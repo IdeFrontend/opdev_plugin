@@ -5,7 +5,6 @@ import { Result } from './Result';
 import { ResultRecord } from './ResultRecord';
 import { OutOfBandRecord } from './OutOfBandRecord';
 
-// MI grammar based on https://ftp.gnu.org/old-gnu/Manuals/gdb/html_chapter/gdb_22.html
 // First sets below -- Regex exprs defined with `` need to escape \ char
 const VARIABLE = /((^[a-zA-Z_][a-zA-Z0-9_\-]*)|(^=))/;
 const TOKEN = '\\d*';
