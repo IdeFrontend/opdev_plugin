@@ -143,3 +143,11 @@ sha256sum Ascend.MindStudio-Debug-VSCode-Plugin-{version}.vsix # 验证vsix包�
 
 #### 核切换
 *  左下角展开KERNEL FOCUS工具栏，可查看核状态，高亮行是当前所在核；点击其他行数据进行切核
+
+## Disclaimer
+All downloading and use of the software and its accompaniments are deemed to have carefully read and fully agreed to the following terms:
+* The software is an experimental product intended solely for personal learning and communication. It is strictly prohibited from being used fr any illegal or malicious purposes.
+* If any third party commercial behavior and illegal uses are found, the software author has the right to revoke the right to use.
+* The risk of using this software will be entirely borne by the user, and the software author will not bear any responsibility.
+* For issues not covered in this statement, please refer to relevant national laws and regulations.
+* The copyright of this software statement and its right to modify, update and final interpretation belong to the software author.
