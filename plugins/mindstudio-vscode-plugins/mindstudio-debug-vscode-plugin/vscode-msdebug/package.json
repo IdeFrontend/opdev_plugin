@@ -1,0 +1,195 @@
+{
+  "name": "MindStudio-Debug-VSCode-Plugin",
+  "displayName": "MindStudio Debug VSCode Plugin",
+  "description": "MindStudio Debug VSCode Plugin for ascend operator debug on board",
+  "keywords": [
+    "c++",
+    "debug"
+  ],
+  "license": "MIT",
+  "version": "1.0.3",
+  "publisher": "Ascend",
+  "engines": {
+    "vscode": "^1.55.0"
+  },
+  "categories": [
+    "Debuggers"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://gitee.com/ascend/msot.git"
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true
+    }
+  },
+  "activationEvents": [
+    "onDebug"
+  ],
+  "main": "./out/extension",
+  "contributes": {
+    "views": {
+      "debug": [
+        {
+          "id": "msdebug.Kernel",
+          "name": "Kernel Focus",
+          "initialSize": 200,
+          "type": "webview",
+          "visibility": "visible",
+          "when": "msdebug.kernel.view == 'npu'"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "msdebug.ChangeKernel",
+        "title": "MSDebug: Change Kernel"
+      },
+      {
+        "command": "msdebug.ReadMemory",
+        "title": "Read Memory"
+      },
+      {
+        "command": "msdebug.ReadMemoryCustom",
+        "title": "Read Memory"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "msdebug.ReadMemory",
+          "when": "editorTextFocus && debugState == 'stopped'",
+          "group": "navigation"
+        }
+      ]
+    },
+    "breakpoints": [
+      {
+        "language": "c"
+      },
+      {
+        "language": "cpp"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "msdebug-mi",
+        "program": "./out/debug_session/msdebug_session.js",
+        "runtime": "node",
+        "label": "MSDebug",
+        "languages": [
+          "c",
+          "cpp"
+        ],
+        "variables": {},
+        "configurationAttributes": {
+          "launch": {
+            "required": [
+              "target"
+            ],
+            "properties": {
+              "target": {
+                "type": "string",
+                "description": "Path to the program to debug."
+              },
+              "targetArgs": {
+                "type": "array",
+                "description": "arguments passed to the program to debug.",
+                "default": []
+              },
+              "cwd": {
+                "type": "string",
+                "description": "The current working directory (cwd) for the debuggee process."
+              },
+              "msdebugMiPath": {
+                "type": "string",
+                "description": "The path to msdebug-mi. If unspecified, the path will be searched in PATH environment.",
+                "default": "msdebug-mi"
+              },
+              "environment": {
+                "type": "array",
+                "description": "The array containing objects that specify environment variables. Such as [{\"name\":\"MY_PATH\", \"value\":\"/usr/local\"}]",
+                "default": []
+              },
+              "printMiInput": {
+                "type": "boolean",
+                "description": "Prints all msdebug-mi calls to the console",
+                "default": false
+              },
+              "printMiOutput": {
+                "type": "boolean",
+                "description": "Prints all msdebug-mi responses to the console",
+                "default": false
+              },
+              "enableLog": {
+                "type": "boolean",
+                "description": "Activate log function",
+                "default": false
+              },
+              "skipEnvCheck": {
+                "type": "boolean",
+                "description": "Skip environment config check",
+                "default": false
+              },
+              "environmentScripts": {
+                "type": "array",
+                "description": "Scripts to load environment variables for the MI debugger",
+                "default": []
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "name": "Debug",
+            "type": "msdebug-mi",
+            "request": "launch",
+            "target": "./bin/executable",
+            "cwd": "${workspaceRoot}"
+          }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "MSDebug: Launch Program",
+            "description": "Starts the program using msdebug-mi",
+            "body": {
+              "type": "msdebug-mi",
+              "request": "launch",
+              "name": "${2:Launch Program}",
+              "target": "${1:./bin/executable}",
+              "cwd": "^\"\\${workspaceRoot}\""
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "vscode-test",
+    "package": "vsce package --out out"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.6",
+    "@types/node": "18.x",
+    "@types/vscode": "^1.55.0",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "@vscode/test-cli": "^0.0.4",
+    "@vscode/test-electron": "^2.3.8",
+    "@vscode/vsce": "^2.31.1",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@vscode/debugadapter": "^1.64.0",
+    "@vscode/debugprotocol": "^1.64.0",
+    "log4js": "^6.9.1",
+    "moment": "^2.30.1"
+  }
+}
