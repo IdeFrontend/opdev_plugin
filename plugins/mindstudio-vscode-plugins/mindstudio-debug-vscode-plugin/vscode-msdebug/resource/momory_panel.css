@@ -1,0 +1,138 @@
+* {
+    box-sizing: border-box;
+}
+
+body.vscode-light {
+    background-color: #fff !important;
+}
+
+html, body {
+    padding: 0px;
+    width: calc(100% - 12px);
+    height: calc(100% - 12px);
+}
+
+body {
+    min-width: 736px;
+}
+
+.control {
+    width: 100%;
+    border-bottom: 1px solid #333;
+}
+
+.control > * {
+    margin: 4px;
+}
+
+body.vscode-light .control {
+    border-color: #dddd !important;
+}
+
+.num-content {
+    white-space: nowrap;
+    display: inline-block;
+    padding: 4px 10px;
+    position: absolute;
+    left: 0;
+    top: 0;
+    border-bottom: 1px solid #333;
+    min-width: calc(100% - 20px);
+}
+
+body.vscode-light .num-content {
+    border-color: #dddd !important;
+}
+
+.num-content .num {
+    width: 69px;
+    display: inline-block;
+    text-align: left;
+    color: #c586c0;
+    line-height: 18px;
+}
+
+.num-content .num:nth-child(even) {
+    
+}
+
+.v-content {
+    display: flex;
+    height: calc(100vh - 83px);
+    overflow: auto;
+}
+
+.vc-left {
+    width: 150px;
+    padding-top: 34px;
+    border-right: 1px solid #333;
+    padding-right: 8px;
+}
+
+body.vscode-light .vc-left {
+    border-color: #dddd !important;
+}
+
+.vc-left .l-list {
+    height: 18px;
+    line-height: 18px;
+    width: 100%;
+    color: #c586c0;
+    overflow-y: auto;
+    text-align: right;
+}
+
+.vc-left .l-list:nth-child(even) {
+
+}
+
+.vc-right {
+    width: calc(100% - 150px);
+    position: relative;
+    padding-top: 24px;
+}
+
+.num-list {
+    padding: 10px;
+    overflow: hidden;
+}
+
+.num-list .list {
+    float: left;
+    text-align: left;
+    width: 66px;
+    margin-right: 3px;
+    height: 18px;
+    line-height: 18px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: #bababa;
+}
+
+.num-list .list:hover {
+    color: #c586c0;
+}
+
+body.vscode-dark .el-select__wrapper {
+    background: none;
+    box-shadow: 0 0 0 1px #444;
+}
+
+body.vscode-dark .el-input-group__prepend {
+    background: none;
+    box-shadow: 0 0 0 1px #444;
+}
+
+body.vscode-dark .el-input__wrapper {
+    background: none !important;
+    box-shadow: 0 0 0 1px #444 !important;
+}
+
+body.vscode-dark .el-input__inner, body.vscode-dark .el-select__wrapper:not(.is-disabled) .el-select__placeholder {
+    color: #eee !important;
+}
+
+.el-loading-mask {
+    background-color: rgba(0, 0, 0, 0.1) !important;
+}
