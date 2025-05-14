@@ -120,7 +120,7 @@ class TableView {
         this.memoryBar.command = 'msdebug.ReadRegister';
         this.memoryBar.tooltip = 'Click to Read Register';
 
-        this.memoryBar.show();
+        // this.memoryBar.show();
     }
 }
 
