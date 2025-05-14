@@ -11,6 +11,10 @@ table * {
     white-space: nowrap;
 }
 
+table thead td {
+    padding: 4px;
+}
+
 table td {
     border: 1px solid #eee;
 }

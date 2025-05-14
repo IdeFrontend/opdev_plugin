@@ -4,7 +4,7 @@ const vscode = acquireVsCodeApi();
 const app = Vue.createApp({
     template: `
         <table class="table-panel">
-        <tbody>
+        <thead>
             <tr>
                 <td>read memory</td>
                 <td>Id</td>
@@ -15,9 +15,11 @@ const app = Vue.createApp({
                 <td>CoreId</td>
                 <td>dim</td>
             </tr>
+        </thead>
+        <tbody>
             <tr v-for="i in tableData">
                 <td>
-                    <el-button size="small" @click="goMemory(i)">memory info</el-button>
+                    <el-button size="small" @click="goMemory(i)">memory</el-button>
                 </td>
                 <td v-for="j in i ">{{ j }}</td>
             </tr>
@@ -38,7 +40,7 @@ const app = Vue.createApp({
         });
 
         function goMemory(row) {
-            vscode.postMessage({ type: 'readMemory', data: row });
+            vscode.postMessage({ type: 'readMemory', data: [...row] });
         }
 
         return {

@@ -174,7 +174,7 @@ export class DebugSessionExt extends DebugSession {
 		}
 
 		if (command === 'queryTableMemory') {
-			this.sendEvent(new Event('readMemory', args));
+			this.sendEvent(new Event('readTableMemory', { data: args }));
 		}
 
 		if (command === 'queryMemory') {

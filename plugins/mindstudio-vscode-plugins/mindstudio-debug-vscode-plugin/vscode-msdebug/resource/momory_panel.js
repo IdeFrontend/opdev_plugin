@@ -119,7 +119,7 @@ const app = Vue.createApp({
         const isCustomStatus = ref(false);
         const address = ref('0');
         const position = ref('GM');
-        const positions = ref(['GM', 'UB', 'L0A', 'L0B', 'L0C', 'L1', 'FB']);
+        const positions = ref(['GM', 'UB', 'L0A', 'L0B', 'L0C', 'L1', 'FB', 'DCACHE']);
         const size = ref('256');
         const type = ref('int64_t[]');
         const types = ref([
@@ -211,6 +211,14 @@ const app = Vue.createApp({
         const lineNum = computed(() => Math.ceil(tableData.value.length / columnNum.value));
         const dataCount = computed(() => size.value / (types.value.find(i => i.value === type.value)?.bt || 1));
         let req = {};
+
+        if (window.__tableQuery) {
+            address.value = window.__tableQuery[3].split('(')[0];
+            size.value = Number(window.__tableQuery[4]);
+            type.value = 'uint8_t[]';
+
+            changeType();
+        }
 
         function calcColumnNum(index) {
             const findBt = types.value.find(i => i.value === type.value)?.bt || 0;
