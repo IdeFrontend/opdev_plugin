@@ -19,6 +19,14 @@ table td {
     border: 1px solid #eee;
 }
 
+table td.key {
+    color: #c586c0;
+}
+
+table td.value {
+    color: #b5cea8;
+}
+
 tr:hover, tr.active {
     background-color: #1b7ee5;
     color: #fff;

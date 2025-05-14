@@ -12,8 +12,8 @@ const app = Vue.createApp({
         </thead>
         <tbody>
             <tr v-for="i in tableData">
-                <td>{{ i.name }}</td>
-                <td>{{ i.value }}</td>
+                <td class="key">{{ i.name }}</td>
+                <td class="value">{{ i.value }}</td>
             </tr>
         </tobody>
         </table>
