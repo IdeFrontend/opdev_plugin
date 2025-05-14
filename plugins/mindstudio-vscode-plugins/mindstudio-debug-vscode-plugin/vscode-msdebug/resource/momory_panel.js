@@ -111,9 +111,8 @@ const app = Vue.createApp({
     <el-result
         v-if="isError"
         icon="warning"
-        sub-title="Unsupported variable type."
+        :sub-title="__tableQuery ? 'error: this memory data is invalid, please check command: ascend info summary' : 'Unsupported variable type.'"
       >
-        {{ __tableQuery ? 'error: this memory data is invalid, please check command: ascend info summary' : '' }}
       </el-result>
     `,
     setup() {
@@ -250,7 +249,7 @@ const app = Vue.createApp({
                 }
 
                 if (!isCustomStatus.value && window.__tableQuery) {
-                    if (address.value.inclues('(invalid)')) {
+                    if (address.value.includes('(invalid)')) {
                         isError.value = true;
                     } else {
                         isError.value = false;
