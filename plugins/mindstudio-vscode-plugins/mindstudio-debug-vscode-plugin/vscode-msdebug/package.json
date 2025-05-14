@@ -17,7 +17,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://gitee.com/ascend/msot.git"
+    "url": "https://gitee.com/ascend/mstt.git"
   },
   "capabilities": {
     "untrustedWorkspaces": {
