@@ -12,7 +12,7 @@ import { DebugProtocol } from '@vscode/debugprotocol'
 import { MsdebugMI } from "../machine_interface/msdebug_mi";
 import { processEnv, checkAndPrintPostLoadMessage} from "../machine_interface/process_env"
 import { getMsdebugMiPath } from "../machine_interface/mi_base"
-import { initLogger } from '../utils/backend_global';
+import { globalKernelEvents, initLogger } from '../utils/backend_global';
 
 export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArguments {
 	cwd: string;
@@ -26,25 +26,57 @@ export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArgum
 	enableLog: boolean;
 	skipEnvCheck: boolean;
 	environmentScripts: string[];
+	dumpfilePath: string;
+	type:string;
 }
 
 class MsDebugDebugSession extends DebugSessionExt {
 	protected initializeRequest(response: DebugProtocol.InitializeResponse, args: DebugProtocol.InitializeRequestArguments): void {
-		response.body.supportsGotoTargetsRequest = true;
-		response.body.supportsHitConditionalBreakpoints = true;
-		response.body.supportsConfigurationDoneRequest = true;
-		response.body.supportsConditionalBreakpoints = true;
-		response.body.supportsFunctionBreakpoints = true;
-		response.body.supportsEvaluateForHovers = true;
-		response.body.supportsReadMemoryRequest = true;
+		if (args.adapterID == 'msdebug-coredump') {
+			response.body.supportsGotoTargetsRequest = true;
+			response.body.supportsConfigurationDoneRequest = true;
+			response.body.supportsEvaluateForHovers = true;
+			response.body.supportsReadMemoryRequest = true;
+		} else {
+			response.body.supportsGotoTargetsRequest = true;
+			response.body.supportsHitConditionalBreakpoints = true;
+			response.body.supportsConfigurationDoneRequest = true;
+			response.body.supportsConditionalBreakpoints = true;
+			response.body.supportsFunctionBreakpoints = true;
+			response.body.supportsEvaluateForHovers = true;
+			response.body.supportsReadMemoryRequest = true;
+		}
 		this.sendResponse(response);
 	}
 
 	protected async launchRequest(response: DebugProtocol.LaunchResponse, args: LaunchRequestArguments): Promise<void> {
+		if (args.type == 'msdebug-coredump') {
+			try {
+				let envs = processEnv(args.environment, args.environmentScripts);
+				let msdebugMiPath:string = await getMsdebugMiPath(args.msdebugMiPath, envs);
+				this.miDebugger = new MsdebugMI(msdebugMiPath, envs, args.type);
+				this.miDebugger.printMiInput = !!args.printMiInput;
+				this.miDebugger.printMiOutput = !!args.printMiOutput;
+				this.mode = args.type;
+				this.bindDebuggerEventsForCoredump();
+			} catch (err) {
+				this.sendEvent(new OutputEvent(`Failed to launch: ${String(err.message)}`, "stderr"));
+				this.sendErrorResponse(response, 1, `Failed to launch: ${String(err.message)}`);
+				return;
+			}
+			return this.miDebugger.load(args.cwd, args.dumpfilePath, [], args.type).then(() => {
+				this.sendResponse(response);
+
+				globalKernelEvents.emit('npuFocus', true);
+				this.initTableWin();
+			}, err => {
+				this.sendErrorResponse(response, 1, `Failed to load MI Debugger: ${err.toString()}`);
+			});
+		}
 		try {
 			let envs = processEnv(args.environment, args.environmentScripts);
 			let msdebugMiPath:string = await getMsdebugMiPath(args.msdebugMiPath, envs);
-			this.miDebugger = new MsdebugMI(msdebugMiPath, envs);
+			this.miDebugger = new MsdebugMI(msdebugMiPath, envs, args.type);
 			this.bindDebuggerEvents();
 			this.miDebugger.printMiInput = !!args.printMiInput;
 			this.miDebugger.printMiOutput = !!args.printMiOutput;

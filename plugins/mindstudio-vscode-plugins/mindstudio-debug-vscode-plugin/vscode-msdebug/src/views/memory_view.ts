@@ -93,6 +93,10 @@ class MemoryView {
             if (event.event === 'memoryResultError') {
                 currentPanel.windowView.webview.postMessage({ ...res, type: 'error' });
             }
+
+            if (event.event === 'readMemory') {
+                this.createView(true);
+            }
         });
     }
 

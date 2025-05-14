@@ -17,7 +17,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://gitee.com/ascend/mstt.git"
+    "url": "https://gitee.com/ascend/msot.git"
   },
   "capabilities": {
     "untrustedWorkspaces": {
@@ -49,6 +49,10 @@
       {
         "command": "msdebug.ReadMemory",
         "title": "Read Memory"
+      },
+      {
+        "command": "msdebug.ReadTable",
+        "title": "Read Table"
       },
       {
         "command": "msdebug.ReadMemoryCustom",
@@ -155,6 +159,92 @@
             "description": "Starts the program using msdebug-mi",
             "body": {
               "type": "msdebug-mi",
+              "request": "launch",
+              "name": "${2:Launch Program}",
+              "target": "${1:./bin/executable}",
+              "cwd": "^\"\\${workspaceRoot}\""
+            }
+          }
+        ]
+      },
+      {
+        "type": "msdebug-coredump",
+        "program": "./out/debug_session/msdebug_session.js",
+        "runtime": "node",
+        "label": "MSDebug",
+        "languages": [
+          "c",
+          "cpp"
+        ],
+        "variables": {},
+        "configurationAttributes": {
+          "launch": {
+            "required": [
+              "dumpfilePath"
+            ],
+            "properties": {
+              "dumpfilePath": {
+                "type": "string",
+                "description": "The path of coredump file. If mode is coredump, it must be specified.",
+                "default": ""
+              },
+              "cwd": {
+                "type": "string",
+                "description": "The current working directory (cwd) for the debuggee process."
+              },
+              "msdebugMiPath": {
+                "type": "string",
+                "description": "The path to msdebug-mi. If unspecified, the path will be searched in PATH environment.",
+                "default": "msdebug"
+              },
+              "environment": {
+                "type": "array",
+                "description": "The array containing objects that specify environment variables. Such as [{\"name\":\"MY_PATH\", \"value\":\"/usr/local\"}]",
+                "default": []
+              },
+              "printMiInput": {
+                "type": "boolean",
+                "description": "Prints all msdebug-mi calls to the console",
+                "default": false
+              },
+              "printMiOutput": {
+                "type": "boolean",
+                "description": "Prints all msdebug-mi responses to the console",
+                "default": false
+              },
+              "enableLog": {
+                "type": "boolean",
+                "description": "Activate log function",
+                "default": false
+              },
+              "skipEnvCheck": {
+                "type": "boolean",
+                "description": "Skip environment config check",
+                "default": false
+              },
+              "environmentScripts": {
+                "type": "array",
+                "description": "Scripts to load environment variables for the MI debugger",
+                "default": []
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "name": "Debug",
+            "type": "msdebug-coredump",
+            "request": "launch",
+            "target": "./bin/executable",
+            "cwd": "${workspaceRoot}"
+          }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "MSDebug: Launch Program",
+            "description": "Starts the program using msdebug-mi",
+            "body": {
+              "type": "msdebug-coredump",
               "request": "launch",
               "name": "${2:Launch Program}",
               "target": "${1:./bin/executable}",

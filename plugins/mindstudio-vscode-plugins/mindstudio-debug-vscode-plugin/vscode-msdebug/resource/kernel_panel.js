@@ -5,12 +5,14 @@ const app = Vue.createApp({
     setup() {
         const tableData = ref([]);
         const currentId = ref('');
+        const mode = ref('');
 
         window.addEventListener('message', ({ data }) => {
             if (!data) return;
 
             tableData.value = data.allKernel;
-            currentId.value = data.type + ' ' + data.focusId;
+            currentId.value = data.type.toLocaleLowerCase() + ' ' + data.focusId;
+            mode.value = data.mode;
         });
 
         onMounted(() => {
@@ -22,7 +24,7 @@ const app = Vue.createApp({
         }
 
         return {
-            tableData, currentId, changeKernel
+            tableData, currentId, changeKernel, mode
         };
     }
 });
