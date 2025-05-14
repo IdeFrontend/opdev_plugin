@@ -113,6 +113,7 @@ const app = Vue.createApp({
         icon="warning"
         sub-title="Unsupported variable type."
       >
+        {{ __tableQuery ? 'error: this memory data is invalid, please check command: ascend info summary' : '' }}
       </el-result>
     `,
     setup() {
@@ -213,7 +214,7 @@ const app = Vue.createApp({
         let req = {};
 
         if (window.__tableQuery) {
-            address.value = window.__tableQuery[3].split('(')[0];
+            address.value = window.__tableQuery[3];
             size.value = Number(window.__tableQuery[4]);
             type.value = 'uint8_t[]';
         }
@@ -249,7 +250,12 @@ const app = Vue.createApp({
                 }
 
                 if (!isCustomStatus.value && window.__tableQuery) {
-                    changeType();
+                    if (address.value.inclues('(invalid)')) {
+                        isError.value = true;
+                    } else {
+                        isError.value = false;
+                        changeType();
+                    }
                 }
             }
 
