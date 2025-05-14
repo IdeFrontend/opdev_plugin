@@ -80,6 +80,10 @@ class TableView {
             if (event.event === 'registerResultError') {
                 currentPanel.windowView.webview.postMessage({ ...res, type: 'error' });
             }
+
+            if (event.event === 'openTable') {
+                this.memoryBar.show();
+            }
         });
     }
 

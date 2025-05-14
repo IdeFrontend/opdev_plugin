@@ -83,6 +83,8 @@ class TableView {
 
             if (event.event === 'openTable') {
                 this.createView();
+
+                this.memoryBar.show();
             }
         });
     }
@@ -124,7 +126,7 @@ class TableView {
         this.memoryBar.command = 'msdebug.ReadTable';
         this.memoryBar.tooltip = 'Click to read coredump info summary';
 
-        this.memoryBar.show();
+        // this.memoryBar.show();
     }
 }
 
