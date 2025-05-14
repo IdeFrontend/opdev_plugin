@@ -248,7 +248,7 @@ const app = Vue.createApp({
                     loading.value = true;
                 }
 
-                if (isCustomStatus.value && window.__tableQuery) {
+                if (!isCustomStatus.value && window.__tableQuery) {
                     changeType();
                 }
             }

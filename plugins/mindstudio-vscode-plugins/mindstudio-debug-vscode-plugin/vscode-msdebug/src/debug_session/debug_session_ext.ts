@@ -132,6 +132,12 @@ export class DebugSessionExt extends DebugSession {
 		this.sendEvent(new Event('tableResult', { table: coredumpInfo.allTables }));
 	}
 
+	async sendRegisterInfo() {
+		const registerInfo = this.miDebugger.getKernelRegisterInfo();
+
+		this.sendEvent(new Event('registerResult', { table: registerInfo }));
+	}
+
 	async initTableWin() {
 		this.sendEvent(new Event('openTable', {}));
 	}
@@ -171,6 +177,10 @@ export class DebugSessionExt extends DebugSession {
 
 		if (command === 'queryTable') {
 			this.sendTableInfo();
+		}
+
+		if (command === 'queryRegister') {
+			this.sendRegisterInfo();
 		}
 
 		if (command === 'queryTableMemory') {

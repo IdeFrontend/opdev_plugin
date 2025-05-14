@@ -55,6 +55,10 @@
         "title": "Read Table"
       },
       {
+        "command": "msdebug.ReadRegister",
+        "title": "Read Register"
+      },
+      {
         "command": "msdebug.ReadMemoryCustom",
         "title": "Read Memory"
       }
