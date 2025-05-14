@@ -16,8 +16,7 @@ class Panel {
 
     createPanel = () => {
         const context = this.context;
-        const currentViewColumn = vscode.window?.activeTextEditor?.viewColumn || 1;
-        const shouldSetColumn = currentViewColumn - 1 ? currentViewColumn - 1 : 2;
+        const shouldSetColumn = -1;
         const panel = this.windowView = vscode.window.createWebviewPanel('tableView',
             'Read Coredump',
             shouldSetColumn,
