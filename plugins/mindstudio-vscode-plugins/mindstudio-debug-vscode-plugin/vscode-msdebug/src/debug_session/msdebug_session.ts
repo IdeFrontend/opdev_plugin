@@ -59,6 +59,14 @@ class MsDebugDebugSession extends DebugSessionExt {
 				this.miDebugger.printMiOutput = !!args.printMiOutput;
 				this.mode = args.type;
 				this.bindDebuggerEventsForCoredump();
+
+				if (args.enableLog) {
+					initLogger();
+				}
+	
+				if (!args.skipEnvCheck){
+					checkAndPrintPostLoadMessage(this.miDebugger.envs, (msg)=>this.miDebugger.log("console", msg));
+				}
 			} catch (err) {
 				this.sendEvent(new OutputEvent(`Failed to launch: ${String(err.message)}`, "stderr"));
 				this.sendErrorResponse(response, 1, `Failed to launch: ${String(err.message)}`);

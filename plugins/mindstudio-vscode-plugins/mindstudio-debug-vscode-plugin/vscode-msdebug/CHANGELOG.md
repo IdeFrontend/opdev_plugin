@@ -2,6 +2,13 @@
 
 All notable changes to the "MindStudio Debug VSCode Plugin" extension will be documented in this file.
 
+## [v1.0.5] - 2025-05-14
+
+### Added
+
+- 支持NPU coredump文件可视化调试功能
+- 新增支持DCACHE类型内存的查看内存
+
 ## [v1.0.3] - 2025-04-02
 
 ### Added
