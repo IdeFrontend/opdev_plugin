@@ -173,6 +173,10 @@ export class DebugSessionExt extends DebugSession {
 			this.sendTableInfo();
 		}
 
+		if (command === 'queryTableMemory') {
+			this.sendEvent(new Event('readMemory', args));
+		}
+
 		if (command === 'queryMemory') {
 			const innerResp = await this.readMemoryInnerRequest(args);
 

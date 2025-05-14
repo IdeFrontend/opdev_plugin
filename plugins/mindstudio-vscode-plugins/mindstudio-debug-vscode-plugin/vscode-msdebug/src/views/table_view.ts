@@ -102,7 +102,7 @@ class TableView {
                 }
 
                 if (message.type === 'readMemory') {
-                    vscode.debug.activeDebugSession?.customRequest?.('queryTable', {});
+                    vscode.debug.activeDebugSession?.customRequest?.('queryTableMemory', message.data);
                 }
             },
             undefined,
