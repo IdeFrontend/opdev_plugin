@@ -133,7 +133,7 @@ export class DebugSessionExt extends DebugSession {
 	}
 
 	async sendRegisterInfo() {
-		const registerInfo = this.miDebugger.getKernelRegisterInfo();
+		const registerInfo = await this.miDebugger.getKernelRegisterInfo();
 
 		this.sendEvent(new Event('registerResult', { table: registerInfo }));
 	}
