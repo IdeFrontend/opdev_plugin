@@ -17,7 +17,7 @@ import { InitialCommandStatus } from "./initial_command"
 import { StackVariable, VariableObjectChild } from '../machine_interface/backend';
 import { expandValue, expandValueStackListVariable } from '../utils/expansion';
 import { MIBase, execCmd } from '../machine_interface/mi_base';
-import backendGlobal, { globalKernelEvents, initBackendGlobal } from '../utils/backend_global';
+import backendGlobal, { globalKernelEvents, initBackendGlobal, setBackendGlobalKernel } from '../utils/backend_global';
 import { AsyncRecord } from "../utils/mi_parse_type/AsyncRecord";
 import { OutputRecord } from "../utils/mi_parse_type/OutputRecord";
 import { MemoryReference } from "./memory";
@@ -43,6 +43,7 @@ export class DebugSessionExt extends DebugSession {
 	protected stackVariables: DebugProtocol.Variable[] = [];
 	protected initialRunCommand: InitialCommandStatus;
 	protected isInitialRunCommandFinished = false;
+	protected mode:string = '';
 
 	public constructor(debuggerLinesAndColumnsStartAt1: boolean, isServer: boolean = false) {
 		super(debuggerLinesAndColumnsStartAt1, isServer);
@@ -94,6 +95,28 @@ export class DebugSessionExt extends DebugSession {
 		globalKernelEvents.on('npuFocus', this.kernelFocus.bind(this));
 	}
 
+	protected bindDebuggerEventsForCoredump(): void {
+		this.miDebugger.on("quit", () => {
+			this.sendEvent(new TerminatedEvent());
+		});
+		this.miDebugger.on("exited-normally", () => {
+			this.sendEvent(new TerminatedEvent());
+		});
+		this.miDebugger.on("output", (type: string, msg: string) => {
+			// type: console(blue)/stdout(green)/stderr(red)
+			this.sendEvent(new OutputEvent(msg, type));
+		});
+		this.miDebugger.once("debug-ready", (() => {
+			initBackendGlobal();
+			setBackendGlobalKernel({ isNpu: true });
+			
+			this.sendEvent(new InitializedEvent());
+			this.sendEvent(new KernelFocus({ focus: true }));
+		
+		}));
+		globalKernelEvents.on('npuFocus', this.kernelFocus.bind(this));
+	}
+
 	kernelFocus() {
 		const focus = backendGlobal.kernel.isNpu;
 		this.sendEvent(new KernelFocus({ focus }));
@@ -103,11 +126,30 @@ export class DebugSessionExt extends DebugSession {
 		}
 	}
 
-	async sendCurrentKernelInfo() {
-		const allCores = await this.miDebugger.getKernelInfo();
-		const index = allCores.findIndex(i => i[7].includes('*')) + 1;
+	async sendTableInfo() {
+		const coredumpInfo = await this.miDebugger.getCoredumpInfo();
 
-		this.sendEvent(new ChangeKernelEvent({ type: allCores?.[index]?.[1], focusId: allCores?.[index]?.[0], allKernel: allCores }));
+		this.sendEvent(new Event('tableResult', { table: coredumpInfo.allTables }));
+	}
+
+	async sendRegisterInfo() {
+		const registerInfo = await this.miDebugger.getKernelRegisterInfo();
+
+		this.sendEvent(new Event('registerResult', { table: registerInfo }));
+	}
+
+	async initTableWin() {
+		this.sendEvent(new Event('openTable', {}));
+	}
+
+	async sendCurrentKernelInfo() {
+		const isCoredump = this.mode === 'msdebug-coredump';
+		const coredumpInfo = isCoredump ? await this.miDebugger.getCoredumpInfo() : null;
+
+		const allCores = isCoredump ? coredumpInfo.allCores : await this.miDebugger.getKernelInfo();
+		const index = allCores.findIndex(i => i[isCoredump ? 3 : 7].includes('*')) + 1;
+
+		this.sendEvent(new ChangeKernelEvent({ type: allCores?.[index]?.[1], focusId: allCores?.[index]?.[0], allKernel: allCores, mode: this.mode }));
 	}
 
 	async sendMemoryInfo(args) {
@@ -121,11 +163,28 @@ export class DebugSessionExt extends DebugSession {
 			try {
 				await this.miDebugger.changeKernel(args);
 
+				if (this.mode === 'msdebug-coredump') {
+					this.sendCurrentKernelInfo();
+					this.sendTableInfo();
+				}
+
 				this.handleBreakpointHit();
 				this.sendEvent(new InvalidatedEvent(['variables']));
 			} catch (e) {
 				this.sendEvent(new ChangeKernelError({ message: e }));
 			}
+		}
+
+		if (command === 'queryTable') {
+			this.sendTableInfo();
+		}
+
+		if (command === 'queryRegister') {
+			this.sendRegisterInfo();
+		}
+
+		if (command === 'queryTableMemory') {
+			this.sendEvent(new Event('readTableMemory', { data: args }));
 		}
 
 		if (command === 'queryMemory') {
@@ -217,6 +276,10 @@ export class DebugSessionExt extends DebugSession {
 	}
 
 	protected setBreakPointsRequest(response: DebugProtocol.SetBreakpointsResponse, args: DebugProtocol.SetBreakpointsArguments): void {
+		if  (this.mode == 'msdebug-coredump') {
+			this.sendResponse(response);
+			return;
+		}
 		let path = args.source.path;
 		this.miDebugger.clearBreakPoints(path).then(() => {
 			const all = args.breakpoints.map(brk => {

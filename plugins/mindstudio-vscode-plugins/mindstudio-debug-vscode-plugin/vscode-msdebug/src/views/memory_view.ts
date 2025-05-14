@@ -6,10 +6,12 @@ class Panel {
     context: vscode.ExtensionContext;
     windowView: any;
     id: number;
+    tableQuery;
 
-    constructor(context) {
+    constructor(context, tableQuery) {
         this.context = context;
         this.id = ++panelId;
+        this.tableQuery = tableQuery;
 
         this.createPanel();
     }
@@ -42,6 +44,9 @@ class Panel {
                 <link href="${cssUri}" rel="stylesheet">
 
                 <title>memory</title>
+                <script>
+                    window.__tableQuery = ${JSON.stringify(this.tableQuery)};
+                </script>
             </head>
             <body>
                 <div id="app"></div>
@@ -72,6 +77,12 @@ class MemoryView {
         this.context.subscriptions.push(vscode.commands.registerCommand('msdebug.ReadMemoryCustom', () => this.createView(true)));
 
         vscode.debug.onDidReceiveDebugSessionCustomEvent((event) => {
+            if (event.event === 'readTableMemory') {
+                this.createView(true, event?.body?.data);
+
+                return;
+            }
+
             const res = event.body;
             const currentPanel = this.panels?.[res?.id];
             const varName = event?.body?.variableName;
@@ -96,7 +107,7 @@ class MemoryView {
         });
     }
 
-    createView = (isCustom = false) => {
+    createView = (isCustom = false, tableQuery = undefined) => {
         const editor = vscode.window.activeTextEditor;
         let variableName = '';
 
@@ -110,7 +121,7 @@ class MemoryView {
 
         if (isCustom) variableName = '';
 
-        const panel = new Panel(this.context);
+        const panel = new Panel(this.context, tableQuery);
 
         this.panels[panel.id] = panel;
 

@@ -23,16 +23,63 @@ import {exec} from "child_process"
 import {ErrorStreamRecordHandler} from "../utils/mi_parse_type/ErrorStreamRecordHandler"
 
 export class MIBase extends EventEmitter {
-	constructor(public application: string, envs: any) {
+	constructor(public application: string, envs: any, mode:string) {
 		super();
 
 		this.envs = envs;
 		this.miParser = new MIParser();
 		this.application = application;
+		this.mode = mode;
 	}
 
 	async getMemory(args): Promise<any> {
 		return { cc: 'cc' };
+	}
+
+	async getCoredumpInfo(): Promise<any> {
+		const res = await this.sendCliCommand('ascend info summary');
+
+		const infoStr = res.getResult('result').replace(/\\{1,3}[trn]/g, '');
+		const content = infoStr.trim() || '';
+
+		const idSplit = content.split(' Id ');
+		const coreStr = idSplit[0];
+		const tableStr = 'Id ' + idSplit[1];
+
+		const coreSplit = coreStr.split(/\s{2,}/).slice(4);
+		const tableSplit = tableStr.split(/\s{2,}/).slice(7);
+
+		const allCores = [];
+		const allTables = [];
+
+		for (let i = 0; i < coreSplit.length / 4; i++) {
+			const tmp = [];
+
+			for (let j = 0; j < 4; j++) {
+				tmp.push(coreSplit[i * 4 + j]);
+			}
+
+			allCores.push(tmp);
+		}
+
+		for (let i = 0; i < tableSplit.length / 7; i++) {
+			const tmp = [];
+
+			for (let j = 0; j < 7; j++) {
+				if (j !== 0 && tableSplit[i * 7 + j] === (i + 1 + '')) {
+					tableSplit.splice(i * 7 + j, 0, '');
+				}
+
+				tmp.push(tableSplit[i * 7 + j] || '');
+			}
+
+			allTables.push(tmp);
+		}
+
+		return {
+			allCores,
+			allTables
+		};
 	}
 
 	async getKernelInfo(): Promise<string[]> {
@@ -96,7 +143,7 @@ export class MIBase extends EventEmitter {
 		});
 	}
 
-	async load(cwd: string, target: string, targetArgs: string[] = []): Promise<any> {
+	async load(cwd: string, target: string, targetArgs: string[] = [], mode:string = ''): Promise<any> {
 		let userHome = await getUserHomePath();
 		if (!validatePath(cwd, userHome)) {
 			throw new Error(`Invalid path for cwd param.cwd=${cwd}`);
@@ -111,7 +158,8 @@ export class MIBase extends EventEmitter {
 		}
 
 		return new Promise((resolve, reject) => {
-			this.process = ChildProcess.spawn(this.application, [], { cwd: cwd, env: this.envs });
+			let args = [];
+			this.process = ChildProcess.spawn(this.application, args, { cwd: cwd, env: this.envs });
 			this.process.stdin.on('error', (e: any) => {
 				this.log('stderr', e?.stack || e);
 			});
@@ -127,7 +175,7 @@ export class MIBase extends EventEmitter {
 			this.process.on("error", (err) => {
 				this.emit("error-fatal", err);
 			});
-			const promises = this.initCommands(target);
+			const promises = this.initCommands(target, [], mode);
 
 			Promise.all(promises).then(() => {
 				this.emit("debug-ready");
@@ -136,7 +184,10 @@ export class MIBase extends EventEmitter {
 		});
 	}
 
-	protected initCommands(target: string, targetArgs: string[] = []) {
+	protected initCommands(target: string, targetArgs: string[] = [], mode:string){
+		if (mode == 'msdebug-coredump') {
+			return [this.sendRaw("target create --core \"" + escape(target) + "\"")];
+		}
 		const cmds = [
 			this.sendCommand("gdb-set target-async on"),
 			new Promise(resolve => {
@@ -295,6 +346,7 @@ export class MIBase extends EventEmitter {
 
 	onOutput(line: string) {
 		const lines = line.split('\n');
+		this.log("console", line);
 		lines.forEach(line => {
 			try {
 				let unknown = {"text": ""};
@@ -347,6 +399,9 @@ export class MIBase extends EventEmitter {
 	}
 
 	execRun(): Promise<boolean> {
+		if (this.mode == 'msdebug-coredump') {
+			return Promise.resolve(true);
+		}
 		var cmd:string = 'run';
 		if (this.targetArgs != undefined && this.targetArgs.length != 0) {
 			cmd = `run ${escape(this.targetArgs.join(' '))}`;
@@ -366,6 +421,10 @@ export class MIBase extends EventEmitter {
 		const toKillDebugProc = setTimeout(() => {
 			process.kill(-debugProc.pid);
 		}, 1000);
+		if (this.mode == 'msdebug-coredump') {
+			this.sendRaw("quit");
+			return;
+		}
 		this.process.on("exit", function (code) {
 			clearTimeout(toKillDebugProc);
 		});
@@ -709,6 +768,7 @@ export class MIBase extends EventEmitter {
 	protected errbuf: string = '';
 	protected process: ChildProcess.ChildProcess;
 	protected stream;
+	protected mode:string;
 }
 
 export function execCmd(cmd:string):Promise<any> {

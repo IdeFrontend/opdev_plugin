@@ -111,7 +111,7 @@ const app = Vue.createApp({
     <el-result
         v-if="isError"
         icon="warning"
-        sub-title="Unsupported variable type."
+        :sub-title="__tableQuery ? 'error: this memory data is invalid, please check command: ascend info summary' : 'Unsupported variable type.'"
       >
       </el-result>
     `,
@@ -119,7 +119,7 @@ const app = Vue.createApp({
         const isCustomStatus = ref(false);
         const address = ref('0');
         const position = ref('GM');
-        const positions = ref(['GM', 'UB', 'L0A', 'L0B', 'L0C', 'L1', 'FB']);
+        const positions = ref(['GM', 'UB', 'L0A', 'L0B', 'L0C', 'L1', 'FB', 'DCACHE']);
         const size = ref('256');
         const type = ref('int64_t[]');
         const types = ref([
@@ -212,6 +212,12 @@ const app = Vue.createApp({
         const dataCount = computed(() => size.value / (types.value.find(i => i.value === type.value)?.bt || 1));
         let req = {};
 
+        if (window.__tableQuery) {
+            address.value = window.__tableQuery[3];
+            size.value = Number(window.__tableQuery[4]);
+            type.value = 'uint8_t[]';
+        }
+
         function calcColumnNum(index) {
             const findBt = types.value.find(i => i.value === type.value)?.bt || 0;
             const numberType = Number(address.value) + index * findBt;
@@ -240,6 +246,15 @@ const app = Vue.createApp({
                     });
 
                     loading.value = true;
+                }
+
+                if (!isCustomStatus.value && window.__tableQuery) {
+                    if (address.value.includes('(invalid)')) {
+                        isError.value = true;
+                    } else {
+                        isError.value = false;
+                        changeType();
+                    }
                 }
             }
 

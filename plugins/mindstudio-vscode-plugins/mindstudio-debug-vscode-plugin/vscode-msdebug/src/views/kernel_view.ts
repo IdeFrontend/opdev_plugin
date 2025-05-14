@@ -108,7 +108,7 @@ class KernelViewProvider implements vscode.WebviewViewProvider {
                     <el-radio-group @change="changeKernel" v-model="currentId">
                         <table>
                         <tbody>
-                            <tr>
+                            <tr v-if="!mode">
                                 <td></td>
                                 <td>CoreId</td>
                                 <td>Type</td>
@@ -119,11 +119,18 @@ class KernelViewProvider implements vscode.WebviewViewProvider {
                                 <td>PC</td>
                                 <td>stop reason</td>
                             </tr>
-                            <tr v-for="i in tableData" :class="{active: currentId === (i[1] + ' ' + i[0])}">
+                            <tr v-else>
+                                <td></td>
+                                <td>CoreId</td>
+                                <td>CoreType</td>
+                                <td>DeviceId</td>
+                                <td>ChipType</td>
+                            </tr>
+                            <tr v-for="i in tableData" :class="{active: currentId === (i[1].toLocaleLowerCase() + ' ' + i[0])}">
                                 <td style="text-align: center">
-                                    <el-radio :value="i[1] + ' ' + i[0]" size="small"></el-radio>
+                                    <el-radio :value="i[1].toLocaleLowerCase() + ' ' + i[0]" size="small"></el-radio>
                                 </td>
-                                <td @click="changeKernel(i[1] + ' ' + i[0])" v-for="j in i ">{{ j }}</td>
+                                <td @click="changeKernel(i[1].toLocaleLowerCase() + ' ' + i[0])" v-for="j in i ">{{ j }}</td>
                             </tr>
                         </tobody>
                         </table>
