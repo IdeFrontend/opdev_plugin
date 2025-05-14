@@ -15,8 +15,8 @@ import registerView from './views/register_view';
 export function activate(context: vscode.ExtensionContext) {
 	console.log('Congratulations, your extension "MindStudio Debug VSCode Plugin" is now active!');
 
-	memoryView.init(context);
 	kernelView.init(context);
 	tableView.init(context);
+	memoryView.init(context);
 	registerView.init(context);
 }
