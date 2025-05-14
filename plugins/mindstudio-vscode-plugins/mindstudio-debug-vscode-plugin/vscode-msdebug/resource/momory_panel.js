@@ -216,8 +216,6 @@ const app = Vue.createApp({
             address.value = window.__tableQuery[3].split('(')[0];
             size.value = Number(window.__tableQuery[4]);
             type.value = 'uint8_t[]';
-
-            changeType();
         }
 
         function calcColumnNum(index) {
@@ -248,6 +246,10 @@ const app = Vue.createApp({
                     });
 
                     loading.value = true;
+                }
+
+                if (isCustomStatus.value && window.__tableQuery) {
+                    changeType();
                 }
             }
 

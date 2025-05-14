@@ -45,7 +45,7 @@ class Panel {
 
                 <title>memory</title>
                 <script>
-                    window.__tableQuery = ${this.tableQuery};
+                    window.__tableQuery = ${JSON.stringify(this.tableQuery)};
                 </script>
             </head>
             <body>
@@ -107,7 +107,7 @@ class MemoryView {
         });
     }
 
-    createView = (isCustom = false, tableQuery) => {
+    createView = (isCustom = false, tableQuery = undefined) => {
         const editor = vscode.window.activeTextEditor;
         let variableName = '';
 
