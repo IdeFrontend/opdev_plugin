@@ -2,7 +2,7 @@
 
 ### 介绍
 MindStudio Debug VSCode Plugin基于[msdebug上板调试算子工具](https://www.hiascend.com/document/detail/zh/mindstudio/70RC1/mscommandtoolug/mscommandug/atlasopdev_16_0005.html)提供VSCode可视化调试昇腾算子功能。
-附：[算子开发编程语言Ascend C简介](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/80RC2alpha003/devguide/opdevg/ascendcopdevg/atlas_ascendc_10_0001.html)
+附：[算子开发编程语言Ascend C简介](https://www.hiascend.com/document/detail/zh/canncommercial/81RC1/developmentguide/opdevg/Ascendcopdevg/atlas_ascendc_10_0001.html)
 
 ### 特性
 * 断点调试（设置/删除/禁用/启用断点）
@@ -10,6 +10,7 @@ MindStudio Debug VSCode Plugin基于[msdebug上板调试算子工具](https://ww
 * 查看变量/寄存器/堆栈/断点信息，监视器支持执行表达式
 * 内存查询
 * 核切换
+* NPU coredump文件可视化调试
 
 ### 规格要求
 
@@ -37,6 +38,7 @@ sha256sum Ascend.MindStudio-Debug-VSCode-Plugin-{version}.vsix # 验证vsix包�
 
 |版本|发布日期|下载链接|校验码|
 |:--:|:--:|:--:|:--:|
+| 1.0.3 | 2025.04.03 | [Ascend.MindStudio-Debug-VSCode-Plugin-1.0.3.vsix](https://marketplace.rnd.huawei.com/detail?identifier=MindStudio-Debug-VSCode-Plugin) | 0902cd170c9327704afa6aba8c4f75631877b96763f068c10d1da0e0a6abc408 |
 | 1.0.2 | 2024.11.28 | [Ascend.MindStudio-Debug-VSCode-Plugin-1.0.2.vsix](https://marketplace.rnd.huawei.com/detail?identifier=MindStudio-Debug-VSCode-Plugin) | 4a4efdc34212330cbe147f45737156866d8f0ecdc1cc2560303163f8a2c7b694 |
 | 1.0.1 | 2024.10.17 | [Ascend.MindStudio-Debug-VSCode-Plugin-1.0.1.vsix](https://marketplace.rnd.huawei.com/detail?identifier=MindStudio-Debug-VSCode-Plugin) | 5550029e1c2e1af79ec295805efdb7633a472ea0d496ce1bc224f696e02af0f2 |
 | 1.0.0 | 2024.09.19 | [Ascend.MindStudio-Debug-VSCode-Plugin-1.0.0.vsix](https://marketplace.rnd.huawei.com/detail?identifier=MindStudio-Debug-VSCode-Plugin) | 3c25b4dbc126203977308931fa16bfaf8712a707f0217165b1a2a0b4d6e98c4c |
@@ -65,7 +67,7 @@ sha256sum Ascend.MindStudio-Debug-VSCode-Plugin-{version}.vsix # 验证vsix包�
 * 后台命令行离线本地安装
 ```
  - 插件.vsix文件上传linux环境
- - 后台输入命令安装插件文件: code --install-extension /xx_dir/MindStudio-Debug-VSCode-Plugin-1.0.3.vsix
+ - 后台输入命令安装插件文件: code --install-extension /xx_dir/MindStudio-Debug-VSCode-Plugin-1.0.5.vsix
 ```
 4.  点开debug侧边工具栏，若未生成.vscode/launch.json文件，则根据提示点击生成launch.json文件(弹窗中调试器选择MSDebug)
 - 需要注意vscode`当前打开目录`的选择，因为当前目录会影响launch.json文件中cwd参数的值。若msdebug的调试参数文件和打断点的源码文件不直接在同一个目录下（比如源码在src目录下，测试用例在test目录下），则建议切换当前目录为共同的父目录下，再创建.vscode/launch.json文件。
@@ -143,6 +145,47 @@ sha256sum Ascend.MindStudio-Debug-VSCode-Plugin-{version}.vsix # 验证vsix包�
 
 #### 核切换
 *  左下角展开KERNEL FOCUS工具栏，可查看核状态，高亮行是当前所在核；点击其他行数据进行切核
+
+#### NPU coredump文件可视化调试
+* [NPU coredump调试官网特性说明](https://www.hiascend.com/document/detail/zh/canncommercial/81RC1/devaids/opdev/optool/atlasopdev_16_0149.html)
+* launch.json增量配置（可以和原先msdebug-mi配置共存）
+```
+{
+    "configurations": [
+        {
+            "name": "xx-debug",
+            "type": "msdebug-mi",
+            ...
+        },
+        // 以下为coredump调试配置
+        {
+            "name": "xx-debug",
+            "type": "msdebug-coredump",     // 注意区别
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "msdebugMiPath": "/xx/x/msdebug-mi", 
+            "environmentScripts": [
+                xxx         // 和msdebug-mi调试参数设置一致即可
+            ],
+            "environment": [
+                xxx         // 和msdebug-mi调试参数设置一致即可
+            ]
+        }
+    ]
+}
+```
+* launch.json参数说明
+  * 原先type=msdebug-mi配置参数继承：name、type（值不同）、requtest、cwd、msdebugMiPath、printMiInput、printMiOutput、environment、environmentScripts、enableLog、skipEnvCheck.
+  * 新增`dumpfilePath`参数：必要配置项，coredump文件路径（和`cwd`配置共同组合成coredump文件的绝对路径，也可单独设成绝对路径）。建议设置前`检查下coredump文件是否具备执行权限！！`
+* 使用方法：
+  - 配置launch.json后，选择`msdebug-coredump`方式启动调试
+  - 启动后加载`coredump info`界面，可以查看coredump信息 (不慎关闭也可通过右下角`read coredump`按钮重新打开页面)
+  - 左下角展开切核菜单，进行NPU核切换
+  - `coredump ino`界面点击每一行最左`memory`按钮，弹窗显示该地址对应的内存值（若内存地址含invalid则查看无效）
+  - 点击右下角的`read memory`按钮跳转内存查看页面，可以自定义查询内存值。
+  - 点击右下角的`read register`按钮跳转寄存器查看页面，可以查看寄存器值。
+  - 结束调试
+
 
 ## Disclaimer
 All downloading and use of the software and its accompaniments are deemed to have carefully read and fully agreed to the following terms:
