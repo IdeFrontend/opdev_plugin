@@ -19,7 +19,7 @@ MindStudio Debug VSCode Plugin基于[msdebug上板调试算子工具](https://ww
 * 支持平台: Linux
 * 调试AscendC算子程序时，Linux环境已安装CANN工具包（含算子调试器）
 * 仅支持调试AscendC算子，且算子经过调试模式重新编译后才能调试
-* 当前支持的[CANN包](https://www.hiascend.com/zh/developer/download/community/result?module=cann)最低版本：
+* 当前支持的[CANN包](https://www.hiascend.com/zh/developer/download/community/result?module=cann)`最低版本`：
   * 社区版： 8.0.RC3.alpha001
   * 商用版： 8.0.RC3
 
@@ -29,15 +29,17 @@ MindStudio Debug VSCode Plugin基于[msdebug上板调试算子工具](https://ww
 ### 功能
 
 #### 软件包下载和完整性校验
-1. （推荐）从插件市场直接在线安装
+1. 从插件市场直接在线安装
 2. 若软件包从插件市场下载后计划后续本地安装，安装前建议进行完整性校验：
 ```bash
 sha256sum Ascend.MindStudio-Debug-VSCode-Plugin-{version}.vsix # 验证vsix包，若校验码一致，则vsix包在下载中没有受损
 ```
 
+最新软件包下载地址：[MindStudio-Debug-VSCode-Plugin Releases](https://gitcode.com/Ascend/mstt/tree/vscode_plugin/plugins/mindstudio-vscode-plugins/mindstudio-debug-vscode-plugin/releases)
 
-|版本|发布日期|下载链接|校验码|
+|历史版本|发布日期|下载链接|校验码|
 |:--:|:--:|:--:|:--:|
+| 1.0.5 | 2025.04.03 | [Ascend.MindStudio-Debug-VSCode-Plugin-1.0.5.vsix](https://marketplace.rnd.huawei.com/detail?identifier=MindStudio-Debug-VSCode-Plugin) | b895ae941dfd468548b307b96fcfc7a0245f1e8f99515afeb8d3bc4f62360fa6 |
 | 1.0.3 | 2025.04.03 | [Ascend.MindStudio-Debug-VSCode-Plugin-1.0.3.vsix](https://marketplace.rnd.huawei.com/detail?identifier=MindStudio-Debug-VSCode-Plugin) | 0902cd170c9327704afa6aba8c4f75631877b96763f068c10d1da0e0a6abc408 |
 | 1.0.2 | 2024.11.28 | [Ascend.MindStudio-Debug-VSCode-Plugin-1.0.2.vsix](https://marketplace.rnd.huawei.com/detail?identifier=MindStudio-Debug-VSCode-Plugin) | 4a4efdc34212330cbe147f45737156866d8f0ecdc1cc2560303163f8a2c7b694 |
 | 1.0.1 | 2024.10.17 | [Ascend.MindStudio-Debug-VSCode-Plugin-1.0.1.vsix](https://marketplace.rnd.huawei.com/detail?identifier=MindStudio-Debug-VSCode-Plugin) | 5550029e1c2e1af79ec295805efdb7633a472ea0d496ce1bc224f696e02af0f2 |
@@ -67,10 +69,10 @@ sha256sum Ascend.MindStudio-Debug-VSCode-Plugin-{version}.vsix # 验证vsix包�
 * 后台命令行离线本地安装
 ```
  - 插件.vsix文件上传linux环境
- - 后台输入命令安装插件文件: code --install-extension /xx_dir/MindStudio-Debug-VSCode-Plugin-1.0.5.vsix
+ - 后台输入命令安装插件文件: code --install-extension /xx_dir/MindStudio-Debug-VSCode-Plugin-1.0.6.vsix
 ```
 4.  点开debug侧边工具栏，若未生成.vscode/launch.json文件，则根据提示点击生成launch.json文件(弹窗中调试器选择MSDebug)
-- 需要注意vscode`当前打开目录`的选择，因为当前目录会影响launch.json文件中cwd参数的值。若msdebug的调试参数文件和打断点的源码文件不直接在同一个目录下（比如源码在src目录下，测试用例在test目录下），则建议切换当前目录为共同的父目录下，再创建.vscode/launch.json文件。
+- 需要注意vscode`当前打开目录`的选择，因为当前目录会影响launch.json文件中`cwd`参数的值。若msdebug的调试参数文件和打断点的源码文件不直接在同一个目录下（比如源码在src目录下，测试用例在test目录下），则建议切换当前目录为共同的父目录下，再创建.vscode/launch.json文件。如果算子可执行文件必须以 `./${excutable_opp}`在当前目录执行（如build_output目录），则`cwd`参数需要设成可执行文件所在父目录的绝对路径。
 5.  在`.vscode/launch.json`中添加调试配置(格式参考下面推荐配置)
 6. <div id="999">(可选)配置launch.json的environmentScripts参数时，若用户需要配置复杂逻辑的环境变量执行脚本（脚本包含除了export key=value以外的逻辑），需要执行以下步骤：</div>
  - 用户登录linux终端（如打开vscode IDE的终端栏），先执行设置环境变量的相关脚本，例如`source /xx/set_env1.sh; source /yy/set_env2.sh`等
@@ -117,7 +119,7 @@ sha256sum Ascend.MindStudio-Debug-VSCode-Plugin-{version}.vsix # 验证vsix包�
 * `type` 固定值`"msdebug-mi"`
 * `request` 固定值`"launch"`
 * `cwd` 调试器启动的工作目录。注意：当target和targetArgs参数不为绝对路径时，cwd参数在target和targetArgs参数上生效。`${workspaceFolder}`为vscode IDE的当前打开目录。
-* `target` (必要配置项)被调试的可执行文件的路径。target可设为算子二进制文件，或者python等二进制命令，建议配置绝对路径
+* `target` (必要配置项)被调试的可执行文件的路径。target可设为算子可执行文件或者python等可执行命令，后者需要配置绝对路径
 * `targetArgs` 可选配置，被调试的算子可执行文件的参数列表。举例`"targetArgs": ["arg1","arg2"]`，底层msdebug-mi调试命令调用效果等价于: `# msdebug ${target} ${arg1} ${arg2}`，若不配置target和targetArgs的绝对路径，则默认加上cwd的路径前缀。
 * `printMiInput` 可选配置，打印msdebug-mi的输入命令日志。默认为false建议不配置，避免生成大量冗余日志
 * `printMiOutput` 可选配置，打印msdebug-mi的命令输出信息日志。默认为false建议不配置，避免生成大量冗余日志
@@ -147,7 +149,7 @@ sha256sum Ascend.MindStudio-Debug-VSCode-Plugin-{version}.vsix # 验证vsix包�
 *  左下角展开KERNEL FOCUS工具栏，可查看核状态，高亮行是当前所在核；点击其他行数据进行切核
 
 #### NPU coredump文件可视化调试
-* [NPU coredump调试官网特性说明](https://www.hiascend.com/document/detail/zh/canncommercial/81RC1/devaids/opdev/optool/atlasopdev_16_0149.html)
+* [NPU coredump调试官网特性说明](https://www.hiascend.com/document/detail/zh/canncommercial/82RC1/devaids/optool/atlasopdev_16_0149.html)
 * launch.json增量配置（可以和原先msdebug-mi配置共存）
 ```
 {

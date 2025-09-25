@@ -143,9 +143,9 @@ export class MIBase extends EventEmitter {
 		});
 	}
 
-	async load(cwd: string, target: string, targetArgs: string[] = [], mode:string = ''): Promise<any> {
+	async load(cwd: string, target: string, mode:string = '', skipEnvCheck = false): Promise<any> {
 		let userHome = await getUserHomePath();
-		if (!validatePath(cwd, userHome)) {
+		if (!skipEnvCheck && !validatePath(cwd, userHome)) {
 			throw new Error(`Invalid path for cwd param.cwd=${cwd}`);
 		}
 
@@ -153,7 +153,7 @@ export class MIBase extends EventEmitter {
 			target = path.join(cwd, target);
 		}
 
-		if (!validatePath(target, userHome)) {
+		if (!skipEnvCheck && !validatePath(target, userHome)) {
 			throw new Error(`Invalid path for target with cwd.cwd=${cwd}, new target=${target}`);
 		}
 
@@ -346,7 +346,6 @@ export class MIBase extends EventEmitter {
 
 	onOutput(line: string) {
 		const lines = line.split('\n');
-		this.log("console", line);
 		lines.forEach(line => {
 			try {
 				let unknown = {"text": ""};
@@ -784,8 +783,8 @@ export function execCmd(cmd:string):Promise<any> {
 }
 
 
-export async function getMsdebugMiPath(sourceMsdebugMiPath: string, envs: string[]): Promise<any> {
-	if (sourceMsdebugMiPath != undefined && !validatePath(sourceMsdebugMiPath, await getUserHomePath(), '/usr')) {
+export async function getMsdebugMiPath(sourceMsdebugMiPath: string, envs: string[], skipEnvCheck = false): Promise<any> {
+	if (!skipEnvCheck && sourceMsdebugMiPath != undefined && !validatePath(sourceMsdebugMiPath, await getUserHomePath(), '/usr')) {
 		throw new Error(`Invalid path for msdebugMiPath. msdebugMiPath=${sourceMsdebugMiPath}`);
 	}
 

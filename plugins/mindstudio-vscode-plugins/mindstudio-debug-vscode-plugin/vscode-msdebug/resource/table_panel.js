@@ -3,7 +3,7 @@ const vscode = acquireVsCodeApi();
 
 const app = Vue.createApp({
     template: `
-        <table class="table-panel">
+        <table class="table-panel" style="width: 100%">
         <thead>
             <tr>
                 <td>read memory</td>

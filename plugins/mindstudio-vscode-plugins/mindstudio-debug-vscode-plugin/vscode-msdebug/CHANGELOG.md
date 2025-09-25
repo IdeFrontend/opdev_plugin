@@ -2,6 +2,19 @@
 
 All notable changes to the "MindStudio Debug VSCode Plugin" extension will be documented in this file.
 
+## [v1.0.6] - 2025-09-25
+
+### Added
+
+- 支持A5的coredump调试功能
+
+### Fixed
+
+- 移除调试命令行打印冗余日志
+- 优化对配置参数的路径校验
+- 优化了coredump调试功能信息布局
+- 优化了异常表达式导致的右下角弹窗
+
 ## [v1.0.5] - 2025-05-14
 
 ### Added

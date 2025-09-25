@@ -243,6 +243,9 @@ export class DebugSessionExt extends DebugSession {
 		}, err => {
 			return undefined;
 		})
+		if (variable == undefined) {
+			return undefined
+		}
 		let memoryReference:MemoryReference = await this.getVariableMemoryReference(variable);
 		return memoryReference;
 	}
@@ -676,8 +679,8 @@ export class DebugSessionExt extends DebugSession {
 				this.sendResponse(response);
 			}, msg => {
 				if (args.context != "hover") {
-					// hover到某个字符会触发错误
-					this.sendErrorResponse(response, 1, msg.toString());
+					// hover到某个字符会触发错误，不弹窗
+					this.sendErrorResponse(response, 1, msg.toString(), undefined, 2);
 				}
 			});
 		} else {

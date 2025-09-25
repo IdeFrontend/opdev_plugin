@@ -53,7 +53,7 @@ class MsDebugDebugSession extends DebugSessionExt {
 		if (args.type == 'msdebug-coredump') {
 			try {
 				let envs = processEnv(args.environment, args.environmentScripts);
-				let msdebugMiPath:string = await getMsdebugMiPath(args.msdebugMiPath, envs);
+				let msdebugMiPath:string = await getMsdebugMiPath(args.msdebugMiPath, envs, args.skipEnvCheck);
 				this.miDebugger = new MsdebugMI(msdebugMiPath, envs, args.type);
 				this.miDebugger.printMiInput = !!args.printMiInput;
 				this.miDebugger.printMiOutput = !!args.printMiOutput;
@@ -72,7 +72,7 @@ class MsDebugDebugSession extends DebugSessionExt {
 				this.sendErrorResponse(response, 1, `Failed to launch: ${String(err.message)}`);
 				return;
 			}
-			return this.miDebugger.load(args.cwd, args.dumpfilePath, [], args.type).then(() => {
+			return this.miDebugger.load(args.cwd, args.dumpfilePath, args.type, args.skipEnvCheck).then(() => {
 				this.sendResponse(response);
 
 				globalKernelEvents.emit('npuFocus', true);
@@ -83,7 +83,7 @@ class MsDebugDebugSession extends DebugSessionExt {
 		}
 		try {
 			let envs = processEnv(args.environment, args.environmentScripts);
-			let msdebugMiPath:string = await getMsdebugMiPath(args.msdebugMiPath, envs);
+			let msdebugMiPath:string = await getMsdebugMiPath(args.msdebugMiPath, envs, args.skipEnvCheck);
 			this.miDebugger = new MsdebugMI(msdebugMiPath, envs, args.type);
 			this.bindDebuggerEvents();
 			this.miDebugger.printMiInput = !!args.printMiInput;
@@ -103,7 +103,7 @@ class MsDebugDebugSession extends DebugSessionExt {
 			this.sendErrorResponse(response, 1, `Failed to launch: ${String(err.message)}`);
 			return;
 		}
-		this.miDebugger.load(args.cwd, args.target).then(() => {
+		this.miDebugger.load(args.cwd, args.target, '', args.skipEnvCheck).then(() => {
 			this.sendResponse(response);
 		}, err => {
 			this.sendErrorResponse(response, 1, `Failed to load MI Debugger: ${err.toString()}`);
