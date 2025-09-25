@@ -121,7 +121,7 @@ class TableView {
     }
 
     initBarView = () => {
-        this.memoryBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 0);
+        this.memoryBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 2);
         this.memoryBar.text = 'Read Coredump';
         this.memoryBar.command = 'msdebug.ReadTable';
         this.memoryBar.tooltip = 'Click to read coredump info summary';

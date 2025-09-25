@@ -130,7 +130,9 @@ class KernelViewProvider implements vscode.WebviewViewProvider {
                                 <td style="text-align: center">
                                     <el-radio :value="i[1].toLocaleLowerCase() + ' ' + i[0]" size="small"></el-radio>
                                 </td>
-                                <td @click="changeKernel(i[1].toLocaleLowerCase() + ' ' + i[0])" v-for="j in i ">{{ j }}</td>
+                                <td @click="changeKernel(i[1].toLocaleLowerCase() + ' ' + i[0])" v-for="j in i ">
+                                    {{ j?.replace('*', '') }}
+                                </td>
                             </tr>
                         </tobody>
                         </table>

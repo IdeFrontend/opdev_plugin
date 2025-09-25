@@ -20,8 +20,8 @@ class Panel {
         const context = this.context;
         const currentViewColumn = vscode.window?.activeTextEditor?.viewColumn || 1;
         const shouldSetColumn = currentViewColumn - 1 ? currentViewColumn - 1 : 2;
-        const panel = this.windowView = vscode.window.createWebviewPanel('momoryView',
-            'Read Memory',
+        const panel = this.windowView = vscode.window.createWebviewPanel('memoryView',
+            this.tableQuery?.[0] ? `Read Memory[${this.tableQuery[0]}]` : 'Read Memory',
             shouldSetColumn,
             {
                 enableScripts: true,
@@ -76,8 +76,12 @@ class MemoryView {
         this.context.subscriptions.push(vscode.commands.registerCommand('msdebug.ReadMemory', () => this.createView()));
         this.context.subscriptions.push(vscode.commands.registerCommand('msdebug.ReadMemoryCustom', () => this.createView(true)));
 
+        let isCoredump = false;
+
         vscode.debug.onDidReceiveDebugSessionCustomEvent((event) => {
             if (event.event === 'readTableMemory') {
+                isCoredump = true;
+
                 this.createView(true, event?.body?.data);
 
                 return;
@@ -92,7 +96,7 @@ class MemoryView {
             }
 
             // 点击查询后会重置掉变量名，因为自定义查询使用的标识是变量名，点击查询按钮会将变量名置为空字符，所以这里只初始化一次窗口标题
-            if (!currentPanel.windowView.__initTitle) {
+            if (!currentPanel.windowView.__initTitle && !isCoredump) {
                 currentPanel.windowView.__initTitle = true;
                 currentPanel.windowView.title = varName ? `Read Memory[${varName}]` : 'Read Memory';
             }
