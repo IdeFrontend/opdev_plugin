@@ -2,11 +2,12 @@
 name = "server"
 version = "0.1.0"
 description = "Add your description here"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 dependencies = [
     "flask>=3.1.2",
-    "pydantic>=2.12.3",
+    "pydantic>=2.11.7",
     "pyinstaller>=6.16.0",
+    "sqlalchemy>=2.0.44",
 ]
 
 [[tool.uv.index]]
