@@ -38,7 +38,7 @@ def after_request(response):
     return add_cors_headers(response)
 
 
-@app.route('/api/health', methods=['GET'])
+@app.route('/api/v1/health', methods=['GET'])
 @cors_enabled
 def health_check():
     """
