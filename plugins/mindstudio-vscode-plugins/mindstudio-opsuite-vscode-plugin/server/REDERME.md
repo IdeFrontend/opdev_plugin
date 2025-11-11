@@ -49,7 +49,7 @@ linux
 ### 3. 运行
 #### 源码运行
 ```shell
-  python3 ./scr/main.py
+  python3 ./src/main.py
 ```
 
 #### 打包可执行文件
@@ -70,12 +70,12 @@ linux
   ./dist/vscode_local_service
 ```
 
-### 4.贡献
+## 三、贡献
 #### 1. fork仓库
 #### 2. 基于vscode_plugin分支开发，修改代码后提交到fork的个人仓vscode_plugin分支
 #### 3. 在个人仓Pull Requests提交pr，fork/mstt/vscode_plugin -> Ascend/mstt/vscode_plugin
-#### 4. 签署cla，通过后评论/check-cla ，生成标签ascend-cla/yes（已签署的可跳过），
+#### 4. 签署cla，通过后评论/check-cla ，生成标签ascend-cla/yes（已签署的可跳过）
 #### 5.评论 compile 触发流水线，等待通过后，生成标签ci-pipeline-passed
 #### 6. 两个reviewer评论 /lgtm ，生成标签lgtm
-#### 7. 一个个committer评论 /approve ，生成标签approved
+#### 7. 一个committer评论 /approve ，生成标签approved
 

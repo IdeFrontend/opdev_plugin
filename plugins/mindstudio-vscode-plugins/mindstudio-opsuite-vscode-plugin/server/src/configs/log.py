@@ -154,7 +154,7 @@ class Logger:
 
 # 全局默认日志器
 app_logger = Logger(
-    name='plugin_app_logger',
+    name='app_logger',
     level='INFO',
     log_file=os.path.join(os.path.abspath(".."), "build", 'log', 'app.log'),
     console=True

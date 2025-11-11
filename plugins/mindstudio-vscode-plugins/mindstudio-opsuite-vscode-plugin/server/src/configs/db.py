@@ -6,7 +6,7 @@ import sys
 from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-from .config import DbConfig
+from .config import DbConfig, get_resource_path
 from .log import app_logger
 
 
@@ -24,18 +24,6 @@ def get_db():
         db.close()
 
 
-def get_resource_path(relative_path):
-    """获取资源文件的绝对路径，兼容开发环境和PyInstaller打包环境"""
-    try:
-        # PyInstaller创建临时文件夹存储资源文件
-        base_path = sys._MEIPASS
-    except Exception:
-        # 开发环境使用当前目录
-        base_path = os.path.abspath("..")
-
-    return os.path.join(base_path, relative_path)
-
-
 def init_database():
     """初始化数据库表结构"""
     os.makedirs(os.path.dirname(DbConfig.DATABASE_PATH), exist_ok=True)
@@ -45,7 +33,7 @@ def init_database():
     tables = inspector.get_table_names()
 
     required_tables = [
-        't_project', 't_task_record', 't_op',
+        't_project', 't_config', 't_task_record', 't_op',
         't_sanitizer', 't_sanitizer_detail', 't_opprof'
     ]
 

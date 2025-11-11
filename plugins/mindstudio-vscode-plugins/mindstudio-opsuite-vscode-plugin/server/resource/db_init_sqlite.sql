@@ -1,5 +1,23 @@
+/*
+ * # Copyright (c) 2025, Huawei Technologies.
+ * # All Rights Reserved.
+ * #
+ * # Licensed under the Apache License, Version 2.0 (the "License");
+ * # you may not use this file except in compliance with the License.
+ * # You may obtain a copy of the License at
+ * #
+ * #     http://www.apache.org/licenses/LICENSE-2.0
+ * #
+ * # Unless required by applicable law or agreed to in writing, software
+ * # distributed under the License is distributed on an "AS IS" BASIS,
+ * # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * # See the License for the specific language governing permissions and
+ * # limitations under the License.
+ * # ==============================================================================
+ */
+
 -- 项目表
-CREATE TABLE t_project
+CREATE TABLE IF NOT EXISTS t_project
 (
     id           INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,        -- 项目ID，主键自增
     project_name TEXT                              NOT NULL,        -- 项目名称
@@ -11,13 +29,29 @@ CREATE TABLE t_project
 );
 
 -- 项目存储路径索引
-CREATE INDEX idx_project_path ON t_project (project_path);
+CREATE INDEX IF NOT EXISTS idx_project_path ON t_project (project_path);
+
+-- 配置表
+CREATE TABLE IF NOT EXISTS t_config
+(
+    id             INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, -- 项目ID，主键自增
+    config_type    TEXT    NOT NULL,                           -- 项目名称
+    script         TEXT    NOT NULL,                           -- 脚本、可执行文件路径
+    custom_options TEXT    NOT NULL,                           -- 脚本参数
+    project_id     INTEGER NOT NULL,                           -- 所属项目ID
+    op_ids         TEXT,                                       -- 算子ID列表(JSON数组格式)[op_id1,op_id2]
+    create_by      TEXT,                                       -- 创建人
+    create_time    DATETIME DEFAULT CURRENT_TIMESTAMP,         -- 创建时间
+    update_by      TEXT,                                       -- 更新人
+    update_time    DATETIME DEFAULT CURRENT_TIMESTAMP,         -- 更新时间
+    FOREIGN KEY (project_id) REFERENCES t_project (id)         -- 外键关联项目表
+);
 
 -- 任务记录表
-CREATE TABLE t_task_record
+CREATE TABLE IF NOT EXISTS t_task_record
 (
     id             INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, -- 任务记录ID
-    type           TEXT,                                       -- 任务类型
+    task_type      TEXT,                                       -- 任务类型
     status         INTEGER                           NOT NULL, -- 执行状态:0成功/1失败
     task_time      INTEGER,                                    -- 耗时(毫秒)
     result_message TEXT,                                       -- 执行结果信息
@@ -28,7 +62,7 @@ CREATE TABLE t_task_record
 );
 
 -- 算子表
-CREATE TABLE t_op
+CREATE TABLE IF NOT EXISTS t_op
 (
     id          INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, -- 算子ID
     task_id     INTEGER,                                    -- 关联任务ID
@@ -45,16 +79,16 @@ CREATE TABLE t_op
 );
 
 -- 项目下算子唯一索引（保证同一项目内算子类型和名称唯一）
-CREATE UNIQUE INDEX uk_project_op ON t_op (project_id, op_class, op_name);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_project_op ON t_op (project_id, op_class, op_name);
 
 -- 检测主表
-CREATE TABLE t_sanitizer
+CREATE TABLE IF NOT EXISTS t_sanitizer
 (
     id             INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, -- 检测ID
     task_id        INTEGER                           NOT NULL, -- 关联任务ID
     project_id     INTEGER                           NOT NULL, -- 所属项目ID
     sanitizer_name TEXT                              NOT NULL, -- 检测名称
-    op_list        TEXT,                                       -- 算子ID列表(JSON数组格式)
+    op_ids        TEXT,                                        -- 算子ID列表(JSON数组格式)
     config         TEXT,                                       -- 检测配置(JSON格式)
     output_path    TEXT,                                       -- 结果输出路径
     statistic      TEXT,                                       -- 统计结果(JSON格式)
@@ -67,10 +101,10 @@ CREATE TABLE t_sanitizer
 );
 
 -- 项目任务联合索引
-CREATE INDEX idx_project_task ON t_sanitizer (project_id, task_id);
+CREATE INDEX IF NOT EXISTS idx_project_task ON t_sanitizer (project_id, task_id);
 
 -- 检测详情表
-CREATE TABLE t_sanitizer_detail
+CREATE TABLE IF NOT EXISTS t_sanitizer_detail
 (
     id               INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, -- 详情ID
     sanitizer_id     INTEGER                           NOT NULL, -- 关联检测ID
@@ -87,16 +121,16 @@ CREATE TABLE t_sanitizer_detail
 );
 
 -- 检测ID索引
-CREATE INDEX idx_sanitizer_id ON t_sanitizer_detail (sanitizer_id);
+CREATE INDEX IF NOT EXISTS idx_sanitizer_id ON t_sanitizer_detail (sanitizer_id);
 
 -- 性能分析表
-CREATE TABLE t_opprof
+CREATE TABLE IF NOT EXISTS t_opprof
 (
     id            INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, -- 分析ID
     task_id       INTEGER                           NOT NULL, -- 关联任务ID
     project_id    INTEGER                           NOT NULL, -- 所属项目ID
     opprof_name   TEXT                              NOT NULL, -- 分析名称
-    op_list       TEXT,                                       -- 算子ID列表(JSON数组格式)[op_id1,op_id2]
+    op_ids       TEXT,                                       -- 算子ID列表(JSON数组格式)[op_id1,op_id2]
     config        TEXT,                                       -- 分析配置(JSON格式)
     output_path   TEXT,                                       -- 结果输出路径
     analysis_type TEXT,                                       -- 分析类型:[roofline,source]
@@ -109,4 +143,4 @@ CREATE TABLE t_opprof
 );
 
 -- 性能分析表项目任务联合索引
-CREATE INDEX idx_project_task_opprof ON t_opprof (project_id, task_id);
+CREATE INDEX IF NOT EXISTS idx_project_task_opprof ON t_opprof (project_id, task_id);
