@@ -1,19 +1,8 @@
-/*
- * # Copyright (c) 2025, Huawei Technologies.
- * # All Rights Reserved.
- * #
- * # Licensed under the Apache License, Version 2.0 (the "License");
- * # you may not use this file except in compliance with the License.
- * # You may obtain a copy of the License at
- * #
- * #     http://www.apache.org/licenses/LICENSE-2.0
- * #
- * # Unless required by applicable law or agreed to in writing, software
- * # distributed under the License is distributed on an "AS IS" BASIS,
- * # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * # See the License for the specific language governing permissions and
- * # limitations under the License.
- * # ==============================================================================
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
  */
 
 -- 项目表
@@ -35,11 +24,14 @@ CREATE INDEX IF NOT EXISTS idx_project_path ON t_project (project_path);
 CREATE TABLE IF NOT EXISTS t_config
 (
     id             INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, -- 项目ID，主键自增
-    config_type    TEXT    NOT NULL,                           -- 项目名称
+    config_name    TEXT    NOT NULL,                           -- 配置名称
+    config_type    TEXT    NOT NULL,                           -- 配置类型
     script         TEXT    NOT NULL,                           -- 脚本、可执行文件路径
-    custom_options TEXT    NOT NULL,                           -- 脚本参数
+    custom_options TEXT,                                       -- 脚本参数
+    target_dir     TEXT    NOT NULL,                           -- 编译产物位置
+    target_file    TEXT    NOT NULL,                           -- 编译产物名
     project_id     INTEGER NOT NULL,                           -- 所属项目ID
-    op_ids         TEXT,                                       -- 算子ID列表(JSON数组格式)[op_id1,op_id2]
+    op         TEXT,                                           -- 算子
     create_by      TEXT,                                       -- 创建人
     create_time    DATETIME DEFAULT CURRENT_TIMESTAMP,         -- 创建时间
     update_by      TEXT,                                       -- 更新人
@@ -69,7 +61,7 @@ CREATE TABLE IF NOT EXISTS t_op
     project_id  INTEGER                           NOT NULL, -- 所属项目ID
     op_class    TEXT                              NOT NULL, -- 算子类型
     op_name     TEXT                              NOT NULL, -- 算子名称
-    examples    TEXT                              NOT NULL, -- examples算子调用所在路径
+    examples    TEXT,                                       -- examples算子调用所在路径
     create_by   TEXT,                                       -- 创建人
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP,         -- 创建时间
     update_by   TEXT,                                       -- 更新人
@@ -88,7 +80,7 @@ CREATE TABLE IF NOT EXISTS t_sanitizer
     task_id        INTEGER                           NOT NULL, -- 关联任务ID
     project_id     INTEGER                           NOT NULL, -- 所属项目ID
     sanitizer_name TEXT                              NOT NULL, -- 检测名称
-    op_ids        TEXT,                                        -- 算子ID列表(JSON数组格式)
+    op_ids        TEXT,                                        -- 算子ID
     config         TEXT,                                       -- 检测配置(JSON格式)
     output_path    TEXT,                                       -- 结果输出路径
     statistic      TEXT,                                       -- 统计结果(JSON格式)
@@ -130,7 +122,7 @@ CREATE TABLE IF NOT EXISTS t_opprof
     task_id       INTEGER                           NOT NULL, -- 关联任务ID
     project_id    INTEGER                           NOT NULL, -- 所属项目ID
     opprof_name   TEXT                              NOT NULL, -- 分析名称
-    op_ids       TEXT,                                       -- 算子ID列表(JSON数组格式)[op_id1,op_id2]
+    op_ids       TEXT,                                        -- 算子ID
     config        TEXT,                                       -- 分析配置(JSON格式)
     output_path   TEXT,                                       -- 结果输出路径
     analysis_type TEXT,                                       -- 分析类型:[roofline,source]

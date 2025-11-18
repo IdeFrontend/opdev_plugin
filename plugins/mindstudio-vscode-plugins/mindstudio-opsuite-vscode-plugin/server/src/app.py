@@ -1,30 +1,24 @@
-#  Copyright (c) 2025, Huawei Technologies.
-#  All Rights Reserved.
-#  #
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#  #
-#      http://www.apache.org/licenses/LICENSE-2.0
-#  #
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
+#  Copyright (c) 2025 Huawei Technologies Co., Ltd.
+#
+#  This source code is licensed under the MIT license found in the
+#  LICENSE file in the root directory of this source tree.
 #  ==============================================================================
 
 from functools import wraps
 
 from flask import Flask, request, jsonify, make_response
 
-from routers import configuration, extension, project
+from common.exception import ServerException
+from routers import configuration, extension, project, ops_prototype, ops, system_api
 
 app = Flask(__name__)
 
 app.register_blueprint(configuration.configuration_bp, url_prefix='/api/v1/config')
 app.register_blueprint(extension.extension_bp, url_prefix='/api/v1/extension')
 app.register_blueprint(project.project_bp, url_prefix='/api/v1/projects')
+app.register_blueprint(ops_prototype.ops_prototype_bp, url_prefix='/api/v1/ops_prototype')
+app.register_blueprint(ops.ops_bp, url_prefix='/api/v1/ops')
+app.register_blueprint(system_api.system_bp, url_prefix='/api/v1/sys')
 
 
 def add_cors_headers(response):
@@ -58,6 +52,15 @@ def cors_enabled(decorated_function):
 @app.after_request
 def after_request(response):
     return add_cors_headers(response)
+
+
+@app.errorhandler(ServerException)
+def handle_general_error(error):
+    return jsonify({'code': 1, 'data': error.message, 'message': '请求失败'})
+
+@app.errorhandler(Exception)
+def handle_general_error(error):
+    return jsonify({'code': -1, 'data': str(error), 'message': '服务内部错误'})
 
 
 @app.route('/api/v1/health', methods=['GET'])
