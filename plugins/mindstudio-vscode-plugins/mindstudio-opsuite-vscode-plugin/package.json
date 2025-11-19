@@ -14,10 +14,17 @@
     "commands": [
       {
         "command": "mindstudio-opsuite.open",
-        "title": "Open MindStudio Opsuite",
-        "category": "MindStudio"
+        "title": "新建算子工程"
       }
-    ]
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "mindstudio-opsuite.open",
+          "group": "navigation"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
@@ -35,7 +42,9 @@
     "eslint": "^8.20.0",
     "typescript": "^4.7.4",
     "vite": "^4.0.0",
-    "ssh2":"^1.17.0",
-    "node-ssh":"^13.2.1"
+    "ssh2": "^1.17.0",
+    "node-ssh": "^13.2.1",
+    "@types/ssh2": "^1.15.5",
+    "ssh2": "^1.17.0"
   }
 }

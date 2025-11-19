@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -7,11 +14,9 @@ import { ConnectionStatus, RemoteServerConfig } from './types';
 
 export class RemoteServerOpener {
     private sshHelper: SSHHelper;
-    private context: vscode.ExtensionContext | undefined;
 
-    constructor(context?: vscode.ExtensionContext) {
+    constructor() {
         this.sshHelper = new SSHHelper();
-        this.context = context;
     }
 
     /**
@@ -36,7 +41,7 @@ export class RemoteServerOpener {
 
                 // 建立SSH连接并验证目录
                 const connection = await this.sshHelper.connect(config);
-                
+
                 progress.report({ increment: 60, message: '连接成功，正在打开远程工作区...' });
 
                 // 打开远程工作区
@@ -60,13 +65,12 @@ export class RemoteServerOpener {
      */
     private async openRemoteWorkspace(config: RemoteServerConfig): Promise<void> {
         const { host, port, username, remotePath } = config;
-        
+
         try {
             // 方法1: 使用VSCode的Remote SSH扩展
             await this.openWithRemoteSSH(host, port, username, remotePath);
         } catch (error) {
-            // 方法2: 备用方案 - 使用终端连接
-            await this.openWithTerminalFallback(host, port, username, remotePath);
+            console.log(error)
         }
     }
 
@@ -77,16 +81,16 @@ export class RemoteServerOpener {
         try {
             // 更新SSH配置
             await this.updateSSHConfig(host, port, username);
-            
+
             // 构造Remote SSH URI
             const sshConfigName = `${username}@${host}`;
             const remoteUri = vscode.Uri.parse(`vscode-remote://ssh-remote+${sshConfigName}${remotePath}`);
-            
+
             // 打开远程工作区
             await vscode.commands.executeCommand('vscode.openFolder', remoteUri, {
                 forceNewWindow: false
             });
-            
+
         } catch (error) {
             throw new Error(`Remote SSH打开失败: ${error instanceof Error ? error.message : String(error)}`);
         }
@@ -99,23 +103,23 @@ export class RemoteServerOpener {
         try {
             const sshDir = path.join(os.homedir(), '.ssh');
             const sshConfigPath = path.join(sshDir, 'config');
-            
+
             // 确保.ssh目录存在
             if (!fs.existsSync(sshDir)) {
                 fs.mkdirSync(sshDir, { mode: 0o700 });
             }
 
             let sshConfig = '';
-            
+
             // 读取现有配置
             if (fs.existsSync(sshConfigPath)) {
                 sshConfig = fs.readFileSync(sshConfigPath, 'utf8');
             }
-            
+
             // 检查是否已存在该主机的配置
             const hostIdentifier = `${username}@${host}`;
             const hostConfig = `\nHost ${hostIdentifier}\n    HostName ${host}\n    User ${username}\n    Port ${port}\n`;
-            
+
             if (!sshConfig.includes(`HostName ${host}`) || !sshConfig.includes(`User ${username}`)) {
                 // 添加新配置
                 fs.appendFileSync(sshConfigPath, hostConfig);
@@ -128,29 +132,13 @@ export class RemoteServerOpener {
     }
 
     /**
-     * 备用方案：使用终端连接
-     */
-    private async openWithTerminalFallback(host: string, port: number, username: string, remotePath: string): Promise<void> {
-        vscode.window.showWarningMessage('使用终端方式连接远程服务器');
-        
-        const terminal = vscode.window.createTerminal('Remote Server');
-        terminal.show();
-        
-        const sshCommand = port === 22 ? 
-            `ssh ${username}@${host} -t "cd ${remotePath} && bash --login"` :
-            `ssh ${username}@${host} -p ${port} -t "cd ${remotePath} && bash --login"`;
-        
-        terminal.sendText(sshCommand);
-    }
-
-    /**
      * 执行远程命令
      */
     async executeCommand(config: RemoteServerConfig, command: string): Promise<string> {
         try {
             const connection = await this.sshHelper.connect(config);
             const result = await this.sshHelper.executeCommand(connection, command);
-            
+
             if (result.code === 0) {
                 return result.stdout;
             } else {

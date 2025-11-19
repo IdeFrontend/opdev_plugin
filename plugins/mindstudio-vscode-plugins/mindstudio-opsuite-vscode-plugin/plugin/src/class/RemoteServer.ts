@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 import * as path from 'path';
 import { Client, ConnectConfig, ExecOptions, SFTPWrapper } from 'ssh2';
 
@@ -93,7 +100,6 @@ export default class RemoteServer {
      * @param remotePath 远程文件路径
      */
     async uploadFile(localPath: string, fileName: string, remotePath: string): Promise<void> {
-        console.log(`localPath=${localPath}${fileName}`);
         if (!this.isConnected) {
             throw new Error('请先连接到服务器');
         }
@@ -111,12 +117,10 @@ export default class RemoteServer {
 
                 const remoteFilePath = path.posix.join(remotePath, fileName)
                 const localFilePath = `${localPath}${fileName}`
-                console.log(`localFilePath=${localFilePath}\n,remoteFilePath=${remoteFilePath}`)
                 sftp.fastPut(localFilePath, remoteFilePath, (err: any) => {
                     if (err) {
                         throw new Error(`上传远程文件失败：${err}`);
                     }
-                    console.log('上传文件成功');
                     resolve();
                 })
 

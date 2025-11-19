@@ -5,8 +5,8 @@
     "strict": true,
     "jsx": "preserve",
     "moduleResolution": "bundler",
-    "declaration": true,
-    "emitDeclarationOnly": true,
+    "declaration": false, 
+    "emitDeclarationOnly": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
@@ -16,7 +16,7 @@
     "src/**/*.d.ts",
     "src/**/*.tsx",
     "src/**/*.vue"
-, "../common/class/HttpClient.ts"  ],
+, "../common/class/HttpClient.ts", "vue.config.ts"  ],
   "exclude": [
     "node_modules"
   ]

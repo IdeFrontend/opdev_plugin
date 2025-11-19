@@ -1,50 +1,33 @@
-<script setup lang="ts">
-import { health } from './server/index';
-async function init(){
-  console.log(await health())
-}
-init()
-</script>
+<!-- 
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree. -->
+ 
 
 <template>
-  <div class="accend-c-link">
-    <div class="title">新建 Accend C 工程</div>
-    <div class="link-row">
-      <span class="label">远程开发环境</span>
-      <span class="button-add-link">新建链接</span>
-    </div>
-  </div>
+  <a-config-provider :theme="theme">
+    <router-view></router-view>
+  </a-config-provider>
 </template>
 
-<style>
-body{
-  background: #1E1E1E;
-}
-.accend-c-link {
-  color: #fff;
-  width: 560px;
-}
-.accend-c-link .link-row{
-  display: flex;
-  justify-content: space-between;
-  color: rgba(255,255,255,0.88);
-}
+<script>
+import { theme } from "ant-design-vue";
+import { defineComponent } from "vue";
 
-.accend-c-link .title {
-  font-weight: 700;
-  font-size: 24px;
-  line-height: 28px;
-}
+export default defineComponent({
+  setup() {
+    // 配置主题为暗黑模式
+    const themeConfig = {
+      algorithm: theme.darkAlgorithm, // 使用暗色算法[citation:1]
+    };
 
-.accend-c-link .label {
-  font-weight: 400;
-  font-size: 14px; 
-  line-height: 20px;
-}
-
-.accend-c-link .button-add-link {
-  font-weight: 400;
-  font-size: 14px;
-  line-height: 22px;
-}
+    return {
+      theme: themeConfig,
+    };
+  },
+});
+</script>
+<style lang="less">
+@import url("./assets/less/common.less");
 </style>
