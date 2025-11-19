@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 import * as cp from 'child_process';
 import * as fs from 'fs';
 import * as net from 'net';
@@ -5,20 +12,29 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { PortFinder } from './portFinder';
 
+let serviceManager: ServiceManager | null = null;
+
 /**
  * 服务管理器 - 负责启动和管理前后端服务
- * 后端服务现在使用可执行文件
+ * 后端服务现在为可执行文件
  */
 export class ServiceManager implements vscode.Disposable {
     private frontendProcess: cp.ChildProcess | undefined;
     private backendProcess: cp.ChildProcess | undefined;
     private frontendPort: number | undefined;
     private backendPort: number | undefined;
-    private portFinder: PortFinder;
+    private portFinder: PortFinder | undefined;
+    public static: string | undefined;
 
     constructor(private context: vscode.ExtensionContext) {
         console.log('ServiceManager 初始化');
+        if (serviceManager) {
+            return serviceManager
+        }
         this.portFinder = new PortFinder();
+        this.static = 'end'
+        serviceManager = this;
+
     }
 
     /**
@@ -28,8 +44,8 @@ export class ServiceManager implements vscode.Disposable {
         console.log('开始启动服务...');
         try {
             // 查找可用端口
-            this.backendPort = await this.portFinder.findAvailablePort(3000);
-            this.frontendPort = await this.portFinder.findAvailablePort(8000);
+            this.backendPort = await this.portFinder?.findAvailablePort(3000);
+            this.frontendPort = await this.portFinder?.findAvailablePort(8000);
 
             console.log(`找到可用端口 - 前端: ${this.frontendPort}, 后端: ${this.backendPort}`);
 
@@ -41,9 +57,11 @@ export class ServiceManager implements vscode.Disposable {
 
             console.log('所有服务启动完成');
 
+            this.static = 'start'
+
             return {
-                frontendPort: this.frontendPort,
-                backendPort: this.backendPort
+                frontendPort: this.frontendPort || 3000,
+                backendPort: this.backendPort || 8000
             };
         } catch (error) {
             console.error('启动服务失败:', error);
@@ -347,9 +365,9 @@ export class ServiceManager implements vscode.Disposable {
     /**
      * 获取前端服务URL
      */
-    public getFrontendUrl(): string {
-        const url = `http://localhost:${this.frontendPort}?backendPort=${this.backendPort}`;
-        console.log('前端服务URL:', url);
+    public getFrontendUrl(router: string = ''): string {
+        const url = `http://localhost:${this.frontendPort}/#/${router}?backendPort=${this.backendPort}`;
+        console.log('前端服务URL2:', url);
         return url;
     }
 

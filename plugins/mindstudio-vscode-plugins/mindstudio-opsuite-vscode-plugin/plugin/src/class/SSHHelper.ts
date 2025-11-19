@@ -1,3 +1,10 @@
+/**
+ * Copyright (c) 2025 Huawei Technologies Co., Ltd.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
 import * as fs from 'fs';
 import { NodeSSH } from 'node-ssh';
 import * as os from 'os';
@@ -191,7 +198,7 @@ L8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8r
      * 执行远程命令
      */
     async executeCommand(connection: NodeSSH, command: string): Promise<SSHExecCommandResponse> {
-        try { 
+        try {
             return await connection.execCommand(command);
         } catch (error) {
             throw new Error(`命令执行失败: ${error instanceof Error ? error.message : String(error)}`);
