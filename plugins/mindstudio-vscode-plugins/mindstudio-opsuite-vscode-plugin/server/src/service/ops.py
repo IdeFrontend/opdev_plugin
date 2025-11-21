@@ -4,7 +4,6 @@
 #  LICENSE file in the root directory of this source tree.
 #  ==============================================================================
 import json
-import os
 import subprocess
 from pathlib import Path
 
@@ -13,11 +12,14 @@ from sqlalchemy import select, and_
 from sqlalchemy.orm import Session
 
 from common.exception import InValidRequestException
+from configs.config import settings
 from configs.db import get_db
 from configs.log import app_logger
+from service.configuration import config_process_registry
 from service.project import query_project_by_id
 from utils.ascend_util import ascend_util, chmod_recursive_standard
 from models.models import Operator
+from utils.op_util import assistant_script_exists
 
 
 class OpsCreateBase(BaseModel):
@@ -77,6 +79,8 @@ def _execute_msopgen(ops_create, project_path, op_class, op_name):
     try:
         op_class_dir = project_path / op_class
         op_class_dir.mkdir(exist_ok=True)
+        if settings.environment == 'development':
+            return True
         soc_version = ops_create.soc_version if ops_create.soc_version is not None else ascend_util.soc_version
         cann_env = ascend_util.cann_env
 
@@ -124,21 +128,39 @@ def generate_operator_structure(data):
     db: Session = next(get_db())
     try:
         db.add(op)
-        assistant_script = project_path / "scripts" / "assistant.py"
-        if assistant_script.exists():
-            op_id = _execute_assistant_script(project_path, op_class, op_name)
+        if assistant_script_exists(project_path):
+            _execute_assistant_script(project_path, op_class, op_name)
         else:
-            op_id =  _execute_msopgen(ops_create, project_path, op_class, op_name)
+            _execute_msopgen(ops_create, project_path, op_class, op_name)
         db.commit()
-        return op_id
+        db.refresh(op)
+        return op, project
     except Exception as e:
         db.rollback()
         app_logger.error(f"Error executing assistant script: {e}")
-        raise Exception("Error executing assistant script: {e}")
+        raise Exception(f"Error executing assistant script: {e}")
+
+
+def operator_config(project, op, process_name):
+    config = config_process_registry.get(process_name).default_config(project, op)
+    config_process_registry.get(process_name).post_config(config)
+
+
+def generate_operator_config(project, op, process_name):
+    config = config_process_registry.get(process_name).default_config(project, op)
+    config_process_registry.get(process_name).post_config(config)
+
+
+def generate_structure(data):
+    op, project = generate_operator_structure(data)
+    generate_operator_config(project, op, 'build')
+    generate_operator_config(project, op, 'sanitizer')
+    generate_operator_config(project, op, 'opprof')
+    return op.id
 
 
 def is_op_name_exist(project_id, op_name):
     db: Session = next(get_db())
-    project = db.scalars(
+    op = db.scalars(
         select(Operator).where(and_(Operator.op_name == op_name, Operator.project_id == project_id))).first()
-    return project is not None
+    return op is not None

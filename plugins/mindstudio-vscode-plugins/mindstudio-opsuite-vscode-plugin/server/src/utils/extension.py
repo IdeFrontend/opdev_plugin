@@ -55,7 +55,7 @@ def register_extension(extension_publisher, extension_name, extension_version):
             "identifier": {
                 "id": extension_id
             },
-            "extension_version": extension_version,
+            "version": extension_version,
             "location": {
                 "$mid": 1,
                 "fsPath": fs_path,
@@ -79,7 +79,7 @@ def register_extension(extension_publisher, extension_name, extension_version):
 
         # 更新或添加插件定义
         if existing_index >= 0:
-            if extensions_list[existing_index].get('extension_version', '') == extension_version:
+            if extensions_list[existing_index].get('version', '') == extension_version:
                 app_logger.info('Extension already registered')
                 return True
             extensions_list[existing_index] = extension_definition

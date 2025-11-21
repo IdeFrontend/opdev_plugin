@@ -73,6 +73,7 @@ def create_project(data):
         # 检查project_config.project_path的.vscode文件夹下是否有launch.json，如果没有新建
         ensure_launch_json_exists(project_config.project_path)
         db.commit()
+        db.refresh(project_config)
     except InValidRequestException as e:
         db.rollback()
         raise e
