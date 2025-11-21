@@ -9,6 +9,7 @@ from functools import wraps
 from flask import Flask, request, jsonify, make_response
 
 from common.exception import ServerException
+from configs.log import app_logger
 from routers import configuration, extension, project, ops_prototype, ops, system_api
 
 app = Flask(__name__)
@@ -60,7 +61,8 @@ def handle_general_error(error):
 
 @app.errorhandler(Exception)
 def handle_general_error(error):
-    return jsonify({'code': -1, 'data': str(error), 'message': '服务内部错误'})
+    app_logger.error(f"服务异常：{error}")
+    return jsonify({'code': -1, 'data': '服务内部错误', 'message': '服务内部错误'})
 
 
 @app.route('/api/v1/health', methods=['GET'])

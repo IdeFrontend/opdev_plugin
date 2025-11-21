@@ -28,10 +28,11 @@ CREATE TABLE IF NOT EXISTS t_config
     config_type    TEXT    NOT NULL,                           -- 配置类型
     script         TEXT    NOT NULL,                           -- 脚本、可执行文件路径
     custom_options TEXT,                                       -- 脚本参数
-    target_dir     TEXT    NOT NULL,                           -- 编译产物位置
-    target_file    TEXT    NOT NULL,                           -- 编译产物名
+    user_options   TEXT,                                       -- 用户选项
+    target_dir     TEXT,                                       -- 编译产物位置
+    target_file    TEXT,                                       -- 编译产物名
     project_id     INTEGER NOT NULL,                           -- 所属项目ID
-    op         TEXT,                                           -- 算子
+    op             TEXT    NOT NULL,                           -- 算子名称
     create_by      TEXT,                                       -- 创建人
     create_time    DATETIME DEFAULT CURRENT_TIMESTAMP,         -- 创建时间
     update_by      TEXT,                                       -- 更新人
@@ -80,7 +81,7 @@ CREATE TABLE IF NOT EXISTS t_sanitizer
     task_id        INTEGER                           NOT NULL, -- 关联任务ID
     project_id     INTEGER                           NOT NULL, -- 所属项目ID
     sanitizer_name TEXT                              NOT NULL, -- 检测名称
-    op_ids        TEXT,                                        -- 算子ID
+    op             TEXT                              NOT NULL, -- 算子名称
     config         TEXT,                                       -- 检测配置(JSON格式)
     output_path    TEXT,                                       -- 结果输出路径
     statistic      TEXT,                                       -- 统计结果(JSON格式)
@@ -122,7 +123,7 @@ CREATE TABLE IF NOT EXISTS t_opprof
     task_id       INTEGER                           NOT NULL, -- 关联任务ID
     project_id    INTEGER                           NOT NULL, -- 所属项目ID
     opprof_name   TEXT                              NOT NULL, -- 分析名称
-    op_ids       TEXT,                                        -- 算子ID
+    op            TEXT                              NOT NULL, -- 算子名称
     config        TEXT,                                       -- 分析配置(JSON格式)
     output_path   TEXT,                                       -- 结果输出路径
     analysis_type TEXT,                                       -- 分析类型:[roofline,source]

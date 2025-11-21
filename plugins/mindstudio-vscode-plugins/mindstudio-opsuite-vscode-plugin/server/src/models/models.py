@@ -4,7 +4,7 @@
 #  LICENSE file in the root directory of this source tree.
 #  ==============================================================================
 
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, JSON
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
@@ -35,11 +35,12 @@ class TConfig(Base):
     config_name = Column(String, nullable=False)
     config_type = Column(String, nullable=False)
     script = Column(String, nullable=False)
-    target_dir = Column(String, nullable=False)
-    target_file = Column(String, nullable=False)
+    target_dir = Column(String, nullable=True)
+    target_file = Column(String, nullable=True)
     custom_options = Column(String, nullable=True)
+    user_options = Column(JSON, nullable=True)
     project_id = Column(Integer, ForeignKey("t_project.id"), nullable=False)
-    op_ids = Column(Text)
+    op = Column(Text)
     create_by = Column(String)
     create_time = Column(DateTime, default=func.now())
     update_by = Column(String)
@@ -94,7 +95,7 @@ class Sanitizer(Base):
     task_id = Column(Integer, ForeignKey("t_task_record.id"), nullable=False)
     project_id = Column(Integer, ForeignKey("t_project.id"), nullable=False)
     sanitizer_name = Column(String, nullable=False)
-    op_ids = Column(Text)
+    op = Column(Text)
     config = Column(Text)
     output_path = Column(String)
     statistic = Column(Text)
@@ -135,7 +136,7 @@ class OpProf(Base):
     task_id = Column(Integer, ForeignKey("t_task_record.id"), nullable=False)
     project_id = Column(Integer, ForeignKey("t_project.id"), nullable=False)
     opprof_name = Column(String, nullable=False)
-    op_ids = Column(Text)
+    op = Column(Text)
     config = Column(Text)
     output_path = Column(String)
     analysis_type = Column(String)

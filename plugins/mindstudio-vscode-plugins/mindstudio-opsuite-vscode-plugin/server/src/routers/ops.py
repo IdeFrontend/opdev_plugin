@@ -16,9 +16,9 @@ def generate_structure():
     data = request.get_json()
     if not data or 'project_id' not in data or 'ops_prototype_file' not in data:
         raise InValidRequestException('request body must contain project_id, ops_prototype_file')
-    ops.generate_operator_structure(data)
+    op_id = ops.generate_structure(data)
     return {
         'code': 0,
-        'data': 0,
+        'data': op_id,
         'message': 'success'
     }
