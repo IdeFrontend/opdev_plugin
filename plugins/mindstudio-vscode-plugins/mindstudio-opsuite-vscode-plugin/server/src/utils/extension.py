@@ -15,7 +15,6 @@ def get_current_user():
     """获取当前进程的用户"""
     return os.getenv('USER') or os.getenv('USERNAME')
 
-
 def register_extension(extension_publisher, extension_name, extension_version):
     try:
         if not all([extension_publisher, extension_name, extension_version]):

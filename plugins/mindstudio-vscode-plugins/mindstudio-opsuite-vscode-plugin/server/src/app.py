@@ -5,12 +5,13 @@
 #  ==============================================================================
 
 from functools import wraps
-
+from configs.log import app_logger
 from flask import Flask, request, jsonify, make_response
 
 from common.exception import ServerException
 from configs.log import app_logger
 from routers import configuration, extension, project, ops_prototype, ops, system_api
+from routers import configuration, extension, project, command
 
 app = Flask(__name__)
 
@@ -20,6 +21,9 @@ app.register_blueprint(project.project_bp, url_prefix='/api/v1/projects')
 app.register_blueprint(ops_prototype.ops_prototype_bp, url_prefix='/api/v1/ops_prototype')
 app.register_blueprint(ops.ops_bp, url_prefix='/api/v1/ops')
 app.register_blueprint(system_api.system_bp, url_prefix='/api/v1/sys')
+
+app.register_blueprint(command.command_bp, url_prefix='/api/v1/command')
+
 
 
 def add_cors_headers(response):
