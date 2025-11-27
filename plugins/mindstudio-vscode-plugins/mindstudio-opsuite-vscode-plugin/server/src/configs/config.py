@@ -20,13 +20,13 @@ def get_resource_path(relative_path):
 
     return os.path.join(base_path, relative_path)
 
-env_file = get_resource_path(f"envs/{os.getenv('RUNNING_ENV', 'pro')}.env")
+def get_user_data_dir():
+    home_dir = os.path.expanduser("~")
+    data_dir = os.path.join(home_dir, ".vscode-server", "data", "ms-op-suite")
+    os.makedirs(data_dir, exist_ok=True)
+    return data_dir
 
-class DbConfig:
-    # 数据库配置
-    BASE_DIR = os.path.abspath("..")
-    DATABASE_PATH = os.path.join(BASE_DIR, "build", 'data', 'plugin.db')
-    DATABASE_URI = f'sqlite:///{DATABASE_PATH}'
+env_file = get_resource_path(f"envs/{os.getenv('RUNNING_ENV', 'pro')}.env")
 
 class EnvironmentSettings(BaseSettings):
     # 环境类型
@@ -44,3 +44,9 @@ def get_settings():
     return EnvironmentSettings()
 
 settings = get_settings()
+
+user_data_dir = os.path.abspath("../build") if settings.environment == "development" else get_user_data_dir()
+
+class DbConfig:
+    DATABASE_PATH = os.path.join(user_data_dir, 'data', 'plugin.db')
+    DATABASE_URI = f'sqlite:///{DATABASE_PATH}'

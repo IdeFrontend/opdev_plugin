@@ -9,6 +9,7 @@ a = Analysis(
     datas=[
         ('resource/*', 'resource'),
         ('envs/*', 'envs'),
+        ('src/tasks/impl/*.py', 'tasks/impl'),
     ],
     hiddenimports=[],
     hookspath=[],

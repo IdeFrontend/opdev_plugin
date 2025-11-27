@@ -22,3 +22,28 @@ def generate_structure():
         'data': op_id,
         'message': 'success'
     }
+
+@ops_bp.route('', methods=['GET'])
+def get_ops():
+    data = request.get_json()
+    if not data or 'project_id' not in data:
+        raise InValidRequestException('request body must contain project_id')
+    op_list = ops.get_ops(project_id=data['project_id'])
+    return {
+        'code': 0,
+        'data': op_list,
+        'message': 'success'
+    }
+
+
+@ops_bp.route('/add', methods=['POST'])
+def add_exist_op():
+    data = request.get_json()
+    if not data or 'project_id' not in data or 'op_class' not in data or 'op_name' not in data:
+        raise InValidRequestException('request body must contain project_id, ops_prototype_file')
+    op_id = ops.add_exist_op(data)
+    return {
+        'code': 0,
+        'data': op_id,
+        'message': 'success'
+    }

@@ -3,12 +3,12 @@
 #  This source code is licensed under the MIT license found in the
 #  LICENSE file in the root directory of this source tree.
 #  ==============================================================================
-
+import os
 from functools import wraps
 from configs.log import app_logger
 from flask import Flask, request, jsonify, make_response
 
-from common.exception import ServerException
+from common.exception import PluginBaseException
 from configs.log import app_logger
 from routers import configuration, extension, project, ops_prototype, ops, system_api
 from routers import configuration, extension, project, command
@@ -59,7 +59,7 @@ def after_request(response):
     return add_cors_headers(response)
 
 
-@app.errorhandler(ServerException)
+@app.errorhandler(PluginBaseException)
 def handle_general_error(error):
     return jsonify({'code': 1, 'data': error.message, 'message': '请求失败'})
 
@@ -75,4 +75,4 @@ def health_check():
     """
     健康检查接口
     """
-    return jsonify({'code': 0, 'data': {'status': 'healthy', 'service': 'vscode-local-service'}})
+    return jsonify({'code': 0, 'data': {'status': 'healthy', 'service': 'vscode-local-service', 'user': os.getenv('USER') or os.getenv('USERNAME')}})

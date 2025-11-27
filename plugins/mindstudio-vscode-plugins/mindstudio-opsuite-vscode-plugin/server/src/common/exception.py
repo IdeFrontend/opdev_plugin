@@ -3,7 +3,7 @@
 #  This source code is licensed under the MIT license found in the
 #  LICENSE file in the root directory of this source tree.
 #  ==============================================================================
-class ServerException(Exception):
+class PluginBaseException(Exception):
     status_code = None
     def __init__(self, message, status_code=None, payload=None):
         super().__init__()
@@ -13,5 +13,8 @@ class ServerException(Exception):
         self.payload = payload
 
 
-class InValidRequestException(ServerException):
+class InValidRequestException(PluginBaseException):
     status_code = 400
+
+class ServerException(PluginBaseException):
+    status_code = 500

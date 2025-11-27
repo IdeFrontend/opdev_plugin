@@ -8,7 +8,7 @@ import sys
 import os
 from logging.handlers import TimedRotatingFileHandler, RotatingFileHandler
 
-from configs.config import settings
+from configs.config import settings, user_data_dir
 
 
 class Logger:
@@ -163,7 +163,7 @@ class Logger:
 app_logger = Logger(
     name='app_logger',
     level=settings.log_level,
-    log_file=os.path.join(os.path.abspath(".."), "build", 'log', 'app.log'),
+    log_file=os.path.join(user_data_dir, 'logs', 'app.log'),
     console=True
 ).get_logger()
 

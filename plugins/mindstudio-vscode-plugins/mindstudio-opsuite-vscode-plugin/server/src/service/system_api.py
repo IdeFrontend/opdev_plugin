@@ -23,11 +23,11 @@ def get_files(path, file_type):
                     'path': str(item.absolute()),
                     'type': 'directory'
                 })
-            elif file_type != 'dir' and item.is_file() and item.suffix == f'.{file_type}':
+            elif file_type != 'dir' and (file_type == 'all' or (item.is_file() and item.suffix == f'.{file_type}')):
                 items.append({
                     'name': item.name,
                     'path': str(item.absolute()),
-                    'type': 'sh'
+                    'type': item.suffix[1:]
                 })
         items.sort(key=lambda d: d['name'])
         return items

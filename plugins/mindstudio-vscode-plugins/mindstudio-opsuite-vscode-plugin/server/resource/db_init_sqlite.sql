@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS t_op
     id          INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, -- 算子ID
     task_id     INTEGER,                                    -- 关联任务ID
     project_id  INTEGER                           NOT NULL, -- 所属项目ID
-    op_class    TEXT                              NOT NULL, -- 算子类型
+    op_class    TEXT,                                       -- 算子类型
     op_name     TEXT                              NOT NULL, -- 算子名称
     examples    TEXT,                                       -- examples算子调用所在路径
     create_by   TEXT,                                       -- 创建人
