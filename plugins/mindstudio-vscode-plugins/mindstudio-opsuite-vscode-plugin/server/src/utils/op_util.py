@@ -8,6 +8,15 @@ from pathlib import Path
 
 import distro
 
+from configs.config import settings
+
+
+def get_python_cmd():
+    if settings.environment == "development":
+        return "python"
+    else:
+        return "python3"
+
 
 def get_detailed_system_info():
     system = platform.system().lower()
@@ -33,7 +42,7 @@ def get_detailed_system_info():
 
 
 def assistant_script_exists(project_path):
-    assistant_script = project_path / "scripts" / "assistant.py"
+    assistant_script = project_path / "scripts" / "opgen" / "opgen_standalone.py"
     return assistant_script.exists()
 
 def get_default_target_dir(project_path, op, is_assistant_script=True):

@@ -13,6 +13,7 @@ from common.exception import InValidRequestException
 from configs.db import get_db
 from models.models import TConfig
 from utils import op_util
+from utils.ascend_util import ascend_util
 
 
 class BaseConfiguration(ABC):
@@ -122,6 +123,18 @@ class BaseConfiguration(ABC):
     def _process_custom_options(self, process_data) -> list:
         pass
 
+    def _merge_config(self, *configs_list):
+        # 创建一个字典来按照 config_name 合并配置
+        merged_configs = {}
+        for configs in configs_list:
+            for config in configs:
+                config_name = config.get('config_name')
+                if config_name in merged_configs:
+                    merged_configs[config_name].append(config)
+                else:
+                    merged_configs[config_name] = [config]
+        return merged_configs
+
 
 config_process_registry: Dict[str, BaseConfiguration] = {}
 def register_config_process(config_process: Type[BaseConfiguration]):
@@ -138,23 +151,7 @@ class BuildConfiguration(BaseConfiguration):
     def get_config(self, project_id, config_type, op=None):
         build_op_configs = super().get_config(project_id, 'build_op', op)
         build_example_configs = super().get_config(project_id, 'build_example', op)
-        # 创建一个字典来按照 config_name 合并配置
-        merged_configs = {}
-        # 处理 build_op_configs
-        for build_op_config in build_op_configs:
-            config_name = build_op_config.get('config_name')
-            if config_name in merged_configs:
-                merged_configs[config_name].append(build_op_config)
-            else:
-                merged_configs[config_name] = [build_op_config]
-        # 处理 build_example_configs
-        for build_example_config in build_example_configs:
-            config_name = build_example_config.get('config_name')
-            if config_name in merged_configs:
-                merged_configs[config_name].append(build_example_config)
-            else:
-                merged_configs[config_name] = [build_example_config]
-        return merged_configs
+        return self._merge_config(build_example_configs, build_op_configs)
 
     def post_config(self, data_list: list):
         return super().post_config(data_list)
@@ -169,13 +166,13 @@ class BuildConfiguration(BaseConfiguration):
         config_type = process_data.get('config_type', '')
         user_options = process_data.get('user_options', {})
         custom_options_parts = []
-        if 'soc' in user_options:
+        if 'soc' in user_options and user_options['soc']:
             custom_options_parts.append(f"--soc={user_options['soc']}")
-        if 'vendor_name' in user_options:
+        if 'vendor_name' in user_options and user_options['vendor_name']:
             custom_options_parts.append(f"--vendor={user_options['vendor_name']}")
-        if 'advanced_param' in user_options:
+        if 'advanced_param' in user_options and user_options['advanced_param']:
             custom_options_parts.extend(self._process_advanced_param(user_options['advanced_param']))
-        if config_type == 'build_example' and 'mode' in user_options:
+        if config_type == 'build_example' and 'mode' in user_options and user_options['mode']:
             custom_options_parts.append(f"--mode={user_options['mode']}")
         return custom_options_parts
 
@@ -183,9 +180,11 @@ class BuildConfiguration(BaseConfiguration):
         custom_options_parts = []
         if not advanced_param:
             return custom_options_parts
-        if not isinstance(advanced_param, dict):
-            raise InValidRequestException("advanced_param must be a dict")
-        for key, value in advanced_param.items():
+        if not isinstance(advanced_param, list):
+            raise InValidRequestException("advanced_param must be a list")
+        for param in advanced_param:
+            key = param.get('key')
+            value = param.get('value')
             if value:
                 custom_options_parts.append(f"--{key}={value}")
             else:
@@ -199,16 +198,39 @@ class SanitizerConfiguration(BaseConfiguration):
         return "sanitizer"
 
     def get_config(self, project_id, config_type, op=None):
-        return super().get_config(project_id, config_type, op)
+        return self._merge_config(super().get_config(project_id, config_type, op))
 
     def post_config(self, data_list: list):
         return super().post_config(data_list)
 
     def default_config(self, project, op, config_type='sanitizer'):
-        return super().default_config(project, op, config_type)
+        base_config = super().default_config(project, op, config_type)
+        base_config[0]['user_options']['detection'] = {
+            'memcheck': 'default'
+        }
+        return base_config
 
     def _process_custom_options(self, process_data) -> list:
-        return []
+        user_options = process_data.get('user_options', {})
+        custom_options_parts = []
+        detection_opts = process_data.get('detection', {})
+        for detection_opt, options in detection_opts.items():
+            if options is None or options == '':
+                continue
+            custom_options_parts.append(f"-t {detection_opt}")
+            opts = [opt.strip() for opt in options.split(',') if opt.strip()]
+            for opt in opts:
+                if opt == 'default':
+                    continue
+                custom_options_parts.append(f"--{opt}=yes")
+
+        if 'log_level' in user_options and user_options['log_level']:
+            custom_options_parts.append(f"--log-level={user_options['log_level']}")
+        if 'max_debug_size' in user_options and user_options['max_debug_size']:
+            custom_options_parts.append(f"--max-debug-size={user_options['max_debug_size']}")
+        if 'block-id' in user_options and user_options['block-id']:
+            custom_options_parts.append(f"--block-id={user_options['block_id']}")
+        return custom_options_parts
 
 
 @register_config_process
@@ -217,13 +239,34 @@ class OpProfConfiguration(BaseConfiguration):
         return "opprof"
 
     def get_config(self, project_id, config_type, op=None):
-        return super().get_config(project_id, config_type, op)
+        on_board_configs = super().get_config(project_id, 'on_board', op)
+        simulate_configs = super().get_config(project_id, 'simulate', op)
+        return self._merge_config(on_board_configs, simulate_configs)
 
     def post_config(self, data_list: list):
         return super().post_config(data_list)
 
     def default_config(self, project, op, config_type='opprof'):
-        return super().default_config(project, op, config_type)
+        on_board_config = super().default_config(project, op, 'on_board')[0]
+        simulate_config = super().default_config(project, op, 'simulate')[0]
+        simulate_config['user_options']['soc_version'] = ascend_util.soc_version
+        return [on_board_config, simulate_config]
 
     def _process_custom_options(self, process_data) -> list:
-        return []
+        user_options = process_data.get('user_options', {})
+        custom_options_parts = []
+        if 'aic_metrics' in user_options and user_options['aic_metrics']:
+            custom_options_parts.append(f"--aic-metrics={user_options['aic_metrics']}")
+        if 'replay_mode' in user_options and user_options['replay_mode']:
+            custom_options_parts.append(f"--replay-mode={user_options['replay_mode']}")
+        if 'warm_up' in user_options:
+            custom_options_parts.append(f"--warm_up-ip={user_options['warm_up']}")
+        if 'soc_version' in user_options and user_options['soc_version']:
+            custom_options_parts.append(f"--soc-version={user_options['soc_version']}")
+        if 'mstx' in user_options and user_options['mstx'] == 'on':
+            custom_options_parts.append(f"--mstx=on")
+            if 'mstx_include' in user_options and user_options['mstx_include']:
+                custom_options_parts.append(f"--mstx-include={user_options['mstx_include']}")
+        if 'dump' in user_options and user_options['dump'] == 'on':
+            custom_options_parts.append(f"--dump=on")
+        return custom_options_parts

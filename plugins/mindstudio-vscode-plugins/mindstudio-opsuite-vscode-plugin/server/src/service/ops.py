@@ -19,7 +19,7 @@ from service.configuration import config_process_registry
 from service.project import query_project_by_id
 from utils.ascend_util import ascend_util, chmod_recursive_standard
 from models.models import Operator
-from utils.op_util import assistant_script_exists
+from utils.op_util import assistant_script_exists, get_python_cmd
 
 
 class OpsCreateBase(BaseModel):
@@ -53,13 +53,13 @@ def _read_ops_prototype(ops_prototype_file):
 
 def _execute_assistant_script(project_path, op_class, op_name):
     try:
-        assistant_script = project_path / "scripts" / "assistant.py"
+        assistant_script = project_path / "scripts" / "opgen" / "opgen_standalone.py"
 
         cmd = [
-            "python", str(assistant_script),
-            "opgen",
+            get_python_cmd(), str(assistant_script),
+            f"--op_type={op_class}",
             f"--op_name={op_name}",
-            f"--op_class={op_class}",
+            f"--output_path={project_path}",
         ]
 
         app_logger.debug(f"executing assistant script: {' '.join(cmd)}")
@@ -116,7 +116,8 @@ def generate_operator_structure(data):
     project_path = Path(project.project_path)
     chmod_recursive_standard(project_path, 0o755)
     op_class, op_name = _read_ops_prototype(ops_create.ops_prototype_file)
-    if is_op_name_exist(ops_create.project_id, op_name):
+    op_dir = project_path / op_class / op_name
+    if is_op_name_exist(ops_create.project_id, op_name) or op_dir.exists():
         app_logger.warn(f"opname is exist: {op_name}")
         raise InValidRequestException(f"opname is exist: {op_name}")
 
@@ -157,6 +158,38 @@ def generate_structure(data):
     generate_operator_config(project, op, 'sanitizer')
     generate_operator_config(project, op, 'opprof')
     return op.id
+
+
+def get_ops(project_id):
+    db: Session = next(get_db())
+    op_list = db.scalars(
+        select(Operator).where(Operator.project_id == project_id)).all()
+    return op_list
+
+
+def add_exist_op(data):
+    op = Operator(**data)
+    project = query_project_by_id(op.project_id)
+    if not project:
+        app_logger.error(f"Project with id {op.project_id} not found")
+        raise InValidRequestException("Project with id {} not found".format(op.project_id))
+    if is_op_name_exist(op.project_id, op.op_name):
+        app_logger.warn(f"opname is exist: {op.op_name}")
+        raise InValidRequestException(f"opname is exist: {op.op_name}")
+    db: Session = next(get_db())
+    try:
+        generate_operator_config(project, op, 'build')
+        generate_operator_config(project, op, 'sanitizer')
+        generate_operator_config(project, op, 'opprof')
+        db.add(op)
+        db.commit()
+        db.refresh(op)
+        return op.id
+    except Exception as e:
+        db.rollback()
+        app_logger.error(f"Error executing assistant script: {e}")
+        raise Exception(f"Error executing assistant script: {e}")
+
 
 
 def is_op_name_exist(project_id, op_name):

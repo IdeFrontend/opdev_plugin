@@ -50,6 +50,9 @@ linux
 ### 3. 运行
 #### 源码运行
 ```shell
+  cd plugins/mindstudio-vscode-plugins/mindstudio-opsuite-vscode-plugin/server/src
+```
+```shell
   python3 ./src/main.py
 ```
 

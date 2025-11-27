@@ -75,7 +75,7 @@ class Operator(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     task_id = Column(Integer, ForeignKey("t_task_record.id"))
     project_id = Column(Integer, ForeignKey("t_project.id"), nullable=False)
-    op_class = Column(String, nullable=False)
+    op_class = Column(String, nullable=True)
     op_name = Column(String, nullable=False)
     examples = Column(Text, nullable=True)
     create_by = Column(String)
