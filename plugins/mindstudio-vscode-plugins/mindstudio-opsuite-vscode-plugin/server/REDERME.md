@@ -36,7 +36,7 @@ uv sync不仅安装和更新包，还卸载多余的包，可以使的pyinstalle
 ##### 3.激活环境
 windows
 ```shell
-  .venv/Scripts/activate.bat
+  .venv\Scripts\activate.bat
 ```
 linux
 ```shell
@@ -53,13 +53,13 @@ linux
   cd plugins/mindstudio-vscode-plugins/mindstudio-opsuite-vscode-plugin/server/src
 ```
 ```shell
-  python3 ./src/main.py
+  python3 main.py
 ```
 
 #### 打包可执行文件
 pyinstaller不支持跨平台，所以在哪个平台打包的产物只能在对应平台运行
 ```shell
-  mv build.spec.template build.spec
+  cp build.spec.template build.spec
 ```
 
 ```shell

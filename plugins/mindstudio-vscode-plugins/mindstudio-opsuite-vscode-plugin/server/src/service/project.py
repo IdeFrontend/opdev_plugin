@@ -95,3 +95,44 @@ def query_project_by_path(project_path):
     project = db.scalars(
         select(Project).where(Project.project_path == project_path)).first()
     return project
+
+def delete_project_by_id(project_id: int):
+    db: Session = next(get_db())
+    project = db.scalars(select(Project).where(Project.id == project_id)).first()
+
+    if not project:
+        raise InValidRequestException("project not found")
+
+    try:
+        db.delete(project)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        app_logger.error(e)
+        raise Exception("服务异常") from e
+
+
+def delete_project_by_path(project_path: str):
+    db: Session = next(get_db())
+    project = db.scalars(select(Project).where(Project.project_path == project_path)).first()
+
+    if not project:
+        raise InValidRequestException("project not found")
+
+    try:
+        db.delete(project)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        app_logger.error(e)
+        raise Exception("服务异常") from e
+
+
+def delete_project(project_id: int = None, project_path: str = None):
+    if project_id is not None:
+        return delete_project_by_id(project_id)
+
+    if project_path is not None:
+        return delete_project_by_path(project_path)
+
+    raise InValidRequestException("project_id or project_path is required")
