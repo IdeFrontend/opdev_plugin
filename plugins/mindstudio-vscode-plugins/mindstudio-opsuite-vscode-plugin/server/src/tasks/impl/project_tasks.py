@@ -5,6 +5,7 @@
 #  ==============================================================================
 from typing import Any
 
+from common.exception import InValidRequestException
 from ..task_executor import Task, register_task
 
 
@@ -45,4 +46,49 @@ class CreateProjectTask(Task):
                 'code': 1,
                 'data': str(e),
                 'message': 'error'
+            }
+
+
+
+@register_task
+class DeleteProjectTask(Task):
+
+    def get_name(self) -> str:
+        return "delete_project"
+
+    def add_task_parser(self, task_subparsers):
+        parser = task_subparsers.add_parser('delete_project', help='Delete a project')
+        parser.add_argument('--project_id', type=int, help="Project id")
+        parser.add_argument('--project_path', type=str, help="Project path")
+
+    def collect_task_args(self, task_args) -> dict[str, Any]:
+        return {
+            'project_id': getattr(task_args, 'project_id', None),
+            'project_path': getattr(task_args, 'project_path', None)
+        }
+
+    def execute(self, **kwargs):
+        from service.project import delete_project
+
+        try:
+            delete_project(
+                project_id=kwargs.get('project_id'),
+                project_path=kwargs.get('project_path')
+            )
+            return {
+                'code': 0,
+                'data': None,
+                'message': 'success'
+            }
+        except InValidRequestException as e:
+            return {
+                'code': 400,
+                'data': None,
+                'message': str(e)
+            }
+        except Exception as e:
+            return {
+                'code': 500,
+                'data': str(e),
+                'message': 'internal error'
             }

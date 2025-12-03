@@ -7,7 +7,7 @@
 from flask import Blueprint, request
 
 from common.exception import InValidRequestException
-from service.project import create_project
+from service.project import create_project, delete_project
 
 
 project_bp = Blueprint('project', __name__)
@@ -23,3 +23,30 @@ def create():
         'data': project_id,
         'message': 'success'
     }
+
+@project_bp.route('', methods=['DELETE'])
+def delete():
+    data = request.get_json() or {}
+
+    project_id = data.get("project_id")
+    project_path = data.get("project_path")
+
+    try:
+        delete_project(project_id=project_id, project_path=project_path)
+        return {
+            'code': 0,
+            'data': None,
+            'message': 'success'
+        }
+    except InValidRequestException as e:
+        return {
+            'code': 400,
+            'data': None,
+            'message': str(e)
+        }, 400
+    except Exception as e:
+        return {
+            'code': 500,
+            'data': None,
+            'message': 'internal error'
+        }, 500
