@@ -18,11 +18,13 @@ class CreateProjectTask(Task):
         create_project_parser = task_subparsers.add_parser('create_project', help='Create a new project')
         create_project_parser.add_argument('--project_name', type=str, help="Project name")
         create_project_parser.add_argument('--project_path', type=str, help="Project path")
+        create_project_parser.add_argument('--ascend_env_script', type=str, help="Project path")
 
     def collect_task_args(self, task_args) -> dict[str, Any]:
         args_dict = {
             'project_name': getattr(task_args, 'project_name', None),
-            'project_path': getattr(task_args, 'project_path', None)
+            'project_path': getattr(task_args, 'project_path', None),
+            'ascend_env_script': getattr(task_args, 'ascend_env_script', None)
         }
         return {k: v for k, v in args_dict.items() if v is not None}
 
@@ -32,7 +34,8 @@ class CreateProjectTask(Task):
 
             project_data = {
                 'project_name': kwargs.get('project_name'),
-                'project_path': kwargs.get('project_path')
+                'project_path': kwargs.get('project_path'),
+                'ascend_env_script': kwargs.get('ascend_env_script')
             }
             project_data = {k: v for k, v in project_data.items() if v is not None}
             project_id = create_project(project_data)

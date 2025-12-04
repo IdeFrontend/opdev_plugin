@@ -47,14 +47,14 @@ def assistant_script_exists(project_path):
 
 def get_default_target_dir(project_path, op, is_assistant_script=True):
     if is_assistant_script:
-        return project_path / 'build'
+        return project_path / 'build_out'
     else:
-        return project_path / op.op_class / op.op_name / 'build_output'
+        return project_path / op.op_class / op.op_name / 'build_out'
 
 def get_default_target(project_path, op, is_assistant_script=True):
     os_name, architecture = get_detailed_system_info()
     target_dir = get_default_target_dir(project_path, op, is_assistant_script=is_assistant_script)
-    target_op_file = target_dir / f'cann-ops-math-custom_linux_{architecture}.run' if is_assistant_script else target_dir / f'custom_opp_{os_name}_{architecture}.run'
+    target_op_file = target_dir / f'cann-ops-math-custom_linux-{architecture}.run' if is_assistant_script else target_dir / f'custom_opp_{os_name}_{architecture}.run'
     target_example_file = target_dir / f'test_aclnn_{op.op_name}_example'
     return target_dir, target_op_file, target_example_file
 

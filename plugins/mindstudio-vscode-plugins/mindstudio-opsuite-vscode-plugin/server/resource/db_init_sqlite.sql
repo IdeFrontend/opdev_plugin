@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS t_project
     id           INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,        -- 项目ID，主键自增
     project_name TEXT                              NOT NULL,        -- 项目名称
     project_path TEXT                              NOT NULL UNIQUE, -- 项目存储路径(唯一)
+    ascend_env_script TEXT,
     create_by    TEXT,                                              -- 创建人
     create_time  DATETIME DEFAULT CURRENT_TIMESTAMP,                -- 创建时间
     update_by    TEXT,                                              -- 更新人
@@ -62,6 +63,7 @@ CREATE TABLE IF NOT EXISTS t_op
     project_id  INTEGER                           NOT NULL, -- 所属项目ID
     op_class    TEXT,                                       -- 算子类型
     op_name     TEXT                              NOT NULL, -- 算子名称
+    ascend_env_script TEXT,
     examples    TEXT,                                       -- examples算子调用所在路径
     create_by   TEXT,                                       -- 创建人
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP,         -- 创建时间

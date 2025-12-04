@@ -6,11 +6,10 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Type
 
-from sqlalchemy import select, update, and_
-from sqlalchemy.orm import Session
+from sqlalchemy import bindparam, select, update, insert, and_, text
 
 from common.exception import InValidRequestException
-from configs.db import get_db
+from configs.db import with_db_session, safe_db_session
 from models.models import TConfig
 from utils import op_util
 from utils.ascend_util import ascend_util
@@ -21,8 +20,14 @@ class BaseConfiguration(ABC):
     def get_name(self) -> str:
         pass
 
-    def get_config(self, project_id, config_type, op=None):
-        db: Session = next(get_db())
+    @with_db_session
+    def delete_config(self, project_id, config_name, db=None):
+        delete_count = db.query(TConfig).filter_by(project_id=project_id, config_name=config_name).delete(synchronize_session=False)
+        db.commit()
+        return delete_count
+
+    @with_db_session
+    def get_config(self, project_id, config_type, op, db=None):
         conditions = [TConfig.project_id == project_id, TConfig.config_type == config_type]
         if op is not None:
             conditions.append(TConfig.op == op)
@@ -34,8 +39,8 @@ class BaseConfiguration(ABC):
              "target_dir": project_config.target_dir} for project_config in project_configs]
 
     @staticmethod
-    def get_config_by_id(config_id):
-        db: Session = next(get_db())
+    @with_db_session
+    def get_config_by_id(config_id, db=None):
         project_config = db.scalars(
             select(TConfig).where(TConfig.id == config_id)).first()
         return project_config
@@ -51,42 +56,7 @@ class BaseConfiguration(ABC):
             custom_options_parts = self._process_custom_options(process_data)
             process_data['custom_options'] = ' '.join(custom_options_parts)
             process_data_list.append(process_data)
-        db: Session = next(get_db())
-        results = []
-        try:
-            for data in process_data_list:
-                operation = "update" if data.get('config_id') else "create"
-                if data.get('config_id'):
-                    db.execute(
-                        update(TConfig)
-                        .where(TConfig.id == data['config_id'])
-                        .values(
-                            script=data.get('script'),
-                            custom_options=data.get('custom_options'),
-                            user_options=data.get('user_options'),
-                            op=data.get('op'),
-                            target_file=data.get('target_file'),
-                            target_dir=data.get('target_dir'),
-                            config_name=data.get('config_name'),
-                        )
-                    )
-                    config_id = data['config_id']
-                else:
-                    t_config = TConfig(**data)
-                    db.add(t_config)
-                    db.flush()  # 立即刷新以获取新ID
-                    config_id = t_config.id
-
-                results.append({
-                    "config_id": config_id,
-                    "operation": operation,
-                    "status": "success"
-                })
-            db.commit()
-        except Exception as e:
-            db.rollback()
-            raise Exception(f"批量处理配置失败: {str(e)}") from e
-        return results
+        return self._batch_upsert_configs(process_data_list)
 
     def default_config(self, project, op, config_type=None) -> list[dict]:
         script_path, target_dir, target_op, target_example = op_util.get_default_path(project, op)
@@ -135,8 +105,66 @@ class BaseConfiguration(ABC):
                     merged_configs[config_name] = [config]
         return merged_configs
 
+    def _batch_upsert_configs(self, process_data_list):
+        results = []
+        update_data = []
+        insert_objects = []
+        insert_indices = []  # 记录插入操作在results中的索引
+        for i, data in enumerate(process_data_list):
+            operation = "update" if data.get('config_id') else "create"
+            results.append({
+                "config_id": data.get('config_id'),
+                "operation": operation,
+                "status": "success"
+            })
+            if data.get('config_id'):
+                data['id'] = data.get('config_id')
+                update_data.append(data)
+            else:
+                t_config = TConfig(**data)
+                insert_objects.append(t_config)
+                insert_indices.append(i)
+        with safe_db_session() as db:
+            try:
+                # 批量更新
+                if update_data:
+                    update_stmt = update(TConfig).where(TConfig.id == bindparam('config_id')).values(
+                        script=bindparam('script'),
+                        custom_options=bindparam('custom_options'),
+                        user_options=bindparam('user_options'),
+                        op=bindparam('op'),
+                        target_file=bindparam('target_file'),
+                        target_dir=bindparam('target_dir'),
+                        config_name=bindparam('config_name')
+                    ).execution_options(synchronize_session=False)
+                    db.execute(update_stmt, update_data)
 
-config_process_registry: Dict[str, BaseConfiguration] = {}
+                # 逐个插入以获取准确的ID
+                for obj, idx in zip(insert_objects, insert_indices):
+                    db.add(obj)
+                    db.flush()  # 立即刷新以获取ID
+                    results[idx]["config_id"] = obj.id
+
+                db.commit()
+                return results
+            except Exception as e:
+                db.rollback()
+                # 如果有异常，将所有操作标记为失败
+                for result in results:
+                    result["status"] = "failed"
+                    result["error"] = str(e)
+                return results
+
+
+class DefaultConfiguration(BaseConfiguration):
+    def get_name(self) -> str:
+        return "default"
+
+    def _process_custom_options(self, process_data) -> list:
+        return []
+
+
+config_process_registry: Dict[str, BaseConfiguration] = {'default': DefaultConfiguration()}
 def register_config_process(config_process: Type[BaseConfiguration]):
     process_instance = config_process()
     config_process_registry[process_instance.get_name()] = process_instance
@@ -148,12 +176,12 @@ class BuildConfiguration(BaseConfiguration):
     def get_name(self):
         return "build"
 
-    def get_config(self, project_id, config_type, op=None):
+    def get_config(self, project_id, config_type, op=None, db=None):
         build_op_configs = super().get_config(project_id, 'build_op', op)
         build_example_configs = super().get_config(project_id, 'build_example', op)
         return self._merge_config(build_example_configs, build_op_configs)
 
-    def post_config(self, data_list: list):
+    def post_config(self, data_list: list, db=None):
         return super().post_config(data_list)
 
     def default_config(self, project, op, config_type=None) -> list[dict]:
@@ -197,11 +225,8 @@ class SanitizerConfiguration(BaseConfiguration):
     def get_name(self) -> str:
         return "sanitizer"
 
-    def get_config(self, project_id, config_type, op=None):
+    def get_config(self, project_id, config_type, op=None, db=None):
         return self._merge_config(super().get_config(project_id, config_type, op))
-
-    def post_config(self, data_list: list):
-        return super().post_config(data_list)
 
     def default_config(self, project, op, config_type='sanitizer'):
         base_config = super().default_config(project, op, config_type)
@@ -238,13 +263,10 @@ class OpProfConfiguration(BaseConfiguration):
     def get_name(self) -> str:
         return "opprof"
 
-    def get_config(self, project_id, config_type, op=None):
+    def get_config(self, project_id, config_type, op=None, db=None):
         on_board_configs = super().get_config(project_id, 'on_board', op)
         simulate_configs = super().get_config(project_id, 'simulate', op)
         return self._merge_config(on_board_configs, simulate_configs)
-
-    def post_config(self, data_list: list):
-        return super().post_config(data_list)
 
     def default_config(self, project, op, config_type='opprof'):
         on_board_config = super().default_config(project, op, 'on_board')[0]

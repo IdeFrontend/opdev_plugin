@@ -5,13 +5,11 @@
 #  ==============================================================================
 import os
 from functools import wraps
-from configs.log import app_logger
 from flask import Flask, request, jsonify, make_response
 
 from common.exception import PluginBaseException
 from configs.log import app_logger
-from routers import configuration, extension, project, ops_prototype, ops, system_api
-from routers import configuration, extension, project, command
+from routers import configuration, extension, project, command, ops_prototype, ops, system_api
 
 app = Flask(__name__)
 
@@ -61,11 +59,12 @@ def after_request(response):
 
 @app.errorhandler(PluginBaseException)
 def handle_general_error(error):
+    app_logger.error(f"请求失败 - 路径: {request.path}, 请求参数: {request.args.to_dict()}, 请求体: {request.view_args}")
     return jsonify({'code': 1, 'data': error.message, 'message': '请求失败'})
 
 @app.errorhandler(Exception)
 def handle_general_error(error):
-    app_logger.error(f"服务异常：{error}")
+    app_logger.error(f"服务异常 - 路径: {request.path}, 请求参数: {request.args.to_dict()}, 请求体: {request.view_args}, 错误: {error}")
     return jsonify({'code': -1, 'data': '服务内部错误', 'message': '服务内部错误'})
 
 

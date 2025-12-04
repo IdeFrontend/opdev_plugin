@@ -36,6 +36,18 @@ def get_ops():
     }
 
 
+@ops_bp.route('/<project_id>/<op_name>', methods=['DELETE'])
+def delete_ops(project_id, op_name):
+    if not project_id or not op_name:
+        raise InValidRequestException('request body is invalid')
+    delete_count = ops.delete_ops(project_id, op_name)
+    return {
+        'code': 0,
+        'data': delete_count,
+        'message': 'success'
+    }
+
+
 @ops_bp.route('/add', methods=['POST'])
 def add_exist_op():
     data = request.get_json()

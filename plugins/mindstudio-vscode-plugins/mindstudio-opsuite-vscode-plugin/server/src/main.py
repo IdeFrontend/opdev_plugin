@@ -6,6 +6,8 @@
 import argparse
 import sys
 
+from configs.config import user_data_dir
+
 
 def start_server(server_args):
     """启动服务器"""
@@ -22,8 +24,9 @@ def start_server(server_args):
             app_logger.error("服务启动失败：数据库初始化错误")
             return
         port = server_args.port if getattr(server_args, 'port', None) else 5000
-        app_logger.info(f"服务地址: http://127.0.0.1:{port}")
         plugin_server = make_server('127.0.0.1', port, app)
+        app_logger.info(f"数据地址：{user_data_dir}")
+        app_logger.info(f"服务地址: http://127.0.0.1:{port}")
         plugin_server.serve_forever()
     except Exception as e:
         app_logger.error(f"启动服务失败: {e}")
