@@ -72,7 +72,6 @@ class TaskExecutor:
         self.tasks[task.get_name()] = task
 
     def execute_task(self, task_name: str, task_args) -> Dict[str, Any]:
-        self._ensure_tasks_loaded()
         if task_name not in self.tasks:
             return {
                 'code': -1,

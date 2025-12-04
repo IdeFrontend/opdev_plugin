@@ -9,16 +9,15 @@ from pathlib import Path
 
 from pydantic import BaseModel
 from sqlalchemy import select, and_
-from sqlalchemy.orm import Session
 
 from common.exception import InValidRequestException
 from configs.config import settings
-from configs.db import get_db
+from configs.db import with_db_session, safe_db_session
 from configs.log import app_logger
 from service.configuration import config_process_registry
 from service.project import query_project_by_id
 from utils.ascend_util import ascend_util, chmod_recursive_standard
-from models.models import Operator
+from models.models import Operator, TConfig
 from utils.op_util import assistant_script_exists, get_python_cmd
 
 
@@ -69,20 +68,23 @@ def _execute_assistant_script(project_path, op_class, op_name):
         return True
     except subprocess.CalledProcessError as e:
         app_logger.error(f"Error executing assistant script: {e.stderr}")
-        raise Exception("Error executing assistant script: {e.stderr}") from e
+        raise Exception(f"Error executing assistant script: {e.stderr}") from e
     except Exception as e:
         app_logger.error(f"Unexpect error when executing assistant script: {e}")
-        raise Exception("Unexpect error when executing assistant script: {e}") from e
+        raise Exception(f"Unexpect error when executing assistant script: {e}") from e
 
 
-def _execute_msopgen(ops_create, project_path, op_class, op_name):
+def _execute_msopgen(ops_create, project, op_class, op_name):
     try:
-        op_class_dir = project_path / op_class
+        op_class_dir = Path(project.project_path) / op_class
         op_class_dir.mkdir(exist_ok=True)
         if settings.environment == 'development':
             return True
         soc_version = ops_create.soc_version if ops_create.soc_version is not None else ascend_util.soc_version
-        cann_env = ascend_util.cann_env
+        if project.ascend_env_script:
+            cann_env = ascend_util.get_env_from_script(project.ascend_env_script)
+        else:
+            cann_env = ascend_util.cann_env
 
         cmd = [
             "msopgen", "gen",
@@ -126,20 +128,15 @@ def generate_operator_structure(data):
         op_name=op_name,
         op_class=op_class
     )
-    db: Session = next(get_db())
-    try:
+    if assistant_script_exists(project_path):
+        _execute_assistant_script(project_path, op_class, op_name)
+    else:
+        _execute_msopgen(ops_create, project, op_class, op_name)
+    with safe_db_session() as db:
         db.add(op)
-        if assistant_script_exists(project_path):
-            _execute_assistant_script(project_path, op_class, op_name)
-        else:
-            _execute_msopgen(ops_create, project_path, op_class, op_name)
         db.commit()
         db.refresh(op)
         return op, project
-    except Exception as e:
-        db.rollback()
-        app_logger.error(f"Error executing assistant script: {e}")
-        raise Exception(f"Error executing assistant script: {e}")
 
 
 def operator_config(project, op, process_name):
@@ -160,11 +157,19 @@ def generate_structure(data):
     return op.id
 
 
-def get_ops(project_id):
-    db: Session = next(get_db())
+@with_db_session
+def get_ops(project_id, db=None):
     op_list = db.scalars(
         select(Operator).where(Operator.project_id == project_id)).all()
     return op_list
+
+
+@with_db_session
+def delete_ops(project_id, op_name, db=None):
+    delete_count = db.query(Operator).filter_by(project_id=project_id, op_name=op_name).delete(
+        synchronize_session=False)
+    db.commit()
+    return delete_count
 
 
 def add_exist_op(data):
@@ -176,24 +181,22 @@ def add_exist_op(data):
     if is_op_name_exist(op.project_id, op.op_name):
         app_logger.warn(f"opname is exist: {op.op_name}")
         raise InValidRequestException(f"opname is exist: {op.op_name}")
-    db: Session = next(get_db())
-    try:
-        generate_operator_config(project, op, 'build')
-        generate_operator_config(project, op, 'sanitizer')
-        generate_operator_config(project, op, 'opprof')
+    with safe_db_session() as db:
         db.add(op)
         db.commit()
         db.refresh(op)
-        return op.id
-    except Exception as e:
-        db.rollback()
-        app_logger.error(f"Error executing assistant script: {e}")
-        raise Exception(f"Error executing assistant script: {e}")
+    generate_operator_config(project, op, 'build')
+    generate_operator_config(project, op, 'sanitizer')
+    generate_operator_config(project, op, 'opprof')
+    return op.id
 
+
+@with_db_session
+def get_op_by_project_id_and_op_name(project_id, op_name, db=None):
+    op = db.scalars(
+        select(Operator).where(and_(Operator.op_name == op_name, Operator.project_id == project_id))).first()
+    return op
 
 
 def is_op_name_exist(project_id, op_name):
-    db: Session = next(get_db())
-    op = db.scalars(
-        select(Operator).where(and_(Operator.op_name == op_name, Operator.project_id == project_id))).first()
-    return op is not None
+    return get_op_by_project_id_and_op_name(project_id, op_name) is not None

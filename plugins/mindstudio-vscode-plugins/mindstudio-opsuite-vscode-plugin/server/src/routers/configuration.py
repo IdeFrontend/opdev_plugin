@@ -36,3 +36,14 @@ def post_configuration(config_type):
         'data': config_id,
         'message': 'success',
     }
+
+@configuration_bp.route('/<project_id>/<config_name>', methods=['DELETE'])
+def delete_configuration(project_id, config_name):
+    if not project_id or not config_name:
+        raise InValidRequestException('request body is invalid')
+    delete_config = config_process_registry.get('default').delete_config(project_id, config_name)
+    return {
+        'code': 0,
+        'data': delete_config,
+        'message': 'success',
+    }

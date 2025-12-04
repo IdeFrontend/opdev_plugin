@@ -8,10 +8,9 @@ import shutil
 from pathlib import Path
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 
 from common.exception import InValidRequestException
-from configs.db import get_db
+from configs.db import with_db_session, safe_db_session
 from configs.log import app_logger
 from configs.config import get_resource_path
 from models.models import Project
@@ -41,7 +40,7 @@ def ensure_launch_json_exists(project_path):
     # 检查launch.json是否已存在
     if launch_json_path.exists():
         app_logger.info("✓ launch.json 已存在: .vscode/launch.json")
-        return True
+        return
 
     # 检查resource目录下的launch.json是否存在
     if not resource_launch_json_path.exists():
@@ -51,47 +50,42 @@ def ensure_launch_json_exists(project_path):
     try:
         # 确保.vscode目录存在
         vscode_dir.mkdir(exist_ok=True)
-
         # 拷贝launch.json文件
         shutil.copy2(resource_launch_json_path, launch_json_path)
         app_logger.info(f"✓ 成功拷贝 launch.json: {resource_launch_json_path} -> {launch_json_path}")
-        return True
-
     except Exception as e:
         app_logger.error(f"✗ 拷贝launch.json失败: {e}")
         raise Exception("服务异常") from e
 
 
 def create_project(data):
-    project_config = Project(**data)
-    project_find = query_project_by_path(project_config.project_path)
+    project_obj = Project(**data)
+    project_find = query_project_by_path(project_obj.project_path)
     if project_find:
+        if not project_obj.ascend_env_script:
+            return project_find.id
+        with safe_db_session() as db:
+            project = db.query(Project).filter(Project.id == project_find.id).first()
+            project.ascend_env_script = project_obj.ascend_env_script
+            db.commit()
         return project_find.id
-    db: Session = next(get_db())
-    try:
-        db.add(project_config)
-        # 检查project_config.project_path的.vscode文件夹下是否有launch.json，如果没有新建
-        ensure_launch_json_exists(project_config.project_path)
+    ensure_launch_json_exists(project_obj.project_path)
+    with safe_db_session() as db:
+        db.add(project_obj)
         db.commit()
-        db.refresh(project_config)
-    except InValidRequestException as e:
-        db.rollback()
-        raise e
-    except Exception as e:
-        db.rollback()
-        app_logger.error(e)
-        raise Exception("服务异常") from e
-    return project_config.id
+        db.refresh(project_obj)
+        return project_obj.id
 
 
-def query_project_by_id(project_id):
-    db: Session = next(get_db())
+@with_db_session
+def query_project_by_id(project_id, db=None):
     project = db.scalars(
         select(Project).where(Project.id == project_id)).first()
     return project
 
-def query_project_by_path(project_path):
-    db: Session = next(get_db())
+
+@with_db_session
+def query_project_by_path(project_path, db=None):
     project = db.scalars(
         select(Project).where(Project.project_path == project_path)).first()
     return project

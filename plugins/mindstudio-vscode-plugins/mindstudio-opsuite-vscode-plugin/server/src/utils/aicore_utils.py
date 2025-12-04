@@ -45,6 +45,8 @@ class AICoreUtils(object):
 
     def parse_cmd_options(self, options):
         # 创建参数解析器
+        if not options:
+            return None
         args_list = options.split(" ")
         # 解析参数列表（而不是命令行输入）
         return self.__parser.parse_args(args_list)
