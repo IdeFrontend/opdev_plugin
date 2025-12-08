@@ -12,6 +12,8 @@ import * as vscode from 'vscode';
 import { ServiceManager } from './serviceManager';
 import { PermanentStorage } from './PermanentStorage'
 import webviewMessageList from './WebviewMessageList'
+import { HtmlTransformer } from './HtmlTransformer'
+
 
 /**
  * Webview提供者 - 负责创建和管理Webview面板
@@ -23,12 +25,14 @@ export class WebviewProvider {
     private isDisposed: boolean = false;
     private isRemote: boolean = false;
     private sshData: Object | undefined;
+    private context: vscode.ExtensionContext
 
-    constructor(private context: vscode.ExtensionContext, serviceManager: ServiceManager) {
+    constructor(context: vscode.ExtensionContext, serviceManager: ServiceManager) {
         this.serviceManager = serviceManager;
         this.storage = new PermanentStorage(context);
+        this.context = context;
         this.isRemote = vscode.env.remoteName !== undefined;
-        this.sshData = this.storage.get('sshData', {});
+        this.sshData = this.storage.get('sshData', []);
     }
 
     public async setSSHData(data: Object) {
@@ -40,14 +44,10 @@ export class WebviewProvider {
      */
     public async show(router: string): Promise<void> {
         try {
-            if (this.serviceManager.static === 'end') {
-                const ports = await this.serviceManager.startServices();
-            }
 
             // 创建或显示面板
             if (this.panel) {
                 this.panel.reveal();
-                this.updateWebviewUrl(router);
             } else {
                 await this.createPanel(router);
             }
@@ -63,6 +63,9 @@ export class WebviewProvider {
      * 创建Webview面板
      */
     private async createPanel(router: string = ''): Promise<void> {
+        const localResourceRoots = [
+            vscode.Uri.file(path.join(this.context.extensionPath, 'web', 'dist')),
+        ]
         try {
             this.panel = vscode.window.createWebviewPanel(
                 'mindstudioOpsuite',
@@ -71,7 +74,7 @@ export class WebviewProvider {
                 {
                     enableScripts: true,
                     retainContextWhenHidden: true,
-                    localResourceRoots: []
+                    localResourceRoots
                 }
             );
 
@@ -106,106 +109,54 @@ export class WebviewProvider {
         }
 
         try {
-            const htmlContent = await this.getWebviewContent(router);
-            this.panel.webview.html = htmlContent;
+            const distPath = path.join(this.context.extensionPath, 'out', 'web')
+            this.panel.webview.html = HtmlTransformer.transformDistHtml(distPath, this.panel.webview, router)
         } catch (error) {
             // 如果读取文件失败，使用fallback内容
-            this.panel.webview.html = this.getFallbackHtml(router);
+            console.log(error)
         }
-    }
-
-    /**
-     * 更新Webview中的URL
-     */
-    private updateWebviewUrl(router: string = ''): void {
-        if (!this.panel) {
-            return;
-        }
-
-        const frontendUrl = this.serviceManager.getFrontendUrl(router);
-        this.panel.webview.postMessage({
-            command: 'setUrl',
-            url: frontendUrl
-        });
     }
 
     /**
      * 从模板文件读取并生成Webview HTML内容
      */
     private async getWebviewContent(router: string = ''): Promise<string> {
-        const frontendUrl = this.serviceManager.getFrontendUrl(router);
-
         try {
-            // 读取模板文件
-            const templatePath = path.join(
-                this.context.extensionPath,
-                'plugin',
-                'templates',
-                'webview.html'
-            );
+            if (!this.panel) {
+                return '';
+            }
 
+            const distPath = path.join(this.context.extensionPath, 'web', 'dist');
+            const templatePath = path.join(distPath, 'index.html');
 
             let htmlContent = await fs.promises.readFile(templatePath, 'utf-8');
 
-            // 替换模板变量
-            htmlContent = htmlContent.replace(/{{FRONTEND_URL}}/g, frontendUrl);
+            htmlContent = htmlContent.replace(
+                /(src|href)="([^"]*)"/g,
+                (match, attr, resourcePath) => {
+                    // 处理相对路径
+                    if (resourcePath.startsWith('./') || resourcePath.startsWith('../')) {
+                        const fullPath = path.resolve(distPath, resourcePath);
+                        const webviewUri = this?.panel?.webview?.asWebviewUri(vscode.Uri.file(fullPath));
+                        return `${attr}="${webviewUri}"`;
+                    }
+                    // 处理绝对路径（在dist目录内）
+                    else if (!resourcePath.startsWith('http')) {
+                        const fullPath = path.join(distPath, resourcePath);
+                        const webviewUri = this?.panel?.webview?.asWebviewUri(vscode.Uri.file(fullPath));
+                        return `${attr}="${webviewUri}"`;
+                    }
+                    // 外部资源保持不变
+                    return match;
+                }
+            );
+
+            console.log(htmlContent)
 
             return htmlContent;
         } catch (error) {
             throw new Error(`无法读取模板文件: ${error}`);
         }
-    }
-
-    /**
-     * 获取fallback HTML内容（当模板文件读取失败时使用）
-     */
-    private getFallbackHtml(router: string = ''): string {
-        const frontendUrl = this.serviceManager.getFrontendUrl(router);
-
-        return `
-            <!DOCTYPE html>
-            <html lang="zh-CN">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>MindStudio Opsuite</title>
-                <style>
-                    body, html {
-                        margin: 0;
-                        padding: 0;
-                        height: 100%;
-                        overflow: hidden;
-                        background-color: var(--vscode-editor-background);
-                        color: var(--vscode-foreground);
-                        font-family: var(--vscode-font-family);
-                    }
-                    .container {
-                        display: flex;
-                        flex-direction: column;
-                        align-items: center;
-                        justify-content: center;
-                        height: 100vh;
-                        text-align: center;
-                        padding: 20px;
-                    }
-                    .error {
-                        color: var(--vscode-errorForeground);
-                        margin-bottom: 20px;
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <h1>MindStudio Opsuite</h1>
-                    <p>正在加载...</p>
-                    <iframe 
-                        src="${frontendUrl}"
-                        style="width: 100%; height: 100%; border: none;"
-                    ></iframe>
-                </div>
-            </body>
-            </html>
-        `;
     }
 
     /**

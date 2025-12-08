@@ -5,18 +5,20 @@
     "strict": true,
     "jsx": "preserve",
     "moduleResolution": "bundler",
-    "declaration": false, 
+    "declaration": false,
     "emitDeclarationOnly": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "noImplicitAny": false,
     "forceConsistentCasingInFileNames": true
   },
   "include": [
     "src/**/*.ts",
     "src/**/*.d.ts",
     "src/**/*.tsx",
-    "src/**/*.vue"
-, "../common/class/HttpClient.ts", "vue.config.ts"  ],
+    "src/**/*.vue",
+    "vue.config.ts"
+, "src/views/Config/class/OpsConfig.js"  ],
   "exclude": [
     "node_modules"
   ]

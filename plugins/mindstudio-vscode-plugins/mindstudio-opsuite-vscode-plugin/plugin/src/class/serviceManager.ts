@@ -11,6 +11,7 @@ import * as net from 'net';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { PortFinder } from './portFinder';
+import NetWork from '../server/NetWork';
 
 let serviceManager: ServiceManager | null = null;
 
@@ -40,20 +41,28 @@ export class ServiceManager implements vscode.Disposable {
     /**
      * 启动所有服务
      */
-    public async startServices(): Promise<{ frontendPort: number; backendPort: number }> {
+    public async startServices() {
         console.log('开始启动服务...');
         try {
             // 查找可用端口
-            this.backendPort = await this.portFinder?.findAvailablePort(3000);
-            this.frontendPort = await this.portFinder?.findAvailablePort(8000);
+            const isRemote = vscode.env.remoteName !== undefined;
 
-            console.log(`找到可用端口 - 前端: ${this.frontendPort}, 后端: ${this.backendPort}`);
-
-            // 启动后端可执行文件服务
-            await this.startBackendService();
-
-            // 启动前端静态文件服务
-            await this.startFrontendService();
+            if (isRemote && this.backendPort !== -1) {
+                this.backendPort = await this.portFinder?.findServerPort(3000);
+                console.log(`找到可用端口: ${this.backendPort}`);
+                const netWork = new NetWork()
+                for (let port = 3000; this.backendPort !== undefined && port < this.backendPort; port++) {
+                    console.log('从3000~可用端口之间嗅探是否有已开启的服务')
+                    const isStartBack = await netWork.testPort(port);
+                    if (isStartBack) {
+                        console.log(`找到可用端口 - 后端: ${isStartBack}`);
+                        return;
+                    }
+                }
+                console.log(`找到可用端口 - 后端: ${this.backendPort}`);
+                // 启动后端可执行文件服务
+                await this.startBackendService();
+            }
 
             console.log('所有服务启动完成');
 
@@ -65,7 +74,6 @@ export class ServiceManager implements vscode.Disposable {
             };
         } catch (error) {
             console.error('启动服务失败:', error);
-            vscode.window.showErrorMessage(`启动服务失败: ${error}`);
             throw error;
         }
     }
@@ -74,12 +82,11 @@ export class ServiceManager implements vscode.Disposable {
      * 启动后端可执行文件服务
      */
     private async startBackendService(): Promise<void> {
-        console.log('启动后端可执行文件服务...');
 
         return new Promise(async (resolve, reject) => {
             try {
-                const serverDir = path.join(this.context.extensionPath, 'server');
-                const executablePath = path.join(serverDir, 'vscode_local_service.exe');
+                const serverDir = path.join(this.context.extensionPath, 'out/server');
+                const executablePath = path.join(serverDir, 'vscode_local_service');
 
                 console.log('后端服务目录:', serverDir);
                 console.log('可执行文件路径:', executablePath);
@@ -110,12 +117,16 @@ export class ServiceManager implements vscode.Disposable {
 
                 console.log(`启动后端服务在端口 ${this.backendPort}...`);
 
+                cp.spawn(`chmod +x ${executablePath}`);
+
                 // 启动可执行文件
-                // 在Windows下，直接运行exe文件[citation:1]
-                this.backendProcess = cp.spawn(executablePath, [`-p ${this.backendPort}`], {
-                    cwd: path.join(serverDir, 'dist'), // 在工作目录为dist文件夹
+                this.backendProcess = cp.spawn(executablePath, [`server`, `-p ${this.backendPort}`], {
+                    cwd: serverDir, // 工作目录为dist文件夹
                     stdio: ['pipe', 'pipe', 'pipe'],
-                    windowsHide: true // 在Windows下隐藏子进程窗口
+                    // 移除 windowsHide 选项，因为它是Windows特有的
+                    // 可以添加Linux下的特定选项
+                    detached: false, // 在Linux下通常设为false
+                    shell: false     // 明确指定不使用shell
                 });
 
                 // 处理标准输出
@@ -136,19 +147,19 @@ export class ServiceManager implements vscode.Disposable {
                 // 处理错误输出
                 this.backendProcess.stderr?.on('data', (data) => {
                     const error = data.toString().trim();
-                    console.error(`[后端服务错误] ${error}`);
+                    console.log(`[后端服务错误] ${error}`);
                 });
 
                 // 处理进程错误
                 this.backendProcess.on('error', (error) => {
-                    console.error('后端服务进程错误:', error);
-                    reject(error);
+                    console.log('后端服务进程错误:', error);
+                    resolve();
                 });
 
                 // 处理进程退出
                 this.backendProcess.on('exit', (code, signal) => {
                     if (code !== 0) {
-                        console.error(`后端服务异常退出，代码: ${code}, 信号: ${signal}`);
+                        console.log(`后端服务异常退出，代码: ${code}, 信号: ${signal}`);
                         // 不要在这里reject，因为可能是正常退出
                     } else {
                         console.log('后端服务正常退出');
@@ -162,109 +173,7 @@ export class ServiceManager implements vscode.Disposable {
 
             } catch (error) {
                 console.error('启动后端服务失败:', error);
-                reject(error);
-            }
-        });
-    }
-
-    /**
-     * 启动前端静态文件服务
-     */
-    private async startFrontendService(): Promise<void> {
-        console.log('启动前端静态文件服务...');
-
-        return new Promise(async (resolve, reject) => {
-            try {
-                const serverDir = path.join(this.context.extensionPath, 'server');
-                const staticServerPath = path.join(serverDir, 'static_server.js');
-                const webDistPath = path.join(this.context.extensionPath, 'web', 'dist');
-
-                console.log('静态服务器脚本路径:', staticServerPath);
-                console.log('前端静态文件目录:', webDistPath);
-
-                // 检查静态服务器脚本是否存在
-                try {
-                    await fs.promises.access(staticServerPath);
-                    console.log('找到静态服务器脚本');
-                } catch (err) {
-                    console.error('静态服务器脚本不存在:', staticServerPath);
-                    reject(new Error(`静态服务器脚本不存在: ${staticServerPath}`));
-                    return;
-                }
-
-                // 检查前端静态文件目录是否存在
-                try {
-                    await fs.promises.access(webDistPath);
-                    console.log('找到前端静态文件目录');
-                } catch (err) {
-                    console.warn('前端静态文件目录不存在，尝试使用源码目录:', webDistPath);
-                    // 如果 dist 目录不存在，尝试使用 web 目录本身
-                    const webPath = path.join(this.context.extensionPath, 'web');
-                    try {
-                        await fs.promises.access(webPath);
-                        console.log('使用前端源码目录作为静态文件目录');
-                    } catch (webErr) {
-                        console.error('前端目录也不存在:', webPath);
-                        // 继续执行，静态服务器会处理目录不存在的情况
-                    }
-                }
-
-                // 设置环境变量
-                const env = {
-                    ...process.env,
-                    PORT: this.frontendPort!.toString(),
-                    STATIC_PATH: webDistPath
-                };
-
-                console.log(`启动前端静态文件服务在端口 ${this.frontendPort}...`);
-
-                // 启动静态文件服务器
-                this.frontendProcess = cp.spawn('node', [staticServerPath], {
-                    cwd: serverDir,
-                    env: env,
-                    stdio: ['pipe', 'pipe', 'pipe']
-                });
-
-                // 处理标准输出
-                this.frontendProcess.stdout?.on('data', (data) => {
-                    const output = data.toString().trim();
-                    console.log(`[前端静态服务] ${output}`);
-
-                    // 检测服务启动消息
-                    if (output.includes('静态文件服务器已启动')) {
-                        console.log('检测到前端静态服务启动成功消息');
-                    }
-                });
-
-                // 处理错误输出
-                this.frontendProcess.stderr?.on('data', (data) => {
-                    const error = data.toString().trim();
-                    console.error(`[前端静态服务错误] ${error}`);
-                });
-
-                // 处理进程错误
-                this.frontendProcess.on('error', (error) => {
-                    console.error('前端静态服务进程错误:', error);
-                    reject(error);
-                });
-
-                // 处理进程退出
-                this.frontendProcess.on('exit', (code, signal) => {
-                    if (code !== 0) {
-                        console.error(`前端静态服务异常退出，代码: ${code}, 信号: ${signal}`);
-                    } else {
-                        console.log('前端静态服务正常退出');
-                    }
-                });
-
-                // 等待服务真正启动 - 通过端口检测
-                await this.waitForServiceStart(this.frontendPort!, 15000);
-                console.log('前端静态服务启动成功，端口已监听');
                 resolve();
-
-            } catch (error) {
-                console.error('启动前端静态服务失败:', error);
-                reject(error);
             }
         });
     }
@@ -360,15 +269,6 @@ export class ServiceManager implements vscode.Disposable {
             }
             this.backendProcess = undefined;
         }
-    }
-
-    /**
-     * 获取前端服务URL
-     */
-    public getFrontendUrl(router: string = ''): string {
-        const url = `http://localhost:${this.frontendPort}/#/${router}?backendPort=${this.backendPort}`;
-        console.log('前端服务URL2:', url);
-        return url;
     }
 
     /**
