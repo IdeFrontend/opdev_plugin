@@ -132,6 +132,18 @@ export class DebugSessionExt extends DebugSession {
 		this.sendEvent(new Event('tableResult', { table: coredumpInfo.allTables }));
 	}
 
+	async sendBtInfo() {
+		const btInfo = await this.miDebugger.getBtInfo();
+
+		this.sendEvent(new Event('btResult', { table: btInfo }));
+	}
+
+	async sendFileNameInfo(args) {
+		const coredumpInfo = await this.miDebugger.getFileNameInfo(args);
+
+		this.sendEvent(new Event('fileNameResult', { table: coredumpInfo }));
+	}
+
 	async sendRegisterInfo() {
 		const registerInfo = await this.miDebugger.getKernelRegisterInfo();
 
@@ -147,7 +159,7 @@ export class DebugSessionExt extends DebugSession {
 		const coredumpInfo = isCoredump ? await this.miDebugger.getCoredumpInfo() : null;
 
 		const allCores = isCoredump ? coredumpInfo.allCores : await this.miDebugger.getKernelInfo();
-		const index = allCores.findIndex(i => i[isCoredump ? 3 : 7].includes('*')) + 1;
+		const index = allCores.findIndex(i => i[isCoredump ? 4 : 7].includes('*')) + 1;
 
 		this.sendEvent(new ChangeKernelEvent({ type: allCores?.[index]?.[1], focusId: allCores?.[index]?.[0], allKernel: allCores, mode: this.mode }));
 	}
@@ -177,6 +189,14 @@ export class DebugSessionExt extends DebugSession {
 
 		if (command === 'queryTable') {
 			this.sendTableInfo();
+		}
+
+		if (command === 'queryBt') {
+			this.sendBtInfo();
+		}
+
+		if (command === 'queryFileName') {
+			this.sendFileNameInfo(args);
 		}
 
 		if (command === 'queryRegister') {

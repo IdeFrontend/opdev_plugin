@@ -7,7 +7,7 @@
     "debug"
   ],
   "license": "MIT",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "publisher": "Ascend",
   "engines": {
     "vscode": "^1.55.0"
@@ -29,8 +29,20 @@
   ],
   "main": "./out/extension",
   "contributes": {
+    "grammars": [
+      {
+        "path": "./syntaxes/cpp-extra.json",
+        "scopeName": "source.cpp.extra",
+        "injectTo": ["source.cpp"]
+      }
+    ],
     "views": {
       "debug": [
+        {
+          "id": "bt",
+          "name": "算子调用堆栈",
+          "when": "inDebugMode"
+        },
         {
           "id": "msdebug.Kernel",
           "name": "Kernel Focus",
@@ -61,9 +73,37 @@
       {
         "command": "msdebug.ReadMemoryCustom",
         "title": "Read Memory"
+      },
+      {
+        "command": "bt.ReadBt",
+        "title": "刷新",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "bt.Copy",
+        "title": "复制",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "bt.OpenFile",
+        "title": "打开文件"
       }
     ],
     "menus": {
+      "view/item/context": [
+        {
+          "command": "bt.Copy",
+          "group": "inline",
+          "when": "view == bt"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "bt.ReadBt",
+          "when": "view == bt",
+          "group": "navigation"
+        }
+      ],
       "editor/context": [
         {
           "command": "msdebug.ReadMemory",
@@ -190,6 +230,11 @@
               "dumpfilePath": {
                 "type": "string",
                 "description": "The path of coredump file. If mode is coredump, it must be specified.",
+                "default": ""
+              },
+              "operatorObjectFile": {
+                "type": "string",
+                "description": "The absolute path of operator's object file. If mode is coredump, it is optional.",
                 "default": ""
               },
               "cwd": {

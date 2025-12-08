@@ -21,6 +21,7 @@ class MemoryView {
             if (event.event === 'changeKernel') {
                 this.cacheData = event.body;
                 this.kernelView._view?.webview.postMessage(this.cacheData);
+                vscode.debug.activeDebugSession?.customRequest?.('queryBt', {});
             }
     
             if (event.event === 'changeKernelError') {
@@ -123,6 +124,7 @@ class KernelViewProvider implements vscode.WebviewViewProvider {
                                 <td></td>
                                 <td>CoreId</td>
                                 <td>CoreType</td>
+                                <td>PC</td>
                                 <td>DeviceId</td>
                                 <td>ChipType</td>
                             </tr>

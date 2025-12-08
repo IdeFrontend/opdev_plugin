@@ -19,12 +19,27 @@ table td {
     border: 1px solid #eee;
 }
 
+table td.detail {
+    color: #9b9b9b !important;
+}
+
+table td.type {
+    color: #838383;
+    min-width: 134px;
+    text-align: left;
+}
+
 table td.key {
     color: #c586c0;
+    text-align: left;
 }
 
 table td.value {
     color: #b5cea8;
+    max-width: 400px;
+    white-space: normal;
+    word-break: break-all;
+    text-align: left;
 }
 
 tr:hover, tr.active {

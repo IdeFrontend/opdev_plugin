@@ -13,6 +13,7 @@ const app = Vue.createApp({
                 <td>Addr</td>
                 <td>Size</td>
                 <td>CoreId</td>
+                <td>CoreType</td>
                 <td>dim</td>
             </tr>
         </thead>

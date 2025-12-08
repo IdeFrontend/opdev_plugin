@@ -1,0 +1,30 @@
+{
+  "scopeName": "source.cpp.extra",
+  "injectionSelector": "L:source.cpp",
+  "patterns": [
+    {
+      "match": "\\b(__aicore__|ASCENDC_AICORE|ASCENDC_ASSERT|ASCENDC_CHECK_TENSOR_PTR_ALIGN|ASCENDC_CHECK_TPOSITION|ASCENDC_CHECK_VALUE_RANGE|ASCENDC_DEBUG_ASSERT|ASCENDC_DEBUG_ASSERT_IMPL|ASCENDC_HOST|ASCENDC_HOST_AICORE|ASCENDC_KERNEL_EVENT_IMPL_H|ASCENDC_KERNEL_MACROS_H|ASCENDC_MODULE_KERNEL_LOG_INTF_H|ASCENDC_MODULE_UTILS_MACROS_H|ASCENDC_REPORT_CHECK_ERROR|ASCENDC_REPORT_NOT_SUPPORT|ASCENDC_REPORT_OVERFLOW_MEM|ASCENDC_SHAPE|ASCEND_IS_AIC|ASCEND_IS_AIV|ASCEND_IS_NOT_AIC|ASCEND_IS_NOT_AIV|AICORE_BASIS_API_COMMON_TYPES_H|__BLOCK_LOCAL__|__host_aicore__|__gm__|GM_ADDR|__global__)\\b",
+      "name": "entity.name.function.preprocessor"
+    },
+    {
+      "match": "\\b(ymbolOverrideAdd|SymbolOverrideSub|SymbolOverrideDiv|SymbolOverrideMul|SymbolOverrideOr|SymbolOverrideAnd|SymbolOverrideCompare|LocalTensor|GlobalTensor|TBufPool|TPipe|TQueBind|TQue|TBuf|TPipe|TQueBind|TQue)\\b",
+      "name": "entity.name.type"
+    },
+    {
+      "match": "\\b(DataCopyParamsL311|DataCopyParams|MultiCopyConfig|MultiCopyLoopInfo|MultiCopyParams|DataCopyEnhancedParams|DataCopyCO12DstParams|DataCopyPadParams|DataCopyExtParams|DataCopyPadExtParams|Nd2NzParamsL311|Nd2NzParams|Nz2NdParamsFullL311|Nz2NdParamsFull|Dn2NzParams|LoopModeParams|SliceInfo|CopyRepeatParams|Dn2NzParams|DataCopyAttrParams|DataCopyConfig)\\b",
+      "name": "entity.name.type"
+    },
+    {
+      "match": "\\b(GetBlockNum|IBSet|IBWait|SetNextTaskStart|WaitPreTaskEnd|SyncAll|InitSocState|GetBlockIdx|GetBlockNum|GetSubBlockIdx|GetTaskRatio|GetTaskRation|SetStoreAtomicConfig|GetStoreAtomicConfig|GetStoreAtomicConfig|NotifyEvent|WaitEvent|NotifyEvent|WaitEvent|Nop|CrossCoreSetFlag|CrossCoreWaitFlag|DataCachePreload|ICachePreLoad|GetICachePreloadStatus|CheckLocalMemoryIA|MemoryT|MemoryT|GetSpr|ClearSpr)\\b",
+      "name": "entity.name.function"
+    },
+    {
+      "match": "\\b(AscendC)\\b",
+      "name": "entity.name.namespace"
+    },
+    {
+      "match": "\\b(TPosition|GM|A1|A2|B1|B2|C1|C2|CO1|CO2|VECIN|VECOUT|VECCALC|LCM|SPM|SHM|TSCM|C2PIPE2GM|C2PIPE2LOCAL|MAX|BIAS|FIXBUF|FIX_FIX|FIX_M|FIX_MTE1|FIX_MTE2|FIX_MTE3|FIX_S|GM|HardEvent|HardEventAic|Hardware|L0A|L0B|L0C|L1|MAX|M_FIX|M_MTE1|M_MTE2|M_MTE3|M_S|MTE1_FIX|MTE1_M|MTE1_MTE2|MTE1_MTE3|MTE1_V|MTE2_FIX|MTE2_M|MTE2_MTE1|MTE2_MTE3|MTE2_S|MTE2_V|MTE3_M|MTE3_MTE1|MTE3_MTE2|MTE3_S|MTE3_V|M_V|S_MTE2|S_MTE3|S_V|UB|V_M|V_MTE1|V_MTE2|V_MTE3|V_S|V_V)\\b",
+      "name": "variable.other.enummember"
+    }
+  ]
+}

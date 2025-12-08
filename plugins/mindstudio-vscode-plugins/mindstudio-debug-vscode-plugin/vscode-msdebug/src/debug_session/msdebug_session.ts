@@ -27,6 +27,7 @@ export interface LaunchRequestArguments extends DebugProtocol.LaunchRequestArgum
 	skipEnvCheck: boolean;
 	environmentScripts: string[];
 	dumpfilePath: string;
+	operatorObjectFile: string;
 	type:string;
 }
 
@@ -72,7 +73,7 @@ class MsDebugDebugSession extends DebugSessionExt {
 				this.sendErrorResponse(response, 1, `Failed to launch: ${String(err.message)}`);
 				return;
 			}
-			return this.miDebugger.load(args.cwd, args.dumpfilePath, args.type, args.skipEnvCheck).then(() => {
+			return this.miDebugger.load(args.cwd, args.dumpfilePath, args.type, args.skipEnvCheck, args.operatorObjectFile).then(() => {
 				this.sendResponse(response);
 
 				globalKernelEvents.emit('npuFocus', true);

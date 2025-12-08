@@ -1,8 +1,8 @@
 # MindStudio Debug VSCode Plugin
 
 ### 介绍
-MindStudio Debug VSCode Plugin基于[msdebug上板调试算子工具](https://www.hiascend.com/document/detail/zh/mindstudio/70RC1/mscommandtoolug/mscommandug/atlasopdev_16_0005.html)提供VSCode可视化调试昇腾算子功能。
-附：[算子开发编程语言Ascend C简介](https://www.hiascend.com/document/detail/zh/canncommercial/81RC1/developmentguide/opdevg/Ascendcopdevg/atlas_ascendc_10_0001.html)
+MindStudio Debug VSCode Plugin基于[msdebug上板调试算子工具](https://www.hiascend.com/document/detail/zh/mindstudio/82RC1/index/index.html)提供VSCode可视化调试昇腾算子功能。
+附：[算子开发编程语言Ascend C简介](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/opdevg/Ascendcopdevg/atlas_ascendc_10_0001.html)
 
 ### 特性
 * 断点调试（设置/删除/禁用/启用断点）
@@ -35,10 +35,11 @@ MindStudio Debug VSCode Plugin基于[msdebug上板调试算子工具](https://ww
 sha256sum Ascend.MindStudio-Debug-VSCode-Plugin-{version}.vsix # 验证vsix包，若校验码一致，则vsix包在下载中没有受损
 ```
 
-最新软件包下载地址：[MindStudio-Debug-VSCode-Plugin Releases](https://gitcode.com/Ascend/mstt/tree/vscode_plugin/plugins/mindstudio-vscode-plugins/mindstudio-debug-vscode-plugin/releases)
+最新蓝区软件包下载地址：[MindStudio-Debug-VSCode-Plugin Releases](https://gitcode.com/Ascend/mstt/tree/vscode_plugin/plugins/mindstudio-vscode-plugins/mindstudio-debug-vscode-plugin/releases)
 
 |历史版本|发布日期|下载链接|校验码|
 |:--:|:--:|:--:|:--:|
+| 1.0.6 | 2025.09.26 | [Ascend.MindStudio-Debug-VSCode-Plugin-1.0.6.vsix](https://gitcode.com/Ascend/mstt/tree/vscode_plugin/plugins/mindstudio-vscode-plugins/mindstudio-debug-vscode-plugin/releases) | dca6eec71a48abd423d2f64cf10f98247f1074d04a925875c87bfea7eace0a01 |
 | 1.0.5 | 2025.04.03 | [Ascend.MindStudio-Debug-VSCode-Plugin-1.0.5.vsix](https://marketplace.rnd.huawei.com/detail?identifier=MindStudio-Debug-VSCode-Plugin) | b895ae941dfd468548b307b96fcfc7a0245f1e8f99515afeb8d3bc4f62360fa6 |
 | 1.0.3 | 2025.04.03 | [Ascend.MindStudio-Debug-VSCode-Plugin-1.0.3.vsix](https://marketplace.rnd.huawei.com/detail?identifier=MindStudio-Debug-VSCode-Plugin) | 0902cd170c9327704afa6aba8c4f75631877b96763f068c10d1da0e0a6abc408 |
 | 1.0.2 | 2024.11.28 | [Ascend.MindStudio-Debug-VSCode-Plugin-1.0.2.vsix](https://marketplace.rnd.huawei.com/detail?identifier=MindStudio-Debug-VSCode-Plugin) | 4a4efdc34212330cbe147f45737156866d8f0ecdc1cc2560303163f8a2c7b694 |
@@ -69,7 +70,7 @@ sha256sum Ascend.MindStudio-Debug-VSCode-Plugin-{version}.vsix # 验证vsix包�
 * 后台命令行离线本地安装
 ```
  - 插件.vsix文件上传linux环境
- - 后台输入命令安装插件文件: code --install-extension /xx_dir/MindStudio-Debug-VSCode-Plugin-1.0.6.vsix
+ - 后台输入命令安装插件文件: code --install-extension /xx_dir/MindStudio-Debug-VSCode-Plugin-1.0.7.vsix
 ```
 4.  点开debug侧边工具栏，若未生成.vscode/launch.json文件，则根据提示点击生成launch.json文件(弹窗中调试器选择MSDebug)
 - 需要注意vscode`当前打开目录`的选择，因为当前目录会影响launch.json文件中`cwd`参数的值。若msdebug的调试参数文件和打断点的源码文件不直接在同一个目录下（比如源码在src目录下，测试用例在test目录下），则建议切换当前目录为共同的父目录下，再创建.vscode/launch.json文件。如果算子可执行文件必须以 `./${excutable_opp}`在当前目录执行（如build_output目录），则`cwd`参数需要设成可执行文件所在父目录的绝对路径。
@@ -149,7 +150,7 @@ sha256sum Ascend.MindStudio-Debug-VSCode-Plugin-{version}.vsix # 验证vsix包�
 *  左下角展开KERNEL FOCUS工具栏，可查看核状态，高亮行是当前所在核；点击其他行数据进行切核
 
 #### NPU coredump文件可视化调试
-* [NPU coredump调试官网特性说明](https://www.hiascend.com/document/detail/zh/canncommercial/82RC1/devaids/optool/atlasopdev_16_0149.html)
+* [NPU coredump调试官网特性说明](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/devaids/optool/atlasopdev_16_0149.html)
 * launch.json增量配置（可以和原先msdebug-mi配置共存）
 ```
 {
@@ -171,7 +172,8 @@ sha256sum Ascend.MindStudio-Debug-VSCode-Plugin-{version}.vsix # 验证vsix包�
             ],
             "environment": [
                 xxx         // 和msdebug-mi调试参数设置一致即可
-            ]
+            ],
+            "operatorObjectFile": "/dir/xxx.o"
         }
     ]
 }
@@ -179,10 +181,12 @@ sha256sum Ascend.MindStudio-Debug-VSCode-Plugin-{version}.vsix # 验证vsix包�
 * launch.json参数说明
   * 原先type=msdebug-mi配置参数继承：name、type（值不同）、requtest、cwd、msdebugMiPath、printMiInput、printMiOutput、environment、environmentScripts、enableLog、skipEnvCheck.
   * 新增`dumpfilePath`参数：必要配置项，coredump文件路径（和`cwd`配置共同组合成coredump文件的绝对路径，也可单独设成绝对路径）。建议设置前`检查下coredump文件是否具备执行权限！！`
+  * 新增`operatorObjectFile`参数：可选配置项，coredump文件对应的含有源码信息的.o目标文件，必须是绝对路径。配置该参数后，查看算子调用堆栈backtrace功能时，可显示和跳转到堆栈对应的精确代码位置
 * 使用方法：
   - 配置launch.json后，选择`msdebug-coredump`方式启动调试
   - 启动后加载`coredump info`界面，可以查看coredump信息 (不慎关闭也可通过右下角`read coredump`按钮重新打开页面)
   - 左下角展开切核菜单，进行NPU核切换
+  - 左下角展开backtrace算子调用堆栈菜单。可查看堆栈信息，每一行堆栈信息包括frame编号、函数声明和函数所在文件路径和行列号信息；可点击每行右侧按钮可复制该行数据；也可双击本行数据可跳转到对应源文件代码位置（前提是文件存在且权限至少为可读权限）
   - `coredump ino`界面点击每一行最左`memory`按钮，弹窗显示该地址对应的内存值（若内存地址含invalid则查看无效）
   - 点击右下角的`read memory`按钮跳转内存查看页面，可以自定义查询内存值。
   - 点击右下角的`read register`按钮跳转寄存器查看页面，可以查看寄存器值。

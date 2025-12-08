@@ -16,10 +16,13 @@ export function readFileContent(filePath:string):string {
     return fileContent;
 }
 
-export function isFileExist(cwd: string, fileName: string) {
+export function isFileExist(fileName: string, cwd: string='') {
 	let ret = true;
+    if (cwd != '') {
+        fileName = `${cwd}/${fileName}`
+    }
 	try {
-		fs.accessSync(`${cwd}/${fileName}`, fs.constants.F_OK);
+		fs.accessSync(fileName, fs.constants.F_OK);
 	} catch (err) {
 		ret = false;
 	}
