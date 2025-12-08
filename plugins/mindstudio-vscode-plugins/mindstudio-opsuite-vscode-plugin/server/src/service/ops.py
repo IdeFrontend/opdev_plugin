@@ -7,7 +7,8 @@ import json
 import subprocess
 from pathlib import Path
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, model_validator
+from typing import Optional, Literal
 from sqlalchemy import select, and_
 
 from common.exception import InValidRequestException
@@ -19,125 +20,94 @@ from service.project import query_project_by_id
 from utils.ascend_util import ascend_util, chmod_recursive_standard
 from models.models import Operator, TConfig
 from utils.op_util import assistant_script_exists, get_python_cmd
+from service.op_generators import OpGeneratorFactory
 
 
 class OpsCreateBase(BaseModel):
     project_id: int
-    ops_prototype_file: str
-    soc_version: str = None
+    op_type: Literal['ascend', 'cann'] = 'ascend'  # 使用 Literal 限制可选值
 
+    ops_prototype_file: Optional[str] = Field(default=None)
+    op_name: Optional[str] = Field(default='hello_world')
+    op_class: Optional[str] = Field(default='FirstProject')
+    template_name: str = Field(default='hello_world')
+    soc_version: Optional[str] = Field(default=None)
 
-def _read_ops_prototype(ops_prototype_file):
-    try:
-        with open(ops_prototype_file, "r", encoding='utf-8') as f:
-            ops_data = json.load(f)
+    @model_validator(mode='after')
+    def validate_fields(self) -> 'OpsCreateBase':
+        errors = []
 
-        if isinstance(ops_data, list) and len(ops_data) > 0:
-            op_info = ops_data[0]
-        else:
-            op_info = ops_data
+        if self.op_type == 'ascend':
+            if not self.ops_prototype_file:
+                errors.append('Ascend type requires ops_prototype_file')
+            # 可选的：清理不需要的字段
+            self.op_name = None
+            self.op_class = None
 
-        op_name = op_info.get("op")
-        op_class = op_info.get("op_class")
+        elif self.op_type == 'cann':
+            if not self.op_name:
+                errors.append('CANN type requires op_name')
+            if not self.op_class:
+                errors.append('CANN type requires op_class')
+            # 可选的：清理不需要的字段
+            self.ops_prototype_file = None
 
-        if not op_name or not op_class:
-            app_logger.error("Invalid op prototype: op_name or op_class is empty")
-            raise InValidRequestException("Invalid op prototype: op_name or op_class is empty")
+        if errors:
+            raise ValueError('; '.join(errors))
 
-        return op_class, op_name
-    except Exception as e:
-        app_logger.error(f"Invalid op prototype: {e}")
-        raise InValidRequestException("Invalid op prototype: {e}")
+        return self
 
-
-def _execute_assistant_script(project_path, op_class, op_name):
-    try:
-        assistant_script = project_path / "scripts" / "opgen" / "opgen_standalone.py"
-
-        cmd = [
-            get_python_cmd(), str(assistant_script),
-            f"--op_type={op_class}",
-            f"--op_name={op_name}",
-            f"--output_path={project_path}",
-        ]
-
-        app_logger.debug(f"executing assistant script: {' '.join(cmd)}")
-        result = subprocess.run(cmd, cwd=project_path, capture_output=True, text=True, check=True)
-
-        app_logger.debug(f"STDOUT: {result.stdout}")
-        return True
-    except subprocess.CalledProcessError as e:
-        app_logger.error(f"Error executing assistant script: {e.stderr}")
-        raise Exception(f"Error executing assistant script: {e.stderr}") from e
-    except Exception as e:
-        app_logger.error(f"Unexpect error when executing assistant script: {e}")
-        raise Exception(f"Unexpect error when executing assistant script: {e}") from e
-
-
-def _execute_msopgen(ops_create, project, op_class, op_name):
-    try:
-        op_class_dir = Path(project.project_path) / op_class
-        op_class_dir.mkdir(exist_ok=True)
-        if settings.environment == 'development':
-            return True
-        soc_version = ops_create.soc_version if ops_create.soc_version is not None else ascend_util.soc_version
-        if project.ascend_env_script:
-            cann_env = ascend_util.get_env_from_script(project.ascend_env_script)
-        else:
-            cann_env = ascend_util.cann_env
-
-        cmd = [
-            "msopgen", "gen",
-            "-i", str(ops_create.ops_prototype_file),
-            "-c", f"ai_core-ascend{soc_version}",
-            "-lan", "cpp",
-            "-out", op_name
-        ]
-
-        app_logger.debug(f"executing msopgen script: {' '.join(cmd)}")
-        result = subprocess.run(cmd, cwd=op_class_dir, capture_output=True, text=True, check=True, env=cann_env)
-
-        app_logger.debug(f"STDOUT: {result.stdout}")
-        return True
-    except subprocess.CalledProcessError as e:
-        app_logger.error(f"Error executing msopgen: {e.stderr}")
-        raise Exception(f"Error executing msopgen: {e.stderr}") from e
-    except Exception as e:
-        app_logger.error(f"Unexpect error when executing msopgen: {e}")
-        raise Exception("Unexpect error when executing msopgen") from e
-
-
+# 2. 核心入口函数
 def generate_operator_structure(data):
+    # 2.1 校验基础参数
     ops_create = OpsCreateBase(**data)
 
     project = query_project_by_id(ops_create.project_id)
     if not project:
-        app_logger.error(f"Project with id {ops_create.project_id} not found")
-        raise InValidRequestException("Project with id {} not found".format(ops_create.project_id))
+        raise InValidRequestException(f"Project {ops_create.project_id} not found")
 
     project_path = Path(project.project_path)
     chmod_recursive_standard(project_path, 0o755)
-    op_class, op_name = _read_ops_prototype(ops_create.ops_prototype_file)
+
+    # 2.2 获取生成策略 (Strategy Pattern)
+    # 无论是 Ascend 还是 CANN，这里拿到的都是 BaseOpGenerator 的子类
+    generator = OpGeneratorFactory.get_generator(
+        ops_create.op_type,
+        project_path,
+        ops_create,
+        project
+    )
+
+    # 2.3 解析元数据 (多态调用)
+    # Ascend 会去读文件，CANN 会直接返回入参
+    op_class, op_name = generator.parse_meta()
+
+    app_logger.info(f"Preparing to create operator: {op_name} (Type: {ops_create.op_type})")
+
+    # 2.4 查重逻辑 (通用)
     op_dir = project_path / op_class / op_name
     if is_op_name_exist(ops_create.project_id, op_name) or op_dir.exists():
         app_logger.warn(f"opname is exist: {op_name}")
-        raise InValidRequestException(f"opname is exist: {op_name}")
+        raise InValidRequestException(f"算子名称已存在: {op_name}")
 
+    # 2.5 数据库对象准备
     op = Operator(
         project_id=ops_create.project_id,
         op_name=op_name,
-        op_class=op_class
+        op_class=op_class,
+        op_type=ops_create.op_type  # 存入类型
     )
-    if assistant_script_exists(project_path):
-        _execute_assistant_script(project_path, op_class, op_name)
-    else:
-        _execute_msopgen(ops_create, project, op_class, op_name)
+
+    # 2.6 执行生成 (多态调用)
+    # Service 层不需要关心你是拷贝还是运行脚本，只管 execute
+    generator.execute_generation()
+
+    # 2.7 事务提交
     with safe_db_session() as db:
         db.add(op)
         db.commit()
         db.refresh(op)
         return op, project
-
 
 def operator_config(project, op, process_name):
     config = config_process_registry.get(process_name).default_config(project, op)

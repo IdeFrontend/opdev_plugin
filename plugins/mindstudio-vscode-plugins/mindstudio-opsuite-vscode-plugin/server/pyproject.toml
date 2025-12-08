@@ -10,6 +10,7 @@ dependencies = [
     "pyinstaller>=6.16.0",
     "python-dotenv>=1.2.1",
     "sqlalchemy>=2.0.44",
+    "yoyo-migrations>=8.2.0",
 ]
 
 [[tool.uv.index]]
