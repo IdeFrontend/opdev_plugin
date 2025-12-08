@@ -2,6 +2,18 @@
 
 All notable changes to the "MindStudio Debug VSCode Plugin" extension will be documented in this file.
 
+## [v1.0.7] - 2025-12-08
+
+### Changed
+- 适配最新ascend info summary输出的coreType列打印
+- 适配最新寄存器的PC列打印
+
+### Added
+
+- coredump调试功能新增operatorObjectFile参数
+- coredump调试功能新增bt算子调试堆栈展示和跳转源码功能
+- 支持部分AscendC关键字高亮功能（安装插件后生效）
+
 ## [v1.0.6] - 2025-09-25
 
 ### Added

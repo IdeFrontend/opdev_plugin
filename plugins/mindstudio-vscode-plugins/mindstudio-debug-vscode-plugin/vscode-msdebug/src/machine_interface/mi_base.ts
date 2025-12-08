@@ -21,6 +21,9 @@ import {isFileExist} from "../utils/file_util"
 import {validatePath} from "../utils/file_util"
 import {exec} from "child_process"
 import {ErrorStreamRecordHandler} from "../utils/mi_parse_type/ErrorStreamRecordHandler"
+import { promisify } from "util";
+
+const execP = promisify(exec);
 
 export class MIBase extends EventEmitter {
 	constructor(public application: string, envs: any, mode:string) {
@@ -46,31 +49,31 @@ export class MIBase extends EventEmitter {
 		const coreStr = idSplit[0];
 		const tableStr = 'Id ' + idSplit[1];
 
-		const coreSplit = coreStr.split(/\s{2,}/).slice(4);
-		const tableSplit = tableStr.split(/\s{2,}/).slice(7);
+		const coreSplit = coreStr.split(/\s{2,}/).slice(5);
+		const tableSplit = tableStr.split(/\s{2,}/).slice(8);
 
 		const allCores = [];
 		const allTables = [];
 
-		for (let i = 0; i < coreSplit.length / 4; i++) {
+		for (let i = 0; i < coreSplit.length / 5; i++) {
 			const tmp = [];
 
-			for (let j = 0; j < 4; j++) {
-				tmp.push(coreSplit[i * 4 + j]);
+			for (let j = 0; j < 5; j++) {
+				tmp.push(coreSplit[i * 5 + j]);
 			}
 
 			allCores.push(tmp);
 		}
 
-		for (let i = 0; i < tableSplit.length / 7; i++) {
+		for (let i = 0; i < tableSplit.length / 8; i++) {
 			const tmp = [];
 
-			for (let j = 0; j < 7; j++) {
-				if (j !== 0 && tableSplit[i * 7 + j] === (i + 1 + '')) {
-					tableSplit.splice(i * 7 + j, 0, '');
+			for (let j = 0; j < 8; j++) {
+				if (j !== 0 && tableSplit[i * 8 + j] === (i + 1 + '')) {
+					tableSplit.splice(i * 8 + j, 0, '');
 				}
 
-				tmp.push(tableSplit[i * 7 + j] || '');
+				tmp.push(tableSplit[i * 8 + j] || '');
 			}
 
 			allTables.push(tmp);
@@ -117,6 +120,48 @@ export class MIBase extends EventEmitter {
 		}
 	}
 
+	async getBtInfo(): Promise<string[]> {
+		const res = await this.sendCliCommand('bt');
+
+		const infoStr = res.getResult('result').replace(/\\{1,3}[trn]/g, '');
+		const content = infoStr.trim() || '';
+		const contentSplit = content.split(/\s{2,}/);
+		const results = contentSplit.slice(1);
+
+		const allBt = [];
+
+		results.forEach(i => {
+			const itemSplit = i.split(' at ');
+			const left = itemSplit[0].replace(/^\s*\*\s*/, '');
+			const oneColumn = left.split(':')[0];
+			const right = itemSplit[1] || '';
+			const name = right.split(':')[0];
+			const all = i.replace(/^\s*\*\s*/, '');
+
+			allBt.push({ left, right, name, all, oneColumn });
+		});
+
+		return allBt;
+	}
+
+	async getFileNameInfo(args): Promise<string[]> {
+		const result = [];
+		let stdout = '';
+
+		for (const i of args.all) {
+			try {
+				const res = await execP(`find ${i} -type f -name ${args.name} 2>/dev/null`);
+				stdout = res.stdout || '';
+			} catch(e) {
+				stdout = e.stdout || '';
+			}
+
+			result.push(...stdout.split('\n').filter(i => i));
+		}
+
+		return result;
+	}
+
 	async getKernelRegisterInfo(): Promise<any> {
 		return new Promise((resolve, reject) => {
 			this.sendCliCommand('register read -a').then(result => {
@@ -124,18 +169,36 @@ export class MIBase extends EventEmitter {
 				const content = infoStr.trim() || '';
 				const contentSplit = content.split(/\s{2,}/);
 				let registerVariableArr = [];
+				let tmpType = '';
+
 				for (const element of contentSplit) {
+					const matchType = element.match(/[A-Z][a-zA-Z0-9_]+:\\n$/);
 					const match = element.match(/^([a-zA-Z_\-][a-zA-Z0-9_\-]*|\[\d+\]|\s*)\s*=\s*([a-zA-Z0-9_\-]*)n?/);
+					const matchDetail = element.includes('::');
+
+					if (matchDetail) {
+						const item = registerVariableArr[registerVariableArr.length - 1];
+
+						if (item) {
+							item.codeDetail = element.split('\\n')[0];
+						}
+					}
+
 					if (match) {
 						let regName = match[1];
 						let regValue = match[2];
 						let registerVariable = {
 							name: regName,
-							type: '',
+							type: tmpType.split(':')[0],
 							value: regValue,
 							variablesReference: 0
 						}
+
 						registerVariableArr.push(registerVariable)
+					}
+
+					if (matchType) {
+						tmpType = matchType[0];
 					}
 				}
 				resolve(registerVariableArr);
@@ -143,14 +206,18 @@ export class MIBase extends EventEmitter {
 		});
 	}
 
-	async load(cwd: string, target: string, mode:string = '', skipEnvCheck = false): Promise<any> {
+	async load(cwd: string, target: string, mode:string = '', skipEnvCheck = false, operatorObjectFile = ''): Promise<any> {
 		let userHome = await getUserHomePath();
 		if (!skipEnvCheck && !validatePath(cwd, userHome)) {
 			throw new Error(`Invalid path for cwd param.cwd=${cwd}`);
 		}
 
-		if (!path.isAbsolute(target) && isFileExist(cwd, target)) {
+		if (!path.isAbsolute(target) && isFileExist(target, cwd)) {
 			target = path.join(cwd, target);
+		}
+
+		if (operatorObjectFile != '' && (!path.isAbsolute(operatorObjectFile) || !isFileExist(operatorObjectFile))) {
+			throw new Error(`Invalid path for cwd param.operatorObjectFile=${operatorObjectFile}`);
 		}
 
 		if (!skipEnvCheck && !validatePath(target, userHome)) {
@@ -175,7 +242,7 @@ export class MIBase extends EventEmitter {
 			this.process.on("error", (err) => {
 				this.emit("error-fatal", err);
 			});
-			const promises = this.initCommands(target, [], mode);
+			const promises = this.initCommands(target, [], mode, operatorObjectFile);
 
 			Promise.all(promises).then(() => {
 				this.emit("debug-ready");
@@ -184,9 +251,14 @@ export class MIBase extends EventEmitter {
 		});
 	}
 
-	protected initCommands(target: string, targetArgs: string[] = [], mode:string){
+	protected initCommands(target: string, targetArgs: string[] = [], mode:string, operatorObjectFile:string = ''){
 		if (mode == 'msdebug-coredump') {
-			return [this.sendRaw("target create --core \"" + escape(target) + "\"")];
+			var cmd = "target create --core \"" + escape(target) + "\""
+			if (operatorObjectFile != '') {
+				cmd = cmd + " \"" + escape(operatorObjectFile) + "\""
+			}
+			const setting_for_bt = "setting set frame-format \"frame #${frame.index}: ${frame.pc}{ ${module.file.basename}{\`${function.name-with-args}{${frame.no-debug}${function.pc-offset}}}}{ at ${line.file.fullpath}:${line.number}{:${line.column}}}\""
+			return [this.sendRaw(cmd), this.sendCliCommand(setting_for_bt)];
 		}
 		const cmds = [
 			this.sendCommand("gdb-set target-async on"),
