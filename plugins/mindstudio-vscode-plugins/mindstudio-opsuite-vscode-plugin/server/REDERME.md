@@ -34,13 +34,29 @@ uv sync不仅安装和更新包，还卸载多余的包，可以使的pyinstalle
   uv venv
 ```
 ##### 3.激活环境
-windows
+###### windows cmd
 ```shell
   .venv\Scripts\activate.bat
 ```
-linux
+指定环境变量
+```shell
+  set RUNNING=dev
+```
+###### windows powershell
+```shell
+  .\.venv\Scripts\Activate.ps1
+```
+指定环境变量
+```shell
+   $env:RUNNING_ENV = "dev"
+```
+###### linux
 ```shell
   source .venv/bin/activate
+```
+指定环境变量
+```shell
+  export RUNNING=dev
 ```
 ##### 4.同步环境
 ```shell
@@ -73,8 +89,11 @@ linux
 ```shell
   ./dist/vscode_local_service
 ```
+## 三、开发说明
+1、 数据库迁移说明：
+详情见 [数据库迁移](docs/db_migration.md) 。
 
-## 三、贡献
+## 四、贡献
 #### 1. fork仓库
 #### 2. 基于vscode_plugin分支开发，修改代码后提交到fork的个人仓vscode_plugin分支
 #### 3. 在个人仓Pull Requests提交pr，fork/mstt/vscode_plugin -> Ascend/mstt/vscode_plugin

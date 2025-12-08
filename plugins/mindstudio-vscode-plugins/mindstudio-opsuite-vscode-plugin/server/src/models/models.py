@@ -78,6 +78,7 @@ class Operator(Base):
     project_id = Column(Integer, ForeignKey("t_project.id"), nullable=False)
     op_class = Column(String, nullable=True)
     op_name = Column(String, nullable=False)
+    op_type = Column(String, default='ascend', nullable=False)
     ascend_env_script = Column(String, nullable=True)
     examples = Column(Text, nullable=True)
     create_by = Column(String)

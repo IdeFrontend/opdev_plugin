@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-
+from PyInstaller.utils.hooks import copy_metadata
 block_cipher = None
 
 a = Analysis(
@@ -10,8 +10,10 @@ a = Analysis(
         ('resource/*', 'resource'),
         ('envs/*', 'envs'),
         ('src/tasks/impl/*.py', 'tasks/impl'),
+    ] + copy_metadata('yoyo-migrations'),
+    hiddenimports=[
+        'yoyo.backends.sqlite',
     ],
-    hiddenimports=[],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

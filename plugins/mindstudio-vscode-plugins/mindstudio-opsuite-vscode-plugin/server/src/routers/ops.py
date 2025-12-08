@@ -14,9 +14,12 @@ ops_bp = Blueprint('ops', __name__)
 @ops_bp.route('', methods=['POST'])
 def generate_structure():
     data = request.get_json()
-    if not data or 'project_id' not in data or 'ops_prototype_file' not in data:
-        raise InValidRequestException('request body must contain project_id, ops_prototype_file')
+    if not data or 'project_id' not in data:
+        raise InValidRequestException('request body must contain project_id')
+
+    # 参数的具体校验交给 Service 层的 Pydantic Model
     op_id = ops.generate_structure(data)
+
     return {
         'code': 0,
         'data': op_id,
