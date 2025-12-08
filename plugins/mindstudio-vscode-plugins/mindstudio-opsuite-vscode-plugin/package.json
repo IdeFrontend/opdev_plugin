@@ -1,20 +1,43 @@
 {
-  "name": "mindstudio-opsuite-vscode-plugins",
+  "name": "mindstudio-opsuite-vscode-plugin",
   "displayName": "MindStudio Opsuite",
   "description": "A comprehensive operations suite for MindStudio",
-  "version": "1.0.0",
+  "publisher": "huawei",
+  "version": "1.0.46",
   "engines": {
-    "vscode": "^1.60.0"
+    "vscode": "^1.80.0"
   },
   "categories": [
     "Other"
   ],
-  "main": "./out/extension.js",
+  "main": "./out/plugin/src/extension.js",
+  "extensionDependencies": [
+    "ms-vscode-remote.remote-ssh"
+  ],
+  "activationEvents": [],
   "contributes": {
     "commands": [
       {
         "command": "mindstudio-opsuite.open",
         "title": "新建算子工程"
+      },
+      {
+        "command": "mindstudio-opsuite.buildOps",
+        "title": "编译算子"
+      },
+      {
+        "command": "mindstudio-opsuite.config",
+        "title": "配置"
+      },
+      {
+        "command": "mindstudio-opsuite.createOps",
+        "title": "新建算子原型文件",
+        "icon": "plugin/icon/ops.svg"
+      },
+      {
+        "command": "extension.jsonButtonAction",
+        "title": "生成算子工程",
+        "category": "JSON Tools"
       }
     ],
     "menus": {
@@ -22,19 +45,87 @@
         {
           "command": "mindstudio-opsuite.open",
           "group": "navigation"
+        },
+        {
+          "command": "mindstudio-opsuite.createOps",
+          "group": "navigation"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "mindstudio-opsuite.createOps",
+          "group": "navigation"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "mindstudio-opsuite.config",
+          "group": "navigation",
+          "when": "true"
+        },
+        {
+          "command": "extension.jsonButtonAction",
+          "group": "navigation",
+          "when": "editorLangId == json"
+        },
+        {
+          "submenu": "extension/build",
+          "group": "navigation",
+          "when": "true"
+        }
+      ],
+      "extension/build": [
+        {
+          "command": "mindstudio-opsuite.buildOps",
+          "group": "navigation"
+        },
+        {
+          "command": "mindstudio-opsuite.createOps",
+          "group": "navigation"
         }
       ]
-    }
+    },
+    "submenus": [
+      {
+        "id": "extension/build",
+        "label": "buildOps",
+        "icon": "plugin/icon/build.svg"
+      },
+      {
+        "id": "extension/opsRun",
+        "label": "opsRun",
+        "icon": "plugin/icon/run.svg"
+      },
+      {
+        "id": "extension/opsDebug",
+        "label": "opsDebug",
+        "icon": "plugin/icon/debug.svg"
+      },
+      {
+        "id": "extension/opsDebug",
+        "label": "opsDebug",
+        "icon": "plugin/icon/debug.svg"
+      }
+    ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run package",
+    "vscode:prepublish": "npm run compile",
     "compile": "tsc -p .",
     "watch": "tsc -watch -p .",
-    "package": "vite build",
+    "package": "vsce package",
     "lint": "eslint plugin/src --ext ts",
     "check-types": "tsc --noEmit"
   },
+  "dependencies": {
+    "ssh2": "^1.17.0",
+    "node-ssh": "^13.2.1",
+    "archiver": "^7.0.1",
+    "@types/archiver": "^7.0.0",
+    "@types/ssh2": "^1.15.5",
+    "axios": "^1.13.2"
+  },
   "devDependencies": {
+    "@rolldown/pluginutils": "^1.0.0-beta.53",
     "@types/vscode": "^1.60.0",
     "@types/node": "16.x",
     "@typescript-eslint/eslint-plugin": "^5.31.0",
@@ -42,9 +133,6 @@
     "eslint": "^8.20.0",
     "typescript": "^4.7.4",
     "vite": "^4.0.0",
-    "ssh2": "^1.17.0",
-    "node-ssh": "^13.2.1",
-    "@types/ssh2": "^1.15.5",
-    "ssh2": "^1.17.0"
+    "rollup-plugin-copy": "^3.5.0"
   }
 }

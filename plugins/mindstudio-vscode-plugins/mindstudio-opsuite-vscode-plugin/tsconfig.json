@@ -1,10 +1,11 @@
 {
   "compilerOptions": {
     "module": "node16",
+    "types":["node"],
     "target": "ES2020",
     "outDir": "out",
     "lib": [
-      "ES2020"
+      "ES2020","DOM"
     ],
     "sourceMap": true,
     "rootDirs": ["plugin/src","./"],
@@ -17,7 +18,7 @@
   },
   "include": [
     "plugin/src/**/*"
-  ],
+, "server/static_server.js"  ],
   "exclude": [
     "node_modules",
     ".vscode-test",

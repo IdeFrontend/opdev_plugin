@@ -218,16 +218,14 @@ export default class RemoteServer {
                     return;
                 }
 
-                console.log('执行完毕')
-
                 let stdout = '';
                 let stderr = '';
                 let code: number | null = null;
 
                 stream.on('data', (data: Buffer) => {
                     stdout += data.toString();
-                     console.log(data.toString())
-                    if (stdout.indexOf('完毕') !== -1) {
+                    console.log(data.toString())
+                    if (stdout.indexOf('服务地址') !== -1) {
                         resolve({ stdout, stderr, code });
                     }
                 });
@@ -238,11 +236,16 @@ export default class RemoteServer {
 
                 stream.on('close', (exitCode: number) => {
                     code = exitCode;
-                    resolve({ stdout, stderr, code });
+
+                    if (code === 0) {
+                        resolve({ stdout, stderr, code });
+                    } else {
+                        resolve({ stdout, stderr, code });
+                    }
                 });
 
                 stream.on('error', (error: any) => {
-                    reject(error);
+                    resolve({ stdout, stderr, code });
                 });
             });
         });

@@ -26,7 +26,7 @@ export interface RequestConfig extends AxiosRequestConfig {
 export interface ResponseData<T = any> {
   code: number;
   message: string;
-  data: T;
+  data?: T;
   success: boolean;
 }
 
@@ -60,48 +60,7 @@ class HttpClient {
         'Content-Type': 'application/json;charset=UTF-8'
       }
     });
-
-    this.setupDefaultInterceptors();
   }
-
-  /**
-   * 设置默认拦截器
-   */
-  private setupDefaultInterceptors(): void {
-    // 请求拦截器
-    this.instance.interceptors.request.use(
-      (config) => {
-        const token = localStorage.getItem('token');
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        
-        if (config.method?.toLowerCase() === 'get') {
-          config.params = {
-            ...config.params,
-            _t: Date.now()
-          };
-        }
-        
-        return config;
-      },
-      (error) => {
-        return Promise.reject(error);
-      }
-    );
-
-    // 响应拦截器
-    this.instance.interceptors.response.use(
-      (response) => {
-        return response;
-      },
-      (error: unknown) => {
-        this.handleError(error);
-        return Promise.reject(error);
-      }
-    );
-  }
-
   /**
    * 添加请求拦截器
    */
@@ -148,12 +107,12 @@ class HttpClient {
 
     try {
       const response = await this.instance.request<ResponseData<T>>(axiosConfig);
-      
+
       // 请求成功后隐藏 loading
       if (showLoading) {
         this.hideLoading();
       }
-      
+
       return response.data;
     } catch (error: unknown) {
       // 请求失败后隐藏 loading
@@ -165,11 +124,16 @@ class HttpClient {
       if (retryCount > 0 && this.isAxiosError(error)) {
         return this.retryRequest(config, retryCount, retryDelay);
       }
-      
+
       if (showError) {
         this.showError(error);
       }
-      throw error;
+      console.log(error);
+      return {
+        code: 1,
+        message: '',
+        success: false,
+      };
     }
   }
 
@@ -278,7 +242,7 @@ class HttpClient {
   } {
     const cancelKey = config.cancelKey || `${config.method}-${config.url}`;
     const source = axios.CancelToken.source();
-    
+
     this.cancelTokenSources.set(cancelKey, source);
 
     const promise = this.request<T>({
@@ -291,7 +255,7 @@ class HttpClient {
       },
       (error) => {
         this.cancelTokenSources.delete(cancelKey);
-        throw error;
+        return error;
       }
     );
 
@@ -359,7 +323,7 @@ class HttpClient {
 
     if (this.isAxiosError(error)) {
       let message = '请求失败';
-      
+
       if (error.response) {
         // 服务器返回错误状态码
         const status = error.response.status;
@@ -407,10 +371,10 @@ class HttpClient {
         message = error.message;
       }
 
-      console.error('请求错误:', message);
+      console.log('请求错误:', message);
     } else {
       // 处理非 Axios 错误
-      console.error('未知错误:', error);
+      console.log('未知错误:', error);
     }
   }
 
@@ -444,7 +408,7 @@ class HttpClient {
    */
   private showError(error: unknown): void {
     let message = '请求失败';
-    
+
     if (this.isAxiosError(error)) {
       if (error.response?.data && typeof error.response.data === 'object') {
         const responseData = error.response.data as any;
@@ -459,7 +423,7 @@ class HttpClient {
     }
 
     // 实现错误消息显示逻辑，例如使用 Toast 或 Message 组件
-    console.error('显示错误:', message);
+    console.log('显示错误:', message);
   }
 
   /**

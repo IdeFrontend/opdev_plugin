@@ -8,7 +8,11 @@
 import { message } from "./Message"
 
 export function getLocalData(key: string) {
-    return JSON.parse(localStorage.getItem(key) || '{}')
+    const value = localStorage.getItem(key);
+    if (value) {
+        return JSON.parse(value)
+    }
+    return ''
 }
 
 export function setLoaclData(key: string, value: any) {

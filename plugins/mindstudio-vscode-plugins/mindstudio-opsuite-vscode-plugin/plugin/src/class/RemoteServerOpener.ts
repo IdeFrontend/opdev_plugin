@@ -118,9 +118,9 @@ export class RemoteServerOpener {
 
             // 检查是否已存在该主机的配置
             const hostIdentifier = `${username}@${host}`;
-            const hostConfig = `\nHost ${hostIdentifier}\n    HostName ${host}\n    User ${username}\n    Port ${port}\n`;
+            const hostConfig = `\nHost ${this.getHostName(host, sshConfig)}\n    HostName ${host}\n    User ${username}\n    Port ${port}\n`;
 
-            if (!sshConfig.includes(`HostName ${host}`) || !sshConfig.includes(`User ${username}`)) {
+            if (!sshConfig.includes(`HostName ${this.getHostName(host, sshConfig)}`) || !sshConfig.includes(`User ${username}`)) {
                 // 添加新配置
                 fs.appendFileSync(sshConfigPath, hostConfig);
                 vscode.window.showInformationMessage(`已更新SSH配置: ${hostIdentifier}`);
@@ -129,6 +129,16 @@ export class RemoteServerOpener {
             console.warn('更新SSH配置失败:', error);
             // 不抛出错误，继续尝试连接
         }
+    }
+
+    getHostName(username: string, sshConfig: string) {
+        let hostName = username;
+        let index = 1;
+        while (sshConfig.includes(hostName)) {
+            hostName = `username_${index}`
+            index++;
+        }
+        return hostName;
     }
 
     /**

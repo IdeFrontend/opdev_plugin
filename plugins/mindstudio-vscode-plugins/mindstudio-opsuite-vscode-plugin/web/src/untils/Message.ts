@@ -41,7 +41,7 @@ export default class Message {
     }
 
     sendMessageToParent(message: Object, origin: string = '*') {
-        window.parent.postMessage(message, origin)
+        window.postMessage(message, origin)
     }
 
     messageListener() {
