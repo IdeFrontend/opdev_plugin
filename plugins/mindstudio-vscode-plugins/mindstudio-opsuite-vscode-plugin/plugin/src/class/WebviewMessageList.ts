@@ -291,7 +291,7 @@ const webviewMessageList: messageItem[] = [
                 await server.executeCommand(`mkdir  ${message.projectPath}/${message.projectName}`);
                 await server.executeCommand(`chmod + x ${message.projectSH}`);
                 await server.executeCommand(`${message.projectSH}`);
-                await server.executeCommand(`./${serviceFile} task create_project --project_name ${message.projectName} --project_path ${message.projectPath} --ascend_evn_script ${message.projectSH}`, commandPath);
+                await server.executeCommand(`./${serviceFile} task create_project --project_name ${message.projectName} --project_path ${message.projectPath} --ascend_env_script ${message.projectSH}`, commandPath);
                 const remoteOpener: RemoteServerOpener = new RemoteServerOpener();
                 remoteOpener.open({ ...message, remotePath: `${message.projectPath}/${message.projectName}` })
             }
