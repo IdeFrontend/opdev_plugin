@@ -288,12 +288,12 @@ defineExpose({
     border-radius: 15px;
     border: 1px solid rgba(255, 255, 255, 0.15);
     padding-top: 55px;
-    .empty-icon {
-      margin-bottom: 15px;
-    }
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     span {
       display: block;
-      margin-bottom: 15px;
+      margin-bottom: 16px;
       color: rgba(255, 255, 255, 0.65);
     }
   }
