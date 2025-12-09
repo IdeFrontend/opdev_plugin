@@ -13,13 +13,13 @@ import 'ant-design-vue/dist/reset.css'
 import { message, messageItem } from '../../untils/Message';
 const item: messageItem = {
     command: 'iframeSetSSHData',
-    callback: (message: any) => localStorage.setItem('sshData', JSON.stringify(message.data))
+    callback: (message: any) => localStorage.setItem('sshData', JSON.stringify(message.data ?? []))
 }
 
 const getDisposed: messageItem = {
     command: 'iframeGetDisposed',
     callback: (message: any) => {
-        localStorage.setItem('isRemote', JSON.stringify(message.data))
+        localStorage.setItem('isRemote', JSON.stringify(message.data ?? false))
         init();
     }
 }

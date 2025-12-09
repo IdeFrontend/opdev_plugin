@@ -1,84 +1,35 @@
 import vue from '@vitejs/plugin-vue';
 import path from 'path';
 import { defineConfig } from 'vite';
-import { viteSingleFile } from 'vite-plugin-singlefile'
-import { createHtmlPlugin } from 'vite-plugin-html'
-import { viteStaticCopy } from 'vite-plugin-static-copy';
+
+/** 视图入口白名单 */
+const TEMP_MULTI_ENTRIES = ['Config', 'Link'];
 
 export default defineConfig(({ mode }) => {
-  let createHtmlPluginOptions = {}
-  let rollupOptions = {}
-  let targets: any = []
-  if (mode === 'link') {
-    rollupOptions = {
-      input: {
-        link: 'src/views/Link/Link.html',
-      }
+  const buildInput: Record<string, string> = {};
+  // 配置多入口
+  const isBuildingSingleView = TEMP_MULTI_ENTRIES.includes(mode);
+  for (const entry of TEMP_MULTI_ENTRIES) {
+    if (isBuildingSingleView && entry !== mode) {
+      continue;
     }
-
-    createHtmlPluginOptions = {
-      entry: path.join(__dirname, 'src/views/Link/main.ts'),
-      filename: 'Link.html',
-      template: 'src/views/Link/Link.html',
-    }
-
-    targets = [{
-      src: 'dist/src/views/Link/Link.html',
-      dest: '../out'
-    }]
-
+    buildInput[entry] = `src/views/${entry}/${entry}.html`;
   }
-  if (mode === 'config') {
-    rollupOptions = {
-      input: {
-        Config: 'src/views/Config/Config.html'
-      }
-    }
-    createHtmlPluginOptions = {
-      entry: path.join(__dirname, 'src/views/Config/main.ts'),
-      filename: 'Config.html',
-      template: 'src/views/Config/Config.html',
-      data: {
-        basePath: './'
-      }
-    }
 
-    targets = [{
-      src: 'dist/src/views/Config/Config.html',
-       dest: '../out'
-    }]
-  }
   return {
+    base: './',
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, './src')
-      }
+        '@': path.resolve(__dirname, './src'),
+      },
     },
-    plugins: [createHtmlPlugin({
-      minify: true,
-      pages: [createHtmlPluginOptions]
-    }),
-    viteSingleFile(), vue(),
-    viteStaticCopy({
-      targets,
-    }),],
+    plugins: [vue()],
     build: {
-      outDir: 'dist',
+      outDir: 'out',
+      emptyOutDir: true,
       assetsDir: 'assets',
-      sourcemap: false,
-      rollupOptions
+      sourcemap: true,
+      rollupOptions: { input: buildInput },
     },
-    server: {
-      port: 8000,
-      proxy: {
-        '/api': {
-          target: 'http://localhost:3000',
-          changeOrigin: true
-        }
-      }
-    },
-    define: {
-      'process.env': {}
-    },
-  }
+  };
 });
