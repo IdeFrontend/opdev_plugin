@@ -63,18 +63,14 @@ export class WebviewProvider {
      * 创建Webview面板
      */
     private async createPanel(router: string = ''): Promise<void> {
-        const localResourceRoots = [
-            vscode.Uri.file(path.join(this.context.extensionPath, 'web', 'dist')),
-        ]
         try {
             this.panel = vscode.window.createWebviewPanel(
                 'mindstudioOpsuite',
                 'MindStudio Opsuite',
-                vscode.ViewColumn.One,
+                vscode.ViewColumn.Active,
                 {
                     enableScripts: true,
                     retainContextWhenHidden: true,
-                    localResourceRoots
                 }
             );
 
@@ -114,48 +110,6 @@ export class WebviewProvider {
         } catch (error) {
             // 如果读取文件失败，使用fallback内容
             console.log(error)
-        }
-    }
-
-    /**
-     * 从模板文件读取并生成Webview HTML内容
-     */
-    private async getWebviewContent(router: string = ''): Promise<string> {
-        try {
-            if (!this.panel) {
-                return '';
-            }
-
-            const distPath = path.join(this.context.extensionPath, 'web', 'dist');
-            const templatePath = path.join(distPath, 'index.html');
-
-            let htmlContent = await fs.promises.readFile(templatePath, 'utf-8');
-
-            htmlContent = htmlContent.replace(
-                /(src|href)="([^"]*)"/g,
-                (match, attr, resourcePath) => {
-                    // 处理相对路径
-                    if (resourcePath.startsWith('./') || resourcePath.startsWith('../')) {
-                        const fullPath = path.resolve(distPath, resourcePath);
-                        const webviewUri = this?.panel?.webview?.asWebviewUri(vscode.Uri.file(fullPath));
-                        return `${attr}="${webviewUri}"`;
-                    }
-                    // 处理绝对路径（在dist目录内）
-                    else if (!resourcePath.startsWith('http')) {
-                        const fullPath = path.join(distPath, resourcePath);
-                        const webviewUri = this?.panel?.webview?.asWebviewUri(vscode.Uri.file(fullPath));
-                        return `${attr}="${webviewUri}"`;
-                    }
-                    // 外部资源保持不变
-                    return match;
-                }
-            );
-
-            console.log(htmlContent)
-
-            return htmlContent;
-        } catch (error) {
-            throw new Error(`无法读取模板文件: ${error}`);
         }
     }
 

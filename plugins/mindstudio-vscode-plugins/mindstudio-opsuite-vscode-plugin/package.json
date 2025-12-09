@@ -14,7 +14,9 @@
   "extensionDependencies": [
     "ms-vscode-remote.remote-ssh"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "contributes": {
     "commands": [
       {
@@ -100,21 +102,17 @@
         "id": "extension/opsDebug",
         "label": "opsDebug",
         "icon": "plugin/icon/debug.svg"
-      },
-      {
-        "id": "extension/opsDebug",
-        "label": "opsDebug",
-        "icon": "plugin/icon/debug.svg"
       }
     ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p .",
+    "compile": "tsc -p . & npm run copy-web-output",
     "watch": "tsc -watch -p .",
     "package": "vsce package",
     "lint": "eslint plugin/src --ext ts",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "copy-web-output": "tsx ./scripts/copy-web-output.ts"
   },
   "dependencies": {
     "ssh2": "^1.17.0",
