@@ -51,9 +51,9 @@ def get_build_op_command():
     project_path = Path(project.project_path)
     deploy_cmd = f"chmod +x {config_data.target_file} && {config_data.target_file}"
 
-    if not op_util.assistant_script_exists(project_path):
+    if op_util.is_opgen_op(project_path, operator):
         cd_cmd = f"cd {project.project_path}/{operator.op_class}/{operator.op_name}"
-        build_cmd = f"bash {build_script_path} {custom_options if custom_options else ''}"
+        build_cmd = f"{build_script_path} {custom_options if custom_options else ''}"
         return jsonify({'code': 0, 'data': " && ".join([source_cann, cd_cmd, build_cmd, deploy_cmd]), 'message': 'ok'})
 
     try:
@@ -70,7 +70,7 @@ def get_build_op_command():
             soc = args.soc
 
         cd_cmd = f"cd {project.project_path}"
-        cmd = f"bash {build_script_path} --pkg --soc={soc} --vendor_name={vendor_name} --ops={op}"
+        cmd = f"{build_script_path} --pkg --soc={soc} --vendor_name={vendor_name} --ops={op}"
         return jsonify({'code': 0, 'data': " && ".join([source_cann, cd_cmd, cmd, deploy_cmd]), 'message': 'ok'})
 
     except Exception as e:
@@ -102,9 +102,9 @@ def get_build_example_command():
     source_cann = f". {project.ascend_env_script}" if project.ascend_env_script else f". {ascend_util.ascend_env_script}"
     project_path = Path(project.project_path)
 
-    if not op_util.assistant_script_exists(project_path):
+    if op_util.is_opgen_op(project_path, operator):
         cd_cmd = f"cd {project.project_path}/{operator.op_class}/{operator.op_name}"
-        cmd = f"bash {build_script_path} {custom_options if custom_options else ''}"
+        cmd = f"{build_script_path} {custom_options if custom_options else ''}"
         return jsonify({'code': 0, 'data': " && ".join([source_cann, cd_cmd, cmd]), 'message': 'ok'})
 
     try:
@@ -126,7 +126,7 @@ def get_build_example_command():
             mode = args.mode
 
         cd_cmd = f"cd {project.project_path}"
-        cmd = f"bash {build_script_path} --run_example {op} {mode} {pkg_mode} {vendor_name}"
+        cmd = f"{build_script_path} --run_example {op} {mode} {pkg_mode} {vendor_name}"
         return jsonify({'code': 0, 'data': " && ".join([source_cann, cd_cmd, cmd]), 'message': 'ok'})
     except Exception as e:
         return jsonify({'code': 0, 'data': -1, 'message': str(e)})
