@@ -1,9 +1,9 @@
 /**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- */
+* Copyright (c) 2025 Huawei Technologies Co., Ltd.
+*
+* This source code is licensed under the MIT license found in the
+* LICENSE file in the root directory of this source tree.
+*/
 
 import * as vscode from 'vscode';
 import * as path from 'path';
@@ -11,8 +11,6 @@ import * as fs from 'fs';
 import { ServiceManager } from './class/serviceManager';
 import { WebviewProvider } from './class/webviewProvider'; 3
 import OpsOption from './class/OpsOption'
-
-
 
 /**
  * 插件激活入口函数
@@ -28,6 +26,11 @@ export function activate(context: vscode.ExtensionContext) {
     // 初始化配置页面的Webview
     const configProvider = new WebviewProvider(context, serviceManager);
 
+    // 初始化配置页面的Webview
+    const configWelcomeProvider = new WebviewProvider(context, serviceManager);
+    // 初始化配置页面的Webview
+    const configNewPrototypeProvider = new WebviewProvider(context, serviceManager);
+
     const opsOption = new OpsOption(context)
 
     // 注册打开Opsuite命令
@@ -40,6 +43,16 @@ export function activate(context: vscode.ExtensionContext) {
     const ConfigCommand = vscode.commands.registerCommand('mindstudio-opsuite.config', async () => {
         await serviceManager.startServices();
         configProvider.show('Config');
+    });
+    
+    // 注册打开欢迎页命令
+    const welcomeCommand = vscode.commands.registerCommand('mindstudio-opsuite.welcome', async () => {
+        configWelcomeProvider.show('Welcome');
+    });
+
+    // 注册打开欢迎页命令
+    const newPrototypeCommand = vscode.commands.registerCommand('mindstudio-opsuite.newPrototype', async () => {
+        configNewPrototypeProvider.show('newPrototype');
     });
 
     // 注册新建算子原型文件命令
@@ -71,7 +84,7 @@ export function activate(context: vscode.ExtensionContext) {
     button.text = "生成算子工程";
     button.tooltip = "生成算子工程";
     button.command = 'extension.jsonButtonAction';
-
+    
     // 只在JSON文件中显示按钮
     vscode.window.onDidChangeActiveTextEditor((editor) => {
         if (editor && editor.document.languageId === 'json') {
@@ -81,6 +94,9 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
+    configProvider.showLeftPage('Home');
+    
+    vscode.commands.executeCommand('mindstudio-opsuite.welcome');
     context.subscriptions.push(buttonCommand, button);
 
     // 订阅销毁事件
@@ -89,4 +105,6 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(ConfigCommand);
     context.subscriptions.push(createCommand);
     context.subscriptions.push(serviceManager);
+    context.subscriptions.push(welcomeCommand);
+    context.subscriptions.push(newPrototypeCommand);
 }

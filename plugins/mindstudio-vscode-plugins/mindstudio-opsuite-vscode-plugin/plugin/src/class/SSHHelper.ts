@@ -147,12 +147,7 @@ export class SSHHelper {
      * 创建模拟密钥内容
      */
     private createMockKeyContent(): string {
-        return `-----BEGIN OPENSSH PRIVATE KEY-----
-b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABlwAAAAdzc2gtcn
-NhAAAAAwEAAQAAAYEAtL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8r
-L8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8r
-L8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8rL8r
------END OPENSSH PRIVATE KEY-----`;
+        return ``;
     }
 
     /**
