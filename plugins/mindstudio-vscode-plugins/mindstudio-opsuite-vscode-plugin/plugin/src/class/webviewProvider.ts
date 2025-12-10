@@ -78,10 +78,10 @@ export class WebviewProvider {
             vscode.window.registerWebviewViewProvider('pluginSidebar', {
                 resolveWebviewView: (webviewView: vscode.WebviewView) => {
                     webviewView.webview.options = {
-                        enableScripts: true,
-                        localResourceRoots
+                        enableScripts: true
                     };
                     const distPath = path.join(this.context.extensionPath, 'out', 'web')
+                    console.log(router);
                     webviewView.webview.html = HtmlTransformer.transformDistHtml(distPath, webviewView.webview, router)
                     // 处理Webview消息
                     webviewView.webview.onDidReceiveMessage(
