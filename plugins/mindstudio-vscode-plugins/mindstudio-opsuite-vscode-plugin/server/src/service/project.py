@@ -8,9 +8,10 @@ import shutil
 from pathlib import Path
 
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from common.exception import InValidRequestException
-from configs.db import with_db_session, safe_db_session
+from configs.db import with_db_session, safe_db_session, get_db
 from configs.log import app_logger
 from configs.config import get_resource_path
 from models.models import Project
@@ -64,6 +65,7 @@ def create_project(data):
     if project_find:
         if not project_obj.ascend_env_script:
             return project_find.id
+        app_logger.info(f"update {project_find.project_name} ascend_env_script: {project_obj.ascend_env_script}")
         with safe_db_session() as db:
             project = db.query(Project).filter(Project.id == project_find.id).first()
             project.ascend_env_script = project_obj.ascend_env_script

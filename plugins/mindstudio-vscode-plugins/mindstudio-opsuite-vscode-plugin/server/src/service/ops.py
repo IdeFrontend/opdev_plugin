@@ -3,8 +3,6 @@
 #  This source code is licensed under the MIT license found in the
 #  LICENSE file in the root directory of this source tree.
 #  ==============================================================================
-import json
-import subprocess
 from pathlib import Path
 
 from pydantic import BaseModel, Field, model_validator
@@ -12,14 +10,12 @@ from typing import Optional, Literal
 from sqlalchemy import select, and_
 
 from common.exception import InValidRequestException
-from configs.config import settings
 from configs.db import with_db_session, safe_db_session
 from configs.log import app_logger
 from service.configuration import config_process_registry
 from service.project import query_project_by_id
-from utils.ascend_util import ascend_util, chmod_recursive_standard
-from models.models import Operator, TConfig
-from utils.op_util import assistant_script_exists, get_python_cmd
+from utils.ascend_util import chmod_recursive_standard
+from models.models import Operator
 from service.op_generators import OpGeneratorFactory
 
 

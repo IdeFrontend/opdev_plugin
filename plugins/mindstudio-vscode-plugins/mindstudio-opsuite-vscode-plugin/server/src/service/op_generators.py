@@ -5,13 +5,13 @@ import abc
 import json
 import shutil
 import subprocess
+import zipfile
 from pathlib import Path
 
 from common.exception import InValidRequestException, ServerException
 from configs.config import settings, get_resource_path
 from configs.log import app_logger
 from utils.ascend_util import ascend_util
-from utils.op_util import assistant_script_exists, get_python_cmd
 
 
 # --- 1. 抽象基类 (接口定义) ---
@@ -58,37 +58,18 @@ class AscendOpGenerator(BaseOpGenerator):
             raise InValidRequestException(f"Invalid op prototype: {e}")
 
     def execute_generation(self):
-        # Ascend 逻辑: 判断是用自定义脚本还是 msopgen
-        if assistant_script_exists(self.project_path):
-            self._execute_assistant_script()
-        else:
-            self._execute_msopgen()
-
-    def _execute_assistant_script(self):
         try:
-            assistant_script = self.project_path / "scripts" / "opgen" / "opgen_standalone.py"
-            cmd = [
-                get_python_cmd(), str(assistant_script),
-                f"--op_type={self.op_class}",
-                f"--op_name={self.op_name}",
-                f"--output_path={self.project_path}",
-            ]
-            app_logger.debug(f"executing assistant script: {' '.join(cmd)}")
-            subprocess.run(cmd, cwd=self.project_path, capture_output=True, text=True, check=True)
-            return True
-        except Exception as e:
-            app_logger.error(f"Error executing assistant script: {e}")
-            raise Exception(f"Error executing assistant script: {e}")
-
-    def _execute_msopgen(self):
-        try:
-            op_class_dir = self.project_path / self.op_class
+            op_class_dir = Path(self.project.project_path) / self.op_class
             op_class_dir.mkdir(exist_ok=True)
+
+            zip_file_path = Path(get_resource_path(f'resource/code_template/add_example/AclNNInvocation.zip'))
+            examples_dir = op_class_dir / self.op_name / "examples"
+            if not zip_file_path.exists():
+                raise FileNotFoundError(f"找不到zip文件: {zip_file_path}")
 
             if settings.environment == 'development':
                 return True
-
-            soc_version = self.params.soc_version if self.params.soc_version else ascend_util.soc_version
+            soc_version = self.params.soc_version if self.params.soc_version is not None else ascend_util.soc_version
             if self.project.ascend_env_script:
                 cann_env = ascend_util.get_env_from_script(self.project.ascend_env_script)
             else:
@@ -96,16 +77,23 @@ class AscendOpGenerator(BaseOpGenerator):
             cmd = [
                 "msopgen", "gen",
                 "-i", str(self.params.ops_prototype_file),
-                "-c", f"ai_core-ascend{soc_version}",
+                "-c", f"ai_core-{soc_version}",
                 "-lan", "cpp",
                 "-out", self.op_name
             ]
-            app_logger.debug(f"executing msopgen: {' '.join(cmd)}")
-            subprocess.run(cmd, cwd=op_class_dir, capture_output=True, text=True, check=True, env=cann_env)
+            app_logger.debug(f"executing msopgen script: {' '.join(cmd)}")
+            result = subprocess.run(cmd, cwd=op_class_dir, capture_output=True, text=True, check=True, env=cann_env)
+            app_logger.debug(f"STDOUT: {result.stdout}")
+            examples_dir.mkdir(exist_ok=True)
+            with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
+                zip_ref.extractall(examples_dir)
             return True
+        except subprocess.CalledProcessError as e:
+            app_logger.error(f"Error executing msopgen: {e.stderr}")
+            raise Exception(f"Error executing msopgen: {e.stderr}") from e
         except Exception as e:
-            app_logger.error(f"Error executing msopgen: {e}")
-            raise Exception(f"Error executing msopgen: {e}")
+            app_logger.error(f"Unexpect error when executing msopgen: {e}")
+            raise Exception("Unexpect error when executing msopgen") from e
 
 
 # --- 3. CANN 策略实现 ---

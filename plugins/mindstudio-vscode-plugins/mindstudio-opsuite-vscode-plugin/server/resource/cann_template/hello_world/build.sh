@@ -1,8 +1,8 @@
 # 设置 CMAKE_PREFIX_PATH
 export CMAKE_PREFIX_PATH=${ASCEND_TOOLKIT_HOME}/compiler/tikcpp/ascendc_kernel_cmake:$CMAKE_PREFIX_PATH
 # 创建并进入构建目录
-mkdir -p build
-cd build
+mkdir -p build_out
+cd build_out
 # 配置和编译
 cmake ..
 make -j
