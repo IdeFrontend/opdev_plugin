@@ -18,7 +18,7 @@ const addLink = () => {
 </script>
 <template>
   <div class="accend-c-link">
-    <div class="title">新建 Accend C 工程</div>
+    <div class="title">新建 Accend C 算子工程</div>
     <div class="steps">
       <a-steps :current="current" :items="items"></a-steps>
     </div>

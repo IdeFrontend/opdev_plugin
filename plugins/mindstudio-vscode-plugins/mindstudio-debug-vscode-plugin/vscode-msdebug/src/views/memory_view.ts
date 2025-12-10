@@ -131,8 +131,6 @@ class MemoryView {
 
         panel.windowView.webview.onDidReceiveMessage(
             message => {
-                console.log(message);
-
                 vscode.debug.activeDebugSession?.customRequest('queryMemory', message);
             },
             undefined,

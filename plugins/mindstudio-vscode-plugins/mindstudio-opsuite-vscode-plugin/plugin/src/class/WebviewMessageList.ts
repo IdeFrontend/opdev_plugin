@@ -42,6 +42,18 @@ const webviewMessageList: messageItem[] = [
         }
     },
     {
+        command: 'startLinkCreateOps',
+        callback: (message: any, that: any) => {
+            vscode.commands.executeCommand('mindstudio-opsuite.createOps');
+        }
+    },
+    {
+        command: 'openLinkWebviewPanel',
+        callback: (message: any, that: any) => {
+            vscode.commands.executeCommand('mindstudio-opsuite.open');
+        }
+    },
+    {
         command: 'vscodeGetssh',
         callback: (message: any, that: any) => {
             if (!that.panel) {
@@ -239,6 +251,7 @@ const webviewMessageList: messageItem[] = [
 
             async function testLoaclPort(port: number) {
                 const result = await server.executeCommand(`export no_proxy="localhost,127.0.0.1,.huawei.com,10.0.0.0/24" && curl http://127.0.0.1:${port}/api/v1/health`)
+                console.log(result);
                 let isServerStart = result.stdout.indexOf(os.userInfo().username) !== -1;
                 if (isServerStart) {
                     return true;

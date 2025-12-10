@@ -3,7 +3,7 @@
   "displayName": "MindStudio Opsuite",
   "description": "A comprehensive operations suite for MindStudio",
   "publisher": "huawei",
-  "version": "1.0.46",
+  "version": "1.0.59",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -18,6 +18,25 @@
     "onStartupFinished"
   ],
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "mindstudio-opssuite-vscode-plugin",
+          "title": "算子一站式交付平台",
+          "icon": "resources/homeIcon.svg"
+
+        }
+      ]
+    },
+    "views": {
+      "mindstudio-opssuite-vscode-plugin":[
+        {
+          "id": "pluginSidebar",
+          "name": "功能列表",
+          "type": "webview"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "mindstudio-opsuite.open",
@@ -30,6 +49,15 @@
       {
         "command": "mindstudio-opsuite.config",
         "title": "配置"
+      },
+      {
+        "command": "mindstudio-opsuite.leftNaV",
+        "title": "左侧菜单配置"
+      },
+      {
+        "command": "mindstudio-opsuite.newPrototype",
+        "title": "新建算子原型定义文件",
+        "icon": "resources/homeIconW.svg"
       },
       {
         "command": "mindstudio-opsuite.createOps",
@@ -55,8 +83,13 @@
       ],
       "view/title": [
         {
-          "command": "mindstudio-opsuite.createOps",
-          "group": "navigation"
+          "command": "mindstudio-opsuite.newPrototype",
+          "group": "navigation",
+          "when": "view == workbench.explorer.fileView",
+          "icon": {
+            "light": "resources/homeIconW.svg",
+            "dark": "resources/homeIconW.svg"
+          }
         }
       ],
       "editor/title": [

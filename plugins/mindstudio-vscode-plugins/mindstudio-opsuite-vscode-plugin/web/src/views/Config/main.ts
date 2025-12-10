@@ -8,7 +8,6 @@
 import { createApp } from 'vue'
 import antd from 'ant-design-vue';
 import App from './APP.vue'
-import 'ant-design-vue/dist/reset.css'
 
 import { message, messageItem } from '../../untils/Message';
 const getProjectIdItem: messageItem = {

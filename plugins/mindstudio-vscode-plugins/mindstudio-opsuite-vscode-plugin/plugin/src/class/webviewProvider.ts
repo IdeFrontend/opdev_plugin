@@ -20,6 +20,7 @@ import { HtmlTransformer } from './HtmlTransformer'
  */
 export class WebviewProvider {
     private panel: vscode.WebviewPanel | undefined;
+    private leftNav: any | undefined;
     private serviceManager: ServiceManager;
     private storage: PermanentStorage;
     private isDisposed: boolean = false;
@@ -56,6 +57,44 @@ export class WebviewProvider {
             const errorMsg = `打开MindStudio Opsuite失败: ${error}`;
             console.error(errorMsg);
             vscode.window.showErrorMessage(errorMsg);
+        }
+    }
+
+    /**
+     * 创建Webview面板
+     */
+    public async showLeftPage(router: string): Promise<void> {
+        await this.createLeftNavWebview(router);
+    }
+
+    /**
+     * 创建Webview面板
+     */
+    private async createLeftNavWebview(router: string = ''): Promise<void> {
+        const localResourceRoots = [
+            vscode.Uri.file(path.join(this.context.extensionPath, 'web', 'dist')),
+        ]
+        try {
+            vscode.window.registerWebviewViewProvider('pluginSidebar', {
+                resolveWebviewView: (webviewView: vscode.WebviewView) => {
+                    webviewView.webview.options = {
+                        enableScripts: true,
+                        localResourceRoots
+                    };
+                    const distPath = path.join(this.context.extensionPath, 'out', 'web')
+                    webviewView.webview.html = HtmlTransformer.transformDistHtml(distPath, webviewView.webview, router)
+                    // 处理Webview消息
+                    webviewView.webview.onDidReceiveMessage(
+                        (message: any) => {
+                            this.handleWebviewMessage(message);
+                        },
+                        undefined,
+                        this.context.subscriptions
+                    );
+                }
+            });
+        } catch (error) {
+            console.error(error);
         }
     }
 
