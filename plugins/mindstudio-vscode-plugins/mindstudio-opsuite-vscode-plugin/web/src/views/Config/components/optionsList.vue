@@ -14,6 +14,10 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  activeConfig: {
+    type: String,
+    default: "",
+  },
 });
 
 const emit = defineEmits(["updateActiveOption"]);
@@ -24,54 +28,78 @@ const updateActiveOption = (item) => {
 };
 </script>
 <template>
-  <div class="options-list">
-    <div
-      class="options-list-build options-list-title"
-      :class="[Actived === 'build' ? 'is-active' : '']"
-      @click="updateActiveOption('build')"
-    >
-      算子/example编译
+  <div class="options-box">
+    <div class="options-title">
+      算子配置配置
     </div>
-    <div
-      class="options-list-sanitizer options-list-title"
-      @click="updateActiveOption('sanitizer')"
-      :class="[Actived === 'sanitizer' ? 'is-active' : '']"
-    >
-      异常检测
+    <div class="options-list">
+      <div class="options-list-item" :class="[Actived === 'build' ? 'is-active' : '']"
+        @click="updateActiveOption('build')">
+        <img src="../../../assets/svg/build.svg" alt="" class="img">
+        编译部署
+      </div>
+      <div class="options-list-item" :class="[Actived === 'sanitizer' ? 'is-active' : '']"
+        @click="updateActiveOption('sanitizer')">
+        <img src="../../../assets/svg/check.svg" alt="" class="img">
+        异常检测
+      </div>
+      <div class="options-list-item" :class="[Actived === 'opprof' ? 'is-active' : '']"
+        @click="updateActiveOption('opprof')">
+        <img src="../../../assets/svg/power.svg" alt="" class="img">
+        性能调优
+      </div>
     </div>
-    <div
-      class="options-list-opprof options-list-title"
-      @click="updateActiveOption('opprof')"
-      :class="[Actived === 'opprof' ? 'is-active' : '']"
-    >
-      性能调优
-    </div>
+
   </div>
 </template>
 
 
 <style lang="less">
+.options-box {
+  display: flex;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+  box-shadow: 0px 2px 12px 0px rgba(0, 0, 0, 0.48);
+}
+
+.options-title {
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 22px;
+  font-weight: bold;
+  max-width: 320px;
+  word-break: break-all;
+}
+
 .options-list {
-  height: 100%;
   font-size: 14px;
   color: #ffffff;
-  width: 225px;
-  float: left;
-  border-right: 1px solid #2b2b2b;
-  padding-left: 22px;
+  width: 750px;
+  display: flex;
+  padding: 12px 32px;
 
-  .options-list-title {
-    text-align: left;
-    float: left;
-    font-weight: 400;
-    line-height: 16px;
-    width: 100%;
-    margin-bottom: 24px;
+  .options-list-item {
+    border-radius: 4px;
+    border: 1px solid #424242;
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    font-size: 14px;
+    margin-right: 12px;
     cursor: pointer;
+
+    .img {
+      margin-right: 4px;
+      width: 16px;
+      height: 16px;
+    }
   }
 
   .is-active {
-    font-weight: 700;
+    border-color: #1668dc;
   }
 }
 </style>

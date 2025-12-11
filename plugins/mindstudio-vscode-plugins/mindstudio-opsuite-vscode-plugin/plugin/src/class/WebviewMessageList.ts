@@ -17,6 +17,7 @@ import { ServerInfoUtil } from './ServerInfoUtil';
 import OpsOption from './OpsOption'
 
 
+const tempObj = { currentActiveConfig: '' }
 
 export interface messageItem {
     command: string;
@@ -88,6 +89,82 @@ const webviewMessageList: messageItem[] = [
             await opsOption.init();
             const configData = await opsOption.getConfigData()
             that.panel.webview.postMessage({
+                command: 'iframeSetBuildConfigItem',
+                data: JSON.stringify(configData.data)
+            });
+        }
+    },
+    {
+        command: 'vscodeSaveBuildConfig',
+        callback: async (msg: any, that: any) => {
+            const data = msg.message.data;
+            const opsOption = new OpsOption(that.context);
+            await opsOption.init();
+            await opsOption.saveBuildConfig(data)
+            const configData = await opsOption.getConfigData()
+            that.panel.webview.postMessage({
+                command: 'iframeSetBuildConfigItem',
+                data: JSON.stringify(configData.data)
+            });
+        }
+    },
+    {
+        command: 'vscodeSaveAndStartBuild',
+        callback: async (msg: any, that: any) => {
+            const data = msg.message.data;
+            const opsOption = new OpsOption(that.context);
+            await opsOption.init();
+            await opsOption.saveBuildConfig(data, false)
+            const configData = await opsOption.getConfigData()
+            that.panel.webview.postMessage({
+                command: 'iframeSetBuildConfigItem',
+                data: JSON.stringify(configData.data)
+            });
+            const config_id = data.find((v: any) => v.config_type === "build_op").config_id
+            await opsOption.startBuild(config_id)
+        }
+    },
+    {
+        command: 'vscodeSaveAndStartBuildExample',
+        callback: async (msg: any, that: any) => {
+            const data = msg.message.data;
+            const opsOption = new OpsOption(that.context);
+            await opsOption.init();
+            await opsOption.saveBuildConfig(data, false)
+            const config_id = data.find((v: any) => v.config_type === "build_example").config_id
+            await opsOption.startBuildExample(config_id)
+        }
+    },
+    {
+        command: 'vscodeGetProjectIdBoard',
+        callback: async (message: any, that: any) => {
+            const opsOption = new OpsOption(that.context);
+            await opsOption.init();
+            that._view.webview.postMessage({
+                command: 'iframeSetProjectId',
+                data: opsOption.projectId
+            });
+        }
+    },
+    {
+        command: 'vscodeGetBuildConfig',
+        callback: async (message: any, that: any) => {
+            const opsOption = new OpsOption(that.context);
+            await opsOption.init();
+            const configData = await opsOption.getConfigData()
+            that.panel.webview.postMessage({
+                command: 'iframeSetBuildConfigItem',
+                data: JSON.stringify(configData.data)
+            });
+        }
+    },
+    {
+        command: 'vscodeGetBuildConfigBoard',
+        callback: async (message: any, that: any) => {
+            const opsOption = new OpsOption(that.context);
+            await opsOption.init();
+            const configData = await opsOption.getConfigData()
+            that._view.webview.postMessage({
                 command: 'iframeSetBuildConfigItem',
                 data: JSON.stringify(configData.data)
             });
@@ -311,7 +388,88 @@ const webviewMessageList: messageItem[] = [
 
 
         }
-    }
+    },
+    {
+        command: 'vscodeCreatedProject',
+        callback: async (msg: any, that: any) => {
+            const message = msg.message.data;
+            const publisher = packageJson.publisher;
+            const extensionName = packageJson.name;
+            const version = packageJson.version;
+            const extensionsPath = '.vscode-server/extensions/'
+            const serviceFile = 'vscode_local_service'
+            const plugiExtensionsPath = `${extensionsPath}${publisher}.${extensionName}-${version}`;
+            const commandPath = `${plugiExtensionsPath}/out/server`
+
+            if (that.isRemote) {
+                console.log('服务器上执行');
+                const executor = new CommandExecutor();
+                await executor.execute(`mkdir  ${message.projectPath}/${message.projectName}`, ['File exists'])
+                await executor.execute(`chmod +x ${message.projectSH}`);
+                await executor.execute(`${message.projectSH}`);
+                const opsOption = new OpsOption(that.context);
+                await opsOption.init(message.projectSH);
+                await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(`${message.projectPath}/${message.projectName}`))
+                const sshConfigName = `${ServerInfoUtil.getUsername()}@${ServerInfoUtil.getPrimaryIP()}`;
+                const remoteUri = vscode.Uri.parse(`vscode-remote://ssh-remote+${sshConfigName}${message.projectPath}/${message.projectName}`);
+                await vscode.commands.executeCommand('vscode.openFolder', remoteUri, {
+                    forceNewWindow: true
+                });
+            } else {
+                console.log('本地执行上执行')
+                const server = new RemoteServer(message)
+                await server.connect();
+                await server.executeCommand(`mkdir  ${message.projectPath}/${message.projectName}`);
+                await server.executeCommand(`chmod + x ${message.projectSH}`);
+                await server.executeCommand(`${message.projectSH}`);
+                await server.executeCommand(`./${serviceFile} task create_project --project_name ${message.projectName} --project_path ${message.projectPath} --ascend_env_script ${message.projectSH}`, commandPath);
+                const remoteOpener: RemoteServerOpener = new RemoteServerOpener();
+                remoteOpener.open({ ...message, remotePath: `${message.projectPath}/${message.projectName}` })
+            }
+
+
+        }
+    },
+    {
+        command: 'vscodeSetActiveConfig',
+        callback: async (msg: any, that: any) => {
+            tempObj.currentActiveConfig = msg.message.data
+        }
+    },
+    {
+        command: 'vscodeOpenConfig',
+        callback: async (msg: any, that: any) => {
+            tempObj.currentActiveConfig = msg.message.data
+            await vscode.commands.executeCommand('mindstudio-opsuite.config')
+        }
+    },
+    {
+        command: 'vscodeGetActiveConfig',
+        callback: async (message: any, that: any) => {
+            that.panel.webview.postMessage({
+                command: 'getActiveConfig',
+                data: tempObj.currentActiveConfig
+            });
+        }
+    },
+    {
+        command: 'vscodeBuildOp',
+        callback: async (msg: any, that: any) => {
+            const data = msg.message.data;
+            const opsOption = new OpsOption(that.context);
+            await opsOption.init();
+            await opsOption.startBuild(data)
+        }
+    },
+    {
+        command: 'vscodeBuildExample',
+        callback: async (msg: any, that: any) => {
+            const data = msg.message.data;
+            const opsOption = new OpsOption(that.context);
+            await opsOption.init();
+            await opsOption.startBuildExample(data)
+        }
+    },
 ]
 
 export default webviewMessageList;
