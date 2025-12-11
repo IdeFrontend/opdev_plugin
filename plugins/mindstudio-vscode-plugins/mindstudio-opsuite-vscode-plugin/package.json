@@ -3,7 +3,7 @@
   "displayName": "MindStudio Opsuite",
   "description": "A comprehensive operations suite for MindStudio",
   "publisher": "huawei",
-  "version": "1.0.63",
+  "version": "1.0.76",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -26,10 +26,6 @@
           "id": "mindstudio-opssuite-vscode-plugin",
           "title": "算子一站式交付平台",
           "icon": "resources/homeIcon.svg"
-        },
-        {
-          "id": "custom-sidebar",
-          "title": "我的操作面板"
         }
       ]
     },
@@ -41,10 +37,10 @@
           "type": "webview"
         }
       ],
-      "custom-sidebar": [
+      "explorer": [
         {
           "id": "customSidebarView",
-          "name": "操作面板",
+          "name": "操作面板123",
           "type": "webview"
         }
       ]

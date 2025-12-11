@@ -30,7 +30,7 @@ const updateActiveOption = (item) => {
 <template>
   <div class="options-box">
     <div class="options-title">
-      算子配置配置
+      算子工程配置
     </div>
     <div class="options-list">
       <div class="options-list-item" :class="[Actived === 'build' ? 'is-active' : '']"
@@ -49,7 +49,7 @@ const updateActiveOption = (item) => {
         性能调优
       </div>
     </div>
-
+    <div class="block"></div>
   </div>
 </template>
 
@@ -57,27 +57,29 @@ const updateActiveOption = (item) => {
 <style lang="less">
 .options-box {
   display: flex;
-  justify-content: center;
-  position: relative;
+  justify-content: space-between;
+  align-items: center;
   width: 100%;
   box-shadow: 0px 2px 12px 0px rgba(0, 0, 0, 0.48);
 }
 
 .options-title {
-  position: absolute;
-  left: 20px;
-  top: 50%;
-  transform: translateY(-50%);
+  padding: 0 20px;
   font-size: 22px;
   font-weight: bold;
-  max-width: 320px;
   word-break: break-all;
+}
+
+.block {
+  width: 172px;
+  height: 100%;
 }
 
 .options-list {
   font-size: 14px;
   color: #ffffff;
   width: 750px;
+  min-width: 750px;
   display: flex;
   padding: 12px 32px;
 

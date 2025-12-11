@@ -3,7 +3,7 @@ import path from 'path';
 import { defineConfig } from 'vite';
 
 /** 视图入口白名单 */
-const TEMP_MULTI_ENTRIES = ['Config', 'Link', 'Welcome', 'Home', 'newPrototype'];
+const TEMP_MULTI_ENTRIES = ['Config', 'Link', 'Welcome', 'Home', 'newPrototype', 'Board'];
 
 export default defineConfig(({ mode }) => {
   const buildInput: Record<string, string> = {};

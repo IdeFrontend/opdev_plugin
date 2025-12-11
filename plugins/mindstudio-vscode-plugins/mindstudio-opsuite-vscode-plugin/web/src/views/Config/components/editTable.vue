@@ -79,6 +79,7 @@ const addTableItem = () => {
   float: right;
   color: #4ba5f4;
   cursor: pointer;
+  margin-bottom: 12px;
 }
 .editable-row-operations a {
   margin-right: 8px;

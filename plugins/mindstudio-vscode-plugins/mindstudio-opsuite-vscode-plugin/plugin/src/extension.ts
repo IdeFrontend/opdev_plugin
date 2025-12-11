@@ -55,6 +55,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // 注册打开欢迎页命令
     const newPrototypeCommand = vscode.commands.registerCommand('mindstudio-opsuite.newPrototype', async () => {
+        await serviceManager.startServices();
         configNewPrototypeProvider.show('newPrototype');
     });
 

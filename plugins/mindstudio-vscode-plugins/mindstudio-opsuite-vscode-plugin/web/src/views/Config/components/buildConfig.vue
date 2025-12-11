@@ -97,7 +97,6 @@ const getSaveData = () => {
 
 <template>
   <div class="build-config">
-    <div class="title">算子/example编译</div>
     <div class="model-title">算子编译配置</div>
     <a-form
       :model="buildConfigForme"
