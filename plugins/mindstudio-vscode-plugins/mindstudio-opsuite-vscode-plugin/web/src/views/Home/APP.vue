@@ -11,26 +11,26 @@
             <a-menu @click="handleMenuClick">
               <a-menu-item key="Ascend C">
                 <UserOutlined />
-                Ascend C
+                Ascend C 算子工程
               </a-menu-item>
               <a-menu-item key="Trition">
                 <UserOutlined />
-                Trition
+                Trition 算子工程
               </a-menu-item>
               <a-menu-item key="TileLang">
                 <UserOutlined />
-                TileLang
+                TileLang 算子工程
               </a-menu-item>
             </a-menu>
           </template>
           <a-button type="primary">
-            新建工程
+            新建算子工程
             <DownOutlined />
           </a-button>
         </a-dropdown>
       </div>
       <div class="button-box">
-        <a-button type="primary" class="button disable-btn">打开工程</a-button>
+        <a-button type="primary" class="button disable-btn">打开算子工程</a-button>
       </div>
     </a-collapse-panel>
   </a-collapse>

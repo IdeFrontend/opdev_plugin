@@ -8,10 +8,6 @@
       backgroundPosition: 'center'
     }"
   >
-    <!-- <div class="content">
-      <h1>Base64背景图示例</h1>
-      <p>背景图不会重复显示</p>
-    </div> -->
   </div>
 </template>
 
