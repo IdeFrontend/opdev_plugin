@@ -125,6 +125,9 @@ const getSaveData = () => {
           placeholder="请输入生成文件名称 "
         />
       </a-form-item>
+      <a-form-item label="编译命令行" name="script">
+        <a-input v-model:value="buildConfigForme.script" placeholder="" />
+      </a-form-item>
     </a-form>
     <a-collapse v-model:activeKey="activeKey1" ghost>
       <a-collapse-panel key="1" header="高级配置">
@@ -135,10 +138,6 @@ const getSaveData = () => {
           ref="connectionFormRef"
           layout="vertical"
         >
-          <a-form-item label="script" name="script">
-            <a-input v-model:value="buildConfigForme.script" placeholder="" />
-          </a-form-item>
-
           <a-form-item label="高级参数">
             <editTable
               :key="updateIndex"
@@ -159,8 +158,8 @@ const getSaveData = () => {
     >
       <a-form-item label="执行模式" name="mode">
         <a-radio-group v-model:value="exampleConfigForme.mode">
-          <a-radio :style="radioStyle" :value="eager">eager(aclnn调用)</a-radio>
-          <a-radio :style="radioStyle" :value="graph"
+          <a-radio :style="radioStyle" value="eager">eager(aclnn调用)</a-radio>
+          <a-radio :style="radioStyle" value="graph"
             >graph(图模式调用)</a-radio
           >
         </a-radio-group>
@@ -176,6 +175,10 @@ const getSaveData = () => {
           placeholder=""
         />
       </a-form-item>
+
+      <a-form-item label="编译命令行" name="script">
+        <a-input v-model:value="exampleConfigForme.script" />
+      </a-form-item>
     </a-form>
 
     <a-collapse v-model:activeKey="activeKey2" ghost>
@@ -188,9 +191,6 @@ const getSaveData = () => {
           :rules="connectionFormRules"
           layout="vertical"
         >
-          <a-form-item label="script" name="script">
-            <a-input v-model:value="exampleConfigForme.script" />
-          </a-form-item>
 
           <a-form-item label="高级参数" name="userName">
             <editTable

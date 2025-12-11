@@ -9,8 +9,11 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { ServiceManager } from './class/serviceManager';
-import { WebviewProvider } from './class/webviewProvider'; 3
+import { WebviewProvider } from './class/webviewProvider';
 import OpsOption from './class/OpsOption'
+import { CustomSidebarProvider } from './class/CustomSidebarProvider';
+
+
 
 /**
  * 插件激活入口函数
@@ -107,4 +110,20 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(serviceManager);
     context.subscriptions.push(welcomeCommand);
     context.subscriptions.push(newPrototypeCommand);
+
+    // 创建侧边栏提供者
+    const sidebarProvider = new CustomSidebarProvider(context);
+    
+    // 注册WebView视图
+    const sidebarView = vscode.window.registerWebviewViewProvider(
+        CustomSidebarProvider.viewType,
+        sidebarProvider,
+        {
+            webviewOptions: {
+                retainContextWhenHidden: true // WebView隐藏时保持状态
+            }
+        }
+    );
+    
+    context.subscriptions.push(sidebarView);
 }

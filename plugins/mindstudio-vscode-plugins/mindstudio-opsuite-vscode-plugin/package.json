@@ -26,7 +26,10 @@
           "id": "mindstudio-opssuite-vscode-plugin",
           "title": "算子一站式交付平台",
           "icon": "resources/homeIcon.svg"
-
+        },
+        {
+          "id": "custom-sidebar",
+          "title": "我的操作面板"
         }
       ]
     },
@@ -35,6 +38,13 @@
         {
           "id": "pluginSidebar",
           "name": "功能列表",
+          "type": "webview"
+        }
+      ],
+      "custom-sidebar": [
+        {
+          "id": "customSidebarView",
+          "name": "操作面板",
           "type": "webview"
         }
       ]

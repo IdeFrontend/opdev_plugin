@@ -121,6 +121,6 @@ defineExpose({
   color: #ffffff;
   text-align: left;
   font-size: 14px;
-  padding: 0 32px;
+  padding: 20px 32px;
 }
 </style>

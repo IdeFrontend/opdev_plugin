@@ -8,6 +8,7 @@
     "build": "vue-tsc -b --noEmit && vite build",
     "build:link": "vue-tsc -b --noEmit && vite build --mode link",
     "build:config": "vue-tsc -b --noEmit && vite build --mode config",
+    "build:board": "vue-tsc -b --noEmit && vite build --mode board",
     "build:home": "vue-tsc -b --noEmit && vite build --mode home",
     "build:welcome": "vue-tsc -b --noEmit && vite build --mode welcome",
     "build:newPrototype": "vue-tsc -b --noEmit && vite build --mode newPrototype",
