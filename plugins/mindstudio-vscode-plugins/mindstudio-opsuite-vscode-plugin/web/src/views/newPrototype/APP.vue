@@ -105,6 +105,8 @@ import { ref, computed, reactive } from 'vue';
 import { message } from 'ant-design-vue';
 import { InboxOutlined, PrinterOutlined } from '@ant-design/icons-vue';
 
+import { message as utilMessage } from "../../untils/Message";
+
 const fileInput = ref(null);
 const fileInfo = ref(null);
 const jsonContent = ref('');
@@ -226,12 +228,20 @@ const items_proto = [
 ];
 const connectSSH = () => {
   //@ts-ignore
-  window.vscode.postMessage({
-    command: 'startLinkCreateOps',
-    commandId: 'startLinkCreateOps'
-  });
-  msg.
-    console.log(val, '开始请求');
+  console.log('点击确定',selectedId_type.value, selectedId_proto.value);
+  if (selectedId_type.value === 1) {
+    utilMessage.sendMessageToParent({
+      command: "vscodeBuildCreateOps",
+      data: 'cann'
+    });
+    return
+  }
+  if (selectedId_type.value === 2 && selectedId_proto.value === 1) {
+    utilMessage.sendMessageToParent({
+      command: "vscodeStartLinkCreateOps",
+    });
+  }
+
 }
 </script>
 

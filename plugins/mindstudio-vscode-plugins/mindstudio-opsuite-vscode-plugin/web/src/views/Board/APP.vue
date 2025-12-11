@@ -37,17 +37,17 @@ configArray.value = Object.keys(buildConfigData).map((config_name) => {
 
 if (configArray.value.length > 0) {
     activeConfig.value = configArray.value[0].config_name;
-    if (!activeConfig.value) {
-        return
+    if (activeConfig.value) {
+        message.sendMessageToParent({
+            command: "vscodeSetActiveConfig",
+            data: activeConfig.value
+        });
     }
-    message.sendMessageToParent({
-        command: "vscodeSetActiveConfig",
-        data: activeConfig.value
-    });
 }
 
 const clickSetting = (() => {
     if (!activeConfig.value) {
+        console.log('未获取到configArray')
         return
     }
     message.sendMessageToParent({
@@ -60,7 +60,7 @@ const clickSetting = (() => {
 <template>
     <a-config-provider :theme="themeConfig">
         <div>
-            <div class="target-box">
+            <div v-if="false" class="target-box">
                 目标算子
                 <a-select v-model:value="activeConfig" size="small" style="width: 200px;" placeholder="--">
                     <a-select-option v-for="item in configArray" :key="item.config_name" :value="item.config_name">{{
@@ -76,7 +76,7 @@ const clickSetting = (() => {
                     <span class="dropdown-content">
                         <img src="../../assets/svg/build.svg" alt="" class="img">
                         编译部署
-                        <DownOutlined style="margin-right: 4px;" />
+                        <DownOutlined style="margin-right: 4px; margin-left: 4px;" />
                     </span>
                     <template #overlay>
                         <a-menu>
@@ -94,7 +94,7 @@ const clickSetting = (() => {
                     <span class="dropdown-content">
                         <img src="../../assets/svg/run.svg" alt="" class="img">
                         运行
-                        <DownOutlined style="margin-right: 4px;" />
+                        <DownOutlined style="margin-right: 4px; margin-left: 4px;" />
                     </span>
                     <template #overlay>
                         <a-menu>
@@ -108,7 +108,7 @@ const clickSetting = (() => {
                     <span class="dropdown-content">
                         <img src="../../assets/svg/debug.svg" alt="" class="img">
                         调试
-                        <DownOutlined style="margin-right: 4px;" />
+                        <DownOutlined style="margin-right: 4px; margin-left: 4px;" />
                     </span>
                     <template #overlay>
                         <a-menu>
@@ -129,10 +129,10 @@ const clickSetting = (() => {
                 </a-button>
 
                 <a-dropdown>
-                    <span class="dropdown-content">
+                    <span class="dropdown-content" style="margin-left: 4px">
                         <img src="../../assets/svg/power.svg" alt="" class="img">
                         性能调优
-                        <DownOutlined style="margin-right: 4px;" />
+                        <DownOutlined style="margin-right: 4px; margin-left: 4px;" />
                     </span>
                     <template #overlay>
                         <a-menu>
@@ -141,6 +141,13 @@ const clickSetting = (() => {
                         </a-menu>
                     </template>
                 </a-dropdown>
+
+                <a-button type="text" size="small" style="padding: 0;" @click="clickSetting">
+                    <div class="inline-flex">
+                        <img src="../../assets/svg/setting.svg" alt="" class="img">
+                        工程配置
+                    </div>
+                </a-button>
             </div>
         </div>
     </a-config-provider>

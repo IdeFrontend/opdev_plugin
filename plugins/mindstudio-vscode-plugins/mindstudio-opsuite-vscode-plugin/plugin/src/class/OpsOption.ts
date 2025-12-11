@@ -29,10 +29,13 @@ export default class OpsOption {
         this.projectId = await this.getProjectId(accendEnvScript)
     }
 
+    // 创建算子原型文件
+    // 标准自定义算子工程 使用原型模板
     async createOps(projectName?: string, projectId?: string, ptototypeName?: string) {
         const op_name = projectName || this.project_name;
         const project_id = projectId || this.projectId;
         const prototype_name = ptototypeName || undefined;
+        console.log('生成算子原型文件参数', op_name, project_id, prototype_name)
         const result = await this.server.post('api/v1/ops_prototype', {
             op_name, project_id, prototype_name
         })
@@ -54,13 +57,16 @@ export default class OpsOption {
         return projectRes.data;
     }
 
-    async createOpsByPrototype(ops_prototype_file: string) {
+    // 生成算子工程
+    // <<< 算子工程 op_type: 'cann'
+    // 右上角 op_type: 'ascend'
+    async createOpsByPrototype(ops_prototype_file: string, op_type = 'ascend') {
         const project_id = this.projectId;
         const result = await this.server.post('api/v1/ops', {
-            ops_prototype_file, project_id
+            ops_prototype_file, project_id, op_type
         })
-        console.log({
-            ops_prototype_file, project_id
+        console.log('生成算子工程参数', {
+            ops_prototype_file, project_id, op_type
         }, result)
         if (result.code === 0) {
             vscode.window.showInformationMessage(`新建算子文件成功`);
