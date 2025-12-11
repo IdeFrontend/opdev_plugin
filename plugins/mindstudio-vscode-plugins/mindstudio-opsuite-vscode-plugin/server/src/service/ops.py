@@ -24,33 +24,17 @@ class OpsCreateBase(BaseModel):
     op_type: Literal['ascend', 'cann'] = 'ascend'  # 使用 Literal 限制可选值
 
     ops_prototype_file: Optional[str] = Field(default=None)
-    op_name: Optional[str] = Field(default='hello_world')
-    op_class: Optional[str] = Field(default='FirstProject')
-    template_name: str = Field(default='hello_world')
+    op_name: Optional[str] = Field(default=None)
+    op_class: Optional[str] = Field(default=None)
+    template_name: str = Field(default=None)
     soc_version: Optional[str] = Field(default=None)
+    op_path: Optional[str] = Field(default=None)  # 指定算子生成目录，为空则默认项目根目录
 
     @model_validator(mode='after')
     def validate_fields(self) -> 'OpsCreateBase':
         errors = []
-
-        if self.op_type == 'ascend':
-            if not self.ops_prototype_file:
-                errors.append('Ascend type requires ops_prototype_file')
-            # 可选的：清理不需要的字段
-            self.op_name = None
-            self.op_class = None
-
-        elif self.op_type == 'cann':
-            if not self.op_name:
-                errors.append('CANN type requires op_name')
-            if not self.op_class:
-                errors.append('CANN type requires op_class')
-            # 可选的：清理不需要的字段
-            self.ops_prototype_file = None
-
         if errors:
             raise ValueError('; '.join(errors))
-
         return self
 
 # 2. 核心入口函数
@@ -65,24 +49,25 @@ def generate_operator_structure(data):
     project_path = Path(project.project_path)
     chmod_recursive_standard(project_path, 0o755)
 
+    # 确定算子生成目录
+    if not ops_create.op_path:
+        # 如果指定了op_path，则使用项目路径下的相对路径
+        ops_create.op_path = project.project_path
+
     # 2.2 获取生成策略 (Strategy Pattern)
     # 无论是 Ascend 还是 CANN，这里拿到的都是 BaseOpGenerator 的子类
     generator = OpGeneratorFactory.get_generator(
-        ops_create.op_type,
-        project_path,
         ops_create,
         project
     )
 
     # 2.3 解析元数据 (多态调用)
-    # Ascend 会去读文件，CANN 会直接返回入参
-    op_class, op_name = generator.parse_meta()
+    op_name = generator.parse_meta()
 
     app_logger.info(f"Preparing to create operator: {op_name} (Type: {ops_create.op_type})")
 
     # 2.4 查重逻辑 (通用)
-    op_dir = project_path / op_class / op_name
-    if is_op_name_exist(ops_create.project_id, op_name) or op_dir.exists():
+    if is_op_name_exist(ops_create.project_id, op_name):
         app_logger.warn(f"opname is exist: {op_name}")
         raise InValidRequestException(f"算子名称已存在: {op_name}")
 
@@ -90,12 +75,12 @@ def generate_operator_structure(data):
     op = Operator(
         project_id=ops_create.project_id,
         op_name=op_name,
-        op_class=op_class,
-        op_type=ops_create.op_type  # 存入类型
+        op_type=ops_create.op_type,  # 存入类型
+        op_path=ops_create.op_path,  # 保存算子目录
+        ascend_env_script=project.ascend_env_script
     )
 
     # 2.6 执行生成 (多态调用)
-    # Service 层不需要关心你是拷贝还是运行脚本，只管 execute
     generator.execute_generation()
 
     # 2.7 事务提交
@@ -125,6 +110,9 @@ def generate_structure(data):
 
 @with_db_session
 def get_ops(project_id, db=None):
+    """
+    获取项目下的算子列表
+    """
     op_list = db.scalars(
         select(Operator).where(Operator.project_id == project_id)).all()
     return op_list
@@ -139,7 +127,11 @@ def delete_ops(project_id, op_name, db=None):
 
 
 def add_exist_op(data):
+    # 确保op_path字段被正确处理
+    op_path = data.pop('op_path', None)
+    
     op = Operator(**data)
+    op.op_path = op_path  # 显式设置op_path
     project = query_project_by_id(op.project_id)
     if not project:
         app_logger.error(f"Project with id {op.project_id} not found")

@@ -48,9 +48,9 @@ def execute_task(args):
 
 
 def setup_common_parser(parser):
-    parser.add_argument('--extension_publisher', type=str, default='mindstudio', help='插件发布商')
-    parser.add_argument('--extension_name', type=str, default='mindstudio-opsuite-vscode-plugin', help='插件名')
-    parser.add_argument('--extension_version', type=str, default='0.0.1', help='插件版本')
+    parser.add_argument('--extension_publisher', type=str, default=None, help='插件发布商')
+    parser.add_argument('--extension_name', type=str, default=None, help='插件名')
+    parser.add_argument('--extension_version', type=str, default=None, help='插件版本')
 
 
 def setup_server_parser(parser):
