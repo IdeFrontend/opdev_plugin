@@ -6,5 +6,5 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 const sourcePath = path.resolve(__dirname, '../web/out/');
 const targetPath = path.resolve(__dirname, '../out/web/');
 
-fs.rmSync(targetPath, { recursive: true });
+fs.rmSync(targetPath, { force: true, recursive: true });
 fs.cpSync(sourcePath, targetPath, { recursive: true });
