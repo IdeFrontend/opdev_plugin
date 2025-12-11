@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS t_op
     op_class    TEXT,                                       -- 算子类型
     op_name     TEXT                              NOT NULL, -- 算子名称
     op_type     TEXT DEFAULT 'ascend',                      -- 算子类型，默认为ascend
+    op_path     TEXT                              NOT NULL, -- 算子目录，默认为项目根目录
     ascend_env_script TEXT,
     examples    TEXT,                                       -- examples算子调用所在路径
     create_by   TEXT,                                       -- 创建人

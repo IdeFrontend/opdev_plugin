@@ -41,51 +41,34 @@ def get_detailed_system_info():
     return os_name, architecture
 
 
-def is_opgen_op(project_path, op):
-    op_sh = project_path / op.op_class / op.op_name / 'build.sh'
-    return op_sh.exists()
-
-def get_default_target_dir(project_path, op, opgen_op=True):
-    if opgen_op:
-        return project_path / op.op_class / op.op_name / 'build_out'
+def get_op_run_path(op):
+    op_path = Path(op.op_path)
+    # 根据算子类型确定脚本路径
+    if op.op_type == 'ascend':
+        return op_path.parent.parent
     else:
-        return project_path / 'build_out'
+        return op_path
 
-
-def get_default_target(project_path, op, opgen_op=True):
+def get_default_target(op_run_path, op):
     os_name, architecture = get_detailed_system_info()
-    target_dir = get_default_target_dir(project_path, op, opgen_op=opgen_op)
-    target_op_file = target_dir / f'custom_opp_{os_name}_{architecture}.run' if opgen_op else target_dir / f'cann-ops-math-custom_linux-{architecture}.run'
-    run_script = project_path / op.op_class / op.op_name / 'examples' / 'run.sh'
-    target_example_file = run_script if opgen_op else target_dir / f'test_aclnn_{op.op_name}_example'
+    target_dir = op_run_path / 'build_out'
+
+    # 根据算子类型确定目标文件名
+    if op.op_type == 'ascend':
+        target_op_file = op_run_path / 'build_out' / f'cann-ops-math-custom_linux-{architecture}.run'
+        target_example_file = op_run_path / 'build' / f'test_aclnn_{op.op_name}'
+    else:
+        target_example_file = target_op_file = op_run_path / 'build' / op.op_name
     return target_dir, target_op_file, target_example_file
 
 
-def get_op_script_path(project_path, op):
-    op_sh = project_path / op.op_class / op.op_name / 'build.sh'
-    project_sh = project_path / 'build.sh'
-    if op_sh:
-        return str(op_sh.absolute())
-    elif project_sh:
-        return str(project_sh.absolute())
-    else:
-        return "未识别到脚本"
+def get_build_script_path(op_run_path):
+    return op_run_path / 'build.sh'
 
 
-def get_example_script_path(project_path, op, opgen_op):
-    if opgen_op:
-        common = project_path / op.op_class / op.op_name / 'examples' / 'build.sh'
-        aclnn = project_path / op.op_class / op.op_name / 'examples' / 'AclNNInvocation' / 'build.sh'
-        return common if op.op_type == 'cann' else aclnn
-    else:
-        return project_path / 'build.sh'
-
-
-def get_default_path(project, op):
-    project_path = Path(project.project_path)
-    opgen_op = is_opgen_op(project_path, op)
-    target_dir, target_op_file, target_example_file = get_default_target(project_path, op, opgen_op)
-    op_script_path = get_op_script_path(project_path, op)
-    example_script_path = get_example_script_path(project_path, op, opgen_op)
-    return op_script_path, str(example_script_path), str(target_dir.absolute()), str(target_op_file.absolute()), str(
+def get_default_path(op):
+    op_run_path = get_op_run_path(op)
+    target_dir, target_op_file, target_example_file = get_default_target(op_run_path, op)
+    example_script_path = op_script_path = get_build_script_path(op_run_path)
+    return str(op_script_path), str(example_script_path), str(target_dir.absolute()), str(target_op_file.absolute()), str(
         target_example_file.absolute())

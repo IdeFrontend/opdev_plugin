@@ -48,11 +48,11 @@ def get_build_op_command():
     project = query_project_by_id(config_data.project_id)
     operator = get_op_by_project_id_and_op_name(config_data.project_id, config_data.op)
     source_cann = f". {project.ascend_env_script}" if project.ascend_env_script else f". {ascend_util.ascend_env_script}"
-    project_path = Path(project.project_path)
     deploy_cmd = f"chmod +x {config_data.target_file} && {config_data.target_file}"
+    run_path = str(op_util.get_op_run_path(operator).absolute())
+    cd_cmd = f"cd {run_path}"
 
-    if op_util.is_opgen_op(project_path, operator):
-        cd_cmd = f"cd {project.project_path}/{operator.op_class}/{operator.op_name}"
+    if operator.op_type != "ascend":
         build_cmd = f"{build_script_path} {custom_options if custom_options else ''}"
         return jsonify({'code': 0, 'data': " && ".join([source_cann, cd_cmd, build_cmd, deploy_cmd]), 'message': 'ok'})
 
@@ -60,16 +60,11 @@ def get_build_op_command():
         soc = ascend_util.soc_version
         vendor_name = "custom"
         op = config_data.op
-
         args = aicore_utils.parse_cmd_options(custom_options)
-
         if args and args.vendor_name is not None:
             vendor_name = args.vendor_name
-
         if args and args.soc is not None:
             soc = args.soc
-
-        cd_cmd = f"cd {project.project_path}"
         cmd = f"{build_script_path} --pkg --soc={soc} --vendor_name={vendor_name} --ops={op}"
         return jsonify({'code': 0, 'data': " && ".join([source_cann, cd_cmd, cmd, deploy_cmd]), 'message': 'ok'})
 
@@ -100,10 +95,10 @@ def get_build_example_command():
     project = query_project_by_id(config_data.project_id)
     operator = get_op_by_project_id_and_op_name(config_data.project_id, config_data.op)
     source_cann = f". {project.ascend_env_script}" if project.ascend_env_script else f". {ascend_util.ascend_env_script}"
-    project_path = Path(project.project_path)
+    run_path = str(op_util.get_op_run_path(operator).absolute())
+    cd_cmd = f"cd {run_path}"
 
-    if op_util.is_opgen_op(project_path, operator):
-        cd_cmd = f"cd {project.project_path}/{operator.op_class}/{operator.op_name}"
+    if operator.op_type != "ascend":
         cmd = f"{build_script_path} {custom_options if custom_options else ''}"
         return jsonify({'code': 0, 'data': " && ".join([source_cann, cd_cmd, cmd]), 'message': 'ok'})
 
@@ -111,21 +106,14 @@ def get_build_example_command():
         vendor_name = "custom"
         pkg_mode = "cust"
         mode = "eager"
-
         op = config_data.op
-
         args = aicore_utils.parse_cmd_options(custom_options)
-
         if args and args.vendor_name is not None:
             vendor_name = args.vendor_name
-
         if args and args.pkg_mode is not None:
             pkg_mode = args.pkg_mode
-
         if args and args.mode is not None:
             mode = args.mode
-
-        cd_cmd = f"cd {project.project_path}"
         cmd = f"{build_script_path} --run_example {op} {mode} {pkg_mode} {vendor_name}"
         return jsonify({'code': 0, 'data': " && ".join([source_cann, cd_cmd, cmd]), 'message': 'ok'})
     except Exception as e:

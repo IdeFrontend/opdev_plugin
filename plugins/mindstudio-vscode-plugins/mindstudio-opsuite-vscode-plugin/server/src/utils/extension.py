@@ -10,25 +10,19 @@ from pathlib import Path
 
 from configs.log import app_logger
 
-
-def get_current_user():
-    """获取当前进程的用户"""
-    return os.getenv('USER') or os.getenv('USERNAME')
-
 def register_extension(extension_publisher, extension_name, extension_version):
     try:
         if not all([extension_publisher, extension_name, extension_version]):
-            app_logger.error('Missing required parameters: extension_publisher, extension_name, extension_version')
-            return False
+            return True
 
         # 获取当前用户
-        user = get_current_user()
-        if not user:
+        home_dir = os.path.expanduser("~")
+        if not home_dir:
             app_logger.error('Could not determine current user')
             return False
 
         # 构建文件路径
-        extensions_dir = Path(f'/home/{user}/.vscode-server/extensions')
+        extensions_dir = Path(f'{home_dir}/.vscode-server/extensions')
         extensions_json_path = extensions_dir / 'extensions.json'
 
         # 确保目录存在
@@ -48,7 +42,7 @@ def register_extension(extension_publisher, extension_name, extension_version):
 
         # 构建插件定义
         extension_id = f"{extension_publisher}.{extension_name}"
-        fs_path = f"/home/{user}/.vscode-server/extensions/{extension_id}-{extension_version}"
+        fs_path = f"{home_dir}/.vscode-server/extensions/{extension_id}-{extension_version}"
 
         extension_definition = {
             "identifier": {
@@ -64,8 +58,7 @@ def register_extension(extension_publisher, extension_name, extension_version):
             },
             "relativeLocation": f"{extension_id}-{extension_version}",
             "metadata": {
-                "installedTimestamp": int(time.time() * 1000),  # 毫秒时间戳
-                "source": "vsix"
+                "installedTimestamp": int(time.time() * 1000)
             }
         }
 

@@ -59,8 +59,9 @@ class BaseConfiguration(ABC):
         return self._batch_upsert_configs(process_data_list)
 
     def default_config(self, project, op, config_type=None) -> list[dict]:
-        op_script_path, example_script_path, target_dir, target_op, target_example = op_util.get_default_path(project, op)
+        op_script_path, example_script_path, target_dir, target_op, target_example = op_util.get_default_path(op)
         script_path = example_script_path if config_type == 'build_example' else op_script_path
+        target_file = target_op if config_type == 'build_op' else target_example if config_type == 'build_example' else None
         default_data = [{
             'config_type': config_type,
             "project_id": project.id,
@@ -69,7 +70,7 @@ class BaseConfiguration(ABC):
                 'script': f'bash {script_path}',
                 'config_name': op.op_name,
                 'target_dir': target_dir,
-                'target_file': target_op if config_type == 'build_op' else target_example if config_type == 'build_example' else None
+                'target_file': target_file
             }
         }]
         return default_data

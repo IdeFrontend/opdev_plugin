@@ -79,6 +79,7 @@ class Operator(Base):
     op_class = Column(String, nullable=True)
     op_name = Column(String, nullable=False)
     op_type = Column(String, default='ascend', nullable=False)
+    op_path = Column(String, nullable=True)  # 算子目录，默认为项目根目录
     ascend_env_script = Column(String, nullable=True)
     examples = Column(Text, nullable=True)
     create_by = Column(String)
