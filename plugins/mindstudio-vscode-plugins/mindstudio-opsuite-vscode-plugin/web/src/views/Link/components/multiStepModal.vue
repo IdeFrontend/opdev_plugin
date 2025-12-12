@@ -1,9 +1,10 @@
 <script setup >
-import { ref, reactive } from "vue";
+import { ref, reactive, computed } from "vue";
 import { message } from "ant-design-vue";
 import { FileOutlined } from "@ant-design/icons-vue";
 import { getLocalData, setLoaclData } from "../../../untils/index";
 import { message as msg } from "../../../untils/Message";
+import { DEFAULT_SSH_PORT, MIN_PORT, MAX_PORT } from "../../../data/index";
 
 // 定义组件事件
 const emit = defineEmits(["update"]);
@@ -24,24 +25,27 @@ const authenticationFormRef = ref();
 const connectionFormData = reactive({
   userName: "",
   ipAddress: "",
+  port: DEFAULT_SSH_PORT
 });
 
 const authenticationFormData = reactive({
   password: "",
+   authenticationType: 'password'
 });
+
+const auth = computed(() =>      {
+  return authenticationFormData.authenticationType === 'privateKey' ? { privateKey: authenticationFormData.password } : { password: authenticationFormData.password }
+})
+
+const authenticationTypeOptions = reactive([{label: '密码', value: 'password'}, {label: '密钥', value: 'privateKey'}])
 
 // 表单验证规则
 const connectionFormRules = {
   userName: [{ required: true, message: "请输入用户名", trigger: "blur" }],
   ipAddress: [
     { required: true, message: "请输入IP地址", trigger: "blur" },
-    {
-      pattern:
-        /^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/,
-      message: "请输入有效的IP地址",
-      trigger: "blur",
-    },
   ],
+   port: [{ required: true, message: '请输入端口', trigger: 'blur' }],
 };
 
 const authenticationFormRules = {
@@ -57,8 +61,8 @@ const openConnectionDialog = () => {
 
 // 重置所有表单数据
 const resetFormData = () => {
-  Object.assign(connectionFormData, { userName: "", ipAddress: "" });
-  Object.assign(authenticationFormData, { password: "" });
+  Object.assign(connectionFormData, { userName: "", ipAddress: "", port: DEFAULT_SSH_PORT });
+  Object.assign(authenticationFormData, { password: "", authenticationType: 'password' });
 };
 
 // 处理连接信息提交
@@ -90,7 +94,8 @@ const handleAuthenticationSubmit = async () => {
       command: "vscodeSshValidate",
       username: connectionFormData.userName,
       host: connectionFormData.ipAddress,
-      password: authenticationFormData.password,
+      port: connectionFormData.port || DEFAULT_SSH_PORT,
+      ...auth.value,
       remotePath: "/",
     };
 
@@ -110,11 +115,11 @@ const handleAuthenticationClose = (messageData) => {
     const sshData = getLocalData("sshData");
     console.log(sshData);
     sshData.unshift({
-      name: `${connectionFormData.userName}@${connectionFormData.ipAddress}`,
+   name: `${connectionFormData.userName}@${connectionFormData.ipAddress}:${connectionFormData.port || DEFAULT_SSH_PORT}`,
       username: connectionFormData.userName,
       host: connectionFormData.ipAddress,
-      password: authenticationFormData.password,
-      port: 22,
+      ...auth.value,
+      port: connectionFormData.port || DEFAULT_SSH_PORT,
     });
     setLoaclData("sshData", sshData);
     emit("update");
@@ -173,12 +178,16 @@ defineExpose({
             />
           </a-form-item>
 
-          <a-form-item label="IP" name="ipAddress">
+            <a-form-item label="IP/域名" name="ipAddress">
             <a-input
               v-model:value="connectionFormData.ipAddress"
-              placeholder="请输入IP地址"
+                 placeholder="请输入IP地址/域名"
               @pressEnter="handleConnectionInfoSubmit"
             />
+          </a-form-item>
+
+          <a-form-item label="端口" name="port">
+            <a-input-number v-model:value="connectionFormData.port" :min="MIN_PORT" :max="MAX_PORT" addon-before="+" addon-after="-" />
           </a-form-item>
         </a-form>
       </div>
@@ -211,6 +220,9 @@ defineExpose({
           :rules="authenticationFormRules"
           layout="vertical"
         >
+          <a-form-item label="Key" name="password">
+            <a-select v-model:value="authenticationFormData.authenticationType" :options="authenticationTypeOptions"></a-select>
+          </a-form-item>
           <a-form-item label="Key" name="password">
             <a-input-password
               v-model:value="authenticationFormData.password"
