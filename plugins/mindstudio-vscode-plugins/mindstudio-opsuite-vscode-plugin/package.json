@@ -70,7 +70,7 @@
       {
         "command": "mindstudio-opsuite.createOps",
         "title": "新建算子原型文件",
-        "icon": "plugin/icon/ops.svg"
+        "icon": "resources/ops.svg"
       },
       {
         "command": "extension.jsonButtonAction",
@@ -132,17 +132,17 @@
       {
         "id": "extension/build",
         "label": "buildOps",
-        "icon": "plugin/icon/build.svg"
+        "icon": "resources/build.svg"
       },
       {
         "id": "extension/opsRun",
         "label": "opsRun",
-        "icon": "plugin/icon/run.svg"
+        "icon": "resources/run.svg"
       },
       {
         "id": "extension/opsDebug",
         "label": "opsDebug",
-        "icon": "plugin/icon/debug.svg"
+        "icon": "resources/debug.svg"
       }
     ]
   },
