@@ -3,7 +3,7 @@
   "displayName": "MindStudio Opsuite",
   "description": "A comprehensive operations suite for MindStudio",
   "publisher": "huawei",
-  "version": "1.0.76",
+  "version": "1.0.77",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -40,7 +40,7 @@
       "explorer": [
         {
           "id": "customSidebarView",
-          "name": "操作面板123",
+          "name": "操作面板",
           "type": "webview"
         }
       ]

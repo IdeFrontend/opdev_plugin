@@ -45,27 +45,28 @@ const webviewMessageList: messageItem[] = [
     {
         command: 'vscodeStartLinkCreateOps',
         callback: async (message: any, that: any) => {
-            vscode.commands.executeCommand('mindstudio-opsuite.createOps');
-            // 开始传入
-            const result = {
-                fileName:'test.json',
-                value:'[{"name":"test"}]'
+            console.log('message-------', message)
+            if (!message.message.data) {
+                vscode.commands.executeCommand('mindstudio-opsuite.createOps');
+                return
             }
+            // 开始传入
+            const result = message.message.data
             async function createFile(result: { fileName: string; value: string }) {
                 const workspaceFolders = vscode.workspace.workspaceFolders;
                 if (!workspaceFolders) {
                     vscode.window.showErrorMessage('请先打开一个工作区');
                     return;
                 }
-                
+
                 const workspacePath = workspaceFolders[0].uri;
                 const filePath = vscode.Uri.joinPath(workspacePath, result.fileName);
-                
+
                 try {
                     // 检查文件是否存在
                     try {
                         await vscode.workspace.fs.stat(filePath);
-                        
+
                         // 询问是否覆盖
                         const choice = await vscode.window.showWarningMessage(
                             `文件 ${result.fileName} 已存在，是否覆盖？`,
@@ -73,22 +74,22 @@ const webviewMessageList: messageItem[] = [
                             '覆盖',
                             '取消'
                         );
-                        
+
                         if (choice !== '覆盖') {
                             return;
                         }
                     } catch {
                         // 文件不存在，继续
                     }
-                    
+
                     // 写入文件
                     await vscode.workspace.fs.writeFile(
                         filePath,
                         new TextEncoder().encode(result.value)
                     );
-                    
+
                     vscode.window.showInformationMessage(`文件 ${result.fileName} 创建成功`);
-                    
+
                     // 可选：格式化JSON
                     try {
                         const formattedValue = JSON.stringify(JSON.parse(result.value), null, 2);
@@ -99,7 +100,7 @@ const webviewMessageList: messageItem[] = [
                     } catch {
                         // 如果不是有效的JSON，保持原样
                     }
-                    
+
                 } catch (error: any) {
                     vscode.window.showErrorMessage(`创建文件失败: ${error.message}`);
                 }
