@@ -240,6 +240,14 @@ const connectSSH = () => {
     utilMessage.sendMessageToParent({
       command: "vscodeStartLinkCreateOps",
     });
+    return
+  }
+  if (selectedId_type.value === 2 && selectedId_proto.value === 2) {
+    utilMessage.sendMessageToParent({
+      command: "vscodeStartLinkCreateOps",
+      data: {fileName: fileInfo.value.name, value: jsonContent.value}
+    });
+    return
   }
 
 }
