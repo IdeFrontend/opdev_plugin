@@ -336,7 +336,7 @@ const webviewMessageList: messageItem[] = [
             async function testLoaclPort(port: number) {
                 const result = await server.executeCommand(`export no_proxy="localhost,127.0.0.1,.huawei.com,10.0.0.0/24" && curl http://127.0.0.1:${port}/api/v1/health`)
                 console.log(result);
-                let isServerStart = result.stdout.indexOf(os.userInfo().username) !== -1;
+                let isServerStart = result.stdout.indexOf(message.username) !== -1;
                 if (isServerStart) {
                     return true;
                 }
@@ -388,7 +388,7 @@ const webviewMessageList: messageItem[] = [
                 await server.executeCommand(`mkdir  ${message.projectPath}/${message.projectName}`);
                 await server.executeCommand(`chmod + x ${message.projectSH}`);
                 await server.executeCommand(`${message.projectSH}`);
-                await server.executeCommand(`./${serviceFile} task create_project --project_name ${message.projectName} --project_path ${message.projectPath} --ascend_env_script ${message.projectSH}`, commandPath);
+                await server.executeCommand(`./${serviceFile} task create_project --project_name ${message.projectName} --project_path ${message.projectPath}/${message.projectName} --ascend_env_script ${message.projectSH}`, commandPath);
                 const remoteOpener: RemoteServerOpener = new RemoteServerOpener();
                 remoteOpener.open({ ...message, remotePath: `${message.projectPath}/${message.projectName}` })
             }

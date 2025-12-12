@@ -50,10 +50,11 @@ export default class OpsOption {
     async getProjectId(accendEnvScript?: string) {
         const project_name = this.project_name;
         const project_path = this.project_path;
-        const ascend_env_script = accendEnvScript || ''
+        const ascend_env_script = accendEnvScript || undefined
         const projectRes = await this.server.post('api/v1/projects', {
             project_name, project_path, ascend_env_script
         })
+        console.log('projectRes', projectRes)
         return projectRes.data;
     }
 

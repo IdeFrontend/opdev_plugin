@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import * as fs from 'fs';
 import * as path from 'path';
 import { Client, ConnectConfig, ExecOptions, SFTPWrapper } from 'ssh2';
 
@@ -13,6 +14,7 @@ export interface RemoteServerConfig {
     port?: number;
     username: string;
     password: string;
+    privateKey: string;
 }
 
 export default class RemoteServer {
@@ -23,7 +25,7 @@ export default class RemoteServer {
 
     constructor(config: RemoteServerConfig) {
         this.config = {
-            port: 22,
+            port: config?.port || 22,
             ...config
         };
         this.client = new Client();
@@ -41,6 +43,13 @@ export default class RemoteServer {
                 password: this.config.password,
                 readyTimeout: 30000
             };
+
+            if (this.config.privateKey) {
+                connectConfig.privateKey = fs.readFileSync(this.config.privateKey, 'utf8');
+            }
+            if (this.config.password) {
+                connectConfig.password = this.config.password
+            }
 
             this.client.on('ready', () => {
                 console.log('SSH连接已建立');

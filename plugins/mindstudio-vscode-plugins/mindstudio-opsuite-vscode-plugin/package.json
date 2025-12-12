@@ -3,7 +3,7 @@
   "displayName": "MindStudio Opsuite",
   "description": "A comprehensive operations suite for MindStudio",
   "publisher": "huawei",
-  "version": "1.0.77",
+  "version": "1.0.81",
   "engines": {
     "vscode": "^1.80.0"
   },
