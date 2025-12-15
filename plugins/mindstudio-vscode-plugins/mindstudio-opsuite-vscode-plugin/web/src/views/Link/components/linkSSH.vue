@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree. -->
 
 <script setup>
-import { ref, reactive } from "vue";
+import { ref, reactive, onBeforeUnmount } from "vue";
 import { FolderOpenOutlined, RestOutlined } from "@ant-design/icons-vue";
 import { getLocalData, setLoaclData } from "../../../untils/index";
 import { message } from "../../../untils/Message";
@@ -24,6 +24,10 @@ const tableData = ref([]);
 const multiStepModalRef = ref();
 const linkType = ref("choose");
 const selectedRow = ref(null);
+const projectPathOptions = ref([]);
+const projectSHOptions = ref([]);
+const projectPathLoading = ref(false);
+const projectSHLoading = ref(false);
 const onSelectChange = (value) => {
   selectedRow.value = value;
 };
@@ -45,6 +49,20 @@ const SSHLoadingMessageItem = {
 };
 
 message.addMessageListener(SSHLoadingMessageItem);
+message.addMessageListener({
+  command: "iframeRemoteSearchResult",
+  callback: (resp) => {
+    const { type, list = [] } = resp.data || {};
+    const mapped = list.map((item) => ({ value: item }));
+    if (type === "projectPath") {
+      projectPathOptions.value = mapped;
+      projectPathLoading.value = false;
+    } else if (type === "projectSH") {
+      projectSHOptions.value = mapped;
+      projectSHLoading.value = false;
+    }
+  },
+});
 
 const addRateLoop = () => {
   if (rateNumber.value < maxRate.value) {
@@ -130,6 +148,36 @@ const createdProject = () => {
   });
 };
 
+const buildDefaultSearchPath = (value = "") => {
+  if (value) return value;
+  if (selectedRow.value?.username) {
+    return `/home/${selectedRow.value.username}`;
+  }
+  return "/";
+};
+
+const remoteSearch = (type, keyword) => {
+  if (!selectedRow.value) {
+    return;
+  }
+  const searchValue = keyword || "";
+  if (type === "projectPath") {
+    projectPathLoading.value = true;
+  } else {
+    projectSHLoading.value = true;
+  }
+  message.sendMessageToParent({
+    command: "vscodeRemotePathSearch",
+    type,
+    keyword: buildDefaultSearchPath(searchValue.trim()),
+    ssh: selectedRow.value,
+  });
+};
+
+onBeforeUnmount(() => {
+  message.deleteMessageListener("iframeRemoteSearchResult");
+});
+
 updatedTable();
 
 defineExpose({
@@ -198,9 +246,14 @@ defineExpose({
         layout="vertical"
       >
         <a-form-item label="工程位置" name="userName">
-          <a-input
+          <a-auto-complete
             v-model:value="projectFormData.projectPath"
-            placeholder="请输入工程位置"
+            :options="projectPathOptions"
+            :loading="projectPathLoading"
+            :disabled="!selectedRow"
+            placeholder="请输入工程位置，支持远程搜索"
+            @search="(val) => remoteSearch('projectPath', val)"
+            @focus="() => remoteSearch('projectPath', projectFormData.projectPath)"
           />
         </a-form-item>
 
@@ -211,9 +264,14 @@ defineExpose({
           />
         </a-form-item>
         <a-form-item label="环境变量配置脚本" name="ipAddress">
-          <a-input
+          <a-auto-complete
             v-model:value="projectFormData.projectSH"
-            placeholder="请输入环境变量.sh文件地址"
+            :options="projectSHOptions"
+            :loading="projectSHLoading"
+            :disabled="!selectedRow"
+            placeholder="请输入环境变量.sh文件地址，支持远程搜索"
+            @search="(val) => remoteSearch('projectSH', val)"
+            @focus="() => remoteSearch('projectSH', projectFormData.projectSH)"
           />
         </a-form-item>
       </a-form>
