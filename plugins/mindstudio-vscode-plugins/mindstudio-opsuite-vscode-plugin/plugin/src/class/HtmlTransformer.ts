@@ -33,7 +33,7 @@ export class HtmlTransformer {
     /**
      * 处理 HTML 中的资源路径 - 使用正确的 vscode-resource 协议
      */
-    private static processResourcePaths(
+    public static processResourcePaths(
         htmlContent: string,
         htmlUri: vscode.Uri,
     ): string {
