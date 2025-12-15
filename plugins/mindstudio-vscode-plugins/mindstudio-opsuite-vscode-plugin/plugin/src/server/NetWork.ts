@@ -67,7 +67,7 @@ export default class NetWork {
         const local = new HttpClient(`${host}:${port}`);
         const result = await local.get('/api/v1/health');
         console.log(port, result);
-        if (result.code === -1) {
+        if (result.code === 1) {
             return -1;
         }
         if (result?.data?.user !== os.userInfo().username) {

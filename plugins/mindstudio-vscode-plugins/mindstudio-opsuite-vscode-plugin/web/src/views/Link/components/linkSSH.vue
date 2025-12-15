@@ -163,9 +163,6 @@ const buildDefaultSearchPath = (value = "") => {
 };
 
 const remoteSearch = (type, keyword) => {
-  if (!selectedRow.value) {
-    return;
-  }
   const searchValue = keyword || "";
   if (type === "projectPath") {
     projectPathLoading.value = true;
@@ -261,7 +258,6 @@ defineExpose({
             v-model:value="projectFormData.projectPath"
             :options="projectPathOptions"
             :loading="projectPathLoading"
-            :disabled="!selectedRow"
             placeholder="请输入工程位置，支持远程搜索"
             @search="(val) => remoteSearch('projectPath', val)"
             @focus="() => remoteSearch('projectPath', projectFormData.projectPath)"
@@ -279,7 +275,6 @@ defineExpose({
             v-model:value="projectFormData.projectSH"
             :options="projectSHOptions"
             :loading="projectSHLoading"
-            :disabled="!selectedRow"
             placeholder="请输入环境变量.sh文件地址，支持远程搜索"
             @search="(val) => remoteSearch('projectSH', val)"
             @focus="() => remoteSearch('projectSH', projectFormData.projectSH)"
