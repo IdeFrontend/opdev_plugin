@@ -7,6 +7,7 @@
 
 
 import * as path from 'path';
+import * as os from 'os';
 import * as vscode from 'vscode';
 import { PermanentStorage } from './PermanentStorage'
 import webviewMessageList from './WebviewMessageList'
@@ -23,13 +24,16 @@ export class WebviewProvider {
     private isDisposed: boolean = false;
     private isRemote: boolean = false;
     private sshData: Object | undefined;
-    private context: vscode.ExtensionContext
+    private context: vscode.ExtensionContext;
+    private userInfo: os.UserInfo<string | Number>;
 
     constructor(context: vscode.ExtensionContext) {
         this.storage = new PermanentStorage(context);
         this.context = context;
         this.isRemote = vscode.env.remoteName !== undefined;
         this.sshData = this.storage.get('sshData', []);
+        this.userInfo = os.userInfo();
+        this.storage.set('userInfo', this.userInfo);
     }
 
     public async setSSHData(data: Object) {

@@ -122,6 +122,11 @@ const webviewMessageList: messageItem[] = [
                 command: 'iframeSetSSHData',
                 data: that.sshData
             });
+            
+            that.panel.webview.postMessage({
+                command: 'iframeSetUserInfo',
+                data: that.userInfo
+            });
 
             that.panel.webview.postMessage({
                 command: 'iframeGetDisposed',
@@ -316,7 +321,8 @@ const webviewMessageList: messageItem[] = [
                 const opsOption = new OpsOption(that.context);
                 await opsOption.init(message.projectSH);
                 await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(`${message.projectPath}/${message.projectName}`))
-                const sshConfigName = `${ServerInfoUtil.getUsername()}@${ServerInfoUtil.getPrimaryIP()}`;
+                const sshConfigName = `${ServerInfoUtil.getUsername()}@${ServerInfoUtil.getPrimaryIP()}:${message.port || 22}`;
+                console.log(`打开新路径：${sshConfigName}${message.projectPath}/${message.projectName}`);
                 const remoteUri = vscode.Uri.parse(`vscode-remote://ssh-remote+${sshConfigName}${message.projectPath}/${message.projectName}`);
                 await vscode.commands.executeCommand('vscode.openFolder', remoteUri, {
                     forceNewWindow: true

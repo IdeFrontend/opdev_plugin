@@ -187,7 +187,7 @@ defineExpose({
           </a-form-item>
 
           <a-form-item label="端口" name="port">
-            <a-input-number v-model:value="connectionFormData.port" :min="MIN_PORT" :max="MAX_PORT" addon-before="+" addon-after="-" />
+            <a-input-number v-model:value="connectionFormData.port" :min="MIN_PORT" :max="MAX_PORT" :precision="0" />
           </a-form-item>
         </a-form>
       </div>
