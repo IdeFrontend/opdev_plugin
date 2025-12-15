@@ -44,7 +44,7 @@ export default class NetWork {
                 const serviceFile = 'vscode_local_service';
                 const pluigExtensionsPath = `${extensionsPath}${publisher}.${extensionName}-${version}`;
                 const commandPath = `${pluigExtensionsPath}/out/server`;
-                this.executor && await this.executor.execute(`chmod u+x ${commandPath}/${serviceFile}`);
+                this.executor && await this.executor.execute(`chmod +x ${commandPath}/${serviceFile}`);
                 this.executor && await this.executor.execute(`${commandPath}/${serviceFile}  server --port ${port}`);
                 await new Promise((reslove) => {
                     setTimeout(() => {
