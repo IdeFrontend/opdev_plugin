@@ -44,33 +44,33 @@ export async function activate(context: vscode.ExtensionContext) {
   const opsOption = new OpsOption(context);
 
   // 注册打开Opsuite命令
-  const openCommand = vscode.commands.registerCommand('mindstudio-opsuite.open', async () => {
+  const openCommand = vscode.commands.registerCommand('haiwei-op-devtools.open', async () => {
     createOpsProvider.show('Link');
   });
 
   // 注册打开Opsuite命令
-  const ConfigCommand = vscode.commands.registerCommand('mindstudio-opsuite.config', async () => {
+  const ConfigCommand = vscode.commands.registerCommand('haiwei-op-devtools.config', async () => {
     configProvider.show('Config');
   });
 
   // 注册打开欢迎页命令
-  const welcomeCommand = vscode.commands.registerCommand('mindstudio-opsuite.welcome', async () => {
+  const welcomeCommand = vscode.commands.registerCommand('haiwei-op-devtools.welcome', async () => {
     configWelcomeProvider.show('Welcome');
   });
 
   // 注册打开欢迎页命令
-  const newPrototypeCommand = vscode.commands.registerCommand('mindstudio-opsuite.newPrototype', async () => {
+  const newPrototypeCommand = vscode.commands.registerCommand('haiwei-op-devtools.newPrototype', async () => {
     configNewPrototypeProvider.show('newPrototype');
   });
 
   // 注册新建算子原型文件命令
-  const createCommand = vscode.commands.registerCommand('mindstudio-opsuite.createOps', async () => {
+  const createCommand = vscode.commands.registerCommand('haiwei-op-devtools.createOps', async () => {
     await opsOption.init();
     opsOption.createOps();
   });
 
   // 注册编译命令
-  const buildOpsCommand = vscode.commands.registerCommand('mindstudio-opsuite.buildOps', async () => {
+  const buildOpsCommand = vscode.commands.registerCommand('haiwei-op-devtools.buildOps', async () => {
     await opsOption.init();
     opsOption.startBuild();
   });
@@ -100,7 +100,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   configProvider.showLeftPage('Home');
 
-  vscode.commands.executeCommand('mindstudio-opsuite.welcome');
+  vscode.commands.executeCommand('haiwei-op-devtools.welcome');
   context.subscriptions.push(buttonCommand, button);
 
   // 订阅销毁事件
