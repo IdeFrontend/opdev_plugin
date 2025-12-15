@@ -53,7 +53,7 @@ message.addMessageListener({
   command: "iframeRemoteSearchResult",
   callback: (resp) => {
     const { type, list = [] } = resp.data || {};
-    const mapped = list.map((item) => ({ value: item }));
+    const mapped = list.map((item) => ({ value: item.path }));
     if (type === "projectPath") {
       projectPathOptions.value = mapped;
       projectPathLoading.value = false;
