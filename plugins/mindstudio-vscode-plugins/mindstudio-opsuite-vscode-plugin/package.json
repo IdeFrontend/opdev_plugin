@@ -176,6 +176,7 @@
     "@types/vscode": "^1.60.0",
     "@typescript-eslint/eslint-plugin": "^5.31.0",
     "@typescript-eslint/parser": "^5.31.0",
+    "@vscode/vsce": "^3.7.1",
     "esbuild": "^0.27.1",
     "eslint": "^8.20.0",
     "rollup-plugin-copy": "^3.5.0",
