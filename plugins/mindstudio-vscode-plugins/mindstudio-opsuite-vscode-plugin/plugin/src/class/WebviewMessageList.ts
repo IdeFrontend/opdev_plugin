@@ -243,6 +243,49 @@ const webviewMessageList: messageItem[] = [
         }
     },
     {
+        command: 'vscodeRemotePathSearch',
+        callback: async (msg: any, that: any) => {
+            const message = msg.message;
+            const publisher = packageJson.publisher;
+            const extensionName = packageJson.name;
+            const version = packageJson.version;
+            const extensionsPath = '.vscode-server/extensions/'
+            const serviceFile = 'vscode_local_service'
+            const plugiExtensionsPath = `${extensionsPath}${publisher}.${extensionName}-${version}`;
+            const commandPath = `${plugiExtensionsPath}/out/server`
+            if (that.isRemote) {
+                const opsOption = new OpsOption(that.context);
+                await opsOption.init();
+                const res = await opsOption.getAllPath(message.keyword)
+                that.panel.webview.postMessage({
+                    command: 'iframeRemoteSearchResult',
+                    data: {
+                        type: message.type,
+                        list: res.data
+                    }
+                });
+            } else {
+                const server = new RemoteServer(message.ssh)
+                await server.connect();
+                await server.executeCommand(`chmod u+x  ./${serviceFile}`, commandPath);
+                const res = await server.executeCommand(`./${serviceFile} task list_files --path ${message.keyword} --file_type all`, commandPath);
+                const stdout = res.stdout.replaceAll(`\n`, ``);
+                const list = JSON.parse(stdout.substring(stdout.indexOf(`{'code':`), stdout.length).replaceAll(`'`, `"`)).data;
+                that.panel.webview.postMessage({
+                    command: 'iframeRemoteSearchResult',
+                    data: {
+                        type: message.type,
+                        list
+                    }
+                });
+
+
+
+            }
+
+        }
+    },
+    {
         command: 'vscodeInstallServer',
         callback: async (msg: any, that: any) => {
             const message = msg.message;
