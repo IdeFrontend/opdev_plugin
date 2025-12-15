@@ -157,9 +157,6 @@ const buildDefaultSearchPath = (value = "") => {
 };
 
 const remoteSearch = (type, keyword) => {
-  if (!selectedRow.value) {
-    return;
-  }
   const searchValue = keyword || "";
   if (type === "projectPath") {
     projectPathLoading.value = true;
