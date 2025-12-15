@@ -3,6 +3,10 @@
   "displayName": "MindStudio Opsuite",
   "description": "A comprehensive operations suite for MindStudio",
   "publisher": "huawei",
+  "repository": {
+    "type": "git",
+    "url": "https://gitcode.com/Asscend/mstt"
+  },
   "version": "1.0.81",
   "engines": {
     "vscode": "^1.80.0"
@@ -10,7 +14,7 @@
   "categories": [
     "Other"
   ],
-  "main": "./out/plugin/src/extension.js",
+  "main": "./out/extension.js",
   "extensionDependencies": [
     "ms-vscode-remote.remote-ssh"
   ],
@@ -30,7 +34,7 @@
       ]
     },
     "views": {
-      "mindstudio-opssuite-vscode-plugin":[
+      "mindstudio-opssuite-vscode-plugin": [
         {
           "id": "pluginSidebar",
           "name": "功能列表",
@@ -148,30 +152,33 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p . & npm run copy-web-output",
+    "compile": "npm run build-extension && npm run copy-web-output",
     "watch": "tsc -watch -p .",
-    "package": "vsce package",
+    "package": "vsce package --no-dependencies",
     "lint": "eslint plugin/src --ext ts",
     "check-types": "tsc --noEmit",
+    "build-extension": "tsx ./scripts/build-extension",
     "copy-web-output": "tsx ./scripts/copy-web-output.ts"
   },
   "dependencies": {
-    "ssh2": "^1.17.0",
-    "node-ssh": "^13.2.1",
     "archiver": "^7.0.1",
-    "@types/archiver": "^7.0.0",
-    "@types/ssh2": "^1.15.5",
-    "axios": "^1.13.2"
+    "axios": "^1.13.2",
+    "i18next": "^25.7.2",
+    "node-ssh": "^13.2.1",
+    "ssh2": "^1.17.0"
   },
   "devDependencies": {
     "@rolldown/pluginutils": "^1.0.0-beta.53",
-    "@types/vscode": "^1.60.0",
+    "@types/archiver": "^7.0.0",
     "@types/node": "16.x",
+    "@types/ssh2": "^1.15.5",
+    "@types/vscode": "^1.60.0",
     "@typescript-eslint/eslint-plugin": "^5.31.0",
     "@typescript-eslint/parser": "^5.31.0",
+    "esbuild": "^0.27.1",
     "eslint": "^8.20.0",
-    "typescript": "^4.7.4",
-    "vite": "^4.0.0",
-    "rollup-plugin-copy": "^3.5.0"
+    "rollup-plugin-copy": "^3.5.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
   }
 }

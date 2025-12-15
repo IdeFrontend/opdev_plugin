@@ -2,9 +2,12 @@
 web/
 plugin/
 server/
+scripts/
+node_modules/
 vite.config.ts
 tsconfig.json
 package-lock.json
 .gitignore
+.prettierrc.json
 *.ts
 *.map
