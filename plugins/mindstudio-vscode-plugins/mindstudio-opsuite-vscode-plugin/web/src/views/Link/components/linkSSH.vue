@@ -170,7 +170,7 @@ const remoteSearch = (type, keyword) => {
     command: "vscodeRemotePathSearch",
     type,
     keyword: buildDefaultSearchPath(searchValue.trim()),
-    ssh: selectedRow.value,
+    ssh: JSON.parse(JSON.stringify({...selectedRow.value})),
   });
 };
 

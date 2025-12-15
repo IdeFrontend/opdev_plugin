@@ -83,6 +83,12 @@ export default class OpsOption {
         return result;
     }
 
+    async getAllPath(path:string) {
+        const result = await this.server.get(`api/v1/sys/all?path=${path}`)
+        console.log(result)
+        return result;
+    }
+
     async saveBuildConfig(data: any, showMessage: boolean = true) {
         const result = await this.server.post('api/v1/config/build', data)
         console.log(result)

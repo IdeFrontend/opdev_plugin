@@ -10,7 +10,7 @@ import linkSSH from "./components/linkSSH.vue";
 import { getLocalData } from "../../untils/index";
 import { PlusOutlined } from "@ant-design/icons-vue";
 import { ref } from "vue";
-const current = ref(getLocalData("isRemote") ? 1 : 0);
+const current = ref(getLocalData("isRemote") ? 1 : 1);
 const items = [{ title: "连接远程开发环境" }, { title: "工程配置" }];
 const linkSSHRef = ref();
 const themeConfig = {
