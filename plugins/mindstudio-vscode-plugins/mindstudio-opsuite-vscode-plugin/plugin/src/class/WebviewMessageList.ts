@@ -238,7 +238,7 @@ const webviewMessageList: messageItem[] = [
         }
     },
     {
-        command: 'iframeRemoteSearchResult',
+        command: 'vscodeRemotePathSearch',
         callback: async (msg: any, that: any) => {
             const message = msg.message;
             const publisher = packageJson.publisher;
@@ -253,7 +253,7 @@ const webviewMessageList: messageItem[] = [
                 await opsOption.init();
                 const res = await opsOption.getAllPath(message.keyword)
                 that.panel.webview.postMessage({
-                    command: 'iframeSetBuildConfigItem',
+                    command: 'iframeRemoteSearchResult',
                     data: {
                         type: message.type,
                         list: res.data
@@ -267,7 +267,7 @@ const webviewMessageList: messageItem[] = [
                 const stdout = res.stdout.replaceAll(`\n`, ``);
                 const list = JSON.parse(stdout.substring(stdout.indexOf(`{'code':`), stdout.length).replaceAll(`'`, `"`)).data;
                 that.panel.webview.postMessage({
-                    command: 'iframeSetBuildConfigItem',
+                    command: 'iframeRemoteSearchResult',
                     data: {
                         type: message.type,
                         list
