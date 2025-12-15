@@ -16,6 +16,12 @@ const item: messageItem = {
     callback: (message: any) => localStorage.setItem('sshData', JSON.stringify(message.data ?? []))
 }
 
+const getUserInfo: messageItem = {
+    command: 'iframeSetUserInfo',
+    callback: (message: any) => localStorage.setItem('userInfo', JSON.stringify(message.data ?? []))
+}
+
+
 const getDisposed: messageItem = {
     command: 'iframeGetDisposed',
     callback: (message: any) => {
@@ -25,6 +31,7 @@ const getDisposed: messageItem = {
 }
 
 message.addMessageListener(item)
+message.addMessageListener(getUserInfo)
 message.addMessageListener(getDisposed)
 message.sendMessageToParent({ command: 'vscodeGetssh' });
 
