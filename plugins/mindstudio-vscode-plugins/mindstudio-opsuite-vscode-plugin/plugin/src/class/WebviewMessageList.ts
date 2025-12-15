@@ -5,9 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import * as path from 'path';
 import * as vscode from 'vscode';
-import * as os from 'os';
 import { RemoteServerOpener } from './RemoteServerOpener'
 import RemoteServer from './RemoteServer'
 import DirectoryZipper from './DirectoryZipper'
@@ -282,65 +280,7 @@ const webviewMessageList: messageItem[] = [
                     data: 90
                 });
                 await server.executeCommand(`chmod u+x  ./${serviceFile}`, commandPath);
-                let index = 1000;
-                while (index !== 0) {
-                    index--;
-                    let isServerStart = await testLoaclPort(port);
-                    if (isServerStart) {
-                        console.log(`服务器启动成功，启动端口：${port}`)
-                        break;
-                    }
-                    await server.executeCommand(`./${serviceFile} --extension_publisher ${publisher} --extension_name ${extensionName} --extension_version ${version} server --port ${port}`, commandPath);
-                    console.log('服务已尝试启动');
-                    await new Promise((reslove) => {
-                        setTimeout(() => {
-                            reslove(0)
-                        }, 1000);
-                    })
-                    console.log('1s后再次调用嗅探借口，检测服务是否启动成功')
-                    isServerStart = await testLoaclPort(port);
-                    if (isServerStart) {
-                        console.log(`服务器启动成功，启动端口：${port}`)
-                        break;
-                    }
-                    port++;
-                }
-
-            } else {
-                await server.executeCommand(`chmod u+x  ./${serviceFile}`, commandPath);
-                let index = 1000;
-                while (index !== 0) {
-                    index--;
-                    let isServerStart = await testLoaclPort(port);
-                    if (isServerStart) {
-                        console.log(`服务器启动成功，启动端口：${port}`)
-                        break;
-                    }
-                    await server.executeCommand(`./${serviceFile}  server --port ${port}`, commandPath);
-                    console.log('服务已尝试启动');
-                    await new Promise((reslove) => {
-                        setTimeout(() => {
-                            reslove(0)
-                        }, 1000);
-                    })
-                    console.log('1s后再次调用嗅探借口，检测服务是否启动成功')
-                    isServerStart = await testLoaclPort(port);
-                    if (isServerStart) {
-                        break;
-                    }
-                    port++;
-                }
-
-            }
-
-            async function testLoaclPort(port: number) {
-                const result = await server.executeCommand(`export no_proxy="localhost,127.0.0.1,.huawei.com,10.0.0.0/24" && curl http://127.0.0.1:${port}/api/v1/health`)
-                console.log(result);
-                let isServerStart = result.stdout.indexOf(message.username) !== -1;
-                if (isServerStart) {
-                    return true;
-                }
-                return false
+                await server.executeCommand(`./${serviceFile} --extension_publisher ${publisher} --extension_name ${extensionName} --extension_version ${version} server --port ${port}`, commandPath);
             }
 
             that.panel.webview.postMessage({
