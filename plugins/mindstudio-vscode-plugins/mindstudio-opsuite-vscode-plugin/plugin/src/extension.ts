@@ -9,7 +9,6 @@ import * as vscode from 'vscode';
 
 import i18nResource from 'shared:/i18n';
 
-import { ServiceManager } from './class/serviceManager';
 import { WebviewProvider } from './class/webviewProvider';
 import OpsOption from './class/OpsOption';
 import { CustomSidebarProvider } from './class/CustomSidebarProvider';
@@ -31,31 +30,26 @@ export async function activate(context: vscode.ExtensionContext) {
   // 视图
   const panelView = initViews(context, apiServer);
 
-  // 初始化服务管理器
-  const serviceManager = new ServiceManager(context);
-
   // 初始化新建算子工程的Webview
-  const createOpsProvider = new WebviewProvider(context, serviceManager);
+  const createOpsProvider = new WebviewProvider(context);
 
   // 初始化配置页面的Webview
-  const configProvider = new WebviewProvider(context, serviceManager);
+  const configProvider = new WebviewProvider(context);
 
   // 初始化配置页面的Webview
-  const configWelcomeProvider = new WebviewProvider(context, serviceManager);
+  const configWelcomeProvider = new WebviewProvider(context);
   // 初始化配置页面的Webview
-  const configNewPrototypeProvider = new WebviewProvider(context, serviceManager);
+  const configNewPrototypeProvider = new WebviewProvider(context);
 
   const opsOption = new OpsOption(context);
 
   // 注册打开Opsuite命令
   const openCommand = vscode.commands.registerCommand('mindstudio-opsuite.open', async () => {
-    await serviceManager.startServices();
     createOpsProvider.show('Link');
   });
 
   // 注册打开Opsuite命令
   const ConfigCommand = vscode.commands.registerCommand('mindstudio-opsuite.config', async () => {
-    await serviceManager.startServices();
     configProvider.show('Config');
   });
 
@@ -66,20 +60,17 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 注册打开欢迎页命令
   const newPrototypeCommand = vscode.commands.registerCommand('mindstudio-opsuite.newPrototype', async () => {
-        await serviceManager.startServices();
     configNewPrototypeProvider.show('newPrototype');
   });
 
   // 注册新建算子原型文件命令
   const createCommand = vscode.commands.registerCommand('mindstudio-opsuite.createOps', async () => {
-    await serviceManager.startServices();
     await opsOption.init();
     opsOption.createOps();
   });
 
   // 注册编译命令
   const buildOpsCommand = vscode.commands.registerCommand('mindstudio-opsuite.buildOps', async () => {
-    await serviceManager.startServices();
     await opsOption.init();
     opsOption.startBuild();
   });
@@ -87,7 +78,6 @@ export async function activate(context: vscode.ExtensionContext) {
   // 注册JSON编辑器按钮命令
   const buttonCommand = vscode.commands.registerCommand('extension.jsonButtonAction', async (uri?: vscode.Uri) => {
     if (uri) {
-      await serviceManager.startServices();
       await opsOption.init();
       opsOption.createOpsByPrototype(uri.fsPath);
     }
@@ -120,7 +110,6 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(openCommand);
   context.subscriptions.push(ConfigCommand);
   context.subscriptions.push(createCommand);
-  context.subscriptions.push(serviceManager);
   context.subscriptions.push(welcomeCommand);
   context.subscriptions.push(newPrototypeCommand);
 

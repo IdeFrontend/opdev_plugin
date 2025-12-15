@@ -6,10 +6,8 @@
  */
 
 
-import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ServiceManager } from './serviceManager';
 import { PermanentStorage } from './PermanentStorage'
 import webviewMessageList from './WebviewMessageList'
 import { HtmlTransformer } from './HtmlTransformer'
@@ -21,15 +19,13 @@ import { HtmlTransformer } from './HtmlTransformer'
 export class WebviewProvider {
     private panel: vscode.WebviewPanel | undefined;
     private leftNav: any | undefined;
-    private serviceManager: ServiceManager;
     private storage: PermanentStorage;
     private isDisposed: boolean = false;
     private isRemote: boolean = false;
     private sshData: Object | undefined;
     private context: vscode.ExtensionContext
 
-    constructor(context: vscode.ExtensionContext, serviceManager: ServiceManager) {
-        this.serviceManager = serviceManager;
+    constructor(context: vscode.ExtensionContext) {
         this.storage = new PermanentStorage(context);
         this.context = context;
         this.isRemote = vscode.env.remoteName !== undefined;
@@ -171,7 +167,5 @@ export class WebviewProvider {
             this.panel.dispose();
             this.panel = undefined;
         }
-        // 停止服务
-        this.serviceManager.stopServices();
     }
 }
