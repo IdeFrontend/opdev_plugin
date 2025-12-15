@@ -251,12 +251,12 @@ const webviewMessageList: messageItem[] = [
             if (that.isRemote) {
                 const opsOption = new OpsOption(that.context);
                 await opsOption.init();
-                const configData = await opsOption.getAllPath(message.keyword)
+                const res = await opsOption.getAllPath(message.keyword)
                 that.panel.webview.postMessage({
                     command: 'iframeSetBuildConfigItem',
                     data: {
                         type: message.type,
-                        list: configData.data
+                        list: res.data
                     }
                 });
             } else {
