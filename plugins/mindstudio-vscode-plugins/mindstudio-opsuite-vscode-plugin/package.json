@@ -1,6 +1,6 @@
 {
-  "name": "mindstudio-opsuite-vscode-plugin",
-  "displayName": "MindStudio Opsuite",
+  "name": "haiwei-op-devtools-vscode-plugin",
+  "displayName": "Huawei OP DevTools",
   "description": "A comprehensive operations suite for MindStudio",
   "publisher": "huawei",
   "repository": {
@@ -51,28 +51,28 @@
     },
     "commands": [
       {
-        "command": "mindstudio-opsuite.open",
+        "command": "haiwei-op-devtools.open",
         "title": "新建算子工程"
       },
       {
-        "command": "mindstudio-opsuite.buildOps",
+        "command": "haiwei-op-devtools.buildOps",
         "title": "编译算子"
       },
       {
-        "command": "mindstudio-opsuite.config",
+        "command": "haiwei-op-devtools.config",
         "title": "配置"
       },
       {
-        "command": "mindstudio-opsuite.leftNaV",
+        "command": "haiwei-op-devtools.leftNaV",
         "title": "左侧菜单配置"
       },
       {
-        "command": "mindstudio-opsuite.newPrototype",
+        "command": "haiwei-op-devtools.newPrototype",
         "title": "新建算子原型定义文件",
         "icon": "resources/homeIconW.svg"
       },
       {
-        "command": "mindstudio-opsuite.createOps",
+        "command": "haiwei-op-devtools.createOps",
         "title": "新建算子原型文件",
         "icon": "resources/ops.svg"
       },
@@ -85,17 +85,17 @@
     "menus": {
       "explorer/context": [
         {
-          "command": "mindstudio-opsuite.open",
+          "command": "haiwei-op-devtools.open",
           "group": "navigation"
         },
         {
-          "command": "mindstudio-opsuite.createOps",
+          "command": "haiwei-op-devtools.createOps",
           "group": "navigation"
         }
       ],
       "view/title": [
         {
-          "command": "mindstudio-opsuite.newPrototype",
+          "command": "haiwei-op-devtools.newPrototype",
           "group": "navigation",
           "when": "view == workbench.explorer.fileView",
           "icon": {
@@ -106,7 +106,7 @@
       ],
       "editor/title": [
         {
-          "command": "mindstudio-opsuite.config",
+          "command": "haiwei-op-devtools.config",
           "group": "navigation",
           "when": "true"
         },
@@ -123,11 +123,11 @@
       ],
       "extension/build": [
         {
-          "command": "mindstudio-opsuite.buildOps",
+          "command": "haiwei-op-devtools.buildOps",
           "group": "navigation"
         },
         {
-          "command": "mindstudio-opsuite.createOps",
+          "command": "haiwei-op-devtools.createOps",
           "group": "navigation"
         }
       ]

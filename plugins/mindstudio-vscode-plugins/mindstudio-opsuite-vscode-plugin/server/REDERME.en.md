@@ -22,7 +22,7 @@ mindstudio工具一站式开发插件opsuite后端服务
 uv sync不仅安装和更新包，还卸载多余的包，可以使的pyinstaller打包后的可执行文件体积更小
 #### uv (推荐)
 ```shell
-  cd plugins/mindstudio-vscode-plugins/mindstudio-opsuite-vscode-plugin/server
+  cd plugins/mindstudio-vscode-plugins/haiwei-op-devtools-vscode-plugin/server
 ```
 ##### 1.安装uv
 ```shell
@@ -49,7 +49,7 @@ linux
 ### 3. 运行
 #### 源码运行
 ```shell
-  cd plugins/mindstudio-vscode-plugins/mindstudio-opsuite-vscode-plugin/server/src
+  cd plugins/mindstudio-vscode-plugins/haiwei-op-devtools-vscode-plugin/server/src
 ```
 ```shell
   python3 ./src/main.py

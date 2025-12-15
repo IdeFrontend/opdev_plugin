@@ -45,7 +45,7 @@ const webviewMessageList: messageItem[] = [
         callback: async (message: any, that: any) => {
             console.log('message-------', message)
             if (!message.message.data) {
-                vscode.commands.executeCommand('mindstudio-opsuite.createOps');
+                vscode.commands.executeCommand('haiwei-op-devtools.createOps');
                 return
             }
             // 开始传入
@@ -109,7 +109,7 @@ const webviewMessageList: messageItem[] = [
     {
         command: 'openLinkWebviewPanel',
         callback: (message: any, that: any) => {
-            vscode.commands.executeCommand('mindstudio-opsuite.open');
+            vscode.commands.executeCommand('haiwei-op-devtools.open');
         }
     },
     {
@@ -346,7 +346,7 @@ const webviewMessageList: messageItem[] = [
         command: 'vscodeOpenConfig',
         callback: async (msg: any, that: any) => {
             tempObj.currentActiveConfig = msg.message.data
-            await vscode.commands.executeCommand('mindstudio-opsuite.config')
+            await vscode.commands.executeCommand('haiwei-op-devtools.config')
         }
     },
     {

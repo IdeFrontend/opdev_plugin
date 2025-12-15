@@ -9,13 +9,13 @@
           <div v-for="item in items_type" :key="item.id" class="single-select-item left"
             :class="{ selected: selectedId_type === item.id }" @click="selectedId_type = item.id">
             <div class="item-title">{{ item.title }}</div>
-            <div class="item-desc">{{ item.desc }}</div>
+            <div class="item-desc" v-html="item.desc"></div>
           </div>
         </div>
         <div class="single-select-item right">
           <div style="margin-bottom: 20px;">工程目录结构示意</div>
-          <div>
-            <a-image :width="400" :src="selectedId_type === 1 ? tipBase_1 : tipBase_0" />
+          <div class="image-wrapper">
+            <a-image :src="selectedId_type === 1 ? tipBase_1 : tipBase_0" />
           </div>
         </div>
       </div>
@@ -24,7 +24,7 @@
           <div style="margin-bottom: 20px;">2.工程配置</div>
           <a-checkbox-group v-model:value="state.value1" :options="options" style="color: white;" />
         </div>
-        <div v-if="selectedId_type === 2">
+        <div v-if="selectedId_type === 4">
           <div>选择算子原型定义文件</div>
           <div class="left-right-box">
             <div v-for="item in items_proto" :key="item.id" class="single-select-item left"
@@ -208,7 +208,7 @@ const formatFileSize = (bytes) => {
 };
 
 const selectedId_type = ref(1);
-const selectedId_proto = ref();
+const selectedId_proto = ref(1);
 const state = reactive({
   value1: [],
 });
@@ -219,7 +219,7 @@ const options = [
 ];
 const items_type = [
   { id: 1, title: '<<<>>>算子工程', desc: '生成一个使用<<<>>>内核调用符进行算子直调的hello_world样例，代码文件采用".asc"后缀支持异构编译。' },
-  { id: 2, title: '标准自定义算子工程', desc: 'op_host存放CPU侧的代码实现，op_kernel存放NPU侧的代码实现，op_graph存放图模式下的代码实现' },
+  { id: 2, title: '标准自定义算子工程', desc: 'op_host存放CPU侧的代码实现，op_kernel存放NPU侧的代码实现，op_graph存放图模式下的代码实现（需要下载<a href="https://gitcode.com/zhanw_coding/ops-math/tree/master/math">ops-math工程</a>,并将该算子放入到op-math/math目录下，才能编译）' },
 ];
 
 const items_proto = [
@@ -394,6 +394,19 @@ const connectSSH = () => {
 .right {
   flex: 0 1 420px; /* 右侧优先被压缩 */
   min-width: 240px;
+}
+
+.image-wrapper {
+  overflow: hidden;
+  max-width: 100%;
+}
+
+/* 保证图片不会撑破容器 */
+:deep(.right .ant-image-img) {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
 }
 
 
