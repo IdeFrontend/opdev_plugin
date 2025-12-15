@@ -1,5 +1,5 @@
 {
-  "name": "haiwei-op-devtools-vscode-plugin",
+  "name": "huawei-op-devtools-vscode-plugin",
   "displayName": "Huawei OP DevTools",
   "description": "A comprehensive operations suite for MindStudio",
   "publisher": "huawei",
@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://gitcode.com/Asscend/mstt"
   },
-  "version": "1.0.81",
+  "version": "1.0.82",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -51,28 +51,28 @@
     },
     "commands": [
       {
-        "command": "haiwei-op-devtools.open",
+        "command": "huawei-op-devtools.open",
         "title": "新建算子工程"
       },
       {
-        "command": "haiwei-op-devtools.buildOps",
+        "command": "huawei-op-devtools.buildOps",
         "title": "编译算子"
       },
       {
-        "command": "haiwei-op-devtools.config",
+        "command": "huawei-op-devtools.config",
         "title": "配置"
       },
       {
-        "command": "haiwei-op-devtools.leftNaV",
+        "command": "huawei-op-devtools.leftNaV",
         "title": "左侧菜单配置"
       },
       {
-        "command": "haiwei-op-devtools.newPrototype",
+        "command": "huawei-op-devtools.newPrototype",
         "title": "新建算子原型定义文件",
         "icon": "resources/homeIconW.svg"
       },
       {
-        "command": "haiwei-op-devtools.createOps",
+        "command": "huawei-op-devtools.createOps",
         "title": "新建算子原型文件",
         "icon": "resources/ops.svg"
       },
@@ -85,17 +85,17 @@
     "menus": {
       "explorer/context": [
         {
-          "command": "haiwei-op-devtools.open",
+          "command": "huawei-op-devtools.open",
           "group": "navigation"
         },
         {
-          "command": "haiwei-op-devtools.createOps",
+          "command": "huawei-op-devtools.createOps",
           "group": "navigation"
         }
       ],
       "view/title": [
         {
-          "command": "haiwei-op-devtools.newPrototype",
+          "command": "huawei-op-devtools.newPrototype",
           "group": "navigation",
           "when": "view == workbench.explorer.fileView",
           "icon": {
@@ -106,7 +106,7 @@
       ],
       "editor/title": [
         {
-          "command": "haiwei-op-devtools.config",
+          "command": "huawei-op-devtools.config",
           "group": "navigation",
           "when": "true"
         },
@@ -123,11 +123,11 @@
       ],
       "extension/build": [
         {
-          "command": "haiwei-op-devtools.buildOps",
+          "command": "huawei-op-devtools.buildOps",
           "group": "navigation"
         },
         {
-          "command": "haiwei-op-devtools.createOps",
+          "command": "huawei-op-devtools.createOps",
           "group": "navigation"
         }
       ]

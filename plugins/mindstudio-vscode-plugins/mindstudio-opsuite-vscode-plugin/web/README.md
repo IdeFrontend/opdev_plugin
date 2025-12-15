@@ -1,1 +1,1 @@
-# haiwei-op-devtools-vscode-plugin 前端微服务
+# huawei-op-devtools-vscode-plugin 前端微服务
