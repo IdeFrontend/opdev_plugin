@@ -267,7 +267,7 @@ const webviewMessageList: messageItem[] = [
             } else {
                 const server = new RemoteServer(message.ssh)
                 await server.connect();
-                await server.executeCommand(`chmod u+x  ./${serviceFile}`, commandPath);
+                await server.executeCommand(`chmod +x  ./${serviceFile}`, commandPath);
                 const res = await server.executeCommand(`./${serviceFile} task list_files --path ${message.keyword} --file_type all`, commandPath);
                 const stdout = res.stdout.replaceAll(`\n`, ``);
                 const list = JSON.parse(stdout.substring(stdout.indexOf(`{'code':`), stdout.length).replaceAll(`'`, `"`)).data;
@@ -327,7 +327,7 @@ const webviewMessageList: messageItem[] = [
                     command: 'iframeSetSSHLoading',
                     data: 90
                 });
-                await server.executeCommand(`chmod u+x  ./${serviceFile}`, commandPath);
+                await server.executeCommand(`chmod +x  ./${serviceFile}`, commandPath);
                 await server.executeCommand(`./${serviceFile} --extension_publisher ${publisher} --extension_name ${extensionName} --extension_version ${version} server --port ${port}`, commandPath);
             }
 
