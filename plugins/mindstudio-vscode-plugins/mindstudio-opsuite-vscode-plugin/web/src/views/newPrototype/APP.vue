@@ -380,16 +380,20 @@ const connectSSH = () => {
 
 .left-right-box {
   display: flex;
-  gap: 20px;
-  /* 两列之间的间距 */
+  gap: 20px; /* 两列之间的间距 */
+  align-items: flex-start;
+  flex-wrap: nowrap;
 }
 
-.left,
+.left {
+  flex: 1 0 360px; /* 左侧保持宽度，不压缩 */
+  min-width: 300px;
+  flex-shrink: 0;
+}
+
 .right {
-  flex: 1;
-  /* 等分宽度 */
-  /* 或者指定具体宽度 */
-  /* width: 50%; */
+  flex: 0 1 420px; /* 右侧优先被压缩 */
+  min-width: 240px;
 }
 
 
@@ -432,5 +436,20 @@ const connectSSH = () => {
 
 :deep(.ant-descriptions-item-content){
   color: white !important;
+}
+@media (max-width: 960px) {
+  .left-right-box {
+    flex-wrap: wrap;
+  }
+
+  .left {
+    flex: 1 0 100%;
+    min-width: 0;
+  }
+
+  .right {
+    flex: 0 1 100%;
+    min-width: 0;
+  }
 }
 </style>
