@@ -65,7 +65,7 @@ export default class OpsOption {
         ops_prototype_file,
         project_id: Number(project_id),
         op_type,
-      });
+      }, this.context.extensionPath);
       console.log(
         '生成算子工程参数',
         {

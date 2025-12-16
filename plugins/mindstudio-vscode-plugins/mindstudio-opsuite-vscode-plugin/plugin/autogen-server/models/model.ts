@@ -3,6 +3,7 @@ import fs from 'fs-extra';
 import config from './config';
 import * as projectModel from './projectModel';
 import * as configModel from './configModel';
+import { OpGeneratorFactory } from '../services/opGeneratorFactory';
 
 const dataDir = path.join((config as any).user_data_dir, 'data');
 const opsFile = path.join(dataDir, 'ops.json');
@@ -60,7 +61,35 @@ export function getOpByProjectIdAndOpName(project_id: number, op_name: string): 
   return found || null;
 }
 
-export function generateStructure(data: Partial<OpRecord>): number {
+export function generateStructure(data: Partial<OpRecord>, extensionPath: string): number {
+  // 1) basic checks
+  const project = projectModel.get_project_by_id(data.project_id as any);
+  if (!project) throw Object.assign(new Error('project not found'), { name: 'InvalidRequest' });
+
+  // 2) prepare params for generator
+  const params = {
+    project_id: data.project_id,
+    op_type: data.op_type,
+    ops_prototype_file: (data as any).ops_prototype_file ?? null,
+    op_name: data.op_name ?? null,
+    template_name: (data as any).template_name ?? null,
+    soc_version: (data as any).soc_version ?? null,
+    op_path: data.op_path ?? project.project_path,
+  } as any;
+
+  // 3) get generator and parse meta
+  const generator = OpGeneratorFactory.getGenerator(params, project, extensionPath);
+  const opName = generator.parseMeta();
+
+  // 4) check duplicate
+  if (getOpByProjectIdAndOpName(project.id as number, opName)) {
+    throw Object.assign(new Error('op name exists'), { name: 'InvalidRequest' });
+  }
+
+  // 5) execute generation (filesystem work)
+  generator.executeGeneration();
+
+  // 6) persist store entry
   const store = ensureStore();
   const now = new Date().toISOString();
   const nextId = store.lastId + 1;
@@ -69,9 +98,9 @@ export function generateStructure(data: Partial<OpRecord>): number {
     task_id: data.task_id ?? null,
     project_id: data.project_id as number,
     op_class: data.op_class ?? null,
-    op_name: data.op_name as string,
+    op_name: opName,
     op_type: data.op_type ?? 'ascend',
-    op_path: data.op_path ?? null,
+    op_path: params.op_path ?? project.project_path,
     ascend_env_script: data.ascend_env_script ?? null,
     examples: data.examples ?? null,
     create_by: data.create_by ?? null,
@@ -82,8 +111,8 @@ export function generateStructure(data: Partial<OpRecord>): number {
   store.ops.push(record);
   store.lastId = nextId;
   writeStore(store);
+
   try {
-    const project = projectModel.get_project_by_id(record.project_id as any);
     if (project) {
       // Build: 创建 build_op 和 build_example 两种配置
       const buildOp = {
