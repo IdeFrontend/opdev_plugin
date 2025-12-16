@@ -3,7 +3,7 @@ import fs from 'fs-extra';
 import config from './config';
 import { ensureLaunchJsonExists } from '../utils/projectUtils';
 
-const dataDir = path.join((config as any).user_data_dir, 'data');
+const dataDir = path.join(config.user_data_dir, 'data');
 const projectsFile = path.join(dataDir, 'projects.json');
 
 type ProjectRecord = {

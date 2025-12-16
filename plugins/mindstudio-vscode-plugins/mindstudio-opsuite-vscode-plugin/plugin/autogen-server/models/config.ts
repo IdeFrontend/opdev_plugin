@@ -11,8 +11,4 @@ function getUserDataDir(): string {
 
 const user_data_dir = getUserDataDir();
 
-const db = {
-  DATABASE_PATH: path.join(user_data_dir, 'data', 'plugin.db'),
-};
-
-export default { user_data_dir, db };
+export default { user_data_dir };

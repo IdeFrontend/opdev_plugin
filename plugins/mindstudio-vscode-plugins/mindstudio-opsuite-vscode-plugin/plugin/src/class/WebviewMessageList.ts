@@ -13,7 +13,6 @@ import DirectoryZipper from './DirectoryZipper';
 import packageJson from '../../../package.json';
 import { CommandExecutor } from './CommandOptions';
 import OpsOption from './OpsOption';
-import { createProject } from 'plugin/autogen-server';
 
 const tempObj = { currentActiveConfig: '' };
 
@@ -286,8 +285,7 @@ const webviewMessageList: messageItem[] = [
       const extensionsPath = '.vscode-server/extensions/';
       const serviceFile = 'register_extension.sh';
       const plugiExtensionsPath = `${extensionsPath}${publisher}.${extensionName}-${version}`;
-      const commandPath = `${plugiExtensionsPath}/out`;
-      let port = 3000;
+      const commandPath = `${plugiExtensionsPath}/out/shell`;
 
       let cmdOut: any = {};
       cmdOut = await server.executeCommand(`cd ${plugiExtensionsPath}`);
@@ -335,6 +333,13 @@ const webviewMessageList: messageItem[] = [
     command: 'vscodeCreatedProject',
     callback: async (msg: any, that: any) => {
       const message = msg.message.data;
+      const publisher = packageJson.publisher;
+      const extensionName = packageJson.name;
+      const version = packageJson.version;
+      const extensionsPath = '.vscode-server/extensions/';
+      const serviceFile = 'create_project.sh';
+      const plugiExtensionsPath = `${extensionsPath}${publisher}.${extensionName}-${version}`;
+      const commandPath = `${plugiExtensionsPath}/out/shell`;
       // 判斷当前是在本地还是服务器上
       if (that.isRemote) {
         console.log('服务器上执行');
@@ -384,12 +389,7 @@ const webviewMessageList: messageItem[] = [
         await server.executeCommand(`mkdir  ${message.projectPath}/${message.projectName}`);
         await server.executeCommand(`chmod + x ${message.projectSH}`);
         await server.executeCommand(`${message.projectSH}`);
-        await createProject({
-          project_name: message.projectName,
-          project_path: `${message.projectPath}/${message.projectName}`,
-          ascend_env_script: message.projectSH,
-          create_by: ServerInfoUtil.getUsername(),
-        });
+        await server.executeCommand(`./${serviceFile} --project-name "${message.projectName}" --project-path "${message.projectPath}/${message.projectName}" --ascend-env-script "${message.projectSH}" --creat-by "ServerInfoUtil.getUsername()"`, commandPath);
         const remoteOpener: RemoteServerOpener = new RemoteServerOpener();
         remoteOpener.open({ ...message, remotePath: `${message.projectPath}/${message.projectName}` });
       }

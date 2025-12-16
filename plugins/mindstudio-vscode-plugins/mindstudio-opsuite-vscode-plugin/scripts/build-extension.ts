@@ -15,8 +15,9 @@ esbuild.build({
   sourcemap: useSourcemap,
 });
 
-const sourcePath = path.resolve(__dirname, '../plugin/register_extension.sh');
-const targetPath = path.resolve(__dirname, '../out/register_extension.sh');
+// 复制脚本文件
+const sourcePath = path.resolve(__dirname, '../plugin/shell');
+const targetPath = path.resolve(__dirname, '../out/shell');
 
-fs.rmSync(targetPath, { force: true });
-fs.cpSync(sourcePath, targetPath);
+fs.rmSync(targetPath, { force: true, recursive: true });
+fs.cpSync(sourcePath, targetPath, { recursive: true });
