@@ -7,7 +7,7 @@ const configsFile = path.join(dataDir, 'configs.json');
 
 type ConfigRecord = {
   id: number;
-  config_name: string | null;
+  config_name: string;
   config_type: string;
   script: string;
   target_dir?: string | null;

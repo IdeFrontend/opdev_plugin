@@ -4,6 +4,7 @@ import config from './config';
 import * as projectModel from './projectModel';
 import * as configModel from './configModel';
 import { OpGeneratorFactory } from '../services/opGeneratorFactory';
+import { getDefaultPath } from '../utils/opUtil';
 
 const dataDir = path.join((config as any).user_data_dir, 'data');
 const opsFile = path.join(dataDir, 'ops.json');
@@ -14,8 +15,8 @@ type OpRecord = {
   project_id: number;
   op_class?: string | null;
   op_name: string;
-  op_type?: string;
-  op_path?: string | null;
+  op_type: string;
+  op_path: string;
   ascend_env_script?: string | null;
   examples?: string | null;
   create_by?: string | null;
@@ -114,25 +115,26 @@ export function generateStructure(data: Partial<OpRecord>, extensionPath: string
 
   try {
     if (project) {
+      const { opScriptPath, exampleScriptPath, targetDir, targetOpFile, targetExampleFile } = getDefaultPath(record);
       // Build: 创建 build_op 和 build_example 两种配置
       const buildOp = {
         project_id: project.id,
         user_options: {
           op: record.op_name,
-          script: `bash ${record.op_name}.sh`,
+          script: `bash ${opScriptPath}`,
           config_name: record.op_name,
-          target_dir: record.op_path || project.project_path,
-          target_file: null,
+          target_dir: targetDir,
+          target_file: targetOpFile,
         },
       };
       const buildExample = {
         project_id: project.id,
         user_options: {
           op: record.op_name,
-          script: `bash ${record.op_name}.sh`,
+          script: `bash ${exampleScriptPath}`,
           config_name: record.op_name,
-          target_dir: record.op_path || project.project_path,
-          target_file: null,
+          target_dir: targetDir,
+          target_file: targetExampleFile,
         },
       };
       // 调用 postConfig，不 await（保持同步签名兼容），若需确保完成可改为 async/await

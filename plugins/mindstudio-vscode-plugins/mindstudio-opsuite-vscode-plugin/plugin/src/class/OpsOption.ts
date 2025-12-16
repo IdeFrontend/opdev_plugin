@@ -96,7 +96,7 @@ export default class OpsOption {
   async getConfigData() {
     const project_id = this.projectId;
     const [opConfig, exampleConfig] = await Promise.all([getConfig(Number(project_id), 'build_op'), getConfig(Number(project_id), 'build_example')]);
-    return [...opConfig, ...exampleConfig];
+    return { [opConfig[0].config_name]: [...opConfig, ...exampleConfig] };
   }
 
   async getAllPath(path: string) {
