@@ -2,7 +2,16 @@ import { ExplorerRootUtils } from './ExplorerRootUtils';
 import { CommandExecutor } from './CommandOptions';
 import { PermanentStorage } from './PermanentStorage';
 import * as vscode from 'vscode';
-import { createProject, generateOpsPrototype, generateStructure, getBuildExampleCommand, getBuildOpCommand, getConfig, getFiles, postConfig } from '../../autogen-server';
+import {
+  createProject,
+  generateOpsPrototype,
+  generateStructure,
+  getBuildExampleCommand,
+  getBuildOpCommand,
+  getConfig,
+  getFiles,
+  postConfig,
+} from '../../autogen-server';
 
 export default class OpsOption {
   private storage: PermanentStorage;
@@ -61,11 +70,14 @@ export default class OpsOption {
   async createOpsByPrototype(ops_prototype_file: string, op_type = 'ascend') {
     const project_id = this.projectId;
     try {
-      const result = await generateStructure({
-        ops_prototype_file,
-        project_id: Number(project_id),
-        op_type,
-      }, this.context.extensionPath);
+      const result = await generateStructure(
+        {
+          ops_prototype_file,
+          project_id: Number(project_id),
+          op_type,
+        },
+        this.context.extensionPath
+      );
       console.log(
         '生成算子工程参数',
         {
@@ -76,8 +88,8 @@ export default class OpsOption {
         result
       );
       vscode.window.showInformationMessage(`新建算子文件成功`);
-    } catch {
-      vscode.window.showErrorMessage(`新建算子文件失败`);
+    } catch (e) {
+      vscode.window.showErrorMessage(`新建算子文件失败 ${e instanceof Error ? e.message : ''}`);
     }
   }
 

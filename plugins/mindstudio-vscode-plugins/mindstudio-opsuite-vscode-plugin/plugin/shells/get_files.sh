@@ -2,6 +2,7 @@
 set -euo pipefail
 
 dir="${1:-}"
+searchKey=""
 
 if [ -z "$dir" ]; then
   printf '[]\n'
@@ -9,18 +10,34 @@ if [ -z "$dir" ]; then
 fi
 
 if [ ! -e "$dir" ]; then
-  printf '%s does not exist\n' "$dir" >&2
-  printf '[]\n'
-  exit 0
-fi
-
-# resolve directory to absolute path
-if command -v realpath >/dev/null 2>&1; then
-  base="$(realpath "$dir")"
+  # 输入路径不存在：把最后一段当作模糊搜索关键字，使用其父目录作为基准目录
+  searchKey="$(basename "$dir")"
+  parent="$(dirname "$dir")"
+  if [ -z "$parent" ] || [ "$parent" = "." ]; then
+    parent="."
+  fi
+  if [ ! -e "$parent" ]; then
+    printf '%s does not exist\n' "$parent" >&2
+    printf '[]\n'
+    exit 0
+  fi
+  # resolve parent to absolute path
+  if command -v realpath >/dev/null 2>&1; then
+    base="$(realpath "$parent")"
+  else
+    pushd "$parent" >/dev/null 2>&1 || { printf '[]\n'; exit 0; }
+    base="$(pwd -P)"
+    popd >/dev/null 2>&1
+  fi
 else
-  pushd "$dir" >/dev/null 2>&1 || { printf '[]\n'; exit 0; }
-  base="$(pwd -P)"
-  popd >/dev/null 2>&1
+  # resolve directory to absolute path
+  if command -v realpath >/dev/null 2>&1; then
+    base="$(realpath "$dir")"
+  else
+    pushd "$dir" >/dev/null 2>&1 || { printf '[]\n'; exit 0; }
+    base="$(pwd -P)"
+    popd >/dev/null 2>&1
+  fi
 fi
 
 tmp="$(mktemp)"
@@ -29,6 +46,12 @@ trap 'rm -f "$tmp"' EXIT
 # collect entries (non-recursive)
 while IFS= read -r -d '' entry; do
   name="$(basename "$entry")"
+  # 如果设置了搜索关键字，则只保留名称包含关键字的条目（子串匹配）
+  if [ -n "$searchKey" ]; then
+    if ! printf '%s\n' "$name" | grep -F -q "$searchKey"; then
+      continue
+    fi
+  fi
   # resolve absolute path for the entry
   if command -v realpath >/dev/null 2>&1; then
     entry_path="$(realpath "$entry")"
