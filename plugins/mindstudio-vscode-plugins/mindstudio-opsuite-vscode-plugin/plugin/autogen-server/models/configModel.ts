@@ -80,7 +80,7 @@ export async function postConfig(config_type: string, dataList: any[]) {
   const now = new Date().toISOString();
 
   for (const item of dataList) {
-    const opVal = item.op || null;
+    const opVal = item.user_options.op || null;
     const user_options = item.user_options ? item.user_options : null;
     if (item.config_id) {
       const idx = store.configs.findIndex(c => c.id === item.config_id);
@@ -89,10 +89,10 @@ export async function postConfig(config_type: string, dataList: any[]) {
         continue;
       }
       store.configs[idx] = Object.assign({}, store.configs[idx], {
-        config_name: item.config_name,
-        script: item.script,
-        target_dir: item.target_dir || null,
-        target_file: item.target_file || null,
+        config_name: user_options.config_name,
+        script: user_options.script,
+        target_dir: user_options.target_dir || null,
+        target_file: user_options.target_file || null,
         custom_options: item.custom_options || null,
         user_options: user_options,
         op: opVal,
@@ -104,11 +104,11 @@ export async function postConfig(config_type: string, dataList: any[]) {
       const nextId = store.lastId + 1;
       const record: ConfigRecord = {
         id: nextId,
-        config_name: item.config_name || null,
+        config_name: user_options.config_name || null,
         config_type: config_type,
-        script: item.script || '',
-        target_dir: item.target_dir || null,
-        target_file: item.target_file || null,
+        script: user_options.script || '',
+        target_dir: user_options.target_dir || null,
+        target_file: user_options.target_file || null,
         custom_options: item.custom_options || null,
         user_options: user_options,
         project_id: item.project_id,

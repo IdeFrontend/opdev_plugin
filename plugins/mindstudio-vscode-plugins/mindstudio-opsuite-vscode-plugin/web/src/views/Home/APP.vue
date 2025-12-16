@@ -13,9 +13,9 @@
                 <UserOutlined />
                 Ascend C 算子工程
               </a-menu-item>
-              <a-menu-item key="Trition">
+              <a-menu-item key="Triton">
                 <UserOutlined />
-                Trition 算子工程
+                Triton 算子工程
               </a-menu-item>
               <a-menu-item key="TileLang">
                 <UserOutlined />

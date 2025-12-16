@@ -133,8 +133,8 @@ export default class OpsOption {
         return;
       }
       vscode.window.showInformationMessage(`编译算子成功`);
-    } catch {
-      vscode.window.showErrorMessage(`获取编译算子命令失败`);
+    } catch (e: any) {
+      vscode.window.showErrorMessage(`获取编译算子命令失败 ${e.message}`);
     }
   }
 
