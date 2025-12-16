@@ -390,9 +390,7 @@ const webviewMessageList: messageItem[] = [
         await server.executeCommand(`chmod + x ${message.projectSH}`);
         await server.executeCommand(`${message.projectSH}`);
         await server.executeCommand(
-          `./${serviceFile} --project-name "${message.projectName}" --project-path "${message.projectPath}/${message.projectName}" --ascend-env-script "${
-            message.projectSH
-          }" --creat-by "${ServerInfoUtil.getUsername()}"`,
+          `./${serviceFile} --project-name "${message.projectName}" --project-path "${message.projectPath}/${message.projectName}" --ascend-env-script "${message.projectSH}"`,
           commandPath
         );
         const remoteOpener: RemoteServerOpener = new RemoteServerOpener();
@@ -410,7 +408,7 @@ const webviewMessageList: messageItem[] = [
     command: 'vscodeOpenConfig',
     callback: async (msg: any, that: any) => {
       tempObj.currentActiveConfig = msg.message.data;
-      await vscode.commands.executeCommand('mindstudio-opsuite.config');
+      await vscode.commands.executeCommand('huawei-op-devtools.config');
     },
   },
   {
