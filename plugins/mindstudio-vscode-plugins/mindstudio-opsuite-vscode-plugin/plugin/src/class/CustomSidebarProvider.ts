@@ -9,7 +9,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { HtmlTransformer } from './HtmlTransformer'
-import { ServiceManager } from './serviceManager';
 import webviewMessageList from './WebviewMessageList'
 
 export class CustomSidebarProvider implements vscode.WebviewViewProvider {
@@ -47,11 +46,6 @@ export class CustomSidebarProvider implements vscode.WebviewViewProvider {
             undefined,
             this._context.subscriptions
         );
-
-        // 初始化服务管理器
-        const serviceManager = new ServiceManager(this._context);
-        await serviceManager.startServices();
-
 
         // 设置HTML内容
         const distPath = path.join(this._extensionUri.fsPath, 'out', 'web')

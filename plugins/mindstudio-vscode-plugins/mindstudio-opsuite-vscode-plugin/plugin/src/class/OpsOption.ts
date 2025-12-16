@@ -1,176 +1,185 @@
-import NetWork from "../server/NetWork";
-import { ExplorerRootUtils } from "./ExplorerRootUtils";
-import { CommandExecutor } from './CommandOptions'
-import { PermanentStorage } from './PermanentStorage'
+import { ExplorerRootUtils } from './ExplorerRootUtils';
+import { CommandExecutor } from './CommandOptions';
+import { PermanentStorage } from './PermanentStorage';
 import * as vscode from 'vscode';
+import {
+  createProject,
+  generateOpsPrototype,
+  generateStructure,
+  getBuildExampleCommand,
+  getBuildOpCommand,
+  getConfig,
+  getFiles,
+  postConfig,
+} from '../../autogen-server';
+import path from 'node:path';
 
 export default class OpsOption {
-    private netWork: NetWork;
-    private context: vscode.ExtensionContext
-    private storage: PermanentStorage;
-    private server: any;
-    private project_name: string | undefined;
-    private project_path: string | undefined;
-    public projectId: string;
-    public executor: CommandExecutor;
-    constructor(context: vscode.ExtensionContext) {
-        this.context = context;
-        this.netWork = new NetWork();
-        this.projectId = '';
-        const selectedFiles = ExplorerRootUtils.getPrimaryRoot();
-        this.project_name = selectedFiles?.name;
-        this.project_path = selectedFiles?.path;
-        this.storage = new PermanentStorage(context);
-        this.executor = new CommandExecutor()
-    }
+  private storage: PermanentStorage;
+  private project_name: string | undefined;
+  private project_path: string | undefined;
+  public projectId: string;
+  public executor: CommandExecutor;
+  constructor(private context: vscode.ExtensionContext) {
+    this.projectId = '';
+    const selectedFiles = ExplorerRootUtils.getPrimaryRoot();
+    this.project_name = selectedFiles?.name;
+    this.project_path = selectedFiles?.path;
+    this.storage = new PermanentStorage(context);
+    this.executor = new CommandExecutor();
+  }
 
-    async init(accendEnvScript?: string, projectPath?: string, projectName?: string) {
-        this.server = await this.netWork.getServer();
-        if (projectPath) {
-            this.project_path = `${projectPath}/${projectName}`;
-        }
-        if (projectName) {
-            this.project_name = projectName
-        }
-        this.projectId = await this.getProjectId(accendEnvScript)
+  async init(accendEnvScript?: string, projectPath?: string, projectName?: string) {
+    if (projectPath) {
+      this.project_path = path.normalize(`${projectPath}/${projectName}`);
     }
-
-    // 创建算子原型文件
-    // 标准自定义算子工程 使用原型模板
-    async createOps(projectName?: string, projectId?: string, ptototypeName?: string) {
-        const op_name = projectName || this.project_name;
-        const project_id = projectId || this.projectId;
-        const prototype_name = ptototypeName || undefined;
-        console.log('生成算子原型文件参数', op_name, project_id, prototype_name)
-        const result = await this.server.post('api/v1/ops_prototype', {
-            op_name, project_id, prototype_name
-        })
-
-        if (result.code === 0) {
-            vscode.window.showInformationMessage(`新建算子原型文件成功`);
-        } else {
-            vscode.window.showErrorMessage(`新建算子原型文件失败`);
-        }
-        return result
+    if (projectName) {
+      this.project_name = projectName;
     }
+    this.projectId = await this.getProjectId(accendEnvScript);
+  }
 
-    async getProjectId(accendEnvScript?: string) {
-        const project_name = this.project_name;
-        const project_path = this.project_path;
-        const ascend_env_script = accendEnvScript || undefined
-        console.log('project params',project_name, project_path, ascend_env_script);
-        
-        const projectRes = await this.server.post('api/v1/projects', {
-            project_name, project_path, ascend_env_script
-        })
-        console.log('projectRes', projectRes)
-        return projectRes.data;
+  // 创建算子原型文件
+  // 标准自定义算子工程 使用原型模板
+  async createOps(projectName?: string, projectId?: string, ptototypeName?: string): Promise<string> {
+    const op_name = projectName || this.project_name;
+    const project_id = projectId || this.projectId;
+    const prototype_name = ptototypeName || undefined;
+    console.log('生成算子原型文件参数', op_name, project_id, prototype_name);
+    try {
+      const result = await generateOpsPrototype(Number(project_id), op_name, prototype_name, this.context.extensionPath);
+      vscode.window.showInformationMessage(`新建算子原型文件成功`);
+      return result;
+    } catch {
+      vscode.window.showErrorMessage(`新建算子原型文件失败`);
+      return '';
     }
+  }
 
-    // 生成算子工程
-    // <<< 算子工程 op_type: 'cann'
-    // 右上角 op_type: 'ascend'
-    async createOpsByPrototype(ops_prototype_file: string, op_type = 'ascend') {
-        const project_id = this.projectId;
-        const result = await this.server.post('api/v1/ops', {
-            ops_prototype_file, project_id, op_type
-        })
-        console.log('生成算子工程参数', {
-            ops_prototype_file, project_id, op_type
-        }, result)
-        if (result.code === 0) {
-            vscode.window.showInformationMessage(`新建算子文件成功`);
-        } else {
-            vscode.window.showErrorMessage(`新建算子文件失败`);
-        }
-    }
+  async getProjectId(accendEnvScript?: string) {
+    const project_name = this.project_name;
+    const project_path = this.project_path;
+    const ascend_env_script = accendEnvScript || undefined;
+    const projectRes = await createProject({ project_name, project_path, ascend_env_script });
+    console.log('projectRes', projectRes);
+    return String(projectRes);
+  }
 
-    async getConfigData() {
-        const project_id = this.projectId;
-        const result = await this.server.get(`api/v1/config/build?project_id=${project_id}`)
-        console.log(result)
-        return result;
+  // 生成算子工程
+  // <<< 算子工程 op_type: 'cann'
+  // 右上角 op_type: 'ascend'
+  async createOpsByPrototype(ops_prototype_file: string, op_type = 'ascend') {
+    const project_id = this.projectId;
+    try {
+      const result = await generateStructure(
+        {
+          ops_prototype_file,
+          project_id: Number(project_id),
+          op_type,
+        },
+        this.context.extensionPath
+      );
+      console.log(
+        '生成算子工程参数',
+        {
+          ops_prototype_file,
+          project_id,
+          op_type,
+        },
+        result
+      );
+      vscode.window.showInformationMessage(`新建算子文件成功`);
+    } catch (e) {
+      vscode.window.showErrorMessage(`新建算子文件失败 ${e instanceof Error ? e.message : ''}`);
     }
+  }
 
-    async getAllPath(path:string) {
-        const result = await this.server.get(`api/v1/sys/all?path=${path}`)
-        console.log(result)
-        return result;
-    }
+  async getConfigData() {
+    const buildConfigs = await this.getBuildConfigs();
+    return { [buildConfigs[0].config_name]: buildConfigs };
+  }
 
-    async saveBuildConfig(data: any, showMessage: boolean = true) {
-        const result = await this.server.post('api/v1/config/build', data)
-        console.log(result)
-        if (result.code !== 0) {
-            vscode.window.showErrorMessage(`保存编译配置失败`);
-        }
-        if (!showMessage) {
-            return;
-        }
-        vscode.window.showInformationMessage(`保存编译配置成功`);
-    }
+  async getBuildConfigs() {
+    const project_id = this.projectId;
+    const [opConfig, exampleConfig] = await Promise.all([getConfig(Number(project_id), 'build_op'), getConfig(Number(project_id), 'build_example')]);
+    return [...opConfig, ...exampleConfig];
+  }
 
-    async startBuild(config_id?: string) {
-        let configId = config_id
-        if (!configId) {
-            configId = await this.getBuildConfig()
-        }
-        const result = await this.server.get(`api/v1/command/get_build_op_command?config_id=${configId}`)
-        console.log(`api/v1/command/get_build_op_command?config_id=${config_id}`, result)
-        if (result.code !== 0) {
-            vscode.window.showErrorMessage(`获取编译算子命令失败`);
-            return;
-        }
-        const res = await this.executor.execute(result.data, [], [], {}, true);
-        if (res.code !== 0) {
-            vscode.window.showErrorMessage(`编译算子失败 ${res}`);
-            return;
-        }
-        vscode.window.showInformationMessage(`编译算子成功`);
-    }
+  async getAllPath(path: string) {
+    return getFiles(path);
+  }
 
-    async startBuildExample(config_id?: string) {
-        let configId = config_id
-        if (!configId) {
-            configId = await this.getBuildExampleConfig()
-        }
-        const result = await this.server.get(`api/v1/command/get_build_example_command?config_id=${configId}`)
-        console.log(`api/v1/command/get_build_example_command?config_id=${config_id}`, result)
-        if (result.code !== 0) {
-            vscode.window.showErrorMessage(`获取编译example命令失败 ${result}`);
-            return;
-        }
-        const res = await this.executor.execute(result.data, [], [], {}, true);
-        if (res.code !== 0) {
-            vscode.window.showErrorMessage(`编译example失败`);
-            return;
-        }
-        vscode.window.showInformationMessage(`编译example成功`);
+  async saveBuildConfig(data: any, showMessage: boolean = true) {
+    try {
+      await postConfig('build', data);
+      if (!showMessage) {
+        return;
+      }
+      vscode.window.showInformationMessage(`保存编译配置成功`);
+    } catch {
+      vscode.window.showErrorMessage(`保存编译配置失败`);
     }
+  }
 
-    async getBuildConfig() {
-        let buildConfigId = this.storage.get('buildConfigId', '')
-        if (!buildConfigId) {
-            const res = await this.getConfigData()
-            if (res.code !== 0) {
-                return buildConfigId
-            }
-            const configData = res.data;
-            buildConfigId = configData.find((v: any) => v.config_type === "build_op").config_id
-        }
-        return buildConfigId
+  async startBuild(config_id?: string) {
+    let configId = config_id;
+    if (!configId) {
+      configId = await this.getBuildConfig();
     }
+    try {
+      const buildCommand = await getBuildOpCommand(Number(configId));
+      const res = await this.executor.execute(buildCommand, [], [], {}, true);
+      if (res.code !== 0) {
+        vscode.window.showErrorMessage(`编译算子失败 ${res}`);
+        return;
+      }
+      vscode.window.showInformationMessage(`编译算子成功`);
+    } catch (e: any) {
+      vscode.window.showErrorMessage(`获取编译算子命令失败 ${e.message}`);
+    }
+  }
 
-    async getBuildExampleConfig() {
-        let exampleConfigId = this.storage.get('exampleConfigId', '')
-        if (!exampleConfigId) {
-            const res = await this.getConfigData()
-            if (res.code !== 0) {
-                return exampleConfigId
-            }
-            const configData = res.data;
-            exampleConfigId = configData.find((v: any) => v.config_type === "build_example").config_id
-        }
-        return exampleConfigId
+  async startBuildExample(config_id?: string) {
+    let configId = config_id;
+    if (!configId) {
+      configId = await this.getBuildExampleConfig();
     }
+    try {
+      const buildCommand = await getBuildExampleCommand(Number(configId));
+      const res = await this.executor.execute(buildCommand, [], [], {}, true);
+      if (res.code !== 0) {
+        vscode.window.showErrorMessage(`编译example失败`);
+        return;
+      }
+      vscode.window.showInformationMessage(`编译example成功`);
+    } catch (e: any) {
+      vscode.window.showErrorMessage(`获取编译example命令失败 ${e.message}`);
+    }
+  }
+
+  async getBuildConfig() {
+    let buildConfigId = this.storage.get('buildConfigId', '');
+    if (!buildConfigId) {
+      try {
+        const configData = await this.getBuildConfigs();
+        return configData.find((v: any) => v.config_type === 'build_op')?.config_id;
+      } catch {
+        return buildConfigId;
+      }
+    }
+    return buildConfigId;
+  }
+
+  async getBuildExampleConfig() {
+    let exampleConfigId = this.storage.get('exampleConfigId', '');
+    if (!exampleConfigId) {
+      try {
+        const configData = await this.getBuildConfigs();
+        return configData.find((v: any) => v.config_type === 'build_example')?.config_id;
+      } catch {
+        return exampleConfigId;
+      }
+    }
+    return exampleConfigId;
+  }
 }
