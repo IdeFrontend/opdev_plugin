@@ -151,8 +151,9 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "npm run compile:web && npm run compile",
     "compile": "npm run build-extension && npm run copy-web-output",
+    "compile:web": "cd web && npm run build",
     "watch": "tsc -watch -p .",
     "package": "vsce package --no-dependencies",
     "lint": "eslint plugin/src --ext ts",
