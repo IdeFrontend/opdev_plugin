@@ -10,7 +10,7 @@ export default class OpsOption {
   private project_path: string | undefined;
   public projectId: string;
   public executor: CommandExecutor;
-  constructor(context: vscode.ExtensionContext) {
+  constructor(private context: vscode.ExtensionContext) {
     this.projectId = '';
     const selectedFiles = ExplorerRootUtils.getPrimaryRoot();
     this.project_name = selectedFiles?.name;
@@ -37,7 +37,7 @@ export default class OpsOption {
     const prototype_name = ptototypeName || undefined;
     console.log('生成算子原型文件参数', op_name, project_id, prototype_name);
     try {
-      const result = await generateOpsPrototype(Number(project_id), op_name, prototype_name);
+      const result = await generateOpsPrototype(Number(project_id), op_name, prototype_name, this.context.extensionPath);
       vscode.window.showInformationMessage(`新建算子原型文件成功`);
       return result;
     } catch {

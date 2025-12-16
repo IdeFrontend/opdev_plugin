@@ -15,9 +15,13 @@ esbuild.build({
   sourcemap: useSourcemap,
 });
 
-// 复制脚本文件
-const sourcePath = path.resolve(__dirname, '../plugin/shell');
-const targetPath = path.resolve(__dirname, '../out/shell');
+// 复制资源文件
+const copyDirs = [
+  [path.resolve(__dirname, '../plugin/shells'), path.resolve(__dirname, '../out/shells')], // 脚本
+  [path.resolve(__dirname, '../plugin/templates'), path.resolve(__dirname, '../out/templates')], // 模板
+];
 
-fs.rmSync(targetPath, { force: true, recursive: true });
-fs.cpSync(sourcePath, targetPath, { recursive: true });
+for (const [sourcePath, targetPath] of copyDirs) {
+  fs.rmSync(targetPath, { force: true, recursive: true });
+  fs.cpSync(sourcePath, targetPath, { recursive: true });
+}

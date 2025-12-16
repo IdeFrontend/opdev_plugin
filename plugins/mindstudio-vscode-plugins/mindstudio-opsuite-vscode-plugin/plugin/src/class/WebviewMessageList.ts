@@ -285,7 +285,7 @@ const webviewMessageList: messageItem[] = [
       const extensionsPath = '.vscode-server/extensions/';
       const serviceFile = 'register_extension.sh';
       const plugiExtensionsPath = `${extensionsPath}${publisher}.${extensionName}-${version}`;
-      const commandPath = `${plugiExtensionsPath}/out/shell`;
+      const commandPath = `${plugiExtensionsPath}/out/shells`;
 
       let cmdOut: any = {};
       cmdOut = await server.executeCommand(`cd ${plugiExtensionsPath}`);
@@ -339,7 +339,7 @@ const webviewMessageList: messageItem[] = [
       const extensionsPath = '.vscode-server/extensions/';
       const serviceFile = 'create_project.sh';
       const plugiExtensionsPath = `${extensionsPath}${publisher}.${extensionName}-${version}`;
-      const commandPath = `${plugiExtensionsPath}/out/shell`;
+      const commandPath = `${plugiExtensionsPath}/out/shells`;
       // 判斷当前是在本地还是服务器上
       if (that.isRemote) {
         console.log('服务器上执行');

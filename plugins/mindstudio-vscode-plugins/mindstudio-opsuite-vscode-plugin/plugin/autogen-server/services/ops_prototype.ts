@@ -1,9 +1,8 @@
 import path from 'path';
 import fs from 'fs-extra';
-import { getResourcePath } from '../utils/resourceUtils';
 import { get_project_by_id } from './project';
 
-async function generateOpsPrototypeJson(projectPath: string, opName = 'default_op', prototypeName = 'add_custom'): Promise<boolean> {
+async function generateOpsPrototypeJson(projectPath: string, opName: string, prototypeName: string, extensionPath: string): Promise<boolean> {
   const projectDir = path.resolve(projectPath);
   const projectExists = await fs.pathExists(projectDir);
   if (!projectExists) {
@@ -17,7 +16,7 @@ async function generateOpsPrototypeJson(projectPath: string, opName = 'default_o
     t += 1;
   }
 
-  const opsPrototypeJsonPath = path.resolve(getResourcePath(`resource/ops_prototype/${prototypeName}.json`));
+  const opsPrototypeJsonPath = path.resolve(extensionPath, `out/templates/ops_prototype/${prototypeName}.json`);
   if (!(await fs.pathExists(opsPrototypeJsonPath))) {
     console.error('✗ 不存在的 ops_prototype模板');
     throw Object.assign(new Error('✗ 不存在的 ops_prototype模板'), { name: 'InvalidRequest' });
@@ -41,8 +40,8 @@ async function generateOpsPrototypeJson(projectPath: string, opName = 'default_o
   }
 }
 
-export async function generateOpsPrototype(project_id: number, op_name = 'default_op', prototype_name = 'add_custom') {
+export async function generateOpsPrototype(project_id: number, op_name = 'default_op', prototype_name = 'add_custom', extensionPath: string): Promise<boolean> {
   const project = get_project_by_id(project_id as any);
   if (!project) throw Object.assign(new Error('project not found'), { name: 'InvalidRequest' });
-  return generateOpsPrototypeJson(project.project_path, op_name, prototype_name);
+  return generateOpsPrototypeJson(project.project_path, op_name, prototype_name, extensionPath);
 }
