@@ -6,12 +6,12 @@
  */
 
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { RemoteServerOpener } from './RemoteServerOpener'
 import RemoteServer from './RemoteServer'
 import DirectoryZipper from './DirectoryZipper'
 import packageJson from '../../../package.json'
 import { CommandExecutor } from './CommandOptions'
-import { ServerInfoUtil } from './ServerInfoUtil';
 import OpsOption from './OpsOption'
 
 
@@ -364,15 +364,42 @@ const webviewMessageList: messageItem[] = [
                 await executor.execute(`mkdir  ${message.projectPath}/${message.projectName}`, ['File exists'])
                 await executor.execute(`chmod +x ${message.projectSH}`);
                 await executor.execute(`${message.projectSH}`);
-                const opsOption = new OpsOption(that.context);
-                await opsOption.init(message.projectSH);
+                const opsOption = new OpsOption(that.context);                
+                await opsOption.init(message.projectSH, message.projectPath, message.projectName);
                 await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(`${message.projectPath}/${message.projectName}`))
-                const sshConfigName = `${ServerInfoUtil.getUsername()}@${ServerInfoUtil.getPrimaryIP()}:${message.port || 22}`;
-                console.log(`打开新路径：${sshConfigName}${message.projectPath}/${message.projectName}`);
-                const remoteUri = vscode.Uri.parse(`vscode-remote://ssh-remote+${sshConfigName}${message.projectPath}/${message.projectName}`);
-                await vscode.commands.executeCommand('vscode.openFolder', remoteUri, {
-                    forceNewWindow: true
-                });
+
+                // 使用正确的API检测远程连接
+                const remoteName = vscode.env.remoteName;
+                if (!remoteName) {
+                    return console.log("未检测到远程连接");
+                }
+                // 规范化路径
+                const normalizedProjectPath = path.normalize(message.projectPath);
+                const normalizedProjectName = path.normalize(message.projectName);
+                const fullProjectPath = path.join(normalizedProjectPath, normalizedProjectName);
+                console.log(`检测到远程连接: ${remoteName}`);
+              
+                if (remoteName && remoteName !== 'ssh-remote') {
+                    // 如果有完整的远程连接信息，则使用它
+                    if (remoteName.startsWith('ssh-remote+')) {
+                        const remoteUri = vscode.Uri.parse(`vscode-remote://${remoteName}${fullProjectPath}`);
+                        console.log(`准备打开远程文件夹: ${remoteUri.toString()}`);
+                        
+                        await vscode.commands.executeCommand('vscode.openFolder', remoteUri, {
+                            forceNewWindow: true
+                        });
+                    }
+                } else {
+                    // 如果只有 'ssh-remote' 类型而没有具体连接ID
+                    // 尝试通过其他方式获取当前SSH连接信息
+                    console.log(`打开新路径：${fullProjectPath}`);
+                    
+                    // 在远程环境中，我们可以直接打开本地路径（相对于远程系统）
+                    const localUri = vscode.Uri.file(fullProjectPath);
+                    await vscode.commands.executeCommand('vscode.openFolder', localUri, {
+                        forceNewWindow: true
+                    });
+                }
             } else {
                 console.log('本地执行上执行')
                 const server = new RemoteServer(message)

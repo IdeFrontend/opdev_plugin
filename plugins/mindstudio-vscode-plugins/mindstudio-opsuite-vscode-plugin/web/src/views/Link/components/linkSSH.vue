@@ -10,7 +10,6 @@ import { FolderOpenOutlined, RestOutlined } from "@ant-design/icons-vue";
 import { getLocalData, setLoaclData } from "../../../untils/index";
 import { message } from "../../../untils/Message";
 import multiStepModal from "./multiStepModal.vue";
-import { DEFAULT_SSH_PORT, MIN_PORT, MAX_PORT } from "../../../data/index";
 
 const emit = defineEmits(["connected"]);
 
@@ -41,8 +40,6 @@ const projectFormData = reactive({
   projectName: "",
   projectSH: "",
 });
-
-const port = ref(DEFAULT_SSH_PORT)
 
 const buttonText = ref("确认");
 const rateNumber = ref(0);
@@ -149,7 +146,6 @@ const createdProject = () => {
     data: {
       ...projectFormData,
       ...selectedRow.value,
-      ...(isRemote.value ? { port: port.value } : null)
     },
   });
 };
@@ -248,11 +244,6 @@ defineExpose({
         :rules="connectionFormRules"
         layout="vertical"
       >
-
-        <a-form-item v-if="isRemote" label="端口" name="port">
-          <a-input-number v-model:value="port" :min="MIN_PORT" :max="MAX_PORT" :precision="0" />
-        </a-form-item>
-
         <a-form-item label="工程位置" name="userName">
           <a-auto-complete
             v-model:value="projectFormData.projectPath"
