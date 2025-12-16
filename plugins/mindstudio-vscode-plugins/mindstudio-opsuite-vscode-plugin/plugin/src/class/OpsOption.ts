@@ -27,7 +27,7 @@ export default class OpsOption {
     async init(accendEnvScript?: string, projectPath?: string, projectName?: string) {
         this.server = await this.netWork.getServer();
         if (projectPath) {
-            this.project_path = projectPath
+            this.project_path = `${projectPath}/${projectName}`;
         }
         if (projectName) {
             this.project_name = projectName
@@ -57,6 +57,8 @@ export default class OpsOption {
         const project_name = this.project_name;
         const project_path = this.project_path;
         const ascend_env_script = accendEnvScript || undefined
+        console.log('project params',project_name, project_path, ascend_env_script);
+        
         const projectRes = await this.server.post('api/v1/projects', {
             project_name, project_path, ascend_env_script
         })
