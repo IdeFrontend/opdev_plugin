@@ -51,6 +51,7 @@ export default class OpsOption {
         } else {
             vscode.window.showErrorMessage(`新建算子原型文件失败`);
         }
+        return result
     }
 
     async getProjectId(accendEnvScript?: string) {
