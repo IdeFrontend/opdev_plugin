@@ -241,9 +241,9 @@ const webviewMessageList: messageItem[] = [
       const extensionName = packageJson.name;
       const version = packageJson.version;
       const extensionsPath = '.vscode-server/extensions/';
-      const serviceFile = 'vscode_local_service';
+      const serviceFile = 'get_files.sh';
       const plugiExtensionsPath = `${extensionsPath}${publisher}.${extensionName}-${version}`;
-      const commandPath = `${plugiExtensionsPath}/out/server`;
+      const commandPath = `${plugiExtensionsPath}/out/server/shells`;
       if (that.isRemote) {
         const opsOption = new OpsOption(that.context);
         await opsOption.init();
@@ -259,9 +259,8 @@ const webviewMessageList: messageItem[] = [
         const server = new RemoteServer(message.ssh);
         await server.connect();
         await server.executeCommand(`chmod +x  ./${serviceFile}`, commandPath);
-        const res = await server.executeCommand(`./${serviceFile} task list_files --path ${message.keyword} --file_type all`, commandPath);
-        const stdout = res.stdout.replaceAll(`\n`, ``);
-        const list = JSON.parse(stdout.substring(stdout.indexOf(`{'code':`), stdout.length).replaceAll(`'`, `"`)).data;
+        const res = await server.executeCommand(`./${serviceFile} ${message.keyword}`, commandPath);
+        const list = JSON.parse(res.stdout);
         that.panel.webview.postMessage({
           command: 'iframeRemoteSearchResult',
           data: {
