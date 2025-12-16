@@ -54,7 +54,7 @@ export class WebviewProvider {
             }
 
         } catch (error) {
-            const errorMsg = `打开MindStudio Opsuite失败: ${error}`;
+            const errorMsg = `打开Huawei OP DevTools失败: ${error}`;
             console.error(errorMsg);
             vscode.window.showErrorMessage(errorMsg);
         }
@@ -104,7 +104,7 @@ export class WebviewProvider {
         try {
             this.panel = vscode.window.createWebviewPanel(
                 'mindstudioOpsuite',
-                'MindStudio Opsuite',
+                'Huawei OP DevTools',
                 vscode.ViewColumn.Active,
                 {
                     enableScripts: true,
