@@ -13,7 +13,6 @@ import DirectoryZipper from './DirectoryZipper';
 import packageJson from '../../../package.json';
 import { CommandExecutor } from './CommandOptions';
 import OpsOption from './OpsOption';
-import { readFileSync } from 'node:fs';
 
 const tempObj = { currentActiveConfig: '' };
 
@@ -145,7 +144,7 @@ const webviewMessageList: messageItem[] = [
       const configData = await opsOption.getConfigData();
       that.panel.webview.postMessage({
         command: 'iframeSetBuildConfigItem',
-        data: JSON.stringify(configData.data),
+        data: JSON.stringify(configData),
       });
     },
   },
@@ -159,7 +158,7 @@ const webviewMessageList: messageItem[] = [
       const configData = await opsOption.getConfigData();
       that.panel.webview.postMessage({
         command: 'iframeSetBuildConfigItem',
-        data: JSON.stringify(configData.data),
+        data: JSON.stringify(configData),
       });
     },
   },
@@ -173,7 +172,7 @@ const webviewMessageList: messageItem[] = [
       const configData = await opsOption.getConfigData();
       that.panel.webview.postMessage({
         command: 'iframeSetBuildConfigItem',
-        data: JSON.stringify(configData.data),
+        data: JSON.stringify(configData),
       });
       const config_id = data.find((v: any) => v.config_type === 'build_op').config_id;
       await opsOption.startBuild(config_id);
@@ -209,7 +208,7 @@ const webviewMessageList: messageItem[] = [
       const configData = await opsOption.getConfigData();
       that._view.webview.postMessage({
         command: 'iframeSetBuildConfigItem',
-        data: JSON.stringify(configData.data),
+        data: JSON.stringify(configData),
       });
     },
   },
