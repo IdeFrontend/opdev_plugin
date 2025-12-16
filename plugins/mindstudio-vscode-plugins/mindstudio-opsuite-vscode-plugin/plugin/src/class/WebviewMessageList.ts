@@ -46,9 +46,11 @@ const webviewMessageList: messageItem[] = [
       if (!message.message.data) {
         const opsOption = new OpsOption(that.context);
         await opsOption.init();
-        const res = await opsOption.createOps();
-        console.log('res', res);
-        opsOption.createOpsByPrototype(res);
+        const opsPrototypeFilePath = await opsOption.createOps();
+        console.log('res', opsPrototypeFilePath);
+        if (opsPrototypeFilePath) {
+          opsOption.createOpsByPrototype(opsPrototypeFilePath);
+        }
         return;
       }
       // 开始传入

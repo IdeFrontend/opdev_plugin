@@ -2,7 +2,7 @@ import path from 'path';
 import fs from 'fs-extra';
 import { get_project_by_id } from './project';
 
-async function generateOpsPrototypeJson(projectPath: string, opName: string, prototypeName: string, extensionPath: string): Promise<boolean> {
+async function generateOpsPrototypeJson(projectPath: string, opName: string, prototypeName: string, extensionPath: string): Promise<string> {
   const projectDir = path.resolve(projectPath);
   const projectExists = await fs.pathExists(projectDir);
   if (!projectExists) {
@@ -33,14 +33,14 @@ async function generateOpsPrototypeJson(projectPath: string, opName: string, pro
     await fs.writeJson(opsPath, prototypeJson, { spaces: 4, encoding: 'utf8' });
 
     console.info(`✓ 成功创建 json: ${path.basename(opsPath)}`);
-    return true;
+    return opsPath;
   } catch (e: any) {
     console.error(`✗ 处理ops_prototype.json失败: ${e}`);
     throw e;
   }
 }
 
-export async function generateOpsPrototype(project_id: number, op_name = 'default_op', prototype_name = 'add_custom', extensionPath: string): Promise<boolean> {
+export async function generateOpsPrototype(project_id: number, op_name = 'default_op', prototype_name = 'add_custom', extensionPath: string): Promise<string> {
   const project = get_project_by_id(project_id as any);
   if (!project) throw Object.assign(new Error('project not found'), { name: 'InvalidRequest' });
   return generateOpsPrototypeJson(project.project_path, op_name, prototype_name, extensionPath);

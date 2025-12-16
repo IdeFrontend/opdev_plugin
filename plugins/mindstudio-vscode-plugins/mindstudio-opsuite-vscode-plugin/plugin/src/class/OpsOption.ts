@@ -40,7 +40,7 @@ export default class OpsOption {
 
   // 创建算子原型文件
   // 标准自定义算子工程 使用原型模板
-  async createOps(projectName?: string, projectId?: string, ptototypeName?: string): Promise<boolean> {
+  async createOps(projectName?: string, projectId?: string, ptototypeName?: string): Promise<string> {
     const op_name = projectName || this.project_name;
     const project_id = projectId || this.projectId;
     const prototype_name = ptototypeName || undefined;
@@ -51,7 +51,7 @@ export default class OpsOption {
       return result;
     } catch {
       vscode.window.showErrorMessage(`新建算子原型文件失败`);
-      return false;
+      return '';
     }
   }
 
