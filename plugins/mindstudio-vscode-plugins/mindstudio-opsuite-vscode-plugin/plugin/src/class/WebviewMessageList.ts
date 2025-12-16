@@ -45,10 +45,11 @@ const webviewMessageList: messageItem[] = [
         callback: async (message: any, that: any) => {
             console.log('message-------', message)
             if (!message.message.data) {
-                await vscode.commands.executeCommand('huawei-op-devtools.createOps');
-                console.log('qqqqqq')
-                vscode.commands.executeCommand('extension.jsonButtonAction');
-                  console.log('wwww')
+                const opsOption = new OpsOption(that.context);
+                await opsOption.init();
+                const res = await opsOption.createOps();
+                console.log('res', res)
+                opsOption.createOpsByPrototype(res.data)
                 return
             }
             // 开始传入
@@ -125,7 +126,7 @@ const webviewMessageList: messageItem[] = [
                 command: 'iframeSetSSHData',
                 data: that.sshData
             });
-            
+
             that.panel.webview.postMessage({
                 command: 'iframeSetUserInfo',
                 data: that.userInfo
@@ -364,7 +365,7 @@ const webviewMessageList: messageItem[] = [
                 await executor.execute(`mkdir  ${message.projectPath}/${message.projectName}`, ['File exists'])
                 await executor.execute(`chmod +x ${message.projectSH}`);
                 await executor.execute(`${message.projectSH}`);
-                const opsOption = new OpsOption(that.context);                
+                const opsOption = new OpsOption(that.context);
                 await opsOption.init(message.projectSH, message.projectPath, message.projectName);
                 await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(`${message.projectPath}/${message.projectName}`))
 
@@ -378,13 +379,13 @@ const webviewMessageList: messageItem[] = [
                 const normalizedProjectName = path.normalize(message.projectName);
                 const fullProjectPath = path.join(normalizedProjectPath, normalizedProjectName);
                 console.log(`检测到远程连接: ${remoteName}`);
-              
+
                 if (remoteName && remoteName !== 'ssh-remote') {
                     // 如果有完整的远程连接信息，则使用它
                     if (remoteName.startsWith('ssh-remote+')) {
                         const remoteUri = vscode.Uri.parse(`vscode-remote://${remoteName}${fullProjectPath}`);
                         console.log(`准备打开远程文件夹: ${remoteUri.toString()}`);
-                        
+
                         await vscode.commands.executeCommand('vscode.openFolder', remoteUri, {
                             forceNewWindow: true
                         });
@@ -393,7 +394,7 @@ const webviewMessageList: messageItem[] = [
                     // 如果只有 'ssh-remote' 类型而没有具体连接ID
                     // 尝试通过其他方式获取当前SSH连接信息
                     console.log(`打开新路径：${fullProjectPath}`);
-                    
+
                     // 在远程环境中，我们可以直接打开本地路径（相对于远程系统）
                     const localUri = vscode.Uri.file(fullProjectPath);
                     await vscode.commands.executeCommand('vscode.openFolder', localUri, {
