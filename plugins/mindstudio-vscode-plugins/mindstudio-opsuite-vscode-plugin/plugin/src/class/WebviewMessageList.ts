@@ -45,7 +45,10 @@ const webviewMessageList: messageItem[] = [
         callback: async (message: any, that: any) => {
             console.log('message-------', message)
             if (!message.message.data) {
-                vscode.commands.executeCommand('huawei-op-devtools.createOps');
+                await vscode.commands.executeCommand('huawei-op-devtools.createOps');
+                console.log('qqqqqq')
+                vscode.commands.executeCommand('extension.jsonButtonAction');
+                  console.log('wwww')
                 return
             }
             // 开始传入

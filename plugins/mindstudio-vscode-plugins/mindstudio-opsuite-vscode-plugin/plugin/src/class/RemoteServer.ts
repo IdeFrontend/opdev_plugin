@@ -40,7 +40,6 @@ export default class RemoteServer {
                 host: this.config.host,
                 port: this.config.port,
                 username: this.config.username,
-                password: this.config.password,
                 readyTimeout: 30000
             };
 
