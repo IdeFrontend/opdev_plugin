@@ -12,6 +12,7 @@ import {
   getFiles,
   postConfig,
 } from '../../autogen-server';
+import path from 'node:path';
 
 export default class OpsOption {
   private storage: PermanentStorage;
@@ -30,7 +31,7 @@ export default class OpsOption {
 
   async init(accendEnvScript?: string, projectPath?: string, projectName?: string) {
     if (projectPath) {
-      this.project_path = `${projectPath}/${projectName}`;
+      this.project_path = path.normalize(`${projectPath}/${projectName}`);
     }
     if (projectName) {
       this.project_name = projectName;

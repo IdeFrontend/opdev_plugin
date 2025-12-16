@@ -13,13 +13,14 @@ export function getBuildOpCommand(config_id: number) {
   const project = get_project_by_id(config.project_id as number) as any;
   const operator = getOpByProjectIdAndOpName(config.project_id as number, config.op as string)!;
   const source_cann = project && project.ascend_env_script ? `. ${project.ascend_env_script}` : `. ${ascend_env_script}`;
-  const deploy_cmd = `chmod +x ${config.target_file || ''} && ${config.target_file || ''}`;
+  // TODO 后续迁移至运行命令
+  // const deploy_cmd = `chmod +x ${config.target_file || ''} && ${config.target_file || ''}`;
   const run_path = getOpRunPath(operator);
   const cd_cmd = `cd ${run_path}`;
 
   if (!operator || operator.op_type !== 'ascend') {
     const build_cmd = `${config.script || ''} ${config.custom_options || ''}`.trim();
-    return [source_cann, cd_cmd, build_cmd, deploy_cmd].filter(Boolean).join(' && ');
+    return [source_cann, cd_cmd, build_cmd].filter(Boolean).join(' && ');
   }
 
   try {
@@ -30,7 +31,7 @@ export function getBuildOpCommand(config_id: number) {
     if (args && args.vendor_name) vendor_name = args.vendor_name;
     if (args && args.soc) soc = args.soc;
     const cmd = `${config.script || ''} --pkg --soc=${soc} --vendor_name=${vendor_name} --ops=${op}`.trim();
-    return [source_cann, cd_cmd, cmd, deploy_cmd].filter(Boolean).join(' && ');
+    return [source_cann, cd_cmd, cmd].filter(Boolean).join(' && ');
   } catch (e: any) {
     throw new Error(`生成编译命令失败:${e.message}`);
   }

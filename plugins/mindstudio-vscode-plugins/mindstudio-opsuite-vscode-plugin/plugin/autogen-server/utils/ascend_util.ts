@@ -32,21 +32,8 @@ export async function chmodRecursiveStandard(targetPath: string, mode: number) {
   }
 }
 
-function getDefaultAscendEnvScript(): string | undefined {
-  const userPath = path.resolve(os.homedir());
-  const rootPath = path.resolve('/usr/local');
-  const toolkitScript = path.join('Ascend', 'ascend-toolkit', 'set_env.sh');
-  const ascendScript = path.join('Ascend', 'set_env.sh');
-  const candidates = [
-    path.join(userPath, toolkitScript),
-    path.join(userPath, ascendScript),
-    path.join(rootPath, toolkitScript),
-    path.join(rootPath, ascendScript),
-  ];
-  for (const p of candidates) {
-    if (fs.pathExistsSync(p)) return p;
-  }
-  return undefined;
+function getDefaultAscendEnvScript(): string {
+  return '/etc/profile';
 }
 
 export function getEnvFromScript(ascendEnvScript?: string): NodeJS.ProcessEnv {
@@ -79,7 +66,7 @@ function getSocFromCoreName(coreName?: string) {
   return 'ascend910b';
 }
 
-export let ascend_env_script: string = process.env.ASCEND_ENV_SCRIPT || getDefaultAscendEnvScript() || path.join(process.cwd(), 'ascend_env.sh');
+export let ascend_env_script: string = process.env.ASCEND_ENV_SCRIPT || getDefaultAscendEnvScript();
 export let soc_version: string = process.env.SOC_VERSION || 'ascend910b';
 
 export function setSocVersion(s: string) {
