@@ -24,8 +24,14 @@ export default class OpsOption {
         this.executor = new CommandExecutor()
     }
 
-    async init(accendEnvScript?: string) {
+    async init(accendEnvScript?: string, projectPath?: string, projectName?: string) {
         this.server = await this.netWork.getServer();
+        if (projectPath) {
+            this.project_path = projectPath
+        }
+        if (projectName) {
+            this.project_name = projectName
+        }
         this.projectId = await this.getProjectId(accendEnvScript)
     }
 

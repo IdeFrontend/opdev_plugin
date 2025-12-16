@@ -11,7 +11,6 @@ import RemoteServer from './RemoteServer'
 import DirectoryZipper from './DirectoryZipper'
 import packageJson from '../../../package.json'
 import { CommandExecutor } from './CommandOptions'
-import { ServerInfoUtil } from './ServerInfoUtil';
 import OpsOption from './OpsOption'
 
 
@@ -361,12 +360,18 @@ const webviewMessageList: messageItem[] = [
                 await executor.execute(`mkdir  ${message.projectPath}/${message.projectName}`, ['File exists'])
                 await executor.execute(`chmod +x ${message.projectSH}`);
                 await executor.execute(`${message.projectSH}`);
-                const opsOption = new OpsOption(that.context);
-                await opsOption.init(message.projectSH);
+                const opsOption = new OpsOption(that.context);                
+                await opsOption.init(message.projectSH, message.projectPath, message.projectName);
                 await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(`${message.projectPath}/${message.projectName}`))
-                const sshConfigName = `${ServerInfoUtil.getUsername()}@${ServerInfoUtil.getPrimaryIP()}:${message.port || 22}`;
-                console.log(`打开新路径：${sshConfigName}${message.projectPath}/${message.projectName}`);
-                const remoteUri = vscode.Uri.parse(`vscode-remote://ssh-remote+${sshConfigName}${message.projectPath}/${message.projectName}`);
+
+                // 1.获取当前远程链接信息
+                const remoteAuthority = vscode.env.remoteAuthority;
+                if (!remoteAuthority) {
+                    return console.log("未检测到远程链接");
+                }
+
+                console.log(`打开新路径：${remoteAuthority}${message.projectPath}/${message.projectName}`);
+                const remoteUri = vscode.Uri.parse(`vscode-remote://${remoteAuthority}${message.projectPath}/${message.projectName}`);
                 await vscode.commands.executeCommand('vscode.openFolder', remoteUri, {
                     forceNewWindow: true
                 });
