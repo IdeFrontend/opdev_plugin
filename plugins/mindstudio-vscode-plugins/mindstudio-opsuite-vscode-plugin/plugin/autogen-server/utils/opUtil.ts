@@ -42,7 +42,7 @@ function getDetailedSystemInfo(): { osName: string; architecture: string } {
   return { osName, architecture };
 }
 
-function getOpRunPath(op: Op): string {
+export function getOpRunPath(op: Op): string {
   const opPath = op.op_path;
   if (op.op_type === 'ascend') {
     return path.resolve(opPath, '..', '..');

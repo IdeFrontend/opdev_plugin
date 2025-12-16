@@ -94,9 +94,14 @@ export default class OpsOption {
   }
 
   async getConfigData() {
+    const buildConfigs = await this.getBuildConfigs();
+    return { [buildConfigs[0].config_name]: buildConfigs };
+  }
+
+  async getBuildConfigs() {
     const project_id = this.projectId;
     const [opConfig, exampleConfig] = await Promise.all([getConfig(Number(project_id), 'build_op'), getConfig(Number(project_id), 'build_example')]);
-    return { [opConfig[0].config_name]: [...opConfig, ...exampleConfig] };
+    return [...opConfig, ...exampleConfig];
   }
 
   async getAllPath(path: string) {
@@ -155,7 +160,7 @@ export default class OpsOption {
     let buildConfigId = this.storage.get('buildConfigId', '');
     if (!buildConfigId) {
       try {
-        const configData = await this.getConfigData();
+        const configData = await this.getBuildConfigs();
         return configData.find((v: any) => v.config_type === 'build_op')?.config_id;
       } catch {
         return buildConfigId;
@@ -168,7 +173,7 @@ export default class OpsOption {
     let exampleConfigId = this.storage.get('exampleConfigId', '');
     if (!exampleConfigId) {
       try {
-        const configData = await this.getConfigData();
+        const configData = await this.getBuildConfigs();
         return configData.find((v: any) => v.config_type === 'build_example')?.config_id;
       } catch {
         return exampleConfigId;
