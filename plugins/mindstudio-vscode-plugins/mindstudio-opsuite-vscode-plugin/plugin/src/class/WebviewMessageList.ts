@@ -13,6 +13,7 @@ import DirectoryZipper from './DirectoryZipper';
 import packageJson from '../../../package.json';
 import { CommandExecutor } from './CommandOptions';
 import OpsOption from './OpsOption';
+import { readFileSync } from 'node:fs';
 
 const tempObj = { currentActiveConfig: '' };
 
@@ -389,7 +390,12 @@ const webviewMessageList: messageItem[] = [
         await server.executeCommand(`mkdir  ${message.projectPath}/${message.projectName}`);
         await server.executeCommand(`chmod + x ${message.projectSH}`);
         await server.executeCommand(`${message.projectSH}`);
-        await server.executeCommand(`./${serviceFile} --project-name "${message.projectName}" --project-path "${message.projectPath}/${message.projectName}" --ascend-env-script "${message.projectSH}" --creat-by "ServerInfoUtil.getUsername()"`, commandPath);
+        await server.executeCommand(
+          `./${serviceFile} --project-name "${message.projectName}" --project-path "${message.projectPath}/${message.projectName}" --ascend-env-script "${
+            message.projectSH
+          }" --creat-by "${ServerInfoUtil.getUsername()}"`,
+          commandPath
+        );
         const remoteOpener: RemoteServerOpener = new RemoteServerOpener();
         remoteOpener.open({ ...message, remotePath: `${message.projectPath}/${message.projectName}` });
       }
