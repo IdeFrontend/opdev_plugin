@@ -50,6 +50,7 @@ const webviewMessageList: messageItem[] = [
                 const res = await opsOption.createOps();
                 console.log('res', res)
                 opsOption.createOpsByPrototype(res.data)
+                vscode.commands.executeCommand('workbench.action.closeActiveEditor');
                 return
             }
             // 开始传入
