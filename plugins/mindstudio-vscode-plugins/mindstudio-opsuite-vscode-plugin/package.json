@@ -151,8 +151,9 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "npm run compile:web && npm run compile",
     "compile": "npm run build-extension && npm run copy-web-output",
+    "compile:web": "cd web && npm run build",
     "watch": "tsc -watch -p .",
     "package": "vsce package --no-dependencies",
     "lint": "eslint plugin/src --ext ts",
@@ -165,8 +166,7 @@
     "axios": "^1.13.2",
     "i18next": "^25.7.2",
     "node-ssh": "^13.2.1",
-    "ssh2": "^1.17.0",
-    "vsce": "^2.15.0"
+    "ssh2": "^1.17.0"
   },
   "devDependencies": {
     "@rolldown/pluginutils": "^1.0.0-beta.53",
@@ -176,6 +176,7 @@
     "@types/vscode": "^1.60.0",
     "@typescript-eslint/eslint-plugin": "^5.31.0",
     "@typescript-eslint/parser": "^5.31.0",
+    "@vscode/vsce": "^3.7.1",
     "esbuild": "^0.27.1",
     "eslint": "^8.20.0",
     "rollup-plugin-copy": "^3.5.0",
