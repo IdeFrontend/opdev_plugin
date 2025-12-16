@@ -33,7 +33,7 @@ export default class NetWork {
         }
         for (let port = 3000; port < 4000; port++) {
             this.server = await this.testPort(port);
-            if (this.server) {
+          if (this.server !== -1 && this.server !== false) {
                 console.log('getServer port', port);
                 break;
             } else if (this.server === -1) {
@@ -52,7 +52,7 @@ export default class NetWork {
                     }, 1000);
                 });
                 this.server = await this.testPort(port);
-                if (this.server) {
+            if (this.server !== -1 && this.server !== false){
                     console.log('getServer port', port);
                     break;
                 }
