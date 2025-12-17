@@ -517,6 +517,51 @@ const webviewMessageList: messageItem[] = [
       }
     },
   },
+  {
+    command: 'vscodeDownloadData',
+    callback: async (msg: any) => {
+      // 从消息中获取文件路径和节点信息
+      const { filePath, nodeKey } = msg.message.data || {};
+      if (!filePath && !nodeKey) {
+        vscode.window.showErrorMessage('文件路径不能为空');
+        return;
+      }
+      try {
+        console.log('下载数据到本地:', filePath || nodeKey);
+        // 这里可以添加下载文件的逻辑
+        // 例如：读取文件、保存到本地等
+        vscode.window.showInformationMessage(`正在下载数据: ${filePath || nodeKey}`);
+      } catch (error) {
+        vscode.window.showErrorMessage(`下载数据失败: ${error}`);
+      }
+    },
+  },
+  {
+    command: 'vscodeDeleteNode',
+    callback: async (msg: any) => {
+      // 从消息中获取节点信息
+      const { nodeKey, filePath } = msg.message.data || {};
+      if (!nodeKey) {
+        vscode.window.showErrorMessage('节点信息不能为空');
+        return;
+      }
+      try {
+        // 确认删除
+        const result = await vscode.window.showWarningMessage(
+          `确定要删除 ${nodeKey} 吗？`,
+          '确定',
+          '取消'
+        );
+        if (result === '确定') {
+          console.log('删除节点:', nodeKey, filePath);
+          // 这里可以添加删除文件的逻辑
+          vscode.window.showInformationMessage(`已删除: ${nodeKey}`);
+        }
+      } catch (error) {
+        vscode.window.showErrorMessage(`删除节点失败: ${error}`);
+      }
+    },
+  },
 ];
 
 export default webviewMessageList;
