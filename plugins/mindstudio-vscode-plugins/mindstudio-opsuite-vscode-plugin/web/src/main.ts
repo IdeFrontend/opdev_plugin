@@ -1,3 +1,4 @@
+import antd from 'ant-design-vue';
 import { createApp } from 'vue';
 
 import App from './App.vue';
@@ -8,5 +9,5 @@ const app = createApp(App);
 
 app.use(i18nPlugin);
 app.use(queryPlugin);
-
+app.use(antd);
 app.mount('#app');
