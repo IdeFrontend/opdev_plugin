@@ -219,7 +219,7 @@ const options = [
 ];
 const items_type = [
   { id: 1, title: '<<<>>>算子工程', desc: '生成一个使用<<<>>>内核调用符进行算子直调的hello_world样例，代码文件采用".asc"后缀支持异构编译。' },
-  { id: 2, title: '标准自定义算子工程', desc: 'op_host存放CPU侧的代码实现，op_kernel存放NPU侧的代码实现，op_graph存放图模式下的代码实现（需要下载<a href="https://gitcode.com/zhanw_coding/ops-math/tree/master/math">ops-math工程</a>,并将该算子放入到op-math/math目录下，才能编译）' },
+  { id: 2, title: '标准自定义算子工程', desc: 'op_host存放CPU侧的代码实现，op_kernel存放NPU侧的代码实现，op_graph存放图模式下的代码实现（需要下载<a href="https://gitcode.com/cann/ops-math">ops-math工程</a>,并将该算子放入到op-math/math目录下，才能编译）' },
 ];
 
 const items_proto = [
