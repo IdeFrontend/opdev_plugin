@@ -526,13 +526,74 @@ const webviewMessageList: messageItem[] = [
         vscode.window.showErrorMessage('文件路径不能为空');
         return;
       }
+
+      // 使用 filePath 优先，如果没有则使用 nodeKey
+      const remoteFilePath = filePath || nodeKey;
+      
       try {
-        console.log('下载数据到本地:', filePath || nodeKey);
-        // 这里可以添加下载文件的逻辑
-        // 例如：读取文件、保存到本地等
-        vscode.window.showInformationMessage(`正在下载数据: ${filePath || nodeKey}`);
-      } catch (error) {
-        vscode.window.showErrorMessage(`下载数据失败: ${error}`);
+        // 检查是否在远程环境中
+        const isRemote = vscode.env.remoteName !== undefined;
+        
+        if (!isRemote) {
+          vscode.window.showWarningMessage('此功能需要在远程 SSH 连接环境中使用');
+          return;
+        }
+
+        // 显示下载进度
+        await vscode.window.withProgress({
+          location: vscode.ProgressLocation.Notification,
+          title: '正在下载文件',
+          cancellable: false
+        }, async (progress) => {
+          progress.report({ increment: 0, message: '正在读取远程文件...' });
+
+          // 创建远程文件 URI
+          const remoteFileUri = vscode.Uri.file(remoteFilePath);
+          
+          // 检查远程文件是否存在
+          try {
+            const stat = await vscode.workspace.fs.stat(remoteFileUri);
+            progress.report({ increment: 30, message: `文件大小: ${(stat.size / 1024).toFixed(2)} KB` });
+          } catch (error) {
+            vscode.window.showErrorMessage(`远程文件不存在: ${remoteFilePath}`);
+            return;
+          }
+
+          // 读取远程文件内容
+          progress.report({ increment: 40, message: '正在读取文件内容...' });
+          const fileData = await vscode.workspace.fs.readFile(remoteFileUri);
+          
+          // 获取文件名
+          const fileName = path.basename(remoteFilePath);
+          
+          progress.report({ increment: 60, message: '请选择保存位置...' });
+          
+          // 让用户选择本地保存位置
+          // 在 remote-ssh 场景下，showSaveDialog 会自动打开本地文件保存对话框
+          const localFileUri = await vscode.window.showSaveDialog({
+            defaultUri: vscode.Uri.file(fileName),
+            saveLabel: '保存',
+            filters: {
+              '所有文件': ['*']
+            }
+          });
+
+          if (!localFileUri) {
+            // 用户取消了保存对话框
+            return;
+          }
+
+          // 将文件内容写入本地
+          progress.report({ increment: 80, message: '正在保存文件...' });
+          await vscode.workspace.fs.writeFile(localFileUri, fileData);
+          
+          progress.report({ increment: 100, message: '下载完成' });
+          vscode.window.showInformationMessage(`文件已成功下载到: ${localFileUri.fsPath}`);
+        });
+      } catch (error: any) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage(`下载数据失败: ${errorMessage}`);
+        console.error('下载文件失败:', error);
       }
     },
   },
