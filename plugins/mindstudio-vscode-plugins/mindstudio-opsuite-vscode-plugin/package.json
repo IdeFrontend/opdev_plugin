@@ -46,6 +46,11 @@
           "id": "customSidebarView",
           "name": "操作面板",
           "type": "webview"
+        },
+        {
+          "id": "performanceSidebarView",
+          "name": "性能调优",
+          "type": "webview"
         }
       ]
     },

@@ -5,7 +5,7 @@ import { defineConfig } from 'vite';
 import { debugEntry } from './vite-plugins/debug-entry';
 
 /** 视图入口白名单 */
-const TEMP_MULTI_ENTRIES = ['Config', 'Link', 'Welcome', 'Home', 'newPrototype', 'Board'];
+const TEMP_MULTI_ENTRIES = ['Config', 'Link', 'Welcome', 'Home', 'newPrototype', 'Board', 'Performance'];
 
 export default defineConfig(({ mode }) => {
   const buildInput: Record<string, string> = { index: 'index.html' };

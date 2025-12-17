@@ -12,6 +12,7 @@ import i18nResource from 'shared:/i18n';
 import { WebviewProvider } from './class/webviewProvider';
 import OpsOption from './class/OpsOption';
 import { CustomSidebarProvider } from './class/CustomSidebarProvider';
+import { PerformanceSidebarProvider } from './class/PerformanceSidebarProvider';
 import { CsvEditorProvider } from './class/CsvEditorProvider';
 import { ApiServer } from './core/ApiServer';
 import { PanelView } from './core/view/PanelView';
@@ -147,6 +148,22 @@ export async function activate(context: vscode.ExtensionContext) {
     );
     
     context.subscriptions.push(sidebarView);
+
+    // 创建性能调优侧边栏提供者
+    const performanceSidebarProvider = new PerformanceSidebarProvider(context);
+    
+    // 注册性能调优WebView视图
+    const performanceSidebarView = vscode.window.registerWebviewViewProvider(
+        PerformanceSidebarProvider.viewType,
+        performanceSidebarProvider,
+        {
+            webviewOptions: {
+                retainContextWhenHidden: true // WebView隐藏时保持状态
+            }
+        }
+    );
+    
+    context.subscriptions.push(performanceSidebarView);
 
     // 注册 CSV 编辑器提供者
     const csvEditorProvider = new CsvEditorProvider();
