@@ -15,6 +15,7 @@ import { CustomSidebarProvider } from './class/CustomSidebarProvider';
 import { ApiServer } from './core/ApiServer';
 import { PanelView } from './core/view/PanelView';
 import { routes } from './routes';
+import { apis } from './apis';
 
 /**
  * 插件激活入口函数
@@ -50,6 +51,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 注册打开Opsuite命令
   const ConfigCommand = vscode.commands.registerCommand('huawei-op-devtools.config', async () => {
+    // panelView.open('ops-config');
     configProvider.show('Config');
   });
 
@@ -113,21 +115,17 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(welcomeCommand);
   context.subscriptions.push(newPrototypeCommand);
 
-    // 创建侧边栏提供者
-    const sidebarProvider = new CustomSidebarProvider(context);
-    
-    // 注册WebView视图
-    const sidebarView = vscode.window.registerWebviewViewProvider(
-        CustomSidebarProvider.viewType,
-        sidebarProvider,
-        {
-            webviewOptions: {
-                retainContextWhenHidden: true // WebView隐藏时保持状态
-            }
-        }
-    );
-    
-    context.subscriptions.push(sidebarView);
+  // 创建侧边栏提供者
+  const sidebarProvider = new CustomSidebarProvider(context);
+
+  // 注册WebView视图
+  const sidebarView = vscode.window.registerWebviewViewProvider(CustomSidebarProvider.viewType, sidebarProvider, {
+    webviewOptions: {
+      retainContextWhenHidden: true, // WebView隐藏时保持状态
+    },
+  });
+
+  context.subscriptions.push(sidebarView);
 }
 
 /**
@@ -145,9 +143,7 @@ async function initI18n() {
  * 接口
  */
 function initApiServer() {
-  return new ApiServer({
-    // TODO 接口配置
-  });
+  return new ApiServer(apis);
 }
 
 /**
