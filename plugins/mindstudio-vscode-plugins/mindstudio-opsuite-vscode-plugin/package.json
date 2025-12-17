@@ -85,6 +85,11 @@
         "command": "extension.jsonButtonAction",
         "title": "生成算子工程",
         "category": "JSON Tools"
+      },
+      {
+        "command": "csv-viewer.openCsv",
+        "title": "打开 CSV 文件",
+        "category": "CSV Viewer"
       }
     ],
     "menus": {

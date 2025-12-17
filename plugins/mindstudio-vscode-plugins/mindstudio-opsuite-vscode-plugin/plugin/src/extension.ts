@@ -179,6 +179,28 @@ export async function activate(context: vscode.ExtensionContext) {
     );
     
     context.subscriptions.push(csvEditorRegistration);
+
+    // 注册打开 CSV 文件的命令
+    const openCsvCommand = vscode.commands.registerCommand('csv-viewer.openCsv', async () => {
+      // 方式1：让用户选择文件
+      const fileUri = await vscode.window.showOpenDialog({
+        canSelectFiles: true,
+        canSelectFolders: false,
+        canSelectMany: false,
+        openLabel: '打开',
+        filters: {
+          'CSV 文件': ['csv'],
+          '所有文件': ['*']
+        }
+      });
+
+      if (fileUri && fileUri[0]) {
+        // 使用自定义编辑器打开文件
+        await vscode.commands.executeCommand('vscode.openWith', fileUri[0], CsvEditorProvider.viewType);
+      }
+    });
+
+    context.subscriptions.push(openCsvCommand);
 }
 
 /**
