@@ -13,6 +13,7 @@ import DirectoryZipper from './DirectoryZipper';
 import packageJson from '../../../package.json';
 import { CommandExecutor } from './CommandOptions';
 import OpsOption from './OpsOption';
+import { SSHKeyAutoConfig } from './SSHKeyAutoConfig';
 
 const tempObj = { currentActiveConfig: '' };
 
@@ -398,11 +399,14 @@ const webviewMessageList: messageItem[] = [
           `./${serviceFile} --project-name "${message.projectName}" --project-path "${message.projectPath}/${message.projectName}" --ascend-env-script "${message.projectSH}"`,
           commandPath
         );
-        
-        await vscode.commands.executeCommand('ssh-key-auto.configure', message);
 
-        // const remoteOpener: RemoteServerOpener = new RemoteServerOpener();
-        // remoteOpener.open({ ...message, remotePath: `${message.projectPath}/${message.projectName}` });
+        if (!message.privateKey) {
+          const autoConfig = new SSHKeyAutoConfig(server)
+          await autoConfig.configureSSH(message)
+        }
+
+        const remoteOpener: RemoteServerOpener = new RemoteServerOpener();
+        remoteOpener.open({ ...message, remotePath: `${message.projectPath}/${message.projectName}` });
       }
     },
   },

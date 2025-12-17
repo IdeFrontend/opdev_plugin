@@ -2,8 +2,9 @@ import * as vscode from 'vscode';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as child_process from 'child_process';
 import * as os from 'os';
+import * as child_process from 'child_process';
+import RemoteServer from './RemoteServer';
 
 interface SSHConfigInput {
     serverAddress?: string;
@@ -17,21 +18,17 @@ interface SSHConfigInput {
 }
 
 export class SSHKeyAutoConfig {
-    private context: vscode.ExtensionContext;
+    private server: RemoteServer;
 
-    constructor(context: vscode.ExtensionContext) {
-        this.context = context;
+    constructor(server: RemoteServer) {
+        this.server = server;
     }
 
     public registerCommands(): void {
-        const configureSSHCommand = vscode.commands.registerCommand(
-            'ssh-key-auto.configure',
-            (args?: SSHConfigInput) => this.configureSSH(args)
-        );
-        this.context.subscriptions.push(configureSSHCommand);
+        // 这里假设上下文由外部传入或不需要注册命令
     }
 
-    private async configureSSH(args?: SSHConfigInput): Promise<void> {
+    public async configureSSH(args?: SSHConfigInput): Promise<void> {
         try {
             let serverAddress: string;
             let port: string;
@@ -93,63 +90,27 @@ export class SSHKeyAutoConfig {
                 port = parts[1];
             }
 
-            const { privateKey, publicKey } = this.generateSSHKeyPair(password);
+            // 使用ssh-keygen命令生成密钥对
             const keyName = `id_${serverAddress.replace(/\./g, '_').replace(/[^a-zA-Z0-9_]/g, '_')}_${port}`;
             const sshDir = path.join(os.homedir(), '.ssh');
             const privateKeyPath = path.join(sshDir, keyName);
             const publicKeyPath = path.join(sshDir, `${keyName}.pub`);
 
+            // 确保SSH目录存在
             this.ensureDirectoryExists(sshDir);
-            fs.writeFileSync(privateKeyPath, privateKey);
-            fs.writeFileSync(publicKeyPath, publicKey);
-            fs.chmodSync(privateKeyPath, 0o600);
-            fs.chmodSync(publicKeyPath, 0o644);
 
-            await this.uploadPublicKeyToServer(serverAddress, port, username, password, publicKey);
-            await this.updateSSHConfig(serverAddress, port, username, privateKeyPath);
-
-            const selection = await vscode.window.showInformationMessage(
-                `SSH密钥配置已完成！服务器：${serverAddress}:${port} 用户：${username}`,
-                '通过Remote-SSH连接',
-                '查看SSH配置'
-            );
-
-            if (selection === '通过Remote-SSH连接') {
-                await vscode.commands.executeCommand(
-                    'workbench.action.remote-ssh.connectToHost',
-                    `${username}@${serverAddress}`,
-                    { port: parseInt(port) }
-                );
-            } else if (selection === '查看SSH配置') {
-                const configPath = path.join(sshDir, 'config');
-                const document = await vscode.workspace.openTextDocument(configPath);
-                await vscode.window.showTextDocument(document);
+            // 生成密钥对
+            if (!fs.existsSync(privateKeyPath) || !fs.existsSync(publicKeyPath)) {
+                await this.generateSSHKeyPairWithSSHKeygen(keyName, sshDir);
             }
+
+            // 直接使用逐条命令上传方法
+            await this.uploadPublicKeyWithSequentialCommands(serverAddress, port, username, password, publicKeyPath);
+            await this.updateSSHConfig(serverAddress, port, username, privateKeyPath);
 
         } catch (error) {
             vscode.window.showErrorMessage(`配置SSH密钥时发生错误：${error}`);
         }
-    }
-
-    private generateSSHKeyPair(password: string) {
-        const rsaKeyPair = crypto.generateKeyPairSync('rsa', {
-            modulusLength: 4096,
-            publicKeyEncoding: {
-                type: 'spki',
-                format: 'pem'
-            },
-            privateKeyEncoding: {
-                type: 'pkcs8',
-                format: 'pem',
-                cipher: 'aes-256-cbc',
-                passphrase: password
-            }
-        });
-
-        return {
-            privateKey: rsaKeyPair.privateKey.toString(),
-            publicKey: rsaKeyPair.publicKey.toString()
-        };
     }
 
     private ensureDirectoryExists(dir: string): void {
@@ -158,61 +119,91 @@ export class SSHKeyAutoConfig {
         }
     }
 
-    private uploadPublicKeyToServer(
-        serverAddress: string,
-        port: string,
-        username: string,
-        password: string,
-        publicKey: string
-    ): Promise<void> {
-        return new Promise((resolve, reject) => {
-            const tempPublicKeyPath = path.join(os.tmpdir(), `temp_public_key_${Date.now()}`);
-            fs.writeFileSync(tempPublicKeyPath, publicKey);
-
-            const uploadCmd = `sshpass -p '${password}' ssh-copy-id -i "${tempPublicKeyPath}" -p ${port} ${username}@${serverAddress}`;
-
-            child_process.exec(uploadCmd, (error, stdout, stderr) => {
-                fs.unlinkSync(tempPublicKeyPath);
-
+    private async generateSSHKeyPairWithSSHKeygen(keyName: string, sshDir: string): Promise<void> {
+        // 生成密钥对命令（本地执行）
+        const keygenCmd = `ssh-keygen -t rsa -b 4096 -N "" -f "${path.join(sshDir, keyName)}"`;
+        await new Promise((resolve, reject) => {
+            child_process.exec(keygenCmd, (error, stdout, stderr) => {
                 if (error) {
-                    this.manualUploadPublicKey(serverAddress, port, username, password, publicKey)
-                        .then(() => resolve())
-                        .catch(err => reject(err));
+                    reject(new Error(`生成SSH密钥对失败: ${stderr || error.message}`));
                 } else {
-                    console.log('公钥上传成功：', stdout);
-                    resolve();
+                    resolve(stdout);
                 }
             });
         });
+
+        console.log('SSH密钥对生成成功');
     }
 
-    private manualUploadPublicKey(
+    private async uploadPublicKeyWithSequentialCommands(
         serverAddress: string,
         port: string,
         username: string,
         password: string,
-        publicKey: string
+        publicKeyPath: string
     ): Promise<void> {
-        return new Promise((resolve, reject) => {
-            const commands = [
-                'mkdir -p ~/.ssh',
-                `echo "${publicKey.trim()}" >> ~/.ssh/authorized_keys`,
-                'chmod 700 ~/.ssh',
-                'chmod 600 ~/.ssh/authorized_keys'
-            ].join('; ');
+        // 读取公钥内容
+        const publicKeyContent = fs.readFileSync(publicKeyPath, 'utf8');
+        
+        // 创建临时公钥文件
+        const tempPubKeyPath = `/tmp/temp_pub_key_${Date.now()}.pub`;
+        
+        // 写入公钥到临时文件
+        const writePubKeyCmd = `echo '${publicKeyContent.trim()}' > ${tempPubKeyPath}`;
+        const writeResult = await this.server.executeCommand(writePubKeyCmd);
+        if (writeResult.code !== 0) {
+            throw new Error(`写入临时公钥文件失败: ${writeResult.stderr}`);
+        }
 
-            const sshCmd = `printf '%s\\n' "${password}" | ssh -p ${port} -o StrictHostKeyChecking=no ${username}@${serverAddress} '${commands}'`;
+        // 创建 .ssh 目录
+        const createDirCmd = `mkdir -p ~/.ssh`;
+        const createDirResult = await this.server.executeCommand(createDirCmd);
+        if (createDirResult.code !== 0) {
+            throw new Error(`创建 .ssh 目录失败: ${createDirResult.stderr}`);
+        }
 
-            child_process.exec(sshCmd, (error, stdout, stderr) => {
-                if (error) {
-                    console.error('手动上传错误：', error);
-                    reject(error);
-                } else {
-                    console.log('公钥已手动上传：', stdout);
-                    resolve();
-                }
-            });
-        });
+        // 设置目录权限
+        const chmodDirCmd = `chmod 700 ~/.ssh`;
+        const chmodDirResult = await this.server.executeCommand(chmodDirCmd);
+        if (chmodDirResult.code !== 0) {
+            throw new Error(`设置 .ssh 目录权限失败: ${chmodDirResult.stderr}`);
+        }
+
+        const res = await this.server.executeCommand(`grep -qzFf ${tempPubKeyPath} .ssh/authorized_keys && echo "1" || echo "0"`)
+        console.log(res);
+        console.log('findout', res.stdout, res.stdout === "0\n");
+        
+        if (res.stdout === "0\n") {
+            // 将公钥追加到 authorized_keys
+            const appendCmd = `cat ${tempPubKeyPath} >> ~/.ssh/authorized_keys`;
+            const appendResult = await this.server.executeCommand(appendCmd);
+            if (appendResult.code !== 0) {
+                throw new Error(`合并公钥到 authorized_keys 失败: ${appendResult.stderr}`);
+            }
+            // 设置 authorized_keys 权限
+            const chmodFileCmd = `chmod 600 ~/.ssh/authorized_keys`;
+            const chmodFileResult = await this.server.executeCommand(chmodFileCmd);
+            if (chmodFileResult.code !== 0) {
+                throw new Error(`设置 authorized_keys 权限失败: ${chmodFileResult.stderr}`);
+            }
+    
+            // 确保所有者是当前用户
+            const chownCmd = `chown $USER:$USER ~/.ssh ~/.ssh/authorized_keys`;
+            const chownResult = await this.server.executeCommand(chownCmd);
+            if (chownResult.code !== 0) {
+                console.warn(`设置文件所有者失败: ${chownResult.stderr}`);
+            }
+        }
+
+
+        // 删除临时文件
+        const rmTempCmd = `rm ${tempPubKeyPath}`;
+        const rmTempResult = await this.server.executeCommand(rmTempCmd);
+        if (rmTempResult.code !== 0) {
+            console.warn(`删除临时文件失败: ${rmTempResult.stderr}`);
+        }
+
+        console.log('SSH密钥配置完成');
     }
 
     private async updateSSHConfig(
@@ -223,6 +214,9 @@ export class SSHKeyAutoConfig {
     ): Promise<void> {
         const sshDir = path.join(os.homedir(), '.ssh');
         const configPath = path.join(sshDir, 'config');
+
+        // 确保SSH目录存在
+        this.ensureDirectoryExists(sshDir);
 
         let configContent = '';
         if (fs.existsSync(configPath)) {
@@ -252,11 +246,3 @@ export class SSHKeyAutoConfig {
     }
 }
 
-// 激活入口
-export function initSSHKeyAutoConfig(context: vscode.ExtensionContext) {
-    console.log('SSH密钥自动配置插件已激活！');
-    const plugin = new SSHKeyAutoConfig(context);
-    plugin.registerCommands();
-}
-
-export function deactivate() {}

@@ -10,7 +10,6 @@ import * as vscode from 'vscode';
 import i18nResource from 'shared:/i18n';
 
 import { WebviewProvider } from './class/webviewProvider';
-import { initSSHKeyAutoConfig } from './class/SSHKeyAutoConfig';
 import OpsOption from './class/OpsOption';
 import { CustomSidebarProvider } from './class/CustomSidebarProvider';
 import { ApiServer } from './core/ApiServer';
@@ -44,9 +43,6 @@ export async function activate(context: vscode.ExtensionContext) {
   const configNewPrototypeProvider = new WebviewProvider(context);
 
   const opsOption = new OpsOption(context);
-
-  // 注册自动配置SSH密钥命令
-  const sshKeyAutoConfig = initSSHKeyAutoConfig(context)
 
   // 注册打开Opsuite命令
   const openCommand = vscode.commands.registerCommand('huawei-op-devtools.open', async () => {
