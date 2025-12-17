@@ -441,6 +441,15 @@ const webviewMessageList: messageItem[] = [
     },
   },
   {
+    command: 'vscodeRunExample',
+    callback: async (msg: any, that: any) => {
+      const data = msg.message.data;
+      const opsOption = new OpsOption(that.context);
+      await opsOption.init();
+      await opsOption.startRun(data);
+    },
+  },
+  {
     command: 'vscodeBuildCreateOps',
     callback: async (msg: any, that: any) => {
       const data = msg.message.data;

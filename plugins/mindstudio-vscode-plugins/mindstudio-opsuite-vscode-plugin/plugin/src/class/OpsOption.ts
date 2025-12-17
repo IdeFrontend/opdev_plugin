@@ -8,6 +8,7 @@ import {
   generateStructure,
   getBuildExampleCommand,
   getBuildOpCommand,
+  getRunCommand,
   getConfig,
   getFiles,
   postConfig,
@@ -136,6 +137,26 @@ export default class OpsOption {
       vscode.window.showInformationMessage(`编译算子成功`);
     } catch (e: any) {
       vscode.window.showErrorMessage(`获取编译算子命令失败 ${e.message}`);
+    }
+  }
+
+  async startRun(config_id?: string) {
+    let configId = config_id;
+    if (!configId) {
+      configId = await this.getBuildExampleConfig();
+    }
+    try {
+      const runCommand = await getRunCommand(Number(configId));
+      console.log('runCommand', runCommand)
+      const res = await this.executor.execute(runCommand, [], [], {}, true);
+      console.log('runRes', res)
+      if (res.code !== 0) {
+        vscode.window.showErrorMessage(`运行失败 ${res}`);
+        return;
+      }
+      vscode.window.showInformationMessage(`运行成功`);
+    } catch (e: any) {
+      vscode.window.showErrorMessage(`获取运行命令失败 ${e.message}`);
     }
   }
 

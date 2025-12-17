@@ -13,8 +13,7 @@ export function getBuildOpCommand(config_id: number) {
   const project = get_project_by_id(config.project_id as number) as any;
   const operator = getOpByProjectIdAndOpName(config.project_id as number, config.op as string)!;
   const source_cann = project && project.ascend_env_script ? `. ${project.ascend_env_script}` : `. ${ascend_env_script}`;
-  // TODO 后续迁移至运行命令
-  // const deploy_cmd = `chmod +x ${config.target_file || ''} && ${config.target_file || ''}`;
+
   const run_path = getOpRunPath(operator);
   const cd_cmd = `cd ${run_path}`;
 
@@ -31,7 +30,37 @@ export function getBuildOpCommand(config_id: number) {
     if (args && args.vendor_name) vendor_name = args.vendor_name;
     if (args && args.soc) soc = args.soc;
     const cmd = `${config.script || ''} --pkg --soc=${soc} --vendor_name=${vendor_name} --ops=${op}`.trim();
-    return [source_cann, cd_cmd, cmd].filter(Boolean).join(' && ');
+    const deploy_cmd = `chmod +x ${config.target_file || ''} && ${config.target_file || ''}`;
+    return [source_cann, cd_cmd, cmd, deploy_cmd].filter(Boolean).join(' && ');
+  } catch (e: any) {
+    throw new Error(`生成编译命令失败:${e.message}`);
+  }
+}
+
+export function getRunCommand(config_id: number) {
+  const config = getConfigById(config_id as any) as any;
+  if (!config) {
+    throw new Error('配置不存在');
+  }
+  const project = get_project_by_id(config.project_id as number) as any;
+  const operator = getOpByProjectIdAndOpName(config.project_id as number, config.op as string)!;
+  const source_cann = project && project.ascend_env_script ? `. ${project.ascend_env_script}` : `. ${ascend_env_script}`;
+  const run_cmd = `chmod +x ${config.target_file || ''} && ${config.target_file || ''}`;
+  const run_path = getOpRunPath(operator);
+  const cd_cmd = `cd ${run_path}`;
+
+  if (!operator || operator.op_type !== 'ascend') {
+    return [source_cann, cd_cmd, run_cmd].filter(Boolean).join(' && ');
+  }
+
+  try {
+    let soc = soc_version;
+    let vendor_name = 'custom';
+    const op = config.op;
+    const args = parse_cmd_options(config.custom_options || null);
+    if (args && args.vendor_name) vendor_name = args.vendor_name;
+    if (args && args.soc) soc = args.soc;
+    return [source_cann, cd_cmd, run_cmd].filter(Boolean).join(' && ');
   } catch (e: any) {
     throw new Error(`生成编译命令失败:${e.message}`);
   }

@@ -28,6 +28,17 @@ const buildExampleFn = () => {
     });
 };
 
+const runExampleFn = () => {
+    const exampleConfigData = buildConfigData[activeConfig.value].find(
+        (v) => v.config_type === "build_example"
+    );
+    const id = exampleConfigData.config_id;
+    message.sendMessageToParent({
+        command: "vscodeRunExample",
+        data: id,
+    });
+};
+
 const configArray = ref([]);
 const buildConfigData = JSON.parse(localStorage.getItem("buildConfig") || '{}');
 console.log('---------------buildConfigDataBoard', buildConfigData)
@@ -98,8 +109,8 @@ const clickSetting = (() => {
                     </span>
                     <template #overlay>
                         <a-menu>
-                            <a-menu-item>运行算子</a-menu-item>
-                            <a-menu-item>运行example</a-menu-item>
+                            <a-menu-item @click="runExampleFn">运行算子</a-menu-item>
+                            <a-menu-item @click="runExampleFn">运行example</a-menu-item>
                         </a-menu>
                     </template>
                 </a-dropdown>
