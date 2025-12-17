@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree. -->
 
 <script setup>
-import { ref } from "vue";
+import { ref, watch } from "vue";
 
 const Actived = ref("build");
 
@@ -18,9 +18,17 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  activeOption: {
+    type: String,
+    default: "build",
+  },
 });
 
 const emit = defineEmits(["updateActiveOption"]);
+
+watch(() => props.activeOption, (newVal) => {
+  Actived.value = newVal;
+}, { immediate: true });
 
 const updateActiveOption = (item) => {
   Actived.value = item;
@@ -29,9 +37,6 @@ const updateActiveOption = (item) => {
 </script>
 <template>
   <div class="options-box">
-    <div class="options-title">
-      算子工程配置
-    </div>
     <div class="options-list">
       <div class="options-list-item" :class="[Actived === 'build' ? 'is-active' : '']"
         @click="updateActiveOption('build')">
@@ -49,59 +54,57 @@ const updateActiveOption = (item) => {
         性能调优
       </div>
     </div>
-    <div class="block"></div>
   </div>
 </template>
 
 
 <style lang="less">
 .options-box {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   width: 100%;
-  box-shadow: 0px 2px 12px 0px rgba(0, 0, 0, 0.48);
-}
-
-.options-title {
-  padding: 0 20px;
-  font-size: 22px;
-  font-weight: bold;
-  word-break: break-all;
-}
-
-.block {
-  width: 172px;
   height: 100%;
+  padding: 12px;
+  overflow: hidden;
 }
 
 .options-list {
-  font-size: 14px;
+  font-size: 12px;
   color: #ffffff;
-  width: 750px;
-  min-width: 750px;
   display: flex;
-  padding: 12px 32px;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+  padding-left: 12px;
 
   .options-list-item {
     border-radius: 4px;
     border: 1px solid #424242;
     display: flex;
     align-items: center;
-    padding: 8px;
-    font-size: 14px;
-    margin-right: 12px;
+    justify-content: center;
+    padding: 8px 4px;
+    font-size: 12px;
     cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 112px;
 
     .img {
       margin-right: 4px;
-      width: 16px;
-      height: 16px;
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.05);
     }
   }
 
   .is-active {
     border-color: #1668dc;
+    background-color: rgba(22, 104, 220, 0.1);
   }
 }
 </style>

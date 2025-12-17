@@ -15,7 +15,7 @@ const getProjectIdItem: messageItem = {
     callback: (message: any) => { localStorage.setItem('projectId', message.data); }
 }
 
-let isInitRun =false
+let isInitRun = false
 
 
 
@@ -54,16 +54,12 @@ window.addEventListener('message', event => {
 });
 
 function init() {
-    if(isInitRun){
+    if (isInitRun) {
         console.log('isInitRun is true')
         return;
     }
     createApp(App).use(antd).mount('#app')
-    isInitRun=true;
+    isInitRun = true;
 }
 //@ts-ignore
-console.log(JSON.stringify(window?.chrome) !== '{}')
-//@ts-ignore
-if (JSON.stringify(window?.chrome) !== '{}') {
-    init()
-}
+init()
