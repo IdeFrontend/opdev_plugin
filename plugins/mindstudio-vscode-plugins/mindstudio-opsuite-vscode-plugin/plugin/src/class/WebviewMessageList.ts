@@ -372,6 +372,11 @@ const webviewMessageList: messageItem[] = [
             await vscode.commands.executeCommand('vscode.openFolder', remoteUri, {
               forceNewWindow: true,
             });
+          } else {
+            const remoteUri = vscode.Uri.parse(`vscode-remote://ssh-remote+${remoteName}${fullProjectPath}`);
+            await vscode.commands.executeCommand('vscode.openFolder', remoteUri, {
+              forceNewWindow: true,
+            });
           }
         } else {
           // 如果只有 'ssh-remote' 类型而没有具体连接ID
