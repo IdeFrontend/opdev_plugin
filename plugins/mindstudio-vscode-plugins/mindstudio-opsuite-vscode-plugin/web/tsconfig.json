@@ -4,6 +4,7 @@
     "module": "ESNext",
     "strict": true,
     "jsx": "preserve",
+    "jsxImportSource": "vue",
     "moduleResolution": "bundler",
     "declaration": false,
     "emitDeclarationOnly": false,
@@ -11,6 +12,9 @@
     "skipLibCheck": true,
     "noImplicitAny": false,
     "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "types": ["vite/client", "vscode-webview"],
     "paths": {
       "@/*": ["./src/*"],
       "plugin:/*": ["../plugin/src/*"],

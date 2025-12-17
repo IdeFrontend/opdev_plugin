@@ -7,7 +7,7 @@ import { useConnector } from './use-connector';
 export type { RequestOptions };
 
 interface ExtensionRequest {
-  post: <Data, Res>(api: string, params: Data, options?: RequestOptions) => Promise<Res>;
+  post: <Data, Res>(api: string, params?: Data, options?: RequestOptions) => Promise<Res>;
 }
 
 interface PendingRequest {
@@ -40,7 +40,7 @@ function createExtensionRequest(): ExtensionRequest {
   });
 
   return {
-    post: <Data, Res>(api: string, params: Data, options?: RequestOptions): Promise<Res> => {
+    post: <Data, Res>(api: string, params?: Data, options?: RequestOptions): Promise<Res> => {
       const optionsWithDefault = getOptionsWithDefault(options);
       const requestId = `${api}-${window.crypto.randomUUID()}`;
       send({ api, requestId, data: deepToRaw(params), options: optionsWithDefault });

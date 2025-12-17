@@ -33,7 +33,7 @@ export interface ResponseMessage {
 
 type Api = (params: any) => unknown;
 
-type ApiGroup = {
+export type ApiGroup = {
   [key: string]: ApiGroup | Api;
 };
 

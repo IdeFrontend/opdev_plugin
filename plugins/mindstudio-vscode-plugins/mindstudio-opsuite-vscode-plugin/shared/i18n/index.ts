@@ -1,4 +1,4 @@
 import en from './en';
-import zhCn from './zh-cn';
+import zh from './zh-cn';
 
-export default { en, 'zh-cn': zhCn };
+export default { en: { translation: en }, zh: { translation: zh } };

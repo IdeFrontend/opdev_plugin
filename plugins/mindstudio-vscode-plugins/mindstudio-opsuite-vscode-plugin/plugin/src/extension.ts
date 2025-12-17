@@ -16,6 +16,7 @@ import { ApiServer } from './core/ApiServer';
 import { PanelView } from './core/view/PanelView';
 import { routes } from './routes';
 import { apis } from './apis';
+import { PermanentStorage } from './class/PermanentStorage';
 
 /**
  * 插件激活入口函数
@@ -30,6 +31,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 视图
   const panelView = initViews(context, apiServer);
+
+  new PermanentStorage(context);
 
   // 初始化新建算子工程的Webview
   const createOpsProvider = new WebviewProvider(context);
@@ -132,7 +135,7 @@ export async function activate(context: vscode.ExtensionContext) {
  * 国际化
  */
 async function initI18n() {
-  i18next.init({
+  await i18next.init({
     resources: i18nResource,
     lng: vscode.env.language,
     interpolation: { escapeValue: false },
