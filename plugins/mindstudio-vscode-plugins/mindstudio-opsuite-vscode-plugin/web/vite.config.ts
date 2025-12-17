@@ -7,14 +7,9 @@ import { debugEntry } from './vite-plugins/debug-entry';
 /** 视图入口白名单 */
 const TEMP_MULTI_ENTRIES = ['Config', 'Link', 'Welcome', 'Home', 'newPrototype', 'Board'];
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(() => {
   const buildInput: Record<string, string> = { index: 'index.html' };
-  // 配置多入口
-  const isBuildingSingleView = TEMP_MULTI_ENTRIES.includes(mode);
   for (const entry of TEMP_MULTI_ENTRIES) {
-    if (isBuildingSingleView && entry !== mode) {
-      continue;
-    }
     buildInput[entry] = `src/views/${entry}/${entry}.html`;
   }
 
