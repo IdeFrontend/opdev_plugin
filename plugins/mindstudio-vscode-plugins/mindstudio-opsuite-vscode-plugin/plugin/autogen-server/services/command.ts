@@ -62,7 +62,7 @@ export function getRunCommand(config_id: number) {
     if (args && args.soc) soc = args.soc;
     return [source_cann, cd_cmd, run_cmd].filter(Boolean).join(' && ');
   } catch (e: any) {
-    throw new Error(`生成编译命令失败:${e.message}`);
+    throw new Error(`生成运行命令失败:${e.message}`);
   }
 }
 
