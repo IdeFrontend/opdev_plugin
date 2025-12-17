@@ -148,12 +148,25 @@
         "label": "opsDebug",
         "icon": "resources/debug.svg"
       }
+    ],
+    "customEditors": [
+      {
+        "viewType": "csvViewer",
+        "displayName": "CSV 表格视图",
+        "selector": [
+          {
+            "filenamePattern": "*.csv"
+          }
+        ],
+        "priority": "default"
+      }
     ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile:web && npm run compile",
-    "compile": "npm run build-extension && npm run copy-web-output",
-    "compile:web": "cd web && npm run build",
+    "compile": "npm run compile:web && npm run build-extension && npm run copy-web-output",
+    "install:web": "cd web && npm install",
+    "compile:web": "npm run install:web && cd web && npm run build",
     "watch": "tsc -watch -p .",
     "package": "vsce package --no-dependencies",
     "lint": "eslint plugin/src --ext ts",
