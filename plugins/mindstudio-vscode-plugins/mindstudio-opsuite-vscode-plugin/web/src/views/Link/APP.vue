@@ -127,5 +127,12 @@ const connected = () => {
 </style>
 
 <style lang="less">
+#app {
+  width: 100%;
+  margin: 0 auto 0 10px;
+  padding: 2rem;
+  text-align: left;
+  height: 100vh;
+}
 @import url("@/assets/less/common.less");
 </style>
