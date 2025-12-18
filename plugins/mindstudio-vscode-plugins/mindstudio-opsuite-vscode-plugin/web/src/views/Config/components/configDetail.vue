@@ -25,8 +25,8 @@ const exampleConfigForme = ref({});
 const buildConfigId = ref("");
 const exampleConfigId = ref("");
 
-const init = () => {
-  const ConfigData = JSON.parse(localStorage.getItem("buildConfig"));
+const init = (obj) => {
+  const ConfigData = obj
   console.log(ConfigData, props.activeConfig, ConfigData[props.activeConfig]);
 
   const buildConfigData = ConfigData[props.activeConfig].find(

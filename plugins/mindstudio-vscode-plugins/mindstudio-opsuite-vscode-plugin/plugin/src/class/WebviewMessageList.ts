@@ -412,7 +412,7 @@ const webviewMessageList: messageItem[] = [
       const data = msg.message.data;
       const opsOption = new OpsOption(that.context);
       await opsOption.init();
-      await opsOption.startBuild(data);
+      await opsOption.startBuild();
     },
   },
   {
@@ -421,7 +421,7 @@ const webviewMessageList: messageItem[] = [
       const data = msg.message.data;
       const opsOption = new OpsOption(that.context);
       await opsOption.init();
-      await opsOption.startBuildExample(data);
+      await opsOption.startBuildExample();
     },
   },
   {
@@ -430,7 +430,7 @@ const webviewMessageList: messageItem[] = [
       const data = msg.message.data;
       const opsOption = new OpsOption(that.context);
       await opsOption.init();
-      await opsOption.startRun(data);
+      await opsOption.startRun();
     },
   },
   {

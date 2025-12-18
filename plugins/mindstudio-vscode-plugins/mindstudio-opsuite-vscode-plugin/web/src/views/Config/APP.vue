@@ -22,20 +22,22 @@ const updateActiveOption = (option) => {
   activeOption.value = option;
 };
 
-const getProjectIdItem = {
-  command: 'getActiveConfig',
+const getBuildConfigItem = {
+  command: 'iframeSetBuildConfigItem',
   callback: (message) => {
-    console.log('message.data activeConfig.value', message.data)
-    activeConfig.value = message.data
+    console.log('message.data config', message.data)
+    const obj = JSON.parse(message.data || '{}')
+    const keys = Object.keys(obj)
+    activeConfig.value = keys[0] || ''
     if (activeConfig.value) {
-      nextTick(() => configDetailRef.value.init());
+      nextTick(() => configDetailRef.value.init(obj));
     }
   }
 }
 
 onMounted(() => {
-  message.addMessageListener(getProjectIdItem)
-  message.sendMessageToParent({ command: 'vscodeGetActiveConfig' });
+  message.addMessageListener(getBuildConfigItem)
+  message.sendMessageToParent({ command: 'vscodeGetBuildConfig' });
 })
 </script>
 <template>
@@ -48,18 +50,11 @@ onMounted(() => {
       </div>
       <div class="config-content">
         <div class="config-sidebar">
-          <optionsList 
-            :activeConfig="activeConfig" 
-            :activeOption="activeOption"
-            @updateActiveOption="updateActiveOption" 
-          />
+          <optionsList :activeConfig="activeConfig" :activeOption="activeOption"
+            @updateActiveOption="updateActiveOption" />
         </div>
         <div class="config-main">
-          <configDetail 
-            :activeOption="activeOption" 
-            :activeConfig="activeConfig" 
-            ref="configDetailRef" 
-          />
+          <configDetail :activeOption="activeOption" :activeConfig="activeConfig" ref="configDetailRef" />
         </div>
       </div>
     </div>
@@ -80,7 +75,7 @@ onMounted(() => {
   padding: 20px;
   box-shadow: 0px 2px 12px 0px rgba(0, 0, 0, 0.48);
   z-index: 1;
-  
+
   .options-title {
     font-size: 22px;
     font-weight: bold;

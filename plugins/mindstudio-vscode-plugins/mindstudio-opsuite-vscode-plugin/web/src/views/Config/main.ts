@@ -17,19 +17,8 @@ const getProjectIdItem: messageItem = {
 
 let isInitRun = false
 
-
-
-const getBuildConfigItem: messageItem = {
-    command: 'iframeSetBuildConfigItem',
-    callback: (message: any) => { localStorage.setItem('buildConfig', message.data); init(); }
-}
-
-message.addMessageListener(getBuildConfigItem)
 message.addMessageListener(getProjectIdItem)
 message.sendMessageToParent({ command: 'vscodeGetProjectId' });
-message.sendMessageToParent({ command: 'vscodeGetBuildConfig' });
-
-
 
 let vscode = null;
 //@ts-ignore
