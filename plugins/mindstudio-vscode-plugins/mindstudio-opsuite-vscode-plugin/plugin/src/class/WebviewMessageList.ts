@@ -7,6 +7,7 @@
 
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
 import { RemoteServerOpener } from './RemoteServerOpener';
 import RemoteServer from './RemoteServer';
 import DirectoryZipper from './DirectoryZipper';
@@ -14,6 +15,7 @@ import packageJson from '../../../package.json';
 import { CommandExecutor } from './CommandOptions';
 import OpsOption from './OpsOption';
 import { SSHKeyAutoConfig } from './SSHKeyAutoConfig';
+import { InsightDataViewerPanel } from './InsightDataViewerPanel';
 
 // 跟踪已打开的CSV文件目录
 const openedCsvDirectories = new Map<string, vscode.Uri>();
@@ -524,7 +526,7 @@ const webviewMessageList: messageItem[] = [
   },
   {
     command: 'vscodeinsigLoadData',
-    callback: async (msg: any) => {
+    callback: async (msg: any, that: any) => {
       // 从消息中获取BIN文件路径
       const binPath = msg.message.data;
       if (!binPath) {
@@ -533,8 +535,19 @@ const webviewMessageList: messageItem[] = [
       }
       try {
         console.log('加载 BIN 文件:', binPath);
-        // 这里可以添加加载 BIN 文件的逻辑
-        // 例如：读取文件、解析数据等
+        
+        // 获取 extension context
+        // 兼容不同的 provider: WebviewProvider 使用 context, PerformanceSidebarProvider 使用 _context
+        const context = that.context || that._context;
+        if (!context) {
+          vscode.window.showErrorMessage('无法获取扩展上下文');
+          console.error('无法获取扩展上下文，that:', that);
+          return;
+        }
+
+        // 使用 InsightDataViewerPanel 创建或显示 panel
+        InsightDataViewerPanel.createOrShow(context, binPath);
+
         vscode.window.showInformationMessage(`正在加载数据文件: ${binPath}`);
       } catch (error) {
         vscode.window.showErrorMessage(`加载数据文件失败: ${error}`);

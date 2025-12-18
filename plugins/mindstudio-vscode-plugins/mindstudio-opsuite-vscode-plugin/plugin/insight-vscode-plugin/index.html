@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据查看器</title>
+</head>
+<body>
+    <div id="app">
+        <h1>数据查看器</h1>
+        <p>BIN 文件路径: <span id="binPath">等待加载...</span></p>
+        <p>WebSocket 端口: <span id="wsPort">等待启动...</span></p>
+    </div>
+    <script>
+        const vscode = acquireVsCodeApi();
+        
+        // 监听来自扩展的消息
+        window.addEventListener('message', event => {
+            const message = event.data;
+            
+            // 处理设置 bin 文件路径的消息
+            if (message.command === 'setBinPath') {
+                const binPathElement = document.getElementById('binPath');
+                if (binPathElement) {
+                    binPathElement.textContent = message.data;
+                }
+            }
+            
+            // 处理设置 WebSocket 端口的消息
+            if (message.command === 'setWsPort') {
+                const wsPortElement = document.getElementById('wsPort');
+                if (wsPortElement) {
+                    wsPortElement.textContent = message.data;
+                }
+            }
+            
+            // 处理 WebSocket 桥接消息（来自 NodeWebviewSocketBridge）
+            if (message.type && message.type.startsWith('ws:')) {
+                // WebSocket 桥接消息处理
+                // 这些消息来自 NodeWebviewSocketBridge，用于 WebSocket 通信
+                console.log('WebSocket bridge message:', message);
+                
+                // 可以根据需要处理 WebSocket 事件
+                switch (message.type) {
+                    case 'ws:opened':
+                        console.log('WebSocket opened:', message.id);
+                        break;
+                    case 'ws:message':
+                        console.log('WebSocket message received:', message.id, message.payload);
+                        break;
+                    case 'ws:error':
+                        console.error('WebSocket error:', message.id, message.reason);
+                        break;
+                    case 'ws:closed':
+                        console.log('WebSocket closed:', message.id, message.code, message.reason);
+                        break;
+                }
+            }
+        });
+        
+        // 通知扩展已准备好接收消息
+        vscode.postMessage({ command: 'ready' });
+        
+        // 示例：如何使用 WebSocket 桥接
+        // 如果需要打开 WebSocket 连接，可以发送以下消息：
+        // vscode.postMessage({
+        //     type: 'ws:open',
+        //     id: 'my-websocket-id',
+        //     url: 'ws://example.com',
+        //     protocols: []
+        // });
+    </script>
+</body>
+</html>

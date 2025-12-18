@@ -190,7 +190,8 @@
     "fs-extra": "^11.3.2",
     "i18next": "^25.7.2",
     "node-ssh": "^13.2.1",
-    "ssh2": "^1.17.0"
+    "ssh2": "^1.17.0",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@rolldown/pluginutils": "^1.0.0-beta.53",
