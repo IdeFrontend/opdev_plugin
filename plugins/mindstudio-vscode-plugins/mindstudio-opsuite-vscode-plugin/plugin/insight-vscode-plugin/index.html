@@ -4,15 +4,150 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>数据查看器</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        #app {
+            padding: 20px;
+        }
+        h1 {
+            margin-top: 0;
+        }
+        .plugin-container {
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .plugin-container iframe {
+            width: 100%;
+            border: none;
+            display: block;
+        }
+        .plugin-placeholder {
+            padding: 20px;
+            background-color: #f5f5f5;
+            text-align: center;
+            color: #999;
+        }
+    </style>
 </head>
 <body>
     <div id="app">
         <h1>数据查看器</h1>
         <p>BIN 文件路径: <span id="binPath">等待加载...</span></p>
         <p>WebSocket 端口: <span id="wsPort">等待启动...</span></p>
+        
+        <!-- 插件 iframe 容器 -->
+        <div id="Cluster" class="plugin-container">
+            <div class="plugin-placeholder">等待加载 Cluster...</div>
+        </div>
+        <div id="Compute" class="plugin-container">
+            <div class="plugin-placeholder">等待加载 Compute...</div>
+        </div>
+        <div id="leaks" class="plugin-container">
+            <div class="plugin-placeholder">等待加载 leaks...</div>
+        </div>
+        <div id="Memory" class="plugin-container">
+            <div class="plugin-placeholder">等待加载 Memory...</div>
+        </div>
+        <div id="Operator" class="plugin-container">
+            <div class="plugin-placeholder">等待加载 Operator...</div>
+        </div>
+        <div id="RL" class="plugin-container">
+            <div class="plugin-placeholder">等待加载 RL...</div>
+        </div>
+        <div id="Statistic" class="plugin-container">
+            <div class="plugin-placeholder">等待加载 Statistic...</div>
+        </div>
+        <div id="Timeline" class="plugin-container">
+            <div class="plugin-placeholder">等待加载 Timeline...</div>
+        </div>
     </div>
     <script>
         const vscode = acquireVsCodeApi();
+        
+        // 创建空的 iframe
+        function createIframe(pluginName) {
+            const container = document.getElementById(pluginName);
+            if (!container) {
+                console.error(`未找到插件容器: ${pluginName}`);
+                return null;
+            }
+            
+            // 清除占位符
+            container.innerHTML = '';
+            
+            // 创建空的 iframe
+            const iframe = document.createElement('iframe');
+            iframe.src = 'about:blank';
+            iframe.style.width = '100%';
+            iframe.style.height = '600px';
+            iframe.style.border = 'none';
+            iframe.style.display = 'block';
+            
+            container.appendChild(iframe);
+            return iframe;
+        }
+        
+        // 渲染 iframe 内容
+        function renderIframeContent(pluginName, content) {
+            const container = document.getElementById(pluginName);
+            if (!container) {
+                console.error(`未找到插件容器: ${pluginName}`);
+                return;
+            }
+            
+            // 获取或创建 iframe
+            let iframe = container.querySelector('iframe');
+            if (!iframe) {
+                iframe = createIframe(pluginName);
+            }
+            
+            // 尝试写入内容的函数
+            function writeContent() {
+                try {
+                    const doc = iframe.contentDocument || iframe.contentWindow.document;
+                    if (!doc) {
+                        console.error(`无法获取 iframe document: ${pluginName}`);
+                        return;
+                    }
+                    doc.open();
+                    doc.write(content);
+                    doc.close();
+                } catch (error) {
+                    console.error(`渲染 iframe 内容失败: ${pluginName}`, error);
+                    container.innerHTML = `<div class="plugin-placeholder">渲染失败: ${pluginName}</div>`;
+                }
+            }
+            
+            // 如果 iframe 已经加载，直接写入
+            try {
+                const doc = iframe.contentDocument || iframe.contentWindow.document;
+                if (doc && doc.readyState === 'complete') {
+                    writeContent();
+                } else {
+                    // 等待 iframe 加载完成后再写入内容
+                    iframe.onload = function() {
+                        writeContent();
+                    };
+                    // 如果 onload 没有触发，使用 setTimeout 重试
+                    setTimeout(function() {
+                        if (iframe.contentDocument && iframe.contentDocument.readyState === 'complete') {
+                            writeContent();
+                        }
+                    }, 100);
+                }
+            } catch (error) {
+                // 如果访问 document 失败，等待 onload
+                iframe.onload = function() {
+                    writeContent();
+                };
+            }
+        }
         
         // 监听来自扩展的消息
         window.addEventListener('message', event => {
@@ -34,32 +169,51 @@
                 }
             }
             
+            // 处理 iframe 内容渲染消息
+            // 消息格式: { command: 'renderIframe', pluginName: 'Cluster', content: '<html>...</html>' }
+            if (message.command === 'renderIframe') {
+                if (message.pluginName && message.content) {
+                    renderIframeContent(message.pluginName, message.content);
+                } else {
+                    console.error('renderIframe 消息缺少必要字段:', message);
+                }
+            }
+            
             // 处理 WebSocket 桥接消息（来自 NodeWebviewSocketBridge）
             if (message.type && message.type.startsWith('ws:')) {
                 // WebSocket 桥接消息处理
                 // 这些消息来自 NodeWebviewSocketBridge，用于 WebSocket 通信
-                console.log('WebSocket bridge message:', message);
-                
-                // 可以根据需要处理 WebSocket 事件
                 switch (message.type) {
                     case 'ws:opened':
-                        console.log('WebSocket opened:', message.id);
                         break;
                     case 'ws:message':
-                        console.log('WebSocket message received:', message.id, message.payload);
                         break;
                     case 'ws:error':
                         console.error('WebSocket error:', message.id, message.reason);
                         break;
                     case 'ws:closed':
-                        console.log('WebSocket closed:', message.id, message.code, message.reason);
                         break;
                 }
             }
         });
         
-        // 通知扩展已准备好接收消息
-        vscode.postMessage({ command: 'ready' });
+        // 页面加载完成后通知 node 层可以开始渲染 iframe
+        window.addEventListener('DOMContentLoaded', function() {
+            // 通知扩展已准备好接收消息
+            vscode.postMessage({ command: 'ready' });
+            
+            // 通知 node 层可以开始发送 iframe 内容
+            vscode.postMessage({ command: 'startRenderIframes' });
+        });
+        
+        // 如果 DOMContentLoaded 已经触发，立即发送消息
+        if (document.readyState === 'loading') {
+            // DOMContentLoaded 尚未触发，等待它
+        } else {
+            // DOMContentLoaded 已经触发，立即发送消息
+            vscode.postMessage({ command: 'ready' });
+            vscode.postMessage({ command: 'startRenderIframes' });
+        }
         
         // 示例：如何使用 WebSocket 桥接
         // 如果需要打开 WebSocket 连接，可以发送以下消息：

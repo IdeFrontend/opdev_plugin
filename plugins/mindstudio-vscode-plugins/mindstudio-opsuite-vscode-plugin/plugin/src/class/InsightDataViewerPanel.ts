@@ -12,6 +12,7 @@ import * as os from 'os';
 import { spawn, ChildProcess, exec } from 'child_process';
 import { promisify } from 'util';
 import { NodeWebviewSocketBridge } from './NodeWebviewSocketBridge';
+import webviewMessageList from './WebviewMessageList';
 
 const execAsync = promisify(exec);
 
@@ -187,7 +188,28 @@ export class InsightDataViewerPanel implements vscode.Disposable {
    * 处理来自 webview 的消息
    */
   private handleWebviewMessage(message: any): void {
-    if (message.command === 'ready') {
+    console.log('[InsightDataViewerPanel] 收到 webview 消息:', message);
+    
+    // 先尝试从 WebviewMessageList 中查找对应的处理器
+    let handled = false;
+    for (const messageItem of webviewMessageList) {
+      if (message.command === messageItem.command) {
+        console.log(`[InsightDataViewerPanel] 找到处理器: ${message.command}`);
+        // 创建一个类似 WebviewProvider 的 that 对象
+        const that = {
+          context: this.context,
+          panel: this.panel,
+          _view: undefined,
+        };
+        messageItem.callback(message, that);
+        handled = true;
+        break;
+      }
+    }
+    
+    // 如果没有找到处理器，使用原有的逻辑
+    if (!handled && message.command === 'ready') {
+      console.log('[InsightDataViewerPanel] 使用默认 ready 处理');
       // Webview 已准备好，发送 bin 文件路径和端口号
       this.panel.webview.postMessage({
         command: 'setBinPath',
@@ -200,6 +222,8 @@ export class InsightDataViewerPanel implements vscode.Disposable {
           data: this.serverPort,
         });
       }
+    } else if (!handled) {
+      console.log(`[InsightDataViewerPanel] 未找到处理器: ${message.command}`);
     }
   }
 
@@ -320,6 +344,13 @@ export class InsightDataViewerPanel implements vscode.Disposable {
    */
   private async startProfilerServer(): Promise<void> {
     try {
+      // Windows 系统不启动服务
+      if (os.platform() === 'win32') {
+        console.log('Windows 系统，跳过 profiler_server 启动');
+        vscode.window.showInformationMessage('Windows 系统不支持 profiler_server，服务未启动');
+        return;
+      }
+
       // 确保 profiler_server 存在
       const serverReady = await this.ensureProfilerServerExists();
       if (!serverReady) {

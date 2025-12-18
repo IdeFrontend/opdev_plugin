@@ -660,6 +660,59 @@ const webviewMessageList: messageItem[] = [
       }
     },
   },
+  {
+    command: 'startRenderIframes',
+    callback: async (message: any, that: any) => {
+      try {
+        // 获取 extension context（兼容不同的 provider）
+        const context = that.context || that._context;
+        if (!context) {
+          console.error('无法获取扩展上下文');
+          return;
+        }
+
+        // 获取 webview（兼容不同的 provider）
+        const webview = that.panel?.webview || that._view?.webview;
+        if (!webview) {
+          console.error('无法获取 webview');
+          return;
+        }
+
+        // 插件目录列表
+        const pluginDirs = ['Cluster', 'Compute', 'leaks', 'Memory', 'Operator', 'RL', 'Statistic', 'Timeline'];
+        
+        // 插件目录路径
+        const pluginsBasePath = path.join(context.extensionPath, 'plugin', 'insight-vscode-plugin', 'plugins');
+
+        // 读取每个插件目录下的 index.html 文件并发送给 webview
+        for (const pluginName of pluginDirs) {
+          const pluginDirPath = path.join(pluginsBasePath, pluginName);
+          const indexPath = path.join(pluginDirPath, 'index.html');
+
+          try {
+            // 检查文件是否存在
+            if (fs.existsSync(indexPath)) {
+              // 读取文件内容
+              const content = fs.readFileSync(indexPath, 'utf8');
+              
+              // 发送消息给 webview
+              webview.postMessage({
+                command: 'renderIframe',
+                pluginName: pluginName,
+                content: content,
+              });
+            } else {
+              console.warn(`插件文件不存在: ${indexPath}`);
+            }
+          } catch (error: any) {
+            console.error(`读取插件文件失败: ${pluginName}`, error);
+          }
+        }
+      } catch (error: any) {
+        console.error('处理 startRenderIframes 失败:', error);
+      }
+    },
+  },
 ];
 
 export default webviewMessageList;
