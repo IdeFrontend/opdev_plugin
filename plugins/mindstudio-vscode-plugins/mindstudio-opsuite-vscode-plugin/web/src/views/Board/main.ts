@@ -53,10 +53,3 @@ function init() {
     createApp(App).use(antd).mount('#app')
     isInitRun=true;
 }
-
-//@ts-ignore
-console.log(JSON.stringify(window?.chrome) !== '{}')
-//@ts-ignore
-if (JSON.stringify(window?.chrome) !== '{}') {
-    init()
-}
