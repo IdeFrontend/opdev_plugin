@@ -13,6 +13,7 @@ import DirectoryZipper from './DirectoryZipper';
 import packageJson from '../../../package.json';
 import { CommandExecutor } from './CommandOptions';
 import OpsOption from './OpsOption';
+import { SSHKeyAutoConfig } from './SSHKeyAutoConfig';
 
 // 跟踪已打开的CSV文件目录
 const openedCsvDirectories = new Map<string, vscode.Uri>();
@@ -302,12 +303,15 @@ const webviewMessageList: messageItem[] = [
         });
         let outputhPath = await zipper.findAndZipDirectory(`${publisher}.${extensionName}-${version}`, `${extensionName}.zip`);
         if (!outputhPath) {
-          outputhPath = await zipper.findAndZipDirectory(`${extensionName}`, `${extensionName}.zip`);
+          outputhPath = await zipper.findAndZipDirectory(`mindstudio-opsuite-vscode-plugin`, `${extensionName}.zip`);
         }
         that.panel.webview.postMessage({
           command: 'iframeSetSSHLoading',
           data: 50,
         });
+        console.log('extensionsPath', extensionsPath);
+        console.log('outputhPath', outputhPath);
+        
         await server.uploadFile(outputhPath, `/${extensionName}.zip`, extensionsPath);
         that.panel.webview.postMessage({
           command: 'iframeSetSSHLoading',
@@ -375,6 +379,11 @@ const webviewMessageList: messageItem[] = [
             await vscode.commands.executeCommand('vscode.openFolder', remoteUri, {
               forceNewWindow: true,
             });
+          } else {
+            const remoteUri = vscode.Uri.parse(`vscode-remote://ssh-remote+${remoteName}${fullProjectPath}`);
+            await vscode.commands.executeCommand('vscode.openFolder', remoteUri, {
+              forceNewWindow: true,
+            });
           }
         } else {
           // 如果只有 'ssh-remote' 类型而没有具体连接ID
@@ -398,6 +407,12 @@ const webviewMessageList: messageItem[] = [
           `./${serviceFile} --project-name "${message.projectName}" --project-path "${message.projectPath}/${message.projectName}" --ascend-env-script "${message.projectSH}"`,
           commandPath
         );
+
+        if (!message.privateKey) {
+          const autoConfig = new SSHKeyAutoConfig(server)
+          await autoConfig.configureSSH(message)
+        }
+
         const remoteOpener: RemoteServerOpener = new RemoteServerOpener();
         remoteOpener.open({ ...message, remotePath: `${message.projectPath}/${message.projectName}` });
       }
@@ -441,6 +456,15 @@ const webviewMessageList: messageItem[] = [
       const opsOption = new OpsOption(that.context);
       await opsOption.init();
       await opsOption.startBuildExample(data);
+    },
+  },
+  {
+    command: 'vscodeRunExample',
+    callback: async (msg: any, that: any) => {
+      const data = msg.message.data;
+      const opsOption = new OpsOption(that.context);
+      await opsOption.init();
+      await opsOption.startRun(data);
     },
   },
   {

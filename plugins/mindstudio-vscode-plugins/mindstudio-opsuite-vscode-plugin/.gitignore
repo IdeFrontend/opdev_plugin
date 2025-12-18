@@ -1,4 +1,9 @@
-node_modules
+.idea
+.vscode
+
 dist
+node_modules
 out
-agent.md
+package-lock.json
+pnpm-lock.yaml
+tsconfig.tsbuildinfo

@@ -61,7 +61,4 @@ window.addEventListener('message', event => {
 function init() {
     createApp(App).use(antd).mount('#app')
 }
-//@ts-ignore
-if (JSON.stringify(window.chrome) !== '{}') {
-    init()
-}
+

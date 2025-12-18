@@ -17,6 +17,8 @@ import { CsvEditorProvider } from './class/CsvEditorProvider';
 import { ApiServer } from './core/ApiServer';
 import { PanelView } from './core/view/PanelView';
 import { routes } from './routes';
+import { apis } from './apis';
+import { PermanentStorage } from './class/PermanentStorage';
 
 /**
  * 插件激活入口函数
@@ -31,6 +33,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 视图
   const panelView = initViews(context, apiServer);
+
+  new PermanentStorage(context);
 
   // 初始化新建算子工程的Webview
   const createOpsProvider = new WebviewProvider(context);
@@ -133,25 +137,21 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(welcomeCommand);
   context.subscriptions.push(newPrototypeCommand);
 
-    // 创建侧边栏提供者
-    const sidebarProvider = new CustomSidebarProvider(context);
-    
-    // 注册WebView视图
-    const sidebarView = vscode.window.registerWebviewViewProvider(
-        CustomSidebarProvider.viewType,
-        sidebarProvider,
-        {
-            webviewOptions: {
-                retainContextWhenHidden: true // WebView隐藏时保持状态
-            }
-        }
-    );
-    
-    context.subscriptions.push(sidebarView);
+  // 创建侧边栏提供者
+  const sidebarProvider = new CustomSidebarProvider(context);
+
+  // 注册WebView视图
+  const sidebarView = vscode.window.registerWebviewViewProvider(CustomSidebarProvider.viewType, sidebarProvider, {
+    webviewOptions: {
+      retainContextWhenHidden: true, // WebView隐藏时保持状态
+    },
+  });
+
+  context.subscriptions.push(sidebarView);
 
     // 创建性能调优侧边栏提供者
     const performanceSidebarProvider = new PerformanceSidebarProvider(context);
-    
+
     // 注册性能调优WebView视图
     const performanceSidebarView = vscode.window.registerWebviewViewProvider(
         PerformanceSidebarProvider.viewType,
@@ -162,7 +162,7 @@ export async function activate(context: vscode.ExtensionContext) {
             }
         }
     );
-    
+
     context.subscriptions.push(performanceSidebarView);
 
     // 注册 CSV 编辑器提供者
@@ -177,7 +177,7 @@ export async function activate(context: vscode.ExtensionContext) {
             supportsMultipleEditorsPerDocument: false
         }
     );
-    
+
     context.subscriptions.push(csvEditorRegistration);
 
     // 注册打开 CSV 文件的命令
@@ -207,7 +207,7 @@ export async function activate(context: vscode.ExtensionContext) {
  * 国际化
  */
 async function initI18n() {
-  i18next.init({
+  await i18next.init({
     resources: i18nResource,
     lng: vscode.env.language,
     interpolation: { escapeValue: false },
@@ -218,9 +218,7 @@ async function initI18n() {
  * 接口
  */
 function initApiServer() {
-  return new ApiServer({
-    // TODO 接口配置
-  });
+  return new ApiServer(apis);
 }
 
 /**

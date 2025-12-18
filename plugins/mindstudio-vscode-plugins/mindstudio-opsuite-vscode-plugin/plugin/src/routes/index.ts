@@ -1,3 +1,3 @@
 import { ViewRouteRaw } from 'plugin:/core/view/ViewRouter';
 
-export const routes: ViewRouteRaw[] = [{ path: 'config', title: '算子配置' }];
+export const routes: ViewRouteRaw[] = [{ path: 'ops-config', title: '算子配置' }];

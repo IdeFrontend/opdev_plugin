@@ -6,6 +6,10 @@ import { toRaw } from 'vue';
  * @param visitedObjects 递归过程中已访问的对象和数组
  */
 export function deepToRaw<T>(maybeProxy: T, visitedObjects = new WeakSet<any>()): T {
+  if (maybeProxy === undefined) {
+    return maybeProxy;
+  }
+
   const raw = toRaw(maybeProxy);
 
   // 循环依赖
