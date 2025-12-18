@@ -106,7 +106,8 @@ export default class OpsOption {
 
   async getBuildConfigs() {
     const project_id = this.projectId;
-    const [opConfig, exampleConfig] = await Promise.all([getConfig(Number(project_id), 'build_op'), getConfig(Number(project_id), 'build_example')]);
+    const array = [getConfig(Number(project_id), 'build_op'), getConfig(Number(project_id), 'build_example'), getConfig(Number(project_id), 'simulate'), getConfig(Number(project_id), 'on_board')]
+    const [opConfig, exampleConfig] = await Promise.all(array);
     return [...opConfig, ...exampleConfig];
   }
 
@@ -124,6 +125,14 @@ export default class OpsOption {
     } catch {
       vscode.window.showErrorMessage(`保存编译配置失败`);
     }
+  }
+
+  async saveConfig(type: string, data: any, showMessage: boolean = true) {
+      // 仿真/上板保存
+      await postConfig(type, data);
+      if (!showMessage) {
+        vscode.window.showInformationMessage(`保存配置成功`);
+      }
   }
 
   async startBuild(config_id?: string) {

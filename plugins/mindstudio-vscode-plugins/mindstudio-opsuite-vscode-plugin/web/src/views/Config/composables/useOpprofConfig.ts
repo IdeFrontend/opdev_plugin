@@ -224,6 +224,11 @@ export function useOpprofConfig() {
     });
   };
 
+  const initSimulate = (data:any) => {
+    console.log('simulationData', data)
+    Object.assign(simulationData, data)
+  }
+
   return {
     activeTab,
     simulationData,

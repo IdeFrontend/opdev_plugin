@@ -109,7 +109,6 @@ export function getCommand(config_id: number, example_config_id: number) {
   }
   let soc = soc_version;
   const operator = getOpByProjectIdAndOpName(config.project_id as number, config.op as string)!;
-  // const build_cmd = `${config.script || ''} ${config.custom_options || ''}`.trim();
-  const build_cmd = 'msprof op simulator'
-  return `${build_cmd} --soc-version=${soc} --output=${operator.op_path}/.vscode/opprof ${exConfig.target_file} --aic-metrics=`
+  console.log('command operator', operator)
+  return `msprof op simulator --soc-version=${soc} --output=${operator.op_path}/.vscode/opprof ${exConfig.target_file} --aic-metrics=`
 }

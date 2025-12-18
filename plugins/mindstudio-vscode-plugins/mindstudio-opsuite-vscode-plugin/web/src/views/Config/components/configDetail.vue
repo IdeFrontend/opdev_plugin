@@ -8,6 +8,8 @@
 import buildConfig from "./buildConfig.vue";
 import sanitizerConfig from "./sanitizerConfig.vue";
 import opprofConfig from "./opprofConfig.vue";
+import { useOpprofConfig } from "../composables/useOpprofConfig";
+
 import { ref } from "vue";
 const props = defineProps({
   activeOption: {
@@ -20,6 +22,8 @@ const props = defineProps({
   },
 });
 
+const { initSimulate } = useOpprofConfig()
+
 const buildConfigForme = ref({});
 const exampleConfigForme = ref({});
 const buildConfigId = ref("");
@@ -27,8 +31,9 @@ const exampleConfigId = ref("");
 
 const init = (obj) => {
   const ConfigData = obj
-  console.log(ConfigData, props.activeConfig, ConfigData[props.activeConfig]);
+  console.log('配置数据', ConfigData, props.activeConfig, ConfigData[props.activeConfig]);
 
+  // 编译算子表单数据
   const buildConfigData = ConfigData[props.activeConfig].find(
     (v) => v.config_type === "build_op"
   );
@@ -37,21 +42,18 @@ const init = (obj) => {
   if (!buildConfigForme.value.advance_param) {
     buildConfigForme.value.advance_param = [];
   }
-
   buildConfigForme.value.advance_param =
     buildConfigForme.value.advance_param.map((v, i) => {
       v.key = i;
       return v;
     });
 
+  // 编译example表单数据
   const exampleConfigData = ConfigData[props.activeConfig].find(
     (v) => v.config_type === "build_example"
   );
   exampleConfigForme.value = exampleConfigData.user_options;
   exampleConfigId.value = exampleConfigData.config_id;
-
-  console.log(exampleConfigForme.value);
-
   if (!exampleConfigForme.value.advance_param) {
     exampleConfigForme.value.advance_param = [];
   }
@@ -60,6 +62,12 @@ const init = (obj) => {
       v.key = i;
       return v;
     });
+
+  // 仿真数据
+  const simulateConfigData = ConfigData[props.activeConfig].find(
+    (v) => v.config_type === "simulate"
+  );
+  initSimulate(simulateConfigData)
 };
 
 const addBuildTableItem = () => {
