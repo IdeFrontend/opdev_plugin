@@ -294,8 +294,10 @@ const webviewMessageList: messageItem[] = [
         console.log('服务器上执行');
         const executor = new CommandExecutor();
         await executor.execute(`mkdir  ${message.projectPath}/${message.projectName}`, ['File exists']);
-        await executor.execute(`chmod +x ${message.projectSH}`);
-        await executor.execute(`${message.projectSH}`);
+        if (message.projectSH) {
+          await executor.execute(`chmod +x ${message.projectSH}`);
+          await executor.execute(`${message.projectSH}`);
+        }
         const opsOption = new OpsOption(that.context);
         await opsOption.init(message.projectSH, message.projectPath, message.projectName);
         await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(`${message.projectPath}/${message.projectName}`));
@@ -429,20 +431,20 @@ const webviewMessageList: messageItem[] = [
       try {
         const uri = vscode.Uri.file(csvPath);
         const targetDir = path.dirname(csvPath).toLowerCase(); // 使用小写进行比较，避免路径大小写问题
-        
+
         // 检查是否有相同目录的文件已经打开
         const existingUri = openedCsvDirectories.get(targetDir);
-        
+
         // 先打开新文件（使用自定义编辑器），这样新文件会立即显示
         // 使用 openWith 命令，VSCode 会自动处理，不会闪现源文件
         await vscode.commands.executeCommand('vscode.openWith', uri, 'csvViewer');
-        
+
         // 如果相同目录的不同文件已打开，在新文件打开后关闭旧文件
         // 这样新文件已经显示，关闭旧文件时不会闪现源文件
         if (existingUri && existingUri.fsPath !== csvPath) {
           // 等待新文件完全打开
           await new Promise(resolve => setTimeout(resolve, 300));
-          
+
           // 尝试关闭旧文件
           // 检查当前打开的文本编辑器，找到旧文件并关闭
           const visibleEditors = vscode.window.visibleTextEditors;
@@ -455,7 +457,7 @@ const webviewMessageList: messageItem[] = [
             }
           }
         }
-        
+
         // 记录已打开的目录
         openedCsvDirectories.set(targetDir, uri);
       } catch (error) {
@@ -494,11 +496,11 @@ const webviewMessageList: messageItem[] = [
 
       // 使用 filePath 优先，如果没有则使用 nodeKey
       const remoteFilePath = filePath || nodeKey;
-      
+
       try {
         // 检查是否在远程环境中
         const isRemote = vscode.env.remoteName !== undefined;
-        
+
         if (!isRemote) {
           vscode.window.showWarningMessage('此功能需要在远程 SSH 连接环境中使用');
           return;
@@ -514,7 +516,7 @@ const webviewMessageList: messageItem[] = [
 
           // 创建远程文件 URI
           const remoteFileUri = vscode.Uri.file(remoteFilePath);
-          
+
           // 检查远程文件是否存在
           try {
             const stat = await vscode.workspace.fs.stat(remoteFileUri);
@@ -527,12 +529,12 @@ const webviewMessageList: messageItem[] = [
           // 读取远程文件内容
           progress.report({ increment: 40, message: '正在读取文件内容...' });
           const fileData = await vscode.workspace.fs.readFile(remoteFileUri);
-          
+
           // 获取文件名
           const fileName = path.basename(remoteFilePath);
-          
+
           progress.report({ increment: 60, message: '请选择保存位置...' });
-          
+
           // 让用户选择本地保存位置
           // 在 remote-ssh 场景下，showSaveDialog 会自动打开本地文件保存对话框
           const localFileUri = await vscode.window.showSaveDialog({
@@ -551,7 +553,7 @@ const webviewMessageList: messageItem[] = [
           // 将文件内容写入本地
           progress.report({ increment: 80, message: '正在保存文件...' });
           await vscode.workspace.fs.writeFile(localFileUri, fileData);
-          
+
           progress.report({ increment: 100, message: '下载完成' });
           vscode.window.showInformationMessage(`文件已成功下载到: ${localFileUri.fsPath}`);
         });
