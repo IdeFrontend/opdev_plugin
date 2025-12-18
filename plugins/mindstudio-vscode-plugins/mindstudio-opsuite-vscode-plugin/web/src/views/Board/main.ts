@@ -11,17 +11,8 @@ const getProjectIdItem: messageItem = {
 
 let isInitRun =false
 
-const getBuildConfigItem: messageItem = {
-    command: 'iframeSetBuildConfigItem',
-    callback: (message: any) => { localStorage.setItem('buildConfig', message.data); init(); }
-}
-
-message.addMessageListener(getBuildConfigItem)
 message.addMessageListener(getProjectIdItem)
 message.sendMessageToParent({ command: 'vscodeGetProjectIdBoard' });
-message.sendMessageToParent({ command: 'vscodeGetBuildConfigBoard' });
-
-
 
 let vscode = null;
 //@ts-ignore
@@ -53,3 +44,12 @@ function init() {
     createApp(App).use(antd).mount('#app')
     isInitRun=true;
 }
+
+//@ts-ignore
+console.log(JSON.stringify(window?.chrome) !== '{}')
+//@ts-ignore
+if (JSON.stringify(window?.chrome) !== '{}') {
+    init()
+}
+
+init()

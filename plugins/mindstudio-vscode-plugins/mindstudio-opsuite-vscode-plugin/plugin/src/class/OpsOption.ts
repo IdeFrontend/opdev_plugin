@@ -97,6 +97,10 @@ export default class OpsOption {
 
   async getConfigData() {
     const buildConfigs = await this.getBuildConfigs();
+    console.log('buildConfigs', buildConfigs)
+    if (!buildConfigs.length) {
+      return {}
+    }
     return { [buildConfigs[0].config_name]: buildConfigs };
   }
 
@@ -179,28 +183,22 @@ export default class OpsOption {
   }
 
   async getBuildConfig() {
-    let buildConfigId = this.storage.get('buildConfigId', '');
-    if (!buildConfigId) {
       try {
         const configData = await this.getBuildConfigs();
+        console.log('configData in build', configData)
         return configData.find((v: any) => v.config_type === 'build_op')?.config_id;
       } catch {
-        return buildConfigId;
+        return '';
       }
-    }
-    return buildConfigId;
   }
 
   async getBuildExampleConfig() {
-    let exampleConfigId = this.storage.get('exampleConfigId', '');
-    if (!exampleConfigId) {
       try {
         const configData = await this.getBuildConfigs();
+        console.log('configData in exam', configData)
         return configData.find((v: any) => v.config_type === 'build_example')?.config_id;
       } catch {
-        return exampleConfigId;
+        return ''
       }
-    }
-    return exampleConfigId;
   }
 }
