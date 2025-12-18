@@ -342,7 +342,7 @@ defineExpose({
       >
         <a-form-item name="projectPath">
           <template #label>
-            <span>算子工程位置<span style="color: #ff4d4f; margin-left: 4px">*</span></span>
+            <span>算子工程位置</span>
           </template>
           <a-auto-complete
             v-model:value="projectFormData.projectPath"
@@ -356,7 +356,7 @@ defineExpose({
 
         <a-form-item name="projectName">
           <template #label>
-            <span>算子工程名称<span style="color: #ff4d4f; margin-left: 4px">*</span></span>
+            <span>算子工程名称</span>
           </template>
           <a-input
             v-model:value="projectFormData.projectName"
