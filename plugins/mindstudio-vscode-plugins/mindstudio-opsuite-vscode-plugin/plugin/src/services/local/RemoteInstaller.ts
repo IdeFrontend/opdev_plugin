@@ -1,4 +1,3 @@
-import { ReadableStream } from 'node:stream/web';
 import { ExtensionConfig } from '../ExtensionConfig';
 import DirectoryZipper from './DirectoryZipper';
 import RemoteServer, { RemoteServerConfig } from './RemoteServer';

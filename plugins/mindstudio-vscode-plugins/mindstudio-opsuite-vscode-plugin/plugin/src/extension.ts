@@ -39,7 +39,7 @@ export async function activate(context: vscode.ExtensionContext) {
   new PermanentStorage(context);
 
   // 初始化新建算子工程的Webview
-  const createOpsProvider = new WebviewProvider(context);
+  const createOpsProvider = new WebviewProvider(context, apiServer);
 
   // 初始化配置页面的Webview
   const configProvider = new WebviewProvider(context);

@@ -8,11 +8,8 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 
-import { RemoteInstaller } from 'plugin:/services/local/RemoteInstaller';
-
 import { RemoteServerOpener } from './RemoteServerOpener';
 import RemoteServer from '../services/local/RemoteServer';
-import DirectoryZipper from '../services/local/DirectoryZipper';
 import packageJson from '../../../package.json';
 import { CommandExecutor } from './CommandOptions';
 import OpsOption from './OpsOption';
@@ -282,29 +279,6 @@ const webviewMessageList: messageItem[] = [
     },
   },
   {
-    command: 'vscodeInstallServer',
-    callback: async (msg: any, that: any) => {
-      const message = msg.message;
-      const installer = new RemoteInstaller(message);
-      const stream = installer.installOnRemoteServer();
-      const reader = stream.getReader();
-      let res = await reader.read();
-      while (res.done === false) {
-        that.panel.webview.postMessage({
-          command: 'iframeSetSSHLoading',
-          data: res.value,
-        });
-        res = await reader.read();
-      }
-
-      setTimeout(() => {
-        that.panel.webview.postMessage({
-          command: 'iframePluginInstallEnd',
-        });
-      }, 500);
-    },
-  },
-  {
     command: 'vscodeCreatedProject',
     callback: async (msg: any, that: any) => {
       const message = msg.message.data;
@@ -440,6 +414,7 @@ const webviewMessageList: messageItem[] = [
       const opsOption = new OpsOption(that.context);
       await opsOption.init();
       await opsOption.createOpsByPrototype('', data);
+      vscode.commands.executeCommand('workbench.action.closeActiveEditor');
     },
   },
   {
