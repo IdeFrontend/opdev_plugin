@@ -414,6 +414,7 @@ const webviewMessageList: messageItem[] = [
       const opsOption = new OpsOption(that.context);
       await opsOption.init();
       await opsOption.createOpsByPrototype('', data);
+      vscode.commands.executeCommand('workbench.action.closeActiveEditor');
     },
   },
   {

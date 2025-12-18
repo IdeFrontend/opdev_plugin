@@ -51,17 +51,29 @@ const CPP_KEYWORDS = [
   'volatile', 'wchar_t', 'while', 'xor', 'xor_eq'
 ];
 
+// 生成默认算子工程名称 op_XXXXXX（随机六位数字）
+const generateDefaultProjectName = () => {
+  const num = Math.floor(100000 + Math.random() * 900000);
+  return `op_${num}`;
+};
+
 // 表单数据
 const projectFormData = reactive({
-  projectPath: isRemote.value ? getLocalData("userInfo")?.homedir || "/home" : "",
-  projectName: "",
+  // 算子工程位置默认值
+  projectPath: "/home",
+  // 算子工程名称默认值
+  projectName: generateDefaultProjectName(),
+  // 环境变量配置脚本默认值
   projectSH: "",
 });
 
 // 表单校验规则
 const connectionFormRules = {
+  projectPath: [
+    { required: true, message: '请输入算子工程位置', trigger: 'blur' }
+  ],
   projectName: [
-    { required: true, message: '请输入工程名称', trigger: 'blur' },
+    { required: true, message: '请输入算子工程名称', trigger: 'blur' },
     {
       validator: (rule, value) => {
         if (!value) {
@@ -69,15 +81,15 @@ const connectionFormRules = {
         }
         // 规则1: 只能使用字母、数字和下划线
         if (!/^[a-zA-Z0-9_]+$/.test(value)) {
-          return Promise.reject('工程名称只能包含字母、数字和下划线');
+          return Promise.reject('算子工程名称只能包含字母、数字和下划线');
         }
         // 规则2: 首字母必须是字母
         if (!/^[a-zA-Z]/.test(value)) {
-          return Promise.reject('工程名称必须以字母开头');
+          return Promise.reject('算子工程名称必须以字母开头');
         }
         // 规则3: 不能是C++关键字
         if (CPP_KEYWORDS.includes(value.toLowerCase())) {
-          return Promise.reject('工程名称不能是C++关键字');
+          return Promise.reject('算子工程名称不能是C++关键字');
         }
         return Promise.resolve();
       },
@@ -178,28 +190,28 @@ const connectSuccess = () => {
   emit("connected");
 };
 
-// 校验工程名称
+// 校验算子工程名称
 const validateProjectName = (projectName) => {
   if (!projectName || projectName.trim() === '') {
-    antdMessage.error('请输入工程名称');
+    antdMessage.error('请输入算子工程名称');
     return false;
   }
 
   // 规则1: 只能使用字母、数字和下划线
   if (!/^[a-zA-Z0-9_]+$/.test(projectName)) {
-    antdMessage.error('工程名称只能包含字母、数字和下划线');
+    antdMessage.error('算子工程名称只能包含字母、数字和下划线');
     return false;
   }
 
   // 规则2: 首字母必须是字母
   if (!/^[a-zA-Z]/.test(projectName)) {
-    antdMessage.error('工程名称必须以字母开头');
+    antdMessage.error('算子工程名称必须以字母开头');
     return false;
   }
 
   // 规则3: 不能是C++关键字
   if (CPP_KEYWORDS.includes(projectName.toLowerCase())) {
-    antdMessage.error('工程名称不能是C++关键字');
+    antdMessage.error('算子工程名称不能是C++关键字');
     return false;
   }
 
@@ -214,7 +226,7 @@ const createdProject = async () => {
     return;
   }
 
-  // 再次校验工程名称（双重校验确保）
+  // 再次校验算子工程名称（双重校验确保）
   if (!validateProjectName(projectFormData.projectName)) {
     return;
   }
@@ -322,7 +334,10 @@ defineExpose({
         :rules="connectionFormRules"
         layout="vertical"
       >
-        <a-form-item label="工程位置" name="userName">
+        <a-form-item name="projectPath">
+          <template #label>
+            <span>算子工程位置</span>
+          </template>
           <a-auto-complete
             v-model:value="projectFormData.projectPath"
             :options="projectPathOptions"
@@ -333,10 +348,13 @@ defineExpose({
           />
         </a-form-item>
 
-        <a-form-item label="工程名称" name="projectName">
+        <a-form-item name="projectName">
+          <template #label>
+            <span>算子工程名称</span>
+          </template>
           <a-input
             v-model:value="projectFormData.projectName"
-            placeholder="请输入工程名称（只能包含字母、数字和下划线，必须以字母开头）"
+            placeholder="请输入算子工程名称（只能包含字母、数字和下划线，必须以字母开头）"
           />
         </a-form-item>
         <a-form-item label="环境变量配置脚本" name="ipAddress">

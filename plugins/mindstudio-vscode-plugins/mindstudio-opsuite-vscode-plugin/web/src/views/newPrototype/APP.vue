@@ -57,39 +57,6 @@
           </a-descriptions-item>
         </a-descriptions>
       </div>
-      <!-- <div v-if="jsonContent" class="json-preview">
-        <a-divider>JSON内容预览（前500字符）</a-divider>
-        <a-alert
-          v-if="isValidJSON"
-          message="JSON格式验证通过"
-          type="success"
-          show-icon
-          style="margin-bottom: 12px;"
-        />
-        <a-alert
-          v-else
-          message="JSON格式错误"
-          type="error"
-          show-icon
-          style="margin-bottom: 12px;"
-        />
-        <a-textarea
-          :value="previewContent"
-          readonly
-          :rows="6"
-          placeholder="JSON内容将在这里显示..."
-        />
-        <div class="action-buttons">
-          <a-button 
-            type="primary" 
-            @click="printToConsole"
-            :disabled="!isValidJSON"
-            style="margin-right: 8px;"
-          >
-            <printer-outlined /> 打印到控制台
-          </a-button>
-        </div>
-      </div> -->
         </div>
       </div>
       <div class="link-row">
