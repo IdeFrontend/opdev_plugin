@@ -203,6 +203,11 @@ export async function activate(context: vscode.ExtensionContext) {
     });
 
     context.subscriptions.push(openCsvCommand);
+    // 自动显示算子一站式交付平台的活动栏视图
+    // 延迟执行，确保视图已经注册完成
+    setTimeout(() => {
+      vscode.commands.executeCommand('workbench.view.extension.mindstudio-opssuite-vscode-plugin');
+    }, 500);
 }
 
 /**

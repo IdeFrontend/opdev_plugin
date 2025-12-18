@@ -128,8 +128,8 @@ const connected = () => {
 
 <style lang="less">
 #app {
-  width: 100%;
-  margin: 0 auto 0 10px;
+  width: 100% !important;
+  margin: 0 auto 0 10px !important;
   padding: 2rem;
   text-align: left;
   height: 100vh;
