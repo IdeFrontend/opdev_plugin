@@ -1,8 +1,15 @@
+import { get } from 'axios';
 import * as vscode from 'vscode';
 
 export interface ViewRouteRaw {
+  /** 路由路径 */
   path: string;
-  title: string;
+
+  /** 页面标题 */
+  title?: string;
+
+  /** vscode固定视图类型，extension启动时自动注册 */
+  providerViewType?: string;
 }
 
 export class ViewRouter extends vscode.Disposable {
@@ -21,6 +28,13 @@ export class ViewRouter extends vscode.Disposable {
    */
   public getRaw(path: string): ViewRouteRaw | undefined {
     return this.routeRawMap.get(path);
+  }
+
+  /**
+   *  获取所有注册了Provider的路由
+   */
+  public getAllProviderRaws(): ViewRouteRaw[] {
+    return Array.from(this.routeRawMap.values()).filter((route) => route.providerViewType);
   }
 
   /**
