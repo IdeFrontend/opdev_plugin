@@ -27,16 +27,21 @@ function createExtensionRequest(): ExtensionRequest {
 
   const pendingRequests = new Map<string, PendingRequest>();
 
-  receive(({ requestId, statusCode, data, error }) => {
+  receive(({ requestId, statusCode, isStream, data, error }) => {
     if (!pendingRequests.has(requestId)) {
       return;
     }
     if (statusCode === 200) {
-      pendingRequests.get(requestId)?.success(data);
+      if (isStream) {
+        handleStreamResponse(requestId, data as ReadableStreamReadResult<unknown>, pendingRequests);
+      } else {
+        pendingRequests.get(requestId)?.success(data);
+        pendingRequests.delete(requestId);
+      }
     } else {
       pendingRequests.get(requestId)?.error(statusCode, error ? recoverFromMessageError(error) : new Error('unknown error'));
+      pendingRequests.delete(requestId);
     }
-    pendingRequests.delete(requestId);
   });
 
   return {
@@ -60,6 +65,33 @@ function createExtensionRequest(): ExtensionRequest {
       });
     },
   };
+}
+
+const pendingStreams = new Map<string, ReadableStreamDefaultController<any>>();
+/**
+ * 流式传输返回
+ * @description 先返回一个ReadableStream，后续消息写入ReadableStream
+ */
+function handleStreamResponse(
+  requestId: string,
+  result: ReadableStreamReadResult<unknown>,
+  pendingRequests: Map<string, PendingRequest>,
+): void {
+  if (!pendingStreams.has(requestId)) {
+    const stream = new ReadableStream({
+      start(controller) {
+        pendingStreams.set(requestId, controller);
+      },
+    });
+    pendingRequests.get(requestId)?.success(stream);
+  }
+  if (result.done) {
+    pendingStreams.get(requestId)?.close();
+    pendingStreams.delete(requestId);
+    pendingRequests.delete(requestId);
+  } else {
+    pendingStreams.get(requestId)?.enqueue(result.value);
+  }
 }
 
 function recoverFromMessageError(messageError: NonNullable<ResponseMessage['error']>): Error {

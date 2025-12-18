@@ -12,6 +12,7 @@ import * as vscode from 'vscode';
 import { PermanentStorage } from './PermanentStorage'
 import webviewMessageList from './WebviewMessageList'
 import { HtmlTransformer } from './HtmlTransformer'
+import { ApiServer } from 'plugin:/core/ApiServer';
 
 
 /**
@@ -27,7 +28,7 @@ export class WebviewProvider {
     private context: vscode.ExtensionContext;
     private userInfo: os.UserInfo<string | Number>;
 
-    constructor(context: vscode.ExtensionContext) {
+    constructor(context: vscode.ExtensionContext, private apiServer?: ApiServer) {
         this.storage = new PermanentStorage(context);
         this.context = context;
         this.isRemote = vscode.env.remoteName !== undefined;
@@ -111,6 +112,8 @@ export class WebviewProvider {
                     retainContextWhenHidden: true,
                 }
             );
+
+            this.apiServer?.addWebview(router, this.panel.webview);
 
             // 设置Webview内容
             await this.updateWebviewContent(router);

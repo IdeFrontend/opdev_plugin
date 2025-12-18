@@ -11,6 +11,7 @@ import { getLocalData, setLoaclData } from "../../../untils/index";
 import { message } from "../../../untils/Message";
 import { message as antdMessage } from "ant-design-vue";
 import multiStepModal from "./multiStepModal.vue";
+import { installRemoteExtension } from "@/apis";
 
 const emit = defineEmits(["connected"]);
 
@@ -89,12 +90,6 @@ const buttonText = ref("确认");
 const rateNumber = ref(0);
 const maxRate = ref(10);
 
-const SSHLoadingMessageItem = {
-  command: "iframeSetSSHLoading",
-  callback: (message) => (maxRate.value = message.data),
-};
-
-message.addMessageListener(SSHLoadingMessageItem);
 message.addMessageListener({
   command: "iframeRemoteSearchResult",
   callback: (resp) => {
@@ -123,7 +118,6 @@ const addRateLoop = () => {
     }, 50);
   } else {
     rateNumber.value = 100;
-    message.deleteMessageListener("iframeSetSSHLoading");
   }
 };
 
@@ -157,14 +151,14 @@ const connectSSH = () => {
   linkType.value = "link";
   addRateLoop();
 
-  message.addMessageListener({
-    command: "iframePluginInstallEnd",
-    callback: connectSuccess,
-  });
-
-  message.sendMessageToParent({
-    command: "vscodeInstallServer",
-    ...selectedRow.value,
+  installRemoteExtension(selectedRow.value).then(async (installStream) => {
+    const reader = installStream.getReader();
+    let result = await reader.read();
+    while (!result.done) {
+      maxRate.value = result.value;
+      result = await reader.read();
+    }
+    connectSuccess();
   });
 };
 

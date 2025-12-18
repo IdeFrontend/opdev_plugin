@@ -27,6 +27,7 @@ export interface ResponseMessage {
   requestId: string;
   statusCode: 200 | 404 | 500 | null;
   message: string;
+  isStream?: boolean;
   data?: unknown;
   error?: { name: string; message: string; stack: string };
 }
@@ -82,7 +83,11 @@ export class ApiServer extends vscode.Disposable {
       }
       try {
         const resData = await currentApi(data);
-        this.resSuccess(webview, requestMessage, resData);
+        if (resData instanceof ReadableStream) {
+          this.resStream(webview, requestMessage, resData);
+        } else {
+          this.resSuccess(webview, requestMessage, resData);
+        }
       } catch (e) {
         this.resServerError(webview, requestMessage, e as Error);
         throw e;
@@ -100,6 +105,31 @@ export class ApiServer extends vscode.Disposable {
       }
     }
     return apiOrGroup instanceof Function ? apiOrGroup : undefined;
+  }
+
+  /**
+   * 遍历数据流
+   * @param stream
+   * @param callback
+   * @returns
+   */
+  private resStream(webview: vscode.Webview, requestMessage: RequestMessage, stream: ReadableStream): void {
+    const reader = stream.getReader();
+    const readByChunk = () => {
+      reader.read().then((chunk) => {
+        this.connector.send(webview, {
+          ...this.makeBasicResponse(requestMessage),
+          statusCode: 200,
+          message: t('core.message.apiResponseSuccess'),
+          isStream: true,
+          data: chunk,
+        });
+        if (!chunk.done) {
+          readByChunk();
+        }
+      });
+    };
+    readByChunk();
   }
 
   private resSuccess(webview: vscode.Webview, requestMessage: RequestMessage, resData: unknown): void {
