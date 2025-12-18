@@ -12,6 +12,8 @@ import i18nResource from 'shared:/i18n';
 import { WebviewProvider } from './class/webviewProvider';
 import OpsOption from './class/OpsOption';
 import { CustomSidebarProvider } from './class/CustomSidebarProvider';
+import { PerformanceSidebarProvider } from './class/PerformanceSidebarProvider';
+import { CsvEditorProvider } from './class/CsvEditorProvider';
 import { ApiServer } from './core/ApiServer';
 import { PanelView } from './core/view/PanelView';
 import { routes } from './routes';
@@ -54,7 +56,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 注册打开Opsuite命令
   const ConfigCommand = vscode.commands.registerCommand('huawei-op-devtools.config', async () => {
-    // panelView.open('ops-config');
     configProvider.show('Config');
   });
 
@@ -81,12 +82,30 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   // 注册JSON编辑器按钮命令
-  const buttonCommand = vscode.commands.registerCommand('extension.jsonButtonAction', async (uri?: vscode.Uri) => {
-    if (uri) {
-      await opsOption.init();
-      opsOption.createOpsByPrototype(uri.fsPath);
+  // 注意：命令已在 package.json 中声明，这里注册处理逻辑
+  // 在开发模式下，如果扩展被热重载，可能会遇到命令已存在的错误
+  // 使用 try-catch 捕获并忽略该错误
+  let buttonCommand: vscode.Disposable;
+  try {
+    buttonCommand = vscode.commands.registerCommand('extension.jsonButtonAction', async (uri?: vscode.Uri) => {
+      if (uri) {
+        await opsOption.init();
+        opsOption.createOpsByPrototype(uri.fsPath);
+      }
+    });
+  } catch (error: any) {
+    // 捕获命令已存在的错误，这是开发模式下常见的情况
+    const errorMessage = error?.message || String(error);
+    if (errorMessage.includes('already exists') || errorMessage.includes('already registered')) {
+      console.warn('命令 extension.jsonButtonAction 已存在，使用现有命令');
+      // 创建一个虚拟的 Disposable，实际使用现有的命令
+      buttonCommand = { dispose: () => {} };
+    } else {
+      // 其他错误仍然抛出，但不会阻止扩展加载
+      console.error('注册命令 extension.jsonButtonAction 时发生未知错误:', errorMessage);
+      buttonCommand = { dispose: () => {} };
     }
-  });
+  }
 
   // 注册按钮到编辑器标题栏
   const button = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
@@ -129,6 +148,59 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   context.subscriptions.push(sidebarView);
+
+    // 创建性能调优侧边栏提供者
+    const performanceSidebarProvider = new PerformanceSidebarProvider(context);
+
+    // 注册性能调优WebView视图
+    const performanceSidebarView = vscode.window.registerWebviewViewProvider(
+        PerformanceSidebarProvider.viewType,
+        performanceSidebarProvider,
+        {
+            webviewOptions: {
+                retainContextWhenHidden: true // WebView隐藏时保持状态
+            }
+        }
+    );
+
+    context.subscriptions.push(performanceSidebarView);
+
+    // 注册 CSV 编辑器提供者
+    const csvEditorProvider = new CsvEditorProvider();
+    const csvEditorRegistration = vscode.window.registerCustomEditorProvider(
+        CsvEditorProvider.viewType,
+        csvEditorProvider,
+        {
+            webviewOptions: {
+                retainContextWhenHidden: true
+            },
+            supportsMultipleEditorsPerDocument: false
+        }
+    );
+
+    context.subscriptions.push(csvEditorRegistration);
+
+    // 注册打开 CSV 文件的命令
+    const openCsvCommand = vscode.commands.registerCommand('csv-viewer.openCsv', async () => {
+      // 方式1：让用户选择文件
+      const fileUri = await vscode.window.showOpenDialog({
+        canSelectFiles: true,
+        canSelectFolders: false,
+        canSelectMany: false,
+        openLabel: '打开',
+        filters: {
+          'CSV 文件': ['csv'],
+          '所有文件': ['*']
+        }
+      });
+
+      if (fileUri && fileUri[0]) {
+        // 使用自定义编辑器打开文件
+        await vscode.commands.executeCommand('vscode.openWith', fileUri[0], CsvEditorProvider.viewType);
+      }
+    });
+
+    context.subscriptions.push(openCsvCommand);
 }
 
 /**
