@@ -8,8 +8,12 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { spawn, ChildProcess } from 'child_process';
+import * as os from 'os';
+import { spawn, ChildProcess, exec } from 'child_process';
+import { promisify } from 'util';
 import { NodeWebviewSocketBridge } from './NodeWebviewSocketBridge';
+
+const execAsync = promisify(exec);
 
 export class InsightDataViewerPanel implements vscode.Disposable {
   private static currentPanel: InsightDataViewerPanel | undefined;
@@ -200,13 +204,125 @@ export class InsightDataViewerPanel implements vscode.Disposable {
   }
 
   /**
+   * 检测系统架构
+   */
+  private detectArchitecture(): 'x86' | 'arm' {
+    const arch = os.arch().toLowerCase();
+    // x86_64, ia32, x32, x64 等都属于 x86 架构
+    if (arch.includes('x64') || arch.includes('x86') || arch.includes('ia32') || arch === 'x32') {
+      return 'x86';
+    }
+    // arm64, aarch64, arm 等都属于 arm 架构
+    if (arch.includes('arm') || arch.includes('aarch')) {
+      return 'arm';
+    }
+    // 默认返回 x86（大多数情况）
+    console.warn(`未知架构: ${arch}，默认使用 x86`);
+    return 'x86';
+  }
+
+  /**
+   * 解压 zip 文件
+   */
+  private async extractZip(zipPath: string, extractTo: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      // 确保目标目录存在
+      if (!fs.existsSync(extractTo)) {
+        fs.mkdirSync(extractTo, { recursive: true });
+      }
+
+      // 根据平台选择解压命令
+      const platform = os.platform();
+      let command: string;
+
+      if (platform === 'win32') {
+        // Windows 使用 PowerShell 解压
+        command = `powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${extractTo}' -Force"`;
+      } else {
+        // Linux/Unix 使用 unzip 命令
+        command = `unzip -o "${zipPath}" -d "${extractTo}"`;
+      }
+
+      exec(command, (error, stdout, stderr) => {
+        if (error) {
+          console.error(`解压失败: ${error.message}`);
+          if (stderr) {
+            console.error(`stderr: ${stderr}`);
+          }
+          reject(new Error(`解压失败: ${error.message}`));
+          return;
+        }
+        console.log(`解压成功: ${zipPath} -> ${extractTo}`);
+        if (stdout) {
+          console.log(`解压输出: ${stdout}`);
+        }
+        resolve();
+      });
+    });
+  }
+
+  /**
+   * 确保 profiler_server 存在，如果不存在则解压对应的 zip 文件
+   */
+  private async ensureProfilerServerExists(): Promise<boolean> {
+    // 如果文件已存在，直接返回
+    if (fs.existsSync(this.serverPath)) {
+      return true;
+    }
+
+    const serverDir = path.dirname(this.serverPath);
+    const architecture = this.detectArchitecture();
+    const zipFileName = architecture === 'x86' ? 'server_x86.zip' : 'server_arm.zip';
+    const zipPath = path.join(serverDir, zipFileName);
+
+    // 检查 zip 文件是否存在
+    if (!fs.existsSync(zipPath)) {
+      vscode.window.showErrorMessage(
+        `profiler_server 不存在，且找不到对应的 zip 文件: ${zipPath}`
+      );
+      return false;
+    }
+
+    try {
+      // 显示进度信息
+      vscode.window.showInformationMessage(`正在解压 ${zipFileName}...`);
+
+      // 解压 zip 文件
+      await this.extractZip(zipPath, serverDir);
+
+      // 检查解压后文件是否存在
+      if (!fs.existsSync(this.serverPath)) {
+        vscode.window.showErrorMessage(
+          `解压完成，但 profiler_server 文件仍不存在: ${this.serverPath}`
+        );
+        return false;
+      }
+
+      // 设置执行权限
+      try {
+        fs.chmodSync(this.serverPath, 0o755);
+      } catch (chmodError) {
+        console.warn('设置执行权限失败:', chmodError);
+        // 在 Windows 上可能失败，但不影响执行
+      }
+
+      vscode.window.showInformationMessage(`成功解压并准备 profiler_server`);
+      return true;
+    } catch (error: any) {
+      vscode.window.showErrorMessage(`解压 ${zipFileName} 失败: ${error.message}`);
+      console.error('解压失败:', error);
+      return false;
+    }
+  }
+
+  /**
    * 启动 profiler_server
    */
   private async startProfilerServer(): Promise<void> {
     try {
-      // 检查 profiler_server 文件是否存在
-      if (!fs.existsSync(this.serverPath)) {
-        vscode.window.showErrorMessage(`profiler_server 文件不存在: ${this.serverPath}`);
+      // 确保 profiler_server 存在
+      const serverReady = await this.ensureProfilerServerExists();
+      if (!serverReady) {
         return;
       }
 
