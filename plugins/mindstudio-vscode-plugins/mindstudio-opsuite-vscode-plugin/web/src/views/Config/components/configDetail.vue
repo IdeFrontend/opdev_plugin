@@ -115,8 +115,9 @@ defineExpose({
 
 <style lang="less">
 .config-detial {
-  width: 750px;
-  overflow-y: scroll;
+  width: 100%;
+  max-width: 1000px;
+  overflow-y: auto;
   height: 100%;
   color: #ffffff;
   text-align: left;

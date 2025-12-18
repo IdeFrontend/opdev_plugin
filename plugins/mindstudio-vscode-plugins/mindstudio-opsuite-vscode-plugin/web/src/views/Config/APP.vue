@@ -41,8 +41,27 @@ onMounted(() => {
 <template>
   <a-config-provider :theme="themeConfig">
     <div class="config-ops">
-      <optionsList :activeConfig="activeConfig" @updateActiveOption="updateActiveOption" />
-      <configDetail :activeOption="activeOption" :activeConfig="activeConfig" ref="configDetailRef" />
+      <div class="config-header">
+        <div class="options-title">
+          算子工程配置
+        </div>
+      </div>
+      <div class="config-content">
+        <div class="config-sidebar">
+          <optionsList 
+            :activeConfig="activeConfig" 
+            :activeOption="activeOption"
+            @updateActiveOption="updateActiveOption" 
+          />
+        </div>
+        <div class="config-main">
+          <configDetail 
+            :activeOption="activeOption" 
+            :activeConfig="activeConfig" 
+            ref="configDetailRef" 
+          />
+        </div>
+      </div>
     </div>
   </a-config-provider>
 </template>
@@ -50,10 +69,44 @@ onMounted(() => {
 <style lang="less">
 .config-ops {
   width: 100%;
-  margin: 0 auto;
   height: 100%;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.config-header {
+  width: 100%;
+  padding: 20px;
+  box-shadow: 0px 2px 12px 0px rgba(0, 0, 0, 0.48);
+  z-index: 1;
+  
+  .options-title {
+    font-size: 22px;
+    font-weight: bold;
+    color: #ffffff;
+  }
+}
+
+.config-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  width: 100%;
+}
+
+.config-sidebar {
+  width: 163px;
+  min-width: 163px;
+  border-right: 1px solid #424242;
+  overflow: hidden;
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.config-main {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
   flex-direction: column;
 }
 </style>

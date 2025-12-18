@@ -7,13 +7,19 @@
 
 import * as vscode from 'vscode';
 import * as path from 'path';
+
+import { RemoteInstaller } from 'plugin:/services/local/RemoteInstaller';
+
 import { RemoteServerOpener } from './RemoteServerOpener';
-import RemoteServer from './RemoteServer';
-import DirectoryZipper from './DirectoryZipper';
+import RemoteServer from '../services/local/RemoteServer';
+import DirectoryZipper from '../services/local/DirectoryZipper';
 import packageJson from '../../../package.json';
 import { CommandExecutor } from './CommandOptions';
 import OpsOption from './OpsOption';
 import { SSHKeyAutoConfig } from './SSHKeyAutoConfig';
+
+// 跟踪已打开的CSV文件目录
+const openedCsvDirectories = new Map<string, vscode.Uri>();
 
 const tempObj = { currentActiveConfig: '' };
 
@@ -279,54 +285,17 @@ const webviewMessageList: messageItem[] = [
     command: 'vscodeInstallServer',
     callback: async (msg: any, that: any) => {
       const message = msg.message;
-      const server = new RemoteServer(message);
-      await server.connect();
-      const zipper = new DirectoryZipper();
-      const publisher = packageJson.publisher;
-      const extensionName = packageJson.name;
-      const version = packageJson.version;
-      const extensionsPath = '.vscode-server/extensions/';
-      const serviceFile = 'register_extension.sh';
-      const plugiExtensionsPath = `${extensionsPath}${publisher}.${extensionName}-${version}`;
-      const commandPath = `${plugiExtensionsPath}/out/shells`;
-
-      let cmdOut: any = {};
-      cmdOut = await server.executeCommand(`cd ${plugiExtensionsPath}`);
-      if (cmdOut.stderr && cmdOut.stderr.indexOf('No such file or directory') !== -1) {
-        zipper.setCurrentDirectory(__dirname);
+      const installer = new RemoteInstaller(message);
+      const stream = installer.installOnRemoteServer();
+      const reader = stream.getReader();
+      let res = await reader.read();
+      while (res.done === false) {
         that.panel.webview.postMessage({
           command: 'iframeSetSSHLoading',
-          data: 20,
+          data: res.value,
         });
-        let outputhPath = await zipper.findAndZipDirectory(`${publisher}.${extensionName}-${version}`, `${extensionName}.zip`);
-        if (!outputhPath) {
-          outputhPath = await zipper.findAndZipDirectory(`mindstudio-opsuite-vscode-plugin`, `${extensionName}.zip`);
-        }
-        that.panel.webview.postMessage({
-          command: 'iframeSetSSHLoading',
-          data: 50,
-        });
-        console.log('extensionsPath', extensionsPath);
-        console.log('outputhPath', outputhPath);
-        
-        await server.uploadFile(outputhPath, `/${extensionName}.zip`, extensionsPath);
-        that.panel.webview.postMessage({
-          command: 'iframeSetSSHLoading',
-          data: 80,
-        });
-        await server.unzipFile(`${extensionsPath}/${extensionName}.zip`, plugiExtensionsPath, { zipType: 'zip' });
-        that.panel.webview.postMessage({
-          command: 'iframeSetSSHLoading',
-          data: 90,
-        });
-        await server.executeCommand(`chmod +x  ./${serviceFile}`, commandPath);
-        await server.executeCommand(`./${serviceFile} ${publisher} ${extensionName} ${version}`, commandPath);
+        res = await reader.read();
       }
-
-      that.panel.webview.postMessage({
-        command: 'iframeSetSSHLoading',
-        data: 100,
-      });
 
       setTimeout(() => {
         that.panel.webview.postMessage({
@@ -406,8 +375,8 @@ const webviewMessageList: messageItem[] = [
         );
 
         if (!message.privateKey) {
-          const autoConfig = new SSHKeyAutoConfig(server)
-          await autoConfig.configureSSH(message)
+          const autoConfig = new SSHKeyAutoConfig(server);
+          await autoConfig.configureSSH(message);
         }
 
         const remoteOpener: RemoteServerOpener = new RemoteServerOpener();
@@ -472,6 +441,177 @@ const webviewMessageList: messageItem[] = [
       await opsOption.init();
       await opsOption.createOpsByPrototype('', data);
       vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+    },
+  },
+  {
+    command: 'vscodeOpenCsv',
+    callback: async (msg: any) => {
+      // 从消息中获取CSV路径，必须从前端传入
+      const csvPath = msg.message.data;
+      if (!csvPath) {
+        vscode.window.showErrorMessage('CSV文件路径不能为空');
+        return;
+      }
+      try {
+        const uri = vscode.Uri.file(csvPath);
+        const targetDir = path.dirname(csvPath).toLowerCase(); // 使用小写进行比较，避免路径大小写问题
+        
+        // 检查是否有相同目录的文件已经打开
+        const existingUri = openedCsvDirectories.get(targetDir);
+        
+        // 先打开新文件（使用自定义编辑器），这样新文件会立即显示
+        // 使用 openWith 命令，VSCode 会自动处理，不会闪现源文件
+        await vscode.commands.executeCommand('vscode.openWith', uri, 'csvViewer');
+        
+        // 如果相同目录的不同文件已打开，在新文件打开后关闭旧文件
+        // 这样新文件已经显示，关闭旧文件时不会闪现源文件
+        if (existingUri && existingUri.fsPath !== csvPath) {
+          // 等待新文件完全打开
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
+          // 尝试关闭旧文件
+          // 检查当前打开的文本编辑器，找到旧文件并关闭
+          const visibleEditors = vscode.window.visibleTextEditors;
+          for (const editor of visibleEditors) {
+            if (editor.document.uri.fsPath === existingUri.fsPath) {
+              // 切换到旧文件并关闭（此时新文件已经打开并显示，所以不会闪现）
+              await vscode.window.showTextDocument(editor.document, { preview: false });
+              await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+              break;
+            }
+          }
+        }
+        
+        // 记录已打开的目录
+        openedCsvDirectories.set(targetDir, uri);
+      } catch (error) {
+        vscode.window.showErrorMessage(`打开 CSV 文件失败: ${error}`);
+      }
+    },
+  },
+  {
+    command: 'vscodeinsigLoadData',
+    callback: async (msg: any) => {
+      // 从消息中获取BIN文件路径
+      const binPath = msg.message.data;
+      if (!binPath) {
+        vscode.window.showErrorMessage('BIN文件路径不能为空');
+        return;
+      }
+      try {
+        console.log('加载 BIN 文件:', binPath);
+        // 这里可以添加加载 BIN 文件的逻辑
+        // 例如：读取文件、解析数据等
+        vscode.window.showInformationMessage(`正在加载数据文件: ${binPath}`);
+      } catch (error) {
+        vscode.window.showErrorMessage(`加载数据文件失败: ${error}`);
+      }
+    },
+  },
+  {
+    command: 'vscodeDownloadData',
+    callback: async (msg: any) => {
+      // 从消息中获取文件路径和节点信息
+      const { filePath, nodeKey } = msg.message.data || {};
+      if (!filePath && !nodeKey) {
+        vscode.window.showErrorMessage('文件路径不能为空');
+        return;
+      }
+
+      // 使用 filePath 优先，如果没有则使用 nodeKey
+      const remoteFilePath = filePath || nodeKey;
+      
+      try {
+        // 检查是否在远程环境中
+        const isRemote = vscode.env.remoteName !== undefined;
+        
+        if (!isRemote) {
+          vscode.window.showWarningMessage('此功能需要在远程 SSH 连接环境中使用');
+          return;
+        }
+
+        // 显示下载进度
+        await vscode.window.withProgress({
+          location: vscode.ProgressLocation.Notification,
+          title: '正在下载文件',
+          cancellable: false
+        }, async (progress) => {
+          progress.report({ increment: 0, message: '正在读取远程文件...' });
+
+          // 创建远程文件 URI
+          const remoteFileUri = vscode.Uri.file(remoteFilePath);
+          
+          // 检查远程文件是否存在
+          try {
+            const stat = await vscode.workspace.fs.stat(remoteFileUri);
+            progress.report({ increment: 30, message: `文件大小: ${(stat.size / 1024).toFixed(2)} KB` });
+          } catch (error) {
+            vscode.window.showErrorMessage(`远程文件不存在: ${remoteFilePath}`);
+            return;
+          }
+
+          // 读取远程文件内容
+          progress.report({ increment: 40, message: '正在读取文件内容...' });
+          const fileData = await vscode.workspace.fs.readFile(remoteFileUri);
+          
+          // 获取文件名
+          const fileName = path.basename(remoteFilePath);
+          
+          progress.report({ increment: 60, message: '请选择保存位置...' });
+          
+          // 让用户选择本地保存位置
+          // 在 remote-ssh 场景下，showSaveDialog 会自动打开本地文件保存对话框
+          const localFileUri = await vscode.window.showSaveDialog({
+            defaultUri: vscode.Uri.file(fileName),
+            saveLabel: '保存',
+            filters: {
+              '所有文件': ['*']
+            }
+          });
+
+          if (!localFileUri) {
+            // 用户取消了保存对话框
+            return;
+          }
+
+          // 将文件内容写入本地
+          progress.report({ increment: 80, message: '正在保存文件...' });
+          await vscode.workspace.fs.writeFile(localFileUri, fileData);
+          
+          progress.report({ increment: 100, message: '下载完成' });
+          vscode.window.showInformationMessage(`文件已成功下载到: ${localFileUri.fsPath}`);
+        });
+      } catch (error: any) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage(`下载数据失败: ${errorMessage}`);
+        console.error('下载文件失败:', error);
+      }
+    },
+  },
+  {
+    command: 'vscodeDeleteNode',
+    callback: async (msg: any) => {
+      // 从消息中获取节点信息
+      const { nodeKey, filePath } = msg.message.data || {};
+      if (!nodeKey) {
+        vscode.window.showErrorMessage('节点信息不能为空');
+        return;
+      }
+      try {
+        // 确认删除
+        const result = await vscode.window.showWarningMessage(
+          `确定要删除 ${nodeKey} 吗？`,
+          '确定',
+          '取消'
+        );
+        if (result === '确定') {
+          console.log('删除节点:', nodeKey, filePath);
+          // 这里可以添加删除文件的逻辑
+          vscode.window.showInformationMessage(`已删除: ${nodeKey}`);
+        }
+      } catch (error) {
+        vscode.window.showErrorMessage(`删除节点失败: ${error}`);
+      }
     },
   },
 ];
