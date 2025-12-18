@@ -9,6 +9,7 @@ import { ref, reactive, onBeforeUnmount } from "vue";
 import { FolderOpenOutlined, RestOutlined } from "@ant-design/icons-vue";
 import { getLocalData, setLoaclData } from "../../../untils/index";
 import { message } from "../../../untils/Message";
+import { message as antdMessage } from "ant-design-vue";
 import multiStepModal from "./multiStepModal.vue";
 
 const emit = defineEmits(["connected"]);
@@ -28,11 +29,26 @@ const projectPathOptions = ref([]);
 const projectSHOptions = ref([]);
 const projectPathLoading = ref(false);
 const projectSHLoading = ref(false);
+const connectionFormRef = ref(null);
 const onSelectChange = (value) => {
   selectedRow.value = value;
 };
 
 const isRemote = ref(getLocalData("isRemote"));
+
+// C++ 关键字列表
+const CPP_KEYWORDS = [
+  'alignas', 'alignof', 'and', 'and_eq', 'asm', 'auto', 'bitand', 'bitor', 'bool', 'break',
+  'case', 'catch', 'char', 'char16_t', 'char32_t', 'class', 'compl', 'const', 'constexpr',
+  'const_cast', 'continue', 'decltype', 'default', 'delete', 'do', 'double', 'dynamic_cast',
+  'else', 'enum', 'explicit', 'export', 'extern', 'false', 'float', 'for', 'friend', 'goto',
+  'if', 'inline', 'int', 'long', 'mutable', 'namespace', 'new', 'noexcept', 'not', 'not_eq',
+  'nullptr', 'operator', 'or', 'or_eq', 'private', 'protected', 'public', 'register',
+  'reinterpret_cast', 'return', 'short', 'signed', 'sizeof', 'static', 'static_assert',
+  'static_cast', 'struct', 'switch', 'template', 'this', 'thread_local', 'throw', 'true',
+  'try', 'typedef', 'typeid', 'typename', 'union', 'unsigned', 'using', 'virtual', 'void',
+  'volatile', 'wchar_t', 'while', 'xor', 'xor_eq'
+];
 
 // 表单数据
 const projectFormData = reactive({
@@ -40,6 +56,34 @@ const projectFormData = reactive({
   projectName: "",
   projectSH: "",
 });
+
+// 表单校验规则
+const connectionFormRules = {
+  projectName: [
+    { required: true, message: '请输入工程名称', trigger: 'blur' },
+    {
+      validator: (rule, value) => {
+        if (!value) {
+          return Promise.resolve();
+        }
+        // 规则1: 只能使用字母、数字和下划线
+        if (!/^[a-zA-Z0-9_]+$/.test(value)) {
+          return Promise.reject('工程名称只能包含字母、数字和下划线');
+        }
+        // 规则2: 首字母必须是字母
+        if (!/^[a-zA-Z]/.test(value)) {
+          return Promise.reject('工程名称必须以字母开头');
+        }
+        // 规则3: 不能是C++关键字
+        if (CPP_KEYWORDS.includes(value.toLowerCase())) {
+          return Promise.reject('工程名称不能是C++关键字');
+        }
+        return Promise.resolve();
+      },
+      trigger: 'blur'
+    }
+  ]
+};
 
 const buttonText = ref("确认");
 const rateNumber = ref(0);
@@ -140,7 +184,47 @@ const connectSuccess = () => {
   emit("connected");
 };
 
-const createdProject = () => {
+// 校验工程名称
+const validateProjectName = (projectName) => {
+  if (!projectName || projectName.trim() === '') {
+    antdMessage.error('请输入工程名称');
+    return false;
+  }
+
+  // 规则1: 只能使用字母、数字和下划线
+  if (!/^[a-zA-Z0-9_]+$/.test(projectName)) {
+    antdMessage.error('工程名称只能包含字母、数字和下划线');
+    return false;
+  }
+
+  // 规则2: 首字母必须是字母
+  if (!/^[a-zA-Z]/.test(projectName)) {
+    antdMessage.error('工程名称必须以字母开头');
+    return false;
+  }
+
+  // 规则3: 不能是C++关键字
+  if (CPP_KEYWORDS.includes(projectName.toLowerCase())) {
+    antdMessage.error('工程名称不能是C++关键字');
+    return false;
+  }
+
+  return true;
+};
+
+const createdProject = async () => {
+  // 先进行表单校验
+  try {
+    await connectionFormRef.value.validate();
+  } catch (error) {
+    return;
+  }
+
+  // 再次校验工程名称（双重校验确保）
+  if (!validateProjectName(projectFormData.projectName)) {
+    return;
+  }
+
   message.sendMessageToParent({
     command: "vscodeCreatedProject",
     data: {
@@ -255,10 +339,10 @@ defineExpose({
           />
         </a-form-item>
 
-        <a-form-item label="工程名称" name="ipAddress">
+        <a-form-item label="工程名称" name="projectName">
           <a-input
             v-model:value="projectFormData.projectName"
-            placeholder="请输入工程名称"
+            placeholder="请输入工程名称（只能包含字母、数字和下划线，必须以字母开头）"
           />
         </a-form-item>
         <a-form-item label="环境变量配置脚本" name="ipAddress">
