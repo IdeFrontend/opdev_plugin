@@ -7,9 +7,12 @@
 
 import * as vscode from 'vscode';
 import * as path from 'path';
+
+import { RemoteInstaller } from 'plugin:/services/local/RemoteInstaller';
+
 import { RemoteServerOpener } from './RemoteServerOpener';
-import RemoteServer from './RemoteServer';
-import DirectoryZipper from './DirectoryZipper';
+import RemoteServer from '../services/local/RemoteServer';
+import DirectoryZipper from '../services/local/DirectoryZipper';
 import packageJson from '../../../package.json';
 import { CommandExecutor } from './CommandOptions';
 import OpsOption from './OpsOption';
@@ -282,54 +285,17 @@ const webviewMessageList: messageItem[] = [
     command: 'vscodeInstallServer',
     callback: async (msg: any, that: any) => {
       const message = msg.message;
-      const server = new RemoteServer(message);
-      await server.connect();
-      const zipper = new DirectoryZipper();
-      const publisher = packageJson.publisher;
-      const extensionName = packageJson.name;
-      const version = packageJson.version;
-      const extensionsPath = '.vscode-server/extensions/';
-      const serviceFile = 'register_extension.sh';
-      const plugiExtensionsPath = `${extensionsPath}${publisher}.${extensionName}-${version}`;
-      const commandPath = `${plugiExtensionsPath}/out/shells`;
-
-      let cmdOut: any = {};
-      cmdOut = await server.executeCommand(`cd ${plugiExtensionsPath}`);
-      if (cmdOut.stderr && cmdOut.stderr.indexOf('No such file or directory') !== -1) {
-        zipper.setCurrentDirectory(__dirname);
+      const installer = new RemoteInstaller(message);
+      const stream = installer.installOnRemoteServer();
+      const reader = stream.getReader();
+      let res = await reader.read();
+      while (res.done === false) {
         that.panel.webview.postMessage({
           command: 'iframeSetSSHLoading',
-          data: 20,
+          data: res.value,
         });
-        let outputhPath = await zipper.findAndZipDirectory(`${publisher}.${extensionName}-${version}`, `${extensionName}.zip`);
-        if (!outputhPath) {
-          outputhPath = await zipper.findAndZipDirectory(`mindstudio-opsuite-vscode-plugin`, `${extensionName}.zip`);
-        }
-        that.panel.webview.postMessage({
-          command: 'iframeSetSSHLoading',
-          data: 50,
-        });
-        console.log('extensionsPath', extensionsPath);
-        console.log('outputhPath', outputhPath);
-        
-        await server.uploadFile(outputhPath, `/${extensionName}.zip`, extensionsPath);
-        that.panel.webview.postMessage({
-          command: 'iframeSetSSHLoading',
-          data: 80,
-        });
-        await server.unzipFile(`${extensionsPath}/${extensionName}.zip`, plugiExtensionsPath, { zipType: 'zip' });
-        that.panel.webview.postMessage({
-          command: 'iframeSetSSHLoading',
-          data: 90,
-        });
-        await server.executeCommand(`chmod +x  ./${serviceFile}`, commandPath);
-        await server.executeCommand(`./${serviceFile} ${publisher} ${extensionName} ${version}`, commandPath);
+        res = await reader.read();
       }
-
-      that.panel.webview.postMessage({
-        command: 'iframeSetSSHLoading',
-        data: 100,
-      });
 
       setTimeout(() => {
         that.panel.webview.postMessage({
@@ -409,8 +375,8 @@ const webviewMessageList: messageItem[] = [
         );
 
         if (!message.privateKey) {
-          const autoConfig = new SSHKeyAutoConfig(server)
-          await autoConfig.configureSSH(message)
+          const autoConfig = new SSHKeyAutoConfig(server);
+          await autoConfig.configureSSH(message);
         }
 
         const remoteOpener: RemoteServerOpener = new RemoteServerOpener();

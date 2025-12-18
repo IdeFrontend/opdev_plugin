@@ -9,7 +9,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as archiver from 'archiver';
 import { ZlibOptions } from 'zlib'
-import * as vscode from 'vscode';
 
 
 export default class DirectoryZipper {
@@ -74,26 +73,6 @@ export default class DirectoryZipper {
         });
     }
 
-    /**
-     * 替代方案：使用更简洁的创建方式
-     */
-    private async createZipAlternative(sourceDir: string, outputPath: string): Promise<void> {
-        return new Promise((resolve, reject) => {
-            // 方法：直接创建 Archiver 实例
-            const archive = archiver.create('zip', {
-                zlib: { level: 9 }
-            });
-
-            const output = fs.createWriteStream(outputPath);
-
-            output.on('close', resolve);
-            archive.on('error', reject);
-
-            archive.pipe(output);
-            archive.directory(sourceDir, false);
-            archive.finalize();
-        });
-    }
 
     /**
      * 主方法：查找目录并压缩
@@ -127,7 +106,7 @@ export default class DirectoryZipper {
             await this.createZip(targetDir, outputPath);
 
             console.log(`成功将目录 ${targetDir} 压缩到 ${outputPath}`);
-            return path.dirname(targetDir);
+            return `${path.dirname(targetDir)}/`;
 
         } catch (error) {
             console.error('压缩过程中发生错误:', error);

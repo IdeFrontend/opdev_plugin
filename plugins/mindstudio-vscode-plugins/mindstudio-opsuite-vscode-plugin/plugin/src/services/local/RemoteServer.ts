@@ -114,8 +114,6 @@ export default class RemoteServer {
 
         const sftp = await this.getSFTP();
 
-        console.log('remotePath', remotePath);
-        
         return new Promise((resolve, reject) => {
 
             this.client.exec(`mkdir -p ${remotePath}`, (err: any) => {
@@ -127,7 +125,6 @@ export default class RemoteServer {
 
                 const remoteFilePath = path.posix.join(remotePath, fileName)
                 const localFilePath = `${localPath}${fileName}`
-
                 sftp.fastPut(localFilePath, remoteFilePath, (err: any) => {
                     if (err) {
                         throw new Error(`上传远程文件失败：${err}`);
