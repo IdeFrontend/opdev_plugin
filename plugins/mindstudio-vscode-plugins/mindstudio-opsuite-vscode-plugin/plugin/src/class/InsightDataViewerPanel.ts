@@ -105,7 +105,9 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     this.panel.webview.html = htmlContent;
 
     // 使用 NodeWebviewSocketBridge 处理 WebSocket 桥接
+    console.log('[InsightDataViewerPanel] 初始化 NodeWebviewSocketBridge');
     this.socketBridge = new NodeWebviewSocketBridge(this.panel.webview);
+    console.log('[InsightDataViewerPanel] NodeWebviewSocketBridge 初始化完成');
 
     // 发送 bin 文件路径
     setTimeout(() => {
@@ -188,7 +190,21 @@ export class InsightDataViewerPanel implements vscode.Disposable {
    * 处理来自 webview 的消息
    */
   private handleWebviewMessage(message: any): void {
-    console.log('[InsightDataViewerPanel] 收到 webview 消息:', message);
+    console.log('[InsightDataViewerPanel] 收到 webview 消息:', JSON.stringify(message, null, 2));
+    
+    // 检查是否是 WebSocket 桥接消息（这些消息应该由 NodeWebviewSocketBridge 处理）
+    if (message.type && (message.type === 'ws:open' || message.type === 'ws:send' || message.type === 'ws:close')) {
+      console.log(`[InsightDataViewerPanel] 检测到 WebSocket 桥接消息，应该由 NodeWebviewSocketBridge 处理:`, message.type);
+      // 这些消息会被 NodeWebviewSocketBridge 的 handleMessage 处理
+      // 但我们需要确保消息能正确传递过去
+      if (this.socketBridge) {
+        console.log('[InsightDataViewerPanel] NodeWebviewSocketBridge 已初始化，消息应该会被处理');
+      } else {
+        console.error('[InsightDataViewerPanel] NodeWebviewSocketBridge 未初始化！');
+      }
+      // 不在这里处理，让 NodeWebviewSocketBridge 处理
+      return;
+    }
     
     // 先尝试从 WebviewMessageList 中查找对应的处理器
     let handled = false;
@@ -217,10 +233,13 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       });
       
       if (this.serverPort) {
+        console.log(`[InsightDataViewerPanel] 发送 WebSocket 端口到 webview: ${this.serverPort}`);
         this.panel.webview.postMessage({
           command: 'setWsPort',
           data: this.serverPort,
         });
+      } else {
+        console.warn('[InsightDataViewerPanel] serverPort 未设置，无法发送端口信息');
       }
     } else if (!handled) {
       console.log(`[InsightDataViewerPanel] 未找到处理器: ${message.command}`);
@@ -370,6 +389,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       this.serverPort = port;
 
       // 发送端口号到 webview
+      console.log(`[InsightDataViewerPanel] 发送 WebSocket 端口到 webview: ${this.serverPort}`);
       this.panel.webview.postMessage({
         command: 'setWsPort',
         data: this.serverPort,
