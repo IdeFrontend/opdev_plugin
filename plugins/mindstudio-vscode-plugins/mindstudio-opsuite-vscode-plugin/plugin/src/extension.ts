@@ -19,6 +19,7 @@ import { PanelView } from './core/view/PanelView';
 import { routes } from './routes';
 import { apis } from './apis';
 import { PermanentStorage } from './class/PermanentStorage';
+import { ExtensionConfig } from './services/ExtensionConfig';
 
 /**
  * 插件激活入口函数
@@ -34,6 +35,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // 视图
   const panelView = initViews(context, apiServer);
 
+  ExtensionConfig.init(context);
   new PermanentStorage(context);
 
   // 初始化新建算子工程的Webview
