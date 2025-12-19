@@ -8,59 +8,27 @@ const themeConfig = {
     algorithm: theme.darkAlgorithm
 }
 const activeConfig = ref('')
+const configArray = ref([]);
 
 const buildOpFn = () => {
-    const curBuildConfigData = buildConfigData[activeConfig.value].find(
-        (v) => v.config_type === "build_op"
-    );
-    const id = curBuildConfigData.config_id;
-    message.sendMessageToParent({ command: "vscodeBuildOp", data: id });
+    message.sendMessageToParent({ command: "vscodeBuildOp", data: '' });
 }
 
 const buildExampleFn = () => {
-    const exampleConfigData = buildConfigData[activeConfig.value].find(
-        (v) => v.config_type === "build_example"
-    );
-    const id = exampleConfigData.config_id;
     message.sendMessageToParent({
         command: "vscodeBuildExample",
-        data: id,
+        data: '',
     });
 };
 
 const runExampleFn = () => {
-    const exampleConfigData = buildConfigData[activeConfig.value].find(
-        (v) => v.config_type === "build_example"
-    );
-    const id = exampleConfigData.config_id;
     message.sendMessageToParent({
         command: "vscodeRunExample",
-        data: id,
+        data: '',
     });
 };
 
-const configArray = ref([]);
-const buildConfigData = JSON.parse(localStorage.getItem("buildConfig") || '{}');
-console.log('---------------buildConfigDataBoard', buildConfigData)
-configArray.value = Object.keys(buildConfigData).map((config_name) => {
-    return { config_name };
-});
-
-if (configArray.value.length > 0) {
-    activeConfig.value = configArray.value[0].config_name;
-    if (activeConfig.value) {
-        message.sendMessageToParent({
-            command: "vscodeSetActiveConfig",
-            data: activeConfig.value
-        });
-    }
-}
-
 const clickSetting = (() => {
-    if (!activeConfig.value) {
-        console.log('未获取到configArray')
-        return
-    }
     message.sendMessageToParent({
         command: "vscodeOpenConfig",
         data: activeConfig.value

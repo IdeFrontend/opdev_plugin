@@ -97,3 +97,19 @@ export function getBuildExampleCommand(config_id: number) {
     throw new Error(`生成编译命令失败:${e.message}`);
   }
 }
+
+// 生成仿真命令
+// msprof op --output=$home/projects/output $home/projects/MyApp/out/main blockdim 1 // --output为可选参数，$home/projects/MyApp/out/main为使用的app，blockdim 1为用户app的可选参数 
+// msprof op simulator --soc-version=Ascendxxxyy --output=/home/projects/output /home/projects/MyApp/out/main blockdim 1   // --output为可选参数,/home/projects/MyApp/out/main为使用的app,blockdim 1为用户app的可选参数，xxxyy为用户实际使用的具体芯片类型
+export function getCommand(config_id: number, example_config_id: number) {
+  const config = getConfigById(config_id as any) as any;
+  const exConfig = getConfigById(example_config_id as any) as any;
+  if (!config) {
+    throw new Error('配置不存在');
+  }
+  let soc = soc_version;
+  const operator = getOpByProjectIdAndOpName(config.project_id as number, config.op as string)!;
+  // const build_cmd = `${config.script || ''} ${config.custom_options || ''}`.trim();
+  const build_cmd = 'msprof op simulator'
+  return `${build_cmd} --soc-version=${soc} --output=${operator.op_path}/.vscode/opprof ${exConfig.target_file} --aic-metrics=`
+}

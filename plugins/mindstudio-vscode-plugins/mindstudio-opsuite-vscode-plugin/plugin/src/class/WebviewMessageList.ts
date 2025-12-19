@@ -7,10 +7,9 @@
 
 import * as vscode from 'vscode';
 import * as path from 'path';
-import * as fs from 'fs';
+
 import { RemoteServerOpener } from './RemoteServerOpener';
-import RemoteServer from './RemoteServer';
-import DirectoryZipper from './DirectoryZipper';
+import RemoteServer from '../services/local/RemoteServer';
 import packageJson from '../../../package.json';
 import { CommandExecutor } from './CommandOptions';
 import OpsOption from './OpsOption';
@@ -281,66 +280,6 @@ const webviewMessageList: messageItem[] = [
     },
   },
   {
-    command: 'vscodeInstallServer',
-    callback: async (msg: any, that: any) => {
-      const message = msg.message;
-      const server = new RemoteServer(message);
-      await server.connect();
-      const zipper = new DirectoryZipper();
-      const publisher = packageJson.publisher;
-      const extensionName = packageJson.name;
-      const version = packageJson.version;
-      const extensionsPath = '.vscode-server/extensions/';
-      const serviceFile = 'register_extension.sh';
-      const plugiExtensionsPath = `${extensionsPath}${publisher}.${extensionName}-${version}`;
-      const commandPath = `${plugiExtensionsPath}/out/shells`;
-
-      let cmdOut: any = {};
-      cmdOut = await server.executeCommand(`cd ${plugiExtensionsPath}`);
-      if (cmdOut.stderr && cmdOut.stderr.indexOf('No such file or directory') !== -1) {
-        zipper.setCurrentDirectory(__dirname);
-        that.panel.webview.postMessage({
-          command: 'iframeSetSSHLoading',
-          data: 20,
-        });
-        let outputhPath = await zipper.findAndZipDirectory(`${publisher}.${extensionName}-${version}`, `${extensionName}.zip`);
-        if (!outputhPath) {
-          outputhPath = await zipper.findAndZipDirectory(`mindstudio-opsuite-vscode-plugin`, `${extensionName}.zip`);
-        }
-        that.panel.webview.postMessage({
-          command: 'iframeSetSSHLoading',
-          data: 50,
-        });
-        console.log('extensionsPath', extensionsPath);
-        console.log('outputhPath', outputhPath);
-
-        await server.uploadFile(outputhPath, `/${extensionName}.zip`, extensionsPath);
-        that.panel.webview.postMessage({
-          command: 'iframeSetSSHLoading',
-          data: 80,
-        });
-        await server.unzipFile(`${extensionsPath}/${extensionName}.zip`, plugiExtensionsPath, { zipType: 'zip' });
-        that.panel.webview.postMessage({
-          command: 'iframeSetSSHLoading',
-          data: 90,
-        });
-        await server.executeCommand(`chmod +x  ./${serviceFile}`, commandPath);
-        await server.executeCommand(`./${serviceFile} ${publisher} ${extensionName} ${version}`, commandPath);
-      }
-
-      that.panel.webview.postMessage({
-        command: 'iframeSetSSHLoading',
-        data: 100,
-      });
-
-      setTimeout(() => {
-        that.panel.webview.postMessage({
-          command: 'iframePluginInstallEnd',
-        });
-      }, 500);
-    },
-  },
-  {
     command: 'vscodeCreatedProject',
     callback: async (msg: any, that: any) => {
       const message = msg.message.data;
@@ -356,8 +295,10 @@ const webviewMessageList: messageItem[] = [
         console.log('服务器上执行');
         const executor = new CommandExecutor();
         await executor.execute(`mkdir  ${message.projectPath}/${message.projectName}`, ['File exists']);
-        await executor.execute(`chmod +x ${message.projectSH}`);
-        await executor.execute(`${message.projectSH}`);
+        if (message.projectSH) {
+          await executor.execute(`chmod +x ${message.projectSH}`);
+          await executor.execute(`${message.projectSH}`);
+        }
         const opsOption = new OpsOption(that.context);
         await opsOption.init(message.projectSH, message.projectPath, message.projectName);
         await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(`${message.projectPath}/${message.projectName}`));
@@ -411,8 +352,8 @@ const webviewMessageList: messageItem[] = [
         );
 
         if (!message.privateKey) {
-          const autoConfig = new SSHKeyAutoConfig(server)
-          await autoConfig.configureSSH(message)
+          const autoConfig = new SSHKeyAutoConfig(server);
+          await autoConfig.configureSSH(message);
         }
 
         const remoteOpener: RemoteServerOpener = new RemoteServerOpener();
@@ -448,7 +389,7 @@ const webviewMessageList: messageItem[] = [
       const data = msg.message.data;
       const opsOption = new OpsOption(that.context);
       await opsOption.init();
-      await opsOption.startBuild(data);
+      await opsOption.startBuild();
     },
   },
   {
@@ -457,7 +398,7 @@ const webviewMessageList: messageItem[] = [
       const data = msg.message.data;
       const opsOption = new OpsOption(that.context);
       await opsOption.init();
-      await opsOption.startBuildExample(data);
+      await opsOption.startBuildExample();
     },
   },
   {
@@ -466,7 +407,7 @@ const webviewMessageList: messageItem[] = [
       const data = msg.message.data;
       const opsOption = new OpsOption(that.context);
       await opsOption.init();
-      await opsOption.startRun(data);
+      await opsOption.startRun();
     },
   },
   {
@@ -476,6 +417,7 @@ const webviewMessageList: messageItem[] = [
       const opsOption = new OpsOption(that.context);
       await opsOption.init();
       await opsOption.createOpsByPrototype('', data);
+      vscode.commands.executeCommand('workbench.action.closeActiveEditor');
     },
   },
   {
