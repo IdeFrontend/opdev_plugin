@@ -21,6 +21,7 @@ import { apis } from './apis';
 import { PermanentStorage } from './class/PermanentStorage';
 import { ExtensionConfig } from './services/ExtensionConfig';
 import { Project } from './services/project/Project';
+import { OpsOperateProvider } from './class/OpsOperateProvider';
 
 /**
  * 插件激活入口函数
@@ -56,6 +57,26 @@ export async function activate(context: vscode.ExtensionContext) {
   const openCommand = vscode.commands.registerCommand('huawei-op-devtools.open', async () => {
     createOpsProvider.show('Link');
   });
+
+  // 注册打开关闭算子工作-操作命令
+  const toggleOpsOperateCommand = vscode.commands.registerCommand('huawei-op-devtools.toggleOpsOperate', async () => {
+    try {
+      // 打开/关闭右侧辅助侧栏
+      await vscode.commands.executeCommand('workbench.action.toggleAuxiliaryBar');
+    } catch (error) {
+      console.log(error)
+    }
+  });
+  context.subscriptions.push(toggleOpsOperateCommand);
+
+  const opsOperateProvider = new OpsOperateProvider(context);
+  const opsOperateView = vscode.window.registerWebviewViewProvider(OpsOperateProvider.viewType, opsOperateProvider, {
+    webviewOptions: {
+      retainContextWhenHidden: true,
+    },
+  });
+
+  context.subscriptions.push(opsOperateView);
 
   // 注册打开Opsuite命令
   const ConfigCommand = vscode.commands.registerCommand('huawei-op-devtools.config', async () => {
