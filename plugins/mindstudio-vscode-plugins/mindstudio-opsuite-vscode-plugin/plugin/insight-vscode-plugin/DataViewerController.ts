@@ -51,6 +51,9 @@ export class DataViewerController {
         pollInterval: 100
     };
 
+    // 单个 div 的轮询定时器映射（key: pluginName/id, value: timerId）
+    private divPollTimers = new Map<string, number>();
+
     private observer: MutationObserver | null = null;
 
     constructor(vscode: VSCodeAPI) {
@@ -168,7 +171,7 @@ export class DataViewerController {
         }
 
         // 获取或创建 iframe
-        let iframe = container.querySelector('iframe') as HTMLIFrameElement;
+        let iframe: HTMLIFrameElement | null = container.querySelector('iframe') as HTMLIFrameElement | null;
         if (!iframe) {
             console.log(`[Webview] [${pluginName}] 创建新的 iframe 元素`);
             iframe = this.createIframe(pluginName);
@@ -501,6 +504,14 @@ export class DataViewerController {
     private cleanup(): void {
         console.log('[Webview] 页面即将卸载，清理资源');
         this.stopPolling();
+        
+        // 清理所有 div 的轮询定时器
+        this.divPollTimers.forEach((timerId, pluginName) => {
+            console.log(`[Webview] [${pluginName}] 清理轮询定时器`);
+            clearInterval(timerId);
+        });
+        this.divPollTimers.clear();
+        
         if (this.observer) {
             this.observer.disconnect();
             this.observer = null;
@@ -517,6 +528,104 @@ export class DataViewerController {
             url,
             protocols
         });
+    }
+
+    /**
+     * 公开方法：div onload 事件处理
+     * 根据 div 的 id 匹配 iframe 缓存数据并渲染
+     * 如果数据还未返回，则轮询本地存储等待数据到达
+     * 
+     * @param id div 的 id，应该与 pluginName 匹配
+     */
+    public onDivLoad(id: string): void {
+        console.log(`[Webview] [${id}] ========== div onload 事件触发 ==========`);
+
+        // 检查是否已经加载过
+        if (this.iframeStatus.loadedIframes.has(id)) {
+            console.log(`[Webview] [${id}] 已加载过，跳过重复加载`);
+            return;
+        }
+
+        // 检查容器是否存在
+        const container = document.getElementById(id);
+        if (!container) {
+            console.error(`[Webview] [${id}] ✗ 未找到容器元素`);
+            return;
+        }
+
+        // 检查缓存中是否有数据
+        if (this.iframeStatus.receivedIframes.has(id)) {
+            const iframeData = this.iframeStatus.receivedIframes.get(id)!;
+            console.log(`[Webview] [${id}] ✓ 缓存中已有数据，立即渲染，文件路径: ${iframeData.filePath || 'N/A'}`);
+            this.renderIframeContent(id, iframeData.content);
+            // 标记为已加载
+            this.iframeStatus.loadedIframes.add(id);
+            console.log(`[Webview] [${id}] ✓ 渲染完成`);
+        } else {
+            console.log(`[Webview] [${id}] 缓存中暂无数据，开始轮询等待...`);
+            // 启动针对这个 id 的轮询
+            this.startDivPolling(id);
+        }
+    }
+
+    /**
+     * 启动针对特定 div 的轮询
+     * @param pluginName div 的 id/pluginName
+     */
+    private startDivPolling(pluginName: string): void {
+        // 如果已经在轮询中，跳过
+        if (this.divPollTimers.has(pluginName)) {
+            console.log(`[Webview] [${pluginName}] 轮询已在运行中，跳过重复启动`);
+            return;
+        }
+
+        console.log(`[Webview] [${pluginName}] ========== 开始轮询等待 iframe 内容 ==========`);
+        console.log(`[Webview] [${pluginName}] 轮询间隔: ${this.iframeStatus.pollInterval}ms`);
+
+        let pollCount = 0;
+        const maxPollCount = 1000; // 最大轮询次数，避免无限轮询
+
+        const timerId = window.setInterval(() => {
+            pollCount++;
+
+            // 检查缓存中是否有数据
+            if (this.iframeStatus.receivedIframes.has(pluginName)) {
+                const iframeData = this.iframeStatus.receivedIframes.get(pluginName)!;
+                console.log(`[Webview] [${pluginName}] ✓ 轮询第 ${pollCount} 次，检测到数据，开始渲染，文件路径: ${iframeData.filePath || 'N/A'}`);
+                
+                // 停止轮询
+                this.stopDivPolling(pluginName);
+                
+                // 渲染内容
+                this.renderIframeContent(pluginName, iframeData.content);
+                // 标记为已加载
+                this.iframeStatus.loadedIframes.add(pluginName);
+                console.log(`[Webview] [${pluginName}] ✓ 渲染完成`);
+            } else if (pollCount >= maxPollCount) {
+                // 达到最大轮询次数，停止轮询
+                console.warn(`[Webview] [${pluginName}] ✗ 达到最大轮询次数 (${maxPollCount})，停止轮询`);
+                this.stopDivPolling(pluginName);
+            } else if (pollCount % 50 === 0) {
+                // 每50次轮询输出一次状态
+                console.log(`[Webview] [${pluginName}] 轮询第 ${pollCount} 次，仍在等待数据...`);
+            }
+        }, this.iframeStatus.pollInterval);
+
+        // 保存定时器 ID
+        this.divPollTimers.set(pluginName, timerId);
+    }
+
+    /**
+     * 停止特定 div 的轮询
+     * @param pluginName div 的 id/pluginName
+     */
+    private stopDivPolling(pluginName: string): void {
+        const timerId = this.divPollTimers.get(pluginName);
+        if (timerId) {
+            console.log(`[Webview] [${pluginName}] 停止轮询定时器`);
+            clearInterval(timerId);
+            this.divPollTimers.delete(pluginName);
+        }
     }
 }
 
