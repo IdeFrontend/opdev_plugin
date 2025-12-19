@@ -55,19 +55,19 @@ class CommandExecutor extends EventEmitter {
       this.stderr = '';
       this.output = '';
 
-      let outputChannel: any = null
-      console.log("isOpenTerminal", isOpenTerminal)
+      let outputChannel: any = null;
+      console.log('isOpenTerminal', isOpenTerminal);
 
       if (isOpenTerminal) {
-        outputChannel = vscode.window.createOutputChannel('OpsTite outputChannel')
+        outputChannel = vscode.window.createOutputChannel('OpsTite outputChannel');
         outputChannel.show();
-        outputChannel.appendLine(command + '\r\n')
+        outputChannel.appendLine(command + '\r\n');
       }
 
       this.process = spawn(command, args, {
         cwd: options.cwd || process.cwd(),
         env: { ...process.env, ...options.env },
-        shell: true
+        shell: true,
       });
 
       let timeoutId: NodeJS.Timeout | null = null;
@@ -93,13 +93,18 @@ class CommandExecutor extends EventEmitter {
         if (outputChannel) {
           outputChannel.appendLine(text);
         }
-        console.log(text)
+        console.log('execute command, stdout:', text);
         this.stdout += text;
         this.output += text;
 
         this.emit('stdout', text);
         if (options.streaming) {
           process.stdout.write(text);
+        }
+
+        if (this.checkErrorKeywords(text)) {
+          resolve(this.getResult(-1, null));
+          this.cleanup();
         }
 
         // 检查是否包含停止关键字
@@ -112,6 +117,7 @@ class CommandExecutor extends EventEmitter {
       // 处理错误输出
       this.process.stderr?.on('data', (data: Buffer) => {
         const text = data.toString();
+        console.error('execute command, stderr:', text);
         this.stderr += text;
         this.output += text;
         if (outputChannel) {
@@ -136,7 +142,6 @@ class CommandExecutor extends EventEmitter {
         const result = this.getResult(code, signal);
 
         if (code === 0) {
-          
           resolve(result);
         } else {
           this.stderr += `Command failed with code ${code}: ${command} ${args.join(' ')}`;
@@ -158,9 +163,14 @@ class CommandExecutor extends EventEmitter {
   private checkStopKeywords(text: string, stopKeywords: string[]): boolean {
     if (stopKeywords.length === 0) return false;
 
-    return stopKeywords.some(keyword =>
-      text.toLowerCase().includes(keyword.toLowerCase())
-    );
+    return stopKeywords.some((keyword) => text.toLowerCase().includes(keyword.toLowerCase()));
+  }
+
+  /**
+   * 检查是否包含异常关键字
+   */
+  private checkErrorKeywords(text: string): boolean {
+    return text.toLowerCase().includes('[error]');
   }
 
   /**
@@ -172,7 +182,7 @@ class CommandExecutor extends EventEmitter {
       signal,
       stdout: this.stdout,
       stderr: this.stderr,
-      output: this.output
+      output: this.output,
     };
   }
 

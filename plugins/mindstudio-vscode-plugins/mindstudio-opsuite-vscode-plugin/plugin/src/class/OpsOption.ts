@@ -138,7 +138,7 @@ export default class OpsOption {
       const buildCommand = await getBuildOpCommand(Number(configId));
       const res = await this.executor.execute(buildCommand, [], [], {}, true);
       if (res.code !== 0) {
-        vscode.window.showErrorMessage(`编译算子失败 ${res}`);
+        vscode.window.showErrorMessage(`编译算子失败 ${res.output}`);
         return;
       }
       vscode.window.showInformationMessage(`编译算子成功`);
