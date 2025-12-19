@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { theme } from 'ant-design-vue';
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 
 import { getQuery } from '@/core/query';
 
@@ -12,8 +12,20 @@ const themeConfig = {
 };
 
 const routePath = ref('');
-getQuery().then(({ _path }) => {
-  routePath.value = _path;
+
+// 添加错误处理和调试日志
+onMounted(async () => {
+  try {
+    const query = await getQuery();
+    console.log('App.vue received query:', query);
+    if (query && query._path) {
+      routePath.value = query._path as string;
+    } else {
+      console.warn('App.vue: query._path is missing', query);
+    }
+  } catch (error) {
+    console.error('App.vue: Failed to get query:', error);
+  }
 });
 </script>
 
@@ -21,5 +33,8 @@ getQuery().then(({ _path }) => {
   <a-config-provider :theme="themeConfig">
     <OpsConfig v-if="routePath === 'ops-config'"></OpsConfig>
     <PerformanceRunData v-else-if="routePath === 'performance-records'"></PerformanceRunData>
+    <div v-else-if="!routePath" style="padding: 20px; color: #999;">
+      加载中...
+    </div>
   </a-config-provider>
 </template>
