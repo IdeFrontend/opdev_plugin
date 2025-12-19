@@ -291,8 +291,9 @@ const webviewMessageList: messageItem[] = [
         const server = new RemoteServer(message);
         await server.connect();
         await server.executeCommand(`mkdir  ${message.projectPath}/${message.projectName}`);
-        await server.executeCommand(`chmod + x ${message.projectSH}`);
+        await server.executeCommand(`chmod +x ${message.projectSH}`);
         await server.executeCommand(`${message.projectSH}`);
+        await server.executeCommand(`chmod +x ./${serviceFile}`);
         await server.executeCommand(
           `./${serviceFile} --project-name "${message.projectName}" --project-path "${message.projectPath}/${message.projectName}" --ascend-env-script "${message.projectSH}"`,
           commandPath

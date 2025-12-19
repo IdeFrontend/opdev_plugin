@@ -19,6 +19,7 @@ import { routes } from './routes';
 import { apis } from './apis';
 import { PermanentStorage } from './class/PermanentStorage';
 import { ExtensionConfig } from './services/ExtensionConfig';
+import { Project } from './services/project/Project';
 
 /**
  * 插件激活入口函数
@@ -125,7 +126,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
   configProvider.showLeftPage('Home');
 
-  vscode.commands.executeCommand('huawei-op-devtools.welcome');
+  if (!new Project().workspaceIsProject()) {
+    vscode.commands.executeCommand('huawei-op-devtools.welcome');
+  }
+
   context.subscriptions.push(buttonCommand, button);
 
   // 订阅销毁事件
@@ -182,11 +186,6 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   context.subscriptions.push(openCsvCommand);
-  // 自动显示算子一站式交付平台的活动栏视图
-  // 延迟执行，确保视图已经注册完成
-  setTimeout(() => {
-    vscode.commands.executeCommand('workbench.view.extension.mindstudio-opssuite-vscode-plugin');
-  }, 500);
 }
 
 /**
