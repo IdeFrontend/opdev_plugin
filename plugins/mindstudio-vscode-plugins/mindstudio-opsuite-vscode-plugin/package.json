@@ -23,6 +23,7 @@
     "workspaceContains:package.json",
     "onStartupFinished"
   ],
+  "icon": "resources/display.png",
   "contributes": {
     "viewsContainers": {
       "activitybar": [
