@@ -9,8 +9,10 @@ import { theme } from "ant-design-vue";
 import linkSSH from "./components/linkSSH.vue";
 import { getLocalData } from "../../untils/index";
 import { PlusOutlined } from "@ant-design/icons-vue";
-import { ref } from "vue";
-const current = ref(getLocalData("isRemote") ? 1 : 0);
+import { ref, computed } from "vue";
+
+const isRemote = computed(() => getLocalData("isRemote"))
+const current = ref(isRemote.value ? 1 : 0);
 const items = [{ title: "连接远程开发环境" }, { title: "工程配置" }];
 const linkSSHRef = ref();
 const themeConfig = {
@@ -28,7 +30,7 @@ const connected = () => {
     <div class="link-container">
       <div class="header-section">
         <div class="title">新建算子工程</div>
-        <div class="steps">
+        <div v-if="!isRemote" class="steps">
           <a-steps :current="current" :items="items"></a-steps>
         </div>
       </div>
