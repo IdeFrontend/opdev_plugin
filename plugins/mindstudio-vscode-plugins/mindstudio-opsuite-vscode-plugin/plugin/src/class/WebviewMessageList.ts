@@ -47,61 +47,8 @@ const webviewMessageList: messageItem[] = [
     command: 'vscodeStartLinkCreateOps',
     callback: async (message: any, that: any) => {
       console.log('message-------', message);
-      if (!message.message.data) {
-        const opsOption = new OpsOption(that.context);
-        await opsOption.init();
-        const opsPrototypeFilePath = await opsOption.createOps();
-        console.log('res', opsPrototypeFilePath);
-        if (opsPrototypeFilePath) {
-          opsOption.createOpsByPrototype(opsPrototypeFilePath);
-        }
-        vscode.commands.executeCommand('workbench.action.closeActiveEditor');
-        return;
-      }
-      // 开始传入
-      const result = message.message.data;
-      async function createFile(result: { fileName: string; value: string }) {
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-        if (!workspaceFolders) {
-          vscode.window.showErrorMessage('请先打开一个工作区');
-          return;
-        }
 
-        const workspacePath = workspaceFolders[0].uri;
-        const filePath = vscode.Uri.joinPath(workspacePath, result.fileName);
-
-        try {
-          // 检查文件是否存在
-          try {
-            await vscode.workspace.fs.stat(filePath);
-
-            // 询问是否覆盖
-            const choice = await vscode.window.showWarningMessage(`文件 ${result.fileName} 已存在，是否覆盖？`, { modal: true }, '覆盖', '取消');
-
-            if (choice !== '覆盖') {
-              return;
-            }
-          } catch {
-            // 文件不存在，继续
-          }
-
-          // 写入文件
-          await vscode.workspace.fs.writeFile(filePath, new TextEncoder().encode(result.value));
-
-          vscode.window.showInformationMessage(`文件 ${result.fileName} 创建成功`);
-
-          // 可选：格式化JSON
-          try {
-            const formattedValue = JSON.stringify(JSON.parse(result.value), null, 2);
-            await vscode.workspace.fs.writeFile(filePath, new TextEncoder().encode(formattedValue));
-          } catch {
-            // 如果不是有效的JSON，保持原样
-          }
-        } catch (error: any) {
-          vscode.window.showErrorMessage(`创建文件失败: ${error.message}`);
-        }
-      }
-      createFile(result);
+      vscodeStartLinkCreateOps(message.message.data, that);
     },
   },
   {
@@ -312,6 +259,8 @@ const webviewMessageList: messageItem[] = [
         const fullProjectPath = path.join(normalizedProjectPath, normalizedProjectName);
         console.log(`检测到远程连接: ${remoteName}`);
 
+        await handleOperatorProjectDictoryFile(message.createOperatorProjectDictoryFileType, that)
+
         if (remoteName && remoteName !== 'ssh-remote') {
           // 如果有完整的远程连接信息，则使用它
           if (remoteName.startsWith('ssh-remote+')) {
@@ -353,6 +302,17 @@ const webviewMessageList: messageItem[] = [
         if (!message.privateKey) {
           const autoConfig = new SSHKeyAutoConfig(server);
           await autoConfig.configureSSH(message);
+        }
+        
+        await handleOperatorProjectDictoryFile(message.createOperatorProjectDictoryFileType, that)
+
+        if (message.createOperatorProjectDictoryFileType) {
+          if (message.createOperatorProjectDictoryFileType === 1) {
+            await vscodeBuildCreateOps('cann', that)
+          }
+          if (message.createOperatorProjectDictoryFileType === 2) {
+            await vscodeStartLinkCreateOps(undefined, that)
+          }
         }
 
         const remoteOpener: RemoteServerOpener = new RemoteServerOpener();
@@ -413,10 +373,7 @@ const webviewMessageList: messageItem[] = [
     command: 'vscodeBuildCreateOps',
     callback: async (msg: any, that: any) => {
       const data = msg.message.data;
-      const opsOption = new OpsOption(that.context);
-      await opsOption.init();
-      await opsOption.createOpsByPrototype('', data);
-      vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+      await vscodeBuildCreateOps(data, that);
     },
   },
   {
@@ -591,5 +548,83 @@ const webviewMessageList: messageItem[] = [
     },
   },
 ];
+
+// 创建算子工程类型 
+// 1 执行 vscodeBuildCreateOps 消息体内逻辑  data: 'cann'
+// 2 执行 vscodeStartLinkCreateOps 消息体内逻辑
+async function handleOperatorProjectDictoryFile(createOperatorProjectDictoryFileType: Number | undefined, that: any) {
+  if (createOperatorProjectDictoryFileType) {
+    if (createOperatorProjectDictoryFileType === 1) {
+      await vscodeBuildCreateOps('cann', that)
+    }
+    if (createOperatorProjectDictoryFileType === 2) {
+      await vscodeStartLinkCreateOps(undefined, that)
+    }
+  }
+}
+
+async function vscodeBuildCreateOps(data: any, that: any) {
+  const opsOption = new OpsOption(that.context);
+  await opsOption.init();
+  await opsOption.createOpsByPrototype('', data);
+  await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+}
+
+async function vscodeStartLinkCreateOps(data: any, that: any) {
+  if (!data) {
+    const opsOption = new OpsOption(that.context);
+    await opsOption.init();
+    const opsPrototypeFilePath = await opsOption.createOps();
+    console.log('res', opsPrototypeFilePath);
+    if (opsPrototypeFilePath) {
+      opsOption.createOpsByPrototype(opsPrototypeFilePath);
+    }
+    vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+    return;
+  }
+  // 开始传入
+  async function createFile(result: { fileName: string; value: string }) {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders) {
+      vscode.window.showErrorMessage('请先打开一个工作区');
+      return;
+    }
+
+    const workspacePath = workspaceFolders[0].uri;
+    const filePath = vscode.Uri.joinPath(workspacePath, data.fileName);
+
+    try {
+      // 检查文件是否存在
+      try {
+        await vscode.workspace.fs.stat(filePath);
+
+        // 询问是否覆盖
+        const choice = await vscode.window.showWarningMessage(`文件 ${data.fileName} 已存在，是否覆盖？`, { modal: true }, '覆盖', '取消');
+
+        if (choice !== '覆盖') {
+          return;
+        }
+      } catch {
+        // 文件不存在，继续
+      }
+
+      // 写入文件
+      await vscode.workspace.fs.writeFile(filePath, new TextEncoder().encode(data.value));
+
+      vscode.window.showInformationMessage(`文件 ${data.fileName} 创建成功`);
+
+      // 可选：格式化JSON
+      try {
+        const formattedValue = JSON.stringify(JSON.parse(data.value), null, 2);
+        await vscode.workspace.fs.writeFile(filePath, new TextEncoder().encode(formattedValue));
+      } catch {
+        // 如果不是有效的JSON，保持原样
+      }
+    } catch (error: any) {
+      vscode.window.showErrorMessage(`创建文件失败: ${error.message}`);
+    }
+  }
+  createFile(data);
+}
 
 export default webviewMessageList;
