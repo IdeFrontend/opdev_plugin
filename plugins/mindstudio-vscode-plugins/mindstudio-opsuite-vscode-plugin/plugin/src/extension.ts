@@ -123,9 +123,9 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   });
 
-  configProvider.showLeftPage('Home');
-
-  vscode.commands.executeCommand('huawei-op-devtools.welcome');
+  // 注释掉自动打开页面的代码，用户手动打开
+  // configProvider.showLeftPage('Home');
+  // vscode.commands.executeCommand('huawei-op-devtools.welcome');
   context.subscriptions.push(buttonCommand, button);
 
   // 订阅销毁事件
@@ -182,11 +182,12 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   context.subscriptions.push(openCsvCommand);
+  // 注释掉自动显示活动栏视图，用户手动打开
   // 自动显示算子一站式交付平台的活动栏视图
   // 延迟执行，确保视图已经注册完成
-  setTimeout(() => {
-    vscode.commands.executeCommand('workbench.view.extension.mindstudio-opssuite-vscode-plugin');
-  }, 500);
+  // setTimeout(() => {
+  //   vscode.commands.executeCommand('workbench.view.extension.mindstudio-opssuite-vscode-plugin');
+  // }, 500);
 }
 
 /**

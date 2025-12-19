@@ -16,7 +16,19 @@ const routePath = ref('');
 // 添加错误处理和调试日志
 onMounted(async () => {
   try {
-    const query = await getQuery();
+    // 添加超时处理，如果 3 秒内没有收到查询参数，尝试使用 URL 参数或默认值
+    const queryPromise = getQuery();
+    const timeoutPromise = new Promise<{ _path: string }>((resolve) => {
+      setTimeout(() => {
+        console.warn('App.vue: Query timeout, checking URL params');
+        // 尝试从 URL 参数获取路径
+        const urlParams = new URLSearchParams(window.location.search);
+        const pathFromUrl = urlParams.get('_path');
+        resolve({ _path: pathFromUrl || '' });
+      }, 3000);
+    });
+    
+    const query = await Promise.race([queryPromise, timeoutPromise]);
     console.log('App.vue received query:', query);
     if (query && query._path) {
       routePath.value = query._path as string;

@@ -50,8 +50,7 @@
         {
           "id": "performanceSidebarView",
           "name": "性能调优",
-          "type": "webview",
-          "visibility": "collapsed"
+          "type": "webview"
         }
       ]
     },
