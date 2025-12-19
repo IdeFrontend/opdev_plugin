@@ -41,8 +41,8 @@ const isRemote = ref(getLocalData("isRemote"));
 const selectedId_type = ref(1);
 const selectedId_proto = ref(1);
 const items_type = [
-  { id: 1, title: '【AscendC】<<<>>>算子工程', desc: '生成一个使用<<<>>>内核调用符进行算子直调的hello_world样例，代码文件采用".asc"后缀支持异构编译。' },
-  { id: 2, title: '【AscendC】标准自定义算子工程', desc: '基于Ascend C语言的标准自定义算子工程，op_host存放在CPC侧的代码实现，op_kermel存放NPU侧的代码实现，op_graph存放图模式下的代码实现' },
+  { id: 1, title: '【AscendC】<<<>>>算子工程', desc: '创建<<<>>>调用的hello_world工程样例，支持".asc"后缀的异构编译。' },
+  // { id: 2, title: '【AscendC】标准自定义算子工程', desc: '基于Ascend C语言的标准自定义算子工程，op_host存放在CPC侧的代码实现，op_kermel存放NPU侧的代码实现，op_graph存放图模式下的代码实现' },
 ];
 const items_proto = [
   { id: 1, title: '使用原型定义文件模版', desc: '从标准模版开始编写算子原型，完成后可基于此生成工程。' },
@@ -384,7 +384,7 @@ defineExpose({
 </script>
 <template>
   <div class="link-box">
-    <div v-if="linkType === 'config'" class="empty-box">
+    <div v-if="linkType === 'empty'" class="empty-box">
       <div class="empty-icon">
         <FolderOpenOutlined style="font-size: 55px" />
       </div>
@@ -417,7 +417,7 @@ defineExpose({
         </a-button>
       </div>
     </div>
-    <div v-else-if="linkType === 'empty'" class="config-box">
+    <div v-else-if="linkType === 'config'" class="config-box">
       <div class="config-left-placeholder">
         <div class="section-title">工程类型</div>
         <div class="project-type-content">
@@ -440,40 +440,6 @@ defineExpose({
               </transition>
             </div>
           </div>
-          <!-- <div v-if="selectedId_type === 2" class="proto-select-section">
-            <div style="margin-bottom: 20px;">选择算子原型定义文件</div>
-            <div class="left-right-box">
-              <div v-for="item in items_proto" :key="item.id" class="single-select-item left"
-                :class="{ selected: selectedId_proto === item.id }" @click="selectedId_proto = item.id">
-                <div class="item-title">{{ item.title }}</div>
-                <div class="item-desc">{{ item.desc }}</div>
-              </div>
-            </div>
-          </div> -->
-          <!-- <div v-if="selectedId_type === 2 && selectedId_proto === 2" class="json-upload-container">
-            <div class="single-select-item">
-              <div class="upload-area" @click="triggerFileInput" @dragover.prevent @drop="handleDrop">
-                <input ref="fileInput" type="file" accept=".json" @change="handleFileSelect" style="display: none" />
-                <div class="upload-content">
-                  <p class="ant-upload-drag-icon">
-                    <InboxOutlined></InboxOutlined>
-                  </p>
-                  <p class="ant-upload-text">点击或拖拽JSON文件到此区域上传</p>
-                </div>
-              </div>
-              <div v-if="fileInfo" class="file-info">
-                <a-divider>文件信息</a-divider>
-                <a-descriptions :column="1" bordered size="small">
-                  <a-descriptions-item label="文件名">
-                    {{ fileInfo.name }}
-                  </a-descriptions-item>
-                  <a-descriptions-item label="文件大小">
-                    {{ formatFileSize(fileInfo.size) }}
-                  </a-descriptions-item>
-                </a-descriptions>
-              </div>
-            </div>
-          </div> -->
         </div>
       </div>
       <div class="config-divider"></div>
@@ -662,7 +628,7 @@ defineExpose({
         }
 
         .single-select-item {
-          background: #2f2f2f;
+          background: transparent;
           padding: 20px;
           margin: 20px 0;
           border: 1px solid #464646;
@@ -674,13 +640,13 @@ defineExpose({
 
           &:hover {
             border-color: #4BA5F4;
-            background: #2f2f2f;
+            background: transparent;
             box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.1);
           }
 
           &.selected {
             border-color: #4BA5F4;
-            background: #2f2f2f;
+            background: transparent;
             box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.1);
           }
 
@@ -697,6 +663,17 @@ defineExpose({
             color: white;
             font-size: 13px;
             margin-bottom: 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          &.selected {
+            .item-desc {
+              white-space: normal;
+              overflow: visible;
+              text-overflow: unset;
+            }
           }
 
           :deep(.ant-tag) {
@@ -864,8 +841,8 @@ defineExpose({
     .config-divider {
       width: 1px;
       background-color: rgba(255, 255, 255, 0.15);
-      margin-left: 20px;
-      margin-right: 20px;
+      margin-left: 16px;
+      margin-right: 16px;
       flex-shrink: 0;
       align-self: stretch;
     }
