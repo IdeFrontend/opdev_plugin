@@ -267,14 +267,15 @@ const webviewMessageList: messageItem[] = [
         if (remoteName && remoteName !== 'ssh-remote') {
           // 如果有完整的远程连接信息，则使用它
           if (remoteName.startsWith('ssh-remote+')) {
-            const remoteUri = vscode.Uri.parse(`vscode-remote://${remoteName}${fullProjectPath}`).with({ query: JSON.stringify({ runCommand: 'huawei-op-devtools.createDictory', commandParams: message.createOperatorProjectDictoryFileType })});
+            const remoteUri = vscode.Uri.parse(`vscode-remote://${remoteName}${fullProjectPath}`).with({ query: JSON.stringify({ runCommand: 'huawei-op-devtools.createDictory', commandParams: message.createOperatorProjectDictoryFileType }) });
             console.log(`准备打开远程文件夹: ${remoteUri.toString()}`);
-
+            console.log('vscode新目录', remoteUri);
             await vscode.commands.executeCommand('vscode.openFolder', remoteUri, {
               forceNewWindow: true,
             });
           } else {
-            const remoteUri = vscode.Uri.parse(`vscode-remote://ssh-remote+${remoteName}${fullProjectPath}`).with({ query: JSON.stringify({ runCommand: 'huawei-op-devtools.createDictory', commandParams: message.createOperatorProjectDictoryFileType })});
+            const remoteUri = vscode.Uri.parse(`vscode-remote://ssh-remote+${remoteName}${fullProjectPath}`).with({ query: JSON.stringify({ runCommand: 'huawei-op-devtools.createDictory', commandParams: message.createOperatorProjectDictoryFileType }) });
+            console.log('vscode新目录', remoteUri);
             await vscode.commands.executeCommand('vscode.openFolder', remoteUri, {
               forceNewWindow: true,
             });
@@ -285,7 +286,8 @@ const webviewMessageList: messageItem[] = [
           console.log(`打开新路径：${fullProjectPath}`);
 
           // 在远程环境中，我们可以直接打开本地路径（相对于远程系统）
-          const localUri = vscode.Uri.file(fullProjectPath);
+          const localUri = vscode.Uri.file(fullProjectPath).with({ query: JSON.stringify({ runCommand: 'huawei-op-devtools.createDictory', commandParams: message.createOperatorProjectDictoryFileType }) });
+          console.log('vscode新目录', localUri);
           await vscode.commands.executeCommand('vscode.openFolder', localUri, {
             forceNewWindow: true,
           });
