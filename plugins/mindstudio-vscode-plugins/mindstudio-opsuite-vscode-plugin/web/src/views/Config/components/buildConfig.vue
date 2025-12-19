@@ -112,7 +112,7 @@ const getSaveData = () => {
         />
       </a-form-item>
 
-      <a-form-item label="编译生成文件位置" name="target_dir">
+      <a-form-item v-if="false" label="编译生成文件位置" name="target_dir">
         <a-input
           v-model:value="buildConfigForme.target_dir"
           placeholder="请输入生成文件位置"
@@ -164,7 +164,7 @@ const getSaveData = () => {
         </a-radio-group>
       </a-form-item>
 
-      <a-form-item label="编译example生成文件位置" name="target_dir">
+      <a-form-item v-if="false" label="编译example生成文件位置" name="target_dir">
         <a-input v-model:value="exampleConfigForme.target_dir" />
       </a-form-item>
 
