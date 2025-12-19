@@ -11,7 +11,7 @@ import { getLocalData, setLoaclData } from "../../../untils/index";
 import { message } from "../../../untils/Message";
 import { message as antdMessage } from "ant-design-vue";
 import multiStepModal from "./multiStepModal.vue";
-import { installRemoteExtension } from "@/apis";
+import { installRemoteExtension, checkPathExists } from "@/apis";
 
 const emit = defineEmits(["connected"]);
 
@@ -179,7 +179,14 @@ const projectFormData = reactive({
 // 表单校验规则
 const connectionFormRules = {
   projectPath: [
-    { required: true, message: '请输入算子工程位置', trigger: 'blur' }
+    { required: true, message: '请输入算子工程位置', trigger: 'blur' },
+    {
+      trigger: 'blur',
+      validator: async (rule, value) => {
+        const pathExists = await checkPathExists({ path: value, ssh: selectedRow.value });
+        return pathExists ? Promise.resolve() : Promise.reject('目录不存在，请先创建目录');
+      }
+    }
   ],
   projectName: [
     { required: true, message: '请输入算子工程名称', trigger: 'blur' },
@@ -203,6 +210,18 @@ const connectionFormRules = {
         return Promise.resolve();
       },
       trigger: 'blur'
+    }
+  ],
+  projectSH: [
+    {
+      trigger: 'blur',
+      validator: async (rule, value) => {
+        if (!value) {
+          return Promise.resolve();
+        }
+        const pathExists = await checkPathExists({ path: value, ssh: selectedRow.value });
+        return pathExists ? Promise.resolve() : Promise.reject('脚本文件不存在，请确认');
+      }
     }
   ]
 };
@@ -473,7 +492,7 @@ defineExpose({
               @search="(val) => remoteSearch('projectPath', val)"
               @focus="() => remoteSearch('projectPath', projectFormData.projectPath)" />
           </a-form-item>
-          <a-form-item name="ipAddress">
+          <a-form-item name="projectSH">
             <template #label>
               <span>环境变量配置脚本</span>
               <a-tooltip title="安装CANN包后需要执行的set_env.sh脚本的绝对路径信息，如果使用的是一站式开发平台提供的容器镜像，则此处可以置空。若出现报错提示路径不存在，说明非有效环境变量脚本路径，需要输入设置环境变量脚本的绝对路径。">
