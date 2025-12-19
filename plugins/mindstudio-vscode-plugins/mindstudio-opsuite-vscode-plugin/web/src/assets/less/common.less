@@ -37,6 +37,8 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background: #1E1E1E;
+  overflow-y: auto;
+  height: fit-content !important;
 }
 
 h1 {
@@ -74,22 +76,8 @@ button:focus-visible {
   margin: 0 auto;
   padding: 2rem;
   text-align: left;
-  height: 100vh;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-
-  a:hover {
-    color: #747bff;
-  }
-
-  button {
-    background-color: #f9f9f9;
-  }
+  min-height: 100vh;
+  height: fit-content;
 }
 
 .ant-input {

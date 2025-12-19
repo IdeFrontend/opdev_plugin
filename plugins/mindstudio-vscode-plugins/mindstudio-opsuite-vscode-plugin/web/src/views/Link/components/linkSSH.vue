@@ -451,7 +451,6 @@ defineExpose({
 
   .choose-box {
     button {
-      float: left;
       margin-top: 24px;
     }
 

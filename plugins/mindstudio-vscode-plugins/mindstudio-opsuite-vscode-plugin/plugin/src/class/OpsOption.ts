@@ -10,7 +10,6 @@ import {
   getBuildOpCommand,
   getRunCommand,
   getConfig,
-  getFiles,
   postConfig,
 } from '../../autogen-server';
 import path from 'node:path';
@@ -108,10 +107,6 @@ export default class OpsOption {
     const project_id = this.projectId;
     const [opConfig, exampleConfig] = await Promise.all([getConfig(Number(project_id), 'build_op'), getConfig(Number(project_id), 'build_example')]);
     return [...opConfig, ...exampleConfig];
-  }
-
-  async getAllPath(path: string) {
-    return getFiles(path);
   }
 
   async saveBuildConfig(data: any, showMessage: boolean = true) {
