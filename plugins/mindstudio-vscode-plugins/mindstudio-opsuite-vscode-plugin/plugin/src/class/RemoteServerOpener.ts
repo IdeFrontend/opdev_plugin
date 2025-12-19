@@ -64,11 +64,11 @@ export class RemoteServerOpener {
      * 打开远程工作区
      */
     private async openRemoteWorkspace(config: RemoteServerConfig): Promise<void> {
-        const { host, port, username, remotePath, privateKey } = config;
+        const { host, port, username, remotePath, privateKey, query } = config;
 
         try {
             // 方法1: 使用VSCode的Remote SSH扩展
-            await this.openWithRemoteSSH(host, port, username, remotePath, privateKey);
+            await this.openWithRemoteSSH(host, port, username, remotePath, privateKey, query);
         } catch (error) {
             console.log(error)
         }
@@ -77,7 +77,7 @@ export class RemoteServerOpener {
     /**
      * 使用Remote SSH扩展打开
      */
-    private async openWithRemoteSSH(host: string, port: number, username: string, remotePath: string, privateKey: string): Promise<void> {
+    private async openWithRemoteSSH(host: string, port: number, username: string, remotePath: string, privateKey: string | undefined, query: string | undefined): Promise<void> {
         try {
             if (privateKey) {
                 // 更新SSH配置
@@ -86,7 +86,13 @@ export class RemoteServerOpener {
 
             // 构造Remote SSH URI
             const sshConfigName = `${username}@${host}`;
-            const remoteUri = vscode.Uri.parse(`vscode-remote://ssh-remote+${sshConfigName}${remotePath}`);
+            let remoteUri = vscode.Uri.parse(`vscode-remote://ssh-remote+${sshConfigName}${remotePath}`);
+
+            console.log('query', query)
+            if (query) {
+               remoteUri = remoteUri.with({query})
+            }
+            console.log('remoteUri', remoteUri);
 
             // 打开远程工作区
             await vscode.commands.executeCommand('vscode.openFolder', remoteUri, {

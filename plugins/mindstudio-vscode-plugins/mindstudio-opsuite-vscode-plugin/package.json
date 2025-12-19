@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://gitcode.com/Asscend/mstt"
   },
-  "version": "1.0.103",
+  "version": "1.0.113",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -69,11 +69,6 @@
         "title": "左侧菜单配置"
       },
       {
-        "command": "huawei-op-devtools.newPrototype",
-        "title": "新建算子原型定义文件",
-        "icon": "resources/homeIconW.svg"
-      },
-      {
         "command": "huawei-op-devtools.createOps",
         "title": "新建算子原型文件",
         "icon": "resources/ops.svg"
@@ -91,15 +86,7 @@
     ],
     "menus": {
       "view/title": [
-        {
-          "command": "huawei-op-devtools.newPrototype",
-          "group": "navigation",
-          "when": "view == workbench.explorer.fileView",
-          "icon": {
-            "light": "resources/homeIconW.svg",
-            "dark": "resources/homeIconW.svg"
-          }
-        }
+
       ]
     },
     "customEditors": [

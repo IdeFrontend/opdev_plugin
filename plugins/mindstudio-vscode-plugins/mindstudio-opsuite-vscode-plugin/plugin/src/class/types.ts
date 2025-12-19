@@ -12,6 +12,7 @@ export interface RemoteServerConfig {
     username: string;
     password?: string;
     privateKey?: string;
+    query?: string;
     remotePath: string;
 }
 

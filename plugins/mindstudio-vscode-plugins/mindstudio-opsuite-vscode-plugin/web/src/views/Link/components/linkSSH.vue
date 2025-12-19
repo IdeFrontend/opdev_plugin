@@ -11,7 +11,7 @@ import { getLocalData, setLoaclData } from "../../../untils/index";
 import { message } from "../../../untils/Message";
 import { message as antdMessage } from "ant-design-vue";
 import multiStepModal from "./multiStepModal.vue";
-import { installRemoteExtension } from "@/apis";
+import { installRemoteExtension, checkPathExists } from "@/apis";
 
 const emit = defineEmits(["connected"]);
 
@@ -41,8 +41,8 @@ const isRemote = ref(getLocalData("isRemote"));
 const selectedId_type = ref(1);
 const selectedId_proto = ref(1);
 const items_type = [
-  { id: 1, title: '【AscendC】<<<>>>算子工程', desc: '创建<<<>>>调用的hello_world工程样例，支持".asc"后缀的异构编译。' },
-  // { id: 2, title: '【AscendC】标准自定义算子工程', desc: '基于Ascend C语言的标准自定义算子工程，op_host存放在CPC侧的代码实现，op_kermel存放NPU侧的代码实现，op_graph存放图模式下的代码实现' },
+  { id: 1, title: '【Ascend C】<<<>>>算子工程', desc: '创建<<<>>>调用的hello_world工程样例，支持".asc"后缀的异构编译。' },
+  // { id: 2, title: '【Ascend C】标准自定义算子工程', desc: '基于Ascend C语言的标准自定义算子工程，op_host存放在CPC侧的代码实现，op_kermel存放NPU侧的代码实现，op_graph存放图模式下的代码实现' },
 ];
 const items_proto = [
   { id: 1, title: '使用原型定义文件模版', desc: '从标准模版开始编写算子原型，完成后可基于此生成工程。' },
@@ -179,7 +179,14 @@ const projectFormData = reactive({
 // 表单校验规则
 const connectionFormRules = {
   projectPath: [
-    { required: true, message: '请输入算子工程位置', trigger: 'blur' }
+    { required: true, message: '请输入算子工程位置', trigger: 'blur' },
+    {
+      trigger: 'blur',
+      validator: async (rule, value) => {
+        const pathExists = await checkPathExists({ path: value, ssh: selectedRow.value });
+        return pathExists ? Promise.resolve() : Promise.reject('目录不存在，请先创建目录');
+      }
+    }
   ],
   projectName: [
     { required: true, message: '请输入算子工程名称', trigger: 'blur' },
@@ -203,6 +210,18 @@ const connectionFormRules = {
         return Promise.resolve();
       },
       trigger: 'blur'
+    }
+  ],
+  projectSH: [
+    {
+      trigger: 'blur',
+      validator: async (rule, value) => {
+        if (!value) {
+          return Promise.resolve();
+        }
+        const pathExists = await checkPathExists({ path: value, mustFile: true, ssh: selectedRow.value });
+        return pathExists ? Promise.resolve() : Promise.reject('脚本文件不存在，请确认');
+      }
     }
   ]
 };
@@ -345,6 +364,7 @@ const createdProject = async () => {
     data: {
       ...projectFormData,
       ...selectedRow.value,
+      createOperatorProjectDictoryFileType: selectedId_type.value,
     },
   });
 };
@@ -427,7 +447,7 @@ defineExpose({
               :class="{ selected: selectedId_type === item.id }" @click="selectedId_type = item.id">
               <div class="item-title">{{ item.title }}</div>
               <div class="item-desc" v-html="item.desc"></div>
-              <a-tag color="blue">语言：AscendC</a-tag>
+              <a-tag color="blue">语言：Ascend C</a-tag>
               <a-tag v-if="item.id === 1" color="purple">类型：<<<>>></a-tag>
               <a-tag v-if="item.id === 2" color="green">类型：标准自定义</a-tag>
               <transition name="slide-fade">
@@ -445,7 +465,7 @@ defineExpose({
       <div class="config-divider"></div>
       <div class="config-right-content">
         <div class="section-title">工程配置</div>
-        <div class="config-title">
+        <div v-if="!isRemote" class="config-title">
           <div>当前环境</div>
           <span>{{ props.connected === 1 ? "" : selectedRow?.name }}</span>
         </div>
@@ -472,7 +492,7 @@ defineExpose({
               @search="(val) => remoteSearch('projectPath', val)"
               @focus="() => remoteSearch('projectPath', projectFormData.projectPath)" />
           </a-form-item>
-          <a-form-item name="ipAddress">
+          <a-form-item name="projectSH">
             <template #label>
               <span>环境变量配置脚本</span>
               <a-tooltip title="安装CANN包后需要执行的set_env.sh脚本的绝对路径信息，如果使用的是一站式开发平台提供的容器镜像，则此处可以置空。若出现报错提示路径不存在，说明非有效环境变量脚本路径，需要输入设置环境变量脚本的绝对路径。">
