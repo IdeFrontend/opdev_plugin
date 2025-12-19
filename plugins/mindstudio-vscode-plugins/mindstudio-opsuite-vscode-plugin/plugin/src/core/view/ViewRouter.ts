@@ -17,9 +17,12 @@ export class ViewRouter extends vscode.Disposable {
 
   constructor(routes: ViewRouteRaw[]) {
     super(() => {});
+    console.log('[ViewRouter] constructor: 初始化ViewRouter, routes数量:', routes.length);
     for (const route of routes) {
+      console.log('[ViewRouter] constructor: 注册路由, path:', route.path, 'title:', route.title, 'providerViewType:', route.providerViewType);
       this.registerRoute(route);
     }
+    console.log('[ViewRouter] constructor: ViewRouter初始化完成');
   }
 
   /**
@@ -34,7 +37,14 @@ export class ViewRouter extends vscode.Disposable {
    *  获取所有注册了Provider的路由
    */
   public getAllProviderRaws(): ViewRouteRaw[] {
-    return Array.from(this.routeRawMap.values()).filter((route) => route.providerViewType);
+    const allRoutes = Array.from(this.routeRawMap.values());
+    console.log('[ViewRouter] getAllProviderRaws: 所有路由数量:', allRoutes.length);
+    const providerRaws = allRoutes.filter((route) => route.providerViewType);
+    console.log('[ViewRouter] getAllProviderRaws: 有providerViewType的路由数量:', providerRaws.length);
+    providerRaws.forEach(route => {
+      console.log('[ViewRouter] getAllProviderRaws: provider路由, path:', route.path, 'providerViewType:', route.providerViewType);
+    });
+    return providerRaws;
   }
 
   /**

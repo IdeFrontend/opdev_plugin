@@ -94,25 +94,58 @@ export class ViewServer extends vscode.Disposable {
     console.log('[ViewServer] registerViewProviders: viewRootUri:', viewRootUri.fsPath);
     console.log('[ViewServer] registerViewProviders: extensionUri:', this.context.extensionUri.fsPath);
     
+    if (providerRaws.length === 0) {
+      console.warn('[ViewServer] registerViewProviders: 警告！没有找到任何provider路由');
+    }
+    
     for (const routeRaw of providerRaws) {
       console.log('[ViewServer] registerViewProviders: 注册provider, viewType:', routeRaw.providerViewType, 'path:', routeRaw.path);
-      const disposable = vscode.window.registerWebviewViewProvider(routeRaw.providerViewType!, {
-        resolveWebviewView: async (webviewView) => {
-          console.log('[ViewServer] resolveWebviewView: 开始解析webview, viewType:', routeRaw.providerViewType, 'path:', routeRaw.path);
-          console.log('[ViewServer] resolveWebviewView: viewRootUri:', viewRootUri.toString());
-          
-          webviewView.webview.options = { 
-            enableScripts: true,
-            localResourceRoots: [viewRootUri]
-          };
-          console.log('[ViewServer] resolveWebviewView: webview.options已设置:', JSON.stringify(webviewView.webview.options));
-          
-          this.activeWebview(webviewView.webview, routeRaw.path);
-        },
-      });
-      this.viewProviders.push(disposable);
+      
+      try {
+        const disposable = vscode.window.registerWebviewViewProvider(routeRaw.providerViewType!, {
+          resolveWebviewView: async (webviewView, context, token) => {
+            console.log('[ViewServer] resolveWebviewView: ========== 开始解析webview ==========');
+            console.log('[ViewServer] resolveWebviewView: viewType:', routeRaw.providerViewType);
+            console.log('[ViewServer] resolveWebviewView: path:', routeRaw.path);
+            console.log('[ViewServer] resolveWebviewView: viewRootUri:', viewRootUri.toString());
+            console.log('[ViewServer] resolveWebviewView: webviewView.visible:', webviewView.visible);
+            console.log('[ViewServer] resolveWebviewView: context:', JSON.stringify(context));
+            console.log('[ViewServer] resolveWebviewView: token.isCancellationRequested:', token.isCancellationRequested);
+            
+            try {
+              webviewView.webview.options = { 
+                enableScripts: true,
+                localResourceRoots: [viewRootUri]
+              };
+              console.log('[ViewServer] resolveWebviewView: webview.options已设置:', JSON.stringify(webviewView.webview.options));
+              
+              // 监听webview可见性变化
+              webviewView.onDidChangeVisibility(() => {
+                console.log('[ViewServer] resolveWebviewView: webview可见性变化, visible:', webviewView.visible);
+              });
+              
+              this.activeWebview(webviewView.webview, routeRaw.path);
+              console.log('[ViewServer] resolveWebviewView: ========== 解析完成 ==========');
+            } catch (error) {
+              console.error('[ViewServer] resolveWebviewView: 解析过程中出错:', error);
+              console.error('[ViewServer] resolveWebviewView: 错误堆栈:', error instanceof Error ? error.stack : String(error));
+              throw error;
+            }
+          },
+        });
+        this.viewProviders.push(disposable);
+        console.log('[ViewServer] registerViewProviders: provider注册成功, viewType:', routeRaw.providerViewType);
+      } catch (error) {
+        console.error('[ViewServer] registerViewProviders: 注册provider失败, viewType:', routeRaw.providerViewType, 'error:', error);
+        console.error('[ViewServer] registerViewProviders: 错误堆栈:', error instanceof Error ? error.stack : String(error));
+      }
     }
     console.log('[ViewServer] registerViewProviders: 完成注册, 共注册', this.viewProviders.length, '个providers');
+    
+    // 添加延迟检查，看看是否有webview被创建
+    setTimeout(() => {
+      console.log('[ViewServer] registerViewProviders: 延迟检查 - 已注册的providers数量:', this.viewProviders.length);
+    }, 2000);
   }
 
   /**

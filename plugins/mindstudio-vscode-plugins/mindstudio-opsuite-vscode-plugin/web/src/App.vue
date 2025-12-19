@@ -17,7 +17,7 @@ const routePath = ref('');
 onMounted(async () => {
   console.log('[App.vue] onMounted: 组件已挂载, 开始获取query');
   console.log('[App.vue] onMounted: window.location:', window.location.href);
-  console.log('[App.vue] onMounted: vscode对象:', typeof window.vscode !== 'undefined' ? '存在' : '不存在');
+  console.log('[App.vue] onMounted: vscode对象:', typeof (window as any).vscode !== 'undefined' ? '存在' : '不存在');
   
   try {
     // 添加超时处理，如果 3 秒内没有收到查询参数，尝试使用 URL 参数或默认值
