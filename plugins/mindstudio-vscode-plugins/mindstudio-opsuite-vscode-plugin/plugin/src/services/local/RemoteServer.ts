@@ -261,7 +261,7 @@ export default class RemoteServer {
    * 检查远程文件或目录是否存在
    * @param remotePath 远程路径
    */
-  public async exists(remotePath: string): Promise<boolean> {
+  public async exists(remotePath: string, mustFile?: boolean): Promise<boolean> {
     if (!this.isConnected) {
       throw new Error('请先连接到服务器');
     }
@@ -269,8 +269,12 @@ export default class RemoteServer {
     const sftp = await this.getSFTP();
 
     return new Promise((resolve) => {
-      sftp.stat(remotePath, (err: any) => {
-        resolve(!err);
+      sftp.stat(remotePath, (err, stats) => {
+        if (mustFile) {
+          resolve(!err && stats.isFile());
+        } else {
+          resolve(!err);
+        }
       });
     });
   }

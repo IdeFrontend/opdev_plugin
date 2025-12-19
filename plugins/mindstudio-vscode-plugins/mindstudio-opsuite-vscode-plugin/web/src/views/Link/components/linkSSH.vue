@@ -219,7 +219,7 @@ const connectionFormRules = {
         if (!value) {
           return Promise.resolve();
         }
-        const pathExists = await checkPathExists({ path: value, ssh: selectedRow.value });
+        const pathExists = await checkPathExists({ path: value, mustFile: true, ssh: selectedRow.value });
         return pathExists ? Promise.resolve() : Promise.reject('脚本文件不存在，请确认');
       }
     }
