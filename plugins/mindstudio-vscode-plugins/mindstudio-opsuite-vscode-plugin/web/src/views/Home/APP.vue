@@ -10,7 +10,7 @@
           新建算子工程
         </a-button>
       </div>
-      <div class="button-box">
+      <div v-if="false" class="button-box">
         <a-button type="primary" class="button disable-btn">打开算子工程</a-button>
       </div>
     </a-collapse-panel>

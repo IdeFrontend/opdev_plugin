@@ -224,6 +224,13 @@ export function useOpprofConfig() {
     });
   };
 
+  const initSimulate = (data:any) => {
+    console.log('simulationData', data)
+    simulationData.collectionContent.memoryThroughput = data.user_options.PMSampling
+    simulationData.mode.downloadToLocal = data.user_options.downloadToLocal
+    simulationData.dataStoragePath = data.user_options.dataStoragePath
+  }
+
   return {
     activeTab,
     simulationData,
@@ -234,6 +241,7 @@ export function useOpprofConfig() {
     handleOperatorPerformanceChange,
     addAdvancedParam,
     deleteAdvancedParam,
+    initSimulate
   };
 }
 

@@ -121,6 +121,14 @@ export default class OpsOption {
     }
   }
 
+  async saveConfig(type: string, data: any, showMessage: boolean = false) {
+      // 仿真/上板保存
+      await postConfig(type, data);
+      if (showMessage) {
+        vscode.window.showInformationMessage(`保存配置成功`);
+      }
+  }
+
   async startBuild(config_id?: string) {
     let configId = config_id;
     if (!configId) {
