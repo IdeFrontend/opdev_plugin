@@ -6,6 +6,7 @@
 
 <script setup>
 import { QuestionCircleOutlined } from "@ant-design/icons-vue";
+import { message } from "../../../untils/Message";
 
 const props = defineProps({
   simulationData: {
@@ -30,6 +31,10 @@ const handleRemoteSearch = (val) => {
 
 const handleFocus = () => {
   emit("remoteSearch", props.simulationData.dataStoragePath, "simulation");
+};
+
+const saveConfig = () => {
+  message.sendMessageToParent({ command: "vscodeSaveConfig", data: { type: 'simulate', data: {} } });
 };
 </script>
 
@@ -101,14 +106,9 @@ const handleFocus = () => {
       <div class="section-title">数据存放位置</div>
       <a-form layout="vertical">
         <a-form-item>
-          <a-auto-complete
-            v-model:value="simulationData.dataStoragePath"
-            :options="dataStorageOptions"
-            :loading="dataStorageLoading"
-            placeholder="请输入数据存放位置，支持远程搜索"
-            @search="handleRemoteSearch"
-            @focus="handleFocus"
-          />
+          <a-auto-complete v-model:value="simulationData.dataStoragePath" :options="dataStorageOptions"
+            :loading="dataStorageLoading" placeholder="请输入数据存放位置，支持远程搜索" @search="handleRemoteSearch"
+            @focus="handleFocus" />
         </a-form-item>
       </a-form>
     </div>
@@ -145,4 +145,3 @@ const handleFocus = () => {
   }
 }
 </style>
-

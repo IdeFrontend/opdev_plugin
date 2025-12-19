@@ -10,7 +10,6 @@ import {
   getBuildOpCommand,
   getRunCommand,
   getConfig,
-  getFiles,
   postConfig,
 } from '../../autogen-server';
 import path from 'node:path';
@@ -110,10 +109,6 @@ export default class OpsOption {
     return [...opConfig, ...exampleConfig];
   }
 
-  async getAllPath(path: string) {
-    return getFiles(path);
-  }
-
   async saveBuildConfig(data: any, showMessage: boolean = true) {
     try {
       await postConfig('build', data);
@@ -124,6 +119,14 @@ export default class OpsOption {
     } catch {
       vscode.window.showErrorMessage(`保存编译配置失败`);
     }
+  }
+
+  async saveConfig(type: string, data: any, showMessage: boolean = false) {
+      // 仿真/上板保存
+      await postConfig(type, data);
+      if (showMessage) {
+        vscode.window.showInformationMessage(`保存配置成功`);
+      }
   }
 
   async startBuild(config_id?: string) {

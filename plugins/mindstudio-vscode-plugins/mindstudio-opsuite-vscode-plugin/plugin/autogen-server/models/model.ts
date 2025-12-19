@@ -157,7 +157,7 @@ export function generateStructure(data: Partial<OpRecord>, extensionPath: string
         project_id: project.id,
         user_options: {
           op: record.op_name,
-          script: `bash ${record.op_name}.sh`,
+          script: 'msprof op',
           config_name: record.op_name,
         },
       };
@@ -165,9 +165,14 @@ export function generateStructure(data: Partial<OpRecord>, extensionPath: string
         project_id: project.id,
         user_options: {
           op: record.op_name,
-          script: `bash ${record.op_name}.sh`,
+          script: 'msprof op simulator',
           config_name: record.op_name,
           soc_version: null,
+          PMSampling: true,
+          downloadToLocal: true,
+          renderInPlatform: false,
+          // 数据存放位置默认值
+          dataStoragePath: ''
         },
       };
       void configModel.postConfig('on_board', [onBoard]);

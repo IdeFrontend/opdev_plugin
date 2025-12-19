@@ -14,6 +14,7 @@ import packageJson from '../../../package.json';
 import { CommandExecutor } from './CommandOptions';
 import OpsOption from './OpsOption';
 import { SSHKeyAutoConfig } from './SSHKeyAutoConfig';
+import { getFiles } from '../../autogen-server';
 import { InsightDataViewerPanel } from './InsightDataViewerPanel';
 
 // 跟踪已打开的CSV文件目录
@@ -48,61 +49,8 @@ const webviewMessageList: messageItem[] = [
     command: 'vscodeStartLinkCreateOps',
     callback: async (message: any, that: any) => {
       console.log('message-------', message);
-      if (!message.message.data) {
-        const opsOption = new OpsOption(that.context);
-        await opsOption.init();
-        const opsPrototypeFilePath = await opsOption.createOps();
-        console.log('res', opsPrototypeFilePath);
-        if (opsPrototypeFilePath) {
-          opsOption.createOpsByPrototype(opsPrototypeFilePath);
-        }
-        vscode.commands.executeCommand('workbench.action.closeActiveEditor');
-        return;
-      }
-      // 开始传入
-      const result = message.message.data;
-      async function createFile(result: { fileName: string; value: string }) {
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-        if (!workspaceFolders) {
-          vscode.window.showErrorMessage('请先打开一个工作区');
-          return;
-        }
 
-        const workspacePath = workspaceFolders[0].uri;
-        const filePath = vscode.Uri.joinPath(workspacePath, result.fileName);
-
-        try {
-          // 检查文件是否存在
-          try {
-            await vscode.workspace.fs.stat(filePath);
-
-            // 询问是否覆盖
-            const choice = await vscode.window.showWarningMessage(`文件 ${result.fileName} 已存在，是否覆盖？`, { modal: true }, '覆盖', '取消');
-
-            if (choice !== '覆盖') {
-              return;
-            }
-          } catch {
-            // 文件不存在，继续
-          }
-
-          // 写入文件
-          await vscode.workspace.fs.writeFile(filePath, new TextEncoder().encode(result.value));
-
-          vscode.window.showInformationMessage(`文件 ${result.fileName} 创建成功`);
-
-          // 可选：格式化JSON
-          try {
-            const formattedValue = JSON.stringify(JSON.parse(result.value), null, 2);
-            await vscode.workspace.fs.writeFile(filePath, new TextEncoder().encode(formattedValue));
-          } catch {
-            // 如果不是有效的JSON，保持原样
-          }
-        } catch (error: any) {
-          vscode.window.showErrorMessage(`创建文件失败: ${error.message}`);
-        }
-      }
-      createFile(result);
+      vscodeStartLinkCreateOps(message.message.data, that);
     },
   },
   {
@@ -251,11 +199,9 @@ const webviewMessageList: messageItem[] = [
       const extensionsPath = '.vscode-server/extensions/';
       const serviceFile = 'get_files.sh';
       const plugiExtensionsPath = `${extensionsPath}${publisher}.${extensionName}-${version}`;
-      const commandPath = `${plugiExtensionsPath}/out/server/shells`;
+      const commandPath = `${plugiExtensionsPath}/out/shells`;
       if (that.isRemote) {
-        const opsOption = new OpsOption(that.context);
-        await opsOption.init();
-        const res = await opsOption.getAllPath(message.keyword);
+        const res = getFiles(message.keyword);
         that.panel.webview.postMessage({
           command: 'iframeRemoteSearchResult',
           data: {
@@ -313,6 +259,8 @@ const webviewMessageList: messageItem[] = [
         const fullProjectPath = path.join(normalizedProjectPath, normalizedProjectName);
         console.log(`检测到远程连接: ${remoteName}`);
 
+        await handleOperatorProjectDictoryFile(message.createOperatorProjectDictoryFileType, that)
+
         if (remoteName && remoteName !== 'ssh-remote') {
           // 如果有完整的远程连接信息，则使用它
           if (remoteName.startsWith('ssh-remote+')) {
@@ -354,6 +302,17 @@ const webviewMessageList: messageItem[] = [
         if (!message.privateKey) {
           const autoConfig = new SSHKeyAutoConfig(server);
           await autoConfig.configureSSH(message);
+        }
+
+        await handleOperatorProjectDictoryFile(message.createOperatorProjectDictoryFileType, that)
+
+        if (message.createOperatorProjectDictoryFileType) {
+          if (message.createOperatorProjectDictoryFileType === 1) {
+            await vscodeBuildCreateOps('cann', that)
+          }
+          if (message.createOperatorProjectDictoryFileType === 2) {
+            await vscodeStartLinkCreateOps(undefined, that)
+          }
         }
 
         const remoteOpener: RemoteServerOpener = new RemoteServerOpener();
@@ -411,13 +370,19 @@ const webviewMessageList: messageItem[] = [
     },
   },
   {
-    command: 'vscodeBuildCreateOps',
+    command: 'vscodeSaveConfig',
     callback: async (msg: any, that: any) => {
       const data = msg.message.data;
       const opsOption = new OpsOption(that.context);
       await opsOption.init();
-      await opsOption.createOpsByPrototype('', data);
-      vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+      await opsOption.saveConfig(data.type, data.data);
+    },
+  },
+  {
+    command: 'vscodeBuildCreateOps',
+    callback: async (msg: any, that: any) => {
+      const data = msg.message.data;
+      await vscodeBuildCreateOps(data, that);
     },
   },
   {
@@ -444,7 +409,7 @@ const webviewMessageList: messageItem[] = [
         // 这样新文件已经显示，关闭旧文件时不会闪现源文件
         if (existingUri && existingUri.fsPath !== csvPath) {
           // 等待新文件完全打开
-          await new Promise(resolve => setTimeout(resolve, 300));
+          await new Promise((resolve) => setTimeout(resolve, 300));
 
           // 尝试关闭旧文件
           // 检查当前打开的文本编辑器，找到旧文件并关闭
@@ -519,56 +484,59 @@ const webviewMessageList: messageItem[] = [
         }
 
         // 显示下载进度
-        await vscode.window.withProgress({
-          location: vscode.ProgressLocation.Notification,
-          title: '正在下载文件',
-          cancellable: false
-        }, async (progress) => {
-          progress.report({ increment: 0, message: '正在读取远程文件...' });
+        await vscode.window.withProgress(
+          {
+            location: vscode.ProgressLocation.Notification,
+            title: '正在下载文件',
+            cancellable: false,
+          },
+          async (progress) => {
+            progress.report({ increment: 0, message: '正在读取远程文件...' });
 
-          // 创建远程文件 URI
-          const remoteFileUri = vscode.Uri.file(remoteFilePath);
+            // 创建远程文件 URI
+            const remoteFileUri = vscode.Uri.file(remoteFilePath);
 
-          // 检查远程文件是否存在
-          try {
-            const stat = await vscode.workspace.fs.stat(remoteFileUri);
-            progress.report({ increment: 30, message: `文件大小: ${(stat.size / 1024).toFixed(2)} KB` });
-          } catch (error) {
-            vscode.window.showErrorMessage(`远程文件不存在: ${remoteFilePath}`);
-            return;
-          }
-
-          // 读取远程文件内容
-          progress.report({ increment: 40, message: '正在读取文件内容...' });
-          const fileData = await vscode.workspace.fs.readFile(remoteFileUri);
-
-          // 获取文件名
-          const fileName = path.basename(remoteFilePath);
-
-          progress.report({ increment: 60, message: '请选择保存位置...' });
-
-          // 让用户选择本地保存位置
-          // 在 remote-ssh 场景下，showSaveDialog 会自动打开本地文件保存对话框
-          const localFileUri = await vscode.window.showSaveDialog({
-            defaultUri: vscode.Uri.file(fileName),
-            saveLabel: '保存',
-            filters: {
-              '所有文件': ['*']
+            // 检查远程文件是否存在
+            try {
+              const stat = await vscode.workspace.fs.stat(remoteFileUri);
+              progress.report({ increment: 30, message: `文件大小: ${(stat.size / 1024).toFixed(2)} KB` });
+            } catch (error) {
+              vscode.window.showErrorMessage(`远程文件不存在: ${remoteFilePath}`);
+              return;
             }
-          });
 
-          if (!localFileUri) {
-            // 用户取消了保存对话框
-            return;
+            // 读取远程文件内容
+            progress.report({ increment: 40, message: '正在读取文件内容...' });
+            const fileData = await vscode.workspace.fs.readFile(remoteFileUri);
+
+            // 获取文件名
+            const fileName = path.basename(remoteFilePath);
+
+            progress.report({ increment: 60, message: '请选择保存位置...' });
+
+            // 让用户选择本地保存位置
+            // 在 remote-ssh 场景下，showSaveDialog 会自动打开本地文件保存对话框
+            const localFileUri = await vscode.window.showSaveDialog({
+              defaultUri: vscode.Uri.file(fileName),
+              saveLabel: '保存',
+              filters: {
+                所有文件: ['*'],
+              },
+            });
+
+            if (!localFileUri) {
+              // 用户取消了保存对话框
+              return;
+            }
+
+            // 将文件内容写入本地
+            progress.report({ increment: 80, message: '正在保存文件...' });
+            await vscode.workspace.fs.writeFile(localFileUri, fileData);
+
+            progress.report({ increment: 100, message: '下载完成' });
+            vscode.window.showInformationMessage(`文件已成功下载到: ${localFileUri.fsPath}`);
           }
-
-          // 将文件内容写入本地
-          progress.report({ increment: 80, message: '正在保存文件...' });
-          await vscode.workspace.fs.writeFile(localFileUri, fileData);
-
-          progress.report({ increment: 100, message: '下载完成' });
-          vscode.window.showInformationMessage(`文件已成功下载到: ${localFileUri.fsPath}`);
-        });
+        );
       } catch (error: any) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         vscode.window.showErrorMessage(`下载数据失败: ${errorMessage}`);
@@ -587,11 +555,7 @@ const webviewMessageList: messageItem[] = [
       }
       try {
         // 确认删除
-        const result = await vscode.window.showWarningMessage(
-          `确定要删除 ${nodeKey} 吗？`,
-          '确定',
-          '取消'
-        );
+        const result = await vscode.window.showWarningMessage(`确定要删除 ${nodeKey} 吗？`, '确定', '取消');
         if (result === '确定') {
           console.log('删除节点:', nodeKey, filePath);
           // 这里可以添加删除文件的逻辑
@@ -670,5 +634,83 @@ const webviewMessageList: messageItem[] = [
     },
   },
 ];
+
+// 创建算子工程类型
+// 1 执行 vscodeBuildCreateOps 消息体内逻辑  data: 'cann'
+// 2 执行 vscodeStartLinkCreateOps 消息体内逻辑
+async function handleOperatorProjectDictoryFile(createOperatorProjectDictoryFileType: Number | undefined, that: any) {
+  if (createOperatorProjectDictoryFileType) {
+    if (createOperatorProjectDictoryFileType === 1) {
+      await vscodeBuildCreateOps('cann', that)
+    }
+    if (createOperatorProjectDictoryFileType === 2) {
+      await vscodeStartLinkCreateOps(undefined, that)
+    }
+  }
+}
+
+async function vscodeBuildCreateOps(data: any, that: any) {
+  const opsOption = new OpsOption(that.context);
+  await opsOption.init();
+  await opsOption.createOpsByPrototype('', data);
+  await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+}
+
+async function vscodeStartLinkCreateOps(data: any, that: any) {
+  if (!data) {
+    const opsOption = new OpsOption(that.context);
+    await opsOption.init();
+    const opsPrototypeFilePath = await opsOption.createOps();
+    console.log('res', opsPrototypeFilePath);
+    if (opsPrototypeFilePath) {
+      opsOption.createOpsByPrototype(opsPrototypeFilePath);
+    }
+    vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+    return;
+  }
+  // 开始传入
+  async function createFile(result: { fileName: string; value: string }) {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders) {
+      vscode.window.showErrorMessage('请先打开一个工作区');
+      return;
+    }
+
+    const workspacePath = workspaceFolders[0].uri;
+    const filePath = vscode.Uri.joinPath(workspacePath, data.fileName);
+
+    try {
+      // 检查文件是否存在
+      try {
+        await vscode.workspace.fs.stat(filePath);
+
+        // 询问是否覆盖
+        const choice = await vscode.window.showWarningMessage(`文件 ${data.fileName} 已存在，是否覆盖？`, { modal: true }, '覆盖', '取消');
+
+        if (choice !== '覆盖') {
+          return;
+        }
+      } catch {
+        // 文件不存在，继续
+      }
+
+      // 写入文件
+      await vscode.workspace.fs.writeFile(filePath, new TextEncoder().encode(data.value));
+
+      vscode.window.showInformationMessage(`文件 ${data.fileName} 创建成功`);
+
+      // 可选：格式化JSON
+      try {
+        const formattedValue = JSON.stringify(JSON.parse(data.value), null, 2);
+        await vscode.workspace.fs.writeFile(filePath, new TextEncoder().encode(formattedValue));
+      } catch {
+        // 如果不是有效的JSON，保持原样
+      }
+    } catch (error: any) {
+      vscode.window.showErrorMessage(`创建文件失败: ${error.message}`);
+    }
+  }
+  createFile(data);
+}
 
 export default webviewMessageList;

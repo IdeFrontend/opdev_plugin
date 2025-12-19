@@ -62,66 +62,19 @@ const clickSetting = (() => {
                             <a-menu-item @click="buildOpFn">编译部署算子</a-menu-item>
                             <a-sub-menu key="sub1" title="编译example">
                                 <a-menu-item @click="buildExampleFn">基础编译</a-menu-item>
-                                <a-menu-item>带debug选项的编译</a-menu-item>
-                                <a-menu-item>带sanitizer选项的编译</a-menu-item>
                             </a-sub-menu>
                         </a-menu>
                     </template>
                 </a-dropdown>
 
-                <a-dropdown>
-                    <span class="dropdown-content">
-                        <img src="../../assets/svg/run.svg" alt="" class="img">
-                        运行
-                        <DownOutlined style="margin-right: 4px; margin-left: 4px;" />
-                    </span>
-                    <template #overlay>
-                        <a-menu>
-                            <a-menu-item @click="runExampleFn">运行算子</a-menu-item>
-                            <a-menu-item @click="runExampleFn">运行example</a-menu-item>
-                        </a-menu>
-                    </template>
-                </a-dropdown>
-
-                <a-dropdown>
-                    <span class="dropdown-content">
-                        <img src="../../assets/svg/debug.svg" alt="" class="img">
-                        调试
-                        <DownOutlined style="margin-right: 4px; margin-left: 4px;" />
-                    </span>
-                    <template #overlay>
-                        <a-menu>
-                            <a-menu-item>执行调试</a-menu-item>
-                            <a-menu-item>调试配置</a-menu-item>
-                        </a-menu>
-                    </template>
-                </a-dropdown>
-            </div>
-
-
-            <div style="padding-top: 12px;">
-                <a-button type="text" size="small" style="padding: 0;">
+                <a-button type="text" size="small" style="margin-right: 4px;" @click="runExampleFn">
                     <div class="inline-flex">
-                        <img src="../../assets/svg/check.svg" alt="" class="img">
-                        异常检测
+                        <img src="../../assets/svg/run.svg" alt="" class="img">
+                        运行验证
                     </div>
                 </a-button>
 
-                <a-dropdown>
-                    <span class="dropdown-content" style="margin-left: 4px">
-                        <img src="../../assets/svg/power.svg" alt="" class="img">
-                        性能调优
-                        <DownOutlined style="margin-right: 4px; margin-left: 4px;" />
-                    </span>
-                    <template #overlay>
-                        <a-menu>
-                            <a-menu-item>带源码的性能调优</a-menu-item>
-                            <a-menu-item>不带源码的性能调优</a-menu-item>
-                        </a-menu>
-                    </template>
-                </a-dropdown>
-
-                <a-button type="text" size="small" style="padding: 0;" @click="clickSetting">
+                <a-button type="text" size="small" style="margin-right: 4px;" @click="clickSetting">
                     <div class="inline-flex">
                         <img src="../../assets/svg/setting.svg" alt="" class="img">
                         工程配置
@@ -145,7 +98,6 @@ const clickSetting = (() => {
     font-size: 14px;
     display: inline-flex;
     align-items: center;
-    margin-right: 8px;
 }
 
 .img {
@@ -155,9 +107,11 @@ const clickSetting = (() => {
 }
 
 .dropdown-content {
+    height: 24px;
     font-size: 14px;
     display: inline-flex;
     align-items: center;
-    margin-right: 8px;
+    margin-right: 7px;
+    margin-left: 7px;
 }
 </style>
