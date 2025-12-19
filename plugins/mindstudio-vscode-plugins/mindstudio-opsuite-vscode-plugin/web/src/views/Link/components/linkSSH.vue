@@ -509,7 +509,7 @@ defineExpose({
           <a-form-item name="ipAddress">
             <template #label>
               <span>环境变量配置脚本</span>
-              <a-tooltip title="安装CANN包后需要执行的set_env.sh脚本的全路径信息，如果使用的是一站式开发平台提供的容器镜像，则此处可以置空">
+              <a-tooltip title="安装CANN包后需要执行的set_env.sh脚本的绝对路径信息，如果使用的是一站式开发平台提供的容器镜像，则此处可以置空。若出现报错提示路径不存在，说明非有效环境变量脚本路径，需要输入设置环境变量脚本的绝对路径。">
                 <QuestionCircleOutlined class="help-icon" />
               </a-tooltip>
             </template>
