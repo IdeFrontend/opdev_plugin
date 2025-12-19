@@ -32,15 +32,19 @@ export const apis: ApiGroup = {
     pathExists(params: CheckPathExistsParams): Promise<boolean> {
       if (RemoteServer.isRemote()) {
         return new Promise((resolve) => {
-          fs.stat(params.path, (err) => {
-            resolve(!err);
+          fs.stat(params.path, (err, stats) => {
+            if (params.mustFile) {
+              resolve(!err && stats.isFile());
+            } else {
+              resolve(!err);
+            }
           });
         });
       } else {
         if (!params.ssh) {
           throw new Error('检查远程目录需要ssh配置');
         }
-        return new RemoteServer(params.ssh).connect().then((server) => server.exists(params.path));
+        return new RemoteServer(params.ssh).connect().then((server) => server.exists(params.path, params.mustFile));
       }
     },
   },
