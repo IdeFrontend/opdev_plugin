@@ -4,15 +4,27 @@
     backgroundRepeat: 'no-repeat',
     backgroundSize: 'cover',
     backgroundPosition: 'center'
-  }">
+  }" @click="handleClick">
   </div>
 </template>
 
 <script>
-  import a from './a.json'
+import a from './a.json'
 export default {
   data() {
     return {a: a.url }
+  },
+  methods: {
+    handleClick() {
+      //@ts-ignore
+      if (window.vscode) {
+        //@ts-ignore
+        window.vscode.postMessage({
+          command: 'vscodeOpenSidebar',
+          message: {}
+        });
+      }
+    }
   }
 }
 </script>

@@ -59,6 +59,12 @@ const webviewMessageList: messageItem[] = [
     },
   },
   {
+    command: 'vscodeOpenSidebar',
+    callback: (message: any, that: any) => {
+      vscode.commands.executeCommand('workbench.view.extension.mindstudio-opssuite-vscode-plugin');
+    },
+  },
+  {
     command: 'vscodeGetssh',
     callback: (message: any, that: any) => {
       if (!that.panel) {
