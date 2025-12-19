@@ -7,7 +7,7 @@ import { ViewRenderer } from './ViewRender';
 import { ViewQuery } from './ViewQuery';
 
 /** 开启视图hook */
-type ViewOpenedCallback = (routePath: string, panel: vscode.WebviewPanel) => void;
+type ViewOpenedCallback = (routePath: string, webview: vscode.Webview) => void;
 
 /** 关闭视图hook */
 type ViewDisposedCallback = (routePath: string) => void;
@@ -25,12 +25,14 @@ interface PanelViewOptions {
 
 const CUSTOM_EDITOR_VIEW_TYPE = 'mindstudioOpsuite';
 
-export class PanelView extends vscode.Disposable {
+export class ViewServer extends vscode.Disposable {
   // 单例模式
-  private static instance: PanelView;
-  public static getInstance(): PanelView {
+  private static instance: ViewServer;
+  public static getInstance(): ViewServer {
     return this.instance;
   }
+
+  private viewProviders: vscode.Disposable[] = [];
 
   private router: ViewRouter;
   private renderer: ViewRenderer;
@@ -44,10 +46,11 @@ export class PanelView extends vscode.Disposable {
 
   constructor(routes: ViewRouteRaw[], private context: vscode.ExtensionContext) {
     super(() => this.onDispose());
-    PanelView.instance = this;
+    ViewServer.instance = this;
     this.router = new ViewRouter(routes);
     this.renderer = new ViewRenderer(context);
     this.query = new ViewQuery();
+    this.registerViewProviders();
   }
 
   public onViewActivated(callback: ViewOpenedCallback) {
@@ -58,14 +61,19 @@ export class PanelView extends vscode.Disposable {
     this.viewDisposedCallbacks.push(callback);
   }
 
-  public open(routePath: string, options: PanelViewOptions = {}): vscode.WebviewPanel {
+  /**
+   * 开启视图页签
+   * @param routePath 路由
+   * @param options 开启视图选项
+   * @returns 页签实例
+   */
+  public openPanel(routePath: string, options: PanelViewOptions = {}): vscode.WebviewPanel {
     const routeRaw = this.router.getRaw(routePath);
     if (!routeRaw) {
       throw new Error(`路由 ${routePath} 不存在`);
     }
 
     const { viewColumn = vscode.ViewColumn.Active, query = {}, title } = options;
-    const viewTitle = title ?? routeRaw.title;
 
     // 避免重复开启
     if (this.openedViews.has(routePath)) {
@@ -74,18 +82,30 @@ export class PanelView extends vscode.Disposable {
       return panel;
     }
 
-    // 限制webview资源加载目录
-    const localResourceRoots = [vscode.Uri.file(path.join(this.context.extensionPath, 'out', 'web'))];
-
-    // 生成webview
-    const webviewPanel = vscode.window.createWebviewPanel(
-      CUSTOM_EDITOR_VIEW_TYPE,
-      viewTitle,
-      { viewColumn },
-      { retainContextWhenHidden: true, enableScripts: true, localResourceRoots }
-    );
+    const webviewPanel = this.createViewPanel(routeRaw, viewColumn, title);
     this.activeViewPanel(webviewPanel, routePath, query);
     return webviewPanel;
+  }
+
+  private registerViewProviders() {
+    const providerRaws = this.router.getAllProviderRaws();
+    for (const routeRaw of providerRaws) {
+      const disposable = vscode.window.registerWebviewViewProvider(routeRaw.providerViewType!, {
+        resolveWebviewView: async (webviewView) => {
+          webviewView.webview.options = { enableScripts: true };
+          this.activeWebview(webviewView.webview, routeRaw.path);
+        },
+      });
+      this.viewProviders.push(disposable);
+    }
+  }
+
+  /**
+   * 创建页签
+   */
+  private createViewPanel(routeRaw: ViewRouteRaw, viewColumn: vscode.ViewColumn, customTitle?: string): vscode.WebviewPanel {
+    const viewTitle = customTitle ?? routeRaw.title ?? routeRaw.path;
+    return vscode.window.createWebviewPanel(CUSTOM_EDITOR_VIEW_TYPE, viewTitle, { viewColumn }, { retainContextWhenHidden: true, enableScripts: true });
   }
 
   /**
@@ -95,11 +115,6 @@ export class PanelView extends vscode.Disposable {
     this.openedViews.set(routePath, viewPanel);
 
     this.activeWebview(viewPanel.webview, routePath, query);
-
-    // 【hook】页面激活
-    this.viewOpenedCallbacks.forEach((callback) => {
-      callback(routePath, viewPanel);
-    });
 
     // 监听销毁
     viewPanel.onDidDispose(() => {
@@ -117,10 +132,17 @@ export class PanelView extends vscode.Disposable {
   private activeWebview(webview: vscode.Webview, routePath: string, query: Record<string, unknown> = {}) {
     this.renderer.render(webview, { lang: vscode.env.language });
     this.query.setQuery(webview, { ...query, _path: routePath });
+
+    // 【hook】页面激活
+    this.viewOpenedCallbacks.forEach((callback) => {
+      callback(routePath, webview);
+    });
   }
 
   private onDispose() {
+    this.viewProviders.forEach((disposable) => disposable.dispose());
     this.router.dispose();
     this.renderer.dispose();
+    this.query.dispose();
   }
 }
