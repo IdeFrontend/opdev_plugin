@@ -1,6 +1,3 @@
-import path from 'path';
-import os from 'os';
-import fs from 'fs-extra';
 import child_process from 'child_process';
 
 const ascend_soc_map: Record<string, string> = {
@@ -14,29 +11,11 @@ const ascend_soc_map: Record<string, string> = {
   '910a': 'ascend910',
 };
 
-export async function chmodRecursiveStandard(targetPath: string, mode: number) {
-  try {
-    await fs.chmod(targetPath, mode);
-    const items = await fs.readdir(targetPath);
-    for (const item of items) {
-      const full = path.join(targetPath, item);
-      const stat = await fs.stat(full);
-      if (stat.isDirectory()) {
-        await chmodRecursiveStandard(full, mode);
-      } else {
-        await fs.chmod(full, mode);
-      }
-    }
-  } catch (e: any) {
-    console.warn(`Exception while chmod: ${e}`);
-  }
-}
-
 function getDefaultAscendEnvScript(): string {
   return '/etc/profile';
 }
 
-export function getEnvFromScript(ascendEnvScript?: string): NodeJS.ProcessEnv {
+function getEnvFromScript(ascendEnvScript?: string): NodeJS.ProcessEnv {
   if (!ascendEnvScript) return process.env;
   try {
     const cmd = `source ${ascendEnvScript} && env`;
@@ -69,15 +48,7 @@ function getSocFromCoreName(coreName?: string) {
 export let ascend_env_script: string = process.env.ASCEND_ENV_SCRIPT || getDefaultAscendEnvScript();
 export let soc_version: string = process.env.SOC_VERSION || 'ascend910b';
 
-export function setSocVersion(s: string) {
-  soc_version = s;
-}
-
-export function setAscendEnvScript(p: string) {
-  ascend_env_script = p;
-}
-
-export function refreshAscendEnv() {
+function refreshAscendEnv() {
   try {
     // populate environment vars from script
     const env = getEnvFromScript(ascend_env_script);
@@ -88,7 +59,7 @@ export function refreshAscendEnv() {
   }
 }
 
-export function refreshSocVersion() {
+function refreshSocVersion() {
   try {
     const out = child_process.execSync('npu-smi info', { encoding: 'utf8' });
     const lines = out.split('\n');

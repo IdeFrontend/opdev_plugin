@@ -62,7 +62,9 @@ export class RemoteInstaller {
     let zipFilePath = await zipper.findAndZipDirectory(ExtensionConfig.packageName, zipFileName);
     if (!zipFilePath) {
       // 开发模式，打包整个插件目录
-      zipFilePath = await zipper.findAndZipDirectory(SOURCE_CODE_DIR_NAME, zipFileName);
+      zipFilePath = await zipper.findAndZipDirectory(SOURCE_CODE_DIR_NAME, zipFileName, {
+        ignoreFiles: ['node_modules/**', 'web/**', 'plugin/**', 'package-lock.json'], // TODO 读取.vscodeignore 文件，文件夹后面+**
+      });
     }
     return zipFilePath;
   }
