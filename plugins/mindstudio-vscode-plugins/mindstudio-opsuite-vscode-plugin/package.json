@@ -45,11 +45,6 @@
         {
           "id": "customSidebarView",
           "name": "操作面板",
-          "type": "webview"
-        },
-        {
-          "id": "performanceSidebarView",
-          "name": "性能调优",
           "type": "webview",
           "visibility": "collapsed"
         }
@@ -94,16 +89,6 @@
       }
     ],
     "menus": {
-      "explorer/context": [
-        {
-          "command": "huawei-op-devtools.open",
-          "group": "navigation"
-        },
-        {
-          "command": "huawei-op-devtools.createOps",
-          "group": "navigation"
-        }
-      ],
       "view/title": [
         {
           "command": "huawei-op-devtools.newPrototype",
@@ -114,52 +99,8 @@
             "dark": "resources/homeIconW.svg"
           }
         }
-      ],
-      "editor/title": [
-        {
-          "command": "huawei-op-devtools.config",
-          "group": "navigation",
-          "when": "true"
-        },
-        {
-          "command": "extension.jsonButtonAction",
-          "group": "navigation",
-          "when": "editorLangId == json"
-        },
-        {
-          "submenu": "extension/build",
-          "group": "navigation",
-          "when": "true"
-        }
-      ],
-      "extension/build": [
-        {
-          "command": "huawei-op-devtools.buildOps",
-          "group": "navigation"
-        },
-        {
-          "command": "huawei-op-devtools.createOps",
-          "group": "navigation"
-        }
       ]
     },
-    "submenus": [
-      {
-        "id": "extension/build",
-        "label": "buildOps",
-        "icon": "resources/build.svg"
-      },
-      {
-        "id": "extension/opsRun",
-        "label": "opsRun",
-        "icon": "resources/run.svg"
-      },
-      {
-        "id": "extension/opsDebug",
-        "label": "opsDebug",
-        "icon": "resources/debug.svg"
-      }
-    ],
     "customEditors": [
       {
         "viewType": "csvViewer",
