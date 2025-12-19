@@ -158,7 +158,7 @@ export default class OpsOption {
       const res = await this.executor.execute(runCommand, [], [], {}, true);
       console.log('runRes', res)
       if (res.code !== 0) {
-        vscode.window.showErrorMessage(`运行失败 ${res}`);
+        vscode.window.showErrorMessage(`运行失败 ${res.output}`);
         return;
       }
       vscode.window.showInformationMessage(`运行成功`);
