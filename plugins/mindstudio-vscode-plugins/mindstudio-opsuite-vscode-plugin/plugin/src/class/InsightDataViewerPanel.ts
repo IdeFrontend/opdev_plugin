@@ -187,8 +187,8 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     console.log('[InsightDataViewerPanel] 收到 webview 消息:', JSON.stringify(message, null, 2));
 
     // 检查是否是 WebSocket 桥接消息（这些消息应该由 NodeWebviewSocketBridge 处理）
-    if (message.type && (message.type === 'setBinPath')) {
-      console.log(`[InsightDataViewerPanel] 检测到 WebSocket 桥接消息，应该由 NodeWebviewSocketBridge 处理:`, message.type);
+    if (message.command && (message.command === 'setBinPath')) {
+      console.log(`[InsightDataViewerPanel] 检测到 WebSocket 桥接消息，应该由 NodeWebviewSocketBridge 处理:`, message.command,this.binPath);
       this.panel.webview.postMessage({
         command: 'setBinPath',
         data: this.binPath,

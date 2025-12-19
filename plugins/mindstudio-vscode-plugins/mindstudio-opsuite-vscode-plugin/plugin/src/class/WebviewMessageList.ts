@@ -7,6 +7,7 @@
 
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
 
 import { RemoteServerOpener } from './RemoteServerOpener';
 import RemoteServer from '../services/local/RemoteServer';
@@ -586,12 +587,11 @@ const webviewMessageList: messageItem[] = [
 
         // 插件目录列表
         const pluginDirs = [
-          { model: 'Cluster', path: 'communication.html', iframeName: 'communication' },
-          { model: 'Cluster', path: 'summary.html', iframeName: 'summary' },
-          { model: 'Cluster', path: 'index.html', iframeName: 'Cluster' },
-          { model: 'Compute', path: 'cache.html', iframeName: 'cache' },
-          { model: 'Compute', path: 'detail.html', iframeName: 'detail' },
-          { model: 'Compute', path: 'source.html', iframeName: 'source' },
+          { model: 'Cluster', path: 'communication.html', iframeName: 'Communication' },
+          { model: 'Cluster', path: 'summary.html', iframeName: 'Summary' },
+          { model: 'Compute', path: 'cache.html', iframeName: 'Cache' },
+          { model: 'Compute', path: 'detail.html', iframeName: 'Detail' },
+          { model: 'Compute', path: 'source.html', iframeName: 'Source' },
           { model: 'Compute', path: 'index.html', iframeName: 'Compute' },
           { model: 'leaks' },
           { model: 'Memory' },
