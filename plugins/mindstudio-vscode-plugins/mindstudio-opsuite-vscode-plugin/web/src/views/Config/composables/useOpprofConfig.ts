@@ -226,7 +226,9 @@ export function useOpprofConfig() {
 
   const initSimulate = (data:any) => {
     console.log('simulationData', data)
-    Object.assign(simulationData, data)
+    simulationData.collectionContent.memoryThroughput = data.user_options.PMSampling
+    simulationData.mode.downloadToLocal = data.user_options.downloadToLocal
+    simulationData.dataStoragePath = data.user_options.dataStoragePath
   }
 
   return {
@@ -239,6 +241,7 @@ export function useOpprofConfig() {
     handleOperatorPerformanceChange,
     addAdvancedParam,
     deleteAdvancedParam,
+    initSimulate
   };
 }
 
