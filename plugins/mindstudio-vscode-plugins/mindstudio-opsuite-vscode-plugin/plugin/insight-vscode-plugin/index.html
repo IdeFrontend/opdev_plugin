@@ -67,162 +67,18 @@
             <div class="plugin-placeholder">等待加载 Timeline...</div>
         </div>
     </div>
+    <!-- DataViewerController 脚本将由 InsightDataViewerPanel 注入 -->
+    <script id="data-viewer-controller-script"></script>
     <script>
-        const vscode = acquireVsCodeApi();
-        
-        // 创建空的 iframe
-        function createIframe(pluginName) {
-            const container = document.getElementById(pluginName);
-            if (!container) {
-                console.error(`未找到插件容器: ${pluginName}`);
-                return null;
-            }
-            
-            // 清除占位符
-            container.innerHTML = '';
-            
-            // 创建空的 iframe
-            const iframe = document.createElement('iframe');
-            iframe.src = 'about:blank';
-            iframe.style.width = '100%';
-            iframe.style.height = '600px';
-            iframe.style.border = 'none';
-            iframe.style.display = 'block';
-            
-            container.appendChild(iframe);
-            return iframe;
-        }
-        
-        // 渲染 iframe 内容
-        function renderIframeContent(pluginName, content) {
-            const container = document.getElementById(pluginName);
-            if (!container) {
-                console.error(`未找到插件容器: ${pluginName}`);
-                return;
-            }
-            
-            // 获取或创建 iframe
-            let iframe = container.querySelector('iframe');
-            if (!iframe) {
-                iframe = createIframe(pluginName);
-            }
-            
-            // 尝试写入内容的函数
-            function writeContent() {
-                try {
-                    const doc = iframe.contentDocument || iframe.contentWindow.document;
-                    if (!doc) {
-                        console.error(`无法获取 iframe document: ${pluginName}`);
-                        return;
-                    }
-                    doc.open();
-                    doc.write(content);
-                    doc.close();
-                } catch (error) {
-                    console.error(`渲染 iframe 内容失败: ${pluginName}`, error);
-                    container.innerHTML = `<div class="plugin-placeholder">渲染失败: ${pluginName}</div>`;
-                }
-            }
-            
-            // 如果 iframe 已经加载，直接写入
-            try {
-                const doc = iframe.contentDocument || iframe.contentWindow.document;
-                if (doc && doc.readyState === 'complete') {
-                    writeContent();
-                } else {
-                    // 等待 iframe 加载完成后再写入内容
-                    iframe.onload = function() {
-                        writeContent();
-                    };
-                    // 如果 onload 没有触发，使用 setTimeout 重试
-                    setTimeout(function() {
-                        if (iframe.contentDocument && iframe.contentDocument.readyState === 'complete') {
-                            writeContent();
-                        }
-                    }, 100);
-                }
-            } catch (error) {
-                // 如果访问 document 失败，等待 onload
-                iframe.onload = function() {
-                    writeContent();
-                };
-            }
-        }
-        
-        // 监听来自扩展的消息
-        window.addEventListener('message', event => {
-            const message = event.data;
-            
-            // 处理设置 bin 文件路径的消息
-            if (message.command === 'setBinPath') {
-                const binPathElement = document.getElementById('binPath');
-                if (binPathElement) {
-                    binPathElement.textContent = message.data;
-                }
-            }
-            
-            // 处理设置 WebSocket 端口的消息
-            if (message.command === 'setWsPort') {
-                const wsPortElement = document.getElementById('wsPort');
-                if (wsPortElement) {
-                    wsPortElement.textContent = message.data;
-                }
-            }
-            
-            // 处理 iframe 内容渲染消息
-            // 消息格式: { command: 'renderIframe', pluginName: 'Cluster', content: '<html>...</html>' }
-            if (message.command === 'renderIframe') {
-                if (message.pluginName && message.content) {
-                    renderIframeContent(message.pluginName, message.content);
-                } else {
-                    console.error('renderIframe 消息缺少必要字段:', message);
-                }
-            }
-            
-            // 处理 WebSocket 桥接消息（来自 NodeWebviewSocketBridge）
-            if (message.type && message.type.startsWith('ws:')) {
-                // WebSocket 桥接消息处理
-                // 这些消息来自 NodeWebviewSocketBridge，用于 WebSocket 通信
-                switch (message.type) {
-                    case 'ws:opened':
-                        break;
-                    case 'ws:message':
-                        break;
-                    case 'ws:error':
-                        console.error('WebSocket error:', message.id, message.reason);
-                        break;
-                    case 'ws:closed':
-                        break;
-                }
-            }
-        });
-        
-        // 页面加载完成后通知 node 层可以开始渲染 iframe
-        window.addEventListener('DOMContentLoaded', function() {
-            // 通知扩展已准备好接收消息
-            vscode.postMessage({ command: 'ready' });
-            
-            // 通知 node 层可以开始发送 iframe 内容
-            vscode.postMessage({ command: 'startRenderIframes' });
-        });
-        
-        // 如果 DOMContentLoaded 已经触发，立即发送消息
-        if (document.readyState === 'loading') {
-            // DOMContentLoaded 尚未触发，等待它
+        // 初始化控制器
+        if (typeof window.DataViewerController !== 'undefined' && typeof acquireVsCodeApi !== 'undefined') {
+            const vscode = acquireVsCodeApi();
+            const controller = new window.DataViewerController(vscode);
+            // 将控制器暴露到全局，以便调试
+            window.dataViewerController = controller;
         } else {
-            // DOMContentLoaded 已经触发，立即发送消息
-            vscode.postMessage({ command: 'ready' });
-            vscode.postMessage({ command: 'startRenderIframes' });
+            console.error('[Webview] DataViewerController 未加载或 acquireVsCodeApi 不可用');
         }
-        
-        // 示例：如何使用 WebSocket 桥接
-        // 如果需要打开 WebSocket 连接，可以发送以下消息：
-        // vscode.postMessage({
-        //     type: 'ws:open',
-        //     id: 'my-websocket-id',
-        //     url: 'ws://example.com',
-        //     protocols: []
-        // });
     </script>
 </body>
 </html>

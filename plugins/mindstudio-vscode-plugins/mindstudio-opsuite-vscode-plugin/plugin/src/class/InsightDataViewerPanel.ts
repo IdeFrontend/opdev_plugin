@@ -49,6 +49,12 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       context.subscriptions
     );
 
+    // 立即并发加载所有 iframe 内容并发送到 webview（提前缓存）
+    console.log('[InsightDataViewerPanel] Panel 创建完成，开始提前加载所有 iframe 内容...');
+    this.loadAndSendAllIframes().catch((error) => {
+      console.error('[InsightDataViewerPanel] ✗ 提前加载 iframe 失败:', error);
+    });
+
     // 启动 profiler_server
     this.startProfilerServer();
   }
@@ -100,6 +106,26 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     let htmlContent = '';
     if (fs.existsSync(htmlPath)) {
       htmlContent = fs.readFileSync(htmlPath, 'utf8');
+      
+      // 注入编译后的 DataViewerController JS 文件
+      const controllerJsPath = path.join(
+        this.context.extensionPath,
+        'out',
+        'insight-vscode-plugin',
+        'DataViewerController.js'
+      );
+      
+      if (fs.existsSync(controllerJsPath)) {
+        const controllerJs = fs.readFileSync(controllerJsPath, 'utf8');
+        // 将 JS 代码注入到占位符 script 标签中
+        htmlContent = htmlContent.replace(
+          '<script id="data-viewer-controller-script"></script>',
+          `<script id="data-viewer-controller-script">${controllerJs}</script>`
+        );
+        console.log('[InsightDataViewerPanel] ✓ 已注入 DataViewerController.js');
+      } else {
+        console.warn('[InsightDataViewerPanel] ✗ DataViewerController.js 未找到:', controllerJsPath);
+      }
     } else {
       htmlContent = this.getDefaultHtml();
     }
@@ -226,6 +252,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
         break;
       }
     }
+
 
     // 如果没有找到处理器，使用原有的逻辑
     if (!handled && message.command === 'ready') {
@@ -447,6 +474,110 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     } catch (error: any) {
       vscode.window.showErrorMessage(`启动 profiler_server 失败: ${error.message}`);
       console.error('启动 profiler_server 失败:', error);
+    }
+  }
+
+  /**
+   * 并发加载所有 HTML 文件并统一发送给 webview
+   */
+  private async loadAndSendAllIframes(): Promise<void> {
+    console.log('[InsightDataViewerPanel] ========== 开始加载所有 iframe 内容 ==========');
+    const startTime = Date.now();
+    
+    try {
+      // 插件目录列表（与 WebviewMessageList.ts 中的保持一致）
+      const pluginDirs = [
+        { model: 'Cluster', path: 'communication.html', iframeName: 'Communication' },
+        { model: 'Cluster', path: 'summary.html', iframeName: 'Summary' },
+        { model: 'Compute', path: 'cache.html', iframeName: 'Cache' },
+        { model: 'Compute', path: 'detail.html', iframeName: 'Detail' },
+        { model: 'Compute', path: 'source.html', iframeName: 'Source' },
+        { model: 'Compute', path: 'index.html', iframeName: 'Compute' },
+        { model: 'leaks' },
+        { model: 'Memory' },
+        { model: 'Operator' },
+        { model: 'RL' },
+        { model: 'Statistic' },
+        { model: 'Timeline' },
+      ];
+
+      console.log(`[InsightDataViewerPanel] 准备加载 ${pluginDirs.length} 个插件文件`);
+
+      // 插件目录路径
+      const pluginsBasePath = path.join(
+        this.context.extensionPath,
+        'plugin',
+        'insight-vscode-plugin',
+        'plugins'
+      );
+      console.log(`[InsightDataViewerPanel] 插件基础路径: ${pluginsBasePath}`);
+
+      // 创建所有文件的并发读取 Promise
+      const readPromises = pluginDirs.map(async (pluginModel) => {
+        const pluginDirPath = path.join(pluginsBasePath, pluginModel.model);
+        const indexPath = path.join(pluginDirPath, pluginModel.path || 'index.html');
+        const pluginName = pluginModel.iframeName || pluginModel.model;
+        
+        console.log(`[InsightDataViewerPanel] [${pluginName}] 开始读取文件: ${indexPath}`);
+
+        try {
+          // 检查文件是否存在
+          if (fs.existsSync(indexPath)) {
+            const fileStartTime = Date.now();
+            // 并发读取文件内容
+            const content = await fs.promises.readFile(indexPath, 'utf8');
+            const fileEndTime = Date.now();
+            const fileSize = content.length;
+            console.log(`[InsightDataViewerPanel] [${pluginName}] ✓ 文件读取成功，大小: ${fileSize} 字节，耗时: ${fileEndTime - fileStartTime}ms`);
+            
+            return {
+              pluginName: pluginName,
+              content: content,
+              filePath: indexPath,
+            };
+          } else {
+            console.warn(`[InsightDataViewerPanel] [${pluginName}] ✗ 插件文件不存在: ${indexPath}`);
+            return null;
+          }
+        } catch (error: any) {
+          console.error(`[InsightDataViewerPanel] [${pluginName}] ✗ 读取插件文件失败: ${indexPath}`, error);
+          return null;
+        }
+      });
+
+      console.log(`[InsightDataViewerPanel] 开始并发执行 ${readPromises.length} 个文件读取操作...`);
+      
+      // 并发执行所有读取操作
+      const results = await Promise.all(readPromises);
+
+      // 过滤掉 null 值（文件不存在或读取失败的情况）
+      const iframes = results.filter(
+        (item): item is { pluginName: string; content: string; filePath: string } => item !== null
+      );
+
+      const endTime = Date.now();
+      const totalTime = endTime - startTime;
+      
+      console.log(`[InsightDataViewerPanel] ========== 并发读取完成 ==========`);
+      console.log(`[InsightDataViewerPanel] 成功读取: ${iframes.length}/${pluginDirs.length} 个文件`);
+      console.log(`[InsightDataViewerPanel] 总耗时: ${totalTime}ms`);
+      console.log(`[InsightDataViewerPanel] 成功读取的插件列表:`, iframes.map(i => i.pluginName).join(', '));
+
+      // 统一发送所有 iframe 内容、端口号和 binPath 给 webview
+      console.log(`[InsightDataViewerPanel] 准备发送 ${iframes.length} 个 iframe 内容到 webview`);
+      console.log(`[InsightDataViewerPanel] wsPort: ${this.serverPort}, binPath: ${this.binPath}`);
+      
+      this.panel.webview.postMessage({
+        command: 'renderAllIframes',
+        iframes: iframes,
+        wsPort: this.serverPort,
+        binPath: this.binPath,
+      });
+      
+      console.log(`[InsightDataViewerPanel] ✓ 消息已发送到 webview`);
+    } catch (error: any) {
+      console.error('[InsightDataViewerPanel] ✗ 加载并发送 iframe 内容失败:', error);
+      console.error('[InsightDataViewerPanel] 错误堆栈:', error.stack);
     }
   }
 
