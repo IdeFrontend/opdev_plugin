@@ -1,6 +1,5 @@
 <template>
   <a-collapse v-model:activeKey="activeKey" :bordered="false">
-    <a-collapse-panel key="1" header="Welcome">
       <div style="margin-bottom: 15px;">
         <span style="color: white;">想要了解如何快速上手，详见 插件使用指南</span>
       </div>
@@ -13,7 +12,6 @@
       <div v-if="false" class="button-box">
         <a-button type="primary" class="button disable-btn">打开算子工程</a-button>
       </div>
-    </a-collapse-panel>
   </a-collapse>
 
 </template>

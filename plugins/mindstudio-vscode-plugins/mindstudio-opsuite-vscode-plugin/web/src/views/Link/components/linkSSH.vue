@@ -41,8 +41,8 @@ const isRemote = ref(getLocalData("isRemote"));
 const selectedId_type = ref(1);
 const selectedId_proto = ref(1);
 const items_type = [
-  { id: 1, title: '【AscendC】<<<>>>算子工程', desc: '创建<<<>>>调用的hello_world工程样例，支持".asc"后缀的异构编译。' },
-  // { id: 2, title: '【AscendC】标准自定义算子工程', desc: '基于Ascend C语言的标准自定义算子工程，op_host存放在CPC侧的代码实现，op_kermel存放NPU侧的代码实现，op_graph存放图模式下的代码实现' },
+  { id: 1, title: '【Ascend C】<<<>>>算子工程', desc: '创建<<<>>>调用的hello_world工程样例，支持".asc"后缀的异构编译。' },
+  // { id: 2, title: '【Ascend C】标准自定义算子工程', desc: '基于Ascend C语言的标准自定义算子工程，op_host存放在CPC侧的代码实现，op_kermel存放NPU侧的代码实现，op_graph存放图模式下的代码实现' },
 ];
 const items_proto = [
   { id: 1, title: '使用原型定义文件模版', desc: '从标准模版开始编写算子原型，完成后可基于此生成工程。' },
@@ -427,7 +427,7 @@ defineExpose({
               :class="{ selected: selectedId_type === item.id }" @click="selectedId_type = item.id">
               <div class="item-title">{{ item.title }}</div>
               <div class="item-desc" v-html="item.desc"></div>
-              <a-tag color="blue">语言：AscendC</a-tag>
+              <a-tag color="blue">语言：Ascend C</a-tag>
               <a-tag v-if="item.id === 1" color="purple">类型：<<<>>></a-tag>
               <a-tag v-if="item.id === 2" color="green">类型：标准自定义</a-tag>
               <transition name="slide-fade">
