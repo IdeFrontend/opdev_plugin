@@ -12,10 +12,9 @@ import i18nResource from 'shared:/i18n';
 import { WebviewProvider } from './class/webviewProvider';
 import OpsOption from './class/OpsOption';
 import { CustomSidebarProvider } from './class/CustomSidebarProvider';
-import { PerformanceSidebarProvider } from './class/PerformanceSidebarProvider';
 import { CsvEditorProvider } from './class/CsvEditorProvider';
 import { ApiServer } from './core/ApiServer';
-import { PanelView } from './core/view/PanelView';
+import { ViewServer } from './core/view/ViewServer';
 import { routes } from './routes';
 import { apis } from './apis';
 import { PermanentStorage } from './class/PermanentStorage';
@@ -33,7 +32,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const apiServer = initApiServer();
 
   // 视图
-  const panelView = initViews(context, apiServer);
+  const viewServer = initViews(context, apiServer);
 
   ExtensionConfig.init(context);
   new PermanentStorage(context);
@@ -131,7 +130,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 订阅销毁事件
   context.subscriptions.push(apiServer);
-  context.subscriptions.push(panelView);
+  context.subscriptions.push(viewServer);
   context.subscriptions.push(buildOpsCommand);
   context.subscriptions.push(openCommand);
   context.subscriptions.push(ConfigCommand);
@@ -151,58 +150,43 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(sidebarView);
 
-    // 创建性能调优侧边栏提供者
-    const performanceSidebarProvider = new PerformanceSidebarProvider(context);
+  // 注册 CSV 编辑器提供者
+  const csvEditorProvider = new CsvEditorProvider();
+  const csvEditorRegistration = vscode.window.registerCustomEditorProvider(CsvEditorProvider.viewType, csvEditorProvider, {
+    webviewOptions: {
+      retainContextWhenHidden: true,
+    },
+    supportsMultipleEditorsPerDocument: false,
+  });
 
-    // 注册性能调优WebView视图
-    const performanceSidebarView = vscode.window.registerWebviewViewProvider(
-        PerformanceSidebarProvider.viewType,
-        performanceSidebarProvider,
-        {
-            webviewOptions: {
-                retainContextWhenHidden: true // WebView隐藏时保持状态
-            }
-        }
-    );
+  context.subscriptions.push(csvEditorRegistration);
 
-    context.subscriptions.push(performanceSidebarView);
-
-    // 注册 CSV 编辑器提供者
-    const csvEditorProvider = new CsvEditorProvider();
-    const csvEditorRegistration = vscode.window.registerCustomEditorProvider(
-        CsvEditorProvider.viewType,
-        csvEditorProvider,
-        {
-            webviewOptions: {
-                retainContextWhenHidden: true
-            },
-            supportsMultipleEditorsPerDocument: false
-        }
-    );
-
-    context.subscriptions.push(csvEditorRegistration);
-
-    // 注册打开 CSV 文件的命令
-    const openCsvCommand = vscode.commands.registerCommand('csv-viewer.openCsv', async () => {
-      // 方式1：让用户选择文件
-      const fileUri = await vscode.window.showOpenDialog({
-        canSelectFiles: true,
-        canSelectFolders: false,
-        canSelectMany: false,
-        openLabel: '打开',
-        filters: {
-          'CSV 文件': ['csv'],
-          '所有文件': ['*']
-        }
-      });
-
-      if (fileUri && fileUri[0]) {
-        // 使用自定义编辑器打开文件
-        await vscode.commands.executeCommand('vscode.openWith', fileUri[0], CsvEditorProvider.viewType);
-      }
+  // 注册打开 CSV 文件的命令
+  const openCsvCommand = vscode.commands.registerCommand('csv-viewer.openCsv', async () => {
+    // 方式1：让用户选择文件
+    const fileUri = await vscode.window.showOpenDialog({
+      canSelectFiles: true,
+      canSelectFolders: false,
+      canSelectMany: false,
+      openLabel: '打开',
+      filters: {
+        'CSV 文件': ['csv'],
+        所有文件: ['*'],
+      },
     });
 
-    context.subscriptions.push(openCsvCommand);
+    if (fileUri && fileUri[0]) {
+      // 使用自定义编辑器打开文件
+      await vscode.commands.executeCommand('vscode.openWith', fileUri[0], CsvEditorProvider.viewType);
+    }
+  });
+
+  context.subscriptions.push(openCsvCommand);
+  // 自动显示算子一站式交付平台的活动栏视图
+  // 延迟执行，确保视图已经注册完成
+  setTimeout(() => {
+    vscode.commands.executeCommand('workbench.view.extension.mindstudio-opssuite-vscode-plugin');
+  }, 500);
 }
 
 /**
@@ -228,15 +212,15 @@ function initApiServer() {
  * @param context 扩展上下文
  * @param apiServer api服务
  */
-function initViews(context: vscode.ExtensionContext, apiServer: ApiServer): PanelView {
-  const panelView = new PanelView(routes, context);
+function initViews(context: vscode.ExtensionContext, apiServer: ApiServer): ViewServer {
+  const viewServer = new ViewServer(routes, context);
 
-  panelView.onViewActivated((path, panel) => {
-    apiServer.addWebview(path, panel.webview);
+  viewServer.onViewActivated((path, webview) => {
+    apiServer.addWebview(path, webview);
   });
-  panelView.onViewDisposed((path) => {
+  viewServer.onViewDisposed((path) => {
     apiServer.removeWebview(path);
   });
 
-  return panelView;
+  return viewServer;
 }

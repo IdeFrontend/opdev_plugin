@@ -25,73 +25,49 @@ const connected = () => {
 </script>
 <template>
   <a-config-provider :theme="themeConfig">
-    <div class="accend-c-link">
-      <div class="title">新建 Accend C 算子工程</div>
+    <div class="header-section">
+      <div class="title">新建算子工程</div>
       <div class="steps">
         <a-steps :current="current" :items="items"></a-steps>
       </div>
-      <div class="link-row" v-if="current !== 1">
-        <span class="label">远程开发环境</span>
-        <div class="link-add" @click="addLink">
-          <PlusOutlined />
-          <span class="button-add-link">新建链接</span>
+    </div>
+    <div class="divider"></div>
+    <div class="accend-c-link">
+      <div class="content-section">
+        <div class="link-row" v-if="current !== 1">
+          <span class="label">远程开发环境</span>
+          <div class="link-add" @click="addLink">
+            <PlusOutlined />
+            <span class="button-add-link">新建链接</span>
+          </div>
         </div>
+        <linkSSH ref="linkSSHRef" @connected="connected" :connected="current" />
       </div>
-      <linkSSH ref="linkSSHRef" @connected="connected" :connected="current" />
     </div>
   </a-config-provider>
 </template>
 
 <style lang="less">
-.accend-c-link {
-  color: #fff;
-  width: 560px;
-}
-.accend-c-link {
-  .link-row {
-    margin-bottom: 8px;
-    display: flex;
-    justify-content: space-between;
-    color: rgba(255, 255, 255, 0.88);
-
-    .label {
-      font-weight: 400;
-      font-size: 14px;
-      line-height: 20px;
-    }
-
-    .link-add {
-      svg {
-        display: inline-block;
-        margin-right: 5px;
-      }
-    }
-
-    .link-add {
-      color: #4ba5f4;
-      cursor: pointer;
-    }
-  }
+.header-section {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
 
   .title {
     font-weight: 700;
     font-size: 24px;
     line-height: 28px;
-  }
-
-  .button-add-link {
-    font-weight: 400;
-    font-size: 14px;
-    line-height: 22px;
+    margin: 0;
+    color: #fff;
+    margin-right: 40px;;
   }
 
   .steps {
-    margin-top: 55px;
-    margin-bottom: 50px;
     width: 330px;
     font-weight: 500;
     font-size: 16px;
     line-height: 24px;
+    margin: 0;
 
     .ant-steps-item-title::after {
       background-color: rgba(255, 255, 255, 0.45) !important;
@@ -124,12 +100,58 @@ const connected = () => {
     }
   }
 }
+
+.divider {
+  height: 1px;
+  background-color: rgba(255, 255, 255, 0.15);
+  margin-bottom: 24px;
+  width: 560px;
+}
+
+.accend-c-link {
+  color: #fff;
+  width: 560px;
+
+  .content-section {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .link-row {
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    color: rgba(255, 255, 255, 0.88);
+
+    .label {
+      font-weight: 400;
+      font-size: 14px;
+      line-height: 20px;
+    }
+
+    .link-add {
+      svg {
+        display: inline-block;
+        margin-right: 5px;
+      }
+
+      color: #4ba5f4;
+      cursor: pointer;
+    }
+  }
+
+  .button-add-link {
+    font-weight: 400;
+    font-size: 14px;
+    line-height: 22px;
+  }
+}
 </style>
 
 <style lang="less">
 #app {
-  width: 100%;
-  margin: 0 auto 0 10px;
+  width: 100% !important;
+  margin: 0 auto 0 10px !important;
   padding: 2rem;
   text-align: left;
   height: 100vh;

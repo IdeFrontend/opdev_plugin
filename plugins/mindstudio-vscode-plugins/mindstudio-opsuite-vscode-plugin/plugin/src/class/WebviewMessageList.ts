@@ -14,6 +14,7 @@ import packageJson from '../../../package.json';
 import { CommandExecutor } from './CommandOptions';
 import OpsOption from './OpsOption';
 import { SSHKeyAutoConfig } from './SSHKeyAutoConfig';
+import { getFiles } from '../../autogen-server';
 
 // 跟踪已打开的CSV文件目录
 const openedCsvDirectories = new Map<string, vscode.Uri>();
@@ -250,11 +251,9 @@ const webviewMessageList: messageItem[] = [
       const extensionsPath = '.vscode-server/extensions/';
       const serviceFile = 'get_files.sh';
       const plugiExtensionsPath = `${extensionsPath}${publisher}.${extensionName}-${version}`;
-      const commandPath = `${plugiExtensionsPath}/out/server/shells`;
+      const commandPath = `${plugiExtensionsPath}/out/shells`;
       if (that.isRemote) {
-        const opsOption = new OpsOption(that.context);
-        await opsOption.init();
-        const res = await opsOption.getAllPath(message.keyword);
+        const res = getFiles(message.keyword);
         that.panel.webview.postMessage({
           command: 'iframeRemoteSearchResult',
           data: {
@@ -452,7 +451,7 @@ const webviewMessageList: messageItem[] = [
         // 这样新文件已经显示，关闭旧文件时不会闪现源文件
         if (existingUri && existingUri.fsPath !== csvPath) {
           // 等待新文件完全打开
-          await new Promise(resolve => setTimeout(resolve, 300));
+          await new Promise((resolve) => setTimeout(resolve, 300));
 
           // 尝试关闭旧文件
           // 检查当前打开的文本编辑器，找到旧文件并关闭
@@ -516,56 +515,59 @@ const webviewMessageList: messageItem[] = [
         }
 
         // 显示下载进度
-        await vscode.window.withProgress({
-          location: vscode.ProgressLocation.Notification,
-          title: '正在下载文件',
-          cancellable: false
-        }, async (progress) => {
-          progress.report({ increment: 0, message: '正在读取远程文件...' });
+        await vscode.window.withProgress(
+          {
+            location: vscode.ProgressLocation.Notification,
+            title: '正在下载文件',
+            cancellable: false,
+          },
+          async (progress) => {
+            progress.report({ increment: 0, message: '正在读取远程文件...' });
 
-          // 创建远程文件 URI
-          const remoteFileUri = vscode.Uri.file(remoteFilePath);
+            // 创建远程文件 URI
+            const remoteFileUri = vscode.Uri.file(remoteFilePath);
 
-          // 检查远程文件是否存在
-          try {
-            const stat = await vscode.workspace.fs.stat(remoteFileUri);
-            progress.report({ increment: 30, message: `文件大小: ${(stat.size / 1024).toFixed(2)} KB` });
-          } catch (error) {
-            vscode.window.showErrorMessage(`远程文件不存在: ${remoteFilePath}`);
-            return;
-          }
-
-          // 读取远程文件内容
-          progress.report({ increment: 40, message: '正在读取文件内容...' });
-          const fileData = await vscode.workspace.fs.readFile(remoteFileUri);
-
-          // 获取文件名
-          const fileName = path.basename(remoteFilePath);
-
-          progress.report({ increment: 60, message: '请选择保存位置...' });
-
-          // 让用户选择本地保存位置
-          // 在 remote-ssh 场景下，showSaveDialog 会自动打开本地文件保存对话框
-          const localFileUri = await vscode.window.showSaveDialog({
-            defaultUri: vscode.Uri.file(fileName),
-            saveLabel: '保存',
-            filters: {
-              '所有文件': ['*']
+            // 检查远程文件是否存在
+            try {
+              const stat = await vscode.workspace.fs.stat(remoteFileUri);
+              progress.report({ increment: 30, message: `文件大小: ${(stat.size / 1024).toFixed(2)} KB` });
+            } catch (error) {
+              vscode.window.showErrorMessage(`远程文件不存在: ${remoteFilePath}`);
+              return;
             }
-          });
 
-          if (!localFileUri) {
-            // 用户取消了保存对话框
-            return;
+            // 读取远程文件内容
+            progress.report({ increment: 40, message: '正在读取文件内容...' });
+            const fileData = await vscode.workspace.fs.readFile(remoteFileUri);
+
+            // 获取文件名
+            const fileName = path.basename(remoteFilePath);
+
+            progress.report({ increment: 60, message: '请选择保存位置...' });
+
+            // 让用户选择本地保存位置
+            // 在 remote-ssh 场景下，showSaveDialog 会自动打开本地文件保存对话框
+            const localFileUri = await vscode.window.showSaveDialog({
+              defaultUri: vscode.Uri.file(fileName),
+              saveLabel: '保存',
+              filters: {
+                所有文件: ['*'],
+              },
+            });
+
+            if (!localFileUri) {
+              // 用户取消了保存对话框
+              return;
+            }
+
+            // 将文件内容写入本地
+            progress.report({ increment: 80, message: '正在保存文件...' });
+            await vscode.workspace.fs.writeFile(localFileUri, fileData);
+
+            progress.report({ increment: 100, message: '下载完成' });
+            vscode.window.showInformationMessage(`文件已成功下载到: ${localFileUri.fsPath}`);
           }
-
-          // 将文件内容写入本地
-          progress.report({ increment: 80, message: '正在保存文件...' });
-          await vscode.workspace.fs.writeFile(localFileUri, fileData);
-
-          progress.report({ increment: 100, message: '下载完成' });
-          vscode.window.showInformationMessage(`文件已成功下载到: ${localFileUri.fsPath}`);
-        });
+        );
       } catch (error: any) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         vscode.window.showErrorMessage(`下载数据失败: ${errorMessage}`);
@@ -584,11 +586,7 @@ const webviewMessageList: messageItem[] = [
       }
       try {
         // 确认删除
-        const result = await vscode.window.showWarningMessage(
-          `确定要删除 ${nodeKey} 吗？`,
-          '确定',
-          '取消'
-        );
+        const result = await vscode.window.showWarningMessage(`确定要删除 ${nodeKey} 吗？`, '确定', '取消');
         if (result === '确定') {
           console.log('删除节点:', nodeKey, filePath);
           // 这里可以添加删除文件的逻辑

@@ -4,8 +4,9 @@ import * as vscode from 'vscode';
 
 import { PermanentStorage } from 'plugin:/class/PermanentStorage';
 import { ApiGroup } from 'plugin:/core/ApiServer';
-import { InstallRemoteExtensionParams, InstallRemoteExtensionResult } from 'shared:/api-types';
+import { GetPerformanceRunDataParams, GetPerformanceRunDataResult, InstallRemoteExtensionParams, InstallRemoteExtensionResult } from 'shared:/api-types';
 import { RemoteInstaller } from 'plugin:/services/local/RemoteInstaller';
+import { PerformanceRunData } from 'plugin:/services/performance/PerformanceRunData';
 
 export const apis: ApiGroup = {
   common: {
@@ -17,8 +18,13 @@ export const apis: ApiGroup = {
         isRemote: vscode.env.remoteName !== undefined,
       };
     },
-    installRemoteExtension: (params:InstallRemoteExtensionParams): InstallRemoteExtensionResult => {
+    installRemoteExtension: (params: InstallRemoteExtensionParams): InstallRemoteExtensionResult => {
       return new RemoteInstaller(params).installOnRemoteServer();
-    }
+    },
+  },
+  performance: {
+    getRunData: (params: GetPerformanceRunDataParams): GetPerformanceRunDataResult => {
+      return { data: PerformanceRunData.getInstance().queryExecutionRecords() };
+    },
   },
 };
