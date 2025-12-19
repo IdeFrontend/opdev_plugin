@@ -8,7 +8,6 @@
 import buildConfig from "./buildConfig.vue";
 import sanitizerConfig from "./sanitizerConfig.vue";
 import opprofConfig from "./opprofConfig.vue";
-import { useOpprofConfig } from "../composables/useOpprofConfig";
 
 import { ref } from "vue";
 const props = defineProps({
@@ -21,8 +20,6 @@ const props = defineProps({
     default: "",
   },
 });
-
-const { initSimulate } = useOpprofConfig()
 
 const buildConfigForme = ref({});
 const exampleConfigForme = ref({});
@@ -62,12 +59,6 @@ const init = (obj) => {
       v.key = i;
       return v;
     });
-
-  // 仿真数据
-  const simulateConfigData = ConfigData[props.activeConfig].find(
-    (v) => v.config_type === "simulate"
-  );
-  initSimulate(simulateConfigData)
 };
 
 const addBuildTableItem = () => {

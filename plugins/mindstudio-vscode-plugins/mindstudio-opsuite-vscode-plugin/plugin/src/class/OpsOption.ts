@@ -106,8 +106,7 @@ export default class OpsOption {
 
   async getBuildConfigs() {
     const project_id = this.projectId;
-    const array = [getConfig(Number(project_id), 'build_op'), getConfig(Number(project_id), 'build_example'), getConfig(Number(project_id), 'simulate'), getConfig(Number(project_id), 'on_board')]
-    const [opConfig, exampleConfig] = await Promise.all(array);
+    const [opConfig, exampleConfig] = await Promise.all([getConfig(Number(project_id), 'build_op'), getConfig(Number(project_id), 'build_example')]);
     return [...opConfig, ...exampleConfig];
   }
 
