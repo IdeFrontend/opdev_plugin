@@ -21,6 +21,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
   private readonly panel: vscode.WebviewPanel;
   private readonly context: vscode.ExtensionContext;
   private socketBridge: NodeWebviewSocketBridge | undefined;
+  private binPath: string;
   private profilerServerProcess: ChildProcess | null = null;
   private serverPort: number | null = null;
   private readonly serverPath: string;
@@ -28,7 +29,8 @@ export class InsightDataViewerPanel implements vscode.Disposable {
   private constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, binPath: string) {
     this.panel = panel;
     this.context = context;
-    
+    this.binPath = binPath;
+
     // 构建 profiler_server 文件路径
     this.serverPath = path.join(context.extensionPath, 'plugin', 'insight-vscode-plugin', 'server', 'profiler_server');
 
@@ -108,14 +110,6 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     console.log('[InsightDataViewerPanel] 初始化 NodeWebviewSocketBridge');
     this.socketBridge = new NodeWebviewSocketBridge(this.panel.webview);
     console.log('[InsightDataViewerPanel] NodeWebviewSocketBridge 初始化完成');
-
-    // 发送 bin 文件路径
-    setTimeout(() => {
-      this.panel.webview.postMessage({
-        command: 'setBinPath',
-        data: binPath,
-      });
-    }, 100);
   }
 
   /**
@@ -191,7 +185,17 @@ export class InsightDataViewerPanel implements vscode.Disposable {
    */
   private handleWebviewMessage(message: any): void {
     console.log('[InsightDataViewerPanel] 收到 webview 消息:', JSON.stringify(message, null, 2));
-    
+
+    // 检查是否是 WebSocket 桥接消息（这些消息应该由 NodeWebviewSocketBridge 处理）
+    if (message.type && (message.type === 'setBinPath')) {
+      console.log(`[InsightDataViewerPanel] 检测到 WebSocket 桥接消息，应该由 NodeWebviewSocketBridge 处理:`, message.type);
+      this.panel.webview.postMessage({
+        command: 'setBinPath',
+        data: this.binPath,
+      });
+      return;
+    }
+
     // 检查是否是 WebSocket 桥接消息（这些消息应该由 NodeWebviewSocketBridge 处理）
     if (message.type && (message.type === 'ws:open' || message.type === 'ws:send' || message.type === 'ws:close')) {
       console.log(`[InsightDataViewerPanel] 检测到 WebSocket 桥接消息，应该由 NodeWebviewSocketBridge 处理:`, message.type);
@@ -205,7 +209,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       // 不在这里处理，让 NodeWebviewSocketBridge 处理
       return;
     }
-    
+
     // 先尝试从 WebviewMessageList 中查找对应的处理器
     let handled = false;
     for (const messageItem of webviewMessageList) {
@@ -222,7 +226,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
         break;
       }
     }
-    
+
     // 如果没有找到处理器，使用原有的逻辑
     if (!handled && message.command === 'ready') {
       console.log('[InsightDataViewerPanel] 使用默认 ready 处理');
@@ -231,7 +235,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
         command: 'setBinPath',
         data: message.binPath || '',
       });
-      
+
       if (this.serverPort) {
         console.log(`[InsightDataViewerPanel] 发送 WebSocket 端口到 webview: ${this.serverPort}`);
         this.panel.webview.postMessage({
@@ -378,7 +382,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
 
       // 确保文件有执行权限
       const serverDir = path.dirname(this.serverPath);
-      
+
       // 首先获取可用端口
       const port = await this.scanPort();
       if (!port) {
@@ -399,11 +403,11 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       // 注意：export 命令需要在 shell 中执行，所以使用 bash -c
       // 设置 LD_LIBRARY_PATH 为当前目录
       const command = `export LD_LIBRARY_PATH=\`pwd\` && ${this.serverPath} --wsPort=${this.serverPort} --wsHost=0.0.0.0`;
-      
+
       // 使用 bash -c 执行命令，确保 export 命令能够正确执行
       this.profilerServerProcess = spawn('bash', ['-c', command], {
         cwd: serverDir,
-        env: { 
+        env: {
           ...process.env,
           // 确保 LD_LIBRARY_PATH 被设置
           LD_LIBRARY_PATH: serverDir
@@ -426,7 +430,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       this.profilerServerProcess.on('close', (code: number) => {
         console.log(`profiler_server 进程退出，退出码: ${code}`);
         this.profilerServerProcess = null;
-        
+
         if (code !== 0 && code !== null) {
           vscode.window.showWarningMessage(`profiler_server 进程异常退出，退出码: ${code}`);
         }
@@ -453,7 +457,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     return new Promise((resolve) => {
       try {
         const serverDir = path.dirname(this.serverPath);
-        
+
         // 执行 profiler_server --scanPort 命令
         const scanProcess = spawn(this.serverPath, ['--scanPort'], {
           cwd: serverDir,
@@ -483,7 +487,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
               }
             }
           }
-          
+
           console.error(`扫描端口失败: code=${code}, stdout=${stdout}, stderr=${stderr}`);
           resolve(null);
         });
