@@ -6,28 +6,9 @@
       </div>
       <!-- 方案1：普通全宽按钮（最常用） -->
       <div class="button-box">
-        <a-dropdown type="primary">
-          <template #overlay>
-            <a-menu @click="handleMenuClick">
-              <a-menu-item key="Ascend C">
-                <UserOutlined />
-                Ascend C 算子工程
-              </a-menu-item>
-              <a-menu-item key="Triton">
-                <UserOutlined />
-                Triton 算子工程
-              </a-menu-item>
-              <a-menu-item key="TileLang">
-                <UserOutlined />
-                TileLang 算子工程
-              </a-menu-item>
-            </a-menu>
-          </template>
-          <a-button type="primary">
-            新建算子工程
-            <DownOutlined />
-          </a-button>
-        </a-dropdown>
+        <a-button type="primary" @click="handleMenuClick">
+          新建算子工程
+        </a-button>
       </div>
       <div class="button-box">
         <a-button type="primary" class="button disable-btn">打开算子工程</a-button>
@@ -42,15 +23,14 @@ import { DownOutlined } from '@ant-design/icons-vue';
 
 const activeKey = ref(['1']);
 
-const handleMenuClick = (val) => {
-  if (val.key === 'Ascend C' && (window as any).vscode) {
+const handleMenuClick = () => {
+  if ((window as any).vscode) {
     //@ts-ignore
     window.vscode.postMessage({
       command: 'openLinkWebviewPanel',
       commandId: 'my-extension.openProjectView'
     });
   }
-  console.log(val, 'open,window');
 }
 </script>
 

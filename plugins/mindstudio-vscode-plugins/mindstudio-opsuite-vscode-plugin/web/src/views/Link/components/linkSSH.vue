@@ -6,7 +6,7 @@
 
 <script setup>
 import { ref, reactive, onBeforeUnmount } from "vue";
-import { FolderOpenOutlined, RestOutlined } from "@ant-design/icons-vue";
+import { FolderOpenOutlined, RestOutlined, QuestionCircleOutlined } from "@ant-design/icons-vue";
 import { getLocalData, setLoaclData } from "../../../untils/index";
 import { message } from "../../../untils/Message";
 import { message as antdMessage } from "ant-design-vue";
@@ -64,7 +64,7 @@ const projectFormData = reactive({
   // 算子工程名称默认值
   projectName: generateDefaultProjectName(),
   // 环境变量配置脚本默认值
-  projectSH: "",
+  projectSH: "/etc/profile",
 });
 
 // 表单校验规则
@@ -259,7 +259,7 @@ const remoteSearch = (type, keyword) => {
     command: "vscodeRemotePathSearch",
     type,
     keyword: buildDefaultSearchPath(searchValue.trim()),
-    ssh: JSON.parse(JSON.stringify({...selectedRow.value})),
+    ssh: JSON.parse(JSON.stringify({ ...selectedRow.value })),
   });
 };
 
@@ -275,42 +275,29 @@ defineExpose({
 </script>
 <template>
   <div class="link-box">
-    <div v-if="linkType === 'empty'" class="empty-box">
+    <div v-if="linkType === 'config'" class="empty-box">
       <div class="empty-icon">
         <FolderOpenOutlined style="font-size: 55px" />
       </div>
       <span>暂无已连接的远程开发环境，请新建连接</span>
       <a-button @click="addItem" type="primary">新建连接</a-button>
     </div>
-    <div
-      v-else-if="linkType === 'choose' || linkType === 'link'"
-      class="choose-box"
-    >
+    <div v-else-if="linkType === 'choose' || linkType === 'link'" class="choose-box">
       <div class="link-table">
         <div class="link-table-head">
           <span>名称</span>
         </div>
         <div class="link-table-body">
-          <div
-            class="link-table-cell"
-            v-for="(item, index) in tableData"
-            :key="item.name"
-          >
-            <a-radio
-              :disabled="linkType === 'link'"
-              :checked="selectedRow === item"
-              @change="() => onSelectChange(item)"
-            />
+          <div class="link-table-cell" v-for="(item, index) in tableData" :key="item.name">
+            <a-radio :disabled="linkType === 'link'" :checked="selectedRow === item"
+              @change="() => onSelectChange(item)" />
             <span>{{ item.name }}</span>
             <RestOutlined class="icon" @click="deleteData(index)" />
           </div>
         </div>
       </div>
-      <a-button
-        @click="connectSSH"
-        :disabled="selectedRow === null || buttonText === '连接中'"
-        type="primary"
-        >{{ buttonText }}
+      <a-button @click="connectSSH" :disabled="selectedRow === null || buttonText === '连接中'" type="primary">{{
+        buttonText }}
       </a-button>
 
       <div class="link-message" v-if="linkType === 'link'">
@@ -321,61 +308,59 @@ defineExpose({
         </a-button>
       </div>
     </div>
-    <div v-else-if="linkType === 'config'" class="config-box">
-      <div class="config-title">
-        <div>当前环境</div>
-        <span>{{ props.connected === 1 ? "" : selectedRow.name }}</span>
+    <div v-else-if="linkType === 'empty'" class="config-box">
+      <div class="config-left-placeholder"></div>
+      <div class="config-right-content">
+        <div class="config-title">
+          <div>当前环境</div>
+          <span>{{ props.connected === 1 ? "" : selectedRow?.name }}</span>
+        </div>
+        <a-form :model="projectFormData" :label-col="{ span: 6 }" :wrapper-col="{ span: 24 }" ref="connectionFormRef"
+          :rules="connectionFormRules" layout="vertical">
+          <a-form-item name="projectName">
+            <template #label>
+              <span>算子工程名称</span>
+              <a-tooltip title="新建算子的名称，用于代码中的算子的定义，并默认用于工程名称。支持数字、字母、下划线">
+                <QuestionCircleOutlined class="help-icon" />
+              </a-tooltip>
+            </template>
+            <a-input v-model:value="projectFormData.projectName" placeholder="请输入算子工程名称（只能包含字母、数字和下划线，必须以字母开头）" />
+          </a-form-item>
+          <a-form-item name="projectPath">
+            <template #label>
+              <span>算子工程位置</span>
+              <a-tooltip title="您所创建的算子工程的存储路径。">
+                <QuestionCircleOutlined class="help-icon" />
+              </a-tooltip>
+            </template>
+            <a-auto-complete v-model:value="projectFormData.projectPath" :options="projectPathOptions"
+              :loading="projectPathLoading" placeholder="请输入工程位置，支持远程搜索"
+              @search="(val) => remoteSearch('projectPath', val)"
+              @focus="() => remoteSearch('projectPath', projectFormData.projectPath)" />
+          </a-form-item>
+          <a-form-item name="ipAddress">
+            <template #label>
+              <span>环境变量配置脚本</span>
+              <a-tooltip title="安装CANN包后需要执行的set_env.sh脚本的全路径信息，如果使用的是一站式开发平台提供的容器镜像，则此处可以置空">
+                <QuestionCircleOutlined class="help-icon" />
+              </a-tooltip>
+            </template>
+            <a-auto-complete v-model:value="projectFormData.projectSH" :options="projectSHOptions"
+              :loading="projectSHLoading" placeholder="请输入环境变量.sh文件地址，支持远程搜索"
+              @search="(val) => remoteSearch('projectSH', val)"
+              @focus="() => remoteSearch('projectSH', projectFormData.projectSH)" />
+          </a-form-item>
+        </a-form>
+        <a-button @click="createdProject" type="primary">立即创建</a-button>
       </div>
-      <a-form
-        :model="projectFormData"
-        :label-col="{ span: 6 }"
-        :wrapper-col="{ span: 24 }"
-        ref="connectionFormRef"
-        :rules="connectionFormRules"
-        layout="vertical"
-      >
-        <a-form-item name="projectPath">
-          <template #label>
-            <span>算子工程位置</span>
-          </template>
-          <a-auto-complete
-            v-model:value="projectFormData.projectPath"
-            :options="projectPathOptions"
-            :loading="projectPathLoading"
-            placeholder="请输入工程位置，支持远程搜索"
-            @search="(val) => remoteSearch('projectPath', val)"
-            @focus="() => remoteSearch('projectPath', projectFormData.projectPath)"
-          />
-        </a-form-item>
-
-        <a-form-item name="projectName">
-          <template #label>
-            <span>算子工程名称</span>
-          </template>
-          <a-input
-            v-model:value="projectFormData.projectName"
-            placeholder="请输入算子工程名称（只能包含字母、数字和下划线，必须以字母开头）"
-          />
-        </a-form-item>
-        <a-form-item label="环境变量配置脚本" name="ipAddress">
-          <a-auto-complete
-            v-model:value="projectFormData.projectSH"
-            :options="projectSHOptions"
-            :loading="projectSHLoading"
-            placeholder="请输入环境变量.sh文件地址，支持远程搜索"
-            @search="(val) => remoteSearch('projectSH', val)"
-            @focus="() => remoteSearch('projectSH', projectFormData.projectSH)"
-          />
-        </a-form-item>
-      </a-form>
-      <a-button @click="createdProject" type="primary">立即创建</a-button>
     </div>
     <multiStepModal ref="multiStepModalRef" @update="updatedTable" />
   </div>
 </template>
-<style  scoped lang="less">
+<style scoped lang="less">
 .link-table {
   width: 560px;
+
   .link-table-head {
     background-color: #262626;
     border-bottom: 1px solid #303030;
@@ -384,6 +369,7 @@ defineExpose({
     line-height: 32px;
     font-weight: 500;
     height: 32px;
+
     span {
       display: block;
       margin-left: 55px;
@@ -394,6 +380,7 @@ defineExpose({
   .link-table-body {
     max-height: 300px;
     overflow-y: auto;
+
     .link-table-cell {
       line-height: 32px;
       font-size: 12px;
@@ -431,6 +418,7 @@ defineExpose({
     }
   }
 }
+
 .link-box {
   width: 560px;
 
@@ -442,6 +430,7 @@ defineExpose({
     display: flex;
     flex-direction: column;
     align-items: center;
+
     span {
       display: block;
       margin-bottom: 16px;
@@ -474,24 +463,41 @@ defineExpose({
   }
 
   .config-box {
-    float: left;
-    text-align: left;
-    font-size: 14px;
-    font-weight: 400;
-    line-height: 22px;
+    display: flex;
     width: 100%;
-    div {
-      margin-bottom: 8px;
+
+    .config-left-placeholder {
+      width: 30%;
     }
 
-    .config-title {
-      display: block;
-      margin-bottom: 24px;
-    }
+    .config-right-content {
+      width: 70%;
+      text-align: left;
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 22px;
 
-    button {
-      float: left;
-      margin-top: 24px;
+      div {
+        margin-bottom: 8px;
+      }
+
+      .config-title {
+        display: block;
+        margin-bottom: 24px;
+      }
+
+      button {
+        margin-top: 24px;
+      }
+
+      :deep(.ant-form-item-label) {
+        .help-icon {
+          color: rgba(255, 255, 255, 0.45);
+          cursor: help;
+          font-size: 14px;
+          margin-left: 4px;
+        }
+      }
     }
   }
 
@@ -501,33 +507,43 @@ defineExpose({
     border-radius: 0;
   }
 }
+
 /* 针对整个页面的滚动条 */
 ::-webkit-scrollbar {
-  width: 12px; /* 垂直滚动条宽度 */
-  height: 12px; /* 水平滚动条高度 */
+  width: 12px;
+  /* 垂直滚动条宽度 */
+  height: 12px;
+  /* 水平滚动条高度 */
 }
 
 /* 滚动条轨道 */
 ::-webkit-scrollbar-track {
-  background: #f1f1f1; /* 轨道背景色 */
-  border-radius: 6px; /* 轨道圆角 */
+  background: #f1f1f1;
+  /* 轨道背景色 */
+  border-radius: 6px;
+  /* 轨道圆角 */
 }
 
 /* 滚动条滑块 */
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c1; /* 滑块颜色 */
-  border-radius: 6px; /* 滑块圆角 */
-  border: 2px solid #f1f1f1; /* 滑块边框，与轨道背景色相同形成间隔效果 */
+  background: #c1c1c1;
+  /* 滑块颜色 */
+  border-radius: 6px;
+  /* 滑块圆角 */
+  border: 2px solid #f1f1f1;
+  /* 滑块边框，与轨道背景色相同形成间隔效果 */
 }
 
 /* 滑块悬停状态 */
 ::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8; /* 悬停时颜色变深 */
+  background: #a8a8a8;
+  /* 悬停时颜色变深 */
 }
 
 /* 滑块激活状态（点击时） */
 ::-webkit-scrollbar-thumb:active {
-  background: #787878; /* 点击时颜色更深 */
+  background: #787878;
+  /* 点击时颜色更深 */
 }
 
 /* 滚动条角落（垂直和水平滚动条交汇处） */
