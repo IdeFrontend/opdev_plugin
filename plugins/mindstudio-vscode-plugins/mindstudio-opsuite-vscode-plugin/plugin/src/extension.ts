@@ -10,6 +10,7 @@ import * as vscode from 'vscode';
 import i18nResource from 'shared:/i18n';
 
 import { WebviewProvider } from './class/webviewProvider';
+import { handleOperatorProjectDictoryFile } from './class/WebviewMessageList';
 import OpsOption from './class/OpsOption';
 import { CustomSidebarProvider } from './class/CustomSidebarProvider';
 import { CsvEditorProvider } from './class/CsvEditorProvider';
@@ -81,6 +82,13 @@ export async function activate(context: vscode.ExtensionContext) {
   const buildOpsCommand = vscode.commands.registerCommand('huawei-op-devtools.buildOps', async () => {
     await opsOption.init();
     opsOption.startBuild();
+  });
+
+  
+  // 注册编译命令
+  const createOptionsCommand = vscode.commands.registerCommand('huawei-op-devtools.createDictory', async (data: any) => {
+    await handleOperatorProjectDictoryFile({createOperatorProjectDictoryFileType: data}, createOpsProvider)
+    
   });
 
   // 注册JSON编辑器按钮命令
@@ -186,6 +194,34 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   context.subscriptions.push(openCsvCommand);
+
+  if (vscode.workspace.workspaceFolders) {
+    console.log('激活', vscode.workspace.workspaceFolders);
+    for (const wf of vscode.workspace.workspaceFolders) {
+      try {
+        const query = wf.uri.query;
+        if (query) {
+          const params = JSON.parse(query);
+          console.log('激活params', params);
+          if (params.runCommand) {
+            // 延迟执行，确保 UI 已就绪
+            setTimeout(async () => {
+              try {
+                console.log('执行命令', params);
+                await vscode.commands.executeCommand(params.runCommand, params.commandParams);
+                // 可选：执行完后清理（但无法修改 URI）
+              } catch (e) {
+                console.error('Failed to run auto command:', e);
+              }
+            }, 1000); // 等待窗口加载完成
+            break;
+          }
+        }
+      } catch (e) {
+        // ignore invalid query
+      }
+    }
+  }
 }
 
 /**

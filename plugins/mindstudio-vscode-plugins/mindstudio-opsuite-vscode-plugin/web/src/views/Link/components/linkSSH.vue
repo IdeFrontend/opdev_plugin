@@ -345,6 +345,7 @@ const createdProject = async () => {
     data: {
       ...projectFormData,
       ...selectedRow.value,
+      createOperatorProjectDictoryFileType: selectedId_type.value,
     },
   });
 };
@@ -445,7 +446,7 @@ defineExpose({
       <div class="config-divider"></div>
       <div class="config-right-content">
         <div class="section-title">工程配置</div>
-        <div class="config-title">
+        <div v-if="!isRemote" class="config-title">
           <div>当前环境</div>
           <span>{{ props.connected === 1 ? "" : selectedRow?.name }}</span>
         </div>
