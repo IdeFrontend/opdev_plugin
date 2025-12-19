@@ -274,8 +274,10 @@ const webviewMessageList: messageItem[] = [
               forceNewWindow: true,
             });
           } else {
-            const remoteUri = vscode.Uri.parse(`vscode-remote://ssh-remote+${remoteName}${fullProjectPath}`).with({ query: JSON.stringify({ runCommand: 'huawei-op-devtools.createDictory', commandParams: message.createOperatorProjectDictoryFileType }) });
+            const remoteUri = vscode.Uri.parse(`vscode-remote://ssh-remote+${remoteName}${fullProjectPath}`);
             console.log('vscode新目录', remoteUri);
+            (that.context as vscode.ExtensionContext).globalState.update('runCommand', 'huawei-op-devtools.createDictory');
+            (that.context as vscode.ExtensionContext).globalState.update('runCommand-param', message.createOperatorProjectDictoryFileType);
             await vscode.commands.executeCommand('vscode.openFolder', remoteUri, {
               forceNewWindow: true,
             });
