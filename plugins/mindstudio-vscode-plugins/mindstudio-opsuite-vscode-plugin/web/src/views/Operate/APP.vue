@@ -207,6 +207,7 @@ body {
 }
 
 :deep(.ant-menu-title-content) {
+    font-size: 11px;
     color: rgba(255, 255, 255, 0.85);
 }
 
@@ -219,7 +220,7 @@ body {
     align-items: center;
     font-size: 11px;
     span {
-    color: rgba(255, 255, 255, 0.85);
+        color: rgba(255, 255, 255, 0.85);
     }
 }
 
