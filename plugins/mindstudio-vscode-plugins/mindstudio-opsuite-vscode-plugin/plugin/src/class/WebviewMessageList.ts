@@ -263,7 +263,7 @@ const webviewMessageList: messageItem[] = [
       if (that.isRemote) {
         console.log('服务器上执行');
         const executor = new CommandExecutor();
-        
+
         // 标准算子解压缩
         if (message.createOperatorProjectDictoryFileType === 2) {
           await executor.execute(`mkdir -p ${originPath}`, ['File exists']);
@@ -583,34 +583,42 @@ const webviewMessageList: messageItem[] = [
 // 2 执行 vscodeStartLinkCreateOps 消息体内逻辑
 export async function handleOperatorProjectDictoryFile(message: any | undefined, that: any) {
   console.log('创建算子工程类型', message);
-  if (message.createOperatorProjectDictoryFileType) {
-    vscode.window.showInformationMessage(`开始创建算子文件`);
-    if (message.createOperatorProjectDictoryFileType === 1) {
-      await vscodeBuildCreateOps('cann', that);
-    }
-    if (message.createOperatorProjectDictoryFileType === 2) {
-      await vscodeStartLinkCreateOps(undefined, that);
-    }
+  if ([1, 2].includes(message.createOperatorProjectDictoryFileType)) {
+    // 显示连接进度
+    await vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: `开始创建算子文件...`,
+      cancellable: false
+    }, async (progress) => {
+      progress.report({ increment: 0 });
+      if (message.createOperatorProjectDictoryFileType === 1) {
+        await vscodeBuildCreateOps('cann', that, progress);
+      }
+      if (message.createOperatorProjectDictoryFileType === 2) {
+        await vscodeStartLinkCreateOps(undefined, that, progress);
+      }
+      progress.report({ increment: 100, message: '算子文件创建完成' });
+    })
   }
 }
 
-async function vscodeBuildCreateOps(data: any, that: any) {
+async function vscodeBuildCreateOps(data: any, that: any, progress: any) {
   const opsOption = new OpsOption(that.context);
   await opsOption.init();
-  await opsOption.createOpsByPrototype('', data);
+  await opsOption.createOpsByPrototype('', data, progress);
   if (that.isRemote) {
     await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
   }
 }
 
-async function vscodeStartLinkCreateOps(data: any, that: any) {
+async function vscodeStartLinkCreateOps(data: any, that: any, progress: any) {
   if (!data) {
     const opsOption = new OpsOption(that.context);
     await opsOption.init();
     const opsPrototypeFilePath = await opsOption.createOps();
     console.log('res', opsPrototypeFilePath);
     if (opsPrototypeFilePath) {
-      opsOption.createOpsByPrototype(opsPrototypeFilePath);
+      opsOption.createOpsByPrototype(opsPrototypeFilePath, undefined, progress);
     }
     if (that.isRemote) {
       await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
