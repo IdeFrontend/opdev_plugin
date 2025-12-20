@@ -98,6 +98,16 @@ const webviewMessageList: messageItem[] = [
     },
   },
   {
+    command: 'vscodeGetHome',
+    callback: async (message: any, that: any) => {
+      console.log(process.env.HOME,'GET');
+      that.panel.webview.postMessage({
+        command: 'iframeSetHome',
+        data: process.env.HOME,
+      });
+    },
+  },
+  {
     command: 'vscodeGetBuildConfig',
     callback: async (message: any, that: any) => {
       const opsOption = new OpsOption(that.context);
