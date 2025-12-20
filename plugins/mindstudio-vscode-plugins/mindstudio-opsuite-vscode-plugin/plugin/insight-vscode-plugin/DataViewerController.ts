@@ -540,16 +540,51 @@ export class DataViewerController {
     public onDivLoad(id: string): void {
         console.log(`[Webview] [${id}] ========== div onload 事件触发 ==========`);
 
-        // 检查是否已经加载过
-        if (this.iframeStatus.loadedIframes.has(id)) {
-            console.log(`[Webview] [${id}] 已加载过，跳过重复加载`);
-            return;
-        }
-
         // 检查容器是否存在
         const container = document.getElementById(id);
         if (!container) {
             console.error(`[Webview] [${id}] ✗ 未找到容器元素`);
+            return;
+        }
+
+        // 检查容器中是否实际存在iframe元素
+        const existingIframe = container.querySelector('iframe') as HTMLIFrameElement | null;
+        let shouldSkipLoad = false;
+
+        // 如果iframe存在，检查是否已经加载了内容（通过检查contentDocument的状态）
+        if (existingIframe) {
+            try {
+                const doc = existingIframe.contentDocument || existingIframe.contentWindow?.document;
+                // 如果iframe存在且有有效的document且有内容，说明已经加载过了
+                if (doc && doc.readyState === 'complete' && doc.body && doc.body.innerHTML.trim().length > 0) {
+                    console.log(`[Webview] [${id}] iframe已存在且已加载内容，跳过重复加载`);
+                    // 确保标记为已加载（可能在重新渲染后丢失）
+                    if (!this.iframeStatus.loadedIframes.has(id)) {
+                        this.iframeStatus.loadedIframes.add(id);
+                    }
+                    shouldSkipLoad = true;
+                } else {
+                    // iframe存在但未加载内容或内容为空，需要重新加载
+                    console.log(`[Webview] [${id}] iframe存在但未加载内容，需要重新加载`);
+                }
+            } catch (e) {
+                // 跨域或其他错误，无法检查内容，但iframe存在，假设已加载
+                console.log(`[Webview] [${id}] iframe已存在但无法检查内容状态（可能是跨域限制），跳过加载`);
+                if (!this.iframeStatus.loadedIframes.has(id)) {
+                    this.iframeStatus.loadedIframes.add(id);
+                }
+                shouldSkipLoad = true;
+            }
+        } else {
+            // iframe不存在，如果之前标记为已加载，说明div被重新渲染了，需要清除标记
+            if (this.iframeStatus.loadedIframes.has(id)) {
+                console.log(`[Webview] [${id}] 检测到div被重新渲染，iframe已不存在，清除旧标记并重新加载`);
+                this.iframeStatus.loadedIframes.delete(id);
+            }
+        }
+
+        // 如果需要跳过加载，直接返回
+        if (shouldSkipLoad) {
             return;
         }
 
