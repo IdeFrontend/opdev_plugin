@@ -188,7 +188,7 @@ const webviewMessageList: messageItem[] = [
       // 标准算子解压缩
       if (message.createOperatorProjectDictoryFileType === 2) {
         await executor.execute(`mkdir -p ${originPath}`, ['File exists']);
-        const zipUrl = path.resolve(__dirname, `./zip/ops-math.zip`);
+        const zipUrl = path.resolve(that.context.extensionPath, `out/templates/code_template/op-math/ops-math.zip`);
         await executor.execute(`unzip -o ${zipUrl} -d ${originPath}`);
       }
       await executor.execute(`mkdir -p ${message.projectPath}/${message.projectName}`, ['File exists']);

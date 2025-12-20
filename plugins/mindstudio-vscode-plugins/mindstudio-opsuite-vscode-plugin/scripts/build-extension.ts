@@ -18,7 +18,6 @@ esbuild.build({
 // 复制资源文件
 const copyDirs = [
   [path.resolve(__dirname, '../plugin/templates'), path.resolve(__dirname, '../out/templates')], // 模板
-  [path.resolve(__dirname, '../zip'), path.resolve(__dirname, '../out/zip')], // 算子zip
 ];
 
 for (const [sourcePath, targetPath] of copyDirs) {
