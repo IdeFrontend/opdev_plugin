@@ -110,6 +110,11 @@ export async function activate(context: vscode.ExtensionContext) {
     await handleOperatorProjectDictoryFile({ createOperatorProjectDictoryFileType: data }, createOpsProvider);
   });
 
+  // 获取home
+  const getHome = vscode.commands.registerCommand('huawei-op-devtools.getHome', async (data: any) => {
+    return process.env.HOME;
+  });
+
   // 注册JSON编辑器按钮命令
   // 注意：命令已在 package.json 中声明，这里注册处理逻辑
   // 在开发模式下，如果扩展被热重载，可能会遇到命令已存在的错误
