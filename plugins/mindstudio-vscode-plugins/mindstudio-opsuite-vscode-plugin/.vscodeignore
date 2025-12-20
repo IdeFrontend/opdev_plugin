@@ -1,4 +1,5 @@
 .vscode/
+.vscode-test-web/
 web/
 plugin/
 server/
