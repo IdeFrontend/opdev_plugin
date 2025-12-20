@@ -486,8 +486,8 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       const pluginDirs = [
         { model: 'Cluster', path: 'communication.html', iframeName: 'Communication' },
         { model: 'Cluster', path: 'summary.html', iframeName: 'Summary' },
-        { model: 'Compute', path: 'cache.html', iframeName: 'Cache' },
-        { model: 'Compute', path: 'detail.html', iframeName: 'Detail' },
+        { model: 'Compute', path: 'cache.html', iframeName: 'CacheFrame' },
+        { model: 'Compute', path: 'detail.html', iframeName: 'Details' },
         { model: 'Compute', path: 'source.html', iframeName: 'Source' },
         { model: 'Compute', path: 'index.html', iframeName: 'Compute' },
         { model: 'leaks' },
