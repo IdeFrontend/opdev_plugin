@@ -69,15 +69,15 @@ export async function activate(context: vscode.ExtensionContext) {
   });
   context.subscriptions.push(toggleOpsOperateCommand);
 
+  // 注册视图
   const opsOperateProvider = new OpsOperateProvider(context);
   const opsOperateView = vscode.window.registerWebviewViewProvider(OpsOperateProvider.viewType, opsOperateProvider, {
     webviewOptions: {
       retainContextWhenHidden: true,
     },
   });
-
   context.subscriptions.push(opsOperateView);
-
+  // 聚焦该视图
   vscode.commands.executeCommand('OpsOperateProvider.focus');
 
   // 注册打开Opsuite命令
