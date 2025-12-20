@@ -31,6 +31,14 @@ export async function activate(context: vscode.ExtensionContext) {
   // 国际化
   await initI18n();
 
+  let progress: any;
+  if (context.globalState.get<string>('runCommand') === 'huawei-op-devtools.createDictory') {
+    await vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: `开始创建算子文件...`,
+      cancellable: false
+    }, async pro => progress = pro)
+  }
   // api接口
   const apiServer = initApiServer();
 
@@ -108,8 +116,8 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   // 注册编译命令
-  const createOptionsCommand = vscode.commands.registerCommand('huawei-op-devtools.createDictory', async (data: any) => {
-    await handleOperatorProjectDictoryFile({ createOperatorProjectDictoryFileType: data }, createOpsProvider);
+  const createOptionsCommand = vscode.commands.registerCommand('huawei-op-devtools.createDictory', async (data: any, progress: any) => {
+    await handleOperatorProjectDictoryFile({ createOperatorProjectDictoryFileType: data }, createOpsProvider, progress);
   });
 
   // 获取home
@@ -135,11 +143,11 @@ export async function activate(context: vscode.ExtensionContext) {
     if (errorMessage.includes('already exists') || errorMessage.includes('already registered')) {
       console.warn('命令 extension.jsonButtonAction 已存在，使用现有命令');
       // 创建一个虚拟的 Disposable，实际使用现有的命令
-      buttonCommand = { dispose: () => {} };
+      buttonCommand = { dispose: () => { } };
     } else {
       // 其他错误仍然抛出，但不会阻止扩展加载
       console.error('注册命令 extension.jsonButtonAction 时发生未知错误:', errorMessage);
-      buttonCommand = { dispose: () => {} };
+      buttonCommand = { dispose: () => { } };
     }
   }
 
@@ -229,7 +237,7 @@ export async function activate(context: vscode.ExtensionContext) {
         setTimeout(async () => {
           try {
             console.log('执行命令', runCommand);
-            await vscode.commands.executeCommand(runCommand, context.globalState.get('runCommand-param'));
+            await vscode.commands.executeCommand(runCommand, context.globalState.get('runCommand-param'), progress);
             context.globalState.update('runCommand', null);
             context.globalState.update('runCommand-param', null);
           } catch (e) {
