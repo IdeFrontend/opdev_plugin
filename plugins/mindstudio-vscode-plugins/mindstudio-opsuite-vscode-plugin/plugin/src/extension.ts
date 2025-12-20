@@ -21,6 +21,7 @@ import { apis } from './apis';
 import { PermanentStorage } from './class/PermanentStorage';
 import { ExtensionConfig } from './services/ExtensionConfig';
 import { Project } from './services/project/Project';
+import { OpsOperateProvider } from './class/OpsOperateProvider';
 
 /**
  * 插件激活入口函数
@@ -57,6 +58,26 @@ export async function activate(context: vscode.ExtensionContext) {
     createOpsProvider.show('Link');
   });
 
+  // 注册打开关闭算子工作-操作命令
+  const toggleOpsOperateCommand = vscode.commands.registerCommand('huawei-op-devtools.toggleOpsOperate', async () => {
+    try {
+      // 打开/关闭右侧辅助侧栏
+      await vscode.commands.executeCommand('workbench.action.toggleAuxiliaryBar');
+    } catch (error) {
+      console.log(error)
+    }
+  });
+  context.subscriptions.push(toggleOpsOperateCommand);
+
+  const opsOperateProvider = new OpsOperateProvider(context);
+  const opsOperateView = vscode.window.registerWebviewViewProvider(OpsOperateProvider.viewType, opsOperateProvider, {
+    webviewOptions: {
+      retainContextWhenHidden: true,
+    },
+  });
+
+  context.subscriptions.push(opsOperateView);
+
   // 注册打开Opsuite命令
   const ConfigCommand = vscode.commands.registerCommand('huawei-op-devtools.config', async () => {
     configProvider.show('Config');
@@ -84,11 +105,9 @@ export async function activate(context: vscode.ExtensionContext) {
     opsOption.startBuild();
   });
 
-  
   // 注册编译命令
   const createOptionsCommand = vscode.commands.registerCommand('huawei-op-devtools.createDictory', async (data: any) => {
-    await handleOperatorProjectDictoryFile({createOperatorProjectDictoryFileType: data}, createOpsProvider)
-    
+    await handleOperatorProjectDictoryFile({ createOperatorProjectDictoryFileType: data }, createOpsProvider);
   });
 
   // 注册JSON编辑器按钮命令
@@ -197,29 +216,23 @@ export async function activate(context: vscode.ExtensionContext) {
 
   if (vscode.workspace.workspaceFolders) {
     console.log('激活', vscode.workspace.workspaceFolders);
-    for (const wf of vscode.workspace.workspaceFolders) {
-      try {
-        const query = wf.uri.query;
-        if (query) {
-          const params = JSON.parse(query);
-          console.log('激活params', params);
-          if (params.runCommand) {
-            // 延迟执行，确保 UI 已就绪
-            setTimeout(async () => {
-              try {
-                console.log('执行命令', params);
-                await vscode.commands.executeCommand(params.runCommand, params.commandParams);
-                // 可选：执行完后清理（但无法修改 URI）
-              } catch (e) {
-                console.error('Failed to run auto command:', e);
-              }
-            }, 1000); // 等待窗口加载完成
-            break;
+    try {
+      const runCommand = context.globalState.get<string>('runCommand');
+      if (runCommand) {
+        // 延迟执行，确保 UI 已就绪
+        setTimeout(async () => {
+          try {
+            console.log('执行命令', runCommand);
+            await vscode.commands.executeCommand(runCommand, context.globalState.get('runCommand-param'));
+            context.globalState.update('runCommand', null);
+            context.globalState.update('runCommand-param', null);
+          } catch (e) {
+            console.error('Failed to run auto command:', e);
           }
-        }
-      } catch (e) {
-        // ignore invalid query
+        }, 1000); // 等待窗口加载完成
       }
+    } catch (e) {
+      // ignore invalid query
     }
   }
 }

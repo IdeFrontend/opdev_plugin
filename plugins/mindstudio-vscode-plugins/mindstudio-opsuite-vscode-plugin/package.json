@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://gitcode.com/Asscend/mstt"
   },
-  "version": "1.0.113",
+  "version": "1.0.115",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -32,6 +32,12 @@
           "title": "算子一站式交付平台",
           "icon": "resources/homeIcon.svg"
         }
+      ],
+      "secondarySidebar": [
+        {
+          "id": "secondary-sidebar-operate-view",
+          "title": "算子工程-操作"
+        }
       ]
     },
     "views": {
@@ -42,12 +48,11 @@
           "type": "webview"
         }
       ],
-      "explorer": [
+      "secondary-sidebar-operate-view": [
         {
-          "id": "customSidebarView",
-          "name": "操作面板",
           "type": "webview",
-          "visibility": "collapsed"
+          "id": "OpsOperateProvider",
+          "name": "算子工程-操作"
         }
       ]
     },
@@ -59,6 +64,12 @@
       {
         "command": "huawei-op-devtools.buildOps",
         "title": "编译算子"
+      },
+      {
+        "command": "huawei-op-devtools.toggleOpsOperate",
+        "title": "算子工程-操作",
+        "category": "secondary Sidebar",
+        "icon": "resources/operate.svg"
       },
       {
         "command": "huawei-op-devtools.config",
@@ -85,8 +96,19 @@
       }
     ],
     "menus": {
-      "view/title": [
-
+      "commandPalette": [
+        {
+          "command": "huawei-op-devtools.toggleOpsOperate",
+          "when": "true"
+        }
+      ],
+      "view/title": [],
+      "editor/title": [
+        {
+          "command": "huawei-op-devtools.toggleOpsOperate",
+          "group": "navigation",
+          "when": "true"
+        }
       ]
     },
     "customEditors": [
