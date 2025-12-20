@@ -25,14 +25,31 @@ export class InsightDataViewerPanel implements vscode.Disposable {
   private profilerServerProcess: ChildProcess | null = null;
   private serverPort: number | null = null;
   private readonly serverPath: string;
+  private readonly serverDir: string;
+  private readonly zipDir: string;
+  private serverPortReady: Promise<void>;
 
   private constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, binPath: string) {
     this.panel = panel;
     this.context = context;
     this.binPath = binPath;
 
-    // 构建 profiler_server 文件路径
-    this.serverPath = path.join(context.extensionPath, 'plugin', 'insight-vscode-plugin', 'server', 'profiler_server');
+    // 构建路径
+    this.serverDir = path.join(context.extensionPath, 'plugin', 'insight-vscode-plugin', 'server');
+    this.serverPath = path.join(this.serverDir, 'profiler_server');
+    this.zipDir = path.join(context.extensionPath, 'plugin', 'insight-vscode-plugin', 'zip');
+
+    // 创建一个 Promise 来等待 serverPort 被赋值
+    let resolvePortReady: () => void;
+    this.serverPortReady = new Promise((resolve) => {
+      resolvePortReady = resolve;
+    });
+    const resolvePort = resolvePortReady!;
+
+    // 启动 profiler_server（异步，但会在后台设置 this.serverPort）
+    this.startProfilerServer(resolvePort).catch((error) => {
+      console.error('[InsightDataViewerPanel] ✗ 启动 profiler_server 失败:', error);
+    });
 
     // 设置 webview 内容
     this.setupWebview(binPath);
@@ -49,14 +66,11 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       context.subscriptions
     );
 
-    // 立即并发加载所有 iframe 内容并发送到 webview（提前缓存）
-    console.log('[InsightDataViewerPanel] Panel 创建完成，开始提前加载所有 iframe 内容...');
+    // 等待 serverPort 就绪后再加载并发送 iframe 内容
+    console.log('[InsightDataViewerPanel] Panel 创建完成，等待服务端口就绪后加载所有 iframe 内容...');
     this.loadAndSendAllIframes().catch((error) => {
       console.error('[InsightDataViewerPanel] ✗ 提前加载 iframe 失败:', error);
     });
-
-    // 启动 profiler_server
-    this.startProfilerServer();
   }
 
   /**
@@ -76,7 +90,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     // 创建新的 panel
     const panel = vscode.window.createWebviewPanel(
       'insightDataViewer',
-      '数据查看器',
+      '性能分析',
       column || vscode.ViewColumn.Active,
       {
         enableScripts: true,
@@ -282,102 +296,132 @@ export class InsightDataViewerPanel implements vscode.Disposable {
   }
 
   /**
-   * 确保 profiler_server 存在，如果不存在则解压对应的 zip 文件
+   * 确保 server 目录存在，如果不存在则解压对应的 zip 文件
    */
-  private async ensureProfilerServerExists(): Promise<boolean> {
-    // 如果文件已存在，直接返回
-    if (fs.existsSync(this.serverPath)) {
-      return true;
+  private async ensureServerDirectoryExists(): Promise<boolean> {
+    // 如果 server 目录已存在，直接返回
+    if (fs.existsSync(this.serverDir)) {
+      console.log(`[InsightDataViewerPanel] server 目录已存在: ${this.serverDir}`);
+      // 检查 profiler_server 文件是否存在
+      if (fs.existsSync(this.serverPath)) {
+        return true;
+      } else {
+        console.warn(`[InsightDataViewerPanel] server 目录存在但 profiler_server 文件不存在: ${this.serverPath}`);
+        // 如果目录存在但文件不存在，可能需要重新解压
+      }
     }
 
-    const serverDir = path.dirname(this.serverPath);
+    // 检测系统架构
     const architecture = this.detectArchitecture();
     const zipFileName = architecture === 'x86' ? 'server_x86.zip' : 'server_arm.zip';
-    const zipPath = path.join(serverDir, zipFileName);
+    const zipPath = path.join(this.zipDir, zipFileName);
 
     // 检查 zip 文件是否存在
     if (!fs.existsSync(zipPath)) {
-      vscode.window.showErrorMessage(
-        `profiler_server 不存在，且找不到对应的 zip 文件: ${zipPath}`
-      );
+      const errorMsg = `server 目录不存在，且找不到对应的 zip 文件: ${zipPath}`;
+      console.error(`[InsightDataViewerPanel] ${errorMsg}`);
+      vscode.window.showErrorMessage(errorMsg);
       return false;
     }
 
     try {
       // 显示进度信息
       vscode.window.showInformationMessage(`正在解压 ${zipFileName}...`);
+      console.log(`[InsightDataViewerPanel] 开始解压: ${zipPath}`);
 
-      // 解压 zip 文件
-      await this.extractZip(zipPath, serverDir);
+      // 解压 zip 文件到 insight-vscode-plugin 目录（压缩包中已有 server 目录）
+      const extractToDir = path.join(this.context.extensionPath, 'plugin', 'insight-vscode-plugin');
+      await this.extractZip(zipPath, extractToDir);
 
-      // 检查解压后文件是否存在
-      if (!fs.existsSync(this.serverPath)) {
-        vscode.window.showErrorMessage(
-          `解压完成，但 profiler_server 文件仍不存在: ${this.serverPath}`
-        );
+      // 检查解压后 server 目录是否存在
+      if (!fs.existsSync(this.serverDir)) {
+        const errorMsg = `解压完成，但 server 目录仍不存在: ${this.serverDir}`;
+        console.error(`[InsightDataViewerPanel] ${errorMsg}`);
+        vscode.window.showErrorMessage(errorMsg);
         return false;
       }
 
-      // 设置执行权限
+      // 检查 profiler_server 文件是否存在
+      if (!fs.existsSync(this.serverPath)) {
+        const errorMsg = `解压完成，但 profiler_server 文件仍不存在: ${this.serverPath}`;
+        console.error(`[InsightDataViewerPanel] ${errorMsg}`);
+        vscode.window.showErrorMessage(errorMsg);
+        return false;
+      }
+
+      // 设置执行权限（在 Windows 上可能失败，但不影响执行）
       try {
         fs.chmodSync(this.serverPath, 0o755);
+        console.log(`[InsightDataViewerPanel] 已设置 profiler_server 执行权限`);
       } catch (chmodError) {
-        console.warn('设置执行权限失败:', chmodError);
-        // 在 Windows 上可能失败，但不影响执行
+        console.warn('[InsightDataViewerPanel] 设置执行权限失败（Windows 系统可忽略）:', chmodError);
       }
 
       vscode.window.showInformationMessage(`成功解压并准备 profiler_server`);
+      console.log(`[InsightDataViewerPanel] ✓ server 目录准备完成`);
       return true;
     } catch (error: any) {
-      vscode.window.showErrorMessage(`解压 ${zipFileName} 失败: ${error.message}`);
-      console.error('解压失败:', error);
+      const errorMsg = `解压 ${zipFileName} 失败: ${error.message}`;
+      console.error(`[InsightDataViewerPanel] ${errorMsg}`, error);
+      vscode.window.showErrorMessage(errorMsg);
       return false;
     }
   }
 
   /**
    * 启动 profiler_server
+   * @param resolvePort 端口就绪时的回调函数
    */
-  private async startProfilerServer(): Promise<void> {
+  private async startProfilerServer(resolvePort: () => void): Promise<void> {
     try {
       // Windows 系统不启动服务
       if (os.platform() === 'win32') {
-        console.log('Windows 系统，跳过 profiler_server 启动');
+        console.log('[InsightDataViewerPanel] Windows 系统，跳过 profiler_server 启动');
         vscode.window.showInformationMessage('Windows 系统不支持 profiler_server，服务未启动');
+        // Windows 系统不启动服务，但仍需要设置一个默认端口（如果需要的话）
+        // 或者直接 resolve，让 loadAndSendAllIframes 继续执行
+        resolvePort();
         return;
       }
 
-      // 确保 profiler_server 存在
-      const serverReady = await this.ensureProfilerServerExists();
+      // 确保 server 目录存在，如果不存在则解压
+      console.log('[InsightDataViewerPanel] 检查 server 目录...');
+      const serverReady = await this.ensureServerDirectoryExists();
       if (!serverReady) {
+        console.error('[InsightDataViewerPanel] server 目录准备失败');
+        resolvePort(); // 即使失败也 resolve，避免永久阻塞
         return;
       }
 
-      // 确保文件有执行权限
-      const serverDir = path.dirname(this.serverPath);
-
-      // 首先获取可用端口
+      // 获取可用端口
+      console.log('[InsightDataViewerPanel] 扫描可用端口...');
       const port = await this.scanPort();
       if (!port) {
-        vscode.window.showErrorMessage('无法获取可用端口');
+        const errorMsg = '无法获取可用端口';
+        console.error(`[InsightDataViewerPanel] ${errorMsg}`);
+        vscode.window.showErrorMessage(errorMsg);
+        resolvePort(); // 即使失败也 resolve，避免永久阻塞
         return;
       }
 
+      // 记录端口号
       this.serverPort = port;
-
+      console.log(`[InsightDataViewerPanel] 找到可用端口: ${this.serverPort}`);
 
       // 启动 profiler_server
       // 注意：export 命令需要在 shell 中执行，所以使用 bash -c
       // 设置 LD_LIBRARY_PATH 为当前目录
       const command = `export LD_LIBRARY_PATH=\`pwd\` && ${this.serverPath} --wsPort=${this.serverPort} --wsHost=0.0.0.0`;
 
+      console.log(`[InsightDataViewerPanel] 启动 profiler_server: ${command}`);
+
       // 使用 bash -c 执行命令，确保 export 命令能够正确执行
       this.profilerServerProcess = spawn('bash', ['-c', command], {
-        cwd: serverDir,
+        cwd: this.serverDir,
         env: {
           ...process.env,
           // 确保 LD_LIBRARY_PATH 被设置
-          LD_LIBRARY_PATH: serverDir
+          LD_LIBRARY_PATH: this.serverDir
         },
         shell: false,
       });
@@ -395,7 +439,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
 
       // 处理进程关闭
       this.profilerServerProcess.on('close', (code: number) => {
-        console.log(`profiler_server 进程退出，退出码: ${code}`);
+        console.log(`[InsightDataViewerPanel] profiler_server 进程退出，退出码: ${code}`);
         this.profilerServerProcess = null;
 
         if (code !== 0 && code !== null) {
@@ -405,15 +449,22 @@ export class InsightDataViewerPanel implements vscode.Disposable {
 
       // 处理进程错误
       this.profilerServerProcess.on('error', (error: Error) => {
-        console.error('启动 profiler_server 失败:', error);
+        console.error('[InsightDataViewerPanel] 启动 profiler_server 失败:', error);
         vscode.window.showErrorMessage(`启动 profiler_server 失败: ${error.message}`);
         this.profilerServerProcess = null;
       });
 
       vscode.window.showInformationMessage(`profiler_server 已启动，端口: ${this.serverPort}`);
+      console.log(`[InsightDataViewerPanel] ✓ profiler_server 已启动，端口: ${this.serverPort}`);
+
+      // 通知端口已就绪
+      resolvePort();
     } catch (error: any) {
-      vscode.window.showErrorMessage(`启动 profiler_server 失败: ${error.message}`);
-      console.error('启动 profiler_server 失败:', error);
+      const errorMsg = `启动 profiler_server 失败: ${error.message}`;
+      console.error(`[InsightDataViewerPanel] ${errorMsg}`, error);
+      vscode.window.showErrorMessage(errorMsg);
+      // 即使出错也 resolve，避免永久阻塞
+      resolvePort();
     }
   }
 
@@ -425,6 +476,11 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     const startTime = Date.now();
     
     try {
+      // 等待 serverPort 就绪
+      console.log('[InsightDataViewerPanel] 等待服务端口就绪...');
+     
+      console.log(`[InsightDataViewerPanel] 服务端口已就绪: ${this.serverPort}`);
+
       // 插件目录列表（与 WebviewMessageList.ts 中的保持一致）
       const pluginDirs = [
         { model: 'Cluster', path: 'communication.html', iframeName: 'Communication' },
@@ -506,11 +562,13 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       // 统一发送所有 iframe 内容、端口号和 binPath 给 webview
       console.log(`[InsightDataViewerPanel] 准备发送 ${iframes.length} 个 iframe 内容到 webview`);
       console.log(`[InsightDataViewerPanel] wsPort: ${this.serverPort}, binPath: ${this.binPath}`);
-      
+
+       await this.serverPortReady;
+       
       this.panel.webview.postMessage({
         command: 'renderAllIframes',
         iframes: iframes,
-        wsPort: 9000,
+        wsPort: this.serverPort,
         binPath: this.binPath,
       });
       
@@ -522,53 +580,42 @@ export class InsightDataViewerPanel implements vscode.Disposable {
   }
 
   /**
-   * 扫描可用端口
+   * 扫描可用端口（使用 Linux 原生命令）
    */
   private async scanPort(): Promise<number | null> {
     return new Promise((resolve) => {
       try {
-        const serverDir = path.dirname(this.serverPath);
+        // 使用 Linux 原生命令查找可用端口
+        // 从端口 9000 开始，使用 ss 命令检查端口是否被占用
+        // 如果 ss 不可用，则使用 netstat 作为备选
+        const command = 'port=9000; while [ $port -le 9999 ]; do if command -v ss >/dev/null 2>&1; then if ! ss -tuln | grep -q ":$port "; then echo $port; exit 0; fi; elif command -v netstat >/dev/null 2>&1; then if ! netstat -tuln | grep -q ":$port "; then echo $port; exit 0; fi; else exit 1; fi; port=$((port+1)); done; exit 1';
+        
+        exec(command, { shell: '/bin/bash' }, (error, stdout, stderr) => {
+          if (error) {
+            console.error(`[InsightDataViewerPanel] 扫描端口失败: ${error.message}`);
+            if (stderr) {
+              console.error(`[InsightDataViewerPanel] stderr: ${stderr}`);
+            }
+            resolve(null);
+            return;
+          }
 
-        // 执行 profiler_server --scanPort 命令
-        const scanProcess = spawn(this.serverPath, ['--scanPort'], {
-          cwd: serverDir,
-          env: { ...process.env },
-        });
-
-        let stdout = '';
-        let stderr = '';
-
-        scanProcess.stdout?.on('data', (data: Buffer) => {
-          stdout += data.toString();
-        });
-
-        scanProcess.stderr?.on('data', (data: Buffer) => {
-          stderr += data.toString();
-        });
-
-        scanProcess.on('close', (code: number) => {
-          if (code === 0) {
-            // 从输出中提取端口号
-            const portMatch = stdout.match(/(\d+)/);
-            if (portMatch) {
-              const port = parseInt(portMatch[1], 10);
-              if (!isNaN(port) && port > 0) {
-                resolve(port);
-                return;
-              }
+          // 从输出中提取端口号
+          const portMatch = stdout.trim().match(/^\d+$/);
+          if (portMatch) {
+            const port = parseInt(portMatch[0], 10);
+            if (!isNaN(port) && port > 0 && port <= 65535) {
+              console.log(`[InsightDataViewerPanel] 找到可用端口: ${port}`);
+              resolve(port);
+              return;
             }
           }
 
-          console.error(`扫描端口失败: code=${code}, stdout=${stdout}, stderr=${stderr}`);
-          resolve(null);
-        });
-
-        scanProcess.on('error', (error: Error) => {
-          console.error('执行 scanPort 命令失败:', error);
+          console.error(`[InsightDataViewerPanel] 无法从输出中解析端口号: ${stdout}`);
           resolve(null);
         });
       } catch (error: any) {
-        console.error('扫描端口异常:', error);
+        console.error(`[InsightDataViewerPanel] 扫描端口异常:`, error);
         resolve(null);
       }
     });

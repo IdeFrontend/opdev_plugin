@@ -90,6 +90,10 @@
         "command": "csv-viewer.openCsv",
         "title": "打开 CSV 文件",
         "category": "CSV Viewer"
+      },
+      {
+        "command": "huawei-op-devtools.test",
+        "title": "测试数据查看器"
       }
     ],
     "menus": {

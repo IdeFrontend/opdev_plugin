@@ -30,16 +30,6 @@ export async function activate(context: vscode.ExtensionContext) {
   // 国际化
   await initI18n();
 
-  setTimeout(()=>{
-
-    const binPath = ''
-    InsightDataViewerPanel.createOrShow(context, binPath);
-
-    console.log('自动发送打开文件命令给iframe binPath=',binPath)
-
-    vscode.window.showInformationMessage(`正在加载数据文件: ${binPath}`);
-  },1000)
-
   // api接口
   const apiServer = initApiServer();
 
@@ -80,6 +70,14 @@ export async function activate(context: vscode.ExtensionContext) {
   // 注册打开欢迎页命令
   const newPrototypeCommand = vscode.commands.registerCommand('huawei-op-devtools.newPrototype', async () => {
     configNewPrototypeProvider.show('newPrototype');
+  });
+
+  // 注册测试命令
+  const testCommand = vscode.commands.registerCommand('huawei-op-devtools.test', async () => {
+    const binPath = '';
+    InsightDataViewerPanel.createOrShow(context, binPath);
+    console.log('自动发送打开文件命令给iframe binPath=', binPath);
+    vscode.window.showInformationMessage(`正在加载数据文件: ${binPath}`);
   });
 
   // 注册新建算子原型文件命令
@@ -149,6 +147,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(createCommand);
   context.subscriptions.push(welcomeCommand);
   context.subscriptions.push(newPrototypeCommand);
+  context.subscriptions.push(testCommand);
 
   // 创建侧边栏提供者
   const sidebarProvider = new CustomSidebarProvider(context);
