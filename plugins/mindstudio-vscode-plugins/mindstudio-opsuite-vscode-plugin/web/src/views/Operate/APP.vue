@@ -38,16 +38,22 @@ const menuItems = ref([
             },
             {
                 key: 'basicBuild',
-                label: '基础编译',
-                handler: () => {
-                    message.sendMessageToParent({ command: "vscodeBuildExample", data: { type: 'basic' } });
-                }
+                label: '编译example',
+                children: [
+                    {
+                        key: 'buildExample',
+                        label: '基础编译',
+                        handler: () => {
+                            message.sendMessageToParent({ command: "vscodeBuildExample", data: '' });
+                        }
+                    }
+                ]
             },
         ]
     },
     {
         key: 'runExample',
-        label: '运行',
+        label: '运行验证',
         icon: runIcon,
         handler: () => {
             message.sendMessageToParent({ command: "vscodeRunExample", data: '' });
@@ -108,8 +114,8 @@ const onOpenChange = (keys) => {
                 </a-select>
             </div>
 
-            <a-menu mode="inline" :open-keys="openKeys" :selected-keys="selectedKeys" @openChange="onOpenChange"
-                @click="handleMenuClick" class="inline-menu">
+            <a-menu mode="inline" :open-keys="openKeys" :selected-keys="selectedKeys" class="inline-menu"
+                @openChange="onOpenChange" @click="handleMenuClick">
                 <template v-for="item in menuItems">
                     <!-- 有子菜单的情况 -->
                     <a-sub-menu v-if="item.children && item.children.length > 0" :key="`submenu-${item.key}`">
@@ -183,11 +189,13 @@ body {
     border-right: none !important;
 }
 
-:deep(.ant-menu-item), :deep(.ant-menu-submenu-title) {
+:deep(.ant-menu-item),
+:deep(.ant-menu-submenu-title) {
     height: 28px !important;
     line-height: 28px !important;
     margin-block: 2px !important;
 }
+
 :deep(.ant-menu-inline) {
     border-right: none !important;
     background-color: rgb(20, 20, 20) !important;
@@ -198,10 +206,22 @@ body {
     background-color: rgb(20, 20, 20) !important;
 }
 
+:deep(.ant-menu-title-content) {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+:deep(.ant-menu-submenu-arrow) {
+    color: rgba(255, 255, 255, 0.85);
+}
+
 .menu-title {
     display: inline-flex;
     align-items: center;
     font-size: 11px;
+    span {
+        color: rgba(255, 255, 255, 0.85);
+    }
 }
 
 .menu-icon {

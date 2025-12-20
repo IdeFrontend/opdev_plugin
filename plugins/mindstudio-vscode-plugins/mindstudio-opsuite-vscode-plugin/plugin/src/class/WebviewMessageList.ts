@@ -98,6 +98,16 @@ const webviewMessageList: messageItem[] = [
     },
   },
   {
+    command: 'vscodeGetHome',
+    callback: async (message: any, that: any) => {
+      console.log(process.env.HOME,'GET');
+      that.panel.webview.postMessage({
+        command: 'iframeSetHome',
+        data: process.env.HOME,
+      });
+    },
+  },
+  {
     command: 'vscodeGetBuildConfig',
     callback: async (message: any, that: any) => {
       const opsOption = new OpsOption(that.context);
@@ -277,36 +287,19 @@ const webviewMessageList: messageItem[] = [
         const fullProjectPath = path.join(normalizedProjectPath, normalizedProjectName);
         console.log(`检测到远程连接: ${remoteName}`);
 
-        if (remoteName && remoteName !== 'ssh-remote') {
-          // 如果有完整的远程连接信息，则使用它
-          if (remoteName.startsWith('ssh-remote+')) {
-            const remoteUri = vscode.Uri.parse(`vscode-remote://${remoteName}${fullProjectPath}`).with({ query: JSON.stringify({ runCommand: 'huawei-op-devtools.createDictory', commandParams: message.createOperatorProjectDictoryFileType }) });
-            console.log(`准备打开远程文件夹: ${remoteUri.toString()}`);
-            console.log('vscode新目录', remoteUri);
-            await vscode.commands.executeCommand('vscode.openFolder', remoteUri, {
-              forceNewWindow: true,
-            });
-          } else {
-            const remoteUri = vscode.Uri.parse(`vscode-remote://ssh-remote+${remoteName}${fullProjectPath}`);
-            console.log('vscode新目录', remoteUri);
-            (that.context as vscode.ExtensionContext).globalState.update('runCommand', 'huawei-op-devtools.createDictory');
-            (that.context as vscode.ExtensionContext).globalState.update('runCommand-param', message.createOperatorProjectDictoryFileType);
-            await vscode.commands.executeCommand('vscode.openFolder', remoteUri, {
-              forceNewWindow: true,
-            });
-          }
-        } else {
-          // 如果只有 'ssh-remote' 类型而没有具体连接ID
-          // 尝试通过其他方式获取当前SSH连接信息
-          console.log(`打开新路径：${fullProjectPath}`);
+        (that.context as vscode.ExtensionContext).globalState.update('runCommand', 'huawei-op-devtools.createDictory');
+        (that.context as vscode.ExtensionContext).globalState.update('runCommand-param', message.createOperatorProjectDictoryFileType);
 
-          // 在远程环境中，我们可以直接打开本地路径（相对于远程系统）
-          const localUri = vscode.Uri.file(fullProjectPath).with({ query: JSON.stringify({ runCommand: 'huawei-op-devtools.createDictory', commandParams: message.createOperatorProjectDictoryFileType }) });
-          console.log('vscode新目录', localUri);
-          await vscode.commands.executeCommand('vscode.openFolder', localUri, {
-            forceNewWindow: true,
-          });
-        }
+        // 如果只有 'ssh-remote' 类型而没有具体连接ID
+        // 尝试通过其他方式获取当前SSH连接信息
+        console.log(`打开新路径：${fullProjectPath}`);
+
+        // 在远程环境中，我们可以直接打开本地路径（相对于远程系统）
+        const localUri = vscode.Uri.file(fullProjectPath);
+        console.log('vscode新目录', localUri);
+        await vscode.commands.executeCommand('vscode.openFolder', localUri, {
+          forceNewWindow: true,
+        });
       } else {
         console.log('本地执行上执行');
         const server = new RemoteServer(message);
@@ -332,7 +325,7 @@ const webviewMessageList: messageItem[] = [
         }
 
         const remoteOpener: RemoteServerOpener = new RemoteServerOpener();
-        remoteOpener.open({ ...message, remotePath: `${message.projectPath}/${message.projectName}`, query: JSON.stringify({ runCommand: 'huawei-op-devtools.createDictory', commandParams: message.createOperatorProjectDictoryFileType }) });
+        remoteOpener.open({ ...message, remotePath: `${message.projectPath}/${message.projectName}` });
       }
     },
   },
@@ -573,17 +566,17 @@ const webviewMessageList: messageItem[] = [
   },
 ];
 
-// 创建算子工程类型 
+// 创建算子工程类型
 // 1 执行 vscodeBuildCreateOps 消息体内逻辑  data: 'cann'
 // 2 执行 vscodeStartLinkCreateOps 消息体内逻辑
 export async function handleOperatorProjectDictoryFile(message: any | undefined, that: any) {
-  console.log('创建算子工程类型', message)
+  console.log('创建算子工程类型', message);
   if (message.createOperatorProjectDictoryFileType) {
     if (message.createOperatorProjectDictoryFileType === 1) {
-      await vscodeBuildCreateOps('cann', that)
+      await vscodeBuildCreateOps('cann', that);
     }
     if (message.createOperatorProjectDictoryFileType === 2) {
-      await vscodeStartLinkCreateOps(undefined, that)
+      await vscodeStartLinkCreateOps(undefined, that);
     }
   }
 }

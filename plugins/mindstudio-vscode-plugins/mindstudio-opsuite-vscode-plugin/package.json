@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://gitcode.com/Asscend/mstt"
   },
-  "version": "1.0.115",
+  "version": "1.1.1",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -15,9 +15,7 @@
     "Other"
   ],
   "main": "./out/extension.js",
-  "extensionDependencies": [
-    "ms-vscode-remote.remote-ssh"
-  ],
+  "browser": "./out/extension.js",
   "activationEvents": [
     "onView:pluginSidebar",
     "workspaceContains:package.json",
@@ -36,7 +34,8 @@
       "secondarySidebar": [
         {
           "id": "secondary-sidebar-operate-view",
-          "title": "算子工程-操作"
+          "title": "算子工程-操作",
+          "icon": "resources/operate.svg"
         }
       ]
     },
@@ -52,7 +51,8 @@
         {
           "type": "webview",
           "id": "OpsOperateProvider",
-          "name": "算子工程-操作"
+          "name": "算子工程-操作",
+          "icon": "resources/operate.svg"
         }
       ]
     },
@@ -125,10 +125,11 @@
     ]
   },
   "scripts": {
+    "start-web": "vscode-test-web --extensionDevelopmentPath=. .",
     "vscode:prepublish": "npm run compile:web && npm run compile",
     "compile": "npm run compile:web && npm run build-extension && npm run copy-web-output",
     "install:web": "cd web && npm install",
-    "compile:web": "npm run install:web && cd web && npm run build",
+    "compile:web": "cd web && npm run build",
     "watch": "tsc -watch -p .",
     "package": "vsce package --no-dependencies",
     "lint": "eslint plugin/src --ext ts",
@@ -153,6 +154,7 @@
     "@types/vscode": "^1.60.0",
     "@typescript-eslint/eslint-plugin": "^5.31.0",
     "@typescript-eslint/parser": "^5.31.0",
+    "@vscode/test-web": "^0.0.77",
     "@vscode/vsce": "^3.7.1",
     "esbuild": "^0.27.1",
     "eslint": "^8.20.0",

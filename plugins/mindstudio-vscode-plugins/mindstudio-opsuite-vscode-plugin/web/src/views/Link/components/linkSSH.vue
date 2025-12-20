@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree. -->
 
 <script setup>
-import { ref, reactive, onBeforeUnmount, computed } from "vue";
+import { ref, reactive, onBeforeUnmount, computed, onMounted } from "vue";
 import { FolderOpenOutlined, RestOutlined, QuestionCircleOutlined, InboxOutlined } from "@ant-design/icons-vue";
 import { getLocalData, setLoaclData } from "../../../untils/index";
 import { message } from "../../../untils/Message";
@@ -42,7 +42,7 @@ const selectedId_type = ref(1);
 const selectedId_proto = ref(1);
 const items_type = [
   { id: 1, title: '【Ascend C】<<<>>>算子工程', desc: '创建<<<>>>调用的hello_world工程样例，支持".asc"后缀的异构编译。' },
-  { id: 2, title: '【Ascend C】标准自定义算子工程', desc: '基于Ascend C语言的标准自定义算子工程，op_host存放在CPC侧的代码实现，op_kermel存放NPU侧的代码实现，op_graph存放图模式下的代码实现 <span style="color: #ff4d4f; font-weight: bold;">(因为该算子的编译依赖ops-math项目，该算子将自动放到ops-math项目中，后续提交代码需要迁移到自己的fork代码仓中操作)</span>' },
+  { id: 2, title: '【Ascend C】标准自定义算子工程', desc: '基于Ascend C语言的标准自定义算子工程，op_host存放在CPC侧的代码实现，op_kermel存放NPU侧的代码实现，op_graph存放图模式下的代码实现 <span style="color: #ff4d4f; font-weight: bold;">(因为该算子的编译依赖ops-math项目，该算子将自动放到ops-math项目中math目录中，后续提交代码需要迁移到自己的fork代码仓中操作)</span>' },
 ];
 const items_proto = [
   { id: 1, title: '使用原型定义文件模版', desc: '从标准模版开始编写算子原型，完成后可基于此生成工程。' },
@@ -169,17 +169,11 @@ const generateDefaultProjectName = () => {
 
 // 获取 HOME 环境变量路径
 const getHomePath = () => {
-  // 优先从 userInfo 中获取 homedir
-  const userInfo = getLocalData("userInfo");
-  if (userInfo && userInfo.homedir) {
-    return userInfo.homedir;
-  }
-  
   // 尝试从 process.env 获取（如果可用）
   if (typeof process !== 'undefined' && process.env && process.env.HOME) {
     return process.env.HOME;
   }
-  
+
   // 如果都获取不到，使用默认值
   return "/home";
 };
@@ -332,6 +326,7 @@ const connectSuccess = () => {
   linkType.value = "config";
   rateNumber.value = 0;
   maxRate.value = 0;
+  console(selectedRow, 'change');
   projectFormData.projectPath = `/home/${selectedRow.value.username}`;
   emit("connected");
 };
@@ -419,6 +414,20 @@ updatedTable();
 defineExpose({
   addItem,
 });
+
+const getBuildConfigItem = {
+  command: 'iframeSetHome',
+  callback: (message) => {
+    console.log(message.data);
+    const obj = message.data || '/home';
+    projectFormData.projectPath = obj;
+  }
+}
+
+onMounted(() => {
+  message.addMessageListener(getBuildConfigItem);
+  message.sendMessageToParent({ command: 'vscodeGetHome' });
+})
 </script>
 <template>
   <div class="link-box">
@@ -513,7 +522,8 @@ defineExpose({
           <a-form-item name="projectSH">
             <template #label>
               <span>环境变量配置脚本</span>
-              <a-tooltip title="安装CANN包后需要执行的set_env.sh脚本的绝对路径信息，如果使用的是一站式开发平台提供的容器镜像，则此处可以置空。若出现报错提示路径不存在，说明非有效环境变量脚本路径，需要输入设置环境变量脚本的绝对路径。">
+              <a-tooltip
+                title="安装CANN包后需要执行的set_env.sh脚本的绝对路径信息，如果使用的是一站式开发平台提供的容器镜像，则此处可以置空。若出现报错提示路径不存在，说明非有效环境变量脚本路径，需要输入设置环境变量脚本的绝对路径。">
                 <QuestionCircleOutlined class="help-icon" />
               </a-tooltip>
             </template>
@@ -523,7 +533,7 @@ defineExpose({
               @focus="() => remoteSearch('projectSH', projectFormData.projectSH)" />
           </a-form-item>
         </a-form>
-          <a-button @click="createdProject" type="primary">立即创建</a-button>
+        <a-button @click="createdProject" type="primary">立即创建</a-button>
       </div>
     </div>
     <multiStepModal ref="multiStepModalRef" @update="updatedTable" />
