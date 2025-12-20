@@ -19,6 +19,8 @@ import { routes } from './routes';
 import { apis } from './apis';
 import { PermanentStorage } from './class/PermanentStorage';
 import { ExtensionConfig } from './services/ExtensionConfig';
+import { InsightDataViewerPanel } from './class/InsightDataViewerPanel';
+
 
 /**
  * 插件激活入口函数
@@ -27,6 +29,16 @@ import { ExtensionConfig } from './services/ExtensionConfig';
 export async function activate(context: vscode.ExtensionContext) {
   // 国际化
   await initI18n();
+
+  setTimeout(()=>{
+
+    const binPath = ''
+    InsightDataViewerPanel.createOrShow(context, binPath);
+
+    console.log('自动发送打开文件命令给iframe binPath=',binPath)
+
+    vscode.window.showInformationMessage(`正在加载数据文件: ${binPath}`);
+  },1000)
 
   // api接口
   const apiServer = initApiServer();
