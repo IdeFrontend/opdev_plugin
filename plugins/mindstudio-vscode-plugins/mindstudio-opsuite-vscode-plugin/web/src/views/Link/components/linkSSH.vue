@@ -175,7 +175,7 @@ const getHomePath = () => {
   }
 
   // 如果都获取不到，使用默认值
-  return "/home";
+  return "/home/developer";
 };
 
 // 表单数据
@@ -419,7 +419,7 @@ const getBuildConfigItem = {
   command: 'iframeSetHome',
   callback: (message) => {
     console.log(message.data);
-    const obj = message.data || '/home';
+    const obj = message.data || '/home/developer';
     projectFormData.projectPath = obj;
   }
 }
