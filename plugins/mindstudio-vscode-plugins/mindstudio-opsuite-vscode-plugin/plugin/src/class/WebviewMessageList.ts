@@ -100,7 +100,7 @@ const webviewMessageList: messageItem[] = [
   {
     command: 'vscodeGetHome',
     callback: async (message: any, that: any) => {
-      console.log(process.env.HOME,'GET');
+      console.log(process.env.HOME, 'GET');
       that.panel.webview.postMessage({
         command: 'iframeSetHome',
         data: process.env.HOME,
@@ -257,16 +257,18 @@ const webviewMessageList: messageItem[] = [
         originPath = message.projectPath
         message.projectPath += '/ops-math/math'
       }
+
+      vscode.window.showInformationMessage(`初始化中`);
       // 判斷当前是在本地还是服务器上
       if (that.isRemote) {
         console.log('服务器上执行');
         const executor = new CommandExecutor();
-        
+
         // 标准算子解压缩
         if (message.createOperatorProjectDictoryFileType === 2) {
           await executor.execute(`mkdir -p ${originPath}`, ['File exists']);
           const zipUrl = path.resolve(__dirname, `./zip/ops-math.zip`)
-          await executor.execute( `unzip -o ${zipUrl} -d ${originPath}`);
+          await executor.execute(`unzip -o ${zipUrl} -d ${originPath}`);
         }
         await executor.execute(`mkdir -p ${message.projectPath}/${message.projectName}`, ['File exists']);
         if (message.projectSH) {
@@ -297,9 +299,14 @@ const webviewMessageList: messageItem[] = [
         // 在远程环境中，我们可以直接打开本地路径（相对于远程系统）
         const localUri = vscode.Uri.file(fullProjectPath);
         console.log('vscode新目录', localUri);
-        await vscode.commands.executeCommand('vscode.openFolder', localUri, {
-          forceNewWindow: true,
-        });
+        try {
+          await vscode.commands.executeCommand('vscode.openFolder', localUri, {
+            forceNewWindow: true,
+          });
+          vscode.window.showInformationMessage(`打开算子工程目录成功`);
+        } catch (e) {
+          vscode.window.showInformationMessage(`打开算子工程目录失败: ${e}`);
+        }
       } else {
         console.log('本地执行上执行');
         const server = new RemoteServer(message);
@@ -321,11 +328,16 @@ const webviewMessageList: messageItem[] = [
         if (message.createOperatorProjectDictoryFileType === 2) {
           await server.executeCommand(`mkdir -p ${originPath}`);
           const zipUrl = path.resolve(__dirname, `./zip/ops-math.zip`)
-          await server.executeCommand( `unzip -o ${zipUrl} -d ${originPath}`);
+          await server.executeCommand(`unzip -o ${zipUrl} -d ${originPath}`);
         }
 
-        const remoteOpener: RemoteServerOpener = new RemoteServerOpener();
-        remoteOpener.open({ ...message, remotePath: `${message.projectPath}/${message.projectName}` });
+        try {
+          const remoteOpener: RemoteServerOpener = new RemoteServerOpener();
+          remoteOpener.open({ ...message, remotePath: `${message.projectPath}/${message.projectName}` });
+          vscode.window.showInformationMessage(`打开算子工程目录成功`);
+        } catch (e) {
+          vscode.window.showInformationMessage(`打开算子工程目录失败: ${e}`);
+        }
       }
     },
   },
@@ -571,33 +583,42 @@ const webviewMessageList: messageItem[] = [
 // 2 执行 vscodeStartLinkCreateOps 消息体内逻辑
 export async function handleOperatorProjectDictoryFile(message: any | undefined, that: any) {
   console.log('创建算子工程类型', message);
-  if (message.createOperatorProjectDictoryFileType) {
-    if (message.createOperatorProjectDictoryFileType === 1) {
-      await vscodeBuildCreateOps('cann', that);
-    }
-    if (message.createOperatorProjectDictoryFileType === 2) {
-      await vscodeStartLinkCreateOps(undefined, that);
-    }
+  if ([1, 2].includes(message.createOperatorProjectDictoryFileType)) {
+    // 显示连接进度
+    await vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: `开始创建算子文件...`,
+      cancellable: false
+    }, async (progress) => {
+      progress.report({ increment: 0 });
+      if (message.createOperatorProjectDictoryFileType === 1) {
+        await vscodeBuildCreateOps('cann', that, progress);
+      }
+      if (message.createOperatorProjectDictoryFileType === 2) {
+        await vscodeStartLinkCreateOps(undefined, that, progress);
+      }
+      progress.report({ increment: 100, message: '算子文件创建完成' });
+    })
   }
 }
 
-async function vscodeBuildCreateOps(data: any, that: any) {
+async function vscodeBuildCreateOps(data: any, that: any, progress: any) {
   const opsOption = new OpsOption(that.context);
   await opsOption.init();
-  await opsOption.createOpsByPrototype('', data);
+  await opsOption.createOpsByPrototype('', data, progress);
   if (that.isRemote) {
     await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
   }
 }
 
-async function vscodeStartLinkCreateOps(data: any, that: any) {
+async function vscodeStartLinkCreateOps(data: any, that: any, progress: any) {
   if (!data) {
     const opsOption = new OpsOption(that.context);
     await opsOption.init();
     const opsPrototypeFilePath = await opsOption.createOps();
     console.log('res', opsPrototypeFilePath);
     if (opsPrototypeFilePath) {
-      opsOption.createOpsByPrototype(opsPrototypeFilePath);
+      opsOption.createOpsByPrototype(opsPrototypeFilePath, undefined, progress);
     }
     if (that.isRemote) {
       await vscode.commands.executeCommand('workbench.action.closeActiveEditor');

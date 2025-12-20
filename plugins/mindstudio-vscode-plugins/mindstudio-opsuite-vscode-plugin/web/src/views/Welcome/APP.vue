@@ -3,7 +3,7 @@
     backgroundImage: `url(${a})`,
     backgroundRepeat: 'no-repeat',
     backgroundSize: 'cover',
-    backgroundPosition: 'center'
+    backgroundPosition: 'left center'
   }" @click="handleClick">
   </div>
 </template>
