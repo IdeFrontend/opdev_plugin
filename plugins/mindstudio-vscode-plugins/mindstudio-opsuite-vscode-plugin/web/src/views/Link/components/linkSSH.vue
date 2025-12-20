@@ -13,7 +13,7 @@ import { message as antdMessage } from "ant-design-vue";
 import multiStepModal from "./multiStepModal.vue";
 import { installRemoteExtension, checkPathExists } from "@/apis";
 
-const emit = defineEmits(["connected"]);
+const emit = defineEmits(["connected", "goBack"]);
 
 const props = defineProps({
   connected: {
@@ -318,6 +318,11 @@ const connectSuccess = () => {
   emit("connected");
 };
 
+const goBack = () => {
+  linkType.value = "choose";
+  emit("goBack");
+};
+
 // 校验算子工程名称
 const validateProjectName = (projectName) => {
   if (!projectName || projectName.trim() === '') {
@@ -400,6 +405,7 @@ updatedTable();
 
 defineExpose({
   addItem,
+  goBack,
 });
 </script>
 <template>
@@ -505,7 +511,10 @@ defineExpose({
               @focus="() => remoteSearch('projectSH', projectFormData.projectSH)" />
           </a-form-item>
         </a-form>
-        <a-button @click="createdProject" type="primary">立即创建</a-button>
+        <div class="button-group">
+          <a-button  v-if="!isRemote" @click="goBack" style="margin-right: 8px;">上一步</a-button>
+          <a-button @click="createdProject" type="primary">立即创建</a-button>
+        </div>
       </div>
     </div>
     <multiStepModal ref="multiStepModalRef" @update="updatedTable" />
@@ -891,8 +900,14 @@ defineExpose({
         margin-bottom: 24px;
       }
 
-      button {
+      .button-group {
         margin-top: 24px;
+        display: flex;
+        align-items: center;
+      }
+
+      button {
+        margin-top: 0;
       }
 
       :deep(.ant-form-item-label) {

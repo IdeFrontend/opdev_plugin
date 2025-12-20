@@ -24,6 +24,10 @@ const addLink = () => {
 const connected = () => {
   current.value = 1;
 };
+const goBack = () => {
+  current.value = 0;
+  linkSSHRef.value.goBack();
+};
 </script>
 <template>
   <a-config-provider :theme="themeConfig">
@@ -44,7 +48,7 @@ const connected = () => {
               <span class="button-add-link">新建链接</span>
             </div>
           </div>
-          <linkSSH ref="linkSSHRef" @connected="connected" :connected="current" />
+          <linkSSH ref="linkSSHRef" @connected="connected" @goBack="goBack" :connected="current" />
         </div>
       </div>
     </div>
