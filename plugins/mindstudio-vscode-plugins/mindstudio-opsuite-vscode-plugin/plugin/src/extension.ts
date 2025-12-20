@@ -23,6 +23,7 @@ import { ExtensionConfig } from './services/ExtensionConfig';
 import { Project } from './services/project/Project';
 import { InsightDataViewerPanel } from './class/InsightDataViewerPanel';
 
+import { OpsOperateProvider } from './class/OpsOperateProvider';
 
 /**
  * 插件激活入口函数
@@ -58,6 +59,28 @@ export async function activate(context: vscode.ExtensionContext) {
   const openCommand = vscode.commands.registerCommand('huawei-op-devtools.open', async () => {
     createOpsProvider.show('Link');
   });
+
+  // 注册打开关闭算子工作-操作命令
+  const toggleOpsOperateCommand = vscode.commands.registerCommand('huawei-op-devtools.toggleOpsOperate', async () => {
+    try {
+      // 打开/关闭右侧辅助侧栏
+      await vscode.commands.executeCommand('workbench.action.toggleAuxiliaryBar');
+    } catch (error) {
+      console.log(error)
+    }
+  });
+  context.subscriptions.push(toggleOpsOperateCommand);
+
+  const opsOperateProvider = new OpsOperateProvider(context);
+  const opsOperateView = vscode.window.registerWebviewViewProvider(OpsOperateProvider.viewType, opsOperateProvider, {
+    webviewOptions: {
+      retainContextWhenHidden: true,
+    },
+  });
+
+  context.subscriptions.push(opsOperateView);
+
+  vscode.commands.executeCommand('OpsOperateProvider.focus');
 
   // 注册打开Opsuite命令
   const ConfigCommand = vscode.commands.registerCommand('huawei-op-devtools.config', async () => {
@@ -97,6 +120,11 @@ export async function activate(context: vscode.ExtensionContext) {
   // 注册编译命令
   const createOptionsCommand = vscode.commands.registerCommand('huawei-op-devtools.createDictory', async (data: any) => {
     await handleOperatorProjectDictoryFile({ createOperatorProjectDictoryFileType: data }, createOpsProvider);
+  });
+
+  // 获取home
+  const getHome = vscode.commands.registerCommand('huawei-op-devtools.getHome', async (data: any) => {
+    return process.env.HOME;
   });
 
   // 注册JSON编辑器按钮命令
@@ -145,7 +173,6 @@ export async function activate(context: vscode.ExtensionContext) {
   if (!new Project().workspaceIsProject()) {
     vscode.commands.executeCommand('huawei-op-devtools.welcome');
   }
-
   context.subscriptions.push(buttonCommand, button);
 
   // 订阅销毁事件

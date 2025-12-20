@@ -68,9 +68,10 @@ export default class OpsOption {
   // 生成算子工程
   // <<< 算子工程 op_type: 'cann'
   // 右上角 op_type: 'ascend'
-  async createOpsByPrototype(ops_prototype_file: string, op_type = 'ascend') {
+  async createOpsByPrototype(ops_prototype_file: string, op_type = 'ascend', progress: any) {
     const project_id = this.projectId;
     try {
+      progress.report({ increment: 50, message: '算子文件创建中...' });
       const result = await generateStructure(
         {
           ops_prototype_file,
@@ -122,11 +123,11 @@ export default class OpsOption {
   }
 
   async saveConfig(type: string, data: any, showMessage: boolean = false) {
-      // 仿真/上板保存
-      await postConfig(type, data);
-      if (showMessage) {
-        vscode.window.showInformationMessage(`保存配置成功`);
-      }
+    // 仿真/上板保存
+    await postConfig(type, data);
+    if (showMessage) {
+      vscode.window.showInformationMessage(`保存配置成功`);
+    }
   }
 
   async startBuild(config_id?: string) {
@@ -158,7 +159,7 @@ export default class OpsOption {
       const res = await this.executor.execute(runCommand, [], [], {}, true);
       console.log('runRes', res)
       if (res.code !== 0) {
-        vscode.window.showErrorMessage(`运行失败 ${res}`);
+        vscode.window.showErrorMessage(`运行失败 ${res.output}`);
         return;
       }
       vscode.window.showInformationMessage(`运行成功`);
@@ -186,22 +187,22 @@ export default class OpsOption {
   }
 
   async getBuildConfig() {
-      try {
-        const configData = await this.getBuildConfigs();
-        console.log('configData in build', configData)
-        return configData.find((v: any) => v.config_type === 'build_op')?.config_id;
-      } catch {
-        return '';
-      }
+    try {
+      const configData = await this.getBuildConfigs();
+      console.log('configData in build', configData)
+      return configData.find((v: any) => v.config_type === 'build_op')?.config_id;
+    } catch {
+      return '';
+    }
   }
 
   async getBuildExampleConfig() {
-      try {
-        const configData = await this.getBuildConfigs();
-        console.log('configData in exam', configData)
-        return configData.find((v: any) => v.config_type === 'build_example')?.config_id;
-      } catch {
-        return ''
-      }
+    try {
+      const configData = await this.getBuildConfigs();
+      console.log('configData in exam', configData)
+      return configData.find((v: any) => v.config_type === 'build_example')?.config_id;
+    } catch {
+      return ''
+    }
   }
 }
