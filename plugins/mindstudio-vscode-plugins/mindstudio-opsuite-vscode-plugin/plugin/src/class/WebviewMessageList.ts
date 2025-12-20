@@ -241,11 +241,24 @@ const webviewMessageList: messageItem[] = [
       const serviceFile = 'create_project.sh';
       const plugiExtensionsPath = `${extensionsPath}${publisher}.${extensionName}-${version}`;
       const commandPath = `${plugiExtensionsPath}/out/shells`;
+      // 标准算子projectPath需增加 /ops-math/math路径
+      let originPath;
+      if (message.createOperatorProjectDictoryFileType === 2) {
+        originPath = message.projectPath
+        message.projectPath += '/ops-math/math'
+      }
       // 判斷当前是在本地还是服务器上
       if (that.isRemote) {
         console.log('服务器上执行');
         const executor = new CommandExecutor();
-        await executor.execute(`mkdir  ${message.projectPath}/${message.projectName}`, ['File exists']);
+        
+        // 标准算子解压缩
+        if (message.createOperatorProjectDictoryFileType === 2) {
+          await executor.execute(`mkdir -p ${originPath}`, ['File exists']);
+          const zipUrl = path.resolve(__dirname, `./zip/ops-math.zip`)
+          await executor.execute( `unzip -o ${zipUrl} -d ${originPath}`);
+        }
+        await executor.execute(`mkdir -p ${message.projectPath}/${message.projectName}`, ['File exists']);
         if (message.projectSH) {
           await executor.execute(`chmod +x ${message.projectSH}`);
           await executor.execute(`${message.projectSH}`);
@@ -298,7 +311,7 @@ const webviewMessageList: messageItem[] = [
         console.log('本地执行上执行');
         const server = new RemoteServer(message);
         await server.connect();
-        await server.executeCommand(`mkdir  ${message.projectPath}/${message.projectName}`);
+        await server.executeCommand(`mkdir -p ${message.projectPath}/${message.projectName}`);
         await server.executeCommand(`chmod +x ${message.projectSH}`);
         await server.executeCommand(`${message.projectSH}`);
         await server.executeCommand(`chmod +x ./${serviceFile}`);
@@ -310,6 +323,12 @@ const webviewMessageList: messageItem[] = [
         if (!message.privateKey) {
           const autoConfig = new SSHKeyAutoConfig(server);
           await autoConfig.configureSSH(message);
+        }
+
+        if (message.createOperatorProjectDictoryFileType === 2) {
+          await server.executeCommand(`mkdir -p ${originPath}`);
+          const zipUrl = path.resolve(__dirname, `./zip/ops-math.zip`)
+          await server.executeCommand( `unzip -o ${zipUrl} -d ${originPath}`);
         }
 
         const remoteOpener: RemoteServerOpener = new RemoteServerOpener();
