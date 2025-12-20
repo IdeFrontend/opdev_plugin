@@ -70,11 +70,6 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     // 如果已经存在 panel，直接显示
     if (InsightDataViewerPanel.currentPanel) {
       InsightDataViewerPanel.currentPanel.panel.reveal(column);
-      // 更新 bin 文件路径
-      InsightDataViewerPanel.currentPanel.panel.webview.postMessage({
-        command: 'setBinPath',
-        data: binPath,
-      });
       return;
     }
 
@@ -162,22 +157,6 @@ export class InsightDataViewerPanel implements vscode.Disposable {
         window.addEventListener('message', event => {
             const message = event.data;
             
-            // 处理设置 bin 文件路径的消息
-            if (message.command === 'setBinPath') {
-                const binPathElement = document.getElementById('binPath');
-                if (binPathElement) {
-                    binPathElement.textContent = message.data;
-                }
-            }
-            
-            // 处理设置 WebSocket 端口的消息
-            if (message.command === 'setWsPort') {
-                const wsPortElement = document.getElementById('wsPort');
-                if (wsPortElement) {
-                    wsPortElement.textContent = message.data;
-                }
-            }
-            
             // 处理 WebSocket 桥接消息（来自 NodeWebviewSocketBridge）
             if (message.type && message.type.startsWith('ws:')) {
                 console.log('WebSocket bridge message:', message);
@@ -213,16 +192,6 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     console.log('[InsightDataViewerPanel] 收到 webview 消息:', JSON.stringify(message, null, 2));
 
     // 检查是否是 WebSocket 桥接消息（这些消息应该由 NodeWebviewSocketBridge 处理）
-    if (message.command && (message.command === 'setBinPath')) {
-      console.log(`[InsightDataViewerPanel] 检测到 WebSocket 桥接消息，应该由 NodeWebviewSocketBridge 处理:`, message.command,this.binPath);
-      this.panel.webview.postMessage({
-        command: 'setBinPath',
-        data: this.binPath,
-      });
-      return;
-    }
-
-    // 检查是否是 WebSocket 桥接消息（这些消息应该由 NodeWebviewSocketBridge 处理）
     if (message.type && (message.type === 'ws:open' || message.type === 'ws:send' || message.type === 'ws:close')) {
       console.log(`[InsightDataViewerPanel] 检测到 WebSocket 桥接消息，应该由 NodeWebviewSocketBridge 处理:`, message.type);
       // 这些消息会被 NodeWebviewSocketBridge 的 handleMessage 处理
@@ -251,29 +220,6 @@ export class InsightDataViewerPanel implements vscode.Disposable {
         handled = true;
         break;
       }
-    }
-
-
-    // 如果没有找到处理器，使用原有的逻辑
-    if (!handled && message.command === 'ready') {
-      console.log('[InsightDataViewerPanel] 使用默认 ready 处理');
-      // Webview 已准备好，发送 bin 文件路径和端口号
-      this.panel.webview.postMessage({
-        command: 'setBinPath',
-        data: message.binPath || '',
-      });
-
-      if (this.serverPort) {
-        console.log(`[InsightDataViewerPanel] 发送 WebSocket 端口到 webview: ${this.serverPort}`);
-        this.panel.webview.postMessage({
-          command: 'setWsPort',
-          data: this.serverPort,
-        });
-      } else {
-        console.warn('[InsightDataViewerPanel] serverPort 未设置，无法发送端口信息');
-      }
-    } else if (!handled) {
-      console.log(`[InsightDataViewerPanel] 未找到处理器: ${message.command}`);
     }
   }
 
@@ -419,12 +365,6 @@ export class InsightDataViewerPanel implements vscode.Disposable {
 
       this.serverPort = port;
 
-      // 发送端口号到 webview
-      console.log(`[InsightDataViewerPanel] 发送 WebSocket 端口到 webview: ${this.serverPort}`);
-      this.panel.webview.postMessage({
-        command: 'setWsPort',
-        data: this.serverPort,
-      });
 
       // 启动 profiler_server
       // 注意：export 命令需要在 shell 中执行，所以使用 bash -c
@@ -570,7 +510,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       this.panel.webview.postMessage({
         command: 'renderAllIframes',
         iframes: iframes,
-        wsPort: this.serverPort,
+        wsPort: 9000,
         binPath: this.binPath,
       });
       
