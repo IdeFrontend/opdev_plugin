@@ -9,8 +9,10 @@ import { theme } from "ant-design-vue";
 import linkSSH from "./components/linkSSH.vue";
 import { getLocalData } from "../../untils/index";
 import { PlusOutlined } from "@ant-design/icons-vue";
-import { ref } from "vue";
-const current = ref(getLocalData("isRemote") ? 1 : 0);
+import { ref, computed } from "vue";
+
+const isRemote = computed(() => getLocalData("isRemote"))
+const current = ref(isRemote.value ? 1 : 0);
 const items = [{ title: "连接远程开发环境" }, { title: "工程配置" }];
 const linkSSHRef = ref();
 const themeConfig = {
@@ -25,29 +27,35 @@ const connected = () => {
 </script>
 <template>
   <a-config-provider :theme="themeConfig">
-    <div class="header-section">
-      <div class="title">新建算子工程</div>
-      <div class="steps">
-        <a-steps :current="current" :items="items"></a-steps>
-      </div>
-    </div>
-    <div class="divider"></div>
-    <div class="accend-c-link">
-      <div class="content-section">
-        <div class="link-row" v-if="current !== 1">
-          <span class="label">远程开发环境</span>
-          <div class="link-add" @click="addLink">
-            <PlusOutlined />
-            <span class="button-add-link">新建链接</span>
-          </div>
+    <div class="link-container">
+      <div class="header-section">
+        <div class="title">新建算子工程</div>
+        <div v-if="!isRemote" class="steps">
+          <a-steps :current="current" :items="items"></a-steps>
         </div>
-        <linkSSH ref="linkSSHRef" @connected="connected" :connected="current" />
+      </div>
+      <div class="divider"></div>
+      <div class="accend-c-link">
+        <div class="content-section">
+          <div class="link-row" v-if="current !== 1">
+            <span class="label">远程开发环境</span>
+            <div class="link-add" @click="addLink">
+              <PlusOutlined />
+              <span class="button-add-link">新建链接</span>
+            </div>
+          </div>
+          <linkSSH ref="linkSSHRef" @connected="connected" :connected="current" />
+        </div>
       </div>
     </div>
   </a-config-provider>
 </template>
 
 <style lang="less">
+.link-container {
+  width: 100%;
+}
+
 .header-section {
   display: flex;
   align-items: center;
@@ -105,12 +113,11 @@ const connected = () => {
   height: 1px;
   background-color: rgba(255, 255, 255, 0.15);
   margin-bottom: 24px;
-  width: 560px;
+  width: 100%;
 }
 
 .accend-c-link {
   color: #fff;
-  width: 560px;
 
   .content-section {
     display: flex;

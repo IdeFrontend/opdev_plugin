@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://gitcode.com/Asscend/mstt"
   },
-  "version": "1.0.103",
+  "version": "1.0.115",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -23,6 +23,7 @@
     "workspaceContains:package.json",
     "onStartupFinished"
   ],
+  "icon": "resources/display.png",
   "contributes": {
     "viewsContainers": {
       "activitybar": [
@@ -45,12 +46,8 @@
         {
           "id": "customSidebarView",
           "name": "操作面板",
-          "type": "webview"
-        },
-        {
-          "id": "performanceSidebarView",
-          "name": "性能调优",
-          "type": "webview"
+          "type": "webview",
+          "visibility": "collapsed"
         }
       ]
     },
@@ -70,11 +67,6 @@
       {
         "command": "huawei-op-devtools.leftNaV",
         "title": "左侧菜单配置"
-      },
-      {
-        "command": "huawei-op-devtools.newPrototype",
-        "title": "新建算子原型定义文件",
-        "icon": "resources/homeIconW.svg"
       },
       {
         "command": "huawei-op-devtools.createOps",
@@ -97,53 +89,8 @@
       }
     ],
     "menus": {
-      "explorer/context": [
-        {
-          "command": "huawei-op-devtools.open",
-          "group": "navigation"
-        },
-        {
-          "command": "huawei-op-devtools.createOps",
-          "group": "navigation"
-        }
-      ],
       "view/title": [
-        {
-          "command": "huawei-op-devtools.newPrototype",
-          "group": "navigation",
-          "when": "view == workbench.explorer.fileView",
-          "icon": {
-            "light": "resources/homeIconW.svg",
-            "dark": "resources/homeIconW.svg"
-          }
-        }
-      ],
-      "editor/title": [
-        {
-          "command": "huawei-op-devtools.config",
-          "group": "navigation",
-          "when": "true"
-        },
-        {
-          "command": "extension.jsonButtonAction",
-          "group": "navigation",
-          "when": "editorLangId == json"
-        },
-        {
-          "submenu": "extension/build",
-          "group": "navigation",
-          "when": "true"
-        }
-      ],
-      "extension/build": [
-        {
-          "command": "huawei-op-devtools.buildOps",
-          "group": "navigation"
-        },
-        {
-          "command": "huawei-op-devtools.createOps",
-          "group": "navigation"
-        }
+
       ]
     },
     "submenus": [

@@ -57,7 +57,7 @@ export interface CreateProjectParams {
 
 export async function createProject(data: CreateProjectParams) {
   const store = ensureStore();
-  const existing = store.projects.find(p => p.project_path === data.project_path);
+  const existing = store.projects.find((p) => p.project_path === data.project_path);
   if (existing) {
     if (!data.ascend_env_script) return existing.id;
     existing.ascend_env_script = data.ascend_env_script;
@@ -77,7 +77,7 @@ export async function createProject(data: CreateProjectParams) {
     create_by: data.create_by || null,
     create_time: now,
     update_by: null,
-    update_time: now
+    update_time: now,
   };
   store.projects.push(record);
   store.lastId = nextId;
@@ -85,9 +85,14 @@ export async function createProject(data: CreateProjectParams) {
   return nextId;
 }
 
+export function getProjectByPath(projectPath: string): ProjectRecord | undefined {
+  const store = ensureStore();
+  return store.projects.find((p) => p.project_path === projectPath);
+}
+
 export function get_project_by_id(project_id: number) {
   const store = ensureStore();
-  const found = store.projects.find(p => p.id === project_id);
+  const found = store.projects.find((p) => p.id === project_id);
   return found || null;
 }
 

@@ -10,6 +10,7 @@ import * as vscode from 'vscode';
 import i18nResource from 'shared:/i18n';
 
 import { WebviewProvider } from './class/webviewProvider';
+import { handleOperatorProjectDictoryFile } from './class/WebviewMessageList';
 import OpsOption from './class/OpsOption';
 import { CustomSidebarProvider } from './class/CustomSidebarProvider';
 import { CsvEditorProvider } from './class/CsvEditorProvider';
@@ -19,6 +20,7 @@ import { routes } from './routes';
 import { apis } from './apis';
 import { PermanentStorage } from './class/PermanentStorage';
 import { ExtensionConfig } from './services/ExtensionConfig';
+import { Project } from './services/project/Project';
 import { InsightDataViewerPanel } from './class/InsightDataViewerPanel';
 
 
@@ -74,7 +76,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 注册测试命令
   const testCommand = vscode.commands.registerCommand('huawei-op-devtools.test', async () => {
-    const binPath = '';
+    const binPath = '-';
     InsightDataViewerPanel.createOrShow(context, binPath);
     console.log('自动发送打开文件命令给iframe binPath=', binPath);
     vscode.window.showInformationMessage(`正在加载数据文件: ${binPath}`);
@@ -90,6 +92,11 @@ export async function activate(context: vscode.ExtensionContext) {
   const buildOpsCommand = vscode.commands.registerCommand('huawei-op-devtools.buildOps', async () => {
     await opsOption.init();
     opsOption.startBuild();
+  });
+
+  // 注册编译命令
+  const createOptionsCommand = vscode.commands.registerCommand('huawei-op-devtools.createDictory', async (data: any) => {
+    await handleOperatorProjectDictoryFile({ createOperatorProjectDictoryFileType: data }, createOpsProvider);
   });
 
   // 注册JSON编辑器按钮命令
@@ -133,9 +140,12 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   });
 
-  // 注释掉自动打开页面的代码，用户手动打开
-  // configProvider.showLeftPage('Home');
-  // vscode.commands.executeCommand('huawei-op-devtools.welcome');
+  configProvider.showLeftPage('Home');
+
+  if (!new Project().workspaceIsProject()) {
+    vscode.commands.executeCommand('huawei-op-devtools.welcome');
+  }
+
   context.subscriptions.push(buttonCommand, button);
 
   // 订阅销毁事件
@@ -193,12 +203,28 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   context.subscriptions.push(openCsvCommand);
-  // 注释掉自动显示活动栏视图，用户手动打开
-  // 自动显示算子一站式交付平台的活动栏视图
-  // 延迟执行，确保视图已经注册完成
-  // setTimeout(() => {
-  //   vscode.commands.executeCommand('workbench.view.extension.mindstudio-opssuite-vscode-plugin');
-  // }, 500);
+
+  if (vscode.workspace.workspaceFolders) {
+    console.log('激活', vscode.workspace.workspaceFolders);
+    try {
+      const runCommand = context.globalState.get<string>('runCommand');
+      if (runCommand) {
+        // 延迟执行，确保 UI 已就绪
+        setTimeout(async () => {
+          try {
+            console.log('执行命令', runCommand);
+            await vscode.commands.executeCommand(runCommand, context.globalState.get('runCommand-param'));
+            context.globalState.update('runCommand', null);
+            context.globalState.update('runCommand-param', null);
+          } catch (e) {
+            console.error('Failed to run auto command:', e);
+          }
+        }, 1000); // 等待窗口加载完成
+      }
+    } catch (e) {
+      // ignore invalid query
+    }
+  }
 }
 
 /**
