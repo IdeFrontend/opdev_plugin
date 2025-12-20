@@ -59,7 +59,7 @@ class CommandExecutor extends EventEmitter {
       console.log('isOpenTerminal', isOpenTerminal);
 
       if (isOpenTerminal) {
-        outputChannel = vscode.window.createOutputChannel('OpsTite outputChannel');
+        outputChannel = vscode.window.createOutputChannel('OP DevTools');
         outputChannel.show();
         outputChannel.appendLine(command + '\r\n');
       }
