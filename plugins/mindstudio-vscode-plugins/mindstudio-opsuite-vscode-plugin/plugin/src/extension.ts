@@ -160,6 +160,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
   if (!new Project().workspaceIsProject()) {
     vscode.commands.executeCommand('huawei-op-devtools.welcome');
+  } else {
+    vscode.commands.executeCommand('huawei-op-devtools.toggleOpsOperate');
   }
 
   context.subscriptions.push(buttonCommand, button);

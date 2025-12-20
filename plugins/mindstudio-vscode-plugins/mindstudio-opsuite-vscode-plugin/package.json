@@ -34,7 +34,8 @@
       "secondarySidebar": [
         {
           "id": "secondary-sidebar-operate-view",
-          "title": "算子工程-操作"
+          "title": "算子工程-操作",
+          "icon": "resources/operate.svg"
         }
       ]
     },
@@ -50,7 +51,8 @@
         {
           "type": "webview",
           "id": "OpsOperateProvider",
-          "name": "算子工程-操作"
+          "name": "算子工程-操作",
+          "icon": "resources/operate.svg"
         }
       ]
     },
