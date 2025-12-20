@@ -78,6 +78,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(opsOperateView);
 
+  vscode.commands.executeCommand('OpsOperateProvider.focus');
+
   // 注册打开Opsuite命令
   const ConfigCommand = vscode.commands.registerCommand('huawei-op-devtools.config', async () => {
     configProvider.show('Config');
@@ -160,10 +162,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   if (!new Project().workspaceIsProject()) {
     vscode.commands.executeCommand('huawei-op-devtools.welcome');
-  } else {
-    vscode.commands.executeCommand('huawei-op-devtools.toggleOpsOperate');
   }
-
   context.subscriptions.push(buttonCommand, button);
 
   // 订阅销毁事件
