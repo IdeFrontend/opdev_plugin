@@ -34,10 +34,10 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     this.context = context;
     this.binPath = binPath;
 
-    // 构建路径
-    this.serverDir = path.join(context.extensionPath, 'plugin', 'insight-vscode-plugin', 'server');
+    // 构建路径（insight-vscode-plugin 最终会在 out/plugin/insight-vscode-plugin 里）
+    this.serverDir = path.join(context.extensionPath, 'out', 'plugin', 'insight-vscode-plugin', 'server');
     this.serverPath = path.join(this.serverDir, 'profiler_server');
-    this.zipDir = path.join(context.extensionPath, 'plugin', 'insight-vscode-plugin', 'zip');
+    this.zipDir = path.join(context.extensionPath, 'out', 'plugin', 'insight-vscode-plugin', 'zip');
 
     // 创建一个 Promise 来等待 serverPort 被赋值
     let resolvePortReady: () => void;
@@ -107,6 +107,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
   private setupWebview(binPath: string): void {
     const htmlPath = path.join(
       this.context.extensionPath,
+      'out',
       'plugin',
       'insight-vscode-plugin',
       'index.html'
@@ -330,7 +331,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       console.log(`[InsightDataViewerPanel] 开始解压: ${zipPath}`);
 
       // 解压 zip 文件到 insight-vscode-plugin 目录（压缩包中已有 server 目录）
-      const extractToDir = path.join(this.context.extensionPath, 'plugin', 'insight-vscode-plugin');
+      const extractToDir = path.join(this.context.extensionPath, 'out', 'plugin', 'insight-vscode-plugin');
       await this.extractZip(zipPath, extractToDir);
 
       // 检查解压后 server 目录是否存在
@@ -502,6 +503,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       // 插件目录路径
       const pluginsBasePath = path.join(
         this.context.extensionPath,
+        'out',
         'plugin',
         'insight-vscode-plugin',
         'plugins'
