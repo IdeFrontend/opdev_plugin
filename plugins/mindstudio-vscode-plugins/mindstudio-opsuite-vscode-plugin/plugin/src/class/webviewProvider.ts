@@ -79,9 +79,6 @@ export class WebviewProvider {
           );
         },
       });
-      if (!new Project().workspaceIsProject()) {
-        vscode.commands.executeCommand('workbench.view.extension.mindstudio-opssuite-vscode-plugin');
-      }
     } catch (error) {
       console.error(error);
     }
