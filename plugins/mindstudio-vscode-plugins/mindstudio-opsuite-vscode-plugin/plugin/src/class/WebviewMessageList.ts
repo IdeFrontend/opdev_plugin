@@ -290,6 +290,23 @@ const webviewMessageList: messageItem[] = [
     },
   },
   {
+    command: 'vscodeSaveProjectSH',
+    callback: async (msg: any, that: any) => {
+      const projectSH = msg.message.data;
+      if (!projectSH) {
+        vscode.window.showErrorMessage('环境变量配置脚本路径不能为空');
+        return;
+      }
+      try {
+        const opsOption = new OpsOption(that.context);
+        await opsOption.init(projectSH);
+        vscode.window.showInformationMessage('环境变量设置成功');
+      } catch (error) {
+        vscode.window.showErrorMessage(`环境变量设置失败: ${error}`);
+      }
+    },
+  },
+  {
     command: 'vscodeRunExample',
     callback: async (msg: any, that: any) => {
       const data = msg.message.data;
