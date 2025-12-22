@@ -14,8 +14,7 @@ const configArray = ref([]);
 const selectedKeys = ref([]);
 const openKeys = ref(['submenu-build']);
 
-// 判断是否存在工程配置文件
-const disabled = ref(true);
+const actionQueue = ref([]);
 
 // 菜单配置对象
 const menuItems = ref([
@@ -98,13 +97,9 @@ const findMenuItemHandler = (items, key) => {
 }
 
 const handleMenuClick = ({ key }) => {
-    // 从带前缀的 key 中提取原始 key
-    const originalKey = key.replace(/^(submenu-|menuitem-)/, '');
     selectedKeys.value = [key]; // 使用带前缀的 key 以匹配模板
-    const handler = findMenuItemHandler(menuItems.value, originalKey);
-    if (handler) {
-        handler();
-    }
+    actionQueue.value.push(key.replace(/^(submenu-|menuitem-)/, ''))
+    message.sendMessageToParent({ command: 'vscodeGetBuildConfigBoard' });
 }
 
 const onOpenChange = (keys) => {
@@ -115,16 +110,26 @@ const onOpenChange = (keys) => {
 const getBuildConfigItem = {
     command: 'iframeSetBuildConfigItem',
     callback: (message) => {
-        console.log('iframeSetBuildConfigItem', message)
         const obj = JSON.parse(message.data || '{}')
-        // 如果没有任何配置信息 则禁用menu菜单
-        disabled.value = Object.keys(obj).length === 0;
+        // // 如果没有任何配置信息 则禁用menu菜单
+        if (Object.keys(obj).length === 0) {
+            handlerSendMessage();
+            return;
+        }
+        const originalKey = actionQueue.value.shift();
+        const handler = findMenuItemHandler(menuItems.value, originalKey);
+        if (handler) {
+            handler();
+        }
     }
 }
 
+const handlerSendMessage = () => {
+    message.sendMessageToParent({ command: 'vscodeOperateErrorToast'});
+}
+
 onMounted(() => {
-    message.addMessageListener(getBuildConfigItem)
-    message.sendMessageToParent({ command: 'vscodeGetBuildConfigBoard' });
+    message.addMessageListener(getBuildConfigItem);
 })
 </script>
 
@@ -140,8 +145,8 @@ onMounted(() => {
                 </a-select>
             </div>
 
-            <a-menu :disabled="disabled" mode="inline" :open-keys="openKeys" :selected-keys="selectedKeys" class="inline-menu"
-            @openChange="onOpenChange" @click="handleMenuClick">
+            <a-menu mode="inline" :open-keys="openKeys" :selected-keys="selectedKeys" class="inline-menu"
+                @openChange="onOpenChange" @click="handleMenuClick">
                 <template v-for="item in menuItems">
                     <!-- 有子菜单的情况 -->
                     <a-sub-menu v-if="item.children && item.children.length > 0" :key="`submenu-${item.key}`">

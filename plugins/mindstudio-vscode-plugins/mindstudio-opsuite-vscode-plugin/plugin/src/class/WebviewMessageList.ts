@@ -431,6 +431,10 @@ const webviewMessageList: messageItem[] = [
       }
     },
   },
+    {
+    command: 'vscodeOperateErrorToast',
+    callback: (message: any) => vscode.window.showErrorMessage('工程配置中命令行为空，请配置再执行该命令'),
+  },
 ];
 
 // 创建算子工程类型
