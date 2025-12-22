@@ -269,9 +269,19 @@ const webviewMessageList: messageItem[] = [
       await opsOption.startRun();
     },
   },
+    {
+    command: 'vscodeSimulate',
+    callback: async (msg: any, that: any) => {
+      const data = msg.message.data;
+      const opsOption = new OpsOption(that.context);
+      await opsOption.init();
+      await opsOption.startSimulate();
+    },
+  },
   {
     command: 'vscodeSaveConfig',
     callback: async (msg: any, that: any) => {
+      console.log('msg', msg)
       const data = msg.message.data;
       const opsOption = new OpsOption(that.context);
       await opsOption.init();

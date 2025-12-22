@@ -3,7 +3,9 @@ import fs from 'fs-extra';
 import config from './config';
 
 const dataDir = path.join((config as any).user_data_dir, 'data');
+console.log('dataDir', dataDir)
 const configsFile = path.join(dataDir, 'configs.json');
+console.log('configsFile', configsFile)
 
 type ConfigRecord = {
   id: number;
@@ -32,6 +34,7 @@ function ensureStore(): ConfigsStore {
   if (!fs.existsSync(configsFile)) {
     const init: ConfigsStore = { lastId: 0, configs: [] };
     fs.writeFileSync(configsFile, JSON.stringify(init, null, 2), 'utf-8');
+    console.log('init1', init)
     return init;
   }
 
@@ -41,10 +44,12 @@ function ensureStore(): ConfigsStore {
     if (!parsed || typeof parsed.lastId !== 'number' || !Array.isArray(parsed.configs)) {
       throw new Error('invalid configs store');
     }
+    console.log('parsed', parsed)
     return parsed;
   } catch (e) {
     const init: ConfigsStore = { lastId: 0, configs: [] };
     fs.writeFileSync(configsFile, JSON.stringify(init, null, 2), 'utf-8');
+     console.log('init2', init)
     return init;
   }
 }

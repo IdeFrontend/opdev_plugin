@@ -63,6 +63,13 @@ const handleRemoteSearch = (val) => {
 const handleFocus = () => {
   emit("remoteSearch", props.onboardData.dataStoragePath, "onboard");
 };
+
+// 所有全选
+const totalSelectedAll = ref(true)
+// 内存分析图全选
+const memorySelectedAll = ref(true)
+// 算子性能数据文件全选
+const performanceSelectedAll = ref(true)
 </script>
 
 <template>
@@ -71,99 +78,71 @@ const handleFocus = () => {
       <div class="section-title">采集内容</div>
       <a-form layout="vertical">
         <a-form-item>
-          <a-checkbox
-            v-model:checked="onboardData.collectionContent.selectAll"
-            @change="handleSelectAll"
-          >
+          <a-checkbox v-model:checked="totalSelectedAll" @change="handleSelectAll">
             全选
           </a-checkbox>
         </a-form-item>
         <a-form-item>
-          <a-checkbox
-            v-model:checked="onboardData.collectionContent.memoryAnalysis"
-            @change="handleMemoryAnalysisChange"
-          >
+          <a-checkbox v-model:checked="memorySelectedAll" @change="handleMemoryAnalysisChange">
             内存分析图
           </a-checkbox>
           <div class="nested-checkbox-group horizontal">
-            <a-checkbox v-model:checked="onboardData.collectionContent.memoryAnalysisSub.interCoreLoad">
+            <a-checkbox v-model:checked="onboardData.user_options.Occupancy">
               核间负载分析图
             </a-checkbox>
-            <a-checkbox
-              v-model:checked="onboardData.collectionContent.memoryAnalysisSub.routineBottleneck"
-            >
-              Roofine瓶颈分析
+            <a-checkbox v-model:checked="onboardData.user_options.Roofline">
+              Roofline瓶颈分析
             </a-checkbox>
-            <a-checkbox
-              :checked="onboardData.collectionContent.memoryAnalysisSub.computeWorkload"
-              disabled
-            >
-              计算工作负载分析
-            </a-checkbox>
-            <a-checkbox
-              :checked="onboardData.collectionContent.memoryAnalysisSub.memoryWorkload"
-              disabled
-            >
-              内存负载分析
-            </a-checkbox>
+            <a-tooltip placeholder="topLeft" title="默认采集">
+              <a-checkbox :checked="true" disabled>
+                计算工作负载分析
+              </a-checkbox>
+            </a-tooltip>
+            <a-tooltip placeholder="topLeft" title="默认采集">
+              <a-checkbox :checked="true" disabled>
+                内存负载分析
+              </a-checkbox>
+            </a-tooltip>
           </div>
         </a-form-item>
         <a-form-item>
-          <a-checkbox v-model:checked="onboardData.collectionContent.operatorHotspot">
+          <a-checkbox v-model:checked="onboardData.user_options.Source">
             算子代码热点图
           </a-checkbox>
         </a-form-item>
         <a-form-item>
-          <a-checkbox v-model:checked="onboardData.collectionContent.cacheHeatmap">
+          <a-checkbox v-model:checked="onboardData.user_options.MemoryDetail">
             Cache热力图
           </a-checkbox>
         </a-form-item>
         <a-form-item>
-          <a-checkbox
-            v-model:checked="onboardData.collectionContent.operatorPerformance"
-            @change="handleOperatorPerformanceChange"
-          >
+          <a-checkbox v-model:checked="performanceSelectedAll"
+            @change="handleOperatorPerformanceChange">
             算子性能数据文件
           </a-checkbox>
           <div class="nested-checkbox-group horizontal">
-            <a-checkbox
-              v-model:checked="onboardData.collectionContent.operatorPerformanceSub.cubeVectorTime"
-            >
+            <a-checkbox v-model:checked="onboardData.user_options.ArithmeticUtilization">
               Cube及Vector类型指令耗时和占比
             </a-checkbox>
-            <a-checkbox
-              v-model:checked="onboardData.collectionContent.operatorPerformanceSub.l2CacheHitRate"
-            >
+            <a-checkbox v-model:checked="onboardData.user_options.L2Cache">
               L2 Cache命中率
             </a-checkbox>
-            <a-checkbox
-              v-model:checked="onboardData.collectionContent.operatorPerformanceSub.memoryBandwidth"
-            >
+            <a-checkbox v-model:checked="onboardData.user_options.Memory">
               内存读写带宽速率
             </a-checkbox>
-            <a-checkbox
-              v-model:checked="onboardData.collectionContent.operatorPerformanceSub.l0Bandwidth"
-            >
+            <a-checkbox v-model:checked="onboardData.user_options.MemoryL0">
               L0读写带宽速率
             </a-checkbox>
-            <a-checkbox
-              v-model:checked="onboardData.collectionContent.operatorPerformanceSub.ubBandwidth"
-            >
+            <a-checkbox v-model:checked="onboardData.user_options.MemoryUB">
               UB读写带宽速率
             </a-checkbox>
-            <a-checkbox
-              v-model:checked="onboardData.collectionContent.operatorPerformanceSub.operatorBasicInfo"
-            >
+            <a-checkbox v-model:checked="onboardData.user_options.OpBasicInfo">
               算子基础信息
             </a-checkbox>
-            <a-checkbox
-              v-model:checked="onboardData.collectionContent.operatorPerformanceSub.computeTransferRatio"
-            >
+            <a-checkbox v-model:checked="onboardData.user_options.PipeUtilization">
               计算单元和搬运单元耗时占比
             </a-checkbox>
-            <a-checkbox
-              v-model:checked="onboardData.collectionContent.operatorPerformanceSub.resourceConflictRatio"
-            >
+            <a-checkbox v-model:checked="onboardData.user_options.ResourceConflictRatio">
               资源冲突占比
             </a-checkbox>
           </div>
@@ -175,12 +154,12 @@ const handleFocus = () => {
       <div class="section-title">模式</div>
       <a-form layout="vertical">
         <a-form-item>
-          <a-checkbox v-model:checked="onboardData.mode.renderInPlatform">
+          <a-checkbox v-model:checked="onboardData.user_options.renderInPlatform">
             平台内渲染结果
           </a-checkbox>
         </a-form-item>
         <a-form-item>
-          <a-checkbox v-model:checked="onboardData.mode.downloadToLocal">
+          <a-checkbox v-model:checked="onboardData.user_options.downloadToLocal">
             下载数据到本地
           </a-checkbox>
         </a-form-item>
@@ -191,14 +170,9 @@ const handleFocus = () => {
       <div class="section-title">数据存放位置</div>
       <a-form layout="vertical">
         <a-form-item>
-          <a-auto-complete
-            v-model:value="onboardData.dataStoragePath"
-            :options="dataStorageOptions"
-            :loading="dataStorageLoading"
-            placeholder="请输入数据存放位置，支持远程搜索"
-            @search="handleRemoteSearch"
-            @focus="handleFocus"
-          />
+          <a-auto-complete v-model:value="onboardData.user_options.dataStoragePath" :options="dataStorageOptions"
+            :loading="dataStorageLoading" placeholder="请输入数据存放位置，支持远程搜索" @search="handleRemoteSearch"
+            @focus="handleFocus" />
         </a-form-item>
       </a-form>
     </div>
@@ -208,51 +182,18 @@ const handleFocus = () => {
         <a-collapse-panel key="1" header="高级配置">
           <a-form layout="vertical">
             <a-form-item>
-              <a-checkbox v-model:checked="onboardData.advanced.useKernelSideCode">
-                使用Kernel侧制定代码段性能采集
+              <a-checkbox v-model:checked="onboardData.user_options.useKernelSideCode">
+                使能Kernel侧制定代码段性能采集
                 <a-tooltip title="帮助内容待定">
                   <QuestionCircleOutlined class="help-icon" />
                 </a-tooltip>
               </a-checkbox>
             </a-form-item>
 
-            <a-form-item>
-              <div class="section-title">
-                上板预热次数
-                <a-tooltip title="帮助内容待定">
-                  <QuestionCircleOutlined class="help-icon" />
-                </a-tooltip>
-              </div>
-              <a-input-number
-                v-model:value="onboardData.advanced.warmupCount"
-                :min="0"
-                :precision="0"
-                style="width: 200px"
-              />
-            </a-form-item>
-
-            <a-form-item>
-              <div class="section-title">上板重放模式</div>
-              <a-radio-group v-model:value="onboardData.advanced.replayMode">
-                <a-radio value="kernel">kernel</a-radio>
-                <a-radio value="applicant">applicant</a-radio>
-                <a-radio value="range">
-                  range
-                  <a-tooltip title="内容待定">
-                    <QuestionCircleOutlined class="help-icon" />
-                  </a-tooltip>
-                </a-radio>
-              </a-radio-group>
-            </a-form-item>
-
-            <a-form-item>
+            <a-form-item v-if="false">
               <div class="section-title">高级参数</div>
-              <editTable
-                :key="updateIndex"
-                :dataSource="onboardData.advanced.advancedParams"
-                @addTableItem="emit('addAdvancedParam')"
-                @deleteTableItem="emit('deleteAdvancedParam', $event)"
-              />
+              <editTable :key="updateIndex" :dataSource="onboardData.advanced.advancedParams"
+                @addTableItem="emit('addAdvancedParam')" @deleteTableItem="emit('deleteAdvancedParam', $event)" />
             </a-form-item>
           </a-form>
         </a-collapse-panel>
@@ -348,4 +289,3 @@ const handleFocus = () => {
   }
 }
 </style>
-

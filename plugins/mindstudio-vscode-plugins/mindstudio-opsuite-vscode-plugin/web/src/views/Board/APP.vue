@@ -28,6 +28,13 @@ const runExampleFn = () => {
     });
 };
 
+const test = () => {
+       message.sendMessageToParent({
+        command: "vscodeSimulate",
+        data: '',
+    });
+}
+
 const clickSetting = (() => {
     message.sendMessageToParent({
         command: "vscodeOpenConfig",
@@ -80,6 +87,8 @@ const clickSetting = (() => {
                         工程配置
                     </div>
                 </a-button>
+
+           <a-button @click="test">性能调优</a-button>
             </div>
         </div>
     </a-config-provider>

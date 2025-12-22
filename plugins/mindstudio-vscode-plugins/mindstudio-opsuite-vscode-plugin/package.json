@@ -54,6 +54,14 @@
           "name": "算子工程-操作",
           "icon": "resources/operate.svg"
         }
+      ],
+      "explorer": [
+        {
+          "id": "customSidebarView",
+          "name": "操作面板",
+          "type": "webview",
+          "visibility": "collapsed"
+        }
       ]
     },
     "commands": [

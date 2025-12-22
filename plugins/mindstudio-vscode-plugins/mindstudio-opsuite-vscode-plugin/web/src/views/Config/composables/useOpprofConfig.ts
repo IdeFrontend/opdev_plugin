@@ -9,56 +9,114 @@ import { reactive, ref } from "vue";
 
 // 仿真配置数据类型
 export interface SimulationConfig {
-  collectionContent: {
-    instructionFlow: boolean;
-    operatorHotspot: boolean;
-    memoryThroughput: boolean;
-  };
-  simulatorType: string;
-  enableDump: boolean;
-  mode: {
-    renderInPlatform: boolean;
-    downloadToLocal: boolean;
-  };
-  dataStoragePath: string;
+  // collectionContent: {
+  //   instructionFlow: boolean;
+  //   operatorHotspot: boolean;
+  //   memoryThroughput: boolean;
+  // };
+  // simulatorType: string;
+  // enableDump: boolean;
+  // mode: {
+  //   renderInPlatform: boolean;
+  //   downloadToLocal: boolean;
+  // };
+  // dataStoragePath: string;
+  // config_id: string,
+
+  config_id: string,
+  project_id: string,
+  user_options: {
+    op: string,
+    script: string,
+    soc_version: string,
+    config_name: string,
+    // 内存通路吞吐率波形图
+    PMSampling: boolean,
+    downloadToLocal: boolean,
+    renderInPlatform: boolean,
+    dataStoragePath: string,
+    simulatorType: string,
+    enableDump: boolean
+  },
 }
 
 // 上板配置数据类型
 export interface OnboardConfig {
-  collectionContent: {
-    selectAll: boolean;
-    memoryAnalysis: boolean;
-    memoryAnalysisSub: {
-      interCoreLoad: boolean;
-      routineBottleneck: boolean;
-      computeWorkload: boolean;
-      memoryWorkload: boolean;
-    };
-    operatorHotspot: boolean;
-    cacheHeatmap: boolean;
-    operatorPerformance: boolean;
-    operatorPerformanceSub: {
-      cubeVectorTime: boolean;
-      l2CacheHitRate: boolean;
-      memoryBandwidth: boolean;
-      l0Bandwidth: boolean;
-      ubBandwidth: boolean;
-      operatorBasicInfo: boolean;
-      computeTransferRatio: boolean;
-      resourceConflictRatio: boolean;
-    };
-  };
-  mode: {
-    renderInPlatform: boolean;
-    downloadToLocal: boolean;
-  };
-  dataStoragePath: string;
-  advanced: {
-    useKernelSideCode: boolean;
-    warmupCount: number;
-    replayMode: string;
-    advancedParams: Array<{ name: string; value: string; key: number }>;
-  };
+  // collectionContent: {
+  //   selectAll: boolean;
+  //   memoryAnalysis: boolean;
+  //   memoryAnalysisSub: {
+  //     interCoreLoad: boolean;
+  //     routineBottleneck: boolean;
+  //     computeWorkload: boolean;
+  //     memoryWorkload: boolean;
+  //   };
+  //   operatorHotspot: boolean;
+  //   cacheHeatmap: boolean;
+  //   operatorPerformance: boolean;
+  //   operatorPerformanceSub: {
+  //     cubeVectorTime: boolean;
+  //     l2CacheHitRate: boolean;
+  //     memoryBandwidth: boolean;
+  //     l0Bandwidth: boolean;
+  //     ubBandwidth: boolean;
+  //     operatorBasicInfo: boolean;
+  //     computeTransferRatio: boolean;
+  //     resourceConflictRatio: boolean;
+  //   };
+  // };
+  // mode: {
+  //   renderInPlatform: boolean;
+  //   downloadToLocal: boolean;
+  // };
+  // dataStoragePath: string;
+  // advanced: {
+  //   useKernelSideCode: boolean;
+  //   advancedParams: Array<{ name: string; value: string; key: number }>;
+  // };
+
+  config_id: string,
+  project_id: string,
+  user_options: {
+    op: string,
+    script: string,
+    config_name: string,
+    // 内存分析图 相关
+    // 核间负载分析图
+    Occupancy: boolean,
+    // Roofline瓶颈分析
+    Roofline: boolean,
+
+    // 算子代码热点图
+    Source: boolean,
+    // Cache热力图
+    MemoryDetail: boolean,
+
+    // 算子性能数据文件 相关
+    // Cube及Vector类型指令耗时和占比
+    ArithmeticUtilization: boolean,
+    // L2 Cache命中率
+    L2Cache: boolean,
+    // 内存读写带宽速率
+    Memory: boolean,
+    // L0读写带宽速率
+    MemoryL0: boolean,
+    // UB读写带宽速率
+    MemoryUB: boolean,
+    // 算子基础信息
+    OpBasicInfo: boolean,
+    // 计算单元和搬运单元耗时占比
+    PipeUtilization: boolean,
+    // 资源冲突占比
+    ResourceConflictRatio: boolean,
+
+    // 使能Kernel侧制定代码段性能采集
+    KernelScale: boolean,
+    downloadToLocal: boolean,
+    renderInPlatform: boolean,
+    dataStoragePath: string,
+  },
+
 }
 
 /**
@@ -66,18 +124,20 @@ export interface OnboardConfig {
  */
 export function createDefaultSimulationConfig(): SimulationConfig {
   return {
-    collectionContent: {
-      instructionFlow: true, // 指令流水图 - 默认勾选且disable
-      operatorHotspot: true, // 算子代码热点图 - 默认勾选且disable
-      memoryThroughput: false, // 内存通路吞吐率波形图
-    },
-    simulatorType: "Ascend310P3", // 仿真器类型
-    enableDump: false, // 控制仿真器dump文件是否生成
-    mode: {
+    config_id: '',
+    project_id: '',
+    user_options: {
+      op: '',
+      script: '',
+      soc_version: '',
+      config_name: '',
+      PMSampling: true, // 内存通路吞吐率波形图
+      downloadToLocal: true, // 下载数据到本地
       renderInPlatform: false, // 平台内渲染结果
-      downloadToLocal: false, // 下载数据到本地
+      dataStoragePath: '', // 数据存放位置
+      simulatorType: '', // 仿真器类型
+      enableDump: false, // 控制仿真器dump文件是否生成
     },
-    dataStoragePath: "", // 数据存放位置
   };
 }
 
@@ -86,39 +146,46 @@ export function createDefaultSimulationConfig(): SimulationConfig {
  */
 export function createDefaultOnboardConfig(): OnboardConfig {
   return {
-    collectionContent: {
-      selectAll: false, // 全选
-      memoryAnalysis: false, // 内存分析图
-      memoryAnalysisSub: {
-        interCoreLoad: false, // 核间负载分析图
-        routineBottleneck: false, // Roofine瓶颈分析
-        computeWorkload: true, // 计算工作负载分析 - 默认勾选且disable
-        memoryWorkload: true, // 内存负载分析 - 默认勾选且disable
-      },
-      operatorHotspot: false, // 算子代码热点图
-      cacheHeatmap: false, // Cache热力图
-      operatorPerformance: false, // 算子性能数据文件
-      operatorPerformanceSub: {
-        cubeVectorTime: false, // Cube及Vector类型指令耗时和占比
-        l2CacheHitRate: false, // L2 Cache命中率
-        memoryBandwidth: false, // 内存读写带宽速率
-        l0Bandwidth: false, // L0读写带宽速率
-        ubBandwidth: false, // UB读写带宽速率
-        operatorBasicInfo: false, // 算子基础信息
-        computeTransferRatio: false, // 计算单元和搬运单元耗时占比
-        resourceConflictRatio: false, // 资源冲突占比
-      },
-    },
-    mode: {
-      renderInPlatform: false, // 平台内渲染结果
-      downloadToLocal: false, // 下载数据到本地
-    },
-    dataStoragePath: "", // 数据存放位置
-    advanced: {
-      useKernelSideCode: false, // 使用Kernel侧制定代码段性能采集
-      warmupCount: 0, // 上板预热次数
-      replayMode: "kernel", // 上板重放模式: kernel, applicant, range
-      advancedParams: [], // 高级参数
+    project_id: '',
+    config_id: '',
+    user_options: {
+      op: '',
+      script: 'msprof op',
+      config_name: '',
+      // 内存分析图 相关
+      // 核间负载分析图
+      Occupancy: true,
+      // Roofline瓶颈分析
+      Roofline: true,
+
+      // 算子代码热点图
+      Source: true,
+      // Cache热力图
+      MemoryDetail: true,
+
+      // 算子性能数据文件 相关
+      // Cube及Vector类型指令耗时和占比
+      ArithmeticUtilization: true,
+      // L2 Cache命中率
+      L2Cache: true,
+      // 内存读写带宽速率
+      Memory: true,
+      // L0读写带宽速率
+      MemoryL0: true,
+      // UB读写带宽速率
+      MemoryUB: true,
+      // 算子基础信息
+      OpBasicInfo: true,
+      // 计算单元和搬运单元耗时占比
+      PipeUtilization: true,
+      // 资源冲突占比
+      ResourceConflictRatio: true,
+
+      // 使能Kernel侧制定代码段性能采集
+      KernelScale: true,
+      downloadToLocal: true,
+      renderInPlatform: false,
+      dataStoragePath: '',
     },
   };
 }
@@ -136,66 +203,30 @@ export function useOpprofConfig() {
    * 处理全选逻辑
    */
   const handleSelectAll = (checked: boolean) => {
-    onboardData.collectionContent.selectAll = checked;
-    if (checked) {
-      onboardData.collectionContent.memoryAnalysis = true;
-      onboardData.collectionContent.memoryAnalysisSub.interCoreLoad = true;
-      onboardData.collectionContent.memoryAnalysisSub.routineBottleneck = true;
-      onboardData.collectionContent.operatorHotspot = true;
-      onboardData.collectionContent.cacheHeatmap = true;
-      onboardData.collectionContent.operatorPerformance = true;
-      Object.keys(onboardData.collectionContent.operatorPerformanceSub).forEach((key) => {
-        if (key !== "computeWorkload" && key !== "memoryWorkload") {
-          onboardData.collectionContent.operatorPerformanceSub[key as keyof typeof onboardData.collectionContent.operatorPerformanceSub] = true;
-        }
-      });
-    } else {
-      onboardData.collectionContent.memoryAnalysis = false;
-      onboardData.collectionContent.memoryAnalysisSub.interCoreLoad = false;
-      onboardData.collectionContent.memoryAnalysisSub.routineBottleneck = false;
-      onboardData.collectionContent.operatorHotspot = false;
-      onboardData.collectionContent.cacheHeatmap = false;
-      onboardData.collectionContent.operatorPerformance = false;
-      Object.keys(onboardData.collectionContent.operatorPerformanceSub).forEach((key) => {
-        if (key !== "computeWorkload" && key !== "memoryWorkload") {
-          onboardData.collectionContent.operatorPerformanceSub[key as keyof typeof onboardData.collectionContent.operatorPerformanceSub] = false;
-        }
-      });
-    }
+    const keyArray = ['Occupancy', 'Roofline', 'Source', 'MemoryDetail', 'ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'OpBasicInfo', 'PipeUtilization', 'ResourceConflictRatio']
+    keyArray.forEach(key => {
+      onboardData.user_options[key] = checked
+    })
   };
 
   /**
    * 处理内存分析复选框变化
    */
   const handleMemoryAnalysisChange = (checked: boolean) => {
-    if (checked) {
-      // 勾选时，将所有可编辑的子项设为true
-      onboardData.collectionContent.memoryAnalysisSub.interCoreLoad = true;
-      onboardData.collectionContent.memoryAnalysisSub.routineBottleneck = true;
-      // computeWorkload 和 memoryWorkload 是 disabled 的，不需要处理
-    } else {
-      // 取消勾选时，将所有可编辑的子项设为false
-      onboardData.collectionContent.memoryAnalysisSub.interCoreLoad = false;
-      onboardData.collectionContent.memoryAnalysisSub.routineBottleneck = false;
-      // computeWorkload 和 memoryWorkload 是 disabled 的，不需要处理
-    }
+    const keyArray = ['Occupancy', 'Roofline']
+    keyArray.forEach(key => {
+      onboardData.user_options[key] = checked
+    })
   };
 
   /**
    * 处理算子性能复选框变化
    */
   const handleOperatorPerformanceChange = (checked: boolean) => {
-    if (checked) {
-      // 勾选时，将所有可编辑的子项设为true
-      Object.keys(onboardData.collectionContent.operatorPerformanceSub).forEach((key) => {
-        onboardData.collectionContent.operatorPerformanceSub[key as keyof typeof onboardData.collectionContent.operatorPerformanceSub] = true;
-      });
-    } else {
-      // 取消勾选时，将所有可编辑的子项设为false
-      Object.keys(onboardData.collectionContent.operatorPerformanceSub).forEach((key) => {
-        onboardData.collectionContent.operatorPerformanceSub[key as keyof typeof onboardData.collectionContent.operatorPerformanceSub] = false;
-      });
-    }
+    const keyArray = ['ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'OpBasicInfo', 'PipeUtilization', 'ResourceConflictRatio']
+    keyArray.forEach(key => {
+      onboardData.user_options[key] = checked
+    })
   };
 
   /**
@@ -224,11 +255,29 @@ export function useOpprofConfig() {
     });
   };
 
-  const initSimulate = (data:any) => {
+  const initSimulate = (data: any) => {
     console.log('simulationData', data)
-    simulationData.collectionContent.memoryThroughput = data.user_options.PMSampling
-    simulationData.mode.downloadToLocal = data.user_options.downloadToLocal
-    simulationData.dataStoragePath = data.user_options.dataStoragePath
+    // simulationData.collectionContent.memoryThroughput = data.user_options.PMSampling
+    // simulationData.mode.downloadToLocal = data.user_options.downloadToLocal
+    // simulationData.mode.renderInPlatform = data.user_options.renderInPlatform
+    // simulationData.dataStoragePath = data.user_options.dataStoragePath
+    // simulationData.config_id = data.config_id
+    // simulationData.simulatorType = data.simulatorType
+    // simulationData.enableDump = data.enableDump
+
+    simulationData.config_id = data.config_id
+    simulationData.project_id = data.project_id
+    Object.assign(simulationData.user_options, data.user_options)
+    console.log('simulationData.user_options, data.user_options', simulationData.user_options, data.user_options)
+  }
+
+
+  const initOnBoard = (data: any) => {
+    console.log('initOnBoard', data)
+    onboardData.config_id = data.config_id
+    onboardData.project_id = data.project_id
+    Object.assign(onboardData.user_options, data.user_options)
+    console.log('onboardData.user_options, data.user_options', onboardData.user_options, data.user_options)
   }
 
   return {
@@ -241,7 +290,8 @@ export function useOpprofConfig() {
     handleOperatorPerformanceChange,
     addAdvancedParam,
     deleteAdvancedParam,
-    initSimulate
+    initSimulate,
+    initOnBoard
   };
 }
 
