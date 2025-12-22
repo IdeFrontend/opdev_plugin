@@ -212,9 +212,29 @@ const webviewMessageList: messageItem[] = [
       // 在远程环境中，我们可以直接打开本地路径（相对于远程系统）
       const localUri = vscode.Uri.file(fullProjectPath);
       console.log('vscode.openFolder，打开新目录', localUri);
+      
+      // 询问用户是在当前窗口打开还是新窗口打开
+      const openOption = await vscode.window.showQuickPick(
+        [
+          { label: '当前窗口', value: 'current' },
+          { label: '新窗口', value: 'new' },
+        ],
+        {
+          placeHolder: '请选择打开方式',
+          ignoreFocusOut: true,
+        }
+      );
+
+      // 如果用户取消了选择，则不打开文件夹
+      if (!openOption) {
+        return;
+      }
+
+      const forceNewWindow = openOption.value === 'new';
+      
       try {
         await vscode.commands.executeCommand('vscode.openFolder', localUri, {
-          forceNewWindow: true,
+          forceNewWindow: forceNewWindow,
         });
         vscode.window.showInformationMessage(`打开算子工程目录成功`);
       } catch (e) {
