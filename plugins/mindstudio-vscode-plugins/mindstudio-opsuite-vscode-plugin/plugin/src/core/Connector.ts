@@ -37,7 +37,8 @@ export class WebviewConnector<T = unknown, R = T> {
   constructor(private channel: ConnectChannel) {}
 
   public send(webview: Webview, data: T): void {
-    if (this.webviewReady.get(webview)) {
+    const isReady = this.webviewReady.get(webview);
+    if (isReady) {
       webview.postMessage({ channel: this.channel, data });
     } else {
       this.pendingDataList.get(webview)?.push(data);
@@ -73,7 +74,10 @@ export class WebviewConnector<T = unknown, R = T> {
 
   private startConnector(webview: Webview): void {
     this.webviewReady.set(webview, true);
-    this.pendingDataList.get(webview)?.forEach((data) => this.send(webview, data));
+    const pendingData = this.pendingDataList.get(webview);
+    pendingData?.forEach((data) => {
+      this.send(webview, data);
+    });
     this.pendingDataList.delete(webview);
   }
 }

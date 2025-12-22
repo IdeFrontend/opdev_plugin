@@ -18,15 +18,29 @@ export class ViewRenderer extends vscode.Disposable {
 
   public render(webview: vscode.Webview, templateValues: Record<string, string> = {}): void {
     const htmlEntryFileUri = vscode.Uri.joinPath(this.viewRootUri, HTML_ENTRY_FILE_PATH);
-    const templateContent = fs.readFileSync(htmlEntryFileUri.fsPath, 'utf-8');
-    const htmlContent = Object.entries(templateValues).reduce((content, [key, value]) => {
-      return content.replace(`{{${key}}}`, value);
-    }, templateContent);
-    webview.html = this.replaceSourceUrl(htmlContent, webview);
+    
+    try {
+      if (!fs.existsSync(htmlEntryFileUri.fsPath)) {
+        throw new Error(`HTML文件不存在: ${htmlEntryFileUri.fsPath}`);
+      }
+      
+      const templateContent = fs.readFileSync(htmlEntryFileUri.fsPath, 'utf-8');
+      
+      const htmlContent = Object.entries(templateValues).reduce((content, [key, value]) => {
+        return content.replace(`{{${key}}}`, value);
+      }, templateContent);
+      
+      const finalHtml = this.replaceSourceUrl(htmlContent, webview);
+      
+      webview.html = finalHtml;
+    } catch (error) {
+      throw error;
+    }
   }
 
   private replaceSourceUrl(htmlContent: string, webview: vscode.Webview): string {
     const webviewRootUri = webview.asWebviewUri(this.viewRootUri);
-    return HtmlTransformer.processResourcePaths(htmlContent, webviewRootUri);
+    const result = HtmlTransformer.processResourcePaths(htmlContent, webviewRootUri);
+    return result;
   }
 }

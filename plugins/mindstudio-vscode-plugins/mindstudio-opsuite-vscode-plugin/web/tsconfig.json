@@ -17,10 +17,10 @@
     "types": ["vite/client", "vscode-webview"],
     "paths": {
       "@/*": ["./src/*"],
-      "plugin:/*": ["../plugin/src/*"],
+      "plugin:/*": ["./types/plugin/*"],
       "shared:/*": ["../shared/*"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue", "vue.config.ts", "src/views/Config/class/OpsConfig.js"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "../plugin"]
 }
