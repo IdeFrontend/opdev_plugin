@@ -51,7 +51,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const viewServer = initViews(context, apiServer);
 
   ExtensionConfig.init(context);
-  new PermanentStorage(context);
+  PermanentStorage.setInstance(context);
 
   // 初始化新建算子工程的Webview
   const createOpsProvider = new WebviewProvider(context, apiServer);

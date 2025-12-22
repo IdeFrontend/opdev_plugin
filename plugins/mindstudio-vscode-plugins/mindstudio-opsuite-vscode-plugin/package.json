@@ -31,7 +31,7 @@
           "icon": "resources/homeIcon.svg"
         }
       ],
-      "secondaryActivitybar": [
+      "secondarySidebar": [
         {
           "id": "secondary-sidebar-operate-view2",
           "title": "算子工程-操作",

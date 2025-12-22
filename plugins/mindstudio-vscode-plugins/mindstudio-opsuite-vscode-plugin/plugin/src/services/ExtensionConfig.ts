@@ -11,6 +11,13 @@ export class ExtensionConfig {
     ExtensionConfig._context = context;
   }
 
+  /**
+   * @deprecated 避免暴露context自身
+   */
+  public static get context(): vscode.ExtensionContext {
+    return ExtensionConfig._context;
+  }
+
   /** 扩展路径 */
   public static get extensionPath(): string {
     return ExtensionConfig._context.extensionPath;
