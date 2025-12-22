@@ -66,7 +66,22 @@ export class NodeWebviewSocketBridge implements vscode.Disposable {
         this.openSocket(msg);
         break;
       case 'ws:send':
-        console.log(`[NodeWebviewSocketBridge] 处理 ws:send 请求, id: ${msg.id}`);
+        // ========== 请求转发入口日志 ==========
+        const requestPayloadStr = typeof msg.payload === 'string' 
+          ? msg.payload 
+          : (msg.payload ? JSON.stringify(msg.payload) : '');
+        const requestPayloadPreview = requestPayloadStr.length > 500 
+          ? requestPayloadStr.substring(0, 500) + '...' 
+          : requestPayloadStr;
+        console.log(`[NodeWebviewSocketBridge] ========== 请求转发入口 ==========`);
+        console.log(`[NodeWebviewSocketBridge] 收到Web端发送请求`);
+        console.log(`[NodeWebviewSocketBridge] 消息类型: ${msg.type}`);
+        console.log(`[NodeWebviewSocketBridge] 连接ID: ${msg.id}`);
+        console.log(`[NodeWebviewSocketBridge] Payload类型: ${typeof msg.payload}`);
+        console.log(`[NodeWebviewSocketBridge] Payload长度: ${msg.payload?.length || (typeof msg.payload === 'string' ? msg.payload.length : JSON.stringify(msg.payload || '').length) || 0}`);
+        console.log(`[NodeWebviewSocketBridge] Payload内容: ${requestPayloadPreview}`);
+        console.log(`[NodeWebviewSocketBridge] 时间戳: ${new Date().toISOString()}`);
+        console.log(`[NodeWebviewSocketBridge] ====================================`);
         this.forwardSend(msg);
         break;
       case 'ws:close':
