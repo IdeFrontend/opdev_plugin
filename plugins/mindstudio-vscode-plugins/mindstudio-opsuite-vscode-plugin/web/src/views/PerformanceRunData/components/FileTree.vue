@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { ref, h, nextTick } from 'vue';
 import { RightOutlined, DownOutlined, FlagOutlined, FlagFilled } from '@ant-design/icons-vue';
+
+import { PerformanceRunData } from 'shared:/api-types';
+
 import { formatTimestamp } from '../utils/timestamp';
 import { handleOpenCsv, handleLoadData } from '../utils/fileHandlers';
 
-const props = defineProps({
-  treeData: Array,
-});
+const props = defineProps<{
+  treeData: PerformanceRunData[];
+}>();
 
 const emit = defineEmits(['rightClick']);
 
@@ -47,7 +50,7 @@ const handleRightClick = (info) => {
 
 <template>
   <div class="tree-container">
-    <a-tree
+    <a-directory-tree
       :tree-data="treeData"
       :show-line="false"
       :show-icon="false"
@@ -57,7 +60,7 @@ const handleRightClick = (info) => {
       @rightClick="handleRightClick"
     >
       <template #title="{ dataRef }">
-        <div class="tree-node">
+        <div class="custom-tree-node">
           <div class="tree-node-title">{{ dataRef.title }}</div>
           <div v-if="dataRef.timestamp" class="tree-node-timestamp">
             {{ formatTimestamp(dataRef.timestamp) }}
@@ -66,7 +69,7 @@ const handleRightClick = (info) => {
           <FlagFilled /> -->
         </div>
       </template>
-    </a-tree>
+    </a-directory-tree>
   </div>
 </template>
 
@@ -79,7 +82,7 @@ const handleRightClick = (info) => {
     color: #fff;
     background: transparent;
 
-    .tree-node {
+    .custom-tree-node {
       color: #fff;
       width: 100%;
       min-width: 0;
@@ -94,7 +97,8 @@ const handleRightClick = (info) => {
       .tree-node-timestamp {
         color: rgba(255, 255, 255, 0.65);
         font-size: 12px;
-        margin-top: 2px;
+        margin-top: 4px;
+        line-height: 16px;
       }
     }
   }

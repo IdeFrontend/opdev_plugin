@@ -13,7 +13,7 @@ const handleMarked = () => {
 </script>
 
 <template>
-  <div style="display: flex; gap: 8px; margin-bottom: 12px">
+  <div class="filter-bar">
     <a-button class="execute-time-sorter-button" type="default" @click="handleExecutionTime" size="small">
       <div class="execute-time-sorter-inner">
         执行时间
@@ -32,6 +32,12 @@ const handleMarked = () => {
 </template>
 
 <style lang="less" scoped>
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+}
+
 .execute-time-sorter-button {
   &:hover {
     .execute-time-sorter-inner .sort-icons .anticon {
