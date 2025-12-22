@@ -57,6 +57,12 @@ const webviewMessageList: messageItem[] = [
     },
   },
   {
+    command: 'openWelcome',
+    callback: (message: any, that: any) => {
+      vscode.commands.executeCommand('huawei-op-devtools.welcome');
+    },
+  },
+  {
     command: 'vscodeOpenSidebar',
     callback: (message: any, that: any) => {
       vscode.commands.executeCommand('workbench.view.extension.mindstudio-opssuite-vscode-plugin');

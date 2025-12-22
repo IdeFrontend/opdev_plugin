@@ -1,7 +1,9 @@
 <template>
   <a-collapse v-model:activeKey="activeKey" :bordered="false">
       <div style="margin-bottom: 15px;">
-        <span style="color: white;">想要了解如何快速上手，详见 插件使用指南</span>
+        <span style="color: white;">
+          查看插件介绍，打开 <a-button type="link" style="display: contents;" @click="openHomePage">欢迎首页</a-button>
+        </span>
       </div>
       <!-- 方案1：普通全宽按钮（最常用） -->
       <div class="button-box">
@@ -27,6 +29,14 @@ const handleMenuClick = () => {
     window.vscode.postMessage({
       command: 'openLinkWebviewPanel',
       commandId: 'my-extension.openProjectView'
+    });
+  }
+}
+const openHomePage = () => {
+  if ((window as any).vscode) {
+    //@ts-ignore
+    window.vscode.postMessage({
+      command: 'openWelcome',
     });
   }
 }
