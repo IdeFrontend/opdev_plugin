@@ -101,10 +101,6 @@ export class ViewServer extends vscode.Disposable {
                 localResourceRoots: [viewRootUri]
               };
               
-              // 监听webview可见性变化
-              webviewView.onDidChangeVisibility(() => {
-              });
-              
               this.activeWebview(webviewView.webview, routeRaw.path);
             } catch (error) {
               throw error;
