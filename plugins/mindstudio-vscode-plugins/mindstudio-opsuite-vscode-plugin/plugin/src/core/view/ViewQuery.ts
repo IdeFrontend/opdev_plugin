@@ -29,10 +29,7 @@ export class ViewQuery extends vscode.Disposable {
    * 设置页面参数
    */
   public setQuery(webview: vscode.Webview, query: QueryParams): void {
-    console.log('[ViewQuery] setQuery: 开始设置query, query:', JSON.stringify(query));
     this.queryConnector.addWebview(webview);
-    console.log('[ViewQuery] setQuery: webview已添加到connector');
     this.queryConnector.send(webview, query);
-    console.log('[ViewQuery] setQuery: query已发送');
   }
 }

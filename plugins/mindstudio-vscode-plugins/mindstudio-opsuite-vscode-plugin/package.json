@@ -96,7 +96,7 @@
       },
       {
         "command": "huawei-op-devtools.test",
-        "title": "测试数据查看器"
+        "title": "insight插件测试"
       }
     ],
     "menus": {
