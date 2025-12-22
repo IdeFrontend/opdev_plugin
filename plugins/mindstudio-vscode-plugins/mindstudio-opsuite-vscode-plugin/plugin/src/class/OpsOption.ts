@@ -71,7 +71,7 @@ export default class OpsOption {
   async createOpsByPrototype(ops_prototype_file: string, op_type = 'ascend', progress: any) {
     const project_id = this.projectId;
     try {
-      progress.report({ increment: 50, message: '算子文件创建中...' });
+      progress.report({ increment: 70, message: '算子文件创建中...' });
       const result = await generateStructure(
         {
           ops_prototype_file,

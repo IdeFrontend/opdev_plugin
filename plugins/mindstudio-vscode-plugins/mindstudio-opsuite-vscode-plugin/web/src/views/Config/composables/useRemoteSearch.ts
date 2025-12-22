@@ -5,9 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { ref } from "vue";
-import { getLocalData } from "../../../untils/index";
-import { message } from "../../../untils/Message";
+import { ref } from 'vue';
+import { message } from '../../../untils/Message';
 
 /**
  * 远程搜索 Composable
@@ -15,48 +14,35 @@ import { message } from "../../../untils/Message";
 export function useRemoteSearch() {
   const dataStorageOptions = ref<Array<{ value: string }>>([]);
   const dataStorageLoading = ref(false);
-  const isRemote = ref(getLocalData("isRemote"));
-  const selectedRow = ref(getLocalData("sshData")?.[0] || null);
 
   /**
    * 构建默认搜索路径
    */
-  const buildDefaultSearchPath = (value = "") => {
+  const buildDefaultSearchPath = (value = '') => {
     if (value) return value;
-    if (selectedRow.value?.username) {
-      return `/home/${selectedRow.value.username}`;
-    }
-    return "/";
+    return '/';
   };
 
   /**
    * 远程搜索
    */
   const remoteSearch = (keyword: string, tabType: string) => {
-    const searchValue = keyword || "";
+    const searchValue = keyword || '';
     dataStorageLoading.value = true;
-
-    // If remote, send search request
-    if (isRemote.value) {
-      message.sendMessageToParent({
-        command: "vscodeRemotePathSearch",
-        type: "dataStorage",
-        keyword: buildDefaultSearchPath(searchValue.trim()),
-        ssh: JSON.parse(JSON.stringify({ ...selectedRow.value })),
-      });
-    } else {
-      // Local search logic can be added here
-      dataStorageLoading.value = false;
-    }
+    message.sendMessageToParent({
+      command: 'vscodeRemotePathSearch',
+      type: 'dataStorage',
+      keyword: buildDefaultSearchPath(searchValue.trim()),
+    });
   };
 
   // 监听远程搜索结果
   message.addMessageListener({
-    command: "iframeRemoteSearchResult",
+    command: 'iframeRemoteSearchResult',
     callback: (resp) => {
       const { type, list = [] } = resp.data || {};
       const mapped = list.map((item: { path: string }) => ({ value: item.path }));
-      if (type === "dataStorage") {
+      if (type === 'dataStorage') {
         dataStorageOptions.value = mapped;
         dataStorageLoading.value = false;
       }
@@ -69,4 +55,3 @@ export function useRemoteSearch() {
     remoteSearch,
   };
 }
-

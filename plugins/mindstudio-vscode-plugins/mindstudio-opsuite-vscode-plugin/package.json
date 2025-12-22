@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://gitcode.com/Asscend/mstt"
   },
-  "version": "1.1.6",
+  "version": "1.1.9",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -31,7 +31,7 @@
           "icon": "resources/homeIcon.svg"
         }
       ],
-      "secondarySidebar": [
+      "secondaryActivitybar": [
         {
           "id": "secondary-sidebar-operate-view2",
           "title": "算子工程-操作",
@@ -159,20 +159,13 @@
     "copy-web-output": "tsx ./scripts/copy-web-output.ts"
   },
   "dependencies": {
-    "archiver": "^7.0.1",
-    "axios": "^1.13.2",
     "fs-extra": "^11.3.2",
     "i18next": "^25.7.2",
-    "node-ssh": "^13.2.1",
-    "ssh2": "^1.17.0",
     "ws": "^8.18.3"
   },
   "devDependencies": {
-    "@rolldown/pluginutils": "^1.0.0-beta.53",
-    "@types/archiver": "^7.0.0",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "16.x",
-    "@types/ssh2": "^1.15.5",
     "@types/vscode": "^1.60.0",
     "@typescript-eslint/eslint-plugin": "^5.31.0",
     "@typescript-eslint/parser": "^5.31.0",
@@ -180,7 +173,6 @@
     "@vscode/vsce": "^3.7.1",
     "esbuild": "^0.27.1",
     "eslint": "^8.20.0",
-    "rollup-plugin-copy": "^3.5.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }

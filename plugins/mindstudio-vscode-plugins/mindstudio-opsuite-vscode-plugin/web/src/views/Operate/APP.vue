@@ -183,6 +183,7 @@ body {
 .inline-menu {
     border-right: none;
     background: transparent;
+    margin-left: -20px;
 }
 
 :deep(.ant-menu) {
