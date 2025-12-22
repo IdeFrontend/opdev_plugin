@@ -112,11 +112,24 @@ export class NodeWebviewSocketBridge implements vscode.Disposable {
       });
 
       ws.on('message', (data) => {
-        console.log(`[NodeWebviewSocketBridge] 收到 WebSocket 消息, id: ${id}, 数据长度: ${data?.length || 0}`);
+        const normalizedPayload = this.normalizeMessagePayload(data);
+        // ========== 响应转发日志 ==========
+        const payloadStr = typeof normalizedPayload === 'string' 
+          ? normalizedPayload 
+          : JSON.stringify(normalizedPayload);
+        const payloadPreview = payloadStr.length > 500 
+          ? payloadStr.substring(0, 500) + '...' 
+          : payloadStr;
+        console.log(`[NodeWebviewSocketBridge] ========== 响应转发 ==========`);
+        console.log(`[NodeWebviewSocketBridge] 后端WebSocket -> Web端`);
+        console.log(`[NodeWebviewSocketBridge] 连接ID: ${id}`);
+        console.log(`[NodeWebviewSocketBridge] 数据长度: ${data?.length || 0}`);
+        console.log(`[NodeWebviewSocketBridge] Payload内容: ${payloadPreview}`);
+        console.log(`[NodeWebviewSocketBridge] ===============================`);
         this.postToView({
           type: 'ws:message',
           id,
-          payload: this.normalizeMessagePayload(data),
+          payload: normalizedPayload,
         });
       });
 
@@ -167,7 +180,19 @@ export class NodeWebviewSocketBridge implements vscode.Disposable {
       console.warn(`[NodeWebviewSocketBridge] WebSocket 未打开, id: ${msg.id}, readyState: ${ws.readyState}`);
       return;
     }
-    console.log(`[NodeWebviewSocketBridge] 转发消息到 WebSocket, id: ${msg.id}, payload length: ${msg.payload?.length || 0}`);
+    // ========== 发送转发日志 ==========
+    const payloadStr = typeof msg.payload === 'string' 
+      ? msg.payload 
+      : (msg.payload ? JSON.stringify(msg.payload) : '');
+    const payloadPreview = payloadStr.length > 500 
+      ? payloadStr.substring(0, 500) + '...' 
+      : payloadStr;
+    console.log(`[NodeWebviewSocketBridge] ========== 发送转发 ==========`);
+    console.log(`[NodeWebviewSocketBridge] Web端 -> 后端WebSocket`);
+    console.log(`[NodeWebviewSocketBridge] 连接ID: ${msg.id}`);
+    console.log(`[NodeWebviewSocketBridge] Payload长度: ${msg.payload?.length || 0}`);
+    console.log(`[NodeWebviewSocketBridge] Payload内容: ${payloadPreview}`);
+    console.log(`[NodeWebviewSocketBridge] ===============================`);
     ws.send(msg.payload);
   }
 
