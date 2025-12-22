@@ -115,23 +115,6 @@
         }
       ]
     },
-    "submenus": [
-      {
-        "id": "extension/build",
-        "label": "buildOps",
-        "icon": "resources/build.svg"
-      },
-      {
-        "id": "extension/opsRun",
-        "label": "opsRun",
-        "icon": "resources/run.svg"
-      },
-      {
-        "id": "extension/opsDebug",
-        "label": "opsDebug",
-        "icon": "resources/debug.svg"
-      }
-    ],
     "customEditors": [
       {
         "viewType": "csvViewer",
