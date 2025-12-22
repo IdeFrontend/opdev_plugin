@@ -121,6 +121,13 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.window.showInformationMessage(`正在加载数据文件: ${binPath}`);
   });
 
+  // 注册删除欢迎页计数命令（用于手动重置）
+  const clearWelcomeCountCommand = vscode.commands.registerCommand('huawei-op-devtools.clearWelcomeCount', async () => {
+    await context.globalState.update('welcomeShowCount', undefined);
+    vscode.window.showInformationMessage('已清除欢迎页显示计数');
+    console.log('welcomeShowCount 已删除');
+  });
+
   // 注册新建算子原型文件命令
   const createCommand = vscode.commands.registerCommand('huawei-op-devtools.createOps', async () => {
     await opsOption.init();
@@ -152,7 +159,7 @@ export async function activate(context: vscode.ExtensionContext) {
     buttonCommand = vscode.commands.registerCommand('extension.jsonButtonAction', async (uri?: vscode.Uri) => {
       if (uri) {
         await opsOption.init();
-        opsOption.createOpsByPrototype(uri.fsPath);
+        await opsOption.createOpsByPrototype(uri.fsPath, 'ascend', undefined);
       }
     });
   } catch (error: any) {
@@ -210,6 +217,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(welcomeCommand);
   context.subscriptions.push(newPrototypeCommand);
   context.subscriptions.push(testCommand);
+  context.subscriptions.push(clearWelcomeCountCommand);
 
   // 创建侧边栏提供者
   const sidebarProvider = new CustomSidebarProvider(context);
