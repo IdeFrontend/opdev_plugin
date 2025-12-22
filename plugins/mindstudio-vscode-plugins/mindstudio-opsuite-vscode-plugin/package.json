@@ -105,6 +105,10 @@
       {
         "command": "huawei-op-devtools.test",
         "title": "insight插件测试"
+      },
+      {
+        "command": "huawei-op-devtools.clearWelcomeCount",
+        "title": "清除欢迎页显示计数"
       }
     ],
     "menus": {
