@@ -8,12 +8,8 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 
-import { RemoteServerOpener } from './RemoteServerOpener';
-import RemoteServer from '../services/local/RemoteServer';
-import packageJson from '../../../package.json';
 import { CommandExecutor } from './CommandOptions';
 import OpsOption from './OpsOption';
-import { SSHKeyAutoConfig } from './SSHKeyAutoConfig';
 import { getFiles } from '../../autogen-server';
 
 // 跟踪已打开的CSV文件目录
@@ -62,28 +58,6 @@ const webviewMessageList: messageItem[] = [
     command: 'vscodeOpenSidebar',
     callback: (message: any, that: any) => {
       vscode.commands.executeCommand('workbench.view.extension.mindstudio-opssuite-vscode-plugin');
-    },
-  },
-  {
-    command: 'vscodeGetssh',
-    callback: (message: any, that: any) => {
-      if (!that.panel) {
-        return;
-      }
-      that.panel.webview.postMessage({
-        command: 'iframeSetSSHData',
-        data: that.sshData,
-      });
-
-      that.panel.webview.postMessage({
-        command: 'iframeSetUserInfo',
-        data: that.userInfo,
-      });
-
-      that.panel.webview.postMessage({
-        command: 'iframeGetDisposed',
-        data: that.isRemote,
-      });
     },
   },
   {
@@ -184,160 +158,65 @@ const webviewMessageList: messageItem[] = [
     },
   },
   {
-    command: 'vscodeSshValidate',
-    callback: async (msg: any, that: any) => {
-      const message = msg.message;
-      const remoteOpener: RemoteServerOpener = new RemoteServerOpener();
-      const isConnected = await remoteOpener.testConnection(message);
-      that.panel.webview.postMessage({
-        command: 'iframeSshValidateEnd',
-        data: {
-          isConnected,
-        },
-      });
-    },
-  },
-  {
-    command: 'vscodeUpdateLocalData',
-    callback: async (msg: any, that: any) => {
-      const message = msg.message;
-      that.storage.set(message.key, message.value);
-    },
-  },
-  {
     command: 'vscodeRemotePathSearch',
     callback: async (msg: any, that: any) => {
       const message = msg.message;
-      const publisher = packageJson.publisher;
-      const extensionName = packageJson.name;
-      const version = packageJson.version;
-      const extensionsPath = '.vscode-server/extensions/';
-      const serviceFile = 'get_files.sh';
-      const plugiExtensionsPath = `${extensionsPath}${publisher}.${extensionName}-${version}`;
-      const commandPath = `${plugiExtensionsPath}/out/shells`;
-      if (that.isRemote) {
-        const res = getFiles(message.keyword);
-        that.panel.webview.postMessage({
-          command: 'iframeRemoteSearchResult',
-          data: {
-            type: message.type,
-            list: res,
-          },
-        });
-      } else {
-        const server = new RemoteServer(message.ssh);
-        await server.connect();
-        await server.executeCommand(`chmod +x  ./${serviceFile}`, commandPath);
-        const res = await server.executeCommand(`./${serviceFile} ${message.keyword}`, commandPath);
-        const list = JSON.parse(res.stdout);
-        that.panel.webview.postMessage({
-          command: 'iframeRemoteSearchResult',
-          data: {
-            type: message.type,
-            list,
-          },
-        });
-      }
+      const res = getFiles(message.keyword);
+      that.panel.webview.postMessage({
+        command: 'iframeRemoteSearchResult',
+        data: {
+          type: message.type,
+          list: res,
+        },
+      });
     },
   },
   {
     command: 'vscodeCreatedProject',
     callback: async (msg: any, that: any) => {
       const message = msg.message.data;
-      const publisher = packageJson.publisher;
-      const extensionName = packageJson.name;
-      const version = packageJson.version;
-      const extensionsPath = '.vscode-server/extensions/';
-      const serviceFile = 'create_project.sh';
-      const plugiExtensionsPath = `${extensionsPath}${publisher}.${extensionName}-${version}`;
-      const commandPath = `${plugiExtensionsPath}/out/shells`;
       // 标准算子projectPath需增加 /ops-math/math路径
       let originPath;
       if (message.createOperatorProjectDictoryFileType === 2) {
-        originPath = message.projectPath
-        message.projectPath += '/ops-math/math'
+        originPath = message.projectPath;
+        message.projectPath += '/ops-math/math';
       }
-
       vscode.window.showInformationMessage(`初始化中`);
-      // 判斷当前是在本地还是服务器上
-      if (that.isRemote) {
-        console.log('服务器上执行');
-        const executor = new CommandExecutor();
 
-        // 标准算子解压缩
-        if (message.createOperatorProjectDictoryFileType === 2) {
-          await executor.execute(`mkdir -p ${originPath}`, ['File exists']);
-          const zipUrl = path.resolve(__dirname, `./zip/ops-math.zip`)
-          await executor.execute(`unzip -o ${zipUrl} -d ${originPath}`);
-        }
-        await executor.execute(`mkdir -p ${message.projectPath}/${message.projectName}`, ['File exists']);
-        if (message.projectSH) {
-          await executor.execute(`chmod +x ${message.projectSH}`);
-          await executor.execute(`${message.projectSH}`);
-        }
-        const opsOption = new OpsOption(that.context);
-        await opsOption.init(message.projectSH, message.projectPath, message.projectName);
-        await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(`${message.projectPath}/${message.projectName}`));
-        // 使用正确的API检测远程连接
-        const remoteName = vscode.env.remoteName;
-        if (!remoteName) {
-          return console.log('未检测到远程连接');
-        }
-        // 规范化路径
-        const normalizedProjectPath = path.normalize(message.projectPath);
-        const normalizedProjectName = path.normalize(message.projectName);
-        const fullProjectPath = path.join(normalizedProjectPath, normalizedProjectName);
-        console.log(`检测到远程连接: ${remoteName}`);
+      const executor = new CommandExecutor();
 
-        (that.context as vscode.ExtensionContext).globalState.update('runCommand', 'huawei-op-devtools.createDictory');
-        (that.context as vscode.ExtensionContext).globalState.update('runCommand-param', message.createOperatorProjectDictoryFileType);
+      // 标准算子解压缩
+      if (message.createOperatorProjectDictoryFileType === 2) {
+        await executor.execute(`mkdir -p ${originPath}`, ['File exists']);
+        const zipUrl = path.resolve(that.context.extensionPath, `out/templates/code_template/op-math/ops-math.zip`);
+        await executor.execute(`unzip -o ${zipUrl} -d ${originPath}`);
+      }
+      await executor.execute(`mkdir -p ${message.projectPath}/${message.projectName}`, ['File exists']);
+      if (message.projectSH) {
+        await executor.execute(`chmod +x ${message.projectSH}`);
+        await executor.execute(`${message.projectSH}`);
+      }
+      const opsOption = new OpsOption(that.context);
+      await opsOption.init(message.projectSH, message.projectPath, message.projectName);
+      await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(`${message.projectPath}/${message.projectName}`));
+      // 规范化路径
+      const normalizedProjectPath = path.normalize(message.projectPath);
+      const normalizedProjectName = path.normalize(message.projectName);
+      const fullProjectPath = path.join(normalizedProjectPath, normalizedProjectName);
 
-        // 如果只有 'ssh-remote' 类型而没有具体连接ID
-        // 尝试通过其他方式获取当前SSH连接信息
-        console.log(`打开新路径：${fullProjectPath}`);
+      (that.context as vscode.ExtensionContext).globalState.update('runCommand', 'huawei-op-devtools.createDictory');
+      (that.context as vscode.ExtensionContext).globalState.update('runCommand-param', message.createOperatorProjectDictoryFileType);
 
-        // 在远程环境中，我们可以直接打开本地路径（相对于远程系统）
-        const localUri = vscode.Uri.file(fullProjectPath);
-        console.log('vscode新目录', localUri);
-        try {
-          await vscode.commands.executeCommand('vscode.openFolder', localUri, {
-            forceNewWindow: true,
-          });
-          vscode.window.showInformationMessage(`打开算子工程目录成功`);
-        } catch (e) {
-          vscode.window.showInformationMessage(`打开算子工程目录失败: ${e}`);
-        }
-      } else {
-        console.log('本地执行上执行');
-        const server = new RemoteServer(message);
-        await server.connect();
-        await server.executeCommand(`mkdir -p ${message.projectPath}/${message.projectName}`);
-        await server.executeCommand(`chmod +x ${message.projectSH}`);
-        await server.executeCommand(`${message.projectSH}`);
-        await server.executeCommand(`chmod +x ./${serviceFile}`);
-        await server.executeCommand(
-          `./${serviceFile} --project-name "${message.projectName}" --project-path "${message.projectPath}/${message.projectName}" --ascend-env-script "${message.projectSH}"`,
-          commandPath
-        );
-
-        if (!message.privateKey) {
-          const autoConfig = new SSHKeyAutoConfig(server);
-          await autoConfig.configureSSH(message);
-        }
-
-        if (message.createOperatorProjectDictoryFileType === 2) {
-          await server.executeCommand(`mkdir -p ${originPath}`);
-          const zipUrl = path.resolve(__dirname, `./zip/ops-math.zip`)
-          await server.executeCommand(`unzip -o ${zipUrl} -d ${originPath}`);
-        }
-
-        try {
-          const remoteOpener: RemoteServerOpener = new RemoteServerOpener();
-          remoteOpener.open({ ...message, remotePath: `${message.projectPath}/${message.projectName}` });
-          vscode.window.showInformationMessage(`打开算子工程目录成功`);
-        } catch (e) {
-          vscode.window.showInformationMessage(`打开算子工程目录失败: ${e}`);
-        }
+      // 在远程环境中，我们可以直接打开本地路径（相对于远程系统）
+      const localUri = vscode.Uri.file(fullProjectPath);
+      console.log('vscode.openFolder，打开新目录', localUri);
+      try {
+        await vscode.commands.executeCommand('vscode.openFolder', localUri, {
+          forceNewWindow: true,
+        });
+        vscode.window.showInformationMessage(`打开算子工程目录成功`);
+      } catch (e) {
+        vscode.window.showInformationMessage(`打开算子工程目录失败: ${e}`);
       }
     },
   },
@@ -485,14 +364,6 @@ const webviewMessageList: messageItem[] = [
       const remoteFilePath = filePath || nodeKey;
 
       try {
-        // 检查是否在远程环境中
-        const isRemote = vscode.env.remoteName !== undefined;
-
-        if (!isRemote) {
-          vscode.window.showWarningMessage('此功能需要在远程 SSH 连接环境中使用');
-          return;
-        }
-
         // 显示下载进度
         await vscode.window.withProgress(
           {
@@ -600,9 +471,7 @@ async function vscodeBuildCreateOps(data: any, that: any, progress: any) {
   const opsOption = new OpsOption(that.context);
   await opsOption.init();
   await opsOption.createOpsByPrototype('', data, progress);
-  if (that.isRemote) {
-    await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
-  }
+  await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
 }
 
 async function vscodeStartLinkCreateOps(data: any, that: any, progress: any) {
@@ -614,9 +483,7 @@ async function vscodeStartLinkCreateOps(data: any, that: any, progress: any) {
     if (opsPrototypeFilePath) {
       await opsOption.createOpsByPrototype(opsPrototypeFilePath, undefined, progress);
     }
-    if (that.isRemote) {
-      await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
-    }
+    await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
     return;
   }
   // 开始传入

@@ -1,4 +1,3 @@
-import { get } from 'axios';
 import * as vscode from 'vscode';
 
 export interface ViewRouteRaw {

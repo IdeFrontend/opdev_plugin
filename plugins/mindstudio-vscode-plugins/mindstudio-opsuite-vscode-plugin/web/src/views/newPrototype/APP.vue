@@ -244,12 +244,6 @@ const connectSSH = () => {
     line-height: 28px;
     margin-bottom: 10px;
   }
-
-  .button-add-link {
-    font-weight: 400;
-    font-size: 14px;
-    line-height: 22px;
-  }
 }
 
 .container {
