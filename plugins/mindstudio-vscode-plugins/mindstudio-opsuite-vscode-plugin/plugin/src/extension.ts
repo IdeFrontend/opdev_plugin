@@ -68,6 +68,11 @@ export async function activate(context: vscode.ExtensionContext) {
     createOpsProvider.show('Link');
   });
 
+  // 打开环境变量命令
+  const openProjectSH = vscode.commands.registerCommand('huawei-op-devtools.projectSH', async () => {
+    createOpsProvider.show('ProjectSH');
+  });
+
   // 注册打开关闭算子工作-操作命令
   const toggleOpsOperateCommand = vscode.commands.registerCommand('huawei-op-devtools.toggleOpsOperate', async () => {
     try {
@@ -188,6 +193,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(viewServer);
   context.subscriptions.push(buildOpsCommand);
   context.subscriptions.push(openCommand);
+  context.subscriptions.push(openProjectSH);
   context.subscriptions.push(ConfigCommand);
   context.subscriptions.push(createCommand);
   context.subscriptions.push(welcomeCommand);

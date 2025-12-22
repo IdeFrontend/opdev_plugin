@@ -283,6 +283,13 @@ const webviewMessageList: messageItem[] = [
     },
   },
   {
+    command: 'vscodeRunSetProjectSH',
+    callback: async (msg: any, that: any) => {
+      vscode.commands.executeCommand('huawei-op-devtools.projectSH');
+      console.log('打开环境变量');
+    },
+  },
+  {
     command: 'vscodeRunExample',
     callback: async (msg: any, that: any) => {
       const data = msg.message.data;
