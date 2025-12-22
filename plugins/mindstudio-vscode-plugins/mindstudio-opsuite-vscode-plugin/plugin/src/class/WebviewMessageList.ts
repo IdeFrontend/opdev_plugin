@@ -506,7 +506,11 @@ const webviewMessageList: messageItem[] = [
         vscode.window.showErrorMessage(`删除节点失败: ${error}`);
       }
     },
-  }
+  },
+    {
+    command: 'vscodeOperateErrorToast',
+    callback: (message: any) => vscode.window.showErrorMessage('工程配置中命令行为空，请配置再执行该命令'),
+  },
 ];
 
 // 创建算子工程类型
