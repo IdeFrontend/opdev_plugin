@@ -193,6 +193,7 @@ export async function activate(context: vscode.ExtensionContext) {
     console.log(welcomeShowCount,'打开次数');
     if (welcomeShowCount < 2) {
       vscode.commands.executeCommand('huawei-op-devtools.welcome');
+      vscode.commands.executeCommand('workbench.view.extension.mindstudio-opssuite-vscode-plugin');
       context.globalState.update('welcomeShowCount', welcomeShowCount + 1);
     }
   }
