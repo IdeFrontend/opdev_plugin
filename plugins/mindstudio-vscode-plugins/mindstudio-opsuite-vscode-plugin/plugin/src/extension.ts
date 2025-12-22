@@ -186,10 +186,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
   configProvider.showLeftPage('Home');
   const [workspaceFolder] = vscode.workspace.workspaceFolders ?? [];
-
+  console.log(workspaceFolder,'是否打开了文件夹');
   // 仅在未打开任何工程/文件夹时弹出欢迎页，且在本地缓存中记录次数，最多弹出两次
   if (!workspaceFolder) {
     const welcomeShowCount = context.globalState.get<number>('welcomeShowCount') ?? 0;
+    console.log(welcomeShowCount,'打开次数');
     if (welcomeShowCount < 2) {
       vscode.commands.executeCommand('huawei-op-devtools.welcome');
       context.globalState.update('welcomeShowCount', welcomeShowCount + 1);
