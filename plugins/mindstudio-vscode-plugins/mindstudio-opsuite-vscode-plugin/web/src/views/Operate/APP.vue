@@ -1,6 +1,6 @@
 <script setup>
 import { theme } from 'ant-design-vue'
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { message } from "../../untils/Message";
 import settingIcon from '../../assets/svg/setting.svg'
 import buildIcon from '../../assets/svg/build.svg'
@@ -13,6 +13,9 @@ const activeConfig = ref('')
 const configArray = ref([]);
 const selectedKeys = ref([]);
 const openKeys = ref(['submenu-build']);
+
+// 判断是否存在工程配置文件
+const disabled = ref(true);
 
 // 菜单配置对象
 const menuItems = ref([
@@ -100,6 +103,21 @@ const onOpenChange = (keys) => {
     // 直接使用传入的 keys，允许嵌套子菜单正常展开
     openKeys.value = keys;
 }
+
+const getBuildConfigItem = {
+    command: 'iframeSetBuildConfigItem',
+    callback: (message) => {
+        console.log('iframeSetBuildConfigItem', message)
+        const obj = JSON.parse(message.data || '{}')
+        // 如果没有任何配置信息 则禁用menu菜单
+        disabled.value = Object.keys(obj).length === 0;
+    }
+}
+
+onMounted(() => {
+    message.addMessageListener(getBuildConfigItem)
+    message.sendMessageToParent({ command: 'vscodeGetBuildConfigBoard' });
+})
 </script>
 
 <template>
@@ -114,8 +132,8 @@ const onOpenChange = (keys) => {
                 </a-select>
             </div>
 
-            <a-menu mode="inline" :open-keys="openKeys" :selected-keys="selectedKeys" class="inline-menu"
-                @openChange="onOpenChange" @click="handleMenuClick">
+            <a-menu :disabled="disabled" mode="inline" :open-keys="openKeys" :selected-keys="selectedKeys" class="inline-menu"
+            @openChange="onOpenChange" @click="handleMenuClick">
                 <template v-for="item in menuItems">
                     <!-- 有子菜单的情况 -->
                     <a-sub-menu v-if="item.children && item.children.length > 0" :key="`submenu-${item.key}`">
