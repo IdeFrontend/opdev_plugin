@@ -115,3 +115,26 @@ export function getSimulateCommand(config_id: number, example_config_id: number)
   const aic = `--aic-metrics=PipeUtilization,ResourceConflictRatio${config.user_options.PMSampling?',PMSampling':''}`
   return `msprof op simulator --soc-version=${soc} --output=${operator.op_path}/.vscode/opprof ${exConfig.target_file} ${aic}`
 }
+
+// 生成上板命令
+export function getOnBoardCommand(config_id: number, example_config_id: number) {
+  const config = getConfigById(config_id as any) as any;
+  const exConfig = getConfigById(example_config_id as any) as any;
+  console.log('命令函数', config, exConfig)
+  if (!config) {
+    throw new Error('配置不存在');
+  }
+
+  const operator = getOpByProjectIdAndOpName(config.project_id as number, config.op as string)!;
+  console.log('command operator', operator)
+
+  const totalKeys = ['Occupancy', 'Roofline', 'Source', 'MemoryDetail', 'ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'OpBasicInfo', 'PipeUtilization', 'ResourceConflictRatio']
+  let aic = '--aic-metrics='
+  totalKeys.forEach(key => {
+    if (config.user_options[key]) {
+      aic += `${key},`
+    }
+  })
+  aic = aic.slice(0, -1)
+  return `msprof op --output=${operator.op_path}/.vscode/opprof ${exConfig.target_file} ${aic}`
+}

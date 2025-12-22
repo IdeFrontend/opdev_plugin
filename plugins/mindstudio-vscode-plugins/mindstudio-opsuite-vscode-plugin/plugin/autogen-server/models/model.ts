@@ -188,12 +188,13 @@ export function generateStructure(data: Partial<OpRecord>, extensionPath: string
           PipeUtilization: true,
           // 资源冲突占比
           ResourceConflictRatio: true,
-          
+
           // 使能Kernel侧制定代码段性能采集
           KernelScale: true,
           downloadToLocal: true,
           renderInPlatform: false,
           dataStoragePath: '',
+          advance_param: []
         },
       };
       const simulate = {
@@ -209,7 +210,8 @@ export function generateStructure(data: Partial<OpRecord>, extensionPath: string
           // 数据存放位置默认值
           dataStoragePath: '',
           simulatorType: soc_version && soc_version.startsWith('ascend') ? `A${soc_version.slice(1)}` : '',
-          enableDump: false
+          enableDump: false,
+          advance_param: []
         },
       };
       void configModel.postConfig('on_board', [onBoard]);

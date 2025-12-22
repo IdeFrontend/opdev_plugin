@@ -8,6 +8,7 @@ import {
   generateStructure,
   getBuildExampleCommand,
   getSimulateCommand,
+  getOnBoardCommand,
   getBuildOpCommand,
   getRunCommand,
   getConfig,
@@ -111,9 +112,10 @@ export default class OpsOption {
       getConfig(Number(project_id), 'build_op'), 
       getConfig(Number(project_id), 'build_example'),
       getConfig(Number(project_id), 'simulate'),
+      getConfig(Number(project_id), 'on_board'),
     ]
-    const [opConfig, exampleConfig, simulateConfig] = await Promise.all(array);
-    return [...opConfig, ...exampleConfig, ...simulateConfig];
+    const [opConfig, exampleConfig, simulateConfig, onBoardConfig] = await Promise.all(array);
+    return [...opConfig, ...exampleConfig, ...simulateConfig, ...onBoardConfig];
   }
 
   async saveBuildConfig(data: any, showMessage: boolean = true) {
@@ -198,18 +200,40 @@ export default class OpsOption {
       configId = await this.getSimulateConfig();
     }
     const exConfigId = await this.getBuildExampleConfig();
-    console.log('simulate configId', configId)
+    console.log('simulate configId', configId, exConfigId)
     try {
       const simulateCommand = await getSimulateCommand(Number(configId), Number(exConfigId));
       console.log('simulateCommand', simulateCommand)
-      // const res = await this.executor.execute(buildCommand, [], [], {}, true);
-      // if (res.code !== 0) {
-      //   vscode.window.showErrorMessage(`编译example失败`);
-      //   return;
-      // }
-      // vscode.window.showInformationMessage(`编译example成功`);
+      const res = await this.executor.execute(simulateCommand, [], [], {}, true);
+      if (res.code !== 0) {
+        vscode.window.showErrorMessage(`执行仿真命令失败`);
+        return;
+      }
+      vscode.window.showInformationMessage(`执行仿真命令成功`);
     } catch (e: any) {
-      vscode.window.showErrorMessage(`获取编译example命令失败 ${e.message}`);
+      vscode.window.showErrorMessage(`获取仿真命令失败 ${e.message}`);
+    }
+  }
+
+  // getOpByProjectIdAndOpName
+   async startOnBoard(config_id?: string) {
+    let configId = config_id;
+    if (!configId) {
+      configId = await this.getOnBoardConfig();
+    }
+    const exConfigId = await this.getBuildExampleConfig();
+    console.log('onboard configId', configId, exConfigId)
+    try {
+      const onBoardCommand = await getOnBoardCommand(Number(configId), Number(exConfigId));
+      console.log('onBoardCommand', onBoardCommand)
+      const res = await this.executor.execute(onBoardCommand, [], [], {}, true);
+      if (res.code !== 0) {
+        vscode.window.showErrorMessage(`执行上板命令失败`);
+        return;
+      }
+      vscode.window.showInformationMessage(`执行上板命令成功`);
+    } catch (e: any) {
+      vscode.window.showErrorMessage(`获取上板命令失败 ${e.message}`);
     }
   }
 
@@ -233,11 +257,21 @@ export default class OpsOption {
     }
   }
 
-    async getSimulateConfig() {
+  async getSimulateConfig() {
       try {
         const configData = await this.getBuildConfigs();
         console.log('configData in simulate', configData)
         return configData.find((v: any) => v.config_type === 'simulate')?.config_id;
+      } catch {
+        return ''
+      }
+  }
+
+  async getOnBoardConfig() {
+      try {
+        const configData = await this.getBuildConfigs();
+        console.log('configData in onBoard', configData)
+        return configData.find((v: any) => v.config_type === 'on_board')?.config_id;
       } catch {
         return ''
       }

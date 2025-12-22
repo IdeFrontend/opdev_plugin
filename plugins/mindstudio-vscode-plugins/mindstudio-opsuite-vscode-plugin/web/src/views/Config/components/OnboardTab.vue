@@ -5,9 +5,10 @@
  * LICENSE file in the root directory of this source tree. -->
 
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { QuestionCircleOutlined } from "@ant-design/icons-vue";
 import editTable from "./editTable.vue";
+import { message } from "../../../untils/Message";
 
 const props = defineProps({
   onboardData: {
@@ -70,6 +71,45 @@ const totalSelectedAll = ref(true)
 const memorySelectedAll = ref(true)
 // 算子性能数据文件全选
 const performanceSelectedAll = ref(true)
+
+// 内存分析图，这组半选
+const memorySelectedHalf = computed(() => {
+  if (props.onboardData.user_options.Occupancy && props.onboardData.user_options.Roofline) {
+    return false
+  }
+  return true
+})
+
+// todo 组内选项全部选中时，自动选上“全选”
+
+// 算子性能数据文件，这组半选
+const performanceSelectedHalf = computed(() => {
+  let count = 0
+  const keyArray = ['ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'OpBasicInfo', 'PipeUtilization', 'ResourceConflictRatio']
+  keyArray.forEach(key => {
+    if (props.onboardData.user_options[key]) {
+      count += 1
+    }
+  })
+  return count > 0 && count < keyArray.length
+})
+
+// 所有图形半选状态
+const totalSelectedHalf = computed(() => {
+  let count = 0
+  const totalKeys = ['Occupancy', 'Roofline', 'Source', 'MemoryDetail', 'ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'OpBasicInfo', 'PipeUtilization', 'ResourceConflictRatio']
+  totalKeys.forEach(key => {
+    if (props.onboardData.user_options[key]) {
+      count += 1
+    }
+  })
+  return count < totalKeys.length
+})
+
+const saveConfig = () => {
+  const obj = { config_id: props.onboardData.config_id, user_options: { ...props.onboardData.user_options } }
+  message.sendMessageToParent({ command: "vscodeSaveConfig", data: { type: 'on_board', data: [JSON.parse(JSON.stringify(obj))] } });
+};
 </script>
 
 <template>
@@ -78,19 +118,20 @@ const performanceSelectedAll = ref(true)
       <div class="section-title">采集内容</div>
       <a-form layout="vertical">
         <a-form-item>
-          <a-checkbox v-model:checked="totalSelectedAll" @change="handleSelectAll">
+          <a-checkbox v-model:checked="totalSelectedAll" :indeterminate="totalSelectedHalf" @change="handleSelectAll">
             全选
           </a-checkbox>
         </a-form-item>
         <a-form-item>
-          <a-checkbox v-model:checked="memorySelectedAll" @change="handleMemoryAnalysisChange">
+          <a-checkbox v-model:checked="memorySelectedAll" :indeterminate="memorySelectedHalf"
+            @change="handleMemoryAnalysisChange">
             内存分析图
           </a-checkbox>
           <div class="nested-checkbox-group horizontal">
-            <a-checkbox v-model:checked="onboardData.user_options.Occupancy">
+            <a-checkbox v-model:checked="onboardData.user_options.Occupancy" @change="saveConfig">
               核间负载分析图
             </a-checkbox>
-            <a-checkbox v-model:checked="onboardData.user_options.Roofline">
+            <a-checkbox v-model:checked="onboardData.user_options.Roofline" @change="saveConfig">
               Roofline瓶颈分析
             </a-checkbox>
             <a-tooltip placeholder="topLeft" title="默认采集">
@@ -116,7 +157,7 @@ const performanceSelectedAll = ref(true)
           </a-checkbox>
         </a-form-item>
         <a-form-item>
-          <a-checkbox v-model:checked="performanceSelectedAll"
+          <a-checkbox v-model:checked="performanceSelectedAll" :indeterminate="performanceSelectedHalf"
             @change="handleOperatorPerformanceChange">
             算子性能数据文件
           </a-checkbox>
@@ -190,9 +231,9 @@ const performanceSelectedAll = ref(true)
               </a-checkbox>
             </a-form-item>
 
-            <a-form-item v-if="false">
+            <a-form-item>
               <div class="section-title">高级参数</div>
-              <editTable :key="updateIndex" :dataSource="onboardData.advanced.advancedParams"
+              <editTable :key="updateIndex" :dataSource="onboardData.user_options.advance_param"
                 @addTableItem="emit('addAdvancedParam')" @deleteTableItem="emit('deleteAdvancedParam', $event)" />
             </a-form-item>
           </a-form>

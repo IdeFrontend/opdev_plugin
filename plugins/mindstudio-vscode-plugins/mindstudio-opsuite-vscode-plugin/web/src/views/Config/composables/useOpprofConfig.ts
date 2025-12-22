@@ -36,7 +36,8 @@ export interface SimulationConfig {
     renderInPlatform: boolean,
     dataStoragePath: string,
     simulatorType: string,
-    enableDump: boolean
+    enableDump: boolean,
+    advance_param: Array<any>
   },
 }
 
@@ -115,6 +116,7 @@ export interface OnboardConfig {
     downloadToLocal: boolean,
     renderInPlatform: boolean,
     dataStoragePath: string,
+    advance_param: Array<any>
   },
 
 }
@@ -137,6 +139,7 @@ export function createDefaultSimulationConfig(): SimulationConfig {
       dataStoragePath: '', // 数据存放位置
       simulatorType: '', // 仿真器类型
       enableDump: false, // 控制仿真器dump文件是否生成
+      advance_param: []
     },
   };
 }
@@ -186,6 +189,7 @@ export function createDefaultOnboardConfig(): OnboardConfig {
       downloadToLocal: true,
       renderInPlatform: false,
       dataStoragePath: '',
+      advance_param: []
     },
   };
 }
@@ -234,13 +238,25 @@ export function useOpprofConfig() {
    */
   const addAdvancedParam = () => {
     updateIndex.value++;
-    if (!onboardData.advanced.advancedParams) {
-      onboardData.advanced.advancedParams = [];
+    if (!onboardData.user_options.advance_param) {
+      onboardData.user_options.advance_param = [];
     }
-    onboardData.advanced.advancedParams.push({
+    onboardData.user_options.advance_param.push({
       name: "",
       value: "",
-      key: onboardData.advanced.advancedParams.length,
+      key: onboardData.user_options.advance_param.length,
+    });
+  };
+
+  const addAdvancedSimulateParam = () => {
+    updateIndex.value++;
+    if (!simulationData.user_options.advance_param) {
+      simulationData.user_options.advance_param = [];
+    }
+    simulationData.user_options.advance_param.push({
+      name: "",
+      value: "",
+      key: simulationData.user_options.advance_param.length,
     });
   };
 
@@ -249,8 +265,16 @@ export function useOpprofConfig() {
    */
   const deleteAdvancedParam = (key: number) => {
     updateIndex.value++;
-    onboardData.advanced.advancedParams.splice(key, 1);
-    onboardData.advanced.advancedParams.forEach((v, i) => {
+    onboardData.user_options.advance_param.splice(key, 1);
+    onboardData.user_options.advance_param.forEach((v, i) => {
+      v.key = i;
+    });
+  };
+
+  const deleteAdvancedSimulateParam = (key: number) => {
+    updateIndex.value++;
+    simulationData.user_options.advance_param.splice(key, 1);
+    simulationData.user_options.advance_param.forEach((v, i) => {
       v.key = i;
     });
   };
@@ -267,7 +291,11 @@ export function useOpprofConfig() {
 
     simulationData.config_id = data.config_id
     simulationData.project_id = data.project_id
-    Object.assign(simulationData.user_options, data.user_options)
+    // Object.assign(simulationData.user_options, data.user_options)
+    console.log('simulationData.user_options, data.user_options', simulationData.user_options, data.user_options)
+    Object.keys(simulationData.user_options).forEach(k => {
+      simulationData.user_options[k] = data.user_options[k]
+    })
     console.log('simulationData.user_options, data.user_options', simulationData.user_options, data.user_options)
   }
 
@@ -291,7 +319,9 @@ export function useOpprofConfig() {
     addAdvancedParam,
     deleteAdvancedParam,
     initSimulate,
-    initOnBoard
+    initOnBoard,
+    addAdvancedSimulateParam,
+    deleteAdvancedSimulateParam
   };
 }
 

@@ -8,6 +8,7 @@
 import { ref } from "vue";
 import { QuestionCircleOutlined } from "@ant-design/icons-vue";
 import { message } from "../../../untils/Message";
+import editTable from "./editTable.vue";
 
 const props = defineProps({
   simulationData: {
@@ -22,22 +23,26 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  updateIndex: {
+    type: Number,
+    default: 1,
+  },
 });
 
-const emit = defineEmits(["update:simulationData", "remoteSearch"]);
+const emit = defineEmits(["remoteSearch", "addAdvancedParam", "deleteAdvancedParam"]);
 
 const handleRemoteSearch = (val) => {
   emit("remoteSearch", val, "simulation");
 };
 
 const handleFocus = () => {
-  emit("remoteSearch", props.simulationData.dataStoragePath, "simulation");
+  emit("remoteSearch", props.simulationData.user_options.dataStoragePath, "simulation");
 };
 
 const saveConfig = () => {
   // 构造user_options
   const obj = { config_id: props.simulationData.config_id, user_options: { ...props.simulationData.user_options } }
-  message.sendMessageToParent({ command: "vscodeSaveConfig", data: { type: 'simulate', data: [obj] } });
+  message.sendMessageToParent({ command: "vscodeSaveConfig", data: { type: 'simulate', data: [JSON.parse(JSON.stringify(obj))] } });
 };
 
 const activeKey = ref(["1"]);
@@ -76,6 +81,7 @@ const activeKey = ref(["1"]);
 
       <div class="section-title">数据存放位置</div>
       <a-form-item>
+        <!-- <FolderOutlined /> -->
         <a-auto-complete v-model:value="simulationData.user_options.dataStoragePath" :options="dataStorageOptions"
           :loading="dataStorageLoading" placeholder="请输入数据存放位置，支持远程搜索" @search="handleRemoteSearch"
           @focus="handleFocus" />
@@ -97,6 +103,9 @@ const activeKey = ref(["1"]);
               <QuestionCircleOutlined class="help-icon" />
             </a-tooltip>
           </div>
+
+          <!-- <h2>{{ simulationData.user_options.simulatorType }}</h2> -->
+
           <a-form-item>
             <a-input v-model:value="simulationData.user_options.simulatorType" placeholder="请输入仿真器类型" />
           </a-form-item>
@@ -105,6 +114,10 @@ const activeKey = ref(["1"]);
           <a-form-item>
             <a-switch v-model:checked="simulationData.user_options.enableDump" />
           </a-form-item>
+
+          <div class="section-title" style="margin-top: 12px;">高级参数</div>
+          <editTable :key="updateIndex" :dataSource="simulationData.user_options.advance_param"
+            @addTableItem="emit('addAdvancedParam')" @deleteTableItem="emit('deleteAdvancedParam', $event)" />
         </a-collapse-panel>
       </a-collapse>
     </a-form>

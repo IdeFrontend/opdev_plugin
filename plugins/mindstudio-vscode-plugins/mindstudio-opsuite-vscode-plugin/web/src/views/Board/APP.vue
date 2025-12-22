@@ -35,6 +35,14 @@ const test = () => {
     });
 }
 
+const test2 = () => {
+       message.sendMessageToParent({
+        command: "vscodeOnBoard",
+        data: '',
+    });
+}
+
+
 const clickSetting = (() => {
     message.sendMessageToParent({
         command: "vscodeOpenConfig",
@@ -89,6 +97,7 @@ const clickSetting = (() => {
                 </a-button>
 
            <a-button @click="test">性能调优</a-button>
+           <a-button @click="test2">上板</a-button>
             </div>
         </div>
     </a-config-provider>

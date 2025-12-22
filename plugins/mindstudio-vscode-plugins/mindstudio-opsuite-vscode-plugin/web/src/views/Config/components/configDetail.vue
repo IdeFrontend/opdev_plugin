@@ -8,9 +8,9 @@
 import buildConfig from "./buildConfig.vue";
 import sanitizerConfig from "./sanitizerConfig.vue";
 import opprofConfig from "./opprofConfig.vue";
-import { useOpprofConfig } from "../composables/useOpprofConfig";
 
-import { ref } from "vue";
+import { ref, watch, nextTick } from "vue";
+
 const props = defineProps({
   activeOption: {
     type: String,
@@ -22,14 +22,13 @@ const props = defineProps({
   },
 });
 
-const {
-initSimulate
-} = useOpprofConfig();
-
 const buildConfigForme = ref({});
 const exampleConfigForme = ref({});
 const buildConfigId = ref("");
 const exampleConfigId = ref("");
+
+const simulateConfigData = ref({})
+const onBoardConfigData = ref({})
 
 const init = (obj) => {
   const ConfigData = obj
@@ -66,10 +65,14 @@ const init = (obj) => {
       });
 
   // 仿真表单数据
-  const simulateConfigData = ConfigData[props.activeConfig].find(
+  simulateConfigData.value = ConfigData[props.activeConfig].find(
     (v) => v.config_type === "simulate"
   );
-  initSimulate(simulateConfigData)
+
+  // 上板表单参数
+  onBoardConfigData.value = ConfigData[props.activeConfig].find(
+    (v) => v.config_type === "on_board"
+  );
 };
 
 const addBuildTableItem = () => {
@@ -103,6 +106,18 @@ const deleteExampleTableItem = (key) => {
 defineExpose({
   init,
 });
+
+const opprofRef = ref(null)
+watch(
+  () => props.activeOption,
+  val => {
+    if (val === 'opprof') {
+      nextTick(()=> {
+        opprofRef.value.init(simulateConfigData.value, onBoardConfigData.value)
+      })
+    }
+  }
+)
 </script>
 <template>
   <div class="config-detial">
@@ -119,7 +134,7 @@ defineExpose({
       @deleteExampleTableItem="deleteExampleTableItem"
     />
     <sanitizerConfig v-if="props.activeOption === 'sanitizer'" />
-    <opprofConfig v-if="props.activeOption === 'opprof'" />
+    <opprofConfig v-if="props.activeOption === 'opprof'" ref="opprofRef" />
   </div>
 </template>
 

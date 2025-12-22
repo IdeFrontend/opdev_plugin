@@ -28,10 +28,21 @@ const {
   handleOperatorPerformanceChange,
   addAdvancedParam,
   deleteAdvancedParam,
+  addAdvancedSimulateParam,
+  deleteAdvancedSimulateParam,
+  initSimulate,
+  initOnBoard
 } = useOpprofConfig();
 
 // 使用 composable 管理远程搜索
 const { dataStorageOptions, dataStorageLoading, remoteSearch } = useRemoteSearch();
+
+const init = (simulateConfigData, onBoardConfigData) => {
+  initSimulate(simulateConfigData)
+  initOnBoard(onBoardConfigData)
+}
+
+defineExpose({ init })
 </script>
 
 <template>
@@ -40,28 +51,19 @@ const { dataStorageOptions, dataStorageLoading, remoteSearch } = useRemoteSearch
     <a-tabs v-model:activeKey="activeTab">
       <!-- 仿真页签 -->
       <a-tab-pane key="simulation" tab="仿真">
-        <SimulationTab
-          :simulation-data="simulationData"
-          :data-storage-options="dataStorageOptions"
-          :data-storage-loading="dataStorageLoading"
-          @remote-search="remoteSearch"
-        />
+        <SimulationTab :simulation-data="simulationData" :update-index="updateIndex"
+          :data-storage-options="dataStorageOptions" :data-storage-loading="dataStorageLoading"
+          @remote-search="remoteSearch" @add-advanced-param="addAdvancedSimulateParam"
+          @delete-advanced-param="deleteAdvancedSimulateParam" />
       </a-tab-pane>
 
       <!-- 上板页签 -->
       <a-tab-pane key="onboard" tab="上板">
-        <OnboardTab
-          :onboard-data="onboardData"
-          :data-storage-options="dataStorageOptions"
-          :data-storage-loading="dataStorageLoading"
-          :update-index="updateIndex"
-          @remote-search="remoteSearch"
-          @select-all="handleSelectAll"
-          @memory-analysis-change="handleMemoryAnalysisChange"
-          @operator-performance-change="handleOperatorPerformanceChange"
-          @add-advanced-param="addAdvancedParam"
-          @delete-advanced-param="deleteAdvancedParam"
-        />
+        <OnboardTab :onboard-data="onboardData" :data-storage-options="dataStorageOptions"
+          :data-storage-loading="dataStorageLoading" :update-index="updateIndex" @remote-search="remoteSearch"
+          @select-all="handleSelectAll" @memory-analysis-change="handleMemoryAnalysisChange"
+          @operator-performance-change="handleOperatorPerformanceChange" @add-advanced-param="addAdvancedParam"
+          @delete-advanced-param="deleteAdvancedParam" />
       </a-tab-pane>
     </a-tabs>
   </div>
