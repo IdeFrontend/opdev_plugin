@@ -32,6 +32,7 @@ export interface ResponseMessage {
   error?: { name: string; message: string; stack: string };
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Api = (params: any) => unknown;
 
 export type ApiGroup = {
@@ -180,7 +181,7 @@ export class ApiServer extends vscode.Disposable {
     return {
       name: error instanceof Error ? error.name : 'CustomError',
       message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack ?? '' : '',
+      stack: error instanceof Error ? (error.stack ?? '') : '',
     };
   }
 }

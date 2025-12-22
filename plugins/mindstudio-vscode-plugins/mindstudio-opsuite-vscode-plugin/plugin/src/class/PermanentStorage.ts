@@ -17,10 +17,13 @@ export class PermanentStorage {
     return PermanentStorage.instance;
   }
 
+  static setInstance(context: vscode.ExtensionContext): void {
+    PermanentStorage.instance = new PermanentStorage(context);
+  }
+
   private readonly context: vscode.ExtensionContext;
 
   constructor(context: vscode.ExtensionContext) {
-    PermanentStorage.instance = this;
     this.context = context;
   }
 
@@ -39,6 +42,8 @@ export class PermanentStorage {
    * @param defaultValue 默认值（当键不存在时返回）
    * @returns 存储的值或默认值
    */
+  get<T>(key: string): T | undefined;
+  get<T>(key: string, defaultValue: T): T;
   get<T>(key: string, defaultValue?: T): T | undefined {
     return this.context.globalState.get(key, defaultValue);
   }

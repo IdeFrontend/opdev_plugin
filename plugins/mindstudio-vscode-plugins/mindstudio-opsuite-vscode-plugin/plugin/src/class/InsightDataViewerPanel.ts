@@ -76,7 +76,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
   /**
    * 创建或显示 panel
    */
-  public static createOrShow(context: vscode.ExtensionContext, binPath: string): void {
+  public static createOrShow(context: vscode.ExtensionContext, binPath: string): InsightDataViewerPanel {
     const column = vscode.window.activeTextEditor
       ? vscode.window.activeTextEditor.viewColumn
       : undefined;
@@ -99,6 +99,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     );
 
     InsightDataViewerPanel.currentPanel = new InsightDataViewerPanel(panel, context, binPath);
+    return InsightDataViewerPanel.currentPanel;
   }
 
   /**
