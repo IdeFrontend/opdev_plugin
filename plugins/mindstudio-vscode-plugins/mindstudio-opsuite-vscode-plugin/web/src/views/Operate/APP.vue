@@ -62,6 +62,14 @@ const menuItems = ref([
             message.sendMessageToParent({ command: "vscodeRunExample", data: '' });
         }
     },
+    // {
+    //     key: 'projectSH',
+    //     label: '设置环境变量',
+    //     icon: runIcon,
+    //     handler: () => {
+    //         message.sendMessageToParent({ command: "vscodeRunSetProjectSH", data: '' });
+    //     }
+    // },
 ]);
 
 // 动态计算顶级子菜单的 key（带前缀）
@@ -179,7 +187,7 @@ onMounted(() => {
 body {
     width: 100% !important;
     height: 100% !important;
-    background-color: rgb(20, 20, 20) !important;
+    background-color: #262729 !important;
 }
 </style>
 
@@ -217,12 +225,12 @@ body {
 
 :deep(.ant-menu-inline) {
     border-right: none !important;
-    background-color: rgb(20, 20, 20) !important;
+    background-color: #262729 !important;
 }
 
 :deep(.ant-menu-item-selected) {
     color: rgba(255, 255, 255, 0.85);
-    background-color: rgb(20, 20, 20) !important;
+    background-color: #262729 !important;
 }
 
 :deep(.ant-menu-title-content) {

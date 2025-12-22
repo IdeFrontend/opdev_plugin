@@ -220,24 +220,21 @@ const webviewMessageList: messageItem[] = [
       console.log('vscode.openFolder，打开新目录', localUri);
       
       // 询问用户是在当前窗口打开还是新窗口打开
-      const openOption = await vscode.window.showQuickPick(
-        [
-          { label: '当前窗口', value: 'current' },
-          { label: '新窗口', value: 'new' },
-        ],
-        {
-          placeHolder: '请选择打开方式',
-          ignoreFocusOut: true,
-        }
+      const choice = await vscode.window.showInformationMessage(
+        '选择打开方式',
+        { modal: true },
+        '当前窗口',
+        '新窗口'
       );
 
-      // 如果用户取消了选择，则不打开文件夹
-      if (!openOption) {
+      // 如果用户取消了选择，则不执行打开操作
+      if (!choice) {
         return;
       }
 
-      const forceNewWindow = openOption.value === 'new';
-      
+      const forceNewWindow = choice === '新窗口';
+
+      // 如果用户取消了选择，则不打开文件夹
       try {
         await vscode.commands.executeCommand('vscode.openFolder', localUri, {
           forceNewWindow: forceNewWindow,
@@ -286,6 +283,30 @@ const webviewMessageList: messageItem[] = [
       const opsOption = new OpsOption(that.context);
       await opsOption.init();
       await opsOption.startBuildExample();
+    },
+  },
+  {
+    command: 'vscodeRunSetProjectSH',
+    callback: async (msg: any, that: any) => {
+      vscode.commands.executeCommand('huawei-op-devtools.projectSH');
+      console.log('打开环境变量');
+    },
+  },
+  {
+    command: 'vscodeSaveProjectSH',
+    callback: async (msg: any, that: any) => {
+      const projectSH = msg.message.data;
+      if (!projectSH) {
+        vscode.window.showErrorMessage('环境变量配置脚本路径不能为空');
+        return;
+      }
+      try {
+        const opsOption = new OpsOption(that.context);
+        await opsOption.init(projectSH);
+        vscode.window.showInformationMessage('环境变量设置成功');
+      } catch (error) {
+        vscode.window.showErrorMessage(`环境变量设置失败: ${error}`);
+      }
     },
   },
   {
