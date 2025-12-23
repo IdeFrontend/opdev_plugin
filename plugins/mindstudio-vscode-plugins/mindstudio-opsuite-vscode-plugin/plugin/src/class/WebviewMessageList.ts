@@ -96,6 +96,16 @@ const webviewMessageList: messageItem[] = [
       });
     },
   },
+  // 获取环境变量
+  {
+    command: 'vscodeGetProjectSH',
+    callback: async (message: any, that: any) => {
+      that.panel.webview.postMessage({
+        command: 'iframeSetProjectSH',
+        data: process.env.HOME,
+      });
+    },
+  },
   {
     command: 'vscodeGetBuildConfig',
     callback: async (message: any, that: any) => {
@@ -187,37 +197,16 @@ const webviewMessageList: messageItem[] = [
     },
   },
   {
-    command: 'vscodeCreatedProject',
+    command: 'vscodeSaveProjectSH',
     callback: async (msg: any, that: any) => {
-      
       const message = msg.message.data;
-      // 标准算子projectPath需增加 /ops-math/math路径
-      let originPath;
-      if (message.createOperatorProjectDictoryFileType === 2) {
-        originPath = message.projectPath;
-        message.projectPath += '/ops-math/math';
+      try {
+        const opsOption = new OpsOption(that.context);
+        await opsOption.init(message.projectSH);
+        vscode.window.showInformationMessage('环境变量设置成功');
+      } catch (error) {
+        vscode.window.showErrorMessage(`环境变量设置失败: ${error}`);
       }
-      vscode.window.showInformationMessage(`初始化中`);
-
-      const executor = new CommandExecutor();
-
-      // 标准算子解压缩
-      if (message.createOperatorProjectDictoryFileType === 2) {
-        await executor.execute(`mkdir -p ${originPath}`, ['File exists']);
-        const zipUrl = path.resolve(that.context.extensionPath, `out/templates/code_template/op-math/ops-math.zip`);
-        await executor.execute(`unzip -o ${zipUrl} -d ${originPath}`);
-      }
-      await executor.execute(`mkdir -p ${message.projectPath}/${message.projectName}`, ['File exists']);
-      if (message.projectSH) {
-        await executor.execute(`chmod +x ${message.projectSH}`);
-        await executor.execute(`${message.projectSH}`);
-      }
-      const opsOption = new OpsOption(that.context);
-      await opsOption.init(message.projectSH, message.projectPath, message.projectName);
-      await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(`${message.projectPath}/${message.projectName}`));
-
-      (that.context as vscode.ExtensionContext).globalState.update('runCommand', 'huawei-op-devtools.createDictory');
-      (that.context as vscode.ExtensionContext).globalState.update('runCommand-param', message.createOperatorProjectDictoryFileType);
     },
   },
   {
@@ -324,23 +313,6 @@ const webviewMessageList: messageItem[] = [
       const opsOption = new OpsOption(that.context);
       await opsOption.init();
       await opsOption.startBuildExample();
-    },
-  },
-  {
-    command: 'vscodeSaveProjectSH',
-    callback: async (msg: any, that: any) => {
-      const projectSH = msg.message.data;
-      if (!projectSH) {
-        vscode.window.showErrorMessage('环境变量配置脚本路径不能为空');
-        return;
-      }
-      try {
-        const opsOption = new OpsOption(that.context);
-        await opsOption.init(projectSH);
-        vscode.window.showInformationMessage('环境变量设置成功');
-      } catch (error) {
-        vscode.window.showErrorMessage(`环境变量设置失败: ${error}`);
-      }
     },
   },
   {

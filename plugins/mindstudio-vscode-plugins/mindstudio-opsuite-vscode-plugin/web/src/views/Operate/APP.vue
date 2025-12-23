@@ -39,19 +39,19 @@ const menuItems = ref([
                     message.sendMessageToParent({ command: "vscodeBuildOp", data: '' });
                 }
             },
-            {
-                key: 'basicBuild',
-                label: '编译example',
-                children: [
-                    {
-                        key: 'buildExample',
-                        label: '基础编译',
-                        handler: () => {
-                            message.sendMessageToParent({ command: "vscodeBuildExample", data: '' });
-                        }
-                    }
-                ]
-            },
+            // {
+            //     key: 'basicBuild',
+            //     label: '编译example',
+            //     children: [
+            //         {
+            //             key: 'buildExample',
+            //             label: '基础编译',
+            //             handler: () => {
+            //                 message.sendMessageToParent({ command: "vscodeBuildExample", data: '' });
+            //             }
+            //         }
+            //     ]
+            // },
         ]
     },
     {
@@ -83,14 +83,14 @@ const menuItems = ref([
             },
         ]
     },
-    {
-        key: 'projectSH',
-        label: '设置环境变量',
-        icon: runIcon,
-        handler: () => {
-            message.sendMessageToParent({ command: "vscodeRunSetProjectSH", data: '' });
-        }
-    },
+    // {
+    //     key: 'projectSH',
+    //     label: '设置环境变量',
+    //     icon: runIcon,
+    //     handler: () => {
+    //         message.sendMessageToParent({ command: "vscodeRunSetProjectSH", data: '' });
+    //     }
+    // },
 ]);
 
 // 动态计算顶级子菜单的 key（带前缀）
