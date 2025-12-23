@@ -6,6 +6,10 @@
  */
 import i18next from 'i18next';
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
+import { promisify } from 'util';
+import { exec } from 'child_process';
 
 import i18nResource from 'shared:/i18n';
 
@@ -25,6 +29,7 @@ import { OpsOperateProvider } from './class/OpsOperateProvider';
 import { MindStudioPluginInstaller } from './class/MindStudioPluginInstaller';
 
 let extensionContext: vscode.ExtensionContext | undefined;
+const execAsync = promisify(exec);
 
 /**
  * 插件激活入口函数
@@ -286,6 +291,7 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   await installer.installIfNeeded();
+  await exportEnvToFile(context);
 }
 
 /**
@@ -322,6 +328,25 @@ function initViews(context: vscode.ExtensionContext, apiServer: ApiServer): View
   });
 
   return viewServer;
+}
+
+/**
+ * 在扩展根目录执行环境导出命令
+ */
+async function exportEnvToFile(context: vscode.ExtensionContext) {
+  const targetDir = path.join(context.extensionPath, '.arts');
+  const targetFile = path.join(targetDir, 'env');
+  try {
+    await fs.promises.mkdir(targetDir, { recursive: true });
+    await execAsync('. /ect/profile && env > ./.arts/env', {
+      cwd: context.extensionPath,
+      shell: '/bin/bash',
+      windowsHide: true,
+    });
+    console.log(`环境变量已导出到: ${targetFile}`);
+  } catch (error) {
+    console.error('导出环境变量失败:', error);
+  }
 }
 
 export function deactivate() {
