@@ -2,6 +2,7 @@
 .vscode-test-web/
 web/
 plugin/
+!out/plugin/mindstudio-debug-vscode-plugin
 server/
 scripts/
 shared/
