@@ -211,7 +211,7 @@ watch(() => props.onboardData.user_options,
       </a-form-item>
 
 
-      <div class="section-title" style="margin-top: 12px;">模式</div>
+      <!-- <div class="section-title" style="margin-top: 12px;">模式</div>
       <a-form-item>
         <a-tooltip placeholder="topLeft" title="暂不支持，敬请期待">
           <a-checkbox :checked="false" disabled>
@@ -227,7 +227,7 @@ watch(() => props.onboardData.user_options,
       <div class="section-title" style="margin-bottom: 8px;">数据存放位置</div>
       <a-form-item>
         <SelectFolder v-model="onboardData.user_options.dataStoragePath" placeholder="请选择数据存放位置" />
-      </a-form-item>
+      </a-form-item> -->
 
       <a-collapse v-model:activeKey="advancedCollapseActiveKey" ghost>
         <a-collapse-panel key="1" header="高级配置">
