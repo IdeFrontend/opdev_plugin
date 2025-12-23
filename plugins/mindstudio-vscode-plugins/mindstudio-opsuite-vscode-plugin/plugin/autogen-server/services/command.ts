@@ -112,9 +112,18 @@ export function getSimulateCommand(config_id: number, example_config_id: number)
   let soc = soc_version;
   const operator = getOpByProjectIdAndOpName(config.project_id as number, config.op as string)!;
   console.log('command operator', operator)
+
+  const project = get_project_by_id(config.project_id as number) as any;
+  const source_cann = project && project.ascend_env_script ? `. ${project.ascend_env_script}` : `. ${ascend_env_script}`;
+  const run_path = getOpRunPath(operator);
+  const cd_cmd = `cd ${run_path}`;
+
   const aic = `--aic-metrics=PipeUtilization,ResourceConflictRatio${config.user_options.PMSampling?',PMSampling':''}`
   const dump = config.user_options.enableDump ? '--dump' : ''
-  return `msprof op simulator --soc-version=${soc} --output=${operator.op_path}/.vscode/opprof ${exConfig.target_file} ${aic} ${dump}`
+  const simulatorCmd =  `msopprof simulator --soc-version=${soc} --output=${operator.op_path}/.vscode/opprof ${exConfig.target_file} ${aic} ${dump}`
+
+  
+  return [source_cann, cd_cmd, simulatorCmd].filter(Boolean).join(' && ')
 }
 
 // 生成上板命令
@@ -129,6 +138,11 @@ export function getOnBoardCommand(config_id: number, example_config_id: number) 
   const operator = getOpByProjectIdAndOpName(config.project_id as number, config.op as string)!;
   console.log('command operator', operator)
 
+  const project = get_project_by_id(config.project_id as number) as any;
+  const source_cann = project && project.ascend_env_script ? `. ${project.ascend_env_script}` : `. ${ascend_env_script}`;
+  const run_path = getOpRunPath(operator);
+  const cd_cmd = `cd ${run_path}`;
+
   const totalKeys = ['Occupancy', 'Roofline', 'Source', 'MemoryDetail', 'ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'OpBasicInfo', 'PipeUtilization', 'ResourceConflictRatio']
   let aic = '--aic-metrics='
   totalKeys.forEach(key => {
@@ -137,5 +151,7 @@ export function getOnBoardCommand(config_id: number, example_config_id: number) 
     }
   })
   aic = aic.slice(0, -1)
-  return `msprof op --output=${operator.op_path}/.vscode/opprof ${exConfig.target_file} ${aic}`
+  const opprofCmd  = `msopprof --output=${operator.op_path}/.vscode/opprof ${exConfig.target_file} ${aic}`
+
+  return [source_cann, cd_cmd, opprofCmd].filter(Boolean).join(' && ')
 }
