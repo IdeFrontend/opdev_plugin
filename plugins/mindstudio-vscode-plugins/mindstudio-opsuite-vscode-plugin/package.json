@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://gitcode.com/Asscend/mstt"
   },
-  "version": "1.1.10",
+  "version": "1.1.11",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -33,7 +33,7 @@
       ],
       "secondarySidebar": [
         {
-          "id": "secondary-sidebar-operate-view2",
+          "id": "secondary-sidebar-operate-view",
           "title": "算子工程-操作",
           "icon": "resources/operate.svg"
         }
@@ -47,7 +47,7 @@
           "type": "webview"
         }
       ],
-      "secondary-sidebar-operate-view2": [
+      "secondary-sidebar-operate-view": [
         {
           "type": "webview",
           "id": "OpsOperateProvider",

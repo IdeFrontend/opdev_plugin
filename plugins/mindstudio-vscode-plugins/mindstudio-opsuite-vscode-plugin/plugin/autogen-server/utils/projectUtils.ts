@@ -2,11 +2,9 @@ import fs from 'fs-extra';
 import path from 'path';
 import debugLaunch from './debug-launch.json';
 
-export async function ensureLaunchJsonExists(project_path: string) {
-  if (!project_path || typeof project_path !== 'string') {
-    const e = new Error('project_path参数无效');
-    (e as any).name = 'InvalidRequest';
-    throw e;
+export async function ensureLaunchJsonExists(project_path: string | undefined) {
+  if ( typeof project_path || typeof project_path !== 'string') {
+    return;
   }
 
   const projectDir = path.resolve(project_path);
