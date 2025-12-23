@@ -339,7 +339,7 @@ async function exportEnvToFile(context: vscode.ExtensionContext) {
   try {
     await fs.promises.mkdir(targetDir, { recursive: true });
     await execAsync('. /ect/profile && env > ./.arts/env', {
-      cwd: context.extensionPath,
+      cwd: '/',
       shell: '/bin/bash',
       windowsHide: true,
     });
