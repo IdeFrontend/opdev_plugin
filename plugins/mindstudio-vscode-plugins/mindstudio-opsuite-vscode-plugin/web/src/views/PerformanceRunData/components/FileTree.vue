@@ -32,8 +32,8 @@ function isCsvFile(row: object): row is PerformanceRunDataFile {
   return Reflect.has(row, 'filePath') && Reflect.get(row as PerformanceRunDataFile, 'fileType') === 'csv';
 }
 
-function isBinFile(row: object): row is PerformanceRunDataFile {
-  return Reflect.has(row, 'filePath') && Reflect.get(row as PerformanceRunDataFile, 'fileType') === 'bin';
+function isInsightFile(row: object): row is PerformanceRunDataFile {
+  return Reflect.has(row, 'filePath') && ['bin', 'json'].includes(Reflect.get(row as PerformanceRunDataFile, 'fileType'));
 }
 
 function handleClickDownload(record: PerformanceExecutionRecord) {
@@ -54,7 +54,7 @@ const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
   const data = node.dataRef || node;
   if (isCsvFile(data)) {
     openCsvView(data.filePath);
-  } else if (isBinFile(data)) {
+  } else if (isInsightFile(data)) {
     openInsightView(data.filePath);
   }
 };
