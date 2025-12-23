@@ -148,7 +148,7 @@ const getSaveData = () => {
         </a-form>
       </a-collapse-panel>
     </a-collapse>
-    <div class="model-title">example编译配置</div>
+    <!-- <div class="model-title">example编译配置</div>
     <a-form
       :model="exampleConfigForme"
       :label-col="{ span: 6 }"
@@ -225,20 +225,21 @@ const getSaveData = () => {
           </a-form-item>
         </a-form>
       </a-collapse-panel>
-    </a-collapse>
+    </a-collapse> -->
     <a-button @click="saveBuildConfig"> 保存 </a-button>
+    <!-- <a-button @click="saveAndStartBuild"> 保存并开始 </a-button> -->
     <a-dropdown>
       <template #overlay>
         <a-menu @click="handleMenuClick">
           <a-menu-item @click="saveAndStartBuild" key="1"
             >编译部署算子</a-menu-item
           >
-          <a-menu-item @click="saveAndStartBuildExample" key="2"
+          <!-- <a-menu-item @click="saveAndStartBuildExample" key="2"
             >编译example</a-menu-item
-          >
+          > -->
         </a-menu>
       </template>
-      <a-button style="margin-left: 15px" type="primary">
+      <a-button  @click="saveAndStartBuild" style="margin-left: 15px" type="primary">
         保存并开始
         <DownOutlined />
       </a-button>
