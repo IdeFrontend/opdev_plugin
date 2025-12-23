@@ -25,11 +25,14 @@ import { InsightDataViewerPanel } from './class/InsightDataViewerPanel';
 
 import { OpsOperateProvider } from './class/OpsOperateProvider';
 
+let extensionContext: vscode.ExtensionContext | undefined;
+
 /**
  * 插件激活入口函数
  * @param context VSCode扩展上下文
  */
 export async function activate(context: vscode.ExtensionContext) {
+  extensionContext = context;
   // 国际化
   await initI18n();
 
@@ -48,7 +51,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const viewServer = initViews(context, apiServer);
 
   ExtensionConfig.init(context);
-  new PermanentStorage(context);
+  PermanentStorage.setInstance(context);
 
   // 初始化新建算子工程的Webview
   const createOpsProvider = new WebviewProvider(context, apiServer);
@@ -66,6 +69,11 @@ export async function activate(context: vscode.ExtensionContext) {
   // 注册打开Opsuite命令
   const openCommand = vscode.commands.registerCommand('huawei-op-devtools.open', async () => {
     createOpsProvider.show('Link');
+  });
+
+  // 打开环境变量命令
+  const openProjectSH = vscode.commands.registerCommand('huawei-op-devtools.projectSH', async () => {
+    createOpsProvider.show('ProjectSH');
   });
 
   // 注册打开关闭算子工作-操作命令
@@ -113,6 +121,13 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.window.showInformationMessage(`正在加载数据文件: ${binPath}`);
   });
 
+  // 注册删除欢迎页计数命令（用于手动重置）
+  const clearWelcomeCountCommand = vscode.commands.registerCommand('huawei-op-devtools.clearWelcomeCount', async () => {
+    await context.globalState.update('welcomeShowCount', undefined);
+    vscode.window.showInformationMessage('已清除欢迎页显示计数');
+    console.log('welcomeShowCount 已删除');
+  });
+
   // 注册新建算子原型文件命令
   const createCommand = vscode.commands.registerCommand('huawei-op-devtools.createOps', async () => {
     await opsOption.init();
@@ -144,7 +159,7 @@ export async function activate(context: vscode.ExtensionContext) {
     buttonCommand = vscode.commands.registerCommand('extension.jsonButtonAction', async (uri?: vscode.Uri) => {
       if (uri) {
         await opsOption.init();
-        opsOption.createOpsByPrototype(uri.fsPath);
+        await opsOption.createOpsByPrototype(uri.fsPath, 'ascend', undefined);
       }
     });
   } catch (error: any) {
@@ -177,9 +192,17 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   configProvider.showLeftPage('Home');
-
-  if (!new Project().workspaceIsProject()) {
-    vscode.commands.executeCommand('huawei-op-devtools.welcome');
+  const [workspaceFolder] = vscode.workspace.workspaceFolders ?? [];
+  console.log(workspaceFolder,'是否打开了文件夹');
+  // 仅在未打开任何工程/文件夹时弹出欢迎页，且在本地缓存中记录次数，最多弹出两次
+  if (!workspaceFolder) {
+    const welcomeShowCount = context.globalState.get<number>('welcomeShowCount') ?? 0;
+    console.log(welcomeShowCount,'打开次数');
+    if (welcomeShowCount < 2) {
+      vscode.commands.executeCommand('huawei-op-devtools.welcome');
+      vscode.commands.executeCommand('workbench.view.extension.mindstudio-opssuite-vscode-plugin');
+      context.globalState.update('welcomeShowCount', welcomeShowCount + 1);
+    }
   }
   context.subscriptions.push(buttonCommand, button);
 
@@ -188,11 +211,13 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(viewServer);
   context.subscriptions.push(buildOpsCommand);
   context.subscriptions.push(openCommand);
+  context.subscriptions.push(openProjectSH);
   context.subscriptions.push(ConfigCommand);
   context.subscriptions.push(createCommand);
   context.subscriptions.push(welcomeCommand);
   context.subscriptions.push(newPrototypeCommand);
   context.subscriptions.push(testCommand);
+  context.subscriptions.push(clearWelcomeCountCommand);
 
   // 创建侧边栏提供者
   const sidebarProvider = new CustomSidebarProvider(context);
@@ -296,4 +321,11 @@ function initViews(context: vscode.ExtensionContext, apiServer: ApiServer): View
   });
 
   return viewServer;
+}
+
+export function deactivate() {
+  if (extensionContext) {
+    // 卸载/禁用扩展时清空欢迎页弹出计数
+    extensionContext.globalState.update('welcomeShowCount', undefined);
+  }
 }

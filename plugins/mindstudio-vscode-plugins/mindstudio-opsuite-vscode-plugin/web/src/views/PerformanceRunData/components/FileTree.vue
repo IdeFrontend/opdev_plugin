@@ -1,72 +1,97 @@
 <script setup lang="ts">
-import { ref, h, nextTick } from 'vue';
-import { RightOutlined, DownOutlined, FlagOutlined, FlagFilled } from '@ant-design/icons-vue';
+import { RightOutlined, DownOutlined, FlagOutlined, FlagFilled, DownloadOutlined } from '@ant-design/icons-vue';
+import type { DirectoryTreeProps } from 'ant-design-vue';
+import { Component, h } from 'vue';
+
+import { PerformanceExecutionRecord, PerformanceRunDataFile } from 'shared:/api-types';
+
+import { openCsvView, openInsightView, saveFileToLocal } from '@/apis';
+
 import { formatTimestamp } from '../utils/timestamp';
-import { handleOpenCsv, handleLoadData } from '../utils/fileHandlers';
 
-const props = defineProps({
-  treeData: Array,
-});
+defineProps<{
+  treeData: PerformanceExecutionRecord[];
+}>();
 
-const emit = defineEmits(['rightClick']);
+const emit = defineEmits<{
+  (e: 'toggle-mark', key: string, marked: boolean): void;
+}>();
 
 // 自定义切换图标（三角箭头）
-const switcherIcon = ({ expanded }) => {
+const SwitcherIcon: Component = ({ expanded }) => {
   return h(expanded ? DownOutlined : RightOutlined, {
     style: { fontSize: '12px', color: '#fff' },
   });
 };
 
-// 树节点点击事件
-const onSelect = (selectedKeys, info) => {
+function isRunData(row: object): row is PerformanceExecutionRecord {
+  return Reflect.has(row, 'timestamp');
+}
+
+function isCsvFile(row: object): row is PerformanceRunDataFile {
+  return Reflect.has(row, 'filePath') && Reflect.get(row as PerformanceRunDataFile, 'fileType') === 'csv';
+}
+
+function isBinFile(row: object): row is PerformanceRunDataFile {
+  return Reflect.has(row, 'filePath') && Reflect.get(row as PerformanceRunDataFile, 'fileType') === 'bin';
+}
+
+function handleClickDownload(record: PerformanceExecutionRecord) {
+  saveFileToLocal({ filename: `${record.title}.zip` });
+}
+
+// 标记
+const MarkedIcon: Component = ({ marked }) => h(marked ? FlagFilled : FlagOutlined, { style: { color: marked ? '#d32029' : undefined } });
+function handleToggleMarked(record: PerformanceExecutionRecord, marked: boolean) {
+  emit('toggle-mark', record.key, marked);
+}
+
+/**
+ * 点击节点
+ */
+const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
   const node = info.node;
   const data = node.dataRef || node;
-  if (data.isLeaf) {
-    if (data.fileType === 'csv') {
-      handleOpenCsv(data.filePath);
-    } else if (data.fileType === 'bin') {
-      handleLoadData(data.filePath);
-    }
+  if (isCsvFile(data)) {
+    openCsvView(data.filePath);
+  } else if (isBinFile(data)) {
+    openInsightView(data.filePath);
   }
-};
-
-// 右键菜单事件
-const handleRightClick = (info) => {
-  // 阻止默认右键菜单
-  info.event.preventDefault();
-  info.event.stopPropagation();
-
-  emit('rightClick', {
-    node: info.node,
-    event: info.event,
-    x: info.event.clientX,
-    y: info.event.clientY,
-  });
 };
 </script>
 
 <template>
   <div class="tree-container">
-    <a-tree
+    <a-directory-tree
       :tree-data="treeData"
       :show-line="false"
       :show-icon="false"
       :default-expand-all="true"
-      :switcher-icon="switcherIcon"
-      @select="onSelect"
-      @rightClick="handleRightClick"
+      :switcher-icon="SwitcherIcon"
+      @select="onClickNode"
     >
       <template #title="{ dataRef }">
-        <div class="tree-node">
+        <div class="custom-tree-node">
           <div class="tree-node-title">{{ dataRef.title }}</div>
-          <div v-if="dataRef.timestamp" class="tree-node-timestamp">
-            {{ formatTimestamp(dataRef.timestamp) }}
-          </div>
-          <!-- <FlagOutlined />
-          <FlagFilled /> -->
+          <template v-if="isRunData(dataRef)">
+            <div class="tree-node-timestamp">
+              {{ formatTimestamp(dataRef.timestamp) }}
+            </div>
+            <div class="run-data-operations">
+              <!-- 下载 -->
+              <a-button type="text" :icon="h(DownloadOutlined)" @click.stop="handleClickDownload(dataRef)"></a-button>
+              <!-- 标记/取消标记 -->
+              <a-button
+                :class="{ marked: dataRef.marked }"
+                type="text"
+                :icon="h(MarkedIcon, { marked: dataRef.marked })"
+                @click.stop="handleToggleMarked(dataRef, !dataRef.marked)"
+              ></a-button>
+            </div>
+          </template>
         </div>
       </template>
-    </a-tree>
+    </a-directory-tree>
   </div>
 </template>
 
@@ -79,22 +104,52 @@ const handleRightClick = (info) => {
     color: #fff;
     background: transparent;
 
-    .tree-node {
-      color: #fff;
-      width: 100%;
-      min-width: 0;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-
-      .tree-node-title {
+    .ant-tree-treenode {
+      .custom-tree-node {
         color: #fff;
+        width: 100%;
+        position: relative;
+
+        .tree-node-title {
+          color: #fff;
+        }
+
+        .tree-node-timestamp {
+          color: rgba(255, 255, 255, 0.65);
+          font-size: 12px;
+          margin-top: 4px;
+          line-height: 16px;
+        }
+
+        .run-data-operations {
+          pointer-events: none;
+          position: absolute;
+          top: 0;
+          right: 0;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+
+          > * {
+            transition: opacity 0.2s cubic-bezier(0.645, 0.045, 0.355, 1);
+            opacity: 0;
+          }
+
+          > .marked {
+            opacity: 1;
+          }
+        }
       }
 
-      .tree-node-timestamp {
-        color: rgba(255, 255, 255, 0.65);
-        font-size: 12px;
-        margin-top: 2px;
+      &:hover {
+        .run-data-operations {
+          pointer-events: all;
+
+          > * {
+            opacity: 1;
+          }
+        }
       }
     }
   }
