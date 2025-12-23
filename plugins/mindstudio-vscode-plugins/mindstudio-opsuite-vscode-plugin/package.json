@@ -147,17 +147,16 @@
     ]
   },
   "scripts": {
-    "start-web": "vscode-test-web --extensionDevelopmentPath=. .",
-    "vscode:prepublish": "npm run compile:web && npm run compile",
-    "compile": "npm run compile:web && npm run build-extension && npm run copy-web-output",
-    "install:web": "cd web && npm install",
+    "package": "npm run compile && vsce package --no-dependencies",
+    "compile": "npm run compile:web && npm run compile:plugin",
     "compile:web": "cd web && npm run build",
-    "watch": "tsc -watch -p .",
-    "package": "vsce package --no-dependencies",
-    "lint": "eslint plugin/src --ext ts",
-    "check-types": "tsc --noEmit",
-    "build-extension": "tsx ./scripts/build-extension",
-    "copy-web-output": "tsx ./scripts/copy-web-output.ts"
+    "compile:plugin": "tsx ./scripts/build-extension",
+    "package:debug": "npm run compile:debug && vsce package --no-dependencies",
+    "compile:debug": "npm run compile:web:debug && npm run compile:plugin:debug",
+    "compile:web:debug": "cd web && npm run build:debug",
+    "compile:plugin:debug": "tsx ./scripts/build-extension --sourcemap",
+    "lint": "eslint plugin/src",
+    "install:web": "cd web && npm install"
   },
   "dependencies": {
     "compressing": "^2.0.0",
@@ -170,6 +169,7 @@
     "@types/fs-extra": "^11.0.4",
     "@types/node": "16.x",
     "@types/vscode": "^1.60.0",
+    "@types/ws": "^8.18.1",
     "@vscode/test-web": "^0.0.77",
     "@vscode/vsce": "^3.7.1",
     "esbuild": "^0.27.1",

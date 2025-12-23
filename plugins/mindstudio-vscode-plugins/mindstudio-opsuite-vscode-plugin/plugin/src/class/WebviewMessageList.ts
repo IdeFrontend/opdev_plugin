@@ -455,14 +455,14 @@ export async function handleOperatorProjectDictoryFile(message: any | undefined,
   }
 }
 
-async function vscodeBuildCreateOps(data: any, that: any, progress: any) {
+async function vscodeBuildCreateOps(data: any, that: any, progress?: any) {
   const opsOption = new OpsOption(that.context);
   await opsOption.init();
   await opsOption.createOpsByPrototype('', data, progress);
   await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
 }
 
-async function vscodeStartLinkCreateOps(data: any, that: any, progress: any) {
+async function vscodeStartLinkCreateOps(data: any, that: any, progress?: any) {
   if (!data) {
     const opsOption = new OpsOption(that.context);
     await opsOption.init();
