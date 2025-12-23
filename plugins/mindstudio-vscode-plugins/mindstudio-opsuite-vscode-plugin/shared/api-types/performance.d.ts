@@ -2,8 +2,9 @@ export type PerformanceExecutionRecord = {
   key: string;
   title: string;
   timestamp: number;
-  marked?: boolean;
+  dirPath: string;
   children: (PerformanceRunDataFolder | PerformanceRunDataFile)[];
+  marked?: boolean;
 };
 
 export type PerformanceRunDataFolder = {
@@ -19,8 +20,7 @@ export type PerformanceRunDataFile = {
 };
 
 export type GetPerformanceRunDataParams = {
-  sort: { by: keyof PerformanceExecutionRecord; order: 'asc' | 'desc' };
-  markedOnly: boolean;
+  sort: { by: 'timestamp'; order: 'asc' | 'desc' };
 };
 
 export type GetPerformanceRunDataResult = {
@@ -30,4 +30,4 @@ export type GetPerformanceRunDataResult = {
 export type MarkRecordParams = {
   key: string;
   marked: boolean;
-}
+};

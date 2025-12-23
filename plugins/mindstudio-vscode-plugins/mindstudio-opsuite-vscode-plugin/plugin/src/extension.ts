@@ -20,7 +20,6 @@ import { routes } from './routes';
 import { apis } from './apis';
 import { PermanentStorage } from './class/PermanentStorage';
 import { ExtensionConfig } from './services/ExtensionConfig';
-import { Project } from './services/project/Project';
 import { InsightDataViewerPanel } from './class/InsightDataViewerPanel';
 
 import { OpsOperateProvider } from './class/OpsOperateProvider';
