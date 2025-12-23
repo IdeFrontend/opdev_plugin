@@ -90,10 +90,6 @@
         "title": "配置"
       },
       {
-        "command": "huawei-op-devtools.newPrototype",
-        "title": "配置2"
-      },
-      {
         "command": "huawei-op-devtools.leftNaV",
         "title": "左侧菜单配置"
       },

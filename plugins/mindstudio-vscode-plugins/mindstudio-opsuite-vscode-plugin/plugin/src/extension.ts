@@ -216,8 +216,6 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(testCommand);
   context.subscriptions.push(clearWelcomeCountCommand);
 
-  vscode.commands.executeCommand('huawei-op-devtools.newPrototype');
-
   // 创建侧边栏提供者
   const sidebarProvider = new CustomSidebarProvider(context);
 

@@ -10,20 +10,6 @@ import { message } from "../../../untils/Message";
 
 // 仿真配置数据类型
 export interface SimulationConfig {
-  // collectionContent: {
-  //   instructionFlow: boolean;
-  //   operatorHotspot: boolean;
-  //   memoryThroughput: boolean;
-  // };
-  // simulatorType: string;
-  // enableDump: boolean;
-  // mode: {
-  //   renderInPlatform: boolean;
-  //   downloadToLocal: boolean;
-  // };
-  // dataStoragePath: string;
-  // config_id: string,
-
   config_id: string,
   project_id: string,
   user_options: {
@@ -44,39 +30,6 @@ export interface SimulationConfig {
 
 // 上板配置数据类型
 export interface OnboardConfig {
-  // collectionContent: {
-  //   selectAll: boolean;
-  //   memoryAnalysis: boolean;
-  //   memoryAnalysisSub: {
-  //     interCoreLoad: boolean;
-  //     routineBottleneck: boolean;
-  //     computeWorkload: boolean;
-  //     memoryWorkload: boolean;
-  //   };
-  //   operatorHotspot: boolean;
-  //   cacheHeatmap: boolean;
-  //   operatorPerformance: boolean;
-  //   operatorPerformanceSub: {
-  //     cubeVectorTime: boolean;
-  //     l2CacheHitRate: boolean;
-  //     memoryBandwidth: boolean;
-  //     l0Bandwidth: boolean;
-  //     ubBandwidth: boolean;
-  //     operatorBasicInfo: boolean;
-  //     computeTransferRatio: boolean;
-  //     resourceConflictRatio: boolean;
-  //   };
-  // };
-  // mode: {
-  //   renderInPlatform: boolean;
-  //   downloadToLocal: boolean;
-  // };
-  // dataStoragePath: string;
-  // advanced: {
-  //   useKernelSideCode: boolean;
-  //   advancedParams: Array<{ name: string; value: string; key: number }>;
-  // };
-
   config_id: string,
   project_id: string,
   user_options: {
@@ -119,7 +72,6 @@ export interface OnboardConfig {
     dataStoragePath: string,
     advance_param: Array<any>
   },
-
 }
 
 /**
@@ -282,18 +234,8 @@ export function useOpprofConfig() {
 
   const initSimulate = (data: any) => {
     console.log('simulationData', data)
-    // simulationData.collectionContent.memoryThroughput = data.user_options.PMSampling
-    // simulationData.mode.downloadToLocal = data.user_options.downloadToLocal
-    // simulationData.mode.renderInPlatform = data.user_options.renderInPlatform
-    // simulationData.dataStoragePath = data.user_options.dataStoragePath
-    // simulationData.config_id = data.config_id
-    // simulationData.simulatorType = data.simulatorType
-    // simulationData.enableDump = data.enableDump
-
     simulationData.config_id = data.config_id
     simulationData.project_id = data.project_id
-    // Object.assign(simulationData.user_options, data.user_options)
-    console.log('simulationData.user_options, data.user_options', simulationData.user_options, data.user_options)
     Object.keys(simulationData.user_options).forEach(k => {
       simulationData.user_options[k] = data.user_options[k]
     })

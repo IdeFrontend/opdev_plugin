@@ -26,8 +26,6 @@ const props = defineProps({
 const advancedCollapseActiveKey = ref(["1"]);
 
 const emit = defineEmits([
-  "update:onboardData",
-  "remoteSearch",
   "selectAll",
   "memoryAnalysisChange",
   "operatorPerformanceChange",

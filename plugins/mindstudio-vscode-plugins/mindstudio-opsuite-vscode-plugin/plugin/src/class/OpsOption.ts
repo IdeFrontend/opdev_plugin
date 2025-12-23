@@ -170,7 +170,7 @@ export default class OpsOption {
       const res = await this.executor.execute(runCommand, [], [], {}, true);
       console.log('runRes', res)
       if (res.code !== 0) {
-        vscode.window.showErrorMessage(`运行失败`);
+        vscode.window.showErrorMessage(`运行失败 ${res.output}`);
         return;
       }
       vscode.window.showInformationMessage(`运行成功`);
@@ -209,17 +209,16 @@ export default class OpsOption {
       console.log('simulateCommand', simulateCommand)
       const res = await this.executor.execute(simulateCommand, [], [], {}, true);
       if (res.code !== 0) {
-        vscode.window.showErrorMessage(`执行仿真命令失败`);
+        vscode.window.showErrorMessage(`执行仿真分析失败`);
         return;
       }
-      vscode.window.showInformationMessage(`执行仿真命令成功`);
+      vscode.window.showInformationMessage(`执行仿真分析成功`);
     } catch (e: any) {
       vscode.window.showErrorMessage(`获取仿真命令失败 ${e.message}`);
     }
   }
 
-  // getOpByProjectIdAndOpName
-   async startOnBoard(config_id?: string) {
+  async startOnBoard(config_id?: string) {
     let configId = config_id;
     if (!configId) {
       configId = await this.getOnBoardConfig();
@@ -231,10 +230,10 @@ export default class OpsOption {
       console.log('onBoardCommand', onBoardCommand)
       const res = await this.executor.execute(onBoardCommand, [], [], {}, true);
       if (res.code !== 0) {
-        vscode.window.showErrorMessage(`执行上板命令失败`);
+        vscode.window.showErrorMessage(`执行上板分析失败`);
         return;
       }
-      vscode.window.showInformationMessage(`执行上板命令成功`);
+      vscode.window.showInformationMessage(`执行上板分析成功`);
     } catch (e: any) {
       vscode.window.showErrorMessage(`获取上板命令失败 ${e.message}`);
     }

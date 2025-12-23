@@ -1,3 +1,5 @@
+<!-- 选择文件夹组件 -->
+
 <script setup>
 import { FolderOutlined } from "@ant-design/icons-vue";
 import { ref, onMounted } from "vue";

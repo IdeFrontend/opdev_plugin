@@ -24,7 +24,7 @@
           <div style="margin-bottom: 20px;">2.工程配置</div>
           <a-checkbox-group v-model:value="state.value1" :options="options" style="color: white;" />
         </div>
-        <div v-if="selectedId_type === 2">
+        <div v-if="selectedId_type === 4">
           <div>选择算子原型定义文件</div>
           <div class="left-right-box">
             <div v-for="item in items_proto" :key="item.id" class="single-select-item left"

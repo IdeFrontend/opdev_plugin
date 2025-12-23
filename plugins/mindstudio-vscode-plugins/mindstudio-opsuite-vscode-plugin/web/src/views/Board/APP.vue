@@ -28,21 +28,6 @@ const runExampleFn = () => {
     });
 };
 
-const test = () => {
-       message.sendMessageToParent({
-        command: "vscodeSimulate",
-        data: '',
-    });
-}
-
-const test2 = () => {
-       message.sendMessageToParent({
-        command: "vscodeOnBoard",
-        data: '',
-    });
-}
-
-
 const clickSetting = (() => {
     message.sendMessageToParent({
         command: "vscodeOpenConfig",
@@ -95,9 +80,6 @@ const clickSetting = (() => {
                         工程配置
                     </div>
                 </a-button>
-
-           <a-button @click="test">性能调优</a-button>
-           <a-button @click="test2">上板</a-button>
             </div>
         </div>
     </a-config-provider>

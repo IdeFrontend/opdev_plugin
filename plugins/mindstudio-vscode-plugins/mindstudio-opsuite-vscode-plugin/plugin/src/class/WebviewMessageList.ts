@@ -339,7 +339,7 @@ const webviewMessageList: messageItem[] = [
   {
     command: 'vscodeSaveConfig',
     callback: async (msg: any, that: any) => {
-      console.log('msg', msg)
+      console.log('saveconfig', msg)
       const data = msg.message.data;
       const opsOption = new OpsOption(that.context);
       await opsOption.init();

@@ -26,7 +26,6 @@ const props = defineProps({
 const emit = defineEmits(["addAdvancedParam", "deleteAdvancedParam"]);
 
 const saveConfig = () => {
-  // 构造user_options
   const obj = { config_id: props.simulationData.config_id, user_options: { ...props.simulationData.user_options } }
   message.sendMessageToParent({ command: "vscodeSaveConfig", data: { type: 'simulate', data: [JSON.parse(JSON.stringify(obj))] } });
 };
@@ -94,19 +93,18 @@ const guide = ref('https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/
         <a-collapse-panel key="1" header="高级配置">
           <div class="simulate-title" style="margin-bottom: 8px;">
             仿真器类型
-            <a-tooltip title="当前支持的仿真器类型可以在${CANN_INSTALL_DIR}/ascend-toolkit/latest/tools/simulator目录查看">
+            <a-tooltip title="当前支持的仿真器类型可以在 CANN安装路径下 ascend-toolkit/latest/tools/simulator目录查看">
               <QuestionCircleOutlined class="help-icon" />
             </a-tooltip>
           </div>
-
           <a-form-item>
             <a-input v-model:value="simulationData.user_options.simulatorType" placeholder="请输入仿真器类型"   @change="saveConfig"/>
           </a-form-item>
 
-          <div class="section-title" style="margin-top: 12px;">控制仿真器dump文件是否生成</div>
+          <!-- <div class="section-title" style="margin-top: 12px;">控制仿真器dump文件是否生成</div>
           <a-form-item>
             <a-switch v-model:checked="simulationData.user_options.enableDump" @change="saveConfig" />
-          </a-form-item>
+          </a-form-item> -->
 
           <div class="section-title" style="margin-top: 12px;">高级参数</div>
           <EditTable :key="updateIndex" :dataSource="simulationData.user_options.advance_param"

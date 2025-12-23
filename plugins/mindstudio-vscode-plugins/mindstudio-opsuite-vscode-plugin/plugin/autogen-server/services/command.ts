@@ -108,9 +108,8 @@ export function getSimulateCommand(config_id: number, example_config_id: number)
   if (!config) {
     throw new Error('配置不存在');
   }
+  
   const operator = getOpByProjectIdAndOpName(config.project_id as number, config.op as string)!;
-  console.log('command operator', operator)
-
   const project = get_project_by_id(config.project_id as number) as any;
   const source_cann = project && project.ascend_env_script ? `. ${project.ascend_env_script}` : `. ${ascend_env_script}`;
   const run_path = getOpRunPath(operator);
@@ -133,8 +132,6 @@ export function getOnBoardCommand(config_id: number, example_config_id: number) 
   }
 
   const operator = getOpByProjectIdAndOpName(config.project_id as number, config.op as string)!;
-  console.log('command operator', operator)
-
   const project = get_project_by_id(config.project_id as number) as any;
   const source_cann = project && project.ascend_env_script ? `. ${project.ascend_env_script}` : `. ${ascend_env_script}`;
   const run_path = getOpRunPath(operator);
