@@ -36,14 +36,14 @@ export const commonApis: ApiGroup = {
         throw new Error('保存失败，源文件不存在');
       }
       if (sourceStat.type === vscode.FileType.File) {
-        await vscode.workspace.fs.copy(sourceUri, savingUri);
+        await vscode.workspace.fs.copy(sourceUri, savingUri, { overwrite: true });
       } else if (sourceStat.type === vscode.FileType.Directory) {
         await compressing.zip.compressDir(sourceUri.fsPath, `${sourceUri.fsPath}.zip`);
         const zipUri = vscode.Uri.file(`${sourceUri.fsPath}.zip`);
-        await vscode.workspace.fs.copy(zipUri, savingUri);
+        await vscode.workspace.fs.copy(zipUri, savingUri, { overwrite: true });
         vscode.workspace.fs.delete(zipUri);
-        vscode.commands.executeCommand('revealFileInOS', savingUri);
       }
+      vscode.commands.executeCommand('revealFileInOS', savingUri);
       return true;
     },
   },
