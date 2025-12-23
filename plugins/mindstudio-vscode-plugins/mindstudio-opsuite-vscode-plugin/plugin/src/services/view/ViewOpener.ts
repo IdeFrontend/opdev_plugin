@@ -58,7 +58,6 @@ export class ViewOpener {
       // 使用 InsightDataViewerPanel 创建或显示 panel
       InsightDataViewerPanel.createOrShow(ExtensionConfig.context, binPath);
 
-      vscode.window.showInformationMessage(`正在加载数据文件: ${binPath}`);
     } catch (error) {
       vscode.window.showErrorMessage(`加载数据文件失败: ${error}`);
     }
