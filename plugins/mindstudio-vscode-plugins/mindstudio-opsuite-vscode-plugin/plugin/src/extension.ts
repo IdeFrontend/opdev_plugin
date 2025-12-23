@@ -22,6 +22,7 @@ import { PermanentStorage } from './class/PermanentStorage';
 import { ExtensionConfig } from './services/ExtensionConfig';
 
 import { OpsOperateProvider } from './class/OpsOperateProvider';
+import { MindStudioPluginInstaller } from './class/MindStudioPluginInstaller';
 
 let extensionContext: vscode.ExtensionContext | undefined;
 
@@ -129,7 +130,7 @@ export async function activate(context: vscode.ExtensionContext) {
     opsOption.startBuild();
   });
 
-  // 注册编译命令
+  // 注册创建算子命令
   const createOptionsCommand = vscode.commands.registerCommand('huawei-op-devtools.createDictory', async (data: any, progress: any) => {
     await handleOperatorProjectDictoryFile({ createOperatorProjectDictoryFileType: data }, createOpsProvider, progress);
   });
@@ -199,6 +200,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(apiServer);
   context.subscriptions.push(viewServer);
   context.subscriptions.push(buildOpsCommand);
+  context.subscriptions.push(createOptionsCommand);
   context.subscriptions.push(openCommand);
   context.subscriptions.push(openProjectSH);
   context.subscriptions.push(ConfigCommand);
@@ -275,6 +277,15 @@ export async function activate(context: vscode.ExtensionContext) {
       // ignore invalid query
     }
   }
+
+  console.log('🧠 MindStudio 插件加载器已激活。');
+  const installer = new MindStudioPluginInstaller(context, {
+    pluginId: 'ascend.mindstudio-debug-vscode-plugin',
+    vsixRelativePath: './out/plugin/mindstudio-debug-vscode-plugin/MindStudio-Debug-VSCode-Plugin-1.0.7.vsix',
+    pluginVersion: '1.0.7'
+  });
+
+  await installer.installIfNeeded();
 }
 
 /**
