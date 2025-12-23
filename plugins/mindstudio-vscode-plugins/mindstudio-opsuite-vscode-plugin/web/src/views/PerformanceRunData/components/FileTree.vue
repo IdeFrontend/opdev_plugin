@@ -24,8 +24,8 @@ const SwitcherIcon: Component = ({ expanded }) => {
   });
 };
 
-function isRunData(row: object): row is PerformanceExecutionRecord {
-  return Reflect.has(row, 'timestamp');
+function isRootDir(row: object): row is PerformanceExecutionRecord {
+  return Reflect.has(row, 'timestamp') && Reflect.has(row, 'dirPath');
 }
 
 function isCsvFile(row: object): row is PerformanceRunDataFile {
@@ -62,18 +62,11 @@ const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
 
 <template>
   <div class="tree-container">
-    <a-directory-tree
-      :tree-data="treeData"
-      :show-line="false"
-      :show-icon="false"
-      :default-expand-all="true"
-      :switcher-icon="SwitcherIcon"
-      @select="onClickNode"
-    >
+    <a-directory-tree :tree-data="treeData" :show-line="false" :show-icon="false" :switcher-icon="SwitcherIcon" @select="onClickNode">
       <template #title="{ dataRef }">
-        <div class="custom-tree-node">
+        <div class="custom-tree-node" :class="{ root: isRootDir(dataRef) }">
           <div class="tree-node-title">{{ dataRef.title }}</div>
-          <template v-if="isRunData(dataRef)">
+          <template v-if="isRootDir(dataRef)">
             <div class="tree-node-timestamp">
               {{ formatTimestamp(dataRef.timestamp) }}
             </div>
@@ -105,13 +98,27 @@ const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
     background: transparent;
 
     .ant-tree-treenode {
+      width: 100%;
+
+      .ant-tree-node-content-wrapper {
+        width: 0;
+      }
+
       .custom-tree-node {
         color: #fff;
         width: 100%;
         position: relative;
 
+        &.root {
+          padding-right: 68px;
+        }
+
         .tree-node-title {
           color: #fff;
+          width: 100%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
         .tree-node-timestamp {
