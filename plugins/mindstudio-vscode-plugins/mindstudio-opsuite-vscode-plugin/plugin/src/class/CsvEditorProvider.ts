@@ -1,12 +1,7 @@
-/**
- * Copyright (c) 2025 Huawei Technologies Co., Ltd.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- */
-
 import * as vscode from 'vscode';
-import * as fs from 'fs';
+
+/** 最大渲染行数 */
+const MAX_RENDER_ROWS = 1000;
 
 /**
  * CSV 编辑器提供者 - 负责将 CSV 文件渲染为表格
@@ -110,9 +105,8 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
      * 生成 HTML 内容
      */
     private getHtmlForWebview(csvData: string[][]): string {
-        const maxRows = 1000; // 限制最大行数以提高性能
-        const displayRows = csvData.slice(0, maxRows);
-        const hasMoreRows = csvData.length > maxRows;
+        const displayRows = csvData.slice(0, MAX_RENDER_ROWS);
+        const isOverMaxRows = csvData.length > MAX_RENDER_ROWS;
 
         // 生成表头
         let headerHtml = '';
@@ -164,6 +158,7 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            padding: 20px;
         }
         
         .table-container {
@@ -171,6 +166,7 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
             overflow: auto;
             width: 100%;
             height: 100%;
+            margin-top: 12px;
         }
         
         table {
@@ -230,6 +226,7 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
 </head>
 <body>
     <div class="container">
+        <span>共 ${csvData.length} 行${isOverMaxRows ? `，仅显示前${MAX_RENDER_ROWS}行` : ''}</span>
         <div class="table-container">
             ${displayRows.length > 0 ? `<table>
                 ${headerHtml}
@@ -261,7 +258,6 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
     public async resolveCustomTextEditor(
         document: vscode.TextDocument,
         webviewPanel: vscode.WebviewPanel,
-        _token: vscode.CancellationToken
     ): Promise<void> {
         try {
             // 设置 Webview 选项

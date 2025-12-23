@@ -43,18 +43,27 @@ export class PerformanceRunData {
     return records.sort((a, b) => (order === 'asc' ? a[sortBy] - b[sortBy] : b[sortBy] - a[sortBy]));
   }
 
+  /**
+   * 标记
+   */
   public markRecord(key: string): void {
     const keySet = this.queryMarkedRecordKeySet();
     keySet.add(key);
     PermanentStorage.getInstance().set<string[]>(MARKED_STORAGE_KEY, [...keySet]);
   }
 
+  /**
+   * 取消标记
+   */
   public unmarkRecord(key: string): void {
     const keySet = this.queryMarkedRecordKeySet();
     keySet.delete(key);
     PermanentStorage.getInstance().set<string[]>(MARKED_STORAGE_KEY, [...keySet]);
   }
 
+  /**
+   * 查询已有标记
+   */
   private queryMarkedRecordKeySet(): Set<string> {
     const storageValue = PermanentStorage.getInstance().get<string[]>(MARKED_STORAGE_KEY, []);
     return new Set(storageValue);
