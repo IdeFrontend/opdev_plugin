@@ -108,8 +108,6 @@ export function getSimulateCommand(config_id: number, example_config_id: number)
   if (!config) {
     throw new Error('配置不存在');
   }
-  // 输入框默认值
-  let soc = soc_version;
   const operator = getOpByProjectIdAndOpName(config.project_id as number, config.op as string)!;
   console.log('command operator', operator)
 
@@ -120,9 +118,8 @@ export function getSimulateCommand(config_id: number, example_config_id: number)
 
   const aic = `--aic-metrics=PipeUtilization,ResourceConflictRatio${config.user_options.PMSampling?',PMSampling':''}`
   const dump = config.user_options.enableDump ? '--dump' : ''
-  const simulatorCmd =  `msopprof simulator --soc-version=${soc} --output=${operator.op_path}/.vscode/opprof ${exConfig.target_file} ${aic} ${dump}`
+  const simulatorCmd =  `msopprof simulator --soc-version=${config.user_options.simulatorType} --output=${operator.op_path}/.vscode/opprof ${exConfig.target_file} ${aic} ${dump}`
 
-  
   return [source_cann, cd_cmd, simulatorCmd].filter(Boolean).join(' && ')
 }
 
@@ -143,7 +140,7 @@ export function getOnBoardCommand(config_id: number, example_config_id: number) 
   const run_path = getOpRunPath(operator);
   const cd_cmd = `cd ${run_path}`;
 
-  const totalKeys = ['Occupancy', 'Roofline', 'Source', 'MemoryDetail', 'ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'OpBasicInfo', 'PipeUtilization', 'ResourceConflictRatio']
+  const totalKeys = ['Occupancy', 'Roofline', 'Source', 'MemoryDetail', 'ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'OpBasicInfo', 'PipeUtilization', 'ResourceConflictRatio', 'KernelScale']
   let aic = '--aic-metrics='
   totalKeys.forEach(key => {
     if (config.user_options[key]) {

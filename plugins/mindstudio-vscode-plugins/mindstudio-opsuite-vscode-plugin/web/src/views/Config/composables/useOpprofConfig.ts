@@ -6,6 +6,7 @@
  */
 
 import { reactive, ref } from "vue";
+import { message } from "../../../untils/Message";
 
 // 仿真配置数据类型
 export interface SimulationConfig {

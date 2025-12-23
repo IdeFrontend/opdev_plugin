@@ -100,12 +100,12 @@ const guide = ref('https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/
           </div>
 
           <a-form-item>
-            <a-input v-model:value="simulationData.user_options.simulatorType" placeholder="请输入仿真器类型" />
+            <a-input v-model:value="simulationData.user_options.simulatorType" placeholder="请输入仿真器类型"   @change="saveConfig"/>
           </a-form-item>
 
           <div class="section-title" style="margin-top: 12px;">控制仿真器dump文件是否生成</div>
           <a-form-item>
-            <a-switch v-model:checked="simulationData.user_options.enableDump" />
+            <a-switch v-model:checked="simulationData.user_options.enableDump" @change="saveConfig" />
           </a-form-item>
 
           <div class="section-title" style="margin-top: 12px;">高级参数</div>

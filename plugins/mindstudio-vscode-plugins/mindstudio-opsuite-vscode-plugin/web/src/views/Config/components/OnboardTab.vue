@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree. -->
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, watch, nextTick } from "vue";
 import { QuestionCircleOutlined } from "@ant-design/icons-vue";
 import editTable from "./editTable.vue";
 import { message } from "../../../untils/Message";
@@ -38,16 +38,25 @@ const emit = defineEmits([
 const handleSelectAll = (e) => {
   const checked = typeof e === "boolean" ? e : e.target?.checked ?? false;
   emit("selectAll", checked);
+  nextTick(() => {
+    saveConfig()
+  })
 };
 
 const handleMemoryAnalysisChange = (e) => {
   const checked = typeof e === "boolean" ? e : e.target?.checked ?? false;
   emit("memoryAnalysisChange", checked);
+  nextTick(() => {
+    saveConfig()
+  })
 };
 
 const handleOperatorPerformanceChange = (e) => {
   const checked = typeof e === "boolean" ? e : e.target?.checked ?? false;
   emit("operatorPerformanceChange", checked);
+  nextTick(() => {
+    saveConfig()
+  })
 };
 
 // 所有全选
@@ -64,8 +73,6 @@ const memorySelectedHalf = computed(() => {
   }
   return true
 })
-
-// todo 组内选项全部选中时，自动选上“全选”
 
 // 算子性能数据文件，这组半选
 const performanceSelectedHalf = computed(() => {
@@ -95,6 +102,26 @@ const saveConfig = () => {
   const obj = { config_id: props.onboardData.config_id, user_options: { ...props.onboardData.user_options } }
   message.sendMessageToParent({ command: "vscodeSaveConfig", data: { type: 'on_board', data: [JSON.parse(JSON.stringify(obj))] } });
 };
+
+
+// 组内选项全部选中时，自动选上“全选”
+watch(() => props.onboardData.user_options,
+  () => {
+    memorySelectedAll.value = props.onboardData.user_options.Occupancy && props.onboardData.user_options.Roofline
+
+    let count = 0
+    const keyArray = ['ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'OpBasicInfo', 'PipeUtilization', 'ResourceConflictRatio']
+    keyArray.forEach(key => {
+      if (props.onboardData.user_options[key]) {
+        count += 1
+      }
+    })
+    performanceSelectedAll.value = count === keyArray.length
+
+    totalSelectedAll.value = memorySelectedAll.value && performanceSelectedAll.value && props.onboardData.user_options.Source && props.onboardData.user_options.MemoryDetail
+  },
+  { deep: true }
+)
 </script>
 
 <template>
@@ -143,12 +170,12 @@ const saveConfig = () => {
           </div>
         </a-form-item>
         <a-form-item>
-          <a-checkbox v-model:checked="onboardData.user_options.Source">
+          <a-checkbox v-model:checked="onboardData.user_options.Source" @change="saveConfig">
             算子代码热点图
           </a-checkbox>
         </a-form-item>
         <a-form-item>
-          <a-checkbox v-model:checked="onboardData.user_options.MemoryDetail">
+          <a-checkbox v-model:checked="onboardData.user_options.MemoryDetail" @change="saveConfig">
             Cache热力图
           </a-checkbox>
         </a-form-item>
@@ -158,28 +185,28 @@ const saveConfig = () => {
             算子性能数据文件
           </a-checkbox>
           <div class="nested-checkbox-group horizontal">
-            <a-checkbox v-model:checked="onboardData.user_options.ArithmeticUtilization">
+            <a-checkbox v-model:checked="onboardData.user_options.ArithmeticUtilization" @change="saveConfig">
               Cube及Vector类型指令耗时和占比
             </a-checkbox>
-            <a-checkbox v-model:checked="onboardData.user_options.L2Cache">
+            <a-checkbox v-model:checked="onboardData.user_options.L2Cache" @change="saveConfig">
               L2 Cache命中率
             </a-checkbox>
-            <a-checkbox v-model:checked="onboardData.user_options.Memory">
+            <a-checkbox v-model:checked="onboardData.user_options.Memory" @change="saveConfig">
               内存读写带宽速率
             </a-checkbox>
-            <a-checkbox v-model:checked="onboardData.user_options.MemoryL0">
+            <a-checkbox v-model:checked="onboardData.user_options.MemoryL0" @change="saveConfig">
               L0读写带宽速率
             </a-checkbox>
-            <a-checkbox v-model:checked="onboardData.user_options.MemoryUB">
+            <a-checkbox v-model:checked="onboardData.user_options.MemoryUB" @change="saveConfig">
               UB读写带宽速率
             </a-checkbox>
-            <a-checkbox v-model:checked="onboardData.user_options.OpBasicInfo">
+            <a-checkbox v-model:checked="onboardData.user_options.OpBasicInfo" @change="saveConfig">
               算子基础信息
             </a-checkbox>
-            <a-checkbox v-model:checked="onboardData.user_options.PipeUtilization">
+            <a-checkbox v-model:checked="onboardData.user_options.PipeUtilization" @change="saveConfig">
               计算单元和搬运单元耗时占比
             </a-checkbox>
-            <a-checkbox v-model:checked="onboardData.user_options.ResourceConflictRatio">
+            <a-checkbox v-model:checked="onboardData.user_options.ResourceConflictRatio" @change="saveConfig">
               资源冲突占比
             </a-checkbox>
           </div>
@@ -191,12 +218,15 @@ const saveConfig = () => {
       <div class="section-title">模式</div>
       <a-form layout="vertical">
         <a-form-item>
-          <a-checkbox v-model:checked="onboardData.user_options.renderInPlatform">
-            平台内渲染结果
-          </a-checkbox>
+          <a-tooltip placeholder="topLeft" title="暂不支持，敬请期待">
+            <a-checkbox :checked="false" disabled>
+              平台内渲染结果
+            </a-checkbox>
+          </a-tooltip>
+
         </a-form-item>
         <a-form-item>
-          <a-checkbox v-model:checked="onboardData.user_options.downloadToLocal">
+          <a-checkbox v-model:checked="onboardData.user_options.downloadToLocal" @change="saveConfig">
             下载数据到本地
           </a-checkbox>
         </a-form-item>
@@ -217,7 +247,7 @@ const saveConfig = () => {
         <a-collapse-panel key="1" header="高级配置">
           <a-form layout="vertical">
             <a-form-item>
-              <a-checkbox v-model:checked="onboardData.user_options.KernelScale">
+              <a-checkbox v-model:checked="onboardData.user_options.KernelScale" @change="saveConfig">
                 使能Kernel侧制定代码段性能采集
                 <a-tooltip title="指定代码段范围时，需要在算子Kernel侧对应的代码段前后进行设置，具体设置请参见MetricsProfStart和MetricsProfStop接口">
                   <QuestionCircleOutlined class="help-icon" />
@@ -262,7 +292,7 @@ const saveConfig = () => {
 
     .help-icon {
       color: rgba(255, 255, 255, 0.45);
-      cursor: help;
+      // cursor: help;
       font-size: 14px;
     }
   }
