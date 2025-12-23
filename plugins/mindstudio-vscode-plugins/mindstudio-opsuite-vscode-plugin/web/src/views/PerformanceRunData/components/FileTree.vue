@@ -72,7 +72,7 @@ const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
             </div>
             <div class="run-data-operations">
               <!-- 下载 -->
-              <a-button type="text" :icon="h(DownloadOutlined)" @click.stop="handleClickDownload(dataRef)"></a-button>
+              <!-- <a-button type="text" :icon="h(DownloadOutlined)" @click.stop="handleClickDownload(dataRef)"></a-button> -->
               <!-- 标记/取消标记 -->
               <a-button
                 :class="{ marked: dataRef.marked }"
@@ -110,7 +110,7 @@ const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
         position: relative;
 
         &.root {
-          padding-right: 68px;
+          padding-right: 32px;
         }
 
         .tree-node-title {
