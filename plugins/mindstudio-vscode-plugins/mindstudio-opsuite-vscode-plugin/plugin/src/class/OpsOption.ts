@@ -11,6 +11,7 @@ import {
   getOnBoardCommand,
   getBuildOpCommand,
   getRunCommand,
+  getSanitizerCommand,
   getConfig,
   postConfig,
 } from '../../autogen-server';
@@ -112,7 +113,7 @@ export default class OpsOption {
   async getBuildConfigs() {
     const project_id = this.projectId;
     const array = [
-      getConfig(Number(project_id), 'build_op'), 
+      getConfig(Number(project_id), 'build_op'),
       getConfig(Number(project_id), 'build_example'),
       getConfig(Number(project_id), 'simulate'),
       getConfig(Number(project_id), 'on_board'),
@@ -141,10 +142,15 @@ export default class OpsOption {
     }
   }
 
-  async startBuild(config_id?: string) {
+  /**
+   * 编译部署算子
+   * @param config_id 配置Id
+   * @param compileOption 编译参数 --debug: debug模式 ；  --mssanitizer: 异常检测模式
+   */
+  async startBuild(config_id?: string, compileOption?: string) {
     const configId = config_id ? Number(config_id) : await this.getBuildConfig();
     try {
-      const buildCommand = await getBuildOpCommand(Number(configId));
+      const buildCommand = await getBuildOpCommand(Number(configId), compileOption);
       const res = await this.executor.execute(buildCommand, [], [], {}, true);
       if (res.code !== 0) {
         vscode.window.showErrorMessage(`编译算子失败 ${res.output}`);
@@ -187,12 +193,9 @@ export default class OpsOption {
       vscode.window.showErrorMessage(`获取编译example命令失败 ${(e as Error).message}`);
     }
   }
-  
-  async startSimulate(config_id?: string) {
-    let configId = config_id;
-    if (!configId) {
-      configId = await this.getSimulateConfig();
-    }
+
+  async startSimulate() {
+    const configId = await this.getSimulateConfig();
     const exConfigId = await this.getBuildExampleConfig();
     console.log('simulate configId', configId, exConfigId)
     try {
@@ -209,11 +212,8 @@ export default class OpsOption {
     }
   }
 
-  async startOnBoard(config_id?: string) {
-    let configId = config_id;
-    if (!configId) {
-      configId = await this.getOnBoardConfig();
-    }
+  async startOnBoard() {
+    const configId = await this.getOnBoardConfig();
     const exConfigId = await this.getBuildExampleConfig();
     console.log('onboard configId', configId, exConfigId)
     try {
@@ -251,22 +251,75 @@ export default class OpsOption {
   }
 
   async getSimulateConfig() {
-      try {
-        const configData = await this.getBuildConfigs();
-        console.log('configData in simulate', configData)
-        return configData.find((v: any) => v.config_type === 'simulate')?.config_id;
-      } catch {
-        return ''
-      }
+    try {
+      const configData = await this.getBuildConfigs();
+      console.log('configData in simulate', configData)
+      return configData.find((v: any) => v.config_type === 'simulate')?.config_id;
+    } catch {
+      return ''
+    }
   }
 
   async getOnBoardConfig() {
-      try {
-        const configData = await this.getBuildConfigs();
-        console.log('configData in onBoard', configData)
-        return configData.find((v: any) => v.config_type === 'on_board')?.config_id;
-      } catch {
-        return ''
+    try {
+      const configData = await this.getBuildConfigs();
+      console.log('configData in onBoard', configData)
+      return configData.find((v: any) => v.config_type === 'on_board')?.config_id;
+    } catch {
+      return ''
+    }
+  }
+
+  async getSanitizerConfigs() {
+    const project_id = this.projectId;
+    const config = await getConfig(Number(project_id), 'sanitizer');
+    return [...config];
+  }
+  async getSanitizerConfigId() {
+    try {
+      const configData = await this.getSanitizerConfigs();
+      console.log('configData in build', configData)
+      return configData.find((v: any) => v.config_type === 'sanitizer')?.config_id;
+    } catch {
+      return undefined;
+    }
+  }
+  async saveSanitizerForm(data: any, showMessage: boolean = true) {
+    try {
+      const formData = (await this.getSanitizerConfigs())[0]
+      await postConfig('sanitizer', [{ ...formData, user_options: { ...formData.user_options, ...data } }]);
+      if (!showMessage) {
+        return;
       }
+      vscode.window.showInformationMessage(`保存编译配置成功`);
+    } catch {
+      vscode.window.showErrorMessage(`保存编译配置失败`);
+    }
+  }
+
+  // 开启异常检测
+  async runSanitizer() {
+    try {
+
+      let sanitizerConfigId: Number | undefined;
+      let exampleConfigId: Number | undefined | string;
+      if (!sanitizerConfigId) {
+        sanitizerConfigId = await this.getSanitizerConfigId();
+      }
+      if (!exampleConfigId) {
+        exampleConfigId = await this.getBuildExampleConfig();
+      }
+
+
+      const sanitizerCommand = await getSanitizerCommand(Number(sanitizerConfigId), Number(exampleConfigId)) || '';
+      const res = await this.executor.execute(sanitizerCommand, [], [], {}, true);
+      if (res.code !== 0) {
+        vscode.window.showErrorMessage(`异常检测失败 ${res.output}`);
+        return;
+      }
+      vscode.window.showInformationMessage(`异常检测成功`);
+    } catch (e: any) {
+      vscode.window.showErrorMessage(`获取异常检测命令失败 ${e.message}`);
+    }
   }
 }

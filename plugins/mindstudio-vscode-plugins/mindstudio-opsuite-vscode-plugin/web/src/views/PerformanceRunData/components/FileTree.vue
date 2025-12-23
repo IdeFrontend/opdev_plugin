@@ -24,16 +24,16 @@ const SwitcherIcon: Component = ({ expanded }) => {
   });
 };
 
-function isRunData(row: object): row is PerformanceExecutionRecord {
-  return Reflect.has(row, 'timestamp');
+function isRootDir(row: object): row is PerformanceExecutionRecord {
+  return Reflect.has(row, 'timestamp') && Reflect.has(row, 'dirPath');
 }
 
 function isCsvFile(row: object): row is PerformanceRunDataFile {
   return Reflect.has(row, 'filePath') && Reflect.get(row as PerformanceRunDataFile, 'fileType') === 'csv';
 }
 
-function isBinFile(row: object): row is PerformanceRunDataFile {
-  return Reflect.has(row, 'filePath') && Reflect.get(row as PerformanceRunDataFile, 'fileType') === 'bin';
+function isInsightFile(row: object): row is PerformanceRunDataFile {
+  return Reflect.has(row, 'filePath') && ['bin', 'json'].includes(Reflect.get(row as PerformanceRunDataFile, 'fileType'));
 }
 
 function handleClickDownload(record: PerformanceExecutionRecord) {
@@ -54,7 +54,7 @@ const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
   const data = node.dataRef || node;
   if (isCsvFile(data)) {
     openCsvView(data.filePath);
-  } else if (isBinFile(data)) {
+  } else if (isInsightFile(data)) {
     openInsightView(data.filePath);
   }
 };
@@ -62,24 +62,17 @@ const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
 
 <template>
   <div class="tree-container">
-    <a-directory-tree
-      :tree-data="treeData"
-      :show-line="false"
-      :show-icon="false"
-      :default-expand-all="true"
-      :switcher-icon="SwitcherIcon"
-      @select="onClickNode"
-    >
+    <a-directory-tree :tree-data="treeData" :show-line="false" :show-icon="false" :switcher-icon="SwitcherIcon" @select="onClickNode">
       <template #title="{ dataRef }">
-        <div class="custom-tree-node">
+        <div class="custom-tree-node" :class="{ root: isRootDir(dataRef) }">
           <div class="tree-node-title">{{ dataRef.title }}</div>
-          <template v-if="isRunData(dataRef)">
+          <template v-if="isRootDir(dataRef)">
             <div class="tree-node-timestamp">
               {{ formatTimestamp(dataRef.timestamp) }}
             </div>
             <div class="run-data-operations">
               <!-- 下载 -->
-              <a-button type="text" :icon="h(DownloadOutlined)" @click.stop="handleClickDownload(dataRef)"></a-button>
+              <!-- <a-button type="text" :icon="h(DownloadOutlined)" @click.stop="handleClickDownload(dataRef)"></a-button> -->
               <!-- 标记/取消标记 -->
               <a-button
                 :class="{ marked: dataRef.marked }"
@@ -105,13 +98,27 @@ const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
     background: transparent;
 
     .ant-tree-treenode {
+      width: 100%;
+
+      .ant-tree-node-content-wrapper {
+        width: 0;
+      }
+
       .custom-tree-node {
         color: #fff;
         width: 100%;
         position: relative;
 
+        &.root {
+          padding-right: 32px;
+        }
+
         .tree-node-title {
           color: #fff;
+          width: 100%;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
         .tree-node-timestamp {
