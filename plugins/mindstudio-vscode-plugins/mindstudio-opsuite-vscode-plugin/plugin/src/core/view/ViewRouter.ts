@@ -33,7 +33,9 @@ export class ViewRouter extends vscode.Disposable {
    *  获取所有注册了Provider的路由
    */
   public getAllProviderRaws(): ViewRouteRaw[] {
-    return Array.from(this.routeRawMap.values()).filter((route) => route.providerViewType);
+    const allRoutes = Array.from(this.routeRawMap.values());
+    const providerRaws = allRoutes.filter((route) => route.providerViewType);
+    return providerRaws;
   }
 
   /**

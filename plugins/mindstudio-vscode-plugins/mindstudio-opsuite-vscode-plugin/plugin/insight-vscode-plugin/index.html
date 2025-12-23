@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据查看器</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        #app {
+            padding: 20px;
+        }
+        h1 {
+            margin-top: 0;
+        }
+        .plugin-container {
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .plugin-container iframe {
+            width: 100%;
+            border: none;
+            display: block;
+        }
+        .plugin-placeholder {
+            padding: 20px;
+            background-color: #f5f5f5;
+            text-align: center;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <h1>数据查看器</h1>
+        <p>BIN 文件路径: <span id="binPath">等待加载...</span></p>
+        <p>WebSocket 端口: <span id="wsPort">等待启动...</span></p>
+        
+        <!-- 插件 iframe 容器 -->
+        <div id="Cluster" class="plugin-container">
+            <div class="plugin-placeholder">等待加载 Cluster...</div>
+        </div>
+        <div id="Compute" class="plugin-container">
+            <div class="plugin-placeholder">等待加载 Compute...</div>
+        </div>
+        <div id="leaks" class="plugin-container">
+            <div class="plugin-placeholder">等待加载 leaks...</div>
+        </div>
+        <div id="Memory" class="plugin-container">
+            <div class="plugin-placeholder">等待加载 Memory...</div>
+        </div>
+        <div id="Operator" class="plugin-container">
+            <div class="plugin-placeholder">等待加载 Operator...</div>
+        </div>
+        <div id="RL" class="plugin-container">
+            <div class="plugin-placeholder">等待加载 RL...</div>
+        </div>
+        <div id="Statistic" class="plugin-container">
+            <div class="plugin-placeholder">等待加载 Statistic...</div>
+        </div>
+        <div id="Timeline" class="plugin-container">
+            <div class="plugin-placeholder">等待加载 Timeline...</div>
+        </div>
+    </div>
+    <!-- DataViewerController 脚本将由 InsightDataViewerPanel 注入 -->
+    <script id="data-viewer-controller-script"></script>
+    <script>
+        // 初始化控制器
+        if (typeof window.DataViewerController !== 'undefined' && typeof acquireVsCodeApi !== 'undefined') {
+            const vscode = acquireVsCodeApi();
+            const controller = new window.DataViewerController(vscode);
+            // 将控制器暴露到全局，以便调试
+            window.dataViewerController = controller;
+        } else {
+            console.error('[Webview] DataViewerController 未加载或 acquireVsCodeApi 不可用');
+        }
+    </script>
+</body>
+</html>

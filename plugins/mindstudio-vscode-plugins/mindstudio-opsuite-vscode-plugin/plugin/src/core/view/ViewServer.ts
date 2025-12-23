@@ -1,5 +1,3 @@
-import path from 'node:path';
-
 import * as vscode from 'vscode';
 
 import { ViewRouteRaw, ViewRouter } from './ViewRouter';
@@ -44,7 +42,10 @@ export class ViewServer extends vscode.Disposable {
   /** 已开启的页面 */
   private openedViews = new Map<string, vscode.WebviewPanel>();
 
-  constructor(routes: ViewRouteRaw[], private context: vscode.ExtensionContext) {
+  constructor(
+    routes: ViewRouteRaw[],
+    private context: vscode.ExtensionContext,
+  ) {
     super(() => this.onDispose());
     ViewServer.instance = this;
     this.router = new ViewRouter(routes);
@@ -89,13 +90,19 @@ export class ViewServer extends vscode.Disposable {
 
   private registerViewProviders() {
     const providerRaws = this.router.getAllProviderRaws();
+    const viewRootUri = vscode.Uri.joinPath(this.context.extensionUri, 'out', 'web');
+
     for (const routeRaw of providerRaws) {
-      const disposable = vscode.window.registerWebviewViewProvider(routeRaw.providerViewType!, {
-        resolveWebviewView: async (webviewView) => {
-          webviewView.webview.options = { enableScripts: true };
-          this.activeWebview(webviewView.webview, routeRaw.path);
+      const disposable = vscode.window.registerWebviewViewProvider(
+        routeRaw.providerViewType!,
+        {
+          resolveWebviewView: async (webviewView) => {
+            webviewView.webview.options = { enableScripts: true, localResourceRoots: [viewRootUri] };
+            this.activeWebview(webviewView.webview, routeRaw.path);
+          },
         },
-      });
+        { webviewOptions: { retainContextWhenHidden: true } },
+      );
       this.viewProviders.push(disposable);
     }
   }
@@ -114,6 +121,13 @@ export class ViewServer extends vscode.Disposable {
   private activeViewPanel(viewPanel: vscode.WebviewPanel, routePath: string, query: Record<string, unknown>): void {
     this.openedViews.set(routePath, viewPanel);
 
+    // 设置webview的资源根目录
+    const viewRootUri = vscode.Uri.joinPath(this.context.extensionUri, 'out', 'web');
+    viewPanel.webview.options = {
+      enableScripts: true,
+      localResourceRoots: [viewRootUri],
+    };
+
     this.activeWebview(viewPanel.webview, routePath, query);
 
     // 监听销毁
@@ -131,7 +145,8 @@ export class ViewServer extends vscode.Disposable {
    */
   private activeWebview(webview: vscode.Webview, routePath: string, query: Record<string, unknown> = {}) {
     this.renderer.render(webview, { lang: vscode.env.language });
-    this.query.setQuery(webview, { ...query, _path: routePath });
+    const queryParams = { ...query, _path: routePath };
+    this.query.setQuery(webview, queryParams);
 
     // 【hook】页面激活
     this.viewOpenedCallbacks.forEach((callback) => {

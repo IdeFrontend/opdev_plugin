@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://gitcode.com/Asscend/mstt"
   },
-  "version": "1.1.10",
+  "version": "1.1.12",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -31,9 +31,16 @@
           "icon": "resources/homeIcon.svg"
         }
       ],
+      "secondarySidebar": [
+        {
+          "id": "huawei-op-devtools-secondary-sidebar",
+          "title": "算子工程-操作",
+          "icon": "resources/operate.svg"
+        }
+      ],
       "secondaryActivitybar": [
         {
-          "id": "secondary-sidebar-operate-view2",
+          "id": "huawei-op-devtools-secondary-sidebar",
           "title": "算子工程-操作",
           "icon": "resources/operate.svg"
         }
@@ -47,7 +54,7 @@
           "type": "webview"
         }
       ],
-      "secondary-sidebar-operate-view2": [
+      "huawei-op-devtools-secondary-sidebar": [
         {
           "type": "webview",
           "id": "OpsOperateProvider",
@@ -57,8 +64,8 @@
       ],
       "explorer": [
         {
-          "id": "customSidebarView",
-          "name": "操作面板",
+          "id": "performanceSidebarView",
+          "name": "性能调优",
           "type": "webview",
           "visibility": "collapsed"
         }
@@ -105,6 +112,14 @@
         "command": "csv-viewer.openCsv",
         "title": "打开 CSV 文件",
         "category": "CSV Viewer"
+      },
+      {
+        "command": "huawei-op-devtools.test",
+        "title": "insight插件测试"
+      },
+      {
+        "command": "huawei-op-devtools.clearWelcomeCount",
+        "title": "清除欢迎页显示计数"
       }
     ],
     "menus": {
@@ -151,19 +166,24 @@
   },
   "dependencies": {
     "fs-extra": "^11.3.2",
-    "i18next": "^25.7.2"
+    "i18next": "^25.7.2",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "16.x",
     "@types/vscode": "^1.60.0",
-    "@typescript-eslint/eslint-plugin": "^5.31.0",
-    "@typescript-eslint/parser": "^5.31.0",
     "@vscode/test-web": "^0.0.77",
     "@vscode/vsce": "^3.7.1",
     "esbuild": "^0.27.1",
-    "eslint": "^8.20.0",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-vue": "^10.6.2",
+    "globals": "^16.5.0",
+    "prettier": "^3.7.4",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.50.0"
   }
 }
