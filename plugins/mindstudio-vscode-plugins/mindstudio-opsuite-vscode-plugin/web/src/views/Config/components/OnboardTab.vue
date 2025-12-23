@@ -120,6 +120,7 @@ watch(() => props.onboardData.user_options,
   },
   { deep: true }
 )
+
 </script>
 
 <template>
