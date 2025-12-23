@@ -69,25 +69,23 @@ const guide = ref('https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/
         </a-checkbox>
       </a-form-item>
 
-      <div class="section-title" style="margin-top: 12px;">模式</div>
+      <!-- <div class="section-title" style="margin-top: 12px;">模式</div>
       <a-form-item>
         <a-checkbox v-model:checked="simulationData.user_options.downloadToLocal" @change="saveConfig">
           下载数据到本地
         </a-checkbox>
       </a-form-item>
-
       <div class="section-title" style="margin-bottom: 8px;">数据存放位置</div>
       <a-form-item>
         <SelectFolder v-model="simulationData.user_options.dataStoragePath" placeholder="请选择数据存放位置" />
       </a-form-item>
-
       <a-form-item>
         <a-tooltip placeholder="topLeft" title="暂不支持，敬请期待">
           <a-checkbox :checked="false" disabled>
             平台内渲染结果
           </a-checkbox>
         </a-tooltip>
-      </a-form-item>
+      </a-form-item> -->
 
       <a-collapse v-model:activeKey="activeKey" ghost>
         <a-collapse-panel key="1" header="高级配置">
