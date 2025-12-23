@@ -71,7 +71,7 @@ export class PerformanceRunData {
 
   private async scanRunDataDirectory(markedKeySet: Set<string>) {
     const runData: PerformanceExecutionRecord[] = [];
-    if (!this.rootUri) {
+    if (!this.rootUri || !(await this.uriExists(this.rootUri))) {
       return runData;
     }
     const executionEntries = await vscode.workspace.fs.readDirectory(this.rootUri);
@@ -107,6 +107,7 @@ export class PerformanceRunData {
         }
       } else {
         const fileType = path.extname(subPath).replace(/^\./, '');
+        // 仅显示以下后缀的文件
         if (['csv', 'bin', 'json'].includes(fileType)) {
           const filePath = path.join(parentUri.fsPath, subPath);
           subDirOrFiles.push({ key: filePath, title: subPath, filePath, fileType });
@@ -114,5 +115,14 @@ export class PerformanceRunData {
       }
     }
     return subDirOrFiles;
+  }
+
+  private async uriExists(uri: vscode.Uri): Promise<boolean> {
+    try {
+      await vscode.workspace.fs.stat(uri);
+      return true;
+    } catch {
+      return false;
+    }
   }
 }

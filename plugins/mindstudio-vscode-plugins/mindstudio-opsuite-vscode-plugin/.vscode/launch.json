@@ -11,14 +11,14 @@
       "outFiles": [
         "${workspaceFolder}/out/extension.js"
       ],
-      "preLaunchTask": "npm: compile"
+      "preLaunchTask": "npm: compile:debug"
     },
     {
       "command": "npm run start-web",
       "name": "调试vscode web扩展",
       "request": "launch",
       "type": "node-terminal",
-      "preLaunchTask": "npm: compile"
+      "preLaunchTask": "npm: compile:debug"
     }
   ]
 }

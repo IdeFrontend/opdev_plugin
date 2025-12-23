@@ -20,7 +20,6 @@ import { routes } from './routes';
 import { apis } from './apis';
 import { PermanentStorage } from './class/PermanentStorage';
 import { ExtensionConfig } from './services/ExtensionConfig';
-import { InsightDataViewerPanel } from './class/InsightDataViewerPanel';
 
 import { OpsOperateProvider } from './class/OpsOperateProvider';
 
@@ -110,13 +109,6 @@ export async function activate(context: vscode.ExtensionContext) {
   // 注册打开欢迎页命令
   const newPrototypeCommand = vscode.commands.registerCommand('huawei-op-devtools.newPrototype', async () => {
     configNewPrototypeProvider.show('newPrototype');
-  });
-
-  // 注册测试命令
-  const testCommand = vscode.commands.registerCommand('huawei-op-devtools.test', async () => {
-    const binPath = '-';
-    InsightDataViewerPanel.createOrShow(context, binPath);
-    console.log('自动发送打开文件命令给iframe binPath=', binPath);
   });
 
   // 注册删除欢迎页计数命令（用于手动重置）
@@ -213,8 +205,9 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(createCommand);
   context.subscriptions.push(welcomeCommand);
   context.subscriptions.push(newPrototypeCommand);
-  context.subscriptions.push(testCommand);
   context.subscriptions.push(clearWelcomeCountCommand);
+  context.subscriptions.push(createOptionsCommand);
+  context.subscriptions.push(getHome);
 
   // 创建侧边栏提供者
   const sidebarProvider = new CustomSidebarProvider(context);
