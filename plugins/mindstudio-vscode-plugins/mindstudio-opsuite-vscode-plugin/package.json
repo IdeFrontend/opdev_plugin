@@ -51,8 +51,7 @@
         {
           "type": "webview",
           "id": "OpsOperateProvider",
-          "name": "算子工程-操作",
-          "icon": "resources/operate.svg"
+          "name": "算子工程-操作"
         }
       ],
       "explorer": [
