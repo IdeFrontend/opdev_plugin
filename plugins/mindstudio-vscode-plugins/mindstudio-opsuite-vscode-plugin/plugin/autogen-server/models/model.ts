@@ -5,6 +5,8 @@ import * as projectModel from './projectModel';
 import * as configModel from './configModel';
 import { OpGeneratorFactory } from '../services/opGeneratorFactory';
 import { getDefaultPath } from '../utils/opUtil';
+import { soc_version } from '../utils/ascend_util';
+import {getDefaultDirectory} from '../utils/projectUtils'
 
 const dataDir = path.join((config as any).user_data_dir, 'data');
 const opsFile = path.join(dataDir, 'ops.json');
@@ -159,6 +161,41 @@ export function generateStructure(data: Partial<OpRecord>, extensionPath: string
           op: record.op_name,
           script: 'msprof op',
           config_name: record.op_name,
+          // 内存分析图 相关
+          // 核间负载分析图
+          Occupancy: true,
+          // Roofline瓶颈分析
+          Roofline: true,
+
+          // 算子代码热点图
+          Source: true,
+          // Cache热力图
+          MemoryDetail: true,
+
+          // 算子性能数据文件 相关
+          // Cube及Vector类型指令耗时和占比
+          ArithmeticUtilization: true,
+          // L2 Cache命中率
+          L2Cache: true,
+          // 内存读写带宽速率
+          Memory: true,
+          // L0读写带宽速率
+          MemoryL0: true,
+          // UB读写带宽速率
+          MemoryUB: true,
+          // 算子基础信息
+          OpBasicInfo: true,
+          // 计算单元和搬运单元耗时占比
+          PipeUtilization: true,
+          // 资源冲突占比
+          ResourceConflictRatio: true,
+
+          // 使能Kernel侧制定代码段性能采集
+          KernelScale: true,
+          downloadToLocal: true,
+          renderInPlatform: false,
+          dataStoragePath: getDefaultDirectory(),
+          advance_param: []
         },
       };
       const simulate = {
@@ -167,12 +204,15 @@ export function generateStructure(data: Partial<OpRecord>, extensionPath: string
           op: record.op_name,
           script: 'msprof op simulator',
           config_name: record.op_name,
-          soc_version: null,
+          soc_version: soc_version,
           PMSampling: true,
           downloadToLocal: true,
           renderInPlatform: false,
           // 数据存放位置默认值
-          dataStoragePath: ''
+          dataStoragePath: getDefaultDirectory(),
+          simulatorType: soc_version && soc_version.startsWith('ascend') ? `A${soc_version.slice(1, -1)}${soc_version[soc_version.length - 1].toUpperCase()}` : '',
+          enableDump: false,
+          advance_param: []
         },
       };
       void configModel.postConfig('on_board', [onBoard]);

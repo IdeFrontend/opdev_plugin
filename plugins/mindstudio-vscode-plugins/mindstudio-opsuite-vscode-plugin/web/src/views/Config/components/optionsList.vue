@@ -48,7 +48,7 @@ const updateActiveOption = (item) => {
         <img src="../../../assets/svg/check.svg" alt="" class="img">
         异常检测
       </div>
-      <div v-if="false" class="options-list-item" :class="[Actived === 'opprof' ? 'is-active' : '']"
+      <div  class="options-list-item" :class="[Actived === 'opprof' ? 'is-active' : '']"
         @click="updateActiveOption('opprof')">
         <img src="../../../assets/svg/power.svg" alt="" class="img">
         性能调优

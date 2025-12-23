@@ -5,6 +5,7 @@ import { message } from "../../untils/Message";
 import settingIcon from '../../assets/svg/setting.svg'
 import buildIcon from '../../assets/svg/build.svg'
 import runIcon from '../../assets/svg/run.svg'
+import powerIcon from '../../assets/svg/power.svg'
 
 const themeConfig = {
     algorithm: theme.darkAlgorithm
@@ -60,6 +61,27 @@ const menuItems = ref([
         handler: () => {
             message.sendMessageToParent({ command: "vscodeRunExample", data: '' });
         }
+    },
+    {
+        key: 'power',
+        label: '性能调优',
+        icon: powerIcon,
+        children: [
+            {
+                key: 'onBoard',
+                label: '上板分析',
+                handler: () => {
+                    message.sendMessageToParent({ command: "vscodeOnBoard", data: '' });
+                }
+            },
+            {
+                key: 'simulate',
+                label: '仿真分析',
+                handler: () => {
+                    message.sendMessageToParent({ command: "vscodeSimulate", data: '' });
+                }
+            },
+        ]
     },
     // {
     //     key: 'projectSH',

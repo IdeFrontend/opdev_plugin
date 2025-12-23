@@ -319,8 +319,27 @@ const webviewMessageList: messageItem[] = [
     },
   },
   {
+    command: 'vscodeSimulate',
+    callback: async (msg: any, that: any) => {
+      const data = msg.message.data;
+      const opsOption = new OpsOption(that.context);
+      await opsOption.init();
+      await opsOption.startSimulate();
+    },
+  },
+  {
+    command: 'vscodeOnBoard',
+    callback: async (msg: any, that: any) => {
+      const data = msg.message.data;
+      const opsOption = new OpsOption(that.context);
+      await opsOption.init();
+      await opsOption.startOnBoard();
+    },
+  },
+  {
     command: 'vscodeSaveConfig',
     callback: async (msg: any, that: any) => {
+      console.log('saveconfig', msg)
       const data = msg.message.data;
       const opsOption = new OpsOption(that.context);
       await opsOption.init();
@@ -431,10 +450,30 @@ const webviewMessageList: messageItem[] = [
       }
     },
   },
-    {
+  {
+    command: 'vscodeSelectFolder',
+    callback: async (msg: any, that: any) => {
+      // 调用 VS Code 原生对话框（支持选择目录）
+      const uris = await vscode.window.showOpenDialog({
+        canSelectFiles: false,
+        canSelectFolders: true,
+        canSelectMany: false,
+        openLabel: '选择目录',
+      });
+
+      if (uris && uris[0]) {
+        // 将选中的目录路径发回 Webview
+        that.panel.webview.postMessage({
+          command: 'selectedDirectory',
+          data: uris[0].fsPath
+        });
+      }
+    },
+  },
+  {
     command: 'vscodeOperateErrorToast',
     callback: (message: any) => vscode.window.showErrorMessage('工程配置中命令行为空，请配置再执行该命令'),
-  },
+  }
 ];
 
 // 创建算子工程类型
