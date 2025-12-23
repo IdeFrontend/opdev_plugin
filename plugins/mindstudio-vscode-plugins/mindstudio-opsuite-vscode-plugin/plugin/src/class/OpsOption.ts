@@ -188,11 +188,8 @@ export default class OpsOption {
     }
   }
   
-  async startSimulate(config_id?: string) {
-    let configId = config_id;
-    if (!configId) {
-      configId = await this.getSimulateConfig();
-    }
+  async startSimulate() {
+    const configId = await this.getSimulateConfig();
     const exConfigId = await this.getBuildExampleConfig();
     console.log('simulate configId', configId, exConfigId)
     try {
@@ -209,11 +206,8 @@ export default class OpsOption {
     }
   }
 
-  async startOnBoard(config_id?: string) {
-    let configId = config_id;
-    if (!configId) {
-      configId = await this.getOnBoardConfig();
-    }
+  async startOnBoard() {
+    const configId = await this.getOnBoardConfig();
     const exConfigId = await this.getBuildExampleConfig();
     console.log('onboard configId', configId, exConfigId)
     try {

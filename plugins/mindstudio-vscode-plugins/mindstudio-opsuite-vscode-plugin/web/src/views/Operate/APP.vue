@@ -39,19 +39,19 @@ const menuItems = ref([
                     message.sendMessageToParent({ command: "vscodeBuildOp", data: '' });
                 }
             },
-            {
-                key: 'basicBuild',
-                label: '编译example',
-                children: [
-                    {
-                        key: 'buildExample',
-                        label: '基础编译',
-                        handler: () => {
-                            message.sendMessageToParent({ command: "vscodeBuildExample", data: '' });
-                        }
-                    }
-                ]
-            },
+            // {
+            //     key: 'basicBuild',
+            //     label: '编译example',
+            //     children: [
+            //         {
+            //             key: 'buildExample',
+            //             label: '基础编译',
+            //             handler: () => {
+            //                 message.sendMessageToParent({ command: "vscodeBuildExample", data: '' });
+            //             }
+            //         }
+            //     ]
+            // },
         ]
     },
     {
