@@ -368,6 +368,7 @@ const webviewMessageList: messageItem[] = [
       const data = msg.message.data;
       const opsOption = new OpsOption(that.context);
       await opsOption.init();
+      await opsOption.startBuild(undefined, '--debug');
       await opsOption.startSimulate();
     },
   },
@@ -377,6 +378,7 @@ const webviewMessageList: messageItem[] = [
       const data = msg.message.data;
       const opsOption = new OpsOption(that.context);
       await opsOption.init();
+      await opsOption.startBuild(undefined, '--debug');
       await opsOption.startOnBoard();
     }
   },

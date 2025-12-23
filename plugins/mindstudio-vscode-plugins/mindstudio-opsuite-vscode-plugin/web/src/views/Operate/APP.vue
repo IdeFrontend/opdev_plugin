@@ -65,27 +65,6 @@ const menuItems = ref([
         }
     },
     {
-        key: 'power',
-        label: '性能调优',
-        icon: powerIcon,
-        children: [
-            {
-                key: 'onBoard',
-                label: '上板分析',
-                handler: () => {
-                    message.sendMessageToParent({ command: "vscodeOnBoard", data: '' });
-                }
-            },
-            {
-                key: 'simulate',
-                label: '仿真分析',
-                handler: () => {
-                    message.sendMessageToParent({ command: "vscodeSimulate", data: '' });
-                }
-            },
-        ]
-    },
-    {
         key: 'runDebug',
         label: '调试',
         icon: debugIcon,
@@ -113,7 +92,28 @@ const menuItems = ref([
         handler: () => {
             message.sendMessageToParent({ command: "vscodeRunSanitizer", data: '' });
         }
-    }
+    },
+    {
+        key: 'power',
+        label: '性能调优',
+        icon: powerIcon,
+        children: [
+            {
+                key: 'onBoard',
+                label: '上板分析',
+                handler: () => {
+                    message.sendMessageToParent({ command: "vscodeOnBoard", data: '' });
+                }
+            },
+            {
+                key: 'simulate',
+                label: '仿真分析',
+                handler: () => {
+                    message.sendMessageToParent({ command: "vscodeSimulate", data: '' });
+                }
+            },
+        ]
+    },
     // {
     //     key: 'projectSH',
     //     label: '设置环境变量',
