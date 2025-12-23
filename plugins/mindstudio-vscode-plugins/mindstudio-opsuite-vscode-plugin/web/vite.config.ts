@@ -7,7 +7,7 @@ import { debugEntry } from './vite-plugins/debug-entry';
 /** 视图入口白名单 */
 const TEMP_MULTI_ENTRIES = ['Config', 'Link', 'Welcome', 'Home', 'newPrototype', 'Board', 'Operate'];
 
-export default defineConfig(() => {
+export default defineConfig(({ mode }) => {
   const buildInput: Record<string, string> = { index: 'index.html' };
   for (const entry of TEMP_MULTI_ENTRIES) {
     buildInput[entry] = `src/views/${entry}/${entry}.html`;
@@ -30,7 +30,7 @@ export default defineConfig(() => {
       outDir: 'out',
       emptyOutDir: true,
       assetsDir: 'assets',
-      sourcemap: true,
+      sourcemap: mode === 'debug',
       rollupOptions: { input: buildInput },
     },
   };

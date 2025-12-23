@@ -59,7 +59,7 @@ export default class OpsOption {
   }
 
   async getProjectId(accendEnvScript?: string) {
-    const project_name = this.project_name;
+    const project_name = this.project_name ?? '';
     const project_path = this.project_path;
     if (project_path === undefined) {
       return '';
@@ -73,10 +73,10 @@ export default class OpsOption {
   // 生成算子工程
   // <<< 算子工程 op_type: 'cann'
   // 右上角 op_type: 'ascend'
-  async createOpsByPrototype(ops_prototype_file: string, op_type = 'ascend', progress: any) {
+  async createOpsByPrototype(ops_prototype_file: string, op_type = 'ascend', progress?: any) {
     const project_id = this.projectId;
     try {
-      progress.report({ increment: 70, message: '算子文件创建中...' });
+      progress?.report({ increment: 70, message: '算子文件创建中...' });
       const result = await generateStructure(
         {
           ops_prototype_file,
@@ -142,10 +142,7 @@ export default class OpsOption {
   }
 
   async startBuild(config_id?: string) {
-    let configId = config_id;
-    if (!configId) {
-      configId = await this.getBuildConfig();
-    }
+    const configId = config_id ? Number(config_id) : await this.getBuildConfig();
     try {
       const buildCommand = await getBuildOpCommand(Number(configId));
       const res = await this.executor.execute(buildCommand, [], [], {}, true);
@@ -154,16 +151,13 @@ export default class OpsOption {
         return;
       }
       vscode.window.showInformationMessage(`编译算子成功`);
-    } catch (e: any) {
-      vscode.window.showErrorMessage(`获取编译算子命令失败 ${e.message}`);
+    } catch (e) {
+      vscode.window.showErrorMessage(`获取编译算子命令失败 ${(e as Error).message}`);
     }
   }
 
   async startRun(config_id?: string) {
-    let configId = config_id;
-    if (!configId) {
-      configId = await this.getBuildExampleConfig();
-    }
+    const configId = config_id ? Number(config_id) : await this.getBuildExampleConfig();
     try {
       const runCommand = await getRunCommand(Number(configId));
       console.log('runCommand', runCommand)
@@ -174,16 +168,13 @@ export default class OpsOption {
         return;
       }
       vscode.window.showInformationMessage(`运行成功`);
-    } catch (e: any) {
-      vscode.window.showErrorMessage(`获取运行命令失败 ${e.message}`);
+    } catch (e) {
+      vscode.window.showErrorMessage(`获取运行命令失败 ${(e as Error).message}`);
     }
   }
 
   async startBuildExample(config_id?: string) {
-    let configId = config_id;
-    if (!configId) {
-      configId = await this.getBuildExampleConfig();
-    }
+    const configId = config_id ? Number(config_id) : await this.getBuildExampleConfig();
     try {
       const buildCommand = await getBuildExampleCommand(Number(configId));
       const res = await this.executor.execute(buildCommand, [], [], {}, true);
@@ -192,8 +183,8 @@ export default class OpsOption {
         return;
       }
       vscode.window.showInformationMessage(`编译example成功`);
-    } catch (e: any) {
-      vscode.window.showErrorMessage(`获取编译example命令失败 ${e.message}`);
+    } catch (e) {
+      vscode.window.showErrorMessage(`获取编译example命令失败 ${(e as Error).message}`);
     }
   }
   
@@ -243,9 +234,9 @@ export default class OpsOption {
     try {
       const configData = await this.getBuildConfigs();
       console.log('configData in build', configData)
-      return configData.find((v: any) => v.config_type === 'build_op')?.config_id;
+      return configData.find((v) => v.config_type === 'build_op')?.config_id;
     } catch {
-      return '';
+      return undefined;
     }
   }
 
@@ -253,9 +244,9 @@ export default class OpsOption {
     try {
       const configData = await this.getBuildConfigs();
       console.log('configData in exam', configData)
-      return configData.find((v: any) => v.config_type === 'build_example')?.config_id;
+      return configData.find((v) => v.config_type === 'build_example')?.config_id;
     } catch {
-      return ''
+      return undefined;
     }
   }
 
