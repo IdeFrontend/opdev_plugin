@@ -29,6 +29,7 @@ function isUseBlock(val) {
   form.value.blockId = null;
 }
 
+const activeKey = ref(['config']);
 
 const getSanitizerForm = {
   command: 'iframeSetSanitizerForm',
@@ -61,29 +62,21 @@ onBeforeMount(() => {
     <div class="model-title">检测内容</div>
     <a-form :model="buildConfigForme" :label-col="{ span: 6 }" :wrapper-col="{ span: 24 }" ref="connectionFormRef"
       layout="vertical">
-      <a-form-item>
-        <a-checkbox v-model:value="form.tool.memcheck">内存检测</a-checkbox>
-      </a-form-item>
-      <a-form-item v-if="form.tool.memcheck">
-        <div class="mem-check">
+      <a-form-item class="check-type">
+        <a-checkbox v-model:checked="form.tool.memcheck">内存检测</a-checkbox>
+        <div v-if="form.tool.memcheck" class="mem-check">
           <div class="desc">基础检测：默认会开启非法读写、多核踩踏、非对齐访问和非法释放</div>
           <div class="desc">可选检测：</div>
           <div class="desc mem-option">
-            <a-checkbox v-model:value="form.memcheckOption['leak-check']">内存泄漏</a-checkbox>
-            <a-checkbox v-model:value="form.memcheckOption['check-unused-memory']">分配内存未使用</a-checkbox>
-            <a-checkbox v-model:value="form.memcheckOption['check-device-heap']">Device侧内存检测</a-checkbox>
-            <a-checkbox v-model:value="form.memcheckOption['check-cann-heap']">CANN软件栈内存检测</a-checkbox>
+            <a-checkbox v-model:checked="form.memcheckOption['leak-check']">内存泄漏</a-checkbox>
+            <a-checkbox v-model:checked="form.memcheckOption['check-unused-memory']">分配内存未使用</a-checkbox>
+            <a-checkbox v-model:checked="form.memcheckOption['check-device-heap']">Device侧内存检测</a-checkbox>
+            <a-checkbox v-model:checked="form.memcheckOption['check-cann-heap']">CANN软件栈内存检测</a-checkbox>
           </div>
         </div>
-      </a-form-item>
-      <a-form-item>
-        <a-checkbox v-model:value="form.tool.racecheck">竞争检测</a-checkbox>
-      </a-form-item>
-      <a-form-item>
-        <a-checkbox v-model:value="form.tool.initcheck">未初始化检测</a-checkbox>
-      </a-form-item>
-      <a-form-item>
-        <a-checkbox v-model:value="form.tool.synccheck">同步检测</a-checkbox>
+        <a-checkbox v-model:checked="form.tool.racecheck">竞争检测</a-checkbox>
+        <a-checkbox v-model:checked="form.tool.initcheck">未初始化检测</a-checkbox>
+        <a-checkbox v-model:checked="form.tool.synccheck">同步检测</a-checkbox>
       </a-form-item>
       <a-form-item label="报告输出等级">
         <a-radio-group v-bind:value="form.logLevel">
@@ -93,8 +86,8 @@ onBeforeMount(() => {
         </a-radio-group>
       </a-form-item>
 
-      <a-collapse v-model:activeKey="activeKey1" ghost>
-        <a-collapse-panel key="1" header="高级配置">
+      <a-collapse v-model:activeKey="activeKey" ghost>
+        <a-collapse-panel key="config" header="高级配置">
 
           <a-form-item>
             <template #label>
@@ -133,8 +126,17 @@ onBeforeMount(() => {
       </a-collapse>
     </a-form>
 
-    <el-button @click="saveSanitizerForm">保存</el-button>
+    <a-button @click="saveSanitizerForm">保存</a-button>
   </div>
 </template>
 
-<style lang="less"></style>
+<style lang="less">
+.sanitizer-config {
+  :deep(.a-form) {
+    .check-type {
+      display: flex;
+      flex-direction: column;
+    }
+  }
+}
+</style>
