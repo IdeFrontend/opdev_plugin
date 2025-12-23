@@ -15,7 +15,7 @@ type ConfigRecord = {
   custom_options?: string | null;
   user_options?: any | null;
   project_id: number;
-  op?: string | null;
+  op: string;
   create_by?: string | null;
   create_time?: string;
   update_by?: string | null;
@@ -68,7 +68,7 @@ function mapRecordToConfig(row: ConfigRecord) {
   };
 }
 
-export async function getConfig(project_id: number, config_type: string, op: string | null = null) {
+export function getConfig(project_id: number, config_type: string, op: string | null = null) {
   const store = ensureStore();
   const filtered = store.configs.filter(c => c.project_id === project_id && c.config_type === config_type && (op ? c.op === op : true));
   return filtered.map(mapRecordToConfig);

@@ -12,7 +12,6 @@ import { PermanentStorage } from './PermanentStorage';
 import webviewMessageList from './WebviewMessageList';
 import { HtmlTransformer } from './HtmlTransformer';
 import { ApiServer } from 'plugin:/core/ApiServer';
-import { Project } from 'plugin:/services/project/Project';
 
 /**
  * Webview提供者 - 负责创建和管理Webview面板

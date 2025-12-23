@@ -37,7 +37,7 @@ function isBinFile(row: object): row is PerformanceRunDataFile {
 }
 
 function handleClickDownload(record: PerformanceExecutionRecord) {
-  saveFileToLocal({ filename: `${record.title}.zip` });
+  saveFileToLocal({ sourcePath: record.dirPath, filename: `${record.title}.zip`, allowedTypes: ['zip'] });
 }
 
 // 标记

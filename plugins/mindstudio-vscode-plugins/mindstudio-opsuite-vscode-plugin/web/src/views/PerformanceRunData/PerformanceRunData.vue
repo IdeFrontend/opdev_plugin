@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import FilterBar from './components/FilterBar.vue';
 import FileTree from './components/FileTree.vue';
 import { getPerformanceRunData, toggleRecordMark } from '@/apis';
@@ -9,18 +9,18 @@ const sortOrder = ref<'asc' | 'desc'>('desc');
 const markedOnly = ref<boolean>(false);
 
 const treeData = ref<PerformanceExecutionRecord[]>([]);
+const renderTreeData = computed<PerformanceExecutionRecord[]>(() => (markedOnly.value ? treeData.value.filter((item) => item.marked) : treeData.value));
 
 function loadTreeData() {
-  const params = { sort: { by: 'timestamp' as const, order: sortOrder.value }, markedOnly: markedOnly.value };
+  const params = { sort: { by: 'timestamp' as const, order: sortOrder.value } };
   getPerformanceRunData(params).then((res) => {
-    console.log('api-response', res);
     treeData.value = res.data;
   });
 }
 
 loadTreeData();
 
-watch([sortOrder, markedOnly], () => {
+watch(sortOrder, () => {
   loadTreeData();
 });
 
@@ -36,6 +36,6 @@ function handleToggleMark(key: string, marked: boolean) {
 <template>
   <div @contextmenu.prevent>
     <FilterBar v-model:sort-order="sortOrder" v-model:marked-only="markedOnly" />
-    <FileTree :tree-data="treeData" @toggle-mark="handleToggleMark" />
+    <FileTree :tree-data="renderTreeData" @toggle-mark="handleToggleMark" />
   </div>
 </template>

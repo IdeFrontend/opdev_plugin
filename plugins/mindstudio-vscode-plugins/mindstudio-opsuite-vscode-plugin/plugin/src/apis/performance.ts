@@ -4,8 +4,9 @@ import { PerformanceRunData } from 'plugin:/services/performance/PerformanceRunD
 
 export const performanceApis: ApiGroup = {
   performance: {
-    getRunData(params: GetPerformanceRunDataParams): GetPerformanceRunDataResult {
-      return { data: PerformanceRunData.getInstance().queryExecutionRecords(params.sort.by, params.sort.order, params.markedOnly) };
+    async getRunData(params: GetPerformanceRunDataParams): Promise<GetPerformanceRunDataResult> {
+      const data = await PerformanceRunData.getInstance().queryExecutionRecords(params.sort.by, params.sort.order);
+      return { data };
     },
     toggleRecordMark(params: MarkRecordParams): void {
       if (params.marked) {

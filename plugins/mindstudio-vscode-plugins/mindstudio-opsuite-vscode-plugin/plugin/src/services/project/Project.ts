@@ -1,16 +1,49 @@
 import * as vscode from 'vscode';
 
-import { getProjectByPath } from '../../../autogen-server/models/projectModel';
+import { getProjectByPath, ProjectRecord } from '../../../autogen-server/models/projectModel';
 
-export class Project {
+export class Project<HasProject extends boolean = false> {
+  private static instance: Project;
+
+  static getInstance(): Project {
+    if (!Project.instance) {
+      Project.instance = new Project();
+    }
+    return Project.instance;
+  }
+
+  public get projectId(): HasProject extends true ? number : number | undefined {
+    return this._workspaceProject!.id;
+  }
+
+  public get projectPath(): HasProject extends true ? string : string | undefined {
+    return this._workspaceProject!.project_path;
+  }
+
+  private _workspaceProject: ProjectRecord | null = null;
+
+  constructor() {
+    this.getWorkspaceProject();
+    vscode.workspace.onDidChangeWorkspaceFolders((e) => {
+      const isCurrentProjectRemoved = e.removed.some((workspace) => workspace.uri.fsPath === this._workspaceProject?.project_path);
+      if (isCurrentProjectRemoved) {
+        this.getWorkspaceProject();
+      }
+    });
+  }
+
   /** 当前工作区是否已创建工程 */
-  public workspaceIsProject(): boolean {
+  public workspaceIsProject(): this is Project<true> {
+    return this._workspaceProject !== null;
+  }
+
+  private getWorkspaceProject() {
     const [workspaceFolder] = vscode.workspace.workspaceFolders ?? [];
     if (!workspaceFolder) {
-      return false;
+      this._workspaceProject = null;
+      return;
     }
     const projectPath = workspaceFolder.uri.fsPath;
-    const record = getProjectByPath(projectPath);
-    return record ? true : false;
+    this._workspaceProject = getProjectByPath(projectPath) ?? null;
   }
 }

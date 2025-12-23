@@ -6,7 +6,7 @@ import { ensureLaunchJsonExists } from '../utils/projectUtils';
 const dataDir = path.join(config.user_data_dir, 'data');
 const projectsFile = path.join(dataDir, 'projects.json');
 
-type ProjectRecord = {
+export type ProjectRecord = {
   id: number;
   project_name: string;
   project_path: string;
@@ -37,7 +37,7 @@ function ensureStore(): ProjectsStore {
       throw new Error('invalid projects store');
     }
     return parsed;
-  } catch (e) {
+  } catch {
     const init: ProjectsStore = { lastId: 0, projects: [] };
     fs.writeFileSync(projectsFile, JSON.stringify(init, null, 2), 'utf-8');
     return init;
