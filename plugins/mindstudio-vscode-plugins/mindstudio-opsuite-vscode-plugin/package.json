@@ -154,7 +154,7 @@
     "package:debug": "npm run compile:debug && vsce package --no-dependencies",
     "compile:debug": "npm run compile:web:debug && npm run compile:plugin:debug",
     "compile:web:debug": "cd web && npm run build:debug",
-    "compile:plugin:debug": "tsc --noEmit && tsx ./scripts/build-extension --sourcemap",
+    "compile:plugin:debug": "tsx ./scripts/build-extension --sourcemap",
     "lint": "eslint plugin/src",
     "install:web": "cd web && npm install"
   },

@@ -291,6 +291,7 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   await installer.installIfNeeded();
+  console.log('执行了', context);
   await exportEnvToFile(context);
 }
 
@@ -334,12 +335,17 @@ function initViews(context: vscode.ExtensionContext, apiServer: ApiServer): View
  * 在扩展根目录执行环境导出命令
  */
 async function exportEnvToFile(context: vscode.ExtensionContext) {
-  const targetDir = path.join(context.extensionPath, '.arts');
+  // 优先使用当前工作区根目录作为执行目录，其次回退到扩展安装目录
+  const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+  console.log('workspaceFolder', workspaceFolder);
+  const cwd = workspaceFolder?.uri.fsPath ?? context.extensionPath;
+  console.log('cwd',cwd)
+  const targetDir = path.join(cwd, '.arts');
   const targetFile = path.join(targetDir, 'env');
   try {
     await fs.promises.mkdir(targetDir, { recursive: true });
     await execAsync('. /ect/profile && env > ./.arts/env', {
-      cwd: '/',
+      cwd,
       shell: '/bin/bash',
       windowsHide: true,
     });
