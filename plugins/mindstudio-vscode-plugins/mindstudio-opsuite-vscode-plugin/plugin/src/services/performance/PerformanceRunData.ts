@@ -1,66 +1,16 @@
-import { PerformanceExecutionRecord } from 'shared:/api-types';
+import path from 'node:path';
+
+import * as vscode from 'vscode';
+
+import { PerformanceExecutionRecord, PerformanceRunDataFile, PerformanceRunDataFolder } from 'shared:/api-types';
 import { PermanentStorage } from 'plugin:/class/PermanentStorage';
+import { Project } from '../project/Project';
+import { getConfig } from 'plugin/autogen-server';
+import { getOpByProjectIdAndOpName } from 'plugin/autogen-server/models/model';
+
+const PERFORMANCE_RUN_DATA_ROOT = '.vscode/opprof';
 
 const MARKED_STORAGE_KEY = 'marked_performance_records';
-
-const mockData = [
-  {
-    title: 'msProf-20251014',
-    key: 'msProf-20251014',
-    timestamp: new Date('2025-10-14 08:50:00').getTime(),
-    children: [
-      {
-        title: '算子性能数据文件',
-        key: 'msProf-20251014-folder',
-        children: [
-          {
-            title: 'example2.csv',
-            key: 'msProf-20251014-example2',
-            filePath: 'D:\\msttObj\\alldemos\\打开csv\\example2.csv',
-            fileType: 'csv',
-          },
-          {
-            title: 'example3.csv',
-            key: 'msProf-20251014-example3',
-            filePath: 'D:\\msttObj\\alldemos\\打开csv\\example3.csv',
-            fileType: 'csv',
-          },
-          {
-            title: 'data.BIN',
-            key: 'msProf-20251014-data',
-            filePath: 'D:\\msttObj\\alldemos\\打开csv\\data.BIN',
-            fileType: 'bin',
-          },
-        ],
-      },
-    ],
-  },
-  {
-    title: 'msProf-20251015',
-    key: 'msProf-20251015',
-    timestamp: new Date('2025-10-15 14:30:00').getTime(),
-    children: [
-      {
-        title: '算子性能数据文件',
-        key: 'msProf-20251015-folder',
-        children: [
-          {
-            title: 'example.csv',
-            key: 'msProf-20251015-example',
-            filePath: 'D:\\msttObj\\alldemos\\打开csv\\example.csv',
-            fileType: 'csv',
-          },
-          {
-            title: 'data.BIN',
-            key: 'msProf-20251015-data',
-            filePath: 'D:\\msttObj\\alldemos\\打开csv\\data.BIN',
-            fileType: 'bin',
-          },
-        ],
-      },
-    ],
-  },
-];
 
 export class PerformanceRunData {
   private static instance: PerformanceRunData;
@@ -72,32 +22,97 @@ export class PerformanceRunData {
     return PerformanceRunData.instance;
   }
 
+  private rootUri?: vscode.Uri;
+
+  constructor() {
+    const project = Project.getInstance();
+    if (!project.workspaceIsProject()) {
+      return;
+    }
+    const [performanceConfig] = getConfig(project.projectId, 'build_op');
+    const op = getOpByProjectIdAndOpName(project.projectId, performanceConfig.op);
+    this.rootUri = vscode.Uri.joinPath(vscode.Uri.file(op?.op_path || project.projectPath), PERFORMANCE_RUN_DATA_ROOT);
+  }
+
   /**
    * 读取性能调优执行记录
    */
-  public queryExecutionRecords(sortBy: string, order: 'asc' | 'desc', markedOnly: boolean): PerformanceExecutionRecord[] {
-    // TODO mock
+  public async queryExecutionRecords(sortBy: 'timestamp', order: 'asc' | 'desc'): Promise<PerformanceExecutionRecord[]> {
     const markedKeySet = this.queryMarkedRecordKeySet();
-    return mockData.map((item) => ({
-      ...item,
-      marked: markedKeySet.has(item.key),
-    }));
+    const records = await this.scanRunDataDirectory(markedKeySet);
+    return records.sort((a, b) => (order === 'asc' ? a[sortBy] - b[sortBy] : b[sortBy] - a[sortBy]));
   }
 
+  /**
+   * 标记
+   */
   public markRecord(key: string): void {
     const keySet = this.queryMarkedRecordKeySet();
     keySet.add(key);
     PermanentStorage.getInstance().set<string[]>(MARKED_STORAGE_KEY, [...keySet]);
   }
 
+  /**
+   * 取消标记
+   */
   public unmarkRecord(key: string): void {
     const keySet = this.queryMarkedRecordKeySet();
     keySet.delete(key);
     PermanentStorage.getInstance().set<string[]>(MARKED_STORAGE_KEY, [...keySet]);
   }
 
+  /**
+   * 查询已有标记
+   */
   private queryMarkedRecordKeySet(): Set<string> {
     const storageValue = PermanentStorage.getInstance().get<string[]>(MARKED_STORAGE_KEY, []);
     return new Set(storageValue);
+  }
+
+  private async scanRunDataDirectory(markedKeySet: Set<string>) {
+    const runData: PerformanceExecutionRecord[] = [];
+    if (!this.rootUri) {
+      return runData;
+    }
+    const executionEntries = await vscode.workspace.fs.readDirectory(this.rootUri);
+    for (const [subPath, fileType] of executionEntries) {
+      if (fileType !== vscode.FileType.Directory) {
+        continue;
+      }
+
+      const recordUri = vscode.Uri.joinPath(this.rootUri, subPath);
+      const stat = await vscode.workspace.fs.stat(recordUri);
+      const executionRecord: PerformanceExecutionRecord = {
+        key: subPath,
+        title: subPath,
+        timestamp: stat.ctime,
+        dirPath: recordUri.fsPath,
+        marked: markedKeySet.has(subPath),
+        children: await this.scanSubFiles(recordUri),
+      };
+      runData.push(executionRecord);
+    }
+    return runData;
+  }
+
+  private async scanSubFiles(parentUri: vscode.Uri): Promise<(PerformanceRunDataFolder | PerformanceRunDataFile)[]> {
+    const subPathEntries = await vscode.workspace.fs.readDirectory(parentUri);
+    const subDirOrFiles: (PerformanceRunDataFolder | PerformanceRunDataFile)[] = [];
+    for (const [subPath, fileType] of subPathEntries) {
+      if (fileType === vscode.FileType.Directory) {
+        const subUri = vscode.Uri.joinPath(parentUri, subPath);
+        const children = await this.scanSubFiles(subUri);
+        if (children.length > 0) {
+          subDirOrFiles.push({ title: subPath, children });
+        }
+      } else {
+        const fileType = path.extname(subPath).replace(/^\./, '');
+        if (['csv', 'bin', 'json'].includes(fileType)) {
+          const filePath = path.join(parentUri.fsPath, subPath);
+          subDirOrFiles.push({ key: filePath, title: subPath, filePath, fileType });
+        }
+      }
+    }
+    return subDirOrFiles;
   }
 }

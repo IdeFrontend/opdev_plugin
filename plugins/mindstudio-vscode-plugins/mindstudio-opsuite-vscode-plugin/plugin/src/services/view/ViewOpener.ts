@@ -1,6 +1,4 @@
-import { InsightDataViewerPanel } from 'plugin:/class/InsightDataViewerPanel';
 import * as vscode from 'vscode';
-import { ExtensionConfig } from '../ExtensionConfig';
 
 // 跟踪已打开的CSV文件目录
 const openedCsvDirectories = new Map<string, vscode.Uri>();
@@ -54,13 +52,6 @@ export class ViewOpener {
       vscode.window.showErrorMessage('BIN文件路径不能为空');
       return;
     }
-    try {
-      // 使用 InsightDataViewerPanel 创建或显示 panel
-      InsightDataViewerPanel.createOrShow(ExtensionConfig.context, binPath);
-
-      vscode.window.showInformationMessage(`正在加载数据文件: ${binPath}`);
-    } catch (error) {
-      vscode.window.showErrorMessage(`加载数据文件失败: ${error}`);
-    }
+    vscode.commands.executeCommand('huawei-op-devtools.test', binPath);
   }
 }

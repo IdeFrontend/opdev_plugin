@@ -328,7 +328,6 @@ export class InsightDataViewerPanel implements vscode.Disposable {
 
     try {
       // 显示进度信息
-      vscode.window.showInformationMessage(`正在解压 ${zipFileName}...`);
       console.log(`[InsightDataViewerPanel] 开始解压: ${zipPath}`);
 
       // 解压 zip 文件到 insight-vscode-plugin 目录（压缩包中已有 server 目录）
@@ -359,7 +358,6 @@ export class InsightDataViewerPanel implements vscode.Disposable {
         console.warn('[InsightDataViewerPanel] 设置执行权限失败（Windows 系统可忽略）:', chmodError);
       }
 
-      vscode.window.showInformationMessage(`成功解压并准备 profiler_server`);
       console.log(`[InsightDataViewerPanel] ✓ server 目录准备完成`);
       return true;
     } catch (error: any) {
@@ -379,7 +377,6 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       // Windows 系统不启动服务
       if (os.platform() === 'win32') {
         console.log('[InsightDataViewerPanel] Windows 系统，跳过 profiler_server 启动');
-        vscode.window.showInformationMessage('Windows 系统不支持 profiler_server，服务未启动');
         // Windows 系统不启动服务，但仍需要设置一个默认端口（如果需要的话）
         // 或者直接 resolve，让 loadAndSendAllIframes 继续执行
         resolvePort();
@@ -456,7 +453,6 @@ export class InsightDataViewerPanel implements vscode.Disposable {
         this.profilerServerProcess = null;
       });
 
-      vscode.window.showInformationMessage(`profiler_server 已启动，端口: ${this.serverPort}`);
       console.log(`[InsightDataViewerPanel] ✓ profiler_server 已启动，端口: ${this.serverPort}`);
 
       // 通知端口已就绪

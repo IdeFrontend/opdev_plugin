@@ -20,7 +20,6 @@ import { routes } from './routes';
 import { apis } from './apis';
 import { PermanentStorage } from './class/PermanentStorage';
 import { ExtensionConfig } from './services/ExtensionConfig';
-import { Project } from './services/project/Project';
 import { InsightDataViewerPanel } from './class/InsightDataViewerPanel';
 
 import { OpsOperateProvider } from './class/OpsOperateProvider';
@@ -118,13 +117,11 @@ export async function activate(context: vscode.ExtensionContext) {
     const binPath = '-';
     InsightDataViewerPanel.createOrShow(context, binPath);
     console.log('自动发送打开文件命令给iframe binPath=', binPath);
-    vscode.window.showInformationMessage(`正在加载数据文件: ${binPath}`);
   });
 
   // 注册删除欢迎页计数命令（用于手动重置）
   const clearWelcomeCountCommand = vscode.commands.registerCommand('huawei-op-devtools.clearWelcomeCount', async () => {
     await context.globalState.update('welcomeShowCount', undefined);
-    vscode.window.showInformationMessage('已清除欢迎页显示计数');
     console.log('welcomeShowCount 已删除');
   });
 
