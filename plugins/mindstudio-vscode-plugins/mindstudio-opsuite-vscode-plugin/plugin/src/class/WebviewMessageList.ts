@@ -8,6 +8,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { Project } from '../services/project/Project';
 
 import { CommandExecutor } from './CommandOptions';
 import OpsOption from './OpsOption';
@@ -54,6 +55,12 @@ const webviewMessageList: messageItem[] = [
     command: 'openLinkWebviewPanel',
     callback: (message: any, that: any) => {
       vscode.commands.executeCommand('huawei-op-devtools.open');
+    },
+  },
+  {
+    command: 'vscodeRunSetProjectSH',
+    callback: async (msg: any, that: any) => {
+      vscode.commands.executeCommand('huawei-op-devtools.projectSH');
     },
   },
   {
@@ -182,6 +189,40 @@ const webviewMessageList: messageItem[] = [
   {
     command: 'vscodeCreatedProject',
     callback: async (msg: any, that: any) => {
+      
+      const message = msg.message.data;
+      // 标准算子projectPath需增加 /ops-math/math路径
+      let originPath;
+      if (message.createOperatorProjectDictoryFileType === 2) {
+        originPath = message.projectPath;
+        message.projectPath += '/ops-math/math';
+      }
+      vscode.window.showInformationMessage(`初始化中`);
+
+      const executor = new CommandExecutor();
+
+      // 标准算子解压缩
+      if (message.createOperatorProjectDictoryFileType === 2) {
+        await executor.execute(`mkdir -p ${originPath}`, ['File exists']);
+        const zipUrl = path.resolve(that.context.extensionPath, `out/templates/code_template/op-math/ops-math.zip`);
+        await executor.execute(`unzip -o ${zipUrl} -d ${originPath}`);
+      }
+      await executor.execute(`mkdir -p ${message.projectPath}/${message.projectName}`, ['File exists']);
+      if (message.projectSH) {
+        await executor.execute(`chmod +x ${message.projectSH}`);
+        await executor.execute(`${message.projectSH}`);
+      }
+      const opsOption = new OpsOption(that.context);
+      await opsOption.init(message.projectSH, message.projectPath, message.projectName);
+      await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(`${message.projectPath}/${message.projectName}`));
+
+      (that.context as vscode.ExtensionContext).globalState.update('runCommand', 'huawei-op-devtools.createDictory');
+      (that.context as vscode.ExtensionContext).globalState.update('runCommand-param', message.createOperatorProjectDictoryFileType);
+    },
+  },
+  {
+    command: 'vscodeCreatedProject',
+    callback: async (msg: any, that: any) => {
       const message = msg.message.data;
       // 标准算子projectPath需增加 /ops-math/math路径
       let originPath;
@@ -283,13 +324,6 @@ const webviewMessageList: messageItem[] = [
       const opsOption = new OpsOption(that.context);
       await opsOption.init();
       await opsOption.startBuildExample();
-    },
-  },
-  {
-    command: 'vscodeRunSetProjectSH',
-    callback: async (msg: any, that: any) => {
-      vscode.commands.executeCommand('huawei-op-devtools.projectSH');
-      console.log('打开环境变量');
     },
   },
   {

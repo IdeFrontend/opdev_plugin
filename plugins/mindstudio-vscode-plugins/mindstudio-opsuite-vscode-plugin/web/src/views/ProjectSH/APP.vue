@@ -14,9 +14,7 @@
             v-model:value="formData.projectSH"
             :options="projectSHOptions"
             :loading="projectSHLoading"
-            placeholder="请输入环境变量.sh文件地址，支持远程搜索"
-            @search="(val) => remoteSearch('projectSH', val)"
-            @focus="() => remoteSearch('projectSH', formData.projectSH)"
+            placeholder="请输入环境变量.sh文件地址"
           />
         </a-form-item>
         <a-form-item>
@@ -48,18 +46,18 @@ const formData = reactive({
 
 // 表单校验规则
 const formRules = {
-  projectSH: [
-    {
-      trigger: 'blur',
-      validator: async (rule, value) => {
-        if (!value) {
-          return Promise.resolve();
-        }
-        const pathExists = await checkPathExists({ path: value, mustFile: true });
-        return pathExists ? Promise.resolve() : Promise.reject('脚本文件不存在，请确认');
-      },
-    },
-  ],
+  // projectSH: [
+  //   {
+  //     trigger: 'blur',
+  //     validator: async (rule, value) => {
+  //       if (!value) {
+  //         return Promise.resolve();
+  //       }
+  //       const pathExists = await checkPathExists({ path: value, mustFile: true });
+  //       return pathExists ? Promise.resolve() : Promise.reject('脚本文件不存在，请确认');
+  //     },
+  //   },
+  // ],
 };
 
 // 远程搜索

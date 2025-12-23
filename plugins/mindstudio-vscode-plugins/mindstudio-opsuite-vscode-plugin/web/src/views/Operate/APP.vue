@@ -83,14 +83,14 @@ const menuItems = ref([
             },
         ]
     },
-    // {
-    //     key: 'projectSH',
-    //     label: '设置环境变量',
-    //     icon: runIcon,
-    //     handler: () => {
-    //         message.sendMessageToParent({ command: "vscodeRunSetProjectSH", data: '' });
-    //     }
-    // },
+    {
+        key: 'projectSH',
+        label: '设置环境变量',
+        icon: runIcon,
+        handler: () => {
+            message.sendMessageToParent({ command: "vscodeRunSetProjectSH", data: '' });
+        }
+    },
 ]);
 
 // 动态计算顶级子菜单的 key（带前缀）
@@ -134,10 +134,10 @@ const getBuildConfigItem = {
     callback: (message) => {
         const obj = JSON.parse(message.data || '{}')
         // // 如果没有任何配置信息 则禁用menu菜单
-        if (Object.keys(obj).length === 0) {
-            handlerSendMessage();
-            return;
-        }
+        // if (Object.keys(obj).length === 0) {
+        //     handlerSendMessage();
+        //     return;
+        // }
         const originalKey = actionQueue.value.shift();
         const handler = findMenuItemHandler(menuItems.value, originalKey);
         if (handler) {

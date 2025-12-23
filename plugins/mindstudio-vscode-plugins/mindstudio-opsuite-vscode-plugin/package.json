@@ -113,6 +113,10 @@
         "title": "insight插件测试"
       },
       {
+        "command": "huawei-op-devtools.projectSH",
+        "title": "设置环境变量"
+      },
+      {
         "command": "huawei-op-devtools.clearWelcomeCount",
         "title": "清除欢迎页显示计数"
       }

@@ -16,6 +16,10 @@ export class Project<HasProject extends boolean = false> {
     return this._workspaceProject!.id;
   }
 
+  public get projectSH(): HasProject extends true ? number : number | undefined {
+    return this._workspaceProject!.id;
+  }
+
   public get projectPath(): HasProject extends true ? string : string | undefined {
     return this._workspaceProject!.project_path;
   }
@@ -45,5 +49,6 @@ export class Project<HasProject extends boolean = false> {
     }
     const projectPath = workspaceFolder.uri.fsPath;
     this._workspaceProject = getProjectByPath(projectPath) ?? null;
+    console.log(this._workspaceProject,'value---------');
   }
 }

@@ -72,6 +72,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 打开环境变量命令
   const openProjectSH = vscode.commands.registerCommand('huawei-op-devtools.projectSH', async () => {
+    console.log('open');
     createOpsProvider.show('ProjectSH');
   });
 
