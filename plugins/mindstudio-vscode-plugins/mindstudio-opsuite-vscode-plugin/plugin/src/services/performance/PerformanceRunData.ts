@@ -71,7 +71,7 @@ export class PerformanceRunData {
 
   private async scanRunDataDirectory(markedKeySet: Set<string>) {
     const runData: PerformanceExecutionRecord[] = [];
-    if (!this.rootUri) {
+    if (!this.rootUri || !(await this.uriExists(this.rootUri))) {
       return runData;
     }
     const executionEntries = await vscode.workspace.fs.readDirectory(this.rootUri);
@@ -114,5 +114,14 @@ export class PerformanceRunData {
       }
     }
     return subDirOrFiles;
+  }
+
+  private async uriExists(uri: vscode.Uri): Promise<boolean> {
+    try {
+      await vscode.workspace.fs.stat(uri);
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
