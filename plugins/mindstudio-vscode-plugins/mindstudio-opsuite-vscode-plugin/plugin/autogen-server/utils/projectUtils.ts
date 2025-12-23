@@ -2,7 +2,11 @@ import fs from 'fs-extra';
 import path from 'path';
 import debugLaunch from './debug-launch.json';
 
-export async function ensureLaunchJsonExists(project_path: string) {
+export async function ensureLaunchJsonExists(project_path: string | undefined) {
+  if ( typeof project_path || typeof project_path !== 'string') {
+    return;
+  }
+
   const projectDir = path.resolve(project_path);
   const vscodeDir = path.join(projectDir, '.vscode');
   const launchJsonPath = path.join(vscodeDir, 'launch.json');
