@@ -107,6 +107,7 @@ export class PerformanceRunData {
         }
       } else {
         const fileType = path.extname(subPath).replace(/^\./, '');
+        // 仅显示以下后缀的文件
         if (['csv', 'bin', 'json'].includes(fileType)) {
           const filePath = path.join(parentUri.fsPath, subPath);
           subDirOrFiles.push({ key: filePath, title: subPath, filePath, fileType });
