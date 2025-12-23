@@ -9,19 +9,12 @@ import { ref, computed } from "vue";
 import { QuestionCircleOutlined } from "@ant-design/icons-vue";
 import editTable from "./editTable.vue";
 import { message } from "../../../untils/Message";
+import SelectFolder from "./SelectFolder.vue";
 
 const props = defineProps({
   onboardData: {
     type: Object,
     required: true,
-  },
-  dataStorageOptions: {
-    type: Array,
-    default: () => [],
-  },
-  dataStorageLoading: {
-    type: Boolean,
-    default: false,
   },
   updateIndex: {
     type: Number,
@@ -55,14 +48,6 @@ const handleMemoryAnalysisChange = (e) => {
 const handleOperatorPerformanceChange = (e) => {
   const checked = typeof e === "boolean" ? e : e.target?.checked ?? false;
   emit("operatorPerformanceChange", checked);
-};
-
-const handleRemoteSearch = (val) => {
-  emit("remoteSearch", val, "onboard");
-};
-
-const handleFocus = () => {
-  emit("remoteSearch", props.onboardData.dataStoragePath, "onboard");
 };
 
 // 所有全选
@@ -115,7 +100,18 @@ const saveConfig = () => {
 <template>
   <div class="onboard-tab">
     <div class="config-section">
-      <div class="section-title">采集内容</div>
+      <div class="flex-title">
+        采集内容
+        <a-tooltip :overlay-style="{ maxWidth: '300px' }">
+          <template #title>
+            <div>
+              具体图形案例请参考
+              <a :href="guide">算子调优工具概述</a>
+            </div>
+          </template>
+          <QuestionCircleOutlined class="help-icon" />
+        </a-tooltip>
+      </div>
       <a-form layout="vertical">
         <a-form-item>
           <a-checkbox v-model:checked="totalSelectedAll" :indeterminate="totalSelectedHalf" @change="handleSelectAll">
@@ -211,9 +207,7 @@ const saveConfig = () => {
       <div class="section-title">数据存放位置</div>
       <a-form layout="vertical">
         <a-form-item>
-          <a-auto-complete v-model:value="onboardData.user_options.dataStoragePath" :options="dataStorageOptions"
-            :loading="dataStorageLoading" placeholder="请输入数据存放位置，支持远程搜索" @search="handleRemoteSearch"
-            @focus="handleFocus" />
+          <SelectFolder v-model="onboardData.user_options.dataStoragePath" placeholder="请选择数据存放位置" />
         </a-form-item>
       </a-form>
     </div>
@@ -223,9 +217,9 @@ const saveConfig = () => {
         <a-collapse-panel key="1" header="高级配置">
           <a-form layout="vertical">
             <a-form-item>
-              <a-checkbox v-model:checked="onboardData.user_options.useKernelSideCode">
+              <a-checkbox v-model:checked="onboardData.user_options.KernelScale">
                 使能Kernel侧制定代码段性能采集
-                <a-tooltip title="帮助内容待定">
+                <a-tooltip title="指定代码段范围时，需要在算子Kernel侧对应的代码段前后进行设置，具体设置请参见MetricsProfStart和MetricsProfStop接口">
                   <QuestionCircleOutlined class="help-icon" />
                 </a-tooltip>
               </a-checkbox>
@@ -245,6 +239,15 @@ const saveConfig = () => {
 
 <style lang="less" scoped>
 .onboard-tab {
+  .flex-title {
+    display: flex;
+    align-items: center;
+
+    .help-icon {
+      margin-left: 4px;
+    }
+  }
+
   .config-section {
     margin-bottom: 24px;
 
@@ -321,11 +324,11 @@ const saveConfig = () => {
       color: rgba(255, 255, 255, 0.85);
       margin-right: 16px;
 
-      .help-icon {
-        color: rgba(255, 255, 255, 0.45);
-        cursor: help;
-        font-size: 14px;
-      }
+      // .help-icon {
+      //   color: rgba(255, 255, 255, 0.45);
+      //   cursor: help;
+      //   font-size: 14px;
+      // }
     }
   }
 }

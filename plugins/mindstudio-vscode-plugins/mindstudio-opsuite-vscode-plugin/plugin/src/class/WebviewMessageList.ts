@@ -466,6 +466,26 @@ const webviewMessageList: messageItem[] = [
       }
     },
   },
+  {
+    command: 'vscodeSelectFolder',
+    callback: async (msg: any, that: any) => {
+      // 调用 VS Code 原生对话框（支持选择目录）
+      const uris = await vscode.window.showOpenDialog({
+        canSelectFiles: false,
+        canSelectFolders: true,
+        canSelectMany: false,
+        openLabel: '选择目录',
+      });
+
+      if (uris && uris[0]) {
+        // 将选中的目录路径发回 Webview
+        that.panel.webview.postMessage({
+          command: 'selectedDirectory',
+          data: uris[0].fsPath
+        });
+      }
+    },
+  },
 ];
 
 // 创建算子工程类型

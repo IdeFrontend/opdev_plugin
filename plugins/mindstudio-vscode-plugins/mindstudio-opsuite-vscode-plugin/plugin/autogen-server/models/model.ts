@@ -6,6 +6,7 @@ import * as configModel from './configModel';
 import { OpGeneratorFactory } from '../services/opGeneratorFactory';
 import { getDefaultPath } from '../utils/opUtil';
 import { soc_version } from '../utils/ascend_util';
+import {getDefaultDirectory} from '../utils/projectUtils'
 
 const dataDir = path.join((config as any).user_data_dir, 'data');
 const opsFile = path.join(dataDir, 'ops.json');
@@ -193,7 +194,7 @@ export function generateStructure(data: Partial<OpRecord>, extensionPath: string
           KernelScale: true,
           downloadToLocal: true,
           renderInPlatform: false,
-          dataStoragePath: '',
+          dataStoragePath: getDefaultDirectory(),
           advance_param: []
         },
       };
@@ -208,7 +209,7 @@ export function generateStructure(data: Partial<OpRecord>, extensionPath: string
           downloadToLocal: true,
           renderInPlatform: false,
           // 数据存放位置默认值
-          dataStoragePath: '',
+          dataStoragePath: getDefaultDirectory(),
           simulatorType: soc_version && soc_version.startsWith('ascend') ? `A${soc_version.slice(1)}` : '',
           enableDump: false,
           advance_param: []

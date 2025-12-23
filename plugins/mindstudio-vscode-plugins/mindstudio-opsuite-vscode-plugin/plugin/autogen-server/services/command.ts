@@ -113,7 +113,8 @@ export function getSimulateCommand(config_id: number, example_config_id: number)
   const operator = getOpByProjectIdAndOpName(config.project_id as number, config.op as string)!;
   console.log('command operator', operator)
   const aic = `--aic-metrics=PipeUtilization,ResourceConflictRatio${config.user_options.PMSampling?',PMSampling':''}`
-  return `msprof op simulator --soc-version=${soc} --output=${operator.op_path}/.vscode/opprof ${exConfig.target_file} ${aic}`
+  const dump = config.user_options.enableDump ? '--dump' : ''
+  return `msprof op simulator --soc-version=${soc} --output=${operator.op_path}/.vscode/opprof ${exConfig.target_file} ${aic} ${dump}`
 }
 
 // 生成上板命令
