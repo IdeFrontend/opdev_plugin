@@ -174,7 +174,7 @@ const webviewMessageList: messageItem[] = [
       const configData = await opsOption.getSanitizerConfigs();
       console.log('SetSanitizerForm', configData);
 
-      that._view.webview.postMessage({
+      that.panel.webview.postMessage({
         command: 'iframeSetSanitizerForm',
         data: JSON.stringify((configData || [])[0]),
       });
