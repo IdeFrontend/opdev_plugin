@@ -96,6 +96,7 @@ onMounted(() => {
   border-right: 1px solid #424242;
   overflow: hidden;
   background-color: rgba(0, 0, 0, 0.2);
+  min-height: calc(100vh - 75px);
 }
 
 .config-main {
