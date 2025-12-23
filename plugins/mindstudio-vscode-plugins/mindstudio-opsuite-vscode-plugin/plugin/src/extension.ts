@@ -13,6 +13,7 @@ import { exec } from 'child_process';
 
 import i18nResource from 'shared:/i18n';
 
+import { ExplorerRootUtils } from './class/ExplorerRootUtils';
 import { WebviewProvider } from './class/webviewProvider';
 import { handleOperatorProjectDictoryFile } from './class/WebviewMessageList';
 import OpsOption from './class/OpsOption';
@@ -336,6 +337,8 @@ function initViews(context: vscode.ExtensionContext, apiServer: ApiServer): View
  */
 async function exportEnvToFile(context: vscode.ExtensionContext) {
   // 优先使用当前工作区根目录作为执行目录，其次回退到扩展安装目录
+  // const selectedFiles = ExplorerRootUtils.getPrimaryRoot();
+  // console.log(selectedFiles);
   const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
   console.log('workspaceFolder', workspaceFolder);
   const cwd = workspaceFolder?.uri.fsPath ?? context.extensionPath;
@@ -344,7 +347,7 @@ async function exportEnvToFile(context: vscode.ExtensionContext) {
   const targetFile = path.join(targetDir, 'env');
   try {
     await fs.promises.mkdir(targetDir, { recursive: true });
-    await execAsync('. /ect/profile && env > ./.arts/env', {
+    await execAsync('. /ect/profile && env > ./.arts/.env', {
       cwd,
       shell: '/bin/bash',
       windowsHide: true,

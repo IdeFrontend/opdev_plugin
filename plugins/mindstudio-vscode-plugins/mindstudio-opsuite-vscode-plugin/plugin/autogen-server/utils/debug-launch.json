@@ -1,24 +1,15 @@
 {
   "configurations": [
     {
-      "name": "xx-debug",
+      "name": "msdebug",
       "type": "msdebug-mi",
       "request": "launch",
-      "cwd": "${workspaceFolder}",
-      "target": "/xxx/xx/xx_operator",
-      "targetArgs": ["arg1", "arg2"],
-      "msdebugMiPath": "/xx/x/msdebug-mi",
-      "environmentScripts": ["/xxx/xx/Ascend/ascend-toolkit/set_env.sh", "/xxx/xx/xx-user-bussiness/set_env.sh", "/xx/xxx/project/.vscode/.env"],
-      "environment": [
-        {
-          "name": "LD_LIBRARY_PATH",
-          "value": "/xx/x/lib:${LD_LIBRARY_PATH}"
-        },
-        {
-          "name": "LAUNCH_KERNEL_PATH",
-          "value": "/xx/x/my_kernel.o"
-        }
-      ]
+      "cwd": "${workspaceRoot}",
+      "target": "${workspaceFolder}/build/${workspaceFolderBasename}",
+      "msdebugMiPath": "${env:ASCEND_TOOLKIT_HOME}/tools/msdebug/bin/msdebug-mi",
+      "environmentScripts": ["${workspaceFolder}/.arts/.env"],
+      "printMiinput":true,
+      "printMiOutput": true
     }
   ]
 }
