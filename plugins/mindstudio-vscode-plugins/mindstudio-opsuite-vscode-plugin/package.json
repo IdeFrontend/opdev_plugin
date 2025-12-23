@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://gitcode.com/Asscend/mstt"
   },
-  "version": "1.1.12",
+  "version": "1.1.11",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -33,14 +33,7 @@
       ],
       "secondarySidebar": [
         {
-          "id": "huawei-op-devtools-secondary-sidebar",
-          "title": "算子工程-操作",
-          "icon": "resources/operate.svg"
-        }
-      ],
-      "secondaryActivitybar": [
-        {
-          "id": "huawei-op-devtools-secondary-sidebar",
+          "id": "secondary-sidebar-operate-view",
           "title": "算子工程-操作",
           "icon": "resources/operate.svg"
         }
@@ -54,7 +47,7 @@
           "type": "webview"
         }
       ],
-      "huawei-op-devtools-secondary-sidebar": [
+      "secondary-sidebar-operate-view": [
         {
           "type": "webview",
           "id": "OpsOperateProvider",
