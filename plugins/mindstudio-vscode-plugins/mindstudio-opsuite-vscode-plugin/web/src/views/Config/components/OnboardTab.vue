@@ -124,7 +124,7 @@ watch(() => props.onboardData.user_options,
 
 <template>
   <div class="onboard-tab">
-    <div class="config-section">
+    <a-form layout="vertical">
       <div class="flex-title">
         采集内容
         <a-tooltip :overlay-style="{ maxWidth: '300px' }">
@@ -137,131 +137,117 @@ watch(() => props.onboardData.user_options,
           <QuestionCircleOutlined class="help-icon" />
         </a-tooltip>
       </div>
-      <a-form layout="vertical">
-        <a-form-item>
-          <a-checkbox v-model:checked="totalSelectedAll" :indeterminate="totalSelectedHalf" @change="handleSelectAll">
-            全选
-          </a-checkbox>
-        </a-form-item>
-        <a-form-item>
-          <a-checkbox v-model:checked="memorySelectedAll" :indeterminate="memorySelectedHalf"
-            @change="handleMemoryAnalysisChange">
-            内存分析图
-          </a-checkbox>
-          <div class="nested-checkbox-group horizontal">
-            <a-checkbox v-model:checked="onboardData.user_options.Occupancy" @change="saveConfig">
-              核间负载分析图
-            </a-checkbox>
-            <a-checkbox v-model:checked="onboardData.user_options.Roofline" @change="saveConfig">
-              Roofline瓶颈分析
-            </a-checkbox>
-            <a-tooltip placeholder="topLeft" title="默认采集">
-              <a-checkbox :checked="true" disabled>
-                计算工作负载分析
-              </a-checkbox>
-            </a-tooltip>
-            <a-tooltip placeholder="topLeft" title="默认采集">
-              <a-checkbox :checked="true" disabled>
-                内存负载分析
-              </a-checkbox>
-            </a-tooltip>
-          </div>
-        </a-form-item>
-        <a-form-item>
-          <a-checkbox v-model:checked="onboardData.user_options.Source" @change="saveConfig">
-            算子代码热点图
-          </a-checkbox>
-        </a-form-item>
-        <a-form-item>
-          <a-checkbox v-model:checked="onboardData.user_options.MemoryDetail" @change="saveConfig">
-            Cache热力图
-          </a-checkbox>
-        </a-form-item>
-        <a-form-item>
-          <a-checkbox v-model:checked="performanceSelectedAll" :indeterminate="performanceSelectedHalf"
-            @change="handleOperatorPerformanceChange">
-            算子性能数据文件
-          </a-checkbox>
-          <div class="nested-checkbox-group horizontal">
-            <a-checkbox v-model:checked="onboardData.user_options.ArithmeticUtilization" @change="saveConfig">
-              Cube及Vector类型指令耗时和占比
-            </a-checkbox>
-            <a-checkbox v-model:checked="onboardData.user_options.L2Cache" @change="saveConfig">
-              L2 Cache命中率
-            </a-checkbox>
-            <a-checkbox v-model:checked="onboardData.user_options.Memory" @change="saveConfig">
-              内存读写带宽速率
-            </a-checkbox>
-            <a-checkbox v-model:checked="onboardData.user_options.MemoryL0" @change="saveConfig">
-              L0读写带宽速率
-            </a-checkbox>
-            <a-checkbox v-model:checked="onboardData.user_options.MemoryUB" @change="saveConfig">
-              UB读写带宽速率
-            </a-checkbox>
-            <a-checkbox v-model:checked="onboardData.user_options.OpBasicInfo" @change="saveConfig">
-              算子基础信息
-            </a-checkbox>
-            <a-checkbox v-model:checked="onboardData.user_options.PipeUtilization" @change="saveConfig">
-              计算单元和搬运单元耗时占比
-            </a-checkbox>
-            <a-checkbox v-model:checked="onboardData.user_options.ResourceConflictRatio" @change="saveConfig">
-              资源冲突占比
-            </a-checkbox>
-          </div>
-        </a-form-item>
-      </a-form>
-    </div>
 
-    <div class="config-section">
-      <div class="section-title">模式</div>
-      <a-form layout="vertical">
-        <a-form-item>
-          <a-tooltip placeholder="topLeft" title="暂不支持，敬请期待">
-            <a-checkbox :checked="false" disabled>
-              平台内渲染结果
+      <a-form-item>
+        <a-checkbox v-model:checked="totalSelectedAll" :indeterminate="totalSelectedHalf" @change="handleSelectAll">
+          全选
+        </a-checkbox>
+      </a-form-item>
+      <a-form-item>
+        <a-checkbox v-model:checked="memorySelectedAll" :indeterminate="memorySelectedHalf"
+          @change="handleMemoryAnalysisChange">
+          内存分析图
+        </a-checkbox>
+        <div class="nested-checkbox-group horizontal">
+          <a-checkbox v-model:checked="onboardData.user_options.Occupancy" @change="saveConfig">
+            核间负载分析图
+          </a-checkbox>
+          <a-checkbox v-model:checked="onboardData.user_options.Roofline" @change="saveConfig">
+            Roofline瓶颈分析
+          </a-checkbox>
+          <a-tooltip placeholder="topLeft" title="默认采集">
+            <a-checkbox :checked="true" disabled>
+              计算工作负载分析
             </a-checkbox>
           </a-tooltip>
-
-        </a-form-item>
-        <a-form-item>
-          <a-checkbox v-model:checked="onboardData.user_options.downloadToLocal" @change="saveConfig">
-            下载数据到本地
+          <a-tooltip placeholder="topLeft" title="默认采集">
+            <a-checkbox :checked="true" disabled>
+              内存负载分析
+            </a-checkbox>
+          </a-tooltip>
+        </div>
+      </a-form-item>
+      <a-form-item>
+        <a-checkbox v-model:checked="onboardData.user_options.Source" @change="saveConfig">
+          算子代码热点图
+        </a-checkbox>
+      </a-form-item>
+      <a-form-item>
+        <a-checkbox v-model:checked="onboardData.user_options.MemoryDetail" @change="saveConfig">
+          Cache热力图
+        </a-checkbox>
+      </a-form-item>
+      <a-form-item>
+        <a-checkbox v-model:checked="performanceSelectedAll" :indeterminate="performanceSelectedHalf"
+          @change="handleOperatorPerformanceChange">
+          算子性能数据文件
+        </a-checkbox>
+        <div class="nested-checkbox-group horizontal">
+          <a-checkbox v-model:checked="onboardData.user_options.ArithmeticUtilization" @change="saveConfig">
+            Cube及Vector类型指令耗时和占比
           </a-checkbox>
-        </a-form-item>
-      </a-form>
-    </div>
+          <a-checkbox v-model:checked="onboardData.user_options.L2Cache" @change="saveConfig">
+            L2 Cache命中率
+          </a-checkbox>
+          <a-checkbox v-model:checked="onboardData.user_options.Memory" @change="saveConfig">
+            内存读写带宽速率
+          </a-checkbox>
+          <a-checkbox v-model:checked="onboardData.user_options.MemoryL0" @change="saveConfig">
+            L0读写带宽速率
+          </a-checkbox>
+          <a-checkbox v-model:checked="onboardData.user_options.MemoryUB" @change="saveConfig">
+            UB读写带宽速率
+          </a-checkbox>
+          <a-checkbox v-model:checked="onboardData.user_options.OpBasicInfo" @change="saveConfig">
+            算子基础信息
+          </a-checkbox>
+          <a-checkbox v-model:checked="onboardData.user_options.PipeUtilization" @change="saveConfig">
+            计算单元和搬运单元耗时占比
+          </a-checkbox>
+          <a-checkbox v-model:checked="onboardData.user_options.ResourceConflictRatio" @change="saveConfig">
+            资源冲突占比
+          </a-checkbox>
+        </div>
+      </a-form-item>
 
-    <div class="config-section">
-      <div class="section-title">数据存放位置</div>
-      <a-form layout="vertical">
-        <a-form-item>
-          <SelectFolder v-model="onboardData.user_options.dataStoragePath" placeholder="请选择数据存放位置" />
-        </a-form-item>
-      </a-form>
-    </div>
 
-    <div class="config-section">
+      <!-- <div class="section-title" style="margin-top: 12px;">模式</div>
+      <a-form-item>
+        <a-tooltip placeholder="topLeft" title="暂不支持，敬请期待">
+          <a-checkbox :checked="false" disabled>
+            平台内渲染结果
+          </a-checkbox>
+        </a-tooltip>
+      </a-form-item>
+      <a-form-item>
+        <a-checkbox v-model:checked="onboardData.user_options.downloadToLocal" @change="saveConfig">
+          下载数据到本地
+        </a-checkbox>
+      </a-form-item>
+      <div class="section-title" style="margin-bottom: 8px;">数据存放位置</div>
+      <a-form-item>
+        <SelectFolder v-model="onboardData.user_options.dataStoragePath" placeholder="请选择数据存放位置" />
+      </a-form-item> -->
+
       <a-collapse v-model:activeKey="advancedCollapseActiveKey" ghost>
         <a-collapse-panel key="1" header="高级配置">
-          <a-form layout="vertical">
-            <a-form-item>
-              <a-checkbox v-model:checked="onboardData.user_options.KernelScale" @change="saveConfig">
-                使能Kernel侧制定代码段性能采集
-                <a-tooltip title="指定代码段范围时，需要在算子Kernel侧对应的代码段前后进行设置，具体设置请参见MetricsProfStart和MetricsProfStop接口">
-                  <QuestionCircleOutlined class="help-icon" />
-                </a-tooltip>
-              </a-checkbox>
-            </a-form-item>
+          <a-form-item>
+            <a-checkbox v-model:checked="onboardData.user_options.KernelScale" @change="saveConfig">
+              使能Kernel侧制定代码段性能采集
+              <a-tooltip title="指定代码段范围时，需要在算子Kernel侧对应的代码段前后进行设置，具体设置请参见MetricsProfStart和MetricsProfStop接口">
+                <QuestionCircleOutlined class="help-icon" />
+              </a-tooltip>
+            </a-checkbox>
+          </a-form-item>
 
-            <a-form-item>
-              <div class="section-title">高级参数</div>
-              <editTable :key="updateIndex" :dataSource="onboardData.user_options.advance_param"
-                @addTableItem="emit('addAdvancedParam')" @deleteTableItem="emit('deleteAdvancedParam', $event)" />
-            </a-form-item>
-          </a-form>
+          <a-form-item>
+            <div class="section-title" style="margin-top: 12px;">高级参数</div>
+            <editTable :key="updateIndex" :dataSource="onboardData.user_options.advance_param"
+              @addTableItem="emit('addAdvancedParam')" @deleteTableItem="emit('deleteAdvancedParam', $event)" />
+          </a-form-item>
         </a-collapse-panel>
       </a-collapse>
-    </div>
+    </a-form>
   </div>
 </template>
 
@@ -299,9 +285,9 @@ watch(() => props.onboardData.user_options,
     margin-left: 24px;
     margin-top: 8px;
     padding: 12px;
-    background-color: rgba(255, 255, 255, 0.05);
     border-radius: 4px;
     border: 1px solid rgba(255, 255, 255, 0.15);
+    max-width: 600px;
 
     .ant-checkbox-wrapper {
       display: block;
@@ -324,40 +310,22 @@ watch(() => props.onboardData.user_options,
     }
   }
 
-  :deep(.ant-form-item) {
-    margin-bottom: 16px;
-  }
-
   :deep(.ant-checkbox-wrapper) {
     color: rgba(255, 255, 255, 0.85);
   }
 
-  :deep(.ant-collapse) {
-    background-color: transparent;
-    border: none;
-
-    .ant-collapse-header {
-      color: rgba(255, 255, 255, 0.85);
-      padding: 12px 0 !important;
-    }
-
-    .ant-collapse-content {
-      background-color: transparent;
-      border: none;
-    }
+  :deep(.ant-form-item) {
+    margin-bottom: 0;
   }
 
-  :deep(.ant-radio-group) {
-    .ant-radio-wrapper {
-      color: rgba(255, 255, 255, 0.85);
-      margin-right: 16px;
+  :deep(.ant-collapse-header) {
+    padding-left: 0;
+    padding-right: 0;
+  }
 
-      // .help-icon {
-      //   color: rgba(255, 255, 255, 0.45);
-      //   cursor: help;
-      //   font-size: 14px;
-      // }
-    }
+  :deep(.ant-collapse-content-box) {
+    padding: 0;
+    padding-block: unset !important;
   }
 }
 </style>

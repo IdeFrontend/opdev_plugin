@@ -182,6 +182,36 @@ const webviewMessageList: messageItem[] = [
       });
     },
   },
+  // 查询 Sanitizer 配置
+  {
+    command: 'vscodeGetSanitizerForm',
+    callback: async (message: any, that: any) => {
+      const opsOption = new OpsOption(that.context);
+      await opsOption.init();
+      const configData = await opsOption.getSanitizerConfigs();
+      console.log('SetSanitizerForm', configData);
+
+      that._view.webview.postMessage({
+        command: 'iframeSetSanitizerForm',
+        data: JSON.stringify((configData || [])[0]),
+      });
+    },
+  },
+  // 保存 Sanitizer 配置
+  {
+    command: 'vscodeSaveSanitizerForm',
+    callback: async (msg: any, that: any) => {
+      const data = msg.message.data;
+      const opsOption = new OpsOption(that.context);
+      await opsOption.init();
+      await opsOption.saveSanitizerForm(data);
+      const configData = await opsOption.getSanitizerConfigs();
+      that.panel.webview.postMessage({
+        command: 'iframeSetBuildConfigItem',
+        data: JSON.stringify((configData || [])[0]),
+      });
+    },
+  },
   {
     command: 'vscodeRemotePathSearch',
     callback: async (msg: any, that: any) => {
@@ -297,6 +327,7 @@ const webviewMessageList: messageItem[] = [
       });
     },
   },
+  // 编译部署算子
   {
     command: 'vscodeBuildOp',
     callback: async (msg: any, that: any) => {
@@ -313,6 +344,19 @@ const webviewMessageList: messageItem[] = [
       const opsOption = new OpsOption(that.context);
       await opsOption.init();
       await opsOption.startBuildExample();
+    },
+  },
+  // sanitizer检测
+  {
+    command: 'vscodeRunSanitizer',
+    callback: async (msg: any, that: any) => {
+      const data = msg.message.data;
+      const opsOption = new OpsOption(that.context);
+      await opsOption.init();
+      // 异常检测前编译
+      await opsOption.startBuild(undefined, '--mssanitizer');
+      // 开启异常检测
+      await opsOption.runSanitizer();
     },
   },
   {
@@ -340,6 +384,32 @@ const webviewMessageList: messageItem[] = [
       const opsOption = new OpsOption(that.context);
       await opsOption.init();
       await opsOption.startOnBoard();
+    }
+  },
+  {
+    command: 'vscodeRunDebug',
+    callback: async (msg: any, that: any) => {
+      try {
+        const opsOption = new OpsOption(that.context);
+        await opsOption.init();
+        // debug前编译
+        await opsOption.startBuild(undefined, '--debug');
+        await vscode.commands.executeCommand('workbench.action.debug.start');
+      } catch (error) {
+        console.error('打开debug时出错:', error);
+      }
+    },
+  },
+  {
+    command: 'vscodeDebugConfig',
+    callback: async (msg: any, that: any) => {
+      try {
+        await vscode.commands.executeCommand('workbench.action.debug.configure');
+        vscode.window.showInformationMessage(`已打开 launch.json 文件`);
+      } catch (error) {
+        console.error('打开 launch.json 时出错:', error);
+        vscode.window.showErrorMessage(`无法打开 launch.json: ${error instanceof Error ? error.message : String(error)}`);
+      }
     },
   },
   {

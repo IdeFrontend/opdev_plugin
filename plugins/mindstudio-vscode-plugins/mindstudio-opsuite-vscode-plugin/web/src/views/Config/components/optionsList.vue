@@ -43,7 +43,7 @@ const updateActiveOption = (item) => {
         <img src="../../../assets/svg/build.svg" alt="" class="img">
         编译部署
       </div>
-      <div v-if="false" class="options-list-item" :class="[Actived === 'sanitizer' ? 'is-active' : '']"
+      <div class="options-list-item" :class="[Actived === 'sanitizer' ? 'is-active' : '']"
         @click="updateActiveOption('sanitizer')">
         <img src="../../../assets/svg/check.svg" alt="" class="img">
         异常检测

@@ -6,6 +6,8 @@ import settingIcon from '../../assets/svg/setting.svg'
 import buildIcon from '../../assets/svg/build.svg'
 import runIcon from '../../assets/svg/run.svg'
 import powerIcon from '../../assets/svg/power.svg'
+import debugIcon from '../../assets/svg/debug.svg'
+import checkIcon from '../../assets/svg/check.svg'
 
 const themeConfig = {
     algorithm: theme.darkAlgorithm
@@ -83,6 +85,51 @@ const menuItems = ref([
             },
         ]
     },
+    {
+        key: 'runDebug',
+        label: '调试',
+        icon: debugIcon,
+        children: [
+            {
+                key: 'buildAndDebug',
+                label: '执行调试',
+                handler: async () => {
+                    message.sendMessageToParent({ command: "vscodeRunDebug", data: '' });
+                }
+            },
+            {
+                key: 'debugConfig',
+                label: '调试配置',
+                handler: async () => {
+                    message.sendMessageToParent({ command: "vscodeDebugConfig", data: '' });
+                }
+            },
+        ]
+    },
+    {
+        key: 'runCheck',
+        label: '异常检测',
+        icon: checkIcon,
+        handler: () => {
+            message.sendMessageToParent({ command: "vscodeRunSanitizer", data: '' });
+        }
+    },
+    // {
+    //     key: 'projectSH',
+    //     label: '设置环境变量',
+    //     icon: runIcon,
+    //     handler: () => {
+    //         message.sendMessageToParent({ command: "vscodeRunSetProjectSH", data: '' });
+    //     }
+    // },
+    {
+        key: 'projectSH',
+        label: '设置环境变量',
+        icon: runIcon,
+        handler: () => {
+            message.sendMessageToParent({ command: "vscodeRunSetProjectSH", data: '' });
+        }
+    },
     // {
     //     key: 'projectSH',
     //     label: '设置环境变量',
@@ -147,7 +194,7 @@ const getBuildConfigItem = {
 }
 
 const handlerSendMessage = () => {
-    message.sendMessageToParent({ command: 'vscodeOperateErrorToast'});
+    message.sendMessageToParent({ command: 'vscodeOperateErrorToast' });
 }
 
 onMounted(() => {
@@ -273,6 +320,7 @@ body {
     display: inline-flex;
     align-items: center;
     font-size: 11px;
+
     span {
         color: rgba(255, 255, 255, 0.85);
     }

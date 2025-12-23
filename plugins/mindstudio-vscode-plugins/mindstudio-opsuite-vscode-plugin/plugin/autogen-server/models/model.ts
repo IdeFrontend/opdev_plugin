@@ -150,7 +150,13 @@ export function generateStructure(data: Partial<OpRecord>, extensionPath: string
           op: record.op_name,
           script: `bash ${record.op_name}.sh`,
           config_name: record.op_name,
-        },
+          tool: { memcheck: true, racecheck: false, initcheck: false, synccheck: false }, // 检测内容
+          memcheckOption: { 'check-unused-memory': false, 'leak-check': false, 'check-device-heap': false, 'check-cann-heap': false }, // 内存检测可选项
+          logLevel: 'warn', // 报告输出等级
+          maxDebuglogSize: 1024, // 输入日志单个文件大小上限 1 - 10240
+          useBlock: false,
+          blockId: null, // 单block检测的blockId，0 - 200
+        }
       };
       void configModel.postConfig('sanitizer', [sanitizerCfg]);
 

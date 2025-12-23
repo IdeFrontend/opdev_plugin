@@ -20,9 +20,9 @@ import { routes } from './routes';
 import { apis } from './apis';
 import { PermanentStorage } from './class/PermanentStorage';
 import { ExtensionConfig } from './services/ExtensionConfig';
-import { InsightDataViewerPanel } from './class/InsightDataViewerPanel';
 
 import { OpsOperateProvider } from './class/OpsOperateProvider';
+import { MindStudioPluginInstaller } from './class/MindStudioPluginInstaller';
 
 let extensionContext: vscode.ExtensionContext | undefined;
 
@@ -113,13 +113,6 @@ export async function activate(context: vscode.ExtensionContext) {
     configNewPrototypeProvider.show('newPrototype');
   });
 
-  // 注册测试命令
-  const testCommand = vscode.commands.registerCommand('huawei-op-devtools.test', async () => {
-    const binPath = '-';
-    InsightDataViewerPanel.createOrShow(context, binPath);
-    console.log('自动发送打开文件命令给iframe binPath=', binPath);
-  });
-
   // 注册删除欢迎页计数命令（用于手动重置）
   const clearWelcomeCountCommand = vscode.commands.registerCommand('huawei-op-devtools.clearWelcomeCount', async () => {
     await context.globalState.update('welcomeShowCount', undefined);
@@ -138,7 +131,7 @@ export async function activate(context: vscode.ExtensionContext) {
     opsOption.startBuild();
   });
 
-  // 注册编译命令
+  // 注册创建算子命令
   const createOptionsCommand = vscode.commands.registerCommand('huawei-op-devtools.createDictory', async (data: any, progress: any) => {
     await handleOperatorProjectDictoryFile({ createOperatorProjectDictoryFileType: data }, createOpsProvider, progress);
   });
@@ -208,14 +201,16 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(apiServer);
   context.subscriptions.push(viewServer);
   context.subscriptions.push(buildOpsCommand);
+  context.subscriptions.push(createOptionsCommand);
   context.subscriptions.push(openCommand);
   context.subscriptions.push(openProjectSH);
   context.subscriptions.push(ConfigCommand);
   context.subscriptions.push(createCommand);
   context.subscriptions.push(welcomeCommand);
   context.subscriptions.push(newPrototypeCommand);
-  context.subscriptions.push(testCommand);
   context.subscriptions.push(clearWelcomeCountCommand);
+  context.subscriptions.push(createOptionsCommand);
+  context.subscriptions.push(getHome);
 
   // 创建侧边栏提供者
   const sidebarProvider = new CustomSidebarProvider(context);
@@ -283,6 +278,15 @@ export async function activate(context: vscode.ExtensionContext) {
       // ignore invalid query
     }
   }
+
+  console.log('🧠 MindStudio 插件加载器已激活。');
+  const installer = new MindStudioPluginInstaller(context, {
+    pluginId: 'ascend.mindstudio-debug-vscode-plugin',
+    vsixRelativePath: './out/plugin/mindstudio-debug-vscode-plugin/MindStudio-Debug-VSCode-Plugin-1.0.7.vsix',
+    pluginVersion: '1.0.7'
+  });
+
+  await installer.installIfNeeded();
 }
 
 /**
