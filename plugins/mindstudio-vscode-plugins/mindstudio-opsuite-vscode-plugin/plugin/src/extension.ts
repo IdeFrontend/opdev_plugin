@@ -347,7 +347,7 @@ async function exportEnvToFile(context: vscode.ExtensionContext) {
   const targetFile = path.join(targetDir, 'env');
   try {
     await fs.promises.mkdir(targetDir, { recursive: true });
-    await execAsync('. /ect/profile && env > ./.arts/.env', {
+    await execAsync('. /etc/profile && env > ./.arts/.env', {
       cwd,
       shell: '/bin/bash',
       windowsHide: true,
