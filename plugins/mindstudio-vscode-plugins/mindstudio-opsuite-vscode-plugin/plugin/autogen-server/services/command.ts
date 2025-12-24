@@ -147,7 +147,7 @@ export function getOnBoardCommand(config_id: number, example_config_id: number) 
   const run_path = getOpRunPath(operator);
   const cd_cmd = `cd ${run_path}`;
 
-  const totalKeys = ['Occupancy', 'Roofline', 'Source', 'MemoryDetail', 'ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'OpBasicInfo', 'PipeUtilization', 'ResourceConflictRatio', 'KernelScale']
+  const totalKeys = ['Occupancy', 'Roofline', 'Source', 'MemoryDetail', 'ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'BasicInfo', 'PipeUtilization', 'ResourceConflictRatio', 'KernelScale']
   let aic = '--aic-metrics='
   totalKeys.forEach(key => {
     if (config.user_options[key]) {
