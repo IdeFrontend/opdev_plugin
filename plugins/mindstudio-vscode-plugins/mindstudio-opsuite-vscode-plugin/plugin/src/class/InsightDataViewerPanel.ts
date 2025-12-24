@@ -17,7 +17,7 @@ import webviewMessageList from './WebviewMessageList';
 const execAsync = promisify(exec);
 
 export class InsightDataViewerPanel implements vscode.Disposable {
-  private static currentPanel: InsightDataViewerPanel | undefined;
+  private static openedFiles = new Map<string, InsightDataViewerPanel>();
   private readonly panel: vscode.WebviewPanel;
   private readonly context: vscode.ExtensionContext;
   private socketBridge: NodeWebviewSocketBridge | undefined;
@@ -29,7 +29,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
   private readonly zipDir: string;
   private serverPortReady: Promise<void>;
 
-  private constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, binPath: string) {
+  constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, binPath: string) {
     this.panel = panel;
     this.context = context;
     this.binPath = binPath;
@@ -52,7 +52,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     });
 
     // 设置 webview 内容
-    this.setupWebview(binPath);
+    this.setupWebview();
 
     // 监听面板关闭事件
     this.panel.onDidDispose(() => this.dispose(), null, context.subscriptions);
@@ -82,8 +82,8 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       : undefined;
 
     // 如果已经存在 panel，直接显示
-    if (InsightDataViewerPanel.currentPanel) {
-      InsightDataViewerPanel.currentPanel.panel.reveal(column);
+    if (InsightDataViewerPanel.openedFiles.has(binPath)) {
+      InsightDataViewerPanel.openedFiles.get(binPath)?.panel.reveal(column);
       return;
     }
 
@@ -98,13 +98,13 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       }
     );
 
-    InsightDataViewerPanel.currentPanel = new InsightDataViewerPanel(panel, context, binPath);
+    InsightDataViewerPanel.openedFiles.set(binPath, new InsightDataViewerPanel(panel, context, binPath));
   }
 
   /**
    * 设置 webview 内容
    */
-  private setupWebview(binPath: string): void {
+  private setupWebview(): void {
     const htmlPath = path.join(
       this.context.extensionPath,
       'out',
@@ -648,9 +648,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     }
 
     // 清理 panel 引用
-    if (InsightDataViewerPanel.currentPanel === this) {
-      InsightDataViewerPanel.currentPanel = undefined;
-    }
+    InsightDataViewerPanel.openedFiles.delete(this.binPath)
 
     // 销毁 panel
     this.panel.dispose();
