@@ -27,6 +27,8 @@ import { PermanentStorage } from './class/PermanentStorage';
 import { ExtensionConfig } from './services/ExtensionConfig';
 
 import { OpsOperateProvider } from './class/OpsOperateProvider';
+import { getMsSanitizerPanelViewProvider } from './class/MsSanitizerPanelView';
+
 import { MindStudioPluginInstaller } from './class/MindStudioPluginInstaller';
 
 let extensionContext: vscode.ExtensionContext | undefined;
@@ -277,11 +279,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
   configProvider.showLeftPage('Home');
   const [workspaceFolder] = vscode.workspace.workspaceFolders ?? [];
-  console.log(workspaceFolder,'是否打开了文件夹');
+  console.log(workspaceFolder, '是否打开了文件夹');
   // 仅在未打开任何工程/文件夹时弹出欢迎页，且在本地缓存中记录次数，最多弹出两次
   if (!workspaceFolder) {
     const welcomeShowCount = context.globalState.get<number>('welcomeShowCount') ?? 0;
-    console.log(welcomeShowCount,'打开次数');
+    console.log(welcomeShowCount, '打开次数');
     if (welcomeShowCount < 2) {
       vscode.commands.executeCommand('huawei-op-devtools.welcome');
       vscode.commands.executeCommand('workbench.view.extension.mindstudio-opssuite-vscode-plugin');
@@ -289,6 +291,11 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   }
   context.subscriptions.push(buttonCommand, button);
+
+  // 异常检测视图
+  const { openMsSanitizerDisposable, msSanitizerPanelView } = getMsSanitizerPanelViewProvider(context);
+
+  context.subscriptions.push(msSanitizerPanelView, openMsSanitizerDisposable);
 
   // 订阅销毁事件
   context.subscriptions.push(apiServer);
@@ -430,7 +437,7 @@ async function exportEnvToFile(context: vscode.ExtensionContext) {
   const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
   console.log('workspaceFolder', workspaceFolder);
   const cwd = workspaceFolder?.uri.fsPath ?? context.extensionPath;
-  console.log('cwd',cwd)
+  console.log('cwd', cwd)
   const targetDir = path.join(cwd, '.arts');
   const targetFile = path.join(targetDir, 'env');
   try {

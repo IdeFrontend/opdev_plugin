@@ -18,7 +18,7 @@ export function getBuildOpCommand(config_id: number, compileOption?: string) {
   }
   const project = get_project_by_id(config.project_id as number) as any;
   const operator = getOpByProjectIdAndOpName(config.project_id as number, config.op as string)!;
-  const source_cann = project && project.ascend_env_script ? `. ${project.ascend_env_script}` : `. ${ascend_env_script}`;
+  const source_cann = project && project.ascend_env_script ? `. ${project.ascend_env_script}` : ``;
 
   const run_path = getOpRunPath(operator);
   const cd_cmd = `cd ${run_path}`;
@@ -52,7 +52,7 @@ export function getRunCommand(config_id: number) {
   }
   const project = get_project_by_id(config.project_id as number) as any;
   const operator = getOpByProjectIdAndOpName(config.project_id as number, config.op as string)!;
-  const source_cann = project && project.ascend_env_script ? `. ${project.ascend_env_script}` : `. ${ascend_env_script}`;
+  const source_cann = project && project.ascend_env_script ? `. ${project.ascend_env_script}` : ``;
   const run_cmd = `chmod +x ${config.target_file || ''} && ${config.target_file || ''}`;
   const run_path = getOpRunPath(operator);
   const cd_cmd = `cd ${run_path}`;
@@ -81,7 +81,7 @@ export function getBuildExampleCommand(config_id: number, compileOption?: string
   }
   const project = get_project_by_id(config.project_id as number) as any;
   const operator = getOpByProjectIdAndOpName(config.project_id as number, config.op as string)!;
-  const source_cann = project && project.ascend_env_script ? `. ${project.ascend_env_script}` : `. ${ascend_env_script}`;
+  const source_cann = project && project.ascend_env_script ? `. ${project.ascend_env_script}` : ``;
   const run_path = getOpRunPath(operator);
   const cd_cmd = `cd ${run_path}`;
 
@@ -121,7 +121,7 @@ export function getSimulateCommand(config_id: number, example_config_id: number)
 
   const operator = getOpByProjectIdAndOpName(config.project_id as number, config.op as string)!;
   const project = get_project_by_id(config.project_id as number) as any;
-  const source_cann = project && project.ascend_env_script ? `. ${project.ascend_env_script}` : `. ${ascend_env_script}`;
+  const source_cann = project && project.ascend_env_script ? `. ${project.ascend_env_script}` : ``;
   const run_path = getOpRunPath(operator);
   const cd_cmd = `cd ${run_path}`;
 
@@ -143,7 +143,7 @@ export function getOnBoardCommand(config_id: number, example_config_id: number) 
 
   const operator = getOpByProjectIdAndOpName(config.project_id as number, config.op as string)!;
   const project = get_project_by_id(config.project_id as number) as any;
-  const source_cann = project && project.ascend_env_script ? `. ${project.ascend_env_script}` : `. ${ascend_env_script}`;
+  const source_cann = project && project.ascend_env_script ? `. ${project.ascend_env_script}` : ``;
   const run_path = getOpRunPath(operator);
   const cd_cmd = `cd ${run_path}`;
 
@@ -169,7 +169,7 @@ export function getSanitizerCommand(sanitizerConfigId: number, example_config_id
   }
   const project = get_project_by_id(sanitizerConfig.project_id as number) as any;
   const operator = getOpByProjectIdAndOpName(sanitizerConfig.project_id as number, sanitizerConfig.op as string)!;
-  const source_cann = project && project.ascend_env_script ? `. ${project.ascend_env_script}` : `. ${ascend_env_script}`;
+  const source_cann = project && project.ascend_env_script ? `. ${project.ascend_env_script}` : ``;
 
   const run_path = getOpRunPath(operator);
   const cd_cmd = `cd ${run_path}`;
