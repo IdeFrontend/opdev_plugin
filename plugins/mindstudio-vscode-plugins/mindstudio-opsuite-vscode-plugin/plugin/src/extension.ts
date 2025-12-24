@@ -6,6 +6,8 @@
  */
 import i18next from 'i18next';
 import * as vscode from 'vscode';
+import * as path from 'path';
+import * as fs from 'fs';
 
 import i18nResource from 'shared:/i18n';
 
@@ -28,6 +30,27 @@ import { OpsOperateProvider } from './class/OpsOperateProvider';
 let extensionContext: vscode.ExtensionContext | undefined;
 
 /**
+ * 检查当前工作区是否存在 .vscode/devtool_config.json 文件
+ * @returns 如果文件存在返回 true，否则返回 false
+ */
+async function checkDevtoolConfigExists(): Promise<boolean> {
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+  if (!workspaceFolders || workspaceFolders.length === 0) {
+    return false;
+  }
+
+  const workspacePath = workspaceFolders[0].uri.fsPath;
+  const devtoolConfigPath = path.join(workspacePath, '.vscode', 'devtool_config.json');
+
+  try {
+    return fs.existsSync(devtoolConfigPath);
+  } catch (error) {
+    console.error('检查 devtool_config.json 文件时出错:', error);
+    return false;
+  }
+}
+
+/**
  * 插件激活入口函数
  * @param context VSCode扩展上下文
  */
@@ -35,6 +58,36 @@ export async function activate(context: vscode.ExtensionContext) {
   extensionContext = context;
   // 国际化
   await initI18n();
+
+  // 检查 devtool_config.json 文件是否存在
+  const hasDevtoolConfig = await checkDevtoolConfigExists();
+  
+  // 设置 context 来控制命令可见性
+  await vscode.commands.executeCommand('setContext', 'hasDevtoolConfig', hasDevtoolConfig);
+
+  // 监听工作区文件夹变化，重新检查配置文件
+  const updateDevtoolConfigContext = async () => {
+    const exists = await checkDevtoolConfigExists();
+    await vscode.commands.executeCommand('setContext', 'hasDevtoolConfig', exists);
+    return exists;
+  };
+
+  // 监听工作区文件夹变化
+  const workspaceWatcher = vscode.workspace.onDidChangeWorkspaceFolders(async () => {
+    const exists = await updateDevtoolConfigContext();
+    // 如果文件存在且侧边栏未展开，则展开它
+    if (exists) {
+      setTimeout(async () => {
+        try {
+          await vscode.commands.executeCommand('OpsOperateProvider.focus');
+        } catch (error) {
+          console.error('聚焦 OpsOperateProvider 视图时出错:', error);
+        }
+      }, 1000);
+    }
+  });
+
+  context.subscriptions.push(workspaceWatcher);
 
   let progress: any;
   if (context.globalState.get<string>('runCommand') === 'huawei-op-devtools.createDictory') {
@@ -95,8 +148,18 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   });
   context.subscriptions.push(opsOperateView);
-  // 聚焦该视图
-  vscode.commands.executeCommand('OpsOperateProvider.focus');
+  
+  // 只有当 devtool_config.json 存在时才聚焦该视图（展开侧边栏）
+  if (hasDevtoolConfig) {
+    // 延迟执行，确保 UI 已就绪
+    setTimeout(async () => {
+      try {
+        await vscode.commands.executeCommand('OpsOperateProvider.focus');
+      } catch (error) {
+        console.error('聚焦 OpsOperateProvider 视图时出错:', error);
+      }
+    }, 1000);
+  }
 
   // 注册打开Opsuite命令
   const ConfigCommand = vscode.commands.registerCommand('huawei-op-devtools.config', async () => {

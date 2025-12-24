@@ -34,7 +34,7 @@
       "secondarySidebar": [
         {
           "id": "secondary-sidebar-operate-view2",
-          "title": "算子工程-操作",
+          "title": "一站式算子工程操作面板",
           "icon": "resources/operate.svg"
         }
       ]
@@ -51,7 +51,7 @@
         {
           "type": "webview",
           "id": "OpsOperateProvider",
-          "name": "算子工程-操作"
+          "name": "一站式算子工程操作面板"
         }
       ],
       "explorer": [
@@ -74,7 +74,7 @@
       },
       {
         "command": "huawei-op-devtools.toggleOpsOperate",
-        "title": "算子工程-操作",
+        "title": "一站式算子工程操作面板",
         "category": "secondary Sidebar",
         "icon": "resources/operate.svg"
       },
@@ -114,7 +114,7 @@
       "commandPalette": [
         {
           "command": "huawei-op-devtools.toggleOpsOperate",
-          "when": "true"
+          "when": "hasDevtoolConfig"
         }
       ],
       "view/title": [],
@@ -122,7 +122,7 @@
         {
           "command": "huawei-op-devtools.toggleOpsOperate",
           "group": "navigation",
-          "when": "true"
+          "when": "hasDevtoolConfig"
         }
       ]
     },
