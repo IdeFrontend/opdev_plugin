@@ -1,15 +1,28 @@
 <script setup lang="ts">
-import { UpOutlined, CaretUpFilled, DownOutlined, CaretDownFilled, FlagOutlined, FlagFilled } from '@ant-design/icons-vue';
+import { UpOutlined, CaretUpFilled, DownOutlined, CaretDownFilled, FlagOutlined, FlagFilled, ReloadOutlined } from '@ant-design/icons-vue';
+import { h } from 'vue';
 
+/** 正序/倒序 */
 const sortOrder = defineModel<'asc' | 'desc'>('sortOrder');
-const handleExecutionTime = () => {
-  sortOrder.value = sortOrder.value === 'desc' ? 'asc' : 'desc';
-};
 
+/** 只查看标记 */
 const isMarkedOnly = defineModel<boolean>('markedOnly');
-const handleMarked = () => {
+
+const emit = defineEmits<{
+  (e: 'reload'): void;
+}>();
+
+function handleExecutionTime() {
+  sortOrder.value = sortOrder.value === 'desc' ? 'asc' : 'desc';
+}
+
+function handleMarked() {
   isMarkedOnly.value = !isMarkedOnly.value;
-};
+}
+
+function handleReload() {
+  emit('reload');
+}
 </script>
 
 <template>
@@ -28,6 +41,7 @@ const handleMarked = () => {
     <a-button :type="isMarkedOnly ? 'primary' : 'default'" @click="handleMarked" size="small">
       已标记 <FlagFilled v-if="isMarkedOnly" /><FlagOutlined v-else />
     </a-button>
+    <a-button type="text" :icon="h(ReloadOutlined)" title="刷新" size="small" @click="handleReload"></a-button>
   </div>
 </template>
 
