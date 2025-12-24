@@ -44,6 +44,13 @@
           "title": "一站式算子工程操作面板",
           "icon": "resources/operate.svg"
         }
+      ],
+      "panel": [
+        {
+          "id": "ms-sanitizer-panel-view",
+          "title": "异常检测",
+          "icon": "resources/ops.svg"
+        }
       ]
     },
     "views": {
@@ -61,7 +68,21 @@
           "name": "一站式算子工程操作面板"
         }
       ],
+      "ms-sanitizer-panel-view": [
+        {
+          "type": "webview",
+          "id": "msSanitizerPanelView",
+          "name": "异常检测",
+          "when": "true"
+        }
+      ],
       "explorer": [
+        {
+          "id": "msSanitizerSidebarView",
+          "name": "异常检测",
+          "type": "webview",
+          "visibility": "collapsed"
+        },
         {
           "id": "performanceSidebarView",
           "name": "性能调优",
@@ -115,6 +136,14 @@
       {
         "command": "huawei-op-devtools.clearWelcomeCount",
         "title": "清除欢迎页显示计数"
+      },
+      {
+        "command": "huawei-op-devtools.open-ms-sanitizer-panel-view",
+        "title": "异常检测"
+      },
+      {
+        "command": "vscodeJumpToFile",
+        "title": "文件跳转定位"
       }
     ],
     "menus": {
