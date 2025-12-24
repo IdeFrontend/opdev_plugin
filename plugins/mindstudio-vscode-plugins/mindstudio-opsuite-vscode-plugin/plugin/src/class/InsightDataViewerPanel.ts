@@ -29,7 +29,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
   private readonly zipDir: string;
   private serverPortReady: Promise<void>;
 
-  private constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, binPath: string) {
+  constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, binPath: string) {
     this.panel = panel;
     this.context = context;
     this.binPath = binPath;
@@ -52,7 +52,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     });
 
     // 设置 webview 内容
-    this.setupWebview(binPath);
+    this.setupWebview();
 
     // 监听面板关闭事件
     this.panel.onDidDispose(() => this.dispose(), null, context.subscriptions);
@@ -73,6 +73,16 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     });
   }
 
+  public updateBinPath(binPath:string) {
+    if (this.binPath === binPath) {
+      return;
+    }
+    this.binPath = binPath;
+    this.loadAndSendAllIframes().catch((error) => {
+      console.error('[InsightDataViewerPanel] ✗ 提前加载 iframe 失败:', error);
+    });
+  }
+
   /**
    * 创建或显示 panel
    */
@@ -83,6 +93,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
 
     // 如果已经存在 panel，直接显示
     if (InsightDataViewerPanel.currentPanel) {
+      InsightDataViewerPanel.currentPanel.updateBinPath(binPath);
       InsightDataViewerPanel.currentPanel.panel.reveal(column);
       return;
     }
@@ -104,7 +115,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
   /**
    * 设置 webview 内容
    */
-  private setupWebview(binPath: string): void {
+  private setupWebview(): void {
     const htmlPath = path.join(
       this.context.extensionPath,
       'out',
