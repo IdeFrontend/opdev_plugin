@@ -118,16 +118,16 @@ export function getSimulateCommand(config_id: number, example_config_id: number)
   if (!config) {
     throw new Error('配置不存在');
   }
-  
+
   const operator = getOpByProjectIdAndOpName(config.project_id as number, config.op as string)!;
   const project = get_project_by_id(config.project_id as number) as any;
   const source_cann = project && project.ascend_env_script ? `. ${project.ascend_env_script}` : `. ${ascend_env_script}`;
   const run_path = getOpRunPath(operator);
   const cd_cmd = `cd ${run_path}`;
 
-  const aic = `--aic-metrics=PipeUtilization,ResourceConflictRatio${config.user_options.PMSampling?',PMSampling':''}`
+  const aic = `--aic-metrics=PipeUtilization,ResourceConflictRatio${config.user_options.PMSampling ? ',PMSampling' : ''}`
   const advance_cmd = getAdvanceCmd(config.user_options.advance_param)
-  const simulatorCmd =  `msopprof simulator --soc-version=${config.user_options.simulatorType} --output=${operator.op_path}/.vscode/opprof ${aic} ${advance_cmd} ${exConfig.target_file}`
+  const simulatorCmd = `msopprof simulator --soc-version=${config.user_options.simulatorType} --output=${operator.op_path}/.vscode/opprof ${aic} ${advance_cmd} ${exConfig.target_file}`
 
   return [source_cann, cd_cmd, simulatorCmd].filter(Boolean).join(' && ')
 }
@@ -156,7 +156,7 @@ export function getOnBoardCommand(config_id: number, example_config_id: number) 
   })
   aic = aic.slice(0, -1)
   const advance_cmd = getAdvanceCmd(config.user_options.advance_param)
-  const opprofCmd  = `msopprof --output=${operator.op_path}/.vscode/opprof ${aic} ${advance_cmd} ${exConfig.target_file}`
+  const opprofCmd = `msopprof --output=${operator.op_path}/.vscode/opprof ${aic} ${advance_cmd} ${exConfig.target_file}`
 
   return [source_cann, cd_cmd, opprofCmd].filter(Boolean).join(' && ')
 }
@@ -192,10 +192,10 @@ function handleSanitizerConfigToCmd(sanitizerConfig: any) {
 }
 
 // 处理高级参数
-function getAdvanceCmd(advance_param: any)  {
+function getAdvanceCmd(advance_param: any) {
   let advanceStr = ''
   if (Array.isArray(advance_param) && advance_param.length) {
-    advanceStr = advance_param.filter((item: any) => item.name && item.value).map((item: any) => `--${item.name}=${item.value}`).join(' ')
+    advanceStr = advance_param.filter((item: any) => item.name).map((item: any) => `--${item.name}${item.value ? `=${item.value}` : ''}`).join(' ')
   }
   return advanceStr
 }
