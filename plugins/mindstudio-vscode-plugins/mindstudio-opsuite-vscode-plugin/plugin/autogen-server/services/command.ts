@@ -127,7 +127,7 @@ export function getSimulateCommand(config_id: number, example_config_id: number)
 
   const aic = `--aic-metrics=PipeUtilization,ResourceConflictRatio${config.user_options.PMSampling?',PMSampling':''}`
   const advance_cmd = getAdvanceCmd(config.user_options)
-  const simulatorCmd =  `msopprof simulator --soc-version=${config.user_options.simulatorType} --output=${operator.op_path}/.vscode/opprof ${exConfig.target_file} ${aic} ${advance_cmd}`
+  const simulatorCmd =  `msopprof simulator --soc-version=${config.user_options.simulatorType} --output=${operator.op_path}/.vscode/opprof ${aic} ${advance_cmd} ${exConfig.target_file}`
 
   return [source_cann, cd_cmd, simulatorCmd].filter(Boolean).join(' && ')
 }
@@ -156,7 +156,7 @@ export function getOnBoardCommand(config_id: number, example_config_id: number) 
   })
   aic = aic.slice(0, -1)
   const advance_cmd = getAdvanceCmd(config.user_options)
-  const opprofCmd  = `msopprof --output=${operator.op_path}/.vscode/opprof ${exConfig.target_file} ${aic} ${advance_cmd}`
+  const opprofCmd  = `msopprof --output=${operator.op_path}/.vscode/opprof ${aic} ${advance_cmd} ${exConfig.target_file}`
 
   return [source_cann, cd_cmd, opprofCmd].filter(Boolean).join(' && ')
 }
