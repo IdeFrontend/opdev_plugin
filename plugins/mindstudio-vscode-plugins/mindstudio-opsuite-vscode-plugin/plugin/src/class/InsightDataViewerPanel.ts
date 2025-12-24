@@ -17,7 +17,7 @@ import webviewMessageList from './WebviewMessageList';
 const execAsync = promisify(exec);
 
 export class InsightDataViewerPanel implements vscode.Disposable {
-  private static currentPanel: InsightDataViewerPanel | undefined;
+  private static openedFiles = new Map<string, InsightDataViewerPanel>();
   private readonly panel: vscode.WebviewPanel;
   private readonly context: vscode.ExtensionContext;
   private socketBridge: NodeWebviewSocketBridge | undefined;
@@ -73,16 +73,6 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     });
   }
 
-  public updateBinPath(binPath:string) {
-    if (this.binPath === binPath) {
-      return;
-    }
-    this.binPath = binPath;
-    this.loadAndSendAllIframes().catch((error) => {
-      console.error('[InsightDataViewerPanel] ✗ 提前加载 iframe 失败:', error);
-    });
-  }
-
   /**
    * 创建或显示 panel
    */
@@ -92,9 +82,8 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       : undefined;
 
     // 如果已经存在 panel，直接显示
-    if (InsightDataViewerPanel.currentPanel) {
-      InsightDataViewerPanel.currentPanel.updateBinPath(binPath);
-      InsightDataViewerPanel.currentPanel.panel.reveal(column);
+    if (InsightDataViewerPanel.openedFiles.has(binPath)) {
+      InsightDataViewerPanel.openedFiles.get(binPath)?.panel.reveal(column);
       return;
     }
 
@@ -109,7 +98,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       }
     );
 
-    InsightDataViewerPanel.currentPanel = new InsightDataViewerPanel(panel, context, binPath);
+    InsightDataViewerPanel.openedFiles.set(binPath, new InsightDataViewerPanel(panel, context, binPath));
   }
 
   /**
@@ -659,9 +648,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     }
 
     // 清理 panel 引用
-    if (InsightDataViewerPanel.currentPanel === this) {
-      InsightDataViewerPanel.currentPanel = undefined;
-    }
+    InsightDataViewerPanel.openedFiles.delete(this.binPath)
 
     // 销毁 panel
     this.panel.dispose();
