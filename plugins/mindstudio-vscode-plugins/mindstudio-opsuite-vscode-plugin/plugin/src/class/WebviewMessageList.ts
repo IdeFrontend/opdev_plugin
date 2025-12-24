@@ -390,6 +390,7 @@ const webviewMessageList: messageItem[] = [
         await opsOption.init();
         // debug前编译
         await opsOption.startBuild(undefined, '--debug');
+        await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
         await vscode.commands.executeCommand('workbench.action.debug.start');
       } catch (error) {
         console.error('打开debug时出错:', error);
