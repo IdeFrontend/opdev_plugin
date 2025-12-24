@@ -384,12 +384,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
 
       // 确保 server 目录存在，如果不存在则解压
       console.log('[InsightDataViewerPanel] 检查 server 目录...');
-      const serverReady = await this.ensureServerDirectoryExists();
-      if (!serverReady) {
-        console.error('[InsightDataViewerPanel] server 目录准备失败');
-        resolvePort(); // 即使失败也 resolve，避免永久阻塞
-        return;
-      }
+      await this.ensureServerDirectoryExists();
 
       // 获取可用端口
       console.log('[InsightDataViewerPanel] 扫描可用端口...');
