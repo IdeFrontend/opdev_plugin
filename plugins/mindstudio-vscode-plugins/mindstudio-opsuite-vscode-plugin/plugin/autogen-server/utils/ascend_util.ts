@@ -12,7 +12,7 @@ const ascend_soc_map: Record<string, string> = {
 };
 
 function getDefaultAscendEnvScript(): string {
-  return '/etc/profile';
+  return '';
 }
 
 function getEnvFromScript(ascendEnvScript?: string): NodeJS.ProcessEnv {
