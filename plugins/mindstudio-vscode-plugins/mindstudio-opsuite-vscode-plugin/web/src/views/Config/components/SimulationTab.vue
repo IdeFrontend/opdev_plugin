@@ -6,7 +6,7 @@
 
 <script setup>
 import { FolderOutlined } from "@ant-design/icons-vue";
-import { ref } from "vue";
+import { ref, nextTick } from "vue";
 import { QuestionCircleOutlined } from "@ant-design/icons-vue";
 import { message } from "../../../untils/Message";
 import EditTable from "./editTable.vue";
@@ -32,6 +32,21 @@ const saveConfig = () => {
 
 const activeKey = ref(["1"]);
 const guide = ref('https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODtools/Operatordevelopmenttools/atlasopdev_16_0082.html')
+
+const addTableItem = () => {
+  emit('addAdvancedParam')
+  nextTick(() => {
+    saveConfig()
+  })
+}
+
+const deleteTableItem = e => {
+  console.log('delete event', e)
+  emit('deleteAdvancedParam', e)
+  nextTick(() => {
+    saveConfig()
+  })
+}
 </script>
 
 <template>
@@ -106,7 +121,7 @@ const guide = ref('https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/
 
           <div class="section-title" style="margin-top: 12px;">高级参数</div>
           <EditTable :key="updateIndex" :dataSource="simulationData.user_options.advance_param"
-            @addTableItem="emit('addAdvancedParam')" @deleteTableItem="emit('deleteAdvancedParam', $event)" />
+            @addTableItem="addTableItem" @deleteTableItem="deleteTableItem" @onChange="saveConfig"/>
         </a-collapse-panel>
       </a-collapse>
     </a-form>
