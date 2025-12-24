@@ -23,7 +23,7 @@ export function getBuildOpCommand(config_id: number, compileOption?: string) {
   const run_path = getOpRunPath(operator);
   const cd_cmd = `cd ${run_path}`;
 
-  const advance_cmd = getAdvanceCmd(config.user_options)
+  const advance_cmd = getAdvanceCmd(config.user_options.advance_param)
 
   if (!operator || operator.op_type !== 'ascend') {
     const build_cmd = `${config.script || ''} ${config.custom_options || ''} ${compileOption ? compileOption : ''} ${advance_cmd}`.trim();
@@ -85,7 +85,7 @@ export function getBuildExampleCommand(config_id: number, compileOption?: string
   const run_path = getOpRunPath(operator);
   const cd_cmd = `cd ${run_path}`;
 
-  const advance_cmd = getAdvanceCmd(config.user_options)
+  const advance_cmd = getAdvanceCmd(config.user_options.advance_param)
 
   if (!operator || operator.op_type !== 'ascend') {
     const cmd = `${config.script || ''} ${config.custom_options || ''} ${compileOption ? compileOption : ''} ${advance_cmd}`.trim();
@@ -126,7 +126,7 @@ export function getSimulateCommand(config_id: number, example_config_id: number)
   const cd_cmd = `cd ${run_path}`;
 
   const aic = `--aic-metrics=PipeUtilization,ResourceConflictRatio${config.user_options.PMSampling?',PMSampling':''}`
-  const advance_cmd = getAdvanceCmd(config.user_options)
+  const advance_cmd = getAdvanceCmd(config.user_options.advance_param)
   const simulatorCmd =  `msopprof simulator --soc-version=${config.user_options.simulatorType} --output=${operator.op_path}/.vscode/opprof ${aic} ${advance_cmd} ${exConfig.target_file}`
 
   return [source_cann, cd_cmd, simulatorCmd].filter(Boolean).join(' && ')
@@ -155,7 +155,7 @@ export function getOnBoardCommand(config_id: number, example_config_id: number) 
     }
   })
   aic = aic.slice(0, -1)
-  const advance_cmd = getAdvanceCmd(config.user_options)
+  const advance_cmd = getAdvanceCmd(config.user_options.advance_param)
   const opprofCmd  = `msopprof --output=${operator.op_path}/.vscode/opprof ${aic} ${advance_cmd} ${exConfig.target_file}`
 
   return [source_cann, cd_cmd, opprofCmd].filter(Boolean).join(' && ')
