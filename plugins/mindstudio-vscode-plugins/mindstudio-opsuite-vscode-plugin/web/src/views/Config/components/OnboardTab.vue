@@ -73,11 +73,11 @@ const handleOperatorPerformanceChange = (e) => {
 };
 
 // 所有全选
-const totalSelectedAll = ref(true)
+const totalSelectedAll = ref(false)
 // 内存分析图全选
 const memorySelectedAll = ref(true)
 // 算子性能数据文件全选
-const performanceSelectedAll = ref(true)
+const performanceSelectedAll = ref(false)
 
 // 内存分析图，这组半选
 const memorySelectedHalf = computed(() => {
@@ -90,7 +90,7 @@ const memorySelectedHalf = computed(() => {
 // 算子性能数据文件，这组半选
 const performanceSelectedHalf = computed(() => {
   let count = 0
-  const keyArray = ['ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'OpBasicInfo', 'PipeUtilization', 'ResourceConflictRatio']
+  const keyArray = ['ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'BasicInfo', 'PipeUtilization', 'ResourceConflictRatio']
   keyArray.forEach(key => {
     if (props.onboardData.user_options[key]) {
       count += 1
@@ -102,7 +102,7 @@ const performanceSelectedHalf = computed(() => {
 // 所有图形半选状态
 const totalSelectedHalf = computed(() => {
   let count = 0
-  const totalKeys = ['Occupancy', 'Roofline', 'Source', 'MemoryDetail', 'ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'OpBasicInfo', 'PipeUtilization', 'ResourceConflictRatio']
+  const totalKeys = ['Occupancy', 'Roofline', 'Source', 'MemoryDetail', 'ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'BasicInfo', 'PipeUtilization', 'ResourceConflictRatio']
   totalKeys.forEach(key => {
     if (props.onboardData.user_options[key]) {
       count += 1
@@ -123,7 +123,7 @@ watch(() => props.onboardData.user_options,
     memorySelectedAll.value = props.onboardData.user_options.Occupancy && props.onboardData.user_options.Roofline
 
     let count = 0
-    const keyArray = ['ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'OpBasicInfo', 'PipeUtilization', 'ResourceConflictRatio']
+    const keyArray = ['ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'BasicInfo', 'PipeUtilization', 'ResourceConflictRatio']
     keyArray.forEach(key => {
       if (props.onboardData.user_options[key]) {
         count += 1
@@ -133,7 +133,7 @@ watch(() => props.onboardData.user_options,
 
     totalSelectedAll.value = memorySelectedAll.value && performanceSelectedAll.value && props.onboardData.user_options.Source && props.onboardData.user_options.MemoryDetail
   },
-  { deep: true }
+  { deep: true, immediate: true }
 )
 
 </script>
@@ -214,7 +214,7 @@ watch(() => props.onboardData.user_options,
           <a-checkbox v-model:checked="onboardData.user_options.MemoryUB" @change="saveConfig">
             UB读写带宽速率
           </a-checkbox>
-          <a-checkbox v-model:checked="onboardData.user_options.OpBasicInfo" @change="saveConfig">
+          <a-checkbox v-model:checked="onboardData.user_options.BasicInfo" @change="saveConfig">
             算子基础信息
           </a-checkbox>
           <a-checkbox v-model:checked="onboardData.user_options.PipeUtilization" @change="saveConfig">

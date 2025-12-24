@@ -59,7 +59,7 @@ export interface OnboardConfig {
     // UB读写带宽速率
     MemoryUB: boolean,
     // 算子基础信息
-    OpBasicInfo: boolean,
+    BasicInfo: boolean,
     // 计算单元和搬运单元耗时占比
     PipeUtilization: boolean,
     // 资源冲突占比
@@ -86,7 +86,7 @@ export function createDefaultSimulationConfig(): SimulationConfig {
       script: '',
       soc_version: '',
       config_name: '',
-      PMSampling: true, // 内存通路吞吐率波形图
+      PMSampling: false, // 内存通路吞吐率波形图
       downloadToLocal: true, // 下载数据到本地
       renderInPlatform: false, // 平台内渲染结果
       dataStoragePath: '', // 数据存放位置
@@ -117,7 +117,7 @@ export function createDefaultOnboardConfig(): OnboardConfig {
       // 算子代码热点图
       Source: true,
       // Cache热力图
-      MemoryDetail: true,
+      MemoryDetail: false,
 
       // 算子性能数据文件 相关
       // Cube及Vector类型指令耗时和占比
@@ -131,7 +131,7 @@ export function createDefaultOnboardConfig(): OnboardConfig {
       // UB读写带宽速率
       MemoryUB: true,
       // 算子基础信息
-      OpBasicInfo: true,
+      BasicInfo: false,
       // 计算单元和搬运单元耗时占比
       PipeUtilization: true,
       // 资源冲突占比
@@ -147,20 +147,20 @@ export function createDefaultOnboardConfig(): OnboardConfig {
   };
 }
 
+const activeTab = ref("simulation");
+const simulationData = reactive<SimulationConfig>(createDefaultSimulationConfig());
+const onboardData = reactive<OnboardConfig>(createDefaultOnboardConfig());
+const updateIndex = ref(1);
+
 /**
  * Opprof配置管理 Composable
  */
 export function useOpprofConfig() {
-  const activeTab = ref("simulation");
-  const simulationData = reactive<SimulationConfig>(createDefaultSimulationConfig());
-  const onboardData = reactive<OnboardConfig>(createDefaultOnboardConfig());
-  const updateIndex = ref(1);
-
   /**
    * 处理全选逻辑
    */
   const handleSelectAll = (checked: boolean) => {
-    const keyArray = ['Occupancy', 'Roofline', 'Source', 'MemoryDetail', 'ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'OpBasicInfo', 'PipeUtilization', 'ResourceConflictRatio']
+    const keyArray = ['Occupancy', 'Roofline', 'Source', 'MemoryDetail', 'ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'BasicInfo', 'PipeUtilization', 'ResourceConflictRatio']
     keyArray.forEach(key => {
       onboardData.user_options[key] = checked
     })
@@ -180,7 +180,7 @@ export function useOpprofConfig() {
    * 处理算子性能复选框变化
    */
   const handleOperatorPerformanceChange = (checked: boolean) => {
-    const keyArray = ['ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'OpBasicInfo', 'PipeUtilization', 'ResourceConflictRatio']
+    const keyArray = ['ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'BasicInfo', 'PipeUtilization', 'ResourceConflictRatio']
     keyArray.forEach(key => {
       onboardData.user_options[key] = checked
     })

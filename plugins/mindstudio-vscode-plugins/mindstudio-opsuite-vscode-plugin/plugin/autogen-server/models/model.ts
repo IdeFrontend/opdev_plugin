@@ -176,7 +176,7 @@ export function generateStructure(data: Partial<OpRecord>, extensionPath: string
           // 算子代码热点图
           Source: true,
           // Cache热力图
-          MemoryDetail: true,
+          MemoryDetail: false,
 
           // 算子性能数据文件 相关
           // Cube及Vector类型指令耗时和占比
@@ -190,7 +190,7 @@ export function generateStructure(data: Partial<OpRecord>, extensionPath: string
           // UB读写带宽速率
           MemoryUB: true,
           // 算子基础信息
-          OpBasicInfo: true,
+          BasicInfo: false,
           // 计算单元和搬运单元耗时占比
           PipeUtilization: true,
           // 资源冲突占比
@@ -211,7 +211,7 @@ export function generateStructure(data: Partial<OpRecord>, extensionPath: string
           script: 'msprof op simulator',
           config_name: record.op_name,
           soc_version: soc_version,
-          PMSampling: true,
+          PMSampling: false,
           downloadToLocal: true,
           renderInPlatform: false,
           // 数据存放位置默认值
