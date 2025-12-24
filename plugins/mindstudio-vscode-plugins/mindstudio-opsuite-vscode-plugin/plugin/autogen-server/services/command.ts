@@ -23,8 +23,10 @@ export function getBuildOpCommand(config_id: number, compileOption?: string) {
   const run_path = getOpRunPath(operator);
   const cd_cmd = `cd ${run_path}`;
 
+  const advance_cmd = getAdvanceCmd(config.user_options)
+
   if (!operator || operator.op_type !== 'ascend') {
-    const build_cmd = `${config.script || ''} ${config.custom_options || ''} ${compileOption ? compileOption : ''}`.trim();
+    const build_cmd = `${config.script || ''} ${config.custom_options || ''} ${compileOption ? compileOption : ''} ${advance_cmd}`.trim();
     return [source_cann, cd_cmd, build_cmd].filter(Boolean).join(' && ');
   }
 
@@ -35,7 +37,7 @@ export function getBuildOpCommand(config_id: number, compileOption?: string) {
     const args = parse_cmd_options(config.custom_options || null);
     if (args && args.vendor_name) vendor_name = args.vendor_name;
     if (args && args.soc) soc = args.soc;
-    const cmd = `${config.script || ''} --pkg --soc=${soc} --vendor_name=${vendor_name} --ops=${op} ${compileOption ? compileOption : ''}`.trim();
+    const cmd = `${config.script || ''} --pkg --soc=${soc} --vendor_name=${vendor_name} --ops=${op} ${compileOption ? compileOption : ''} ${advance_cmd}`.trim();
     const deploy_cmd = `chmod +x ${config.target_file || ''} && ${config.target_file || ''}`;
     return [source_cann, cd_cmd, cmd, deploy_cmd].filter(Boolean).join(' && ');
   } catch (e: any) {
@@ -83,8 +85,10 @@ export function getBuildExampleCommand(config_id: number, compileOption?: string
   const run_path = getOpRunPath(operator);
   const cd_cmd = `cd ${run_path}`;
 
+  const advance_cmd = getAdvanceCmd(config.user_options)
+
   if (!operator || operator.op_type !== 'ascend') {
-    const cmd = `${config.script || ''} ${config.custom_options || ''} ${compileOption ? compileOption : ''}`.trim();
+    const cmd = `${config.script || ''} ${config.custom_options || ''} ${compileOption ? compileOption : ''} ${advance_cmd}`.trim();
     return [source_cann, cd_cmd, cmd].filter(Boolean).join(' && ');
   }
 
@@ -97,7 +101,7 @@ export function getBuildExampleCommand(config_id: number, compileOption?: string
     if (args && args.vendor_name) vendor_name = args.vendor_name;
     if (args && args.pkg_mode) pkg_mode = args.pkg_mode;
     if (args && args.mode) mode = args.mode;
-    const cmd = `${config.script || ''} --run_example ${op} ${mode} ${pkg_mode} ${vendor_name} ${compileOption ? compileOption : ''}`.trim();
+    const cmd = `${config.script || ''} --run_example ${op} ${mode} ${pkg_mode} ${vendor_name} ${compileOption ? compileOption : ''} ${advance_cmd}`.trim();
     return [source_cann, cd_cmd, cmd].filter(Boolean).join(' && ');
   } catch (e: any) {
     throw new Error(`生成编译命令失败:${e.message}`);
@@ -122,8 +126,8 @@ export function getSimulateCommand(config_id: number, example_config_id: number)
   const cd_cmd = `cd ${run_path}`;
 
   const aic = `--aic-metrics=PipeUtilization,ResourceConflictRatio${config.user_options.PMSampling?',PMSampling':''}`
-  const dump = config.user_options.enableDump ? '--dump' : ''
-  const simulatorCmd =  `msopprof simulator --soc-version=${config.user_options.simulatorType} --output=${operator.op_path}/.vscode/opprof ${exConfig.target_file} ${aic} ${dump}`
+  const advance_cmd = getAdvanceCmd(config.user_options)
+  const simulatorCmd =  `msopprof simulator --soc-version=${config.user_options.simulatorType} --output=${operator.op_path}/.vscode/opprof ${exConfig.target_file} ${aic} ${advance_cmd}`
 
   return [source_cann, cd_cmd, simulatorCmd].filter(Boolean).join(' && ')
 }
@@ -151,7 +155,8 @@ export function getOnBoardCommand(config_id: number, example_config_id: number) 
     }
   })
   aic = aic.slice(0, -1)
-  const opprofCmd  = `msopprof --output=${operator.op_path}/.vscode/opprof ${exConfig.target_file} ${aic}`
+  const advance_cmd = getAdvanceCmd(config.user_options)
+  const opprofCmd  = `msopprof --output=${operator.op_path}/.vscode/opprof ${exConfig.target_file} ${aic} ${advance_cmd}`
 
   return [source_cann, cd_cmd, opprofCmd].filter(Boolean).join(' && ')
 }
@@ -184,4 +189,13 @@ function handleSanitizerConfigToCmd(sanitizerConfig: any) {
   ]
     .filter(item => item)
     .join(' ')
+}
+
+// 处理高级参数
+function getAdvanceCmd(advance_param: any)  {
+  let advanceStr = ''
+  if (Array.isArray(advance_param) && advance_param.length) {
+    advanceStr = advance_param.filter((item: any) => item.name && item.value).map((item: any) => `--${item.name}=${item.value}`).join(' ')
+  }
+  return advanceStr
 }

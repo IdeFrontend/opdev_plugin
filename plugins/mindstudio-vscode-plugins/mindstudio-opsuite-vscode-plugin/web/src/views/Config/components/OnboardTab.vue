@@ -33,6 +33,21 @@ const emit = defineEmits([
   "deleteAdvancedParam",
 ]);
 
+const addTableItem = () => {
+  emit('addAdvancedParam')
+  nextTick(() => {
+    saveConfig()
+  })
+}
+
+const deleteTableItem = e => {
+  console.log('delete event', e)
+  emit('deleteAdvancedParam', e)
+  nextTick(() => {
+    saveConfig()
+  })
+}
+
 const handleSelectAll = (e) => {
   const checked = typeof e === "boolean" ? e : e.target?.checked ?? false;
   emit("selectAll", checked);
@@ -244,7 +259,7 @@ watch(() => props.onboardData.user_options,
           <a-form-item>
             <div class="section-title" style="margin-top: 12px;">高级参数</div>
             <editTable :key="updateIndex" :dataSource="onboardData.user_options.advance_param"
-              @addTableItem="emit('addAdvancedParam')" @deleteTableItem="emit('deleteAdvancedParam', $event)" />
+              @addTableItem="addTableItem" @deleteTableItem="deleteTableItem" @onChange="saveConfig" />
           </a-form-item>
         </a-collapse-panel>
       </a-collapse>

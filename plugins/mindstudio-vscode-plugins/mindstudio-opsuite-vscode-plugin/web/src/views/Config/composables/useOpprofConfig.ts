@@ -247,7 +247,9 @@ export function useOpprofConfig() {
     console.log('initOnBoard', data)
     onboardData.config_id = data.config_id
     onboardData.project_id = data.project_id
-    Object.assign(onboardData.user_options, data.user_options)
+    Object.keys(onboardData.user_options).forEach(k => {
+      onboardData.user_options[k] = data.user_options[k]
+    })
     console.log('onboardData.user_options, data.user_options', onboardData.user_options, data.user_options)
   }
 
