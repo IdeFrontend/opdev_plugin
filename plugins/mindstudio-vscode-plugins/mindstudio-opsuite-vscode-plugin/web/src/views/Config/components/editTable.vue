@@ -8,7 +8,7 @@
 import { cloneDeep } from "lodash-es";
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons-vue";
 import { reactive, ref } from "vue";
-const emit = defineEmits(["addTableItem", "deleteTableItem"]);
+const emit = defineEmits(["addTableItem", "deleteTableItem", 'onChange']);
 const columns = [
   {
     title: "参数名称",
@@ -39,6 +39,10 @@ const deleteTableItem = (key) => {
 const addTableItem = () => {
   emit("addTableItem");
 };
+
+const onChange = () => {
+  emit('onChange')
+}
 </script>
 
 <template>
@@ -61,6 +65,7 @@ const addTableItem = () => {
             <a-input
               v-model:value="dataSource[record.key][column.dataIndex]"
               style="margin: -5px 0"
+              @change="onChange"
             />
           </div>
         </template>

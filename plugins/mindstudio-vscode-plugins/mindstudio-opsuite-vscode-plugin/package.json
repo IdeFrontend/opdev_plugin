@@ -1,13 +1,13 @@
 {
   "name": "huawei-op-devtools-vscode-plugin",
   "displayName": "Huawei OP DevTools",
-  "description": "A comprehensive operations suite for MindStudio",
+  "description": "A comprehensive operations suite",
   "publisher": "huawei",
   "repository": {
     "type": "git",
     "url": "https://gitcode.com/Asscend/mstt"
   },
-  "version": "1.1.15",
+  "version": "1.1.25",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -34,15 +34,22 @@
       "secondarySidebar": [
         {
           "id": "huawei-op-devtools-secondary-sidebar",
-          "title": "算子工程-操作",
+          "title": "一站式算子工程操作面板",
           "icon": "resources/operate.svg"
         }
       ],
       "secondaryActivitybar": [
         {
           "id": "huawei-op-devtools-secondary-sidebar",
-          "title": "算子工程-操作",
+          "title": "一站式算子工程操作面板",
           "icon": "resources/operate.svg"
+        }
+      ],
+      "panel": [
+        {
+          "id": "ms-sanitizer-panel-view",
+          "title": "异常检测",
+          "icon": "resources/ops.svg"
         }
       ]
     },
@@ -58,10 +65,24 @@
         {
           "type": "webview",
           "id": "OpsOperateProvider",
-          "name": "算子工程-操作"
+          "name": "一站式算子工程操作面板"
+        }
+      ],
+      "ms-sanitizer-panel-view": [
+        {
+          "type": "webview",
+          "id": "msSanitizerPanelView",
+          "name": "异常检测",
+          "when": "true"
         }
       ],
       "explorer": [
+        {
+          "id": "msSanitizerSidebarView",
+          "name": "异常检测",
+          "type": "webview",
+          "visibility": "collapsed"
+        },
         {
           "id": "performanceSidebarView",
           "name": "性能调优",
@@ -81,7 +102,7 @@
       },
       {
         "command": "huawei-op-devtools.toggleOpsOperate",
-        "title": "算子工程-操作",
+        "title": "一站式算子工程操作面板",
         "category": "secondary Sidebar",
         "icon": "resources/operate.svg"
       },
@@ -119,13 +140,21 @@
       {
         "command": "huawei-op-devtools.clearWelcomeCount",
         "title": "清除欢迎页显示计数"
+      },
+      {
+        "command": "huawei-op-devtools.open-ms-sanitizer-panel-view",
+        "title": "异常检测"
+      },
+      {
+        "command": "vscodeJumpToFile",
+        "title": "文件跳转定位"
       }
     ],
     "menus": {
       "commandPalette": [
         {
           "command": "huawei-op-devtools.toggleOpsOperate",
-          "when": "true"
+          "when": "hasDevtoolConfig"
         }
       ],
       "view/title": [],
@@ -133,7 +162,7 @@
         {
           "command": "huawei-op-devtools.toggleOpsOperate",
           "group": "navigation",
-          "when": "true"
+          "when": "hasDevtoolConfig"
         }
       ]
     },
@@ -158,19 +187,20 @@
     "package:debug": "npm run compile:debug && vsce package --no-dependencies",
     "compile:debug": "npm run compile:web:debug && npm run compile:plugin:debug",
     "compile:web:debug": "cd web && npm run build:debug",
-    "compile:plugin:debug": "tsc --noEmit && tsx ./scripts/build-extension --sourcemap",
+    "compile:plugin:debug": "tsx ./scripts/build-extension --sourcemap",
     "lint": "eslint plugin/src",
     "install:web": "cd web && npm install"
   },
   "dependencies": {
+    "adm-zip": "^0.5.12",
     "compressing": "^2.0.0",
     "fs-extra": "^11.3.2",
     "i18next": "^25.7.2",
-    "ws": "^8.18.3",
-    "adm-zip": "^0.5.12"
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
+    "@types/adm-zip": "^0.5.7",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "16.x",
     "@types/vscode": "^1.60.0",

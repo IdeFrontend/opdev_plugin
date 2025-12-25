@@ -35,7 +35,7 @@ function handleToggleMark(key: string, marked: boolean) {
 
 <template>
   <div @contextmenu.prevent>
-    <FilterBar v-model:sort-order="sortOrder" v-model:marked-only="markedOnly" />
+    <FilterBar v-model:sort-order="sortOrder" v-model:marked-only="markedOnly" @reload="loadTreeData" />
     <FileTree :tree-data="renderTreeData" @toggle-mark="handleToggleMark" />
   </div>
 </template>

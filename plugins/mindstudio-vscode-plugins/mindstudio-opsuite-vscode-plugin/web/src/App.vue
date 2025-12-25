@@ -6,6 +6,7 @@ import { getQuery } from '@/core/query';
 
 import OpsConfig from './views/OpsConfig/OpsConfig.vue';
 import PerformanceRunData from './views/PerformanceRunData/PerformanceRunData.vue';
+import MsSanitizerRunData from "./views/MsSanitizerRunData/APP.vue";
 
 const themeConfig = {
   algorithm: theme.darkAlgorithm, // 使用暗色算法
@@ -56,6 +57,7 @@ onMounted(async () => {
   <a-config-provider :theme="themeConfig">
     <OpsConfig v-if="routePath === 'ops-config'"></OpsConfig>
     <PerformanceRunData v-else-if="routePath === 'performance-records'"></PerformanceRunData>
+    <MsSanitizerRunData v-else-if="routePath === 'msSanitizer-data-list'"></MsSanitizerRunData>
     <div v-else-if="!routePath" style="padding: 20px; color: #999;">
       加载中...
     </div>

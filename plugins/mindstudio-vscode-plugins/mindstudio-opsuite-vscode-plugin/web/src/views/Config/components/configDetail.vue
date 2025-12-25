@@ -108,13 +108,19 @@ defineExpose({
 });
 
 const opprofRef = ref(null)
+const opprofInited = ref(false)
 watch(
   () => props.activeOption,
   val => {
+    if (opprofInited.value) {
+      return
+    }
+    // 避免使用旧的数据初始化
     if (val === 'opprof') {
       nextTick(()=> {
         opprofRef.value.init(simulateConfigData.value, onBoardConfigData.value)
       })
+      opprofInited.value = true
     }
   }
 )

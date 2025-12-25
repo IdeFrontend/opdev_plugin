@@ -6,9 +6,14 @@
  */
 import i18next from 'i18next';
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
+import { promisify } from 'util';
+import { exec } from 'child_process';
 
 import i18nResource from 'shared:/i18n';
 
+import { ExplorerRootUtils } from './class/ExplorerRootUtils';
 import { WebviewProvider } from './class/webviewProvider';
 import { handleOperatorProjectDictoryFile } from './class/WebviewMessageList';
 import OpsOption from './class/OpsOption';
@@ -22,10 +27,34 @@ import { PermanentStorage } from './class/PermanentStorage';
 import { ExtensionConfig } from './services/ExtensionConfig';
 
 import { OpsOperateProvider } from './class/OpsOperateProvider';
+import { getMsSanitizerPanelViewProvider } from './class/MsSanitizerPanelView';
+
 import { MindStudioPluginInstaller } from './class/MindStudioPluginInstaller';
 
 let extensionContext: vscode.ExtensionContext | undefined;
+const execAsync = promisify(exec);
 
+
+/**
+ * 检查当前工作区是否存在 .vscode/devtool_config.json 文件
+ * @returns 如果文件存在返回 true，否则返回 false
+ */
+async function checkDevtoolConfigExists(): Promise<boolean> {
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+  if (!workspaceFolders || workspaceFolders.length === 0) {
+    return false;
+  }
+
+  const workspacePath = workspaceFolders[0].uri.fsPath;
+  const devtoolConfigPath = path.join(workspacePath, '.vscode', 'devtool_config.json');
+
+  try {
+    return fs.existsSync(devtoolConfigPath);
+  } catch (error) {
+    console.error('检查 devtool_config.json 文件时出错:', error);
+    return false;
+  }
+}
 /**
  * 插件激活入口函数
  * @param context VSCode扩展上下文
@@ -34,6 +63,56 @@ export async function activate(context: vscode.ExtensionContext) {
   extensionContext = context;
   // 国际化
   await initI18n();
+
+  
+  // 检查 devtool_config.json 文件是否存在
+  const hasDevtoolConfig = await checkDevtoolConfigExists();
+  console.log('文件是否存在:', hasDevtoolConfig);
+  // 设置 context 来控制命令可见性
+  await vscode.commands.executeCommand('setContext', 'hasDevtoolConfig', hasDevtoolConfig);
+
+  /**
+   * 关闭辅助侧边栏
+   */
+  const closeAuxiliaryBar = async () => {
+    try {
+      // 检查辅助侧边栏是否可见，如果可见则关闭
+      await vscode.commands.executeCommand('workbench.action.closeAuxiliaryBar');
+      console.log('已关闭辅助侧边栏');
+    } catch (error) {
+      console.error('关闭辅助侧边栏时出错:', error);
+    }
+  };
+
+  // 监听工作区文件夹变化，重新检查配置文件
+  // const updateDevtoolConfigContext = async () => {
+  //   const exists = await checkDevtoolConfigExists();
+  //   await vscode.commands.executeCommand('setContext', 'hasDevtoolConfig', exists);
+  //   return exists;
+  // };
+
+  // // 监听工作区文件夹变化
+  // const workspaceWatcher = vscode.workspace.onDidChangeWorkspaceFolders(async () => {
+  //   const exists = await updateDevtoolConfigContext();
+  //   // 如果文件存在且侧边栏未展开，则展开它
+  //   if (exists) {
+  //     setTimeout(async () => {
+  //       try {
+  //          console.log('执行展开文件存在',exists);
+  //         await vscode.commands.executeCommand('OpsOperateProvider.focus');
+  //       } catch (error) {
+  //         console.error('聚焦 OpsOperateProvider 视图时出错:', error);
+  //       }
+  //     }, 1000);
+  //   } else {
+  //     // 如果文件不存在，关闭侧边栏
+  //     setTimeout(async () => {
+  //       await closeAuxiliaryBar();
+  //     }, 500);
+  //   }
+  // });
+
+  // context.subscriptions.push(workspaceWatcher);
 
   let progress: any;
   if (context.globalState.get<string>('runCommand') === 'huawei-op-devtools.createDictory') {
@@ -85,7 +164,6 @@ export async function activate(context: vscode.ExtensionContext) {
       console.log(error)
     }
   });
-  context.subscriptions.push(toggleOpsOperateCommand);
 
   // 注册视图
   const opsOperateProvider = new OpsOperateProvider(context);
@@ -95,9 +173,27 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   });
   context.subscriptions.push(opsOperateView);
-  // 聚焦该视图
-  vscode.commands.executeCommand('OpsOperateProvider.focus');
-
+  // 注册命令（无论文件是否存在都要注册）
+  context.subscriptions.push(toggleOpsOperateCommand);
+  
+  // 根据 devtool_config.json 文件是否存在来决定展开或关闭侧边栏
+  if (hasDevtoolConfig) {
+    // 延迟执行，确保 UI 已就绪
+    setTimeout(async () => {
+      try {
+        console.log('文件存在执行展开：123123123132')
+        await vscode.commands.executeCommand('OpsOperateProvider.focus');
+      } catch (error) {
+        console.error('聚焦 OpsOperateProvider 视图时出错:', error);
+      }
+    }, 1000);
+  } else {
+    // 如果文件不存在，关闭侧边栏
+    setTimeout(async () => {
+      await closeAuxiliaryBar();
+    }, 500);
+  }
+  
   // 注册打开Opsuite命令
   const ConfigCommand = vscode.commands.registerCommand('huawei-op-devtools.config', async () => {
     configProvider.show('Config');
@@ -184,11 +280,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
   configProvider.showLeftPage('Home');
   const [workspaceFolder] = vscode.workspace.workspaceFolders ?? [];
-  console.log(workspaceFolder,'是否打开了文件夹');
+  console.log(workspaceFolder, '是否打开了文件夹');
   // 仅在未打开任何工程/文件夹时弹出欢迎页，且在本地缓存中记录次数，最多弹出两次
   if (!workspaceFolder) {
     const welcomeShowCount = context.globalState.get<number>('welcomeShowCount') ?? 0;
-    console.log(welcomeShowCount,'打开次数');
+    console.log(welcomeShowCount, '打开次数');
     if (welcomeShowCount < 2) {
       vscode.commands.executeCommand('huawei-op-devtools.welcome');
       vscode.commands.executeCommand('workbench.view.extension.mindstudio-opssuite-vscode-plugin');
@@ -196,6 +292,11 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   }
   context.subscriptions.push(buttonCommand, button);
+
+  // 异常检测视图
+  const { openMsSanitizerDisposable, msSanitizerPanelView } = getMsSanitizerPanelViewProvider(context);
+
+  context.subscriptions.push(msSanitizerPanelView, openMsSanitizerDisposable);
 
   // 订阅销毁事件
   context.subscriptions.push(apiServer);
@@ -287,6 +388,8 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   await installer.installIfNeeded();
+  console.log('执行了', context);
+  await exportEnvToFile(context);
 }
 
 /**
@@ -323,6 +426,32 @@ function initViews(context: vscode.ExtensionContext, apiServer: ApiServer): View
   });
 
   return viewServer;
+}
+
+/**
+ * 在扩展根目录执行环境导出命令
+ */
+async function exportEnvToFile(context: vscode.ExtensionContext) {
+  // 优先使用当前工作区根目录作为执行目录，其次回退到扩展安装目录
+  // const selectedFiles = ExplorerRootUtils.getPrimaryRoot();
+  // console.log(selectedFiles);
+  const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+  console.log('workspaceFolder', workspaceFolder);
+  const cwd = workspaceFolder?.uri.fsPath ?? context.extensionPath;
+  console.log('cwd', cwd)
+  const targetDir = path.join(cwd, '.arts');
+  const targetFile = path.join(targetDir, 'env');
+  try {
+    await fs.promises.mkdir(targetDir, { recursive: true });
+    await execAsync('. /etc/profile && env > ./.arts/.env', {
+      cwd,
+      shell: '/bin/bash',
+      windowsHide: true,
+    });
+    console.log(`环境变量已导出到: ${targetFile}`);
+  } catch (error) {
+    console.error('导出环境变量失败:', error);
+  }
 }
 
 export function deactivate() {

@@ -6,7 +6,7 @@
 
 <script setup>
 import { FolderOutlined } from "@ant-design/icons-vue";
-import { ref } from "vue";
+import { ref, nextTick } from "vue";
 import { QuestionCircleOutlined } from "@ant-design/icons-vue";
 import { message } from "../../../untils/Message";
 import EditTable from "./editTable.vue";
@@ -32,6 +32,21 @@ const saveConfig = () => {
 
 const activeKey = ref(["1"]);
 const guide = ref('https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODtools/Operatordevelopmenttools/atlasopdev_16_0082.html')
+
+const addTableItem = () => {
+  emit('addAdvancedParam')
+  nextTick(() => {
+    saveConfig()
+  })
+}
+
+const deleteTableItem = e => {
+  console.log('delete event', e)
+  emit('deleteAdvancedParam', e)
+  nextTick(() => {
+    saveConfig()
+  })
+}
 </script>
 
 <template>
@@ -89,7 +104,7 @@ const guide = ref('https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/
 
       <a-collapse v-model:activeKey="activeKey" ghost>
         <a-collapse-panel key="1" header="高级配置">
-          <div class="simulate-title" style="margin-bottom: 8px;">
+          <!-- <div class="simulate-title" style="margin-bottom: 8px;">
             仿真器类型
             <a-tooltip title="当前支持的仿真器类型可以在 CANN安装路径下 ascend-toolkit/latest/tools/simulator目录查看">
               <QuestionCircleOutlined class="help-icon" />
@@ -97,7 +112,7 @@ const guide = ref('https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/
           </div>
           <a-form-item>
             <a-input v-model:value="simulationData.user_options.simulatorType" placeholder="请输入仿真器类型"   @change="saveConfig"/>
-          </a-form-item>
+          </a-form-item> -->
 
           <!-- <div class="section-title" style="margin-top: 12px;">控制仿真器dump文件是否生成</div>
           <a-form-item>
@@ -106,7 +121,7 @@ const guide = ref('https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/
 
           <div class="section-title" style="margin-top: 12px;">高级参数</div>
           <EditTable :key="updateIndex" :dataSource="simulationData.user_options.advance_param"
-            @addTableItem="emit('addAdvancedParam')" @deleteTableItem="emit('deleteAdvancedParam', $event)" />
+            @addTableItem="addTableItem" @deleteTableItem="deleteTableItem" @onChange="saveConfig"/>
         </a-collapse-panel>
       </a-collapse>
     </a-form>

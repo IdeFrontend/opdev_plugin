@@ -181,7 +181,7 @@ const webviewMessageList: messageItem[] = [
       const configData = await opsOption.getSanitizerConfigs();
       console.log('SetSanitizerForm', configData);
 
-      that._view.webview.postMessage({
+      that.panel.webview.postMessage({
         command: 'iframeSetSanitizerForm',
         data: JSON.stringify((configData || [])[0]),
       });
@@ -402,6 +402,7 @@ const webviewMessageList: messageItem[] = [
       const data = msg.message.data;
       const opsOption = new OpsOption(that.context);
       await opsOption.init();
+      await opsOption.startBuild(undefined, '--simulator');
       await opsOption.startSimulate();
     },
   },
@@ -411,6 +412,7 @@ const webviewMessageList: messageItem[] = [
       const data = msg.message.data;
       const opsOption = new OpsOption(that.context);
       await opsOption.init();
+      await opsOption.startBuild(undefined, '--debug');
       await opsOption.startOnBoard();
     }
   },
@@ -422,6 +424,7 @@ const webviewMessageList: messageItem[] = [
         await opsOption.init();
         // debug前编译
         await opsOption.startBuild(undefined, '--debug');
+        await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
         await vscode.commands.executeCommand('workbench.action.debug.start');
       } catch (error) {
         console.error('打开debug时出错:', error);
@@ -577,6 +580,26 @@ const webviewMessageList: messageItem[] = [
   {
     command: 'vscodeOperateErrorToast',
     callback: (message: any) => vscode.window.showErrorMessage('工程配置中命令行为空，请配置再执行该命令'),
+  },
+  {
+    command: 'vscodeJumpToFile',
+    callback: async (data: any) => {
+      try {
+        const { fileLink, row, col } = data;
+        // const uri = vscode.Uri.file(path.join(__dirname, fileLink))
+        const uri = vscode.Uri.file(fileLink)
+        console.log('uri', uri)
+        const document = await vscode.workspace.openTextDocument(uri);
+        console.log('document', document)
+        await vscode.window.showTextDocument(document, {
+          preview: true,
+          viewColumn: vscode.ViewColumn.One
+        });
+      } catch (error) {
+        console.log('jumpToFile', error)
+        vscode.window.showErrorMessage(`打开文件失败：${error}`)
+      }
+    },
   }
 ];
 
