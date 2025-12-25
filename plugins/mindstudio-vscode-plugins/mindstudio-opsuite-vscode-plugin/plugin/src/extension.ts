@@ -297,7 +297,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const { openMsSanitizerDisposable, msSanitizerPanelView } = getMsSanitizerPanelViewProvider(context);
 
   context.subscriptions.push(msSanitizerPanelView, openMsSanitizerDisposable);
-
+  createOpsProvider.show('ProjectSH');
   // 订阅销毁事件
   context.subscriptions.push(apiServer);
   context.subscriptions.push(viewServer);
