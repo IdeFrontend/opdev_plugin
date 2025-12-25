@@ -117,6 +117,7 @@ export default class OpsOption {
         result,
       );
       vscode.window.showInformationMessage(`新建算子文件成功`);
+      await this.checkVscode()
     } catch (e) {
       vscode.window.showErrorMessage(`新建算子文件失败 ${e instanceof Error ? e.message : ''}`);
     }
