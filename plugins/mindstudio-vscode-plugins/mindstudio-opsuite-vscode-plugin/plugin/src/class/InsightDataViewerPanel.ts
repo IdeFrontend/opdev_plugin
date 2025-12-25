@@ -83,7 +83,6 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     const envPath = process.env.INSIGHT_HOME_PATH;
     if (envPath) {
       console.log(`[InsightDataViewerPanel] 从环境变量获取 insight-vscode-plugin 路径: ${envPath}`);
-     
       return envPath;
     }else{
       vscode.window.showInformationMessage(`从环境变量获取 insight-vscode-plugin 路径失败，请检查环境变量 INSIGHT_HOME_PATH 是否正确，如不存在请联系管理员设置`);
