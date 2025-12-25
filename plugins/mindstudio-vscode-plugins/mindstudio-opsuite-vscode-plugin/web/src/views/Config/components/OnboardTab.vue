@@ -138,7 +138,7 @@ watch(() => props.onboardData.user_options,
 
 const startHref = 'https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/API/ascendcopapi/atlasascendc_api_07_1214.html'
 const stopHref = 'https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/API/ascendcopapi/atlasascendc_api_07_1215.html'
-
+const guide = 'https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODtools/Operatordevelopmenttools/atlasopdev_16_0082.html'
 </script>
 
 <template>
@@ -149,8 +149,9 @@ const stopHref = 'https://www.hiascend.com/document/detail/zh/canncommercial/83R
         <a-tooltip :overlay-style="{ maxWidth: '300px' }">
           <template #title>
             <div>
-              具体图形案例请参考
-              <a :href="guide" target="_blank" style="color: #4ba5f4;">算子调优工具概述</a>
+              具体图形案例请参考算子调优工具概述:
+              <br>
+              {{ guide }}
             </div>
           </template>
           <QuestionCircleOutlined class="help-icon" />
@@ -227,7 +228,7 @@ const stopHref = 'https://www.hiascend.com/document/detail/zh/canncommercial/83R
           </a-checkbox>
         </div>
       </a-form-item>
-
+      <a-alert v-if="onboardData.user_options.Roofline || onboardData.user_options.MemoryDetail" type="warning" show-icon message="若勾选“Roofline瓶颈分析”或“Cache热力图”，将默认采集所有算子性能指标" style="margin-top: 12px;"></a-alert>
 
       <!-- <div class="section-title" style="margin-top: 12px;">模式</div>
       <a-form-item>
@@ -256,11 +257,7 @@ const stopHref = 'https://www.hiascend.com/document/detail/zh/canncommercial/83R
                 <QuestionCircleOutlined class="help-icon" />
                 <template #title>
                   <div>
-                    指定代码段范围时，需要在算子Kernel侧对应的代码段前后进行设置，具体设置请参见
-                    <a :href="startHref" target="_blank" style="color: #4ba5f4;">MetricsProfStart</a>
-                    和
-                    <a :href="stopHref" target="_blank" style="color: #4ba5f4;">MetricsProfStop</a>
-                    接口
+                    指定代码段范围时，需要在算子Kernel侧对应的代码段前后进行设置，具体设置请参见MetricsProfStart和MetricsProfStop接口
                   </div>
                 </template>
               </a-tooltip>
@@ -269,10 +266,14 @@ const stopHref = 'https://www.hiascend.com/document/detail/zh/canncommercial/83R
           <a-alert v-if="onboardData.user_options.KernelScale" type="warning" show-icon>
             <template #message>
               请确认是否在算子Kernal侧对应的代码段前后进行了设置，若未设置，将无法收集到有效数据。具体设置方式请参见
-              <a :href="startHref" target="_blank" style="color: #4ba5f4;">MetricsProfStart</a>
-              和
-              <a :href="stopHref" target="_blank" style="color: #4ba5f4;">MetricsProfStop</a>
-              接口
+              <br>
+              MetricsProfStart
+              <br>
+              （{{ startHref }}）
+              <br>
+              和MetricsProfStop接口
+              <br>
+              （{{ stopHref }}）
             </template>
           </a-alert>
 
