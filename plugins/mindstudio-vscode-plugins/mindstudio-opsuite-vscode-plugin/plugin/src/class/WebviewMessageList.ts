@@ -372,10 +372,10 @@ const webviewMessageList: messageItem[] = [
       await opsOption.startBuild(undefined, '--mssanitizer');
       // 创建文件夹
       const workspaceFolders = vscode.workspace.workspaceFolders;
-      const workspacePath = workspaceFolders[0].uri.fsPath;
+      const workspacePath = workspaceFolders![0].uri.fsPath;
       const logPath = path.join(path.join(workspacePath, '.vscode/mindstudio_sanitizer_log'));
       if (!fs.existsSync(logPath)) {
-        fs.makdirSync(logPath);
+        fs.mkdirSync(logPath);
       }
       // 开启异常检测
       await opsOption.runSanitizer();
@@ -597,7 +597,7 @@ const webviewMessageList: messageItem[] = [
         const charactor = Math.max(0, col - 1);
         const pos = new vscode.Position(line, charactor);
         editor.selection = new vscode.Selection(pos, pos);
-        editor.ravealRange(new vscode.Range(pos, pos))
+        editor.revealRange(new vscode.Range(pos, pos))
       } catch (error) {
         console.log('jumpToFile', error)
         vscode.window.showErrorMessage(`打开文件失败：${error}`)
