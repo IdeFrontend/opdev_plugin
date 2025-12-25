@@ -83,17 +83,17 @@ export const getMsSanitizerPanelViewProvider = (context: vscode.ExtensionContext
     // 注册打开终端和 Webview 的命令
     const openMsSanitizerDisposable = vscode.commands.registerCommand('huawei-op-devtools.open-ms-sanitizer-panel-view', async (data: any) => {
         // 打开底部区域面板
-        vscode.commands.executeCommand('workbench.action.togglePanel');
+        await vscode.commands.executeCommand('workbench.action.togglePanel');
 
         // 定位到异常检测面板
-        vscode.commands.executeCommand(`msSanitizerPanelView.focus`);
-
+        await vscode.commands.executeCommand(`msSanitizerPanelView.focus`);
         // 发送数据 后续优化 先通过_view.webview方式下发内容
         const panelData = await getPanelData(data);
         (msSanitizerPanelViewProvider as any)._view.webview.postMessage({
             command: 'iframeRemoteMsSanitizerPanelViewSetRenderList',
             data: panelData,
         });
+
     });
 
 

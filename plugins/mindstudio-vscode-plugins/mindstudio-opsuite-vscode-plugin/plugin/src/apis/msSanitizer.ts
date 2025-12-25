@@ -33,16 +33,17 @@ function setMsSanitizerMarks(vals: string[]) {
 export const msSanitizerApis: ApiGroup = {
   msSanitizer: {
     async getRunData(params) {
-      // 本地测试数据配置
-      // process.env.HOME = path.join(__dirname, '../')
-
-      // 获取不到系统根路径
-      if (!process.env.HOME) {
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (!workspaceFolders || workspaceFolders.length === 0) {
+        console.log('getRunData1 no workspaceFolders')
         return [];
       }
-
+      
+      const workspacePath = workspaceFolders[0].uri.fsPath;
+      console.log('getRunData2', workspacePath)
       // 获取目录下.vscode/mindstudio_sanitizer_log文件夹中的所有文件
-      const logPath = path.join(path.join(process.env.HOME!, '.vscode/mindstudio_sanitizer_log'));
+      const logPath = path.join(path.join(workspacePath, '.vscode/mindstudio_sanitizer_log'));
+      console.log('getRunData3', logPath)
       // 文件夹不存在
       if (!fs.existsSync(logPath)) {
         return []
