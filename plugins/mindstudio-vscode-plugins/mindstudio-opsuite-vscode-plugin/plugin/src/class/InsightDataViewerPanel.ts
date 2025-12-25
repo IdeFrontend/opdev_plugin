@@ -34,10 +34,11 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     this.context = context;
     this.binPath = binPath;
 
-    // 构建路径（insight-vscode-plugin 最终会在 out/plugin/insight-vscode-plugin 里）
-    this.serverDir = path.join(context.extensionPath, 'out', 'plugin', 'insight-vscode-plugin', 'server');
+    // 构建路径
+    const insightPluginBasePath = this.getInsightPluginBasePath();
+    this.serverDir = path.join(insightPluginBasePath, 'server');
     this.serverPath = path.join(this.serverDir, 'profiler_server');
-    this.zipDir = path.join(context.extensionPath, 'out', 'plugin', 'insight-vscode-plugin', 'zip');
+    this.zipDir = path.join(insightPluginBasePath, 'zip');
 
     // 创建一个 Promise 来等待 serverPort 被赋值
     let resolvePortReady: () => void;
@@ -74,6 +75,24 @@ export class InsightDataViewerPanel implements vscode.Disposable {
   }
 
   /**
+   * 获取 insight-vscode-plugin 基础路径
+   * 优先从环境变量获取，如果环境变量不存在则使用默认路径
+   */
+  private getInsightPluginBasePath(): string {
+    // 优先从环境变量获取
+    const envPath = process.env.INSIGHT_VSCODE_PLUGIN_PATH;
+    if (envPath) {
+      console.log(`[InsightDataViewerPanel] 从环境变量获取 insight-vscode-plugin 路径: ${envPath}`);
+      return envPath;
+    }
+    
+    // 使用默认路径
+    const defaultPath = path.join(this.context.extensionPath, 'out', 'plugin', 'insight-vscode-plugin');
+    console.log(`[InsightDataViewerPanel] 使用默认 insight-vscode-plugin 路径: ${defaultPath}`);
+    return defaultPath;
+  }
+
+  /**
    * 创建或显示 panel
    */
   public static createOrShow(context: vscode.ExtensionContext, binPath: string): void {
@@ -105,25 +124,15 @@ export class InsightDataViewerPanel implements vscode.Disposable {
    * 设置 webview 内容
    */
   private setupWebview(): void {
-    const htmlPath = path.join(
-      this.context.extensionPath,
-      'out',
-      'plugin',
-      'insight-vscode-plugin',
-      'index.html'
-    );
+    const insightPluginBasePath = this.getInsightPluginBasePath();
+    const htmlPath = path.join(insightPluginBasePath, 'index.html');
 
     let htmlContent = '';
     if (fs.existsSync(htmlPath)) {
       htmlContent = fs.readFileSync(htmlPath, 'utf8');
       
       // 注入编译后的 DataViewerController JS 文件
-      const controllerJsPath = path.join(
-        this.context.extensionPath,
-        'out',
-        'insight-vscode-plugin',
-        'DataViewerController.js'
-      );
+      const controllerJsPath = path.join(insightPluginBasePath, 'DataViewerController.js');
       
       if (fs.existsSync(controllerJsPath)) {
         const controllerJs = fs.readFileSync(controllerJsPath, 'utf8');
@@ -330,8 +339,8 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       console.log(`[InsightDataViewerPanel] 开始解压: ${zipPath}`);
 
       // 解压 zip 文件到 insight-vscode-plugin 目录（压缩包中已有 server 目录）
-      const extractToDir = path.join(this.context.extensionPath, 'out', 'plugin', 'insight-vscode-plugin');
-      await this.extractZip(zipPath, extractToDir);
+      const insightPluginBasePath = this.getInsightPluginBasePath();
+      await this.extractZip(zipPath, insightPluginBasePath);
 
       // 检查解压后 server 目录是否存在
       if (!fs.existsSync(this.serverDir)) {
@@ -492,13 +501,8 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       console.log(`[InsightDataViewerPanel] 准备加载 ${pluginDirs.length} 个插件文件`);
 
       // 插件目录路径
-      const pluginsBasePath = path.join(
-        this.context.extensionPath,
-        'out',
-        'plugin',
-        'insight-vscode-plugin',
-        'plugins'
-      );
+      const insightPluginBasePath = this.getInsightPluginBasePath();
+      const pluginsBasePath = path.join(insightPluginBasePath, 'plugins');
       console.log(`[InsightDataViewerPanel] 插件基础路径: ${pluginsBasePath}`);
 
       // 创建所有文件的并发读取 Promise
