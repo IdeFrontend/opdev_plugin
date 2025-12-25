@@ -375,7 +375,7 @@ const webviewMessageList: messageItem[] = [
       const workspacePath = workspaceFolders![0].uri.fsPath;
       const logPath = path.join(path.join(workspacePath, '.vscode/mindstudio_sanitizer_log'));
       if (!fs.existsSync(logPath)) {
-        fs.mkdirSync(logPath);
+        fs.mkdirSync(logPath, {mode: 0o750});
       }
       // 开启异常检测
       await opsOption.runSanitizer();
