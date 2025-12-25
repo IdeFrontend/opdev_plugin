@@ -39,6 +39,7 @@ export default class OpsOption {
     if (projectName) {
       this.project_name = projectName;
     }
+    console.log('accendEnvScript:', accendEnvScript);
     this.projectId = await this.getProjectId(accendEnvScript);
   }
 

@@ -81,8 +81,7 @@ const remoteSearch = (type, keyword) => {
 const getBuildConfigItem = {
   command: 'iframeSetProjectSH',
   callback: (message) => {
-    console.log('获取iframeSetProjectSH');
-    const obj = message.data || '/home/developer';
+    const obj = message.data || '/etc/profile';
     formData.projectSH = obj;
   },
 }
@@ -100,7 +99,6 @@ const handleSubmit = async () => {
       command: 'vscodeSaveProjectSH',
       data: formData.projectSH,
     });
-    antdMessage.success('环境变量设置成功');
   } catch (error) {
     antdMessage.error('环境变量设置失败');
   } finally {
@@ -110,7 +108,7 @@ const handleSubmit = async () => {
 
 onMounted(() => {
   message.addMessageListener(getBuildConfigItem);
-  message.sendMessageToParent({ command: 'vscodeGetHome' });
+  message.sendMessageToParent({ command: 'vscodeGetProjectSH' });
 });
 
 onBeforeUnmount(() => {

@@ -43,6 +43,7 @@ export class Project<HasProject extends boolean = false> {
 
   /** 更新视图 */
   public updateView() {
+    console.log('执行了更新');
     this.getWorkspaceProject();
   }
 

@@ -101,10 +101,21 @@ const webviewMessageList: messageItem[] = [
     command: 'vscodeGetProjectSH',
     callback: async (message: any, that: any) => {
       console.log('执行了获取ASCEND_ENV_SCRIPT的方法', process.env)
+      const project = Project.getInstance();
+      console.log('执行了获取project.projectSH',project.projectSH);
       that.panel.webview.postMessage({
         command: 'iframeSetProjectSH',
-        data: process.env.ASCEND_ENV_SCRIPT,
+        data: process.env.ASCEND_ENV_SCRIPT || project.projectSH,
       });
+    },
+  },
+  // 更新Project
+  {
+    command: 'vscodeUpdataProject',
+    callback: async (message: any, that: any) => {
+      const project = Project.getInstance();
+      console.log('执行更新project逻辑');
+      project.updateView();
     },
   },
   {
@@ -235,6 +246,7 @@ const webviewMessageList: messageItem[] = [
         const opsOption = new OpsOption(that.context);
         await opsOption.init(message.projectSH);
         vscode.window.showInformationMessage('环境变量设置成功');
+        message.sendMessageToParent({ command: 'vscodeUpdataProject' });
       } catch (error) {
         vscode.window.showErrorMessage(`环境变量设置失败: ${error}`);
       }
