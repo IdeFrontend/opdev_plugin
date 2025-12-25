@@ -8,6 +8,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { Project } from '../services/project/Project';
 
 import { CommandExecutor } from './CommandOptions';
 import OpsOption from './OpsOption';
@@ -57,6 +58,12 @@ const webviewMessageList: messageItem[] = [
     },
   },
   {
+    command: 'vscodeRunSetProjectSH',
+    callback: async (msg: any, that: any) => {
+      vscode.commands.executeCommand('huawei-op-devtools.projectSH');
+    },
+  },
+  {
     command: 'openWelcome',
     callback: (message: any, that: any) => {
       vscode.commands.executeCommand('huawei-op-devtools.welcome');
@@ -87,6 +94,28 @@ const webviewMessageList: messageItem[] = [
         command: 'iframeSetHome',
         data: process.env.HOME,
       });
+    },
+  },
+  // 获取环境变量
+  {
+    command: 'vscodeGetProjectSH',
+    callback: async (message: any, that: any) => {
+      console.log('执行了获取ASCEND_ENV_SCRIPT的方法', process.env)
+      const project = Project.getInstance();
+      console.log('执行了获取project.projectSH',project.projectSH);
+      that.panel.webview.postMessage({
+        command: 'iframeSetProjectSH',
+        data: process.env.ASCEND_ENV_SCRIPT || project.projectSH,
+      });
+    },
+  },
+  // 更新Project
+  {
+    command: 'vscodeUpdataProject',
+    callback: async (message: any, that: any) => {
+      const project = Project.getInstance();
+      console.log('执行更新project逻辑');
+      project.updateView();
     },
   },
   {
@@ -210,6 +239,22 @@ const webviewMessageList: messageItem[] = [
     },
   },
   {
+    command: 'vscodeSaveProjectSH',
+    callback: async (msg: any, that: any) => {
+      const message = msg.message.data;
+      try {
+        const opsOption = new OpsOption(that.context);
+        await opsOption.init(message);
+        vscode.window.showInformationMessage('环境变量设置成功');
+        const project = Project.getInstance();
+        console.log('执行更新project逻辑');
+        project.updateView();
+      } catch (error) {
+        vscode.window.showErrorMessage(`环境变量设置失败: ${error}`);
+      }
+    },
+  },
+  {
     command: 'vscodeCreatedProject',
     callback: async (msg: any, that: any) => {
       const message = msg.message.data;
@@ -327,39 +372,15 @@ const webviewMessageList: messageItem[] = [
       await opsOption.startBuild(undefined, '--mssanitizer');
       // 创建文件夹
       const workspaceFolders = vscode.workspace.workspaceFolders;
-      const workspacePath = workspaceFolders[0].uri.fsPath;
+      const workspacePath = workspaceFolders![0].uri.fsPath;
       const logPath = path.join(path.join(workspacePath, '.vscode/mindstudio_sanitizer_log'));
       if (!fs.existsSync(logPath)) {
-        fs.makdirSync(logPath);
+        fs.mkdirSync(logPath);
       }
       // 开启异常检测
       await opsOption.runSanitizer();
       // 执行完检测后，获取最新的列表数据
       vscode.commands.executeCommand('huawei-op-devtools.flashMsSanitizerRunData');
-    },
-  },
-  {
-    command: 'vscodeRunSetProjectSH',
-    callback: async (msg: any, that: any) => {
-      vscode.commands.executeCommand('huawei-op-devtools.projectSH');
-      console.log('打开环境变量');
-    },
-  },
-  {
-    command: 'vscodeSaveProjectSH',
-    callback: async (msg: any, that: any) => {
-      const projectSH = msg.message.data;
-      if (!projectSH) {
-        vscode.window.showErrorMessage('环境变量配置脚本路径不能为空');
-        return;
-      }
-      try {
-        const opsOption = new OpsOption(that.context);
-        await opsOption.init(projectSH);
-        vscode.window.showInformationMessage('环境变量设置成功');
-      } catch (error) {
-        vscode.window.showErrorMessage(`环境变量设置失败: ${error}`);
-      }
     },
   },
   {
@@ -576,7 +597,7 @@ const webviewMessageList: messageItem[] = [
         const charactor = Math.max(0, col - 1);
         const pos = new vscode.Position(line, charactor);
         editor.selection = new vscode.Selection(pos, pos);
-        editor.ravealRange(new vscode.Range(pos, pos))
+        editor.revealRange(new vscode.Range(pos, pos))
       } catch (error) {
         console.log('jumpToFile', error)
         vscode.window.showErrorMessage(`打开文件失败：${error}`)

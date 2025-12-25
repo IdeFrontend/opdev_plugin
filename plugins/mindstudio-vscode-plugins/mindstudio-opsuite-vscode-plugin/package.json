@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://gitcode.com/Asscend/mstt"
   },
-  "version": "1.1.28",
+  "version": "1.1.31",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -132,6 +132,10 @@
       {
         "command": "huawei-op-devtools.test",
         "title": "insight插件测试"
+      },
+      {
+        "command": "huawei-op-devtools.projectSH",
+        "title": "环境配置"
       },
       {
         "command": "huawei-op-devtools.clearWelcomeCount",
