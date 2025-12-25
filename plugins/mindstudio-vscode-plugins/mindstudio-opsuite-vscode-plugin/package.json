@@ -48,7 +48,7 @@
       "panel": [
         {
           "id": "ms-sanitizer-panel-view",
-          "title": "异常检测",
+          "title": "异常检测结果",
           "icon": "resources/ops.svg"
         }
       ]
