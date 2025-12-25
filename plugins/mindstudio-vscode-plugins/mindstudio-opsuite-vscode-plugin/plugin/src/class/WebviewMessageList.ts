@@ -383,7 +383,7 @@ const webviewMessageList: messageItem[] = [
       const data = msg.message.data;
       const opsOption = new OpsOption(that.context);
       await opsOption.init();
-      await opsOption.startBuild(undefined, '--debug');
+      await opsOption.startBuild(undefined, '--prof_onboard');
       await opsOption.startOnBoard();
     }
   },
