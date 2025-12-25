@@ -66,13 +66,13 @@ const deleteTableItem = e => {
       </div>
 
       <div style="margin-top: 12px;">指令流水图（默认采集）</div>
-        <div class="nested-checkbox-group">
-          <div style="margin-bottom: 12px;">默认采集：计算单元和搬运单元指令耗时占比指标</div>
-          附加选项：
-          <a-checkbox v-model:checked="simulationData.user_options.PMSampling" @change="saveConfig">
-            内存通路吞吐率波形子图
-          </a-checkbox>
-        </div>
+      <div class="nested-checkbox-group">
+        <div style="margin-bottom: 12px;">默认采集：计算单元和搬运单元指令耗时占比指标</div>
+        附加选项：
+        <a-checkbox v-model:checked="simulationData.user_options.PMSampling" @change="saveConfig">
+          内存通路吞吐率波形子图
+        </a-checkbox>
+      </div>
 
       <div style="margin-top: 12px;">算子代码热点图（默认采集）</div>
       <div class="nested-checkbox-group">
@@ -150,8 +150,8 @@ const deleteTableItem = e => {
     .ant-checkbox-wrapper {
       // display: block;
       // margin-bottom: 8px;
-        display: inline-flex;
-        margin-bottom: 0;
+      display: inline-flex;
+      margin-bottom: 0;
 
       &:last-child {
         margin-bottom: 0;

@@ -1,13 +1,13 @@
 {
   "name": "huawei-op-devtools-vscode-plugin",
   "displayName": "Huawei OP DevTools",
-  "description": "A comprehensive operations suite",
+  "description": "Operator development, debugging, and performance analysis all-in-one platform for Ascend C and Trito language, etc.",
   "publisher": "huawei",
   "repository": {
     "type": "git",
     "url": "https://gitcode.com/Asscend/mstt"
   },
-  "version": "1.1.31",
+  "version": "1.1.38",
   "engines": {
     "vscode": "^1.80.0"
   },

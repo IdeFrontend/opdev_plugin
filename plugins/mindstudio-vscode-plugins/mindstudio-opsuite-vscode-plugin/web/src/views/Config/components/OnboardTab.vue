@@ -177,9 +177,9 @@ const stopHref = 'https://www.hiascend.com/document/detail/zh/canncommercial/83R
           <a-checkbox v-model:checked="onboardData.user_options.Roofline" @change="saveConfig">
             Roofline瓶颈分析
           </a-checkbox>
-              <a-tooltip title="若勾选该选项，将默认采集所有算子性能指标">
-                <QuestionCircleOutlined class="help-icon" />
-              </a-tooltip>
+          <a-tooltip title="若勾选该选项，将默认采集所有算子性能指标">
+            <QuestionCircleOutlined class="help-icon" />
+          </a-tooltip>
         </div>
       </a-form-item>
       <a-form-item>
@@ -191,9 +191,9 @@ const stopHref = 'https://www.hiascend.com/document/detail/zh/canncommercial/83R
         <a-checkbox v-model:checked="onboardData.user_options.MemoryDetail" @change="saveConfig">
           Cache热力图
         </a-checkbox>
-              <a-tooltip title="若勾选该选项，将默认采集所有算子性能指标">
-                <QuestionCircleOutlined class="help-icon" />
-              </a-tooltip>
+        <a-tooltip title="若勾选该选项，将默认采集所有算子性能指标">
+          <QuestionCircleOutlined class="help-icon" />
+        </a-tooltip>
       </a-form-item>
       <a-form-item>
         <a-checkbox v-model:checked="performanceSelectedAll" :indeterminate="performanceSelectedHalf"
@@ -355,8 +355,8 @@ const stopHref = 'https://www.hiascend.com/document/detail/zh/canncommercial/83R
     width: fit-content;
 
     .ant-checkbox-wrapper {
-         display: inline-flex;
-        margin-bottom: 0;
+      display: inline-flex;
+      margin-bottom: 0;
     }
   }
 

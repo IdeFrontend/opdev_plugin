@@ -247,6 +247,7 @@ body {
     width: 100% !important;
     height: 100% !important;
     background-color: #262729 !important;
+    padding: 0px;
 }
 </style>
 
@@ -254,6 +255,7 @@ body {
 .menu-container {
     padding-top: 12px;
     width: 100%;
+    min-width: 138px;
 }
 
 .target-box {
@@ -268,7 +270,7 @@ body {
 .inline-menu {
     border-right: none;
     background: transparent;
-    margin-left: -20px;
+    margin-left: -12px;
 }
 
 :deep(.ant-menu) {
