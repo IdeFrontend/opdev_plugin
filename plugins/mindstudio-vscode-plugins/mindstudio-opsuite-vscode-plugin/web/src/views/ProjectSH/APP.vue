@@ -187,24 +187,9 @@ onBeforeUnmount(() => {
     }
 
     :deep(.ant-input),
-    :deep(.ant-select-selector) {
-      background-color: #000000 !important;
-      border-color: rgba(255, 255, 255, 0.2);
-      color: rgba(255, 255, 255, 0.85);
-
-      &:hover {
-        border-color: #4ba5f4;
-      }
-
-      &:focus {
-        border-color: #4ba5f4;
-        box-shadow: 0 0 0 2px rgba(75, 165, 244, 0.2);
-      }
-    }
-
-    // a-auto-complete 输入框背景透明
+    :deep(.ant-select-selector),
     :deep(.ant-auto-complete .ant-input) {
-      background-color: transparent !important;
+      background-color: #5C5C5C !important;
       border-color: rgba(255, 255, 255, 0.2);
       color: rgba(255, 255, 255, 0.85);
 
@@ -215,24 +200,6 @@ onBeforeUnmount(() => {
       &:focus {
         border-color: #4ba5f4;
         box-shadow: 0 0 0 2px rgba(75, 165, 244, 0.2);
-      }
-    }
-
-    // a-auto-complete 下拉框背景色
-    :deep(.ant-select-dropdown),
-    :deep(.ant-auto-complete-dropdown) {
-      background-color: #5C5C5C !important;
-
-      .ant-select-item {
-        color: rgba(255, 255, 255, 0.85);
-
-        &:hover {
-          background-color: rgba(255, 255, 255, 0.1);
-        }
-
-        &.ant-select-item-option-selected {
-          background-color: rgba(24, 144, 255, 0.2);
-        }
       }
     }
 
