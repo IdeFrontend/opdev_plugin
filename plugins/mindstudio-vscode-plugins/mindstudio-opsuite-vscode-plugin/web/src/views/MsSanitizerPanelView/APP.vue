@@ -9,7 +9,6 @@
         <div class="ms-panel-title">
           <div class="ms-panel-title-left">{{ msScantinizerInfo.title }}</div>
           <div class="ms-panel-title-right">
-            <ExportOutlined style="margin-right: 8px;" class="ms-panel-ctn-cp" />
             <a-popover placement="bottomRight">
               <template #content>
                 <div class="ms-panel-popper">
@@ -104,14 +103,14 @@
         </div>
       </div>
     </div>
-    <div>请选择异常检测日志查看详情</div>
+    <div v-else>请选择异常检测日志查看详情</div>
   </a-config-provider>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onBeforeUnmount, onMounted } from "vue";
 import { theme } from 'ant-design-vue'
-import { CloseCircleOutlined, WarningOutlined, ExportOutlined, InfoCircleOutlined, RightSquareOutlined, LeftSquareOutlined, ExclamationOutlined } from '@ant-design/icons-vue';
+import { CloseCircleOutlined, WarningOutlined, InfoCircleOutlined, RightSquareOutlined, LeftSquareOutlined, ExclamationOutlined } from '@ant-design/icons-vue';
 import { questionMap, questionHandlerMap, type QuestionData, memorySet, memoryContentionSet, uninitializedSet, synchronizeSet } from './constant'
 import { message } from '../../untils/Message';
 import { formatTimestamp } from "../PerformanceRunData/utils/timestamp";
@@ -213,7 +212,7 @@ const customRow = (record) => {
 };
 
 const handleJumpToFile = (data: QuestionData) => {
-  message.sendMessageToParent({ command: 'vscodeJumpToFile', data: {...data} });
+  message.sendMessageToParent({ command: 'vscodeJumpToFile', data: { ...data } });
 }
 
 function onChange(pagination, filters) {

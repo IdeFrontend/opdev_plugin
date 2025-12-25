@@ -42,6 +42,9 @@ export class ViewServer extends vscode.Disposable {
   /** 已开启的页面 */
   private openedViews = new Map<string, vscode.WebviewPanel>();
 
+  // 缓存webview实例
+  public providerWebViewMap: Record<string, any> = {};
+
   constructor(
     routes: ViewRouteRaw[],
     private context: vscode.ExtensionContext,
@@ -97,6 +100,7 @@ export class ViewServer extends vscode.Disposable {
         routeRaw.providerViewType!,
         {
           resolveWebviewView: async (webviewView) => {
+            this.providerWebViewMap[routeRaw.providerViewType!] = webviewView;
             webviewView.webview.options = { enableScripts: true, localResourceRoots: [viewRootUri] };
             this.activeWebview(webviewView.webview, routeRaw.path);
           },

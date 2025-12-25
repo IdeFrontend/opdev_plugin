@@ -144,6 +144,10 @@
       {
         "command": "vscodeJumpToFile",
         "title": "文件跳转定位"
+      },
+      {
+        "command": "huawei-op-devtools.flashMsSanitizerRunData",
+        "title": "刷新异常检测列表数据"
       }
     ],
     "menus": {
