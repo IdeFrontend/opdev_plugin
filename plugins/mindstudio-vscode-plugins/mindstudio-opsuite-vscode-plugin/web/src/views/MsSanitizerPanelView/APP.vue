@@ -270,6 +270,8 @@ onMounted(() => {
       tableData.value = data || [];
     },
   });
+
+  message.sendMessageToParent({ command:'vscodeGetMsSanitizerPanelViewData' })
 })
 
 onBeforeUnmount(() => {
