@@ -116,7 +116,7 @@ const menuItems = ref([
     },
     {
         key: 'projectSH',
-        label: '设置环境变量',
+        label: '环境配置',
         icon: runIcon,
         handler: () => {
             message.sendMessageToParent({ command: "vscodeRunSetProjectSH", data: '' });

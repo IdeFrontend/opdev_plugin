@@ -1,7 +1,7 @@
 <template>
   <div class="project-sh-container">
     <div class="form-container">
-      <div class="section-title">设置环境变量</div>
+      <div class="section-title">环境配置</div>
       <a-form
         :model="formData"
         :rules="formRules"

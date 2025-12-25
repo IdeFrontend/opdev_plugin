@@ -244,9 +244,11 @@ const webviewMessageList: messageItem[] = [
       const message = msg.message.data;
       try {
         const opsOption = new OpsOption(that.context);
-        await opsOption.init(message.projectSH);
+        await opsOption.init(message);
         vscode.window.showInformationMessage('环境变量设置成功');
-        message.sendMessageToParent({ command: 'vscodeUpdataProject' });
+        const project = Project.getInstance();
+        console.log('执行更新project逻辑');
+        project.updateView();
       } catch (error) {
         vscode.window.showErrorMessage(`环境变量设置失败: ${error}`);
       }
