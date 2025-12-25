@@ -189,7 +189,7 @@ onBeforeUnmount(() => {
     :deep(.ant-input),
     :deep(.ant-select-selector),
     :deep(.ant-auto-complete .ant-input) {
-      background-color: #5C5C5C !important;
+      background-color: #000000 !important;
       border-color: rgba(255, 255, 255, 0.2);
       color: rgba(255, 255, 255, 0.85);
 

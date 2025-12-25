@@ -139,8 +139,12 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 初始化配置页面的Webview
   const configWelcomeProvider = new WebviewProvider(context);
+
   // 初始化配置页面的Webview
   const configNewPrototypeProvider = new WebviewProvider(context);
+
+  // 初始化配置页面的Webview
+  const configProjectSHProvider = new WebviewProvider(context, apiServer);
 
   const opsOption = new OpsOption(context);
 
@@ -151,8 +155,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 打开环境变量命令
   const openProjectSH = vscode.commands.registerCommand('huawei-op-devtools.projectSH', async () => {
-    console.log('open');
-    createOpsProvider.show('ProjectSH');
+    configProjectSHProvider.show('ProjectSH');
   });
 
   // 注册打开关闭算子工作-操作命令
@@ -297,7 +300,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const { openMsSanitizerDisposable, msSanitizerPanelView } = getMsSanitizerPanelViewProvider(context);
 
   context.subscriptions.push(msSanitizerPanelView, openMsSanitizerDisposable);
-  createOpsProvider.show('ProjectSH');
+  // createOpsProvider.show('ProjectSH');
   // 订阅销毁事件
   context.subscriptions.push(apiServer);
   context.subscriptions.push(viewServer);
