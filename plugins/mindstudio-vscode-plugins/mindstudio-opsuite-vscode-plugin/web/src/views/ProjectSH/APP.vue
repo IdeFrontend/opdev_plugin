@@ -1,7 +1,8 @@
 <template>
   <div class="project-sh-container">
     <div class="form-container">
-      <div class="section-title">设置环境变量</div>
+      <div class="section-title">环境配置</div>
+      <div class="divider"></div>
       <a-form
         :model="formData"
         :rules="formRules"
@@ -9,7 +10,15 @@
         layout="vertical"
         @submit="handleSubmit"
       >
-        <a-form-item name="projectSH" label="环境变量配置脚本">
+        <a-form-item name="projectSH">
+          <template #label>
+            <span>环境变量配置脚本</span>
+            <a-tooltip
+              title="安装CANN包后需要执行set_env.sh脚本的绝对路径信息，如果使用的是一站式开发平台提供的容器镜像，则此处可以置空。若出现报错提示路径不存在，说明非有效环境变量脚本路径，需要输入设置环境变量脚本的绝对路径"
+            >
+              <QuestionCircleOutlined class="help-icon" />
+            </a-tooltip>
+          </template>
           <a-auto-complete
             v-model:value="formData.projectSH"
             :options="projectSHOptions"
@@ -30,11 +39,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onBeforeUnmount } from 'vue';
+import { ref, reactive, onBeforeUnmount,onMounted } from 'vue';
 import { message } from '../../untils/Message';
 import { checkPathExists } from '@/apis';
 import type { FormInstance as AntdVForm } from 'ant-design-vue';
 import { message as antdMessage } from 'ant-design-vue';
+import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 
 const formRef = ref<AntdVForm | null>(null);
 const projectSHOptions = ref([]);
@@ -80,7 +90,15 @@ const remoteSearch = (type, keyword) => {
   });
 };
 
-// 消息监听
+const getBuildConfigItem = {
+  command: 'iframeSetProjectSH',
+  callback: (message) => {
+    const obj = message.data || '/etc/profile';
+    formData.projectSH = obj;
+  },
+};
+
+// 监听远程搜索结果
 message.addMessageListener({
   command: 'iframeRemoteSearchResult',
   callback: (resp) => {
@@ -92,7 +110,6 @@ message.addMessageListener({
     }
   },
 });
-
 // 提交表单
 const handleSubmit = async () => {
   try {
@@ -107,7 +124,6 @@ const handleSubmit = async () => {
       command: 'vscodeSaveProjectSH',
       data: formData.projectSH,
     });
-    antdMessage.success('环境变量设置成功');
   } catch (error) {
     antdMessage.error('环境变量设置失败');
   } finally {
@@ -115,8 +131,14 @@ const handleSubmit = async () => {
   }
 };
 
+onMounted(() => {
+  message.addMessageListener(getBuildConfigItem);
+  message.sendMessageToParent({ command: 'vscodeGetProjectSH' });
+});
+
 onBeforeUnmount(() => {
   message.deleteMessageListener('iframeRemoteSearchResult');
+  message.deleteMessageListener('iframeSetProjectSH');
 });
 </script>
 
@@ -127,7 +149,7 @@ onBeforeUnmount(() => {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  background-color: rgb(20, 20, 20);
+  background-color: transparent;
   color: rgba(255, 255, 255, 0.85);
 
   .form-container {
@@ -135,21 +157,39 @@ onBeforeUnmount(() => {
     max-width: 600px;
 
     .section-title {
-      font-size: 16px;
-      line-height: 22px;
+      font-size: 24px;
+      line-height: 28px;
       font-weight: 700;
       color: #fff;
+      margin-bottom: 24px;
+      text-align: left;
+    }
+
+    .divider {
+      height: 1px;
+      background-color: rgba(255, 255, 255, 0.2);
       margin-bottom: 24px;
     }
 
     :deep(.ant-form-item-label) {
       label {
         color: rgba(255, 255, 255, 0.85);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+
+        .help-icon {
+          color: rgba(255, 255, 255, 0.65);
+          cursor: help;
+          font-size: 14px;
+        }
       }
     }
 
-    :deep(.ant-input) {
-      background-color: rgba(255, 255, 255, 0.1);
+    :deep(.ant-input),
+    :deep(.ant-select-selector),
+    :deep(.ant-auto-complete .ant-input) {
+      background-color: #000000 !important;
       border-color: rgba(255, 255, 255, 0.2);
       color: rgba(255, 255, 255, 0.85);
 
@@ -164,12 +204,12 @@ onBeforeUnmount(() => {
     }
 
     :deep(.ant-btn-primary) {
-      background-color: #4ba5f4;
-      border-color: #4ba5f4;
+      background-color: #1890ff;
+      border-color: #1890ff;
 
       &:hover {
-        background-color: #6bb5ff;
-        border-color: #6bb5ff;
+        background-color: #40a9ff;
+        border-color: #40a9ff;
       }
     }
   }
