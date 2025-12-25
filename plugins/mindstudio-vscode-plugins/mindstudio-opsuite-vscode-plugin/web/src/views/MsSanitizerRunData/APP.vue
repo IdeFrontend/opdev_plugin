@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { UpOutlined, CaretUpFilled, DownOutlined, CaretDownFilled, FlagOutlined, FlagFilled } from '@ant-design/icons-vue';
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { formatTimestamp } from "../PerformanceRunData/utils/timestamp";
 import { getMsSanitizerRunData, toggleMsSanitizerMark, openMsSanitizerPanel } from '../../apis'
 
@@ -39,10 +39,25 @@ const getListData = async () => {
   listData.value = await getMsSanitizerRunData({});
 }
 
+const eventListenerHandler = event => {
+  if (event.data.command === 'iframeFlashMsSanitizerRunData') {
+    getListData();
+  }
+}
+
+// 添加全局消息监听 监听刷新列表数据
+const addEventListener = () => {
+  window.addEventListener('message', eventListenerHandler);
+}
+
 onMounted(() => {
-  getListData()
+  getListData();
+  addEventListener();
 })
 
+onBeforeUnmount(() => {
+  window.removeEventListener('message', eventListenerHandler)
+})
 </script>
 
 <template>
@@ -65,7 +80,7 @@ onMounted(() => {
         <FlagOutlined v-else />
       </a-button>
     </div>
-    <div class="render-list">
+    <div class="render-list" v-if="renderListData.length > 0">
       <div class="render-list-item" v-for="(item, index) in renderListData" :key="index" @click="handleClick(item)">
         <div class="render-list-item-content">
           <p class="render-list-item-content-title">{{ item.title }}</p>
@@ -77,6 +92,7 @@ onMounted(() => {
         </div>
       </div>
     </div>
+    <div style="text-align: center;margin-top: 20px;" v-else>暂无数据</div>
   </div>
 </template>
 

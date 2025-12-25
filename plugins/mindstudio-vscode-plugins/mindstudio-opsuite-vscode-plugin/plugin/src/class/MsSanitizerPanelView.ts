@@ -64,35 +64,11 @@ const getPanelData = (params: Record<string, any>) => {
     const parser = new ExceptionParser();
     // 直接传入整个文件内容进行解析
     const data = parser.parseAll(inputContent);
-    console.log('data', data)
+    console.log('异常检测详情数据：', data)
     return {
         ...params,
         data
     };
-
-
-    // return new Promise(res => {
-    //     setTimeout(() => {
-    //         const mockData = [];
-    //         for (let i = 0; i < 100; i++) {
-    //             mockData.push({
-    //                 title: i + ': illegal read of size',
-    //                 type: i % 2 === 0 ? 'error' : 'warning',
-    //                 questionType: ['memory', 'memoryContention', 'uninitialized', 'synchronize'][i % 4] as any,
-    //                 question: 'illegal read of size',
-    //                 row: 41,
-    //                 col: 53,
-    //                 fileLink: i % 2 === 0 ? './extension.js' : undefined,
-    //                 originData: 'xxxxxxxxxxxxxxxxxxxxxxxx'
-    //             })
-    //         }
-    //         res({
-    //             title: 'msSantinizer-20251023',
-    //             timestamp: 1766544770805,
-    //             data: mockData
-    //         })
-    //     }, 500);
-    // })
 }
 
 
