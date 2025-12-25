@@ -54,6 +54,8 @@ export class MsSanitizerPanelViewProvider implements vscode.WebviewViewProvider 
                         command: 'iframeRemoteMsSanitizerPanelViewSetRenderList',
                         data: panelData,
                     });
+                } else {
+                    this.handleWebviewMessage(message);
                 }
             },
             undefined,
@@ -78,8 +80,16 @@ export class MsSanitizerPanelViewProvider implements vscode.WebviewViewProvider 
 }
 
 const getPanelData = (params: Record<string, any>) => {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders || workspaceFolders.length === 0) {
+        console.log('getRunData1 no workspaceFolders')
+        return [];
+    }
+
+    const workspacePath = workspaceFolders[0].uri.fsPath;
+
     const inputContent = fs.readFileSync(params.path, 'utf-8');
-    const parser = new ExceptionParser();
+    const parser = new ExceptionParser({ matchPath: workspacePath });
     // 直接传入整个文件内容进行解析
     const data = parser.parseAll(inputContent);
     console.log('异常检测详情数据：', data)
