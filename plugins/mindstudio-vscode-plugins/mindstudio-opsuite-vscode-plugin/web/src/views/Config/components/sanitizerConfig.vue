@@ -87,8 +87,8 @@ onBeforeMount(() => {
           <div class="mem-option">
             <a-checkbox v-model:checked="form.memcheckOption['leak-check']">内存泄漏</a-checkbox>
             <a-checkbox v-model:checked="form.memcheckOption['check-unused-memory']">分配内存未使用</a-checkbox>
-            <a-checkbox v-model:checked="form.memcheckOption['check-device-heap']" @change="handleDeviceHeapChange">Device侧内存检测</a-checkbox>
-            <a-checkbox v-model:checked="form.memcheckOption['check-cann-heap']" @change="handleCannHeapChange">CANN软件栈内存检测</a-checkbox>
+            <!-- <a-checkbox v-model:checked="form.memcheckOption['check-device-heap']" @change="handleDeviceHeapChange">Device侧内存检测</a-checkbox>
+            <a-checkbox v-model:checked="form.memcheckOption['check-cann-heap']" @change="handleCannHeapChange">CANN软件栈内存检测</a-checkbox> -->
           </div>
         </div>
         <div class="check-item-row">
