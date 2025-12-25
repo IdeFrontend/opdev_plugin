@@ -5,6 +5,7 @@ import { message } from "../../untils/Message";
 import settingIcon from '../../assets/svg/setting.svg'
 import buildIcon from '../../assets/svg/build.svg'
 import runIcon from '../../assets/svg/run.svg'
+import shIcon from '../../assets/svg/sh.svg'
 import powerIcon from '../../assets/svg/power.svg'
 import debugIcon from '../../assets/svg/debug.svg'
 import checkIcon from '../../assets/svg/check.svg'
@@ -117,7 +118,7 @@ const menuItems = ref([
     {
         key: 'projectSH',
         label: '环境配置',
-        icon: runIcon,
+        icon: shIcon,
         handler: () => {
             message.sendMessageToParent({ command: "vscodeRunSetProjectSH", data: '' });
         }
