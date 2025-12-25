@@ -58,31 +58,29 @@ const deleteTableItem = e => {
           <template #title>
             <div>
               具体图形案例请参考
-              <a :href="guide">算子调优工具概述</a>
+              <a :href="guide" target="_blank" style="color: #4ba5f4;">算子调优工具概述</a>
             </div>
           </template>
           <QuestionCircleOutlined class="help-icon" />
         </a-tooltip>
       </div>
-      <a-form-item>
-        <a-tooltip placeholder="topLeft" title="默认采集">
-          <a-checkbox :checked="true" disabled>
-            指令流水图
-          </a-checkbox>
-        </a-tooltip>
-      </a-form-item>
-      <a-form-item>
-        <a-tooltip placeholder="topLeft" title="默认采集">
-          <a-checkbox :checked="true" disabled>
-            算子代码热点图
-          </a-checkbox>
-        </a-tooltip>
-      </a-form-item>
-      <a-form-item>
+
+      <div style="margin-top: 12px;">指令流水图（默认采集）</div>
+      <div class="nested-checkbox-group">
+        <div style="margin-bottom: 12px;">默认采集：计算单元和搬运单元指令耗时占比指标</div>
+        附加选项：
         <a-checkbox v-model:checked="simulationData.user_options.PMSampling" @change="saveConfig">
-          内存通路吞吐率波形图
+          内存通路吞吐率波形子图
         </a-checkbox>
-      </a-form-item>
+      </div>
+
+      <div style="margin-top: 12px;">算子代码热点图（默认采集）</div>
+      <div class="nested-checkbox-group">
+        附加选项：
+        <a-checkbox v-model:checked="simulationData.user_options.ResourceConflictRatio" @change="saveConfig">
+          资源冲突占比指标
+        </a-checkbox>
+      </div>
 
       <!-- <div class="section-title" style="margin-top: 12px;">模式</div>
       <a-form-item>
@@ -137,6 +135,38 @@ const deleteTableItem = e => {
 
     .help-icon {
       margin-left: 4px;
+    }
+  }
+
+  .nested-checkbox-group {
+    // margin-left: 24px;
+    margin-top: 8px;
+    padding: 12px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    max-width: 600px;
+    width: fit-content;
+
+    .ant-checkbox-wrapper {
+      // display: block;
+      // margin-bottom: 8px;
+      display: inline-flex;
+      margin-bottom: 0;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+
+    &.horizontal {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+
+      .ant-checkbox-wrapper {
+        display: inline-flex;
+        margin-bottom: 0;
+      }
     }
   }
 

@@ -73,11 +73,11 @@ const handleOperatorPerformanceChange = (e) => {
 };
 
 // 所有全选
-const totalSelectedAll = ref(false)
+const totalSelectedAll = ref(true)
 // 内存分析图全选
 const memorySelectedAll = ref(true)
 // 算子性能数据文件全选
-const performanceSelectedAll = ref(false)
+const performanceSelectedAll = ref(true)
 
 // 内存分析图，这组半选
 const memorySelectedHalf = computed(() => {
@@ -90,7 +90,7 @@ const memorySelectedHalf = computed(() => {
 // 算子性能数据文件，这组半选
 const performanceSelectedHalf = computed(() => {
   let count = 0
-  const keyArray = ['ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'BasicInfo', 'PipeUtilization', 'ResourceConflictRatio']
+  const keyArray = ['ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'PipeUtilization', 'ResourceConflictRatio']
   keyArray.forEach(key => {
     if (props.onboardData.user_options[key]) {
       count += 1
@@ -102,7 +102,7 @@ const performanceSelectedHalf = computed(() => {
 // 所有图形半选状态
 const totalSelectedHalf = computed(() => {
   let count = 0
-  const totalKeys = ['Occupancy', 'Roofline', 'Source', 'MemoryDetail', 'ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'BasicInfo', 'PipeUtilization', 'ResourceConflictRatio']
+  const totalKeys = ['Occupancy', 'Roofline', 'Source', 'MemoryDetail', 'ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'PipeUtilization', 'ResourceConflictRatio']
   totalKeys.forEach(key => {
     if (props.onboardData.user_options[key]) {
       count += 1
@@ -123,7 +123,7 @@ watch(() => props.onboardData.user_options,
     memorySelectedAll.value = props.onboardData.user_options.Occupancy && props.onboardData.user_options.Roofline
 
     let count = 0
-    const keyArray = ['ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'BasicInfo', 'PipeUtilization', 'ResourceConflictRatio']
+    const keyArray = ['ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'PipeUtilization', 'ResourceConflictRatio']
     keyArray.forEach(key => {
       if (props.onboardData.user_options[key]) {
         count += 1
@@ -150,39 +150,35 @@ const stopHref = 'https://www.hiascend.com/document/detail/zh/canncommercial/83R
           <template #title>
             <div>
               具体图形案例请参考
-              <a :href="guide">算子调优工具概述</a>
+              <a :href="guide" target="_blank" style="color: #4ba5f4;">算子调优工具概述</a>
             </div>
           </template>
           <QuestionCircleOutlined class="help-icon" />
         </a-tooltip>
       </div>
 
-      <a-form-item>
+      <a-form-item v-if="false">
         <a-checkbox v-model:checked="totalSelectedAll" :indeterminate="totalSelectedHalf" @change="handleSelectAll">
           全选
         </a-checkbox>
       </a-form-item>
       <a-form-item>
-        <a-checkbox v-model:checked="memorySelectedAll" :indeterminate="memorySelectedHalf"
+        <a-checkbox v-if="false" v-model:checked="memorySelectedAll" :indeterminate="memorySelectedHalf"
           @change="handleMemoryAnalysisChange">
           内存分析图
         </a-checkbox>
-        <div class="nested-checkbox-group horizontal">
+        <div>计算内存热力图（默认采集）</div>
+        <div class="checkbox-group">
+          <div style="margin-bottom: 12px;">默认采集：基础信息、计算工作负载分析、内存负载分析</div>
+          <span>默认选项：</span>
           <a-checkbox v-model:checked="onboardData.user_options.Occupancy" @change="saveConfig">
             核间负载分析图
           </a-checkbox>
           <a-checkbox v-model:checked="onboardData.user_options.Roofline" @change="saveConfig">
             Roofline瓶颈分析
           </a-checkbox>
-          <a-tooltip placeholder="topLeft" title="默认采集">
-            <a-checkbox :checked="true" disabled>
-              计算工作负载分析
-            </a-checkbox>
-          </a-tooltip>
-          <a-tooltip placeholder="topLeft" title="默认采集">
-            <a-checkbox :checked="true" disabled>
-              内存负载分析
-            </a-checkbox>
+          <a-tooltip title="若勾选该选项，将默认采集所有算子性能指标">
+            <QuestionCircleOutlined class="help-icon" />
           </a-tooltip>
         </div>
       </a-form-item>
@@ -195,11 +191,14 @@ const stopHref = 'https://www.hiascend.com/document/detail/zh/canncommercial/83R
         <a-checkbox v-model:checked="onboardData.user_options.MemoryDetail" @change="saveConfig">
           Cache热力图
         </a-checkbox>
+        <a-tooltip title="若勾选该选项，将默认采集所有算子性能指标">
+          <QuestionCircleOutlined class="help-icon" />
+        </a-tooltip>
       </a-form-item>
       <a-form-item>
         <a-checkbox v-model:checked="performanceSelectedAll" :indeterminate="performanceSelectedHalf"
           @change="handleOperatorPerformanceChange">
-          算子性能数据文件
+          算子性能指标
         </a-checkbox>
         <div class="nested-checkbox-group horizontal">
           <a-checkbox v-model:checked="onboardData.user_options.ArithmeticUtilization" @change="saveConfig">
@@ -217,7 +216,7 @@ const stopHref = 'https://www.hiascend.com/document/detail/zh/canncommercial/83R
           <a-checkbox v-model:checked="onboardData.user_options.MemoryUB" @change="saveConfig">
             UB读写带宽速率
           </a-checkbox>
-          <a-checkbox v-model:checked="onboardData.user_options.BasicInfo" @change="saveConfig">
+          <a-checkbox v-if="false" v-model:checked="onboardData.user_options.BasicInfo" @change="saveConfig">
             算子基础信息
           </a-checkbox>
           <a-checkbox v-model:checked="onboardData.user_options.PipeUtilization" @change="saveConfig">
@@ -319,12 +318,12 @@ const stopHref = 'https://www.hiascend.com/document/detail/zh/canncommercial/83R
   }
 
   .nested-checkbox-group {
-    margin-left: 24px;
     margin-top: 8px;
     padding: 12px;
     border-radius: 4px;
     border: 1px solid rgba(255, 255, 255, 0.15);
     max-width: 600px;
+    width: fit-content;
 
     .ant-checkbox-wrapper {
       display: block;
@@ -344,6 +343,20 @@ const stopHref = 'https://www.hiascend.com/document/detail/zh/canncommercial/83R
         display: inline-flex;
         margin-bottom: 0;
       }
+    }
+  }
+
+  .checkbox-group {
+    margin-top: 8px;
+    padding: 12px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    max-width: 600px;
+    width: fit-content;
+
+    .ant-checkbox-wrapper {
+      display: inline-flex;
+      margin-bottom: 0;
     }
   }
 

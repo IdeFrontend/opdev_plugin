@@ -190,7 +190,7 @@ export function generateStructure(data: Partial<OpRecord>, extensionPath: string
           // UB读写带宽速率
           MemoryUB: true,
           // 算子基础信息
-          BasicInfo: true,
+          // BasicInfo: false,
           // 计算单元和搬运单元耗时占比
           PipeUtilization: true,
           // 资源冲突占比
@@ -211,7 +211,8 @@ export function generateStructure(data: Partial<OpRecord>, extensionPath: string
           script: 'msprof op simulator',
           config_name: record.op_name,
           soc_version: soc_version,
-          PMSampling: false,
+          ResourceConflictRatio: true,
+          PMSampling: true,
           downloadToLocal: true,
           renderInPlatform: false,
           // 数据存放位置默认值

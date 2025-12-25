@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://gitcode.com/Asscend/mstt"
   },
-  "version": "1.1.37",
+  "version": "1.1.38",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -79,13 +79,13 @@
       "explorer": [
         {
           "id": "msSanitizerSidebarView",
-          "name": "异常检测",
+          "name": "异常检测结果可视化",
           "type": "webview",
           "visibility": "collapsed"
         },
         {
           "id": "performanceSidebarView",
-          "name": "性能调优",
+          "name": "性能调优结果可视化",
           "type": "webview",
           "visibility": "collapsed"
         }

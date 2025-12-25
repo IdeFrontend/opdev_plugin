@@ -125,9 +125,9 @@ export function getSimulateCommand(config_id: number, example_config_id: number)
   const run_path = getOpRunPath(operator);
   const cd_cmd = `cd ${run_path}`;
 
-  const aic = `--aic-metrics=PipeUtilization,ResourceConflictRatio${config.user_options.PMSampling ? ',PMSampling' : ''}`
+  const aic = `--aic-metrics=PipeUtilization${config.user_options.ResourceConflictRatio ? ',ResourceConflictRatio' : ''}${config.user_options.PMSampling ? ',PMSampling' : ''}`
   const advance_cmd = getAdvanceCmd(config.user_options.advance_param)
-  const simulatorCmd = `msopprof simulator --soc-version=${config.user_options.simulatorType} --output=${operator.op_path}/.vscode/opprof ${aic} ${advance_cmd} ${exConfig.target_file}`
+  const simulatorCmd = `msprof op simulator --soc-version=${config.user_options.simulatorType} --output=${operator.op_path}/.vscode/opprof ${aic} ${advance_cmd} ${exConfig.target_file}`
 
   return [source_cann, cd_cmd, simulatorCmd].filter(Boolean).join(' && ')
 }
@@ -147,18 +147,33 @@ export function getOnBoardCommand(config_id: number, example_config_id: number) 
   const run_path = getOpRunPath(operator);
   const cd_cmd = `cd ${run_path}`;
 
-  const totalKeys = ['Occupancy', 'Roofline', 'Source', 'MemoryDetail', 'ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'BasicInfo', 'PipeUtilization', 'ResourceConflictRatio', 'KernelScale']
-  let aic = '--aic-metrics='
-  totalKeys.forEach(key => {
-    if (config.user_options[key]) {
-      aic += `${key},`
-    }
-  })
-  aic = aic.slice(0, -1)
+  const aic = getOnBoardAic(config.user_options)
   const advance_cmd = getAdvanceCmd(config.user_options.advance_param)
-  const opprofCmd = `msopprof --output=${operator.op_path}/.vscode/opprof ${aic} ${advance_cmd} ${exConfig.target_file}`
+  const opprofCmd = `msprof op --output=${operator.op_path}/.vscode/opprof ${aic} ${advance_cmd} ${exConfig.target_file}`
 
   return [source_cann, cd_cmd, opprofCmd].filter(Boolean).join(' && ')
+}
+
+// 上板图形参数额外处理
+function getOnBoardAic(obj: any) {
+  const array = ['Occupancy', 'Roofline', 'Source', 'MemoryDetail', 'KernelScale']
+  const result: string[] = []
+  array.forEach(k => {
+    if (obj[k]) {
+      result.push(k)
+    }
+  })
+  if (result.includes('Roofline') || result.includes('MemoryDetail')) {
+    result.push('Default')
+  } else {
+    const list = ['ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'PipeUtilization', 'ResourceConflictRatio']
+    list.forEach(k => {
+      if (obj[k]) {
+        result.push(k)
+      }
+    })
+  }
+  return result.length ? `--aic-metrics=${result.join(',')}` : ''
 }
 
 export function getSanitizerCommand(sanitizerConfigId: number, example_config_id: number) {
