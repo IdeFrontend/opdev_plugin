@@ -244,8 +244,8 @@ const webviewMessageList: messageItem[] = [
       const message = msg.message.data;
       try {
         const opsOption = new OpsOption(that.context);
-        await opsOption.init(message);
-        vscode.window.showInformationMessage('环境变量设置成功');
+        await opsOption.updataShScript(message);
+        vscode.window.showInformationMessage('环境变量设置成功', message);
         const project = Project.getInstance();
         console.log('执行更新project逻辑');
         project.updateView();
