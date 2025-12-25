@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { RightOutlined, DownOutlined, FlagOutlined, FlagFilled, DownloadOutlined } from '@ant-design/icons-vue';
 import type { DirectoryTreeProps } from 'ant-design-vue';
-import { Component, h } from 'vue';
+import { Component, h, ref, watch } from 'vue';
 
 import { PerformanceExecutionRecord, PerformanceRunDataFile } from 'shared:/api-types';
 
@@ -9,13 +9,25 @@ import { openCsvView, openInsightView, saveFileToLocal } from '@/apis';
 
 import { formatTimestamp } from '../utils/timestamp';
 
-defineProps<{
+const props = defineProps<{
   treeData: PerformanceExecutionRecord[];
 }>();
 
 const emit = defineEmits<{
   (e: 'toggle-mark', key: string, marked: boolean): void;
 }>();
+
+const expandedKeys = ref<string[]>([]);
+
+watch(
+  () => props.treeData,
+  (newData) => {
+    if (newData.length > 0 && newData[0].key) {
+      expandedKeys.value = [newData[0].key];
+    }
+  },
+  { immediate: true }
+);
 
 // 自定义切换图标（三角箭头）
 const SwitcherIcon: Component = ({ expanded }) => {
@@ -62,7 +74,7 @@ const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
 
 <template>
   <div class="tree-container">
-    <a-directory-tree :tree-data="treeData" :show-line="false" :show-icon="false" :switcher-icon="SwitcherIcon" @select="onClickNode">
+    <a-directory-tree :tree-data="treeData" :show-line="false" :show-icon="false" :switcher-icon="SwitcherIcon" :expanded-keys="expandedKeys" @update:expanded-keys="expandedKeys = $event" @select="onClickNode">
       <template #title="{ dataRef }">
         <div class="custom-tree-node" :class="{ root: isRootDir(dataRef) }">
           <div class="tree-node-title">{{ dataRef.title }}</div>

@@ -136,6 +136,9 @@ watch(() => props.onboardData.user_options,
   { deep: true, immediate: true }
 )
 
+const startHref = 'https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/API/ascendcopapi/atlasascendc_api_07_1214.html'
+const stopHref = 'https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/API/ascendcopapi/atlasascendc_api_07_1215.html'
+
 </script>
 
 <template>
@@ -250,14 +253,32 @@ watch(() => props.onboardData.user_options,
           <a-form-item>
             <a-checkbox v-model:checked="onboardData.user_options.KernelScale" @change="saveConfig">
               使能Kernel侧制定代码段性能采集
-              <a-tooltip title="指定代码段范围时，需要在算子Kernel侧对应的代码段前后进行设置，具体设置请参见MetricsProfStart和MetricsProfStop接口">
+              <a-tooltip>
                 <QuestionCircleOutlined class="help-icon" />
+                <template #title>
+                  <div>
+                    指定代码段范围时，需要在算子Kernel侧对应的代码段前后进行设置，具体设置请参见
+                    <a :href="startHref" target="_blank" style="color: #4ba5f4;">MetricsProfStart</a>
+                    和
+                    <a :href="stopHref" target="_blank" style="color: #4ba5f4;">MetricsProfStop</a>
+                    接口
+                  </div>
+                </template>
               </a-tooltip>
             </a-checkbox>
           </a-form-item>
+          <a-alert v-if="onboardData.user_options.KernelScale" type="warning" show-icon>
+            <template #message>
+              请确认是否在算子Kernal侧对应的代码段前后进行了设置，若未设置，将无法收集到有效数据。具体设置方式请参见
+              <a :href="startHref" target="_blank" style="color: #4ba5f4;">MetricsProfStart</a>
+              和
+              <a :href="stopHref" target="_blank" style="color: #4ba5f4;">MetricsProfStop</a>
+              接口
+            </template>
+          </a-alert>
 
           <a-form-item>
-            <div class="section-title" style="margin-top: 12px;">高级参数</div>
+            <div class="section-title" style="margin-top: 16px;">高级参数</div>
             <editTable :key="updateIndex" :dataSource="onboardData.user_options.advance_param"
               @addTableItem="addTableItem" @deleteTableItem="deleteTableItem" @onChange="saveConfig" />
           </a-form-item>

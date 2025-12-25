@@ -104,15 +104,16 @@ const deleteTableItem = e => {
 
       <a-collapse v-model:activeKey="activeKey" ghost>
         <a-collapse-panel key="1" header="高级配置">
-          <!-- <div class="simulate-title" style="margin-bottom: 8px;">
+          <div class="simulate-title" style="margin-bottom: 8px;">
             仿真器类型
             <a-tooltip title="当前支持的仿真器类型可以在 CANN安装路径下 ascend-toolkit/latest/tools/simulator目录查看">
               <QuestionCircleOutlined class="help-icon" />
             </a-tooltip>
           </div>
           <a-form-item>
-            <a-input v-model:value="simulationData.user_options.simulatorType" placeholder="请输入仿真器类型"   @change="saveConfig"/>
-          </a-form-item> -->
+            <a-input v-model:value="simulationData.user_options.simulatorType" placeholder="请输入仿真器类型"
+              @change="saveConfig" />
+          </a-form-item>
 
           <!-- <div class="section-title" style="margin-top: 12px;">控制仿真器dump文件是否生成</div>
           <a-form-item>
@@ -121,7 +122,7 @@ const deleteTableItem = e => {
 
           <div class="section-title" style="margin-top: 12px;">高级参数</div>
           <EditTable :key="updateIndex" :dataSource="simulationData.user_options.advance_param"
-            @addTableItem="addTableItem" @deleteTableItem="deleteTableItem" @onChange="saveConfig"/>
+            @addTableItem="addTableItem" @deleteTableItem="deleteTableItem" @onChange="saveConfig" />
         </a-collapse-panel>
       </a-collapse>
     </a-form>
