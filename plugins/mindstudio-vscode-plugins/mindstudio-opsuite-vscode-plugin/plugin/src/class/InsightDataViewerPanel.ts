@@ -27,25 +27,21 @@ export class InsightDataViewerPanel implements vscode.Disposable {
   private readonly serverPath: string;
   private readonly serverDir: string;
   private readonly zipDir: string;
+  private readonly insightPluginBasePath: string;
   private serverPortReady: Promise<void>;
 
   constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, binPath: string) {
     this.panel = panel;
     this.context = context;
     this.binPath = binPath;
-
-    // 构建路径
-    const insightPluginBasePath = this.getInsightPluginBasePath();
-    this.serverDir = path.join(insightPluginBasePath, 'server');
+    this.insightPluginBasePath = this.getInsightPluginBasePath();
+    this.serverDir = path.join(this.insightPluginBasePath, 'server');
     this.serverPath = path.join(this.serverDir, 'profiler_server');
-    this.zipDir = path.join(insightPluginBasePath, 'zip');
+    this.zipDir = path.join(this.insightPluginBasePath, 'zip');
     let resolvePortReady: () => void;
     this.serverPortReady = new Promise((resolve) => {
       resolvePortReady = resolve;
     });
-    if(insightPluginBasePath === ''){
-      return;
-    }
     const resolvePort = resolvePortReady!;
 
     // 启动 profiler_server（异步，但会在后台设置 this.serverPort）
@@ -81,19 +77,15 @@ export class InsightDataViewerPanel implements vscode.Disposable {
    */
   private getInsightPluginBasePath(): string {
     // 优先从环境变量获取
-    const envPath = process.env.INSIGHT_VSCODE_PLUGIN_PATH;
+    const envPath = process.env.INSIGHT_HOME_PATH;
     if (envPath) {
       console.log(`[InsightDataViewerPanel] 从环境变量获取 insight-vscode-plugin 路径: ${envPath}`);
       return envPath;
-    }else{
-      console.log(`[InsightDataViewerPanel] 环境变量 INSIGHT_VSCODE_PLUGIN_PATH 不存在，使用默认路径`);
-      vscode.window.showErrorMessage(`[InsightDataViewerPanel] 环境变量 INSIGHT_VSCODE_PLUGIN_PATH 不存在，使用默认路径`);
-      return '';
     }
     
     // 使用默认路径
     const defaultPath = path.join(this.context.extensionPath, 'out', 'plugin', 'insight-vscode-plugin');
-    console.log(`[InsightDataViewerPanel] 使用默认 insight-vscode-plugin 路径: ${defaultPath}`);
+    console.log(`[InsightDataViewerPanel] 环境变量 INSIGHT_VSCODE_PLUGIN_PATH 不存在，使用默认路径: ${defaultPath}`);
     return defaultPath;
   }
 
@@ -129,15 +121,14 @@ export class InsightDataViewerPanel implements vscode.Disposable {
    * 设置 webview 内容
    */
   private setupWebview(): void {
-    const insightPluginBasePath = this.getInsightPluginBasePath();
-    const htmlPath = path.join(insightPluginBasePath, 'index.html');
+    const htmlPath = path.join(this.insightPluginBasePath, 'index.html');
 
     let htmlContent = '';
     if (fs.existsSync(htmlPath)) {
       htmlContent = fs.readFileSync(htmlPath, 'utf8');
       
       // 注入编译后的 DataViewerController JS 文件
-      const controllerJsPath = path.join(insightPluginBasePath, 'DataViewerController.js');
+      const controllerJsPath = path.join(this.insightPluginBasePath, 'DataViewerController.js');
       
       if (fs.existsSync(controllerJsPath)) {
         const controllerJs = fs.readFileSync(controllerJsPath, 'utf8');
@@ -344,8 +335,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       console.log(`[InsightDataViewerPanel] 开始解压: ${zipPath}`);
 
       // 解压 zip 文件到 insight-vscode-plugin 目录（压缩包中已有 server 目录）
-      const insightPluginBasePath = this.getInsightPluginBasePath();
-      await this.extractZip(zipPath, insightPluginBasePath);
+      await this.extractZip(zipPath, this.insightPluginBasePath);
 
       // 检查解压后 server 目录是否存在
       if (!fs.existsSync(this.serverDir)) {
@@ -506,8 +496,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       console.log(`[InsightDataViewerPanel] 准备加载 ${pluginDirs.length} 个插件文件`);
 
       // 插件目录路径
-      const insightPluginBasePath = this.getInsightPluginBasePath();
-      const pluginsBasePath = path.join(insightPluginBasePath, 'plugins');
+      const pluginsBasePath = path.join(this.insightPluginBasePath, 'plugins');
       console.log(`[InsightDataViewerPanel] 插件基础路径: ${pluginsBasePath}`);
 
       // 创建所有文件的并发读取 Promise
