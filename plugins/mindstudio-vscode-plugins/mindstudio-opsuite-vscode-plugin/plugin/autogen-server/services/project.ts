@@ -5,6 +5,10 @@ export async function createProject(data: CreateProjectParams) {
   return projectModel.createProject(data);
 }
 
+export async function updataShScript(data: CreateProjectParams) {
+  return projectModel.updataShScript(data);
+}
+
 export function get_project_by_id(project_id: number) {
   return projectModel.get_project_by_id(project_id as number);
 }
