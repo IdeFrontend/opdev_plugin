@@ -24,17 +24,20 @@ export class InsightDataViewerPanel implements vscode.Disposable {
   private binPath: string;
   private profilerServerProcess: ChildProcess | null = null;
   private serverPort: number | null = null;
-  private readonly serverPath: string;
-  private readonly serverDir: string;
-  private readonly zipDir: string;
+  private readonly serverPath: string='';
+  private readonly serverDir: string='';
+  private readonly zipDir: string='';
   private readonly insightPluginBasePath: string;
-  private serverPortReady: Promise<void>;
+  private serverPortReady!: Promise<void>; 
 
   constructor(panel: vscode.WebviewPanel, context: vscode.ExtensionContext, binPath: string) {
     this.panel = panel;
     this.context = context;
     this.binPath = binPath;
     this.insightPluginBasePath = this.getInsightPluginBasePath();
+    if(this.insightPluginBasePath === ''){
+      return;
+    }
     this.serverDir = path.join(this.insightPluginBasePath, 'server');
     this.serverPath = path.join(this.serverDir, 'profiler_server');
     this.zipDir = path.join(this.insightPluginBasePath, 'zip');
@@ -80,13 +83,12 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     const envPath = process.env.INSIGHT_HOME_PATH;
     if (envPath) {
       console.log(`[InsightDataViewerPanel] 从环境变量获取 insight-vscode-plugin 路径: ${envPath}`);
+     
       return envPath;
+    }else{
+      vscode.window.showInformationMessage(`从环境变量获取 insight-vscode-plugin 路径失败，请检查环境变量 INSIGHT_HOME_PATH 是否正确，如不存在请联系管理员设置`);
+      return '';
     }
-    
-    // 使用默认路径
-    const defaultPath = path.join(this.context.extensionPath, 'out', 'plugin', 'insight-vscode-plugin');
-    console.log(`[InsightDataViewerPanel] 环境变量 INSIGHT_VSCODE_PLUGIN_PATH 不存在，使用默认路径: ${defaultPath}`);
-    return defaultPath;
   }
 
   /**
