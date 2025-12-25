@@ -39,12 +39,13 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     this.serverDir = path.join(insightPluginBasePath, 'server');
     this.serverPath = path.join(this.serverDir, 'profiler_server');
     this.zipDir = path.join(insightPluginBasePath, 'zip');
-
-    // 创建一个 Promise 来等待 serverPort 被赋值
     let resolvePortReady: () => void;
     this.serverPortReady = new Promise((resolve) => {
       resolvePortReady = resolve;
     });
+    if(insightPluginBasePath === ''){
+      return;
+    }
     const resolvePort = resolvePortReady!;
 
     // 启动 profiler_server（异步，但会在后台设置 this.serverPort）
@@ -84,6 +85,10 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     if (envPath) {
       console.log(`[InsightDataViewerPanel] 从环境变量获取 insight-vscode-plugin 路径: ${envPath}`);
       return envPath;
+    }else{
+      console.log(`[InsightDataViewerPanel] 环境变量 INSIGHT_VSCODE_PLUGIN_PATH 不存在，使用默认路径`);
+      vscode.window.showErrorMessage(`[InsightDataViewerPanel] 环境变量 INSIGHT_VSCODE_PLUGIN_PATH 不存在，使用默认路径`);
+      return '';
     }
     
     // 使用默认路径
