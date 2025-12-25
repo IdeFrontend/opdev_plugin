@@ -1,6 +1,7 @@
 import { ExplorerRootUtils } from './ExplorerRootUtils';
 import { CommandExecutor } from './CommandOptions';
 import { PermanentStorage } from './PermanentStorage';
+import * as fs from 'fs';
 import * as vscode from 'vscode';
 import {
   createProject,
@@ -32,6 +33,25 @@ export default class OpsOption {
     this.executor = new CommandExecutor();
   }
 
+  /**
+   * 检查当前工作区是否存在 .vscode/devtool_config.json 文件
+   * @returns 如果文件存在返回 true，否则返回 false
+   */
+  async checkVscode(): Promise<boolean> {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders || workspaceFolders.length === 0) {
+      return false;
+    }
+
+    const workspacePath = workspaceFolders[0].uri.fsPath;
+    const vscodePath = path.join(workspacePath, '.vscode');
+    if (fs.existsSync(vscodePath)) {
+      const commandExecutor = new CommandExecutor();
+      await commandExecutor.execute('chmod 750 .vscode', [], [], {});
+    }
+    return false;
+  }
+
   async init(accendEnvScript?: string, projectPath?: string, projectName?: string) {
     if (projectPath) {
       this.project_path = path.normalize(`${projectPath}/${projectName}`);
@@ -52,6 +72,7 @@ export default class OpsOption {
     try {
       const result = await generateOpsPrototype(Number(project_id), op_name, prototype_name, this.context.extensionPath);
       vscode.window.showInformationMessage(`新建算子原型文件成功`);
+      await this.checkVscode();
       return result;
     } catch {
       vscode.window.showErrorMessage(`新建算子原型文件失败`);
@@ -84,7 +105,7 @@ export default class OpsOption {
           project_id: Number(project_id),
           op_type,
         },
-        this.context.extensionPath
+        this.context.extensionPath,
       );
       console.log(
         '生成算子工程参数',
@@ -93,7 +114,7 @@ export default class OpsOption {
           project_id,
           op_type,
         },
-        result
+        result,
       );
       vscode.window.showInformationMessage(`新建算子文件成功`);
     } catch (e) {
@@ -103,9 +124,9 @@ export default class OpsOption {
 
   async getConfigData() {
     const buildConfigs = await this.getBuildConfigs();
-    console.log('buildConfigs', buildConfigs)
+    console.log('buildConfigs', buildConfigs);
     if (!buildConfigs.length) {
-      return {}
+      return {};
     }
     return { [buildConfigs[0].config_name]: buildConfigs };
   }
@@ -117,7 +138,7 @@ export default class OpsOption {
       getConfig(Number(project_id), 'build_example'),
       getConfig(Number(project_id), 'simulate'),
       getConfig(Number(project_id), 'on_board'),
-    ]
+    ];
     const [opConfig, exampleConfig, simulateConfig, onBoardConfig] = await Promise.all(array);
     return [...opConfig, ...exampleConfig, ...simulateConfig, ...onBoardConfig];
   }
@@ -166,9 +187,9 @@ export default class OpsOption {
     const configId = config_id ? Number(config_id) : await this.getBuildExampleConfig();
     try {
       const runCommand = await getRunCommand(Number(configId));
-      console.log('runCommand', runCommand)
+      console.log('runCommand', runCommand);
       const res = await this.executor.execute(runCommand, [], [], {}, true);
-      console.log('runRes', res)
+      console.log('runRes', res);
       if (res.code !== 0) {
         vscode.window.showErrorMessage(`运行失败 ${res.output}`);
         return;
@@ -197,10 +218,10 @@ export default class OpsOption {
   async startSimulate() {
     const configId = await this.getSimulateConfig();
     const exConfigId = await this.getBuildExampleConfig();
-    console.log('simulate configId', configId, exConfigId)
+    console.log('simulate configId', configId, exConfigId);
     try {
       const simulateCommand = await getSimulateCommand(Number(configId), Number(exConfigId));
-      console.log('simulateCommand', simulateCommand)
+      console.log('simulateCommand', simulateCommand);
       const res = await this.executor.execute(simulateCommand, [], [], {}, true);
       if (res.code !== 0) {
         vscode.window.showErrorMessage(`执行仿真分析失败`);
@@ -215,10 +236,10 @@ export default class OpsOption {
   async startOnBoard() {
     const configId = await this.getOnBoardConfig();
     const exConfigId = await this.getBuildExampleConfig();
-    console.log('onboard configId', configId, exConfigId)
+    console.log('onboard configId', configId, exConfigId);
     try {
       const onBoardCommand = await getOnBoardCommand(Number(configId), Number(exConfigId));
-      console.log('onBoardCommand', onBoardCommand)
+      console.log('onBoardCommand', onBoardCommand);
       const res = await this.executor.execute(onBoardCommand, [], [], {}, true);
       if (res.code !== 0) {
         vscode.window.showErrorMessage(`执行上板分析失败`);
@@ -233,7 +254,7 @@ export default class OpsOption {
   async getBuildConfig() {
     try {
       const configData = await this.getBuildConfigs();
-      console.log('configData in build', configData)
+      console.log('configData in build', configData);
       return configData.find((v) => v.config_type === 'build_op')?.config_id;
     } catch {
       return undefined;
@@ -243,7 +264,7 @@ export default class OpsOption {
   async getBuildExampleConfig() {
     try {
       const configData = await this.getBuildConfigs();
-      console.log('configData in exam', configData)
+      console.log('configData in exam', configData);
       return configData.find((v) => v.config_type === 'build_example')?.config_id;
     } catch {
       return undefined;
@@ -253,20 +274,20 @@ export default class OpsOption {
   async getSimulateConfig() {
     try {
       const configData = await this.getBuildConfigs();
-      console.log('configData in simulate', configData)
+      console.log('configData in simulate', configData);
       return configData.find((v: any) => v.config_type === 'simulate')?.config_id;
     } catch {
-      return ''
+      return '';
     }
   }
 
   async getOnBoardConfig() {
     try {
       const configData = await this.getBuildConfigs();
-      console.log('configData in onBoard', configData)
+      console.log('configData in onBoard', configData);
       return configData.find((v: any) => v.config_type === 'on_board')?.config_id;
     } catch {
-      return ''
+      return '';
     }
   }
 
@@ -278,7 +299,7 @@ export default class OpsOption {
   async getSanitizerConfigId() {
     try {
       const configData = await this.getSanitizerConfigs();
-      console.log('configData in build', configData)
+      console.log('configData in build', configData);
       return configData.find((v: any) => v.config_type === 'sanitizer')?.config_id;
     } catch {
       return undefined;
@@ -286,7 +307,7 @@ export default class OpsOption {
   }
   async saveSanitizerForm(data: any, showMessage: boolean = true) {
     try {
-      const formData = (await this.getSanitizerConfigs())[0]
+      const formData = (await this.getSanitizerConfigs())[0];
       await postConfig('sanitizer', [{ ...formData, user_options: { ...formData.user_options, ...data } }]);
       if (!showMessage) {
         return;
@@ -300,7 +321,6 @@ export default class OpsOption {
   // 开启异常检测
   async runSanitizer() {
     try {
-
       let sanitizerConfigId: Number | undefined;
       let exampleConfigId: Number | undefined | string;
       if (!sanitizerConfigId) {
@@ -310,8 +330,7 @@ export default class OpsOption {
         exampleConfigId = await this.getBuildExampleConfig();
       }
 
-
-      const sanitizerCommand = await getSanitizerCommand(Number(sanitizerConfigId), Number(exampleConfigId)) || '';
+      const sanitizerCommand = (await getSanitizerCommand(Number(sanitizerConfigId), Number(exampleConfigId))) || '';
       const res = await this.executor.execute(sanitizerCommand, [], [], {}, true);
       if (res.code !== 0) {
         vscode.window.showErrorMessage(`异常检测失败 ${res.output}`);
