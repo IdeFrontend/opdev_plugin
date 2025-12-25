@@ -207,6 +207,7 @@ export default class OpsOption {
         return;
       }
       vscode.window.showInformationMessage(`执行仿真分析成功`);
+      vscode.commands.executeCommand('performanceSidebarView.focus');
     } catch (e: any) {
       vscode.window.showErrorMessage(`获取仿真命令失败 ${e.message}`);
     }
@@ -225,6 +226,7 @@ export default class OpsOption {
         return;
       }
       vscode.window.showInformationMessage(`执行上板分析成功`);
+      vscode.commands.executeCommand('performanceSidebarView.focus');
     } catch (e: any) {
       vscode.window.showErrorMessage(`获取上板命令失败 ${e.message}`);
     }

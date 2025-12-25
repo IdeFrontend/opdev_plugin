@@ -216,7 +216,7 @@ export function generateStructure(data: Partial<OpRecord>, extensionPath: string
           renderInPlatform: false,
           // 数据存放位置默认值
           dataStoragePath: getDefaultDirectory(),
-          simulatorType: soc_version && soc_version.startsWith('ascend') ? `A${soc_version.slice(1, -1)}${soc_version[soc_version.length - 1].toUpperCase()}` : '',
+          simulatorType: 'Ascend910B1',
           enableDump: false,
           advance_param: []
         },

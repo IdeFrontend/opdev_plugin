@@ -368,7 +368,10 @@ const webviewMessageList: messageItem[] = [
       const data = msg.message.data;
       const opsOption = new OpsOption(that.context);
       await opsOption.init();
-      await opsOption.startBuild(undefined, '--simulator');
+      const configData = await opsOption.getBuildConfigs();
+      const simulatorItem = configData.find((v: any) => v.config_type === 'simulate')
+      const simulatorType = simulatorItem?.user_options?.simulatorType ?? '' 
+      await opsOption.startBuild(undefined, `--simulator ${simulatorType}`);
       await opsOption.startSimulate();
     },
   },
