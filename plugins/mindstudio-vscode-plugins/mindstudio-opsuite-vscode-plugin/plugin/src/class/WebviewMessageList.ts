@@ -325,6 +325,13 @@ const webviewMessageList: messageItem[] = [
       await opsOption.init();
       // 异常检测前编译
       await opsOption.startBuild(undefined, '--mssanitizer');
+      // 创建文件夹
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      const workspacePath = workspaceFolders[0].uri.fsPath;
+      const logPath = path.join(path.join(workspacePath, '.vscode/mindstudio_sanitizer_log'));
+      if (!fs.existsSync(logPath)) {
+        fs.makdirSync(logPath);
+      }
       // 开启异常检测
       await opsOption.runSanitizer();
       // 执行完检测后，获取最新的列表数据
@@ -553,16 +560,20 @@ const webviewMessageList: messageItem[] = [
     command: 'vscodeJumpToFile',
     callback: async (data: any) => {
       try {
-        const { fileLink, row, col } = data;
-        // const uri = vscode.Uri.file(path.join(__dirname, fileLink))
+        console.log('vscodeJumpToFile', data)
+        const { fileLink, row, col } = data.message.data;
         const uri = vscode.Uri.file(fileLink)
         console.log('uri', uri)
         const document = await vscode.workspace.openTextDocument(uri);
         console.log('document', document)
-        await vscode.window.showTextDocument(document, {
-          preview: true,
-          viewColumn: vscode.ViewColumn.One
+        const editor = await vscode.window.showTextDocument(document, {
+          viewColumn: vscode.ViewColumn.One,
         });
+        const line = Math.max(0, row - 1);
+        const charactor = Math.max(0, col - 1);
+        const pos = new vscode.Position(line, charactor);
+        editor.selection = new vscode.Selection(pos, pos);
+        editor.ravealRange(new vscode.Range(pos, pos))
       } catch (error) {
         console.log('jumpToFile', error)
         vscode.window.showErrorMessage(`打开文件失败：${error}`)
