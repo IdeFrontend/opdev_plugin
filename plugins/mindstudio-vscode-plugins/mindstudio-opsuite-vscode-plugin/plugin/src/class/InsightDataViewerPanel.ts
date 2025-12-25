@@ -127,21 +127,6 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     let htmlContent = '';
     if (fs.existsSync(htmlPath)) {
       htmlContent = fs.readFileSync(htmlPath, 'utf8');
-      
-      // 注入编译后的 DataViewerController JS 文件
-      const controllerJsPath = path.join(this.insightPluginBasePath, 'DataViewerController.js');
-      
-      if (fs.existsSync(controllerJsPath)) {
-        const controllerJs = fs.readFileSync(controllerJsPath, 'utf8');
-        // 将 JS 代码注入到占位符 script 标签中
-        htmlContent = htmlContent.replace(
-          '<script id="data-viewer-controller-script"></script>',
-          `<script id="data-viewer-controller-script">${controllerJs}</script>`
-        );
-        console.log('[InsightDataViewerPanel] ✓ 已注入 DataViewerController.js');
-      } else {
-        console.warn('[InsightDataViewerPanel] ✗ DataViewerController.js 未找到:', controllerJsPath);
-      }
     } else {
       htmlContent = this.getDefaultHtml();
     }
