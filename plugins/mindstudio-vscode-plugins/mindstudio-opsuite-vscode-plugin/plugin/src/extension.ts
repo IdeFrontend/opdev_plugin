@@ -70,7 +70,7 @@ async function checVscode(): Promise<boolean> {
   const devtoolConfigPath = path.join(workspacePath, '.vscode');
   if (fs.existsSync(devtoolConfigPath)) {
     const commandExecutor = new CommandExecutor();
-    await commandExecutor.execute('chmod -R o-w .vscode', [], [], {});
+    await commandExecutor.execute('chmod 750 .vscode', [], [], {});
   }
   return false;
 }
