@@ -41,6 +41,11 @@ export class Project<HasProject extends boolean = false> {
     return this._workspaceProject !== null;
   }
 
+  /** 更新视图 */
+  public updateView() {
+    this.getWorkspaceProject();
+  }
+
   private getWorkspaceProject() {
     const [workspaceFolder] = vscode.workspace.workspaceFolders ?? [];
     if (!workspaceFolder) {
