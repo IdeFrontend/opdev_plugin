@@ -13,6 +13,7 @@ import { spawn, ChildProcess, exec } from 'child_process';
 import { promisify } from 'util';
 import { NodeWebviewSocketBridge } from './NodeWebviewSocketBridge';
 import webviewMessageList from './WebviewMessageList';
+import { CommandExecutor } from './CommandOptions';
 
 const execAsync = promisify(exec);
 
@@ -294,6 +295,31 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     // 如果 server 目录已存在，直接返回
     if (fs.existsSync(this.serverDir)) {
       console.log(`[InsightDataViewerPanel] server 目录已存在: ${this.serverDir}`);
+      
+      // 对 insightPluginBasePath 目录执行 chmod -R o-w 命令（移除其他用户的写权限）
+      // 只在非 Windows 系统上执行
+      if (os.platform() !== 'win32') {
+        try {
+          const commandExecutor = new CommandExecutor();
+          const chmodCommand = `chmod -R o-w "${this.insightPluginBasePath}"`;
+          console.log(`[InsightDataViewerPanel] 执行命令: ${chmodCommand}`);
+          const result = await commandExecutor.execute(chmodCommand, [], [], {
+            cwd: process.cwd(),
+          });
+          
+          if (result.code === 0) {
+            console.log(`[InsightDataViewerPanel] ✓ 成功执行 chmod 命令`);
+          } else {
+            console.warn(`[InsightDataViewerPanel] chmod 命令执行失败，退出码: ${result.code}`);
+            if (result.stderr) {
+              console.warn(`[InsightDataViewerPanel] chmod 错误输出: ${result.stderr}`);
+            }
+          }
+        } catch (error: any) {
+          console.warn(`[InsightDataViewerPanel] 执行 chmod 命令时出错: ${error.message}`);
+        }
+      }
+      
       // 检查 profiler_server 文件是否存在
       if (fs.existsSync(this.serverPath)) {
         return true;
