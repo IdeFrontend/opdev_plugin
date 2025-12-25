@@ -57,8 +57,9 @@ const deleteTableItem = e => {
         <a-tooltip :overlay-style="{ maxWidth: '300px' }">
           <template #title>
             <div>
-              具体图形案例请参考
-              <a :href="guide" target="_blank" style="color: #4ba5f4;">算子调优工具概述</a>
+              具体图形案例请参考算子调优工具概述
+              <br>
+              {{ guide }}
             </div>
           </template>
           <QuestionCircleOutlined class="help-icon" />
