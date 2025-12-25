@@ -47,7 +47,7 @@ export default class OpsOption {
     const vscodePath = path.join(workspacePath, '.vscode');
     if (fs.existsSync(vscodePath)) {
       const commandExecutor = new CommandExecutor();
-      await commandExecutor.execute('chmod 750 .vscode', [], [], {});
+      await commandExecutor.execute(`chmod 750 ${vscodePath}`, [], [], {});
     }
     return false;
   }
