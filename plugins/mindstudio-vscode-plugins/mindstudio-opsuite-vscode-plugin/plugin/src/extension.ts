@@ -15,7 +15,6 @@ import i18nResource from 'shared:/i18n';
 
 import { ExplorerRootUtils } from './class/ExplorerRootUtils';
 import { WebviewProvider } from './class/webviewProvider';
-import { CommandExecutor } from './class/CommandOptions';
 import { handleOperatorProjectDictoryFile } from './class/WebviewMessageList';
 import OpsOption from './class/OpsOption';
 import { CustomSidebarProvider } from './class/CustomSidebarProvider';
@@ -34,6 +33,7 @@ import { MindStudioPluginInstaller } from './class/MindStudioPluginInstaller';
 
 let extensionContext: vscode.ExtensionContext | undefined;
 const execAsync = promisify(exec);
+
 
 /**
  * 检查当前工作区是否存在 .vscode/devtool_config.json 文件
@@ -55,26 +55,6 @@ async function checkDevtoolConfigExists(): Promise<boolean> {
     return false;
   }
 }
-
-/**
- * 检查当前工作区是否存在 .vscode/devtool_config.json 文件
- * @returns 如果文件存在返回 true，否则返回 false
- */
-async function checVscode(): Promise<boolean> {
-  const workspaceFolders = vscode.workspace.workspaceFolders;
-  if (!workspaceFolders || workspaceFolders.length === 0) {
-    return false;
-  }
-
-  const workspacePath = workspaceFolders[0].uri.fsPath;
-  const devtoolConfigPath = path.join(workspacePath, '.vscode');
-  if (fs.existsSync(devtoolConfigPath)) {
-    const commandExecutor = new CommandExecutor();
-    await commandExecutor.execute('chmod 750 .vscode', [], [], {});
-  }
-  return false;
-}
-
 /**
  * 插件激活入口函数
  * @param context VSCode扩展上下文
@@ -84,7 +64,6 @@ export async function activate(context: vscode.ExtensionContext) {
   // 国际化
   await initI18n();
 
-  await checVscode(); 
 
   // 检查 devtool_config.json 文件是否存在
   const hasDevtoolConfig = await checkDevtoolConfigExists();
@@ -137,14 +116,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
   let progress: any;
   if (context.globalState.get<string>('runCommand') === 'huawei-op-devtools.createDictory') {
-    await vscode.window.withProgress(
-      {
-        location: vscode.ProgressLocation.Notification,
-        title: `开始创建算子文件...`,
-        cancellable: false,
-      },
-      async (pro) => (progress = pro),
-    );
+    await vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: `开始创建算子文件...`,
+      cancellable: false
+    }, async pro => progress = pro)
   }
   // api接口
   const apiServer = initApiServer();
@@ -188,7 +164,7 @@ export async function activate(context: vscode.ExtensionContext) {
       // 打开/关闭右侧辅助侧栏
       await vscode.commands.executeCommand('workbench.action.toggleAuxiliaryBar');
     } catch (error) {
-      console.log(error);
+      console.log(error)
     }
   });
 
@@ -208,7 +184,7 @@ export async function activate(context: vscode.ExtensionContext) {
     // 延迟执行，确保 UI 已就绪
     setTimeout(async () => {
       try {
-        console.log('文件存在执行展开：123123123132');
+        console.log('文件存在执行展开：123123123132')
         await vscode.commands.executeCommand('OpsOperateProvider.focus');
       } catch (error) {
         console.error('聚焦 OpsOperateProvider 视图时出错:', error);
@@ -282,11 +258,11 @@ export async function activate(context: vscode.ExtensionContext) {
     if (errorMessage.includes('already exists') || errorMessage.includes('already registered')) {
       console.warn('命令 extension.jsonButtonAction 已存在，使用现有命令');
       // 创建一个虚拟的 Disposable，实际使用现有的命令
-      buttonCommand = { dispose: () => {} };
+      buttonCommand = { dispose: () => { } };
     } else {
       // 其他错误仍然抛出，但不会阻止扩展加载
       console.error('注册命令 extension.jsonButtonAction 时发生未知错误:', errorMessage);
-      buttonCommand = { dispose: () => {} };
+      buttonCommand = { dispose: () => { } };
     }
   }
 
@@ -390,7 +366,7 @@ export async function activate(context: vscode.ExtensionContext) {
     // 拿到MsSanitizerRunData的视图实例，主动下发刷新命令
     const msSanitizerRunData = ViewServer.getInstance().providerWebViewMap.msSanitizerSidebarView;
     msSanitizerRunData.webview.postMessage({
-      command: 'iframeFlashMsSanitizerRunData',
+      command: 'iframeFlashMsSanitizerRunData'
     });
   });
 
@@ -428,7 +404,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const installer = new MindStudioPluginInstaller(context, {
     pluginId: 'ascend.mindstudio-debug-vscode-plugin',
     vsixRelativePath: './out/plugin/mindstudio-debug-vscode-plugin/MindStudio-Debug-VSCode-Plugin-1.0.7.vsix',
-    pluginVersion: '1.0.7',
+    pluginVersion: '1.0.7'
   });
 
   await installer.installIfNeeded();
@@ -481,7 +457,7 @@ async function exportEnvToFile(context: vscode.ExtensionContext) {
   const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
   console.log('workspaceFolder', workspaceFolder);
   const cwd = workspaceFolder?.uri.fsPath ?? context.extensionPath;
-  console.log('cwd', cwd);
+  console.log('cwd', cwd)
   const targetDir = path.join(cwd, '.arts');
   const targetFile = path.join(targetDir, 'env');
   try {
