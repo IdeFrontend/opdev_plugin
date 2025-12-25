@@ -33,9 +33,21 @@ function setMsSanitizerMarks(vals: string[]) {
 export const msSanitizerApis: ApiGroup = {
   msSanitizer: {
     async getRunData(params) {
-      // TODO 替换为实际的项目路径
-      // const files = await readSpecificFiles('mssanitizer_*.log', '.vscode');
-      const logPath = path.join(path.join(__dirname, '../.vscode/mindstudio_sanitizer_log'));
+      // 本地测试数据配置
+      // process.env.HOME = path.join(__dirname, '../')
+
+      // 获取不到系统根路径
+      if (!process.env.HOME) {
+        return [];
+      }
+
+      // 获取目录下.vscode/mindstudio_sanitizer_log文件夹中的所有文件
+      const logPath = path.join(path.join(process.env.HOME!, '.vscode/mindstudio_sanitizer_log'));
+      // 文件夹不存在
+      if (!fs.existsSync(logPath)) {
+        return []
+      }
+
       const allFileNames = await fs.readdirSync(logPath);
 
       const markSet = getMsSanitizerMarks();

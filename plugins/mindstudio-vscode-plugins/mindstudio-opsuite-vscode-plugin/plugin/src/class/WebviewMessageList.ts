@@ -327,6 +327,8 @@ const webviewMessageList: messageItem[] = [
       await opsOption.startBuild(undefined, '--mssanitizer');
       // 开启异常检测
       await opsOption.runSanitizer();
+      // 执行完检测后，获取最新的列表数据
+      vscode.commands.executeCommand('huawei-op-devtools.flashMsSanitizerRunData');
     },
   },
   {

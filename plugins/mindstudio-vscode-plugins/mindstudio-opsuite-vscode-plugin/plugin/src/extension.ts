@@ -64,7 +64,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // 国际化
   await initI18n();
 
-  
+
   // 检查 devtool_config.json 文件是否存在
   const hasDevtoolConfig = await checkDevtoolConfigExists();
   console.log('文件是否存在:', hasDevtoolConfig);
@@ -174,7 +174,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(opsOperateView);
   // 注册命令（无论文件是否存在都要注册）
   context.subscriptions.push(toggleOpsOperateCommand);
-  
+
   // 根据 devtool_config.json 文件是否存在来决定展开或关闭侧边栏
   if (hasDevtoolConfig) {
     // 延迟执行，确保 UI 已就绪
@@ -192,7 +192,7 @@ export async function activate(context: vscode.ExtensionContext) {
       await closeAuxiliaryBar();
     }, 500);
   }
-  
+
   // 注册打开Opsuite命令
   const ConfigCommand = vscode.commands.registerCommand('huawei-op-devtools.config', async () => {
     configProvider.show('Config');
@@ -357,6 +357,23 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(openCsvCommand);
 
+  const flashMsSanitizerRunData = vscode.commands.registerCommand('huawei-op-devtools.flashMsSanitizerRunData', async () => {
+    // 后续待优化点，目前通过非法操作方式拿到视图实例
+    // 拿到MsSanitizerRunData的视图实例，主动下发刷新命令
+    const msSanitizerRunData = ViewServer.getInstance().providerWebViewMap.msSanitizerSidebarView;
+    msSanitizerRunData.webview.postMessage({
+      command: 'iframeFlashMsSanitizerRunData'
+    });
+  });
+
+  context.subscriptions.push(flashMsSanitizerRunData);
+
+  const watchWorkSpaceFolderChange = vscode.workspace.onDidChangeWorkspaceFolders(async () => {
+    vscode.commands.executeCommand('huawei-op-devtools.flashMsSanitizerRunData');
+  });
+
+  context.subscriptions.push(watchWorkSpaceFolderChange);
+
   if (vscode.workspace.workspaceFolders) {
     console.log('激活', vscode.workspace.workspaceFolders);
     try {
@@ -416,7 +433,6 @@ function initApiServer() {
  */
 function initViews(context: vscode.ExtensionContext, apiServer: ApiServer): ViewServer {
   const viewServer = new ViewServer(routes, context);
-
   viewServer.onViewActivated((path, webview) => {
     apiServer.addWebview(path, webview);
   });

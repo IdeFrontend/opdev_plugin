@@ -186,6 +186,7 @@ function handleSanitizerConfigToCmd(sanitizerConfig: any) {
     sanitizerConfig.logLevel ? `--log-level=${sanitizerConfig.logLevel}` : '', // 报告输出等级
     sanitizerConfig.maxDebuglogSize ? `--max-debuglog-size=${sanitizerConfig.maxDebuglogSize}` : '', // 输入日志单个文件大小上限 1 - 10240
     sanitizerConfig.blockId ? `--block-id=${sanitizerConfig.blockId}` : '', // 单block检测的blockId 0 - 200
+    `--log-file=./.vscode/mindstudio_sanitizer_log/mssanitizer_${new Date().valueOf()}.log`
   ]
     .filter(item => item)
     .join(' ')
