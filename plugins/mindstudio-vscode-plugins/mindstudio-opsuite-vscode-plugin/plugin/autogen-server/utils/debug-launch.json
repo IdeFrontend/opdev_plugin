@@ -6,7 +6,6 @@
       "request": "launch",
       "cwd": "${workspaceRoot}",
       "target": "${workspaceFolder}/build/${workspaceFolderBasename}",
-      "msdebugMiPath": "${env:ASCEND_TOOLKIT_HOME}/tools/msdebug/bin/msdebug-mi",
       "environmentScripts": ["${workspaceFolder}/.arts/.env"]
     }
   ]
