@@ -16,6 +16,10 @@ export class Project<HasProject extends boolean = false> {
     return this._workspaceProject!.id;
   }
 
+  public get projectSH(): HasProject extends true ? string : string | undefined {
+    return this._workspaceProject!.ascend_env_script!;
+  }
+
   public get projectPath(): HasProject extends true ? string : string | undefined {
     return this._workspaceProject!.project_path;
   }
@@ -37,6 +41,12 @@ export class Project<HasProject extends boolean = false> {
     return this._workspaceProject !== null;
   }
 
+  /** 更新视图 */
+  public updateView() {
+    console.log('执行了更新');
+    this.getWorkspaceProject();
+  }
+
   private getWorkspaceProject() {
     const [workspaceFolder] = vscode.workspace.workspaceFolders ?? [];
     if (!workspaceFolder) {
@@ -45,5 +55,6 @@ export class Project<HasProject extends boolean = false> {
     }
     const projectPath = workspaceFolder.uri.fsPath;
     this._workspaceProject = getProjectByPath(projectPath) ?? null;
+    console.log(this._workspaceProject,'value---------');
   }
 }

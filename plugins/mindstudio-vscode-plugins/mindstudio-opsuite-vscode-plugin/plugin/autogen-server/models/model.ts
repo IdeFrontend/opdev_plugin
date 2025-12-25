@@ -176,7 +176,7 @@ export function generateStructure(data: Partial<OpRecord>, extensionPath: string
           // 算子代码热点图
           Source: true,
           // Cache热力图
-          MemoryDetail: false,
+          MemoryDetail: true,
 
           // 算子性能数据文件 相关
           // Cube及Vector类型指令耗时和占比
@@ -190,14 +190,14 @@ export function generateStructure(data: Partial<OpRecord>, extensionPath: string
           // UB读写带宽速率
           MemoryUB: true,
           // 算子基础信息
-          BasicInfo: false,
+          BasicInfo: true,
           // 计算单元和搬运单元耗时占比
           PipeUtilization: true,
           // 资源冲突占比
           ResourceConflictRatio: true,
 
           // 使能Kernel侧制定代码段性能采集
-          KernelScale: true,
+          KernelScale: false,
           downloadToLocal: true,
           renderInPlatform: false,
           dataStoragePath: getDefaultDirectory(),
@@ -216,7 +216,7 @@ export function generateStructure(data: Partial<OpRecord>, extensionPath: string
           renderInPlatform: false,
           // 数据存放位置默认值
           dataStoragePath: getDefaultDirectory(),
-          simulatorType: soc_version && soc_version.startsWith('ascend') ? `A${soc_version.slice(1, -1)}${soc_version[soc_version.length - 1].toUpperCase()}` : '',
+          simulatorType: 'Ascend910B1',
           enableDump: false,
           advance_param: []
         },

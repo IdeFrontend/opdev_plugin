@@ -8,6 +8,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { Project } from '../services/project/Project';
 
 import { CommandExecutor } from './CommandOptions';
 import OpsOption from './OpsOption';
@@ -57,6 +58,12 @@ const webviewMessageList: messageItem[] = [
     },
   },
   {
+    command: 'vscodeRunSetProjectSH',
+    callback: async (msg: any, that: any) => {
+      vscode.commands.executeCommand('huawei-op-devtools.projectSH');
+    },
+  },
+  {
     command: 'openWelcome',
     callback: (message: any, that: any) => {
       vscode.commands.executeCommand('huawei-op-devtools.welcome');
@@ -87,6 +94,28 @@ const webviewMessageList: messageItem[] = [
         command: 'iframeSetHome',
         data: process.env.HOME,
       });
+    },
+  },
+  // 获取环境变量
+  {
+    command: 'vscodeGetProjectSH',
+    callback: async (message: any, that: any) => {
+      console.log('执行了获取ASCEND_ENV_SCRIPT的方法', process.env)
+      const project = Project.getInstance();
+      console.log('执行了获取project.projectSH',project.projectSH);
+      that.panel.webview.postMessage({
+        command: 'iframeSetProjectSH',
+        data: process.env.ASCEND_ENV_SCRIPT || project.projectSH,
+      });
+    },
+  },
+  // 更新Project
+  {
+    command: 'vscodeUpdataProject',
+    callback: async (message: any, that: any) => {
+      const project = Project.getInstance();
+      console.log('执行更新project逻辑');
+      project.updateView();
     },
   },
   {
@@ -207,6 +236,22 @@ const webviewMessageList: messageItem[] = [
           list: res,
         },
       });
+    },
+  },
+  {
+    command: 'vscodeSaveProjectSH',
+    callback: async (msg: any, that: any) => {
+      const message = msg.message.data;
+      try {
+        const opsOption = new OpsOption(that.context);
+        await opsOption.init(message);
+        vscode.window.showInformationMessage('环境变量设置成功');
+        const project = Project.getInstance();
+        console.log('执行更新project逻辑');
+        project.updateView();
+      } catch (error) {
+        vscode.window.showErrorMessage(`环境变量设置失败: ${error}`);
+      }
     },
   },
   {
@@ -339,30 +384,6 @@ const webviewMessageList: messageItem[] = [
     },
   },
   {
-    command: 'vscodeRunSetProjectSH',
-    callback: async (msg: any, that: any) => {
-      vscode.commands.executeCommand('huawei-op-devtools.projectSH');
-      console.log('打开环境变量');
-    },
-  },
-  {
-    command: 'vscodeSaveProjectSH',
-    callback: async (msg: any, that: any) => {
-      const projectSH = msg.message.data;
-      if (!projectSH) {
-        vscode.window.showErrorMessage('环境变量配置脚本路径不能为空');
-        return;
-      }
-      try {
-        const opsOption = new OpsOption(that.context);
-        await opsOption.init(projectSH);
-        vscode.window.showInformationMessage('环境变量设置成功');
-      } catch (error) {
-        vscode.window.showErrorMessage(`环境变量设置失败: ${error}`);
-      }
-    },
-  },
-  {
     command: 'vscodeRunExample',
     callback: async (msg: any, that: any) => {
       const data = msg.message.data;
@@ -377,7 +398,10 @@ const webviewMessageList: messageItem[] = [
       const data = msg.message.data;
       const opsOption = new OpsOption(that.context);
       await opsOption.init();
-      await opsOption.startBuild(undefined, '--simulator');
+      const configData = await opsOption.getBuildConfigs();
+      const simulatorItem = configData.find((v: any) => v.config_type === 'simulate')
+      const simulatorType = simulatorItem?.user_options?.simulatorType ?? '' 
+      await opsOption.startBuild(undefined, `--simulator ${simulatorType}`);
       await opsOption.startSimulate();
     },
   },
@@ -387,7 +411,7 @@ const webviewMessageList: messageItem[] = [
       const data = msg.message.data;
       const opsOption = new OpsOption(that.context);
       await opsOption.init();
-      await opsOption.startBuild(undefined, '--debug');
+      await opsOption.startBuild(undefined, '--prof_onboard');
       await opsOption.startOnBoard();
     }
   },
