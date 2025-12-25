@@ -114,14 +114,6 @@ const menuItems = ref([
             },
         ]
     },
-    // {
-    //     key: 'projectSH',
-    //     label: '设置环境变量',
-    //     icon: runIcon,
-    //     handler: () => {
-    //         message.sendMessageToParent({ command: "vscodeRunSetProjectSH", data: '' });
-    //     }
-    // },
     {
         key: 'projectSH',
         label: '设置环境变量',
@@ -130,14 +122,6 @@ const menuItems = ref([
             message.sendMessageToParent({ command: "vscodeRunSetProjectSH", data: '' });
         }
     },
-    // {
-    //     key: 'projectSH',
-    //     label: '设置环境变量',
-    //     icon: runIcon,
-    //     handler: () => {
-    //         message.sendMessageToParent({ command: "vscodeRunSetProjectSH", data: '' });
-    //     }
-    // },
 ]);
 
 // 动态计算顶级子菜单的 key（带前缀）

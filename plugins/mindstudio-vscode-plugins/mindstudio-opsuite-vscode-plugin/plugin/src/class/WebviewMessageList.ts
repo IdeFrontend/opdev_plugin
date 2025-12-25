@@ -100,9 +100,10 @@ const webviewMessageList: messageItem[] = [
   {
     command: 'vscodeGetProjectSH',
     callback: async (message: any, that: any) => {
+      console.log('执行了获取ASCEND_ENV_SCRIPT的方法', process.env)
       that.panel.webview.postMessage({
         command: 'iframeSetProjectSH',
-        data: process.env.HOME,
+        data: process.env.ASCEND_ENV_SCRIPT,
       });
     },
   },

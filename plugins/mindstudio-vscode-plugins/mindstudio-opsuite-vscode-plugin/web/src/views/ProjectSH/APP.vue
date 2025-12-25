@@ -28,7 +28,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onBeforeUnmount } from 'vue';
+import { ref, reactive, onBeforeUnmount,onMounted } from 'vue';
 import { message } from '../../untils/Message';
 import { checkPathExists } from '@/apis';
 import type { FormInstance as AntdVForm } from 'ant-design-vue';
@@ -78,19 +78,14 @@ const remoteSearch = (type, keyword) => {
   });
 };
 
-// 消息监听
-message.addMessageListener({
-  command: 'iframeRemoteSearchResult',
-  callback: (resp) => {
-    const { type, list = [] } = resp.data || {};
-    const mapped = list.map((item) => ({ value: item.path }));
-    if (type === 'projectSH') {
-      projectSHOptions.value = mapped;
-      projectSHLoading.value = false;
-    }
+const getBuildConfigItem = {
+  command: 'iframeSetProjectSH',
+  callback: (message) => {
+    console.log('获取iframeSetProjectSH');
+    const obj = message.data || '/home/developer';
+    formData.projectSH = obj;
   },
-});
-
+}
 // 提交表单
 const handleSubmit = async () => {
   try {
@@ -112,6 +107,11 @@ const handleSubmit = async () => {
     submitting.value = false;
   }
 };
+
+onMounted(() => {
+  message.addMessageListener(getBuildConfigItem);
+  message.sendMessageToParent({ command: 'vscodeGetHome' });
+});
 
 onBeforeUnmount(() => {
   message.deleteMessageListener('iframeRemoteSearchResult');
