@@ -189,6 +189,11 @@ export class ExceptionParser {
     private isInContentionEvent: boolean = false; // 标记是否在处理竞争检测事件
     private currentStackLevel: number = -1; // 当前结果的最大调用栈层级
 
+    private matchPath = '';
+    constructor(config: Record<string, string>) {
+        this.matchPath = config.matchPath;
+    }
+
     /**
      * 处理一行输入
      * @param line 控制台输出的一行文本（可能包含 ====== 前缀）
@@ -374,8 +379,7 @@ export class ExceptionParser {
 
                     // 优先选择调用栈中编号最大的用户代码文件（通常是 #3）
                     // 如果还没有设置文件信息，或者当前调用栈层级更高，则更新
-                    if (!this.currentResult.fileLink ||
-                        stackLevel > this.currentStackLevel) {
+                    if (!this.currentResult.fileLink && filePath.includes(this.matchPath)) {
                         this.currentResult.fileLink = filePath;
                         this.currentResult.row = row;
                         this.currentResult.col = col;
@@ -415,7 +419,6 @@ export class ExceptionParser {
         if (line.includes('code in') && line.includes('.cpp:')) {
             const codeMatch = line.match(/code\s+in\s+(.+?):(\d+)/);
             if (codeMatch && !this.currentResult.fileLink) {
-                console.log('bbbbbbbbbbbbbbbb', codeMatch)
                 this.currentResult.fileLink = codeMatch[1].trim();
                 this.currentResult.row = parseInt(codeMatch[2], 10);
             }

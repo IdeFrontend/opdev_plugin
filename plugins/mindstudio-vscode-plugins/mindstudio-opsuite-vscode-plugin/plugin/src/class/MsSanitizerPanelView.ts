@@ -9,6 +9,8 @@ import webviewMessageList from './WebviewMessageList'
 export class MsSanitizerPanelViewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'msSanitizerPanelView';
 
+    public static getMsSanitizerPanelViewDataParams = null;
+
     _view?: vscode.WebviewView
     private _extensionUri: vscode.Uri
     private _context: vscode.ExtensionContext
@@ -35,8 +37,26 @@ export class MsSanitizerPanelViewProvider implements vscode.WebviewViewProvider 
 
         // 消息处理
         webviewView.webview.onDidReceiveMessage(
-            (message: any) => {
-                this.handleWebviewMessage(message);
+            async (message: any) => {
+                if (message.command === 'vscodeGetMsSanitizerPanelViewData') {
+                    // 发送数据 后续优化 先通过_view.webview方式下发内容
+                    if (!MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams) {
+                        webviewView.webview.postMessage({
+                            command: 'iframeRemoteMsSanitizerPanelViewSetRenderList',
+                            data: {},
+                        });
+                        return;
+                    }
+
+                    const panelData = await getPanelData(MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams);
+                    MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams = null;
+                    webviewView.webview.postMessage({
+                        command: 'iframeRemoteMsSanitizerPanelViewSetRenderList',
+                        data: panelData,
+                    });
+                } else {
+                    this.handleWebviewMessage(message);
+                }
             },
             undefined,
             this._context.subscriptions
@@ -60,8 +80,16 @@ export class MsSanitizerPanelViewProvider implements vscode.WebviewViewProvider 
 }
 
 const getPanelData = (params: Record<string, any>) => {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders || workspaceFolders.length === 0) {
+        console.log('getRunData1 no workspaceFolders')
+        return [];
+    }
+
+    const workspacePath = workspaceFolders[0].uri.fsPath;
+
     const inputContent = fs.readFileSync(params.path, 'utf-8');
-    const parser = new ExceptionParser();
+    const parser = new ExceptionParser({ matchPath: workspacePath });
     // 直接传入整个文件内容进行解析
     const data = parser.parseAll(inputContent);
     console.log('异常检测详情数据：', data)
@@ -87,13 +115,8 @@ export const getMsSanitizerPanelViewProvider = (context: vscode.ExtensionContext
 
         // 定位到异常检测面板
         await vscode.commands.executeCommand(`msSanitizerPanelView.focus`);
-        // 发送数据 后续优化 先通过_view.webview方式下发内容
-        const panelData = await getPanelData(data);
-        (msSanitizerPanelViewProvider as any)._view.webview.postMessage({
-            command: 'iframeRemoteMsSanitizerPanelViewSetRenderList',
-            data: panelData,
-        });
 
+        MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams = data;
     });
 
 

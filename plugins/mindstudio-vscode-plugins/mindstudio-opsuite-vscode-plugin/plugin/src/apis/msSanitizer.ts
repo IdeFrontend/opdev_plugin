@@ -43,6 +43,8 @@ export const msSanitizerApis: ApiGroup = {
       console.log('getRunData2', workspacePath)
       // 获取目录下.vscode/mindstudio_sanitizer_log文件夹中的所有文件
       const logPath = path.join(path.join(workspacePath, '.vscode/mindstudio_sanitizer_log'));
+      // 本地测试数据
+      // const logPath = path.join(__dirname, '../.vscode/mindstudio_sanitizer_log');
       console.log('getRunData3', logPath)
       // 文件夹不存在
       if (!fs.existsSync(logPath)) {

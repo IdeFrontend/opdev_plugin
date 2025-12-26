@@ -135,7 +135,7 @@ const projectFormData = reactive({
   // 算子工程名称默认值
   projectName: generateDefaultProjectName(),
   // 环境变量配置脚本默认值
-  projectSH: '',
+  projectSH: '/etc/profile',
 });
 
 // 表单校验规则

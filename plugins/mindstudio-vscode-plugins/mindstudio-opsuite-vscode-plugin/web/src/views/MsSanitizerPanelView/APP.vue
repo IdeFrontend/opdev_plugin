@@ -58,29 +58,31 @@
             <span class="ms-panel-fitler-ctn-item-label">{{ synchronizeCount }}</span>
           </div>
         </div>
-        <a-table :scroll="{ y: 'calc(100vh - 224px)' }" :columns="columns" :data-source="tableData" @change="onChange"
-          size="small" :custom-row="customRow">
-          <template #bodyCell="{ column, record }">
-            <template v-if="column.dataIndex === 'type'">
-              <CloseCircleOutlined style="color:#FF4D4F" v-if="record.type === 'error'" />
-              <WarningOutlined style="color:#FAAD14" v-else />
-              <span style="padding-left: 4px;">{{ record.title }}</span>
+        <div style="padding: 0 20px;">
+          <a-table :scroll="{ y: 'calc(100vh - 224px)' }" :columns="columns" :data-source="tableData" @change="onChange"
+            size="small" :custom-row="customRow">
+            <template #bodyCell="{ column, record }">
+              <template v-if="column.dataIndex === 'type'">
+                <CloseCircleOutlined style="color:#FF4D4F" v-if="record.type === 'error'" />
+                <WarningOutlined style="color:#FAAD14" v-else />
+                <span style="padding-left: 4px;">{{ record.title }}</span>
+              </template>
+              <template v-if="column.dataIndex === 'fileLink'">
+                <a-button v-if="record.fileLink" type="link" @click.stop="handleJumpToFile(record)">{{ record.fileLink
+                }}</a-button>
+                <span v-else>
+                  <ExclamationOutlined style="color:#FF4D4F" /> 缺失源码信息，无法跳转
+                </span>
+              </template>
+              <template v-if="column.dataIndex === 'question'">
+                <span>{{ questionMap.get(record.question) }}</span>
+              </template>
             </template>
-            <template v-if="column.dataIndex === 'fileLink'">
-              <a-button v-if="record.fileLink" type="link" @click.stop="handleJumpToFile(record)">{{ record.fileLink
-              }}</a-button>
-              <span v-else>
-                <ExclamationOutlined style="color:#FF4D4F" /> 缺失源码信息，无法跳转
-              </span>
-            </template>
-            <template v-if="column.dataIndex === 'question'">
-              <span>{{ questionMap.get(record.question) }}</span>
-            </template>
-          </template>
-        </a-table>
+          </a-table>
+        </div>
       </div>
       <div class="ms-panel-ctn-right" v-if="showDetail">
-        <div class="ms-panel-label" style="">检测结果
+        <div class="ms-panel-label">详情
           <RightSquareOutlined class="ms-panel-ctn-cp" @click="showDetail = false" />
         </div>
         <div class="ms-panel-ctn-right-main">
@@ -270,6 +272,8 @@ onMounted(() => {
       tableData.value = data || [];
     },
   });
+
+  message.sendMessageToParent({ command:'vscodeGetMsSanitizerPanelViewData' })
 })
 
 onBeforeUnmount(() => {
@@ -296,6 +300,7 @@ onBeforeUnmount(() => {
 
     .ms-panel-ctn-right-main {
       padding: 0 20px;
+      word-break: break-all;
     }
 
     .ms-panel-ctn-right-label {
@@ -327,6 +332,7 @@ onBeforeUnmount(() => {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 0 20px;
 
     .ms-panel-title-left {
       font-size: 14px;
@@ -336,6 +342,7 @@ onBeforeUnmount(() => {
   .ms-panel-fitler-ctn {
     display: flex;
     margin-bottom: 4px;
+    padding: 0 20px;
 
     .ms-panel-fitler-ctn-item {
       height: 44px;
@@ -401,5 +408,8 @@ p {
   height: 100% !important;
   width: 100% !important;
   overflow: hidden;
+}
+body {
+  padding: 0 !important;
 }
 </style>
