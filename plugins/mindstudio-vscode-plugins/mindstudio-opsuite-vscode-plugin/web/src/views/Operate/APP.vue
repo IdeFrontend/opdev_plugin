@@ -220,7 +220,6 @@ const loadingKeys = ref(new Set([]));
 const LOADING_MENU_KEYS = new Set([
     'buildOp',
     'runExample',
-    'buildAndDebug',
     'onBoard',
     'simulate',
     'runCheck'
