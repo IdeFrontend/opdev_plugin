@@ -244,8 +244,8 @@ const webviewMessageList: messageItem[] = [
       const message = msg.message.data;
       try {
         const opsOption = new OpsOption(that.context);
-        await opsOption.init(message);
-        vscode.window.showInformationMessage('环境变量设置成功');
+        await opsOption.updataShScript(message);
+        vscode.window.showInformationMessage('环境变量设置成功', message);
         const project = Project.getInstance();
         console.log('执行更新project逻辑');
         project.updateView();
@@ -380,7 +380,7 @@ const webviewMessageList: messageItem[] = [
       const workspacePath = workspaceFolders![0].uri.fsPath;
       const logPath = path.join(path.join(workspacePath, '.vscode/mindstudio_sanitizer_log'));
       if (!fs.existsSync(logPath)) {
-        fs.mkdirSync(logPath);
+        fs.mkdirSync(logPath, {mode: 0o750});
       }
       // 开启异常检测
       await opsOption.runSanitizer();

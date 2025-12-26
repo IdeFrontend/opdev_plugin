@@ -93,7 +93,7 @@ const remoteSearch = (type, keyword) => {
 const getBuildConfigItem = {
   command: 'iframeSetProjectSH',
   callback: (message) => {
-    const obj = message.data || '/etc/profile';
+    const obj = message.data;
     formData.projectSH = obj;
   },
 };
@@ -143,6 +143,7 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped lang="less">
+
 .project-sh-container {
   padding: 24px;
   height: 100%;

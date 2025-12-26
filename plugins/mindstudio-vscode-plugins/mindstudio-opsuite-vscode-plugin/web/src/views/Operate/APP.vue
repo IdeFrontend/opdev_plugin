@@ -65,27 +65,27 @@ const menuItems = ref([
             message.sendMessageToParent({ command: "vscodeRunExample", data: '' });
         }
     },
-    {
-        key: 'runDebug',
-        label: '调试',
-        icon: debugIcon,
-        children: [
-            {
-                key: 'buildAndDebug',
-                label: '执行调试',
-                handler: async () => {
-                    message.sendMessageToParent({ command: "vscodeRunDebug", data: '' });
-                }
-            },
-            {
-                key: 'debugConfig',
-                label: '调试配置',
-                handler: async () => {
-                    message.sendMessageToParent({ command: "vscodeDebugConfig", data: '' });
-                }
-            },
-        ]
-    },
+    // {
+    //     key: 'runDebug',
+    //     label: '调试',
+    //     icon: debugIcon,
+    //     children: [
+    //         {
+    //             key: 'buildAndDebug',
+    //             label: '执行调试',
+    //             handler: async () => {
+    //                 message.sendMessageToParent({ command: "vscodeRunDebug", data: '' });
+    //             }
+    //         },
+    //         {
+    //             key: 'debugConfig',
+    //             label: '调试配置',
+    //             handler: async () => {
+    //                 message.sendMessageToParent({ command: "vscodeDebugConfig", data: '' });
+    //             }
+    //         },
+    //     ]
+    // },
     {
         key: 'runCheck',
         label: '异常检测',

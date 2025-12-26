@@ -55,7 +55,20 @@ export interface CreateProjectParams {
   create_by?: string;
 }
 
+export async function updataShScript(data: CreateProjectParams) {
+  // 数据库 操作
+  const store = ensureStore();
+  const existing = store.projects.find((p) => p.project_path === data.project_path);
+  if (existing) {
+    existing.ascend_env_script = data.ascend_env_script;
+    existing.update_time = new Date().toISOString();
+    writeStore(store);
+    return existing.id;
+  }
+}
+
 export async function createProject(data: CreateProjectParams) {
+  // 数据库 操作
   const store = ensureStore();
   const existing = store.projects.find((p) => p.project_path === data.project_path);
   if (existing) {
