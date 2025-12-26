@@ -5,9 +5,9 @@
   "publisher": "huawei",
   "repository": {
     "type": "git",
-    "url": "https://gitcode.com/Asscend/mstt"
+    "url": "https://gitcode.com/Ascend/mstt"
   },
-  "version": "1.1.43",
+  "version": "1.1.51",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -66,17 +66,7 @@
           "type": "webview",
           "id": "OpsOperateProvider",
           "name": "一站式算子工程操作面板"
-        }
-      ],
-      "ms-sanitizer-panel-view": [
-        {
-          "type": "webview",
-          "id": "msSanitizerPanelView",
-          "name": "异常检测",
-          "when": "true"
-        }
-      ],
-      "explorer": [
+        },
         {
           "id": "msSanitizerSidebarView",
           "name": "异常检测结果可视化",
@@ -89,7 +79,16 @@
           "type": "webview",
           "visibility": "collapsed"
         }
-      ]
+      ],
+      "ms-sanitizer-panel-view": [
+        {
+          "type": "webview",
+          "id": "msSanitizerPanelView",
+          "name": "异常检测",
+          "when": "true"
+        }
+      ],
+      "explorer": []
     },
     "commands": [
       {
