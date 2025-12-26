@@ -1,41 +1,47 @@
 <template>
-  <div class="project-sh-container">
-    <div class="form-container">
-      <div class="section-title">环境配置</div>
-      <div class="divider"></div>
-      <a-form
-        :model="formData"
-        :rules="formRules"
-        ref="formRef"
-        layout="vertical"
-        @submit="handleSubmit"
-      >
-        <a-form-item name="projectSH">
-          <template #label>
-            <span>环境变量配置脚本</span>
-            <a-tooltip
-              title="安装CANN包后需要执行set_env.sh脚本的绝对路径信息，如果使用的是一站式开发平台提供的容器镜像，则此处可以置空。若出现报错提示路径不存在，说明非有效环境变量脚本路径，需要输入设置环境变量脚本的绝对路径"
-            >
-              <QuestionCircleOutlined class="help-icon" />
-            </a-tooltip>
-          </template>
-          <a-auto-complete
-            v-model:value="formData.projectSH"
-            :options="projectSHOptions"
-            :loading="projectSHLoading"
-            placeholder="请输入环境变量.sh文件地址，支持远程搜索"
-            @search="(val) => remoteSearch('projectSH', val)"
-            @focus="() => remoteSearch('projectSH', formData.projectSH)"
-          />
-        </a-form-item>
-        <a-form-item>
-          <a-button type="primary" @click="handleSubmit" :loading="submitting">
-            确认
-          </a-button>
-        </a-form-item>
-      </a-form>
+  <a-config-provider :theme="themeConfig">
+    <div class="project-sh-container">
+      <div class="form-container">
+        <div class="section-title">环境配置</div>
+        <div class="divider"></div>
+        <a-form
+          :model="formData"
+          :rules="formRules"
+          ref="formRef"
+          layout="vertical"
+          @submit="handleSubmit"
+        >
+          <a-form-item name="projectSH">
+            <template #label>
+              <span>环境变量配置脚本</span>
+              <a-tooltip
+                title="安装CANN包后需要执行set_env.sh脚本的绝对路径信息，如果使用的是一站式开发平台提供的容器镜像，则此处可以置空。若出现报错提示路径不存在，说明非有效环境变量脚本路径，需要输入设置环境变量脚本的绝对路径"
+              >
+                <QuestionCircleOutlined class="help-icon" />
+              </a-tooltip>
+            </template>
+            <div ref="autoCompleteContainer" class="auto-complete-wrapper">
+              <a-auto-complete
+                v-model:value="formData.projectSH"
+                :options="projectSHOptions"
+                :loading="projectSHLoading"
+                placement="bottomLeft"
+                :getPopupContainer="getPopupContainer"
+                placeholder="请输入环境变量.sh文件地址，支持远程搜索"
+                @search="(val) => remoteSearch('projectSH', val)"
+                @focus="() => remoteSearch('projectSH', formData.projectSH)"
+              />
+            </div>
+          </a-form-item>
+          <a-form-item>
+            <a-button type="primary" @click="handleSubmit" :loading="submitting">
+              确认
+            </a-button>
+          </a-form-item>
+        </a-form>
+      </div>
     </div>
-  </div>
+  </a-config-provider>
 </template>
 
 <script setup lang="ts">
@@ -45,11 +51,22 @@ import { checkPathExists } from '@/apis';
 import type { FormInstance as AntdVForm } from 'ant-design-vue';
 import { message as antdMessage } from 'ant-design-vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
+import { theme } from 'ant-design-vue';
+
+const themeConfig = {
+  algorithm: theme.darkAlgorithm, // 使用暗色算法
+};
 
 const formRef = ref<AntdVForm | null>(null);
+const autoCompleteContainer = ref<HTMLElement | null>(null);
 const projectSHOptions = ref([]);
 const projectSHLoading = ref(false);
 const submitting = ref(false);
+
+// 获取下拉框容器
+const getPopupContainer = (triggerNode: HTMLElement): HTMLElement => {
+  return autoCompleteContainer.value || triggerNode.parentElement || document.body;
+};
 
 // 表单数据
 const formData = reactive({
@@ -211,6 +228,17 @@ onBeforeUnmount(() => {
       &:hover {
         background-color: #40a9ff;
         border-color: #40a9ff;
+      }
+    }
+
+    .auto-complete-wrapper {
+      position: relative;
+
+      :deep(.ant-select-dropdown) {
+        position: absolute !important;
+        top: 100% !important;
+        left: 0 !important;
+        margin-top: 4px;
       }
     }
   }
