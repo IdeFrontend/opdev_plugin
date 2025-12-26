@@ -20,15 +20,18 @@
                 <QuestionCircleOutlined class="help-icon" />
               </a-tooltip>
             </template>
-            <a-auto-complete
-              v-model:value="formData.projectSH"
-              :options="projectSHOptions"
-              :loading="projectSHLoading"
-              placement="bottomLeft"
-              placeholder="请输入环境变量.sh文件地址，支持远程搜索"
-              @search="(val) => remoteSearch('projectSH', val)"
-              @focus="() => remoteSearch('projectSH', formData.projectSH)"
-            />
+            <div ref="autoCompleteContainer" class="auto-complete-wrapper">
+              <a-auto-complete
+                v-model:value="formData.projectSH"
+                :options="projectSHOptions"
+                :loading="projectSHLoading"
+                placement="bottomLeft"
+                :getPopupContainer="getPopupContainer"
+                placeholder="请输入环境变量.sh文件地址，支持远程搜索"
+                @search="(val) => remoteSearch('projectSH', val)"
+                @focus="() => remoteSearch('projectSH', formData.projectSH)"
+              />
+            </div>
           </a-form-item>
           <a-form-item>
             <a-button type="primary" @click="handleSubmit" :loading="submitting">
@@ -55,9 +58,15 @@ const themeConfig = {
 };
 
 const formRef = ref<AntdVForm | null>(null);
+const autoCompleteContainer = ref<HTMLElement | null>(null);
 const projectSHOptions = ref([]);
 const projectSHLoading = ref(false);
 const submitting = ref(false);
+
+// 获取下拉框容器
+const getPopupContainer = (triggerNode: HTMLElement): HTMLElement => {
+  return autoCompleteContainer.value || triggerNode.parentElement || document.body;
+};
 
 // 表单数据
 const formData = reactive({
@@ -219,6 +228,17 @@ onBeforeUnmount(() => {
       &:hover {
         background-color: #40a9ff;
         border-color: #40a9ff;
+      }
+    }
+
+    .auto-complete-wrapper {
+      position: relative;
+
+      :deep(.ant-select-dropdown) {
+        position: absolute !important;
+        top: 100% !important;
+        left: 0 !important;
+        margin-top: 4px;
       }
     }
   }
