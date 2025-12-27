@@ -20,6 +20,15 @@ const openedCsvDirectories = new Map<string, vscode.Uri>();
 
 const tempObj = { currentActiveConfig: '' };
 
+// 辅助函数：获取webview实例（兼容panel和_view两种情况）
+function getWebview(that: any): vscode.Webview | undefined {
+  const webview = that._view?.webview || that.panel?.webview;
+  if (!webview) {
+    console.warn('[WebviewMessageList] 无法获取webview实例，that._view 和 that.panel 都不存在');
+  }
+  return webview;
+}
+
 export interface messageItem {
   command: string;
   callback: Function;
@@ -348,8 +357,18 @@ const webviewMessageList: messageItem[] = [
     callback: async (msg: any, that: any) => {
       const data = msg.message.data;
       const opsOption = new OpsOption(that.context);
-      await opsOption.init();
-      await opsOption.startBuild();
+      try {
+        await opsOption.init();
+        await opsOption.startBuild();
+      } finally {
+        // 无论成功失败，都通知前端操作已完成
+        console.log('[vscodeBuildOp] 操作完成，发送 iframeOperationComplete 消息');
+        const webview = getWebview(that);
+        webview?.postMessage({
+          command: 'iframeOperationComplete',
+          data: ''
+        });
+      }
     },
   },
   {
@@ -367,20 +386,29 @@ const webviewMessageList: messageItem[] = [
     callback: async (msg: any, that: any) => {
       const data = msg.message.data;
       const opsOption = new OpsOption(that.context);
-      await opsOption.init();
-      // 异常检测前编译
-      await opsOption.startBuild(undefined, '--mssanitizer');
-      // 创建文件夹
-      const workspaceFolders = vscode.workspace.workspaceFolders;
-      const workspacePath = workspaceFolders![0].uri.fsPath;
-      const logPath = path.join(path.join(workspacePath, '.vscode/mindstudio_sanitizer_log'));
-      if (!fs.existsSync(logPath)) {
-        fs.mkdirSync(logPath, {mode: 0o750});
+      try {
+        await opsOption.init();
+        // 异常检测前编译
+        await opsOption.startBuild(undefined, '--mssanitizer');
+        // 创建文件夹
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        const workspacePath = workspaceFolders![0].uri.fsPath;
+        const logPath = path.join(path.join(workspacePath, '.vscode/mindstudio_sanitizer_log'));
+        if (!fs.existsSync(logPath)) {
+          fs.mkdirSync(logPath, {mode: 0o750});
+        }
+        // 开启异常检测
+        await opsOption.runSanitizer();
+        // 执行完检测后，获取最新的列表数据
+        vscode.commands.executeCommand('huawei-op-devtools.flashMsSanitizerRunData');
+      } finally {
+        // 无论成功失败，都通知前端操作已完成
+        const webview = getWebview(that);
+        webview?.postMessage({
+          command: 'iframeOperationComplete',
+          data: ''
+        });
       }
-      // 开启异常检测
-      await opsOption.runSanitizer();
-      // 执行完检测后，获取最新的列表数据
-      vscode.commands.executeCommand('huawei-op-devtools.flashMsSanitizerRunData');
     },
   },
   {
@@ -388,8 +416,17 @@ const webviewMessageList: messageItem[] = [
     callback: async (msg: any, that: any) => {
       const data = msg.message.data;
       const opsOption = new OpsOption(that.context);
-      await opsOption.init();
-      await opsOption.startRun();
+      try {
+        await opsOption.init();
+        await opsOption.startRun();
+      } finally {
+        // 无论成功失败，都通知前端操作已完成
+        const webview = getWebview(that);
+        webview?.postMessage({
+          command: 'iframeOperationComplete',
+          data: ''
+        });
+      }
     },
   },
   {
@@ -397,12 +434,21 @@ const webviewMessageList: messageItem[] = [
     callback: async (msg: any, that: any) => {
       const data = msg.message.data;
       const opsOption = new OpsOption(that.context);
-      await opsOption.init();
-      const configData = await opsOption.getBuildConfigs();
-      const simulatorItem = configData.find((v: any) => v.config_type === 'simulate')
-      const simulatorType = simulatorItem?.user_options?.simulatorType ?? '' 
-      await opsOption.startBuild(undefined, `--simulator ${simulatorType}`);
-      await opsOption.startSimulate();
+      try {
+        await opsOption.init();
+        const configData = await opsOption.getBuildConfigs();
+        const simulatorItem = configData.find((v: any) => v.config_type === 'simulate')
+        const simulatorType = simulatorItem?.user_options?.simulatorType ?? ''
+        await opsOption.startBuild(undefined, `--simulator ${simulatorType}`);
+        await opsOption.startSimulate();
+      } finally {
+        // 无论成功失败，都通知前端操作已完成
+        const webview = getWebview(that);
+        webview?.postMessage({
+          command: 'iframeOperationComplete',
+          data: ''
+        });
+      }
     },
   },
   {
@@ -410,9 +456,18 @@ const webviewMessageList: messageItem[] = [
     callback: async (msg: any, that: any) => {
       const data = msg.message.data;
       const opsOption = new OpsOption(that.context);
-      await opsOption.init();
-      await opsOption.startBuild(undefined, '--onboard');
-      await opsOption.startOnBoard();
+      try {
+        await opsOption.init();
+        await opsOption.startBuild(undefined, '--onboard');
+        await opsOption.startOnBoard();
+      } finally {
+        // 无论成功失败，都通知前端操作已完成
+        const webview = getWebview(that);
+        webview?.postMessage({
+          command: 'iframeOperationComplete',
+          data: ''
+        });
+      }
     }
   },
   {
