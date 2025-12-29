@@ -71,7 +71,7 @@
                 <a-button v-if="record.fileLink" type="link" @click.stop="handleJumpToFile(record)">{{ record.fileLink
                 }}</a-button>
                 <span v-else>
-                   该问题为HOST侧的问题，请按照右侧详情信息进行排查。
+                   该问题为HOST侧的问题，按照右侧详情信息进行排查。
                 </span>
               </template>
               <template v-if="column.dataIndex === 'question'">
