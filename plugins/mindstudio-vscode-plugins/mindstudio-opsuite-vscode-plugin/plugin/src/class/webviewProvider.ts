@@ -50,6 +50,15 @@ export class WebviewProvider {
   }
 
   /**
+   * 向Webview发送消息
+   */
+  public postMessage(message: any): void {
+    if (this.panel?.webview) {
+      this.panel.webview.postMessage(message);
+    }
+  }
+
+  /**
    * 创建Webview面板
    */
   public async showLeftPage(router: string): Promise<void> {

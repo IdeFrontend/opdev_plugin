@@ -293,19 +293,88 @@ const remoteSearch = (type, keyword) => {
 
 onBeforeUnmount(() => {
   message.deleteMessageListener('iframeRemoteSearchResult');
+  message.deleteMessageListener('iframeSetHome');
+  message.deleteMessageListener('iframeSetProjectPath');
+  message.deleteMessageListener('iframeSetLastProjectPath');
+  message.deleteMessageListener('iframeSetWorkspace');
 });
+
+// 标记是否已从右键菜单设置过路径
+const isPathSetFromContextMenu = ref(false);
+// 工作区路径
+const workspacePath = ref<string | null>(null);
+// HOME 路径
+const homePath = ref<string | null>(null);
 
 const getBuildConfigItem = {
   command: 'iframeSetHome',
   callback: (message) => {
     console.log(message.data);
     const obj = message.data || '/home/developer';
-    projectFormData.projectPath = obj;
+    homePath.value = obj;
+    // 只有在没有从右键菜单设置过路径，且当前是默认值时才使用
+    if (!isPathSetFromContextMenu.value && (!projectFormData.projectPath || projectFormData.projectPath === '/home/developer')) {
+      // 优先级第三：如果已打开工作区，使用工作区根目录；否则使用 HOME
+      if (workspacePath.value) {
+        projectFormData.projectPath = workspacePath.value;
+      } else {
+        projectFormData.projectPath = obj;
+      }
+    }
+  },
+};
+
+// 监听来自右键菜单的路径设置（优先级最高）
+const setProjectPathItem = {
+  command: 'iframeSetProjectPath',
+  callback: (message) => {
+    if (message.data) {
+      projectFormData.projectPath = message.data;
+      isPathSetFromContextMenu.value = true;
+    }
+  },
+};
+
+// 获取缓存的 projectPath（优先级第二）
+const getLastProjectPathItem = {
+  command: 'iframeSetLastProjectPath',
+  callback: (message) => {
+    // 只有在没有从右键菜单设置过路径时才使用缓存
+    // 缓存路径优先级高于工作区路径和 HOME，所以直接设置
+    if (!isPathSetFromContextMenu.value && message.data) {
+      projectFormData.projectPath = message.data;
+    }
+  },
+};
+
+// 获取工作区路径（优先级第三）
+const getWorkspacePathItem = {
+  command: 'iframeSetWorkspace',
+  callback: (message) => {
+    workspacePath.value = message.data || null;
+    // 如果已打开工作区，且没有从右键菜单设置过，则使用工作区路径
+    // 工作区路径优先级高于 HOME，但低于缓存路径
+    if (workspacePath.value && !isPathSetFromContextMenu.value) {
+      const currentPath = projectFormData.projectPath;
+      const isDefaultPath = !currentPath || currentPath === '/home/developer';
+      const isHomePath = homePath.value && currentPath === homePath.value;
+      // 如果当前是默认路径或者是 HOME 路径，则使用工作区路径覆盖
+      // 注意：如果当前已经有缓存路径，缓存路径优先级更高，不应该被工作区路径覆盖
+      if (isDefaultPath || isHomePath) {
+        projectFormData.projectPath = workspacePath.value;
+      }
+    }
   },
 };
 
 onMounted(() => {
   message.addMessageListener(getBuildConfigItem);
+  message.addMessageListener(setProjectPathItem);
+  message.addMessageListener(getLastProjectPathItem);
+  message.addMessageListener(getWorkspacePathItem);
+  // 先获取工作区路径，再获取缓存的路径，最后获取 HOME（优先级从高到低）
+  message.sendMessageToParent({ command: 'vscodeGetWorkspace' });
+  message.sendMessageToParent({ command: 'vscodeGetLastProjectPath' });
   message.sendMessageToParent({ command: 'vscodeGetHome' });
 });
 </script>
