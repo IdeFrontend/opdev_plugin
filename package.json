@@ -34,14 +34,14 @@
       "secondarySidebar": [
         {
           "id": "huawei-op-devtools-secondary-sidebar",
-          "title": " ",
+          "title": "算子一站式开发平台操作面板",
           "icon": "resources/operate.svg"
         }
       ],
       "secondaryActivitybar": [
         {
           "id": "huawei-op-devtools-secondary-sidebar",
-          "title": " ",
+          "title": "算子一站式开发平台操作面板",
           "icon": "resources/operate.svg"
         }
       ],
@@ -65,7 +65,7 @@
         {
           "type": "webview",
           "id": "OpsOperateProvider",
-          "name": "一站式算子工程操作面板"
+          "name": "算子开发流程菜单"
         },
         {
           "id": "msSanitizerSidebarView",
