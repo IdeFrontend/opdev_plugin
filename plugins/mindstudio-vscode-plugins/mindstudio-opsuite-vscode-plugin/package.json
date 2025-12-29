@@ -34,14 +34,14 @@
       "secondarySidebar": [
         {
           "id": "huawei-op-devtools-secondary-sidebar",
-          "title": "一站式算子工程操作面板",
+          "title": " ",
           "icon": "resources/operate.svg"
         }
       ],
       "secondaryActivitybar": [
         {
           "id": "huawei-op-devtools-secondary-sidebar",
-          "title": "一站式算子工程操作面板",
+          "title": " ",
           "icon": "resources/operate.svg"
         }
       ],
