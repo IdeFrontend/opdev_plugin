@@ -335,6 +335,17 @@ const webviewMessageList: messageItem[] = [
     },
   },
   {
+    command: 'vscodeGetWorkspace',
+    callback: async (message: any, that: any) => {
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      const workspacePath = workspaceFolders && workspaceFolders.length > 0 ? workspaceFolders[0].uri.fsPath : null;
+      that.panel.webview.postMessage({
+        command: 'iframeSetWorkspace',
+        data: workspacePath,
+      });
+    },
+  },
+  {
     command: 'vscodeSetActiveConfig',
     callback: async (msg: any, that: any) => {
       tempObj.currentActiveConfig = msg.message.data;
