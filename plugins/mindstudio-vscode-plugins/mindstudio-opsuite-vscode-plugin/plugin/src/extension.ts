@@ -342,7 +342,6 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(clearLastProjectPathCommand);
   context.subscriptions.push(createOptionsCommand);
   context.subscriptions.push(getHome);
-  context.subscriptions.push(createOperatorInFolderCommand);
   context.subscriptions.push(createOperatorInWorkspaceCommand);
 
   // 创建侧边栏提供者
