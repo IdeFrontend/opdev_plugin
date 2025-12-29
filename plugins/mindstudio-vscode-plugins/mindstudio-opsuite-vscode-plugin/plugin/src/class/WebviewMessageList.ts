@@ -20,6 +20,9 @@ const openedCsvDirectories = new Map<string, vscode.Uri>();
 
 const tempObj = { currentActiveConfig: '' };
 
+// 全局任务管理器：用于追踪和终止正在执行的任务
+let currentExecutor: CommandExecutor | null = null;
+
 // 辅助函数：获取webview实例（兼容panel和_view两种情况）
 function getWebview(that: any): vscode.Webview | undefined {
   const webview = that._view?.webview || that.panel?.webview;
@@ -359,8 +362,12 @@ const webviewMessageList: messageItem[] = [
       const opsOption = new OpsOption(that.context);
       try {
         await opsOption.init();
+        // 保存当前 executor 引用，用于可能的终止操作
+        currentExecutor = opsOption.executor;
         await opsOption.startBuild();
       } finally {
+        // 清除 executor 引用
+        currentExecutor = null;
         // 无论成功失败，都通知前端操作已完成
         console.log('[vscodeBuildOp] 操作完成，发送 iframeOperationComplete 消息');
         const webview = getWebview(that);
@@ -388,6 +395,8 @@ const webviewMessageList: messageItem[] = [
       const opsOption = new OpsOption(that.context);
       try {
         await opsOption.init();
+        // 保存当前 executor 引用
+        currentExecutor = opsOption.executor;
         // 异常检测前编译
         await opsOption.startBuild(undefined, '--mssanitizer');
         // 创建文件夹
@@ -402,6 +411,8 @@ const webviewMessageList: messageItem[] = [
         // 执行完检测后，获取最新的列表数据
         vscode.commands.executeCommand('huawei-op-devtools.flashMsSanitizerRunData');
       } finally {
+        // 清除 executor 引用
+        currentExecutor = null;
         // 无论成功失败，都通知前端操作已完成
         const webview = getWebview(that);
         webview?.postMessage({
@@ -418,8 +429,12 @@ const webviewMessageList: messageItem[] = [
       const opsOption = new OpsOption(that.context);
       try {
         await opsOption.init();
+        // 保存当前 executor 引用
+        currentExecutor = opsOption.executor;
         await opsOption.startRun();
       } finally {
+        // 清除 executor 引用
+        currentExecutor = null;
         // 无论成功失败，都通知前端操作已完成
         const webview = getWebview(that);
         webview?.postMessage({
@@ -436,12 +451,16 @@ const webviewMessageList: messageItem[] = [
       const opsOption = new OpsOption(that.context);
       try {
         await opsOption.init();
+        // 保存当前 executor 引用
+        currentExecutor = opsOption.executor;
         const configData = await opsOption.getBuildConfigs();
         const simulatorItem = configData.find((v: any) => v.config_type === 'simulate')
         const simulatorType = simulatorItem?.user_options?.simulatorType ?? ''
         await opsOption.startBuild(undefined, `--simulator ${simulatorType}`);
         await opsOption.startSimulate();
       } finally {
+        // 清除 executor 引用
+        currentExecutor = null;
         // 无论成功失败，都通知前端操作已完成
         const webview = getWebview(that);
         webview?.postMessage({
@@ -458,9 +477,13 @@ const webviewMessageList: messageItem[] = [
       const opsOption = new OpsOption(that.context);
       try {
         await opsOption.init();
+        // 保存当前 executor 引用
+        currentExecutor = opsOption.executor;
         await opsOption.startBuild(undefined, '--onboard');
         await opsOption.startOnBoard();
       } finally {
+        // 清除 executor 引用
+        currentExecutor = null;
         // 无论成功失败，都通知前端操作已完成
         const webview = getWebview(that);
         webview?.postMessage({
@@ -469,6 +492,28 @@ const webviewMessageList: messageItem[] = [
         });
       }
     }
+  },
+  // 停止当前正在执行的任务
+  {
+    command: 'vscodeStopTask',
+    callback: async (msg: any, that: any) => {
+      console.log('[vscodeStopTask] 收到停止任务请求');
+      if (currentExecutor) {
+        console.log('[vscodeStopTask] 终止正在执行的任务');
+        currentExecutor.kill();
+        currentExecutor = null;
+        // 通知前端任务已停止，恢复按钮状态
+        const webview = getWebview(that);
+        webview?.postMessage({
+          command: 'iframeOperationComplete',
+          data: ''
+        });
+        vscode.window.showWarningMessage('任务已被手动停止');
+      } else {
+        console.log('[vscodeStopTask] 没有正在执行的任务');
+        vscode.window.showInformationMessage('当前没有正在执行的任务');
+      }
+    },
   },
   {
     command: 'vscodeRunDebug',

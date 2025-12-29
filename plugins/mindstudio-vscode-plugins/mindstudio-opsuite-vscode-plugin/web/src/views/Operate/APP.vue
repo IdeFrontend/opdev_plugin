@@ -217,6 +217,12 @@ const handlerSendMessage = () => {
     message.sendMessageToParent({ command: 'vscodeOperateErrorToast' });
 }
 
+// 停止任务
+const handleStopTask = () => {
+    console.log('[Operate] 用户点击停止任务');
+    message.sendMessageToParent({ command: 'vscodeStopTask', data: '' });
+}
+
 onMounted(() => {
     message.addMessageListener(getBuildConfigItem);
     message.addMessageListener(operationComplete);
@@ -233,6 +239,13 @@ onMounted(() => {
                     <a-select-option v-for="item in configArray" :key="item.config_name" :value="item.config_name">{{
                         item.config_name }}</a-select-option>
                 </a-select>
+            </div>
+
+            <!-- 停止任务按钮 -->
+            <div v-if="isExecuting" class="stop-task-container">
+                <a-button danger size="small" @click="handleStopTask" class="stop-task-btn">
+                    停止任务
+                </a-button>
             </div>
 
             <a-menu mode="inline" :open-keys="openKeys" :selected-keys="selectedKeys" class="inline-menu"
@@ -305,6 +318,17 @@ body {
     gap: 8px;
     margin-top: 12px;
     margin-bottom: 12px;
+}
+
+.stop-task-container {
+    padding: 8px 12px;
+    margin-bottom: 8px;
+}
+
+.stop-task-btn {
+    width: 100%;
+    font-size: 11px;
+    height: 24px;
 }
 
 .inline-menu {
