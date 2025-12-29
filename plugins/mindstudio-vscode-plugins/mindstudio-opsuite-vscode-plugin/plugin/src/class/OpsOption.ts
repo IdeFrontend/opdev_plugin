@@ -160,7 +160,7 @@ export default class OpsOption {
     return [...opConfig, ...exampleConfig, ...simulateConfig, ...onBoardConfig];
   }
 
-  async saveBuildConfig(data: any, showMessage: boolean = true) {
+  async saveBuildConfig(data: any, showMessage: boolean = false) {
     try {
       await postConfig('build', data);
       if (!showMessage) {
@@ -324,16 +324,16 @@ export default class OpsOption {
       return undefined;
     }
   }
-  async saveSanitizerForm(data: any, showMessage: boolean = true) {
+  async saveSanitizerForm(data: any, showMessage: boolean = false) {
     try {
       const formData = (await this.getSanitizerConfigs())[0];
       await postConfig('sanitizer', [{ ...formData, user_options: { ...formData.user_options, ...data } }]);
       if (!showMessage) {
         return;
       }
-      vscode.window.showInformationMessage(`保存编译配置成功`);
+      vscode.window.showInformationMessage(`保存异常检测配置成功`);
     } catch {
-      vscode.window.showErrorMessage(`保存编译配置失败`);
+      vscode.window.showErrorMessage(`保存异常检测配置失败`);
     }
   }
 
