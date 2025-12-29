@@ -68,6 +68,9 @@ class CommandExecutor extends EventEmitter {
         cwd: options.cwd || process.cwd(),
         env: { ...process.env, ...options.env },
         shell: true,
+        // Windows 上需要设置 detached: false，否则无法终止
+        // Linux/macOS 上设置 detached: true 可以创建进程组
+        detached: process.platform !== 'win32',
       });
 
       let timeoutId: NodeJS.Timeout | null = null;
@@ -191,8 +194,30 @@ class CommandExecutor extends EventEmitter {
    */
   private cleanup(): void {
     if (this.process) {
-      this.process.kill('SIGTERM');
-      this.process = null;
+      try {
+        // 在 Windows 上，使用 taskkill 终止整个进程树
+        if (process.platform === 'win32') {
+          const pid = this.process.pid;
+          if (pid) {
+            // /F 强制终止, /T 终止子进程树
+            exec(`taskkill /pid ${pid} /T /F`, (error) => {
+              if (error) {
+                console.error('Failed to kill process tree:', error);
+              }
+            });
+          }
+        } else {
+          // 在 Linux/macOS 上，使用负PID终止整个进程组
+          // 负号表示终止整个进程组
+          if (this.process.pid) {
+            process.kill(-this.process.pid, 'SIGTERM');
+          }
+        }
+      } catch (error) {
+        console.error('Error killing process:', error);
+      } finally {
+        this.process = null;
+      }
     }
   }
 

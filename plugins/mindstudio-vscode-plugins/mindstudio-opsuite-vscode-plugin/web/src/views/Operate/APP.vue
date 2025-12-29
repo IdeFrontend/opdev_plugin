@@ -20,6 +20,12 @@ const openKeys = ref(['submenu-build']);
 
 const actionQueue = ref([]);
 
+// 全局执行状态管理
+const isExecuting = ref(false);
+
+// 需要互斥的操作按钮（执行时其他按钮应该禁用）
+const mutuallyExclusiveKeys = ['buildOp', 'runExample', 'runCheck', 'onBoard', 'simulate'];
+
 // 菜单配置对象
 const menuItems = ref([
     {
@@ -125,6 +131,12 @@ const menuItems = ref([
     },
 ]);
 
+// 判断菜单项是否应该被禁用
+const isMenuItemDisabled = (itemKey) => {
+    // 如果当前有操作在执行，且该项是互斥操作，则禁用
+    return isExecuting.value && mutuallyExclusiveKeys.includes(itemKey);
+};
+
 // 动态计算顶级子菜单的 key（带前缀）
 const rootSubmenuKeys = computed(() => {
     const keys = [];
@@ -151,8 +163,17 @@ const findMenuItemHandler = (items, key) => {
 }
 
 const handleMenuClick = ({ key }) => {
+    const originalKey = key.replace(/^(submenu-|menuitem-)/, '');
+
+    // 检查是否是互斥操作，且当前有操作正在执行
+    if (mutuallyExclusiveKeys.includes(originalKey) && isExecuting.value) {
+        // 可以选择给用户提示，或者直接忽略点击
+        console.warn('有操作正在执行中，请稍后再试');
+        return;
+    }
+
     selectedKeys.value = [key]; // 使用带前缀的 key 以匹配模板
-    actionQueue.value.push(key.replace(/^(submenu-|menuitem-)/, ''))
+    actionQueue.value.push(originalKey)
     message.sendMessageToParent({ command: 'vscodeGetBuildConfigBoard' });
 }
 
@@ -173,8 +194,22 @@ const getBuildConfigItem = {
         const originalKey = actionQueue.value.shift();
         const handler = findMenuItemHandler(menuItems.value, originalKey);
         if (handler) {
+            // 如果是互斥操作，设置执行状态
+            if (mutuallyExclusiveKeys.includes(originalKey)) {
+                console.log('[Operate] 开始执行操作:', originalKey, '，锁定按钮');
+                isExecuting.value = true;
+            }
             handler();
         }
+    }
+}
+
+// 监听执行完成的消息
+const operationComplete = {
+    command: 'iframeOperationComplete',
+    callback: (message) => {
+        console.log('[Operate] 收到操作完成通知，恢复按钮状态');
+        isExecuting.value = false;
     }
 }
 
@@ -182,8 +217,15 @@ const handlerSendMessage = () => {
     message.sendMessageToParent({ command: 'vscodeOperateErrorToast' });
 }
 
+// 停止任务
+const handleStopTask = () => {
+    console.log('[Operate] 用户点击停止任务');
+    message.sendMessageToParent({ command: 'vscodeStopTask', data: '' });
+}
+
 onMounted(() => {
     message.addMessageListener(getBuildConfigItem);
+    message.addMessageListener(operationComplete);
 })
 </script>
 
@@ -197,6 +239,13 @@ onMounted(() => {
                     <a-select-option v-for="item in configArray" :key="item.config_name" :value="item.config_name">{{
                         item.config_name }}</a-select-option>
                 </a-select>
+            </div>
+
+            <!-- 停止任务按钮 -->
+            <div v-if="isExecuting" class="stop-task-container">
+                <a-button danger size="small" @click="handleStopTask" class="stop-task-btn">
+                    停止任务
+                </a-button>
             </div>
 
             <a-menu mode="inline" :open-keys="openKeys" :selected-keys="selectedKeys" class="inline-menu"
@@ -214,7 +263,9 @@ onMounted(() => {
                         <template v-for="child in item.children">
                             <!-- 子菜单项 -->
                             <a-menu-item v-if="!child.children || child.children.length === 0"
-                                :key="`menuitem-${child.key}`">
+                                :key="`menuitem-${child.key}`"
+                                :disabled="isMenuItemDisabled(child.key)"
+                                :class="{ 'menu-item-executing': isMenuItemDisabled(child.key) }">
                                 {{ child.label }}
                             </a-menu-item>
                             <!-- 嵌套子菜单 -->
@@ -229,7 +280,9 @@ onMounted(() => {
                         </template>
                     </a-sub-menu>
                     <!-- 普通菜单项 -->
-                    <a-menu-item v-else :key="`menuitem-${item.key}`">
+                    <a-menu-item v-else :key="`menuitem-${item.key}`"
+                        :disabled="isMenuItemDisabled(item.key)"
+                        :class="{ 'menu-item-executing': isMenuItemDisabled(item.key) }">
                         <span class="menu-title" v-if="item.icon">
                             <img :src="item.icon" alt="" class="menu-icon">
                             <span>{{ item.label }}</span>
@@ -265,6 +318,17 @@ body {
     gap: 8px;
     margin-top: 12px;
     margin-bottom: 12px;
+}
+
+.stop-task-container {
+    padding: 8px 12px;
+    margin-bottom: 8px;
+}
+
+.stop-task-btn {
+    width: 100%;
+    font-size: 11px;
+    height: 24px;
 }
 
 .inline-menu {
@@ -325,5 +389,15 @@ body {
     display: flex;
     align-items: center;
     font-size: 11px;
+}
+
+/* 禁用状态的样式 */
+:deep(.ant-menu-item-disabled) {
+    opacity: 0.5;
+    cursor: not-allowed !important;
+}
+
+.menu-item-executing {
+    pointer-events: none;
 }
 </style>

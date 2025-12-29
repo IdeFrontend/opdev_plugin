@@ -20,6 +20,18 @@ const openedCsvDirectories = new Map<string, vscode.Uri>();
 
 const tempObj = { currentActiveConfig: '' };
 
+// 全局任务管理器：用于追踪和终止正在执行的任务
+let currentExecutor: CommandExecutor | null = null;
+
+// 辅助函数：获取webview实例（兼容panel和_view两种情况）
+function getWebview(that: any): vscode.Webview | undefined {
+  const webview = that._view?.webview || that.panel?.webview;
+  if (!webview) {
+    console.warn('[WebviewMessageList] 无法获取webview实例，that._view 和 that.panel 都不存在');
+  }
+  return webview;
+}
+
 export interface messageItem {
   command: string;
   callback: Function;
@@ -373,8 +385,22 @@ const webviewMessageList: messageItem[] = [
     callback: async (msg: any, that: any) => {
       const data = msg.message.data;
       const opsOption = new OpsOption(that.context);
-      await opsOption.init();
-      await opsOption.startBuild();
+      try {
+        await opsOption.init();
+        // 保存当前 executor 引用，用于可能的终止操作
+        currentExecutor = opsOption.executor;
+        await opsOption.startBuild();
+      } finally {
+        // 清除 executor 引用
+        currentExecutor = null;
+        // 无论成功失败，都通知前端操作已完成
+        console.log('[vscodeBuildOp] 操作完成，发送 iframeOperationComplete 消息');
+        const webview = getWebview(that);
+        webview?.postMessage({
+          command: 'iframeOperationComplete',
+          data: ''
+        });
+      }
     },
   },
   {
@@ -392,20 +418,33 @@ const webviewMessageList: messageItem[] = [
     callback: async (msg: any, that: any) => {
       const data = msg.message.data;
       const opsOption = new OpsOption(that.context);
-      await opsOption.init();
-      // 异常检测前编译
-      await opsOption.startBuild(undefined, '--mssanitizer');
-      // 创建文件夹
-      const workspaceFolders = vscode.workspace.workspaceFolders;
-      const workspacePath = workspaceFolders![0].uri.fsPath;
-      const logPath = path.join(path.join(workspacePath, '.vscode/mindstudio_sanitizer_log'));
-      if (!fs.existsSync(logPath)) {
-        fs.mkdirSync(logPath, {mode: 0o750});
+      try {
+        await opsOption.init();
+        // 保存当前 executor 引用
+        currentExecutor = opsOption.executor;
+        // 异常检测前编译
+        await opsOption.startBuild(undefined, '--mssanitizer');
+        // 创建文件夹
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        const workspacePath = workspaceFolders![0].uri.fsPath;
+        const logPath = path.join(path.join(workspacePath, '.vscode/mindstudio_sanitizer_log'));
+        if (!fs.existsSync(logPath)) {
+          fs.mkdirSync(logPath, {mode: 0o750});
+        }
+        // 开启异常检测
+        await opsOption.runSanitizer();
+        // 执行完检测后，获取最新的列表数据
+        vscode.commands.executeCommand('huawei-op-devtools.flashMsSanitizerRunData');
+      } finally {
+        // 清除 executor 引用
+        currentExecutor = null;
+        // 无论成功失败，都通知前端操作已完成
+        const webview = getWebview(that);
+        webview?.postMessage({
+          command: 'iframeOperationComplete',
+          data: ''
+        });
       }
-      // 开启异常检测
-      await opsOption.runSanitizer();
-      // 执行完检测后，获取最新的列表数据
-      vscode.commands.executeCommand('huawei-op-devtools.flashMsSanitizerRunData');
     },
   },
   {
@@ -413,8 +452,21 @@ const webviewMessageList: messageItem[] = [
     callback: async (msg: any, that: any) => {
       const data = msg.message.data;
       const opsOption = new OpsOption(that.context);
-      await opsOption.init();
-      await opsOption.startRun();
+      try {
+        await opsOption.init();
+        // 保存当前 executor 引用
+        currentExecutor = opsOption.executor;
+        await opsOption.startRun();
+      } finally {
+        // 清除 executor 引用
+        currentExecutor = null;
+        // 无论成功失败，都通知前端操作已完成
+        const webview = getWebview(that);
+        webview?.postMessage({
+          command: 'iframeOperationComplete',
+          data: ''
+        });
+      }
     },
   },
   {
@@ -422,12 +474,25 @@ const webviewMessageList: messageItem[] = [
     callback: async (msg: any, that: any) => {
       const data = msg.message.data;
       const opsOption = new OpsOption(that.context);
-      await opsOption.init();
-      const configData = await opsOption.getBuildConfigs();
-      const simulatorItem = configData.find((v: any) => v.config_type === 'simulate')
-      const simulatorType = simulatorItem?.user_options?.simulatorType ?? '' 
-      await opsOption.startBuild(undefined, `--simulator ${simulatorType}`);
-      await opsOption.startSimulate();
+      try {
+        await opsOption.init();
+        // 保存当前 executor 引用
+        currentExecutor = opsOption.executor;
+        const configData = await opsOption.getBuildConfigs();
+        const simulatorItem = configData.find((v: any) => v.config_type === 'simulate')
+        const simulatorType = simulatorItem?.user_options?.simulatorType ?? ''
+        await opsOption.startBuild(undefined, `--simulator ${simulatorType}`);
+        await opsOption.startSimulate();
+      } finally {
+        // 清除 executor 引用
+        currentExecutor = null;
+        // 无论成功失败，都通知前端操作已完成
+        const webview = getWebview(that);
+        webview?.postMessage({
+          command: 'iframeOperationComplete',
+          data: ''
+        });
+      }
     },
   },
   {
@@ -435,10 +500,45 @@ const webviewMessageList: messageItem[] = [
     callback: async (msg: any, that: any) => {
       const data = msg.message.data;
       const opsOption = new OpsOption(that.context);
-      await opsOption.init();
-      await opsOption.startBuild(undefined, '--onboard');
-      await opsOption.startOnBoard();
+      try {
+        await opsOption.init();
+        // 保存当前 executor 引用
+        currentExecutor = opsOption.executor;
+        await opsOption.startBuild(undefined, '--onboard');
+        await opsOption.startOnBoard();
+      } finally {
+        // 清除 executor 引用
+        currentExecutor = null;
+        // 无论成功失败，都通知前端操作已完成
+        const webview = getWebview(that);
+        webview?.postMessage({
+          command: 'iframeOperationComplete',
+          data: ''
+        });
+      }
     }
+  },
+  // 停止当前正在执行的任务
+  {
+    command: 'vscodeStopTask',
+    callback: async (msg: any, that: any) => {
+      console.log('[vscodeStopTask] 收到停止任务请求');
+      if (currentExecutor) {
+        console.log('[vscodeStopTask] 终止正在执行的任务');
+        currentExecutor.kill();
+        currentExecutor = null;
+        // 通知前端任务已停止，恢复按钮状态
+        const webview = getWebview(that);
+        webview?.postMessage({
+          command: 'iframeOperationComplete',
+          data: ''
+        });
+        vscode.window.showWarningMessage('任务已被手动停止');
+      } else {
+        console.log('[vscodeStopTask] 没有正在执行的任务');
+        vscode.window.showInformationMessage('当前没有正在执行的任务');
+      }
+    },
   },
   {
     command: 'vscodeRunDebug',
@@ -621,8 +721,31 @@ const webviewMessageList: messageItem[] = [
         const line = Math.max(0, row - 1);
         const charactor = Math.max(0, col - 1);
         const pos = new vscode.Position(line, charactor);
+
+        // 设置光标位置
         editor.selection = new vscode.Selection(pos, pos);
-        editor.revealRange(new vscode.Range(pos, pos))
+
+        // 滚动到目标行，并将其置于视图中央
+        editor.revealRange(new vscode.Range(pos, pos), vscode.TextEditorRevealType.InCenter);
+
+        // 创建高亮装饰
+        const decorationType = vscode.window.createTextEditorDecorationType({
+          backgroundColor: 'rgba(255, 200, 0, 0.3)', // 黄色半透明背景
+          border: '1px solid rgba(255, 200, 0, 0.8)', // 黄色边框
+          isWholeLine: true, // 高亮整行
+        });
+
+        // 应用高亮到目标行
+        const lineRange = new vscode.Range(
+          new vscode.Position(line, 0),
+          new vscode.Position(line, document.lineAt(line).text.length)
+        );
+        editor.setDecorations(decorationType, [lineRange]);
+
+        // 2秒后移除高亮
+        setTimeout(() => {
+          decorationType.dispose();
+        }, 2000);
       } catch (error) {
         console.log('jumpToFile', error)
         vscode.window.showErrorMessage(`打开文件失败：${error}`)
