@@ -71,7 +71,7 @@
                 <a-button v-if="record.fileLink" type="link" @click.stop="handleJumpToFile(record)">{{ record.fileLink
                 }}</a-button>
                 <span v-else>
-                  <ExclamationOutlined style="color:#FF4D4F" /> 缺失源码信息，无法跳转
+                  <ExclamationOutlined style="color:#FF4D4F" /> HOST侧问题不可跳转，请按照右侧详情信息进行排查。
                 </span>
               </template>
               <template v-if="column.dataIndex === 'question'">
