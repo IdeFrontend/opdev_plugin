@@ -241,7 +241,6 @@ export async function activate(context: vscode.ExtensionContext) {
   const clearLastProjectPathCommand = vscode.commands.registerCommand('huawei-op-devtools.clearLastProjectPath', async () => {
     await context.globalState.update('lastProjectPath', undefined);
     vscode.window.showInformationMessage('已清除缓存的算子工程位置');
-    console.log('lastProjectPath 已删除');
   });
 
   // 注册新建算子原型文件命令
