@@ -228,7 +228,7 @@ const guide = 'https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODto
           </a-checkbox>
         </div>
       </a-form-item>
-      <a-alert v-if="onboardData.user_options.Roofline || onboardData.user_options.MemoryDetail" type="warning" show-icon message="若勾选“Roofline瓶颈分析”或“Cache热力图”，将默认采集所有算子性能指标" style="margin-top: 12px;"></a-alert>
+      <a-alert v-if="onboardData.user_options.Roofline || onboardData.user_options.MemoryDetail" type="info" show-icon message="若勾选“Roofline瓶颈分析”或“Cache热力图”，将默认采集所有算子性能指标" style="margin-top: 12px;"></a-alert>
 
       <!-- <div class="section-title" style="margin-top: 12px;">模式</div>
       <a-form-item>
@@ -252,20 +252,21 @@ const guide = 'https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODto
         <a-collapse-panel key="1" header="高级配置">
           <a-form-item>
             <a-checkbox v-model:checked="onboardData.user_options.KernelScale" @change="saveConfig">
-              使能Kernel侧制定代码段性能采集
+              使能Kernel侧指定代码段性能采集
               <a-tooltip>
                 <QuestionCircleOutlined class="help-icon" />
                 <template #title>
                   <div>
-                    指定代码段范围时，需要在算子Kernel侧对应的代码段前后进行设置，具体设置请参见MetricsProfStart和MetricsProfStop接口
+                    指定代码段范围时，需要在算子Kernel侧对应的代码段前后调用MetricsProfStart和MetricsProfStop接口，具体调用方式请参见MetricsProfStart和MetricsProfStop接口
                   </div>
                 </template>
               </a-tooltip>
             </a-checkbox>
           </a-form-item>
-          <a-alert v-if="onboardData.user_options.KernelScale" type="warning" show-icon>
+          <a-alert v-if="onboardData.user_options.KernelScale" type="info" show-icon>
             <template #message>
-              请确认是否在算子Kernal侧对应的代码段前后进行了设置，若未设置，将无法收集到有效数据。具体设置方式请参见
+              请确认是否在算子Kernal侧对应的代码段前后调用了MetricsProfStart和MetricsProfStop接口，若未调用，该选项将不会生效。
+              具体调用方式请参见
               <br>
               MetricsProfStart
               <br>
