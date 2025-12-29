@@ -30,6 +30,10 @@ export class PerformanceRunData {
       return;
     }
     const [performanceConfig] = getConfig(project.projectId, 'build_op');
+    if (!performanceConfig) {
+      // 如果项目没有 build_op 配置（例如非插件创建的项目），不进行任何处理
+      return;
+    }
     const op = getOpByProjectIdAndOpName(project.projectId, performanceConfig.op);
     this.rootUri = vscode.Uri.joinPath(vscode.Uri.file(op?.op_path || project.projectPath), PERFORMANCE_RUN_DATA_ROOT);
   }
