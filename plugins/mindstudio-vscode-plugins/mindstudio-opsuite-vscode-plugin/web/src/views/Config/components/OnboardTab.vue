@@ -228,7 +228,7 @@ const guide = 'https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODto
           </a-checkbox>
         </div>
       </a-form-item>
-      <a-alert v-if="onboardData.user_options.Roofline || onboardData.user_options.MemoryDetail" type="warning" show-icon message="若勾选“Roofline瓶颈分析”或“Cache热力图”，将默认采集所有算子性能指标" style="margin-top: 12px;"></a-alert>
+      <a-alert v-if="onboardData.user_options.Roofline || onboardData.user_options.MemoryDetail" type="info" show-icon message="若勾选“Roofline瓶颈分析”或“Cache热力图”，将默认采集所有算子性能指标" style="margin-top: 12px;"></a-alert>
 
       <!-- <div class="section-title" style="margin-top: 12px;">模式</div>
       <a-form-item>
@@ -263,7 +263,7 @@ const guide = 'https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODto
               </a-tooltip>
             </a-checkbox>
           </a-form-item>
-          <a-alert v-if="onboardData.user_options.KernelScale" type="warning" show-icon>
+          <a-alert v-if="onboardData.user_options.KernelScale" type="info" show-icon>
             <template #message>
               请确认是否在算子Kernal侧对应的代码段前后进行了设置，若未设置，将无法收集到有效数据。具体设置方式请参见
               <br>
