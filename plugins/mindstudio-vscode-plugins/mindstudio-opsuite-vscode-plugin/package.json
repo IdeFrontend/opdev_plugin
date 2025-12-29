@@ -153,10 +153,6 @@
         "title": "刷新异常检测列表数据"
       },
       {
-        "command": "huawei-op-devtools.createOperatorInFolder",
-        "title": "在该文件夹下新建算子"
-      },
-      {
         "command": "huawei-op-devtools.createOperatorInWorkspace",
         "title": "在当前目录下新建算子"
       },
@@ -181,11 +177,6 @@
         }
       ],
       "explorer/context": [
-        {
-          "command": "huawei-op-devtools.createOperatorInFolder",
-          "when": "explorerResourceIsFolder",
-          "group": "navigation"
-        },
         {
           "command": "huawei-op-devtools.createOperatorInWorkspace",
           "when": "explorerViewletVisible",

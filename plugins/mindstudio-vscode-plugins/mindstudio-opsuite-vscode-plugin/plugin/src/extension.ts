@@ -153,19 +153,6 @@ export async function activate(context: vscode.ExtensionContext) {
     createOpsProvider.show('Link');
   });
 
-  // 注册在文件夹下新建算子命令
-  const createOperatorInFolderCommand = vscode.commands.registerCommand('huawei-op-devtools.createOperatorInFolder', async (uri: vscode.Uri) => {
-    await createOpsProvider.show('Link');
-    // 等待 webview 加载完成后发送路径
-    setTimeout(() => {
-      const folderPath = uri.fsPath;
-      createOpsProvider.postMessage({
-        command: 'iframeSetProjectPath',
-        data: folderPath,
-      });
-    }, 500);
-  });
-
   // 注册在当前目录下新建算子命令
   const createOperatorInWorkspaceCommand = vscode.commands.registerCommand('huawei-op-devtools.createOperatorInWorkspace', async (uri?: vscode.Uri) => {
     const workspaceFolders = vscode.workspace.workspaceFolders;
