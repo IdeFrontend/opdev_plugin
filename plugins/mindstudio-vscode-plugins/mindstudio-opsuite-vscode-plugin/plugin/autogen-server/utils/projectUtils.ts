@@ -20,7 +20,7 @@ export async function ensureLaunchJsonExists(project_path: string, create_by?: s
   }
   if (fs.existsSync(launchJsonPath)) return;
   await fs.ensureDir(vscodeDir);
-  await fs.writeFile(launchJsonPath, JSON.stringify(debugLaunch, null, 2), 'utf-8');
+  // await fs.writeFile(launchJsonPath, JSON.stringify(debugLaunch, null, 2), 'utf-8');
   // 创建 devtool_config.json 文件
   const devtoolConfig = { type: create_by || '1' };
   await fs.writeFile(devtoolConfigPath, JSON.stringify(devtoolConfig, null, 2), 'utf-8');
