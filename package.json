@@ -1,0 +1,238 @@
+{
+  "name": "huawei-op-devtools-vscode-plugin",
+  "displayName": "Huawei OP DevTools",
+  "description": "Operator development, debugging, and performance analysis all-in-one platform for Ascend C and Trito language, etc.",
+  "publisher": "huawei",
+  "repository": {
+    "type": "git",
+    "url": "https://gitcode.com/Ascend/mstt"
+  },
+  "version": "1.1.56",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./out/extension.js",
+  "browser": "./out/extension.js",
+  "activationEvents": [
+    "onView:pluginSidebar",
+    "workspaceContains:package.json",
+    "onStartupFinished"
+  ],
+  "icon": "resources/display.png",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "mindstudio-opssuite-vscode-plugin",
+          "title": "算子一站式交付平台",
+          "icon": "resources/homeIcon.svg"
+        }
+      ],
+      "secondarySidebar": [
+        {
+          "id": "huawei-op-devtools-secondary-sidebar",
+          "title": " ",
+          "icon": "resources/operate.svg"
+        }
+      ],
+      "secondaryActivitybar": [
+        {
+          "id": "huawei-op-devtools-secondary-sidebar",
+          "title": " ",
+          "icon": "resources/operate.svg"
+        }
+      ],
+      "panel": [
+        {
+          "id": "ms-sanitizer-panel-view",
+          "title": "异常检测结果",
+          "icon": "resources/ops.svg"
+        }
+      ]
+    },
+    "views": {
+      "mindstudio-opssuite-vscode-plugin": [
+        {
+          "id": "pluginSidebar",
+          "name": "功能列表",
+          "type": "webview"
+        }
+      ],
+      "huawei-op-devtools-secondary-sidebar": [
+        {
+          "type": "webview",
+          "id": "OpsOperateProvider",
+          "name": "一站式算子工程操作面板"
+        },
+        {
+          "id": "msSanitizerSidebarView",
+          "name": "异常检测结果可视化",
+          "type": "webview",
+          "visibility": "collapsed"
+        },
+        {
+          "id": "performanceSidebarView",
+          "name": "性能调优结果可视化",
+          "type": "webview",
+          "visibility": "collapsed"
+        }
+      ],
+      "ms-sanitizer-panel-view": [
+        {
+          "type": "webview",
+          "id": "msSanitizerPanelView",
+          "name": "异常检测",
+          "when": "true"
+        }
+      ],
+      "explorer": []
+    },
+    "commands": [
+      {
+        "command": "huawei-op-devtools.open",
+        "title": "新建算子工程"
+      },
+      {
+        "command": "huawei-op-devtools.buildOps",
+        "title": "编译算子"
+      },
+      {
+        "command": "huawei-op-devtools.toggleOpsOperate",
+        "title": "一站式算子工程操作面板",
+        "category": "secondary Sidebar",
+        "icon": "resources/operate.svg"
+      },
+      {
+        "command": "huawei-op-devtools.config",
+        "title": "配置"
+      },
+      {
+        "command": "huawei-op-devtools.leftNaV",
+        "title": "左侧菜单配置"
+      },
+      {
+        "command": "huawei-op-devtools.createOps",
+        "title": "新建算子原型文件",
+        "icon": "resources/ops.svg"
+      },
+      {
+        "command": "extension.jsonButtonAction",
+        "title": "生成算子工程",
+        "category": "JSON Tools"
+      },
+      {
+        "command": "csv-viewer.openCsv",
+        "title": "打开 CSV 文件",
+        "category": "CSV Viewer"
+      },
+      {
+        "command": "huawei-op-devtools.test",
+        "title": "insight插件测试"
+      },
+      {
+        "command": "huawei-op-devtools.projectSH",
+        "title": "环境配置"
+      },
+      {
+        "command": "huawei-op-devtools.clearWelcomeCount",
+        "title": "清除欢迎页显示计数"
+      },
+      {
+        "command": "huawei-op-devtools.open-ms-sanitizer-panel-view",
+        "title": "异常检测"
+      },
+      {
+        "command": "vscodeJumpToFile",
+        "title": "文件跳转定位"
+      },
+      {
+        "command": "huawei-op-devtools.flashMsSanitizerRunData",
+        "title": "刷新异常检测列表数据"
+      },
+      {
+        "command": "huawei-op-devtools.createOperatorInWorkspace",
+        "title": "在当前目录下新建算子"
+      },
+      {
+        "command": "huawei-op-devtools.clearLastProjectPath",
+        "title": "清除缓存的算子工程位置"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "huawei-op-devtools.toggleOpsOperate",
+          "when": "hasDevtoolConfig"
+        }
+      ],
+      "view/title": [],
+      "editor/title": [
+        {
+          "command": "huawei-op-devtools.toggleOpsOperate",
+          "group": "navigation",
+          "when": "hasDevtoolConfig"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "huawei-op-devtools.createOperatorInWorkspace",
+          "when": "explorerViewletVisible",
+          "group": "navigation"
+        }
+      ]
+    },
+    "customEditors": [
+      {
+        "viewType": "csvViewer",
+        "displayName": "CSV 表格视图",
+        "selector": [
+          {
+            "filenamePattern": "*.csv"
+          }
+        ],
+        "priority": "option"
+      }
+    ]
+  },
+  "scripts": {
+    "package": "npm run compile && vsce package --no-dependencies",
+    "compile": "npm run compile:web && npm run compile:plugin",
+    "compile:web": "cd web && npm run build",
+    "compile:plugin": "tsc --noEmit && tsx scripts/build-extension",
+    "package:debug": "npm run compile:debug && vsce package --no-dependencies",
+    "compile:debug": "npm run compile:web:debug && npm run compile:plugin:debug",
+    "compile:web:debug": "cd web && npm run build:debug",
+    "compile:plugin:debug": "tsx scripts/build-extension --sourcemap",
+    "lint": "eslint plugin/src",
+    "install:web": "cd web && npm install"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.12",
+    "compressing": "^2.0.0",
+    "fs-extra": "^11.3.2",
+    "i18next": "^25.7.2",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@types/adm-zip": "^0.5.7",
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "16.x",
+    "@types/vscode": "^1.60.0",
+    "@types/ws": "^8.18.1",
+    "@vscode/test-web": "^0.0.77",
+    "@vscode/vsce": "^3.7.1",
+    "esbuild": "^0.27.1",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-vue": "^10.6.2",
+    "globals": "^16.5.0",
+    "prettier": "^3.7.4",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.50.0"
+  }
+}
