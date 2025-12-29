@@ -153,6 +153,38 @@ export async function activate(context: vscode.ExtensionContext) {
     createOpsProvider.show('Link');
   });
 
+  // 注册在文件夹下新建算子命令
+  const createOperatorInFolderCommand = vscode.commands.registerCommand('huawei-op-devtools.createOperatorInFolder', async (uri: vscode.Uri) => {
+    await createOpsProvider.show('Link');
+    // 等待 webview 加载完成后发送路径
+    setTimeout(() => {
+      const folderPath = uri.fsPath;
+      createOpsProvider.postMessage({
+        command: 'iframeSetProjectPath',
+        data: folderPath,
+      });
+    }, 500);
+  });
+
+  // 注册在当前目录下新建算子命令
+  const createOperatorInWorkspaceCommand = vscode.commands.registerCommand('huawei-op-devtools.createOperatorInWorkspace', async (uri?: vscode.Uri) => {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders || workspaceFolders.length === 0) {
+      vscode.window.showErrorMessage('请先打开一个工作区');
+      return;
+    }
+    // 如果提供了 uri（在文件上右键），使用该路径；否则使用工作区根目录
+    const targetPath = uri ? uri.fsPath : workspaceFolders[0].uri.fsPath;
+    await createOpsProvider.show('Link');
+    // 等待 webview 加载完成后发送路径
+    setTimeout(() => {
+      createOpsProvider.postMessage({
+        command: 'iframeSetProjectPath',
+        data: targetPath,
+      });
+    }, 500);
+  });
+
   // 打开环境变量命令
   const openProjectSH = vscode.commands.registerCommand('huawei-op-devtools.projectSH', async () => {
     configProjectSHProvider.show('ProjectSH');
@@ -216,6 +248,13 @@ export async function activate(context: vscode.ExtensionContext) {
   const clearWelcomeCountCommand = vscode.commands.registerCommand('huawei-op-devtools.clearWelcomeCount', async () => {
     await context.globalState.update('welcomeShowCount', undefined);
     console.log('welcomeShowCount 已删除');
+  });
+
+  // 注册清除缓存的算子工程位置命令
+  const clearLastProjectPathCommand = vscode.commands.registerCommand('huawei-op-devtools.clearLastProjectPath', async () => {
+    await context.globalState.update('lastProjectPath', undefined);
+    vscode.window.showInformationMessage('已清除缓存的算子工程位置');
+    console.log('lastProjectPath 已删除');
   });
 
   // 注册新建算子原型文件命令
@@ -313,8 +352,11 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(welcomeCommand);
   context.subscriptions.push(newPrototypeCommand);
   context.subscriptions.push(clearWelcomeCountCommand);
+  context.subscriptions.push(clearLastProjectPathCommand);
   context.subscriptions.push(createOptionsCommand);
   context.subscriptions.push(getHome);
+  context.subscriptions.push(createOperatorInFolderCommand);
+  context.subscriptions.push(createOperatorInWorkspaceCommand);
 
   // 创建侧边栏提供者
   const sidebarProvider = new CustomSidebarProvider(context);

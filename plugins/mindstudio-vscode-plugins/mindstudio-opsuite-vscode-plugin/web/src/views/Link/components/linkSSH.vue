@@ -293,19 +293,54 @@ const remoteSearch = (type, keyword) => {
 
 onBeforeUnmount(() => {
   message.deleteMessageListener('iframeRemoteSearchResult');
+  message.deleteMessageListener('iframeSetHome');
+  message.deleteMessageListener('iframeSetProjectPath');
+  message.deleteMessageListener('iframeSetLastProjectPath');
 });
+
+// 标记是否已从右键菜单设置过路径
+const isPathSetFromContextMenu = ref(false);
 
 const getBuildConfigItem = {
   command: 'iframeSetHome',
   callback: (message) => {
     console.log(message.data);
     const obj = message.data || '/home/developer';
-    projectFormData.projectPath = obj;
+    // 只有在没有从右键菜单设置过路径，且当前是默认值时才使用 HOME
+    if (!isPathSetFromContextMenu.value && (!projectFormData.projectPath || projectFormData.projectPath === '/home/developer')) {
+      projectFormData.projectPath = obj;
+    }
+  },
+};
+
+// 监听来自右键菜单的路径设置（优先级最高）
+const setProjectPathItem = {
+  command: 'iframeSetProjectPath',
+  callback: (message) => {
+    if (message.data) {
+      projectFormData.projectPath = message.data;
+      isPathSetFromContextMenu.value = true;
+    }
+  },
+};
+
+// 获取缓存的 projectPath（优先级第二）
+const getLastProjectPathItem = {
+  command: 'iframeSetLastProjectPath',
+  callback: (message) => {
+    // 只有在没有从右键菜单设置过路径时才使用缓存
+    if (!isPathSetFromContextMenu.value && message.data) {
+      projectFormData.projectPath = message.data;
+    }
   },
 };
 
 onMounted(() => {
   message.addMessageListener(getBuildConfigItem);
+  message.addMessageListener(setProjectPathItem);
+  message.addMessageListener(getLastProjectPathItem);
+  // 先获取缓存的路径，再获取 HOME（HOME 作为最后的默认值）
+  message.sendMessageToParent({ command: 'vscodeGetLastProjectPath' });
   message.sendMessageToParent({ command: 'vscodeGetHome' });
 });
 </script>

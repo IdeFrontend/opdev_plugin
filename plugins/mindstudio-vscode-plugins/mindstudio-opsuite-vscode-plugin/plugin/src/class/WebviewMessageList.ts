@@ -258,6 +258,10 @@ const webviewMessageList: messageItem[] = [
     command: 'vscodeCreatedProject',
     callback: async (msg: any, that: any) => {
       const message = msg.message.data;
+      // 缓存 projectPath 到 globalState
+      const originalProjectPath = message.projectPath;
+      (that.context as vscode.ExtensionContext).globalState.update('lastProjectPath', originalProjectPath);
+      
       // 标准算子projectPath需增加 /ops-math/math路径
       let originPath;
       if (message.createOperatorProjectDictoryFileType === 2) {
@@ -318,6 +322,16 @@ const webviewMessageList: messageItem[] = [
       } catch (e) {
         vscode.window.showInformationMessage(`打开算子工程目录失败: ${e}`);
       }
+    },
+  },
+  {
+    command: 'vscodeGetLastProjectPath',
+    callback: async (message: any, that: any) => {
+      const lastProjectPath = (that.context as vscode.ExtensionContext).globalState.get<string>('lastProjectPath');
+      that.panel.webview.postMessage({
+        command: 'iframeSetLastProjectPath',
+        data: lastProjectPath || null,
+      });
     },
   },
   {

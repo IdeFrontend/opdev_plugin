@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://gitcode.com/Ascend/mstt"
   },
-  "version": "1.1.51",
+  "version": "1.1.55",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -151,6 +151,18 @@
       {
         "command": "huawei-op-devtools.flashMsSanitizerRunData",
         "title": "刷新异常检测列表数据"
+      },
+      {
+        "command": "huawei-op-devtools.createOperatorInFolder",
+        "title": "在该文件夹下新建算子"
+      },
+      {
+        "command": "huawei-op-devtools.createOperatorInWorkspace",
+        "title": "在当前目录下新建算子"
+      },
+      {
+        "command": "huawei-op-devtools.clearLastProjectPath",
+        "title": "清除缓存的算子工程位置"
       }
     ],
     "menus": {
@@ -166,6 +178,18 @@
           "command": "huawei-op-devtools.toggleOpsOperate",
           "group": "navigation",
           "when": "hasDevtoolConfig"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "huawei-op-devtools.createOperatorInFolder",
+          "when": "explorerResourceIsFolder",
+          "group": "navigation"
+        },
+        {
+          "command": "huawei-op-devtools.createOperatorInWorkspace",
+          "when": "explorerViewletVisible",
+          "group": "navigation"
         }
       ]
     },
