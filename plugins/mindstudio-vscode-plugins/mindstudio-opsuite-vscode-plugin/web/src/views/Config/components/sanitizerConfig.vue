@@ -27,6 +27,7 @@ const form = ref({
 })
 function isUseBlock(val) {
   form.value.blockId = null;
+  saveSanitizerForm()
 }
 
 // 处理 Device侧内存检测 和 CANN软件栈内存检测 互斥
@@ -79,29 +80,29 @@ onBeforeMount(() => {
       <div class="section-title">检测内容</div>
       <a-form-item class="check-type">
         <div class="check-item-row">
-          <a-checkbox v-model:checked="form.tool.memcheck">内存检测</a-checkbox>
+          <a-checkbox v-model:checked="form.tool.memcheck" @change="saveSanitizerForm">内存检测</a-checkbox>
         </div>
         <div v-if="form.tool.memcheck" class="mem-check">
           <div class="desc">基础检测:默认会开启非法读写、多核踩踏、非对齐访问和非法释放</div>
           <div class="desc">可选检测:</div>
           <div class="mem-option">
-            <a-checkbox v-model:checked="form.memcheckOption['leak-check']">内存泄漏</a-checkbox>
-            <a-checkbox v-model:checked="form.memcheckOption['check-unused-memory']">分配内存未使用</a-checkbox>
+            <a-checkbox v-model:checked="form.memcheckOption['leak-check']" @change="saveSanitizerForm">内存泄漏</a-checkbox>
+            <a-checkbox v-model:checked="form.memcheckOption['check-unused-memory']" @change="saveSanitizerForm">分配内存未使用</a-checkbox>
             <!-- <a-checkbox v-model:checked="form.memcheckOption['check-device-heap']" @change="handleDeviceHeapChange">Device侧内存检测</a-checkbox>
             <a-checkbox v-model:checked="form.memcheckOption['check-cann-heap']" @change="handleCannHeapChange">CANN软件栈内存检测</a-checkbox> -->
           </div>
         </div>
         <div class="check-item-row">
-          <a-checkbox v-model:checked="form.tool.racecheck">竞争检测</a-checkbox>
+          <a-checkbox v-model:checked="form.tool.racecheck" @change="saveSanitizerForm">竞争检测</a-checkbox>
         </div>
         <div class="check-item-row">
-          <a-checkbox v-model:checked="form.tool.initcheck">未初始化检测</a-checkbox>
+          <a-checkbox v-model:checked="form.tool.initcheck" @change="saveSanitizerForm">未初始化检测</a-checkbox>
         </div>
       </a-form-item>
 
       <!-- 报告输出等级 -->
       <a-form-item label="报告输出等级">
-        <a-radio-group v-model:value="form.logLevel">
+        <a-radio-group v-model:value="form.logLevel" @change="saveSanitizerForm">
           <a-radio value="info">info:输出info/warn/error级别的运行信息</a-radio>
           <a-radio value="warn">warn:输出warn/error级别的运行信息</a-radio>
           <a-radio value="error">error:输出error级别的运行信息</a-radio>
@@ -120,7 +121,7 @@ onBeforeMount(() => {
               </a-tooltip>
             </template>
             <a-input-number v-model:value="form.maxDebuglogSize" placeholder="1-10240" :max="10240"
-              :min="1"></a-input-number>
+              :min="1" @change="saveSanitizerForm"></a-input-number>
           </a-form-item>
 
           <a-form-item>
@@ -143,16 +144,16 @@ onBeforeMount(() => {
             </a-radio-group>
 
             <a-input-number v-if="form.useBlock" v-model:value="form.blockId" placeholder="0-200" :max="200"
-              :min="0"></a-input-number>
+              :min="0" @change="saveSanitizerForm"></a-input-number>
           </a-form-item>
         </a-collapse-panel>
       </a-collapse>
     </a-form>
 
     <!-- 保存按钮 -->
-    <div class="action-buttons">
+    <!-- <div class="action-buttons">
       <a-button type="primary" @click="saveSanitizerForm">保存</a-button>
-    </div>
+    </div> -->
   </div>
 </template>
 
