@@ -151,35 +151,9 @@ const findMenuItemHandler = (items, key) => {
 }
 
 const handleMenuClick = ({ key }) => {
-    // selectedKeys.value = [key]; // 使用带前缀的 key 以匹配模板
-    // actionQueue.value.push(key.replace(/^(submenu-|menuitem-)/, ''))
-    // message.sendMessageToParent({ command: 'vscodeGetBuildConfigBoard' });
-
-    // 去掉前缀，获取真实 key
-    const realKey = key.replace(/^(submenu-|menuitem-)/, '');
-
-    // 设置选中项（保持 UI 反馈）
-    selectedKeys.value = [key];
-
-    const handler = findMenuItemHandler(menuItems.value, realKey);
-    if (!handler) {
-        return
-    }
-
-    // 判断是否需要 loading
-    if (LOADING_MENU_KEYS.has(realKey)) {
-        // 已在 loading，忽略
-        if (isMenuItemLoading(realKey)) {
-            return
-        }
-
-        // 开始 loading
-        loadingKeys.value.add(realKey)
-        handler();
-    } else {
-        // 普通菜单项：直接执行
-        handler();
-    }
+    selectedKeys.value = [key]; // 使用带前缀的 key 以匹配模板
+    actionQueue.value.push(key.replace(/^(submenu-|menuitem-)/, ''))
+    message.sendMessageToParent({ command: 'vscodeGetBuildConfigBoard' });
 }
 
 const onOpenChange = (keys) => {
@@ -191,18 +165,16 @@ const getBuildConfigItem = {
     command: 'iframeSetBuildConfigItem',
     callback: (message) => {
         const obj = JSON.parse(message.data || '{}')
-        // 如果没有任何配置信息 则禁用menu菜单
+        // // 如果没有任何配置信息 则禁用menu菜单
         if (Object.keys(obj).length === 0) {
             handlerSendMessage();
+            return;
         }
-    }
-}
-
-const getCommandFinishMsg = {
-    command: 'commandFinish',
-    callback: (message) => {
-        console.log('commandFinish', message)
-        loadingKeys.value.delete(message.data);
+        const originalKey = actionQueue.value.shift();
+        const handler = findMenuItemHandler(menuItems.value, originalKey);
+        if (handler) {
+            handler();
+        }
     }
 }
 
@@ -212,31 +184,7 @@ const handlerSendMessage = () => {
 
 onMounted(() => {
     message.addMessageListener(getBuildConfigItem);
-    message.addMessageListener(getCommandFinishMsg);
 })
-
-const loadingKeys = ref(new Set([]));
-
-const LOADING_MENU_KEYS = new Set([
-    'buildOp',
-    'runExample',
-    'onBoard',
-    'simulate',
-    'runCheck'
-]);
-
-const isMenuItemLoading = (key) => {
-    return loadingKeys.value.has(key);
-};
-
-// 新增：只要有一个在 loading，就返回 true
-const idMenuDisabled = key => {
-    const array = ['projectConfig', 'projectSH', 'debugConfig']
-    if (array.includes(key)) {
-        return false
-    }
-    return loadingKeys.value.size > 0;
-}
 </script>
 
 <template>
@@ -266,9 +214,7 @@ const idMenuDisabled = key => {
                         <template v-for="child in item.children">
                             <!-- 子菜单项 -->
                             <a-menu-item v-if="!child.children || child.children.length === 0"
-                                :key="`menuitem-${child.key}`" :disabled="idMenuDisabled(child.key)">
-                                <a-spin v-if="isMenuItemLoading(child.key)" size="small" :indicator="null"
-                                    style="margin-right: 8px;" />
+                                :key="`menuitem-${child.key}`">
                                 {{ child.label }}
                             </a-menu-item>
                             <!-- 嵌套子菜单 -->
@@ -283,11 +229,9 @@ const idMenuDisabled = key => {
                         </template>
                     </a-sub-menu>
                     <!-- 普通菜单项 -->
-                    <a-menu-item v-else :key="`menuitem-${item.key}`" :disabled="idMenuDisabled(item.key)">
+                    <a-menu-item v-else :key="`menuitem-${item.key}`">
                         <span class="menu-title" v-if="item.icon">
-                            <a-spin v-if="isMenuItemLoading(item.key)" size="small" :indicator="null"
-                                style="margin-right: 8px;" />
-                            <img v-else :src="item.icon" alt="" class="menu-icon">
+                            <img :src="item.icon" alt="" class="menu-icon">
                             <span>{{ item.label }}</span>
                         </span>
                         <span v-else>{{ item.label }}</span>
@@ -381,9 +325,5 @@ body {
     display: flex;
     align-items: center;
     font-size: 11px;
-}
-
-:deep(.ant-spin-dot) {
-    font-size: 16px;
 }
 </style>

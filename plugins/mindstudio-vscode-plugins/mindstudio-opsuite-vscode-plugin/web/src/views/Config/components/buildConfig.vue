@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree. -->
 <script setup>
-import { ref } from "vue";
+import { ref, nextTick } from "vue";
 import editTable from "./editTable.vue";
 import { message } from "../../../untils/Message";
 import { DownOutlined } from "@ant-design/icons-vue";
@@ -48,10 +48,16 @@ const updateIndex = ref(1);
 const addBuildTableItem = () => {
   updateIndex.value++;
   emit("addBuildTableItem");
+  nextTick(() => {
+    saveBuildConfig()
+  })
 };
 const deleteBuildTableItem = (key) => {
   updateIndex.value++;
   emit("deleteBuildTableItem", key);
+  nextTick(() => {
+    saveBuildConfig()
+  })
 };
 const addExampleTableItem = () => {
   updateIndex.value++;
@@ -109,6 +115,7 @@ const getSaveData = () => {
         <a-input
           v-model:value="buildConfigForme.op"
           placeholder="请输入算子名称"
+          @change="saveBuildConfig"
         />
       </a-form-item>
 
@@ -116,16 +123,18 @@ const getSaveData = () => {
         <a-input
           v-model:value="buildConfigForme.target_dir"
           placeholder="请输入生成文件位置"
+          @change="saveBuildConfig"
         />
       </a-form-item>
       <a-form-item label="编译生成文件名称" name="ipAddress">
         <a-input
           v-model:value="buildConfigForme.target_file"
-          placeholder="请输入生成文件名称 "
+          placeholder="请输入生成文件名称"
+          @change="saveBuildConfig"
         />
       </a-form-item>
       <a-form-item label="编译命令行" name="script">
-        <a-input v-model:value="buildConfigForme.script" placeholder="" />
+        <a-input v-model:value="buildConfigForme.script" placeholder="" @change="saveBuildConfig" />
       </a-form-item>
     </a-form>
     <a-collapse v-model:activeKey="activeKey1" ghost>
@@ -143,6 +152,7 @@ const getSaveData = () => {
               :dataSource="buildConfigForme.advance_param"
               @addTableItem="addBuildTableItem"
               @deleteTableItem="deleteBuildTableItem"
+              @onChange="saveBuildConfig"
             />
           </a-form-item>
         </a-form>
@@ -226,8 +236,8 @@ const getSaveData = () => {
         </a-form>
       </a-collapse-panel>
     </a-collapse> -->
-    <a-button @click="saveBuildConfig"> 保存 </a-button>
-    <a-button  @click="saveAndStartBuild" style="margin-left: 15px" type="primary">保存并开始</a-button>
+    <!-- <a-button @click="saveBuildConfig"> 保存 </a-button> -->
+    <!-- <a-button  @click="saveAndStartBuild" style="margin-left: 15px" type="primary">保存并开始</a-button> -->
     <!-- <a-button @click="saveAndStartBuild"> 保存并开始 </a-button> -->
     <!--  <a-dropdown>
       <template #overlay>

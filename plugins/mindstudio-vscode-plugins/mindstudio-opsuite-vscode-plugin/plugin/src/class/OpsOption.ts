@@ -261,21 +261,12 @@ export default class OpsOption {
       const res = await this.executor.execute(onBoardCommand, [], [], {}, true);
       if (res.code !== 0) {
         vscode.window.showErrorMessage(`执行上板分析失败`);
-        console.log('res.code', res)
-        vscode.commands.executeCommand('performanceSidebarView.focus');
         return;
       }
-      console.log('aaa')
       vscode.window.showInformationMessage(`执行上板分析成功`);
-      console.log('sss')
       vscode.commands.executeCommand('performanceSidebarView.focus');
-      console.log('ddd')
     } catch (e: any) {
-      console.log('qqq')
       vscode.window.showErrorMessage(`获取上板命令失败 ${e.message}`);
-      console.log('www')
-      vscode.commands.executeCommand('performanceSidebarView.focus');
-      console.log('eee')
     }
   }
 

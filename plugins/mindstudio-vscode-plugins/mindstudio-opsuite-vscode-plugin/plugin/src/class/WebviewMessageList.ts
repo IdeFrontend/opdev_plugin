@@ -350,11 +350,6 @@ const webviewMessageList: messageItem[] = [
       const opsOption = new OpsOption(that.context);
       await opsOption.init();
       await opsOption.startBuild();
-      console.log('aaaaaaaa')
-      that._view.webview.postMessage({
-        command: 'commandFinish',
-        data: 'buildOp',
-      });
     },
   },
   {
@@ -386,11 +381,6 @@ const webviewMessageList: messageItem[] = [
       await opsOption.runSanitizer();
       // 执行完检测后，获取最新的列表数据
       vscode.commands.executeCommand('huawei-op-devtools.flashMsSanitizerRunData');
-      console.log('flashMsSanitizerRunData')
-      that._view.webview.postMessage({
-        command: 'commandFinish',
-        data: 'runCheck',
-      });
     },
   },
   {
@@ -400,11 +390,6 @@ const webviewMessageList: messageItem[] = [
       const opsOption = new OpsOption(that.context);
       await opsOption.init();
       await opsOption.startRun();
-      console.log('运行消息')
-      that._view.webview.postMessage({
-        command: 'commandFinish',
-        data: 'runExample',
-      });
     },
   },
   {
@@ -418,11 +403,6 @@ const webviewMessageList: messageItem[] = [
       const simulatorType = simulatorItem?.user_options?.simulatorType ?? '' 
       await opsOption.startBuild(undefined, `--simulator ${simulatorType}`);
       await opsOption.startSimulate();
-            console.log('仿真消息')
-      that._view.webview.postMessage({
-        command: 'commandFinish',
-        data: 'simulate',
-      });
     },
   },
   {
@@ -433,11 +413,6 @@ const webviewMessageList: messageItem[] = [
       await opsOption.init();
       await opsOption.startBuild(undefined, '--onboard');
       await opsOption.startOnBoard();
-            console.log('上板消息')
-      that._view.webview.postMessage({
-        command: 'commandFinish',
-        data: 'onBoard',
-      });
     }
   },
   {
