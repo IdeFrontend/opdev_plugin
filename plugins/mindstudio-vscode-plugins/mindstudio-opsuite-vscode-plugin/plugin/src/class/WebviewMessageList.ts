@@ -696,8 +696,31 @@ const webviewMessageList: messageItem[] = [
         const line = Math.max(0, row - 1);
         const charactor = Math.max(0, col - 1);
         const pos = new vscode.Position(line, charactor);
+
+        // 设置光标位置
         editor.selection = new vscode.Selection(pos, pos);
-        editor.revealRange(new vscode.Range(pos, pos))
+
+        // 滚动到目标行，并将其置于视图中央
+        editor.revealRange(new vscode.Range(pos, pos), vscode.TextEditorRevealType.InCenter);
+
+        // 创建高亮装饰
+        const decorationType = vscode.window.createTextEditorDecorationType({
+          backgroundColor: 'rgba(255, 200, 0, 0.3)', // 黄色半透明背景
+          border: '1px solid rgba(255, 200, 0, 0.8)', // 黄色边框
+          isWholeLine: true, // 高亮整行
+        });
+
+        // 应用高亮到目标行
+        const lineRange = new vscode.Range(
+          new vscode.Position(line, 0),
+          new vscode.Position(line, document.lineAt(line).text.length)
+        );
+        editor.setDecorations(decorationType, [lineRange]);
+
+        // 2秒后移除高亮
+        setTimeout(() => {
+          decorationType.dispose();
+        }, 2000);
       } catch (error) {
         console.log('jumpToFile', error)
         vscode.window.showErrorMessage(`打开文件失败：${error}`)
