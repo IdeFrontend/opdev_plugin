@@ -23,6 +23,9 @@ const actionQueue = ref([]);
 // 全局执行状态管理
 const isExecuting = ref(false);
 
+// 配置文件是否存在
+const hasDevtoolConfig = ref(false);
+
 // 需要互斥的操作按钮（执行时其他按钮应该禁用）
 const mutuallyExclusiveKeys = ['buildOp', 'runExample', 'runCheck', 'onBoard', 'simulate'];
 
@@ -213,6 +216,15 @@ const operationComplete = {
     }
 }
 
+// 监听配置文件检查结果
+const devtoolConfigCheck = {
+    command: 'iframeSetDevtoolConfigExists',
+    callback: (message) => {
+        hasDevtoolConfig.value = message.data || false;
+        console.log('[Operate] 配置文件检查结果:', hasDevtoolConfig.value);
+    }
+}
+
 const handlerSendMessage = () => {
     message.sendMessageToParent({ command: 'vscodeOperateErrorToast' });
 }
@@ -226,30 +238,42 @@ const handleStopTask = () => {
 onMounted(() => {
     message.addMessageListener(getBuildConfigItem);
     message.addMessageListener(operationComplete);
+    message.addMessageListener(devtoolConfigCheck);
+    // 初始化时检查配置文件是否存在
+    message.sendMessageToParent({ command: 'vscodeCheckDevtoolConfig' });
 })
 </script>
 
 <template>
     <a-config-provider :theme="themeConfig">
         <div class="menu-container">
-            <div v-if="false" class="target-box">
-                目标算子
-                <a-select :value="activeConfig" @change="(val) => activeConfig = val" size="small" style="width: 200px;"
-                    placeholder="--">
-                    <a-select-option v-for="item in configArray" :key="item.config_name" :value="item.config_name">{{
-                        item.config_name }}</a-select-option>
-                </a-select>
+            <!-- 如果配置文件不存在，显示提示信息 -->
+            <div v-if="!hasDevtoolConfig" class="empty-tip-container">
+                <div class="empty-tip">
+                    您需要新建算子工程或打开算子工程才可以使用操作面板
+                </div>
             </div>
 
-            <!-- 停止任务按钮 -->
-            <div v-if="isExecuting" class="stop-task-container">
-                <a-button danger size="small" @click="handleStopTask" class="stop-task-btn">
-                    停止任务
-                </a-button>
-            </div>
+            <!-- 如果配置文件存在，显示正常菜单 -->
+            <template v-else>
+                <div v-if="false" class="target-box">
+                    目标算子
+                    <a-select :value="activeConfig" @change="(val) => activeConfig = val" size="small" style="width: 200px;"
+                        placeholder="--">
+                        <a-select-option v-for="item in configArray" :key="item.config_name" :value="item.config_name">{{
+                            item.config_name }}</a-select-option>
+                    </a-select>
+                </div>
 
-            <a-menu mode="inline" :open-keys="openKeys" :selected-keys="selectedKeys" class="inline-menu"
-                @openChange="onOpenChange" @click="handleMenuClick">
+                <!-- 停止任务按钮 -->
+                <div v-if="isExecuting" class="stop-task-container">
+                    <a-button danger size="small" @click="handleStopTask" class="stop-task-btn">
+                        停止任务
+                    </a-button>
+                </div>
+
+                <a-menu mode="inline" :open-keys="openKeys" :selected-keys="selectedKeys" class="inline-menu"
+                    @openChange="onOpenChange" @click="handleMenuClick">
                 <template v-for="item in menuItems">
                     <!-- 有子菜单的情况 -->
                     <a-sub-menu v-if="item.children && item.children.length > 0" :key="`submenu-${item.key}`">
@@ -290,7 +314,8 @@ onMounted(() => {
                         <span v-else>{{ item.label }}</span>
                     </a-menu-item>
                 </template>
-            </a-menu>
+                </a-menu>
+            </template>
         </div>
     </a-config-provider>
 </template>
@@ -399,5 +424,20 @@ body {
 
 .menu-item-executing {
     pointer-events: none;
+}
+
+.empty-tip-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    padding: 20px;
+}
+
+.empty-tip {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.65);
+    text-align: center;
+    line-height: 1.6;
 }
 </style>
