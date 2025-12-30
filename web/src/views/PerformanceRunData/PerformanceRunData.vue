@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue';
 import FilterBar from './components/FilterBar.vue';
 import FileTree from './components/FileTree.vue';
 import { getPerformanceRunData, toggleRecordMark } from '@/apis';
@@ -31,6 +31,25 @@ function handleToggleMark(key: string, marked: boolean) {
   }
   toggleRecordMark({ key, marked });
 }
+
+const eventListenerHandler = event => {
+  if (event.data.command === 'iframeRefreshData') {
+    loadTreeData();
+  }
+}
+
+// 添加全局消息监听 监听刷新列表数据
+const addEventListener = () => {
+  window.addEventListener('message', eventListenerHandler);
+}
+
+onMounted(() => {
+  addEventListener();
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('message', eventListenerHandler)
+})
 </script>
 
 <template>

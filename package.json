@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://gitcode.com/Ascend/mstt"
   },
-  "version": "1.1.57",
+  "version": "1.1.60",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -151,6 +151,10 @@
       {
         "command": "huawei-op-devtools.flashMsSanitizerRunData",
         "title": "刷新异常检测列表数据"
+      },
+      {
+        "command": "huawei-op-devtools.flashPerformanceRunData",
+        "title": "刷新性能调优列表数据"
       },
       {
         "command": "huawei-op-devtools.createOperatorInWorkspace",
