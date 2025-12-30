@@ -706,6 +706,39 @@ const webviewMessageList: messageItem[] = [
     callback: (message: any) => vscode.window.showErrorMessage('工程配置中命令行为空，请配置再执行该命令'),
   },
   {
+    command: 'vscodeCheckDevtoolConfig',
+    callback: async (message: any, that: any) => {
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (!workspaceFolders || workspaceFolders.length === 0) {
+        const webview = getWebview(that);
+        webview?.postMessage({
+          command: 'iframeSetDevtoolConfigExists',
+          data: false,
+        });
+        return;
+      }
+
+      const workspacePath = workspaceFolders[0].uri.fsPath;
+      const devtoolConfigPath = path.join(workspacePath, '.vscode', 'devtool_config.json');
+
+      try {
+        const exists = fs.existsSync(devtoolConfigPath);
+        const webview = getWebview(that);
+        webview?.postMessage({
+          command: 'iframeSetDevtoolConfigExists',
+          data: exists,
+        });
+      } catch (error) {
+        console.error('检查 devtool_config.json 文件时出错:', error);
+        const webview = getWebview(that);
+        webview?.postMessage({
+          command: 'iframeSetDevtoolConfigExists',
+          data: false,
+        });
+      }
+    },
+  },
+  {
     command: 'vscodeJumpToFile',
     callback: async (data: any) => {
       try {
