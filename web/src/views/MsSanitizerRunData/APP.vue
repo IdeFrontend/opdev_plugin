@@ -105,7 +105,6 @@ onBeforeUnmount(() => {
     display: flex;
     gap: 8px;
     margin: 12px 0;
-    padding: 0 20px;
   }
 
   .render-list {

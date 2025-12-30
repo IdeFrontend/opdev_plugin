@@ -137,27 +137,6 @@ const getSaveData = () => {
         <a-input v-model:value="buildConfigForme.script" placeholder="" @change="saveBuildConfig" />
       </a-form-item>
     </a-form>
-    <a-collapse v-model:activeKey="activeKey1" ghost>
-      <a-collapse-panel key="1" header="高级配置">
-        <a-form
-          :model="buildConfigForme"
-          :label-col="{ span: 6 }"
-          :wrapper-col="{ span: 24 }"
-          ref="connectionFormRef"
-          layout="vertical"
-        >
-          <a-form-item label="高级参数">
-            <editTable
-              :key="updateIndex"
-              :dataSource="buildConfigForme.advance_param"
-              @addTableItem="addBuildTableItem"
-              @deleteTableItem="deleteBuildTableItem"
-              @onChange="saveBuildConfig"
-            />
-          </a-form-item>
-        </a-form>
-      </a-collapse-panel>
-    </a-collapse>
     <!-- <div class="model-title">example编译配置</div>
     <a-form
       :model="exampleConfigForme"

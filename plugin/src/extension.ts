@@ -399,8 +399,19 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(flashMsSanitizerRunData);
 
+  const flashPerformanceRunData = vscode.commands.registerCommand('huawei-op-devtools.flashPerformanceRunData', async () => {
+    // 拿到PerformanceRunData的视图实例，主动下发刷新命令
+    const performanceRunData = ViewServer.getInstance().providerWebViewMap.performanceSidebarView;
+    performanceRunData.webview.postMessage({
+      command: 'iframeRefreshData'
+    });
+  });
+
+  context.subscriptions.push(flashPerformanceRunData);
+
   const watchWorkSpaceFolderChange = vscode.workspace.onDidChangeWorkspaceFolders(async () => {
     vscode.commands.executeCommand('huawei-op-devtools.flashMsSanitizerRunData');
+    vscode.commands.executeCommand('huawei-op-devtools.flashPerformanceRunData');
   });
 
   context.subscriptions.push(watchWorkSpaceFolderChange);

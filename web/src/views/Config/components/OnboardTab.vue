@@ -279,7 +279,6 @@ const guide = 'https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODto
           </a-alert>
 
           <a-form-item>
-            <div class="section-title" style="margin-top: 16px;">高级参数</div>
             <editTable :key="updateIndex" :dataSource="onboardData.user_options.advance_param"
               @addTableItem="addTableItem" @deleteTableItem="deleteTableItem" @onChange="saveConfig" />
           </a-form-item>

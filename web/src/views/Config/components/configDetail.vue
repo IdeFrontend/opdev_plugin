@@ -154,5 +154,6 @@ watch(
   text-align: left;
   font-size: 14px;
   padding: 20px 32px;
+  box-sizing: border-box;
 }
 </style>
