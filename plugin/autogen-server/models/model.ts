@@ -6,7 +6,7 @@ import * as configModel from './configModel';
 import { OpGeneratorFactory } from '../services/opGeneratorFactory';
 import { getDefaultPath } from '../utils/opUtil';
 import { soc_version } from '../utils/ascend_util';
-import {getDefaultDirectory} from '../utils/projectUtils'
+import {getDefaultDirectory, ensureLaunchJsonExists} from '../utils/projectUtils'
 
 const getDataDir = () => path.join((config as any).workspace_data_dir, 'data');
 const getOpsFile = () => path.join(getDataDir(), 'ops.json');
@@ -81,6 +81,7 @@ export function generateStructure(data: Partial<OpRecord>, extensionPath: string
     soc_version: (data as any).soc_version ?? null,
     op_path: data.op_path ?? project.project_path,
   } as any;
+  ensureLaunchJsonExists(params.op_path, data.create_by);
 
   // 3) get generator and parse meta
   const generator = OpGeneratorFactory.getGenerator(params, project, extensionPath);
