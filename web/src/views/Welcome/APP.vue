@@ -216,18 +216,18 @@ const handleFeatureClick = () => {
   align-items: stretch;
   justify-content: center;
   background-color: #27272b;
-  gap: 20px;
-  /* 减少间距 */
-  max-width: 1400px;
+  gap: 15px;
+  /* 缩小卡片间距 */
+  max-width: 1200px;
+  /* 缩小最大宽度 */
   width: 100%;
   margin-bottom: 30px;
-  /* 减少与底部提示的距离 */
-  padding: 25px;
-  /* 减少内边距以减小高度 */
+  padding: 30px 20px;
+  /* 增加垂直内边距，减少水平内边距 */
   flex: none;
-  /* 不再让模块区域占据剩余空间 */
   border-radius: 12px;
-  /* 添加圆角 */
+  min-height: 450px;
+  /* 增加最小高度以适应内容 */
 }
 
 /* 箭头样式 */
@@ -235,22 +235,28 @@ const handleFeatureClick = () => {
   align-self: center;
   font-size: 24px;
   color: #888;
+  flex-shrink: 0;
 }
 
 /* 单个模块卡片 */
 .module-card {
   flex: 1;
   border-radius: 8px;
-  padding: 25px;
-  /* 减少内边距以 decrease height */
+  padding: 20px;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  /* 使内部元素纵向排列 */
+  min-width: 0;
+  /* 允许卡片缩小 */
 }
 
 .module-header {
   display: flex;
   align-items: center;
-  margin-bottom: 15px;
-  /* 减少底部间距 */
+  margin-bottom: 12px;
+  flex-shrink: 0;
+  /* 不允许标题区域缩小 */
 }
 
 .module-header .icon {
@@ -280,27 +286,36 @@ const handleFeatureClick = () => {
 }
 
 .module-header h3 {
-  font-size: 20px;
-  /* 减小标题字体 */
+  font-size: 18px;
+  /* 缩小标题字体 */
   font-weight: 600;
   margin: 0;
+  white-space: nowrap;
+  /* 标题不换行 */
 }
 
 .module-desc {
-  font-size: 14px;
-  /* 减小描述字体 */
+  font-size: 13px;
+  /* 缩小描述字体 */
   color: #b0b0b5;
-  line-height: 1.6;
-  margin: 0 0 20px 0;
-  /* 减少底部间距 */
+  line-height: 1.5;
+  margin: 0 0 15px 0;
+  flex-shrink: 0;
+  /* 描述文字不缩小 */
+  overflow-wrap: break-word;
+  /* 允许长单词换行 */
 }
 
 /* 功能按钮 */
 .module-buttons {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-  /* 减少按钮间距 */
+  /* 保持两列布局 */
+  gap: 10px;
+  flex: 1;
+  /* 占据剩余空间 */
+  align-content: start;
+  /* 按钮从顶部开始排列 */
 }
 
 .func-btn {
@@ -308,20 +323,25 @@ const handleFeatureClick = () => {
   border: none;
   border-radius: 6px;
   color: #f0f0f0;
-  padding: 10px 14px;
+  padding: 10px 12px;
   /* 减少按钮内边距 */
-  font-size: 14px;
-  /* 减小按钮字体 */
+  font-size: 13px;
+  /* 缩小按钮字体 */
   cursor: pointer;
   transition: background-color 0.2s;
-  min-height: 40px;
-  /* 减少按钮最小高度 */
+  min-height: 36px;
+  /* 最小高度，允许增长 */
+  height: auto;
+  /* 高度自适应内容 */
   text-align: left;
-  /* 左对齐文本 */
   display: flex;
-  /* 使用flex布局 */
   align-items: center;
-  /* 垂直居中对齐内容 */
+  word-break: break-word;
+  /* 允许文字换行 */
+  overflow-wrap: break-word;
+  /* 允许长单词换行 */
+  line-height: 1.4;
+  /* 设置行高 */
 }
 
 .func-btn:hover {
@@ -337,11 +357,13 @@ const handleFeatureClick = () => {
 
 .btn-icon {
   display: inline-block;
-  width: 16px;
+  width: 14px;
   /* 减小图标 */
-  height: 16px;
-  margin-right: 8px;
+  height: 14px;
+  margin-right: 6px;
   /* 减少右边距 */
+  flex-shrink: 0;
+  /* 图标不缩小 */
   background: url("../../../resources/welcomePage/other.svg") no-repeat center;
   background-size: contain;
   vertical-align: middle;
@@ -349,16 +371,14 @@ const handleFeatureClick = () => {
 
 .tips-btn {
   width: 100%;
-  max-width: 1400px;
-  /* Match the width of the modules section */
+  max-width: 1200px;
+  /* 与 modules-section 宽度一致 */
   background-color: #212124;
   border: 1px solid #3a3a3e;
   border-radius: 6px;
   color: #a0a0a5;
   padding: 16px 24px;
-  /* Increase padding */
   font-size: 16px;
-  /* Increase font size */
   cursor: pointer;
   transition: all 0.2s;
   text-align: left;
@@ -367,7 +387,6 @@ const handleFeatureClick = () => {
   z-index: 1000;
   animation: fadeIn 0.5s ease-in;
   margin: 0 auto;
-  /* Center the button within the container */
 }
 
 .tips-btn:hover {
@@ -391,7 +410,7 @@ const handleFeatureClick = () => {
 /* 响应式适配 */
 @media (max-width: 992px) {
   .op-devtools-wrapper {
-    padding: 20px 40px;
+    padding: 20px 30px;
     /* Reduce padding on smaller screens */
   }
 
@@ -400,21 +419,43 @@ const handleFeatureClick = () => {
   }
 
   .modules-section {
-    flex-direction: column;
-    padding: 20px;
-    /* Adjust padding for mobile */
-    margin-bottom: 25px;
-    /* Adjust margin for mobile */
+    gap: 12px;
+    /* 进一步缩小间距 */
+    padding: 25px 15px;
+    /* 减少水平内边距 */
+    min-height: 400px;
   }
 
   .arrow {
-    transform: rotate(90deg);
-    margin: 8px 0;
+    font-size: 20px;
+    /* 缩小箭头 */
   }
 
   .module-card {
-    padding: 20px;
-    /* Adjust padding for mobile */
+    padding: 15px;
+    /* Adjust padding for smaller screens */
+  }
+
+  .module-header h3 {
+    font-size: 16px;
+  }
+
+  .module-desc {
+    font-size: 12px;
+  }
+
+  .module-buttons {
+    grid-template-columns: 1fr;
+    /* 改为单列布局 */
+    gap: 8px;
+  }
+
+  .func-btn {
+    font-size: 12px;
+    padding: 8px 10px;
+    min-height: 32px;
+    height: auto;
+    /* 允许高度自适应 */
   }
 
   .tips-btn {
@@ -428,49 +469,65 @@ const handleFeatureClick = () => {
 /* Extra small screens */
 @media (max-width: 576px) {
   .op-devtools-wrapper {
-    padding: 15px 20px;
+    padding: 15px 15px;
     /* Further reduce padding on very small screens */
   }
 
   .modules-section {
-    padding: 15px;
+    gap: 8px;
+    /* 进一步缩小间距 */
+    padding: 20px 10px;
     /* Adjust padding for very small screens */
-    margin-bottom: 18px;
+    min-height: 350px;
+  }
+
+  .arrow {
+    font-size: 16px;
   }
 
   .module-card {
-    padding: 15px;
+    padding: 12px;
     /* Adjust padding for very small screens */
   }
 
   .module-header {
-    margin-bottom: 12px;
+    margin-bottom: 10px;
   }
 
   .module-header .icon {
-    width: 20px;
-    height: 20px;
-    margin-right: 10px;
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
   }
 
   .module-header h3 {
-    font-size: 18px;
+    font-size: 14px;
   }
 
   .module-desc {
-    font-size: 13px;
-    margin: 0 0 15px 0;
+    font-size: 11px;
+    margin: 0 0 12px 0;
   }
 
   .module-buttons {
-    gap: 10px;
+    grid-template-columns: 1fr;
+    /* 单列布局 */
+    gap: 6px;
     /* Adjust gap for very small screens */
   }
 
   .func-btn {
-    padding: 8px 12px;
-    font-size: 13px;
-    min-height: 35px;
+    padding: 6px 8px;
+    font-size: 11px;
+    min-height: 28px;
+    height: auto;
+    /* 允许高度自适应 */
+  }
+
+  .btn-icon {
+    width: 12px;
+    height: 12px;
+    margin-right: 4px;
   }
 
   .tips-btn {

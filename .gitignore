@@ -8,3 +8,8 @@ out
 package-lock.json
 pnpm-lock.yaml
 tsconfig.tsbuildinfo
+
+.vscode
+.claude
+CLAUDE.local.md
+huawei-op-devtools-vscode-plugin-**.vsix
