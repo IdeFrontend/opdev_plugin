@@ -16,7 +16,6 @@ import i18nResource from 'shared:/i18n';
 import { ExplorerRootUtils } from './class/ExplorerRootUtils';
 import { WebviewProvider } from './class/webviewProvider';
 import { handleOperatorProjectDictoryFile } from './class/WebviewMessageList';
-import OpsOption from './class/OpsOption';
 import { CustomSidebarProvider } from './class/CustomSidebarProvider';
 import { CsvEditorProvider } from './class/CsvEditorProvider';
 import { ApiServer } from './core/ApiServer';
@@ -61,6 +60,8 @@ async function checkDevtoolConfigExists(): Promise<boolean> {
  */
 export async function activate(context: vscode.ExtensionContext) {
   extensionContext = context;
+  // 将 context 设置到全局对象以便 API 层使用
+  (globalThis as any).extensionContext = context;
   // 国际化
   await initI18n();
 
@@ -135,7 +136,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const createOpsProvider = new WebviewProvider(context, apiServer);
 
   // 初始化配置页面的Webview
-  const configProvider = new WebviewProvider(context);
+  const configProvider = new WebviewProvider(context, apiServer);
 
   // 初始化配置页面的Webview
   const configWelcomeProvider = new WebviewProvider(context);
@@ -145,8 +146,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 初始化配置页面的Webview
   const configProjectSHProvider = new WebviewProvider(context, apiServer);
-
-  const opsOption = new OpsOption(context);
 
   // 注册打开Opsuite命令
   const openCommand = vscode.commands.registerCommand('huawei-op-devtools.open', async () => {
@@ -188,7 +187,7 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   // 注册视图
-  const opsOperateProvider = new OpsOperateProvider(context);
+  const opsOperateProvider = new OpsOperateProvider(context, apiServer);
   const opsOperateView = vscode.window.registerWebviewViewProvider(OpsOperateProvider.viewType, opsOperateProvider, {
     webviewOptions: {
       retainContextWhenHidden: true,
@@ -243,18 +242,6 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.window.showInformationMessage('已清除缓存的算子工程位置');
   });
 
-  // 注册新建算子原型文件命令
-  const createCommand = vscode.commands.registerCommand('huawei-op-devtools.createOps', async () => {
-    await opsOption.init();
-    opsOption.createOps();
-  });
-
-  // 注册编译命令
-  const buildOpsCommand = vscode.commands.registerCommand('huawei-op-devtools.buildOps', async () => {
-    await opsOption.init();
-    opsOption.startBuild();
-  });
-
   // 注册创建算子命令
   const createOptionsCommand = vscode.commands.registerCommand('huawei-op-devtools.createDictory', async (data: any, progress: any) => {
     await handleOperatorProjectDictoryFile({ createOperatorProjectDictoryFileType: data }, createOpsProvider, progress);
@@ -263,47 +250,6 @@ export async function activate(context: vscode.ExtensionContext) {
   // 获取home
   const getHome = vscode.commands.registerCommand('huawei-op-devtools.getHome', async (data: any) => {
     return process.env.HOME;
-  });
-
-  // 注册JSON编辑器按钮命令
-  // 注意：命令已在 package.json 中声明，这里注册处理逻辑
-  // 在开发模式下，如果扩展被热重载，可能会遇到命令已存在的错误
-  // 使用 try-catch 捕获并忽略该错误
-  let buttonCommand: vscode.Disposable;
-  try {
-    buttonCommand = vscode.commands.registerCommand('extension.jsonButtonAction', async (uri?: vscode.Uri) => {
-      if (uri) {
-        await opsOption.init();
-        await opsOption.createOpsByPrototype(uri.fsPath, 'ascend', undefined);
-      }
-    });
-  } catch (error: any) {
-    // 捕获命令已存在的错误，这是开发模式下常见的情况
-    const errorMessage = error?.message || String(error);
-    if (errorMessage.includes('already exists') || errorMessage.includes('already registered')) {
-      console.warn('命令 extension.jsonButtonAction 已存在，使用现有命令');
-      // 创建一个虚拟的 Disposable，实际使用现有的命令
-      buttonCommand = { dispose: () => { } };
-    } else {
-      // 其他错误仍然抛出，但不会阻止扩展加载
-      console.error('注册命令 extension.jsonButtonAction 时发生未知错误:', errorMessage);
-      buttonCommand = { dispose: () => { } };
-    }
-  }
-
-  // 注册按钮到编辑器标题栏
-  const button = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-  button.text = '生成算子工程';
-  button.tooltip = '生成算子工程';
-  button.command = 'extension.jsonButtonAction';
-
-  // 只在JSON文件中显示按钮
-  vscode.window.onDidChangeActiveTextEditor((editor) => {
-    if (editor && editor.document.languageId === 'json') {
-      button.show();
-    } else {
-      button.hide();
-    }
   });
 
   configProvider.showLeftPage('Home');
@@ -319,7 +265,6 @@ export async function activate(context: vscode.ExtensionContext) {
       context.globalState.update('welcomeShowCount', welcomeShowCount + 1);
     }
   }
-  context.subscriptions.push(buttonCommand, button);
 
   // 异常检测视图
   const { openMsSanitizerDisposable, msSanitizerPanelView } = getMsSanitizerPanelViewProvider(context);
@@ -329,12 +274,10 @@ export async function activate(context: vscode.ExtensionContext) {
   // 订阅销毁事件
   context.subscriptions.push(apiServer);
   context.subscriptions.push(viewServer);
-  context.subscriptions.push(buildOpsCommand);
   context.subscriptions.push(createOptionsCommand);
   context.subscriptions.push(openCommand);
   context.subscriptions.push(openProjectSH);
   context.subscriptions.push(ConfigCommand);
-  context.subscriptions.push(createCommand);
   context.subscriptions.push(welcomeCommand);
   context.subscriptions.push(newPrototypeCommand);
   context.subscriptions.push(clearWelcomeCountCommand);

@@ -8,7 +8,7 @@
 import { FolderOutlined } from "@ant-design/icons-vue";
 import { ref, nextTick } from "vue";
 import { QuestionCircleOutlined } from "@ant-design/icons-vue";
-import { message } from "../../../untils/Message.ts";
+import { saveConfig as saveConfigAPI } from "@/apis";
 import EditTable from "./editTable.vue";
 import SelectFolder from "./SelectFolder.vue";
 
@@ -25,9 +25,9 @@ const props = defineProps({
 
 const emit = defineEmits(["addAdvancedParam", "deleteAdvancedParam"]);
 
-const saveConfig = () => {
+const saveConfig = async () => {
   const obj = { config_id: props.simulationData.config_id, user_options: { ...props.simulationData.user_options } }
-  message.sendMessageToParent({ command: "vscodeSaveConfig", data: { type: 'simulate', data: [JSON.parse(JSON.stringify(obj))] } });
+  await saveConfigAPI({ type: 'simulate', data: [JSON.parse(JSON.stringify(obj))] });
 };
 
 const activeKey = ref(["1"]);

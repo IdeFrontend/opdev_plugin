@@ -6,7 +6,7 @@
 <script setup>
 import { ref, nextTick } from "vue";
 import editTable from "./editTable.vue";
-import { message } from "../../../untils/Message.ts";
+import { saveBuildConfig as saveBuildConfigAPI, startBuild, startBuildExample } from "@/apis";
 import { DownOutlined } from "@ant-design/icons-vue";
 const props = defineProps({
   buidlConfigData: {
@@ -68,21 +68,22 @@ const deleteExampleTableItem = (key) => {
   emit("deleteExampleTableItem", key);
 };
 
-const saveBuildConfig = () => {
+const saveBuildConfig = async () => {
   const data = getSaveData();
   console.log(data);
-  message.sendMessageToParent({ command: "vscodeSaveBuildConfig", data });
+  await saveBuildConfigAPI({ data });
 };
-const saveAndStartBuild = () => {
+const saveAndStartBuild = async () => {
   const data = getSaveData();
-  message.sendMessageToParent({ command: "vscodeSaveAndStartBuild", data });
+  await saveBuildConfigAPI({ data, showMessage: false });
+  const config_id = data.find((v) => v.config_type === 'build_op').config_id;
+  await startBuild({ configId: config_id });
 };
-const saveAndStartBuildExample = () => {
+const saveAndStartBuildExample = async () => {
   const data = getSaveData();
-  message.sendMessageToParent({
-    command: "vscodeSaveAndStartBuildExample",
-    data,
-  });
+  await saveBuildConfigAPI({ data, showMessage: false });
+  const config_id = data.find((v) => v.config_type === 'build_example').config_id;
+  await startBuildExample({ configId: config_id });
 };
 const getSaveData = () => {
   const data = [

@@ -1,0 +1,141 @@
+import {
+  InitOpsParams,
+  CreateOpsParams,
+  CreateOpsByPrototypeParams,
+  GetConfigDataResult,
+  StartBuildParams,
+  StartRunParams,
+  StartBuildExampleParams,
+  SaveBuildConfigParams,
+  SaveConfigParams,
+  SaveSanitizerFormParams,
+  UpdateShScriptParams,
+  BuildConfig,
+} from 'shared:/api-types';
+
+import { request } from '@/core/request';
+
+/** 初始化算子项目 */
+export function initOps(params: InitOpsParams = {}) {
+  return request.post<InitOpsParams, string>('ops/init', params);
+}
+
+/** 创建算子原型文件 */
+export function createOps(params: CreateOpsParams = {}) {
+  return request.post<CreateOpsParams, string>('ops/createOps', params);
+}
+
+/** 通过原型生成算子工程 */
+export function createOpsByPrototype(params: CreateOpsByPrototypeParams) {
+  return request.post<CreateOpsByPrototypeParams, void>('ops/createOpsByPrototype', params);
+}
+
+/** 获取配置数据 */
+export function getConfigData() {
+  return request.post<undefined, GetConfigDataResult>('ops/getConfigData');
+}
+
+/** 获取构建配置列表 */
+export function getBuildConfigs() {
+  return request.post<undefined, BuildConfig[]>('ops/getBuildConfigs');
+}
+
+/** 保存构建配置 */
+export function saveBuildConfig(params: SaveBuildConfigParams) {
+  return request.post<SaveBuildConfigParams, void>('ops/saveBuildConfig', params);
+}
+
+/** 保存配置（仿真/上板） */
+export function saveConfig(params: SaveConfigParams) {
+  return request.post<SaveConfigParams, void>('ops/saveConfig', params);
+}
+
+/** 编译算子 */
+export function startBuild(params: StartBuildParams = {}) {
+  return request.post<StartBuildParams, void>('ops/startBuild', params);
+}
+
+/** 运行算子 */
+export function startRun(params: StartRunParams = {}) {
+  return request.post<StartRunParams, void>('ops/startRun', params);
+}
+
+/** 编译示例 */
+export function startBuildExample(params: StartBuildExampleParams = {}) {
+  return request.post<StartBuildExampleParams, void>('ops/startBuildExample', params);
+}
+
+/** 开始仿真分析 */
+export function startSimulate() {
+  return request.post<undefined, void>('ops/startSimulate');
+}
+
+/** 开始上板分析 */
+export function startOnBoard() {
+  return request.post<undefined, void>('ops/startOnBoard');
+}
+
+/** 获取构建配置ID */
+export function getBuildConfig() {
+  return request.post<undefined, number | undefined>('ops/getBuildConfig');
+}
+
+/** 获取示例构建配置ID */
+export function getBuildExampleConfig() {
+  return request.post<undefined, number | undefined>('ops/getBuildExampleConfig');
+}
+
+/** 获取仿真配置ID */
+export function getSimulateConfig() {
+  return request.post<undefined, string>('ops/getSimulateConfig');
+}
+
+/** 获取上板配置ID */
+export function getOnBoardConfig() {
+  return request.post<undefined, string>('ops/getOnBoardConfig');
+}
+
+/** 获取异常检测配置列表 */
+export function getSanitizerConfigs() {
+  return request.post<undefined, BuildConfig[]>('ops/getSanitizerConfigs');
+}
+
+/** 获取异常检测配置ID */
+export function getSanitizerConfigId() {
+  return request.post<undefined, number | undefined>('ops/getSanitizerConfigId');
+}
+
+/** 保存异常检测表单配置 */
+export function saveSanitizerForm(params: SaveSanitizerFormParams) {
+  return request.post<SaveSanitizerFormParams, void>('ops/saveSanitizerForm', params);
+}
+
+/** 运行异常检测 */
+export function runSanitizer() {
+  return request.post<undefined, void>('ops/runSanitizer');
+}
+
+/** 更新脚本文件 */
+export function updateShScript(params: UpdateShScriptParams) {
+  return request.post<UpdateShScriptParams, string>('ops/updateShScript', params);
+}
+
+/** 检查 .vscode 目录 */
+export function checkVscode() {
+  return request.post<undefined, boolean>('ops/checkVscode');
+}
+
+/** 获取当前项目ID */
+export function getProjectId() {
+  return request.post<undefined, string>('ops/getProjectId');
+}
+
+/** 停止当前任务 */
+export function stopTask() {
+  return request.post<undefined, void>('ops/stopTask');
+}
+
+/** 打开配置页面 */
+export function openConfig(params: { configName?: string } = {}) {
+  return request.post<{ configName?: string }, void>('ops/openConfig', params);
+}

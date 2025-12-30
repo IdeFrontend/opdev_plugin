@@ -1,0 +1,628 @@
+import * as vscode from 'vscode';
+import * as fs from 'fs';
+import path from 'node:path';
+
+import { ApiGroup } from 'plugin:/core/ApiServer';
+import { ExplorerRootUtils } from 'plugin:/class/ExplorerRootUtils';
+import { CommandExecutor } from 'plugin:/class/CommandOptions';
+import {
+  InitOpsParams,
+  CreateOpsParams,
+  CreateOpsByPrototypeParams,
+  GetConfigDataResult,
+  StartBuildParams,
+  StartRunParams,
+  StartBuildExampleParams,
+  SaveBuildConfigParams,
+  SaveConfigParams,
+  SaveSanitizerFormParams,
+  UpdateShScriptParams,
+  BuildConfig,
+} from 'shared:/api-types';
+import {
+  createProject,
+  updataShScript,
+  generateOpsPrototype,
+  generateStructure,
+  getBuildExampleCommand,
+  getSimulateCommand,
+  getOnBoardCommand,
+  getBuildOpCommand,
+  getRunCommand,
+  getSanitizerCommand,
+  getConfig,
+  postConfig,
+} from '../../autogen-server';
+
+// 定义 OpsApi 接口
+export interface OpsApi {
+  init(params: InitOpsParams): Promise<string>;
+  createOps(params: CreateOpsParams): Promise<string>;
+  createOpsByPrototype(params: CreateOpsByPrototypeParams): Promise<void>;
+  getConfigData(): Promise<GetConfigDataResult>;
+  getBuildConfigs(): Promise<BuildConfig[]>;
+  saveBuildConfig(params: SaveBuildConfigParams): Promise<void>;
+  saveConfig(params: SaveConfigParams): Promise<void>;
+  startBuild(params: StartBuildParams): Promise<void>;
+  startRun(params: StartRunParams): Promise<void>;
+  startBuildExample(params: StartBuildExampleParams): Promise<void>;
+  startSimulate(): Promise<void>;
+  startOnBoard(): Promise<void>;
+  getBuildConfig(): Promise<number | undefined>;
+  getBuildExampleConfig(): Promise<number | undefined>;
+  getSimulateConfig(): Promise<string>;
+  getOnBoardConfig(): Promise<string>;
+  getSanitizerConfigs(): Promise<BuildConfig[]>;
+  getSanitizerConfigId(): Promise<number | undefined>;
+  saveSanitizerForm(params: SaveSanitizerFormParams): Promise<void>;
+  runSanitizer(): Promise<void>;
+  updateShScript(params: UpdateShScriptParams): Promise<string>;
+  checkVscode(): Promise<boolean>;
+  getExecutor(): CommandExecutor;
+  clearExecutor(): void;
+  getProjectId(): string;
+  stopTask(): Promise<void>;
+  openConfig(params: { configName?: string }): Promise<void>;
+}
+
+// 模块级状态管理
+let projectId: string = '';
+let projectName: string | undefined;
+let projectPath: string | undefined;
+let currentExecutor: CommandExecutor | null = null;
+
+/**
+ * 获取项目信息（从工作区或参数）
+ */
+function getProjectInfo(params?: { projectPath?: string; projectName?: string }) {
+  if (params?.projectPath && params?.projectName) {
+    return {
+      name: params.projectName,
+      path: path.normalize(`${params.projectPath}/${params.projectName}`),
+    };
+  }
+
+  if (projectName && projectPath) {
+    return {
+      name: projectName,
+      path: projectPath,
+    };
+  }
+
+  const selectedFiles = ExplorerRootUtils.getPrimaryRoot();
+  return {
+    name: selectedFiles?.name,
+    path: selectedFiles?.path,
+  };
+}
+
+/**
+ * 获取 ExtensionContext
+ */
+function getContext(): vscode.ExtensionContext {
+  return (globalThis as any).extensionContext as vscode.ExtensionContext;
+}
+
+/**
+ * 获取或创建 CommandExecutor
+ */
+function getExecutor(): CommandExecutor {
+  if (!currentExecutor) {
+    currentExecutor = new CommandExecutor();
+  }
+  return currentExecutor;
+}
+
+/**
+ * 检查 .vscode 目录
+ */
+async function checkVscodeInternal(): Promise<boolean> {
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+  if (!workspaceFolders || workspaceFolders.length === 0) {
+    return false;
+  }
+
+  const workspacePath = workspaceFolders[0].uri.fsPath;
+  const vscodePath = path.join(workspacePath, '.vscode');
+  console.log('vscodePath', vscodePath);
+
+  if (fs.existsSync(vscodePath)) {
+    const commandExecutor = new CommandExecutor();
+    console.log(`chmod 750 ${vscodePath}`);
+    await commandExecutor.execute(`chmod 750 ${vscodePath}`, [], [], {});
+  }
+  return false;
+}
+
+/**
+ * 获取构建配置列表
+ */
+async function getBuildConfigsList(): Promise<any[]> {
+  const array = [
+    getConfig(Number(projectId), 'build_op'),
+    getConfig(Number(projectId), 'build_example'),
+    getConfig(Number(projectId), 'simulate'),
+    getConfig(Number(projectId), 'on_board'),
+  ];
+  const [opConfig, exampleConfig, simulateConfig, onBoardConfig] = await Promise.all(array);
+  return [...opConfig, ...exampleConfig, ...simulateConfig, ...onBoardConfig];
+}
+
+/**
+ * 获取构建配置ID
+ */
+async function getBuildConfigId(): Promise<number | undefined> {
+  try {
+    const configData = await getBuildConfigsList();
+    console.log('configData in build', configData);
+    return configData.find((v: any) => v.config_type === 'build_op')?.config_id;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * 获取示例构建配置ID
+ */
+async function getBuildExampleConfigId(): Promise<number | undefined> {
+  try {
+    const configData = await getBuildConfigsList();
+    console.log('configData in exam', configData);
+    return configData.find((v: any) => v.config_type === 'build_example')?.config_id;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * 获取仿真配置ID
+ */
+async function getSimulateConfigId(): Promise<string> {
+  try {
+    const configData = await getBuildConfigsList();
+    console.log('configData in simulate', configData);
+    return configData.find((v: any) => v.config_type === 'simulate')?.config_id || '';
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * 获取上板配置ID
+ */
+async function getOnBoardConfigId(): Promise<string> {
+  try {
+    const configData = await getBuildConfigsList();
+    console.log('configData in onBoard', configData);
+    return configData.find((v: any) => v.config_type === 'on_board')?.config_id || '';
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * 获取异常检测配置列表
+ */
+async function getSanitizerConfigsList(): Promise<any[]> {
+  const config = await getConfig(Number(projectId), 'sanitizer');
+  return [...config];
+}
+
+/**
+ * 获取异常检测配置ID
+ */
+async function getSanitizerConfigIdInternal(): Promise<number | undefined> {
+  try {
+    const configData = await getSanitizerConfigsList();
+    console.log('configData in sanitizer', configData);
+    return configData.find((v: any) => v.config_type === 'sanitizer')?.config_id;
+  } catch {
+    return undefined;
+  }
+}
+
+export const opsApis: ApiGroup = {
+  ops: {
+    /**
+     * 初始化算子项目
+     */
+    async init(params: InitOpsParams): Promise<string> {
+      const info = getProjectInfo(params);
+
+      if (params.projectPath && params.projectName) {
+        projectPath = path.normalize(`${params.projectPath}/${params.projectName}`);
+        projectName = params.projectName;
+      } else {
+        projectName = info.name;
+        projectPath = info.path;
+      }
+
+      console.log('accendEnvScript:', params.accendEnvScript);
+
+      // 获取项目ID
+      if (projectPath === undefined) {
+        projectId = '';
+        return projectId;
+      }
+
+      const ascend_env_script = params.accendEnvScript || undefined;
+      const projectRes = await createProject({
+        project_name: projectName ?? '',
+        project_path: projectPath,
+        ascend_env_script,
+      });
+      console.log('projectRes', projectRes);
+      projectId = String(projectRes);
+      return projectId;
+    },
+
+    /**
+     * 创建算子原型文件
+     */
+    async createOps(params: CreateOpsParams): Promise<string> {
+      const info = getProjectInfo();
+      const op_name = params.projectName || info.name;
+      const project_id = params.projectId || projectId;
+      const prototype_name = params.prototypeName || undefined;
+
+      console.log('生成算子原型文件参数', op_name, project_id, prototype_name);
+
+      try {
+        const context = getContext();
+        const result = await generateOpsPrototype(
+          Number(project_id),
+          op_name,
+          prototype_name,
+          context.extensionPath
+        );
+        vscode.window.showInformationMessage(`新建算子原型文件成功`);
+
+        // 检查并设置 .vscode 目录权限
+        await checkVscodeInternal();
+        return result;
+      } catch {
+        vscode.window.showErrorMessage(`新建算子原型文件失败`);
+        return '';
+      }
+    },
+
+    /**
+     * 通过原型生成算子工程
+     */
+    async createOpsByPrototype(params: CreateOpsByPrototypeParams): Promise<void> {
+      const context = getContext();
+      try {
+        const result = await generateStructure(
+          {
+            ops_prototype_file: params.opsPrototypeFile,
+            project_id: Number(projectId),
+            op_type: params.opType || 'ascend',
+          },
+          context.extensionPath
+        );
+
+        console.log('生成算子工程参数', {
+          ops_prototype_file: params.opsPrototypeFile,
+          project_id: projectId,
+          op_type: params.opType,
+        }, result);
+
+        vscode.window.showInformationMessage(`新建算子文件成功`);
+        await checkVscodeInternal();
+      } catch (e) {
+        vscode.window.showErrorMessage(`新建算子文件失败 ${e instanceof Error ? e.message : ''}`);
+      }
+    },
+
+    /**
+     * 获取配置数据
+     */
+    async getConfigData(): Promise<GetConfigDataResult> {
+      const buildConfigs = await getBuildConfigsList();
+      console.log('buildConfigs', buildConfigs);
+      if (!buildConfigs.length) {
+        return {};
+      }
+      return { [buildConfigs[0].config_name]: buildConfigs };
+    },
+
+    /**
+     * 获取构建配置列表
+     */
+    async getBuildConfigs(): Promise<BuildConfig[]> {
+      return getBuildConfigsList() as Promise<BuildConfig[]>;
+    },
+
+    /**
+     * 保存构建配置
+     */
+    async saveBuildConfig(params: SaveBuildConfigParams): Promise<void> {
+      try {
+        await postConfig('build', params.data);
+        if (params.showMessage) {
+          vscode.window.showInformationMessage(`保存编译配置成功`);
+        }
+      } catch {
+        vscode.window.showErrorMessage(`保存编译配置失败`);
+      }
+    },
+
+    /**
+     * 保存配置（仿真/上板）
+     */
+    async saveConfig(params: SaveConfigParams): Promise<void> {
+      await postConfig(params.type, params.data);
+      if (params.showMessage) {
+        vscode.window.showInformationMessage(`保存配置成功`);
+      }
+    },
+
+    /**
+     * 编译算子
+     */
+    async startBuild(params: StartBuildParams): Promise<void> {
+      let configId = params.configId ? Number(params.configId) : undefined;
+      if (!configId) {
+        configId = await getBuildConfigId();
+      }
+
+      try {
+        const buildCommand = await getBuildOpCommand(Number(configId), params.compileOption);
+        const executor = getExecutor();
+        const res = await executor.execute(buildCommand, [], [], {}, true);
+        if (res.code !== 0) {
+          vscode.window.showErrorMessage(`编译算子失败 ${res.output}`);
+          return;
+        }
+        vscode.window.showInformationMessage(`编译算子成功`);
+      } catch (e) {
+        vscode.window.showErrorMessage(`获取编译算子命令失败 ${(e as Error).message}`);
+      }
+    },
+
+    /**
+     * 运行算子
+     */
+    async startRun(params: StartRunParams): Promise<void> {
+      let configId = params.configId ? Number(params.configId) : undefined;
+      if (!configId) {
+        configId = await getBuildExampleConfigId();
+      }
+
+      try {
+        const runCommand = await getRunCommand(Number(configId));
+        console.log('runCommand', runCommand);
+        const executor = getExecutor();
+        const res = await executor.execute(runCommand, [], [], {}, true);
+        console.log('runRes', res);
+        if (res.code !== 0) {
+          vscode.window.showErrorMessage(`运行失败 ${res.output}`);
+          return;
+        }
+        vscode.window.showInformationMessage(`运行成功`);
+      } catch (e) {
+        vscode.window.showErrorMessage(`获取运行命令失败 ${(e as Error).message}`);
+      }
+    },
+
+    /**
+     * 编译示例
+     */
+    async startBuildExample(params: StartBuildExampleParams): Promise<void> {
+      let configId = params.configId ? Number(params.configId) : undefined;
+      if (!configId) {
+        configId = await getBuildExampleConfigId();
+      }
+
+      try {
+        const buildCommand = await getBuildExampleCommand(Number(configId));
+        const executor = getExecutor();
+        const res = await executor.execute(buildCommand, [], [], {}, true);
+        if (res.code !== 0) {
+          vscode.window.showErrorMessage(`编译example失败`);
+          return;
+        }
+        vscode.window.showInformationMessage(`编译example成功`);
+      } catch (e) {
+        vscode.window.showErrorMessage(`获取编译example命令失败 ${(e as Error).message}`);
+      }
+    },
+
+    /**
+     * 开始仿真分析
+     */
+    async startSimulate(): Promise<void> {
+      const configId = await getSimulateConfigId();
+      const exConfigId = await getBuildExampleConfigId();
+      console.log('simulate configId', configId, exConfigId);
+
+      try {
+        const simulateCommand = await getSimulateCommand(Number(configId), Number(exConfigId));
+        console.log('simulateCommand', simulateCommand);
+        const executor = getExecutor();
+        const res = await executor.execute(simulateCommand, [], [], {}, true);
+        if (res.code !== 0) {
+          vscode.window.showErrorMessage(`执行仿真分析失败`);
+          return;
+        }
+        vscode.window.showInformationMessage(`执行仿真分析成功`);
+        vscode.commands.executeCommand('performanceSidebarView.focus');
+      } catch (e: any) {
+        vscode.window.showErrorMessage(`获取仿真命令失败 ${e.message}`);
+      }
+    },
+
+    /**
+     * 开始上板分析
+     */
+    async startOnBoard(): Promise<void> {
+      const configId = await getOnBoardConfigId();
+      const exConfigId = await getBuildExampleConfigId();
+      console.log('onboard configId', configId, exConfigId);
+
+      try {
+        const onBoardCommand = await getOnBoardCommand(Number(configId), Number(exConfigId));
+        console.log('onBoardCommand', onBoardCommand);
+        const executor = getExecutor();
+        const res = await executor.execute(onBoardCommand, [], [], {}, true);
+        if (res.code !== 0) {
+          vscode.window.showErrorMessage(`执行上板分析失败`);
+          return;
+        }
+        vscode.window.showInformationMessage(`执行上板分析成功`);
+        vscode.commands.executeCommand('performanceSidebarView.focus');
+      } catch (e: any) {
+        vscode.window.showErrorMessage(`获取上板命令失败 ${e.message}`);
+      }
+    },
+
+    /**
+     * 获取构建配置ID
+     */
+    async getBuildConfig(): Promise<number | undefined> {
+      return getBuildConfigId();
+    },
+
+    /**
+     * 获取示例构建配置ID
+     */
+    async getBuildExampleConfig(): Promise<number | undefined> {
+      return getBuildExampleConfigId();
+    },
+
+    /**
+     * 获取仿真配置ID
+     */
+    async getSimulateConfig(): Promise<string> {
+      return getSimulateConfigId();
+    },
+
+    /**
+     * 获取上板配置ID
+     */
+    async getOnBoardConfig(): Promise<string> {
+      return getOnBoardConfigId();
+    },
+
+    /**
+     * 获取异常检测配置列表
+     */
+    async getSanitizerConfigs(): Promise<BuildConfig[]> {
+      return getSanitizerConfigsList() as Promise<BuildConfig[]>;
+    },
+
+    /**
+     * 获取异常检测配置ID
+     */
+    async getSanitizerConfigId(): Promise<number | undefined> {
+      return getSanitizerConfigIdInternal();
+    },
+
+    /**
+     * 保存异常检测表单配置
+     */
+    async saveSanitizerForm(params: SaveSanitizerFormParams): Promise<void> {
+      try {
+        const formData = (await getSanitizerConfigsList())[0];
+        await postConfig('sanitizer', [{ ...formData, user_options: { ...formData.user_options, ...params.data } }]);
+        if (params.showMessage) {
+          vscode.window.showInformationMessage(`保存异常检测配置成功`);
+        }
+      } catch {
+        vscode.window.showErrorMessage(`保存异常检测配置失败`);
+      }
+    },
+
+    /**
+     * 运行异常检测
+     */
+    async runSanitizer(): Promise<void> {
+      try {
+        let sanitizerConfigId: Number | undefined = await getSanitizerConfigIdInternal();
+        let exampleConfigId: Number | undefined | string = await getBuildExampleConfigId();
+
+        const sanitizerCommand = (await getSanitizerCommand(Number(sanitizerConfigId), Number(exampleConfigId))) || '';
+        const executor = getExecutor();
+        const res = await executor.execute(sanitizerCommand, [], [], {}, true);
+        if (res.code !== 0) {
+          vscode.window.showErrorMessage(`异常检测失败 ${res.output}`);
+          return;
+        }
+        vscode.window.showInformationMessage(`异常检测成功`);
+      } catch (e: any) {
+        vscode.window.showErrorMessage(`获取异常检测命令失败 ${e.message}`);
+      }
+    },
+
+    /**
+     * 更新脚本文件
+     */
+    async updateShScript(params: UpdateShScriptParams): Promise<string> {
+      const info = getProjectInfo();
+      const project_name = info.name ?? '';
+      const project_path = info.path;
+
+      if (project_path === undefined) {
+        return '';
+      }
+
+      const ascend_env_script = params.accendEnvScript || undefined;
+      const projectRes = await updataShScript({ project_name, project_path, ascend_env_script });
+      console.log('projectRes', projectRes);
+      return String(projectRes);
+    },
+
+    /**
+     * 检查 .vscode 目录
+     */
+    async checkVscode(): Promise<boolean> {
+      return checkVscodeInternal();
+    },
+
+    /**
+     * 获取当前 executor（用于外部停止任务）
+     */
+    getExecutor(): CommandExecutor | null {
+      return currentExecutor;
+    },
+
+    /**
+     * 清除当前 executor
+     */
+    clearExecutor(): void {
+      currentExecutor = null;
+    },
+
+    /**
+     * 获取当前项目ID
+     */
+    getProjectId(): string {
+      return projectId;
+    },
+
+    /**
+     * 停止当前任务
+     */
+    async stopTask(): Promise<void> {
+      if (currentExecutor) {
+        try {
+          currentExecutor.kill();
+          currentExecutor = null;
+          vscode.window.showInformationMessage('任务已停止');
+        } catch (e) {
+          vscode.window.showErrorMessage(`停止任务失败: ${e instanceof Error ? e.message : ''}`);
+        }
+      } else {
+        vscode.window.showWarningMessage('当前没有正在执行的任务');
+      }
+    },
+
+    /**
+     * 打开配置页面
+     */
+    async openConfig(_params: { configName: string }): Promise<void> {
+      // 触发打开配置页面的命令
+      vscode.commands.executeCommand(_params.configName);
+    },
+  },
+};
