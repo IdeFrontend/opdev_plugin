@@ -80,6 +80,7 @@ export async function createProject(data: CreateProjectParams) {
   }
 
   await ensureLaunchJsonExists(data.project_path, data.create_by);
+
   const nextId = store.lastId + 1;
   const now = new Date().toISOString();
   const record: ProjectRecord = {
