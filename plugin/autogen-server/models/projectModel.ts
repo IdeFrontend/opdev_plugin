@@ -1,7 +1,6 @@
 import path from 'path';
 import fs from 'fs-extra';
 import config from './config';
-import { ensureLaunchJsonExists } from '../utils/projectUtils';
 
 const dataDir = path.join(config.user_data_dir, 'data');
 const projectsFile = path.join(dataDir, 'projects.json');
@@ -78,8 +77,6 @@ export async function createProject(data: CreateProjectParams) {
     writeStore(store);
     return existing.id;
   }
-
-  await ensureLaunchJsonExists(data.project_path, data.create_by);
 
   const nextId = store.lastId + 1;
   const now = new Date().toISOString();

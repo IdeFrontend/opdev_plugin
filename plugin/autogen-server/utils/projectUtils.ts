@@ -7,12 +7,12 @@ import { exec } from 'child_process';
 import * as vscode from 'vscode';
 
 const execAsync = promisify(exec);
-export async function ensureLaunchJsonExists(project_path: string, create_by?: string | null) {
-  if (!project_path || typeof project_path !== 'string') {
+export async function ensureLaunchJsonExists(op_path: string | undefined, create_by?: string | null) {
+  if (!op_path || typeof op_path !== 'string') {
     return;
   }
 
-  const projectDir = path.resolve(project_path);
+  const projectDir = path.resolve(op_path);
   const vscodeDir = path.join(projectDir, '.vscode');
   const launchJsonPath = path.join(vscodeDir, 'launch.json');
   const devtoolConfigPath = path.join(vscodeDir, 'devtool_config.json');
@@ -22,7 +22,7 @@ export async function ensureLaunchJsonExists(project_path: string, create_by?: s
     (e as any).name = 'InvalidRequest';
     throw e;
   }
-  if (fs.existsSync(launchJsonPath)) return;
+  if (fs.existsSync(devtoolConfigPath)) return;
   await fs.ensureDir(vscodeDir);
   // await fs.writeFile(launchJsonPath, JSON.stringify(debugLaunch, null, 2), 'utf-8');
   // 创建 devtool_config.json 文件
