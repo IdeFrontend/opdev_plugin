@@ -15,7 +15,7 @@
     "moduleResolution": "node16",
     "resolveJsonModule": true,
     "noImplicitAny": true,
-    "baseUrl": "./plugins/mindstudio-vscode-plugins/mindstudio-opsuite-vscode-plugin",
+    "baseUrl": ".",
     "paths": {
       "plugin:/*": ["plugin/src/*"],
       "shared:/*": ["shared/*"]
