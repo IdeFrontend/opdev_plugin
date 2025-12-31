@@ -222,6 +222,30 @@ async function getSanitizerConfigIdInternal(): Promise<number | undefined> {
   }
 }
 
+/**
+ * 确保 projectId 已初始化
+ */
+async function ensureProjectId(): Promise<void> {
+  if (!projectId) {
+    const info = getProjectInfo();
+    projectName = info.name;
+    projectPath = info.path;
+
+    if (projectPath === undefined) {
+      projectId = '';
+      return;
+    }
+
+    const projectRes = await createProject({
+      project_name: projectName ?? '',
+      project_path: projectPath,
+      ascend_env_script: undefined,
+    });
+    console.log('projectRes', projectRes);
+    projectId = String(projectRes);
+  }
+}
+
 export const opsApis: ApiGroup = {
   ops: {
     /**
@@ -319,6 +343,8 @@ export const opsApis: ApiGroup = {
      * 获取配置数据
      */
     async getConfigData(): Promise<GetConfigDataResult> {
+      // 确保projectId已初始化
+      await ensureProjectId();
       const buildConfigs = await getBuildConfigsList();
       console.log('buildConfigs', buildConfigs);
       if (!buildConfigs.length) {
@@ -433,6 +459,21 @@ export const opsApis: ApiGroup = {
      * 开始仿真分析
      */
     async startSimulate(): Promise<void> {
+      const configData = await getBuildConfigsList();
+      const simulatorItem = configData.find((v: any) => v.config_type === 'simulate')
+      const simulatorType = simulatorItem?.user_options?.simulatorType ?? ''
+
+      // 仿真分析前编译
+      const buildConfigId = await getBuildConfigId();
+      const buildCommand = await getBuildOpCommand(Number(buildConfigId), `--simulator ${simulatorType}`);
+      const buildExecutor = getExecutor();
+      const buildRes = await buildExecutor.execute(buildCommand, [], [], {}, true);
+      console.log('buildRes', buildRes)
+      if (buildRes.code !== 0) {
+        vscode.window.showErrorMessage(`编译算子失败 ${buildRes.output}`);
+        return;
+      }
+
       const configId = await getSimulateConfigId();
       const exConfigId = await getBuildExampleConfigId();
       console.log('simulate configId', configId, exConfigId);
@@ -458,6 +499,17 @@ export const opsApis: ApiGroup = {
      * 开始上板分析
      */
     async startOnBoard(): Promise<void> {
+      // 上板分析前编译
+      const buildConfigId = await getBuildConfigId();
+      const buildCommand = await getBuildOpCommand(Number(buildConfigId), '--onboard');
+      const buildExecutor = getExecutor();
+      const buildRes = await buildExecutor.execute(buildCommand, [], [], {}, true);
+      console.log('buildRes', buildRes)
+      if (buildRes.code !== 0) {
+        vscode.window.showErrorMessage(`编译算子失败 ${buildRes.output}`);
+        return;
+      }
+
       const configId = await getOnBoardConfigId();
       const exConfigId = await getBuildExampleConfigId();
       console.log('onboard configId', configId, exConfigId);

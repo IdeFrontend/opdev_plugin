@@ -70,24 +70,6 @@ export const configApis: ApiGroup = {
       await OpsAPI.saveConfig(params.type, params.data);
     },
 
-    // 检查 devtool 配置
-    checkDevtoolConfig(): CheckDevtoolConfigResult {
-      const workspaceFolders = vscode.workspace.workspaceFolders;
-      if (!workspaceFolders || workspaceFolders.length === 0) {
-        return false;
-      }
-
-      const workspacePath = workspaceFolders[0].uri.fsPath;
-      const devtoolConfigPath = path.join(workspacePath, '.vscode', 'devtool_config.json');
-
-      try {
-        return fs.existsSync(devtoolConfigPath);
-      } catch (error) {
-        console.error('检查 devtool_config.json 文件时出错:', error);
-        return false;
-      }
-    },
-
     // 远程路径搜索
     remotePathSearch(params: RemotePathSearchParams): RemotePathSearchResult {
       const res = getFiles(params.keyword);

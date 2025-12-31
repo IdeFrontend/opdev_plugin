@@ -229,7 +229,7 @@ export async function activate(context: vscode.ExtensionContext) {
   }
 
   // 异常检测视图
-  const { openMsSanitizerDisposable, msSanitizerPanelView } = getMsSanitizerPanelViewProvider(context);
+  const { openMsSanitizerDisposable, msSanitizerPanelView } = getMsSanitizerPanelViewProvider(context, apiServer);
 
   context.subscriptions.push(msSanitizerPanelView, openMsSanitizerDisposable);
   // createOpsProvider.show('ProjectSH');
@@ -377,8 +377,6 @@ function initViews(context: vscode.ExtensionContext, apiServer: ApiServer): View
 
   return viewServer;
 }
-
-
 
 export function deactivate() {
   if (extensionContext) {

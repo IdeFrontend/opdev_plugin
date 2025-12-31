@@ -61,13 +61,6 @@ export function saveConfigWebview(params: { type: string; data: any }) {
 }
 
 /**
- * 检查 devtool 配置（webview版本）
- */
-export function checkDevtoolConfigWebview() {
-  return request.post<undefined, CheckDevtoolConfigResult>('webview/checkDevtoolConfig');
-}
-
-/**
  * 远程路径搜索
  */
 export function remotePathSearch(params: RemotePathSearchParams) {
