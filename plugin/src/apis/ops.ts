@@ -58,6 +58,7 @@ export interface OpsApi {
   runSanitizer(): Promise<void>;
   updateShScript(params: UpdateShScriptParams): Promise<string>;
   checkVscode(): Promise<boolean>;
+  checkDevtoolConfig(): Promise<boolean>;
   getExecutor(): CommandExecutor;
   clearExecutor(): void;
   getProjectId(): string;
@@ -447,6 +448,7 @@ export const opsApis: ApiGroup = {
         }
         vscode.window.showInformationMessage(`执行仿真分析成功`);
         vscode.commands.executeCommand('performanceSidebarView.focus');
+        vscode.commands.executeCommand('huawei-op-devtools.flashPerformanceRunData');
       } catch (e: any) {
         vscode.window.showErrorMessage(`获取仿真命令失败 ${e.message}`);
       }
@@ -471,6 +473,7 @@ export const opsApis: ApiGroup = {
         }
         vscode.window.showInformationMessage(`执行上板分析成功`);
         vscode.commands.executeCommand('performanceSidebarView.focus');
+        vscode.commands.executeCommand('huawei-op-devtools.flashPerformanceRunData');
       } catch (e: any) {
         vscode.window.showErrorMessage(`获取上板命令失败 ${e.message}`);
       }
@@ -577,6 +580,26 @@ export const opsApis: ApiGroup = {
      */
     async checkVscode(): Promise<boolean> {
       return checkVscodeInternal();
+    },
+
+    /**
+     * 检查 devtool_config.json 配置文件是否存在
+     */
+    async checkDevtoolConfig(): Promise<boolean> {
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (!workspaceFolders || workspaceFolders.length === 0) {
+        return false;
+      }
+
+      const workspacePath = workspaceFolders[0].uri.fsPath;
+      const devtoolConfigPath = path.join(workspacePath, '.vscode', 'devtool_config.json');
+
+      try {
+        return fs.existsSync(devtoolConfigPath);
+      } catch (error) {
+        console.error('检查 devtool_config.json 文件时出错:', error);
+        return false;
+      }
     },
 
     /**

@@ -147,7 +147,7 @@ class AscendOpGenerator extends BaseOpGenerator {
       throw new Error(`Template file does not exist: ${templateFilePath}`);
     }
     execSync(`unzip -o ${templateFilePath} -d ${this.op_path}`);
-    if (this.template_name) {
+    if (this.template_name && this.template_name != this.op_name) {
       this._renameFiles(this.template_name);
       this._replaceContent(this.template_name);
     }
@@ -168,7 +168,7 @@ class CannOpGenerator extends BaseOpGenerator {
       throw new Error(`Template file does not exist: ${templateFilePath}`);
     }
     execSync(`unzip -o ${templateFilePath} -d ${this.op_path}`);
-    if (this.template_name) {
+    if (this.template_name && this.template_name != this.op_name) {
       this._renameFiles(this.template_name);
       this._replaceContent(this.template_name);
     }

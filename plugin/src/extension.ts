@@ -342,8 +342,19 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(flashMsSanitizerRunData);
 
+  const flashPerformanceRunData = vscode.commands.registerCommand('huawei-op-devtools.flashPerformanceRunData', async () => {
+    // 拿到PerformanceRunData的视图实例，主动下发刷新命令
+    const performanceRunData = ViewServer.getInstance().providerWebViewMap.performanceSidebarView;
+    performanceRunData.webview.postMessage({
+      command: 'iframeRefreshData'
+    });
+  });
+
+  context.subscriptions.push(flashPerformanceRunData);
+
   const watchWorkSpaceFolderChange = vscode.workspace.onDidChangeWorkspaceFolders(async () => {
     vscode.commands.executeCommand('huawei-op-devtools.flashMsSanitizerRunData');
+    vscode.commands.executeCommand('huawei-op-devtools.flashPerformanceRunData');
   });
 
   context.subscriptions.push(watchWorkSpaceFolderChange);
@@ -379,7 +390,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
   await installer.installIfNeeded();
   console.log('执行了', context);
-  await exportEnvToFile(context);
 }
 
 /**
@@ -417,31 +427,7 @@ function initViews(context: vscode.ExtensionContext, apiServer: ApiServer): View
   return viewServer;
 }
 
-/**
- * 在扩展根目录执行环境导出命令
- */
-async function exportEnvToFile(context: vscode.ExtensionContext) {
-  // 优先使用当前工作区根目录作为执行目录，其次回退到扩展安装目录
-  // const selectedFiles = ExplorerRootUtils.getPrimaryRoot();
-  // console.log(selectedFiles);
-  const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-  console.log('workspaceFolder', workspaceFolder);
-  const cwd = workspaceFolder?.uri.fsPath ?? context.extensionPath;
-  console.log('cwd', cwd)
-  const targetDir = path.join(cwd, '.arts');
-  const targetFile = path.join(targetDir, 'env');
-  try {
-    await fs.promises.mkdir(targetDir, { recursive: true });
-    await execAsync('. /etc/profile && env > ./.arts/.env', {
-      cwd,
-      shell: '/bin/bash',
-      windowsHide: true,
-    });
-    console.log(`环境变量已导出到: ${targetFile}`);
-  } catch (error) {
-    console.error('导出环境变量失败:', error);
-  }
-}
+
 
 export function deactivate() {
   if (extensionContext) {

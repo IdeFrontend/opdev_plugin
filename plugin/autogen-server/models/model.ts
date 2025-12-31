@@ -6,10 +6,10 @@ import * as configModel from './configModel';
 import { OpGeneratorFactory } from '../services/opGeneratorFactory';
 import { getDefaultPath } from '../utils/opUtil';
 import { soc_version } from '../utils/ascend_util';
-import {getDefaultDirectory} from '../utils/projectUtils'
+import {getDefaultDirectory, ensureLaunchJsonExists} from '../utils/projectUtils'
 
-const dataDir = path.join((config as any).user_data_dir, 'data');
-const opsFile = path.join(dataDir, 'ops.json');
+const getDataDir = () => path.join((config as any).workspace_data_dir, 'data');
+const getOpsFile = () => path.join(getDataDir(), 'ops.json');
 
 type OpRecord = {
   id: number;
@@ -33,6 +33,8 @@ type OpsStore = {
 };
 
 function ensureStore(): OpsStore {
+  const dataDir = getDataDir();
+  const opsFile = getOpsFile();
   fs.ensureDirSync(dataDir);
   if (!fs.existsSync(opsFile)) {
     const init: OpsStore = { lastId: 0, ops: [] };
@@ -55,7 +57,7 @@ function ensureStore(): OpsStore {
 }
 
 function writeStore(store: OpsStore) {
-  fs.writeFileSync(opsFile, JSON.stringify(store, null, 2), 'utf-8');
+  fs.writeFileSync(getOpsFile(), JSON.stringify(store, null, 2), 'utf-8');
 }
 
 export function getOpByProjectIdAndOpName(project_id: number, op_name: string): OpRecord | null {
@@ -79,6 +81,7 @@ export function generateStructure(data: Partial<OpRecord>, extensionPath: string
     soc_version: (data as any).soc_version ?? null,
     op_path: data.op_path ?? project.project_path,
   } as any;
+  ensureLaunchJsonExists(params.op_path, data.create_by);
 
   // 3) get generator and parse meta
   const generator = OpGeneratorFactory.getGenerator(params, project, extensionPath);
@@ -236,5 +239,5 @@ export function generateStructure(data: Partial<OpRecord>, extensionPath: string
 
 export function _resetOpsForTest(): void {
   // helper for tests/dev: remove store
-  fs.removeSync(opsFile);
+  fs.removeSync(getOpsFile());
 }

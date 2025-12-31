@@ -1,7 +1,6 @@
 <script setup>
 import { theme } from 'ant-design-vue'
 import { ref, computed, onMounted } from 'vue'
-import { message } from "../../untils/Message.ts";
 import settingIcon from '../../assets/svg/setting.svg'
 import buildIcon from '../../assets/svg/build.svg'
 import runIcon from '../../assets/svg/run.svg'
@@ -17,7 +16,8 @@ import {
   startSimulate,
   stopTask,
   openConfig,
-  getBuildConfigs
+  getBuildConfigs,
+  checkDevtoolConfig
 } from '@/apis';
 
 const themeConfig = {
@@ -30,6 +30,9 @@ const openKeys = ref(['submenu-build']);
 
 // 全局执行状态管理
 const isExecuting = ref(false);
+
+// 配置文件是否存在
+const hasDevtoolConfig = ref(false);
 
 // 需要互斥的操作按钮（执行时其他按钮应该禁用）
 const mutuallyExclusiveKeys = ['buildOp', 'runExample', 'runCheck', 'onBoard', 'simulate'];
@@ -209,6 +212,15 @@ const onOpenChange = (keys) => {
     openKeys.value = keys;
 }
 
+// 监听执行完成的消息
+const operationComplete = {
+    command: 'iframeOperationComplete',
+    callback: (message) => {
+        console.log('[Operate] 收到操作完成通知，恢复按钮状态');
+        isExecuting.value = false;
+    }
+}
+
 // 停止任务
 const handleStopTask = async () => {
     console.log('[Operate] 用户点击停止任务');
@@ -220,32 +232,48 @@ const handleStopTask = async () => {
     }
 }
 
-onMounted(() => {
-    // 初始化时不需要额外的消息监听器了
+onMounted(async () => {
+    // 初始化时检查配置文件是否存在
+    try {
+        hasDevtoolConfig.value = await checkDevtoolConfig();
+        console.log('[Operate] 配置文件检查结果:', hasDevtoolConfig.value);
+    } catch (error) {
+        console.error('[Operate] 检查配置文件失败:', error);
+        hasDevtoolConfig.value = false;
+    }
 })
 </script>
 
 <template>
     <a-config-provider :theme="themeConfig">
         <div class="menu-container">
-            <div v-if="false" class="target-box">
-                目标算子
-                <a-select :value="activeConfig" @change="(val) => activeConfig = val" size="small" style="width: 200px;"
-                    placeholder="--">
-                    <a-select-option v-for="item in configArray" :key="item.config_name" :value="item.config_name">{{
-                        item.config_name }}</a-select-option>
-                </a-select>
+            <!-- 如果配置文件不存在，显示提示信息 -->
+            <div v-if="!hasDevtoolConfig" class="empty-tip-container">
+                <div class="empty-tip">
+                    您需要新建算子工程或打开算子工程才可以使用操作面板
+                </div>
             </div>
 
-            <!-- 停止任务按钮 -->
-            <div v-if="isExecuting" class="stop-task-container">
-                <a-button danger size="small" @click="handleStopTask" class="stop-task-btn">
-                    停止任务
-                </a-button>
-            </div>
+            <!-- 如果配置文件存在，显示正常菜单 -->
+            <template v-else>
+                <div v-if="false" class="target-box">
+                    目标算子
+                    <a-select :value="activeConfig" @change="(val) => activeConfig = val" size="small" style="width: 200px;"
+                        placeholder="--">
+                        <a-select-option v-for="item in configArray" :key="item.config_name" :value="item.config_name">{{
+                            item.config_name }}</a-select-option>
+                    </a-select>
+                </div>
 
-            <a-menu mode="inline" :open-keys="openKeys" :selected-keys="selectedKeys" class="inline-menu"
-                @openChange="onOpenChange" @click="handleMenuClick">
+                <!-- 停止任务按钮 -->
+                <div v-if="isExecuting" class="stop-task-container">
+                    <a-button danger size="small" @click="handleStopTask" class="stop-task-btn">
+                        停止任务
+                    </a-button>
+                </div>
+
+                <a-menu mode="inline" :open-keys="openKeys" :selected-keys="selectedKeys" class="inline-menu"
+                    @openChange="onOpenChange" @click="handleMenuClick">
                 <template v-for="item in menuItems">
                     <!-- 有子菜单的情况 -->
                     <a-sub-menu v-if="item.children && item.children.length > 0" :key="`submenu-${item.key}`">
@@ -286,7 +314,8 @@ onMounted(() => {
                         <span v-else>{{ item.label }}</span>
                     </a-menu-item>
                 </template>
-            </a-menu>
+                </a-menu>
+            </template>
         </div>
     </a-config-provider>
 </template>
@@ -395,5 +424,20 @@ body {
 
 .menu-item-executing {
     pointer-events: none;
+}
+
+.empty-tip-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    padding: 20px;
+}
+
+.empty-tip {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.65);
+    text-align: center;
+    line-height: 1.6;
 }
 </style>

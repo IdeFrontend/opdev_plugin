@@ -153,6 +153,10 @@
         "title": "刷新异常检测列表数据"
       },
       {
+        "command": "huawei-op-devtools.flashPerformanceRunData",
+        "title": "刷新性能调优列表数据"
+      },
+      {
         "command": "huawei-op-devtools.createOperatorInWorkspace",
         "title": "在当前目录下新建算子"
       },
@@ -198,16 +202,16 @@
     ]
   },
   "scripts": {
-    "package": "npm run compile && vsce package --no-dependencies",
-    "compile": "npm run compile:web && npm run compile:plugin",
-    "compile:web": "cd web && npm run build",
+    "package": "pnpm run compile && vsce package --no-dependencies",
+    "compile": "pnpm run compile:web && pnpm run compile:plugin",
+    "compile:web": "cd web && pnpm run build",
     "compile:plugin": "tsc --noEmit && tsx scripts/build-extension",
-    "package:debug": "npm run compile:debug && vsce package --no-dependencies",
-    "compile:debug": "npm run compile:web:debug && npm run compile:plugin:debug",
-    "compile:web:debug": "cd web && npm run build:debug",
+    "package:debug": "pnpm run compile:debug && vsce package --no-dependencies",
+    "compile:debug": "pnpm run compile:web:debug && pnpm run compile:plugin:debug",
+    "compile:web:debug": "cd web && pnpm run build:debug",
     "compile:plugin:debug": "tsx scripts/build-extension --sourcemap",
     "lint": "eslint plugin/src",
-    "install:web": "cd web && npm install"
+    "install:web": "cd web && pnpm install"
   },
   "dependencies": {
     "adm-zip": "^0.5.12",

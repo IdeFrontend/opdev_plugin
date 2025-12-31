@@ -119,8 +119,7 @@ const deleteTableItem = e => {
             <a-switch v-model:checked="simulationData.user_options.enableDump" @change="saveConfig" />
           </a-form-item> -->
 
-          <div class="section-title" style="margin-top: 12px;">高级参数</div>
-          <EditTable :key="updateIndex" :dataSource="simulationData.user_options.advance_param"
+          <EditTable class="add-params" :key="updateIndex" :dataSource="simulationData.user_options.advance_param"
             @addTableItem="addTableItem" @deleteTableItem="deleteTableItem" @onChange="saveConfig" />
         </a-collapse-panel>
       </a-collapse>
@@ -137,6 +136,10 @@ const deleteTableItem = e => {
     .help-icon {
       margin-left: 4px;
     }
+  }
+
+  .add-params{
+    margin-top: 12px;
   }
 
   .nested-checkbox-group {

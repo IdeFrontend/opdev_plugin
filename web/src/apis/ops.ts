@@ -125,6 +125,11 @@ export function checkVscode() {
   return request.post<undefined, boolean>('ops/checkVscode');
 }
 
+/** 检查 devtool_config.json 配置文件是否存在 */
+export function checkDevtoolConfig() {
+  return request.post<undefined, boolean>('ops/checkDevtoolConfig');
+}
+
 /** 获取当前项目ID */
 export function getProjectId() {
   return request.post<undefined, string>('ops/getProjectId');
