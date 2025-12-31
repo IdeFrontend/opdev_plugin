@@ -378,8 +378,6 @@ function initViews(context: vscode.ExtensionContext, apiServer: ApiServer): View
   return viewServer;
 }
 
-
-
 export function deactivate() {
   if (extensionContext) {
     // 卸载/禁用扩展时清空欢迎页弹出计数
