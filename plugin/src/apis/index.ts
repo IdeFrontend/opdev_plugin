@@ -13,5 +13,5 @@ export const apis: ApiGroup = {
   ...viewApis,
   ...msSanitizerApis,
   ...opsApis,
-  ...webviewApis
+  ...webviewApis,
 };
