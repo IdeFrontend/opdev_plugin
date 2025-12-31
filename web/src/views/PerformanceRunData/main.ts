@@ -10,26 +10,21 @@ import antd from 'ant-design-vue';
 import App from './PerformanceRunData.vue';
 import 'ant-design-vue/dist/reset.css';
 
-import { message, messageItem } from '../../untils/Message';
-
-const item: messageItem = {
-  command: 'iframeSetSSHData',
-  callback: (message: any) => localStorage.setItem('sshData', JSON.stringify(message.data)),
-};
-
-const getDisposed: messageItem = {
-  command: 'iframeGetDisposed',
-  callback: (message: any) => {
+// 监听来自 iframe 的消息
+window.addEventListener('message', (event) => {
+  const message = event.data;
+  if (message.command === 'iframeSetSSHData') {
+    localStorage.setItem('sshData', JSON.stringify(message.data));
+  } else if (message.command === 'iframeGetDisposed') {
     localStorage.setItem('isRemote', JSON.stringify(message.data));
     init();
-  },
-};
+  }
+});
 
 let isInitRun = false;
 
-message.addMessageListener(item);
-message.addMessageListener(getDisposed);
-message.sendMessageToParent({ command: 'vscodeGetssh' });
+// 发送消息给父窗口请求 SSH 数据
+window.postMessage({ command: 'vscodeGetssh' }, '*');
 
 let vscode = null;
 //@ts-ignore

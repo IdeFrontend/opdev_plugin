@@ -72,7 +72,7 @@ import { ref, computed, reactive } from 'vue';
 import { message } from 'ant-design-vue';
 import { InboxOutlined, PrinterOutlined } from '@ant-design/icons-vue';
 
-import { message as utilMessage } from "../../untils/Message.ts";
+import { buildCreateOps, startLinkCreateOps } from '@/apis';
 
 const fileInput = ref(null);
 const fileInfo = ref(null);
@@ -193,28 +193,27 @@ const items_proto = [
   { id: 1, title: '使用原型定义文件模版', desc: '从标准模版开始编写算子原型，完成后可基于此生成工程。' },
   { id: 2, title: '上传原型定义文件（json）', desc: '若您已有现成的算子原型文件，可直上传并生成工程' },
 ];
-const connectSSH = () => {
+const connectSSH = async () => {
   //@ts-ignore
   console.log('点击确定',selectedId_type.value, selectedId_proto.value);
-  if (selectedId_type.value === 1) {
-    utilMessage.sendMessageToParent({
-      command: "vscodeBuildCreateOps",
-      data: 'cann'
-    });
-    return
-  }
-  if (selectedId_type.value === 2 && selectedId_proto.value === 1) {
-    utilMessage.sendMessageToParent({
-      command: "vscodeStartLinkCreateOps",
-    });
-    return
-  }
-  if (selectedId_type.value === 2 && selectedId_proto.value === 2) {
-    utilMessage.sendMessageToParent({
-      command: "vscodeStartLinkCreateOps",
-      data: {fileName: fileInfo.value.name, value: jsonContent.value}
-    });
-    return
+  try {
+    if (selectedId_type.value === 1) {
+      await buildCreateOps({ data: 'cann' });
+      return
+    }
+    if (selectedId_type.value === 2 && selectedId_proto.value === 1) {
+      await startLinkCreateOps({});
+      return
+    }
+    if (selectedId_type.value === 2 && selectedId_proto.value === 2) {
+      await startLinkCreateOps({
+        fileName: fileInfo.value.name,
+        value: jsonContent.value
+      });
+      return
+    }
+  } catch (error) {
+    console.error('创建算子失败:', error);
   }
 
 }

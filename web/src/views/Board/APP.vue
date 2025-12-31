@@ -2,7 +2,7 @@
 import { SettingOutlined, DownOutlined } from '@ant-design/icons-vue'
 import { theme } from 'ant-design-vue'
 import { ref, onMounted } from 'vue'
-import { message } from "../../untils/Message.ts";
+import { buildOpWebview, buildExampleWebview, runExampleWebview, setActiveConfig } from '@/apis';
 
 const themeConfig = {
     algorithm: theme.darkAlgorithm
@@ -10,30 +10,42 @@ const themeConfig = {
 const activeConfig = ref('')
 const configArray = ref([]);
 
-const buildOpFn = () => {
-    message.sendMessageToParent({ command: "vscodeBuildOp", data: '' });
+const buildOpFn = async () => {
+    try {
+        await buildOpWebview({});
+        window.postMessage({ command: 'iframeOperationComplete', data: '' }, '*');
+    } catch (error) {
+        console.error('构建算子失败:', error);
+    }
 }
 
-const buildExampleFn = () => {
-    message.sendMessageToParent({
-        command: "vscodeBuildExample",
-        data: '',
-    });
+const buildExampleFn = async () => {
+    try {
+        await buildExampleWebview({});
+        window.postMessage({ command: 'iframeOperationComplete', data: '' }, '*');
+    } catch (error) {
+        console.error('构建示例失败:', error);
+    }
 };
 
-const runExampleFn = () => {
-    message.sendMessageToParent({
-        command: "vscodeRunExample",
-        data: '',
-    });
+const runExampleFn = async () => {
+    try {
+        await runExampleWebview({});
+        window.postMessage({ command: 'iframeOperationComplete', data: '' }, '*');
+    } catch (error) {
+        console.error('运行示例失败:', error);
+    }
 };
 
-const clickSetting = (() => {
-    message.sendMessageToParent({
-        command: "vscodeOpenConfig",
-        data: activeConfig.value
-    });
-})
+const clickSetting = async () => {
+    try {
+        await setActiveConfig({ configId: activeConfig.value });
+        // 发送消息给父窗口，由插件端处理打开配置
+        window.postMessage({ command: 'vscodeOpenConfig', data: activeConfig.value }, '*');
+    } catch (error) {
+        console.error('打开配置失败:', error);
+    }
+}
 </script>
 
 <template>

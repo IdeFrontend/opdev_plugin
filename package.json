@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://gitcode.com/Ascend/mstt"
   },
-  "version": "1.1.60",
+  "version": "1.1.67",
   "engines": {
     "vscode": "^1.80.0"
   },

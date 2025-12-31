@@ -114,7 +114,7 @@ import { ref, computed, onBeforeUnmount, onMounted } from "vue";
 import { theme } from 'ant-design-vue'
 import { CloseCircleOutlined, WarningOutlined, InfoCircleOutlined, RightSquareOutlined, LeftSquareOutlined } from '@ant-design/icons-vue';
 import { questionMap, questionHandlerMap, type QuestionData, memorySet, memoryContentionSet, uninitializedSet, synchronizeSet } from './constant'
-import { message } from '../../untils/Message';
+import { jumpToFileWebview } from '@/apis';
 import { formatTimestamp } from "../PerformanceRunData/utils/timestamp";
 
 const themeConfig = {
@@ -213,8 +213,20 @@ const customRow = (record) => {
   };
 };
 
-const handleJumpToFile = (data: QuestionData) => {
-  message.sendMessageToParent({ command: 'vscodeJumpToFile', data: { ...data } });
+const handleJumpToFile = async (data: QuestionData) => {
+  if (!data.fileLink || data.row === undefined || data.col === undefined) {
+    console.warn('无法跳转：缺少必要的文件信息');
+    return;
+  }
+  try {
+    await jumpToFileWebview({
+      fileLink: data.fileLink,
+      row: data.row,
+      col: data.col,
+    });
+  } catch (error) {
+    console.error('跳转到文件失败:', error);
+  }
 }
 
 function onChange(pagination, filters) {
@@ -260,24 +272,26 @@ const filterTableData = async (type) => {
 }
 
 onMounted(() => {
-  // 接受渲染的数据
-  message.addMessageListener({
-    command: 'iframeRemoteMsSanitizerPanelViewSetRenderList',
-    callback: (res) => {
-      const { data, title, timestamp } = res.data;
+  // 监听来自 iframe 的消息
+  const messageHandler = (event: MessageEvent) => {
+    if (event.data.command === 'iframeRemoteMsSanitizerPanelViewSetRenderList') {
+      const { data, title, timestamp } = event.data.data;
       msScantinizerInfo.value = {
         title,
         timestamp
       }
       tableData.value = data || [];
-    },
+    }
+  };
+  window.addEventListener('message', messageHandler);
+  
+  // 发送消息给父窗口请求数据
+  window.postMessage({ command: 'vscodeGetMsSanitizerPanelViewData' }, '*');
+  
+  // 清理函数
+  onBeforeUnmount(() => {
+    window.removeEventListener('message', messageHandler);
   });
-
-  message.sendMessageToParent({ command:'vscodeGetMsSanitizerPanelViewData' })
-})
-
-onBeforeUnmount(() => {
-  message.deleteMessageListener('iframeRemoteMsSanitizerPanelViewSetRenderList');
 });
 </script>
 

@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { ref, reactive, onBeforeUnmount, onMounted } from 'vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
-import { message } from '../../../untils/Message';
 import type { FormInstance as AntdVForm } from 'ant-design-vue';
 import { message as antdMessage } from 'ant-design-vue';
-import { checkPathExists } from '@/apis';
+import { checkPathExists, remotePathSearch, createdProject, getHome, getLastProjectPath, getWorkspace } from '@/apis';
 
 const emit = defineEmits(['connected']);
 
@@ -15,8 +14,8 @@ const props = defineProps({
   },
 });
 
-const projectPathOptions = ref([]);
-const projectSHOptions = ref([]);
+const projectPathOptions = ref<Array<{ value: string }>>([]);
+const projectSHOptions = ref<Array<{ value: string }>>([]);
 const projectPathLoading = ref(false);
 const projectSHLoading = ref(false);
 const connectionFormRef = ref<AntdVForm | null>(null);
@@ -191,10 +190,10 @@ const connectionFormRules = {
 const rateNumber = ref(0);
 const maxRate = ref(10);
 
-message.addMessageListener({
-  command: 'iframeRemoteSearchResult',
-  callback: (resp) => {
-    const { type, list = [] } = resp.data || {};
+// 监听来自 iframe 的远程搜索结果
+window.addEventListener('message', (event) => {
+  if (event.data.command === 'iframeRemoteSearchResult') {
+    const { type, list = [] } = event.data.data || {};
     const mapped = list.map((item) => ({ value: item.path }));
     if (type === 'projectPath') {
       projectPathOptions.value = mapped;
@@ -203,7 +202,7 @@ message.addMessageListener({
       projectSHOptions.value = mapped;
       projectSHLoading.value = false;
     }
-  },
+  }
 });
 
 const addRateLoop = () => {
@@ -250,7 +249,7 @@ const validateProjectName = (projectName) => {
   return true;
 };
 
-const createdProject = async () => {
+const handleCreatedProject = async () => {
   // 先进行表单校验
   try {
     await connectionFormRef.value?.validate();
@@ -263,13 +262,15 @@ const createdProject = async () => {
     return;
   }
 
-  message.sendMessageToParent({
-    command: 'vscodeCreatedProject',
-    data: {
+  try {
+    await createdProject({
       ...projectFormData,
       createOperatorProjectDictoryFileType: selectedId_type.value,
-    },
-  });
+    });
+  } catch (error) {
+    console.error('创建项目失败:', error);
+    antdMessage.error('创建项目失败');
+  }
 };
 
 const buildDefaultSearchPath = (value = '') => {
@@ -277,26 +278,71 @@ const buildDefaultSearchPath = (value = '') => {
   return '/';
 };
 
-const remoteSearch = (type, keyword) => {
+const remoteSearch = async (type, keyword) => {
   const searchValue = keyword || '';
   if (type === 'projectPath') {
     projectPathLoading.value = true;
   } else {
     projectSHLoading.value = true;
   }
-  message.sendMessageToParent({
-    command: 'vscodeRemotePathSearch',
-    type,
-    keyword: buildDefaultSearchPath(searchValue.trim()),
-  });
+  try {
+    const result = await remotePathSearch({
+      type,
+      keyword: buildDefaultSearchPath(searchValue.trim()),
+    });
+    const { type: resultType, list = [] } = result;
+    const mapped = list.map((item) => ({ value: item.path }));
+    if (resultType === 'projectPath') {
+      projectPathOptions.value = mapped;
+      projectPathLoading.value = false;
+    } else if (resultType === 'projectSH') {
+      projectSHOptions.value = mapped;
+      projectSHLoading.value = false;
+    }
+  } catch (error) {
+    projectPathLoading.value = false;
+    projectSHLoading.value = false;
+    console.error('远程搜索失败:', error);
+  }
+};
+
+// 监听来自 iframe 的消息
+const messageHandler = (event: MessageEvent) => {
+  const message = event.data;
+  if (message.command === 'iframeSetHome') {
+    const obj = message.data || '/home/developer';
+    homePath.value = obj;
+    if (!isPathSetFromContextMenu.value && (!projectFormData.projectPath || projectFormData.projectPath === '/home/developer')) {
+      if (workspacePath.value) {
+        projectFormData.projectPath = workspacePath.value;
+      } else {
+        projectFormData.projectPath = obj;
+      }
+    }
+  } else if (message.command === 'iframeSetProjectPath') {
+    if (message.data) {
+      projectFormData.projectPath = message.data;
+      isPathSetFromContextMenu.value = true;
+    }
+  } else if (message.command === 'iframeSetLastProjectPath') {
+    if (!isPathSetFromContextMenu.value && message.data) {
+      projectFormData.projectPath = message.data;
+    }
+  } else if (message.command === 'iframeSetWorkspace') {
+    workspacePath.value = message.data || null;
+    if (workspacePath.value && !isPathSetFromContextMenu.value) {
+      const currentPath = projectFormData.projectPath;
+      const isDefaultPath = !currentPath || currentPath === '/home/developer';
+      const isHomePath = homePath.value && currentPath === homePath.value;
+      if (isDefaultPath || isHomePath) {
+        projectFormData.projectPath = workspacePath.value;
+      }
+    }
+  }
 };
 
 onBeforeUnmount(() => {
-  message.deleteMessageListener('iframeRemoteSearchResult');
-  message.deleteMessageListener('iframeSetHome');
-  message.deleteMessageListener('iframeSetProjectPath');
-  message.deleteMessageListener('iframeSetLastProjectPath');
-  message.deleteMessageListener('iframeSetWorkspace');
+  window.removeEventListener('message', messageHandler);
 });
 
 // 标记是否已从右键菜单设置过路径
@@ -306,76 +352,29 @@ const workspacePath = ref<string | null>(null);
 // HOME 路径
 const homePath = ref<string | null>(null);
 
-const getBuildConfigItem = {
-  command: 'iframeSetHome',
-  callback: (message) => {
-    console.log(message.data);
-    const obj = message.data || '/home/developer';
-    homePath.value = obj;
-    // 只有在没有从右键菜单设置过路径，且当前是默认值时才使用
-    if (!isPathSetFromContextMenu.value && (!projectFormData.projectPath || projectFormData.projectPath === '/home/developer')) {
-      // 优先级第三：如果已打开工作区，使用工作区根目录；否则使用 HOME
-      if (workspacePath.value) {
-        projectFormData.projectPath = workspacePath.value;
-      } else {
-        projectFormData.projectPath = obj;
-      }
-    }
-  },
-};
-
-// 监听来自右键菜单的路径设置（优先级最高）
-const setProjectPathItem = {
-  command: 'iframeSetProjectPath',
-  callback: (message) => {
-    if (message.data) {
-      projectFormData.projectPath = message.data;
-      isPathSetFromContextMenu.value = true;
-    }
-  },
-};
-
-// 获取缓存的 projectPath（优先级第二）
-const getLastProjectPathItem = {
-  command: 'iframeSetLastProjectPath',
-  callback: (message) => {
-    // 只有在没有从右键菜单设置过路径时才使用缓存
-    // 缓存路径优先级高于工作区路径和 HOME，所以直接设置
-    if (!isPathSetFromContextMenu.value && message.data) {
-      projectFormData.projectPath = message.data;
-    }
-  },
-};
-
-// 获取工作区路径（优先级第三）
-const getWorkspacePathItem = {
-  command: 'iframeSetWorkspace',
-  callback: (message) => {
-    workspacePath.value = message.data || null;
-    // 如果已打开工作区，且没有从右键菜单设置过，则使用工作区路径
-    // 工作区路径优先级高于 HOME，但低于缓存路径
-    if (workspacePath.value && !isPathSetFromContextMenu.value) {
-      const currentPath = projectFormData.projectPath;
-      const isDefaultPath = !currentPath || currentPath === '/home/developer';
-      const isHomePath = homePath.value && currentPath === homePath.value;
-      // 如果当前是默认路径或者是 HOME 路径，则使用工作区路径覆盖
-      // 注意：如果当前已经有缓存路径，缓存路径优先级更高，不应该被工作区路径覆盖
-      if (isDefaultPath || isHomePath) {
-        projectFormData.projectPath = workspacePath.value;
-      }
-    }
-  },
-};
-
-onMounted(() => {
-  message.addMessageListener(getBuildConfigItem);
-  message.addMessageListener(setProjectPathItem);
-  message.addMessageListener(getLastProjectPathItem);
-  message.addMessageListener(getWorkspacePathItem);
+onMounted(async () => {
+  window.addEventListener('message', messageHandler);
+  
   // 先获取工作区路径，再获取缓存的路径，最后获取 HOME（优先级从高到低）
-  message.sendMessageToParent({ command: 'vscodeGetWorkspace' });
-  message.sendMessageToParent({ command: 'vscodeGetLastProjectPath' });
-  message.sendMessageToParent({ command: 'vscodeGetHome' });
+  try {
+    const workspace = await getWorkspace();
+    if (workspace) {
+      workspacePath.value = workspace;
+      window.postMessage({ command: 'iframeSetWorkspace', data: workspace }, '*');
+    }
+    
+    const lastProjectPath = await getLastProjectPath();
+    if (lastProjectPath) {
+      window.postMessage({ command: 'iframeSetLastProjectPath', data: lastProjectPath }, '*');
+    }
+    
+    const home = await getHome();
+    if (home) {
+      window.postMessage({ command: 'iframeSetHome', data: home }, '*');
+    }
+  } catch (error) {
+    console.error('获取路径信息失败:', error);
+  }
 });
 </script>
 <template>
@@ -465,7 +464,7 @@ onMounted(() => {
             />
           </a-form-item>
         </a-form>
-        <a-button @click="createdProject" type="primary">立即创建</a-button>
+        <a-button @click="handleCreatedProject" type="primary">立即创建</a-button>
       </div>
     </div>
   </div>
