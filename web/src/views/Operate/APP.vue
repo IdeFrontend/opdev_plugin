@@ -16,7 +16,6 @@ import {
   startSimulate,
   stopTask,
   openConfig,
-  getBuildConfigs,
   checkDevtoolConfig
 } from '@/apis';
 
