@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 
 import { ApiGroup } from 'plugin:/core/ApiServer';
 import { OpsAPI } from '../helpers/OpsAPI';
+import { RemoteConfig } from '../helpers/RemoteConfig';
 import { Project } from '../services/project/Project';
 import {
   GetProjectIdResult,
@@ -10,11 +11,6 @@ import {
   GetWorkspaceResult,
   GetLastProjectPathResult,
 } from 'shared:/api-types';
-
-// 辅助函数：获取 extension context
-function getExtensionContext(): vscode.ExtensionContext {
-  return (globalThis as any).extensionContext;
-}
 
 export const homeApis: ApiGroup = {
   webview: {
@@ -47,10 +43,9 @@ export const homeApis: ApiGroup = {
       return workspaceFolders && workspaceFolders.length > 0 ? workspaceFolders[0].uri.fsPath : null;
     },
 
-    // 获取最后项目路径
+    // 获取最后项目路径 - 从远程服务器读取
     async getLastProjectPath(): Promise<GetLastProjectPathResult> {
-      const context = getExtensionContext();
-      return context.globalState.get<string>('lastProjectPath') || null;
+      return RemoteConfig.getLastProjectPath();
     },
   },
 };
