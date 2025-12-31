@@ -5,6 +5,7 @@ import { ExceptionParser } from "./ExceptionParser";
 
 import { HtmlTransformer } from './HtmlTransformer'
 import webviewMessageList from './WebviewMessageList'
+import { ApiServer } from 'plugin:/core/ApiServer';
 
 export class MsSanitizerPanelViewProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'msSanitizerPanelView';
@@ -14,10 +15,12 @@ export class MsSanitizerPanelViewProvider implements vscode.WebviewViewProvider 
     _view?: vscode.WebviewView
     private _extensionUri: vscode.Uri
     private _context: vscode.ExtensionContext
+    private _apiServer: ApiServer
 
-    constructor(context: vscode.ExtensionContext) {
+    constructor(context: vscode.ExtensionContext, apiServer: ApiServer) {
         this._extensionUri = context.extensionUri
         this._context = context
+        this._apiServer = apiServer
     }
 
     async resolveWebviewView(
@@ -34,6 +37,9 @@ export class MsSanitizerPanelViewProvider implements vscode.WebviewViewProvider 
                 this._extensionUri
             ]
         };
+
+        // 注册 webview 到 ApiServer
+        this._apiServer.addWebview('MsSanitizerPanelView', webviewView.webview);
 
         // 消息处理
         webviewView.webview.onDidReceiveMessage(
@@ -100,8 +106,8 @@ const getPanelData = (params: Record<string, any>) => {
 }
 
 
-export const getMsSanitizerPanelViewProvider = (context: vscode.ExtensionContext) => {
-    const msSanitizerPanelViewProvider = new MsSanitizerPanelViewProvider(context);
+export const getMsSanitizerPanelViewProvider = (context: vscode.ExtensionContext, apiServer: ApiServer) => {
+    const msSanitizerPanelViewProvider = new MsSanitizerPanelViewProvider(context, apiServer);
     const msSanitizerPanelView = vscode.window.registerWebviewViewProvider(MsSanitizerPanelViewProvider.viewType, msSanitizerPanelViewProvider, {
         webviewOptions: {
             retainContextWhenHidden: false,

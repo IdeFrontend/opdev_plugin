@@ -147,17 +147,6 @@ const isMenuItemDisabled = (itemKey) => {
     return isExecuting.value && mutuallyExclusiveKeys.includes(itemKey);
 };
 
-// 动态计算顶级子菜单的 key（带前缀）
-const rootSubmenuKeys = computed(() => {
-    const keys = [];
-    menuItems.value.forEach(item => {
-        if (item.children && item.children.length > 0) {
-            keys.push(`submenu-${item.key}`);
-        }
-    });
-    return keys;
-});
-
 // 查找菜单项的处理函数
 const findMenuItemHandler = (items, key) => {
     for (const item of items) {
@@ -209,15 +198,6 @@ const handleMenuClick = async ({ key }) => {
 const onOpenChange = (keys) => {
     // 直接使用传入的 keys，允许嵌套子菜单正常展开
     openKeys.value = keys;
-}
-
-// 监听执行完成的消息
-const operationComplete = {
-    command: 'iframeOperationComplete',
-    callback: (message) => {
-        console.log('[Operate] 收到操作完成通知，恢复按钮状态');
-        isExecuting.value = false;
-    }
 }
 
 // 停止任务

@@ -6,7 +6,6 @@
 
 <script setup>
 import { useOpprofConfig } from "../composables/useOpprofConfig.ts";
-import { useRemoteSearch } from "../composables/useRemoteSearch.ts";
 import SimulationTab from "./SimulationTab.vue";
 import OnboardTab from "./OnboardTab.vue";
 
@@ -33,9 +32,6 @@ const {
   initSimulate,
   initOnBoard
 } = useOpprofConfig();
-
-// 使用 composable 管理远程搜索
-const { dataStorageOptions, dataStorageLoading, remoteSearch } = useRemoteSearch();
 
 const init = (simulateConfigData, onBoardConfigData) => {
   initSimulate(simulateConfigData)
