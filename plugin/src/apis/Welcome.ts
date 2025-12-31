@@ -4,6 +4,7 @@ import * as path from 'path';
 import { ApiGroup } from 'plugin:/core/ApiServer';
 import { CommandExecutor } from 'plugin:/class/CommandOptions';
 import { OpsAPI } from '../helpers/OpsAPI';
+import { RemoteConfig } from '../helpers/RemoteConfig';
 import { CreatedProjectParams } from 'shared:/api-types';
 
 // 辅助函数：获取 extension context
@@ -16,9 +17,9 @@ export const welcomeApis: ApiGroup = {
     // 创建项目
     async createdProject(params: CreatedProjectParams): Promise<void> {
       const context = getExtensionContext();
-      // 缓存 projectPath 到 globalState
+      // 缓存 projectPath 到远程服务器
       const originalProjectPath = params.projectPath;
-      context.globalState.update('lastProjectPath', originalProjectPath);
+      RemoteConfig.setLastProjectPath(originalProjectPath);
 
       // 标准算子projectPath需增加 /ops-math/math路径
       let originPath;

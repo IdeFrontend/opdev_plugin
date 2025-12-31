@@ -1,7 +1,7 @@
 {
   "name": "huawei-op-devtools-vscode-plugin",
   "displayName": "Huawei OP DevTools",
-  "description": "Operator development, debugging, and performance analysis all-in-one platform for Ascend C and Trito language, etc.",
+  "description": "Operator development, debugging, and performance analysis all-in-one platform for Ascend C language.",
   "publisher": "huawei",
   "repository": {
     "type": "git",
