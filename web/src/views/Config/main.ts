@@ -8,30 +8,15 @@
 import { createApp } from 'vue'
 import antd from 'ant-design-vue';
 import App from './APP.vue'
-
-import { message, messageItem } from '../../untils/Message';
-const getProjectIdItem: messageItem = {
-    command: 'iframeSetProjectId',
-    callback: (message: any) => { localStorage.setItem('projectId', message.data); }
-}
+import { vscode } from '@/utils/vscode';
 
 let isInitRun = false
-
-message.addMessageListener(getProjectIdItem)
-message.sendMessageToParent({ command: 'vscodeGetProjectId' });
-
-let vscode = null;
-//@ts-ignore
-if (typeof acquireVsCodeApi !== 'undefined') {
-    //@ts-ignore
-    vscode = acquireVsCodeApi();
-}
 
 // 监听来自VSCode扩展和iframe的消息
 window.addEventListener('message', event => {
     const message = event.data;
     console.log('外层页面接收到的message:', message)
-    if (message.command.indexOf('vscode') === 0) {
+    if (message.command?.indexOf('vscode') === 0) {
         if (vscode) {
             //@ts-ignore
             vscode.postMessage({

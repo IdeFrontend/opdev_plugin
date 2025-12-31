@@ -11,7 +11,7 @@ import * as fs from 'fs';
 import { Project } from '../services/project/Project';
 
 import { CommandExecutor } from './CommandOptions';
-import OpsOption from './OpsOption';
+import { OpsAPI } from '../helpers/OpsAPI';
 import { getFiles } from '../../autogen-server';
 import { InsightDataViewerPanel } from './InsightDataViewerPanel';
 
@@ -90,11 +90,10 @@ const webviewMessageList: messageItem[] = [
   {
     command: 'vscodeGetProjectId',
     callback: async (message: any, that: any) => {
-      const opsOption = new OpsOption(that.context);
-      await opsOption.init();
+      await OpsAPI.init();
       that.panel.webview.postMessage({
         command: 'iframeSetProjectId',
-        data: opsOption.projectId,
+        data: OpsAPI.getProjectId(),
       });
     },
   },
@@ -133,9 +132,8 @@ const webviewMessageList: messageItem[] = [
   {
     command: 'vscodeGetBuildConfig',
     callback: async (message: any, that: any) => {
-      const opsOption = new OpsOption(that.context);
-      await opsOption.init();
-      const configData = await opsOption.getConfigData();
+      await OpsAPI.init();
+      const configData = await OpsAPI.getConfigData();
       that.panel.webview.postMessage({
         command: 'iframeSetBuildConfigItem',
         data: JSON.stringify(configData),
@@ -146,10 +144,9 @@ const webviewMessageList: messageItem[] = [
     command: 'vscodeSaveBuildConfig',
     callback: async (msg: any, that: any) => {
       const data = msg.message.data;
-      const opsOption = new OpsOption(that.context);
-      await opsOption.init();
-      await opsOption.saveBuildConfig(data);
-      const configData = await opsOption.getConfigData();
+      await OpsAPI.init();
+      await OpsAPI.saveBuildConfig(data);
+      const configData = await OpsAPI.getConfigData();
       that.panel.webview.postMessage({
         command: 'iframeSetBuildConfigItem',
         data: JSON.stringify(configData),
@@ -160,46 +157,42 @@ const webviewMessageList: messageItem[] = [
     command: 'vscodeSaveAndStartBuild',
     callback: async (msg: any, that: any) => {
       const data = msg.message.data;
-      const opsOption = new OpsOption(that.context);
-      await opsOption.init();
-      await opsOption.saveBuildConfig(data, false);
-      const configData = await opsOption.getConfigData();
+      await OpsAPI.init();
+      await OpsAPI.saveBuildConfig(data, false);
+      const configData = await OpsAPI.getConfigData();
       that.panel.webview.postMessage({
         command: 'iframeSetBuildConfigItem',
         data: JSON.stringify(configData),
       });
       const config_id = data.find((v: any) => v.config_type === 'build_op').config_id;
-      await opsOption.startBuild(config_id);
+      await OpsAPI.startBuild(config_id);
     },
   },
   {
     command: 'vscodeSaveAndStartBuildExample',
     callback: async (msg: any, that: any) => {
       const data = msg.message.data;
-      const opsOption = new OpsOption(that.context);
-      await opsOption.init();
-      await opsOption.saveBuildConfig(data, false);
+      await OpsAPI.init();
+      await OpsAPI.saveBuildConfig(data, false);
       const config_id = data.find((v: any) => v.config_type === 'build_example').config_id;
-      await opsOption.startBuildExample(config_id);
+      await OpsAPI.startBuildExample(config_id);
     },
   },
   {
     command: 'vscodeGetProjectIdBoard',
     callback: async (message: any, that: any) => {
-      const opsOption = new OpsOption(that.context);
-      await opsOption.init();
+      await OpsAPI.init();
       that._view.webview.postMessage({
         command: 'iframeSetProjectId',
-        data: opsOption.projectId,
+        data: OpsAPI.getProjectId(),
       });
     },
   },
   {
     command: 'vscodeGetBuildConfigBoard',
     callback: async (message: any, that: any) => {
-      const opsOption = new OpsOption(that.context);
-      await opsOption.init();
-      const configData = await opsOption.getConfigData();
+      await OpsAPI.init();
+      const configData = await OpsAPI.getConfigData();
       that._view.webview.postMessage({
         command: 'iframeSetBuildConfigItem',
         data: JSON.stringify(configData),
@@ -210,9 +203,8 @@ const webviewMessageList: messageItem[] = [
   {
     command: 'vscodeGetSanitizerForm',
     callback: async (message: any, that: any) => {
-      const opsOption = new OpsOption(that.context);
-      await opsOption.init();
-      const configData = await opsOption.getSanitizerConfigs();
+      await OpsAPI.init();
+      const configData = await OpsAPI.getSanitizerConfigs();
       console.log('SetSanitizerForm', configData);
 
       that.panel.webview.postMessage({
@@ -226,10 +218,9 @@ const webviewMessageList: messageItem[] = [
     command: 'vscodeSaveSanitizerForm',
     callback: async (msg: any, that: any) => {
       const data = msg.message.data;
-      const opsOption = new OpsOption(that.context);
-      await opsOption.init();
-      await opsOption.saveSanitizerForm(data);
-      const configData = await opsOption.getSanitizerConfigs();
+      await OpsAPI.init();
+      await OpsAPI.saveSanitizerForm(data);
+      const configData = await OpsAPI.getSanitizerConfigs();
       that.panel.webview.postMessage({
         command: 'iframeSetBuildConfigItem',
         data: JSON.stringify((configData || [])[0]),
@@ -255,8 +246,7 @@ const webviewMessageList: messageItem[] = [
     callback: async (msg: any, that: any) => {
       const message = msg.message.data;
       try {
-        const opsOption = new OpsOption(that.context);
-        await opsOption.updataShScript(message);
+        await OpsAPI.updateShScript(message);
         vscode.window.showInformationMessage('环境变量设置成功', message);
         const project = Project.getInstance();
         console.log('执行更新project逻辑');
@@ -295,8 +285,11 @@ const webviewMessageList: messageItem[] = [
         await executor.execute(`chmod +x ${message.projectSH}`);
         await executor.execute(`${message.projectSH}`);
       }
-      const opsOption = new OpsOption(that.context);
-      await opsOption.init(message.projectSH, message.projectPath, message.projectName);
+      await OpsAPI.init({
+        accendEnvScript: message.projectSH,
+        projectPath: message.projectPath,
+        projectName: message.projectName
+      });
       await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(`${message.projectPath}/${message.projectName}`));
       // 规范化路径
       const normalizedProjectPath = path.normalize(message.projectPath);
@@ -384,12 +377,11 @@ const webviewMessageList: messageItem[] = [
     command: 'vscodeBuildOp',
     callback: async (msg: any, that: any) => {
       const data = msg.message.data;
-      const opsOption = new OpsOption(that.context);
       try {
-        await opsOption.init();
+        await OpsAPI.init();
         // 保存当前 executor 引用，用于可能的终止操作
-        currentExecutor = opsOption.executor;
-        await opsOption.startBuild();
+        currentExecutor = OpsAPI.getExecutor();
+        await OpsAPI.startBuild();
       } finally {
         // 清除 executor 引用
         currentExecutor = null;
@@ -407,9 +399,8 @@ const webviewMessageList: messageItem[] = [
     command: 'vscodeBuildExample',
     callback: async (msg: any, that: any) => {
       const data = msg.message.data;
-      const opsOption = new OpsOption(that.context);
-      await opsOption.init();
-      await opsOption.startBuildExample();
+      await OpsAPI.init();
+      await OpsAPI.startBuildExample();
     },
   },
   // sanitizer检测
@@ -417,13 +408,12 @@ const webviewMessageList: messageItem[] = [
     command: 'vscodeRunSanitizer',
     callback: async (msg: any, that: any) => {
       const data = msg.message.data;
-      const opsOption = new OpsOption(that.context);
       try {
-        await opsOption.init();
+        await OpsAPI.init();
         // 保存当前 executor 引用
-        currentExecutor = opsOption.executor;
+        currentExecutor = OpsAPI.getExecutor();
         // 异常检测前编译
-        await opsOption.startBuild(undefined, '--mssanitizer');
+        await OpsAPI.startBuild(undefined, '--mssanitizer');
         // 创建文件夹
         const workspaceFolders = vscode.workspace.workspaceFolders;
         const workspacePath = workspaceFolders![0].uri.fsPath;
@@ -432,7 +422,7 @@ const webviewMessageList: messageItem[] = [
           fs.mkdirSync(logPath, {mode: 0o750});
         }
         // 开启异常检测
-        await opsOption.runSanitizer();
+        await OpsAPI.runSanitizer();
         // 执行完检测后，获取最新的列表数据
         vscode.commands.executeCommand('huawei-op-devtools.flashMsSanitizerRunData');
       } finally {
@@ -451,12 +441,11 @@ const webviewMessageList: messageItem[] = [
     command: 'vscodeRunExample',
     callback: async (msg: any, that: any) => {
       const data = msg.message.data;
-      const opsOption = new OpsOption(that.context);
       try {
-        await opsOption.init();
+        await OpsAPI.init();
         // 保存当前 executor 引用
-        currentExecutor = opsOption.executor;
-        await opsOption.startRun();
+        currentExecutor = OpsAPI.getExecutor();
+        await OpsAPI.startRun();
       } finally {
         // 清除 executor 引用
         currentExecutor = null;
@@ -473,16 +462,15 @@ const webviewMessageList: messageItem[] = [
     command: 'vscodeSimulate',
     callback: async (msg: any, that: any) => {
       const data = msg.message.data;
-      const opsOption = new OpsOption(that.context);
       try {
-        await opsOption.init();
+        await OpsAPI.init();
         // 保存当前 executor 引用
-        currentExecutor = opsOption.executor;
-        const configData = await opsOption.getBuildConfigs();
+        currentExecutor = OpsAPI.getExecutor();
+        const configData = await OpsAPI.getBuildConfigs();
         const simulatorItem = configData.find((v: any) => v.config_type === 'simulate')
         const simulatorType = simulatorItem?.user_options?.simulatorType ?? ''
-        await opsOption.startBuild(undefined, `--simulator ${simulatorType}`);
-        await opsOption.startSimulate();
+        await OpsAPI.startBuild(undefined, `--simulator ${simulatorType}`);
+        await OpsAPI.startSimulate();
       } finally {
         // 清除 executor 引用
         currentExecutor = null;
@@ -499,13 +487,12 @@ const webviewMessageList: messageItem[] = [
     command: 'vscodeOnBoard',
     callback: async (msg: any, that: any) => {
       const data = msg.message.data;
-      const opsOption = new OpsOption(that.context);
       try {
-        await opsOption.init();
+        await OpsAPI.init();
         // 保存当前 executor 引用
-        currentExecutor = opsOption.executor;
-        await opsOption.startBuild(undefined, '--onboard');
-        await opsOption.startOnBoard();
+        currentExecutor = OpsAPI.getExecutor();
+        await OpsAPI.startBuild(undefined, '--onboard');
+        await OpsAPI.startOnBoard();
       } finally {
         // 清除 executor 引用
         currentExecutor = null;
@@ -544,10 +531,9 @@ const webviewMessageList: messageItem[] = [
     command: 'vscodeRunDebug',
     callback: async (msg: any, that: any) => {
       try {
-        const opsOption = new OpsOption(that.context);
-        await opsOption.init();
+        await OpsAPI.init();
         // debug前编译
-        await opsOption.startBuild(undefined, '--debug');
+        await OpsAPI.startBuild(undefined, '--debug');
         await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
         await vscode.commands.executeCommand('workbench.action.debug.start');
       } catch (error) {
@@ -572,9 +558,8 @@ const webviewMessageList: messageItem[] = [
     callback: async (msg: any, that: any) => {
       console.log('saveconfig', msg)
       const data = msg.message.data;
-      const opsOption = new OpsOption(that.context);
-      await opsOption.init();
-      await opsOption.saveConfig(data.type, data.data);
+      await OpsAPI.init();
+      await OpsAPI.saveConfig(data.type, data.data);
     },
   },
   {
@@ -806,20 +791,18 @@ export async function handleOperatorProjectDictoryFile(message: any | undefined,
 }
 
 async function vscodeBuildCreateOps(data: any, that: any, progress?: any) {
-  const opsOption = new OpsOption(that.context);
-  await opsOption.init();
-  await opsOption.createOpsByPrototype('', data, progress);
+  await OpsAPI.init();
+  await OpsAPI.createOpsByPrototype('', data);
   await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
 }
 
 async function vscodeStartLinkCreateOps(data: any, that: any, progress?: any) {
   if (!data) {
-    const opsOption = new OpsOption(that.context);
-    await opsOption.init();
-    const opsPrototypeFilePath = await opsOption.createOps();
+    await OpsAPI.init();
+    const opsPrototypeFilePath = await OpsAPI.createOps();
     console.log('res', opsPrototypeFilePath);
     if (opsPrototypeFilePath) {
-      await opsOption.createOpsByPrototype(opsPrototypeFilePath, undefined, progress);
+      await OpsAPI.createOpsByPrototype(opsPrototypeFilePath);
     }
     await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
     return;

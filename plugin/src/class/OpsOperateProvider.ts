@@ -3,6 +3,7 @@ import * as path from 'path';
 
 import { HtmlTransformer } from './HtmlTransformer'
 import webviewMessageList from './WebviewMessageList'
+import { ApiServer } from 'plugin:/core/ApiServer';
 
 export class OpsOperateProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'OpsOperateProvider'
@@ -10,10 +11,12 @@ export class OpsOperateProvider implements vscode.WebviewViewProvider {
     private _view?: vscode.WebviewView
     private _extensionUri: vscode.Uri
     private _context: vscode.ExtensionContext
+    private _apiServer: ApiServer
 
-    constructor(context: vscode.ExtensionContext) {
+    constructor(context: vscode.ExtensionContext, apiServer: ApiServer) {
         this._extensionUri = context.extensionUri
         this._context = context
+        this._apiServer = apiServer
     }
 
     async resolveWebviewView(
@@ -30,6 +33,9 @@ export class OpsOperateProvider implements vscode.WebviewViewProvider {
                 this._extensionUri
             ]
         };
+
+        // 注册 webview 到 ApiServer
+        this._apiServer.addWebview('Operate', webviewView.webview);
 
         // 消息处理
         webviewView.webview.onDidReceiveMessage(

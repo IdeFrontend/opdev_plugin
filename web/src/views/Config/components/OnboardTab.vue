@@ -8,7 +8,7 @@
 import { ref, computed, watch, nextTick } from "vue";
 import { QuestionCircleOutlined } from "@ant-design/icons-vue";
 import editTable from "./editTable.vue";
-import { message } from "../../../untils/Message.ts";
+import { saveConfig as saveConfigAPI } from "@/apis";
 import SelectFolder from "./SelectFolder.vue";
 
 const props = defineProps({
@@ -111,9 +111,9 @@ const totalSelectedHalf = computed(() => {
   return count < totalKeys.length
 })
 
-const saveConfig = () => {
+const saveConfig = async () => {
   const obj = { config_id: props.onboardData.config_id, user_options: { ...props.onboardData.user_options } }
-  message.sendMessageToParent({ command: "vscodeSaveConfig", data: { type: 'on_board', data: [JSON.parse(JSON.stringify(obj))] } });
+  await saveConfigAPI({ type: 'on_board', data: [JSON.parse(JSON.stringify(obj))] });
 };
 
 

@@ -8,7 +8,7 @@
 import { ref, onBeforeMount } from 'vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 
-import { message } from "../../../untils/Message.ts";
+import { getSanitizerConfigs, saveSanitizerForm as saveSanitizerFormAPI } from '@/apis';
 
 const props = defineProps({
   activeConfig: {
@@ -45,29 +45,24 @@ function handleCannHeapChange(checked) {
 
 const activeKey = ref(['config']);
 
-const getSanitizerForm = {
-  command: 'iframeSetSanitizerForm',
-  callback: (message) => {
-    console.log('message.data config', message.data)
-    const obj = JSON.parse(message.data || '{}')?.user_options || {}
-    Object.keys(form.value).forEach(key => {
-      if (obj[key] !== undefined) {
-        form.value[key] = obj[key]
-      }
-    })
-  }
-}
-
-
-function saveSanitizerForm() {
-  message.sendMessageToParent({
-    command: "vscodeSaveSanitizerForm", data: JSON.parse(JSON.stringify(form.value))
+async function loadSanitizerForm() {
+  const configs = await getSanitizerConfigs();
+  const obj = (configs[0] || {})?.user_options || {};
+  Object.keys(form.value).forEach(key => {
+    if (obj[key] !== undefined) {
+      form.value[key] = obj[key];
+    }
   });
 }
 
-onBeforeMount(() => {
-  message.addMessageListener(getSanitizerForm)
-  message.sendMessageToParent({ command: 'vscodeGetSanitizerForm' });
+async function saveSanitizerForm() {
+  await saveSanitizerFormAPI({
+    data: JSON.parse(JSON.stringify(form.value))
+  });
+}
+
+onBeforeMount(async () => {
+  await loadSanitizerForm();
 })
 </script>
 

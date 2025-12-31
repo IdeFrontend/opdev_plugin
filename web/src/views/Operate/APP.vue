@@ -1,7 +1,6 @@
 <script setup>
 import { theme } from 'ant-design-vue'
 import { ref, computed, onMounted } from 'vue'
-import { message } from "../../untils/Message.ts";
 import settingIcon from '../../assets/svg/setting.svg'
 import buildIcon from '../../assets/svg/build.svg'
 import runIcon from '../../assets/svg/run.svg'
@@ -9,6 +8,17 @@ import shIcon from '../../assets/svg/sh.svg'
 import powerIcon from '../../assets/svg/power.svg'
 import debugIcon from '../../assets/svg/debug.svg'
 import checkIcon from '../../assets/svg/check.svg'
+import {
+  startBuild,
+  startRun,
+  runSanitizer,
+  startOnBoard,
+  startSimulate,
+  stopTask,
+  openConfig,
+  getBuildConfigs,
+  checkDevtoolConfig
+} from '@/apis';
 
 const themeConfig = {
     algorithm: theme.darkAlgorithm
@@ -17,8 +27,6 @@ const activeConfig = ref('')
 const configArray = ref([]);
 const selectedKeys = ref([]);
 const openKeys = ref(['submenu-build']);
-
-const actionQueue = ref([]);
 
 // 全局执行状态管理
 const isExecuting = ref(false);
@@ -35,8 +43,8 @@ const menuItems = ref([
         key: 'projectConfig',
         label: '工程配置',
         icon: settingIcon,
-        handler: () => {
-            message.sendMessageToParent({ command: "vscodeOpenConfig", data: activeConfig.value });
+        handler: async () => {
+            await openConfig({ configName: 'huawei-op-devtools.config' });
         }
     },
     {
@@ -47,8 +55,8 @@ const menuItems = ref([
             {
                 key: 'buildOp',
                 label: '编译部署算子',
-                handler: () => {
-                    message.sendMessageToParent({ command: "vscodeBuildOp", data: '' });
+                handler: async () => {
+                    await startBuild();
                 }
             },
             // {
@@ -70,8 +78,8 @@ const menuItems = ref([
         key: 'runExample',
         label: '运行验证',
         icon: runIcon,
-        handler: () => {
-            message.sendMessageToParent({ command: "vscodeRunExample", data: '' });
+        handler: async () => {
+            await startRun();
         }
     },
     // {
@@ -99,8 +107,8 @@ const menuItems = ref([
         key: 'runCheck',
         label: '异常检测',
         icon: checkIcon,
-        handler: () => {
-            message.sendMessageToParent({ command: "vscodeRunSanitizer", data: '' });
+        handler: async () => {
+            await runSanitizer();
         }
     },
     {
@@ -111,15 +119,15 @@ const menuItems = ref([
             {
                 key: 'onBoard',
                 label: '上板分析',
-                handler: () => {
-                    message.sendMessageToParent({ command: "vscodeOnBoard", data: '' });
+                handler: async () => {
+                    await startOnBoard();
                 }
             },
             {
                 key: 'simulate',
                 label: '仿真分析',
-                handler: () => {
-                    message.sendMessageToParent({ command: "vscodeSimulate", data: '' });
+                handler: async () => {
+                    await startSimulate();
                 }
             },
         ]
@@ -128,8 +136,8 @@ const menuItems = ref([
         key: 'projectSH',
         label: '环境配置',
         icon: shIcon,
-        handler: () => {
-            message.sendMessageToParent({ command: "vscodeRunSetProjectSH", data: '' });
+        handler: async () => {
+            await openConfig({ configName: 'huawei-op-devtools.projectSH' });
         }
     },
 ]);
@@ -165,7 +173,7 @@ const findMenuItemHandler = (items, key) => {
     return null;
 }
 
-const handleMenuClick = ({ key }) => {
+const handleMenuClick = async ({ key }) => {
     const originalKey = key.replace(/^(submenu-|menuitem-)/, '');
 
     // 检查是否是互斥操作，且当前有操作正在执行
@@ -176,35 +184,32 @@ const handleMenuClick = ({ key }) => {
     }
 
     selectedKeys.value = [key]; // 使用带前缀的 key 以匹配模板
-    actionQueue.value.push(originalKey)
-    message.sendMessageToParent({ command: 'vscodeGetBuildConfigBoard' });
+
+    const handler = findMenuItemHandler(menuItems.value, originalKey);
+    if (handler) {
+        // 如果是互斥操作，设置执行状态
+        if (mutuallyExclusiveKeys.includes(originalKey)) {
+            console.log('[Operate] 开始执行操作:', originalKey, '，锁定按钮');
+            isExecuting.value = true;
+        }
+
+        try {
+            await handler();
+        } catch (error) {
+            console.error('[Operate] 执行操作失败:', error);
+        } finally {
+            // 操作完成后恢复按钮状态
+            if (mutuallyExclusiveKeys.includes(originalKey)) {
+                console.log('[Operate] 操作完成，恢复按钮状态');
+                isExecuting.value = false;
+            }
+        }
+    }
 }
 
 const onOpenChange = (keys) => {
     // 直接使用传入的 keys，允许嵌套子菜单正常展开
     openKeys.value = keys;
-}
-
-const getBuildConfigItem = {
-    command: 'iframeSetBuildConfigItem',
-    callback: (message) => {
-        const obj = JSON.parse(message.data || '{}')
-        // // 如果没有任何配置信息 则禁用menu菜单
-        if (Object.keys(obj).length === 0) {
-            handlerSendMessage();
-            return;
-        }
-        const originalKey = actionQueue.value.shift();
-        const handler = findMenuItemHandler(menuItems.value, originalKey);
-        if (handler) {
-            // 如果是互斥操作，设置执行状态
-            if (mutuallyExclusiveKeys.includes(originalKey)) {
-                console.log('[Operate] 开始执行操作:', originalKey, '，锁定按钮');
-                isExecuting.value = true;
-            }
-            handler();
-        }
-    }
 }
 
 // 监听执行完成的消息
@@ -216,31 +221,26 @@ const operationComplete = {
     }
 }
 
-// 监听配置文件检查结果
-const devtoolConfigCheck = {
-    command: 'iframeSetDevtoolConfigExists',
-    callback: (message) => {
-        hasDevtoolConfig.value = message.data || false;
-        console.log('[Operate] 配置文件检查结果:', hasDevtoolConfig.value);
+// 停止任务
+const handleStopTask = async () => {
+    console.log('[Operate] 用户点击停止任务');
+    try {
+        await stopTask();
+        isExecuting.value = false;
+    } catch (error) {
+        console.error('[Operate] 停止任务失败:', error);
     }
 }
 
-const handlerSendMessage = () => {
-    message.sendMessageToParent({ command: 'vscodeOperateErrorToast' });
-}
-
-// 停止任务
-const handleStopTask = () => {
-    console.log('[Operate] 用户点击停止任务');
-    message.sendMessageToParent({ command: 'vscodeStopTask', data: '' });
-}
-
-onMounted(() => {
-    message.addMessageListener(getBuildConfigItem);
-    message.addMessageListener(operationComplete);
-    message.addMessageListener(devtoolConfigCheck);
+onMounted(async () => {
     // 初始化时检查配置文件是否存在
-    message.sendMessageToParent({ command: 'vscodeCheckDevtoolConfig' });
+    try {
+        hasDevtoolConfig.value = await checkDevtoolConfig();
+        console.log('[Operate] 配置文件检查结果:', hasDevtoolConfig.value);
+    } catch (error) {
+        console.error('[Operate] 检查配置文件失败:', error);
+        hasDevtoolConfig.value = false;
+    }
 })
 </script>
 

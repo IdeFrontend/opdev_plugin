@@ -9,7 +9,7 @@ import { theme } from "ant-design-vue";
 import { ref, nextTick, onMounted } from "vue";
 import optionsList from "./components/optionsList.vue";
 import configDetail from "./components/configDetail.vue";
-import { message } from "../../untils/Message.ts";
+import { getConfigData } from "@/apis";
 
 const themeConfig = {
   algorithm: theme.darkAlgorithm, // 使用暗色算法[1](@ref)
@@ -22,22 +22,19 @@ const updateActiveOption = (option) => {
   activeOption.value = option;
 };
 
-const getBuildConfigItem = {
-  command: 'iframeSetBuildConfigItem',
-  callback: (message) => {
-    console.log('message.data config', message.data)
-    const obj = JSON.parse(message.data || '{}')
-    const keys = Object.keys(obj)
-    activeConfig.value = keys[0] || ''
-    if (activeConfig.value) {
-      nextTick(() => configDetailRef.value.init(obj));
-    }
+async function loadBuildConfig() {
+  const result = await getConfigData();
+  console.log('getConfigData result', result);
+  const obj = result || {};
+  const keys = Object.keys(obj);
+  activeConfig.value = keys[0] || '';
+  if (activeConfig.value) {
+    nextTick(() => configDetailRef.value.init(obj));
   }
 }
 
 onMounted(() => {
-  message.addMessageListener(getBuildConfigItem)
-  message.sendMessageToParent({ command: 'vscodeGetBuildConfig' });
+  loadBuildConfig();
 })
 </script>
 <template>
