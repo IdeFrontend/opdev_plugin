@@ -5,11 +5,13 @@ import { performanceApis } from './performance';
 import { msSanitizerApis } from './msSanitizer';
 import { viewApis } from './view';
 import { opsApis } from './ops';
+import { webviewApis } from './webview';
 
 export const apis: ApiGroup = {
   ...commonApis,
   ...performanceApis,
   ...viewApis,
   ...msSanitizerApis,
-  ...opsApis
+  ...opsApis,
+  ...webviewApis,
 };

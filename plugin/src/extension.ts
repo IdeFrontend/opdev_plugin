@@ -139,7 +139,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const configProvider = new WebviewProvider(context, apiServer);
 
   // 初始化配置页面的Webview
-  const configWelcomeProvider = new WebviewProvider(context);
+  const configWelcomeProvider = new WebviewProvider(context, apiServer);
 
   // 初始化配置页面的Webview
   const configNewPrototypeProvider = new WebviewProvider(context);

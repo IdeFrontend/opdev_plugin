@@ -6,7 +6,7 @@
  */
 
 import { reactive, ref } from "vue";
-import { message } from "../../../untils/Message";
+// Message.ts 已删除，不再需要导入
 
 // 仿真配置数据类型
 export interface SimulationConfig {
