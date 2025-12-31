@@ -4,7 +4,6 @@ import { ref, onMounted } from 'vue';
 
 import { getQuery } from '@/core/query';
 
-import OpsConfig from './views/OpsConfig/OpsConfig.vue';
 import PerformanceRunData from './views/PerformanceRunData/PerformanceRunData.vue';
 import MsSanitizerRunData from "./views/MsSanitizerRunData/APP.vue";
 
@@ -55,8 +54,7 @@ onMounted(async () => {
 
 <template>
   <a-config-provider :theme="themeConfig">
-    <OpsConfig v-if="routePath === 'ops-config'"></OpsConfig>
-    <PerformanceRunData v-else-if="routePath === 'performance-records'"></PerformanceRunData>
+    <PerformanceRunData v-if="routePath === 'performance-records'"></PerformanceRunData>
     <MsSanitizerRunData v-else-if="routePath === 'msSanitizer-data-list'"></MsSanitizerRunData>
     <div v-else-if="!routePath" style="padding: 20px; color: #999;">
       加载中...
