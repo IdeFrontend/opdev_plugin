@@ -15,23 +15,6 @@ import { OpsAPI } from '../helpers/OpsAPI';
 import { getFiles } from '../../autogen-server';
 import { InsightDataViewerPanel } from './InsightDataViewerPanel';
 
-// 跟踪已打开的CSV文件目录
-const openedCsvDirectories = new Map<string, vscode.Uri>();
-
-const tempObj = { currentActiveConfig: '' };
-
-// 全局任务管理器：用于追踪和终止正在执行的任务
-let currentExecutor: CommandExecutor | null = null;
-
-// 辅助函数：获取webview实例（兼容panel和_view两种情况）
-function getWebview(that: any): vscode.Webview | undefined {
-  const webview = that._view?.webview || that.panel?.webview;
-  if (!webview) {
-    console.warn('[WebviewMessageList] 无法获取webview实例，that._view 和 that.panel 都不存在');
-  }
-  return webview;
-}
-
 export interface messageItem {
   command: string;
   callback: Function;
@@ -82,7 +65,6 @@ const webviewMessageList: messageItem[] = [
   {
     command: 'vscodeOpenConfig',
     callback: async (msg: any, that: any) => {
-      tempObj.currentActiveConfig = msg.message.data;
       await vscode.commands.executeCommand('huawei-op-devtools.config');
     },
   },

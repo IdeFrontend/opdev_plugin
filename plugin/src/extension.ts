@@ -16,7 +16,6 @@ import i18nResource from 'shared:/i18n';
 import { ExplorerRootUtils } from './class/ExplorerRootUtils';
 import { WebviewProvider } from './class/webviewProvider';
 import { handleOperatorProjectDictoryFile } from './class/WebviewMessageList';
-import { CustomSidebarProvider } from './class/CustomSidebarProvider';
 import { CsvEditorProvider } from './class/CsvEditorProvider';
 import { ApiServer } from './core/ApiServer';
 import { ViewServer } from './core/view/ViewServer';
@@ -85,36 +84,6 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   };
 
-  // 监听工作区文件夹变化，重新检查配置文件
-  // const updateDevtoolConfigContext = async () => {
-  //   const exists = await checkDevtoolConfigExists();
-  //   await vscode.commands.executeCommand('setContext', 'hasDevtoolConfig', exists);
-  //   return exists;
-  // };
-
-  // // 监听工作区文件夹变化
-  // const workspaceWatcher = vscode.workspace.onDidChangeWorkspaceFolders(async () => {
-  //   const exists = await updateDevtoolConfigContext();
-  //   // 如果文件存在且侧边栏未展开，则展开它
-  //   if (exists) {
-  //     setTimeout(async () => {
-  //       try {
-  //          console.log('执行展开文件存在',exists);
-  //         await vscode.commands.executeCommand('OpsOperateProvider.focus');
-  //       } catch (error) {
-  //         console.error('聚焦 OpsOperateProvider 视图时出错:', error);
-  //       }
-  //     }, 1000);
-  //   } else {
-  //     // 如果文件不存在，关闭侧边栏
-  //     setTimeout(async () => {
-  //       await closeAuxiliaryBar();
-  //     }, 500);
-  //   }
-  // });
-
-  // context.subscriptions.push(workspaceWatcher);
-
   let progress: any;
   if (context.globalState.get<string>('runCommand') === 'huawei-op-devtools.createDictory') {
     await vscode.window.withProgress({
@@ -140,9 +109,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 初始化配置页面的Webview
   const configWelcomeProvider = new WebviewProvider(context, apiServer);
-
-  // 初始化配置页面的Webview
-  const configNewPrototypeProvider = new WebviewProvider(context);
 
   // 初始化配置页面的Webview
   const configProjectSHProvider = new WebviewProvider(context, apiServer);
@@ -225,11 +191,6 @@ export async function activate(context: vscode.ExtensionContext) {
     configWelcomeProvider.show('Welcome');
   });
 
-  // 注册打开欢迎页命令
-  const newPrototypeCommand = vscode.commands.registerCommand('huawei-op-devtools.newPrototype', async () => {
-    configNewPrototypeProvider.show('newPrototype');
-  });
-
   // 注册删除欢迎页计数命令（用于手动重置）
   const clearWelcomeCountCommand = vscode.commands.registerCommand('huawei-op-devtools.clearWelcomeCount', async () => {
     await context.globalState.update('welcomeShowCount', undefined);
@@ -279,24 +240,11 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(openProjectSH);
   context.subscriptions.push(ConfigCommand);
   context.subscriptions.push(welcomeCommand);
-  context.subscriptions.push(newPrototypeCommand);
   context.subscriptions.push(clearWelcomeCountCommand);
   context.subscriptions.push(clearLastProjectPathCommand);
   context.subscriptions.push(createOptionsCommand);
   context.subscriptions.push(getHome);
   context.subscriptions.push(createOperatorInWorkspaceCommand);
-
-  // 创建侧边栏提供者
-  const sidebarProvider = new CustomSidebarProvider(context);
-
-  // 注册WebView视图
-  const sidebarView = vscode.window.registerWebviewViewProvider(CustomSidebarProvider.viewType, sidebarProvider, {
-    webviewOptions: {
-      retainContextWhenHidden: true, // WebView隐藏时保持状态
-    },
-  });
-
-  context.subscriptions.push(sidebarView);
 
   // 注册 CSV 编辑器提供者
   const csvEditorProvider = new CsvEditorProvider();
@@ -335,6 +283,7 @@ export async function activate(context: vscode.ExtensionContext) {
     // 后续待优化点，目前通过非法操作方式拿到视图实例
     // 拿到MsSanitizerRunData的视图实例，主动下发刷新命令
     const msSanitizerRunData = ViewServer.getInstance().providerWebViewMap.msSanitizerSidebarView;
+    console.log('ViewServer.getInstance()', msSanitizerRunData)
     msSanitizerRunData.webview.postMessage({
       command: 'iframeFlashMsSanitizerRunData'
     });
@@ -345,6 +294,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const flashPerformanceRunData = vscode.commands.registerCommand('huawei-op-devtools.flashPerformanceRunData', async () => {
     // 拿到PerformanceRunData的视图实例，主动下发刷新命令
     const performanceRunData = ViewServer.getInstance().providerWebViewMap.performanceSidebarView;
+    console.log('ViewServer.getInstance()', performanceRunData)
     performanceRunData.webview.postMessage({
       command: 'iframeRefreshData'
     });
