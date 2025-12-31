@@ -23,6 +23,7 @@ import { routes } from './routes';
 import { apis } from './apis';
 import { PermanentStorage } from './class/PermanentStorage';
 import { ExtensionConfig } from './services/ExtensionConfig';
+import { RemoteConfig } from './helpers/RemoteConfig';
 
 import { OpsOperateProvider } from './class/OpsOperateProvider';
 import { getMsSanitizerPanelViewProvider } from './class/MsSanitizerPanelView';
@@ -199,7 +200,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 注册清除缓存的算子工程位置命令
   const clearLastProjectPathCommand = vscode.commands.registerCommand('huawei-op-devtools.clearLastProjectPath', async () => {
-    await context.globalState.update('lastProjectPath', undefined);
+    RemoteConfig.clearLastProjectPath();
     vscode.window.showInformationMessage('已清除缓存的算子工程位置');
   });
 
