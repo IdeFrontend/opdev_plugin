@@ -541,6 +541,27 @@ export const opsApis: ApiGroup = {
      */
     async runSanitizer(): Promise<void> {
       try {
+        // 异常检测前编译
+        const buildConfigId = await getBuildConfigId();
+        const buildCommand = await getBuildOpCommand(Number(buildConfigId), '--mssanitizer');
+        const buildExecutor = getExecutor();
+        const buildRes = await buildExecutor.execute(buildCommand, [], [], {}, true);
+        if (buildRes.code !== 0) {
+          vscode.window.showErrorMessage(`编译算子失败 ${buildRes.output}`);
+          return;
+        }
+
+        // 创建文件夹
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (workspaceFolders && workspaceFolders.length > 0) {
+          const workspacePath = workspaceFolders[0].uri.fsPath;
+          const logPath = path.join(workspacePath, '.vscode/mindstudio_sanitizer_log');
+          if (!fs.existsSync(logPath)) {
+            fs.mkdirSync(logPath, { mode: 0o750 });
+          }
+        }
+
+        // 开启异常检测
         let sanitizerConfigId: Number | undefined = await getSanitizerConfigIdInternal();
         let exampleConfigId: Number | undefined | string = await getBuildExampleConfigId();
 
@@ -552,8 +573,11 @@ export const opsApis: ApiGroup = {
           return;
         }
         vscode.window.showInformationMessage(`异常检测成功`);
+
+        // 执行完检测后，获取最新的列表数据
+        vscode.commands.executeCommand('huawei-op-devtools.flashMsSanitizerRunData');
       } catch (e: any) {
-        vscode.window.showErrorMessage(`获取异常检测命令失败 ${e.message}`);
+        vscode.window.showErrorMessage(`异常检测失败: ${e.message}`);
       }
     },
 
