@@ -13,3 +13,8 @@ tsconfig.tsbuildinfo
 .claude
 CLAUDE.local.md
 huawei-op-devtools-vscode-plugin-**.vsix
+deletePackage.bat
+deletePackage.js
+package.bat
+package.js
+huawei-op-devtools-vscode-plugin*
