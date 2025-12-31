@@ -46,8 +46,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onBeforeUnmount,onMounted } from 'vue';
-import { message } from '../../untils/Message';
-import { checkPathExists } from '@/apis';
+import { checkPathExists, getProjectSH, saveProjectSH, remotePathSearch } from '@/apis';
 import type { FormInstance as AntdVForm } from 'ant-design-vue';
 import { message as antdMessage } from 'ant-design-vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
@@ -59,7 +58,7 @@ const themeConfig = {
 
 const formRef = ref<AntdVForm | null>(null);
 const autoCompleteContainer = ref<HTMLElement | null>(null);
-const projectSHOptions = ref([]);
+const projectSHOptions = ref<Array<{ value: string }>>([]);
 const projectSHLoading = ref(false);
 const submitting = ref(false);
 
@@ -95,38 +94,28 @@ const buildDefaultSearchPath = (value = '') => {
   return '/';
 };
 
-const remoteSearch = (type, keyword) => {
+const remoteSearch = async (type, keyword) => {
   const searchValue = keyword || '';
   if (type === 'projectSH') {
     projectSHLoading.value = true;
   }
-  message.sendMessageToParent({
-    command: 'vscodeRemotePathSearch',
-    type,
-    keyword: buildDefaultSearchPath(searchValue.trim()),
-  });
-};
-
-const getBuildConfigItem = {
-  command: 'iframeSetProjectSH',
-  callback: (message) => {
-    const obj = message.data;
-    formData.projectSH = obj;
-  },
-};
-
-// 监听远程搜索结果
-message.addMessageListener({
-  command: 'iframeRemoteSearchResult',
-  callback: (resp) => {
-    const { type, list = [] } = resp.data || {};
+  try {
+    const result = await remotePathSearch({
+      type,
+      keyword: buildDefaultSearchPath(searchValue.trim()),
+    });
+    const { type: resultType, list = [] } = result;
     const mapped = list.map((item) => ({ value: item.path }));
-    if (type === 'projectSH') {
+    if (resultType === 'projectSH') {
       projectSHOptions.value = mapped;
       projectSHLoading.value = false;
     }
-  },
-});
+  } catch (error) {
+    projectSHLoading.value = false;
+    console.error('远程搜索失败:', error);
+  }
+};
+
 // 提交表单
 const handleSubmit = async () => {
   try {
@@ -137,10 +126,12 @@ const handleSubmit = async () => {
 
   submitting.value = true;
   try {
-    message.sendMessageToParent({
-      command: 'vscodeSaveProjectSH',
+    await saveProjectSH({ accendEnvScript: formData.projectSH });
+    // 发送消息给 iframe
+    window.postMessage({
+      command: 'iframeSetProjectSH',
       data: formData.projectSH,
-    });
+    }, '*');
   } catch (error) {
     antdMessage.error('环境变量设置失败');
   } finally {
@@ -148,14 +139,18 @@ const handleSubmit = async () => {
   }
 };
 
-onMounted(() => {
-  message.addMessageListener(getBuildConfigItem);
-  message.sendMessageToParent({ command: 'vscodeGetProjectSH' });
-});
-
-onBeforeUnmount(() => {
-  message.deleteMessageListener('iframeRemoteSearchResult');
-  message.deleteMessageListener('iframeSetProjectSH');
+onMounted(async () => {
+  try {
+    const projectSH = await getProjectSH();
+    formData.projectSH = projectSH;
+    // 发送消息给 iframe
+    window.postMessage({
+      command: 'iframeSetProjectSH',
+      data: projectSH,
+    }, '*');
+  } catch (error) {
+    console.error('获取项目SH失败:', error);
+  }
 });
 </script>
 

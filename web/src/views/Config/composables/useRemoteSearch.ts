@@ -6,7 +6,7 @@
  */
 
 import { ref } from 'vue';
-import { message } from '../../../untils/Message';
+import { remotePathSearch } from '@/apis';
 
 /**
  * 远程搜索 Composable
@@ -26,28 +26,25 @@ export function useRemoteSearch() {
   /**
    * 远程搜索
    */
-  const remoteSearch = (keyword: string, tabType: string) => {
+  const remoteSearch = async (keyword: string, tabType: string) => {
     const searchValue = keyword || '';
     dataStorageLoading.value = true;
-    message.sendMessageToParent({
-      command: 'vscodeRemotePathSearch',
-      type: 'dataStorage',
-      keyword: buildDefaultSearchPath(searchValue.trim()),
-    });
-  };
-
-  // 监听远程搜索结果
-  message.addMessageListener({
-    command: 'iframeRemoteSearchResult',
-    callback: (resp) => {
-      const { type, list = [] } = resp.data || {};
+    try {
+      const result = await remotePathSearch({
+        type: 'dataStorage',
+        keyword: buildDefaultSearchPath(searchValue.trim()),
+      });
+      const { type, list = [] } = result;
       const mapped = list.map((item: { path: string }) => ({ value: item.path }));
       if (type === 'dataStorage') {
         dataStorageOptions.value = mapped;
         dataStorageLoading.value = false;
       }
-    },
-  });
+    } catch (error) {
+      dataStorageLoading.value = false;
+      console.error('远程搜索失败:', error);
+    }
+  };
 
   return {
     dataStorageOptions,
