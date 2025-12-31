@@ -137,6 +137,10 @@
         "title": "环境配置"
       },
       {
+        "command": "huawei-op-devtools.welcome",
+        "title": "欢迎页"
+      },
+      {
         "command": "huawei-op-devtools.clearWelcomeCount",
         "title": "清除欢迎页显示计数"
       },
