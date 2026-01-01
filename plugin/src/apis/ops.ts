@@ -3,8 +3,8 @@ import * as fs from 'fs';
 import path from 'node:path';
 
 import { ApiGroup } from 'plugin:/core/ApiServer';
-import { ExplorerRootUtils } from 'plugin:/class/ExplorerRootUtils';
 import { CommandExecutor } from 'plugin:/class/CommandOptions';
+import { ProjectManager } from 'plugin:/services/project/project-manager';
 import {
   InitOpsParams,
   CreateOpsParams,
@@ -20,7 +20,6 @@ import {
   BuildConfig,
 } from 'shared:/api-types';
 import {
-  createProject,
   updataShScript,
   generateOpsPrototype,
   generateStructure,
@@ -66,41 +65,6 @@ export interface OpsApi {
   openConfig(params: { configName?: string }): Promise<void>;
 }
 
-// 模块级状态管理
-let projectId: string = '';
-let projectName: string | undefined;
-let projectPath: string | undefined;
-let currentExecutor: CommandExecutor | null = null;
-
-/**
- * 获取项目信息（从工作区或参数）
- */
-function getProjectInfo(params?: {
-  projectPath?: string;
-  projectName?: string;
-}) {
-  if (params?.projectPath && params?.projectName) {
-    return {
-      name: params.projectName,
-      path: path.normalize(`${params.projectPath}/${params.projectName}`),
-    };
-  }
-
-  if (projectName && projectPath) {
-    return {
-      name: projectName,
-      path: projectPath,
-    };
-  }
-
-  const selectedFiles = ExplorerRootUtils.getPrimaryRoot();
-
-  return {
-    name: selectedFiles?.name,
-    path: selectedFiles?.path,
-  };
-}
-
 /**
  * 获取 ExtensionContext
  */
@@ -109,45 +73,10 @@ function getContext(): vscode.ExtensionContext {
 }
 
 /**
- * 获取或创建 CommandExecutor
- */
-function getExecutor(): CommandExecutor {
-  if (!currentExecutor) {
-    currentExecutor = new CommandExecutor();
-  }
-
-  return currentExecutor;
-}
-
-/**
- * 检查 .vscode 目录
- */
-async function checkVscodeInternal(): Promise<boolean> {
-  const workspaceFolders = vscode.workspace.workspaceFolders;
-
-  if (!workspaceFolders || workspaceFolders.length === 0) {
-    return false;
-  }
-
-  const workspacePath = workspaceFolders[0].uri.fsPath;
-  const vscodePath = path.join(workspacePath, '.vscode');
-
-  console.log('vscodePath', vscodePath);
-
-  if (fs.existsSync(vscodePath)) {
-    const commandExecutor = new CommandExecutor();
-
-    console.log(`chmod 750 ${vscodePath}`);
-    await commandExecutor.execute(`chmod 750 ${vscodePath}`, [], [], {});
-  }
-
-  return false;
-}
-
-/**
  * 获取构建配置列表
  */
 async function getBuildConfigsList(): Promise<any[]> {
+  const projectId = ProjectManager.getInstance().projectId;
   const array = [
     getConfig(Number(projectId), 'build_op'),
     getConfig(Number(projectId), 'build_example'),
@@ -167,7 +96,7 @@ async function getBuildConfigId(): Promise<number | undefined> {
   try {
     const configData = await getBuildConfigsList();
 
-    console.log('configData in build', configData);
+    // console.log('configData in build', configData);
 
     return configData.find((v: any) => v.config_type === 'build_op')?.config_id;
   } catch {
@@ -182,7 +111,7 @@ async function getBuildExampleConfigId(): Promise<number | undefined> {
   try {
     const configData = await getBuildConfigsList();
 
-    console.log('configData in exam', configData);
+    // console.log('configData in exam', configData);
 
     return configData.find((v: any) => v.config_type === 'build_example')
       ?.config_id;
@@ -198,7 +127,7 @@ async function getSimulateConfigId(): Promise<string> {
   try {
     const configData = await getBuildConfigsList();
 
-    console.log('configData in simulate', configData);
+    // console.log('configData in simulate', configData);
 
     return (
       configData.find((v: any) => v.config_type === 'simulate')?.config_id || ''
@@ -215,7 +144,7 @@ async function getOnBoardConfigId(): Promise<string> {
   try {
     const configData = await getBuildConfigsList();
 
-    console.log('configData in onBoard', configData);
+    // console.log('configData in onBoard', configData);
 
     return (
       configData.find((v: any) => v.config_type === 'on_board')?.config_id || ''
@@ -229,6 +158,7 @@ async function getOnBoardConfigId(): Promise<string> {
  * 获取异常检测配置列表
  */
 async function getSanitizerConfigsList(): Promise<any[]> {
+  const projectId = ProjectManager.getInstance().projectId;
   const config = await getConfig(Number(projectId), 'sanitizer');
 
   return [...config];
@@ -241,39 +171,12 @@ async function getSanitizerConfigIdInternal(): Promise<number | undefined> {
   try {
     const configData = await getSanitizerConfigsList();
 
-    console.log('configData in sanitizer', configData);
+    // console.log('configData in sanitizer', configData);
 
     return configData.find((v: any) => v.config_type === 'sanitizer')
       ?.config_id;
   } catch {
     return undefined;
-  }
-}
-
-/**
- * 确保 projectId 已初始化
- */
-async function ensureProjectId(): Promise<void> {
-  if (!projectId) {
-    const info = getProjectInfo();
-
-    projectName = info.name;
-    projectPath = info.path;
-
-    if (projectPath === undefined) {
-      projectId = '';
-
-      return;
-    }
-
-    const projectRes = await createProject({
-      project_name: projectName ?? '',
-      project_path: projectPath,
-      ascend_env_script: undefined,
-    });
-
-    console.log('projectRes', projectRes);
-    projectId = String(projectRes);
   }
 }
 
@@ -283,47 +186,17 @@ export const opsApis: ApiGroup = {
      * 初始化算子项目
      */
     async init(params: InitOpsParams): Promise<string> {
-      const info = getProjectInfo(params);
-
-      if (params.projectPath && params.projectName) {
-        projectPath = path.normalize(
-          `${params.projectPath}/${params.projectName}`,
-        );
-        projectName = params.projectName;
-      } else {
-        projectName = info.name;
-        projectPath = info.path;
-      }
-
-      console.log('accendEnvScript:', params.accendEnvScript);
-
-      // 获取项目ID
-      if (projectPath === undefined) {
-        projectId = '';
-
-        return projectId;
-      }
-
-      const ascend_env_script = params.accendEnvScript || undefined;
-      const projectRes = await createProject({
-        project_name: projectName ?? '',
-        project_path: projectPath,
-        ascend_env_script,
-      });
-
-      console.log('projectRes', projectRes);
-      projectId = String(projectRes);
-
-      return projectId;
+      return await ProjectManager.getInstance().initProject(params);
     },
 
     /**
      * 创建算子原型文件
      */
     async createOps(params: CreateOpsParams): Promise<string> {
-      const info = getProjectInfo();
+      const pm = ProjectManager.getInstance();
+      const info = pm.getProjectInfo();
       const op_name = params.projectName || info.name;
-      const project_id = params.projectId || projectId;
+      const project_id = params.projectId || pm.projectId;
       const prototype_name = params.prototypeName || undefined;
 
       console.log('生成算子原型文件参数', op_name, project_id, prototype_name);
@@ -340,7 +213,7 @@ export const opsApis: ApiGroup = {
         vscode.window.showInformationMessage(`新建算子原型文件成功`);
 
         // 检查并设置 .vscode 目录权限
-        await checkVscodeInternal();
+        await pm.checkVscode();
 
         return result;
       } catch {
@@ -356,13 +229,14 @@ export const opsApis: ApiGroup = {
     async createOpsByPrototype(
       params: CreateOpsByPrototypeParams,
     ): Promise<void> {
+      const pm = ProjectManager.getInstance();
       const context = getContext();
 
       try {
         const result = await generateStructure(
           {
             ops_prototype_file: params.opsPrototypeFile,
-            project_id: Number(projectId),
+            project_id: Number(pm.projectId),
             op_type: params.opType || 'ascend',
           },
           context.extensionPath,
@@ -372,14 +246,14 @@ export const opsApis: ApiGroup = {
           '生成算子工程参数',
           {
             ops_prototype_file: params.opsPrototypeFile,
-            project_id: projectId,
+            project_id: pm.projectId,
             op_type: params.opType,
           },
           result,
         );
 
         vscode.window.showInformationMessage(`新建算子文件成功`);
-        await checkVscodeInternal();
+        await pm.checkVscode();
       } catch (e) {
         vscode.window.showErrorMessage(
           `新建算子文件失败 ${e instanceof Error ? e.message : ''}`,
@@ -392,7 +266,7 @@ export const opsApis: ApiGroup = {
      */
     async getConfigData(): Promise<GetConfigDataResult> {
       // 确保projectId已初始化
-      await ensureProjectId();
+      await ProjectManager.getInstance().ensureProjectId();
       const buildConfigs = await getBuildConfigsList();
 
       console.log('buildConfigs', buildConfigs);
@@ -449,7 +323,7 @@ export const opsApis: ApiGroup = {
           Number(configId),
           params.compileOption,
         );
-        const executor = getExecutor();
+        const executor = ProjectManager.getInstance().getExecutor();
         const res = await executor.execute(buildCommand, [], [], {}, true);
 
         if (res.code !== 0) {
@@ -479,7 +353,7 @@ export const opsApis: ApiGroup = {
         const runCommand = await getRunCommand(Number(configId));
 
         console.log('runCommand', runCommand);
-        const executor = getExecutor();
+        const executor = ProjectManager.getInstance().getExecutor();
         const res = await executor.execute(runCommand, [], [], {}, true);
 
         console.log('runRes', res);
@@ -508,7 +382,7 @@ export const opsApis: ApiGroup = {
 
       try {
         const buildCommand = await getBuildExampleCommand(Number(configId));
-        const executor = getExecutor();
+        const executor = ProjectManager.getInstance().getExecutor();
         const res = await executor.execute(buildCommand, [], [], {}, true);
 
         if (res.code !== 0) {
@@ -540,7 +414,7 @@ export const opsApis: ApiGroup = {
         Number(buildConfigId),
         `--simulator ${simulatorType}`,
       );
-      const buildExecutor = getExecutor();
+      const buildExecutor = ProjectManager.getInstance().getExecutor();
       const buildRes = await buildExecutor.execute(
         buildCommand,
         [],
@@ -568,7 +442,7 @@ export const opsApis: ApiGroup = {
         );
 
         console.log('simulateCommand', simulateCommand);
-        const executor = getExecutor();
+        const executor = ProjectManager.getInstance().getExecutor();
         const res = await executor.execute(simulateCommand, [], [], {}, true);
 
         if (res.code !== 0) {
@@ -596,7 +470,7 @@ export const opsApis: ApiGroup = {
         Number(buildConfigId),
         '--onboard',
       );
-      const buildExecutor = getExecutor();
+      const buildExecutor = ProjectManager.getInstance().getExecutor();
       const buildRes = await buildExecutor.execute(
         buildCommand,
         [],
@@ -624,7 +498,7 @@ export const opsApis: ApiGroup = {
         );
 
         console.log('onBoardCommand', onBoardCommand);
-        const executor = getExecutor();
+        const executor = ProjectManager.getInstance().getExecutor();
         const res = await executor.execute(onBoardCommand, [], [], {}, true);
 
         if (res.code !== 0) {
@@ -716,7 +590,7 @@ export const opsApis: ApiGroup = {
           Number(buildConfigId),
           '--mssanitizer',
         );
-        const buildExecutor = getExecutor();
+        const buildExecutor = ProjectManager.getInstance().getExecutor();
         const buildRes = await buildExecutor.execute(
           buildCommand,
           [],
@@ -757,7 +631,7 @@ export const opsApis: ApiGroup = {
             Number(sanitizerConfigId),
             Number(exampleConfigId),
           )) || '';
-        const executor = getExecutor();
+        const executor = ProjectManager.getInstance().getExecutor();
         const res = await executor.execute(sanitizerCommand, [], [], {}, true);
 
         if (res.code !== 0) {
@@ -780,7 +654,8 @@ export const opsApis: ApiGroup = {
      * 更新脚本文件
      */
     async updateShScript(params: UpdateShScriptParams): Promise<string> {
-      const info = getProjectInfo();
+      const pm = ProjectManager.getInstance();
+      const info = pm.getProjectInfo();
       const project_name = info.name ?? '';
       const project_path = info.path;
 
@@ -804,7 +679,7 @@ export const opsApis: ApiGroup = {
      * 检查 .vscode 目录
      */
     async checkVscode(): Promise<boolean> {
-      return checkVscodeInternal();
+      return ProjectManager.getInstance().checkVscode();
     },
 
     /**
@@ -836,41 +711,29 @@ export const opsApis: ApiGroup = {
     /**
      * 获取当前 executor（用于外部停止任务）
      */
-    getExecutor(): CommandExecutor | null {
-      return currentExecutor;
+    getExecutor(): CommandExecutor {
+      return ProjectManager.getInstance().getExecutor();
     },
 
     /**
      * 清除当前 executor
      */
     clearExecutor(): void {
-      currentExecutor = null;
+      ProjectManager.getInstance().clearExecutor();
     },
 
     /**
      * 获取当前项目ID
      */
     getProjectId(): string {
-      return projectId;
+      return ProjectManager.getInstance().projectId;
     },
 
     /**
      * 停止当前任务
      */
     async stopTask(): Promise<void> {
-      if (currentExecutor) {
-        try {
-          currentExecutor.kill();
-          currentExecutor = null;
-          vscode.window.showInformationMessage('任务已停止');
-        } catch (e) {
-          vscode.window.showErrorMessage(
-            `停止任务失败: ${e instanceof Error ? e.message : ''}`,
-          );
-        }
-      } else {
-        vscode.window.showWarningMessage('当前没有正在执行的任务');
-      }
+      return await ProjectManager.getInstance().stopTask();
     },
 
     /**
