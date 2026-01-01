@@ -30,23 +30,34 @@ type ConfigsStore = {
 function ensureStore(): ConfigsStore {
   const dataDir = getDataDir();
   const configsFile = getConfigsFile();
+
   fs.ensureDirSync(dataDir);
   if (!fs.existsSync(configsFile)) {
     const init: ConfigsStore = { lastId: 0, configs: [] };
+
     fs.writeFileSync(configsFile, JSON.stringify(init, null, 2), 'utf-8');
+
     return init;
   }
 
   try {
     const raw = fs.readFileSync(configsFile, 'utf-8');
     const parsed = JSON.parse(raw) as ConfigsStore;
-    if (!parsed || typeof parsed.lastId !== 'number' || !Array.isArray(parsed.configs)) {
+
+    if (
+      !parsed ||
+      typeof parsed.lastId !== 'number' ||
+      !Array.isArray(parsed.configs)
+    ) {
       throw new Error('invalid configs store');
     }
+
     return parsed;
   } catch (e) {
     const init: ConfigsStore = { lastId: 0, configs: [] };
+
     fs.writeFileSync(configsFile, JSON.stringify(init, null, 2), 'utf-8');
+
     return init;
   }
 }
@@ -66,13 +77,23 @@ function mapRecordToConfig(row: ConfigRecord) {
     custom_options: row.custom_options,
     target_file: row.target_file,
     target_dir: row.target_dir,
-    project_id: row.project_id
+    project_id: row.project_id,
   };
 }
 
-export function getConfig(project_id: number, config_type: string, op: string | null = null) {
+export function getConfig(
+  project_id: number,
+  config_type: string,
+  op: string | null = null,
+) {
   const store = ensureStore();
-  const filtered = store.configs.filter(c => c.project_id === project_id && c.config_type === config_type && (op ? c.op === op : true));
+  const filtered = store.configs.filter(
+    (c) =>
+      c.project_id === project_id &&
+      c.config_type === config_type &&
+      (op ? c.op === op : true),
+  );
+
   return filtered.map(mapRecordToConfig);
 }
 
@@ -84,10 +105,17 @@ export async function postConfig(config_type: string, dataList: any[]) {
   for (const item of dataList) {
     const opVal = item.user_options.op || null;
     const user_options = item.user_options ? item.user_options : null;
+
     if (item.config_id) {
-      const idx = store.configs.findIndex(c => c.id === item.config_id);
+      const idx = store.configs.findIndex((c) => c.id === item.config_id);
+
       if (idx === -1) {
-        results.push({ config_id: item.config_id, operation: 'update', status: 'failed', error: 'not_found' });
+        results.push({
+          config_id: item.config_id,
+          operation: 'update',
+          status: 'failed',
+          error: 'not_found',
+        });
         continue;
       }
       store.configs[idx] = Object.assign({}, store.configs[idx], {
@@ -99,9 +127,13 @@ export async function postConfig(config_type: string, dataList: any[]) {
         user_options: user_options,
         op: opVal,
         update_by: item.update_by || null,
-        update_time: now
+        update_time: now,
       });
-      results.push({ config_id: item.config_id, operation: 'update', status: 'success' });
+      results.push({
+        config_id: item.config_id,
+        operation: 'update',
+        status: 'success',
+      });
     } else {
       const nextId = store.lastId + 1;
       const record: ConfigRecord = {
@@ -118,27 +150,39 @@ export async function postConfig(config_type: string, dataList: any[]) {
         create_by: item.create_by || null,
         create_time: now,
         update_by: null,
-        update_time: now
+        update_time: now,
       };
+
       store.configs.push(record);
       store.lastId = nextId;
-      results.push({ config_id: nextId, operation: 'create', status: 'success' });
+      results.push({
+        config_id: nextId,
+        operation: 'create',
+        status: 'success',
+      });
     }
   }
 
   try {
     writeStore(store);
+
     return results;
   } catch (e: any) {
-    for (const r of results) { r.status = 'failed'; r.error = e.message; }
+    for (const r of results) {
+      r.status = 'failed';
+      r.error = e.message;
+    }
+
     return results;
   }
 }
 
 export function getConfigById(config_id: number) {
   const store = ensureStore();
-  const row = store.configs.find(c => c.id === config_id);
+  const row = store.configs.find((c) => c.id === config_id);
+
   if (!row) return null;
+
   return {
     id: row.id,
     config_name: row.config_name,
@@ -149,7 +193,7 @@ export function getConfigById(config_id: number) {
     custom_options: row.custom_options,
     user_options: row.user_options || null,
     project_id: row.project_id,
-    op: row.op
+    op: row.op,
   };
 }
 

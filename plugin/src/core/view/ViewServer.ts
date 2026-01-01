@@ -71,29 +71,45 @@ export class ViewServer extends vscode.Disposable {
    * @param options 开启视图选项
    * @returns 页签实例
    */
-  public openPanel(routePath: string, options: PanelViewOptions = {}): vscode.WebviewPanel {
+  public openPanel(
+    routePath: string,
+    options: PanelViewOptions = {},
+  ): vscode.WebviewPanel {
     const routeRaw = this.router.getRaw(routePath);
+
     if (!routeRaw) {
       throw new Error(`路由 ${routePath} 不存在`);
     }
 
-    const { viewColumn = vscode.ViewColumn.Active, query = {}, title } = options;
+    const {
+      viewColumn = vscode.ViewColumn.Active,
+      query = {},
+      title,
+    } = options;
 
     // 避免重复开启
     if (this.openedViews.has(routePath)) {
       const panel = this.openedViews.get(routePath)!;
+
       panel.reveal(viewColumn);
+
       return panel;
     }
 
     const webviewPanel = this.createViewPanel(routeRaw, viewColumn, title);
+
     this.activeViewPanel(webviewPanel, routePath, query);
+
     return webviewPanel;
   }
 
   private registerViewProviders() {
     const providerRaws = this.router.getAllProviderRaws();
-    const viewRootUri = vscode.Uri.joinPath(this.context.extensionUri, 'out', 'web');
+    const viewRootUri = vscode.Uri.joinPath(
+      this.context.extensionUri,
+      'out',
+      'web',
+    );
 
     for (const routeRaw of providerRaws) {
       const disposable = vscode.window.registerWebviewViewProvider(
@@ -101,12 +117,16 @@ export class ViewServer extends vscode.Disposable {
         {
           resolveWebviewView: async (webviewView) => {
             this.providerWebViewMap[routeRaw.providerViewType!] = webviewView;
-            webviewView.webview.options = { enableScripts: true, localResourceRoots: [viewRootUri] };
+            webviewView.webview.options = {
+              enableScripts: true,
+              localResourceRoots: [viewRootUri],
+            };
             this.activeWebview(webviewView.webview, routeRaw.path);
           },
         },
         { webviewOptions: { retainContextWhenHidden: true } },
       );
+
       this.viewProviders.push(disposable);
     }
   }
@@ -114,19 +134,38 @@ export class ViewServer extends vscode.Disposable {
   /**
    * 创建页签
    */
-  private createViewPanel(routeRaw: ViewRouteRaw, viewColumn: vscode.ViewColumn, customTitle?: string): vscode.WebviewPanel {
+  private createViewPanel(
+    routeRaw: ViewRouteRaw,
+    viewColumn: vscode.ViewColumn,
+    customTitle?: string,
+  ): vscode.WebviewPanel {
     const viewTitle = customTitle ?? routeRaw.title ?? routeRaw.path;
-    return vscode.window.createWebviewPanel(CUSTOM_EDITOR_VIEW_TYPE, viewTitle, { viewColumn }, { retainContextWhenHidden: true, enableScripts: true });
+
+    return vscode.window.createWebviewPanel(
+      CUSTOM_EDITOR_VIEW_TYPE,
+      viewTitle,
+      { viewColumn },
+      { retainContextWhenHidden: true, enableScripts: true },
+    );
   }
 
   /**
    * 激活页签
    */
-  private activeViewPanel(viewPanel: vscode.WebviewPanel, routePath: string, query: Record<string, unknown>): void {
+  private activeViewPanel(
+    viewPanel: vscode.WebviewPanel,
+    routePath: string,
+    query: Record<string, unknown>,
+  ): void {
     this.openedViews.set(routePath, viewPanel);
 
     // 设置webview的资源根目录
-    const viewRootUri = vscode.Uri.joinPath(this.context.extensionUri, 'out', 'web');
+    const viewRootUri = vscode.Uri.joinPath(
+      this.context.extensionUri,
+      'out',
+      'web',
+    );
+
     viewPanel.webview.options = {
       enableScripts: true,
       localResourceRoots: [viewRootUri],
@@ -147,9 +186,14 @@ export class ViewServer extends vscode.Disposable {
   /**
    * 激活页面
    */
-  private activeWebview(webview: vscode.Webview, routePath: string, query: Record<string, unknown> = {}) {
+  private activeWebview(
+    webview: vscode.Webview,
+    routePath: string,
+    query: Record<string, unknown> = {},
+  ) {
     this.renderer.render(webview, { lang: vscode.env.language });
     const queryParams = { ...query, _path: routePath };
+
     this.query.setQuery(webview, queryParams);
 
     // 【hook】页面激活

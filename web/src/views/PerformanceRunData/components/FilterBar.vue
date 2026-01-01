@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { UpOutlined, CaretUpFilled, DownOutlined, CaretDownFilled, FlagOutlined, FlagFilled, ReloadOutlined } from '@ant-design/icons-vue';
+import {
+  UpOutlined,
+  CaretUpFilled,
+  DownOutlined,
+  CaretDownFilled,
+  FlagOutlined,
+  FlagFilled,
+  ReloadOutlined,
+} from '@ant-design/icons-vue';
 import { h } from 'vue';
 
 /** 正序/倒序 */
@@ -27,7 +35,12 @@ function handleReload() {
 
 <template>
   <div class="filter-bar">
-    <a-button class="execute-time-sorter-button" type="default" @click="handleExecutionTime" size="small">
+    <a-button
+      class="execute-time-sorter-button"
+      type="default"
+      size="small"
+      @click="handleExecutionTime"
+    >
       <div class="execute-time-sorter-inner">
         执行时间
         <div class="sort-icons">
@@ -38,10 +51,20 @@ function handleReload() {
         </div>
       </div>
     </a-button>
-    <a-button :type="isMarkedOnly ? 'primary' : 'default'" @click="handleMarked" size="small">
+    <a-button
+      :type="isMarkedOnly ? 'primary' : 'default'"
+      size="small"
+      @click="handleMarked"
+    >
       已标记 <FlagFilled v-if="isMarkedOnly" /><FlagOutlined v-else />
     </a-button>
-    <a-button type="text" :icon="h(ReloadOutlined)" title="刷新" size="small" @click="handleReload"></a-button>
+    <a-button
+      type="text"
+      :icon="h(ReloadOutlined)"
+      title="刷新"
+      size="small"
+      @click="handleReload"
+    ></a-button>
   </div>
 </template>
 

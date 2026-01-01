@@ -1,25 +1,22 @@
-
 # 数据库 schema 管理工具 yoyo-migrations
-1. **引入 yoyo-migrations 作为数据库 schema 管理工具**
 
-   * 在 `server` 子项目中声明依赖 `yoyo-migrations`；
-   * 启动本地服务时，自动执行 `yoyo apply`，将数据库结构迁移到**当前代码目录中已存在的最新 migration**。
+1. **引入 yoyo-migrations 作为数据库 schema 管理工具**
+   - 在 `server` 子项目中声明依赖 `yoyo-migrations`；
+   - 启动本地服务时，自动执行 `yoyo apply`，将数据库结构迁移到**当前代码目录中已存在的最新 migration**。
 
 2. **升级行为说明**
 
 以 migration 序列 `A → B → C → D` 为例：
 
-* **用户从 A 升级到 C**
+- **用户从 A 升级到 C**
+  - 如果「插件 C 的包里只包含 A/B/C 三个 migration」：
+    - 启动时执行 `yoyo apply`；
+    - 数据库中只会补执行 B、C；
+    - **最终数据库结构停在 C**，不会包含 D。
 
-  * 如果「插件 C 的包里只包含 A/B/C 三个 migration」：
-
-    * 启动时执行 `yoyo apply`；
-    * 数据库中只会补执行 B、C；
-    * **最终数据库结构停在 C**，不会包含 D。
-  * 如果某次打包把 D 也一起带进来了（目录中为 A/B/C/D）：
-
-    * `yoyo apply` 会依次执行 B、C、D；
-    * **数据库结构会直接升级到 D**。
+  - 如果某次打包把 D 也一起带进来了（目录中为 A/B/C/D）：
+    - `yoyo apply` 会依次执行 B、C、D；
+    - **数据库结构会直接升级到 D**。
 
 即：
 
@@ -27,15 +24,14 @@
 
 这也保证了用户可以从任意旧版本直接升级到新版本，只要中间的 migration 脚本都在，yoyo 会依次补齐执行。
 
-
 ---
 
 # 示例：目录结构与 Migration 编写方式
 
 ```
 server/
-  ├── src 
-        └── main.py  # 服务主入口               
+  ├── src
+        └── main.py  # 服务主入口
   ├── resource/
         └── migrations/         # migration 存放目录
              ├── 0001_create_meta_table.py
@@ -63,8 +59,6 @@ server/resource/migrations/
 0003_xxx.py
 ...
 ```
-
-
 
 > **建议：** 序号使用 4 位数字，保持有序性，避免冲突。
 
@@ -98,9 +92,9 @@ steps = [
 
 要点：
 
-* `step()` 的第一个参数是 **upgrade SQL**。
-* 第二个参数（可选）是 **downgrade SQL**；如不需要回退，可传空字符串 `""`。
-* 采用 **IF NOT EXISTS** 可增强兼容性。
+- `step()` 的第一个参数是 **upgrade SQL**。
+- 第二个参数（可选）是 **downgrade SQL**；如不需要回退，可传空字符串 `""`。
+- 采用 **IF NOT EXISTS** 可增强兼容性。
 
 ---
 
@@ -128,14 +122,11 @@ steps = [
 
 要点：
 
-* 同一个 migration 文件内可以包含多个 `step()`；
-* 文件内的 step 会按顺序执行；
-* 典型适用场景：同一批字段的新增、同一类结构调整等。
+- 同一个 migration 文件内可以包含多个 `step()`；
+- 文件内的 step 会按顺序执行；
+- 典型适用场景：同一批字段的新增、同一类结构调整等。
 
 ---
-
-
-
 
 # Migration 管理规范（强烈建议遵守）
 
@@ -149,9 +140,9 @@ steps = [
 
 例如：
 
-* 表新增字段：写新的 migration；
-* 表结构调整：写新的 migration；
-* 初始化数据也可以放在 migration 中，但建议独立文件，比如：
+- 表新增字段：写新的 migration；
+- 表结构调整：写新的 migration；
+- 初始化数据也可以放在 migration 中，但建议独立文件，比如：
 
 ```
 0003_init_default_values.py
@@ -161,9 +152,7 @@ steps = [
 
 发布版本时，确保插件包内的 `resource/migrations/` 目录**只包含本版本必须的 migration 文件**。
 
-
 ---
-
 
 # 扩展：推荐的 migration 文件风格
 

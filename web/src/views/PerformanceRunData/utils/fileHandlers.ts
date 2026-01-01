@@ -6,6 +6,7 @@ import { downloadData, deleteNode } from '@/apis';
 export const handleDownload = async (nodeData: any) => {
   // 根据节点类型确定文件路径
   let filePath = '';
+
   if (nodeData.filePath) {
     filePath = nodeData.filePath;
   } else if (nodeData.key) {

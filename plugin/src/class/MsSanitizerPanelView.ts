@@ -1,134 +1,157 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import * as fs from 'fs'
-import { ExceptionParser } from "./ExceptionParser";
+import * as fs from 'fs';
+import { ExceptionParser } from './ExceptionParser';
 
-import { HtmlTransformer } from './HtmlTransformer'
-import webviewMessageList from './WebviewMessageList'
+import { HtmlTransformer } from './HtmlTransformer';
+import webviewMessageList from './WebviewMessageList';
 import { ApiServer } from 'plugin:/core/ApiServer';
 
-export class MsSanitizerPanelViewProvider implements vscode.WebviewViewProvider {
-    public static readonly viewType = 'msSanitizerPanelView';
+export class MsSanitizerPanelViewProvider
+  implements vscode.WebviewViewProvider
+{
+  public static readonly viewType = 'msSanitizerPanelView';
 
-    public static getMsSanitizerPanelViewDataParams = null;
+  public static getMsSanitizerPanelViewDataParams = null;
 
-    _view?: vscode.WebviewView
-    private _extensionUri: vscode.Uri
-    private _context: vscode.ExtensionContext
-    private _apiServer: ApiServer
+  _view?: vscode.WebviewView;
+  private _extensionUri: vscode.Uri;
+  private _context: vscode.ExtensionContext;
+  private _apiServer: ApiServer;
 
-    constructor(context: vscode.ExtensionContext, apiServer: ApiServer) {
-        this._extensionUri = context.extensionUri
-        this._context = context
-        this._apiServer = apiServer
-    }
+  constructor(context: vscode.ExtensionContext, apiServer: ApiServer) {
+    this._extensionUri = context.extensionUri;
+    this._context = context;
+    this._apiServer = apiServer;
+  }
 
-    async resolveWebviewView(
-        webviewView: vscode.WebviewView,
-        context: vscode.WebviewViewResolveContext,
-        _token: vscode.CancellationToken
-    ) {
-        this._view = webviewView;
+  async resolveWebviewView(
+    webviewView: vscode.WebviewView,
+    context: vscode.WebviewViewResolveContext,
+    _token: vscode.CancellationToken,
+  ) {
+    this._view = webviewView;
 
-        // 配置WebView
-        webviewView.webview.options = {
-            enableScripts: true,
-            localResourceRoots: [
-                this._extensionUri
-            ]
-        };
+    // 配置WebView
+    webviewView.webview.options = {
+      enableScripts: true,
+      localResourceRoots: [this._extensionUri],
+    };
 
-        // 注册 webview 到 ApiServer
-        this._apiServer.addWebview('MsSanitizerPanelView', webviewView.webview);
+    // 注册 webview 到 ApiServer
+    this._apiServer.addWebview('MsSanitizerPanelView', webviewView.webview);
 
-        // 消息处理
-        webviewView.webview.onDidReceiveMessage(
-            async (message: any) => {
-                if (message.command === 'vscodeGetMsSanitizerPanelViewData') {
-                    // 发送数据 后续优化 先通过_view.webview方式下发内容
-                    if (!MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams) {
-                        webviewView.webview.postMessage({
-                            command: 'iframeRemoteMsSanitizerPanelViewSetRenderList',
-                            data: {},
-                        });
-                        return;
-                    }
+    // 消息处理
+    webviewView.webview.onDidReceiveMessage(
+      async (message: any) => {
+        if (message.command === 'vscodeGetMsSanitizerPanelViewData') {
+          // 发送数据 后续优化 先通过_view.webview方式下发内容
+          if (!MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams) {
+            webviewView.webview.postMessage({
+              command: 'iframeRemoteMsSanitizerPanelViewSetRenderList',
+              data: {},
+            });
 
-                    const panelData = await getPanelData(MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams);
-                    MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams = null;
-                    webviewView.webview.postMessage({
-                        command: 'iframeRemoteMsSanitizerPanelViewSetRenderList',
-                        data: panelData,
-                    });
-                } else {
-                    this.handleWebviewMessage(message);
-                }
-            },
-            undefined,
-            this._context.subscriptions
-        );
+            return;
+          }
 
-        // 设置HTML内容
-        const distPath = path.join(this._extensionUri.fsPath, 'out', 'web')
-        webviewView.webview.html = HtmlTransformer.transformDistHtml(distPath, webviewView.webview, 'MsSanitizerPanelView')
-    }
+          const panelData = await getPanelData(
+            MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams,
+          );
 
-    /**
-     * 处理来自Webview的消息
-     */
-    private handleWebviewMessage(message: any): void {
-        for (const messageItem of webviewMessageList) {
-            if (message.command === messageItem.command) {
-                messageItem.callback(message, this);
-            }
+          MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams = null;
+          webviewView.webview.postMessage({
+            command: 'iframeRemoteMsSanitizerPanelViewSetRenderList',
+            data: panelData,
+          });
+        } else {
+          this.handleWebviewMessage(message);
         }
+      },
+      undefined,
+      this._context.subscriptions,
+    );
+
+    // 设置HTML内容
+    const distPath = path.join(this._extensionUri.fsPath, 'out', 'web');
+
+    webviewView.webview.html = HtmlTransformer.transformDistHtml(
+      distPath,
+      webviewView.webview,
+      'MsSanitizerPanelView',
+    );
+  }
+
+  /**
+   * 处理来自Webview的消息
+   */
+  private handleWebviewMessage(message: any): void {
+    for (const messageItem of webviewMessageList) {
+      if (message.command === messageItem.command) {
+        messageItem.callback(message, this);
+      }
     }
+  }
 }
 
 const getPanelData = (params: Record<string, any>) => {
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders || workspaceFolders.length === 0) {
-        console.log('getRunData1 no workspaceFolders')
-        return [];
-    }
+  const workspaceFolders = vscode.workspace.workspaceFolders;
 
-    const workspacePath = workspaceFolders[0].uri.fsPath;
+  if (!workspaceFolders || workspaceFolders.length === 0) {
+    console.log('getRunData1 no workspaceFolders');
 
-    const inputContent = fs.readFileSync(params.path, 'utf-8');
-    const parser = new ExceptionParser({ matchPath: workspacePath });
-    // 直接传入整个文件内容进行解析
-    const data = parser.parseAll(inputContent);
-    console.log('异常检测详情数据：', data)
-    return {
-        ...params,
-        data
-    };
-}
+    return [];
+  }
 
+  const workspacePath = workspaceFolders[0].uri.fsPath;
 
-export const getMsSanitizerPanelViewProvider = (context: vscode.ExtensionContext, apiServer: ApiServer) => {
-    const msSanitizerPanelViewProvider = new MsSanitizerPanelViewProvider(context, apiServer);
-    const msSanitizerPanelView = vscode.window.registerWebviewViewProvider(MsSanitizerPanelViewProvider.viewType, msSanitizerPanelViewProvider, {
-        webviewOptions: {
-            retainContextWhenHidden: false,
-        },
-    });
+  const inputContent = fs.readFileSync(params.path, 'utf-8');
+  const parser = new ExceptionParser({ matchPath: workspacePath });
+  // 直接传入整个文件内容进行解析
+  const data = parser.parseAll(inputContent);
 
-    // 注册打开终端和 Webview 的命令
-    const openMsSanitizerDisposable = vscode.commands.registerCommand('huawei-op-devtools.open-ms-sanitizer-panel-view', async (data: any) => {
-        // 打开底部区域面板
-        await vscode.commands.executeCommand('workbench.action.togglePanel');
+  console.log('异常检测详情数据：', data);
 
-        // 定位到异常检测面板
-        await vscode.commands.executeCommand(`msSanitizerPanelView.focus`);
+  return {
+    ...params,
+    data,
+  };
+};
 
-        MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams = data;
-    });
+export const getMsSanitizerPanelViewProvider = (
+  context: vscode.ExtensionContext,
+  apiServer: ApiServer,
+) => {
+  const msSanitizerPanelViewProvider = new MsSanitizerPanelViewProvider(
+    context,
+    apiServer,
+  );
+  const msSanitizerPanelView = vscode.window.registerWebviewViewProvider(
+    MsSanitizerPanelViewProvider.viewType,
+    msSanitizerPanelViewProvider,
+    {
+      webviewOptions: {
+        retainContextWhenHidden: false,
+      },
+    },
+  );
 
+  // 注册打开终端和 Webview 的命令
+  const openMsSanitizerDisposable = vscode.commands.registerCommand(
+    'huawei-op-devtools.open-ms-sanitizer-panel-view',
+    async (data: any) => {
+      // 打开底部区域面板
+      await vscode.commands.executeCommand('workbench.action.togglePanel');
 
-    return {
-        msSanitizerPanelView,
-        openMsSanitizerDisposable
-    }
-}
+      // 定位到异常检测面板
+      await vscode.commands.executeCommand(`msSanitizerPanelView.focus`);
 
+      MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams = data;
+    },
+  );
+
+  return {
+    msSanitizerPanelView,
+    openMsSanitizerDisposable,
+  };
+};

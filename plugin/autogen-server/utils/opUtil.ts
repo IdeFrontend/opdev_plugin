@@ -23,10 +23,12 @@ function getDetailedSystemInfo(): { osName: string; architecture: string } {
   const architecture = archMap[arch] ?? arch;
 
   let osName = platformName;
+
   if (platformName === 'linux') {
     try {
       const content = fs.readFileSync('/etc/os-release', 'utf8');
       const idLine = content.split('\n').find((l) => l.startsWith('ID='));
+
       if (idLine) {
         osName = idLine.split('=')[1].replace(/"/g, '').trim();
       }
@@ -44,9 +46,11 @@ function getDetailedSystemInfo(): { osName: string; architecture: string } {
 
 export function getOpRunPath(op: Op): string {
   const opPath = op.op_path;
+
   if (op.op_type === 'ascend') {
     return path.resolve(opPath, '..', '..');
   }
+
   return opPath;
 }
 
@@ -58,8 +62,16 @@ function getDefaultTarget(opRunPath: string, op: Op) {
   let targetExampleFile: string;
 
   if (op.op_type === 'ascend') {
-    targetOpFile = path.join(opRunPath, 'build_out', `cann-ops-math-custom_linux-${architecture}.run`);
-    targetExampleFile = path.join(opRunPath, 'build', `test_aclnn_${op.op_name}`);
+    targetOpFile = path.join(
+      opRunPath,
+      'build_out',
+      `cann-ops-math-custom_linux-${architecture}.run`,
+    );
+    targetExampleFile = path.join(
+      opRunPath,
+      'build',
+      `test_aclnn_${op.op_name}`,
+    );
   } else {
     targetOpFile = path.join(opRunPath, 'build', op.op_name);
     targetExampleFile = targetOpFile;
@@ -74,7 +86,10 @@ function getBuildScriptPath(opRunPath: string): string {
 
 export function getDefaultPath(op: Op) {
   const opRunPath = getOpRunPath(op);
-  const { targetDir, targetOpFile, targetExampleFile } = getDefaultTarget(opRunPath, op);
+  const { targetDir, targetOpFile, targetExampleFile } = getDefaultTarget(
+    opRunPath,
+    op,
+  );
   const opScriptPath = getBuildScriptPath(opRunPath);
   const exampleScriptPath = opScriptPath;
 

@@ -1,9 +1,18 @@
 <script setup lang="ts">
-import { RightOutlined, DownOutlined, FlagOutlined, FlagFilled, DownloadOutlined } from '@ant-design/icons-vue';
+import {
+  RightOutlined,
+  DownOutlined,
+  FlagOutlined,
+  FlagFilled,
+  DownloadOutlined,
+} from '@ant-design/icons-vue';
 import type { DirectoryTreeProps } from 'ant-design-vue';
 import { Component, h, ref, watch } from 'vue';
 
-import { PerformanceExecutionRecord, PerformanceRunDataFile } from 'shared:/api-types';
+import {
+  PerformanceExecutionRecord,
+  PerformanceRunDataFile,
+} from 'shared:/api-types';
 
 import { openCsvView, openInsightView, saveFileToLocal } from '@/apis';
 
@@ -26,7 +35,7 @@ watch(
       expandedKeys.value = [newData[0].key];
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 // 自定义切换图标（三角箭头）
@@ -41,20 +50,39 @@ function isRootDir(row: object): row is PerformanceExecutionRecord {
 }
 
 function isCsvFile(row: object): row is PerformanceRunDataFile {
-  return Reflect.has(row, 'filePath') && Reflect.get(row as PerformanceRunDataFile, 'fileType') === 'csv';
+  return (
+    Reflect.has(row, 'filePath') &&
+    Reflect.get(row as PerformanceRunDataFile, 'fileType') === 'csv'
+  );
 }
 
 function isInsightFile(row: object): row is PerformanceRunDataFile {
-  return Reflect.has(row, 'filePath') && ['bin', 'json'].includes(Reflect.get(row as PerformanceRunDataFile, 'fileType'));
+  return (
+    Reflect.has(row, 'filePath') &&
+    ['bin', 'json'].includes(
+      Reflect.get(row as PerformanceRunDataFile, 'fileType'),
+    )
+  );
 }
 
 function handleClickDownload(record: PerformanceExecutionRecord) {
-  saveFileToLocal({ sourcePath: record.dirPath, filename: `${record.title}.zip`, allowedTypes: ['zip'] });
+  saveFileToLocal({
+    sourcePath: record.dirPath,
+    filename: `${record.title}.zip`,
+    allowedTypes: ['zip'],
+  });
 }
 
 // 标记
-const MarkedIcon: Component = ({ marked }) => h(marked ? FlagFilled : FlagOutlined, { style: { color: marked ? '#d32029' : undefined } });
-function handleToggleMarked(record: PerformanceExecutionRecord, marked: boolean) {
+const MarkedIcon: Component = ({ marked }) =>
+  h(marked ? FlagFilled : FlagOutlined, {
+    style: { color: marked ? '#d32029' : undefined },
+  });
+
+function handleToggleMarked(
+  record: PerformanceExecutionRecord,
+  marked: boolean,
+) {
   emit('toggle-mark', record.key, marked);
 }
 
@@ -64,6 +92,7 @@ function handleToggleMarked(record: PerformanceExecutionRecord, marked: boolean)
 const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
   const node = info.node;
   const data = node.dataRef || node;
+
   if (isCsvFile(data)) {
     openCsvView(data.filePath);
   } else if (isInsightFile(data)) {
@@ -74,9 +103,20 @@ const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
 
 <template>
   <div class="tree-container">
-    <a-directory-tree :tree-data="treeData" :show-line="false" :show-icon="false" :switcher-icon="SwitcherIcon" :expanded-keys="expandedKeys" @update:expanded-keys="expandedKeys = $event" @select="onClickNode">
+    <a-directory-tree
+      :tree-data="treeData"
+      :show-line="false"
+      :show-icon="false"
+      :switcher-icon="SwitcherIcon"
+      :expanded-keys="expandedKeys"
+      @update:expanded-keys="expandedKeys = $event"
+      @select="onClickNode"
+    >
       <template #title="{ dataRef }">
-        <div class="custom-tree-node" :class="{ root: isRootDir(dataRef) }">
+        <div
+          class="custom-tree-node"
+          :class="{ root: isRootDir(dataRef) }"
+        >
           <div class="tree-node-title">{{ dataRef.title }}</div>
           <template v-if="isRootDir(dataRef)">
             <div class="tree-node-timestamp">

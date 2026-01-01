@@ -5,11 +5,11 @@
  * LICENSE file in the root directory of this source tree. -->
 
 <script setup>
-import { ref, computed, watch, nextTick } from "vue";
-import { QuestionCircleOutlined } from "@ant-design/icons-vue";
-import editTable from "./editTable.vue";
-import { saveConfig as saveConfigAPI } from "@/apis";
-import SelectFolder from "./SelectFolder.vue";
+import { ref, computed, watch, nextTick } from 'vue';
+import { QuestionCircleOutlined } from '@ant-design/icons-vue';
+import editTable from './editTable.vue';
+import { saveConfig as saveConfigAPI } from '@/apis';
+import SelectFolder from './SelectFolder.vue';
 
 const props = defineProps({
   onboardData: {
@@ -23,122 +23,178 @@ const props = defineProps({
 });
 
 // Advanced collapse panel - default open
-const advancedCollapseActiveKey = ref(["1"]);
+const advancedCollapseActiveKey = ref(['1']);
 
 const emit = defineEmits([
-  "selectAll",
-  "memoryAnalysisChange",
-  "operatorPerformanceChange",
-  "addAdvancedParam",
-  "deleteAdvancedParam",
+  'selectAll',
+  'memoryAnalysisChange',
+  'operatorPerformanceChange',
+  'addAdvancedParam',
+  'deleteAdvancedParam',
 ]);
 
 const addTableItem = () => {
-  emit('addAdvancedParam')
+  emit('addAdvancedParam');
   nextTick(() => {
-    saveConfig()
-  })
-}
+    saveConfig();
+  });
+};
 
-const deleteTableItem = e => {
-  console.log('delete event', e)
-  emit('deleteAdvancedParam', e)
+const deleteTableItem = (e) => {
+  console.log('delete event', e);
+  emit('deleteAdvancedParam', e);
   nextTick(() => {
-    saveConfig()
-  })
-}
+    saveConfig();
+  });
+};
 
 const handleSelectAll = (e) => {
-  const checked = typeof e === "boolean" ? e : e.target?.checked ?? false;
-  emit("selectAll", checked);
+  const checked = typeof e === 'boolean' ? e : (e.target?.checked ?? false);
+
+  emit('selectAll', checked);
   nextTick(() => {
-    saveConfig()
-  })
+    saveConfig();
+  });
 };
 
 const handleMemoryAnalysisChange = (e) => {
-  const checked = typeof e === "boolean" ? e : e.target?.checked ?? false;
-  emit("memoryAnalysisChange", checked);
+  const checked = typeof e === 'boolean' ? e : (e.target?.checked ?? false);
+
+  emit('memoryAnalysisChange', checked);
   nextTick(() => {
-    saveConfig()
-  })
+    saveConfig();
+  });
 };
 
 const handleOperatorPerformanceChange = (e) => {
-  const checked = typeof e === "boolean" ? e : e.target?.checked ?? false;
-  emit("operatorPerformanceChange", checked);
+  const checked = typeof e === 'boolean' ? e : (e.target?.checked ?? false);
+
+  emit('operatorPerformanceChange', checked);
   nextTick(() => {
-    saveConfig()
-  })
+    saveConfig();
+  });
 };
 
 // 所有全选
-const totalSelectedAll = ref(true)
+const totalSelectedAll = ref(true);
 // 内存分析图全选
-const memorySelectedAll = ref(true)
+const memorySelectedAll = ref(true);
 // 算子性能数据文件全选
-const performanceSelectedAll = ref(true)
+const performanceSelectedAll = ref(true);
 
 // 内存分析图，这组半选
 const memorySelectedHalf = computed(() => {
-  if (props.onboardData.user_options.Occupancy && props.onboardData.user_options.Roofline) {
-    return false
+  if (
+    props.onboardData.user_options.Occupancy &&
+    props.onboardData.user_options.Roofline
+  ) {
+    return false;
   }
-  return true
-})
+
+  return true;
+});
 
 // 算子性能数据文件，这组半选
 const performanceSelectedHalf = computed(() => {
-  let count = 0
-  const keyArray = ['ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'PipeUtilization', 'ResourceConflictRatio']
-  keyArray.forEach(key => {
+  let count = 0;
+  const keyArray = [
+    'ArithmeticUtilization',
+    'L2Cache',
+    'Memory',
+    'MemoryL0',
+    'MemoryUB',
+    'PipeUtilization',
+    'ResourceConflictRatio',
+  ];
+
+  keyArray.forEach((key) => {
     if (props.onboardData.user_options[key]) {
-      count += 1
+      count += 1;
     }
-  })
-  return count > 0 && count < keyArray.length
-})
+  });
+
+  return count > 0 && count < keyArray.length;
+});
 
 // 所有图形半选状态
 const totalSelectedHalf = computed(() => {
-  let count = 0
-  const totalKeys = ['Occupancy', 'Roofline', 'Source', 'MemoryDetail', 'ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'PipeUtilization', 'ResourceConflictRatio']
-  totalKeys.forEach(key => {
+  let count = 0;
+  const totalKeys = [
+    'Occupancy',
+    'Roofline',
+    'Source',
+    'MemoryDetail',
+    'ArithmeticUtilization',
+    'L2Cache',
+    'Memory',
+    'MemoryL0',
+    'MemoryUB',
+    'PipeUtilization',
+    'ResourceConflictRatio',
+  ];
+
+  totalKeys.forEach((key) => {
     if (props.onboardData.user_options[key]) {
-      count += 1
+      count += 1;
     }
-  })
-  return count < totalKeys.length
-})
+  });
+
+  return count < totalKeys.length;
+});
 
 const saveConfig = async () => {
-  const obj = { config_id: props.onboardData.config_id, user_options: { ...props.onboardData.user_options } }
-  await saveConfigAPI({ type: 'on_board', data: [JSON.parse(JSON.stringify(obj))] });
+  const obj = {
+    config_id: props.onboardData.config_id,
+    user_options: { ...props.onboardData.user_options },
+  };
+
+  await saveConfigAPI({
+    type: 'on_board',
+    data: [JSON.parse(JSON.stringify(obj))],
+  });
 };
 
-
 // 组内选项全部选中时，自动选上“全选”
-watch(() => props.onboardData.user_options,
+watch(
+  () => props.onboardData.user_options,
   () => {
-    memorySelectedAll.value = props.onboardData.user_options.Occupancy && props.onboardData.user_options.Roofline
+    memorySelectedAll.value =
+      props.onboardData.user_options.Occupancy &&
+      props.onboardData.user_options.Roofline;
 
-    let count = 0
-    const keyArray = ['ArithmeticUtilization', 'L2Cache', 'Memory', 'MemoryL0', 'MemoryUB', 'PipeUtilization', 'ResourceConflictRatio']
-    keyArray.forEach(key => {
+    let count = 0;
+    const keyArray = [
+      'ArithmeticUtilization',
+      'L2Cache',
+      'Memory',
+      'MemoryL0',
+      'MemoryUB',
+      'PipeUtilization',
+      'ResourceConflictRatio',
+    ];
+
+    keyArray.forEach((key) => {
       if (props.onboardData.user_options[key]) {
-        count += 1
+        count += 1;
       }
-    })
-    performanceSelectedAll.value = count === keyArray.length
+    });
+    performanceSelectedAll.value = count === keyArray.length;
 
-    totalSelectedAll.value = memorySelectedAll.value && performanceSelectedAll.value && props.onboardData.user_options.Source && props.onboardData.user_options.MemoryDetail
+    totalSelectedAll.value =
+      memorySelectedAll.value &&
+      performanceSelectedAll.value &&
+      props.onboardData.user_options.Source &&
+      props.onboardData.user_options.MemoryDetail;
   },
-  { deep: true, immediate: true }
-)
+  { deep: true, immediate: true },
+);
 
-const startHref = 'https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/API/ascendcopapi/atlasascendc_api_07_1214.html'
-const stopHref = 'https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/API/ascendcopapi/atlasascendc_api_07_1215.html'
-const guide = 'https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODtools/Operatordevelopmenttools/atlasopdev_16_0082.html'
+const startHref =
+  'https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/API/ascendcopapi/atlasascendc_api_07_1214.html';
+const stopHref =
+  'https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/API/ascendcopapi/atlasascendc_api_07_1215.html';
+const guide =
+  'https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODtools/Operatordevelopmenttools/atlasopdev_16_0082.html';
 </script>
 
 <template>
@@ -150,7 +206,7 @@ const guide = 'https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODto
           <template #title>
             <div>
               具体图形案例请参考算子调优工具概述:
-              <br>
+              <br />
               {{ guide }}
             </div>
           </template>
@@ -159,23 +215,39 @@ const guide = 'https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODto
       </div>
 
       <a-form-item v-if="false">
-        <a-checkbox v-model:checked="totalSelectedAll" :indeterminate="totalSelectedHalf" @change="handleSelectAll">
+        <a-checkbox
+          v-model:checked="totalSelectedAll"
+          :indeterminate="totalSelectedHalf"
+          @change="handleSelectAll"
+        >
           全选
         </a-checkbox>
       </a-form-item>
       <a-form-item>
-        <a-checkbox v-if="false" v-model:checked="memorySelectedAll" :indeterminate="memorySelectedHalf"
-          @change="handleMemoryAnalysisChange">
+        <a-checkbox
+          v-if="false"
+          v-model:checked="memorySelectedAll"
+          :indeterminate="memorySelectedHalf"
+          @change="handleMemoryAnalysisChange"
+        >
           内存分析图
         </a-checkbox>
         <div>计算内存热力图（默认采集）</div>
         <div class="checkbox-group">
-          <div style="margin-bottom: 12px;">默认采集：基础信息、计算工作负载分析、内存负载分析</div>
+          <div style="margin-bottom: 12px">
+            默认采集：基础信息、计算工作负载分析、内存负载分析
+          </div>
           <span>默认选项：</span>
-          <a-checkbox v-model:checked="onboardData.user_options.Occupancy" @change="saveConfig">
+          <a-checkbox
+            v-model:checked="onboardData.user_options.Occupancy"
+            @change="saveConfig"
+          >
             核间负载分析图
           </a-checkbox>
-          <a-checkbox v-model:checked="onboardData.user_options.Roofline" @change="saveConfig">
+          <a-checkbox
+            v-model:checked="onboardData.user_options.Roofline"
+            @change="saveConfig"
+          >
             Roofline瓶颈分析
           </a-checkbox>
           <a-tooltip title="若勾选该选项，将默认采集所有算子性能指标">
@@ -184,12 +256,18 @@ const guide = 'https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODto
         </div>
       </a-form-item>
       <a-form-item>
-        <a-checkbox v-model:checked="onboardData.user_options.Source" @change="saveConfig">
+        <a-checkbox
+          v-model:checked="onboardData.user_options.Source"
+          @change="saveConfig"
+        >
           算子代码热点图
         </a-checkbox>
       </a-form-item>
       <a-form-item>
-        <a-checkbox v-model:checked="onboardData.user_options.MemoryDetail" @change="saveConfig">
+        <a-checkbox
+          v-model:checked="onboardData.user_options.MemoryDetail"
+          @change="saveConfig"
+        >
           Cache热力图
         </a-checkbox>
         <a-tooltip title="若勾选该选项，将默认采集所有算子性能指标">
@@ -197,38 +275,75 @@ const guide = 'https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODto
         </a-tooltip>
       </a-form-item>
       <a-form-item>
-        <a-checkbox v-model:checked="performanceSelectedAll" :indeterminate="performanceSelectedHalf"
-          @change="handleOperatorPerformanceChange">
+        <a-checkbox
+          v-model:checked="performanceSelectedAll"
+          :indeterminate="performanceSelectedHalf"
+          @change="handleOperatorPerformanceChange"
+        >
           算子性能指标
         </a-checkbox>
         <div class="nested-checkbox-group horizontal">
-          <a-checkbox v-model:checked="onboardData.user_options.ArithmeticUtilization" @change="saveConfig">
+          <a-checkbox
+            v-model:checked="onboardData.user_options.ArithmeticUtilization"
+            @change="saveConfig"
+          >
             Cube及Vector类型指令耗时和占比
           </a-checkbox>
-          <a-checkbox v-model:checked="onboardData.user_options.L2Cache" @change="saveConfig">
+          <a-checkbox
+            v-model:checked="onboardData.user_options.L2Cache"
+            @change="saveConfig"
+          >
             L2 Cache命中率
           </a-checkbox>
-          <a-checkbox v-model:checked="onboardData.user_options.Memory" @change="saveConfig">
+          <a-checkbox
+            v-model:checked="onboardData.user_options.Memory"
+            @change="saveConfig"
+          >
             内存读写带宽速率
           </a-checkbox>
-          <a-checkbox v-model:checked="onboardData.user_options.MemoryL0" @change="saveConfig">
+          <a-checkbox
+            v-model:checked="onboardData.user_options.MemoryL0"
+            @change="saveConfig"
+          >
             L0读写带宽速率
           </a-checkbox>
-          <a-checkbox v-model:checked="onboardData.user_options.MemoryUB" @change="saveConfig">
+          <a-checkbox
+            v-model:checked="onboardData.user_options.MemoryUB"
+            @change="saveConfig"
+          >
             UB读写带宽速率
           </a-checkbox>
-          <a-checkbox v-if="false" v-model:checked="onboardData.user_options.BasicInfo" @change="saveConfig">
+          <a-checkbox
+            v-if="false"
+            v-model:checked="onboardData.user_options.BasicInfo"
+            @change="saveConfig"
+          >
             算子基础信息
           </a-checkbox>
-          <a-checkbox v-model:checked="onboardData.user_options.PipeUtilization" @change="saveConfig">
+          <a-checkbox
+            v-model:checked="onboardData.user_options.PipeUtilization"
+            @change="saveConfig"
+          >
             计算单元和搬运单元耗时占比
           </a-checkbox>
-          <a-checkbox v-model:checked="onboardData.user_options.ResourceConflictRatio" @change="saveConfig">
+          <a-checkbox
+            v-model:checked="onboardData.user_options.ResourceConflictRatio"
+            @change="saveConfig"
+          >
             资源冲突占比
           </a-checkbox>
         </div>
       </a-form-item>
-      <a-alert v-if="onboardData.user_options.Roofline || onboardData.user_options.MemoryDetail" type="info" show-icon message="若勾选“Roofline瓶颈分析”或“Cache热力图”，将默认采集所有算子性能指标" style="margin-top: 12px;"></a-alert>
+      <a-alert
+        v-if="
+          onboardData.user_options.Roofline ||
+          onboardData.user_options.MemoryDetail
+        "
+        type="info"
+        show-icon
+        message="若勾选“Roofline瓶颈分析”或“Cache热力图”，将默认采集所有算子性能指标"
+        style="margin-top: 12px"
+      ></a-alert>
 
       <!-- <div class="section-title" style="margin-top: 12px;">模式</div>
       <a-form-item>
@@ -248,10 +363,19 @@ const guide = 'https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODto
         <SelectFolder v-model="onboardData.user_options.dataStoragePath" placeholder="请选择数据存放位置" />
       </a-form-item> -->
 
-      <a-collapse v-model:activeKey="advancedCollapseActiveKey" ghost>
-        <a-collapse-panel key="1" header="高级配置">
+      <a-collapse
+        v-model:active-key="advancedCollapseActiveKey"
+        ghost
+      >
+        <a-collapse-panel
+          key="1"
+          header="高级配置"
+        >
           <a-form-item>
-            <a-checkbox v-model:checked="onboardData.user_options.KernelScale" @change="saveConfig">
+            <a-checkbox
+              v-model:checked="onboardData.user_options.KernelScale"
+              @change="saveConfig"
+            >
               使能Kernel侧指定代码段性能采集
               <a-tooltip>
                 <QuestionCircleOutlined class="help-icon" />
@@ -263,24 +387,33 @@ const guide = 'https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODto
               </a-tooltip>
             </a-checkbox>
           </a-form-item>
-          <a-alert v-if="onboardData.user_options.KernelScale" type="info" show-icon>
+          <a-alert
+            v-if="onboardData.user_options.KernelScale"
+            type="info"
+            show-icon
+          >
             <template #message>
               请确认是否在算子Kernal侧对应的代码段前后调用了MetricsProfStart和MetricsProfStop接口，若未调用，该选项将不会生效。
               具体调用方式请参见
-              <br>
+              <br />
               MetricsProfStart
-              <br>
+              <br />
               （{{ startHref }}）
-              <br>
+              <br />
               和MetricsProfStop接口
-              <br>
+              <br />
               （{{ stopHref }}）
             </template>
           </a-alert>
 
           <a-form-item>
-            <editTable :key="updateIndex" :dataSource="onboardData.user_options.advance_param"
-              @addTableItem="addTableItem" @deleteTableItem="deleteTableItem" @onChange="saveConfig" />
+            <editTable
+              :key="updateIndex"
+              :data-source="onboardData.user_options.advance_param"
+              @add-table-item="addTableItem"
+              @delete-table-item="deleteTableItem"
+              @on-change="saveConfig"
+            />
           </a-form-item>
         </a-collapse-panel>
       </a-collapse>

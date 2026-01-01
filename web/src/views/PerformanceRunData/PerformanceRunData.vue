@@ -9,10 +9,15 @@ const sortOrder = ref<'asc' | 'desc'>('desc');
 const markedOnly = ref<boolean>(false);
 
 const treeData = ref<PerformanceExecutionRecord[]>([]);
-const renderTreeData = computed<PerformanceExecutionRecord[]>(() => (markedOnly.value ? treeData.value.filter((item) => item.marked) : treeData.value));
+const renderTreeData = computed<PerformanceExecutionRecord[]>(() =>
+  markedOnly.value
+    ? treeData.value.filter((item) => item.marked)
+    : treeData.value,
+);
 
 function loadTreeData() {
   const params = { sort: { by: 'timestamp' as const, order: sortOrder.value } };
+
   getPerformanceRunData(params).then((res) => {
     treeData.value = res.data;
   });
@@ -26,35 +31,43 @@ watch(sortOrder, () => {
 
 function handleToggleMark(key: string, marked: boolean) {
   const targetRecord = treeData.value.find((item) => item.key === key);
+
   if (targetRecord) {
     targetRecord.marked = marked;
   }
   toggleRecordMark({ key, marked });
 }
 
-const eventListenerHandler = event => {
+const eventListenerHandler = (event) => {
   if (event.data.command === 'iframeRefreshData') {
     loadTreeData();
   }
-}
+};
 
 // 添加全局消息监听 监听刷新列表数据
 const addEventListener = () => {
   window.addEventListener('message', eventListenerHandler);
-}
+};
 
 onMounted(() => {
   addEventListener();
-})
+});
 
 onBeforeUnmount(() => {
-  window.removeEventListener('message', eventListenerHandler)
-})
+  window.removeEventListener('message', eventListenerHandler);
+});
 </script>
 
 <template>
   <div @contextmenu.prevent>
-    <FilterBar v-model:sort-order="sortOrder" v-model:marked-only="markedOnly" @reload="loadTreeData" />
-    <FileTree :tree-data="renderTreeData" @toggle-mark="handleToggleMark" />
+    <FilterBar
+      v-model:sort-order="sortOrder"
+      v-model:marked-only="markedOnly"
+      @reload="loadTreeData"
+    />
+    <FileTree
+      :tree-data="renderTreeData"
+      @toggle-mark="handleToggleMark"
+    />
   </div>
 </template>

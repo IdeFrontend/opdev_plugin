@@ -11,8 +11,12 @@ export const projectSHApis: ApiGroup = {
     async saveProjectSH(params: SaveProjectSHParams): Promise<void> {
       try {
         await OpsAPI.updateShScript(params.accendEnvScript);
-        vscode.window.showInformationMessage('环境变量设置成功', params.accendEnvScript);
+        vscode.window.showInformationMessage(
+          '环境变量设置成功',
+          params.accendEnvScript,
+        );
         const project = Project.getInstance();
+
         project.updateView();
       } catch (error) {
         vscode.window.showErrorMessage(`环境变量设置失败: ${error}`);
@@ -21,4 +25,3 @@ export const projectSHApis: ApiGroup = {
     },
   },
 };
-

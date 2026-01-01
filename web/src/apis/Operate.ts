@@ -62,4 +62,3 @@ export function runDebug() {
 export function debugConfig() {
   return request.post<undefined, void>('webview/debugConfig');
 }
-

@@ -7,7 +7,11 @@ import { exec } from 'child_process';
 import * as vscode from 'vscode';
 
 const execAsync = promisify(exec);
-export async function ensureLaunchJsonExists(op_path: string | undefined, create_by?: string | null) {
+
+export async function ensureLaunchJsonExists(
+  op_path: string | undefined,
+  create_by?: string | null,
+) {
   if (!op_path || typeof op_path !== 'string') {
     return;
   }
@@ -19,6 +23,7 @@ export async function ensureLaunchJsonExists(op_path: string | undefined, create
 
   if (!fs.existsSync(projectDir)) {
     const e = new Error('project_dir不存在');
+
     (e as any).name = 'InvalidRequest';
     throw e;
   }
@@ -27,11 +32,15 @@ export async function ensureLaunchJsonExists(op_path: string | undefined, create
   // await fs.writeFile(launchJsonPath, JSON.stringify(debugLaunch, null, 2), 'utf-8');
   // 创建 devtool_config.json 文件
   const devtoolConfig = { type: create_by || '1' };
+
   console.log('生成了devtool_config.json');
-  await fs.writeFile(devtoolConfigPath, JSON.stringify(devtoolConfig, null, 2), 'utf-8');
+  await fs.writeFile(
+    devtoolConfigPath,
+    JSON.stringify(devtoolConfig, null, 2),
+    'utf-8',
+  );
   console.log('执行了');
   await exportEnvToFile(projectDir);
-  
 }
 
 export function getDefaultDirectory(): string {
@@ -40,22 +49,26 @@ export function getDefaultDirectory(): string {
   // macOS: /Users/zhangsan
   // Linux: /home/zhangsan
   const homeDir = os.homedir();
-  return path.join(homeDir, 'OpDevtoolsDownloads')
+
+  return path.join(homeDir, 'OpDevtoolsDownloads');
 }
 
 /**
  * 在扩展根目录执行环境导出命令
  */
-async function exportEnvToFile(projectDir:string) {
+async function exportEnvToFile(projectDir: string) {
   // 优先使用当前工作区根目录作为执行目录，其次回退到扩展安装目录
   // const selectedFiles = ExplorerRootUtils.getPrimaryRoot();
   // console.log(selectedFiles);
   const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+
   console.log('workspaceFolder', workspaceFolder);
   const cwd = projectDir;
-  console.log('cwd', cwd)
+
+  console.log('cwd', cwd);
   const targetDir = path.join(cwd, '.arts');
   const targetFile = path.join(targetDir, 'env');
+
   try {
     await fs.promises.mkdir(targetDir, { recursive: true });
     await execAsync('. /etc/profile && env > ./.arts/.env', {

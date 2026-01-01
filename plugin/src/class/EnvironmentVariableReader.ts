@@ -23,11 +23,18 @@ export class EnvironmentVariableReader {
    * @param fallbackToEnvFile 如果直接读取失败，是否尝试从 .arts/.env 文件读取（默认 true）
    * @returns 环境变量值，如果不存在则返回 undefined
    */
-  static getEnv(varName: string, fallbackToEnvFile: boolean = true): string | undefined {
+  static getEnv(
+    varName: string,
+    fallbackToEnvFile: boolean = true,
+  ): string | undefined {
     // 优先从 process.env 直接读取
     const directValue = process.env[varName];
+
     if (directValue) {
-      console.log(`[EnvironmentVariableReader] 从 process.env 直接获取环境变量 ${varName}: ${directValue}`);
+      console.log(
+        `[EnvironmentVariableReader] 从 process.env 直接获取环境变量 ${varName}: ${directValue}`,
+      );
+
       return directValue;
     }
 
@@ -41,16 +48,24 @@ export class EnvironmentVariableReader {
 
         // 从缓存中读取
         const cachedValue = this.envCache.get(varName);
+
         if (cachedValue) {
-          console.log(`[EnvironmentVariableReader] 从 .arts/.env 文件获取环境变量 ${varName}: ${cachedValue}`);
+          console.log(
+            `[EnvironmentVariableReader] 从 .arts/.env 文件获取环境变量 ${varName}: ${cachedValue}`,
+          );
+
           return cachedValue;
         }
       } catch (error) {
-        console.warn(`[EnvironmentVariableReader] 从 .arts/.env 文件读取 ${varName} 失败:`, error);
+        console.warn(
+          `[EnvironmentVariableReader] 从 .arts/.env 文件读取 ${varName} 失败:`,
+          error,
+        );
       }
     }
 
     console.warn(`[EnvironmentVariableReader] 环境变量 ${varName} 不存在`);
+
     return undefined;
   }
 
@@ -65,9 +80,13 @@ export class EnvironmentVariableReader {
     try {
       // 获取工作区文件夹
       const workspaceFolders = vscode.workspace.workspaceFolders;
+
       if (!workspaceFolders || workspaceFolders.length === 0) {
-        console.warn('[EnvironmentVariableReader] 未找到工作区文件夹，无法加载 .arts/.env 文件');
+        console.warn(
+          '[EnvironmentVariableReader] 未找到工作区文件夹，无法加载 .arts/.env 文件',
+        );
         this.isEnvLoaded = true;
+
         return;
       }
 
@@ -77,8 +96,11 @@ export class EnvironmentVariableReader {
 
       // 检查文件是否存在
       if (!fs.existsSync(envFilePath)) {
-        console.warn(`[EnvironmentVariableReader] .env 文件不存在: ${envFilePath}`);
+        console.warn(
+          `[EnvironmentVariableReader] .env 文件不存在: ${envFilePath}`,
+        );
         this.isEnvLoaded = true;
+
         return;
       }
 
@@ -88,9 +110,14 @@ export class EnvironmentVariableReader {
       // 解析环境变量
       this.parseEnvFile(envContent);
       this.isEnvLoaded = true;
-      console.log(`[EnvironmentVariableReader] 成功从 .arts/.env 文件加载环境变量，共 ${this.envCache.size} 个`);
+      console.log(
+        `[EnvironmentVariableReader] 成功从 .arts/.env 文件加载环境变量，共 ${this.envCache.size} 个`,
+      );
     } catch (error: any) {
-      console.error(`[EnvironmentVariableReader] 加载 .arts/.env 文件失败:`, error.message);
+      console.error(
+        `[EnvironmentVariableReader] 加载 .arts/.env 文件失败:`,
+        error.message,
+      );
       // 即使失败也标记为已加载，避免重复尝试
       this.isEnvLoaded = true;
     }
@@ -114,26 +141,35 @@ export class EnvironmentVariableReader {
       // 解析格式：VAR_NAME=value 或 VAR_NAME="value" 或 VAR_NAME='value'
       // 支持等号前后可能有空格
       const match = trimmedLine.match(/^\s*([^=#\s]+)\s*=\s*(.*)$/);
+
       if (match) {
         const varName = match[1].trim();
         let varValue = match[2].trim();
 
         // 移除引号（如果有）
-        if ((varValue.startsWith('"') && varValue.endsWith('"')) || (varValue.startsWith("'") && varValue.endsWith("'"))) {
+        if (
+          (varValue.startsWith('"') && varValue.endsWith('"')) ||
+          (varValue.startsWith("'") && varValue.endsWith("'"))
+        ) {
           varValue = varValue.slice(1, -1);
         }
 
         // 处理行尾注释（# 后面的内容）
         const commentIndex = varValue.indexOf('#');
+
         if (commentIndex !== -1) {
           // 检查 # 是否在引号内
           const beforeComment = varValue.substring(0, commentIndex);
           const quoteCount = (beforeComment.match(/"/g) || []).length;
+
           if (quoteCount % 2 === 0) {
             // # 不在引号内，移除注释
             varValue = beforeComment.trim();
             // 再次检查引号
-            if ((varValue.startsWith('"') && varValue.endsWith('"')) || (varValue.startsWith("'") && varValue.endsWith("'"))) {
+            if (
+              (varValue.startsWith('"') && varValue.endsWith('"')) ||
+              (varValue.startsWith("'") && varValue.endsWith("'"))
+            ) {
               varValue = varValue.slice(1, -1);
             }
           }

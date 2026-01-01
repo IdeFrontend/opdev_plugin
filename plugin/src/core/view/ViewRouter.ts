@@ -35,6 +35,7 @@ export class ViewRouter extends vscode.Disposable {
   public getAllProviderRaws(): ViewRouteRaw[] {
     const allRoutes = Array.from(this.routeRawMap.values());
     const providerRaws = allRoutes.filter((route) => route.providerViewType);
+
     return providerRaws;
   }
 

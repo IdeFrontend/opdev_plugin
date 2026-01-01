@@ -20,6 +20,7 @@ export function useRemoteSearch() {
    */
   const buildDefaultSearchPath = (value = '') => {
     if (value) return value;
+
     return '/';
   };
 
@@ -28,6 +29,7 @@ export function useRemoteSearch() {
    */
   const remoteSearch = async (keyword: string, tabType: string) => {
     const searchValue = keyword || '';
+
     dataStorageLoading.value = true;
     try {
       const result = await remotePathSearch({
@@ -35,7 +37,10 @@ export function useRemoteSearch() {
         keyword: buildDefaultSearchPath(searchValue.trim()),
       });
       const { type, list = [] } = result;
-      const mapped = list.map((item: { path: string }) => ({ value: item.path }));
+      const mapped = list.map((item: { path: string }) => ({
+        value: item.path,
+      }));
+
       if (type === 'dataStorage') {
         dataStorageOptions.value = mapped;
         dataStorageLoading.value = false;

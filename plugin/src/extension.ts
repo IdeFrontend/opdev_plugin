@@ -33,27 +33,33 @@ import { MindStudioPluginInstaller } from './class/MindStudioPluginInstaller';
 let extensionContext: vscode.ExtensionContext | undefined;
 const execAsync = promisify(exec);
 
-
 /**
  * 检查当前工作区是否存在 .vscode/devtool_config.json 文件
  * @returns 如果文件存在返回 true，否则返回 false
  */
 async function checkDevtoolConfigExists(): Promise<boolean> {
   const workspaceFolders = vscode.workspace.workspaceFolders;
+
   if (!workspaceFolders || workspaceFolders.length === 0) {
     return false;
   }
 
   const workspacePath = workspaceFolders[0].uri.fsPath;
-  const devtoolConfigPath = path.join(workspacePath, '.vscode', 'devtool_config.json');
+  const devtoolConfigPath = path.join(
+    workspacePath,
+    '.vscode',
+    'devtool_config.json',
+  );
 
   try {
     return fs.existsSync(devtoolConfigPath);
   } catch (error) {
     console.error('检查 devtool_config.json 文件时出错:', error);
+
     return false;
   }
 }
+
 /**
  * 插件激活入口函数
  * @param context VSCode扩展上下文
@@ -65,12 +71,16 @@ export async function activate(context: vscode.ExtensionContext) {
   // 国际化
   await initI18n();
 
-
   // 检查 devtool_config.json 文件是否存在
   const hasDevtoolConfig = await checkDevtoolConfigExists();
+
   console.log('文件是否存在:', hasDevtoolConfig);
   // 设置 context 来控制命令可见性
-  await vscode.commands.executeCommand('setContext', 'hasDevtoolConfig', hasDevtoolConfig);
+  await vscode.commands.executeCommand(
+    'setContext',
+    'hasDevtoolConfig',
+    hasDevtoolConfig,
+  );
 
   /**
    * 关闭辅助侧边栏
@@ -78,7 +88,9 @@ export async function activate(context: vscode.ExtensionContext) {
   const closeAuxiliaryBar = async () => {
     try {
       // 检查辅助侧边栏是否可见，如果可见则关闭
-      await vscode.commands.executeCommand('workbench.action.closeAuxiliaryBar');
+      await vscode.commands.executeCommand(
+        'workbench.action.closeAuxiliaryBar',
+      );
       console.log('已关闭辅助侧边栏');
     } catch (error) {
       console.error('关闭辅助侧边栏时出错:', error);
@@ -86,12 +98,19 @@ export async function activate(context: vscode.ExtensionContext) {
   };
 
   let progress: any;
-  if (context.globalState.get<string>('runCommand') === 'huawei-op-devtools.createDictory') {
-    await vscode.window.withProgress({
-      location: vscode.ProgressLocation.Notification,
-      title: `开始创建算子文件...`,
-      cancellable: false
-    }, async pro => progress = pro)
+
+  if (
+    context.globalState.get<string>('runCommand') ===
+    'huawei-op-devtools.createDictory'
+  ) {
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: `开始创建算子文件...`,
+        cancellable: false,
+      },
+      async (pro) => (progress = pro),
+    );
   }
   // api接口
   const apiServer = initApiServer();
@@ -115,51 +134,73 @@ export async function activate(context: vscode.ExtensionContext) {
   const configProjectSHProvider = new WebviewProvider(context, apiServer);
 
   // 注册打开Opsuite命令
-  const openCommand = vscode.commands.registerCommand('huawei-op-devtools.open', async () => {
-    createOpsProvider.show('Link');
-  });
+  const openCommand = vscode.commands.registerCommand(
+    'huawei-op-devtools.open',
+    async () => {
+      createOpsProvider.show('Link');
+    },
+  );
 
   // 注册在当前目录下新建算子命令
-  const createOperatorInWorkspaceCommand = vscode.commands.registerCommand('huawei-op-devtools.createOperatorInWorkspace', async (uri?: vscode.Uri) => {
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders || workspaceFolders.length === 0) {
-      vscode.window.showErrorMessage('请先打开一个工作区');
-      return;
-    }
-    // 如果提供了 uri（在文件上右键），使用该路径；否则使用工作区根目录
-    const targetPath = uri ? uri.fsPath : workspaceFolders[0].uri.fsPath;
-    await createOpsProvider.show('Link');
-    // 等待 webview 加载完成后发送路径
-    setTimeout(() => {
-      createOpsProvider.postMessage({
-        command: 'iframeSetProjectPath',
-        data: targetPath,
-      });
-    }, 500);
-  });
+  const createOperatorInWorkspaceCommand = vscode.commands.registerCommand(
+    'huawei-op-devtools.createOperatorInWorkspace',
+    async (uri?: vscode.Uri) => {
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+
+      if (!workspaceFolders || workspaceFolders.length === 0) {
+        vscode.window.showErrorMessage('请先打开一个工作区');
+
+        return;
+      }
+      // 如果提供了 uri（在文件上右键），使用该路径；否则使用工作区根目录
+      const targetPath = uri ? uri.fsPath : workspaceFolders[0].uri.fsPath;
+
+      await createOpsProvider.show('Link');
+      // 等待 webview 加载完成后发送路径
+      setTimeout(() => {
+        createOpsProvider.postMessage({
+          command: 'iframeSetProjectPath',
+          data: targetPath,
+        });
+      }, 500);
+    },
+  );
 
   // 打开环境变量命令
-  const openProjectSH = vscode.commands.registerCommand('huawei-op-devtools.projectSH', async () => {
-    configProjectSHProvider.show('ProjectSH');
-  });
+  const openProjectSH = vscode.commands.registerCommand(
+    'huawei-op-devtools.projectSH',
+    async () => {
+      configProjectSHProvider.show('ProjectSH');
+    },
+  );
 
   // 注册打开关闭算子工作-操作命令
-  const toggleOpsOperateCommand = vscode.commands.registerCommand('huawei-op-devtools.toggleOpsOperate', async () => {
-    try {
-      // 打开/关闭右侧辅助侧栏
-      await vscode.commands.executeCommand('workbench.action.toggleAuxiliaryBar');
-    } catch (error) {
-      console.log(error)
-    }
-  });
+  const toggleOpsOperateCommand = vscode.commands.registerCommand(
+    'huawei-op-devtools.toggleOpsOperate',
+    async () => {
+      try {
+        // 打开/关闭右侧辅助侧栏
+        await vscode.commands.executeCommand(
+          'workbench.action.toggleAuxiliaryBar',
+        );
+      } catch (error) {
+        console.log(error);
+      }
+    },
+  );
 
   // 注册视图
   const opsOperateProvider = new OpsOperateProvider(context, apiServer);
-  const opsOperateView = vscode.window.registerWebviewViewProvider(OpsOperateProvider.viewType, opsOperateProvider, {
-    webviewOptions: {
-      retainContextWhenHidden: true,
+  const opsOperateView = vscode.window.registerWebviewViewProvider(
+    OpsOperateProvider.viewType,
+    opsOperateProvider,
+    {
+      webviewOptions: {
+        retainContextWhenHidden: true,
+      },
     },
-  });
+  );
+
   context.subscriptions.push(opsOperateView);
   // 注册命令（无论文件是否存在都要注册）
   context.subscriptions.push(toggleOpsOperateCommand);
@@ -169,7 +210,7 @@ export async function activate(context: vscode.ExtensionContext) {
     // 延迟执行，确保 UI 已就绪
     setTimeout(async () => {
       try {
-        console.log('文件存在执行展开：123123123132')
+        console.log('文件存在执行展开：123123123132');
         await vscode.commands.executeCommand('OpsOperateProvider.focus');
       } catch (error) {
         console.error('聚焦 OpsOperateProvider 视图时出错:', error);
@@ -183,53 +224,81 @@ export async function activate(context: vscode.ExtensionContext) {
   }
 
   // 注册打开Opsuite命令
-  const ConfigCommand = vscode.commands.registerCommand('huawei-op-devtools.config', async () => {
-    configProvider.show('Config');
-  });
+  const ConfigCommand = vscode.commands.registerCommand(
+    'huawei-op-devtools.config',
+    async () => {
+      configProvider.show('Config');
+    },
+  );
 
   // 注册打开欢迎页命令
-  const welcomeCommand = vscode.commands.registerCommand('huawei-op-devtools.welcome', async () => {
-    configWelcomeProvider.show('Welcome');
-  });
+  const welcomeCommand = vscode.commands.registerCommand(
+    'huawei-op-devtools.welcome',
+    async () => {
+      configWelcomeProvider.show('Welcome');
+    },
+  );
 
   // 注册删除欢迎页计数命令（用于手动重置）
-  const clearWelcomeCountCommand = vscode.commands.registerCommand('huawei-op-devtools.clearWelcomeCount', async () => {
-    await context.globalState.update('welcomeShowCount', undefined);
-    console.log('welcomeShowCount 已删除');
-  });
+  const clearWelcomeCountCommand = vscode.commands.registerCommand(
+    'huawei-op-devtools.clearWelcomeCount',
+    async () => {
+      await context.globalState.update('welcomeShowCount', undefined);
+      console.log('welcomeShowCount 已删除');
+    },
+  );
 
   // 注册清除缓存的算子工程位置命令
-  const clearLastProjectPathCommand = vscode.commands.registerCommand('huawei-op-devtools.clearLastProjectPath', async () => {
-    RemoteConfig.clearLastProjectPath();
-    vscode.window.showInformationMessage('已清除缓存的算子工程位置');
-  });
+  const clearLastProjectPathCommand = vscode.commands.registerCommand(
+    'huawei-op-devtools.clearLastProjectPath',
+    async () => {
+      RemoteConfig.clearLastProjectPath();
+      vscode.window.showInformationMessage('已清除缓存的算子工程位置');
+    },
+  );
 
   // 注册创建算子命令
-  const createOptionsCommand = vscode.commands.registerCommand('huawei-op-devtools.createDictory', async (data: any, progress: any) => {
-    await handleOperatorProjectDictoryFile({ createOperatorProjectDictoryFileType: data }, createOpsProvider, progress);
-  });
+  const createOptionsCommand = vscode.commands.registerCommand(
+    'huawei-op-devtools.createDictory',
+    async (data: any, progress: any) => {
+      await handleOperatorProjectDictoryFile(
+        { createOperatorProjectDictoryFileType: data },
+        createOpsProvider,
+        progress,
+      );
+    },
+  );
 
   // 获取home
-  const getHome = vscode.commands.registerCommand('huawei-op-devtools.getHome', async (data: any) => {
-    return process.env.HOME;
-  });
+  const getHome = vscode.commands.registerCommand(
+    'huawei-op-devtools.getHome',
+    async (data: any) => {
+      return process.env.HOME;
+    },
+  );
 
   configProvider.showLeftPage('Home');
   const [workspaceFolder] = vscode.workspace.workspaceFolders ?? [];
+
   console.log(workspaceFolder, '是否打开了文件夹');
   // 仅在未打开任何工程/文件夹时弹出欢迎页，且在本地缓存中记录次数，最多弹出两次
   if (!workspaceFolder) {
-    const welcomeShowCount = context.globalState.get<number>('welcomeShowCount') ?? 0;
+    const welcomeShowCount =
+      context.globalState.get<number>('welcomeShowCount') ?? 0;
+
     console.log(welcomeShowCount, '打开次数');
     if (welcomeShowCount < 2) {
       vscode.commands.executeCommand('huawei-op-devtools.welcome');
-      vscode.commands.executeCommand('workbench.view.extension.mindstudio-opssuite-vscode-plugin');
+      vscode.commands.executeCommand(
+        'workbench.view.extension.mindstudio-opssuite-vscode-plugin',
+      );
       context.globalState.update('welcomeShowCount', welcomeShowCount + 1);
     }
   }
 
   // 异常检测视图
-  const { openMsSanitizerDisposable, msSanitizerPanelView } = getMsSanitizerPanelViewProvider(context, apiServer);
+  const { openMsSanitizerDisposable, msSanitizerPanelView } =
+    getMsSanitizerPanelViewProvider(context, apiServer);
 
   context.subscriptions.push(msSanitizerPanelView, openMsSanitizerDisposable);
   // createOpsProvider.show('ProjectSH');
@@ -249,64 +318,90 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 注册 CSV 编辑器提供者
   const csvEditorProvider = new CsvEditorProvider();
-  const csvEditorRegistration = vscode.window.registerCustomEditorProvider(CsvEditorProvider.viewType, csvEditorProvider, {
-    webviewOptions: {
-      retainContextWhenHidden: true,
+  const csvEditorRegistration = vscode.window.registerCustomEditorProvider(
+    CsvEditorProvider.viewType,
+    csvEditorProvider,
+    {
+      webviewOptions: {
+        retainContextWhenHidden: true,
+      },
+      supportsMultipleEditorsPerDocument: false,
     },
-    supportsMultipleEditorsPerDocument: false,
-  });
+  );
 
   context.subscriptions.push(csvEditorRegistration);
 
   // 注册打开 CSV 文件的命令
-  const openCsvCommand = vscode.commands.registerCommand('csv-viewer.openCsv', async () => {
-    // 方式1：让用户选择文件
-    const fileUri = await vscode.window.showOpenDialog({
-      canSelectFiles: true,
-      canSelectFolders: false,
-      canSelectMany: false,
-      openLabel: '打开',
-      filters: {
-        'CSV 文件': ['csv'],
-        所有文件: ['*'],
-      },
-    });
+  const openCsvCommand = vscode.commands.registerCommand(
+    'csv-viewer.openCsv',
+    async () => {
+      // 方式1：让用户选择文件
+      const fileUri = await vscode.window.showOpenDialog({
+        canSelectFiles: true,
+        canSelectFolders: false,
+        canSelectMany: false,
+        openLabel: '打开',
+        filters: {
+          'CSV 文件': ['csv'],
+          所有文件: ['*'],
+        },
+      });
 
-    if (fileUri && fileUri[0]) {
-      // 使用自定义编辑器打开文件
-      await vscode.commands.executeCommand('vscode.openWith', fileUri[0], CsvEditorProvider.viewType);
-    }
-  });
+      if (fileUri && fileUri[0]) {
+        // 使用自定义编辑器打开文件
+        await vscode.commands.executeCommand(
+          'vscode.openWith',
+          fileUri[0],
+          CsvEditorProvider.viewType,
+        );
+      }
+    },
+  );
 
   context.subscriptions.push(openCsvCommand);
 
-  const flashMsSanitizerRunData = vscode.commands.registerCommand('huawei-op-devtools.flashMsSanitizerRunData', async () => {
-    // 后续待优化点，目前通过非法操作方式拿到视图实例
-    // 拿到MsSanitizerRunData的视图实例，主动下发刷新命令
-    const msSanitizerRunData = ViewServer.getInstance().providerWebViewMap.msSanitizerSidebarView;
-    console.log('ViewServer.getInstance()', msSanitizerRunData)
-    msSanitizerRunData.webview.postMessage({
-      command: 'iframeFlashMsSanitizerRunData'
-    });
-  });
+  const flashMsSanitizerRunData = vscode.commands.registerCommand(
+    'huawei-op-devtools.flashMsSanitizerRunData',
+    async () => {
+      // 后续待优化点，目前通过非法操作方式拿到视图实例
+      // 拿到MsSanitizerRunData的视图实例，主动下发刷新命令
+      const msSanitizerRunData =
+        ViewServer.getInstance().providerWebViewMap.msSanitizerSidebarView;
+
+      console.log('ViewServer.getInstance()', msSanitizerRunData);
+      msSanitizerRunData.webview.postMessage({
+        command: 'iframeFlashMsSanitizerRunData',
+      });
+    },
+  );
 
   context.subscriptions.push(flashMsSanitizerRunData);
 
-  const flashPerformanceRunData = vscode.commands.registerCommand('huawei-op-devtools.flashPerformanceRunData', async () => {
-    // 拿到PerformanceRunData的视图实例，主动下发刷新命令
-    const performanceRunData = ViewServer.getInstance().providerWebViewMap.performanceSidebarView;
-    console.log('ViewServer.getInstance()', performanceRunData)
-    performanceRunData.webview.postMessage({
-      command: 'iframeRefreshData'
-    });
-  });
+  const flashPerformanceRunData = vscode.commands.registerCommand(
+    'huawei-op-devtools.flashPerformanceRunData',
+    async () => {
+      // 拿到PerformanceRunData的视图实例，主动下发刷新命令
+      const performanceRunData =
+        ViewServer.getInstance().providerWebViewMap.performanceSidebarView;
+
+      console.log('ViewServer.getInstance()', performanceRunData);
+      performanceRunData.webview.postMessage({
+        command: 'iframeRefreshData',
+      });
+    },
+  );
 
   context.subscriptions.push(flashPerformanceRunData);
 
-  const watchWorkSpaceFolderChange = vscode.workspace.onDidChangeWorkspaceFolders(async () => {
-    vscode.commands.executeCommand('huawei-op-devtools.flashMsSanitizerRunData');
-    vscode.commands.executeCommand('huawei-op-devtools.flashPerformanceRunData');
-  });
+  const watchWorkSpaceFolderChange =
+    vscode.workspace.onDidChangeWorkspaceFolders(async () => {
+      vscode.commands.executeCommand(
+        'huawei-op-devtools.flashMsSanitizerRunData',
+      );
+      vscode.commands.executeCommand(
+        'huawei-op-devtools.flashPerformanceRunData',
+      );
+    });
 
   context.subscriptions.push(watchWorkSpaceFolderChange);
 
@@ -314,12 +409,17 @@ export async function activate(context: vscode.ExtensionContext) {
     console.log('激活', vscode.workspace.workspaceFolders);
     try {
       const runCommand = context.globalState.get<string>('runCommand');
+
       if (runCommand) {
         // 延迟执行，确保 UI 已就绪
         setTimeout(async () => {
           try {
             console.log('执行命令', runCommand);
-            await vscode.commands.executeCommand(runCommand, context.globalState.get('runCommand-param'), progress);
+            await vscode.commands.executeCommand(
+              runCommand,
+              context.globalState.get('runCommand-param'),
+              progress,
+            );
             context.globalState.update('runCommand', null);
             context.globalState.update('runCommand-param', null);
           } catch (e) {
@@ -335,8 +435,9 @@ export async function activate(context: vscode.ExtensionContext) {
   console.log('🧠 MindStudio 插件加载器已激活。');
   const installer = new MindStudioPluginInstaller(context, {
     pluginId: 'ascend.mindstudio-debug-vscode-plugin',
-    vsixRelativePath: './out/plugin/mindstudio-debug-vscode-plugin/MindStudio-Debug-VSCode-Plugin-1.0.7.vsix',
-    pluginVersion: '1.0.7'
+    vsixRelativePath:
+      './out/plugin/mindstudio-debug-vscode-plugin/MindStudio-Debug-VSCode-Plugin-1.0.7.vsix',
+    pluginVersion: '1.0.7',
   });
 
   await installer.installIfNeeded();
@@ -366,8 +467,12 @@ function initApiServer() {
  * @param context 扩展上下文
  * @param apiServer api服务
  */
-function initViews(context: vscode.ExtensionContext, apiServer: ApiServer): ViewServer {
+function initViews(
+  context: vscode.ExtensionContext,
+  apiServer: ApiServer,
+): ViewServer {
   const viewServer = new ViewServer(routes, context);
+
   viewServer.onViewActivated((path, webview) => {
     apiServer.addWebview(path, webview);
   });

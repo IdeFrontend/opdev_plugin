@@ -1,4 +1,8 @@
-import type { RequestOptions, RequestMessage, ResponseMessage } from 'plugin:/core/ApiServer';
+import type {
+  RequestOptions,
+  RequestMessage,
+  ResponseMessage,
+} from 'plugin:/core/ApiServer';
 
 import { deepToRaw } from '@/utils/reactive';
 
@@ -7,7 +11,11 @@ import { useConnector } from './use-connector';
 export type { RequestOptions };
 
 interface ExtensionRequest {
-  post: <Data, Res>(api: string, params?: Data, options?: RequestOptions) => Promise<Res>;
+  post: <Data, Res>(
+    api: string,
+    params?: Data,
+    options?: RequestOptions,
+  ) => Promise<Res>;
 }
 
 interface PendingRequest {
@@ -23,7 +31,9 @@ export const request = createExtensionRequest();
  * @returns { ExtensionRequest }
  */
 function createExtensionRequest(): ExtensionRequest {
-  const { send, receive } = useConnector<RequestMessage, ResponseMessage>('request');
+  const { send, receive } = useConnector<RequestMessage, ResponseMessage>(
+    'request',
+  );
 
   const pendingRequests = new Map<string, PendingRequest>();
 
@@ -33,22 +43,41 @@ function createExtensionRequest(): ExtensionRequest {
     }
     if (statusCode === 200) {
       if (isStream) {
-        handleStreamResponse(requestId, data as ReadableStreamReadResult<unknown>, pendingRequests);
+        handleStreamResponse(
+          requestId,
+          data as ReadableStreamReadResult<unknown>,
+          pendingRequests,
+        );
       } else {
         pendingRequests.get(requestId)?.success(data);
         pendingRequests.delete(requestId);
       }
     } else {
-      pendingRequests.get(requestId)?.error(statusCode, error ? recoverFromMessageError(error) : new Error('unknown error'));
+      pendingRequests
+        .get(requestId)
+        ?.error(
+          statusCode,
+          error ? recoverFromMessageError(error) : new Error('unknown error'),
+        );
       pendingRequests.delete(requestId);
     }
   });
 
   return {
-    post: <Data, Res>(api: string, params?: Data, options?: RequestOptions): Promise<Res> => {
+    post: <Data, Res>(
+      api: string,
+      params?: Data,
+      options?: RequestOptions,
+    ): Promise<Res> => {
       const optionsWithDefault = getOptionsWithDefault(options);
       const requestId = `${api}-${window.crypto.randomUUID()}`;
-      send({ api, requestId, data: deepToRaw(params), options: optionsWithDefault });
+
+      send({
+        api,
+        requestId,
+        data: deepToRaw(params),
+        options: optionsWithDefault,
+      });
 
       return new Promise((resolve, reject) => {
         // 请求超时
@@ -68,6 +97,7 @@ function createExtensionRequest(): ExtensionRequest {
 }
 
 const pendingStreams = new Map<string, ReadableStreamDefaultController<any>>();
+
 /**
  * 流式传输返回
  * @description 先返回一个ReadableStream，后续消息写入ReadableStream
@@ -83,6 +113,7 @@ function handleStreamResponse(
         pendingStreams.set(requestId, controller);
       },
     });
+
     pendingRequests.get(requestId)?.success(stream);
   }
   if (result.done) {
@@ -94,14 +125,21 @@ function handleStreamResponse(
   }
 }
 
-function recoverFromMessageError(messageError: NonNullable<ResponseMessage['error']>): Error {
+function recoverFromMessageError(
+  messageError: NonNullable<ResponseMessage['error']>,
+): Error {
   const error = new Error(messageError.message);
+
   error.name = messageError.name;
   error.stack = messageError.stack;
+
   return error;
 }
 
-function makeSuccessHandler<T extends (value: any) => void>(resolve: T, requestTimeout: ReturnType<typeof setTimeout>): T {
+function makeSuccessHandler<T extends (value: any) => void>(
+  resolve: T,
+  requestTimeout: ReturnType<typeof setTimeout>,
+): T {
   return ((...args) => {
     clearTimeout(requestTimeout);
     resolve(...args);
@@ -111,7 +149,7 @@ function makeSuccessHandler<T extends (value: any) => void>(resolve: T, requestT
 function makeErrorHandler(
   reject: (reason: unknown) => void,
   requestTimeout: ReturnType<typeof setTimeout>,
-  options: Required<RequestOptions>
+  options: Required<RequestOptions>,
 ): PendingRequest['error'] {
   return (statusCode, error) => {
     clearTimeout(requestTimeout);
@@ -123,7 +161,9 @@ function makeErrorHandler(
   };
 }
 
-function getOptionsWithDefault(options?: RequestOptions): Required<RequestOptions> {
+function getOptionsWithDefault(
+  options?: RequestOptions,
+): Required<RequestOptions> {
   return {
     timeout: 60000, // 默认60秒
     useCustomErrorHandler: false,

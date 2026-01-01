@@ -24,7 +24,10 @@ export class WebviewProvider {
   private context: vscode.ExtensionContext;
   private userInfo: os.UserInfo<string | Number>;
 
-  constructor(context: vscode.ExtensionContext, private apiServer?: ApiServer) {
+  constructor(
+    context: vscode.ExtensionContext,
+    private apiServer?: ApiServer,
+  ) {
     this.storage = new PermanentStorage(context);
     this.context = context;
     this.userInfo = os.userInfo();
@@ -44,6 +47,7 @@ export class WebviewProvider {
       }
     } catch (error) {
       const errorMsg = `打开Huawei OP DevTools失败: ${error}`;
+
       console.error(errorMsg);
       vscode.window.showErrorMessage(errorMsg);
     }
@@ -76,14 +80,19 @@ export class WebviewProvider {
             enableScripts: true,
           };
           const distPath = path.join(this.context.extensionPath, 'out', 'web');
-          webviewView.webview.html = HtmlTransformer.transformDistHtml(distPath, webviewView.webview, router);
+
+          webviewView.webview.html = HtmlTransformer.transformDistHtml(
+            distPath,
+            webviewView.webview,
+            router,
+          );
           // 处理Webview消息
           webviewView.webview.onDidReceiveMessage(
             (message: any) => {
               this.handleWebviewMessage(message);
             },
             undefined,
-            this.context.subscriptions
+            this.context.subscriptions,
           );
         },
       });
@@ -97,10 +106,15 @@ export class WebviewProvider {
    */
   private async createPanel(router: string = ''): Promise<void> {
     try {
-      this.panel = vscode.window.createWebviewPanel('mindstudioOpsuite', 'Huawei OP DevTools', vscode.ViewColumn.Active, {
-        enableScripts: true,
-        retainContextWhenHidden: true,
-      });
+      this.panel = vscode.window.createWebviewPanel(
+        'mindstudioOpsuite',
+        'Huawei OP DevTools',
+        vscode.ViewColumn.Active,
+        {
+          enableScripts: true,
+          retainContextWhenHidden: true,
+        },
+      );
 
       this.apiServer?.addWebview(router, this.panel.webview);
 
@@ -113,7 +127,7 @@ export class WebviewProvider {
           this.dispose();
         },
         null,
-        this.context.subscriptions
+        this.context.subscriptions,
       );
 
       // 处理Webview消息
@@ -122,7 +136,7 @@ export class WebviewProvider {
           this.handleWebviewMessage(message);
         },
         undefined,
-        this.context.subscriptions
+        this.context.subscriptions,
       );
     } catch (error) {
       console.error(error);
@@ -139,7 +153,12 @@ export class WebviewProvider {
 
     try {
       const distPath = path.join(this.context.extensionPath, 'out', 'web');
-      this.panel.webview.html = HtmlTransformer.transformDistHtml(distPath, this.panel.webview, router);
+
+      this.panel.webview.html = HtmlTransformer.transformDistHtml(
+        distPath,
+        this.panel.webview,
+        router,
+      );
     } catch (error) {
       // 如果读取文件失败，使用fallback内容
       console.log(error);

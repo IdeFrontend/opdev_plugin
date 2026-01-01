@@ -5,7 +5,10 @@ import { toRaw } from 'vue';
  * @param maybeProxy 输入
  * @param visitedObjects 递归过程中已访问的对象和数组
  */
-export function deepToRaw<T>(maybeProxy: T, visitedObjects = new WeakSet<any>()): T {
+export function deepToRaw<T>(
+  maybeProxy: T,
+  visitedObjects = new WeakSet<any>(),
+): T {
   if (maybeProxy === undefined) {
     return maybeProxy;
   }
@@ -23,6 +26,7 @@ export function deepToRaw<T>(maybeProxy: T, visitedObjects = new WeakSet<any>())
     raw.forEach((item, index) => {
       raw[index] = deepToRaw(item, visitedObjects);
     });
+
     return raw;
   }
 
@@ -32,9 +36,11 @@ export function deepToRaw<T>(maybeProxy: T, visitedObjects = new WeakSet<any>())
   } else if (typeof raw === 'object') {
     visitedObjects.add(raw);
     const keys = Object.keys(raw);
+
     for (const key of keys) {
       raw[key] = deepToRaw(raw[key], visitedObjects);
     }
+
     return raw;
   }
 

@@ -14,13 +14,14 @@ import {
   getConfigData,
   saveBuildConfig,
   startBuild,
-  getBuildConfigs
+  getBuildConfigs,
 } from '@/apis';
 ```
 
 ### 2. 基础用法示例
 
 #### 初始化项目
+
 ```typescript
 // 使用默认参数
 await initOps();
@@ -29,36 +30,39 @@ await initOps();
 await initOps({
   accendEnvScript: '/path/to/script.sh',
   projectPath: '/path/to/project',
-  projectName: 'my-project'
+  projectName: 'my-project',
 });
 ```
 
 #### 获取配置数据
+
 ```typescript
 const configData = await getConfigData();
 console.log(configData);
 ```
 
 #### 获取构建配置列表
+
 ```typescript
 const configs = await getBuildConfigs();
-configs.forEach(config => {
+configs.forEach((config) => {
   console.log(config.config_name, config.config_type);
 });
 ```
 
 #### 保存并编译
+
 ```typescript
 // 保存配置
 await saveBuildConfig({
   data: buildConfigArray,
-  showMessage: true
+  showMessage: true,
 });
 
 // 开始编译
 await startBuild({
   configId: '123',
-  compileOption: '--debug'
+  compileOption: '--debug',
 });
 ```
 
@@ -101,7 +105,10 @@ async function handleBuild() {
 
 <template>
   <div>
-    <button @click="handleBuild" :disabled="isBuilding">
+    <button
+      @click="handleBuild"
+      :disabled="isBuilding"
+    >
       {{ isBuilding ? '编译中...' : '开始编译' }}
     </button>
   </div>
@@ -132,7 +139,7 @@ await saveSanitizerForm({
   data: {
     // sanitizer 配置数据
   },
-  showMessage: true
+  showMessage: true,
 });
 
 // 运行异常检测
@@ -142,16 +149,19 @@ await runSanitizer();
 ## 可用的 API 列表
 
 ### 项目管理
+
 - `initOps(params?)` - 初始化算子项目
 - `getProjectId()` - 获取当前项目ID
 - `updateShScript(params)` - 更新脚本文件
 - `checkVscode()` - 检查 .vscode 目录
 
 ### 算子创建
+
 - `createOps(params?)` - 创建算子原型文件
 - `createOpsByPrototype(params)` - 通过原型生成算子工程
 
 ### 配置管理
+
 - `getConfigData()` - 获取配置数据
 - `getBuildConfigs()` - 获取构建配置列表
 - `saveBuildConfig(params)` - 保存构建配置
@@ -162,15 +172,18 @@ await runSanitizer();
 - `getOnBoardConfig()` - 获取上板配置ID
 
 ### 编译和运行
+
 - `startBuild(params?)` - 编译算子
 - `startRun(params?)` - 运行算子
 - `startBuildExample(params?)` - 编译示例
 
 ### 性能分析
+
 - `startSimulate()` - 开始仿真分析
 - `startOnBoard()` - 开始上板分析
 
 ### 异常检测
+
 - `getSanitizerConfigs()` - 获取异常检测配置列表
 - `getSanitizerConfigId()` - 获取异常检测配置ID
 - `saveSanitizerForm(params)` - 保存异常检测表单配置
@@ -200,6 +213,7 @@ import type {
 ## 与旧方式的对比
 
 ### 旧方式（通过 WebviewMessageList）
+
 ```typescript
 // 通过 postMessage 发送消息
 that.panel.webview.postMessage({
@@ -209,6 +223,7 @@ that.panel.webview.postMessage({
 ```
 
 ### 新方式（直接调用 API）
+
 ```typescript
 // 直接调用，像调用普通函数一样
 await startBuild({ configId: '123' });

@@ -24,9 +24,11 @@ if (typeof acquireVsCodeApi !== 'undefined' && !(window as any).vscode) {
 // 监听来自VSCode扩展和iframe的消息
 window.addEventListener('message', (event) => {
   const message = event.data;
+
   console.log('外层页面接收到的message:', message);
   if (message.command && message.command.indexOf('vscode') === 0) {
     const vscode = (window as any).vscode;
+
     if (vscode) {
       vscode.postMessage({
         command: message.command,

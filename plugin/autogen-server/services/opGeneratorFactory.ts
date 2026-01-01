@@ -26,11 +26,17 @@ class BaseOpGenerator {
   op_name: string | null = null;
   template_name: string | null = null;
 
-  constructor(params: Params, project: Project, protected extensionPath: string) {
+  constructor(
+    params: Params,
+    project: Project,
+    protected extensionPath: string,
+  ) {
     this.params = params || {};
     this.project = project;
     this.op_path =
-      this.params.op_path && path.isAbsolute(this.params.op_path) ? this.params.op_path : path.resolve(this.project.project_path, this.params.op_path || '');
+      this.params.op_path && path.isAbsolute(this.params.op_path)
+        ? this.params.op_path
+        : path.resolve(this.project.project_path, this.params.op_path || '');
     this.template_name = this.params.template_name || null;
   }
 
@@ -41,6 +47,7 @@ class BaseOpGenerator {
   executeGeneration(): boolean {
     // default: ensure dir exists and return true
     fs.ensureDirSync(this.op_path);
+
     return true;
   }
 
@@ -48,28 +55,44 @@ class BaseOpGenerator {
   _renameFiles(templateName = 'add_custom') {
     if (!fs.pathExistsSync(this.op_path)) return;
     const entries = fs.readdirSync(this.op_path);
+
     for (const name of entries) {
       const full = path.join(this.op_path, name);
       const stat = fs.statSync(full);
+
       if (stat.isDirectory()) {
         this._renameFilesInDir(full, templateName);
       }
       if (name.includes(templateName)) {
-        const newName = name.replace(new RegExp(templateName, 'g'), this.op_name || '');
-        fs.moveSync(full, path.join(this.op_path, newName), { overwrite: true });
+        const newName = name.replace(
+          new RegExp(templateName, 'g'),
+          this.op_name || '',
+        );
+
+        fs.moveSync(full, path.join(this.op_path, newName), {
+          overwrite: true,
+        });
       }
     }
   }
 
   _renameFilesInDir(dir: string, templateName: string) {
     const entries = fs.readdirSync(dir);
+
     for (const name of entries) {
       const full = path.join(dir, name);
       const stat = fs.statSync(full);
+
       if (stat.isDirectory()) this._renameFilesInDir(full, templateName);
       if (name.includes(templateName)) {
-        const newName = name.replace(new RegExp(templateName, 'g'), this.op_name || '');
-        fs.moveSync(full, path.join(path.dirname(full), newName), { overwrite: true });
+        const newName = name.replace(
+          new RegExp(templateName, 'g'),
+          this.op_name || '',
+        );
+
+        fs.moveSync(full, path.join(path.dirname(full), newName), {
+          overwrite: true,
+        });
       }
     }
   }
@@ -94,9 +117,11 @@ class BaseOpGenerator {
 
     const walk = (dir: string) => {
       const names = fs.readdirSync(dir);
+
       for (const name of names) {
         const full = path.join(dir, name);
         const stat = fs.statSync(full);
+
         if (stat.isDirectory()) {
           walk(full);
           continue;
@@ -105,6 +130,7 @@ class BaseOpGenerator {
         try {
           let content = fs.readFileSync(full, 'utf8');
           let changed = false;
+
           for (const oldKey of Object.keys(replacements)) {
             if (content.includes(oldKey)) {
               content = content.split(oldKey).join(replacements[oldKey]);
@@ -125,24 +151,39 @@ class BaseOpGenerator {
 class AscendOpGenerator extends BaseOpGenerator {
   parseMeta(): string {
     const opsPrototype = this.params.ops_prototype_file;
-    this.template_name = this.params.template_name || this.template_name || 'add_custom';
+
+    this.template_name =
+      this.params.template_name || this.template_name || 'add_custom';
     if (!opsPrototype) {
-      this.op_name = this.project.project_name || path.basename(this.project.project_path);
+      this.op_name =
+        this.project.project_name || path.basename(this.project.project_path);
+
       return this.op_name;
     }
     try {
       const raw = fs.readFileSync(opsPrototype, 'utf8');
       const json = JSON.parse(raw);
       const opInfo = Array.isArray(json) ? json[0] : json;
-      this.op_name = opInfo?.op || this.project.project_name || path.basename(this.project.project_path);
+
+      this.op_name =
+        opInfo?.op ||
+        this.project.project_name ||
+        path.basename(this.project.project_path);
+
       return this.op_name!;
     } catch (e) {
-      throw Object.assign(new Error('Invalid op prototype'), { name: 'InvalidRequest' });
+      throw Object.assign(new Error('Invalid op prototype'), {
+        name: 'InvalidRequest',
+      });
     }
   }
 
   executeGeneration(): boolean {
-    const templateFilePath = path.resolve(this.extensionPath, `out/templates/code_template/ascend_template/${this.template_name}.zip`);
+    const templateFilePath = path.resolve(
+      this.extensionPath,
+      `out/templates/code_template/ascend_template/${this.template_name}.zip`,
+    );
+
     if (!fs.pathExistsSync(templateFilePath)) {
       throw new Error(`Template file does not exist: ${templateFilePath}`);
     }
@@ -151,19 +192,29 @@ class AscendOpGenerator extends BaseOpGenerator {
       this._renameFiles(this.template_name);
       this._replaceContent(this.template_name);
     }
+
     return true;
   }
 }
 
 class CannOpGenerator extends BaseOpGenerator {
   parseMeta(): string {
-    this.op_name = this.params.op_name || this.project.project_name || path.basename(this.project.project_path);
-    this.template_name = this.params.template_name || this.template_name || 'hello_world';
+    this.op_name =
+      this.params.op_name ||
+      this.project.project_name ||
+      path.basename(this.project.project_path);
+    this.template_name =
+      this.params.template_name || this.template_name || 'hello_world';
+
     return this.op_name;
   }
 
   executeGeneration(): boolean {
-    const templateFilePath = path.resolve(this.extensionPath, `out/templates/code_template/cann_template/${this.template_name}.zip`);
+    const templateFilePath = path.resolve(
+      this.extensionPath,
+      `out/templates/code_template/cann_template/${this.template_name}.zip`,
+    );
+
     if (!fs.pathExistsSync(templateFilePath)) {
       throw new Error(`Template file does not exist: ${templateFilePath}`);
     }
@@ -172,14 +223,22 @@ class CannOpGenerator extends BaseOpGenerator {
       this._renameFiles(this.template_name);
       this._replaceContent(this.template_name);
     }
+
     return true;
   }
 }
 
 export const OpGeneratorFactory = {
-  getGenerator(params: Params, project: Project, extensionPath: string): BaseOpGenerator {
+  getGenerator(
+    params: Params,
+    project: Project,
+    extensionPath: string,
+  ): BaseOpGenerator {
     const opType = (params.op_type || 'ascend').toLowerCase();
-    if (opType === 'cann') return new CannOpGenerator(params, project, extensionPath);
+
+    if (opType === 'cann')
+      return new CannOpGenerator(params, project, extensionPath);
+
     return new AscendOpGenerator(params, project, extensionPath);
   },
 };

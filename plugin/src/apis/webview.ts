@@ -21,4 +21,3 @@ export const webviewApis: ApiGroup = {
     ...welcomeApis.webview,
   },
 };
-

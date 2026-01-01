@@ -12,12 +12,17 @@ const modelValue = defineModel();
 
 <template>
   <a-form-item :label="attr.label[i18next.language]">
-    <a-switch v-if="attr.type === 'boolean'" v-model:checked="modelValue"></a-switch>
+    <a-switch
+      v-if="attr.type === 'boolean'"
+      v-model:checked="modelValue"
+    ></a-switch>
     <a-input v-else-if="attr.type === 'string'"></a-input>
     <a-input-number v-else-if="attr.type === 'number'"></a-input-number>
     <a-select v-else-if="attr.type === 'enum'">
       <template v-for="option in attr.options">
-        <a-select-option :value="option.value">{{ option.label[i18next.language] }}</a-select-option>
+        <a-select-option :value="option.value">{{
+          option.label[i18next.language]
+        }}</a-select-option>
       </template>
     </a-select>
   </a-form-item>

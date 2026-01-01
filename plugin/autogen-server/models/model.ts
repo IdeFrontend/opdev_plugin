@@ -6,7 +6,10 @@ import * as configModel from './configModel';
 import { OpGeneratorFactory } from '../services/opGeneratorFactory';
 import { getDefaultPath } from '../utils/opUtil';
 import { soc_version } from '../utils/ascend_util';
-import {getDefaultDirectory, ensureLaunchJsonExists} from '../utils/projectUtils'
+import {
+  getDefaultDirectory,
+  ensureLaunchJsonExists,
+} from '../utils/projectUtils';
 
 const getDataDir = () => path.join((config as any).workspace_data_dir, 'data');
 const getOpsFile = () => path.join(getDataDir(), 'ops.json');
@@ -35,23 +38,34 @@ type OpsStore = {
 function ensureStore(): OpsStore {
   const dataDir = getDataDir();
   const opsFile = getOpsFile();
+
   fs.ensureDirSync(dataDir);
   if (!fs.existsSync(opsFile)) {
     const init: OpsStore = { lastId: 0, ops: [] };
+
     fs.writeFileSync(opsFile, JSON.stringify(init, null, 2), 'utf-8');
+
     return init;
   }
 
   try {
     const raw = fs.readFileSync(opsFile, 'utf-8');
     const parsed = JSON.parse(raw) as OpsStore;
-    if (!parsed || typeof parsed.lastId !== 'number' || !Array.isArray(parsed.ops)) {
+
+    if (
+      !parsed ||
+      typeof parsed.lastId !== 'number' ||
+      !Array.isArray(parsed.ops)
+    ) {
       throw new Error('invalid ops store');
     }
+
     return parsed;
   } catch (e) {
     const init: OpsStore = { lastId: 0, ops: [] };
+
     fs.writeFileSync(opsFile, JSON.stringify(init, null, 2), 'utf-8');
+
     return init;
   }
 }
@@ -60,16 +74,29 @@ function writeStore(store: OpsStore) {
   fs.writeFileSync(getOpsFile(), JSON.stringify(store, null, 2), 'utf-8');
 }
 
-export function getOpByProjectIdAndOpName(project_id: number, op_name: string): OpRecord | null {
+export function getOpByProjectIdAndOpName(
+  project_id: number,
+  op_name: string,
+): OpRecord | null {
   const store = ensureStore();
-  const found = store.ops.find((o) => o.project_id === project_id && o.op_name === op_name);
+  const found = store.ops.find(
+    (o) => o.project_id === project_id && o.op_name === op_name,
+  );
+
   return found || null;
 }
 
-export function generateStructure(data: Partial<OpRecord>, extensionPath: string): number {
+export function generateStructure(
+  data: Partial<OpRecord>,
+  extensionPath: string,
+): number {
   // 1) basic checks
   const project = projectModel.get_project_by_id(data.project_id as any);
-  if (!project) throw Object.assign(new Error('project not found'), { name: 'InvalidRequest' });
+
+  if (!project)
+    throw Object.assign(new Error('project not found'), {
+      name: 'InvalidRequest',
+    });
 
   // 2) prepare params for generator
   const params = {
@@ -81,15 +108,22 @@ export function generateStructure(data: Partial<OpRecord>, extensionPath: string
     soc_version: (data as any).soc_version ?? null,
     op_path: data.op_path ?? project.project_path,
   } as any;
+
   ensureLaunchJsonExists(params.op_path, data.create_by);
 
   // 3) get generator and parse meta
-  const generator = OpGeneratorFactory.getGenerator(params, project, extensionPath);
+  const generator = OpGeneratorFactory.getGenerator(
+    params,
+    project,
+    extensionPath,
+  );
   const opName = generator.parseMeta();
 
   // 4) check duplicate
   if (getOpByProjectIdAndOpName(project.id as number, opName)) {
-    throw Object.assign(new Error('op name exists'), { name: 'InvalidRequest' });
+    throw Object.assign(new Error('op name exists'), {
+      name: 'InvalidRequest',
+    });
   }
 
   // 5) execute generation (filesystem work)
@@ -114,13 +148,20 @@ export function generateStructure(data: Partial<OpRecord>, extensionPath: string
     update_by: null,
     update_time: now,
   };
+
   store.ops.push(record);
   store.lastId = nextId;
   writeStore(store);
 
   try {
     if (project) {
-      const { opScriptPath, exampleScriptPath, targetDir, targetOpFile, targetExampleFile } = getDefaultPath(record);
+      const {
+        opScriptPath,
+        exampleScriptPath,
+        targetDir,
+        targetOpFile,
+        targetExampleFile,
+      } = getDefaultPath(record);
       // Build: 创建 build_op 和 build_example 两种配置
       const buildOp = {
         project_id: project.id,
@@ -142,6 +183,7 @@ export function generateStructure(data: Partial<OpRecord>, extensionPath: string
           target_file: targetExampleFile,
         },
       };
+
       // 调用 postConfig，不 await（保持同步签名兼容），若需确保完成可改为 async/await
       void configModel.postConfig('build_op', [buildOp]);
       void configModel.postConfig('build_example', [buildExample]);
@@ -153,14 +195,25 @@ export function generateStructure(data: Partial<OpRecord>, extensionPath: string
           op: record.op_name,
           script: `bash ${record.op_name}.sh`,
           config_name: record.op_name,
-          tool: { memcheck: true, racecheck: false, initcheck: false, synccheck: false }, // 检测内容
-          memcheckOption: { 'check-unused-memory': false, 'leak-check': false, 'check-device-heap': false, 'check-cann-heap': false }, // 内存检测可选项
+          tool: {
+            memcheck: true,
+            racecheck: false,
+            initcheck: false,
+            synccheck: false,
+          }, // 检测内容
+          memcheckOption: {
+            'check-unused-memory': false,
+            'leak-check': false,
+            'check-device-heap': false,
+            'check-cann-heap': false,
+          }, // 内存检测可选项
           logLevel: 'warn', // 报告输出等级
           maxDebuglogSize: 1024, // 输入日志单个文件大小上限 1 - 10240
           useBlock: false,
           blockId: null, // 单block检测的blockId，0 - 200
-        }
+        },
       };
+
       void configModel.postConfig('sanitizer', [sanitizerCfg]);
 
       // Opprof: 创建 on_board 和 simulate 两种配置
@@ -204,7 +257,7 @@ export function generateStructure(data: Partial<OpRecord>, extensionPath: string
           downloadToLocal: true,
           renderInPlatform: false,
           dataStoragePath: getDefaultDirectory(),
-          advance_param: []
+          advance_param: [],
         },
       };
       const simulate = {
@@ -222,15 +275,16 @@ export function generateStructure(data: Partial<OpRecord>, extensionPath: string
           dataStoragePath: getDefaultDirectory(),
           simulatorType: 'Ascend910B1',
           enableDump: false,
-          advance_param: []
+          advance_param: [],
         },
       };
+
       void configModel.postConfig('on_board', [onBoard]);
       void configModel.postConfig('simulate', [simulate]);
     }
   } catch (e) {
     // 忽略配置创建错误，但打印日志以便调试
-    // eslint-disable-next-line no-console
+
     console.error('generateStructure: failed to create default configs', e);
   }
 

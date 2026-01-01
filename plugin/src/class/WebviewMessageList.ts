@@ -27,7 +27,8 @@ const webviewMessageList: messageItem[] = [
   },
   {
     command: 'info',
-    callback: (message: any) => vscode.window.showInformationMessage(message.text),
+    callback: (message: any) =>
+      vscode.window.showInformationMessage(message.text),
   },
   {
     command: 'loaded',
@@ -59,7 +60,9 @@ const webviewMessageList: messageItem[] = [
   {
     command: 'vscodeOpenSidebar',
     callback: (message: any, that: any) => {
-      vscode.commands.executeCommand('workbench.view.extension.mindstudio-opssuite-vscode-plugin');
+      vscode.commands.executeCommand(
+        'workbench.view.extension.mindstudio-opssuite-vscode-plugin',
+      );
     },
   },
   {
@@ -73,7 +76,11 @@ const webviewMessageList: messageItem[] = [
 // 创建算子工程类型
 // 1 执行 vscodeBuildCreateOps 消息体内逻辑  data: 'cann'
 // 2 执行 vscodeStartLinkCreateOps 消息体内逻辑
-export async function handleOperatorProjectDictoryFile(message: any | undefined, that: any, progress: any) {
+export async function handleOperatorProjectDictoryFile(
+  message: any | undefined,
+  that: any,
+  progress: any,
+) {
   console.log('创建算子工程类型', message);
   if ([1, 2].includes(message.createOperatorProjectDictoryFileType)) {
     // 显示连接进度
@@ -82,21 +89,25 @@ export async function handleOperatorProjectDictoryFile(message: any | undefined,
       // 创建算子（通过原型）
       await OpsAPI.init();
       await OpsAPI.createOpsByPrototype('', 'cann');
-      await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+      await vscode.commands.executeCommand(
+        'workbench.action.closeActiveEditor',
+      );
     }
     if (message.createOperatorProjectDictoryFileType === 2) {
       // 开始链接创建算子
       await OpsAPI.init();
       const opsPrototypeFilePath = await OpsAPI.createOps();
+
       console.log('res', opsPrototypeFilePath);
       if (opsPrototypeFilePath) {
         await OpsAPI.createOpsByPrototype(opsPrototypeFilePath);
       }
-      await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+      await vscode.commands.executeCommand(
+        'workbench.action.closeActiveEditor',
+      );
     }
     progress.report({ increment: 100, message: '算子文件创建完成' });
   }
 }
-
 
 export default webviewMessageList;

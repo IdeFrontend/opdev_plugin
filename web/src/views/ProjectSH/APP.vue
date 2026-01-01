@@ -5,9 +5,9 @@
         <div class="section-title">环境配置</div>
         <div class="divider"></div>
         <a-form
+          ref="formRef"
           :model="formData"
           :rules="formRules"
-          ref="formRef"
           layout="vertical"
           @submit="handleSubmit"
         >
@@ -20,13 +20,16 @@
                 <QuestionCircleOutlined class="help-icon" />
               </a-tooltip>
             </template>
-            <div ref="autoCompleteContainer" class="auto-complete-wrapper">
+            <div
+              ref="autoCompleteContainer"
+              class="auto-complete-wrapper"
+            >
               <a-auto-complete
                 v-model:value="formData.projectSH"
                 :options="projectSHOptions"
                 :loading="projectSHLoading"
                 placement="bottomLeft"
-                :getPopupContainer="getPopupContainer"
+                :get-popup-container="getPopupContainer"
                 placeholder="请输入环境变量.sh文件地址，支持远程搜索"
                 @search="(val) => remoteSearch('projectSH', val)"
                 @focus="() => remoteSearch('projectSH', formData.projectSH)"
@@ -34,7 +37,11 @@
             </div>
           </a-form-item>
           <a-form-item>
-            <a-button type="primary" @click="handleSubmit" :loading="submitting">
+            <a-button
+              type="primary"
+              :loading="submitting"
+              @click="handleSubmit"
+            >
               确认
             </a-button>
           </a-form-item>
@@ -45,8 +52,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onBeforeUnmount,onMounted } from 'vue';
-import { checkPathExists, getProjectSH, saveProjectSH, remotePathSearch } from '@/apis';
+import { ref, reactive, onBeforeUnmount, onMounted } from 'vue';
+import {
+  checkPathExists,
+  getProjectSH,
+  saveProjectSH,
+  remotePathSearch,
+} from '@/apis';
 import type { FormInstance as AntdVForm } from 'ant-design-vue';
 import { message as antdMessage } from 'ant-design-vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
@@ -64,7 +76,9 @@ const submitting = ref(false);
 
 // 获取下拉框容器
 const getPopupContainer = (triggerNode: HTMLElement): HTMLElement => {
-  return autoCompleteContainer.value || triggerNode.parentElement || document.body;
+  return (
+    autoCompleteContainer.value || triggerNode.parentElement || document.body
+  );
 };
 
 // 表单数据
@@ -81,8 +95,14 @@ const formRules = {
         if (!value) {
           return Promise.resolve();
         }
-        const pathExists = await checkPathExists({ path: value, mustFile: true });
-        return pathExists ? Promise.resolve() : Promise.reject('脚本文件不存在，请确认');
+        const pathExists = await checkPathExists({
+          path: value,
+          mustFile: true,
+        });
+
+        return pathExists
+          ? Promise.resolve()
+          : Promise.reject('脚本文件不存在，请确认');
       },
     },
   ],
@@ -91,11 +111,13 @@ const formRules = {
 // 远程搜索
 const buildDefaultSearchPath = (value = '') => {
   if (value) return value;
+
   return '/';
 };
 
 const remoteSearch = async (type, keyword) => {
   const searchValue = keyword || '';
+
   if (type === 'projectSH') {
     projectSHLoading.value = true;
   }
@@ -106,6 +128,7 @@ const remoteSearch = async (type, keyword) => {
     });
     const { type: resultType, list = [] } = result;
     const mapped = list.map((item) => ({ value: item.path }));
+
     if (resultType === 'projectSH') {
       projectSHOptions.value = mapped;
       projectSHLoading.value = false;
@@ -128,10 +151,13 @@ const handleSubmit = async () => {
   try {
     await saveProjectSH({ accendEnvScript: formData.projectSH });
     // 发送消息给 iframe
-    window.postMessage({
-      command: 'iframeSetProjectSH',
-      data: formData.projectSH,
-    }, '*');
+    window.postMessage(
+      {
+        command: 'iframeSetProjectSH',
+        data: formData.projectSH,
+      },
+      '*',
+    );
   } catch (error) {
     antdMessage.error('环境变量设置失败');
   } finally {
@@ -142,12 +168,16 @@ const handleSubmit = async () => {
 onMounted(async () => {
   try {
     const projectSH = await getProjectSH();
+
     formData.projectSH = projectSH;
     // 发送消息给 iframe
-    window.postMessage({
-      command: 'iframeSetProjectSH',
-      data: projectSH,
-    }, '*');
+    window.postMessage(
+      {
+        command: 'iframeSetProjectSH',
+        data: projectSH,
+      },
+      '*',
+    );
   } catch (error) {
     console.error('获取项目SH失败:', error);
   }
@@ -155,7 +185,6 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="less">
-
 .project-sh-container {
   padding: 24px;
   height: 100%;

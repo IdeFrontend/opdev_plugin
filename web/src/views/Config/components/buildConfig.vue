@@ -4,14 +4,19 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree. -->
 <script setup>
-import { ref, nextTick } from "vue";
-import editTable from "./editTable.vue";
-import { saveBuildConfig as saveBuildConfigAPI, startBuild, startBuildExample } from "@/apis";
-import { DownOutlined } from "@ant-design/icons-vue";
+import { ref, nextTick } from 'vue';
+import editTable from './editTable.vue';
+import {
+  saveBuildConfig as saveBuildConfigAPI,
+  startBuild,
+  startBuildExample,
+} from '@/apis';
+import { DownOutlined } from '@ant-design/icons-vue';
+
 const props = defineProps({
   buidlConfigData: {
     type: String,
-    default: "",
+    default: '',
   },
   buildConfigForme: {
     type: Object,
@@ -23,81 +28,89 @@ const props = defineProps({
   },
   exampleConfigId: {
     type: String,
-    default: "",
+    default: '',
   },
   buildConfigId: {
     type: String,
-    default: "",
+    default: '',
   },
   activeConfig: {
     type: String,
-    default: "",
+    default: '',
   },
 });
 const emit = defineEmits([
-  "addBuildTableItem",
-  "deleteBuildTableItem",
-  "addExampleTableItem",
-  "deleteExampleTableItem",
+  'addBuildTableItem',
+  'deleteBuildTableItem',
+  'addExampleTableItem',
+  'deleteExampleTableItem',
 ]);
-const activeKey1 = ref(["1"]);
-const activeKey2 = ref(["1"]);
-const activeKey3 = ref(["1"]);
+const activeKey1 = ref(['1']);
+const activeKey2 = ref(['1']);
+const activeKey3 = ref(['1']);
 const updateIndex = ref(1);
 
 const addBuildTableItem = () => {
   updateIndex.value++;
-  emit("addBuildTableItem");
+  emit('addBuildTableItem');
   nextTick(() => {
-    saveBuildConfig()
-  })
+    saveBuildConfig();
+  });
 };
 const deleteBuildTableItem = (key) => {
   updateIndex.value++;
-  emit("deleteBuildTableItem", key);
+  emit('deleteBuildTableItem', key);
   nextTick(() => {
-    saveBuildConfig()
-  })
+    saveBuildConfig();
+  });
 };
 const addExampleTableItem = () => {
   updateIndex.value++;
-  emit("addExampleTableItem");
+  emit('addExampleTableItem');
 };
 const deleteExampleTableItem = (key) => {
   updateIndex.value++;
-  emit("deleteExampleTableItem", key);
+  emit('deleteExampleTableItem', key);
 };
 
 const saveBuildConfig = async () => {
   const data = getSaveData();
+
   console.log(data);
   await saveBuildConfigAPI({ data });
 };
 const saveAndStartBuild = async () => {
   const data = getSaveData();
+
   await saveBuildConfigAPI({ data, showMessage: false });
   const config_id = data.find((v) => v.config_type === 'build_op').config_id;
+
   await startBuild({ configId: config_id });
 };
 const saveAndStartBuildExample = async () => {
   const data = getSaveData();
+
   await saveBuildConfigAPI({ data, showMessage: false });
-  const config_id = data.find((v) => v.config_type === 'build_example').config_id;
+  const config_id = data.find(
+    (v) => v.config_type === 'build_example',
+  ).config_id;
+
   await startBuildExample({ configId: config_id });
 };
 const getSaveData = () => {
   const data = [
     {
       config_id: props.buildConfigId,
-      config_type: "build_op",
+      config_type: 'build_op',
       user_options: props.buildConfigForme,
     },
     {
       config_id: props.exampleConfigId,
-      config_type: "build_example",
+      config_type: 'build_example',
       user_options: props.exampleConfigForme,
     },
   ];
+
   return JSON.parse(JSON.stringify(data));
 };
 </script>
@@ -106,13 +119,16 @@ const getSaveData = () => {
   <div class="build-config">
     <div class="model-title">算子编译配置</div>
     <a-form
+      ref="connectionFormRef"
       :model="buildConfigForme"
       :label-col="{ span: 6 }"
       :wrapper-col="{ span: 24 }"
-      ref="connectionFormRef"
       layout="vertical"
     >
-      <a-form-item label="要编译的算子名称" name="op">
+      <a-form-item
+        label="要编译的算子名称"
+        name="op"
+      >
         <a-input
           v-model:value="buildConfigForme.op"
           placeholder="请输入算子名称"
@@ -120,22 +136,36 @@ const getSaveData = () => {
         />
       </a-form-item>
 
-      <a-form-item v-if="false" label="编译生成文件位置" name="target_dir">
+      <a-form-item
+        v-if="false"
+        label="编译生成文件位置"
+        name="target_dir"
+      >
         <a-input
           v-model:value="buildConfigForme.target_dir"
           placeholder="请输入生成文件位置"
           @change="saveBuildConfig"
         />
       </a-form-item>
-      <a-form-item label="编译生成文件名称" name="ipAddress">
+      <a-form-item
+        label="编译生成文件名称"
+        name="ipAddress"
+      >
         <a-input
           v-model:value="buildConfigForme.target_file"
           placeholder="请输入生成文件名称"
           @change="saveBuildConfig"
         />
       </a-form-item>
-      <a-form-item label="编译命令行" name="script">
-        <a-input v-model:value="buildConfigForme.script" placeholder="" @change="saveBuildConfig" />
+      <a-form-item
+        label="编译命令行"
+        name="script"
+      >
+        <a-input
+          v-model:value="buildConfigForme.script"
+          placeholder=""
+          @change="saveBuildConfig"
+        />
       </a-form-item>
     </a-form>
     <!-- <div class="model-title">example编译配置</div>

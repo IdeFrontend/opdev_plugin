@@ -13,7 +13,10 @@ export class ViewOpener {
    * @param uri csv文件uri
    */
   public static async openCsvPreview(uri: vscode.Uri): Promise<void> {
-    const targetDir = vscode.Uri.joinPath(uri, '../').fsPath.toLocaleLowerCase(); // 使用小写进行比较，避免路径大小写问题
+    const targetDir = vscode.Uri.joinPath(
+      uri,
+      '../',
+    ).fsPath.toLocaleLowerCase(); // 使用小写进行比较，避免路径大小写问题
 
     // 检查是否有相同目录的文件已经打开
     const existingUri = openedCsvDirectories.get(targetDir);
@@ -31,11 +34,16 @@ export class ViewOpener {
       // 尝试关闭旧文件
       // 检查当前打开的文本编辑器，找到旧文件并关闭
       const visibleEditors = vscode.window.visibleTextEditors;
+
       for (const editor of visibleEditors) {
         if (editor.document.uri.fsPath === existingUri.fsPath) {
           // 切换到旧文件并关闭（此时新文件已经打开并显示，所以不会闪现）
-          await vscode.window.showTextDocument(editor.document, { preview: false });
-          await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+          await vscode.window.showTextDocument(editor.document, {
+            preview: false,
+          });
+          await vscode.commands.executeCommand(
+            'workbench.action.closeActiveEditor',
+          );
           break;
         }
       }
@@ -52,8 +60,10 @@ export class ViewOpener {
   public static async openInsight(uri: vscode.Uri): Promise<void> {
     // 从消息中获取BIN文件路径
     const binPath = uri.fsPath;
+
     if (!binPath) {
       vscode.window.showErrorMessage('BIN文件路径不能为空');
+
       return;
     }
     try {

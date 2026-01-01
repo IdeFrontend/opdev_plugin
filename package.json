@@ -214,8 +214,21 @@
     "compile:debug": "pnpm run compile:web:debug && pnpm run compile:plugin:debug",
     "compile:web:debug": "cd web && pnpm run build:debug",
     "compile:plugin:debug": "tsx scripts/build-extension --sourcemap",
-    "lint": "eslint plugin/src",
-    "install:web": "cd web && pnpm install"
+    "lint": "oxlint . && eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "install:web": "cd web && pnpm install",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,ts,vue}": [
+      "oxlint",
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,html,css,less}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "adm-zip": "^0.5.12",
@@ -226,6 +239,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
+    "@stylistic/eslint-plugin": "^5.6.1",
     "@types/adm-zip": "^0.5.7",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "16.x",
@@ -236,8 +250,12 @@
     "esbuild": "^0.27.1",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-oxlint": "^1.36.0",
     "eslint-plugin-vue": "^10.6.2",
     "globals": "^16.5.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "oxlint": "^1.36.0",
     "prettier": "^3.7.4",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",

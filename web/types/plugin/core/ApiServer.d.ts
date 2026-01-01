@@ -26,4 +26,3 @@ export interface ResponseMessage {
   data?: unknown;
   error?: { name: string; message: string; stack: string };
 }
-

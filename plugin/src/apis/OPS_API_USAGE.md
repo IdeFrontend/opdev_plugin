@@ -21,45 +21,45 @@ shared/api-types/
 
 ### 初始化和创建
 
-| API 路径 | 参数类型 | 返回类型 | 描述 |
-|---------|---------|---------|------|
-| `ops/init` | `InitOpsParams` | `Promise<string>` | 初始化算子项目，返回 projectId |
-| `ops/createOps` | `CreateOpsParams` | `Promise<string>` | 创建算子原型文件 |
-| `ops/createOpsByPrototype` | `CreateOpsByPrototypeParams` | `Promise<void>` | 通过原型生成算子工程 |
-| `ops/checkVscode` | 无参数 | `Promise<boolean>` | 检查 .vscode 目录 |
-| `ops/updateShScript` | `UpdateShScriptParams` | `Promise<string>` | 更新脚本文件 |
+| API 路径                   | 参数类型                     | 返回类型           | 描述                           |
+| -------------------------- | ---------------------------- | ------------------ | ------------------------------ |
+| `ops/init`                 | `InitOpsParams`              | `Promise<string>`  | 初始化算子项目，返回 projectId |
+| `ops/createOps`            | `CreateOpsParams`            | `Promise<string>`  | 创建算子原型文件               |
+| `ops/createOpsByPrototype` | `CreateOpsByPrototypeParams` | `Promise<void>`    | 通过原型生成算子工程           |
+| `ops/checkVscode`          | 无参数                       | `Promise<boolean>` | 检查 .vscode 目录              |
+| `ops/updateShScript`       | `UpdateShScriptParams`       | `Promise<string>`  | 更新脚本文件                   |
 
 ### 配置管理
 
-| API 路径 | 参数类型 | 返回类型 | 描述 |
-|---------|---------|---------|------|
-| `ops/getConfigData` | 无参数 | `Promise<GetConfigDataResult>` | 获取所有配置数据 |
-| `ops/getBuildConfigs` | 无参数 | `Promise<BuildConfig[]>` | 获取构建配置列表 |
-| `ops/getBuildConfig` | 无参数 | `Promise<number \| undefined>` | 获取构建配置ID |
-| `ops/getBuildExampleConfig` | 无参数 | `Promise<number \| undefined>` | 获取示例构建配置ID |
-| `ops/getSimulateConfig` | 无参数 | `Promise<string>` | 获取仿真配置ID |
-| `ops/getOnBoardConfig` | 无参数 | `Promise<string>` | 获取上板配置ID |
-| `ops/saveBuildConfig` | `SaveBuildConfigParams` | `Promise<void>` | 保存构建配置 |
-| `ops/saveConfig` | `SaveConfigParams` | `Promise<void>` | 保存配置（仿真/上板） |
+| API 路径                    | 参数类型                | 返回类型                       | 描述                  |
+| --------------------------- | ----------------------- | ------------------------------ | --------------------- |
+| `ops/getConfigData`         | 无参数                  | `Promise<GetConfigDataResult>` | 获取所有配置数据      |
+| `ops/getBuildConfigs`       | 无参数                  | `Promise<BuildConfig[]>`       | 获取构建配置列表      |
+| `ops/getBuildConfig`        | 无参数                  | `Promise<number \| undefined>` | 获取构建配置ID        |
+| `ops/getBuildExampleConfig` | 无参数                  | `Promise<number \| undefined>` | 获取示例构建配置ID    |
+| `ops/getSimulateConfig`     | 无参数                  | `Promise<string>`              | 获取仿真配置ID        |
+| `ops/getOnBoardConfig`      | 无参数                  | `Promise<string>`              | 获取上板配置ID        |
+| `ops/saveBuildConfig`       | `SaveBuildConfigParams` | `Promise<void>`                | 保存构建配置          |
+| `ops/saveConfig`            | `SaveConfigParams`      | `Promise<void>`                | 保存配置（仿真/上板） |
 
 ### 构建和运行
 
-| API 路径 | 参数类型 | 返回类型 | 描述 |
-|---------|---------|---------|------|
-| `ops/startBuild` | `StartBuildParams` | `Promise<void>` | 编译算子 |
-| `ops/startBuildExample` | `StartBuildExampleParams` | `Promise<void>` | 编译示例 |
-| `ops/startRun` | `StartRunParams` | `Promise<void>` | 运行算子 |
-| `ops/startSimulate` | 无参数 | `Promise<void>` | 开始仿真分析 |
-| `ops/startOnBoard` | 无参数 | `Promise<void>` | 开始上板分析 |
+| API 路径                | 参数类型                  | 返回类型        | 描述         |
+| ----------------------- | ------------------------- | --------------- | ------------ |
+| `ops/startBuild`        | `StartBuildParams`        | `Promise<void>` | 编译算子     |
+| `ops/startBuildExample` | `StartBuildExampleParams` | `Promise<void>` | 编译示例     |
+| `ops/startRun`          | `StartRunParams`          | `Promise<void>` | 运行算子     |
+| `ops/startSimulate`     | 无参数                    | `Promise<void>` | 开始仿真分析 |
+| `ops/startOnBoard`      | 无参数                    | `Promise<void>` | 开始上板分析 |
 
 ### 异常检测
 
-| API 路径 | 参数类型 | 返回类型 | 描述 |
-|---------|---------|---------|------|
-| `ops/getSanitizerConfigs` | 无参数 | `Promise<BuildConfig[]>` | 获取异常检测配置列表 |
-| `ops/getSanitizerConfigId` | 无参数 | `Promise<number \| undefined>` | 获取异常检测配置ID |
-| `ops/saveSanitizerForm` | `SaveSanitizerFormParams` | `Promise<void>` | 保存异常检测表单配置 |
-| `ops/runSanitizer` | 无参数 | `Promise<void>` | 运行异常检测 |
+| API 路径                   | 参数类型                  | 返回类型                       | 描述                 |
+| -------------------------- | ------------------------- | ------------------------------ | -------------------- |
+| `ops/getSanitizerConfigs`  | 无参数                    | `Promise<BuildConfig[]>`       | 获取异常检测配置列表 |
+| `ops/getSanitizerConfigId` | 无参数                    | `Promise<number \| undefined>` | 获取异常检测配置ID   |
+| `ops/saveSanitizerForm`    | `SaveSanitizerFormParams` | `Promise<void>`                | 保存异常检测表单配置 |
+| `ops/runSanitizer`         | 无参数                    | `Promise<void>`                | 运行异常检测         |
 
 ## 使用示例
 
@@ -70,26 +70,28 @@ shared/api-types/
 const projectId = await callApi('ops/init', {
   accendEnvScript: '/path/to/script.sh',
   projectPath: '/workspace',
-  projectName: 'my-operator'
+  projectName: 'my-operator',
 });
 
 // 创建算子原型
 const result = await callApi('ops/createOps', {
   projectName: 'my-operator',
   projectId: projectId,
-  prototypeName: 'add'
+  prototypeName: 'add',
 });
 
 // 编译算子（支持编译选项）
 await callApi('ops/startBuild', {
   configId: '123',
-  compileOption: '--debug'  // 或 '--mssanitizer' 用于异常检测模式
+  compileOption: '--debug', // 或 '--mssanitizer' 用于异常检测模式
 });
 
 // 保存构建配置
 await callApi('ops/saveBuildConfig', {
-  data: { /* 配置数据 */ },
-  showMessage: true  // 是否显示成功/失败提示
+  data: {
+    /* 配置数据 */
+  },
+  showMessage: true, // 是否显示成功/失败提示
 });
 
 // 运行仿真分析
@@ -102,6 +104,7 @@ await callApi('ops/runSanitizer');
 ## 类型定义
 
 ### InitOpsParams
+
 ```typescript
 {
   accendEnvScript?: string;
@@ -111,6 +114,7 @@ await callApi('ops/runSanitizer');
 ```
 
 ### CreateOpsParams
+
 ```typescript
 {
   projectName?: string;
@@ -120,6 +124,7 @@ await callApi('ops/runSanitizer');
 ```
 
 ### CreateOpsByPrototypeParams
+
 ```typescript
 {
   opsPrototypeFile: string;
@@ -128,6 +133,7 @@ await callApi('ops/runSanitizer');
 ```
 
 ### StartBuildParams
+
 ```typescript
 {
   configId?: string;
@@ -136,6 +142,7 @@ await callApi('ops/runSanitizer');
 ```
 
 ### SaveBuildConfigParams
+
 ```typescript
 {
   data: any;
@@ -144,6 +151,7 @@ await callApi('ops/runSanitizer');
 ```
 
 ### SaveConfigParams
+
 ```typescript
 {
   type: string;
@@ -162,17 +170,19 @@ await callApi('ops/runSanitizer');
 ## 对比原有调用方式
 
 ### 之前（直接调用 OpsOption 方法）
+
 ```typescript
 const opsOption = new OpsOption(context);
 await opsOption.startBuild('123', '--debug');
 ```
 
 ### 现在（通过 API 层调用）
+
 ```typescript
 // Webview 端
 await callApi('ops/startBuild', {
   configId: '123',
-  compileOption: '--debug'
+  compileOption: '--debug',
 });
 ```
 

@@ -20,14 +20,18 @@ export const msSanitizerPanelViewApis: ApiGroup = {
     async getSanitizerForm(): Promise<GetSanitizerFormResult> {
       await OpsAPI.init();
       const configData = await OpsAPI.getSanitizerConfigs();
+
       return JSON.stringify((configData || [])[0] || {});
     },
 
     // 保存 Sanitizer 配置（返回字符串格式）
-    async saveSanitizerForm(params: SaveSanitizerFormParams): Promise<GetSanitizerFormResult> {
+    async saveSanitizerForm(
+      params: SaveSanitizerFormParams,
+    ): Promise<GetSanitizerFormResult> {
       await OpsAPI.init();
       await OpsAPI.saveSanitizerForm(params.data);
       const configData = await OpsAPI.getSanitizerConfigs();
+
       return JSON.stringify((configData || [])[0] || {});
     },
 
@@ -42,14 +46,19 @@ export const msSanitizerPanelViewApis: ApiGroup = {
         // 创建文件夹
         const workspaceFolders = vscode.workspace.workspaceFolders;
         const workspacePath = workspaceFolders![0].uri.fsPath;
-        const logPath = path.join(path.join(workspacePath, '.vscode/mindstudio_sanitizer_log'));
+        const logPath = path.join(
+          path.join(workspacePath, '.vscode/mindstudio_sanitizer_log'),
+        );
+
         if (!fs.existsSync(logPath)) {
           fs.mkdirSync(logPath, { mode: 0o750 });
         }
         // 开启异常检测
         await OpsAPI.runSanitizer();
         // 执行完检测后，获取最新的列表数据
-        vscode.commands.executeCommand('huawei-op-devtools.flashMsSanitizerRunData');
+        vscode.commands.executeCommand(
+          'huawei-op-devtools.flashMsSanitizerRunData',
+        );
       } finally {
         // 清除 executor 引用
         currentExecutor = null;
@@ -57,4 +66,3 @@ export const msSanitizerPanelViewApis: ApiGroup = {
     },
   },
 };
-
