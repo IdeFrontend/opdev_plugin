@@ -1,3 +1,5 @@
+import { GetConfigDataResult } from './ops';
+
 // Webview 相关类型定义
 
 export type GetProjectIdResult = string;
@@ -6,7 +8,7 @@ export type GetHomeResult = string;
 
 export type GetProjectSHResult = string;
 
-export type GetBuildConfigResult = string;
+export type GetBuildConfigResult = GetConfigDataResult;
 
 export type SaveAndStartBuildParams = {
   data: any;
@@ -16,7 +18,7 @@ export type SaveAndStartBuildExampleParams = {
   data: any;
 };
 
-export type GetSanitizerFormResult = string;
+export type GetSanitizerFormResult = any;
 
 export type RemotePathSearchParams = {
   keyword: string;

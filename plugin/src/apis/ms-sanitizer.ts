@@ -6,6 +6,11 @@ import { PermanentStorage } from 'plugin:/class/PermanentStorage';
 
 const MARKED_STORAGE_KEY = 'msSanitizer_marks';
 
+/**
+ * 格式化时间戳
+ * @param {number} timestamp - 时间戳
+ * @returns {string} 格式化后的日期字符串 (YYYYMMDD)
+ */
 function formatTimestampToYYYYMMDD(timestamp: number): string {
   const date = new Date(timestamp);
 
@@ -21,6 +26,10 @@ function formatTimestampToYYYYMMDD(timestamp: number): string {
   return `${year}${month}${day}`;
 }
 
+/**
+ * 获取标记的记录
+ * @returns {Set<string>} 标记集合
+ */
 function getMsSanitizerMarks() {
   const storageValue = PermanentStorage.getInstance().get<string[]>(
     MARKED_STORAGE_KEY,
@@ -30,32 +39,35 @@ function getMsSanitizerMarks() {
   return new Set(storageValue);
 }
 
+/**
+ * 设置标记记录
+ * @param {string[]} vals - 标记列表
+ */
 function setMsSanitizerMarks(vals: string[]) {
   PermanentStorage.getInstance().set<string[]>(MARKED_STORAGE_KEY, [...vals]);
 }
 
 export const msSanitizerApis: ApiGroup = {
   msSanitizer: {
-    async getRunData(params) {
+    /**
+     * 获取异常检测运行数据列表
+     * @returns {Promise<any[]>} 运行数据列表
+     */
+    async getRunData() {
       const workspaceFolders = vscode.workspace.workspaceFolders;
 
       if (!workspaceFolders || workspaceFolders.length === 0) {
-        console.log('getRunData1 no workspaceFolders');
-
         return [];
       }
 
       const workspacePath = workspaceFolders[0].uri.fsPath;
 
-      console.log('getRunData2', workspacePath);
       // 获取目录下.vscode/mindstudio_sanitizer_log文件夹中的所有文件
       const logPath = path.join(
-        path.join(workspacePath, '.vscode/mindstudio_sanitizer_log'),
+        workspacePath,
+        '.vscode/mindstudio_sanitizer_log',
       );
 
-      // 本地测试数据
-      // const logPath = path.join(__dirname, '../.vscode/mindstudio_sanitizer_log');
-      console.log('getRunData3', logPath);
       // 文件夹不存在
       if (!fs.existsSync(logPath)) {
         return [];
@@ -80,7 +92,11 @@ export const msSanitizerApis: ApiGroup = {
       return res;
     },
 
-    async toggleMark(params) {
+    /**
+     * 切换标记状态
+     * @param params
+     */
+    async toggleMark(params: { id: string }) {
       const { id } = params;
       // 修改mark标记状态
       const markSet = getMsSanitizerMarks();
@@ -94,7 +110,12 @@ export const msSanitizerApis: ApiGroup = {
 
       return;
     },
-    openPanel(params) {
+
+    /**
+     * 打开异常检测数据面板
+     * @param params - 参数
+     */
+    openPanel(params: any) {
       // 打开异常检测数据面板
       vscode.commands.executeCommand(
         'huawei-op-devtools.open-ms-sanitizer-panel-view',
