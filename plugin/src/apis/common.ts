@@ -21,29 +21,43 @@ export const commonApis: ApiGroup = {
     },
     async saveFileToLocal(params: SaveFileParams): Promise<boolean> {
       const savingUri = await vscode.window.showSaveDialog({
-        defaultUri: vscode.Uri.from({ scheme: 'vscode-local', path: params.filename }),
-        filters: params.allowedTypes ? { default: params.allowedTypes } : undefined,
+        defaultUri: vscode.Uri.from({
+          scheme: 'vscode-local',
+          path: params.filename,
+        }),
+        filters: params.allowedTypes
+          ? { default: params.allowedTypes }
+          : undefined,
         title: params.dialogTitle ?? '保存至',
       });
+
       if (!savingUri) {
         return false;
       }
       const sourceUri = vscode.Uri.file(params.sourcePath);
       let sourceStat: vscode.FileStat;
+
       try {
         sourceStat = await vscode.workspace.fs.stat(sourceUri);
       } catch {
         throw new Error('保存失败，源文件不存在');
       }
       if (sourceStat.type === vscode.FileType.File) {
-        await vscode.workspace.fs.copy(sourceUri, savingUri, { overwrite: true });
+        await vscode.workspace.fs.copy(sourceUri, savingUri, {
+          overwrite: true,
+        });
       } else if (sourceStat.type === vscode.FileType.Directory) {
-        await compressing.zip.compressDir(sourceUri.fsPath, `${sourceUri.fsPath}.zip`);
+        await compressing.zip.compressDir(
+          sourceUri.fsPath,
+          `${sourceUri.fsPath}.zip`,
+        );
         const zipUri = vscode.Uri.file(`${sourceUri.fsPath}.zip`);
+
         await vscode.workspace.fs.copy(zipUri, savingUri, { overwrite: true });
         vscode.workspace.fs.delete(zipUri);
       }
       vscode.commands.executeCommand('revealFileInOS', savingUri);
+
       return true;
     },
   },

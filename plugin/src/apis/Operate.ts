@@ -55,8 +55,11 @@ export const operateApis: ApiGroup = {
         // 保存当前 executor 引用
         currentExecutor = OpsAPI.getExecutor();
         const configData = await OpsAPI.getBuildConfigs();
-        const simulatorItem = configData.find((v: any) => v.config_type === 'simulate')
-        const simulatorType = simulatorItem?.user_options?.simulatorType ?? ''
+        const simulatorItem = configData.find(
+          (v: any) => v.config_type === 'simulate',
+        );
+        const simulatorType = simulatorItem?.user_options?.simulatorType ?? '';
+
         await OpsAPI.startBuild(undefined, `--simulator ${simulatorType}`);
         await OpsAPI.startSimulate();
       } finally {
@@ -99,7 +102,9 @@ export const operateApis: ApiGroup = {
         await OpsAPI.init();
         // debug前编译
         await OpsAPI.startBuild(undefined, '--debug');
-        await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
+        await vscode.commands.executeCommand(
+          'workbench.debug.action.toggleRepl',
+        );
         await vscode.commands.executeCommand('workbench.action.debug.start');
       } catch (error) {
         console.error('打开debug时出错:', error);
@@ -110,14 +115,17 @@ export const operateApis: ApiGroup = {
     // 调试配置
     async debugConfig(): Promise<void> {
       try {
-        await vscode.commands.executeCommand('workbench.action.debug.configure');
+        await vscode.commands.executeCommand(
+          'workbench.action.debug.configure',
+        );
         vscode.window.showInformationMessage(`已打开 launch.json 文件`);
       } catch (error) {
         console.error('打开 launch.json 时出错:', error);
-        vscode.window.showErrorMessage(`无法打开 launch.json: ${error instanceof Error ? error.message : String(error)}`);
+        vscode.window.showErrorMessage(
+          `无法打开 launch.json: ${error instanceof Error ? error.message : String(error)}`,
+        );
         throw error;
       }
     },
   },
 };
-

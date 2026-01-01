@@ -39,7 +39,9 @@ export function updateProject() {
  * 获取最后项目路径
  */
 export function getLastProjectPath() {
-  return request.post<undefined, GetLastProjectPathResult>('webview/getLastProjectPath');
+  return request.post<undefined, GetLastProjectPathResult>(
+    'webview/getLastProjectPath',
+  );
 }
 
 /**
@@ -48,4 +50,3 @@ export function getLastProjectPath() {
 export function getWorkspace() {
   return request.post<undefined, GetWorkspaceResult>('webview/getWorkspace');
 }
-

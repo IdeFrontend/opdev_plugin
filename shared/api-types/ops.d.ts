@@ -20,7 +20,12 @@ export type CreateOpsByPrototypeParams = {
 export type BuildConfig = {
   config_id: number;
   config_name: string;
-  config_type: 'build_op' | 'build_example' | 'simulate' | 'on_board' | 'sanitizer';
+  config_type:
+    | 'build_op'
+    | 'build_example'
+    | 'simulate'
+    | 'on_board'
+    | 'sanitizer';
   user_options?: Record<string, any>;
 };
 

@@ -18,6 +18,9 @@ interface GenerateStructureParams {
   ops_prototype_file?: string;
 }
 
-export function generateStructure(data: GenerateStructureParams, extensionPath: string): number {
+export function generateStructure(
+  data: GenerateStructureParams,
+  extensionPath: string,
+): number {
   return model.generateStructure(data, extensionPath);
 }

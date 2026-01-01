@@ -8,6 +8,7 @@ import { queryPlugin } from './core/query';
 import 'ant-design-vue/dist/reset.css';
 
 const app = createApp(App);
+
 app.use(i18nPlugin);
 app.use(queryPlugin);
 app.use(antd);

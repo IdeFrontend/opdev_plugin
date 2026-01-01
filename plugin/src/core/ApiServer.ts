@@ -69,6 +69,7 @@ export class ApiServer extends vscode.Disposable {
 
   public removeWebview(key: string): void {
     const linkedWebview = this.linkedWebviews.get(key);
+
     if (linkedWebview) {
       this.connector.removeWebview(linkedWebview);
     }
@@ -78,12 +79,15 @@ export class ApiServer extends vscode.Disposable {
     this.connector.receive(async (requestMessage, webview) => {
       const { api: apiPath, data } = requestMessage;
       const currentApi = this.getApi(apiPath);
+
       if (!currentApi) {
         this.resNotFoundError(webview, requestMessage);
+
         return;
       }
       try {
         const resData = await currentApi(data);
+
         if (resData instanceof ReadableStream) {
           this.resStream(webview, requestMessage, resData);
         } else {
@@ -99,12 +103,14 @@ export class ApiServer extends vscode.Disposable {
   private getApi(apiPath: string): Api | undefined {
     const apiKeys = apiPath.split('/');
     let apiOrGroup: ApiGroup | Api | undefined = this.apis;
+
     for (const apiKey of apiKeys) {
       apiOrGroup = (apiOrGroup as ApiGroup)[apiKey];
       if (!apiOrGroup) {
         return undefined;
       }
     }
+
     return apiOrGroup instanceof Function ? apiOrGroup : undefined;
   }
 
@@ -114,7 +120,11 @@ export class ApiServer extends vscode.Disposable {
    * @param callback
    * @returns
    */
-  private resStream(webview: vscode.Webview, requestMessage: RequestMessage, stream: ReadableStream): void {
+  private resStream(
+    webview: vscode.Webview,
+    requestMessage: RequestMessage,
+    stream: ReadableStream,
+  ): void {
     const reader = stream.getReader();
     const readByChunk = () => {
       reader.read().then((chunk) => {
@@ -130,10 +140,15 @@ export class ApiServer extends vscode.Disposable {
         }
       });
     };
+
     readByChunk();
   }
 
-  private resSuccess(webview: vscode.Webview, requestMessage: RequestMessage, resData: unknown): void {
+  private resSuccess(
+    webview: vscode.Webview,
+    requestMessage: RequestMessage,
+    resData: unknown,
+  ): void {
     this.connector.send(webview, {
       ...this.makeBasicResponse(requestMessage),
       statusCode: 200,
@@ -142,8 +157,14 @@ export class ApiServer extends vscode.Disposable {
     });
   }
 
-  private resNotFoundError(webview: vscode.Webview, requestMessage: RequestMessage): void {
-    const errorMessage = t('core.message.apiResponseNotFound', { apiName: requestMessage.api });
+  private resNotFoundError(
+    webview: vscode.Webview,
+    requestMessage: RequestMessage,
+  ): void {
+    const errorMessage = t('core.message.apiResponseNotFound', {
+      apiName: requestMessage.api,
+    });
+
     this.connector.send(webview, {
       ...this.makeBasicResponse(requestMessage),
       statusCode: 404,
@@ -153,9 +174,16 @@ export class ApiServer extends vscode.Disposable {
     vscode.window.showErrorMessage(errorMessage);
   }
 
-  private resServerError(webview: vscode.Webview, requestMessage: RequestMessage, error: Error): void {
-    const errorMessage = t('core.message.apiResponseServerError', { apiName: requestMessage.api });
+  private resServerError(
+    webview: vscode.Webview,
+    requestMessage: RequestMessage,
+    error: Error,
+  ): void {
+    const errorMessage = t('core.message.apiResponseServerError', {
+      apiName: requestMessage.api,
+    });
     const errorObject = this.makeSendableError(error);
+
     this.connector.send(webview, {
       ...this.makeBasicResponse(requestMessage),
       statusCode: 500,
@@ -164,7 +192,9 @@ export class ApiServer extends vscode.Disposable {
     });
 
     if (!requestMessage.options.useCustomErrorHandler) {
-      vscode.window.showErrorMessage(`${errorMessage}: \n${errorObject.message}`);
+      vscode.window.showErrorMessage(
+        `${errorMessage}: \n${errorObject.message}`,
+      );
     }
   }
 
@@ -177,7 +207,11 @@ export class ApiServer extends vscode.Disposable {
    * @param error
    * @returns
    */
-  private makeSendableError(error: unknown): { name: string; message: string; stack: string } {
+  private makeSendableError(error: unknown): {
+    name: string;
+    message: string;
+    stack: string;
+  } {
     return {
       name: error instanceof Error ? error.name : 'CustomError',
       message: error instanceof Error ? error.message : String(error),

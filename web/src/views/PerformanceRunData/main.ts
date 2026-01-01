@@ -13,6 +13,7 @@ import 'ant-design-vue/dist/reset.css';
 // 监听来自 iframe 的消息
 window.addEventListener('message', (event) => {
   const message = event.data;
+
   if (message.command === 'iframeSetSSHData') {
     localStorage.setItem('sshData', JSON.stringify(message.data));
   } else if (message.command === 'iframeGetDisposed') {
@@ -27,6 +28,7 @@ let isInitRun = false;
 window.postMessage({ command: 'vscodeGetssh' }, '*');
 
 let vscode = null;
+
 //@ts-ignore
 if (typeof acquireVsCodeApi !== 'undefined') {
   //@ts-ignore
@@ -38,6 +40,7 @@ if (typeof acquireVsCodeApi !== 'undefined') {
 // 监听来自VSCode扩展和iframe的消息
 window.addEventListener('message', (event) => {
   const message = event.data;
+
   console.log('外层页面接收到的message:', message);
   if (message.command && message.command.indexOf('vscode') === 0) {
     if (vscode) {
@@ -53,6 +56,7 @@ window.addEventListener('message', (event) => {
 function init() {
   if (isInitRun) {
     console.log('PerformanceRunData isInitRun is true');
+
     return;
   }
   createApp(App).use(antd).mount('#app');
@@ -60,4 +64,3 @@ function init() {
 }
 //@ts-ignore
 init();
-

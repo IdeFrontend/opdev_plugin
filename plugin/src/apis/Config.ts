@@ -26,14 +26,18 @@ export const configApis: ApiGroup = {
     async getBuildConfig(): Promise<GetBuildConfigResult> {
       await OpsAPI.init();
       const configData = await OpsAPI.getConfigData();
+
       return JSON.stringify(configData);
     },
 
     // 保存构建配置（返回字符串格式）
-    async saveBuildConfig(params: SaveBuildConfigParams): Promise<GetBuildConfigResult> {
+    async saveBuildConfig(
+      params: SaveBuildConfigParams,
+    ): Promise<GetBuildConfigResult> {
       await OpsAPI.init();
       await OpsAPI.saveBuildConfig(params.data);
       const configData = await OpsAPI.getConfigData();
+
       return JSON.stringify(configData);
     },
 
@@ -42,15 +46,23 @@ export const configApis: ApiGroup = {
       await OpsAPI.init();
       await OpsAPI.saveBuildConfig(params.data, false);
       const configData = await OpsAPI.getConfigData();
-      const config_id = params.data.find((v: any) => v.config_type === 'build_op').config_id;
+      const config_id = params.data.find(
+        (v: any) => v.config_type === 'build_op',
+      ).config_id;
+
       await OpsAPI.startBuild(config_id);
     },
 
     // 保存并开始构建示例
-    async saveAndStartBuildExample(params: SaveAndStartBuildExampleParams): Promise<void> {
+    async saveAndStartBuildExample(
+      params: SaveAndStartBuildExampleParams,
+    ): Promise<void> {
       await OpsAPI.init();
       await OpsAPI.saveBuildConfig(params.data, false);
-      const config_id = params.data.find((v: any) => v.config_type === 'build_example').config_id;
+      const config_id = params.data.find(
+        (v: any) => v.config_type === 'build_example',
+      ).config_id;
+
       await OpsAPI.startBuildExample(config_id);
     },
 
@@ -73,6 +85,7 @@ export const configApis: ApiGroup = {
     // 远程路径搜索
     remotePathSearch(params: RemotePathSearchParams): RemotePathSearchResult {
       const res = getFiles(params.keyword);
+
       return {
         type: params.type,
         list: res,
@@ -80,4 +93,3 @@ export const configApis: ApiGroup = {
     },
   },
 };
-

@@ -19,10 +19,12 @@ export const welcomeApis: ApiGroup = {
       const context = getExtensionContext();
       // 缓存 projectPath 到远程服务器
       const originalProjectPath = params.projectPath;
+
       RemoteConfig.setLastProjectPath(originalProjectPath);
 
       // 标准算子projectPath需增加 /ops-math/math路径
       let originPath;
+
       if (params.createOperatorProjectDictoryFileType === 2) {
         originPath = params.projectPath;
         params.projectPath += '/ops-math/math';
@@ -34,10 +36,17 @@ export const welcomeApis: ApiGroup = {
       // 标准算子解压缩
       if (params.createOperatorProjectDictoryFileType === 2) {
         await executor.execute(`mkdir -p ${originPath}`, ['File exists']);
-        const zipUrl = path.resolve(context.extensionPath, `out/templates/code_template/op-math/ops-math.zip`);
+        const zipUrl = path.resolve(
+          context.extensionPath,
+          `out/templates/code_template/op-math/ops-math.zip`,
+        );
+
         await executor.execute(`unzip -o ${zipUrl} -d ${originPath}`);
       }
-      await executor.execute(`mkdir -p ${params.projectPath}/${params.projectName}`, ['File exists']);
+      await executor.execute(
+        `mkdir -p ${params.projectPath}/${params.projectName}`,
+        ['File exists'],
+      );
       if (params.projectSH) {
         await executor.execute(`chmod +x ${params.projectSH}`);
         await executor.execute(`${params.projectSH}`);
@@ -45,19 +54,32 @@ export const welcomeApis: ApiGroup = {
       await OpsAPI.init({
         accendEnvScript: params.projectSH,
         projectPath: params.projectPath,
-        projectName: params.projectName
+        projectName: params.projectName,
       });
-      await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(`${params.projectPath}/${params.projectName}`));
+      await vscode.commands.executeCommand(
+        'revealInExplorer',
+        vscode.Uri.file(`${params.projectPath}/${params.projectName}`),
+      );
       // 规范化路径
       const normalizedProjectPath = path.normalize(params.projectPath);
       const normalizedProjectName = path.normalize(params.projectName);
-      const fullProjectPath = path.join(normalizedProjectPath, normalizedProjectName);
+      const fullProjectPath = path.join(
+        normalizedProjectPath,
+        normalizedProjectName,
+      );
 
-      context.globalState.update('runCommand', 'huawei-op-devtools.createDictory');
-      context.globalState.update('runCommand-param', params.createOperatorProjectDictoryFileType);
+      context.globalState.update(
+        'runCommand',
+        'huawei-op-devtools.createDictory',
+      );
+      context.globalState.update(
+        'runCommand-param',
+        params.createOperatorProjectDictoryFileType,
+      );
 
       // 在远程环境中，我们可以直接打开本地路径（相对于远程系统）
       const localUri = vscode.Uri.file(fullProjectPath);
+
       console.log('vscode.openFolder，打开新目录', localUri);
 
       // 询问用户是在当前窗口打开还是新窗口打开
@@ -65,7 +87,7 @@ export const welcomeApis: ApiGroup = {
         '选择打开方式',
         { modal: true },
         '当前窗口',
-        '新窗口'
+        '新窗口',
       );
 
       // 如果用户取消了选择，则不执行打开操作
@@ -87,4 +109,3 @@ export const welcomeApis: ApiGroup = {
     },
   },
 };
-

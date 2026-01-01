@@ -5,9 +5,10 @@
  * LICENSE file in the root directory of this source tree. -->
 
 <script setup>
-import { ref } from "vue";
-import { PlusOutlined } from "@ant-design/icons-vue";
-const activeConfig = ref("");
+import { ref } from 'vue';
+import { PlusOutlined } from '@ant-design/icons-vue';
+
+const activeConfig = ref('');
 const props = defineProps({
   configArray: {
     type: Array,
@@ -19,28 +20,29 @@ if (props.configArray.length > 0) {
   activeConfig.value = props.configArray[0];
 }
 
-const emit = defineEmits(["updateActiveConfig"]);
+const emit = defineEmits(['updateActiveConfig']);
 
 const updateActiveConfig = (item) => {
   activeConfig.value = item;
-  emit("updateActiveConfig", item);
+  emit('updateActiveConfig', item);
 };
 </script>
 <template>
   <div class="config-list">
     <div class="config-list-title">运行/调试/调优配置<PlusOutlined /></div>
     <div
-      class="config-list-detail"
       v-for="item in props.configArray"
       :key="item.config_name"
+      class="config-list-detail"
+      :class="[
+        activeConfig.config_name === item.config_name ? 'is-active' : '',
+      ]"
       @click="updateActiveConfig(item)"
-      :class="[activeConfig.config_name === item.config_name ? 'is-active' : '']"
     >
       {{ item.config_name }}
     </div>
   </div>
 </template>
-
 
 <style lang="less">
 .config-list {

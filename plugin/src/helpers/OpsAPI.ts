@@ -40,7 +40,10 @@ export class OpsAPI {
   /**
    * 通过原型生成算子工程
    */
-  static async createOpsByPrototype(opsPrototypeFile: string, opType?: 'ascend' | 'cann'): Promise<void> {
+  static async createOpsByPrototype(
+    opsPrototypeFile: string,
+    opType?: 'ascend' | 'cann',
+  ): Promise<void> {
     return await ops.createOpsByPrototype({ opsPrototypeFile, opType });
   }
 
@@ -61,21 +64,31 @@ export class OpsAPI {
   /**
    * 保存构建配置
    */
-  static async saveBuildConfig(data: any, showMessage: boolean = false): Promise<void> {
+  static async saveBuildConfig(
+    data: any,
+    showMessage: boolean = false,
+  ): Promise<void> {
     return await ops.saveBuildConfig({ data, showMessage });
   }
 
   /**
    * 保存配置（仿真/上板）
    */
-  static async saveConfig(type: string, data: any, showMessage: boolean = false): Promise<void> {
+  static async saveConfig(
+    type: string,
+    data: any,
+    showMessage: boolean = false,
+  ): Promise<void> {
     return await ops.saveConfig({ type, data, showMessage });
   }
 
   /**
    * 编译算子
    */
-  static async startBuild(configId?: string, compileOption?: string): Promise<void> {
+  static async startBuild(
+    configId?: string,
+    compileOption?: string,
+  ): Promise<void> {
     return await ops.startBuild({ configId, compileOption });
   }
 
@@ -152,7 +165,10 @@ export class OpsAPI {
   /**
    * 保存异常检测表单配置
    */
-  static async saveSanitizerForm(data: any, showMessage: boolean = false): Promise<void> {
+  static async saveSanitizerForm(
+    data: any,
+    showMessage: boolean = false,
+  ): Promise<void> {
     return await ops.saveSanitizerForm({ data, showMessage });
   }
 

@@ -79,6 +79,7 @@ export class PermanentStorage {
    */
   async clear(): Promise<void> {
     const allKeys = this.keys();
+
     for (const key of allKeys) {
       await this.delete(key);
     }

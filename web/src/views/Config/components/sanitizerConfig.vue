@@ -8,26 +8,40 @@
 import { ref, onBeforeMount } from 'vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 
-import { getSanitizerConfigs, saveSanitizerForm as saveSanitizerFormAPI } from '@/apis';
+import {
+  getSanitizerConfigs,
+  saveSanitizerForm as saveSanitizerFormAPI,
+} from '@/apis';
 
 const props = defineProps({
   activeConfig: {
     type: String,
-    default: "",
+    default: '',
   },
 });
 
 const form = ref({
-  tool: { memcheck: true, racecheck: false, initcheck: false, synccheck: false }, // 检测内容
-  memcheckOption: { 'check-unused-memory': false, 'leak-check': false, 'check-device-heap': false, 'check-cann-heap': false }, // 内存检测可选项
+  tool: {
+    memcheck: true,
+    racecheck: false,
+    initcheck: false,
+    synccheck: false,
+  }, // 检测内容
+  memcheckOption: {
+    'check-unused-memory': false,
+    'leak-check': false,
+    'check-device-heap': false,
+    'check-cann-heap': false,
+  }, // 内存检测可选项
   logLevel: 'warn', // 报告输出等级
   maxDebuglogSize: 1024, // 输入日志单个文件大小上限 1 - 10240
   useBlock: false,
   blockId: null, // 单block检测的blockId,0 - 200
-})
+});
+
 function isUseBlock(val) {
   form.value.blockId = null;
-  saveSanitizerForm()
+  saveSanitizerForm();
 }
 
 // 处理 Device侧内存检测 和 CANN软件栈内存检测 互斥
@@ -48,7 +62,8 @@ const activeKey = ref(['config']);
 async function loadSanitizerForm() {
   const configs = await getSanitizerConfigs();
   const obj = (configs[0] || {})?.user_options || {};
-  Object.keys(form.value).forEach(key => {
+
+  Object.keys(form.value).forEach((key) => {
     if (obj[key] !== undefined) {
       form.value[key] = obj[key];
     }
@@ -57,47 +72,79 @@ async function loadSanitizerForm() {
 
 async function saveSanitizerForm() {
   await saveSanitizerFormAPI({
-    data: JSON.parse(JSON.stringify(form.value))
+    data: JSON.parse(JSON.stringify(form.value)),
   });
 }
 
 onBeforeMount(async () => {
   await loadSanitizerForm();
-})
+});
 </script>
 
 <template>
   <div class="sanitizer-config">
-    <a-form :model="form" :label-col="{ span: 6 }" :wrapper-col="{ span: 24 }" ref="connectionFormRef"
-      layout="vertical">
-
+    <a-form
+      ref="connectionFormRef"
+      :model="form"
+      :label-col="{ span: 6 }"
+      :wrapper-col="{ span: 24 }"
+      layout="vertical"
+    >
       <!-- 检测内容 -->
       <div class="section-title">检测内容</div>
       <a-form-item class="check-type">
         <div class="check-item-row">
-          <a-checkbox v-model:checked="form.tool.memcheck" @change="saveSanitizerForm">内存检测</a-checkbox>
+          <a-checkbox
+            v-model:checked="form.tool.memcheck"
+            @change="saveSanitizerForm"
+            >内存检测</a-checkbox
+          >
         </div>
-        <div v-if="form.tool.memcheck" class="mem-check">
-          <div class="desc">基础检测:默认会开启非法读写、多核踩踏、非对齐访问和非法释放</div>
+        <div
+          v-if="form.tool.memcheck"
+          class="mem-check"
+        >
+          <div class="desc">
+            基础检测:默认会开启非法读写、多核踩踏、非对齐访问和非法释放
+          </div>
           <div class="desc">可选检测:</div>
           <div class="mem-option">
-            <a-checkbox v-model:checked="form.memcheckOption['leak-check']" @change="saveSanitizerForm">内存泄漏</a-checkbox>
-            <a-checkbox v-model:checked="form.memcheckOption['check-unused-memory']" @change="saveSanitizerForm">分配内存未使用</a-checkbox>
+            <a-checkbox
+              v-model:checked="form.memcheckOption['leak-check']"
+              @change="saveSanitizerForm"
+              >内存泄漏</a-checkbox
+            >
+            <a-checkbox
+              v-model:checked="form.memcheckOption['check-unused-memory']"
+              @change="saveSanitizerForm"
+              >分配内存未使用</a-checkbox
+            >
             <!-- <a-checkbox v-model:checked="form.memcheckOption['check-device-heap']" @change="handleDeviceHeapChange">Device侧内存检测</a-checkbox>
             <a-checkbox v-model:checked="form.memcheckOption['check-cann-heap']" @change="handleCannHeapChange">CANN软件栈内存检测</a-checkbox> -->
           </div>
         </div>
         <div class="check-item-row">
-          <a-checkbox v-model:checked="form.tool.racecheck" @change="saveSanitizerForm">竞争检测</a-checkbox>
+          <a-checkbox
+            v-model:checked="form.tool.racecheck"
+            @change="saveSanitizerForm"
+            >竞争检测</a-checkbox
+          >
         </div>
         <div class="check-item-row">
-          <a-checkbox v-model:checked="form.tool.initcheck" @change="saveSanitizerForm">未初始化检测</a-checkbox>
+          <a-checkbox
+            v-model:checked="form.tool.initcheck"
+            @change="saveSanitizerForm"
+            >未初始化检测</a-checkbox
+          >
         </div>
       </a-form-item>
 
       <!-- 报告输出等级 -->
       <a-form-item label="报告输出等级">
-        <a-radio-group v-model:value="form.logLevel" @change="saveSanitizerForm">
+        <a-radio-group
+          v-model:value="form.logLevel"
+          @change="saveSanitizerForm"
+        >
           <a-radio value="info">info:输出info/warn/error级别的运行信息</a-radio>
           <a-radio value="warn">warn:输出warn/error级别的运行信息</a-radio>
           <a-radio value="error">error:输出error级别的运行信息</a-radio>
@@ -105,41 +152,64 @@ onBeforeMount(async () => {
       </a-form-item>
 
       <!-- 高级配置 -->
-      <a-collapse v-model:activeKey="activeKey" ghost>
-        <a-collapse-panel key="config" header="高级配置">
-
+      <a-collapse
+        v-model:active-key="activeKey"
+        ghost
+      >
+        <a-collapse-panel
+          key="config"
+          header="高级配置"
+        >
           <a-form-item>
             <template #label>
               <span>输出日志中单个文件大小的上限</span>
-              <a-tooltip title="可设定范围为1~10240之间的整数,单位为MB。默认值为1024。">
+              <a-tooltip
+                title="可设定范围为1~10240之间的整数,单位为MB。默认值为1024。"
+              >
                 <QuestionCircleOutlined class="help-icon" />
               </a-tooltip>
             </template>
-            <a-input-number v-model:value="form.maxDebuglogSize" placeholder="1-10240" :max="10240"
-              :min="1" @change="saveSanitizerForm"></a-input-number>
+            <a-input-number
+              v-model:value="form.maxDebuglogSize"
+              placeholder="1-10240"
+              :max="10240"
+              :min="1"
+              @change="saveSanitizerForm"
+            ></a-input-number>
           </a-form-item>
 
           <a-form-item>
             <template #label>
               <span>检测范围</span>
-              <a-tooltip title="可设定范围为0~200之间的整数。
+              <a-tooltip
+                title="可设定范围为0~200之间的整数。
 启用前
 内存检测、未初始化检测和同步检测:默认检测所有block。
 竞争检测:核间默认检测所有block,核内默认检测block 0的流水内及流水间的竞争。
 启用后
 内存检测、未初始化检测和同步检测:检测指定block。
-竞争检测:核间不进行检测,检测指定block的流水内及流水间的竞争。">
+竞争检测:核间不进行检测,检测指定block的流水内及流水间的竞争。"
+              >
                 <QuestionCircleOutlined class="help-icon" />
               </a-tooltip>
             </template>
 
-            <a-radio-group v-model:value="form.useBlock" @change="isUseBlock">
+            <a-radio-group
+              v-model:value="form.useBlock"
+              @change="isUseBlock"
+            >
               <a-radio :value="false">全局检测</a-radio>
               <a-radio :value="true">单block检测</a-radio>
             </a-radio-group>
 
-            <a-input-number v-if="form.useBlock" v-model:value="form.blockId" placeholder="0-200" :max="200"
-              :min="0" @change="saveSanitizerForm"></a-input-number>
+            <a-input-number
+              v-if="form.useBlock"
+              v-model:value="form.blockId"
+              placeholder="0-200"
+              :max="200"
+              :min="0"
+              @change="saveSanitizerForm"
+            ></a-input-number>
           </a-form-item>
         </a-collapse-panel>
       </a-collapse>

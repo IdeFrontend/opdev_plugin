@@ -5,17 +5,17 @@
  * LICENSE file in the root directory of this source tree. -->
 
 <script setup>
-import { theme } from "ant-design-vue";
-import { ref, nextTick, onMounted } from "vue";
-import optionsList from "./components/optionsList.vue";
-import configDetail from "./components/configDetail.vue";
-import { getConfigData } from "@/apis";
+import { theme } from 'ant-design-vue';
+import { ref, nextTick, onMounted } from 'vue';
+import optionsList from './components/optionsList.vue';
+import configDetail from './components/configDetail.vue';
+import { getConfigData } from '@/apis';
 
 const themeConfig = {
   algorithm: theme.darkAlgorithm, // 使用暗色算法[1](@ref)
 };
-const activeConfig = ref("");
-const activeOption = ref("build");
+const activeConfig = ref('');
+const activeOption = ref('build');
 const configDetailRef = ref();
 
 const updateActiveOption = (option) => {
@@ -24,9 +24,11 @@ const updateActiveOption = (option) => {
 
 async function loadBuildConfig() {
   const result = await getConfigData();
+
   console.log('getConfigData result', result);
   const obj = result || {};
   const keys = Object.keys(obj);
+
   activeConfig.value = keys[0] || '';
   if (activeConfig.value) {
     nextTick(() => configDetailRef.value.init(obj));
@@ -35,23 +37,28 @@ async function loadBuildConfig() {
 
 onMounted(() => {
   loadBuildConfig();
-})
+});
 </script>
 <template>
   <a-config-provider :theme="themeConfig">
     <div class="config-ops">
       <div class="config-header">
-        <div class="options-title">
-          算子工程配置
-        </div>
+        <div class="options-title">算子工程配置</div>
       </div>
       <div class="config-content">
         <div class="config-sidebar">
-          <optionsList :activeConfig="activeConfig" :activeOption="activeOption"
-            @updateActiveOption="updateActiveOption" />
+          <optionsList
+            :active-config="activeConfig"
+            :active-option="activeOption"
+            @update-active-option="updateActiveOption"
+          />
         </div>
         <div class="config-main">
-          <configDetail :activeOption="activeOption" :activeConfig="activeConfig" ref="configDetailRef" />
+          <configDetail
+            ref="configDetailRef"
+            :active-option="activeOption"
+            :active-config="activeConfig"
+          />
         </div>
       </div>
     </div>
@@ -105,5 +112,5 @@ onMounted(() => {
 </style>
 
 <style lang="less">
-@import url("@/assets/less/common.less");
+@import url('@/assets/less/common.less');
 </style>

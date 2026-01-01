@@ -1,10 +1,17 @@
 <template>
   <a-config-provider :theme="themeConfig">
-    <div class="ms-panel-ctn" v-if="msScantinizerInfo.title">
+    <div
+      v-if="msScantinizerInfo.title"
+      class="ms-panel-ctn"
+    >
       <div class="ms-panel-ctn-left">
         <div class="ms-panel-label ms-panel-ctn-btw">
           <span>检测结果</span>
-          <LeftSquareOutlined class="ms-panel-ctn-cp" v-if="!showDetail" @click="showDetail = true" />
+          <LeftSquareOutlined
+            v-if="!showDetail"
+            class="ms-panel-ctn-cp"
+            @click="showDetail = true"
+          />
         </div>
         <div class="ms-panel-title">
           <div class="ms-panel-title-left">{{ msScantinizerInfo.title }}</div>
@@ -14,7 +21,9 @@
                 <div class="ms-panel-popper">
                   <p class="ms-panel-popper-title">检测信息</p>
                   <p class="ms-panel-popper-type">检测时间</p>
-                  <p class="ms-panel-popper-info">{{ formatTimestamp(msScantinizerInfo.timestamp) }}</p>
+                  <p class="ms-panel-popper-info">
+                    {{ formatTimestamp(msScantinizerInfo.timestamp) }}
+                  </p>
                   <p class="ms-panel-popper-type">检测内容</p>
                   <p class="ms-panel-popper-info">
                     内存检测：非法读写、多核踩踏、非对齐访问和非法释放，内存泄漏、分配内存未使用、Device侧内存检测、CANN软件栈内存检测、竞争检测、未初始化监测
@@ -28,50 +37,97 @@
           </div>
         </div>
         <div class="ms-panel-fitler-ctn">
-          <div class="ms-panel-fitler-ctn-item" @click="filterTableData('error')">
+          <div
+            class="ms-panel-fitler-ctn-item"
+            @click="filterTableData('error')"
+          >
             <span>
-              <CloseCircleOutlined style="color:#FF4D4F" />
+              <CloseCircleOutlined style="color: #ff4d4f" />
             </span>
             <span class="ms-panel-fitler-ctn-item-label">{{ errorCount }}</span>
           </div>
-          <div class="ms-panel-fitler-ctn-item" @click="filterTableData('warning')">
+          <div
+            class="ms-panel-fitler-ctn-item"
+            @click="filterTableData('warning')"
+          >
             <span>
-              <WarningOutlined style="color:#FAAD14" />
+              <WarningOutlined style="color: #faad14" />
             </span>
-            <span class="ms-panel-fitler-ctn-item-label">{{ warningCount }}</span>
+            <span class="ms-panel-fitler-ctn-item-label">{{
+              warningCount
+            }}</span>
           </div>
-          <a-divider style="height: 44px" type="vertical" />
-          <div class="ms-panel-fitler-ctn-item" @click="filterTableData('memory')">
+          <a-divider
+            style="height: 44px"
+            type="vertical"
+          />
+          <div
+            class="ms-panel-fitler-ctn-item"
+            @click="filterTableData('memory')"
+          >
             <span>内存</span>
-            <span class="ms-panel-fitler-ctn-item-label">{{ memoryCount }}</span>
+            <span class="ms-panel-fitler-ctn-item-label">{{
+              memoryCount
+            }}</span>
           </div>
-          <div class="ms-panel-fitler-ctn-item" @click="filterTableData('memoryContention')">
+          <div
+            class="ms-panel-fitler-ctn-item"
+            @click="filterTableData('memoryContention')"
+          >
             <span>内存竞争</span>
-            <span class="ms-panel-fitler-ctn-item-label">{{ memoryContentionCount }}</span>
+            <span class="ms-panel-fitler-ctn-item-label">{{
+              memoryContentionCount
+            }}</span>
           </div>
-          <div class="ms-panel-fitler-ctn-item" @click="filterTableData('uninitialized')">
+          <div
+            class="ms-panel-fitler-ctn-item"
+            @click="filterTableData('uninitialized')"
+          >
             <span>未初始化</span>
-            <span class="ms-panel-fitler-ctn-item-label">{{ uninitializedCount }}</span>
+            <span class="ms-panel-fitler-ctn-item-label">{{
+              uninitializedCount
+            }}</span>
           </div>
-          <div class="ms-panel-fitler-ctn-item" @click="filterTableData('synchronize')">
+          <div
+            class="ms-panel-fitler-ctn-item"
+            @click="filterTableData('synchronize')"
+          >
             <span>同步</span>
-            <span class="ms-panel-fitler-ctn-item-label">{{ synchronizeCount }}</span>
+            <span class="ms-panel-fitler-ctn-item-label">{{
+              synchronizeCount
+            }}</span>
           </div>
         </div>
-        <div style="padding: 0 20px;">
-          <a-table :scroll="{ y: 'calc(100vh - 224px)' }" :columns="columns" :data-source="tableData" @change="onChange"
-            size="small" :custom-row="customRow">
+        <div style="padding: 0 20px">
+          <a-table
+            :scroll="{ y: 'calc(100vh - 224px)' }"
+            :columns="columns"
+            :data-source="tableData"
+            size="small"
+            :custom-row="customRow"
+            @change="onChange"
+          >
             <template #bodyCell="{ column, record }">
               <template v-if="column.dataIndex === 'type'">
-                <CloseCircleOutlined style="color:#FF4D4F" v-if="record.type === 'error'" />
-                <WarningOutlined style="color:#FAAD14" v-else />
-                <span style="padding-left: 4px;">{{ record.title }}</span>
+                <CloseCircleOutlined
+                  v-if="record.type === 'error'"
+                  style="color: #ff4d4f"
+                />
+                <WarningOutlined
+                  v-else
+                  style="color: #faad14"
+                />
+                <span style="padding-left: 4px">{{ record.title }}</span>
               </template>
               <template v-if="column.dataIndex === 'fileLink'">
-                <a-button v-if="record.fileLink" type="link" @click.stop="handleJumpToFile(record)">{{ record.fileLink
-                }}</a-button>
+                <a-button
+                  v-if="record.fileLink"
+                  type="link"
+                  @click.stop="handleJumpToFile(record)"
+                  >{{ record.fileLink }}</a-button
+                >
                 <span v-else>
-                   该问题为HOST侧的问题，按照右侧详情信息进行排查。
+                  该问题为HOST侧的问题，按照右侧详情信息进行排查。
                 </span>
               </template>
               <template v-if="column.dataIndex === 'question'">
@@ -81,9 +137,16 @@
           </a-table>
         </div>
       </div>
-      <div class="ms-panel-ctn-right" v-if="showDetail">
-        <div class="ms-panel-label">详情
-          <RightSquareOutlined class="ms-panel-ctn-cp" @click="showDetail = false" />
+      <div
+        v-if="showDetail"
+        class="ms-panel-ctn-right"
+      >
+        <div class="ms-panel-label">
+          详情
+          <RightSquareOutlined
+            class="ms-panel-ctn-cp"
+            @click="showDetail = false"
+          />
         </div>
         <div class="ms-panel-ctn-right-main">
           <div class="ms-panel-ctn-right-label">
@@ -95,13 +158,19 @@
             <div class="ms-panel-ctn-right-label-block"></div>
             <span>问题详情</span>
           </div>
-          <div class="ms-panel-ctn-right-text">{{ questionDetails.originData }}</div>
+          <div class="ms-panel-ctn-right-text">
+            {{ questionDetails.originData }}
+          </div>
           <div class="ms-panel-ctn-right-label">
             <div class="ms-panel-ctn-right-label-block"></div>
             <span>问题类型详情</span>
           </div>
-          <div class="ms-panel-ctn-right-text">{{ questionMap.get(questionDetails.question) }}</div>
-          <div class="ms-panel-ctn-right-text">{{ questionHandlerMap.get(questionDetails.question) }}</div>
+          <div class="ms-panel-ctn-right-text">
+            {{ questionMap.get(questionDetails.question) }}
+          </div>
+          <div class="ms-panel-ctn-right-text">
+            {{ questionHandlerMap.get(questionDetails.question) }}
+          </div>
         </div>
       </div>
     </div>
@@ -110,18 +179,35 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onBeforeUnmount, onMounted } from "vue";
-import { theme } from 'ant-design-vue'
-import { CloseCircleOutlined, WarningOutlined, InfoCircleOutlined, RightSquareOutlined, LeftSquareOutlined } from '@ant-design/icons-vue';
-import { questionMap, questionHandlerMap, type QuestionData, memorySet, memoryContentionSet, uninitializedSet, synchronizeSet } from './constant'
+import { ref, computed, onBeforeUnmount, onMounted } from 'vue';
+import { theme } from 'ant-design-vue';
+import {
+  CloseCircleOutlined,
+  WarningOutlined,
+  InfoCircleOutlined,
+  RightSquareOutlined,
+  LeftSquareOutlined,
+} from '@ant-design/icons-vue';
+import {
+  questionMap,
+  questionHandlerMap,
+  type QuestionData,
+  memorySet,
+  memoryContentionSet,
+  uninitializedSet,
+  synchronizeSet,
+} from './constant';
 import { jumpToFileWebview } from '@/apis';
-import { formatTimestamp } from "../PerformanceRunData/utils/timestamp";
+import { formatTimestamp } from '../PerformanceRunData/utils/timestamp';
 
 const themeConfig = {
-  algorithm: theme.darkAlgorithm
-}
+  algorithm: theme.darkAlgorithm,
+};
 
-const questionTypes = Array.from(questionMap).map(item => ({ text: item[1], value: item[0] }));
+const questionTypes = Array.from(questionMap).map((item) => ({
+  text: item[1],
+  value: item[0],
+}));
 
 const msScantinizerInfo = ref<Record<string, string>>({});
 
@@ -134,16 +220,18 @@ const showDetail = ref(false);
 const allFilePath = computed(() => {
   const filaPathSet = new Set();
 
-  tableData.value.forEach(item => {
+  tableData.value.forEach((item) => {
     if (item.fileLink) {
-      filaPathSet.add(item.fileLink)
+      filaPathSet.add(item.fileLink);
     }
   });
-  return Array.from(filaPathSet).map(item => ({ text: item, value: item }))
-})
+
+  return Array.from(filaPathSet).map((item) => ({ text: item, value: item }));
+});
 
 const columns = computed(() => {
   const filtered = filteredInfo.value || {};
+
   return [
     {
       title: '问题描述',
@@ -152,7 +240,8 @@ const columns = computed(() => {
       ellipsis: true,
       filterDropdownOpen: false,
       filteredValue: filtered.type || null,
-      onFilter: (value: string, record: QuestionData) => record.type?.includes(value),
+      onFilter: (value: string, record: QuestionData) =>
+        record.type?.includes(value),
     },
     {
       title: '问题类型',
@@ -160,7 +249,8 @@ const columns = computed(() => {
       width: '12%',
       filters: questionTypes,
       filteredValue: filtered.question || null,
-      onFilter: (value: string, record: QuestionData) => record.question?.includes(value),
+      onFilter: (value: string, record: QuestionData) =>
+        record.question?.includes(value),
     },
     {
       title: '源码文件',
@@ -168,41 +258,53 @@ const columns = computed(() => {
       width: '30%',
       filters: allFilePath.value,
       filteredValue: filtered.fileLink || null,
-      onFilter: (value: string, record: QuestionData) => record.fileLink?.includes(value),
-      ellipsis: true
+      onFilter: (value: string, record: QuestionData) =>
+        record.fileLink?.includes(value),
+      ellipsis: true,
     },
     {
       title: '行数',
       dataIndex: 'row',
       width: '8%',
-    }
-  ]
+    },
+  ];
 });
 const tableData = ref<QuestionData[]>([]);
 
 const errorCount = computed(() => {
-  return tableData.value.filter(item => item.type === 'error').length || 0;
-})
+  return tableData.value.filter((item) => item.type === 'error').length || 0;
+});
 
 const warningCount = computed(() => {
-  return tableData.value.filter(item => item.type === 'warning').length || 0;
-})
+  return tableData.value.filter((item) => item.type === 'warning').length || 0;
+});
 
 const memoryCount = computed(() => {
-  return tableData.value.filter(item => item.questionType === 'memory').length || 0;
-})
+  return (
+    tableData.value.filter((item) => item.questionType === 'memory').length || 0
+  );
+});
 
 const memoryContentionCount = computed(() => {
-  return tableData.value.filter(item => item.questionType === 'memoryContention').length || 0;
-})
+  return (
+    tableData.value.filter((item) => item.questionType === 'memoryContention')
+      .length || 0
+  );
+});
 
 const uninitializedCount = computed(() => {
-  return tableData.value.filter(item => item.questionType === 'uninitialized').length || 0;
-})
+  return (
+    tableData.value.filter((item) => item.questionType === 'uninitialized')
+      .length || 0
+  );
+});
 
 const synchronizeCount = computed(() => {
-  return tableData.value.filter(item => item.questionType === 'synchronize').length || 0;
-})
+  return (
+    tableData.value.filter((item) => item.questionType === 'synchronize')
+      .length || 0
+  );
+});
 
 const customRow = (record) => {
   return {
@@ -216,6 +318,7 @@ const customRow = (record) => {
 const handleJumpToFile = async (data: QuestionData) => {
   if (!data.fileLink || data.row === undefined || data.col === undefined) {
     console.warn('无法跳转：缺少必要的文件信息');
+
     return;
   }
   try {
@@ -227,7 +330,7 @@ const handleJumpToFile = async (data: QuestionData) => {
   } catch (error) {
     console.error('跳转到文件失败:', error);
   }
-}
+};
 
 function onChange(pagination, filters) {
   filteredInfo.value = filters || {};
@@ -237,57 +340,61 @@ const filterTableData = async (type) => {
   switch (type) {
     case 'memory':
       filteredInfo.value = {
-        question: Array.from(memorySet)
-      }
+        question: Array.from(memorySet),
+      };
       break;
     case 'memoryContention':
       filteredInfo.value = {
-        question: Array.from(memoryContentionSet)
-      }
+        question: Array.from(memoryContentionSet),
+      };
       break;
     case 'uninitialized':
       filteredInfo.value = {
-        question: Array.from(uninitializedSet)
-      }
+        question: Array.from(uninitializedSet),
+      };
       break;
     case 'synchronize':
       filteredInfo.value = {
-        question: Array.from(synchronizeSet)
-      }
+        question: Array.from(synchronizeSet),
+      };
       break;
     case 'error':
       filteredInfo.value = {
-        type: ['error']
-      }
+        type: ['error'],
+      };
       break;
     case 'warning':
       filteredInfo.value = {
-        type: ['warning']
-      }
+        type: ['warning'],
+      };
       break;
 
     default:
       break;
   }
-}
+};
 
 onMounted(() => {
   // 监听来自 iframe 的消息
   const messageHandler = (event: MessageEvent) => {
-    if (event.data.command === 'iframeRemoteMsSanitizerPanelViewSetRenderList') {
+    if (
+      event.data.command === 'iframeRemoteMsSanitizerPanelViewSetRenderList'
+    ) {
       const { data, title, timestamp } = event.data.data;
+
       msScantinizerInfo.value = {
         title,
-        timestamp
-      }
+        timestamp,
+      };
       tableData.value = data || [];
     }
   };
+
   window.addEventListener('message', messageHandler);
-  
+
   // 发送消息给父窗口请求数据
   window.postMessage({ command: 'vscodeGetMsSanitizerPanelViewData' }, '*');
-  
+
   // 清理函数
   onBeforeUnmount(() => {
     window.removeEventListener('message', messageHandler);

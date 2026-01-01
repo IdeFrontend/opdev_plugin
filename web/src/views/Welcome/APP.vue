@@ -1,8 +1,11 @@
 <template>
-  <div class="op-devtools-wrapper" @click="handleClick">
+  <div
+    class="op-devtools-wrapper"
+    @click="handleClick"
+  >
     <!-- 背景层（芯片图 + 深色遮罩） -->
     <div class="background-layer"></div>
-    
+
     <!-- 内容层 -->
     <div class="content-wrapper">
       <!-- 顶部标题区域 -->
@@ -20,11 +23,25 @@
             <h3>算子工程</h3>
           </div>
           <p class="module-desc">
-            提供算子开发环境开箱即用能力，支持基于Ascend C开发算子，支持&lt;&lt;&lt;&gt;&gt;&gt;算子工程的快速创建
+            提供算子开发环境开箱即用能力，支持基于Ascend
+            C开发算子，支持&lt;&lt;&lt;&gt;&gt;&gt;算子工程的快速创建
           </p>
-          <div class="module-buttons" @click.stop>
-            <button class="func-btn disabled-btn" @click="handleFeatureClick"><i class="btn-icon"></i>环境开箱即用</button>
-            <button class="func-btn" @click="handleAscendCProject"><i class="btn-icon"></i>Ascend C算子工程</button>
+          <div
+            class="module-buttons"
+            @click.stop
+          >
+            <button
+              class="func-btn disabled-btn"
+              @click="handleFeatureClick"
+            >
+              <i class="btn-icon"></i>环境开箱即用
+            </button>
+            <button
+              class="func-btn"
+              @click="handleAscendCProject"
+            >
+              <i class="btn-icon"></i>Ascend C算子工程
+            </button>
             <!-- <button class="func-btn disabled-btn" disabled><i class="btn-icon"></i>Triton算子工程</button>
             <button class="func-btn disabled-btn" disabled><i class="btn-icon"></i>TileLang算子工程</button> -->
           </div>
@@ -40,14 +57,43 @@
             <h3>算子实现</h3>
           </div>
           <p class="module-desc">
-            开发过程中支持Ascend C语法高亮、代码补全、代码跳转等。提供算子编译、算子部署到CANNN包，算子异常检测编译等能力
+            开发过程中支持Ascend
+            C语法高亮、代码补全、代码跳转等。提供算子编译、算子部署到CANNN包，算子异常检测编译等能力
           </p>
-          <div class="module-buttons" @click.stop>
-            <button class="func-btn disabled-btn" @click="handleFeatureClick"><i class="btn-icon"></i>Tiling开发</button>
-            <button class="func-btn disabled-btn" @click="handleFeatureClick"><i class="btn-icon"></i>Kernel开发</button>
-            <button class="func-btn disabled-btn" @click="handleFeatureClick"><i class="btn-icon"></i>语法高亮</button>
-            <button class="func-btn disabled-btn" @click="handleFeatureClick"><i class="btn-icon"></i>代码补全</button>
-            <button class="func-btn disabled-btn" @click="handleFeatureClick"><i class="btn-icon"></i>算子编译</button>
+          <div
+            class="module-buttons"
+            @click.stop
+          >
+            <button
+              class="func-btn disabled-btn"
+              @click="handleFeatureClick"
+            >
+              <i class="btn-icon"></i>Tiling开发
+            </button>
+            <button
+              class="func-btn disabled-btn"
+              @click="handleFeatureClick"
+            >
+              <i class="btn-icon"></i>Kernel开发
+            </button>
+            <button
+              class="func-btn disabled-btn"
+              @click="handleFeatureClick"
+            >
+              <i class="btn-icon"></i>语法高亮
+            </button>
+            <button
+              class="func-btn disabled-btn"
+              @click="handleFeatureClick"
+            >
+              <i class="btn-icon"></i>代码补全
+            </button>
+            <button
+              class="func-btn disabled-btn"
+              @click="handleFeatureClick"
+            >
+              <i class="btn-icon"></i>算子编译
+            </button>
           </div>
         </div>
 
@@ -61,20 +107,40 @@
             <h3>调试调优</h3>
           </div>
           <p class="module-desc">
-            支持NPU coredump文件可视化调试等能力。支持一键采集、分析算子关键性指标，提供指令流水线、内存负载分析图、Roofline瓶颈分析图、Cache热力图、算子代码热点图等能力
+            支持NPU
+            coredump文件可视化调试等能力。支持一键采集、分析算子关键性指标，提供指令流水线、内存负载分析图、Roofline瓶颈分析图、Cache热力图、算子代码热点图等能力
           </p>
-          <div class="module-buttons" @click.stop>
+          <div
+            class="module-buttons"
+            @click.stop
+          >
             <!-- <button class="func-btn disabled-btn" disabled><i class="btn-icon"></i>孪生调试</button> -->
             <!-- <button class="func-btn disabled-btn" @click="handleFeatureClick"><i class="btn-icon"></i>功能调试</button> -->
-            <button class="func-btn disabled-btn" @click="handleFeatureClick"><i class="btn-icon"></i>异常检测</button>
-            <button class="func-btn disabled-btn" @click="handleFeatureClick"><i class="btn-icon"></i>性能调优</button>
+            <button
+              class="func-btn disabled-btn"
+              @click="handleFeatureClick"
+            >
+              <i class="btn-icon"></i>异常检测
+            </button>
+            <button
+              class="func-btn disabled-btn"
+              @click="handleFeatureClick"
+            >
+              <i class="btn-icon"></i>性能调优
+            </button>
           </div>
         </div>
       </div>
 
       <!-- 底部提示区域 -->
-      <button class="tips-btn" @click.stop="handleClick">
-        点击左侧 <span class="home-icon"></span> 算子一站式开发平台激活左侧面板，点击面板上的 “新建算子工程” 按钮，开始工作
+      <button
+        class="tips-btn"
+        @click.stop="handleClick"
+      >
+        点击左侧
+        <span class="home-icon"></span>
+        算子一站式开发平台激活左侧面板，点击面板上的 “新建算子工程”
+        按钮，开始工作
       </button>
     </div>
   </div>
@@ -89,10 +155,10 @@ const handleClick = (event) => {
     //@ts-ignore
     window.vscode.postMessage({
       command: 'vscodeOpenSidebar',
-      message: {}
+      message: {},
     });
   }
-}
+};
 
 // 处理Ascend C算子工程按钮点击
 const handleAscendCProject = () => {
@@ -101,15 +167,16 @@ const handleAscendCProject = () => {
     //@ts-ignore
     window.vscode.postMessage({
       command: 'openLinkWebviewPanel',
-      commandId: 'my-extension.openProjectView'
+      commandId: 'my-extension.openProjectView',
     });
   }
-}
+};
 
 // 处理其他功能按钮点击
 const handleFeatureClick = () => {
   // Create a temporary notification element
   const notification = document.createElement('div');
+
   notification.className = 'feature-notification';
   notification.textContent = '请打开算子工程体验';
 
@@ -127,7 +194,7 @@ const handleFeatureClick = () => {
     fontSize: '14px',
     fontFamily: '"Microsoft Yahei", sans-serif',
     border: '1px solid #444',
-    animation: 'slideInFromRight 0.3s ease-out'
+    animation: 'slideInFromRight 0.3s ease-out',
   });
 
   document.body.appendChild(notification);
@@ -138,7 +205,7 @@ const handleFeatureClick = () => {
       notification.parentNode.removeChild(notification);
     }
   }, 3000);
-}
+};
 </script>
 
 <style scoped>
@@ -152,7 +219,7 @@ const handleFeatureClick = () => {
   /* 基础文字颜色 */
   padding: 40px 80px;
   box-sizing: border-box;
-  font-family: "Microsoft Yahei", sans-serif;
+  font-family: 'Microsoft Yahei', sans-serif;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -265,21 +332,24 @@ const handleFeatureClick = () => {
 }
 
 .module-card:nth-child(1) .module-header .icon {
-  background: url("../../../../resources/welcomePage/opCreate.svg") no-repeat center;
+  background: url('../../../../resources/welcomePage/opCreate.svg') no-repeat
+    center;
   background-size: contain;
   width: 26px;
   height: 26px;
 }
 
 .module-card:nth-child(3) .module-header .icon {
-  background: url("../../../../resources/welcomePage/opImpl.svg") no-repeat center;
+  background: url('../../../../resources/welcomePage/opImpl.svg') no-repeat
+    center;
   background-size: contain;
   width: 28px;
   height: 28px;
 }
 
 .module-card:nth-child(5) .module-header .icon {
-  background: url("../../../../resources/welcomePage/opInspect.svg") no-repeat center;
+  background: url('../../../../resources/welcomePage/opInspect.svg') no-repeat
+    center;
   background-size: contain;
   width: 24px;
   height: 24px;
@@ -364,7 +434,7 @@ const handleFeatureClick = () => {
   /* 减少右边距 */
   flex-shrink: 0;
   /* 图标不缩小 */
-  background: url("../../../resources/welcomePage/other.svg") no-repeat center;
+  background: url('../../../resources/welcomePage/other.svg') no-repeat center;
   background-size: contain;
   vertical-align: middle;
 }
@@ -402,7 +472,7 @@ const handleFeatureClick = () => {
   height: 20px;
   margin-left: 8px;
   margin-right: 8px;
-  background: url("../../../../resources/homeIcon.svg") no-repeat center;
+  background: url('../../../../resources/homeIcon.svg') no-repeat center;
   background-size: contain;
   vertical-align: middle;
 }
@@ -596,4 +666,5 @@ const handleFeatureClick = () => {
     transform: translateX(0);
     opacity: 1;
   }
-}</style>
+}
+</style>

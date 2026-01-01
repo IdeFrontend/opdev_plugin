@@ -1,21 +1,39 @@
 <template>
-  <a-collapse v-model:activeKey="activeKey" :bordered="false">
-      <div style="margin-bottom: 15px;">
-        <span style="color: white;">
-          查看插件介绍，打开 <a-button type="link" style="display: contents;" @click="openHomePage">欢迎首页</a-button>
-        </span>
-      </div>
-      <!-- 方案1：普通全宽按钮（最常用） -->
-      <div class="button-box">
-        <a-button type="primary" @click="handleMenuClick">
-          新建算子工程
-        </a-button>
-      </div>
-      <div v-if="false" class="button-box">
-        <a-button type="primary" class="button disable-btn">打开算子工程</a-button>
-      </div>
+  <a-collapse
+    v-model:active-key="activeKey"
+    :bordered="false"
+  >
+    <div style="margin-bottom: 15px">
+      <span style="color: white">
+        查看插件介绍，打开
+        <a-button
+          type="link"
+          style="display: contents"
+          @click="openHomePage"
+          >欢迎首页</a-button
+        >
+      </span>
+    </div>
+    <!-- 方案1：普通全宽按钮（最常用） -->
+    <div class="button-box">
+      <a-button
+        type="primary"
+        @click="handleMenuClick"
+      >
+        新建算子工程
+      </a-button>
+    </div>
+    <div
+      v-if="false"
+      class="button-box"
+    >
+      <a-button
+        type="primary"
+        class="button disable-btn"
+        >打开算子工程</a-button
+      >
+    </div>
   </a-collapse>
-
 </template>
 <script lang="ts" setup>
 import { Ref, ref } from 'vue';
@@ -28,10 +46,10 @@ const handleMenuClick = () => {
     //@ts-ignore
     window.vscode.postMessage({
       command: 'openLinkWebviewPanel',
-      commandId: 'my-extension.openProjectView'
+      commandId: 'my-extension.openProjectView',
     });
   }
-}
+};
 const openHomePage = () => {
   if ((window as any).vscode) {
     //@ts-ignore
@@ -39,7 +57,7 @@ const openHomePage = () => {
       command: 'openWelcome',
     });
   }
-}
+};
 </script>
 
 <style scoped lang="less">
@@ -80,7 +98,9 @@ const openHomePage = () => {
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   padding: 20px;
   box-sizing: border-box;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial,
+    sans-serif;
 }
 
 /* 顶部按钮容器 */
@@ -100,13 +120,17 @@ const openHomePage = () => {
   background: white;
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
   border: 1px solid rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
 }
 
 .button-layout:hover {
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
   transform: translateY(-2px);
 }
 
@@ -282,7 +306,9 @@ const openHomePage = () => {
   background: white;
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
   border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
@@ -476,7 +502,12 @@ const openHomePage = () => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
   animation: shimmer 1.5s infinite;
 }
 

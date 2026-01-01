@@ -5,12 +5,12 @@
  * LICENSE file in the root directory of this source tree. -->
 
 <script setup>
-import { FolderOutlined } from "@ant-design/icons-vue";
-import { ref, nextTick } from "vue";
-import { QuestionCircleOutlined } from "@ant-design/icons-vue";
-import { saveConfig as saveConfigAPI } from "@/apis";
-import EditTable from "./editTable.vue";
-import SelectFolder from "./SelectFolder.vue";
+import { FolderOutlined } from '@ant-design/icons-vue';
+import { ref, nextTick } from 'vue';
+import { QuestionCircleOutlined } from '@ant-design/icons-vue';
+import { saveConfig as saveConfigAPI } from '@/apis';
+import EditTable from './editTable.vue';
+import SelectFolder from './SelectFolder.vue';
 
 const props = defineProps({
   simulationData: {
@@ -23,30 +23,39 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["addAdvancedParam", "deleteAdvancedParam"]);
+const emit = defineEmits(['addAdvancedParam', 'deleteAdvancedParam']);
 
 const saveConfig = async () => {
-  const obj = { config_id: props.simulationData.config_id, user_options: { ...props.simulationData.user_options } }
-  await saveConfigAPI({ type: 'simulate', data: [JSON.parse(JSON.stringify(obj))] });
+  const obj = {
+    config_id: props.simulationData.config_id,
+    user_options: { ...props.simulationData.user_options },
+  };
+
+  await saveConfigAPI({
+    type: 'simulate',
+    data: [JSON.parse(JSON.stringify(obj))],
+  });
 };
 
-const activeKey = ref(["1"]);
-const guide = ref('https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODtools/Operatordevelopmenttools/atlasopdev_16_0082.html')
+const activeKey = ref(['1']);
+const guide = ref(
+  'https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODtools/Operatordevelopmenttools/atlasopdev_16_0082.html',
+);
 
 const addTableItem = () => {
-  emit('addAdvancedParam')
+  emit('addAdvancedParam');
   nextTick(() => {
-    saveConfig()
-  })
-}
+    saveConfig();
+  });
+};
 
-const deleteTableItem = e => {
-  console.log('delete event', e)
-  emit('deleteAdvancedParam', e)
+const deleteTableItem = (e) => {
+  console.log('delete event', e);
+  emit('deleteAdvancedParam', e);
   nextTick(() => {
-    saveConfig()
-  })
-}
+    saveConfig();
+  });
+};
 </script>
 
 <template>
@@ -58,7 +67,7 @@ const deleteTableItem = e => {
           <template #title>
             <div>
               具体图形案例请参考算子调优工具概述
-              <br>
+              <br />
               {{ guide }}
             </div>
           </template>
@@ -66,19 +75,27 @@ const deleteTableItem = e => {
         </a-tooltip>
       </div>
 
-      <div style="margin-top: 12px;">指令流水图（默认采集）</div>
+      <div style="margin-top: 12px">指令流水图（默认采集）</div>
       <div class="nested-checkbox-group">
-        <div style="margin-bottom: 12px;">默认采集：计算单元和搬运单元指令耗时占比指标</div>
+        <div style="margin-bottom: 12px">
+          默认采集：计算单元和搬运单元指令耗时占比指标
+        </div>
         附加选项：
-        <a-checkbox v-model:checked="simulationData.user_options.PMSampling" @change="saveConfig">
+        <a-checkbox
+          v-model:checked="simulationData.user_options.PMSampling"
+          @change="saveConfig"
+        >
           内存通路吞吐率波形子图
         </a-checkbox>
       </div>
 
-      <div style="margin-top: 12px;">算子代码热点图（默认采集）</div>
+      <div style="margin-top: 12px">算子代码热点图（默认采集）</div>
       <div class="nested-checkbox-group">
         附加选项：
-        <a-checkbox v-model:checked="simulationData.user_options.ResourceConflictRatio" @change="saveConfig">
+        <a-checkbox
+          v-model:checked="simulationData.user_options.ResourceConflictRatio"
+          @change="saveConfig"
+        >
           资源冲突占比指标
         </a-checkbox>
       </div>
@@ -101,17 +118,31 @@ const deleteTableItem = e => {
         </a-tooltip>
       </a-form-item> -->
 
-      <a-collapse v-model:activeKey="activeKey" ghost>
-        <a-collapse-panel key="1" header="高级配置">
-          <div class="simulate-title" style="margin-bottom: 8px;">
+      <a-collapse
+        v-model:active-key="activeKey"
+        ghost
+      >
+        <a-collapse-panel
+          key="1"
+          header="高级配置"
+        >
+          <div
+            class="simulate-title"
+            style="margin-bottom: 8px"
+          >
             仿真器类型
-            <a-tooltip title="当前支持的仿真器类型可以在 CANN安装路径下 ascend-toolkit/latest/tools/simulator目录查看">
+            <a-tooltip
+              title="当前支持的仿真器类型可以在 CANN安装路径下 ascend-toolkit/latest/tools/simulator目录查看"
+            >
               <QuestionCircleOutlined class="help-icon" />
             </a-tooltip>
           </div>
           <a-form-item>
-            <a-input v-model:value="simulationData.user_options.simulatorType" placeholder="请输入仿真器类型"
-              @change="saveConfig" />
+            <a-input
+              v-model:value="simulationData.user_options.simulatorType"
+              placeholder="请输入仿真器类型"
+              @change="saveConfig"
+            />
           </a-form-item>
 
           <!-- <div class="section-title" style="margin-top: 12px;">控制仿真器dump文件是否生成</div>
@@ -119,8 +150,14 @@ const deleteTableItem = e => {
             <a-switch v-model:checked="simulationData.user_options.enableDump" @change="saveConfig" />
           </a-form-item> -->
 
-          <EditTable class="add-params" :key="updateIndex" :dataSource="simulationData.user_options.advance_param"
-            @addTableItem="addTableItem" @deleteTableItem="deleteTableItem" @onChange="saveConfig" />
+          <EditTable
+            :key="updateIndex"
+            class="add-params"
+            :data-source="simulationData.user_options.advance_param"
+            @add-table-item="addTableItem"
+            @delete-table-item="deleteTableItem"
+            @on-change="saveConfig"
+          />
         </a-collapse-panel>
       </a-collapse>
     </a-form>
@@ -138,7 +175,7 @@ const deleteTableItem = e => {
     }
   }
 
-  .add-params{
+  .add-params {
     margin-top: 12px;
   }
 

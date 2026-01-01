@@ -3,7 +3,10 @@ import path from 'node:path';
 
 import esbuild from 'esbuild';
 
-const useSourcemap = process.argv.some((item) => item === '--sourcemap' || item === '--sourcemap=true') || false;
+const useSourcemap =
+  process.argv.some(
+    (item) => item === '--sourcemap' || item === '--sourcemap=true',
+  ) || false;
 
 esbuild.build({
   entryPoints: ['./plugin/src/extension.ts'],
@@ -17,9 +20,18 @@ esbuild.build({
 
 // 复制资源文件
 const copyDirs = [
-  [path.resolve(__dirname, '../web/out/'), path.resolve(__dirname, '../out/web/')], // web
-  [path.resolve(__dirname, '../plugin/templates/'), path.resolve(__dirname, '../out/templates/')], // 模板
-  [path.resolve(__dirname, '../plugin/mindstudio-debug-vscode-plugin/'), path.resolve(__dirname, '../out/plugin/mindstudio-debug-vscode-plugin/')], // mindstudio-debug-vscode-plugin 插件
+  [
+    path.resolve(__dirname, '../web/out/'),
+    path.resolve(__dirname, '../out/web/'),
+  ], // web
+  [
+    path.resolve(__dirname, '../plugin/templates/'),
+    path.resolve(__dirname, '../out/templates/'),
+  ], // 模板
+  [
+    path.resolve(__dirname, '../plugin/mindstudio-debug-vscode-plugin/'),
+    path.resolve(__dirname, '../out/plugin/mindstudio-debug-vscode-plugin/'),
+  ], // mindstudio-debug-vscode-plugin 插件
 ];
 
 for (const [sourcePath, targetPath] of copyDirs) {

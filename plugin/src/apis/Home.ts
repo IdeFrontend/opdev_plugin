@@ -17,6 +17,7 @@ export const homeApis: ApiGroup = {
     // 获取项目ID
     async getProjectId(): Promise<GetProjectIdResult> {
       await OpsAPI.init();
+
       return OpsAPI.getProjectId();
     },
 
@@ -28,19 +29,24 @@ export const homeApis: ApiGroup = {
     // 获取项目SH脚本
     async getProjectSH(): Promise<GetProjectSHResult> {
       const project = Project.getInstance();
+
       return process.env.ASCEND_ENV_SCRIPT || project.projectSH || '';
     },
 
     // 更新Project
     async updateProject(): Promise<void> {
       const project = Project.getInstance();
+
       project.updateView();
     },
 
     // 获取工作区路径
     getWorkspace(): GetWorkspaceResult {
       const workspaceFolders = vscode.workspace.workspaceFolders;
-      return workspaceFolders && workspaceFolders.length > 0 ? workspaceFolders[0].uri.fsPath : null;
+
+      return workspaceFolders && workspaceFolders.length > 0
+        ? workspaceFolders[0].uri.fsPath
+        : null;
     },
 
     // 获取最后项目路径 - 从远程服务器读取
@@ -49,4 +55,3 @@ export const homeApis: ApiGroup = {
     },
   },
 };
-

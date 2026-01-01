@@ -28,6 +28,7 @@ export class RemoteConfig {
   private static getConfigPath(): string {
     const homeDir = os.homedir();
     const configDir = path.join(homeDir, this.CONFIG_DIR);
+
     return path.join(configDir, this.CONFIG_FILE);
   }
 
@@ -52,6 +53,7 @@ export class RemoteConfig {
     try {
       if (fs.existsSync(configPath)) {
         const content = fs.readFileSync(configPath, 'utf-8');
+
         return JSON.parse(content);
       }
     } catch (error) {
@@ -81,6 +83,7 @@ export class RemoteConfig {
    */
   static getLastProjectPath(): string | null {
     const config = this.readConfig();
+
     return config.lastProjectPath || null;
   }
 
@@ -89,6 +92,7 @@ export class RemoteConfig {
    */
   static setLastProjectPath(projectPath: string): void {
     const config = this.readConfig();
+
     config.lastProjectPath = projectPath;
     this.writeConfig(config);
   }
@@ -98,6 +102,7 @@ export class RemoteConfig {
    */
   static clearLastProjectPath(): void {
     const config = this.readConfig();
+
     delete config.lastProjectPath;
     this.writeConfig(config);
   }
@@ -107,6 +112,7 @@ export class RemoteConfig {
    */
   static get(key: string): any {
     const config = this.readConfig();
+
     return config[key];
   }
 
@@ -115,6 +121,7 @@ export class RemoteConfig {
    */
   static set(key: string, value: any): void {
     const config = this.readConfig();
+
     config[key] = value;
     this.writeConfig(config);
   }
@@ -124,6 +131,7 @@ export class RemoteConfig {
    */
   static delete(key: string): void {
     const config = this.readConfig();
+
     delete config[key];
     this.writeConfig(config);
   }

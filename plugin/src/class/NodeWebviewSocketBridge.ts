@@ -64,17 +64,31 @@ export class NodeWebviewSocketBridge implements vscode.Disposable {
       case 'ws:send':
         // 提取接口信息（如果payload是JSON格式）
         let apiName = 'unknown';
+
         try {
           if (typeof msg.payload === 'string') {
             const parsed = JSON.parse(msg.payload);
-            apiName = parsed?.method || parsed?.api || parsed?.action || parsed?.type || 'unknown';
+
+            apiName =
+              parsed?.method ||
+              parsed?.api ||
+              parsed?.action ||
+              parsed?.type ||
+              'unknown';
           } else if (msg.payload && typeof msg.payload === 'object') {
-            apiName = msg.payload?.method || msg.payload?.api || msg.payload?.action || msg.payload?.type || 'unknown';
+            apiName =
+              msg.payload?.method ||
+              msg.payload?.api ||
+              msg.payload?.action ||
+              msg.payload?.type ||
+              'unknown';
           }
         } catch {
           // 无法解析payload，使用默认值
         }
-        console.log(`[转发请求入口] 接口: ${apiName}, ID: ${id}, 类型: ${msg.type}`);
+        console.log(
+          `[转发请求入口] 接口: ${apiName}, ID: ${id}, 类型: ${msg.type}`,
+        );
         this.forwardSend(msg);
         break;
       case 'ws:close':
@@ -93,6 +107,7 @@ export class NodeWebviewSocketBridge implements vscode.Disposable {
         id,
         reason: 'WebSocket URL is required',
       });
+
       return;
     }
 
@@ -103,6 +118,7 @@ export class NodeWebviewSocketBridge implements vscode.Disposable {
 
     try {
       const ws = new WebSocket(url, protocols);
+
       this.sockets.set(id, ws);
 
       ws.on('open', () => {
@@ -114,11 +130,22 @@ export class NodeWebviewSocketBridge implements vscode.Disposable {
 
         // 提取接口信息用于日志
         let apiName = 'unknown';
+
         try {
           if (typeof normalizedPayload === 'string') {
             const parsed = JSON.parse(normalizedPayload);
-            apiName = parsed?.method || parsed?.api || parsed?.action || parsed?.type || parsed?.result?.method || 'unknown';
-          } else if (normalizedPayload && typeof normalizedPayload === 'object') {
+
+            apiName =
+              parsed?.method ||
+              parsed?.api ||
+              parsed?.action ||
+              parsed?.type ||
+              parsed?.result?.method ||
+              'unknown';
+          } else if (
+            normalizedPayload &&
+            typeof normalizedPayload === 'object'
+          ) {
             apiName =
               normalizedPayload?.method ||
               normalizedPayload?.api ||
@@ -138,7 +165,9 @@ export class NodeWebviewSocketBridge implements vscode.Disposable {
               : normalizedPayload
             : JSON.stringify(normalizedPayload || '').substring(0, 200);
 
-        console.log(`[转发响应] 后端WebSocket -> Web端 | 接口: ${apiName}, ID: ${id}, Payload: ${payloadPreview}`);
+        console.log(
+          `[转发响应] 后端WebSocket -> Web端 | 接口: ${apiName}, ID: ${id}, Payload: ${payloadPreview}`,
+        );
 
         this.postToView({
           type: 'ws:message',
@@ -149,6 +178,7 @@ export class NodeWebviewSocketBridge implements vscode.Disposable {
 
       ws.on('error', (err: Error) => {
         const errorMessage = (err as Error)?.message ?? String(err);
+
         this.postToView({
           type: 'ws:error',
           id,
@@ -181,22 +211,38 @@ export class NodeWebviewSocketBridge implements vscode.Disposable {
 
     if (!ws) {
       console.warn(`[转发发送] WebSocket连接不存在, ID: ${id}`);
+
       return;
     }
 
     if (ws.readyState !== WebSocket.OPEN) {
-      console.warn(`[转发发送] WebSocket未打开, ID: ${id}, readyState: ${ws.readyState}`);
+      console.warn(
+        `[转发发送] WebSocket未打开, ID: ${id}, readyState: ${ws.readyState}`,
+      );
+
       return;
     }
 
     // 提取接口信息用于日志
     let apiName = 'unknown';
+
     try {
       if (typeof msg.payload === 'string') {
         const parsed = JSON.parse(msg.payload);
-        apiName = parsed?.method || parsed?.api || parsed?.action || parsed?.type || 'unknown';
+
+        apiName =
+          parsed?.method ||
+          parsed?.api ||
+          parsed?.action ||
+          parsed?.type ||
+          'unknown';
       } else if (msg.payload && typeof msg.payload === 'object') {
-        apiName = msg.payload?.method || msg.payload?.api || msg.payload?.action || msg.payload?.type || 'unknown';
+        apiName =
+          msg.payload?.method ||
+          msg.payload?.api ||
+          msg.payload?.action ||
+          msg.payload?.type ||
+          'unknown';
       }
     } catch {
       // 无法解析payload，使用默认值
@@ -209,7 +255,9 @@ export class NodeWebviewSocketBridge implements vscode.Disposable {
           : msg.payload
         : JSON.stringify(msg.payload || '').substring(0, 200);
 
-    console.log(`[转发发送] Web端 -> 后端WebSocket | 接口: ${apiName}, ID: ${id}, Payload: ${payloadPreview}`);
+    console.log(
+      `[转发发送] Web端 -> 后端WebSocket | 接口: ${apiName}, ID: ${id}, Payload: ${payloadPreview}`,
+    );
     ws.send(msg.payload);
   }
 
@@ -243,13 +291,20 @@ export class NodeWebviewSocketBridge implements vscode.Disposable {
   private normalizeMessagePayload(data: any) {
     // ws RawData 可以是 Buffer | ArrayBuffer | Buffer[] | ArrayBufferView | string
     if (typeof data === 'string') return data;
-    if (Array.isArray(data)) return Buffer.concat(data as Buffer[]).toString('utf8');
+    if (Array.isArray(data))
+      return Buffer.concat(data as Buffer[]).toString('utf8');
     if (data instanceof ArrayBuffer) return Buffer.from(data).toString('utf8');
     if (ArrayBuffer.isView(data)) {
       const view = data as ArrayBufferView;
-      return Buffer.from(view.buffer, view.byteOffset, view.byteLength).toString('utf8');
+
+      return Buffer.from(
+        view.buffer,
+        view.byteOffset,
+        view.byteLength,
+      ).toString('utf8');
     }
     if (Buffer.isBuffer(data)) return data.toString('utf8');
+
     return data;
   }
 }

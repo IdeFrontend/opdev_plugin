@@ -38,6 +38,7 @@ export class WebviewConnector<T = unknown, R = T> {
 
   public send(webview: Webview, data: T): void {
     const isReady = this.webviewReady.get(webview);
+
     if (isReady) {
       webview.postMessage({ channel: this.channel, data });
     } else {
@@ -54,6 +55,7 @@ export class WebviewConnector<T = unknown, R = T> {
       // 客户端初始化
       if (isWebviewReadyMessage(res, this.channel)) {
         this.startConnector(webview);
+
         return;
       }
       if (res.channel !== this.channel) {
@@ -63,6 +65,7 @@ export class WebviewConnector<T = unknown, R = T> {
         callback(res.data, webview);
       });
     });
+
     this.pendingDataList.set(webview, []);
     this.messageReceivers.set(webview, receiver);
   }
@@ -75,6 +78,7 @@ export class WebviewConnector<T = unknown, R = T> {
   private startConnector(webview: Webview): void {
     this.webviewReady.set(webview, true);
     const pendingData = this.pendingDataList.get(webview);
+
     pendingData?.forEach((data) => {
       this.send(webview, data);
     });
@@ -82,6 +86,11 @@ export class WebviewConnector<T = unknown, R = T> {
   }
 }
 
-function isWebviewReadyMessage(message: ConnectMessage, channel: ConnectChannel): boolean {
-  return message.channel === CONNECTOR_READY_CHANNEL && message.data === channel;
+function isWebviewReadyMessage(
+  message: ConnectMessage,
+  channel: ConnectChannel,
+): boolean {
+  return (
+    message.channel === CONNECTOR_READY_CHANNEL && message.data === channel
+  );
 }

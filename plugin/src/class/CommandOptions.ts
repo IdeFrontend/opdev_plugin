@@ -48,7 +48,7 @@ class CommandExecutor extends EventEmitter {
     stopKeywords: string[] = [],
     args: string[] = [],
     options: CommandOptions = {},
-    isOpenTerminal: boolean = false
+    isOpenTerminal: boolean = false,
   ): Promise<CommandResult> {
     return new Promise((resolve, reject) => {
       this.stdout = '';
@@ -56,6 +56,7 @@ class CommandExecutor extends EventEmitter {
       this.output = '';
 
       let outputChannel: any = null;
+
       console.log('isOpenTerminal', isOpenTerminal);
 
       if (isOpenTerminal) {
@@ -79,7 +80,9 @@ class CommandExecutor extends EventEmitter {
       if (options.timeout && options.timeout > 0) {
         timeoutId = setTimeout(() => {
           this.cleanup();
-          reject(new Error(`Command execution timeout after ${options.timeout}ms`));
+          reject(
+            new Error(`Command execution timeout after ${options.timeout}ms`),
+          );
         }, options.timeout);
       }
 
@@ -93,6 +96,7 @@ class CommandExecutor extends EventEmitter {
       // 处理标准输出
       this.process.stdout?.on('data', (data: Buffer) => {
         const text = data.toString();
+
         if (outputChannel) {
           outputChannel.appendLine(text);
         }
@@ -120,6 +124,7 @@ class CommandExecutor extends EventEmitter {
       // 处理错误输出
       this.process.stderr?.on('data', (data: Buffer) => {
         const text = data.toString();
+
         console.error('execute command, stderr:', text);
         this.stderr += text;
         this.output += text;
@@ -166,7 +171,9 @@ class CommandExecutor extends EventEmitter {
   private checkStopKeywords(text: string, stopKeywords: string[]): boolean {
     if (stopKeywords.length === 0) return false;
 
-    return stopKeywords.some((keyword) => text.toLowerCase().includes(keyword.toLowerCase()));
+    return stopKeywords.some((keyword) =>
+      text.toLowerCase().includes(keyword.toLowerCase()),
+    );
   }
 
   /**
@@ -179,7 +186,10 @@ class CommandExecutor extends EventEmitter {
   /**
    * 获取执行结果
    */
-  private getResult(code: number | null, signal: NodeJS.Signals | null): CommandResult {
+  private getResult(
+    code: number | null,
+    signal: NodeJS.Signals | null,
+  ): CommandResult {
     return {
       code,
       signal,
@@ -198,6 +208,7 @@ class CommandExecutor extends EventEmitter {
         // 在 Windows 上，使用 taskkill 终止整个进程树
         if (process.platform === 'win32') {
           const pid = this.process.pid;
+
           if (pid) {
             // /F 强制终止, /T 终止子进程树
             exec(`taskkill /pid ${pid} /T /F`, (error) => {

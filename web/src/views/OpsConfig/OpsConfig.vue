@@ -41,7 +41,10 @@ const formModel = ref<any>({});
 
 <template>
   <a-form :model="formModel">
-    <template v-for="attr in mockSchema" :key="attr.key">
+    <template
+      v-for="attr in mockSchema"
+      :key="attr.key"
+    >
       <attr-controller :attr="attr"></attr-controller>
     </template>
   </a-form>

@@ -24,7 +24,9 @@ export function deleteNode(params: DeleteNodeParams) {
  * 选择文件夹
  */
 export function selectFolder() {
-  return request.post<undefined, SelectFolderResult | null>('webview/selectFolder');
+  return request.post<undefined, SelectFolderResult | null>(
+    'webview/selectFolder',
+  );
 }
 
 /**
@@ -33,4 +35,3 @@ export function selectFolder() {
 export function jumpToFileWebview(params: JumpToFileParams) {
   return request.post<JumpToFileParams, void>('webview/jumpToFile', params);
 }
-

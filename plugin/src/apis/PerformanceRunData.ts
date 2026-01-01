@@ -15,6 +15,7 @@ export const performanceRunDataApis: ApiGroup = {
     async downloadData(params: DownloadDataParams): Promise<void> {
       // 使用 filePath 优先，如果没有则使用 nodeKey
       const remoteFilePath = params.filePath || params.nodeKey;
+
       if (!remoteFilePath) {
         throw new Error('文件路径不能为空');
       }
@@ -35,7 +36,11 @@ export const performanceRunDataApis: ApiGroup = {
           // 检查远程文件是否存在
           try {
             const stat = await vscode.workspace.fs.stat(remoteFileUri);
-            progress.report({ increment: 30, message: `文件大小: ${(stat.size / 1024).toFixed(2)} KB` });
+
+            progress.report({
+              increment: 30,
+              message: `文件大小: ${(stat.size / 1024).toFixed(2)} KB`,
+            });
           } catch (error) {
             throw new Error(`远程文件不存在: ${remoteFilePath}`);
           }
@@ -68,7 +73,9 @@ export const performanceRunDataApis: ApiGroup = {
           await vscode.workspace.fs.writeFile(localFileUri, fileData);
 
           progress.report({ increment: 100, message: '下载完成' });
-          vscode.window.showInformationMessage(`文件已成功下载到: ${localFileUri.fsPath}`);
+          vscode.window.showInformationMessage(
+            `文件已成功下载到: ${localFileUri.fsPath}`,
+          );
         },
       );
     },
@@ -79,7 +86,12 @@ export const performanceRunDataApis: ApiGroup = {
         throw new Error('节点信息不能为空');
       }
       // 确认删除
-      const result = await vscode.window.showWarningMessage(`确定要删除 ${params.nodeKey} 吗？`, '确定', '取消');
+      const result = await vscode.window.showWarningMessage(
+        `确定要删除 ${params.nodeKey} 吗？`,
+        '确定',
+        '取消',
+      );
+
       if (result === '确定') {
         console.log('删除节点:', params.nodeKey, params.filePath);
         // 这里可以添加删除文件的逻辑
@@ -100,6 +112,7 @@ export const performanceRunDataApis: ApiGroup = {
       if (uris && uris[0]) {
         return uris[0].fsPath;
       }
+
       return null;
     },
 
@@ -109,8 +122,10 @@ export const performanceRunDataApis: ApiGroup = {
         console.log('jumpToFile', params);
         const { fileLink, row, col } = params;
         const uri = vscode.Uri.file(fileLink);
+
         console.log('uri', uri);
         const document = await vscode.workspace.openTextDocument(uri);
+
         console.log('document', document);
         const editor = await vscode.window.showTextDocument(document, {
           viewColumn: vscode.ViewColumn.One,
@@ -123,7 +138,10 @@ export const performanceRunDataApis: ApiGroup = {
         editor.selection = new vscode.Selection(pos, pos);
 
         // 滚动到目标行，并将其置于视图中央
-        editor.revealRange(new vscode.Range(pos, pos), vscode.TextEditorRevealType.InCenter);
+        editor.revealRange(
+          new vscode.Range(pos, pos),
+          vscode.TextEditorRevealType.InCenter,
+        );
 
         // 创建高亮装饰
         const decorationType = vscode.window.createTextEditorDecorationType({
@@ -135,8 +153,9 @@ export const performanceRunDataApis: ApiGroup = {
         // 应用高亮到目标行
         const lineRange = new vscode.Range(
           new vscode.Position(line, 0),
-          new vscode.Position(line, document.lineAt(line).text.length)
+          new vscode.Position(line, document.lineAt(line).text.length),
         );
+
         editor.setDecorations(decorationType, [lineRange]);
 
         // 2秒后移除高亮
@@ -151,4 +170,3 @@ export const performanceRunDataApis: ApiGroup = {
     },
   },
 };
-

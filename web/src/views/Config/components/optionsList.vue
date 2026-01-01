@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree. -->
 
 <script setup>
-import { ref, watch } from "vue";
+import { ref, watch } from 'vue';
 
-const Actived = ref("build");
+const Actived = ref('build');
 
 const props = defineProps({
   configList: {
@@ -16,47 +16,71 @@ const props = defineProps({
   },
   activeConfig: {
     type: String,
-    default: "",
+    default: '',
   },
   activeOption: {
     type: String,
-    default: "build",
+    default: 'build',
   },
 });
 
-const emit = defineEmits(["updateActiveOption"]);
+const emit = defineEmits(['updateActiveOption']);
 
-watch(() => props.activeOption, (newVal) => {
-  Actived.value = newVal;
-}, { immediate: true });
+watch(
+  () => props.activeOption,
+  (newVal) => {
+    Actived.value = newVal;
+  },
+  { immediate: true },
+);
 
 const updateActiveOption = (item) => {
   Actived.value = item;
-  emit("updateActiveOption", item);
+  emit('updateActiveOption', item);
 };
 </script>
 <template>
   <div class="options-box">
     <div class="options-list">
-      <div class="options-list-item" :class="[Actived === 'build' ? 'is-active' : '']"
-        @click="updateActiveOption('build')">
-        <img src="../../../assets/svg/build.svg" alt="" class="img">
+      <div
+        class="options-list-item"
+        :class="[Actived === 'build' ? 'is-active' : '']"
+        @click="updateActiveOption('build')"
+      >
+        <img
+          src="../../../assets/svg/build.svg"
+          alt=""
+          class="img"
+        />
         编译部署
       </div>
-      <div class="options-list-item" :class="[Actived === 'sanitizer' ? 'is-active' : '']"
-        @click="updateActiveOption('sanitizer')">
-        <img src="../../../assets/svg/check.svg" alt="" class="img">
+      <div
+        class="options-list-item"
+        :class="[Actived === 'sanitizer' ? 'is-active' : '']"
+        @click="updateActiveOption('sanitizer')"
+      >
+        <img
+          src="../../../assets/svg/check.svg"
+          alt=""
+          class="img"
+        />
         异常检测
       </div>
-      <div  class="options-list-item" :class="[Actived === 'opprof' ? 'is-active' : '']"
-        @click="updateActiveOption('opprof')">
-        <img src="../../../assets/svg/power.svg" alt="" class="img">
+      <div
+        class="options-list-item"
+        :class="[Actived === 'opprof' ? 'is-active' : '']"
+        @click="updateActiveOption('opprof')"
+      >
+        <img
+          src="../../../assets/svg/power.svg"
+          alt=""
+          class="img"
+        />
         性能调优
       </div>
     </div>
   </div>
 </template>
-
 
 <style lang="less">
 .options-box {

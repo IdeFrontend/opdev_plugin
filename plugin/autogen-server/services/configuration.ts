@@ -1,6 +1,10 @@
 import * as configModel from '../models/configModel';
 
-export function getConfig(project_id: number, config_type: string, op: string | null = null) {
+export function getConfig(
+  project_id: number,
+  config_type: string,
+  op: string | null = null,
+) {
   return configModel.getConfig(project_id, config_type, op);
 }
 

@@ -1,22 +1,39 @@
 <script setup lang="ts">
-import { UpOutlined, CaretUpFilled, DownOutlined, CaretDownFilled, FlagOutlined, FlagFilled } from '@ant-design/icons-vue';
-import { ref, computed, onMounted, onBeforeUnmount } from "vue";
-import { formatTimestamp } from "../PerformanceRunData/utils/timestamp";
-import { getMsSanitizerRunData, toggleMsSanitizerMark, openMsSanitizerPanel } from '../../apis'
+import {
+  UpOutlined,
+  CaretUpFilled,
+  DownOutlined,
+  CaretDownFilled,
+  FlagOutlined,
+  FlagFilled,
+} from '@ant-design/icons-vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { formatTimestamp } from '../PerformanceRunData/utils/timestamp';
+import {
+  getMsSanitizerRunData,
+  toggleMsSanitizerMark,
+  openMsSanitizerPanel,
+} from '../../apis';
 
 const sortOrder = ref<'asc' | 'desc'>('asc');
 const isMarkedOnly = ref<boolean>(false);
-const listData = ref<any[]>([])
+const listData = ref<any[]>([]);
 
 const renderListData = computed(() => {
-  const data = listData.value.filter(item => {
+  const data = listData.value.filter((item) => {
     if (isMarkedOnly.value) {
-      return item.marked
+      return item.marked;
     }
+
     return true;
-  })
-  return data.sort((a, b) => sortOrder.value === 'asc' ? b.timestamp - a.timestamp : a.timestamp - b.timestamp)
-})
+  });
+
+  return data.sort((a, b) =>
+    sortOrder.value === 'asc'
+      ? b.timestamp - a.timestamp
+      : a.timestamp - b.timestamp,
+  );
+});
 
 const handleExecutionTime = () => {
   sortOrder.value = sortOrder.value === 'desc' ? 'asc' : 'desc';
@@ -28,42 +45,47 @@ const filterMark = () => {
 
 const handleClick = (data) => {
   openMsSanitizerPanel(data);
-}
+};
 
 const handleMark = async (data) => {
   await toggleMsSanitizerMark(data);
   getListData();
-}
+};
 
 const getListData = async () => {
   listData.value = await getMsSanitizerRunData({});
-}
+};
 
-const eventListenerHandler = event => {
+const eventListenerHandler = (event) => {
   if (event.data.command === 'iframeFlashMsSanitizerRunData') {
     getListData();
   }
-}
+};
 
 // 添加全局消息监听 监听刷新列表数据
 const addEventListener = () => {
   window.addEventListener('message', eventListenerHandler);
-}
+};
 
 onMounted(() => {
   getListData();
   addEventListener();
-})
+});
 
 onBeforeUnmount(() => {
-  window.removeEventListener('message', eventListenerHandler)
-})
+  window.removeEventListener('message', eventListenerHandler);
+});
 </script>
 
 <template>
   <div class="ctn">
     <div class="filter-bar">
-      <a-button class="time-sorter-button" type="default" @click="handleExecutionTime" size="small">
+      <a-button
+        class="time-sorter-button"
+        type="default"
+        size="small"
+        @click="handleExecutionTime"
+      >
         <div class="time-sorter-inner">
           执行时间
           <div class="sort-icons">
@@ -74,25 +96,52 @@ onBeforeUnmount(() => {
           </div>
         </div>
       </a-button>
-      <a-button :type="isMarkedOnly ? 'primary' : 'default'" @click="filterMark" size="small">
+      <a-button
+        :type="isMarkedOnly ? 'primary' : 'default'"
+        size="small"
+        @click="filterMark"
+      >
         已标记
         <FlagFilled v-if="isMarkedOnly" />
         <FlagOutlined v-else />
       </a-button>
     </div>
-    <div class="render-list" v-if="renderListData.length > 0">
-      <div class="render-list-item" v-for="(item, index) in renderListData" :key="index" @click="handleClick(item)">
+    <div
+      v-if="renderListData.length > 0"
+      class="render-list"
+    >
+      <div
+        v-for="(item, index) in renderListData"
+        :key="index"
+        class="render-list-item"
+        @click="handleClick(item)"
+      >
         <div class="render-list-item-content">
           <p class="render-list-item-content-title">{{ item.title }}</p>
-          <p class="render-list-item-content-time">{{ formatTimestamp(item.timestamp) }}</p>
+          <p class="render-list-item-content-time">
+            {{ formatTimestamp(item.timestamp) }}
+          </p>
         </div>
         <div class="render-list-item-action">
-          <FlagFilled v-if="item.marked" style="color: #d32029;" class="marked" @click.stop="handleMark(item)" />
-          <FlagOutlined v-else @click.stop="handleMark(item)" />
+          <FlagFilled
+            v-if="item.marked"
+            style="color: #d32029"
+            class="marked"
+            @click.stop="handleMark(item)"
+          />
+          <FlagOutlined
+            v-else
+            @click.stop="handleMark(item)"
+          />
         </div>
       </div>
     </div>
-    <div style="text-align: center;margin-top: 20px;" v-else>暂无数据</div>
+    <div
+      v-else
+      style="text-align: center; margin-top: 20px"
+    >
+      暂无数据
+    </div>
   </div>
 </template>
 
@@ -126,7 +175,7 @@ onBeforeUnmount(() => {
         .render-list-item-action {
           pointer-events: all;
 
-          >* {
+          > * {
             opacity: 1;
           }
         }
@@ -137,7 +186,7 @@ onBeforeUnmount(() => {
         font-size: 12px;
 
         .render-list-item-content-title {
-          color: #FFFFFF;
+          color: #ffffff;
           line-height: 22px;
         }
 
@@ -153,12 +202,12 @@ onBeforeUnmount(() => {
         align-items: center;
         pointer-events: none;
 
-        >* {
+        > * {
           transition: opacity 0.2s cubic-bezier(0.645, 0.045, 0.355, 1);
           opacity: 0;
         }
 
-        >.marked {
+        > .marked {
           opacity: 1;
         }
       }

@@ -27,7 +27,10 @@ export function createOps(params: CreateOpsParams = {}) {
 
 /** 通过原型生成算子工程 */
 export function createOpsByPrototype(params: CreateOpsByPrototypeParams) {
-  return request.post<CreateOpsByPrototypeParams, void>('ops/createOpsByPrototype', params);
+  return request.post<CreateOpsByPrototypeParams, void>(
+    'ops/createOpsByPrototype',
+    params,
+  );
 }
 
 /** 获取配置数据 */
@@ -42,7 +45,10 @@ export function getBuildConfigs() {
 
 /** 保存构建配置 */
 export function saveBuildConfig(params: SaveBuildConfigParams) {
-  return request.post<SaveBuildConfigParams, void>('ops/saveBuildConfig', params);
+  return request.post<SaveBuildConfigParams, void>(
+    'ops/saveBuildConfig',
+    params,
+  );
 }
 
 /** 保存配置（仿真/上板） */
@@ -62,7 +68,10 @@ export function startRun(params: StartRunParams = {}) {
 
 /** 编译示例 */
 export function startBuildExample(params: StartBuildExampleParams = {}) {
-  return request.post<StartBuildExampleParams, void>('ops/startBuildExample', params);
+  return request.post<StartBuildExampleParams, void>(
+    'ops/startBuildExample',
+    params,
+  );
 }
 
 /** 开始仿真分析 */
@@ -82,7 +91,9 @@ export function getBuildConfig() {
 
 /** 获取示例构建配置ID */
 export function getBuildExampleConfig() {
-  return request.post<undefined, number | undefined>('ops/getBuildExampleConfig');
+  return request.post<undefined, number | undefined>(
+    'ops/getBuildExampleConfig',
+  );
 }
 
 /** 获取仿真配置ID */
@@ -102,12 +113,17 @@ export function getSanitizerConfigs() {
 
 /** 获取异常检测配置ID */
 export function getSanitizerConfigId() {
-  return request.post<undefined, number | undefined>('ops/getSanitizerConfigId');
+  return request.post<undefined, number | undefined>(
+    'ops/getSanitizerConfigId',
+  );
 }
 
 /** 保存异常检测表单配置 */
 export function saveSanitizerForm(params: SaveSanitizerFormParams) {
-  return request.post<SaveSanitizerFormParams, void>('ops/saveSanitizerForm', params);
+  return request.post<SaveSanitizerFormParams, void>(
+    'ops/saveSanitizerForm',
+    params,
+  );
 }
 
 /** 运行异常检测 */
@@ -117,7 +133,10 @@ export function runSanitizer() {
 
 /** 更新脚本文件 */
 export function updateShScript(params: UpdateShScriptParams) {
-  return request.post<UpdateShScriptParams, string>('ops/updateShScript', params);
+  return request.post<UpdateShScriptParams, string>(
+    'ops/updateShScript',
+    params,
+  );
 }
 
 /** 检查 .vscode 目录 */

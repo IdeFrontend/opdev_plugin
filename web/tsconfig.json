@@ -21,8 +21,13 @@
       "shared:/*": ["../shared/*"]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue", "vue.config.ts", "src/views/Config/class/OpsConfig.js"],
-  "exclude": ["node_modules",
-    "../plugin"
-  ]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "src/**/*.tsx",
+    "src/**/*.vue",
+    "vue.config.ts",
+    "src/views/Config/class/OpsConfig.js"
+  ],
+  "exclude": ["node_modules", "../plugin"]
 }
