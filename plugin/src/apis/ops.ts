@@ -33,6 +33,14 @@ import {
   postConfig,
 } from '../../autogen-server';
 
+const CONFIG_TYPES = {
+  BUILD_OP: 'build_op',
+  BUILD_EXAMPLE: 'build_example',
+  SIMULATE: 'simulate',
+  ON_BOARD: 'on_board',
+  SANITIZER: 'sanitizer',
+} as const;
+
 // 定义 OpsApi 接口
 export interface OpsApi {
   init(params: InitOpsParams): Promise<string>;
@@ -555,7 +563,7 @@ export const opsApis: ApiGroup = {
       try {
         const formData = (await getSanitizerConfigsList())[0];
 
-        await postConfig('sanitizer', [
+        await postConfig(CONFIG_TYPES.SANITIZER, [
           {
             ...formData,
             user_options: { ...formData.user_options, ...params.data },
