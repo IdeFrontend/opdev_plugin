@@ -1,57 +1,34 @@
-import * as vscode from 'vscode';
-
 import { ApiGroup } from 'plugin:/core/ApiServer';
-import { OpsAPI } from '../helpers/OpsAPI';
-import { RemoteConfig } from '../helpers/RemoteConfig';
-import { Project } from '../services/project/Project';
+import { ProjectManager } from '../services/project/project-manager';
+import { opsApis, OpsApi } from './ops';
 import {
   GetProjectIdResult,
   GetHomeResult,
-  GetProjectSHResult,
-  GetWorkspaceResult,
-  GetLastProjectPathResult,
+  InitOpsParams,
 } from 'shared:/api-types';
+
+// 获取正确类型的 ops API
+const ops = opsApis.ops as unknown as OpsApi;
 
 export const homeApis: ApiGroup = {
   webview: {
-    // 获取项目ID
+    /**
+     * 获取项目ID
+     * @returns 项目ID
+     */
     async getProjectId(): Promise<GetProjectIdResult> {
-      await OpsAPI.init();
+      await ProjectManager.getInstance().initProject();
 
-      return OpsAPI.getProjectId();
+      return ProjectManager.getInstance().projectId;
     },
 
-    // 获取HOME目录
-    getHome(): GetHomeResult {
-      return process.env.HOME || '';
-    },
-
-    // 获取项目SH脚本
-    async getProjectSH(): Promise<GetProjectSHResult> {
-      const project = Project.getInstance();
-
-      return process.env.ASCEND_ENV_SCRIPT || project.projectSH || '';
-    },
-
-    // 更新Project
-    async updateProject(): Promise<void> {
-      const project = Project.getInstance();
-
-      project.updateView();
-    },
-
-    // 获取工作区路径
-    getWorkspace(): GetWorkspaceResult {
-      const workspaceFolders = vscode.workspace.workspaceFolders;
-
-      return workspaceFolders && workspaceFolders.length > 0
-        ? workspaceFolders[0].uri.fsPath
-        : null;
-    },
-
-    // 获取最后项目路径 - 从远程服务器读取
-    async getLastProjectPath(): Promise<GetLastProjectPathResult> {
-      return RemoteConfig.getLastProjectPath();
+    /**
+     * 初始化项目
+     * @param params - 初始化参数
+     * @returns 初始化结果
+     */
+    async initOps(params: InitOpsParams): Promise<GetHomeResult> {
+      return await ops.init(params);
     },
   },
 };

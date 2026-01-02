@@ -6,14 +6,12 @@
  */
 
 import * as vscode from 'vscode';
-import * as path from 'path';
-import * as fs from 'fs';
-import { Project } from '../services/project/Project';
 
-import { CommandExecutor } from './CommandOptions';
-import { OpsAPI } from '../helpers/OpsAPI';
-import { getFiles } from '../../autogen-server';
-import { InsightDataViewerPanel } from './InsightDataViewerPanel';
+import { opsApis, OpsApi } from '../apis/ops';
+import { ProjectManager } from '../services/project/project-manager';
+
+// 获取正确类型的 ops API
+const ops = opsApis.ops as unknown as OpsApi;
 
 export interface messageItem {
   command: string;
@@ -87,20 +85,22 @@ export async function handleOperatorProjectDictoryFile(
     progress.report({ increment: 25 });
     if (message.createOperatorProjectDictoryFileType === 1) {
       // 创建算子（通过原型）
-      await OpsAPI.init();
-      await OpsAPI.createOpsByPrototype('', 'cann');
+      await ProjectManager.getInstance().initProject();
+      await ops.createOpsByPrototype({ opsPrototypeFile: '', opType: 'cann' });
       await vscode.commands.executeCommand(
         'workbench.action.closeActiveEditor',
       );
     }
     if (message.createOperatorProjectDictoryFileType === 2) {
       // 开始链接创建算子
-      await OpsAPI.init();
-      const opsPrototypeFilePath = await OpsAPI.createOps();
+      await ProjectManager.getInstance().initProject();
+      const opsPrototypeFilePath = await ops.createOps({});
 
       console.log('res', opsPrototypeFilePath);
       if (opsPrototypeFilePath) {
-        await OpsAPI.createOpsByPrototype(opsPrototypeFilePath);
+        await ops.createOpsByPrototype({
+          opsPrototypeFile: opsPrototypeFilePath,
+        });
       }
       await vscode.commands.executeCommand(
         'workbench.action.closeActiveEditor',

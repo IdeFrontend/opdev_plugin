@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { ApiGroup } from 'plugin:/core/ApiServer';
 import { CommandExecutor } from 'plugin:/class/CommandOptions';
-import { ProjectManager } from 'plugin:/services/project/project-manager';
+import { ProjectManager } from '../services/project/project-manager';
 import {
   InitOpsParams,
   CreateOpsParams,
@@ -96,8 +96,6 @@ async function getBuildConfigId(): Promise<number | undefined> {
   try {
     const configData = await getBuildConfigsList();
 
-    // console.log('configData in build', configData);
-
     return configData.find((v: any) => v.config_type === 'build_op')?.config_id;
   } catch {
     return undefined;
@@ -110,8 +108,6 @@ async function getBuildConfigId(): Promise<number | undefined> {
 async function getBuildExampleConfigId(): Promise<number | undefined> {
   try {
     const configData = await getBuildConfigsList();
-
-    // console.log('configData in exam', configData);
 
     return configData.find((v: any) => v.config_type === 'build_example')
       ?.config_id;
@@ -126,8 +122,6 @@ async function getBuildExampleConfigId(): Promise<number | undefined> {
 async function getSimulateConfigId(): Promise<string> {
   try {
     const configData = await getBuildConfigsList();
-
-    // console.log('configData in simulate', configData);
 
     return (
       configData.find((v: any) => v.config_type === 'simulate')?.config_id || ''
@@ -144,8 +138,6 @@ async function getOnBoardConfigId(): Promise<string> {
   try {
     const configData = await getBuildConfigsList();
 
-    // console.log('configData in onBoard', configData);
-
     return (
       configData.find((v: any) => v.config_type === 'on_board')?.config_id || ''
     );
@@ -159,7 +151,7 @@ async function getOnBoardConfigId(): Promise<string> {
  */
 async function getSanitizerConfigsList(): Promise<any[]> {
   const projectId = ProjectManager.getInstance().projectId;
-  const config = await getConfig(Number(projectId), 'sanitizer');
+  const config = getConfig(Number(projectId), 'sanitizer');
 
   return [...config];
 }
@@ -170,8 +162,6 @@ async function getSanitizerConfigsList(): Promise<any[]> {
 async function getSanitizerConfigIdInternal(): Promise<number | undefined> {
   try {
     const configData = await getSanitizerConfigsList();
-
-    // console.log('configData in sanitizer', configData);
 
     return configData.find((v: any) => v.config_type === 'sanitizer')
       ?.config_id;
@@ -233,7 +223,7 @@ export const opsApis: ApiGroup = {
       const context = getContext();
 
       try {
-        const result = await generateStructure(
+        const result = generateStructure(
           {
             ops_prototype_file: params.opsPrototypeFile,
             project_id: Number(pm.projectId),
@@ -319,7 +309,7 @@ export const opsApis: ApiGroup = {
       }
 
       try {
-        const buildCommand = await getBuildOpCommand(
+        const buildCommand = getBuildOpCommand(
           Number(configId),
           params.compileOption,
         );
@@ -350,7 +340,7 @@ export const opsApis: ApiGroup = {
       }
 
       try {
-        const runCommand = await getRunCommand(Number(configId));
+        const runCommand = getRunCommand(Number(configId));
 
         console.log('runCommand', runCommand);
         const executor = ProjectManager.getInstance().getExecutor();
@@ -410,7 +400,7 @@ export const opsApis: ApiGroup = {
 
       // 仿真分析前编译
       const buildConfigId = await getBuildConfigId();
-      const buildCommand = await getBuildOpCommand(
+      const buildCommand = getBuildOpCommand(
         Number(buildConfigId),
         `--simulator ${simulatorType}`,
       );
@@ -436,7 +426,7 @@ export const opsApis: ApiGroup = {
       console.log('simulate configId', configId, exConfigId);
 
       try {
-        const simulateCommand = await getSimulateCommand(
+        const simulateCommand = getSimulateCommand(
           Number(configId),
           Number(exConfigId),
         );
@@ -466,7 +456,7 @@ export const opsApis: ApiGroup = {
     async startOnBoard(): Promise<void> {
       // 上板分析前编译
       const buildConfigId = await getBuildConfigId();
-      const buildCommand = await getBuildOpCommand(
+      const buildCommand = getBuildOpCommand(
         Number(buildConfigId),
         '--onboard',
       );
@@ -492,7 +482,7 @@ export const opsApis: ApiGroup = {
       console.log('onboard configId', configId, exConfigId);
 
       try {
-        const onBoardCommand = await getOnBoardCommand(
+        const onBoardCommand = getOnBoardCommand(
           Number(configId),
           Number(exConfigId),
         );
@@ -586,7 +576,7 @@ export const opsApis: ApiGroup = {
       try {
         // 异常检测前编译
         const buildConfigId = await getBuildConfigId();
-        const buildCommand = await getBuildOpCommand(
+        const buildCommand = getBuildOpCommand(
           Number(buildConfigId),
           '--mssanitizer',
         );
@@ -627,10 +617,10 @@ export const opsApis: ApiGroup = {
           await getBuildExampleConfigId();
 
         const sanitizerCommand =
-          (await getSanitizerCommand(
+          getSanitizerCommand(
             Number(sanitizerConfigId),
             Number(exampleConfigId),
-          )) || '';
+          ) || '';
         const executor = ProjectManager.getInstance().getExecutor();
         const res = await executor.execute(sanitizerCommand, [], [], {}, true);
 

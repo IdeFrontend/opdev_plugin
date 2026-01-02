@@ -103,3 +103,11 @@ export type StartLinkCreateOpsParams = {
   fileName?: string;
   value?: string;
 };
+
+export type OpenFileParams = {
+  file: string;
+};
+
+export type OpenLinkParams = {
+  url: string;
+};

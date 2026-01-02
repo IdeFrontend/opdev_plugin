@@ -2,7 +2,8 @@ import * as vscode from 'vscode';
 
 import { ApiGroup } from 'plugin:/core/ApiServer';
 import { CommandExecutor } from 'plugin:/class/CommandOptions';
-import { OpsAPI } from '../helpers/OpsAPI';
+import { ProjectManager } from '../services/project/project-manager';
+import { opsApis, OpsApi } from './ops';
 import {
   BuildOpParams,
   BuildExampleParams,
@@ -11,74 +12,81 @@ import {
   OnBoardParams,
 } from 'shared:/api-types';
 
+// 获取正确类型的 ops API
+const ops = opsApis.ops as unknown as OpsApi;
+
 // 全局任务管理器：用于追踪和终止正在执行的任务
 let currentExecutor: CommandExecutor | null = null;
 
 export const operateApis: ApiGroup = {
   webview: {
     // 构建算子
-    async buildOp(params: BuildOpParams): Promise<void> {
+    async buildOp(): Promise<void> {
       try {
-        await OpsAPI.init();
+        await ProjectManager.getInstance().initProject();
         // 保存当前 executor 引用，用于可能的终止操作
-        currentExecutor = OpsAPI.getExecutor();
-        await OpsAPI.startBuild();
+        currentExecutor = ProjectManager.getInstance().getExecutor();
+        await ops.startBuild({});
       } finally {
         // 清除 executor 引用
         currentExecutor = null;
+        ProjectManager.getInstance().clearExecutor();
       }
     },
 
     // 构建示例
-    async buildExample(params: BuildExampleParams): Promise<void> {
-      await OpsAPI.init();
-      await OpsAPI.startBuildExample();
+    async buildExample(): Promise<void> {
+      await ProjectManager.getInstance().initProject();
+      await ops.startBuildExample({});
     },
 
     // 运行示例
-    async runExample(params: RunExampleParams): Promise<void> {
+    async runExample(): Promise<void> {
       try {
-        await OpsAPI.init();
+        await ProjectManager.getInstance().initProject();
         // 保存当前 executor 引用
-        currentExecutor = OpsAPI.getExecutor();
-        await OpsAPI.startRun();
+        currentExecutor = ProjectManager.getInstance().getExecutor();
+        await ops.startRun({});
       } finally {
         // 清除 executor 引用
         currentExecutor = null;
+        ProjectManager.getInstance().clearExecutor();
       }
     },
 
     // 仿真
-    async simulate(params: SimulateParams): Promise<void> {
+    async simulate(): Promise<void> {
       try {
-        await OpsAPI.init();
+        await ProjectManager.getInstance().initProject();
         // 保存当前 executor 引用
-        currentExecutor = OpsAPI.getExecutor();
-        const configData = await OpsAPI.getBuildConfigs();
+        currentExecutor = ProjectManager.getInstance().getExecutor();
+        const configData = await ops.getBuildConfigs();
         const simulatorItem = configData.find(
           (v: any) => v.config_type === 'simulate',
         );
         const simulatorType = simulatorItem?.user_options?.simulatorType ?? '';
 
-        await OpsAPI.startBuild(undefined, `--simulator ${simulatorType}`);
-        await OpsAPI.startSimulate();
+        await ops.startBuild({ compileOption: `--simulator ${simulatorType}` });
+        await ops.startSimulate();
       } finally {
         // 清除 executor 引用
         currentExecutor = null;
+        ProjectManager.getInstance().clearExecutor();
       }
     },
 
     // 上板
-    async onBoard(params: OnBoardParams): Promise<void> {
+    async onBoard(): Promise<void> {
       try {
-        await OpsAPI.init();
+        await ProjectManager.getInstance().initProject();
         // 保存当前 executor 引用
-        currentExecutor = OpsAPI.getExecutor();
-        await OpsAPI.startBuild(undefined, '--onboard');
-        await OpsAPI.startOnBoard();
+        currentExecutor = ProjectManager.getInstance().getExecutor();
+        await ops.startBuild({ compileOption: '--onboard' });
+        await ops.startOnBoard();
       } finally {
         // 清除 executor 引用
         currentExecutor = null;
+        ProjectManager.getInstance().clearExecutor();
       }
     },
 
@@ -89,6 +97,7 @@ export const operateApis: ApiGroup = {
         console.log('[stopTask] 终止正在执行的任务');
         currentExecutor.kill();
         currentExecutor = null;
+        ProjectManager.getInstance().clearExecutor();
         vscode.window.showWarningMessage('任务已被手动停止');
       } else {
         console.log('[stopTask] 没有正在执行的任务');
@@ -99,9 +108,9 @@ export const operateApis: ApiGroup = {
     // 运行调试
     async runDebug(): Promise<void> {
       try {
-        await OpsAPI.init();
+        await ProjectManager.getInstance().initProject();
         // debug前编译
-        await OpsAPI.startBuild(undefined, '--debug');
+        await ops.startBuild({ compileOption: '--debug' });
         await vscode.commands.executeCommand(
           'workbench.debug.action.toggleRepl',
         );
