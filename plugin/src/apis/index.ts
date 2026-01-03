@@ -1,17 +1,17 @@
 import { ApiGroup } from 'plugin:/core/ApiServer';
 
-import { commonApis } from './common';
-import { performanceApis } from './performance';
-import { msSanitizerApis } from './ms-sanitizer';
-import { viewApis } from './view';
-import { opsApis } from './ops';
-import { webviewApis } from './webview';
+import { commonMethods } from './common';
+import { performanceMethods } from './performance';
+import { msSanitizerMethods } from './ms-sanitizer';
+import { viewMethods } from './view';
+import { opsMethods } from './ops';
+import { webviewMethods } from './webview';
 
 export const apis: ApiGroup = {
-  ...commonApis,
-  ...performanceApis,
-  ...viewApis,
-  ...msSanitizerApis,
-  ...opsApis,
-  ...webviewApis,
+  common: commonMethods,
+  performance: performanceMethods,
+  view: viewMethods,
+  msSanitizer: msSanitizerMethods,
+  ops: opsMethods,
+  webview: webviewMethods,
 };

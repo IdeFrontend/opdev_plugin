@@ -7,7 +7,7 @@ import {
   PerformanceRunDataFile,
   PerformanceRunDataFolder,
 } from 'shared:/api-types';
-import { PermanentStorage } from 'plugin:/class/PermanentStorage';
+import { PermanentStorage } from 'plugin:/class/permanent-storage';
 import { Project } from '../project/Project';
 import { getConfig } from '../../../autogen-server';
 import { getOpByProjectIdAndOpName } from '../../../autogen-server/models/model';

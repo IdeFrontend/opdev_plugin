@@ -1,8 +1,7 @@
-import { ApiGroup } from 'plugin:/core/ApiServer';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import path from 'path';
-import { PermanentStorage } from 'plugin:/class/PermanentStorage';
+import { PermanentStorage } from 'plugin:/class/permanent-storage';
 
 const MARKED_STORAGE_KEY = 'msSanitizer_marks';
 
@@ -47,80 +46,78 @@ function setMsSanitizerMarks(vals: string[]) {
   PermanentStorage.getInstance().set<string[]>(MARKED_STORAGE_KEY, [...vals]);
 }
 
-export const msSanitizerApis: ApiGroup = {
-  msSanitizer: {
-    /**
-     * 获取异常检测运行数据列表
-     * @returns {Promise<any[]>} 运行数据列表
-     */
-    async getRunData() {
-      const workspaceFolders = vscode.workspace.workspaceFolders;
+export const msSanitizerMethods = {
+  /**
+   * 获取异常检测运行数据列表
+   * @returns {Promise<any[]>} 运行数据列表
+   */
+  async getRunData() {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
 
-      if (!workspaceFolders || workspaceFolders.length === 0) {
-        return [];
-      }
+    if (!workspaceFolders || workspaceFolders.length === 0) {
+      return [];
+    }
 
-      const workspacePath = workspaceFolders[0].uri.fsPath;
+    const workspacePath = workspaceFolders[0].uri.fsPath;
 
-      // 获取目录下.vscode/mindstudio_sanitizer_log文件夹中的所有文件
-      const logPath = path.join(
-        workspacePath,
-        '.vscode/mindstudio_sanitizer_log',
-      );
+    // 获取目录下.vscode/mindstudio_sanitizer_log文件夹中的所有文件
+    const logPath = path.join(
+      workspacePath,
+      '.vscode/mindstudio_sanitizer_log',
+    );
 
-      // 文件夹不存在
-      if (!fs.existsSync(logPath)) {
-        return [];
-      }
+    // 文件夹不存在
+    if (!fs.existsSync(logPath)) {
+      return [];
+    }
 
-      const allFileNames = await fs.readdirSync(logPath);
+    const allFileNames = await fs.readdirSync(logPath);
 
-      const markSet = getMsSanitizerMarks();
-      const res = allFileNames.map((filename) => {
-        const _filename = filename.replace('.log', '');
-        const [title, timestamp] = _filename.split('_');
+    const markSet = getMsSanitizerMarks();
+    const res = allFileNames.map((filename) => {
+      const _filename = filename.replace('.log', '');
+      const [title, timestamp] = _filename.split('_');
 
-        return {
-          title: `${title}-${formatTimestampToYYYYMMDD(+timestamp)}`,
-          timestamp: +timestamp,
-          id: filename,
-          path: path.join(logPath, filename),
-          marked: markSet.has(filename),
-        };
-      });
+      return {
+        title: `${title}-${formatTimestampToYYYYMMDD(+timestamp)}`,
+        timestamp: +timestamp,
+        id: filename,
+        path: path.join(logPath, filename),
+        marked: markSet.has(filename),
+      };
+    });
 
-      return res;
-    },
+    return res;
+  },
 
-    /**
-     * 切换标记状态
-     * @param params
-     */
-    async toggleMark(params: { id: string }) {
-      const { id } = params;
-      // 修改mark标记状态
-      const markSet = getMsSanitizerMarks();
+  /**
+   * 切换标记状态
+   * @param params
+   */
+  async toggleMark(params: { id: string }) {
+    const { id } = params;
+    // 修改mark标记状态
+    const markSet = getMsSanitizerMarks();
 
-      if (markSet.has(id)) {
-        markSet.delete(id);
-      } else {
-        markSet.add(id);
-      }
-      setMsSanitizerMarks([...markSet]);
+    if (markSet.has(id)) {
+      markSet.delete(id);
+    } else {
+      markSet.add(id);
+    }
+    setMsSanitizerMarks([...markSet]);
 
-      return;
-    },
+    return;
+  },
 
-    /**
-     * 打开异常检测数据面板
-     * @param params - 参数
-     */
-    openPanel(params: any) {
-      // 打开异常检测数据面板
-      vscode.commands.executeCommand(
-        'huawei-op-devtools.open-ms-sanitizer-panel-view',
-        params,
-      );
-    },
+  /**
+   * 打开异常检测数据面板
+   * @param params - 参数
+   */
+  openPanel(params: any) {
+    // 打开异常检测数据面板
+    vscode.commands.executeCommand(
+      'huawei-op-devtools.open-ms-sanitizer-panel-view',
+      params,
+    );
   },
 };

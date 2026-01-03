@@ -4,7 +4,7 @@
 
 ## 概述
 
-原本 `OpsOption.ts` 中的方法现在已经被改造成类似 `plugin/src/apis` 的结构，可以通过 Webview 与插件后端进行通信。
+原本 `ops-option.ts` 中的方法现在已经被改造成类似 `plugin/src/apis` 的结构，可以通过 Webview 与插件后端进行通信。
 
 ## 文件结构
 

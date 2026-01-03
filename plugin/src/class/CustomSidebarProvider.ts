@@ -8,7 +8,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { HtmlTransformer } from './HtmlTransformer';
-import webviewMessageList from './WebviewMessageList';
+import webviewMessageList from './webview-message-list';
 
 export class CustomSidebarProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'customSidebarView';

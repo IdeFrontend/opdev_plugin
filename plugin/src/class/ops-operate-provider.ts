@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 
 import { HtmlTransformer } from './HtmlTransformer';
-import webviewMessageList from './WebviewMessageList';
+import webviewMessageList from './webview-message-list';
 import { ApiServer } from 'plugin:/core/ApiServer';
 
 export class OpsOperateProvider implements vscode.WebviewViewProvider {

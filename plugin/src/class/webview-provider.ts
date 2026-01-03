@@ -8,8 +8,8 @@
 import * as path from 'path';
 import * as os from 'os';
 import * as vscode from 'vscode';
-import { PermanentStorage } from './PermanentStorage';
-import webviewMessageList from './WebviewMessageList';
+import { PermanentStorage } from './permanent-storage';
+import webviewMessageList from './webview-message-list';
 import { HtmlTransformer } from './HtmlTransformer';
 import { ApiServer } from 'plugin:/core/ApiServer';
 
@@ -18,9 +18,7 @@ import { ApiServer } from 'plugin:/core/ApiServer';
  */
 export class WebviewProvider {
   private panel: vscode.WebviewPanel | undefined;
-  private leftNav: any | undefined;
   private storage: PermanentStorage;
-  private isDisposed: boolean = false;
   private context: vscode.ExtensionContext;
   private userInfo: os.UserInfo<string | Number>;
 
@@ -180,7 +178,6 @@ export class WebviewProvider {
    * 清理资源
    */
   public dispose(): void {
-    this.isDisposed = true;
     if (this.panel) {
       this.panel.dispose();
       this.panel = undefined;

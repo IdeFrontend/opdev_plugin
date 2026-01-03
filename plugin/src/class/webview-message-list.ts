@@ -7,11 +7,8 @@
 
 import * as vscode from 'vscode';
 
-import { opsApis, OpsApi } from '../apis/ops';
 import { ProjectManager } from '../services/project/project-manager';
-
-// 获取正确类型的 ops API
-const ops = opsApis.ops as unknown as OpsApi;
+import { welcomeMethods } from 'plugin:/apis/welcome';
 
 export interface messageItem {
   command: string;
@@ -86,7 +83,10 @@ export async function handleOperatorProjectDictoryFile(
     if (message.createOperatorProjectDictoryFileType === 1) {
       // 创建算子（通过原型）
       await ProjectManager.getInstance().initProject();
-      await ops.createOpsByPrototype({ opsPrototypeFile: '', opType: 'cann' });
+      await welcomeMethods.createOpsByPrototype({
+        opsPrototypeFile: '',
+        opType: 'cann',
+      });
       await vscode.commands.executeCommand(
         'workbench.action.closeActiveEditor',
       );
@@ -94,11 +94,11 @@ export async function handleOperatorProjectDictoryFile(
     if (message.createOperatorProjectDictoryFileType === 2) {
       // 开始链接创建算子
       await ProjectManager.getInstance().initProject();
-      const opsPrototypeFilePath = await ops.createOps({});
+      const opsPrototypeFilePath = await welcomeMethods.createOps({});
 
       console.log('res', opsPrototypeFilePath);
       if (opsPrototypeFilePath) {
-        await ops.createOpsByPrototype({
+        await welcomeMethods.createOpsByPrototype({
           opsPrototypeFile: opsPrototypeFilePath,
         });
       }

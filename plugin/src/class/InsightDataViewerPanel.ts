@@ -12,7 +12,7 @@ import * as os from 'os';
 import { spawn, ChildProcess, exec } from 'child_process';
 import { promisify } from 'util';
 import { NodeWebviewSocketBridge } from './NodeWebviewSocketBridge';
-import webviewMessageList from './WebviewMessageList';
+import webviewMessageList from './webview-message-list';
 import { CommandExecutor } from './CommandOptions';
 import { EnvironmentVariableReader } from './EnvironmentVariableReader';
 
@@ -589,7 +589,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
         `[InsightDataViewerPanel] 服务端口已就绪: ${this.serverPort}`,
       );
 
-      // 插件目录列表（与 WebviewMessageList.ts 中的保持一致）
+      // 插件目录列表（与 webview-message-list.ts 中的保持一致）
       const pluginDirs = [
         {
           model: 'Cluster',

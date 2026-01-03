@@ -1,6 +1,6 @@
 import { ExplorerRootUtils } from './ExplorerRootUtils';
 import { CommandExecutor } from './CommandOptions';
-import { PermanentStorage } from './PermanentStorage';
+import { PermanentStorage } from './permanent-storage';
 import * as fs from 'fs';
 import * as vscode from 'vscode';
 import {
@@ -156,7 +156,7 @@ export default class OpsOption {
 
     try {
       progress?.report({ increment: 70, message: '算子文件创建中...' });
-      const result = await generateStructure(
+      const result = generateStructure(
         {
           ops_prototype_file,
           project_id: Number(project_id),
@@ -239,10 +239,7 @@ export default class OpsOption {
       : await this.getBuildConfig();
 
     try {
-      const buildCommand = await getBuildOpCommand(
-        Number(configId),
-        compileOption,
-      );
+      const buildCommand = getBuildOpCommand(Number(configId), compileOption);
       const res = await this.executor.execute(buildCommand, [], [], {}, true);
 
       if (res.code !== 0) {
@@ -264,7 +261,7 @@ export default class OpsOption {
       : await this.getBuildExampleConfig();
 
     try {
-      const runCommand = await getRunCommand(Number(configId));
+      const runCommand = getRunCommand(Number(configId));
 
       console.log('runCommand', runCommand);
       const res = await this.executor.execute(runCommand, [], [], {}, true);
@@ -289,7 +286,7 @@ export default class OpsOption {
       : await this.getBuildExampleConfig();
 
     try {
-      const buildCommand = await getBuildExampleCommand(Number(configId));
+      const buildCommand = getBuildExampleCommand(Number(configId));
       const res = await this.executor.execute(buildCommand, [], [], {}, true);
 
       if (res.code !== 0) {
@@ -311,7 +308,7 @@ export default class OpsOption {
 
     console.log('simulate configId', configId, exConfigId);
     try {
-      const simulateCommand = await getSimulateCommand(
+      const simulateCommand = getSimulateCommand(
         Number(configId),
         Number(exConfigId),
       );
@@ -346,7 +343,7 @@ export default class OpsOption {
 
     console.log('onboard configId', configId, exConfigId);
     try {
-      const onBoardCommand = await getOnBoardCommand(
+      const onBoardCommand = getOnBoardCommand(
         Number(configId),
         Number(exConfigId),
       );
@@ -468,10 +465,10 @@ export default class OpsOption {
       }
 
       const sanitizerCommand =
-        (await getSanitizerCommand(
+        getSanitizerCommand(
           Number(sanitizerConfigId),
           Number(exampleConfigId),
-        )) || '';
+        ) || '';
       const res = await this.executor.execute(
         sanitizerCommand,
         [],
