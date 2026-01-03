@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 
-import { ProjectManager } from '../services/project/project-manager';
+import { ProjectManager } from '../core/project/project-manager';
 import { BuildConfig } from 'shared:/api-types';
 import { getSanitizerCommand } from '../../autogen-server';
 import { configService } from './config-service';

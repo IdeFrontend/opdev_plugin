@@ -3,7 +3,7 @@ import {
   GetPerformanceRunDataResult,
   MarkRecordParams,
 } from 'shared:/api-types';
-import { PerformanceRunData } from 'plugin:/services/performance/PerformanceRunData';
+import { runDataService } from '../service/run-data-service';
 
 export const performanceMethods = {
   /**
@@ -14,12 +14,7 @@ export const performanceMethods = {
   async getRunData(
     params: GetPerformanceRunDataParams,
   ): Promise<GetPerformanceRunDataResult> {
-    const data = await PerformanceRunData.getInstance().queryExecutionRecords(
-      params.sort.by,
-      params.sort.order,
-    );
-
-    return { data };
+    return await runDataService.getPerformanceRunData(params);
   },
 
   /**
@@ -27,10 +22,6 @@ export const performanceMethods = {
    * @param params 标记参数
    */
   toggleRecordMark(params: MarkRecordParams): void {
-    if (params.marked) {
-      PerformanceRunData.getInstance().markRecord(params.key);
-    } else {
-      PerformanceRunData.getInstance().unmarkRecord(params.key);
-    }
+    runDataService.togglePerformanceRecordMark(params);
   },
 };

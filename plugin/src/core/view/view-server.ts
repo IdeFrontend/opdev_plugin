@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 
-import { ViewRouteRaw, ViewRouter } from './ViewRouter';
-import { ViewRenderer } from './ViewRender';
-import { ViewQuery } from './ViewQuery';
+import { ViewRouteRaw, ViewRouter } from './view-router';
+import { ViewRenderer } from './view-render';
+import { ViewQuery } from './view-query';
 
 /** 开启视图hook */
 type ViewOpenedCallback = (routePath: string, webview: vscode.Webview) => void;

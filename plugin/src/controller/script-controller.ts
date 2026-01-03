@@ -1,4 +1,4 @@
-import { ProjectManager } from '../services/project/project-manager';
+import { ProjectManager } from '../core/project/project-manager';
 import { projectService } from '../service/project-service';
 import { GetProjectSHResult, UpdateShScriptParams } from 'shared:/api-types';
 

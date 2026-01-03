@@ -5,11 +5,9 @@ import * as vscode from 'vscode';
 
 import { CheckPathExistsParams, SaveFileParams } from 'shared:/api-types';
 
-export const commonMethods = {
+export class FileService {
   /**
    * 检查路径是否存在
-   * @param params 检查参数
-   * @returns 存在返回 true，否则返回 false
    */
   pathExists(params: CheckPathExistsParams): Promise<boolean> {
     return new Promise((resolve) => {
@@ -21,12 +19,10 @@ export const commonMethods = {
         }
       });
     });
-  },
+  }
 
   /**
    * 保存文件到本地
-   * @param params 保存参数
-   * @returns 保存成功返回 true，否则返回 false
    */
   async saveFileToLocal(params: SaveFileParams): Promise<boolean> {
     const savingUri = await vscode.window.showSaveDialog({
@@ -68,5 +64,7 @@ export const commonMethods = {
     vscode.commands.executeCommand('revealFileInOS', savingUri);
 
     return true;
-  },
-};
+  }
+}
+
+export const fileService = new FileService();

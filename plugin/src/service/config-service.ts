@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { ProjectManager } from '../services/project/project-manager';
+import { ProjectManager } from '../core/project/project-manager';
 import {
   SaveBuildConfigParams,
   SaveConfigParams,

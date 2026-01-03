@@ -1,4 +1,4 @@
-import { ProjectManager } from '../services/project/project-manager';
+import { ProjectManager } from '../core/project/project-manager';
 import { configService } from '../service/config-service';
 import { buildService } from '../service/build-service';
 import {

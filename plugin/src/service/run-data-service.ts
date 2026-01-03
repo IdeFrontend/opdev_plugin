@@ -1,7 +1,10 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import path from 'path';
+import * as path from 'path';
+
 import { PermanentStorage } from 'plugin:/class/permanent-storage';
+import { GetPerformanceRunDataParams, GetPerformanceRunDataResult, MarkRecordParams } from 'shared:/api-types';
+import { PerformanceRunData } from '../core/performance/performance-run-data';
 
 const MARKED_STORAGE_KEY = 'msSanitizer_marks';
 
@@ -46,12 +49,36 @@ function setMsSanitizerMarks(vals: string[]) {
   PermanentStorage.getInstance().set<string[]>(MARKED_STORAGE_KEY, [...vals]);
 }
 
-export const msSanitizerMethods = {
+export class RunDataService {
+  /**
+   * 获取性能运行数据
+   */
+  async getPerformanceRunData(
+    params: GetPerformanceRunDataParams,
+  ): Promise<GetPerformanceRunDataResult> {
+    const data = await PerformanceRunData.getInstance().queryExecutionRecords(
+      params.sort.by,
+      params.sort.order,
+    );
+
+    return { data };
+  }
+
+  /**
+   * 切换性能记录的标记状态
+   */
+  togglePerformanceRecordMark(params: MarkRecordParams): void {
+    if (params.marked) {
+      PerformanceRunData.getInstance().markRecord(params.key);
+    } else {
+      PerformanceRunData.getInstance().unmarkRecord(params.key);
+    }
+  }
+
   /**
    * 获取异常检测运行数据列表
-   * @returns {Promise<any[]>} 运行数据列表
    */
-  async getRunData() {
+  async getSanitizerRunData() {
     const workspaceFolders = vscode.workspace.workspaceFolders;
 
     if (!workspaceFolders || workspaceFolders.length === 0) {
@@ -88,13 +115,12 @@ export const msSanitizerMethods = {
     });
 
     return res;
-  },
+  }
 
   /**
-   * 切换标记状态
-   * @param params
+   * 切换异常检测标记状态
    */
-  async toggleMark(params: { id: string }) {
+  async toggleSanitizerMark(params: { id: string }) {
     const { id } = params;
     // 修改mark标记状态
     const markSet = getMsSanitizerMarks();
@@ -107,17 +133,7 @@ export const msSanitizerMethods = {
     setMsSanitizerMarks([...markSet]);
 
     return;
-  },
+  }
+}
 
-  /**
-   * 打开异常检测数据面板
-   * @param params - 参数
-   */
-  openPanel(params: any) {
-    // 打开异常检测数据面板
-    vscode.commands.executeCommand(
-      'huawei-op-devtools.open-ms-sanitizer-panel-view',
-      params,
-    );
-  },
-};
+export const runDataService = new RunDataService();

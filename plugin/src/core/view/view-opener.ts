@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 
+import { ExtensionConfig } from '../extension-config';
 import { InsightDataViewerPanel } from 'plugin:/class/InsightDataViewerPanel';
 
-import { ExtensionConfig } from '../ExtensionConfig';
 
 // 跟踪已打开的CSV文件目录
 const openedCsvDirectories = new Map<string, vscode.Uri>();
@@ -67,8 +67,7 @@ export class ViewOpener {
       return;
     }
     try {
-      // TODO 移除context依赖
-      InsightDataViewerPanel.createOrShow(ExtensionConfig.context, binPath);
+      InsightDataViewerPanel.createOrShow(binPath);
     } catch (error) {
       vscode.window.showErrorMessage(`加载数据文件失败: ${error}`);
     }

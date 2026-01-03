@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { ProjectManager } from '../services/project/project-manager';
+import { ProjectManager } from '../core/project/project-manager';
 import {
   InitOpsParams,
   CreateOpsParams,

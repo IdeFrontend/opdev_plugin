@@ -16,12 +16,12 @@ import i18nResource from 'shared:/i18n';
 import { WebviewProvider } from './class/webview-provider';
 import { handleOperatorProjectDictoryFile } from './class/webview-message-list';
 import { CsvEditorProvider } from './class/CsvEditorProvider';
-import { ApiServer } from './core/ApiServer';
-import { ViewServer } from './core/view/ViewServer';
+import { ApiServer } from './core/api-server';
+import { ViewServer } from './core/view/view-server';
 import { routes } from './routes';
 import { apis } from './apis';
 import { PermanentStorage } from './class/permanent-storage';
-import { ExtensionConfig } from './services/ExtensionConfig';
+import { ExtensionConfig } from './core/extension-config';
 import { RemoteConfig } from './helpers/RemoteConfig';
 
 import { OpsOperateProvider } from './class/ops-operate-provider';

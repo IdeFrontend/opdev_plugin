@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { CommandExecutor } from 'plugin:/class/CommandOptions';
-import { ProjectManager } from '../services/project/project-manager';
+import { ProjectManager } from '../core/project/project-manager';
 import {
   StartBuildParams,
   StartRunParams,
