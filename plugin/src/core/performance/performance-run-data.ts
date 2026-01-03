@@ -9,8 +9,8 @@ import {
 } from 'shared:/api-types';
 import { PermanentStorage } from 'plugin:/class/permanent-storage';
 import { Project } from '../project/Project';
-import { getConfig } from '../../../autogen-server';
-import { getOpByProjectIdAndOpName } from '../../../autogen-server/models/model';
+import { getConfig } from '../../autogen';
+import { getOpByProjectIdAndOpName } from '../../autogen/models/model';
 
 const PERFORMANCE_RUN_DATA_ROOT = '.vscode/opprof';
 

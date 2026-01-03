@@ -101,6 +101,6 @@ export class SanitizerService {
 }
 
 // Helper for importing getBuildOpCommand which is not exported by autogen-server directly in all cases or needs import
-import { getBuildOpCommand } from '../../autogen-server';
+import { getBuildOpCommand } from '../autogen';
 
 export const sanitizerService = new SanitizerService();

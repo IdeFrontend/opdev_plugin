@@ -16,7 +16,7 @@ import {
   getSanitizerCommand,
   getConfig,
   postConfig,
-} from '../../autogen-server';
+} from '../autogen';
 import path from 'node:path';
 
 export default class OpsOption {

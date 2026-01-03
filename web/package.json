@@ -15,7 +15,8 @@
     "axios": "^1.13.2",
     "i18next": "^25.7.2",
     "lodash-es": "^4.17.22",
-    "vue": "^3.5.22"
+    "vue": "^3.5.22",
+    "@mstt/shared": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^24.6.0",

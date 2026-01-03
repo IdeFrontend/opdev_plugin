@@ -21,15 +21,15 @@ esbuild.build({
 // 复制资源文件
 const copyDirs = [
   [
-    path.resolve(__dirname, '../web/out/'),
+    path.resolve(__dirname, '../../web/out/'),
     path.resolve(__dirname, '../out/web/'),
   ], // web
   [
-    path.resolve(__dirname, '../plugin/templates/'),
+    path.resolve(__dirname, '../templates/'),
     path.resolve(__dirname, '../out/templates/'),
   ], // 模板
   [
-    path.resolve(__dirname, '../plugin/mindstudio-debug-vscode-plugin/'),
+    path.resolve(__dirname, '../mindstudio-debug-vscode-plugin/'),
     path.resolve(__dirname, '../out/plugin/mindstudio-debug-vscode-plugin/'),
   ], // mindstudio-debug-vscode-plugin 插件
 ];
