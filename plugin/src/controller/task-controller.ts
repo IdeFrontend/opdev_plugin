@@ -2,7 +2,14 @@ import * as vscode from 'vscode';
 
 import { CommandExecutor } from 'plugin:/class/CommandOptions';
 import { ProjectManager } from '../services/project/project-manager';
-import { opsMethods } from './ops';
+import { buildService } from '../service/build-service';
+import {
+  BuildOpParams,
+  BuildExampleParams,
+  RunExampleParams,
+  SimulateParams,
+  OnBoardParams,
+} from 'shared:/api-types';
 
 // 全局任务管理器：用于追踪和终止正在执行的任务
 let currentExecutor: CommandExecutor | null = null;
@@ -16,7 +23,7 @@ export const taskMethods = {
       await ProjectManager.getInstance().initProject();
       // 保存当前 executor 引用，用于可能的终止操作
       currentExecutor = ProjectManager.getInstance().getExecutor();
-      await opsMethods.startBuild({});
+      await buildService.startBuild({});
     } finally {
       // 清除 executor 引用
       currentExecutor = null;
@@ -29,7 +36,7 @@ export const taskMethods = {
    */
   async buildExample(): Promise<void> {
     await ProjectManager.getInstance().initProject();
-    await opsMethods.startBuildExample({});
+    await buildService.startBuildExample({});
   },
 
   /**
@@ -40,7 +47,7 @@ export const taskMethods = {
       await ProjectManager.getInstance().initProject();
       // 保存当前 executor 引用
       currentExecutor = ProjectManager.getInstance().getExecutor();
-      await opsMethods.startRun({});
+      await buildService.startRun({});
     } finally {
       // 清除 executor 引用
       currentExecutor = null;
@@ -56,16 +63,7 @@ export const taskMethods = {
       await ProjectManager.getInstance().initProject();
       // 保存当前 executor 引用
       currentExecutor = ProjectManager.getInstance().getExecutor();
-      const configData = await opsMethods.getBuildConfigs();
-      const simulatorItem = configData.find(
-        (v: any) => v.config_type === 'simulate',
-      );
-      const simulatorType = simulatorItem?.user_options?.simulatorType ?? '';
-
-      await opsMethods.startBuild({
-        compileOption: `--simulator ${simulatorType}`,
-      });
-      await opsMethods.startSimulate();
+      await buildService.startSimulate();
     } finally {
       // 清除 executor 引用
       currentExecutor = null;
@@ -81,8 +79,7 @@ export const taskMethods = {
       await ProjectManager.getInstance().initProject();
       // 保存当前 executor 引用
       currentExecutor = ProjectManager.getInstance().getExecutor();
-      await opsMethods.startBuild({ compileOption: '--onboard' });
-      await opsMethods.startOnBoard();
+      await buildService.startOnBoard();
     } finally {
       // 清除 executor 引用
       currentExecutor = null;
@@ -114,8 +111,10 @@ export const taskMethods = {
     try {
       await ProjectManager.getInstance().initProject();
       // debug前编译
-      await opsMethods.startBuild({ compileOption: '--debug' });
-      await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
+      await buildService.startBuild({ compileOption: '--debug' });
+      await vscode.commands.executeCommand(
+        'workbench.debug.action.toggleRepl',
+      );
       await vscode.commands.executeCommand('workbench.action.debug.start');
     } catch (error) {
       console.error('打开debug时出错:', error);

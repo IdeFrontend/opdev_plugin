@@ -1,5 +1,5 @@
 import { ProjectManager } from '../services/project/project-manager';
-import { opsMethods } from './ops';
+import { projectService } from '../service/project-service';
 import { GetProjectSHResult, UpdateShScriptParams } from 'shared:/api-types';
 
 export const scriptMethods = {
@@ -13,7 +13,8 @@ export const scriptMethods = {
   ): Promise<GetProjectSHResult> {
     await ProjectManager.getInstance().initProject();
 
-    return await opsMethods.updateShScript(params);
+    return await projectService.updateShScript(params);
   },
 };
+
 

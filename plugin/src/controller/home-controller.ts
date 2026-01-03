@@ -1,5 +1,5 @@
 import { ProjectManager } from '../services/project/project-manager';
-import { opsMethods } from './ops';
+import { projectService } from '../service/project-service';
 import {
   GetProjectIdResult,
   GetHomeResult,
@@ -23,6 +23,7 @@ export const homeMethods = {
    * @returns 初始化结果
    */
   async initOps(params: InitOpsParams): Promise<GetHomeResult> {
-    return await opsMethods.init(params);
+    return await projectService.init(params);
   },
 };
+

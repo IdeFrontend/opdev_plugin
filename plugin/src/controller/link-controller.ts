@@ -2,7 +2,8 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { opsMethods } from './ops';
+import { projectService } from '../service/project-service';
+import { configService } from '../service/config-service';
 import { OpenFileParams, OpenLinkParams } from 'shared:/api-types';
 
 export const linkMethods = {
@@ -44,7 +45,7 @@ export const linkMethods = {
    * @returns 检查结果
    */
   async checkVscodeFolder(): Promise<boolean> {
-    return await opsMethods.checkVscode();
+    return await projectService.checkVscode();
   },
 
   /**
@@ -52,7 +53,8 @@ export const linkMethods = {
    * @returns 检查结果
    */
   async checkDevtoolConfig(): Promise<boolean> {
-    return await opsMethods.checkDevtoolConfig();
+    return await configService.checkDevtoolConfig();
   },
 };
+
 

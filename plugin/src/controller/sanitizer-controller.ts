@@ -1,5 +1,6 @@
 import { ProjectManager } from '../services/project/project-manager';
-import { opsMethods } from './ops';
+import { configService } from '../service/config-service';
+import { sanitizerService } from '../service/sanitizer-service';
 import {
   GetSanitizerFormResult,
   SaveSanitizerFormParams,
@@ -12,7 +13,7 @@ export const sanitizerViewMethods = {
    */
   async getSanitizerForm(): Promise<GetSanitizerFormResult> {
     await ProjectManager.getInstance().initProject();
-    const configData = await opsMethods.getSanitizerConfigs();
+    const configData = await configService.getSanitizerConfigsList();
 
     return (configData || [])[0] || {};
   },
@@ -26,8 +27,8 @@ export const sanitizerViewMethods = {
     params: SaveSanitizerFormParams,
   ): Promise<GetSanitizerFormResult> {
     await ProjectManager.getInstance().initProject();
-    await opsMethods.saveSanitizerForm(params);
-    const configData = await opsMethods.getSanitizerConfigs();
+    await configService.saveSanitizerForm(params);
+    const configData = await configService.getSanitizerConfigsList();
 
     return (configData || [])[0] || {};
   },
@@ -38,7 +39,7 @@ export const sanitizerViewMethods = {
   async runSanitizer(): Promise<void> {
     try {
       await ProjectManager.getInstance().initProject();
-      await opsMethods.runSanitizer();
+      await sanitizerService.runSanitizer();
     } finally {
       ProjectManager.getInstance().clearExecutor();
     }

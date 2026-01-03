@@ -1,5 +1,5 @@
 import { ProjectManager } from '../services/project/project-manager';
-import { opsMethods } from './ops';
+import { projectService } from '../service/project-service';
 import { CreateOpsParams, CreateOpsByPrototypeParams } from 'shared:/api-types';
 
 export const welcomeMethods = {
@@ -11,7 +11,7 @@ export const welcomeMethods = {
   async createOps(params: CreateOpsParams): Promise<string> {
     await ProjectManager.getInstance().initProject();
 
-    return await opsMethods.createOps(params);
+    return await projectService.createOps(params);
   },
 
   /**
@@ -22,7 +22,8 @@ export const welcomeMethods = {
     params: CreateOpsByPrototypeParams,
   ): Promise<void> {
     await ProjectManager.getInstance().initProject();
-    await opsMethods.createOpsByPrototype(params);
+    await projectService.createOpsByPrototype(params);
   },
 };
+
 
