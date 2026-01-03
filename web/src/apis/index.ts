@@ -4,7 +4,7 @@ export * from './common';
 
 export * from './view';
 
-export * from './msSanitizer';
+export * from './ms-sanitizer';
 
 export * from './ops';
 

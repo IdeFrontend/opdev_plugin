@@ -6,6 +6,7 @@ import { i18nPlugin } from './core/i18n';
 import { queryPlugin } from './core/query';
 
 import 'ant-design-vue/dist/reset.css';
+import './assets/css/tailwind.css';
 
 const app = createApp(App);
 

@@ -13,25 +13,23 @@ import { exec } from 'child_process';
 
 import i18nResource from 'shared:/i18n';
 
-import { ExplorerRootUtils } from './class/ExplorerRootUtils';
-import { WebviewProvider } from './class/webviewProvider';
-import { handleOperatorProjectDictoryFile } from './class/WebviewMessageList';
-import { CsvEditorProvider } from './class/CsvEditorProvider';
-import { ApiServer } from './core/ApiServer';
-import { ViewServer } from './core/view/ViewServer';
+import { WebviewProvider } from './class/webview-provider';
+import { handleOperatorProjectDictoryFile } from './class/webview-message-list';
+import { CsvEditorProvider } from './class/csv-editor-provider';
+import { ApiServer } from './core/api-server';
+import { ViewServer } from './core/view/view-server';
 import { routes } from './routes';
 import { apis } from './apis';
-import { PermanentStorage } from './class/PermanentStorage';
-import { ExtensionConfig } from './services/ExtensionConfig';
-import { RemoteConfig } from './helpers/RemoteConfig';
+import { PermanentStorage } from './class/permanent-storage';
+import { ExtensionConfig } from './core/extension-config';
+import { RemoteConfig } from './helpers/remote-config';
 
-import { OpsOperateProvider } from './class/OpsOperateProvider';
-import { getMsSanitizerPanelViewProvider } from './class/MsSanitizerPanelView';
+import { OpsOperateProvider } from './class/ops-operate-provider';
+import { getMsSanitizerPanelViewProvider } from './class/ms-sanitizer-panel-view';
 
 import { MindStudioPluginInstaller } from './class/MindStudioPluginInstaller';
 
 let extensionContext: vscode.ExtensionContext | undefined;
-const execAsync = promisify(exec);
 
 /**
  * 检查当前工作区是否存在 .vscode/devtool_config.json 文件
@@ -135,9 +133,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 注册打开Opsuite命令
   const openCommand = vscode.commands.registerCommand(
-    'huawei-op-devtools.open',
+    'mindstudio-opsuite.createOps',
     async () => {
-      createOpsProvider.show('Link');
+      createOpsProvider.show('link');
     },
   );
 

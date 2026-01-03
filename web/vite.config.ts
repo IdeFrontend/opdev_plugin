@@ -6,13 +6,13 @@ import { debugEntry } from './vite-plugins/debug-entry';
 
 /** 视图入口白名单 */
 const TEMP_MULTI_ENTRIES = [
-  'Config',
-  'Link',
-  'Welcome',
-  'Home',
-  'Operate',
-  'MsSanitizerPanelView',
-  'ProjectSH',
+  'config',
+  'link',
+  'welcome',
+  'home',
+  'operate',
+  'ms-sanitizer-panel-view',
+  'project-sh',
 ];
 
 export default defineConfig(({ mode }) => {
