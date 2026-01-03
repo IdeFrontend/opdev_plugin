@@ -30,8 +30,6 @@
 │   ├── api-types/          # 共享类型定义
 │   └── i18n/               # 国际化资源
 │
-├── server_legacy/          # [已归档] 旧版 Python 后端服务
-│
 ├── scripts/                # 构建与工具脚本
 └── resources/              # 静态资源 (图标、图片等)
 ```
