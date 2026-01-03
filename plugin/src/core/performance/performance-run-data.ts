@@ -8,9 +8,9 @@ import {
   PerformanceRunDataFolder,
 } from 'shared:/api-types';
 import { PermanentStorage } from 'plugin:/class/permanent-storage';
-import { Project } from '../project/Project';
-import { getConfig } from '../../autogen';
-import { getOpByProjectIdAndOpName } from '../../autogen/models/model';
+import { Project } from '../project/project';
+import { getConfig } from '../../domain';
+import { getOpByProjectIdAndOpName } from '../../domain/models/model';
 
 const PERFORMANCE_RUN_DATA_ROOT = '.vscode/opprof';
 

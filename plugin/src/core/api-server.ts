@@ -1,7 +1,7 @@
 import { t } from 'i18next';
 import * as vscode from 'vscode';
 
-import { WebviewConnector } from './webview-connector';
+import { WebviewConnector } from './connector';
 
 export interface RequestOptions {
   /** 超时时间（单位：ms） */

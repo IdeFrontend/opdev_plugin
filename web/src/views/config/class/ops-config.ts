@@ -1,4 +1,4 @@
-import { BuildConfig } from './build-config';
+import BuildConfig from './build-config';
 
 export default class OpsConfig {
   private opsName: string;

@@ -15,7 +15,7 @@ import {
   getBuildOpCommand,
   getRunCommand,
   getConfig,
-} from '../autogen';
+} from '../domain';
 
 const CONFIG_TYPES = {
   BUILD_OP: 'build_op',

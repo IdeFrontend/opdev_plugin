@@ -5,7 +5,7 @@ import { ExceptionParser } from './exception-parser';
 
 import { HtmlTransformer } from './html-transformer';
 import webviewMessageList from './webview-message-list';
-import { ApiServer } from 'plugin:/core/ApiServer';
+import { ApiServer } from 'plugin:/core/api-server';
 
 export class MsSanitizerPanelViewProvider
   implements vscode.WebviewViewProvider

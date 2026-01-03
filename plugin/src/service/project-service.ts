@@ -11,7 +11,7 @@ import {
   updataShScript,
   generateOpsPrototype,
   generateStructure,
-} from '../autogen';
+} from '../domain';
 
 export class ProjectService {
   /**

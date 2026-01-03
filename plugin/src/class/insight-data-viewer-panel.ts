@@ -13,7 +13,7 @@ import { spawn, ChildProcess, exec } from 'child_process';
 import { promisify } from 'util';
 import { NodeWebviewSocketBridge } from './node-webview-socket-bridge';
 import webviewMessageList from './webview-message-list';
-import { CommandExecutor } from './CommandOptions';
+import { CommandExecutor } from './command-options';
 import { EnvironmentVariableReader } from './environment-variable-reader';
 
 const execAsync = promisify(exec);

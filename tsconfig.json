@@ -6,7 +6,7 @@
     "outDir": "out",
     "lib": ["ES2020", "DOM"],
     "sourceMap": true,
-    "rootDirs": ["src", "../"],
+    "rootDirs": ["plugin/src", "shared"],
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": false,
@@ -16,10 +16,10 @@
     "noImplicitAny": true,
     "baseUrl": ".",
     "paths": {
-      "plugin:/*": ["src/*"],
-      "shared:/*": ["../shared/*"]
+      "plugin:/*": ["plugin/src/*"],
+      "shared:/*": ["shared/*"]
     }
   },
-  "include": ["src/**/*", "../shared/**/*"],
-  "exclude": ["node_modules", ".vscode-test", "../web", "../server"]
+  "include": ["plugin/src/**/*", "shared/**/*"],
+  "exclude": ["node_modules", ".vscode-test", "web", "server", "server_legacy"]
 }

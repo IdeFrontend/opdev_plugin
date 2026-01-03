@@ -4,7 +4,7 @@ import * as fs from 'fs';
 
 import { ProjectManager } from '../core/project/project-manager';
 import { BuildConfig } from 'shared:/api-types';
-import { getSanitizerCommand } from '../../autogen-server';
+import { getSanitizerCommand } from '../domain';
 import { configService } from './config-service';
 import { buildService } from './build-service';
 
@@ -101,6 +101,6 @@ export class SanitizerService {
 }
 
 // Helper for importing getBuildOpCommand which is not exported by autogen-server directly in all cases or needs import
-import { getBuildOpCommand } from '../autogen';
+import { getBuildOpCommand } from '../domain';
 
 export const sanitizerService = new SanitizerService();

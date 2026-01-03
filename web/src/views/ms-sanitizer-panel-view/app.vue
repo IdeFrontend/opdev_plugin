@@ -198,7 +198,7 @@ import {
   synchronizeSet,
 } from './constant';
 import { jumpToFileWebview } from '@/apis';
-import { formatTimestamp } from '../PerformanceRunData/utils/timestamp';
+import { formatTimestamp } from '../performance-run-data/utils/timestamp';
 
 const themeConfig = {
   algorithm: theme.darkAlgorithm,

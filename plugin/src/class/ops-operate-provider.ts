@@ -3,7 +3,7 @@ import * as path from 'path';
 
 import { HtmlTransformer } from './html-transformer';
 import webviewMessageList from './webview-message-list';
-import { ApiServer } from 'plugin:/core/ApiServer';
+import { ApiServer } from 'plugin:/core/api-server';
 
 export class OpsOperateProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'OpsOperateProvider';
