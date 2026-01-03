@@ -4,8 +4,8 @@ import { ref, onMounted } from 'vue';
 
 import { getQuery } from '@/core/query';
 
-import PerformanceRunData from './views/PerformanceRunData/PerformanceRunData.vue';
-import MsSanitizerRunData from './views/MsSanitizerRunData/APP.vue';
+import PerformanceRunData from './views/performance-run-data/performance-run-data.vue';
+import MsSanitizerRunData from './views/ms-sanitizer-run-data/app.vue';
 
 const themeConfig = {
   algorithm: theme.darkAlgorithm, // 使用暗色算法

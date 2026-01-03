@@ -15,17 +15,17 @@ import i18nResource from 'shared:/i18n';
 
 import { WebviewProvider } from './class/webview-provider';
 import { handleOperatorProjectDictoryFile } from './class/webview-message-list';
-import { CsvEditorProvider } from './class/CsvEditorProvider';
+import { CsvEditorProvider } from './class/csv-editor-provider';
 import { ApiServer } from './core/api-server';
 import { ViewServer } from './core/view/view-server';
 import { routes } from './routes';
 import { apis } from './apis';
 import { PermanentStorage } from './class/permanent-storage';
 import { ExtensionConfig } from './core/extension-config';
-import { RemoteConfig } from './helpers/RemoteConfig';
+import { RemoteConfig } from './helpers/remote-config';
 
 import { OpsOperateProvider } from './class/ops-operate-provider';
-import { getMsSanitizerPanelViewProvider } from './class/MsSanitizerPanelView';
+import { getMsSanitizerPanelViewProvider } from './class/ms-sanitizer-panel-view';
 
 import { MindStudioPluginInstaller } from './class/MindStudioPluginInstaller';
 
@@ -133,9 +133,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 注册打开Opsuite命令
   const openCommand = vscode.commands.registerCommand(
-    'huawei-op-devtools.open',
+    'mindstudio-opsuite.createOps',
     async () => {
-      createOpsProvider.show('Link');
+      createOpsProvider.show('link');
     },
   );
 

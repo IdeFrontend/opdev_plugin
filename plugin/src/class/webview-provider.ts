@@ -10,7 +10,7 @@ import * as os from 'os';
 import * as vscode from 'vscode';
 import { PermanentStorage } from './permanent-storage';
 import webviewMessageList from './webview-message-list';
-import { HtmlTransformer } from './HtmlTransformer';
+import { HtmlTransformer } from './html-transformer';
 import { ApiServer } from 'plugin:/core/ApiServer';
 
 /**

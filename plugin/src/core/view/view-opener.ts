@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { ExtensionConfig } from '../extension-config';
-import { InsightDataViewerPanel } from 'plugin:/class/InsightDataViewerPanel';
+import { InsightDataViewerPanel } from 'plugin:/class/insight-data-viewer-panel';
 
 
 // 跟踪已打开的CSV文件目录

@@ -2,7 +2,7 @@ import fs from 'node:fs';
 
 import * as vscode from 'vscode';
 
-import { HtmlTransformer } from 'plugin:/class/HtmlTransformer';
+import { HtmlTransformer } from 'plugin:/class/html-transformer';
 
 const WEB_OUT_DIR_PATH = 'out/web';
 

@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { CommandExecutor } from 'plugin:/class/CommandOptions';
-import { ExplorerRootUtils } from 'plugin:/class/ExplorerRootUtils';
+import { CommandExecutor } from 'plugin:/class/command-options';
+import { ExplorerRootUtils } from 'plugin:/class/explorer-root-utils';
 import { createProject } from '../../../autogen-server';
 
 /**

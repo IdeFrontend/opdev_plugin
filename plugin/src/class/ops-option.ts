@@ -1,5 +1,5 @@
-import { ExplorerRootUtils } from './ExplorerRootUtils';
-import { CommandExecutor } from './CommandOptions';
+import { ExplorerRootUtils } from './explorer-root-utils';
+import { CommandExecutor } from './command-options';
 import { PermanentStorage } from './permanent-storage';
 import * as fs from 'fs';
 import * as vscode from 'vscode';
