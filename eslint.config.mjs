@@ -14,6 +14,7 @@ export default defineConfig([
       '@stylistic': stylistic,
     },
     rules: {
+      curly: ['error', 'all'],
       '@stylistic/padding-line-between-statements': [
         'error',
         {
