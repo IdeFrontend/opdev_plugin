@@ -20,10 +20,10 @@ esbuild.build({
 
 // 复制资源文件
 const copyDirs = [
-  [
-    path.resolve(__dirname, '../web/out/'),
-    path.resolve(__dirname, '../out/web/'),
-  ], // web
+  // [
+  //   path.resolve(__dirname, '../web/out/'),
+  //   path.resolve(__dirname, '../out/web/'),
+  // ], // web
   [
     path.resolve(__dirname, '../plugin/templates/'),
     path.resolve(__dirname, '../out/templates/'),

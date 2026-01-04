@@ -9,6 +9,7 @@ import { createApp } from 'vue';
 import antd from 'ant-design-vue';
 import App from './app.vue';
 import { vscode } from '@/utils/vscode';
+import '../../assets/css/tailwind.css';
 
 let isInitRun = false;
 

@@ -9,6 +9,7 @@ import { createApp } from 'vue';
 import antd from 'ant-design-vue';
 import App from './app.vue';
 import 'ant-design-vue/dist/reset.css';
+import '../../assets/css/tailwind.css';
 import { vscode } from '@/utils/vscode';
 
 // 监听来自VSCode扩展和iframe的消息

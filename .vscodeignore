@@ -17,6 +17,13 @@ package-lock.json
 .prettierrc.json
 .eslintrc.js
 .eslintignore
+eslint.config.mjs
+package.json.workspace
+pnpm-lock.yaml
+pnpm-workspace.yaml
+prettier.config.mjs
+.husky/
+.idea/
 
 # 忽略特定文件类型
 *.ts

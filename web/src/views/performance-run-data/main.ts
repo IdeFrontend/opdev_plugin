@@ -9,6 +9,7 @@ import { createApp } from 'vue';
 import antd from 'ant-design-vue';
 import App from './performance-run-data.vue';
 import 'ant-design-vue/dist/reset.css';
+import '../../assets/css/tailwind.css';
 
 // 监听来自 iframe 的消息
 window.addEventListener('message', (event) => {
