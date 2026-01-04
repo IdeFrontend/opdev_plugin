@@ -6,6 +6,7 @@ import { ExceptionParser } from './exception-parser';
 import { HtmlTransformer } from './html-transformer';
 import webviewMessageList from './webview-message-list';
 import { ApiServer } from 'plugin:/core/api-server';
+import { COMMAND_OPEN_MS_SANITIZER_PANEL_VIEW } from '../constants';
 
 export class MsSanitizerPanelViewProvider
   implements vscode.WebviewViewProvider
@@ -138,7 +139,7 @@ export const getMsSanitizerPanelViewProvider = (
 
   // 注册打开终端和 Webview 的命令
   const openMsSanitizerDisposable = vscode.commands.registerCommand(
-    'huawei-op-devtools.open-ms-sanitizer-panel-view',
+    COMMAND_OPEN_MS_SANITIZER_PANEL_VIEW,
     async (data: any) => {
       // 打开底部区域面板
       await vscode.commands.executeCommand('workbench.action.togglePanel');
