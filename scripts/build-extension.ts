@@ -9,6 +9,7 @@ const useSourcemap =
   ) || false;
 
 const isWatch = process.argv.includes('--watch');
+const isReadable = process.argv.includes('--readable');
 
 const buildOptions: esbuild.BuildOptions = {
   entryPoints: ['./plugin/src/extension.ts'],
@@ -18,6 +19,7 @@ const buildOptions: esbuild.BuildOptions = {
   platform: 'node',
   external: ['vscode'],
   sourcemap: useSourcemap,
+  keepNames: isReadable,
 };
 
 // 复制资源文件
