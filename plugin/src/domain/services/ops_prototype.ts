@@ -1,6 +1,6 @@
 import path from 'path';
 import fs from 'fs-extra';
-import { get_project_by_id } from './project';
+import { getProjectById } from 'plugin:/domain';
 
 async function generateOpsPrototypeJson(
   projectPath: string,
@@ -63,7 +63,7 @@ export async function generateOpsPrototype(
   prototype_name = 'add_custom',
   extensionPath: string,
 ): Promise<string> {
-  const project = get_project_by_id(project_id as any);
+  const project = getProjectById(project_id as any);
 
   if (!project)
     throw Object.assign(new Error('project not found'), {

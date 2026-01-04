@@ -55,5 +55,13 @@ export const homeMethods = {
   async getHome(): Promise<GetHomeResult> {
     return process.env.HOME || process.env.USERPROFILE || '';
   },
+
+  /**
+   * 更新Project
+   */
+  async updateProject(): Promise<void> {
+    // 刷新项目信息
+    await ProjectManager.getInstance().initProject();
+  },
 };
 

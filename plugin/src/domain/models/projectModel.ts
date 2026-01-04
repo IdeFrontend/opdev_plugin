@@ -23,17 +23,19 @@ type ProjectsStore = {
 };
 
 function ensureStore(): ProjectsStore {
-    const init: ProjectsStore = { lastId: 0, projects: [] };
-    const data = storage.read<ProjectsStore>(init);
-    // 简单的校验
-    if (typeof data.lastId !== 'number' || !Array.isArray(data.projects)) {
-        return init;
-    }
-    return data;
+  const init: ProjectsStore = { lastId: 0, projects: [] };
+  const data = storage.read<ProjectsStore>(init);
+
+  // 简单的校验
+  if (!Array.isArray(data.projects)) {
+    return init;
+  }
+
+  return data;
 }
 
 function writeStore(store: ProjectsStore) {
-    storage.write(store);
+  storage.write(store);
 }
 
 export interface CreateProjectParams {
@@ -43,7 +45,7 @@ export interface CreateProjectParams {
   create_by?: string;
 }
 
-export async function updataShScript(data: CreateProjectParams) {
+export async function updateShScript(data: CreateProjectParams) {
   // 数据库 操作
   const store = ensureStore();
   const existing = store.projects.find(
@@ -103,7 +105,7 @@ export function getProjectByPath(
   return store.projects.find((p) => p.project_path === projectPath);
 }
 
-export function get_project_by_id(project_id: number) {
+export function getProjectById(project_id: number) {
   const store = ensureStore();
   const found = store.projects.find((p) => p.id === project_id);
 

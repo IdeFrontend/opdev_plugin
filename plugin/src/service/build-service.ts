@@ -15,6 +15,7 @@ import {
   getBuildOpCommand,
   getRunCommand,
   getConfig,
+  objectToCommandString,
 } from '../domain';
 
 const CONFIG_TYPES = {
@@ -200,7 +201,7 @@ export class BuildService {
     const buildConfigId = await this.getBuildConfigId();
     const buildCommand = getBuildOpCommand(
       Number(buildConfigId),
-      `--simulator ${simulatorType}`,
+      objectToCommandString({ simulator: simulatorType }),
     );
     const buildExecutor = ProjectManager.getInstance().getExecutor();
     const buildRes = await buildExecutor.execute(
@@ -254,7 +255,10 @@ export class BuildService {
   async startOnBoard(): Promise<void> {
     // 上板分析前编译
     const buildConfigId = await this.getBuildConfigId();
-    const buildCommand = getBuildOpCommand(Number(buildConfigId), '--onboard');
+    const buildCommand = getBuildOpCommand(
+      Number(buildConfigId),
+      objectToCommandString({ onboard: true }),
+    );
     const buildExecutor = ProjectManager.getInstance().getExecutor();
     const buildRes = await buildExecutor.execute(
       buildCommand,
