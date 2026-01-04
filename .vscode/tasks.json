@@ -15,6 +15,42 @@
       },
       "problemMatcher": ["$tsc"],
       "label": "npm: compile"
+    },
+    {
+      "type": "npm",
+      "script": "compile:debug",
+      "group": "build",
+      "label": "npm: compile:debug",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      }
+    },
+    {
+      "type": "npm",
+      "script": "watch",
+      "group": "build",
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "custom",
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Watching for changes...",
+          "endsPattern": "Build succeeded"
+        }
+      },
+      "label": "npm: watch",
+      "presentation": {
+        "group": "watch",
+        "reveal": "never"
+      }
     }
   ]
 }

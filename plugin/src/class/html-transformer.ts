@@ -1,13 +1,27 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as http from 'http';
 
 export class HtmlTransformer {
-  public static transformDistHtml(
+  public static async transformDistHtml(
     distPath: string,
     webview: vscode.Webview,
     router: string = 'index',
-  ): string {
+  ): Promise<string> {
+    const devServerUrl = process.env.MSTT_DEV_SERVER_URL;
+
+    if (devServerUrl) {
+      try {
+        const url = `${devServerUrl}/src/views/${router}/${router}.html`;
+        const htmlContent = await this.fetchHtml(url);
+
+        return this.processDevResourcePaths(htmlContent, devServerUrl, url);
+      } catch (e) {
+        console.error(`Failed to fetch from dev server ${devServerUrl}:`, e);
+      }
+    }
+
     const indexPath = path.join(distPath, `src/views/${router}/${router}.html`);
 
     try {
@@ -29,6 +43,63 @@ export class HtmlTransformer {
     } catch (error) {
       throw new Error(`Failed to transform HTML: ${error}`);
     }
+  }
+
+  public static fetchHtml(url: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const req = http.get(url, (res) => {
+        if (res.statusCode !== 200) {
+          reject(new Error(`Status code: ${res.statusCode}`));
+          res.resume();
+
+          return;
+        }
+        let data = '';
+
+        res.on('data', (chunk) => (data += chunk));
+        res.on('end', () => resolve(data));
+      });
+
+      req.on('error', reject);
+    });
+  }
+
+  public static processDevResourcePaths(
+    html: string,
+    baseUrl: string,
+    currentFileUrl: string,
+  ): string {
+    // 1. 处理绝对路径 (以 / 开头)，指向 Dev Server Root
+    let processedHtml = html.replace(
+      /(src|href)="\/([^"]*)"/g,
+      `$1="${baseUrl}/$2"`,
+    );
+
+    // 2. 注入 <base> 标签，解决相对路径问题
+    // 计算当前文件的目录 URL，确保以 / 结尾
+    // 例如: http://localhost:5173/src/views/home/home.html -> http://localhost:5173/src/views/home/
+    const currentDirUrl = currentFileUrl.substring(
+      0,
+      currentFileUrl.lastIndexOf('/') + 1,
+    );
+
+    // 在 <head> 后面插入 <base>
+    // 如果没有 <head> 标签（虽然不规范但可能存在），则尝试在 <html> 后面插入，或者直接在开头插入
+    if (processedHtml.includes('<head>')) {
+      processedHtml = processedHtml.replace(
+        '<head>',
+        `<head>\n    <base href="${currentDirUrl}">`,
+      );
+    } else if (processedHtml.includes('<html>')) {
+      processedHtml = processedHtml.replace(
+        '<html>',
+        `<html>\n<head><base href="${currentDirUrl}"></head>`,
+      );
+    } else {
+      processedHtml = `<base href="${currentDirUrl}">\n` + processedHtml;
+    }
+
+    return processedHtml;
   }
 
   public static processResourcePaths(

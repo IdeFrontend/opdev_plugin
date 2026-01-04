@@ -76,7 +76,7 @@ export class MsSanitizerPanelViewProvider
     // 设置HTML内容
     const distPath = path.join(this._extensionUri.fsPath, 'out', 'web');
 
-    webviewView.webview.html = HtmlTransformer.transformDistHtml(
+    webviewView.webview.html = await HtmlTransformer.transformDistHtml(
       distPath,
       webviewView.webview,
       'ms-sanitizer-panel-view',

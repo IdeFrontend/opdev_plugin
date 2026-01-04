@@ -8,7 +8,9 @@ const useSourcemap =
     (item) => item === '--sourcemap' || item === '--sourcemap=true',
   ) || false;
 
-esbuild.build({
+const isWatch = process.argv.includes('--watch');
+
+const buildOptions: esbuild.BuildOptions = {
   entryPoints: ['./plugin/src/extension.ts'],
   outfile: 'out/extension.js',
   bundle: true,
@@ -16,7 +18,7 @@ esbuild.build({
   platform: 'node',
   external: ['vscode'],
   sourcemap: useSourcemap,
-});
+};
 
 // 复制资源文件
 const copyDirs = [
@@ -34,7 +36,46 @@ const copyDirs = [
   ], // mindstudio-debug-vscode-plugin 插件
 ];
 
-for (const [sourcePath, targetPath] of copyDirs) {
-  fs.rmSync(targetPath, { force: true, recursive: true });
-  fs.cpSync(sourcePath, targetPath, { recursive: true });
-}
+const copyAssets = () => {
+  for (const [sourcePath, targetPath] of copyDirs) {
+    if (fs.existsSync(sourcePath)) {
+      // 确保目标目录的父目录存在
+      const targetDir = path.dirname(targetPath);
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+
+      fs.rmSync(targetPath, { force: true, recursive: true });
+      fs.cpSync(sourcePath, targetPath, { recursive: true });
+    }
+  }
+};
+
+(async () => {
+  if (isWatch) {
+    const ctx = await esbuild.context({
+      ...buildOptions,
+      plugins: [
+        {
+          name: 'watch-plugin',
+          setup(build) {
+            build.onEnd((result) => {
+              if (result.errors.length > 0) {
+                console.error('Build failed:', result.errors);
+              } else {
+                console.log('Build succeeded');
+                copyAssets();
+              }
+            });
+          },
+        },
+      ],
+    });
+
+    await ctx.watch();
+    console.log('Watching for changes...');
+  } else {
+    await esbuild.build(buildOptions);
+    copyAssets();
+  }
+})();
