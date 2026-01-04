@@ -8,7 +8,7 @@ import {
   FlagFilled,
 } from '@ant-design/icons-vue';
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import { formatTimestamp } from '../PerformanceRunData/utils/timestamp';
+import { formatTimestamp } from '../performance-run-data/utils/timestamp';
 import {
   getMsSanitizerRunData,
   toggleMsSanitizerMark,

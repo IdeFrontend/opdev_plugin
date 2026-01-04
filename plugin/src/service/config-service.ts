@@ -9,7 +9,7 @@ import {
   SaveSanitizerFormParams,
   BuildConfig,
 } from 'shared:/api-types';
-import { postConfig, getConfig } from '../../autogen-server';
+import { postConfig, getConfig } from '../domain';
 
 const CONFIG_TYPES = {
   SANITIZER: 'sanitizer',

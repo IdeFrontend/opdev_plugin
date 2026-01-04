@@ -1,9 +1,10 @@
 import path from 'path';
-import fs from 'fs-extra';
 import config from './config';
+import { JsonStorage } from '../../core/storage/JsonStorage';
 
 const dataDir = path.join(config.user_data_dir, 'data');
 const projectsFile = path.join(dataDir, 'projects.json');
+const storage = new JsonStorage(projectsFile);
 
 export type ProjectRecord = {
   id: number;
@@ -22,39 +23,17 @@ type ProjectsStore = {
 };
 
 function ensureStore(): ProjectsStore {
-  fs.ensureDirSync(dataDir);
-  if (!fs.existsSync(projectsFile)) {
     const init: ProjectsStore = { lastId: 0, projects: [] };
-
-    fs.writeFileSync(projectsFile, JSON.stringify(init, null, 2), 'utf-8');
-
-    return init;
-  }
-
-  try {
-    const raw = fs.readFileSync(projectsFile, 'utf-8');
-    const parsed = JSON.parse(raw) as ProjectsStore;
-
-    if (
-      !parsed ||
-      typeof parsed.lastId !== 'number' ||
-      !Array.isArray(parsed.projects)
-    ) {
-      throw new Error('invalid projects store');
+    const data = storage.read<ProjectsStore>(init);
+    // 简单的校验
+    if (typeof data.lastId !== 'number' || !Array.isArray(data.projects)) {
+        return init;
     }
-
-    return parsed;
-  } catch {
-    const init: ProjectsStore = { lastId: 0, projects: [] };
-
-    fs.writeFileSync(projectsFile, JSON.stringify(init, null, 2), 'utf-8');
-
-    return init;
-  }
+    return data;
 }
 
 function writeStore(store: ProjectsStore) {
-  fs.writeFileSync(projectsFile, JSON.stringify(store, null, 2), 'utf-8');
+    storage.write(store);
 }
 
 export interface CreateProjectParams {
@@ -132,5 +111,5 @@ export function get_project_by_id(project_id: number) {
 }
 
 export function _resetProjectsForTest(): void {
-  fs.removeSync(projectsFile);
+  storage.delete();
 }

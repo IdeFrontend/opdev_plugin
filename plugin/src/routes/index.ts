@@ -1,4 +1,4 @@
-import { ViewRouteRaw } from 'plugin:/core/view/ViewRouter';
+import { ViewRouteRaw } from '../core/view/view-router';
 
 export const routes: ViewRouteRaw[] = [
   {

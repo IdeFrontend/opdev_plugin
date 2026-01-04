@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { CommandExecutor } from 'plugin:/class/command-options';
 import { ExplorerRootUtils } from 'plugin:/class/explorer-root-utils';
-import { createProject } from '../../../autogen-server';
+import { createProject } from '../../domain';
 
 /**
  * 项目管理器

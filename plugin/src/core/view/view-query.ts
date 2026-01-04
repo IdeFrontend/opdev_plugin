@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { WebviewConnector } from 'plugin:/core/Connector';
+import { WebviewConnector } from 'plugin:/core/connector';
 
 /**
  * 页面参数

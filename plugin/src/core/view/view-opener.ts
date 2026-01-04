@@ -60,6 +60,7 @@ export class ViewOpener {
   public static async openInsight(uri: vscode.Uri): Promise<void> {
     // 从消息中获取BIN文件路径
     const binPath = uri.fsPath;
+    const context = (globalThis as any).extensionContext as vscode.ExtensionContext;
 
     if (!binPath) {
       vscode.window.showErrorMessage('BIN文件路径不能为空');
@@ -67,7 +68,7 @@ export class ViewOpener {
       return;
     }
     try {
-      InsightDataViewerPanel.createOrShow(binPath);
+      InsightDataViewerPanel.createOrShow(context, binPath);
     } catch (error) {
       vscode.window.showErrorMessage(`加载数据文件失败: ${error}`);
     }

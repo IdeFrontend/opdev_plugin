@@ -19,7 +19,7 @@ import { CsvEditorProvider } from './class/csv-editor-provider';
 import { ApiServer } from './core/api-server';
 import { ViewServer } from './core/view/view-server';
 import { routes } from './routes';
-import { apis } from './apis';
+import { apis } from './api-routes';
 import { PermanentStorage } from './class/permanent-storage';
 import { ExtensionConfig } from './core/extension-config';
 import { RemoteConfig } from './helpers/remote-config';
@@ -27,7 +27,7 @@ import { RemoteConfig } from './helpers/remote-config';
 import { OpsOperateProvider } from './class/ops-operate-provider';
 import { getMsSanitizerPanelViewProvider } from './class/ms-sanitizer-panel-view';
 
-import { MindStudioPluginInstaller } from './class/MindStudioPluginInstaller';
+import { MindStudioPluginInstaller } from './class/mind-studio-plugin-installer';
 
 let extensionContext: vscode.ExtensionContext | undefined;
 

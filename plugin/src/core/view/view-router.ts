@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { ViewQuery } from './view-query';
-import { ViewRender } from './view-render';
+import { ViewRenderer } from './view-render';
 
 export interface ViewRouteRaw {
   /** 路由路径 */

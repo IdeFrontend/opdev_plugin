@@ -1,9 +1,13 @@
 import path from 'path';
-import fs from 'fs-extra';
 import config from './config';
+import { JsonStorage } from '../../core/storage/JsonStorage';
 
 const getDataDir = () => path.join((config as any).workspace_data_dir, 'data');
 const getConfigsFile = () => path.join(getDataDir(), 'configs.json');
+
+function getStorage() {
+    return new JsonStorage(getConfigsFile());
+}
 
 type ConfigRecord = {
   id: number;
@@ -28,42 +32,21 @@ type ConfigsStore = {
 };
 
 function ensureStore(): ConfigsStore {
-  const dataDir = getDataDir();
-  const configsFile = getConfigsFile();
-
-  fs.ensureDirSync(dataDir);
-  if (!fs.existsSync(configsFile)) {
     const init: ConfigsStore = { lastId: 0, configs: [] };
-
-    fs.writeFileSync(configsFile, JSON.stringify(init, null, 2), 'utf-8');
-
-    return init;
-  }
-
-  try {
-    const raw = fs.readFileSync(configsFile, 'utf-8');
-    const parsed = JSON.parse(raw) as ConfigsStore;
-
+    const data = getStorage().read<ConfigsStore>(init);
+    
     if (
-      !parsed ||
-      typeof parsed.lastId !== 'number' ||
-      !Array.isArray(parsed.configs)
+      !data ||
+      typeof data.lastId !== 'number' ||
+      !Array.isArray(data.configs)
     ) {
-      throw new Error('invalid configs store');
+        return init;
     }
-
-    return parsed;
-  } catch (e) {
-    const init: ConfigsStore = { lastId: 0, configs: [] };
-
-    fs.writeFileSync(configsFile, JSON.stringify(init, null, 2), 'utf-8');
-
-    return init;
-  }
+    return data;
 }
 
 function writeStore(store: ConfigsStore) {
-  fs.writeFileSync(getConfigsFile(), JSON.stringify(store, null, 2), 'utf-8');
+  getStorage().write(store);
 }
 
 function mapRecordToConfig(row: ConfigRecord) {
@@ -194,9 +177,9 @@ export function getConfigById(config_id: number) {
     user_options: row.user_options || null,
     project_id: row.project_id,
     op: row.op,
-  };
+    };
 }
 
 export function _resetConfigsForTest(): void {
-  fs.removeSync(getConfigsFile());
+  getStorage().delete();
 }

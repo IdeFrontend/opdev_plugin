@@ -207,6 +207,7 @@
   },
   "scripts": {
     "package": "pnpm run compile && vsce package --no-dependencies",
+    "build": "pnpm run compile",
     "compile": "pnpm run compile:web && pnpm run compile:plugin",
     "compile:web": "cd web && pnpm run build",
     "compile:plugin": "tsc --noEmit && tsx scripts/build-extension",
@@ -217,8 +218,7 @@
     "lint": "oxlint . && eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
-    "install:web": "cd web && pnpm install",
-    "prepare": "husky"
+    "install:web": "cd ../web && pnpm install"
   },
   "lint-staged": {
     "*.{js,ts,vue}": [
@@ -235,7 +235,8 @@
     "compressing": "^2.0.0",
     "fs-extra": "^11.3.2",
     "i18next": "^25.7.2",
-    "ws": "^8.18.3"
+    "ws": "^8.18.3",
+    "@mstt/shared": "workspace:*"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",

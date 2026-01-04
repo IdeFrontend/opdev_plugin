@@ -7,8 +7,8 @@
 
 import * as vscode from 'vscode';
 
-import { ProjectManager } from '../services/project/project-manager';
-import { welcomeMethods } from 'plugin:/apis/welcome';
+import { ProjectManager } from '../core/project/project-manager';
+import { welcomeMethods } from '../controller/welcome-controller';
 
 export interface messageItem {
   command: string;

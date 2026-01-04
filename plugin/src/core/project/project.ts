@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import {
   getProjectByPath,
   ProjectRecord,
-} from '../../../autogen-server/models/projectModel';
+} from '../../domain/models/projectModel';
 
 export class Project<HasProject extends boolean = false> {
   private static instance: Project;

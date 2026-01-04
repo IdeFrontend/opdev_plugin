@@ -11,7 +11,7 @@ import * as vscode from 'vscode';
 import { PermanentStorage } from './permanent-storage';
 import webviewMessageList from './webview-message-list';
 import { HtmlTransformer } from './html-transformer';
-import { ApiServer } from 'plugin:/core/ApiServer';
+import { ApiServer } from 'plugin:/core/api-server';
 
 /**
  * Webview提供者 - 负责创建和管理Webview面板

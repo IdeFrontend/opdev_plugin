@@ -1,0 +1,13 @@
+{
+  "name": "mstt-monorepo",
+  "private": true,
+  "scripts": {
+    "build": "pnpm -r run build",
+    "compile": "pnpm -r run compile",
+    "lint": "pnpm -r run lint",
+    "format": "pnpm -r run format"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
