@@ -72,6 +72,14 @@ export async function activate(context: vscode.ExtensionContext) {
   extensionContext = context;
   // 将 context 设置到全局对象以便 API 层使用
   (globalThis as any).extensionContext = context;
+
+  // api接口
+  const apiServer = initApiServer();
+
+  // 初始化配置页面的Webview
+  const configProvider = new WebviewProvider(context, apiServer);
+  configProvider.showLeftPage('home');
+
   // 国际化
   await initI18n();
 
@@ -116,9 +124,6 @@ export async function activate(context: vscode.ExtensionContext) {
       async (pro) => (progress = pro),
     );
   }
-  // api接口
-  const apiServer = initApiServer();
-
   // 视图
   const viewServer = initViews(context, apiServer);
 
@@ -127,9 +132,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 初始化新建算子工程的Webview
   const createOpsProvider = new WebviewProvider(context, apiServer);
-
-  // 初始化配置页面的Webview
-  const configProvider = new WebviewProvider(context, apiServer);
 
   // 初始化配置页面的Webview
   const configWelcomeProvider = new WebviewProvider(context, apiServer);
@@ -159,7 +161,7 @@ export async function activate(context: vscode.ExtensionContext) {
       // 如果提供了 uri（在文件上右键），使用该路径；否则使用工作区根目录
       const targetPath = uri ? uri.fsPath : workspaceFolders[0].uri.fsPath;
 
-      await createOpsProvider.show('Link');
+      await createOpsProvider.show('link');
       // 等待 webview 加载完成后发送路径
       setTimeout(() => {
         createOpsProvider.postMessage({
@@ -174,7 +176,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const openProjectSH = vscode.commands.registerCommand(
     COMMAND_PROJECT_SH,
     async () => {
-      configProjectSHProvider.show('ProjectSH');
+      configProjectSHProvider.show('project-sh');
     },
   );
 
@@ -231,7 +233,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const ConfigCommand = vscode.commands.registerCommand(
     COMMAND_CONFIG,
     async () => {
-      configProvider.show('Config');
+      configProvider.show('config');
     },
   );
 
@@ -239,7 +241,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const welcomeCommand = vscode.commands.registerCommand(
     COMMAND_WELCOME,
     async () => {
-      configWelcomeProvider.show('Welcome');
+      configWelcomeProvider.show('welcome');
     },
   );
 
@@ -281,7 +283,6 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  configProvider.showLeftPage('Home');
   const [workspaceFolder] = vscode.workspace.workspaceFolders ?? [];
 
   console.log(workspaceFolder, '是否打开了文件夹');
