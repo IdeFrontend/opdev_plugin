@@ -20,3 +20,5 @@ export {
 } from './services/command';
 
 export { getFiles } from './services/system';
+
+export { objectToCommandString } from './utils/command-utils';

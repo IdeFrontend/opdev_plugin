@@ -4,6 +4,7 @@ import { getConfigById } from './configuration';
 import { ascend_env_script, soc_version } from '../utils/ascend_util';
 import { parse_cmd_options } from '../utils/aicore_utils';
 import { getOpRunPath } from '../utils/opUtil';
+import { objectToCommandString } from '../utils/command-utils';
 
 /**
  *
@@ -47,8 +48,14 @@ export function getBuildOpCommand(config_id: number, compileOption?: string) {
 
     if (args && args.vendor_name) vendor_name = args.vendor_name;
     if (args && args.soc) soc = args.soc;
+    const cmdArgs = objectToCommandString({
+      pkg: true,
+      soc,
+      vendor_name,
+      ops: op,
+    });
     const cmd =
-      `${config.script || ''} --pkg --soc=${soc} --vendor_name=${vendor_name} --ops=${op} ${compileOption ? compileOption : ''} ${advance_cmd}`.trim();
+      `${config.script || ''} ${cmdArgs} ${compileOption ? compileOption : ''} ${advance_cmd}`.trim();
     const deploy_cmd = `chmod +x ${config.target_file || ''} && ${config.target_file || ''}`;
 
     return [source_cann, cd_cmd, cmd, deploy_cmd].filter(Boolean).join(' && ');
@@ -135,8 +142,11 @@ export function getBuildExampleCommand(
     if (args && args.vendor_name) vendor_name = args.vendor_name;
     if (args && args.pkg_mode) pkg_mode = args.pkg_mode;
     if (args && args.mode) mode = args.mode;
+    const cmdArgs = objectToCommandString({
+      run_example: true,
+    });
     const cmd =
-      `${config.script || ''} --run_example ${op} ${mode} ${pkg_mode} ${vendor_name} ${compileOption ? compileOption : ''} ${advance_cmd}`.trim();
+      `${config.script || ''} ${cmdArgs} ${op} ${mode} ${pkg_mode} ${vendor_name} ${compileOption ? compileOption : ''} ${advance_cmd}`.trim();
 
     return [source_cann, cd_cmd, cmd].filter(Boolean).join(' && ');
   } catch (e: any) {
@@ -173,7 +183,11 @@ export function getSimulateCommand(
 
   const aic = `--aic-metrics=PipeUtilization${config.user_options.ResourceConflictRatio ? ',ResourceConflictRatio' : ''}${config.user_options.PMSampling ? ',PMSampling' : ''}`;
   const advance_cmd = getAdvanceCmd(config.user_options.advance_param);
-  const simulatorCmd = `msprof op simulator --soc-version=${config.user_options.simulatorType} --output=${operator.op_path}/.vscode/opprof ${aic} ${advance_cmd} ${exConfig.target_file}`;
+  const cmdArgs = objectToCommandString({
+    'soc-version': config.user_options.simulatorType,
+    output: `${operator.op_path}/.vscode/opprof`,
+  });
+  const simulatorCmd = `msprof op simulator ${cmdArgs} ${aic} ${advance_cmd} ${exConfig.target_file}`;
 
   return [source_cann, cd_cmd, simulatorCmd].filter(Boolean).join(' && ');
 }
@@ -205,7 +219,10 @@ export function getOnBoardCommand(
 
   const aic = getOnBoardAic(config.user_options);
   const advance_cmd = getAdvanceCmd(config.user_options.advance_param);
-  const opprofCmd = `msprof op --output=${operator.op_path}/.vscode/opprof ${aic} ${advance_cmd} ${exConfig.target_file}`;
+  const cmdArgs = objectToCommandString({
+    output: `${operator.op_path}/.vscode/opprof`,
+  });
+  const opprofCmd = `msprof op ${cmdArgs} ${aic} ${advance_cmd} ${exConfig.target_file}`;
 
   return [source_cann, cd_cmd, opprofCmd].filter(Boolean).join(' && ');
 }
@@ -281,26 +298,27 @@ export function getSanitizerCommand(
 }
 
 function handleSanitizerConfigToCmd(sanitizerConfig: any) {
-  return [
-    Object.keys(sanitizerConfig.tool || {})
-      .filter((key) => sanitizerConfig.tool[key])
-      .map((key) => `--tool=${key}`)
-      .join(' '), // 检测内容
-    sanitizerConfig.tool?.memcheck
-      ? Object.keys(sanitizerConfig.memcheckOption || {})
-          .filter((key) => sanitizerConfig.memcheckOption[key])
-          .map((key) => `--${key}=yes`)
-          .join(' ')
-      : '', // 内存检测可选项
-    sanitizerConfig.logLevel ? `--log-level=${sanitizerConfig.logLevel}` : '', // 报告输出等级
-    sanitizerConfig.maxDebuglogSize
-      ? `--max-debuglog-size=${sanitizerConfig.maxDebuglogSize}`
-      : '', // 输入日志单个文件大小上限 1 - 10240
-    sanitizerConfig.blockId ? `--block-id=${sanitizerConfig.blockId}` : '', // 单block检测的blockId 0 - 200
-    `--log-file=./.vscode/mindstudio_sanitizer_log/mssanitizer_${new Date().valueOf()}.log`,
-  ]
-    .filter((item) => item)
-    .join(' ');
+  const tools = Object.keys(sanitizerConfig.tool || {}).filter(
+    (key) => sanitizerConfig.tool[key]
+  );
+
+  const memcheckOptions: Record<string, string> = {};
+  if (sanitizerConfig.tool?.memcheck) {
+    Object.keys(sanitizerConfig.memcheckOption || {}).forEach((key) => {
+      if (sanitizerConfig.memcheckOption[key]) {
+        memcheckOptions[key] = 'yes';
+      }
+    });
+  }
+
+  return objectToCommandString({
+    tool: tools,
+    ...memcheckOptions,
+    'log-level': sanitizerConfig.logLevel,
+    'max-debuglog-size': sanitizerConfig.maxDebuglogSize,
+    'block-id': sanitizerConfig.blockId,
+    'log-file': `./.vscode/mindstudio_sanitizer_log/mssanitizer_${new Date().valueOf()}.log`,
+  });
 }
 
 // 处理高级参数
