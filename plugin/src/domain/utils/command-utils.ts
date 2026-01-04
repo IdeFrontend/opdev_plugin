@@ -1,17 +1,16 @@
 
 /**
  * 将对象转换为命令行参数字符串
- * Convert object to command line argument string
  *
- * Example:
+ * 示例:
  * { pkg: true, soc: 'Ascend310', output: undefined } -> "--pkg --soc=Ascend310"
  * { tool: ['memcheck', 'leak'] } -> "--tool=memcheck --tool=leak"
  *
- * Rules:
+ * 规则:
  * - value === true: --key
- * - value === false | undefined | null: ignored
- * - value is Array: --key=item1 --key=item2 ...
- * - other: --key=value
+ * - value === false | undefined | null: 忽略
+ * - value 是数组: --key=item1 --key=item2 ...
+ * - 其他: --key=value
  */
 export function objectToCommandString(
   options: Record<string, string | number | boolean | undefined | null | (string | number)[]>
