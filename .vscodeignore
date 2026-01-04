@@ -1,17 +1,27 @@
 .vscode/
 .vscode-test-web/
+# 忽略源码目录
 web/
 plugin/
 plugins/
-!out/plugin/mindstudio-debug-vscode-plugin
 server/
 scripts/
 shared/
 node_modules/
+
+# 忽略配置文件
 vite.config.ts
 tsconfig.json
 package-lock.json
 .gitignore
 .prettierrc.json
+.eslintrc.js
+.eslintignore
+
+# 忽略特定文件类型
 *.ts
 *.map
+
+# 显式保留的文件/目录 (用 ! 开头)
+!web/resources/
+!out/plugin/mindstudio-debug-vscode-plugin

@@ -21,35 +21,35 @@
     "workspaceContains:package.json",
     "onStartupFinished"
   ],
-  "icon": "resources/display.png",
+  "icon": "web/resources/extension_icon.png",
   "contributes": {
     "viewsContainers": {
       "activitybar": [
         {
           "id": "mindstudio-opssuite-vscode-plugin",
           "title": "算子一站式交付平台",
-          "icon": "resources/homeIcon.svg"
+          "icon": "web/resources/activitybar_logo_mono.svg"
         }
       ],
       "secondarySidebar": [
         {
           "id": "huawei-op-devtools-secondary-sidebar",
           "title": "算子一站式开发平台操作面板",
-          "icon": "resources/operate.svg"
+          "icon": "web/resources/operate_icon_mono.svg"
         }
       ],
       "secondaryActivitybar": [
         {
           "id": "huawei-op-devtools-secondary-sidebar",
           "title": "算子一站式开发平台操作面板",
-          "icon": "resources/operate.svg"
+          "icon": "web/resources/operate_icon_mono.svg"
         }
       ],
       "panel": [
         {
           "id": "ms-sanitizer-panel-view",
           "title": "异常检测结果",
-          "icon": "resources/ops.svg"
+          "icon": "web/resources/ops_icon_mono.svg"
         }
       ]
     },
@@ -103,7 +103,7 @@
         "command": "huawei-op-devtools.toggleOpsOperate",
         "title": "一站式算子工程操作面板",
         "category": "secondary Sidebar",
-        "icon": "resources/operate.svg"
+        "icon": "web/resources/operate.svg"
       },
       {
         "command": "huawei-op-devtools.config",
@@ -116,7 +116,7 @@
       {
         "command": "huawei-op-devtools.createOps",
         "title": "新建算子原型文件",
-        "icon": "resources/ops.svg"
+        "icon": "web/resources/ops_icon_mono.svg"
       },
       {
         "command": "extension.jsonButtonAction",

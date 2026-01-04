@@ -210,25 +210,25 @@ const handleFeatureClick = () => {
   margin-right: 12px;
 }
 .op-create-icon {
-  background: url('../../../../resources/welcomePage/opCreate.svg') no-repeat center;
+  background: url('../../../resources/welcomePage/welcome_op_create_color.svg') no-repeat center;
   background-size: contain;
   width: 26px;
   height: 26px;
 }
 .op-impl-icon {
-  background: url('../../../../resources/welcomePage/opImpl.svg') no-repeat center;
+  background: url('../../../resources/welcomePage/welcome_op_impl_color.svg') no-repeat center;
   background-size: contain;
   width: 28px;
   height: 28px;
 }
 .op-inspect-icon {
-  background: url('../../../../resources/welcomePage/opInspect.svg') no-repeat center;
+  background: url('../../../resources/welcomePage/welcome_op_inspect_color.svg') no-repeat center;
   background-size: contain;
   width: 24px;
   height: 24px;
 }
 .home-icon {
-  background: url('../../../../resources/homeIcon.svg') no-repeat center;
+  background: url('../../../resources/activitybar_logo_mono.svg') no-repeat center;
   background-size: contain;
 }
 .btn-icon {
@@ -237,7 +237,7 @@ const handleFeatureClick = () => {
   height: 14px;
   margin-right: 6px;
   flex-shrink: 0;
-  background: url('../../../resources/welcomePage/other.svg') no-repeat center;
+  background: url('../../../resources/welcomePage/welcome_bullet_mono.svg') no-repeat center;
   background-size: contain;
   vertical-align: middle;
 }

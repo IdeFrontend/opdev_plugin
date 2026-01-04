@@ -36,7 +36,7 @@ export default defineConfig(({ mode }) => {
       cors: true,
     },
     build: {
-      outDir: 'out',
+      outDir: '../out/web',
       emptyOutDir: true,
       assetsDir: 'assets',
       sourcemap: mode === 'debug',

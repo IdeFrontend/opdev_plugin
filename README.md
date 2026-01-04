@@ -24,6 +24,7 @@
 │   │   ├── views/          # 各功能页面 (Vue 3 组件)
 │   │   ├── apis/           # 前端 API 封装
 │   │   └── ...
+│   ├── resources/          # 静态资源 (图标、图片等)
 │   └── vite.config.ts      # Vite 构建配置
 │
 ├── shared/                 # 前后端共享模块 (Workspace Package)
@@ -31,7 +32,6 @@
 │   └── i18n/               # 国际化资源
 │
 ├── scripts/                # 构建与工具脚本
-└── resources/              # 静态资源 (图标、图片等)
 ```
 
 ## 🛠️ 开发脚本
