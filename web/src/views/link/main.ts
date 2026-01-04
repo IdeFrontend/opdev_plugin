@@ -11,6 +11,7 @@ import App from './app.vue';
 import { vscode } from '@/utils/vscode';
 
 import 'ant-design-vue/dist/reset.css';
+import '../../assets/css/tailwind.css';
 
 // 监听来自VSCode扩展和iframe的消息
 window.addEventListener('message', (event) => {
