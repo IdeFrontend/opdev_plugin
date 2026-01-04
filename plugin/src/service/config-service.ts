@@ -8,14 +8,26 @@ import {
   SaveConfigParams,
   SaveSanitizerFormParams,
   BuildConfig,
+  RemotePathSearchParams,
+  RemotePathSearchResult,
 } from 'shared:/api-types';
 import { postConfig, getConfig } from '../domain';
+import { RemoteConfig } from '../helpers/remote-config';
 
 const CONFIG_TYPES = {
   SANITIZER: 'sanitizer',
 } as const;
 
 export class ConfigService {
+  /**
+   * 远程路径搜索
+   */
+  async remotePathSearch(
+    params: RemotePathSearchParams,
+  ): Promise<RemotePathSearchResult> {
+    return await RemoteConfig.searchPath(params);
+  }
+
   /**
    * 保存构建配置
    */

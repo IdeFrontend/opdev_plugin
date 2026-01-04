@@ -215,6 +215,7 @@
     "compile:debug": "pnpm run compile:web:debug && pnpm run compile:plugin:debug",
     "compile:web:debug": "cd web && pnpm run build:debug",
     "compile:plugin:debug": "tsx scripts/build-extension --sourcemap",
+    "watch": "tsx scripts/build-extension --watch --sourcemap",
     "lint": "oxlint . && eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",

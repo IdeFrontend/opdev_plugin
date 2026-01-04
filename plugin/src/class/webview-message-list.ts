@@ -9,6 +9,12 @@ import * as vscode from 'vscode';
 
 import { ProjectManager } from '../core/project/project-manager';
 import { welcomeMethods } from '../controller/welcome-controller';
+import {
+  COMMAND_OPEN,
+  COMMAND_PROJECT_SH,
+  COMMAND_WELCOME,
+  COMMAND_CONFIG,
+} from '../constants';
 
 export interface messageItem {
   command: string;
@@ -37,19 +43,19 @@ const webviewMessageList: messageItem[] = [
   {
     command: 'openLinkWebviewPanel',
     callback: (message: any, that: any) => {
-      vscode.commands.executeCommand('huawei-op-devtools.open');
+      vscode.commands.executeCommand(COMMAND_OPEN);
     },
   },
   {
     command: 'vscodeRunSetProjectSH',
     callback: async (msg: any, that: any) => {
-      vscode.commands.executeCommand('huawei-op-devtools.projectSH');
+      vscode.commands.executeCommand(COMMAND_PROJECT_SH);
     },
   },
   {
     command: 'openWelcome',
     callback: (message: any, that: any) => {
-      vscode.commands.executeCommand('huawei-op-devtools.welcome');
+      vscode.commands.executeCommand(COMMAND_WELCOME);
     },
   },
   {
@@ -63,7 +69,7 @@ const webviewMessageList: messageItem[] = [
   {
     command: 'vscodeOpenConfig',
     callback: async (msg: any, that: any) => {
-      await vscode.commands.executeCommand('huawei-op-devtools.config');
+      await vscode.commands.executeCommand(COMMAND_CONFIG);
     },
   },
 ];

@@ -28,6 +28,12 @@ import { OpsOperateProvider } from './class/ops-operate-provider';
 import { getMsSanitizerPanelViewProvider } from './class/ms-sanitizer-panel-view';
 
 import { MindStudioPluginInstaller } from './class/mind-studio-plugin-installer';
+import {
+  COMMAND_OPEN,
+  COMMAND_PROJECT_SH,
+  COMMAND_WELCOME,
+  COMMAND_CONFIG,
+} from './constants';
 
 let extensionContext: vscode.ExtensionContext | undefined;
 
@@ -133,7 +139,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 注册打开Opsuite命令
   const openCommand = vscode.commands.registerCommand(
-    'mindstudio-opsuite.createOps',
+    COMMAND_OPEN,
     async () => {
       createOpsProvider.show('link');
     },
@@ -166,7 +172,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 打开环境变量命令
   const openProjectSH = vscode.commands.registerCommand(
-    'huawei-op-devtools.projectSH',
+    COMMAND_PROJECT_SH,
     async () => {
       configProjectSHProvider.show('ProjectSH');
     },
@@ -223,7 +229,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 注册打开Opsuite命令
   const ConfigCommand = vscode.commands.registerCommand(
-    'huawei-op-devtools.config',
+    COMMAND_CONFIG,
     async () => {
       configProvider.show('Config');
     },
@@ -231,7 +237,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 注册打开欢迎页命令
   const welcomeCommand = vscode.commands.registerCommand(
-    'huawei-op-devtools.welcome',
+    COMMAND_WELCOME,
     async () => {
       configWelcomeProvider.show('Welcome');
     },
@@ -286,7 +292,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     console.log(welcomeShowCount, '打开次数');
     if (welcomeShowCount < 2) {
-      vscode.commands.executeCommand('huawei-op-devtools.welcome');
+      vscode.commands.executeCommand(COMMAND_WELCOME);
       vscode.commands.executeCommand(
         'workbench.view.extension.mindstudio-opssuite-vscode-plugin',
       );

@@ -19,34 +19,58 @@ export class ViewRenderer extends vscode.Disposable {
     );
   }
 
-  public render(
+  public async render(
     webview: vscode.Webview,
     templateValues: Record<string, string> = {},
-  ): void {
-    const htmlEntryFileUri = vscode.Uri.joinPath(
-      this.viewRootUri,
-      HTML_ENTRY_FILE_PATH,
-    );
+  ): Promise<void> {
+    const devServerUrl = process.env.MSTT_DEV_SERVER_URL;
+    let htmlContent = '';
+    let isDev = false;
+    let devUrl = '';
 
-    try {
-      if (!fs.existsSync(htmlEntryFileUri.fsPath)) {
-        throw new Error(`HTML文件不存在: ${htmlEntryFileUri.fsPath}`);
+    if (devServerUrl) {
+      try {
+        devUrl = `${devServerUrl}/${HTML_ENTRY_FILE_PATH}`;
+
+        htmlContent = await HtmlTransformer.fetchHtml(devUrl);
+        isDev = true;
+      } catch (e) {
+        console.error(`Failed to fetch from dev server: ${e}`);
       }
+    }
 
-      const templateContent = fs.readFileSync(htmlEntryFileUri.fsPath, 'utf-8');
-
-      const htmlContent = Object.entries(templateValues).reduce(
-        (content, [key, value]) => {
-          return content.replace(`{{${key}}}`, value);
-        },
-        templateContent,
+    if (!htmlContent) {
+      const htmlEntryFileUri = vscode.Uri.joinPath(
+        this.viewRootUri,
+        HTML_ENTRY_FILE_PATH,
       );
 
-      const finalHtml = this.replaceSourceUrl(htmlContent, webview);
+      try {
+        if (!fs.existsSync(htmlEntryFileUri.fsPath)) {
+          throw new Error(`HTML文件不存在: ${htmlEntryFileUri.fsPath}`);
+        }
 
-      webview.html = finalHtml;
-    } catch (error) {
-      throw error;
+        htmlContent = fs.readFileSync(htmlEntryFileUri.fsPath, 'utf-8');
+      } catch (error) {
+        throw error;
+      }
+    }
+
+    const finalContent = Object.entries(templateValues).reduce(
+      (content, [key, value]) => {
+        return content.replace(`{{${key}}}`, value);
+      },
+      htmlContent,
+    );
+
+    if (isDev && devServerUrl) {
+      webview.html = HtmlTransformer.processDevResourcePaths(
+        finalContent,
+        devServerUrl,
+        devUrl,
+      );
+    } else {
+      webview.html = this.replaceSourceUrl(finalContent, webview);
     }
   }
 
