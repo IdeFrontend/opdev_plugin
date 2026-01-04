@@ -112,4 +112,9 @@ export const configMethods = {
    * 打开配置页面
    * @param params 参数
    */
+  async openConfig(params: { configName?: string }) {
+    if (params.configName) {
+      await vscode.commands.executeCommand(params.configName);
+    }
+  },
 };
