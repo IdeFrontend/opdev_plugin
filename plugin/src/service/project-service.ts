@@ -131,6 +131,24 @@ export class ProjectService {
   async checkVscode(): Promise<boolean> {
     return ProjectManager.getInstance().checkVscode();
   }
+
+  /**
+   * 获取项目脚本
+   */
+  async getProjectSH(): Promise<GetProjectSHResult> {
+    const pm = ProjectManager.getInstance();
+    
+    await pm.ensureProjectId();
+    const projectId = pm.projectId;
+
+    if (!projectId) {
+      return {};
+    }
+
+    const project = get_project_by_id(Number(projectId));
+
+    return { projectSH: project?.ascend_env_script || '' };
+  }
 }
 
 export const projectService = new ProjectService();

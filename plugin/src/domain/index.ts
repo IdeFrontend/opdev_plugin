@@ -1,6 +1,6 @@
 export { getConfig, postConfig } from './services/configuration';
 
-export { createProject, updataShScript } from './services/project';
+export { createProject, updataShScript, get_project_by_id } from './services/project';
 
 export { generateOpsPrototype } from './services/ops_prototype';
 

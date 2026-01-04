@@ -17,6 +17,17 @@ export const sanitizerViewMethods = {
   },
 
   /**
+   * 获取 Sanitizer 配置ID
+   * @returns Sanitizer 配置ID
+   */
+  async getSanitizerConfigId(): Promise<number | undefined> {
+    await ProjectManager.getInstance().initProject();
+    const configData = await configService.getSanitizerConfigsList();
+
+    return (configData || [])[0]?.config_id;
+  },
+
+  /**
    * 获取 Sanitizer 配置
    * @returns Sanitizer 配置对象
    */
