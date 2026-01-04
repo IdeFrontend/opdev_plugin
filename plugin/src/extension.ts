@@ -72,6 +72,14 @@ export async function activate(context: vscode.ExtensionContext) {
   extensionContext = context;
   // 将 context 设置到全局对象以便 API 层使用
   (globalThis as any).extensionContext = context;
+
+  // api接口
+  const apiServer = initApiServer();
+
+  // 初始化配置页面的Webview
+  const configProvider = new WebviewProvider(context, apiServer);
+  configProvider.showLeftPage('Home');
+
   // 国际化
   await initI18n();
 
@@ -116,9 +124,6 @@ export async function activate(context: vscode.ExtensionContext) {
       async (pro) => (progress = pro),
     );
   }
-  // api接口
-  const apiServer = initApiServer();
-
   // 视图
   const viewServer = initViews(context, apiServer);
 
@@ -127,9 +132,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 初始化新建算子工程的Webview
   const createOpsProvider = new WebviewProvider(context, apiServer);
-
-  // 初始化配置页面的Webview
-  const configProvider = new WebviewProvider(context, apiServer);
 
   // 初始化配置页面的Webview
   const configWelcomeProvider = new WebviewProvider(context, apiServer);
@@ -281,7 +283,6 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  configProvider.showLeftPage('Home');
   const [workspaceFolder] = vscode.workspace.workspaceFolders ?? [];
 
   console.log(workspaceFolder, '是否打开了文件夹');

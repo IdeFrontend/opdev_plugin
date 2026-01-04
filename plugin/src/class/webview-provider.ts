@@ -63,14 +63,14 @@ export class WebviewProvider {
   /**
    * 创建Webview面板
    */
-  public async showLeftPage(router: string): Promise<void> {
-    await this.createLeftNavWebview(router);
+  public showLeftPage(router: string): void {
+    this.createLeftNavWebview(router);
   }
 
   /**
    * 创建Webview面板
    */
-  private async createLeftNavWebview(router: string = ''): Promise<void> {
+  private createLeftNavWebview(router: string = ''): void {
     try {
       vscode.window.registerWebviewViewProvider('pluginSidebar', {
         resolveWebviewView: async (webviewView: vscode.WebviewView) => {
