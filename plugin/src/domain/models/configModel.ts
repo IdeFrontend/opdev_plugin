@@ -9,7 +9,7 @@ function getStorage() {
     return new JsonStorage(getConfigsFile());
 }
 
-type ConfigRecord = {
+export type ConfigRecord = {
   id: number;
   config_name: string;
   config_type: string;

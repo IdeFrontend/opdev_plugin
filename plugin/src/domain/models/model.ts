@@ -14,7 +14,7 @@ import {
 const getDataDir = () => path.join((config as any).workspace_data_dir, 'data');
 const getOpsFile = () => path.join(getDataDir(), 'ops.json');
 
-type OpRecord = {
+export type OpRecord = {
   id: number;
   task_id?: number | null;
   project_id: number;
