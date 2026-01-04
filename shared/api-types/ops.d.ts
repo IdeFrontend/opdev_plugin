@@ -63,5 +63,5 @@ export type SaveSanitizerFormParams = {
 };
 
 export type UpdateShScriptParams = {
-  accendEnvScript?: string;
+  ascendEnvScript?: string;
 };

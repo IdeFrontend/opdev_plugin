@@ -91,7 +91,7 @@ export function generateStructure(
   extensionPath: string,
 ): number {
   // 1) basic checks
-  const project = projectModel.get_project_by_id(data.project_id as any);
+  const project = projectModel.getProjectById(data.project_id as any);
 
   if (!project)
     throw Object.assign(new Error('project not found'), {

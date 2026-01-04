@@ -1,5 +1,5 @@
 import { getOpByProjectIdAndOpName } from './ops';
-import { get_project_by_id } from './project';
+import { getProjectById } from '../models/projectModel';
 import { getConfigById } from './configuration';
 import { ascend_env_script, soc_version } from '../utils/ascend_util';
 import { parse_cmd_options } from '../utils/aicore_utils';
@@ -17,7 +17,7 @@ export function getBuildOpCommand(config_id: number, compileOption?: string) {
   if (!config) {
     throw new Error('配置不存在');
   }
-  const project = get_project_by_id(config.project_id as number) as any;
+  const project = getProjectById(config.project_id as number) as any;
   const operator = getOpByProjectIdAndOpName(
     config.project_id as number,
     config.op as string,
@@ -63,7 +63,7 @@ export function getRunCommand(config_id: number) {
   if (!config) {
     throw new Error('配置不存在');
   }
-  const project = get_project_by_id(config.project_id as number) as any;
+  const project = getProjectById(config.project_id as number) as any;
   const operator = getOpByProjectIdAndOpName(
     config.project_id as number,
     config.op as string,
@@ -104,7 +104,7 @@ export function getBuildExampleCommand(
   if (!config) {
     throw new Error('配置不存在');
   }
-  const project = get_project_by_id(config.project_id as number) as any;
+  const project = getProjectById(config.project_id as number) as any;
   const operator = getOpByProjectIdAndOpName(
     config.project_id as number,
     config.op as string,
@@ -163,7 +163,7 @@ export function getSimulateCommand(
     config.project_id as number,
     config.op as string,
   )!;
-  const project = get_project_by_id(config.project_id as number) as any;
+  const project = getProjectById(config.project_id as number) as any;
   const source_cann =
     project && project.ascend_env_script
       ? `. ${project.ascend_env_script}`
@@ -195,7 +195,7 @@ export function getOnBoardCommand(
     config.project_id as number,
     config.op as string,
   )!;
-  const project = get_project_by_id(config.project_id as number) as any;
+  const project = getProjectById(config.project_id as number) as any;
   const source_cann =
     project && project.ascend_env_script
       ? `. ${project.ascend_env_script}`
@@ -259,9 +259,7 @@ export function getSanitizerCommand(
   if (!sanitizerConfig) {
     throw new Error('配置不存在');
   }
-  const project = get_project_by_id(
-    sanitizerConfig.project_id as number,
-  ) as any;
+  const project = getProjectById(sanitizerConfig.project_id as number) as any;
   const operator = getOpByProjectIdAndOpName(
     sanitizerConfig.project_id as number,
     sanitizerConfig.op as string,

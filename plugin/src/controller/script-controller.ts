@@ -36,9 +36,7 @@ export const scriptMethods = {
     await ProjectManager.getInstance().initProject();
     // 复用 updateShScript 逻辑
     await projectService.updateShScript({
-      accendEnvScript: params.projectSH,
+      ascendEnvScript: params.accendEnvScript,
     });
   },
 };
-
-

@@ -5,7 +5,7 @@ import * as fs from 'fs';
 import * as vscode from 'vscode';
 import {
   createProject,
-  updataShScript,
+  updateShScript,
   generateOpsPrototype,
   generateStructure,
   getBuildExampleCommand,
@@ -106,14 +106,14 @@ export default class OpsOption {
     }
   }
 
-  async getProjectId(accendEnvScript?: string) {
+  async getProjectId(ascendEnvScript?: string) {
     const project_name = this.project_name ?? '';
     const project_path = this.project_path;
 
     if (project_path === undefined) {
       return '';
     }
-    const ascend_env_script = accendEnvScript || undefined;
+    const ascend_env_script = ascendEnvScript || undefined;
     const projectRes = await createProject({
       project_name,
       project_path,
@@ -125,15 +125,15 @@ export default class OpsOption {
     return String(projectRes);
   }
 
-  async updataShScript(accendEnvScript?: string) {
+  async updateShScript(ascendEnvScript?: string) {
     const project_name = this.project_name ?? '';
     const project_path = this.project_path;
 
     if (project_path === undefined) {
       return '';
     }
-    const ascend_env_script = accendEnvScript || undefined;
-    const projectRes = await updataShScript({
+    const ascend_env_script = ascendEnvScript || undefined;
+    const projectRes = await updateShScript({
       project_name,
       project_path,
       ascend_env_script,
