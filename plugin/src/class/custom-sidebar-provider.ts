@@ -47,7 +47,7 @@ export class CustomSidebarProvider implements vscode.WebviewViewProvider {
     // 设置HTML内容
     const distPath = path.join(this._extensionUri.fsPath, 'out', 'web');
 
-    webviewView.webview.html = HtmlTransformer.transformDistHtml(
+    webviewView.webview.html = await HtmlTransformer.transformDistHtml(
       distPath,
       webviewView.webview,
       'Board',

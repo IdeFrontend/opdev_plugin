@@ -3,13 +3,6 @@ import * as vscode from 'vscode';
 import { CommandExecutor } from 'plugin:/class/command-options';
 import { ProjectManager } from '../core/project/project-manager';
 import { buildService } from '../service/build-service';
-import {
-  BuildOpParams,
-  BuildExampleParams,
-  RunExampleParams,
-  SimulateParams,
-  OnBoardParams,
-} from 'shared:/api-types';
 
 // 全局任务管理器：用于追踪和终止正在执行的任务
 let currentExecutor: CommandExecutor | null = null;
@@ -18,7 +11,7 @@ export const taskMethods = {
   /**
    * 构建算子
    */
-  async buildOp(): Promise<void> {
+  async startBuild(): Promise<void> {
     try {
       await ProjectManager.getInstance().initProject();
       // 保存当前 executor 引用，用于可能的终止操作
@@ -32,17 +25,9 @@ export const taskMethods = {
   },
 
   /**
-   * 构建示例
+   * 运行算子
    */
-  async buildExample(): Promise<void> {
-    await ProjectManager.getInstance().initProject();
-    await buildService.startBuildExample({});
-  },
-
-  /**
-   * 运行示例
-   */
-  async runExample(): Promise<void> {
+  async startRun(): Promise<void> {
     try {
       await ProjectManager.getInstance().initProject();
       // 保存当前 executor 引用
@@ -56,9 +41,17 @@ export const taskMethods = {
   },
 
   /**
+   * 构建示例
+   */
+  async startBuildExample(): Promise<void> {
+    await ProjectManager.getInstance().initProject();
+    await buildService.startBuildExample({});
+  },
+
+  /**
    * 仿真分析
    */
-  async simulate(): Promise<void> {
+  async startSimulate(): Promise<void> {
     try {
       await ProjectManager.getInstance().initProject();
       // 保存当前 executor 引用
@@ -74,7 +67,7 @@ export const taskMethods = {
   /**
    * 上板分析
    */
-  async onBoard(): Promise<void> {
+  async startOnBoard(): Promise<void> {
     try {
       await ProjectManager.getInstance().initProject();
       // 保存当前 executor 引用
@@ -85,6 +78,41 @@ export const taskMethods = {
       currentExecutor = null;
       ProjectManager.getInstance().clearExecutor();
     }
+  },
+
+  /**
+   * 构建算子 (webview 兼容)
+   */
+  async buildOp(): Promise<void> {
+    return this.startBuild();
+  },
+
+  /**
+   * 构建示例 (webview 兼容)
+   */
+  async buildExample(): Promise<void> {
+    return this.startBuildExample();
+  },
+
+  /**
+   * 运行示例 (webview 兼容)
+   */
+  async runExample(): Promise<void> {
+    return this.startRun();
+  },
+
+  /**
+   * 仿真分析 (webview 兼容)
+   */
+  async simulate(): Promise<void> {
+    return this.startSimulate();
+  },
+
+  /**
+   * 上板分析 (webview 兼容)
+   */
+  async onBoard(): Promise<void> {
+    return this.startOnBoard();
   },
 
   /**
@@ -112,9 +140,7 @@ export const taskMethods = {
       await ProjectManager.getInstance().initProject();
       // debug前编译
       await buildService.startBuild({ compileOption: '--debug' });
-      await vscode.commands.executeCommand(
-        'workbench.debug.action.toggleRepl',
-      );
+      await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
       await vscode.commands.executeCommand('workbench.action.debug.start');
     } catch (error) {
       console.error('打开debug时出错:', error);

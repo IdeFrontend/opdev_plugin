@@ -8,6 +8,15 @@ import {
 
 export const sanitizerViewMethods = {
   /**
+   * 获取 Sanitizer 配置列表 (ops/getSanitizerConfigs)
+   */
+  async getSanitizerConfigs() {
+    await ProjectManager.getInstance().initProject();
+
+    return await configService.getSanitizerConfigsList();
+  },
+
+  /**
    * 获取 Sanitizer 配置
    * @returns Sanitizer 配置对象
    */
