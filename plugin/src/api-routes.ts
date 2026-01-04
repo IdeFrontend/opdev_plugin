@@ -9,6 +9,7 @@ import { scriptMethods } from './controller/script-controller';
 import { linkMethods } from './controller/link-controller';
 import { sanitizerViewMethods } from './controller/sanitizer-controller';
 import { homeMethods } from './controller/home-controller';
+import { performanceMethods } from './controller/performance-data-controller';
 
 // 聚合 ops 命名空间下的所有方法
 const opsMethods = {
@@ -27,4 +28,5 @@ export const apis = {
   msSanitizer: msSanitizerMethods,
   view: viewMethods,
   ops: opsMethods,
+  performance: performanceMethods,
 };
