@@ -483,6 +483,7 @@ export default class OpsOption {
         return;
       }
       vscode.window.showInformationMessage(`异常检测成功`);
+      vscode.commands.executeCommand('msSanitizerSidebarView.focus');
     } catch (e: any) {
       vscode.window.showErrorMessage(`获取异常检测命令失败 ${e.message}`);
     }

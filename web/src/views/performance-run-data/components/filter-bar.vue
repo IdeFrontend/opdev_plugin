@@ -58,13 +58,6 @@ function handleReload() {
     >
       已标记 <FlagFilled v-if="isMarkedOnly" /><FlagOutlined v-else />
     </a-button>
-    <a-button
-      type="text"
-      :icon="h(ReloadOutlined)"
-      title="刷新"
-      size="small"
-      @click="handleReload"
-    ></a-button>
   </div>
 </template>
 
