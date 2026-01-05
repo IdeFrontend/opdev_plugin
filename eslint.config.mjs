@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import eslint from '@eslint/js';
 import { defineConfig } from 'eslint/config';
 import configPrettier from 'eslint-config-prettier';
@@ -10,6 +11,8 @@ import stylistic from '@stylistic/eslint-plugin';
 export default defineConfig([
   {
     ignores: [
+      'out/',
+      'dist/',
       '**/dist/',
       '**/out/',
       '**/node_modules/',
