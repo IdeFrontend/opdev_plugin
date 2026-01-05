@@ -14,6 +14,11 @@ import {
   toggleMsSanitizerMark,
   openMsSanitizerPanel,
 } from '../../apis';
+import { theme } from 'ant-design-vue';
+
+const themeConfig = {
+  algorithm: theme.darkAlgorithm, // 使用暗色算法
+};
 
 const sortOrder = ref<'asc' | 'desc'>('asc');
 const isMarkedOnly = ref<boolean>(false);
@@ -78,100 +83,124 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="flex flex-col">
-    <div class="flex gap-2 my-3">
-      <a-button
-        class="group hover:[&_.anticon]:!border-[#1890ff]"
-        type="default"
-        size="small"
-        @click="handleExecutionTime"
-      >
-        <div class="flex items-center">
-          执行时间
-          <div class="inline-flex flex-col gap-[2px] ml-1">
-            <div class="sort-icon-wrapper border-b border-white/85">
-              <CaretUpFilled
-                v-if="sortOrder === 'asc'"
-                class="text-sm -m-[2px]"
-              />
-              <UpOutlined
-                v-else
-                class="text-[10px] relative -bottom-[2px]"
-              />
-            </div>
-            <div class="sort-icon-wrapper border-t border-white/85">
-              <CaretDownFilled
-                v-if="sortOrder === 'desc'"
-                class="text-sm -m-[2px]"
-              />
-              <DownOutlined
-                v-else
-                class="text-[10px] relative -top-[2px]"
-              />
+  <a-config-provider :theme="themeConfig">
+    <div class="flex flex-col">
+      <div class="flex gap-2 my-3">
+        <a-button type="default" class="execute-time-sorter-button" @click="handleExecutionTime">
+          <div class="flex items-center">
+            执行时间
+            <div class="sort-icons">
+              <CaretUpFilled v-if="sortOrder === 'asc'" />
+              <UpOutlined v-else />
+              <CaretDownFilled v-if="sortOrder === 'desc'" />
+              <DownOutlined v-else />
             </div>
           </div>
-        </div>
-      </a-button>
-      <a-button
-        :type="isMarkedOnly ? 'primary' : 'default'"
-        size="small"
-        @click="filterMark"
-      >
-        已标记
-        <FlagFilled v-if="isMarkedOnly" />
-        <FlagOutlined v-else />
-      </a-button>
-    </div>
-    <div
-      v-if="renderListData.length > 0"
-      class="flex-1 overflow-auto w-full"
-    >
-      <div
-        v-for="(item, index) in renderListData"
-        :key="index"
-        class="h-[50px] w-full px-6 py-1.5 flex cursor-pointer transition-all duration-100 hover:bg-white/10 group"
-        @click="handleClick(item)"
-      >
-        <div class="flex-1 text-xs">
-          <p class="text-white leading-[22px] m-0">{{ item.title }}</p>
-          <p class="text-[#87878b] leading-4 m-0">
-            {{ formatTimestamp(item.timestamp) }}
-          </p>
-        </div>
-        <div
-          class="flex justify-center items-center pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-hover:pointer-events-auto"
-        >
-          <FlagFilled
-            v-if="item.marked"
-            class="text-[#d32029] opacity-100"
-            @click.stop="handleMark(item)"
-          />
-          <FlagOutlined
-            v-else
-            @click.stop="handleMark(item)"
-          />
+        </a-button>
+        <a-button class="execute-time-sorter-button" @click="filterMark">
+          已标记
+          <FlagFilled v-if="isMarkedOnly" class="flag-outlined-icon" />
+          <FlagOutlined v-else class="flag-outlined-icon" />
+        </a-button>
+      </div>
+      <div v-if="renderListData.length > 0" class="flex-1 overflow-auto w-full">
+        <div v-for="(item, index) in renderListData" :key="index"
+          class="h-[50px] w-full px-6 py-1.5 flex cursor-pointer transition-all duration-100 hover:bg-white/10 group"
+          @click="handleClick(item)">
+          <div class="flex-1 text-xs">
+            <p class="text-white leading-[22px] m-0">{{ item.title }}</p>
+            <p class="text-[#87878b] leading-4 m-0">
+              {{ formatTimestamp(item.timestamp) }}
+            </p>
+          </div>
+          <div
+            class="flex justify-center items-center pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-hover:pointer-events-auto">
+            <FlagFilled v-if="item.marked" class="text-[#d32029] opacity-100" @click.stop="handleMark(item)" />
+            <FlagOutlined v-else @click.stop="handleMark(item)" />
+          </div>
         </div>
       </div>
+      <div v-else style="text-align: center; margin-top: 20px">
+        暂无数据
+      </div>
     </div>
-    <div
-      v-else
-      style="text-align: center; margin-top: 20px"
-    >
-      暂无数据
-    </div>
-  </div>
+  </a-config-provider>
 </template>
 
 <style scoped>
-.sort-icon-wrapper {
+.execute-time-sorter-button {
+  border-radius: 2px;
+}
+
+.execute-time-sorter-button:hover,
+.execute-time-sorter-button:focus,
+.execute-time-sorter-button:active {
+  background-color: rgba(20, 20, 20, 0.96) !important;
+  border-color: rgb(72, 72, 73) !important;
+  color: rgba(255, 255, 255, 0.855) !important;
+  box-shadow: rgba(255, 255, 255, 0.04) !important;
+}
+
+.sort-icons {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-left: 4px;
+}
+
+.sort-icons :deep(.anticon) {
   display: block;
   width: 10px;
   height: 10px;
   transition: all 0.2s cubic-bezier(0.645, 0.045, 0.355, 1);
   border-style: solid;
   border-color: rgba(225, 225, 225, 0.85);
-  border-left-width: 0;
-  border-right-width: 0;
+  border-width: 0;
   position: relative;
+}
+
+.sort-icons :deep(.anticon svg) {
+  position: absolute;
+  left: 0;
+}
+
+.sort-icons :deep(.anticon-caret-up),
+.sort-icons :deep(.anticon-caret-down) {
+  font-size: 14px;
+}
+
+.sort-icons :deep(.anticon-caret-up svg),
+.sort-icons :deep(.anticon-caret-down svg) {
+  margin: -2px;
+}
+
+.sort-icons :deep(.anticon-up),
+.sort-icons :deep(.anticon-down) {
+  font-size: 10px;
+}
+
+.sort-icons :deep(.anticon-up),
+.sort-icons :deep(.anticon-caret-up) {
+  border-bottom-width: 1px;
+}
+
+.sort-icons :deep(.anticon-up svg),
+.sort-icons :deep(.anticon-caret-up svg) {
+  bottom: -2px;
+}
+
+.sort-icons :deep(.anticon-down),
+.sort-icons :deep(.anticon-caret-down) {
+  border-top-width: 1px;
+}
+
+.sort-icons :deep(.anticon-down svg),
+.sort-icons :deep(.anticon-caret-down svg) {
+  top: -2px;
+}
+
+.flag-outlined-icon {
+  position: relative;
+  bottom: 2px;
 }
 </style>
