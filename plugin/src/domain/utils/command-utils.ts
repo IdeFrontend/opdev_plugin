@@ -90,6 +90,7 @@ export function generateChmodCommand(
   }
 
   const parts: string[] = [];
+
   if (mode.read) parts.push('r');
   if (mode.write) parts.push('w');
   if (mode.execute) parts.push('x');
@@ -99,6 +100,7 @@ export function generateChmodCommand(
   }
 
   const modeStr = '+' + parts.join('');
+
   return `chmod ${modeStr} ${file}`;
 }
 
@@ -140,6 +142,7 @@ export class Command {
    */
   public addOption(key: string, value: any): Command {
     this._options[key] = value;
+
     return this;
   }
 
@@ -149,6 +152,7 @@ export class Command {
    */
   public addOptions(options: Record<string, any>): Command {
     Object.assign(this._options, options);
+
     return this;
   }
 
@@ -160,6 +164,7 @@ export class Command {
     if (arg) {
       this._args.push(arg);
     }
+
     return this;
   }
 
@@ -170,9 +175,11 @@ export class Command {
   public setSubCommand(cmd: Command | string): Command {
     if (typeof cmd === 'string') {
       this._subCommand = new Command(cmd);
+
       return this._subCommand;
     }
     this._subCommand = cmd;
+
     return cmd;
   }
 
@@ -183,7 +190,9 @@ export class Command {
    */
   public sub(name: string, config?: CommandStringConfig): Command {
     const subCmd = new Command(name, config);
+
     this._subCommand = subCmd;
+
     return subCmd;
   }
 
@@ -195,6 +204,7 @@ export class Command {
 
     // 1. 自身的选项
     const optionsStr = objectToCommandString(this._options, this.config);
+
     if (optionsStr) parts.push(optionsStr);
 
     // 2. 位置参数

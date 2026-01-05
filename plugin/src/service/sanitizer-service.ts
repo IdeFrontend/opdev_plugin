@@ -3,7 +3,6 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 import { ProjectManager } from '../core/project/project-manager';
-import { BuildConfig } from 'shared:/api-types';
 import { getSanitizerCommand } from '../domain';
 import { configService } from './config-service';
 import { buildService } from './build-service';
@@ -70,9 +69,9 @@ export class SanitizerService {
       }
 
       // 开启异常检测
-      const sanitizerConfigId: Number | undefined =
+      const sanitizerConfigId: number | undefined =
         await this.getSanitizerConfigIdInternal();
-      const exampleConfigId: Number | undefined | string =
+      const exampleConfigId: number | undefined | string =
         await buildService.getBuildExampleConfigId();
 
       const sanitizerCommand =

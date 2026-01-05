@@ -10,7 +10,7 @@ if (typeof window !== 'undefined') {
     try {
       vscodeInstance = acquireVsCodeApi();
       (window as any).vscode = vscodeInstance;
-    } catch (error) {
+    } catch {
       // 如果已经获取过会抛出错误，从 window 获取已存在的实例
       vscodeInstance = (window as any).vscode || null;
     }

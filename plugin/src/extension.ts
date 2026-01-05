@@ -8,8 +8,6 @@ import i18next from 'i18next';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { promisify } from 'util';
-import { exec } from 'child_process';
 
 import i18nResource from 'shared:/i18n';
 
@@ -292,7 +290,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // 获取home
   const getHome = vscode.commands.registerCommand(
     COMMAND_GET_HOME,
-    async (data: any) => {
+    async (_data: any) => {
       return process.env.HOME;
     },
   );
@@ -446,7 +444,7 @@ export async function activate(context: vscode.ExtensionContext) {
           }
         }, 1000); // 等待窗口加载完成
       }
-    } catch (e) {
+    } catch {
       // ignore invalid query
     }
   }

@@ -79,6 +79,7 @@ export function getBuildOpCommand(config_id: number, compileOption?: string) {
 
     if (!operator || operator.op_type !== 'ascend') {
       const cmd = new Command(config.script || '');
+
       if (config.custom_options) cmd.addArgument(config.custom_options);
       if (compileOption) cmd.addArgument(compileOption);
       if (advance_cmd) cmd.addArgument(advance_cmd);
@@ -99,6 +100,7 @@ export function getBuildOpCommand(config_id: number, compileOption?: string) {
     }
 
     const cmd = new Command(config.script || '');
+
     cmd.addOptions({
       pkg: true,
       soc,
@@ -157,6 +159,7 @@ export function getBuildExampleCommand(
 
     if (!operator || operator.op_type !== 'ascend') {
       const cmd = new Command(config.script || '');
+
       if (config.custom_options) cmd.addArgument(config.custom_options);
       if (compileOption) cmd.addArgument(compileOption);
       if (advance_cmd) cmd.addArgument(advance_cmd);
@@ -181,6 +184,7 @@ export function getBuildExampleCommand(
     }
 
     const cmd = new Command(config.script || '');
+
     cmd.addOption('run_example', true);
     cmd.addArgument(op);
     cmd.addArgument(mode);
@@ -314,6 +318,7 @@ export function getSanitizerCommand(
     const tools = Object.keys(options.tool || {}).filter(
       (key) => options.tool[key],
     );
+
     mssanitizer.addOption('tool', tools);
 
     if (options.tool?.memcheck) {

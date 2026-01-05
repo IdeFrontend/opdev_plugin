@@ -20,7 +20,7 @@ export class WebviewProvider {
   private panel: vscode.WebviewPanel | undefined;
   private storage: PermanentStorage;
   private context: vscode.ExtensionContext;
-  private userInfo: os.UserInfo<string | Number>;
+  private userInfo: os.UserInfo<string | number>;
 
   constructor(
     context: vscode.ExtensionContext,

@@ -10,13 +10,10 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
 import { spawn, ChildProcess, exec } from 'child_process';
-import { promisify } from 'util';
 import { NodeWebviewSocketBridge } from './node-webview-socket-bridge';
 import webviewMessageList from './webview-message-list';
 import { CommandExecutor } from './command-options';
 import { EnvironmentVariableReader } from './environment-variable-reader';
-
-const execAsync = promisify(exec);
 
 export class InsightDataViewerPanel implements vscode.Disposable {
   private static openedFiles = new Map<string, InsightDataViewerPanel>();
@@ -255,8 +252,6 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     }
 
     // 先尝试从 WebviewMessageList 中查找对应的处理器
-    let handled = false;
-
     for (const messageItem of webviewMessageList) {
       if (message.command === messageItem.command) {
         console.log(`[InsightDataViewerPanel] 找到处理器: ${message.command}`);
@@ -268,7 +263,6 @@ export class InsightDataViewerPanel implements vscode.Disposable {
         };
 
         messageItem.callback(message, that);
-        handled = true;
         break;
       }
     }

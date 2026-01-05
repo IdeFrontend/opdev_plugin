@@ -5,7 +5,6 @@ import {
   SaveAndStartBuildExampleParams,
   SetActiveConfigParams,
   GetActiveConfigResult,
-  CheckDevtoolConfigResult,
   RemotePathSearchParams,
   RemotePathSearchResult,
   SaveBuildConfigParams,

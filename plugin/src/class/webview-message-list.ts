@@ -42,25 +42,25 @@ const webviewMessageList: messageItem[] = [
   },
   {
     command: 'openLinkWebviewPanel',
-    callback: (message: any, that: any) => {
+    callback: (_message: any, _that: any) => {
       vscode.commands.executeCommand(COMMAND_OPEN);
     },
   },
   {
     command: 'vscodeRunSetProjectSH',
-    callback: async (msg: any, that: any) => {
+    callback: async (_msg: any, _that: any) => {
       vscode.commands.executeCommand(COMMAND_PROJECT_SH);
     },
   },
   {
     command: 'openWelcome',
-    callback: (message: any, that: any) => {
+    callback: (_message: any, _that: any) => {
       vscode.commands.executeCommand(COMMAND_WELCOME);
     },
   },
   {
     command: 'vscodeOpenSidebar',
-    callback: (message: any, that: any) => {
+    callback: (_message: any, _that: any) => {
       vscode.commands.executeCommand(
         'workbench.view.extension.mindstudio-opssuite-vscode-plugin',
       );
@@ -68,7 +68,7 @@ const webviewMessageList: messageItem[] = [
   },
   {
     command: 'vscodeOpenConfig',
-    callback: async (msg: any, that: any) => {
+    callback: async (_msg: any, _that: any) => {
       await vscode.commands.executeCommand(COMMAND_CONFIG);
     },
   },

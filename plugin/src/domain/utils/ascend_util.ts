@@ -110,6 +110,6 @@ function refreshSocVersion() {
 try {
   refreshAscendEnv();
   if (!process.env.SOC_VERSION) refreshSocVersion();
-} catch (e) {
+} catch {
   // ignore
 }

@@ -1,4 +1,4 @@
-import { ref, reactive, onBeforeUnmount, onMounted, type Ref } from 'vue';
+import { ref, reactive, onBeforeUnmount, onMounted } from 'vue';
 import { message } from 'ant-design-vue';
 import type { FormInstance as AntdVForm } from 'ant-design-vue';
 import {
@@ -90,7 +90,7 @@ export function useLinkSSH() {
     // 先进行表单校验
     try {
       await connectionFormRef.value?.validate();
-    } catch (error) {
+    } catch {
       return;
     }
 

@@ -61,7 +61,7 @@ function ensureStore(): OpsStore {
     }
 
     return parsed;
-  } catch (e) {
+  } catch {
     const init: OpsStore = { lastId: 0, ops: [] };
 
     fs.writeFileSync(opsFile, JSON.stringify(init, null, 2), 'utf-8');

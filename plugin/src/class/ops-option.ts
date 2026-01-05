@@ -454,8 +454,8 @@ export default class OpsOption {
   // 开启异常检测
   async runSanitizer() {
     try {
-      let sanitizerConfigId: Number | undefined;
-      let exampleConfigId: Number | undefined | string;
+      let sanitizerConfigId: number | undefined;
+      let exampleConfigId: number | undefined | string;
 
       if (!sanitizerConfigId) {
         sanitizerConfigId = await this.getSanitizerConfigId();

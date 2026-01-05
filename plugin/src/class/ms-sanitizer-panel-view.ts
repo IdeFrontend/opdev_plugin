@@ -28,7 +28,7 @@ export class MsSanitizerPanelViewProvider
 
   async resolveWebviewView(
     webviewView: vscode.WebviewView,
-    context: vscode.WebviewViewResolveContext,
+    _context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken,
   ) {
     console.log(`[MsSanitizerPanelViewProvider.resolveWebviewView] 开始解析webview视图`);

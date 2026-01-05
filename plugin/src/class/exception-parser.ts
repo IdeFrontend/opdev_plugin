@@ -421,9 +421,6 @@ export class ExceptionParser {
         const isSystem = this.isSystemPath(filePath);
 
         if (!isSystem) {
-          // 提取文件名（去掉路径前缀）
-          // 例如：illegal_read_and_write/add_custom.cpp -> add_custom.cpp
-          const fileName = this.extractFileName(filePath);
 
           // 优先选择调用栈中编号最大的用户代码文件（通常是 #3）
           // 如果还没有设置文件信息，或者当前调用栈层级更高，则更新

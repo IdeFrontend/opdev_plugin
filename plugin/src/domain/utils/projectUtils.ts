@@ -1,7 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
 import * as os from 'os';
-import debugLaunch from './debug-launch.json';
 import { promisify } from 'util';
 import { exec } from 'child_process';
 import * as vscode from 'vscode';
@@ -18,7 +17,6 @@ export async function ensureLaunchJsonExists(
 
   const projectDir = path.resolve(op_path);
   const vscodeDir = path.join(projectDir, '.vscode');
-  const launchJsonPath = path.join(vscodeDir, 'launch.json');
   const devtoolConfigPath = path.join(vscodeDir, 'devtool_config.json');
 
   if (!fs.existsSync(projectDir)) {

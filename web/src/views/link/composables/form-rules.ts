@@ -1,6 +1,4 @@
-import { checkPathExists } from '@/apis';
 import {
-  ValidationStrategyFactory,
   ProjectNameValidationStrategy,
   ProjectPathValidationStrategy,
   ProjectSHValidationStrategy,

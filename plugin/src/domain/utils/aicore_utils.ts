@@ -9,7 +9,7 @@ export function parse_cmd_options(
     .filter(Boolean);
 
   for (const part of parts) {
-    const m = part.match(/^(?:--)?([a-zA-Z0-9_\-]+)=(.*)$/);
+    const m = part.match(/^(?:--)?([a-zA-Z0-9_-]+)=(.*)$/);
 
     if (m) {
       res[m[1]] = m[2];
