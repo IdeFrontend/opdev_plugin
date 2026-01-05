@@ -28,15 +28,13 @@ let isInitRun = false;
 // 发送消息给父窗口请求 SSH 数据
 window.postMessage({ command: 'vscodeGetssh' }, '*');
 
-let vscode = null;
-
 //@ts-ignore
-if (typeof acquireVsCodeApi !== 'undefined') {
+if (typeof acquireVsCodeApi !== 'undefined' && !window.vscode) {
   //@ts-ignore
-  vscode = acquireVsCodeApi();
-  //@ts-ignore
-  window.vscode = vscode;
+  window.vscode = acquireVsCodeApi();
 }
+
+let vscode = (window as any).vscode;
 
 // 监听来自VSCode扩展和iframe的消息
 window.addEventListener('message', (event) => {

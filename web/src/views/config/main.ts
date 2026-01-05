@@ -11,6 +11,12 @@ import App from './app.vue';
 import { vscode } from '@/utils/vscode';
 import '../../assets/css/tailwind.css';
 
+//@ts-ignore
+if (typeof acquireVsCodeApi !== 'undefined' && !window.vscode) {
+  //@ts-ignore
+  window.vscode = acquireVsCodeApi();
+}
+
 let isInitRun = false;
 
 // 监听来自VSCode扩展和iframe的消息
