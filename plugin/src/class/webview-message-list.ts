@@ -72,6 +72,14 @@ const webviewMessageList: messageItem[] = [
       await vscode.commands.executeCommand(COMMAND_CONFIG);
     },
   },
+  {
+    command: 'openExternalLink',
+    callback: async (message: any) => {
+      if (message.url) {
+        await vscode.env.openExternal(vscode.Uri.parse(message.url));
+      }
+    },
+  },
 ];
 
 // 创建算子工程类型
