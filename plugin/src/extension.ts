@@ -78,6 +78,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 初始化配置页面的Webview
   const configProvider = new WebviewProvider(context, apiServer);
+
   configProvider.showLeftPage('home');
 
   // 国际化

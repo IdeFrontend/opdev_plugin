@@ -10,7 +10,9 @@ const themeConfig = {
   <a-config-provider :theme="themeConfig">
     <div class="!w-full !ml-[10px] !mr-auto !p-8 !text-left !h-screen">
       <div class="flex items-center mb-6">
-        <div class="font-bold text-2xl leading-7 m-0 text-white mr-10">新建算子工程</div>
+        <div class="font-bold text-2xl leading-7 m-0 text-white mr-10">
+          新建算子工程
+        </div>
       </div>
       <div class="h-px bg-white/15 mb-6 w-full"></div>
       <div class="text-white">

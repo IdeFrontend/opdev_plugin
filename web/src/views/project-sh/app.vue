@@ -1,8 +1,12 @@
 <template>
   <a-config-provider :theme="themeConfig">
-    <div class="p-6 h-full flex justify-center items-start bg-transparent text-white/85">
+    <div
+      class="p-6 h-full flex justify-center items-start bg-transparent text-white/85"
+    >
       <div class="w-full max-w-[600px]">
-        <div class="text-2xl leading-7 font-bold text-white mb-6 text-left">环境配置</div>
+        <div class="text-2xl leading-7 font-bold text-white mb-6 text-left">
+          环境配置
+        </div>
         <div class="h-px bg-white/20 mb-6"></div>
         <a-form
           ref="formRef"
@@ -11,13 +15,18 @@
           layout="vertical"
           @submit="handleSubmit"
         >
-          <a-form-item name="projectSH" class="[&_label]:!text-white/85 [&_.ant-form-item-label_label]:flex [&_.ant-form-item-label_label]:items-center [&_.ant-form-item-label_label]:gap-1">
+          <a-form-item
+            name="projectSH"
+            class="[&_label]:!text-white/85 [&_.ant-form-item-label_label]:flex [&_.ant-form-item-label_label]:items-center [&_.ant-form-item-label_label]:gap-1"
+          >
             <template #label>
               <span>环境变量配置脚本</span>
               <a-tooltip
                 title="安装CANN包后需要执行set_env.sh脚本的绝对路径信息，如果使用的是一站式开发平台提供的容器镜像，则此处可以置空。若出现报错提示路径不存在，说明非有效环境变量脚本路径，需要输入设置环境变量脚本的绝对路径"
               >
-                <QuestionCircleOutlined class="text-white/65 cursor-help text-sm" />
+                <QuestionCircleOutlined
+                  class="text-white/65 cursor-help text-sm"
+                />
               </a-tooltip>
             </template>
             <div

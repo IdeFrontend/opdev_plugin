@@ -3,7 +3,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import { PermanentStorage } from 'plugin:/class/permanent-storage';
-import { GetPerformanceRunDataParams, GetPerformanceRunDataResult, MarkRecordParams } from 'shared:/api-types';
+import {
+  GetPerformanceRunDataParams,
+  GetPerformanceRunDataResult,
+  MarkRecordParams,
+} from 'shared:/api-types';
 import { PerformanceRunData } from '../core/performance/performance-run-data';
 
 const MARKED_STORAGE_KEY = 'msSanitizer_marks';

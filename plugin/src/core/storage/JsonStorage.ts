@@ -8,19 +8,22 @@ export class JsonStorage {
     try {
       if (!fs.existsSync(this.filePath)) {
         this.write(defaultValue);
+
         return defaultValue;
       }
       const content = fs.readFileSync(this.filePath, 'utf-8');
+
       return JSON.parse(content) as T;
     } catch (error) {
       console.error(`Failed to read storage file: ${this.filePath}`, error);
       // 备份损坏的文件
       if (fs.existsSync(this.filePath)) {
         try {
-           fs.copySync(this.filePath, `${this.filePath}.bak`);
+          fs.copySync(this.filePath, `${this.filePath}.bak`);
         } catch {}
       }
       this.write(defaultValue);
+
       return defaultValue;
     }
   }
@@ -34,14 +37,14 @@ export class JsonStorage {
       throw error;
     }
   }
-  
+
   public exists(): boolean {
-      return fs.existsSync(this.filePath);
+    return fs.existsSync(this.filePath);
   }
-  
+
   public delete(): void {
-      if (fs.existsSync(this.filePath)) {
-          fs.removeSync(this.filePath);
-      }
+    if (fs.existsSync(this.filePath)) {
+      fs.removeSync(this.filePath);
+    }
   }
 }

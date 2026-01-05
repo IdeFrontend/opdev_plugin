@@ -31,6 +31,7 @@ export class ProjectManager {
     if (!ProjectManager.instance) {
       ProjectManager.instance = new ProjectManager();
     }
+
     return ProjectManager.instance;
   }
 
@@ -71,6 +72,7 @@ export class ProjectManager {
     if (!this._currentExecutor) {
       this._currentExecutor = new CommandExecutor();
     }
+
     return this._currentExecutor;
   }
 
@@ -140,11 +142,13 @@ export class ProjectManager {
    * @param params 初始化参数
    * @returns 项目ID
    */
-  public async initProject(params: {
-    projectPath?: string;
-    projectName?: string;
-    accendEnvScript?: string;
-  } = {}): Promise<string> {
+  public async initProject(
+    params: {
+      projectPath?: string;
+      projectName?: string;
+      accendEnvScript?: string;
+    } = {},
+  ): Promise<string> {
     const info = this.getProjectInfo(params);
 
     if (params.projectPath && params.projectName) {
@@ -160,6 +164,7 @@ export class ProjectManager {
     // 获取项目ID
     if (this._projectPath === undefined) {
       this._projectId = '';
+
       return this._projectId;
     }
 

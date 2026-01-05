@@ -26,8 +26,10 @@ export function useLinkSSH() {
   const homePath = ref<string | null>(null);
 
   // 搜索策略实例
-  const projectPathSearchStrategy = SearchStrategyFactory.getStrategy('projectPath');
-  const projectSHSearchStrategy = SearchStrategyFactory.getStrategy('projectSH');
+  const projectPathSearchStrategy =
+    SearchStrategyFactory.getStrategy('projectPath');
+  const projectSHSearchStrategy =
+    SearchStrategyFactory.getStrategy('projectSH');
 
   // 消息处理策略管理器
   const messageHandlerManager = new MessageHandlerStrategyManager();
@@ -69,12 +71,17 @@ export function useLinkSSH() {
       projectPath: projectFormData,
       isPathSetFromContextMenu,
     };
+
     messageHandlerManager.handle(messageData, context as any);
   };
 
   // 远程搜索
-  const remoteSearch = async (type: 'projectPath' | 'projectSH', keyword: string) => {
+  const remoteSearch = async (
+    type: 'projectPath' | 'projectSH',
+    keyword: string,
+  ) => {
     const strategy = SearchStrategyFactory.getStrategy(type);
+
     await strategy.search(keyword);
   };
 
@@ -88,7 +95,11 @@ export function useLinkSSH() {
     }
 
     // 再次校验算子工程名称（双重校验确保）
-    if (!ValidationStrategyFactory.validateProjectName(projectFormData.projectName)) {
+    if (
+      !ValidationStrategyFactory.validateProjectName(
+        projectFormData.projectName,
+      )
+    ) {
       return;
     }
 
@@ -156,4 +167,3 @@ export function useLinkSSH() {
     handleCreatedProject,
   };
 }
-

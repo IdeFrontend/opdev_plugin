@@ -43,6 +43,7 @@ const copyAssets = () => {
     if (fs.existsSync(sourcePath)) {
       // 确保目标目录的父目录存在
       const targetDir = path.dirname(targetPath);
+
       if (!fs.existsSync(targetDir)) {
         fs.mkdirSync(targetDir, { recursive: true });
       }
