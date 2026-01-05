@@ -11,7 +11,7 @@
         <a-form
           ref="formRef"
           :model="formData"
-          :rules="formRules"
+          :rules="formRules as any"
           layout="vertical"
           @submit="handleSubmit"
         >

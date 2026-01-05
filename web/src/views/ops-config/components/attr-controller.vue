@@ -14,7 +14,7 @@ const modelValue = defineModel();
   <a-form-item :label="attr.label[i18next.language]">
     <a-switch
       v-if="attr.type === 'boolean'"
-      v-model:checked="modelValue"
+      v-model:checked="modelValue as any"
     ></a-switch>
     <a-input v-else-if="attr.type === 'string'"></a-input>
     <a-input-number v-else-if="attr.type === 'number'"></a-input-number>

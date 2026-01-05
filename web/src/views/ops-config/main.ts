@@ -13,5 +13,4 @@ if (typeof acquireVsCodeApi !== 'undefined' && !window.vscode) {
 
 const app = createApp(App);
 
-app.use(antd);
 app.mount('#app');

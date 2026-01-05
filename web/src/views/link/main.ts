@@ -35,4 +35,4 @@ window.addEventListener('message', (event) => {
   }
 });
 
-createApp(App).use(antd).mount('#app');
+createApp(App).mount('#app');

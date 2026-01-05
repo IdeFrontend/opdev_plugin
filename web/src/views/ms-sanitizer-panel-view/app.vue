@@ -121,7 +121,7 @@
                 <a-button
                   v-if="record.fileLink"
                   type="link"
-                  @click.stop="handleJumpToFile(record)"
+                  @click.stop="handleJumpToFile(record as any)"
                   >{{ record.fileLink }}</a-button
                 >
                 <span v-else>
@@ -216,7 +216,7 @@ const questionDetails = ref<any>({});
 const showDetail = ref(false);
 
 const allFilePath = computed(() => {
-  const filaPathSet = new Set();
+  const filaPathSet = new Set<string>();
 
   tableData.value.forEach((item) => {
     if (item.fileLink) {
@@ -238,8 +238,8 @@ const columns = computed(() => {
       ellipsis: true,
       filterDropdownOpen: false,
       filteredValue: filtered.type || null,
-      onFilter: (value: string, record: QuestionData) =>
-        record.type?.includes(value),
+      onFilter: (value: any, record: QuestionData) =>
+        record.type?.includes(value) ?? false,
     },
     {
       title: '问题类型',
@@ -247,8 +247,8 @@ const columns = computed(() => {
       width: '12%',
       filters: questionTypes,
       filteredValue: filtered.question || null,
-      onFilter: (value: string, record: QuestionData) =>
-        record.question?.includes(value),
+      onFilter: (value: any, record: QuestionData) =>
+        record.question?.includes(value) ?? false,
     },
     {
       title: '源码文件',
@@ -256,8 +256,8 @@ const columns = computed(() => {
       width: '30%',
       filters: allFilePath.value,
       filteredValue: filtered.fileLink || null,
-      onFilter: (value: string, record: QuestionData) =>
-        record.fileLink?.includes(value),
+      onFilter: (value: any, record: QuestionData) =>
+        record.fileLink?.includes(value) ?? false,
       ellipsis: true,
     },
     {

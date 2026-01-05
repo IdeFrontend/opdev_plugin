@@ -18,7 +18,7 @@ function init() {
 
     return;
   }
-  createApp(App).use(antd).mount('#app');
+  createApp(App).mount('#app');
   isInitRun = true;
 }
 
