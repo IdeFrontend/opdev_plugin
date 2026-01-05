@@ -9,6 +9,11 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons-vue';
 import { h } from 'vue';
+import { theme } from 'ant-design-vue';
+
+const themeConfig = {
+  algorithm: theme.darkAlgorithm, // 使用暗色算法
+};
 
 /** 正序/倒序 */
 const sortOrder = defineModel<'asc' | 'desc'>('sortOrder');
@@ -34,11 +39,11 @@ function handleReload() {
 </script>
 
 <template>
-  <div class="filter-bar">
+  <a-config-provider :theme="themeConfig">
+    <div class="filter-bar">
     <a-button
       class="execute-time-sorter-button"
       type="default"
-      size="small"
       @click="handleExecutionTime"
     >
       <div class="execute-time-sorter-inner">
@@ -52,13 +57,13 @@ function handleReload() {
       </div>
     </a-button>
     <a-button
-      :type="isMarkedOnly ? 'primary' : 'default'"
-      size="small"
+     class="execute-time-sorter-button"
       @click="handleMarked"
     >
-      已标记 <FlagFilled v-if="isMarkedOnly" /><FlagOutlined v-else />
+      已标记 <FlagFilled v-if="isMarkedOnly" class="flag-outlined-icon" /><FlagOutlined v-else class="flag-outlined-icon" />
     </a-button>
   </div>
+  </a-config-provider>
 </template>
 
 <style lang="less" scoped>
@@ -69,15 +74,21 @@ function handleReload() {
 }
 
 .execute-time-sorter-button {
-  &:hover {
-    .execute-time-sorter-inner .sort-icons .anticon {
-      border-color: #1890ff;
-    }
+  border-radius: 2px;
+
+  &:hover,
+  &:focus,
+  &:active {
+    background-color: rgba(20, 20, 20, 0.96) !important;
+    border-color: rgb(72, 72, 73) !important;
+    color: rgba(255, 255, 255, 0.855) !important;
+    box-shadow: rgba(255, 255, 255, 0.04) !important;
   }
 
   .execute-time-sorter-inner {
     display: flex;
     align-items: center;
+    border-radius: 2px;
 
     .sort-icons {
       display: inline-flex;
@@ -129,6 +140,11 @@ function handleReload() {
         }
       }
     }
+  }
+
+  .flag-outlined-icon {
+    position: relative;
+    bottom: 2px;
   }
 }
 </style>
