@@ -22,7 +22,7 @@ export async function ensureLaunchJsonExists(
   if (!fs.existsSync(projectDir)) {
     const e = new Error('project_dir不存在');
 
-    (e as any).name = 'InvalidRequest';
+    (e as Error & { name: string }).name = 'InvalidRequest';
     throw e;
   }
   if (fs.existsSync(devtoolConfigPath)) return;

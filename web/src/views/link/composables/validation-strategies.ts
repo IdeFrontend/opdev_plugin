@@ -92,30 +92,32 @@ export const CPP_KEYWORDS = [
 ];
 
 export interface ValidationStrategy {
-  validate(value: any, rule?: any): Promise<void> | void;
+  validate(value: unknown, rule?: unknown): Promise<void> | void;
 }
 
 /**
  * 项目名称
  */
 export class ProjectNameValidationStrategy implements ValidationStrategy {
-  validate(value: string): void {
-    if (!value || value.trim() === '') {
+  validate(value: unknown): void {
+    const strValue = value as string;
+
+    if (!strValue || strValue.trim() === '') {
       throw new Error('请输入算子工程名称');
     }
 
     // 规则1: 只能使用字母、数字和下划线
-    if (!/^[a-zA-Z0-9_]+$/.test(value)) {
+    if (!/^[a-zA-Z0-9_]+$/.test(strValue)) {
       throw new Error('算子工程名称只能包含字母、数字和下划线');
     }
 
     // 规则2: 首字母必须是字母
-    if (!/^[a-zA-Z]/.test(value)) {
+    if (!/^[a-zA-Z]/.test(strValue)) {
       throw new Error('算子工程名称必须以字母开头');
     }
 
     // 规则3: 不能是C++关键字
-    if (CPP_KEYWORDS.includes(value.toLowerCase())) {
+    if (CPP_KEYWORDS.includes(strValue.toLowerCase())) {
       throw new Error('算子工程名称不能是C++关键字');
     }
   }
@@ -125,12 +127,14 @@ export class ProjectNameValidationStrategy implements ValidationStrategy {
  * 项目路径验证
  */
 export class ProjectPathValidationStrategy implements ValidationStrategy {
-  async validate(value: string): Promise<void> {
-    if (!value) {
+  async validate(value: unknown): Promise<void> {
+    const strValue = value as string;
+
+    if (!strValue) {
       throw new Error('请输入算子工程位置');
     }
 
-    const pathExists = await checkPathExists({ path: value });
+    const pathExists = await checkPathExists({ path: strValue });
 
     if (!pathExists) {
       throw new Error('目录不存在，请先创建目录');
@@ -142,13 +146,15 @@ export class ProjectPathValidationStrategy implements ValidationStrategy {
  * 环境变量脚本
  */
 export class ProjectSHValidationStrategy implements ValidationStrategy {
-  async validate(value: string): Promise<void> {
-    if (!value) {
+  async validate(value: unknown): Promise<void> {
+    const strValue = value as string;
+
+    if (!strValue) {
       return; // 允许为空
     }
 
     const pathExists = await checkPathExists({
-      path: value,
+      path: strValue,
       mustFile: true,
     });
 
@@ -189,8 +195,11 @@ export class ValidationStrategyFactory {
       }
 
       return false;
-    } catch (error: any) {
-      message.error(error.message || '验证失败');
+    } catch (error: unknown) {
+      const messageText =
+        error instanceof Error ? error.message : (error as string) || '验证失败';
+
+      message.error(messageText);
 
       return false;
     }

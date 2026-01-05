@@ -5,13 +5,11 @@
  * LICENSE file in the root directory of this source tree. -->
 
 <script setup>
-import { cloneDeep } from 'lodash-es';
 import {
   PlusOutlined,
   DeleteOutlined,
   QuestionCircleOutlined,
 } from '@ant-design/icons-vue';
-import { reactive, ref } from 'vue';
 
 const emit = defineEmits(['addTableItem', 'deleteTableItem', 'onChange']);
 const columns = [
@@ -34,9 +32,10 @@ const columns = [
 const props = defineProps({
   dataSource: {
     type: Array,
-    default: () => {},
+    default: () => [],
   },
 });
+console.log('props', props);
 
 const deleteTableItem = (key) => {
   emit('deleteTableItem', key);
@@ -83,11 +82,11 @@ const onChange = () => {
           </a-tooltip>
         </template>
       </template>
-      <template #bodyCell="{ column, text, record }">
+      <template #bodyCell="{ column, record }">
         <template v-if="['name', 'value'].includes(column.dataIndex)">
           <div>
             <a-input
-              v-model:value="dataSource[record.key][column.dataIndex]"
+              v-model:value="record[column.dataIndex]"
               style="margin: -5px 0"
               @change="onChange"
             />

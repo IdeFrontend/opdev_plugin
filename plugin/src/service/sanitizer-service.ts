@@ -93,8 +93,8 @@ export class SanitizerService {
       vscode.commands.executeCommand(
         'huawei-op-devtools.flashMsSanitizerRunData',
       );
-    } catch (e: any) {
-      vscode.window.showErrorMessage(`异常检测失败: ${e.message}`);
+    } catch (e: unknown) {
+      vscode.window.showErrorMessage(`异常检测失败: ${(e as Error).message}`);
     }
   }
 }

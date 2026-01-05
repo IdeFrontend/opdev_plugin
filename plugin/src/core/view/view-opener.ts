@@ -31,9 +31,8 @@ export class ViewOpener {
 
       // 尝试关闭旧文件
       // 检查当前打开的文本编辑器，找到旧文件并关闭
-      const visibleEditors = vscode.window.visibleTextEditors;
 
-      for (const editor of visibleEditors) {
+      for (const editor of vscode.window.visibleTextEditors) {
         if (editor.document.uri.fsPath === existingUri.fsPath) {
           // 切换到旧文件并关闭（此时新文件已经打开并显示，所以不会闪现）
           await vscode.window.showTextDocument(editor.document, {
@@ -58,8 +57,9 @@ export class ViewOpener {
   public static async openInsight(uri: vscode.Uri): Promise<void> {
     // 从消息中获取BIN文件路径
     const binPath = uri.fsPath;
-    const context = (globalThis as any)
-      .extensionContext as vscode.ExtensionContext;
+    const context = (
+      globalThis as unknown as { extensionContext: vscode.ExtensionContext }
+    ).extensionContext;
 
     if (!binPath) {
       vscode.window.showErrorMessage('BIN文件路径不能为空');

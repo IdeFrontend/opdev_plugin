@@ -39,7 +39,6 @@ export class PermanentStorage {
   /**
    * 获取数据
    * @param key 要获取的键名
-   * @param defaultValue 默认值（当键不存在时返回）
    * @returns 存储的值或默认值
    */
   get<T>(key: string): T | undefined;

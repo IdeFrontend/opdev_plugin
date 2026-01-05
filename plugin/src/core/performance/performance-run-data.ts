@@ -27,7 +27,7 @@ export class PerformanceRunData {
     return PerformanceRunData.instance;
   }
 
-  private rootUri?: vscode.Uri;
+  private readonly rootUri?: vscode.Uri;
 
   constructor() {
     const project = Project.getInstance();

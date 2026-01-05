@@ -12,7 +12,7 @@ import * as os from 'os';
  */
 interface RemoteConfigData {
   lastProjectPath?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
@@ -110,7 +110,7 @@ export class RemoteConfig {
   /**
    * 获取配置项
    */
-  static get(key: string): any {
+  static get(key: string): unknown {
     const config = this.readConfig();
 
     return config[key];
@@ -119,7 +119,7 @@ export class RemoteConfig {
   /**
    * 设置配置项
    */
-  static set(key: string, value: any): void {
+  static set(key: string, value: unknown): void {
     const config = this.readConfig();
 
     config[key] = value;
@@ -150,7 +150,7 @@ export class RemoteConfig {
   static async searchPath(params: {
     keyword: string;
     type: string;
-  }): Promise<{ type: string; list: any[] }> {
+  }): Promise<{ type: string; list: unknown[] }> {
     const { keyword, type } = params;
 
     // 如果关键词为空，返回空列表

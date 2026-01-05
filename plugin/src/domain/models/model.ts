@@ -1,17 +1,21 @@
 import path from 'path';
 import fs from 'fs-extra';
 import config from './config';
-import * as projectModel from './projectModel';
-import * as configModel from './configModel';
-import { OpGeneratorFactory } from '../services/opGeneratorFactory';
-import { getDefaultPath } from '../utils/opUtil';
-import { soc_version } from '../utils/ascend_util';
+import * as projectModel from './project-model';
+import * as configModel from './config-model';
+import { OpGeneratorFactory } from '../services/op-generator-factory';
+import { getDefaultPath } from '../utils/op-util';
+import { soc_version } from '../utils/ascend-util';
 import {
   getDefaultDirectory,
   ensureLaunchJsonExists,
-} from '../utils/projectUtils';
+} from '../utils/project-utils';
 
-const getDataDir = () => path.join((config as any).workspace_data_dir, 'data');
+const getDataDir = () =>
+  path.join(
+    (config as unknown as { workspace_data_dir: string }).workspace_data_dir,
+    'data',
+  );
 const getOpsFile = () => path.join(getDataDir(), 'ops.json');
 
 export type OpRecord = {
@@ -91,7 +95,7 @@ export function generateStructure(
   extensionPath: string,
 ): number {
   // 1) basic checks
-  const project = projectModel.getProjectById(data.project_id as any);
+  const project = projectModel.getProjectById(data.project_id as number);
 
   if (!project)
     throw Object.assign(new Error('project not found'), {
@@ -102,18 +106,30 @@ export function generateStructure(
   const params = {
     project_id: data.project_id,
     op_type: data.op_type,
-    ops_prototype_file: (data as any).ops_prototype_file ?? null,
+    ops_prototype_file:
+      (data as { ops_prototype_file?: string }).ops_prototype_file ?? null,
     op_name: data.op_name ?? null,
-    template_name: (data as any).template_name ?? null,
-    soc_version: (data as any).soc_version ?? null,
+    template_name: (data as { template_name?: string }).template_name ?? null,
+    soc_version: (data as { soc_version?: string }).soc_version ?? null,
     op_path: data.op_path ?? project.project_path,
-  } as any;
+  } as unknown;
 
-  ensureLaunchJsonExists(params.op_path, data.create_by);
+  ensureLaunchJsonExists(
+    (params as { op_path: string }).op_path,
+    data.create_by,
+  );
 
   // 3) get generator and parse meta
   const generator = OpGeneratorFactory.getGenerator(
-    params,
+    params as {
+      project_id: number;
+      op_type: string;
+      ops_prototype_file: string;
+      op_name: string;
+      template_name: string;
+      soc_version: string;
+      op_path: string;
+    },
     project,
     extensionPath,
   );
@@ -140,7 +156,7 @@ export function generateStructure(
     op_class: data.op_class ?? null,
     op_name: opName,
     op_type: data.op_type ?? 'ascend',
-    op_path: params.op_path ?? project.project_path,
+    op_path: (params as { op_path: string }).op_path ?? project.project_path,
     ascend_env_script: data.ascend_env_script ?? null,
     examples: data.examples ?? null,
     create_by: data.create_by ?? null,

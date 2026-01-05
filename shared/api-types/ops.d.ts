@@ -26,7 +26,7 @@ export type BuildConfig = {
     | 'simulate'
     | 'on_board'
     | 'sanitizer';
-  user_options?: Record<string, any>;
+  user_options?: Record<string, unknown>;
 };
 
 export type GetConfigDataResult = {
@@ -47,18 +47,18 @@ export type StartBuildExampleParams = {
 };
 
 export type SaveBuildConfigParams = {
-  data: any;
+  data: unknown;
   showMessage?: boolean;
 };
 
 export type SaveConfigParams = {
   type: string;
-  data: any;
+  data: unknown;
   showMessage?: boolean;
 };
 
 export type SaveSanitizerFormParams = {
-  data: any;
+  data: unknown;
   showMessage?: boolean;
 };
 

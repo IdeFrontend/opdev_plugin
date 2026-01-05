@@ -121,7 +121,7 @@
                 <a-button
                   v-if="record.fileLink"
                   type="link"
-                  @click.stop="handleJumpToFile(record as any)"
+                  @click.stop="handleJumpToFile(record)"
                   >{{ record.fileLink }}</a-button
                 >
                 <span v-else>
@@ -164,10 +164,10 @@
             <span>问题类型详情</span>
           </div>
           <div class="mt-2.5">
-            {{ questionMap.get(questionDetails.question) }}
+            {{ questionMap.get(questionDetails.question || '') }}
           </div>
           <div class="mt-2.5">
-            {{ questionHandlerMap.get(questionDetails.question) }}
+            {{ questionHandlerMap.get(questionDetails.question || '') }}
           </div>
         </div>
       </div>
@@ -209,9 +209,9 @@ const questionTypes = Array.from(questionMap).map((item) => ({
 
 const msScantinizerInfo = ref<Record<string, string>>({});
 
-const filteredInfo = ref<any>({});
+const filteredInfo = ref<Record<string, string[] | null>>({});
 
-const questionDetails = ref<any>({});
+const questionDetails = ref<Partial<QuestionData>>({});
 
 const showDetail = ref(false);
 
@@ -238,8 +238,8 @@ const columns = computed(() => {
       ellipsis: true,
       filterDropdownOpen: false,
       filteredValue: filtered.type || null,
-      onFilter: (value: any, record: QuestionData) =>
-        record.type?.includes(value) ?? false,
+      onFilter: (value: string | number | boolean, record: QuestionData) =>
+        record.type?.includes(String(value)) ?? false,
     },
     {
       title: '问题类型',
@@ -247,8 +247,8 @@ const columns = computed(() => {
       width: '12%',
       filters: questionTypes,
       filteredValue: filtered.question || null,
-      onFilter: (value: any, record: QuestionData) =>
-        record.question?.includes(value) ?? false,
+      onFilter: (value: string | number | boolean, record: QuestionData) =>
+        record.question?.includes(String(value)) ?? false,
     },
     {
       title: '源码文件',
@@ -256,8 +256,8 @@ const columns = computed(() => {
       width: '30%',
       filters: allFilePath.value,
       filteredValue: filtered.fileLink || null,
-      onFilter: (value: any, record: QuestionData) =>
-        record.fileLink?.includes(value) ?? false,
+      onFilter: (value: string | number | boolean, record: QuestionData) =>
+        record.fileLink?.includes(String(value)) ?? false,
       ellipsis: true,
     },
     {
@@ -304,7 +304,7 @@ const synchronizeCount = computed(() => {
   );
 });
 
-const customRow = (record) => {
+const customRow = (record: QuestionData) => {
   return {
     onClick: () => {
       questionDetails.value = record;
@@ -330,11 +330,26 @@ const handleJumpToFile = async (data: QuestionData) => {
   }
 };
 
-function onChange(pagination, filters) {
-  filteredInfo.value = filters || {};
+function onChange(
+  _pagination: unknown,
+  filters: Record<string, (string | number | boolean)[] | null>,
+) {
+  // 转换 filter 类型以匹配 filteredInfo (Record<string, string[] | null>)
+  const newFilters: Record<string, string[] | null> = {};
+
+  Object.keys(filters).forEach((key) => {
+    const val = filters[key];
+
+    if (val) {
+      newFilters[key] = val.map(String);
+    } else {
+      newFilters[key] = null;
+    }
+  });
+  filteredInfo.value = newFilters;
 }
 
-const filterTableData = async (type) => {
+const filterTableData = async (type: string) => {
   switch (type) {
     case 'memory':
       filteredInfo.value = {

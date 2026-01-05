@@ -243,8 +243,10 @@ export class BuildService {
       vscode.commands.executeCommand(
         'huawei-op-devtools.flashPerformanceRunData',
       );
-    } catch (e: any) {
-      vscode.window.showErrorMessage(`获取仿真命令失败 ${e.message}`);
+    } catch (e: unknown) {
+      vscode.window.showErrorMessage(
+        `获取仿真命令失败 ${(e as Error).message}`,
+      );
     }
   }
 
@@ -299,8 +301,8 @@ export class BuildService {
       vscode.commands.executeCommand(
         'huawei-op-devtools.flashPerformanceRunData',
       );
-    } catch (e: any) {
-      vscode.window.showErrorMessage(`获取上板命令失败 ${e.message}`);
+    } catch (e: unknown) {
+      vscode.window.showErrorMessage(`获取上板命令失败 ${(e as Error).message}`);
     }
   }
 }

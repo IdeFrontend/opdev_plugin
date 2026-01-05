@@ -121,7 +121,7 @@ const connectionFormRules = FormRulesFactory.createFormRules();
           :model="projectFormData"
           :label-col="{ span: 6 }"
           :wrapper-col="{ span: 24 }"
-          :rules="connectionFormRules as any"
+          :rules="connectionFormRules"
           layout="vertical"
         >
           <a-form-item name="projectName">

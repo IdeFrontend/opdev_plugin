@@ -1,4 +1,4 @@
-import * as configModel from '../models/configModel';
+import * as configModel from '../models/config-model';
 
 export function getConfig(
   project_id: number,
@@ -8,10 +8,10 @@ export function getConfig(
   return configModel.getConfig(project_id, config_type, op);
 }
 
-export async function postConfig(config_type: string, dataList: any[]) {
+export async function postConfig(config_type: string, dataList: unknown[]) {
   return configModel.postConfig(config_type, dataList);
 }
 
 export function getConfigById(config_id: number) {
-  return configModel.getConfigById(config_id as any);
+  return configModel.getConfigById(config_id);
 }

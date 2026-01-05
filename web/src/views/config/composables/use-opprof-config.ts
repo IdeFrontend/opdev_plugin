@@ -8,6 +8,12 @@
 import { reactive, ref } from 'vue';
 // Message.ts 已删除，不再需要导入
 
+export interface AdvanceParam {
+  name: string;
+  value: string;
+  key: number;
+}
+
 // 仿真配置数据类型
 export interface SimulationConfig {
   config_id: string;
@@ -25,7 +31,7 @@ export interface SimulationConfig {
     dataStoragePath: string;
     simulatorType: string;
     enableDump: boolean;
-    advance_param: Array<any>;
+    advance_param: Array<AdvanceParam>;
   };
 }
 
@@ -71,7 +77,7 @@ export interface OnboardConfig {
     downloadToLocal: boolean;
     renderInPlatform: boolean;
     dataStoragePath: string;
-    advance_param: Array<any>;
+    advance_param: Array<AdvanceParam>;
   };
 }
 
@@ -164,7 +170,7 @@ export function useOpprofConfig() {
    * 处理全选逻辑
    */
   const handleSelectAll = (checked: boolean) => {
-    const keyArray = [
+    const keyArray: (keyof typeof onboardData.user_options)[] = [
       'Occupancy',
       'Roofline',
       'Source',
@@ -179,7 +185,9 @@ export function useOpprofConfig() {
     ];
 
     keyArray.forEach((key) => {
-      onboardData.user_options[key] = checked;
+      // 显式断言为 boolean，因为这些 key 对应的值在 OnboardConfig 中都是 boolean
+      (onboardData.user_options as unknown as Record<string, boolean>)[key] =
+        checked;
     });
   };
 
@@ -187,10 +195,14 @@ export function useOpprofConfig() {
    * 处理内存分析复选框变化
    */
   const handleMemoryAnalysisChange = (checked: boolean) => {
-    const keyArray = ['Occupancy', 'Roofline'];
+    const keyArray: (keyof typeof onboardData.user_options)[] = [
+      'Occupancy',
+      'Roofline',
+    ];
 
     keyArray.forEach((key) => {
-      onboardData.user_options[key] = checked;
+      (onboardData.user_options as unknown as Record<string, boolean>)[key] =
+        checked;
     });
   };
 
@@ -198,7 +210,7 @@ export function useOpprofConfig() {
    * 处理算子性能复选框变化
    */
   const handleOperatorPerformanceChange = (checked: boolean) => {
-    const keyArray = [
+    const keyArray: (keyof typeof onboardData.user_options)[] = [
       'ArithmeticUtilization',
       'L2Cache',
       'Memory',
@@ -209,7 +221,8 @@ export function useOpprofConfig() {
     ];
 
     keyArray.forEach((key) => {
-      onboardData.user_options[key] = checked;
+      (onboardData.user_options as unknown as Record<string, boolean>)[key] =
+        checked;
     });
   };
 
@@ -259,13 +272,15 @@ export function useOpprofConfig() {
     });
   };
 
-  const initSimulate = (data: any) => {
+  const initSimulate = (data: SimulationConfig) => {
     console.log('simulationData', data);
     simulationData.config_id = data.config_id;
     simulationData.project_id = data.project_id;
-    Object.keys(simulationData.user_options).forEach((k) => {
-      simulationData.user_options[k] = data.user_options[k];
-    });
+    // 重置并赋值 user_options
+    simulationData.user_options = {
+      ...createDefaultSimulationConfig().user_options,
+      ...data.user_options,
+    };
     console.log(
       'simulationData.user_options, data.user_options',
       simulationData.user_options,
@@ -273,13 +288,15 @@ export function useOpprofConfig() {
     );
   };
 
-  const initOnBoard = (data: any) => {
+  const initOnBoard = (data: OnboardConfig) => {
     console.log('initOnBoard', data);
     onboardData.config_id = data.config_id;
     onboardData.project_id = data.project_id;
-    Object.keys(onboardData.user_options).forEach((k) => {
-      onboardData.user_options[k] = data.user_options[k];
-    });
+    // 重置并赋值 user_options
+    onboardData.user_options = {
+      ...createDefaultOnboardConfig().user_options,
+      ...data.user_options,
+    };
     console.log(
       'onboardData.user_options, data.user_options',
       onboardData.user_options,

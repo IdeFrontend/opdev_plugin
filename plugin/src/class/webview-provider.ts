@@ -20,7 +20,7 @@ export class WebviewProvider {
   private panel: vscode.WebviewPanel | undefined;
   private storage: PermanentStorage;
   private context: vscode.ExtensionContext;
-  private userInfo: os.UserInfo<string | number>;
+  private readonly userInfo: os.UserInfo<string | number>;
 
   constructor(
     context: vscode.ExtensionContext,
@@ -54,7 +54,7 @@ export class WebviewProvider {
   /**
    * 向Webview发送消息
    */
-  public postMessage(message: any): void {
+  public postMessage(message: unknown): void {
     if (this.panel?.webview) {
       this.panel.webview.postMessage(message);
     }
@@ -86,7 +86,7 @@ export class WebviewProvider {
           );
           // 处理Webview消息
           webviewView.webview.onDidReceiveMessage(
-            (message: any) => {
+            (message: unknown) => {
               this.handleWebviewMessage(message);
             },
             undefined,
@@ -130,7 +130,7 @@ export class WebviewProvider {
 
       // 处理Webview消息
       this.panel.webview.onDidReceiveMessage(
-        (message: any) => {
+        (message: unknown) => {
           this.handleWebviewMessage(message);
         },
         undefined,
@@ -166,10 +166,12 @@ export class WebviewProvider {
   /**
    * 处理来自Webview的消息
    */
-  private handleWebviewMessage(message: any): void {
+  private handleWebviewMessage(message: unknown): void {
+    const msg = message as { command: string; [key: string]: unknown };
+
     for (const messageItem of webviewMessageList) {
-      if (message.command === messageItem.command) {
-        messageItem.callback(message, this);
+      if (msg.command === messageItem.command) {
+        messageItem.callback(msg, this);
       }
     }
   }

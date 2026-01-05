@@ -32,8 +32,7 @@ export interface ResponseMessage {
   error?: { name: string; message: string; stack: string };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Api = (params: any) => unknown;
+type Api = (params: unknown) => unknown;
 
 export type ApiGroup = {
   [key: string]: ApiGroup | Api;
@@ -45,10 +44,6 @@ export type ApiGroup = {
 export class ApiServer extends vscode.Disposable {
   // 单例模式
   private static instance: ApiServer;
-  public static getInstance(): ApiServer {
-    return this.instance;
-  }
-
   private linkedWebviews = new Map<string, vscode.Webview>();
   private connector: WebviewConnector<ResponseMessage, RequestMessage>;
 
@@ -116,8 +111,9 @@ export class ApiServer extends vscode.Disposable {
 
   /**
    * 遍历数据流
+   * @param webview
+   * @param requestMessage
    * @param stream
-   * @param callback
    * @returns
    */
   private resStream(

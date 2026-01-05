@@ -12,7 +12,7 @@ import * as path from 'path';
 import i18nResource from 'shared:/i18n';
 
 import { WebviewProvider } from './class/webview-provider';
-import { handleOperatorProjectDictoryFile } from './class/webview-message-list';
+import { handleOperatorProjectDirectoryFile } from './class/webview-message-list';
 import { CsvEditorProvider } from './class/csv-editor-provider';
 import { ApiServer } from './core/api-server';
 import { ViewServer } from './core/view/view-server';
@@ -82,7 +82,9 @@ async function checkDevtoolConfigExists(): Promise<boolean> {
 export async function activate(context: vscode.ExtensionContext) {
   extensionContext = context;
   // 将 context 设置到全局对象以便 API 层使用
-  (globalThis as any).extensionContext = context;
+  (
+    globalThis as unknown as { extensionContext: vscode.ExtensionContext }
+  ).extensionContext = context;
 
   // api接口
   const apiServer = initApiServer();
@@ -121,7 +123,9 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   };
 
-  let progress: any;
+  let progress:
+    | vscode.Progress<{ message?: string; increment?: number }>
+    | undefined;
 
   if (
     context.globalState.get<string>('runCommand') === COMMAND_CREATE_DIRECTORY
@@ -277,9 +281,12 @@ export async function activate(context: vscode.ExtensionContext) {
   // 注册创建算子命令
   const createOptionsCommand = vscode.commands.registerCommand(
     COMMAND_CREATE_DIRECTORY,
-    async (data: any, progress: any) => {
-      await handleOperatorProjectDictoryFile(
-        { createOperatorProjectDictoryFileType: data },
+    async (
+      data: { createOperatorProjectDictoryFileType: number },
+      progress: vscode.Progress<{ message?: string; increment?: number }>,
+    ) => {
+      await handleOperatorProjectDirectoryFile(
+        { createOperatorProjectDirectoryFileType: data },
         createOpsProvider,
         progress,
       );
@@ -289,7 +296,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // 获取home
   const getHome = vscode.commands.registerCommand(
     COMMAND_GET_HOME,
-    async (_data: any) => {
+    async (_data: unknown) => {
       return process.env.HOME;
     },
   );

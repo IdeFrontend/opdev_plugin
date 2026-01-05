@@ -2,7 +2,6 @@
 
 <script setup>
 import { FolderOutlined } from '@ant-design/icons-vue';
-import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { selectFolder } from '@/apis';
 
 const props = defineProps({
@@ -15,8 +14,9 @@ const props = defineProps({
     default: '',
   },
 });
+console.log('props', props);
 
-const emits = defineEmits('update:modelValue');
+const emits = defineEmits(['update:modelValue']);
 
 const onClick = async () => {
   try {

@@ -1,17 +1,17 @@
 import { getOpByProjectIdAndOpName } from './ops';
 import { getProjectById } from 'plugin:/domain';
 import { getConfigById } from './configuration';
-import { soc_version } from '../utils/ascend_util';
-import { parse_cmd_options } from '../utils/aicore_utils';
-import { getOpRunPath } from '../utils/opUtil';
+import { soc_version } from '../utils/ascend-util';
+import { parse_cmd_options } from '../utils/aicore-utils';
+import { getOpRunPath } from '../utils/op-util';
 import {
   joinCommands,
   getExecutableCommand,
   getAdvanceCmd,
   Command,
 } from '../utils/command-utils';
-import { ConfigRecord } from '../models/configModel';
-import { ProjectRecord } from '../models/projectModel';
+import { ConfigRecord } from '../models/config-model';
+import { ProjectRecord } from '../models/project-model';
 import { OpRecord } from '../models/model';
 import { ProfilerFactory } from './profiler-service';
 
@@ -116,8 +116,8 @@ export function getBuildOpCommand(config_id: number, compileOption?: string) {
     });
 
     return joinCommands(sourceCannCmd, cdCmd, cmd.toString(), deploy_cmd);
-  } catch (e: any) {
-    throw new Error(`生成编译命令失败:${e.message}`);
+  } catch (e: unknown) {
+    throw new Error(`生成编译命令失败:${(e as Error).message}`);
   }
 }
 
@@ -136,8 +136,8 @@ export function getRunCommand(config_id: number) {
 
     // 注意：原始代码中两个分支的返回值相同，这里保持简化的逻辑。
     return joinCommands(sourceCannCmd, cdCmd, run_cmd);
-  } catch (e: any) {
-    throw new Error(`生成运行命令失败:${e.message}`);
+  } catch (e: unknown) {
+    throw new Error(`生成运行命令失败:${(e as Error).message}`);
   }
 }
 
@@ -195,8 +195,8 @@ export function getBuildExampleCommand(
     if (advance_cmd) cmd.addArgument(advance_cmd);
 
     return joinCommands(sourceCannCmd, cdCmd, cmd.toString());
-  } catch (e: any) {
-    throw new Error(`生成编译命令失败:${e.message}`);
+  } catch (e: unknown) {
+    throw new Error(`生成编译命令失败:${(e as Error).message}`);
   }
 }
 
@@ -229,9 +229,9 @@ export function getSimulateCommand(
     );
 
     return joinCommands(sourceCannCmd, cdCmd, simulatorCmd);
-  } catch (e: any) {
+  } catch (e: unknown) {
     // 稍微规范化错误消息或保持原样
-    throw new Error(`获取仿真命令失败 ${e.message}`);
+    throw new Error(`获取仿真命令失败 ${(e as Error).message}`);
   }
 }
 
@@ -260,8 +260,8 @@ export function getOnBoardCommand(
     );
 
     return joinCommands(sourceCannCmd, cdCmd, opprofCmd);
-  } catch (e: any) {
-    throw new Error(`获取上板命令失败 ${e.message}`);
+  } catch (e: unknown) {
+    throw new Error(`获取上板命令失败 ${(e as Error).message}`);
   }
 }
 

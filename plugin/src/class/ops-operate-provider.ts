@@ -9,8 +9,7 @@ import { VIEW_OPERATE } from '../constants';
 export class OpsOperateProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'OpsOperateProvider';
 
-  private _view?: vscode.WebviewView;
-  private _extensionUri: vscode.Uri;
+  private readonly _extensionUri: vscode.Uri;
   private _context: vscode.ExtensionContext;
   private _apiServer: ApiServer;
 
@@ -25,8 +24,6 @@ export class OpsOperateProvider implements vscode.WebviewViewProvider {
     _context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken,
   ) {
-    this._view = webviewView;
-
     // 配置WebView
     webviewView.webview.options = {
       enableScripts: true,

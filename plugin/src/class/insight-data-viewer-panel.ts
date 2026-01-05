@@ -20,14 +20,14 @@ export class InsightDataViewerPanel implements vscode.Disposable {
   private readonly panel: vscode.WebviewPanel;
   private readonly context: vscode.ExtensionContext;
   private socketBridge: NodeWebviewSocketBridge | undefined;
-  private binPath: string;
+  private readonly binPath: string;
   private profilerServerProcess: ChildProcess | null = null;
   private serverPort: number | null = null;
-  private serverPath: string = '';
-  private serverDir: string = '';
-  private zipDir: string = '';
-  private insightPluginBasePath: string;
-  private serverPortReady!: Promise<void>;
+  private readonly serverPath: string = '';
+  private readonly serverDir: string = '';
+  private readonly zipDir: string = '';
+  private readonly insightPluginBasePath: string;
+  private readonly serverPortReady!: Promise<void>;
 
   constructor(
     panel: vscode.WebviewPanel,
@@ -147,7 +147,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
   private setupWebview(): void {
     const htmlPath = path.join(this.insightPluginBasePath, 'index.html');
 
-    let htmlContent = '';
+    let htmlContent: string;
 
     if (fs.existsSync(htmlPath)) {
       htmlContent = fs.readFileSync(htmlPath, 'utf8');

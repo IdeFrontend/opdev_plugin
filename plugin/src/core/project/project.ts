@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import {
   getProjectByPath,
   ProjectRecord,
-} from '../../domain/models/projectModel';
+} from '../../domain/models/project-model';
 
 export class Project<HasProject extends boolean = false> {
   private static instance: Project;
@@ -53,12 +53,6 @@ export class Project<HasProject extends boolean = false> {
   /** 当前工作区是否已创建工程 */
   public workspaceIsProject(): this is Project<true> {
     return this._workspaceProject !== null;
-  }
-
-  /** 更新视图 */
-  public updateView() {
-    console.log('执行了更新');
-    this.getWorkspaceProject();
   }
 
   private getWorkspaceProject() {

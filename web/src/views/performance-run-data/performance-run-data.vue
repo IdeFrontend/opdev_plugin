@@ -38,7 +38,7 @@ function handleToggleMark(key: string, marked: boolean) {
   toggleRecordMark({ key, marked });
 }
 
-const eventListenerHandler = (event) => {
+const eventListenerHandler = (event: MessageEvent) => {
   if (event.data.command === 'iframeRefreshData') {
     loadTreeData();
   }

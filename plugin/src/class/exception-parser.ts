@@ -217,10 +217,7 @@ const SUPPORTED_EXCEPTION_PATTERNS = [
 export class ExceptionParser {
   private results: Result[] = [];
   private currentResult: Partial<Result> | null = null;
-  private buffer: string[] = []; // 清理后的行（用于解析）
   private rawBuffer: string[] = []; // 原始行（保留 ====== 前缀，用于问题详情）
-  private currentQuestionType: QuestionType | null = null;
-  private isInContentionEvent: boolean = false; // 标记是否在处理竞争检测事件
   private currentStackLevel: number = -1; // 当前结果的最大调用栈层级
 
   private matchPath = '';
@@ -284,7 +281,7 @@ export class ExceptionParser {
       // 恢复新异常的结果
       this.currentResult = newResult;
       // 初始化 buffer
-      this.startNewResult(cleanedLine, originalLine);
+      this.startNewResult(originalLine);
     } else if (this.currentResult) {
       // 收集异常详细信息（同时保存原始行）
       this.collectExceptionInfo(cleanedLine, originalLine);
@@ -357,12 +354,9 @@ export class ExceptionParser {
 
         // 设置竞争检测事件标记
         if (questionType === 'memoryContention') {
-          this.isInContentionEvent = true;
         } else {
-          this.isInContentionEvent = false;
         }
 
-        this.currentQuestionType = questionType as QuestionType;
         this.currentResult = {
           type: pattern.errorType,
           questionType: questionType as QuestionType,
@@ -377,18 +371,6 @@ export class ExceptionParser {
 
     return false;
   }
-
-  /**
-   * 提取竞争类型
-   */
-  private extractHazardType(line: string): string {
-    if (line.includes('RAW hazard')) return 'RAW (Read-After-Write)';
-    if (line.includes('WAR hazard')) return 'WAR (Write-After-Read)';
-    if (line.includes('WAW hazard')) return 'WAW (Write-After-Write)';
-
-    return '未知类型';
-  }
-
   /**
    * 收集异常详细信息
    */
@@ -399,8 +381,6 @@ export class ExceptionParser {
 
     const trimmedLine = line.trim();
 
-    // 收集问题描述（清理后的行用于解析）
-    this.buffer.push(line);
     // 收集原始行（用于问题详情）
     this.rawBuffer.push(originalLine);
 
@@ -508,16 +488,14 @@ export class ExceptionParser {
   private extractFileName(filePath: string): string {
     // 使用 / 或 \ 分割路径，取最后一部分作为文件名
     const parts = filePath.split(/[/\\]/);
-    const fileName = parts[parts.length - 1] || filePath;
 
-    return fileName;
+    return parts[parts.length - 1] || filePath;
   }
 
   /**
    * 开始新的结果收集
    */
-  private startNewResult(line: string, originalLine: string): void {
-    this.buffer = [line];
+  private startNewResult(originalLine: string): void {
     this.rawBuffer = [originalLine];
     this.currentStackLevel = -1; // 重置调用栈层级
   }
@@ -556,9 +534,7 @@ export class ExceptionParser {
 
     this.results.push(result);
     this.currentResult = null;
-    this.buffer = [];
     this.rawBuffer = [];
-    this.isInContentionEvent = false;
     this.currentStackLevel = -1; // 重置调用栈层级
   }
 
@@ -570,13 +546,6 @@ export class ExceptionParser {
     this.finalizeCurrentResult();
 
     return this.results;
-  }
-
-  /**
-   * 获取当前已解析的结果（不等待完成）
-   */
-  public getResults(): Result[] {
-    return [...this.results];
   }
 
   /**
@@ -602,34 +571,12 @@ export class ExceptionParser {
   }
 
   /**
-   * 一次性解析全部行并返回结果
-   * 适用于已经将内容分割为行数组的情况
-   * @param lines 字符串数组，每行一个元素
-   * @returns 解析后的结果列表
-   */
-  public parseAllLines(lines: string[]): Result[] {
-    // 重置解析器状态，确保干净的状态
-    this.reset();
-
-    // 逐行处理
-    for (const line of lines) {
-      this.processLine(line);
-    }
-
-    // 完成解析并返回结果
-    return this.finalize();
-  }
-
-  /**
    * 重置解析器状态
    */
   public reset(): void {
     this.results = [];
     this.currentResult = null;
-    this.buffer = [];
     this.rawBuffer = [];
-    this.currentQuestionType = null;
-    this.isInContentionEvent = false;
     this.currentStackLevel = -1;
   }
 
