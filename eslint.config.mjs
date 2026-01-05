@@ -8,6 +8,22 @@ import oxlint from 'eslint-plugin-oxlint';
 import stylistic from '@stylistic/eslint-plugin';
 
 export default defineConfig([
+  {
+    ignores: [
+      '**/dist/',
+      '**/out/',
+      '**/node_modules/',
+      '**/.idea/',
+      '**/.vscode/',
+      '**/.vscode-test-web/',
+      '**/pnpm-lock.yaml',
+      '**/package-lock.json',
+      '**/tsconfig.tsbuildinfo',
+      '**/*.vsix',
+      'deletePackage.js',
+      'package.js',
+    ],
+  },
   ...typescriptEslint.configs.recommended,
   {
     plugins: {

@@ -124,8 +124,7 @@ export async function activate(context: vscode.ExtensionContext) {
   let progress: any;
 
   if (
-    context.globalState.get<string>('runCommand') ===
-    COMMAND_CREATE_DIRECTORY
+    context.globalState.get<string>('runCommand') === COMMAND_CREATE_DIRECTORY
   ) {
     await vscode.window.withProgress(
       {
@@ -412,12 +411,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const watchWorkSpaceFolderChange =
     vscode.workspace.onDidChangeWorkspaceFolders(async () => {
-      vscode.commands.executeCommand(
-        COMMAND_FLASH_MS_SANITIZER_RUN_DATA,
-      );
-      vscode.commands.executeCommand(
-        COMMAND_FLASH_PERFORMANCE_RUN_DATA,
-      );
+      vscode.commands.executeCommand(COMMAND_FLASH_MS_SANITIZER_RUN_DATA);
+      vscode.commands.executeCommand(COMMAND_FLASH_PERFORMANCE_RUN_DATA);
     });
 
   context.subscriptions.push(watchWorkSpaceFolderChange);

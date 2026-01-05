@@ -46,4 +46,3 @@ export const VIEW_PERFORMANCE_RUN_DATA = 'performance-run-data';
 export const VIEW_MS_SANITIZER_RUN_DATA = 'ms-sanitizer-run-data';
 
 export const VIEW_OPS_CONFIG = 'ops-config';
-

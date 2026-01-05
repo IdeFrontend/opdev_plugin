@@ -219,7 +219,6 @@ export class Command {
   }
 }
 
-
 /**
  * 处理高级参数
  * @param advance_param 高级参数数组

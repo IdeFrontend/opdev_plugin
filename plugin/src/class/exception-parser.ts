@@ -421,7 +421,6 @@ export class ExceptionParser {
         const isSystem = this.isSystemPath(filePath);
 
         if (!isSystem) {
-
           // 优先选择调用栈中编号最大的用户代码文件（通常是 #3）
           // 如果还没有设置文件信息，或者当前调用栈层级更高，则更新
           if (

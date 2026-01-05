@@ -44,7 +44,9 @@ export class ViewRenderer extends vscode.Disposable {
         htmlContent = await HtmlTransformer.fetchHtml(devUrl);
         isDev = true;
       } catch (e) {
-        console.error(`Failed to fetch ${targetHtmlPath} from dev server: ${e}`);
+        console.error(
+          `Failed to fetch ${targetHtmlPath} from dev server: ${e}`,
+        );
       }
     }
 

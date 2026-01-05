@@ -190,7 +190,7 @@ export function getBuildExampleCommand(
     cmd.addArgument(mode);
     cmd.addArgument(pkg_mode);
     cmd.addArgument(vendor_name);
-    
+
     if (compileOption) cmd.addArgument(compileOption);
     if (advance_cmd) cmd.addArgument(advance_cmd);
 
@@ -342,4 +342,3 @@ export function getSanitizerCommand(
 
   return '';
 }
-
