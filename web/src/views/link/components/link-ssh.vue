@@ -43,24 +43,36 @@ const connectionFormRules = FormRulesFactory.createFormRules();
 <template>
   <div class="">
     <div class="flex w-full items-stretch max-[960px]:flex-wrap">
-      <div class="w-[35%] max-[960px]:flex-auto max-[960px]:w-full max-[960px]:min-w-0">
-        <div class="text-base leading-[22px] font-bold text-white mb-6">工程类型</div>
+      <div
+        class="w-[35%] max-[960px]:flex-auto max-[960px]:w-full max-[960px]:min-w-0"
+      >
+        <div class="text-base leading-[22px] font-bold text-white mb-6">
+          工程类型
+        </div>
         <div class="">
-          <!-- <div class="title-tip">根据使用场景选择对应的算子工程，快速生成代码模板框架。注：<strong>若已存在算子工程，再次生成将会覆盖原工程。</strong></div> -->
           <div class="mb-5">
             <div
               v-for="item in items_type"
               :key="item.id"
               class="bg-transparent p-5 my-5 border border-[#464646] rounded-lg cursor-pointer transition-all duration-300 overflow-hidden relative hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)] group max-[960px]:flex-auto max-[960px]:min-w-0"
-              :class="{ 'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)] selected': selectedId_type === item.id }"
+              :class="{
+                'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)] selected':
+                  selectedId_type === item.id,
+              }"
               @click="selectedId_type = item.id"
             >
-              <div class="font-extrabold text-[initial] mb-[25px] text-white">{{ item.title }}</div>
+              <div class="font-extrabold text-[initial] mb-[25px] text-white">
+                {{ item.title }}
+              </div>
               <div
                 class="leading-8 mt-2.5 text-white text-[13px] mb-2.5 whitespace-nowrap overflow-hidden text-ellipsis group-[.selected]:whitespace-normal group-[.selected]:overflow-visible group-[.selected]:text-clip"
                 v-html="item.desc"
               ></div>
-              <a-tag color="blue" class="mt-2.5 mr-2">语言：Ascend C</a-tag>
+              <a-tag
+                color="blue"
+                class="mt-2.5 mr-2"
+                >语言：Ascend C</a-tag
+              >
               <a-tag
                 v-if="item.id === 1"
                 color="purple"
@@ -81,8 +93,13 @@ const connectionFormRules = FormRulesFactory.createFormRules();
                   <div style="margin-bottom: 20px; margin-top: 20px">
                     工程目录结构示意
                   </div>
-                  <div class="overflow-hidden max-w-full transition-all duration-300">
-                    <a-image :src="item.id === 1 ? tipBase_1 : tipBase_0" class="block max-w-full h-auto object-contain transition-opacity duration-300 transform" />
+                  <div
+                    class="overflow-hidden max-w-full transition-all duration-300"
+                  >
+                    <a-image
+                      :src="item.id === 1 ? tipBase_1 : tipBase_0"
+                      class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
+                    />
                   </div>
                 </div>
               </transition>
@@ -91,8 +108,12 @@ const connectionFormRules = FormRulesFactory.createFormRules();
         </div>
       </div>
       <div class="w-px bg-white/15 mx-4 shrink-0 self-stretch"></div>
-      <div class="w-[65%] text-left text-sm font-normal leading-[22px] max-[960px]:flex-auto max-[960px]:w-full max-[960px]:min-w-0 [&_.ant-form-item-label_.help-icon]:text-white/45 [&_.ant-form-item-label_.help-icon]:cursor-help [&_.ant-form-item-label_.help-icon]:text-sm [&_.ant-form-item-label_.help-icon]:ml-1">
-        <div class="text-base leading-[22px] font-bold text-white mb-6">工程配置</div>
+      <div
+        class="w-[65%] text-left text-sm font-normal leading-[22px] max-[960px]:flex-auto max-[960px]:w-full max-[960px]:min-w-0 [&_.ant-form-item-label_.help-icon]:text-white/45 [&_.ant-form-item-label_.help-icon]:cursor-help [&_.ant-form-item-label_.help-icon]:text-sm [&_.ant-form-item-label_.help-icon]:ml-1"
+      >
+        <div class="text-base leading-[22px] font-bold text-white mb-6">
+          工程配置
+        </div>
         <a-form
           ref="connectionFormRef"
           :model="projectFormData"

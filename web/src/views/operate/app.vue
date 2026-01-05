@@ -310,7 +310,11 @@ onMounted(async () => {
                   />
                   <span class="text-white/85">{{ item.label }}</span>
                 </span>
-                <span v-else class="text-white/85">{{ item.label }}</span>
+                <span
+                  v-else
+                  class="text-white/85"
+                  >{{ item.label }}</span
+                >
               </template>
               <template v-for="child in item.children">
                 <!-- 子菜单项 -->
@@ -319,7 +323,8 @@ onMounted(async () => {
                   :key="`menuitem-${child.key}`"
                   :disabled="isMenuItemDisabled(child.key)"
                   :class="{
-                    'pointer-events-none opacity-50 cursor-not-allowed': isMenuItemDisabled(child.key),
+                    'pointer-events-none opacity-50 cursor-not-allowed':
+                      isMenuItemDisabled(child.key),
                   }"
                 >
                   {{ child.label }}
@@ -346,7 +351,10 @@ onMounted(async () => {
               v-else
               :key="`menuitem-${item.key}`"
               :disabled="isMenuItemDisabled(item.key)"
-              :class="{ 'pointer-events-none opacity-50 cursor-not-allowed': isMenuItemDisabled(item.key) }"
+              :class="{
+                'pointer-events-none opacity-50 cursor-not-allowed':
+                  isMenuItemDisabled(item.key),
+              }"
             >
               <span
                 v-if="item.icon"
@@ -359,7 +367,11 @@ onMounted(async () => {
                 />
                 <span class="text-white/85">{{ item.label }}</span>
               </span>
-              <span v-else class="text-white/85">{{ item.label }}</span>
+              <span
+                v-else
+                class="text-white/85"
+                >{{ item.label }}</span
+              >
             </a-menu-item>
           </template>
         </a-menu>

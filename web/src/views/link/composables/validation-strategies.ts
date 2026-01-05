@@ -181,15 +181,18 @@ export class ValidationStrategyFactory {
   static validateProjectName(projectName: string): boolean {
     try {
       const strategy = this.getStrategy('projectName');
+
       if (strategy) {
         strategy.validate(projectName);
+
         return true;
       }
+
       return false;
     } catch (error: any) {
       message.error(error.message || '验证失败');
+
       return false;
     }
   }
 }
-

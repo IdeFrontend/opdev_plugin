@@ -8,9 +8,10 @@ import {
   UpdateShScriptParams,
 } from 'shared:/api-types';
 import {
-  updataShScript,
+  updateShScript,
   generateOpsPrototype,
   generateStructure,
+  getProjectById,
 } from '../domain';
 
 export class ProjectService {
@@ -113,8 +114,8 @@ export class ProjectService {
       return '';
     }
 
-    const ascend_env_script = params.accendEnvScript || undefined;
-    const projectRes = await updataShScript({
+    const ascend_env_script = params.ascendEnvScript || undefined;
+    const projectRes = await updateShScript({
       project_name,
       project_path,
       ascend_env_script,
@@ -130,6 +131,24 @@ export class ProjectService {
    */
   async checkVscode(): Promise<boolean> {
     return ProjectManager.getInstance().checkVscode();
+  }
+
+  /**
+   * 获取项目脚本
+   */
+  async getProjectSH(): Promise<any> {
+    const pm = ProjectManager.getInstance();
+
+    await pm.ensureProjectId();
+    const projectId = pm.projectId;
+
+    if (!projectId) {
+      return {};
+    }
+
+    const project = getProjectById(Number(projectId));
+
+    return { projectSH: project?.ascend_env_script || '' };
   }
 }
 

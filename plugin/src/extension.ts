@@ -28,6 +28,12 @@ import { OpsOperateProvider } from './class/ops-operate-provider';
 import { getMsSanitizerPanelViewProvider } from './class/ms-sanitizer-panel-view';
 
 import { MindStudioPluginInstaller } from './class/mind-studio-plugin-installer';
+import {
+  COMMAND_OPEN,
+  COMMAND_PROJECT_SH,
+  COMMAND_WELCOME,
+  COMMAND_CONFIG,
+} from './constants';
 
 let extensionContext: vscode.ExtensionContext | undefined;
 
@@ -66,6 +72,15 @@ export async function activate(context: vscode.ExtensionContext) {
   extensionContext = context;
   // 将 context 设置到全局对象以便 API 层使用
   (globalThis as any).extensionContext = context;
+
+  // api接口
+  const apiServer = initApiServer();
+
+  // 初始化配置页面的Webview
+  const configProvider = new WebviewProvider(context, apiServer);
+
+  configProvider.showLeftPage('home');
+
   // 国际化
   await initI18n();
 
@@ -110,9 +125,6 @@ export async function activate(context: vscode.ExtensionContext) {
       async (pro) => (progress = pro),
     );
   }
-  // api接口
-  const apiServer = initApiServer();
-
   // 视图
   const viewServer = initViews(context, apiServer);
 
@@ -123,9 +135,6 @@ export async function activate(context: vscode.ExtensionContext) {
   const createOpsProvider = new WebviewProvider(context, apiServer);
 
   // 初始化配置页面的Webview
-  const configProvider = new WebviewProvider(context, apiServer);
-
-  // 初始化配置页面的Webview
   const configWelcomeProvider = new WebviewProvider(context, apiServer);
 
   // 初始化配置页面的Webview
@@ -133,7 +142,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 注册打开Opsuite命令
   const openCommand = vscode.commands.registerCommand(
-    'mindstudio-opsuite.createOps',
+    COMMAND_OPEN,
     async () => {
       createOpsProvider.show('link');
     },
@@ -153,7 +162,7 @@ export async function activate(context: vscode.ExtensionContext) {
       // 如果提供了 uri（在文件上右键），使用该路径；否则使用工作区根目录
       const targetPath = uri ? uri.fsPath : workspaceFolders[0].uri.fsPath;
 
-      await createOpsProvider.show('Link');
+      await createOpsProvider.show('link');
       // 等待 webview 加载完成后发送路径
       setTimeout(() => {
         createOpsProvider.postMessage({
@@ -166,9 +175,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 打开环境变量命令
   const openProjectSH = vscode.commands.registerCommand(
-    'huawei-op-devtools.projectSH',
+    COMMAND_PROJECT_SH,
     async () => {
-      configProjectSHProvider.show('ProjectSH');
+      configProjectSHProvider.show('project-sh');
     },
   );
 
@@ -223,17 +232,17 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 注册打开Opsuite命令
   const ConfigCommand = vscode.commands.registerCommand(
-    'huawei-op-devtools.config',
+    COMMAND_CONFIG,
     async () => {
-      configProvider.show('Config');
+      configProvider.show('config');
     },
   );
 
   // 注册打开欢迎页命令
   const welcomeCommand = vscode.commands.registerCommand(
-    'huawei-op-devtools.welcome',
+    COMMAND_WELCOME,
     async () => {
-      configWelcomeProvider.show('Welcome');
+      configWelcomeProvider.show('welcome');
     },
   );
 
@@ -275,7 +284,6 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  configProvider.showLeftPage('Home');
   const [workspaceFolder] = vscode.workspace.workspaceFolders ?? [];
 
   console.log(workspaceFolder, '是否打开了文件夹');
@@ -286,7 +294,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     console.log(welcomeShowCount, '打开次数');
     if (welcomeShowCount < 2) {
-      vscode.commands.executeCommand('huawei-op-devtools.welcome');
+      vscode.commands.executeCommand(COMMAND_WELCOME);
       vscode.commands.executeCommand(
         'workbench.view.extension.mindstudio-opssuite-vscode-plugin',
       );

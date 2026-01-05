@@ -6,10 +6,10 @@ const getDataDir = () => path.join((config as any).workspace_data_dir, 'data');
 const getConfigsFile = () => path.join(getDataDir(), 'configs.json');
 
 function getStorage() {
-    return new JsonStorage(getConfigsFile());
+  return new JsonStorage(getConfigsFile());
 }
 
-type ConfigRecord = {
+export type ConfigRecord = {
   id: number;
   config_name: string;
   config_type: string;
@@ -32,17 +32,14 @@ type ConfigsStore = {
 };
 
 function ensureStore(): ConfigsStore {
-    const init: ConfigsStore = { lastId: 0, configs: [] };
-    const data = getStorage().read<ConfigsStore>(init);
-    
-    if (
-      !data ||
-      typeof data.lastId !== 'number' ||
-      !Array.isArray(data.configs)
-    ) {
-        return init;
-    }
-    return data;
+  const init: ConfigsStore = { lastId: 0, configs: [] };
+  const data = getStorage().read<ConfigsStore>(init);
+
+  if (!data || !Array.isArray(data.configs)) {
+    return init;
+  }
+
+  return data;
 }
 
 function writeStore(store: ConfigsStore) {
@@ -177,7 +174,7 @@ export function getConfigById(config_id: number) {
     user_options: row.user_options || null,
     project_id: row.project_id,
     op: row.op,
-    };
+  };
 }
 
 export function _resetConfigsForTest(): void {

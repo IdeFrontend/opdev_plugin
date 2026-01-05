@@ -90,12 +90,24 @@ onBeforeUnmount(() => {
           执行时间
           <div class="inline-flex flex-col gap-[2px] ml-1">
             <div class="sort-icon-wrapper border-b border-white/85">
-              <CaretUpFilled v-if="sortOrder === 'asc'" class="text-sm -m-[2px]" />
-              <UpOutlined v-else class="text-[10px] relative -bottom-[2px]" />
+              <CaretUpFilled
+                v-if="sortOrder === 'asc'"
+                class="text-sm -m-[2px]"
+              />
+              <UpOutlined
+                v-else
+                class="text-[10px] relative -bottom-[2px]"
+              />
             </div>
             <div class="sort-icon-wrapper border-t border-white/85">
-              <CaretDownFilled v-if="sortOrder === 'desc'" class="text-sm -m-[2px]" />
-              <DownOutlined v-else class="text-[10px] relative -top-[2px]" />
+              <CaretDownFilled
+                v-if="sortOrder === 'desc'"
+                class="text-sm -m-[2px]"
+              />
+              <DownOutlined
+                v-else
+                class="text-[10px] relative -top-[2px]"
+              />
             </div>
           </div>
         </div>
@@ -126,7 +138,9 @@ onBeforeUnmount(() => {
             {{ formatTimestamp(item.timestamp) }}
           </p>
         </div>
-        <div class="flex justify-center items-center pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-hover:pointer-events-auto">
+        <div
+          class="flex justify-center items-center pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-hover:pointer-events-auto"
+        >
           <FlagFilled
             v-if="item.marked"
             class="text-[#d32029] opacity-100"

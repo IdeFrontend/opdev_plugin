@@ -130,4 +130,3 @@ export class SearchStrategyFactory {
     return this.strategies.get(type)!;
   }
 }
-

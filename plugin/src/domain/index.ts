@@ -1,6 +1,10 @@
 export { getConfig, postConfig } from './services/configuration';
 
-export { createProject, updataShScript } from './services/project';
+export {
+  createProject,
+  updateShScript,
+  getProjectById,
+} from './models/projectModel';
 
 export { generateOpsPrototype } from './services/ops_prototype';
 
@@ -16,3 +20,5 @@ export {
 } from './services/command';
 
 export { getFiles } from './services/system';
+
+export { objectToCommandString } from './utils/command-utils';

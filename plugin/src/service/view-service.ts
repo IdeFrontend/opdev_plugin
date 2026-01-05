@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import { ViewOpener } from '../core/view/view-opener';
+import { COMMAND_OPEN_MS_SANITIZER_PANEL_VIEW } from '../constants';
 
 export class ViewService {
   /**
@@ -27,7 +28,7 @@ export class ViewService {
   openMsSanitizerPanelView(params: any) {
     // 打开异常检测数据面板
     vscode.commands.executeCommand(
-      'huawei-op-devtools.open-ms-sanitizer-panel-view',
+      COMMAND_OPEN_MS_SANITIZER_PANEL_VIEW,
       params,
     );
   }

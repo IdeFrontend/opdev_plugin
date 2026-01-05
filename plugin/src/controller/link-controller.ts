@@ -56,5 +56,3 @@ export const linkMethods = {
     return await configService.checkDevtoolConfig();
   },
 };
-
-

@@ -142,4 +142,60 @@ export class RemoteConfig {
   static clear(): void {
     this.writeConfig({});
   }
+
+  /**
+   * 搜索路径
+   * @param params 搜索参数
+   */
+  static async searchPath(params: {
+    keyword: string;
+    type: string;
+  }): Promise<{ type: string; list: any[] }> {
+    const { keyword, type } = params;
+
+    // 如果关键词为空，返回空列表
+    if (!keyword) {
+      return { type, list: [] };
+    }
+
+    // 如果是绝对路径
+    if (path.isAbsolute(keyword)) {
+      try {
+        const stats = await fs.promises.stat(keyword);
+
+        if (stats.isDirectory()) {
+          const files = await fs.promises.readdir(keyword);
+
+          return {
+            type,
+            list: files.map((file) => path.join(keyword, file)),
+          };
+        }
+      } catch {
+        // 忽略错误
+      }
+    }
+
+    // 默认行为：尝试列出目录内容或返回匹配项
+    // 这里简单实现：如果路径存在且是目录，返回目录下的文件；否则返回空
+    try {
+      if (fs.existsSync(keyword)) {
+        const stats = await fs.promises.stat(keyword);
+
+        if (stats.isDirectory()) {
+          const files = await fs.promises.readdir(keyword);
+          const fullPaths = files.map((file) => path.join(keyword, file));
+
+          return {
+            type,
+            list: fullPaths,
+          };
+        }
+      }
+    } catch {
+      // 忽略错误
+    }
+
+    return { type, list: [] };
+  }
 }

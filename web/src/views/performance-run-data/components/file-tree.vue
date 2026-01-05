@@ -102,7 +102,9 @@ const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
 </script>
 
 <template>
-  <div class="w-full relative [&_.ant-tree]:!text-white [&_.ant-tree]:!bg-transparent [&_.ant-tree-treenode]:!w-full [&_.ant-tree-node-content-wrapper]:!w-0 hover:[&_.ant-tree-treenode]:!bg-transparent">
+  <div
+    class="w-full relative [&_.ant-tree]:!text-white [&_.ant-tree]:!bg-transparent [&_.ant-tree-treenode]:!w-full [&_.ant-tree-node-content-wrapper]:!w-0 hover:[&_.ant-tree-treenode]:!bg-transparent"
+  >
     <a-directory-tree
       :tree-data="treeData"
       :show-line="false"
@@ -117,12 +119,20 @@ const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
           class="text-white w-full relative group flex items-center"
           :class="{ 'pr-8': isRootDir(dataRef) }"
         >
-          <div class="text-white w-full overflow-hidden text-ellipsis whitespace-nowrap">{{ dataRef.title }}</div>
+          <div
+            class="text-white w-full overflow-hidden text-ellipsis whitespace-nowrap"
+          >
+            {{ dataRef.title }}
+          </div>
           <template v-if="isRootDir(dataRef)">
-            <div class="text-white/65 text-xs mt-1 leading-4 absolute bottom-[-16px] left-0 hidden">
+            <div
+              class="text-white/65 text-xs mt-1 leading-4 absolute bottom-[-16px] left-0 hidden"
+            >
               {{ formatTimestamp(dataRef.timestamp) }}
             </div>
-            <div class="pointer-events-none absolute top-0 right-0 h-full flex items-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-hover:pointer-events-auto">
+            <div
+              class="pointer-events-none absolute top-0 right-0 h-full flex items-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-hover:pointer-events-auto"
+            >
               <!-- 下载 -->
               <!-- <a-button type="text" :icon="h(DownloadOutlined)" @click.stop="handleClickDownload(dataRef)"></a-button> -->
               <!-- 标记/取消标记 -->

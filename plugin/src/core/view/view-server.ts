@@ -121,7 +121,7 @@ export class ViewServer extends vscode.Disposable {
               enableScripts: true,
               localResourceRoots: [viewRootUri],
             };
-            this.activeWebview(webviewView.webview, routeRaw.path);
+            await this.activeWebview(webviewView.webview, routeRaw.path);
           },
         },
         { webviewOptions: { retainContextWhenHidden: true } },
@@ -186,12 +186,12 @@ export class ViewServer extends vscode.Disposable {
   /**
    * 激活页面
    */
-  private activeWebview(
+  private async activeWebview(
     webview: vscode.Webview,
     routePath: string,
     query: Record<string, unknown> = {},
   ) {
-    this.renderer.render(webview, { lang: vscode.env.language });
+    await this.renderer.render(webview, { lang: vscode.env.language });
     const queryParams = { ...query, _path: routePath };
 
     this.query.setQuery(webview, queryParams);

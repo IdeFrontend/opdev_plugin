@@ -18,8 +18,10 @@ export class FormRulesFactory {
         trigger: 'blur',
         validator: async (rule: any, value: string) => {
           const strategy = new ProjectPathValidationStrategy();
+
           try {
             await strategy.validate(value);
+
             return Promise.resolve();
           } catch (error: any) {
             return Promise.reject(error.message);
@@ -41,8 +43,10 @@ export class FormRulesFactory {
             return Promise.resolve();
           }
           const strategy = new ProjectNameValidationStrategy();
+
           try {
             strategy.validate(value);
+
             return Promise.resolve();
           } catch (error: any) {
             return Promise.reject(error.message);
@@ -62,8 +66,10 @@ export class FormRulesFactory {
         trigger: 'blur',
         validator: async (rule: any, value: string) => {
           const strategy = new ProjectSHValidationStrategy();
+
           try {
             await strategy.validate(value);
+
             return Promise.resolve();
           } catch (error: any) {
             return Promise.reject(error.message);
@@ -84,4 +90,3 @@ export class FormRulesFactory {
     };
   }
 }
-

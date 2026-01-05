@@ -63,23 +63,23 @@ export class WebviewProvider {
   /**
    * 创建Webview面板
    */
-  public async showLeftPage(router: string): Promise<void> {
-    await this.createLeftNavWebview(router);
+  public showLeftPage(router: string): void {
+    this.createLeftNavWebview(router);
   }
 
   /**
    * 创建Webview面板
    */
-  private async createLeftNavWebview(router: string = ''): Promise<void> {
+  private createLeftNavWebview(router: string = ''): void {
     try {
       vscode.window.registerWebviewViewProvider('pluginSidebar', {
-        resolveWebviewView: (webviewView: vscode.WebviewView) => {
+        resolveWebviewView: async (webviewView: vscode.WebviewView) => {
           webviewView.webview.options = {
             enableScripts: true,
           };
           const distPath = path.join(this.context.extensionPath, 'out', 'web');
 
-          webviewView.webview.html = HtmlTransformer.transformDistHtml(
+          webviewView.webview.html = await HtmlTransformer.transformDistHtml(
             distPath,
             webviewView.webview,
             router,
@@ -152,7 +152,7 @@ export class WebviewProvider {
     try {
       const distPath = path.join(this.context.extensionPath, 'out', 'web');
 
-      this.panel.webview.html = HtmlTransformer.transformDistHtml(
+      this.panel.webview.html = await HtmlTransformer.transformDistHtml(
         distPath,
         this.panel.webview,
         router,

@@ -46,7 +46,9 @@ onMounted(() => {
         <div class="text-[22px] font-bold text-white">算子工程配置</div>
       </div>
       <div class="flex-1 flex overflow-hidden w-full">
-        <div class="w-[163px] min-w-[163px] border-r border-[#424242] overflow-hidden bg-black/20 min-h-[calc(100vh-75px)]">
+        <div
+          class="w-[163px] min-w-[163px] border-r border-[#424242] overflow-hidden bg-black/20 min-h-[calc(100vh-75px)]"
+        >
           <optionsList
             :active-config="activeConfig"
             :active-option="activeOption"

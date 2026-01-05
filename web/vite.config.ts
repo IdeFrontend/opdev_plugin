@@ -39,7 +39,8 @@ export default defineConfig(({ mode }) => {
       outDir: '../out/web',
       emptyOutDir: true,
       assetsDir: 'assets',
-      sourcemap: mode === 'debug',
+      sourcemap: mode === 'debug' || mode === 'readable',
+      minify: mode === 'readable' ? false : 'esbuild',
       rollupOptions: { input: buildInput },
     },
   };

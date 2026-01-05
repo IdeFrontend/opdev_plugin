@@ -3,7 +3,6 @@ import * as vscode from 'vscode';
 import { ExtensionConfig } from '../extension-config';
 import { InsightDataViewerPanel } from 'plugin:/class/insight-data-viewer-panel';
 
-
 // 跟踪已打开的CSV文件目录
 const openedCsvDirectories = new Map<string, vscode.Uri>();
 
@@ -60,7 +59,8 @@ export class ViewOpener {
   public static async openInsight(uri: vscode.Uri): Promise<void> {
     // 从消息中获取BIN文件路径
     const binPath = uri.fsPath;
-    const context = (globalThis as any).extensionContext as vscode.ExtensionContext;
+    const context = (globalThis as any)
+      .extensionContext as vscode.ExtensionContext;
 
     if (!binPath) {
       vscode.window.showErrorMessage('BIN文件路径不能为空');

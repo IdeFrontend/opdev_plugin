@@ -5,7 +5,9 @@
       class="flex h-full"
     >
       <div class="flex-1 h-full overflow-hidden flex flex-col">
-        <div class="leading-6 bg-white/10 px-5 flex justify-between items-center">
+        <div
+          class="leading-6 bg-white/10 px-5 flex justify-between items-center"
+        >
           <span>检测结果</span>
           <LeftSquareOutlined
             v-if="!showDetail"
@@ -20,15 +22,21 @@
               <template #content>
                 <div class="w-[378px]">
                   <p class="text-sm m-0">检测信息</p>
-                  <p class="text-[#8e8e8f] text-xs leading-4 py-0.5 m-0">检测时间</p>
+                  <p class="text-[#8e8e8f] text-xs leading-4 py-0.5 m-0">
+                    检测时间
+                  </p>
                   <p class="leading-4 text-xs py-0.5 m-0">
                     {{ formatTimestamp(msScantinizerInfo.timestamp) }}
                   </p>
-                  <p class="text-[#8e8e8f] text-xs leading-4 py-0.5 m-0">检测内容</p>
+                  <p class="text-[#8e8e8f] text-xs leading-4 py-0.5 m-0">
+                    检测内容
+                  </p>
                   <p class="leading-4 text-xs py-0.5 m-0">
                     内存检测：非法读写、多核踩踏、非对齐访问和非法释放，内存泄漏、分配内存未使用、Device侧内存检测、CANN软件栈内存检测、竞争检测、未初始化监测
                   </p>
-                  <p class="text-[#8e8e8f] text-xs leading-4 py-0.5 m-0">检测范围</p>
+                  <p class="text-[#8e8e8f] text-xs leading-4 py-0.5 m-0">
+                    检测范围
+                  </p>
                   <p class="leading-4 text-xs py-0.5 m-0">全局监测</p>
                 </div>
               </template>
@@ -53,9 +61,7 @@
             <span>
               <WarningOutlined style="color: #faad14" />
             </span>
-            <span class="pt-1">{{
-              warningCount
-            }}</span>
+            <span class="pt-1">{{ warningCount }}</span>
           </div>
           <a-divider
             style="height: 44px"
@@ -66,36 +72,28 @@
             @click="filterTableData('memory')"
           >
             <span>内存</span>
-            <span class="pt-1">{{
-              memoryCount
-            }}</span>
+            <span class="pt-1">{{ memoryCount }}</span>
           </div>
           <div
             class="h-11 w-[60px] flex flex-col justify-center items-center mx-2 cursor-pointer transition-all duration-100 rounded hover:bg-white/10"
             @click="filterTableData('memoryContention')"
           >
             <span>内存竞争</span>
-            <span class="pt-1">{{
-              memoryContentionCount
-            }}</span>
+            <span class="pt-1">{{ memoryContentionCount }}</span>
           </div>
           <div
             class="h-11 w-[60px] flex flex-col justify-center items-center mx-2 cursor-pointer transition-all duration-100 rounded hover:bg-white/10"
             @click="filterTableData('uninitialized')"
           >
             <span>未初始化</span>
-            <span class="pt-1">{{
-              uninitializedCount
-            }}</span>
+            <span class="pt-1">{{ uninitializedCount }}</span>
           </div>
           <div
             class="h-11 w-[60px] flex flex-col justify-center items-center mx-2 cursor-pointer transition-all duration-100 rounded hover:bg-white/10"
             @click="filterTableData('synchronize')"
           >
             <span>同步</span>
-            <span class="pt-1">{{
-              synchronizeCount
-            }}</span>
+            <span class="pt-1">{{ synchronizeCount }}</span>
           </div>
         </div>
         <div style="padding: 0 20px">
