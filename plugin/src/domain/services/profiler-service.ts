@@ -23,6 +23,7 @@ export class SimulatorStrategy implements ProfilerCommandStrategy {
     targetFile: string,
   ): string {
     const metrics = ['PipeUtilization'];
+
     if (config.user_options?.ResourceConflictRatio) {
       metrics.push('ResourceConflictRatio');
     }
@@ -46,6 +47,7 @@ export class SimulatorStrategy implements ProfilerCommandStrategy {
     );
 
     const parts = ['msprof op simulator', cmdArgs, advance_cmd, targetFile];
+
     return parts.filter(Boolean).join(' ');
   }
 }
@@ -75,6 +77,7 @@ export class OnBoardStrategy implements ProfilerCommandStrategy {
     );
 
     const parts = ['msprof op', cmdArgs, advance_cmd, targetFile];
+
     return parts.filter(Boolean).join(' ');
   }
 
@@ -124,6 +127,7 @@ export class ProfilerFactory {
     if (type === 'simulator') {
       return new SimulatorStrategy();
     }
+
     return new OnBoardStrategy();
   }
 }

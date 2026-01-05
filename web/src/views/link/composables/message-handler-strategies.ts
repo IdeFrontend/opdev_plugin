@@ -55,9 +55,7 @@ export class SetHomeMessageHandlerStrategy implements MessageHandlerStrategy {
 /**
  * 设置项目路径消息处理策略
  */
-export class SetProjectPathMessageHandlerStrategy
-  implements MessageHandlerStrategy
-{
+export class SetProjectPathMessageHandlerStrategy implements MessageHandlerStrategy {
   canHandle(command: string): boolean {
     return command === 'iframeSetProjectPath';
   }
@@ -73,9 +71,7 @@ export class SetProjectPathMessageHandlerStrategy
 /**
  * 设置最后项目路径消息处理策略
  */
-export class SetLastProjectPathMessageHandlerStrategy
-  implements MessageHandlerStrategy
-{
+export class SetLastProjectPathMessageHandlerStrategy implements MessageHandlerStrategy {
   canHandle(command: string): boolean {
     return command === 'iframeSetLastProjectPath';
   }
@@ -90,19 +86,19 @@ export class SetLastProjectPathMessageHandlerStrategy
 /**
  * 设置工作区路径消息处理策略
  */
-export class SetWorkspaceMessageHandlerStrategy
-  implements MessageHandlerStrategy
-{
+export class SetWorkspaceMessageHandlerStrategy implements MessageHandlerStrategy {
   canHandle(command: string): boolean {
     return command === 'iframeSetWorkspace';
   }
 
   handle(message: MessageData, context: MessageHandlerContext): void {
     context.workspacePath.value = message.data || null;
-    if (context.workspacePath.value && !context.isPathSetFromContextMenu.value) {
+    if (
+      context.workspacePath.value &&
+      !context.isPathSetFromContextMenu.value
+    ) {
       const currentPath = context.projectPath.projectPath;
-      const isDefaultPath =
-        !currentPath || currentPath === '/home/developer';
+      const isDefaultPath = !currentPath || currentPath === '/home/developer';
       const isHomePath =
         context.homePath.value && currentPath === context.homePath.value;
 
@@ -134,13 +130,10 @@ export class MessageHandlerStrategyManager {
    * 处理消息
    */
   handle(message: MessageData, context: MessageHandlerContext): void {
-    const strategy = this.strategies.find((s) =>
-      s.canHandle(message.command),
-    );
+    const strategy = this.strategies.find((s) => s.canHandle(message.command));
 
     if (strategy) {
       strategy.handle(message, context);
     }
   }
 }
-

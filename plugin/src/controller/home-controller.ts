@@ -64,4 +64,3 @@ export const homeMethods = {
     await ProjectManager.getInstance().initProject();
   },
 };
-
