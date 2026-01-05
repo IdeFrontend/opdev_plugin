@@ -5,10 +5,10 @@ import { soc_version } from '../utils/ascend_util';
 import { parse_cmd_options } from '../utils/aicore_utils';
 import { getOpRunPath } from '../utils/opUtil';
 import {
-  objectToCommandString,
   joinCommands,
   getExecutableCommand,
   getAdvanceCmd,
+  Command,
 } from '../utils/command-utils';
 import { ConfigRecord } from '../models/configModel';
 import { ProjectRecord } from '../models/projectModel';
@@ -78,14 +78,12 @@ export function getBuildOpCommand(config_id: number, compileOption?: string) {
     const advance_cmd = getAdvanceCmd(config.user_options?.advance_param);
 
     if (!operator || operator.op_type !== 'ascend') {
-      const build_cmd = joinCommands(
-        config.script || '',
-        config.custom_options || '',
-        compileOption || '',
-        advance_cmd,
-      );
+      const cmd = new Command(config.script || '');
+      if (config.custom_options) cmd.addArgument(config.custom_options);
+      if (compileOption) cmd.addArgument(compileOption);
+      if (advance_cmd) cmd.addArgument(advance_cmd);
 
-      return joinCommands(sourceCannCmd, cdCmd, build_cmd);
+      return joinCommands(sourceCannCmd, cdCmd, cmd.toString());
     }
 
     let soc = soc_version;
@@ -100,23 +98,22 @@ export function getBuildOpCommand(config_id: number, compileOption?: string) {
       soc = args.soc;
     }
 
-    const cmdArgs = objectToCommandString({
+    const cmd = new Command(config.script || '');
+    cmd.addOptions({
       pkg: true,
       soc,
       vendor_name,
       ops: op,
     });
 
-    const cmd = joinCommands(
-      config.script || '',
-      cmdArgs,
-      compileOption || '',
-      advance_cmd,
-    );
+    if (compileOption) cmd.addArgument(compileOption);
+    if (advance_cmd) cmd.addArgument(advance_cmd);
 
-    const deploy_cmd = getExecutableCommand(config.target_file || '');
+    const deploy_cmd = getExecutableCommand(config.target_file || '', {
+      execute: true,
+    });
 
-    return joinCommands(sourceCannCmd, cdCmd, cmd, deploy_cmd);
+    return joinCommands(sourceCannCmd, cdCmd, cmd.toString(), deploy_cmd);
   } catch (e: any) {
     throw new Error(`生成编译命令失败:${e.message}`);
   }
@@ -131,7 +128,9 @@ export function getBuildOpCommand(config_id: number, compileOption?: string) {
 export function getRunCommand(config_id: number) {
   try {
     const { config, sourceCannCmd, cdCmd } = getCommandContext(config_id);
-    const run_cmd = getExecutableCommand(config.target_file || '');
+    const run_cmd = getExecutableCommand(config.target_file || '', {
+      execute: true,
+    });
 
     // 注意：原始代码中两个分支的返回值相同，这里保持简化的逻辑。
     return joinCommands(sourceCannCmd, cdCmd, run_cmd);
@@ -157,14 +156,12 @@ export function getBuildExampleCommand(
     const advance_cmd = getAdvanceCmd(config.user_options?.advance_param);
 
     if (!operator || operator.op_type !== 'ascend') {
-      const cmd = joinCommands(
-        config.script || '',
-        config.custom_options || '',
-        compileOption || '',
-        advance_cmd,
-      );
+      const cmd = new Command(config.script || '');
+      if (config.custom_options) cmd.addArgument(config.custom_options);
+      if (compileOption) cmd.addArgument(compileOption);
+      if (advance_cmd) cmd.addArgument(advance_cmd);
 
-      return joinCommands(sourceCannCmd, cdCmd, cmd);
+      return joinCommands(sourceCannCmd, cdCmd, cmd.toString());
     }
 
     let vendor_name = 'custom';
@@ -183,22 +180,17 @@ export function getBuildExampleCommand(
       mode = args.mode;
     }
 
-    const cmdArgs = objectToCommandString({
-      run_example: true,
-    });
+    const cmd = new Command(config.script || '');
+    cmd.addOption('run_example', true);
+    cmd.addArgument(op);
+    cmd.addArgument(mode);
+    cmd.addArgument(pkg_mode);
+    cmd.addArgument(vendor_name);
+    
+    if (compileOption) cmd.addArgument(compileOption);
+    if (advance_cmd) cmd.addArgument(advance_cmd);
 
-    const cmd = joinCommands(
-      config.script || '',
-      cmdArgs,
-      op,
-      mode,
-      pkg_mode,
-      vendor_name,
-      compileOption || '',
-      advance_cmd,
-    );
-
-    return joinCommands(sourceCannCmd, cdCmd, cmd);
+    return joinCommands(sourceCannCmd, cdCmd, cmd.toString());
   } catch (e: any) {
     throw new Error(`生成编译命令失败:${e.message}`);
   }
@@ -229,7 +221,7 @@ export function getSimulateCommand(
     const simulatorCmd = ProfilerFactory.getStrategy('simulator').generate(
       config,
       operator,
-      exConfig?.target_file,
+      exConfig?.target_file || '',
     );
 
     return joinCommands(sourceCannCmd, cdCmd, simulatorCmd);
@@ -260,7 +252,7 @@ export function getOnBoardCommand(
     const opprofCmd = ProfilerFactory.getStrategy('onboard').generate(
       config,
       operator,
-      exConfig?.target_file,
+      exConfig?.target_file || '',
     );
 
     return joinCommands(sourceCannCmd, cdCmd, opprofCmd);
@@ -310,39 +302,39 @@ export function getSanitizerCommand(
   const cdCmd = `cd ${runPath}`;
 
   if (operator.op_type !== 'ascend') {
-    const sanitizer_cmd =
-      `mssanitizer ${exConfig?.target_file} ${handleSanitizerConfigToCmd(sanitizerConfig.user_options || {})}`.trim();
+    const mssanitizer = new Command('mssanitizer');
 
-    return joinCommands(sourceCannCmd, cdCmd, sanitizer_cmd);
+    // 添加目标文件
+    if (exConfig?.target_file) {
+      mssanitizer.addArgument(exConfig.target_file);
+    }
+
+    // 处理配置选项
+    const options = sanitizerConfig.user_options || {};
+    const tools = Object.keys(options.tool || {}).filter(
+      (key) => options.tool[key],
+    );
+    mssanitizer.addOption('tool', tools);
+
+    if (options.tool?.memcheck) {
+      Object.keys(options.memcheckOption || {}).forEach((key) => {
+        if (options.memcheckOption[key]) {
+          mssanitizer.addOption(key, 'yes');
+        }
+      });
+    }
+
+    mssanitizer.addOption('log-level', options.logLevel);
+    mssanitizer.addOption('max-debuglog-size', options.maxDebuglogSize);
+    mssanitizer.addOption('block-id', options.blockId);
+    mssanitizer.addOption(
+      'log-file',
+      `./.vscode/mindstudio_sanitizer_log/mssanitizer_${new Date().valueOf()}.log`,
+    );
+
+    return joinCommands(sourceCannCmd, cdCmd, mssanitizer.toString());
   }
+
+  return '';
 }
 
-// --- 辅助函数 ---
-
-/**
- * 处理Sanitizer配置转换为命令行参数
- */
-function handleSanitizerConfigToCmd(sanitizerConfig: any) {
-  const tools = Object.keys(sanitizerConfig.tool || {}).filter(
-    (key) => sanitizerConfig.tool[key],
-  );
-
-  const memcheckOptions: Record<string, string> = {};
-
-  if (sanitizerConfig.tool?.memcheck) {
-    Object.keys(sanitizerConfig.memcheckOption || {}).forEach((key) => {
-      if (sanitizerConfig.memcheckOption[key]) {
-        memcheckOptions[key] = 'yes';
-      }
-    });
-  }
-
-  return objectToCommandString({
-    tool: tools,
-    ...memcheckOptions,
-    'log-level': sanitizerConfig.logLevel,
-    'max-debuglog-size': sanitizerConfig.maxDebuglogSize,
-    'block-id': sanitizerConfig.blockId,
-    'log-file': `./.vscode/mindstudio_sanitizer_log/mssanitizer_${new Date().valueOf()}.log`,
-  });
-}

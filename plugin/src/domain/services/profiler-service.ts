@@ -1,6 +1,6 @@
 import { ConfigRecord } from '../models/configModel';
 import { OpRecord } from '../models/model';
-import { objectToCommandString, getAdvanceCmd } from '../utils/command-utils';
+import { Command, getAdvanceCmd } from '../utils/command-utils';
 
 /**
  * msprof 命令生成策略接口
@@ -33,22 +33,29 @@ export class SimulatorStrategy implements ProfilerCommandStrategy {
 
     const advance_cmd = getAdvanceCmd(config.user_options?.advance_param);
 
-    const cmdArgs = objectToCommandString(
-      {
-        'soc-version': config.user_options?.simulatorType,
-        output: `${operator.op_path}/.vscode/opprof`,
-        'aic-metrics': metrics,
+    // 构建 msprof op simulator 命令
+    const msprof = new Command('msprof');
+    const simulator = msprof.sub('op').sub('simulator', {
+      separators: {
+        'aic-metrics': ',',
       },
-      {
-        separators: {
-          'aic-metrics': ',',
-        },
-      },
-    );
+    });
 
-    const parts = ['msprof op simulator', cmdArgs, advance_cmd, targetFile];
+    simulator.addOptions({
+      'soc-version': config.user_options?.simulatorType,
+      output: `${operator.op_path}/.vscode/opprof`,
+      'aic-metrics': metrics,
+    });
 
-    return parts.filter(Boolean).join(' ');
+    if (advance_cmd) {
+      simulator.addArgument(advance_cmd);
+    }
+
+    if (targetFile) {
+      simulator.addArgument(targetFile);
+    }
+
+    return msprof.toString();
   }
 }
 
@@ -64,21 +71,28 @@ export class OnBoardStrategy implements ProfilerCommandStrategy {
     const metrics = this.getOnBoardMetrics(config.user_options || {});
     const advance_cmd = getAdvanceCmd(config.user_options?.advance_param);
 
-    const cmdArgs = objectToCommandString(
-      {
-        output: `${operator.op_path}/.vscode/opprof`,
-        'aic-metrics': metrics.length > 0 ? metrics : undefined,
+    // 构建 msprof op 命令
+    const msprof = new Command('msprof');
+    const op = msprof.sub('op', {
+      separators: {
+        'aic-metrics': ',',
       },
-      {
-        separators: {
-          'aic-metrics': ',',
-        },
-      },
-    );
+    });
 
-    const parts = ['msprof op', cmdArgs, advance_cmd, targetFile];
+    op.addOptions({
+      output: `${operator.op_path}/.vscode/opprof`,
+      'aic-metrics': metrics.length > 0 ? metrics : undefined,
+    });
 
-    return parts.filter(Boolean).join(' ');
+    if (advance_cmd) {
+      op.addArgument(advance_cmd);
+    }
+
+    if (targetFile) {
+      op.addArgument(targetFile);
+    }
+
+    return msprof.toString();
   }
 
   /**
