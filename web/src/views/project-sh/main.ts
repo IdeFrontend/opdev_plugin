@@ -12,14 +12,9 @@ import 'ant-design-vue/dist/reset.css';
 import '../../assets/css/tailwind.css';
 
 //@ts-ignore
-if (typeof acquireVsCodeApi !== 'undefined' && !(window as any).vscode) {
-  try {
-    //@ts-ignore
-    window.vscode = acquireVsCodeApi();
-  } catch (error) {
-    // 如果已经获取过，忽略错误
-    console.warn('VS Code API already acquired:', error);
-  }
+if (typeof acquireVsCodeApi !== 'undefined' && !window.vscode) {
+  //@ts-ignore
+  window.vscode = acquireVsCodeApi();
 }
 
 // 监听来自VSCode扩展和iframe的消息

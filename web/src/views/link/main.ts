@@ -13,6 +13,12 @@ import { vscode } from '@/utils/vscode';
 import 'ant-design-vue/dist/reset.css';
 import '../../assets/css/tailwind.css';
 
+//@ts-ignore
+if (typeof acquireVsCodeApi !== 'undefined' && !window.vscode) {
+  //@ts-ignore
+  window.vscode = acquireVsCodeApi();
+}
+
 // 监听来自VSCode扩展和iframe的消息
 window.addEventListener('message', (event) => {
   const message = event.data;

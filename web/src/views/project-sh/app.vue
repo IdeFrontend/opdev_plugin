@@ -177,7 +177,18 @@ const handleSubmit = async () => {
 
 onMounted(async () => {
   try {
-    const projectSH = await getProjectSH();
+    const result = await getProjectSH();
+    // 修复类型推断错误，保证 projectSH 始终为可用类型
+    let projectSH = '';
+    if (typeof result === 'object' && result !== null && 'projectSH' in result) {
+      // @ts-ignore
+      projectSH = result.projectSH ?? '';
+    } else if (typeof result === 'string') {
+      projectSH = result;
+    } else {
+      projectSH = '';
+    }
+    console.log('projectSH', projectSH);
 
     formData.projectSH = projectSH;
     // 发送消息给 iframe
