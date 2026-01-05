@@ -6,7 +6,7 @@ import { ExceptionParser } from './exception-parser';
 import { HtmlTransformer } from './html-transformer';
 import webviewMessageList from './webview-message-list';
 import { ApiServer } from 'plugin:/core/api-server';
-import { COMMAND_OPEN_MS_SANITIZER_PANEL_VIEW } from '../constants';
+import { COMMAND_OPEN_MS_SANITIZER_PANEL_VIEW, VIEW_MS_SANITIZER } from '../constants';
 
 export class MsSanitizerPanelViewProvider
   implements vscode.WebviewViewProvider
@@ -79,7 +79,7 @@ export class MsSanitizerPanelViewProvider
     webviewView.webview.html = await HtmlTransformer.transformDistHtml(
       distPath,
       webviewView.webview,
-      'ms-sanitizer-panel-view',
+      VIEW_MS_SANITIZER,
     );
   }
 
