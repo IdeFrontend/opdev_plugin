@@ -91,15 +91,12 @@ export const CPP_KEYWORDS = [
   'xor_eq',
 ];
 
-/**
- * 验证策略接口
- */
 export interface ValidationStrategy {
   validate(value: any, rule?: any): Promise<void> | void;
 }
 
 /**
- * 项目名称验证策略
+ * 项目名称
  */
 export class ProjectNameValidationStrategy implements ValidationStrategy {
   validate(value: string): void {
@@ -125,7 +122,7 @@ export class ProjectNameValidationStrategy implements ValidationStrategy {
 }
 
 /**
- * 项目路径验证策略
+ * 项目路径验证
  */
 export class ProjectPathValidationStrategy implements ValidationStrategy {
   async validate(value: string): Promise<void> {
@@ -142,7 +139,7 @@ export class ProjectPathValidationStrategy implements ValidationStrategy {
 }
 
 /**
- * 环境变量脚本验证策略
+ * 环境变量脚本
  */
 export class ProjectSHValidationStrategy implements ValidationStrategy {
   async validate(value: string): Promise<void> {
@@ -162,8 +159,7 @@ export class ProjectSHValidationStrategy implements ValidationStrategy {
 }
 
 /**
- * 验证策略工厂
- * 使用工厂模式创建验证策略实例
+ * 这个后面业务再加算子的其他字段和校验规则 可以在这个类里搞（单例模式：确保每种策略只有一个实例）
  */
 export class ValidationStrategyFactory {
   private static strategies: Map<string, ValidationStrategy> = new Map([
@@ -173,7 +169,7 @@ export class ValidationStrategyFactory {
   ]);
 
   /**
-   * 获取验证策略
+   * 根据字段获取对应的策略
    */
   static getStrategy(key: string): ValidationStrategy | undefined {
     return this.strategies.get(key);
