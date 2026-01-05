@@ -4,6 +4,7 @@ import * as path from 'path';
 import { HtmlTransformer } from './html-transformer';
 import webviewMessageList from './webview-message-list';
 import { ApiServer } from 'plugin:/core/api-server';
+import { VIEW_OPERATE } from '../constants';
 
 export class OpsOperateProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'OpsOperateProvider';
@@ -33,7 +34,7 @@ export class OpsOperateProvider implements vscode.WebviewViewProvider {
     };
 
     // 注册 webview 到 ApiServer
-    this._apiServer.addWebview('operate', webviewView.webview);
+    this._apiServer.addWebview(VIEW_OPERATE, webviewView.webview);
 
     // 消息处理
     webviewView.webview.onDidReceiveMessage(
@@ -50,7 +51,7 @@ export class OpsOperateProvider implements vscode.WebviewViewProvider {
     webviewView.webview.html = await HtmlTransformer.transformDistHtml(
       distPath,
       webviewView.webview,
-      'operate',
+      VIEW_OPERATE,
     );
   }
 

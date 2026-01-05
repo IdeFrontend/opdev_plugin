@@ -1,24 +1,22 @@
 import vue from '@vitejs/plugin-vue';
 import path from 'path';
+import fs from 'fs';
 import { defineConfig } from 'vite';
 
 import { debugEntry } from './vite-plugins/debug-entry';
 
-/** 视图入口白名单 */
-const TEMP_MULTI_ENTRIES = [
-  'config',
-  'link',
-  'welcome',
-  'home',
-  'operate',
-  'ms-sanitizer-panel-view',
-  'project-sh',
-];
-
 export default defineConfig(({ mode }) => {
-  const buildInput: Record<string, string> = { index: 'index.html' };
+  const buildInput: Record<string, string> = {};
 
-  for (const entry of TEMP_MULTI_ENTRIES) {
+  // 动态读取 views 目录下的所有符合规则的入口
+  const viewsDir = path.resolve(__dirname, 'src/views');
+  const entries = fs.readdirSync(viewsDir).filter((entry) => {
+    const entryPath = path.join(viewsDir, entry);
+    const htmlPath = path.join(entryPath, `${entry}.html`);
+    return fs.statSync(entryPath).isDirectory() && fs.existsSync(htmlPath);
+  });
+
+  for (const entry of entries) {
     buildInput[entry] = `src/views/${entry}/${entry}.html`;
   }
 

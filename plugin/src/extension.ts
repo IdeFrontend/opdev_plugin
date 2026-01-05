@@ -33,6 +33,19 @@ import {
   COMMAND_PROJECT_SH,
   COMMAND_WELCOME,
   COMMAND_CONFIG,
+  COMMAND_CREATE_OPERATOR_IN_WORKSPACE,
+  COMMAND_TOGGLE_OPS_OPERATE,
+  COMMAND_CLEAR_WELCOME_COUNT,
+  COMMAND_CLEAR_LAST_PROJECT_PATH,
+  COMMAND_CREATE_DIRECTORY,
+  COMMAND_GET_HOME,
+  COMMAND_FLASH_MS_SANITIZER_RUN_DATA,
+  COMMAND_FLASH_PERFORMANCE_RUN_DATA,
+  VIEW_HOME,
+  VIEW_CONFIG,
+  VIEW_LINK,
+  VIEW_WELCOME,
+  VIEW_PROJECT_SH,
 } from './constants';
 
 let extensionContext: vscode.ExtensionContext | undefined;
@@ -79,7 +92,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // 初始化配置页面的Webview
   const configProvider = new WebviewProvider(context, apiServer);
 
-  configProvider.showLeftPage('home');
+  configProvider.showLeftPage(VIEW_HOME);
 
   // 国际化
   await initI18n();
@@ -114,7 +127,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   if (
     context.globalState.get<string>('runCommand') ===
-    'huawei-op-devtools.createDictory'
+    COMMAND_CREATE_DIRECTORY
   ) {
     await vscode.window.withProgress(
       {
@@ -144,13 +157,13 @@ export async function activate(context: vscode.ExtensionContext) {
   const openCommand = vscode.commands.registerCommand(
     COMMAND_OPEN,
     async () => {
-      createOpsProvider.show('link');
+      createOpsProvider.show(VIEW_LINK);
     },
   );
 
   // 注册在当前目录下新建算子命令
   const createOperatorInWorkspaceCommand = vscode.commands.registerCommand(
-    'huawei-op-devtools.createOperatorInWorkspace',
+    COMMAND_CREATE_OPERATOR_IN_WORKSPACE,
     async (uri?: vscode.Uri) => {
       const workspaceFolders = vscode.workspace.workspaceFolders;
 
@@ -162,7 +175,7 @@ export async function activate(context: vscode.ExtensionContext) {
       // 如果提供了 uri（在文件上右键），使用该路径；否则使用工作区根目录
       const targetPath = uri ? uri.fsPath : workspaceFolders[0].uri.fsPath;
 
-      await createOpsProvider.show('link');
+      await createOpsProvider.show(VIEW_LINK);
       // 等待 webview 加载完成后发送路径
       setTimeout(() => {
         createOpsProvider.postMessage({
@@ -177,13 +190,13 @@ export async function activate(context: vscode.ExtensionContext) {
   const openProjectSH = vscode.commands.registerCommand(
     COMMAND_PROJECT_SH,
     async () => {
-      configProjectSHProvider.show('project-sh');
+      configProjectSHProvider.show(VIEW_PROJECT_SH);
     },
   );
 
   // 注册打开关闭算子工作-操作命令
   const toggleOpsOperateCommand = vscode.commands.registerCommand(
-    'huawei-op-devtools.toggleOpsOperate',
+    COMMAND_TOGGLE_OPS_OPERATE,
     async () => {
       try {
         // 打开/关闭右侧辅助侧栏
@@ -234,7 +247,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const ConfigCommand = vscode.commands.registerCommand(
     COMMAND_CONFIG,
     async () => {
-      configProvider.show('config');
+      configProvider.show(VIEW_CONFIG);
     },
   );
 
@@ -242,13 +255,13 @@ export async function activate(context: vscode.ExtensionContext) {
   const welcomeCommand = vscode.commands.registerCommand(
     COMMAND_WELCOME,
     async () => {
-      configWelcomeProvider.show('welcome');
+      configWelcomeProvider.show(VIEW_WELCOME);
     },
   );
 
   // 注册删除欢迎页计数命令（用于手动重置）
   const clearWelcomeCountCommand = vscode.commands.registerCommand(
-    'huawei-op-devtools.clearWelcomeCount',
+    COMMAND_CLEAR_WELCOME_COUNT,
     async () => {
       await context.globalState.update('welcomeShowCount', undefined);
       console.log('welcomeShowCount 已删除');
@@ -257,7 +270,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 注册清除缓存的算子工程位置命令
   const clearLastProjectPathCommand = vscode.commands.registerCommand(
-    'huawei-op-devtools.clearLastProjectPath',
+    COMMAND_CLEAR_LAST_PROJECT_PATH,
     async () => {
       RemoteConfig.clearLastProjectPath();
       vscode.window.showInformationMessage('已清除缓存的算子工程位置');
@@ -266,7 +279,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 注册创建算子命令
   const createOptionsCommand = vscode.commands.registerCommand(
-    'huawei-op-devtools.createDictory',
+    COMMAND_CREATE_DIRECTORY,
     async (data: any, progress: any) => {
       await handleOperatorProjectDictoryFile(
         { createOperatorProjectDictoryFileType: data },
@@ -278,7 +291,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 获取home
   const getHome = vscode.commands.registerCommand(
-    'huawei-op-devtools.getHome',
+    COMMAND_GET_HOME,
     async (data: any) => {
       return process.env.HOME;
     },
@@ -367,7 +380,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(openCsvCommand);
 
   const flashMsSanitizerRunData = vscode.commands.registerCommand(
-    'huawei-op-devtools.flashMsSanitizerRunData',
+    COMMAND_FLASH_MS_SANITIZER_RUN_DATA,
     async () => {
       // 后续待优化点，目前通过非法操作方式拿到视图实例
       // 拿到MsSanitizerRunData的视图实例，主动下发刷新命令
@@ -384,7 +397,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(flashMsSanitizerRunData);
 
   const flashPerformanceRunData = vscode.commands.registerCommand(
-    'huawei-op-devtools.flashPerformanceRunData',
+    COMMAND_FLASH_PERFORMANCE_RUN_DATA,
     async () => {
       // 拿到PerformanceRunData的视图实例，主动下发刷新命令
       const performanceRunData =
@@ -402,10 +415,10 @@ export async function activate(context: vscode.ExtensionContext) {
   const watchWorkSpaceFolderChange =
     vscode.workspace.onDidChangeWorkspaceFolders(async () => {
       vscode.commands.executeCommand(
-        'huawei-op-devtools.flashMsSanitizerRunData',
+        COMMAND_FLASH_MS_SANITIZER_RUN_DATA,
       );
       vscode.commands.executeCommand(
-        'huawei-op-devtools.flashPerformanceRunData',
+        COMMAND_FLASH_PERFORMANCE_RUN_DATA,
       );
     });
 

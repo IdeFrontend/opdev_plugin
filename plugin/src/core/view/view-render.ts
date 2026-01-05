@@ -6,8 +6,6 @@ import { HtmlTransformer } from 'plugin:/class/html-transformer';
 
 const WEB_OUT_DIR_PATH = 'out/web';
 
-const HTML_ENTRY_FILE_PATH = 'index.html';
-
 export class ViewRenderer extends vscode.Disposable {
   private viewRootUri: vscode.Uri;
 
@@ -22,35 +20,45 @@ export class ViewRenderer extends vscode.Disposable {
   public async render(
     webview: vscode.Webview,
     templateValues: Record<string, string> = {},
+    entryName?: string,
   ): Promise<void> {
     const devServerUrl = process.env.MSTT_DEV_SERVER_URL;
     let htmlContent = '';
     let isDev = false;
     let devUrl = '';
 
+    // Determine target HTML path
+    let targetHtmlPath = '';
+
+    if (entryName) {
+      targetHtmlPath = `src/views/${entryName}/${entryName}.html`;
+    } else {
+      throw new Error('Entry name is required for rendering');
+    }
+
     if (devServerUrl) {
       try {
-        devUrl = `${devServerUrl}/${HTML_ENTRY_FILE_PATH}`;
+        devUrl = `${devServerUrl}/${targetHtmlPath}`;
 
         htmlContent = await HtmlTransformer.fetchHtml(devUrl);
         isDev = true;
       } catch (e) {
-        console.error(`Failed to fetch from dev server: ${e}`);
+        console.error(`Failed to fetch ${targetHtmlPath} from dev server: ${e}`);
       }
     }
 
     if (!htmlContent) {
       const htmlEntryFileUri = vscode.Uri.joinPath(
         this.viewRootUri,
-        HTML_ENTRY_FILE_PATH,
+        targetHtmlPath,
       );
 
       try {
-        if (!fs.existsSync(htmlEntryFileUri.fsPath)) {
-          throw new Error(`HTML文件不存在: ${htmlEntryFileUri.fsPath}`);
+        if (fs.existsSync(htmlEntryFileUri.fsPath)) {
+          htmlContent = fs.readFileSync(htmlEntryFileUri.fsPath, 'utf-8');
+        } else {
+          throw new Error(`HTML file not found: ${htmlEntryFileUri.fsPath}`);
         }
-
-        htmlContent = fs.readFileSync(htmlEntryFileUri.fsPath, 'utf-8');
       } catch (error) {
         throw error;
       }

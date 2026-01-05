@@ -68,33 +68,49 @@ export function joinCommands(
   return commands.filter(Boolean).join(' && ');
 }
 
+export interface PermissionConfig {
+  read?: boolean;
+  write?: boolean;
+  execute?: boolean;
+}
+
 /**
  * 生成 chmod 命令
  *
  * @param file 目标文件
- * @param mode 权限模式，默认为 '+x'
+ * @param mode 权限配置对象，默认 { execute: true }
  * @returns chmod 命令字符串
  */
 export function generateChmodCommand(
   file: string,
-  mode: string = '+x',
+  mode: PermissionConfig = { execute: true },
 ): string {
   if (!file) {
     return '';
   }
 
-  return `chmod ${mode} ${file}`;
+  const parts: string[] = [];
+  if (mode.read) parts.push('r');
+  if (mode.write) parts.push('w');
+  if (mode.execute) parts.push('x');
+
+  if (parts.length === 0) {
+    return '';
+  }
+
+  const modeStr = '+' + parts.join('');
+  return `chmod ${modeStr} ${file}`;
 }
 
 /**
  * 生成带 chmod 的运行命令
  * @param file 可执行文件路径
- * @param mode 权限模式，默认为 '+x'
+ * @param mode 权限配置对象，默认 { execute: true }
  * @returns 完整的运行命令
  */
 export function getExecutableCommand(
   file: string,
-  mode: string = '+x',
+  mode: PermissionConfig = { execute: true },
 ): string {
   if (!file) {
     return '';
@@ -102,6 +118,97 @@ export function getExecutableCommand(
 
   return joinCommands(generateChmodCommand(file, mode), file);
 }
+
+/**
+ * 命令行构建类
+ * 支持 a b --key=value 形式的命令生成
+ */
+export class Command {
+  private _options: Record<string, any> = {};
+  private _subCommand: Command | null = null;
+  private _args: string[] = [];
+
+  constructor(
+    public name: string,
+    private config?: CommandStringConfig,
+  ) {}
+
+  /**
+   * 添加选项参数
+   * @param key 参数名
+   * @param value 参数值
+   */
+  public addOption(key: string, value: any): Command {
+    this._options[key] = value;
+    return this;
+  }
+
+  /**
+   * 批量添加选项
+   * @param options 选项对象
+   */
+  public addOptions(options: Record<string, any>): Command {
+    Object.assign(this._options, options);
+    return this;
+  }
+
+  /**
+   * 添加位置参数
+   * @param arg 参数值
+   */
+  public addArgument(arg: string): Command {
+    if (arg) {
+      this._args.push(arg);
+    }
+    return this;
+  }
+
+  /**
+   * 设置子命令
+   * @param cmd 子命令对象或名称
+   */
+  public setSubCommand(cmd: Command | string): Command {
+    if (typeof cmd === 'string') {
+      this._subCommand = new Command(cmd);
+      return this._subCommand;
+    }
+    this._subCommand = cmd;
+    return cmd;
+  }
+
+  /**
+   * 创建并返回子命令
+   * @param name 子命令名称
+   * @param config 子命令配置
+   */
+  public sub(name: string, config?: CommandStringConfig): Command {
+    const subCmd = new Command(name, config);
+    this._subCommand = subCmd;
+    return subCmd;
+  }
+
+  /**
+   * 生成完整的命令字符串
+   */
+  public toString(): string {
+    const parts = [this.name];
+
+    // 1. 自身的选项
+    const optionsStr = objectToCommandString(this._options, this.config);
+    if (optionsStr) parts.push(optionsStr);
+
+    // 2. 位置参数
+    if (this._args.length) parts.push(this._args.join(' '));
+
+    // 3. 子命令 (递归生成)
+    if (this._subCommand) {
+      parts.push(this._subCommand.toString());
+    }
+
+    return parts.join(' ');
+  }
+}
+
 
 /**
  * 处理高级参数
