@@ -13,10 +13,13 @@ const TEMP_MULTI_ENTRIES = [
   'operate',
   'ms-sanitizer-panel-view',
   'project-sh',
+  'performance-run-data',
+  'ms-sanitizer-run-data',
+  'ops-config',
 ];
 
 export default defineConfig(({ mode }) => {
-  const buildInput: Record<string, string> = { index: 'index.html' };
+  const buildInput: Record<string, string> = {};
 
   for (const entry of TEMP_MULTI_ENTRIES) {
     buildInput[entry] = `src/views/${entry}/${entry}.html`;

@@ -191,7 +191,11 @@ export class ViewServer extends vscode.Disposable {
     routePath: string,
     query: Record<string, unknown> = {},
   ) {
-    await this.renderer.render(webview, { lang: vscode.env.language });
+    await this.renderer.render(
+      webview,
+      { lang: vscode.env.language },
+      routePath,
+    );
     const queryParams = { ...query, _path: routePath };
 
     this.query.setQuery(webview, queryParams);
