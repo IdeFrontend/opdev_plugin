@@ -7,7 +7,7 @@ import { remotePathSearch } from '@/apis';
 export type SearchType = 'projectPath' | 'projectSH';
 
 /**
- * 搜索策略接口
+ * 搜索接口
  */
 export interface SearchStrategy {
   search(keyword: string): Promise<void>;
