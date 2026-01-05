@@ -273,7 +273,7 @@ export function generateStructure(
           renderInPlatform: false,
           // 数据存放位置默认值
           dataStoragePath: getDefaultDirectory(),
-          simulatorType: 'Ascend910B1',
+          simulatorType: 'Ascend910B3',
           enableDump: false,
           advance_param: [],
         },
