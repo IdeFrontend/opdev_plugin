@@ -323,7 +323,7 @@ onMounted(async () => {
                   :key="`menuitem-${child.key}`"
                   :disabled="isMenuItemDisabled(child.key)"
                   :class="{
-                    'pointer-events-none opacity-50 cursor-not-allowed':
+                    'opacity-50 cursor-not-allowed':
                       isMenuItemDisabled(child.key),
                   }"
                 >
@@ -352,7 +352,7 @@ onMounted(async () => {
               :key="`menuitem-${item.key}`"
               :disabled="isMenuItemDisabled(item.key)"
               :class="{
-                'pointer-events-none opacity-50 cursor-not-allowed':
+                'opacity-50 cursor-not-allowed':
                   isMenuItemDisabled(item.key),
               }"
             >
