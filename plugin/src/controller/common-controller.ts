@@ -1,5 +1,6 @@
 import { CheckPathExistsParams, SaveFileParams } from 'shared:/api-types';
 import { fileService } from '../service/file-service';
+import * as vscode from 'vscode';
 
 export const commonMethods = {
   /**
@@ -15,4 +16,11 @@ export const commonMethods = {
   async saveFileToLocal(params: SaveFileParams): Promise<boolean> {
     return await fileService.saveFileToLocal(params);
   },
+
+  /**
+   * 打开外部网站
+   */
+  openExternalLink(url: string) {
+    vscode.env.openExternal(vscode.Uri.parse(url));
+  }
 };

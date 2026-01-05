@@ -20,3 +20,13 @@ export function saveFileToLocal(params: SaveFileParams) {
     params,
   );
 }
+
+/**
+ * 打开外部网站
+ */
+export function openExternalLink(url: string) {
+  return request.post(
+    'common/openExternalLink',
+    url
+  );
+}

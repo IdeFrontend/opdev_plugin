@@ -8,7 +8,7 @@
 import { FolderOutlined } from '@ant-design/icons-vue';
 import { ref, nextTick } from 'vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
-import { saveConfig as saveConfigAPI } from '@/apis';
+import { saveConfig as saveConfigAPI, openExternalLink } from '@/apis';
 import EditTable from './edit-table.vue';
 import SelectFolder from './select-folder.vue';
 
@@ -56,6 +56,10 @@ const deleteTableItem = (e) => {
     saveConfig();
   });
 };
+
+const jumpToGuide = () => {
+  openExternalLink(guide.value)
+}
 </script>
 
 <template>
@@ -66,9 +70,7 @@ const deleteTableItem = (e) => {
         <a-tooltip :overlay-style="{ maxWidth: '300px' }">
           <template #title>
             <div>
-              具体图形案例请参考算子调优工具概述
-              <br />
-              {{ guide }}
+              具体图形案例请参考<span style="color: #1677ff; cursor: pointer;" @click="jumpToGuide">算子调优工具概述</span>
             </div>
           </template>
           <QuestionCircleOutlined class="help-icon" />
