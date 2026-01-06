@@ -225,7 +225,7 @@
     "install:web": "cd ../web && pnpm install"
   },
   "lint-staged": {
-    "*.{js,ts,vue}": [
+    "*.{js,jsx,ts,tsx,vue}": [
       "oxlint",
       "eslint --fix"
     ]
