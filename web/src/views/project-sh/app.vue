@@ -190,15 +190,8 @@ const handleSubmit = async () => {
 onMounted(async () => {
   try {
     const result = await getProjectSH();
-    // 修复类型推断错误，保证 projectSH 始终为可用类型
-    let projectSH = '';
-
-    if (typeof result === 'object' && result !== null && 'projectSH' in result) {
-      projectSH = result.projectSH ?? '';
-    }
-    else {
-      projectSH = result;
-    }
+    // result 本身就是 string 类型
+    const projectSH = result || '';
 
     console.log('projectSH', projectSH);
 

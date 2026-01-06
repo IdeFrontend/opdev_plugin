@@ -42,31 +42,23 @@
 </template>
 <script lang="ts" setup>
 import { ref } from 'vue';
+import { vscode } from '@/utils/vscode';
 
 const activeKey = ref(['1']);
 
 const handleMenuClick = () => {
-  if ((window as any).vscode) {
-
-    window.vscode.postMessage({
-      command: 'openLinkWebviewPanel',
-      commandId: 'my-extension.openProjectView',
-    });
-  }
+  vscode.postMessage({
+    command: 'openLinkWebviewPanel',
+    commandId: 'my-extension.openProjectView',
+  });
 };
 const openHomePage = () => {
-  if ((window as any).vscode) {
-
-    window.vscode.postMessage({ command: 'openWelcome' });
-  }
+  vscode.postMessage({ command: 'openWelcome' });
 };
 const openHelpPage = () => {
-  if ((window as any).vscode) {
-
-    window.vscode.postMessage({
-      command: 'openExternalLink',
-      url: 'https://gitcode.com/org/cann/discussions/54',
-    });
-  }
+  vscode.postMessage({
+    command: 'openExternalLink',
+    url: 'https://gitcode.com/org/cann/discussions/54',
+  });
 };
 </script>

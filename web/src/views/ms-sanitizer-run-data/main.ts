@@ -9,11 +9,7 @@ import { createApp } from 'vue';
 import App from './app.vue';
 import 'ant-design-vue/dist/reset.css';
 import '../../assets/css/tailwind.css';
-
-if (typeof acquireVsCodeApi !== 'undefined' && !window.vscode) {
-
-  window.vscode = acquireVsCodeApi();
-}
+import { vscode } from '@/utils/vscode';
 
 // 监听来自VSCode扩展和iframe的消息
 window.addEventListener('message', (event) => {
@@ -22,13 +18,10 @@ window.addEventListener('message', (event) => {
   console.log('外层页面接收到的message:', message);
 
   if (message.command.indexOf('vscode') === 0) {
-    if ((window as any).vscode) {
-
-      vscode.postMessage({
-        command: message.command,
-        message,
-      });
-    }
+    vscode.postMessage({
+      command: message.command,
+      message,
+    });
   }
 });
 

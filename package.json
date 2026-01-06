@@ -222,6 +222,7 @@
     "watch": "tsx scripts/build-extension --watch --sourcemap",
     "lint": "oxlint . && eslint .",
     "lint:fix": "eslint . --fix",
+    "type-check": "tsc --noEmit && cd web && vue-tsc --noEmit",
     "install:web": "cd ../web && pnpm install"
   },
   "lint-staged": {
@@ -231,12 +232,12 @@
     ]
   },
   "dependencies": {
+    "@mstt/shared": "workspace:*",
     "adm-zip": "^0.5.12",
     "compressing": "^2.0.0",
     "fs-extra": "^11.3.2",
     "i18next": "^25.7.2",
-    "ws": "^8.18.3",
-    "@mstt/shared": "workspace:*"
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
@@ -258,6 +259,7 @@
     "oxlint": "^1.36.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.50.0"
+    "typescript-eslint": "^8.50.0",
+    "vue-tsc": "^3.2.1"
   }
 }

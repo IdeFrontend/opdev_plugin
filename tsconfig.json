@@ -20,6 +20,16 @@
       "shared:/*": ["shared/*"]
     }
   },
-  "include": ["plugin/src/**/*", "shared/**/*"],
-  "exclude": ["node_modules", ".vscode-test", "web", "server"]
+  "exclude": [
+    "node_modules",
+    ".vscode-test",
+    ".vscode-test-web",
+    ".idea",
+    "dist",
+    "out",
+    "**/*.vsix",
+    "deletePackage.js",
+    "package.js",
+    "web"
+  ]
 }
