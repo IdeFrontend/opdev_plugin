@@ -72,7 +72,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div @contextmenu.prevent>
+  <div @contextmenu.prevent class="flex flex-col">
     <FilterBar
       v-model:sort-order="sortOrder"
       v-model:marked-only="markedOnly"
@@ -82,5 +82,8 @@ onBeforeUnmount(() => {
       :tree-data="renderTreeData"
       @toggle-mark="handleToggleMark"
     />
+    <div v-if="!renderTreeData || !renderTreeData.length" class="text-center mt-[20px]">
+      暂无数据
+    </div>
   </div>
 </template>

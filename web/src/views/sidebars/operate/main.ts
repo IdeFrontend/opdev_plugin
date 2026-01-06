@@ -22,10 +22,4 @@ function init() {
   isInitRun = true;
 }
 
-console.log(JSON.stringify(window?.chrome) !== '{}');
-
-if (JSON.stringify(window?.chrome) !== '{}') {
-  init();
-}
-
 init();

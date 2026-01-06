@@ -19,6 +19,9 @@ export class FormRulesFactory {
       {
         trigger: 'blur',
         validator: async (_rule: unknown, value: string) => {
+          if (!value) {
+            return Promise.resolve();
+          }
           const strategy = new ProjectPathValidationStrategy();
 
           try {
