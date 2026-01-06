@@ -8,7 +8,7 @@
 import { ref, computed, watch, nextTick } from 'vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import editTable from './edit-table.vue';
-import { saveConfig as saveConfigAPI } from '@/apis';
+import { saveConfig as saveConfigAPI, openExternalLink } from '@/apis';
 
 const props = defineProps({
   onboardData: {
@@ -213,6 +213,10 @@ const stopHref =
   'https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/API/ascendcopapi/atlasascendc_api_07_1215.html';
 const guide =
   'https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODtools/Operatordevelopmenttools/atlasopdev_16_0082.html';
+
+const jumpToGuide = (url) => {
+  openExternalLink(url)
+}
 </script>
 
 <template>
@@ -223,9 +227,7 @@ const guide =
         <a-tooltip :overlay-style="{ maxWidth: '300px' }">
           <template #title>
             <div>
-              具体图形案例请参考算子调优工具概述:
-              <br />
-              {{ guide }}
+              具体图形案例请参考<span style="color: #1677ff; cursor: pointer;" @click="jumpToGuide(guide)">算子调优工具概述</span>
             </div>
           </template>
           <QuestionCircleOutlined class="help-icon" />
@@ -399,7 +401,11 @@ const guide =
                 <QuestionCircleOutlined class="help-icon" />
                 <template #title>
                   <div>
-                    指定代码段范围时，需要在算子Kernel侧对应的代码段前后调用MetricsProfStart和MetricsProfStop接口，具体调用方式请参见MetricsProfStart和MetricsProfStop接口
+                    指定代码段范围时，需要在算子Kernel侧对应的代码段前后调用MetricsProfStart和MetricsProfStop接口，具体调用方式请参见
+                    <span style="color: #1677ff; cursor: pointer;" @click="jumpToGuide(startHref)">MetricsProfStart</span>
+                    和
+                    <span style="color: #1677ff; cursor: pointer;" @click="jumpToGuide(stopHref)">MetricsProfStop</span>
+                    接口
                   </div>
                 </template>
               </a-tooltip>
@@ -409,18 +415,15 @@ const guide =
             v-if="onboardData.user_options.KernelScale"
             type="info"
             show-icon
+            style="margin-bottom: 12px;"
           >
             <template #message>
               请确认是否在算子Kernal侧对应的代码段前后调用了MetricsProfStart和MetricsProfStop接口，若未调用，该选项将不会生效。
               具体调用方式请参见
-              <br />
-              MetricsProfStart
-              <br />
-              （{{ startHref }}）
-              <br />
-              和MetricsProfStop接口
-              <br />
-              （{{ stopHref }}）
+              <span style="color: #1677ff; cursor: pointer;" @click="jumpToGuide(startHref)">MetricsProfStart</span>
+              和
+              <span style="color: #1677ff; cursor: pointer;" @click="jumpToGuide(stopHref)">MetricsProfStop</span>
+              接口
             </template>
           </a-alert>
 
