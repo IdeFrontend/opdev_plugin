@@ -91,9 +91,7 @@ export function getBuildConfig() {
 
 /** 获取示例构建配置ID */
 export function getBuildExampleConfig() {
-  return request.post<undefined, number | undefined>(
-    'ops/getBuildExampleConfig',
-  );
+  return request.post<undefined, number | undefined>('ops/getBuildExampleConfig');
 }
 
 /** 获取仿真配置ID */
@@ -113,9 +111,7 @@ export function getSanitizerConfigs() {
 
 /** 获取异常检测配置ID */
 export function getSanitizerConfigId() {
-  return request.post<undefined, number | undefined>(
-    'ops/getSanitizerConfigId',
-  );
+  return request.post<undefined, number | undefined>('ops/getSanitizerConfigId');
 }
 
 /** 保存异常检测表单配置 */

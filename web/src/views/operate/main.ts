@@ -3,9 +3,8 @@ import App from './app.vue';
 import 'ant-design-vue/dist/reset.css';
 import '../../assets/css/tailwind.css';
 
-//@ts-ignore
 if (typeof acquireVsCodeApi !== 'undefined' && !window.vscode) {
-  //@ts-ignore
+
   window.vscode = acquireVsCodeApi();
 }
 
@@ -17,13 +16,14 @@ function init() {
 
     return;
   }
-  createApp(App).mount('#app');
+
+  createApp(App)
+    .mount('#app');
   isInitRun = true;
 }
 
-//@ts-ignore
 console.log(JSON.stringify(window?.chrome) !== '{}');
-//@ts-ignore
+
 if (JSON.stringify(window?.chrome) !== '{}') {
   init();
 }

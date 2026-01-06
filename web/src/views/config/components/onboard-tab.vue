@@ -1,14 +1,18 @@
-<!-- 
+<!--
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree. -->
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue';
+import {
+  ref, computed, watch, nextTick,
+} from 'vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import editTable from './edit-table.vue';
-import { saveConfig as saveConfigAPI, openExternalLink } from '@/apis';
+import {
+  saveConfig as saveConfigAPI, openExternalLink,
+} from '@/apis';
 
 const props = defineProps({
   onboardData: {
@@ -28,7 +32,10 @@ watch(
   (val) => {
     localOnboardData.value = { ...val };
   },
-  { immediate: true, deep: true }
+  {
+    immediate: true,
+    deep: true,
+  },
 );
 
 // Advanced collapse panel - default open
@@ -47,6 +54,7 @@ const handleOnboardDataChange = () => {
   emit('update:onboardData', localOnboardData.value);
   saveConfig();
 };
+
 console.log('handleOnboardDataChange', handleOnboardDataChange);
 
 const addTableItem = () => {
@@ -101,8 +109,8 @@ const performanceSelectedAll = ref(true);
 // 内存分析图，这组半选
 const memorySelectedHalf = computed(() => {
   if (
-    localOnboardData.value.user_options?.Occupancy &&
-    localOnboardData.value.user_options?.Roofline
+    localOnboardData.value.user_options?.Occupancy
+    && localOnboardData.value.user_options?.Roofline
   ) {
     return false;
   }
@@ -174,11 +182,13 @@ const saveConfig = async () => {
 watch(
   () => localOnboardData.value.user_options,
   () => {
-    if (!localOnboardData.value.user_options) return;
+    if (!localOnboardData.value.user_options) {
+      return;
+    }
 
     memorySelectedAll.value =
-      localOnboardData.value.user_options.Occupancy &&
-      localOnboardData.value.user_options.Roofline;
+      localOnboardData.value.user_options.Occupancy
+      && localOnboardData.value.user_options.Roofline;
 
     let count = 0;
     const keyArray = [
@@ -199,12 +209,15 @@ watch(
     performanceSelectedAll.value = count === keyArray.length;
 
     totalSelectedAll.value =
-      memorySelectedAll.value &&
-      performanceSelectedAll.value &&
-      localOnboardData.value.user_options.Source &&
-      localOnboardData.value.user_options.MemoryDetail;
+      memorySelectedAll.value
+      && performanceSelectedAll.value
+      && localOnboardData.value.user_options.Source
+      && localOnboardData.value.user_options.MemoryDetail;
   },
-  { deep: true, immediate: true },
+  {
+    deep: true,
+    immediate: true,
+  },
 );
 
 const startHref =
@@ -215,8 +228,8 @@ const guide =
   'https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODtools/Operatordevelopmenttools/atlasopdev_16_0082.html';
 
 const jumpToGuide = (url) => {
-  openExternalLink(url)
-}
+  openExternalLink(url);
+};
 </script>
 
 <template>
@@ -227,7 +240,10 @@ const jumpToGuide = (url) => {
         <a-tooltip :overlay-style="{ maxWidth: '300px' }">
           <template #title>
             <div>
-              具体图形案例请参考<span style="color: #1677ff; cursor: pointer;" @click="jumpToGuide(guide)">算子调优工具概述</span>
+              具体图形案例请参考<span
+                style="color: #1677ff; cursor: pointer;"
+                @click="jumpToGuide(guide)"
+              >算子调优工具概述</span>
             </div>
           </template>
           <QuestionCircleOutlined class="help-icon" />
@@ -357,13 +373,13 @@ const jumpToGuide = (url) => {
       <a-alert
         v-if="
           onboardData.user_options.Roofline ||
-          onboardData.user_options.MemoryDetail
+            onboardData.user_options.MemoryDetail
         "
         type="info"
         show-icon
         message="若勾选“Roofline瓶颈分析”或“Cache热力图”，将默认采集所有算子性能指标"
         style="margin-top: 12px"
-      ></a-alert>
+      />
 
       <!-- <div class="section-title" style="margin-top: 12px;">模式</div>
       <a-form-item>
@@ -402,9 +418,15 @@ const jumpToGuide = (url) => {
                 <template #title>
                   <div>
                     指定代码段范围时，需要在算子Kernel侧对应的代码段前后调用MetricsProfStart和MetricsProfStop接口，具体调用方式请参见
-                    <span style="color: #1677ff; cursor: pointer;" @click="jumpToGuide(startHref)">MetricsProfStart</span>
+                    <span
+                      style="color: #1677ff; cursor: pointer;"
+                      @click="jumpToGuide(startHref)"
+                    >MetricsProfStart</span>
                     和
-                    <span style="color: #1677ff; cursor: pointer;" @click="jumpToGuide(stopHref)">MetricsProfStop</span>
+                    <span
+                      style="color: #1677ff; cursor: pointer;"
+                      @click="jumpToGuide(stopHref)"
+                    >MetricsProfStop</span>
                     接口
                   </div>
                 </template>
@@ -420,9 +442,15 @@ const jumpToGuide = (url) => {
             <template #message>
               请确认是否在算子Kernal侧对应的代码段前后调用了MetricsProfStart和MetricsProfStop接口，若未调用，该选项将不会生效。
               具体调用方式请参见
-              <span style="color: #1677ff; cursor: pointer;" @click="jumpToGuide(startHref)">MetricsProfStart</span>
+              <span
+                style="color: #1677ff; cursor: pointer;"
+                @click="jumpToGuide(startHref)"
+              >MetricsProfStart</span>
               和
-              <span style="color: #1677ff; cursor: pointer;" @click="jumpToGuide(stopHref)">MetricsProfStop</span>
+              <span
+                style="color: #1677ff; cursor: pointer;"
+                @click="jumpToGuide(stopHref)"
+              >MetricsProfStop</span>
               接口
             </template>
           </a-alert>

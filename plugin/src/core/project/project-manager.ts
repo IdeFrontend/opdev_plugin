@@ -100,21 +100,18 @@ export class ProjectManager {
    * @param params 初始化参数
    * @returns 项目ID
    */
-  public async initProject(
-    params: {
-      projectPath?: string;
-      projectName?: string;
-      accendEnvScript?: string;
-    } = {},
-  ): Promise<string> {
+  public async initProject(params: {
+    projectPath?: string;
+    projectName?: string;
+    accendEnvScript?: string;
+  } = {}): Promise<string> {
     const info = this.getProjectInfo(params);
 
     if (params.projectPath && params.projectName) {
-      this._projectPath = path.normalize(
-        `${params.projectPath}/${params.projectName}`,
-      );
+      this._projectPath = path.normalize(`${params.projectPath}/${params.projectName}`);
       this._projectName = params.projectName;
-    } else {
+    }
+    else {
       this._projectName = info.name;
       this._projectPath = info.path;
     }

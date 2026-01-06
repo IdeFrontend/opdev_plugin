@@ -12,8 +12,7 @@ import {
 } from '../constants';
 
 export class MsSanitizerPanelViewProvider
-  implements vscode.WebviewViewProvider
-{
+implements vscode.WebviewViewProvider {
   public static readonly viewType = 'msSanitizerPanelView';
 
   public static getMsSanitizerPanelViewDataParams = null;
@@ -34,10 +33,10 @@ export class MsSanitizerPanelViewProvider
     _context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken,
   ) {
-    console.log(`[MsSanitizerPanelViewProvider.resolveWebviewView] 开始解析webview视图`);
+    console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] 开始解析webview视图');
     console.log(`[MsSanitizerPanelViewProvider.resolveWebviewView] viewType: ${MsSanitizerPanelViewProvider.viewType}`);
     console.log(`[MsSanitizerPanelViewProvider.resolveWebviewView] extensionUri: ${this._extensionUri.toString()}`);
-    
+
     this._view = webviewView;
 
     // 配置WebView
@@ -45,20 +44,21 @@ export class MsSanitizerPanelViewProvider
       enableScripts: true,
       localResourceRoots: [this._extensionUri],
     };
-    console.log(`[MsSanitizerPanelViewProvider.resolveWebviewView] WebView配置完成`);
+    console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] WebView配置完成');
 
     // 注册 webview 到 ApiServer
     this._apiServer.addWebview('MsSanitizerPanelView', webviewView.webview);
-    console.log(`[MsSanitizerPanelViewProvider.resolveWebviewView] WebView已注册到ApiServer`);
+    console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] WebView已注册到ApiServer');
 
     // 消息处理
     webviewView.webview.onDidReceiveMessage(
       async (message: any) => {
-        console.log(`[MsSanitizerPanelViewProvider] 收到消息:`, message.command);
+        console.log('[MsSanitizerPanelViewProvider] 收到消息:', message.command);
+
         if (message.command === 'vscodeGetMsSanitizerPanelViewData') {
           // 发送数据 后续优化 先通过_view.webview方式下发内容
           if (!MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams) {
-            console.log(`[MsSanitizerPanelViewProvider] 无数据参数，发送空数据`);
+            console.log('[MsSanitizerPanelViewProvider] 无数据参数，发送空数据');
             webviewView.webview.postMessage({
               command: 'iframeRemoteMsSanitizerPanelViewSetRenderList',
               data: {},
@@ -67,28 +67,28 @@ export class MsSanitizerPanelViewProvider
             return;
           }
 
-          console.log(`[MsSanitizerPanelViewProvider] 开始获取面板数据`);
-          const panelData = await getPanelData(
-            MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams,
-          );
+          console.log('[MsSanitizerPanelViewProvider] 开始获取面板数据');
+          const panelData = await getPanelData(MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams);
 
           MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams = null;
-          console.log(`[MsSanitizerPanelViewProvider] 面板数据获取完成，发送数据`);
+          console.log('[MsSanitizerPanelViewProvider] 面板数据获取完成，发送数据');
           webviewView.webview.postMessage({
             command: 'iframeRemoteMsSanitizerPanelViewSetRenderList',
             data: panelData,
           });
-        } else {
+        }
+        else {
           this.handleWebviewMessage(message);
         }
       },
       undefined,
       this._context.subscriptions,
     );
-    console.log(`[MsSanitizerPanelViewProvider.resolveWebviewView] 消息处理器已注册`);
+    console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] 消息处理器已注册');
 
     // 设置HTML内容
     const distPath = path.join(this._extensionUri.fsPath, 'out', 'web');
+
     console.log(`[MsSanitizerPanelViewProvider.resolveWebviewView] 开始加载HTML，distPath: ${distPath}`);
     console.log(`[MsSanitizerPanelViewProvider.resolveWebviewView] router: ${VIEW_MS_SANITIZER}`);
 
@@ -98,9 +98,10 @@ export class MsSanitizerPanelViewProvider
         webviewView.webview,
         VIEW_MS_SANITIZER,
       );
-      console.log(`[MsSanitizerPanelViewProvider.resolveWebviewView] HTML加载完成`);
-    } catch (error) {
-      console.error(`[MsSanitizerPanelViewProvider.resolveWebviewView] HTML加载失败:`, error);
+      console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] HTML加载完成');
+    }
+    catch (error) {
+      console.error('[MsSanitizerPanelViewProvider.resolveWebviewView] HTML加载失败:', error);
       throw error;
     }
   }
@@ -152,11 +153,7 @@ export const getMsSanitizerPanelViewProvider = (
   const msSanitizerPanelView = vscode.window.registerWebviewViewProvider(
     MsSanitizerPanelViewProvider.viewType,
     msSanitizerPanelViewProvider,
-    {
-      webviewOptions: {
-        retainContextWhenHidden: false,
-      },
-    },
+    { webviewOptions: { retainContextWhenHidden: false } },
   );
 
   // 注册打开终端和 Webview 的命令
@@ -167,7 +164,7 @@ export const getMsSanitizerPanelViewProvider = (
       await vscode.commands.executeCommand('workbench.action.togglePanel');
 
       // 定位到异常检测面板
-      await vscode.commands.executeCommand(`msSanitizerPanelView.focus`);
+      await vscode.commands.executeCommand('msSanitizerPanelView.focus');
 
       MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams = data;
     },

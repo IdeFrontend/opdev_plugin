@@ -91,10 +91,10 @@ export class MindStudioPluginInstaller {
       // ✅【关键】先判断是否是 VS Code 官方 Remote（SSH / WSL / Container）
       const isVSCodeOfficialRemote =
         // 官方 Remote 一定会设置这个
-        process.env.VSCODE_AGENT_FOLDER !== undefined ||
+        process.env.VSCODE_AGENT_FOLDER !== undefined
         // 或者进程路径包含官方 server 标识
-        process.execPath.includes('.vscode-server') ||
-        process.execPath.includes('.vscode-remote');
+        || process.execPath.includes('.vscode-server')
+        || process.execPath.includes('.vscode-remote');
 
       if (isVSCodeOfficialRemote) {
         // 明确不是 code-server / CodeArts
@@ -109,26 +109,32 @@ export class MindStudioPluginInstaller {
 
       // 显式检测 华为 CodeArts Server（关键！避免误判为桌面）
       if (
-        process.env.CODEARTS_SERVER_VERSION !== undefined ||
-        (process.env.HOSTNAME && process.env.HOSTNAME.includes('codearts')) ||
-        process.execPath.includes('codearts') ||
-        process.argv.some((arg) => arg.includes('codearts'))
+        process.env.CODEARTS_SERVER_VERSION !== undefined
+        || (process.env.HOSTNAME && process.env.HOSTNAME.includes('codearts'))
+        || process.execPath.includes('codearts')
+        || process.argv.some((arg) => arg.includes('codearts'))
       ) {
         isCodeArts = true;
         isCodeServer = true; // CodeArts 基于 code-server，归为一类
       }
       // 检测开源版 code-server
       else if (
-        process.env.CODE_SERVER_VERSION !== undefined ||
-        process.argv.some((arg) => arg.includes('code-server')) ||
-        process.execPath.includes('code-server')
+        process.env.CODE_SERVER_VERSION !== undefined
+        || process.argv.some((arg) => arg.includes('code-server'))
+        || process.execPath.includes('code-server')
       ) {
         isCodeServer = true;
       }
       // 否则默认为桌面 VS Code
     }
 
-    return { isWeb, isCodeServer, isCodeArts, isCodespaces, isGitpod };
+    return {
+      isWeb,
+      isCodeServer,
+      isCodeArts,
+      isCodespaces,
+      isGitpod,
+    };
   }
 
   // ===================================================================
@@ -154,10 +160,9 @@ export class MindStudioPluginInstaller {
       );
 
       // 提示用户 debug 插件已自动安装完成
-      vscode.window.showInformationMessage(
-        '✅ 相关 Debug 插件已自动安装完成，可立即使用。',
-      );
-    } catch (err) {
+      vscode.window.showInformationMessage('✅ 相关 Debug 插件已自动安装完成，可立即使用。');
+    }
+    catch (err) {
       console.error('Desktop install failed:', err);
       vscode.window.showErrorMessage(`安装失败：${(err as Error).message}`);
     }
@@ -167,7 +172,9 @@ export class MindStudioPluginInstaller {
   // 🐳 code-server / CodeArts Server 安装方式（手动解压 + 注册）
   // ===================================================================
   private async installForCodeServer(): Promise<void> {
-    const { pluginId, vsixRelativePath, pluginVersion } = this.options;
+    const {
+      pluginId, vsixRelativePath, pluginVersion,
+    } = this.options;
 
     try {
       // 获取正确的 extensions 目录（优先 CodeArts）
@@ -197,6 +204,7 @@ export class MindStudioPluginInstaller {
       if (!fs.existsSync(vsixPath)) {
         throw new Error(`.vsix file not found at: ${vsixPath}`);
       }
+
       console.log(`📦 Using .vsix from: ${vsixPath}`);
 
       // 动态导入 adm-zip（避免 Web 环境报错）
@@ -219,15 +227,17 @@ export class MindStudioPluginInstaller {
       }
 
       // 清理临时目录
-      fs.rmSync(tempDir, { recursive: true, force: true });
+      fs.rmSync(tempDir, {
+        recursive: true,
+        force: true,
+      });
       // 更新 extensions.json，使其被 CodeArts 识别
       await this.updateExtensionsJson(extensionsDir, pluginId, pluginVersion);
 
       // 提示用户 debug 插件已自动安装完成
-      vscode.window.showInformationMessage(
-        '✅ 相关 Debug 插件已自动安装完成，可立即使用。',
-      );
-    } catch (err) {
+      vscode.window.showInformationMessage('✅ 相关 Debug 插件已自动安装完成，可立即使用。');
+    }
+    catch (err) {
       console.error('code-server/CodeArts install failed:', err);
       vscode.window.showErrorMessage(`安装失败：${(err as Error).message}`);
     }
@@ -276,20 +286,17 @@ export class MindStudioPluginInstaller {
         const content = fs.readFileSync(jsonPath, 'utf8');
 
         manifest = JSON.parse(content);
-      } catch {
+      }
+      catch {
         console.warn('Failed to parse extensions.json, starting fresh.');
       }
     }
 
     // 避免重复注册
-    const exists = manifest.some(
-      (ext) => ext.identifier?.id === id && ext.version === version,
-    );
+    const exists = manifest.some((ext) => ext.identifier?.id === id && ext.version === version);
 
     if (exists) {
-      console.log(
-        `✅ Extension ${id}@${version} already registered in extensions.json`,
-      );
+      console.log(`✅ Extension ${id}@${version} already registered in extensions.json`);
 
       return;
     }
@@ -325,37 +332,34 @@ export class MindStudioPluginInstaller {
   // ===================================================================
   // ☁️ Web IDE（Codespaces / Gitpod）处理：生成配置文件
   // ===================================================================
-  private async handleWebIDE(
-    env: ReturnType<MindStudioPluginInstaller['detectEnvironment']>,
-  ): Promise<void> {
+  private async handleWebIDE(env: ReturnType<MindStudioPluginInstaller['detectEnvironment']>): Promise<void> {
     let generated = false;
 
     try {
       if (env.isCodespaces) {
         generated = await this.generateDevContainerConfig();
-      } else if (env.isGitpod) {
+      }
+      else if (env.isGitpod) {
         generated = await this.generateGitpodConfig();
-      } else {
+      }
+      else {
         await vscode.window.showWarningMessage(
-          `当前 Web 环境不支持自动安装，请手动配置。`,
+          '当前 Web 环境不支持自动安装，请手动配置。',
           '确定',
         );
 
         return;
       }
-    } catch (err) {
-      vscode.window.showErrorMessage(
-        `配置文件生成失败：${(err as Error).message}`,
-      );
+    }
+    catch (err) {
+      vscode.window.showErrorMessage(`配置文件生成失败：${(err as Error).message}`);
 
       return;
     }
 
     if (generated) {
       // 提示用户 debug 插件已自动安装完成
-      vscode.window.showInformationMessage(
-        '✅ 相关 Debug 插件已自动安装完成，可立即使用。',
-      );
+      vscode.window.showInformationMessage('✅ 相关 Debug 插件已自动安装完成，可立即使用。');
     }
   }
 
@@ -365,7 +369,9 @@ export class MindStudioPluginInstaller {
   private async generateDevContainerConfig(): Promise<boolean> {
     const wsFolder = vscode.workspace.workspaceFolders?.[0];
 
-    if (!wsFolder) throw new Error('No workspace folder.');
+    if (!wsFolder) {
+      throw new Error('No workspace folder.');
+    }
 
     const dir = vscode.Uri.joinPath(wsFolder.uri, '.devcontainer');
     const file = vscode.Uri.joinPath(dir, 'devcontainer.json');
@@ -373,10 +379,14 @@ export class MindStudioPluginInstaller {
     // 检查是否已包含该插件
     try {
       const buf = await vscode.workspace.fs.readFile(file);
-      const text = new TextDecoder().decode(buf);
+      const text = new TextDecoder()
+        .decode(buf);
 
-      if (text.includes(this.options.pluginId)) return false;
-    } catch {
+      if (text.includes(this.options.pluginId)) {
+        return false;
+      }
+    }
+    catch {
       // 文件不存在，继续创建
     }
 
@@ -385,14 +395,11 @@ export class MindStudioPluginInstaller {
     const config = {
       name: 'MindStudio Dev',
       image: 'mcr.microsoft.com/devcontainers/base:ubuntu',
-      customizations: {
-        vscode: {
-          extensions: [this.options.pluginId],
-        },
-      },
+      customizations: { vscode: { extensions: [this.options.pluginId] } },
     };
 
-    const content = new TextEncoder().encode(JSON.stringify(config, null, 2));
+    const content = new TextEncoder()
+      .encode(JSON.stringify(config, null, 2));
 
     await vscode.workspace.fs.writeFile(file, content);
 
@@ -405,16 +412,22 @@ export class MindStudioPluginInstaller {
   private async generateGitpodConfig(): Promise<boolean> {
     const wsFolder = vscode.workspace.workspaceFolders?.[0];
 
-    if (!wsFolder) throw new Error('No workspace folder.');
+    if (!wsFolder) {
+      throw new Error('No workspace folder.');
+    }
 
     const file = vscode.Uri.joinPath(wsFolder.uri, '.gitpod.yml');
 
     try {
       const buf = await vscode.workspace.fs.readFile(file);
-      const text = new TextDecoder().decode(buf);
+      const text = new TextDecoder()
+        .decode(buf);
 
-      if (text.includes(this.options.pluginId)) return false;
-    } catch {
+      if (text.includes(this.options.pluginId)) {
+        return false;
+      }
+    }
+    catch {
       // 文件不存在
     }
 
@@ -425,7 +438,8 @@ vscode:
     - ${this.options.pluginId}
 `;
 
-    await vscode.workspace.fs.writeFile(file, new TextEncoder().encode(yaml));
+    await vscode.workspace.fs.writeFile(file, new TextEncoder()
+      .encode(yaml));
 
     return true;
   }

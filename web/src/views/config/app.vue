@@ -1,4 +1,4 @@
-<!-- 
+<!--
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  *
  * This source code is licensed under the MIT license found in the
@@ -6,13 +6,16 @@
 
 <script setup>
 import { theme } from 'ant-design-vue';
-import { ref, nextTick, onMounted } from 'vue';
+import {
+  ref, nextTick, onMounted,
+} from 'vue';
 import optionsList from './components/options-list.vue';
 import configDetail from './components/config-detail.vue';
 import { getConfigData } from '@/apis';
 
 const themeConfig = {
-  algorithm: theme.darkAlgorithm, // 使用暗色算法[1](@ref)
+  // 使用暗色算法[1](@ref)
+  algorithm: theme.darkAlgorithm,
 };
 const activeConfig = ref('');
 const activeOption = ref('build');
@@ -30,6 +33,7 @@ async function loadBuildConfig() {
   const keys = Object.keys(obj);
 
   activeConfig.value = keys[0] || '';
+
   if (activeConfig.value) {
     nextTick(() => configDetailRef.value.init(obj));
   }
@@ -43,7 +47,9 @@ onMounted(() => {
   <a-config-provider :theme="themeConfig">
     <div class="w-full h-full flex flex-col overflow-hidden">
       <div class="w-full p-5 shadow-[0_2px_12px_0_rgba(0,0,0,0.48)] z-10">
-        <div class="text-[22px] font-bold text-white">算子工程配置</div>
+        <div class="text-[22px] font-bold text-white">
+          算子工程配置
+        </div>
       </div>
       <div class="flex-1 flex overflow-hidden w-full">
         <div

@@ -1,4 +1,6 @@
-import { downloadData, deleteNode } from '@/apis';
+import {
+  downloadData, deleteNode,
+} from '@/apis';
 
 export interface TreeNodeData {
   key: string;
@@ -17,18 +19,21 @@ export const handleDownload = async (nodeData: TreeNodeData) => {
 
   if (nodeData.filePath) {
     filePath = nodeData.filePath;
-  } else if (nodeData.key) {
+  }
+  else if (nodeData.key) {
     // 如果是文件夹节点，可能需要特殊处理
     filePath = nodeData.key;
   }
 
   console.log('下载数据到本地:', filePath);
+
   try {
     await downloadData({
       filePath: filePath,
       nodeKey: nodeData.key,
     });
-  } catch (error) {
+  }
+  catch (error) {
     console.error('下载数据失败:', error);
   }
 };
@@ -38,12 +43,14 @@ export const handleDownload = async (nodeData: TreeNodeData) => {
  */
 export const handleDelete = async (nodeData: TreeNodeData) => {
   console.log('删除节点:', nodeData.key);
+
   try {
     await deleteNode({
       nodeKey: nodeData.key,
       filePath: nodeData.filePath,
     });
-  } catch (error) {
+  }
+  catch (error) {
     console.error('删除节点失败:', error);
   }
 };

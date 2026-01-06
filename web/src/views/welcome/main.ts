@@ -10,9 +10,8 @@ import App from './app.vue';
 import 'ant-design-vue/dist/reset.css';
 import '../../assets/css/tailwind.css';
 
-//@ts-ignore
 if (typeof acquireVsCodeApi !== 'undefined' && !window.vscode) {
-  //@ts-ignore
+
   window.vscode = acquireVsCodeApi();
 }
 
@@ -21,9 +20,10 @@ window.addEventListener('message', (event) => {
   const message = event.data;
 
   console.log('外层页面接收到的message:', message);
+
   if (message.command.indexOf('vscode') === 0) {
     if ((window as any).vscode) {
-      //@ts-ignore
+
       vscode.postMessage({
         command: message.command,
         message,
@@ -32,4 +32,5 @@ window.addEventListener('message', (event) => {
   }
 });
 
-createApp(App).mount('#app');
+createApp(App)
+  .mount('#app');

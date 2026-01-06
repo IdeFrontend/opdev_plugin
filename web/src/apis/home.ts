@@ -25,9 +25,7 @@ export function getProjectSH() {
  * 获取最后项目路径
  */
 export function getLastProjectPath() {
-  return request.post<undefined, GetLastProjectPathResult>(
-    'webview/getLastProjectPath',
-  );
+  return request.post<undefined, GetLastProjectPathResult>('webview/getLastProjectPath');
 }
 
 /**

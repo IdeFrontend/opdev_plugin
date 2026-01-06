@@ -14,7 +14,9 @@ import i18nResource from 'shared:/i18n';
 import { WebviewProvider } from './class/webview-provider';
 import { handleOperatorProjectDirectoryFile } from './class/webview-message-list';
 import { CsvEditorProvider } from './class/csv-editor-provider';
-import { ApiServer, type ApiGroup } from './core/api-server';
+import {
+  ApiServer, type ApiGroup,
+} from './core/api-server';
 import { ViewServer } from './core/view/view-server';
 import { routes } from './routes';
 import { apis } from './api-routes';
@@ -68,7 +70,8 @@ async function checkDevtoolConfigExists(): Promise<boolean> {
 
   try {
     return fs.existsSync(devtoolConfigPath);
-  } catch (error) {
+  }
+  catch (error) {
     console.error('检查 devtool_config.json 文件时出错:', error);
 
     return false;
@@ -94,6 +97,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 注册 pluginSidebar webview provider 并添加到 subscriptions
   const pluginSidebarDisposable = configProvider.showLeftPage(VIEW_HOME);
+
   context.subscriptions.push(pluginSidebarDisposable);
 
   // 国际化
@@ -116,48 +120,49 @@ export async function activate(context: vscode.ExtensionContext) {
   const closeAuxiliaryBar = async () => {
     try {
       // 检查辅助侧边栏是否可见，如果可见则关闭
-      await vscode.commands.executeCommand(
-        'workbench.action.closeAuxiliaryBar',
-      );
+      await vscode.commands.executeCommand('workbench.action.closeAuxiliaryBar');
       console.log('已关闭辅助侧边栏');
-    } catch (error) {
+    }
+    catch (error) {
       console.error('关闭辅助侧边栏时出错:', error);
     }
   };
 
   let progress:
-    | vscode.Progress<{ message?: string; increment?: number }>
-    | undefined;
+    | vscode.Progress<{ message?: string;
+      increment?: number }>
+      | undefined;
 
   // 检查是否需要执行创建算子命令
   const runCommand = context.globalState.get<string>('runCommand');
   const runCommandParam = context.globalState.get<number>('runCommand-param');
-  
+
   if (runCommand === COMMAND_CREATE_DIRECTORY && runCommandParam) {
     console.log('检测到需要执行创建算子命令，类型:', runCommandParam);
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: `开始创建算子文件...`,
+        title: '开始创建算子文件...',
         cancellable: false,
       },
       async (pro) => {
         progress = pro;
+
         try {
           // 执行创建算子命令
-          await vscode.commands.executeCommand(COMMAND_CREATE_DIRECTORY, {
-            createOperatorProjectDirectoryFileType: runCommandParam,
-          }, progress);
+          await vscode.commands.executeCommand(COMMAND_CREATE_DIRECTORY, { createOperatorProjectDirectoryFileType: runCommandParam }, progress);
           // 清除 runCommand，避免重复执行
           await context.globalState.update('runCommand', undefined);
           await context.globalState.update('runCommand-param', undefined);
-        } catch (error) {
+        }
+        catch (error) {
           console.error('执行创建算子命令失败:', error);
           throw error;
         }
       },
     );
   }
+
   // 视图
   const viewServer = initViews(context, apiServer);
 
@@ -192,6 +197,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
         return;
       }
+
       // 如果提供了 uri（在文件上右键），使用该路径；否则使用工作区根目录
       const targetPath = uri ? uri.fsPath : workspaceFolders[0].uri.fsPath;
 
@@ -220,10 +226,9 @@ export async function activate(context: vscode.ExtensionContext) {
     async () => {
       try {
         // 打开/关闭右侧辅助侧栏
-        await vscode.commands.executeCommand(
-          'workbench.action.toggleAuxiliaryBar',
-        );
-      } catch (error) {
+        await vscode.commands.executeCommand('workbench.action.toggleAuxiliaryBar');
+      }
+      catch (error) {
         console.log(error);
       }
     },
@@ -234,11 +239,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const opsOperateView = vscode.window.registerWebviewViewProvider(
     OpsOperateProvider.viewType,
     opsOperateProvider,
-    {
-      webviewOptions: {
-        retainContextWhenHidden: true,
-      },
-    },
+    { webviewOptions: { retainContextWhenHidden: true } },
   );
 
   context.subscriptions.push(opsOperateView);
@@ -252,11 +253,13 @@ export async function activate(context: vscode.ExtensionContext) {
       try {
         console.log('文件存在执行展开：123123123132');
         await vscode.commands.executeCommand('OpsOperateProvider.focus');
-      } catch (error) {
+      }
+      catch (error) {
         console.error('聚焦 OpsOperateProvider 视图时出错:', error);
       }
     }, 1000);
-  } else {
+  }
+  else {
     // 如果文件不存在，关闭侧边栏
     setTimeout(async () => {
       await closeAuxiliaryBar();
@@ -302,7 +305,8 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_CREATE_DIRECTORY,
     async (
       data: { createOperatorProjectDirectoryFileType: number },
-      progress: vscode.Progress<{ message?: string; increment?: number }>,
+      progress: vscode.Progress<{ message?: string;
+        increment?: number }>,
     ) => {
       await handleOperatorProjectDirectoryFile(
         data,
@@ -323,23 +327,25 @@ export async function activate(context: vscode.ExtensionContext) {
   const [workspaceFolder] = vscode.workspace.workspaceFolders ?? [];
 
   console.log(workspaceFolder, '是否打开了文件夹');
+
   // 仅在未打开任何工程/文件夹时弹出欢迎页，且在本地缓存中记录次数，最多弹出两次
   if (!workspaceFolder) {
     const welcomeShowCount =
       context.globalState.get<number>('welcomeShowCount') ?? 0;
 
     console.log(welcomeShowCount, '打开次数');
+
     if (welcomeShowCount < 2) {
       vscode.commands.executeCommand(COMMAND_WELCOME);
-      vscode.commands.executeCommand(
-        'workbench.view.extension.mindstudio-opssuite-vscode-plugin',
-      );
+      vscode.commands.executeCommand('workbench.view.extension.mindstudio-opssuite-vscode-plugin');
       context.globalState.update('welcomeShowCount', welcomeShowCount + 1);
     }
   }
 
   // 异常检测视图
-  const { openMsSanitizerDisposable, msSanitizerPanelView } =
+  const {
+    openMsSanitizerDisposable, msSanitizerPanelView,
+  } =
     getMsSanitizerPanelViewProvider(context, apiServer);
 
   context.subscriptions.push(msSanitizerPanelView, openMsSanitizerDisposable);
@@ -364,9 +370,7 @@ export async function activate(context: vscode.ExtensionContext) {
     CsvEditorProvider.viewType,
     csvEditorProvider,
     {
-      webviewOptions: {
-        retainContextWhenHidden: true,
-      },
+      webviewOptions: { retainContextWhenHidden: true },
       supportsMultipleEditorsPerDocument: false,
     },
   );
@@ -411,9 +415,7 @@ export async function activate(context: vscode.ExtensionContext) {
         ViewServer.getInstance().providerWebViewMap.msSanitizerSidebarView;
 
       console.log('ViewServer.getInstance()', msSanitizerRunData);
-      msSanitizerRunData.webview.postMessage({
-        command: 'iframeFlashMsSanitizerRunData',
-      });
+      msSanitizerRunData.webview.postMessage({ command: 'iframeFlashMsSanitizerRunData' });
     },
   );
 
@@ -427,9 +429,7 @@ export async function activate(context: vscode.ExtensionContext) {
         ViewServer.getInstance().providerWebViewMap.performanceSidebarView;
 
       console.log('ViewServer.getInstance()', performanceRunData);
-      performanceRunData.webview.postMessage({
-        command: 'iframeRefreshData',
-      });
+      performanceRunData.webview.postMessage({ command: 'iframeRefreshData' });
     },
   );
 
@@ -445,6 +445,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   if (vscode.workspace.workspaceFolders) {
     console.log('激活', vscode.workspace.workspaceFolders);
+
     try {
       const runCommand = context.globalState.get<string>('runCommand');
 
@@ -460,12 +461,14 @@ export async function activate(context: vscode.ExtensionContext) {
             );
             context.globalState.update('runCommand', null);
             context.globalState.update('runCommand-param', null);
-          } catch (e) {
+          }
+          catch (e) {
             console.error('Failed to run auto command:', e);
           }
         }, 1000); // 等待窗口加载完成
       }
-    } catch {
+    }
+    catch {
       // ignore invalid query
     }
   }

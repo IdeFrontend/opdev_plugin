@@ -35,12 +35,14 @@ export class PerformanceRunData {
     if (!project.workspaceIsProject()) {
       return;
     }
+
     const [performanceConfig] = getConfig(project.projectId, 'build_op');
 
     if (!performanceConfig) {
       // 如果项目没有 build_op 配置（例如非插件创建的项目），不进行任何处理
       return;
     }
+
     const op = getOpByProjectIdAndOpName(
       project.projectId,
       performanceConfig.op,
@@ -63,8 +65,7 @@ export class PerformanceRunData {
     const records = await this.scanRunDataDirectory(markedKeySet);
 
     return records.sort((a, b) =>
-      order === 'asc' ? a[sortBy] - b[sortBy] : b[sortBy] - a[sortBy],
-    );
+      order === 'asc' ? a[sortBy] - b[sortBy] : b[sortBy] - a[sortBy]);
   }
 
   /**
@@ -74,9 +75,8 @@ export class PerformanceRunData {
     const keySet = this.queryMarkedRecordKeySet();
 
     keySet.add(key);
-    PermanentStorage.getInstance().set<string[]>(MARKED_STORAGE_KEY, [
-      ...keySet,
-    ]);
+    PermanentStorage.getInstance()
+      .set<string[]>(MARKED_STORAGE_KEY, [...keySet]);
   }
 
   /**
@@ -86,19 +86,19 @@ export class PerformanceRunData {
     const keySet = this.queryMarkedRecordKeySet();
 
     keySet.delete(key);
-    PermanentStorage.getInstance().set<string[]>(MARKED_STORAGE_KEY, [
-      ...keySet,
-    ]);
+    PermanentStorage.getInstance()
+      .set<string[]>(MARKED_STORAGE_KEY, [...keySet]);
   }
 
   /**
    * 查询已有标记
    */
   private queryMarkedRecordKeySet(): Set<string> {
-    const storageValue = PermanentStorage.getInstance().get<string[]>(
-      MARKED_STORAGE_KEY,
-      [],
-    );
+    const storageValue = PermanentStorage.getInstance()
+      .get<string[]>(
+        MARKED_STORAGE_KEY,
+        [],
+      );
 
     return new Set(storageValue);
   }
@@ -109,11 +109,13 @@ export class PerformanceRunData {
     if (!this.rootUri || !(await this.uriExists(this.rootUri))) {
       return runData;
     }
-    const executionEntries = await vscode.workspace.fs.readDirectory(
-      this.rootUri,
-    );
 
-    for (const [subPath, fileType] of executionEntries) {
+    const executionEntries = await vscode.workspace.fs.readDirectory(this.rootUri);
+
+    for (const [
+      subPath,
+      fileType,
+    ] of executionEntries) {
       if (fileType !== vscode.FileType.Directory) {
         continue;
       }
@@ -135,26 +137,36 @@ export class PerformanceRunData {
     return runData;
   }
 
-  private async scanSubFiles(
-    parentUri: vscode.Uri,
-  ): Promise<(PerformanceRunDataFolder | PerformanceRunDataFile)[]> {
+  private async scanSubFiles(parentUri: vscode.Uri): Promise<(PerformanceRunDataFolder | PerformanceRunDataFile)[]> {
     const subPathEntries = await vscode.workspace.fs.readDirectory(parentUri);
     const subDirOrFiles: (PerformanceRunDataFolder | PerformanceRunDataFile)[] =
       [];
 
-    for (const [subPath, fileType] of subPathEntries) {
+    for (const [
+      subPath,
+      fileType,
+    ] of subPathEntries) {
       if (fileType === vscode.FileType.Directory) {
         const subUri = vscode.Uri.joinPath(parentUri, subPath);
         const children = await this.scanSubFiles(subUri);
 
         if (children.length > 0) {
-          subDirOrFiles.push({ title: subPath, children });
+          subDirOrFiles.push({
+            title: subPath,
+            children,
+          });
         }
-      } else {
-        const fileType = path.extname(subPath).replace(/^\./, '');
+      }
+      else {
+        const fileType = path.extname(subPath)
+          .replace(/^\./, '');
 
         // 仅显示以下后缀的文件
-        if (['csv', 'bin', 'json'].includes(fileType)) {
+        if ([
+          'csv',
+          'bin',
+          'json',
+        ].includes(fileType)) {
           const filePath = path.join(parentUri.fsPath, subPath);
 
           subDirOrFiles.push({
@@ -175,7 +187,8 @@ export class PerformanceRunData {
       await vscode.workspace.fs.stat(uri);
 
       return true;
-    } catch {
+    }
+    catch {
       return false;
     }
   }

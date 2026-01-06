@@ -53,7 +53,10 @@ class BaseOpGenerator {
 
   // helpers
   _renameFiles(templateName = 'add_custom') {
-    if (!fs.pathExistsSync(this.op_path)) return;
+    if (!fs.pathExistsSync(this.op_path)) {
+      return;
+    }
+
     const entries = fs.readdirSync(this.op_path);
 
     for (const name of entries) {
@@ -63,15 +66,14 @@ class BaseOpGenerator {
       if (stat.isDirectory()) {
         this._renameFilesInDir(full, templateName);
       }
+
       if (name.includes(templateName)) {
         const newName = name.replace(
           new RegExp(templateName, 'g'),
           this.op_name || '',
         );
 
-        fs.moveSync(full, path.join(this.op_path, newName), {
-          overwrite: true,
-        });
+        fs.moveSync(full, path.join(this.op_path, newName), { overwrite: true });
       }
     }
   }
@@ -83,30 +85,36 @@ class BaseOpGenerator {
       const full = path.join(dir, name);
       const stat = fs.statSync(full);
 
-      if (stat.isDirectory()) this._renameFilesInDir(full, templateName);
+      if (stat.isDirectory()) {
+        this._renameFilesInDir(full, templateName);
+      }
+
       if (name.includes(templateName)) {
         const newName = name.replace(
           new RegExp(templateName, 'g'),
           this.op_name || '',
         );
 
-        fs.moveSync(full, path.join(path.dirname(full), newName), {
-          overwrite: true,
-        });
+        fs.moveSync(full, path.join(path.dirname(full), newName), { overwrite: true });
       }
     }
   }
 
   _replaceContent(templateName = 'add_custom') {
-    if (!fs.pathExistsSync(this.op_path)) return;
+    if (!fs.pathExistsSync(this.op_path)) {
+      return;
+    }
+
     const opName = this.op_name || '';
     const opNameCapitalized = opName
       .split('_')
-      .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+      .map((s) => s.charAt(0)
+        .toUpperCase() + s.slice(1))
       .join('');
     const templateCap = templateName
       .split('_')
-      .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+      .map((s) => s.charAt(0)
+        .toUpperCase() + s.slice(1))
       .join('');
 
     const replacements: Record<string, string> = {
@@ -126,6 +134,7 @@ class BaseOpGenerator {
           walk(full);
           continue;
         }
+
         // only replace for text files
         try {
           let content = fs.readFileSync(full, 'utf8');
@@ -133,12 +142,17 @@ class BaseOpGenerator {
 
           for (const oldKey of Object.keys(replacements)) {
             if (content.includes(oldKey)) {
-              content = content.split(oldKey).join(replacements[oldKey]);
+              content = content.split(oldKey)
+                .join(replacements[oldKey]);
               changed = true;
             }
           }
-          if (changed) fs.writeFileSync(full, content, 'utf8');
-        } catch {
+
+          if (changed) {
+            fs.writeFileSync(full, content, 'utf8');
+          }
+        }
+        catch {
           // skip binary or unreadable files
         }
       }
@@ -154,27 +168,28 @@ class AscendOpGenerator extends BaseOpGenerator {
 
     this.template_name =
       this.params.template_name || this.template_name || 'add_custom';
+
     if (!opsPrototype) {
       this.op_name =
         this.project.project_name || path.basename(this.project.project_path);
 
       return this.op_name;
     }
+
     try {
       const raw = fs.readFileSync(opsPrototype, 'utf8');
       const json = JSON.parse(raw);
       const opInfo = Array.isArray(json) ? json[0] : json;
 
       this.op_name =
-        opInfo?.op ||
-        this.project.project_name ||
-        path.basename(this.project.project_path);
+        opInfo?.op
+        || this.project.project_name
+        || path.basename(this.project.project_path);
 
       return this.op_name!;
-    } catch {
-      throw Object.assign(new Error('Invalid op prototype'), {
-        name: 'InvalidRequest',
-      });
+    }
+    catch {
+      throw Object.assign(new Error('Invalid op prototype'), { name: 'InvalidRequest' });
     }
   }
 
@@ -187,7 +202,9 @@ class AscendOpGenerator extends BaseOpGenerator {
     if (!fs.pathExistsSync(templateFilePath)) {
       throw new Error(`Template file does not exist: ${templateFilePath}`);
     }
+
     execSync(`unzip -o ${templateFilePath} -d ${this.op_path}`);
+
     if (this.template_name && this.template_name != this.op_name) {
       this._renameFiles(this.template_name);
       this._replaceContent(this.template_name);
@@ -200,9 +217,9 @@ class AscendOpGenerator extends BaseOpGenerator {
 class CannOpGenerator extends BaseOpGenerator {
   parseMeta(): string {
     this.op_name =
-      this.params.op_name ||
-      this.project.project_name ||
-      path.basename(this.project.project_path);
+      this.params.op_name
+      || this.project.project_name
+      || path.basename(this.project.project_path);
     this.template_name =
       this.params.template_name || this.template_name || 'hello_world';
 
@@ -218,7 +235,9 @@ class CannOpGenerator extends BaseOpGenerator {
     if (!fs.pathExistsSync(templateFilePath)) {
       throw new Error(`Template file does not exist: ${templateFilePath}`);
     }
+
     execSync(`unzip -o ${templateFilePath} -d ${this.op_path}`);
+
     if (this.template_name && this.template_name != this.op_name) {
       this._renameFiles(this.template_name);
       this._replaceContent(this.template_name);
@@ -236,8 +255,9 @@ export const OpGeneratorFactory = {
   ): BaseOpGenerator {
     const opType = (params.op_type || 'ascend').toLowerCase();
 
-    if (opType === 'cann')
+    if (opType === 'cann') {
       return new CannOpGenerator(params, project, extensionPath);
+    }
 
     return new AscendOpGenerator(params, project, extensionPath);
   },

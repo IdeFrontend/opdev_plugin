@@ -1,12 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import { useLinkSSH } from '../composables/use-link-ssh';
 import { FormRulesFactory } from '../composables/form-rules';
 
-const emit = defineEmits(['connected']);
-
-const props = defineProps({
+defineProps({
   connected: {
     type: Number,
     default: 0,
@@ -69,24 +66,27 @@ const connectionFormRules = FormRulesFactory.createFormRules();
               <div
                 class="leading-8 mt-2.5 text-white text-[13px] mb-2.5 whitespace-nowrap overflow-hidden text-ellipsis group-[.selected]:whitespace-normal group-[.selected]:overflow-visible group-[.selected]:text-clip"
                 v-html="item.desc"
-              ></div>
+              />
               <a-tag
                 color="blue"
                 class="mt-2.5 mr-2"
-                >语言：Ascend C</a-tag
               >
+                语言：Ascend C
+              </a-tag>
               <a-tag
                 v-if="item.id === 1"
                 color="purple"
                 class="mt-2.5 mr-2"
-                >类型：<<<>>></a-tag
               >
+                类型：<<<>>>
+              </a-tag>
               <a-tag
                 v-if="item.id === 2"
                 color="green"
                 class="mt-2.5 mr-2"
-                >类型：标准自定义</a-tag
               >
+                类型：标准自定义
+              </a-tag>
               <transition name="slide-fade">
                 <div
                   v-if="selectedId_type === item.id"
@@ -109,7 +109,7 @@ const connectionFormRules = FormRulesFactory.createFormRules();
           </div>
         </div>
       </div>
-      <div class="w-px bg-white/15 mx-4 shrink-0 self-stretch"></div>
+      <div class="w-px bg-white/15 mx-4 shrink-0 self-stretch" />
       <div
         class="w-[65%] text-left text-sm font-normal leading-[22px] max-[960px]:flex-auto max-[960px]:w-full max-[960px]:min-w-0 [&_.ant-form-item-label_.help-icon]:text-white/45 [&_.ant-form-item-label_.help-icon]:cursor-help [&_.ant-form-item-label_.help-icon]:text-sm [&_.ant-form-item-label_.help-icon]:ml-1"
       >
@@ -181,8 +181,9 @@ const connectionFormRules = FormRulesFactory.createFormRules();
           type="primary"
           class="!mt-6 !w-[84px] !h-8 !rounded-none"
           @click="handleCreatedProject"
-          >立即创建</a-button
         >
+          立即创建
+        </a-button>
       </div>
     </div>
   </div>

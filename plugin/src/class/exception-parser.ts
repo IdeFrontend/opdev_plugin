@@ -28,26 +28,74 @@ export type QuestionType =
 
 export const exceptionTpyeMap = new Map<string, string>([
   // 注意：顺序很重要，更具体的匹配应该放在前面
-  ['Potential RAW hazard detected', 'memoryContention'],
-  ['Potential WAR hazard detected', 'memoryContention'],
-  ['Potential WAW hazard detected', 'memoryContention'],
-  ['LeakCheck: detected memory leaks', 'memory'],
-  ['illegal free()', 'memory'],
-  ['illegal read of size', 'memory'],
-  ['illegal write of size', 'memory'],
-  ['out of bounds of size', 'memory'],
-  ['Unused memory', 'memory'],
-  ['misaligned access of size', 'memory'],
-  ['uninitialized read of size', 'uninitialized'],
-  ['Unpaired set_flag insetructions detected', 'synchronize'],
+  [
+    'Potential RAW hazard detected',
+    'memoryContention',
+  ],
+  [
+    'Potential WAR hazard detected',
+    'memoryContention',
+  ],
+  [
+    'Potential WAW hazard detected',
+    'memoryContention',
+  ],
+  [
+    'LeakCheck: detected memory leaks',
+    'memory',
+  ],
+  [
+    'illegal free()',
+    'memory',
+  ],
+  [
+    'illegal read of size',
+    'memory',
+  ],
+  [
+    'illegal write of size',
+    'memory',
+  ],
+  [
+    'out of bounds of size',
+    'memory',
+  ],
+  [
+    'Unused memory',
+    'memory',
+  ],
+  [
+    'misaligned access of size',
+    'memory',
+  ],
+  [
+    'uninitialized read of size',
+    'uninitialized',
+  ],
+  [
+    'Unpaired set_flag insetructions detected',
+    'synchronize',
+  ],
 ]);
 
 export const exceptionMap = new Map<string, string>([
   // 注意：顺序很重要，更具体的匹配应该放在前面
-  ['memory', '内存'],
-  ['memoryContention', '竞争'],
-  ['uninitialized', '未初始化'],
-  ['synchronize', '同步'],
+  [
+    'memory',
+    '内存',
+  ],
+  [
+    'memoryContention',
+    '竞争',
+  ],
+  [
+    'uninitialized',
+    '未初始化',
+  ],
+  [
+    'synchronize',
+    '同步',
+  ],
 ]);
 
 /**
@@ -57,18 +105,54 @@ export const exceptionMap = new Map<string, string>([
  */
 export const exceptionNameMap = new Map<string, string>([
   // 注意：顺序很重要，更具体的匹配应该放在前面
-  ['Potential RAW hazard detected', '(Reaqd-After-White)内存数据竞争访问'],
-  ['Potential WAR hazard detected', '(White-After-Read)内存数据竞争访问'],
-  ['Potential WAW hazard detected', '(White-After-White)内存数据竞争访问'],
-  ['LeakCheck: detected memory leaks', '内存泄漏'],
-  ['illegal free()', '非法释放'],
-  ['illegal read of size', '非法读'],
-  ['illegal write of size', '非法写'],
-  ['out of bounds of size', '多核踩踏'],
-  ['Unused memory', '分配内存未使用'],
-  ['uninitialized read of size', '未初始化异常'],
-  ['Unpaired set_flag insetructions detected', '同步异常'],
-  ['misaligned access of size', '非对齐访问'],
+  [
+    'Potential RAW hazard detected',
+    '(Reaqd-After-White)内存数据竞争访问',
+  ],
+  [
+    'Potential WAR hazard detected',
+    '(White-After-Read)内存数据竞争访问',
+  ],
+  [
+    'Potential WAW hazard detected',
+    '(White-After-White)内存数据竞争访问',
+  ],
+  [
+    'LeakCheck: detected memory leaks',
+    '内存泄漏',
+  ],
+  [
+    'illegal free()',
+    '非法释放',
+  ],
+  [
+    'illegal read of size',
+    '非法读',
+  ],
+  [
+    'illegal write of size',
+    '非法写',
+  ],
+  [
+    'out of bounds of size',
+    '多核踩踏',
+  ],
+  [
+    'Unused memory',
+    '分配内存未使用',
+  ],
+  [
+    'uninitialized read of size',
+    '未初始化异常',
+  ],
+  [
+    'Unpaired set_flag insetructions detected',
+    '同步异常',
+  ],
+  [
+    'misaligned access of size',
+    '非对齐访问',
+  ],
 ]);
 
 /**
@@ -76,9 +160,7 @@ export const exceptionNameMap = new Map<string, string>([
  * @param exceptionName 原始异常名
  * @returns 问题类型，如果没有匹配则返回 null
  */
-export function getQuestionTypeByExceptionName(
-  exceptionName: string,
-): string | null {
+export function getQuestionTypeByExceptionName(exceptionName: string): string | null {
   if (!exceptionName || exceptionName.trim() === '') {
     return null;
   }
@@ -87,19 +169,24 @@ export function getQuestionTypeByExceptionName(
   const lowerTrimmedName = trimmedName.toLowerCase();
 
   // 按键的长度从长到短排序，优先匹配更具体的键
-  const sortedEntries = Array.from(exceptionTpyeMap.entries()).sort(
-    (a, b) => b[0].length - a[0].length,
-  );
+  const sortedEntries = Array.from(exceptionTpyeMap.entries())
+    .sort((a, b) => b[0].length - a[0].length);
 
   // 部分匹配：如果异常名包含映射键，则使用该映射（大小写敏感）
-  for (const [key, value] of sortedEntries) {
+  for (const [
+    key,
+    value,
+  ] of sortedEntries) {
     if (trimmedName.includes(key)) {
       return value;
     }
   }
 
   // 大小写不敏感匹配：如果异常名包含映射键（忽略大小写），则使用该映射
-  for (const [key, value] of sortedEntries) {
+  for (const [
+    key,
+    value,
+  ] of sortedEntries) {
     const lowerKey = key.toLowerCase();
 
     if (lowerTrimmedName.includes(lowerKey)) {
@@ -142,19 +229,24 @@ export function getChineseExceptionName(exceptionName: string): string {
   }
 
   // 2. 按键的长度从长到短排序，优先匹配更具体的键
-  const sortedEntries = Array.from(exceptionNameMap.entries()).sort(
-    (a, b) => b[0].length - a[0].length,
-  );
+  const sortedEntries = Array.from(exceptionNameMap.entries())
+    .sort((a, b) => b[0].length - a[0].length);
 
   // 3. 部分匹配：如果异常名包含映射键，则使用该映射（大小写敏感）
-  for (const [key, value] of sortedEntries) {
+  for (const [
+    key,
+    value,
+  ] of sortedEntries) {
     if (trimmedName.includes(key)) {
       return value;
     }
   }
 
   // 4. 大小写不敏感匹配：如果异常名包含映射键（忽略大小写），则使用该映射
-  for (const [key, value] of sortedEntries) {
+  for (const [
+    key,
+    value,
+  ] of sortedEntries) {
     const lowerKey = key.toLowerCase();
 
     if (lowerTrimmedName.includes(lowerKey)) {
@@ -165,6 +257,7 @@ export function getChineseExceptionName(exceptionName: string): string {
   // 5. 如果没有找到匹配，返回原始异常名
   return trimmedName;
 }
+
 /**
  * 需要处理的异常类型列表（对应 result.ts 中 ignoredKeys 的键）
  * 只处理这些类型的异常
@@ -190,11 +283,31 @@ const SUPPORTED_EXCEPTION_PATTERNS = [
     type: 'memory',
     errorType: 'error',
   },
-  { pattern: 'illegal free()', type: 'memory', errorType: 'error' },
-  { pattern: 'illegal read of size', type: 'memory', errorType: 'error' },
-  { pattern: 'illegal write of size', type: 'memory', errorType: 'error' },
-  { pattern: 'out of bounds of size', type: 'memory', errorType: 'warning' },
-  { pattern: 'Unused memory', type: 'memory', errorType: 'warning' },
+  {
+    pattern: 'illegal free()',
+    type: 'memory',
+    errorType: 'error',
+  },
+  {
+    pattern: 'illegal read of size',
+    type: 'memory',
+    errorType: 'error',
+  },
+  {
+    pattern: 'illegal write of size',
+    type: 'memory',
+    errorType: 'error',
+  },
+  {
+    pattern: 'out of bounds of size',
+    type: 'memory',
+    errorType: 'warning',
+  },
+  {
+    pattern: 'Unused memory',
+    type: 'memory',
+    errorType: 'warning',
+  },
   {
     pattern: 'uninitialized read of size',
     type: 'uninitialized',
@@ -205,7 +318,11 @@ const SUPPORTED_EXCEPTION_PATTERNS = [
     type: 'synchronize',
     errorType: 'warning',
   },
-  { pattern: 'misaligned access of size', type: 'memory', errorType: 'error' },
+  {
+    pattern: 'misaligned access of size',
+    type: 'memory',
+    errorType: 'error',
+  },
 ] as const;
 
 /**
@@ -282,7 +399,8 @@ export class ExceptionParser {
       this.currentResult = newResult;
       // 初始化 buffer
       this.startNewResult(originalLine);
-    } else if (this.currentResult) {
+    }
+    else if (this.currentResult) {
       // 收集异常详细信息（同时保存原始行）
       this.collectExceptionInfo(cleanedLine, originalLine);
     }
@@ -296,7 +414,8 @@ export class ExceptionParser {
 
     // 移除行首的 ====== 前缀
     if (cleaned.startsWith('======')) {
-      cleaned = cleaned.substring(6).trim();
+      cleaned = cleaned.substring(6)
+        .trim();
     }
 
     return cleaned;
@@ -312,6 +431,7 @@ export class ExceptionParser {
     if (match && match[1]) {
       return match[1].trim();
     }
+
     // 如果没有匹配到，尝试提取 ERROR: 或 WARNING: 后面的所有内容
     const simpleMatch = line.match(/^(?:ERROR|WARNING):\s*(.+)/);
 
@@ -337,8 +457,8 @@ export class ExceptionParser {
       const hasErrorPrefix = line.includes('ERROR:');
       const hasWarningPrefix = line.includes('WARNING:');
       const hasCorrectPrefix =
-        (pattern.errorType === 'error' && hasErrorPrefix) ||
-        (pattern.errorType === 'warning' && hasWarningPrefix);
+        (pattern.errorType === 'error' && hasErrorPrefix)
+        || (pattern.errorType === 'warning' && hasWarningPrefix);
 
       // 如果行包含模式字符串（不区分大小写），并且有正确的前缀，则匹配成功
       const lineLower = line.toLowerCase();
@@ -351,11 +471,6 @@ export class ExceptionParser {
 
         // 根据问题类型获取中文
         const title = getChineseQuestionType(questionType);
-
-        // 设置竞争检测事件标记
-        if (questionType === 'memoryContention') {
-        } else {
-        }
 
         this.currentResult = {
           type: pattern.errorType,
@@ -404,8 +519,8 @@ export class ExceptionParser {
           // 优先选择调用栈中编号最大的用户代码文件（通常是 #3）
           // 如果还没有设置文件信息，或者当前调用栈层级更高，则更新
           if (
-            !this.currentResult.fileLink &&
-            filePath.includes(this.matchPath)
+            !this.currentResult.fileLink
+            && filePath.includes(this.matchPath)
           ) {
             this.currentResult.fileLink = filePath;
             this.currentResult.row = row;
@@ -414,7 +529,8 @@ export class ExceptionParser {
             this.currentStackLevel = stackLevel;
           }
         }
-      } else {
+      }
+      else {
         // 如果行以 # 开头但没有匹配到格式，尝试更宽松的匹配
         // 例如：#3 file.cpp:21 或 #3 file.cpp:21:5
         const looseMatch = line.match(/^\s*#(\d+)\s+(.+?):(\d+)(?::(\d+))?/);
@@ -429,8 +545,8 @@ export class ExceptionParser {
             const fileName = this.extractFileName(filePath);
 
             if (
-              !this.currentResult.fileLink ||
-              stackLevel > this.currentStackLevel
+              !this.currentResult.fileLink
+              || stackLevel > this.currentStackLevel
             ) {
               console.log('aaaaaaaaaaaaaaa', filePath);
               this.currentResult.fileLink = fileName;
@@ -471,12 +587,12 @@ export class ExceptionParser {
 
     // 其他系统路径特征
     return (
-      filePath.includes('/compiler/') ||
-      filePath.includes('/tikcpp/') ||
-      filePath.includes('kernel_operator_data_copy_impl.h') ||
-      filePath.includes('inner_kernel_operator_data_copy_intf.cppm') ||
-      filePath.includes('kernel_event.h') ||
-      filePath.includes('kernel_common.h')
+      filePath.includes('/compiler/')
+      || filePath.includes('/tikcpp/')
+      || filePath.includes('kernel_operator_data_copy_impl.h')
+      || filePath.includes('inner_kernel_operator_data_copy_intf.cppm')
+      || filePath.includes('kernel_event.h')
+      || filePath.includes('kernel_common.h')
     );
   }
 
@@ -504,7 +620,9 @@ export class ExceptionParser {
    * 完成当前结果的收集
    */
   private finalizeCurrentResult(): void {
-    if (!this.currentResult) return;
+    if (!this.currentResult) {
+      return;
+    }
 
     // 如果没有提取到问题描述，使用异常名（ERROR或WARNING后面的全部内容）
     if (!this.currentResult.question) {

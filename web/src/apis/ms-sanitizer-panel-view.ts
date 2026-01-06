@@ -9,9 +9,7 @@ import {
  * 获取 Sanitizer 配置（字符串格式）
  */
 export function getSanitizerFormString() {
-  return request.post<undefined, GetSanitizerFormResult>(
-    'webview/getSanitizerForm',
-  );
+  return request.post<undefined, GetSanitizerFormResult>('webview/getSanitizerForm');
 }
 
 /**

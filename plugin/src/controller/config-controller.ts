@@ -17,7 +17,8 @@ export const configMethods = {
    */
   async getBuildConfigs() {
     // 确保projectId已初始化
-    await ProjectManager.getInstance().ensureProjectId();
+    await ProjectManager.getInstance()
+      .ensureProjectId();
 
     return await buildService.getBuildConfigsList();
   },
@@ -28,10 +29,12 @@ export const configMethods = {
    */
   async getConfigData(): Promise<GetConfigDataResult> {
     // 确保projectId已初始化
-    await ProjectManager.getInstance().ensureProjectId();
+    await ProjectManager.getInstance()
+      .ensureProjectId();
     const buildConfigs = await buildService.getBuildConfigsList();
 
     console.log('buildConfigs', buildConfigs);
+
     if (!buildConfigs.length) {
       return {};
     }
@@ -44,7 +47,8 @@ export const configMethods = {
    * @param params 保存参数
    */
   async saveBuildConfig(params: SaveBuildConfigParams): Promise<void> {
-    await ProjectManager.getInstance().initProject();
+    await ProjectManager.getInstance()
+      .initProject();
     await configService.saveBuildConfig(params);
   },
 
@@ -53,7 +57,8 @@ export const configMethods = {
    * @param params 保存参数
    */
   async saveConfig(params: SaveConfigParams): Promise<void> {
-    await ProjectManager.getInstance().initProject();
+    await ProjectManager.getInstance()
+      .initProject();
     await configService.saveConfig(params);
   },
 
@@ -62,9 +67,7 @@ export const configMethods = {
    * @param params 搜索参数
    * @returns 搜索结果
    */
-  async remotePathSearch(
-    params: RemotePathSearchParams,
-  ): Promise<RemotePathSearchResult> {
+  async remotePathSearch(params: RemotePathSearchParams): Promise<RemotePathSearchResult> {
     return await configService.remotePathSearch(params);
   },
 
@@ -73,7 +76,8 @@ export const configMethods = {
    * @returns 构建配置ID
    */
   async getBuildConfig(): Promise<number | undefined> {
-    await ProjectManager.getInstance().ensureProjectId();
+    await ProjectManager.getInstance()
+      .ensureProjectId();
 
     return await buildService.getBuildConfigId();
   },
@@ -83,7 +87,8 @@ export const configMethods = {
    * @returns 示例构建配置ID
    */
   async getBuildExampleConfig(): Promise<number | undefined> {
-    await ProjectManager.getInstance().ensureProjectId();
+    await ProjectManager.getInstance()
+      .ensureProjectId();
 
     return await buildService.getBuildExampleConfigId();
   },
@@ -93,7 +98,8 @@ export const configMethods = {
    * @returns 仿真配置ID
    */
   async getSimulateConfig(): Promise<string> {
-    await ProjectManager.getInstance().ensureProjectId();
+    await ProjectManager.getInstance()
+      .ensureProjectId();
 
     return await buildService.getSimulateConfigId();
   },
@@ -103,7 +109,8 @@ export const configMethods = {
    * @returns 上板配置ID
    */
   async getOnBoardConfig(): Promise<string> {
-    await ProjectManager.getInstance().ensureProjectId();
+    await ProjectManager.getInstance()
+      .ensureProjectId();
 
     return await buildService.getOnBoardConfigId();
   },

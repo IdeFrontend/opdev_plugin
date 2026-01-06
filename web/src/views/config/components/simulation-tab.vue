@@ -1,14 +1,17 @@
-<!-- 
+<!--
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree. -->
 
 <script setup>
-import { FolderOutlined } from '@ant-design/icons-vue';
-import { ref, nextTick, watch } from 'vue';
+import {
+  ref, nextTick, watch,
+} from 'vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
-import { saveConfig as saveConfigAPI, openExternalLink } from '@/apis';
+import {
+  saveConfig as saveConfigAPI, openExternalLink,
+} from '@/apis';
 import EditTable from './edit-table.vue';
 
 const props = defineProps({
@@ -29,7 +32,10 @@ watch(
   (val) => {
     localSimulationData.value = { ...val };
   },
-  { immediate: true, deep: true }
+  {
+    immediate: true,
+    deep: true,
+  },
 );
 
 const emit = defineEmits([
@@ -37,6 +43,7 @@ const emit = defineEmits([
   'deleteAdvancedParam',
   'update:simulationData',
 ]);
+
 console.log('emit', emit);
 
 const handleSimulationDataChange = () => {
@@ -57,9 +64,7 @@ const saveConfig = async () => {
 };
 
 const activeKey = ref(['1']);
-const guide = ref(
-  'https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODtools/Operatordevelopmenttools/atlasopdev_16_0082.html',
-);
+const guide = ref('https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODtools/Operatordevelopmenttools/atlasopdev_16_0082.html');
 
 const addTableItem = () => {
   emit('addAdvancedParam');
@@ -77,8 +82,8 @@ const deleteTableItem = (e) => {
 };
 
 const jumpToGuide = () => {
-  openExternalLink(guide.value)
-}
+  openExternalLink(guide.value);
+};
 </script>
 
 <template>
@@ -89,14 +94,19 @@ const jumpToGuide = () => {
         <a-tooltip :overlay-style="{ maxWidth: '300px' }">
           <template #title>
             <div>
-              具体图形案例请参考<span style="color: #1677ff; cursor: pointer;" @click="jumpToGuide">算子调优工具概述</span>
+              具体图形案例请参考<span
+                style="color: #1677ff; cursor: pointer;"
+                @click="jumpToGuide"
+              >算子调优工具概述</span>
             </div>
           </template>
           <QuestionCircleOutlined class="help-icon" />
         </a-tooltip>
       </div>
 
-      <div style="margin-top: 12px">指令流水图（默认采集）</div>
+      <div style="margin-top: 12px">
+        指令流水图（默认采集）
+      </div>
       <div class="nested-checkbox-group">
         <div style="margin-bottom: 12px">
           默认采集：计算单元和搬运单元指令耗时占比指标
@@ -110,7 +120,9 @@ const jumpToGuide = () => {
         </a-checkbox>
       </div>
 
-      <div style="margin-top: 12px">算子代码热点图（默认采集）</div>
+      <div style="margin-top: 12px">
+        算子代码热点图（默认采集）
+      </div>
       <div class="nested-checkbox-group">
         附加选项：
         <a-checkbox

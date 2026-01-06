@@ -46,16 +46,19 @@ function getCommandContext(configId: number): CommandContext {
   const sourceCannCmd =
     project && project.ascend_env_script
       ? `. ${project.ascend_env_script}`
-      : ``;
+      : '';
 
   let runPath: string;
+
   if (operator) {
     runPath = getOpRunPath(operator);
-  } else {
+  }
+  else {
     // 如果找不到算子，但有配置脚本，使用项目路径作为运行路径
     if (config.script && project) {
       runPath = project.project_path;
-    } else {
+    }
+    else {
       throw new Error(`Operator not found: ${config.op}`);
     }
   }
@@ -80,7 +83,9 @@ function getCommandContext(configId: number): CommandContext {
  */
 export function getBuildOpCommand(config_id: number, compileOption?: string) {
   try {
-    const { config, operator, sourceCannCmd, cdCmd } =
+    const {
+      config, operator, sourceCannCmd, cdCmd,
+    } =
       getCommandContext(config_id);
     const userOptions = config.user_options as Record<string, unknown> | null | undefined;
     const advance_cmd = getAdvanceCmd(userOptions?.advance_param);
@@ -94,9 +99,17 @@ export function getBuildOpCommand(config_id: number, compileOption?: string) {
 
       const cmd = new Command(config.script || '');
 
-      if (config.custom_options) cmd.addArgument(config.custom_options);
-      if (compileOption) cmd.addArgument(compileOption);
-      if (advance_cmd) cmd.addArgument(advance_cmd);
+      if (config.custom_options) {
+        cmd.addArgument(config.custom_options);
+      }
+
+      if (compileOption) {
+        cmd.addArgument(compileOption);
+      }
+
+      if (advance_cmd) {
+        cmd.addArgument(advance_cmd);
+      }
 
       return joinCommands(sourceCannCmd, cdCmd, cmd.toString());
     }
@@ -109,6 +122,7 @@ export function getBuildOpCommand(config_id: number, compileOption?: string) {
     if (args && args.vendor_name) {
       vendor_name = args.vendor_name;
     }
+
     if (args && args.soc) {
       soc = args.soc;
     }
@@ -122,15 +136,19 @@ export function getBuildOpCommand(config_id: number, compileOption?: string) {
       ops: op,
     });
 
-    if (compileOption) cmd.addArgument(compileOption);
-    if (advance_cmd) cmd.addArgument(advance_cmd);
+    if (compileOption) {
+      cmd.addArgument(compileOption);
+    }
 
-    const deploy_cmd = getExecutableCommand(config.target_file || '', {
-      execute: true,
-    });
+    if (advance_cmd) {
+      cmd.addArgument(advance_cmd);
+    }
+
+    const deploy_cmd = getExecutableCommand(config.target_file || '', { execute: true });
 
     return joinCommands(sourceCannCmd, cdCmd, cmd.toString(), deploy_cmd);
-  } catch (e: unknown) {
+  }
+  catch (e: unknown) {
     throw new Error(`生成编译命令失败:${(e as Error).message}`);
   }
 }
@@ -143,14 +161,15 @@ export function getBuildOpCommand(config_id: number, compileOption?: string) {
  */
 export function getRunCommand(config_id: number) {
   try {
-    const { config, sourceCannCmd, cdCmd } = getCommandContext(config_id);
-    const run_cmd = getExecutableCommand(config.target_file || '', {
-      execute: true,
-    });
+    const {
+      config, sourceCannCmd, cdCmd,
+    } = getCommandContext(config_id);
+    const run_cmd = getExecutableCommand(config.target_file || '', { execute: true });
 
     // 注意：原始代码中两个分支的返回值相同，这里保持简化的逻辑。
     return joinCommands(sourceCannCmd, cdCmd, run_cmd);
-  } catch (e: unknown) {
+  }
+  catch (e: unknown) {
     throw new Error(`生成运行命令失败:${(e as Error).message}`);
   }
 }
@@ -167,7 +186,9 @@ export function getBuildExampleCommand(
   compileOption?: string,
 ) {
   try {
-    const { config, operator, sourceCannCmd, cdCmd } =
+    const {
+      config, operator, sourceCannCmd, cdCmd,
+    } =
       getCommandContext(config_id);
     const userOptions = config.user_options as Record<string, unknown> | null | undefined;
     const advance_cmd = getAdvanceCmd(userOptions?.advance_param);
@@ -181,9 +202,17 @@ export function getBuildExampleCommand(
 
       const cmd = new Command(config.script || '');
 
-      if (config.custom_options) cmd.addArgument(config.custom_options);
-      if (compileOption) cmd.addArgument(compileOption);
-      if (advance_cmd) cmd.addArgument(advance_cmd);
+      if (config.custom_options) {
+        cmd.addArgument(config.custom_options);
+      }
+
+      if (compileOption) {
+        cmd.addArgument(compileOption);
+      }
+
+      if (advance_cmd) {
+        cmd.addArgument(advance_cmd);
+      }
 
       return joinCommands(sourceCannCmd, cdCmd, cmd.toString());
     }
@@ -197,9 +226,11 @@ export function getBuildExampleCommand(
     if (args && args.vendor_name) {
       vendor_name = args.vendor_name;
     }
+
     if (args && args.pkg_mode) {
       pkg_mode = args.pkg_mode;
     }
+
     if (args && args.mode) {
       mode = args.mode;
     }
@@ -212,11 +243,17 @@ export function getBuildExampleCommand(
     cmd.addArgument(pkg_mode);
     cmd.addArgument(vendor_name);
 
-    if (compileOption) cmd.addArgument(compileOption);
-    if (advance_cmd) cmd.addArgument(advance_cmd);
+    if (compileOption) {
+      cmd.addArgument(compileOption);
+    }
+
+    if (advance_cmd) {
+      cmd.addArgument(advance_cmd);
+    }
 
     return joinCommands(sourceCannCmd, cdCmd, cmd.toString());
-  } catch (e: unknown) {
+  }
+  catch (e: unknown) {
     throw new Error(`生成编译命令失败:${(e as Error).message}`);
   }
 }
@@ -237,15 +274,19 @@ export function getSimulateCommand(
   example_config_id: number,
 ) {
   try {
-    const { config, project, operator, sourceCannCmd, cdCmd } =
+    const {
+      config, project, operator, sourceCannCmd, cdCmd,
+    } =
       getCommandContext(config_id);
-    
+
     // 如果找不到算子记录，但有项目路径，创建一个临时算子对象
     let effectiveOperator = operator;
+
     if (!effectiveOperator) {
       if (!project || !project.project_path) {
         throw new Error(`无法生成仿真命令：找不到算子记录 ${config.op}，且项目路径不可用`);
       }
+
       // 创建临时算子对象，使用项目路径作为 op_path
       effectiveOperator = {
         id: 0,
@@ -256,18 +297,18 @@ export function getSimulateCommand(
       } as OpRecord;
     }
 
-    const exConfig = getConfigById(
-      example_config_id,
-    ) as unknown as ConfigRecord;
+    const exConfig = getConfigById(example_config_id) as unknown as ConfigRecord;
 
-    const simulatorCmd = ProfilerFactory.getStrategy('simulator').generate(
-      config,
-      effectiveOperator,
-      exConfig?.target_file || '',
-    );
+    const simulatorCmd = ProfilerFactory.getStrategy('simulator')
+      .generate(
+        config,
+        effectiveOperator,
+        exConfig?.target_file || '',
+      );
 
     return joinCommands(sourceCannCmd, cdCmd, simulatorCmd);
-  } catch (e: unknown) {
+  }
+  catch (e: unknown) {
     // 稍微规范化错误消息或保持原样
     throw new Error(`获取仿真命令失败 ${(e as Error).message}`);
   }
@@ -285,15 +326,19 @@ export function getOnBoardCommand(
   example_config_id: number,
 ) {
   try {
-    const { config, project, operator, sourceCannCmd, cdCmd } =
+    const {
+      config, project, operator, sourceCannCmd, cdCmd,
+    } =
       getCommandContext(config_id);
-    
+
     // 如果找不到算子记录，但有项目路径，创建一个临时算子对象
     let effectiveOperator = operator;
+
     if (!effectiveOperator) {
       if (!project || !project.project_path) {
         throw new Error(`无法生成上板命令：找不到算子记录 ${config.op}，且项目路径不可用`);
       }
+
       // 创建临时算子对象，使用项目路径作为 op_path
       effectiveOperator = {
         id: 0,
@@ -304,18 +349,18 @@ export function getOnBoardCommand(
       } as OpRecord;
     }
 
-    const exConfig = getConfigById(
-      example_config_id,
-    ) as unknown as ConfigRecord;
+    const exConfig = getConfigById(example_config_id) as unknown as ConfigRecord;
 
-    const opprofCmd = ProfilerFactory.getStrategy('onboard').generate(
-      config,
-      effectiveOperator,
-      exConfig?.target_file || '',
-    );
+    const opprofCmd = ProfilerFactory.getStrategy('onboard')
+      .generate(
+        config,
+        effectiveOperator,
+        exConfig?.target_file || '',
+      );
 
     return joinCommands(sourceCannCmd, cdCmd, opprofCmd);
-  } catch (e: unknown) {
+  }
+  catch (e: unknown) {
     throw new Error(`获取上板命令失败 ${(e as Error).message}`);
   }
 }
@@ -333,7 +378,9 @@ export function getSanitizerCommand(
 ) {
   try {
     // 使用 getCommandContext 获取上下文，保持一致性
-    const { config: sanitizerConfig, operator, sourceCannCmd, cdCmd } =
+    const {
+      config: sanitizerConfig, operator, sourceCannCmd, cdCmd,
+    } =
       getCommandContext(sanitizerConfigId);
     const exConfig = getConfigById(example_config_id) as unknown as ConfigRecord;
 
@@ -354,19 +401,20 @@ export function getSanitizerCommand(
       // 处理配置选项
       const options = (sanitizerConfig.user_options as Record<string, unknown> | null | undefined) || {};
       const toolOptions = (options.tool as Record<string, unknown> | undefined) || {};
-      const tools = Object.keys(toolOptions).filter(
-        (key) => toolOptions[key],
-      );
+      const tools = Object.keys(toolOptions)
+        .filter((key) => toolOptions[key]);
 
       mssanitizer.addOption('tool', tools);
 
       if (toolOptions.memcheck) {
         const memcheckOptions = (options.memcheckOption as Record<string, unknown> | undefined) || {};
-        Object.keys(memcheckOptions).forEach((key) => {
-          if (memcheckOptions[key]) {
-            mssanitizer.addOption(key, 'yes');
-          }
-        });
+
+        Object.keys(memcheckOptions)
+          .forEach((key) => {
+            if (memcheckOptions[key]) {
+              mssanitizer.addOption(key, 'yes');
+            }
+          });
       }
 
       mssanitizer.addOption('log-level', options.logLevel as string | undefined);
@@ -374,14 +422,16 @@ export function getSanitizerCommand(
       mssanitizer.addOption('block-id', options.blockId as string | number | undefined);
       mssanitizer.addOption(
         'log-file',
-        `./.vscode/mindstudio_sanitizer_log/mssanitizer_${new Date().valueOf()}.log`,
+        `./.vscode/mindstudio_sanitizer_log/mssanitizer_${new Date()
+          .valueOf()}.log`,
       );
 
       return joinCommands(sourceCannCmd, cdCmd, mssanitizer.toString());
     }
 
     return '';
-  } catch (e: unknown) {
+  }
+  catch (e: unknown) {
     throw new Error(`生成异常检测命令失败: ${(e as Error).message}`);
   }
 }

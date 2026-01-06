@@ -6,13 +6,12 @@ import {
   CaretDownFilled,
   FlagOutlined,
   FlagFilled,
-  ReloadOutlined,
 } from '@ant-design/icons-vue';
-import { h } from 'vue';
 import { theme } from 'ant-design-vue';
 
 const themeConfig = {
-  algorithm: theme.darkAlgorithm, // 使用暗色算法
+  // 使用暗色算法
+  algorithm: theme.darkAlgorithm,
 };
 
 /** 正序/倒序 */
@@ -20,10 +19,6 @@ const sortOrder = defineModel<'asc' | 'desc'>('sortOrder');
 
 /** 只查看标记 */
 const isMarkedOnly = defineModel<boolean>('markedOnly');
-
-const emit = defineEmits<{
-  (e: 'reload'): void;
-}>();
 
 function handleExecutionTime() {
   sortOrder.value = sortOrder.value === 'desc' ? 'asc' : 'desc';
@@ -33,36 +28,39 @@ function handleMarked() {
   isMarkedOnly.value = !isMarkedOnly.value;
 }
 
-function handleReload() {
-  emit('reload');
-}
 </script>
 
 <template>
   <a-config-provider :theme="themeConfig">
     <div class="filter-bar">
-    <a-button
-      class="execute-time-sorter-button"
-      type="default"
-      @click="handleExecutionTime"
-    >
-      <div class="execute-time-sorter-inner">
-        执行时间
-        <div class="sort-icons">
-          <CaretUpFilled v-if="sortOrder === 'asc'" />
-          <UpOutlined v-else />
-          <CaretDownFilled v-if="sortOrder === 'desc'" />
-          <DownOutlined v-else />
+      <a-button
+        class="execute-time-sorter-button"
+        type="default"
+        @click="handleExecutionTime"
+      >
+        <div class="execute-time-sorter-inner">
+          执行时间
+          <div class="sort-icons">
+            <CaretUpFilled v-if="sortOrder === 'asc'" />
+            <UpOutlined v-else />
+            <CaretDownFilled v-if="sortOrder === 'desc'" />
+            <DownOutlined v-else />
+          </div>
         </div>
-      </div>
-    </a-button>
-    <a-button
-     class="execute-time-sorter-button"
-      @click="handleMarked"
-    >
-      已标记 <FlagFilled v-if="isMarkedOnly" class="flag-outlined-icon" /><FlagOutlined v-else class="flag-outlined-icon" />
-    </a-button>
-  </div>
+      </a-button>
+      <a-button
+        class="execute-time-sorter-button"
+        @click="handleMarked"
+      >
+        已标记 <FlagFilled
+          v-if="isMarkedOnly"
+          class="flag-outlined-icon"
+        /><FlagOutlined
+          v-else
+          class="flag-outlined-icon"
+        />
+      </a-button>
+    </div>
   </a-config-provider>
 </template>
 

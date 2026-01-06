@@ -16,5 +16,8 @@ export const routes: ViewRouteRaw[] = [
     title: '异常检测',
     providerViewType: 'msSanitizerSidebarView',
   },
-  { path: VIEW_OPS_CONFIG, title: '算子配置' },
+  {
+    path: VIEW_OPS_CONFIG,
+    title: '算子配置',
+  },
 ];

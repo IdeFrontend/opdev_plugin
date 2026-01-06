@@ -33,7 +33,8 @@ export class ViewRenderer extends vscode.Disposable {
 
     if (entryName) {
       targetHtmlPath = `src/views/${entryName}/${entryName}.html`;
-    } else {
+    }
+    else {
       throw new Error('Entry name is required for rendering');
     }
 
@@ -43,10 +44,9 @@ export class ViewRenderer extends vscode.Disposable {
 
         htmlContent = await HtmlTransformer.fetchHtml(devUrl);
         isDev = true;
-      } catch (e) {
-        console.error(
-          `Failed to fetch ${targetHtmlPath} from dev server: ${e}`,
-        );
+      }
+      catch (e) {
+        console.error(`Failed to fetch ${targetHtmlPath} from dev server: ${e}`);
       }
     }
 
@@ -58,17 +58,22 @@ export class ViewRenderer extends vscode.Disposable {
 
       if (fs.existsSync(htmlEntryFileUri.fsPath)) {
         htmlContent = fs.readFileSync(htmlEntryFileUri.fsPath, 'utf-8');
-      } else {
+      }
+      else {
         throw new Error(`HTML file not found: ${htmlEntryFileUri.fsPath}`);
       }
     }
 
-    const finalContent = Object.entries(templateValues).reduce(
-      (content, [key, value]) => {
-        return content.replace(`{{${key}}}`, value);
-      },
-      htmlContent,
-    );
+    const finalContent = Object.entries(templateValues)
+      .reduce(
+        (content, [
+          key,
+          value,
+        ]) => {
+          return content.replace(`{{${key}}}`, value);
+        },
+        htmlContent,
+      );
 
     if (isDev && devServerUrl) {
       webview.html = HtmlTransformer.processDevResourcePaths(
@@ -76,7 +81,8 @@ export class ViewRenderer extends vscode.Disposable {
         devServerUrl,
         devUrl,
       );
-    } else {
+    }
+    else {
       const htmlEntryFileUri = vscode.Uri.joinPath(
         this.viewRootUri,
         targetHtmlPath,
@@ -84,7 +90,7 @@ export class ViewRenderer extends vscode.Disposable {
       const htmlFileDir = htmlEntryFileUri.fsPath
         ? path.dirname(htmlEntryFileUri.fsPath)
         : undefined;
-      
+
       webview.html = this.replaceSourceUrl(
         finalContent,
         webview,

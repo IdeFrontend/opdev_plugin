@@ -1,4 +1,6 @@
-import { CheckPathExistsParams, SaveFileParams } from 'shared:/api-types';
+import {
+  CheckPathExistsParams, SaveFileParams,
+} from 'shared:/api-types';
 import { fileService } from '../service/file-service';
 import * as vscode from 'vscode';
 
@@ -22,5 +24,5 @@ export const commonMethods = {
    */
   openExternalLink(url: string) {
     vscode.env.openExternal(vscode.Uri.parse(url));
-  }
+  },
 };

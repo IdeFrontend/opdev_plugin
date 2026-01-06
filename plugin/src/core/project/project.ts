@@ -39,10 +39,8 @@ export class Project<HasProject extends boolean = false> {
   constructor() {
     this.getWorkspaceProject();
     vscode.workspace.onDidChangeWorkspaceFolders((e) => {
-      const isCurrentProjectRemoved = e.removed.some(
-        (workspace) =>
-          workspace.uri.fsPath === this._workspaceProject?.project_path,
-      );
+      const isCurrentProjectRemoved = e.removed.some((workspace) =>
+        workspace.uri.fsPath === this._workspaceProject?.project_path);
 
       if (isCurrentProjectRemoved) {
         this.getWorkspaceProject();
@@ -63,6 +61,7 @@ export class Project<HasProject extends boolean = false> {
 
       return;
     }
+
     const projectPath = workspaceFolder.uri.fsPath;
 
     this._workspaceProject = getProjectByPath(projectPath) ?? null;

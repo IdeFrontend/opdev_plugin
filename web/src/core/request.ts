@@ -15,12 +15,12 @@ interface ExtensionRequest {
     api: string,
     params?: Data,
     options?: RequestOptions,
-  ) => Promise<Res>;
+  )=> Promise<Res>;
 }
 
 interface PendingRequest {
-  success: (value: unknown) => void;
-  error: (statusCode: ResponseMessage['statusCode'], error: Error) => void;
+  success: (value: unknown)=> void;
+  error: (statusCode: ResponseMessage['statusCode'], error: Error)=> void;
   options: Required<RequestOptions>;
 }
 
@@ -31,16 +31,19 @@ export const request = createExtensionRequest();
  * @returns { ExtensionRequest }
  */
 function createExtensionRequest(): ExtensionRequest {
-  const { send, receive } = useConnector<RequestMessage, ResponseMessage>(
-    'request',
-  );
+  const {
+    send, receive,
+  } = useConnector<RequestMessage, ResponseMessage>('request');
 
   const pendingRequests = new Map<string, PendingRequest>();
 
-  receive(({ requestId, statusCode, isStream, data, error }) => {
+  receive(({
+    requestId, statusCode, isStream, data, error,
+  }) => {
     if (!pendingRequests.has(requestId)) {
       return;
     }
+
     if (statusCode === 200) {
       if (isStream) {
         handleStreamResponse(
@@ -48,11 +51,14 @@ function createExtensionRequest(): ExtensionRequest {
           data as ReadableStreamReadResult<unknown>,
           pendingRequests,
         );
-      } else {
-        pendingRequests.get(requestId)?.success(data);
+      }
+      else {
+        pendingRequests.get(requestId)
+          ?.success(data);
         pendingRequests.delete(requestId);
       }
-    } else {
+    }
+    else {
       pendingRequests
         .get(requestId)
         ?.error(
@@ -117,20 +123,23 @@ function handleStreamResponse(
       },
     });
 
-    pendingRequests.get(requestId)?.success(stream);
+    pendingRequests.get(requestId)
+      ?.success(stream);
   }
+
   if (result.done) {
-    pendingStreams.get(requestId)?.close();
+    pendingStreams.get(requestId)
+      ?.close();
     pendingStreams.delete(requestId);
     pendingRequests.delete(requestId);
-  } else {
-    pendingStreams.get(requestId)?.enqueue(result.value);
+  }
+  else {
+    pendingStreams.get(requestId)
+      ?.enqueue(result.value);
   }
 }
 
-function recoverFromMessageError(
-  messageError: NonNullable<ResponseMessage['error']>,
-): Error {
+function recoverFromMessageError(messageError: NonNullable<ResponseMessage['error']>): Error {
   const error = new Error(messageError.message);
 
   error.name = messageError.name;
@@ -140,9 +149,9 @@ function recoverFromMessageError(
 }
 
 function makeSuccessHandler<T>(
-  resolve: (value: T | PromiseLike<T>) => void,
+  resolve: (value: T | PromiseLike<T>)=> void,
   requestTimeout: ReturnType<typeof setTimeout>,
-): (value: unknown) => void {
+): (value: unknown)=> void {
   return (value: unknown) => {
     clearTimeout(requestTimeout);
     resolve(value as T);
@@ -150,23 +159,23 @@ function makeSuccessHandler<T>(
 }
 
 function makeErrorHandler(
-  reject: (reason: unknown) => void,
+  reject: (reason: unknown)=> void,
   requestTimeout: ReturnType<typeof setTimeout>,
   options: Required<RequestOptions>,
 ): PendingRequest['error'] {
   return (statusCode, error) => {
     clearTimeout(requestTimeout);
+
     if (options.useCustomErrorHandler) {
       reject(error);
-    } else {
+    }
+    else {
       // server端唤起vscode错误提示
     }
   };
 }
 
-function getOptionsWithDefault(
-  options?: RequestOptions,
-): Required<RequestOptions> {
+function getOptionsWithDefault(options?: RequestOptions): Required<RequestOptions> {
   return {
     timeout: 60000, // 默认60秒
     useCustomErrorHandler: false,

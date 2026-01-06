@@ -104,7 +104,10 @@ export class PermanentStorage {
    * @param items 键值对对象
    */
   async setMultiple(items: { [key: string]: any }): Promise<void> {
-    for (const [key, value] of Object.entries(items)) {
+    for (const [
+      key,
+      value,
+    ] of Object.entries(items)) {
       await this.set(key, value);
     }
   }

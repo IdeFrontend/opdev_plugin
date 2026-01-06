@@ -1,10 +1,12 @@
-<!-- 
+<!--
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree. -->
 <script setup>
-import { ref, nextTick, watch } from 'vue';
+import {
+  ref, watch,
+} from 'vue';
 import { saveBuildConfig as saveBuildConfigAPI } from '@/apis';
 
 const props = defineProps({
@@ -50,7 +52,10 @@ watch(
   (val) => {
     localBuildConfigForme.value = { ...val };
   },
-  { immediate: true, deep: true },
+  {
+    immediate: true,
+    deep: true,
+  },
 );
 
 watch(
@@ -58,42 +63,15 @@ watch(
   (val) => {
     localExampleConfigForme.value = { ...val };
   },
-  { immediate: true, deep: true },
+  {
+    immediate: true,
+    deep: true,
+  },
 );
 
 const handleBuildConfigChange = () => {
   emit('update:buildConfigForme', localBuildConfigForme.value);
   saveBuildConfig();
-};
-
-const handleExampleConfigChange = () => {
-  emit('update:exampleConfigForme', localExampleConfigForme.value);
-  saveBuildConfig();
-};
-
-const updateIndex = ref(1);
-
-const addBuildTableItem = () => {
-  updateIndex.value++;
-  emit('addBuildTableItem');
-  nextTick(() => {
-    saveBuildConfig();
-  });
-};
-const deleteBuildTableItem = (key) => {
-  updateIndex.value++;
-  emit('deleteBuildTableItem', key);
-  nextTick(() => {
-    saveBuildConfig();
-  });
-};
-const addExampleTableItem = () => {
-  updateIndex.value++;
-  emit('addExampleTableItem');
-};
-const deleteExampleTableItem = (key) => {
-  updateIndex.value++;
-  emit('deleteExampleTableItem', key);
 };
 
 const saveBuildConfig = async () => {
@@ -123,7 +101,9 @@ const getSaveData = () => {
 
 <template>
   <div class="build-config">
-    <div class="model-title">算子编译配置</div>
+    <div class="model-title">
+      算子编译配置
+    </div>
     <a-form
       ref="connectionFormRef"
       :model="localBuildConfigForme"

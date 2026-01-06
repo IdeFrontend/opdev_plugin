@@ -27,7 +27,8 @@ export class ProjectService {
    * 初始化算子项目
    */
   async init(params: InitOpsParams): Promise<string> {
-    return await ProjectManager.getInstance().initProject(params);
+    return await ProjectManager.getInstance()
+      .initProject(params);
   }
 
   /**
@@ -51,14 +52,15 @@ export class ProjectService {
         context.extensionPath,
       );
 
-      vscode.window.showInformationMessage(`新建算子原型文件成功`);
+      vscode.window.showInformationMessage('新建算子原型文件成功');
 
       // 检查并设置 .vscode 目录权限
       await pm.checkVscode();
 
       return result;
-    } catch {
-      vscode.window.showErrorMessage(`新建算子原型文件失败`);
+    }
+    catch {
+      vscode.window.showErrorMessage('新建算子原型文件失败');
 
       return '';
     }
@@ -67,9 +69,7 @@ export class ProjectService {
   /**
    * 通过原型生成算子工程
    */
-  async createOpsByPrototype(
-    params: CreateOpsByPrototypeParams,
-  ): Promise<void> {
+  async createOpsByPrototype(params: CreateOpsByPrototypeParams): Promise<void> {
     const pm = ProjectManager.getInstance();
     const context = this.getContext();
 
@@ -79,8 +79,9 @@ export class ProjectService {
 
     try {
       const projectId = Number(pm.projectId);
+
       console.log('createOpsByPrototype: 转换后的 projectId:', projectId);
-      
+
       if (!projectId || isNaN(projectId)) {
         throw new Error(`无效的 projectId: ${pm.projectId}`);
       }
@@ -105,13 +106,12 @@ export class ProjectService {
         },
       );
 
-      vscode.window.showInformationMessage(`新建算子文件成功`);
+      vscode.window.showInformationMessage('新建算子文件成功');
       await pm.checkVscode();
-    } catch (e) {
+    }
+    catch (e) {
       console.error('createOpsByPrototype: 创建算子失败', e);
-      vscode.window.showErrorMessage(
-        `新建算子文件失败 ${e instanceof Error ? e.message : ''}`,
-      );
+      vscode.window.showErrorMessage(`新建算子文件失败 ${e instanceof Error ? e.message : ''}`);
       throw e; // 重新抛出错误，让调用者知道失败
     }
   }
@@ -145,7 +145,8 @@ export class ProjectService {
    * 检查 .vscode 目录
    */
   async checkVscode(): Promise<boolean> {
-    return ProjectManager.getInstance().checkVscode();
+    return ProjectManager.getInstance()
+      .checkVscode();
   }
 
   /**

@@ -6,7 +6,7 @@
     <!-- 背景层（芯片图 + 深色遮罩） -->
     <div
       class="absolute top-0 left-0 w-full h-full bg-cover bg-[#121417] bg-opacity-90 bg-blend-overlay z-[1]"
-    ></div>
+    />
 
     <!-- 内容层 -->
     <div
@@ -14,7 +14,9 @@
     >
       <!-- 顶部标题区域 -->
       <div class="text-center mb-10 w-full max-[992px]:mb-[25px]">
-        <h5 class="text-[25px] font-normal m-0 mb-2.5">欢迎使用</h5>
+        <h5 class="text-[25px] font-normal m-0 mb-2.5">
+          欢迎使用
+        </h5>
         <h1 class="text-[32px] font-semibold m-0">
           OP DevTools 算子一站式开发平台
         </h1>
@@ -31,7 +33,7 @@
           <div class="flex items-center mb-3 shrink-0 max-[576px]:mb-2.5">
             <i
               class="icon op-create-icon mr-3 max-[992px]:w-[26px] max-[992px]:h-[26px] max-[576px]:w-[18px] max-[576px]:h-[18px] max-[576px]:mr-2"
-            ></i>
+            />
             <h3
               class="text-lg text-[#d1d1d1] font-semibold m-0 whitespace-nowrap max-[992px]:text-base max-[576px]:text-sm"
             >
@@ -49,10 +51,10 @@
             @click.stop
           >
             <div class="func-btn">
-              <i class="btn-icon"></i>环境开箱即用
+              <i class="btn-icon" />环境开箱即用
             </div>
             <div class="func-btn">
-              <i class="btn-icon"></i>Ascend C算子工程
+              <i class="btn-icon" />Ascend C算子工程
             </div>
           </div>
         </div>
@@ -71,7 +73,7 @@
           <div class="flex items-center mb-3 shrink-0 max-[576px]:mb-2.5">
             <i
               class="icon op-impl-icon mr-3 max-[992px]:w-[28px] max-[992px]:h-[28px] max-[576px]:w-[18px] max-[576px]:h-[18px] max-[576px]:mr-2"
-            ></i>
+            />
             <h3
               class="text-lg text-[#d1d1d1] font-semibold m-0 whitespace-nowrap max-[992px]:text-base max-[576px]:text-sm"
             >
@@ -89,19 +91,19 @@
             @click.stop
           >
             <div class="func-btn">
-              <i class="btn-icon"></i>Tiling开发
+              <i class="btn-icon" />Tiling开发
             </div>
             <div class="func-btn">
-              <i class="btn-icon"></i>Kernel开发
+              <i class="btn-icon" />Kernel开发
             </div>
             <div class="func-btn">
-              <i class="btn-icon"></i>语法高亮
+              <i class="btn-icon" />语法高亮
             </div>
             <div class="func-btn">
-              <i class="btn-icon"></i>代码补全
+              <i class="btn-icon" />代码补全
             </div>
             <div class="func-btn">
-              <i class="btn-icon"></i>算子编译
+              <i class="btn-icon" />算子编译
             </div>
           </div>
         </div>
@@ -120,7 +122,7 @@
           <div class="flex items-center mb-3 shrink-0 max-[576px]:mb-2.5">
             <i
               class="icon op-inspect-icon mr-3 max-[992px]:w-[24px] max-[992px]:h-[24px] max-[576px]:w-[18px] max-[576px]:h-[18px] max-[576px]:mr-2"
-            ></i>
+            />
             <h3
               class="text-lg text-[#d1d1d1] font-semibold m-0 whitespace-nowrap max-[992px]:text-base max-[576px]:text-sm"
             >
@@ -138,10 +140,10 @@
             @click.stop
           >
             <div class="func-btn">
-              <i class="btn-icon"></i>异常检测
+              <i class="btn-icon" />异常检测
             </div>
             <div class="func-btn">
-              <i class="btn-icon"></i>性能调优
+              <i class="btn-icon" />性能调优
             </div>
           </div>
         </div>
@@ -152,21 +154,16 @@
         class="w-fit max-w-full bg-[#212124] border border-[#3a3a3e] rounded-md text-[#d1d1d1] p-[8px_16px] text-base cursor-pointer transition-all duration-200 flex items-center justify-center z-[1000] animate-[fadeIn_0.5s_ease-in] mx-auto hover:bg-[#2a2a2e] hover:text-white hover:border-[#4a4a4e] max-[992px]:text-center max-[992px]:p-[14px_20px] max-[576px]:text-sm max-[576px]:p-[12px_16px]"
         @click.stop="handleAscendCProject"
       >
-        <span class="create-op-icon mr-2"></span>
+        <span class="create-op-icon mr-2" />
         新建算子工程
       </button>
-
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-
-const handleClick = (event:MouseEvent) => {
-  //@ts-ignore
+const handleClick = () => {
   if (window.vscode) {
-    //@ts-ignore
     window.vscode.postMessage({
       command: 'vscodeOpenSidebar',
       message: {},
@@ -176,9 +173,7 @@ const handleClick = (event:MouseEvent) => {
 
 // 处理Ascend C算子工程按钮点击
 const handleAscendCProject = () => {
-  //@ts-ignore
   if (window.vscode) {
-    //@ts-ignore
     window.vscode.postMessage({
       command: 'openLinkWebviewPanel',
       commandId: 'my-extension.openProjectView',
@@ -194,21 +189,21 @@ const handleAscendCProject = () => {
 }
 .op-create-icon {
   background: url('../../../resources/welcomePage/welcome_op_create_color.svg')
-    no-repeat center;
+  no-repeat center;
   background-size: contain;
   width: 26px;
   height: 26px;
 }
 .op-impl-icon {
   background: url('../../../resources/welcomePage/welcome_op_impl_color.svg')
-    no-repeat center;
+  no-repeat center;
   background-size: contain;
   width: 28px;
   height: 28px;
 }
 .op-inspect-icon {
   background: url('../../../resources/welcomePage/welcome_op_inspect_color.svg')
-    no-repeat center;
+  no-repeat center;
   background-size: contain;
   width: 24px;
   height: 24px;
@@ -218,7 +213,7 @@ const handleAscendCProject = () => {
   height: 1.6em;
   aspect-ratio: 22 / 26;
   background: url('../../../resources/welcomePage/welcome_op_create_color.svg')
-    no-repeat center;
+  no-repeat center;
   background-size: contain;
 }
 .btn-icon {
@@ -228,7 +223,7 @@ const handleAscendCProject = () => {
   margin-right: 6px;
   flex-shrink: 0;
   background: url('../../../resources/welcomePage/welcome_bullet_mono.svg')
-    no-repeat center;
+  no-repeat center;
   background-size: contain;
   vertical-align: middle;
 }

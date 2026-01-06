@@ -7,9 +7,7 @@ import { getSanitizerCommand } from '../domain';
 import { configService } from './config-service';
 import { buildService } from './build-service';
 
-const CONFIG_TYPES = {
-  SANITIZER: 'sanitizer',
-} as const;
+const CONFIG_TYPES = { SANITIZER: 'sanitizer' } as const;
 
 export class SanitizerService {
   /**
@@ -21,7 +19,8 @@ export class SanitizerService {
 
       return configData.find((v) => v.config_type === CONFIG_TYPES.SANITIZER)
         ?.config_id;
-    } catch {
+    }
+    catch {
       return undefined;
     }
   }
@@ -37,7 +36,8 @@ export class SanitizerService {
         Number(buildConfigId),
         '--mssanitizer',
       );
-      const buildExecutor = ProjectManager.getInstance().getExecutor();
+      const buildExecutor = ProjectManager.getInstance()
+        .getExecutor();
       const buildRes = await buildExecutor.execute(
         buildCommand,
         [],
@@ -79,7 +79,8 @@ export class SanitizerService {
           Number(sanitizerConfigId),
           Number(exampleConfigId),
         ) || '';
-      const executor = ProjectManager.getInstance().getExecutor();
+      const executor = ProjectManager.getInstance()
+        .getExecutor();
       const res = await executor.execute(sanitizerCommand, [], [], {}, true);
 
       if (res.code !== 0) {
@@ -87,13 +88,13 @@ export class SanitizerService {
 
         return;
       }
-      vscode.window.showInformationMessage(`异常检测成功`);
+
+      vscode.window.showInformationMessage('异常检测成功');
 
       // 执行完检测后，获取最新的列表数据
-      vscode.commands.executeCommand(
-        'huawei-op-devtools.flashMsSanitizerRunData',
-      );
-    } catch (e: unknown) {
+      vscode.commands.executeCommand('huawei-op-devtools.flashMsSanitizerRunData');
+    }
+    catch (e: unknown) {
       vscode.window.showErrorMessage(`异常检测失败: ${(e as Error).message}`);
     }
   }

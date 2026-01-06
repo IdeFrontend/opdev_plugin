@@ -5,7 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { reactive, ref } from 'vue';
+import {
+  reactive, ref,
+} from 'vue';
 // Message.ts 已删除，不再需要导入
 
 export interface AdvanceParam {
@@ -156,9 +158,7 @@ export function createDefaultOnboardConfig(): OnboardConfig {
 }
 
 const activeTab = ref('simulation');
-const simulationData = reactive<SimulationConfig>(
-  createDefaultSimulationConfig(),
-);
+const simulationData = reactive<SimulationConfig>(createDefaultSimulationConfig());
 const onboardData = reactive<OnboardConfig>(createDefaultOnboardConfig());
 const updateIndex = ref(1);
 
@@ -231,9 +231,11 @@ export function useOpprofConfig() {
    */
   const addAdvancedParam = () => {
     updateIndex.value++;
+
     if (!onboardData.user_options.advance_param) {
       onboardData.user_options.advance_param = [];
     }
+
     onboardData.user_options.advance_param.push({
       name: '',
       value: '',
@@ -243,9 +245,11 @@ export function useOpprofConfig() {
 
   const addAdvancedSimulateParam = () => {
     updateIndex.value++;
+
     if (!simulationData.user_options.advance_param) {
       simulationData.user_options.advance_param = [];
     }
+
     simulationData.user_options.advance_param.push({
       name: '',
       value: '',
