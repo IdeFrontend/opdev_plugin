@@ -10,9 +10,8 @@ import App from './app.vue';
 import { vscode } from '@/utils/vscode';
 import '../../assets/css/tailwind.css';
 
-//@ts-ignore
 if (typeof acquireVsCodeApi !== 'undefined' && !window.vscode) {
-  //@ts-ignore
+
   window.vscode = acquireVsCodeApi();
 }
 
@@ -23,9 +22,10 @@ window.addEventListener('message', (event) => {
   const message = event.data;
 
   console.log('外层页面接收到的message:', message);
+
   if (message.command?.indexOf('vscode') === 0) {
     if (vscode) {
-      //@ts-ignore
+
       vscode.postMessage({
         command: message.command,
         message,
@@ -40,8 +40,10 @@ function init() {
 
     return;
   }
-  createApp(App).mount('#app');
+
+  createApp(App)
+    .mount('#app');
   isInitRun = true;
 }
-//@ts-ignore
+
 init();
