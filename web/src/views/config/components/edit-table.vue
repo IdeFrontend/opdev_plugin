@@ -1,4 +1,4 @@
-<!-- 
+<!--
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  *
  * This source code is licensed under the MIT license found in the
@@ -11,7 +11,11 @@ import {
   QuestionCircleOutlined,
 } from '@ant-design/icons-vue';
 
-const emit = defineEmits(['addTableItem', 'deleteTableItem', 'onChange']);
+const emit = defineEmits([
+  'addTableItem',
+  'deleteTableItem',
+  'onChange',
+]);
 const columns = [
   {
     title: '参数名称',
@@ -35,6 +39,7 @@ const props = defineProps({
     default: () => [],
   },
 });
+
 console.log('props', props);
 
 const deleteTableItem = (key) => {

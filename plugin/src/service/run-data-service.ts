@@ -26,8 +26,11 @@ function formatTimestampToYYYYMMDD(timestamp: number): string {
   }
 
   const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString()
+    .padStart(2, '0');
+  const day = date.getDate()
+    .toString()
+    .padStart(2, '0');
 
   return `${year}${month}${day}`;
 }
@@ -37,10 +40,11 @@ function formatTimestampToYYYYMMDD(timestamp: number): string {
  * @returns {Set<string>} 标记集合
  */
 function getMsSanitizerMarks() {
-  const storageValue = PermanentStorage.getInstance().get<string[]>(
-    MARKED_STORAGE_KEY,
-    [],
-  );
+  const storageValue = PermanentStorage.getInstance()
+    .get<string[]>(
+      MARKED_STORAGE_KEY,
+      [],
+    );
 
   return new Set(storageValue);
 }
@@ -50,20 +54,20 @@ function getMsSanitizerMarks() {
  * @param {string[]} vals - 标记列表
  */
 function setMsSanitizerMarks(vals: string[]) {
-  PermanentStorage.getInstance().set<string[]>(MARKED_STORAGE_KEY, [...vals]);
+  PermanentStorage.getInstance()
+    .set<string[]>(MARKED_STORAGE_KEY, [...vals]);
 }
 
 export class RunDataService {
   /**
    * 获取性能运行数据
    */
-  async getPerformanceRunData(
-    params: GetPerformanceRunDataParams,
-  ): Promise<GetPerformanceRunDataResult> {
-    const data = await PerformanceRunData.getInstance().queryExecutionRecords(
-      params.sort.by,
-      params.sort.order,
-    );
+  async getPerformanceRunData(params: GetPerformanceRunDataParams): Promise<GetPerformanceRunDataResult> {
+    const data = await PerformanceRunData.getInstance()
+      .queryExecutionRecords(
+        params.sort.by,
+        params.sort.order,
+      );
 
     return { data };
   }
@@ -73,9 +77,12 @@ export class RunDataService {
    */
   togglePerformanceRecordMark(params: MarkRecordParams): void {
     if (params.marked) {
-      PerformanceRunData.getInstance().markRecord(params.key);
-    } else {
-      PerformanceRunData.getInstance().unmarkRecord(params.key);
+      PerformanceRunData.getInstance()
+        .markRecord(params.key);
+    }
+    else {
+      PerformanceRunData.getInstance()
+        .unmarkRecord(params.key);
     }
   }
 
@@ -107,7 +114,10 @@ export class RunDataService {
     const markSet = getMsSanitizerMarks();
     const res = allFileNames.map((filename) => {
       const _filename = filename.replace('.log', '');
-      const [title, timestamp] = _filename.split('_');
+      const [
+        title,
+        timestamp,
+      ] = _filename.split('_');
 
       return {
         title: `${title}-${formatTimestampToYYYYMMDD(+timestamp)}`,
@@ -131,9 +141,11 @@ export class RunDataService {
 
     if (markSet.has(id)) {
       markSet.delete(id);
-    } else {
+    }
+    else {
       markSet.add(id);
     }
+
     setMsSanitizerMarks([...markSet]);
 
     return;

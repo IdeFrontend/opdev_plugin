@@ -16,7 +16,10 @@ function getDefaultAscendEnvScript(): string {
 }
 
 function getEnvFromScript(ascendEnvScript?: string): NodeJS.ProcessEnv {
-  if (!ascendEnvScript) return process.env;
+  if (!ascendEnvScript) {
+    return process.env;
+  }
+
   try {
     const cmd = `source ${ascendEnvScript} && env`;
     const out = child_process.execSync(cmd, {
@@ -26,7 +29,10 @@ function getEnvFromScript(ascendEnvScript?: string): NodeJS.ProcessEnv {
     const env: NodeJS.ProcessEnv = { ...process.env };
 
     for (const line of out.split('\n')) {
-      if (!line) continue;
+      if (!line) {
+        continue;
+      }
+
       const idx = line.indexOf('=');
 
       if (idx > 0) {
@@ -38,7 +44,8 @@ function getEnvFromScript(ascendEnvScript?: string): NodeJS.ProcessEnv {
     }
 
     return env;
-  } catch (e: unknown) {
+  }
+  catch (e: unknown) {
     console.error(`getEnvFromScript failed: ${e}`);
 
     return process.env;
@@ -46,9 +53,17 @@ function getEnvFromScript(ascendEnvScript?: string): NodeJS.ProcessEnv {
 }
 
 function getSocFromCoreName(coreName?: string) {
-  if (!coreName) return 'ascend910b';
-  for (const [k, v] of Object.entries(ascend_soc_map)) {
-    if (coreName.includes(k)) return v;
+  if (!coreName) {
+    return 'ascend910b';
+  }
+
+  for (const [
+    k,
+    v,
+  ] of Object.entries(ascend_soc_map)) {
+    if (coreName.includes(k)) {
+      return v;
+    }
   }
 
   return 'ascend910b';
@@ -66,7 +81,8 @@ function refreshAscendEnv() {
 
     // merge into process.env if desired (non-destructive)
     Object.assign(process.env, env);
-  } catch (e: unknown) {
+  }
+  catch (e: unknown) {
     console.error(e);
   }
 }
@@ -81,24 +97,35 @@ function refreshSocVersion() {
     for (const line of lines) {
       const m = re.exec(line);
 
-      if (m) names.push([m[1], m[2]]);
+      if (m) {
+        names.push([
+          m[1],
+          m[2],
+        ]);
+      }
     }
+
     if (names.length > 0) {
       soc_version = getSocFromCoreName(names[0][1]);
       console.info(`soc_version: ${soc_version}`);
 
       return names[0];
     }
+
     throw new Error('soc_version does not match in npu-smi info');
-  } catch (e: unknown) {
+  }
+  catch (e: unknown) {
     if ((e as { code?: string }).code === 'ENOENT') {
-      console.error(
-        '未找到npu-smi命令，请确保已安装昇腾驱动并正确设置环境变量',
-      );
-    } else if ((e as { status?: number }).status !== undefined) {
+      console.error('未找到npu-smi命令，请确保已安装昇腾驱动并正确设置环境变量');
+    }
+    else if ((e as { status?: number }).status !== undefined) {
       console.error(`执行npu-smi命令失败，错误码: ${(e as { status: number }).status}`);
-      if ((e as { stderr?: string }).stderr) console.error(`错误输出: ${(e as { stderr: string }).stderr}`);
-    } else {
+
+      if ((e as { stderr?: string }).stderr) {
+        console.error(`错误输出: ${(e as { stderr: string }).stderr}`);
+      }
+    }
+    else {
       console.error(`使用npu-smi命令时出错: ${e}`);
     }
 
@@ -109,7 +136,11 @@ function refreshSocVersion() {
 // Try refreshing at module load if env indicates
 try {
   refreshAscendEnv();
-  if (!process.env.SOC_VERSION) refreshSocVersion();
-} catch {
+
+  if (!process.env.SOC_VERSION) {
+    refreshSocVersion();
+  }
+}
+catch {
   // ignore
 }

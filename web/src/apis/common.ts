@@ -1,5 +1,7 @@
 import { request } from '@/core/request';
-import { CheckPathExistsParams, SaveFileParams } from 'shared:/api-types';
+import {
+  CheckPathExistsParams, SaveFileParams,
+} from 'shared:/api-types';
 
 /**
  * 检查路径是否存在
@@ -27,6 +29,6 @@ export function saveFileToLocal(params: SaveFileParams) {
 export function openExternalLink(url: string) {
   return request.post(
     'common/openExternalLink',
-    url
+    url,
   );
 }

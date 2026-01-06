@@ -5,7 +5,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { spawn, ChildProcess, exec } from 'child_process';
+import {
+  spawn, ChildProcess, exec,
+} from 'child_process';
 import { EventEmitter } from 'events';
 import * as vscode from 'vscode';
 
@@ -67,7 +69,10 @@ class CommandExecutor extends EventEmitter {
 
       this.process = spawn(command, args, {
         cwd: options.cwd || process.cwd(),
-        env: { ...process.env, ...options.env },
+        env: {
+          ...process.env,
+          ...options.env,
+        },
         shell: true,
         // Windows 上需要设置 detached: false，否则无法终止
         // Linux/macOS 上设置 detached: true 可以创建进程组
@@ -80,9 +85,7 @@ class CommandExecutor extends EventEmitter {
       if (options.timeout && options.timeout > 0) {
         timeoutId = setTimeout(() => {
           this.cleanup();
-          reject(
-            new Error(`Command execution timeout after ${options.timeout}ms`),
-          );
+          reject(new Error(`Command execution timeout after ${options.timeout}ms`));
         }, options.timeout);
       }
 
@@ -90,6 +93,7 @@ class CommandExecutor extends EventEmitter {
         if (timeoutId) {
           clearTimeout(timeoutId);
         }
+
         this.process = null;
       };
 
@@ -100,11 +104,13 @@ class CommandExecutor extends EventEmitter {
         if (outputChannel) {
           outputChannel.appendLine(text);
         }
+
         console.log('execute command, stdout:', text);
         this.stdout += text;
         this.output += text;
 
         this.emit('stdout', text);
+
         if (options.streaming) {
           process.stdout.write(text);
         }
@@ -128,11 +134,13 @@ class CommandExecutor extends EventEmitter {
         console.error('execute command, stderr:', text);
         this.stderr += text;
         this.output += text;
+
         if (outputChannel) {
           outputChannel.appendLine(text);
         }
 
         this.emit('stderr', text);
+
         if (options.streaming) {
           process.stderr.write(text);
         }
@@ -151,7 +159,8 @@ class CommandExecutor extends EventEmitter {
 
         if (code === 0) {
           resolve(result);
-        } else {
+        }
+        else {
           this.stderr += `Command failed with code ${code}: ${command} ${args.join(' ')}`;
           resolve(this.getResult(code));
         }
@@ -169,18 +178,21 @@ class CommandExecutor extends EventEmitter {
    * 检查是否包含停止关键字
    */
   private checkStopKeywords(text: string, stopKeywords: string[]): boolean {
-    if (stopKeywords.length === 0) return false;
+    if (stopKeywords.length === 0) {
+      return false;
+    }
 
     return stopKeywords.some((keyword) =>
-      text.toLowerCase().includes(keyword.toLowerCase()),
-    );
+      text.toLowerCase()
+        .includes(keyword.toLowerCase()));
   }
 
   /**
    * 检查是否包含异常关键字
    */
   private checkErrorKeywords(text: string): boolean {
-    return text.toLowerCase().includes('[error]');
+    return text.toLowerCase()
+      .includes('[error]');
   }
 
   /**
@@ -213,16 +225,19 @@ class CommandExecutor extends EventEmitter {
               }
             });
           }
-        } else {
+        }
+        else {
           // 在 Linux/macOS 上，使用负PID终止整个进程组
           // 负号表示终止整个进程组
           if (this.process.pid) {
             process.kill(-this.process.pid, 'SIGTERM');
           }
         }
-      } catch (error) {
+      }
+      catch (error) {
         console.error('Error killing process:', error);
-      } finally {
+      }
+      finally {
         this.process = null;
       }
     }
@@ -236,4 +251,6 @@ class CommandExecutor extends EventEmitter {
   }
 }
 
-export { CommandExecutor, CommandOptions, CommandResult };
+export {
+  CommandExecutor, CommandOptions, CommandResult,
+};

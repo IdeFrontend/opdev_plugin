@@ -16,7 +16,8 @@ window.addEventListener('message', (event) => {
 
   if (message.command === 'iframeSetSSHData') {
     localStorage.setItem('sshData', JSON.stringify(message.data));
-  } else if (message.command === 'iframeGetDisposed') {
+  }
+  else if (message.command === 'iframeGetDisposed') {
     localStorage.setItem('isRemote', JSON.stringify(message.data));
     init();
   }

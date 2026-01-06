@@ -14,6 +14,7 @@ const props = defineProps({
     default: '',
   },
 });
+
 console.log('props', props);
 
 const emits = defineEmits(['update:modelValue']);
@@ -27,11 +28,15 @@ const onClick = async () => {
       emits('update:modelValue', folderPath);
       // 发送消息给 iframe
       window.postMessage(
-        { command: 'selectedDirectory', data: folderPath },
+        {
+          command: 'selectedDirectory',
+          data: folderPath,
+        },
         '*',
       );
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('选择文件夹失败:', error);
   }
 };

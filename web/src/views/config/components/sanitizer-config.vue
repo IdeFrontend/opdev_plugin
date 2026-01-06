@@ -5,7 +5,9 @@
  * LICENSE file in the root directory of this source tree. -->
 
 <script setup>
-import { ref, onBeforeMount } from 'vue';
+import {
+  ref, onBeforeMount,
+} from 'vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 
 import {
@@ -19,6 +21,7 @@ const props = defineProps({
     default: '',
   },
 });
+
 console.log('props', props);
 
 const form = ref({
@@ -45,38 +48,22 @@ function isUseBlock() {
   saveSanitizerForm();
 }
 
-// 处理 Device侧内存检测 和 CANN软件栈内存检测 互斥
-function _handleDeviceHeapChange(checked) {
-  console.log('handleDeviceHeapChange', checked);
-  if (checked) {
-    form.value.memcheckOption['check-cann-heap'] = false;
-  }
-}
-
-function _handleCannHeapChange(checked) {
-  console.log('handleCannHeapChange', checked);
-  if (checked) {
-    form.value.memcheckOption['check-device-heap'] = false;
-  }
-}
-
 const activeKey = ref(['config']);
 
 async function loadSanitizerForm() {
   const configs = await getSanitizerConfigs();
   const obj = (configs[0] || {})?.user_options || {};
 
-  Object.keys(form.value).forEach((key) => {
-    if (obj[key] !== undefined) {
-      form.value[key] = obj[key];
-    }
-  });
+  Object.keys(form.value)
+    .forEach((key) => {
+      if (obj[key] !== undefined) {
+        form.value[key] = obj[key];
+      }
+    });
 }
 
 async function saveSanitizerForm() {
-  await saveSanitizerFormAPI({
-    data: JSON.parse(JSON.stringify(form.value)),
-  });
+  await saveSanitizerFormAPI({ data: JSON.parse(JSON.stringify(form.value)) });
 }
 
 onBeforeMount(async () => {
@@ -94,14 +81,17 @@ onBeforeMount(async () => {
       layout="vertical"
     >
       <!-- 检测内容 -->
-      <div class="section-title">检测内容</div>
+      <div class="section-title">
+        检测内容
+      </div>
       <a-form-item class="check-type">
         <div class="check-item-row">
           <a-checkbox
             v-model:checked="form.tool.memcheck"
             @change="saveSanitizerForm"
-            >内存检测</a-checkbox
           >
+            内存检测
+          </a-checkbox>
         </div>
         <div
           v-if="form.tool.memcheck"
@@ -110,18 +100,22 @@ onBeforeMount(async () => {
           <div class="desc">
             基础检测:默认会开启非法读写、多核踩踏、非对齐访问和非法释放
           </div>
-          <div class="desc">可选检测:</div>
+          <div class="desc">
+            可选检测:
+          </div>
           <div class="mem-option">
             <a-checkbox
               v-model:checked="form.memcheckOption['leak-check']"
               @change="saveSanitizerForm"
-              >内存泄漏</a-checkbox
             >
+              内存泄漏
+            </a-checkbox>
             <a-checkbox
               v-model:checked="form.memcheckOption['check-unused-memory']"
               @change="saveSanitizerForm"
-              >分配内存未使用</a-checkbox
             >
+              分配内存未使用
+            </a-checkbox>
             <!-- <a-checkbox v-model:checked="form.memcheckOption['check-device-heap']" @change="handleDeviceHeapChange">Device侧内存检测</a-checkbox>
             <a-checkbox v-model:checked="form.memcheckOption['check-cann-heap']" @change="handleCannHeapChange">CANN软件栈内存检测</a-checkbox> -->
           </div>
@@ -130,15 +124,17 @@ onBeforeMount(async () => {
           <a-checkbox
             v-model:checked="form.tool.racecheck"
             @change="saveSanitizerForm"
-            >竞争检测</a-checkbox
           >
+            竞争检测
+          </a-checkbox>
         </div>
         <div class="check-item-row">
           <a-checkbox
             v-model:checked="form.tool.initcheck"
             @change="saveSanitizerForm"
-            >未初始化检测</a-checkbox
           >
+            未初始化检测
+          </a-checkbox>
         </div>
       </a-form-item>
 
@@ -148,9 +144,15 @@ onBeforeMount(async () => {
           v-model:value="form.logLevel"
           @change="saveSanitizerForm"
         >
-          <a-radio value="info">info:输出info/warn/error级别的运行信息</a-radio>
-          <a-radio value="warn">warn:输出warn/error级别的运行信息</a-radio>
-          <a-radio value="error">error:输出error级别的运行信息</a-radio>
+          <a-radio value="info">
+            info:输出info/warn/error级别的运行信息
+          </a-radio>
+          <a-radio value="warn">
+            warn:输出warn/error级别的运行信息
+          </a-radio>
+          <a-radio value="error">
+            error:输出error级别的运行信息
+          </a-radio>
         </a-radio-group>
       </a-form-item>
 
@@ -178,7 +180,7 @@ onBeforeMount(async () => {
               :max="10240"
               :min="1"
               @change="saveSanitizerForm"
-            ></a-input-number>
+            />
           </a-form-item>
 
           <a-form-item>
@@ -201,8 +203,12 @@ onBeforeMount(async () => {
               v-model:value="form.useBlock"
               @change="isUseBlock"
             >
-              <a-radio :value="false">全局检测</a-radio>
-              <a-radio :value="true">单block检测</a-radio>
+              <a-radio :value="false">
+                全局检测
+              </a-radio>
+              <a-radio :value="true">
+                单block检测
+              </a-radio>
             </a-radio-group>
 
             <a-input-number
@@ -212,7 +218,7 @@ onBeforeMount(async () => {
               :max="200"
               :min="0"
               @change="saveSanitizerForm"
-            ></a-input-number>
+            />
           </a-form-item>
         </a-collapse-panel>
       </a-collapse>

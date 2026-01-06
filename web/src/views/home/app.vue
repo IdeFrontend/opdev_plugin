@@ -41,10 +41,7 @@
   </a-collapse>
 </template>
 <script lang="ts" setup>
-import {
-  Ref, ref,
-} from 'vue';
-import { DownOutlined } from '@ant-design/icons-vue';
+import { ref } from 'vue';
 
 const activeKey = ref(['1']);
 

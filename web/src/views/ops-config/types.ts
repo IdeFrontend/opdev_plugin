@@ -38,5 +38,6 @@ type ValueType<T extends FormAttributeType> = T extends 'boolean'
           : never;
 
 type OptionsType<T extends FormAttributeType> = T extends 'enum'
-  ? { value: ValueType<T>; label: I18nLabels }[]
+  ? { value: ValueType<T>;
+    label: I18nLabels }[]
   : undefined;

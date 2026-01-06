@@ -1,4 +1,4 @@
-<!-- 
+<!--
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  *
  * This source code is licensed under the MIT license found in the
@@ -15,6 +15,7 @@ const props = defineProps({
     default: '',
   },
 });
+
 console.log('props', props);
 
 // 使用 composables 管理配置数据和逻辑

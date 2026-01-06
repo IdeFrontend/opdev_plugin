@@ -1,8 +1,12 @@
 <script setup lang="ts">
-import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue';
+import {
+  computed, ref, watch, onMounted, onBeforeUnmount,
+} from 'vue';
 import FilterBar from './components/filter-bar.vue';
 import FileTree from './components/file-tree.vue';
-import { getPerformanceRunData, toggleRecordMark } from '@/apis';
+import {
+  getPerformanceRunData, toggleRecordMark,
+} from '@/apis';
 import { PerformanceExecutionRecord } from 'shared:/api-types';
 
 const sortOrder = ref<'asc' | 'desc'>('desc');
@@ -12,15 +16,20 @@ const treeData = ref<PerformanceExecutionRecord[]>([]);
 const renderTreeData = computed<PerformanceExecutionRecord[]>(() =>
   markedOnly.value
     ? treeData.value.filter((item) => item.marked)
-    : treeData.value,
-);
+    : treeData.value);
 
 function loadTreeData() {
-  const params = { sort: { by: 'timestamp' as const, order: sortOrder.value } };
+  const params = {
+    sort: {
+      by: 'timestamp' as const,
+      order: sortOrder.value,
+    },
+  };
 
-  getPerformanceRunData(params).then((res) => {
-    treeData.value = res.data;
-  });
+  getPerformanceRunData(params)
+    .then((res) => {
+      treeData.value = res.data;
+    });
 }
 
 loadTreeData();
@@ -35,7 +44,11 @@ function handleToggleMark(key: string, marked: boolean) {
   if (targetRecord) {
     targetRecord.marked = marked;
   }
-  toggleRecordMark({ key, marked });
+
+  toggleRecordMark({
+    key,
+    marked,
+  });
 }
 
 const eventListenerHandler = (event: MessageEvent) => {

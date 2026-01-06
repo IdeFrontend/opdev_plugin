@@ -1,14 +1,16 @@
 import * as vscode from 'vscode';
 
-import { ViewRouteRaw, ViewRouter } from './view-router';
+import {
+  ViewRouteRaw, ViewRouter,
+} from './view-router';
 import { ViewRenderer } from './view-render';
 import { ViewQuery } from './view-query';
 
 /** 开启视图hook */
-type ViewOpenedCallback = (routePath: string, webview: vscode.Webview) => void;
+type ViewOpenedCallback = (routePath: string, webview: vscode.Webview)=> void;
 
 /** 关闭视图hook */
-type ViewDisposedCallback = (routePath: string) => void;
+type ViewDisposedCallback = (routePath: string)=> void;
 
 export class ViewServer extends vscode.Disposable {
   // 单例模式
@@ -53,14 +55,16 @@ export class ViewServer extends vscode.Disposable {
   }
 
   private registerViewProviders() {
-    console.log(`[ViewServer.registerViewProviders] 开始注册视图提供者`);
+    console.log('[ViewServer.registerViewProviders] 开始注册视图提供者');
     const providerRaws = this.router.getAllProviderRaws();
+
     console.log(`[ViewServer.registerViewProviders] 找到 ${providerRaws.length} 个提供者路由`);
     const viewRootUri = vscode.Uri.joinPath(
       this.context.extensionUri,
       'out',
       'web',
     );
+
     console.log(`[ViewServer.registerViewProviders] viewRootUri: ${viewRootUri.toString()}`);
 
     for (const routeRaw of providerRaws) {
@@ -71,12 +75,12 @@ export class ViewServer extends vscode.Disposable {
           resolveWebviewView: async (webviewView) => {
             console.log(`[ViewServer.registerViewProviders] 解析webview视图: ${routeRaw.providerViewType}, path: ${routeRaw.path}`);
             this.providerWebViewMap[routeRaw.providerViewType!] = webviewView;
-            console.log(`[ViewServer.registerViewProviders] WebView已添加到providerWebViewMap`);
+            console.log('[ViewServer.registerViewProviders] WebView已添加到providerWebViewMap');
             webviewView.webview.options = {
               enableScripts: true,
               localResourceRoots: [viewRootUri],
             };
-            console.log(`[ViewServer.registerViewProviders] WebView配置完成，开始激活webview`);
+            console.log('[ViewServer.registerViewProviders] WebView配置完成，开始激活webview');
             await this.activeWebview(webviewView.webview, routeRaw.path);
             console.log(`[ViewServer.registerViewProviders] WebView激活完成: ${routeRaw.providerViewType}`);
           },
@@ -87,7 +91,8 @@ export class ViewServer extends vscode.Disposable {
       this.viewProviders.push(disposable);
       console.log(`[ViewServer.registerViewProviders] 提供者注册完成: ${routeRaw.providerViewType}`);
     }
-    console.log(`[ViewServer.registerViewProviders] 所有视图提供者注册完成`);
+
+    console.log('[ViewServer.registerViewProviders] 所有视图提供者注册完成');
   }
 
   /**
@@ -99,17 +104,21 @@ export class ViewServer extends vscode.Disposable {
     query: Record<string, unknown> = {},
   ) {
     console.log(`[ViewServer.activeWebview] 开始激活webview: routePath=${routePath}`);
-    console.log(`[ViewServer.activeWebview] query:`, query);
-    
+    console.log('[ViewServer.activeWebview] query:', query);
+
     await this.renderer.render(
       webview,
       { lang: vscode.env.language },
       routePath,
     );
-    console.log(`[ViewServer.activeWebview] 渲染完成`);
-    
-    const queryParams = { ...query, _path: routePath };
-    console.log(`[ViewServer.activeWebview] 设置查询参数:`, queryParams);
+    console.log('[ViewServer.activeWebview] 渲染完成');
+
+    const queryParams = {
+      ...query,
+      _path: routePath,
+    };
+
+    console.log('[ViewServer.activeWebview] 设置查询参数:', queryParams);
     this.query.setQuery(webview, queryParams);
 
     // 【hook】页面激活

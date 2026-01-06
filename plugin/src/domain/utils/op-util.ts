@@ -8,9 +8,12 @@ interface Op {
   op_name: string;
 }
 
-function getDetailedSystemInfo(): { osName: string; architecture: string } {
-  const platformName = os.platform().toLowerCase();
-  const arch = os.arch().toLowerCase();
+function getDetailedSystemInfo(): { osName: string;
+  architecture: string } {
+  const platformName = os.platform()
+    .toLowerCase();
+  const arch = os.arch()
+    .toLowerCase();
 
   const archMap: Record<string, string> = {
     x64: 'x86_64',
@@ -27,21 +30,29 @@ function getDetailedSystemInfo(): { osName: string; architecture: string } {
   if (platformName === 'linux') {
     try {
       const content = fs.readFileSync('/etc/os-release', 'utf8');
-      const idLine = content.split('\n').find((l) => l.startsWith('ID='));
+      const idLine = content.split('\n')
+        .find((l) => l.startsWith('ID='));
 
       if (idLine) {
-        osName = idLine.split('=')[1].replace(/"/g, '').trim();
+        osName = idLine.split('=')[1].replace(/"/g, '')
+          .trim();
       }
-    } catch {
+    }
+    catch {
       // ignore and fall back to platformName
     }
-  } else if (platformName === 'win32') {
+  }
+  else if (platformName === 'win32') {
     osName = 'windows';
-  } else if (platformName === 'darwin') {
+  }
+  else if (platformName === 'darwin') {
     osName = 'darwin';
   }
 
-  return { osName, architecture };
+  return {
+    osName,
+    architecture,
+  };
 }
 
 export function getOpRunPath(op: Op): string {
@@ -55,7 +66,9 @@ export function getOpRunPath(op: Op): string {
 }
 
 function getDefaultTarget(opRunPath: string, op: Op) {
-  const { osName, architecture } = getDetailedSystemInfo();
+  const {
+    osName, architecture,
+  } = getDetailedSystemInfo();
   const targetDir = path.join(opRunPath, 'build_out');
 
   let targetOpFile: string;
@@ -72,12 +85,18 @@ function getDefaultTarget(opRunPath: string, op: Op) {
       'build',
       `test_aclnn_${op.op_name}`,
     );
-  } else {
+  }
+  else {
     targetOpFile = path.join(opRunPath, 'build', op.op_name);
     targetExampleFile = targetOpFile;
   }
 
-  return { targetDir, targetOpFile, targetExampleFile, osName };
+  return {
+    targetDir,
+    targetOpFile,
+    targetExampleFile,
+    osName,
+  };
 }
 
 function getBuildScriptPath(opRunPath: string): string {
@@ -86,7 +105,9 @@ function getBuildScriptPath(opRunPath: string): string {
 
 export function getDefaultPath(op: Op) {
   const opRunPath = getOpRunPath(op);
-  const { targetDir, targetOpFile, targetExampleFile } = getDefaultTarget(
+  const {
+    targetDir, targetOpFile, targetExampleFile,
+  } = getDefaultTarget(
     opRunPath,
     op,
   );

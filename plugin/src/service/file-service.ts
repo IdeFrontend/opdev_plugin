@@ -3,7 +3,9 @@ import fs from 'node:fs';
 import compressing from 'compressing';
 import * as vscode from 'vscode';
 
-import { CheckPathExistsParams, SaveFileParams } from 'shared:/api-types';
+import {
+  CheckPathExistsParams, SaveFileParams,
+} from 'shared:/api-types';
 
 export class FileService {
   /**
@@ -14,7 +16,8 @@ export class FileService {
       fs.stat(params.path, (err, stats) => {
         if (params.mustFile) {
           resolve(!err && stats.isFile());
-        } else {
+        }
+        else {
           resolve(!err);
         }
       });
@@ -39,19 +42,21 @@ export class FileService {
     if (!savingUri) {
       return false;
     }
+
     const sourceUri = vscode.Uri.file(params.sourcePath);
     let sourceStat: vscode.FileStat;
 
     try {
       sourceStat = await vscode.workspace.fs.stat(sourceUri);
-    } catch {
+    }
+    catch {
       throw new Error('保存失败，源文件不存在');
     }
+
     if (sourceStat.type === vscode.FileType.File) {
-      await vscode.workspace.fs.copy(sourceUri, savingUri, {
-        overwrite: true,
-      });
-    } else if (sourceStat.type === vscode.FileType.Directory) {
+      await vscode.workspace.fs.copy(sourceUri, savingUri, { overwrite: true });
+    }
+    else if (sourceStat.type === vscode.FileType.Directory) {
       await compressing.zip.compressDir(
         sourceUri.fsPath,
         `${sourceUri.fsPath}.zip`,
@@ -61,6 +66,7 @@ export class FileService {
       await vscode.workspace.fs.copy(zipUri, savingUri, { overwrite: true });
       vscode.workspace.fs.delete(zipUri);
     }
+
     vscode.commands.executeCommand('revealFileInOS', savingUri);
 
     return true;

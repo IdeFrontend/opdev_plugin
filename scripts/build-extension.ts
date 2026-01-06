@@ -4,9 +4,7 @@ import path from 'node:path';
 import esbuild from 'esbuild';
 
 const useSourcemap =
-  process.argv.some(
-    (item) => item === '--sourcemap' || item === '--sourcemap=true',
-  ) || false;
+  process.argv.some((item) => item === '--sourcemap' || item === '--sourcemap=true') || false;
 
 const isWatch = process.argv.includes('--watch');
 const isReadable = process.argv.includes('--readable');
@@ -39,7 +37,10 @@ const copyDirs = [
 ];
 
 const copyAssets = () => {
-  for (const [sourcePath, targetPath] of copyDirs) {
+  for (const [
+    sourcePath,
+    targetPath,
+  ] of copyDirs) {
     if (fs.existsSync(sourcePath)) {
       // 确保目标目录的父目录存在
       const targetDir = path.dirname(targetPath);
@@ -48,7 +49,10 @@ const copyAssets = () => {
         fs.mkdirSync(targetDir, { recursive: true });
       }
 
-      fs.rmSync(targetPath, { force: true, recursive: true });
+      fs.rmSync(targetPath, {
+        force: true,
+        recursive: true,
+      });
       fs.cpSync(sourcePath, targetPath, { recursive: true });
     }
   }
@@ -65,7 +69,8 @@ const copyAssets = () => {
             build.onEnd((result) => {
               if (result.errors.length > 0) {
                 console.error('Build failed:', result.errors);
-              } else {
+              }
+              else {
                 console.log('Build succeeded');
                 copyAssets();
               }
@@ -77,7 +82,8 @@ const copyAssets = () => {
 
     await ctx.watch();
     console.log('Watching for changes...');
-  } else {
+  }
+  else {
     await esbuild.build(buildOptions);
     copyAssets();
   }

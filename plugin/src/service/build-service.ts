@@ -30,6 +30,7 @@ export class BuildService {
    */
   async getBuildConfigsList(): Promise<BuildConfig[]> {
     const projectId = ProjectManager.getInstance().projectId;
+
     console.log('getBuildConfigsList: 查询配置，projectId:', projectId);
     const array = [
       getConfig(Number(projectId), CONFIG_TYPES.BUILD_OP),
@@ -37,8 +38,13 @@ export class BuildService {
       getConfig(Number(projectId), CONFIG_TYPES.SIMULATE),
       getConfig(Number(projectId), CONFIG_TYPES.ON_BOARD),
     ];
-    const [opConfig, exampleConfig, simulateConfig, onBoardConfig] = await Promise.all(array);
-    
+    const [
+      opConfig,
+      exampleConfig,
+      simulateConfig,
+      onBoardConfig,
+    ] = await Promise.all(array);
+
     console.log('getBuildConfigsList: 查询结果', {
       build_op: opConfig.length,
       build_example: exampleConfig.length,
@@ -74,7 +80,8 @@ export class BuildService {
       const configData = await this.getBuildConfigsList();
 
       return configData.find((v) => v.config_type === type);
-    } catch {
+    }
+    catch {
       return undefined;
     }
   }
@@ -130,7 +137,8 @@ export class BuildService {
         Number(configId),
         params.compileOption,
       );
-      const executor = ProjectManager.getInstance().getExecutor();
+      const executor = ProjectManager.getInstance()
+        .getExecutor();
       const res = await executor.execute(buildCommand, [], [], {}, true);
 
       if (res.code !== 0) {
@@ -138,11 +146,11 @@ export class BuildService {
 
         return;
       }
-      vscode.window.showInformationMessage(`编译算子成功`);
-    } catch (e) {
-      vscode.window.showErrorMessage(
-        `获取编译算子命令失败 ${(e as Error).message}`,
-      );
+
+      vscode.window.showInformationMessage('编译算子成功');
+    }
+    catch (e) {
+      vscode.window.showErrorMessage(`获取编译算子命令失败 ${(e as Error).message}`);
     }
   }
 
@@ -160,20 +168,22 @@ export class BuildService {
       const runCommand = getRunCommand(Number(configId));
 
       console.log('runCommand', runCommand);
-      const executor = ProjectManager.getInstance().getExecutor();
+      const executor = ProjectManager.getInstance()
+        .getExecutor();
       const res = await executor.execute(runCommand, [], [], {}, true);
 
       console.log('runRes', res);
+
       if (res.code !== 0) {
         vscode.window.showErrorMessage(`运行失败 ${res.output}`);
 
         return;
       }
-      vscode.window.showInformationMessage(`运行成功`);
-    } catch (e) {
-      vscode.window.showErrorMessage(
-        `获取运行命令失败 ${(e as Error).message}`,
-      );
+
+      vscode.window.showInformationMessage('运行成功');
+    }
+    catch (e) {
+      vscode.window.showErrorMessage(`获取运行命令失败 ${(e as Error).message}`);
     }
   }
 
@@ -189,19 +199,20 @@ export class BuildService {
 
     try {
       const buildCommand = getBuildExampleCommand(Number(configId));
-      const executor = ProjectManager.getInstance().getExecutor();
+      const executor = ProjectManager.getInstance()
+        .getExecutor();
       const res = await executor.execute(buildCommand, [], [], {}, true);
 
       if (res.code !== 0) {
-        vscode.window.showErrorMessage(`编译example失败`);
+        vscode.window.showErrorMessage('编译example失败');
 
         return;
       }
-      vscode.window.showInformationMessage(`编译example成功`);
-    } catch (e) {
-      vscode.window.showErrorMessage(
-        `获取编译example命令失败 ${(e as Error).message}`,
-      );
+
+      vscode.window.showInformationMessage('编译example成功');
+    }
+    catch (e) {
+      vscode.window.showErrorMessage(`获取编译example命令失败 ${(e as Error).message}`);
     }
   }
 
@@ -210,9 +221,7 @@ export class BuildService {
    */
   async startSimulate(): Promise<void> {
     const configData = await this.getBuildConfigsList();
-    const simulatorItem = configData.find(
-      (v) => v.config_type === CONFIG_TYPES.SIMULATE,
-    );
+    const simulatorItem = configData.find((v) => v.config_type === CONFIG_TYPES.SIMULATE);
     const simulatorType = (simulatorItem?.user_options?.simulatorType as string | undefined) ?? '';
 
     // 仿真分析前编译
@@ -221,7 +230,8 @@ export class BuildService {
       Number(buildConfigId),
       objectToCommandString({ simulator: simulatorType }),
     );
-    const buildExecutor = ProjectManager.getInstance().getExecutor();
+    const buildExecutor = ProjectManager.getInstance()
+      .getExecutor();
     const buildRes = await buildExecutor.execute(
       buildCommand,
       [],
@@ -231,6 +241,7 @@ export class BuildService {
     );
 
     console.log('buildRes', buildRes);
+
     if (buildRes.code !== 0) {
       vscode.window.showErrorMessage(`编译算子失败 ${buildRes.output}`);
 
@@ -249,23 +260,22 @@ export class BuildService {
       );
 
       console.log('simulateCommand', simulateCommand);
-      const executor = ProjectManager.getInstance().getExecutor();
+      const executor = ProjectManager.getInstance()
+        .getExecutor();
       const res = await executor.execute(simulateCommand, [], [], {}, true);
 
       if (res.code !== 0) {
-        vscode.window.showErrorMessage(`执行仿真分析失败`);
+        vscode.window.showErrorMessage('执行仿真分析失败');
 
         return;
       }
-      vscode.window.showInformationMessage(`执行仿真分析成功`);
+
+      vscode.window.showInformationMessage('执行仿真分析成功');
       vscode.commands.executeCommand('performanceSidebarView.focus');
-      vscode.commands.executeCommand(
-        'huawei-op-devtools.flashPerformanceRunData',
-      );
-    } catch (e: unknown) {
-      vscode.window.showErrorMessage(
-        `获取仿真命令失败 ${(e as Error).message}`,
-      );
+      vscode.commands.executeCommand('huawei-op-devtools.flashPerformanceRunData');
+    }
+    catch (e: unknown) {
+      vscode.window.showErrorMessage(`获取仿真命令失败 ${(e as Error).message}`);
     }
   }
 
@@ -279,7 +289,8 @@ export class BuildService {
       Number(buildConfigId),
       objectToCommandString({ onboard: true }),
     );
-    const buildExecutor = ProjectManager.getInstance().getExecutor();
+    const buildExecutor = ProjectManager.getInstance()
+      .getExecutor();
     const buildRes = await buildExecutor.execute(
       buildCommand,
       [],
@@ -289,6 +300,7 @@ export class BuildService {
     );
 
     console.log('buildRes', buildRes);
+
     if (buildRes.code !== 0) {
       vscode.window.showErrorMessage(`编译算子失败 ${buildRes.output}`);
 
@@ -307,20 +319,21 @@ export class BuildService {
       );
 
       console.log('onBoardCommand', onBoardCommand);
-      const executor = ProjectManager.getInstance().getExecutor();
+      const executor = ProjectManager.getInstance()
+        .getExecutor();
       const res = await executor.execute(onBoardCommand, [], [], {}, true);
 
       if (res.code !== 0) {
-        vscode.window.showErrorMessage(`执行上板分析失败`);
+        vscode.window.showErrorMessage('执行上板分析失败');
 
         return;
       }
-      vscode.window.showInformationMessage(`执行上板分析成功`);
+
+      vscode.window.showInformationMessage('执行上板分析成功');
       vscode.commands.executeCommand('performanceSidebarView.focus');
-      vscode.commands.executeCommand(
-        'huawei-op-devtools.flashPerformanceRunData',
-      );
-    } catch (e: unknown) {
+      vscode.commands.executeCommand('huawei-op-devtools.flashPerformanceRunData');
+    }
+    catch (e: unknown) {
       vscode.window.showErrorMessage(`获取上板命令失败 ${(e as Error).message}`);
     }
   }

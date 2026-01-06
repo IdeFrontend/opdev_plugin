@@ -9,13 +9,17 @@ export interface FileItem {
 
 export function getFiles(dirPath: string): FileItem[] {
   try {
-    if (!dirPath) return [];
+    if (!dirPath) {
+      return [];
+    }
+
     let basePath = path.resolve(dirPath);
     let searchKey = '';
 
     // 转换成搜索模式
     if (!fs.existsSync(basePath)) {
-      searchKey = basePath.split(path.sep).at(-1)!;
+      searchKey = basePath.split(path.sep)
+        .at(-1)!;
       basePath = basePath.slice(0, basePath.length - searchKey.length - 1);
     }
 
@@ -32,6 +36,7 @@ export function getFiles(dirPath: string): FileItem[] {
       if (searchKey && !entry.name.includes(searchKey)) {
         continue;
       }
+
       const entryPath = path.join(basePath, entry.name);
 
       if (entry.isDirectory()) {
@@ -40,7 +45,8 @@ export function getFiles(dirPath: string): FileItem[] {
           path: path.resolve(entryPath),
           type: 'directory',
         });
-      } else {
+      }
+      else {
         const ext = path.extname(entry.name);
 
         items.push({
@@ -54,7 +60,8 @@ export function getFiles(dirPath: string): FileItem[] {
     items.sort((a, b) => a.name.localeCompare(b.name));
 
     return items;
-  } catch (e) {
+  }
+  catch (e) {
     console.error(e);
 
     return [];

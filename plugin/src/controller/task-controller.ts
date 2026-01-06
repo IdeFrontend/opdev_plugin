@@ -13,14 +13,18 @@ export const taskMethods = {
    */
   async startBuild(): Promise<void> {
     try {
-      await ProjectManager.getInstance().initProject();
+      await ProjectManager.getInstance()
+        .initProject();
       // 保存当前 executor 引用，用于可能的终止操作
-      currentExecutor = ProjectManager.getInstance().getExecutor();
+      currentExecutor = ProjectManager.getInstance()
+        .getExecutor();
       await buildService.startBuild({});
-    } finally {
+    }
+    finally {
       // 清除 executor 引用
       currentExecutor = null;
-      ProjectManager.getInstance().clearExecutor();
+      ProjectManager.getInstance()
+        .clearExecutor();
     }
   },
 
@@ -29,14 +33,18 @@ export const taskMethods = {
    */
   async startRun(): Promise<void> {
     try {
-      await ProjectManager.getInstance().initProject();
+      await ProjectManager.getInstance()
+        .initProject();
       // 保存当前 executor 引用
-      currentExecutor = ProjectManager.getInstance().getExecutor();
+      currentExecutor = ProjectManager.getInstance()
+        .getExecutor();
       await buildService.startRun({});
-    } finally {
+    }
+    finally {
       // 清除 executor 引用
       currentExecutor = null;
-      ProjectManager.getInstance().clearExecutor();
+      ProjectManager.getInstance()
+        .clearExecutor();
     }
   },
 
@@ -44,7 +52,8 @@ export const taskMethods = {
    * 构建示例
    */
   async startBuildExample(): Promise<void> {
-    await ProjectManager.getInstance().initProject();
+    await ProjectManager.getInstance()
+      .initProject();
     await buildService.startBuildExample({});
   },
 
@@ -53,14 +62,18 @@ export const taskMethods = {
    */
   async startSimulate(): Promise<void> {
     try {
-      await ProjectManager.getInstance().initProject();
+      await ProjectManager.getInstance()
+        .initProject();
       // 保存当前 executor 引用
-      currentExecutor = ProjectManager.getInstance().getExecutor();
+      currentExecutor = ProjectManager.getInstance()
+        .getExecutor();
       await buildService.startSimulate();
-    } finally {
+    }
+    finally {
       // 清除 executor 引用
       currentExecutor = null;
-      ProjectManager.getInstance().clearExecutor();
+      ProjectManager.getInstance()
+        .clearExecutor();
     }
   },
 
@@ -69,14 +82,18 @@ export const taskMethods = {
    */
   async startOnBoard(): Promise<void> {
     try {
-      await ProjectManager.getInstance().initProject();
+      await ProjectManager.getInstance()
+        .initProject();
       // 保存当前 executor 引用
-      currentExecutor = ProjectManager.getInstance().getExecutor();
+      currentExecutor = ProjectManager.getInstance()
+        .getExecutor();
       await buildService.startOnBoard();
-    } finally {
+    }
+    finally {
       // 清除 executor 引用
       currentExecutor = null;
-      ProjectManager.getInstance().clearExecutor();
+      ProjectManager.getInstance()
+        .clearExecutor();
     }
   },
 
@@ -120,13 +137,16 @@ export const taskMethods = {
    */
   stopTask(): void {
     console.log('[stopTask] 收到停止任务请求');
+
     if (currentExecutor) {
       console.log('[stopTask] 终止正在执行的任务');
       currentExecutor.kill();
       currentExecutor = null;
-      ProjectManager.getInstance().clearExecutor();
+      ProjectManager.getInstance()
+        .clearExecutor();
       vscode.window.showWarningMessage('任务已被手动停止');
-    } else {
+    }
+    else {
       console.log('[stopTask] 没有正在执行的任务');
       vscode.window.showInformationMessage('当前没有正在执行的任务');
     }
@@ -137,12 +157,14 @@ export const taskMethods = {
    */
   async runDebug(): Promise<void> {
     try {
-      await ProjectManager.getInstance().initProject();
+      await ProjectManager.getInstance()
+        .initProject();
       // debug前编译
       await buildService.startBuild({ compileOption: '--debug' });
       await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
       await vscode.commands.executeCommand('workbench.action.debug.start');
-    } catch (error) {
+    }
+    catch (error) {
       console.error('打开debug时出错:', error);
       throw error;
     }
@@ -154,12 +176,11 @@ export const taskMethods = {
   async debugConfig(): Promise<void> {
     try {
       await vscode.commands.executeCommand('workbench.action.debug.configure');
-      vscode.window.showInformationMessage(`已打开 launch.json 文件`);
-    } catch (error) {
+      vscode.window.showInformationMessage('已打开 launch.json 文件');
+    }
+    catch (error) {
       console.error('打开 launch.json 时出错:', error);
-      vscode.window.showErrorMessage(
-        `无法打开 launch.json: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      vscode.window.showErrorMessage(`无法打开 launch.json: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   },

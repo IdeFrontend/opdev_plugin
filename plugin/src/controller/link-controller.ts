@@ -4,7 +4,9 @@ import * as path from 'path';
 
 import { projectService } from '../service/project-service';
 import { configService } from '../service/config-service';
-import { OpenFileParams, OpenLinkParams } from 'shared:/api-types';
+import {
+  OpenFileParams, OpenLinkParams,
+} from 'shared:/api-types';
 
 export const linkMethods = {
   /**
@@ -19,6 +21,7 @@ export const linkMethods = {
     if (!workspaceFolders) {
       return;
     }
+
     const workspacePath = workspaceFolders[0].uri.fsPath;
     const absolutePath = path.join(workspacePath, filePath);
 
@@ -27,7 +30,8 @@ export const linkMethods = {
         'vscode.open',
         vscode.Uri.file(absolutePath),
       );
-    } else {
+    }
+    else {
       vscode.window.showErrorMessage(`文件不存在: ${filePath}`);
     }
   },

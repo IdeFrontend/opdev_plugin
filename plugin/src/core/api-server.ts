@@ -29,10 +29,12 @@ export interface ResponseMessage {
   message: string;
   isStream?: boolean;
   data?: unknown;
-  error?: { name: string; message: string; stack: string };
+  error?: { name: string;
+    message: string;
+    stack: string };
 }
 
-type Api = (params: unknown) => unknown;
+type Api = (params: unknown)=> unknown;
 
 export type ApiGroup = {
   [key: string]: ApiGroup | Api;
@@ -72,7 +74,9 @@ export class ApiServer extends vscode.Disposable {
 
   private initRequestConnector(): void {
     this.connector.receive(async (requestMessage, webview) => {
-      const { api: apiPath, data } = requestMessage;
+      const {
+        api: apiPath, data,
+      } = requestMessage;
       const currentApi = this.getApi(apiPath);
 
       if (!currentApi) {
@@ -80,15 +84,18 @@ export class ApiServer extends vscode.Disposable {
 
         return;
       }
+
       try {
         const resData = await currentApi(data);
 
         if (resData instanceof ReadableStream) {
           this.resStream(webview, requestMessage, resData);
-        } else {
+        }
+        else {
           this.resSuccess(webview, requestMessage, resData);
         }
-      } catch (e) {
+      }
+      catch (e) {
         this.resServerError(webview, requestMessage, e as Error);
         throw e;
       }
@@ -101,6 +108,7 @@ export class ApiServer extends vscode.Disposable {
 
     for (const apiKey of apiKeys) {
       apiOrGroup = (apiOrGroup as ApiGroup)[apiKey];
+
       if (!apiOrGroup) {
         return undefined;
       }
@@ -123,18 +131,20 @@ export class ApiServer extends vscode.Disposable {
   ): void {
     const reader = stream.getReader();
     const readByChunk = () => {
-      reader.read().then((chunk) => {
-        this.connector.send(webview, {
-          ...this.makeBasicResponse(requestMessage),
-          statusCode: 200,
-          message: t('core.message.apiResponseSuccess'),
-          isStream: true,
-          data: chunk,
+      reader.read()
+        .then((chunk) => {
+          this.connector.send(webview, {
+            ...this.makeBasicResponse(requestMessage),
+            statusCode: 200,
+            message: t('core.message.apiResponseSuccess'),
+            isStream: true,
+            data: chunk,
+          });
+
+          if (!chunk.done) {
+            readByChunk();
+          }
         });
-        if (!chunk.done) {
-          readByChunk();
-        }
-      });
     };
 
     readByChunk();
@@ -157,9 +167,7 @@ export class ApiServer extends vscode.Disposable {
     webview: vscode.Webview,
     requestMessage: RequestMessage,
   ): void {
-    const errorMessage = t('core.message.apiResponseNotFound', {
-      apiName: requestMessage.api,
-    });
+    const errorMessage = t('core.message.apiResponseNotFound', { apiName: requestMessage.api });
 
     this.connector.send(webview, {
       ...this.makeBasicResponse(requestMessage),
@@ -175,9 +183,7 @@ export class ApiServer extends vscode.Disposable {
     requestMessage: RequestMessage,
     error: Error,
   ): void {
-    const errorMessage = t('core.message.apiResponseServerError', {
-      apiName: requestMessage.api,
-    });
+    const errorMessage = t('core.message.apiResponseServerError', { apiName: requestMessage.api });
     const errorObject = this.makeSendableError(error);
 
     this.connector.send(webview, {
@@ -188,14 +194,17 @@ export class ApiServer extends vscode.Disposable {
     });
 
     if (!requestMessage.options.useCustomErrorHandler) {
-      vscode.window.showErrorMessage(
-        `${errorMessage}: \n${errorObject.message}`,
-      );
+      vscode.window.showErrorMessage(`${errorMessage}: \n${errorObject.message}`);
     }
   }
 
-  private makeBasicResponse({ api, requestId }: RequestMessage) {
-    return { api, requestId };
+  private makeBasicResponse({
+    api, requestId,
+  }: RequestMessage) {
+    return {
+      api,
+      requestId,
+    };
   }
 
   /**

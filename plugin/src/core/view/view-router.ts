@@ -16,6 +16,7 @@ export class ViewRouter extends vscode.Disposable {
 
   constructor(routes: ViewRouteRaw[]) {
     super(() => {});
+
     for (const route of routes) {
       this.registerRoute(route);
     }

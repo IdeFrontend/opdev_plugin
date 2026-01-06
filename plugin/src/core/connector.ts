@@ -1,4 +1,6 @@
-import type { Webview, Disposable } from 'vscode';
+import type {
+  Webview, Disposable,
+} from 'vscode';
 
 /**
  * 通信频道
@@ -9,9 +11,10 @@ import type { Webview, Disposable } from 'vscode';
  */
 export type ConnectChannel = '__connector__' | 'request' | 'viewQuery';
 
-export type ConnectMessage = { channel: ConnectChannel; data: unknown };
+export type ConnectMessage = { channel: ConnectChannel;
+  data: unknown };
 
-type ExtensionListener<T> = (message: T, webview: Webview) => void;
+type ExtensionListener<T> = (message: T, webview: Webview)=> void;
 
 /** 通信双向ready消息频道 */
 export const CONNECTOR_READY_CHANNEL: ConnectChannel = '__connector__';
@@ -40,9 +43,14 @@ export class WebviewConnector<T = unknown, R = T> {
     const isReady = this.webviewReady.get(webview);
 
     if (isReady) {
-      webview.postMessage({ channel: this.channel, data });
-    } else {
-      this.pendingDataList.get(webview)?.push(data);
+      webview.postMessage({
+        channel: this.channel,
+        data,
+      });
+    }
+    else {
+      this.pendingDataList.get(webview)
+        ?.push(data);
     }
   }
 
@@ -58,9 +66,11 @@ export class WebviewConnector<T = unknown, R = T> {
 
         return;
       }
+
       if (res.channel !== this.channel) {
         return;
       }
+
       this.listeners.forEach((callback) => {
         callback(res.data, webview);
       });
@@ -72,7 +82,8 @@ export class WebviewConnector<T = unknown, R = T> {
 
   public removeWebview(webview: Webview): void {
     this.pendingDataList.delete(webview);
-    this.messageReceivers.get(webview)?.dispose();
+    this.messageReceivers.get(webview)
+      ?.dispose();
   }
 
   private startConnector(webview: Webview): void {

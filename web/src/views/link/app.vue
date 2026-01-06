@@ -3,7 +3,8 @@ import { theme } from 'ant-design-vue';
 import linkSSH from './components/link-ssh.vue';
 
 const themeConfig = {
-  algorithm: theme.darkAlgorithm, // 使用暗色算法[1](@ref)
+  // 使用暗色算法[1](@ref)
+  algorithm: theme.darkAlgorithm,
 };
 </script>
 <template>
@@ -14,7 +15,7 @@ const themeConfig = {
           新建算子工程
         </div>
       </div>
-      <div class="h-px bg-white/15 mb-6 w-full"></div>
+      <div class="h-px bg-white/15 mb-6 w-full" />
       <div class="text-white">
         <div class="flex flex-col">
           <linkSSH />

@@ -11,9 +11,7 @@ export const performanceMethods = {
    * @param params 查询参数
    * @returns 运行数据结果
    */
-  async getRunData(
-    params: GetPerformanceRunDataParams,
-  ): Promise<GetPerformanceRunDataResult> {
+  async getRunData(params: GetPerformanceRunDataParams): Promise<GetPerformanceRunDataResult> {
     return await runDataService.getPerformanceRunData(params);
   },
 

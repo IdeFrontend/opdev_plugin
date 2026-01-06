@@ -20,7 +20,8 @@ export type PerformanceRunDataFile = {
 };
 
 export type GetPerformanceRunDataParams = {
-  sort: { by: 'timestamp'; order: 'asc' | 'desc' };
+  sort: { by: 'timestamp';
+    order: 'asc' | 'desc' };
 };
 
 export type GetPerformanceRunDataResult = {

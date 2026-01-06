@@ -1,4 +1,4 @@
-<!-- 
+<!--
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  *
  * This source code is licensed under the MIT license found in the
@@ -9,7 +9,9 @@ import buildConfig from './build-config.vue';
 import sanitizerConfig from './sanitizer-config.vue';
 import opprofConfig from './opprof-config.vue';
 
-import { ref, watch, nextTick } from 'vue';
+import {
+  ref, watch, nextTick,
+} from 'vue';
 
 const props = defineProps({
   activeOption: {
@@ -41,15 +43,15 @@ const init = (obj) => {
   );
 
   // 编译算子表单数据
-  const buildConfigData = ConfigData[props.activeConfig].find(
-    (v) => v.config_type === 'build_op',
-  );
+  const buildConfigData = ConfigData[props.activeConfig].find((v) => v.config_type === 'build_op');
 
   buildConfigForme.value = buildConfigData.user_options;
   buildConfigId.value = buildConfigData.config_id;
+
   if (!buildConfigForme.value.advance_param) {
     buildConfigForme.value.advance_param = [];
   }
+
   buildConfigForme.value.advance_param =
     buildConfigForme.value.advance_param.map((v, i) => {
       v.key = i;
@@ -58,15 +60,15 @@ const init = (obj) => {
     });
 
   // 编译example表单数据
-  const exampleConfigData = ConfigData[props.activeConfig].find(
-    (v) => v.config_type === 'build_example',
-  );
+  const exampleConfigData = ConfigData[props.activeConfig].find((v) => v.config_type === 'build_example');
 
   exampleConfigForme.value = exampleConfigData.user_options;
   exampleConfigId.value = exampleConfigData.config_id;
+
   if (!exampleConfigForme.value.advance_param) {
     exampleConfigForme.value.advance_param = [];
   }
+
   exampleConfigForme.value.advance_param =
     exampleConfigForme.value.advance_param.map((v, i) => {
       v.key = i;
@@ -75,14 +77,10 @@ const init = (obj) => {
     });
 
   // 仿真表单数据
-  simulateConfigData.value = ConfigData[props.activeConfig].find(
-    (v) => v.config_type === 'simulate',
-  );
+  simulateConfigData.value = ConfigData[props.activeConfig].find((v) => v.config_type === 'simulate');
 
   // 上板表单参数
-  onBoardConfigData.value = ConfigData[props.activeConfig].find(
-    (v) => v.config_type === 'on_board',
-  );
+  onBoardConfigData.value = ConfigData[props.activeConfig].find((v) => v.config_type === 'on_board');
 };
 
 const addBuildTableItem = () => {
@@ -113,9 +111,7 @@ const deleteExampleTableItem = (key) => {
   console.log(exampleConfigForme.value.advance_param);
 };
 
-defineExpose({
-  init,
-});
+defineExpose({ init });
 
 const opprofRef = ref(null);
 const opprofInited = ref(false);
@@ -126,6 +122,7 @@ watch(
     if (opprofInited.value) {
       return;
     }
+
     // 避免使用旧的数据初始化
     if (val === 'opprof') {
       nextTick(() => {

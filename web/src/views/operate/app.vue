@@ -1,12 +1,13 @@
 <script setup>
 import { theme } from 'ant-design-vue';
-import { ref, computed, onMounted } from 'vue';
+import {
+  ref, onMounted,
+} from 'vue';
 import settingIcon from '../../assets/svg/setting.svg';
 import buildIcon from '../../assets/svg/build.svg';
 import runIcon from '../../assets/svg/run.svg';
 import shIcon from '../../assets/svg/sh.svg';
 import powerIcon from '../../assets/svg/power.svg';
-import debugIcon from '../../assets/svg/debug.svg';
 import checkIcon from '../../assets/svg/check.svg';
 import {
   startBuild,
@@ -19,9 +20,7 @@ import {
   checkDevtoolConfig,
 } from '@/apis';
 
-const themeConfig = {
-  algorithm: theme.darkAlgorithm,
-};
+const themeConfig = { algorithm: theme.darkAlgorithm };
 const activeConfig = ref('');
 const configArray = ref([]);
 const selectedKeys = ref([]);
@@ -159,10 +158,13 @@ const findMenuItemHandler = (items, key) => {
     if (item.key === key && item.handler) {
       return item.handler;
     }
+
     if (item.children) {
       const handler = findMenuItemHandler(item.children, key);
 
-      if (handler) return handler;
+      if (handler) {
+        return handler;
+      }
     }
   }
 
@@ -193,9 +195,11 @@ const handleMenuClick = async ({ key }) => {
 
     try {
       await handler();
-    } catch (error) {
+    }
+    catch (error) {
       console.error('[Operate] 执行操作失败:', error);
-    } finally {
+    }
+    finally {
       // 操作完成后恢复按钮状态
       if (mutuallyExclusiveKeys.includes(originalKey)) {
         console.log('[Operate] 操作完成，恢复按钮状态');
@@ -213,10 +217,12 @@ const onOpenChange = (keys) => {
 // 停止任务
 const handleStopTask = async () => {
   console.log('[Operate] 用户点击停止任务');
+
   try {
     await stopTask();
     isExecuting.value = false;
-  } catch (error) {
+  }
+  catch (error) {
     console.error('[Operate] 停止任务失败:', error);
   }
 };
@@ -226,7 +232,8 @@ onMounted(async () => {
   try {
     hasDevtoolConfig.value = await checkDevtoolConfig();
     console.log('[Operate] 配置文件检查结果:', hasDevtoolConfig.value);
-  } catch (error) {
+  }
+  catch (error) {
     console.error('[Operate] 检查配置文件失败:', error);
     hasDevtoolConfig.value = false;
   }
@@ -264,8 +271,9 @@ onMounted(async () => {
               v-for="item in configArray"
               :key="item.config_name"
               :value="item.config_name"
-              >{{ item.config_name }}</a-select-option
             >
+              {{ item.config_name }}
+            </a-select-option>
           </a-select>
         </div>
 
@@ -313,8 +321,7 @@ onMounted(async () => {
                 <span
                   v-else
                   class="text-white/85"
-                  >{{ item.label }}</span
-                >
+                >{{ item.label }}</span>
               </template>
               <template v-for="child in item.children">
                 <!-- 子菜单项 -->
@@ -370,8 +377,7 @@ onMounted(async () => {
               <span
                 v-else
                 class="text-white/85"
-                >{{ item.label }}</span
-              >
+              >{{ item.label }}</span>
             </a-menu-item>
           </template>
         </a-menu>

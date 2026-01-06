@@ -46,24 +46,58 @@ export const memoryContentionSet = new Set([
 export const uninitializedSet = new Set(['uninitialized read of size']);
 
 // 同步异常大类
-export const synchronizeSet = new Set([
-  'Unpaired set_flag insetructions detected',
-]);
+export const synchronizeSet = new Set(['Unpaired set_flag insetructions detected']);
 
 // 问题名称键值对
 export const questionMap = new Map([
-  ['illegal read of size', '非法读'],
-  ['illegal write of size', '非法写'],
-  ['out of bounds of size', '多核踩踏'],
-  ['misaligned access of size', '非对齐访问'],
-  ['LeakCheck: detected memory leaks', '内存泄漏'],
-  ['illegal free()', '非法释放'],
-  ['Unused memory', '非配内存未使用'],
-  ['Potential RAW hazard detected', '(Read-After-Write)内存数据竞争访问'],
-  ['Potential WAW hazard detected', '(Write-After-Write)内存数据竞争访问'],
-  ['Potential WAR hazard detected', '(Write-After-Read)内存数据竞争访问'],
-  ['uninitialized read of size', '未初始化异常'],
-  ['Unpaired set_flag insetructions detected', '同步异常'],
+  [
+    'illegal read of size',
+    '非法读',
+  ],
+  [
+    'illegal write of size',
+    '非法写',
+  ],
+  [
+    'out of bounds of size',
+    '多核踩踏',
+  ],
+  [
+    'misaligned access of size',
+    '非对齐访问',
+  ],
+  [
+    'LeakCheck: detected memory leaks',
+    '内存泄漏',
+  ],
+  [
+    'illegal free()',
+    '非法释放',
+  ],
+  [
+    'Unused memory',
+    '非配内存未使用',
+  ],
+  [
+    'Potential RAW hazard detected',
+    '(Read-After-Write)内存数据竞争访问',
+  ],
+  [
+    'Potential WAW hazard detected',
+    '(Write-After-Write)内存数据竞争访问',
+  ],
+  [
+    'Potential WAR hazard detected',
+    '(Write-After-Read)内存数据竞争访问',
+  ],
+  [
+    'uninitialized read of size',
+    '未初始化异常',
+  ],
+  [
+    'Unpaired set_flag insetructions detected',
+    '同步异常',
+  ],
 ]);
 
 export const questionHandlerMap = new Map([

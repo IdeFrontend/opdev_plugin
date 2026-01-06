@@ -56,7 +56,8 @@ export class RemoteConfig {
 
         return JSON.parse(content);
       }
-    } catch (error) {
+    }
+    catch (error) {
       console.error('读取远程配置文件失败:', error);
     }
 
@@ -72,7 +73,8 @@ export class RemoteConfig {
 
     try {
       fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
-    } catch (error) {
+    }
+    catch (error) {
       console.error('写入远程配置文件失败:', error);
       throw error;
     }
@@ -150,12 +152,18 @@ export class RemoteConfig {
   static async searchPath(params: {
     keyword: string;
     type: string;
-  }): Promise<{ type: string; list: Array<{ path: string }> }> {
-    const { keyword, type } = params;
+  }): Promise<{ type: string;
+    list: Array<{ path: string }> }> {
+    const {
+      keyword, type,
+    } = params;
 
     // 如果关键词为空，返回空列表
     if (!keyword) {
-      return { type, list: [] };
+      return {
+        type,
+        list: [],
+      };
     }
 
     // 如果是绝对路径
@@ -171,7 +179,8 @@ export class RemoteConfig {
             list: files.map((file) => ({ path: path.join(keyword, file) })),
           };
         }
-      } catch {
+      }
+      catch {
         // 忽略错误
       }
     }
@@ -192,10 +201,14 @@ export class RemoteConfig {
           };
         }
       }
-    } catch {
+    }
+    catch {
       // 忽略错误
     }
 
-    return { type, list: [] };
+    return {
+      type,
+      list: [],
+    };
   }
 }

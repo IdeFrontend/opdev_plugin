@@ -1,4 +1,4 @@
-<!-- 
+<!--
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  *
  * This source code is licensed under the MIT license found in the
@@ -29,7 +29,9 @@ const updateActiveConfig = (item) => {
 </script>
 <template>
   <div class="config-list">
-    <div class="config-list-title">运行/调试/调优配置<PlusOutlined /></div>
+    <div class="config-list-title">
+      运行/调试/调优配置<PlusOutlined />
+    </div>
     <div
       v-for="item in props.configArray"
       :key="item.config_name"

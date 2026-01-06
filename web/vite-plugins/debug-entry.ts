@@ -22,7 +22,9 @@ export function debugEntry(): Plugin {
     configResolved(resolvedConfig) {
       root = resolvedConfig.root;
       outDir = resolvedConfig.build.outDir;
-      const { host = 'localhost', port = 5173 } = resolvedConfig.server;
+      const {
+        host = 'localhost', port = 5173,
+      } = resolvedConfig.server;
 
       serverHost = `http://${host}:${port}`;
     },

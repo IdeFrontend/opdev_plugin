@@ -169,9 +169,18 @@ export class ProjectSHValidationStrategy implements ValidationStrategy {
  */
 export class ValidationStrategyFactory {
   private static strategies: Map<string, ValidationStrategy> = new Map([
-    ['projectName', new ProjectNameValidationStrategy()],
-    ['projectPath', new ProjectPathValidationStrategy()],
-    ['projectSH', new ProjectSHValidationStrategy()],
+    [
+      'projectName',
+      new ProjectNameValidationStrategy(),
+    ],
+    [
+      'projectPath',
+      new ProjectPathValidationStrategy(),
+    ],
+    [
+      'projectSH',
+      new ProjectSHValidationStrategy(),
+    ],
   ]);
 
   /**
@@ -195,7 +204,8 @@ export class ValidationStrategyFactory {
       }
 
       return false;
-    } catch (error: unknown) {
+    }
+    catch (error: unknown) {
       const messageText =
         error instanceof Error ? error.message : (error as string) || '验证失败';
 

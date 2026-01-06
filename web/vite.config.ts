@@ -12,12 +12,14 @@ export default defineConfig(({ mode }) => {
 
   // 动态读取 views 目录下的所有符合规则的入口
   const viewsDir = path.resolve(__dirname, 'src/views');
-  const entries = fs.readdirSync(viewsDir).filter((entry) => {
-    const entryPath = path.join(viewsDir, entry);
-    const htmlPath = path.join(entryPath, `${entry}.html`);
+  const entries = fs.readdirSync(viewsDir)
+    .filter((entry) => {
+      const entryPath = path.join(viewsDir, entry);
+      const htmlPath = path.join(entryPath, `${entry}.html`);
 
-    return fs.statSync(entryPath).isDirectory() && fs.existsSync(htmlPath);
-  });
+      return fs.statSync(entryPath)
+        .isDirectory() && fs.existsSync(htmlPath);
+    });
 
   for (const entry of entries) {
     buildInput[entry] = `src/views/${entry}/${entry}.html`;
@@ -37,15 +39,14 @@ export default defineConfig(({ mode }) => {
       Components({
         resolvers: [
           AntDesignVueResolver({
-            importStyle: false, // css in js
+            // css in js
+            importStyle: false,
           }),
         ],
       }),
       debugEntry(),
     ],
-    server: {
-      cors: true,
-    },
+    server: { cors: true },
     build: {
       outDir: '../out/web',
       emptyOutDir: true,

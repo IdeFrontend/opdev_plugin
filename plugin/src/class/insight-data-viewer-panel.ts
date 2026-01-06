@@ -9,7 +9,9 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
-import { spawn, ChildProcess, exec } from 'child_process';
+import {
+  spawn, ChildProcess, exec,
+} from 'child_process';
 import { NodeWebviewSocketBridge } from './node-webview-socket-bridge';
 import webviewMessageList from './webview-message-list';
 import { CommandExecutor } from './command-options';
@@ -39,17 +41,17 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     this.binPath = binPath;
     // 从环境变量获取路径（优先从 process.env，失败则从 .arts/.env 文件读取）
     this.insightPluginBasePath = this.getInsightPluginBasePath();
+
     if (this.insightPluginBasePath === '') {
-      vscode.window.showInformationMessage(
-        `从环境变量获取 insight-vscode-plugin 路径失败，请检查环境变量 INSIGHT_HOME_PATH 是否正确，如不存在请联系管理员设置`,
-      );
+      vscode.window.showInformationMessage('从环境变量获取 insight-vscode-plugin 路径失败，请检查环境变量 INSIGHT_HOME_PATH 是否正确，如不存在请联系管理员设置');
 
       return;
     }
+
     this.serverDir = path.join(this.insightPluginBasePath, 'server');
     this.serverPath = path.join(this.serverDir, 'profiler_server');
     this.zipDir = path.join(this.insightPluginBasePath, 'zip');
-    let resolvePortReady: () => void;
+    let resolvePortReady: ()=> void;
 
     this.serverPortReady = new Promise((resolve) => {
       resolvePortReady = resolve;
@@ -57,12 +59,13 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     const resolvePort = resolvePortReady!;
 
     // 启动 profiler_server（异步，但会在后台设置 this.serverPort）
-    this.startProfilerServer(resolvePort).catch((error) => {
-      console.error(
-        '[InsightDataViewerPanel] ✗ 启动 profiler_server 失败:',
-        error,
-      );
-    });
+    this.startProfilerServer(resolvePort)
+      .catch((error) => {
+        console.error(
+          '[InsightDataViewerPanel] ✗ 启动 profiler_server 失败:',
+          error,
+        );
+      });
 
     // 设置 webview 内容
     this.setupWebview();
@@ -80,12 +83,11 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     );
 
     // 等待 serverPort 就绪后再加载并发送 iframe 内容
-    console.log(
-      '[InsightDataViewerPanel] Panel 创建完成，等待服务端口就绪后加载所有 iframe 内容...',
-    );
-    this.loadAndSendAllIframes().catch((error) => {
-      console.error('[InsightDataViewerPanel] ✗ 提前加载 iframe 失败:', error);
-    });
+    console.log('[InsightDataViewerPanel] Panel 创建完成，等待服务端口就绪后加载所有 iframe 内容...');
+    this.loadAndSendAllIframes()
+      .catch((error) => {
+        console.error('[InsightDataViewerPanel] ✗ 提前加载 iframe 失败:', error);
+      });
   }
 
   /**
@@ -96,9 +98,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     const envPath = EnvironmentVariableReader.getEnv('INSIGHT_HOME_PATH');
 
     if (envPath) {
-      console.log(
-        `[InsightDataViewerPanel] 从环境变量获取 insight-vscode-plugin 路径: ${envPath}`,
-      );
+      console.log(`[InsightDataViewerPanel] 从环境变量获取 insight-vscode-plugin 路径: ${envPath}`);
 
       return envPath;
     }
@@ -151,7 +151,8 @@ export class InsightDataViewerPanel implements vscode.Disposable {
 
     if (fs.existsSync(htmlPath)) {
       htmlContent = fs.readFileSync(htmlPath, 'utf8');
-    } else {
+    }
+    else {
       htmlContent = this.getDefaultHtml();
     }
 
@@ -226,25 +227,23 @@ export class InsightDataViewerPanel implements vscode.Disposable {
 
     // 检查是否是 WebSocket 桥接消息（这些消息应该由 NodeWebviewSocketBridge 处理）
     if (
-      message.type &&
-      (message.type === 'ws:open' ||
-        message.type === 'ws:send' ||
-        message.type === 'ws:close')
+      message.type
+      && (message.type === 'ws:open'
+        || message.type === 'ws:send'
+        || message.type === 'ws:close')
     ) {
       console.log(
-        `[InsightDataViewerPanel] 检测到 WebSocket 桥接消息，应该由 NodeWebviewSocketBridge 处理:`,
+        '[InsightDataViewerPanel] 检测到 WebSocket 桥接消息，应该由 NodeWebviewSocketBridge 处理:',
         message.type,
       );
+
       // 这些消息会被 NodeWebviewSocketBridge 的 handleMessage 处理
       // 但我们需要确保消息能正确传递过去
       if (this.socketBridge) {
-        console.log(
-          '[InsightDataViewerPanel] NodeWebviewSocketBridge 已初始化，消息应该会被处理',
-        );
-      } else {
-        console.error(
-          '[InsightDataViewerPanel] NodeWebviewSocketBridge 未初始化！',
-        );
+        console.log('[InsightDataViewerPanel] NodeWebviewSocketBridge 已初始化，消息应该会被处理');
+      }
+      else {
+        console.error('[InsightDataViewerPanel] NodeWebviewSocketBridge 未初始化！');
       }
 
       // 不在这里处理，让 NodeWebviewSocketBridge 处理
@@ -272,21 +271,24 @@ export class InsightDataViewerPanel implements vscode.Disposable {
    * 检测系统架构
    */
   private detectArchitecture(): 'x86' | 'arm' {
-    const arch = os.arch().toLowerCase();
+    const arch = os.arch()
+      .toLowerCase();
 
     // x86_64, ia32, x32, x64 等都属于 x86 架构
     if (
-      arch.includes('x64') ||
-      arch.includes('x86') ||
-      arch.includes('ia32') ||
-      arch === 'x32'
+      arch.includes('x64')
+      || arch.includes('x86')
+      || arch.includes('ia32')
+      || arch === 'x32'
     ) {
       return 'x86';
     }
+
     // arm64, aarch64, arm 等都属于 arm 架构
     if (arch.includes('arm') || arch.includes('aarch')) {
       return 'arm';
     }
+
     // 默认返回 x86（大多数情况）
     console.warn(`未知架构: ${arch}，默认使用 x86`);
 
@@ -310,7 +312,8 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       if (platform === 'win32') {
         // Windows 使用 PowerShell 解压
         command = `powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${extractTo}' -Force"`;
-      } else {
+      }
+      else {
         // Linux/Unix 使用 unzip 命令
         command = `unzip -o "${zipPath}" -d "${extractTo}"`;
       }
@@ -318,17 +321,22 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       exec(command, (error, stdout, stderr) => {
         if (error) {
           console.error(`解压失败: ${error.message}`);
+
           if (stderr) {
             console.error(`stderr: ${stderr}`);
           }
+
           reject(new Error(`解压失败: ${error.message}`));
 
           return;
         }
+
         console.log(`解压成功: ${zipPath} -> ${extractTo}`);
+
         if (stdout) {
           console.log(`解压输出: ${stdout}`);
         }
+
         resolve();
       });
     });
@@ -340,9 +348,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
   private async ensureServerDirectoryExists(): Promise<boolean> {
     // 如果 server 目录已存在，直接返回
     if (fs.existsSync(this.serverDir)) {
-      console.log(
-        `[InsightDataViewerPanel] server 目录已存在: ${this.serverDir}`,
-      );
+      console.log(`[InsightDataViewerPanel] server 目录已存在: ${this.serverDir}`);
 
       // 对 insightPluginBasePath 目录执行 chmod -R o-w 命令（移除其他用户的写权限）
       // 只在非 Windows 系统上执行
@@ -352,36 +358,30 @@ export class InsightDataViewerPanel implements vscode.Disposable {
           const chmodCommand = `chmod -R o-w ${this.insightPluginBasePath}`;
 
           console.log(`[InsightDataViewerPanel] 执行命令: ${chmodCommand}`);
-          const result = await commandExecutor.execute(chmodCommand, [], [], {
-            cwd: process.cwd(),
-          });
+          const result = await commandExecutor.execute(chmodCommand, [], [], { cwd: process.cwd() });
 
           if (result.code === 0) {
-            console.log(`[InsightDataViewerPanel] ✓ 成功执行 chmod 命令`);
-          } else {
-            console.warn(
-              `[InsightDataViewerPanel] chmod 命令执行失败，退出码: ${result.code}`,
-            );
+            console.log('[InsightDataViewerPanel] ✓ 成功执行 chmod 命令');
+          }
+          else {
+            console.warn(`[InsightDataViewerPanel] chmod 命令执行失败，退出码: ${result.code}`);
+
             if (result.stderr) {
-              console.warn(
-                `[InsightDataViewerPanel] chmod 错误输出: ${result.stderr}`,
-              );
+              console.warn(`[InsightDataViewerPanel] chmod 错误输出: ${result.stderr}`);
             }
           }
-        } catch (error: any) {
-          console.warn(
-            `[InsightDataViewerPanel] 执行 chmod 命令时出错: ${error.message}`,
-          );
+        }
+        catch (error: any) {
+          console.warn(`[InsightDataViewerPanel] 执行 chmod 命令时出错: ${error.message}`);
         }
       }
 
       // 检查 profiler_server 文件是否存在
       if (fs.existsSync(this.serverPath)) {
         return true;
-      } else {
-        console.warn(
-          `[InsightDataViewerPanel] server 目录存在但 profiler_server 文件不存在: ${this.serverPath}`,
-        );
+      }
+      else {
+        console.warn(`[InsightDataViewerPanel] server 目录存在但 profiler_server 文件不存在: ${this.serverPath}`);
         // 如果目录存在但文件不存在，可能需要重新解压
       }
     }
@@ -432,18 +432,20 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       // 设置执行权限（在 Windows 上可能失败，但不影响执行）
       try {
         fs.chmodSync(this.serverPath, 0o755);
-        console.log(`[InsightDataViewerPanel] 已设置 profiler_server 执行权限`);
-      } catch (chmodError) {
+        console.log('[InsightDataViewerPanel] 已设置 profiler_server 执行权限');
+      }
+      catch (chmodError) {
         console.warn(
           '[InsightDataViewerPanel] 设置执行权限失败（Windows 系统可忽略）:',
           chmodError,
         );
       }
 
-      console.log(`[InsightDataViewerPanel] ✓ server 目录准备完成`);
+      console.log('[InsightDataViewerPanel] ✓ server 目录准备完成');
 
       return true;
-    } catch (error: any) {
+    }
+    catch (error: any) {
       const errorMsg = `解压 ${zipFileName} 失败: ${error.message}`;
 
       console.error(`[InsightDataViewerPanel] ${errorMsg}`, error);
@@ -457,13 +459,11 @@ export class InsightDataViewerPanel implements vscode.Disposable {
    * 启动 profiler_server
    * @param resolvePort 端口就绪时的回调函数
    */
-  private async startProfilerServer(resolvePort: () => void): Promise<void> {
+  private async startProfilerServer(resolvePort: ()=> void): Promise<void> {
     try {
       // Windows 系统不启动服务
       if (os.platform() === 'win32') {
-        console.log(
-          '[InsightDataViewerPanel] Windows 系统，跳过 profiler_server 启动',
-        );
+        console.log('[InsightDataViewerPanel] Windows 系统，跳过 profiler_server 启动');
         // Windows 系统不启动服务，但仍需要设置一个默认端口（如果需要的话）
         // 或者直接 resolve，让 loadAndSendAllIframes 继续执行
         resolvePort();
@@ -501,7 +501,10 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       console.log(`[InsightDataViewerPanel] 启动 profiler_server: ${command}`);
 
       // 使用 bash -c 执行命令，确保 export 命令能够正确执行
-      this.profilerServerProcess = spawn('bash', ['-c', command], {
+      this.profilerServerProcess = spawn('bash', [
+        '-c',
+        command,
+      ], {
         cwd: this.serverDir,
         env: {
           ...process.env,
@@ -526,15 +529,11 @@ export class InsightDataViewerPanel implements vscode.Disposable {
 
       // 处理进程关闭
       this.profilerServerProcess.on('close', (code: number) => {
-        console.log(
-          `[InsightDataViewerPanel] profiler_server 进程退出，退出码: ${code}`,
-        );
+        console.log(`[InsightDataViewerPanel] profiler_server 进程退出，退出码: ${code}`);
         this.profilerServerProcess = null;
 
         if (code !== 0 && code !== null) {
-          vscode.window.showWarningMessage(
-            `profiler_server 进程异常退出，退出码: ${code}`,
-          );
+          vscode.window.showWarningMessage(`profiler_server 进程异常退出，退出码: ${code}`);
         }
       });
 
@@ -544,19 +543,16 @@ export class InsightDataViewerPanel implements vscode.Disposable {
           '[InsightDataViewerPanel] 启动 profiler_server 失败:',
           error,
         );
-        vscode.window.showErrorMessage(
-          `启动 profiler_server 失败: ${error.message}`,
-        );
+        vscode.window.showErrorMessage(`启动 profiler_server 失败: ${error.message}`);
         this.profilerServerProcess = null;
       });
 
-      console.log(
-        `[InsightDataViewerPanel] ✓ profiler_server 已启动，端口: ${this.serverPort}`,
-      );
+      console.log(`[InsightDataViewerPanel] ✓ profiler_server 已启动，端口: ${this.serverPort}`);
 
       // 通知端口已就绪
       resolvePort();
-    } catch (error: any) {
+    }
+    catch (error: any) {
       const errorMsg = `启动 profiler_server 失败: ${error.message}`;
 
       console.error(`[InsightDataViewerPanel] ${errorMsg}`, error);
@@ -570,18 +566,14 @@ export class InsightDataViewerPanel implements vscode.Disposable {
    * 并发加载所有 HTML 文件并统一发送给 webview
    */
   private async loadAndSendAllIframes(): Promise<void> {
-    console.log(
-      '[InsightDataViewerPanel] ========== 开始加载所有 iframe 内容 ==========',
-    );
+    console.log('[InsightDataViewerPanel] ========== 开始加载所有 iframe 内容 ==========');
     const startTime = Date.now();
 
     try {
       // 等待 serverPort 就绪
       console.log('[InsightDataViewerPanel] 等待服务端口就绪...');
 
-      console.log(
-        `[InsightDataViewerPanel] 服务端口已就绪: ${this.serverPort}`,
-      );
+      console.log(`[InsightDataViewerPanel] 服务端口已就绪: ${this.serverPort}`);
 
       // 插件目录列表（与 webview-message-list.ts 中的保持一致）
       const pluginDirs = [
@@ -590,11 +582,31 @@ export class InsightDataViewerPanel implements vscode.Disposable {
           path: 'communication.html',
           iframeName: 'Communication',
         },
-        { model: 'Cluster', path: 'summary.html', iframeName: 'Summary' },
-        { model: 'Compute', path: 'cache.html', iframeName: 'CacheFrame' },
-        { model: 'Compute', path: 'detail.html', iframeName: 'Details' },
-        { model: 'Compute', path: 'source.html', iframeName: 'Source' },
-        { model: 'Compute', path: 'index.html', iframeName: 'Compute' },
+        {
+          model: 'Cluster',
+          path: 'summary.html',
+          iframeName: 'Summary',
+        },
+        {
+          model: 'Compute',
+          path: 'cache.html',
+          iframeName: 'CacheFrame',
+        },
+        {
+          model: 'Compute',
+          path: 'detail.html',
+          iframeName: 'Details',
+        },
+        {
+          model: 'Compute',
+          path: 'source.html',
+          iframeName: 'Source',
+        },
+        {
+          model: 'Compute',
+          path: 'index.html',
+          iframeName: 'Compute',
+        },
         { model: 'leaks' },
         { model: 'Memory' },
         { model: 'Operator' },
@@ -603,9 +615,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
         { model: 'Timeline' },
       ];
 
-      console.log(
-        `[InsightDataViewerPanel] 准备加载 ${pluginDirs.length} 个插件文件`,
-      );
+      console.log(`[InsightDataViewerPanel] 准备加载 ${pluginDirs.length} 个插件文件`);
 
       // 插件目录路径
       const pluginsBasePath = path.join(this.insightPluginBasePath, 'plugins');
@@ -621,9 +631,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
         );
         const pluginName = pluginModel.iframeName || pluginModel.model;
 
-        console.log(
-          `[InsightDataViewerPanel] [${pluginName}] 开始读取文件: ${indexPath}`,
-        );
+        console.log(`[InsightDataViewerPanel] [${pluginName}] 开始读取文件: ${indexPath}`);
 
         try {
           // 检查文件是否存在
@@ -634,23 +642,21 @@ export class InsightDataViewerPanel implements vscode.Disposable {
             const fileEndTime = Date.now();
             const fileSize = content.length;
 
-            console.log(
-              `[InsightDataViewerPanel] [${pluginName}] ✓ 文件读取成功，大小: ${fileSize} 字节，耗时: ${fileEndTime - fileStartTime}ms`,
-            );
+            console.log(`[InsightDataViewerPanel] [${pluginName}] ✓ 文件读取成功，大小: ${fileSize} 字节，耗时: ${fileEndTime - fileStartTime}ms`);
 
             return {
               pluginName: pluginName,
               content: content,
               filePath: indexPath,
             };
-          } else {
-            console.warn(
-              `[InsightDataViewerPanel] [${pluginName}] ✗ 插件文件不存在: ${indexPath}`,
-            );
+          }
+          else {
+            console.warn(`[InsightDataViewerPanel] [${pluginName}] ✗ 插件文件不存在: ${indexPath}`);
 
             return null;
           }
-        } catch (error: any) {
+        }
+        catch (error: any) {
           console.error(
             `[InsightDataViewerPanel] [${pluginName}] ✗ 读取插件文件失败: ${indexPath}`,
             error,
@@ -660,43 +666,32 @@ export class InsightDataViewerPanel implements vscode.Disposable {
         }
       });
 
-      console.log(
-        `[InsightDataViewerPanel] 开始并发执行 ${readPromises.length} 个文件读取操作...`,
-      );
+      console.log(`[InsightDataViewerPanel] 开始并发执行 ${readPromises.length} 个文件读取操作...`);
 
       // 并发执行所有读取操作
       const results = await Promise.all(readPromises);
 
       // 过滤掉 null 值（文件不存在或读取失败的情况）
-      const iframes = results.filter(
-        (
-          item,
-        ): item is { pluginName: string; content: string; filePath: string } =>
-          item !== null,
-      );
+      const iframes = results.filter((item): item is { pluginName: string;
+        content: string;
+        filePath: string } =>
+        item !== null);
 
       const endTime = Date.now();
       const totalTime = endTime - startTime;
 
-      console.log(
-        `[InsightDataViewerPanel] ========== 并发读取完成 ==========`,
-      );
-      console.log(
-        `[InsightDataViewerPanel] 成功读取: ${iframes.length}/${pluginDirs.length} 个文件`,
-      );
+      console.log('[InsightDataViewerPanel] ========== 并发读取完成 ==========');
+      console.log(`[InsightDataViewerPanel] 成功读取: ${iframes.length}/${pluginDirs.length} 个文件`);
       console.log(`[InsightDataViewerPanel] 总耗时: ${totalTime}ms`);
       console.log(
-        `[InsightDataViewerPanel] 成功读取的插件列表:`,
-        iframes.map((i) => i.pluginName).join(', '),
+        '[InsightDataViewerPanel] 成功读取的插件列表:',
+        iframes.map((i) => i.pluginName)
+          .join(', '),
       );
 
       // 统一发送所有 iframe 内容、端口号和 binPath 给 webview
-      console.log(
-        `[InsightDataViewerPanel] 准备发送 ${iframes.length} 个 iframe 内容到 webview`,
-      );
-      console.log(
-        `[InsightDataViewerPanel] wsPort: ${this.serverPort}, binPath: ${this.binPath}`,
-      );
+      console.log(`[InsightDataViewerPanel] 准备发送 ${iframes.length} 个 iframe 内容到 webview`);
+      console.log(`[InsightDataViewerPanel] wsPort: ${this.serverPort}, binPath: ${this.binPath}`);
 
       await this.serverPortReady;
 
@@ -707,8 +702,9 @@ export class InsightDataViewerPanel implements vscode.Disposable {
         binPath: this.binPath,
       });
 
-      console.log(`[InsightDataViewerPanel] ✓ 消息已发送到 webview`);
-    } catch (error: any) {
+      console.log('[InsightDataViewerPanel] ✓ 消息已发送到 webview');
+    }
+    catch (error: any) {
       console.error(
         '[InsightDataViewerPanel] ✗ 加载并发送 iframe 内容失败:',
         error,
@@ -731,19 +727,20 @@ export class InsightDataViewerPanel implements vscode.Disposable {
 
         exec(command, { shell: '/bin/bash' }, (error, stdout, stderr) => {
           if (error) {
-            console.error(
-              `[InsightDataViewerPanel] 扫描端口失败: ${error.message}`,
-            );
+            console.error(`[InsightDataViewerPanel] 扫描端口失败: ${error.message}`);
+
             if (stderr) {
               console.error(`[InsightDataViewerPanel] stderr: ${stderr}`);
             }
+
             resolve(null);
 
             return;
           }
 
           // 从输出中提取端口号
-          const portMatch = stdout.trim().match(/^\d+$/);
+          const portMatch = stdout.trim()
+            .match(/^\d+$/);
 
           if (portMatch) {
             const port = parseInt(portMatch[0], 10);
@@ -756,13 +753,12 @@ export class InsightDataViewerPanel implements vscode.Disposable {
             }
           }
 
-          console.error(
-            `[InsightDataViewerPanel] 无法从输出中解析端口号: ${stdout}`,
-          );
+          console.error(`[InsightDataViewerPanel] 无法从输出中解析端口号: ${stdout}`);
           resolve(null);
         });
-      } catch (error: any) {
-        console.error(`[InsightDataViewerPanel] 扫描端口异常:`, error);
+      }
+      catch (error: any) {
+        console.error('[InsightDataViewerPanel] 扫描端口异常:', error);
         resolve(null);
       }
     });
@@ -776,9 +772,11 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       try {
         this.profilerServerProcess.kill('SIGTERM');
         console.log('已停止 profiler_server 进程');
-      } catch (error) {
+      }
+      catch (error) {
         console.error('停止 profiler_server 失败:', error);
       }
+
       this.profilerServerProcess = null;
     }
   }
