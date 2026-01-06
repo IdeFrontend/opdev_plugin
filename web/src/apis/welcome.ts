@@ -1,5 +1,5 @@
 import { request } from '@/core/request';
-import { CreatedProjectParams } from 'shared:/api-types';
+import { CreatedProjectParams } from '@shared/api-types';
 
 /**
  * 创建项目

@@ -2,7 +2,7 @@ import { request } from '@/core/request';
 import {
   RemotePathSearchParams,
   RemotePathSearchResult,
-} from 'shared:/api-types';
+} from '@shared/api-types';
 
 /**
  * 远程路径搜索

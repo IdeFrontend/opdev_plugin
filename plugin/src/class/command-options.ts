@@ -251,6 +251,8 @@ class CommandExecutor extends EventEmitter {
   }
 }
 
-export {
-  CommandExecutor, CommandOptions, CommandResult,
+export { CommandExecutor };
+
+export type {
+  CommandOptions, CommandResult,
 };

@@ -2,11 +2,11 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { projectService } from '../service/project-service';
-import { configService } from '../service/config-service';
+import { projectService } from '@plugin/service/project-service';
+import { configService } from '@plugin/service/config-service';
 import {
   OpenFileParams, OpenLinkParams,
-} from 'shared:/api-types';
+} from '@shared/api-types';
 
 export const linkMethods = {
   /**

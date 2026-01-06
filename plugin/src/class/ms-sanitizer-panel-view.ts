@@ -5,11 +5,11 @@ import { ExceptionParser } from './exception-parser';
 
 import { HtmlTransformer } from './html-transformer';
 import webviewMessageList from './webview-message-list';
-import { ApiServer } from 'plugin:/core/api-server';
+import { ApiServer } from '@plugin/core/api-server';
 import {
   COMMAND_OPEN_MS_SANITIZER_PANEL_VIEW,
   VIEW_MS_SANITIZER,
-} from '../constants';
+} from '@plugin/constants';
 
 export class MsSanitizerPanelViewProvider
 implements vscode.WebviewViewProvider {

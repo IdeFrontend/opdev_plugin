@@ -1,6 +1,6 @@
 import path from 'path';
 import config from './config';
-import { JsonStorage } from '../../core/storage/json-storage';
+import { JsonStorage } from '@plugin/core/storage/json-storage';
 
 const dataDir = path.join(config.user_data_dir, 'data');
 const projectsFile = path.join(dataDir, 'projects.json');

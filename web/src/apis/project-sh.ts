@@ -1,5 +1,5 @@
 import { request } from '@/core/request';
-import { SaveProjectSHParams } from 'shared:/api-types';
+import { SaveProjectSHParams } from '@shared/api-types';
 
 /**
  * 保存项目SH脚本

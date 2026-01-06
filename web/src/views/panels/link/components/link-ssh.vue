@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
-import { useLinkSSH } from '../composables/use-link-ssh';
-import { FormRulesFactory } from '../composables/form-rules';
+import { useLinkSSH } from '@web/views/panels/link/composables/use-link-ssh';
+import { FormRulesFactory } from '@web/views/panels/link/composables/form-rules';
 
 defineProps({
   connected: {

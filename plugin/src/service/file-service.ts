@@ -5,7 +5,7 @@ import * as vscode from 'vscode';
 
 import {
   CheckPathExistsParams, SaveFileParams,
-} from 'shared:/api-types';
+} from '@shared/api-types';
 
 export class FileService {
   /**

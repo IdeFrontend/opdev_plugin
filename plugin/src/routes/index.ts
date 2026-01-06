@@ -1,9 +1,9 @@
-import { ViewRouteRaw } from '../core/view/view-router';
+import { ViewRouteRaw } from '@plugin/core/view/view-router';
 import {
   VIEW_PERFORMANCE_RUN_DATA,
   VIEW_MS_SANITIZER_RUN_DATA,
   VIEW_OPS_CONFIG,
-} from '../constants';
+} from '@plugin/constants';
 
 export const routes: ViewRouteRaw[] = [
   {

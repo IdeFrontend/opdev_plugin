@@ -1,26 +1,20 @@
 {
+  "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "module": "node16",
-    "types": ["node"],
-    "target": "ES2020",
-    "outDir": "out",
-    "lib": ["ES2020", "DOM"],
-    "sourceMap": true,
-    "rootDirs": ["plugin/src", "shared"],
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": false,
-    "forceConsistentCasingInFileNames": true,
     "moduleResolution": "node16",
-    "resolveJsonModule": true,
-    "noImplicitAny": true,
+    "target": "ES2020",
+    "lib": ["ES2022", "DOM"],
+    "outDir": "out",
+    "rootDirs": ["plugin/src", "shared"],
+    "sourceMap": true,
     "baseUrl": ".",
     "paths": {
-      "plugin:/*": ["plugin/src/*"],
-      "shared:/*": ["shared/*"],
-      "@shared/*": ["shared/*"]
+      "@shared/*": ["shared/*"],
+      "@plugin/*": ["plugin/src/*"]
     }
   },
+  "include": ["plugin/src/**/*", "shared/**/*"],
   "exclude": [
     "node_modules",
     ".vscode-test",
@@ -29,8 +23,6 @@
     "dist",
     "out",
     "**/*.vsix",
-    "deletePackage.js",
-    "package.js",
     "web"
   ]
 }

@@ -1,7 +1,7 @@
 import { request } from '@/core/request';
 import {
   CheckPathExistsParams, SaveFileParams,
-} from 'shared:/api-types';
+} from '@shared/api-types';
 
 /**
  * 检查路径是否存在

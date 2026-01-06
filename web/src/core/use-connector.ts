@@ -1,5 +1,5 @@
-import type { ConnectChannel } from 'plugin:/core/connector';
-import { CONNECTOR_READY_CHANNEL } from 'plugin:/core/connector';
+import type { ConnectChannel } from '@shared/connector';
+import { CONNECTOR_READY_CHANNEL } from '@shared/connector';
 
 import { vscode } from '@/utils/vscode';
 

@@ -22,6 +22,7 @@ export class FormRulesFactory {
           if (!value) {
             return Promise.resolve();
           }
+
           const strategy = new ProjectPathValidationStrategy();
 
           try {

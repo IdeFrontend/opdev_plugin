@@ -11,7 +11,7 @@ import {
   SaveSanitizerFormParams,
   UpdateShScriptParams,
   BuildConfig,
-} from 'shared:/api-types';
+} from '@shared/api-types';
 
 import { request } from '@/core/request';
 

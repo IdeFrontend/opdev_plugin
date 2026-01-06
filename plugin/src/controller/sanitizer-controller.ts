@@ -1,10 +1,10 @@
-import { ProjectManager } from '../core/project/project-manager';
-import { configService } from '../service/config-service';
-import { sanitizerService } from '../service/sanitizer-service';
+import { ProjectManager } from '@plugin/core/project/project-manager';
+import { configService } from '@plugin/service/config-service';
+import { sanitizerService } from '@plugin/service/sanitizer-service';
 import {
   GetSanitizerFormResult,
   SaveSanitizerFormParams,
-} from 'shared:/api-types';
+} from '@shared/api-types';
 
 export const sanitizerViewMethods = {
   /**

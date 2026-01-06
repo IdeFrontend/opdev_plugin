@@ -3,13 +3,13 @@ import fs from 'fs-extra';
 import config from './config';
 import * as projectModel from './project-model';
 import * as configModel from './config-model';
-import { OpGeneratorFactory } from '../services/op-generator-factory';
-import { getDefaultPath } from '../utils/op-util';
-import { soc_version } from '../utils/ascend-util';
+import { OpGeneratorFactory } from '@plugin/domain/services/op-generator-factory';
+import { getDefaultPath } from '@plugin/domain/utils/op-util';
+import { soc_version } from '@plugin/domain/utils/ascend-util';
 import {
   getDefaultDirectory,
   ensureLaunchJsonExists,
-} from '../utils/project-utils';
+} from '@plugin/domain/utils/project-utils';
 
 const getDataDir = () =>
   path.join(

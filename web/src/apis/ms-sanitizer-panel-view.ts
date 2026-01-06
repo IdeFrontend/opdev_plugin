@@ -3,7 +3,7 @@ import {
   GetSanitizerFormResult,
   SaveSanitizerFormParams,
   RunSanitizerParams,
-} from 'shared:/api-types';
+} from '@shared/api-types';
 
 /**
  * 获取 Sanitizer 配置（字符串格式）

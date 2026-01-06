@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import * as vscode from 'vscode';
 
-import { HtmlTransformer } from 'plugin:/class/html-transformer';
+import { HtmlTransformer } from '@plugin/class/html-transformer';
 
 const WEB_OUT_DIR_PATH = 'out/web';
 

@@ -2,7 +2,7 @@ import type {
   RequestOptions,
   RequestMessage,
   ResponseMessage,
-} from 'plugin:/core/api-server';
+} from '@shared/api-server';
 
 import { deepToRaw } from '@/utils/reactive';
 

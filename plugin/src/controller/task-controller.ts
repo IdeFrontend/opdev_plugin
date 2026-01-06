@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 
-import { CommandExecutor } from 'plugin:/class/command-options';
-import { ProjectManager } from '../core/project/project-manager';
-import { buildService } from '../service/build-service';
+import { CommandExecutor } from '@plugin/class/command-options';
+import { ProjectManager } from '@plugin/core/project/project-manager';
+import { buildService } from '@plugin/service/build-service';
 
 // 全局任务管理器：用于追踪和终止正在执行的任务
 let currentExecutor: CommandExecutor | null = null;

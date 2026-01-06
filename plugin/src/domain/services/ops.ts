@@ -1,4 +1,4 @@
-import * as model from '../models/model';
+import * as model from '@plugin/domain/models/model';
 
 export function getOpByProjectIdAndOpName(project_id: number, op_name: string) {
   return model.getOpByProjectIdAndOpName(project_id, op_name);

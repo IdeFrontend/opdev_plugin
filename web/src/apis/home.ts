@@ -5,7 +5,7 @@ import {
   GetProjectSHResult,
   GetLastProjectPathResult,
   GetWorkspaceResult,
-} from 'shared:/api-types';
+} from '@shared/api-types';
 
 /**
  * 获取HOME目录

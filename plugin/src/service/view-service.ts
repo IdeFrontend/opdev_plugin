@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
-import { ViewOpener } from '../core/view/view-opener';
-import { COMMAND_OPEN_MS_SANITIZER_PANEL_VIEW } from '../constants';
+import { ViewOpener } from '@plugin/core/view/view-opener';
+import { COMMAND_OPEN_MS_SANITIZER_PANEL_VIEW } from '@plugin/constants';
 
 export class ViewService {
   /**

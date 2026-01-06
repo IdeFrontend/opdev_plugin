@@ -1,12 +1,12 @@
 import * as vscode from 'vscode';
 
-import { ProjectManager } from '../core/project/project-manager';
+import { ProjectManager } from '@plugin/core/project/project-manager';
 import {
   StartBuildParams,
   StartRunParams,
   StartBuildExampleParams,
   BuildConfig,
-} from 'shared:/api-types';
+} from '@shared/api-types';
 import {
   getBuildExampleCommand,
   getSimulateCommand,
@@ -15,7 +15,7 @@ import {
   getRunCommand,
   getConfig,
   objectToCommandString,
-} from '../domain';
+} from '@plugin/domain';
 
 const CONFIG_TYPES = {
   BUILD_OP: 'build_op',

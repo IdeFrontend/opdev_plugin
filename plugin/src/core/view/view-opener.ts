@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { InsightDataViewerPanel } from 'plugin:/class/insight-data-viewer-panel';
+import { InsightDataViewerPanel } from '@plugin/class/insight-data-viewer-panel';
 
 // 跟踪已打开的CSV文件目录
 const openedCsvDirectories = new Map<string, vscode.Uri>();

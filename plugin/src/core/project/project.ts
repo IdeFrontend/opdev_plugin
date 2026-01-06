@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import {
   getProjectByPath,
   ProjectRecord,
-} from '../../domain/models/project-model';
+} from '@plugin/domain/models/project-model';
 
 export class Project<HasProject extends boolean = false> {
   private static instance: Project;

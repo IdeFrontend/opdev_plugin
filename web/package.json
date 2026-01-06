@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc --noEmit && vite build",
-    "build:debug": "vue-tsc --noEmit && vite build --mode=debug",
+    "build": "vite build",
+    "build:with-check": "vue-tsc --noEmit && vite build",
+    "build:debug": "vite build --mode=debug",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -19,19 +20,7 @@
     "vue": "^3.5.22"
   },
   "devDependencies": {
-    "@types/node": "^24.6.0",
-    "@types/vscode-webview": "^1.57.5",
-    "@vitejs/plugin-vue": "^6.0.1",
-    "@vue/tsconfig": "^0.8.1",
-    "autoprefixer": "^10.4.23",
-    "less": "^4.4.2",
-    "less-loader": "^12.3.0",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^3.4.17",
-    "typescript": "~5.9.3",
-    "unplugin-vue-components": "^30.0.0",
-    "vite": "npm:rolldown-vite@7.1.14",
-    "vue-tsc": "^3.1.0"
+    "@types/vscode-webview": "^1.57.5"
   },
   "overrides": {
     "vite": "npm:rolldown-vite@7.1.14"

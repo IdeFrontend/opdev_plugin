@@ -3,7 +3,7 @@ import i18next from 'i18next';
 
 import type {
   FormAttribute, FormAttributeType,
-} from '../types';
+} from '@web/views/panels/ops-config/types';
 
 defineProps<{
   attr: FormAttribute<T>;

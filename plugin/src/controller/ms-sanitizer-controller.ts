@@ -1,5 +1,5 @@
-import { runDataService } from '../service/run-data-service';
-import { viewService } from '../service/view-service';
+import { runDataService } from '@plugin/service/run-data-service';
+import { viewService } from '@plugin/service/view-service';
 
 export const msSanitizerMethods = {
   /**

@@ -5,7 +5,7 @@ import {
   RunExampleParams,
   SimulateParams,
   OnBoardParams,
-} from 'shared:/api-types';
+} from '@shared/api-types';
 
 /**
  * 构建算子（webview版本）
