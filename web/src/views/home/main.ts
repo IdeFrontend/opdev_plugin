@@ -24,7 +24,7 @@ window.addEventListener('message', (event) => {
   if (message.command.indexOf('vscode') === 0) {
     if ((window as any).vscode) {
 
-      vscode.postMessage({
+      (window as any).vscode.postMessage({
         command: message.command,
         message,
       });

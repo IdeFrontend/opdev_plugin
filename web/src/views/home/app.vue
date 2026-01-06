@@ -48,7 +48,7 @@ const activeKey = ref(['1']);
 const handleMenuClick = () => {
   if ((window as any).vscode) {
 
-    window.vscode.postMessage({
+    (window as any).vscode.postMessage({
       command: 'openLinkWebviewPanel',
       commandId: 'my-extension.openProjectView',
     });
@@ -57,13 +57,13 @@ const handleMenuClick = () => {
 const openHomePage = () => {
   if ((window as any).vscode) {
 
-    window.vscode.postMessage({ command: 'openWelcome' });
+    (window as any).vscode.postMessage({ command: 'openWelcome' });
   }
 };
 const openHelpPage = () => {
   if ((window as any).vscode) {
 
-    window.vscode.postMessage({
+    (window as any).vscode.postMessage({
       command: 'openExternalLink',
       url: 'https://gitcode.com/org/cann/discussions/54',
     });

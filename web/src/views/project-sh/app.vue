@@ -194,10 +194,10 @@ onMounted(async () => {
     let projectSH = '';
 
     if (typeof result === 'object' && result !== null && 'projectSH' in result) {
-      projectSH = result.projectSH ?? '';
+      projectSH = (result as any).projectSH ?? '';
     }
     else {
-      projectSH = result;
+      projectSH = result as string;
     }
 
     console.log('projectSH', projectSH);
