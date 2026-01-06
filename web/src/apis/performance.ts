@@ -2,7 +2,7 @@ import {
   GetPerformanceRunDataParams,
   GetPerformanceRunDataResult,
   MarkRecordParams,
-} from 'shared:/api-types';
+} from '@shared/api-types';
 
 import { request } from '@/core/request';
 

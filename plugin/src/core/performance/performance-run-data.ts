@@ -6,11 +6,11 @@ import {
   PerformanceExecutionRecord,
   PerformanceRunDataFile,
   PerformanceRunDataFolder,
-} from 'shared:/api-types';
-import { PermanentStorage } from 'plugin:/class/permanent-storage';
-import { Project } from '../project/project';
-import { getConfig } from '../../domain';
-import { getOpByProjectIdAndOpName } from '../../domain/models/model';
+} from '@shared/api-types';
+import { PermanentStorage } from '@plugin/class/permanent-storage';
+import { Project } from '@plugin/core/project/project';
+import { getConfig } from '@plugin/domain';
+import { getOpByProjectIdAndOpName } from '@plugin/domain/models/model';
 
 const PERFORMANCE_RUN_DATA_ROOT = '.vscode/opprof';
 

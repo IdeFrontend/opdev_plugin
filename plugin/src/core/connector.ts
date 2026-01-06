@@ -2,22 +2,19 @@ import type {
   Webview, Disposable,
 } from 'vscode';
 
-/**
- * 通信频道
- * @value request 数据请求
- * @value viewQuery 页面参数
- * @value viewServerApi 页面服务端 - api方法
- * @value viewServerRef 页面服务端 - 响应式对象
- */
-export type ConnectChannel = '__connector__' | 'request' | 'viewQuery';
+import type {
+  ConnectChannel,
+  ConnectMessage,
+} from '@shared/connector';
+import { CONNECTOR_READY_CHANNEL } from '@shared/connector';
 
-export type ConnectMessage = { channel: ConnectChannel;
-  data: unknown };
+export type {
+  ConnectChannel, ConnectMessage,
+};
+
+export { CONNECTOR_READY_CHANNEL };
 
 type ExtensionListener<T> = (message: T, webview: Webview)=> void;
-
-/** 通信双向ready消息频道 */
-export const CONNECTOR_READY_CHANNEL: ConnectChannel = '__connector__';
 
 /**
  * 多webview通信器（extension端使用）

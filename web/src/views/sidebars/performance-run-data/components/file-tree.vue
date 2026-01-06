@@ -19,7 +19,7 @@ import {
   openCsvView, openInsightView,
 } from '@web/apis';
 
-import { formatTimestamp } from '../utils/timestamp';
+import { formatTimestamp } from '@web/views/sidebars/performance-run-data/utils/timestamp';
 
 const props = defineProps<{
   treeData: PerformanceExecutionRecord[];

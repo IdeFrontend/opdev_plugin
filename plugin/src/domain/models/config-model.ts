@@ -1,7 +1,7 @@
 import path from 'path';
 import * as fs from 'fs-extra';
 import config from './config';
-import { JsonStorage } from '../../core/storage/json-storage';
+import { JsonStorage } from '@plugin/core/storage/json-storage';
 
 // 使用 user_data_dir 而不是 workspace_data_dir，确保配置在新窗口打开时也能找到
 // 因为 workspace_data_dir 依赖于工作区路径，在新窗口打开时可能会不同

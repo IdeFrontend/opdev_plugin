@@ -1,10 +1,10 @@
-import { ProjectManager } from '../core/project/project-manager';
-import { projectService } from '../service/project-service';
+import { ProjectManager } from '@plugin/core/project/project-manager';
+import { projectService } from '@plugin/service/project-service';
 import {
   GetProjectSHResult,
   UpdateShScriptParams,
   SaveProjectSHParams,
-} from 'shared:/api-types';
+} from '@shared/api-types';
 
 export const scriptMethods = {
   /**

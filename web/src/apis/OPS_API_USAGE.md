@@ -72,7 +72,7 @@ await startBuild({
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { initOps, getConfigData, startBuild } from '@/apis';
-import type { BuildConfig } from 'shared:/api-types';
+import type { BuildConfig } from '@shared/api-types';
 
 const configData = ref<BuildConfig[]>([]);
 const isBuilding = ref(false);
@@ -191,7 +191,7 @@ await runSanitizer();
 
 ## 类型定义
 
-所有的类型定义都在 `shared:/api-types` 中：
+所有的类型定义都在 `@shared/api-types` 中：
 
 ```typescript
 import type {
@@ -200,7 +200,7 @@ import type {
   BuildConfig,
   SaveBuildConfigParams,
   // ... 其他类型
-} from 'shared:/api-types';
+} from '@shared/api-types';
 ```
 
 ## 注意事项

@@ -1,14 +1,14 @@
-import { ProjectManager } from '../core/project/project-manager';
-import { projectService } from '../service/project-service';
-import { ExplorerRootUtils } from '../class/explorer-root-utils';
-import { RemoteConfig } from '../helpers/remote-config';
+import { ProjectManager } from '@plugin/core/project/project-manager';
+import { projectService } from '@plugin/service/project-service';
+import { ExplorerRootUtils } from '@plugin/class/explorer-root-utils';
+import { RemoteConfig } from '@plugin/helpers/remote-config';
 import {
   GetProjectIdResult,
   GetHomeResult,
   InitOpsParams,
   GetWorkspaceResult,
   GetLastProjectPathResult,
-} from 'shared:/api-types';
+} from '@shared/api-types';
 
 export const homeMethods = {
   /**

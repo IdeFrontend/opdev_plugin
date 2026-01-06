@@ -1,4 +1,4 @@
-import * as configModel from '../models/config-model';
+import * as configModel from '@plugin/domain/models/config-model';
 
 export function getConfig(
   project_id: number,

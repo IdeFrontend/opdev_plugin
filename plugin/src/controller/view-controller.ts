@@ -1,4 +1,4 @@
-import { viewService } from '../service/view-service';
+import { viewService } from '@plugin/service/view-service';
 
 export const viewMethods = {
   /**

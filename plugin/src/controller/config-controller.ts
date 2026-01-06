@@ -1,14 +1,14 @@
 import * as vscode from 'vscode';
-import { ProjectManager } from '../core/project/project-manager';
-import { configService } from '../service/config-service';
-import { buildService } from '../service/build-service';
+import { ProjectManager } from '@plugin/core/project/project-manager';
+import { configService } from '@plugin/service/config-service';
+import { buildService } from '@plugin/service/build-service';
 import {
   GetConfigDataResult,
   SaveBuildConfigParams,
   SaveConfigParams,
   RemotePathSearchParams,
   RemotePathSearchResult,
-} from 'shared:/api-types';
+} from '@shared/api-types';
 
 export const configMethods = {
   /**

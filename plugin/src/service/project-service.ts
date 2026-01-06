@@ -1,18 +1,18 @@
 import * as vscode from 'vscode';
 
-import { ProjectManager } from '../core/project/project-manager';
+import { ProjectManager } from '@plugin/core/project/project-manager';
 import {
   InitOpsParams,
   CreateOpsParams,
   CreateOpsByPrototypeParams,
   UpdateShScriptParams,
-} from 'shared:/api-types';
+} from '@shared/api-types';
 import {
   updateShScript,
   generateOpsPrototype,
   generateStructure,
   getProjectById,
-} from '../domain';
+} from '@plugin/domain';
 
 export class ProjectService {
   /**

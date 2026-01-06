@@ -12,17 +12,40 @@ export default defineConfig(({ mode }) => {
 
   // 动态读取 views 目录下的所有符合规则的入口
   const viewsDir = path.resolve(__dirname, 'src/views');
-  const entries = fs.readdirSync(viewsDir)
-    .filter((entry) => {
-      const entryPath = path.join(viewsDir, entry);
+
+  // 递归扫描 panels 和 sidebars 目录
+  const scanDir = (dir: string, prefix: string = '') => {
+    const entries = fs.readdirSync(dir);
+
+    for (const entry of entries) {
+      const entryPath = path.join(dir, entry);
+
+      if (!fs.statSync(entryPath)
+        .isDirectory()) {
+        continue;
+      }
+
       const htmlPath = path.join(entryPath, `${entry}.html`);
 
-      return fs.statSync(entryPath)
-        .isDirectory() && fs.existsSync(htmlPath);
-    });
+      if (fs.existsSync(htmlPath)) {
+        const key = prefix ? `${prefix}-${entry}` : entry;
 
-  for (const entry of entries) {
-    buildInput[entry] = `src/views/${entry}/${entry}.html`;
+        buildInput[key] = path.relative(__dirname, htmlPath)
+          .replace(/\\/g, '/');
+      }
+    }
+  };
+
+  // 扫描 panels 和 sidebars
+  const panelsDir = path.join(viewsDir, 'panels');
+  const sidebarsDir = path.join(viewsDir, 'sidebars');
+
+  if (fs.existsSync(panelsDir)) {
+    scanDir(panelsDir, 'panels');
+  }
+
+  if (fs.existsSync(sidebarsDir)) {
+    scanDir(sidebarsDir, 'sidebars');
   }
 
   return {
@@ -30,8 +53,8 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
-        'plugin:': path.resolve(__dirname, '../plugin/src'),
-        'shared:': path.resolve(__dirname, '../shared'),
+        '@web': path.resolve(__dirname, './src'),
+        '@shared': path.resolve(__dirname, '../shared'),
       },
     },
     plugins: [

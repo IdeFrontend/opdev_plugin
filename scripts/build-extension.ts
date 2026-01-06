@@ -18,6 +18,60 @@ const buildOptions: esbuild.BuildOptions = {
   external: ['vscode'],
   sourcemap: useSourcemap,
   keepNames: isReadable,
+  plugins: [
+    {
+      name: 'resolve-paths',
+      setup(build) {
+        // 解析 @plugin/* 和 @shared/* 别名
+        build.onResolve({ filter: /^@plugin\// }, (args) => {
+          const resolved = path.resolve(__dirname, '../plugin/src', args.path.replace(/^@plugin\//, ''));
+
+          // 尝试文件或目录
+          if (fs.existsSync(resolved + '.ts')) {
+            return {
+              path: resolved + '.ts',
+              namespace: 'file',
+            };
+          }
+
+          if (fs.existsSync(path.join(resolved, 'index.ts'))) {
+            return {
+              path: path.join(resolved, 'index.ts'),
+              namespace: 'file',
+            };
+          }
+
+          return {
+            path: resolved + '.ts',
+            namespace: 'file',
+          };
+        });
+        build.onResolve({ filter: /^@shared\// }, (args) => {
+          const resolved = path.resolve(__dirname, '../shared', args.path.replace(/^@shared\//, ''));
+
+          // 尝试 .ts 和 /index.ts
+          if (fs.existsSync(resolved + '.ts')) {
+            return {
+              path: resolved + '.ts',
+              namespace: 'file',
+            };
+          }
+
+          if (fs.existsSync(path.join(resolved, 'index.ts'))) {
+            return {
+              path: path.join(resolved, 'index.ts'),
+              namespace: 'file',
+            };
+          }
+
+          return {
+            path: resolved + '.ts',
+            namespace: 'file',
+          };
+        });
+      },
+    },
+  ],
 };
 
 // 复制资源文件

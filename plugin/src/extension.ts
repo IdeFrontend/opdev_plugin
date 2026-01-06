@@ -9,7 +9,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import i18nResource from 'shared:/i18n';
+import i18nResource from '@shared/i18n';
 
 import { WebviewProvider } from './class/webview-provider';
 import { handleOperatorProjectDirectoryFile } from './class/webview-message-list';

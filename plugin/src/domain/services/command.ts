@@ -1,18 +1,18 @@
 import { getOpByProjectIdAndOpName } from './ops';
-import { getProjectById } from 'plugin:/domain';
+import { getProjectById } from '@plugin/domain';
 import { getConfigById } from './configuration';
-import { soc_version } from '../utils/ascend-util';
-import { parse_cmd_options } from '../utils/aicore-utils';
-import { getOpRunPath } from '../utils/op-util';
+import { soc_version } from '@plugin/domain/utils/ascend-util';
+import { parse_cmd_options } from '@plugin/domain/utils/aicore-utils';
+import { getOpRunPath } from '@plugin/domain/utils/op-util';
 import {
   joinCommands,
   getExecutableCommand,
   getAdvanceCmd,
   Command,
-} from '../utils/command-utils';
-import { ConfigRecord } from '../models/config-model';
-import { ProjectRecord } from '../models/project-model';
-import { OpRecord } from '../models/model';
+} from '@plugin/domain/utils/command-utils';
+import { ConfigRecord } from '@plugin/domain/models/config-model';
+import { ProjectRecord } from '@plugin/domain/models/project-model';
+import { OpRecord } from '@plugin/domain/models/model';
 import { ProfilerFactory } from './profiler-service';
 
 /**

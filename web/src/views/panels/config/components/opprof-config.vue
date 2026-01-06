@@ -7,7 +7,7 @@
 <script setup>
 import SimulationTab from './simulation-tab.vue';
 import OnboardTab from './onboard-tab.vue';
-import { useOpprofConfig } from '../composables/use-opprof-config';
+import { useOpprofConfig } from '@web/views/panels/config/composables/use-opprof-config';
 
 const props = defineProps({
   activeConfig: {

@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 
-import { ProjectManager } from '../core/project/project-manager';
-import { getSanitizerCommand } from '../domain';
+import { ProjectManager } from '@plugin/core/project/project-manager';
+import { getSanitizerCommand } from '@plugin/domain';
 import { configService } from './config-service';
 import { buildService } from './build-service';
 
@@ -101,6 +101,6 @@ export class SanitizerService {
 }
 
 // Helper for importing getBuildOpCommand which is not exported by autogen-server directly in all cases or needs import
-import { getBuildOpCommand } from '../domain';
+import { getBuildOpCommand } from '@plugin/domain';
 
 export const sanitizerService = new SanitizerService();

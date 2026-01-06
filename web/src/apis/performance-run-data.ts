@@ -4,7 +4,7 @@ import {
   DeleteNodeParams,
   SelectFolderResult,
   JumpToFileParams,
-} from 'shared:/api-types';
+} from '@shared/api-types';
 
 /**
  * 下载数据

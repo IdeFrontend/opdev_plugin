@@ -1,8 +1,8 @@
-import { ConfigRecord } from '../models/config-model';
-import { OpRecord } from '../models/model';
+import { ConfigRecord } from '@plugin/domain/models/config-model';
+import { OpRecord } from '@plugin/domain/models/model';
 import {
   Command, getAdvanceCmd,
-} from '../utils/command-utils';
+} from '@plugin/domain/utils/command-utils';
 
 /**
  * msprof 命令生成策略接口

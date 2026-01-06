@@ -6,7 +6,7 @@ import {
   DeleteNodeParams,
   SelectFolderResult,
   JumpToFileParams,
-} from 'shared:/api-types';
+} from '@shared/api-types';
 
 export const performanceDataMethods = {
   /**

@@ -2,8 +2,8 @@ import {
   GetPerformanceRunDataParams,
   GetPerformanceRunDataResult,
   MarkRecordParams,
-} from 'shared:/api-types';
-import { runDataService } from '../service/run-data-service';
+} from '@shared/api-types';
+import { runDataService } from '@plugin/service/run-data-service';
 
 export const performanceMethods = {
   /**

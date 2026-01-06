@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { CommandExecutor } from 'plugin:/class/command-options';
-import { ProjectManager } from '../core/project/project-manager';
-import { projectService } from '../service/project-service';
+import { CommandExecutor } from '@plugin/class/command-options';
+import { ProjectManager } from '@plugin/core/project/project-manager';
+import { projectService } from '@plugin/service/project-service';
 import {
   CreateOpsParams,
   CreateOpsByPrototypeParams,
   CreatedProjectParams,
-} from 'shared:/api-types';
+} from '@shared/api-types';
 
 // 辅助函数：获取 extension context
 function getExtensionContext(): vscode.ExtensionContext {

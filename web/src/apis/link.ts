@@ -2,7 +2,7 @@ import { request } from '@/core/request';
 import {
   BuildCreateOpsParams,
   StartLinkCreateOpsParams,
-} from 'shared:/api-types';
+} from '@shared/api-types';
 
 /**
  * 创建算子（通过原型）
