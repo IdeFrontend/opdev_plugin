@@ -11,7 +11,8 @@ import {
 
 // 辅助函数：获取 extension context
 function getExtensionContext(): vscode.ExtensionContext {
-  return (globalThis as any).extensionContext;
+  return (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
+    .extensionContext;
 }
 
 export const welcomeMethods = {

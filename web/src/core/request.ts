@@ -2,7 +2,7 @@ import type {
   RequestOptions,
   RequestMessage,
   ResponseMessage,
-} from 'plugin:/core/ApiServer';
+} from 'plugin:/core/api-server';
 
 import { deepToRaw } from '@/utils/reactive';
 
@@ -19,7 +19,7 @@ interface ExtensionRequest {
 }
 
 interface PendingRequest {
-  success: (value: any) => void;
+  success: (value: unknown) => void;
   error: (statusCode: ResponseMessage['statusCode'], error: Error) => void;
   options: Required<RequestOptions>;
 }
@@ -96,7 +96,10 @@ function createExtensionRequest(): ExtensionRequest {
   };
 }
 
-const pendingStreams = new Map<string, ReadableStreamDefaultController<any>>();
+const pendingStreams = new Map<
+  string,
+  ReadableStreamDefaultController<unknown>
+>();
 
 /**
  * 流式传输返回
@@ -136,14 +139,14 @@ function recoverFromMessageError(
   return error;
 }
 
-function makeSuccessHandler<T extends (value: any) => void>(
-  resolve: T,
+function makeSuccessHandler<T>(
+  resolve: (value: T | PromiseLike<T>) => void,
   requestTimeout: ReturnType<typeof setTimeout>,
-): T {
-  return ((...args) => {
+): (value: unknown) => void {
+  return (value: unknown) => {
     clearTimeout(requestTimeout);
-    resolve(...args);
-  }) as T;
+    resolve(value as T);
+  };
 }
 
 function makeErrorHandler(

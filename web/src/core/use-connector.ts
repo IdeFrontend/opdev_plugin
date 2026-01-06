@@ -1,5 +1,5 @@
-import type { ConnectChannel } from 'plugin:/core/Connector';
-import { CONNECTOR_READY_CHANNEL } from 'plugin:/core/Connector';
+import type { ConnectChannel } from 'plugin:/core/connector';
+import { CONNECTOR_READY_CHANNEL } from 'plugin:/core/connector';
 
 import { vscode } from '../utils/vscode';
 
@@ -37,7 +37,7 @@ export function useConnector<T = unknown, R = T>(channel: ConnectChannel) {
   console.log(
     `[use-connector] useConnector: 发送ready消息, channel=${channel}`,
   );
-  vscode.postMessage({ channel: CONNECTOR_READY_CHANNEL, data: channel });
+  vscode?.postMessage({ channel: CONNECTOR_READY_CHANNEL, data: channel });
   console.log(`[use-connector] useConnector: ready消息已发送`);
 
   function send(message: T): void {
@@ -45,7 +45,7 @@ export function useConnector<T = unknown, R = T>(channel: ConnectChannel) {
       `[use-connector] send: 发送消息, channel=${channel}, data:`,
       JSON.stringify(message),
     );
-    vscode.postMessage({ channel: channel, data: message });
+    vscode?.postMessage({ channel: channel, data: message });
   }
 
   function receive(callback: WebviewListener<R>): void {

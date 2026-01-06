@@ -136,7 +136,7 @@ export class MindStudioPluginInstaller {
   // 注意：此方法在 code-server/CodeArts 中不可靠，应避免调用
   // ===================================================================
   private async installViaVsixCommand(): Promise<void> {
-    const { pluginId, vsixRelativePath } = this.options;
+    const { vsixRelativePath } = this.options;
 
     try {
       // 构建 .vsix 文件的 URI（相对于当前插件）
@@ -276,7 +276,7 @@ export class MindStudioPluginInstaller {
         const content = fs.readFileSync(jsonPath, 'utf8');
 
         manifest = JSON.parse(content);
-      } catch (e) {
+      } catch {
         console.warn('Failed to parse extensions.json, starting fresh.');
       }
     }
@@ -328,17 +328,13 @@ export class MindStudioPluginInstaller {
   private async handleWebIDE(
     env: ReturnType<MindStudioPluginInstaller['detectEnvironment']>,
   ): Promise<void> {
-    const { pluginId } = this.options;
     let generated = false;
-    let configPath = '';
 
     try {
       if (env.isCodespaces) {
         generated = await this.generateDevContainerConfig();
-        configPath = '.devcontainer/devcontainer.json';
       } else if (env.isGitpod) {
         generated = await this.generateGitpodConfig();
-        configPath = '.gitpod.yml';
       } else {
         await vscode.window.showWarningMessage(
           `当前 Web 环境不支持自动安装，请手动配置。`,

@@ -8,13 +8,6 @@ import {
 } from 'shared:/api-types';
 
 /**
- * 获取项目ID（webview版本）
- */
-export function getProjectIdWebview() {
-  return request.post<undefined, GetProjectIdResult>('webview/getProjectId');
-}
-
-/**
  * 获取HOME目录
  */
 export function getHome() {
@@ -26,13 +19,6 @@ export function getHome() {
  */
 export function getProjectSH() {
   return request.post<undefined, GetProjectSHResult>('webview/getProjectSH');
-}
-
-/**
- * 更新Project
- */
-export function updateProject() {
-  return request.post<undefined, void>('webview/updateProject');
 }
 
 /**

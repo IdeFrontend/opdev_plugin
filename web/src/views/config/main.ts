@@ -6,7 +6,6 @@
  */
 
 import { createApp } from 'vue';
-import antd from 'ant-design-vue';
 import App from './app.vue';
 import { vscode } from '@/utils/vscode';
 import '../../assets/css/tailwind.css';
@@ -41,7 +40,7 @@ function init() {
 
     return;
   }
-  createApp(App).use(antd).mount('#app');
+  createApp(App).mount('#app');
   isInitRun = true;
 }
 //@ts-ignore

@@ -140,8 +140,8 @@ watch(
   <div class="config-detial">
     <buildConfig
       v-if="props.activeOption === 'build'"
-      :build-config-forme="buildConfigForme"
-      :example-config-forme="exampleConfigForme"
+      v-model:build-config-forme="buildConfigForme"
+      v-model:example-config-forme="exampleConfigForme"
       :example-config-id="exampleConfigId"
       :build-config-id="buildConfigId"
       :active-config="activeConfig"

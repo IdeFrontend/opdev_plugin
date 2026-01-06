@@ -7,13 +7,18 @@ import { toRaw } from 'vue';
  */
 export function deepToRaw<T>(
   maybeProxy: T,
-  visitedObjects = new WeakSet<any>(),
+  visitedObjects = new WeakSet<object>(),
 ): T {
   if (maybeProxy === undefined) {
     return maybeProxy;
   }
 
   const raw = toRaw(maybeProxy);
+
+  // 非对象类型（包括 null）直接返回
+  if (raw === null || typeof raw !== 'object') {
+    return raw;
+  }
 
   // 循环依赖
   if (visitedObjects.has(raw)) {
@@ -30,20 +35,18 @@ export function deepToRaw<T>(
     return raw;
   }
 
-  // 对象
-  if (raw instanceof Date || raw === null) {
-    return raw;
-  } else if (typeof raw === 'object') {
-    visitedObjects.add(raw);
-    const keys = Object.keys(raw);
-
-    for (const key of keys) {
-      raw[key] = deepToRaw(raw[key], visitedObjects);
-    }
-
+  // Date 对象
+  if (raw instanceof Date) {
     return raw;
   }
 
-  // 其他
+  // 普通对象
+  visitedObjects.add(raw);
+  const keys = Object.keys(raw);
+
+  for (const key of keys) {
+    (raw as Record<string, any>)[key] = deepToRaw((raw as Record<string, any>)[key], visitedObjects);
+  }
+
   return raw;
 }

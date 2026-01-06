@@ -1,4 +1,4 @@
-import { ref, reactive, onBeforeUnmount, onMounted, type Ref } from 'vue';
+import { ref, reactive, onBeforeUnmount, onMounted } from 'vue';
 import { message } from 'ant-design-vue';
 import type { FormInstance as AntdVForm } from 'ant-design-vue';
 import {
@@ -44,7 +44,10 @@ export function useLinkSSH() {
   // 监听来自 iframe 的远程搜索结果
   const handleRemoteSearchResult = (event: MessageEvent) => {
     if (event.data.command === 'iframeRemoteSearchResult') {
-      const { type, list = [] } = event.data.data || {};
+      const { type, list = [] } = (event.data.data as {
+        type?: 'projectPath' | 'projectSH';
+        list?: Array<{ path: string }>;
+      }) || {};
       const mapped = list.map((item) => ({ value: item.path }));
 
       if (type === 'projectPath') {
@@ -72,7 +75,7 @@ export function useLinkSSH() {
       isPathSetFromContextMenu,
     };
 
-    messageHandlerManager.handle(messageData, context as any);
+    messageHandlerManager.handle(messageData, context);
   };
 
   // 远程搜索
@@ -90,7 +93,7 @@ export function useLinkSSH() {
     // 先进行表单校验
     try {
       await connectionFormRef.value?.validate();
-    } catch (error) {
+    } catch {
       return;
     }
 

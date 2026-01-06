@@ -9,7 +9,7 @@ import type { Webview, Disposable } from 'vscode';
  */
 export type ConnectChannel = '__connector__' | 'request' | 'viewQuery';
 
-export type ConnectMessage = { channel: ConnectChannel; data: any };
+export type ConnectMessage = { channel: ConnectChannel; data: unknown };
 
 type ExtensionListener<T> = (message: T, webview: Webview) => void;
 

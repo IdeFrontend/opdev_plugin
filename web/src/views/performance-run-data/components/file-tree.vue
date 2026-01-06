@@ -106,12 +106,12 @@ const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
     class="w-full relative [&_.ant-tree]:!text-white [&_.ant-tree]:!bg-transparent [&_.ant-tree-treenode]:!w-full [&_.ant-tree-node-content-wrapper]:!w-0 hover:[&_.ant-tree-treenode]:!bg-transparent"
   >
     <a-directory-tree
-      :tree-data="treeData"
+      :tree-data="treeData as any"
       :show-line="false"
       :show-icon="false"
       :switcher-icon="SwitcherIcon"
       :expanded-keys="expandedKeys"
-      @update:expanded-keys="expandedKeys = $event"
+      @update:expanded-keys="expandedKeys = $event as string[]"
       @select="onClickNode"
     >
       <template #title="{ dataRef }">

@@ -42,7 +42,7 @@ export const performanceDataMethods = {
             increment: 30,
             message: `文件大小: ${(stat.size / 1024).toFixed(2)} KB`,
           });
-        } catch (error) {
+        } catch {
           throw new Error(`远程文件不存在: ${remoteFilePath}`);
         }
 

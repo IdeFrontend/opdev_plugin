@@ -19,7 +19,6 @@ interface CommandOptions {
 
 interface CommandResult {
   code: number | null;
-  signal: NodeJS.Signals | null;
   stdout: string;
   stderr: string;
   output: string;
@@ -41,6 +40,7 @@ class CommandExecutor extends EventEmitter {
    * @param args 命令参数
    * @param options 配置选项
    * @param stopKeywords 触发提前结束的关键字数组
+   * @param isOpenTerminal
    * @returns Promise<CommandResult>
    */
   async execute(
@@ -55,7 +55,7 @@ class CommandExecutor extends EventEmitter {
       this.stderr = '';
       this.output = '';
 
-      let outputChannel: any = null;
+      let outputChannel: vscode.OutputChannel | null = null;
 
       console.log('isOpenTerminal', isOpenTerminal);
 
@@ -110,14 +110,14 @@ class CommandExecutor extends EventEmitter {
         }
 
         if (this.checkErrorKeywords(text)) {
-          resolve(this.getResult(-1, null));
+          resolve(this.getResult(-1));
           this.cleanup();
         }
 
         // 检查是否包含停止关键字
         if (this.checkStopKeywords(text, stopKeywords)) {
           this.cleanup();
-          resolve(this.getResult(0, null));
+          resolve(this.getResult(0));
         }
       });
 
@@ -140,27 +140,27 @@ class CommandExecutor extends EventEmitter {
         // 检查是否包含停止关键字
         if (this.checkStopKeywords(text, stopKeywords)) {
           this.cleanup();
-          resolve(this.getResult(0, null));
+          resolve(this.getResult(0));
         }
       });
 
       // 处理进程结束
-      this.process.on('close', (code: number, signal: NodeJS.Signals) => {
+      this.process.on('close', (code: number) => {
         cleanup();
-        const result = this.getResult(code, signal);
+        const result = this.getResult(code);
 
         if (code === 0) {
           resolve(result);
         } else {
           this.stderr += `Command failed with code ${code}: ${command} ${args.join(' ')}`;
-          resolve(this.getResult(code, signal));
+          resolve(this.getResult(code));
         }
       });
 
       // 处理进程错误
-      this.process.on('error', (error: any) => {
+      this.process.on('error', () => {
         cleanup();
-        resolve(this.getResult(-1, error));
+        resolve(this.getResult(-1));
       });
     });
   }
@@ -186,13 +186,9 @@ class CommandExecutor extends EventEmitter {
   /**
    * 获取执行结果
    */
-  private getResult(
-    code: number | null,
-    signal: NodeJS.Signals | null,
-  ): CommandResult {
+  private getResult(code: number): CommandResult {
     return {
       code,
-      signal,
       stdout: this.stdout,
       stderr: this.stderr,
       output: this.output,
@@ -237,28 +233,6 @@ class CommandExecutor extends EventEmitter {
    */
   kill(): void {
     this.cleanup();
-  }
-
-  /**
-   * 获取实时输出（用于长时间运行的命令）
-   */
-  onOutput(callback: (data: string) => void): void {
-    this.on('stdout', callback);
-    this.on('stderr', callback);
-  }
-
-  /**
-   * 获取标准输出
-   */
-  onStdout(callback: (data: string) => void): void {
-    this.on('stdout', callback);
-  }
-
-  /**
-   * 获取错误输出
-   */
-  onStderr(callback: (data: string) => void): void {
-    this.on('stderr', callback);
   }
 }
 

@@ -1,6 +1,6 @@
 import { Plugin } from 'vue';
 
-import type { QueryParams } from 'plugin:/core/view/ViewQuery';
+import type { QueryParams } from 'plugin:/core/view/view-query';
 
 import { useConnector } from './use-connector';
 

@@ -32,7 +32,7 @@ function getDetailedSystemInfo(): { osName: string; architecture: string } {
       if (idLine) {
         osName = idLine.split('=')[1].replace(/"/g, '').trim();
       }
-    } catch (e) {
+    } catch {
       // ignore and fall back to platformName
     }
   } else if (platformName === 'win32') {

@@ -6,7 +6,6 @@
  */
 
 import { createApp } from 'vue';
-import antd from 'ant-design-vue';
 import App from './performance-run-data.vue';
 import 'ant-design-vue/dist/reset.css';
 import '../../assets/css/tailwind.css';
@@ -58,7 +57,7 @@ function init() {
 
     return;
   }
-  createApp(App).use(antd).mount('#app');
+  createApp(App).mount('#app');
   isInitRun = true;
 }
 //@ts-ignore

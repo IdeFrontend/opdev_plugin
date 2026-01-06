@@ -18,7 +18,7 @@ import {
 
 export interface messageItem {
   command: string;
-  callback: Function;
+  callback: (message: any, that: any) => void;
 }
 
 const webviewMessageList: messageItem[] = [
@@ -42,25 +42,25 @@ const webviewMessageList: messageItem[] = [
   },
   {
     command: 'openLinkWebviewPanel',
-    callback: (message: any, that: any) => {
+    callback: (_message: any, _that: any) => {
       vscode.commands.executeCommand(COMMAND_OPEN);
     },
   },
   {
     command: 'vscodeRunSetProjectSH',
-    callback: async (msg: any, that: any) => {
+    callback: async (_msg: any, _that: any) => {
       vscode.commands.executeCommand(COMMAND_PROJECT_SH);
     },
   },
   {
     command: 'openWelcome',
-    callback: (message: any, that: any) => {
+    callback: (_message: any, _that: any) => {
       vscode.commands.executeCommand(COMMAND_WELCOME);
     },
   },
   {
     command: 'vscodeOpenSidebar',
-    callback: (message: any, that: any) => {
+    callback: (_message: any, _that: any) => {
       vscode.commands.executeCommand(
         'workbench.view.extension.mindstudio-opssuite-vscode-plugin',
       );
@@ -68,7 +68,7 @@ const webviewMessageList: messageItem[] = [
   },
   {
     command: 'vscodeOpenConfig',
-    callback: async (msg: any, that: any) => {
+    callback: async (_msg: any, _that: any) => {
       await vscode.commands.executeCommand(COMMAND_CONFIG);
     },
   },
@@ -85,16 +85,19 @@ const webviewMessageList: messageItem[] = [
 // 创建算子工程类型
 // 1 执行 vscodeBuildCreateOps 消息体内逻辑  data: 'cann'
 // 2 执行 vscodeStartLinkCreateOps 消息体内逻辑
-export async function handleOperatorProjectDictoryFile(
-  message: any | undefined,
-  that: any,
-  progress: any,
+export async function handleOperatorProjectDirectoryFile(
+  message: { createOperatorProjectDirectoryFileType: number } | undefined,
+  _that: unknown,
+  progress: vscode.Progress<{ message?: string; increment?: number }>,
 ) {
   console.log('创建算子工程类型', message);
-  if ([1, 2].includes(message.createOperatorProjectDictoryFileType)) {
+  if (
+    message &&
+    [1, 2].includes(message.createOperatorProjectDirectoryFileType)
+  ) {
     // 显示连接进度
     progress.report({ increment: 25 });
-    if (message.createOperatorProjectDictoryFileType === 1) {
+    if (message.createOperatorProjectDirectoryFileType === 1) {
       // 创建算子（通过原型）
       await ProjectManager.getInstance().initProject();
       await welcomeMethods.createOpsByPrototype({
@@ -105,7 +108,7 @@ export async function handleOperatorProjectDictoryFile(
         'workbench.action.closeActiveEditor',
       );
     }
-    if (message.createOperatorProjectDictoryFileType === 2) {
+    if (message.createOperatorProjectDirectoryFileType === 2) {
       // 开始链接创建算子
       await ProjectManager.getInstance().initProject();
       const opsPrototypeFilePath = await welcomeMethods.createOps({});

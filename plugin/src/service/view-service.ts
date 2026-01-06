@@ -25,7 +25,7 @@ export class ViewService {
   /**
    * 打开异常检测面板
    */
-  openMsSanitizerPanelView(params: any) {
+  openMsSanitizerPanelView(params: unknown) {
     // 打开异常检测数据面板
     vscode.commands.executeCommand(
       COMMAND_OPEN_MS_SANITIZER_PANEL_VIEW,

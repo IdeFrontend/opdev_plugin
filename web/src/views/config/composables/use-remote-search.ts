@@ -27,7 +27,8 @@ export function useRemoteSearch() {
   /**
    * 远程搜索
    */
-  const remoteSearch = async (keyword: string, tabType: string) => {
+  const remoteSearch = async (keyword: string, _tabType: string) => {
+    console.log(_tabType);
     const searchValue = keyword || '';
 
     dataStorageLoading.value = true;

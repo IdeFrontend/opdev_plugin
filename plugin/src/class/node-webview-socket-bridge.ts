@@ -271,7 +271,7 @@ export class NodeWebviewSocketBridge implements vscode.Disposable {
 
     try {
       ws.close(code, reason);
-    } catch (error) {
+    } catch {
       // 忽略关闭错误
     }
 
@@ -283,7 +283,7 @@ export class NodeWebviewSocketBridge implements vscode.Disposable {
     // msg.id 来自 webview，原样返回
     try {
       this.webview.postMessage(msg);
-    } catch (error) {
+    } catch {
       // 忽略 postMessage 错误
     }
   }

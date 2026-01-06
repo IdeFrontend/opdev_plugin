@@ -6,7 +6,6 @@
  */
 
 import { createApp } from 'vue';
-import antd from 'ant-design-vue';
 import App from './app.vue';
 import { vscode } from '@/utils/vscode';
 
@@ -35,4 +34,4 @@ window.addEventListener('message', (event) => {
   }
 });
 
-createApp(App).use(antd).mount('#app');
+createApp(App).mount('#app');

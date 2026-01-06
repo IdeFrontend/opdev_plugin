@@ -11,14 +11,14 @@ export type GetProjectSHResult = string;
 export type GetBuildConfigResult = GetConfigDataResult;
 
 export type SaveAndStartBuildParams = {
-  data: any;
+  data: unknown;
 };
 
 export type SaveAndStartBuildExampleParams = {
-  data: any;
+  data: unknown;
 };
 
-export type GetSanitizerFormResult = any;
+export type GetSanitizerFormResult = unknown;
 
 export type RemotePathSearchParams = {
   keyword: string;
@@ -27,7 +27,7 @@ export type RemotePathSearchParams = {
 
 export type RemotePathSearchResult = {
   type: string;
-  list: any[];
+  list: Array<{ path: string }>;
 };
 
 export type SaveProjectSHParams = {
@@ -52,27 +52,27 @@ export type SetActiveConfigParams = {
 export type GetActiveConfigResult = string;
 
 export type BuildOpParams = {
-  data?: any;
+  data?: unknown;
 };
 
 export type BuildExampleParams = {
-  data?: any;
+  data?: unknown;
 };
 
 export type RunSanitizerParams = {
-  data?: any;
+  data?: unknown;
 };
 
 export type RunExampleParams = {
-  data?: any;
+  data?: unknown;
 };
 
 export type SimulateParams = {
-  data?: any;
+  data?: unknown;
 };
 
 export type OnBoardParams = {
-  data?: any;
+  data?: unknown;
 };
 
 export type DownloadDataParams = {
@@ -96,7 +96,7 @@ export type JumpToFileParams = {
 };
 
 export type BuildCreateOpsParams = {
-  data?: any;
+  data?: unknown;
 };
 
 export type StartLinkCreateOpsParams = {

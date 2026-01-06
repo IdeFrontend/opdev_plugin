@@ -26,6 +26,7 @@
     "src/**/*.tsx",
     "src/**/*.vue",
     "vue.config.ts",
+    "components.d.ts",
     "src/views/Config/class/OpsConfig.js"
   ],
   "exclude": ["node_modules", "../plugin"]
