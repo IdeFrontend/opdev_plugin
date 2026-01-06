@@ -12,9 +12,10 @@ export async function ensureLaunchJsonExists(
   create_by?: string | null,
 ) {
   console.log('ensureLaunchJsonExists 被调用，op_path:', op_path, 'create_by:', create_by);
-  
+
   if (!op_path || typeof op_path !== 'string') {
     console.warn('ensureLaunchJsonExists: op_path 无效，跳过创建配置文件');
+
     return;
   }
 
@@ -33,16 +34,17 @@ export async function ensureLaunchJsonExists(
     (e as Error & { name: string }).name = 'InvalidRequest';
     throw e;
   }
-  
+
   if (fs.existsSync(devtoolConfigPath)) {
     console.log('ensureLaunchJsonExists: 配置文件已存在，跳过创建');
+
     return;
   }
-  
+
   console.log('ensureLaunchJsonExists: 创建 .vscode 目录...');
   await fs.ensureDir(vscodeDir);
   console.log('ensureLaunchJsonExists: .vscode 目录创建成功');
-  
+
   // 创建 devtool_config.json 文件
   const devtoolConfig = { type: create_by || '1' };
 
@@ -53,11 +55,12 @@ export async function ensureLaunchJsonExists(
     'utf-8',
   );
   console.log('ensureLaunchJsonExists: devtool_config.json 文件创建成功');
-  
+
   try {
     await exportEnvToFile(projectDir);
     console.log('ensureLaunchJsonExists: 环境变量导出完成');
-  } catch (error) {
+  }
+  catch (error) {
     console.error('ensureLaunchJsonExists: 环境变量导出失败:', error);
     // 环境变量导出失败不影响配置文件创建
   }
@@ -97,7 +100,8 @@ async function exportEnvToFile(projectDir: string) {
       windowsHide: true,
     });
     console.log(`环境变量已导出到: ${targetFile}`);
-  } catch (error) {
+  }
+  catch (error) {
     console.error('导出环境变量失败:', error);
   }
 }

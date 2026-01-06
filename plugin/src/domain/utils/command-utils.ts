@@ -34,10 +34,14 @@ export function objectToCommandString(
   config?: CommandStringConfig,
 ): string {
   return Object.entries(options)
-    .filter(
-      ([_, value]) => value !== undefined && value !== null && value !== false,
-    )
-    .map(([key, value]) => {
+    .filter(([
+      _,
+      value,
+    ]) => value !== undefined && value !== null && value !== false)
+    .map(([
+      key,
+      value,
+    ]) => {
       if (value === true) {
         return `--${key}`;
       }
@@ -49,7 +53,8 @@ export function objectToCommandString(
           return `--${key}=${value.join(separator)}`;
         }
 
-        return value.map((v) => `--${key}=${v}`).join(' ');
+        return value.map((v) => `--${key}=${v}`)
+          .join(' ');
       }
 
       return `--${key}=${value}`;
@@ -62,10 +67,9 @@ export function objectToCommandString(
  * @param commands 命令列表
  * @returns 连接后的命令字符串
  */
-export function joinCommands(
-  ...commands: (string | undefined | null)[]
-): string {
-  return commands.filter(Boolean).join(' && ');
+export function joinCommands(...commands: (string | undefined | null)[]): string {
+  return commands.filter(Boolean)
+    .join(' && ');
 }
 
 export interface PermissionConfig {
@@ -91,9 +95,17 @@ export function generateChmodCommand(
 
   const parts: string[] = [];
 
-  if (mode.read) parts.push('r');
-  if (mode.write) parts.push('w');
-  if (mode.execute) parts.push('x');
+  if (mode.read) {
+    parts.push('r');
+  }
+
+  if (mode.write) {
+    parts.push('w');
+  }
+
+  if (mode.execute) {
+    parts.push('x');
+  }
 
   if (parts.length === 0) {
     return '';
@@ -178,6 +190,7 @@ export class Command {
 
       return this._subCommand;
     }
+
     this._subCommand = cmd;
 
     return cmd;
@@ -211,10 +224,14 @@ export class Command {
       this.config,
     );
 
-    if (optionsStr) parts.push(optionsStr);
+    if (optionsStr) {
+      parts.push(optionsStr);
+    }
 
     // 2. 位置参数
-    if (this._args.length) parts.push(this._args.join(' '));
+    if (this._args.length) {
+      parts.push(this._args.join(' '));
+    }
 
     // 3. 子命令 (递归生成)
     if (this._subCommand) {
@@ -232,13 +249,14 @@ export class Command {
  */
 export function getAdvanceCmd(advance_param: unknown): string {
   if (
-    !Array.isArray(advance_param) ||
-    !advance_param.length
+    !Array.isArray(advance_param)
+    || !advance_param.length
   ) {
     return '';
   }
 
-  return (advance_param as Array<{ name: string; value: string }>)
+  return (advance_param as Array<{ name: string;
+    value: string }>)
     .filter((item) => item.name)
     .map((item) => `--${item.name}${item.value ? `=${item.value}` : ''}`)
     .join(' ');

@@ -1,4 +1,6 @@
-import { ref, type Ref } from 'vue';
+import {
+  ref, type Ref,
+} from 'vue';
 import { remotePathSearch } from '@/apis';
 
 /**
@@ -37,26 +39,32 @@ export class ProjectPathSearchStrategy implements SearchStrategy {
 
   async search(keyword: string): Promise<void> {
     this.loading.value = true;
+
     try {
       const result = await remotePathSearch({
         type: 'projectPath',
         keyword: this.buildDefaultSearchPath(keyword.trim()),
       });
-      const { type, list = [] } = result;
+      const {
+        type, list = [],
+      } = result;
       const mapped = list.map((item) => ({ value: item.path }));
 
       if (type === 'projectPath') {
         this.options.value = mapped;
         this.loading.value = false;
       }
-    } catch (error) {
+    }
+    catch (error) {
       this.loading.value = false;
       console.error('远程搜索失败:', error);
     }
   }
 
   private buildDefaultSearchPath(value = ''): string {
-    if (value) return value;
+    if (value) {
+      return value;
+    }
 
     return '/';
   }
@@ -83,26 +91,32 @@ export class ProjectSHSearchStrategy implements SearchStrategy {
 
   async search(keyword: string): Promise<void> {
     this.loading.value = true;
+
     try {
       const result = await remotePathSearch({
         type: 'projectSH',
         keyword: this.buildDefaultSearchPath(keyword.trim()),
       });
-      const { type, list = [] } = result;
+      const {
+        type, list = [],
+      } = result;
       const mapped = list.map((item) => ({ value: item.path }));
 
       if (type === 'projectSH') {
         this.options.value = mapped;
         this.loading.value = false;
       }
-    } catch (error) {
+    }
+    catch (error) {
       this.loading.value = false;
       console.error('远程搜索失败:', error);
     }
   }
 
   private buildDefaultSearchPath(value = ''): string {
-    if (value) return value;
+    if (value) {
+      return value;
+    }
 
     return '/';
   }
@@ -122,7 +136,8 @@ export class SearchStrategyFactory {
     if (!this.strategies.has(type)) {
       if (type === 'projectPath') {
         this.strategies.set(type, new ProjectPathSearchStrategy());
-      } else if (type === 'projectSH') {
+      }
+      else if (type === 'projectSH') {
         this.strategies.set(type, new ProjectSHSearchStrategy());
       }
     }

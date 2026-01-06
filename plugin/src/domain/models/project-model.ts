@@ -23,7 +23,10 @@ type ProjectsStore = {
 };
 
 function ensureStore(): ProjectsStore {
-  const init: ProjectsStore = { lastId: 0, projects: [] };
+  const init: ProjectsStore = {
+    lastId: 0,
+    projects: [],
+  };
   const data = storage.read<ProjectsStore>(init);
 
   // 简单的校验
@@ -48,13 +51,12 @@ export interface CreateProjectParams {
 export async function updateShScript(data: CreateProjectParams) {
   // 数据库 操作
   const store = ensureStore();
-  const existing = store.projects.find(
-    (p) => p.project_path === data.project_path,
-  );
+  const existing = store.projects.find((p) => p.project_path === data.project_path);
 
   if (existing) {
     existing.ascend_env_script = data.ascend_env_script;
-    existing.update_time = new Date().toISOString();
+    existing.update_time = new Date()
+      .toISOString();
     writeStore(store);
 
     return existing.id;
@@ -64,21 +66,24 @@ export async function updateShScript(data: CreateProjectParams) {
 export async function createProject(data: CreateProjectParams) {
   // 数据库 操作
   const store = ensureStore();
-  const existing = store.projects.find(
-    (p) => p.project_path === data.project_path,
-  );
+  const existing = store.projects.find((p) => p.project_path === data.project_path);
 
   if (existing) {
-    if (!data.ascend_env_script) return existing.id;
+    if (!data.ascend_env_script) {
+      return existing.id;
+    }
+
     existing.ascend_env_script = data.ascend_env_script;
-    existing.update_time = new Date().toISOString();
+    existing.update_time = new Date()
+      .toISOString();
     writeStore(store);
 
     return existing.id;
   }
 
   const nextId = store.lastId + 1;
-  const now = new Date().toISOString();
+  const now = new Date()
+    .toISOString();
   const record: ProjectRecord = {
     id: nextId,
     project_name: data.project_name,
@@ -97,9 +102,7 @@ export async function createProject(data: CreateProjectParams) {
   return nextId;
 }
 
-export function getProjectByPath(
-  projectPath: string,
-): ProjectRecord | undefined {
+export function getProjectByPath(projectPath: string): ProjectRecord | undefined {
   const store = ensureStore();
 
   return store.projects.find((p) => p.project_path === projectPath);

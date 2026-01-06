@@ -19,7 +19,9 @@ export function useRemoteSearch() {
    * 构建默认搜索路径
    */
   const buildDefaultSearchPath = (value = '') => {
-    if (value) return value;
+    if (value) {
+      return value;
+    }
 
     return '/';
   };
@@ -32,21 +34,23 @@ export function useRemoteSearch() {
     const searchValue = keyword || '';
 
     dataStorageLoading.value = true;
+
     try {
       const result = await remotePathSearch({
         type: 'dataStorage',
         keyword: buildDefaultSearchPath(searchValue.trim()),
       });
-      const { type, list = [] } = result;
-      const mapped = list.map((item: { path: string }) => ({
-        value: item.path,
-      }));
+      const {
+        type, list = [],
+      } = result;
+      const mapped = list.map((item: { path: string }) => ({ value: item.path }));
 
       if (type === 'dataStorage') {
         dataStorageOptions.value = mapped;
         dataStorageLoading.value = false;
       }
-    } catch (error) {
+    }
+    catch (error) {
       dataStorageLoading.value = false;
       console.error('远程搜索失败:', error);
     }

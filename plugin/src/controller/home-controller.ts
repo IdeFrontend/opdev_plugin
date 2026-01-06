@@ -16,7 +16,8 @@ export const homeMethods = {
    * @returns 项目ID
    */
   async getProjectId(): Promise<GetProjectIdResult> {
-    await ProjectManager.getInstance().initProject();
+    await ProjectManager.getInstance()
+      .initProject();
 
     return ProjectManager.getInstance().projectId;
   },
@@ -61,6 +62,7 @@ export const homeMethods = {
    */
   async updateProject(): Promise<void> {
     // 刷新项目信息
-    await ProjectManager.getInstance().initProject();
+    await ProjectManager.getInstance()
+      .initProject();
   },
 };

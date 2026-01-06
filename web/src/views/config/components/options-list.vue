@@ -1,11 +1,13 @@
-<!-- 
+<!--
  * Copyright (c) 2025 Huawei Technologies Co., Ltd.
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree. -->
 
 <script setup>
-import { ref, watch } from 'vue';
+import {
+  ref, watch,
+} from 'vue';
 
 const Actived = ref('build');
 

@@ -12,9 +12,7 @@ async function generateOpsPrototypeJson(
   const projectExists = await fs.pathExists(projectDir);
 
   if (!projectExists) {
-    throw Object.assign(new Error('project dir does not exist'), {
-      name: 'InvalidRequest',
-    });
+    throw Object.assign(new Error('project dir does not exist'), { name: 'InvalidRequest' });
   }
 
   let opsPath = path.join(projectDir, `${opName}.json`);
@@ -32,9 +30,7 @@ async function generateOpsPrototypeJson(
 
   if (!(await fs.pathExists(opsPrototypeJsonPath))) {
     console.error('✗ 不存在的 ops_prototype模板');
-    throw Object.assign(new Error('✗ 不存在的 ops_prototype模板'), {
-      name: 'InvalidRequest',
-    });
+    throw Object.assign(new Error('✗ 不存在的 ops_prototype模板'), { name: 'InvalidRequest' });
   }
 
   try {
@@ -42,16 +38,21 @@ async function generateOpsPrototypeJson(
 
     if (Array.isArray(prototypeJson) && prototypeJson.length > 0) {
       (prototypeJson as Record<string, unknown>[])[0]['op'] = opName;
-    } else if (typeof prototypeJson === 'object') {
+    }
+    else if (typeof prototypeJson === 'object') {
       (prototypeJson as Record<string, unknown>)['op'] = opName;
     }
 
-    await fs.writeJson(opsPath, prototypeJson, { spaces: 4, encoding: 'utf8' });
+    await fs.writeJson(opsPath, prototypeJson, {
+      spaces: 4,
+      encoding: 'utf8',
+    });
 
     console.info(`✓ 成功创建 json: ${path.basename(opsPath)}`);
 
     return opsPath;
-  } catch (e: unknown) {
+  }
+  catch (e: unknown) {
     console.error(`✗ 处理ops_prototype.json失败: ${e}`);
     throw e;
   }
@@ -65,10 +66,9 @@ export async function generateOpsPrototype(
 ): Promise<string> {
   const project = getProjectById(project_id);
 
-  if (!project)
-    throw Object.assign(new Error('project not found'), {
-      name: 'InvalidRequest',
-    });
+  if (!project) {
+    throw Object.assign(new Error('project not found'), { name: 'InvalidRequest' });
+  }
 
   return generateOpsPrototypeJson(
     project.project_path,

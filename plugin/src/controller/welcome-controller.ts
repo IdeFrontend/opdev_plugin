@@ -22,7 +22,8 @@ export const welcomeMethods = {
    * @returns 结果
    */
   async createOps(params: CreateOpsParams): Promise<string> {
-    await ProjectManager.getInstance().initProject();
+    await ProjectManager.getInstance()
+      .initProject();
 
     return await projectService.createOps(params);
   },
@@ -31,10 +32,9 @@ export const welcomeMethods = {
    * 通过原型创建算子
    * @param params - 参数
    */
-  async createOpsByPrototype(
-    params: CreateOpsByPrototypeParams,
-  ): Promise<void> {
-    await ProjectManager.getInstance().initProject();
+  async createOpsByPrototype(params: CreateOpsByPrototypeParams): Promise<void> {
+    await ProjectManager.getInstance()
+      .initProject();
     await projectService.createOpsByPrototype(params);
   },
 
@@ -57,7 +57,8 @@ export const welcomeMethods = {
         originPath = params.projectPath;
         params.projectPath += '/ops-math/math';
       }
-      vscode.window.showInformationMessage(`初始化中`);
+
+      vscode.window.showInformationMessage('初始化中');
 
       const executor = new CommandExecutor();
 
@@ -67,34 +68,33 @@ export const welcomeMethods = {
           await executor.execute(`mkdir -p ${originPath}`, ['File exists']);
           const zipUrl = path.resolve(
             context.extensionPath,
-            `out/templates/code_template/op-math/ops-math.zip`,
+            'out/templates/code_template/op-math/ops-math.zip',
           );
 
           await executor.execute(`unzip -o ${zipUrl} -d ${originPath}`);
-        } catch (error) {
-          throw new Error(
-            `创建标准算子目录失败: ${error instanceof Error ? error.message : String(error)}`,
-          );
+        }
+        catch (error) {
+          throw new Error(`创建标准算子目录失败: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
+
       try {
         await executor.execute(
           `mkdir -p ${params.projectPath}/${params.projectName}`,
           ['File exists'],
         );
-      } catch (error) {
-        throw new Error(
-          `创建工程目录失败: ${error instanceof Error ? error.message : String(error)}`,
-        );
       }
+      catch (error) {
+        throw new Error(`创建工程目录失败: ${error instanceof Error ? error.message : String(error)}`);
+      }
+
       if (params.projectSH) {
         try {
           await executor.execute(`chmod +x ${params.projectSH}`);
           await executor.execute(`${params.projectSH}`);
-        } catch (error) {
-          console.warn(
-            `执行环境变量脚本失败: ${error instanceof Error ? error.message : String(error)}`,
-          );
+        }
+        catch (error) {
+          console.warn(`执行环境变量脚本失败: ${error instanceof Error ? error.message : String(error)}`);
           // 环境变量脚本执行失败不影响项目创建，只记录警告
         }
       }
@@ -106,10 +106,9 @@ export const welcomeMethods = {
           projectPath: params.projectPath,
           projectName: params.projectName,
         });
-      } catch (error) {
-        throw new Error(
-          `初始化算子工程失败: ${error instanceof Error ? error.message : String(error)}`,
-        );
+      }
+      catch (error) {
+        throw new Error(`初始化算子工程失败: ${error instanceof Error ? error.message : String(error)}`);
       }
 
       try {
@@ -117,10 +116,9 @@ export const welcomeMethods = {
           'revealInExplorer',
           vscode.Uri.file(`${params.projectPath}/${params.projectName}`),
         );
-      } catch (error) {
-        console.warn(
-          `在资源管理器中显示失败: ${error instanceof Error ? error.message : String(error)}`,
-        );
+      }
+      catch (error) {
+        console.warn(`在资源管理器中显示失败: ${error instanceof Error ? error.message : String(error)}`);
         // 这个失败不影响项目创建，只记录警告
       }
 
@@ -138,26 +136,26 @@ export const welcomeMethods = {
       console.log('vscode.openFolder，打开新目录', localUri);
 
       // 显示创建成功消息
-      vscode.window.showInformationMessage(
-        `算子工程创建成功: ${params.projectName}`,
-      );
+      vscode.window.showInformationMessage(`算子工程创建成功: ${params.projectName}`);
 
       // 执行创建算子文件命令
       console.log('createdProject: 准备执行创建算子文件命令');
       console.log('createdProject: createOperatorProjectDictoryFileType:', params.createOperatorProjectDictoryFileType);
+
       try {
         await vscode.window.withProgress(
           {
             location: vscode.ProgressLocation.Notification,
-            title: `开始创建算子文件...`,
+            title: '开始创建算子文件...',
             cancellable: false,
           },
           async (progress) => {
-            progress.report({ increment: 0, message: '准备创建算子文件...' });
-            console.log('createdProject: 执行命令 huawei-op-devtools.createDictory');
-            console.log('createdProject: 命令参数:', {
-              createOperatorProjectDirectoryFileType: params.createOperatorProjectDictoryFileType,
+            progress.report({
+              increment: 0,
+              message: '准备创建算子文件...',
             });
+            console.log('createdProject: 执行命令 huawei-op-devtools.createDictory');
+            console.log('createdProject: 命令参数:', { createOperatorProjectDirectoryFileType: params.createOperatorProjectDictoryFileType });
             const result = await vscode.commands.executeCommand(
               'huawei-op-devtools.createDictory',
               {
@@ -166,17 +164,17 @@ export const welcomeMethods = {
               },
               progress,
             );
+
             console.log('createdProject: 命令执行完成，结果:', result);
           },
         );
         console.log('createdProject: 创建算子文件命令执行成功');
-      } catch (error) {
+      }
+      catch (error) {
         console.error('createdProject: 执行创建算子文件命令失败:', error);
         console.error('createdProject: 错误详情:', error instanceof Error ? error.stack : String(error));
         // 即使创建算子文件失败，项目目录已经创建成功
-        vscode.window.showWarningMessage(
-          `算子工程目录已创建，但创建算子文件时出错: ${error instanceof Error ? error.message : String(error)}`,
-        );
+        vscode.window.showWarningMessage(`算子工程目录已创建，但创建算子文件时出错: ${error instanceof Error ? error.message : String(error)}`);
       }
 
       // 询问用户是在当前窗口打开还是新窗口打开
@@ -196,18 +194,17 @@ export const welcomeMethods = {
 
       // 打开文件夹
       try {
-        await vscode.commands.executeCommand('vscode.openFolder', localUri, {
-          forceNewWindow: forceNewWindow,
-        });
-        vscode.window.showInformationMessage(`打开算子工程目录成功`);
-      } catch (e) {
-        vscode.window.showErrorMessage(
-          `打开算子工程目录失败: ${e instanceof Error ? e.message : String(e)}`,
-        );
+        await vscode.commands.executeCommand('vscode.openFolder', localUri, { forceNewWindow: forceNewWindow });
+        vscode.window.showInformationMessage('打开算子工程目录成功');
       }
-    } catch (error) {
+      catch (e) {
+        vscode.window.showErrorMessage(`打开算子工程目录失败: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+    catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
+
       vscode.window.showErrorMessage(`创建算子工程失败: ${errorMessage}`);
       throw error; // 重新抛出错误，让 API 服务器能够捕获并返回给前端
     }

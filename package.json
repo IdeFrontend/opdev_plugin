@@ -222,17 +222,12 @@
     "watch": "tsx scripts/build-extension --watch --sourcemap",
     "lint": "oxlint . && eslint .",
     "lint:fix": "eslint . --fix",
-    "format": "prettier --write .",
     "install:web": "cd ../web && pnpm install"
   },
   "lint-staged": {
-    "*.{js,ts,vue}": [
+    "*.{js,jsx,ts,tsx,vue}": [
       "oxlint",
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "*.{json,md,html,css,less}": [
-      "prettier --write"
+      "eslint --fix"
     ]
   },
   "dependencies": {
@@ -255,14 +250,12 @@
     "@vscode/vsce": "^3.7.1",
     "esbuild": "^0.27.1",
     "eslint": "^9.39.2",
-    "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-oxlint": "^1.36.0",
     "eslint-plugin-vue": "^10.6.2",
     "globals": "^16.5.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "oxlint": "^1.36.0",
-    "prettier": "^3.7.4",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.50.0"

@@ -16,12 +16,16 @@
           />
         </div>
         <div class="h-14 flex justify-between items-center px-5">
-          <div class="text-sm">{{ msScantinizerInfo.title }}</div>
+          <div class="text-sm">
+            {{ msScantinizerInfo.title }}
+          </div>
           <div class="ms-panel-title-right">
             <a-popover placement="bottomRight">
               <template #content>
                 <div class="w-[378px]">
-                  <p class="text-sm m-0">检测信息</p>
+                  <p class="text-sm m-0">
+                    检测信息
+                  </p>
                   <p class="text-[#8e8e8f] text-xs leading-4 py-0.5 m-0">
                     检测时间
                   </p>
@@ -37,7 +41,9 @@
                   <p class="text-[#8e8e8f] text-xs leading-4 py-0.5 m-0">
                     检测范围
                   </p>
-                  <p class="leading-4 text-xs py-0.5 m-0">全局监测</p>
+                  <p class="leading-4 text-xs py-0.5 m-0">
+                    全局监测
+                  </p>
                 </div>
               </template>
               <InfoCircleOutlined class="cursor-pointer" />
@@ -122,8 +128,9 @@
                   v-if="record.fileLink"
                   type="link"
                   @click.stop="handleJumpToFile(record)"
-                  >{{ record.fileLink }}</a-button
                 >
+                  {{ record.fileLink }}
+                </a-button>
                 <span v-else>
                   该问题为HOST侧的问题，按照右侧详情信息进行排查。
                 </span>
@@ -148,19 +155,21 @@
         </div>
         <div class="px-5 break-all">
           <div class="flex items-center mt-5">
-            <div class="h-2.5 w-1 bg-white mr-1"></div>
+            <div class="h-2.5 w-1 bg-white mr-1" />
             <span>问题</span>
           </div>
-          <div class="mt-2.5">{{ questionDetails.title }}</div>
+          <div class="mt-2.5">
+            {{ questionDetails.title }}
+          </div>
           <div class="flex items-center mt-5">
-            <div class="h-2.5 w-1 bg-white mr-1"></div>
+            <div class="h-2.5 w-1 bg-white mr-1" />
             <span>问题详情</span>
           </div>
           <div class="mt-2.5">
             {{ questionDetails.originData }}
           </div>
           <div class="flex items-center mt-5">
-            <div class="h-2.5 w-1 bg-white mr-1"></div>
+            <div class="h-2.5 w-1 bg-white mr-1" />
             <span>问题类型详情</span>
           </div>
           <div class="mt-2.5">
@@ -172,12 +181,16 @@
         </div>
       </div>
     </div>
-    <div v-else>请选择异常检测日志查看详情</div>
+    <div v-else>
+      请选择异常检测日志查看详情
+    </div>
   </a-config-provider>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onBeforeUnmount, onMounted } from 'vue';
+import {
+  ref, computed, onBeforeUnmount, onMounted,
+} from 'vue';
 import { theme } from 'ant-design-vue';
 import {
   CloseCircleOutlined,
@@ -198,14 +211,13 @@ import {
 import { jumpToFileWebview } from '@/apis';
 import { formatTimestamp } from '../performance-run-data/utils/timestamp';
 
-const themeConfig = {
-  algorithm: theme.darkAlgorithm,
-};
+const themeConfig = { algorithm: theme.darkAlgorithm };
 
-const questionTypes = Array.from(questionMap).map((item) => ({
-  text: item[1],
-  value: item[0],
-}));
+const questionTypes = Array.from(questionMap)
+  .map((item) => ({
+    text: item[1],
+    value: item[0],
+  }));
 
 const msScantinizerInfo = ref<Record<string, string>>({});
 
@@ -224,7 +236,11 @@ const allFilePath = computed(() => {
     }
   });
 
-  return Array.from(filaPathSet).map((item) => ({ text: item, value: item }));
+  return Array.from(filaPathSet)
+    .map((item) => ({
+      text: item,
+      value: item,
+    }));
 });
 
 const columns = computed(() => {
@@ -315,18 +331,21 @@ const customRow = (record: QuestionData) => {
 
 const handleJumpToFile = async (data: QuestionData | Record<string, any>) => {
   const questionData = data as QuestionData;
+
   if (!questionData.fileLink || questionData.row === undefined || questionData.col === undefined) {
     console.warn('无法跳转：缺少必要的文件信息');
 
     return;
   }
+
   try {
     await jumpToFileWebview({
       fileLink: questionData.fileLink,
       row: questionData.row,
       col: questionData.col,
     });
-  } catch (error) {
+  }
+  catch (error) {
     console.error('跳转到文件失败:', error);
   }
 };
@@ -338,49 +357,39 @@ function onChange(
   // 转换 filter 类型以匹配 filteredInfo (Record<string, string[] | null>)
   const newFilters: Record<string, string[] | null> = {};
 
-  Object.keys(filters).forEach((key) => {
-    const val = filters[key];
+  Object.keys(filters)
+    .forEach((key) => {
+      const val = filters[key];
 
-    if (val) {
-      newFilters[key] = val.map(String);
-    } else {
-      newFilters[key] = null;
-    }
-  });
+      if (val) {
+        newFilters[key] = val.map(String);
+      }
+      else {
+        newFilters[key] = null;
+      }
+    });
   filteredInfo.value = newFilters;
 }
 
 const filterTableData = async (type: string) => {
   switch (type) {
     case 'memory':
-      filteredInfo.value = {
-        question: Array.from(memorySet),
-      };
+      filteredInfo.value = { question: Array.from(memorySet) };
       break;
     case 'memoryContention':
-      filteredInfo.value = {
-        question: Array.from(memoryContentionSet),
-      };
+      filteredInfo.value = { question: Array.from(memoryContentionSet) };
       break;
     case 'uninitialized':
-      filteredInfo.value = {
-        question: Array.from(uninitializedSet),
-      };
+      filteredInfo.value = { question: Array.from(uninitializedSet) };
       break;
     case 'synchronize':
-      filteredInfo.value = {
-        question: Array.from(synchronizeSet),
-      };
+      filteredInfo.value = { question: Array.from(synchronizeSet) };
       break;
     case 'error':
-      filteredInfo.value = {
-        type: ['error'],
-      };
+      filteredInfo.value = { type: ['error'] };
       break;
     case 'warning':
-      filteredInfo.value = {
-        type: ['warning'],
-      };
+      filteredInfo.value = { type: ['warning'] };
       break;
 
     default:
@@ -394,7 +403,9 @@ onMounted(() => {
     if (
       event.data.command === 'iframeRemoteMsSanitizerPanelViewSetRenderList'
     ) {
-      const { data, title, timestamp } = event.data.data;
+      const {
+        data, title, timestamp,
+      } = event.data.data;
 
       msScantinizerInfo.value = {
         title,

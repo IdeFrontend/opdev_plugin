@@ -29,7 +29,10 @@ export const performanceDataMethods = {
         cancellable: false,
       },
       async (progress) => {
-        progress.report({ increment: 0, message: '正在读取远程文件...' });
+        progress.report({
+          increment: 0,
+          message: '正在读取远程文件...',
+        });
 
         // 创建远程文件 URI
         const remoteFileUri = vscode.Uri.file(remoteFilePath);
@@ -42,26 +45,31 @@ export const performanceDataMethods = {
             increment: 30,
             message: `文件大小: ${(stat.size / 1024).toFixed(2)} KB`,
           });
-        } catch {
+        }
+        catch {
           throw new Error(`远程文件不存在: ${remoteFilePath}`);
         }
 
         // 读取远程文件内容
-        progress.report({ increment: 40, message: '正在读取文件内容...' });
+        progress.report({
+          increment: 40,
+          message: '正在读取文件内容...',
+        });
         const fileData = await vscode.workspace.fs.readFile(remoteFileUri);
 
         // 获取文件名
         const fileName = path.basename(remoteFilePath);
 
-        progress.report({ increment: 60, message: '请选择保存位置...' });
+        progress.report({
+          increment: 60,
+          message: '请选择保存位置...',
+        });
 
         // 让用户选择本地保存位置
         const localFileUri = await vscode.window.showSaveDialog({
           defaultUri: vscode.Uri.file(fileName),
           saveLabel: '保存',
-          filters: {
-            所有文件: ['*'],
-          },
+          filters: { 所有文件: ['*'] },
         });
 
         if (!localFileUri) {
@@ -70,13 +78,17 @@ export const performanceDataMethods = {
         }
 
         // 将文件内容写入本地
-        progress.report({ increment: 80, message: '正在保存文件...' });
+        progress.report({
+          increment: 80,
+          message: '正在保存文件...',
+        });
         await vscode.workspace.fs.writeFile(localFileUri, fileData);
 
-        progress.report({ increment: 100, message: '下载完成' });
-        vscode.window.showInformationMessage(
-          `文件已成功下载到: ${localFileUri.fsPath}`,
-        );
+        progress.report({
+          increment: 100,
+          message: '下载完成',
+        });
+        vscode.window.showInformationMessage(`文件已成功下载到: ${localFileUri.fsPath}`);
       },
     );
   },
@@ -89,6 +101,7 @@ export const performanceDataMethods = {
     if (!params.nodeKey) {
       throw new Error('节点信息不能为空');
     }
+
     // 确认删除
     const result = await vscode.window.showWarningMessage(
       `确定要删除 ${params.nodeKey} 吗？`,
@@ -130,16 +143,16 @@ export const performanceDataMethods = {
   async jumpToFile(params: JumpToFileParams): Promise<void> {
     try {
       console.log('jumpToFile', params);
-      const { fileLink, row, col } = params;
+      const {
+        fileLink, row, col,
+      } = params;
       const uri = vscode.Uri.file(fileLink);
 
       console.log('uri', uri);
       const document = await vscode.workspace.openTextDocument(uri);
 
       console.log('document', document);
-      const editor = await vscode.window.showTextDocument(document, {
-        viewColumn: vscode.ViewColumn.One,
-      });
+      const editor = await vscode.window.showTextDocument(document, { viewColumn: vscode.ViewColumn.One });
       const line = Math.max(0, row - 1);
       const charactor = Math.max(0, col - 1);
       const pos = new vscode.Position(line, charactor);
@@ -172,7 +185,8 @@ export const performanceDataMethods = {
       setTimeout(() => {
         decorationType.dispose();
       }, 2000);
-    } catch (error) {
+    }
+    catch (error) {
       console.log('jumpToFile', error);
       vscode.window.showErrorMessage(`打开文件失败：${error}`);
       throw error;

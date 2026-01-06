@@ -4,7 +4,7 @@ import type { QueryParams } from 'plugin:/core/view/view-query';
 
 import { useConnector } from './use-connector';
 
-let resolveQuery: ((value: QueryParams) => void) | null = null;
+let resolveQuery: ((value: QueryParams)=> void) | null = null;
 let cachedQuery: QueryParams | null = null;
 let thenableQuery: Promise<QueryParams> | null = null;
 
@@ -39,7 +39,8 @@ export const queryPlugin: Plugin = {
         // 创建新的 Promise，准备下次调用
         thenableQuery = createNewQueryPromise();
         console.log('[query.ts] install: Promise已解析, 新Promise已创建');
-      } else {
+      }
+      else {
         console.log('[query.ts] install: resolveQuery不存在, query已缓存');
       }
     });
@@ -52,6 +53,7 @@ export const queryPlugin: Plugin = {
  */
 export function getQuery(): Promise<QueryParams> {
   console.log('[query.ts] getQuery: 调用getQuery');
+
   // 如果已经有缓存的查询参数，立即返回
   if (cachedQuery) {
     console.log(
@@ -61,11 +63,13 @@ export function getQuery(): Promise<QueryParams> {
 
     return Promise.resolve(cachedQuery);
   }
+
   // 否则返回 Promise，等待查询参数到达
   if (!thenableQuery) {
     console.log('[query.ts] getQuery: thenableQuery不存在, 创建新的Promise');
     thenableQuery = createNewQueryPromise();
   }
+
   console.log('[query.ts] getQuery: 返回Promise, 等待query到达');
 
   return thenableQuery;

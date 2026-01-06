@@ -17,7 +17,8 @@ export class HtmlTransformer {
         const htmlContent = await this.fetchHtml(url);
 
         return this.processDevResourcePaths(htmlContent, devServerUrl, url);
-      } catch (e) {
+      }
+      catch (e) {
         console.error(
           `[HtmlTransformer.transformDistHtml] 从开发服务器获取失败: ${devServerUrl}`,
           e,
@@ -29,9 +30,7 @@ export class HtmlTransformer {
 
     try {
       if (!fs.existsSync(indexPath)) {
-        throw new Error(
-          `${router}.html not found in dist directory: ${distPath}`,
-        );
+        throw new Error(`${router}.html not found in dist directory: ${distPath}`);
       }
 
       let htmlContent = fs.readFileSync(indexPath, 'utf8');
@@ -47,7 +46,8 @@ export class HtmlTransformer {
       );
 
       return htmlContent;
-    } catch (error) {
+    }
+    catch (error) {
       throw new Error(`Failed to transform HTML: ${error}`);
     }
   }
@@ -61,6 +61,7 @@ export class HtmlTransformer {
 
           return;
         }
+
         let data = '';
 
         res.on('data', (chunk) => (data += chunk));
@@ -97,12 +98,14 @@ export class HtmlTransformer {
         '<head>',
         `<head>\n    <base href="${currentDirUrl}">`,
       );
-    } else if (processedHtml.includes('<html>')) {
+    }
+    else if (processedHtml.includes('<html>')) {
       processedHtml = processedHtml.replace(
         '<html>',
         `<html>\n<head><base href="${currentDirUrl}"></head>`,
       );
-    } else {
+    }
+    else {
       processedHtml = `<base href="${currentDirUrl}">\n` + processedHtml;
     }
 
@@ -129,9 +132,9 @@ export class HtmlTransformer {
 
         // 处理相对路径（包含 .. 或 . 的路径，或者不以 / 开头的路径）
         if (
-          src.startsWith('../') ||
-          src.startsWith('./') ||
-          (!src.startsWith('/') && htmlFileDir)
+          src.startsWith('../')
+          || src.startsWith('./')
+          || (!src.startsWith('/') && htmlFileDir)
         ) {
           // 如果有 htmlFileDir，使用它来解析相对路径
           if (htmlFileDir) {
@@ -140,14 +143,17 @@ export class HtmlTransformer {
             // 使用 webview 转换 URI（如果提供了 webview）
             if (webview) {
               resolvedUri = webview.asWebviewUri(vscode.Uri.file(resolvedPath));
-            } else {
+            }
+            else {
               resolvedUri = vscode.Uri.file(resolvedPath);
             }
-          } else {
+          }
+          else {
             // 回退到原来的方法（可能不工作，但保持兼容性）
             resolvedUri = vscode.Uri.joinPath(htmlUri, src);
           }
-        } else {
+        }
+        else {
           // 绝对路径，直接使用 joinPath
           resolvedUri = vscode.Uri.joinPath(htmlUri, src);
         }
@@ -161,11 +167,11 @@ export class HtmlTransformer {
 
   private static isExternalResource(url: string): boolean {
     return (
-      url.startsWith('data:') ||
-      url.startsWith('http://') ||
-      url.startsWith('https://') ||
-      url.startsWith('//') ||
-      url.startsWith('vscode-resource:')
+      url.startsWith('data:')
+      || url.startsWith('http://')
+      || url.startsWith('https://')
+      || url.startsWith('//')
+      || url.startsWith('vscode-resource:')
     );
   }
 }

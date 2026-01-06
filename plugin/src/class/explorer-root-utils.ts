@@ -30,7 +30,8 @@ export class ExplorerRootUtils {
   /**
    * 获取主根目录（第一个工作区文件夹）
    */
-  public static getPrimaryRoot(): { name: string; path: string } | undefined {
+  public static getPrimaryRoot(): { name: string;
+    path: string } | undefined {
     const roots = this.getExplorerRoots();
 
     return roots.length > 0 ? roots[0] : undefined;

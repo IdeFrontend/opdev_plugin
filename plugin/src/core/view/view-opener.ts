@@ -35,12 +35,8 @@ export class ViewOpener {
       for (const editor of vscode.window.visibleTextEditors) {
         if (editor.document.uri.fsPath === existingUri.fsPath) {
           // 切换到旧文件并关闭（此时新文件已经打开并显示，所以不会闪现）
-          await vscode.window.showTextDocument(editor.document, {
-            preview: false,
-          });
-          await vscode.commands.executeCommand(
-            'workbench.action.closeActiveEditor',
-          );
+          await vscode.window.showTextDocument(editor.document, { preview: false });
+          await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
           break;
         }
       }
@@ -66,9 +62,11 @@ export class ViewOpener {
 
       return;
     }
+
     try {
       InsightDataViewerPanel.createOrShow(context, binPath);
-    } catch (error) {
+    }
+    catch (error) {
       vscode.window.showErrorMessage(`加载数据文件失败: ${error}`);
     }
   }

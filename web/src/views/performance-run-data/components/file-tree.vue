@@ -4,17 +4,20 @@ import {
   DownOutlined,
   FlagOutlined,
   FlagFilled,
-  DownloadOutlined,
 } from '@ant-design/icons-vue';
 import type { DirectoryTreeProps } from 'ant-design-vue';
-import { Component, h, ref, watch } from 'vue';
+import {
+  Component, h, ref, watch,
+} from 'vue';
 
 import {
   PerformanceExecutionRecord,
   PerformanceRunDataFile,
 } from 'shared:/api-types';
 
-import { openCsvView, openInsightView, saveFileToLocal } from '@/apis';
+import {
+  openCsvView, openInsightView,
+} from '@/apis';
 
 import { formatTimestamp } from '../utils/timestamp';
 
@@ -41,7 +44,10 @@ watch(
 // 自定义切换图标（三角箭头）
 const SwitcherIcon: Component = ({ expanded }) => {
   return h(expanded ? DownOutlined : RightOutlined, {
-    style: { fontSize: '12px', color: '#fff' },
+    style: {
+      fontSize: '12px',
+      color: '#fff',
+    },
   });
 };
 
@@ -51,33 +57,24 @@ function isRootDir(row: object): row is PerformanceExecutionRecord {
 
 function isCsvFile(row: object): row is PerformanceRunDataFile {
   return (
-    Reflect.has(row, 'filePath') &&
-    Reflect.get(row as PerformanceRunDataFile, 'fileType') === 'csv'
+    Reflect.has(row, 'filePath')
+    && Reflect.get(row as PerformanceRunDataFile, 'fileType') === 'csv'
   );
 }
 
 function isInsightFile(row: object): row is PerformanceRunDataFile {
   return (
-    Reflect.has(row, 'filePath') &&
-    ['bin', 'json'].includes(
-      Reflect.get(row as PerformanceRunDataFile, 'fileType'),
-    )
+    Reflect.has(row, 'filePath')
+    && [
+      'bin',
+      'json',
+    ].includes(Reflect.get(row as PerformanceRunDataFile, 'fileType'))
   );
-}
-
-function handleClickDownload(record: PerformanceExecutionRecord) {
-  saveFileToLocal({
-    sourcePath: record.dirPath,
-    filename: `${record.title}.zip`,
-    allowedTypes: ['zip'],
-  });
 }
 
 // 标记
 const MarkedIcon: Component = ({ marked }) =>
-  h(marked ? FlagFilled : FlagOutlined, {
-    style: { color: marked ? '#d32029' : undefined },
-  });
+  h(marked ? FlagFilled : FlagOutlined, { style: { color: marked ? '#d32029' : undefined } });
 
 function handleToggleMarked(
   record: PerformanceExecutionRecord,
@@ -95,7 +92,8 @@ const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
 
   if (isCsvFile(data)) {
     openCsvView(data.filePath);
-  } else if (isInsightFile(data)) {
+  }
+  else if (isInsightFile(data)) {
     openInsightView(data.filePath);
   }
 };
@@ -141,7 +139,7 @@ const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
                 type="text"
                 :icon="h(MarkedIcon, { marked: dataRef.marked })"
                 @click.stop="handleToggleMarked(dataRef, !dataRef.marked)"
-              ></a-button>
+              />
             </div>
           </template>
         </div>

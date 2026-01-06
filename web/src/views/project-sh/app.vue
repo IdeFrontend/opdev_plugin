@@ -7,7 +7,7 @@
         <div class="text-2xl leading-7 font-bold text-white mb-6 text-left">
           环境配置
         </div>
-        <div class="h-px bg-white/20 mb-6"></div>
+        <div class="h-px bg-white/20 mb-6" />
         <a-form
           ref="formRef"
           :model="formData"
@@ -62,7 +62,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onBeforeUnmount, onMounted } from 'vue';
+import {
+  ref, reactive, onMounted,
+} from 'vue';
 import {
   checkPathExists,
   getProjectSH,
@@ -75,7 +77,8 @@ import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import { theme } from 'ant-design-vue';
 
 const themeConfig = {
-  algorithm: theme.darkAlgorithm, // 使用暗色算法
+  // 使用暗色算法
+  algorithm: theme.darkAlgorithm,
 };
 
 const formRef = ref<AntdVForm | null>(null);
@@ -92,9 +95,7 @@ const getPopupContainer = (triggerNode: HTMLElement): HTMLElement => {
 };
 
 // 表单数据
-const formData = reactive({
-  projectSH: '/etc/profile',
-});
+const formData = reactive({ projectSH: '/etc/profile' });
 
 // 表单校验规则
 const formRules = {
@@ -105,6 +106,7 @@ const formRules = {
         if (!value) {
           return Promise.resolve();
         }
+
         const pathExists = await checkPathExists({
           path: value,
           mustFile: true,
@@ -120,7 +122,9 @@ const formRules = {
 
 // 远程搜索
 const buildDefaultSearchPath = (value = '') => {
-  if (value) return value;
+  if (value) {
+    return value;
+  }
 
   return '/';
 };
@@ -131,19 +135,23 @@ const remoteSearch = async (type, keyword) => {
   if (type === 'projectSH') {
     projectSHLoading.value = true;
   }
+
   try {
     const result = await remotePathSearch({
       type,
       keyword: buildDefaultSearchPath(searchValue.trim()),
     });
-    const { type: resultType, list = [] } = result;
+    const {
+      type: resultType, list = [],
+    } = result;
     const mapped = list.map((item) => ({ value: item.path }));
 
     if (resultType === 'projectSH') {
       projectSHOptions.value = mapped;
       projectSHLoading.value = false;
     }
-  } catch (error) {
+  }
+  catch (error) {
     projectSHLoading.value = false;
     console.error('远程搜索失败:', error);
   }
@@ -153,11 +161,13 @@ const remoteSearch = async (type, keyword) => {
 const handleSubmit = async () => {
   try {
     await formRef.value?.validate();
-  } catch (error) {
+  }
+  catch {
     return;
   }
 
   submitting.value = true;
+
   try {
     await saveProjectSH({ accendEnvScript: formData.projectSH });
     // 发送消息给 iframe
@@ -168,9 +178,11 @@ const handleSubmit = async () => {
       },
       '*',
     );
-  } catch (error) {
+  }
+  catch {
     antdMessage.error('环境变量设置失败');
-  } finally {
+  }
+  finally {
     submitting.value = false;
   }
 };
@@ -180,14 +192,14 @@ onMounted(async () => {
     const result = await getProjectSH();
     // 修复类型推断错误，保证 projectSH 始终为可用类型
     let projectSH = '';
+
     if (typeof result === 'object' && result !== null && 'projectSH' in result) {
-      // @ts-ignore
       projectSH = result.projectSH ?? '';
-    } else if (typeof result === 'string') {
-      projectSH = result;
-    } else {
-      projectSH = '';
     }
+    else {
+      projectSH = result;
+    }
+
     console.log('projectSH', projectSH);
 
     formData.projectSH = projectSH;
@@ -199,7 +211,8 @@ onMounted(async () => {
       },
       '*',
     );
-  } catch (error) {
+  }
+  catch (error) {
     console.error('获取项目SH失败:', error);
   }
 });

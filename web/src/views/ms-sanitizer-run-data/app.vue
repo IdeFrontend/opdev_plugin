@@ -7,7 +7,9 @@ import {
   FlagOutlined,
   FlagFilled,
 } from '@ant-design/icons-vue';
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import {
+  ref, computed, onMounted, onBeforeUnmount,
+} from 'vue';
 import { formatTimestamp } from '../performance-run-data/utils/timestamp';
 import {
   getMsSanitizerRunData,
@@ -17,7 +19,8 @@ import {
 import { theme } from 'ant-design-vue';
 
 const themeConfig = {
-  algorithm: theme.darkAlgorithm, // 使用暗色算法
+  // 使用暗色算法
+  algorithm: theme.darkAlgorithm,
 };
 
 const sortOrder = ref<'asc' | 'desc'>('asc');
@@ -36,8 +39,7 @@ const renderListData = computed(() => {
   return data.sort((a, b) =>
     sortOrder.value === 'asc'
       ? b.timestamp - a.timestamp
-      : a.timestamp - b.timestamp,
-  );
+      : a.timestamp - b.timestamp);
 });
 
 const handleExecutionTime = () => {
@@ -86,7 +88,11 @@ onBeforeUnmount(() => {
   <a-config-provider :theme="themeConfig">
     <div class="flex flex-col">
       <div class="flex gap-2 my-3">
-        <a-button type="default" class="execute-time-sorter-button" @click="handleExecutionTime">
+        <a-button
+          type="default"
+          class="execute-time-sorter-button"
+          @click="handleExecutionTime"
+        >
           <div class="flex items-center">
             执行时间
             <div class="sort-icons">
@@ -97,30 +103,58 @@ onBeforeUnmount(() => {
             </div>
           </div>
         </a-button>
-        <a-button class="execute-time-sorter-button" @click="filterMark">
+        <a-button
+          class="execute-time-sorter-button"
+          @click="filterMark"
+        >
           已标记
-          <FlagFilled v-if="isMarkedOnly" class="flag-outlined-icon" />
-          <FlagOutlined v-else class="flag-outlined-icon" />
+          <FlagFilled
+            v-if="isMarkedOnly"
+            class="flag-outlined-icon"
+          />
+          <FlagOutlined
+            v-else
+            class="flag-outlined-icon"
+          />
         </a-button>
       </div>
-      <div v-if="renderListData.length > 0" class="flex-1 overflow-auto w-full">
-        <div v-for="(item, index) in renderListData" :key="index"
+      <div
+        v-if="renderListData.length > 0"
+        class="flex-1 overflow-auto w-full"
+      >
+        <div
+          v-for="(item, index) in renderListData"
+          :key="index"
           class="h-[50px] w-full px-6 py-1.5 flex cursor-pointer transition-all duration-100 hover:bg-white/10 group"
-          @click="handleClick(item)">
+          @click="handleClick(item)"
+        >
           <div class="flex-1 text-xs">
-            <p class="text-white leading-[22px] m-0">{{ item.title }}</p>
+            <p class="text-white leading-[22px] m-0">
+              {{ item.title }}
+            </p>
             <p class="text-[#87878b] leading-4 m-0">
               {{ formatTimestamp(item.timestamp) }}
             </p>
           </div>
           <div
-            class="flex justify-center items-center pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-hover:pointer-events-auto">
-            <FlagFilled v-if="item.marked" class="text-[#d32029] opacity-100" @click.stop="handleMark(item)" />
-            <FlagOutlined v-else @click.stop="handleMark(item)" />
+            class="flex justify-center items-center pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-hover:pointer-events-auto"
+          >
+            <FlagFilled
+              v-if="item.marked"
+              class="text-[#d32029] opacity-100"
+              @click.stop="handleMark(item)"
+            />
+            <FlagOutlined
+              v-else
+              @click.stop="handleMark(item)"
+            />
           </div>
         </div>
       </div>
-      <div v-else style="text-align: center; margin-top: 20px">
+      <div
+        v-else
+        style="text-align: center; margin-top: 20px"
+      >
         暂无数据
       </div>
     </div>

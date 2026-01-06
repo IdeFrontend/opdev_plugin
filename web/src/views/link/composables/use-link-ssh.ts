@@ -1,4 +1,6 @@
-import { ref, reactive, onBeforeUnmount, onMounted } from 'vue';
+import {
+  ref, reactive, onBeforeUnmount, onMounted,
+} from 'vue';
 import { message } from 'ant-design-vue';
 import type { FormInstance as AntdVForm } from 'ant-design-vue';
 import {
@@ -44,7 +46,9 @@ export function useLinkSSH() {
   // 监听来自 iframe 的远程搜索结果
   const handleRemoteSearchResult = (event: MessageEvent) => {
     if (event.data.command === 'iframeRemoteSearchResult') {
-      const { type, list = [] } = (event.data.data as {
+      const {
+        type, list = [],
+      } = (event.data.data as {
         type?: 'projectPath' | 'projectSH';
         list?: Array<{ path: string }>;
       }) || {};
@@ -53,7 +57,8 @@ export function useLinkSSH() {
       if (type === 'projectPath') {
         projectPathSearchStrategy.getOptions().value = mapped;
         projectPathSearchStrategy.getLoading().value = false;
-      } else if (type === 'projectSH') {
+      }
+      else if (type === 'projectSH') {
         projectSHSearchStrategy.getOptions().value = mapped;
         projectSHSearchStrategy.getLoading().value = false;
       }
@@ -93,15 +98,14 @@ export function useLinkSSH() {
     // 先进行表单校验
     try {
       await connectionFormRef.value?.validate();
-    } catch {
+    }
+    catch {
       return;
     }
 
     // 再次校验算子工程名称（双重校验确保）
     if (
-      !ValidationStrategyFactory.validateProjectName(
-        projectFormData.projectName,
-      )
+      !ValidationStrategyFactory.validateProjectName(projectFormData.projectName)
     ) {
       return;
     }
@@ -112,7 +116,8 @@ export function useLinkSSH() {
         createOperatorProjectDictoryFileType: selectedId_type.value,
       });
       message.success('算子工程创建成功');
-    } catch (error) {
+    }
+    catch (error) {
       console.error('创建项目失败:', error);
       message.error('创建项目失败');
     }
@@ -126,7 +131,10 @@ export function useLinkSSH() {
       if (workspace) {
         workspacePath.value = workspace;
         window.postMessage(
-          { command: 'iframeSetWorkspace', data: workspace },
+          {
+            command: 'iframeSetWorkspace',
+            data: workspace,
+          },
           '*',
         );
       }
@@ -135,7 +143,10 @@ export function useLinkSSH() {
 
       if (lastProjectPath) {
         window.postMessage(
-          { command: 'iframeSetLastProjectPath', data: lastProjectPath },
+          {
+            command: 'iframeSetLastProjectPath',
+            data: lastProjectPath,
+          },
           '*',
         );
       }
@@ -143,9 +154,13 @@ export function useLinkSSH() {
       const home = await getHome();
 
       if (home) {
-        window.postMessage({ command: 'iframeSetHome', data: home }, '*');
+        window.postMessage({
+          command: 'iframeSetHome',
+          data: home,
+        }, '*');
       }
-    } catch (error) {
+    }
+    catch (error) {
       console.error('获取路径信息失败:', error);
     }
   };

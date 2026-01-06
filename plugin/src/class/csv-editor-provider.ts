@@ -35,21 +35,26 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
             // 转义的双引号
             currentLine += '"';
             i++; // 跳过下一个引号
-          } else {
+          }
+          else {
             // 切换引号状态
             inQuotes = !inQuotes;
             currentLine += char;
           }
-        } else if ((char === '\n' || char === '\r') && !inQuotes) {
+        }
+        else if ((char === '\n' || char === '\r') && !inQuotes) {
           // 行结束
           if (char === '\r' && nextChar === '\n') {
             i++; // 跳过 \n
           }
+
           if (currentLine.trim() || lines.length === 0) {
             lines.push(currentLine);
           }
+
           currentLine = '';
-        } else {
+        }
+        else {
           currentLine += char;
         }
       }
@@ -77,13 +82,16 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
             if (fieldInQuotes && nextChar === '"') {
               currentField += '"';
               i++; // 跳过下一个引号
-            } else {
+            }
+            else {
               fieldInQuotes = !fieldInQuotes;
             }
-          } else if (char === ',' && !fieldInQuotes) {
+          }
+          else if (char === ',' && !fieldInQuotes) {
             fields.push(currentField);
             currentField = '';
-          } else {
+          }
+          else {
             currentField += char;
           }
         }
@@ -94,11 +102,17 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
       }
 
       return rows;
-    } catch (error) {
+    }
+    catch (error) {
       console.error('CSV 解析错误:', error);
 
       // 返回空数组或单行错误信息
-      return [['解析错误', String(error)]];
+      return [
+        [
+          '解析错误',
+          String(error),
+        ],
+      ];
     }
   }
 
@@ -119,6 +133,7 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
       for (const cell of headerRow) {
         headerHtml += `<th>${this.escapeHtml(cell)}</th>`;
       }
+
       headerHtml += '</tr></thead>';
     }
 
@@ -127,11 +142,14 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
 
     for (let i = 1; i < displayRows.length; i++) {
       bodyHtml += '<tr>';
+
       for (const cell of displayRows[i]) {
         bodyHtml += `<td>${this.escapeHtml(cell)}</td>`;
       }
+
       bodyHtml += '</tr>';
     }
+
     bodyHtml += '</tbody>';
 
     return `<!DOCTYPE html>
@@ -270,9 +288,7 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
   ): Promise<void> {
     try {
       // 设置 Webview 选项
-      webviewPanel.webview.options = {
-        enableScripts: true,
-      };
+      webviewPanel.webview.options = { enableScripts: true };
 
       // 初始化内容
       const updateWebview = () => {
@@ -281,7 +297,8 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
           const csvData = this.parseCsv(text);
 
           webviewPanel.webview.html = this.getHtmlForWebview(csvData);
-        } catch (error) {
+        }
+        catch (error) {
           console.error('更新 Webview 错误:', error);
           // 显示错误页面
           webviewPanel.webview.html = this.getErrorHtml(String(error));
@@ -303,7 +320,8 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
 
       // 初始更新
       updateWebview();
-    } catch (error) {
+    }
+    catch (error) {
       console.error('初始化 CSV 编辑器错误:', error);
       webviewPanel.webview.html = this.getErrorHtml(String(error));
     }

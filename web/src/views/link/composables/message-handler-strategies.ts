@@ -38,14 +38,16 @@ export class SetHomeMessageHandlerStrategy implements MessageHandlerStrategy {
     const obj = (message.data as string) || '/home/developer';
 
     context.homePath.value = obj;
+
     if (
-      !context.isPathSetFromContextMenu.value &&
-      (!context.projectPath.projectPath ||
-        context.projectPath.projectPath === '/home/developer')
+      !context.isPathSetFromContextMenu.value
+      && (!context.projectPath.projectPath
+        || context.projectPath.projectPath === '/home/developer')
     ) {
       if (context.workspacePath.value) {
         context.projectPath.projectPath = context.workspacePath.value;
-      } else {
+      }
+      else {
         context.projectPath.projectPath = obj;
       }
     }
@@ -93,9 +95,10 @@ export class SetWorkspaceMessageHandlerStrategy implements MessageHandlerStrateg
 
   handle(message: MessageData, context: MessageHandlerContext): void {
     context.workspacePath.value = (message.data as string) || null;
+
     if (
-      context.workspacePath.value &&
-      !context.isPathSetFromContextMenu.value
+      context.workspacePath.value
+      && !context.isPathSetFromContextMenu.value
     ) {
       const currentPath = context.projectPath.projectPath;
       const isDefaultPath = !currentPath || currentPath === '/home/developer';

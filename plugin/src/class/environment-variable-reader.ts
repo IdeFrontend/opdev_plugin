@@ -31,9 +31,7 @@ export class EnvironmentVariableReader {
     const directValue = process.env[varName];
 
     if (directValue) {
-      console.log(
-        `[EnvironmentVariableReader] 从 process.env 直接获取环境变量 ${varName}: ${directValue}`,
-      );
+      console.log(`[EnvironmentVariableReader] 从 process.env 直接获取环境变量 ${varName}: ${directValue}`);
 
       return directValue;
     }
@@ -50,13 +48,12 @@ export class EnvironmentVariableReader {
         const cachedValue = this.envCache.get(varName);
 
         if (cachedValue) {
-          console.log(
-            `[EnvironmentVariableReader] 从 .arts/.env 文件获取环境变量 ${varName}: ${cachedValue}`,
-          );
+          console.log(`[EnvironmentVariableReader] 从 .arts/.env 文件获取环境变量 ${varName}: ${cachedValue}`);
 
           return cachedValue;
         }
-      } catch (error) {
+      }
+      catch (error) {
         console.warn(
           `[EnvironmentVariableReader] 从 .arts/.env 文件读取 ${varName} 失败:`,
           error,
@@ -82,9 +79,7 @@ export class EnvironmentVariableReader {
       const workspaceFolders = vscode.workspace.workspaceFolders;
 
       if (!workspaceFolders || workspaceFolders.length === 0) {
-        console.warn(
-          '[EnvironmentVariableReader] 未找到工作区文件夹，无法加载 .arts/.env 文件',
-        );
+        console.warn('[EnvironmentVariableReader] 未找到工作区文件夹，无法加载 .arts/.env 文件');
         this.isEnvLoaded = true;
 
         return;
@@ -96,9 +91,7 @@ export class EnvironmentVariableReader {
 
       // 检查文件是否存在
       if (!fs.existsSync(envFilePath)) {
-        console.warn(
-          `[EnvironmentVariableReader] .env 文件不存在: ${envFilePath}`,
-        );
+        console.warn(`[EnvironmentVariableReader] .env 文件不存在: ${envFilePath}`);
         this.isEnvLoaded = true;
 
         return;
@@ -110,12 +103,11 @@ export class EnvironmentVariableReader {
       // 解析环境变量
       this.parseEnvFile(envContent);
       this.isEnvLoaded = true;
-      console.log(
-        `[EnvironmentVariableReader] 成功从 .arts/.env 文件加载环境变量，共 ${this.envCache.size} 个`,
-      );
-    } catch (error: any) {
+      console.log(`[EnvironmentVariableReader] 成功从 .arts/.env 文件加载环境变量，共 ${this.envCache.size} 个`);
+    }
+    catch (error: any) {
       console.error(
-        `[EnvironmentVariableReader] 加载 .arts/.env 文件失败:`,
+        '[EnvironmentVariableReader] 加载 .arts/.env 文件失败:',
         error.message,
       );
       // 即使失败也标记为已加载，避免重复尝试
@@ -148,8 +140,8 @@ export class EnvironmentVariableReader {
 
         // 移除引号（如果有）
         if (
-          (varValue.startsWith('"') && varValue.endsWith('"')) ||
-          (varValue.startsWith("'") && varValue.endsWith("'"))
+          (varValue.startsWith('"') && varValue.endsWith('"'))
+          || (varValue.startsWith("'") && varValue.endsWith("'"))
         ) {
           varValue = varValue.slice(1, -1);
         }
@@ -165,10 +157,11 @@ export class EnvironmentVariableReader {
           if (quoteCount % 2 === 0) {
             // # 不在引号内，移除注释
             varValue = beforeComment.trim();
+
             // 再次检查引号
             if (
-              (varValue.startsWith('"') && varValue.endsWith('"')) ||
-              (varValue.startsWith("'") && varValue.endsWith("'"))
+              (varValue.startsWith('"') && varValue.endsWith('"'))
+              || (varValue.startsWith("'") && varValue.endsWith("'"))
             ) {
               varValue = varValue.slice(1, -1);
             }

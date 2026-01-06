@@ -24,5 +24,7 @@ export interface ResponseMessage {
   message: string;
   isStream?: boolean;
   data?: unknown;
-  error?: { name: string; message: string; stack: string };
+  error?: { name: string;
+    message: string;
+    stack: string };
 }

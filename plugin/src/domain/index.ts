@@ -1,4 +1,6 @@
-export { getConfig, postConfig } from './services/configuration';
+export {
+  getConfig, postConfig,
+} from './services/configuration';
 
 export {
   createProject,

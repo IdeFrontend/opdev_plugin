@@ -41,10 +41,12 @@ export class WebviewProvider {
       // 创建或显示面板
       if (this.panel) {
         this.panel.reveal();
-      } else {
+      }
+      else {
         await this.createPanel(router);
       }
-    } catch (error) {
+    }
+    catch (error) {
       const errorMsg = `打开Huawei OP DevTools失败: ${error}`;
 
       console.error(errorMsg);
@@ -110,16 +112,14 @@ export class WebviewProvider {
             );
           },
         },
-        {
-          webviewOptions: {
-            retainContextWhenHidden: true,
-          },
-        },
+        { webviewOptions: { retainContextWhenHidden: true } },
       );
 
       return this.pluginSidebarDisposable;
-    } catch (error) {
+    }
+    catch (error) {
       console.error('注册 pluginSidebar webview provider 失败:', error);
+
       // 返回一个空的 disposable 以避免错误
       return { dispose: () => {} };
     }
@@ -162,7 +162,8 @@ export class WebviewProvider {
         undefined,
         this.context.subscriptions,
       );
-    } catch (error) {
+    }
+    catch (error) {
       console.error(error);
     }
   }
@@ -183,7 +184,8 @@ export class WebviewProvider {
         this.panel.webview,
         router,
       );
-    } catch (error) {
+    }
+    catch (error) {
       // 如果读取文件失败，使用fallback内容
       console.log(error);
     }
@@ -193,7 +195,8 @@ export class WebviewProvider {
    * 处理来自Webview的消息
    */
   private handleWebviewMessage(message: unknown): void {
-    const msg = message as { command: string; [key: string]: unknown };
+    const msg = message as { command: string;
+      [key: string]: unknown };
 
     for (const messageItem of webviewMessageList) {
       if (msg.command === messageItem.command) {
@@ -210,6 +213,7 @@ export class WebviewProvider {
       this.panel.dispose();
       this.panel = undefined;
     }
+
     if (this.pluginSidebarDisposable) {
       this.pluginSidebarDisposable.dispose();
       this.pluginSidebarDisposable = undefined;

@@ -1,6 +1,8 @@
 import { ConfigRecord } from '../models/config-model';
 import { OpRecord } from '../models/model';
-import { Command, getAdvanceCmd } from '../utils/command-utils';
+import {
+  Command, getAdvanceCmd,
+} from '../utils/command-utils';
 
 /**
  * msprof 命令生成策略接口
@@ -28,6 +30,7 @@ export class SimulatorStrategy implements ProfilerCommandStrategy {
     if (userOptions?.ResourceConflictRatio) {
       metrics.push('ResourceConflictRatio');
     }
+
     if (userOptions?.PMSampling) {
       metrics.push('PMSampling');
     }
@@ -36,11 +39,8 @@ export class SimulatorStrategy implements ProfilerCommandStrategy {
 
     // 构建 msprof op simulator 命令
     const msprof = new Command('msprof');
-    const simulator = msprof.sub('op').sub('simulator', {
-      separators: {
-        'aic-metrics': ',',
-      },
-    });
+    const simulator = msprof.sub('op')
+      .sub('simulator', { separators: { 'aic-metrics': ',' } });
 
     simulator.addOptions({
       'soc-version': userOptions?.simulatorType as string | undefined,
@@ -75,11 +75,7 @@ export class OnBoardStrategy implements ProfilerCommandStrategy {
 
     // 构建 msprof op 命令
     const msprof = new Command('msprof');
-    const op = msprof.sub('op', {
-      separators: {
-        'aic-metrics': ',',
-      },
-    });
+    const op = msprof.sub('op', { separators: { 'aic-metrics': ',' } });
 
     op.addOptions({
       output: `${operator.op_path}/.vscode/opprof`,
@@ -113,7 +109,8 @@ export class OnBoardStrategy implements ProfilerCommandStrategy {
 
     if (result.includes('Roofline') || result.includes('MemoryDetail')) {
       result.push('Default');
-    } else {
+    }
+    else {
       const extendedMetrics = [
         'ArithmeticUtilization',
         'L2Cache',

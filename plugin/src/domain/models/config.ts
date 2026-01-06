@@ -24,7 +24,8 @@ function getWorkspaceDataDir(): string {
 
       return dataDir;
     }
-  } catch (e) {
+  }
+  catch (e) {
     // vscode might not be available or initialized
     console.error('Failed to get workspace data dir:', e);
   }

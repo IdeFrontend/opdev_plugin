@@ -12,10 +12,9 @@ export const scriptMethods = {
    * @param params 更新参数
    * @returns 更新结果
    */
-  async updateShScript(
-    params: UpdateShScriptParams,
-  ): Promise<GetProjectSHResult> {
-    await ProjectManager.getInstance().initProject();
+  async updateShScript(params: UpdateShScriptParams): Promise<GetProjectSHResult> {
+    await ProjectManager.getInstance()
+      .initProject();
 
     return await projectService.updateShScript(params);
   },
@@ -33,10 +32,9 @@ export const scriptMethods = {
    * @param params 保存参数
    */
   async saveProjectSH(params: SaveProjectSHParams): Promise<void> {
-    await ProjectManager.getInstance().initProject();
+    await ProjectManager.getInstance()
+      .initProject();
     // 复用 updateShScript 逻辑
-    await projectService.updateShScript({
-      ascendEnvScript: params.accendEnvScript,
-    });
+    await projectService.updateShScript({ ascendEnvScript: params.accendEnvScript });
   },
 };
