@@ -23,15 +23,16 @@ export class SimulatorStrategy implements ProfilerCommandStrategy {
     targetFile: string,
   ): string {
     const metrics = ['PipeUtilization'];
+    const userOptions = config.user_options as Record<string, unknown> | null | undefined;
 
-    if (config.user_options?.ResourceConflictRatio) {
+    if (userOptions?.ResourceConflictRatio) {
       metrics.push('ResourceConflictRatio');
     }
-    if (config.user_options?.PMSampling) {
+    if (userOptions?.PMSampling) {
       metrics.push('PMSampling');
     }
 
-    const advance_cmd = getAdvanceCmd(config.user_options?.advance_param);
+    const advance_cmd = getAdvanceCmd(userOptions?.advance_param);
 
     // 构建 msprof op simulator 命令
     const msprof = new Command('msprof');
@@ -42,7 +43,7 @@ export class SimulatorStrategy implements ProfilerCommandStrategy {
     });
 
     simulator.addOptions({
-      'soc-version': config.user_options?.simulatorType,
+      'soc-version': userOptions?.simulatorType as string | undefined,
       output: `${operator.op_path}/.vscode/opprof`,
       'aic-metrics': metrics,
     });
@@ -68,8 +69,9 @@ export class OnBoardStrategy implements ProfilerCommandStrategy {
     operator: OpRecord,
     targetFile: string,
   ): string {
-    const metrics = this.getOnBoardMetrics(config.user_options || {});
-    const advance_cmd = getAdvanceCmd(config.user_options?.advance_param);
+    const userOptions = (config.user_options as Record<string, unknown> | null | undefined) || {};
+    const metrics = this.getOnBoardMetrics(userOptions as Record<string, boolean>);
+    const advance_cmd = getAdvanceCmd(userOptions.advance_param);
 
     // 构建 msprof op 命令
     const msprof = new Command('msprof');

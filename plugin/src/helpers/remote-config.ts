@@ -150,7 +150,7 @@ export class RemoteConfig {
   static async searchPath(params: {
     keyword: string;
     type: string;
-  }): Promise<{ type: string; list: unknown[] }> {
+  }): Promise<{ type: string; list: Array<{ path: string }> }> {
     const { keyword, type } = params;
 
     // 如果关键词为空，返回空列表
@@ -168,7 +168,7 @@ export class RemoteConfig {
 
           return {
             type,
-            list: files.map((file) => path.join(keyword, file)),
+            list: files.map((file) => ({ path: path.join(keyword, file) })),
           };
         }
       } catch {
@@ -188,7 +188,7 @@ export class RemoteConfig {
 
           return {
             type,
-            list: fullPaths,
+            list: fullPaths.map((p) => ({ path: p })),
           };
         }
       }

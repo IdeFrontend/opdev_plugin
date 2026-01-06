@@ -1,16 +1,87 @@
 import path from 'path';
+import * as fs from 'fs-extra';
 import config from './config';
 import { JsonStorage } from '../../core/storage/json-storage';
 
-const getDataDir = () =>
-  path.join(
-    (config as unknown as { workspace_data_dir: string }).workspace_data_dir,
-    'data',
-  );
-const getConfigsFile = () => path.join(getDataDir(), 'configs.json');
+// 使用 user_data_dir 而不是 workspace_data_dir，确保配置在新窗口打开时也能找到
+// 因为 workspace_data_dir 依赖于工作区路径，在新窗口打开时可能会不同
+const getDataDir = () => {
+  const userDataDir = config.user_data_dir;
+  const dataDir = path.join(userDataDir, 'data');
+  console.log('getDataDir: user_data_dir:', userDataDir);
+  console.log('getDataDir: dataDir:', dataDir);
+  return dataDir;
+};
+const getConfigsFile = () => {
+  const configsFile = path.join(getDataDir(), 'configs.json');
+  console.log('getConfigsFile: configs.json path:', configsFile);
+  return configsFile;
+};
+
+// 获取旧的配置文件路径（workspace_data_dir）
+const getOldConfigsFile = () => {
+  try {
+    const workspaceDataDir = (config as unknown as { workspace_data_dir: string }).workspace_data_dir;
+    const oldDataDir = path.join(workspaceDataDir, 'data');
+    return path.join(oldDataDir, 'configs.json');
+  } catch {
+    return null;
+  }
+};
 
 function getStorage() {
   return new JsonStorage(getConfigsFile());
+}
+
+// 迁移旧配置（如果存在）
+function migrateOldConfigsIfNeeded(): void {
+  const oldConfigsFile = getOldConfigsFile();
+  const newConfigsFile = getConfigsFile();
+  
+  if (!oldConfigsFile || !fs.existsSync(oldConfigsFile)) {
+    return; // 没有旧配置需要迁移
+  }
+  
+  try {
+    console.log('getConfig: 发现旧配置文件，开始迁移:', oldConfigsFile, '->', newConfigsFile);
+    const oldStorage = new JsonStorage(oldConfigsFile);
+    const oldStore = oldStorage.read<ConfigsStore>({ lastId: 0, configs: [] });
+    
+    if (oldStore.configs.length === 0) {
+      return; // 旧配置为空，无需迁移
+    }
+    
+    const newStorage = new JsonStorage(newConfigsFile);
+    const newStore = newStorage.read<ConfigsStore>({ lastId: 0, configs: [] });
+    
+    // 合并配置：将旧配置中不存在于新配置的配置项添加进去
+    const existingIds = new Set(newStore.configs.map(c => c.id));
+    let migratedCount = 0;
+    let maxId = newStore.lastId;
+    
+    for (const oldConfig of oldStore.configs) {
+      if (!existingIds.has(oldConfig.id)) {
+        // 如果ID冲突，分配新的ID
+        if (oldConfig.id <= maxId) {
+          maxId = Math.max(maxId, oldConfig.id);
+        }
+        newStore.configs.push(oldConfig);
+        migratedCount++;
+      }
+    }
+    
+    // 更新 lastId 为两个存储中的最大值
+    newStore.lastId = Math.max(newStore.lastId, oldStore.lastId, maxId);
+    
+    if (migratedCount > 0) {
+      newStorage.write(newStore);
+      console.log('getConfig: 配置迁移成功，迁移了', migratedCount, '个配置');
+    } else {
+      console.log('getConfig: 所有旧配置已存在于新配置中，无需迁移');
+    }
+  } catch (error) {
+    console.error('getConfig: 配置迁移失败:', error);
+  }
 }
 
 export type ConfigRecord = {
@@ -36,6 +107,9 @@ type ConfigsStore = {
 };
 
 function ensureStore(): ConfigsStore {
+  // 尝试迁移旧配置（如果存在）
+  migrateOldConfigsIfNeeded();
+  
   const init: ConfigsStore = { lastId: 0, configs: [] };
   const data = getStorage().read<ConfigsStore>(init);
 
@@ -70,13 +144,23 @@ export function getConfig(
   config_type: string,
   op: string | null = null,
 ) {
+  const configsFile = getConfigsFile();
+  console.log('getConfig: 查询配置，project_id:', project_id, 'config_type:', config_type, 'op:', op, 'configsFile:', configsFile);
   const store = ensureStore();
+  console.log('getConfig: store.configs.length:', store.configs.length);
+  console.log('getConfig: store.configs:', store.configs.map(c => ({
+    id: c.id,
+    project_id: c.project_id,
+    config_type: c.config_type,
+    op: c.op,
+  })));
   const filtered = store.configs.filter(
     (c) =>
       c.project_id === project_id &&
       c.config_type === config_type &&
       (op ? c.op === op : true),
   );
+  console.log('getConfig: 过滤后的配置数量:', filtered.length);
 
   return filtered.map(mapRecordToConfig);
 }

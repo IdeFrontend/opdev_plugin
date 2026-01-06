@@ -14,7 +14,7 @@ import i18nResource from 'shared:/i18n';
 import { WebviewProvider } from './class/webview-provider';
 import { handleOperatorProjectDirectoryFile } from './class/webview-message-list';
 import { CsvEditorProvider } from './class/csv-editor-provider';
-import { ApiServer } from './core/api-server';
+import { ApiServer, type ApiGroup } from './core/api-server';
 import { ViewServer } from './core/view/view-server';
 import { routes } from './routes';
 import { apis } from './api-routes';
@@ -92,7 +92,9 @@ export async function activate(context: vscode.ExtensionContext) {
   // 初始化配置页面的Webview
   const configProvider = new WebviewProvider(context, apiServer);
 
-  configProvider.showLeftPage(VIEW_HOME);
+  // 注册 pluginSidebar webview provider 并添加到 subscriptions
+  const pluginSidebarDisposable = configProvider.showLeftPage(VIEW_HOME);
+  context.subscriptions.push(pluginSidebarDisposable);
 
   // 国际化
   await initI18n();
@@ -127,16 +129,33 @@ export async function activate(context: vscode.ExtensionContext) {
     | vscode.Progress<{ message?: string; increment?: number }>
     | undefined;
 
-  if (
-    context.globalState.get<string>('runCommand') === COMMAND_CREATE_DIRECTORY
-  ) {
+  // 检查是否需要执行创建算子命令
+  const runCommand = context.globalState.get<string>('runCommand');
+  const runCommandParam = context.globalState.get<number>('runCommand-param');
+  
+  if (runCommand === COMMAND_CREATE_DIRECTORY && runCommandParam) {
+    console.log('检测到需要执行创建算子命令，类型:', runCommandParam);
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
         title: `开始创建算子文件...`,
         cancellable: false,
       },
-      async (pro) => (progress = pro),
+      async (pro) => {
+        progress = pro;
+        try {
+          // 执行创建算子命令
+          await vscode.commands.executeCommand(COMMAND_CREATE_DIRECTORY, {
+            createOperatorProjectDirectoryFileType: runCommandParam,
+          }, progress);
+          // 清除 runCommand，避免重复执行
+          await context.globalState.update('runCommand', undefined);
+          await context.globalState.update('runCommand-param', undefined);
+        } catch (error) {
+          console.error('执行创建算子命令失败:', error);
+          throw error;
+        }
+      },
     );
   }
   // 视图
@@ -282,11 +301,11 @@ export async function activate(context: vscode.ExtensionContext) {
   const createOptionsCommand = vscode.commands.registerCommand(
     COMMAND_CREATE_DIRECTORY,
     async (
-      data: { createOperatorProjectDictoryFileType: number },
+      data: { createOperatorProjectDirectoryFileType: number },
       progress: vscode.Progress<{ message?: string; increment?: number }>,
     ) => {
       await handleOperatorProjectDirectoryFile(
-        { createOperatorProjectDirectoryFileType: data },
+        data,
         createOpsProvider,
         progress,
       );
@@ -478,7 +497,7 @@ async function initI18n() {
  * 接口
  */
 function initApiServer() {
-  return new ApiServer(apis);
+  return new ApiServer(apis as ApiGroup);
 }
 
 /**

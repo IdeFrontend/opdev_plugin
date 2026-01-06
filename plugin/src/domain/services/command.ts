@@ -21,7 +21,7 @@ import { ProfilerFactory } from './profiler-service';
 interface CommandContext {
   config: ConfigRecord;
   project: ProjectRecord | null;
-  operator: OpRecord;
+  operator: OpRecord | null;
   sourceCannCmd: string;
   cdCmd: string;
 }
@@ -43,16 +43,23 @@ function getCommandContext(configId: number): CommandContext {
   const project = getProjectById(config.project_id);
   const operator = getOpByProjectIdAndOpName(config.project_id, config.op);
 
-  if (!operator) {
-    throw new Error(`Operator not found: ${config.op}`);
-  }
-
   const sourceCannCmd =
     project && project.ascend_env_script
       ? `. ${project.ascend_env_script}`
       : ``;
 
-  const runPath = getOpRunPath(operator);
+  let runPath: string;
+  if (operator) {
+    runPath = getOpRunPath(operator);
+  } else {
+    // 如果找不到算子，但有配置脚本，使用项目路径作为运行路径
+    if (config.script && project) {
+      runPath = project.project_path;
+    } else {
+      throw new Error(`Operator not found: ${config.op}`);
+    }
+  }
+
   const cdCmd = `cd ${runPath}`;
 
   return {
@@ -75,9 +82,16 @@ export function getBuildOpCommand(config_id: number, compileOption?: string) {
   try {
     const { config, operator, sourceCannCmd, cdCmd } =
       getCommandContext(config_id);
-    const advance_cmd = getAdvanceCmd(config.user_options?.advance_param);
+    const userOptions = config.user_options as Record<string, unknown> | null | undefined;
+    const advance_cmd = getAdvanceCmd(userOptions?.advance_param);
 
+    // 如果没有算子记录，或者算子类型不是 ascend，使用自定义脚本
     if (!operator || operator.op_type !== 'ascend') {
+      // 如果没有脚本，抛出错误
+      if (!config.script) {
+        throw new Error(`配置缺少脚本信息，且找不到算子记录: ${config.op}`);
+      }
+
       const cmd = new Command(config.script || '');
 
       if (config.custom_options) cmd.addArgument(config.custom_options);
@@ -155,9 +169,16 @@ export function getBuildExampleCommand(
   try {
     const { config, operator, sourceCannCmd, cdCmd } =
       getCommandContext(config_id);
-    const advance_cmd = getAdvanceCmd(config.user_options?.advance_param);
+    const userOptions = config.user_options as Record<string, unknown> | null | undefined;
+    const advance_cmd = getAdvanceCmd(userOptions?.advance_param);
 
+    // 如果没有算子记录，或者算子类型不是 ascend，使用自定义脚本
     if (!operator || operator.op_type !== 'ascend') {
+      // 如果没有脚本，抛出错误
+      if (!config.script) {
+        throw new Error(`配置缺少脚本信息，且找不到算子记录: ${config.op}`);
+      }
+
       const cmd = new Command(config.script || '');
 
       if (config.custom_options) cmd.addArgument(config.custom_options);
@@ -216,15 +237,32 @@ export function getSimulateCommand(
   example_config_id: number,
 ) {
   try {
-    const { config, operator, sourceCannCmd, cdCmd } =
+    const { config, project, operator, sourceCannCmd, cdCmd } =
       getCommandContext(config_id);
+    
+    // 如果找不到算子记录，但有项目路径，创建一个临时算子对象
+    let effectiveOperator = operator;
+    if (!effectiveOperator) {
+      if (!project || !project.project_path) {
+        throw new Error(`无法生成仿真命令：找不到算子记录 ${config.op}，且项目路径不可用`);
+      }
+      // 创建临时算子对象，使用项目路径作为 op_path
+      effectiveOperator = {
+        id: 0,
+        project_id: config.project_id,
+        op_name: config.op,
+        op_type: 'ascend', // 默认假设为 ascend 类型
+        op_path: project.project_path,
+      } as OpRecord;
+    }
+
     const exConfig = getConfigById(
       example_config_id,
     ) as unknown as ConfigRecord;
 
     const simulatorCmd = ProfilerFactory.getStrategy('simulator').generate(
       config,
-      operator,
+      effectiveOperator,
       exConfig?.target_file || '',
     );
 
@@ -247,15 +285,32 @@ export function getOnBoardCommand(
   example_config_id: number,
 ) {
   try {
-    const { config, operator, sourceCannCmd, cdCmd } =
+    const { config, project, operator, sourceCannCmd, cdCmd } =
       getCommandContext(config_id);
+    
+    // 如果找不到算子记录，但有项目路径，创建一个临时算子对象
+    let effectiveOperator = operator;
+    if (!effectiveOperator) {
+      if (!project || !project.project_path) {
+        throw new Error(`无法生成上板命令：找不到算子记录 ${config.op}，且项目路径不可用`);
+      }
+      // 创建临时算子对象，使用项目路径作为 op_path
+      effectiveOperator = {
+        id: 0,
+        project_id: config.project_id,
+        op_name: config.op,
+        op_type: 'ascend', // 默认假设为 ascend 类型
+        op_path: project.project_path,
+      } as OpRecord;
+    }
+
     const exConfig = getConfigById(
       example_config_id,
     ) as unknown as ConfigRecord;
 
     const opprofCmd = ProfilerFactory.getStrategy('onboard').generate(
       config,
-      operator,
+      effectiveOperator,
       exConfig?.target_file || '',
     );
 
@@ -276,69 +331,57 @@ export function getSanitizerCommand(
   sanitizerConfigId: number,
   example_config_id: number,
 ) {
-  // 使用相同的上下文模式，虽然变量名不同
-  const sanitizerConfig = getConfigById(
-    sanitizerConfigId,
-  ) as unknown as ConfigRecord;
-  const exConfig = getConfigById(example_config_id) as unknown as ConfigRecord;
+  try {
+    // 使用 getCommandContext 获取上下文，保持一致性
+    const { config: sanitizerConfig, operator, sourceCannCmd, cdCmd } =
+      getCommandContext(sanitizerConfigId);
+    const exConfig = getConfigById(example_config_id) as unknown as ConfigRecord;
 
-  if (!sanitizerConfig) {
-    throw new Error('配置不存在');
-  }
+    // Sanitizer 需要算子信息来确定算子类型
+    // 如果找不到算子记录，getCommandContext 会尝试使用项目路径（如果有脚本）
+    // 对于 sanitizer，如果没有算子记录，我们假设它是非 ascend 类型
+    // 因为 ascend 类型的算子通常需要算子记录才能正确执行
+    const opType = operator ? operator.op_type : 'custom';
 
-  const project = getProjectById(sanitizerConfig.project_id);
-  const operator = getOpByProjectIdAndOpName(
-    sanitizerConfig.project_id,
-    sanitizerConfig.op,
-  );
+    if (opType !== 'ascend') {
+      const mssanitizer = new Command('mssanitizer');
 
-  if (!operator) {
-    throw new Error(`Operator not found: ${sanitizerConfig.op}`);
-  }
+      // 添加目标文件
+      if (exConfig?.target_file) {
+        mssanitizer.addArgument(exConfig.target_file);
+      }
 
-  const sourceCannCmd =
-    project && project.ascend_env_script
-      ? `. ${project.ascend_env_script}`
-      : ``;
+      // 处理配置选项
+      const options = (sanitizerConfig.user_options as Record<string, unknown> | null | undefined) || {};
+      const toolOptions = (options.tool as Record<string, unknown> | undefined) || {};
+      const tools = Object.keys(toolOptions).filter(
+        (key) => toolOptions[key],
+      );
 
-  const runPath = getOpRunPath(operator);
+      mssanitizer.addOption('tool', tools);
 
-  const cdCmd = `cd ${runPath}`;
+      if (toolOptions.memcheck) {
+        const memcheckOptions = (options.memcheckOption as Record<string, unknown> | undefined) || {};
+        Object.keys(memcheckOptions).forEach((key) => {
+          if (memcheckOptions[key]) {
+            mssanitizer.addOption(key, 'yes');
+          }
+        });
+      }
 
-  if (operator.op_type !== 'ascend') {
-    const mssanitizer = new Command('mssanitizer');
+      mssanitizer.addOption('log-level', options.logLevel as string | undefined);
+      mssanitizer.addOption('max-debuglog-size', options.maxDebuglogSize as string | undefined);
+      mssanitizer.addOption('block-id', options.blockId as string | number | undefined);
+      mssanitizer.addOption(
+        'log-file',
+        `./.vscode/mindstudio_sanitizer_log/mssanitizer_${new Date().valueOf()}.log`,
+      );
 
-    // 添加目标文件
-    if (exConfig?.target_file) {
-      mssanitizer.addArgument(exConfig.target_file);
+      return joinCommands(sourceCannCmd, cdCmd, mssanitizer.toString());
     }
 
-    // 处理配置选项
-    const options = sanitizerConfig.user_options || {};
-    const tools = Object.keys(options.tool || {}).filter(
-      (key) => options.tool[key],
-    );
-
-    mssanitizer.addOption('tool', tools);
-
-    if (options.tool?.memcheck) {
-      Object.keys(options.memcheckOption || {}).forEach((key) => {
-        if (options.memcheckOption[key]) {
-          mssanitizer.addOption(key, 'yes');
-        }
-      });
-    }
-
-    mssanitizer.addOption('log-level', options.logLevel);
-    mssanitizer.addOption('max-debuglog-size', options.maxDebuglogSize);
-    mssanitizer.addOption('block-id', options.blockId);
-    mssanitizer.addOption(
-      'log-file',
-      `./.vscode/mindstudio_sanitizer_log/mssanitizer_${new Date().valueOf()}.log`,
-    );
-
-    return joinCommands(sourceCannCmd, cdCmd, mssanitizer.toString());
+    return '';
+  } catch (e: unknown) {
+    throw new Error(`生成异常检测命令失败: ${(e as Error).message}`);
   }
-
-  return '';
 }

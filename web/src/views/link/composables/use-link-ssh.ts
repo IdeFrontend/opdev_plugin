@@ -111,6 +111,7 @@ export function useLinkSSH() {
         ...projectFormData,
         createOperatorProjectDictoryFileType: selectedId_type.value,
       });
+      message.success('算子工程创建成功');
     } catch (error) {
       console.error('创建项目失败:', error);
       message.error('创建项目失败');

@@ -90,17 +90,25 @@ export function getOpByProjectIdAndOpName(
   return found || null;
 }
 
-export function generateStructure(
+export async function generateStructure(
   data: Partial<OpRecord>,
   extensionPath: string,
-): number {
+): Promise<number> {
   // 1) basic checks
   const project = projectModel.getProjectById(data.project_id as number);
 
-  if (!project)
+  if (!project) {
+    console.error('项目未找到，project_id:', data.project_id);
     throw Object.assign(new Error('project not found'), {
       name: 'InvalidRequest',
     });
+  }
+  
+  console.log('generateStructure: 项目信息', {
+    project_id: project.id,
+    project_name: project.project_name,
+    project_path: project.project_path,
+  });
 
   // 2) prepare params for generator
   const params = {
@@ -114,10 +122,25 @@ export function generateStructure(
     op_path: data.op_path ?? project.project_path,
   } as unknown;
 
-  ensureLaunchJsonExists(
-    (params as { op_path: string }).op_path,
-    data.create_by,
-  );
+  // 确保在算子工程目录创建 devtool_config.json
+  // project.project_path 是算子工程完整路径（如 /path/to/project/operator_name）
+  // op_path 也是算子工程路径，应该在这里创建 .vscode 目录
+  const opPath = (params as { op_path: string }).op_path ?? project.project_path;
+  console.log('generateStructure: 准备创建配置文件');
+  console.log('generateStructure: 算子工程路径 (op_path):', opPath);
+  console.log('generateStructure: project.project_path:', project.project_path);
+  console.log('generateStructure: create_by:', data.create_by);
+  
+  try {
+    await ensureLaunchJsonExists(
+      opPath,
+      data.create_by,
+    );
+    console.log('generateStructure: 配置文件创建完成');
+  } catch (error) {
+    console.error('generateStructure: 配置文件创建失败:', error);
+    // 配置文件创建失败不应该阻止算子创建，只记录错误
+  }
 
   // 3) get generator and parse meta
   const generator = OpGeneratorFactory.getGenerator(
@@ -200,9 +223,16 @@ export function generateStructure(
         },
       };
 
-      // 调用 postConfig，不 await（保持同步签名兼容），若需确保完成可改为 async/await
-      void configModel.postConfig('build_op', [buildOp]);
-      void configModel.postConfig('build_example', [buildExample]);
+      // 调用 postConfig，确保配置创建完成
+      console.log('generateStructure: 开始创建 build_op 配置');
+      console.log('generateStructure: build_op 配置数据:', JSON.stringify(buildOp, null, 2));
+      const buildOpResult = await configModel.postConfig('build_op', [buildOp]);
+      console.log('generateStructure: build_op 配置创建结果:', JSON.stringify(buildOpResult, null, 2));
+      
+      console.log('generateStructure: 开始创建 build_example 配置');
+      console.log('generateStructure: build_example 配置数据:', JSON.stringify(buildExample, null, 2));
+      const buildExampleResult = await configModel.postConfig('build_example', [buildExample]);
+      console.log('generateStructure: build_example 配置创建结果:', JSON.stringify(buildExampleResult, null, 2));
 
       // Sanitizer: 创建一个基础 sanitizer 配置
       const sanitizerCfg = {
@@ -230,7 +260,10 @@ export function generateStructure(
         },
       };
 
-      void configModel.postConfig('sanitizer', [sanitizerCfg]);
+      console.log('generateStructure: 开始创建 sanitizer 配置');
+      console.log('generateStructure: sanitizer 配置数据:', JSON.stringify(sanitizerCfg, null, 2));
+      const sanitizerResult = await configModel.postConfig('sanitizer', [sanitizerCfg]);
+      console.log('generateStructure: sanitizer 配置创建结果:', JSON.stringify(sanitizerResult, null, 2));
 
       // Opprof: 创建 on_board 和 simulate 两种配置
       const onBoard = {
@@ -295,8 +328,15 @@ export function generateStructure(
         },
       };
 
-      void configModel.postConfig('on_board', [onBoard]);
-      void configModel.postConfig('simulate', [simulate]);
+      console.log('generateStructure: 开始创建 on_board 配置');
+      console.log('generateStructure: on_board 配置数据:', JSON.stringify(onBoard, null, 2));
+      const onBoardResult = await configModel.postConfig('on_board', [onBoard]);
+      console.log('generateStructure: on_board 配置创建结果:', JSON.stringify(onBoardResult, null, 2));
+      
+      console.log('generateStructure: 开始创建 simulate 配置');
+      console.log('generateStructure: simulate 配置数据:', JSON.stringify(simulate, null, 2));
+      const simulateResult = await configModel.postConfig('simulate', [simulate]);
+      console.log('generateStructure: simulate 配置创建结果:', JSON.stringify(simulateResult, null, 2));
     }
   } catch (e) {
     // 忽略配置创建错误，但打印日志以便调试

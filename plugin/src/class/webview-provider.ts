@@ -21,6 +21,7 @@ export class WebviewProvider {
   private storage: PermanentStorage;
   private context: vscode.ExtensionContext;
   private readonly userInfo: os.UserInfo<string | number>;
+  private pluginSidebarDisposable: vscode.Disposable | undefined;
 
   constructor(
     context: vscode.ExtensionContext,
@@ -63,39 +64,64 @@ export class WebviewProvider {
   /**
    * 创建Webview面板
    */
-  public showLeftPage(router: string): void {
-    this.createLeftNavWebview(router);
+  public showLeftPage(router: string): vscode.Disposable {
+    return this.createLeftNavWebview(router);
   }
 
   /**
    * 创建Webview面板
    */
-  private createLeftNavWebview(router: string = ''): void {
+  private createLeftNavWebview(router: string = ''): vscode.Disposable {
     try {
-      vscode.window.registerWebviewViewProvider('pluginSidebar', {
-        resolveWebviewView: async (webviewView: vscode.WebviewView) => {
-          webviewView.webview.options = {
-            enableScripts: true,
-          };
-          const distPath = path.join(this.context.extensionPath, 'out', 'web');
+      // 如果已经注册过，先释放旧的
+      if (this.pluginSidebarDisposable) {
+        this.pluginSidebarDisposable.dispose();
+      }
 
-          webviewView.webview.html = await HtmlTransformer.transformDistHtml(
-            distPath,
-            webviewView.webview,
-            router,
-          );
-          // 处理Webview消息
-          webviewView.webview.onDidReceiveMessage(
-            (message: unknown) => {
-              this.handleWebviewMessage(message);
-            },
-            undefined,
-            this.context.subscriptions,
-          );
+      const extensionUri = this.context.extensionUri;
+      const viewRootUri = vscode.Uri.joinPath(extensionUri, 'out', 'web');
+
+      this.pluginSidebarDisposable = vscode.window.registerWebviewViewProvider(
+        'pluginSidebar',
+        {
+          resolveWebviewView: async (webviewView: vscode.WebviewView) => {
+            webviewView.webview.options = {
+              enableScripts: true,
+              localResourceRoots: [viewRootUri],
+            };
+            const distPath = path.join(
+              this.context.extensionUri.fsPath,
+              'out',
+              'web',
+            );
+
+            webviewView.webview.html = await HtmlTransformer.transformDistHtml(
+              distPath,
+              webviewView.webview,
+              router,
+            );
+            // 处理Webview消息
+            webviewView.webview.onDidReceiveMessage(
+              (message: unknown) => {
+                this.handleWebviewMessage(message);
+              },
+              undefined,
+              this.context.subscriptions,
+            );
+          },
         },
-      });
+        {
+          webviewOptions: {
+            retainContextWhenHidden: true,
+          },
+        },
+      );
+
+      return this.pluginSidebarDisposable;
     } catch (error) {
-      console.error(error);
+      console.error('注册 pluginSidebar webview provider 失败:', error);
+      // 返回一个空的 disposable 以避免错误
+      return { dispose: () => {} };
     }
   }
 
@@ -183,6 +209,10 @@ export class WebviewProvider {
     if (this.panel) {
       this.panel.dispose();
       this.panel = undefined;
+    }
+    if (this.pluginSidebarDisposable) {
+      this.pluginSidebarDisposable.dispose();
+      this.pluginSidebarDisposable = undefined;
     }
   }
 }

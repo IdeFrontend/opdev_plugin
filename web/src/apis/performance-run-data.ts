@@ -7,6 +7,20 @@ import {
 } from 'shared:/api-types';
 
 /**
+ * 下载数据
+ */
+export function downloadData(params: DownloadDataParams) {
+  return request.post<DownloadDataParams, void>('webview/downloadData', params);
+}
+
+/**
+ * 删除节点
+ */
+export function deleteNode(params: DeleteNodeParams) {
+  return request.post<DeleteNodeParams, void>('webview/deleteNode', params);
+}
+
+/**
  * 选择文件夹
  */
 export function selectFolder() {

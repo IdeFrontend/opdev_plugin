@@ -30,20 +30,39 @@ export class BuildService {
    */
   async getBuildConfigsList(): Promise<BuildConfig[]> {
     const projectId = ProjectManager.getInstance().projectId;
+    console.log('getBuildConfigsList: 查询配置，projectId:', projectId);
     const array = [
       getConfig(Number(projectId), CONFIG_TYPES.BUILD_OP),
       getConfig(Number(projectId), CONFIG_TYPES.BUILD_EXAMPLE),
       getConfig(Number(projectId), CONFIG_TYPES.SIMULATE),
       getConfig(Number(projectId), CONFIG_TYPES.ON_BOARD),
     ];
-    const [opConfig, exampleConfig, simulateConfig, onBoardConfig] =
-      await Promise.all(array);
+    const [opConfig, exampleConfig, simulateConfig, onBoardConfig] = await Promise.all(array);
+    
+    console.log('getBuildConfigsList: 查询结果', {
+      build_op: opConfig.length,
+      build_example: exampleConfig.length,
+      simulate: simulateConfig.length,
+      on_board: onBoardConfig.length,
+    });
 
     return [
-      ...opConfig,
-      ...exampleConfig,
-      ...simulateConfig,
-      ...onBoardConfig,
+      ...opConfig.map((c) => ({
+        ...c,
+        user_options: c.user_options ? (c.user_options as Record<string, unknown>) : undefined,
+      })),
+      ...exampleConfig.map((c) => ({
+        ...c,
+        user_options: c.user_options ? (c.user_options as Record<string, unknown>) : undefined,
+      })),
+      ...simulateConfig.map((c) => ({
+        ...c,
+        user_options: c.user_options ? (c.user_options as Record<string, unknown>) : undefined,
+      })),
+      ...onBoardConfig.map((c) => ({
+        ...c,
+        user_options: c.user_options ? (c.user_options as Record<string, unknown>) : undefined,
+      })),
     ] as BuildConfig[];
   }
 
@@ -194,7 +213,7 @@ export class BuildService {
     const simulatorItem = configData.find(
       (v) => v.config_type === CONFIG_TYPES.SIMULATE,
     );
-    const simulatorType = simulatorItem?.user_options?.simulatorType ?? '';
+    const simulatorType = (simulatorItem?.user_options?.simulatorType as string | undefined) ?? '';
 
     // 仿真分析前编译
     const buildConfigId = await this.getBuildConfigId();
