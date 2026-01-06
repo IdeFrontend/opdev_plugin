@@ -54,7 +54,7 @@ const menuItems = ref([
   },
   {
     key: 'build',
-    label: '编辑部署',
+    label: '编译部署',
     icon: buildIcon,
     children: [
       {
