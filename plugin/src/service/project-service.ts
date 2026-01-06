@@ -73,32 +73,46 @@ export class ProjectService {
     const pm = ProjectManager.getInstance();
     const context = this.getContext();
 
+    console.log('createOpsByPrototype: 开始创建算子，参数:', params);
+    console.log('createOpsByPrototype: 当前 projectId:', pm.projectId);
+    console.log('createOpsByPrototype: projectId 类型:', typeof pm.projectId);
+
     try {
-      const result = generateStructure(
+      const projectId = Number(pm.projectId);
+      console.log('createOpsByPrototype: 转换后的 projectId:', projectId);
+      
+      if (!projectId || isNaN(projectId)) {
+        throw new Error(`无效的 projectId: ${pm.projectId}`);
+      }
+
+      console.log('createOpsByPrototype: 调用 generateStructure...');
+      const result = await generateStructure(
         {
           ops_prototype_file: params.opsPrototypeFile,
-          project_id: Number(pm.projectId),
+          project_id: projectId,
           op_type: params.opType || 'ascend',
         },
         context.extensionPath,
       );
 
       console.log(
-        '生成算子工程参数',
+        'createOpsByPrototype: 生成算子工程完成',
         {
           ops_prototype_file: params.opsPrototypeFile,
           project_id: pm.projectId,
           op_type: params.opType,
+          result,
         },
-        result,
       );
 
       vscode.window.showInformationMessage(`新建算子文件成功`);
       await pm.checkVscode();
     } catch (e) {
+      console.error('createOpsByPrototype: 创建算子失败', e);
       vscode.window.showErrorMessage(
         `新建算子文件失败 ${e instanceof Error ? e.message : ''}`,
       );
+      throw e; // 重新抛出错误，让调用者知道失败
     }
   }
 
@@ -137,19 +151,19 @@ export class ProjectService {
   /**
    * 获取项目脚本
    */
-  async getProjectSH(): Promise<Record<string, unknown>> {
+  async getProjectSH(): Promise<string> {
     const pm = ProjectManager.getInstance();
 
     await pm.ensureProjectId();
     const projectId = pm.projectId;
 
     if (!projectId) {
-      return {};
+      return '';
     }
 
     const project = getProjectById(Number(projectId));
 
-    return { projectSH: project?.ascend_env_script || '' };
+    return project?.ascend_env_script || '';
   }
 }
 

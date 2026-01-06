@@ -313,17 +313,18 @@ const customRow = (record: QuestionData) => {
   };
 };
 
-const handleJumpToFile = async (data: QuestionData) => {
-  if (!data.fileLink || data.row === undefined || data.col === undefined) {
+const handleJumpToFile = async (data: QuestionData | Record<string, any>) => {
+  const questionData = data as QuestionData;
+  if (!questionData.fileLink || questionData.row === undefined || questionData.col === undefined) {
     console.warn('无法跳转：缺少必要的文件信息');
 
     return;
   }
   try {
     await jumpToFileWebview({
-      fileLink: data.fileLink,
-      row: data.row,
-      col: data.col,
+      fileLink: questionData.fileLink,
+      row: questionData.row,
+      col: questionData.col,
     });
   } catch (error) {
     console.error('跳转到文件失败:', error);

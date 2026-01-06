@@ -18,9 +18,9 @@ interface GenerateStructureParams {
   ops_prototype_file?: string;
 }
 
-export function generateStructure(
+export async function generateStructure(
   data: GenerateStructureParams,
   extensionPath: string,
-): number {
-  return model.generateStructure(data, extensionPath);
+): Promise<number> {
+  return await model.generateStructure(data, extensionPath);
 }

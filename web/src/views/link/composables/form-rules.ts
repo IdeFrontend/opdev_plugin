@@ -86,7 +86,7 @@ export class FormRulesFactory {
   /**
    * 生成完整的表单校验规则
    */
-  static createFormRules() {
+  static createFormRules(): Record<string, Array<{ required?: boolean; message?: string; trigger?: string; validator?: (_rule: unknown, value: string) => Promise<void> }>> {
     return {
       projectPath: this.createProjectPathRule(),
       projectName: this.createProjectNameRule(),

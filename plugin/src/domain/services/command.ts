@@ -75,7 +75,8 @@ export function getBuildOpCommand(config_id: number, compileOption?: string) {
   try {
     const { config, operator, sourceCannCmd, cdCmd } =
       getCommandContext(config_id);
-    const advance_cmd = getAdvanceCmd(config.user_options?.advance_param);
+    const userOptions = config.user_options as Record<string, unknown> | null | undefined;
+    const advance_cmd = getAdvanceCmd(userOptions?.advance_param);
 
     if (!operator || operator.op_type !== 'ascend') {
       const cmd = new Command(config.script || '');
@@ -155,7 +156,8 @@ export function getBuildExampleCommand(
   try {
     const { config, operator, sourceCannCmd, cdCmd } =
       getCommandContext(config_id);
-    const advance_cmd = getAdvanceCmd(config.user_options?.advance_param);
+    const userOptions = config.user_options as Record<string, unknown> | null | undefined;
+    const advance_cmd = getAdvanceCmd(userOptions?.advance_param);
 
     if (!operator || operator.op_type !== 'ascend') {
       const cmd = new Command(config.script || '');
@@ -314,24 +316,26 @@ export function getSanitizerCommand(
     }
 
     // 处理配置选项
-    const options = sanitizerConfig.user_options || {};
-    const tools = Object.keys(options.tool || {}).filter(
-      (key) => options.tool[key],
+    const options = (sanitizerConfig.user_options as Record<string, unknown> | null | undefined) || {};
+    const toolOptions = (options.tool as Record<string, unknown> | undefined) || {};
+    const tools = Object.keys(toolOptions).filter(
+      (key) => toolOptions[key],
     );
 
     mssanitizer.addOption('tool', tools);
 
-    if (options.tool?.memcheck) {
-      Object.keys(options.memcheckOption || {}).forEach((key) => {
-        if (options.memcheckOption[key]) {
+    if (toolOptions.memcheck) {
+      const memcheckOptions = (options.memcheckOption as Record<string, unknown> | undefined) || {};
+      Object.keys(memcheckOptions).forEach((key) => {
+        if (memcheckOptions[key]) {
           mssanitizer.addOption(key, 'yes');
         }
       });
     }
 
-    mssanitizer.addOption('log-level', options.logLevel);
-    mssanitizer.addOption('max-debuglog-size', options.maxDebuglogSize);
-    mssanitizer.addOption('block-id', options.blockId);
+    mssanitizer.addOption('log-level', options.logLevel as string | undefined);
+    mssanitizer.addOption('max-debuglog-size', options.maxDebuglogSize as string | undefined);
+    mssanitizer.addOption('block-id', options.blockId as string | number | undefined);
     mssanitizer.addOption(
       'log-file',
       `./.vscode/mindstudio_sanitizer_log/mssanitizer_${new Date().valueOf()}.log`,

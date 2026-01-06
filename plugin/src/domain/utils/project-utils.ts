@@ -11,7 +11,10 @@ export async function ensureLaunchJsonExists(
   op_path: string | undefined,
   create_by?: string | null,
 ) {
+  console.log('ensureLaunchJsonExists 被调用，op_path:', op_path, 'create_by:', create_by);
+  
   if (!op_path || typeof op_path !== 'string') {
+    console.warn('ensureLaunchJsonExists: op_path 无效，跳过创建配置文件');
     return;
   }
 
@@ -19,26 +22,45 @@ export async function ensureLaunchJsonExists(
   const vscodeDir = path.join(projectDir, '.vscode');
   const devtoolConfigPath = path.join(vscodeDir, 'devtool_config.json');
 
+  console.log('ensureLaunchJsonExists: 项目目录:', projectDir);
+  console.log('ensureLaunchJsonExists: .vscode 目录:', vscodeDir);
+  console.log('ensureLaunchJsonExists: 配置文件路径:', devtoolConfigPath);
+
   if (!fs.existsSync(projectDir)) {
+    console.error('ensureLaunchJsonExists: 项目目录不存在:', projectDir);
     const e = new Error('project_dir不存在');
 
     (e as Error & { name: string }).name = 'InvalidRequest';
     throw e;
   }
-  if (fs.existsSync(devtoolConfigPath)) return;
+  
+  if (fs.existsSync(devtoolConfigPath)) {
+    console.log('ensureLaunchJsonExists: 配置文件已存在，跳过创建');
+    return;
+  }
+  
+  console.log('ensureLaunchJsonExists: 创建 .vscode 目录...');
   await fs.ensureDir(vscodeDir);
-  // await fs.writeFile(launchJsonPath, JSON.stringify(debugLaunch, null, 2), 'utf-8');
+  console.log('ensureLaunchJsonExists: .vscode 目录创建成功');
+  
   // 创建 devtool_config.json 文件
   const devtoolConfig = { type: create_by || '1' };
 
-  console.log('生成了devtool_config.json');
+  console.log('ensureLaunchJsonExists: 创建 devtool_config.json 文件...');
   await fs.writeFile(
     devtoolConfigPath,
     JSON.stringify(devtoolConfig, null, 2),
     'utf-8',
   );
-  console.log('执行了');
-  await exportEnvToFile(projectDir);
+  console.log('ensureLaunchJsonExists: devtool_config.json 文件创建成功');
+  
+  try {
+    await exportEnvToFile(projectDir);
+    console.log('ensureLaunchJsonExists: 环境变量导出完成');
+  } catch (error) {
+    console.error('ensureLaunchJsonExists: 环境变量导出失败:', error);
+    // 环境变量导出失败不影响配置文件创建
+  }
 }
 
 export function getDefaultDirectory(): string {

@@ -33,7 +33,7 @@ export class ConfigService {
    */
   async saveBuildConfig(params: SaveBuildConfigParams): Promise<void> {
     try {
-      await postConfig('build', params.data);
+      await postConfig('build', params.data as unknown[]);
       if (params.showMessage) {
         vscode.window.showInformationMessage(`保存编译配置成功`);
       }
@@ -46,7 +46,7 @@ export class ConfigService {
    * 保存配置（仿真/上板）
    */
   async saveConfig(params: SaveConfigParams): Promise<void> {
-    await postConfig(params.type, params.data);
+    await postConfig(params.type, params.data as unknown[]);
     if (params.showMessage) {
       vscode.window.showInformationMessage(`保存配置成功`);
     }
@@ -54,26 +54,44 @@ export class ConfigService {
 
   /**
    * 检查 devtool_config.json 配置文件是否存在
+   * 优先检查 ProjectManager 中的项目路径，如果不存在则检查当前工作区
    */
   async checkDevtoolConfig(): Promise<boolean> {
-    const workspaceFolders = vscode.workspace.workspaceFolders;
+    const pm = ProjectManager.getInstance();
+    
+    // 优先使用 ProjectManager 的项目路径
+    const projectInfo = pm.getProjectInfo();
+    let checkPath: string | undefined;
+    
+    if (projectInfo?.path) {
+      checkPath = projectInfo.path;
+      console.log('checkDevtoolConfig: 使用 ProjectManager 项目路径:', checkPath);
+    } else {
+      // 回退到工作区路径
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (workspaceFolders && workspaceFolders.length > 0) {
+        checkPath = workspaceFolders[0].uri.fsPath;
+        console.log('checkDevtoolConfig: 使用工作区路径:', checkPath);
+      }
+    }
 
-    if (!workspaceFolders || workspaceFolders.length === 0) {
+    if (!checkPath) {
+      console.log('checkDevtoolConfig: 没有可用的路径，返回 false');
       return false;
     }
 
-    const workspacePath = workspaceFolders[0].uri.fsPath;
     const devtoolConfigPath = path.join(
-      workspacePath,
+      checkPath,
       '.vscode',
       'devtool_config.json',
     );
 
     try {
-      return fs.existsSync(devtoolConfigPath);
+      const exists = fs.existsSync(devtoolConfigPath);
+      console.log('checkDevtoolConfig: 配置文件路径:', devtoolConfigPath, '存在:', exists);
+      return exists;
     } catch (error) {
       console.error('检查 devtool_config.json 文件时出错:', error);
-
       return false;
     }
   }
@@ -85,7 +103,10 @@ export class ConfigService {
     const projectId = ProjectManager.getInstance().projectId;
     const config = getConfig(Number(projectId), CONFIG_TYPES.SANITIZER);
 
-    return [...config] as BuildConfig[];
+    return config.map((c) => ({
+      ...c,
+      user_options: c.user_options ? (c.user_options as Record<string, unknown>) : undefined,
+    })) as BuildConfig[];
   }
 
   /**
@@ -98,7 +119,7 @@ export class ConfigService {
       await postConfig(CONFIG_TYPES.SANITIZER, [
         {
           ...formData,
-          user_options: { ...formData.user_options, ...params.data },
+          user_options: { ...(formData.user_options || {}), ...(params.data as Record<string, unknown>) },
         },
       ]);
       if (params.showMessage) {
