@@ -1,7 +1,7 @@
 // 导出所有 webview 相关的 API 模块
 export * from './home';
 
-export * from './Link';
+export * from './link';
 
 export * from './config';
 
@@ -13,4 +13,4 @@ export * from './ms-sanitizer-panel-view';
 
 export * from './performance-run-data';
 
-export * from './Welcome';
+export * from './welcome';
