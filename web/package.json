@@ -11,12 +11,12 @@
   },
   "dependencies": {
     "@ant-design/icons-vue": "^7.0.1",
+    "@mstt/shared": "workspace:*",
     "ant-design-vue": "^4.2.6",
     "axios": "^1.13.2",
     "i18next": "^25.7.2",
     "lodash-es": "^4.17.22",
-    "vue": "^3.5.22",
-    "@mstt/shared": "workspace:*"
+    "vue": "^3.5.22"
   },
   "devDependencies": {
     "@types/node": "^24.6.0",
@@ -29,6 +29,7 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "typescript": "~5.9.3",
+    "unplugin-vue-components": "^30.0.0",
     "vite": "npm:rolldown-vite@7.1.14",
     "vue-tsc": "^3.1.0"
   },

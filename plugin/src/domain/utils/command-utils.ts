@@ -90,6 +90,7 @@ export function generateChmodCommand(
   }
 
   const parts: string[] = [];
+
   if (mode.read) parts.push('r');
   if (mode.write) parts.push('w');
   if (mode.execute) parts.push('x');
@@ -99,6 +100,7 @@ export function generateChmodCommand(
   }
 
   const modeStr = '+' + parts.join('');
+
   return `chmod ${modeStr} ${file}`;
 }
 
@@ -124,22 +126,23 @@ export function getExecutableCommand(
  * 支持 a b --key=value 形式的命令生成
  */
 export class Command {
-  private _options: Record<string, any> = {};
+  private _options: Record<string, unknown> = {};
   private _subCommand: Command | null = null;
   private _args: string[] = [];
 
   constructor(
     public name: string,
     private config?: CommandStringConfig,
-  ) {}
+  ) { }
 
   /**
    * 添加选项参数
    * @param key 参数名
    * @param value 参数值
    */
-  public addOption(key: string, value: any): Command {
+  public addOption(key: string, value: unknown): Command {
     this._options[key] = value;
+
     return this;
   }
 
@@ -147,8 +150,9 @@ export class Command {
    * 批量添加选项
    * @param options 选项对象
    */
-  public addOptions(options: Record<string, any>): Command {
+  public addOptions(options: Record<string, unknown>): Command {
     Object.assign(this._options, options);
+
     return this;
   }
 
@@ -160,6 +164,7 @@ export class Command {
     if (arg) {
       this._args.push(arg);
     }
+
     return this;
   }
 
@@ -170,9 +175,11 @@ export class Command {
   public setSubCommand(cmd: Command | string): Command {
     if (typeof cmd === 'string') {
       this._subCommand = new Command(cmd);
+
       return this._subCommand;
     }
     this._subCommand = cmd;
+
     return cmd;
   }
 
@@ -183,7 +190,9 @@ export class Command {
    */
   public sub(name: string, config?: CommandStringConfig): Command {
     const subCmd = new Command(name, config);
+
     this._subCommand = subCmd;
+
     return subCmd;
   }
 
@@ -194,7 +203,14 @@ export class Command {
     const parts = [this.name];
 
     // 1. 自身的选项
-    const optionsStr = objectToCommandString(this._options, this.config);
+    const optionsStr = objectToCommandString(
+      this._options as Record<
+        string,
+        string | number | boolean | (string | number)[]
+      >,
+      this.config,
+    );
+
     if (optionsStr) parts.push(optionsStr);
 
     // 2. 位置参数
@@ -209,19 +225,21 @@ export class Command {
   }
 }
 
-
 /**
  * 处理高级参数
  * @param advance_param 高级参数数组
  * @returns 格式化后的参数字符串
  */
-export function getAdvanceCmd(advance_param: any): string {
-  if (!Array.isArray(advance_param) || !advance_param.length) {
+export function getAdvanceCmd(advance_param: unknown): string {
+  if (
+    !Array.isArray(advance_param) ||
+    !advance_param.length
+  ) {
     return '';
   }
 
-  return advance_param
-    .filter((item: any) => item.name)
-    .map((item: any) => `--${item.name}${item.value ? `=${item.value}` : ''}`)
+  return (advance_param as Array<{ name: string; value: string }>)
+    .filter((item) => item.name)
+    .map((item) => `--${item.name}${item.value ? `=${item.value}` : ''}`)
     .join(' ');
 }

@@ -43,27 +43,6 @@ export class ProjectManager {
   }
 
   /**
-   * 获取项目名称
-   */
-  public get projectName(): string | undefined {
-    return this._projectName;
-  }
-
-  /**
-   * 获取项目路径
-   */
-  public get projectPath(): string | undefined {
-    return this._projectPath;
-  }
-
-  /**
-   * 获取当前任务执行器
-   */
-  public get currentExecutor(): CommandExecutor | null {
-    return this._currentExecutor;
-  }
-
-  /**
    * 获取或创建任务执行器
    * 如果当前没有执行器，则创建一个新的
    * @returns {CommandExecutor} 任务执行器
@@ -83,27 +62,6 @@ export class ProjectManager {
   public clearExecutor(): void {
     this._currentExecutor = null;
   }
-
-  /**
-   * 停止当前正在执行的任务
-   * 如果有正在运行的 executor，调用其 kill 方法并重置
-   */
-  public async stopTask(): Promise<void> {
-    if (this._currentExecutor) {
-      try {
-        this._currentExecutor.kill();
-        this._currentExecutor = null;
-        vscode.window.showInformationMessage('任务已停止');
-      } catch (e) {
-        vscode.window.showErrorMessage(
-          `停止任务失败: ${e instanceof Error ? e.message : ''}`,
-        );
-      }
-    } else {
-      vscode.window.showWarningMessage('当前没有正在执行的任务');
-    }
-  }
-
   /**
    * 获取项目信息
    * 优先使用传入参数，其次使用缓存信息，最后尝试从工作区获取
@@ -175,7 +133,6 @@ export class ProjectManager {
       ascend_env_script,
     });
 
-    // console.log('projectRes', projectRes);
     this._projectId = String(projectRes);
 
     return this._projectId;

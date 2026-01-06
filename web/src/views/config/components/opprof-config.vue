@@ -15,6 +15,7 @@ const props = defineProps({
     default: '',
   },
 });
+console.log('props', props);
 
 // 使用 composables 管理配置数据和逻辑
 const {
@@ -51,7 +52,7 @@ defineExpose({ init });
         tab="仿真"
       >
         <SimulationTab
-          :simulation-data="simulationData"
+          v-model:simulation-data="simulationData"
           :update-index="updateIndex"
           @add-advanced-param="addAdvancedSimulateParam"
           @delete-advanced-param="deleteAdvancedSimulateParam"
@@ -64,7 +65,7 @@ defineExpose({ init });
         tab="上板"
       >
         <OnboardTab
-          :onboard-data="onboardData"
+          v-model:onboard-data="onboardData"
           :update-index="updateIndex"
           @select-all="handleSelectAll"
           @memory-analysis-change="handleMemoryAnalysisChange"

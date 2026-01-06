@@ -22,7 +22,7 @@ export const msSanitizerMethods = {
    * 打开异常检测数据面板
    * @param params - 参数
    */
-  openPanel(params: any) {
+  openPanel(params: unknown) {
     viewService.openMsSanitizerPanelView(params);
   },
 };

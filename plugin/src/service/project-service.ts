@@ -19,7 +19,8 @@ export class ProjectService {
    * 获取 ExtensionContext
    */
   private getContext(): vscode.ExtensionContext {
-    return (globalThis as any).extensionContext as vscode.ExtensionContext;
+    return (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
+      .extensionContext;
   }
 
   /**
@@ -136,7 +137,7 @@ export class ProjectService {
   /**
    * 获取项目脚本
    */
-  async getProjectSH(): Promise<any> {
+  async getProjectSH(): Promise<Record<string, unknown>> {
     const pm = ProjectManager.getInstance();
 
     await pm.ensureProjectId();

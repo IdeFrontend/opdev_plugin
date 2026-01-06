@@ -6,11 +6,10 @@
 
 <script setup>
 import { FolderOutlined } from '@ant-design/icons-vue';
-import { ref, nextTick } from 'vue';
+import { ref, nextTick, watch } from 'vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import { saveConfig as saveConfigAPI, openExternalLink } from '@/apis';
 import EditTable from './edit-table.vue';
-import SelectFolder from './select-folder.vue';
 
 const props = defineProps({
   simulationData: {
@@ -23,12 +22,32 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['addAdvancedParam', 'deleteAdvancedParam']);
+const localSimulationData = ref({});
+
+watch(
+  () => props.simulationData,
+  (val) => {
+    localSimulationData.value = { ...val };
+  },
+  { immediate: true, deep: true }
+);
+
+const emit = defineEmits([
+  'addAdvancedParam',
+  'deleteAdvancedParam',
+  'update:simulationData',
+]);
+console.log('emit', emit);
+
+const handleSimulationDataChange = () => {
+  emit('update:simulationData', localSimulationData.value);
+  saveConfig();
+};
 
 const saveConfig = async () => {
   const obj = {
-    config_id: props.simulationData.config_id,
-    user_options: { ...props.simulationData.user_options },
+    config_id: localSimulationData.value.config_id,
+    user_options: { ...localSimulationData.value.user_options },
   };
 
   await saveConfigAPI({
@@ -84,8 +103,8 @@ const jumpToGuide = () => {
         </div>
         附加选项：
         <a-checkbox
-          v-model:checked="simulationData.user_options.PMSampling"
-          @change="saveConfig"
+          v-model:checked="localSimulationData.user_options.PMSampling"
+          @change="handleSimulationDataChange"
         >
           内存通路吞吐率波形子图
         </a-checkbox>
@@ -95,30 +114,12 @@ const jumpToGuide = () => {
       <div class="nested-checkbox-group">
         附加选项：
         <a-checkbox
-          v-model:checked="simulationData.user_options.ResourceConflictRatio"
-          @change="saveConfig"
+          v-model:checked="localSimulationData.user_options.ResourceConflictRatio"
+          @change="handleSimulationDataChange"
         >
           资源冲突占比指标
         </a-checkbox>
       </div>
-
-      <!-- <div class="section-title" style="margin-top: 12px;">模式</div>
-      <a-form-item>
-        <a-checkbox v-model:checked="simulationData.user_options.downloadToLocal" @change="saveConfig">
-          下载数据到本地
-        </a-checkbox>
-      </a-form-item>
-      <div class="section-title" style="margin-bottom: 8px;">数据存放位置</div>
-      <a-form-item>
-        <SelectFolder v-model="simulationData.user_options.dataStoragePath" placeholder="请选择数据存放位置" />
-      </a-form-item>
-      <a-form-item>
-        <a-tooltip placeholder="topLeft" title="暂不支持，敬请期待">
-          <a-checkbox :checked="false" disabled>
-            平台内渲染结果
-          </a-checkbox>
-        </a-tooltip>
-      </a-form-item> -->
 
       <a-collapse
         v-model:active-key="activeKey"
@@ -141,24 +142,19 @@ const jumpToGuide = () => {
           </div>
           <a-form-item>
             <a-input
-              v-model:value="simulationData.user_options.simulatorType"
+              v-model:value="localSimulationData.user_options.simulatorType"
               placeholder="请输入仿真器类型"
-              @change="saveConfig"
+              @change="handleSimulationDataChange"
             />
           </a-form-item>
-
-          <!-- <div class="section-title" style="margin-top: 12px;">控制仿真器dump文件是否生成</div>
-          <a-form-item>
-            <a-switch v-model:checked="simulationData.user_options.enableDump" @change="saveConfig" />
-          </a-form-item> -->
 
           <EditTable
             :key="updateIndex"
             class="add-params"
-            :data-source="simulationData.user_options.advance_param"
+            :data-source="localSimulationData.user_options.advance_param"
             @add-table-item="addTableItem"
             @delete-table-item="deleteTableItem"
-            @on-change="saveConfig"
+            @on-change="handleSimulationDataChange"
           />
         </a-collapse-panel>
       </a-collapse>

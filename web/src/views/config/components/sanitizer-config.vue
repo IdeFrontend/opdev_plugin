@@ -19,6 +19,7 @@ const props = defineProps({
     default: '',
   },
 });
+console.log('props', props);
 
 const form = ref({
   tool: {
@@ -39,19 +40,21 @@ const form = ref({
   blockId: null, // 单block检测的blockId,0 - 200
 });
 
-function isUseBlock(val) {
+function isUseBlock() {
   form.value.blockId = null;
   saveSanitizerForm();
 }
 
 // 处理 Device侧内存检测 和 CANN软件栈内存检测 互斥
-function handleDeviceHeapChange(checked) {
+function _handleDeviceHeapChange(checked) {
+  console.log('handleDeviceHeapChange', checked);
   if (checked) {
     form.value.memcheckOption['check-cann-heap'] = false;
   }
 }
 
-function handleCannHeapChange(checked) {
+function _handleCannHeapChange(checked) {
+  console.log('handleCannHeapChange', checked);
   if (checked) {
     form.value.memcheckOption['check-device-heap'] = false;
   }

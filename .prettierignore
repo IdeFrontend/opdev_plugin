@@ -1,0 +1,23 @@
+# From .gitignore
+.idea
+plugins/mindstudio-vscode-plugins/mindstudio-opsuite-vscode-plugin/.vscode
+.vscode-test-web
+
+dist
+node_modules
+out
+package-lock.json
+tsconfig.tsbuildinfo
+
+.vscode
+.claude
+CLAUDE.local.md
+huawei-op-devtools-vscode-plugin-**.vsix
+deletePackage.bat
+deletePackage.js
+package.bat
+package.js
+huawei-op-devtools-vscode-plugin*
+
+# User request
+pnpm-lock.yaml

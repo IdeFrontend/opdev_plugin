@@ -1,9 +1,17 @@
 import { downloadData, deleteNode } from '@/apis';
 
+export interface TreeNodeData {
+  key: string;
+  title?: string;
+  filePath?: string;
+  children?: TreeNodeData[];
+  [key: string]: unknown;
+}
+
 /**
  * 下载数据到本地
  */
-export const handleDownload = async (nodeData: any) => {
+export const handleDownload = async (nodeData: TreeNodeData) => {
   // 根据节点类型确定文件路径
   let filePath = '';
 
@@ -28,7 +36,7 @@ export const handleDownload = async (nodeData: any) => {
 /**
  * 删除节点
  */
-export const handleDelete = async (nodeData: any) => {
+export const handleDelete = async (nodeData: TreeNodeData) => {
   console.log('删除节点:', nodeData.key);
   try {
     await deleteNode({

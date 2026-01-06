@@ -1,9 +1,11 @@
+import type { Ref } from 'vue';
+
 /**
  * 消息数据接口
  */
 export interface MessageData {
   command: string;
-  data?: any;
+  data?: unknown;
 }
 
 /**
@@ -15,8 +17,6 @@ export interface MessageHandlerContext {
   projectPath: { projectPath: string };
   isPathSetFromContextMenu: Ref<boolean>;
 }
-
-import type { Ref } from 'vue';
 
 /**
  * 消息处理策略接口
@@ -35,7 +35,7 @@ export class SetHomeMessageHandlerStrategy implements MessageHandlerStrategy {
   }
 
   handle(message: MessageData, context: MessageHandlerContext): void {
-    const obj = message.data || '/home/developer';
+    const obj = (message.data as string) || '/home/developer';
 
     context.homePath.value = obj;
     if (
@@ -62,7 +62,7 @@ export class SetProjectPathMessageHandlerStrategy implements MessageHandlerStrat
 
   handle(message: MessageData, context: MessageHandlerContext): void {
     if (message.data) {
-      context.projectPath.projectPath = message.data;
+      context.projectPath.projectPath = message.data as string;
       context.isPathSetFromContextMenu.value = true;
     }
   }
@@ -78,7 +78,7 @@ export class SetLastProjectPathMessageHandlerStrategy implements MessageHandlerS
 
   handle(message: MessageData, context: MessageHandlerContext): void {
     if (!context.isPathSetFromContextMenu.value && message.data) {
-      context.projectPath.projectPath = message.data;
+      context.projectPath.projectPath = message.data as string;
     }
   }
 }
@@ -92,7 +92,7 @@ export class SetWorkspaceMessageHandlerStrategy implements MessageHandlerStrateg
   }
 
   handle(message: MessageData, context: MessageHandlerContext): void {
-    context.workspacePath.value = message.data || null;
+    context.workspacePath.value = (message.data as string) || null;
     if (
       context.workspacePath.value &&
       !context.isPathSetFromContextMenu.value

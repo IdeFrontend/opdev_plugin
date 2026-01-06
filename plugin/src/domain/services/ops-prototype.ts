@@ -41,9 +41,9 @@ async function generateOpsPrototypeJson(
     const prototypeJson = await fs.readJson(opsPrototypeJsonPath);
 
     if (Array.isArray(prototypeJson) && prototypeJson.length > 0) {
-      (prototypeJson as any)[0]['op'] = opName;
+      (prototypeJson as Record<string, unknown>[])[0]['op'] = opName;
     } else if (typeof prototypeJson === 'object') {
-      (prototypeJson as any)['op'] = opName;
+      (prototypeJson as Record<string, unknown>)['op'] = opName;
     }
 
     await fs.writeJson(opsPath, prototypeJson, { spaces: 4, encoding: 'utf8' });
@@ -51,7 +51,7 @@ async function generateOpsPrototypeJson(
     console.info(`✓ 成功创建 json: ${path.basename(opsPath)}`);
 
     return opsPath;
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error(`✗ 处理ops_prototype.json失败: ${e}`);
     throw e;
   }
@@ -63,7 +63,7 @@ export async function generateOpsPrototype(
   prototype_name = 'add_custom',
   extensionPath: string,
 ): Promise<string> {
-  const project = getProjectById(project_id as any);
+  const project = getProjectById(project_id);
 
   if (!project)
     throw Object.assign(new Error('project not found'), {

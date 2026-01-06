@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 
-import { FormAttribute } from './types';
+import { FormAttribute, FormAttributeType } from './types';
 import AttrController from './components/attr-controller.vue';
 
-const mockSchema: FormAttribute<any>[] = [
+const mockSchema: FormAttribute<FormAttributeType>[] = [
   {
     key: 'test1',
     type: 'string',
@@ -36,7 +36,7 @@ const mockSchema: FormAttribute<any>[] = [
   },
 ];
 
-const formModel = ref<any>({});
+const formModel = ref<Record<string, unknown>>({});
 </script>
 
 <template>

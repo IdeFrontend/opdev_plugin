@@ -1,4 +1,4 @@
-import { ConfigRecord } from '../models/configModel';
+import { ConfigRecord } from '../models/config-model';
 import { OpRecord } from '../models/model';
 import { Command, getAdvanceCmd } from '../utils/command-utils';
 
@@ -98,7 +98,7 @@ export class OnBoardStrategy implements ProfilerCommandStrategy {
   /**
    * 获取上板图形参数指标
    */
-  private getOnBoardMetrics(obj: any): string[] {
+  private getOnBoardMetrics(obj: Record<string, boolean>): string[] {
     const basicMetrics = [
       'Occupancy',
       'Roofline',

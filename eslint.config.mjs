@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import eslint from '@eslint/js';
 import { defineConfig } from 'eslint/config';
 import configPrettier from 'eslint-config-prettier';
@@ -8,6 +9,24 @@ import oxlint from 'eslint-plugin-oxlint';
 import stylistic from '@stylistic/eslint-plugin';
 
 export default defineConfig([
+  {
+    ignores: [
+      'out/',
+      'dist/',
+      '**/dist/',
+      '**/out/',
+      '**/node_modules/',
+      '**/.idea/',
+      '**/.vscode/',
+      '**/.vscode-test-web/',
+      '**/pnpm-lock.yaml',
+      '**/package-lock.json',
+      '**/tsconfig.tsbuildinfo',
+      '**/*.vsix',
+      'deletePackage.js',
+      'package.js',
+    ],
+  },
   ...typescriptEslint.configs.recommended,
   {
     plugins: {

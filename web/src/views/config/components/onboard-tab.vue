@@ -9,7 +9,6 @@ import { ref, computed, watch, nextTick } from 'vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import editTable from './edit-table.vue';
 import { saveConfig as saveConfigAPI, openExternalLink } from '@/apis';
-import SelectFolder from './select-folder.vue';
 
 const props = defineProps({
   onboardData: {
@@ -22,6 +21,16 @@ const props = defineProps({
   },
 });
 
+const localOnboardData = ref({});
+
+watch(
+  () => props.onboardData,
+  (val) => {
+    localOnboardData.value = { ...val };
+  },
+  { immediate: true, deep: true }
+);
+
 // Advanced collapse panel - default open
 const advancedCollapseActiveKey = ref(['1']);
 
@@ -31,7 +40,14 @@ const emit = defineEmits([
   'operatorPerformanceChange',
   'addAdvancedParam',
   'deleteAdvancedParam',
+  'update:onboardData',
 ]);
+
+const handleOnboardDataChange = () => {
+  emit('update:onboardData', localOnboardData.value);
+  saveConfig();
+};
+console.log('handleOnboardDataChange', handleOnboardDataChange);
 
 const addTableItem = () => {
   emit('addAdvancedParam');
@@ -85,8 +101,8 @@ const performanceSelectedAll = ref(true);
 // 内存分析图，这组半选
 const memorySelectedHalf = computed(() => {
   if (
-    props.onboardData.user_options.Occupancy &&
-    props.onboardData.user_options.Roofline
+    localOnboardData.value.user_options?.Occupancy &&
+    localOnboardData.value.user_options?.Roofline
   ) {
     return false;
   }
@@ -108,7 +124,7 @@ const performanceSelectedHalf = computed(() => {
   ];
 
   keyArray.forEach((key) => {
-    if (props.onboardData.user_options[key]) {
+    if (localOnboardData.value.user_options?.[key]) {
       count += 1;
     }
   });
@@ -134,7 +150,7 @@ const totalSelectedHalf = computed(() => {
   ];
 
   totalKeys.forEach((key) => {
-    if (props.onboardData.user_options[key]) {
+    if (localOnboardData.value.user_options?.[key]) {
       count += 1;
     }
   });
@@ -144,8 +160,8 @@ const totalSelectedHalf = computed(() => {
 
 const saveConfig = async () => {
   const obj = {
-    config_id: props.onboardData.config_id,
-    user_options: { ...props.onboardData.user_options },
+    config_id: localOnboardData.value.config_id,
+    user_options: { ...localOnboardData.value.user_options },
   };
 
   await saveConfigAPI({
@@ -156,11 +172,13 @@ const saveConfig = async () => {
 
 // 组内选项全部选中时，自动选上“全选”
 watch(
-  () => props.onboardData.user_options,
+  () => localOnboardData.value.user_options,
   () => {
+    if (!localOnboardData.value.user_options) return;
+
     memorySelectedAll.value =
-      props.onboardData.user_options.Occupancy &&
-      props.onboardData.user_options.Roofline;
+      localOnboardData.value.user_options.Occupancy &&
+      localOnboardData.value.user_options.Roofline;
 
     let count = 0;
     const keyArray = [
@@ -174,7 +192,7 @@ watch(
     ];
 
     keyArray.forEach((key) => {
-      if (props.onboardData.user_options[key]) {
+      if (localOnboardData.value.user_options[key]) {
         count += 1;
       }
     });
@@ -183,8 +201,8 @@ watch(
     totalSelectedAll.value =
       memorySelectedAll.value &&
       performanceSelectedAll.value &&
-      props.onboardData.user_options.Source &&
-      props.onboardData.user_options.MemoryDetail;
+      localOnboardData.value.user_options.Source &&
+      localOnboardData.value.user_options.MemoryDetail;
   },
   { deep: true, immediate: true },
 );

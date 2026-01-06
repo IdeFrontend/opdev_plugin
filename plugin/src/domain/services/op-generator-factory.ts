@@ -138,7 +138,7 @@ class BaseOpGenerator {
             }
           }
           if (changed) fs.writeFileSync(full, content, 'utf8');
-        } catch (e) {
+        } catch {
           // skip binary or unreadable files
         }
       }
@@ -171,7 +171,7 @@ class AscendOpGenerator extends BaseOpGenerator {
         path.basename(this.project.project_path);
 
       return this.op_name!;
-    } catch (e) {
+    } catch {
       throw Object.assign(new Error('Invalid op prototype'), {
         name: 'InvalidRequest',
       });

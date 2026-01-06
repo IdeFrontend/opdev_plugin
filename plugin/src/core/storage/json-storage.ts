@@ -38,10 +38,6 @@ export class JsonStorage {
     }
   }
 
-  public exists(): boolean {
-    return fs.existsSync(this.filePath);
-  }
-
   public delete(): void {
     if (fs.existsSync(this.filePath)) {
       fs.removeSync(this.filePath);

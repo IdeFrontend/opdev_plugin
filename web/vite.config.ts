@@ -1,4 +1,6 @@
 import vue from '@vitejs/plugin-vue';
+import Components from 'unplugin-vue-components/vite';
+import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers';
 import path from 'path';
 import fs from 'fs';
 import { defineConfig } from 'vite';
@@ -13,6 +15,7 @@ export default defineConfig(({ mode }) => {
   const entries = fs.readdirSync(viewsDir).filter((entry) => {
     const entryPath = path.join(viewsDir, entry);
     const htmlPath = path.join(entryPath, `${entry}.html`);
+
     return fs.statSync(entryPath).isDirectory() && fs.existsSync(htmlPath);
   });
 
@@ -29,7 +32,17 @@ export default defineConfig(({ mode }) => {
         'shared:': path.resolve(__dirname, '../shared'),
       },
     },
-    plugins: [vue(), debugEntry()],
+    plugins: [
+      vue(),
+      Components({
+        resolvers: [
+          AntDesignVueResolver({
+            importStyle: false, // css in js
+          }),
+        ],
+      }),
+      debugEntry(),
+    ],
     server: {
       cors: true,
     },

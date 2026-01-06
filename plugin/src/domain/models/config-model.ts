@@ -1,8 +1,12 @@
 import path from 'path';
 import config from './config';
-import { JsonStorage } from '../../core/storage/JsonStorage';
+import { JsonStorage } from '../../core/storage/json-storage';
 
-const getDataDir = () => path.join((config as any).workspace_data_dir, 'data');
+const getDataDir = () =>
+  path.join(
+    (config as unknown as { workspace_data_dir: string }).workspace_data_dir,
+    'data',
+  );
 const getConfigsFile = () => path.join(getDataDir(), 'configs.json');
 
 function getStorage() {
@@ -17,7 +21,7 @@ export type ConfigRecord = {
   target_dir?: string | null;
   target_file?: string | null;
   custom_options?: string | null;
-  user_options?: any | null;
+  user_options?: unknown | null;
   project_id: number;
   op: string;
   create_by?: string | null;
@@ -77,12 +81,12 @@ export function getConfig(
   return filtered.map(mapRecordToConfig);
 }
 
-export async function postConfig(config_type: string, dataList: any[]) {
-  const results: any[] = [];
+export async function postConfig(config_type: string, dataList: unknown[]) {
+  const results: unknown[] = [];
   const store = ensureStore();
   const now = new Date().toISOString();
 
-  for (const item of dataList) {
+  for (const item of dataList as any[]) {
     const opVal = item.user_options.op || null;
     const user_options = item.user_options ? item.user_options : null;
 
@@ -147,10 +151,10 @@ export async function postConfig(config_type: string, dataList: any[]) {
     writeStore(store);
 
     return results;
-  } catch (e: any) {
+  } catch (e: unknown) {
     for (const r of results) {
-      r.status = 'failed';
-      r.error = e.message;
+      (r as { status: string; error: string }).status = 'failed';
+      (r as { status: string; error: string }).error = (e as Error).message;
     }
 
     return results;

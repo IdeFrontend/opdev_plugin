@@ -4,9 +4,9 @@ export {
   createProject,
   updateShScript,
   getProjectById,
-} from './models/projectModel';
+} from './models/project-model';
 
-export { generateOpsPrototype } from './services/ops_prototype';
+export { generateOpsPrototype } from './services/ops-prototype';
 
 export { generateStructure } from './services/ops';
 
