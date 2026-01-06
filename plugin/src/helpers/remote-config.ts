@@ -162,7 +162,7 @@ export class RemoteConfig {
     if (path.isAbsolute(keyword)) {
       try {
         const stats = await fs.promises.stat(keyword);
-
+        
         if (stats.isDirectory()) {
           const files = await fs.promises.readdir(keyword);
 
@@ -185,7 +185,7 @@ export class RemoteConfig {
         if (stats.isDirectory()) {
           const files = await fs.promises.readdir(keyword);
           const fullPaths = files.map((file) => path.join(keyword, file));
-
+          
           return {
             type,
             list: fullPaths.map((p) => ({ path: p })),

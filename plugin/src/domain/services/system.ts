@@ -27,7 +27,7 @@ export function getFiles(dirPath: string): FileItem[] {
 
     const items: FileItem[] = [];
     const entries = fs.readdirSync(basePath, { withFileTypes: true });
-
+    
     for (const entry of entries) {
       if (searchKey && !entry.name.includes(searchKey)) {
         continue;

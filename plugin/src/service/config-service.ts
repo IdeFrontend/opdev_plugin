@@ -11,8 +11,7 @@ import {
   RemotePathSearchParams,
   RemotePathSearchResult,
 } from 'shared:/api-types';
-import { postConfig, getConfig } from '../domain';
-import { RemoteConfig } from '../helpers/remote-config';
+import { postConfig, getConfig, getFiles } from '../domain';
 
 const CONFIG_TYPES = {
   SANITIZER: 'sanitizer',
@@ -25,7 +24,8 @@ export class ConfigService {
   async remotePathSearch(
     params: RemotePathSearchParams,
   ): Promise<RemotePathSearchResult> {
-    return await RemoteConfig.searchPath(params);
+    const res = getFiles(params.keyword)
+    return { type: params.type, list: res }
   }
 
   /**
