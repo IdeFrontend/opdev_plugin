@@ -17,7 +17,8 @@
     "baseUrl": ".",
     "paths": {
       "plugin:/*": ["plugin/src/*"],
-      "shared:/*": ["shared/*"]
+      "shared:/*": ["shared/*"],
+      "@shared/*": ["shared/*"]
     }
   },
   "exclude": [
