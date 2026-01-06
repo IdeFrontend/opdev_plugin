@@ -8,3 +8,12 @@ declare module '*.vue' {
 
   export default component;
 }
+
+// 扩展 Window 接口，添加 chrome 属性
+interface Window {
+  chrome?: {
+    webview?: {
+      postMessage: (message: any)=> void;
+    };
+  };
+}

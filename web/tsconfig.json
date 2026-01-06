@@ -15,9 +15,8 @@
     "isolatedModules": true,
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "paths": {
-      "@/*": ["./src/*"],
-      "plugin:/*": ["./types/plugin/*"],
-      "shared:/*": ["../shared/*"]
+      "@web/*": ["./src/*"],
+      "@shared/*": ["../shared/*"]
     }
   },
   "include": [
