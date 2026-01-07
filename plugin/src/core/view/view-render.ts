@@ -33,8 +33,20 @@ export class ViewRenderer extends vscode.Disposable {
 
     if (entryName) {
       // 判断是 panel 还是 sidebar 类型的视图
-      const panelViews = ['config', 'link', 'welcome', 'project-sh', 'ops-config'];
-      const sidebarViews = ['home', 'operate', 'ms-sanitizer-panel-view', 'performance-run-data', 'ms-sanitizer-run-data'];
+      const panelViews = [
+        'config',
+        'link',
+        'welcome',
+        'project-sh',
+        'ops-config',
+      ];
+      const sidebarViews = [
+        'home',
+        'operate',
+        'ms-sanitizer-panel-view',
+        'performance-run-data',
+        'ms-sanitizer-run-data',
+      ];
 
       if (panelViews.includes(entryName)) {
         targetHtmlPath = `src/views/panels/${entryName}/${entryName}.html`;

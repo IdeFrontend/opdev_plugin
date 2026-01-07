@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
+import AdmZip from 'adm-zip';
 import { CommandExecutor } from '@plugin/class/command-options';
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import { projectService } from '@plugin/service/project-service';
@@ -65,13 +67,25 @@ export const welcomeMethods = {
       // 标准算子解压缩
       if (params.createOperatorProjectDictoryFileType === 2) {
         try {
-          await executor.execute(`mkdir -p ${originPath}`, ['File exists']);
+          // 使用 fs.mkdirSync 创建目录（跨平台兼容）
+          if (!fs.existsSync(originPath)) {
+            fs.mkdirSync(originPath, { recursive: true });
+          }
+
           const zipUrl = path.resolve(
             context.extensionPath,
             'out/templates/code_template/op-math/ops-math.zip',
           );
 
-          await executor.execute(`unzip -o ${zipUrl} -d ${originPath}`);
+          // 使用 adm-zip 解压缩（跨平台兼容）
+          try {
+            const zip = new AdmZip(zipUrl);
+
+            zip.extractAllTo(originPath, true);
+          }
+          catch (zipError) {
+            throw new Error(`解压缩失败: ${zipError instanceof Error ? zipError.message : String(zipError)}`);
+          }
         }
         catch (error) {
           throw new Error(`创建标准算子目录失败: ${error instanceof Error ? error.message : String(error)}`);
@@ -79,10 +93,12 @@ export const welcomeMethods = {
       }
 
       try {
-        await executor.execute(
-          `mkdir -p ${params.projectPath}/${params.projectName}`,
-          ['File exists'],
-        );
+        // 使用 fs.mkdirSync 创建目录（跨平台兼容）
+        const projectDir = path.join(params.projectPath, params.projectName);
+
+        if (!fs.existsSync(projectDir)) {
+          fs.mkdirSync(projectDir, { recursive: true });
+        }
       }
       catch (error) {
         throw new Error(`创建工程目录失败: ${error instanceof Error ? error.message : String(error)}`);
@@ -102,7 +118,7 @@ export const welcomeMethods = {
       // 调用 projectService.init (对应旧代码的 OpsAPI.init)
       try {
         await projectService.init({
-          accendEnvScript: params.projectSH,
+          ascendEnvScript: params.projectSH,
           projectPath: params.projectPath,
           projectName: params.projectName,
         });

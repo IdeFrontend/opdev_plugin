@@ -1,7 +1,7 @@
 // 算子操作相关类型定义
 
 export type InitOpsParams = {
-  accendEnvScript?: string;
+  ascendEnvScript?: string;
   projectPath?: string;
   projectName?: string;
 };

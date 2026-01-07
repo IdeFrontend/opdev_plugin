@@ -16,7 +16,7 @@ const buildOptions: esbuild.BuildOptions = {
   format: 'cjs',
   platform: 'node',
   external: ['vscode'],
-  sourcemap: useSourcemap,
+  sourcemap: useSourcemap, // Only enabled with --sourcemap flag
   keepNames: isReadable,
   plugins: [
     {

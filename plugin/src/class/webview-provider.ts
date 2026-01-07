@@ -180,7 +180,13 @@ export class WebviewProvider {
       const distPath = path.join(this.context.extensionPath, 'out', 'web');
 
       // 判断是 panel 还是 sidebar 类型的视图
-      const panelViews = ['config', 'link', 'welcome', 'project-sh', 'ops-config'];
+      const panelViews = [
+        'config',
+        'link',
+        'welcome',
+        'project-sh',
+        'ops-config',
+      ];
       const viewPath = panelViews.includes(router) ? `panels/${router}` : router;
 
       this.panel.webview.html = await HtmlTransformer.transformDistHtml(

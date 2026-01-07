@@ -13,7 +13,10 @@ export class HtmlTransformer {
 
     // 从 router 中提取视图名称（最后一段）
     // 例如: 'sidebars/home' -> 'home', 'panels/config' -> 'config'
-    const viewName = router.includes('/') ? router.split('/').pop()! : router;
+    const viewName = router.includes('/')
+      ? router.split('/')
+        .pop()!
+      : router;
 
     if (devServerUrl) {
       try {

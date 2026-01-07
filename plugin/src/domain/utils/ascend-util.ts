@@ -100,11 +100,13 @@ function refreshSocVersion() {
           encoding: 'utf8',
           shell: 'cmd.exe',
         });
-      } catch (e) {
+      }
+      catch (e) {
         // 如果上面的方法失败,尝试直接执行
         out = child_process.execSync('npu-smi info', { encoding: 'utf8' });
       }
-    } else {
+    }
+    else {
       out = child_process.execSync('npu-smi info', { encoding: 'utf8' });
     }
 

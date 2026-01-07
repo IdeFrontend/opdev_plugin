@@ -12,6 +12,7 @@ import * as os from 'os';
 import {
   spawn, ChildProcess, exec,
 } from 'child_process';
+import AdmZip from 'adm-zip';
 import { NodeWebviewSocketBridge } from './node-webview-socket-bridge';
 import webviewMessageList from './webview-message-list';
 import { CommandExecutor } from './command-options';
@@ -300,45 +301,24 @@ export class InsightDataViewerPanel implements vscode.Disposable {
    */
   private async extractZip(zipPath: string, extractTo: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      // 确保目标目录存在
-      if (!fs.existsSync(extractTo)) {
-        fs.mkdirSync(extractTo, { recursive: true });
-      }
-
-      // 根据平台选择解压命令
-      const platform = os.platform();
-      let command: string;
-
-      if (platform === 'win32') {
-        // Windows 使用 PowerShell 解压
-        command = `powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${extractTo}' -Force"`;
-      }
-      else {
-        // Linux/Unix 使用 unzip 命令
-        command = `unzip -o "${zipPath}" -d "${extractTo}"`;
-      }
-
-      exec(command, (error, stdout, stderr) => {
-        if (error) {
-          console.error(`解压失败: ${error.message}`);
-
-          if (stderr) {
-            console.error(`stderr: ${stderr}`);
-          }
-
-          reject(new Error(`解压失败: ${error.message}`));
-
-          return;
+      try {
+        // 确保目标目录存在
+        if (!fs.existsSync(extractTo)) {
+          fs.mkdirSync(extractTo, { recursive: true });
         }
+
+        // 使用 adm-zip 解压缩（跨平台兼容）
+        const zip = new AdmZip(zipPath);
+
+        zip.extractAllTo(extractTo, true);
 
         console.log(`解压成功: ${zipPath} -> ${extractTo}`);
-
-        if (stdout) {
-          console.log(`解压输出: ${stdout}`);
-        }
-
         resolve();
-      });
+      }
+      catch (error) {
+        console.error(`解压失败: ${error instanceof Error ? error.message : String(error)}`);
+        reject(new Error(`解压失败: ${error instanceof Error ? error.message : String(error)}`));
+      }
     });
   }
 
