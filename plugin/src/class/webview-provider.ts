@@ -100,7 +100,7 @@ export class WebviewProvider {
             webviewView.webview.html = await HtmlTransformer.transformDistHtml(
               distPath,
               webviewView.webview,
-              router,
+              `sidebars/${router}`,
             );
             // 处理Webview消息
             webviewView.webview.onDidReceiveMessage(
@@ -179,10 +179,14 @@ export class WebviewProvider {
     try {
       const distPath = path.join(this.context.extensionPath, 'out', 'web');
 
+      // 判断是 panel 还是 sidebar 类型的视图
+      const panelViews = ['config', 'link', 'welcome', 'project-sh', 'ops-config'];
+      const viewPath = panelViews.includes(router) ? `panels/${router}` : router;
+
       this.panel.webview.html = await HtmlTransformer.transformDistHtml(
         distPath,
         this.panel.webview,
-        router,
+        viewPath,
       );
     }
     catch (error) {

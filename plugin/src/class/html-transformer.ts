@@ -11,9 +11,13 @@ export class HtmlTransformer {
   ): Promise<string> {
     const devServerUrl = process.env.MSTT_DEV_SERVER_URL;
 
+    // 从 router 中提取视图名称（最后一段）
+    // 例如: 'sidebars/home' -> 'home', 'panels/config' -> 'config'
+    const viewName = router.includes('/') ? router.split('/').pop()! : router;
+
     if (devServerUrl) {
       try {
-        const url = `${devServerUrl}/src/views/${router}/${router}.html`;
+        const url = `${devServerUrl}/src/views/${router}/${viewName}.html`;
         const htmlContent = await this.fetchHtml(url);
 
         return this.processDevResourcePaths(htmlContent, devServerUrl, url);
@@ -26,11 +30,11 @@ export class HtmlTransformer {
       }
     }
 
-    const indexPath = path.join(distPath, `src/views/${router}/${router}.html`);
+    const indexPath = path.join(distPath, `src/views/${router}/${viewName}.html`);
 
     try {
       if (!fs.existsSync(indexPath)) {
-        throw new Error(`${router}.html not found in dist directory: ${distPath}`);
+        throw new Error(`${viewName}.html not found in dist directory: ${distPath}, expected path: ${indexPath}`);
       }
 
       let htmlContent = fs.readFileSync(indexPath, 'utf8');

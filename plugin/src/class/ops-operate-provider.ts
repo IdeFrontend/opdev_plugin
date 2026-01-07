@@ -48,7 +48,7 @@ export class OpsOperateProvider implements vscode.WebviewViewProvider {
     webviewView.webview.html = await HtmlTransformer.transformDistHtml(
       distPath,
       webviewView.webview,
-      VIEW_OPERATE,
+      `sidebars/${VIEW_OPERATE}`,
     );
   }
 

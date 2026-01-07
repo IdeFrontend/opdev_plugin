@@ -89,7 +89,25 @@ function refreshAscendEnv() {
 
 function refreshSocVersion() {
   try {
-    const out = child_process.execSync('npu-smi info', { encoding: 'utf8' });
+    // 在Windows上使用chcp 65001设置UTF-8编码以避免乱码
+    const isWindows = process.platform === 'win32';
+    let out: string;
+
+    if (isWindows) {
+      // 在Windows上先设置UTF-8编码,然后执行命令
+      try {
+        out = child_process.execSync('chcp 65001 >nul && npu-smi info', {
+          encoding: 'utf8',
+          shell: 'cmd.exe',
+        });
+      } catch (e) {
+        // 如果上面的方法失败,尝试直接执行
+        out = child_process.execSync('npu-smi info', { encoding: 'utf8' });
+      }
+    } else {
+      out = child_process.execSync('npu-smi info', { encoding: 'utf8' });
+    }
+
     const lines = out.split('\n');
     const names: Array<[string, string]> = [];
     const re = /^\|\s*(\d+)\s+(\w+)\s+\|/;
