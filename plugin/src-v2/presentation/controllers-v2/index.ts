@@ -102,4 +102,12 @@ export const taskMethodsV2 = {
     return getBuildController()
       .runSanitizer();
   },
+
+  /**
+   * 停止当前任务
+   */
+  stopTask(): void {
+    return getBuildController()
+      .stopTask();
+  },
 };
