@@ -5,6 +5,7 @@ import { BuildApplicationService } from '@plugin-v2/application/services/operato
 import { INotificationService } from '@plugin-v2/application/interfaces/notification.interface';
 import { ResultUtils } from '@plugin-v2/domain/shared/types/result.type';
 import { ProjectManager } from '@plugin/core/project/project-manager';
+import { CommandExecutor } from '@plugin/class/command-options';
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -14,6 +15,9 @@ import * as fs from 'fs';
  * 表现层,负责处理 API 请求和 UI 交互
  */
 export class BuildControllerV2 {
+  // 全局任务执行器引用,用于支持停止任务功能
+  private static currentExecutor: CommandExecutor | null = null;
+
   constructor(
     private buildService: BuildApplicationService,
     private notification: INotificationService,
@@ -31,6 +35,9 @@ export class BuildControllerV2 {
     try {
       // 确保项目已初始化
       await this.projectManager.initProject();
+
+      // 保存当前 executor 引用,用于可能的停止操作
+      BuildControllerV2.currentExecutor = this.projectManager.getExecutor();
 
       // 转换参数
       const dto = {
@@ -54,7 +61,8 @@ export class BuildControllerV2 {
       this.notification.showInfo('编译算子成功');
     }
     finally {
-      // 清理执行器
+      // 清理执行器引用
+      BuildControllerV2.currentExecutor = null;
       this.projectManager.clearExecutor();
     }
   }
@@ -66,6 +74,9 @@ export class BuildControllerV2 {
      console.log('[V2] run called:', params);
     try {
       await this.projectManager.initProject();
+
+      // 保存当前 executor 引用
+      BuildControllerV2.currentExecutor = this.projectManager.getExecutor();
 
       const dto = { configId: params.configId ? Number(params.configId) : undefined };
 
@@ -83,6 +94,7 @@ export class BuildControllerV2 {
       this.notification.showInfo('运行成功');
     }
     finally {
+      BuildControllerV2.currentExecutor = null;
       this.projectManager.clearExecutor();
     }
   }
@@ -93,6 +105,9 @@ export class BuildControllerV2 {
   async startBuildExample(params: StartBuildExampleParams = {}): Promise<void> {
     try {
       await this.projectManager.initProject();
+
+      // 保存当前 executor 引用
+      BuildControllerV2.currentExecutor = this.projectManager.getExecutor();
 
       const dto = { configId: params.configId ? Number(params.configId) : undefined };
 
@@ -110,6 +125,7 @@ export class BuildControllerV2 {
       this.notification.showInfo('编译示例成功');
     }
     finally {
+      BuildControllerV2.currentExecutor = null;
       this.projectManager.clearExecutor();
     }
   }
@@ -199,6 +215,9 @@ export class BuildControllerV2 {
     try {
       await this.projectManager.initProject();
 
+      // 保存当前 executor 引用
+      BuildControllerV2.currentExecutor = this.projectManager.getExecutor();
+
       const result = await this.buildService.startSimulate();
 
       if (ResultUtils.isErr(result)) {
@@ -217,6 +236,7 @@ export class BuildControllerV2 {
       await vscode.commands.executeCommand('huawei-op-devtools.flashPerformanceRunData');
     }
     finally {
+      BuildControllerV2.currentExecutor = null;
       this.projectManager.clearExecutor();
     }
   }
@@ -228,6 +248,9 @@ export class BuildControllerV2 {
      console.log('[V2] onBoard called:');
     try {
       await this.projectManager.initProject();
+
+      // 保存当前 executor 引用
+      BuildControllerV2.currentExecutor = this.projectManager.getExecutor();
 
       const result = await this.buildService.startOnBoard();
 
@@ -247,6 +270,7 @@ export class BuildControllerV2 {
       await vscode.commands.executeCommand('huawei-op-devtools.flashPerformanceRunData');
     }
     finally {
+      BuildControllerV2.currentExecutor = null;
       this.projectManager.clearExecutor();
     }
   }
@@ -258,6 +282,9 @@ export class BuildControllerV2 {
      console.log('[V2] runSanitizer called:', );
     try {
       await this.projectManager.initProject();
+
+      // 保存当前 executor 引用
+      BuildControllerV2.currentExecutor = this.projectManager.getExecutor();
 
       // 创建日志目录
       this.ensureSanitizerLogDir();
@@ -280,6 +307,7 @@ export class BuildControllerV2 {
       await vscode.commands.executeCommand('huawei-op-devtools.flashMsSanitizerRunData');
     }
     finally {
+      BuildControllerV2.currentExecutor = null;
       this.projectManager.clearExecutor();
     }
   }
@@ -305,6 +333,25 @@ export class BuildControllerV2 {
           recursive: true,
         });
       }
+    }
+  }
+
+  /**
+   * 停止当前正在执行的任务
+   */
+  stopTask(): void {
+    console.log('[BuildControllerV2.stopTask] 收到停止任务请求');
+
+    if (BuildControllerV2.currentExecutor) {
+      console.log('[BuildControllerV2.stopTask] 终止正在执行的任务');
+      BuildControllerV2.currentExecutor.kill();
+      BuildControllerV2.currentExecutor = null;
+      this.projectManager.clearExecutor();
+      vscode.window.showWarningMessage('任务已被手动停止');
+    }
+    else {
+      console.log('[BuildControllerV2.stopTask] 没有正在执行的任务');
+      vscode.window.showInformationMessage('当前没有正在执行的任务');
     }
   }
 }
