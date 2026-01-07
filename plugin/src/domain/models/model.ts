@@ -11,11 +11,9 @@ import {
   ensureLaunchJsonExists,
 } from '@plugin/domain/utils/project-utils';
 
-const getDataDir = () =>
-  path.join(
-    (config as unknown as { workspace_data_dir: string }).workspace_data_dir,
-    'data',
-  );
+const getDataDir = () => {
+  return path.join(config.user_data_dir, 'data');
+};
 const getOpsFile = () => path.join(getDataDir(), 'ops.json');
 
 export type OpRecord = {
@@ -164,38 +162,59 @@ export async function generateStructure(
   );
   const opName = generator.parseMeta();
 
-  // 4) check duplicate
-  if (getOpByProjectIdAndOpName(project.id as number, opName)) {
-    throw Object.assign(new Error('op name exists'), { name: 'InvalidRequest' });
-  }
-
-  // 5) execute generation (filesystem work)
+  // 4) execute generation (filesystem work)
   generator.executeGeneration();
 
-  // 6) persist store entry
+  // 5) persist store entry (update if exists, create if new)
   const store = ensureStore();
   const now = new Date()
     .toISOString();
-  const nextId = store.lastId + 1;
-  const record: OpRecord = {
-    id: nextId,
-    task_id: data.task_id ?? null,
-    project_id: data.project_id as number,
-    op_class: data.op_class ?? null,
-    op_name: opName,
-    op_type: data.op_type ?? 'ascend',
-    op_path: (params as { op_path: string }).op_path ?? project.project_path,
-    ascend_env_script: data.ascend_env_script ?? null,
-    examples: data.examples ?? null,
-    create_by: data.create_by ?? null,
-    create_time: now,
-    update_by: null,
-    update_time: now,
-  };
+  let record: OpRecord;
+  let nextId: number;
 
-  store.ops.push(record);
-  store.lastId = nextId;
-  writeStore(store);
+  const existingOp = getOpByProjectIdAndOpName(project.id as number, opName);
+  const index = existingOp ? store.ops.findIndex(op => op.id === existingOp.id) : -1;
+
+  if (existingOp && index !== -1) {
+    // Update existing record
+    store.ops[index] = {
+      ...store.ops[index],
+      task_id: data.task_id ?? store.ops[index].task_id,
+      op_class: data.op_class ?? store.ops[index].op_class,
+      op_type: data.op_type ?? store.ops[index].op_type,
+      op_path: (params as { op_path: string }).op_path ?? store.ops[index].op_path,
+      ascend_env_script: data.ascend_env_script ?? store.ops[index].ascend_env_script,
+      examples: data.examples ?? store.ops[index].examples,
+      update_by: data.create_by ?? store.ops[index].update_by,
+      update_time: now,
+    };
+    // Update the record variable to reference the updated record
+    record = store.ops[index];
+    nextId = record.id; // Use the existing record's ID
+    writeStore(store);
+  } else {
+    // Create new record (both when existingOp is null and when index is -1)
+    nextId = store.lastId + 1;
+    record = {
+      id: nextId,
+      task_id: data.task_id ?? null,
+      project_id: data.project_id as number,
+      op_class: data.op_class ?? null,
+      op_name: opName,
+      op_type: data.op_type ?? 'ascend',
+      op_path: (params as { op_path: string }).op_path ?? project.project_path,
+      ascend_env_script: data.ascend_env_script ?? null,
+      examples: data.examples ?? null,
+      create_by: data.create_by ?? null,
+      create_time: now,
+      update_by: null,
+      update_time: now,
+    };
+
+    store.ops.push(record);
+    store.lastId = nextId;
+    writeStore(store);
+  }
 
   try {
     if (project) {
