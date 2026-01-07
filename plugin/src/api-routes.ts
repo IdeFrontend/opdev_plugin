@@ -43,8 +43,19 @@ const opsMethods = {
     ? taskMethodsV2.startOnBoard
     : taskMethods.startOnBoard,
 
+  // 停止任务 - 如果任意 V2 功能启用,使用 V2 版本的 stopTask
+  stopTask: (
+    getFeatureFlag('USE_V2_BUILD') ||
+    getFeatureFlag('USE_V2_RUN') ||
+    getFeatureFlag('USE_V2_BUILD_EXAMPLE') ||
+    getFeatureFlag('USE_V2_SIMULATE') ||
+    getFeatureFlag('USE_V2_ON_BOARD') ||
+    getFeatureFlag('USE_V2_SANITIZER')
+  )
+    ? taskMethodsV2.stopTask
+    : taskMethods.stopTask,
+
   // 其他方法继续使用 v1
-  stopTask: taskMethods.stopTask,
   buildOp: taskMethods.buildOp,
   buildExample: taskMethods.buildExample,
   runExample: taskMethods.runExample,
