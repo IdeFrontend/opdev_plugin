@@ -32,7 +32,32 @@ export class ViewRenderer extends vscode.Disposable {
     let targetHtmlPath = '';
 
     if (entryName) {
-      targetHtmlPath = `src/views/${entryName}/${entryName}.html`;
+      // 判断是 panel 还是 sidebar 类型的视图
+      const panelViews = [
+        'config',
+        'link',
+        'welcome',
+        'project-sh',
+        'ops-config',
+      ];
+      const sidebarViews = [
+        'home',
+        'operate',
+        'ms-sanitizer-panel-view',
+        'performance-run-data',
+        'ms-sanitizer-run-data',
+      ];
+
+      if (panelViews.includes(entryName)) {
+        targetHtmlPath = `src/views/panels/${entryName}/${entryName}.html`;
+      }
+      else if (sidebarViews.includes(entryName)) {
+        targetHtmlPath = `src/views/sidebars/${entryName}/${entryName}.html`;
+      }
+      else {
+        // 默认假定是 sidebar
+        targetHtmlPath = `src/views/sidebars/${entryName}/${entryName}.html`;
+      }
     }
     else {
       throw new Error('Entry name is required for rendering');

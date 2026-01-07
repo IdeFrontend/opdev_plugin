@@ -2,36 +2,93 @@
 
 华为算子一站式开发平台 VS Code 插件。提供算子开发、调试、性能分析等一站式功能。
 
+## 📖 文档导航
+
+### 🎯 我是新手，想快速上手
+1. **[开发环境搭建](#极速开发指南-保姆级教程)** - 本文档下方，3步启动热更新开发
+2. **[目录结构说明](#📁-目录结构)** - 了解项目组织方式
+3. **[构建脚本说明](#📦-构建脚本)** - 掌握常用命令
+
+### 🎨 我是前端开发者
+1. **[Web 模块开发指南](https://gitcode.com/kaocong/mstt/blob/vscode_plugin/web/README.md)** - MPA架构、视图结构、构建脚本
+2. **[Ops API 使用指南](https://gitcode.com/kaocong/mstt/blob/vscode_plugin/web/src/apis/OPS_API_USAGE.md)** - 前端调用算子操作 API（完整示例）
+3. **[开发环境搭建](#极速开发指南-保姆级教程)** - 配置热更新环境
+
+### 🔧 我是后端/架构师
+1. **[Plugin V2 架构概览](https://gitcode.com/kaocong/mstt/blob/vscode_plugin/plugin/src-v2/README.md)** - DDD分层架构、Feature Flags、依赖注入
+2. **[策略模式使用指南](https://gitcode.com/kaocong/mstt/blob/vscode_plugin/plugin/src-v2/STRATEGY_PATTERN_GUIDE.md)** - 扩展新算子类型、自定义执行流程
+3. **[架构重构总结](https://gitcode.com/kaocong/mstt/blob/vscode_plugin/plugin/src-v2/REFACTORING_SUMMARY.md)** - 设计模式应用、代码统计、最佳实践
+
+### ⚡ 我想体验 V2 新架构
+- **[V2 快速开始](https://gitcode.com/kaocong/mstt/blob/vscode_plugin/plugin/src-v2/QUICKSTART.md)** - 5分钟启用 V2，对比 V1/V2 差异
+
+### 📊 文档关系图
+
+```
+项目根目录 (README.md) ────────────────────┐
+│                                           │
+├─ 前端开发 ────────────────┐               │
+│  │                         │               │
+│  ├─ Web 模块 (web/README.md)              │
+│  │                         │               │
+│  └─ Ops API 使用 (web/src/apis/OPS_API_USAGE.md)
+│                                            │
+└─ 后端架构 ────────────────┬────────────────┘
+   │                        │
+   └─ Plugin V2 (plugin/src-v2/README.md) ──┬──────┐
+      │                                      │      │
+      ├─ 快速开始 (QUICKSTART.md)           │      │
+      ├─ 策略模式指南 (STRATEGY_PATTERN_GUIDE.md) │
+      └─ 重构总结 (REFACTORING_SUMMARY.md) ───────┘
+```
+
+---
+
 ## 📁 目录结构
 
 ```text
-├── plugin/                 # VS Code 插件主进程代码 (Extension Host)
+├── plugin/                      # VS Code 插件主进程代码 (Extension Host)
+│   ├── src/                     # V1 实现代码
+│   │   ├── controller/          # 业务控制器 (处理 Webview 消息)
+│   │   ├── core/                # 核心架构层
+│   │   │   ├── storage/         # 数据存储服务 (JsonStorage)
+│   │   │   ├── view/            # Webview 视图管理与路由
+│   │   │   ├── project/         # 项目管理
+│   │   │   ├── api-server.ts    # API 服务器
+│   │   │   └── connector.ts     # 连接器
+│   │   ├── domain/              # 领域业务逻辑
+│   │   ├── service/             # 应用层服务
+│   │   ├── routes/              # 路由定义
+│   │   ├── helpers/             # 工具函数
+│   │   ├── api-routes.ts        # API 路由配置
+│   │   ├── feature-flags.ts     # V1/V2 功能开关
+│   │   └── extension.ts         # 插件入口
+│   ├── src-v2/                  # V2 架构实现 (DDD + 策略模式)
+│   │   ├── application/         # 应用层 - 业务编排
+│   │   ├── domain/              # 领域层 - 核心业务逻辑
+│   │   ├── infrastructure/      # 基础设施层 - 技术实现
+│   │   ├── presentation/        # 表现层 - UI 交互
+│   │   └── di/                  # 依赖注入容器
+│   └── templates/               # 工程与代码模板
+│
+├── web/                         # 插件前端 UI 代码 (WebView)
 │   ├── src/
-│   │   ├── controller/     # 业务控制器 (处理 Webview 消息)
-│   │   ├── core/           # 核心架构层
-│   │   │   ├── storage/    # 数据存储服务 (JsonStorage)
-│   │   │   ├── view/       # Webview 视图管理与路由
-│   │   │   └── ...
-│   │   ├── domain/         # 领域业务逻辑 (原 autogen-server 移植)
-│   │   │   ├── models/     # 业务实体模型
-│   │   │   └── services/   # 领域服务 (Project, Ops 等)
-│   │   ├── service/        # 应用层服务
-│   │   └── api-routes.ts   # API 路由定义
-│   └── templates/          # 工程与代码模板
+│   │   ├── views/               # 各功能页面 (Vue 3 组件, MPA 架构)
+│   │   ├── apis/                # 前端 API 封装
+│   │   ├── core/                # 核心功能
+│   │   ├── utils/               # 工具函数
+│   │   └── assets/              # 静态资源
+│   ├── resources/               # 资源文件 (图标、图片等)
+│   ├── vite-plugins/            # Vite 插件
+│   └── vite.config.ts           # Vite 构建配置
 │
-├── web/                    # 插件前端 UI 代码 (WebView)
-│   ├── src/
-│   │   ├── views/          # 各功能页面 (Vue 3 组件)
-│   │   ├── apis/           # 前端 API 封装
-│   │   └── ...
-│   ├── resources/          # 静态资源 (图标、图片等)
-│   └── vite.config.ts      # Vite 构建配置
+├── shared/                      # 前后端共享模块 (Workspace Package)
+│   ├── api-types/               # 共享类型定义
+│   ├── api-server/              # API 服务器共享代码
+│   ├── connector/               # 连接器共享代码
+│   └── i18n/                    # 国际化资源
 │
-├── shared/                 # 前后端共享模块 (Workspace Package)
-│   ├── api-types/          # 共享类型定义
-│   └── i18n/               # 国际化资源
-│
-├── scripts/                # 构建与工具脚本
+└── scripts/                     # 构建与工具脚本
 ```
 
 ## � 极速开发指南 (保姆级教程)

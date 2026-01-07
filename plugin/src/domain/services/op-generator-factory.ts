@@ -1,6 +1,6 @@
-import { execSync } from 'child_process';
 import fs from 'fs-extra';
 import path from 'path';
+import AdmZip from 'adm-zip';
 
 type Project = {
   id?: number;
@@ -203,7 +203,15 @@ class AscendOpGenerator extends BaseOpGenerator {
       throw new Error(`Template file does not exist: ${templateFilePath}`);
     }
 
-    execSync(`unzip -o ${templateFilePath} -d ${this.op_path}`);
+    // 使用 adm-zip 解压缩（跨平台兼容）
+    try {
+      const zip = new AdmZip(templateFilePath);
+
+      zip.extractAllTo(this.op_path, true);
+    }
+    catch (error) {
+      throw new Error(`Failed to extract template: ${error instanceof Error ? error.message : String(error)}`);
+    }
 
     if (this.template_name && this.template_name != this.op_name) {
       this._renameFiles(this.template_name);
@@ -236,7 +244,15 @@ class CannOpGenerator extends BaseOpGenerator {
       throw new Error(`Template file does not exist: ${templateFilePath}`);
     }
 
-    execSync(`unzip -o ${templateFilePath} -d ${this.op_path}`);
+    // 使用 adm-zip 解压缩（跨平台兼容）
+    try {
+      const zip = new AdmZip(templateFilePath);
+
+      zip.extractAllTo(this.op_path, true);
+    }
+    catch (error) {
+      throw new Error(`Failed to extract template: ${error instanceof Error ? error.message : String(error)}`);
+    }
 
     if (this.template_name && this.template_name != this.op_name) {
       this._renameFiles(this.template_name);

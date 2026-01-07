@@ -128,41 +128,6 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   };
 
-  let progress:
-    | vscode.Progress<{ message?: string;
-      increment?: number }>
-      | undefined;
-
-  // 检查是否需要执行创建算子命令
-  const runCommand = context.globalState.get<string>('runCommand');
-  const runCommandParam = context.globalState.get<number>('runCommand-param');
-
-  if (runCommand === COMMAND_CREATE_DIRECTORY && runCommandParam) {
-    console.log('检测到需要执行创建算子命令，类型:', runCommandParam);
-    await vscode.window.withProgress(
-      {
-        location: vscode.ProgressLocation.Notification,
-        title: '开始创建算子文件...',
-        cancellable: false,
-      },
-      async (pro) => {
-        progress = pro;
-
-        try {
-          // 执行创建算子命令
-          await vscode.commands.executeCommand(COMMAND_CREATE_DIRECTORY, { createOperatorProjectDirectoryFileType: runCommandParam }, progress);
-          // 清除 runCommand，避免重复执行
-          await context.globalState.update('runCommand', undefined);
-          await context.globalState.update('runCommand-param', undefined);
-        }
-        catch (error) {
-          console.error('执行创建算子命令失败:', error);
-          throw error;
-        }
-      },
-    );
-  }
-
   // 视图
   const viewServer = initViews(context, apiServer);
 
@@ -360,7 +325,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(welcomeCommand);
   context.subscriptions.push(clearWelcomeCountCommand);
   context.subscriptions.push(clearLastProjectPathCommand);
-  context.subscriptions.push(createOptionsCommand);
+  // 注意: createOptionsCommand 已在上面添加,不要重复添加
   context.subscriptions.push(getHome);
   context.subscriptions.push(createOperatorInWorkspaceCommand);
 
@@ -443,34 +408,47 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(watchWorkSpaceFolderChange);
 
+  // 检查是否需要执行创建算子命令（必须在所有命令注册完成后执行）
+  const runCommand = context.globalState.get<string>('runCommand');
+  const runCommandParam = context.globalState.get<number>('runCommand-param');
+
+  if (runCommand === COMMAND_CREATE_DIRECTORY && runCommandParam) {
+    console.log('检测到需要执行创建算子命令，类型:', runCommandParam);
+    // 使用 setTimeout 延迟执行，确保所有插件初始化完成
+    setTimeout(async () => {
+      try {
+        await vscode.window.withProgress(
+          {
+            location: vscode.ProgressLocation.Notification,
+            title: '开始创建算子文件...',
+            cancellable: false,
+          },
+          async (progress) => {
+            try {
+              // 执行创建算子命令
+              await vscode.commands.executeCommand(
+                COMMAND_CREATE_DIRECTORY,
+                { createOperatorProjectDirectoryFileType: runCommandParam },
+                progress,
+              );
+              // 清除 runCommand，避免重复执行
+              await context.globalState.update('runCommand', undefined);
+              await context.globalState.update('runCommand-param', undefined);
+            }
+            catch (error) {
+              console.error('执行创建算子命令失败:', error);
+            }
+          },
+        );
+      }
+      catch (error) {
+        console.error('创建算子任务启动失败:', error);
+      }
+    }, 1000);
+  }
+
   if (vscode.workspace.workspaceFolders) {
     console.log('激活', vscode.workspace.workspaceFolders);
-
-    try {
-      const runCommand = context.globalState.get<string>('runCommand');
-
-      if (runCommand) {
-        // 延迟执行，确保 UI 已就绪
-        setTimeout(async () => {
-          try {
-            console.log('执行命令', runCommand);
-            await vscode.commands.executeCommand(
-              runCommand,
-              context.globalState.get('runCommand-param'),
-              progress,
-            );
-            context.globalState.update('runCommand', null);
-            context.globalState.update('runCommand-param', null);
-          }
-          catch (e) {
-            console.error('Failed to run auto command:', e);
-          }
-        }, 1000); // 等待窗口加载完成
-      }
-    }
-    catch {
-      // ignore invalid query
-    }
   }
 
   console.log('🧠 MindStudio 插件加载器已激活。');

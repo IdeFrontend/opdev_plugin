@@ -6,15 +6,16 @@
     "target": "ES2020",
     "lib": ["ES2022", "DOM"],
     "outDir": "out",
-    "rootDirs": ["plugin/src", "shared"],
+    "rootDirs": ["plugin/src", "plugin/src-v2", "shared"],
     "sourceMap": true,
     "baseUrl": ".",
     "paths": {
       "@shared/*": ["shared/*"],
-      "@plugin/*": ["plugin/src/*"]
+      "@plugin/*": ["plugin/src/*"],
+      "@plugin-v2/*": ["plugin/src-v2/*"]
     }
   },
-  "include": ["plugin/src/**/*", "shared/**/*"],
+  "include": ["plugin/src/**/*", "plugin/src-v2/**/*", "shared/**/*"],
   "exclude": [
     "node_modules",
     ".vscode-test",
@@ -23,6 +24,10 @@
     "dist",
     "out",
     "**/*.vsix",
-    "web"
+    "web",
+    "**/__tests__/**",
+    "**/*.spec.ts",
+    "**/*.test.ts",
+    "jest.config.js"
   ]
 }

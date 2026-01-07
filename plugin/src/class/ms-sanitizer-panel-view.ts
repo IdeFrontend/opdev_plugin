@@ -96,7 +96,7 @@ implements vscode.WebviewViewProvider {
       webviewView.webview.html = await HtmlTransformer.transformDistHtml(
         distPath,
         webviewView.webview,
-        VIEW_MS_SANITIZER,
+        `sidebars/${VIEW_MS_SANITIZER}`,
       );
       console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] HTML加载完成');
     }
