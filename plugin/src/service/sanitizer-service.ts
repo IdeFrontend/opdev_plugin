@@ -92,7 +92,8 @@ export class SanitizerService {
       vscode.window.showInformationMessage('异常检测成功');
 
       // 执行完检测后，获取最新的列表数据
-      vscode.commands.executeCommand('huawei-op-devtools.flashMsSanitizerRunData');
+      await vscode.commands.executeCommand('msSanitizerSidebarView.focus');
+      await vscode.commands.executeCommand('huawei-op-devtools.flashMsSanitizerRunData');
     }
     catch (e: unknown) {
       vscode.window.showErrorMessage(`异常检测失败: ${(e as Error).message}`);

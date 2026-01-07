@@ -24,6 +24,10 @@ export class BuildControllerV2 {
    * 开始构建算子
    */
   async startBuild(params: StartBuildParams = {}): Promise<void> {
+
+ console.log('[V2] startBuild called:', params);  // 添加这行
+
+
     try {
       // 确保项目已初始化
       await this.projectManager.initProject();
@@ -59,6 +63,7 @@ export class BuildControllerV2 {
    * 开始运行算子
    */
   async startRun(params: StartRunParams = {}): Promise<void> {
+     console.log('[V2] run called:', params);
     try {
       await this.projectManager.initProject();
 
@@ -190,6 +195,7 @@ export class BuildControllerV2 {
    * 开始仿真分析
    */
   async startSimulate(): Promise<void> {
+     console.log('[V2] simulate called:');
     try {
       await this.projectManager.initProject();
 
@@ -219,6 +225,7 @@ export class BuildControllerV2 {
    * 开始上板分析
    */
   async startOnBoard(): Promise<void> {
+     console.log('[V2] onBoard called:');
     try {
       await this.projectManager.initProject();
 
@@ -248,6 +255,7 @@ export class BuildControllerV2 {
    * 运行异常检测
    */
   async runSanitizer(): Promise<void> {
+     console.log('[V2] runSanitizer called:', );
     try {
       await this.projectManager.initProject();
 
@@ -268,6 +276,7 @@ export class BuildControllerV2 {
       this.notification.showInfo('异常检测成功');
 
       // 触发 UI 刷新命令
+      await vscode.commands.executeCommand('msSanitizerSidebarView.focus');
       await vscode.commands.executeCommand('huawei-op-devtools.flashMsSanitizerRunData');
     }
     finally {
