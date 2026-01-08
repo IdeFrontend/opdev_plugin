@@ -103,7 +103,7 @@ export class ProjectManager {
   public async initProject(params: {
     projectPath?: string;
     projectName?: string;
-    accendEnvScript?: string;
+    ascendEnvScript?: string;
   } = {}): Promise<string> {
     const info = this.getProjectInfo(params);
 
@@ -123,7 +123,7 @@ export class ProjectManager {
       return this._projectId;
     }
 
-    const ascend_env_script = params.accendEnvScript || undefined;
+    const ascend_env_script = params.ascendEnvScript || undefined;
     const projectRes = await createProject({
       project_name: this._projectName ?? '',
       project_path: this._projectPath,

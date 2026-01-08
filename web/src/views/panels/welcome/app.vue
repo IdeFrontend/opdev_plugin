@@ -188,21 +188,21 @@ const handleAscendCProject = () => {
   margin-right: 12px;
 }
 .op-create-icon {
-  background: url('../../../resources/welcomePage/welcome_op_create_color.svg')
+  background: url('../../../../resources/welcomePage/welcome_op_create_color.svg')
   no-repeat center;
   background-size: contain;
   width: 26px;
   height: 26px;
 }
 .op-impl-icon {
-  background: url('../../../resources/welcomePage/welcome_op_impl_color.svg')
+  background: url('../../../../resources/welcomePage/welcome_op_impl_color.svg')
   no-repeat center;
   background-size: contain;
   width: 28px;
   height: 28px;
 }
 .op-inspect-icon {
-  background: url('../../../resources/welcomePage/welcome_op_inspect_color.svg')
+  background: url('../../../../resources/welcomePage/welcome_op_inspect_color.svg')
   no-repeat center;
   background-size: contain;
   width: 24px;
@@ -212,7 +212,7 @@ const handleAscendCProject = () => {
   display: block;
   height: 1.6em;
   aspect-ratio: 22 / 26;
-  background: url('../../../resources/welcomePage/welcome_op_create_color.svg')
+  background: url('../../../../resources/welcomePage/welcome_op_create_color.svg')
   no-repeat center;
   background-size: contain;
 }
@@ -222,7 +222,7 @@ const handleAscendCProject = () => {
   height: 14px;
   margin-right: 6px;
   flex-shrink: 0;
-  background: url('../../../resources/welcomePage/welcome_bullet_mono.svg')
+  background: url('../../../../resources/welcomePage/welcome_bullet_mono.svg')
   no-repeat center;
   background-size: contain;
   vertical-align: middle;

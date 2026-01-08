@@ -169,7 +169,7 @@ const handleSubmit = async () => {
   submitting.value = true;
 
   try {
-    await saveProjectSH({ accendEnvScript: formData.projectSH });
+    await saveProjectSH({ ascendEnvScript: formData.projectSH });
     // 发送消息给 iframe
     window.postMessage(
       {

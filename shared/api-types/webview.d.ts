@@ -31,7 +31,7 @@ export type RemotePathSearchResult = {
 };
 
 export type SaveProjectSHParams = {
-  accendEnvScript: string;
+  ascendEnvScript: string;
 };
 
 export type CreatedProjectParams = {
