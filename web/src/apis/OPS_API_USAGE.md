@@ -32,7 +32,7 @@ await initOps();
 
 // 或带参数
 await initOps({
-  accendEnvScript: '/path/to/script.sh',
+  ascendEnvScript: '/path/to/script.sh',
   projectPath: '/path/to/project',
   projectName: 'my-project',
 });

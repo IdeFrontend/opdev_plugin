@@ -17,7 +17,7 @@ window.addEventListener('message', (event) => {
 
   console.log('外层页面接收到的message:', message);
 
-  if (message?.command.indexOf('vscode') === 0) {
+  if (message?.command?.indexOf('vscode') === 0) {
     vscode.postMessage({
       command: message.command,
       message,
