@@ -295,6 +295,7 @@ export class BuildControllerV2 {
       this.notification.showInfo('异常检测成功');
 
       // 触发 UI 刷新命令
+      await vscode.commands.executeCommand('msSanitizerSidebarView.focus');
       await vscode.commands.executeCommand('huawei-op-devtools.flashMsSanitizerRunData');
     }
     finally {

@@ -380,7 +380,7 @@ export async function activate(context: vscode.ExtensionContext) {
         ViewServer.getInstance().providerWebViewMap.msSanitizerSidebarView;
 
       console.log('ViewServer.getInstance()', msSanitizerRunData);
-      msSanitizerRunData.webview.postMessage({ command: 'iframeFlashMsSanitizerRunData' });
+      msSanitizerRunData?.webview?.postMessage({ command: 'iframeFlashMsSanitizerRunData' });
     },
   );
 
@@ -394,7 +394,7 @@ export async function activate(context: vscode.ExtensionContext) {
         ViewServer.getInstance().providerWebViewMap.performanceSidebarView;
 
       console.log('ViewServer.getInstance()', performanceRunData);
-      performanceRunData.webview.postMessage({ command: 'iframeRefreshData' });
+      performanceRunData?.webview?.postMessage({ command: 'iframeRefreshData' });
     },
   );
 
