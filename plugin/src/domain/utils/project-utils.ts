@@ -99,6 +99,11 @@ async function exportEnvToFile(projectDir: string) {
       shell: '/bin/bash',
       windowsHide: true,
     });
+    await execAsync('chmod -R 750 .vscode/', {
+      cwd,
+      shell: '/bin/bash',
+      windowsHide: true,
+    });
     console.log(`环境变量已导出到: ${targetFile}`);
   }
   catch (error) {
