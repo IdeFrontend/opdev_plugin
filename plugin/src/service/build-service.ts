@@ -228,7 +228,7 @@ export class BuildService {
     const buildConfigId = await this.getBuildConfigId();
     const buildCommand = getBuildOpCommand(
       Number(buildConfigId),
-      objectToCommandString({ simulator: simulatorType }),
+      objectToCommandString({ [`simulator ${simulatorType || ''}`]: true }),
     );
     const buildExecutor = ProjectManager.getInstance()
       .getExecutor();

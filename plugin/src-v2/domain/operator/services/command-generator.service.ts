@@ -73,7 +73,7 @@ export class CommandGeneratorService {
   ): string {
     return getBuildOpCommand(
       configId,
-      objectToCommandString({ simulator: simulatorType }),
+      objectToCommandString({ [`simulator ${simulatorType || ''}`]: true }),
     );
   }
 

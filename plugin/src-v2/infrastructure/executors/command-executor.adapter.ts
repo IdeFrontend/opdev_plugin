@@ -27,7 +27,7 @@ export class CommandExecutorAdapter implements ICommandExecutor {
     };
   }
 
-  kill(): void {
-    this.executor.kill();
+  async kill(): Promise<void> {
+    await this.executor.kill();
   }
 }

@@ -166,12 +166,11 @@ function makeErrorHandler(
   return (statusCode, error) => {
     clearTimeout(requestTimeout);
 
-    if (options.useCustomErrorHandler) {
-      reject(error);
+    if (!options.useCustomErrorHandler) {
+      // 这里进行自定义错误处理
     }
-    else {
-      // server端唤起vscode错误提示
-    }
+    // 默认会通过vscode弹出错误提示
+    reject(error);
   };
 }
 

@@ -135,12 +135,12 @@ export const taskMethods = {
   /**
    * 停止任务
    */
-  stopTask(): void {
+  async stopTask(): Promise<void> {
     console.log('[stopTask] 收到停止任务请求');
 
     if (currentExecutor) {
       console.log('[stopTask] 终止正在执行的任务');
-      currentExecutor.kill();
+      await currentExecutor.kill();
       currentExecutor = null;
       ProjectManager.getInstance()
         .clearExecutor();
