@@ -67,7 +67,7 @@ class CommandExecutor extends EventEmitter {
         outputChannel.appendLine(command + '\r\n');
       }
 
-      this.process = spawn(command, args, {
+      const child = spawn(command, args, {
         cwd: options.cwd || process.cwd(),
         env: {
           ...process.env,
@@ -79,17 +79,19 @@ class CommandExecutor extends EventEmitter {
         detached: process.platform !== 'win32',
       });
 
+      this.process = child;
+
       let timeoutId: NodeJS.Timeout | null = null;
 
       // 设置超时
       if (options.timeout && options.timeout > 0) {
-        timeoutId = setTimeout(() => {
-          this.cleanup();
+        timeoutId = setTimeout(async () => {
+          await this.cleanup();
           reject(new Error(`Command execution timeout after ${options.timeout}ms`));
         }, options.timeout);
       }
 
-      const cleanup = () => {
+      const localCleanup = () => {
         if (timeoutId) {
           clearTimeout(timeoutId);
         }
@@ -98,7 +100,7 @@ class CommandExecutor extends EventEmitter {
       };
 
       // 处理标准输出
-      this.process.stdout?.on('data', (data: Buffer) => {
+      child.stdout?.on('data', async (data: Buffer) => {
         const text = data.toString();
 
         if (outputChannel) {
@@ -116,19 +118,19 @@ class CommandExecutor extends EventEmitter {
         }
 
         if (this.checkErrorKeywords(text)) {
+          await this.cleanup();
           resolve(this.getResult(-1));
-          this.cleanup();
         }
 
         // 检查是否包含停止关键字
         if (this.checkStopKeywords(text, stopKeywords)) {
-          this.cleanup();
+          await this.cleanup();
           resolve(this.getResult(0));
         }
       });
 
       // 处理错误输出
-      this.process.stderr?.on('data', (data: Buffer) => {
+      child.stderr?.on('data', async (data: Buffer) => {
         const text = data.toString();
 
         console.error('execute command, stderr:', text);
@@ -147,14 +149,14 @@ class CommandExecutor extends EventEmitter {
 
         // 检查是否包含停止关键字
         if (this.checkStopKeywords(text, stopKeywords)) {
-          this.cleanup();
+          await this.cleanup();
           resolve(this.getResult(0));
         }
       });
 
       // 处理进程结束
-      this.process.on('close', (code: number) => {
-        cleanup();
+      child.on('close', (code: number) => {
+        localCleanup();
         const result = this.getResult(code);
 
         if (code === 0) {
@@ -167,8 +169,8 @@ class CommandExecutor extends EventEmitter {
       });
 
       // 处理进程错误
-      this.process.on('error', () => {
-        cleanup();
+      child.on('error', () => {
+        localCleanup();
         resolve(this.getResult(-1));
       });
     });
@@ -208,46 +210,83 @@ class CommandExecutor extends EventEmitter {
   }
 
   /**
-   * 清理资源
+   * 清理资源（异步终止进程并等待退出）
    */
-  private cleanup(): void {
-    if (this.process) {
-      try {
-        // 在 Windows 上，使用 taskkill 终止整个进程树
-        if (process.platform === 'win32') {
-          const pid = this.process.pid;
+  private async cleanup(): Promise<void> {
+    const child = this.process;
+    if (!child) {
+      return;
+    }
 
+    // 立即清除成员变量引用，防止重复调用此方法
+    this.process = null;
+
+    return new Promise<void>((resolve) => {
+      let timeoutId: NodeJS.Timeout | null = null;
+      let finished = false;
+
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        // 移除监听器以避免内存泄漏
+        child.removeListener('exit', finish);
+        child.removeListener('close', finish);
+        child.removeListener('error', finish);
+        resolve();
+      };
+
+      // 监听进程退出事件
+      child.once('exit', finish);
+      child.once('close', finish);
+      child.once('error', finish);
+
+      // 设置 5 秒超时，防止进程卡死
+      timeoutId = setTimeout(() => {
+        console.warn('CommandExecutor: kill process timed out after 5s, force resolving');
+        finish();
+      }, 5000);
+
+      try {
+        if (process.platform === 'win32') {
+          const pid = child.pid;
           if (pid) {
-            // /F 强制终止, /T 终止子进程树
+            // 在 Windows 上使用 taskkill 强制终止进程及其所有子进程 (/F /T)
             exec(`taskkill /pid ${pid} /T /F`, (error) => {
               if (error) {
-                console.error('Failed to kill process tree:', error);
+                console.error('CommandExecutor: failed to kill process tree:', error);
               }
             });
+          } else {
+            finish();
+          }
+        } else {
+          // 在 Linux/macOS 上，使用负 PID 终止整个进程组
+          if (child.pid) {
+            try {
+              process.kill(-child.pid, 'SIGTERM');
+            } catch (e) {
+              // 如果进程组终止失败，退回到终止单个进程
+              child.kill('SIGTERM');
+            }
+          } else {
+            finish();
           }
         }
-        else {
-          // 在 Linux/macOS 上，使用负PID终止整个进程组
-          // 负号表示终止整个进程组
-          if (this.process.pid) {
-            process.kill(-this.process.pid, 'SIGTERM');
-          }
-        }
+      } catch (error) {
+        console.error('CommandExecutor: error during process cleanup:', error);
+        finish();
       }
-      catch (error) {
-        console.error('Error killing process:', error);
-      }
-      finally {
-        this.process = null;
-      }
-    }
+    });
   }
 
   /**
-   * 强制终止命令执行
+   * 强制终止命令执行（异步）
    */
-  kill(): void {
-    this.cleanup();
+  async kill(): Promise<void> {
+    await this.cleanup();
   }
 }
 

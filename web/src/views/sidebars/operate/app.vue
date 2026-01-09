@@ -220,10 +220,12 @@ const handleStopTask = async () => {
 
   try {
     await stopTask();
-    isExecuting.value = false;
   }
   catch (error) {
     console.error('[Operate] 停止任务失败:', error);
+  }
+  finally {
+    isExecuting.value = false;
   }
 };
 

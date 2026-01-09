@@ -33,5 +33,5 @@ export interface ICommandExecutor {
   /**
    * 终止当前执行的命令
    */
-  kill(): void;
+  kill(): Promise<void>;
 }

@@ -331,12 +331,12 @@ export class BuildControllerV2 {
   /**
    * 停止当前正在执行的任务
    */
-  stopTask(): void {
+  async stopTask(): Promise<void> {
     console.log('[BuildControllerV2.stopTask] 收到停止任务请求');
 
     if (BuildControllerV2.currentExecutor) {
       console.log('[BuildControllerV2.stopTask] 终止正在执行的任务');
-      BuildControllerV2.currentExecutor.kill();
+      await BuildControllerV2.currentExecutor.kill();
       BuildControllerV2.currentExecutor = null;
       this.projectManager.clearExecutor();
       vscode.window.showWarningMessage('任务已被手动停止');

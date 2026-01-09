@@ -106,7 +106,7 @@ export const taskMethodsV2 = {
   /**
    * 停止当前任务
    */
-  stopTask(): void {
+  async stopTask(): Promise<void> {
     return getBuildController()
       .stopTask();
   },
