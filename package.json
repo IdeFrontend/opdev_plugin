@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://gitcode.com/kaocong/mstt"
   },
-  "version": "1.1.96",
+  "version": "1.1.97",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -167,6 +167,10 @@
       {
         "command": "huawei-op-devtools.simulatorOptions",
         "title": "仿真分析-选择采集内容"
+      },
+      {
+        "command": "huawei-op-devtools.onBoardOptions",
+        "title": "上板分析-选择采集内容"
       }
     ],
     "menus": {
