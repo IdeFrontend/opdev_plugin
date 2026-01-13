@@ -46,6 +46,8 @@ import {
   VIEW_LINK,
   VIEW_WELCOME,
   VIEW_PROJECT_SH,
+  COMMAND_SIMULATOR_OPTIONS,
+  VIEW_OPTIONS_SIMULATOR
 } from './constants';
 
 let extensionContext: vscode.ExtensionContext | undefined;
@@ -312,9 +314,17 @@ export async function activate(context: vscode.ExtensionContext) {
     openMsSanitizerDisposable, msSanitizerPanelView,
   } =
     getMsSanitizerPanelViewProvider(context, apiServer);
-
   context.subscriptions.push(msSanitizerPanelView, openMsSanitizerDisposable);
-  // createOpsProvider.show('ProjectSH');
+
+  // 初始化'仿真分析-选择采集内容'页面的Webview
+  const simulatorOptionsProvider = new WebviewProvider(context, apiServer);
+  const simulatorOptionsCommand = vscode.commands.registerCommand(
+    COMMAND_SIMULATOR_OPTIONS,
+    async () => {
+      simulatorOptionsProvider.show(VIEW_OPTIONS_SIMULATOR);
+    },
+  );
+
   // 订阅销毁事件
   context.subscriptions.push(apiServer);
   context.subscriptions.push(viewServer);
@@ -328,6 +338,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // 注意: createOptionsCommand 已在上面添加,不要重复添加
   context.subscriptions.push(getHome);
   context.subscriptions.push(createOperatorInWorkspaceCommand);
+  context.subscriptions.push(simulatorOptionsCommand);
 
   // 注册 CSV 编辑器提供者
   const csvEditorProvider = new CsvEditorProvider();

@@ -38,7 +38,7 @@ const mutuallyExclusiveKeys = [
   'runExample',
   'runCheck',
   'onBoard',
-  'simulate',
+  // 'simulate',
 ];
 
 // 菜单配置对象
@@ -131,7 +131,8 @@ const menuItems = ref([
         key: 'simulate',
         label: '仿真分析',
         handler: async () => {
-          await startSimulate();
+          // await startSimulate();
+          await openConfig({ configName: 'huawei-op-devtools.simulatorOptions' });
         },
       },
     ],

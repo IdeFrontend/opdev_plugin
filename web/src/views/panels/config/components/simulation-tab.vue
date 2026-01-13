@@ -89,87 +89,33 @@ const jumpToGuide = () => {
 <template>
   <div class="simulation-tab">
     <a-form layout="vertical">
-      <div class="simulate-title">
-        采集内容
-        <a-tooltip :overlay-style="{ maxWidth: '300px' }">
-          <template #title>
-            <div>
-              具体图形案例请参考<span
-                style="color: #1677ff; cursor: pointer;"
-                @click="jumpToGuide"
-              >算子调优工具概述</span>
-            </div>
-          </template>
+      <div
+        class="simulate-title"
+        style="margin-bottom: 8px"
+      >
+        仿真器类型
+        <a-tooltip
+          title="当前支持的仿真器类型可以在 CANN安装路径下 ascend-toolkit/latest/tools/simulator目录查看"
+        >
           <QuestionCircleOutlined class="help-icon" />
         </a-tooltip>
       </div>
-
-      <div style="margin-top: 12px">
-        指令流水图（默认采集）
-      </div>
-      <div class="nested-checkbox-group">
-        <div style="margin-bottom: 12px">
-          默认采集：计算单元和搬运单元指令耗时占比指标
-        </div>
-        附加选项：
-        <a-checkbox
-          v-model:checked="localSimulationData.user_options.PMSampling"
+      <a-form-item>
+        <a-input
+          v-model:value="localSimulationData.user_options.simulatorType"
+          placeholder="请输入仿真器类型"
           @change="handleSimulationDataChange"
-        >
-          内存通路吞吐率波形子图
-        </a-checkbox>
-      </div>
+        />
+      </a-form-item>
 
-      <div style="margin-top: 12px">
-        算子代码热点图（默认采集）
-      </div>
-      <div class="nested-checkbox-group">
-        附加选项：
-        <a-checkbox
-          v-model:checked="localSimulationData.user_options.ResourceConflictRatio"
-          @change="handleSimulationDataChange"
-        >
-          资源冲突占比指标
-        </a-checkbox>
-      </div>
-
-      <a-collapse
-        v-model:active-key="activeKey"
-        ghost
-      >
-        <a-collapse-panel
-          key="1"
-          header="高级配置"
-        >
-          <div
-            class="simulate-title"
-            style="margin-bottom: 8px"
-          >
-            仿真器类型
-            <a-tooltip
-              title="当前支持的仿真器类型可以在 CANN安装路径下 ascend-toolkit/latest/tools/simulator目录查看"
-            >
-              <QuestionCircleOutlined class="help-icon" />
-            </a-tooltip>
-          </div>
-          <a-form-item>
-            <a-input
-              v-model:value="localSimulationData.user_options.simulatorType"
-              placeholder="请输入仿真器类型"
-              @change="handleSimulationDataChange"
-            />
-          </a-form-item>
-
-          <EditTable
-            :key="updateIndex"
-            class="add-params"
-            :data-source="localSimulationData.user_options.advance_param"
-            @add-table-item="addTableItem"
-            @delete-table-item="deleteTableItem"
-            @on-change="handleSimulationDataChange"
-          />
-        </a-collapse-panel>
-      </a-collapse>
+      <EditTable
+        :key="updateIndex"
+        class="add-params"
+        :data-source="localSimulationData.user_options.advance_param"
+        @add-table-item="addTableItem"
+        @delete-table-item="deleteTableItem"
+        @on-change="handleSimulationDataChange"
+      />
     </a-form>
   </div>
 </template>

@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://gitcode.com/kaocong/mstt"
   },
-  "version": "1.1.95",
+  "version": "1.1.96",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -96,10 +96,6 @@
         "title": "新建算子工程"
       },
       {
-        "command": "huawei-op-devtools.buildOps",
-        "title": "编译算子"
-      },
-      {
         "command": "huawei-op-devtools.toggleOpsOperate",
         "title": "一站式算子工程操作面板",
         "category": "secondary Sidebar",
@@ -167,6 +163,10 @@
       {
         "command": "huawei-op-devtools.clearLastProjectPath",
         "title": "清除缓存的算子工程位置"
+      }, 
+      {
+        "command": "huawei-op-devtools.simulatorOptions",
+        "title": "仿真分析-选择采集内容"
       }
     ],
     "menus": {
