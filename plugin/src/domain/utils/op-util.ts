@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { ConfigRecord } from '../models/config-model';
 
 interface Op {
   op_path: string;
@@ -55,10 +56,16 @@ function getDetailedSystemInfo(): { osName: string;
   };
 }
 
-export function getOpRunPath(op: Op): string {
+export function getOpRunPath(op: Op, config?: ConfigRecord): string {
   const opPath = op.op_path;
 
   if (op.op_type === 'ascend') {
+    if (config) {
+      const options = (config.user_options as Record<string, unknown> | null | undefined) || {};
+      if (options.is_expermental == 'on') {
+        return path.resolve(opPath, '..', '..', '..');
+      }
+    }
     return path.resolve(opPath, '..', '..');
   }
 
