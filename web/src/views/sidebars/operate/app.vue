@@ -248,7 +248,7 @@ onMounted(async () => {
     <div class="pt-3 w-full min-w-[138px]">
       <!-- 如果配置文件不存在，显示提示信息 -->
       <div
-        v-if="hasDevtoolConfig"
+        v-if="!hasDevtoolConfig"
         class="flex items-center justify-center min-h-[200px] p-5"
       >
         <div class="text-xs text-white/65 text-center leading-relaxed">
