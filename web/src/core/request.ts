@@ -86,11 +86,13 @@ function createExtensionRequest(): ExtensionRequest {
       });
 
       return new Promise((resolve, reject) => {
-        // 请求超时
-        const requestTimeout = setTimeout(() => {
-          reject(new Error(`request:${requestId} timeout`));
-          pendingRequests.delete(requestId);
-        }, optionsWithDefault.timeout);
+        // 请求超时：如果 timeout <= 0，则不设置超时
+        const requestTimeout = optionsWithDefault.timeout > 0
+          ? setTimeout(() => {
+            reject(new Error(`request:${requestId} timeout`));
+            pendingRequests.delete(requestId);
+          }, optionsWithDefault.timeout)
+          : null;
 
         pendingRequests.set(requestId, {
           success: makeSuccessHandler(resolve, requestTimeout),
@@ -150,21 +152,25 @@ function recoverFromMessageError(messageError: NonNullable<ResponseMessage['erro
 
 function makeSuccessHandler<T>(
   resolve: (value: T | PromiseLike<T>)=> void,
-  requestTimeout: ReturnType<typeof setTimeout>,
+  requestTimeout: ReturnType<typeof setTimeout> | null,
 ): (value: unknown)=> void {
   return (value: unknown) => {
-    clearTimeout(requestTimeout);
+    if (requestTimeout) {
+      clearTimeout(requestTimeout);
+    }
     resolve(value as T);
   };
 }
 
 function makeErrorHandler(
   reject: (reason: unknown)=> void,
-  requestTimeout: ReturnType<typeof setTimeout>,
+  requestTimeout: ReturnType<typeof setTimeout> | null,
   options: Required<RequestOptions>,
 ): PendingRequest['error'] {
   return (statusCode, error) => {
-    clearTimeout(requestTimeout);
+    if (requestTimeout) {
+      clearTimeout(requestTimeout);
+    }
 
     if (!options.useCustomErrorHandler) {
       // 这里进行自定义错误处理
