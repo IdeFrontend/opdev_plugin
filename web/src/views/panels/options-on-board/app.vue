@@ -192,6 +192,7 @@ onMounted(() => {
           </a-checkbox>
           <a-checkbox
             v-model:checked="onboardData.user_options.Roofline"
+            style="margin-left: 12px;"
             @change="handleSave"
           >
             Roofline瓶颈分析

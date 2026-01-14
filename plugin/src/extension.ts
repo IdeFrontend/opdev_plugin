@@ -49,7 +49,9 @@ import {
   COMMAND_SIMULATOR_OPTIONS,
   VIEW_OPTIONS_SIMULATOR,
   COMMAND_ON_BOARD_OPTIONS,
-  VIEW_OPTIONS_ON_BOARD
+  VIEW_OPTIONS_ON_BOARD,
+  COMMAND_SANITIZER_OPTIONS,
+  VIEW_OPTIONS_SANITIZER
 } from './constants';
 
 let extensionContext: vscode.ExtensionContext | undefined;
@@ -336,6 +338,15 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
+  // 初始化'异常检测-选择检测内容'页面的Webview
+  const sanitizerOptionsProvider = new WebviewProvider(context, apiServer);
+  const sanitizerOptionsCommand = vscode.commands.registerCommand(
+    COMMAND_SANITIZER_OPTIONS,
+    async () => {
+      sanitizerOptionsProvider.show(VIEW_OPTIONS_SANITIZER);
+    },
+  );
+
   // 订阅销毁事件
   context.subscriptions.push(apiServer);
   context.subscriptions.push(viewServer);
@@ -351,6 +362,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(createOperatorInWorkspaceCommand);
   context.subscriptions.push(simulatorOptionsCommand);
   context.subscriptions.push(onBoardOptionsCommand);
+  context.subscriptions.push(sanitizerOptionsCommand);
 
   // 注册 CSV 编辑器提供者
   const csvEditorProvider = new CsvEditorProvider();

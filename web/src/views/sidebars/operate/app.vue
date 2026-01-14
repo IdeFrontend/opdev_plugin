@@ -19,6 +19,7 @@ import {
   openConfig,
   checkDevtoolConfig,
 } from '@web/apis';
+import { SettingOutlined } from '@ant-design/icons-vue';
 
 const themeConfig = { algorithm: theme.darkAlgorithm };
 const activeConfig = ref('');
@@ -36,9 +37,9 @@ const hasDevtoolConfig = ref(false);
 const mutuallyExclusiveKeys = [
   'buildOp',
   'runExample',
-  'runCheck',
-  // 'onBoard',
-  // 'simulate',
+  // 'sanitizer',
+  // 'onboard',
+  // 'simulation',
 ];
 
 // 菜单配置对象
@@ -108,11 +109,12 @@ const menuItems = ref([
   //     ]
   // },
   {
-    key: 'runCheck',
+    key: 'sanitizer',
     label: '异常检测',
     icon: checkIcon,
     handler: async () => {
-      await runSanitizer();
+      // await runSanitizer();
+      await openConfig({ configName: 'huawei-op-devtools.sanitizerOptions' });
     },
   },
   {
@@ -121,7 +123,7 @@ const menuItems = ref([
     icon: powerIcon,
     children: [
       {
-        key: 'onBoard',
+        key: 'onboard',
         label: '上板分析',
         handler: async () => {
           // await startOnBoard();
@@ -129,7 +131,7 @@ const menuItems = ref([
         },
       },
       {
-        key: 'simulate',
+        key: 'simulation',
         label: '仿真分析',
         handler: async () => {
           // await startSimulate();
@@ -242,6 +244,11 @@ onMounted(async () => {
     hasDevtoolConfig.value = false;
   }
 });
+
+const openSetting = key => {
+  const configKey = key === 'simulation' || key === 'onboard' ? `opprof-${key}` : key;
+  openConfig({ configName: 'huawei-op-devtools.config', key: configKey });
+}
 </script>
 
 <template>
@@ -338,7 +345,12 @@ onMounted(async () => {
                       isMenuItemDisabled(child.key),
                   }"
                 >
-                  {{ child.label }}
+                  <div class="single-box">
+                    {{ child.label }}
+                    <div v-if="child.key === 'simulation' || child.key === 'onboard'" class="setting-box">
+                      <SettingOutlined @click.stop="openSetting(child.key)" />
+                    </div>
+                  </div>
                 </a-menu-item>
                 <!-- 嵌套子菜单 -->
                 <a-sub-menu
@@ -367,17 +379,19 @@ onMounted(async () => {
                   isMenuItemDisabled(item.key),
               }"
             >
-              <span
-                v-if="item.icon"
-                class="inline-flex items-center text-[11px]"
-              >
-                <img
-                  :src="item.icon"
-                  alt=""
-                  class="w-4 h-4 mr-2 align-middle"
-                />
-                <span class="text-white/85">{{ item.label }}</span>
-              </span>
+              <div v-if="item.icon" class="single-box"> 
+                <span class="inline-flex items-center text-[11px]">
+                  <img
+                    :src="item.icon"
+                    alt=""
+                    class="w-4 h-4 mr-2 align-middle"
+                  />
+                  <span class="text-white/85">{{ item.label }}</span>
+                </span>
+                <div v-if="item.key === 'sanitizer'" class="setting-box">
+                  <SettingOutlined @click.stop="openSetting(item.key)" />
+                </div>
+              </div>
               <span
                 v-else
                 class="text-white/85"
@@ -441,5 +455,26 @@ body {
 :deep(.ant-menu-item-disabled) {
   opacity: 0.5;
   cursor: not-allowed !important;
+}
+
+.single-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.single-box:hover .setting-box {
+  display: flex;
+}
+
+.setting-box {
+  display: none;
+  width: 22px;
+  height: 22px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 6px;
+}
+.setting-box:hover {
+  background-color: #262729 !important;
 }
 </style>

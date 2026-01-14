@@ -11,7 +11,8 @@ import {
 } from 'vue';
 import optionsList from './components/options-list.vue';
 import configDetail from './components/config-detail.vue';
-import { getConfigData } from '@web/apis';
+import { getConfigData, getTargetTab } from '@web/apis';
+import { useOpprofConfig } from './composables/use-opprof-config'
 
 const themeConfig = {
   // 使用暗色算法[1](@ref)
@@ -39,8 +40,19 @@ async function loadBuildConfig() {
   }
 }
 
-onMounted(() => {
+const { activeTab } = useOpprofConfig()
+onMounted(async () => {
   loadBuildConfig();
+  // 根据需要打开对应的菜单
+  const target = await getTargetTab();
+  console.log('target', target)
+  if (target) {
+    const tab = target.split('-')
+    activeOption.value = tab[0]
+    if (tab[1]) {
+      activeTab.value = tab[1]
+    }
+  }
 });
 </script>
 <template>
