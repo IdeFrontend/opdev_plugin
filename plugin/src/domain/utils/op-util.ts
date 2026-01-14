@@ -69,10 +69,6 @@ export function getOpRunPath(op: Op, config?: ConfigRecord): string {
     return path.resolve(opPath, '..', '..');
   }
 
-  if (op.op_type === 'cann') {
-    return path.resolve(opPath, 'build');
-  }
-
   return opPath;
 }
 
