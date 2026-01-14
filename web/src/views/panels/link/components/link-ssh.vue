@@ -12,7 +12,7 @@ defineProps({
 });
 
 // 模板类型选择
-const selectedTemplate = ref<'helloworld' | 'addn' | 'torch_libray'>('helloworld');
+const selectedTemplate = ref<'helloworld' | 'addn' | 'torch_library'>('helloworld');
 
 // 使用 composable 获取业务逻辑
 const {
@@ -34,7 +34,7 @@ const getTemplateDesc = (template: string) => {
       return '生成<<<>>>异构运行的.asc代码，默认打印"Hello World"';
     case 'addn':
       return '生成<<<>>>异构运行的.asc，默认实现addn算子';
-    case 'torch_libray':
+    case 'torch_library':
       return '生成<<<>>>接入rotch licrary的.asc代码，默认实现add算子';
     default:
       return '生成<<<>>>异构运行的.asc代码，默认打印"Hello World"';
@@ -48,7 +48,7 @@ const getTemplateImage = (template: string) => {
       return tipBase_1_1;
     case 'addn':
       return tipBase_1_2;
-    case 'torch_libray':
+    case 'torch_library':
       return tipBase_1_3;
     default:
       return tipBase_1_1;
@@ -116,8 +116,8 @@ const connectionFormRules = FormRulesFactory.createFormRules();
                   <a-radio value="addn">
                     addn
                   </a-radio>
-                  <a-radio value="torch_libray">
-                    torch_libray
+                  <a-radio value="torch_library">
+                    torch_library
                   </a-radio>
                 </a-radio-group>
               </div>

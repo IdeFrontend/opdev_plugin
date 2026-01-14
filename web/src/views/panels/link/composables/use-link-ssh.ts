@@ -18,7 +18,7 @@ import { ProjectNameFactory } from './project-name-factory';
  * Link SSH Composable
  * 封装链接SSH相关的业务逻辑
  */
-export function useLinkSSH(selectedTemplate?: Ref<'helloworld' | 'addn' | 'torch_libray'>) {
+export function useLinkSSH(selectedTemplate?: Ref<'helloworld' | 'addn' | 'torch_library'>) {
   const connectionFormRef = ref<AntdVForm | null>(null);
   const selectedId_type = ref(1);
 
@@ -94,12 +94,12 @@ export function useLinkSSH(selectedTemplate?: Ref<'helloworld' | 'addn' | 'torch
   };
 
   // 模板名称映射
-  const getTemplateName = (template: 'helloworld' | 'addn' | 'torch_libray' | undefined): string | undefined => {
+  const getTemplateName = (template: 'helloworld' | 'addn' | 'torch_library' | undefined): string | undefined => {
     if (!template) return undefined;
-    const mapping: Record<'helloworld' | 'addn' | 'torch_libray', string> = {
+    const mapping: Record<'helloworld' | 'addn' | 'torch_library', string> = {
       helloworld: 'hello_world',
       addn: 'addn_custom',
-      torch_libray: 'torch_libray',
+      torch_library: 'torch_library',
     };
     return mapping[template];
   };
