@@ -37,7 +37,7 @@ const mutuallyExclusiveKeys = [
   'buildOp',
   'runExample',
   'runCheck',
-  'onBoard',
+  // 'onBoard',
   // 'simulate',
 ];
 
@@ -124,7 +124,8 @@ const menuItems = ref([
         key: 'onBoard',
         label: '上板分析',
         handler: async () => {
-          await startOnBoard();
+          // await startOnBoard();
+          await openConfig({ configName: 'huawei-op-devtools.onBoardOptions' });
         },
       },
       {

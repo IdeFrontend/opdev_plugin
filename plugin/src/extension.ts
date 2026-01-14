@@ -47,7 +47,9 @@ import {
   VIEW_WELCOME,
   VIEW_PROJECT_SH,
   COMMAND_SIMULATOR_OPTIONS,
-  VIEW_OPTIONS_SIMULATOR
+  VIEW_OPTIONS_SIMULATOR,
+  COMMAND_ON_BOARD_OPTIONS,
+  VIEW_OPTIONS_ON_BOARD
 } from './constants';
 
 let extensionContext: vscode.ExtensionContext | undefined;
@@ -325,6 +327,15 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
+  // 初始化'上板分析-选择采集内容'页面的Webview
+  const onBoardOptionsProvider = new WebviewProvider(context, apiServer);
+  const onBoardOptionsCommand = vscode.commands.registerCommand(
+    COMMAND_ON_BOARD_OPTIONS,
+    async () => {
+      onBoardOptionsProvider.show(VIEW_OPTIONS_ON_BOARD);
+    },
+  );
+
   // 订阅销毁事件
   context.subscriptions.push(apiServer);
   context.subscriptions.push(viewServer);
@@ -339,6 +350,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(getHome);
   context.subscriptions.push(createOperatorInWorkspaceCommand);
   context.subscriptions.push(simulatorOptionsCommand);
+  context.subscriptions.push(onBoardOptionsCommand);
 
   // 注册 CSV 编辑器提供者
   const csvEditorProvider = new CsvEditorProvider();
