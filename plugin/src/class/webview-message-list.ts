@@ -98,7 +98,13 @@ export async function handleOperatorProjectDirectoryFile(
     return;
   }
 
+  // 获取 extension context 以读取 templateName
+  const context = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
+    .extensionContext;
+  const templateName = context.globalState.get<string>('templateName');
+
   console.log('handleOperatorProjectDirectoryFile: createOperatorProjectDirectoryFileType:', message.createOperatorProjectDirectoryFileType);
+  console.log('handleOperatorProjectDirectoryFile: templateName:', templateName);
 
   if (
     message
@@ -134,8 +140,14 @@ export async function handleOperatorProjectDirectoryFile(
         await welcomeMethods.createOpsByPrototype({
           opsPrototypeFile: '',
           opType: 'cann',
+          templateName,
         });
         console.log('算子原型创建完成');
+
+        // 清理 templateName
+        if (templateName) {
+          context.globalState.update('templateName', undefined);
+        }
 
         await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
       }
