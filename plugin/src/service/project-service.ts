@@ -92,6 +92,7 @@ export class ProjectService {
           ops_prototype_file: params.opsPrototypeFile,
           project_id: projectId,
           op_type: params.opType || 'ascend',
+          template_name: params.templateName,
         },
         context.extensionPath,
       );

@@ -16,6 +16,7 @@ interface GenerateStructureParams {
   create_by?: string;
   /** 暂未启用 */
   ops_prototype_file?: string;
+  template_name?: string;
 }
 
 export async function generateStructure(

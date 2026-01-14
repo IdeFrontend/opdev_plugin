@@ -39,6 +39,7 @@ export type CreatedProjectParams = {
   projectName: string;
   projectSH?: string;
   createOperatorProjectDictoryFileType?: number;
+  templateName?: string;
 };
 
 export type GetLastProjectPathResult = string | null;
