@@ -45,6 +45,7 @@ export class AscendCommandStrategy implements CommandStrategy {
     }
 
     const cdCmd = `cd ${runPath}`;
+    const cdBuildCmd = `mkdir -p ${runPath}/build && cd ${runPath}/build`;
 
     return {
       config,
@@ -52,6 +53,7 @@ export class AscendCommandStrategy implements CommandStrategy {
       operator,
       sourceCannCmd,
       cdCmd,
+      cdBuildCmd,
     };
   }
 
@@ -146,7 +148,7 @@ export class AscendCommandStrategy implements CommandStrategy {
   }
 
   buildSimulateCommand(params: ProfilerCommandParams): string {
-    const { config, project, operator, sourceCannCmd, cdCmd, exampleTargetFile } = params;
+    const { config, project, operator, sourceCannCmd, cdBuildCmd, exampleTargetFile } = params;
 
     // 如果找不到算子记录，但有项目路径，创建一个临时算子对象
     let effectiveOperator = operator;
@@ -173,11 +175,11 @@ export class AscendCommandStrategy implements CommandStrategy {
         exampleTargetFile,
       );
 
-    return joinCommands(sourceCannCmd, cdCmd, simulatorCmd);
+    return joinCommands(sourceCannCmd, cdBuildCmd, simulatorCmd);
   }
 
   buildOnBoardCommand(params: ProfilerCommandParams): string {
-    const { config, project, operator, sourceCannCmd, cdCmd, exampleTargetFile } = params;
+    const { config, project, operator, sourceCannCmd, cdBuildCmd, exampleTargetFile } = params;
 
     // 如果找不到算子记录，但有项目路径，创建一个临时算子对象
     let effectiveOperator = operator;
@@ -204,6 +206,6 @@ export class AscendCommandStrategy implements CommandStrategy {
         exampleTargetFile,
       );
 
-    return joinCommands(sourceCannCmd, cdCmd, opprofCmd);
+    return joinCommands(sourceCannCmd, cdBuildCmd, opprofCmd);
   }
 }

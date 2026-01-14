@@ -176,6 +176,7 @@ export function getSimulateCommand(
       sourceCannCmd: context.sourceCannCmd,
       cdCmd: context.cdCmd,
       exampleTargetFile: targetFile,
+      cdBuildCmd: context.cdBuildCmd,
     });
   }
   catch (e: unknown) {
@@ -223,6 +224,7 @@ export function getOnBoardCommand(
       sourceCannCmd: context.sourceCannCmd,
       cdCmd: context.cdCmd,
       exampleTargetFile: targetFile,
+      cdBuildCmd: context.cdBuildCmd,
     });
   }
   catch (e: unknown) {
@@ -253,7 +255,8 @@ export function getSanitizerCommand(
       context.operator,
       context.sourceCannCmd,
       context.cdCmd,
-      exConfig?.target_file || ''
+      exConfig?.target_file || '',
+      context.cdBuildCmd,
     );
   }
   catch (e: unknown) {

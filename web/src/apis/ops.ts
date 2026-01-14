@@ -152,7 +152,9 @@ export function getProjectId() {
 
 /** 停止当前任务 */
 export function stopTask() {
-  return request.post<undefined, void>('ops/stopTask');
+  return request.post<undefined, void>('ops/stopTask', undefined, {
+    timeout: Number.MAX_SAFE_INTEGER, // 去掉超时时间限制
+  });
 }
 
 /** 打开配置页面 */
