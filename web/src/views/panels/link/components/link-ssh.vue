@@ -5,7 +5,7 @@ import { useLinkSSH } from '../composables/use-link-ssh';
 import { FormRulesFactory } from '../composables/form-rules';
 import tipBase_1_1 from '@/assets/imgs/hello_world.png';
 import tipBase_1_2 from '@/assets/imgs/add_custom.png';
-import tipBase_1_3 from '@/assets/imgs/torch_library.png';
+import tipBase_1_3 from '@/assets/imgs/torch_library_template.png';
 
 defineProps({
   connected: {
@@ -15,7 +15,7 @@ defineProps({
 });
 
 // 模板类型选择
-const selectedTemplate = ref<'helloworld' | 'addn' | 'torch_library'>('helloworld');
+const selectedTemplate = ref<'helloworld' | 'addn' | 'torch_library_template'>('helloworld');
 
 // 使用 composable 获取业务逻辑
 const {
@@ -37,7 +37,7 @@ const getTemplateDesc = (template: string) => {
       return '生成<<<>>>异构运行的.asc代码，默认打印"Hello World"';
     case 'addn':
       return '生成<<<>>>异构运行的.asc，默认实现addn算子';
-    case 'torch_library':
+    case 'torch_library_template':
       return '生成<<<>>>接入rotch licrary的.asc代码，默认实现add算子';
     default:
       return '生成<<<>>>异构运行的.asc代码，默认打印"Hello World"';
@@ -51,7 +51,7 @@ const getTemplateImage = (template: string) => {
       return tipBase_1_1;
     case 'addn':
       return tipBase_1_2;
-    case 'torch_library':
+    case 'torch_library_template':
       return tipBase_1_3;
     default:
       return tipBase_1_1;
@@ -118,7 +118,7 @@ const connectionFormRules = FormRulesFactory.createFormRules();
                   <a-radio value="addn">
                     addn
                   </a-radio>
-                  <a-radio value="torch_library">
+                  <a-radio value="torch_library_template">
                     torch_library
                   </a-radio>
                 </a-radio-group>

@@ -44,7 +44,7 @@ export class CannCommandStrategy implements CommandStrategy {
       }
     }
 
-    const cdCmd = `cd ${runPath}`;
+    const cdCmd = `mkdir -p  ${runPath}/build && cd ${runPath}/build`;
 
     return {
       config,

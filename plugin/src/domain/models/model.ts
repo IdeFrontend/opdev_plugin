@@ -231,6 +231,10 @@ export async function generateStructure(
         targetExampleFile,
       } = getDefaultPath(record);
       // Build: 创建 build_op 和 build_example 两种配置
+      // 如果是 torch_library_template 类型，设置 target_file 为 python ../run.py
+      const targetFile = record.template_name === 'torch_library_template' 
+        ? 'python ../run.py' 
+        : targetOpFile;
       const buildOp = {
         project_id: project.id,
         user_options: {
@@ -238,7 +242,7 @@ export async function generateStructure(
           script: `bash ${opScriptPath}`,
           config_name: record.op_name,
           target_dir: targetDir,
-          target_file: targetOpFile,
+          target_file: targetFile,
         },
       };
       const buildExample = {

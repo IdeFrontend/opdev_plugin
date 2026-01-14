@@ -117,8 +117,29 @@ export function generateChmodCommand(
 }
 
 /**
+ * 检查字符串是否是命令（而不是文件路径）
+ * @param str 要检查的字符串
+ * @returns 如果是命令返回 true，否则返回 false
+ */
+function isCommand(str: string): boolean {
+  if (!str) {
+    return false;
+  }
+  
+  // 如果包含空格，很可能是命令
+  if (str.includes(' ')) {
+    return true;
+  }
+  
+  // 如果以常见的命令前缀开头，认为是命令
+  const commandPrefixes = ['python', 'bash', 'sh', 'node', 'npm', 'yarn', 'java', 'perl', 'ruby'];
+  const firstWord = str.split(' ')[0].split('/').pop() || '';
+  return commandPrefixes.some(prefix => firstWord.startsWith(prefix));
+}
+
+/**
  * 生成带 chmod 的运行命令
- * @param file 可执行文件路径
+ * @param file 可执行文件路径或命令
  * @param mode 权限配置对象，默认 { execute: true }
  * @returns 完整的运行命令
  */
@@ -128,6 +149,11 @@ export function getExecutableCommand(
 ): string {
   if (!file) {
     return '';
+  }
+
+  // 如果是命令（如 python ../run.py），不执行 chmod，直接返回命令
+  if (isCommand(file)) {
+    return file;
   }
 
   return joinCommands(generateChmodCommand(file, mode), file);
