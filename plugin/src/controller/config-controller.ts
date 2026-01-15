@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import { configService } from '@plugin/service/config-service';
 import { buildService } from '@plugin/service/build-service';
+import { ConfigHelper } from '@plugin/helpers/ConfigHelper';
 import {
   GetConfigDataResult,
   SaveBuildConfigParams,
@@ -140,5 +141,13 @@ export const configMethods = {
     if (params.configName) {
       await vscode.commands.executeCommand(params.configName, params.key);
     }
+  },
+
+  /**
+   * 获取调试模式状态
+   * @returns 是否启用调试模式
+   */
+  async getDebugMode(): Promise<boolean> {
+    return ConfigHelper.isDebugModeEnabled();
   },
 };

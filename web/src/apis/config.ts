@@ -13,3 +13,10 @@ export function remotePathSearch(params: RemotePathSearchParams) {
     params,
   );
 }
+
+/**
+ * 获取调试模式状态
+ */
+export function getDebugMode() {
+  return request.post<undefined, boolean>('webview/getDebugMode');
+}

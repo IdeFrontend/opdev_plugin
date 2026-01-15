@@ -490,8 +490,8 @@ export async function activate(context: vscode.ExtensionContext) {
   const installer = new MindStudioPluginInstaller(context, {
     pluginId: 'ascend.mindstudio-debug-vscode-plugin',
     vsixRelativePath:
-      './out/plugin/mindstudio-debug-vscode-plugin/MindStudio-Debug-VSCode-Plugin-1.0.7.vsix',
-    pluginVersion: '1.0.7',
+      './out/plugin/mindstudio-debug-vscode-plugin/MindStudio-Debug-VSCode-Plugin-1.0.8.vsix',
+    pluginVersion: '1.0.8',
   });
 
   await installer.installIfNeeded();

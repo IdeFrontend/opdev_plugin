@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import * as fs from 'fs';
-import compressing from 'compressing';
+import AdmZip from 'adm-zip';
 import {
   GetPerformanceRunDataParams,
   GetPerformanceRunDataResult,
@@ -37,6 +36,32 @@ async function readDirectoryFiles(dirPath: string, basePath: string = dirPath): 
   }
 
   return contents.join('');
+}
+
+/**
+ * 递归将目录中的文件添加到 zip
+ */
+async function addDirectoryToZip(
+  zip: AdmZip,
+  dirUri: vscode.Uri,
+  basePath: string,
+): Promise<void> {
+  const entries = await vscode.workspace.fs.readDirectory(dirUri);
+
+  for (const [name, type] of entries) {
+    const entryUri = vscode.Uri.joinPath(dirUri, name);
+    const relativePath = path.relative(basePath, entryUri.fsPath);
+
+    if (type === vscode.FileType.File) {
+      // 读取文件内容并添加到 zip
+      const fileData = await vscode.workspace.fs.readFile(entryUri);
+      zip.addFile(relativePath, Buffer.from(fileData));
+    }
+    else if (type === vscode.FileType.Directory) {
+      // 递归处理子目录
+      await addDirectoryToZip(zip, entryUri, basePath);
+    }
+  }
 }
 
 export const performanceMethods = {
@@ -149,12 +174,16 @@ export const performanceMethods = {
           message: '正在压缩目录...',
         });
 
-        // 创建临时 zip 文件路径
-        const tempZipPath = path.join(path.dirname(dirPath), `${dirName}_${Date.now()}.zip`);
-
         try {
-          // 压缩目录
-          await compressing.zip.compressDir(dirPath, tempZipPath);
+          // 使用 AdmZip 和 VS Code 文件系统 API 压缩目录
+          const zip = new AdmZip();
+          const basePath = dirUri.fsPath;
+
+          // 递归添加目录中的所有文件到 zip
+          await addDirectoryToZip(zip, dirUri, basePath);
+
+          // 生成 zip 文件的 Buffer
+          const zipBuffer = zip.toBuffer();
 
           progress.report({
             increment: 60,
@@ -169,26 +198,17 @@ export const performanceMethods = {
           });
 
           if (!localFileUri) {
-            // 用户取消了保存对话框，删除临时文件
-            if (fs.existsSync(tempZipPath)) {
-              fs.unlinkSync(tempZipPath);
-            }
+            // 用户取消了保存对话框
             return;
           }
 
-          // 将压缩文件复制到用户选择的位置
+          // 将压缩文件写入用户选择的位置
           progress.report({
             increment: 80,
             message: '正在保存文件...',
           });
 
-          const tempZipUri = vscode.Uri.file(tempZipPath);
-          await vscode.workspace.fs.copy(tempZipUri, localFileUri, { overwrite: true });
-
-          // 删除临时文件
-          if (fs.existsSync(tempZipPath)) {
-            fs.unlinkSync(tempZipPath);
-          }
+          await vscode.workspace.fs.writeFile(localFileUri, zipBuffer);
 
           progress.report({
             increment: 100,
@@ -197,10 +217,8 @@ export const performanceMethods = {
           vscode.window.showInformationMessage(`文件已成功下载到: ${localFileUri.fsPath}`);
         }
         catch (error) {
-          // 清理临时文件
-          if (fs.existsSync(tempZipPath)) {
-            fs.unlinkSync(tempZipPath);
-          }
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          vscode.window.showErrorMessage(`下载报告失败: ${errorMessage}`);
           throw error;
         }
       },
