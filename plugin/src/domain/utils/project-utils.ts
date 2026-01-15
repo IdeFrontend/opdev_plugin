@@ -4,6 +4,8 @@ import * as os from 'os';
 import { promisify } from 'util';
 import { exec } from 'child_process';
 import * as vscode from 'vscode';
+import debugLaunch from './debug-launch.json';
+import { ConfigHelper } from '@plugin/helpers/ConfigHelper';
 
 const execAsync = promisify(exec);
 
@@ -22,10 +24,12 @@ export async function ensureLaunchJsonExists(
   const projectDir = path.resolve(op_path);
   const vscodeDir = path.join(projectDir, '.vscode');
   const devtoolConfigPath = path.join(vscodeDir, 'devtool_config.json');
+  const launchJsonPath = path.join(vscodeDir, 'launch.json');
 
   console.log('ensureLaunchJsonExists: 项目目录:', projectDir);
   console.log('ensureLaunchJsonExists: .vscode 目录:', vscodeDir);
   console.log('ensureLaunchJsonExists: 配置文件路径:', devtoolConfigPath);
+  console.log('ensureLaunchJsonExists: launch.json 路径:', launchJsonPath);
 
   if (!fs.existsSync(projectDir)) {
     console.error('ensureLaunchJsonExists: 项目目录不存在:', projectDir);
@@ -55,6 +59,29 @@ export async function ensureLaunchJsonExists(
     'utf-8',
   );
   console.log('ensureLaunchJsonExists: devtool_config.json 文件创建成功');
+
+  // 检查 debug 开关状态，决定是否创建 launch.json
+  const isDebugModeEnabled = ConfigHelper.isDebugModeEnabled();
+  console.log('ensureLaunchJsonExists: debug 开关状态:', isDebugModeEnabled);
+
+  if (isDebugModeEnabled) {
+    // debug 开关为 true 或未配置（默认 true）时，创建 launch.json
+    if (!fs.existsSync(launchJsonPath)) {
+      console.log('ensureLaunchJsonExists: 创建 launch.json 文件...');
+      await fs.writeFile(
+        launchJsonPath,
+        JSON.stringify(debugLaunch, null, 2),
+        'utf-8',
+      );
+      console.log('ensureLaunchJsonExists: launch.json 文件创建成功');
+    }
+    else {
+      console.log('ensureLaunchJsonExists: launch.json 文件已存在，跳过创建');
+    }
+  }
+  else {
+    console.log('ensureLaunchJsonExists: debug 开关为 false，跳过创建 launch.json');
+  }
 
   try {
     await exportEnvToFile(projectDir);
