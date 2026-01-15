@@ -16,3 +16,11 @@ export type SaveFileParams = {
   /** 允许保存的文件类型 */
   allowedTypes?: string[];
 };
+
+/** 保存文件返回结果（Web 版本返回文件数据，桌面版本返回 boolean） */
+export type SaveFileResult = boolean | {
+  /** Base64 编码的文件数据 */
+  data: string;
+  /** 文件名 */
+  filename: string;
+};

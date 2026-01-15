@@ -1,24 +1,25 @@
 <script setup>
 import { theme } from 'ant-design-vue';
 import {
-  ref, onMounted, onUnmounted
+  ref, computed, onMounted, onUnmounted
 } from 'vue';
 import settingIcon from '@web/assets/svg/setting.svg';
 import buildIcon from '@web/assets/svg/build.svg';
 import runIcon from '@web/assets/svg/run.svg';
 import shIcon from '@web/assets/svg/sh.svg';
 import powerIcon from '@web/assets/svg/power.svg';
+import debugIcon from '@web/assets/svg/debug.svg';
 import checkIcon from '@web/assets/svg/check.svg';
 import {
   startBuild,
   startRun,
-  runSanitizer,
-  startOnBoard,
-  startSimulate,
   stopTask,
   openConfig,
   checkDevtoolConfig,
   checkTaskStatus,
+  getDebugMode,
+  runDebug,
+  debugConfig,
 } from '@web/apis';
 import { SettingOutlined } from '@ant-design/icons-vue';
 
@@ -30,9 +31,14 @@ const openKeys = ref(['submenu-build']);
 
 // 全局执行状态管理
 const isExecuting = ref(false);
+// 是否正在停止任务
+const isStopping = ref(false);
 
 // 配置文件是否存在
 const hasDevtoolConfig = ref(false);
+
+// 调试模式开关
+const debugModeEnabled = ref(false);
 
 // 需要互斥的操作按钮（执行时其他按钮应该禁用）
 const mutuallyExclusiveKeys = [
@@ -43,8 +49,8 @@ const mutuallyExclusiveKeys = [
   'simulation',
 ];
 
-// 菜单配置对象
-const menuItems = ref([
+// 基础菜单配置（不包含调试菜单）
+const baseMenuItems = [
   {
     key: 'projectConfig',
     label: '工程配置',
@@ -88,33 +94,11 @@ const menuItems = ref([
       await startRun();
     },
   },
-  // {
-  //     key: 'runDebug',
-  //     label: '调试',
-  //     icon: debugIcon,
-  //     children: [
-  //         {
-  //             key: 'buildAndDebug',
-  //             label: '执行调试',
-  //             handler: async () => {
-  //                 message.sendMessageToParent({ command: "vscodeRunDebug", data: '' });
-  //             }
-  //         },
-  //         {
-  //             key: 'debugConfig',
-  //             label: '调试配置',
-  //             handler: async () => {
-  //                 message.sendMessageToParent({ command: "vscodeDebugConfig", data: '' });
-  //             }
-  //         },
-  //     ]
-  // },
   {
     key: 'sanitizer',
     label: '异常检测',
     icon: checkIcon,
     handler: async () => {
-      // await runSanitizer();
       await openConfig({ configName: 'huawei-op-devtools.sanitizerOptions' });
     },
   },
@@ -127,7 +111,6 @@ const menuItems = ref([
         key: 'onboard',
         label: '上板分析',
         handler: async () => {
-          // await startOnBoard();
           await openConfig({ configName: 'huawei-op-devtools.onBoardOptions' });
         },
       },
@@ -135,7 +118,6 @@ const menuItems = ref([
         key: 'simulation',
         label: '仿真分析',
         handler: async () => {
-          // await startSimulate();
           await openConfig({ configName: 'huawei-op-devtools.simulatorOptions' });
         },
       },
@@ -149,7 +131,45 @@ const menuItems = ref([
       await openConfig({ configName: 'huawei-op-devtools.projectSH' });
     },
   },
-]);
+];
+
+// 调试菜单配置（只在调试模式启用时显示）
+const debugMenuItem = {
+  key: 'runDebug',
+  label: '调试',
+  icon: debugIcon,
+  children: [
+    {
+      key: 'buildAndDebug',
+      label: '执行调试',
+      handler: async () => {
+        await runDebug();
+      },
+    },
+    {
+      key: 'debugConfig',
+      label: '调试配置',
+      handler: async () => {
+        await debugConfig();
+      },
+    },
+  ],
+};
+
+// 动态计算菜单项（根据调试模式开关决定是否包含调试菜单）
+const menuItems = computed(() => {
+  const items = [...baseMenuItems];
+
+  // 如果启用了调试模式，在"运行验证"后插入调试菜单
+  if (debugModeEnabled.value) {
+    const runExampleIndex = items.findIndex(item => item.key === 'runExample');
+    if (runExampleIndex !== -1) {
+      items.splice(runExampleIndex + 1, 0, debugMenuItem);
+    }
+  }
+
+  return items;
+});
 
 // 判断菜单项是否应该被禁用
 const isMenuItemDisabled = (itemKey) => {
@@ -207,8 +227,22 @@ const handleMenuClick = async ({ key }) => {
     finally {
       // 操作完成后恢复按钮状态
       if (['buildOp', 'runExample'].includes(originalKey)) {
-        console.log('[Operate] 操作完成，恢复按钮状态');
-        isExecuting.value = false;
+        // 如果任务正在被停止，延迟清除执行状态，确保停止任务按钮不会过早消失
+        if (isStopping.value) {
+          console.log('[Operate] 任务正在被停止，延迟清除执行状态');
+          // 等待足够长的时间，确保任务真正停止
+          // 后端 cleanup() 最多等待5秒，但实际进程停止可能需要更长时间
+          // 特别是对于长时间运行的任务（如编译），需要更多时间让进程完全停止
+          setTimeout(() => {
+            console.log('[Operate] 延迟后恢复按钮状态');
+            isExecuting.value = false;
+            isStopping.value = false;
+          }, 10000); // 延迟10秒，确保任务真正停止（给进程足够时间完全停止）
+        }
+        else {
+          console.log('[Operate] 操作完成，恢复按钮状态');
+          isExecuting.value = false;
+        }
       }
     }
   }
@@ -222,15 +256,18 @@ const onOpenChange = (keys) => {
 // 停止任务
 const handleStopTask = async () => {
   console.log('[Operate] 用户点击停止任务');
+  isStopping.value = true; // 标记正在停止任务
 
   try {
     await stopTask();
+    // 停止任务请求发送成功，等待任务真正停止
+    // isExecuting 会在任务完成后自动设置为 false（在 handleMenuClick 的 finally 块中）
   }
   catch (error) {
     console.error('[Operate] 停止任务失败:', error);
-  }
-  finally {
-    isExecuting.value = false;
+    // 如果停止任务失败，取消停止标记，但不立即清除执行状态
+    // 让任务自然完成后在 handleMenuClick 的 finally 中清除
+    isStopping.value = false;
   }
 };
 
@@ -245,6 +282,16 @@ onMounted(async () => {
   catch (error) {
     console.error('[Operate] 检查配置文件失败:', error);
     hasDevtoolConfig.value = false;
+  }
+
+  // 获取调试模式开关状态
+  try {
+    debugModeEnabled.value = await getDebugMode();
+    console.log('[Operate] 调试模式状态:', debugModeEnabled.value);
+  }
+  catch (error) {
+    console.error('[Operate] 获取调试模式状态失败:', error);
+    debugModeEnabled.value = true; // 默认开启
   }
 
   // 开启状态同步定时器

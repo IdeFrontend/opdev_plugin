@@ -30,6 +30,7 @@ export type OpRecord = {
   create_time?: string;
   update_by?: string | null;
   update_time?: string;
+  template_name?: string | null;
 };
 
 type OpsStore = {
@@ -175,6 +176,8 @@ export async function generateStructure(
   const existingOp = getOpByProjectIdAndOpName(project.id as number, opName);
   const index = existingOp ? store.ops.findIndex(op => op.id === existingOp.id) : -1;
 
+  const templateName = (params as { template_name?: string }).template_name ?? null;
+
   if (existingOp && index !== -1) {
     // Update existing record
     store.ops[index] = {
@@ -185,6 +188,7 @@ export async function generateStructure(
       op_path: (params as { op_path: string }).op_path ?? store.ops[index].op_path,
       ascend_env_script: data.ascend_env_script ?? store.ops[index].ascend_env_script,
       examples: data.examples ?? store.ops[index].examples,
+      template_name: templateName ?? store.ops[index].template_name,
       update_by: data.create_by ?? store.ops[index].update_by,
       update_time: now,
     };
@@ -205,6 +209,7 @@ export async function generateStructure(
       op_path: (params as { op_path: string }).op_path ?? project.project_path,
       ascend_env_script: data.ascend_env_script ?? null,
       examples: data.examples ?? null,
+      template_name: templateName,
       create_by: data.create_by ?? null,
       create_time: now,
       update_by: null,
@@ -226,6 +231,10 @@ export async function generateStructure(
         targetExampleFile,
       } = getDefaultPath(record);
       // Build: 创建 build_op 和 build_example 两种配置
+      // 如果是 torch_library_template 类型，设置 target_file 为 python ../run.py
+      const targetFile = record.template_name === 'torch_library_template' 
+        ? 'python ../run.py' 
+        : targetOpFile;
       const buildOp = {
         project_id: project.id,
         user_options: {
@@ -233,7 +242,7 @@ export async function generateStructure(
           script: `bash ${opScriptPath}`,
           config_name: record.op_name,
           target_dir: targetDir,
-          target_file: targetOpFile,
+          target_file: targetFile,
         },
       };
       const buildExample = {
