@@ -10,6 +10,7 @@ import { linkMethods } from './controller/link-controller';
 import { sanitizerViewMethods } from './controller/sanitizer-controller';
 import { homeMethods } from './controller/home-controller';
 import { performanceMethods } from './controller/performance-data-controller';
+import { navigationController } from './controller/navigation-controller';
 
 // V2 版本控制器
 import { taskMethodsV2 } from '../src-v2/presentation/controllers-v2';
@@ -88,4 +89,5 @@ export const apis = {
   view: viewMethods,
   ops: opsMethods,
   performance: performanceMethods,
+  navigation: navigationController,
 };

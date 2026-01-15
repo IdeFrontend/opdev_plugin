@@ -11,9 +11,7 @@ import { ProjectManager } from '@plugin/core/project/project-manager';
 import { welcomeMethods } from '@plugin/controller/welcome-controller';
 import {
   COMMAND_OPEN,
-  COMMAND_PROJECT_SH,
   COMMAND_WELCOME,
-  COMMAND_CONFIG,
 } from '@plugin/constants';
 
 export interface messageItem {
@@ -46,12 +44,6 @@ const webviewMessageList: messageItem[] = [
     },
   },
   {
-    command: 'vscodeRunSetProjectSH',
-    callback: async (_msg: any, _that: any) => {
-      vscode.commands.executeCommand(COMMAND_PROJECT_SH);
-    },
-  },
-  {
     command: 'openWelcome',
     callback: (_message: any, _that: any) => {
       vscode.commands.executeCommand(COMMAND_WELCOME);
@@ -61,12 +53,6 @@ const webviewMessageList: messageItem[] = [
     command: 'vscodeOpenSidebar',
     callback: (_message: any, _that: any) => {
       vscode.commands.executeCommand('workbench.view.extension.mindstudio-opssuite-vscode-plugin');
-    },
-  },
-  {
-    command: 'vscodeOpenConfig',
-    callback: async (_msg: any, _that: any) => {
-      await vscode.commands.executeCommand(COMMAND_CONFIG);
     },
   },
   {
