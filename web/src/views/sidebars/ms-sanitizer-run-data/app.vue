@@ -6,6 +6,8 @@ import {
   CaretDownFilled,
   FlagOutlined,
   FlagFilled,
+  CopyOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons-vue';
 import {
   ref, computed, onMounted, onBeforeUnmount,
@@ -15,6 +17,8 @@ import {
   getMsSanitizerRunData,
   toggleMsSanitizerMark,
   openMsSanitizerPanel,
+  copyMsSanitizerReport,
+  downloadMsSanitizerReport,
 } from '@web/apis';
 import { theme } from 'ant-design-vue';
 
@@ -57,6 +61,24 @@ const handleClick = (data) => {
 const handleMark = async (data) => {
   await toggleMsSanitizerMark(data);
   getListData();
+};
+
+const handleCopyReport = async (data) => {
+  try {
+    await copyMsSanitizerReport({ path: data.path });
+  }
+  catch (error) {
+    console.error('复制报告失败:', error);
+  }
+};
+
+const handleDownloadReport = async (data) => {
+  try {
+    await downloadMsSanitizerReport({ path: data.path });
+  }
+  catch (error) {
+    console.error('下载报告失败:', error);
+  }
 };
 
 const getListData = async () => {
@@ -137,15 +159,24 @@ onBeforeUnmount(() => {
             </p>
           </div>
           <div
-            class="flex justify-center items-center pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-hover:pointer-events-auto"
+            class="flex gap-2 justify-center items-center pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-hover:pointer-events-auto"
           >
+            <CopyOutlined
+              class="text-white/70 hover:text-white cursor-pointer transition-colors"
+              @click.stop="handleCopyReport(item)"
+            />
+            <DownloadOutlined
+              class="text-white/70 hover:text-white cursor-pointer transition-colors"
+              @click.stop="handleDownloadReport(item)"
+            />
             <FlagFilled
               v-if="item.marked"
-              class="text-[#d32029] opacity-100"
+              class="text-[#d32029] opacity-100 cursor-pointer"
               @click.stop="handleMark(item)"
             />
             <FlagOutlined
               v-else
+              class="cursor-pointer"
               @click.stop="handleMark(item)"
             />
           </div>

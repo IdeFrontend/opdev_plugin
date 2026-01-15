@@ -4,6 +4,7 @@ import {
   DownOutlined,
   FlagOutlined,
   FlagFilled,
+  CopyOutlined,
   DownloadOutlined,
 } from '@ant-design/icons-vue';
 import type { DirectoryTreeProps } from 'ant-design-vue';
@@ -19,6 +20,8 @@ import {
 
 import {
   openCsvView, openInsightView, saveFileToLocal,
+  copyPerformanceReport,
+  downloadPerformanceReport,
 } from '@web/apis';
 
 import { formatTimestamp } from '@web/views/sidebars/performance-run-data/utils/timestamp';
@@ -83,6 +86,24 @@ function handleToggleMarked(
   marked: boolean,
 ) {
   emit('toggle-mark', record.key, marked);
+}
+
+async function handleCopyReport(record: PerformanceExecutionRecord) {
+  try {
+    await copyPerformanceReport({ dirPath: record.dirPath });
+  }
+  catch (error) {
+    console.error('复制报告失败:', error);
+  }
+}
+
+async function handleDownloadReport(record: PerformanceExecutionRecord) {
+  try {
+    await downloadPerformanceReport({ dirPath: record.dirPath });
+  }
+  catch (error) {
+    console.error('下载报告失败:', error);
+  }
 }
 
 /**
@@ -185,11 +206,17 @@ async function handleClickDownload(record: PerformanceExecutionRecord) {
             <div
               class="pointer-events-none absolute top-0 right-0 h-full flex items-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-hover:pointer-events-auto"
             >
-              <!-- 下载 -->
+              <!-- 复制报告 -->
+              <a-button
+                type="text"
+                :icon="h(CopyOutlined)"
+                @click.stop="handleCopyReport(dataRef)"
+              />
+              <!-- 下载报告 -->
               <a-button
                 type="text"
                 :icon="h(DownloadOutlined)"
-                @click.stop="handleClickDownload(dataRef)"
+                @click.stop="handleDownloadReport(dataRef)"
               />
               <!-- 标记/取消标记 -->
               <a-button

@@ -21,3 +21,13 @@ export function toggleRecordMark(params: MarkRecordParams) {
     params,
   );
 }
+
+/** 复制报告内容到剪贴板 */
+export function copyPerformanceReport(params: { dirPath: string }) {
+  return request.post<{ dirPath: string }, void>('performance/copyReport', params);
+}
+
+/** 下载报告文件（目录） */
+export function downloadPerformanceReport(params: { dirPath: string }) {
+  return request.post<{ dirPath: string }, void>('performance/downloadReport', params);
+}
