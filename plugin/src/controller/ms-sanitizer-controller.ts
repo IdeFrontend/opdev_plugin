@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { runDataService } from '@plugin/service/run-data-service';
 import { viewService } from '@plugin/service/view-service';
+import { fileService } from '@plugin/service/file-service';
 
 export const msSanitizerMethods = {
   /**
@@ -87,7 +88,7 @@ export const msSanitizerMethods = {
       async (progress) => {
         progress.report({
           increment: 0,
-          message: '正在读取文件...',
+          message: '正在检查文件...',
         });
 
         // 创建文件 URI
@@ -96,55 +97,57 @@ export const msSanitizerMethods = {
         // 检查文件是否存在
         try {
           const stat = await vscode.workspace.fs.stat(fileUri);
-
-          progress.report({
-            increment: 30,
-            message: `文件大小: ${(stat.size / 1024).toFixed(2)} KB`,
-          });
+          if (stat.type !== vscode.FileType.File && stat.type !== vscode.FileType.Directory) {
+            throw new Error('路径不是文件或目录');
+          }
         }
         catch {
           throw new Error(`文件不存在: ${filePath}`);
         }
 
-        // 读取文件内容
-        progress.report({
-          increment: 40,
-          message: '正在读取文件内容...',
-        });
-        const fileData = await vscode.workspace.fs.readFile(fileUri);
-
-        // 获取文件名
+        // 获取文件名（确保是 .zip 扩展名）
         const fileName = path.basename(filePath);
+        const zipFileName = fileName.endsWith('.zip')
+          ? fileName
+          : `${fileName}.zip`;
 
         progress.report({
-          increment: 60,
-          message: '请选择保存位置...',
+          increment: 20,
+          message: '正在准备下载...',
         });
 
-        // 让用户选择本地保存位置
-        const localFileUri = await vscode.window.showSaveDialog({
-          defaultUri: vscode.Uri.file(fileName),
-          saveLabel: '保存',
-          filters: { 所有文件: ['*'], 日志文件: ['log'] },
-        });
+        try {
+          // 使用 fileService.saveFileToLocal 方法，它会自动处理 Web 版本和桌面版本
+          // 对于单个文件，会自动复制到临时文件夹并压缩为 zip
+          const result = await fileService.saveFileToLocal({
+            sourcePath: filePath,
+            filename: zipFileName,
+            dialogTitle: '保存文件',
+            allowedTypes: ['zip'],
+          });
 
-        if (!localFileUri) {
-          // 用户取消了保存对话框
-          return;
+          if (result) {
+            progress.report({
+              increment: 100,
+              message: '下载完成',
+            });
+
+            // 如果是桌面版本（返回 boolean），显示成功消息
+            if (typeof result === 'boolean' && result) {
+              vscode.window.showInformationMessage('文件已成功下载');
+            }
+            // Web 版本会通过浏览器自动下载，不需要额外提示
+          }
+          else {
+            // 用户取消了保存对话框
+            vscode.window.showInformationMessage('下载已取消');
+          }
         }
-
-        // 将文件内容写入本地
-        progress.report({
-          increment: 80,
-          message: '正在保存文件...',
-        });
-        await vscode.workspace.fs.writeFile(localFileUri, fileData);
-
-        progress.report({
-          increment: 100,
-          message: '下载完成',
-        });
-        vscode.window.showInformationMessage(`文件已成功下载到: ${localFileUri.fsPath}`);
+        catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          vscode.window.showErrorMessage(`下载报告失败: ${errorMessage}`);
+          throw error;
+        }
       },
     );
   },
