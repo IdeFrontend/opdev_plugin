@@ -7,6 +7,7 @@ import {
   MarkRecordParams,
 } from '@shared/api-types';
 import { runDataService } from '@plugin/service/run-data-service';
+import { fileService } from '@plugin/service/file-service';
 
 /**
  * 递归读取目录下所有文件内容
@@ -171,50 +172,34 @@ export const performanceMethods = {
 
         progress.report({
           increment: 20,
-          message: '正在压缩目录...',
+          message: '正在准备下载...',
         });
 
         try {
-          // 使用 AdmZip 和 VS Code 文件系统 API 压缩目录
-          const zip = new AdmZip();
-          const basePath = dirUri.fsPath;
-
-          // 递归添加目录中的所有文件到 zip
-          await addDirectoryToZip(zip, dirUri, basePath);
-
-          // 生成 zip 文件的 Buffer
-          const zipBuffer = zip.toBuffer();
-
-          progress.report({
-            increment: 60,
-            message: '请选择保存位置...',
+          // 使用 fileService.saveFileToLocal 方法，它会自动处理 Web 版本和桌面版本
+          const result = await fileService.saveFileToLocal({
+            sourcePath: dirPath,
+            filename: zipFileName,
+            dialogTitle: '保存报告文件',
+            allowedTypes: ['zip'],
           });
 
-          // 让用户选择本地保存位置
-          const localFileUri = await vscode.window.showSaveDialog({
-            defaultUri: vscode.Uri.file(zipFileName),
-            saveLabel: '保存',
-            filters: { ZIP文件: ['zip'], 所有文件: ['*'] },
-          });
+          if (result) {
+            progress.report({
+              increment: 100,
+              message: '下载完成',
+            });
 
-          if (!localFileUri) {
-            // 用户取消了保存对话框
-            return;
+            // 如果是桌面版本（返回 boolean），显示成功消息
+            if (typeof result === 'boolean' && result) {
+              vscode.window.showInformationMessage('文件已成功下载');
+            }
+            // Web 版本会通过浏览器自动下载，不需要额外提示
           }
-
-          // 将压缩文件写入用户选择的位置
-          progress.report({
-            increment: 80,
-            message: '正在保存文件...',
-          });
-
-          await vscode.workspace.fs.writeFile(localFileUri, zipBuffer);
-
-          progress.report({
-            increment: 100,
-            message: '下载完成',
-          });
-          vscode.window.showInformationMessage(`文件已成功下载到: ${localFileUri.fsPath}`);
+          else {
+            // 用户取消了保存对话框
+            vscode.window.showInformationMessage('下载已取消');
+          }
         }
         catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);

@@ -20,7 +20,6 @@ import {
 
 import {
   openCsvView, openInsightView, saveFileToLocal,
-  copyPerformanceReport,
   downloadPerformanceReport,
 } from '@web/apis';
 
@@ -90,19 +89,33 @@ function handleToggleMarked(
 
 async function handleCopyReport(record: PerformanceExecutionRecord) {
   try {
-    await copyPerformanceReport({ dirPath: record.dirPath });
+    await navigator.clipboard.writeText(record.dirPath);
+    message.success('路径已复制到剪贴板');
   }
   catch (error) {
-    console.error('复制报告失败:', error);
+    console.error('复制路径失败:', error);
+    message.error('复制路径失败');
   }
 }
 
 async function handleDownloadReport(record: PerformanceExecutionRecord) {
   try {
-    await downloadPerformanceReport({ dirPath: record.dirPath });
+    const hide = message.loading('正在准备下载...', 0);
+    try {
+      await downloadPerformanceReport({ dirPath: record.dirPath });
+      message.success('下载成功');
+    }
+    catch (error) {
+      console.error('下载报告失败:', error);
+      message.error(error instanceof Error ? error.message : '下载失败');
+    }
+    finally {
+      hide();
+    }
   }
   catch (error) {
-    console.error('下载报告失败:', error);
+    console.error('下载处理失败:', error);
+    message.error('下载处理失败');
   }
 }
 
@@ -190,6 +203,7 @@ async function handleClickDownload(record: PerformanceExecutionRecord) {
       <template #title="{ dataRef }">
         <div
           class="text-white w-full relative group flex items-center"
+          style="padding-right: 100px;"
           :class="{ 'pr-8': isRootDir(dataRef) }"
         >
           <div
