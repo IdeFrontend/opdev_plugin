@@ -17,23 +17,6 @@ if (typeof acquireVsCodeApi !== 'undefined' && !window.vscode) {
 
 let isInitRun = false;
 
-// 监听来自VSCode扩展和iframe的消息
-window.addEventListener('message', (event) => {
-  const message = event.data;
-
-  console.log('外层页面接收到的message:', message);
-
-  if (message.command?.indexOf('vscode') === 0) {
-    if (vscode) {
-
-      vscode.postMessage({
-        command: message.command,
-        message,
-      });
-    }
-  }
-});
-
 function init() {
   if (isInitRun) {
     console.log('isInitRun is true');
