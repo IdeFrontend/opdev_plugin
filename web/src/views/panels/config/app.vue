@@ -7,7 +7,7 @@
 <script setup>
 import { theme } from 'ant-design-vue';
 import {
-  ref, nextTick, onMounted,
+  ref, nextTick, onMounted, onUnmounted
 } from 'vue';
 import optionsList from './components/options-list.vue';
 import configDetail from './components/config-detail.vue';
@@ -41,18 +41,42 @@ async function loadBuildConfig() {
 }
 
 const { activeTab } = useOpprofConfig()
+
+// 处理来自VSCode的消息
+const handleWebviewMessage = (event) => {
+  const message = event.data;
+  console.log('message-tab', message)
+  if (message.command === 'navigateToTab' && message.tab) {
+    changeTab(message.tab)
+  }
+};
+
 onMounted(async () => {
+  // 添加message事件监听器
+  window.addEventListener('message', handleWebviewMessage);
+
   loadBuildConfig();
   // 根据需要打开对应的菜单
   const target = await getTargetTab();
   console.log('target', target)
   if (target) {
-    const tab = target.split('-')
+    changeTab(target)
+  }
+});
+
+const changeTab = str => {
+    const tab = str.split('-')
+    // 一级菜单
     activeOption.value = tab[0]
+    // 二级菜单 - 性能调优
     if (tab[1]) {
       activeTab.value = tab[1]
     }
-  }
+}
+
+onUnmounted(() => {
+  // 移除message事件监听器
+  window.removeEventListener('message', handleWebviewMessage);
 });
 </script>
 <template>
