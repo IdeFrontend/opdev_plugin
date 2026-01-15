@@ -86,8 +86,8 @@ function createExtensionRequest(): ExtensionRequest {
       });
 
       return new Promise((resolve, reject) => {
-        // 请求超时：如果 timeout <= 0，则不设置超时
-        const requestTimeout = optionsWithDefault.timeout > 0
+        // 请求超时：如果 timeout <= 0 或 timeout 为 Infinity，则不设置超时
+        const requestTimeout = optionsWithDefault.timeout > 0 && optionsWithDefault.timeout !== Number.POSITIVE_INFINITY
           ? setTimeout(() => {
             reject(new Error(`request:${requestId} timeout`));
             pendingRequests.delete(requestId);
@@ -181,9 +181,9 @@ function makeErrorHandler(
 }
 
 function getOptionsWithDefault(options?: RequestOptions): Required<RequestOptions> {
+  // 如果明确指定了 timeout，使用指定的值；否则使用默认值
   return {
-    timeout: 60000, // 默认60秒
-    useCustomErrorHandler: false,
-    ...options,
+    timeout: options?.timeout !== undefined ? options.timeout : 60000, // 默认60秒
+    useCustomErrorHandler: options?.useCustomErrorHandler ?? false,
   };
 }
