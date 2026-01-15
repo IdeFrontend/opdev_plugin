@@ -25,4 +25,12 @@ export const commonMethods = {
   openExternalLink(url: string) {
     vscode.env.openExternal(vscode.Uri.parse(url));
   },
+
+  /**
+   * 执行 VSCode 命令
+   */
+  async executeVscodeCommand(params: { command: string; args: any[] }) {
+    const { command, args } = params;
+    return await vscode.commands.executeCommand(command, ...args);
+  },
 };

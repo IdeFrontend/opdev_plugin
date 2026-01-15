@@ -63,6 +63,7 @@ const opsMethods = {
   onBoard: taskMethods.onBoard,
   runDebug: taskMethods.runDebug,
   debugConfig: taskMethods.debugConfig,
+  checkTaskStatus: taskMethods.checkTaskStatus,
 
   ...configMethods, // getConfigData, getBuildConfigs, saveBuildConfig, saveConfig, openConfig
   ...scriptMethods, // updateShScript
@@ -75,7 +76,7 @@ const opsMethods = {
   saveSanitizerForm: sanitizerViewMethods.saveSanitizerForm,
   runSanitizer: getFeatureFlag('USE_V2_SANITIZER')
     ? taskMethodsV2.runSanitizer
-    : sanitizerViewMethods.runSanitizer,
+    : taskMethods.runSanitizer,
 
   ...homeMethods, // getProjectId
 };

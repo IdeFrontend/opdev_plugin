@@ -1,7 +1,7 @@
 <script setup>
 import { theme } from 'ant-design-vue';
 import {
-  ref, onMounted,
+  ref, onMounted, onUnmounted
 } from 'vue';
 import settingIcon from '@web/assets/svg/setting.svg';
 import buildIcon from '@web/assets/svg/build.svg';
@@ -18,6 +18,7 @@ import {
   stopTask,
   openConfig,
   checkDevtoolConfig,
+  checkTaskStatus,
 } from '@web/apis';
 import { SettingOutlined } from '@ant-design/icons-vue';
 
@@ -37,9 +38,9 @@ const hasDevtoolConfig = ref(false);
 const mutuallyExclusiveKeys = [
   'buildOp',
   'runExample',
-  // 'sanitizer',
-  // 'onboard',
-  // 'simulation',
+  'sanitizer',
+  'onboard',
+  'simulation',
 ];
 
 // 菜单配置对象
@@ -192,7 +193,7 @@ const handleMenuClick = async ({ key }) => {
 
   if (handler) {
     // 如果是互斥操作，设置执行状态
-    if (mutuallyExclusiveKeys.includes(originalKey)) {
+    if (['buildOp', 'runExample'].includes(originalKey)) {
       console.log('[Operate] 开始执行操作:', originalKey, '，锁定按钮');
       isExecuting.value = true;
     }
@@ -205,7 +206,7 @@ const handleMenuClick = async ({ key }) => {
     }
     finally {
       // 操作完成后恢复按钮状态
-      if (mutuallyExclusiveKeys.includes(originalKey)) {
+      if (['buildOp', 'runExample'].includes(originalKey)) {
         console.log('[Operate] 操作完成，恢复按钮状态');
         isExecuting.value = false;
       }
@@ -233,6 +234,8 @@ const handleStopTask = async () => {
   }
 };
 
+let statusTimer = null;
+
 onMounted(async () => {
   // 初始化时检查配置文件是否存在
   try {
@@ -242,6 +245,28 @@ onMounted(async () => {
   catch (error) {
     console.error('[Operate] 检查配置文件失败:', error);
     hasDevtoolConfig.value = false;
+  }
+
+  // 开启状态同步定时器
+  statusTimer = setInterval(async () => {
+    try {
+      const isRunning = await checkTaskStatus();
+      // 只有当状态发生变化时才更新，避免不必要的重绘
+      if (isExecuting.value !== isRunning) {
+        console.log('[Operate] 同步后端任务状态:', isRunning);
+        isExecuting.value = isRunning;
+      }
+    }
+    catch (error) {
+      console.error('[Operate] 获取任务状态失败:', error);
+    }
+  }, 1000);
+});
+
+onUnmounted(() => {
+  if (statusTimer) {
+    clearInterval(statusTimer);
+    statusTimer = null;
   }
 });
 
@@ -473,6 +498,7 @@ body {
   justify-content: center;
   align-items: center;
   border-radius: 6px;
+  cursor: pointer !important;
 }
 .setting-box:hover {
   background-color: #262729 !important;

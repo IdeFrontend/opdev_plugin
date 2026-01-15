@@ -2,9 +2,13 @@
 import {
     ref, onBeforeMount,
 } from 'vue';
-import { theme } from 'ant-design-vue';
+import { theme, message } from 'ant-design-vue';
 import {
-    getSanitizerConfigs, saveSanitizerForm as saveSanitizerFormAPI, runSanitizer
+    getSanitizerConfigs, 
+    saveSanitizerForm as saveSanitizerFormAPI, 
+    runSanitizer, 
+    checkTaskStatus, 
+    executeVscodeCommand
 } from '@web/apis';
 
 const themeConfig = { algorithm: theme.darkAlgorithm };
@@ -45,10 +49,19 @@ const handleConfirm = async () => {
   if (!form.value || isExecuting.value) {
     return;
   }
+  const hasRunningTask = await checkTaskStatus()
+  console.log('hasRunningTask', hasRunningTask)
+  if (hasRunningTask) {
+    message.info('存在未执行完毕的任务，请稍后再试');
+    return
+  }
   try {
     isExecuting.value = true;
     // 执行异常检测
-    await runSanitizer();
+    runSanitizer();
+    setTimeout(() => {
+      executeVscodeCommand('workbench.action.closeActiveEditor');
+    }, 500);
   }
   catch (error) {
     console.error('异常检测启动失败: ', error);
