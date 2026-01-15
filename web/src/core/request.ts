@@ -86,11 +86,13 @@ function createExtensionRequest(): ExtensionRequest {
       });
 
       return new Promise((resolve, reject) => {
-        // 请求超时
-        const requestTimeout = setTimeout(() => {
-          reject(new Error(`request:${requestId} timeout`));
-          pendingRequests.delete(requestId);
-        }, optionsWithDefault.timeout);
+        // 请求超时：如果 timeout <= 0 或 timeout 为 Infinity，则不设置超时
+        const requestTimeout = optionsWithDefault.timeout > 0 && optionsWithDefault.timeout !== Number.POSITIVE_INFINITY
+          ? setTimeout(() => {
+            reject(new Error(`request:${requestId} timeout`));
+            pendingRequests.delete(requestId);
+          }, optionsWithDefault.timeout)
+          : null;
 
         pendingRequests.set(requestId, {
           success: makeSuccessHandler(resolve, requestTimeout),
@@ -150,21 +152,25 @@ function recoverFromMessageError(messageError: NonNullable<ResponseMessage['erro
 
 function makeSuccessHandler<T>(
   resolve: (value: T | PromiseLike<T>)=> void,
-  requestTimeout: ReturnType<typeof setTimeout>,
+  requestTimeout: ReturnType<typeof setTimeout> | null,
 ): (value: unknown)=> void {
   return (value: unknown) => {
-    clearTimeout(requestTimeout);
+    if (requestTimeout) {
+      clearTimeout(requestTimeout);
+    }
     resolve(value as T);
   };
 }
 
 function makeErrorHandler(
   reject: (reason: unknown)=> void,
-  requestTimeout: ReturnType<typeof setTimeout>,
+  requestTimeout: ReturnType<typeof setTimeout> | null,
   options: Required<RequestOptions>,
 ): PendingRequest['error'] {
   return (statusCode, error) => {
-    clearTimeout(requestTimeout);
+    if (requestTimeout) {
+      clearTimeout(requestTimeout);
+    }
 
     if (!options.useCustomErrorHandler) {
       // 这里进行自定义错误处理
@@ -175,9 +181,9 @@ function makeErrorHandler(
 }
 
 function getOptionsWithDefault(options?: RequestOptions): Required<RequestOptions> {
+  // 如果明确指定了 timeout，使用指定的值；否则使用默认值
   return {
-    timeout: 60000, // 默认60秒
-    useCustomErrorHandler: false,
-    ...options,
+    timeout: options?.timeout !== undefined ? options.timeout : 60000, // 默认60秒
+    useCustomErrorHandler: options?.useCustomErrorHandler ?? false,
   };
 }

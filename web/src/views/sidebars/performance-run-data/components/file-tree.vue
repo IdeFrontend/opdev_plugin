@@ -11,6 +11,7 @@ import type { DirectoryTreeProps } from 'ant-design-vue';
 import {
   Component, h, ref, watch,
 } from 'vue';
+import { message } from 'ant-design-vue';
 
 import {
   PerformanceExecutionRecord,
@@ -18,7 +19,7 @@ import {
 } from '@shared/api-types';
 
 import {
-  openCsvView, openInsightView,
+  openCsvView, openInsightView, saveFileToLocal,
   copyPerformanceReport,
   downloadPerformanceReport,
 } from '@web/apis';
@@ -119,6 +120,58 @@ const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
     openInsightView(data.filePath);
   }
 };
+
+/**
+ * 处理下载点击
+ */
+async function handleClickDownload(record: PerformanceExecutionRecord) {
+  try {
+    // 从 dirPath 中提取目录名作为文件名
+    const dirPath = record.dirPath;
+    const dirName = dirPath
+      .split(/[/\\]/)
+      .filter(Boolean)
+      .pop() || 'download';
+    const filename = `${dirName}.zip`;
+
+    console.log('开始下载，路径:', dirPath, '文件名:', filename);
+
+    // 显示加载提示
+    const hide = message.loading('正在准备下载...', 0);
+
+    try {
+      const result = await saveFileToLocal({
+        sourcePath: dirPath,
+        filename,
+        dialogTitle: '保存文件',
+        allowedTypes: ['zip'],
+      });
+
+      console.log('下载API返回结果:', result);
+
+      if (result) {
+        // 延迟一下再显示成功消息，确保下载已开始
+        setTimeout(() => {
+          message.success('下载成功');
+        }, 500);
+      }
+      else {
+        message.warning('下载已取消或未完成');
+      }
+    }
+    catch (error) {
+      console.error('下载失败:', error);
+      message.error(error instanceof Error ? error.message : '下载失败');
+    }
+    finally {
+      hide();
+    }
+  }
+  catch (error) {
+    console.error('下载处理失败:', error);
+    message.error('下载处理失败');
+  }
+}
 </script>
 
 <template>

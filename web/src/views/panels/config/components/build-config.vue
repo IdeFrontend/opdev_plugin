@@ -134,12 +134,12 @@ const getSaveData = () => {
         />
       </a-form-item>
       <a-form-item
-        label="编译生成文件名称"
+        label="算子运行验证命令行"
         name="ipAddress"
       >
         <a-input
           v-model:value="localBuildConfigForme.target_file"
-          placeholder="请输入生成文件名称"
+          placeholder="请输入算子运行验证命令行"
           @change="handleBuildConfigChange"
         />
       </a-form-item>

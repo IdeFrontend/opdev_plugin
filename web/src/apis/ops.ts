@@ -58,12 +58,20 @@ export function saveConfig(params: SaveConfigParams) {
 
 /** 编译算子 */
 export function startBuild(params: StartBuildParams = {}) {
-  return request.post<StartBuildParams, void>('ops/startBuild', params);
+  return request.post<StartBuildParams, void>(
+    'ops/startBuild',
+    params,
+    { timeout: Number.POSITIVE_INFINITY }, // 编译可能耗时很长，设置无超时限制
+  );
 }
 
 /** 运行算子 */
 export function startRun(params: StartRunParams = {}) {
-  return request.post<StartRunParams, void>('ops/startRun', params);
+  return request.post<StartRunParams, void>(
+    'ops/startRun',
+    params,
+    { timeout: Number.POSITIVE_INFINITY }, // 运行可能耗时很长，设置无超时限制
+  );
 }
 
 /** 编译示例 */
@@ -71,17 +79,26 @@ export function startBuildExample(params: StartBuildExampleParams = {}) {
   return request.post<StartBuildExampleParams, void>(
     'ops/startBuildExample',
     params,
+    { timeout: Number.POSITIVE_INFINITY }, // 编译可能耗时很长，设置无超时限制
   );
 }
 
 /** 开始仿真分析 */
 export function startSimulate() {
-  return request.post<undefined, void>('ops/startSimulate');
+  return request.post<undefined, void>(
+    'ops/startSimulate',
+    undefined,
+    { timeout: Number.POSITIVE_INFINITY }, // 仿真分析可能耗时很长，设置无超时限制
+  );
 }
 
 /** 开始上板分析 */
 export function startOnBoard() {
-  return request.post<undefined, void>('ops/startOnBoard');
+  return request.post<undefined, void>(
+    'ops/startOnBoard',
+    undefined,
+    { timeout: Number.POSITIVE_INFINITY }, // 上板分析可能耗时很长，设置无超时限制
+  );
 }
 
 /** 获取构建配置ID */
@@ -124,7 +141,11 @@ export function saveSanitizerForm(params: SaveSanitizerFormParams) {
 
 /** 运行异常检测 */
 export function runSanitizer() {
-  return request.post<undefined, void>('ops/runSanitizer');
+  return request.post<undefined, void>(
+    'ops/runSanitizer',
+    undefined,
+    { timeout: Number.POSITIVE_INFINITY }, // 异常检测可能耗时很长，设置无超时限制
+  );
 }
 
 /** 更新脚本文件 */
@@ -152,7 +173,11 @@ export function getProjectId() {
 
 /** 停止当前任务 */
 export function stopTask() {
-  return request.post<undefined, void>('ops/stopTask');
+  return request.post<undefined, void>(
+    'ops/stopTask',
+    undefined,
+    { timeout: Number.POSITIVE_INFINITY }, // 去掉超时时间限制（Infinity 表示无超时）
+  );
 }
 
 /** 打开配置页面 */

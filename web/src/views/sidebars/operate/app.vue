@@ -14,8 +14,6 @@ import {
   startBuild,
   startRun,
   runSanitizer,
-  startOnBoard,
-  startSimulate,
   stopTask,
   openConfig,
   checkDevtoolConfig,
@@ -32,6 +30,8 @@ const openKeys = ref(['submenu-build']);
 
 // 全局执行状态管理
 const isExecuting = ref(false);
+// 是否正在停止任务
+const isStopping = ref(false);
 
 // 配置文件是否存在
 const hasDevtoolConfig = ref(false);
@@ -44,8 +44,8 @@ const mutuallyExclusiveKeys = [
   'buildOp',
   'runExample',
   'runCheck',
-  'onBoard',
-  'simulate',
+  // 'onBoard',
+  // 'simulate',
 ];
 
 // 基础菜单配置（不包含调试菜单）
@@ -110,14 +110,16 @@ const baseMenuItems = [
         key: 'onBoard',
         label: '上板分析',
         handler: async () => {
-          await startOnBoard();
+          // await startOnBoard();
+          await openConfig({ configName: 'huawei-op-devtools.onBoardOptions' });
         },
       },
       {
         key: 'simulate',
         label: '仿真分析',
         handler: async () => {
-          await startSimulate();
+          // await startSimulate();
+          await openConfig({ configName: 'huawei-op-devtools.simulatorOptions' });
         },
       },
     ],
@@ -226,8 +228,22 @@ const handleMenuClick = async ({ key }) => {
     finally {
       // 操作完成后恢复按钮状态
       if (mutuallyExclusiveKeys.includes(originalKey)) {
-        console.log('[Operate] 操作完成，恢复按钮状态');
-        isExecuting.value = false;
+        // 如果任务正在被停止，延迟清除执行状态，确保停止任务按钮不会过早消失
+        if (isStopping.value) {
+          console.log('[Operate] 任务正在被停止，延迟清除执行状态');
+          // 等待足够长的时间，确保任务真正停止
+          // 后端 cleanup() 最多等待5秒，但实际进程停止可能需要更长时间
+          // 特别是对于长时间运行的任务（如编译），需要更多时间让进程完全停止
+          setTimeout(() => {
+            console.log('[Operate] 延迟后恢复按钮状态');
+            isExecuting.value = false;
+            isStopping.value = false;
+          }, 10000); // 延迟10秒，确保任务真正停止（给进程足够时间完全停止）
+        }
+        else {
+          console.log('[Operate] 操作完成，恢复按钮状态');
+          isExecuting.value = false;
+        }
       }
     }
   }
@@ -241,15 +257,18 @@ const onOpenChange = (keys) => {
 // 停止任务
 const handleStopTask = async () => {
   console.log('[Operate] 用户点击停止任务');
+  isStopping.value = true; // 标记正在停止任务
 
   try {
     await stopTask();
+    // 停止任务请求发送成功，等待任务真正停止
+    // isExecuting 会在任务完成后自动设置为 false（在 handleMenuClick 的 finally 块中）
   }
   catch (error) {
     console.error('[Operate] 停止任务失败:', error);
-  }
-  finally {
-    isExecuting.value = false;
+    // 如果停止任务失败，取消停止标记，但不立即清除执行状态
+    // 让任务自然完成后在 handleMenuClick 的 finally 中清除
+    isStopping.value = false;
   }
 };
 

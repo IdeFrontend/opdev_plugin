@@ -15,6 +15,7 @@ export type CreateOpsParams = {
 export type CreateOpsByPrototypeParams = {
   opsPrototypeFile: string;
   opType?: 'ascend' | 'cann';
+  templateName?: string;
 };
 
 export type BuildConfig = {

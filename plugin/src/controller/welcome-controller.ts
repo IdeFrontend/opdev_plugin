@@ -154,9 +154,15 @@ export const welcomeMethods = {
       // 显示创建成功消息
       vscode.window.showInformationMessage(`算子工程创建成功: ${params.projectName}`);
 
+      // 保存 templateName 到 globalState，以便后续使用
+      if (params.templateName) {
+        context.globalState.update('templateName', params.templateName);
+      }
+
       // 执行创建算子文件命令
       console.log('createdProject: 准备执行创建算子文件命令');
       console.log('createdProject: createOperatorProjectDictoryFileType:', params.createOperatorProjectDictoryFileType);
+      console.log('createdProject: templateName:', params.templateName);
 
       try {
         await vscode.window.withProgress(

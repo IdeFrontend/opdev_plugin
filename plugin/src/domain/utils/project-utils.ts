@@ -105,6 +105,12 @@ async function exportEnvToFile(projectDir: string) {
       windowsHide: true,
     });
     console.log(`环境变量已导出到: ${targetFile}`);
+
+    await execAsync('mkdir build', {
+      cwd,
+      shell: '/bin/bash',
+      windowsHide: true,
+    });
   }
   catch (error) {
     console.error('导出环境变量失败:', error);
