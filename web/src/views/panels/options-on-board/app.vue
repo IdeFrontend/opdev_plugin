@@ -2,18 +2,18 @@
 import {
   ref, onMounted, computed, watch
 } from 'vue';
-import { theme } from 'ant-design-vue';
+import { theme, message } from 'ant-design-vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import {
-  getConfigData, saveConfig, openExternalLink, startOnBoard
+  getConfigData, saveConfig, openExternalLink, startOnBoard, executeVscodeCommand, checkTaskStatus
 } from '@web/apis';
 
 const themeConfig = { algorithm: theme.darkAlgorithm };
 const guide = 'https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODtools/Operatordevelopmenttools/atlasopdev_16_0082.html';
-const onboardData = ref({ user_options: { 
-    Occupancy: true, 
-    Roofline: true, 
-    Source: true, 
+const onboardData = ref({ user_options: {
+    Occupancy: true,
+    Roofline: true,
+    Source: true,
     MemoryDetail: true,
     ArithmeticUtilization: true,
     L2Cache: true,
@@ -58,10 +58,20 @@ const handleConfirm = async () => {
   if (!onboardData.value || isExecuting.value) {
     return;
   }
+  const hasRunningTask = await checkTaskStatus()
+  console.log('hasRunningTask', hasRunningTask)
+  if (hasRunningTask) {
+    message.info('存在未执行完毕的任务，请稍后再试');
+    return
+  }
   try {
     isExecuting.value = true;
     // 执行上板
-    await startOnBoard();
+    startOnBoard();
+    // 关闭当前页面
+    setTimeout(() => {
+      executeVscodeCommand('workbench.action.closeActiveEditor');
+    }, 500);
   }
   catch (error) {
     console.error('上板启动失败: ', error);
@@ -192,6 +202,7 @@ onMounted(() => {
           </a-checkbox>
           <a-checkbox
             v-model:checked="onboardData.user_options.Roofline"
+            style="margin-left: 12px;"
             @change="handleSave"
           >
             Roofline瓶颈分析
@@ -209,7 +220,7 @@ onMounted(() => {
             算子代码热点图
           </a-checkbox>
         </div>
-   
+
         <div class="cache-box">
           <a-checkbox
             v-model:checked="onboardData.user_options.MemoryDetail"
@@ -221,7 +232,7 @@ onMounted(() => {
             <QuestionCircleOutlined class="help-icon" />
           </a-tooltip>
         </div>
-   
+
         <div>
           <a-checkbox
             v-model:checked="performanceSelectedAll"

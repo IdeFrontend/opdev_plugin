@@ -1,7 +1,7 @@
 <script setup>
 import { theme } from 'ant-design-vue';
 import {
-  ref, computed, onMounted,
+  ref, computed, onMounted, onUnmounted
 } from 'vue';
 import settingIcon from '@web/assets/svg/setting.svg';
 import buildIcon from '@web/assets/svg/build.svg';
@@ -13,14 +13,15 @@ import checkIcon from '@web/assets/svg/check.svg';
 import {
   startBuild,
   startRun,
-  runSanitizer,
   stopTask,
   openConfig,
   checkDevtoolConfig,
+  checkTaskStatus,
   getDebugMode,
   runDebug,
   debugConfig,
 } from '@web/apis';
+import { SettingOutlined } from '@ant-design/icons-vue';
 
 const themeConfig = { algorithm: theme.darkAlgorithm };
 const activeConfig = ref('');
@@ -43,9 +44,9 @@ const debugModeEnabled = ref(false);
 const mutuallyExclusiveKeys = [
   'buildOp',
   'runExample',
-  'runCheck',
-  // 'onBoard',
-  // 'simulate',
+  'sanitizer',
+  'onboard',
+  'simulation',
 ];
 
 // 基础菜单配置（不包含调试菜单）
@@ -94,11 +95,11 @@ const baseMenuItems = [
     },
   },
   {
-    key: 'runCheck',
+    key: 'sanitizer',
     label: '异常检测',
     icon: checkIcon,
     handler: async () => {
-      await runSanitizer();
+      await openConfig({ configName: 'huawei-op-devtools.sanitizerOptions' });
     },
   },
   {
@@ -107,18 +108,16 @@ const baseMenuItems = [
     icon: powerIcon,
     children: [
       {
-        key: 'onBoard',
+        key: 'onboard',
         label: '上板分析',
         handler: async () => {
-          // await startOnBoard();
           await openConfig({ configName: 'huawei-op-devtools.onBoardOptions' });
         },
       },
       {
-        key: 'simulate',
+        key: 'simulation',
         label: '仿真分析',
         handler: async () => {
-          // await startSimulate();
           await openConfig({ configName: 'huawei-op-devtools.simulatorOptions' });
         },
       },
@@ -214,7 +213,7 @@ const handleMenuClick = async ({ key }) => {
 
   if (handler) {
     // 如果是互斥操作，设置执行状态
-    if (mutuallyExclusiveKeys.includes(originalKey)) {
+    if (['buildOp', 'runExample'].includes(originalKey)) {
       console.log('[Operate] 开始执行操作:', originalKey, '，锁定按钮');
       isExecuting.value = true;
     }
@@ -227,7 +226,7 @@ const handleMenuClick = async ({ key }) => {
     }
     finally {
       // 操作完成后恢复按钮状态
-      if (mutuallyExclusiveKeys.includes(originalKey)) {
+      if (['buildOp', 'runExample'].includes(originalKey)) {
         // 如果任务正在被停止，延迟清除执行状态，确保停止任务按钮不会过早消失
         if (isStopping.value) {
           console.log('[Operate] 任务正在被停止，延迟清除执行状态');
@@ -272,6 +271,8 @@ const handleStopTask = async () => {
   }
 };
 
+let statusTimer = null;
+
 onMounted(async () => {
   // 初始化时检查配置文件是否存在
   try {
@@ -292,7 +293,34 @@ onMounted(async () => {
     console.error('[Operate] 获取调试模式状态失败:', error);
     debugModeEnabled.value = true; // 默认开启
   }
+
+  // 开启状态同步定时器
+  statusTimer = setInterval(async () => {
+    try {
+      const isRunning = await checkTaskStatus();
+      // 只有当状态发生变化时才更新，避免不必要的重绘
+      if (isExecuting.value !== isRunning) {
+        console.log('[Operate] 同步后端任务状态:', isRunning);
+        isExecuting.value = isRunning;
+      }
+    }
+    catch (error) {
+      console.error('[Operate] 获取任务状态失败:', error);
+    }
+  }, 1000);
 });
+
+onUnmounted(() => {
+  if (statusTimer) {
+    clearInterval(statusTimer);
+    statusTimer = null;
+  }
+});
+
+const openSetting = key => {
+  const configKey = key === 'simulation' || key === 'onboard' ? `opprof-${key}` : key;
+  openConfig({ configName: 'huawei-op-devtools.config', key: configKey });
+}
 </script>
 
 <template>
@@ -389,7 +417,12 @@ onMounted(async () => {
                       isMenuItemDisabled(child.key),
                   }"
                 >
-                  {{ child.label }}
+                  <div class="single-box">
+                    {{ child.label }}
+                    <div v-if="child.key === 'simulation' || child.key === 'onboard'" class="setting-box">
+                      <SettingOutlined @click.stop="openSetting(child.key)" />
+                    </div>
+                  </div>
                 </a-menu-item>
                 <!-- 嵌套子菜单 -->
                 <a-sub-menu
@@ -418,17 +451,19 @@ onMounted(async () => {
                   isMenuItemDisabled(item.key),
               }"
             >
-              <span
-                v-if="item.icon"
-                class="inline-flex items-center text-[11px]"
-              >
-                <img
-                  :src="item.icon"
-                  alt=""
-                  class="w-4 h-4 mr-2 align-middle"
-                />
-                <span class="text-white/85">{{ item.label }}</span>
-              </span>
+              <div v-if="item.icon" class="single-box"> 
+                <span class="inline-flex items-center text-[11px]">
+                  <img
+                    :src="item.icon"
+                    alt=""
+                    class="w-4 h-4 mr-2 align-middle"
+                  />
+                  <span class="text-white/85">{{ item.label }}</span>
+                </span>
+                <div v-if="item.key === 'sanitizer'" class="setting-box">
+                  <SettingOutlined @click.stop="openSetting(item.key)" />
+                </div>
+              </div>
               <span
                 v-else
                 class="text-white/85"
@@ -492,5 +527,27 @@ body {
 :deep(.ant-menu-item-disabled) {
   opacity: 0.5;
   cursor: not-allowed !important;
+}
+
+.single-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.single-box:hover .setting-box {
+  display: flex;
+}
+
+.setting-box {
+  display: none;
+  width: 22px;
+  height: 22px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 6px;
+  cursor: pointer !important;
+}
+.setting-box:hover {
+  background-color: #262729 !important;
 }
 </style>

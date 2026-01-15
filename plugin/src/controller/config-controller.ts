@@ -10,7 +10,20 @@ import {
   RemotePathSearchResult,
 } from '@shared/api-types';
 
+let targetTab: string | undefined;
+
 export const configMethods = {
+  /**
+   * 获取目标标签页并清除
+   * @returns 目标标签页
+   */
+  async getTargetTab(): Promise<string | undefined> {
+    const tab = targetTab;
+
+    targetTab = undefined; // 读取后立即清除
+
+    return tab;
+  },
   /**
    * 获取构建配置列表
    * @returns 构建配置列表
@@ -119,9 +132,13 @@ export const configMethods = {
    * 打开配置页面
    * @param params 参数
    */
-  async openConfig(params: { configName?: string }) {
+  async openConfig(params: { configName?: string, key?: string }) {
+    if (params.key) {
+      targetTab = params.key;
+    }
+
     if (params.configName) {
-      await vscode.commands.executeCommand(params.configName);
+      await vscode.commands.executeCommand(params.configName, params.key);
     }
   },
 };

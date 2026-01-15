@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { CommandExecutor } from '@plugin/class/command-options';
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import { buildService } from '@plugin/service/build-service';
+import { sanitizerService } from '@plugin/service/sanitizer-service';
 
 // 全局任务管理器：用于追踪和终止正在执行的任务
 let currentExecutor: CommandExecutor | null = null;
@@ -98,6 +99,26 @@ export const taskMethods = {
   },
 
   /**
+   * 异常检测
+   */
+  async runSanitizer(): Promise<void> {
+    try {
+      await ProjectManager.getInstance()
+        .initProject();
+      // 保存当前 executor 引用，用于可能的终止操作
+      currentExecutor = ProjectManager.getInstance()
+        .getExecutor();
+      await sanitizerService.runSanitizer();
+    }
+    finally {
+      // 清除 executor 引用
+      currentExecutor = null;
+      ProjectManager.getInstance()
+        .clearExecutor();
+    }
+  },
+
+  /**
    * 构建算子 (webview 兼容)
    */
   async buildOp(): Promise<void> {
@@ -130,6 +151,14 @@ export const taskMethods = {
    */
   async onBoard(): Promise<void> {
     return this.startOnBoard();
+  },
+
+  /**
+   * 检查任务执行状态
+   * @returns 是否有任务正在运行
+   */
+  async checkTaskStatus(): Promise<boolean> {
+    return currentExecutor !== null;
   },
 
   /**

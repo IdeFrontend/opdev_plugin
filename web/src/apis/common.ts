@@ -89,3 +89,13 @@ export function openExternalLink(url: string) {
     url,
   );
 }
+
+/**
+ * 执行 VSCode 命令
+ */
+export function executeVscodeCommand(command: string, ...args: any[]) {
+  return request.post(
+    'common/executeVscodeCommand',
+    { command, args }
+  );
+}

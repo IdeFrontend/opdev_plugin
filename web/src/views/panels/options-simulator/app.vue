@@ -2,10 +2,10 @@
 import {
   ref, onMounted,
 } from 'vue';
-import { theme } from 'ant-design-vue';
+import { theme, message } from 'ant-design-vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import {
-  getConfigData, saveConfig, startSimulate, openExternalLink,
+  getConfigData, saveConfig, startSimulate, openExternalLink, checkTaskStatus, executeVscodeCommand
 } from '@web/apis';
 
 const themeConfig = { algorithm: theme.darkAlgorithm };
@@ -36,11 +36,6 @@ const fetchConfig = async () => {
 };
 
 const handleChange = async () => {
-  // const obj = {
-  //   config_id: simulateOptions.value.config_id,
-  //   user_options: { ...simulateOptions.value.user_options },
-  // };
-
   await saveConfig({
     type: 'simulate',
     data: [simulateOptions.value],
@@ -51,12 +46,19 @@ const handleConfirm = async () => {
   if (!simulateOptions.value || isExecuting.value) {
     return;
   }
+  const hasRunningTask = await checkTaskStatus()
+  console.log('hasRunningTask', hasRunningTask)
+  if (hasRunningTask) {
+    message.info('存在未执行完毕的任务，请稍后再试');
+    return
+  }
   try {
     isExecuting.value = true;
     // 执行仿真
-    await startSimulate();
-    // 成功启动后可以考虑关闭当前页面或跳转
-    console.log('仿真已启动');
+    startSimulate();
+    setTimeout(() => {
+      executeVscodeCommand('workbench.action.closeActiveEditor');
+    }, 500);
   }
   catch (error) {
     console.error('仿真启动失败: ', error);

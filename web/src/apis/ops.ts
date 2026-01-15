@@ -180,6 +180,16 @@ export function stopTask() {
   );
 }
 
+/** 检查任务执行状态 */
+export function checkTaskStatus() {
+  return request.post<undefined, boolean>('ops/checkTaskStatus');
+}
+
+/** 获取目标标签页并清除 */
+export function getTargetTab() {
+  return request.post<undefined, string | undefined>('ops/getTargetTab');
+}
+
 /** 打开配置页面 */
 export function openConfig(params: { configName?: string } = {}) {
   return request.post<{ configName?: string }, void>('ops/openConfig', params);
