@@ -1,13 +1,14 @@
 <script setup>
 import { theme } from 'ant-design-vue';
 import {
-  ref, onMounted,
+  ref, computed, onMounted,
 } from 'vue';
 import settingIcon from '@web/assets/svg/setting.svg';
 import buildIcon from '@web/assets/svg/build.svg';
 import runIcon from '@web/assets/svg/run.svg';
 import shIcon from '@web/assets/svg/sh.svg';
 import powerIcon from '@web/assets/svg/power.svg';
+import debugIcon from '@web/assets/svg/debug.svg';
 import checkIcon from '@web/assets/svg/check.svg';
 import {
   startBuild,
@@ -16,6 +17,9 @@ import {
   stopTask,
   openConfig,
   checkDevtoolConfig,
+  getDebugMode,
+  runDebug,
+  debugConfig,
 } from '@web/apis';
 
 const themeConfig = { algorithm: theme.darkAlgorithm };
@@ -32,6 +36,9 @@ const isStopping = ref(false);
 // 配置文件是否存在
 const hasDevtoolConfig = ref(false);
 
+// 调试模式开关
+const debugModeEnabled = ref(false);
+
 // 需要互斥的操作按钮（执行时其他按钮应该禁用）
 const mutuallyExclusiveKeys = [
   'buildOp',
@@ -41,8 +48,8 @@ const mutuallyExclusiveKeys = [
   // 'simulate',
 ];
 
-// 菜单配置对象
-const menuItems = ref([
+// 基础菜单配置（不包含调试菜单）
+const baseMenuItems = [
   {
     key: 'projectConfig',
     label: '工程配置',
@@ -86,27 +93,6 @@ const menuItems = ref([
       await startRun();
     },
   },
-  // {
-  //     key: 'runDebug',
-  //     label: '调试',
-  //     icon: debugIcon,
-  //     children: [
-  //         {
-  //             key: 'buildAndDebug',
-  //             label: '执行调试',
-  //             handler: async () => {
-  //                 message.sendMessageToParent({ command: "vscodeRunDebug", data: '' });
-  //             }
-  //         },
-  //         {
-  //             key: 'debugConfig',
-  //             label: '调试配置',
-  //             handler: async () => {
-  //                 message.sendMessageToParent({ command: "vscodeDebugConfig", data: '' });
-  //             }
-  //         },
-  //     ]
-  // },
   {
     key: 'runCheck',
     label: '异常检测',
@@ -146,7 +132,45 @@ const menuItems = ref([
       await openConfig({ configName: 'huawei-op-devtools.projectSH' });
     },
   },
-]);
+];
+
+// 调试菜单配置（只在调试模式启用时显示）
+const debugMenuItem = {
+  key: 'runDebug',
+  label: '调试',
+  icon: debugIcon,
+  children: [
+    {
+      key: 'buildAndDebug',
+      label: '执行调试',
+      handler: async () => {
+        await runDebug();
+      },
+    },
+    {
+      key: 'debugConfig',
+      label: '调试配置',
+      handler: async () => {
+        await debugConfig();
+      },
+    },
+  ],
+};
+
+// 动态计算菜单项（根据调试模式开关决定是否包含调试菜单）
+const menuItems = computed(() => {
+  const items = [...baseMenuItems];
+
+  // 如果启用了调试模式，在"运行验证"后插入调试菜单
+  if (debugModeEnabled.value) {
+    const runExampleIndex = items.findIndex(item => item.key === 'runExample');
+    if (runExampleIndex !== -1) {
+      items.splice(runExampleIndex + 1, 0, debugMenuItem);
+    }
+  }
+
+  return items;
+});
 
 // 判断菜单项是否应该被禁用
 const isMenuItemDisabled = (itemKey) => {
@@ -257,6 +281,16 @@ onMounted(async () => {
   catch (error) {
     console.error('[Operate] 检查配置文件失败:', error);
     hasDevtoolConfig.value = false;
+  }
+
+  // 获取调试模式开关状态
+  try {
+    debugModeEnabled.value = await getDebugMode();
+    console.log('[Operate] 调试模式状态:', debugModeEnabled.value);
+  }
+  catch (error) {
+    console.error('[Operate] 获取调试模式状态失败:', error);
+    debugModeEnabled.value = true; // 默认开启
   }
 });
 </script>

@@ -23,6 +23,16 @@
   ],
   "icon": "web/resources/extension_icon.png",
   "contributes": {
+    "configuration": {
+      "title": "Huawei OP DevTools",
+      "properties": {
+        "op-devtools.debugMode": {
+          "type": "boolean",
+          "default": true,
+          "description": "启用调试功能（实验性功能）"
+        }
+      }
+    },
     "viewsContainers": {
       "activitybar": [
         {
