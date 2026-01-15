@@ -1,6 +1,9 @@
 import { getOpByProjectIdAndOpName } from './ops';
 import { getProjectById } from '@plugin/domain';
-import { getConfigById } from './configuration';
+import {
+  getConfigById,
+  getConfig,
+} from './configuration';
 import { getAdvanceCmd } from '@plugin/domain/utils/command-utils';
 import { ConfigRecord } from '@plugin/domain/models/config-model';
 import {
@@ -77,6 +80,21 @@ export function getRunCommand(config_id: number) {
 
     const context = strategy.buildCommandContext(baseContext);
 
+    // 根据操作符类型选择 TargetFile
+    // CANN 使用 build_op 的 TargetFile，ascend 使用 build_example 的 TargetFile
+    const opType = baseContext.operator?.op_type;
+
+    if (opType === 'cann') {
+      // CANN 类型：使用 build_op 配置的 TargetFile
+      const buildOpConfigs = getConfig(context.config.project_id, 'build_op', context.config.op);
+      const buildOpConfig = buildOpConfigs.length > 0 ? buildOpConfigs[0] : null;
+
+      if (buildOpConfig?.target_file) {
+        context.config.target_file = buildOpConfig.target_file;
+      }
+    }
+    // ascend 类型：使用当前配置（build_example）的 TargetFile，保持不变
+
     return strategy.buildRunCommand(context);
   }
   catch (e: unknown) {
@@ -138,7 +156,25 @@ export function getSimulateCommand(
     const strategy = CommandStrategyFactory.getStrategy(baseContext.operator?.op_type);
 
     const context = strategy.buildCommandContext(baseContext);
-    const exConfig = getConfigById(example_config_id) as unknown as ConfigRecord;
+
+    // 根据操作符类型选择 TargetFile
+    // CANN 使用 build_op 的 TargetFile，ascend 使用 build_example 的 TargetFile
+    let targetFile = '';
+    const opType = baseContext.operator?.op_type;
+
+    if (opType === 'cann') {
+      // CANN 类型：使用 build_op 配置的 TargetFile
+      const buildOpConfigs = getConfig(context.config.project_id, 'build_op', context.config.op);
+      const buildOpConfig = buildOpConfigs.length > 0 ? buildOpConfigs[0] : null;
+
+      targetFile = buildOpConfig?.target_file || '';
+    }
+    else {
+      // ascend 类型：使用 build_example 配置的 TargetFile
+      const exConfig = getConfigById(example_config_id) as unknown as ConfigRecord;
+
+      targetFile = exConfig?.target_file || '';
+    }
 
     return strategy.buildSimulateCommand({
       config: context.config,
@@ -146,7 +182,8 @@ export function getSimulateCommand(
       operator: context.operator,
       sourceCannCmd: context.sourceCannCmd,
       cdCmd: context.cdCmd,
-      exampleTargetFile: exConfig?.target_file || '',
+      exampleTargetFile: targetFile,
+      cdBuildCmd: context.cdBuildCmd,
     });
   }
   catch (e: unknown) {
@@ -170,7 +207,25 @@ export function getOnBoardCommand(
     const strategy = CommandStrategyFactory.getStrategy(baseContext.operator?.op_type);
 
     const context = strategy.buildCommandContext(baseContext);
-    const exConfig = getConfigById(example_config_id) as unknown as ConfigRecord;
+
+    // 根据操作符类型选择 TargetFile
+    // CANN 使用 build_op 的 TargetFile，ascend 使用 build_example 的 TargetFile
+    let targetFile = '';
+    const opType = baseContext.operator?.op_type;
+
+    if (opType === 'cann') {
+      // CANN 类型：使用 build_op 配置的 TargetFile
+      const buildOpConfigs = getConfig(context.config.project_id, 'build_op', context.config.op);
+      const buildOpConfig = buildOpConfigs.length > 0 ? buildOpConfigs[0] : null;
+
+      targetFile = buildOpConfig?.target_file || '';
+    }
+    else {
+      // ascend 类型：使用 build_example 配置的 TargetFile
+      const exConfig = getConfigById(example_config_id) as unknown as ConfigRecord;
+
+      targetFile = exConfig?.target_file || '';
+    }
 
     return strategy.buildOnBoardCommand({
       config: context.config,
@@ -178,7 +233,8 @@ export function getOnBoardCommand(
       operator: context.operator,
       sourceCannCmd: context.sourceCannCmd,
       cdCmd: context.cdCmd,
-      exampleTargetFile: exConfig?.target_file || '',
+      exampleTargetFile: targetFile,
+      cdBuildCmd: context.cdBuildCmd,
     });
   }
   catch (e: unknown) {
@@ -202,14 +258,33 @@ export function getSanitizerCommand(
     const strategy = CommandStrategyFactory.getStrategy(baseContext.operator?.op_type);
 
     const context = strategy.buildCommandContext(baseContext);
-    const exConfig = getConfigById(example_config_id) as unknown as ConfigRecord;
+
+    // 根据操作符类型选择 TargetFile
+    // CANN 使用 build_op 的 TargetFile，ascend 使用 build_example 的 TargetFile
+    let targetFile = '';
+    const opType = baseContext.operator?.op_type;
+
+    if (opType === 'cann') {
+      // CANN 类型：使用 build_op 配置的 TargetFile
+      const buildOpConfigs = getConfig(context.config.project_id, 'build_op', context.config.op);
+      const buildOpConfig = buildOpConfigs.length > 0 ? buildOpConfigs[0] : null;
+
+      targetFile = buildOpConfig?.target_file || '';
+    }
+    else {
+      // ascend 类型：使用 build_example 配置的 TargetFile
+      const exConfig = getConfigById(example_config_id) as unknown as ConfigRecord;
+
+      targetFile = exConfig?.target_file || '';
+    }
 
     return strategy.buildSanitizerCommand(
       context.config,
       context.operator,
       context.sourceCannCmd,
       context.cdCmd,
-      exConfig?.target_file || ''
+      targetFile,
+      context.cdBuildCmd,
     );
   }
   catch (e: unknown) {
@@ -219,4 +294,5 @@ export function getSanitizerCommand(
 
 // 导出策略相关类型和工厂，以便外部注册新策略
 export { CommandStrategyFactory } from './command-strategy';
+
 export type { CommandStrategy } from './command-strategy';
