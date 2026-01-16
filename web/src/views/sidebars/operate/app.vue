@@ -20,6 +20,8 @@ import {
   getDebugMode,
   runDebug,
   debugConfig,
+  runCpuDebug,
+  cpuDebugConfig,
   navigateToTab
 } from '@web/apis';
 import { SettingOutlined } from '@ant-design/icons-vue';
@@ -142,16 +144,30 @@ const debugMenuItem = {
   children: [
     {
       key: 'buildAndDebug',
-      label: '执行调试',
+      label: 'NPU调试',
       handler: async () => {
         await runDebug();
       },
     },
     {
       key: 'debugConfig',
-      label: '调试配置',
+      label: 'NPU调试配置',
       handler: async () => {
         await debugConfig();
+      },
+    },
+    {
+      key: 'buildAndCpuDebug',
+      label: 'CPU调试',
+      handler: async () => {
+        await runCpuDebug();
+      },
+    },
+    {
+      key: 'cpuDebugConfig',
+      label: 'CPU调试配置',
+      handler: async () => {
+        await cpuDebugConfig();
       },
     },
   ],
