@@ -20,6 +20,7 @@ import {
   getDebugMode,
   runDebug,
   debugConfig,
+  navigateToTab
 } from '@web/apis';
 import { SettingOutlined } from '@ant-design/icons-vue';
 
@@ -317,9 +318,19 @@ onUnmounted(() => {
   }
 });
 
-const openSetting = key => {
+
+const openSetting = async (key) => {
   const configKey = key === 'simulation' || key === 'onboard' ? `opprof-${key}` : key;
-  openConfig({ configName: 'huawei-op-devtools.config', key: configKey });
+
+  // 首先尝试打开配置页面
+  await openConfig({ configName: 'huawei-op-devtools.config', key: configKey });
+
+  // 然后向已打开的配置页面发送导航消息
+  try {
+    await navigateToTab(configKey);
+  } catch (error) {
+    console.error('导航到标签页失败:', error);
+  }
 }
 </script>
 
