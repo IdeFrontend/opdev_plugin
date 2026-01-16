@@ -227,11 +227,11 @@ async function handleClickDownload(record: PerformanceExecutionRecord) {
                 @click.stop="handleCopyReport(dataRef)"
               />
               <!-- 下载报告 -->
-              <a-button
+              <!-- <a-button
                 type="text"
                 :icon="h(DownloadOutlined)"
                 @click.stop="handleDownloadReport(dataRef)"
-              />
+              /> -->
               <!-- 标记/取消标记 -->
               <a-button
                 :class="{ 'opacity-100': dataRef.marked }"
