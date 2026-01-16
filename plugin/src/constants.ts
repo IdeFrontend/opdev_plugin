@@ -26,6 +26,12 @@ export const COMMAND_FLASH_MS_SANITIZER_RUN_DATA = `${COMMAND_PREFIX}.flashMsSan
 
 export const COMMAND_FLASH_PERFORMANCE_RUN_DATA = `${COMMAND_PREFIX}.flashPerformanceRunData`;
 
+export const COMMAND_SIMULATOR_OPTIONS = `${COMMAND_PREFIX}.simulatorOptions`;
+
+export const COMMAND_ON_BOARD_OPTIONS = `${COMMAND_PREFIX}.onBoardOptions`;
+
+export const COMMAND_SANITIZER_OPTIONS = `${COMMAND_PREFIX}.sanitizerOptions`;
+
 // 视图名称常量（对应 web/src/views 下的目录名）
 export const VIEW_HOME = 'home';
 
@@ -46,3 +52,9 @@ export const VIEW_PERFORMANCE_RUN_DATA = 'performance-run-data';
 export const VIEW_MS_SANITIZER_RUN_DATA = 'ms-sanitizer-run-data';
 
 export const VIEW_OPS_CONFIG = 'ops-config';
+
+export const VIEW_OPTIONS_SIMULATOR = 'options-simulator';
+
+export const VIEW_OPTIONS_ON_BOARD = 'options-on-board';
+
+export const VIEW_OPTIONS_SANITIZER = 'options-sanitizer';

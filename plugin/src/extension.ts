@@ -46,6 +46,12 @@ import {
   VIEW_LINK,
   VIEW_WELCOME,
   VIEW_PROJECT_SH,
+  COMMAND_SIMULATOR_OPTIONS,
+  VIEW_OPTIONS_SIMULATOR,
+  COMMAND_ON_BOARD_OPTIONS,
+  VIEW_OPTIONS_ON_BOARD,
+  COMMAND_SANITIZER_OPTIONS,
+  VIEW_OPTIONS_SANITIZER
 } from './constants';
 
 let extensionContext: vscode.ExtensionContext | undefined;
@@ -312,9 +318,35 @@ export async function activate(context: vscode.ExtensionContext) {
     openMsSanitizerDisposable, msSanitizerPanelView,
   } =
     getMsSanitizerPanelViewProvider(context, apiServer);
-
   context.subscriptions.push(msSanitizerPanelView, openMsSanitizerDisposable);
-  // createOpsProvider.show('ProjectSH');
+
+  // 初始化'仿真分析-选择采集内容'页面的Webview
+  const simulatorOptionsProvider = new WebviewProvider(context, apiServer);
+  const simulatorOptionsCommand = vscode.commands.registerCommand(
+    COMMAND_SIMULATOR_OPTIONS,
+    async () => {
+      simulatorOptionsProvider.show(VIEW_OPTIONS_SIMULATOR);
+    },
+  );
+
+  // 初始化'上板分析-选择采集内容'页面的Webview
+  const onBoardOptionsProvider = new WebviewProvider(context, apiServer);
+  const onBoardOptionsCommand = vscode.commands.registerCommand(
+    COMMAND_ON_BOARD_OPTIONS,
+    async () => {
+      onBoardOptionsProvider.show(VIEW_OPTIONS_ON_BOARD);
+    },
+  );
+
+  // 初始化'异常检测-选择检测内容'页面的Webview
+  const sanitizerOptionsProvider = new WebviewProvider(context, apiServer);
+  const sanitizerOptionsCommand = vscode.commands.registerCommand(
+    COMMAND_SANITIZER_OPTIONS,
+    async () => {
+      sanitizerOptionsProvider.show(VIEW_OPTIONS_SANITIZER);
+    },
+  );
+
   // 订阅销毁事件
   context.subscriptions.push(apiServer);
   context.subscriptions.push(viewServer);
@@ -328,6 +360,9 @@ export async function activate(context: vscode.ExtensionContext) {
   // 注意: createOptionsCommand 已在上面添加,不要重复添加
   context.subscriptions.push(getHome);
   context.subscriptions.push(createOperatorInWorkspaceCommand);
+  context.subscriptions.push(simulatorOptionsCommand);
+  context.subscriptions.push(onBoardOptionsCommand);
+  context.subscriptions.push(sanitizerOptionsCommand);
 
   // 注册 CSV 编辑器提供者
   const csvEditorProvider = new CsvEditorProvider();
@@ -455,8 +490,8 @@ export async function activate(context: vscode.ExtensionContext) {
   const installer = new MindStudioPluginInstaller(context, {
     pluginId: 'ascend.mindstudio-debug-vscode-plugin',
     vsixRelativePath:
-      './out/plugin/mindstudio-debug-vscode-plugin/MindStudio-Debug-VSCode-Plugin-1.0.7.vsix',
-    pluginVersion: '1.0.7',
+      './out/plugin/mindstudio-debug-vscode-plugin/MindStudio-Debug-VSCode-Plugin-1.0.8.vsix',
+    pluginVersion: '1.0.8',
   });
 
   await installer.installIfNeeded();

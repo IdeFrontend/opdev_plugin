@@ -12,6 +12,7 @@ import { PermanentStorage } from './permanent-storage';
 import webviewMessageList from './webview-message-list';
 import { HtmlTransformer } from './html-transformer';
 import { ApiServer } from '@plugin/core/api-server';
+import { registerConfigPage, unregisterConfigPage } from '@plugin/controller/navigation-controller';
 
 /**
  * Webview提供者 - 负责创建和管理Webview面板
@@ -142,12 +143,21 @@ export class WebviewProvider {
 
       this.apiServer?.addWebview(router, this.panel.webview);
 
+      // 如果是配置页面，注册到导航控制器
+      if (router === 'config') {
+        registerConfigPage('config', this.panel.webview);
+      }
+
       // 设置Webview内容
       await this.updateWebviewContent(router);
 
       // 处理面板关闭事件
       this.panel.onDidDispose(
         () => {
+          // 注销配置页面
+          if (router === 'config') {
+            unregisterConfigPage(router);
+          }
           this.dispose();
         },
         null,
@@ -186,6 +196,9 @@ export class WebviewProvider {
         'welcome',
         'project-sh',
         'ops-config',
+        'options-simulator',
+        'options-on-board',
+        'options-sanitizer'
       ];
       const viewPath = panelViews.includes(router) ? `panels/${router}` : router;
 

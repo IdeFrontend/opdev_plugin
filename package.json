@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://gitcode.com/kaocong/mstt"
   },
-  "version": "1.1.95",
+  "version": "1.1.106",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -23,6 +23,16 @@
   ],
   "icon": "web/resources/extension_icon.png",
   "contributes": {
+    "configuration": {
+      "title": "Huawei OP DevTools",
+      "properties": {
+        "op-devtools.debugMode": {
+          "type": "boolean",
+          "default": true,
+          "description": "启用调试功能（实验性功能）"
+        }
+      }
+    },
     "viewsContainers": {
       "activitybar": [
         {
@@ -167,6 +177,18 @@
       {
         "command": "huawei-op-devtools.clearLastProjectPath",
         "title": "清除缓存的算子工程位置"
+      }, 
+      {
+        "command": "huawei-op-devtools.simulatorOptions",
+        "title": "仿真分析-选择采集内容"
+      },
+      {
+        "command": "huawei-op-devtools.onBoardOptions",
+        "title": "上板分析-选择采集内容"
+      },
+      {
+        "command": "huawei-op-devtools.sanitizerOptions",
+        "title": "异常检测-选择检测内容"
       }
     ],
     "menus": {

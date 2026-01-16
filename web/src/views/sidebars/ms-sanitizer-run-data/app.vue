@@ -6,17 +6,23 @@ import {
   CaretDownFilled,
   FlagOutlined,
   FlagFilled,
+  CopyOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons-vue';
 import {
-  ref, computed, onMounted, onBeforeUnmount,
+  Component, h, ref, computed, onMounted, onBeforeUnmount,
 } from 'vue';
 import { formatTimestamp } from '@web/views/sidebars/performance-run-data/utils/timestamp';
 import {
   getMsSanitizerRunData,
   toggleMsSanitizerMark,
   openMsSanitizerPanel,
+  downloadMsSanitizerReport,
 } from '@web/apis';
-import { theme } from 'ant-design-vue';
+import {
+  theme,
+  message,
+} from 'ant-design-vue';
 
 const themeConfig = {
   // 使用暗色算法
@@ -57,6 +63,43 @@ const handleClick = (data) => {
 const handleMark = async (data) => {
   await toggleMsSanitizerMark(data);
   getListData();
+};
+
+// 标记图标组件
+const MarkedIcon: Component = ({ marked }) =>
+  h(marked ? FlagFilled : FlagOutlined, { style: { color: marked ? '#d32029' : undefined } });
+
+const handleCopyReport = async (data) => {
+  try {
+    await navigator.clipboard.writeText(data.path);
+    message.success('路径已复制到剪贴板');
+  }
+  catch (error) {
+    console.error('复制路径失败:', error);
+    message.error('复制路径失败');
+  }
+};
+
+const handleDownloadReport = async (data) => {
+  try {
+    const hide = message.loading('正在准备下载...', 0);
+
+    try {
+      await downloadMsSanitizerReport({ path: data.path });
+      message.success('下载成功');
+    }
+    catch (error) {
+      console.error('下载报告失败:', error);
+      message.error(error instanceof Error ? error.message : '下载失败');
+    }
+    finally {
+      hide();
+    }
+  }
+  catch (error) {
+    console.error('下载处理失败:', error);
+    message.error('下载处理失败');
+  }
 };
 
 const getListData = async () => {
@@ -137,15 +180,25 @@ onBeforeUnmount(() => {
             </p>
           </div>
           <div
-            class="flex justify-center items-center pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-hover:pointer-events-auto"
+            class="flex gap-1 justify-center items-center pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-hover:pointer-events-auto"
           >
-            <FlagFilled
-              v-if="item.marked"
-              class="text-[#d32029] opacity-100"
-              @click.stop="handleMark(item)"
+            <!-- 复制报告 -->
+            <a-button
+              type="text"
+              :icon="h(CopyOutlined)"
+              @click.stop="handleCopyReport(item)"
             />
-            <FlagOutlined
-              v-else
+            <!-- 下载报告 -->
+            <!-- <a-button
+              type="text"
+              :icon="h(DownloadOutlined)"
+              @click.stop="handleDownloadReport(item)"
+            /> -->
+            <!-- 标记/取消标记 -->
+            <a-button
+              :class="{ 'opacity-100': item.marked }"
+              type="text"
+              :icon="h(MarkedIcon, { marked: item.marked })"
               @click.stop="handleMark(item)"
             />
           </div>

@@ -11,9 +11,7 @@ import { ProjectManager } from '@plugin/core/project/project-manager';
 import { welcomeMethods } from '@plugin/controller/welcome-controller';
 import {
   COMMAND_OPEN,
-  COMMAND_PROJECT_SH,
   COMMAND_WELCOME,
-  COMMAND_CONFIG,
 } from '@plugin/constants';
 
 export interface messageItem {
@@ -46,12 +44,6 @@ const webviewMessageList: messageItem[] = [
     },
   },
   {
-    command: 'vscodeRunSetProjectSH',
-    callback: async (_msg: any, _that: any) => {
-      vscode.commands.executeCommand(COMMAND_PROJECT_SH);
-    },
-  },
-  {
     command: 'openWelcome',
     callback: (_message: any, _that: any) => {
       vscode.commands.executeCommand(COMMAND_WELCOME);
@@ -61,12 +53,6 @@ const webviewMessageList: messageItem[] = [
     command: 'vscodeOpenSidebar',
     callback: (_message: any, _that: any) => {
       vscode.commands.executeCommand('workbench.view.extension.mindstudio-opssuite-vscode-plugin');
-    },
-  },
-  {
-    command: 'vscodeOpenConfig',
-    callback: async (_msg: any, _that: any) => {
-      await vscode.commands.executeCommand(COMMAND_CONFIG);
     },
   },
   {
@@ -98,7 +84,13 @@ export async function handleOperatorProjectDirectoryFile(
     return;
   }
 
+  // 获取 extension context 以读取 templateName
+  const context = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
+    .extensionContext;
+  const templateName = context.globalState.get<string>('templateName');
+
   console.log('handleOperatorProjectDirectoryFile: createOperatorProjectDirectoryFileType:', message.createOperatorProjectDirectoryFileType);
+  console.log('handleOperatorProjectDirectoryFile: templateName:', templateName);
 
   if (
     message
@@ -134,8 +126,14 @@ export async function handleOperatorProjectDirectoryFile(
         await welcomeMethods.createOpsByPrototype({
           opsPrototypeFile: '',
           opType: 'cann',
+          templateName,
         });
         console.log('算子原型创建完成');
+
+        // 清理 templateName
+        if (templateName) {
+          context.globalState.update('templateName', undefined);
+        }
 
         await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
       }

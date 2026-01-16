@@ -39,6 +39,9 @@ export class ViewRenderer extends vscode.Disposable {
         'welcome',
         'project-sh',
         'ops-config',
+        'options-simulator',
+        'options-on-board',
+        'options-sanitizer'
       ];
       const sidebarViews = [
         'home',

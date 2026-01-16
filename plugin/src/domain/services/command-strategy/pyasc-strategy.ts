@@ -44,6 +44,7 @@ export class PyAscCommandStrategy implements CommandStrategy {
     }
 
     const cdCmd = `cd ${runPath}`;
+    const cdBuildCmd = `cd ${runPath}`;
 
     return {
       config,
@@ -51,6 +52,7 @@ export class PyAscCommandStrategy implements CommandStrategy {
       operator,
       sourceCannCmd,
       cdCmd,
+      cdBuildCmd,
     };
   }
 
@@ -58,7 +60,7 @@ export class PyAscCommandStrategy implements CommandStrategy {
     const { config, sourceCannCmd, cdCmd } = context;
     // PyAsc 运行命令直接执行 Python 文件，文件名就是算子名称
     const pythonFile = `${config.op}.py`;
-    const run_cmd = `python3 ${pythonFile}`;
+    const run_cmd = `python ${pythonFile}`;
 
     return joinCommands(sourceCannCmd, cdCmd, run_cmd);
   }
@@ -105,11 +107,14 @@ export class PyAscCommandStrategy implements CommandStrategy {
       } as OpRecord;
     }
 
+    const pythonFile = `${config.op}.py`;
+    const run_cmd = `python ${pythonFile}`;
+
     const simulatorCmd = ProfilerFactory.getStrategy('simulator')
       .generate(
         config,
         effectiveOperator,
-        exampleTargetFile,
+        run_cmd,
       );
 
     return joinCommands(sourceCannCmd, cdCmd, simulatorCmd);
@@ -136,11 +141,14 @@ export class PyAscCommandStrategy implements CommandStrategy {
       } as OpRecord;
     }
 
+    const pythonFile = `${config.op}.py`;
+    const run_cmd = `python ${pythonFile}`;
+
     const opprofCmd = ProfilerFactory.getStrategy('onboard')
       .generate(
         config,
         effectiveOperator,
-        exampleTargetFile,
+        run_cmd,
       );
 
     return joinCommands(sourceCannCmd, cdCmd, opprofCmd);

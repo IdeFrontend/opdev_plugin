@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import { configService } from '@plugin/service/config-service';
 import { buildService } from '@plugin/service/build-service';
+import { ConfigHelper } from '@plugin/helpers/ConfigHelper';
 import {
   GetConfigDataResult,
   SaveBuildConfigParams,
@@ -10,7 +11,20 @@ import {
   RemotePathSearchResult,
 } from '@shared/api-types';
 
+let targetTab: string | undefined;
+
 export const configMethods = {
+  /**
+   * 获取目标标签页并清除
+   * @returns 目标标签页
+   */
+  async getTargetTab(): Promise<string | undefined> {
+    const tab = targetTab;
+
+    targetTab = undefined; // 读取后立即清除
+
+    return tab;
+  },
   /**
    * 获取构建配置列表
    * @returns 构建配置列表
@@ -119,9 +133,21 @@ export const configMethods = {
    * 打开配置页面
    * @param params 参数
    */
-  async openConfig(params: { configName?: string }) {
-    if (params.configName) {
-      await vscode.commands.executeCommand(params.configName);
+  async openConfig(params: { configName?: string, key?: string }) {
+    if (params.key) {
+      targetTab = params.key;
     }
+
+    if (params.configName) {
+      await vscode.commands.executeCommand(params.configName, params.key);
+    }
+  },
+
+  /**
+   * 获取调试模式状态
+   * @returns 是否启用调试模式
+   */
+  async getDebugMode(): Promise<boolean> {
+    return ConfigHelper.isDebugModeEnabled();
   },
 };

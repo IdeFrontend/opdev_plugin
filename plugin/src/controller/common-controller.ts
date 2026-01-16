@@ -1,5 +1,5 @@
 import {
-  CheckPathExistsParams, SaveFileParams,
+  CheckPathExistsParams, SaveFileParams, SaveFileResult,
 } from '@shared/api-types';
 import { fileService } from '@plugin/service/file-service';
 import * as vscode from 'vscode';
@@ -14,8 +14,9 @@ export const commonMethods = {
 
   /**
    * 保存文件到本地
+   * Web 版本返回文件数据，桌面版本返回 boolean
    */
-  async saveFileToLocal(params: SaveFileParams): Promise<boolean> {
+  async saveFileToLocal(params: SaveFileParams): Promise<SaveFileResult> {
     return await fileService.saveFileToLocal(params);
   },
 
@@ -24,5 +25,13 @@ export const commonMethods = {
    */
   openExternalLink(url: string) {
     vscode.env.openExternal(vscode.Uri.parse(url));
+  },
+
+  /**
+   * 执行 VSCode 命令
+   */
+  async executeVscodeCommand(params: { command: string; args: any[] }) {
+    const { command, args } = params;
+    return await vscode.commands.executeCommand(command, ...args);
   },
 };

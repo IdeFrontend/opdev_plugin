@@ -10,6 +10,7 @@ import { linkMethods } from './controller/link-controller';
 import { sanitizerViewMethods } from './controller/sanitizer-controller';
 import { homeMethods } from './controller/home-controller';
 import { performanceMethods } from './controller/performance-data-controller';
+import { navigationController } from './controller/navigation-controller';
 
 // V2 版本控制器
 import { taskMethodsV2 } from '../src-v2/presentation/controllers-v2';
@@ -63,6 +64,7 @@ const opsMethods = {
   onBoard: taskMethods.onBoard,
   runDebug: taskMethods.runDebug,
   debugConfig: taskMethods.debugConfig,
+  checkTaskStatus: taskMethods.checkTaskStatus,
 
   ...configMethods, // getConfigData, getBuildConfigs, saveBuildConfig, saveConfig, openConfig
   ...scriptMethods, // updateShScript
@@ -75,7 +77,7 @@ const opsMethods = {
   saveSanitizerForm: sanitizerViewMethods.saveSanitizerForm,
   runSanitizer: getFeatureFlag('USE_V2_SANITIZER')
     ? taskMethodsV2.runSanitizer
-    : sanitizerViewMethods.runSanitizer,
+    : taskMethods.runSanitizer,
 
   ...homeMethods, // getProjectId
 };
@@ -87,4 +89,5 @@ export const apis = {
   view: viewMethods,
   ops: opsMethods,
   performance: performanceMethods,
+  navigation: navigationController,
 };

@@ -1,6 +1,6 @@
-import { ConfigRecord } from '@plugin/domain/models/config-model';
-import { ProjectRecord } from '@plugin/domain/models/project-model';
-import { OpRecord } from '@plugin/domain/models/model';
+import { ConfigRecord } from "@plugin/domain/models/config-model";
+import { ProjectRecord } from "@plugin/domain/models/project-model";
+import { OpRecord } from "@plugin/domain/models/model";
 
 /**
  * 上下文接口，包含生成命令所需的基础信息
@@ -11,6 +11,7 @@ export interface CommandContext {
   operator: OpRecord | null;
   sourceCannCmd: string;
   cdCmd: string;
+  cdBuildCmd: string;
 }
 
 /**
@@ -35,6 +36,7 @@ export interface ProfilerCommandParams {
   sourceCannCmd: string;
   cdCmd: string;
   exampleTargetFile: string;
+  cdBuildCmd: string;
 }
 
 /**
@@ -82,7 +84,8 @@ export interface CommandStrategy {
     operator: OpRecord | null,
     sourceCannCmd: string,
     cdCmd: string,
-    exampleTargetFile?: string
+    exampleTargetFile?: string,
+    cdBuildCmd?: string
   ): string;
 
   /**

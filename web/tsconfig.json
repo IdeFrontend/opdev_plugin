@@ -24,6 +24,7 @@
     "src/**/*.vue",
     "vite.config.ts",
     "components.d.ts",
+    "src/env.d.ts",
     "src/views/Config/class/OpsConfig.js"
   ],
   "exclude": ["node_modules", "../plugin"],

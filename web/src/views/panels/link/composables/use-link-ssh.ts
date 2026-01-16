@@ -1,5 +1,5 @@
 import {
-  ref, reactive, onBeforeUnmount, onMounted,
+  ref, reactive, onBeforeUnmount, onMounted, type Ref,
 } from 'vue';
 import { message } from 'ant-design-vue';
 import type { FormInstance as AntdVForm } from 'ant-design-vue';
@@ -18,7 +18,7 @@ import { ProjectNameFactory } from './project-name-factory';
  * Link SSH Composable
  * 封装链接SSH相关的业务逻辑
  */
-export function useLinkSSH() {
+export function useLinkSSH(selectedTemplate?: Ref<'helloworld' | 'addn' | 'torch_library_template'>) {
   const connectionFormRef = ref<AntdVForm | null>(null);
   const selectedId_type = ref(1);
 
@@ -93,6 +93,17 @@ export function useLinkSSH() {
     await strategy.search(keyword);
   };
 
+  // 模板名称映射
+  const getTemplateName = (template: 'helloworld' | 'addn' | 'torch_library_template' | undefined): string | undefined => {
+    if (!template) return undefined;
+    const mapping: Record<'helloworld' | 'addn' | 'torch_library_template', string> = {
+      helloworld: 'hello_world',
+      addn: 'addn_custom',
+      torch_library_template: 'torch_library_template',
+    };
+    return mapping[template];
+  };
+
   // 创建项目
   const handleCreatedProject = async () => {
     // 先进行表单校验
@@ -111,9 +122,14 @@ export function useLinkSSH() {
     }
 
     try {
+      const templateName = selectedTemplate?.value 
+        ? getTemplateName(selectedTemplate.value) 
+        : undefined;
+      
       await createdProject({
         ...projectFormData,
         createOperatorProjectDictoryFileType: selectedId_type.value,
+        templateName,
       });
       message.success('算子工程创建成功');
     }
