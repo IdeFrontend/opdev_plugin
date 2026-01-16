@@ -143,20 +143,6 @@ const debugMenuItem = {
   icon: debugIcon,
   children: [
     {
-      key: 'buildAndDebug',
-      label: 'NPU调试',
-      handler: async () => {
-        await runDebug();
-      },
-    },
-    {
-      key: 'debugConfig',
-      label: 'NPU调试配置',
-      handler: async () => {
-        await debugConfig();
-      },
-    },
-    {
       key: 'buildAndCpuDebug',
       label: 'CPU调试',
       handler: async () => {
@@ -164,10 +150,24 @@ const debugMenuItem = {
       },
     },
     {
+      key: 'buildAndDebug',
+      label: 'NPU调试',
+      handler: async () => {
+        await runDebug();
+      },
+    },
+    {
       key: 'cpuDebugConfig',
       label: 'CPU调试配置',
       handler: async () => {
         await cpuDebugConfig();
+      },
+    },
+    {
+      key: 'debugConfig',
+      label: 'NPU调试配置',
+      handler: async () => {
+        await debugConfig();
       },
     },
   ],
