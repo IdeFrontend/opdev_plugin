@@ -39,6 +39,7 @@ export type {
 // 导出策略实现
 export { AscendCommandStrategy } from './ascend-strategy';
 export { CannCommandStrategy } from './cann-strategy';
+export { PyAscCommandStrategy } from './pyasc-strategy';
 
 // 导出工厂类
 export { CommandStrategyFactory } from './factory';

@@ -1,6 +1,7 @@
 import { CommandStrategy } from './types';
 import { AscendCommandStrategy } from './ascend-strategy';
 import { CannCommandStrategy } from './cann-strategy';
+import { PyAscCommandStrategy } from './pyasc-strategy';
 
 /**
  * 命令策略工厂
@@ -18,6 +19,7 @@ export class CommandStrategyFactory {
   private static strategies: Map<string, CommandStrategy> = new Map([
     ['ascend', new AscendCommandStrategy()],
     ['cann', new CannCommandStrategy()],
+    ['pyasc', new PyAscCommandStrategy()],
   ]);
 
   /**
