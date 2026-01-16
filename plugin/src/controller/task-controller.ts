@@ -182,27 +182,74 @@ export const taskMethods = {
   },
 
   /**
-   * 运行调试
+   * 运行NPU调试
    */
   async runDebug(): Promise<void> {
     try {
       await ProjectManager.getInstance()
         .initProject();
-      // debug前编译
+      // debug前编译，使用--debug参数
       await buildService.startBuild({ compileOption: '--debug' });
       await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
-      await vscode.commands.executeCommand('workbench.action.debug.start');
+      // 启动msdebug配置（NPU调试）
+      const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+      if (workspaceFolder) {
+        await vscode.debug.startDebugging(workspaceFolder, 'msdebug');
+      }
+      else {
+        await vscode.commands.executeCommand('workbench.action.debug.start');
+      }
     }
     catch (error) {
-      console.error('打开debug时出错:', error);
+      console.error('打开NPU debug时出错:', error);
       throw error;
     }
   },
 
   /**
-   * 调试配置
+   * NPU调试配置
    */
   async debugConfig(): Promise<void> {
+    try {
+      await vscode.commands.executeCommand('workbench.action.debug.configure');
+      vscode.window.showInformationMessage('已打开 launch.json 文件');
+    }
+    catch (error) {
+      console.error('打开 launch.json 时出错:', error);
+      vscode.window.showErrorMessage(`无法打开 launch.json: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  },
+
+  /**
+   * 运行CPU调试
+   */
+  async runCpuDebug(): Promise<void> {
+    try {
+      await ProjectManager.getInstance()
+        .initProject();
+      // CPU调试前编译，使用--simulator参数
+      await buildService.startBuild({ compileOption: '--simulator' });
+      await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
+      // 启动msdebug-cpu配置（CPU调试）
+      const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+      if (workspaceFolder) {
+        await vscode.debug.startDebugging(workspaceFolder, 'msdebug-cpu');
+      }
+      else {
+        await vscode.commands.executeCommand('workbench.action.debug.start');
+      }
+    }
+    catch (error) {
+      console.error('打开CPU debug时出错:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * CPU调试配置
+   */
+  async cpuDebugConfig(): Promise<void> {
     try {
       await vscode.commands.executeCommand('workbench.action.debug.configure');
       vscode.window.showInformationMessage('已打开 launch.json 文件');

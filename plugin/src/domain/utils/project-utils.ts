@@ -68,12 +68,30 @@ export async function ensureLaunchJsonExists(
     // debug 开关为 true 或未配置（默认 true）时，创建 launch.json
     if (!fs.existsSync(launchJsonPath)) {
       console.log('ensureLaunchJsonExists: 创建 launch.json 文件...');
+      const launchJsonContent = JSON.stringify(debugLaunch, null, 2);
       await fs.writeFile(
         launchJsonPath,
-        JSON.stringify(debugLaunch, null, 2),
+        launchJsonContent,
         'utf-8',
       );
       console.log('ensureLaunchJsonExists: launch.json 文件创建成功');
+
+      // 同时在 .arts 目录下也创建一份 launch.json
+      const artsDir = path.join(projectDir, '.arts');
+      const artsLaunchJsonPath = path.join(artsDir, 'launch.json');
+      try {
+        await fs.ensureDir(artsDir);
+        await fs.writeFile(
+          artsLaunchJsonPath,
+          launchJsonContent,
+          'utf-8',
+        );
+        console.log('ensureLaunchJsonExists: .arts/launch.json 文件创建成功');
+      }
+      catch (error) {
+        console.error('ensureLaunchJsonExists: 创建 .arts/launch.json 失败:', error);
+        // 不影响主流程，只记录错误
+      }
     }
     else {
       console.log('ensureLaunchJsonExists: launch.json 文件已存在，跳过创建');
