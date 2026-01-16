@@ -62,3 +62,17 @@ export function runDebug() {
 export function debugConfig() {
   return request.post<undefined, void>('webview/debugConfig');
 }
+
+/**
+ * CPU调试
+ */
+export function runCpuDebug() {
+  return request.post<undefined, void>('webview/runCpuDebug');
+}
+
+/**
+ * CPU调试配置
+ */
+export function cpuDebugConfig() {
+  return request.post<undefined, void>('webview/cpuDebugConfig');
+}
