@@ -16,6 +16,7 @@ import {
   ProfilerCommandParams,
 } from './types';
 import { ConfigRecord } from '@plugin/domain/models/config-model';
+import { getConfig, getConfigById } from '../../services/configuration';
 
 /**
  * Ascend 类型命令策略
@@ -181,7 +182,7 @@ export class AscendCommandStrategy implements CommandStrategy {
       mssanitizer.addOption('block-id', options.blockId as string | number | undefined);
       mssanitizer.addOption(
         'log-file',
-        `./.vscode/mindstudio_sanitizer_log/mssanitizer_${new Date()
+        `${operator?.op_path}/.vscode/mindstudio_sanitizer_log/mssanitizer_${new Date()
           .valueOf()}.log`,
       );
   
@@ -248,5 +249,16 @@ export class AscendCommandStrategy implements CommandStrategy {
       );
 
     return joinCommands(sourceCannCmd, cdBuildCmd, opprofCmd);
+  }
+
+  getRunTargetFile(config: ConfigRecord, operator: OpRecord | null): string {
+    // ascend 类型：使用当前配置的 target_file
+    return config.target_file || '';
+  }
+
+  getProfilerTargetFile(config: ConfigRecord, operator: OpRecord | null, exampleConfigId: number): string {
+    // ascend 类型：使用示例配置的 target_file
+    const exConfig = getConfigById(exampleConfigId) as unknown as ConfigRecord;
+    return exConfig?.target_file || '';
   }
 }

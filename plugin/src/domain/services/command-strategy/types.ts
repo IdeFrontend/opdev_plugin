@@ -97,4 +97,21 @@ export interface CommandStrategy {
    * 生成上板命令
    */
   buildOnBoardCommand(params: ProfilerCommandParams): string;
+
+  /**
+   * 获取运行命令的目标文件
+   * @param config 当前配置
+   * @param operator 算子信息
+   * @returns 目标文件路径
+   */
+  getRunTargetFile(config: ConfigRecord, operator: OpRecord | null): string;
+
+  /**
+   * 获取仿真/上板/检测命令的目标文件
+   * @param config 当前配置
+   * @param operator 算子信息
+   * @param exampleConfigId 示例配置ID (用于ascend类型)
+   * @returns 目标文件路径
+   */
+  getProfilerTargetFile(config: ConfigRecord, operator: OpRecord | null, exampleConfigId: number): string;
 }

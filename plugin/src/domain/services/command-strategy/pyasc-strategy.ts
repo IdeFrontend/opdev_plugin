@@ -13,6 +13,7 @@ import {
   CommandBuildParams,
   ProfilerCommandParams,
 } from './types';
+import { getConfig, getConfigById } from '../../services/configuration';
 
 /**
  * PyAsc 类型命令策略
@@ -58,11 +59,8 @@ export class PyAscCommandStrategy implements CommandStrategy {
 
   buildRunCommand(context: CommandContext): string {
     const { config, sourceCannCmd, cdCmd } = context;
-    // PyAsc 运行命令直接执行 Python 文件，文件名就是算子名称
-    const pythonFile = `${config.op}.py`;
-    const run_cmd = `python ${pythonFile}`;
 
-    return joinCommands(sourceCannCmd, cdCmd, run_cmd);
+    return joinCommands(sourceCannCmd, cdCmd, config.target_file);
   }
 
   buildOpCommand(params: CommandBuildParams): string {
@@ -107,14 +105,11 @@ export class PyAscCommandStrategy implements CommandStrategy {
       } as OpRecord;
     }
 
-    const pythonFile = `${config.op}.py`;
-    const run_cmd = `python ${pythonFile}`;
-
     const simulatorCmd = ProfilerFactory.getStrategy('simulator')
       .generate(
         config,
         effectiveOperator,
-        run_cmd,
+        exampleTargetFile,
       );
 
     return joinCommands(sourceCannCmd, cdCmd, simulatorCmd);
@@ -141,16 +136,24 @@ export class PyAscCommandStrategy implements CommandStrategy {
       } as OpRecord;
     }
 
-    const pythonFile = `${config.op}.py`;
-    const run_cmd = `python ${pythonFile}`;
-
     const opprofCmd = ProfilerFactory.getStrategy('onboard')
       .generate(
         config,
         effectiveOperator,
-        run_cmd,
+        exampleTargetFile,
       );
 
     return joinCommands(sourceCannCmd, cdCmd, opprofCmd);
+  }
+
+  getRunTargetFile(config: ConfigRecord, operator: OpRecord | null): string {
+    // PyAsc 类型：使用当前配置的 target_file
+    return config.target_file || '';
+  }
+
+  getProfilerTargetFile(config: ConfigRecord, operator: OpRecord | null, exampleConfigId: number): string {
+    const buildOpConfigs = getConfig(config.project_id, 'build_op', config.op);
+    const buildOpConfig = buildOpConfigs.length > 0 ? buildOpConfigs[0] : null;
+    return buildOpConfig?.target_file || '';
   }
 }
