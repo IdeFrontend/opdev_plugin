@@ -118,3 +118,8 @@ export type OpenFileParams = {
 export type OpenLinkParams = {
   url: string;
 };
+
+export type OpenProjectParams = {
+  projectPath: string;
+  projectSH?: string;
+};

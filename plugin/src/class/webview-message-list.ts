@@ -12,6 +12,7 @@ import { welcomeMethods } from '@plugin/controller/welcome-controller';
 import {
   COMMAND_OPEN,
   COMMAND_WELCOME,
+  COMMAND_OPEN_PROJECT,
 } from '@plugin/constants';
 
 export interface messageItem {
@@ -41,6 +42,12 @@ const webviewMessageList: messageItem[] = [
     command: 'openLinkWebviewPanel',
     callback: (_message: any, _that: any) => {
       vscode.commands.executeCommand(COMMAND_OPEN);
+    },
+  },
+  {
+    command: 'openProjectWebviewPanel',
+    callback: (_message: any, _that: any) => {
+      vscode.commands.executeCommand(COMMAND_OPEN_PROJECT);
     },
   },
   {

@@ -76,3 +76,10 @@ export function runCpuDebug() {
 export function cpuDebugConfig() {
   return request.post<undefined, void>('webview/cpuDebugConfig');
 }
+
+/**
+ * 检查当前目录下是否有多个算子工程
+ */
+export function checkMultipleOperators() {
+  return request.post<undefined, { hasMultiple: boolean }>('webview/checkMultipleOperators');
+}

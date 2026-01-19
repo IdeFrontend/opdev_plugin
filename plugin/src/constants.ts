@@ -32,6 +32,8 @@ export const COMMAND_ON_BOARD_OPTIONS = `${COMMAND_PREFIX}.onBoardOptions`;
 
 export const COMMAND_SANITIZER_OPTIONS = `${COMMAND_PREFIX}.sanitizerOptions`;
 
+export const COMMAND_OPEN_PROJECT = `${COMMAND_PREFIX}.openProject`;
+
 // 视图名称常量（对应 web/src/views 下的目录名）
 export const VIEW_HOME = 'home';
 
@@ -58,3 +60,17 @@ export const VIEW_OPTIONS_SIMULATOR = 'options-simulator';
 export const VIEW_OPTIONS_ON_BOARD = 'options-on-board';
 
 export const VIEW_OPTIONS_SANITIZER = 'options-sanitizer';
+
+export const VIEW_OPEN_PROJECT = 'open-project';
+
+// 文件夹右键菜单命令
+export const COMMAND_MARK_AS_OPERATOR_PROJECT = `${COMMAND_PREFIX}.markAsOperatorProject`;
+export const COMMAND_MARK_AS_MULTI_OPERATOR_PROJECT = `${COMMAND_PREFIX}.markAsMultiOperatorProject`;
+export const COMMAND_UNMARK_AS_OPERATOR_PROJECT = `${COMMAND_PREFIX}.unmarkAsOperatorProject`;
+export const COMMAND_UNMARK_AS_MULTI_OPERATOR_PROJECT = `${COMMAND_PREFIX}.unmarkAsMultiOperatorProject`;
+export const COMMAND_OPERATOR_PROJECT_CONFIG = `${COMMAND_PREFIX}.operatorProjectConfig`;
+export const COMMAND_OPERATOR_PROJECT_BUILD = `${COMMAND_PREFIX}.operatorProjectBuild`;
+export const COMMAND_OPERATOR_PROJECT_RUN = `${COMMAND_PREFIX}.operatorProjectRun`;
+export const COMMAND_OPERATOR_PROJECT_DEBUG = `${COMMAND_PREFIX}.operatorProjectDebug`;
+export const COMMAND_OPERATOR_PROJECT_SANITIZER = `${COMMAND_PREFIX}.operatorProjectSanitizer`;
+export const COMMAND_OPERATOR_PROJECT_PERFORMANCE = `${COMMAND_PREFIX}.operatorProjectPerformance`;

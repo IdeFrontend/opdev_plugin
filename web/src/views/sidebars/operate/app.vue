@@ -22,9 +22,10 @@ import {
   debugConfig,
   runCpuDebug,
   cpuDebugConfig,
-  navigateToTab
+  navigateToTab,
+  checkMultipleOperators,
 } from '@web/apis';
-import { SettingOutlined } from '@ant-design/icons-vue';
+import { SettingOutlined, CheckOutlined } from '@ant-design/icons-vue';
 
 const themeConfig = { algorithm: theme.darkAlgorithm };
 const activeConfig = ref('');
@@ -311,6 +312,17 @@ onMounted(async () => {
     debugModeEnabled.value = true; // 默认开启
   }
 
+  // 检查是否有多个算子工程
+  try {
+    const result = await checkMultipleOperators();
+    hasMultipleOperators.value = result.hasMultiple || false;
+    console.log('[Operate] 是否有多个算子工程:', hasMultipleOperators.value);
+  }
+  catch (error) {
+    console.error('[Operate] 检查多个算子工程失败:', error);
+    hasMultipleOperators.value = false;
+  }
+
   // 开启状态同步定时器
   statusTimer = setInterval(async () => {
     try {
@@ -347,7 +359,290 @@ const openSetting = async (key) => {
   } catch (error) {
     console.error('导航到标签页失败:', error);
   }
-}
+};
+
+// 算子工程选择器相关状态
+const hasMultipleOperators = ref(false);
+const operatorSelectorVisible = ref(false);
+const searchKeyword = ref('');
+const selectedOperatorIds = ref([]);
+const compiledOperatorsActiveKey = ref(['1']);
+const preparedOperatorsActiveKey = ref(['1']);
+const operatorSelectorTriggerRef = ref(null);
+const popoverWidth = ref('auto');
+
+// 模拟数据 - 编译成功的算子工程
+const compiledOperators = ref([
+  {
+    id: 'c1',
+    name: '算子工程1',
+    hasEx: false,
+  },
+  {
+    id: 'c2',
+    name: '算子工程2',
+    hasEx: false,
+  },
+  {
+    id: 'c3',
+    name: '算子工程3',
+    hasEx: true,
+  },
+  {
+    id: 'c4',
+    name: '算子工程4',
+    hasEx: true,
+  },
+  {
+    id: 'c5',
+    name: '算子工程5',
+    hasEx: false,
+  },
+]);
+
+// 模拟数据 - 预备算子工程
+const preparedOperators = ref([
+  {
+    id: 'p1',
+    name: '预备算子工程1',
+    hasEx: false,
+  },
+  {
+    id: 'p2',
+    name: '预备算子工程2',
+    hasEx: false,
+  },
+  {
+    id: 'p3',
+    name: '预备算子工程3',
+    hasEx: true,
+  },
+  {
+    id: 'p4',
+    name: '预备算子工程4',
+    hasEx: true,
+  },
+]);
+
+// 所有算子工程（合并两个列表）
+const allOperators = computed(() => [
+  ...compiledOperators.value,
+  ...preparedOperators.value,
+]);
+
+// 根据搜索关键词过滤算子工程
+const filteredCompiledOperators = computed(() => {
+  if (!searchKeyword.value.trim()) {
+    return compiledOperators.value;
+  }
+
+  const keyword = searchKeyword.value.toLowerCase();
+
+  return compiledOperators.value.filter((op) =>
+    op.name.toLowerCase().includes(keyword),
+  );
+});
+
+const filteredPreparedOperators = computed(() => {
+  if (!searchKeyword.value.trim()) {
+    return preparedOperators.value;
+  }
+
+  const keyword = searchKeyword.value.toLowerCase();
+
+  return preparedOperators.value.filter((op) =>
+    op.name.toLowerCase().includes(keyword),
+  );
+});
+
+// 获取已选择的算子工程
+const selectedOperators = computed(() => {
+  return allOperators.value.filter((op) => selectedOperatorIds.value.includes(op.id));
+});
+
+// 获取已选择项的类型（ex 或 无ex）
+const selectedType = computed(() => {
+  if (selectedOperators.value.length === 0) {
+    return null; // 没有选择任何项
+  }
+
+  const hasEx = selectedOperators.value.some((op) => op.hasEx);
+  const hasNonEx = selectedOperators.value.some((op) => !op.hasEx);
+
+  if (hasEx && !hasNonEx) {
+    return 'ex'; // 只选择了带ex的
+  }
+
+  if (!hasEx && hasNonEx) {
+    return 'nonEx'; // 只选择了不带ex的
+  }
+
+  return null; // 理论上不应该出现这种情况
+});
+
+// 检查条目是否应该被禁用
+const isOperatorDisabled = (operator) => {
+  if (selectedType.value === null) {
+    return false; // 没有选择任何项，不禁用
+  }
+
+  // 如果已选择的是带ex的，则不带ex的应该被禁用
+  if (selectedType.value === 'ex' && !operator.hasEx) {
+    return true;
+  }
+
+  // 如果已选择的是不带ex的，则带ex的应该被禁用
+  if (selectedType.value === 'nonEx' && operator.hasEx) {
+    return true;
+  }
+
+  return false;
+};
+
+// 检查全选是否应该禁用（编译成功的算子工程）
+const isCompiledAllDisabled = computed(() => {
+  return selectedType.value === null;
+});
+
+// 检查全选是否应该禁用（预备算子工程）
+const isPreparedAllDisabled = computed(() => {
+  return selectedType.value === null;
+});
+
+// 检查是否全选（编译成功的算子工程）
+const isCompiledAllSelected = computed(() => {
+  if (selectedType.value === null) {
+    return false;
+  }
+
+  const filtered = filteredCompiledOperators.value;
+  const targetType = selectedType.value === 'ex';
+
+  // 只检查目标类型的项
+  const targetItems = filtered.filter((op) => op.hasEx === targetType);
+
+  return targetItems.length > 0 && targetItems.every((op) => selectedOperatorIds.value.includes(op.id));
+});
+
+// 检查是否全选（预备算子工程）
+const isPreparedAllSelected = computed(() => {
+  if (selectedType.value === null) {
+    return false;
+  }
+
+  const filtered = filteredPreparedOperators.value;
+  const targetType = selectedType.value === 'ex';
+
+  // 只检查目标类型的项
+  const targetItems = filtered.filter((op) => op.hasEx === targetType);
+
+  return targetItems.length > 0 && targetItems.every((op) => selectedOperatorIds.value.includes(op.id));
+});
+
+// 切换单个算子工程的选择状态
+const toggleOperator = (operator) => {
+  const isSelected = selectedOperatorIds.value.includes(operator.id);
+
+  if (isSelected) {
+    // 取消选择
+    selectedOperatorIds.value = selectedOperatorIds.value.filter((id) => id !== operator.id);
+  } else {
+    // 检查是否违反规则：不能同时选择带ex和不带ex的条目
+    const selectedOps = selectedOperators.value;
+
+    if (selectedOps.length > 0) {
+      const hasExInSelected = selectedOps.some((op) => op.hasEx);
+      const hasNonExInSelected = selectedOps.some((op) => !op.hasEx);
+
+      // 如果当前要选择的是带ex的，但已选择中有不带ex的，则不允许
+      if (operator.hasEx && hasNonExInSelected) {
+        return;
+      }
+
+      // 如果当前要选择的是不带ex的，但已选择中有带ex的，则不允许
+      if (!operator.hasEx && hasExInSelected) {
+        return;
+      }
+    }
+
+    // 允许选择
+    selectedOperatorIds.value.push(operator.id);
+  }
+};
+
+// 切换全选（编译成功的算子工程）
+const toggleCompiledAll = () => {
+  if (selectedType.value === null) {
+    return; // 没有选择任何项，全选禁用
+  }
+
+  const filtered = filteredCompiledOperators.value;
+
+  if (filtered.length === 0) {
+    return;
+  }
+
+  const targetType = selectedType.value === 'ex';
+  const targetItems = filtered.filter((op) => op.hasEx === targetType);
+
+  if (isCompiledAllSelected.value) {
+    // 取消全选 - 只取消目标类型的项
+    selectedOperatorIds.value = selectedOperatorIds.value.filter((id) =>
+      !targetItems.some((op) => op.id === id),
+    );
+  } else {
+    // 全选目标类型的项
+    targetItems.forEach((op) => {
+      if (!selectedOperatorIds.value.includes(op.id)) {
+        selectedOperatorIds.value.push(op.id);
+      }
+    });
+  }
+};
+
+// 切换全选（预备算子工程）
+const togglePreparedAll = () => {
+  if (selectedType.value === null) {
+    return; // 没有选择任何项，全选禁用
+  }
+
+  const filtered = filteredPreparedOperators.value;
+
+  if (filtered.length === 0) {
+    return;
+  }
+
+  const targetType = selectedType.value === 'ex';
+  const targetItems = filtered.filter((op) => op.hasEx === targetType);
+
+  if (isPreparedAllSelected.value) {
+    // 取消全选 - 只取消目标类型的项
+    selectedOperatorIds.value = selectedOperatorIds.value.filter((id) =>
+      !targetItems.some((op) => op.id === id),
+    );
+  } else {
+    // 全选目标类型的项
+    targetItems.forEach((op) => {
+      if (!selectedOperatorIds.value.includes(op.id)) {
+        selectedOperatorIds.value.push(op.id);
+      }
+    });
+  }
+};
+
+// 移除已选择的算子工程
+const removeOperator = (operatorId) => {
+  selectedOperatorIds.value = selectedOperatorIds.value.filter((id) => id !== operatorId);
+};
+
+// 处理 Popover 打开/关闭事件，动态设置宽度
+const handlePopoverOpenChange = (open) => {
+  if (open && operatorSelectorTriggerRef.value) {
+    // 当 Popover 打开时，获取触发器的宽度
+    const triggerWidth = operatorSelectorTriggerRef.value.offsetWidth;
+    popoverWidth.value = `${triggerWidth}px`;
+  }
+};
 </script>
 
 <template>
@@ -400,6 +695,211 @@ const openSetting = async (key) => {
           >
             停止任务
           </a-button>
+        </div>
+
+        <!-- 算子工程选择器 -->
+        <div
+          v-if="hasMultipleOperators"
+          class="px-3 py-2 mb-2 operator-selector-wrapper"
+        >
+          <a-popover
+            v-model:open="operatorSelectorVisible"
+            placement="bottomLeft"
+            trigger="click"
+            :overlay-style="{ width: popoverWidth, padding: '0' }"
+            overlay-class-name="operator-selector-popover"
+            @open-change="handlePopoverOpenChange"
+          >
+            <template #content>
+              <div class="operator-selector-content">
+                <!-- 第一个模块：已选择的内容 -->
+                <div class="selected-section">
+                  <div class="selected-header">
+                    已选择 {{ selectedOperators.length }} 项
+                  </div>
+                  <div class="selected-tags">
+                    <a-tag
+                      v-for="op in selectedOperators"
+                      :key="op.id"
+                      closable
+                      class="mb-2 mr-2"
+                      @close="removeOperator(op.id)"
+                    >
+                      {{ op.name }}
+                    </a-tag>
+                  </div>
+                  <div class="divider" />
+                </div>
+
+                <!-- 第二个模块：搜索和选择 -->
+                <div class="search-section">
+                  <a-input
+                    v-model:value="searchKeyword"
+                    placeholder="搜索算子工程"
+                    class="mb-3"
+                    allow-clear
+                  />
+
+                  <!-- 编译成功的算子工程 -->
+                  <a-collapse
+                    v-model:active-key="compiledOperatorsActiveKey"
+                    :bordered="false"
+                    class="operator-collapse"
+                  >
+                    <a-collapse-panel
+                      key="1"
+                      header="编译成功的算子工程"
+                    >
+                      <div class="operator-list">
+                        <div
+                          class="operator-item select-all"
+                          :class="{
+                            selected: isCompiledAllSelected,
+                            disabled: isCompiledAllDisabled,
+                          }"
+                          @click="!isCompiledAllDisabled && toggleCompiledAll()"
+                        >
+                          <span>全选</span>
+                          <CheckOutlined
+                            v-if="isCompiledAllSelected"
+                            class="check-icon"
+                          />
+                        </div>
+                        <div
+                          v-for="op in filteredCompiledOperators"
+                          :key="op.id"
+                          class="operator-item"
+                          :class="{
+                            selected: selectedOperatorIds.includes(op.id),
+                            disabled: isOperatorDisabled(op),
+                          }"
+                          @click="!isOperatorDisabled(op) && toggleOperator(op)"
+                        >
+                          <span>
+                            {{ op.name }}
+                            <div
+                              v-if="op.hasEx"
+                              class="ex-icon"
+                            >
+                              ex
+                            </div>
+                          </span>
+                          <CheckOutlined
+                            v-if="selectedOperatorIds.includes(op.id)"
+                            class="check-icon"
+                          />
+                        </div>
+                      </div>
+                    </a-collapse-panel>
+                  </a-collapse>
+
+                  <!-- 预备算子工程 -->
+                  <a-collapse
+                    v-model:active-key="preparedOperatorsActiveKey"
+                    :bordered="false"
+                    class="operator-collapse mt-3"
+                  >
+                    <a-collapse-panel
+                      key="1"
+                      header="预备算子工程"
+                    >
+                      <div class="operator-list">
+                        <div
+                          class="operator-item select-all"
+                          :class="{
+                            selected: isPreparedAllSelected,
+                            disabled: isPreparedAllDisabled,
+                          }"
+                          @click="!isPreparedAllDisabled && togglePreparedAll()"
+                        >
+                          <span>全选</span>
+                          <CheckOutlined
+                            v-if="isPreparedAllSelected"
+                            class="check-icon"
+                          />
+                        </div>
+                        <div
+                          v-for="op in filteredPreparedOperators"
+                          :key="op.id"
+                          class="operator-item"
+                          :class="{
+                            selected: selectedOperatorIds.includes(op.id),
+                            disabled: isOperatorDisabled(op),
+                          }"
+                          @click="!isOperatorDisabled(op) && toggleOperator(op)"
+                        >
+                          <span>
+                            {{ op.name }}
+                            <div
+                              v-if="op.hasEx"
+                              class="ex-icon"
+                            >
+                              ex
+                            </div>
+                          </span>
+                          <CheckOutlined
+                            v-if="selectedOperatorIds.includes(op.id)"
+                            class="check-icon"
+                          />
+                        </div>
+                      </div>
+                    </a-collapse-panel>
+                  </a-collapse>
+                </div>
+              </div>
+            </template>
+            <template #default>
+              <div
+                ref="operatorSelectorTriggerRef"
+                class="operator-selector-trigger"
+                :class="{ 'has-selection': selectedOperators.length > 0 }"
+              >
+                <span class="selector-text">
+                  请选择算子工程
+                </span>
+                <span class="selector-arrow">
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M2 4L6 8L10 4"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </span>
+              </div>
+            </template>
+          </a-popover>
+        </div>
+
+        <!-- 已选择的算子工程显示区域（组件收起后显示） -->
+        <div
+          v-if="hasMultipleOperators && !operatorSelectorVisible && selectedOperators.length > 0"
+          class="px-3 py-2 mb-2"
+        >
+          <div class="selected-display-section">
+            <div class="selected-display-header">
+              已选择 {{ selectedOperators.length }} 项
+            </div>
+            <div class="selected-display-tags">
+              <a-tag
+                v-for="op in selectedOperators"
+                :key="op.id"
+                closable
+                class="mb-2 mr-2"
+                @close="removeOperator(op.id)"
+              >
+                {{ op.name }}
+              </a-tag>
+            </div>
+          </div>
         </div>
 
         <a-menu
@@ -576,5 +1076,198 @@ body {
 }
 .setting-box:hover {
   background-color: #262729 !important;
+}
+
+/* 算子工程选择器样式 */
+.operator-selector-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 32px;
+  padding: 4px 11px;
+  background-color: #262729;
+  border: 1px solid #434343;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.operator-selector-trigger:hover {
+  border-color: #177ddc;
+}
+
+.operator-selector-trigger.has-selection {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.selector-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.operator-selector-trigger.has-selection .selector-text {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.selector-arrow {
+  display: flex;
+  align-items: center;
+  margin-left: 8px;
+  color: rgba(255, 255, 255, 0.45);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.operator-selector-wrapper {
+  position: relative;
+}
+
+:deep(.operator-selector-popover) {
+  .ant-popover-inner-content {
+    padding: 0;
+  }
+}
+
+.operator-selector-content {
+  padding: 8px;
+  background-color: #1f1f1f;
+}
+
+.selected-section {
+  margin-bottom: 8px;
+}
+
+.selected-header {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 8px;
+}
+
+.selected-tags {
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.divider {
+  height: 1px;
+  background-color: #434343;
+  margin: 0;
+}
+
+.search-section {
+  margin-top: 8px;
+}
+
+.operator-collapse {
+  :deep(.ant-collapse-item) {
+    background-color: #262729;
+    border: none;
+  }
+
+  :deep(.ant-collapse-header) {
+    padding: 8px !important;
+    background-color: rgb(31, 31, 31);
+    color: rgba(255, 255, 255, 0.85) !important;
+    font-size: 11px;
+  }
+
+  :deep(.ant-collapse-content) {
+    background-color: rgb(31, 31, 31);
+    border: none;
+  }
+
+  :deep(.ant-collapse-content-box) {
+    padding: 8px 0 !important;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+
+  :deep(.ant-collapse-expand-icon) {
+    color: rgba(255, 255, 255, 0.85) !important;
+  }
+}
+
+.operator-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.operator-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.85);
+
+  &:hover:not(.disabled) {
+    background-color: #262729;
+  }
+
+  &.selected {
+    background-color: #111b26;
+    color: #177ddc;
+  }
+
+  &.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    color: rgba(255, 255, 255, 0.25);
+  }
+
+  > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+.ex-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 2px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.85);
+  background-color: transparent;
+  margin-left: 6px;
+  flex-shrink: 0;
+}
+
+.check-icon {
+  color: #177ddc;
+  font-size: 11px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.selected-display-section {
+  padding: 8px;
+  background-color: #1f1f1f;
+  border-radius: 6px;
+  border: 1px solid #434343;
+}
+
+.selected-display-header {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.65);
+  margin-bottom: 8px;
+}
+
+.selected-display-tags {
+  display: flex;
+  flex-wrap: wrap;
 }
 </style>

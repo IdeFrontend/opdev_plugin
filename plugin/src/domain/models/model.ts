@@ -124,6 +124,7 @@ export async function generateStructure(
     template_name: (data as { template_name?: string }).template_name ?? null,
     soc_version: (data as { soc_version?: string }).soc_version ?? null,
     op_path: data.op_path ?? project.project_path,
+    skipExisting: (data as { skipExisting?: boolean }).skipExisting ?? false,
   } as unknown;
 
   // 确保在算子工程目录创建 devtool_config.json

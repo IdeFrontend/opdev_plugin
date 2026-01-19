@@ -198,7 +198,8 @@ export class WebviewProvider {
         'ops-config',
         'options-simulator',
         'options-on-board',
-        'options-sanitizer'
+        'options-sanitizer',
+        'open-project'
       ];
       const viewPath = panelViews.includes(router) ? `panels/${router}` : router;
 

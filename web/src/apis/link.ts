@@ -2,6 +2,7 @@ import { request } from '@/core/request';
 import {
   BuildCreateOpsParams,
   StartLinkCreateOpsParams,
+  OpenProjectParams,
 } from '@shared/api-types';
 
 /**
@@ -20,6 +21,16 @@ export function buildCreateOps(params: BuildCreateOpsParams = {}) {
 export function startLinkCreateOps(params: StartLinkCreateOpsParams = {}) {
   return request.post<StartLinkCreateOpsParams, void>(
     'webview/startLinkCreateOps',
+    params,
+  );
+}
+
+/**
+ * 打开算子工程
+ */
+export function openProject(params: OpenProjectParams) {
+  return request.post<OpenProjectParams, void>(
+    'webview/openProject',
     params,
   );
 }

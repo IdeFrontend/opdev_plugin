@@ -51,8 +51,23 @@ import {
   COMMAND_ON_BOARD_OPTIONS,
   VIEW_OPTIONS_ON_BOARD,
   COMMAND_SANITIZER_OPTIONS,
-  VIEW_OPTIONS_SANITIZER
+  VIEW_OPTIONS_SANITIZER,
+  COMMAND_OPEN_PROJECT,
+  VIEW_OPEN_PROJECT,
+  COMMAND_MARK_AS_OPERATOR_PROJECT,
+  COMMAND_MARK_AS_MULTI_OPERATOR_PROJECT,
+  COMMAND_UNMARK_AS_OPERATOR_PROJECT,
+  COMMAND_UNMARK_AS_MULTI_OPERATOR_PROJECT,
+  COMMAND_OPERATOR_PROJECT_CONFIG,
+  COMMAND_OPERATOR_PROJECT_BUILD,
+  COMMAND_OPERATOR_PROJECT_RUN,
+  COMMAND_OPERATOR_PROJECT_DEBUG,
+  COMMAND_OPERATOR_PROJECT_SANITIZER,
+  COMMAND_OPERATOR_PROJECT_PERFORMANCE,
 } from './constants';
+import { FolderContextMenuService } from './service/folder-context-menu-service';
+import { AutoMultiProjectDetector } from './service/auto-multi-project-detector';
+import { OperatorProjectIconTheme } from './class/operator-project-icon-theme';
 
 let extensionContext: vscode.ExtensionContext | undefined;
 
@@ -149,11 +164,22 @@ export async function activate(context: vscode.ExtensionContext) {
   // 初始化配置页面的Webview
   const configProjectSHProvider = new WebviewProvider(context, apiServer);
 
+  // 初始化打开算子工程的Webview
+  const openProjectProvider = new WebviewProvider(context, apiServer);
+
   // 注册打开Opsuite命令
   const openCommand = vscode.commands.registerCommand(
     COMMAND_OPEN,
     async () => {
       createOpsProvider.show(VIEW_LINK);
+    },
+  );
+
+  // 注册打开算子工程命令
+  const openProjectCommand = vscode.commands.registerCommand(
+    COMMAND_OPEN_PROJECT,
+    async () => {
+      openProjectProvider.show(VIEW_OPEN_PROJECT);
     },
   );
 
@@ -352,6 +378,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(viewServer);
   context.subscriptions.push(createOptionsCommand);
   context.subscriptions.push(openCommand);
+  context.subscriptions.push(openProjectCommand);
   context.subscriptions.push(openProjectSH);
   context.subscriptions.push(ConfigCommand);
   context.subscriptions.push(welcomeCommand);
@@ -363,6 +390,210 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(simulatorOptionsCommand);
   context.subscriptions.push(onBoardOptionsCommand);
   context.subscriptions.push(sanitizerOptionsCommand);
+
+  // 初始化图标主题管理器
+  const iconTheme = OperatorProjectIconTheme.getInstance(context);
+  await iconTheme.updateIconTheme();
+  
+  // 注意：不在插件激活时自动检测并标记算子工程合集
+  // 只在用户明确打开项目时（link-controller.ts）才进行自动检测
+
+  // 注册文件夹右键菜单命令
+  // 注意：由于 VSCode API 限制，无法在菜单显示前更新上下文变量
+  // 菜单的 when 条件在菜单显示时评估，此时上下文变量可能不是最新的
+  // 解决方案：在命令执行时检查状态，如果不是对应的类型就静默返回
+  const markAsOperatorProjectCommand = vscode.commands.registerCommand(
+    COMMAND_MARK_AS_OPERATOR_PROJECT,
+    async (uri?: vscode.Uri) => {
+      if (!uri) {
+        vscode.window.showErrorMessage('请右键点击文件夹');
+        return;
+      }
+      await FolderContextMenuService.markAsOperatorProject(uri);
+      
+      // 操作完成后更新图标主题
+      await iconTheme.updateIconTheme();
+      
+      // 操作完成后更新上下文变量
+      await updateContextForUri(uri);
+    },
+  );
+
+  const markAsMultiOperatorProjectCommand = vscode.commands.registerCommand(
+    COMMAND_MARK_AS_MULTI_OPERATOR_PROJECT,
+    async (uri?: vscode.Uri) => {
+      if (!uri) {
+        vscode.window.showErrorMessage('请右键点击文件夹');
+        return;
+      }
+      await FolderContextMenuService.markAsMultiOperatorProject(uri);
+      
+      // 操作完成后更新图标主题
+      await iconTheme.updateIconTheme();
+      
+      // 操作完成后更新上下文变量
+      await updateContextForUri(uri);
+    },
+  );
+
+  const unmarkAsOperatorProjectCommand = vscode.commands.registerCommand(
+    COMMAND_UNMARK_AS_OPERATOR_PROJECT,
+    async (uri?: vscode.Uri) => {
+      if (!uri) {
+        vscode.window.showErrorMessage('请右键点击文件夹');
+        return;
+      }
+      await FolderContextMenuService.unmarkAsOperatorProject(uri);
+      
+      // 操作完成后更新图标主题
+      await iconTheme.updateIconTheme();
+      
+      // 操作完成后更新上下文变量
+      await updateContextForUri(uri);
+    },
+  );
+
+  const unmarkAsMultiOperatorProjectCommand = vscode.commands.registerCommand(
+    COMMAND_UNMARK_AS_MULTI_OPERATOR_PROJECT,
+    async (uri?: vscode.Uri) => {
+      if (!uri) {
+        vscode.window.showErrorMessage('请右键点击文件夹');
+        return;
+      }
+      await FolderContextMenuService.unmarkAsMultiOperatorProject(uri);
+      
+      // 操作完成后更新图标主题
+      await iconTheme.updateIconTheme();
+      
+      // 操作完成后更新上下文变量
+      await updateContextForUri(uri);
+    },
+  );
+
+  const operatorProjectConfigCommand = vscode.commands.registerCommand(
+    COMMAND_OPERATOR_PROJECT_CONFIG,
+    async (uri?: vscode.Uri) => {
+      if (!uri) {
+        vscode.window.showErrorMessage('请右键点击文件夹');
+        return;
+      }
+      await FolderContextMenuService.openOperatorProjectConfig(uri);
+    },
+  );
+
+  const operatorProjectBuildCommand = vscode.commands.registerCommand(
+    COMMAND_OPERATOR_PROJECT_BUILD,
+    async (uri?: vscode.Uri) => {
+      if (!uri) {
+        vscode.window.showErrorMessage('请右键点击文件夹');
+        return;
+      }
+      await FolderContextMenuService.buildOperatorProject(uri);
+    },
+  );
+
+  const operatorProjectRunCommand = vscode.commands.registerCommand(
+    COMMAND_OPERATOR_PROJECT_RUN,
+    async (uri?: vscode.Uri) => {
+      if (!uri) {
+        vscode.window.showErrorMessage('请右键点击文件夹');
+        return;
+      }
+      await FolderContextMenuService.runOperatorProject(uri);
+    },
+  );
+
+  const operatorProjectDebugCommand = vscode.commands.registerCommand(
+    COMMAND_OPERATOR_PROJECT_DEBUG,
+    async (uri?: vscode.Uri) => {
+      if (!uri) {
+        vscode.window.showErrorMessage('请右键点击文件夹');
+        return;
+      }
+      await FolderContextMenuService.debugOperatorProject(uri);
+    },
+  );
+
+  const operatorProjectSanitizerCommand = vscode.commands.registerCommand(
+    COMMAND_OPERATOR_PROJECT_SANITIZER,
+    async (uri?: vscode.Uri) => {
+      if (!uri) {
+        vscode.window.showErrorMessage('请右键点击文件夹');
+        return;
+      }
+      await FolderContextMenuService.sanitizerOperatorProject(uri);
+    },
+  );
+
+  const operatorProjectPerformanceCommand = vscode.commands.registerCommand(
+    COMMAND_OPERATOR_PROJECT_PERFORMANCE,
+    async (uri?: vscode.Uri) => {
+      if (!uri) {
+        vscode.window.showErrorMessage('请右键点击文件夹');
+        return;
+      }
+      await FolderContextMenuService.performanceOperatorProject(uri);
+    },
+  );
+
+
+  context.subscriptions.push(
+    markAsOperatorProjectCommand,
+    markAsMultiOperatorProjectCommand,
+    unmarkAsOperatorProjectCommand,
+    unmarkAsMultiOperatorProjectCommand,
+    operatorProjectConfigCommand,
+    operatorProjectBuildCommand,
+    operatorProjectRunCommand,
+    operatorProjectDebugCommand,
+    operatorProjectSanitizerCommand,
+    operatorProjectPerformanceCommand,
+  );
+
+  // 注册资源选择变化监听，动态更新上下文变量
+  // 在命令执行前更新上下文变量，这样菜单显示逻辑才能正确工作
+  const updateContextForUri = async (uri: vscode.Uri | undefined) => {
+    if (!uri) {
+      await vscode.commands.executeCommand('setContext', 'operatorProjectMarked', false);
+      await vscode.commands.executeCommand('setContext', 'multiOperatorProjectMarked', false);
+      await vscode.commands.executeCommand('setContext', 'operatorProjectType', '');
+      return;
+    }
+
+    const checkResult = await FolderContextMenuService.checkIsOperatorProject(uri);
+    
+    await vscode.commands.executeCommand(
+      'setContext',
+      'operatorProjectMarked',
+      checkResult.isOperatorProject && !checkResult.isMultiProject,
+    );
+    await vscode.commands.executeCommand(
+      'setContext',
+      'multiOperatorProjectMarked',
+      checkResult.isMultiProject,
+    );
+    
+    await vscode.commands.executeCommand(
+      'setContext',
+      'operatorProjectType',
+      checkResult.projectType || '',
+    );
+  };
+
+  // 初始化上下文变量
+  await vscode.commands.executeCommand('setContext', 'operatorProjectMarked', false);
+  await vscode.commands.executeCommand('setContext', 'multiOperatorProjectMarked', false);
+  await vscode.commands.executeCommand('setContext', 'operatorProjectType', '');
+
+  // 注意：由于 VSCode API 限制，无法在菜单显示前更新上下文变量
+  // 菜单的 when 条件在菜单显示时评估，此时上下文变量可能不是最新的
+  // 解决方案：在命令执行时检查状态，如果不是对应的类型就静默返回
+  // 这样即使菜单显示了，也不会执行错误操作
+
+  // 监听资源管理器选择变化，动态更新上下文变量
+  // 注意：VSCode 没有直接的 API 来监听资源管理器的选择变化
+  // 我们通过在命令执行前更新上下文变量来实现
+  // 但更好的方式是使用 onDidChangeTreeData 或其他方式
 
   // 注册 CSV 编辑器提供者
   const csvEditorProvider = new CsvEditorProvider();
@@ -439,9 +670,108 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.workspace.onDidChangeWorkspaceFolders(async () => {
       vscode.commands.executeCommand(COMMAND_FLASH_MS_SANITIZER_RUN_DATA);
       vscode.commands.executeCommand(COMMAND_FLASH_PERFORMANCE_RUN_DATA);
+      
+      // 检测工作区中的算子工程
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (workspaceFolders && workspaceFolders.length > 0) {
+        const { WorkspaceDetectorService } = await import('./service/workspace-detector-service.js');
+        const { FolderContextMenuService } = await import('./service/folder-context-menu-service.js');
+        const { getAllProjects } = await import('./domain/models/project-model.js');
+        
+        for (const folder of workspaceFolders) {
+          await WorkspaceDetectorService.detectAndRegisterWorkspace(folder.uri.fsPath).catch((error) => {
+            console.error('检测工作区算子工程失败:', error);
+          });
+        }
+        
+        // 检测完成后，更新所有已标记项目的上下文变量，模拟手动操作的效果
+        const allProjects = getAllProjects();
+        for (const project of allProjects) {
+          if (project.project_path) {
+            const uri = vscode.Uri.file(project.project_path);
+            const checkResult = await FolderContextMenuService.checkIsOperatorProject(uri);
+            
+            // 更新上下文变量
+            await vscode.commands.executeCommand(
+              'setContext',
+              'operatorProjectMarked',
+              checkResult.isOperatorProject && !checkResult.isMultiProject,
+            );
+            await vscode.commands.executeCommand(
+              'setContext',
+              'multiOperatorProjectMarked',
+              checkResult.isMultiProject,
+            );
+            await vscode.commands.executeCommand(
+              'setContext',
+              'operatorProjectType',
+              checkResult.projectType || '',
+            );
+          }
+        }
+        
+        // 更新图标主题并刷新资源管理器
+        const iconTheme = OperatorProjectIconTheme.getInstance(context);
+        await iconTheme.updateIconTheme();
+        
+        // 延迟刷新资源管理器，确保菜单显示正确
+        setTimeout(() => {
+          vscode.commands.executeCommand('workbench.files.action.refreshFilesExplorer');
+        }, 500);
+      }
     });
 
   context.subscriptions.push(watchWorkSpaceFolderChange);
+
+  // 插件激活时检测当前工作区
+  if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+    // 延迟执行，确保插件完全初始化
+    setTimeout(async () => {
+      const { WorkspaceDetectorService } = await import('./service/workspace-detector-service.js');
+      const { FolderContextMenuService } = await import('./service/folder-context-menu-service.js');
+      const { getAllProjects } = await import('./domain/models/project-model.js');
+      
+      for (const folder of vscode.workspace.workspaceFolders!) {
+        await WorkspaceDetectorService.detectAndRegisterWorkspace(folder.uri.fsPath).catch((error) => {
+          console.error('检测工作区算子工程失败:', error);
+        });
+      }
+      
+      // 检测完成后，更新所有已标记项目的上下文变量，模拟手动操作的效果
+      const allProjects = getAllProjects();
+      for (const project of allProjects) {
+        if (project.project_path) {
+          const uri = vscode.Uri.file(project.project_path);
+          const checkResult = await FolderContextMenuService.checkIsOperatorProject(uri);
+          
+          // 更新上下文变量
+          await vscode.commands.executeCommand(
+            'setContext',
+            'operatorProjectMarked',
+            checkResult.isOperatorProject && !checkResult.isMultiProject,
+          );
+          await vscode.commands.executeCommand(
+            'setContext',
+            'multiOperatorProjectMarked',
+            checkResult.isMultiProject,
+          );
+          await vscode.commands.executeCommand(
+            'setContext',
+            'operatorProjectType',
+            checkResult.projectType || '',
+          );
+        }
+      }
+      
+      // 更新图标主题并刷新资源管理器
+      await iconTheme.updateIconTheme();
+      
+      // 延迟刷新资源管理器，确保菜单显示正确
+      setTimeout(() => {
+        vscode.commands.executeCommand('workbench.files.action.refreshFilesExplorer');
+      }, 500);
+    }, 2000);
+  }
 
   // 检查是否需要执行创建算子命令（必须在所有命令注册完成后执行）
   const runCommand = context.globalState.get<string>('runCommand');
