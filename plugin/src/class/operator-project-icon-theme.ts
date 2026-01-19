@@ -49,21 +49,74 @@ export class OperatorProjectIconTheme {
       console.log(`[OperatorProjectIconTheme] ========== 开始更新图标主题 ==========`);
       
       // 获取所有已注册的算子工程
-      let projects = getAllProjects();
+      const allProjects = getAllProjects();
+      console.log(`[OperatorProjectIconTheme] 获取到 ${allProjects.length} 个已注册的项目`);
       
       // 过滤：只处理当前工作区内的项目
       const workspaceFolders = vscode.workspace.workspaceFolders;
-      if (workspaceFolders && workspaceFolders.length > 0) {
-        const workspacePaths = workspaceFolders.map(f => path.normalize(f.uri.fsPath).toLowerCase());
-        projects = projects.filter(project => {
-          if (!project.project_path) return false;
-          const projectPath = path.normalize(project.project_path).toLowerCase();
-          // 检查项目路径是否在当前工作区的任何文件夹下
-          return workspacePaths.some(wsPath => projectPath.startsWith(wsPath));
-        });
-        console.log(`[OperatorProjectIconTheme] 过滤后，共 ${projects.length} 个项目在当前工作区内`);
-      } else {
+      if (!workspaceFolders || workspaceFolders.length === 0) {
         console.log(`[OperatorProjectIconTheme] 没有打开的工作区，跳过图标更新`);
+        return;
+      }
+      
+      const workspacePaths = workspaceFolders.map(f => {
+        const normalized = path.normalize(f.uri.fsPath).toLowerCase();
+        // 确保路径以路径分隔符结尾，避免部分匹配
+        return normalized.endsWith(path.sep) ? normalized : normalized + path.sep;
+      });
+      
+      console.log(`[OperatorProjectIconTheme] 当前工作区路径:`, workspacePaths);
+      
+      // 严格过滤：项目路径必须在工作区路径下（不能是同级或父级）
+      const projects = allProjects.filter(project => {
+        if (!project.project_path) {
+          console.log(`[OperatorProjectIconTheme] 跳过项目（缺少路径）: ${project.project_name || 'unknown'}`);
+          return false;
+        }
+        
+        const projectPath = path.normalize(project.project_path).toLowerCase();
+        // 确保项目路径以路径分隔符结尾
+        const normalizedProjectPath = projectPath.endsWith(path.sep) ? projectPath : projectPath + path.sep;
+        
+        // 检查项目路径是否在当前工作区的任何文件夹下（必须是子目录或等于工作区路径）
+        const isInWorkspace = workspacePaths.some(wsPath => {
+          // 检查是否是工作区的子目录
+          const isChild = normalizedProjectPath.startsWith(wsPath);
+          // 或者项目路径恰好等于工作区路径（去掉末尾的路径分隔符后比较）
+          const isExactMatch = normalizedProjectPath.slice(0, -1) === wsPath.slice(0, -1);
+          const isInWorkspace = isChild || isExactMatch;
+          
+          if (isInWorkspace) {
+            console.log(`[OperatorProjectIconTheme] ✓ 项目在工作区内: ${project.project_name} (${projectPath}) 在 ${wsPath} 下`);
+          }
+          return isInWorkspace;
+        });
+        
+        if (!isInWorkspace) {
+          console.log(`[OperatorProjectIconTheme] ✗ 项目不在工作区内: ${project.project_name} (${projectPath})`);
+        }
+        
+        return isInWorkspace;
+      });
+      
+      console.log(`[OperatorProjectIconTheme] 过滤后，共 ${projects.length} 个项目在当前工作区内`);
+      
+      if (projects.length === 0) {
+        console.log(`[OperatorProjectIconTheme] 没有需要处理的项目，清空图标主题`);
+        // 生成空的图标主题
+        const emptyTheme = {
+          iconDefinitions: {
+            'operator-project-folder': {
+              iconPath: './setting.svg',
+            },
+            'operator-project-set-folder': {
+              iconPath: './power.svg',
+            },
+          },
+          folderNames: {},
+          folderNamesExpanded: {},
+        };
+        fs.writeFileSync(this.iconThemeJsonPath, JSON.stringify(emptyTheme, null, 2), 'utf-8');
         return;
       }
       
@@ -168,6 +221,15 @@ export class OperatorProjectIconTheme {
     const folderNames: Record<string, string> = {};
     const folderNamesExpanded: Record<string, string> = {};
 
+    // 获取当前工作区路径，用于二次验证
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    const workspacePaths = workspaceFolders
+      ? workspaceFolders.map(f => {
+          const normalized = path.normalize(f.uri.fsPath).toLowerCase();
+          return normalized.endsWith(path.sep) ? normalized : normalized + path.sep;
+        })
+      : [];
+
     // 为每个算子工程创建图标映射
     for (const project of projects) {
       if (!project.project_path || !project.project_type) {
@@ -177,6 +239,20 @@ export class OperatorProjectIconTheme {
 
       // 规范化路径，确保路径格式一致
       const normalizedPath = path.normalize(project.project_path);
+      const normalizedPathLower = normalizedPath.toLowerCase();
+      const normalizedPathWithSep = normalizedPathLower.endsWith(path.sep) 
+        ? normalizedPathLower 
+        : normalizedPathLower + path.sep;
+      
+      // 二次验证：确保项目路径在工作区内
+      if (workspacePaths.length > 0) {
+        const isInWorkspace = workspacePaths.some(wsPath => normalizedPathWithSep.startsWith(wsPath));
+        if (!isInWorkspace) {
+          console.log(`[OperatorProjectIconTheme] ✗ 跳过项目（不在工作区内）: ${project.project_name} (${normalizedPath})`);
+          continue;
+        }
+      }
+      
       const folderName = path.basename(normalizedPath);
       const isMultiProject = project.project_type === OperatorProjectType.MULTI_PROJECT;
 

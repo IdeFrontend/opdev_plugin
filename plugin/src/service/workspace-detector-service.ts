@@ -18,6 +18,7 @@ import { ProjectManager } from '@plugin/core/project/project-manager';
 import { generateStructure } from '@plugin/domain';
 import { OperatorProjectIconTheme } from '@plugin/class/operator-project-icon-theme';
 import { AutoMultiProjectDetector } from './auto-multi-project-detector';
+import { FolderContextMenuService } from './folder-context-menu-service';
 
 /**
  * 工作区检测服务
@@ -43,16 +44,11 @@ export class WorkspaceDetectorService {
       });
       
       if (rootDetection.isOperatorProject && rootDetection.projectType) {
-        // 根目录就是算子工程，直接注册
-        console.log('[WorkspaceDetectorService] 根目录是算子工程，开始注册');
-        await this.registerOperatorProject(rootDetection, workspacePath);
-        console.log('[WorkspaceDetectorService] 根目录算子工程注册完成，开始初始化');
-        // 初始化算子工程
-        await this.initializeOperatorProject(rootDetection, workspacePath);
-        console.log('[WorkspaceDetectorService] 根目录算子工程初始化完成');
-        
-        // 注册完成后，更新图标主题并刷新资源管理器，同时更新上下文变量
-        await this.refreshAfterRegistration(workspacePath);
+        // 根目录就是算子工程，调用手动标记方法（会自动处理图标更新）
+        console.log('[WorkspaceDetectorService] 根目录是算子工程，调用手动标记方法');
+        const uri = vscode.Uri.file(workspacePath);
+        await FolderContextMenuService.markAsOperatorProject(uri);
+        console.log('[WorkspaceDetectorService] 根目录算子工程标记完成');
         return;
       }
 
@@ -87,27 +83,19 @@ export class WorkspaceDetectorService {
       }
 
       if (validProjects.length === 1) {
-        // 只有一个算子工程，直接注册
-        console.log('[WorkspaceDetectorService] 找到1个算子工程，开始注册');
-        await this.registerOperatorProject(validProjects[0], workspacePath);
-        console.log('[WorkspaceDetectorService] 算子工程注册完成，开始初始化');
-        // 初始化算子工程
-        await this.initializeOperatorProject(validProjects[0], workspacePath);
-        console.log('[WorkspaceDetectorService] 算子工程初始化完成');
-        
-        // 注册完成后，更新图标主题并刷新资源管理器，同时更新上下文变量
-        await this.refreshAfterRegistration(validProjects[0].projectPath);
+        // 只有一个算子工程，调用手动标记方法（会自动处理图标更新）
+        console.log('[WorkspaceDetectorService] 找到1个算子工程，调用手动标记方法');
+        const uri = vscode.Uri.file(validProjects[0].projectPath);
+        await FolderContextMenuService.markAsOperatorProject(uri);
+        console.log('[WorkspaceDetectorService] 算子工程标记完成');
       } else {
-        // 多个算子工程，创建多算子工程集合
-        console.log(`[WorkspaceDetectorService] 找到${validProjects.length}个算子工程，创建多算子工程集合`);
+        // 多个算子工程，调用手动标记为算子工程集合的方法（会自动处理图标更新）
+        console.log(`[WorkspaceDetectorService] 找到${validProjects.length}个算子工程，调用手动标记为算子工程集合方法`);
         console.log(`[WorkspaceDetectorService] 算子工程集合路径: ${workspacePath}`);
         console.log(`[WorkspaceDetectorService] 算子工程集合名称: ${path.basename(workspacePath)}`);
-        await this.registerMultiProject(workspacePath, validProjects);
-        console.log('[WorkspaceDetectorService] 多算子工程集合注册完成');
-        
-        // 注册完成后，更新图标主题并刷新资源管理器
-        // 注意：不在这里调用 AutoMultiProjectDetector，避免自动标记所有目录
-        await this.refreshAfterRegistration(workspacePath);
+        const uri = vscode.Uri.file(workspacePath);
+        await FolderContextMenuService.markAsMultiOperatorProject(uri);
+        console.log('[WorkspaceDetectorService] 多算子工程集合标记完成');
       }
     } catch (error) {
       console.error('[WorkspaceDetectorService] 检测工作区算子工程失败:', error);

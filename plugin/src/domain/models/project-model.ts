@@ -135,7 +135,14 @@ export function getProjectById(project_id: number) {
 
 export function deleteProject(projectPath: string): boolean {
   const store = ensureStore();
-  const index = store.projects.findIndex((p) => p.project_path === projectPath);
+  
+  // 规范化路径比较（Windows 上路径大小写不敏感）
+  const normalizedPath = path.normalize(projectPath).replace(/\\/g, '/').toLowerCase();
+  
+  const index = store.projects.findIndex((p) => {
+    const normalizedProjectPath = path.normalize(p.project_path).replace(/\\/g, '/').toLowerCase();
+    return normalizedProjectPath === normalizedPath;
+  });
   
   if (index === -1) {
     return false;
