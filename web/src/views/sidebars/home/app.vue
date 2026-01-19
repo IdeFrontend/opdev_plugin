@@ -28,12 +28,12 @@
       </a-button>
     </div>
     <div
-      v-if="false"
       class="w-full pb-[15px]"
     >
       <a-button
         type="primary"
-        class="w-full cursor-not-allowed pointer-events-none"
+        class="w-full"
+        @click="handleOpenProject"
       >
         打开算子工程
       </a-button>
@@ -49,6 +49,12 @@ const activeKey = ref(['1']);
 const handleMenuClick = () => {
   vscode.postMessage({
     command: 'openLinkWebviewPanel',
+    commandId: 'my-extension.openProjectView',
+  });
+};
+const handleOpenProject = () => {
+  vscode.postMessage({
+    command: 'openProjectWebviewPanel',
     commandId: 'my-extension.openProjectView',
   });
 };

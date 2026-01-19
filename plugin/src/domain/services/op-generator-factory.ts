@@ -17,6 +17,7 @@ type Params = {
   template_name?: string | null;
   soc_version?: string | null;
   op_path?: string | null;
+  skipExisting?: boolean; // 是否跳过已有文件
 };
 
 class BaseOpGenerator {
@@ -57,6 +58,7 @@ class BaseOpGenerator {
       return;
     }
 
+    const skipExisting = this.params.skipExisting || false;
     const entries = fs.readdirSync(this.op_path);
 
     for (const name of entries) {
@@ -64,21 +66,29 @@ class BaseOpGenerator {
       const stat = fs.statSync(full);
 
       if (stat.isDirectory()) {
-        this._renameFilesInDir(full, templateName);
+        this._renameFilesInDir(full, templateName, skipExisting);
+        continue;
       }
 
+      // 如果 skipExisting 为 true，只重命名包含模板名称的文件（这些是从模板解压的新文件）
       if (name.includes(templateName)) {
         const newName = name.replace(
           new RegExp(templateName, 'g'),
           this.op_name || '',
         );
+        const newPath = path.join(this.op_path, newName);
 
-        fs.moveSync(full, path.join(this.op_path, newName), { overwrite: true });
+        // 如果 skipExisting 为 true，且目标文件已存在，则跳过重命名
+        if (skipExisting && fs.pathExistsSync(newPath)) {
+          continue;
+        }
+
+        fs.moveSync(full, newPath, { overwrite: !skipExisting });
       }
     }
   }
 
-  _renameFilesInDir(dir: string, templateName: string) {
+  _renameFilesInDir(dir: string, templateName: string, skipExisting: boolean = false) {
     const entries = fs.readdirSync(dir);
 
     for (const name of entries) {
@@ -86,16 +96,24 @@ class BaseOpGenerator {
       const stat = fs.statSync(full);
 
       if (stat.isDirectory()) {
-        this._renameFilesInDir(full, templateName);
+        this._renameFilesInDir(full, templateName, skipExisting);
+        continue;
       }
 
+      // 如果 skipExisting 为 true，只重命名包含模板名称的文件（这些是从模板解压的新文件）
       if (name.includes(templateName)) {
         const newName = name.replace(
           new RegExp(templateName, 'g'),
           this.op_name || '',
         );
+        const newPath = path.join(path.dirname(full), newName);
 
-        fs.moveSync(full, path.join(path.dirname(full), newName), { overwrite: true });
+        // 如果 skipExisting 为 true，且目标文件已存在，则跳过重命名
+        if (skipExisting && fs.pathExistsSync(newPath)) {
+          continue;
+        }
+
+        fs.moveSync(full, newPath, { overwrite: !skipExisting });
       }
     }
   }
@@ -105,6 +123,7 @@ class BaseOpGenerator {
       return;
     }
 
+    const skipExisting = this.params.skipExisting || false;
     const opName = this.op_name || '';
     const opNameCapitalized = opName
       .split('_')
@@ -133,6 +152,33 @@ class BaseOpGenerator {
         if (stat.isDirectory()) {
           walk(full);
           continue;
+        }
+
+        // 如果 skipExisting 为 true，只替换模板文件（文件名或内容包含模板名称的文件）
+        if (skipExisting) {
+          // 检查文件是否包含模板名称
+          const fileName = path.basename(full);
+          let fileContainsTemplate = fileName.includes(templateName);
+
+          // 如果文件名不包含模板名称，检查文件内容
+          if (!fileContainsTemplate) {
+            try {
+              const content = fs.readFileSync(full, 'utf8');
+
+              // 检查内容是否包含模板相关的字符串
+              fileContainsTemplate = Object.keys(replacements)
+                .some((key) => content.includes(key));
+            }
+            catch {
+              // 无法读取文件，跳过
+              continue;
+            }
+          }
+
+          // 如果文件不包含模板相关内容，说明是已有文件，跳过替换
+          if (!fileContainsTemplate) {
+            continue;
+          }
         }
 
         // only replace for text files
@@ -204,10 +250,39 @@ class AscendOpGenerator extends BaseOpGenerator {
     }
 
     // 使用 adm-zip 解压缩（跨平台兼容）
+    // 如果 skipExisting 为 true，则不覆盖已有文件
     try {
       const zip = new AdmZip(templateFilePath);
+      const skipExisting = this.params.skipExisting || false;
 
-      zip.extractAllTo(this.op_path, true);
+      if (skipExisting) {
+        // 不覆盖已有文件：逐个提取文件，如果文件已存在则跳过
+        zip.getEntries()
+          .forEach((entry) => {
+            if (entry.isDirectory) {
+              return;
+            }
+
+            const entryPath = path.join(this.op_path, entry.entryName);
+            const entryDir = path.dirname(entryPath);
+
+            // 确保目录存在
+            fs.ensureDirSync(entryDir);
+
+            // 如果文件不存在，才提取
+            if (!fs.pathExistsSync(entryPath)) {
+              const content = zip.readFile(entry);
+
+              if (content) {
+                fs.writeFileSync(entryPath, content);
+              }
+            }
+          });
+      }
+      else {
+        // 原有逻辑：覆盖已有文件
+        zip.extractAllTo(this.op_path, true);
+      }
     }
     catch (error) {
       throw new Error(`Failed to extract template: ${error instanceof Error ? error.message : String(error)}`);
@@ -245,10 +320,39 @@ class CannOpGenerator extends BaseOpGenerator {
     }
 
     // 使用 adm-zip 解压缩（跨平台兼容）
+    // 如果 skipExisting 为 true，则不覆盖已有文件
     try {
       const zip = new AdmZip(templateFilePath);
+      const skipExisting = this.params.skipExisting || false;
 
-      zip.extractAllTo(this.op_path, true);
+      if (skipExisting) {
+        // 不覆盖已有文件：逐个提取文件，如果文件已存在则跳过
+        zip.getEntries()
+          .forEach((entry) => {
+            if (entry.isDirectory) {
+              return;
+            }
+
+            const entryPath = path.join(this.op_path, entry.entryName);
+            const entryDir = path.dirname(entryPath);
+
+            // 确保目录存在
+            fs.ensureDirSync(entryDir);
+
+            // 如果文件不存在，才提取
+            if (!fs.pathExistsSync(entryPath)) {
+              const content = zip.readFile(entry);
+
+              if (content) {
+                fs.writeFileSync(entryPath, content);
+              }
+            }
+          });
+      }
+      else {
+        // 原有逻辑：覆盖已有文件
+        zip.extractAllTo(this.op_path, true);
+      }
     }
     catch (error) {
       throw new Error(`Failed to extract template: ${error instanceof Error ? error.message : String(error)}`);

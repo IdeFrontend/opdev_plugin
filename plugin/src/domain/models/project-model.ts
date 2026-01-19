@@ -10,11 +10,14 @@ export type ProjectRecord = {
   id: number;
   project_name: string;
   project_path: string;
+  project_type?: string | null; // 算子工程类型：standard-custom, ascend-c, torch-library, pyasc, multi-project
   ascend_env_script?: string | null;
   create_by?: string | null;
   create_time?: string;
   update_by?: string | null;
   update_time?: string;
+  // 多算子工程集合的子项目ID列表
+  sub_project_ids?: number[] | null;
 };
 
 type ProjectsStore = {
@@ -44,8 +47,10 @@ function writeStore(store: ProjectsStore) {
 export interface CreateProjectParams {
   project_name: string;
   project_path: string;
+  project_type?: string; // 算子工程类型
   ascend_env_script?: string;
   create_by?: string;
+  sub_project_ids?: number[]; // 多算子工程集合的子项目ID列表
 }
 
 export async function updateShScript(data: CreateProjectParams) {
@@ -69,11 +74,16 @@ export async function createProject(data: CreateProjectParams) {
   const existing = store.projects.find((p) => p.project_path === data.project_path);
 
   if (existing) {
-    if (!data.ascend_env_script) {
-      return existing.id;
+    // 更新现有项目
+    if (data.ascend_env_script) {
+      existing.ascend_env_script = data.ascend_env_script;
     }
-
-    existing.ascend_env_script = data.ascend_env_script;
+    if (data.project_type) {
+      existing.project_type = data.project_type;
+    }
+    if (data.sub_project_ids) {
+      existing.sub_project_ids = data.sub_project_ids;
+    }
     existing.update_time = new Date()
       .toISOString();
     writeStore(store);
@@ -88,11 +98,13 @@ export async function createProject(data: CreateProjectParams) {
     id: nextId,
     project_name: data.project_name,
     project_path: data.project_path,
+    project_type: data.project_type || null,
     ascend_env_script: data.ascend_env_script || null,
     create_by: data.create_by || null,
     create_time: now,
     update_by: null,
     update_time: now,
+    sub_project_ids: data.sub_project_ids || null,
   };
 
   store.projects.push(record);
@@ -104,8 +116,14 @@ export async function createProject(data: CreateProjectParams) {
 
 export function getProjectByPath(projectPath: string): ProjectRecord | undefined {
   const store = ensureStore();
+  
+  // 规范化路径比较（Windows 上路径大小写不敏感）
+  const normalizedPath = path.normalize(projectPath).replace(/\\/g, '/').toLowerCase();
 
-  return store.projects.find((p) => p.project_path === projectPath);
+  return store.projects.find((p) => {
+    const normalizedProjectPath = path.normalize(p.project_path).replace(/\\/g, '/').toLowerCase();
+    return normalizedProjectPath === normalizedPath;
+  });
 }
 
 export function getProjectById(project_id: number) {
@@ -113,6 +131,25 @@ export function getProjectById(project_id: number) {
   const found = store.projects.find((p) => p.id === project_id);
 
   return found || null;
+}
+
+export function deleteProject(projectPath: string): boolean {
+  const store = ensureStore();
+  const index = store.projects.findIndex((p) => p.project_path === projectPath);
+  
+  if (index === -1) {
+    return false;
+  }
+  
+  store.projects.splice(index, 1);
+  writeStore(store);
+  
+  return true;
+}
+
+export function getAllProjects(): ProjectRecord[] {
+  const store = ensureStore();
+  return store.projects;
 }
 
 export function _resetProjectsForTest(): void {
