@@ -20,7 +20,6 @@ import {
 
 import {
   openCsvView, openInsightView, saveFileToLocal,
-  downloadPerformanceReport,
 } from '@web/apis';
 
 import { formatTimestamp } from '@web/views/sidebars/performance-run-data/utils/timestamp';
@@ -98,42 +97,6 @@ async function handleCopyReport(record: PerformanceExecutionRecord) {
   }
 }
 
-async function handleDownloadReport(record: PerformanceExecutionRecord) {
-  try {
-    const hide = message.loading('正在准备下载...', 0);
-    try {
-      await downloadPerformanceReport({ dirPath: record.dirPath });
-      message.success('下载成功');
-    }
-    catch (error) {
-      console.error('下载报告失败:', error);
-      message.error(error instanceof Error ? error.message : '下载失败');
-    }
-    finally {
-      hide();
-    }
-  }
-  catch (error) {
-    console.error('下载处理失败:', error);
-    message.error('下载处理失败');
-  }
-}
-
-/**
- * 点击节点
- */
-const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
-  const node = info.node;
-  const data = node.dataRef || node;
-
-  if (isCsvFile(data)) {
-    openCsvView(data.filePath);
-  }
-  else if (isInsightFile(data)) {
-    openInsightView(data.filePath);
-  }
-};
-
 /**
  * 处理下载点击
  */
@@ -185,6 +148,21 @@ async function handleClickDownload(record: PerformanceExecutionRecord) {
     message.error('下载处理失败');
   }
 }
+
+/**
+ * 点击节点
+ */
+const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
+  const node = info.node;
+  const data = node.dataRef || node;
+
+  if (isCsvFile(data)) {
+    openCsvView(data.filePath);
+  }
+  else if (isInsightFile(data)) {
+    openInsightView(data.filePath);
+  }
+};
 </script>
 
 <template>
@@ -227,11 +205,11 @@ async function handleClickDownload(record: PerformanceExecutionRecord) {
                 @click.stop="handleCopyReport(dataRef)"
               />
               <!-- 下载报告 -->
-              <!-- <a-button
+              <a-button
                 type="text"
                 :icon="h(DownloadOutlined)"
-                @click.stop="handleDownloadReport(dataRef)"
-              /> -->
+                @click.stop="handleClickDownload(dataRef)"
+              />
               <!-- 标记/取消标记 -->
               <a-button
                 :class="{ 'opacity-100': dataRef.marked }"
