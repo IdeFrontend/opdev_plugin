@@ -22,6 +22,7 @@ interface GenerateStructureParams {
 export async function generateStructure(
   data: GenerateStructureParams,
   extensionPath: string,
+  isSkipUnZip: boolean = false
 ): Promise<number> {
-  return await model.generateStructure(data, extensionPath);
+  return await model.generateStructure(data, extensionPath, isSkipUnZip);
 }

@@ -98,6 +98,7 @@ export function getOpByProjectIdAndOpName(
 export async function generateStructure(
   data: Partial<OpRecord>,
   extensionPath: string,
+  isSkipUnZip: boolean = false
 ): Promise<number> {
   // 1) basic checks
   const project = projectModel.getProjectById(data.project_id as number);
@@ -164,7 +165,9 @@ export async function generateStructure(
   const opName = generator.parseMeta();
 
   // 4) execute generation (filesystem work)
-  generator.executeGeneration();
+  if (!isSkipUnZip) {
+    generator.executeGeneration();
+  }
 
   // 5) persist store entry (update if exists, create if new)
   const store = ensureStore();

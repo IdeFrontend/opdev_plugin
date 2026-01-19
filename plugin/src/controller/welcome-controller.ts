@@ -9,7 +9,11 @@ import {
   CreateOpsParams,
   CreateOpsByPrototypeParams,
   CreatedProjectParams,
+  OpenProjectParams
 } from '@shared/api-types';
+import {
+  generateStructure
+} from '@plugin/domain';
 
 // 辅助函数：获取 extension context
 function getExtensionContext(): vscode.ExtensionContext {
@@ -231,4 +235,110 @@ export const welcomeMethods = {
       throw error; // 重新抛出错误，让 API 服务器能够捕获并返回给前端
     }
   },
+
+  /**
+   * 打开算子工程 (webview/openProject)
+   * @param params - 参数
+   */
+  async openProject(params: OpenProjectParams): Promise<void> {
+    try {
+      const context = getExtensionContext();
+
+      const executor = new CommandExecutor();
+
+      // 处理环境变量配置脚本
+      if (params.projectSH) {
+        try {
+          await executor.execute(`chmod +x ${params.projectSH}`);
+          await executor.execute(`${params.projectSH}`);
+        }
+        catch (error) {
+          console.warn(`执行环境变量脚本失败: ${error instanceof Error ? error.message : String(error)}`);
+          // 环境变量脚本执行失败不影响项目创建，只记录警告
+        }
+      }
+
+      // 将配置写入project.json文件
+      try {
+        await projectService.init({
+          ascendEnvScript: params.projectSH,
+          projectPath: params.projectPath,
+          projectName: params.projectName,
+        });
+      }
+      catch (error) {
+        throw new Error(`初始化算子工程失败: ${error instanceof Error ? error.message : String(error)}`);
+      }
+
+      try {
+        await vscode.commands.executeCommand(
+          'revealInExplorer',
+          vscode.Uri.file(`${params.projectPath}/${params.projectName}`),
+        );
+      }
+      catch (error) {
+        console.warn(`在资源管理器中显示失败: ${error instanceof Error ? error.message : String(error)}`);
+        // 这个失败不影响项目创建，只记录警告
+      }
+
+      // 处理配置文件
+      const pm = ProjectManager.getInstance();
+      const projectId = Number(pm.projectId);
+      await generateStructure(
+        {
+          ops_prototype_file: '',
+          project_id: projectId,
+          // cann ascend pyasc
+          op_type: 'cann',
+          template_name: '',
+        },
+        context.extensionPath,
+        true
+      );
+      await pm.checkVscode();
+      // op_type为ascend时，是否需要创建算子工程原型文件
+      await vscode.commands.executeCommand('workbench.action.closeActiveEditor'); 
+
+      // 规范化路径
+      const normalizedProjectPath = path.normalize(params.projectPath);
+      const normalizedProjectName = path.normalize(params.projectName);
+      const fullProjectPath = path.join(
+        normalizedProjectPath,
+        normalizedProjectName,
+      );
+      // 在远程环境中，我们可以直接打开本地路径（相对于远程系统）
+      const localUri = vscode.Uri.file(fullProjectPath);
+
+      // 询问用户是在当前窗口打开还是新窗口打开
+      const choice = await vscode.window.showInformationMessage(
+        '选择打开方式',
+        { modal: true },
+        '当前窗口',
+        '新窗口',
+      );
+
+      // 如果用户取消了选择，则不执行打开操作，但已经创建成功
+      if (!choice) {
+        return;
+      }
+
+      const forceNewWindow = choice === '新窗口';
+
+      // 打开文件夹
+      try {
+        await vscode.commands.executeCommand('vscode.openFolder', localUri, { forceNewWindow: forceNewWindow });
+        vscode.window.showInformationMessage('打开算子工程目录成功');
+      }
+      catch (e) {
+        vscode.window.showErrorMessage(`打开算子工程目录失败: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+    catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+
+      vscode.window.showErrorMessage(`打开算子工程失败: ${errorMessage}`);
+      throw error; // 重新抛出错误，让 API 服务器能够捕获并返回给前端
+    }
+  }
 };
