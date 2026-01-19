@@ -15,6 +15,8 @@ import {
   CommandBuildParams,
   ProfilerCommandParams,
 } from './types';
+import { ConfigRecord } from '@plugin/domain/models/config-model';
+import { getConfig, getConfigById } from '../../services/configuration';
 
 /**
  * Ascend 类型命令策略
@@ -142,10 +144,50 @@ export class AscendCommandStrategy implements CommandStrategy {
     return joinCommands(sourceCannCmd, cdCmd, cmd.toString());
   }
 
-  buildSanitizerCommand(): string {
-    // Ascend 类型不支持 Sanitizer
-    return '';
-  }
+  buildSanitizerCommand(
+      config: ConfigRecord,
+      operator: OpRecord | null,
+      sourceCannCmd: string,
+      cdCmd: string,
+      exampleTargetFile?: string
+    ): string {
+      const mssanitizer = new Command('mssanitizer');
+  
+      // 添加目标文件
+      if (exampleTargetFile) {
+        mssanitizer.addArgument(exampleTargetFile);
+      }
+  
+      // 处理配置选项
+      const options = (config.user_options as Record<string, unknown> | null | undefined) || {};
+      const toolOptions = (options.tool as Record<string, unknown> | undefined) || {};
+      const tools = Object.keys(toolOptions)
+        .filter((key) => toolOptions[key]);
+  
+      mssanitizer.addOption('tool', tools);
+  
+      if (toolOptions.memcheck) {
+        const memcheckOptions = (options.memcheckOption as Record<string, unknown> | undefined) || {};
+  
+        Object.keys(memcheckOptions)
+          .forEach((key) => {
+            if (memcheckOptions[key]) {
+              mssanitizer.addOption(key, 'yes');
+            }
+          });
+      }
+  
+      mssanitizer.addOption('log-level', options.logLevel as string | undefined);
+      mssanitizer.addOption('max-debuglog-size', options.maxDebuglogSize as string | undefined);
+      mssanitizer.addOption('block-id', options.blockId as string | number | undefined);
+      mssanitizer.addOption(
+        'log-file',
+        `${operator?.op_path}/.vscode/mindstudio_sanitizer_log/mssanitizer_${new Date()
+          .valueOf()}.log`,
+      );
+  
+      return joinCommands(sourceCannCmd, cdCmd, mssanitizer.toString());
+    }
 
   buildSimulateCommand(params: ProfilerCommandParams): string {
     const { config, project, operator, sourceCannCmd, cdBuildCmd, exampleTargetFile } = params;
@@ -207,5 +249,16 @@ export class AscendCommandStrategy implements CommandStrategy {
       );
 
     return joinCommands(sourceCannCmd, cdBuildCmd, opprofCmd);
+  }
+
+  getRunTargetFile(config: ConfigRecord, operator: OpRecord | null): string {
+    // ascend 类型：使用当前配置的 target_file
+    return config.target_file || '';
+  }
+
+  getProfilerTargetFile(config: ConfigRecord, operator: OpRecord | null, exampleConfigId: number): string {
+    // ascend 类型：使用示例配置的 target_file
+    const exConfig = getConfigById(exampleConfigId) as unknown as ConfigRecord;
+    return exConfig?.target_file || '';
   }
 }

@@ -80,20 +80,11 @@ export function getRunCommand(config_id: number) {
 
     const context = strategy.buildCommandContext(baseContext);
 
-    // 根据操作符类型选择 TargetFile
-    // CANN 使用 build_op 的 TargetFile，ascend 使用 build_example 的 TargetFile
-    const opType = baseContext.operator?.op_type;
+    // 使用策略来获取正确的 target_file
+    const targetFile = strategy.getRunTargetFile(context.config, context.operator);
 
-    if (opType === 'cann') {
-      // CANN 类型：使用 build_op 配置的 TargetFile
-      const buildOpConfigs = getConfig(context.config.project_id, 'build_op', context.config.op);
-      const buildOpConfig = buildOpConfigs.length > 0 ? buildOpConfigs[0] : null;
-
-      if (buildOpConfig?.target_file) {
-        context.config.target_file = buildOpConfig.target_file;
-      }
-    }
-    // ascend 类型：使用当前配置（build_example）的 TargetFile，保持不变
+    // 更新上下文中的 target_file
+    context.config.target_file = targetFile;
 
     return strategy.buildRunCommand(context);
   }
@@ -157,24 +148,8 @@ export function getSimulateCommand(
 
     const context = strategy.buildCommandContext(baseContext);
 
-    // 根据操作符类型选择 TargetFile
-    // CANN 使用 build_op 的 TargetFile，ascend 使用 build_example 的 TargetFile
-    let targetFile = '';
-    const opType = baseContext.operator?.op_type;
-
-    if (opType === 'cann') {
-      // CANN 类型：使用 build_op 配置的 TargetFile
-      const buildOpConfigs = getConfig(context.config.project_id, 'build_op', context.config.op);
-      const buildOpConfig = buildOpConfigs.length > 0 ? buildOpConfigs[0] : null;
-
-      targetFile = buildOpConfig?.target_file || '';
-    }
-    else {
-      // ascend 类型：使用 build_example 配置的 TargetFile
-      const exConfig = getConfigById(example_config_id) as unknown as ConfigRecord;
-
-      targetFile = exConfig?.target_file || '';
-    }
+    // 使用策略来获取正确的 target_file
+    const targetFile = strategy.getProfilerTargetFile(context.config, context.operator, example_config_id);
 
     return strategy.buildSimulateCommand({
       config: context.config,
@@ -208,24 +183,8 @@ export function getOnBoardCommand(
 
     const context = strategy.buildCommandContext(baseContext);
 
-    // 根据操作符类型选择 TargetFile
-    // CANN 使用 build_op 的 TargetFile，ascend 使用 build_example 的 TargetFile
-    let targetFile = '';
-    const opType = baseContext.operator?.op_type;
-
-    if (opType === 'cann') {
-      // CANN 类型：使用 build_op 配置的 TargetFile
-      const buildOpConfigs = getConfig(context.config.project_id, 'build_op', context.config.op);
-      const buildOpConfig = buildOpConfigs.length > 0 ? buildOpConfigs[0] : null;
-
-      targetFile = buildOpConfig?.target_file || '';
-    }
-    else {
-      // ascend 类型：使用 build_example 配置的 TargetFile
-      const exConfig = getConfigById(example_config_id) as unknown as ConfigRecord;
-
-      targetFile = exConfig?.target_file || '';
-    }
+    // 使用策略来获取正确的 target_file
+    const targetFile = strategy.getProfilerTargetFile(context.config, context.operator, example_config_id);
 
     return strategy.buildOnBoardCommand({
       config: context.config,
@@ -259,24 +218,8 @@ export function getSanitizerCommand(
 
     const context = strategy.buildCommandContext(baseContext);
 
-    // 根据操作符类型选择 TargetFile
-    // CANN 使用 build_op 的 TargetFile，ascend 使用 build_example 的 TargetFile
-    let targetFile = '';
-    const opType = baseContext.operator?.op_type;
-
-    if (opType === 'cann') {
-      // CANN 类型：使用 build_op 配置的 TargetFile
-      const buildOpConfigs = getConfig(context.config.project_id, 'build_op', context.config.op);
-      const buildOpConfig = buildOpConfigs.length > 0 ? buildOpConfigs[0] : null;
-
-      targetFile = buildOpConfig?.target_file || '';
-    }
-    else {
-      // ascend 类型：使用 build_example 配置的 TargetFile
-      const exConfig = getConfigById(example_config_id) as unknown as ConfigRecord;
-
-      targetFile = exConfig?.target_file || '';
-    }
+    // 使用策略来获取正确的 target_file
+    const targetFile = strategy.getProfilerTargetFile(context.config, context.operator, example_config_id);
 
     return strategy.buildSanitizerCommand(
       context.config,

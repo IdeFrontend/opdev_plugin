@@ -16,6 +16,7 @@ import {
   CommandBuildParams,
   ProfilerCommandParams,
 } from "./types";
+import { getConfig, getConfigById } from '../../services/configuration';
 
 /**
  * CANN 类型命令策略
@@ -250,5 +251,19 @@ export class CannCommandStrategy implements CommandStrategy {
     );
 
     return joinCommands(sourceCannCmd, cdBuildCmd, opprofCmd);
+  }
+
+  getRunTargetFile(config: ConfigRecord, operator: OpRecord | null): string {
+    // CANN 类型：使用 build_op 配置的 target_file
+    const buildOpConfigs = getConfig(config.project_id, 'build_op', config.op);
+    const buildOpConfig = buildOpConfigs.length > 0 ? buildOpConfigs[0] : null;
+    return buildOpConfig?.target_file || config.target_file || '';
+  }
+
+  getProfilerTargetFile(config: ConfigRecord, operator: OpRecord | null, exampleConfigId: number): string {
+    // CANN 类型：使用 build_op 配置的 target_file
+    const buildOpConfigs = getConfig(config.project_id, 'build_op', config.op);
+    const buildOpConfig = buildOpConfigs.length > 0 ? buildOpConfigs[0] : null;
+    return buildOpConfig?.target_file || '';
   }
 }
