@@ -42,6 +42,12 @@ export type CreatedProjectParams = {
   templateName?: string;
 };
 
+export type OpenProjectParams = {
+  projectPath: string;
+  projectName: string;
+  projectSH?: string;
+};
+
 export type GetLastProjectPathResult = string | null;
 
 export type GetWorkspaceResult = string | null;
