@@ -45,11 +45,12 @@ async function loadOperators() {
         config_name: op.name, // 配置名称就是算子名称，不带ex
         display_name: op.isExperimental ? `${op.name} (ex)` : op.name, // 显示名称带ex标识
         isExperimental: op.isExperimental,
+        path: op.path, // 文件夹的完整路径
       }));
       
       // 如果有算子列表且没有选中算子,默认选择第一个
       if (!selectedOperator.value) {
-        selectedOperator.value = operators.value[0].config_name;
+        selectedOperator.value = operators.value[0].path;
       }
     } else {
       // 非标准自定义算子，没有多个算子，清空列表
@@ -88,13 +89,13 @@ async function loadBuildConfig(configName, projectId) {
 
 async function handleOperatorChange(value) {
   selectedOperator.value = value;
-  // 找到对应的算子信息，获取project_id
-  const operator = operators.value.find(op => op.config_name === value);
+  // 找到对应的算子信息，使用 path 作为唯一标识
+  const operator = operators.value.find(op => op.path === value);
   if (operator) {
     // 使用 config_name（算子名称）和 project_id 来获取配置
     await loadBuildConfig(operator.config_name, operator.id);
   } else {
-    // 如果没有找到算子信息，只使用算子名称
+    // 如果没有找到算子信息，尝试将 value 作为算子名称处理（兼容旧逻辑）
     await loadBuildConfig(value);
   }
 }
@@ -136,18 +137,30 @@ onMounted(async () => {
     });
     
     if (matchedOperator) {
-      selectedOperator.value = matchedOperator.config_name;
+      selectedOperator.value = matchedOperator.path;
       await loadBuildConfig(matchedOperator.config_name, matchedOperator.id);
     } else {
-      // 如果没找到匹配的算子，直接使用目标算子名称
-      selectedOperator.value = targetOperator.opName;
-      await loadBuildConfig(targetOperator.opName, targetOperator.projectId);
+      // 如果没找到匹配的算子，尝试通过名称查找（兼容旧逻辑）
+      const operatorByName = operators.value.find(op => op.config_name === targetOperator.opName);
+      if (operatorByName) {
+        selectedOperator.value = operatorByName.path;
+        await loadBuildConfig(operatorByName.config_name, operatorByName.id);
+      } else {
+        // 如果还是找不到，使用目标算子名称（可能不在列表中）
+        selectedOperator.value = targetOperator.opName;
+        await loadBuildConfig(targetOperator.opName, targetOperator.projectId);
+      }
     }
   } else {
     // 没有目标算子，使用默认逻辑
     // 加载配置数据（如果有选中的算子，使用算子的config_name和project_id，否则使用默认逻辑）
     if (selectedOperator.value) {
-      const operator = operators.value.find(op => op.config_name === selectedOperator.value);
+      // 先尝试通过 path 查找（新逻辑）
+      let operator = operators.value.find(op => op.path === selectedOperator.value);
+      // 如果找不到，尝试通过 config_name 查找（兼容旧逻辑）
+      if (!operator) {
+        operator = operators.value.find(op => op.config_name === selectedOperator.value);
+      }
       if (operator) {
         await loadBuildConfig(operator.config_name, operator.id);
       } else {
@@ -199,8 +212,8 @@ onUnmounted(() => {
             >
               <a-select-option
                 v-for="op in operators"
-                :key="op.id"
-                :value="op.config_name"
+                :key="op.path"
+                :value="op.path"
               >
                 {{ op.display_name }}
               </a-select-option>

@@ -323,7 +323,15 @@ onMounted(async () => {
   try {
     const result = await checkMultipleOperators();
     hasMultipleOperators.value = result.hasMultiple || false;
+    isStandardCustom.value = result.isStandardCustom || false;
     console.log('[Operate] 是否有多个算子工程:', hasMultipleOperators.value);
+    console.log('[Operate] 是否是标准自定义算子:', isStandardCustom.value);
+
+    // 如果是标准自定义算子，即使没有配置文件，也应该显示操作面板
+    if (isStandardCustom.value) {
+      hasDevtoolConfig.value = true;
+      console.log('[Operate] 标准自定义算子，强制显示操作面板');
+    }
 
     // 如果是标准自定义算子，更新算子列表
     if (result.isStandardCustom && result.operators) {
@@ -331,7 +339,7 @@ onMounted(async () => {
       compiledOperators.value = [];
       preparedOperators.value = [];
 
-      // 根据是否experimental分类
+      // 根据是否experimental分类，并判断是否编译成功
       result.operators.forEach((op) => {
         const operatorItem = {
           id: String(op.id),
@@ -339,9 +347,13 @@ onMounted(async () => {
           hasEx: op.isExperimental,
         };
 
-        // 暂时都放到编译成功的算子工程列表中
-        // 可以根据实际需求调整分类逻辑
-        compiledOperators.value.push(operatorItem);
+        // 默认所有算子都放到预备算子工程中
+        // 根据编译成功判断逻辑，将编译成功的算子移到编译成功的算子工程列表中
+        if (isOperatorCompiled(operatorItem)) {
+          compiledOperators.value.push(operatorItem);
+        } else {
+          preparedOperators.value.push(operatorItem);
+        }
       });
 
       // 同时更新 configArray，用于选择器显示
@@ -353,13 +365,15 @@ onMounted(async () => {
         isExperimental: op.isExperimental,
       }));
 
-      console.log('[Operate] 标准自定义算子，加载算子列表:', compiledOperators.value);
+      console.log('[Operate] 标准自定义算子，编译成功的算子列表:', compiledOperators.value);
+      console.log('[Operate] 标准自定义算子，预备算子列表:', preparedOperators.value);
       console.log('[Operate] 标准自定义算子，加载配置列表:', configArray.value);
     }
   }
   catch (error) {
     console.error('[Operate] 检查多个算子工程失败:', error);
     hasMultipleOperators.value = false;
+    isStandardCustom.value = false;
   }
 
   // 开启状态同步定时器
@@ -402,6 +416,7 @@ const openSetting = async (key) => {
 
 // 算子工程选择器相关状态
 const hasMultipleOperators = ref(false);
+const isStandardCustom = ref(false); // 是否是标准自定义算子
 const operatorSelectorVisible = ref(false);
 const searchKeyword = ref('');
 const selectedOperatorIds = ref([]);
@@ -410,58 +425,19 @@ const preparedOperatorsActiveKey = ref(['1']);
 const operatorSelectorTriggerRef = ref(null);
 const popoverWidth = ref('auto');
 
-// 模拟数据 - 编译成功的算子工程
-const compiledOperators = ref([
-  {
-    id: 'c1',
-    name: '算子工程1',
-    hasEx: false,
-  },
-  {
-    id: 'c2',
-    name: '算子工程2',
-    hasEx: false,
-  },
-  {
-    id: 'c3',
-    name: '算子工程3',
-    hasEx: true,
-  },
-  {
-    id: 'c4',
-    name: '算子工程4',
-    hasEx: true,
-  },
-  {
-    id: 'c5',
-    name: '算子工程5',
-    hasEx: false,
-  },
-]);
+// 判断算子是否编译成功（待实现具体判断逻辑）
+// eslint-disable-next-line no-unused-vars
+const isOperatorCompiled = (operator) => {
+  // TODO: 实现编译成功的判断逻辑
+  // 目前默认返回 false，所有算子都放到预备算子工程中
+  return false;
+};
 
-// 模拟数据 - 预备算子工程
-const preparedOperators = ref([
-  {
-    id: 'p1',
-    name: '预备算子工程1',
-    hasEx: false,
-  },
-  {
-    id: 'p2',
-    name: '预备算子工程2',
-    hasEx: false,
-  },
-  {
-    id: 'p3',
-    name: '预备算子工程3',
-    hasEx: true,
-  },
-  {
-    id: 'p4',
-    name: '预备算子工程4',
-    hasEx: true,
-  },
-]);
+// 编译成功的算子工程（通过 isOperatorCompiled 判断）
+const compiledOperators = ref([]);
+
+// 预备算子工程（默认所有算子都在这里）
+const preparedOperators = ref([]);
 
 // 所有算子工程（合并两个列表）
 const allOperators = computed(() => [
@@ -687,14 +663,14 @@ const handlePopoverOpenChange = (open) => {
 <template>
   <a-config-provider :theme="themeConfig">
     <div class="pt-3 w-full min-w-[138px]">
-      <!-- 如果配置文件不存在，显示提示信息 -->
-      <div v-if="!hasDevtoolConfig" class="flex items-center justify-center min-h-[200px] p-5">
+      <!-- 如果配置文件不存在且不是标准自定义算子，显示提示信息 -->
+      <div v-if="!hasDevtoolConfig && !isStandardCustom" class="flex items-center justify-center min-h-[200px] p-5">
         <div class="text-xs text-white/65 text-center leading-relaxed">
           您需要新建算子工程或打开算子工程才可以使用操作面板
         </div>
       </div>
 
-      <!-- 如果配置文件存在，显示正常菜单 -->
+      <!-- 如果配置文件存在或是标准自定义算子，显示正常菜单 -->
       <template v-else>
         <div v-if="false" class="text-sm flex items-center gap-2 mt-3 mb-3 px-3">
           目标算子
@@ -714,7 +690,7 @@ const handlePopoverOpenChange = (open) => {
         </div>
 
         <!-- 算子工程选择器 -->
-        <div v-if="hasMultipleOperators" class="px-3 py-2 mb-2 operator-selector-wrapper">
+        <div v-if="hasMultipleOperators || isStandardCustom" class="px-3 py-2 mb-2 operator-selector-wrapper">
           <a-popover v-model:open="operatorSelectorVisible" placement="bottomLeft" trigger="click"
             :overlay-style="{ width: popoverWidth, padding: '0' }" overlay-class-name="operator-selector-popover"
             @open-change="handlePopoverOpenChange">
@@ -739,8 +715,8 @@ const handlePopoverOpenChange = (open) => {
                   <a-input v-model:value="searchKeyword" placeholder="搜索算子工程" class="mb-3" allow-clear />
 
                   <!-- 编译成功的算子工程 -->
-                  <a-collapse v-model:active-key="compiledOperatorsActiveKey" :bordered="false"
-                    class="operator-collapse">
+                  <a-collapse v-model:active-key="compiledOperatorsActiveKey"
+                    :bordered="false" class="operator-collapse">
                     <a-collapse-panel key="1" header="编译成功的算子工程">
                       <div class="operator-list">
                         <div class="operator-item select-all" :class="{
@@ -814,7 +790,7 @@ const handlePopoverOpenChange = (open) => {
         </div>
 
         <!-- 已选择的算子工程显示区域（组件收起后显示） -->
-        <div v-if="hasMultipleOperators && !operatorSelectorVisible && selectedOperators.length > 0"
+        <div v-if="(hasMultipleOperators || isStandardCustom) && !operatorSelectorVisible && selectedOperators.length > 0"
           class="px-3 py-2 mb-2">
           <div class="selected-display-section">
             <div class="selected-display-header">

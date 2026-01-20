@@ -48,8 +48,8 @@ export class WorkspaceDetectorService {
       if (rootDetection.isOperatorProject && rootDetection.projectType) {
         // 根目录就是算子工程
         if (rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM) {
-          // 标准自定义算子，需要特殊扫描逻辑
-          console.log('[WorkspaceDetectorService] 根目录是标准自定义算子，开始特殊扫描');
+          // 标准自定义算子，只标记指定的文件夹，不扫描目录
+          console.log('[WorkspaceDetectorService] 根目录是标准自定义算子，开始标记指定文件夹');
           await this.scanStandardCustomOperators(workspacePath);
         } else {
           // 其他类型的算子工程，直接标记
@@ -423,28 +423,54 @@ export class WorkspaceDetectorService {
     }
 
 
-    // 初始化所有子项目
+    // 初始化所有子项目（并行执行以提升性能）
     console.log('[WorkspaceDetectorService] 开始初始化所有子项目');
+    const initializationTasks: Array<() => Promise<void>> = [];
+    
     for (let i = 0; i < detectedProjects.length; i++) {
       const detection = detectedProjects[i];
       if (detection.isOperatorProject && detection.projectType) {
-        console.log(`[WorkspaceDetectorService] 初始化子项目 ${i + 1}/${detectedProjects.length}: ${detection.projectName}`);
-        try {
-          // 获取项目的 projectId
-          const project = getProjectByPath(detection.projectPath);
-          if (project) {
-            await this.initializeOperatorProject(detection, project.id);
-            console.log(`[WorkspaceDetectorService] 子项目 ${detection.projectName} 初始化完成`);
-          } else {
-            console.warn(`[WorkspaceDetectorService] 子项目未找到: ${detection.projectPath}`);
-          }
-        } catch (error) {
-          console.error(`[WorkspaceDetectorService] 子项目 ${detection.projectName} 初始化失败:`, error);
-          // 继续初始化其他子项目
+        // 获取项目的 projectId
+        const project = getProjectByPath(detection.projectPath);
+        if (project) {
+          // 收集初始化任务，稍后并行执行
+          initializationTasks.push(async () => {
+            try {
+              console.log(`[WorkspaceDetectorService] 初始化子项目: ${detection.projectName}`);
+              await this.initializeOperatorProject(detection, project.id);
+              console.log(`[WorkspaceDetectorService] 子项目 ${detection.projectName} 初始化完成`);
+            } catch (error) {
+              console.error(`[WorkspaceDetectorService] 子项目 ${detection.projectName} 初始化失败:`, error);
+              throw error; // 重新抛出以便 Promise.allSettled 捕获
+            }
+          });
+        } else {
+          console.warn(`[WorkspaceDetectorService] 子项目未找到: ${detection.projectPath}`);
         }
       }
     }
-    console.log('[WorkspaceDetectorService] 所有子项目初始化完成');
+    
+    // 并行执行所有初始化任务
+    if (initializationTasks.length > 0) {
+      console.log(`[WorkspaceDetectorService] 开始并行初始化 ${initializationTasks.length} 个子项目`);
+      const startTime = Date.now();
+      const results = await Promise.allSettled(
+        initializationTasks.map((task, index) => {
+          console.log(`[WorkspaceDetectorService] 启动初始化任务 ${index + 1}/${initializationTasks.length}`);
+          return task();
+        })
+      );
+      const endTime = Date.now();
+      const successCount = results.filter(r => r.status === 'fulfilled').length;
+      const failCount = results.filter(r => r.status === 'rejected').length;
+      console.log(`[WorkspaceDetectorService] 并行初始化完成，成功: ${successCount}, 失败: ${failCount}, 耗时: ${endTime - startTime}ms`);
+      
+      if (failCount > 0) {
+        console.warn(`[WorkspaceDetectorService] 有 ${failCount} 个子项目初始化失败，但继续执行后续操作`);
+      }
+    } else {
+      console.log('[WorkspaceDetectorService] 没有需要初始化的子项目');
+    }
 
     // 最终打印算子工程集合信息
     console.log('[WorkspaceDetectorService] ========== 算子工程集合信息 ==========');

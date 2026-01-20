@@ -674,55 +674,12 @@ export async function activate(context: vscode.ExtensionContext) {
       const workspaceFolders = vscode.workspace.workspaceFolders;
       if (workspaceFolders && workspaceFolders.length > 0) {
         const { WorkspaceDetectorService } = await import('./service/workspace-detector-service.js');
-        const { FolderContextMenuService } = await import('./service/folder-context-menu-service.js');
-        const { getAllProjects } = await import('./domain/models/project-model.js');
         
         for (const folder of workspaceFolders) {
           await WorkspaceDetectorService.detectAndRegisterWorkspace(folder.uri.fsPath).catch((error) => {
             console.error('检测工作区算子工程失败:', error);
           });
         }
-        
-        // 检测完成后，更新所有已标记项目的上下文变量，模拟手动操作的效果
-        const allProjectsForContext = getAllProjects();
-        for (const project of allProjectsForContext) {
-          if (project.project_path) {
-            const uri = vscode.Uri.file(project.project_path);
-            const checkResult = await FolderContextMenuService.checkIsOperatorProject(uri);
-            
-            // 更新上下文变量
-            await vscode.commands.executeCommand(
-              'setContext',
-              'operatorProjectMarked',
-              checkResult.isOperatorProject && !checkResult.isMultiProject,
-            );
-            await vscode.commands.executeCommand(
-              'setContext',
-              'multiOperatorProjectMarked',
-              checkResult.isMultiProject,
-            );
-            await vscode.commands.executeCommand(
-              'setContext',
-              'operatorProjectType',
-              checkResult.projectType || '',
-            );
-          }
-        }
-        
-        // 触发装饰更新
-        const iconThemeForWatch = OperatorProjectIconTheme.getInstance(context);
-        const allProjectsForWatch = getAllProjects();
-        const urisForWatch = allProjectsForWatch
-          .filter(p => p.project_path)
-          .map(p => vscode.Uri.file(p.project_path!));
-        if (urisForWatch.length > 0) {
-          iconThemeForWatch.fireDecorationUpdate(urisForWatch);
-        }
-        
-        // 延迟刷新资源管理器，确保菜单显示正确
-        setTimeout(() => {
-          vscode.commands.executeCommand('workbench.files.action.refreshFilesExplorer');
-        }, 500);
       }
     });
 
@@ -733,95 +690,13 @@ export async function activate(context: vscode.ExtensionContext) {
     // 延迟执行，确保插件完全初始化
     setTimeout(async () => {
       const { WorkspaceDetectorService } = await import('./service/workspace-detector-service.js');
-      const { FolderContextMenuService } = await import('./service/folder-context-menu-service.js');
-      const { getAllProjects } = await import('./domain/models/project-model.js');
       
       for (const folder of vscode.workspace.workspaceFolders!) {
         await WorkspaceDetectorService.detectAndRegisterWorkspace(folder.uri.fsPath).catch((error) => {
           console.error('检测工作区算子工程失败:', error);
         });
       }
-      
-      // 检测完成后，更新所有已标记项目的上下文变量，模拟手动操作的效果
-      const allProjectsForInit = getAllProjects();
-      for (const project of allProjectsForInit) {
-        if (project.project_path) {
-          const uri = vscode.Uri.file(project.project_path);
-          const checkResult = await FolderContextMenuService.checkIsOperatorProject(uri);
-          
-          // 更新上下文变量
-          await vscode.commands.executeCommand(
-            'setContext',
-            'operatorProjectMarked',
-            checkResult.isOperatorProject && !checkResult.isMultiProject,
-          );
-          await vscode.commands.executeCommand(
-            'setContext',
-            'multiOperatorProjectMarked',
-            checkResult.isMultiProject,
-          );
-          await vscode.commands.executeCommand(
-            'setContext',
-            'operatorProjectType',
-            checkResult.projectType || '',
-          );
-        }
-      }
-      
-      // 触发装饰更新
-      const allProjectsForInit2 = getAllProjects();
-      const urisForInit = allProjectsForInit2
-        .filter(p => p.project_path)
-        .map(p => vscode.Uri.file(p.project_path!));
-      if (urisForInit.length > 0) {
-        const iconThemeForInit = OperatorProjectIconTheme.getInstance(context);
-        iconThemeForInit.fireDecorationUpdate(urisForInit);
-      }
-      
-      // 延迟刷新资源管理器，确保菜单显示正确
-      setTimeout(() => {
-        vscode.commands.executeCommand('workbench.files.action.refreshFilesExplorer');
-      }, 500);
     }, 2000);
-  }
-
-  // 检查是否需要执行创建算子命令（必须在所有命令注册完成后执行）
-  const runCommand = context.globalState.get<string>('runCommand');
-  const runCommandParam = context.globalState.get<number>('runCommand-param');
-
-  if (runCommand === COMMAND_CREATE_DIRECTORY && runCommandParam) {
-    console.log('检测到需要执行创建算子命令，类型:', runCommandParam);
-    // 使用 setTimeout 延迟执行，确保所有插件初始化完成
-    setTimeout(async () => {
-      try {
-        await vscode.window.withProgress(
-          {
-            location: vscode.ProgressLocation.Notification,
-            title: '开始创建算子文件...',
-            cancellable: false,
-          },
-          async (progress) => {
-            try {
-              // 执行创建算子命令
-              await vscode.commands.executeCommand(
-                COMMAND_CREATE_DIRECTORY,
-                { createOperatorProjectDirectoryFileType: runCommandParam },
-                progress,
-              );
-              // 清除 runCommand，避免重复执行
-              await context.globalState.update('runCommand', undefined);
-              await context.globalState.update('runCommand-param', undefined);
-            }
-            catch (error) {
-              console.error('执行创建算子命令失败:', error);
-            }
-          },
-        );
-      }
-      catch (error) {
-        console.error('创建算子任务启动失败:', error);
-      }
-    }, 1000);
   }
 
   if (vscode.workspace.workspaceFolders) {

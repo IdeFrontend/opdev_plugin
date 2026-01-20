@@ -13,7 +13,6 @@ import { OperatorProjectDetector, OperatorProjectType, type OperatorProjectDetec
 import { createProject, getProjectByPath, getProjectById, deleteProject, getAllProjects } from '@plugin/domain/models/project-model';
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import { projectService } from './project-service';
-import { AutoMultiProjectDetector } from './auto-multi-project-detector';
 import { OperatorProjectIconTheme } from '@plugin/class/operator-project-icon-theme';
 import { generateStructure } from '@plugin/domain';
 import { getOpsByProjectId } from '@plugin/domain/models/model';
@@ -74,6 +73,7 @@ export class FolderContextMenuService {
             
             // 注册子项目
             const subProjectIds: number[] = [];
+            const initializationTasks: Array<() => Promise<void>> = [];
             for (const detection of detectedProjects) {
               if (!detection.projectType) continue;
               
@@ -85,11 +85,22 @@ export class FolderContextMenuService {
                   project_type: detection.projectType,
                 });
                 subProjectIds.push(subId);
-                // 初始化算子工程配置
-                await this.initializeOperatorProject(detection, subId);
+                // 收集初始化任务，稍后并行执行
+                initializationTasks.push(() => this.initializeOperatorProject(detection, subId));
               } else {
                 subProjectIds.push(subProject.id);
               }
+            }
+            
+            // 并行执行所有初始化任务
+            if (initializationTasks.length > 0) {
+              console.log(`[markAsOperatorProject] 开始并行初始化 ${initializationTasks.length} 个算子工程`);
+              await Promise.allSettled(
+                initializationTasks.map(task => task().catch(error => {
+                  console.error(`[markAsOperatorProject] 初始化失败:`, error);
+                  throw error;
+                }))
+              );
             }
             
             // 注册多算子工程集合
@@ -124,17 +135,6 @@ export class FolderContextMenuService {
         // 初始化算子工程配置
         await this.initializeOperatorProject(rootDetection, projectId);
         
-        // 自动检测并标记算子工程合集
-        const context = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
-          .extensionContext;
-        if (context) {
-          await AutoMultiProjectDetector.detectAndMarkMultiProjects(context);
-          
-          // 更新图标主题（确保在自动检测后更新）
-          const iconTheme = OperatorProjectIconTheme.getInstance(context);
-          iconTheme.fireDecorationUpdate(vscode.Uri.file(folderPath));
-        }
-        
         vscode.window.showInformationMessage(`已标记为算子工程: ${rootDetection.projectName}`);
         return;
       }
@@ -159,6 +159,7 @@ export class FolderContextMenuService {
         
         // 注册子项目
         const subProjectIds: number[] = [];
+        const initializationTasks: Array<() => Promise<void>> = [];
         for (const detection of detectedProjects) {
           if (!detection.projectType) continue;
           
@@ -170,11 +171,22 @@ export class FolderContextMenuService {
               project_type: detection.projectType,
             });
             subProjectIds.push(subId);
-            // 初始化算子工程配置
-            await this.initializeOperatorProject(detection, subId);
+            // 收集初始化任务，稍后并行执行
+            initializationTasks.push(() => this.initializeOperatorProject(detection, subId));
           } else {
             subProjectIds.push(subProject.id);
           }
+        }
+        
+        // 并行执行所有初始化任务
+        if (initializationTasks.length > 0) {
+          console.log(`[markAsOperatorProject] 开始并行初始化 ${initializationTasks.length} 个算子工程`);
+          await Promise.allSettled(
+            initializationTasks.map(task => task().catch(error => {
+              console.error(`[markAsOperatorProject] 初始化失败:`, error);
+              throw error;
+            }))
+          );
         }
         
         // 注册多算子工程集合
@@ -319,10 +331,22 @@ export class FolderContextMenuService {
       // 注册所有算子工程（标记experimental属性）
       // 这是关键步骤：确保所有检测到的算子工程都被标记为算子工程
       const subProjectIds: number[] = [];
+      const initializationTasks: Array<() => Promise<void>> = [];
       console.log(`[markAsMultiOperatorProject] 开始注册 ${detectedProjects.length} 个算子工程`);
+      
+      // 第一步：先注册所有项目（串行，确保数据库操作安全）
       for (const detection of detectedProjects) {
         if (!detection.projectType) {
           console.warn(`[markAsMultiOperatorProject] 跳过无类型的算子工程: ${detection.projectPath}`);
+          continue;
+        }
+        
+        // 跳过集合根目录本身，即使它也被检测为算子工程，也不应该初始化
+        // 因为它是作为集合被标记的，不应该在集合根目录下创建 .vscode 和 .arts 文件
+        const normalizedDetectionPath = path.normalize(detection.projectPath);
+        const normalizedFolderPath = path.normalize(folderPath);
+        if (normalizedDetectionPath === normalizedFolderPath) {
+          console.log(`[markAsMultiOperatorProject] 跳过集合根目录本身: ${detection.projectPath}`);
           continue;
         }
         
@@ -331,6 +355,10 @@ export class FolderContextMenuService {
           ? true  // 如果当前目录是 experimental，所有子目录都是 experimental 算子
           : detection.projectPath.toLowerCase().startsWith(experimentalPath.toLowerCase());
         let subProject = getProjectByPath(detection.projectPath);
+        
+        // 对于标准自定义算子，在集合中识别出的算子工程不需要创建 .vscode 和 .arts 文件
+        const shouldSkipVscodeFiles = detection.projectType === OperatorProjectType.STANDARD_CUSTOM;
+        
         if (!subProject) {
           // 子目录是算子工程，但还没有被标记，需要标记为算子工程
           console.log(`[markAsMultiOperatorProject] 标记算子工程: ${detection.projectName} (${detection.projectPath}), experimental: ${isExperimental}`);
@@ -343,8 +371,8 @@ export class FolderContextMenuService {
           subProjectIds.push(subId);
           console.log(`[markAsMultiOperatorProject] 已标记算子工程: ${detection.projectName}, ID: ${subId}`);
           
-          // 初始化算子工程配置
-          await this.initializeOperatorProject(detection, subId);
+          // 收集初始化任务，稍后并行执行
+          initializationTasks.push(() => this.initializeOperatorProject(detection, subId, shouldSkipVscodeFiles));
         } else {
           // 子目录已经是算子工程，更新experimental标记（如果需要）
           console.log(`[markAsMultiOperatorProject] 算子工程已存在: ${detection.projectName} (${detection.projectPath}), ID: ${subProject.id}`);
@@ -359,11 +387,35 @@ export class FolderContextMenuService {
           }
           subProjectIds.push(subProject.id);
           
-          // 检查算子是否已初始化（是否有配置），如果没有则初始化
-          await this.checkAndInitializeOperatorProject(detection, subProject.id);
+          // 收集初始化任务，稍后并行执行
+          initializationTasks.push(() => this.checkAndInitializeOperatorProject(detection, subProject.id, shouldSkipVscodeFiles));
         }
       }
       console.log(`[markAsMultiOperatorProject] 算子工程注册完成，共 ${subProjectIds.length} 个`);
+      
+      // 第二步：并行执行所有初始化任务
+      if (initializationTasks.length > 0) {
+        console.log(`[markAsMultiOperatorProject] 开始并行初始化 ${initializationTasks.length} 个算子工程`);
+        const startTime = Date.now();
+        // 使用 Promise.allSettled 确保即使某个初始化失败，其他也能继续
+        const results = await Promise.allSettled(
+          initializationTasks.map((task, index) => {
+            console.log(`[markAsMultiOperatorProject] 启动初始化任务 ${index + 1}/${initializationTasks.length}`);
+            return task().catch(error => {
+              console.error(`[markAsMultiOperatorProject] 初始化任务 ${index + 1} 失败:`, error);
+              throw error; // 重新抛出以便 Promise.allSettled 捕获
+            });
+          })
+        );
+        const endTime = Date.now();
+        const successCount = results.filter(r => r.status === 'fulfilled').length;
+        const failCount = results.filter(r => r.status === 'rejected').length;
+        console.log(`[markAsMultiOperatorProject] 并行初始化完成，成功: ${successCount}, 失败: ${failCount}, 耗时: ${endTime - startTime}ms`);
+        
+        if (failCount > 0) {
+          console.warn(`[markAsMultiOperatorProject] 有 ${failCount} 个算子工程初始化失败，但继续执行后续操作`);
+        }
+      }
       
       // 手动标记为算子合集时，只标记子目录为算子工程，不会将子目录标记为算子合集
       // 移除将子目录标记为算子合集的逻辑
@@ -771,10 +823,12 @@ export class FolderContextMenuService {
    * 初始化算子工程配置
    * @param detection 算子工程检测结果
    * @param projectId 项目ID
+   * @param skipVscodeFiles 是否跳过创建 .vscode 和 .arts 文件（默认 false）
    */
   private static async initializeOperatorProject(
     detection: OperatorProjectDetectionResult,
     projectId: number,
+    skipVscodeFiles: boolean = false,
   ): Promise<void> {
     console.log(`[FolderContextMenuService] 开始初始化算子工程: ${detection.projectName}`);
     
@@ -821,7 +875,7 @@ export class FolderContextMenuService {
       // 调用 generateStructure 初始化配置
       // 对于标准自定义算子，如果没有模板，跳过模板解压，只创建配置
       const isSkipUnZip = detection.projectType === OperatorProjectType.STANDARD_CUSTOM && !templateName;
-      console.log(`[FolderContextMenuService] 调用 generateStructure 初始化配置, isSkipUnZip: ${isSkipUnZip}`);
+      console.log(`[FolderContextMenuService] 调用 generateStructure 初始化配置, isSkipUnZip: ${isSkipUnZip}, skipVscodeFiles: ${skipVscodeFiles}`);
       await generateStructure(
         {
           project_id: projectId,
@@ -833,6 +887,7 @@ export class FolderContextMenuService {
         } as any,
         context.extensionPath,
         isSkipUnZip, // 标准自定义算子且无模板时，跳过模板解压
+        skipVscodeFiles, // 是否跳过创建 .vscode 和 .arts 文件
       );
       console.log(`[FolderContextMenuService] 算子工程初始化完成: ${detection.projectName}`);
       
@@ -858,10 +913,12 @@ export class FolderContextMenuService {
    * 检查算子是否已初始化，如果没有则初始化
    * @param detection 算子工程检测结果
    * @param projectId 项目ID
+   * @param skipVscodeFiles 是否跳过创建 .vscode 和 .arts 文件（默认 false）
    */
   private static async checkAndInitializeOperatorProject(
     detection: OperatorProjectDetectionResult,
     projectId: number,
+    skipVscodeFiles: boolean = false,
   ): Promise<void> {
     console.log(`[FolderContextMenuService] 检查算子是否已初始化: ${detection.projectName}, projectId: ${projectId}`);
     
@@ -879,7 +936,7 @@ export class FolderContextMenuService {
       // 如果既没有算子记录也没有配置，说明未初始化，需要初始化
       if (!hasOpRecord && !hasConfig) {
         console.log(`[FolderContextMenuService] 算子未初始化，开始初始化: ${detection.projectName}`);
-        await this.initializeOperatorProject(detection, projectId);
+        await this.initializeOperatorProject(detection, projectId, skipVscodeFiles);
       } else {
         console.log(`[FolderContextMenuService] 算子已初始化，跳过: ${detection.projectName}`);
       }
@@ -887,7 +944,7 @@ export class FolderContextMenuService {
       console.error(`[FolderContextMenuService] 检查算子初始化状态失败: ${detection.projectPath}`, error);
       // 检查失败时，尝试初始化（避免遗漏）
       try {
-        await this.initializeOperatorProject(detection, projectId);
+        await this.initializeOperatorProject(detection, projectId, skipVscodeFiles);
       } catch (initError) {
         console.error(`[FolderContextMenuService] 初始化算子失败: ${detection.projectPath}`, initError);
       }
