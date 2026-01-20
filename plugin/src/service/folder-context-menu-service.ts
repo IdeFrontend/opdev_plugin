@@ -71,12 +71,29 @@ export class FolderContextMenuService {
           sub_project_ids: subProjectIds,
         });
         
+        // 初始化所有子项目
+        console.log(`[markAsOperatorProject] 开始初始化 ${detectedProjects.length} 个子项目`);
+        for (const detection of detectedProjects) {
+          if (detection.isOperatorProject && detection.projectType) {
+            try {
+              console.log(`[markAsOperatorProject] 初始化子项目: ${detection.projectName}`);
+              await WorkspaceDetectorService['initializeOperatorProject'](detection, folderPath);
+              console.log(`[markAsOperatorProject] 子项目 ${detection.projectName} 初始化完成`);
+            } catch (error) {
+              console.error(`[markAsOperatorProject] 子项目 ${detection.projectName} 初始化失败:`, error);
+              // 继续初始化其他子项目
+            }
+          }
+        }
+        console.log(`[markAsOperatorProject] 所有子项目初始化完成`);
+        
         // 更新图标主题
         const context1 = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
           .extensionContext;
         if (context1) {
           const iconTheme = OperatorProjectIconTheme.getInstance(context1);
-          await iconTheme.updateIconTheme();
+          // 触发装饰更新
+          iconTheme.fireDecorationUpdate(vscode.Uri.file(folderPath));
         }
         
         vscode.window.showInformationMessage(`已自动标记为算子工程集合（包含 ${detectedProjects.length} 个算子工程）: ${projectName}`);
@@ -106,12 +123,12 @@ export class FolderContextMenuService {
           project_type: OperatorProjectType.ASCEND_C, // 默认类型
         });
         
-        // 更新图标主题
+        // 触发装饰更新
         const context2 = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
           .extensionContext;
         if (context2) {
           const iconTheme = OperatorProjectIconTheme.getInstance(context2);
-          await iconTheme.updateIconTheme();
+          iconTheme.fireDecorationUpdate(vscode.Uri.file(folderPath));
         }
         
         vscode.window.showInformationMessage(`已标记为算子工程: ${projectName}`);
@@ -138,9 +155,10 @@ export class FolderContextMenuService {
       if (context) {
         await AutoMultiProjectDetector.detectAndMarkMultiProjects(context);
         
-        // 更新图标主题
+        // 更新图标主题（确保在自动检测后更新）
         const iconTheme = OperatorProjectIconTheme.getInstance(context);
-        await iconTheme.updateIconTheme();
+        // 触发装饰更新
+        iconTheme.fireDecorationUpdate(vscode.Uri.file(folderPath));
       }
       
       // 初始化算子工程
@@ -213,6 +231,22 @@ export class FolderContextMenuService {
         sub_project_ids: subProjectIds,
       });
       
+      // 初始化所有子项目
+      console.log(`[markAsMultiOperatorProject] 开始初始化 ${detectedProjects.length} 个子项目`);
+      for (const detection of detectedProjects) {
+        if (detection.isOperatorProject && detection.projectType) {
+          try {
+            console.log(`[markAsMultiOperatorProject] 初始化子项目: ${detection.projectName}`);
+            await WorkspaceDetectorService['initializeOperatorProject'](detection, folderPath);
+            console.log(`[markAsMultiOperatorProject] 子项目 ${detection.projectName} 初始化完成`);
+          } catch (error) {
+            console.error(`[markAsMultiOperatorProject] 子项目 ${detection.projectName} 初始化失败:`, error);
+            // 继续初始化其他子项目
+          }
+        }
+      }
+      console.log(`[markAsMultiOperatorProject] 所有子项目初始化完成`);
+      
       // 自动检测并标记算子工程合集（可能会发现更高层级的合集）
       const context = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
         .extensionContext;
@@ -221,7 +255,8 @@ export class FolderContextMenuService {
         
         // 更新图标主题
         const iconTheme = OperatorProjectIconTheme.getInstance(context);
-        await iconTheme.updateIconTheme();
+        // 触发装饰更新
+        iconTheme.fireDecorationUpdate(vscode.Uri.file(folderPath));
       }
 
       vscode.window.showInformationMessage(`已标记为算子工程集合: ${projectName}`);
@@ -254,12 +289,12 @@ export class FolderContextMenuService {
       // 直接删除项目，不需要二次确认
       const deleted = deleteProject(folderPath);
       if (deleted) {
-        // 更新图标主题
+        // 触发装饰更新
         const context = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
           .extensionContext;
         if (context) {
           const iconTheme = OperatorProjectIconTheme.getInstance(context);
-          await iconTheme.updateIconTheme();
+          iconTheme.fireDecorationUpdate(vscode.Uri.file(folderPath));
         }
         
         vscode.window.showInformationMessage('已取消标记为算子工程');
@@ -295,12 +330,12 @@ export class FolderContextMenuService {
       // 直接删除项目，不需要二次确认
       const deleted = deleteProject(folderPath);
       if (deleted) {
-        // 更新图标主题
+        // 触发装饰更新
         const context = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
           .extensionContext;
         if (context) {
           const iconTheme = OperatorProjectIconTheme.getInstance(context);
-          await iconTheme.updateIconTheme();
+          iconTheme.fireDecorationUpdate(vscode.Uri.file(folderPath));
         }
         
         vscode.window.showInformationMessage('已取消标记为算子工程集合');

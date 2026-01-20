@@ -18,6 +18,8 @@ export type ProjectRecord = {
   update_time?: string;
   // 多算子工程集合的子项目ID列表
   sub_project_ids?: number[] | null;
+  // 是否为experimental算子（仅在experimental目录下的算子）
+  is_experimental?: boolean | null;
 };
 
 type ProjectsStore = {
@@ -51,6 +53,7 @@ export interface CreateProjectParams {
   ascend_env_script?: string;
   create_by?: string;
   sub_project_ids?: number[]; // 多算子工程集合的子项目ID列表
+  is_experimental?: boolean; // 是否为experimental算子
 }
 
 export async function updateShScript(data: CreateProjectParams) {
@@ -84,6 +87,9 @@ export async function createProject(data: CreateProjectParams) {
     if (data.sub_project_ids) {
       existing.sub_project_ids = data.sub_project_ids;
     }
+    if (data.is_experimental !== undefined) {
+      existing.is_experimental = data.is_experimental;
+    }
     existing.update_time = new Date()
       .toISOString();
     writeStore(store);
@@ -105,6 +111,7 @@ export async function createProject(data: CreateProjectParams) {
     update_by: null,
     update_time: now,
     sub_project_ids: data.sub_project_ids || null,
+    is_experimental: data.is_experimental || null,
   };
 
   store.projects.push(record);
@@ -115,12 +122,20 @@ export async function createProject(data: CreateProjectParams) {
 }
 
 export function getProjectByPath(projectPath: string): ProjectRecord | undefined {
+  if (!projectPath || typeof projectPath !== 'string') {
+    console.warn('[getProjectByPath] 项目路径为空或无效:', projectPath);
+    return undefined;
+  }
+
   const store = ensureStore();
   
   // 规范化路径比较（Windows 上路径大小写不敏感）
   const normalizedPath = path.normalize(projectPath).replace(/\\/g, '/').toLowerCase();
 
   return store.projects.find((p) => {
+    if (!p.project_path) {
+      return false;
+    }
     const normalizedProjectPath = path.normalize(p.project_path).replace(/\\/g, '/').toLowerCase();
     return normalizedProjectPath === normalizedPath;
   });
@@ -134,8 +149,23 @@ export function getProjectById(project_id: number) {
 }
 
 export function deleteProject(projectPath: string): boolean {
+  if (!projectPath || typeof projectPath !== 'string') {
+    console.warn('[deleteProject] 项目路径为空或无效:', projectPath);
+    return false;
+  }
+
   const store = ensureStore();
-  const index = store.projects.findIndex((p) => p.project_path === projectPath);
+  
+  // 规范化路径比较（Windows 上路径大小写不敏感）
+  const normalizedPath = path.normalize(projectPath).replace(/\\/g, '/').toLowerCase();
+  
+  const index = store.projects.findIndex((p) => {
+    if (!p.project_path) {
+      return false;
+    }
+    const normalizedProjectPath = path.normalize(p.project_path).replace(/\\/g, '/').toLowerCase();
+    return normalizedProjectPath === normalizedPath;
+  });
   
   if (index === -1) {
     return false;

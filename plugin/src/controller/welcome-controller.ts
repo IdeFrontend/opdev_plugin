@@ -242,6 +242,20 @@ export const welcomeMethods = {
    */
   async openProject(params: OpenProjectParams): Promise<void> {
     try {
+      // 验证参数
+      if (!params.projectPath || typeof params.projectPath !== 'string') {
+        vscode.window.showErrorMessage('项目路径不能为空');
+        console.error('[openProject] 项目路径为空或无效:', params.projectPath);
+        return;
+      }
+
+      // 如果没有提供 projectName，从路径中提取
+      let projectName = params.projectName;
+      if (!projectName || typeof projectName !== 'string') {
+        projectName = path.basename(params.projectPath);
+        console.log(`[openProject] 未提供项目名称，从路径提取: ${projectName}`);
+      }
+
       const context = getExtensionContext();
 
       const executor = new CommandExecutor();
@@ -263,7 +277,7 @@ export const welcomeMethods = {
         await projectService.init({
           ascendEnvScript: params.projectSH,
           projectPath: params.projectPath,
-          projectName: params.projectName,
+          projectName: projectName,
         });
       }
       catch (error) {
@@ -273,7 +287,7 @@ export const welcomeMethods = {
       try {
         await vscode.commands.executeCommand(
           'revealInExplorer',
-          vscode.Uri.file(`${params.projectPath}/${params.projectName}`),
+          vscode.Uri.file(params.projectPath),
         );
       }
       catch (error) {
@@ -301,11 +315,8 @@ export const welcomeMethods = {
 
       // 规范化路径
       const normalizedProjectPath = path.normalize(params.projectPath);
-      const normalizedProjectName = path.normalize(params.projectName);
-      const fullProjectPath = path.join(
-        normalizedProjectPath,
-        normalizedProjectName,
-      );
+      const normalizedProjectName = path.normalize(projectName);
+      const fullProjectPath = path.normalize(params.projectPath);
       // 在远程环境中，我们可以直接打开本地路径（相对于远程系统）
       const localUri = vscode.Uri.file(fullProjectPath);
 

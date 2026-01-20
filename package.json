@@ -33,13 +33,6 @@
         }
       }
     },
-    "iconThemes": [
-      {
-        "id": "operator-project-icon-theme",
-        "label": "算子工程图标主题",
-        "path": "./resources/operator-project-icons/operator-project-icon-theme.json"
-      }
-    ],
     "viewsContainers": {
       "activitybar": [
         {
@@ -265,22 +258,22 @@
         },
         {
           "command": "huawei-op-devtools.markAsOperatorProject",
-          "when": "explorerResourceIsFolder && !operatorProjectMarked && !multiOperatorProjectMarked",
+          "when": "explorerResourceIsFolder",
           "group": "operator@1"
         },
         {
           "command": "huawei-op-devtools.markAsMultiOperatorProject",
-          "when": "explorerResourceIsFolder && !operatorProjectMarked && !multiOperatorProjectMarked",
+          "when": "explorerResourceIsFolder",
           "group": "operator@1"
         },
         {
           "command": "huawei-op-devtools.unmarkAsOperatorProject",
-          "when": "explorerResourceIsFolder && operatorProjectMarked",
+          "when": "explorerResourceIsFolder",
           "group": "operator@2"
         },
         {
           "command": "huawei-op-devtools.unmarkAsMultiOperatorProject",
-          "when": "explorerResourceIsFolder && multiOperatorProjectMarked",
+          "when": "explorerResourceIsFolder",
           "group": "operator@2"
         },
         {
