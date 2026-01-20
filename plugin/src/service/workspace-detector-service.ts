@@ -19,6 +19,8 @@ import { ProjectManager } from '@plugin/core/project/project-manager';
 import { generateStructure } from '@plugin/domain';
 import { OperatorProjectIconTheme } from '@plugin/class/operator-project-icon-theme';
 import { AutoMultiProjectDetector } from './auto-multi-project-detector';
+import { getOpsByProjectId } from '@plugin/domain/models/model';
+import { getConfig, postConfig } from '@plugin/domain/services/configuration';
 
 /**
  * 工作区检测服务
@@ -42,7 +44,7 @@ export class WorkspaceDetectorService {
         projectType: rootDetection.projectType,
         projectName: rootDetection.projectName,
       });
-      
+
       if (rootDetection.isOperatorProject && rootDetection.projectType) {
         // 根目录就是算子工程
         if (rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM) {
@@ -75,219 +77,196 @@ export class WorkspaceDetectorService {
 
   /**
    * 扫描标准自定义算子（特殊规则）
-   * 使用与右键标记算子合集相同的逻辑，确保一致性
-   * 1. 根目录下存在 experimental 文件夹，则将experimental标记为算子工程集合
-   * 2. 扫描的文件夹根目录下有CMakeLists.txt文件，则这个文件夹为算子文件
-   * 3. 识别出来的所有算子，需要分为2类，在experimental目录下的算子会被归类为experimental算子
-   * 4. 只标记根目录级的文件夹为算子工程集合（工作区根目录的直接子目录）
-   * 5. 合集的子目录不可以再标记成算子合集
+   * 当识别为自定义算子目录后，标记指定的文件夹为算子工程集合
+   * 标记的逻辑和鼠标右键标记的逻辑一致
    */
   private static async scanStandardCustomOperators(workspacePath: string): Promise<void> {
-    console.log('[WorkspaceDetectorService] ========== 开始扫描标准自定义算子 ==========');
-    
+    console.log('[WorkspaceDetectorService] ========== 开始标记标准自定义算子集合 ==========');
+
     const context = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
       .extensionContext;
-    
+
     if (!context) {
       console.error('[WorkspaceDetectorService] 无法获取扩展上下文');
       return;
     }
 
-    // 使用与右键标记相同的扫描方法
-    console.log(`[WorkspaceDetectorService] 使用 scanForStandardCustomOperatorProjects 扫描算子工程`);
-    const detectedProjects = await OperatorProjectDetector.scanForStandardCustomOperatorProjects(
-      workspacePath,
-      3,
-    );
-    console.log(`[WorkspaceDetectorService] 扫描完成，找到 ${detectedProjects.length} 个标准自定义算子工程`);
+    // 获取根目录名称
+    const rootDirName = path.basename(workspacePath);
 
-    if (detectedProjects.length === 0) {
-      console.log('[WorkspaceDetectorService] 未找到算子工程，跳过标记');
-      return;
-    }
+    // 使用进度条显示标记过程
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: `正在扫描 ${rootDirName} 的文件`,
+        cancellable: false,
+      },
+      async (progress) => {
+        // 定义需要标记为算子工程集合的文件夹列表
+        // experimental目录下的文件夹
+        const experimentalFolders = [
+          'image',
+          'objdetect',
+          'conversion',
+          'math',
+          'npu_ops_math_ext',
+          'random',
+          'activation',
+          'control',
+          'conv',
+          'foreach',
+          'index',
+          'loss',
+          'matmul',
+          'norm',
+          'optim',
+          'pooling',
+          'quant',
+          'rnn',
+          'vfusion',
+          'attention',
+          'ffn',
+          'gmm',
+          'mc2',
+          'moe',
+          'npu_ops_transformer_ext',
+          'posembedding',
+          'select_attention_operators',
+        ];
 
-    // 检查根目录下是否存在 experimental 文件夹
-    const experimentalPath = path.join(workspacePath, 'experimental');
-    const hasExperimental = fs.existsSync(experimentalPath) && fs.statSync(experimentalPath).isDirectory();
-    
-    console.log(`[WorkspaceDetectorService] experimental 文件夹存在: ${hasExperimental}, 路径: ${experimentalPath}`);
+        // 根目录下的文件夹
+        const rootFolders = [
+          'image',
+          'objdetect',
+          'conversion',
+          'math',
+          'random',
+          'activation',
+          'control',
+          'conv',
+          'foreach',
+          'index',
+          'loss',
+          'matmul',
+          'norm',
+          'optim',
+          'pooling',
+          'quant',
+          'rnn',
+          'vfusion',
+          'hash',
+          'attention',
+          'ffn',
+          'gmm',
+          'mc2',
+          'moe',
+          'posembedding',
+          'select_attention_operators',
+        ];
 
-    // 分类算子工程：experimental算子和普通算子
-    const experimentalOperators: OperatorProjectDetectionResult[] = [];
-    const normalOperators: OperatorProjectDetectionResult[] = [];
-    
-    for (const detection of detectedProjects) {
-      // 检查路径是否在 experimental 目录下
-      const isExperimental = detection.projectPath.toLowerCase().startsWith(experimentalPath.toLowerCase());
-      if (isExperimental) {
-        experimentalOperators.push(detection);
-      } else {
-        normalOperators.push(detection);
-      }
-    }
-    
-    console.log(`[WorkspaceDetectorService] experimental算子: ${experimentalOperators.length} 个`);
-    console.log(`[WorkspaceDetectorService] 普通算子: ${normalOperators.length} 个`);
+        // 使用与右键标记相同的逻辑
+        const { FolderContextMenuService } = await import('./folder-context-menu-service.js');
+        const iconTheme = OperatorProjectIconTheme.getInstance(context);
+        const urisToUpdate: vscode.Uri[] = [];
 
-    // 注册所有算子工程（标记experimental属性）
-    const subProjectIds: number[] = [];
-    console.log(`[WorkspaceDetectorService] 开始注册 ${detectedProjects.length} 个算子工程`);
-    for (const detection of detectedProjects) {
-      if (!detection.projectType) {
-        console.warn(`[WorkspaceDetectorService] 跳过无类型的算子工程: ${detection.projectPath}`);
-        continue;
-      }
-      
-      // 判断是否是 experimental 算子
-      const isExperimental = detection.projectPath.toLowerCase().startsWith(experimentalPath.toLowerCase());
-      let subProject = getProjectByPath(detection.projectPath);
-      if (!subProject) {
-        // 子目录是算子工程，但还没有被标记，需要标记为算子工程
-        console.log(`[WorkspaceDetectorService] 标记算子工程: ${detection.projectName} (${detection.projectPath}), experimental: ${isExperimental}`);
-        const subId = await createProject({
-          project_name: detection.projectName,
-          project_path: detection.projectPath,
-          project_type: detection.projectType,
-          is_experimental: isExperimental,
-        });
-        subProjectIds.push(subId);
-        console.log(`[WorkspaceDetectorService] 已标记算子工程: ${detection.projectName}, ID: ${subId}`);
-      } else {
-        // 子目录已经是算子工程，更新experimental标记（如果需要）
-        console.log(`[WorkspaceDetectorService] 算子工程已存在: ${detection.projectName} (${detection.projectPath}), ID: ${subProject.id}`);
-        if (subProject.is_experimental !== isExperimental) {
-          console.log(`[WorkspaceDetectorService] 更新experimental标记: ${detection.projectName}, ${subProject.is_experimental} -> ${isExperimental}`);
-          await createProject({
-            project_name: detection.projectName,
-            project_path: detection.projectPath,
-            project_type: detection.projectType,
-            is_experimental: isExperimental,
+        // 计算总文件夹数量（用于进度显示）
+        const totalFolders = experimentalFolders.length + rootFolders.length;
+        let processedFolders = 0;
+
+        // 标记 experimental 目录下的文件夹
+        const experimentalPath = path.join(workspacePath, 'experimental');
+        const hasExperimental = fs.existsSync(experimentalPath)
+          && fs.statSync(experimentalPath).isDirectory();
+
+        if (hasExperimental) {
+          console.log('[WorkspaceDetectorService] experimental 目录存在，开始标记其下的文件夹');
+          progress.report({
+            message: '正在扫描 experimental 目录...',
+            increment: 0,
           });
-        }
-        subProjectIds.push(subProject.id);
-      }
-    }
-    console.log(`[WorkspaceDetectorService] 算子工程注册完成，共 ${subProjectIds.length} 个`);
 
-    // 标记 experimental 文件夹为算子工程集合（如果存在且当前目录不是 experimental 本身）
-    if (hasExperimental) {
-      const existingExperimental = getProjectByPath(experimentalPath);
-      if (!existingExperimental || existingExperimental.project_type !== OperatorProjectType.MULTI_PROJECT) {
-        const experimentalProjectIds = experimentalOperators
-          .map(p => getProjectByPath(p.projectPath)?.id)
-          .filter((id): id is number => id !== undefined);
-        
-        await createProject({
-          project_name: 'experimental',
-          project_path: experimentalPath,
-          project_type: OperatorProjectType.MULTI_PROJECT,
-          sub_project_ids: experimentalProjectIds.length > 0 ? experimentalProjectIds : undefined,
-        });
-        console.log(`[WorkspaceDetectorService] ✓ 已标记 experimental 为算子工程集合`);
-      }
-    }
+          for (const folderName of experimentalFolders) {
+            const folderPath = path.join(experimentalPath, folderName);
 
-    // 只标记根目录级的文件夹为算子工程集合
-    // 获取工作区根目录的直接子目录（深度为1的目录）
-    const normalizedWorkspacePath = path.normalize(workspacePath).replace(/\\/g, '/');
-    const rootLevelParentDirMap = new Map<string, string[]>();
-    
-    for (const detection of detectedProjects) {
-      const parentDir = path.dirname(detection.projectPath);
-      const normalizedParentDir = path.normalize(parentDir).replace(/\\/g, '/');
-      
-      // 检查父目录是否在工作区根目录下，且深度为1（即根目录的直接子目录）
-      if (normalizedParentDir.startsWith(normalizedWorkspacePath)) {
-        const relativePath = normalizedParentDir.substring(normalizedWorkspacePath.length).replace(/^[/\\]/, '');
-        const depth = relativePath.split(/[/\\]/).filter(p => p.length > 0).length;
-        
-        // 只处理根目录的直接子目录（深度为1）
-        if (depth === 1) {
-          // 检查该父目录是否已经是算子工程集合（合集的子目录不能再标记成算子合集）
-          const existingParent = getProjectByPath(parentDir);
-          if (existingParent && existingParent.project_type === OperatorProjectType.MULTI_PROJECT) {
-            console.log(`[WorkspaceDetectorService] 跳过已标记为合集的目录: ${parentDir}`);
-            continue;
-          }
-          
-          // 检查该父目录是否已经在某个合集下（合集的子目录不可以再标记成算子合集）
-          let isInCollection = false;
-          let currentDir = path.dirname(parentDir);
-          while (currentDir !== workspacePath && currentDir !== path.dirname(currentDir)) {
-            const normalizedCurrentDir = path.normalize(currentDir).replace(/\\/g, '/');
-            if (normalizedCurrentDir.startsWith(normalizedWorkspacePath)) {
-              const ancestorProject = getProjectByPath(currentDir);
-              if (ancestorProject && ancestorProject.project_type === OperatorProjectType.MULTI_PROJECT) {
-                console.log(`[WorkspaceDetectorService] 父目录 "${parentDir}" 已经在合集 "${currentDir}" 下，跳过标记为合集`);
-                isInCollection = true;
-                break;
+            if (fs.existsSync(folderPath) && fs.statSync(folderPath).isDirectory()) {
+              const folderUri = vscode.Uri.file(folderPath);
+              const existing = getProjectByPath(folderPath);
+
+              if (!existing || existing.project_type !== OperatorProjectType.MULTI_PROJECT) {
+                processedFolders++;
+                progress.report({
+                  message: `正在标记 experimental/${folderName}...`,
+                  increment: (90 / totalFolders),
+                });
+                console.log(`[WorkspaceDetectorService] 标记 experimental/${folderName} 为算子工程集合`);
+                await FolderContextMenuService.markAsMultiOperatorProject(folderUri);
+                console.log(`[WorkspaceDetectorService] ✓ 已标记 experimental/${folderName} 为算子工程集合`);
+                urisToUpdate.push(folderUri);
+              }
+              else {
+                console.log(`[WorkspaceDetectorService] experimental/${folderName} 已经是算子工程集合，跳过`);
               }
             }
-            const parentOfCurrent = path.dirname(currentDir);
-            if (parentOfCurrent === currentDir) {
-              break;
+            else {
+              console.log(`[WorkspaceDetectorService] experimental/${folderName} 不存在，忽略`);
             }
-            currentDir = parentOfCurrent;
-          }
-          
-          if (isInCollection) {
-            continue;
-          }
-          
-          // 检查该父目录是否在 experimental 目录下（experimental 已单独处理）
-          if (normalizedParentDir === path.normalize(experimentalPath).replace(/\\/g, '/')) {
-            continue;
-          }
-          
-          if (!rootLevelParentDirMap.has(normalizedParentDir)) {
-            rootLevelParentDirMap.set(normalizedParentDir, []);
-          }
-          rootLevelParentDirMap.get(normalizedParentDir)!.push(detection.projectPath);
-        }
-      }
-    }
-
-    // 标记包含多个算子的根目录级父目录为合集
-    for (const [parentDir, operatorPaths] of rootLevelParentDirMap.entries()) {
-      if (operatorPaths.length > 1) {
-        const existing = getProjectByPath(parentDir);
-        if (!existing || existing.project_type !== OperatorProjectType.MULTI_PROJECT) {
-          const subProjectIds = operatorPaths
-            .map(p => getProjectByPath(p)?.id)
-            .filter((id): id is number => id !== undefined);
-          
-          if (subProjectIds.length > 1) {
-            const parentDirName = path.basename(parentDir);
-            await createProject({
-              project_name: parentDirName,
-              project_path: parentDir,
-              project_type: OperatorProjectType.MULTI_PROJECT,
-              sub_project_ids: subProjectIds,
-            });
-            console.log(`[WorkspaceDetectorService] ✓ 已标记根目录级文件夹 ${parentDirName} 为算子工程集合 (包含 ${subProjectIds.length} 个子算子)`);
           }
         }
-      }
-    }
+        else {
+          console.log('[WorkspaceDetectorService] experimental 目录不存在，跳过');
+        }
 
-    // 触发装饰更新
-    const iconTheme = OperatorProjectIconTheme.getInstance(context);
-    const allProjectPaths = [
-      ...detectedProjects.map(p => p.projectPath),
-      ...Array.from(rootLevelParentDirMap.keys()).filter(dir => {
-        const existing = getProjectByPath(dir);
-        return existing && existing.project_type === OperatorProjectType.MULTI_PROJECT;
-      }),
-    ];
-    if (hasExperimental) {
-      allProjectPaths.push(experimentalPath);
-    }
-    const uris = allProjectPaths.map(p => vscode.Uri.file(p));
-    if (uris.length > 0) {
-      iconTheme.fireDecorationUpdate(uris);
-    }
-    
-    console.log('[WorkspaceDetectorService] ========== 标准自定义算子扫描完成 ==========');
+        // 标记根目录下的文件夹
+        console.log('[WorkspaceDetectorService] 开始标记根目录下的文件夹');
+        progress.report({
+          message: '正在扫描根目录...',
+        });
+
+        for (const folderName of rootFolders) {
+          const folderPath = path.join(workspacePath, folderName);
+
+          if (fs.existsSync(folderPath) && fs.statSync(folderPath).isDirectory()) {
+            const folderUri = vscode.Uri.file(folderPath);
+            const existing = getProjectByPath(folderPath);
+
+            if (!existing || existing.project_type !== OperatorProjectType.MULTI_PROJECT) {
+              processedFolders++;
+              progress.report({
+                message: `正在标记 ${folderName}...`,
+                increment: (90 / totalFolders),
+              });
+              console.log(`[WorkspaceDetectorService] 标记 ${folderName} 为算子工程集合`);
+              await FolderContextMenuService.markAsMultiOperatorProject(folderUri);
+              console.log(`[WorkspaceDetectorService] ✓ 已标记 ${folderName} 为算子工程集合`);
+              urisToUpdate.push(folderUri);
+            }
+            else {
+              console.log(`[WorkspaceDetectorService] ${folderName} 已经是算子工程集合，跳过`);
+            }
+          }
+          else {
+            console.log(`[WorkspaceDetectorService] ${folderName} 不存在，忽略`);
+          }
+        }
+
+        // 触发装饰更新
+        progress.report({
+          message: '正在更新图标...',
+          increment: 5,
+        });
+
+        if (urisToUpdate.length > 0) {
+          iconTheme.fireDecorationUpdate(urisToUpdate);
+        }
+
+        progress.report({
+          message: '标记完成',
+          increment: 5,
+        });
+
+        console.log(`[WorkspaceDetectorService] ========== 标准自定义算子集合标记完成，共标记 ${urisToUpdate.length} 个文件夹 ==========`);
+      },
+    );
   }
 
 
@@ -337,7 +316,7 @@ export class WorkspaceDetectorService {
     console.log(`[WorkspaceDetectorService] 新项目注册完成，ID: ${projectId}`);
     console.log(`[WorkspaceDetectorService] 项目路径: ${detection.projectPath}`);
     console.log(`[WorkspaceDetectorService] 项目类型: ${detection.projectType}`);
-    
+
   }
 
   /**
@@ -359,7 +338,7 @@ export class WorkspaceDetectorService {
 
     if (existing) {
       console.log(`[WorkspaceDetectorService] 项目已存在，ID: ${existing.id}, 类型: ${existing.project_type}`);
-      
+
       // 如果已存在的项目不是 MULTI_PROJECT 类型，需要先删除再重新创建
       if (existing.project_type !== OperatorProjectType.MULTI_PROJECT) {
         console.log(`[WorkspaceDetectorService] 警告: 项目 "${workspacePath}" 已存在但类型为 "${existing.project_type}"，不是 MULTI_PROJECT`);
@@ -379,7 +358,7 @@ export class WorkspaceDetectorService {
             console.warn(`[WorkspaceDetectorService] 跳过无类型的算子工程: ${detection.projectPath}`);
             continue;
           }
-          
+
           const subProject = getProjectByPath(detection.projectPath);
           if (subProject) {
             console.log(`[WorkspaceDetectorService] 子项目已存在: ${detection.projectName}, ID: ${subProject.id}`);
@@ -396,7 +375,7 @@ export class WorkspaceDetectorService {
             subProjectIds.push(subId);
           }
         }
-        
+
         console.log(`[WorkspaceDetectorService] 更新多算子工程集合，子项目数量: ${subProjectIds.length}`);
         // 更新父项目
         await createProject({
@@ -408,20 +387,20 @@ export class WorkspaceDetectorService {
         return; // 已更新，直接返回
       }
     }
-    
+
     // 创建新的多算子工程集合（包括 existing 但类型不对的情况）
     if (!existing) {
       console.log('[WorkspaceDetectorService] 创建新的多算子工程集合');
       // 创建新的多算子工程集合
       const subProjectIds: number[] = [];
-      
+
       // 先注册所有子项目
       for (const detection of detectedProjects) {
         if (!detection.projectType) {
           console.warn(`[WorkspaceDetectorService] 跳过无类型的算子工程: ${detection.projectPath}`);
           continue;
         }
-        
+
         console.log(`[WorkspaceDetectorService] 注册子项目: ${detection.projectName}, 类型: ${detection.projectType}`);
         const subId = await createProject({
           project_name: detection.projectName,
@@ -451,8 +430,14 @@ export class WorkspaceDetectorService {
       if (detection.isOperatorProject && detection.projectType) {
         console.log(`[WorkspaceDetectorService] 初始化子项目 ${i + 1}/${detectedProjects.length}: ${detection.projectName}`);
         try {
-          await this.initializeOperatorProject(detection, workspacePath);
-          console.log(`[WorkspaceDetectorService] 子项目 ${detection.projectName} 初始化完成`);
+          // 获取项目的 projectId
+          const project = getProjectByPath(detection.projectPath);
+          if (project) {
+            await this.initializeOperatorProject(detection, project.id);
+            console.log(`[WorkspaceDetectorService] 子项目 ${detection.projectName} 初始化完成`);
+          } else {
+            console.warn(`[WorkspaceDetectorService] 子项目未找到: ${detection.projectPath}`);
+          }
         } catch (error) {
           console.error(`[WorkspaceDetectorService] 子项目 ${detection.projectName} 初始化失败:`, error);
           // 继续初始化其他子项目
@@ -460,7 +445,7 @@ export class WorkspaceDetectorService {
       }
     }
     console.log('[WorkspaceDetectorService] 所有子项目初始化完成');
-    
+
     // 最终打印算子工程集合信息
     console.log('[WorkspaceDetectorService] ========== 算子工程集合信息 ==========');
     const finalProject = getProjectByPath(workspacePath);
@@ -480,10 +465,12 @@ export class WorkspaceDetectorService {
   /**
    * 初始化算子工程
    * 参考新增算子的逻辑，但不覆盖已有文件
+   * @param detection 算子工程检测结果
+   * @param projectId 项目ID
    */
   private static async initializeOperatorProject(
     detection: OperatorProjectDetectionResult,
-    workspacePath: string,
+    projectId: number,
   ): Promise<void> {
     console.log('[WorkspaceDetectorService] 开始初始化算子工程');
     console.log('[WorkspaceDetectorService] detection:', {
@@ -499,6 +486,9 @@ export class WorkspaceDetectorService {
     }
 
     try {
+      // 使用传入的 projectId
+      console.log(`[WorkspaceDetectorService] 开始初始化算子工程，projectId: ${projectId}`);
+
       // 获取项目信息
       const project = getProjectByPath(detection.projectPath);
       if (!project) {
@@ -506,11 +496,9 @@ export class WorkspaceDetectorService {
         return;
       }
 
-      console.log(`[WorkspaceDetectorService] 找到项目，ID: ${project.id}`);
-
       // 设置 ProjectManager 的项目信息
       const pm = ProjectManager.getInstance();
-      pm['_projectId'] = String(project.id);
+      pm['_projectId'] = String(projectId);
       pm['_projectName'] = detection.projectName;
       pm['_projectPath'] = detection.projectPath;
       console.log(`[WorkspaceDetectorService] ProjectManager 设置完成: projectId=${pm['_projectId']}, projectName=${pm['_projectName']}`);
@@ -612,8 +600,10 @@ export class WorkspaceDetectorService {
       // 调用 generateStructure，传入 skipExisting: true 以不覆盖已有文件
       const context = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
         .extensionContext;
-      
-      console.log('[WorkspaceDetectorService] 开始调用 generateStructure');
+
+      // 对于标准自定义算子，如果没有模板，跳过模板解压，只创建配置
+      const isSkipUnZip = project.project_type === OperatorProjectType.STANDARD_CUSTOM && !templateName;
+      console.log('[WorkspaceDetectorService] 开始调用 generateStructure, isSkipUnZip:', isSkipUnZip);
       await generateStructure(
         {
           project_id: project.id,
@@ -624,35 +614,24 @@ export class WorkspaceDetectorService {
           skipExisting: true, // 不覆盖已有文件
         } as any,
         context.extensionPath,
+        isSkipUnZip, // 标准自定义算子且无模板时，跳过模板解压
       );
       console.log('[WorkspaceDetectorService] generateStructure 完成');
+
+      // 对于标准自定义算子，根据官方文档配置编译部署命令行
+      if (project.project_type === OperatorProjectType.STANDARD_CUSTOM) {
+        await this.configureStandardCustomOperatorBuildCommands(project, projectName, projectPath);
+      }
 
       // 如果需要创建算子文件，调用相应的命令
       if (createOperatorProjectDictoryFileType) {
         console.log(`[WorkspaceDetectorService] 需要创建算子文件，类型: ${createOperatorProjectDictoryFileType}`);
         try {
           // 使用 withProgress 包装命令调用，提供 progress 参数
-          await vscode.window.withProgress(
+          await vscode.commands.executeCommand(
+            'huawei-op-devtools.createDictory',
             {
-              location: vscode.ProgressLocation.Notification,
-              title: '初始化算子工程文件...',
-              cancellable: false,
-            },
-            async (progress) => {
-              progress.report({
-                increment: 0,
-                message: '创建算子文件...',
-              });
-
-              console.log('[WorkspaceDetectorService] 执行创建算子文件命令');
-              await vscode.commands.executeCommand(
-                'huawei-op-devtools.createDictory',
-                {
-                  createOperatorProjectDirectoryFileType: createOperatorProjectDictoryFileType,
-                },
-                progress,
-              );
-              console.log('[WorkspaceDetectorService] 创建算子文件命令执行完成');
+              createOperatorProjectDirectoryFileType: createOperatorProjectDictoryFileType,
             },
           );
         } catch (error) {
@@ -674,6 +653,104 @@ export class WorkspaceDetectorService {
   }
 
   /**
+   * 为标准自定义算子配置编译部署命令行
+   * 根据官方文档配置编译和运行验证命令
+   * @param project 项目信息
+   * @param projectName 算子名称
+   * @param projectPath 算子路径
+   */
+  private static async configureStandardCustomOperatorBuildCommands(
+    project: ReturnType<typeof getProjectByPath>,
+    projectName: string,
+    projectPath: string,
+  ): Promise<void> {
+    if (!project) {
+      console.warn('[WorkspaceDetectorService] 项目不存在，跳过配置编译部署命令行');
+      return;
+    }
+
+    console.log('[WorkspaceDetectorService] 开始为标准自定义算子配置编译部署命令行');
+    console.log('[WorkspaceDetectorService] 项目信息:', {
+      projectId: project.id,
+      projectName,
+      projectPath,
+      isExperimental: project.is_experimental,
+    });
+
+    try {
+      // 获取工作区根目录（项目根目录）
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (!workspaceFolders || workspaceFolders.length === 0) {
+        console.warn('[WorkspaceDetectorService] 无法获取工作区根目录，跳过配置');
+        return;
+      }
+      const workspaceRoot = workspaceFolders[0].uri.fsPath;
+
+      // 判断是否是experimental算子
+      const isExperimental = project.is_experimental || false;
+
+      // 获取build_op配置
+      const buildOpConfigs = getConfig(project.id, 'build_op', projectName);
+      let buildOpConfig = buildOpConfigs.length > 0 ? buildOpConfigs[0] : null;
+
+      // 根据官方文档配置编译命令
+      // 编译命令：bash build.sh --pkg --soc=ascend910b [--vendor_name=${vendor_name}] [--ops=${op_list}] [--experimental]
+      // 默认使用ascend910b，可以根据需要调整
+      const socVersion = 'ascend910b';
+      const opName = projectName.toLowerCase().replace(/_/g, '-'); // 转换为小写，下划线转横线
+      const experimentalFlag = isExperimental ? '--experimental' : '';
+      
+      // 构建编译命令
+      const buildScript = `bash build.sh --pkg --soc=${socVersion} --ops=${opName} ${experimentalFlag}`.trim();
+
+      // 根据官方文档配置运行验证命令
+      // 运行验证命令：bash build.sh --run_example ${op} eager cust [--vendor_name=${vendor_name}] [--soc=${soc_version}] [--experimental]
+      const runCommand = `bash build.sh --run_example ${opName} eager cust --soc=${socVersion} ${experimentalFlag}`.trim();
+
+      console.log('[WorkspaceDetectorService] 编译命令:', buildScript);
+      console.log('[WorkspaceDetectorService] 运行验证命令:', runCommand);
+
+      // 更新或创建build_op配置
+      if (buildOpConfig) {
+        // 更新现有配置
+        const userOptions = (buildOpConfig.user_options as Record<string, unknown>) || {};
+        userOptions.script = buildScript;
+        userOptions.target_file = runCommand;
+        userOptions.op = projectName;
+        userOptions.config_name = projectName;
+
+        await postConfig('build_op', [{
+          config_id: buildOpConfig.config_id,
+          project_id: project.id,
+          user_options: userOptions,
+        }]);
+        console.log('[WorkspaceDetectorService] 已更新build_op配置');
+      } else {
+        // 创建新配置
+        await postConfig('build_op', [{
+          project_id: project.id,
+          user_options: {
+            op: projectName,
+            script: buildScript,
+            config_name: projectName,
+            target_file: runCommand,
+          },
+        }]);
+        console.log('[WorkspaceDetectorService] 已创建build_op配置');
+      }
+
+      console.log('[WorkspaceDetectorService] 标准自定义算子编译部署命令行配置完成');
+    } catch (error) {
+      console.error('[WorkspaceDetectorService] 配置编译部署命令行失败:', error);
+      if (error instanceof Error) {
+        console.error('[WorkspaceDetectorService] 错误详情:', error.message);
+        console.error('[WorkspaceDetectorService] 错误堆栈:', error.stack);
+      }
+      // 配置失败不应该阻止初始化，只记录错误
+    }
+  }
+
+  /**
    * 注册完成后刷新资源管理器和更新图标主题
    * 同时更新上下文变量，模拟手动操作的效果
    */
@@ -689,13 +766,13 @@ export class WorkspaceDetectorService {
         } else {
           iconTheme.fireDecorationUpdate();
         }
-        
+
         // 如果有项目路径，更新该路径的上下文变量
         if (projectPath) {
           const uri = vscode.Uri.file(projectPath);
           const { FolderContextMenuService } = await import('./folder-context-menu-service.js');
           const checkResult = await FolderContextMenuService.checkIsOperatorProject(uri);
-          
+
           // 更新上下文变量，模拟手动操作的效果
           await vscode.commands.executeCommand(
             'setContext',
@@ -712,10 +789,10 @@ export class WorkspaceDetectorService {
             'operatorProjectType',
             checkResult.projectType || '',
           );
-          
+
           console.log(`[WorkspaceDetectorService] 已更新上下文变量: operatorProjectMarked=${checkResult.isOperatorProject && !checkResult.isMultiProject}, multiOperatorProjectMarked=${checkResult.isMultiProject}`);
         }
-        
+
         // 延迟刷新资源管理器，确保菜单显示正确
         setTimeout(() => {
           vscode.commands.executeCommand('workbench.files.action.refreshFilesExplorer');
@@ -723,6 +800,46 @@ export class WorkspaceDetectorService {
       }
     } catch (error) {
       console.error('[WorkspaceDetectorService] 刷新资源管理器失败:', error);
+    }
+  }
+
+  /**
+   * 检查算子是否已初始化，如果没有则初始化
+   * @param detection 算子工程检测结果
+   * @param projectId 项目ID
+   */
+  private static async checkAndInitializeOperatorProject(
+    detection: OperatorProjectDetectionResult,
+    projectId: number,
+  ): Promise<void> {
+    console.log(`[WorkspaceDetectorService] 检查算子是否已初始化: ${detection.projectName}, projectId: ${projectId}`);
+
+    try {
+      // 检查是否有算子记录
+      const ops = getOpsByProjectId(projectId);
+      const hasOpRecord = ops.length > 0;
+
+      // 检查是否有配置（至少有一个配置类型）
+      const buildOpConfigs = getConfig(projectId, 'build_op');
+      const hasConfig = buildOpConfigs.length > 0;
+
+      console.log(`[WorkspaceDetectorService] 算子初始化检查结果: hasOpRecord=${hasOpRecord}, hasConfig=${hasConfig}`);
+
+      // 如果既没有算子记录也没有配置，说明未初始化，需要初始化
+      if (!hasOpRecord && !hasConfig) {
+        console.log(`[WorkspaceDetectorService] 算子未初始化，开始初始化: ${detection.projectName}`);
+        await this.initializeOperatorProject(detection, projectId);
+      } else {
+        console.log(`[WorkspaceDetectorService] 算子已初始化，跳过: ${detection.projectName}`);
+      }
+    } catch (error) {
+      console.error(`[WorkspaceDetectorService] 检查算子初始化状态失败: ${detection.projectPath}`, error);
+      // 检查失败时，尝试初始化（避免遗漏）
+      try {
+        await this.initializeOperatorProject(detection, projectId);
+      } catch (initError) {
+        console.error(`[WorkspaceDetectorService] 初始化算子失败: ${detection.projectPath}`, initError);
+      }
     }
   }
 }

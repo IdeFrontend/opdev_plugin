@@ -100,24 +100,9 @@ async function initializeProjectForOpen(
     // 执行创建算子文件命令（如果需要）
     if (createOperatorProjectDictoryFileType) {
       try {
-        await vscode.window.withProgress(
-          {
-            location: vscode.ProgressLocation.Notification,
-            title: '初始化算子工程文件...',
-            cancellable: false,
-          },
-          async (progress) => {
-            progress.report({
-              increment: 0,
-              message: '创建算子文件...',
-            });
-
-            await vscode.commands.executeCommand(
-              'huawei-op-devtools.createDictory',
-              { createOperatorProjectDirectoryFileType: createOperatorProjectDictoryFileType },
-              progress,
-            );
-          },
+        await vscode.commands.executeCommand(
+          'huawei-op-devtools.createDictory',
+          { createOperatorProjectDirectoryFileType: createOperatorProjectDictoryFileType },
         );
       }
       catch (error) {

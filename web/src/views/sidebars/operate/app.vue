@@ -79,19 +79,11 @@ const baseMenuItems = [
           await startBuild();
         },
       },
-      // {
-      //     key: 'basicBuild',
-      //     label: '编译example',
-      //     children: [
-      //         {
-      //             key: 'buildExample',
-      //             label: '基础编译',
-      //             handler: () => {
-      //                 message.sendMessageToParent({ command: "vscodeBuildExample", data: '' });
-      //             }
-      //         }
-      //     ]
-      // },
+      {
+        key: 'buildExample',
+        label: '编译example',
+        handler: async () => { },
+      },
     ],
   },
   {
@@ -696,10 +688,7 @@ const handlePopoverOpenChange = (open) => {
   <a-config-provider :theme="themeConfig">
     <div class="pt-3 w-full min-w-[138px]">
       <!-- 如果配置文件不存在，显示提示信息 -->
-      <div
-        v-if="!hasDevtoolConfig"
-        class="flex items-center justify-center min-h-[200px] p-5"
-      >
+      <div v-if="!hasDevtoolConfig" class="flex items-center justify-center min-h-[200px] p-5">
         <div class="text-xs text-white/65 text-center leading-relaxed">
           您需要新建算子工程或打开算子工程才可以使用操作面板
         </div>
@@ -707,56 +696,28 @@ const handlePopoverOpenChange = (open) => {
 
       <!-- 如果配置文件存在，显示正常菜单 -->
       <template v-else>
-        <div
-          v-if="false"
-          class="text-sm flex items-center gap-2 mt-3 mb-3 px-3"
-        >
+        <div v-if="false" class="text-sm flex items-center gap-2 mt-3 mb-3 px-3">
           目标算子
-          <a-select
-            :value="activeConfig"
-            size="small"
-            style="width: 200px"
-            placeholder="--"
-            @change="(val) => (activeConfig = val)"
-          >
-            <a-select-option
-              v-for="item in configArray"
-              :key="item.config_name"
-              :value="item.config_name"
-            >
+          <a-select :value="activeConfig" size="small" style="width: 200px" placeholder="--"
+            @change="(val) => (activeConfig = val)">
+            <a-select-option v-for="item in configArray" :key="item.config_name" :value="item.config_name">
               {{ item.config_name }}
             </a-select-option>
           </a-select>
         </div>
 
         <!-- 停止任务按钮 -->
-        <div
-          v-if="isExecuting"
-          class="px-3 py-2 mb-2"
-        >
-          <a-button
-            danger
-            size="small"
-            class="w-full text-[11px] h-6"
-            @click="handleStopTask"
-          >
+        <div v-if="isExecuting" class="px-3 py-2 mb-2">
+          <a-button danger size="small" class="w-full text-[11px] h-6" @click="handleStopTask">
             停止任务
           </a-button>
         </div>
 
         <!-- 算子工程选择器 -->
-        <div
-          v-if="hasMultipleOperators"
-          class="px-3 py-2 mb-2 operator-selector-wrapper"
-        >
-          <a-popover
-            v-model:open="operatorSelectorVisible"
-            placement="bottomLeft"
-            trigger="click"
-            :overlay-style="{ width: popoverWidth, padding: '0' }"
-            overlay-class-name="operator-selector-popover"
-            @open-change="handlePopoverOpenChange"
-          >
+        <div v-if="hasMultipleOperators" class="px-3 py-2 mb-2 operator-selector-wrapper">
+          <a-popover v-model:open="operatorSelectorVisible" placement="bottomLeft" trigger="click"
+            :overlay-style="{ width: popoverWidth, padding: '0' }" overlay-class-name="operator-selector-popover"
+            @open-change="handlePopoverOpenChange">
             <template #content>
               <div class="operator-selector-content">
                 <!-- 第一个模块：已选择的内容 -->
@@ -765,13 +726,8 @@ const handlePopoverOpenChange = (open) => {
                     已选择 {{ selectedOperators.length }} 项
                   </div>
                   <div class="selected-tags">
-                    <a-tag
-                      v-for="op in selectedOperators"
-                      :key="op.id"
-                      closable
-                      class="mb-2 mr-2"
-                      @close="removeOperator(op.id)"
-                    >
+                    <a-tag v-for="op in selectedOperators" :key="op.id" closable class="mb-2 mr-2"
+                      @close="removeOperator(op.id)">
                       {{ op.name }}
                     </a-tag>
                   </div>
@@ -780,114 +736,59 @@ const handlePopoverOpenChange = (open) => {
 
                 <!-- 第二个模块：搜索和选择 -->
                 <div class="search-section">
-                  <a-input
-                    v-model:value="searchKeyword"
-                    placeholder="搜索算子工程"
-                    class="mb-3"
-                    allow-clear
-                  />
+                  <a-input v-model:value="searchKeyword" placeholder="搜索算子工程" class="mb-3" allow-clear />
 
                   <!-- 编译成功的算子工程 -->
-                  <a-collapse
-                    v-model:active-key="compiledOperatorsActiveKey"
-                    :bordered="false"
-                    class="operator-collapse"
-                  >
-                    <a-collapse-panel
-                      key="1"
-                      header="编译成功的算子工程"
-                    >
+                  <a-collapse v-model:active-key="compiledOperatorsActiveKey" :bordered="false"
+                    class="operator-collapse">
+                    <a-collapse-panel key="1" header="编译成功的算子工程">
                       <div class="operator-list">
-                        <div
-                          class="operator-item select-all"
-                          :class="{
-                            selected: isCompiledAllSelected,
-                            disabled: isCompiledAllDisabled,
-                          }"
-                          @click="!isCompiledAllDisabled && toggleCompiledAll()"
-                        >
+                        <div class="operator-item select-all" :class="{
+                          selected: isCompiledAllSelected,
+                          disabled: isCompiledAllDisabled,
+                        }" @click="!isCompiledAllDisabled && toggleCompiledAll()">
                           <span>全选</span>
-                          <CheckOutlined
-                            v-if="isCompiledAllSelected"
-                            class="check-icon"
-                          />
+                          <CheckOutlined v-if="isCompiledAllSelected" class="check-icon" />
                         </div>
-                        <div
-                          v-for="op in filteredCompiledOperators"
-                          :key="op.id"
-                          class="operator-item"
-                          :class="{
-                            selected: selectedOperatorIds.includes(op.id),
-                            disabled: isOperatorDisabled(op),
-                          }"
-                          @click="!isOperatorDisabled(op) && toggleOperator(op)"
-                        >
+                        <div v-for="op in filteredCompiledOperators" :key="op.id" class="operator-item" :class="{
+                          selected: selectedOperatorIds.includes(op.id),
+                          disabled: isOperatorDisabled(op),
+                        }" @click="!isOperatorDisabled(op) && toggleOperator(op)">
                           <span>
                             {{ op.name }}
-                            <div
-                              v-if="op.hasEx"
-                              class="ex-icon"
-                            >
+                            <div v-if="op.hasEx" class="ex-icon">
                               ex
                             </div>
                           </span>
-                          <CheckOutlined
-                            v-if="selectedOperatorIds.includes(op.id)"
-                            class="check-icon"
-                          />
+                          <CheckOutlined v-if="selectedOperatorIds.includes(op.id)" class="check-icon" />
                         </div>
                       </div>
                     </a-collapse-panel>
                   </a-collapse>
 
                   <!-- 预备算子工程 -->
-                  <a-collapse
-                    v-model:active-key="preparedOperatorsActiveKey"
-                    :bordered="false"
-                    class="operator-collapse mt-3"
-                  >
-                    <a-collapse-panel
-                      key="1"
-                      header="预备算子工程"
-                    >
+                  <a-collapse v-model:active-key="preparedOperatorsActiveKey" :bordered="false"
+                    class="operator-collapse mt-3">
+                    <a-collapse-panel key="1" header="预备算子工程">
                       <div class="operator-list">
-                        <div
-                          class="operator-item select-all"
-                          :class="{
-                            selected: isPreparedAllSelected,
-                            disabled: isPreparedAllDisabled,
-                          }"
-                          @click="!isPreparedAllDisabled && togglePreparedAll()"
-                        >
+                        <div class="operator-item select-all" :class="{
+                          selected: isPreparedAllSelected,
+                          disabled: isPreparedAllDisabled,
+                        }" @click="!isPreparedAllDisabled && togglePreparedAll()">
                           <span>全选</span>
-                          <CheckOutlined
-                            v-if="isPreparedAllSelected"
-                            class="check-icon"
-                          />
+                          <CheckOutlined v-if="isPreparedAllSelected" class="check-icon" />
                         </div>
-                        <div
-                          v-for="op in filteredPreparedOperators"
-                          :key="op.id"
-                          class="operator-item"
-                          :class="{
-                            selected: selectedOperatorIds.includes(op.id),
-                            disabled: isOperatorDisabled(op),
-                          }"
-                          @click="!isOperatorDisabled(op) && toggleOperator(op)"
-                        >
+                        <div v-for="op in filteredPreparedOperators" :key="op.id" class="operator-item" :class="{
+                          selected: selectedOperatorIds.includes(op.id),
+                          disabled: isOperatorDisabled(op),
+                        }" @click="!isOperatorDisabled(op) && toggleOperator(op)">
                           <span>
                             {{ op.name }}
-                            <div
-                              v-if="op.hasEx"
-                              class="ex-icon"
-                            >
+                            <div v-if="op.hasEx" class="ex-icon">
                               ex
                             </div>
                           </span>
-                          <CheckOutlined
-                            v-if="selectedOperatorIds.includes(op.id)"
-                            class="check-icon"
-                          />
+                          <CheckOutlined v-if="selectedOperatorIds.includes(op.id)" class="check-icon" />
                         </div>
                       </div>
                     </a-collapse-panel>
@@ -896,29 +797,15 @@ const handlePopoverOpenChange = (open) => {
               </div>
             </template>
             <template #default>
-              <div
-                ref="operatorSelectorTriggerRef"
-                class="operator-selector-trigger"
-                :class="{ 'has-selection': selectedOperators.length > 0 }"
-              >
+              <div ref="operatorSelectorTriggerRef" class="operator-selector-trigger"
+                :class="{ 'has-selection': selectedOperators.length > 0 }">
                 <span class="selector-text">
                   请选择算子工程
                 </span>
                 <span class="selector-arrow">
-                  <svg
-                    width="12"
-                    height="12"
-                    viewBox="0 0 12 12"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M2 4L6 8L10 4"
-                      stroke="currentColor"
-                      stroke-width="1.5"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                    />
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M2 4L6 8L10 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                      stroke-linejoin="round" />
                   </svg>
                 </span>
               </div>
@@ -927,70 +814,40 @@ const handlePopoverOpenChange = (open) => {
         </div>
 
         <!-- 已选择的算子工程显示区域（组件收起后显示） -->
-        <div
-          v-if="hasMultipleOperators && !operatorSelectorVisible && selectedOperators.length > 0"
-          class="px-3 py-2 mb-2"
-        >
+        <div v-if="hasMultipleOperators && !operatorSelectorVisible && selectedOperators.length > 0"
+          class="px-3 py-2 mb-2">
           <div class="selected-display-section">
             <div class="selected-display-header">
               已选择 {{ selectedOperators.length }} 项
             </div>
             <div class="selected-display-tags">
-              <a-tag
-                v-for="op in selectedOperators"
-                :key="op.id"
-                closable
-                class="mb-2 mr-2"
-                @close="removeOperator(op.id)"
-              >
+              <a-tag v-for="op in selectedOperators" :key="op.id" closable class="mb-2 mr-2"
+                @close="removeOperator(op.id)">
                 {{ op.name }}
               </a-tag>
             </div>
           </div>
         </div>
 
-        <a-menu
-          mode="inline"
-          :open-keys="openKeys"
-          :selected-keys="selectedKeys"
-          class="border-r-0 bg-transparent -ml-3"
-          @open-change="onOpenChange"
-          @click="handleMenuClick"
-        >
+        <a-menu mode="inline" :open-keys="openKeys" :selected-keys="selectedKeys"
+          class="border-r-0 bg-transparent -ml-3" @open-change="onOpenChange" @click="handleMenuClick">
           <template v-for="item in menuItems">
             <!-- 有子菜单的情况 -->
-            <a-sub-menu
-              v-if="item.children && item.children.length > 0"
-              :key="`submenu-${item.key}`"
-            >
+            <a-sub-menu v-if="item.children && item.children.length > 0" :key="`submenu-${item.key}`">
               <template #title>
-                <span
-                  v-if="item.icon"
-                  class="inline-flex items-center text-[11px]"
-                >
-                  <img
-                    :src="item.icon"
-                    alt=""
-                    class="w-4 h-4 mr-2 align-middle"
-                  />
+                <span v-if="item.icon" class="inline-flex items-center text-[11px]">
+                  <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
                   <span class="text-white/85">{{ item.label }}</span>
                 </span>
-                <span
-                  v-else
-                  class="text-white/85"
-                >{{ item.label }}</span>
+                <span v-else class="text-white/85">{{ item.label }}</span>
               </template>
               <template v-for="child in item.children">
                 <!-- 子菜单项 -->
-                <a-menu-item
-                  v-if="!child.children || child.children.length === 0"
-                  :key="`menuitem-${child.key}`"
-                  :disabled="isMenuItemDisabled(child.key)"
-                  :class="{
+                <a-menu-item v-if="!child.children || child.children.length === 0" :key="`menuitem-${child.key}`"
+                  :disabled="isMenuItemDisabled(child.key)" :class="{
                     'opacity-50 cursor-not-allowed':
                       isMenuItemDisabled(child.key),
-                  }"
-                >
+                  }">
                   <div class="single-box">
                     {{ child.label }}
                     <div v-if="child.key === 'simulation' || child.key === 'onboard'" class="setting-box">
@@ -999,49 +856,31 @@ const handlePopoverOpenChange = (open) => {
                   </div>
                 </a-menu-item>
                 <!-- 嵌套子菜单 -->
-                <a-sub-menu
-                  v-else
-                  :key="`submenu-${child.key}`"
-                >
+                <a-sub-menu v-else :key="`submenu-${child.key}`">
                   <template #title>
                     <span>{{ child.label }}</span>
                   </template>
-                  <a-menu-item
-                    v-for="grandChild in child.children"
-                    :key="grandChild.key"
-                  >
+                  <a-menu-item v-for="grandChild in child.children" :key="grandChild.key">
                     {{ grandChild.label }}
                   </a-menu-item>
                 </a-sub-menu>
               </template>
             </a-sub-menu>
             <!-- 普通菜单项 -->
-            <a-menu-item
-              v-else
-              :key="`menuitem-${item.key}`"
-              :disabled="isMenuItemDisabled(item.key)"
-              :class="{
-                'opacity-50 cursor-not-allowed':
-                  isMenuItemDisabled(item.key),
-              }"
-            >
-              <div v-if="item.icon" class="single-box"> 
+            <a-menu-item v-else :key="`menuitem-${item.key}`" :disabled="isMenuItemDisabled(item.key)" :class="{
+              'opacity-50 cursor-not-allowed':
+                isMenuItemDisabled(item.key),
+            }">
+              <div v-if="item.icon" class="single-box">
                 <span class="inline-flex items-center text-[11px]">
-                  <img
-                    :src="item.icon"
-                    alt=""
-                    class="w-4 h-4 mr-2 align-middle"
-                  />
+                  <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
                   <span class="text-white/85">{{ item.label }}</span>
                 </span>
                 <div v-if="item.key === 'sanitizer'" class="setting-box">
                   <SettingOutlined @click.stop="openSetting(item.key)" />
                 </div>
               </div>
-              <span
-                v-else
-                class="text-white/85"
-              >{{ item.label }}</span>
+              <span v-else class="text-white/85">{{ item.label }}</span>
             </a-menu-item>
           </template>
         </a-menu>
@@ -1108,6 +947,7 @@ body {
   align-items: center;
   justify-content: space-between;
 }
+
 .single-box:hover .setting-box {
   display: flex;
 }
@@ -1121,6 +961,7 @@ body {
   border-radius: 6px;
   cursor: pointer !important;
 }
+
 .setting-box:hover {
   background-color: #262729 !important;
 }
@@ -1271,7 +1112,7 @@ body {
     color: rgba(255, 255, 255, 0.25);
   }
 
-  > span {
+  >span {
     display: inline-flex;
     align-items: center;
     gap: 6px;

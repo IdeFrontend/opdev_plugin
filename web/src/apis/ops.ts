@@ -11,6 +11,7 @@ import {
   SaveSanitizerFormParams,
   UpdateShScriptParams,
   BuildConfig,
+  OperatorInfo,
 } from '@shared/api-types';
 
 import { request } from '@/core/request';
@@ -34,8 +35,13 @@ export function createOpsByPrototype(params: CreateOpsByPrototypeParams) {
 }
 
 /** 获取配置数据 */
-export function getConfigData() {
-  return request.post<undefined, GetConfigDataResult>('ops/getConfigData');
+export function getConfigData(opName?: string, projectId?: number) {
+  return request.post<{ opName?: string; projectId?: number }, GetConfigDataResult>('ops/getConfigData', { opName, projectId });
+}
+
+/** 获取当前项目下的所有算子列表 */
+export function getOperators() {
+  return request.post<undefined, OperatorInfo[]>('ops/getOperators');
 }
 
 /** 获取构建配置列表 */
@@ -188,6 +194,11 @@ export function checkTaskStatus() {
 /** 获取目标标签页并清除 */
 export function getTargetTab() {
   return request.post<undefined, string | undefined>('ops/getTargetTab');
+}
+
+/** 获取目标算子并清除 */
+export function getTargetOperator() {
+  return request.post<undefined, { opName: string; projectId?: number } | undefined>('ops/getTargetOperator');
 }
 
 /** 打开配置页面 */

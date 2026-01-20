@@ -15,6 +15,9 @@ import { ProjectManager } from '@plugin/core/project/project-manager';
 import { projectService } from './project-service';
 import { AutoMultiProjectDetector } from './auto-multi-project-detector';
 import { OperatorProjectIconTheme } from '@plugin/class/operator-project-icon-theme';
+import { generateStructure } from '@plugin/domain';
+import { getOpsByProjectId } from '@plugin/domain/models/model';
+import { getConfig } from '@plugin/domain/services/configuration';
 
 /**
  * 文件夹右键菜单服务
@@ -82,6 +85,8 @@ export class FolderContextMenuService {
                   project_type: detection.projectType,
                 });
                 subProjectIds.push(subId);
+                // 初始化算子工程配置
+                await this.initializeOperatorProject(detection, subId);
               } else {
                 subProjectIds.push(subProject.id);
               }
@@ -110,11 +115,14 @@ export class FolderContextMenuService {
         }
         
         // 单个算子工程，直接标记
-        await createProject({
+        const projectId = await createProject({
           project_name: rootDetection.projectName,
           project_path: folderPath,
           project_type: rootDetection.projectType,
         });
+        
+        // 初始化算子工程配置
+        await this.initializeOperatorProject(rootDetection, projectId);
         
         // 自动检测并标记算子工程合集
         const context = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
@@ -162,6 +170,8 @@ export class FolderContextMenuService {
               project_type: detection.projectType,
             });
             subProjectIds.push(subId);
+            // 初始化算子工程配置
+            await this.initializeOperatorProject(detection, subId);
           } else {
             subProjectIds.push(subProject.id);
           }
@@ -201,11 +211,20 @@ export class FolderContextMenuService {
       
       // 用户选择强制标记，使用默认类型
       const projectName = path.basename(folderPath);
-      await createProject({
+      const projectId = await createProject({
         project_name: projectName,
         project_path: folderPath,
         project_type: OperatorProjectType.ASCEND_C, // 默认类型
       });
+      
+      // 初始化算子工程配置
+      const forceDetection: OperatorProjectDetectionResult = {
+        isOperatorProject: true,
+        projectType: OperatorProjectType.ASCEND_C,
+        projectPath: folderPath,
+        projectName,
+      };
+      await this.initializeOperatorProject(forceDetection, projectId);
       
       // 触发装饰更新
       const context2 = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
@@ -323,6 +342,9 @@ export class FolderContextMenuService {
           });
           subProjectIds.push(subId);
           console.log(`[markAsMultiOperatorProject] 已标记算子工程: ${detection.projectName}, ID: ${subId}`);
+          
+          // 初始化算子工程配置
+          await this.initializeOperatorProject(detection, subId);
         } else {
           // 子目录已经是算子工程，更新experimental标记（如果需要）
           console.log(`[markAsMultiOperatorProject] 算子工程已存在: ${detection.projectName} (${detection.projectPath}), ID: ${subProject.id}`);
@@ -336,6 +358,9 @@ export class FolderContextMenuService {
             });
           }
           subProjectIds.push(subProject.id);
+          
+          // 检查算子是否已初始化（是否有配置），如果没有则初始化
+          await this.checkAndInitializeOperatorProject(detection, subProject.id);
         }
       }
       console.log(`[markAsMultiOperatorProject] 算子工程注册完成，共 ${subProjectIds.length} 个`);
@@ -566,8 +591,23 @@ export class FolderContextMenuService {
     }
     
     await this.switchToProject(uri, async () => {
-      const configCommand = 'huawei-op-devtools.config';
-      await vscode.commands.executeCommand(configCommand);
+      // 获取算子名称
+      // 对于标准自定义算子，项目名称就是算子名称
+      // 对于其他类型，尝试从算子记录中获取
+      let opName = project.project_name;
+      const ops = getOpsByProjectId(project.id);
+      if (ops.length > 0) {
+        // 如果有算子记录，使用第一个算子的名称
+        opName = ops[0].op_name;
+      }
+      
+      // 设置目标算子，以便配置页面自动选择
+      const { configMethods } = await import('../controller/config-controller.js');
+      await configMethods.openConfig({
+        configName: 'huawei-op-devtools.config',
+        opName,
+        projectId: project.id,
+      });
     });
   }
 
@@ -725,5 +765,132 @@ export class FolderContextMenuService {
       isMultiProject: project.project_type === OperatorProjectType.MULTI_PROJECT,
       projectType: project.project_type || undefined,
     };
+  }
+
+  /**
+   * 初始化算子工程配置
+   * @param detection 算子工程检测结果
+   * @param projectId 项目ID
+   */
+  private static async initializeOperatorProject(
+    detection: OperatorProjectDetectionResult,
+    projectId: number,
+  ): Promise<void> {
+    console.log(`[FolderContextMenuService] 开始初始化算子工程: ${detection.projectName}`);
+    
+    if (!detection.isOperatorProject || !detection.projectType) {
+      console.warn(`[FolderContextMenuService] 不是算子工程或类型未定义，跳过初始化`);
+      return;
+    }
+
+    try {
+      const context = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
+        .extensionContext;
+      
+      if (!context) {
+        console.warn(`[FolderContextMenuService] 无法获取扩展上下文，跳过初始化`);
+        return;
+      }
+
+      // 根据算子工程类型确定模板名称和类型
+      let templateName: string | undefined;
+      let opType: string = 'ascend';
+
+      switch (detection.projectType) {
+        case OperatorProjectType.ASCEND_C:
+          templateName = 'hello_world';
+          opType = 'ascend';
+          break;
+        case OperatorProjectType.TORCH_LIBRARY:
+          templateName = 'torch_library_template';
+          opType = 'ascend';
+          break;
+        case OperatorProjectType.PYASC:
+          // pyasc算子工程，不需要初始化
+          console.log(`[FolderContextMenuService] PYASC类型，跳过初始化`);
+          return;
+        case OperatorProjectType.STANDARD_CUSTOM:
+          opType = 'cann';
+          // 标准自定义算子不需要模板
+          break;
+        default:
+          console.warn(`[FolderContextMenuService] 未知的算子类型: ${detection.projectType}, 跳过初始化`);
+          return;
+      }
+
+      // 调用 generateStructure 初始化配置
+      // 对于标准自定义算子，如果没有模板，跳过模板解压，只创建配置
+      const isSkipUnZip = detection.projectType === OperatorProjectType.STANDARD_CUSTOM && !templateName;
+      console.log(`[FolderContextMenuService] 调用 generateStructure 初始化配置, isSkipUnZip: ${isSkipUnZip}`);
+      await generateStructure(
+        {
+          project_id: projectId,
+          op_type: opType,
+          op_name: detection.projectName,
+          template_name: templateName,
+          op_path: detection.projectPath,
+          skipExisting: true, // 不覆盖已有文件
+        } as any,
+        context.extensionPath,
+        isSkipUnZip, // 标准自定义算子且无模板时，跳过模板解压
+      );
+      console.log(`[FolderContextMenuService] 算子工程初始化完成: ${detection.projectName}`);
+      
+      // 验证配置是否创建成功
+      const ops = getOpsByProjectId(projectId);
+      const buildOpConfigs = getConfig(projectId, 'build_op');
+      console.log(`[FolderContextMenuService] 初始化验证: 算子记录数=${ops.length}, 配置数=${buildOpConfigs.length}`);
+      
+      if (ops.length === 0 && buildOpConfigs.length === 0) {
+        console.warn(`[FolderContextMenuService] 警告: 算子工程初始化后没有创建任何记录或配置: ${detection.projectName}`);
+      }
+    } catch (error) {
+      console.error(`[FolderContextMenuService] 初始化算子工程失败 ${detection.projectPath}:`, error);
+      if (error instanceof Error) {
+        console.error(`[FolderContextMenuService] 错误详情: ${error.message}`);
+        console.error(`[FolderContextMenuService] 错误堆栈: ${error.stack}`);
+      }
+      // 初始化失败不应该阻止标记操作，只记录错误
+    }
+  }
+
+  /**
+   * 检查算子是否已初始化，如果没有则初始化
+   * @param detection 算子工程检测结果
+   * @param projectId 项目ID
+   */
+  private static async checkAndInitializeOperatorProject(
+    detection: OperatorProjectDetectionResult,
+    projectId: number,
+  ): Promise<void> {
+    console.log(`[FolderContextMenuService] 检查算子是否已初始化: ${detection.projectName}, projectId: ${projectId}`);
+    
+    try {
+      // 检查是否有算子记录
+      const ops = getOpsByProjectId(projectId);
+      const hasOpRecord = ops.length > 0;
+      
+      // 检查是否有配置（至少有一个配置类型）
+      const buildOpConfigs = getConfig(projectId, 'build_op');
+      const hasConfig = buildOpConfigs.length > 0;
+      
+      console.log(`[FolderContextMenuService] 算子初始化检查结果: hasOpRecord=${hasOpRecord}, hasConfig=${hasConfig}`);
+      
+      // 如果既没有算子记录也没有配置，说明未初始化，需要初始化
+      if (!hasOpRecord && !hasConfig) {
+        console.log(`[FolderContextMenuService] 算子未初始化，开始初始化: ${detection.projectName}`);
+        await this.initializeOperatorProject(detection, projectId);
+      } else {
+        console.log(`[FolderContextMenuService] 算子已初始化，跳过: ${detection.projectName}`);
+      }
+    } catch (error) {
+      console.error(`[FolderContextMenuService] 检查算子初始化状态失败: ${detection.projectPath}`, error);
+      // 检查失败时，尝试初始化（避免遗漏）
+      try {
+        await this.initializeOperatorProject(detection, projectId);
+      } catch (initError) {
+        console.error(`[FolderContextMenuService] 初始化算子失败: ${detection.projectPath}`, initError);
+      }
+    }
   }
 }

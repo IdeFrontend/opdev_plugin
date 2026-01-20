@@ -66,3 +66,11 @@ export type SaveSanitizerFormParams = {
 export type UpdateShScriptParams = {
   ascendEnvScript?: string;
 };
+
+export type OperatorInfo = {
+  id: number;
+  op_name: string;
+  op_type: string;
+  op_path: string;
+  config_name: string;
+};

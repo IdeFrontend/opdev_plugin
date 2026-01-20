@@ -76,7 +76,7 @@ export const questionMap = new Map([
   ],
   [
     'Unused memory',
-    '非配内存未使用',
+    '分配内存未使用',
   ],
   [
     'Potential RAW hazard detected',
