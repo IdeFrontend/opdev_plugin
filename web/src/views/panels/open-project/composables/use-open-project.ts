@@ -103,6 +103,7 @@ export function useOpenProject() {
       await openProject({
         projectPath: projectFormData.projectPath,
         projectSH: projectFormData.projectSH,
+        projectName: ''
       });
       message.success('算子工程打开成功');
     }

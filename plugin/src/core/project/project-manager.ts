@@ -104,6 +104,8 @@ export class ProjectManager {
     projectPath?: string;
     projectName?: string;
     ascendEnvScript?: string;
+    projectType?: string,
+    templateName?: string,
   } = {}): Promise<string> {
     const info = this.getProjectInfo(params);
 
@@ -128,6 +130,8 @@ export class ProjectManager {
       project_name: this._projectName ?? '',
       project_path: this._projectPath,
       ascend_env_script,
+      template_name: params.templateName,
+      project_type: params.projectType
     });
 
     this._projectId = String(projectRes);
