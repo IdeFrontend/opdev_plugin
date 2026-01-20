@@ -4,6 +4,8 @@ export type InitOpsParams = {
   ascendEnvScript?: string;
   projectPath?: string;
   projectName?: string;
+  templateName?: string,
+  projectType?: string
 };
 
 export type CreateOpsParams = {

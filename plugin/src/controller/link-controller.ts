@@ -298,7 +298,7 @@ export const linkMethods = {
    * 打开算子工程
    * @param params 打开项目参数
    */
-  async openProject(params: OpenProjectParams): Promise<void> {
+  async openProjectV2(params: OpenProjectParams): Promise<void> {
     const {
       projectPath,
       projectSH,

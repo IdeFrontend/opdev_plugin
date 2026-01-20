@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import AdmZip from 'adm-zip';
 import { CommandExecutor } from '@plugin/class/command-options';
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import { projectService } from '@plugin/service/project-service';
@@ -14,6 +13,11 @@ import {
 import {
   generateStructure
 } from '@plugin/domain';
+import { viewIdToProjectType } from '../domain/utils/project-utils'
+import {
+  OperatorProjectDetector,
+} from '@plugin/domain/services/operator-project-detector';
+import { getProjectByPath } from '@plugin/domain/models/project-model';
 
 // 辅助函数：获取 extension context
 function getExtensionContext(): vscode.ExtensionContext {
@@ -57,44 +61,13 @@ export const welcomeMethods = {
       context.globalState.update('lastProjectPath', originalProjectPath);
 
       // 标准算子projectPath需增加 /ops-math/math路径
-      let originPath;
-
       if (params.createOperatorProjectDictoryFileType === 2) {
-        originPath = params.projectPath;
         params.projectPath += '/ops-math/math';
       }
 
       vscode.window.showInformationMessage('初始化中');
 
       const executor = new CommandExecutor();
-
-      // 标准算子解压缩
-      if (params.createOperatorProjectDictoryFileType === 2) {
-        try {
-          // 使用 fs.mkdirSync 创建目录（跨平台兼容）
-          if (!fs.existsSync(originPath)) {
-            fs.mkdirSync(originPath, { recursive: true });
-          }
-
-          const zipUrl = path.resolve(
-            context.extensionPath,
-            'out/templates/code_template/op-math/ops-math.zip',
-          );
-
-          // 使用 adm-zip 解压缩（跨平台兼容）
-          try {
-            const zip = new AdmZip(zipUrl);
-
-            zip.extractAllTo(originPath, true);
-          }
-          catch (zipError) {
-            throw new Error(`解压缩失败: ${zipError instanceof Error ? zipError.message : String(zipError)}`);
-          }
-        }
-        catch (error) {
-          throw new Error(`创建标准算子目录失败: ${error instanceof Error ? error.message : String(error)}`);
-        }
-      }
 
       try {
         // 使用 fs.mkdirSync 创建目录（跨平台兼容）
@@ -125,6 +98,8 @@ export const welcomeMethods = {
           ascendEnvScript: params.projectSH,
           projectPath: params.projectPath,
           projectName: params.projectName,
+          templateName: params.templateName,
+          projectType: viewIdToProjectType(params.createOperatorProjectDictoryFileType)
         });
       }
       catch (error) {
@@ -242,18 +217,52 @@ export const welcomeMethods = {
    */
   async openProject(params: OpenProjectParams): Promise<void> {
     try {
-      // 验证参数
-      if (!params.projectPath || typeof params.projectPath !== 'string') {
-        vscode.window.showErrorMessage('项目路径不能为空');
-        console.error('[openProject] 项目路径为空或无效:', params.projectPath);
-        return;
+      // 首先检查项目是否已在用户的配置数据中
+      const existingProject = getProjectByPath(params.projectPath);
+
+      if (existingProject) {
+        console.log(`[openProject] 项目已在配置中: ${existingProject.project_name} (${existingProject.project_path})`);
+
+        // 如果项目已存在，直接打开目录
+        const localUri = vscode.Uri.file(params.projectPath);
+
+        // 询问用户是在当前窗口打开还是新窗口打开
+        const choice = await vscode.window.showInformationMessage(
+          '选择打开方式',
+          { modal: true },
+          '当前窗口',
+          '新窗口',
+        );
+
+        // 如果用户取消了选择，则不执行打开操作
+        if (!choice) {
+          return;
+        }
+
+        const forceNewWindow = choice === '新窗口';
+
+        // 打开文件夹
+        try {
+          await vscode.commands.executeCommand('vscode.openFolder', localUri, { forceNewWindow: forceNewWindow });
+          vscode.window.showInformationMessage('打开算子工程目录成功');
+        }
+        catch (e) {
+          vscode.window.showErrorMessage(`打开算子工程目录失败: ${e instanceof Error ? e.message : String(e)}`);
+        }
+
+        return; // 退出函数，不再执行后续初始化操作
       }
 
+      // 如果项目不存在于配置中，继续执行初始化流程
       // 如果没有提供 projectName，从路径中提取
-      let projectName = params.projectName;
-      if (!projectName || typeof projectName !== 'string') {
-        projectName = path.basename(params.projectPath);
-        console.log(`[openProject] 未提供项目名称，从路径提取: ${projectName}`);
+      if (!params.projectName) {
+        params.projectName = path.basename(params.projectPath);
+        console.log(`[openProject] 未提供项目名称，从路径提取: ${params.projectName}`);
+
+        // 截断 projectPath，移除项目名称部分
+        const dirPath = path.dirname(params.projectPath);
+        params.projectPath = dirPath;
+        console.log(`[openProject] 更新 projectPath (移除项目名称后): ${params.projectPath}`);
       }
 
       const context = getExtensionContext();
@@ -272,12 +281,19 @@ export const welcomeMethods = {
         }
       }
 
+      // 检测算子工程类型
+      vscode.window.showInformationMessage('正在检测算子工程类型...');
+      const projectFullPath = path.join(params.projectPath, params.projectName);
+      const rootDetection = await OperatorProjectDetector.detectOperatorProject(projectFullPath);
+
       // 将配置写入project.json文件
       try {
         await projectService.init({
           ascendEnvScript: params.projectSH,
           projectPath: params.projectPath,
-          projectName: projectName,
+          projectName: params.projectName,
+          templateName: '',
+          projectType: viewIdToProjectType(rootDetection.projectType)
         });
       }
       catch (error) {
@@ -287,7 +303,7 @@ export const welcomeMethods = {
       try {
         await vscode.commands.executeCommand(
           'revealInExplorer',
-          vscode.Uri.file(params.projectPath),
+          vscode.Uri.file(projectFullPath),
         );
       }
       catch (error) {
@@ -303,20 +319,19 @@ export const welcomeMethods = {
           ops_prototype_file: '',
           project_id: projectId,
           // cann ascend pyasc
-          op_type: 'cann',
+          op_type: viewIdToProjectType(rootDetection.projectType),
           template_name: '',
         },
         context.extensionPath,
         true
       );
       await pm.checkVscode();
-      // op_type为ascend时，是否需要创建算子工程原型文件
-      await vscode.commands.executeCommand('workbench.action.closeActiveEditor'); 
+      await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
 
       // 规范化路径
       const normalizedProjectPath = path.normalize(params.projectPath);
-      const normalizedProjectName = path.normalize(projectName);
-      const fullProjectPath = path.normalize(params.projectPath);
+      const normalizedProjectName = path.normalize(params.projectName);
+      const fullProjectPath = path.join(normalizedProjectPath, normalizedProjectName);
       // 在远程环境中，我们可以直接打开本地路径（相对于远程系统）
       const localUri = vscode.Uri.file(fullProjectPath);
 

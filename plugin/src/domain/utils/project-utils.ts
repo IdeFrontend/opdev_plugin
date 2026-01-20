@@ -161,3 +161,19 @@ async function exportEnvToFile(projectDir: string) {
     console.error('导出环境变量失败:', error);
   }
 }
+
+const map = {
+  1: 'cann',
+  2: 'ascend',
+  3: 'pyasc',
+  'standard-custom': 'ascend',
+  'ascend-c': 'cann',
+  'torch-library': 'cann',
+  'pyasc': 'pyasc',
+}
+export function viewIdToProjectType(id: string | number | undefined) {
+  if (!id) {
+    return 'cann'
+  }
+  return map[id] || 'cann'
+}

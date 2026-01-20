@@ -166,7 +166,7 @@ export async function handleOperatorProjectDirectoryFile(
 
         if (opsPrototypeFilePath) {
           console.log('开始通过原型创建算子工程...');
-          await welcomeMethods.createOpsByPrototype({ opsPrototypeFile: opsPrototypeFilePath });
+          await welcomeMethods.createOpsByPrototype({ opsPrototypeFile: opsPrototypeFilePath, opType: 'ascend' });
           console.log('通过原型创建算子工程完成');
         }
         else {

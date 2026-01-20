@@ -10,7 +10,8 @@ export type ProjectRecord = {
   id: number;
   project_name: string;
   project_path: string;
-  project_type?: string | null; // 算子工程类型：standard-custom, ascend-c, torch-library, pyasc, multi-project
+  template_name?: string | null; // 模板名称: helloworld addn torch_library
+  project_type?: string | null; // 算子工程类型：cann ascend pyasc
   ascend_env_script?: string | null;
   create_by?: string | null;
   create_time?: string;
@@ -49,6 +50,7 @@ function writeStore(store: ProjectsStore) {
 export interface CreateProjectParams {
   project_name: string;
   project_path: string;
+  template_name?: string,
   project_type?: string; // 算子工程类型
   ascend_env_script?: string;
   create_by?: string;
@@ -84,6 +86,9 @@ export async function createProject(data: CreateProjectParams) {
     if (data.project_type) {
       existing.project_type = data.project_type;
     }
+    if (data.template_name) {
+      existing.template_name = data.template_name
+    }
     if (data.sub_project_ids) {
       existing.sub_project_ids = data.sub_project_ids;
     }
@@ -104,6 +109,7 @@ export async function createProject(data: CreateProjectParams) {
     id: nextId,
     project_name: data.project_name,
     project_path: data.project_path,
+    template_name: data.template_name || null,
     project_type: data.project_type || null,
     ascend_env_script: data.ascend_env_script || null,
     create_by: data.create_by || null,
