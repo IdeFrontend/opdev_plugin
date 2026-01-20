@@ -92,11 +92,11 @@ export class AutoMultiProjectDetector {
         console.log(`[AutoMultiProjectDetector] 共标记了 ${markedCount} 个算子工程合集`);
         
         // 更新图标主题
-        console.log(`[AutoMultiProjectDetector] 开始更新图标主题...`);
+        console.log(`[AutoMultiProjectDetector] 开始触发装饰更新...`);
         try {
           const iconTheme = OperatorProjectIconTheme.getInstance(context);
-          await iconTheme.updateIconTheme();
-          console.log(`[AutoMultiProjectDetector] ✓ 图标主题已更新`);
+          iconTheme.fireDecorationUpdate();
+          console.log(`[AutoMultiProjectDetector] ✓ 装饰已更新`);
         } catch (error) {
           console.error(`[AutoMultiProjectDetector] 更新图标主题失败:`, error);
           if (error instanceof Error) {

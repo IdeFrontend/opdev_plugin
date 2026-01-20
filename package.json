@@ -33,13 +33,6 @@
         }
       }
     },
-    "iconThemes": [
-      {
-        "id": "operator-project-icon-theme",
-        "label": "算子工程图标主题",
-        "path": "./resources/operator-project-icons/operator-project-icon-theme.json"
-      }
-    ],
     "viewsContainers": {
       "activitybar": [
         {

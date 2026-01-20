@@ -320,6 +320,13 @@ export const linkMethods = {
     } = params;
 
     try {
+      // 验证参数
+      if (!projectPath || typeof projectPath !== 'string') {
+        vscode.window.showErrorMessage('项目路径不能为空');
+        console.error('[openProject] 项目路径为空或无效:', projectPath);
+        return;
+      }
+
       // 验证路径是否存在
       if (!fs.existsSync(projectPath)) {
         vscode.window.showErrorMessage(`路径不存在: ${projectPath}`);
@@ -453,9 +460,9 @@ export const linkMethods = {
       // 注意：不在打开项目时自动检测并标记所有算子工程合集
       // 只在当前打开的项目路径下，如果找到多个算子工程，才标记根目录为合集（上面已处理）
 
-      // 更新图标主题
+      // 触发装饰更新
       const iconTheme = OperatorProjectIconTheme.getInstance(context);
-      await iconTheme.updateIconTheme();
+      iconTheme.fireDecorationUpdate();
 
       // 更新所有已标记项目的上下文变量，模拟手动操作的效果
       const allProjects = getAllProjects();

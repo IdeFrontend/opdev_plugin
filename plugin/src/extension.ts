@@ -391,9 +391,8 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(onBoardOptionsCommand);
   context.subscriptions.push(sanitizerOptionsCommand);
 
-  // 初始化图标主题管理器
+  // 初始化文件夹装饰提供者
   const iconTheme = OperatorProjectIconTheme.getInstance(context);
-  await iconTheme.updateIconTheme();
   
   // 注意：不在插件激活时自动检测并标记算子工程合集
   // 只在用户明确打开项目时（link-controller.ts）才进行自动检测
@@ -411,8 +410,8 @@ export async function activate(context: vscode.ExtensionContext) {
       }
       await FolderContextMenuService.markAsOperatorProject(uri);
       
-      // 操作完成后更新图标主题
-      await iconTheme.updateIconTheme();
+      // 操作完成后触发装饰更新
+      iconTheme.fireDecorationUpdate(uri);
       
       // 操作完成后更新上下文变量
       await updateContextForUri(uri);
@@ -428,8 +427,8 @@ export async function activate(context: vscode.ExtensionContext) {
       }
       await FolderContextMenuService.markAsMultiOperatorProject(uri);
       
-      // 操作完成后更新图标主题
-      await iconTheme.updateIconTheme();
+      // 操作完成后触发装饰更新
+      iconTheme.fireDecorationUpdate(uri);
       
       // 操作完成后更新上下文变量
       await updateContextForUri(uri);
@@ -445,8 +444,8 @@ export async function activate(context: vscode.ExtensionContext) {
       }
       await FolderContextMenuService.unmarkAsOperatorProject(uri);
       
-      // 操作完成后更新图标主题
-      await iconTheme.updateIconTheme();
+      // 操作完成后触发装饰更新
+      iconTheme.fireDecorationUpdate(uri);
       
       // 操作完成后更新上下文变量
       await updateContextForUri(uri);
@@ -462,8 +461,8 @@ export async function activate(context: vscode.ExtensionContext) {
       }
       await FolderContextMenuService.unmarkAsMultiOperatorProject(uri);
       
-      // 操作完成后更新图标主题
-      await iconTheme.updateIconTheme();
+      // 操作完成后触发装饰更新
+      iconTheme.fireDecorationUpdate(uri);
       
       // 操作完成后更新上下文变量
       await updateContextForUri(uri);
@@ -685,8 +684,8 @@ export async function activate(context: vscode.ExtensionContext) {
         }
         
         // 检测完成后，更新所有已标记项目的上下文变量，模拟手动操作的效果
-        const allProjects = getAllProjects();
-        for (const project of allProjects) {
+        const allProjectsForContext = getAllProjects();
+        for (const project of allProjectsForContext) {
           if (project.project_path) {
             const uri = vscode.Uri.file(project.project_path);
             const checkResult = await FolderContextMenuService.checkIsOperatorProject(uri);
@@ -710,9 +709,15 @@ export async function activate(context: vscode.ExtensionContext) {
           }
         }
         
-        // 更新图标主题并刷新资源管理器
-        const iconTheme = OperatorProjectIconTheme.getInstance(context);
-        await iconTheme.updateIconTheme();
+        // 触发装饰更新
+        const iconThemeForWatch = OperatorProjectIconTheme.getInstance(context);
+        const allProjectsForWatch = getAllProjects();
+        const urisForWatch = allProjectsForWatch
+          .filter(p => p.project_path)
+          .map(p => vscode.Uri.file(p.project_path!));
+        if (urisForWatch.length > 0) {
+          iconThemeForWatch.fireDecorationUpdate(urisForWatch);
+        }
         
         // 延迟刷新资源管理器，确保菜单显示正确
         setTimeout(() => {
@@ -738,8 +743,8 @@ export async function activate(context: vscode.ExtensionContext) {
       }
       
       // 检测完成后，更新所有已标记项目的上下文变量，模拟手动操作的效果
-      const allProjects = getAllProjects();
-      for (const project of allProjects) {
+      const allProjectsForInit = getAllProjects();
+      for (const project of allProjectsForInit) {
         if (project.project_path) {
           const uri = vscode.Uri.file(project.project_path);
           const checkResult = await FolderContextMenuService.checkIsOperatorProject(uri);
@@ -763,8 +768,15 @@ export async function activate(context: vscode.ExtensionContext) {
         }
       }
       
-      // 更新图标主题并刷新资源管理器
-      await iconTheme.updateIconTheme();
+      // 触发装饰更新
+      const allProjectsForInit2 = getAllProjects();
+      const urisForInit = allProjectsForInit2
+        .filter(p => p.project_path)
+        .map(p => vscode.Uri.file(p.project_path!));
+      if (urisForInit.length > 0) {
+        const iconThemeForInit = OperatorProjectIconTheme.getInstance(context);
+        iconThemeForInit.fireDecorationUpdate(urisForInit);
+      }
       
       // 延迟刷新资源管理器，确保菜单显示正确
       setTimeout(() => {
