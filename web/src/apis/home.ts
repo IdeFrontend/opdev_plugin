@@ -34,3 +34,10 @@ export function getLastProjectPath() {
 export function getWorkspace() {
   return request.post<undefined, GetWorkspaceResult>('webview/getWorkspace');
 }
+
+/**
+ * 获取当前项目类型
+ */
+export function getProjectType() {
+  return request.post<undefined, { projectType: string | null; projectTypeName: string }>('webview/getProjectType');
+}

@@ -81,5 +81,9 @@ export function cpuDebugConfig() {
  * 检查当前目录下是否有多个算子工程
  */
 export function checkMultipleOperators() {
-  return request.post<undefined, { hasMultiple: boolean }>('webview/checkMultipleOperators');
+  return request.post<undefined, { 
+    hasMultiple: boolean; 
+    operators?: Array<{ id: number; name: string; path: string; isExperimental: boolean }>;
+    isStandardCustom?: boolean;
+  }>('webview/checkMultipleOperators');
 }

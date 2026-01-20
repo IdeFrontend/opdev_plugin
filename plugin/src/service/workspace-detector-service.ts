@@ -19,7 +19,6 @@ import { ProjectManager } from '@plugin/core/project/project-manager';
 import { generateStructure } from '@plugin/domain';
 import { OperatorProjectIconTheme } from '@plugin/class/operator-project-icon-theme';
 import { AutoMultiProjectDetector } from './auto-multi-project-detector';
-import { FolderContextMenuService } from './folder-context-menu-service';
 
 /**
  * 工作区检测服务
@@ -54,6 +53,7 @@ export class WorkspaceDetectorService {
           // 其他类型的算子工程，直接标记
           console.log('[WorkspaceDetectorService] 根目录是算子工程，调用手动标记方法');
           const uri = vscode.Uri.file(workspacePath);
+          const { FolderContextMenuService } = await import('./folder-context-menu-service.js');
           await FolderContextMenuService.markAsOperatorProject(uri);
           console.log('[WorkspaceDetectorService] 根目录算子工程标记完成');
         }
@@ -75,10 +75,12 @@ export class WorkspaceDetectorService {
 
   /**
    * 扫描标准自定义算子（特殊规则）
+   * 使用与右键标记算子合集相同的逻辑，确保一致性
    * 1. 根目录下存在 experimental 文件夹，则将experimental标记为算子工程集合
    * 2. 扫描的文件夹根目录下有CMakeLists.txt文件，则这个文件夹为算子文件
    * 3. 识别出来的所有算子，需要分为2类，在experimental目录下的算子会被归类为experimental算子
-   * 4. 当一个目录的下一层目录中有多个算子目录，则将该目录标记成算子工程集合
+   * 4. 只标记根目录级的文件夹为算子工程集合（工作区根目录的直接子目录）
+   * 5. 合集的子目录不可以再标记成算子合集
    */
   private static async scanStandardCustomOperators(workspacePath: string): Promise<void> {
     console.log('[WorkspaceDetectorService] ========== 开始扫描标准自定义算子 ==========');
@@ -91,158 +93,162 @@ export class WorkspaceDetectorService {
       return;
     }
 
-    // 1. 检查根目录下是否存在 experimental 文件夹
+    // 使用与右键标记相同的扫描方法
+    console.log(`[WorkspaceDetectorService] 使用 scanForStandardCustomOperatorProjects 扫描算子工程`);
+    const detectedProjects = await OperatorProjectDetector.scanForStandardCustomOperatorProjects(
+      workspacePath,
+      3,
+    );
+    console.log(`[WorkspaceDetectorService] 扫描完成，找到 ${detectedProjects.length} 个标准自定义算子工程`);
+
+    if (detectedProjects.length === 0) {
+      console.log('[WorkspaceDetectorService] 未找到算子工程，跳过标记');
+      return;
+    }
+
+    // 检查根目录下是否存在 experimental 文件夹
     const experimentalPath = path.join(workspacePath, 'experimental');
     const hasExperimental = fs.existsSync(experimentalPath) && fs.statSync(experimentalPath).isDirectory();
     
     console.log(`[WorkspaceDetectorService] experimental 文件夹存在: ${hasExperimental}, 路径: ${experimentalPath}`);
 
-    // 2. 扫描算子工程（扫描到第3层目录，即深度0,1,2）
-    const operatorProjects: Array<{ path: string; isExperimental: boolean; isCollection?: boolean }> = [];
+    // 分类算子工程：experimental算子和普通算子
+    const experimentalOperators: OperatorProjectDetectionResult[] = [];
+    const normalOperators: OperatorProjectDetectionResult[] = [];
     
-    // 扫描根目录下的子目录（从深度0开始，扫描到深度2，共3层）
-    await this.scanStandardCustomOperatorsRecursive(workspacePath, 0, 2, operatorProjects, experimentalPath);
-    
-    console.log(`[WorkspaceDetectorService] 扫描完成，找到 ${operatorProjects.length} 个项目`);
-    
-    // 3. 分类算子工程和算子工程集合
-    const experimentalOperators: string[] = [];
-    const normalOperators: string[] = [];
-    const operatorCollections: Array<{ path: string; isExperimental: boolean; subOperators: string[] }> = [];
-    
-    for (const op of operatorProjects) {
-      if (op.isCollection) {
-        // 这是算子工程集合，需要找到其子算子工程
-        const subOperators = operatorProjects
-          .filter(p => !p.isCollection && p.path.startsWith(op.path + path.sep))
-          .map(p => p.path);
-        operatorCollections.push({
-          path: op.path,
-          isExperimental: op.isExperimental,
-          subOperators,
-        });
-        console.log(`[WorkspaceDetectorService] 算子工程集合: ${op.path} (experimental: ${op.isExperimental}, 包含 ${subOperators.length} 个子算子)`);
+    for (const detection of detectedProjects) {
+      // 检查路径是否在 experimental 目录下
+      const isExperimental = detection.projectPath.toLowerCase().startsWith(experimentalPath.toLowerCase());
+      if (isExperimental) {
+        experimentalOperators.push(detection);
       } else {
-        // 这是单个算子工程
-        if (op.isExperimental) {
-          experimentalOperators.push(op.path);
-        } else {
-          normalOperators.push(op.path);
-        }
+        normalOperators.push(detection);
       }
     }
     
     console.log(`[WorkspaceDetectorService] experimental算子: ${experimentalOperators.length} 个`);
     console.log(`[WorkspaceDetectorService] 普通算子: ${normalOperators.length} 个`);
-    console.log(`[WorkspaceDetectorService] 算子工程集合: ${operatorCollections.length} 个`);
 
-    // 4. 先注册所有单个算子工程
-    const allOperatorPaths = [...experimentalOperators, ...normalOperators];
-    const registeredProjectIds: number[] = [];
-    
-    for (const opPath of allOperatorPaths) {
-      const isExperimental = experimentalOperators.includes(opPath);
-      const projectName = path.basename(opPath);
+    // 注册所有算子工程（标记experimental属性）
+    const subProjectIds: number[] = [];
+    console.log(`[WorkspaceDetectorService] 开始注册 ${detectedProjects.length} 个算子工程`);
+    for (const detection of detectedProjects) {
+      if (!detection.projectType) {
+        console.warn(`[WorkspaceDetectorService] 跳过无类型的算子工程: ${detection.projectPath}`);
+        continue;
+      }
       
-      // 检查是否已注册
-      const existing = getProjectByPath(opPath);
-      if (existing) {
-        // 更新 is_experimental 字段
-        if (existing.is_experimental !== isExperimental) {
+      // 判断是否是 experimental 算子
+      const isExperimental = detection.projectPath.toLowerCase().startsWith(experimentalPath.toLowerCase());
+      let subProject = getProjectByPath(detection.projectPath);
+      if (!subProject) {
+        // 子目录是算子工程，但还没有被标记，需要标记为算子工程
+        console.log(`[WorkspaceDetectorService] 标记算子工程: ${detection.projectName} (${detection.projectPath}), experimental: ${isExperimental}`);
+        const subId = await createProject({
+          project_name: detection.projectName,
+          project_path: detection.projectPath,
+          project_type: detection.projectType,
+          is_experimental: isExperimental,
+        });
+        subProjectIds.push(subId);
+        console.log(`[WorkspaceDetectorService] 已标记算子工程: ${detection.projectName}, ID: ${subId}`);
+      } else {
+        // 子目录已经是算子工程，更新experimental标记（如果需要）
+        console.log(`[WorkspaceDetectorService] 算子工程已存在: ${detection.projectName} (${detection.projectPath}), ID: ${subProject.id}`);
+        if (subProject.is_experimental !== isExperimental) {
+          console.log(`[WorkspaceDetectorService] 更新experimental标记: ${detection.projectName}, ${subProject.is_experimental} -> ${isExperimental}`);
           await createProject({
-            project_name: projectName,
-            project_path: opPath,
-            project_type: OperatorProjectType.STANDARD_CUSTOM,
+            project_name: detection.projectName,
+            project_path: detection.projectPath,
+            project_type: detection.projectType,
             is_experimental: isExperimental,
           });
         }
-        registeredProjectIds.push(existing.id);
-        console.log(`[WorkspaceDetectorService] ✓ 算子工程已存在: ${projectName} (experimental: ${isExperimental})`);
-      } else {
-        // 注册新项目
-        const projectId = await createProject({
-          project_name: projectName,
-          project_path: opPath,
-          project_type: OperatorProjectType.STANDARD_CUSTOM,
-          is_experimental: isExperimental,
-        });
-        registeredProjectIds.push(projectId);
-        console.log(`[WorkspaceDetectorService] ✓ 已注册算子工程: ${projectName} (experimental: ${isExperimental})`);
+        subProjectIds.push(subProject.id);
       }
     }
+    console.log(`[WorkspaceDetectorService] 算子工程注册完成，共 ${subProjectIds.length} 个`);
 
-    // 5. 注册算子工程集合
-    for (const collection of operatorCollections) {
-      const subProjectIds = collection.subOperators
-        .map(p => getProjectByPath(p)?.id)
-        .filter((id): id is number => id !== undefined);
-      
-      if (subProjectIds.length > 0) {
-        const collectionName = path.basename(collection.path);
-        await createProject({
-          project_name: collectionName,
-          project_path: collection.path,
-          project_type: OperatorProjectType.MULTI_PROJECT,
-          sub_project_ids: subProjectIds,
-        });
-        console.log(`[WorkspaceDetectorService] ✓ 已注册算子工程集合: ${collectionName} (experimental: ${collection.isExperimental}, 包含 ${subProjectIds.length} 个子算子)`);
-      }
-    }
-
-    // 6. 标记 experimental 文件夹为算子工程集合（如果存在且还没有被标记为集合）
+    // 标记 experimental 文件夹为算子工程集合（如果存在且当前目录不是 experimental 本身）
     if (hasExperimental) {
-      const existing = getProjectByPath(experimentalPath);
-      // 检查是否已经在 operatorCollections 中
-      const isAlreadyCollection = operatorCollections.some(c => c.path === experimentalPath);
-      
-      if (!isAlreadyCollection) {
+      const existingExperimental = getProjectByPath(experimentalPath);
+      if (!existingExperimental || existingExperimental.project_type !== OperatorProjectType.MULTI_PROJECT) {
         const experimentalProjectIds = experimentalOperators
-          .map(p => getProjectByPath(p)?.id)
+          .map(p => getProjectByPath(p.projectPath)?.id)
           .filter((id): id is number => id !== undefined);
         
-        // 即使没有算子，也要标记experimental为算子工程集合（如果它存在）
         await createProject({
           project_name: 'experimental',
           project_path: experimentalPath,
           project_type: OperatorProjectType.MULTI_PROJECT,
           sub_project_ids: experimentalProjectIds.length > 0 ? experimentalProjectIds : undefined,
         });
-        console.log(`[WorkspaceDetectorService] ✓ 已标记 experimental 为算子工程集合 (包含 ${experimentalProjectIds.length} 个算子)`);
+        console.log(`[WorkspaceDetectorService] ✓ 已标记 experimental 为算子工程集合`);
       }
     }
 
-    // 7. 标记包含多个算子的父目录为算子工程集合（如果还没有被标记）
-    const parentDirMap = new Map<string, string[]>();
+    // 只标记根目录级的文件夹为算子工程集合
+    // 获取工作区根目录的直接子目录（深度为1的目录）
+    const normalizedWorkspacePath = path.normalize(workspacePath).replace(/\\/g, '/');
+    const rootLevelParentDirMap = new Map<string, string[]>();
     
-    for (const opPath of allOperatorPaths) {
-      const parentDir = path.dirname(opPath);
-      const normalizedParentDir = path.normalize(parentDir);
+    for (const detection of detectedProjects) {
+      const parentDir = path.dirname(detection.projectPath);
+      const normalizedParentDir = path.normalize(parentDir).replace(/\\/g, '/');
       
-      // 确保父目录在工作区内
-      const normalizedWorkspacePath = path.normalize(workspacePath);
-      if (!normalizedParentDir.startsWith(normalizedWorkspacePath)) {
-        continue;
+      // 检查父目录是否在工作区根目录下，且深度为1（即根目录的直接子目录）
+      if (normalizedParentDir.startsWith(normalizedWorkspacePath)) {
+        const relativePath = normalizedParentDir.substring(normalizedWorkspacePath.length).replace(/^[/\\]/, '');
+        const depth = relativePath.split(/[/\\]/).filter(p => p.length > 0).length;
+        
+        // 只处理根目录的直接子目录（深度为1）
+        if (depth === 1) {
+          // 检查该父目录是否已经是算子工程集合（合集的子目录不能再标记成算子合集）
+          const existingParent = getProjectByPath(parentDir);
+          if (existingParent && existingParent.project_type === OperatorProjectType.MULTI_PROJECT) {
+            console.log(`[WorkspaceDetectorService] 跳过已标记为合集的目录: ${parentDir}`);
+            continue;
+          }
+          
+          // 检查该父目录是否已经在某个合集下（合集的子目录不可以再标记成算子合集）
+          let isInCollection = false;
+          let currentDir = path.dirname(parentDir);
+          while (currentDir !== workspacePath && currentDir !== path.dirname(currentDir)) {
+            const normalizedCurrentDir = path.normalize(currentDir).replace(/\\/g, '/');
+            if (normalizedCurrentDir.startsWith(normalizedWorkspacePath)) {
+              const ancestorProject = getProjectByPath(currentDir);
+              if (ancestorProject && ancestorProject.project_type === OperatorProjectType.MULTI_PROJECT) {
+                console.log(`[WorkspaceDetectorService] 父目录 "${parentDir}" 已经在合集 "${currentDir}" 下，跳过标记为合集`);
+                isInCollection = true;
+                break;
+              }
+            }
+            const parentOfCurrent = path.dirname(currentDir);
+            if (parentOfCurrent === currentDir) {
+              break;
+            }
+            currentDir = parentOfCurrent;
+          }
+          
+          if (isInCollection) {
+            continue;
+          }
+          
+          // 检查该父目录是否在 experimental 目录下（experimental 已单独处理）
+          if (normalizedParentDir === path.normalize(experimentalPath).replace(/\\/g, '/')) {
+            continue;
+          }
+          
+          if (!rootLevelParentDirMap.has(normalizedParentDir)) {
+            rootLevelParentDirMap.set(normalizedParentDir, []);
+          }
+          rootLevelParentDirMap.get(normalizedParentDir)!.push(detection.projectPath);
+        }
       }
-      
-      // 跳过根目录和experimental目录（experimental已单独处理）
-      if (normalizedParentDir === normalizedWorkspacePath || normalizedParentDir === path.normalize(experimentalPath)) {
-        continue;
-      }
-      
-      // 检查该父目录是否已经在 operatorCollections 中
-      const isAlreadyCollection = operatorCollections.some(c => c.path === normalizedParentDir);
-      if (isAlreadyCollection) {
-        continue; // 已经标记为集合，跳过
-      }
-      
-      if (!parentDirMap.has(normalizedParentDir)) {
-        parentDirMap.set(normalizedParentDir, []);
-      }
-      parentDirMap.get(normalizedParentDir)!.push(opPath);
     }
 
-    // 标记包含多个算子的父目录为合集
-    for (const [parentDir, operatorPaths] of parentDirMap.entries()) {
+    // 标记包含多个算子的根目录级父目录为合集
+    for (const [parentDir, operatorPaths] of rootLevelParentDirMap.entries()) {
       if (operatorPaths.length > 1) {
         const existing = getProjectByPath(parentDir);
         if (!existing || existing.project_type !== OperatorProjectType.MULTI_PROJECT) {
@@ -258,15 +264,24 @@ export class WorkspaceDetectorService {
               project_type: OperatorProjectType.MULTI_PROJECT,
               sub_project_ids: subProjectIds,
             });
-            console.log(`[WorkspaceDetectorService] ✓ 已标记 ${parentDirName} 为算子工程集合`);
+            console.log(`[WorkspaceDetectorService] ✓ 已标记根目录级文件夹 ${parentDirName} 为算子工程集合 (包含 ${subProjectIds.length} 个子算子)`);
           }
         }
       }
     }
 
-    // 7. 触发装饰更新
+    // 触发装饰更新
     const iconTheme = OperatorProjectIconTheme.getInstance(context);
-    const allProjectPaths = [...experimentalOperators, ...normalOperators, ...operatorCollections.map(c => c.path)];
+    const allProjectPaths = [
+      ...detectedProjects.map(p => p.projectPath),
+      ...Array.from(rootLevelParentDirMap.keys()).filter(dir => {
+        const existing = getProjectByPath(dir);
+        return existing && existing.project_type === OperatorProjectType.MULTI_PROJECT;
+      }),
+    ];
+    if (hasExperimental) {
+      allProjectPaths.push(experimentalPath);
+    }
     const uris = allProjectPaths.map(p => vscode.Uri.file(p));
     if (uris.length > 0) {
       iconTheme.fireDecorationUpdate(uris);
@@ -275,165 +290,6 @@ export class WorkspaceDetectorService {
     console.log('[WorkspaceDetectorService] ========== 标准自定义算子扫描完成 ==========');
   }
 
-  /**
-   * 递归扫描标准自定义算子
-   * 如果识别为算子文件后，还要再扫描下根目录的文件夹
-   * 如果根目录的文件夹还是算子文件，则该文件目录为算子合集，不是算子文件
-   */
-  private static async scanStandardCustomOperatorsRecursive(
-    dirPath: string,
-    currentDepth: number,
-    maxDepth: number,
-    results: Array<{ path: string; isExperimental: boolean; isCollection?: boolean }>,
-    experimentalPath: string,
-  ): Promise<void> {
-    if (currentDepth > maxDepth) {
-      return;
-    }
-
-    try {
-      const entries = fs.readdirSync(dirPath, { withFileTypes: true });
-      
-      // 检查当前目录是否有 CMakeLists.txt
-      const cmakeListsPath = path.join(dirPath, 'CMakeLists.txt');
-      const hasCMakeLists = fs.existsSync(cmakeListsPath);
-      
-      console.log(`[WorkspaceDetectorService] 扫描目录: ${dirPath}, depth: ${currentDepth}, hasCMakeLists: ${hasCMakeLists}`);
-      
-      if (hasCMakeLists) {
-        // 当前目录有 CMakeLists.txt，可能是算子工程
-        // 但需要检查其直接子目录是否也有算子工程
-        
-        // 扫描该目录的直接子目录（只扫描一层，检查是否有算子工程）
-        const subOperatorPaths: string[] = [];
-        for (const entry of entries) {
-          if (entry.isDirectory()) {
-            const dirName = entry.name;
-            // 跳过一些常见的非算子工程目录
-            if (
-              dirName.startsWith('.') ||
-              dirName === 'node_modules' ||
-              dirName === 'out' ||
-              dirName === 'build'
-            ) {
-              continue;
-            }
-
-            const subDirPath = path.join(dirPath, entry.name);
-            const subCmakeListsPath = path.join(subDirPath, 'CMakeLists.txt');
-            const subHasCMakeLists = fs.existsSync(subCmakeListsPath);
-            console.log(`[WorkspaceDetectorService]   检查子目录: ${subDirPath}, hasCMakeLists: ${subHasCMakeLists}`);
-            if (subHasCMakeLists) {
-              // 子目录也是算子工程
-              subOperatorPaths.push(subDirPath);
-            }
-          }
-        }
-        
-        console.log(`[WorkspaceDetectorService]   找到 ${subOperatorPaths.length} 个子算子工程`);
-
-        if (subOperatorPaths.length > 0) {
-          // 该目录的直接子目录中有算子工程，所以这个目录是算子工程集合
-          // 但是，这个目录本身也有 CMakeLists.txt，所以它本身也是一个算子工程
-          const isExperimental = dirPath.toLowerCase().startsWith(experimentalPath.toLowerCase());
-          
-          // 先添加为单个算子工程（如果它还没有被添加）
-          const alreadyAdded = results.some(r => r.path === dirPath && !r.isCollection);
-          if (!alreadyAdded) {
-            results.push({ path: dirPath, isExperimental, isCollection: false });
-            console.log(`[WorkspaceDetectorService] 找到算子工程: ${dirPath} (experimental: ${isExperimental})`);
-          }
-          
-          // 然后添加为算子工程集合（如果它还没有被添加为集合）
-          const alreadyAddedAsCollection = results.some(r => r.path === dirPath && r.isCollection);
-          if (!alreadyAddedAsCollection) {
-            results.push({ path: dirPath, isExperimental, isCollection: true });
-            console.log(`[WorkspaceDetectorService] 找到算子工程集合: ${dirPath} (experimental: ${isExperimental}, 包含 ${subOperatorPaths.length} 个子算子)`);
-          }
-          
-          // 继续扫描子目录中的算子工程（递归扫描，因为子算子工程可能也有子算子工程）
-          for (const subOpPath of subOperatorPaths) {
-            await this.scanStandardCustomOperatorsRecursive(
-              subOpPath,
-              currentDepth + 1,
-              maxDepth,
-              results,
-              experimentalPath,
-            );
-          }
-          // 扫描完子算子工程后返回，不再继续扫描其他子目录
-          return;
-        } else {
-          // 该目录的直接子目录中没有算子工程，所以这个目录是单个算子工程
-          const isExperimental = dirPath.toLowerCase().startsWith(experimentalPath.toLowerCase());
-          results.push({ path: dirPath, isExperimental, isCollection: false });
-          console.log(`[WorkspaceDetectorService] 找到算子工程: ${dirPath} (experimental: ${isExperimental})`);
-          
-          // 即使找到了单个算子工程，如果还没达到最大深度，继续扫描子目录
-          // 因为子目录中可能还有算子工程（例如：math/accumulate_nv2 这种情况）
-          if (currentDepth < maxDepth) {
-            for (const entry of entries) {
-              if (entry.isDirectory()) {
-                const dirName = entry.name;
-                // 跳过一些常见的非算子工程目录
-                if (
-                  dirName.startsWith('.') ||
-                  dirName === 'node_modules' ||
-                  dirName === 'out' ||
-                  dirName === 'build'
-                ) {
-                  continue;
-                }
-
-                const subDirPath = path.join(dirPath, entry.name);
-                // 检查子目录是否已经在结果中（避免重复扫描）
-                const alreadyScanned = results.some(r => r.path === subDirPath);
-                if (!alreadyScanned) {
-                  await this.scanStandardCustomOperatorsRecursive(
-                    subDirPath,
-                    currentDepth + 1,
-                    maxDepth,
-                    results,
-                    experimentalPath,
-                  );
-                }
-              }
-            }
-          }
-          return;
-        }
-      } else {
-        // 当前目录不是算子工程，继续扫描子目录
-        if (currentDepth < maxDepth) {
-          for (const entry of entries) {
-            if (entry.isDirectory()) {
-              const dirName = entry.name;
-              // 跳过一些常见的非算子工程目录
-              if (
-                dirName.startsWith('.') ||
-                dirName === 'node_modules' ||
-                dirName === 'out' ||
-                dirName === 'build'
-              ) {
-                continue;
-              }
-
-              const subDirPath = path.join(dirPath, entry.name);
-              await this.scanStandardCustomOperatorsRecursive(
-                subDirPath,
-                currentDepth + 1,
-                maxDepth,
-                results,
-                experimentalPath,
-              );
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.warn(`[WorkspaceDetectorService] 扫描目录失败 ${dirPath}: ${error}`);
-    }
-  }
 
   /**
    * 注册单个算子工程

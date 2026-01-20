@@ -24,6 +24,7 @@ import {
   cpuDebugConfig,
   navigateToTab,
   checkMultipleOperators,
+  getProjectType,
 } from '@web/apis';
 import { SettingOutlined, CheckOutlined } from '@ant-design/icons-vue';
 
@@ -43,6 +44,9 @@ const hasDevtoolConfig = ref(false);
 
 // 调试模式开关
 const debugModeEnabled = ref(false);
+
+// 当前项目类型
+const projectTypeName = ref('');
 
 // 需要互斥的操作按钮（执行时其他按钮应该禁用）
 const mutuallyExclusiveKeys = [
@@ -312,11 +316,54 @@ onMounted(async () => {
     debugModeEnabled.value = true; // 默认开启
   }
 
+  // 获取当前项目类型
+  try {
+    const result = await getProjectType();
+    projectTypeName.value = result.projectTypeName || '未知';
+    console.log('[Operate] 当前项目类型:', projectTypeName.value);
+  }
+  catch (error) {
+    console.error('[Operate] 获取项目类型失败:', error);
+    projectTypeName.value = '未知';
+  }
+
   // 检查是否有多个算子工程
   try {
     const result = await checkMultipleOperators();
     hasMultipleOperators.value = result.hasMultiple || false;
     console.log('[Operate] 是否有多个算子工程:', hasMultipleOperators.value);
+
+    // 如果是标准自定义算子，更新算子列表
+    if (result.isStandardCustom && result.operators) {
+      // 清空模拟数据
+      compiledOperators.value = [];
+      preparedOperators.value = [];
+
+      // 根据是否experimental分类
+      result.operators.forEach((op) => {
+        const operatorItem = {
+          id: String(op.id),
+          name: op.name,
+          hasEx: op.isExperimental,
+        };
+
+        // 暂时都放到编译成功的算子工程列表中
+        // 可以根据实际需求调整分类逻辑
+        compiledOperators.value.push(operatorItem);
+      });
+
+      // 同时更新 configArray，用于选择器显示
+      // experimental 算子的名称后面加上 "ex"
+      configArray.value = result.operators.map((op) => ({
+        config_name: op.isExperimental ? `${op.name}ex` : op.name,
+        id: op.id,
+        name: op.name,
+        isExperimental: op.isExperimental,
+      }));
+
+      console.log('[Operate] 标准自定义算子，加载算子列表:', compiledOperators.value);
+      console.log('[Operate] 标准自定义算子，加载配置列表:', configArray.value);
+    }
   }
   catch (error) {
     console.error('[Operate] 检查多个算子工程失败:', error);
@@ -662,7 +709,7 @@ const handlePopoverOpenChange = (open) => {
       <template v-else>
         <div
           v-if="false"
-          class="text-sm flex items-center gap-2 mt-3 mb-3"
+          class="text-sm flex items-center gap-2 mt-3 mb-3 px-3"
         >
           目标算子
           <a-select
