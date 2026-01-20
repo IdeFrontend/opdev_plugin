@@ -95,10 +95,21 @@ export function getOpByProjectIdAndOpName(
   return found || null;
 }
 
+/**
+ * 获取项目下的所有算子
+ * @param project_id 项目ID
+ * @returns 算子列表
+ */
+export function getOpsByProjectId(project_id: number): OpRecord[] {
+  const store = ensureStore();
+  return store.ops.filter((o) => o.project_id === project_id);
+}
+
 export async function generateStructure(
   data: Partial<OpRecord>,
   extensionPath: string,
-  isSkipUnZip: boolean = false
+  isSkipUnZip: boolean = false,
+  skipVscodeFiles: boolean = false
 ): Promise<number> {
   // 1) basic checks
   const project = projectModel.getProjectById(data.project_id as number);
@@ -136,17 +147,23 @@ export async function generateStructure(
   console.log('generateStructure: 算子工程路径 (op_path):', opPath);
   console.log('generateStructure: project.project_path:', project.project_path);
   console.log('generateStructure: create_by:', data.create_by);
+  console.log('generateStructure: skipVscodeFiles:', skipVscodeFiles);
 
-  try {
-    await ensureLaunchJsonExists(
-      opPath,
-      data.create_by,
-    );
-    console.log('generateStructure: 配置文件创建完成');
-  }
-  catch (error) {
-    console.error('generateStructure: 配置文件创建失败:', error);
-    // 配置文件创建失败不应该阻止算子创建，只记录错误
+  // 如果 skipVscodeFiles 为 true，跳过创建 .vscode 和 .arts 文件
+  if (!skipVscodeFiles) {
+    try {
+      await ensureLaunchJsonExists(
+        opPath,
+        data.create_by,
+      );
+      console.log('generateStructure: 配置文件创建完成');
+    }
+    catch (error) {
+      console.error('generateStructure: 配置文件创建失败:', error);
+      // 配置文件创建失败不应该阻止算子创建，只记录错误
+    }
+  } else {
+    console.log('generateStructure: 跳过创建 .vscode 和 .arts 文件');
   }
 
   // 3) get generator and parse meta
@@ -227,6 +244,11 @@ export async function generateStructure(
 
   try {
     if (project) {
+      console.log('generateStructure: 开始获取默认路径, record:', {
+        op_name: record.op_name,
+        op_type: record.op_type,
+        op_path: record.op_path,
+      });
       const {
         opScriptPath,
         exampleScriptPath,
@@ -234,6 +256,13 @@ export async function generateStructure(
         targetOpFile,
         targetExampleFile,
       } = getDefaultPath(record);
+      console.log('generateStructure: 默认路径获取成功:', {
+        opScriptPath,
+        exampleScriptPath,
+        targetDir,
+        targetOpFile,
+        targetExampleFile,
+      });
       // Build: 创建 build_op 和 build_example 两种配置
       // 如果是 torch_library_template 类型，设置 target_file 为 python ../run.py
       const targetFile = record.template_name === 'torch_library_template' 
@@ -383,8 +412,12 @@ export async function generateStructure(
   }
   catch (e) {
     // 忽略配置创建错误，但打印日志以便调试
-
     console.error('generateStructure: failed to create default configs', e);
+    if (e instanceof Error) {
+      console.error('generateStructure: 错误详情:', e.message);
+      console.error('generateStructure: 错误堆栈:', e.stack);
+    }
+    // 不抛出错误，让算子记录能够创建成功
   }
 
   return nextId;

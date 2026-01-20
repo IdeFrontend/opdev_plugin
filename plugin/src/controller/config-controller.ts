@@ -9,9 +9,12 @@ import {
   SaveConfigParams,
   RemotePathSearchParams,
   RemotePathSearchResult,
+  OperatorInfo,
 } from '@shared/api-types';
+import { getOpsByProjectId } from '@plugin/domain/models/model';
 
 let targetTab: string | undefined;
+let targetOperator: { opName: string; projectId?: number } | undefined;
 
 export const configMethods = {
   /**
@@ -24,6 +27,18 @@ export const configMethods = {
     targetTab = undefined; // 读取后立即清除
 
     return tab;
+  },
+
+  /**
+   * 获取目标算子并清除
+   * @returns 目标算子信息
+   */
+  async getTargetOperator(): Promise<{ opName: string; projectId?: number } | undefined> {
+    const operator = targetOperator;
+
+    targetOperator = undefined; // 读取后立即清除
+
+    return operator;
   },
   /**
    * 获取构建配置列表
@@ -39,21 +54,88 @@ export const configMethods = {
 
   /**
    * 获取配置数据
+   * @param params 参数对象，包含 opName 和 projectId
    * @returns 配置数据
    */
-  async getConfigData(): Promise<GetConfigDataResult> {
-    // 确保projectId已初始化
-    await ProjectManager.getInstance()
-      .ensureProjectId();
-    const buildConfigs = await buildService.getBuildConfigsList();
-
-    console.log('buildConfigs', buildConfigs);
-
-    if (!buildConfigs.length) {
-      return {};
+  async getConfigData(params?: { opName?: string; projectId?: number } | string): Promise<GetConfigDataResult> {
+    // 兼容旧版本：如果传入的是字符串，当作 opName 处理
+    let opName: string | undefined;
+    let projectId: number | undefined;
+    
+    if (typeof params === 'string') {
+      opName = params;
+    } else if (params) {
+      opName = params.opName;
+      projectId = params.projectId;
+    }
+    // 如果指定了projectId，临时设置ProjectManager的projectId
+    const pm = ProjectManager.getInstance();
+    const originalProjectId = pm.projectId;
+    
+    if (projectId) {
+      // 临时设置projectId
+      (pm as any)._projectId = String(projectId);
+    } else {
+      // 确保projectId已初始化
+      await pm.ensureProjectId();
     }
 
-    return { [buildConfigs[0].config_name]: buildConfigs };
+    try {
+      const buildConfigs = await buildService.getBuildConfigsList();
+
+      console.log('getConfigData: buildConfigs', buildConfigs);
+      console.log('getConfigData: opName', opName, 'projectId', projectId || pm.projectId);
+
+      if (!buildConfigs.length) {
+        return {};
+      }
+
+      // 如果指定了算子名称，只返回该算子的配置
+      if (opName) {
+        // 从user_options中获取config_name进行匹配
+        const filteredConfigs = buildConfigs.filter(config => {
+          const configName = (config.user_options as any)?.config_name || config.config_name;
+          return configName === opName;
+        });
+        if (filteredConfigs.length > 0) {
+          return { [opName]: filteredConfigs };
+        }
+        return {};
+      }
+
+      // 如果没有指定算子名称，返回第一个算子的配置
+      const firstConfigName = (buildConfigs[0].user_options as any)?.config_name || buildConfigs[0].config_name;
+      return { [firstConfigName]: buildConfigs };
+    } finally {
+      // 恢复原来的projectId
+      if (projectId) {
+        (pm as any)._projectId = originalProjectId;
+      }
+    }
+  },
+
+  /**
+   * 获取当前项目下的所有算子列表
+   * @returns 算子列表
+   */
+  async getOperators(): Promise<OperatorInfo[]> {
+    // 确保projectId已初始化
+    const pm = ProjectManager.getInstance();
+    await pm.ensureProjectId();
+    
+    const projectId = parseInt(pm.projectId || '0', 10);
+    if (!projectId) {
+      return [];
+    }
+
+    const ops = getOpsByProjectId(projectId);
+    return ops.map(op => ({
+      id: op.id,
+      op_name: op.op_name,
+      op_type: op.op_type,
+      op_path: op.op_path,
+      config_name: op.op_name,
+    }));
   },
 
   /**
@@ -133,9 +215,16 @@ export const configMethods = {
    * 打开配置页面
    * @param params 参数
    */
-  async openConfig(params: { configName?: string, key?: string }) {
+  async openConfig(params: { configName?: string, key?: string, opName?: string, projectId?: number }) {
     if (params.key) {
       targetTab = params.key;
+    }
+
+    if (params.opName) {
+      targetOperator = {
+        opName: params.opName,
+        projectId: params.projectId,
+      };
     }
 
     if (params.configName) {
