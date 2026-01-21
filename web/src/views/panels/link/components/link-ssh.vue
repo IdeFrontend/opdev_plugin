@@ -67,6 +67,7 @@ const items_type = [
     desc: '创建<<<>>>调用的addn工程样例，支持".asc"后缀的异构编译。',
   },
   { id: 2, title: '【Ascend C】标准自定义算子工程', desc: '基于Ascend C语言的标准自定义算子工程，op_host存放在CPC侧的代码实现，op_kermel存放NPU侧的代码实现，op_graph存放图模式下的代码实现 <span style="color: #ff4d4f; font-weight: bold;">(因为该算子的编译依赖ops-math项目，该算子将自动放到ops-math项目中math目录中，后续提交代码需要迁移到自己的fork代码仓中操作)</span>' },
+  { id: 3, title: '【Python】pyasc算子工程', desc: '创建<<<>>>调用的hallo_world工程样例，支持.asc后缀的异构编译' },
 ];
 
 const tipBase_0 = jsonUrl.url
@@ -100,14 +101,20 @@ const connectionFormRules = FormRulesFactory.createFormRules();
               >
                 {{ item.id === 1 ? getTemplateDesc(selectedTemplate) : item.desc }}
               </div>
-              <a-tag color="blue" class="mt-2.5 mr-2">
+              <a-tag v-if="item.id === 1 || item.id === 2" color="blue" class="mt-2.5 mr-2">
                 语言：Ascend C
+              </a-tag>
+              <a-tag v-if="item.id === 3" color="blue" class="mt-2.5 mr-2">
+                语言：Python
               </a-tag>
               <a-tag v-if="item.id === 1" color="purple" class="mt-2.5 mr-2">
                 类型：<<<>>>
               </a-tag>
               <a-tag v-if="item.id === 2" color="green" class="mt-2.5 mr-2">
                 类型：标准自定义
+              </a-tag>
+              <a-tag v-if="item.id === 3" color="purple" class="mt-2.5 mr-2">
+                类型：pyasc
               </a-tag>
               <div
                 v-if="item.id === 1"

@@ -104,6 +104,7 @@ export async function handleOperatorProjectDirectoryFile(
     && [
       1,
       2,
+      3,
     ].includes(message.createOperatorProjectDirectoryFileType)
   ) {
     console.log('handleOperatorProjectDirectoryFile: 类型验证通过，开始处理');
@@ -136,6 +137,34 @@ export async function handleOperatorProjectDirectoryFile(
           templateName,
         });
         console.log('算子原型创建完成');
+
+        // 清理 templateName
+        if (templateName) {
+          context.globalState.update('templateName', undefined);
+        }
+
+        await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+      }
+
+      if (message.createOperatorProjectDirectoryFileType === 3) {
+        // pyasc 算子工程，使用模板创建
+        console.log('开始创建 pyasc 算子（类型3）...');
+        const pm = ProjectManager.getInstance();
+
+        if (!pm.projectId) {
+          console.log('projectId 未设置，尝试初始化项目...');
+          await pm.ensureProjectId();
+        }
+
+        console.log('当前 projectId:', pm.projectId);
+        console.log('开始创建 pyasc 算子原型...');
+
+        await welcomeMethods.createOpsByPrototype({
+          opsPrototypeFile: '',
+          opType: 'pyasc',
+          templateName,
+        });
+        console.log('pyasc 算子原型创建完成');
 
         // 清理 templateName
         if (templateName) {

@@ -550,9 +550,12 @@ export class WorkspaceDetectorService {
           console.log('[WorkspaceDetectorService] 算子类型: TORCH_LIBRARY, 使用 torch_library_template 模板');
           break;
         case OperatorProjectType.PYASC:
-          // pyasc算子工程，不需要模板
-          console.log('[WorkspaceDetectorService] 算子类型: PYASC, 跳过初始化');
-          return;
+          // pyasc算子工程，使用 pyasc_temple 模板
+          templateName = 'pyasc_temple';
+          opType = 'pyasc';
+          createOperatorProjectDictoryFileType = 3;
+          console.log('[WorkspaceDetectorService] 算子类型: PYASC, 使用 pyasc_temple 模板');
+          break;
         case OperatorProjectType.STANDARD_CUSTOM:
           // 标准自定义算子工程
           opType = 'cann';

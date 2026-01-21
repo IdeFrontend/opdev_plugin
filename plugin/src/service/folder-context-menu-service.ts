@@ -860,9 +860,11 @@ export class FolderContextMenuService {
           opType = 'ascend';
           break;
         case OperatorProjectType.PYASC:
-          // pyasc算子工程，不需要初始化
-          console.log(`[FolderContextMenuService] PYASC类型，跳过初始化`);
-          return;
+          // pyasc算子工程，使用 pyasc_temple 模板
+          templateName = 'pyasc_temple';
+          opType = 'pyasc';
+          console.log(`[FolderContextMenuService] PYASC类型，使用 pyasc_temple 模板`);
+          break;
         case OperatorProjectType.STANDARD_CUSTOM:
           opType = 'cann';
           // 标准自定义算子不需要模板
