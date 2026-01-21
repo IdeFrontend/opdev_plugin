@@ -32,17 +32,11 @@ export class FolderContextMenuService {
    */
   static async markAsOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
-    
+
     try {
       // 1. 先检测当前目录本身是否为算子工程（与初始化逻辑一致）
-      console.log(`[markAsOperatorProject] 检测当前目录是否为算子工程: ${folderPath}`);
       const rootDetection = await OperatorProjectDetector.detectOperatorProject(folderPath);
-      console.log(`[markAsOperatorProject] 当前目录检测结果:`, {
-        isOperatorProject: rootDetection.isOperatorProject,
-        projectType: rootDetection.projectType,
-        projectName: rootDetection.projectName,
-      });
-      
+
       if (rootDetection.isOperatorProject && rootDetection.projectType) {
         // 当前目录就是算子工程
         // 检查是否已注册
@@ -51,7 +45,7 @@ export class FolderContextMenuService {
           vscode.window.showInformationMessage('该文件夹已经是算子工程');
           return;
         }
-        
+
         // 如果是标准自定义算子，需要特殊处理（扫描子目录看是否有多个算子工程）
         if (rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM) {
           // 标准自定义算子，扫描子目录看是否有多个算子工程
@@ -59,24 +53,22 @@ export class FolderContextMenuService {
             folderPath,
             3,
           );
-          
+
           // 如果找到多个算子工程（包括当前目录），自动标记为多算子工程集合
           if (detectedProjects.length > 1) {
-            console.log(`[markAsOperatorProject] 检测到 ${detectedProjects.length} 个算子工程，自动标记为多算子工程集合`);
-            
             // 检查是否已注册为多算子工程集合
             const existingMulti = getProjectByPath(folderPath);
             if (existingMulti && existingMulti.project_type === OperatorProjectType.MULTI_PROJECT) {
               vscode.window.showInformationMessage('该文件夹已经是算子工程集合');
               return;
             }
-            
+
             // 注册子项目
             const subProjectIds: number[] = [];
             const initializationTasks: Array<() => Promise<void>> = [];
             for (const detection of detectedProjects) {
               if (!detection.projectType) continue;
-              
+
               let subProject = getProjectByPath(detection.projectPath);
               if (!subProject) {
                 const subId = await createProject({
@@ -91,18 +83,16 @@ export class FolderContextMenuService {
                 subProjectIds.push(subProject.id);
               }
             }
-            
+
             // 并行执行所有初始化任务
             if (initializationTasks.length > 0) {
-              console.log(`[markAsOperatorProject] 开始并行初始化 ${initializationTasks.length} 个算子工程`);
               await Promise.allSettled(
                 initializationTasks.map(task => task().catch(error => {
-                  console.error(`[markAsOperatorProject] 初始化失败:`, error);
                   throw error;
                 }))
               );
             }
-            
+
             // 注册多算子工程集合
             const projectName = path.basename(folderPath);
             await createProject({
@@ -111,7 +101,7 @@ export class FolderContextMenuService {
               project_type: OperatorProjectType.MULTI_PROJECT,
               sub_project_ids: subProjectIds,
             });
-            
+
             // 更新图标主题
             const context1 = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
               .extensionContext;
@@ -119,50 +109,47 @@ export class FolderContextMenuService {
               const iconTheme = OperatorProjectIconTheme.getInstance(context1);
               iconTheme.fireDecorationUpdate(vscode.Uri.file(folderPath));
             }
-            
+
             vscode.window.showInformationMessage(`已自动标记为算子工程集合（包含 ${detectedProjects.length} 个算子工程）: ${projectName}`);
             return;
           }
         }
-        
+
         // 单个算子工程，直接标记
         const projectId = await createProject({
           project_name: rootDetection.projectName,
           project_path: folderPath,
           project_type: rootDetection.projectType,
         });
-        
+
         // 初始化算子工程配置
         await this.initializeOperatorProject(rootDetection, projectId);
-        
+
         vscode.window.showInformationMessage(`已标记为算子工程: ${rootDetection.projectName}`);
         return;
       }
-      
+
       // 2. 当前目录不是算子工程，扫描子目录看是否有多个算子工程
-      console.log(`[markAsOperatorProject] 当前目录不是算子工程，扫描子目录`);
       const detectedProjects = await OperatorProjectDetector.scanForOperatorProjects(
         folderPath,
         3,
       );
-      
+
       // 如果找到多个算子工程，自动标记为多算子工程集合
       if (detectedProjects.length > 1) {
-        console.log(`[markAsOperatorProject] 检测到 ${detectedProjects.length} 个算子工程，自动标记为多算子工程集合`);
-        
         // 检查是否已注册为多算子工程集合
         const existing = getProjectByPath(folderPath);
         if (existing && existing.project_type === OperatorProjectType.MULTI_PROJECT) {
           vscode.window.showInformationMessage('该文件夹已经是算子工程集合');
           return;
         }
-        
+
         // 注册子项目
         const subProjectIds: number[] = [];
         const initializationTasks: Array<() => Promise<void>> = [];
         for (const detection of detectedProjects) {
           if (!detection.projectType) continue;
-          
+
           let subProject = getProjectByPath(detection.projectPath);
           if (!subProject) {
             const subId = await createProject({
@@ -177,18 +164,16 @@ export class FolderContextMenuService {
             subProjectIds.push(subProject.id);
           }
         }
-        
+
         // 并行执行所有初始化任务
         if (initializationTasks.length > 0) {
-          console.log(`[markAsOperatorProject] 开始并行初始化 ${initializationTasks.length} 个算子工程`);
           await Promise.allSettled(
             initializationTasks.map(task => task().catch(error => {
-              console.error(`[markAsOperatorProject] 初始化失败:`, error);
               throw error;
             }))
           );
         }
-        
+
         // 注册多算子工程集合
         const projectName = path.basename(folderPath);
         await createProject({
@@ -197,7 +182,7 @@ export class FolderContextMenuService {
           project_type: OperatorProjectType.MULTI_PROJECT,
           sub_project_ids: subProjectIds,
         });
-        
+
         // 更新图标主题
         const context1 = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
           .extensionContext;
@@ -205,22 +190,22 @@ export class FolderContextMenuService {
           const iconTheme = OperatorProjectIconTheme.getInstance(context1);
           iconTheme.fireDecorationUpdate(vscode.Uri.file(folderPath));
         }
-        
+
         vscode.window.showInformationMessage(`已自动标记为算子工程集合（包含 ${detectedProjects.length} 个算子工程）: ${projectName}`);
         return;
       }
-      
+
       // 3. 既不是算子工程，子目录也没有多个算子工程，提示用户
       const result = await vscode.window.showWarningMessage(
         `文件夹 "${path.basename(folderPath)}" 不是算子工程，是否仍要标记？`,
         '是',
         '否',
       );
-      
+
       if (result !== '是') {
         return;
       }
-      
+
       // 用户选择强制标记，使用默认类型
       const projectName = path.basename(folderPath);
       const projectId = await createProject({
@@ -228,7 +213,7 @@ export class FolderContextMenuService {
         project_path: folderPath,
         project_type: OperatorProjectType.ASCEND_C, // 默认类型
       });
-      
+
       // 初始化算子工程配置
       const forceDetection: OperatorProjectDetectionResult = {
         isOperatorProject: true,
@@ -237,7 +222,7 @@ export class FolderContextMenuService {
         projectName,
       };
       await this.initializeOperatorProject(forceDetection, projectId);
-      
+
       // 触发装饰更新
       const context2 = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
         .extensionContext;
@@ -245,7 +230,7 @@ export class FolderContextMenuService {
         const iconTheme = OperatorProjectIconTheme.getInstance(context2);
         iconTheme.fireDecorationUpdate(vscode.Uri.file(folderPath));
       }
-      
+
       vscode.window.showInformationMessage(`已标记为算子工程: ${projectName}`);
     } catch (error) {
       vscode.window.showErrorMessage(
@@ -264,58 +249,29 @@ export class FolderContextMenuService {
    */
   static async markAsMultiOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
-    
+
     try {
       // 使用标准自定义算子的扫描规则（只识别标准自定义算子）
-      console.log(`[markAsMultiOperatorProject] 开始扫描标准自定义算子工程: ${folderPath}`);
-      const detectedProjects = await OperatorProjectDetector.scanForStandardCustomOperatorProjects(
-        folderPath,
-        3,
-      );
-      console.log(`[markAsMultiOperatorProject] 扫描完成，找到 ${detectedProjects.length} 个标准自定义算子工程`);
-      
-      if (detectedProjects.length === 0) {
-        const result = await vscode.window.showWarningMessage(
-          `文件夹 "${path.basename(folderPath)}" 下未发现算子工程，是否仍要标记为算子工程集合？`,
-          '是',
-          '否',
-        );
-        
-        if (result !== '是') {
-          return;
-        }
-      }
-      
-      // 检查是否已注册
-      const existing = getProjectByPath(folderPath);
-      if (existing && existing.project_type === OperatorProjectType.MULTI_PROJECT) {
-        vscode.window.showInformationMessage('该文件夹已经是算子工程集合');
-        return;
-      }
-      
+      const detectedProjects = await OperatorProjectDetector.scanForStandardCustomOperatorProjects( folderPath );
+
       // 检查根目录下是否存在 experimental 文件夹
       // 如果当前目录本身就是 experimental 目录，则 experimentalPath 就是当前目录
       const folderName = path.basename(folderPath).toLowerCase();
       const isExperimentalFolder = folderName === 'experimental';
-      const experimentalPath = isExperimentalFolder 
-        ? folderPath 
+      const experimentalPath = isExperimentalFolder
+        ? folderPath
         : path.join(folderPath, 'experimental');
-      const hasExperimental = isExperimentalFolder || 
+      const hasExperimental = isExperimentalFolder ||
         (fs.existsSync(experimentalPath) && fs.statSync(experimentalPath).isDirectory());
-      
-      console.log(`[markAsMultiOperatorProject] folderPath: ${folderPath}`);
-      console.log(`[markAsMultiOperatorProject] isExperimentalFolder: ${isExperimentalFolder}`);
-      console.log(`[markAsMultiOperatorProject] experimentalPath: ${experimentalPath}`);
-      console.log(`[markAsMultiOperatorProject] hasExperimental: ${hasExperimental}`);
-      
+
       // 分类算子工程：experimental算子和普通算子
       const experimentalOperators: OperatorProjectDetectionResult[] = [];
       const normalOperators: OperatorProjectDetectionResult[] = [];
-      
+
       for (const detection of detectedProjects) {
         // 如果当前目录本身就是 experimental，那么所有子目录都是 experimental 算子
         // 否则，检查路径是否在 experimental 目录下
-        const isExperimental = isExperimentalFolder 
+        const isExperimental = isExperimentalFolder
           ? true  // 如果当前目录是 experimental，所有子目录都是 experimental 算子
           : detection.projectPath.toLowerCase().startsWith(experimentalPath.toLowerCase());
         if (isExperimental) {
@@ -324,44 +280,33 @@ export class FolderContextMenuService {
           normalOperators.push(detection);
         }
       }
-      
-      console.log(`[markAsMultiOperatorProject] experimental算子: ${experimentalOperators.length} 个`);
-      console.log(`[markAsMultiOperatorProject] 普通算子: ${normalOperators.length} 个`);
-      
+
       // 注册所有算子工程（标记experimental属性）
       // 这是关键步骤：确保所有检测到的算子工程都被标记为算子工程
       const subProjectIds: number[] = [];
-      const initializationTasks: Array<() => Promise<void>> = [];
-      console.log(`[markAsMultiOperatorProject] 开始注册 ${detectedProjects.length} 个算子工程`);
-      
+
       // 第一步：先注册所有项目（串行，确保数据库操作安全）
       for (const detection of detectedProjects) {
         if (!detection.projectType) {
-          console.warn(`[markAsMultiOperatorProject] 跳过无类型的算子工程: ${detection.projectPath}`);
           continue;
         }
-        
+
         // 跳过集合根目录本身，即使它也被检测为算子工程，也不应该初始化
         // 因为它是作为集合被标记的，不应该在集合根目录下创建 .vscode 和 .arts 文件
         const normalizedDetectionPath = path.normalize(detection.projectPath);
         const normalizedFolderPath = path.normalize(folderPath);
         if (normalizedDetectionPath === normalizedFolderPath) {
-          console.log(`[markAsMultiOperatorProject] 跳过集合根目录本身: ${detection.projectPath}`);
           continue;
         }
-        
+
         // 判断是否是 experimental 算子（与上面的分类逻辑保持一致）
-        const isExperimental = isExperimentalFolder 
+        const isExperimental = isExperimentalFolder
           ? true  // 如果当前目录是 experimental，所有子目录都是 experimental 算子
           : detection.projectPath.toLowerCase().startsWith(experimentalPath.toLowerCase());
         let subProject = getProjectByPath(detection.projectPath);
-        
-        // 对于标准自定义算子，在集合中识别出的算子工程不需要创建 .vscode 和 .arts 文件
-        const shouldSkipVscodeFiles = detection.projectType === OperatorProjectType.STANDARD_CUSTOM;
-        
+
         if (!subProject) {
           // 子目录是算子工程，但还没有被标记，需要标记为算子工程
-          console.log(`[markAsMultiOperatorProject] 标记算子工程: ${detection.projectName} (${detection.projectPath}), experimental: ${isExperimental}`);
           const subId = await createProject({
             project_name: detection.projectName,
             project_path: detection.projectPath,
@@ -369,15 +314,9 @@ export class FolderContextMenuService {
             is_experimental: isExperimental,
           });
           subProjectIds.push(subId);
-          console.log(`[markAsMultiOperatorProject] 已标记算子工程: ${detection.projectName}, ID: ${subId}`);
-          
-          // 收集初始化任务，稍后并行执行
-          initializationTasks.push(() => this.initializeOperatorProject(detection, subId, shouldSkipVscodeFiles));
         } else {
           // 子目录已经是算子工程，更新experimental标记（如果需要）
-          console.log(`[markAsMultiOperatorProject] 算子工程已存在: ${detection.projectName} (${detection.projectPath}), ID: ${subProject.id}`);
           if (subProject.is_experimental !== isExperimental) {
-            console.log(`[markAsMultiOperatorProject] 更新experimental标记: ${detection.projectName}, ${subProject.is_experimental} -> ${isExperimental}`);
             await createProject({
               project_name: detection.projectName,
               project_path: detection.projectPath,
@@ -386,40 +325,12 @@ export class FolderContextMenuService {
             });
           }
           subProjectIds.push(subProject.id);
-          
-          // 收集初始化任务，稍后并行执行
-          initializationTasks.push(() => this.checkAndInitializeOperatorProject(detection, subProject.id, shouldSkipVscodeFiles));
         }
       }
-      console.log(`[markAsMultiOperatorProject] 算子工程注册完成，共 ${subProjectIds.length} 个`);
-      
-      // 第二步：并行执行所有初始化任务
-      if (initializationTasks.length > 0) {
-        console.log(`[markAsMultiOperatorProject] 开始并行初始化 ${initializationTasks.length} 个算子工程`);
-        const startTime = Date.now();
-        // 使用 Promise.allSettled 确保即使某个初始化失败，其他也能继续
-        const results = await Promise.allSettled(
-          initializationTasks.map((task, index) => {
-            console.log(`[markAsMultiOperatorProject] 启动初始化任务 ${index + 1}/${initializationTasks.length}`);
-            return task().catch(error => {
-              console.error(`[markAsMultiOperatorProject] 初始化任务 ${index + 1} 失败:`, error);
-              throw error; // 重新抛出以便 Promise.allSettled 捕获
-            });
-          })
-        );
-        const endTime = Date.now();
-        const successCount = results.filter(r => r.status === 'fulfilled').length;
-        const failCount = results.filter(r => r.status === 'rejected').length;
-        console.log(`[markAsMultiOperatorProject] 并行初始化完成，成功: ${successCount}, 失败: ${failCount}, 耗时: ${endTime - startTime}ms`);
-        
-        if (failCount > 0) {
-          console.warn(`[markAsMultiOperatorProject] 有 ${failCount} 个算子工程初始化失败，但继续执行后续操作`);
-        }
-      }
-      
+
       // 手动标记为算子合集时，只标记子目录为算子工程，不会将子目录标记为算子合集
       // 移除将子目录标记为算子合集的逻辑
-      
+
       // 标记 experimental 文件夹为算子工程集合（如果存在且当前目录不是 experimental 本身）
       if (hasExperimental && !isExperimentalFolder) {
         const existingExperimental = getProjectByPath(experimentalPath);
@@ -427,17 +338,16 @@ export class FolderContextMenuService {
           const experimentalProjectIds = experimentalOperators
             .map(p => getProjectByPath(p.projectPath)?.id)
             .filter((id): id is number => id !== undefined);
-          
+
           await createProject({
             project_name: 'experimental',
             project_path: experimentalPath,
             project_type: OperatorProjectType.MULTI_PROJECT,
             sub_project_ids: experimentalProjectIds.length > 0 ? experimentalProjectIds : undefined,
           });
-          console.log(`[markAsMultiOperatorProject] 已标记 experimental 为算子工程集合`);
         }
       }
-      
+
       // 注册多算子工程集合
       const projectName = path.basename(folderPath);
       await createProject({
@@ -446,25 +356,16 @@ export class FolderContextMenuService {
         project_type: OperatorProjectType.MULTI_PROJECT,
         sub_project_ids: subProjectIds,
       });
-      
-      // 手动标记为算子合集后，不调用自动检测，避免将子目录标记为算子合集
-      // 更新图标主题（更新所有已标记的项目路径）
-      const context = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
-        .extensionContext;
-      if (context) {
-        const iconTheme = OperatorProjectIconTheme.getInstance(context);
-        // 收集所有需要更新的路径：根目录、experimental目录（如果存在）、所有子项目
-        const urisToUpdate = [
-          vscode.Uri.file(folderPath),
-          ...detectedProjects.map(p => vscode.Uri.file(p.projectPath)),
-        ];
-        if (hasExperimental && !isExperimentalFolder) {
-          urisToUpdate.push(vscode.Uri.file(experimentalPath));
-        }
-        iconTheme.fireDecorationUpdate(urisToUpdate);
-      }
 
-      vscode.window.showInformationMessage(`已标记为算子工程集合: ${projectName}`);
+      // 手动标记为算子合集后，不调用自动检测，避免将子目录标记为算子合集
+
+      // 收集实际被标记的算子工程列表（排除根目录本身）
+      const markedProjects = detectedProjects.filter(detection => {
+        const normalizedDetectionPath = path.normalize(detection.projectPath);
+        const normalizedFolderPath = path.normalize(folderPath);
+        return normalizedDetectionPath !== normalizedFolderPath && detection.projectType;
+      });
+
     } catch (error) {
       vscode.window.showErrorMessage(
         `标记为算子工程集合失败: ${error instanceof Error ? error.message : String(error)}`,
@@ -477,20 +378,20 @@ export class FolderContextMenuService {
    */
   static async unmarkAsOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
-    
+
     try {
       const project = getProjectByPath(folderPath);
       if (!project) {
         // 不是算子工程，静默返回（不显示提示，因为菜单可能因为上下文变量未更新而显示）
         return;
       }
-      
+
       // 检查是否是算子工程集合，如果是则提示用户
       if (project.project_type === OperatorProjectType.MULTI_PROJECT) {
         vscode.window.showWarningMessage('该文件夹是算子工程集合，请使用"取消标记为算子工程集合"');
         return;
       }
-      
+
       // 直接删除项目，不需要二次确认
       const deleted = deleteProject(folderPath);
       if (deleted) {
@@ -501,7 +402,7 @@ export class FolderContextMenuService {
           const iconTheme = OperatorProjectIconTheme.getInstance(context);
           iconTheme.fireDecorationUpdate(vscode.Uri.file(folderPath));
         }
-        
+
         vscode.window.showInformationMessage('已取消标记为算子工程');
       } else {
         vscode.window.showErrorMessage('取消标记失败');
@@ -519,30 +420,28 @@ export class FolderContextMenuService {
    */
   static async unmarkAsMultiOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
-    
+
     try {
       const project = getProjectByPath(folderPath);
       if (!project) {
         // 不是算子工程集合，静默返回（不显示提示，因为菜单可能因为上下文变量未更新而显示）
         return;
       }
-      
+
       // 检查是否是算子工程集合
       if (project.project_type !== OperatorProjectType.MULTI_PROJECT) {
         vscode.window.showWarningMessage('该文件夹不是算子工程集合，请使用"取消标记为算子工程"');
         return;
       }
-      
+
       const deletedSubProjects: string[] = [];
       const failedSubProjects: string[] = [];
       const normalizedFolderPath = path.normalize(folderPath);
-      
+
       // 获取所有项目，找出在目标文件夹下的所有算子工程和算子工程集合
       // 这样可以确保取消标记所有已标记为算子的目录，而不仅仅是扫描检测到的
       const allProjects = getAllProjects();
-      
-      console.log(`[unmarkAsMultiOperatorProject] 开始查找目录下所有已标记为算子的目录`);
-      
+
       // 按路径深度排序，先处理深层嵌套的项目，再处理浅层的
       // 这样可以确保在删除父集合之前，先删除子项目
       const projectsInFolder = allProjects
@@ -551,7 +450,7 @@ export class FolderContextMenuService {
           if (proj.project_path === folderPath) {
             return false;
           }
-          
+
           // 检查项目路径是否在目标文件夹下
           const normalizedProjPath = path.normalize(proj.project_path);
           return normalizedProjPath.startsWith(normalizedFolderPath);
@@ -565,9 +464,7 @@ export class FolderContextMenuService {
           const depthB = normalizedB.split(/[/\\]/).filter(p => p.length > 0).length;
           return depthB - depthA;
         });
-      
-      console.log(`[unmarkAsMultiOperatorProject] 找到 ${projectsInFolder.length} 个在目录下的已标记项目`);
-      
+
       // 先取消标记所有算子工程（非集合），再取消标记算子工程集合
       // 这样可以避免在删除集合时，其子项目已经被删除导致的问题
       const operatorProjects = projectsInFolder.filter(
@@ -576,34 +473,30 @@ export class FolderContextMenuService {
       const multiProjects = projectsInFolder.filter(
         proj => proj.project_type === OperatorProjectType.MULTI_PROJECT
       );
-      
+
       // 取消标记所有算子工程（非集合）
       for (const proj of operatorProjects) {
         const deleted = deleteProject(proj.project_path);
         if (deleted) {
           deletedSubProjects.push(proj.project_path);
-          console.log(`[unmarkAsMultiOperatorProject] 已取消标记算子工程: ${proj.project_name} (${proj.project_path})`);
         } else {
           failedSubProjects.push(proj.project_path);
-          console.warn(`[unmarkAsMultiOperatorProject] 取消标记算子工程失败: ${proj.project_name} (${proj.project_path})`);
         }
       }
-      
+
       // 取消标记所有嵌套的算子工程集合（按深度从深到浅）
       for (const proj of multiProjects) {
         const deleted = deleteProject(proj.project_path);
         if (deleted) {
           deletedSubProjects.push(proj.project_path);
-          console.log(`[unmarkAsMultiOperatorProject] 已取消标记嵌套的算子工程集合: ${proj.project_name} (${proj.project_path})`);
         } else {
           failedSubProjects.push(proj.project_path);
-          console.warn(`[unmarkAsMultiOperatorProject] 取消标记嵌套的算子工程集合失败: ${proj.project_name} (${proj.project_path})`);
         }
       }
-      
+
       // 最后删除算子工程集合本身
       const deleted = deleteProject(folderPath);
-      
+
       if (deleted) {
         // 触发装饰更新（更新所有已删除的项目）
         const context = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
@@ -614,7 +507,7 @@ export class FolderContextMenuService {
           const urisToUpdate = [vscode.Uri.file(folderPath), ...deletedSubProjects.map(p => vscode.Uri.file(p))];
           iconTheme.fireDecorationUpdate(urisToUpdate);
         }
-        
+
         const message = failedSubProjects.length > 0
           ? `已取消标记为算子工程集合，已取消标记 ${deletedSubProjects.length} 个子项目，${failedSubProjects.length} 个子项目取消标记失败`
           : `已取消标记为算子工程集合，已取消标记 ${deletedSubProjects.length} 个子项目`;
@@ -635,13 +528,13 @@ export class FolderContextMenuService {
   static async openOperatorProjectConfig(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
     const project = getProjectByPath(folderPath);
-    
+
     // 检查是否是算子工程
     if (!project || project.project_type === OperatorProjectType.MULTI_PROJECT) {
       vscode.window.showWarningMessage('该文件夹不是算子工程');
       return;
     }
-    
+
     await this.switchToProject(uri, async () => {
       // 获取算子名称
       // 对于标准自定义算子，项目名称就是算子名称
@@ -652,7 +545,7 @@ export class FolderContextMenuService {
         // 如果有算子记录，使用第一个算子的名称
         opName = ops[0].op_name;
       }
-      
+
       // 设置目标算子，以便配置页面自动选择
       const { configMethods } = await import('../controller/config-controller.js');
       await configMethods.openConfig({
@@ -669,13 +562,13 @@ export class FolderContextMenuService {
   static async buildOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
     const project = getProjectByPath(folderPath);
-    
+
     // 检查是否是算子工程
     if (!project || project.project_type === OperatorProjectType.MULTI_PROJECT) {
       vscode.window.showWarningMessage('该文件夹不是算子工程');
       return;
     }
-    
+
     await this.switchToProject(uri, async () => {
       // 调用编译命令
       const buildCommand = 'huawei-op-devtools.buildOps';
@@ -689,13 +582,13 @@ export class FolderContextMenuService {
   static async runOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
     const project = getProjectByPath(folderPath);
-    
+
     // 检查是否是算子工程
     if (!project || project.project_type === OperatorProjectType.MULTI_PROJECT) {
       vscode.window.showWarningMessage('该文件夹不是算子工程');
       return;
     }
-    
+
     await this.switchToProject(uri, async () => {
       // 运行验证通过 API 服务器调用，这里先显示提示
       vscode.window.showInformationMessage('请使用操作面板进行运行验证');
@@ -710,13 +603,13 @@ export class FolderContextMenuService {
   static async debugOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
     const project = getProjectByPath(folderPath);
-    
+
     // 检查是否是算子工程
     if (!project || project.project_type === OperatorProjectType.MULTI_PROJECT) {
       vscode.window.showWarningMessage('该文件夹不是算子工程');
       return;
     }
-    
+
     await this.switchToProject(uri, async () => {
       // 打开调试配置
       const debugConfigCommand = 'huawei-op-devtools.debugConfig';
@@ -730,13 +623,13 @@ export class FolderContextMenuService {
   static async sanitizerOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
     const project = getProjectByPath(folderPath);
-    
+
     // 检查是否是算子工程
     if (!project || project.project_type === OperatorProjectType.MULTI_PROJECT) {
       vscode.window.showWarningMessage('该文件夹不是算子工程');
       return;
     }
-    
+
     await this.switchToProject(uri, async () => {
       const sanitizerCommand = 'huawei-op-devtools.sanitizerOptions';
       await vscode.commands.executeCommand(sanitizerCommand);
@@ -749,13 +642,13 @@ export class FolderContextMenuService {
   static async performanceOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
     const project = getProjectByPath(folderPath);
-    
+
     // 检查是否是算子工程
     if (!project || project.project_type === OperatorProjectType.MULTI_PROJECT) {
       vscode.window.showWarningMessage('该文件夹不是算子工程');
       return;
     }
-    
+
     await this.switchToProject(uri, async () => {
       // 打开性能调优配置
       const performanceCommand = 'huawei-op-devtools.simulatorOptions';
@@ -772,19 +665,19 @@ export class FolderContextMenuService {
   ): Promise<void> {
     const folderPath = uri.fsPath;
     const project = getProjectByPath(folderPath);
-    
+
     if (!project) {
       vscode.window.showErrorMessage('该文件夹不是算子工程');
       return;
     }
-    
+
     try {
       // 设置 ProjectManager 的项目信息
       const pm = ProjectManager.getInstance();
       pm['_projectId'] = String(project.id);
       pm['_projectName'] = project.project_name;
       pm['_projectPath'] = project.project_path;
-      
+
       // 执行操作
       await action();
     } catch (error) {
@@ -804,14 +697,14 @@ export class FolderContextMenuService {
   }> {
     const folderPath = uri.fsPath;
     const project = getProjectByPath(folderPath);
-    
+
     if (!project) {
       return {
         isOperatorProject: false,
         isMultiProject: false,
       };
     }
-    
+
     return {
       isOperatorProject: true,
       isMultiProject: project.project_type === OperatorProjectType.MULTI_PROJECT,
@@ -830,19 +723,15 @@ export class FolderContextMenuService {
     projectId: number,
     skipVscodeFiles: boolean = false,
   ): Promise<void> {
-    console.log(`[FolderContextMenuService] 开始初始化算子工程: ${detection.projectName}`);
-    
     if (!detection.isOperatorProject || !detection.projectType) {
-      console.warn(`[FolderContextMenuService] 不是算子工程或类型未定义，跳过初始化`);
       return;
     }
 
     try {
       const context = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
         .extensionContext;
-      
+
       if (!context) {
-        console.warn(`[FolderContextMenuService] 无法获取扩展上下文，跳过初始化`);
         return;
       }
 
@@ -861,21 +750,18 @@ export class FolderContextMenuService {
           break;
         case OperatorProjectType.PYASC:
           // pyasc算子工程，不需要初始化
-          console.log(`[FolderContextMenuService] PYASC类型，跳过初始化`);
           return;
         case OperatorProjectType.STANDARD_CUSTOM:
           opType = 'cann';
           // 标准自定义算子不需要模板
           break;
         default:
-          console.warn(`[FolderContextMenuService] 未知的算子类型: ${detection.projectType}, 跳过初始化`);
           return;
       }
 
       // 调用 generateStructure 初始化配置
       // 对于标准自定义算子，如果没有模板，跳过模板解压，只创建配置
       const isSkipUnZip = detection.projectType === OperatorProjectType.STANDARD_CUSTOM && !templateName;
-      console.log(`[FolderContextMenuService] 调用 generateStructure 初始化配置, isSkipUnZip: ${isSkipUnZip}, skipVscodeFiles: ${skipVscodeFiles}`);
       await generateStructure(
         {
           project_id: projectId,
@@ -889,65 +775,13 @@ export class FolderContextMenuService {
         isSkipUnZip, // 标准自定义算子且无模板时，跳过模板解压
         skipVscodeFiles, // 是否跳过创建 .vscode 和 .arts 文件
       );
-      console.log(`[FolderContextMenuService] 算子工程初始化完成: ${detection.projectName}`);
-      
+
       // 验证配置是否创建成功
       const ops = getOpsByProjectId(projectId);
       const buildOpConfigs = getConfig(projectId, 'build_op');
-      console.log(`[FolderContextMenuService] 初始化验证: 算子记录数=${ops.length}, 配置数=${buildOpConfigs.length}`);
-      
-      if (ops.length === 0 && buildOpConfigs.length === 0) {
-        console.warn(`[FolderContextMenuService] 警告: 算子工程初始化后没有创建任何记录或配置: ${detection.projectName}`);
-      }
     } catch (error) {
-      console.error(`[FolderContextMenuService] 初始化算子工程失败 ${detection.projectPath}:`, error);
-      if (error instanceof Error) {
-        console.error(`[FolderContextMenuService] 错误详情: ${error.message}`);
-        console.error(`[FolderContextMenuService] 错误堆栈: ${error.stack}`);
-      }
       // 初始化失败不应该阻止标记操作，只记录错误
     }
   }
 
-  /**
-   * 检查算子是否已初始化，如果没有则初始化
-   * @param detection 算子工程检测结果
-   * @param projectId 项目ID
-   * @param skipVscodeFiles 是否跳过创建 .vscode 和 .arts 文件（默认 false）
-   */
-  private static async checkAndInitializeOperatorProject(
-    detection: OperatorProjectDetectionResult,
-    projectId: number,
-    skipVscodeFiles: boolean = false,
-  ): Promise<void> {
-    console.log(`[FolderContextMenuService] 检查算子是否已初始化: ${detection.projectName}, projectId: ${projectId}`);
-    
-    try {
-      // 检查是否有算子记录
-      const ops = getOpsByProjectId(projectId);
-      const hasOpRecord = ops.length > 0;
-      
-      // 检查是否有配置（至少有一个配置类型）
-      const buildOpConfigs = getConfig(projectId, 'build_op');
-      const hasConfig = buildOpConfigs.length > 0;
-      
-      console.log(`[FolderContextMenuService] 算子初始化检查结果: hasOpRecord=${hasOpRecord}, hasConfig=${hasConfig}`);
-      
-      // 如果既没有算子记录也没有配置，说明未初始化，需要初始化
-      if (!hasOpRecord && !hasConfig) {
-        console.log(`[FolderContextMenuService] 算子未初始化，开始初始化: ${detection.projectName}`);
-        await this.initializeOperatorProject(detection, projectId, skipVscodeFiles);
-      } else {
-        console.log(`[FolderContextMenuService] 算子已初始化，跳过: ${detection.projectName}`);
-      }
-    } catch (error) {
-      console.error(`[FolderContextMenuService] 检查算子初始化状态失败: ${detection.projectPath}`, error);
-      // 检查失败时，尝试初始化（避免遗漏）
-      try {
-        await this.initializeOperatorProject(detection, projectId, skipVscodeFiles);
-      } catch (initError) {
-        console.error(`[FolderContextMenuService] 初始化算子失败: ${detection.projectPath}`, initError);
-      }
-    }
-  }
 }

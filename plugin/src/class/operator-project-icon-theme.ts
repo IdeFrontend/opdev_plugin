@@ -38,7 +38,7 @@ export class OperatorProjectIconTheme implements vscode.FileDecorationProvider {
    * FileDecorationProvider 实现 - 提供文件装饰（颜色）
    */
   provideFileDecoration(uri: vscode.Uri): vscode.FileDecoration | undefined {
-    const folderPath = path.normalize(uri.fsPath);
+    const folderPath = uri.fsPath;
     
     // 检查是否为文件夹
     try {
@@ -51,11 +51,18 @@ export class OperatorProjectIconTheme implements vscode.FileDecorationProvider {
     }
 
     // 获取项目信息
+    // 注意：getProjectByPath 内部会进行路径规范化（normalize + replace + toLowerCase）
+    // 所以这里直接传入原始路径即可
     const project = getProjectByPath(folderPath);
     
     if (!project) {
+      // 调试日志：记录未找到项目的路径
+      console.log(`[OperatorProjectIconTheme] 未找到项目: ${folderPath}`);
       return undefined;
     }
+
+    // 调试日志：记录找到的项目
+    console.log(`[OperatorProjectIconTheme] 找到项目: ${project.project_name} (${project.project_path}), 类型: ${project.project_type}`);
 
     // 根据项目类型返回不同的装饰
     if (project.project_type === OperatorProjectType.MULTI_PROJECT) {
