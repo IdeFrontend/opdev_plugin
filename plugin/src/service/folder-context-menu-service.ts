@@ -523,40 +523,6 @@ export class FolderContextMenuService {
   }
 
   /**
-   * 打开算子工程配置
-   */
-  static async openOperatorProjectConfig(uri: vscode.Uri): Promise<void> {
-    const folderPath = uri.fsPath;
-    const project = getProjectByPath(folderPath);
-
-    // 检查是否是算子工程
-    if (!project || project.project_type === OperatorProjectType.MULTI_PROJECT) {
-      vscode.window.showWarningMessage('该文件夹不是算子工程');
-      return;
-    }
-
-    await this.switchToProject(uri, async () => {
-      // 获取算子名称
-      // 对于标准自定义算子，项目名称就是算子名称
-      // 对于其他类型，尝试从算子记录中获取
-      let opName = project.project_name;
-      const ops = getOpsByProjectId(project.id);
-      if (ops.length > 0) {
-        // 如果有算子记录，使用第一个算子的名称
-        opName = ops[0].op_name;
-      }
-
-      // 设置目标算子，以便配置页面自动选择
-      const { configMethods } = await import('../controller/config-controller.js');
-      await configMethods.openConfig({
-        configName: 'huawei-op-devtools.config',
-        opName,
-        projectId: project.id,
-      });
-    });
-  }
-
-  /**
    * 编译部署算子工程
    */
   static async buildOperatorProject(uri: vscode.Uri): Promise<void> {
