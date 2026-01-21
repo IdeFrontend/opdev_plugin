@@ -367,6 +367,75 @@ class CannOpGenerator extends BaseOpGenerator {
   }
 }
 
+class PyAscOpGenerator extends BaseOpGenerator {
+  parseMeta(): string {
+    this.op_name =
+      this.params.op_name
+      || this.project.project_name
+      || path.basename(this.project.project_path);
+    this.template_name = 'pyasc_temple';
+
+    return this.op_name;
+  }
+
+  executeGeneration(): boolean {
+    const templateFilePath = path.resolve(
+      this.extensionPath,
+      `out/templates/code_template/cann_template/pyasc_temple.zip`,
+    );
+
+    if (!fs.pathExistsSync(templateFilePath)) {
+      throw new Error(`Template file does not exist: ${templateFilePath}`);
+    }
+
+    // 使用 adm-zip 解压缩（跨平台兼容）
+    // 如果 skipExisting 为 true，则不覆盖已有文件
+    try {
+      const zip = new AdmZip(templateFilePath);
+      const skipExisting = this.params.skipExisting || false;
+
+      if (skipExisting) {
+        // 不覆盖已有文件：逐个提取文件，如果文件已存在则跳过
+        zip.getEntries()
+          .forEach((entry) => {
+            if (entry.isDirectory) {
+              return;
+            }
+
+            const entryPath = path.join(this.op_path, entry.entryName);
+            const entryDir = path.dirname(entryPath);
+
+            // 确保目录存在
+            fs.ensureDirSync(entryDir);
+
+            // 如果文件不存在，才提取
+            if (!fs.pathExistsSync(entryPath)) {
+              const content = zip.readFile(entry);
+
+              if (content) {
+                fs.writeFileSync(entryPath, content);
+              }
+            }
+          });
+      }
+      else {
+        // 原有逻辑：覆盖已有文件
+        zip.extractAllTo(this.op_path, true);
+      }
+    }
+    catch (error) {
+      throw new Error(`Failed to extract template: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    if (this.template_name && this.template_name != this.op_name) {
+      this._renameFiles(this.template_name);
+      this._replaceContent(this.template_name);
+    }
+
+    return true;
+  }
+}
+
 export const OpGeneratorFactory = {
   getGenerator(
     params: Params,
@@ -377,6 +446,10 @@ export const OpGeneratorFactory = {
 
     if (opType === 'cann') {
       return new CannOpGenerator(params, project, extensionPath);
+    }
+
+    if (opType === 'pyasc') {
+      return new PyAscOpGenerator(params, project, extensionPath);
     }
 
     return new AscendOpGenerator(params, project, extensionPath);

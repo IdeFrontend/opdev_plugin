@@ -84,11 +84,19 @@ async function initializeProjectForOpen(
       context.globalState.update('templateName', templateName);
     }
 
+    // 根据 createOperatorProjectDictoryFileType 确定 op_type
+    let opType = 'ascend';
+    if (createOperatorProjectDictoryFileType === 2) {
+      opType = 'cann';
+    } else if (createOperatorProjectDictoryFileType === 3) {
+      opType = 'pyasc';
+    }
+
     // 调用 generateStructure，传入 skipExisting: true 以不覆盖已有文件
     await generateStructure(
       {
         project_id: projectId,
-        op_type: 'ascend',
+        op_type: opType,
         op_name: projectName,
         template_name: templateName,
         op_path: projectPath,
@@ -151,8 +159,9 @@ async function initializeDetectedProject(
     createOperatorProjectDictoryFileType = 1;
   }
   else if (detection.projectType === OperatorProjectType.PYASC) {
-    // pyasc 算子工程不需要初始化
-    return;
+    // pyasc 算子工程，使用 pyasc_temple 模板
+    templateName = 'pyasc_temple';
+    createOperatorProjectDictoryFileType = 3;
   }
   else if (detection.projectType === OperatorProjectType.STANDARD_CUSTOM) {
     // 标准自定义算子工程

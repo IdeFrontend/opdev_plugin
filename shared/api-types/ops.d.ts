@@ -16,7 +16,7 @@ export type CreateOpsParams = {
 
 export type CreateOpsByPrototypeParams = {
   opsPrototypeFile: string;
-  opType?: 'ascend' | 'cann';
+  opType?: 'ascend' | 'cann' | 'pyasc';
   templateName?: string;
 };
 
