@@ -60,11 +60,6 @@ export const welcomeMethods = {
 
       context.globalState.update('lastProjectPath', originalProjectPath);
 
-      // 标准算子projectPath需增加 /ops-math/math路径
-      if (params.createOperatorProjectDictoryFileType === 2) {
-        params.projectPath += '/ops-math/math';
-      }
-
       vscode.window.showInformationMessage('初始化中');
 
       const executor = new CommandExecutor();
