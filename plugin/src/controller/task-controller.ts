@@ -4,6 +4,7 @@ import { CommandExecutor } from '@plugin/class/command-options';
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import { buildService } from '@plugin/service/build-service';
 import { sanitizerService } from '@plugin/service/sanitizer-service';
+import { homeMethods } from './home-controller';
 import { StartBuildParams } from '@shared/api-types';
 
 // 全局任务管理器：用于追踪和终止正在执行的任务
@@ -192,10 +193,16 @@ export const taskMethods = {
       // debug前编译，使用--debug参数
       await buildService.startBuild({ compileOption: '--debug' });
       await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
-      // 启动msdebug配置（NPU调试）
+
+      // 获取项目类型和模板名称，判断是否使用 msdebug-python
+      const projectInfo = await homeMethods.getProjectType();
+      const usePythonDebug = projectInfo.projectType === 'ascend' && projectInfo.projectTemplateName === 'torch_library_template';
+
+      // 启动调试配置
       const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
       if (workspaceFolder) {
-        await vscode.debug.startDebugging(workspaceFolder, 'msdebug');
+        const debugConfigName = usePythonDebug ? 'msdebug-python' : 'msdebug';
+        await vscode.debug.startDebugging(workspaceFolder, debugConfigName);
       }
       else {
         await vscode.commands.executeCommand('workbench.action.debug.start');
@@ -232,10 +239,16 @@ export const taskMethods = {
       // CPU调试前编译，使用--simulator参数
       await buildService.startBuild({ compileOption: '--simulator' });
       await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
-      // 启动msdebug-cpu配置（CPU调试）
+
+      // 获取项目类型和模板名称，判断是否使用 msdebug-python
+      const projectInfo = await homeMethods.getProjectType();
+      const usePythonDebug = projectInfo.projectType === 'ascend' && projectInfo.projectTemplateName === 'torch_library_template';
+
+      // 启动调试配置
       const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
       if (workspaceFolder) {
-        await vscode.debug.startDebugging(workspaceFolder, 'msdebug-cpu');
+        const debugConfigName = usePythonDebug ? 'msdebug-python' : 'msdebug-cpu';
+        await vscode.debug.startDebugging(workspaceFolder, debugConfigName);
       }
       else {
         await vscode.commands.executeCommand('workbench.action.debug.start');
