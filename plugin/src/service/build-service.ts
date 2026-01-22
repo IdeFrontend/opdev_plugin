@@ -16,6 +16,7 @@ import {
   getConfig,
   objectToCommandString,
 } from '@plugin/domain';
+import { getProjectById } from '@plugin/domain/models/project-model';
 
 const CONFIG_TYPES = {
   BUILD_OP: 'build_op',
@@ -224,28 +225,36 @@ export class BuildService {
     const simulatorItem = configData.find((v) => v.config_type === CONFIG_TYPES.SIMULATE);
     const simulatorType = (simulatorItem?.user_options?.simulatorType as string | undefined) ?? '';
 
-    // 仿真分析前编译
-    const buildConfigId = await this.getBuildConfigId();
-    const buildCommand = getBuildOpCommand(
-      Number(buildConfigId),
-      objectToCommandString({ [`simulator ${simulatorType || ''}`]: true }),
-    );
-    const buildExecutor = ProjectManager.getInstance()
-      .getExecutor();
-    const buildRes = await buildExecutor.execute(
-      buildCommand,
-      [],
-      [],
-      {},
-      true,
-    );
 
-    console.log('buildRes', buildRes);
+    // 检查项目类型，pyasc 类型不需要编译
+    const projectId = ProjectManager.getInstance().projectId;
+    const project = projectId ? getProjectById(Number(projectId)) : null;
+    const isPyascType = project?.project_type === 'pyasc';
 
-    if (buildRes.code !== 0) {
-      vscode.window.showErrorMessage(`编译算子失败 ${buildRes.output}`);
+    if (!isPyascType) {
+      // 仿真分析前编译，pyasc 类型不需要编译
+      const buildConfigId = await this.getBuildConfigId();
+      const buildCommand = getBuildOpCommand(
+        Number(buildConfigId),
+        objectToCommandString({ [`simulator ${simulatorType || ''}`]: true }),
+      );
+      const buildExecutor = ProjectManager.getInstance()
+        .getExecutor();
+      const buildRes = await buildExecutor.execute(
+        buildCommand,
+        [],
+        [],
+        {},
+        true,
+      );
 
-      return;
+      console.log('buildRes', buildRes);
+
+      if (buildRes.code !== 0) {
+        vscode.window.showErrorMessage(`编译算子失败 ${buildRes.output}`);
+
+        return;
+      }
     }
 
     const configId = await this.getSimulateConfigId();
@@ -283,28 +292,35 @@ export class BuildService {
    * 开始上板分析
    */
   async startOnBoard(): Promise<void> {
-    // 上板分析前编译
-    const buildConfigId = await this.getBuildConfigId();
-    const buildCommand = getBuildOpCommand(
-      Number(buildConfigId),
-      objectToCommandString({ onboard: true }),
-    );
-    const buildExecutor = ProjectManager.getInstance()
-      .getExecutor();
-    const buildRes = await buildExecutor.execute(
-      buildCommand,
-      [],
-      [],
-      {},
-      true,
-    );
+    // 检查项目类型，pyasc 类型不需要编译
+    const projectId = ProjectManager.getInstance().projectId;
+    const project = projectId ? getProjectById(Number(projectId)) : null;
+    const isPyascType = project?.project_type === 'pyasc';
 
-    console.log('buildRes', buildRes);
+    // 上板分析前编译（pyasc 类型跳过）
+    if (!isPyascType) {
+      const buildConfigId = await this.getBuildConfigId();
+      const buildCommand = getBuildOpCommand(
+        Number(buildConfigId),
+        objectToCommandString({ onboard: true }),
+      );
+      const buildExecutor = ProjectManager.getInstance()
+        .getExecutor();
+      const buildRes = await buildExecutor.execute(
+        buildCommand,
+        [],
+        [],
+        {},
+        true,
+      );
 
-    if (buildRes.code !== 0) {
-      vscode.window.showErrorMessage(`编译算子失败 ${buildRes.output}`);
+      console.log('buildRes', buildRes);
 
-      return;
+      if (buildRes.code !== 0) {
+        vscode.window.showErrorMessage(`编译算子失败 ${buildRes.output}`);
+
+        return;
+      }
     }
 
     const configId = await this.getOnBoardConfigId();
