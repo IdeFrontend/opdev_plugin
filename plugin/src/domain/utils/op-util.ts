@@ -59,15 +59,15 @@ function getDetailedSystemInfo(): { osName: string;
 export function getOpRunPath(op: Op, config?: ConfigRecord): string {
   const opPath = op.op_path;
 
-  if (op.op_type === 'ascend') {
-    if (config) {
-      const options = (config.user_options as Record<string, unknown> | null | undefined) || {};
-      if (options.is_expermental == 'on') {
-        return path.resolve(opPath, '..', '..', '..');
-      }
-    }
-    return path.resolve(opPath, '..', '..');
-  }
+  // if (op.op_type === 'ascend') {
+  //   if (config) {
+  //     const options = (config.user_options as Record<string, unknown> | null | undefined) || {};
+  //     if (options.is_expermental == 'on') {
+  //       return path.resolve(opPath, '..', '..', '..');
+  //     }
+  //   }
+  //   return path.resolve(opPath, '..', '..');
+  // }
 
   return opPath;
 }
