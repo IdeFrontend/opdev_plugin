@@ -9,8 +9,10 @@ interface Op {
   op_name: string;
 }
 
-function getDetailedSystemInfo(): { osName: string;
-  architecture: string } {
+function getDetailedSystemInfo(): {
+  osName: string;
+  architecture: string
+} {
   const platformName = os.platform()
     .toLowerCase();
   const arch = os.arch()
@@ -93,6 +95,10 @@ function getDefaultTarget(opRunPath: string, op: Op) {
       `test_aclnn_${op.op_name}`,
     );
   }
+  else if (op.op_type === 'pyasc') {
+    targetOpFile = `python3 ./${op.op_name}.py`;
+    targetExampleFile = targetOpFile;
+  }
   else {
     targetOpFile = path.join(opRunPath, 'build', op.op_name);
     targetExampleFile = targetOpFile;
@@ -125,7 +131,7 @@ export function getDefaultPath(op: Op) {
     opScriptPath: opScriptPath,
     exampleScriptPath: exampleScriptPath,
     targetDir: path.resolve(targetDir),
-    targetOpFile: path.resolve(targetOpFile),
-    targetExampleFile: path.resolve(targetExampleFile),
+    targetOpFile: targetOpFile,
+    targetExampleFile: targetExampleFile,
   };
 }

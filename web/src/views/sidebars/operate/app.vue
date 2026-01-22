@@ -47,6 +47,8 @@ const debugModeEnabled = ref(false);
 
 // 当前项目类型
 const projectTypeName = ref('');
+const projectType = ref('');  // 项目类型  'cann' | 'ascend' | 'pyasc'
+const projectTemplateName = ref(''); // 项目子类型  'hello_world' | 'addn_custom' | 'torch_library_template'
 
 // 需要互斥的操作按钮（执行时其他按钮应该禁用）
 const mutuallyExclusiveKeys = [
@@ -180,6 +182,15 @@ const menuItems = computed(() => {
     if (runExampleIndex !== -1) {
       items.splice(runExampleIndex + 1, 0, debugMenuItem);
     }
+  }
+
+  // 如果项目类型是 pyasc，隐藏编译部署、调试、异常检测
+  if (projectType.value === 'pyasc') {
+    return items.filter(item => 
+      item.key !== 'build' && 
+      item.key !== 'sanitizer' && 
+      item.key !== 'runDebug'
+    );
   }
 
   // 过滤菜单项：buildExample 只在标准自定义算子中显示
@@ -327,7 +338,9 @@ onMounted(async () => {
   try {
     const result = await getProjectType();
     projectTypeName.value = result.projectTypeName || '未知';
-    console.log('[Operate] 当前项目类型:', projectTypeName.value);
+    projectType.value = result.projectType || '';
+    projectTemplateName.value = result.projectTemplateName || '';
+    console.log('[Operate] 当前项目类型:', JSON.stringify(result));
   }
   catch (error) {
     console.error('[Operate] 获取项目类型失败:', error);
