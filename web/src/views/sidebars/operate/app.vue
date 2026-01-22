@@ -193,7 +193,23 @@ const menuItems = computed(() => {
     );
   }
 
-  return items;
+  // 过滤菜单项：buildExample 只在标准自定义算子中显示
+  return items.map(item => {
+    if (item.key === 'build' && item.children) {
+      return {
+        ...item,
+        children: item.children.filter(child => {
+          // buildExample 只在标准自定义算子中显示
+          if (child.key === 'buildExample') {
+            return isStandardCustom.value;
+          }
+          return true;
+        }),
+      };
+    }
+    return item;
+  });
+>>>>>>> vscode_plugin
 });
 
 // 判断菜单项是否应该被禁用
@@ -685,15 +701,6 @@ const handlePopoverOpenChange = (open) => {
 
       <!-- 如果配置文件存在或是标准自定义算子，显示正常菜单 -->
       <template v-else>
-        <div v-if="false" class="text-sm flex items-center gap-2 mt-3 mb-3 px-3">
-          目标算子
-          <a-select :value="activeConfig" size="small" style="width: 200px" placeholder="--"
-            @change="(val) => (activeConfig = val)">
-            <a-select-option v-for="item in configArray" :key="item.config_name" :value="item.config_name">
-              {{ item.config_name }}
-            </a-select-option>
-          </a-select>
-        </div>
 
         <!-- 停止任务按钮 -->
         <div v-if="isExecuting" class="px-3 py-2 mb-2">

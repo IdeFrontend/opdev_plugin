@@ -107,9 +107,10 @@ export class AscendCommandStrategy implements CommandStrategy {
   buildExampleCommand(params: CommandBuildParams): string {
     const { config, sourceCannCmd, cdCmd, compileOption, advance_cmd } = params;
 
+    const options = (config.user_options as Record<string, unknown> | null | undefined) || {};
+    const mode = options.execution_mode as string || 'eager';
     let vendor_name = 'custom';
     let pkg_mode = 'cust';
-    let mode = 'eager';
     const op = config.op;
     const args = parse_cmd_options(config.custom_options || null);
 
@@ -119,10 +120,6 @@ export class AscendCommandStrategy implements CommandStrategy {
 
     if (args && args.pkg_mode) {
       pkg_mode = args.pkg_mode;
-    }
-
-    if (args && args.mode) {
-      mode = args.mode;
     }
 
     const cmd = new Command(config.script || '');
@@ -152,23 +149,23 @@ export class AscendCommandStrategy implements CommandStrategy {
       exampleTargetFile?: string
     ): string {
       const mssanitizer = new Command('mssanitizer');
-  
+
       // 添加目标文件
       if (exampleTargetFile) {
         mssanitizer.addArgument(exampleTargetFile);
       }
-  
+
       // 处理配置选项
       const options = (config.user_options as Record<string, unknown> | null | undefined) || {};
       const toolOptions = (options.tool as Record<string, unknown> | undefined) || {};
       const tools = Object.keys(toolOptions)
         .filter((key) => toolOptions[key]);
-  
+
       mssanitizer.addOption('tool', tools);
-  
+
       if (toolOptions.memcheck) {
         const memcheckOptions = (options.memcheckOption as Record<string, unknown> | undefined) || {};
-  
+
         Object.keys(memcheckOptions)
           .forEach((key) => {
             if (memcheckOptions[key]) {
@@ -176,7 +173,7 @@ export class AscendCommandStrategy implements CommandStrategy {
             }
           });
       }
-  
+
       mssanitizer.addOption('log-level', options.logLevel as string | undefined);
       mssanitizer.addOption('max-debuglog-size', options.maxDebuglogSize as string | undefined);
       mssanitizer.addOption('block-id', options.blockId as string | number | undefined);
@@ -185,7 +182,7 @@ export class AscendCommandStrategy implements CommandStrategy {
         `${operator?.op_path}/.vscode/mindstudio_sanitizer_log/mssanitizer_${new Date()
           .valueOf()}.log`,
       );
-  
+
       return joinCommands(sourceCannCmd, cdCmd, mssanitizer.toString());
     }
 

@@ -68,7 +68,6 @@ export const COMMAND_MARK_AS_OPERATOR_PROJECT = `${COMMAND_PREFIX}.markAsOperato
 export const COMMAND_MARK_AS_MULTI_OPERATOR_PROJECT = `${COMMAND_PREFIX}.markAsMultiOperatorProject`;
 export const COMMAND_UNMARK_AS_OPERATOR_PROJECT = `${COMMAND_PREFIX}.unmarkAsOperatorProject`;
 export const COMMAND_UNMARK_AS_MULTI_OPERATOR_PROJECT = `${COMMAND_PREFIX}.unmarkAsMultiOperatorProject`;
-export const COMMAND_OPERATOR_PROJECT_CONFIG = `${COMMAND_PREFIX}.operatorProjectConfig`;
 export const COMMAND_OPERATOR_PROJECT_BUILD = `${COMMAND_PREFIX}.operatorProjectBuild`;
 export const COMMAND_OPERATOR_PROJECT_RUN = `${COMMAND_PREFIX}.operatorProjectRun`;
 export const COMMAND_OPERATOR_PROJECT_DEBUG = `${COMMAND_PREFIX}.operatorProjectDebug`;

@@ -16,6 +16,7 @@ import {
 import { viewIdToProjectType } from '../domain/utils/project-utils'
 import {
   OperatorProjectDetector,
+  OperatorProjectType
 } from '@plugin/domain/services/operator-project-detector';
 import { getProjectByPath } from '@plugin/domain/models/project-model';
 
@@ -59,11 +60,6 @@ export const welcomeMethods = {
       const originalProjectPath = params.projectPath;
 
       context.globalState.update('lastProjectPath', originalProjectPath);
-
-      // 标准算子projectPath需增加 /ops-math/math路径
-      if (params.createOperatorProjectDictoryFileType === 2) {
-        params.projectPath += '/ops-math/math';
-      }
 
       vscode.window.showInformationMessage('初始化中');
 
@@ -292,7 +288,7 @@ export const welcomeMethods = {
           ascendEnvScript: params.projectSH,
           projectPath: params.projectPath,
           projectName: params.projectName,
-          templateName: '',
+          templateName: rootDetection.projectType === OperatorProjectType.TORCH_LIBRARY ? 'torch_library_template' : '',
           projectType: viewIdToProjectType(rootDetection.projectType)
         });
       }
@@ -320,7 +316,7 @@ export const welcomeMethods = {
           project_id: projectId,
           // cann ascend pyasc
           op_type: viewIdToProjectType(rootDetection.projectType),
-          template_name: '',
+          template_name: rootDetection.projectType === OperatorProjectType.TORCH_LIBRARY ? 'torch_library_template' : '',
         },
         context.extensionPath,
         true

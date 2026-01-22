@@ -242,7 +242,7 @@ class AscendOpGenerator extends BaseOpGenerator {
   executeGeneration(): boolean {
     const templateFilePath = path.resolve(
       this.extensionPath,
-      `out/templates/code_template/op-math/ops-math.zip`,
+      `out/templates/code_template/ascend_template/add_custom.zip`,
     );
 
     if (!fs.pathExistsSync(templateFilePath)) {

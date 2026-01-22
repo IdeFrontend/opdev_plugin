@@ -34,6 +34,10 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  isStandardCustom: {
+    type: Boolean,
+    default: false,
+  },
 });
 const emit = defineEmits([
   'addBuildTableItem',
@@ -62,6 +66,10 @@ watch(
   () => props.exampleConfigForme,
   (val) => {
     localExampleConfigForme.value = { ...val };
+    // 如果是标准自定义算子且没有执行模式，初始化为 eager
+    if (props.isStandardCustom && !localExampleConfigForme.value.execution_mode) {
+      localExampleConfigForme.value.execution_mode = 'eager';
+    }
   },
   {
     immediate: true,
@@ -71,6 +79,11 @@ watch(
 
 const handleBuildConfigChange = () => {
   emit('update:buildConfigForme', localBuildConfigForme.value);
+  saveBuildConfig();
+};
+
+const handleExampleConfigChange = () => {
+  emit('update:exampleConfigForme', localExampleConfigForme.value);
   saveBuildConfig();
 };
 
@@ -134,12 +147,12 @@ const getSaveData = () => {
         />
       </a-form-item>
       <a-form-item
-        label="算子运行验证命令行"
+        :label="isStandardCustom ? '算子部署命令' : '算子运行验证命令行'"
         name="ipAddress"
       >
         <a-input
           v-model:value="localBuildConfigForme.target_file"
-          placeholder="请输入算子运行验证命令行"
+          :placeholder="isStandardCustom ? '请输入算子部署命令' : '请输入算子运行验证命令行'"
           @change="handleBuildConfigChange"
         />
       </a-form-item>
@@ -149,8 +162,49 @@ const getSaveData = () => {
       >
         <a-input
           v-model:value="localBuildConfigForme.script"
-          placeholder=""
+          placeholder="请输入编译命令行"
           @change="handleBuildConfigChange"
+        />
+      </a-form-item>
+    </a-form>
+    <div
+      v-if="isStandardCustom"
+      class="model-title"
+    >
+      example编译配置
+    </div>
+    <a-form
+      v-if="isStandardCustom"
+      ref="exampleFormRef"
+      :model="localExampleConfigForme"
+      :label-col="{ span: 6 }"
+      :wrapper-col="{ span: 24 }"
+      layout="vertical"
+    >
+      <a-form-item
+        label="执行模式"
+        name="execution_mode"
+      >
+        <a-radio-group
+          v-model:value="localExampleConfigForme.execution_mode"
+          @change="handleExampleConfigChange"
+        >
+          <a-radio value="eager">
+            eager（aclnn调用）
+          </a-radio>
+          <a-radio value="graph">
+            graph（图模式调用）
+          </a-radio>
+        </a-radio-group>
+      </a-form-item>
+      <a-form-item
+        label="算子运行验证命令行"
+        name="script"
+      >
+        <a-input
+          v-model:value="localExampleConfigForme.script"
+          placeholder="请输入算子运行验证命令行"
+          @change="handleExampleConfigChange"
         />
       </a-form-item>
     </a-form>

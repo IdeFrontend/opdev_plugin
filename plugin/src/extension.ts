@@ -58,7 +58,6 @@ import {
   COMMAND_MARK_AS_MULTI_OPERATOR_PROJECT,
   COMMAND_UNMARK_AS_OPERATOR_PROJECT,
   COMMAND_UNMARK_AS_MULTI_OPERATOR_PROJECT,
-  COMMAND_OPERATOR_PROJECT_CONFIG,
   COMMAND_OPERATOR_PROJECT_BUILD,
   COMMAND_OPERATOR_PROJECT_RUN,
   COMMAND_OPERATOR_PROJECT_DEBUG,
@@ -469,17 +468,6 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  const operatorProjectConfigCommand = vscode.commands.registerCommand(
-    COMMAND_OPERATOR_PROJECT_CONFIG,
-    async (uri?: vscode.Uri) => {
-      if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹');
-        return;
-      }
-      await FolderContextMenuService.openOperatorProjectConfig(uri);
-    },
-  );
-
   const operatorProjectBuildCommand = vscode.commands.registerCommand(
     COMMAND_OPERATOR_PROJECT_BUILD,
     async (uri?: vscode.Uri) => {
@@ -541,7 +529,6 @@ export async function activate(context: vscode.ExtensionContext) {
     markAsMultiOperatorProjectCommand,
     unmarkAsOperatorProjectCommand,
     unmarkAsMultiOperatorProjectCommand,
-    operatorProjectConfigCommand,
     operatorProjectBuildCommand,
     operatorProjectRunCommand,
     operatorProjectDebugCommand,
