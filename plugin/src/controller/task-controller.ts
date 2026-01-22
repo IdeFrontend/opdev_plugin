@@ -4,6 +4,7 @@ import { CommandExecutor } from '@plugin/class/command-options';
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import { buildService } from '@plugin/service/build-service';
 import { sanitizerService } from '@plugin/service/sanitizer-service';
+import { StartBuildParams } from '@shared/api-types';
 
 // 全局任务管理器：用于追踪和终止正在执行的任务
 let currentExecutor: CommandExecutor | null = null;
@@ -12,14 +13,14 @@ export const taskMethods = {
   /**
    * 构建算子
    */
-  async startBuild(): Promise<void> {
+  async startBuild(params: StartBuildParams = {}): Promise<void> {
     try {
       await ProjectManager.getInstance()
         .initProject();
       // 保存当前 executor 引用，用于可能的终止操作
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
-      await buildService.startBuild({});
+      await buildService.startBuild(params);
     }
     finally {
       // 清除 executor 引用

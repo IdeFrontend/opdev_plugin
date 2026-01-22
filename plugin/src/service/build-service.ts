@@ -136,6 +136,7 @@ export class BuildService {
       const buildCommand = getBuildOpCommand(
         Number(configId),
         params.compileOption,
+        params.operatorNames,
       );
       const executor = ProjectManager.getInstance()
         .getExecutor();

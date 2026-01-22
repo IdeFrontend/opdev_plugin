@@ -40,9 +40,10 @@ function getBaseContext(configId: number): BaseContext {
  *
  * @param config_id 配置ID
  * @param compileOption 编译参数 --debug: debug模式 ；  --mssanitizer: 异常检测模式
+ * @param operatorNames 算子名称，多个用逗号分隔（用于标准自定义算子等场景）
  * @returns 完整的shell执行命令字符串
  */
-export function getBuildOpCommand(config_id: number, compileOption?: string) {
+export function getBuildOpCommand(config_id: number, compileOption?: string, operatorNames?: string) {
   try {
     const baseContext = getBaseContext(config_id);
     const strategy = CommandStrategyFactory.getStrategy(baseContext.operator?.op_type);
@@ -60,6 +61,7 @@ export function getBuildOpCommand(config_id: number, compileOption?: string) {
       cdCmd: context.cdCmd,
       compileOption,
       advance_cmd,
+      operatorNames,
     });
   }
   catch (e: unknown) {

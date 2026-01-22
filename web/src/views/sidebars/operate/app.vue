@@ -76,7 +76,22 @@ const baseMenuItems = [
         key: 'buildOp',
         label: '编译部署算子',
         handler: async () => {
-          await startBuild();
+          // 如果有选中的算子，将选中算子的名称用逗号拼接传入
+          let operatorNames;
+          let operatorType;
+          
+          if (selectedOperators.value.length > 0) {
+            operatorNames = selectedOperators.value.map((op) => op.name).join(',');
+            // 如果是标准自定义算子，设置类型
+            if (isStandardCustom.value) {
+              operatorType = 'standard-custom';
+            }
+          }
+          
+          await startBuild({
+            operatorNames,
+            operatorType,
+          });
         },
       },
       {

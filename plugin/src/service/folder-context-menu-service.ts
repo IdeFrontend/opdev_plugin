@@ -17,6 +17,7 @@ import { OperatorProjectIconTheme } from '@plugin/class/operator-project-icon-th
 import { generateStructure } from '@plugin/domain';
 import { getOpsByProjectId } from '@plugin/domain/models/model';
 import { getConfig } from '@plugin/domain/services/configuration';
+import { buildService } from './build-service';
 
 /**
  * 文件夹右键菜单服务
@@ -536,9 +537,22 @@ export class FolderContextMenuService {
     }
 
     await this.switchToProject(uri, async () => {
-      // 调用编译命令
-      const buildCommand = 'huawei-op-devtools.buildOps';
-      await vscode.commands.executeCommand(buildCommand);
+      // 如果是标准自定义算子工程，提取文件夹名作为算子名称
+      let operatorNames: string | undefined;
+      let operatorType: string | undefined;
+      
+      if (project.project_type === OperatorProjectType.STANDARD_CUSTOM) {
+        const folderName = path.basename(folderPath);
+        operatorNames = folderName;
+        operatorType = 'standard-custom';
+      }
+
+      // 直接调用 buildService.startBuild，传入算子名称和类型
+      // 这样与 UI 选择的编译逻辑保持一致
+      await buildService.startBuild({
+        operatorNames,
+        operatorType,
+      });
     });
   }
 
