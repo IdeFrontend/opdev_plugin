@@ -308,27 +308,27 @@
         },
         {
           "submenu": "operator.build",
-          "when": "explorerResourceIsFolder",
+          "when": "explorerResourceIsFolder || resourceExtname == '.py'",
           "group": "operator@3"
         },
         {
           "command": "huawei-op-devtools.operatorProjectRun",
-          "when": "explorerResourceIsFolder",
+          "when": "explorerResourceIsFolder || resourceExtname == '.py'",
           "group": "operator@3"
         },
         {
           "submenu": "operator.debug",
-          "when": "explorerResourceIsFolder",
+          "when": "explorerResourceIsFolder || resourceExtname == '.py'",
           "group": "operator@3"
         },
         {
           "command": "huawei-op-devtools.operatorProjectSanitizer",
-          "when": "explorerResourceIsFolder",
+          "when": "explorerResourceIsFolder || resourceExtname == '.py'",
           "group": "operator@3"
         },
         {
           "submenu": "operator.performance",
-          "when": "explorerResourceIsFolder",
+          "when": "explorerResourceIsFolder || resourceExtname == '.py'",
           "group": "operator@3"
         }
       ],

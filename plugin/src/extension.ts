@@ -76,6 +76,25 @@ import { OperatorProjectIconTheme } from './class/operator-project-icon-theme';
 let extensionContext: vscode.ExtensionContext | undefined;
 
 /**
+ * 将文件 URI 转换为文件夹 URI
+ * 如果传入的是文件夹 URI，则直接返回
+ * 如果传入的是文件 URI，则返回文件所在的文件夹 URI
+ */
+function getFolderUri(uri: vscode.Uri): vscode.Uri {
+  try {
+    const stat = fs.statSync(uri.fsPath);
+    if (stat.isDirectory()) {
+      return uri;
+    }
+    // 如果是文件，返回文件所在的文件夹
+    return vscode.Uri.file(path.dirname(uri.fsPath));
+  } catch {
+    // 如果无法获取文件信息，假设是文件，返回父目录
+    return vscode.Uri.file(path.dirname(uri.fsPath));
+  }
+}
+
+/**
  * 检查当前工作区是否存在 .vscode/devtool_config.json 文件
  * @returns 如果文件存在返回 true，否则返回 false
  */
@@ -477,10 +496,11 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_BUILD,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹');
+        vscode.window.showErrorMessage('请右键点击文件夹或文件');
         return;
       }
-      await FolderContextMenuService.buildOperatorProject(uri);
+      const folderUri = getFolderUri(uri);
+      await FolderContextMenuService.buildOperatorProject(folderUri);
     },
   );
 
@@ -488,10 +508,11 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_BUILD_EXAMPLE,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹');
+        vscode.window.showErrorMessage('请右键点击文件夹或文件');
         return;
       }
-      await FolderContextMenuService.buildExampleOperatorProject(uri);
+      const folderUri = getFolderUri(uri);
+      await FolderContextMenuService.buildExampleOperatorProject(folderUri);
     },
   );
 
@@ -499,10 +520,11 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_RUN,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹');
+        vscode.window.showErrorMessage('请右键点击文件夹或文件');
         return;
       }
-      await FolderContextMenuService.runOperatorProject(uri);
+      const folderUri = getFolderUri(uri);
+      await FolderContextMenuService.runOperatorProject(folderUri);
     },
   );
 
@@ -510,10 +532,11 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_CPU_DEBUG,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹');
+        vscode.window.showErrorMessage('请右键点击文件夹或文件');
         return;
       }
-      await FolderContextMenuService.cpuDebugOperatorProject(uri);
+      const folderUri = getFolderUri(uri);
+      await FolderContextMenuService.cpuDebugOperatorProject(folderUri);
     },
   );
 
@@ -521,10 +544,11 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_NPU_DEBUG,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹');
+        vscode.window.showErrorMessage('请右键点击文件夹或文件');
         return;
       }
-      await FolderContextMenuService.npuDebugOperatorProject(uri);
+      const folderUri = getFolderUri(uri);
+      await FolderContextMenuService.npuDebugOperatorProject(folderUri);
     },
   );
 
@@ -532,10 +556,11 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_CPU_DEBUG_CONFIG,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹');
+        vscode.window.showErrorMessage('请右键点击文件夹或文件');
         return;
       }
-      await FolderContextMenuService.cpuDebugConfigOperatorProject(uri);
+      const folderUri = getFolderUri(uri);
+      await FolderContextMenuService.cpuDebugConfigOperatorProject(folderUri);
     },
   );
 
@@ -543,10 +568,11 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_NPU_DEBUG_CONFIG,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹');
+        vscode.window.showErrorMessage('请右键点击文件夹或文件');
         return;
       }
-      await FolderContextMenuService.npuDebugConfigOperatorProject(uri);
+      const folderUri = getFolderUri(uri);
+      await FolderContextMenuService.npuDebugConfigOperatorProject(folderUri);
     },
   );
 
@@ -554,10 +580,11 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_SANITIZER,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹');
+        vscode.window.showErrorMessage('请右键点击文件夹或文件');
         return;
       }
-      await FolderContextMenuService.sanitizerOperatorProject(uri);
+      const folderUri = getFolderUri(uri);
+      await FolderContextMenuService.sanitizerOperatorProject(folderUri);
     },
   );
 
@@ -565,10 +592,11 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_ON_BOARD,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹');
+        vscode.window.showErrorMessage('请右键点击文件夹或文件');
         return;
       }
-      await FolderContextMenuService.onBoardOperatorProject(uri);
+      const folderUri = getFolderUri(uri);
+      await FolderContextMenuService.onBoardOperatorProject(folderUri);
     },
   );
 
@@ -576,10 +604,11 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_SIMULATION,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹');
+        vscode.window.showErrorMessage('请右键点击文件夹或文件');
         return;
       }
-      await FolderContextMenuService.simulationOperatorProject(uri);
+      const folderUri = getFolderUri(uri);
+      await FolderContextMenuService.simulationOperatorProject(folderUri);
     },
   );
 
