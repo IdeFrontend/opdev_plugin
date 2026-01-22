@@ -16,9 +16,9 @@ import {
 import { viewIdToProjectType } from '../domain/utils/project-utils'
 import {
   OperatorProjectDetector,
-  OperatorProjectType,
+  OperatorProjectType
 } from '@plugin/domain/services/operator-project-detector';
-import { 
+import {
   getProjectByPath,
   updateStandardCustomOperators,
   type SubOperatorInfo,
@@ -308,7 +308,7 @@ export const welcomeMethods = {
           ascendEnvScript: params.projectSH,
           projectPath: params.projectPath,
           projectName: params.projectName,
-          templateName: '',
+          templateName: rootDetection.projectType === OperatorProjectType.TORCH_LIBRARY ? 'torch_library_template' : '',
           projectType: viewIdToProjectType(rootDetection.projectType)
         });
       }
@@ -336,7 +336,7 @@ export const welcomeMethods = {
           project_id: projectId,
           // cann ascend pyasc
           op_type: viewIdToProjectType(rootDetection.projectType),
-          template_name: '',
+          template_name: rootDetection.projectType === OperatorProjectType.TORCH_LIBRARY ? 'torch_library_template' : '',
         },
         context.extensionPath,
         true
@@ -348,14 +348,14 @@ export const welcomeMethods = {
       if (rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM) {
         try {
           console.log('[openProject] 检测到标准自定义算子，开始扫描算子合集和算子...');
-          
+
           // 1. 扫描第一层目录，找到算子合集（如 common、math、experimental 等）
           const opsMeet: OperatorCollectionInfo[] = [];
           const opsList: SubOperatorInfo[] = [];
           const experimentalOpsList: SubOperatorInfo[] = [];
 
           const entries = fs.readdirSync(projectFullPath, { withFileTypes: true });
-          
+
           for (const entry of entries) {
             // 只处理目录
             if (!entry.isDirectory()) {
@@ -374,11 +374,11 @@ export const welcomeMethods = {
             }
 
             const collectionPath = path.join(projectFullPath, dirName);
-            
+
             // 2. 扫描算子合集下的子目录，找到算子（如 abs、add 等）
             let hasOperators = false;
             const isExperimentalCollection = dirName.toLowerCase() === 'experimental';
-            
+
             try {
               const subEntries = fs.readdirSync(collectionPath, { withFileTypes: true });
 
@@ -388,12 +388,12 @@ export const welcomeMethods = {
                 }
 
                 const operatorPath = path.join(collectionPath, subEntry.name);
-                
+
                 // 检查是否是算子（有 CMakeLists.txt）
                 const operatorCmakeListsPath = path.join(operatorPath, 'CMakeLists.txt');
                 if (fs.existsSync(operatorCmakeListsPath)) {
                   hasOperators = true; // 标记这个目录包含算子
-                  
+
                   // 检查是否已编译（检查是否有 build 目录或 out 目录）
                   const buildDir = path.join(operatorPath, 'build');
                   const outDir = path.join(operatorPath, 'out');
@@ -430,7 +430,7 @@ export const welcomeMethods = {
           console.log(`[openProject] 算子合集列表:`, opsMeet.map(m => m.name));
           console.log(`[openProject] 普通算子列表:`, opsList.map(o => o.name));
           console.log(`[openProject] experimental算子列表:`, experimentalOpsList.map(o => o.name));
-          
+
           await updateStandardCustomOperators(projectFullPath, opsMeet, opsList, experimentalOpsList);
           console.log(`[openProject] 已检测并存储 ${opsMeet.length} 个算子合集, ${opsList.length} 个普通算子, ${experimentalOpsList.length} 个experimental算子`);
         } catch (error) {

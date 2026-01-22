@@ -32,7 +32,7 @@ export const homeMethods = {
    * 只返回实际的算子类型，不包括"算子工程集合"
    * @returns 项目类型信息
    */
-  async getProjectType(): Promise<{ projectType: string | null; projectTypeName: string }> {
+  async getProjectType(): Promise<{ projectType: string | null; projectTypeName: string; projectTemplateName?: string }> {
     try {
       const workspaceFolders = vscode.workspace.workspaceFolders;
 
@@ -57,6 +57,7 @@ export const homeMethods = {
           return {
             projectType: detection.projectType,
             projectTypeName,
+            projectTemplateName: detection.projectType === OperatorProjectType.TORCH_LIBRARY ? 'torch_library_template' : ''
           };
         }
         return { projectType: null, projectTypeName: '' };
@@ -117,6 +118,7 @@ export const homeMethods = {
       return {
         projectType: project.project_type,
         projectTypeName,
+        projectTemplateName: project.project_type === OperatorProjectType.TORCH_LIBRARY ? 'torch_library_template' : ''
       };
     }
     catch (error) {
