@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://gitcode.com/kaocong/mstt"
   },
-  "version": "1.2.8",
+  "version": "1.2.9",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -211,10 +211,6 @@
         "title": "取消标记为算子工程集合"
       },
       {
-        "command": "huawei-op-devtools.operatorProjectConfig",
-        "title": "算子工程配置"
-      },
-      {
         "command": "huawei-op-devtools.operatorProjectBuild",
         "title": "编译部署"
       },
@@ -277,50 +273,32 @@
           "group": "operator@2"
         },
         {
-          "submenu": "huawei-op-devtools.operatorProjectMenu",
-          "when": "explorerResourceIsFolder && operatorProjectMarked",
-          "group": "operator@3"
-        }
-      ],
-      "huawei-op-devtools.operatorProjectMenu": [
-        {
-          "command": "huawei-op-devtools.operatorProjectConfig",
-          "when": "true",
-          "group": "1_config"
-        },
-        {
           "command": "huawei-op-devtools.operatorProjectBuild",
-          "when": "operatorProjectType != 'pyasc'",
-          "group": "2_build"
+          "when": "explorerResourceIsFolder",
+          "group": "operator@3"
         },
         {
           "command": "huawei-op-devtools.operatorProjectRun",
-          "when": "operatorProjectType != 'pyasc'",
-          "group": "3_run"
+          "when": "explorerResourceIsFolder",
+          "group": "operator@3"
         },
         {
           "command": "huawei-op-devtools.operatorProjectDebug",
-          "when": "operatorProjectType != 'pyasc' && operatorProjectType != 'standard-custom'",
-          "group": "4_debug"
+          "when": "explorerResourceIsFolder ",
+          "group": "operator@3"
         },
         {
           "command": "huawei-op-devtools.operatorProjectSanitizer",
-          "when": "operatorProjectType != 'pyasc'",
-          "group": "5_sanitizer"
+          "when": "explorerResourceIsFolder",
+          "group": "operator@3"
         },
         {
           "command": "huawei-op-devtools.operatorProjectPerformance",
-          "when": "operatorProjectType != 'pyasc'",
-          "group": "6_performance"
+          "when": "explorerResourceIsFolder",
+          "group": "operator@3"
         }
       ]
     },
-    "submenus": [
-      {
-        "id": "huawei-op-devtools.operatorProjectMenu",
-        "label": "算子工程操作"
-      }
-    ],
     "customEditors": [
       {
         "viewType": "csvViewer",

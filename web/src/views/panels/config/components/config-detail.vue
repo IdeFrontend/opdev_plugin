@@ -10,8 +10,9 @@ import sanitizerConfig from './sanitizer-config.vue';
 import opprofConfig from './opprof-config.vue';
 
 import {
-  ref, watch, nextTick,
+  ref, watch, nextTick, onMounted,
 } from 'vue';
+import { checkMultipleOperators } from '@web/apis';
 
 const props = defineProps({
   activeOption: {
@@ -31,6 +32,7 @@ const exampleConfigId = ref('');
 
 const simulateConfigData = ref({});
 const onBoardConfigData = ref({});
+const isStandardCustom = ref(false);
 
 const init = (obj) => {
   const ConfigData = obj;
@@ -111,10 +113,27 @@ const deleteExampleTableItem = (key) => {
   console.log(exampleConfigForme.value.advance_param);
 };
 
+// 获取是否是标准自定义算子
+const checkStandardCustom = async () => {
+  try {
+    const result = await checkMultipleOperators();
+    isStandardCustom.value = result.isStandardCustom || false;
+    console.log('[config-detail] isStandardCustom:', isStandardCustom.value);
+  } catch (error) {
+    console.error('[config-detail] 获取标准自定义算子状态失败:', error);
+    isStandardCustom.value = false;
+  }
+};
+
 defineExpose({ init });
 
 const opprofRef = ref(null);
 const opprofInited = ref(false);
+
+// 组件挂载时检查是否是标准自定义算子
+onMounted(() => {
+  checkStandardCustom();
+});
 
 watch(
   () => props.activeOption,
@@ -142,6 +161,7 @@ watch(
       :example-config-id="exampleConfigId"
       :build-config-id="buildConfigId"
       :active-config="activeConfig"
+      :is-standard-custom="isStandardCustom"
       @add-build-table-item="addBuildTableItem"
       @delete-build-table-item="deleteBuildTableItem"
       @add-example-table-item="addExampleTableItem"

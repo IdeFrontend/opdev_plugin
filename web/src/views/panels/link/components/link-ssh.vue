@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import { useLinkSSH } from '../composables/use-link-ssh';
 import { FormRulesFactory } from '../composables/form-rules';
@@ -7,6 +7,9 @@ import tipBase_1_1 from '@/assets/imgs/hello_world.png';
 import tipBase_1_2 from '@/assets/imgs/add_custom.png';
 import tipBase_1_3 from '@/assets/imgs/torch_library_template.png';
 import jsonUrl from './test.json'
+import {
+  getProjectType,
+} from '@web/apis';
 
 defineProps({
   connected: {
@@ -73,6 +76,26 @@ const items_type = [
 const tipBase_0 = jsonUrl.url
 
 const connectionFormRules = FormRulesFactory.createFormRules();
+
+const currentProjectType = ref('')
+onMounted(async () => {
+  // 获取当前项目类型
+  try {
+    const result = await getProjectType();
+    currentProjectType.value = result.projectType || '';
+    console.log('[Operate] 当前项目类型:', currentProjectType.value);
+
+    // 标准自定义算子大目录下，只能新建标准自定义算子
+    if (currentProjectType.value === 'ascend') {
+      items_type.value = [ascendProject]
+      selectedId_type.value = 2
+    }
+  }
+  catch (error) {
+    console.error('[Operate] 获取项目类型失败:', error);
+    currentProjectType.value = '';
+  }
+})
 </script>
 <template>
   <div class="">
@@ -98,8 +121,8 @@ const connectionFormRules = FormRulesFactory.createFormRules();
               </div>
               <div
                 class="leading-8 mt-2.5 text-white text-[13px] mb-2.5 whitespace-nowrap overflow-hidden text-ellipsis group-[.selected]:whitespace-normal group-[.selected]:overflow-visible group-[.selected]:text-clip"
+                v-html="item.id === 1 ? getTemplateDesc(selectedTemplate) : item.desc"
               >
-                {{ item.id === 1 ? getTemplateDesc(selectedTemplate) : item.desc }}
               </div>
               <a-tag v-if="item.id === 1 || item.id === 2" color="blue" class="mt-2.5 mr-2">
                 语言：Ascend C
