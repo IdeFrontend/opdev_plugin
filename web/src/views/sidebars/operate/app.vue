@@ -224,7 +224,6 @@ const menuItems = computed(() => {
     }
     return item;
   });
->>>>>>> vscode_plugin
 });
 
 // 判断菜单项是否应该被禁用
