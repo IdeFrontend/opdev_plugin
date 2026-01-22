@@ -17,6 +17,16 @@
       "target": "${workspaceFolder}/build/${workspaceFolderBasename}",
       "msdebugMiPath": "/usr/bin/gdb",
       "environmentScripts": ["${workspaceFolder}/.arts/.env"]
+    },
+    
+    {
+      "name": "msdebug-python",
+      "type": "msdebug-mi",
+      "request": "launch",
+      "cwd": "${workspaceRoot}/build",
+      "target": "user/local/bin/python",
+      "targetArgs": ["${workspaceFolder}/run.py"],
+      "environmentScripts": ["${workspaceFolder}/.arts/.env"]
     }
   ]
 }
