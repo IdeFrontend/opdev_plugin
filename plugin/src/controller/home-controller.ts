@@ -206,8 +206,63 @@ export const homeMethods = {
              )
       );
 
-      // 如果根目录是标准自定义算子，或者工作区内有标准自定义算子工程，返回算子列表
-      if (isRootStandardCustom || standardCustomOperators.length > 0) {
+      // 如果根目录是标准自定义算子，从项目的 ops_list 和 experimental_ops_list 读取算子列表
+      if (isRootStandardCustom) {
+        // 查找根目录对应的项目记录
+        const rootProject = getProjectByPath(workspacePath);
+        
+        if (rootProject) {
+          // 从 ops_list 和 experimental_ops_list 读取算子
+          const opsList = rootProject.ops_list || [];
+          const experimentalOpsList = rootProject.experimental_ops_list || [];
+          
+          // 合并所有算子，并转换为前端需要的格式
+          // 使用项目ID作为基础ID，为每个算子生成唯一ID
+          const operators: Array<{ id: number; name: string; path: string; isExperimental: boolean; isCompiled?: boolean }> = [];
+          
+          // 添加普通算子
+          opsList.forEach((op, index) => {
+            operators.push({
+              id: rootProject.id * 10000 + index, // 生成唯一ID
+              name: op.name,
+              path: op.path,
+              isExperimental: false,
+              isCompiled: op.isCompiled || false,
+            });
+          });
+          
+          // 添加experimental算子
+          experimentalOpsList.forEach((op, index) => {
+            operators.push({
+              id: rootProject.id * 10000 + 1000 + index, // 生成唯一ID
+              name: op.name,
+              path: op.path,
+              isExperimental: true,
+              isCompiled: op.isCompiled || false,
+            });
+          });
+
+          const hasMultiple = operators.length > 1;
+
+          console.log(
+            '[checkMultipleOperators] 标准自定义算子，从 ops_list 读取:',
+            `普通算子: ${opsList.length}, experimental算子: ${experimentalOpsList.length}`,
+            '算子列表:',
+            operators.map(op => `${op.name} (${op.isExperimental ? 'ex' : 'normal'}, compiled: ${op.isCompiled})`),
+          );
+
+          return { 
+            hasMultiple, 
+            operators,
+            isStandardCustom: true,
+          };
+        } else {
+          console.warn('[checkMultipleOperators] 根目录是标准自定义算子，但未找到项目记录');
+        }
+      }
+      
+      // 如果工作区内有标准自定义算子工程（但不是根目录），使用原有逻辑
+      if (standardCustomOperators.length > 0) {
         // 转换为前端需要的格式
         const operators = standardCustomOperators.map(p => ({
           id: p.id,
@@ -219,9 +274,7 @@ export const homeMethods = {
         const hasMultiple = operators.length > 1;
 
         console.log(
-          '[checkMultipleOperators] 标准自定义算子，根目录检测结果:',
-          isRootStandardCustom,
-          '找到算子工程数量:',
+          '[checkMultipleOperators] 标准自定义算子，找到算子工程数量:',
           operators.length,
           '算子列表:',
           operators.map(op => `${op.name} (${op.isExperimental ? 'ex' : 'normal'})`),

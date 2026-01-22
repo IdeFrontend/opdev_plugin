@@ -67,11 +67,10 @@ export class AscendCommandStrategy implements CommandStrategy {
   }
 
   buildOpCommand(params: CommandBuildParams): string {
-    const { config, sourceCannCmd, cdCmd, compileOption, advance_cmd } = params;
+    const { config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames } = params;
 
     let soc = soc_version;
     let vendor_name = 'custom';
-    const op = config.op;
     const args = parse_cmd_options(config.custom_options || null);
 
     if (args && args.vendor_name) {
@@ -84,12 +83,18 @@ export class AscendCommandStrategy implements CommandStrategy {
 
     const cmd = new Command(config.script || '');
 
-    cmd.addOptions({
+    const options: Record<string, unknown> = {
       pkg: true,
       soc,
       vendor_name,
-      ops: op,
-    });
+    };
+
+    // 只有当 operatorNames 存在且不为空时，才添加 ops 参数
+    if (operatorNames && operatorNames.trim()) {
+      options.ops = operatorNames;
+    }
+
+    cmd.addOptions(options);
 
     if (compileOption) {
       cmd.addArgument(compileOption);

@@ -83,7 +83,7 @@ export function cpuDebugConfig() {
 export function checkMultipleOperators() {
   return request.post<undefined, { 
     hasMultiple: boolean; 
-    operators?: Array<{ id: number; name: string; path: string; isExperimental: boolean }>;
+    operators?: Array<{ id: number; name: string; path: string; isExperimental: boolean; isCompiled?: boolean }>;
     isStandardCustom?: boolean;
   }>('webview/checkMultipleOperators');
 }

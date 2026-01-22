@@ -10,7 +10,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 import { OperatorProjectDetector, OperatorProjectType, type OperatorProjectDetectionResult } from '@plugin/domain/services/operator-project-detector';
-import { createProject, getProjectByPath, getProjectById, deleteProject, getAllProjects } from '@plugin/domain/models/project-model';
+import { createProject, getProjectByPath, getProjectById, deleteProject, getAllProjects, getContainingStandardCustomProject } from '@plugin/domain/models/project-model';
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import { projectService } from './project-service';
 import { OperatorProjectIconTheme } from '@plugin/class/operator-project-icon-theme';
@@ -526,30 +526,48 @@ export class FolderContextMenuService {
 
   /**
    * 编译部署算子工程
+   * 当当前工程为标准自定义算子时，若右键选择的是文件夹，则将文件夹名作为 operatorNames 传入。
+   * @param uri 右键目标（文件夹或文件）；若为文件则取其所在目录为构建目录
    */
   static async buildOperatorProject(uri: vscode.Uri): Promise<void> {
-    const folderPath = uri.fsPath;
-    const project = getProjectByPath(folderPath);
+    let isFolder = false;
+    try {
+      isFolder = fs.statSync(uri.fsPath).isDirectory();
+    } catch {
+      isFolder = false;
+    }
+    const folderUri = isFolder ? uri : vscode.Uri.file(path.dirname(uri.fsPath));
+    const folderPath = folderUri.fsPath;
 
-    // 检查是否是算子工程
-    if (!project || project.project_type === OperatorProjectType.MULTI_PROJECT) {
+    let project = getProjectByPath(folderPath);
+    if (!project) {
+      project = getContainingStandardCustomProject(folderPath) ?? undefined;
+    }
+
+    if (!project) {
       vscode.window.showWarningMessage('该文件夹不是算子工程');
       return;
     }
 
-    await this.switchToProject(uri, async () => {
-      // 如果是标准自定义算子工程，提取文件夹名作为算子名称
-      let operatorNames: string | undefined;
-      let operatorType: string | undefined;
-      
-      if (project.project_type === OperatorProjectType.STANDARD_CUSTOM) {
-        const folderName = path.basename(folderPath);
-        operatorNames = folderName;
-        operatorType = 'standard-custom';
-      }
+    const isStandardCustom = project.project_type === OperatorProjectType.STANDARD_CUSTOM;
+    const isMultiRoot = project.project_type === OperatorProjectType.MULTI_PROJECT;
+    const norm = (p: string) => path.normalize(p).replace(/\\/g, '/').toLowerCase();
+    const isRootFolder = norm(folderPath) === norm(project.project_path || '');
 
-      // 直接调用 buildService.startBuild，传入算子名称和类型
-      // 这样与 UI 选择的编译逻辑保持一致
+    if (isMultiRoot && isRootFolder) {
+      vscode.window.showWarningMessage('请右键点击具体算子文件夹进行编译');
+      return;
+    }
+
+    let operatorNames: string | undefined;
+    let operatorType: string | undefined;
+    if (isFolder && (isStandardCustom || isMultiRoot)) {
+      operatorNames = path.basename(folderPath);
+      operatorType = 'standard-custom';
+    }
+
+    const projectUri = vscode.Uri.file(project.project_path!);
+    await this.switchToProject(projectUri, async () => {
       await buildService.startBuild({
         operatorNames,
         operatorType,

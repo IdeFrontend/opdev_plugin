@@ -15,7 +15,11 @@ import {
   getRunCommand,
   getConfig,
   objectToCommandString,
+  getProjectById,
 } from '@plugin/domain';
+import { getConfigById } from '@plugin/domain/services/configuration';
+import { OperatorProjectType } from '@plugin/domain/services/operator-project-detector';
+import { markOperatorsAsCompiled } from '@plugin/domain/models/project-model';
 
 const CONFIG_TYPES = {
   BUILD_OP: 'build_op',
@@ -149,6 +153,28 @@ export class BuildService {
       }
 
       vscode.window.showInformationMessage('编译算子成功');
+
+      // 如果编译成功且有 operatorNames，且是标准自定义算子，更新算子的编译状态
+      if (params.operatorNames && params.operatorNames.trim()) {
+        try {
+          const config = getConfigById(Number(configId));
+
+          if (config) {
+            const project = getProjectById(config.project_id);
+
+            if (project && project.project_type === OperatorProjectType.STANDARD_CUSTOM && project.project_path) {
+              await markOperatorsAsCompiled(project.project_path, params.operatorNames);
+
+              console.log(`[startBuild] 已标记算子为已编译: ${params.operatorNames}`);
+            }
+          }
+        }
+        catch (error) {
+          console.warn(`[startBuild] 更新算子编译状态失败: ${error instanceof Error ? error.message : String(error)}`);
+
+          // 不影响主流程，只记录警告
+        }
+      }
     }
     catch (e) {
       vscode.window.showErrorMessage(`获取编译算子命令失败 ${(e as Error).message}`);

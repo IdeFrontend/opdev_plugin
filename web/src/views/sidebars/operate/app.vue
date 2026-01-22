@@ -375,9 +375,9 @@ onMounted(async () => {
           id: String(op.id),
           name: op.name,
           hasEx: op.isExperimental,
+          isCompiled: op.isCompiled || false, // 从API返回的数据中获取编译状态
         };
 
-        // 默认所有算子都放到预备算子工程中
         // 根据编译成功判断逻辑，将编译成功的算子移到编译成功的算子工程列表中
         if (isOperatorCompiled(operatorItem)) {
           compiledOperators.value.push(operatorItem);
@@ -455,11 +455,13 @@ const preparedOperatorsActiveKey = ref(['1']);
 const operatorSelectorTriggerRef = ref(null);
 const popoverWidth = ref('auto');
 
-// 判断算子是否编译成功（待实现具体判断逻辑）
-// eslint-disable-next-line no-unused-vars
+// 判断算子是否编译成功
 const isOperatorCompiled = (operator) => {
-  // TODO: 实现编译成功的判断逻辑
-  // 目前默认返回 false，所有算子都放到预备算子工程中
+  // 如果算子对象有 isCompiled 属性，直接使用
+  if (operator.isCompiled !== undefined) {
+    return operator.isCompiled;
+  }
+  // 否则默认返回 false
   return false;
 };
 

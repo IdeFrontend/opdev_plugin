@@ -499,8 +499,7 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.window.showErrorMessage('请右键点击文件夹或文件');
         return;
       }
-      const folderUri = getFolderUri(uri);
-      await FolderContextMenuService.buildOperatorProject(folderUri);
+      await FolderContextMenuService.buildOperatorProject(uri);
     },
   );
 
