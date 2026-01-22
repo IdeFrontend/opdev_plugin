@@ -212,23 +212,57 @@
       },
       {
         "command": "huawei-op-devtools.operatorProjectBuild",
-        "title": "编译部署"
+        "title": "编译部署算子"
+      },
+      {
+        "command": "huawei-op-devtools.operatorProjectBuildExample",
+        "title": "编译example"
       },
       {
         "command": "huawei-op-devtools.operatorProjectRun",
         "title": "运行验证"
       },
       {
-        "command": "huawei-op-devtools.operatorProjectDebug",
-        "title": "调试"
+        "command": "huawei-op-devtools.operatorProjectCpuDebug",
+        "title": "CPU调试"
+      },
+      {
+        "command": "huawei-op-devtools.operatorProjectNpuDebug",
+        "title": "NPU调试"
+      },
+      {
+        "command": "huawei-op-devtools.operatorProjectCpuDebugConfig",
+        "title": "CPU调试配置"
+      },
+      {
+        "command": "huawei-op-devtools.operatorProjectNpuDebugConfig",
+        "title": "NPU调试配置"
       },
       {
         "command": "huawei-op-devtools.operatorProjectSanitizer",
         "title": "异常检测"
       },
       {
-        "command": "huawei-op-devtools.operatorProjectPerformance",
-        "title": "性能调优"
+        "command": "huawei-op-devtools.operatorProjectOnBoard",
+        "title": "上板分析"
+      },
+      {
+        "command": "huawei-op-devtools.operatorProjectSimulation",
+        "title": "仿真分析"
+      }
+    ],
+    "submenus": [
+      {
+        "id": "operator.build",
+        "label": "编译部署"
+      },
+      {
+        "id": "operator.debug",
+        "label": "调试"
+      },
+      {
+        "id": "operator.performance",
+        "label": "性能调优"
       }
     ],
     "menus": {
@@ -273,7 +307,7 @@
           "group": "operator@2"
         },
         {
-          "command": "huawei-op-devtools.operatorProjectBuild",
+          "submenu": "operator.build",
           "when": "explorerResourceIsFolder",
           "group": "operator@3"
         },
@@ -283,8 +317,8 @@
           "group": "operator@3"
         },
         {
-          "command": "huawei-op-devtools.operatorProjectDebug",
-          "when": "explorerResourceIsFolder ",
+          "submenu": "operator.debug",
+          "when": "explorerResourceIsFolder",
           "group": "operator@3"
         },
         {
@@ -293,9 +327,39 @@
           "group": "operator@3"
         },
         {
-          "command": "huawei-op-devtools.operatorProjectPerformance",
+          "submenu": "operator.performance",
           "when": "explorerResourceIsFolder",
           "group": "operator@3"
+        }
+      ],
+      "operator.build": [
+        {
+          "command": "huawei-op-devtools.operatorProjectBuild"
+        },
+        {
+          "command": "huawei-op-devtools.operatorProjectBuildExample"
+        }
+      ],
+      "operator.debug": [
+        {
+          "command": "huawei-op-devtools.operatorProjectCpuDebug"
+        },
+        {
+          "command": "huawei-op-devtools.operatorProjectNpuDebug"
+        },
+        {
+          "command": "huawei-op-devtools.operatorProjectCpuDebugConfig"
+        },
+        {
+          "command": "huawei-op-devtools.operatorProjectNpuDebugConfig"
+        }
+      ],
+      "operator.performance": [
+        {
+          "command": "huawei-op-devtools.operatorProjectOnBoard"
+        },
+        {
+          "command": "huawei-op-devtools.operatorProjectSimulation"
         }
       ]
     },

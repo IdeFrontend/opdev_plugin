@@ -59,10 +59,15 @@ import {
   COMMAND_UNMARK_AS_OPERATOR_PROJECT,
   COMMAND_UNMARK_AS_MULTI_OPERATOR_PROJECT,
   COMMAND_OPERATOR_PROJECT_BUILD,
+  COMMAND_OPERATOR_PROJECT_BUILD_EXAMPLE,
   COMMAND_OPERATOR_PROJECT_RUN,
-  COMMAND_OPERATOR_PROJECT_DEBUG,
+  COMMAND_OPERATOR_PROJECT_CPU_DEBUG,
+  COMMAND_OPERATOR_PROJECT_NPU_DEBUG,
+  COMMAND_OPERATOR_PROJECT_CPU_DEBUG_CONFIG,
+  COMMAND_OPERATOR_PROJECT_NPU_DEBUG_CONFIG,
   COMMAND_OPERATOR_PROJECT_SANITIZER,
-  COMMAND_OPERATOR_PROJECT_PERFORMANCE,
+  COMMAND_OPERATOR_PROJECT_ON_BOARD,
+  COMMAND_OPERATOR_PROJECT_SIMULATION,
 } from './constants';
 import { FolderContextMenuService } from './service/folder-context-menu-service';
 import { AutoMultiProjectDetector } from './service/auto-multi-project-detector';
@@ -479,6 +484,17 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
+  const operatorProjectBuildExampleCommand = vscode.commands.registerCommand(
+    COMMAND_OPERATOR_PROJECT_BUILD_EXAMPLE,
+    async (uri?: vscode.Uri) => {
+      if (!uri) {
+        vscode.window.showErrorMessage('请右键点击文件夹');
+        return;
+      }
+      await FolderContextMenuService.buildExampleOperatorProject(uri);
+    },
+  );
+
   const operatorProjectRunCommand = vscode.commands.registerCommand(
     COMMAND_OPERATOR_PROJECT_RUN,
     async (uri?: vscode.Uri) => {
@@ -490,14 +506,47 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  const operatorProjectDebugCommand = vscode.commands.registerCommand(
-    COMMAND_OPERATOR_PROJECT_DEBUG,
+  const operatorProjectCpuDebugCommand = vscode.commands.registerCommand(
+    COMMAND_OPERATOR_PROJECT_CPU_DEBUG,
     async (uri?: vscode.Uri) => {
       if (!uri) {
         vscode.window.showErrorMessage('请右键点击文件夹');
         return;
       }
-      await FolderContextMenuService.debugOperatorProject(uri);
+      await FolderContextMenuService.cpuDebugOperatorProject(uri);
+    },
+  );
+
+  const operatorProjectNpuDebugCommand = vscode.commands.registerCommand(
+    COMMAND_OPERATOR_PROJECT_NPU_DEBUG,
+    async (uri?: vscode.Uri) => {
+      if (!uri) {
+        vscode.window.showErrorMessage('请右键点击文件夹');
+        return;
+      }
+      await FolderContextMenuService.npuDebugOperatorProject(uri);
+    },
+  );
+
+  const operatorProjectCpuDebugConfigCommand = vscode.commands.registerCommand(
+    COMMAND_OPERATOR_PROJECT_CPU_DEBUG_CONFIG,
+    async (uri?: vscode.Uri) => {
+      if (!uri) {
+        vscode.window.showErrorMessage('请右键点击文件夹');
+        return;
+      }
+      await FolderContextMenuService.cpuDebugConfigOperatorProject(uri);
+    },
+  );
+
+  const operatorProjectNpuDebugConfigCommand = vscode.commands.registerCommand(
+    COMMAND_OPERATOR_PROJECT_NPU_DEBUG_CONFIG,
+    async (uri?: vscode.Uri) => {
+      if (!uri) {
+        vscode.window.showErrorMessage('请右键点击文件夹');
+        return;
+      }
+      await FolderContextMenuService.npuDebugConfigOperatorProject(uri);
     },
   );
 
@@ -512,14 +561,25 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  const operatorProjectPerformanceCommand = vscode.commands.registerCommand(
-    COMMAND_OPERATOR_PROJECT_PERFORMANCE,
+  const operatorProjectOnBoardCommand = vscode.commands.registerCommand(
+    COMMAND_OPERATOR_PROJECT_ON_BOARD,
     async (uri?: vscode.Uri) => {
       if (!uri) {
         vscode.window.showErrorMessage('请右键点击文件夹');
         return;
       }
-      await FolderContextMenuService.performanceOperatorProject(uri);
+      await FolderContextMenuService.onBoardOperatorProject(uri);
+    },
+  );
+
+  const operatorProjectSimulationCommand = vscode.commands.registerCommand(
+    COMMAND_OPERATOR_PROJECT_SIMULATION,
+    async (uri?: vscode.Uri) => {
+      if (!uri) {
+        vscode.window.showErrorMessage('请右键点击文件夹');
+        return;
+      }
+      await FolderContextMenuService.simulationOperatorProject(uri);
     },
   );
 
@@ -530,10 +590,15 @@ export async function activate(context: vscode.ExtensionContext) {
     unmarkAsOperatorProjectCommand,
     unmarkAsMultiOperatorProjectCommand,
     operatorProjectBuildCommand,
+    operatorProjectBuildExampleCommand,
     operatorProjectRunCommand,
-    operatorProjectDebugCommand,
+    operatorProjectCpuDebugCommand,
+    operatorProjectNpuDebugCommand,
+    operatorProjectCpuDebugConfigCommand,
+    operatorProjectNpuDebugConfigCommand,
     operatorProjectSanitizerCommand,
-    operatorProjectPerformanceCommand,
+    operatorProjectOnBoardCommand,
+    operatorProjectSimulationCommand,
   );
 
   // 注册资源选择变化监听，动态更新上下文变量

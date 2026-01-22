@@ -18,6 +18,7 @@ import { generateStructure } from '@plugin/domain';
 import { getOpsByProjectId } from '@plugin/domain/models/model';
 import { getConfig } from '@plugin/domain/services/configuration';
 import { buildService } from './build-service';
+import { taskMethods } from '../controller/task-controller';
 
 /**
  * 文件夹右键菜单服务
@@ -557,6 +558,25 @@ export class FolderContextMenuService {
   }
 
   /**
+   * 编译example算子工程
+   */
+  static async buildExampleOperatorProject(uri: vscode.Uri): Promise<void> {
+    const folderPath = uri.fsPath;
+    const project = getProjectByPath(folderPath);
+
+    // 检查是否是算子工程
+    if (!project || project.project_type === OperatorProjectType.MULTI_PROJECT) {
+      vscode.window.showWarningMessage('该文件夹不是算子工程');
+      return;
+    }
+
+    await this.switchToProject(uri, async () => {
+      // 调用编译example，与看板逻辑保持一致
+      await taskMethods.startBuildExample();
+    });
+  }
+
+  /**
    * 运行验证算子工程
    */
   static async runOperatorProject(uri: vscode.Uri): Promise<void> {
@@ -570,17 +590,15 @@ export class FolderContextMenuService {
     }
 
     await this.switchToProject(uri, async () => {
-      // 运行验证通过 API 服务器调用，这里先显示提示
-      vscode.window.showInformationMessage('请使用操作面板进行运行验证');
-      // 打开操作面板
-      await vscode.commands.executeCommand('huawei-op-devtools.toggleOpsOperate');
+      // 调用运行验证，与看板逻辑保持一致
+      await taskMethods.startRun();
     });
   }
 
   /**
-   * 调试算子工程
+   * CPU调试算子工程
    */
-  static async debugOperatorProject(uri: vscode.Uri): Promise<void> {
+  static async cpuDebugOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
     const project = getProjectByPath(folderPath);
 
@@ -591,9 +609,65 @@ export class FolderContextMenuService {
     }
 
     await this.switchToProject(uri, async () => {
-      // 打开调试配置
-      const debugConfigCommand = 'huawei-op-devtools.debugConfig';
-      await vscode.commands.executeCommand(debugConfigCommand);
+      // 调用CPU调试，与看板逻辑保持一致
+      await taskMethods.runCpuDebug();
+    });
+  }
+
+  /**
+   * NPU调试算子工程
+   */
+  static async npuDebugOperatorProject(uri: vscode.Uri): Promise<void> {
+    const folderPath = uri.fsPath;
+    const project = getProjectByPath(folderPath);
+
+    // 检查是否是算子工程
+    if (!project || project.project_type === OperatorProjectType.MULTI_PROJECT) {
+      vscode.window.showWarningMessage('该文件夹不是算子工程');
+      return;
+    }
+
+    await this.switchToProject(uri, async () => {
+      // 调用NPU调试，与看板逻辑保持一致
+      await taskMethods.runDebug();
+    });
+  }
+
+  /**
+   * CPU调试配置算子工程
+   */
+  static async cpuDebugConfigOperatorProject(uri: vscode.Uri): Promise<void> {
+    const folderPath = uri.fsPath;
+    const project = getProjectByPath(folderPath);
+
+    // 检查是否是算子工程
+    if (!project || project.project_type === OperatorProjectType.MULTI_PROJECT) {
+      vscode.window.showWarningMessage('该文件夹不是算子工程');
+      return;
+    }
+
+    await this.switchToProject(uri, async () => {
+      // 调用CPU调试配置，与看板逻辑保持一致
+      await taskMethods.cpuDebugConfig();
+    });
+  }
+
+  /**
+   * NPU调试配置算子工程
+   */
+  static async npuDebugConfigOperatorProject(uri: vscode.Uri): Promise<void> {
+    const folderPath = uri.fsPath;
+    const project = getProjectByPath(folderPath);
+
+    // 检查是否是算子工程
+    if (!project || project.project_type === OperatorProjectType.MULTI_PROJECT) {
+      vscode.window.showWarningMessage('该文件夹不是算子工程');
+      return;
+    }
+
+    await this.switchToProject(uri, async () => {
+      // 调用NPU调试配置，与看板逻辑保持一致
+      await taskMethods.debugConfig();
     });
   }
 
@@ -611,15 +685,16 @@ export class FolderContextMenuService {
     }
 
     await this.switchToProject(uri, async () => {
+      // 打开异常检测配置，与看板逻辑保持一致
       const sanitizerCommand = 'huawei-op-devtools.sanitizerOptions';
       await vscode.commands.executeCommand(sanitizerCommand);
     });
   }
 
   /**
-   * 性能调优
+   * 上板分析
    */
-  static async performanceOperatorProject(uri: vscode.Uri): Promise<void> {
+  static async onBoardOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
     const project = getProjectByPath(folderPath);
 
@@ -630,9 +705,29 @@ export class FolderContextMenuService {
     }
 
     await this.switchToProject(uri, async () => {
-      // 打开性能调优配置
-      const performanceCommand = 'huawei-op-devtools.simulatorOptions';
-      await vscode.commands.executeCommand(performanceCommand);
+      // 打开上板分析配置，与看板逻辑保持一致
+      const onBoardCommand = 'huawei-op-devtools.onBoardOptions';
+      await vscode.commands.executeCommand(onBoardCommand);
+    });
+  }
+
+  /**
+   * 仿真分析
+   */
+  static async simulationOperatorProject(uri: vscode.Uri): Promise<void> {
+    const folderPath = uri.fsPath;
+    const project = getProjectByPath(folderPath);
+
+    // 检查是否是算子工程
+    if (!project || project.project_type === OperatorProjectType.MULTI_PROJECT) {
+      vscode.window.showWarningMessage('该文件夹不是算子工程');
+      return;
+    }
+
+    await this.switchToProject(uri, async () => {
+      // 打开仿真分析配置，与看板逻辑保持一致
+      const simulationCommand = 'huawei-op-devtools.simulatorOptions';
+      await vscode.commands.executeCommand(simulationCommand);
     });
   }
 
