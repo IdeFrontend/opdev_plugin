@@ -199,10 +199,10 @@ const getSaveData = () => {
       </a-form-item>
       <a-form-item
         label="算子运行验证命令行"
-        name="target_file"
+        name="script"
       >
         <a-input
-          v-model:value="localExampleConfigForme.target_file"
+          v-model:value="localExampleConfigForme.script"
           placeholder="请输入算子运行验证命令行"
           @change="handleExampleConfigChange"
         />
