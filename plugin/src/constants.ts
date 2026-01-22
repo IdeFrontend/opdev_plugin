@@ -78,3 +78,4 @@ export const COMMAND_OPERATOR_PROJECT_NPU_DEBUG_CONFIG = `${COMMAND_PREFIX}.oper
 export const COMMAND_OPERATOR_PROJECT_SANITIZER = `${COMMAND_PREFIX}.operatorProjectSanitizer`;
 export const COMMAND_OPERATOR_PROJECT_ON_BOARD = `${COMMAND_PREFIX}.operatorProjectOnBoard`;
 export const COMMAND_OPERATOR_PROJECT_SIMULATION = `${COMMAND_PREFIX}.operatorProjectSimulation`;
+export const COMMAND_REFRESH_FOLDER_DECORATIONS = `${COMMAND_PREFIX}.refreshFolderDecorations`;

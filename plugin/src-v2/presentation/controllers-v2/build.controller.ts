@@ -39,6 +39,8 @@ export class BuildControllerV2 {
       const dto = {
         configId: params.configId ? Number(params.configId) : undefined,
         compileOption: params.compileOption,
+        operatorNames: params.operatorNames,
+        operatorType: params.operatorType,
       };
 
       // 执行构建
@@ -104,7 +106,11 @@ export class BuildControllerV2 {
       // 保存当前 executor 引用
       BuildControllerV2.currentExecutor = this.projectManager.getExecutor();
 
-      const dto = { configId: params.configId ? Number(params.configId) : undefined };
+      const dto = {
+        configId: params.configId ? Number(params.configId) : undefined,
+        operatorNames: params.operatorNames,
+        operatorType: params.operatorType,
+      };
 
       const result = await this.buildService.startBuildExample(dto);
 

@@ -59,7 +59,6 @@ import {
   COMMAND_UNMARK_AS_OPERATOR_PROJECT,
   COMMAND_UNMARK_AS_MULTI_OPERATOR_PROJECT,
   COMMAND_OPERATOR_PROJECT_BUILD,
-  COMMAND_OPERATOR_PROJECT_BUILD_EXAMPLE,
   COMMAND_OPERATOR_PROJECT_RUN,
   COMMAND_OPERATOR_PROJECT_CPU_DEBUG,
   COMMAND_OPERATOR_PROJECT_NPU_DEBUG,
@@ -68,6 +67,7 @@ import {
   COMMAND_OPERATOR_PROJECT_SANITIZER,
   COMMAND_OPERATOR_PROJECT_ON_BOARD,
   COMMAND_OPERATOR_PROJECT_SIMULATION,
+  COMMAND_REFRESH_FOLDER_DECORATIONS,
 } from './constants';
 import { FolderContextMenuService } from './service/folder-context-menu-service';
 import { AutoMultiProjectDetector } from './service/auto-multi-project-detector';
@@ -416,7 +416,16 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 初始化文件夹装饰提供者
   const iconTheme = OperatorProjectIconTheme.getInstance(context);
-  
+
+  const refreshDecorationsCommand = vscode.commands.registerCommand(
+    COMMAND_REFRESH_FOLDER_DECORATIONS,
+    () => {
+      iconTheme.fireDecorationUpdate();
+      vscode.window.showInformationMessage('已刷新文件夹装饰，请查看左侧资源管理器');
+    },
+  );
+  context.subscriptions.push(refreshDecorationsCommand);
+
   // 注意：不在插件激活时自动检测并标记算子工程合集
   // 只在用户明确打开项目时（link-controller.ts）才进行自动检测
 
@@ -432,11 +441,11 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
       await FolderContextMenuService.markAsOperatorProject(uri);
-      
-      // 操作完成后触发装饰更新
+
+      // 操作完成后触发装饰更新（先刷新涉及 URI，再全量刷新确保 Explorer 重绘）
       iconTheme.fireDecorationUpdate(uri);
-      
-      // 操作完成后更新上下文变量
+      iconTheme.fireDecorationUpdate();
+
       await updateContextForUri(uri);
     },
   );
@@ -449,11 +458,10 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
       await FolderContextMenuService.markAsMultiOperatorProject(uri);
-      
-      // 操作完成后触发装饰更新
+
       iconTheme.fireDecorationUpdate(uri);
-      
-      // 操作完成后更新上下文变量
+      iconTheme.fireDecorationUpdate();
+
       await updateContextForUri(uri);
     },
   );
@@ -466,11 +474,10 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
       await FolderContextMenuService.unmarkAsOperatorProject(uri);
-      
-      // 操作完成后触发装饰更新
+
       iconTheme.fireDecorationUpdate(uri);
-      
-      // 操作完成后更新上下文变量
+      iconTheme.fireDecorationUpdate();
+
       await updateContextForUri(uri);
     },
   );
@@ -483,11 +490,10 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
       await FolderContextMenuService.unmarkAsMultiOperatorProject(uri);
-      
-      // 操作完成后触发装饰更新
+
       iconTheme.fireDecorationUpdate(uri);
-      
-      // 操作完成后更新上下文变量
+      iconTheme.fireDecorationUpdate();
+
       await updateContextForUri(uri);
     },
   );
@@ -500,18 +506,6 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
       await FolderContextMenuService.buildOperatorProject(uri);
-    },
-  );
-
-  const operatorProjectBuildExampleCommand = vscode.commands.registerCommand(
-    COMMAND_OPERATOR_PROJECT_BUILD_EXAMPLE,
-    async (uri?: vscode.Uri) => {
-      if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹或文件');
-        return;
-      }
-      const folderUri = getFolderUri(uri);
-      await FolderContextMenuService.buildExampleOperatorProject(folderUri);
     },
   );
 
@@ -618,7 +612,6 @@ export async function activate(context: vscode.ExtensionContext) {
     unmarkAsOperatorProjectCommand,
     unmarkAsMultiOperatorProjectCommand,
     operatorProjectBuildCommand,
-    operatorProjectBuildExampleCommand,
     operatorProjectRunCommand,
     operatorProjectCpuDebugCommand,
     operatorProjectNpuDebugCommand,

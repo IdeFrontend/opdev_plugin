@@ -16,15 +16,15 @@ export class CommandGeneratorService {
   /**
    * 生成构建算子命令
    */
-  generateBuildCommand(configId: number, compileOption?: string): string {
-    return getBuildOpCommand(configId, compileOption);
+  generateBuildCommand(configId: number, compileOption?: string, operatorNames?: string): string {
+    return getBuildOpCommand(configId, compileOption, operatorNames);
   }
 
   /**
    * 生成构建示例命令
    */
-  generateBuildExampleCommand(configId: number): string {
-    return getBuildExampleCommand(configId);
+  generateBuildExampleCommand(configId: number, operatorNames?: string): string {
+    return getBuildExampleCommand(configId, undefined, operatorNames);
   }
 
   /**

@@ -5,7 +5,7 @@ import { ProjectManager } from '@plugin/core/project/project-manager';
 import { buildService } from '@plugin/service/build-service';
 import { sanitizerService } from '@plugin/service/sanitizer-service';
 import { homeMethods } from './home-controller';
-import { StartBuildParams } from '@shared/api-types';
+import { StartBuildParams, StartBuildExampleParams } from '@shared/api-types';
 
 // 全局任务管理器：用于追踪和终止正在执行的任务
 let currentExecutor: CommandExecutor | null = null;
@@ -54,10 +54,21 @@ export const taskMethods = {
   /**
    * 构建示例
    */
-  async startBuildExample(): Promise<void> {
-    await ProjectManager.getInstance()
-      .initProject();
-    await buildService.startBuildExample({});
+  async startBuildExample(params: StartBuildExampleParams = {}): Promise<void> {
+    try {
+      await ProjectManager.getInstance()
+        .initProject();
+      // 保存当前 executor 引用
+      currentExecutor = ProjectManager.getInstance()
+        .getExecutor();
+      await buildService.startBuildExample(params);
+    }
+    finally {
+      // 清除 executor 引用
+      currentExecutor = null;
+      ProjectManager.getInstance()
+        .clearExecutor();
+    }
   },
 
   /**

@@ -21,9 +21,8 @@ import {
 import {
   getProjectByPath,
   updateStandardCustomOperators,
-  type SubOperatorInfo,
-  type OperatorCollectionInfo,
 } from '@plugin/domain/models/project-model';
+import { WorkspaceDetectorService } from '@plugin/service/workspace-detector-service';
 
 // 辅助函数：获取 extension context
 function getExtensionContext(): vscode.ExtensionContext {
@@ -344,98 +343,18 @@ export const welcomeMethods = {
       await pm.checkVscode();
       await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
 
-      // 如果是标准自定义算子，检测并存储算子合集和算子
+      // 如果是标准自定义算子，扫描算子合集与算子并更新根项目（不为之新建 projects 项）
       if (rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM) {
         try {
           console.log('[openProject] 检测到标准自定义算子，开始扫描算子合集和算子...');
-
-          // 1. 扫描第一层目录，找到算子合集（如 common、math、experimental 等）
-          const opsMeet: OperatorCollectionInfo[] = [];
-          const opsList: SubOperatorInfo[] = [];
-          const experimentalOpsList: SubOperatorInfo[] = [];
-
-          const entries = fs.readdirSync(projectFullPath, { withFileTypes: true });
-
-          for (const entry of entries) {
-            // 只处理目录
-            if (!entry.isDirectory()) {
-              continue;
-            }
-
-            // 跳过隐藏目录和常见非算子工程目录
-            const dirName = entry.name;
-            if (
-              dirName.startsWith('.')
-              || dirName === 'node_modules'
-              || dirName === 'out'
-              || dirName === 'build'
-            ) {
-              continue;
-            }
-
-            const collectionPath = path.join(projectFullPath, dirName);
-
-            // 2. 扫描算子合集下的子目录，找到算子（如 abs、add 等）
-            let hasOperators = false;
-            const isExperimentalCollection = dirName.toLowerCase() === 'experimental';
-
-            try {
-              const subEntries = fs.readdirSync(collectionPath, { withFileTypes: true });
-
-              for (const subEntry of subEntries) {
-                if (!subEntry.isDirectory() || subEntry.name.startsWith('.')) {
-                  continue;
-                }
-
-                const operatorPath = path.join(collectionPath, subEntry.name);
-
-                // 检查是否是算子（有 CMakeLists.txt）
-                const operatorCmakeListsPath = path.join(operatorPath, 'CMakeLists.txt');
-                if (fs.existsSync(operatorCmakeListsPath)) {
-                  hasOperators = true; // 标记这个目录包含算子
-
-                  // 检查是否已编译（检查是否有 build 目录或 out 目录）
-                  const buildDir = path.join(operatorPath, 'build');
-                  const outDir = path.join(operatorPath, 'out');
-                  const isCompiled = fs.existsSync(buildDir) || fs.existsSync(outDir);
-
-                  const operatorInfo: SubOperatorInfo = {
-                    name: subEntry.name,
-                    path: operatorPath,
-                    isCompiled,
-                  };
-
-                  if (isExperimentalCollection) {
-                    experimentalOpsList.push(operatorInfo);
-                  } else {
-                    opsList.push(operatorInfo);
-                  }
-                }
-              }
-            } catch (error) {
-              console.warn(`[openProject] 扫描算子合集 ${dirName} 下的算子失败: ${error instanceof Error ? error.message : String(error)}`);
-            }
-
-            // 算子合集：只有包含算子的目录才作为算子合集，放到 ops_meet
-            if (hasOperators) {
-              opsMeet.push({
-                name: dirName,
-                path: collectionPath,
-              });
-            }
-            }
-
-          // 更新项目的算子信息
-          console.log(`[openProject] 准备更新项目算子信息: ${projectFullPath}`);
-          console.log(`[openProject] 算子合集列表:`, opsMeet.map(m => m.name));
-          console.log(`[openProject] 普通算子列表:`, opsList.map(o => o.name));
-          console.log(`[openProject] experimental算子列表:`, experimentalOpsList.map(o => o.name));
-
+          const { opsMeet, opsList, experimentalOpsList } = WorkspaceDetectorService.scanOpsMeetAndOpsLists(projectFullPath);
+          console.log(`[openProject] 算子合集列表: ${opsMeet.map((m) => m.name).join(', ')}`);
+          console.log(`[openProject] 普通算子: ${opsList.length}, experimental算子: ${experimentalOpsList.length}`);
           await updateStandardCustomOperators(projectFullPath, opsMeet, opsList, experimentalOpsList);
-          console.log(`[openProject] 已检测并存储 ${opsMeet.length} 个算子合集, ${opsList.length} 个普通算子, ${experimentalOpsList.length} 个experimental算子`);
-        } catch (error) {
+          console.log(`[openProject] 已存储 ${opsMeet.length} 个算子合集, ${opsList.length} 个普通算子, ${experimentalOpsList.length} 个experimental算子`);
+        }
+        catch (error) {
           console.warn(`[openProject] 检测算子信息失败: ${error instanceof Error ? error.message : String(error)}`);
-          // 不影响主流程，只记录警告
         }
       }
 

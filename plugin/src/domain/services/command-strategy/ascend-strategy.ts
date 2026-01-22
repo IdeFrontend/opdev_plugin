@@ -110,13 +110,14 @@ export class AscendCommandStrategy implements CommandStrategy {
   }
 
   buildExampleCommand(params: CommandBuildParams): string {
-    const { config, sourceCannCmd, cdCmd, compileOption, advance_cmd } = params;
+    const { config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames } = params;
 
     const options = (config.user_options as Record<string, unknown> | null | undefined) || {};
     const mode = options.execution_mode as string || 'eager';
     let vendor_name = 'custom';
     let pkg_mode = 'cust';
-    const op = config.op;
+    // 如果提供了 operatorNames，优先使用它；否则使用 config.op
+    const op = operatorNames || '';
     const args = parse_cmd_options(config.custom_options || null);
 
     if (args && args.vendor_name) {
@@ -147,49 +148,49 @@ export class AscendCommandStrategy implements CommandStrategy {
   }
 
   buildSanitizerCommand(
-      config: ConfigRecord,
-      operator: OpRecord | null,
-      sourceCannCmd: string,
-      cdCmd: string,
-      exampleTargetFile?: string
-    ): string {
-      const mssanitizer = new Command('mssanitizer');
+    config: ConfigRecord,
+    operator: OpRecord | null,
+    sourceCannCmd: string,
+    cdCmd: string,
+    exampleTargetFile?: string
+  ): string {
+    const mssanitizer = new Command('mssanitizer');
 
-      // 添加目标文件
-      if (exampleTargetFile) {
-        mssanitizer.addArgument(exampleTargetFile);
-      }
-
-      // 处理配置选项
-      const options = (config.user_options as Record<string, unknown> | null | undefined) || {};
-      const toolOptions = (options.tool as Record<string, unknown> | undefined) || {};
-      const tools = Object.keys(toolOptions)
-        .filter((key) => toolOptions[key]);
-
-      mssanitizer.addOption('tool', tools);
-
-      if (toolOptions.memcheck) {
-        const memcheckOptions = (options.memcheckOption as Record<string, unknown> | undefined) || {};
-
-        Object.keys(memcheckOptions)
-          .forEach((key) => {
-            if (memcheckOptions[key]) {
-              mssanitizer.addOption(key, 'yes');
-            }
-          });
-      }
-
-      mssanitizer.addOption('log-level', options.logLevel as string | undefined);
-      mssanitizer.addOption('max-debuglog-size', options.maxDebuglogSize as string | undefined);
-      mssanitizer.addOption('block-id', options.blockId as string | number | undefined);
-      mssanitizer.addOption(
-        'log-file',
-        `${operator?.op_path}/.vscode/mindstudio_sanitizer_log/mssanitizer_${new Date()
-          .valueOf()}.log`,
-      );
-
-      return joinCommands(sourceCannCmd, cdCmd, mssanitizer.toString());
+    // 添加目标文件
+    if (exampleTargetFile) {
+      mssanitizer.addArgument(exampleTargetFile);
     }
+
+    // 处理配置选项
+    const options = (config.user_options as Record<string, unknown> | null | undefined) || {};
+    const toolOptions = (options.tool as Record<string, unknown> | undefined) || {};
+    const tools = Object.keys(toolOptions)
+      .filter((key) => toolOptions[key]);
+
+    mssanitizer.addOption('tool', tools);
+
+    if (toolOptions.memcheck) {
+      const memcheckOptions = (options.memcheckOption as Record<string, unknown> | undefined) || {};
+
+      Object.keys(memcheckOptions)
+        .forEach((key) => {
+          if (memcheckOptions[key]) {
+            mssanitizer.addOption(key, 'yes');
+          }
+        });
+    }
+
+    mssanitizer.addOption('log-level', options.logLevel as string | undefined);
+    mssanitizer.addOption('max-debuglog-size', options.maxDebuglogSize as string | undefined);
+    mssanitizer.addOption('block-id', options.blockId as string | number | undefined);
+    mssanitizer.addOption(
+      'log-file',
+      `${operator?.op_path}/.vscode/mindstudio_sanitizer_log/mssanitizer_${new Date()
+        .valueOf()}.log`,
+    );
+
+    return joinCommands(sourceCannCmd, cdCmd, mssanitizer.toString());
+  }
 
   buildSimulateCommand(params: ProfilerCommandParams): string {
     const { config, project, operator, sourceCannCmd, cdBuildCmd, exampleTargetFile } = params;

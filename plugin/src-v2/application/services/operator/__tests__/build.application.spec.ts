@@ -133,7 +133,22 @@ describe('BuildApplicationService', () => {
       expect(ResultUtils.isOk(result))
         .toBe(true);
       expect(mockBuildOrchestrator.buildExample)
-        .toHaveBeenCalledWith(202);
+        .toHaveBeenCalledWith(202, undefined);
+    });
+
+    it('should build example with operatorNames', async () => {
+      mockBuildOrchestrator.buildExample.mockResolvedValue(ResultUtils.ok(undefined));
+
+      const result = await service.startBuildExample({
+        configId: 202,
+        operatorNames: 'op1,op2',
+        operatorType: 'standard-custom',
+      });
+
+      expect(ResultUtils.isOk(result))
+        .toBe(true);
+      expect(mockBuildOrchestrator.buildExample)
+        .toHaveBeenCalledWith(202, 'op1,op2');
     });
   });
 

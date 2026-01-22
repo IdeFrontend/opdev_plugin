@@ -18,6 +18,8 @@ import { ConfigType } from '@plugin-v2/domain/operator/value-objects/config-type
 export interface StartBuildDto {
   configId?: number;
   compileOption?: string;
+  operatorNames?: string; // 算子名称，多个用逗号分隔（用于标准自定义算子等场景）
+  operatorType?: string; // 算子类型，用于标识编译哪种类型的算子（如 'standard-custom'）
 }
 
 export interface StartRunDto {
@@ -26,6 +28,8 @@ export interface StartRunDto {
 
 export interface StartBuildExampleDto {
   configId?: number;
+  operatorNames?: string; // 算子名称，多个用逗号分隔（用于标准自定义算子等场景）
+  operatorType?: string; // 算子类型，用于标识编译哪种类型的算子（如 'standard-custom'）
 }
 
 /**
@@ -56,7 +60,7 @@ export class BuildApplicationService {
     }
 
     // 2. 执行构建
-    return this.buildOrchestrator.build(configId, dto.compileOption);
+    return this.buildOrchestrator.build(configId, dto.compileOption, dto.operatorNames);
   }
 
   /**
@@ -98,7 +102,7 @@ export class BuildApplicationService {
     }
 
     // 2. 执行构建
-    return this.buildOrchestrator.buildExample(configId);
+    return this.buildOrchestrator.buildExample(configId, dto.operatorNames);
   }
 
   /**

@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://gitcode.com/kaocong/mstt"
   },
-  "version": "1.2.22",
+  "version": "1.2.55",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -33,6 +33,24 @@
         }
       }
     },
+    "colors": [
+      {
+        "id": "huawei-op-devtools.operatorProject",
+        "description": "算子工程文件夹装饰颜色",
+        "defaults": {
+          "dark": "#5CB3FF",
+          "light": "#1890FF"
+        }
+      },
+      {
+        "id": "huawei-op-devtools.operatorProjectCollection",
+        "description": "算子工程集合文件夹装饰颜色",
+        "defaults": {
+          "dark": "#B37FEB",
+          "light": "#722ED1"
+        }
+      }
+    ],
     "viewsContainers": {
       "activitybar": [
         {
@@ -215,10 +233,6 @@
         "title": "编译部署算子"
       },
       {
-        "command": "huawei-op-devtools.operatorProjectBuildExample",
-        "title": "编译example"
-      },
-      {
         "command": "huawei-op-devtools.operatorProjectRun",
         "title": "运行验证"
       },
@@ -249,13 +263,13 @@
       {
         "command": "huawei-op-devtools.operatorProjectSimulation",
         "title": "仿真分析"
+      },
+      {
+        "command": "huawei-op-devtools.refreshFolderDecorations",
+        "title": "刷新文件夹装饰"
       }
     ],
     "submenus": [
-      {
-        "id": "operator.build",
-        "label": "编译部署"
-      },
       {
         "id": "operator.debug",
         "label": "调试"
@@ -307,37 +321,29 @@
           "group": "operator@2"
         },
         {
-          "submenu": "operator.build",
+          "command": "huawei-op-devtools.operatorProjectBuild",
           "when": "explorerResourceIsFolder || resourceExtname == '.py'",
-          "group": "operator@3"
+          "group": "operator@3.1"
         },
         {
           "command": "huawei-op-devtools.operatorProjectRun",
           "when": "explorerResourceIsFolder || resourceExtname == '.py'",
-          "group": "operator@3"
+          "group": "operator@3.2"
         },
         {
           "submenu": "operator.debug",
           "when": "explorerResourceIsFolder || resourceExtname == '.py'",
-          "group": "operator@3"
+          "group": "operator@3.3"
         },
         {
           "command": "huawei-op-devtools.operatorProjectSanitizer",
           "when": "explorerResourceIsFolder || resourceExtname == '.py'",
-          "group": "operator@3"
+          "group": "operator@3.4"
         },
         {
           "submenu": "operator.performance",
           "when": "explorerResourceIsFolder || resourceExtname == '.py'",
-          "group": "operator@3"
-        }
-      ],
-      "operator.build": [
-        {
-          "command": "huawei-op-devtools.operatorProjectBuild"
-        },
-        {
-          "command": "huawei-op-devtools.operatorProjectBuildExample"
+          "group": "operator@3.5"
         }
       ],
       "operator.debug": [

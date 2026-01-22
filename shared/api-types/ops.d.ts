@@ -41,6 +41,7 @@ export type StartBuildParams = {
   compileOption?: string;
   operatorNames?: string; // 算子名称，多个用逗号分隔
   operatorType?: string; // 算子类型，用于标识编译哪种类型的算子（如 'standard-custom'）
+  projectId?: string | number; // 项目ID
 };
 
 export type StartRunParams = {
@@ -49,6 +50,10 @@ export type StartRunParams = {
 
 export type StartBuildExampleParams = {
   configId?: string;
+  compileOption?: string;
+  operatorNames?: string; // 算子名称，多个用逗号分隔
+  operatorType?: string; // 算子类型，用于标识编译哪种类型的算子（如 'standard-custom'）
+  projectId?: string | number; // 项目ID（从 projects.json 根据根目录查找）
 };
 
 export type SaveBuildConfigParams = {

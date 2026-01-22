@@ -12,6 +12,7 @@ import debugIcon from '@web/assets/svg/debug.svg';
 import checkIcon from '@web/assets/svg/check.svg';
 import {
   startBuild,
+  startBuildExample,
   startRun,
   stopTask,
   openConfig,
@@ -71,44 +72,52 @@ const baseMenuItems = [
   },
   {
     key: 'build',
-    label: '编译部署',
+    label: '编译部署算子',
     icon: buildIcon,
-    children: [
-      {
-        key: 'buildOp',
-        label: '编译部署算子',
-        handler: async () => {
-          // 如果有选中的算子，将选中算子的名称用逗号拼接传入
-          let operatorNames;
-          let operatorType;
-          
-          if (selectedOperators.value.length > 0) {
-            operatorNames = selectedOperators.value.map((op) => op.name).join(',');
-            // 如果是标准自定义算子，设置类型
-            if (isStandardCustom.value) {
-              operatorType = 'standard-custom';
-            }
-          }
-          
-          await startBuild({
-            operatorNames,
-            operatorType,
-          });
-        },
-      },
-      {
-        key: 'buildExample',
-        label: '编译example',
-        handler: async () => { },
-      },
-    ],
+    handler: async () => {
+      // 如果有选中的算子，将选中算子的名称用逗号拼接传入
+      let operatorNames;
+      let operatorType;
+
+      if (selectedOperators.value.length > 0) {
+        operatorNames = selectedOperators.value.map((op) => op.name).join(',');
+        // 如果是标准自定义算子，设置类型
+        if (isStandardCustom.value) {
+          operatorType = 'standard-custom';
+        }
+      }
+
+      await startBuild({
+        operatorNames,
+        operatorType,
+      });
+    },
   },
   {
     key: 'runExample',
     label: '运行验证',
     icon: runIcon,
     handler: async () => {
-      await startRun();
+      if (hasMultipleOperators.value) {
+        // 如果有选中的算子，将选中算子的名称用逗号拼接传入
+        let operatorNames;
+        let operatorType;
+
+        if (selectedOperators.value.length > 0) {
+          operatorNames = selectedOperators.value.map((op) => op.name).join(',');
+          // 如果是标准自定义算子，设置类型
+          if (isStandardCustom.value) {
+            operatorType = 'standard-custom';
+          }
+        }
+
+        await startBuildExample({
+          operatorNames,
+          operatorType,
+        });
+      } else {
+        await startRun();
+      }
     },
   },
   {
@@ -201,9 +210,9 @@ const menuItems = computed(() => {
 
   // 如果项目类型是 pyasc，隐藏编译部署、调试、异常检测
   if (projectType.value === 'pyasc') {
-    return items.filter(item => 
-      item.key !== 'build' && 
-      item.key !== 'sanitizer' && 
+    return items.filter(item =>
+      item.key !== 'build' &&
+      item.key !== 'sanitizer' &&
       item.key !== 'runDebug'
     );
   }
@@ -751,8 +760,8 @@ const handlePopoverOpenChange = (open) => {
                   <a-input v-model:value="searchKeyword" placeholder="搜索算子工程" class="mb-3" allow-clear />
 
                   <!-- 编译成功的算子工程 -->
-                  <a-collapse v-model:active-key="compiledOperatorsActiveKey"
-                    :bordered="false" class="operator-collapse">
+                  <a-collapse v-model:active-key="compiledOperatorsActiveKey" :bordered="false"
+                    class="operator-collapse">
                     <a-collapse-panel key="1" header="编译成功的算子工程">
                       <div class="operator-list">
                         <div class="operator-item select-all" :class="{
@@ -826,7 +835,8 @@ const handlePopoverOpenChange = (open) => {
         </div>
 
         <!-- 已选择的算子工程显示区域（组件收起后显示） -->
-        <div v-if="(hasMultipleOperators || isStandardCustom) && !operatorSelectorVisible && selectedOperators.length > 0"
+        <div
+          v-if="(hasMultipleOperators || isStandardCustom) && !operatorSelectorVisible && selectedOperators.length > 0"
           class="px-3 py-2 mb-2">
           <div class="selected-display-section">
             <div class="selected-display-header">
