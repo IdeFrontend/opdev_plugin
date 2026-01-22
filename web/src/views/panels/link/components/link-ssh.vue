@@ -63,15 +63,22 @@ const getTemplateImage = (template: string) => {
 };
 
 // 工程类型相关配置
-const items_type = [
-  {
-    id: 1,
-    title: '【Ascend C】<<<>>>算子工程',
-    desc: '创建<<<>>>调用的addn工程样例，支持".asc"后缀的异构编译。',
-  },
-  { id: 2, title: '【Ascend C】标准自定义算子工程', desc: '基于Ascend C语言的标准自定义算子工程，op_host存放在CPC侧的代码实现，op_kermel存放NPU侧的代码实现，op_graph存放图模式下的代码实现 <span style="color: #ff4d4f; font-weight: bold;">(因为该算子的编译依赖ops-math项目，该算子将自动放到ops-math项目中math目录中，后续提交代码需要迁移到自己的fork代码仓中操作)</span>' },
-  { id: 3, title: '【Python】pyasc算子工程', desc: '创建<<<>>>调用的hallo_world工程样例，支持.asc后缀的异构编译' },
-];
+const cannProject = {
+  id: 1,
+  title: '【Ascend C】<<<>>>算子工程',
+  desc: '创建<<<>>>调用的addn工程样例，支持".asc"后缀的异构编译。',
+}
+const ascendProject = {
+  id: 2,
+  title: '【Ascend C】标准自定义算子工程',
+  desc: '基于Ascend C语言的标准自定义算子工程，op_host存放在CPC侧的代码实现，op_kermel存放NPU侧的代码实现，op_graph存放图模式下的代码实现 <span style="color: #ff4d4f; font-weight: bold;">(因为该算子的编译依赖ops-math项目，该算子将自动放到ops-math项目中math目录中，后续提交代码需要迁移到自己的fork代码仓中操作)</span>'
+}
+const pyascProject = {
+  id: 3,
+  title: '【Python】pyasc算子工程',
+  desc: '创建<<<>>>调用的hallo_world工程样例，支持.asc后缀的异构编译' 
+}
+const items_type = ref([cannProject, pyascProject])
 
 const tipBase_0 = jsonUrl.url
 

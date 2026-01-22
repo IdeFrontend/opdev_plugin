@@ -286,6 +286,7 @@ export async function generateStructure(
           config_name: record.op_name,
           target_dir: targetDir,
           target_file: targetExampleFile,
+          execution_mode: 'eager'
         },
       };
 
