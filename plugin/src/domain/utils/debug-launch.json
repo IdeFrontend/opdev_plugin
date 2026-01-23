@@ -26,7 +26,8 @@
       "cwd": "${workspaceRoot}/build",
       "target": "/usr/local/bin/python",
       "targetArgs": ["${workspaceFolder}/run.py"],
-      "environmentScripts": ["${workspaceFolder}/.arts/.env"]
+      "environmentScripts": ["${workspaceFolder}/.arts/.env"],
+      "skipEnvCheck": true
     }
   ]
 }
