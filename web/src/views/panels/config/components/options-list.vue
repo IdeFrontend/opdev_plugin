@@ -24,6 +24,10 @@ const props = defineProps({
     type: String,
     default: 'build',
   },
+  supportsSanitizerAndTuning: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 const emit = defineEmits(['updateActiveOption']);
@@ -57,6 +61,7 @@ const updateActiveOption = (item) => {
         编译部署
       </div>
       <div
+        v-if="supportsSanitizerAndTuning"
         class="options-list-item"
         :class="[Actived === 'sanitizer' ? 'is-active' : '']"
         @click="updateActiveOption('sanitizer')"
@@ -69,6 +74,7 @@ const updateActiveOption = (item) => {
         异常检测
       </div>
       <div
+        v-if="supportsSanitizerAndTuning"
         class="options-list-item"
         :class="[Actived === 'opprof' ? 'is-active' : '']"
         @click="updateActiveOption('opprof')"

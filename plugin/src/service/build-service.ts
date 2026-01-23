@@ -287,7 +287,7 @@ export class BuildService {
       }
 
       console.log('[startBuild] 编译成功');
-      vscode.window.showInformationMessage(`编译算子${params.operatorNames}成功`);
+      vscode.window.showInformationMessage("编译算子成功");
 
       await tryMarkOperatorsAsCompiled(Number(configId), params.operatorNames);
     }

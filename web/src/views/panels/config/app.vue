@@ -11,7 +11,7 @@ import {
 } from 'vue';
 import optionsList from './components/options-list.vue';
 import configDetail from './components/config-detail.vue';
-import { getConfigData, getTargetTab } from '@web/apis';
+import { getConfigData, getTargetTab, checkMultipleOperators } from '@web/apis';
 import { useOpprofConfig } from './composables/use-opprof-config'
 
 const themeConfig = {
@@ -21,6 +21,7 @@ const themeConfig = {
 const activeConfig = ref('');
 const activeOption = ref('build');
 const configDetailRef = ref();
+const supportsSanitizerAndTuning = ref(true);
 
 const updateActiveOption = (option) => {
   activeOption.value = option;
@@ -63,6 +64,16 @@ const handleWebviewMessage = (event) => {
 onMounted(async () => {
   // 添加message事件监听器
   window.addEventListener('message', handleWebviewMessage);
+
+  // 检查是否支持异常检测与调优
+  try {
+    const result = await checkMultipleOperators();
+    supportsSanitizerAndTuning.value = result.supportsSanitizerAndTuning ?? true;
+    console.log('[config] 是否支持异常检测与调优:', supportsSanitizerAndTuning.value);
+  } catch (error) {
+    console.error('[config] 获取异常检测与调优支持状态失败:', error);
+    supportsSanitizerAndTuning.value = true;
+  }
 
   // 加载配置数据
   await loadBuildConfig();
@@ -107,6 +118,7 @@ onUnmounted(() => {
           <optionsList
             :active-config="activeConfig"
             :active-option="activeOption"
+            :supports-sanitizer-and-tuning="supportsSanitizerAndTuning"
             @update-active-option="updateActiveOption"
           />
         </div>

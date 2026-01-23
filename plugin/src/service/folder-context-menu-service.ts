@@ -141,6 +141,21 @@ function findStandardCustomRoot(startPath: string): string | null {
 }
 
 /**
+ * 检查标准自定义算子是否支持异常检测与调优
+ * 通过检查根目录的 build.sh 是否包含 --bisheng-config
+ */
+function checkSupportsSanitizerAndTuning(rootPath: string): boolean {
+  const buildShPath = path.join(rootPath, 'build.sh');
+  if (!fs.existsSync(buildShPath)) return false;
+  try {
+    const content = fs.readFileSync(buildShPath, 'utf-8');
+    return content.includes('--bisheng-config');
+  } catch {
+    return false;
+  }
+}
+
+/**
  * 文件夹右键菜单服务
  * 处理文件夹右键菜单的相关操作
  */
@@ -822,10 +837,14 @@ export class FolderContextMenuService {
     const folderPath = uri.fsPath;
     const project = getProjectByPath(folderPath);
 
-    // 检查是否是算子工程
-    if (!project || project.project_type === OperatorProjectType.MULTI_PROJECT) {
-      vscode.window.showWarningMessage('该文件夹不是算子工程');
-      return;
+    // 检查是否支持异常检测与调优（标准自定义算子需要检查 build.sh 是否包含 --bisheng-config）
+    const rootPath = findStandardCustomRoot(folderPath);
+    if (rootPath) {
+      const supportsSanitizerAndTuning = checkSupportsSanitizerAndTuning(rootPath);
+      if (!supportsSanitizerAndTuning) {
+        vscode.window.showWarningMessage('暂不支持该功能，请确保 build.sh 中包含 --bisheng-config');
+        return;
+      }
     }
 
     await this.switchToProject(uri, async () => {
@@ -842,10 +861,15 @@ export class FolderContextMenuService {
     const folderPath = uri.fsPath;
     const project = getProjectByPath(folderPath);
 
-    // 检查是否是算子工程
-    if (!project || project.project_type === OperatorProjectType.MULTI_PROJECT) {
-      vscode.window.showWarningMessage('该文件夹不是算子工程');
-      return;
+
+    // 检查是否支持异常检测与调优（标准自定义算子需要检查 build.sh 是否包含 --bisheng-config）
+    const rootPath = findStandardCustomRoot(folderPath);
+    if (rootPath) {
+      const supportsSanitizerAndTuning = checkSupportsSanitizerAndTuning(rootPath);
+      if (!supportsSanitizerAndTuning) {
+        vscode.window.showWarningMessage('暂不支持该功能，请确保 build.sh 中包含 --bisheng-config');
+        return;
+      }
     }
 
     await this.switchToProject(uri, async () => {
@@ -862,10 +886,14 @@ export class FolderContextMenuService {
     const folderPath = uri.fsPath;
     const project = getProjectByPath(folderPath);
 
-    // 检查是否是算子工程
-    if (!project || project.project_type === OperatorProjectType.MULTI_PROJECT) {
-      vscode.window.showWarningMessage('该文件夹不是算子工程');
-      return;
+    // 检查是否支持异常检测与调优（标准自定义算子需要检查 build.sh 是否包含 --bisheng-config）
+    const rootPath = findStandardCustomRoot(folderPath);
+    if (rootPath) {
+      const supportsSanitizerAndTuning = checkSupportsSanitizerAndTuning(rootPath);
+      if (!supportsSanitizerAndTuning) {
+        vscode.window.showWarningMessage('暂不支持该功能，请确保 build.sh 中包含 --bisheng-config');
+        return;
+      }
     }
 
     await this.switchToProject(uri, async () => {
