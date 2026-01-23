@@ -31,8 +31,8 @@ function checkBuildShHasBishengConfig(rootPath: string): boolean {
 }
 
 // 先定义 checkMultipleOperators 函数，以便在 getSelectedOperators 中使用
-async function checkMultipleOperatorsInternal(): Promise<{ 
-  hasMultiple: boolean; 
+async function checkMultipleOperatorsInternal(): Promise<{
+  hasMultiple: boolean;
   operators?: Array<{ id: number; name: string; path: string; isExperimental: boolean; isCompiled?: boolean }>;
   isStandardCustom?: boolean;
 }> {
@@ -47,36 +47,36 @@ async function checkMultipleOperatorsInternal(): Promise<{
   try {
     // 先检查根目录是否被识别为标准自定义算子（通过检测器）
     const rootDetection = await OperatorProjectDetector.detectOperatorProject(workspacePath);
-    const isRootStandardCustom = rootDetection.isOperatorProject && 
-                                 rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM;
+    const isRootStandardCustom = rootDetection.isOperatorProject &&
+      rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM;
 
     // 获取所有已注册的算子工程
     const allProjects = getAllProjects();
-    
+
     // 过滤出标准自定义算子（排除集合类型），确保算子在工作区内
     const standardCustomOperators = allProjects.filter(
-      p => p.project_type === OperatorProjectType.STANDARD_CUSTOM && 
-           p.project_path &&
-           // 确保算子在工作区内
-           path.normalize(p.project_path).toLowerCase().startsWith(
-             path.normalize(workspacePath).toLowerCase()
-           )
+      p => p.project_type === OperatorProjectType.STANDARD_CUSTOM &&
+        p.project_path &&
+        // 确保算子在工作区内
+        path.normalize(p.project_path).toLowerCase().startsWith(
+          path.normalize(workspacePath).toLowerCase()
+        )
     );
 
     // 如果根目录是标准自定义算子，从项目的 ops_list 和 experimental_ops_list 读取算子列表
     if (isRootStandardCustom) {
       // 查找根目录对应的项目记录
       const rootProject = getProjectByPath(workspacePath);
-      
+
       if (rootProject) {
         // 从 ops_list 和 experimental_ops_list 读取算子
         const opsList = rootProject.ops_list || [];
         const experimentalOpsList = rootProject.experimental_ops_list || [];
-        
+
         // 合并所有算子，并转换为前端需要的格式
         // 使用项目ID作为基础ID，为每个算子生成唯一ID
         const operators: Array<{ id: number; name: string; path: string; isExperimental: boolean; isCompiled?: boolean }> = [];
-        
+
         // 添加普通算子
         opsList.forEach((op, index) => {
           operators.push({
@@ -87,7 +87,7 @@ async function checkMultipleOperatorsInternal(): Promise<{
             isCompiled: op.isCompiled || false,
           });
         });
-        
+
         // 添加experimental算子
         experimentalOpsList.forEach((op, index) => {
           operators.push({
@@ -108,8 +108,8 @@ async function checkMultipleOperatorsInternal(): Promise<{
           operators.map(op => `${op.name} (${op.isExperimental ? 'ex' : 'normal'}, compiled: ${op.isCompiled})`),
         );
 
-        return { 
-          hasMultiple, 
+        return {
+          hasMultiple,
           operators,
           isStandardCustom: true,
         };
@@ -117,7 +117,7 @@ async function checkMultipleOperatorsInternal(): Promise<{
         console.warn('[checkMultipleOperators] 根目录是标准自定义算子，但未找到项目记录');
       }
     }
-    
+
     // 如果工作区内有标准自定义算子工程（但不是根目录），使用原有逻辑
     if (standardCustomOperators.length > 0) {
       // 转换为前端需要的格式
@@ -137,8 +137,8 @@ async function checkMultipleOperatorsInternal(): Promise<{
         operators.map(op => `${op.name} (${op.isExperimental ? 'ex' : 'normal'})`),
       );
 
-      return { 
-        hasMultiple, 
+      return {
+        hasMultiple,
         operators,
         isStandardCustom: true,
       };
@@ -276,7 +276,7 @@ export const homeMethods = {
             };
           }
         }
-        
+
         // 如果无法从子项目获取，直接检测工作区路径
         const detection = await OperatorProjectDetector.detectOperatorProject(workspacePath);
         if (detection.isOperatorProject && detection.projectType) {
@@ -292,7 +292,7 @@ export const homeMethods = {
             projectTypeName,
           };
         }
-        
+
         // 如果都无法获取，返回空字符串（不显示）
         return { projectType: null, projectTypeName: '' };
       }
@@ -351,7 +351,7 @@ export const homeMethods = {
    * @returns HOME目录
    */
   async getHome(): Promise<GetHomeResult> {
-    return process.env.HOME || process.env.USERPROFILE || '';
+    return process.env.WORKSPACE_FOLDER || process.env.HOME || process.env.USERPROFILE || '';
   },
 
   /**
@@ -368,8 +368,8 @@ export const homeMethods = {
    * 如果是标准自定义算子，返回所有已识别的算子列表
    * @returns 如果有多个算子工程返回 true 和算子列表，否则返回 false
    */
-  async checkMultipleOperators(): Promise<{ 
-    hasMultiple: boolean; 
+  async checkMultipleOperators(): Promise<{
+    hasMultiple: boolean;
     operators?: Array<{ id: number; name: string; path: string; isExperimental: boolean }>;
     isStandardCustom?: boolean;
     /** 根目录为标准自定义算子时：build.sh 含 --bisheng-config 则支持异常检测与调优 */
@@ -386,36 +386,36 @@ export const homeMethods = {
     try {
       // 先检查根目录是否被识别为标准自定义算子（通过检测器）
       const rootDetection = await OperatorProjectDetector.detectOperatorProject(workspacePath);
-      const isRootStandardCustom = rootDetection.isOperatorProject && 
-                                   rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM;
+      const isRootStandardCustom = rootDetection.isOperatorProject &&
+        rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM;
 
       // 获取所有已注册的算子工程
       const allProjects = getAllProjects();
-      
+
       // 过滤出标准自定义算子（排除集合类型），确保算子在工作区内
       const standardCustomOperators = allProjects.filter(
-        p => p.project_type === OperatorProjectType.STANDARD_CUSTOM && 
-             p.project_path &&
-             // 确保算子在工作区内
-             path.normalize(p.project_path).toLowerCase().startsWith(
-               path.normalize(workspacePath).toLowerCase()
-             )
+        p => p.project_type === OperatorProjectType.STANDARD_CUSTOM &&
+          p.project_path &&
+          // 确保算子在工作区内
+          path.normalize(p.project_path).toLowerCase().startsWith(
+            path.normalize(workspacePath).toLowerCase()
+          )
       );
 
       // 如果根目录是标准自定义算子，从项目的 ops_list 和 experimental_ops_list 读取算子列表
       if (isRootStandardCustom) {
         // 查找根目录对应的项目记录
         const rootProject = getProjectByPath(workspacePath);
-        
+
         if (rootProject) {
           // 从 ops_list 和 experimental_ops_list 读取算子
           const opsList = rootProject.ops_list || [];
           const experimentalOpsList = rootProject.experimental_ops_list || [];
-          
+
           // 合并所有算子，并转换为前端需要的格式
           // 使用项目ID作为基础ID，为每个算子生成唯一ID
           const operators: Array<{ id: number; name: string; path: string; isExperimental: boolean; isCompiled?: boolean }> = [];
-          
+
           // 添加普通算子
           opsList.forEach((op, index) => {
             operators.push({
@@ -426,7 +426,7 @@ export const homeMethods = {
               isCompiled: op.isCompiled || false,
             });
           });
-          
+
           // 添加experimental算子
           experimentalOpsList.forEach((op, index) => {
             operators.push({
@@ -450,8 +450,8 @@ export const homeMethods = {
             supportsSanitizerAndTuning,
           );
 
-          return { 
-            hasMultiple, 
+          return {
+            hasMultiple,
             operators,
             isStandardCustom: true,
             supportsSanitizerAndTuning,
@@ -460,7 +460,7 @@ export const homeMethods = {
           console.warn('[checkMultipleOperators] 根目录是标准自定义算子，但未找到项目记录');
         }
       }
-      
+
       // 如果工作区内有标准自定义算子工程（但不是根目录），使用原有逻辑
       if (standardCustomOperators.length > 0) {
         // 转换为前端需要的格式
@@ -480,8 +480,8 @@ export const homeMethods = {
           operators.map(op => `${op.name} (${op.isExperimental ? 'ex' : 'normal'})`),
         );
 
-        return { 
-          hasMultiple, 
+        return {
+          hasMultiple,
           operators,
           isStandardCustom: true,
         };
@@ -562,24 +562,24 @@ export const homeMethods = {
 
     const workspacePath = workspaceFolders[0].uri.fsPath;
     const project = getProjectByPath(workspacePath);
-    
+
     if (project) {
       // 从 params 中获取 operatorIds，并确保是数组
       let operatorIds = params?.operatorIds || [];
-      
+
       // 如果 operatorIds 不是数组，尝试转换
       if (!Array.isArray(operatorIds)) {
         console.warn('[setSelectedOperators] operatorIds 不是数组:', typeof operatorIds, operatorIds);
         operatorIds = [];
       }
-      
+
       // 确保 operatorIds 是数字数组
       const numericIds = operatorIds
         .map(id => typeof id === 'string' ? Number(id) : id)
         .filter(id => typeof id === 'number' && !isNaN(id));
-      
+
       console.log('[setSelectedOperators] 保存算子ID:', numericIds);
-      
+
       await createProject({
         project_name: project.project_name,
         project_path: project.project_path,
@@ -600,7 +600,7 @@ export const homeMethods = {
 
     const workspacePath = workspaceFolders[0].uri.fsPath;
     const project = getProjectByPath(workspacePath);
-    
+
     if (!project) {
       return undefined;
     }
@@ -637,7 +637,7 @@ export const homeMethods = {
 
     const workspacePath = workspaceFolders[0].uri.fsPath;
     const project = getProjectByPath(workspacePath);
-    
+
     if (!project) {
       return undefined;
     }

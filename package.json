@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://gitcode.com/kaocong/mstt"
   },
-  "version": "1.2.81",
+  "version": "1.2.1",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -270,10 +270,6 @@
       }
     ],
     "submenus": [
-      {
-        "id": "operator.debug",
-        "label": "调试"
-      },
       {
         "id": "operator.performance",
         "label": "性能调优"

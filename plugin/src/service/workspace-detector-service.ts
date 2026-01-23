@@ -46,8 +46,79 @@ export class WorkspaceDetectorService {
   }
 
   /**
+   * 根目录下的算子合集白名单
+   */
+  private static readonly ROOT_OPERATOR_COLLECTIONS = new Set([
+    'image',
+    'objdetect',
+    'conversion',
+    'math',
+    'random',
+    'activation',
+    'control',
+    'conv',
+    'foreach',
+    'index',
+    'loss',
+    'matmul',
+    'norm',
+    'optim',
+    'pooling',
+    'quant',
+    'rnn',
+    'vfusion',
+    'hash',
+    'attention',
+    'ffn',
+    'gmm',
+    'mc2',
+    'moe',
+    'posembedding',
+    'select_attention_operators',
+  ]);
+
+  /**
+   * experimental 目录下的算子合集白名单
+   */
+  private static readonly EXPERIMENTAL_OPERATOR_COLLECTIONS = new Set([
+    'image',
+    'objdetect',
+    'conversion',
+    'math',
+    'npu_ops_math_ext',
+    'random',
+    'activation',
+    'control',
+    'conv',
+    'foreach',
+    'index',
+    'loss',
+    'matmul',
+    'norm',
+    'optim',
+    'pooling',
+    'quant',
+    'rnn',
+    'vfusion',
+    'attention',
+    'ffn',
+    'gmm',
+    'mc2',
+    'moe',
+    'npu_ops_transformer_ext',
+    'posembedding',
+    'select_attention_operators',
+  ]);
+
+  /**
    * 扫描根目录下的算子合集(ops_meet)与算子(ops_list/experimental_ops_list)。
    * 供 WorkspaceDetectorService、FolderContextMenuService 等复用。
+   *
+   * 扫描规则：
+   * 1. 根目录下的特定文件夹（ROOT_OPERATOR_COLLECTIONS）标记为算子合集
+   * 2. experimental 目录下的特定文件夹（EXPERIMENTAL_OPERATOR_COLLECTIONS）也标记为算子合集
+   * 3. experimental 目录下的算子合集里的算子，都是 experimental 的算子
+   * 4. 识别算子的逻辑不变：检查子目录是否包含 CMakeLists.txt 文件
    */
   static scanOpsMeetAndOpsLists(rootPath: string): {
     opsMeet: OperatorCollectionInfo[];
@@ -65,57 +136,124 @@ export class WorkspaceDetectorService {
       }
 
       const dirName = entry.name;
+
       if (dirName.startsWith('.') || dirName === 'node_modules' || dirName === 'out' || dirName === 'build') {
         continue;
       }
 
       const collectionPath = path.join(rootPath, dirName);
-      let hasOperators = false;
-      const isExperimentalCollection = dirName.toLowerCase() === 'experimental';
 
-      try {
-        const subEntries = fs.readdirSync(collectionPath, { withFileTypes: true });
+      // 处理根目录下的算子合集
+      if (this.ROOT_OPERATOR_COLLECTIONS.has(dirName)) {
+        const {
+          hasOperators,
+          operators,
+        } = this.scanOperatorsInCollection(collectionPath, false);
 
-        for (const subEntry of subEntries) {
-          if (!subEntry.isDirectory() || subEntry.name.startsWith('.')) {
-            continue;
-          }
-
-          const operatorPath = path.join(collectionPath, subEntry.name);
-          const operatorCmakeListsPath = path.join(operatorPath, 'CMakeLists.txt');
-          if (!fs.existsSync(operatorCmakeListsPath)) {
-            continue;
-          }
-
-          hasOperators = true;
-          const buildDir = path.join(operatorPath, 'build');
-          const outDir = path.join(operatorPath, 'out');
-          const isCompiled = fs.existsSync(buildDir) || fs.existsSync(outDir);
-          const operatorInfo: SubOperatorInfo = {
-            name: subEntry.name,
-            path: operatorPath,
-            isCompiled,
-          };
-          if (isExperimentalCollection) {
-            experimentalOpsList.push(operatorInfo);
-          }
-          else {
-            opsList.push(operatorInfo);
-          }
+        if (hasOperators) {
+          opsMeet.push({
+            name: dirName,
+            path: collectionPath,
+          });
+          operators.forEach((op) => opsList.push(op));
         }
       }
-      catch {
-        // 忽略单目录扫描失败
-      }
+      // 处理 experimental 目录
+      else if (dirName.toLowerCase() === 'experimental') {
+        try {
+          const experimentalEntries = fs.readdirSync(collectionPath, { withFileTypes: true });
 
-      if (hasOperators) {
-        opsMeet.push({
-          name: dirName,
-          path: collectionPath,
-        });
+          for (const expEntry of experimentalEntries) {
+            if (!expEntry.isDirectory() || expEntry.name.startsWith('.')) {
+              continue;
+            }
+
+            const expCollectionName = expEntry.name;
+
+            // 检查是否在 experimental 算子合集白名单中
+            if (this.EXPERIMENTAL_OPERATOR_COLLECTIONS.has(expCollectionName)) {
+              const expCollectionPath = path.join(collectionPath, expCollectionName);
+              const {
+                hasOperators,
+                operators,
+              } = this.scanOperatorsInCollection(expCollectionPath, true);
+
+              if (hasOperators) {
+                // experimental 目录下的算子合集，使用完整路径作为名称（如 experimental/image）
+                opsMeet.push({
+                  name: `experimental/${expCollectionName}`,
+                  path: expCollectionPath,
+                });
+                operators.forEach((op) => experimentalOpsList.push(op));
+              }
+            }
+          }
+        }
+        catch {
+          // 忽略 experimental 目录扫描失败
+        }
       }
     }
-    return { opsMeet, opsList, experimentalOpsList };
+
+    return {
+      opsMeet,
+      opsList,
+      experimentalOpsList,
+    };
+  }
+
+  /**
+   * 扫描算子合集目录下的算子
+   * @param collectionPath 算子合集路径
+   * @param isExperimental 是否为 experimental 算子（当前未使用，保留用于未来扩展）
+   * @returns 是否包含算子及算子列表
+   */
+  private static scanOperatorsInCollection(
+    collectionPath: string,
+    isExperimental: boolean,
+  ): {
+    hasOperators: boolean;
+    operators: SubOperatorInfo[];
+  } {
+    const operators: SubOperatorInfo[] = [];
+    let hasOperators = false;
+
+    try {
+      const subEntries = fs.readdirSync(collectionPath, { withFileTypes: true });
+
+      for (const subEntry of subEntries) {
+        if (!subEntry.isDirectory() || subEntry.name.startsWith('.')) {
+          continue;
+        }
+
+        const operatorPath = path.join(collectionPath, subEntry.name);
+        const operatorCmakeListsPath = path.join(operatorPath, 'CMakeLists.txt');
+
+        if (!fs.existsSync(operatorCmakeListsPath)) {
+          continue;
+        }
+
+        hasOperators = true;
+        const buildDir = path.join(operatorPath, 'build');
+        const outDir = path.join(operatorPath, 'out');
+        const isCompiled = fs.existsSync(buildDir) || fs.existsSync(outDir);
+        const operatorInfo: SubOperatorInfo = {
+          name: subEntry.name,
+          path: operatorPath,
+          isCompiled: isCompiled,
+        };
+
+        operators.push(operatorInfo);
+      }
+    }
+    catch {
+      // 忽略单目录扫描失败
+    }
+
+    return {
+      hasOperators,
+      operators,
+    };
   }
 
   /**
@@ -126,11 +264,18 @@ export class WorkspaceDetectorService {
   private static async scanStandardCustomOperators(workspacePath: string): Promise<void> {
     try {
       console.log('[scanStandardCustomOperators] 开始扫描算子合集和算子...');
-      const { opsMeet, opsList, experimentalOpsList } = this.scanOpsMeetAndOpsLists(workspacePath);
+      const {
+        opsMeet,
+        opsList,
+        experimentalOpsList,
+      } = this.scanOpsMeetAndOpsLists(workspacePath);
 
       console.log('[scanStandardCustomOperators] 算子合集列表:', opsMeet.map((m) => m.name));
       console.log('[scanStandardCustomOperators] 普通算子列表:', opsList.map((o) => o.name));
-      console.log('[scanStandardCustomOperators] experimental算子列表:', experimentalOpsList.map((o) => o.name));
+      console.log(
+        '[scanStandardCustomOperators] experimental算子列表:',
+        experimentalOpsList.map((o) => o.name),
+      );
       await updateStandardCustomOperators(workspacePath, opsMeet, opsList, experimentalOpsList);
       console.log(`[scanStandardCustomOperators] 已更新: ${opsMeet.length} 个算子合集, ${opsList.length} 个普通算子, ${experimentalOpsList.length} 个experimental算子`);
     }
