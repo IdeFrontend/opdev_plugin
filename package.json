@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://gitcode.com/kaocong/mstt"
   },
-  "version": "1.2.93",
+  "version": "1.2.1",
   "engines": {
     "vscode": "^1.80.0"
   },
