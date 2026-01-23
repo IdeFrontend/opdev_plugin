@@ -122,6 +122,7 @@ const baseMenuItems = [
         // 如果有选中的算子，将选中算子的名称用逗号拼接传入
         let operatorNames;
         let operatorType;
+        let compileOption;
 
         if (selectedOperators.value.length > 0) {
           operatorNames = selectedOperators.value.map((op) => op.name).join(',');
@@ -131,9 +132,19 @@ const baseMenuItems = [
           }
         }
 
+        if (isStandardCustom.value) {
+          operatorType = 'standard-custom';
+          // 检查选中的算子中是否有 experimental 算子（hasEx 为 true）
+          const hasExperimental = selectedOperators.value.some((op) => op.hasEx);
+          if (hasExperimental) {
+            compileOption = '--experimental';
+          }
+        }
+
         await startBuildExample({
           operatorNames,
           operatorType,
+          compileOption
         });
       } else {
         await startRun();
