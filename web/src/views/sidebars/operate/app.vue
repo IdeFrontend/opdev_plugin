@@ -30,7 +30,7 @@ import {
   getSelectedOperators,
   getSelectedOperatorIds,
 } from '@web/apis';
-import { SettingOutlined, CheckOutlined } from '@ant-design/icons-vue';
+import { SettingOutlined, CheckOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue';
 
 const themeConfig = { algorithm: theme.darkAlgorithm };
 const activeConfig = ref('');
@@ -1097,15 +1097,25 @@ const handlePopoverOpenChange = async (open) => {
                   <a-tooltip v-if="isDisabledByMultipleOperators(child.key)" title="该功能只支持单算子执行" placement="right">
                     <div class="single-box">
                       {{ child.label }}
-                      <div v-if="child.key === 'simulation' || child.key === 'onboard'" class="setting-box">
-                        <SettingOutlined @click.stop="openSetting(child.key)" />
+                      <div class="flex items-center gap-1">
+                        <a-tooltip v-if="(child.key === 'simulation' || child.key === 'onboard') && projectType === 'pyasc'" title="性能调优需修改相关代码模式，具体可参考README.md" placement="right">
+                          <QuestionCircleOutlined class="info-icon" />
+                        </a-tooltip>
+                        <div v-if="child.key === 'simulation' || child.key === 'onboard'" class="setting-box">
+                          <SettingOutlined @click.stop="openSetting(child.key)" />
+                        </div>
                       </div>
                     </div>
                   </a-tooltip>
                   <div v-else class="single-box">
                     {{ child.label }}
-                    <div v-if="child.key === 'simulation' || child.key === 'onboard'" class="setting-box">
-                      <SettingOutlined @click.stop="openSetting(child.key)" />
+                    <div class="flex items-center gap-1">
+                      <a-tooltip v-if="(child.key === 'simulation' || child.key === 'onboard') && projectType === 'pyasc'" title="性能调优需修改相关代码模式，具体可参考README.md" placement="right">
+                        <QuestionCircleOutlined class="info-icon" />
+                      </a-tooltip>
+                      <div v-if="child.key === 'simulation' || child.key === 'onboard'" class="setting-box">
+                        <SettingOutlined @click.stop="openSetting(child.key)" />
+                      </div>
                     </div>
                   </div>
                 </a-menu-item>
@@ -1232,6 +1242,17 @@ body {
 
 .setting-box:hover {
   background-color: #262729 !important;
+}
+
+.info-icon {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+  cursor: help;
+  transition: color 0.2s;
+}
+
+.info-icon:hover {
+  color: rgba(255, 255, 255, 0.85);
 }
 
 /* 算子工程选择器样式 */
