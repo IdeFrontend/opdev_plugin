@@ -197,8 +197,9 @@ const menuItems = computed(() => {
   // 构建调试菜单的子菜单项
   const debugChildren = [];
 
-  // 如果项目类型不是 ascend，添加CPU调试相关的子菜单项
-  if (projectType.value !== 'ascend') {
+  // 如果项目类型不是 ascend，且不是 cann 类型的 torch_library_template，添加CPU调试相关的子菜单项
+  const isCannTorchLibrary = projectType.value === 'cann' && projectTemplateName.value === 'torch_library_template';
+  if (projectType.value !== 'ascend' && !isCannTorchLibrary) {
     debugChildren.push(
       {
         key: 'buildAndCpuDebug',
