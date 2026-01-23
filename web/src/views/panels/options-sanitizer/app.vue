@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import {
     ref, onBeforeMount,
 } from 'vue';
@@ -8,7 +8,8 @@ import {
     saveSanitizerForm as saveSanitizerFormAPI, 
     runSanitizer, 
     checkTaskStatus, 
-    executeVscodeCommand
+    executeVscodeCommand,
+    getSelectedOperators
 } from '@web/apis';
 
 const themeConfig = { algorithm: theme.darkAlgorithm };
@@ -49,16 +50,28 @@ const handleConfirm = async () => {
   if (!form.value || isExecuting.value) {
     return;
   }
-  const hasRunningTask = await checkTaskStatus()
-  console.log('hasRunningTask', hasRunningTask)
+  const hasRunningTask = await checkTaskStatus();
+  console.log('hasRunningTask', hasRunningTask);
   if (hasRunningTask) {
     message.info('存在未执行完毕的任务，请稍后再试');
-    return
+    return;
   }
   try {
     isExecuting.value = true;
+    
+    // 获取已选择的算子名称（如果是标准自定义算子）
+    let operatorNames: string | undefined;
+    try {
+      const selectedOperators = await getSelectedOperators();
+      if (selectedOperators) {
+        operatorNames = selectedOperators;
+      }
+    } catch (error) {
+      console.warn('获取已选择的算子失败:', error);
+    }
+    
     // 执行异常检测
-    runSanitizer();
+    await runSanitizer({ operatorNames });
     setTimeout(() => {
       executeVscodeCommand('workbench.action.closeActiveEditor');
     }, 500);

@@ -338,7 +338,7 @@ export class BuildService {
   /**
    * 开始仿真分析
    */
-  async startSimulate(): Promise<void> {
+  async startSimulate(params: { operatorNames?: string } = {}): Promise<void> {
     const configData = await this.getBuildConfigsList();
     const simulatorItem = configData.find((v) => v.config_type === CONFIG_TYPES.SIMULATE);
     const simulatorType = (simulatorItem?.user_options?.simulatorType as string | undefined) ?? '';
@@ -355,6 +355,7 @@ export class BuildService {
       const buildCommand = getBuildOpCommand(
         Number(buildConfigId),
         objectToCommandString({ [`simulator ${simulatorType || ''}`]: true }),
+        params.operatorNames,
       );
       const buildExecutor = ProjectManager.getInstance()
         .getExecutor();
@@ -409,7 +410,7 @@ export class BuildService {
   /**
    * 开始上板分析
    */
-  async startOnBoard(): Promise<void> {
+  async startOnBoard(params: { operatorNames?: string } = {}): Promise<void> {
     // 检查项目类型，pyasc 类型不需要编译
     const projectId = ProjectManager.getInstance().projectId;
     const project = projectId ? getProjectById(Number(projectId)) : null;
@@ -421,6 +422,7 @@ export class BuildService {
       const buildCommand = getBuildOpCommand(
         Number(buildConfigId),
         objectToCommandString({ onboard: true }),
+        params.operatorNames,
       );
       const buildExecutor = ProjectManager.getInstance()
         .getExecutor();

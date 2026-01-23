@@ -28,13 +28,14 @@ export class SanitizerService {
   /**
    * 运行异常检测
    */
-  async runSanitizer(): Promise<void> {
+  async runSanitizer(params: { operatorNames?: string } = {}): Promise<void> {
     try {
       // 异常检测前编译
       const buildConfigId = await buildService.getBuildConfigId();
       const buildCommand = getBuildOpCommand(
         Number(buildConfigId),
         '--mssanitizer',
+        params.operatorNames,
       );
       const buildExecutor = ProjectManager.getInstance()
         .getExecutor();

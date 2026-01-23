@@ -90,19 +90,19 @@ export function startBuildExample(params: StartBuildExampleParams = {}) {
 }
 
 /** 开始仿真分析 */
-export function startSimulate() {
-  return request.post<undefined, void>(
+export function startSimulate(params: { operatorNames?: string } = {}) {
+  return request.post<{ operatorNames?: string }, void>(
     'ops/startSimulate',
-    undefined,
+    params,
     { timeout: Number.POSITIVE_INFINITY }, // 仿真分析可能耗时很长，设置无超时限制
   );
 }
 
 /** 开始上板分析 */
-export function startOnBoard() {
-  return request.post<undefined, void>(
+export function startOnBoard(params: { operatorNames?: string } = {}) {
+  return request.post<{ operatorNames?: string }, void>(
     'ops/startOnBoard',
-    undefined,
+    params,
     { timeout: Number.POSITIVE_INFINITY }, // 上板分析可能耗时很长，设置无超时限制
   );
 }
@@ -146,10 +146,10 @@ export function saveSanitizerForm(params: SaveSanitizerFormParams) {
 }
 
 /** 运行异常检测 */
-export function runSanitizer() {
-  return request.post<undefined, void>(
+export function runSanitizer(params: { operatorNames?: string } = {}) {
+  return request.post<{ operatorNames?: string }, void>(
     'ops/runSanitizer',
-    undefined,
+    params,
     { timeout: Number.POSITIVE_INFINITY }, // 异常检测可能耗时很长，设置无超时限制
   );
 }
@@ -204,4 +204,19 @@ export function getTargetOperator() {
 /** 打开配置页面 */
 export function openConfig(params: { configName?: string } = {}) {
   return request.post<{ configName?: string }, void>('ops/openConfig', params);
+}
+
+/** 设置已选择的算子ID列表 */
+export function setSelectedOperators(operatorIds: number[]) {
+  return request.post<{ operatorIds: number[] }, void>('ops/setSelectedOperators', { operatorIds });
+}
+
+/** 获取已选择的算子ID列表 */
+export function getSelectedOperatorIds() {
+  return request.post<undefined, number[] | undefined>('ops/getSelectedOperatorIds', undefined);
+}
+
+/** 获取已选择的算子名称列表 */
+export function getSelectedOperators() {
+  return request.post<undefined, string | undefined>('ops/getSelectedOperators', undefined);
 }

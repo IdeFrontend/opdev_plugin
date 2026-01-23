@@ -1,11 +1,11 @@
-<script setup>
+<script setup lang="ts">
 import {
   ref, onMounted,
 } from 'vue';
 import { theme, message } from 'ant-design-vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import {
-  getConfigData, saveConfig, startSimulate, openExternalLink, checkTaskStatus, executeVscodeCommand
+  getConfigData, saveConfig, startSimulate, openExternalLink, checkTaskStatus, executeVscodeCommand, getSelectedOperators
 } from '@web/apis';
 
 const themeConfig = { algorithm: theme.darkAlgorithm };
@@ -46,16 +46,28 @@ const handleConfirm = async () => {
   if (!simulateOptions.value || isExecuting.value) {
     return;
   }
-  const hasRunningTask = await checkTaskStatus()
-  console.log('hasRunningTask', hasRunningTask)
+  const hasRunningTask = await checkTaskStatus();
+  console.log('hasRunningTask', hasRunningTask);
   if (hasRunningTask) {
     message.info('存在未执行完毕的任务，请稍后再试');
-    return
+    return;
   }
   try {
     isExecuting.value = true;
+    
+    // 获取已选择的算子名称（如果是标准自定义算子）
+    let operatorNames: string | undefined;
+    try {
+      const selectedOperators = await getSelectedOperators();
+      if (selectedOperators) {
+        operatorNames = selectedOperators;
+      }
+    } catch (error) {
+      console.warn('获取已选择的算子失败:', error);
+    }
+    
     // 执行仿真
-    startSimulate();
+    await startSimulate({ operatorNames });
     setTimeout(() => {
       executeVscodeCommand('workbench.action.closeActiveEditor');
     }, 500);

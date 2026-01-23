@@ -5,6 +5,7 @@ import {
   joinCommands,
   getExecutableCommand,
   Command,
+  objectToCommandString,
 } from '@plugin/domain/utils/command-utils';
 import { OpRecord } from '@plugin/domain/models/model';
 import { ProfilerFactory } from '../profiler-service';
@@ -130,11 +131,12 @@ export class AscendCommandStrategy implements CommandStrategy {
 
     const cmd = new Command(config.script || '');
 
+    const vendor_name_options: Record<string, unknown> = { vendor_name };
+
     cmd.addOption('run_example', true);
     cmd.addArgument(op);
     cmd.addArgument(mode);
     cmd.addArgument(pkg_mode);
-    cmd.addArgument(vendor_name);
 
     if (compileOption) {
       cmd.addArgument(compileOption);
@@ -142,6 +144,13 @@ export class AscendCommandStrategy implements CommandStrategy {
 
     if (advance_cmd) {
       cmd.addArgument(advance_cmd);
+    }
+
+    // 将 vendor_name_options 转换为字符串并作为最后一个位置参数添加
+    const vendor_name_options_str = objectToCommandString(vendor_name_options as Record<string, string | number | boolean | (string | number)[] | null | undefined>);
+
+    if (vendor_name_options_str) {
+      cmd.addArgument(vendor_name_options_str);
     }
 
     return joinCommands(sourceCannCmd, cdCmd, cmd.toString());
