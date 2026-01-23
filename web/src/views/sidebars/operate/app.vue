@@ -936,7 +936,7 @@ const handlePopoverOpenChange = async (open) => {
       <!-- 如果配置文件不存在且不是标准自定义算子，显示提示信息 -->
       <div v-if="!hasDevtoolConfig && !isStandardCustom" class="flex items-center justify-center min-h-[200px] p-5">
         <div class="text-xs text-white/65 text-center leading-relaxed">
-          您需要新建算子工程或打开算子工程才可以使用操作面板
+          您需要新建算子工程或通过一站式平台插件打开算子工程才可以使用操作面板
         </div>
       </div>
 
