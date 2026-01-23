@@ -15,6 +15,21 @@ import {
   GetLastProjectPathResult,
 } from '@shared/api-types';
 
+/**
+ * 检查根目录 build.sh 是否包含 --bisheng-config
+ * 用于判断标准自定义算子是否支持异常检测和调优
+ */
+function checkBuildShHasBishengConfig(rootPath: string): boolean {
+  const buildShPath = path.join(rootPath, 'build.sh');
+  if (!fs.existsSync(buildShPath)) return false;
+  try {
+    const content = fs.readFileSync(buildShPath, 'utf-8');
+    return content.includes('--bisheng-config');
+  } catch {
+    return false;
+  }
+}
+
 // 先定义 checkMultipleOperators 函数，以便在 getSelectedOperators 中使用
 async function checkMultipleOperatorsInternal(): Promise<{ 
   hasMultiple: boolean; 
@@ -357,6 +372,8 @@ export const homeMethods = {
     hasMultiple: boolean; 
     operators?: Array<{ id: number; name: string; path: string; isExperimental: boolean }>;
     isStandardCustom?: boolean;
+    /** 根目录为标准自定义算子时：build.sh 含 --bisheng-config 则支持异常检测与调优 */
+    supportsSanitizerAndTuning?: boolean;
   }> {
     const workspaceFolders = vscode.workspace.workspaceFolders;
 
@@ -423,17 +440,21 @@ export const homeMethods = {
 
           const hasMultiple = operators.length > 1;
 
+          const supportsSanitizerAndTuning = checkBuildShHasBishengConfig(workspacePath);
           console.log(
             '[checkMultipleOperators] 标准自定义算子，从 ops_list 读取:',
             `普通算子: ${opsList.length}, experimental算子: ${experimentalOpsList.length}`,
             '算子列表:',
             operators.map(op => `${op.name} (${op.isExperimental ? 'ex' : 'normal'}, compiled: ${op.isCompiled})`),
+            '支持异常检测与调优:',
+            supportsSanitizerAndTuning,
           );
 
           return { 
             hasMultiple, 
             operators,
             isStandardCustom: true,
+            supportsSanitizerAndTuning,
           };
         } else {
           console.warn('[checkMultipleOperators] 根目录是标准自定义算子，但未找到项目记录');

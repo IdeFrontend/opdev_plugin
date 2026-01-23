@@ -220,8 +220,13 @@ const menuItems = computed(() => {
     );
   }
 
+  // 根目录为标准自定义算子且 build.sh 不含 --bisheng-config：隐藏异常检测、性能调优
+  const filtered = isStandardCustom.value && !supportsSanitizerAndTuning.value
+    ? items.filter(item => item.key !== 'sanitizer' && item.key !== 'power')
+    : items;
+
   // 过滤菜单项：buildExample 只在标准自定义算子中显示
-  return items.map(item => {
+  return filtered.map(item => {
     if (item.key === 'build' && item.children) {
       return {
         ...item,
@@ -415,8 +420,10 @@ onMounted(async () => {
     const result = await checkMultipleOperators();
     hasMultipleOperators.value = result.hasMultiple || false;
     isStandardCustom.value = result.isStandardCustom || false;
+    supportsSanitizerAndTuning.value = result.supportsSanitizerAndTuning ?? true;
     console.log('[Operate] 是否有多个算子工程:', hasMultipleOperators.value);
     console.log('[Operate] 是否是标准自定义算子:', isStandardCustom.value);
+    console.log('[Operate] 是否支持异常检测与调优:', supportsSanitizerAndTuning.value);
 
     // 如果是标准自定义算子，即使没有配置文件，也应该显示操作面板
     if (isStandardCustom.value) {
@@ -459,7 +466,7 @@ onMounted(async () => {
       console.log('[Operate] 标准自定义算子，编译成功的算子列表:', compiledOperators.value);
       console.log('[Operate] 标准自定义算子，预备算子列表:', preparedOperators.value);
       console.log('[Operate] 标准自定义算子，加载配置列表:', configArray.value);
-      
+
       // 等待一下确保算子列表已完全加载，然后加载已选择的算子
       await new Promise(resolve => setTimeout(resolve, 100));
       await loadSelectedOperators();
@@ -469,6 +476,7 @@ onMounted(async () => {
     console.error('[Operate] 检查多个算子工程失败:', error);
     hasMultipleOperators.value = false;
     isStandardCustom.value = false;
+    supportsSanitizerAndTuning.value = true;
   }
 
   // 开启状态同步定时器
@@ -512,6 +520,8 @@ const openSetting = async (key) => {
 // 算子工程选择器相关状态
 const hasMultipleOperators = ref(false);
 const isStandardCustom = ref(false); // 是否是标准自定义算子
+// 标准自定义算子是否支持异常检测与调优（build.sh 含 --bisheng-config）
+const supportsSanitizerAndTuning = ref(true);
 const operatorSelectorVisible = ref(false);
 const searchKeyword = ref('');
 const selectedOperatorIds = ref([]);
