@@ -271,6 +271,10 @@
     ],
     "submenus": [
       {
+        "id": "operator.debug",
+        "label": "调试"
+      },
+      {
         "id": "operator.performance",
         "label": "性能调优"
       }
@@ -347,13 +351,7 @@
           "command": "huawei-op-devtools.operatorProjectCpuDebug"
         },
         {
-          "command": "huawei-op-devtools.operatorProjectNpuDebug"
-        },
-        {
           "command": "huawei-op-devtools.operatorProjectCpuDebugConfig"
-        },
-        {
-          "command": "huawei-op-devtools.operatorProjectNpuDebugConfig"
         }
       ],
       "operator.performance": [
