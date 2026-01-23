@@ -550,10 +550,9 @@ export class FolderContextMenuService {
       return;
     }
 
-    // 情况2: 选中的是 .py 文件，且当前项目根目录是 pyasc 算子
-    if (isPyFile && isPyasc) {
-      // 暂时留空，后续实现 pyasc 相关操作
-      console.log('[buildOperatorProject] pyasc 算子运行验证功能暂未实现');
+    // 情况2: 当前项目根目录是 pyasc 算子
+    if (isPyasc) {
+      await taskMethods.startRun();
       return;
     }
 
