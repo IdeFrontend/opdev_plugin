@@ -74,14 +74,14 @@ export const taskMethods = {
   /**
    * 仿真分析
    */
-  async startSimulate(): Promise<void> {
+  async startSimulate(params: { operatorNames?: string } = {}): Promise<void> {
     try {
       await ProjectManager.getInstance()
         .initProject();
       // 保存当前 executor 引用
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
-      await buildService.startSimulate();
+      await buildService.startSimulate(params);
     }
     finally {
       // 清除 executor 引用
@@ -94,14 +94,14 @@ export const taskMethods = {
   /**
    * 上板分析
    */
-  async startOnBoard(): Promise<void> {
+  async startOnBoard(params: { operatorNames?: string } = {}): Promise<void> {
     try {
       await ProjectManager.getInstance()
         .initProject();
       // 保存当前 executor 引用
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
-      await buildService.startOnBoard();
+      await buildService.startOnBoard(params);
     }
     finally {
       // 清除 executor 引用
@@ -114,14 +114,14 @@ export const taskMethods = {
   /**
    * 异常检测
    */
-  async runSanitizer(): Promise<void> {
+  async runSanitizer(params: { operatorNames?: string } = {}): Promise<void> {
     try {
       await ProjectManager.getInstance()
         .initProject();
       // 保存当前 executor 引用，用于可能的终止操作
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
-      await sanitizerService.runSanitizer();
+      await sanitizerService.runSanitizer(params);
     }
     finally {
       // 清除 executor 引用

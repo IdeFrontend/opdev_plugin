@@ -68,6 +68,7 @@ export type BuildExampleParams = {
 
 export type RunSanitizerParams = {
   data?: unknown;
+  operatorNames?: string; // 算子名称，多个用逗号分隔
 };
 
 export type RunExampleParams = {

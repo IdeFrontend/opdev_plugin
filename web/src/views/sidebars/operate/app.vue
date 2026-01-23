@@ -26,6 +26,9 @@ import {
   navigateToTab,
   checkMultipleOperators,
   getProjectType,
+  setSelectedOperators,
+  getSelectedOperators,
+  getSelectedOperatorIds,
 } from '@web/apis';
 import { SettingOutlined, CheckOutlined } from '@ant-design/icons-vue';
 
@@ -217,8 +220,13 @@ const menuItems = computed(() => {
     );
   }
 
+  // 根目录为标准自定义算子且 build.sh 不含 --bisheng-config：隐藏异常检测、性能调优
+  const filtered = isStandardCustom.value && !supportsSanitizerAndTuning.value
+    ? items.filter(item => item.key !== 'sanitizer' && item.key !== 'power')
+    : items;
+
   // 过滤菜单项：buildExample 只在标准自定义算子中显示
-  return items.map(item => {
+  return filtered.map(item => {
     if (item.key === 'build' && item.children) {
       return {
         ...item,
@@ -235,10 +243,46 @@ const menuItems = computed(() => {
   });
 });
 
+// 判断是否选择了多个算子
+const hasMultipleSelectedOperators = computed(() => {
+  return selectedOperators.value.length > 1;
+});
+
+// 允许在多算子选择时使用的菜单项
+const allowedKeysForMultipleOperators = ['projectConfig', 'build', 'projectSH'];
+
+// 判断菜单项是否因为多算子选择而被禁用
+const isDisabledByMultipleOperators = (itemKey) => {
+  // 如果选择了多个算子，且该菜单项不在允许列表中，则禁用
+  return hasMultipleSelectedOperators.value && !allowedKeysForMultipleOperators.includes(itemKey);
+};
+
+// 判断子菜单的所有子项是否都因为多算子选择而被禁用
+const areAllChildrenDisabledByMultipleOperators = (item) => {
+  if (!item.children || item.children.length === 0) {
+    return false;
+  }
+  // 检查所有子项是否都因为多算子选择而被禁用
+  return item.children.every(child => {
+    if (child.children) {
+      // 如果有嵌套子菜单，递归检查
+      return areAllChildrenDisabledByMultipleOperators(child);
+    }
+    return isDisabledByMultipleOperators(child.key);
+  });
+};
+
 // 判断菜单项是否应该被禁用
 const isMenuItemDisabled = (itemKey) => {
   // 如果当前有操作在执行，且该项是互斥操作，则禁用
-  return isExecuting.value && mutuallyExclusiveKeys.includes(itemKey);
+  if (isExecuting.value && mutuallyExclusiveKeys.includes(itemKey)) {
+    return true;
+  }
+  // 如果选择了多个算子，且该菜单项不在允许列表中，则禁用
+  if (isDisabledByMultipleOperators(itemKey)) {
+    return true;
+  }
+  return false;
 };
 
 // 查找菜单项的处理函数
@@ -376,8 +420,10 @@ onMounted(async () => {
     const result = await checkMultipleOperators();
     hasMultipleOperators.value = result.hasMultiple || false;
     isStandardCustom.value = result.isStandardCustom || false;
+    supportsSanitizerAndTuning.value = result.supportsSanitizerAndTuning ?? true;
     console.log('[Operate] 是否有多个算子工程:', hasMultipleOperators.value);
     console.log('[Operate] 是否是标准自定义算子:', isStandardCustom.value);
+    console.log('[Operate] 是否支持异常检测与调优:', supportsSanitizerAndTuning.value);
 
     // 如果是标准自定义算子，即使没有配置文件，也应该显示操作面板
     if (isStandardCustom.value) {
@@ -420,12 +466,17 @@ onMounted(async () => {
       console.log('[Operate] 标准自定义算子，编译成功的算子列表:', compiledOperators.value);
       console.log('[Operate] 标准自定义算子，预备算子列表:', preparedOperators.value);
       console.log('[Operate] 标准自定义算子，加载配置列表:', configArray.value);
+
+      // 等待一下确保算子列表已完全加载，然后加载已选择的算子
+      await new Promise(resolve => setTimeout(resolve, 100));
+      await loadSelectedOperators();
     }
   }
   catch (error) {
     console.error('[Operate] 检查多个算子工程失败:', error);
     hasMultipleOperators.value = false;
     isStandardCustom.value = false;
+    supportsSanitizerAndTuning.value = true;
   }
 
   // 开启状态同步定时器
@@ -469,6 +520,8 @@ const openSetting = async (key) => {
 // 算子工程选择器相关状态
 const hasMultipleOperators = ref(false);
 const isStandardCustom = ref(false); // 是否是标准自定义算子
+// 标准自定义算子是否支持异常检测与调优（build.sh 含 --bisheng-config）
+const supportsSanitizerAndTuning = ref(true);
 const operatorSelectorVisible = ref(false);
 const searchKeyword = ref('');
 const selectedOperatorIds = ref([]);
@@ -528,6 +581,7 @@ const filteredPreparedOperators = computed(() => {
 const selectedOperators = computed(() => {
   return allOperators.value.filter((op) => selectedOperatorIds.value.includes(op.id));
 });
+
 
 // 获取已选择项的类型（ex 或 无ex）
 const selectedType = computed(() => {
@@ -637,6 +691,9 @@ const toggleOperator = (operator) => {
     // 允许选择
     selectedOperatorIds.value.push(operator.id);
   }
+  
+  // 保存已选择的算子
+  saveSelectedOperators();
 };
 
 // 切换全选（编译成功的算子工程）
@@ -667,6 +724,9 @@ const toggleCompiledAll = () => {
       }
     });
   }
+  
+  // 保存已选择的算子
+  saveSelectedOperators();
 };
 
 // 切换全选（预备算子工程）
@@ -697,11 +757,68 @@ const togglePreparedAll = () => {
       }
     });
   }
+  
+  // 保存已选择的算子
+  saveSelectedOperators();
 };
 
 // 移除已选择的算子工程
 const removeOperator = (operatorId) => {
   selectedOperatorIds.value = selectedOperatorIds.value.filter((id) => id !== operatorId);
+  // 保存已选择的算子
+  saveSelectedOperators();
+};
+
+// 保存已选择的算子到 projects
+const saveSelectedOperators = async () => {
+  if (!isStandardCustom.value) {
+    return;
+  }
+  try {
+    await setSelectedOperators(selectedOperatorIds.value.map(id => Number(id)));
+  } catch (error) {
+    console.error('[Operate] 保存已选择的算子失败:', error);
+  }
+};
+
+// 加载已选择的算子
+const loadSelectedOperators = async () => {
+  if (!isStandardCustom.value) {
+    return;
+  }
+  try {
+    // 直接通过ID恢复，更准确
+    const selectedIds = await getSelectedOperatorIds();
+    console.log('[Operate] 从后端获取的已选择算子ID:', selectedIds);
+    
+    if (selectedIds && selectedIds.length > 0) {
+      // 将数字ID转换为字符串ID（因为前端使用字符串ID）
+      const allOps = [...compiledOperators.value, ...preparedOperators.value];
+      console.log('[Operate] 所有可用算子:', allOps.map(op => ({ id: op.id, idType: typeof op.id, name: op.name })));
+      
+      const matchedIds = allOps
+        .filter(op => {
+          const opIdNum = Number(op.id);
+          const isMatch = selectedIds.includes(opIdNum);
+          if (isMatch) {
+            console.log('[Operate] 匹配到算子:', op.name, 'ID:', op.id, '数字ID:', opIdNum);
+          }
+          return isMatch;
+        })
+        .map(op => op.id);
+      
+      if (matchedIds.length > 0) {
+        selectedOperatorIds.value = matchedIds;
+        console.log('[Operate] 成功恢复已选择的算子:', matchedIds);
+      } else {
+        console.warn('[Operate] 未找到匹配的算子，保存的ID:', selectedIds, '可用的算子:', allOps.map(op => ({ id: op.id, name: op.name })));
+      }
+    } else {
+      console.log('[Operate] 没有保存的已选择算子');
+    }
+  } catch (error) {
+    console.error('[Operate] 加载已选择的算子失败:', error);
+  }
 };
 
 // 处理 Popover 打开/关闭事件，动态设置宽度
@@ -857,11 +974,20 @@ const handlePopoverOpenChange = (open) => {
             <!-- 有子菜单的情况 -->
             <a-sub-menu v-if="item.children && item.children.length > 0" :key="`submenu-${item.key}`">
               <template #title>
-                <span v-if="item.icon" class="inline-flex items-center text-[11px]">
-                  <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
-                  <span class="text-white/85">{{ item.label }}</span>
-                </span>
-                <span v-else class="text-white/85">{{ item.label }}</span>
+                <a-tooltip v-if="areAllChildrenDisabledByMultipleOperators(item)" title="该功能只支持单算子执行" placement="right">
+                  <span v-if="item.icon" class="inline-flex items-center text-[11px]">
+                    <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
+                    <span class="text-white/85">{{ item.label }}</span>
+                  </span>
+                  <span v-else class="text-white/85">{{ item.label }}</span>
+                </a-tooltip>
+                <template v-else>
+                  <span v-if="item.icon" class="inline-flex items-center text-[11px]">
+                    <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
+                    <span class="text-white/85">{{ item.label }}</span>
+                  </span>
+                  <span v-else class="text-white/85">{{ item.label }}</span>
+                </template>
               </template>
               <template v-for="child in item.children">
                 <!-- 子菜单项 -->
@@ -870,7 +996,15 @@ const handlePopoverOpenChange = (open) => {
                     'opacity-50 cursor-not-allowed':
                       isMenuItemDisabled(child.key),
                   }">
-                  <div class="single-box">
+                  <a-tooltip v-if="isDisabledByMultipleOperators(child.key)" title="该功能只支持单算子执行" placement="right">
+                    <div class="single-box">
+                      {{ child.label }}
+                      <div v-if="child.key === 'simulation' || child.key === 'onboard'" class="setting-box">
+                        <SettingOutlined @click.stop="openSetting(child.key)" />
+                      </div>
+                    </div>
+                  </a-tooltip>
+                  <div v-else class="single-box">
                     {{ child.label }}
                     <div v-if="child.key === 'simulation' || child.key === 'onboard'" class="setting-box">
                       <SettingOutlined @click.stop="openSetting(child.key)" />
@@ -893,16 +1027,30 @@ const handlePopoverOpenChange = (open) => {
               'opacity-50 cursor-not-allowed':
                 isMenuItemDisabled(item.key),
             }">
-              <div v-if="item.icon" class="single-box">
-                <span class="inline-flex items-center text-[11px]">
-                  <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
-                  <span class="text-white/85">{{ item.label }}</span>
-                </span>
-                <div v-if="item.key === 'sanitizer'" class="setting-box">
-                  <SettingOutlined @click.stop="openSetting(item.key)" />
+              <a-tooltip v-if="isDisabledByMultipleOperators(item.key)" title="该功能只支持单算子执行" placement="right">
+                <div v-if="item.icon" class="single-box">
+                  <span class="inline-flex items-center text-[11px]">
+                    <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
+                    <span class="text-white/85">{{ item.label }}</span>
+                  </span>
+                  <div v-if="item.key === 'sanitizer'" class="setting-box">
+                    <SettingOutlined @click.stop="openSetting(item.key)" />
+                  </div>
                 </div>
-              </div>
-              <span v-else class="text-white/85">{{ item.label }}</span>
+                <span v-else class="text-white/85">{{ item.label }}</span>
+              </a-tooltip>
+              <template v-else>
+                <div v-if="item.icon" class="single-box">
+                  <span class="inline-flex items-center text-[11px]">
+                    <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
+                    <span class="text-white/85">{{ item.label }}</span>
+                  </span>
+                  <div v-if="item.key === 'sanitizer'" class="setting-box">
+                    <SettingOutlined @click.stop="openSetting(item.key)" />
+                  </div>
+                </div>
+                <span v-else class="text-white/85">{{ item.label }}</span>
+              </template>
             </a-menu-item>
           </template>
         </a-menu>

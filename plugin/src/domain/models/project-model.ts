@@ -41,6 +41,8 @@ export type ProjectRecord = {
   ops_list?: SubOperatorInfo[] | null;
   // 标准自定义算子工程的experimental子算子列表
   experimental_ops_list?: SubOperatorInfo[] | null;
+  // 已选择的算子ID列表（用于标准自定义算子场景）
+  selected_operator_ids?: number[] | null;
 };
 
 type ProjectsStore = {
@@ -79,6 +81,7 @@ export interface CreateProjectParams {
   ops_meet?: OperatorCollectionInfo[]; // 标准自定义算子工程的算子合集列表
   ops_list?: SubOperatorInfo[]; // 标准自定义算子工程的子算子列表（非experimental）
   experimental_ops_list?: SubOperatorInfo[]; // 标准自定义算子工程的experimental子算子列表
+  selected_operator_ids?: number[]; // 已选择的算子ID列表（用于标准自定义算子场景）
 }
 
 export async function updateShScript(data: CreateProjectParams) {
@@ -127,6 +130,9 @@ export async function createProject(data: CreateProjectParams) {
     if (data.ops_meet !== undefined) {
       existing.ops_meet = data.ops_meet;
     }
+    if (data.selected_operator_ids !== undefined) {
+      existing.selected_operator_ids = data.selected_operator_ids;
+    }
     existing.update_time = new Date()
       .toISOString();
     writeStore(store);
@@ -153,6 +159,7 @@ export async function createProject(data: CreateProjectParams) {
     ops_meet: data.ops_meet || null,
     ops_list: data.ops_list || null,
     experimental_ops_list: data.experimental_ops_list || null,
+    selected_operator_ids: data.selected_operator_ids || null,
   };
 
   store.projects.push(record);

@@ -5,6 +5,7 @@ import {
   joinCommands,
   getExecutableCommand,
   Command,
+  objectToCommandString,
 } from '@plugin/domain/utils/command-utils';
 import { OpRecord } from '@plugin/domain/models/model';
 import { ProfilerFactory } from '../profiler-service';
@@ -17,6 +18,8 @@ import {
 } from './types';
 import { ConfigRecord } from '@plugin/domain/models/config-model';
 import { getConfig, getConfigById } from '../../services/configuration';
+import { getProjectById } from '@plugin/domain/models/project-model';
+import { OperatorProjectType } from '../operator-project-detector';
 
 /**
  * Ascend 类型命令策略
@@ -100,6 +103,14 @@ export class AscendCommandStrategy implements CommandStrategy {
       cmd.addArgument(compileOption);
     }
 
+    // 如果是标准自定义算子且是调试编译（--debug 或 --simulator），添加 --bishneg-config=ccec_o0,ccec_g 参数
+    const project = getProjectById(config.project_id);
+    const isDebugCompile = compileOption === '--debug' || compileOption === '--simulator';
+
+    if (project && project.project_type === OperatorProjectType.STANDARD_CUSTOM && isDebugCompile) {
+      cmd.addArgument('--bishneg-config=ccec_o0,ccec_g');
+    }
+
     if (advance_cmd) {
       cmd.addArgument(advance_cmd);
     }
@@ -130,11 +141,12 @@ export class AscendCommandStrategy implements CommandStrategy {
 
     const cmd = new Command(config.script || '');
 
+    const vendor_name_options: Record<string, unknown> = { vendor_name };
+
     cmd.addOption('run_example', true);
     cmd.addArgument(op);
     cmd.addArgument(mode);
     cmd.addArgument(pkg_mode);
-    cmd.addArgument(vendor_name);
 
     if (compileOption) {
       cmd.addArgument(compileOption);
@@ -142,6 +154,13 @@ export class AscendCommandStrategy implements CommandStrategy {
 
     if (advance_cmd) {
       cmd.addArgument(advance_cmd);
+    }
+
+    // 将 vendor_name_options 转换为字符串并作为最后一个位置参数添加
+    const vendor_name_options_str = objectToCommandString(vendor_name_options as Record<string, string | number | boolean | (string | number)[] | null | undefined>);
+
+    if (vendor_name_options_str) {
+      cmd.addArgument(vendor_name_options_str);
     }
 
     return joinCommands(sourceCannCmd, cdCmd, cmd.toString());

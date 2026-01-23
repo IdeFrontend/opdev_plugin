@@ -1,11 +1,11 @@
-<script setup>
+<script setup lang="ts">
 import {
   ref, onMounted, computed, watch
 } from 'vue';
 import { theme, message } from 'ant-design-vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import {
-  getConfigData, saveConfig, openExternalLink, startOnBoard, executeVscodeCommand, checkTaskStatus
+  getConfigData, saveConfig, openExternalLink, startOnBoard, executeVscodeCommand, checkTaskStatus, getSelectedOperators
 } from '@web/apis';
 
 const themeConfig = { algorithm: theme.darkAlgorithm };
@@ -58,16 +58,28 @@ const handleConfirm = async () => {
   if (!onboardData.value || isExecuting.value) {
     return;
   }
-  const hasRunningTask = await checkTaskStatus()
-  console.log('hasRunningTask', hasRunningTask)
+  const hasRunningTask = await checkTaskStatus();
+  console.log('hasRunningTask', hasRunningTask);
   if (hasRunningTask) {
     message.info('存在未执行完毕的任务，请稍后再试');
-    return
+    return;
   }
   try {
     isExecuting.value = true;
+    
+    // 获取已选择的算子名称（如果是标准自定义算子）
+    let operatorNames;
+    try {
+      const selectedOperators = await getSelectedOperators();
+      if (selectedOperators) {
+        operatorNames = selectedOperators;
+      }
+    } catch (error) {
+      console.warn('获取已选择的算子失败:', error);
+    }
+    
     // 执行上板
-    startOnBoard();
+    await startOnBoard({ operatorNames });
     // 关闭当前页面
     setTimeout(() => {
       executeVscodeCommand('workbench.action.closeActiveEditor');
