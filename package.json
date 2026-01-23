@@ -343,13 +343,7 @@
           "command": "huawei-op-devtools.operatorProjectCpuDebug"
         },
         {
-          "command": "huawei-op-devtools.operatorProjectNpuDebug"
-        },
-        {
           "command": "huawei-op-devtools.operatorProjectCpuDebugConfig"
-        },
-        {
-          "command": "huawei-op-devtools.operatorProjectNpuDebugConfig"
         }
       ],
       "operator.performance": [

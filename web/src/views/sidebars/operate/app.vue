@@ -190,24 +190,17 @@ const baseMenuItems = [
   },
 ];
 
-// 调试菜单配置（只在调试模式启用时显示）
-const debugMenuItem = {
-  key: 'runDebug',
-  label: '调试',
-  icon: debugIcon,
-  children: [
+// 动态计算菜单项（根据调试模式开关决定是否包含调试菜单）
+const menuItems = computed(() => {
+  const items = [...baseMenuItems];
+
+  // 构建调试菜单的子菜单项
+  const debugChildren = [
     {
       key: 'buildAndCpuDebug',
       label: 'CPU调试',
       handler: async () => {
         await runCpuDebug();
-      },
-    },
-    {
-      key: 'buildAndDebug',
-      label: 'NPU调试',
-      handler: async () => {
-        await runDebug();
       },
     },
     {
@@ -217,26 +210,37 @@ const debugMenuItem = {
         await cpuDebugConfig();
       },
     },
-    {
-      key: 'debugConfig',
-      label: 'NPU调试配置',
-      handler: async () => {
-        await debugConfig();
-      },
-    },
-  ],
-};
+  ];
 
-// 动态计算菜单项（根据调试模式开关决定是否包含调试菜单）
-const menuItems = computed(() => {
-  const items = [...baseMenuItems];
-
-  // 如果启用了调试模式，在"运行验证"后插入调试菜单
+  // 如果启用了调试模式，添加NPU调试相关的子菜单项
   if (debugModeEnabled.value) {
-    const runExampleIndex = items.findIndex(item => item.key === 'runExample');
-    if (runExampleIndex !== -1) {
-      items.splice(runExampleIndex + 1, 0, debugMenuItem);
-    }
+    debugChildren.push(
+      {
+        key: 'buildAndDebug',
+        label: 'NPU调试',
+        handler: async () => {
+          await runDebug();
+        },
+      },
+      {
+        key: 'debugConfig',
+        label: 'NPU调试配置',
+        handler: async () => {
+          await debugConfig();
+        },
+      },
+    );
+  }
+
+  // 在"运行验证"后插入调试菜单
+  const runExampleIndex = items.findIndex(item => item.key === 'runExample');
+  if (runExampleIndex !== -1) {
+    items.splice(runExampleIndex + 1, 0, {
+      key: 'runDebug',
+      label: '调试',
+      icon: debugIcon,
+      children: debugChildren,
+    });
   }
 
   // 如果项目类型是 pyasc，隐藏编译部署、调试、异常检测
