@@ -5,16 +5,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import {
   OperatorProjectDetector,
   OperatorProjectType,
-  type OperatorProjectDetectionResult,
 } from '@plugin/domain/services/operator-project-detector';
-import { getProjectByPath } from '@plugin/domain/models/project-model';
-import { OperatorProjectIconTheme } from '@plugin/class/operator-project-icon-theme';
+import {
+  updateStandardCustomOperators,
+  type SubOperatorInfo,
+  type OperatorCollectionInfo,
+} from '@plugin/domain/models/project-model';
 
 /**
  * 工作区检测服务
@@ -45,117 +46,96 @@ export class WorkspaceDetectorService {
   }
 
   /**
-   * 扫描标准自定义算子（特殊规则）
-   * 当识别为自定义算子目录后，标记指定的文件夹为算子工程集合
-   * 标记的逻辑和鼠标右键标记的逻辑一致
+   * 扫描根目录下的算子合集(ops_meet)与算子(ops_list/experimental_ops_list)。
+   * 供 WorkspaceDetectorService、FolderContextMenuService 等复用。
    */
-  private static async scanStandardCustomOperators(workspacePath: string): Promise<void> {
-    const context = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
-      .extensionContext;
+  static scanOpsMeetAndOpsLists(rootPath: string): {
+    opsMeet: OperatorCollectionInfo[];
+    opsList: SubOperatorInfo[];
+    experimentalOpsList: SubOperatorInfo[];
+  } {
+    const opsMeet: OperatorCollectionInfo[] = [];
+    const opsList: SubOperatorInfo[] = [];
+    const experimentalOpsList: SubOperatorInfo[] = [];
+    const entries = fs.readdirSync(rootPath, { withFileTypes: true });
 
-    if (!context) {
-      return;
-    }
+    for (const entry of entries) {
+      if (!entry.isDirectory()) {
+        continue;
+      }
 
-    // 定义需要标记为算子工程集合的文件夹列表
-    // experimental目录下的文件夹
-    const experimentalFolders = [
-      'image',
-      'objdetect',
-      'conversion',
-      'math',
-      'npu_ops_math_ext',
-      'random',
-      'activation',
-      'control',
-      'conv',
-      'foreach',
-      'index',
-      'loss',
-      'matmul',
-      'norm',
-      'optim',
-      'pooling',
-      'quant',
-      'rnn',
-      'vfusion',
-      'attention',
-      'ffn',
-      'gmm',
-      'mc2',
-      'moe',
-      'npu_ops_transformer_ext',
-      'posembedding',
-      'select_attention_operators',
-    ];
+      const dirName = entry.name;
+      if (dirName.startsWith('.') || dirName === 'node_modules' || dirName === 'out' || dirName === 'build') {
+        continue;
+      }
 
-    // 根目录下的文件夹
-    const rootFolders = [
-      'image',
-      'objdetect',
-      'conversion',
-      'math',
-      'random',
-      'activation',
-      'control',
-      'conv',
-      'foreach',
-      'index',
-      'loss',
-      'matmul',
-      'norm',
-      'optim',
-      'pooling',
-      'quant',
-      'rnn',
-      'vfusion',
-      'hash',
-      'attention',
-      'ffn',
-      'gmm',
-      'mc2',
-      'moe',
-      'posembedding',
-      'select_attention_operators',
-    ];
+      const collectionPath = path.join(rootPath, dirName);
+      let hasOperators = false;
+      const isExperimentalCollection = dirName.toLowerCase() === 'experimental';
 
-    // 使用与右键标记相同的逻辑
-    const { FolderContextMenuService } = await import('./folder-context-menu-service.js');
-    const iconTheme = OperatorProjectIconTheme.getInstance(context);
-    const urisToUpdate: vscode.Uri[] = [];
+      try {
+        const subEntries = fs.readdirSync(collectionPath, { withFileTypes: true });
 
-    // 标记 experimental 目录下的文件夹
-    const experimentalPath = path.join(workspacePath, 'experimental');
-    const hasExperimental =
-      fs.existsSync(experimentalPath)
-      && fs.statSync(experimentalPath)
-        .isDirectory();
+        for (const subEntry of subEntries) {
+          if (!subEntry.isDirectory() || subEntry.name.startsWith('.')) {
+            continue;
+          }
 
-    if (hasExperimental) {
-      for (const folderName of experimentalFolders) {
-        const folderPath = path.join(experimentalPath, folderName);
+          const operatorPath = path.join(collectionPath, subEntry.name);
+          const operatorCmakeListsPath = path.join(operatorPath, 'CMakeLists.txt');
+          if (!fs.existsSync(operatorCmakeListsPath)) {
+            continue;
+          }
 
-        const folderUri = vscode.Uri.file(folderPath);
+          hasOperators = true;
+          const buildDir = path.join(operatorPath, 'build');
+          const outDir = path.join(operatorPath, 'out');
+          const isCompiled = fs.existsSync(buildDir) || fs.existsSync(outDir);
+          const operatorInfo: SubOperatorInfo = {
+            name: subEntry.name,
+            path: operatorPath,
+            isCompiled,
+          };
+          if (isExperimentalCollection) {
+            experimentalOpsList.push(operatorInfo);
+          }
+          else {
+            opsList.push(operatorInfo);
+          }
+        }
+      }
+      catch {
+        // 忽略单目录扫描失败
+      }
 
-        await FolderContextMenuService.markAsMultiOperatorProject(folderUri);
-        urisToUpdate.push(folderUri);
+      if (hasOperators) {
+        opsMeet.push({
+          name: dirName,
+          path: collectionPath,
+        });
       }
     }
+    return { opsMeet, opsList, experimentalOpsList };
+  }
 
-    // 标记根目录下的文件夹
+  /**
+   * 扫描标准自定义算子（特殊规则）
+   * 只扫描算子合集(ops_meet)和算子(ops_list/experimental_ops_list)，更新根项目信息。
+   * 不再为算子集合或子算子在 projects 中新建项目。
+   */
+  private static async scanStandardCustomOperators(workspacePath: string): Promise<void> {
+    try {
+      console.log('[scanStandardCustomOperators] 开始扫描算子合集和算子...');
+      const { opsMeet, opsList, experimentalOpsList } = this.scanOpsMeetAndOpsLists(workspacePath);
 
-    for (const folderName of rootFolders) {
-      const folderPath = path.join(workspacePath, folderName);
-
-      const folderUri = vscode.Uri.file(folderPath);
-
-      await FolderContextMenuService.markAsMultiOperatorProject(folderUri);
-      urisToUpdate.push(folderUri);
+      console.log('[scanStandardCustomOperators] 算子合集列表:', opsMeet.map((m) => m.name));
+      console.log('[scanStandardCustomOperators] 普通算子列表:', opsList.map((o) => o.name));
+      console.log('[scanStandardCustomOperators] experimental算子列表:', experimentalOpsList.map((o) => o.name));
+      await updateStandardCustomOperators(workspacePath, opsMeet, opsList, experimentalOpsList);
+      console.log(`[scanStandardCustomOperators] 已更新: ${opsMeet.length} 个算子合集, ${opsList.length} 个普通算子, ${experimentalOpsList.length} 个experimental算子`);
     }
-
-    // 触发装饰更新
-    if (urisToUpdate.length > 0) {
-      iconTheme.fireDecorationUpdate(urisToUpdate);
+    catch (error) {
+      console.warn(`[scanStandardCustomOperators] 更新算子信息失败: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 }

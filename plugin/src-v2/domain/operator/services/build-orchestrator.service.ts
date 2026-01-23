@@ -39,11 +39,13 @@ export class BuildOrchestratorService {
   async build(
     configId: number,
     compileOption?: string,
+    operatorNames?: string,
   ): Promise<Result<void, BuildFailedError>> {
     // 1. 生成构建命令
     const command = this.commandGenerator.generateBuildCommand(
       configId,
       compileOption,
+      operatorNames,
     );
 
     // 2. 执行命令
@@ -64,8 +66,8 @@ export class BuildOrchestratorService {
   /**
    * 执行示例构建
    */
-  async buildExample(configId: number): Promise<Result<void, BuildFailedError>> {
-    const command = this.commandGenerator.generateBuildExampleCommand(configId);
+  async buildExample(configId: number, operatorNames?: string): Promise<Result<void, BuildFailedError>> {
+    const command = this.commandGenerator.generateBuildExampleCommand(configId, operatorNames);
     const execResult = await this.executor.execute(command, [], [], {}, true);
 
     if (execResult.code !== 0) {

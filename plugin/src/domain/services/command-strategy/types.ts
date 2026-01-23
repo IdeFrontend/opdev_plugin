@@ -24,6 +24,7 @@ export interface CommandBuildParams {
   cdCmd: string;
   compileOption?: string;
   advance_cmd?: string;
+  operatorNames?: string; // 算子名称，多个用逗号分隔（用于标准自定义算子等场景）
 }
 
 /**

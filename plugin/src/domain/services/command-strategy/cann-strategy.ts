@@ -68,7 +68,7 @@ export class CannCommandStrategy implements CommandStrategy {
   }
 
   buildOpCommand(params: CommandBuildParams): string {
-    const { config, sourceCannCmd, cdCmd, compileOption, advance_cmd } = params;
+    const { config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames } = params;
 
     if (!config.script) {
       throw new Error(`配置缺少脚本信息，且找不到算子记录: ${config.op}`);
@@ -78,6 +78,11 @@ export class CannCommandStrategy implements CommandStrategy {
 
     if (config.custom_options) {
       cmd.addArgument(config.custom_options);
+    }
+
+    // 如果有算子名称，将其作为参数添加到命令中（用于标准自定义算子等场景）
+    if (operatorNames) {
+      cmd.addArgument(operatorNames);
     }
 
     if (compileOption) {

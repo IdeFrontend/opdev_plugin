@@ -5,6 +5,7 @@ import { ProjectManager } from '@plugin/core/project/project-manager';
 import { buildService } from '@plugin/service/build-service';
 import { sanitizerService } from '@plugin/service/sanitizer-service';
 import { homeMethods } from './home-controller';
+import { StartBuildParams, StartBuildExampleParams } from '@shared/api-types';
 
 // 全局任务管理器：用于追踪和终止正在执行的任务
 let currentExecutor: CommandExecutor | null = null;
@@ -13,14 +14,14 @@ export const taskMethods = {
   /**
    * 构建算子
    */
-  async startBuild(): Promise<void> {
+  async startBuild(params: StartBuildParams = {}): Promise<void> {
     try {
       await ProjectManager.getInstance()
         .initProject();
       // 保存当前 executor 引用，用于可能的终止操作
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
-      await buildService.startBuild({});
+      await buildService.startBuild(params);
     }
     finally {
       // 清除 executor 引用
@@ -53,10 +54,21 @@ export const taskMethods = {
   /**
    * 构建示例
    */
-  async startBuildExample(): Promise<void> {
-    await ProjectManager.getInstance()
-      .initProject();
-    await buildService.startBuildExample({});
+  async startBuildExample(params: StartBuildExampleParams = {}): Promise<void> {
+    try {
+      await ProjectManager.getInstance()
+        .initProject();
+      // 保存当前 executor 引用
+      currentExecutor = ProjectManager.getInstance()
+        .getExecutor();
+      await buildService.startBuildExample(params);
+    }
+    finally {
+      // 清除 executor 引用
+      currentExecutor = null;
+      ProjectManager.getInstance()
+        .clearExecutor();
+    }
   },
 
   /**
@@ -192,11 +204,11 @@ export const taskMethods = {
       // debug前编译，使用--debug参数
       await buildService.startBuild({ compileOption: '--debug' });
       await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
-      
+
       // 获取项目类型和模板名称，判断是否使用 msdebug-python
       const projectInfo = await homeMethods.getProjectType();
       const usePythonDebug = projectInfo.projectType === 'ascend' && projectInfo.projectTemplateName === 'torch_library_template';
-      
+
       // 启动调试配置
       const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
       if (workspaceFolder) {
@@ -238,11 +250,11 @@ export const taskMethods = {
       // CPU调试前编译，使用--simulator参数
       await buildService.startBuild({ compileOption: '--simulator' });
       await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
-      
+
       // 获取项目类型和模板名称，判断是否使用 msdebug-python
       const projectInfo = await homeMethods.getProjectType();
       const usePythonDebug = projectInfo.projectType === 'ascend' && projectInfo.projectTemplateName === 'torch_library_template';
-      
+
       // 启动调试配置
       const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
       if (workspaceFolder) {

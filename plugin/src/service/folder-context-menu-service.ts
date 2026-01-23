@@ -9,14 +9,57 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 
-import { OperatorProjectDetector, OperatorProjectType, type OperatorProjectDetectionResult } from '@plugin/domain/services/operator-project-detector';
-import { createProject, getProjectByPath, getProjectById, deleteProject, getAllProjects } from '@plugin/domain/models/project-model';
+import {
+  OperatorProjectDetector,
+  OperatorProjectType,
+  type OperatorProjectDetectionResult,
+} from '@plugin/domain/services/operator-project-detector';
+import {
+  createProject,
+  getProjectByPath,
+  getProjectById,
+  deleteProject,
+  getAllProjects,
+  getContainingStandardCustomProject,
+  updateStandardCustomOperators,
+} from '@plugin/domain/models/project-model';
+import { WorkspaceDetectorService } from './workspace-detector-service';
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import { projectService } from './project-service';
 import { OperatorProjectIconTheme } from '@plugin/class/operator-project-icon-theme';
 import { generateStructure } from '@plugin/domain';
 import { getOpsByProjectId } from '@plugin/domain/models/model';
 import { getConfig } from '@plugin/domain/services/configuration';
+import { buildService } from './build-service';
+import { taskMethods } from '../controller/task-controller';
+
+/**
+ * 判断目录是否为标准自定义算子的根目录（含 build.sh 且包含 --genop）
+ */
+function isStandardCustomRoot(dirPath: string): boolean {
+  const buildSh = path.join(dirPath, 'build.sh');
+  if (!fs.existsSync(buildSh)) return false;
+  try {
+    const content = fs.readFileSync(buildSh, 'utf-8');
+    return content.includes('--genop');
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 向上查找标准自定义算子根目录（含 build.sh --genop），最多查找 5 层
+ */
+function findStandardCustomRoot(startPath: string): string | null {
+  let dir = path.normalize(startPath);
+  for (let i = 0; i < 5; i++) {
+    if (isStandardCustomRoot(dir)) return dir;
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return null;
+}
 
 /**
  * 文件夹右键菜单服务
@@ -25,131 +68,81 @@ import { getConfig } from '@plugin/domain/services/configuration';
 export class FolderContextMenuService {
   /**
    * 标记文件夹为算子工程
-   * 逻辑与初始化时标记为算子工程的逻辑保持一致：
-   * 1. 先检测当前目录本身是否为算子工程（使用 detectOperatorProject）
-   * 2. 如果当前目录是算子工程，直接标记
-   * 3. 如果当前目录不是算子工程，扫描子目录看是否有多个算子工程
+   * 1. 仅根目录（含 build.sh --genop）可记为标准自定义算子，并在 projects 中新建一项。
+   * 2. 算子集合、子算子不再在 projects 中新建；其信息存于根项目的 ops_meet、ops_list、experimental_ops_list。
    */
   static async markAsOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
 
     try {
-      // 1. 先检测当前目录本身是否为算子工程（与初始化逻辑一致）
       const rootDetection = await OperatorProjectDetector.detectOperatorProject(folderPath);
 
       if (rootDetection.isOperatorProject && rootDetection.projectType) {
-        // 当前目录就是算子工程
-        // 检查是否已注册
         const existing = getProjectByPath(folderPath);
         if (existing) {
           vscode.window.showInformationMessage('该文件夹已经是算子工程');
           return;
         }
 
-        // 如果是标准自定义算子，需要特殊处理（扫描子目录看是否有多个算子工程）
         if (rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM) {
-          // 标准自定义算子，扫描子目录看是否有多个算子工程
-          const detectedProjects = await OperatorProjectDetector.scanForOperatorProjects(
-            folderPath,
-            3,
-          );
-
-          // 如果找到多个算子工程（包括当前目录），自动标记为多算子工程集合
-          if (detectedProjects.length > 1) {
-            // 检查是否已注册为多算子工程集合
-            const existingMulti = getProjectByPath(folderPath);
-            if (existingMulti && existingMulti.project_type === OperatorProjectType.MULTI_PROJECT) {
-              vscode.window.showInformationMessage('该文件夹已经是算子工程集合');
-              return;
-            }
-
-            // 注册子项目
-            const subProjectIds: number[] = [];
-            const initializationTasks: Array<() => Promise<void>> = [];
-            for (const detection of detectedProjects) {
-              if (!detection.projectType) continue;
-
-              let subProject = getProjectByPath(detection.projectPath);
-              if (!subProject) {
-                const subId = await createProject({
-                  project_name: detection.projectName,
-                  project_path: detection.projectPath,
-                  project_type: detection.projectType,
-                });
-                subProjectIds.push(subId);
-                // 收集初始化任务，稍后并行执行
-                initializationTasks.push(() => this.initializeOperatorProject(detection, subId));
-              } else {
-                subProjectIds.push(subProject.id);
-              }
-            }
-
-            // 并行执行所有初始化任务
-            if (initializationTasks.length > 0) {
-              await Promise.allSettled(
-                initializationTasks.map(task => task().catch(error => {
-                  throw error;
-                }))
-              );
-            }
-
-            // 注册多算子工程集合
-            const projectName = path.basename(folderPath);
-            await createProject({
-              project_name: projectName,
-              project_path: folderPath,
-              project_type: OperatorProjectType.MULTI_PROJECT,
-              sub_project_ids: subProjectIds,
-            });
-
-            // 更新图标主题
-            const context1 = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
-              .extensionContext;
-            if (context1) {
-              const iconTheme = OperatorProjectIconTheme.getInstance(context1);
-              iconTheme.fireDecorationUpdate(vscode.Uri.file(folderPath));
-            }
-
-            vscode.window.showInformationMessage(`已自动标记为算子工程集合（包含 ${detectedProjects.length} 个算子工程）: ${projectName}`);
+          if (!isStandardCustomRoot(folderPath)) {
+            vscode.window.showWarningMessage('该目录是标准自定义算子的子目录，请对包含 build.sh 的根目录执行「标记为算子工程」');
             return;
           }
+          const projectId = await createProject({
+            project_name: rootDetection.projectName,
+            project_path: folderPath,
+            project_type: OperatorProjectType.STANDARD_CUSTOM,
+          });
+          const { opsMeet, opsList, experimentalOpsList } = WorkspaceDetectorService.scanOpsMeetAndOpsLists(folderPath);
+          await updateStandardCustomOperators(folderPath, opsMeet, opsList, experimentalOpsList);
+          await this.initializeOperatorProject(rootDetection, projectId);
+          const ctx = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
+            .extensionContext;
+          if (ctx) {
+            const uris: vscode.Uri[] = [vscode.Uri.file(folderPath)];
+            for (const m of opsMeet) { if (m.path) uris.push(vscode.Uri.file(m.path)); }
+            for (const o of opsList) { if (o.path) uris.push(vscode.Uri.file(o.path)); }
+            for (const o of experimentalOpsList) { if (o.path) uris.push(vscode.Uri.file(o.path)); }
+            OperatorProjectIconTheme.getInstance(ctx).fireDecorationUpdate(uris);
+          }
+          vscode.window.showInformationMessage(`已标记为算子工程: ${rootDetection.projectName}`);
+          return;
         }
 
-        // 单个算子工程，直接标记
         const projectId = await createProject({
           project_name: rootDetection.projectName,
           project_path: folderPath,
           project_type: rootDetection.projectType,
         });
-
-        // 初始化算子工程配置
         await this.initializeOperatorProject(rootDetection, projectId);
-
+        const ctxSingle = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
+          .extensionContext;
+        if (ctxSingle) {
+          OperatorProjectIconTheme.getInstance(ctxSingle)
+            .fireDecorationUpdate(vscode.Uri.file(folderPath));
+        }
         vscode.window.showInformationMessage(`已标记为算子工程: ${rootDetection.projectName}`);
         return;
       }
 
-      // 2. 当前目录不是算子工程，扫描子目录看是否有多个算子工程
-      const detectedProjects = await OperatorProjectDetector.scanForOperatorProjects(
-        folderPath,
-        3,
-      );
+      const detectedProjects = await OperatorProjectDetector.scanForOperatorProjects(folderPath, 3);
 
-      // 如果找到多个算子工程，自动标记为多算子工程集合
       if (detectedProjects.length > 1) {
-        // 检查是否已注册为多算子工程集合
+        const hasStandardCustom = detectedProjects.some((d) => d.projectType === OperatorProjectType.STANDARD_CUSTOM);
+        if (hasStandardCustom) {
+          vscode.window.showWarningMessage('该目录下包含标准自定义算子子目录，请对包含 build.sh 的根目录执行「标记为算子工程」');
+          return;
+        }
         const existing = getProjectByPath(folderPath);
         if (existing && existing.project_type === OperatorProjectType.MULTI_PROJECT) {
           vscode.window.showInformationMessage('该文件夹已经是算子工程集合');
           return;
         }
-
-        // 注册子项目
         const subProjectIds: number[] = [];
         const initializationTasks: Array<() => Promise<void>> = [];
         for (const detection of detectedProjects) {
           if (!detection.projectType) continue;
-
           let subProject = getProjectByPath(detection.projectPath);
           if (!subProject) {
             const subId = await createProject({
@@ -158,23 +151,14 @@ export class FolderContextMenuService {
               project_type: detection.projectType,
             });
             subProjectIds.push(subId);
-            // 收集初始化任务，稍后并行执行
             initializationTasks.push(() => this.initializeOperatorProject(detection, subId));
           } else {
             subProjectIds.push(subProject.id);
           }
         }
-
-        // 并行执行所有初始化任务
         if (initializationTasks.length > 0) {
-          await Promise.allSettled(
-            initializationTasks.map(task => task().catch(error => {
-              throw error;
-            }))
-          );
+          await Promise.allSettled(initializationTasks.map((t) => t().catch((e) => { throw e; })));
         }
-
-        // 注册多算子工程集合
         const projectName = path.basename(folderPath);
         await createProject({
           project_name: projectName,
@@ -182,15 +166,8 @@ export class FolderContextMenuService {
           project_type: OperatorProjectType.MULTI_PROJECT,
           sub_project_ids: subProjectIds,
         });
-
-        // 更新图标主题
-        const context1 = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
-          .extensionContext;
-        if (context1) {
-          const iconTheme = OperatorProjectIconTheme.getInstance(context1);
-          iconTheme.fireDecorationUpdate(vscode.Uri.file(folderPath));
-        }
-
+        const ctx1 = (globalThis as unknown as { extensionContext: vscode.ExtensionContext }).extensionContext;
+        if (ctx1) OperatorProjectIconTheme.getInstance(ctx1).fireDecorationUpdate(vscode.Uri.file(folderPath));
         vscode.window.showInformationMessage(`已自动标记为算子工程集合（包含 ${detectedProjects.length} 个算子工程）: ${projectName}`);
         return;
       }
@@ -241,132 +218,49 @@ export class FolderContextMenuService {
 
   /**
    * 标记文件夹为算子工程集合
-   * 使用标准自定义算子的扫描规则：
-   * 1. 根目录下存在 experimental 文件夹，则将experimental标记为算子工程集合
-   * 2. 扫描的文件夹根目录下有CMakeLists.txt文件，则这个文件夹为算子文件
-   * 3. 识别出来的所有算子，需要分为2类，在experimental目录下的算子会被归类为experimental算子，其他的为普通算子
-   * 4. 当一个目录的下一层目录中有多个算子目录，则将该目录标记成算子工程集合
+   * 不再为算子集合或子算子在 projects 中新建项目；只从根目录全量扫描，更新根项目的 ops_meet、ops_list、experimental_ops_list。
    */
   static async markAsMultiOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
 
     try {
-      // 使用标准自定义算子的扫描规则（只识别标准自定义算子）
-      const detectedProjects = await OperatorProjectDetector.scanForStandardCustomOperatorProjects( folderPath );
+      let rootPath: string | null = null;
+      const containing = getContainingStandardCustomProject(folderPath);
+      if (containing?.project_path) {
+        rootPath = containing.project_path;
+      }
+      if (!rootPath) {
+        rootPath = findStandardCustomRoot(folderPath);
+      }
+      if (!rootPath) {
+        vscode.window.showWarningMessage('未找到标准自定义算子根目录，请先对包含 build.sh 的根目录执行「标记为算子工程」');
+        return;
+      }
+      const rootProject = getProjectByPath(rootPath);
+      if (!rootProject || rootProject.project_type !== OperatorProjectType.STANDARD_CUSTOM) {
+        vscode.window.showWarningMessage('请先在根目录执行「标记为算子工程」');
+        return;
+      }
+      const { opsMeet, opsList, experimentalOpsList } = WorkspaceDetectorService.scanOpsMeetAndOpsLists(rootPath);
+      await updateStandardCustomOperators(rootPath, opsMeet, opsList, experimentalOpsList);
 
-      // 检查根目录下是否存在 experimental 文件夹
-      // 如果当前目录本身就是 experimental 目录，则 experimentalPath 就是当前目录
-      const folderName = path.basename(folderPath).toLowerCase();
-      const isExperimentalFolder = folderName === 'experimental';
-      const experimentalPath = isExperimentalFolder
-        ? folderPath
-        : path.join(folderPath, 'experimental');
-      const hasExperimental = isExperimentalFolder ||
-        (fs.existsSync(experimentalPath) && fs.statSync(experimentalPath).isDirectory());
-
-      // 分类算子工程：experimental算子和普通算子
-      const experimentalOperators: OperatorProjectDetectionResult[] = [];
-      const normalOperators: OperatorProjectDetectionResult[] = [];
-
-      for (const detection of detectedProjects) {
-        // 如果当前目录本身就是 experimental，那么所有子目录都是 experimental 算子
-        // 否则，检查路径是否在 experimental 目录下
-        const isExperimental = isExperimentalFolder
-          ? true  // 如果当前目录是 experimental，所有子目录都是 experimental 算子
-          : detection.projectPath.toLowerCase().startsWith(experimentalPath.toLowerCase());
-        if (isExperimental) {
-          experimentalOperators.push(detection);
-        } else {
-          normalOperators.push(detection);
-        }
+      const context = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
+        .extensionContext;
+      if (context) {
+        const iconTheme = OperatorProjectIconTheme.getInstance(context);
+        const urisToUpdate: vscode.Uri[] = [
+          vscode.Uri.file(rootPath),
+          vscode.Uri.file(folderPath),
+        ];
+        for (const m of opsMeet) { if (m.path) urisToUpdate.push(vscode.Uri.file(m.path)); }
+        for (const o of opsList) { if (o.path) urisToUpdate.push(vscode.Uri.file(o.path)); }
+        for (const o of experimentalOpsList) { if (o.path) urisToUpdate.push(vscode.Uri.file(o.path)); }
+        iconTheme.fireDecorationUpdate(urisToUpdate);
       }
 
-      // 注册所有算子工程（标记experimental属性）
-      // 这是关键步骤：确保所有检测到的算子工程都被标记为算子工程
-      const subProjectIds: number[] = [];
-
-      // 第一步：先注册所有项目（串行，确保数据库操作安全）
-      for (const detection of detectedProjects) {
-        if (!detection.projectType) {
-          continue;
-        }
-
-        // 跳过集合根目录本身，即使它也被检测为算子工程，也不应该初始化
-        // 因为它是作为集合被标记的，不应该在集合根目录下创建 .vscode 和 .arts 文件
-        const normalizedDetectionPath = path.normalize(detection.projectPath);
-        const normalizedFolderPath = path.normalize(folderPath);
-        if (normalizedDetectionPath === normalizedFolderPath) {
-          continue;
-        }
-
-        // 判断是否是 experimental 算子（与上面的分类逻辑保持一致）
-        const isExperimental = isExperimentalFolder
-          ? true  // 如果当前目录是 experimental，所有子目录都是 experimental 算子
-          : detection.projectPath.toLowerCase().startsWith(experimentalPath.toLowerCase());
-        let subProject = getProjectByPath(detection.projectPath);
-
-        if (!subProject) {
-          // 子目录是算子工程，但还没有被标记，需要标记为算子工程
-          const subId = await createProject({
-            project_name: detection.projectName,
-            project_path: detection.projectPath,
-            project_type: detection.projectType,
-            is_experimental: isExperimental,
-          });
-          subProjectIds.push(subId);
-        } else {
-          // 子目录已经是算子工程，更新experimental标记（如果需要）
-          if (subProject.is_experimental !== isExperimental) {
-            await createProject({
-              project_name: detection.projectName,
-              project_path: detection.projectPath,
-              project_type: detection.projectType,
-              is_experimental: isExperimental,
-            });
-          }
-          subProjectIds.push(subProject.id);
-        }
-      }
-
-      // 手动标记为算子合集时，只标记子目录为算子工程，不会将子目录标记为算子合集
-      // 移除将子目录标记为算子合集的逻辑
-
-      // 标记 experimental 文件夹为算子工程集合（如果存在且当前目录不是 experimental 本身）
-      if (hasExperimental && !isExperimentalFolder) {
-        const existingExperimental = getProjectByPath(experimentalPath);
-        if (!existingExperimental || existingExperimental.project_type !== OperatorProjectType.MULTI_PROJECT) {
-          const experimentalProjectIds = experimentalOperators
-            .map(p => getProjectByPath(p.projectPath)?.id)
-            .filter((id): id is number => id !== undefined);
-
-          await createProject({
-            project_name: 'experimental',
-            project_path: experimentalPath,
-            project_type: OperatorProjectType.MULTI_PROJECT,
-            sub_project_ids: experimentalProjectIds.length > 0 ? experimentalProjectIds : undefined,
-          });
-        }
-      }
-
-      // 注册多算子工程集合
-      const projectName = path.basename(folderPath);
-      await createProject({
-        project_name: projectName,
-        project_path: folderPath,
-        project_type: OperatorProjectType.MULTI_PROJECT,
-        sub_project_ids: subProjectIds,
-      });
-
-      // 手动标记为算子合集后，不调用自动检测，避免将子目录标记为算子合集
-
-      // 收集实际被标记的算子工程列表（排除根目录本身）
-      const markedProjects = detectedProjects.filter(detection => {
-        const normalizedDetectionPath = path.normalize(detection.projectPath);
-        const normalizedFolderPath = path.normalize(folderPath);
-        return normalizedDetectionPath !== normalizedFolderPath && detection.projectType;
-      });
-
-    } catch (error) {
+      vscode.window.showInformationMessage(`已更新算子合集与算子列表（${opsMeet.length} 个算子合集，${opsList.length + experimentalOpsList.length} 个算子）`);
+    }
+    catch (error) {
       vscode.window.showErrorMessage(
         `标记为算子工程集合失败: ${error instanceof Error ? error.message : String(error)}`,
       );
@@ -523,29 +417,154 @@ export class FolderContextMenuService {
   }
 
   /**
-   * 编译部署算子工程
+   * 编译部署算子工程（运行验证）
+   * 1. 如果选中的是文件夹，且当前项目根目录是标准自定义算子，则执行编译example操作
+   * 2. 如果选中的是 .py 文件，且当前项目根目录是 pyasc 算子，则执行 pyasc 相关操作（暂时留空）
+   * 3. 其他情况提示用户
+   * @param uri 右键目标（文件夹或文件）
    */
   static async buildOperatorProject(uri: vscode.Uri): Promise<void> {
-    const folderPath = uri.fsPath;
-    const project = getProjectByPath(folderPath);
+    // 获取当前打开工程的根目录
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders || workspaceFolders.length === 0) {
+      vscode.window.showErrorMessage('未打开工作区，无法运行验证');
+      return;
+    }
+    const workspaceRootPath = workspaceFolders[0].uri.fsPath;
 
-    // 检查是否是算子工程
-    if (!project || project.project_type === OperatorProjectType.MULTI_PROJECT) {
-      vscode.window.showWarningMessage('该文件夹不是算子工程');
+    // 判断当前选中的是文件夹还是文件
+    let isFolder = false;
+    let isPyFile = false;
+    try {
+      const stat = fs.statSync(uri.fsPath);
+      isFolder = stat.isDirectory();
+      if (!isFolder) {
+        isPyFile = uri.fsPath.endsWith('.py');
+      }
+    } catch {
+      isFolder = false;
+      isPyFile = false;
+    }
+
+    // 判断当前项目的根目录是否为标准自定义算子或 pyasc 算子
+    // 使用 OperatorProjectDetector.detectOperatorProject 来判断
+    const rootDetection = await OperatorProjectDetector.detectOperatorProject(workspaceRootPath);
+    const isStandardCustom = rootDetection.isOperatorProject
+      && rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM;
+    const isPyasc = rootDetection.isOperatorProject
+      && rootDetection.projectType === OperatorProjectType.PYASC;
+
+    // 情况1: 选中的是文件夹，且当前项目根目录是标准自定义算子
+    if (isFolder && isStandardCustom) {
+      // 获取用户选中的文件夹名称作为 operatorNames
+      const operatorNames = path.basename(uri.fsPath);
+
+      // 从根目录找到对应的 projectId
+      let projectId: number | undefined;
+      const containingProject = getContainingStandardCustomProject(uri.fsPath);
+      if (containingProject) {
+        projectId = containingProject.id;
+      } else {
+        // 如果找不到包含的项目，尝试直接通过根目录查找
+        const rootProject = getProjectByPath(workspaceRootPath);
+        if (rootProject) {
+          projectId = rootProject.id;
+        }
+      }
+
+      if (!projectId) {
+        vscode.window.showErrorMessage('未找到对应的项目ID，请先标记为算子工程');
+        return;
+      }
+
+      // 调用 startBuild，传入 operatorNames、operatorType 和 projectId
+      await buildService.startBuild({
+        operatorNames,
+        operatorType: 'standard-custom',
+        projectId,
+      });
       return;
     }
 
-    await this.switchToProject(uri, async () => {
-      // 调用编译命令
-      const buildCommand = 'huawei-op-devtools.buildOps';
-      await vscode.commands.executeCommand(buildCommand);
-    });
+    // 情况2: 选中的是 .py 文件，且当前项目根目录是 pyasc 算子
+    if (isPyFile && isPyasc) {
+      // 暂时留空，后续实现 pyasc 相关操作
+      console.log('[buildOperatorProject] pyasc 算子运行验证功能暂未实现');
+      return;
+    }
+
+    // 其他情况：提示用户
+    vscode.window.showWarningMessage('该文件/文件夹无算子可运行验证');
   }
 
   /**
    * 运行验证算子工程
+   * 如果是标准自定义算子，则执行编译example的逻辑；其他算子执行运行验证的现有逻辑
    */
   static async runOperatorProject(uri: vscode.Uri): Promise<void> {
+    // 获取当前打开工程的根目录
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders || workspaceFolders.length === 0) {
+      vscode.window.showErrorMessage('未打开工作区，无法运行验证');
+      return;
+    }
+    const workspaceRootPath = workspaceFolders[0].uri.fsPath;
+
+    // 判断当前选中的是文件夹还是文件
+    let isFolder = false;
+    let isPyFile = false;
+    try {
+      const stat = fs.statSync(uri.fsPath);
+      isFolder = stat.isDirectory();
+      if (!isFolder) {
+        isPyFile = uri.fsPath.endsWith('.py');
+      }
+    } catch {
+      isFolder = false;
+      isPyFile = false;
+    }
+
+    // 判断当前项目的根目录是否为标准自定义算子或 pyasc 算子
+    // 使用 OperatorProjectDetector.detectOperatorProject 来判断
+    const rootDetection = await OperatorProjectDetector.detectOperatorProject(workspaceRootPath);
+    const isStandardCustom = rootDetection.isOperatorProject
+      && rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM;
+    const isPyasc = rootDetection.isOperatorProject
+      && rootDetection.projectType === OperatorProjectType.PYASC;
+
+    // 情况1: 选中的是文件夹，且当前项目根目录是标准自定义算子
+    if (isFolder && isStandardCustom) {
+      // 参考 app.vue 运行验证逻辑：operatorNames 为选中的文件夹名，projectId 从根目录在 projects.json 中查找
+      const project = getProjectByPath(workspaceRootPath);
+      if (!project) {
+        vscode.window.showErrorMessage('根目录未在 projects.json 中注册，无法运行验证');
+        return;
+      }
+      const operatorNames = path.basename(uri.fsPath);
+      const operatorType = 'standard-custom';
+      await taskMethods.startBuildExample({
+        operatorNames,
+        operatorType,
+        projectId: project.id,
+      });
+      return;
+    }
+
+    // 情况2: 选中的是 .py 文件，且当前项目根目录是 pyasc 算子
+    if (isPyFile && isPyasc) {
+      // 暂时留空，后续实现 pyasc 相关操作
+      console.log('[buildOperatorProject] pyasc 算子运行验证功能暂未实现');
+      return;
+    }
+
+    // 其他情况：提示用户
+    vscode.window.showWarningMessage('该文件/文件夹无算子可运行验证');
+  }
+
+  /**
+   * CPU调试算子工程
+   */
+  static async cpuDebugOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
     const project = getProjectByPath(folderPath);
 
@@ -556,17 +575,15 @@ export class FolderContextMenuService {
     }
 
     await this.switchToProject(uri, async () => {
-      // 运行验证通过 API 服务器调用，这里先显示提示
-      vscode.window.showInformationMessage('请使用操作面板进行运行验证');
-      // 打开操作面板
-      await vscode.commands.executeCommand('huawei-op-devtools.toggleOpsOperate');
+      // 调用CPU调试，与看板逻辑保持一致
+      await taskMethods.runCpuDebug();
     });
   }
 
   /**
-   * 调试算子工程
+   * NPU调试算子工程
    */
-  static async debugOperatorProject(uri: vscode.Uri): Promise<void> {
+  static async npuDebugOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
     const project = getProjectByPath(folderPath);
 
@@ -577,9 +594,46 @@ export class FolderContextMenuService {
     }
 
     await this.switchToProject(uri, async () => {
-      // 打开调试配置
-      const debugConfigCommand = 'huawei-op-devtools.debugConfig';
-      await vscode.commands.executeCommand(debugConfigCommand);
+      // 调用NPU调试，与看板逻辑保持一致
+      await taskMethods.runDebug();
+    });
+  }
+
+  /**
+   * CPU调试配置算子工程
+   */
+  static async cpuDebugConfigOperatorProject(uri: vscode.Uri): Promise<void> {
+    const folderPath = uri.fsPath;
+    const project = getProjectByPath(folderPath);
+
+    // 检查是否是算子工程
+    if (!project || project.project_type === OperatorProjectType.MULTI_PROJECT) {
+      vscode.window.showWarningMessage('该文件夹不是算子工程');
+      return;
+    }
+
+    await this.switchToProject(uri, async () => {
+      // 调用CPU调试配置，与看板逻辑保持一致
+      await taskMethods.cpuDebugConfig();
+    });
+  }
+
+  /**
+   * NPU调试配置算子工程
+   */
+  static async npuDebugConfigOperatorProject(uri: vscode.Uri): Promise<void> {
+    const folderPath = uri.fsPath;
+    const project = getProjectByPath(folderPath);
+
+    // 检查是否是算子工程
+    if (!project || project.project_type === OperatorProjectType.MULTI_PROJECT) {
+      vscode.window.showWarningMessage('该文件夹不是算子工程');
+      return;
+    }
+
+    await this.switchToProject(uri, async () => {
+      // 调用NPU调试配置，与看板逻辑保持一致
+      await taskMethods.debugConfig();
     });
   }
 
@@ -597,15 +651,16 @@ export class FolderContextMenuService {
     }
 
     await this.switchToProject(uri, async () => {
+      // 打开异常检测配置，与看板逻辑保持一致
       const sanitizerCommand = 'huawei-op-devtools.sanitizerOptions';
       await vscode.commands.executeCommand(sanitizerCommand);
     });
   }
 
   /**
-   * 性能调优
+   * 上板分析
    */
-  static async performanceOperatorProject(uri: vscode.Uri): Promise<void> {
+  static async onBoardOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
     const project = getProjectByPath(folderPath);
 
@@ -616,9 +671,29 @@ export class FolderContextMenuService {
     }
 
     await this.switchToProject(uri, async () => {
-      // 打开性能调优配置
-      const performanceCommand = 'huawei-op-devtools.simulatorOptions';
-      await vscode.commands.executeCommand(performanceCommand);
+      // 打开上板分析配置，与看板逻辑保持一致
+      const onBoardCommand = 'huawei-op-devtools.onBoardOptions';
+      await vscode.commands.executeCommand(onBoardCommand);
+    });
+  }
+
+  /**
+   * 仿真分析
+   */
+  static async simulationOperatorProject(uri: vscode.Uri): Promise<void> {
+    const folderPath = uri.fsPath;
+    const project = getProjectByPath(folderPath);
+
+    // 检查是否是算子工程
+    if (!project || project.project_type === OperatorProjectType.MULTI_PROJECT) {
+      vscode.window.showWarningMessage('该文件夹不是算子工程');
+      return;
+    }
+
+    await this.switchToProject(uri, async () => {
+      // 打开仿真分析配置，与看板逻辑保持一致
+      const simulationCommand = 'huawei-op-devtools.simulatorOptions';
+      await vscode.commands.executeCommand(simulationCommand);
     });
   }
 

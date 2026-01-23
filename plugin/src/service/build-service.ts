@@ -15,8 +15,11 @@ import {
   getRunCommand,
   getConfig,
   objectToCommandString,
+  getProjectById,
 } from '@plugin/domain';
-import { getProjectById } from '@plugin/domain/models/project-model';
+import { getConfigById } from '@plugin/domain/services/configuration';
+import { OperatorProjectType } from '@plugin/domain/services/operator-project-detector';
+import { markOperatorsAsCompiled } from '@plugin/domain/models/project-model';
 
 const CONFIG_TYPES = {
   BUILD_OP: 'build_op',
@@ -127,32 +130,131 @@ export class BuildService {
    * 编译算子
    */
   async startBuild(params: StartBuildParams): Promise<void> {
+    console.log('[startBuild] ========== 开始编译算子 ==========');
+    console.log('[startBuild] 传入参数:', JSON.stringify(params, null, 2));
+    const pm = ProjectManager.getInstance();
+
+    // 如果传入了 projectId，则设置 ProjectManager 的项目ID
+    if (params.projectId !== undefined) {
+      console.log('[startBuild] 检测到传入的 projectId:', params.projectId);
+      const projectIdStr = String(params.projectId);
+      const project = getProjectById(Number(params.projectId));
+
+      if (project) {
+        console.log('[startBuild] 找到项目信息:', {
+          id: project.id,
+          project_name: project.project_name,
+          project_path: project.project_path,
+          project_type: project.project_type,
+        });
+        pm['_projectId'] = projectIdStr;
+        pm['_projectName'] = project.project_name;
+        pm['_projectPath'] = project.project_path;
+        console.log('[startBuild] 已设置 ProjectManager 项目信息');
+      } else {
+        console.warn('[startBuild] 未找到对应的项目，projectId:', params.projectId);
+      }
+    } else {
+      console.log('[startBuild] 未传入 projectId，使用 ProjectManager 中的项目ID');
+    }
+
+    const projectId = pm.projectId;
+    console.log('[startBuild] 当前使用的项目ID:', projectId);
+    console.log('[startBuild] ProjectManager 项目信息:', {
+      projectId: pm.projectId,
+      projectName: pm['_projectName'],
+      projectPath: pm['_projectPath'],
+    });
+
     let configId = params.configId ? Number(params.configId) : undefined;
+    console.log('[startBuild] 传入的 configId:', configId);
 
     if (!configId) {
+      console.log('[startBuild] 未传入 configId，尝试获取当前项目的配置');
       configId = await this.getBuildConfigId();
+      console.log('[startBuild] 获取到的 configId:', configId);
     }
+
+    if (!configId) {
+      const errorMsg = '未找到编译配置，请先在配置面板添加编译配置';
+      console.error('[startBuild]', errorMsg);
+      vscode.window.showErrorMessage(errorMsg);
+
+      return;
+    }
+
+    console.log('[startBuild] 使用配置ID:', configId);
+    console.log('[startBuild] 编译参数:', {
+      configId,
+      compileOption: params.compileOption,
+      operatorNames: params.operatorNames,
+      operatorType: params.operatorType,
+    });
 
     try {
       const buildCommand = getBuildOpCommand(
         Number(configId),
         params.compileOption,
+        params.operatorNames,
       );
+      console.log('[startBuild] 生成的编译命令:', buildCommand);
       const executor = ProjectManager.getInstance()
         .getExecutor();
+      console.log('[startBuild] 开始执行编译命令...');
       const res = await executor.execute(buildCommand, [], [], {}, true);
 
+      console.log('[startBuild] 编译执行结果:', {
+        code: res.code,
+        output: res.output,
+      });
+
       if (res.code !== 0) {
+        console.error('[startBuild] 编译失败，退出码:', res.code, '输出:', res.output);
         vscode.window.showErrorMessage(`编译算子失败 ${res.output}`);
 
         return;
       }
 
+      console.log('[startBuild] 编译成功');
       vscode.window.showInformationMessage('编译算子成功');
+
+      // 如果编译成功且有 operatorNames，且是标准自定义算子，更新算子的编译状态
+      if (params.operatorNames && params.operatorNames.trim()) {
+        console.log('[startBuild] 准备更新算子编译状态，operatorNames:', params.operatorNames);
+        try {
+          const config = getConfigById(Number(configId));
+
+          if (config) {
+            console.log('[startBuild] 找到配置信息，config.project_id:', config.project_id);
+            const project = getProjectById(config.project_id);
+
+            if (project && project.project_type === OperatorProjectType.STANDARD_CUSTOM && project.project_path) {
+              console.log('[startBuild] 项目类型为标准自定义算子，准备标记算子为已编译');
+              await markOperatorsAsCompiled(project.project_path, params.operatorNames);
+
+              console.log(`[startBuild] 已标记算子为已编译: ${params.operatorNames}`);
+            } else {
+              console.log('[startBuild] 项目类型不是标准自定义算子或缺少项目路径，跳过标记编译状态');
+            }
+          } else {
+            console.warn('[startBuild] 未找到配置信息，configId:', configId);
+          }
+        }
+        catch (error) {
+          console.warn(`[startBuild] 更新算子编译状态失败: ${error instanceof Error ? error.message : String(error)}`);
+
+          // 不影响主流程，只记录警告
+        }
+      } else {
+        console.log('[startBuild] 无 operatorNames 或为空，跳过更新编译状态');
+      }
     }
     catch (e) {
+      console.error('[startBuild] 编译过程出错:', e);
       vscode.window.showErrorMessage(`获取编译算子命令失败 ${(e as Error).message}`);
     }
+
+    console.log('[startBuild] ========== 结束编译算子 ==========');
   }
 
   /**
@@ -192,6 +294,18 @@ export class BuildService {
    * 编译示例
    */
   async startBuildExample(params: StartBuildExampleParams): Promise<void> {
+    const pm = ProjectManager.getInstance();
+
+    // 如果传入了 projectId，则设置 ProjectManager 的项目信息（与 startBuild 一致）
+    if (params.projectId !== undefined) {
+      const project = getProjectById(Number(params.projectId));
+      if (project) {
+        pm['_projectId'] = String(params.projectId);
+        pm['_projectName'] = project.project_name;
+        pm['_projectPath'] = project.project_path;
+      }
+    }
+
     let configId = params.configId ? Number(params.configId) : undefined;
 
     if (!configId) {
@@ -199,7 +313,11 @@ export class BuildService {
     }
 
     try {
-      const buildCommand = getBuildExampleCommand(Number(configId));
+      const buildCommand = getBuildExampleCommand(
+        Number(configId),
+        params.compileOption,
+        params.operatorNames,
+      );
       const executor = ProjectManager.getInstance()
         .getExecutor();
       const res = await executor.execute(buildCommand, [], [], {}, true);

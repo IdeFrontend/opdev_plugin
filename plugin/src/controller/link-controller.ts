@@ -428,6 +428,12 @@ export const linkMethods = {
           continue;
         }
 
+        // 跳过标准自定义算子的子算子，它们不应该被创建为独立的项目记录
+        if (detection.projectType === OperatorProjectType.STANDARD_CUSTOM) {
+          console.log(`[openProject] 跳过标准自定义算子的子算子: ${detection.projectPath}`);
+          continue;
+        }
+
         try {
           // 初始化算子工程
           await initializeDetectedProject(detection, projectSH, context);

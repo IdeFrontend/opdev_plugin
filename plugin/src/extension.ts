@@ -60,15 +60,39 @@ import {
   COMMAND_UNMARK_AS_MULTI_OPERATOR_PROJECT,
   COMMAND_OPERATOR_PROJECT_BUILD,
   COMMAND_OPERATOR_PROJECT_RUN,
-  COMMAND_OPERATOR_PROJECT_DEBUG,
+  COMMAND_OPERATOR_PROJECT_CPU_DEBUG,
+  COMMAND_OPERATOR_PROJECT_NPU_DEBUG,
+  COMMAND_OPERATOR_PROJECT_CPU_DEBUG_CONFIG,
+  COMMAND_OPERATOR_PROJECT_NPU_DEBUG_CONFIG,
   COMMAND_OPERATOR_PROJECT_SANITIZER,
-  COMMAND_OPERATOR_PROJECT_PERFORMANCE,
+  COMMAND_OPERATOR_PROJECT_ON_BOARD,
+  COMMAND_OPERATOR_PROJECT_SIMULATION,
+  COMMAND_REFRESH_FOLDER_DECORATIONS,
 } from './constants';
 import { FolderContextMenuService } from './service/folder-context-menu-service';
 import { AutoMultiProjectDetector } from './service/auto-multi-project-detector';
 import { OperatorProjectIconTheme } from './class/operator-project-icon-theme';
 
 let extensionContext: vscode.ExtensionContext | undefined;
+
+/**
+ * 将文件 URI 转换为文件夹 URI
+ * 如果传入的是文件夹 URI，则直接返回
+ * 如果传入的是文件 URI，则返回文件所在的文件夹 URI
+ */
+function getFolderUri(uri: vscode.Uri): vscode.Uri {
+  try {
+    const stat = fs.statSync(uri.fsPath);
+    if (stat.isDirectory()) {
+      return uri;
+    }
+    // 如果是文件，返回文件所在的文件夹
+    return vscode.Uri.file(path.dirname(uri.fsPath));
+  } catch {
+    // 如果无法获取文件信息，假设是文件，返回父目录
+    return vscode.Uri.file(path.dirname(uri.fsPath));
+  }
+}
 
 /**
  * 检查当前工作区是否存在 .vscode/devtool_config.json 文件
@@ -392,7 +416,16 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // 初始化文件夹装饰提供者
   const iconTheme = OperatorProjectIconTheme.getInstance(context);
-  
+
+  const refreshDecorationsCommand = vscode.commands.registerCommand(
+    COMMAND_REFRESH_FOLDER_DECORATIONS,
+    () => {
+      iconTheme.fireDecorationUpdate();
+      vscode.window.showInformationMessage('已刷新文件夹装饰，请查看左侧资源管理器');
+    },
+  );
+  context.subscriptions.push(refreshDecorationsCommand);
+
   // 注意：不在插件激活时自动检测并标记算子工程合集
   // 只在用户明确打开项目时（link-controller.ts）才进行自动检测
 
@@ -408,11 +441,11 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
       await FolderContextMenuService.markAsOperatorProject(uri);
-      
-      // 操作完成后触发装饰更新
+
+      // 操作完成后触发装饰更新（先刷新涉及 URI，再全量刷新确保 Explorer 重绘）
       iconTheme.fireDecorationUpdate(uri);
-      
-      // 操作完成后更新上下文变量
+      iconTheme.fireDecorationUpdate();
+
       await updateContextForUri(uri);
     },
   );
@@ -425,11 +458,10 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
       await FolderContextMenuService.markAsMultiOperatorProject(uri);
-      
-      // 操作完成后触发装饰更新
+
       iconTheme.fireDecorationUpdate(uri);
-      
-      // 操作完成后更新上下文变量
+      iconTheme.fireDecorationUpdate();
+
       await updateContextForUri(uri);
     },
   );
@@ -442,11 +474,10 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
       await FolderContextMenuService.unmarkAsOperatorProject(uri);
-      
-      // 操作完成后触发装饰更新
+
       iconTheme.fireDecorationUpdate(uri);
-      
-      // 操作完成后更新上下文变量
+      iconTheme.fireDecorationUpdate();
+
       await updateContextForUri(uri);
     },
   );
@@ -459,11 +490,10 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
       await FolderContextMenuService.unmarkAsMultiOperatorProject(uri);
-      
-      // 操作完成后触发装饰更新
+
       iconTheme.fireDecorationUpdate(uri);
-      
-      // 操作完成后更新上下文变量
+      iconTheme.fireDecorationUpdate();
+
       await updateContextForUri(uri);
     },
   );
@@ -472,7 +502,7 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_BUILD,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹');
+        vscode.window.showErrorMessage('请右键点击文件夹或文件');
         return;
       }
       await FolderContextMenuService.buildOperatorProject(uri);
@@ -483,21 +513,59 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_RUN,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹');
+        vscode.window.showErrorMessage('请右键点击文件夹或文件');
         return;
       }
-      await FolderContextMenuService.runOperatorProject(uri);
+      const folderUri = getFolderUri(uri);
+      await FolderContextMenuService.runOperatorProject(folderUri);
     },
   );
 
-  const operatorProjectDebugCommand = vscode.commands.registerCommand(
-    COMMAND_OPERATOR_PROJECT_DEBUG,
+  const operatorProjectCpuDebugCommand = vscode.commands.registerCommand(
+    COMMAND_OPERATOR_PROJECT_CPU_DEBUG,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹');
+        vscode.window.showErrorMessage('请右键点击文件夹或文件');
         return;
       }
-      await FolderContextMenuService.debugOperatorProject(uri);
+      const folderUri = getFolderUri(uri);
+      await FolderContextMenuService.cpuDebugOperatorProject(folderUri);
+    },
+  );
+
+  const operatorProjectNpuDebugCommand = vscode.commands.registerCommand(
+    COMMAND_OPERATOR_PROJECT_NPU_DEBUG,
+    async (uri?: vscode.Uri) => {
+      if (!uri) {
+        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        return;
+      }
+      const folderUri = getFolderUri(uri);
+      await FolderContextMenuService.npuDebugOperatorProject(folderUri);
+    },
+  );
+
+  const operatorProjectCpuDebugConfigCommand = vscode.commands.registerCommand(
+    COMMAND_OPERATOR_PROJECT_CPU_DEBUG_CONFIG,
+    async (uri?: vscode.Uri) => {
+      if (!uri) {
+        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        return;
+      }
+      const folderUri = getFolderUri(uri);
+      await FolderContextMenuService.cpuDebugConfigOperatorProject(folderUri);
+    },
+  );
+
+  const operatorProjectNpuDebugConfigCommand = vscode.commands.registerCommand(
+    COMMAND_OPERATOR_PROJECT_NPU_DEBUG_CONFIG,
+    async (uri?: vscode.Uri) => {
+      if (!uri) {
+        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        return;
+      }
+      const folderUri = getFolderUri(uri);
+      await FolderContextMenuService.npuDebugConfigOperatorProject(folderUri);
     },
   );
 
@@ -505,21 +573,35 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_SANITIZER,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹');
+        vscode.window.showErrorMessage('请右键点击文件夹或文件');
         return;
       }
-      await FolderContextMenuService.sanitizerOperatorProject(uri);
+      const folderUri = getFolderUri(uri);
+      await FolderContextMenuService.sanitizerOperatorProject(folderUri);
     },
   );
 
-  const operatorProjectPerformanceCommand = vscode.commands.registerCommand(
-    COMMAND_OPERATOR_PROJECT_PERFORMANCE,
+  const operatorProjectOnBoardCommand = vscode.commands.registerCommand(
+    COMMAND_OPERATOR_PROJECT_ON_BOARD,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹');
+        vscode.window.showErrorMessage('请右键点击文件夹或文件');
         return;
       }
-      await FolderContextMenuService.performanceOperatorProject(uri);
+      const folderUri = getFolderUri(uri);
+      await FolderContextMenuService.onBoardOperatorProject(folderUri);
+    },
+  );
+
+  const operatorProjectSimulationCommand = vscode.commands.registerCommand(
+    COMMAND_OPERATOR_PROJECT_SIMULATION,
+    async (uri?: vscode.Uri) => {
+      if (!uri) {
+        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        return;
+      }
+      const folderUri = getFolderUri(uri);
+      await FolderContextMenuService.simulationOperatorProject(folderUri);
     },
   );
 
@@ -531,9 +613,13 @@ export async function activate(context: vscode.ExtensionContext) {
     unmarkAsMultiOperatorProjectCommand,
     operatorProjectBuildCommand,
     operatorProjectRunCommand,
-    operatorProjectDebugCommand,
+    operatorProjectCpuDebugCommand,
+    operatorProjectNpuDebugCommand,
+    operatorProjectCpuDebugConfigCommand,
+    operatorProjectNpuDebugConfigCommand,
     operatorProjectSanitizerCommand,
-    operatorProjectPerformanceCommand,
+    operatorProjectOnBoardCommand,
+    operatorProjectSimulationCommand,
   );
 
   // 注册资源选择变化监听，动态更新上下文变量

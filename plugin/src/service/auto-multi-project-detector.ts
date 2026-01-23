@@ -35,10 +35,12 @@ export class AutoMultiProjectDetector {
       });
       console.log(`[AutoMultiProjectDetector] 工作区根目录: ${workspaceRootPaths.join(', ')}`);
       
-      // 获取所有已注册的算子工程（排除已经是 MULTI_PROJECT 的项目）
+      // 获取所有已注册的算子工程（排除已经是 MULTI_PROJECT 的项目和标准自定义算子）
       const allProjects = getAllProjects();
       const singleProjects = allProjects.filter(
-        (p) => p.project_type && p.project_type !== OperatorProjectType.MULTI_PROJECT,
+        (p) => p.project_type && 
+               p.project_type !== OperatorProjectType.MULTI_PROJECT &&
+               p.project_type !== OperatorProjectType.STANDARD_CUSTOM, // 排除标准自定义算子，其子算子不应该被单独标记
       );
       
       console.log(`[AutoMultiProjectDetector] 找到 ${singleProjects.length} 个单个算子工程`);

@@ -18,7 +18,11 @@ import {
   OperatorProjectDetector,
   OperatorProjectType
 } from '@plugin/domain/services/operator-project-detector';
-import { getProjectByPath } from '@plugin/domain/models/project-model';
+import {
+  getProjectByPath,
+  updateStandardCustomOperators,
+} from '@plugin/domain/models/project-model';
+import { WorkspaceDetectorService } from '@plugin/service/workspace-detector-service';
 
 // 辅助函数：获取 extension context
 function getExtensionContext(): vscode.ExtensionContext {
@@ -219,6 +223,21 @@ export const welcomeMethods = {
       if (existingProject) {
         console.log(`[openProject] 项目已在配置中: ${existingProject.project_name} (${existingProject.project_path})`);
 
+        // 如果是标准自定义算子，触发工作区检测服务来更新算子信息
+        if (existingProject.project_type === OperatorProjectType.STANDARD_CUSTOM) {
+          try {
+            const { WorkspaceDetectorService } = await import('../service/workspace-detector-service.js');
+
+            await WorkspaceDetectorService.detectAndRegisterWorkspace(params.projectPath)
+              .catch((error) => {
+                console.warn(`[openProject] 检测并更新算子信息失败: ${error instanceof Error ? error.message : String(error)}`);
+              });
+          }
+          catch (error) {
+            console.warn(`[openProject] 导入工作区检测服务失败: ${error instanceof Error ? error.message : String(error)}`);
+          }
+        }
+
         // 如果项目已存在，直接打开目录
         const localUri = vscode.Uri.file(params.projectPath);
 
@@ -323,6 +342,21 @@ export const welcomeMethods = {
       );
       await pm.checkVscode();
       await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+
+      // 如果是标准自定义算子，扫描算子合集与算子并更新根项目（不为之新建 projects 项）
+      if (rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM) {
+        try {
+          console.log('[openProject] 检测到标准自定义算子，开始扫描算子合集和算子...');
+          const { opsMeet, opsList, experimentalOpsList } = WorkspaceDetectorService.scanOpsMeetAndOpsLists(projectFullPath);
+          console.log(`[openProject] 算子合集列表: ${opsMeet.map((m) => m.name).join(', ')}`);
+          console.log(`[openProject] 普通算子: ${opsList.length}, experimental算子: ${experimentalOpsList.length}`);
+          await updateStandardCustomOperators(projectFullPath, opsMeet, opsList, experimentalOpsList);
+          console.log(`[openProject] 已存储 ${opsMeet.length} 个算子合集, ${opsList.length} 个普通算子, ${experimentalOpsList.length} 个experimental算子`);
+        }
+        catch (error) {
+          console.warn(`[openProject] 检测算子信息失败: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
 
       // 规范化路径
       const normalizedProjectPath = path.normalize(params.projectPath);
