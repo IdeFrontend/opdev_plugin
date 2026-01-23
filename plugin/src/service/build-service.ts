@@ -18,8 +18,8 @@ import {
   getProjectById,
 } from '@plugin/domain';
 import { getConfigById } from '@plugin/domain/services/configuration';
-import { OperatorProjectType } from '@plugin/domain/services/operator-project-detector';
-import { markOperatorsAsCompiled } from '@plugin/domain/models/project-model';
+import { OperatorProjectType, OperatorProjectDetector } from '@plugin/domain/services/operator-project-detector';
+import { markOperatorsAsCompiled, getProjectByPath } from '@plugin/domain/models/project-model';
 
 const CONFIG_TYPES = {
   BUILD_OP: 'build_op',
@@ -27,6 +27,24 @@ const CONFIG_TYPES = {
   SIMULATE: 'simulate',
   ON_BOARD: 'on_board',
 } as const;
+
+/**
+ * 检查根目录是否是标准自定义算子
+ */
+async function isRootStandardCustom(): Promise<boolean> {
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+  if (!workspaceFolders || workspaceFolders.length === 0) {
+    return false;
+  }
+  const workspacePath = workspaceFolders[0].uri.fsPath;
+  try {
+    const rootDetection = await OperatorProjectDetector.detectOperatorProject(workspacePath);
+    return rootDetection.isOperatorProject && rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM;
+  } catch (error) {
+    console.warn('[isRootStandardCustom] 检测失败:', error);
+    return false;
+  }
+}
 
 export class BuildService {
   /**
@@ -352,9 +370,18 @@ export class BuildService {
     if (!isPyascType) {
       // 仿真分析前编译，pyasc 类型不需要编译
       const buildConfigId = await this.getBuildConfigId();
+      
+      // 构建编译选项
+      let compileOption = objectToCommandString({ [`simulator ${simulatorType || ''}`]: true });
+      
+      // 如果是标准自定义算子，添加 --bisheng-config=ccec_g
+      if (await isRootStandardCustom()) {
+        compileOption = compileOption ? `${compileOption} --bisheng-config=ccec_g` : '--bisheng-config=ccec_g';
+      }
+      
       const buildCommand = getBuildOpCommand(
         Number(buildConfigId),
-        objectToCommandString({ [`simulator ${simulatorType || ''}`]: true }),
+        compileOption,
         params.operatorNames,
       );
       const buildExecutor = ProjectManager.getInstance()
@@ -373,6 +400,33 @@ export class BuildService {
         vscode.window.showErrorMessage(`编译算子失败 ${buildRes.output}`);
 
         return;
+      }
+      
+      // 如果是标准自定义算子，需要编译 example 并添加 --simulator --soc
+      if (await isRootStandardCustom()) {
+        const exConfigId = await this.getBuildExampleConfigId();
+        const exampleCompileOption = '--simulator --soc';
+        const exampleBuildCommand = getBuildExampleCommand(
+          Number(exConfigId),
+          exampleCompileOption,
+          params.operatorNames,
+        );
+        const exampleBuildExecutor = ProjectManager.getInstance()
+          .getExecutor();
+        const exampleBuildRes = await exampleBuildExecutor.execute(
+          exampleBuildCommand,
+          [],
+          [],
+          {},
+          true,
+        );
+
+        console.log('example buildRes', exampleBuildRes);
+
+        if (exampleBuildRes.code !== 0) {
+          vscode.window.showErrorMessage(`编译example失败 ${exampleBuildRes.output}`);
+          return;
+        }
       }
     }
 
@@ -419,9 +473,18 @@ export class BuildService {
     // 上板分析前编译（pyasc 类型跳过）
     if (!isPyascType) {
       const buildConfigId = await this.getBuildConfigId();
+      
+      // 构建编译选项
+      let compileOption = objectToCommandString({ onboard: true });
+      
+      // 如果是标准自定义算子，添加 --bisheng-config=ccec_g
+      if (await isRootStandardCustom()) {
+        compileOption = compileOption ? `${compileOption} --bisheng-config=ccec_g` : '--bisheng-config=ccec_g';
+      }
+      
       const buildCommand = getBuildOpCommand(
         Number(buildConfigId),
-        objectToCommandString({ onboard: true }),
+        compileOption,
         params.operatorNames,
       );
       const buildExecutor = ProjectManager.getInstance()

@@ -18,6 +18,8 @@ import {
 } from './types';
 import { ConfigRecord } from '@plugin/domain/models/config-model';
 import { getConfig, getConfigById } from '../../services/configuration';
+import { getProjectById } from '@plugin/domain/models/project-model';
+import { OperatorProjectType } from '../operator-project-detector';
 
 /**
  * Ascend 类型命令策略
@@ -99,6 +101,14 @@ export class AscendCommandStrategy implements CommandStrategy {
 
     if (compileOption) {
       cmd.addArgument(compileOption);
+    }
+
+    // 如果是标准自定义算子且是调试编译（--debug 或 --simulator），添加 --bishneg-config=ccec_o0,ccec_g 参数
+    const project = getProjectById(config.project_id);
+    const isDebugCompile = compileOption === '--debug' || compileOption === '--simulator';
+
+    if (project && project.project_type === OperatorProjectType.STANDARD_CUSTOM && isDebugCompile) {
+      cmd.addArgument('--bishneg-config=ccec_o0,ccec_g');
     }
 
     if (advance_cmd) {

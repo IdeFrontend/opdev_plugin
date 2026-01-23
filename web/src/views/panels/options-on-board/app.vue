@@ -68,7 +68,7 @@ const handleConfirm = async () => {
     isExecuting.value = true;
     
     // 获取已选择的算子名称（如果是标准自定义算子）
-    let operatorNames: string | undefined;
+    let operatorNames;
     try {
       const selectedOperators = await getSelectedOperators();
       if (selectedOperators) {
