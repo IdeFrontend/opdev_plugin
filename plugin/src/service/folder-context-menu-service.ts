@@ -616,6 +616,12 @@ export class FolderContextMenuService {
       // 获取用户选中的文件夹名称作为 operatorNames
       const operatorNames = path.basename(uri.fsPath);
 
+      // 判断是否在experimental目录下
+      const normalizedUriPath = path.normalize(uri.fsPath).replace(/\\/g, '/').toLowerCase();
+      const normalizedRootPath = path.normalize(workspaceRootPath).replace(/\\/g, '/').toLowerCase();
+      const relativePath = normalizedUriPath.replace(normalizedRootPath, '').replace(/^[/\\]/, '');
+      const isExperimental = relativePath.toLowerCase().startsWith('experimental/');
+
       // 从根目录找到对应的 projectId
       let projectId: number | undefined;
       const containingProject = getContainingStandardCustomProject(uri.fsPath);
@@ -634,11 +640,15 @@ export class FolderContextMenuService {
         return;
       }
 
-      // 调用 startBuild，传入 operatorNames、operatorType 和 projectId
+      // 如果在experimental目录下，添加 --experimental 参数
+      const compileOption = isExperimental ? '--experimental' : undefined;
+
+      // 调用 startBuild，传入 operatorNames、operatorType、projectId 和 compileOption
       await buildService.startBuild({
         operatorNames,
         operatorType: 'standard-custom',
         projectId,
+        compileOption,
       });
       return;
     }
@@ -697,12 +707,24 @@ export class FolderContextMenuService {
         vscode.window.showErrorMessage('根目录未在 projects.json 中注册，无法运行验证');
         return;
       }
+
+      // 判断是否在experimental目录下
+      const normalizedUriPath = path.normalize(uri.fsPath).replace(/\\/g, '/').toLowerCase();
+      const normalizedRootPath = path.normalize(workspaceRootPath).replace(/\\/g, '/').toLowerCase();
+      const relativePath = normalizedUriPath.replace(normalizedRootPath, '').replace(/^[/\\]/, '');
+      const isExperimental = relativePath.toLowerCase().startsWith('experimental/');
+
       const operatorNames = path.basename(uri.fsPath);
       const operatorType = 'standard-custom';
+
+      // 如果在experimental目录下，添加 --experimental 参数
+      const compileOption = isExperimental ? '--experimental' : undefined;
+
       await taskMethods.startBuildExample({
         operatorNames,
         operatorType,
         projectId: project.id,
+        compileOption,
       });
       return;
     }
