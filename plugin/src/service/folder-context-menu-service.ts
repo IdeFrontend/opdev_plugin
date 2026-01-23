@@ -48,6 +48,14 @@ function isStandardCustomRoot(dirPath: string): boolean {
 }
 
 /**
+ * 判断目录是否为标准自定义算子的子算子（包含 CMakeLists.txt）
+ */
+function isStandardCustomSubOperator(dirPath: string): boolean {
+  const cmakeListsPath = path.join(dirPath, 'CMakeLists.txt');
+  return fs.existsSync(cmakeListsPath);
+}
+
+/**
  * 向上查找标准自定义算子根目录（含 build.sh --genop），最多查找 5 层
  */
 function findStandardCustomRoot(startPath: string): string | null {
@@ -85,8 +93,14 @@ export class FolderContextMenuService {
         }
 
         if (rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM) {
+          // 检查是否为根目录
           if (!isStandardCustomRoot(folderPath)) {
-            vscode.window.showWarningMessage('该目录是标准自定义算子的子目录，请对包含 build.sh 的根目录执行「标记为算子工程」');
+            // 检查是否为子算子（包含 CMakeLists.txt）
+            if (isStandardCustomSubOperator(folderPath)) {
+              vscode.window.showWarningMessage('该目录是标准自定义算子的子算子，请对包含 build.sh 的根目录执行「标记为算子工程」');
+            } else {
+              vscode.window.showWarningMessage('该目录不是算子文件');
+            }
             return;
           }
           const projectId = await createProject({
@@ -129,8 +143,15 @@ export class FolderContextMenuService {
       const detectedProjects = await OperatorProjectDetector.scanForOperatorProjects(folderPath, 3);
 
       if (detectedProjects.length > 1) {
-        const hasStandardCustom = detectedProjects.some((d) => d.projectType === OperatorProjectType.STANDARD_CUSTOM);
-        if (hasStandardCustom) {
+        // 检查是否包含标准自定义算子，且不是根目录（根目录应该已经被前面的逻辑处理了）
+        const hasStandardCustomSubOperator = detectedProjects.some((d) => {
+          if (d.projectType === OperatorProjectType.STANDARD_CUSTOM) {
+            // 检查是否为根目录，如果不是根目录，则是子算子
+            return !isStandardCustomRoot(d.projectPath);
+          }
+          return false;
+        });
+        if (hasStandardCustomSubOperator) {
           vscode.window.showWarningMessage('该目录下包含标准自定义算子子目录，请对包含 build.sh 的根目录执行「标记为算子工程」');
           return;
         }
@@ -233,7 +254,12 @@ export class FolderContextMenuService {
         rootPath = findStandardCustomRoot(folderPath);
       }
       if (!rootPath) {
-        vscode.window.showWarningMessage('未找到标准自定义算子根目录，请先对包含 build.sh 的根目录执行「标记为算子工程」');
+        // 检查当前文件夹是否为子算子
+        if (isStandardCustomSubOperator(folderPath)) {
+          vscode.window.showWarningMessage('该目录是标准自定义算子的子算子，请先对包含 build.sh 的根目录执行「标记为算子工程」');
+        } else {
+          vscode.window.showWarningMessage('未找到标准自定义算子根目录，请先对包含 build.sh 的根目录执行「标记为算子工程」');
+        }
         return;
       }
       const rootProject = getProjectByPath(rootPath);

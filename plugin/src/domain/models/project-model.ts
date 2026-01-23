@@ -305,13 +305,49 @@ export async function updateStandardCustomOperators(
     console.log(`[updateStandardCustomOperators] ops_list: ${opsList.length} 个算子`, opsList.map(o => o.name));
     console.log(`[updateStandardCustomOperators] experimental_ops_list: ${experimentalOpsList.length} 个算子`, experimentalOpsList.map(o => o.name));
     
+    // 保留已有算子的 isCompiled 状态
+    const existingOpsList = project.ops_list || [];
+    const existingExperimentalOpsList = project.experimental_ops_list || [];
+    
+    // 创建已有算子的 isCompiled 状态映射（以算子名称为 key）
+    const existingOpsCompiledMap = new Map<string, boolean>();
+    existingOpsList.forEach((op) => {
+      if (op.isCompiled === true) {
+        existingOpsCompiledMap.set(op.name, true);
+      }
+    });
+    existingExperimentalOpsList.forEach((op) => {
+      if (op.isCompiled === true) {
+        existingOpsCompiledMap.set(op.name, true);
+      }
+    });
+    
+    // 更新算子列表，保留已有的 isCompiled: true 状态
+    const updatedOpsList = opsList.map((op) => {
+      const existingIsCompiled = existingOpsCompiledMap.get(op.name);
+      // 如果已有算子的 isCompiled 为 true，则保留；否则使用扫描的结果
+      return {
+        ...op,
+        isCompiled: existingIsCompiled === true ? true : op.isCompiled,
+      };
+    });
+    
+    const updatedExperimentalOpsList = experimentalOpsList.map((op) => {
+      const existingIsCompiled = existingOpsCompiledMap.get(op.name);
+      // 如果已有算子的 isCompiled 为 true，则保留；否则使用扫描的结果
+      return {
+        ...op,
+        isCompiled: existingIsCompiled === true ? true : op.isCompiled,
+      };
+    });
+    
     project.ops_meet = opsMeet;
-    project.ops_list = opsList;
-    project.experimental_ops_list = experimentalOpsList;
+    project.ops_list = updatedOpsList;
+    project.experimental_ops_list = updatedExperimentalOpsList;
     project.update_time = new Date().toISOString();
     writeStore(store);
     
-    console.log(`[updateStandardCustomOperators] 更新完成`);
+    console.log(`[updateStandardCustomOperators] 更新完成，已保留 ${existingOpsCompiledMap.size} 个已编译算子的状态`);
   } else {
     console.warn(`[updateStandardCustomOperators] 未找到项目: ${projectPath}`);
     console.warn(`[updateStandardCustomOperators] 现有项目路径:`, store.projects.map(p => p.project_path));
@@ -327,6 +363,7 @@ export async function markOperatorsAsCompiled(
   projectPath: string,
   operatorNames: string | string[],
 ): Promise<void> {
+  console.log('[markOperatorsAsCompiled] 标记标准自定义算子工程的子算子为已编译', projectPath, operatorNames);
   const store = ensureStore();
   const normalizedPath = path.normalize(projectPath).replace(/\\/g, '/').toLowerCase();
   
