@@ -46,6 +46,59 @@ async function isRootStandardCustom(): Promise<boolean> {
   }
 }
 
+/**
+ * 编译成功后，将 operatorNames（逗号分隔）对应的算子标记为已编译，写入 projects.json。
+ * 仅对标准自定义算子工程生效。
+ */
+async function tryMarkOperatorsAsCompiled(
+  configId: number,
+  operatorNames: string | undefined,
+): Promise<void> {
+  console.log('[tryMarkOperatorsAsCompiled] 编译成功后，将 operatorNames（逗号分隔）对应的算子标记为已编译，写入 projects.json。', operatorNames);
+  if (!operatorNames || !operatorNames.trim()) {
+    return;
+  }
+
+  try {
+    const config = getConfigById(configId);
+    console.log('[tryMarkOperatorsAsCompiled] 找到配置，config:', config);
+    if (!config) {
+      console.warn('[tryMarkOperatorsAsCompiled] 未找到配置，configId:', configId);
+      return;
+    }
+
+    const project = getProjectById(config.project_id);
+    console.log('[tryMarkOperatorsAsCompiled] 找到项目，project:', project);
+
+    if (!project || !project.project_path) {
+      return;
+    }
+
+    // 使用 OperatorProjectDetector 检测项目类型，而不是直接使用 project.project_type
+    try {
+      const rootDetection = await OperatorProjectDetector.detectOperatorProject(project.project_path);
+      if (!rootDetection.isOperatorProject || rootDetection.projectType !== OperatorProjectType.STANDARD_CUSTOM) {
+        return;
+      }
+    }
+    catch (error) {
+      console.warn('[tryMarkOperatorsAsCompiled] 检测项目类型失败:', error);
+
+      return;
+    }
+
+    console.log('[tryMarkOperatorsAsCompiled] 开始标记算子为已编译');
+    await markOperatorsAsCompiled(project.project_path, operatorNames);
+    console.log('[tryMarkOperatorsAsCompiled] 已标记算子为已编译:', operatorNames);
+  }
+  catch (error) {
+    console.warn(
+      '[tryMarkOperatorsAsCompiled] 更新算子编译状态失败:',
+      error instanceof Error ? error.message : String(error),
+    );
+  }
+}
+
 export class BuildService {
   /**
    * 获取构建配置列表
@@ -234,38 +287,9 @@ export class BuildService {
       }
 
       console.log('[startBuild] 编译成功');
-      vscode.window.showInformationMessage('编译算子成功');
+      vscode.window.showInformationMessage(`编译算子${params.operatorNames}成功`);
 
-      // 如果编译成功且有 operatorNames，且是标准自定义算子，更新算子的编译状态
-      if (params.operatorNames && params.operatorNames.trim()) {
-        console.log('[startBuild] 准备更新算子编译状态，operatorNames:', params.operatorNames);
-        try {
-          const config = getConfigById(Number(configId));
-
-          if (config) {
-            console.log('[startBuild] 找到配置信息，config.project_id:', config.project_id);
-            const project = getProjectById(config.project_id);
-
-            if (project && project.project_type === OperatorProjectType.STANDARD_CUSTOM && project.project_path) {
-              console.log('[startBuild] 项目类型为标准自定义算子，准备标记算子为已编译');
-              await markOperatorsAsCompiled(project.project_path, params.operatorNames);
-
-              console.log(`[startBuild] 已标记算子为已编译: ${params.operatorNames}`);
-            } else {
-              console.log('[startBuild] 项目类型不是标准自定义算子或缺少项目路径，跳过标记编译状态');
-            }
-          } else {
-            console.warn('[startBuild] 未找到配置信息，configId:', configId);
-          }
-        }
-        catch (error) {
-          console.warn(`[startBuild] 更新算子编译状态失败: ${error instanceof Error ? error.message : String(error)}`);
-
-          // 不影响主流程，只记录警告
-        }
-      } else {
-        console.log('[startBuild] 无 operatorNames 或为空，跳过更新编译状态');
-      }
+      await tryMarkOperatorsAsCompiled(Number(configId), params.operatorNames);
     }
     catch (e) {
       console.error('[startBuild] 编译过程出错:', e);
@@ -341,15 +365,15 @@ export class BuildService {
       const res = await executor.execute(buildCommand, [], [], {}, true);
 
       if (res.code !== 0) {
-        vscode.window.showErrorMessage('编译example失败');
+        vscode.window.showErrorMessage('执行失败');
 
         return;
       }
 
-      vscode.window.showInformationMessage('编译example成功');
+      vscode.window.showInformationMessage('执行成功');
     }
     catch (e) {
-      vscode.window.showErrorMessage(`获取编译example命令失败 ${(e as Error).message}`);
+      vscode.window.showErrorMessage(`获取执行命令失败 ${(e as Error).message}`);
     }
   }
 
@@ -361,7 +385,6 @@ export class BuildService {
     const simulatorItem = configData.find((v) => v.config_type === CONFIG_TYPES.SIMULATE);
     const simulatorType = (simulatorItem?.user_options?.simulatorType as string | undefined) ?? '';
 
-
     // 检查项目类型，pyasc 类型不需要编译
     const projectId = ProjectManager.getInstance().projectId;
     const project = projectId ? getProjectById(Number(projectId)) : null;
@@ -370,15 +393,15 @@ export class BuildService {
     if (!isPyascType) {
       // 仿真分析前编译，pyasc 类型不需要编译
       const buildConfigId = await this.getBuildConfigId();
-      
+
       // 构建编译选项
       let compileOption = objectToCommandString({ [`simulator ${simulatorType || ''}`]: true });
-      
+
       // 如果是标准自定义算子，添加 --bisheng-config=ccec_g
       if (await isRootStandardCustom()) {
         compileOption = compileOption ? `${compileOption} --bisheng-config=ccec_g` : '--bisheng-config=ccec_g';
       }
-      
+
       const buildCommand = getBuildOpCommand(
         Number(buildConfigId),
         compileOption,
@@ -401,7 +424,9 @@ export class BuildService {
 
         return;
       }
-      
+
+      await tryMarkOperatorsAsCompiled(Number(buildConfigId), params.operatorNames);
+
       // 如果是标准自定义算子，需要编译 example 并添加 --simulator --soc
       if (await isRootStandardCustom()) {
         const exConfigId = await this.getBuildExampleConfigId();
@@ -424,7 +449,7 @@ export class BuildService {
         console.log('example buildRes', exampleBuildRes);
 
         if (exampleBuildRes.code !== 0) {
-          vscode.window.showErrorMessage(`编译example失败 ${exampleBuildRes.output}`);
+          vscode.window.showErrorMessage(`执行失败 ${exampleBuildRes.output}`);
           return;
         }
       }
@@ -473,15 +498,15 @@ export class BuildService {
     // 上板分析前编译（pyasc 类型跳过）
     if (!isPyascType) {
       const buildConfigId = await this.getBuildConfigId();
-      
+
       // 构建编译选项
       let compileOption = objectToCommandString({ onboard: true });
-      
+
       // 如果是标准自定义算子，添加 --bisheng-config=ccec_g
       if (await isRootStandardCustom()) {
         compileOption = compileOption ? `${compileOption} --bisheng-config=ccec_g` : '--bisheng-config=ccec_g';
       }
-      
+
       const buildCommand = getBuildOpCommand(
         Number(buildConfigId),
         compileOption,
@@ -504,6 +529,8 @@ export class BuildService {
 
         return;
       }
+
+      await tryMarkOperatorsAsCompiled(Number(buildConfigId), params.operatorNames);
     }
 
     const configId = await this.getOnBoardConfigId();

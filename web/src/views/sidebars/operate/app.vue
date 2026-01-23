@@ -56,7 +56,7 @@ const projectTemplateName = ref(''); // 项目子类型  'hello_world' | 'addn_c
 
 // 需要互斥的操作按钮（执行时其他按钮应该禁用）
 const mutuallyExclusiveKeys = [
-  'buildOp',
+  'build',
   'runExample',
   'sanitizer',
   'onboard',
@@ -81,19 +81,36 @@ const baseMenuItems = [
       // 如果有选中的算子，将选中算子的名称用逗号拼接传入
       let operatorNames;
       let operatorType;
+      let compileOption;
 
       if (selectedOperators.value.length > 0) {
         operatorNames = selectedOperators.value.map((op) => op.name).join(',');
         // 如果是标准自定义算子，设置类型
         if (isStandardCustom.value) {
           operatorType = 'standard-custom';
+          // 检查选中的算子中是否有 experimental 算子（hasEx 为 true）
+          const hasExperimental = selectedOperators.value.some((op) => op.hasEx);
+          if (hasExperimental) {
+            compileOption = '--experimental';
+          }
         }
       }
 
-      await startBuild({
-        operatorNames,
-        operatorType,
-      });
+      try {
+        await startBuild({
+          operatorNames,
+          operatorType,
+          compileOption,
+        });
+        // 编译成功后，刷新算子列表以更新编译状态
+        if (isStandardCustom.value && operatorNames) {
+          console.log('[Operate] 编译成功，刷新算子列表');
+          await refreshOperatorList();
+        }
+      }
+      catch (error) {
+        console.error('[Operate] 编译失败:', error);
+      }
     },
   },
   {
@@ -321,7 +338,7 @@ const handleMenuClick = async ({ key }) => {
 
   if (handler) {
     // 如果是互斥操作，设置执行状态
-    if (['buildOp', 'runExample'].includes(originalKey)) {
+    if (['build', 'runExample'].includes(originalKey)) {
       console.log('[Operate] 开始执行操作:', originalKey, '，锁定按钮');
       isExecuting.value = true;
     }
@@ -334,7 +351,7 @@ const handleMenuClick = async ({ key }) => {
     }
     finally {
       // 操作完成后恢复按钮状态
-      if (['buildOp', 'runExample'].includes(originalKey)) {
+      if (['build', 'runExample'].includes(originalKey)) {
         // 如果任务正在被停止，延迟清除执行状态，确保停止任务按钮不会过早消失
         if (isStopping.value) {
           console.log('[Operate] 任务正在被停止，延迟清除执行状态');
@@ -538,6 +555,59 @@ const isOperatorCompiled = (operator) => {
   }
   // 否则默认返回 false
   return false;
+};
+
+// 刷新算子列表（从后端重新获取并更新）
+const refreshOperatorList = async () => {
+  if (!isStandardCustom.value) {
+    return;
+  }
+
+  try {
+    const result = await checkMultipleOperators();
+
+    if (result.isStandardCustom && result.operators) {
+      // 清空现有列表
+      compiledOperators.value = [];
+      preparedOperators.value = [];
+
+      // 根据是否experimental分类，并判断是否编译成功
+      result.operators.forEach((op) => {
+        const operatorItem = {
+          id: String(op.id),
+          name: op.name,
+          hasEx: op.isExperimental,
+          isCompiled: op.isCompiled || false, // 从API返回的数据中获取编译状态
+        };
+
+        // 根据编译成功判断逻辑，将编译成功的算子移到编译成功的算子工程列表中
+        if (isOperatorCompiled(operatorItem)) {
+          compiledOperators.value.push(operatorItem);
+        } else {
+          preparedOperators.value.push(operatorItem);
+        }
+      });
+
+      // 同时更新 configArray，用于选择器显示
+      // experimental 算子的名称后面加上 "ex"
+      configArray.value = result.operators.map((op) => ({
+        config_name: op.isExperimental ? `${op.name}ex` : op.name,
+        id: op.id,
+        name: op.name,
+        isExperimental: op.isExperimental,
+      }));
+
+      console.log('[Operate] 刷新算子列表完成，编译成功的算子列表:', compiledOperators.value);
+      console.log('[Operate] 刷新算子列表完成，预备算子列表:', preparedOperators.value);
+
+      // 等待一下确保算子列表已完全加载，然后加载已选择的算子
+      await new Promise(resolve => setTimeout(resolve, 100));
+      await loadSelectedOperators();
+    }
+  }
+  catch (error) {
+    console.error('[Operate] 刷新算子列表失败:', error);
+  }
 };
 
 // 编译成功的算子工程（通过 isOperatorCompiled 判断）
@@ -822,11 +892,17 @@ const loadSelectedOperators = async () => {
 };
 
 // 处理 Popover 打开/关闭事件，动态设置宽度
-const handlePopoverOpenChange = (open) => {
+const handlePopoverOpenChange = async (open) => {
   if (open && operatorSelectorTriggerRef.value) {
     // 当 Popover 打开时，获取触发器的宽度
     const triggerWidth = operatorSelectorTriggerRef.value.offsetWidth;
     popoverWidth.value = `${triggerWidth}px`;
+
+    // 每次打开算子选择器时，从 projects.json 重新读取数据并分类
+    if (isStandardCustom.value) {
+      console.log('[Operate] 打开算子选择器，刷新算子列表');
+      await refreshOperatorList();
+    }
   }
 };
 </script>
