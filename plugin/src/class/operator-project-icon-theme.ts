@@ -8,7 +8,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { getProjectByPath } from '@plugin/domain/models/project-model';
+import { getAllProjects } from '@plugin/domain/models/project-model';
 import { OperatorProjectType } from '@plugin/domain/services/operator-project-detector';
 
 /**
@@ -37,9 +37,9 @@ export class OperatorProjectIconTheme implements vscode.FileDecorationProvider {
   /**
    * FileDecorationProvider 实现 - 提供文件装饰（颜色）
    */
-  provideFileDecoration(uri: vscode.Uri): vscode.FileDecoration | undefined {
+  provideFileDecoration(uri: vscode.Uri): vscode.ProviderResult<vscode.FileDecoration> {
     const folderPath = uri.fsPath;
-    
+
     // 检查是否为文件夹
     try {
       const stats = fs.statSync(folderPath);
@@ -50,36 +50,51 @@ export class OperatorProjectIconTheme implements vscode.FileDecorationProvider {
       return undefined;
     }
 
-    // 获取项目信息
-    // 注意：getProjectByPath 内部会进行路径规范化（normalize + replace + toLowerCase）
-    // 所以这里直接传入原始路径即可
-    const project = getProjectByPath(folderPath);
-    
-    if (!project) {
-      // 调试日志：记录未找到项目的路径
-      console.log(`[OperatorProjectIconTheme] 未找到项目: ${folderPath}`);
-      return undefined;
+    // 从项目配置文件中查找所有项目
+    const allProjects = this.getAllProjectsFromConfig();
+
+    // 遍历所有项目，查找当前文件夹是否在某个项目的配置中
+    for (const project of allProjects) {
+      // 检查当前文件夹是否在项目的 ops_meet 中（算子工程集合）
+      if (project.ops_meet && project.ops_meet.some(collection =>
+          path.normalize(collection.path) === path.normalize(folderPath))) {
+        // 算子工程集合 - 紫色
+        return {
+          tooltip: '算子工程集合',
+          color: new vscode.ThemeColor('charts.purple'),
+        };
+      }
+
+      // 检查当前文件夹是否在项目的 ops_list 或 experimental_ops_list 中（算子工程）
+      const isOperatorProject =
+        (project.ops_list && project.ops_list.some(op =>
+          path.normalize(op.path) === path.normalize(folderPath))) ||
+        (project.experimental_ops_list && project.experimental_ops_list.some(op =>
+          path.normalize(op.path) === path.normalize(folderPath)));
+
+      if (isOperatorProject) {
+        // 单个算子工程 - 蓝色
+        return {
+          tooltip: '算子工程',
+          color: new vscode.ThemeColor('charts.blue'),
+        };
+      }
     }
 
-    // 调试日志：记录找到的项目
-    console.log(`[OperatorProjectIconTheme] 找到项目: ${project.project_name} (${project.project_path}), 类型: ${project.project_type}`);
-
-    // 根据项目类型返回不同的装饰
-    if (project.project_type === OperatorProjectType.MULTI_PROJECT) {
-      // 算子工程合集 - 紫色
-      return {
-        tooltip: '算子工程集合',
-        color: new vscode.ThemeColor('charts.purple'),
-      };
-    } else if (project.project_type) {
-      // 单个算子工程 - 蓝色
-      return {
-        tooltip: '算子工程',
-        color: new vscode.ThemeColor('charts.blue'),
-      };
-    }
-
+    // 如果没找到匹配的配置，返回 undefined
     return undefined;
+  }
+
+  /**
+   * 从配置中获取所有项目
+   */
+  private getAllProjectsFromConfig(): any[] {
+    try {
+      return getAllProjects();
+    } catch (error) {
+      console.error('[OperatorProjectIconTheme] 获取所有项目失败:', error);
+      return [];
+    }
   }
 
   /**
