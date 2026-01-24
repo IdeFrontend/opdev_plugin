@@ -13,7 +13,7 @@ import {
 import {
   generateStructure
 } from '@plugin/domain';
-import { viewIdToProjectType } from '../domain/utils/project-utils'
+import { viewIdToProjectType, ensureLaunchJsonExists } from '../domain/utils/project-utils'
 import {
   OperatorProjectDetector,
   OperatorProjectType
@@ -21,8 +21,11 @@ import {
 import {
   getProjectByPath,
   updateStandardCustomOperators,
+  createProject,
+  SubOperatorInfo
 } from '@plugin/domain/models/project-model';
 import { WorkspaceDetectorService } from '@plugin/service/workspace-detector-service';
+import { OpGeneratorFactory } from '@plugin/domain/services/op-generator-factory';
 
 // 辅助函数：获取 extension context
 function getExtensionContext(): vscode.ExtensionContext {
@@ -60,6 +63,7 @@ export const welcomeMethods = {
   async createdProject(params: CreatedProjectParams): Promise<void> {
     try {
       const context = getExtensionContext();
+
       // 缓存 projectPath 到 globalState
       const originalProjectPath = params.projectPath;
 
@@ -93,17 +97,84 @@ export const welcomeMethods = {
       }
 
       // 调用 projectService.init (对应旧代码的 OpsAPI.init)
-      try {
-        await projectService.init({
-          ascendEnvScript: params.projectSH,
-          projectPath: params.projectPath,
-          projectName: params.projectName,
-          templateName: params.templateName,
-          projectType: viewIdToProjectType(params.createOperatorProjectDictoryFileType)
-        });
-      }
-      catch (error) {
-        throw new Error(`初始化算子工程失败: ${error instanceof Error ? error.message : String(error)}`);
+      if (viewIdToProjectType(params.createOperatorProjectDictoryFileType) === 'ascend') {
+        // 获取当前 VSCode 中打开的工作区目录
+        const currentWorkspaceFolders = vscode.workspace.workspaceFolders;
+        const currentExplorerPath = currentWorkspaceFolders && currentWorkspaceFolders.length > 0
+          ? currentWorkspaceFolders[0].uri.fsPath
+          : undefined;
+        console.log('当前资源管理器打开的目录:', currentExplorerPath);
+
+        if (currentExplorerPath?.includes('experimental')) {
+          // 根据 currentExplorerPath 在project.json配置数据中查找project，查找到之后插入到它的experimental_ops_list中
+          const project = getProjectByPath(currentExplorerPath);
+          if (project) {
+            console.log('在experimental目录下找到项目:', project);
+
+            // 创建新的子算子信息
+            const newSubOperator: SubOperatorInfo = {
+              name: params.projectName,
+              path: path.join(params.projectPath, params.projectName),
+              isCompiled: false
+            };
+
+            // 更新项目的experimental_ops_list
+            const updatedExperimentalOpsList = [...(project.experimental_ops_list || []), newSubOperator];
+
+            // 更新项目记录
+            await createProject({
+              project_name: project.project_name,
+              project_path: project.project_path,
+              experimental_ops_list: updatedExperimentalOpsList,
+            });
+
+            console.log('已将新算子添加到experimental_ops_list:', newSubOperator.name);
+          } else {
+            console.log('在project.json配置中未找到对应项目');
+          }
+        } else if (currentExplorerPath?.includes('math')) {
+          // 根据 currentExplorerPath 在project.json配置数据中查找project，查找到之后插入到它的ops_list中
+          const project = getProjectByPath(currentExplorerPath);
+          if (project) {
+            console.log('在math目录下找到项目:', project);
+
+            // 创建新的子算子信息
+            const newSubOperator: SubOperatorInfo = {
+              name: params.projectName,
+              path: path.join(params.projectPath, params.projectName),
+              isCompiled: false
+            };
+
+            // 更新项目的ops_list
+            const updatedOpsList = [...(project.ops_list || []), newSubOperator];
+
+            // 更新项目记录
+            await createProject({
+              project_name: project.project_name,
+              project_path: project.project_path,
+              ops_list: updatedOpsList,
+            });
+
+            console.log('已将新算子添加到ops_list:', newSubOperator.name);
+          } else {
+            console.log('在project.json配置中未找到对应项目');
+          }
+        } else {
+          vscode.window.showInformationMessage('不支持在该位置创建算子工程');
+        }
+      } else {
+        try {
+          await projectService.init({
+            ascendEnvScript: params.projectSH,
+            projectPath: params.projectPath,
+            projectName: params.projectName,
+            templateName: params.templateName,
+            projectType: viewIdToProjectType(params.createOperatorProjectDictoryFileType)
+          });
+        }
+        catch (error) {
+          throw new Error(`初始化算子工程失败: ${error instanceof Error ? error.message : String(error)}`);
+        }
       }
 
       try {
@@ -132,6 +203,20 @@ export const welcomeMethods = {
 
       // 显示创建成功消息
       vscode.window.showInformationMessage(`算子工程创建成功: ${params.projectName}`);
+
+      if (viewIdToProjectType(params.createOperatorProjectDictoryFileType) === 'ascend') {
+        const fullPath = path.join(params.projectPath, params.projectName)
+        await ensureLaunchJsonExists(fullPath);
+        const generator = OpGeneratorFactory.getGenerator(
+          {op_path: fullPath},
+          {project_name: params.projectName, project_path: params.projectPath},
+          context.extensionPath,
+        );
+        generator.parseMeta();
+        await generator.executeGeneration();
+        vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+        return
+      }
 
       // 保存 templateName 到 globalState，以便后续使用
       if (params.templateName) {
