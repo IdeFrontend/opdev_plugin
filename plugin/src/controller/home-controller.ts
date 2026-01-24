@@ -310,7 +310,7 @@ export const homeMethods = {
       return {
         projectType: project.project_type,
         projectTypeName,
-        projectTemplateName: project.project_type === OperatorProjectType.TORCH_LIBRARY ? 'torch_library_template' : ''
+        projectTemplateName: project.template_name || ''
       };
     }
     catch (error) {

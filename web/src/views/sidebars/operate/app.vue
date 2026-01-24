@@ -30,7 +30,7 @@ import {
   getSelectedOperators,
   getSelectedOperatorIds,
 } from '@web/apis';
-import { SettingOutlined, CheckOutlined } from '@ant-design/icons-vue';
+import { SettingOutlined, CheckOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue';
 
 const themeConfig = { algorithm: theme.darkAlgorithm };
 const activeConfig = ref('');
@@ -195,22 +195,28 @@ const menuItems = computed(() => {
   const items = [...baseMenuItems];
 
   // 构建调试菜单的子菜单项
-  const debugChildren = [
-    {
-      key: 'buildAndCpuDebug',
-      label: 'CPU调试',
-      handler: async () => {
-        await runCpuDebug();
+  const debugChildren = [];
+
+  // 如果项目类型不是 ascend，且不是 cann 类型的 torch_library_template，添加CPU调试相关的子菜单项
+  const isCannTorchLibrary = projectType.value === 'cann' && projectTemplateName.value === 'torch_library_template';
+  if (projectType.value !== 'ascend' && !isCannTorchLibrary) {
+    debugChildren.push(
+      {
+        key: 'buildAndCpuDebug',
+        label: 'CPU调试',
+        handler: async () => {
+          await runCpuDebug();
+        },
       },
-    },
-    {
-      key: 'cpuDebugConfig',
-      label: 'CPU调试配置',
-      handler: async () => {
-        await cpuDebugConfig();
+      {
+        key: 'cpuDebugConfig',
+        label: 'CPU调试配置',
+        handler: async () => {
+          await cpuDebugConfig();
+        },
       },
-    },
-  ];
+    );
+  }
 
   // 如果启用了调试模式，添加NPU调试相关的子菜单项
   if (debugModeEnabled.value) {
@@ -232,15 +238,17 @@ const menuItems = computed(() => {
     );
   }
 
-  // 在"运行验证"后插入调试菜单
-  const runExampleIndex = items.findIndex(item => item.key === 'runExample');
-  if (runExampleIndex !== -1) {
-    items.splice(runExampleIndex + 1, 0, {
-      key: 'runDebug',
-      label: '调试',
-      icon: debugIcon,
-      children: debugChildren,
-    });
+  // 在"运行验证"后插入调试菜单（只有当有子菜单项时才显示）
+  if (debugChildren.length > 0) {
+    const runExampleIndex = items.findIndex(item => item.key === 'runExample');
+    if (runExampleIndex !== -1) {
+      items.splice(runExampleIndex + 1, 0, {
+        key: 'runDebug',
+        label: '调试',
+        icon: debugIcon,
+        children: debugChildren,
+      });
+    }
   }
 
   // 如果项目类型是 pyasc，隐藏编译部署、调试、异常检测
@@ -928,7 +936,7 @@ const handlePopoverOpenChange = async (open) => {
       <!-- 如果配置文件不存在且不是标准自定义算子，显示提示信息 -->
       <div v-if="!hasDevtoolConfig && !isStandardCustom" class="flex items-center justify-center min-h-[200px] p-5">
         <div class="text-xs text-white/65 text-center leading-relaxed">
-          您需要新建算子工程或打开算子工程才可以使用操作面板
+          您需要新建算子工程或通过一站式平台插件打开算子工程才可以使用操作面板
         </div>
       </div>
 
@@ -1090,15 +1098,25 @@ const handlePopoverOpenChange = async (open) => {
                   <a-tooltip v-if="isDisabledByMultipleOperators(child.key)" title="该功能只支持单算子执行" placement="right">
                     <div class="single-box">
                       {{ child.label }}
-                      <div v-if="child.key === 'simulation' || child.key === 'onboard'" class="setting-box">
-                        <SettingOutlined @click.stop="openSetting(child.key)" />
+                      <div class="flex items-center gap-1">
+                        <a-tooltip v-if="(child.key === 'simulation' || child.key === 'onboard') && projectType === 'pyasc'" title="性能调优需修改相关代码模式，具体可参考README.md" placement="right">
+                          <QuestionCircleOutlined class="info-icon" />
+                        </a-tooltip>
+                        <div v-if="child.key === 'simulation' || child.key === 'onboard'" class="setting-box">
+                          <SettingOutlined @click.stop="openSetting(child.key)" />
+                        </div>
                       </div>
                     </div>
                   </a-tooltip>
                   <div v-else class="single-box">
                     {{ child.label }}
-                    <div v-if="child.key === 'simulation' || child.key === 'onboard'" class="setting-box">
-                      <SettingOutlined @click.stop="openSetting(child.key)" />
+                    <div class="flex items-center gap-1">
+                      <a-tooltip v-if="(child.key === 'simulation' || child.key === 'onboard') && projectType === 'pyasc'" title="性能调优需修改相关代码模式，具体可参考README.md" placement="right">
+                        <QuestionCircleOutlined class="info-icon" />
+                      </a-tooltip>
+                      <div v-if="child.key === 'simulation' || child.key === 'onboard'" class="setting-box">
+                        <SettingOutlined @click.stop="openSetting(child.key)" />
+                      </div>
                     </div>
                   </div>
                 </a-menu-item>
@@ -1225,6 +1243,17 @@ body {
 
 .setting-box:hover {
   background-color: #262729 !important;
+}
+
+.info-icon {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+  cursor: help;
+  transition: color 0.2s;
+}
+
+.info-icon:hover {
+  color: rgba(255, 255, 255, 0.85);
 }
 
 /* 算子工程选择器样式 */
