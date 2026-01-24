@@ -260,9 +260,9 @@ const menuItems = computed(() => {
     );
   }
 
-  // 根目录为标准自定义算子且 build.sh 不含 --bisheng-config：隐藏异常检测、性能调优
+  // 根目录为标准自定义算子且 build.sh 不含 --bisheng-config：隐藏性能调优
   const filtered = isStandardCustom.value && !supportsSanitizerAndTuning.value
-    ? items.filter(item => item.key !== 'sanitizer' && item.key !== 'power')
+    ? items.filter(item => item.key !== 'power')
     : items;
 
   // 过滤菜单项：buildExample 只在标准自定义算子中显示

@@ -241,16 +241,8 @@
         "title": "CPU调试"
       },
       {
-        "command": "huawei-op-devtools.operatorProjectNpuDebug",
-        "title": "NPU调试"
-      },
-      {
         "command": "huawei-op-devtools.operatorProjectCpuDebugConfig",
         "title": "CPU调试配置"
-      },
-      {
-        "command": "huawei-op-devtools.operatorProjectNpuDebugConfig",
-        "title": "NPU调试配置"
       },
       {
         "command": "huawei-op-devtools.operatorProjectSanitizer",
