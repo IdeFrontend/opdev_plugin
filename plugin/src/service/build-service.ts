@@ -464,6 +464,7 @@ export class BuildService {
       const simulateCommand = getSimulateCommand(
         Number(configId),
         Number(exConfigId),
+        params.operatorNames,
       );
 
       console.log('simulateCommand', simulateCommand);
@@ -542,6 +543,7 @@ export class BuildService {
       const onBoardCommand = getOnBoardCommand(
         Number(configId),
         Number(exConfigId),
+        params.operatorNames,
       );
 
       console.log('onBoardCommand', onBoardCommand);

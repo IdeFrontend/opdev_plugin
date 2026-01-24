@@ -79,6 +79,7 @@ export class SanitizerService {
         getSanitizerCommand(
           Number(sanitizerConfigId),
           Number(exampleConfigId),
+          params.operatorNames,
         ) || '';
       const executor = ProjectManager.getInstance()
         .getExecutor();

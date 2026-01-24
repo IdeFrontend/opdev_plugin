@@ -141,11 +141,13 @@ export function getBuildExampleCommand(
  *
  * @param config_id 配置ID
  * @param example_config_id 示例配置ID
+ * @param operatorNames 算子名称，多个用逗号分隔（用于标准自定义算子场景）
  * @returns 完整的shell执行命令字符串
  */
 export function getSimulateCommand(
   config_id: number,
   example_config_id: number,
+  operatorNames?: string,
 ) {
   try {
     const baseContext = getBaseContext(config_id);
@@ -154,7 +156,16 @@ export function getSimulateCommand(
     const context = strategy.buildCommandContext(baseContext);
 
     // 使用策略来获取正确的 target_file
-    const targetFile = strategy.getProfilerTargetFile(context.config, context.operator, example_config_id);
+    let targetFile = strategy.getProfilerTargetFile(context.config, context.operator, example_config_id);
+
+    // 如果提供了 operatorNames，用分隔符 test_aclnn_ 分割路径，取前缀 + test_aclnn_ + operatorNames
+    if (operatorNames && targetFile) {
+      const delimiter = 'test_aclnn_';
+      const parts = targetFile.split(delimiter);
+      if (parts.length >= 2) {
+        targetFile = `${parts[0]}${delimiter}${operatorNames}`;
+      }
+    }
 
     return strategy.buildSimulateCommand({
       config: context.config,
@@ -176,11 +187,13 @@ export function getSimulateCommand(
  *
  * @param config_id 配置ID
  * @param example_config_id 示例配置ID
+ * @param operatorNames 算子名称，多个用逗号分隔（用于标准自定义算子场景）
  * @returns 完整的shell执行命令字符串
  */
 export function getOnBoardCommand(
   config_id: number,
   example_config_id: number,
+  operatorNames?: string,
 ) {
   try {
     const baseContext = getBaseContext(config_id);
@@ -189,7 +202,16 @@ export function getOnBoardCommand(
     const context = strategy.buildCommandContext(baseContext);
 
     // 使用策略来获取正确的 target_file
-    const targetFile = strategy.getProfilerTargetFile(context.config, context.operator, example_config_id);
+    let targetFile = strategy.getProfilerTargetFile(context.config, context.operator, example_config_id);
+
+    // 如果提供了 operatorNames，用分隔符 test_aclnn_ 分割路径，取前缀 + test_aclnn_ + operatorNames
+    if (operatorNames && targetFile) {
+      const delimiter = 'test_aclnn_';
+      const parts = targetFile.split(delimiter);
+      if (parts.length >= 2) {
+        targetFile = `${parts[0]}${delimiter}${operatorNames}`;
+      }
+    }
 
     return strategy.buildOnBoardCommand({
       config: context.config,
@@ -211,11 +233,13 @@ export function getOnBoardCommand(
  *
  * @param sanitizerConfigId Sanitizer配置ID
  * @param example_config_id 示例配置ID
+ * @param operatorNames 算子名称，多个用逗号分隔（用于标准自定义算子场景）
  * @returns 完整的shell执行命令字符串
  */
 export function getSanitizerCommand(
   sanitizerConfigId: number,
   example_config_id: number,
+  operatorNames?: string,
 ) {
   try {
     const baseContext = getBaseContext(sanitizerConfigId);
@@ -224,7 +248,16 @@ export function getSanitizerCommand(
     const context = strategy.buildCommandContext(baseContext);
 
     // 使用策略来获取正确的 target_file
-    const targetFile = strategy.getProfilerTargetFile(context.config, context.operator, example_config_id);
+    let targetFile = strategy.getProfilerTargetFile(context.config, context.operator, example_config_id);
+
+    // 如果提供了 operatorNames，用分隔符 test_aclnn_ 分割路径，取前缀 + test_aclnn_ + operatorNames
+    if (operatorNames && targetFile) {
+      const delimiter = 'test_aclnn_';
+      const parts = targetFile.split(delimiter);
+      if (parts.length >= 2) {
+        targetFile = `${parts[0]}${delimiter}${operatorNames}`;
+      }
+    }
 
     return strategy.buildSanitizerCommand(
       context.config,
