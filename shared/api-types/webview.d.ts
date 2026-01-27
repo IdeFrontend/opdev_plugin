@@ -44,7 +44,7 @@ export type CreatedProjectParams = {
 
 export type OpenProjectParams = {
   projectPath: string;
-  projectName: string;
+  projectName?: string;
   projectSH?: string;
 };
 

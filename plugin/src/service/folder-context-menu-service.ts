@@ -762,7 +762,7 @@ export class FolderContextMenuService {
     const project = getProjectByPath(folderPath);
 
     // 检查是否是算子工程
-    if (!project || project.project_type === OperatorProjectType.MULTI_PROJECT) {
+    if (!project) {
       vscode.window.showWarningMessage('该文件夹不是算子工程');
       return;
     }
@@ -781,7 +781,7 @@ export class FolderContextMenuService {
     const project = getProjectByPath(folderPath);
 
     // 检查是否是算子工程
-    if (!project || project.project_type === OperatorProjectType.MULTI_PROJECT) {
+    if (!project) {
       vscode.window.showWarningMessage('该文件夹不是算子工程');
       return;
     }
@@ -800,7 +800,7 @@ export class FolderContextMenuService {
     const project = getProjectByPath(folderPath);
 
     // 检查是否是算子工程
-    if (!project || project.project_type === OperatorProjectType.MULTI_PROJECT) {
+    if (!project) {
       vscode.window.showWarningMessage('该文件夹不是算子工程');
       return;
     }
@@ -819,7 +819,7 @@ export class FolderContextMenuService {
     const project = getProjectByPath(folderPath);
 
     // 检查是否是算子工程
-    if (!project || project.project_type === OperatorProjectType.MULTI_PROJECT) {
+    if (!project) {
       vscode.window.showWarningMessage('该文件夹不是算子工程');
       return;
     }
@@ -954,7 +954,7 @@ export class FolderContextMenuService {
 
     return {
       isOperatorProject: true,
-      isMultiProject: project.project_type === OperatorProjectType.MULTI_PROJECT,
+      isMultiProject: false,
       projectType: project.project_type || undefined,
     };
   }

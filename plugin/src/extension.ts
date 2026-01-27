@@ -70,8 +70,8 @@ import {
   COMMAND_REFRESH_FOLDER_DECORATIONS,
 } from './constants';
 import { FolderContextMenuService } from './service/folder-context-menu-service';
-import { AutoMultiProjectDetector } from './service/auto-multi-project-detector';
 import { OperatorProjectIconTheme } from './class/operator-project-icon-theme';
+import { welcomeMethods } from './controller/welcome-controller'
 
 let extensionContext: vscode.ExtensionContext | undefined;
 
@@ -123,6 +123,50 @@ async function checkDevtoolConfigExists(): Promise<boolean> {
 }
 
 /**
+ * 关闭辅助侧边栏
+ */
+const closeAuxiliaryBar = async () => {
+  try {
+    // 检查辅助侧边栏是否可见，如果可见则关闭
+    await vscode.commands.executeCommand('workbench.action.closeAuxiliaryBar');
+    console.log('已关闭辅助侧边栏');
+  }
+  catch (error) {
+    console.error('关闭辅助侧边栏时出错:', error);
+  }
+};
+
+// 注册资源选择变化监听，动态更新上下文变量
+// 在命令执行前更新上下文变量，这样菜单显示逻辑才能正确工作
+const updateContextForUri = async (uri: vscode.Uri | undefined) => {
+  if (!uri) {
+    await vscode.commands.executeCommand('setContext', 'operatorProjectMarked', false);
+    await vscode.commands.executeCommand('setContext', 'multiOperatorProjectMarked', false);
+    await vscode.commands.executeCommand('setContext', 'operatorProjectType', '');
+    return;
+  }
+
+  const checkResult = await FolderContextMenuService.checkIsOperatorProject(uri);
+  
+  await vscode.commands.executeCommand(
+    'setContext',
+    'operatorProjectMarked',
+    checkResult.isOperatorProject && !checkResult.isMultiProject,
+  );
+  await vscode.commands.executeCommand(
+    'setContext',
+    'multiOperatorProjectMarked',
+    checkResult.isMultiProject,
+  );
+  
+  await vscode.commands.executeCommand(
+    'setContext',
+    'operatorProjectType',
+    checkResult.projectType || '',
+  );
+};
+
+/**
  * 插件激活入口函数
  * @param context VSCode扩展上下文
  */
@@ -158,20 +202,6 @@ export async function activate(context: vscode.ExtensionContext) {
     hasDevtoolConfig,
   );
 
-  /**
-   * 关闭辅助侧边栏
-   */
-  const closeAuxiliaryBar = async () => {
-    try {
-      // 检查辅助侧边栏是否可见，如果可见则关闭
-      await vscode.commands.executeCommand('workbench.action.closeAuxiliaryBar');
-      console.log('已关闭辅助侧边栏');
-    }
-    catch (error) {
-      console.error('关闭辅助侧边栏时出错:', error);
-    }
-  };
-
   // 视图
   const viewServer = initViews(context, apiServer);
 
@@ -184,13 +214,13 @@ export async function activate(context: vscode.ExtensionContext) {
   // 初始化配置页面的Webview
   const configWelcomeProvider = new WebviewProvider(context, apiServer);
 
-  // 初始化配置页面的Webview
+  // 初始化环境脚本配置页面的Webview
   const configProjectSHProvider = new WebviewProvider(context, apiServer);
 
   // 初始化打开算子工程的Webview
   const openProjectProvider = new WebviewProvider(context, apiServer);
 
-  // 注册打开Opsuite命令
+  // 注册新建算子工程命令
   const openCommand = vscode.commands.registerCommand(
     COMMAND_OPEN,
     async () => {
@@ -206,7 +236,7 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // 注册在当前目录下新建算子命令
+  // 注册在当前目录下新建算子工程命令
   const createOperatorInWorkspaceCommand = vscode.commands.registerCommand(
     COMMAND_CREATE_OPERATOR_IN_WORKSPACE,
     async (uri?: vscode.Uri) => {
@@ -286,7 +316,7 @@ export async function activate(context: vscode.ExtensionContext) {
     }, 500);
   }
 
-  // 注册打开Opsuite命令
+  // 注册打开工程配置页命令
   const ConfigCommand = vscode.commands.registerCommand(
     COMMAND_CONFIG,
     async () => {
@@ -320,7 +350,7 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // 注册创建算子命令
+  // 注册创建算子工程命令，会执行回调函数
   const createOptionsCommand = vscode.commands.registerCommand(
     COMMAND_CREATE_DIRECTORY,
     async (
@@ -417,6 +447,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // 初始化文件夹装饰提供者
   const iconTheme = OperatorProjectIconTheme.getInstance(context);
 
+  // 注册刷新文件夹装饰的命令
   const refreshDecorationsCommand = vscode.commands.registerCommand(
     COMMAND_REFRESH_FOLDER_DECORATIONS,
     () => {
@@ -430,9 +461,6 @@ export async function activate(context: vscode.ExtensionContext) {
   // 只在用户明确打开项目时（link-controller.ts）才进行自动检测
 
   // 注册文件夹右键菜单命令
-  // 注意：由于 VSCode API 限制，无法在菜单显示前更新上下文变量
-  // 菜单的 when 条件在菜单显示时评估，此时上下文变量可能不是最新的
-  // 解决方案：在命令执行时检查状态，如果不是对应的类型就静默返回
   const markAsOperatorProjectCommand = vscode.commands.registerCommand(
     COMMAND_MARK_AS_OPERATOR_PROJECT,
     async (uri?: vscode.Uri) => {
@@ -622,36 +650,6 @@ export async function activate(context: vscode.ExtensionContext) {
     operatorProjectSimulationCommand,
   );
 
-  // 注册资源选择变化监听，动态更新上下文变量
-  // 在命令执行前更新上下文变量，这样菜单显示逻辑才能正确工作
-  const updateContextForUri = async (uri: vscode.Uri | undefined) => {
-    if (!uri) {
-      await vscode.commands.executeCommand('setContext', 'operatorProjectMarked', false);
-      await vscode.commands.executeCommand('setContext', 'multiOperatorProjectMarked', false);
-      await vscode.commands.executeCommand('setContext', 'operatorProjectType', '');
-      return;
-    }
-
-    const checkResult = await FolderContextMenuService.checkIsOperatorProject(uri);
-    
-    await vscode.commands.executeCommand(
-      'setContext',
-      'operatorProjectMarked',
-      checkResult.isOperatorProject && !checkResult.isMultiProject,
-    );
-    await vscode.commands.executeCommand(
-      'setContext',
-      'multiOperatorProjectMarked',
-      checkResult.isMultiProject,
-    );
-    
-    await vscode.commands.executeCommand(
-      'setContext',
-      'operatorProjectType',
-      checkResult.projectType || '',
-    );
-  };
-
   // 初始化上下文变量
   await vscode.commands.executeCommand('setContext', 'operatorProjectMarked', false);
   await vscode.commands.executeCommand('setContext', 'multiOperatorProjectMarked', false);
@@ -738,8 +736,10 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(flashPerformanceRunData);
 
+  // 工作区变化监听
   const watchWorkSpaceFolderChange =
     vscode.workspace.onDidChangeWorkspaceFolders(async () => {
+      console.log('工作区变化', vscode.workspace.workspaceFolders)
       vscode.commands.executeCommand(COMMAND_FLASH_MS_SANITIZER_RUN_DATA);
       vscode.commands.executeCommand(COMMAND_FLASH_PERFORMANCE_RUN_DATA);
       
@@ -762,20 +762,11 @@ export async function activate(context: vscode.ExtensionContext) {
   if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
     // 延迟执行，确保插件完全初始化
     setTimeout(async () => {
-      const { WorkspaceDetectorService } = await import('./service/workspace-detector-service.js');
-      
-      for (const folder of vscode.workspace.workspaceFolders!) {
-        await WorkspaceDetectorService.detectAndRegisterWorkspace(folder.uri.fsPath).catch((error) => {
-          console.error('检测工作区算子工程失败:', error);
-        });
-      }
+      welcomeMethods.openProject({ projectPath: vscode.workspace.workspaceFolders![0].uri.fsPath }, false)
     }, 2000);
   }
 
-  if (vscode.workspace.workspaceFolders) {
-    console.log('激活', vscode.workspace.workspaceFolders);
-  }
-
+  console.log('激活', vscode.workspace.workspaceFolders);
   console.log('🧠 MindStudio 插件加载器已激活。');
   const installer = new MindStudioPluginInstaller(context, {
     pluginId: 'ascend.mindstudio-debug-vscode-plugin',
