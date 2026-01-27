@@ -71,6 +71,7 @@ import {
 } from './constants';
 import { FolderContextMenuService } from './service/folder-context-menu-service';
 import { OperatorProjectIconTheme } from './class/operator-project-icon-theme';
+import { welcomeMethods } from './controller/welcome-controller'
 
 let extensionContext: vscode.ExtensionContext | undefined;
 
@@ -738,6 +739,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // 工作区变化监听
   const watchWorkSpaceFolderChange =
     vscode.workspace.onDidChangeWorkspaceFolders(async () => {
+      console.log('工作区变化', vscode.workspace.workspaceFolders)
       vscode.commands.executeCommand(COMMAND_FLASH_MS_SANITIZER_RUN_DATA);
       vscode.commands.executeCommand(COMMAND_FLASH_PERFORMANCE_RUN_DATA);
       
@@ -760,20 +762,11 @@ export async function activate(context: vscode.ExtensionContext) {
   if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
     // 延迟执行，确保插件完全初始化
     setTimeout(async () => {
-      const { WorkspaceDetectorService } = await import('./service/workspace-detector-service.js');
-      
-      for (const folder of vscode.workspace.workspaceFolders!) {
-        await WorkspaceDetectorService.detectAndRegisterWorkspace(folder.uri.fsPath).catch((error) => {
-          console.error('检测工作区算子工程失败:', error);
-        });
-      }
+      welcomeMethods.openProject({ projectPath: vscode.workspace.workspaceFolders![0].uri.fsPath }, false)
     }, 2000);
   }
 
-  if (vscode.workspace.workspaceFolders) {
-    console.log('激活', vscode.workspace.workspaceFolders);
-  }
-
+  console.log('激活', vscode.workspace.workspaceFolders);
   console.log('🧠 MindStudio 插件加载器已激活。');
   const installer = new MindStudioPluginInstaller(context, {
     pluginId: 'ascend.mindstudio-debug-vscode-plugin',

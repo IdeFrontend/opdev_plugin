@@ -33,6 +33,35 @@ function getExtensionContext(): vscode.ExtensionContext {
     .extensionContext;
 }
 
+async function openFolderFn(url: string) {
+  // 如果项目已存在，直接打开目录
+  const localUri = vscode.Uri.file(url);
+
+  // 询问用户是在当前窗口打开还是新窗口打开
+  const choice = await vscode.window.showInformationMessage(
+    '选择打开方式',
+    { modal: true },
+    '当前窗口',
+    '新窗口',
+  );
+
+  // 如果用户取消了选择，则不执行打开操作
+  if (!choice) {
+    return;
+  }
+
+  const forceNewWindow = choice === '新窗口';
+
+  // 打开文件夹
+  try {
+    await vscode.commands.executeCommand('vscode.openFolder', localUri, { forceNewWindow: forceNewWindow });
+    vscode.window.showInformationMessage('打开算子工程目录成功');
+  }
+  catch (e) {
+    vscode.window.showErrorMessage(`打开算子工程目录失败: ${e instanceof Error ? e.message : String(e)}`);
+  }
+}
+
 export const welcomeMethods = {
   /**
    * 创建算子工程
@@ -300,7 +329,7 @@ export const welcomeMethods = {
    * 打开算子工程 (webview/openProject)
    * @param params - 参数
    */
-  async openProject(params: OpenProjectParams): Promise<void> {
+  async openProject(params: OpenProjectParams, needOpenFolder: boolean = true): Promise<void> {
     try {
       // 首先检查项目是否已在用户的配置数据中
       const existingProject = getProjectByPath(params.projectPath);
@@ -308,46 +337,8 @@ export const welcomeMethods = {
       if (existingProject) {
         console.log(`[openProject] 项目已在配置中: ${existingProject.project_name} (${existingProject.project_path})`);
 
-        // 如果是标准自定义算子，触发工作区检测服务来更新算子信息
-        if (existingProject.project_type === OperatorProjectType.STANDARD_CUSTOM) {
-          try {
-            const { WorkspaceDetectorService } = await import('../service/workspace-detector-service.js');
-
-            await WorkspaceDetectorService.detectAndRegisterWorkspace(params.projectPath)
-              .catch((error) => {
-                console.warn(`[openProject] 检测并更新算子信息失败: ${error instanceof Error ? error.message : String(error)}`);
-              });
-          }
-          catch (error) {
-            console.warn(`[openProject] 导入工作区检测服务失败: ${error instanceof Error ? error.message : String(error)}`);
-          }
-        }
-
-        // 如果项目已存在，直接打开目录
-        const localUri = vscode.Uri.file(params.projectPath);
-
-        // 询问用户是在当前窗口打开还是新窗口打开
-        const choice = await vscode.window.showInformationMessage(
-          '选择打开方式',
-          { modal: true },
-          '当前窗口',
-          '新窗口',
-        );
-
-        // 如果用户取消了选择，则不执行打开操作
-        if (!choice) {
-          return;
-        }
-
-        const forceNewWindow = choice === '新窗口';
-
-        // 打开文件夹
-        try {
-          await vscode.commands.executeCommand('vscode.openFolder', localUri, { forceNewWindow: forceNewWindow });
-          vscode.window.showInformationMessage('打开算子工程目录成功');
-        }
-        catch (e) {
-          vscode.window.showErrorMessage(`打开算子工程目录失败: ${e instanceof Error ? e.message : String(e)}`);
+        if (needOpenFolder) {
+          openFolderFn(params.projectPath)
         }
 
         return; // 退出函数，不再执行后续初始化操作
@@ -382,9 +373,16 @@ export const welcomeMethods = {
       }
 
       // 检测算子工程类型
-      vscode.window.showInformationMessage('正在检测算子工程类型...');
       const projectFullPath = path.join(params.projectPath, params.projectName);
       const rootDetection = await OperatorProjectDetector.detectOperatorProject(projectFullPath);
+
+      // 检测到打开的目录并不是算子工程
+      if (!rootDetection.projectType) {
+        if (needOpenFolder) {
+          openFolderFn(projectFullPath)
+        }
+        return
+      }
 
       // 将配置写入project.json文件
       try {
@@ -398,17 +396,6 @@ export const welcomeMethods = {
       }
       catch (error) {
         throw new Error(`初始化算子工程失败: ${error instanceof Error ? error.message : String(error)}`);
-      }
-
-      try {
-        await vscode.commands.executeCommand(
-          'revealInExplorer',
-          vscode.Uri.file(projectFullPath),
-        );
-      }
-      catch (error) {
-        console.warn(`在资源管理器中显示失败: ${error instanceof Error ? error.message : String(error)}`);
-        // 这个失败不影响项目创建，只记录警告
       }
 
       // 处理配置文件
@@ -426,7 +413,9 @@ export const welcomeMethods = {
         true
       );
       await pm.checkVscode();
-      await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+      if (needOpenFolder) {
+        await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+      }
 
       // 如果是标准自定义算子，扫描算子合集与算子并更新根项目（不为之新建 projects 项）
       if (rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM) {
@@ -447,31 +436,8 @@ export const welcomeMethods = {
       const normalizedProjectPath = path.normalize(params.projectPath);
       const normalizedProjectName = path.normalize(params.projectName);
       const fullProjectPath = path.join(normalizedProjectPath, normalizedProjectName);
-      // 在远程环境中，我们可以直接打开本地路径（相对于远程系统）
-      const localUri = vscode.Uri.file(fullProjectPath);
-
-      // 询问用户是在当前窗口打开还是新窗口打开
-      const choice = await vscode.window.showInformationMessage(
-        '选择打开方式',
-        { modal: true },
-        '当前窗口',
-        '新窗口',
-      );
-
-      // 如果用户取消了选择，则不执行打开操作，但已经创建成功
-      if (!choice) {
-        return;
-      }
-
-      const forceNewWindow = choice === '新窗口';
-
-      // 打开文件夹
-      try {
-        await vscode.commands.executeCommand('vscode.openFolder', localUri, { forceNewWindow: forceNewWindow });
-        vscode.window.showInformationMessage('打开算子工程目录成功');
-      }
-      catch (e) {
-        vscode.window.showErrorMessage(`打开算子工程目录失败: ${e instanceof Error ? e.message : String(e)}`);
+      if (needOpenFolder) {
+        openFolderFn(fullProjectPath)
       }
     }
     catch (error) {
