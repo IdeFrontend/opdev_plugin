@@ -26,6 +26,7 @@ import {
 } from '@plugin/domain/models/project-model';
 import { WorkspaceDetectorService } from '@plugin/service/workspace-detector-service';
 import { OpGeneratorFactory } from '@plugin/domain/services/op-generator-factory';
+import { OperatorProjectIconTheme } from '../class/operator-project-icon-theme';
 
 // 辅助函数：获取 extension context
 function getExtensionContext(): vscode.ExtensionContext {
@@ -329,7 +330,7 @@ export const welcomeMethods = {
    * 打开算子工程 (webview/openProject)
    * @param params - 参数
    */
-  async openProject(params: OpenProjectParams, needOpenFolder: boolean = true): Promise<void> {
+  async openProject(params: OpenProjectParams, isFromSystem: boolean = false): Promise<void> {
     try {
       // 首先检查项目是否已在用户的配置数据中
       const existingProject = getProjectByPath(params.projectPath);
@@ -337,7 +338,7 @@ export const welcomeMethods = {
       if (existingProject) {
         console.log(`[openProject] 项目已在配置中: ${existingProject.project_name} (${existingProject.project_path})`);
 
-        if (needOpenFolder) {
+        if (!isFromSystem) {
           openFolderFn(params.projectPath)
         }
 
@@ -360,6 +361,11 @@ export const welcomeMethods = {
 
       const executor = new CommandExecutor();
 
+      // 如果是系统打开而且没有环境变量脚本，则默认设置环境变量脚本
+      if (isFromSystem && !params.projectSH) {
+        params.projectSH = '/etc/profile'
+      }
+
       // 处理环境变量配置脚本
       if (params.projectSH) {
         try {
@@ -378,7 +384,7 @@ export const welcomeMethods = {
 
       // 检测到打开的目录并不是算子工程
       if (!rootDetection.projectType) {
-        if (needOpenFolder) {
+        if (!isFromSystem) {
           openFolderFn(projectFullPath)
         }
         return
@@ -413,7 +419,7 @@ export const welcomeMethods = {
         true
       );
       await pm.checkVscode();
-      if (needOpenFolder) {
+      if (!isFromSystem) {
         await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
       }
 
@@ -436,7 +442,12 @@ export const welcomeMethods = {
       const normalizedProjectPath = path.normalize(params.projectPath);
       const normalizedProjectName = path.normalize(params.projectName);
       const fullProjectPath = path.join(normalizedProjectPath, normalizedProjectName);
-      if (needOpenFolder) {
+      if (isFromSystem) {
+        // 系统级打开算子工程，只需刷新文件夹装饰
+        const iconTheme = OperatorProjectIconTheme.getInstance(context);
+        iconTheme.fireDecorationUpdate();
+      } else {
+        // 通过打开页打开算子工程
         openFolderFn(fullProjectPath)
       }
     }
