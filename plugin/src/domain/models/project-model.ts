@@ -193,7 +193,7 @@ export function getProjectByPath(projectPath: string): ProjectRecord | undefined
  * 查找包含指定路径的标准自定义算子工程（含多算子集合）
  * 用于右键子文件夹编译时，定位到根项目。
  * @param folderPath 文件夹路径（如子算子目录）
- * @returns 包含该路径的 STANDARD_CUSTOM 或 MULTI_PROJECT 项目，按路径最长优先；未找到返回 undefined
+ * @returns 包含该路径的 STANDARD_CUSTOM 项目，按路径最长优先；未找到返回 undefined
  */
 export function getContainingStandardCustomProject(folderPath: string): ProjectRecord | undefined {
   if (!folderPath || typeof folderPath !== 'string') {
@@ -209,7 +209,6 @@ export function getContainingStandardCustomProject(folderPath: string): ProjectR
     }
     if (
       p.project_type !== OperatorProjectType.STANDARD_CUSTOM
-      && p.project_type !== OperatorProjectType.MULTI_PROJECT
     ) {
       return false;
     }

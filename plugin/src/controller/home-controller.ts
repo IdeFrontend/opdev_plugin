@@ -255,48 +255,6 @@ export const homeMethods = {
         return { projectType: null, projectTypeName: '' };
       }
 
-      // 如果项目类型是 MULTI_PROJECT（算子工程集合），不显示集合类型
-      // 尝试从子项目中获取实际的算子类型，或者直接检测工作区路径
-      if (project.project_type === OperatorProjectType.MULTI_PROJECT) {
-        // 如果有子项目，尝试获取第一个子项目的类型
-        if (project.sub_project_ids && project.sub_project_ids.length > 0) {
-          const firstSubProjectId = project.sub_project_ids[0];
-          const subProject = getProjectById(firstSubProjectId);
-          if (subProject && subProject.project_type && subProject.project_type !== OperatorProjectType.MULTI_PROJECT) {
-            const typeNameMap: Record<string, string> = {
-              [OperatorProjectType.STANDARD_CUSTOM]: '标准自定义算子',
-              [OperatorProjectType.ASCEND_C]: '<<<>>>算子',
-              [OperatorProjectType.TORCH_LIBRARY]: 'torch_library算子',
-              [OperatorProjectType.PYASC]: 'pyasc算子',
-            };
-            const projectTypeName = typeNameMap[subProject.project_type] || subProject.project_type;
-            return {
-              projectType: subProject.project_type,
-              projectTypeName,
-            };
-          }
-        }
-
-        // 如果无法从子项目获取，直接检测工作区路径
-        const detection = await OperatorProjectDetector.detectOperatorProject(workspacePath);
-        if (detection.isOperatorProject && detection.projectType) {
-          const typeNameMap: Record<string, string> = {
-            [OperatorProjectType.STANDARD_CUSTOM]: '标准自定义算子',
-            [OperatorProjectType.ASCEND_C]: '<<<>>>算子',
-            [OperatorProjectType.TORCH_LIBRARY]: 'torch_library算子',
-            [OperatorProjectType.PYASC]: 'pyasc算子',
-          };
-          const projectTypeName = typeNameMap[detection.projectType] || detection.projectType;
-          return {
-            projectType: detection.projectType,
-            projectTypeName,
-          };
-        }
-
-        // 如果都无法获取，返回空字符串（不显示）
-        return { projectType: null, projectTypeName: '' };
-      }
-
       // 将项目类型转换为中文名称（只包括实际的算子类型）
       const typeNameMap: Record<string, string> = {
         [OperatorProjectType.STANDARD_CUSTOM]: '标准自定义算子',
