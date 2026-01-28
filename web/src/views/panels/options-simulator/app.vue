@@ -67,7 +67,7 @@ const handleConfirm = async () => {
     }
     
     // 执行仿真
-    await startSimulate({ operatorNames });
+    startSimulate({ operatorNames });
     setTimeout(() => {
       executeVscodeCommand('workbench.action.closeActiveEditor');
     }, 500);

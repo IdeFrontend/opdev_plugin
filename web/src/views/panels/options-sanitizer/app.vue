@@ -71,7 +71,7 @@ const handleConfirm = async () => {
     }
     
     // 执行异常检测
-    await runSanitizer({ operatorNames });
+    runSanitizer({ operatorNames });
     setTimeout(() => {
       executeVscodeCommand('workbench.action.closeActiveEditor');
     }, 500);
