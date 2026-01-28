@@ -3,9 +3,10 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 import { ProjectManager } from '@plugin/core/project/project-manager';
-import { getSanitizerCommand } from '@plugin/domain';
+import { getSanitizerCommand, getBuildExampleCommand } from '@plugin/domain';
 import { configService } from './config-service';
 import { buildService } from './build-service';
+import { OperatorProjectType, OperatorProjectDetector } from '@plugin/domain/services/operator-project-detector';
 
 const CONFIG_TYPES = { SANITIZER: 'sanitizer' } as const;
 
@@ -53,9 +54,46 @@ export class SanitizerService {
         return;
       }
 
-      // 创建文件夹
+      // 如果是标准自定义算子，需要编译 example
       const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (workspaceFolders && workspaceFolders.length > 0) {
+        const workspacePath = workspaceFolders[0].uri.fsPath;
+        try {
+          const rootDetection = await OperatorProjectDetector.detectOperatorProject(workspacePath);
+          const isRootStandardCustom = rootDetection.isOperatorProject && rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM;
 
+          if (isRootStandardCustom) {
+            const exConfigId = await buildService.getBuildExampleConfigId();
+            const exampleCompileOption = '';
+            const exampleBuildCommand = getBuildExampleCommand(
+              Number(exConfigId),
+              exampleCompileOption,
+              params.operatorNames,
+            );
+            const exampleBuildExecutor = ProjectManager.getInstance()
+              .getExecutor();
+            const exampleBuildRes = await exampleBuildExecutor.execute(
+              exampleBuildCommand,
+              [],
+              [],
+              {},
+              true,
+            );
+
+            console.log('example buildRes', exampleBuildRes);
+
+            if (exampleBuildRes.code !== 0) {
+              vscode.window.showErrorMessage(`编译示例失败 ${exampleBuildRes.output}`);
+              return;
+            }
+          }
+        }
+        catch (error) {
+          console.warn('[runSanitizer] 检测项目类型失败:', error);
+        }
+      }
+
+      // 创建文件夹
       if (workspaceFolders && workspaceFolders.length > 0) {
         const workspacePath = workspaceFolders[0].uri.fsPath;
         const logPath = path.join(
@@ -79,6 +117,7 @@ export class SanitizerService {
         getSanitizerCommand(
           Number(sanitizerConfigId),
           Number(exampleConfigId),
+          params.operatorNames,
         ) || '';
       const executor = ProjectManager.getInstance()
         .getExecutor();

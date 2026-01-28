@@ -464,6 +464,7 @@ export class BuildService {
       const simulateCommand = getSimulateCommand(
         Number(configId),
         Number(exConfigId),
+        params.operatorNames,
       );
 
       console.log('simulateCommand', simulateCommand);
@@ -531,6 +532,33 @@ export class BuildService {
       }
 
       await tryMarkOperatorsAsCompiled(Number(buildConfigId), params.operatorNames);
+
+      // 如果是标准自定义算子，需要编译 example
+      if (await isRootStandardCustom()) {
+        const exConfigId = await this.getBuildExampleConfigId();
+        const exampleCompileOption = '';
+        const exampleBuildCommand = getBuildExampleCommand(
+          Number(exConfigId),
+          exampleCompileOption,
+          params.operatorNames,
+        );
+        const exampleBuildExecutor = ProjectManager.getInstance()
+          .getExecutor();
+        const exampleBuildRes = await exampleBuildExecutor.execute(
+          exampleBuildCommand,
+          [],
+          [],
+          {},
+          true,
+        );
+
+        console.log('example buildRes', exampleBuildRes);
+
+        if (exampleBuildRes.code !== 0) {
+          vscode.window.showErrorMessage(`执行失败 ${exampleBuildRes.output}`);
+          return;
+        }
+      }
     }
 
     const configId = await this.getOnBoardConfigId();
@@ -542,6 +570,7 @@ export class BuildService {
       const onBoardCommand = getOnBoardCommand(
         Number(configId),
         Number(exConfigId),
+        params.operatorNames,
       );
 
       console.log('onBoardCommand', onBoardCommand);
