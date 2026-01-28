@@ -54,7 +54,7 @@ const handleConfirm = async () => {
   }
   try {
     isExecuting.value = true;
-    
+
     // 获取已选择的算子名称（如果是标准自定义算子）
     let operatorNames;
     try {
@@ -65,7 +65,7 @@ const handleConfirm = async () => {
     } catch (error) {
       console.warn('获取已选择的算子失败:', error);
     }
-    
+
     // 执行仿真
     startSimulate({ operatorNames });
     setTimeout(() => {
@@ -97,6 +97,7 @@ onMounted(() => {
       </div>
 
       <div class="simulate-content">
+        <a-alert type="info" show-icon message="执行仿真调优，需在代码中修改使用Model的配置，具体可参考README。" style="margin-bottom: 12px" />
         <div class="simulate-title">
           采集内容
           <a-tooltip :overlay-style="{ maxWidth: '300px' }">

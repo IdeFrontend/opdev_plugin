@@ -28,6 +28,10 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  projectType: {
+    type: String,
+    default: '',
+  },
 });
 
 const emit = defineEmits(['updateActiveOption']);
@@ -61,6 +65,7 @@ const updateActiveOption = (item) => {
         编译部署
       </div>
       <div
+        v-if="projectType !== 'pyasc'"
         class="options-list-item"
         :class="[Actived === 'sanitizer' ? 'is-active' : '']"
         @click="updateActiveOption('sanitizer')"

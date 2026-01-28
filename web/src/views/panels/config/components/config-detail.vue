@@ -23,6 +23,10 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  projectType: {
+    type: String,
+    default: '',
+  },
 });
 
 const buildConfigForme = ref({});
@@ -162,6 +166,7 @@ watch(
       :build-config-id="buildConfigId"
       :active-config="activeConfig"
       :is-standard-custom="isStandardCustom"
+      :project-type="projectType"
       @add-build-table-item="addBuildTableItem"
       @delete-build-table-item="deleteBuildTableItem"
       @add-example-table-item="addExampleTableItem"

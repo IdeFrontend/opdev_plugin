@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://gitcode.com/kaocong/mstt"
   },
-  "version": "1.2.15",
+  "version": "1.2.6",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -276,6 +276,12 @@
         {
           "command": "huawei-op-devtools.toggleOpsOperate",
           "when": "hasDevtoolConfig"
+        }
+      ],
+      "menuBar/file/new": [
+        {
+          "command": "huawei-op-devtools.open",
+          "title": "新建算子工程"
         }
       ],
       "view/title": [],
