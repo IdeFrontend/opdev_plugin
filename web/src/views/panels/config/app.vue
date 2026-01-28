@@ -11,7 +11,7 @@ import {
 } from 'vue';
 import optionsList from './components/options-list.vue';
 import configDetail from './components/config-detail.vue';
-import { getConfigData, getTargetTab, checkMultipleOperators } from '@web/apis';
+import { getConfigData, getTargetTab, checkMultipleOperators, getProjectType } from '@web/apis';
 import { useOpprofConfig } from './composables/use-opprof-config'
 
 const themeConfig = {
@@ -22,6 +22,7 @@ const activeConfig = ref('');
 const activeOption = ref('build');
 const configDetailRef = ref();
 const supportsSanitizerAndTuning = ref(true);
+const projectType = ref('');
 
 const updateActiveOption = (option) => {
   activeOption.value = option;
@@ -75,6 +76,16 @@ onMounted(async () => {
     supportsSanitizerAndTuning.value = true;
   }
 
+  // 获取当前项目类型
+  try {
+    const result = await getProjectType();
+    projectType.value = result.projectType || '';
+    console.log('[config] 当前项目类型:', projectType.value);
+  } catch (error) {
+    console.error('[config] 获取项目类型失败:', error);
+    projectType.value = '';
+  }
+
   // 加载配置数据
   await loadBuildConfig();
   
@@ -119,6 +130,7 @@ onUnmounted(() => {
             :active-config="activeConfig"
             :active-option="activeOption"
             :supports-sanitizer-and-tuning="supportsSanitizerAndTuning"
+            :project-type="projectType"
             @update-active-option="updateActiveOption"
           />
         </div>
@@ -127,6 +139,7 @@ onUnmounted(() => {
             ref="configDetailRef"
             :active-option="activeOption"
             :active-config="activeConfig"
+            :project-type="projectType"
           />
         </div>
       </div>

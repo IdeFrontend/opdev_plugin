@@ -271,12 +271,6 @@
         "label": "性能调优"
       }
     ],
-    "MenubarNewMenu": [
-      {
-        "command": "huawei-op-devtools.toggleOpsOperate",
-        "title": "新建算子工程"
-      }
-    ],
     "menus": {
       "commandPalette": [
         {
@@ -284,9 +278,9 @@
           "when": "hasDevtoolConfig"
         }
       ],
-      "MenubarNewMenu": [
+      "menuBar/file/new": [
         {
-          "command": "huawei-op-devtools.toggleOpsOperate",
+          "command": "huawei-op-devtools.open",
           "title": "新建算子工程"
         }
       ],
