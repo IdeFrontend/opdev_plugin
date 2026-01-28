@@ -61,7 +61,6 @@ const updateActiveOption = (item) => {
         编译部署
       </div>
       <div
-        v-if="supportsSanitizerAndTuning"
         class="options-list-item"
         :class="[Actived === 'sanitizer' ? 'is-active' : '']"
         @click="updateActiveOption('sanitizer')"

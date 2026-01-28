@@ -79,7 +79,7 @@ const handleConfirm = async () => {
     }
     
     // 执行上板
-    await startOnBoard({ operatorNames });
+    startOnBoard({ operatorNames });
     // 关闭当前页面
     setTimeout(() => {
       executeVscodeCommand('workbench.action.closeActiveEditor');
