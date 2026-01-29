@@ -4,11 +4,22 @@ import fs from 'fs-extra';
 import * as vscode from 'vscode';
 
 function getUserDataDir(): string {
+  // 优先从环境变量 WORKSPACK_FLODER 读取路径
+  const workspaceFolder = process.env.WORKSPACE_FOLDER;
+  
+  if (workspaceFolder) {
+    const dataDir = path.join(workspaceFolder, 'data', 'ms-op-suite');
+    fs.ensureDirSync(dataDir);
+    console.log('[getUserDataDir] 使用环境变量 WORKSPACK_FLODER:', workspaceFolder);
+    return dataDir;
+  }
+  
+  // 如果环境变量不存在，回退到原来的逻辑
   const home = os.homedir();
   const dataDir = path.join(home, '.vscode-server', 'data', 'ms-op-suite');
-
   fs.ensureDirSync(dataDir);
-
+  console.log('[getUserDataDir] 使用默认路径:', dataDir,'读取到的workspaceFolder=',workspaceFolder);
+  
   return dataDir;
 }
 
