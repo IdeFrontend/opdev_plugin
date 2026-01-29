@@ -113,7 +113,7 @@ const baseMenuItems = [
   },
   {
     key: 'runExample',
-    label: '运行验证',
+    label: '运行',
     icon: runIcon,
     handler: async () => {
       if (hasMultipleOperators.value) {
@@ -846,21 +846,18 @@ const saveSelectedOperators = async () => {
   }
 };
 
-// 加载已选择的算子
+// 加载已选择的算子；无保存选择时，按字母排序并选中第一个作为初始值
 const loadSelectedOperators = async () => {
   if (!isStandardCustom.value) {
     return;
   }
   try {
-    // 直接通过ID恢复，更准确
     const selectedIds = await getSelectedOperatorIds();
     console.log('[Operate] 从后端获取的已选择算子ID:', selectedIds);
-    
+
+    const allOps = [...compiledOperators.value, ...preparedOperators.value];
+
     if (selectedIds && selectedIds.length > 0) {
-      // 将数字ID转换为字符串ID（因为前端使用字符串ID）
-      const allOps = [...compiledOperators.value, ...preparedOperators.value];
-      console.log('[Operate] 所有可用算子:', allOps.map(op => ({ id: op.id, idType: typeof op.id, name: op.name })));
-      
       const matchedIds = allOps
         .filter(op => {
           const opIdNum = Number(op.id);
@@ -871,16 +868,27 @@ const loadSelectedOperators = async () => {
           return isMatch;
         })
         .map(op => op.id);
-      
+
       if (matchedIds.length > 0) {
         selectedOperatorIds.value = matchedIds;
         console.log('[Operate] 成功恢复已选择的算子:', matchedIds);
-      } else {
-        console.warn('[Operate] 未找到匹配的算子，保存的ID:', selectedIds, '可用的算子:', allOps.map(op => ({ id: op.id, name: op.name })));
+        return;
       }
+      console.warn('[Operate] 未找到匹配的算子，保存的ID:', selectedIds, '可用的算子:', allOps.map(op => ({ id: op.id, name: op.name })));
     } else {
       console.log('[Operate] 没有保存的已选择算子');
     }
+
+    // 无有效已选：按字母排序，选中第一个作为初始值并持久化
+    if (allOps.length === 0) {
+      return;
+    }
+
+    const sorted = [...allOps].sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
+    const first = sorted[0];
+    selectedOperatorIds.value = [first.id];
+    await setSelectedOperators([Number(first.id)]);
+    console.log('[Operate] 已设置初始选中算子（按字母排序第一个）:', first.name);
   } catch (error) {
     console.error('[Operate] 加载已选择的算子失败:', error);
   }
@@ -1058,27 +1066,45 @@ const handleConfirm = () => {
             <a-sub-menu v-if="item.children && item.children.length > 0" :key="`submenu-${item.key}`">
               <template #title>
                 <a-tooltip v-if="areAllChildrenDisabledByMultipleOperators(item)" title="该功能只支持单算子执行" placement="right">
-                  <div v-if="item.icon" class="single-box">
-                    <span class="inline-flex items-center text-[11px]">
-                      <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
-                      <span class="text-white/85">{{ item.label }}</span>
-                    </span>
+                  <span v-if="item.icon" class="inline-flex items-center text-[11px]">
+                    <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
+                    <span class="text-white/85">{{ item.label }}</span>
+                    <a-tooltip
+                      v-if="item.key === 'build' && isStandardCustom"
+                      title="不选择算子，则默认编译整个算子包"
+                      placement="right"
+                    >
+                      <QuestionCircleOutlined
+                        class="info-icon ml-1"
+                        @click.stop
+                      />
+                    </a-tooltip>
+                    
                     <div v-if="item.key === 'runDebug'" class="setting-box">
                       <SettingOutlined @click.stop="debugConfig()" />
                     </div>
-                  </div>
+                  </span>
                   <span v-else class="text-white/85">{{ item.label }}</span>
                 </a-tooltip>
                 <template v-else>
-                  <div v-if="item.icon" class="single-box">
-                    <span class="inline-flex items-center text-[11px]">
-                      <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
-                      <span class="text-white/85">{{ item.label }}</span>
-                    </span>
+                  <span v-if="item.icon" class="inline-flex items-center text-[11px]">
+                    <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
+                    <span class="text-white/85">{{ item.label }}</span>
+                    <a-tooltip
+                      v-if="item.key === 'build' && isStandardCustom"
+                      title="不选择算子，则默认编译整个算子包"
+                      placement="right"
+                    >
+                      <QuestionCircleOutlined
+                        class="info-icon ml-1"
+                        @click.stop
+                      />
+                    </a-tooltip>
+                    
                     <div v-if="item.key === 'runDebug'" class="setting-box">
                       <SettingOutlined @click.stop="debugConfig()" />
                     </div>
-                  </div>
+                  </span>
                   <span v-else class="text-white/85">{{ item.label }}</span>
                 </template>
               </template>
@@ -1093,9 +1119,6 @@ const handleConfirm = () => {
                     <div class="single-box">
                       {{ child.label }}
                       <div class="flex items-center gap-1">
-                        <a-tooltip v-if="(child.key === 'simulation' || child.key === 'onboard') && projectType === 'pyasc'" title="性能调优需修改相关代码模式，具体可参考README.md" placement="right">
-                          <QuestionCircleOutlined class="info-icon" />
-                        </a-tooltip>
                         <div v-if="child.key === 'simulation' || child.key === 'onboard'" class="setting-box">
                           <SettingOutlined @click.stop="openSetting(child.key)" />
                         </div>
@@ -1105,9 +1128,6 @@ const handleConfirm = () => {
                   <div v-else class="single-box">
                     {{ child.label }}
                     <div class="flex items-center gap-1">
-                      <a-tooltip v-if="(child.key === 'simulation' || child.key === 'onboard') && projectType === 'pyasc'" title="性能调优需修改相关代码模式，具体可参考README.md" placement="right">
-                        <QuestionCircleOutlined class="info-icon" />
-                      </a-tooltip>
                       <div v-if="child.key === 'simulation' || child.key === 'onboard'" class="setting-box">
                         <SettingOutlined @click.stop="openSetting(child.key)" />
                       </div>
@@ -1132,10 +1152,20 @@ const handleConfirm = () => {
             }">
               <a-tooltip v-if="isDisabledByMultipleOperators(item.key)" title="该功能只支持单算子执行" placement="right">
                 <div v-if="item.icon" class="single-box">
-                  <span class="inline-flex items-center text-[11px]">
+                  <div class="inline-flex items-center text-[11px]">
                     <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
                     <span class="text-white/85">{{ item.label }}</span>
-                  </span>
+                  </div>
+                  <a-tooltip
+                    v-if="item.key === 'build' && isStandardCustom"
+                    title="不选择算子，则默认编译整个算子包"
+                    placement="right"
+                  >
+                    <QuestionCircleOutlined
+                      class="info-icon ml-1 setting-box"
+                      @click.stop
+                    />
+                  </a-tooltip>
                   <div v-if="item.key === 'sanitizer'" class="setting-box">
                     <SettingOutlined @click.stop="openSetting(item.key)" />
                   </div>
@@ -1144,10 +1174,20 @@ const handleConfirm = () => {
               </a-tooltip>
               <template v-else>
                 <div v-if="item.icon" class="single-box">
-                  <span class="inline-flex items-center text-[11px]">
+                  <div class="inline-flex items-center text-[11px]">
                     <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
                     <span class="text-white/85">{{ item.label }}</span>
-                  </span>
+                  </div>
+                  <a-tooltip
+                    v-if="item.key === 'build' && isStandardCustom"
+                    title="不选择算子，则默认编译整个算子包"
+                    placement="right"
+                  >
+                    <QuestionCircleOutlined
+                      class="info-icon ml-1 setting-box"
+                      @click.stop
+                    />
+                  </a-tooltip>
                   <div v-if="item.key === 'sanitizer'" class="setting-box">
                     <SettingOutlined @click.stop="openSetting(item.key)" />
                   </div>

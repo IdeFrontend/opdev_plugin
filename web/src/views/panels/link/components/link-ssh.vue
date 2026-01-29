@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import { useLinkSSH } from '../composables/use-link-ssh';
 import { FormRulesFactory } from '../composables/form-rules';
+import tipBase_0 from '@/assets/imgs/add.png';
 import tipBase_1_1 from '@/assets/imgs/hello_world.png';
 import tipBase_1_2 from '@/assets/imgs/add_custom.png';
 import tipBase_1_3 from '@/assets/imgs/torch_library_template.png';
-import jsonUrl from './test.json'
 import {
   getProjectType,
 } from '@web/apis';
@@ -78,11 +78,11 @@ const ascendProject = {
 const pyascProject = {
   id: 3,
   title: '【Python】pyasc算子工程',
-  desc: '创建<<<>>>调用的hallo_world工程样例，支持.asc后缀的异构编译' 
+  desc: '基于pyasc创建自定义Add算子样例工程'
 }
 const items_type = ref([cannProject, pyascProject])
 
-const tipBase_0 = jsonUrl.url
+
 
 const connectionFormRules = FormRulesFactory.createFormRules();
 
@@ -115,23 +115,18 @@ onMounted(async () => {
         </div>
         <div class="">
           <div class="mb-5">
-            <div
-              v-for="item in items_type"
-              :key="item.id"
+            <div v-for="item in items_type" :key="item.id"
               class="bg-transparent p-5 my-5 border border-[#464646] rounded-lg cursor-pointer transition-all duration-300 overflow-hidden relative hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)] group max-[960px]:flex-auto max-[960px]:min-w-0"
               :class="{
                 'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)] selected':
                   selectedId_type === item.id,
-              }"
-              @click="selectedId_type = item.id"
-            >
+              }" @click="selectedId_type = item.id">
               <div class="font-extrabold text-[initial] mb-[25px] text-white">
                 {{ item.title }}
               </div>
               <div
                 class="leading-8 mt-2.5 text-white text-[13px] mb-2.5 whitespace-nowrap overflow-hidden text-ellipsis group-[.selected]:whitespace-normal group-[.selected]:overflow-visible group-[.selected]:text-clip"
-                v-html="item.id === 1 ? getTemplateDesc(selectedTemplate) : item.desc"
-              >
+                v-html="item.id === 1 ? getTemplateDesc(selectedTemplate) : item.desc">
               </div>
               <a-tag v-if="item.id === 1 || item.id === 2" color="blue" class="mt-2.5 mr-2">
                 语言：Ascend C
@@ -148,12 +143,8 @@ onMounted(async () => {
               <a-tag v-if="item.id === 3" color="purple" class="mt-2.5 mr-2">
                 类型：pyasc
               </a-tag>
-              <div
-                v-if="item.id === 1"
-                class="mt-4 flex gap-4">
-                <a-radio-group
-                  v-model:value="selectedTemplate"
-                  class="flex gap-4">
+              <div v-if="item.id === 1" class="mt-4 flex gap-4">
+                <a-radio-group v-model:value="selectedTemplate" class="flex gap-4">
                   <a-radio value="helloworld">
                     helloworld
                   </a-radio>
