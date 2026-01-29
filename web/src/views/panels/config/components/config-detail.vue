@@ -8,6 +8,7 @@
 import buildConfig from './build-config.vue';
 import sanitizerConfig from './sanitizer-config.vue';
 import opprofConfig from './opprof-config.vue';
+import envConfig from './env-config.vue';
 
 import {
   ref, watch, nextTick, onMounted,
@@ -172,6 +173,7 @@ watch(
       v-if="props.activeOption === 'opprof'"
       ref="opprofRef"
     />
+    <envConfig v-if="props.activeOption === 'env'" />
   </div>
 </template>
 

@@ -6,7 +6,6 @@ import {
 import settingIcon from '@web/assets/svg/setting.svg';
 import buildIcon from '@web/assets/svg/build.svg';
 import runIcon from '@web/assets/svg/run.svg';
-import shIcon from '@web/assets/svg/sh.svg';
 import powerIcon from '@web/assets/svg/power.svg';
 import debugIcon from '@web/assets/svg/debug.svg';
 import checkIcon from '@web/assets/svg/check.svg';
@@ -22,7 +21,6 @@ import {
   runDebug,
   debugConfig,
   runCpuDebug,
-  cpuDebugConfig,
   navigateToTab,
   checkMultipleOperators,
   getProjectType,
@@ -180,14 +178,6 @@ const baseMenuItems = [
       },
     ],
   },
-  {
-    key: 'projectSH',
-    label: '环境配置',
-    icon: shIcon,
-    handler: async () => {
-      await openConfig({ configName: 'huawei-op-devtools.projectSH' });
-    },
-  },
 ];
 
 // 动态计算菜单项（根据调试模式开关决定是否包含调试菜单）
@@ -197,48 +187,30 @@ const menuItems = computed(() => {
   // 构建调试菜单的子菜单项
   const debugChildren = [];
 
-  // 如果项目类型不是 ascend，且不是 cann 类型的 torch_library_template，添加CPU调试相关的子菜单项
+  // 如果项目类型不是 ascend，且不是 cann 类型的 torch_library_template，添加CPU调试子菜单项
   const isCannTorchLibrary = projectType.value === 'cann' && projectTemplateName.value === 'torch_library_template';
   if (projectType.value !== 'ascend' && !isCannTorchLibrary) {
-    debugChildren.push(
-      {
-        key: 'buildAndCpuDebug',
-        label: 'CPU调试',
-        handler: async () => {
-          await runCpuDebug();
-        },
+    debugChildren.push({
+      key: 'buildAndCpuDebug',
+      label: 'CPU调试',
+      handler: async () => {
+        await runCpuDebug();
       },
-      {
-        key: 'cpuDebugConfig',
-        label: 'CPU调试配置',
-        handler: async () => {
-          await cpuDebugConfig();
-        },
-      },
-    );
+    });
   }
 
-  // 如果启用了调试模式，添加NPU调试相关的子菜单项
+  // 如果启用了调试模式，添加NPU调试子菜单项
   if (debugModeEnabled.value) {
-    debugChildren.push(
-      {
-        key: 'buildAndDebug',
-        label: 'NPU调试',
-        handler: async () => {
-          await runDebug();
-        },
+    debugChildren.push({
+      key: 'buildAndDebug',
+      label: 'NPU调试',
+      handler: async () => {
+        await runDebug();
       },
-      {
-        key: 'debugConfig',
-        label: 'NPU调试配置',
-        handler: async () => {
-          await debugConfig();
-        },
-      },
-    );
+    });
   }
 
-  // 在"运行验证"后插入调试菜单（只有当有子菜单项时才显示）
+  // 只有当有子菜单项时才显示调试菜单
   if (debugChildren.length > 0) {
     const runExampleIndex = items.findIndex(item => item.key === 'runExample');
     if (runExampleIndex !== -1) {
@@ -289,7 +261,7 @@ const hasMultipleSelectedOperators = computed(() => {
 });
 
 // 允许在多算子选择时使用的菜单项
-const allowedKeysForMultipleOperators = ['projectConfig', 'build', 'projectSH'];
+const allowedKeysForMultipleOperators = ['projectConfig', 'build'];
 
 // 判断菜单项是否因为多算子选择而被禁用
 const isDisabledByMultipleOperators = (itemKey) => {
@@ -928,6 +900,11 @@ const handlePopoverOpenChange = async (open) => {
     }
   }
 };
+
+// 处理确认按钮点击，关闭下拉框
+const handleConfirm = () => {
+  operatorSelectorVisible.value = false;
+};
 </script>
 
 <template>
@@ -1031,6 +1008,13 @@ const handlePopoverOpenChange = async (open) => {
                     </a-collapse-panel>
                   </a-collapse>
                 </div>
+
+                <!-- 确认按钮 -->
+                <div class="confirm-section">
+                  <a-button type="primary" class="confirm-button" @click="handleConfirm">
+                    确认
+                  </a-button>
+                </div>
               </div>
             </template>
             <template #default>
@@ -1074,17 +1058,27 @@ const handlePopoverOpenChange = async (open) => {
             <a-sub-menu v-if="item.children && item.children.length > 0" :key="`submenu-${item.key}`">
               <template #title>
                 <a-tooltip v-if="areAllChildrenDisabledByMultipleOperators(item)" title="该功能只支持单算子执行" placement="right">
-                  <span v-if="item.icon" class="inline-flex items-center text-[11px]">
-                    <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
-                    <span class="text-white/85">{{ item.label }}</span>
-                  </span>
+                  <div v-if="item.icon" class="single-box">
+                    <span class="inline-flex items-center text-[11px]">
+                      <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
+                      <span class="text-white/85">{{ item.label }}</span>
+                    </span>
+                    <div v-if="item.key === 'runDebug'" class="setting-box">
+                      <SettingOutlined @click.stop="debugConfig()" />
+                    </div>
+                  </div>
                   <span v-else class="text-white/85">{{ item.label }}</span>
                 </a-tooltip>
                 <template v-else>
-                  <span v-if="item.icon" class="inline-flex items-center text-[11px]">
-                    <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
-                    <span class="text-white/85">{{ item.label }}</span>
-                  </span>
+                  <div v-if="item.icon" class="single-box">
+                    <span class="inline-flex items-center text-[11px]">
+                      <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
+                      <span class="text-white/85">{{ item.label }}</span>
+                    </span>
+                    <div v-if="item.key === 'runDebug'" class="setting-box">
+                      <SettingOutlined @click.stop="debugConfig()" />
+                    </div>
+                  </div>
                   <span v-else class="text-white/85">{{ item.label }}</span>
                 </template>
               </template>
@@ -1341,6 +1335,20 @@ body {
 
 .search-section {
   margin-top: 8px;
+}
+
+.confirm-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #434343;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.confirm-button {
+  width: 100%;
+  height: 32px;
+  font-size: 12px;
 }
 
 .operator-collapse {

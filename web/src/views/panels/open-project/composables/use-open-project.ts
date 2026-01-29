@@ -9,6 +9,7 @@ import {
   getWorkspace,
   openProject,
 } from '@web/apis';
+import { selectFolder, selectFile } from '@web/apis/performance-run-data';
 import { MessageHandlerStrategyManager } from '../../link/composables/message-handler-strategies';
 import { SearchStrategyFactory } from '../../link/composables/search-strategies';
 
@@ -87,6 +88,38 @@ export function useOpenProject() {
     const strategy = SearchStrategyFactory.getStrategy(type);
 
     await strategy.search(keyword);
+  };
+
+  // 选择目录
+  const handleSelectFolder = async () => {
+    try {
+      const selectedPath = await selectFolder({
+        defaultPath: projectFormData.projectPath,
+      });
+      if (selectedPath) {
+        projectFormData.projectPath = selectedPath;
+      }
+    }
+    catch (error) {
+      console.error('选择目录失败:', error);
+      message.error('选择目录失败');
+    }
+  };
+
+  // 选择文件
+  const handleSelectFile = async () => {
+    try {
+      const selectedPath = await selectFile({
+        defaultPath: projectFormData.projectSH,
+      });
+      if (selectedPath) {
+        projectFormData.projectSH = selectedPath;
+      }
+    }
+    catch (error) {
+      console.error('选择文件失败:', error);
+      message.error('选择文件失败');
+    }
   };
 
   // 打开项目
@@ -172,6 +205,8 @@ export function useOpenProject() {
     projectSHOptions: projectSHSearchStrategy.getOptions(),
     projectSHLoading: projectSHSearchStrategy.getLoading(),
     remoteSearch,
+    handleSelectFolder,
+    handleSelectFile,
     handleOpenProject,
   };
 }
