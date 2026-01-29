@@ -90,6 +90,18 @@ const updateActiveOption = (item) => {
         />
         性能调优
       </div>
+      <div
+        class="options-list-item"
+        :class="[Actived === 'env' ? 'is-active' : '']"
+        @click="updateActiveOption('env')"
+      >
+        <img
+          src="../../../../assets/svg/sh.svg"
+          alt=""
+          class="img"
+        />
+        环境变量
+      </div>
     </div>
   </div>
 </template>

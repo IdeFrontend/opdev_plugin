@@ -93,7 +93,17 @@ export type DeleteNodeParams = {
   filePath?: string;
 };
 
+export type SelectFolderParams = {
+  defaultPath?: string;
+};
+
 export type SelectFolderResult = string;
+
+export type SelectFileParams = {
+  defaultPath?: string;
+};
+
+export type SelectFileResult = string;
 
 export type CheckDevtoolConfigResult = boolean;
 

@@ -12,6 +12,8 @@ const {
   projectSHOptions,
   projectSHLoading,
   remoteSearch,
+  handleSelectFolder,
+  handleSelectFile,
   handleOpenProject,
 } = useOpenProject();
 
@@ -31,9 +33,7 @@ const connectionFormRules = OpenProjectFormRulesFactory.createFormRules();
         </template>
         <a-auto-complete v-model:value="projectFormData.projectPath" :options="projectPathOptions"
           :loading="projectPathLoading" placeholder="请输入工程位置，支持远程搜索"
-          @search="(val) => remoteSearch('projectPath', val)" @focus="
-            () => remoteSearch('projectPath', projectFormData.projectPath)
-          " />
+          @search="(val) => remoteSearch('projectPath', val)" @focus="handleSelectFolder" />
       </a-form-item>
       <a-form-item name="projectSH">
         <template #label>
@@ -45,9 +45,7 @@ const connectionFormRules = OpenProjectFormRulesFactory.createFormRules();
         </template>
         <a-auto-complete v-model:value="projectFormData.projectSH" :options="projectSHOptions"
           :loading="projectSHLoading" placeholder="请输入环境变量.sh文件地址，支持远程搜索"
-          @search="(val) => remoteSearch('projectSH', val)" @focus="
-            () => remoteSearch('projectSH', projectFormData.projectSH)
-          " />
+          @search="(val) => remoteSearch('projectSH', val)" @focus="handleSelectFile" />
       </a-form-item>
     </a-form>
     <a-button type="primary" class="!mt-6 !w-[84px] !h-8 !rounded-none" style="float: right;" @click="handleOpenProject">

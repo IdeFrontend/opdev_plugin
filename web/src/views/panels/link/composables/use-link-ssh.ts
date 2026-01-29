@@ -9,6 +9,7 @@ import {
   getLastProjectPath,
   getWorkspace,
 } from '@web/apis';
+import { selectFolder, selectFile } from '@web/apis/performance-run-data';
 import { ValidationStrategyFactory } from './validation-strategies';
 import { MessageHandlerStrategyManager } from './message-handler-strategies';
 import { SearchStrategyFactory } from './search-strategies';
@@ -102,6 +103,40 @@ export function useLinkSSH(selectedTemplate?: Ref<'helloworld' | 'addn' | 'torch
       torch_library_template: 'torch_library_template',
     };
     return mapping[template];
+  };
+
+  // 选择目录
+  const handleSelectFolder = async () => {
+    try {
+      const selectedPath = await selectFolder({
+        defaultPath: projectFormData.projectPath,
+      });
+      console.log(selectedPath);
+      
+      if (selectedPath) {
+        projectFormData.projectPath = selectedPath;
+      }
+    }
+    catch (error) {
+      console.error('选择目录失败:', error);
+      message.error('选择目录失败');
+    }
+  };
+
+  // 选择文件
+  const handleSelectFile = async () => {
+    try {
+      const selectedPath = await selectFile({
+        defaultPath: projectFormData.projectSH,
+      });
+      if (selectedPath) {
+        projectFormData.projectSH = selectedPath;
+      }
+    }
+    catch (error) {
+      console.error('选择文件失败:', error);
+      message.error('选择文件失败');
+    }
   };
 
   // 创建项目
@@ -199,6 +234,8 @@ export function useLinkSSH(selectedTemplate?: Ref<'helloworld' | 'addn' | 'torch
     projectSHOptions: projectSHSearchStrategy.getOptions(),
     projectSHLoading: projectSHSearchStrategy.getLoading(),
     remoteSearch,
+    handleSelectFolder,
+    handleSelectFile,
     handleCreatedProject,
   };
 }

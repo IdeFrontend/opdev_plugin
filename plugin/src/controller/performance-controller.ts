@@ -4,7 +4,10 @@ import * as path from 'path';
 import {
   DownloadDataParams,
   DeleteNodeParams,
+  SelectFolderParams,
   SelectFolderResult,
+  SelectFileParams,
+  SelectFileResult,
   JumpToFileParams,
 } from '@shared/api-types';
 
@@ -118,16 +121,104 @@ export const performanceDataMethods = {
 
   /**
    * 选择文件夹
+   * @param params 选择参数，包含可选的默认路径
    * @returns 选择的文件夹路径
    */
-  async selectFolder(): Promise<SelectFolderResult | null> {
-    // 调用 VS Code 原生对话框（支持选择目录）
-    const uris = await vscode.window.showOpenDialog({
+  async selectFolder(params?: SelectFolderParams): Promise<SelectFolderResult | null> {
+    const options: vscode.OpenDialogOptions = {
       canSelectFiles: false,
       canSelectFolders: true,
       canSelectMany: false,
       openLabel: '选择目录',
-    });
+    };
+
+    // 如果提供了默认路径，使用它作为初始路径
+    if (params?.defaultPath) {
+      try {
+        const defaultUri = vscode.Uri.file(params.defaultPath);
+        const stat = await vscode.workspace.fs.stat(defaultUri);
+        
+        // 如果路径是目录，直接使用
+        if (stat.type === vscode.FileType.Directory) {
+          options.defaultUri = defaultUri;
+        }
+        // 如果路径是文件，使用其父目录
+        else {
+          options.defaultUri = vscode.Uri.file(path.dirname(params.defaultPath));
+        }
+      }
+      catch {
+        // 如果路径不存在或无效，尝试使用父目录
+        try {
+          const parentPath = path.dirname(params.defaultPath);
+          if (parentPath && parentPath !== params.defaultPath) {
+            options.defaultUri = vscode.Uri.file(parentPath);
+          }
+        }
+        catch {
+          // 忽略错误，使用默认行为
+        }
+      }
+    }
+
+    // 调用 VS Code 原生对话框（支持选择目录）
+    const uris = await vscode.window.showOpenDialog(options);
+
+    if (uris && uris[0]) {
+      return uris[0].fsPath;
+    }
+
+    return null;
+  },
+
+  /**
+   * 选择文件
+   * @param params 选择参数，包含可选的默认路径
+   * @returns 选择的文件路径
+   */
+  async selectFile(params?: SelectFileParams): Promise<SelectFileResult | null> {
+    const options: vscode.OpenDialogOptions = {
+      canSelectFiles: true,
+      canSelectFolders: false,
+      canSelectMany: false,
+      openLabel: '选择文件',
+      filters: {
+        'Shell脚本': ['sh'],
+        '所有文件': ['*'],
+      },
+    };
+
+    // 如果提供了默认路径，使用它作为初始路径
+    if (params?.defaultPath) {
+      try {
+        const defaultUri = vscode.Uri.file(params.defaultPath);
+        const stat = await vscode.workspace.fs.stat(defaultUri);
+        
+        // 如果路径是文件，直接使用
+        if (stat.type === vscode.FileType.File) {
+          options.defaultUri = defaultUri;
+        }
+        // 如果路径是目录，使用该目录
+        else {
+          options.defaultUri = defaultUri;
+        }
+      }
+      catch {
+        // 如果路径不存在，尝试使用父目录
+        try {
+          const parentPath = path.dirname(params.defaultPath);
+          if (parentPath && parentPath !== params.defaultPath) {
+            options.defaultUri = vscode.Uri.file(parentPath);
+          }
+        }
+        catch {
+          // 忽略错误，使用默认行为
+        }
+      }
+    }
+
+    // 调用 VS Code 原生对话框（支持选择文件）
+    const uris = await vscode.window.showOpenDialog(options);
 
     if (uris && uris[0]) {
       return uris[0].fsPath;
