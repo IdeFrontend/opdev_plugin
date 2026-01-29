@@ -272,7 +272,7 @@ export async function generateStructure(
         project_id: project.id,
         user_options: {
           op: record.op_name,
-          script: `bash ${opScriptPath}`,
+          script: record.op_type === 'ascend' ? `bash ${opScriptPath} --pkg --soc=${soc_version} --vendor_name=custom` : `bash ${opScriptPath}`,
           config_name: record.op_name,
           target_dir: targetDir,
           target_file: targetFile,
@@ -308,7 +308,8 @@ export async function generateStructure(
         project_id: project.id,
         user_options: {
           op: record.op_name,
-          script: `bash ${record.op_name}.sh`,
+          script: record.op_type === 'ascend' ? `bash ${opScriptPath} --pkg --soc=${soc_version} --vendor_name=custom --mssanitizer` : `bash ${opScriptPath} --mssanitizer`,
+           target_file: targetFile,
           config_name: record.op_name,
           tool: {
             memcheck: true,

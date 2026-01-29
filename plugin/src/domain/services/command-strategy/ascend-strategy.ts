@@ -71,25 +71,9 @@ export class AscendCommandStrategy implements CommandStrategy {
   buildOpCommand(params: CommandBuildParams): string {
     const { config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames } = params;
 
-    let soc = soc_version;
-    let vendor_name = 'custom';
-    const args = parse_cmd_options(config.custom_options || null);
-
-    if (args && args.vendor_name) {
-      vendor_name = args.vendor_name;
-    }
-
-    if (args && args.soc) {
-      soc = args.soc;
-    }
-
     const cmd = new Command(config.script || '');
 
-    const options: Record<string, unknown> = {
-      pkg: true,
-      soc,
-      vendor_name,
-    };
+    const options: Record<string, unknown> = {};
 
     // 只有当 operatorNames 存在且不为空时，才添加 ops 参数
     if (operatorNames && operatorNames.trim()) {

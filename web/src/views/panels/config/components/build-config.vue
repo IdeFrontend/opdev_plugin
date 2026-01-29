@@ -5,9 +5,9 @@
  * LICENSE file in the root directory of this source tree. -->
 <script setup>
 import {
-  ref, watch,
+  ref, watch, onBeforeMount
 } from 'vue';
-import { saveBuildConfig as saveBuildConfigAPI } from '@web/apis';
+import { saveBuildConfig as saveBuildConfigAPI, getSanitizerConfigs, saveSanitizerForm } from '@web/apis';
 
 const props = defineProps({
   buidlConfigData: {
@@ -110,6 +110,18 @@ const getSaveData = () => {
 
   return JSON.parse(JSON.stringify(data));
 };
+
+const sanitizerScript = ref('')
+
+const handSanitizerConfigChange = () => {
+  saveSanitizerForm({ data: { script: sanitizerScript.value } });
+};
+
+onBeforeMount(async () => {
+  const configs = await getSanitizerConfigs();
+  const obj = (configs[0] || {})?.user_options || {};
+  sanitizerScript.value = obj.script || ''
+});
 </script>
 
 <template>
@@ -164,6 +176,17 @@ const getSaveData = () => {
           v-model:value="localBuildConfigForme.script"
           placeholder="请输入编译命令行"
           @change="handleBuildConfigChange"
+        />
+      </a-form-item>
+      <!-- v-if="isStandardCustom" -->
+      <a-form-item
+        label="异常检测编译命令行"
+        name="script"
+      >
+        <a-input
+          v-model:value="sanitizerScript.script"
+          placeholder="请输入异常检测编译命令行"
+          @change="handSanitizerConfigChange"
         />
       </a-form-item>
     </a-form>
