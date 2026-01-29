@@ -38,6 +38,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  projectType: {
+    type: String,
+    default: '',
+  },
 });
 const emit = defineEmits([
   'addBuildTableItem',
@@ -159,16 +163,17 @@ onBeforeMount(async () => {
         />
       </a-form-item>
       <a-form-item
-        :label="isStandardCustom ? '算子部署命令' : '算子运行验证命令行'"
+        :label="isStandardCustom ? '算子部署命令' : '算子运行命令行'"
         name="ipAddress"
       >
         <a-input
           v-model:value="localBuildConfigForme.target_file"
-          :placeholder="isStandardCustom ? '请输入算子部署命令' : '请输入算子运行验证命令行'"
+          :placeholder="isStandardCustom ? '请输入算子部署命令' : '请输入算子运行命令行'"
           @change="handleBuildConfigChange"
         />
       </a-form-item>
       <a-form-item
+        v-if="projectType !== 'pyasc'"
         label="编译命令行"
         name="script"
       >
@@ -221,12 +226,12 @@ onBeforeMount(async () => {
         </a-radio-group>
       </a-form-item>
       <a-form-item
-        label="算子运行验证命令行"
+        label="算子运行命令行"
         name="script"
       >
         <a-input
           v-model:value="localExampleConfigForme.script"
-          placeholder="请输入算子运行验证命令行"
+          placeholder="请输入算子运行命令行"
           @change="handleExampleConfigChange"
         />
       </a-form-item>

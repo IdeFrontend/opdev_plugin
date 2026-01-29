@@ -75,7 +75,7 @@ const handleConfirm = async () => {
         operatorNames = selectedOperators;
       }
     } catch (error) {
-      console.warn('获取已选择的算子失败:', error);
+      console.warn('获取已选择的算子失败', error);
     }
     
     // 执行上板
@@ -185,12 +185,29 @@ onMounted(() => {
       </div>
 
       <div class="board-content">
+        <a-alert
+            type="info"
+            show-icon
+            style="margin-top: 12px"
+            class="board-alert-info-content"
+        >
+          <template #message>
+            <div style="white-space: pre-line;">
+              <div>
+                1、执行上板调优，需在代码中修改使用NPU的配置，具体可参考README。
+              </div>
+              <div>
+                2、若勾选"Roofline瓶颈分析"或"Cache热力图"，将默认采集所有算子性能指标。
+              </div>
+            </div>
+          </template>
+        </a-alert>
         <div class="board-title">
           采集内容
           <a-tooltip :overlay-style="{ maxWidth: '300px' }">
             <template #title>
               <div>
-                具体图形案例请参考<span style="color: #1677ff; cursor: pointer;" @click="jumpToGuide">算子调优工具概述</span>
+                具体图形案例请参考 <span style="color: #1677ff; cursor: pointer;" @click="jumpToGuide">算子调优工具概述</span>
               </div>
             </template>
             <QuestionCircleOutlined class="help-icon" />
@@ -210,7 +227,7 @@ onMounted(() => {
             v-model:checked="onboardData.user_options.Occupancy"
             @change="handleSave"
           >
-            核间负载分析图
+            核间负载分析）
           </a-checkbox>
           <a-checkbox
             v-model:checked="onboardData.user_options.Roofline"
@@ -229,7 +246,7 @@ onMounted(() => {
             v-model:checked="onboardData.user_options.Source"
             @change="handleSave"
           >
-            算子代码热点图
+            算子代码热点）
           </a-checkbox>
         </div>
 
@@ -299,16 +316,6 @@ onMounted(() => {
           </a-checkbox>
         </div>
 
-        <a-alert
-            v-if="
-            onboardData.user_options.Roofline ||
-                onboardData.user_options.MemoryDetail
-            "
-            type="info"
-            show-icon
-            message="若勾选“Roofline瓶颈分析”或“Cache热力图”，将默认采集所有算子性能指标"
-            style="margin-top: 12px"
-        />
 
         <div class="footer-actions">
           <a-button type="primary" :loading="isExecuting" @click="handleConfirm">
@@ -377,6 +384,13 @@ onMounted(() => {
     display: flex;
     align-items: center;
     margin: 12px 0;
+  }
+
+  .board-alert-info-content {
+    :deep(.ant-alert-icon) {
+      position: relative;
+      top: -10px;
+    }
   }
 }
 </style>
