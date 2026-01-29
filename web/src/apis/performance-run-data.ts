@@ -2,7 +2,10 @@ import { request } from '@/core/request';
 import {
   DownloadDataParams,
   DeleteNodeParams,
+  SelectFolderParams,
   SelectFolderResult,
+  SelectFileParams,
+  SelectFileResult,
   JumpToFileParams,
 } from '@shared/api-types';
 
@@ -23,8 +26,15 @@ export function deleteNode(params: DeleteNodeParams) {
 /**
  * 选择文件夹
  */
-export function selectFolder() {
-  return request.post<undefined, SelectFolderResult | null>('webview/selectFolder');
+export function selectFolder(params?: SelectFolderParams) {
+  return request.post<SelectFolderParams | undefined, SelectFolderResult | null>('webview/selectFolder', params);
+}
+
+/**
+ * 选择文件
+ */
+export function selectFile(params?: SelectFileParams) {
+  return request.post<SelectFileParams | undefined, SelectFileResult | null>('webview/selectFile', params);
 }
 
 /**

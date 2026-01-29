@@ -39,5 +39,5 @@ export function getWorkspace() {
  * 获取当前项目类型
  */
 export function getProjectType() {
-  return request.post<undefined, { projectType: string | null; projectTypeName: string }>('webview/getProjectType');
+  return request.post<undefined, { projectType: string | null; projectTypeName: string; projectTemplateName: string }>('webview/getProjectType');
 }
