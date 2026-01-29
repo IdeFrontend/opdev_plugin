@@ -71,7 +71,9 @@ export class AscendCommandStrategy implements CommandStrategy {
   buildOpCommand(params: CommandBuildParams): string {
     const { config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames } = params;
 
-    const cmd = new Command(config.script || '');
+    const scriptField = params.scriptField || 'script'
+
+    const cmd = new Command(config[scriptField] || '');
 
     const options: Record<string, unknown> = {};
 

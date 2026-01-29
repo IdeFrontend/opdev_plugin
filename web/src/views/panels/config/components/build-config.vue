@@ -5,9 +5,21 @@
  * LICENSE file in the root directory of this source tree. -->
 <script setup>
 import {
-  ref, watch, onBeforeMount
+  ref,
+  watch, 
+  onBeforeMount, 
+  computed
 } from 'vue';
-import { saveBuildConfig as saveBuildConfigAPI, getSanitizerConfigs, saveSanitizerForm } from '@web/apis';
+import {
+  saveBuildConfig as saveBuildConfigAPI,
+  getSanitizerConfigs, 
+  saveSanitizerForm, 
+  saveConfig,
+  getConfigData, 
+  getProjectType,
+  getDebugMode,
+  checkMultipleOperators
+} from '@web/apis';
 
 const props = defineProps({
   buidlConfigData: {
@@ -122,10 +134,112 @@ const handSanitizerConfigChange = () => {
 };
 
 onBeforeMount(async () => {
+  // 查询各个编译脚本配置
   const configs = await getSanitizerConfigs();
   const obj = (configs[0] || {})?.user_options || {};
-  sanitizerScript.value = obj.script || ''
+  sanitizerScript.value = obj.script || '';
+
+  fetchOnBoardConfig()
+  fetchSimulateConfig()
+
+  // 获取当前项目类型
+  try {
+    const result = await getProjectType();
+    projectType.value = result.projectType || '';
+    projectTemplateName.value = result.projectTemplateName || '';
+    console.log('[build-config] 当前项目类型:', JSON.stringify(result));
+  }
+  catch (error) {
+    console.error('[build-config] 获取项目类型失败:', error);
+  }
+
+  // 获取调试模式开关状态
+  try {
+    debugModeEnabled.value = await getDebugMode();
+    console.log('[build-config] 调试模式状态:', debugModeEnabled.value);
+  }
+  catch (error) {
+    console.error('[build-config] 获取调试模式状态失败:', error);
+    debugModeEnabled.value = true; // 默认开启
+  }
+
+  // 检查标准自定义算子是否支持性能调优
+  try {
+    const result = await checkMultipleOperators();
+    supportsSanitizerAndTuning.value = result.supportsSanitizerAndTuning ?? true;
+  }
+  catch (error) {
+    supportsSanitizerAndTuning.value = true;
+  }
 });
+
+const simulateOptions = ref({ user_options: { script: true } });
+const fetchSimulateConfig = async () => {
+  try {
+    const configObj = await getConfigData();
+    const keys = Object.keys(configObj || {})
+    const configData = configObj[keys[0]] || []
+    const simulateConfig = configData.find(v => v.config_type === 'simulate')
+    if (simulateConfig) {
+      simulateOptions.value = JSON.parse(JSON.stringify(simulateConfig));
+    }
+  }
+  catch (error) {
+    console.error('[fetchSimulateConfig]获取仿真配置失败: ', error);
+  }
+};
+const handleSimulateScriptChange = async () => {
+  await saveConfig({
+    type: 'simulate',
+    data: [simulateOptions.value],
+  });
+};
+
+const onboardData = ref({ user_options: { script: true } });
+const fetchOnBoardConfig = async () => {
+  try {
+    const configObj = await getConfigData();
+    const keys = Object.keys(configObj || {})
+    const configData = configObj[keys[0]] || []
+    const onBoardConfig = configData.find(v => v.config_type === 'on_board')
+    if (onBoardConfig) {
+      onboardData.value = JSON.parse(JSON.stringify(onBoardConfig));
+    }
+  }
+  catch (error) {
+    console.error('[fetchOnBoardConfig]获取上板配置失败: ', error);
+  }
+};
+const handleOnBoardScriptChange = async () => {
+  await saveConfig({
+    type: 'on_board',
+    data: [onboardData.value],
+  });
+};
+
+const supportsSanitizerAndTuning = ref(true)
+const debugModeEnabled = ref(false)
+const projectType = ref('');  // 项目类型  'cann' | 'ascend' | 'pyasc'
+const projectTemplateName = ref(''); // 项目子类型  'hello_world' | 'addn_custom' | 'torch_library_template'
+const showCpuDebugScript = computed(() => {
+  if (projectType.value === 'puasc') {
+    return false
+  }
+  const isCannTorchLibrary = projectType.value === 'cann' && projectTemplateName.value === 'torch_library_template';
+  if (projectType.value !== 'ascend' && !isCannTorchLibrary) {
+    return true
+  }
+  return false
+})
+const showPowerScript = computed(() => {
+  if (projectType.value === 'puasc') {
+    return false
+  }
+  if (projectType.value === 'cann') {
+    return true
+  }
+  return projectType.value === 'ascend' && supportsSanitizerAndTuning.value
+})
 </script>
 
 <template>
@@ -183,15 +297,59 @@ onBeforeMount(async () => {
           @change="handleBuildConfigChange"
         />
       </a-form-item>
-      <!-- v-if="isStandardCustom" -->
       <a-form-item
-        label="异常检测编译命令行"
-        name="script"
+        v-if="showCpuDebugScript'"
+        label="CPU调试命令行"
+        name="cpu_debug_script"
       >
         <a-input
-          v-model:value="sanitizerScript.script"
+          v-model:value="localBuildConfigForme.cpu_debug_script"
+          placeholder="请输入CPU调试命令行"
+          @change="handleBuildConfigChange"
+        />
+      </a-form-item>
+      <a-form-item
+        v-if="debugModeEnabled"
+        label="NPU调试命令行"
+        name="npu_debug_script"
+      >
+        <a-input
+          v-model:value="localBuildConfigForme.npu_debug_script"
+          placeholder="请输入NPU调试命令行"
+          @change="handleBuildConfigChange"
+        />
+      </a-form-item>
+      <a-form-item
+        v-if="projectType !== 'pyasc'"      
+        label="异常检测编译命令行"
+        name="sanitizerScript"
+      >
+        <a-input
+          v-model:value="sanitizerScript"
           placeholder="请输入异常检测编译命令行"
           @change="handSanitizerConfigChange"
+        />
+      </a-form-item>
+      <a-form-item
+        v-if="showPowerScript"
+        label="上板分析编译命令行"
+        name="onBoardScript"
+      >
+        <a-input
+          v-model:value="onboardData.user_options.script"
+          placeholder="请输入上板分析编译命令行"
+          @change="handleOnBoardScriptChange"
+        />
+      </a-form-item>
+      <a-form-item
+        v-if="showPowerScript"
+        label="仿真分析编译命令行"
+        name="simulateScript"
+      >
+        <a-input
+          v-model:value="simulateOptions.user_options.script"
+          placeholder="请输入仿真分析编译命令行"
+          @change="handleSimulateScriptChange"
         />
       </a-form-item>
     </a-form>

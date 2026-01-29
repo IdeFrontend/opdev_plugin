@@ -276,6 +276,8 @@ export async function generateStructure(
           config_name: record.op_name,
           target_dir: targetDir,
           target_file: targetFile,
+          cpu_debug_script: record.op_type === 'ascend' ? `bash ${opScriptPath} --pkg --soc=${soc_version} --vendor_name=custom --simulator` : `bash ${opScriptPath} --simulator`,
+          npu_debug_script: record.op_type === 'ascend' ? `bash ${opScriptPath} --pkg --soc=${soc_version} --vendor_name=custom --debug` : `bash ${opScriptPath} --debug`
         },
       };
       const buildExample = {
@@ -341,7 +343,7 @@ export async function generateStructure(
         project_id: project.id,
         user_options: {
           op: record.op_name,
-          script: 'msprof op',
+          script: record.op_type === 'ascend' ? `bash ${opScriptPath} --pkg --soc=${soc_version} --vendor_name=custom --onboard` : `bash ${opScriptPath} --onboard`,
           config_name: record.op_name,
           // 内存分析图 相关
           // 核间负载分析图
@@ -384,7 +386,7 @@ export async function generateStructure(
         project_id: project.id,
         user_options: {
           op: record.op_name,
-          script: 'msprof op simulator',
+          script: record.op_type === 'ascend' ? `bash ${opScriptPath} --pkg --soc=${soc_version} --vendor_name=custom simulator Ascend910B3` : `bash ${opScriptPath} simulator Ascend910B3`,
           config_name: record.op_name,
           soc_version: soc_version,
           ResourceConflictRatio: true,

@@ -202,7 +202,7 @@ export const taskMethods = {
       await ProjectManager.getInstance()
         .initProject();
       // debug前编译，使用--debug参数
-      await buildService.startBuild({ compileOption: '--debug' });
+      await buildService.startBuild({ scriptField: 'npu_debug_script' });
       await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
 
       // 获取项目类型和模板名称，判断是否使用 msdebug-python
@@ -248,7 +248,7 @@ export const taskMethods = {
       await ProjectManager.getInstance()
         .initProject();
       // CPU调试前编译，使用--simulator参数
-      await buildService.startBuild({ compileOption: '--simulator' });
+      await buildService.startBuild({ scriptField: 'cpu_debug_script' });
       await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
 
       // 获取项目类型和模板名称，判断是否使用 msdebug-python
