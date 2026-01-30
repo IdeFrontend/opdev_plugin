@@ -29,6 +29,12 @@ export function getFiles(dirPath: string): FileItem[] {
       return [];
     }
 
+    // 检查路径是否是目录，如果不是目录则返回空数组
+    const stats = fs.statSync(basePath);
+    if (!stats.isDirectory()) {
+      return [];
+    }
+
     const items: FileItem[] = [];
     const entries = fs.readdirSync(basePath, { withFileTypes: true });
 

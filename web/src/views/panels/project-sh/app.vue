@@ -42,7 +42,7 @@
                 placeholder="请输入环境变量.sh文件地址，支持远程搜索"
                 class="[&_.ant-input]:!bg-black [&_.ant-input]:!border-white/20 [&_.ant-input]:!text-white/85 hover:[&_.ant-input]:!border-[#4ba5f4] focus:[&_.ant-input]:!border-[#4ba5f4] focus:[&_.ant-input]:!shadow-[0_0_0_2px_rgba(75,165,244,0.2)]"
                 @search="(val) => remoteSearch('projectSH', val)"
-                @focus="() => remoteSearch('projectSH', formData.projectSH)"
+                @focus="handleSelectFile"
               />
             </div>
           </a-form-item>
@@ -71,6 +71,7 @@ import {
   saveProjectSH,
   remotePathSearch,
 } from '@web/apis';
+import { selectFile } from '@web/apis/performance-run-data';
 import type { FormInstance as AntdVForm } from 'ant-design-vue';
 import { message as antdMessage } from 'ant-design-vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
@@ -154,6 +155,22 @@ const remoteSearch = async (type, keyword) => {
   catch (error) {
     projectSHLoading.value = false;
     console.error('远程搜索失败:', error);
+  }
+};
+
+// 选择文件
+const handleSelectFile = async () => {
+  try {
+    const selectedPath = await selectFile({
+      defaultPath: formData.projectSH,
+    });
+    if (selectedPath) {
+      formData.projectSH = selectedPath;
+    }
+  }
+  catch (error) {
+    console.error('选择文件失败:', error);
+    antdMessage.error('选择文件失败');
   }
 };
 

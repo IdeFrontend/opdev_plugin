@@ -29,8 +29,8 @@ import { ProjectManager } from '@plugin/core/project/project-manager';
 import { projectService } from './project-service';
 import { OperatorProjectIconTheme } from '@plugin/class/operator-project-icon-theme';
 import { generateStructure } from '@plugin/domain';
-import { getOpsByProjectId } from '@plugin/domain/models/model';
-import { getConfig } from '@plugin/domain/services/configuration';
+import { getOpsByProjectId, getOpByProjectIdAndOpName } from '@plugin/domain/models/model';
+import { getConfig, getConfigById, postConfig } from '@plugin/domain/services/configuration';
 import { buildService } from './build-service';
 import { taskMethods } from '../controller/task-controller';
 
@@ -746,6 +746,52 @@ export class FolderContextMenuService {
 
     // 情况2: 当前项目根目录是 pyasc 算子
     if (isPyasc) {
+      // 如果选择了 .py 文件，更新配置的 target_file
+      if (isPyFile) {
+        try {
+          // 获取 build_op 配置
+          const configId = await buildService.getBuildConfigId();
+          if (configId) {
+            const config = getConfigById(configId);
+            if (config) {
+              // 获取项目信息
+              const project = getProjectByPath(workspaceRootPath);
+              if (project) {
+                // 获取算子信息以获取运行路径
+                const operator = getOpByProjectIdAndOpName(project.id, config.op);
+                const runPath = operator?.op_path || project.project_path;
+                
+                // 计算选择的文件相对于运行路径的相对路径
+                const selectedFilePath = uri.fsPath;
+                const relativePath = path.relative(runPath, selectedFilePath);
+                // 将路径分隔符统一为 /，并确保以 ./ 开头（如果不在根目录）
+                const normalizedRelativePath = relativePath.replace(/\\/g, '/');
+                const targetPath = normalizedRelativePath.startsWith('.') 
+                  ? normalizedRelativePath 
+                  : `./${normalizedRelativePath}`;
+                
+                // 更新 target_file 为 python3 ${相对路径}
+                const newTargetFile = `python3 ${targetPath}`;
+                
+                // 更新配置
+                const userOptions = config.user_options as any || {};
+                await postConfig('build_op', [{
+                  config_id: configId,
+                  project_id: project.id,
+                  user_options: {
+                    ...userOptions,
+                    target_file: newTargetFile,
+                  },
+                }]);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('[runOperatorProject] 更新配置失败:', error);
+          // 即使更新配置失败，也继续执行运行
+        }
+      }
+      
       await taskMethods.startRun();
       return;
     }

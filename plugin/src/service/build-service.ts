@@ -20,6 +20,7 @@ import {
 import { getConfigById } from '@plugin/domain/services/configuration';
 import { OperatorProjectType, OperatorProjectDetector } from '@plugin/domain/services/operator-project-detector';
 import { markOperatorsAsCompiled, getProjectByPath } from '@plugin/domain/models/project-model';
+import { homeMethods } from '../controller/home-controller';
 
 const CONFIG_TYPES = {
   BUILD_OP: 'build_op',
@@ -104,6 +105,7 @@ export class BuildService {
    * 获取构建配置列表
    */
   async getBuildConfigsList(): Promise<BuildConfig[]> {
+    await ProjectManager.getInstance().initProject();
     const projectId = ProjectManager.getInstance().projectId;
 
     console.log('getBuildConfigsList: 查询配置，projectId:', projectId);
@@ -307,7 +309,15 @@ export class BuildService {
     let configId = params.configId ? Number(params.configId) : undefined;
 
     if (!configId) {
-      configId = await this.getBuildExampleConfigId();
+      // 使用 getProjectType 方法获取项目类型，如果是 pyasc，使用 build_op 配置，否则使用 build_example 配置
+      const projectTypeInfo = await homeMethods.getProjectType();
+      const isPyasc = projectTypeInfo.projectType === OperatorProjectType.PYASC;
+      
+      if (isPyasc) {
+        configId = await this.getBuildConfigId();
+      } else {
+        configId = await this.getBuildExampleConfigId();
+      }
     }
 
     try {

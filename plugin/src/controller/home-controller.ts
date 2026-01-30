@@ -7,6 +7,7 @@ import { ExplorerRootUtils } from '@plugin/class/explorer-root-utils';
 import { RemoteConfig } from '@plugin/helpers/remote-config';
 import { getAllProjects, getProjectByPath, getProjectById, createProject } from '@plugin/domain/models/project-model';
 import { OperatorProjectType, OperatorProjectDetector } from '@plugin/domain/services/operator-project-detector';
+import { getWorkspaceFolder } from '@plugin/domain/models/config';
 import {
   GetProjectIdResult,
   GetHomeResult,
@@ -309,7 +310,10 @@ export const homeMethods = {
    * @returns HOME目录
    */
   async getHome(): Promise<GetHomeResult> {
-    return process.env.WORKSPACE_FOLDER || process.env.HOME || process.env.USERPROFILE || '';
+    // 使用封装的函数通过命令获取 WORKSPACE_FOLDER
+    const workspaceFolder = getWorkspaceFolder();
+
+    return workspaceFolder || process.env.HOME || process.env.USERPROFILE || '';
   },
 
   /**
