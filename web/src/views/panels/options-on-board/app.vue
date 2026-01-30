@@ -227,7 +227,7 @@ onMounted(() => {
             v-model:checked="onboardData.user_options.Occupancy"
             @change="handleSave"
           >
-            核间负载分析）
+            核间负载分析图
           </a-checkbox>
           <a-checkbox
             v-model:checked="onboardData.user_options.Roofline"
@@ -246,7 +246,7 @@ onMounted(() => {
             v-model:checked="onboardData.user_options.Source"
             @change="handleSave"
           >
-            算子代码热点）
+            算子代码热点图
           </a-checkbox>
         </div>
 

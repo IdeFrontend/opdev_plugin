@@ -72,11 +72,13 @@ export class CannCommandStrategy implements CommandStrategy {
 
     const scriptField = params.scriptField || 'script'
 
-    if (!config[scriptField]) {
+    const userOptions = config.user_options as Record<string, unknown> | null | undefined;
+
+    if (!userOptions || !userOptions[scriptField]) {
       throw new Error(`配置缺少脚本信息，且找不到算子记录: ${config.op}`);
     }
 
-    const cmd = new Command(config[scriptField]);
+    const cmd = new Command(userOptions[scriptField] as string);
 
     if (config.custom_options) {
       cmd.addArgument(config.custom_options);

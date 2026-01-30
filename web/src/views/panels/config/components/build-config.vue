@@ -50,10 +50,6 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  projectType: {
-    type: String,
-    default: '',
-  },
 });
 const emit = defineEmits([
   'addBuildTableItem',
@@ -167,6 +163,7 @@ onBeforeMount(async () => {
   try {
     const result = await checkMultipleOperators();
     supportsSanitizerAndTuning.value = result.supportsSanitizerAndTuning ?? true;
+    console.log('[build-config] 是否支持异常检测与调优:', supportsSanitizerAndTuning.value);
   }
   catch (error) {
     supportsSanitizerAndTuning.value = true;
@@ -222,7 +219,7 @@ const debugModeEnabled = ref(false)
 const projectType = ref('');  // 项目类型  'cann' | 'ascend' | 'pyasc'
 const projectTemplateName = ref(''); // 项目子类型  'hello_world' | 'addn_custom' | 'torch_library_template'
 const showCpuDebugScript = computed(() => {
-  if (projectType.value === 'puasc') {
+  if (projectType.value === 'pyasc') {
     return false
   }
   const isCannTorchLibrary = projectType.value === 'cann' && projectTemplateName.value === 'torch_library_template';
@@ -231,8 +228,14 @@ const showCpuDebugScript = computed(() => {
   }
   return false
 })
+const showNpuDebugScript = computed(() => {
+  if (projectType.value === 'pyasc') {
+    return false
+  }
+  return debugModeEnabled.value
+})
 const showPowerScript = computed(() => {
-  if (projectType.value === 'puasc') {
+  if (projectType.value === 'pyasc') {
     return false
   }
   if (projectType.value === 'cann') {
@@ -298,24 +301,24 @@ const showPowerScript = computed(() => {
         />
       </a-form-item>
       <a-form-item
-        v-if="showCpuDebugScript'"
-        label="CPU调试命令行"
+        v-if="showCpuDebugScript"
+        label="CPU调试编译命令行"
         name="cpu_debug_script"
       >
         <a-input
           v-model:value="localBuildConfigForme.cpu_debug_script"
-          placeholder="请输入CPU调试命令行"
+          placeholder="请输入CPU调试编译命令行"
           @change="handleBuildConfigChange"
         />
       </a-form-item>
       <a-form-item
-        v-if="debugModeEnabled"
-        label="NPU调试命令行"
+        v-if="showNpuDebugScript"
+        label="NPU调试编译命令行"
         name="npu_debug_script"
       >
         <a-input
           v-model:value="localBuildConfigForme.npu_debug_script"
-          placeholder="请输入NPU调试命令行"
+          placeholder="请输入NPU调试编译命令行"
           @change="handleBuildConfigChange"
         />
       </a-form-item>
@@ -386,6 +389,7 @@ const showPowerScript = computed(() => {
       <a-form-item
         label="算子运行命令行"
         name="script"
+        tooltip="执行该命令时，会自动在后面拼接算子名称、执行模式和和包模式"
       >
         <a-input
           v-model:value="localExampleConfigForme.script"

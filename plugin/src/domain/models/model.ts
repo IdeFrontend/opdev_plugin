@@ -284,7 +284,7 @@ export async function generateStructure(
         project_id: project.id,
         user_options: {
           op: record.op_name,
-          script: `bash ${exampleScriptPath}`,
+          script: record.op_type === 'ascend' ? `bash ${exampleScriptPath} --vendor_name=custom --run_example` : `bash ${exampleScriptPath}`,
           config_name: record.op_name,
           target_dir: targetDir,
           target_file: targetExampleFile,
