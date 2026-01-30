@@ -132,6 +132,7 @@ const handSanitizerConfigChange = () => {
 onBeforeMount(async () => {
   // 查询各个编译脚本配置
   const configs = await getSanitizerConfigs();
+  console.log('[build-config] 查询异常检测配置', configs)
   const obj = (configs[0] || {})?.user_options || {};
   sanitizerScript.value = obj.script || '';
 
