@@ -29,7 +29,7 @@ const themeConfig = {
   algorithm: theme.darkAlgorithm,
 };
 
-const sortOrder = ref<'asc' | 'desc'>('asc');
+const sortOrder = ref<'asc' | 'desc'>('desc');
 const isMarkedOnly = ref<boolean>(false);
 const listData = ref<any[]>([]);
 

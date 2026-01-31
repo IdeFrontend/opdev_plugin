@@ -32,10 +32,11 @@ export class SanitizerService {
   async runSanitizer(params: { operatorNames?: string } = {}): Promise<void> {
     try {
       // 异常检测前编译
-      const buildConfigId = await buildService.getBuildConfigId();
+      const sanitizerConfigId: number | undefined =
+        await this.getSanitizerConfigIdInternal();
       const buildCommand = getBuildOpCommand(
-        Number(buildConfigId),
-        '--mssanitizer',
+        Number(sanitizerConfigId),
+        '',
         params.operatorNames,
       );
       const buildExecutor = ProjectManager.getInstance()
@@ -108,8 +109,6 @@ export class SanitizerService {
       }
 
       // 开启异常检测
-      const sanitizerConfigId: number | undefined =
-        await this.getSanitizerConfigIdInternal();
       const exampleConfigId: number | undefined | string =
         await buildService.getBuildExampleConfigId();
 
