@@ -1131,45 +1131,51 @@ const handleConfirm = () => {
             <a-sub-menu v-if="item.children && item.children.length > 0" :key="`submenu-${item.key}`">
               <template #title>
                 <a-tooltip v-if="areAllChildrenDisabledByMultipleOperators(item)" title="该功能只支持单算子执行" placement="right">
-                  <span v-if="item.icon" class="inline-flex items-center text-[11px]">
-                    <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
-                    <span class="text-white/85">{{ item.label }}</span>
-                    <a-tooltip
-                      v-if="item.key === 'build' && isStandardCustom"
-                      title="不选择算子，则默认编译整个算子包"
-                      placement="right"
-                    >
-                      <QuestionCircleOutlined
-                        class="info-icon ml-1"
-                        @click.stop
-                      />
-                    </a-tooltip>
-                    
-                    <div v-if="item.key === 'runDebug'" class="setting-box">
-                      <SettingOutlined @click.stop="debugConfig()" />
+                  <div v-if="item.icon" class="single-box">
+                    <span class="inline-flex items-center text-[11px]">
+                      <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
+                      <span class="text-white/85">{{ item.label }}</span>
+                    </span>
+                    <div class="flex items-center gap-1">
+                      <a-tooltip
+                        v-if="item.key === 'build' && isStandardCustom"
+                        title="不选择算子，则默认编译整个算子包"
+                        placement="right"
+                      >
+                        <QuestionCircleOutlined
+                          class="info-icon"
+                          @click.stop
+                        />
+                      </a-tooltip>
+                      <div v-if="item.key === 'runDebug'" class="setting-box">
+                        <SettingOutlined @click.stop="debugConfig()" />
+                      </div>
                     </div>
-                  </span>
+                  </div>
                   <span v-else class="text-white/85">{{ item.label }}</span>
                 </a-tooltip>
                 <template v-else>
-                  <span v-if="item.icon" class="inline-flex items-center text-[11px]">
-                    <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
-                    <span class="text-white/85">{{ item.label }}</span>
-                    <a-tooltip
-                      v-if="item.key === 'build' && isStandardCustom"
-                      title="不选择算子，则默认编译整个算子包"
-                      placement="right"
-                    >
-                      <QuestionCircleOutlined
-                        class="info-icon ml-1"
-                        @click.stop
-                      />
-                    </a-tooltip>
-                    
-                    <div v-if="item.key === 'runDebug'" class="setting-box">
-                      <SettingOutlined @click.stop="debugConfig()" />
+                  <div v-if="item.icon" class="single-box">
+                    <span class="inline-flex items-center text-[11px]">
+                      <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
+                      <span class="text-white/85">{{ item.label }}</span>
+                    </span>
+                    <div class="flex items-center gap-1">
+                      <a-tooltip
+                        v-if="item.key === 'build' && isStandardCustom"
+                        title="不选择算子，则默认编译整个算子包"
+                        placement="right"
+                      >
+                        <QuestionCircleOutlined
+                          class="info-icon"
+                          @click.stop
+                        />
+                      </a-tooltip>
+                      <div v-if="item.key === 'runDebug'" class="setting-box">
+                        <SettingOutlined @click.stop="debugConfig()" />
+                      </div>
                     </div>
-                  </span>
+                  </div>
                   <span v-else class="text-white/85">{{ item.label }}</span>
                 </template>
               </template>
