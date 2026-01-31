@@ -231,7 +231,7 @@ export const taskMethods = {
   /**
    * 显示确认对话框
    * @param params 对话框参数
-   * @returns 用户选择的结果，'停止并执行' 或 '取消' 或 undefined
+   * @returns 用户选择的结果，'停止并执行' 或 undefined（取消）
    */
   async showConfirmDialog(params: {
     title: string;
@@ -241,18 +241,17 @@ export const taskMethods = {
   }): Promise<string | undefined> {
     // VSCode的showWarningMessage不支持单独的title，将title和content合并显示
     const message = `${params.title}\n${params.content}`;
-    // 提供两个按钮：确认按钮在前（主要操作），取消按钮在后
-    // 使用 modal: true 确保对话框是模态的，但VSCode可能会在右上角显示关闭按钮（X图标，不是"取消"文字）
+    // 使用 modal: true 保持模态框，但只提供一个"停止并执行"按钮
+    // VSCode会自动添加关闭按钮（X），用户可以通过关闭对话框或按ESC来取消
+    // 这样只有一个取消方式（关闭按钮），不会出现两个取消按钮
     const result = await vscode.window.showWarningMessage(
       message,
       { modal: true },
       params.confirmText,
-      params.cancelText,
     );
-    // 返回用户选择的按钮文本：
+    // 返回用户选择的结果：
     // - 如果用户点击"停止并执行"按钮，返回 confirmText
-    // - 如果用户点击"取消"按钮，返回 cancelText
-    // - 如果用户点击关闭按钮（X）或按ESC，返回 undefined
+    // - 如果用户点击关闭按钮（X）或按ESC，返回 undefined（相当于取消）
     return result;
   },
 
