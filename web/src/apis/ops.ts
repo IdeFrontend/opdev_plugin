@@ -191,6 +191,26 @@ export function checkTaskStatus() {
   return request.post<undefined, boolean>('ops/checkTaskStatus');
 }
 
+/** 获取当前任务名称 */
+export function getCurrentTaskName() {
+  return request.post<undefined, string | null>('ops/getCurrentTaskName');
+}
+
+/** 显示确认对话框 */
+export function showConfirmDialog(params: {
+  title: string;
+  content: string;
+  confirmText: string;
+  cancelText: string;
+}) {
+  return request.post<{
+    title: string;
+    content: string;
+    confirmText: string;
+    cancelText: string;
+  }, string | undefined>('ops/showConfirmDialog', params);
+}
+
 /** 获取目标标签页并清除 */
 export function getTargetTab() {
   return request.post<undefined, string | undefined>('ops/getTargetTab');

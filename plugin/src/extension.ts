@@ -67,6 +67,9 @@ import {
   COMMAND_OPERATOR_PROJECT_SANITIZER,
   COMMAND_OPERATOR_PROJECT_ON_BOARD,
   COMMAND_OPERATOR_PROJECT_SIMULATION,
+  COMMAND_REPORT_VISUALIZATION_SANITIZER,
+  COMMAND_REPORT_VISUALIZATION_ON_BOARD,
+  COMMAND_REPORT_VISUALIZATION_SIMULATION,
   COMMAND_REFRESH_FOLDER_DECORATIONS,
 } from './constants';
 import { FolderContextMenuService } from './service/folder-context-menu-service';
@@ -632,6 +635,41 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
+  // 报告可视化：异常检测
+  const reportVisualizationSanitizerCommand = vscode.commands.registerCommand(
+    COMMAND_REPORT_VISUALIZATION_SANITIZER,
+    async (uri?: vscode.Uri) => {
+      if (!uri) {
+        vscode.window.showErrorMessage('请右键点击文件');
+        return;
+      }
+      await FolderContextMenuService.addReportToFileMapList(uri, 'sanitizer');
+    },
+  );
+
+  // 报告可视化：上板分析
+  const reportVisualizationOnBoardCommand = vscode.commands.registerCommand(
+    COMMAND_REPORT_VISUALIZATION_ON_BOARD,
+    async (uri?: vscode.Uri) => {
+      if (!uri) {
+        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        return;
+      }
+      await FolderContextMenuService.addReportToFileMapList(uri, 'on_board');
+    },
+  );
+
+  // 报告可视化：仿真分析
+  const reportVisualizationSimulationCommand = vscode.commands.registerCommand(
+    COMMAND_REPORT_VISUALIZATION_SIMULATION,
+    async (uri?: vscode.Uri) => {
+      if (!uri) {
+        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        return;
+      }
+      await FolderContextMenuService.addReportToFileMapList(uri, 'simulate');
+    },
+  );
 
   context.subscriptions.push(
     markAsOperatorProjectCommand,
@@ -647,6 +685,9 @@ export async function activate(context: vscode.ExtensionContext) {
     operatorProjectSanitizerCommand,
     operatorProjectOnBoardCommand,
     operatorProjectSimulationCommand,
+    reportVisualizationSanitizerCommand,
+    reportVisualizationOnBoardCommand,
+    reportVisualizationSimulationCommand,
   );
 
   // 初始化上下文变量

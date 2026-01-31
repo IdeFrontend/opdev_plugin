@@ -9,6 +9,16 @@ import { StartBuildParams, StartBuildExampleParams } from '@shared/api-types';
 
 // 全局任务管理器：用于追踪和终止正在执行的任务
 let currentExecutor: CommandExecutor | null = null;
+// 当前任务名称映射
+const taskNameMap: Record<string, string> = {
+  'build': '编译部署算子',
+  'runExample': '运行',
+  'sanitizer': '异常检测',
+  'onboard': '上板分析',
+  'simulation': '仿真分析',
+};
+// 当前正在执行的任务类型
+let currentTaskType: string | null = null;
 
 export const taskMethods = {
   /**
@@ -21,11 +31,13 @@ export const taskMethods = {
       // 保存当前 executor 引用，用于可能的终止操作
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
+      currentTaskType = 'build';
       await buildService.startBuild(params);
     }
     finally {
       // 清除 executor 引用
       currentExecutor = null;
+      currentTaskType = null;
       ProjectManager.getInstance()
         .clearExecutor();
     }
@@ -41,11 +53,13 @@ export const taskMethods = {
       // 保存当前 executor 引用
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
+      currentTaskType = 'runExample';
       await buildService.startRun({});
     }
     finally {
       // 清除 executor 引用
       currentExecutor = null;
+      currentTaskType = null;
       ProjectManager.getInstance()
         .clearExecutor();
     }
@@ -61,11 +75,13 @@ export const taskMethods = {
       // 保存当前 executor 引用
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
+      currentTaskType = 'build';
       await buildService.startBuildExample(params);
     }
     finally {
       // 清除 executor 引用
       currentExecutor = null;
+      currentTaskType = null;
       ProjectManager.getInstance()
         .clearExecutor();
     }
@@ -81,11 +97,13 @@ export const taskMethods = {
       // 保存当前 executor 引用
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
+      currentTaskType = 'simulation';
       await buildService.startSimulate(params);
     }
     finally {
       // 清除 executor 引用
       currentExecutor = null;
+      currentTaskType = null;
       ProjectManager.getInstance()
         .clearExecutor();
     }
@@ -101,11 +119,13 @@ export const taskMethods = {
       // 保存当前 executor 引用
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
+      currentTaskType = 'onboard';
       await buildService.startOnBoard(params);
     }
     finally {
       // 清除 executor 引用
       currentExecutor = null;
+      currentTaskType = null;
       ProjectManager.getInstance()
         .clearExecutor();
     }
@@ -121,11 +141,13 @@ export const taskMethods = {
       // 保存当前 executor 引用，用于可能的终止操作
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
+      currentTaskType = 'sanitizer';
       await sanitizerService.runSanitizer(params);
     }
     finally {
       // 清除 executor 引用
       currentExecutor = null;
+      currentTaskType = null;
       ProjectManager.getInstance()
         .clearExecutor();
     }
@@ -184,6 +206,7 @@ export const taskMethods = {
       console.log('[stopTask] 终止正在执行的任务');
       await currentExecutor.kill();
       currentExecutor = null;
+      currentTaskType = null;
       ProjectManager.getInstance()
         .clearExecutor();
       vscode.window.showWarningMessage('任务已被手动停止');
@@ -192,6 +215,45 @@ export const taskMethods = {
       console.log('[stopTask] 没有正在执行的任务');
       vscode.window.showInformationMessage('当前没有正在执行的任务');
     }
+  },
+
+  /**
+   * 获取当前任务名称
+   * @returns 当前任务名称，如果没有任务则返回null
+   */
+  async getCurrentTaskName(): Promise<string | null> {
+    if (currentTaskType && taskNameMap[currentTaskType]) {
+      return taskNameMap[currentTaskType];
+    }
+    return null;
+  },
+
+  /**
+   * 显示确认对话框
+   * @param params 对话框参数
+   * @returns 用户选择的结果，'停止并执行' 或 '取消' 或 undefined
+   */
+  async showConfirmDialog(params: {
+    title: string;
+    content: string;
+    confirmText: string;
+    cancelText: string;
+  }): Promise<string | undefined> {
+    // VSCode的showWarningMessage不支持单独的title，将title和content合并显示
+    const message = `${params.title}\n${params.content}`;
+    // 提供两个按钮：确认按钮在前（主要操作），取消按钮在后
+    // 使用 modal: true 确保对话框是模态的，但VSCode可能会在右上角显示关闭按钮（X图标，不是"取消"文字）
+    const result = await vscode.window.showWarningMessage(
+      message,
+      { modal: true },
+      params.confirmText,
+      params.cancelText,
+    );
+    // 返回用户选择的按钮文本：
+    // - 如果用户点击"停止并执行"按钮，返回 confirmText
+    // - 如果用户点击"取消"按钮，返回 cancelText
+    // - 如果用户点击关闭按钮（X）或按ESC，返回 undefined
+    return result;
   },
 
   /**

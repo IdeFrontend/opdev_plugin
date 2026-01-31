@@ -235,7 +235,7 @@ export const performanceDataMethods = {
     try {
       console.log('jumpToFile', params);
       const {
-        fileLink, row, col,
+        fileLink, row, col, errorMessage, errorTitle,
       } = params;
       const uri = vscode.Uri.file(fileLink);
 
@@ -257,12 +257,36 @@ export const performanceDataMethods = {
         vscode.TextEditorRevealType.InCenter,
       );
 
+      // 构建错误信息显示文本
+      let errorDisplayText = '';
+      if (errorTitle || errorMessage) {
+        if (errorTitle && errorMessage) {
+          errorDisplayText = `${errorTitle}: ${errorMessage.substring(0, 100)}${errorMessage.length > 100 ? '...' : ''}`;
+        }
+        else {
+          errorDisplayText = errorTitle || errorMessage || '';
+        }
+      }
+
       // 创建高亮装饰
       const decorationType = vscode.window.createTextEditorDecorationType({
         backgroundColor: 'rgba(255, 200, 0, 0.3)', // 黄色半透明背景
         border: '1px solid rgba(255, 200, 0, 0.8)', // 黄色边框
         isWholeLine: true, // 高亮整行
       });
+
+      // 如果有错误信息，创建行尾装饰来显示错误信息
+      let afterDecorationType: vscode.TextEditorDecorationType | undefined;
+      if (errorDisplayText) {
+        afterDecorationType = vscode.window.createTextEditorDecorationType({
+          after: {
+            contentText: `  ⚠ ${errorDisplayText}`,
+            color: 'rgba(255, 200, 0, 0.9)',
+            fontWeight: 'normal',
+            fontStyle: 'italic',
+          },
+        });
+      }
 
       // 应用高亮到目标行
       const lineRange = new vscode.Range(
@@ -272,10 +296,30 @@ export const performanceDataMethods = {
 
       editor.setDecorations(decorationType, [lineRange]);
 
-      // 2秒后移除高亮
+      // 如果有错误信息，在行尾显示
+      if (afterDecorationType && errorDisplayText) {
+        const endPos = new vscode.Position(line, document.lineAt(line).text.length);
+        editor.setDecorations(afterDecorationType, [{
+          range: new vscode.Range(endPos, endPos),
+        }]);
+      }
+
+      // 如果有错误信息，显示通知
+      if (errorTitle || errorMessage) {
+        const notificationMessage = errorTitle || errorMessage || '检测到错误';
+        vscode.window.showInformationMessage(
+          notificationMessage,
+          { modal: false },
+        );
+      }
+
+      // 5秒后移除高亮（延长显示时间以便查看错误信息）
       setTimeout(() => {
         decorationType.dispose();
-      }, 2000);
+        if (afterDecorationType) {
+          afterDecorationType.dispose();
+        }
+      }, 5000);
     }
     catch (error) {
       console.log('jumpToFile', error);
