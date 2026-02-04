@@ -209,4 +209,32 @@ export const performanceMethods = {
       },
     );
   },
+  async diffFiles(params: any)  {
+    console.log('[diffFiles]:比较文件参数', params)
+    const { filePath1, filePath2 } = params;
+
+    if (!filePath1 || !filePath2) {
+      vscode.window.showErrorMessage('缺少文件路径参数');
+      return;
+    }
+
+    try {
+      // 将文件路径转换为 VSCode URI
+      const fileUri1 = vscode.Uri.file(filePath1);
+      const fileUri2 = vscode.Uri.file(filePath2);
+
+      // 使用 VSCode 内置的文件对比功能
+      await vscode.commands.executeCommand(
+        'vscode.diff',
+        fileUri1,
+        fileUri2,
+        `对比: ${filePath1.split('/').pop()} ↔ ${filePath2.split('/').pop()}`
+      );
+
+      console.log(`[diffFiles]:成功打开文件对比: ${filePath1} ↔ ${filePath2}`);
+    } catch (error) {
+      console.error('[diffFiles]:执行文件对比命令失败:', error);
+      vscode.window.showErrorMessage(`文件对比失败: ${(error as Error).message}`);
+    }
+  },
 };
