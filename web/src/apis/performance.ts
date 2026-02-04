@@ -31,3 +31,7 @@ export function copyPerformanceReport(params: { dirPath: string }) {
 export function downloadPerformanceReport(params: { dirPath: string }) {
   return request.post<{ dirPath: string }, void>('performance/downloadReport', params);
 }
+
+export function diffFiles(params: { filePath1: string, filePath2: string }) {
+  return request.post<{ filePath1: string, filePath2: string }, void>('performance/diffFiles', params);
+}

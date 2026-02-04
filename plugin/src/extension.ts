@@ -41,6 +41,7 @@ import {
   COMMAND_GET_HOME,
   COMMAND_FLASH_MS_SANITIZER_RUN_DATA,
   COMMAND_FLASH_PERFORMANCE_RUN_DATA,
+  COMMAND_FLASH_DUMP_TENSOR_DATA,
   VIEW_HOME,
   VIEW_CONFIG,
   VIEW_LINK,
@@ -703,7 +704,6 @@ export async function activate(context: vscode.ExtensionContext) {
       }
     },
   );
-
   context.subscriptions.push(openCsvCommand);
 
   const flashMsSanitizerRunData = vscode.commands.registerCommand(
@@ -718,7 +718,6 @@ export async function activate(context: vscode.ExtensionContext) {
       msSanitizerRunData?.webview?.postMessage({ command: 'iframeFlashMsSanitizerRunData' });
     },
   );
-
   context.subscriptions.push(flashMsSanitizerRunData);
 
   const flashPerformanceRunData = vscode.commands.registerCommand(
@@ -732,8 +731,20 @@ export async function activate(context: vscode.ExtensionContext) {
       performanceRunData?.webview?.postMessage({ command: 'iframeRefreshData' });
     },
   );
-
   context.subscriptions.push(flashPerformanceRunData);
+
+  const flashDumpTensorData = vscode.commands.registerCommand(
+    COMMAND_FLASH_DUMP_TENSOR_DATA,
+    async () => {
+      // 拿到dumpTensorRunData的视图实例，主动下发刷新命令
+      const dumpTensorRunData =
+        ViewServer.getInstance().providerWebViewMap.dumpTensorSidebarView;
+
+      console.log('ViewServer.getInstance()', dumpTensorRunData);
+      dumpTensorRunData?.webview?.postMessage({ command: 'dumpTensorRefreshData' });
+    },
+  );
+  context.subscriptions.push(flashDumpTensorData);
 
   // 工作区变化监听
   const watchWorkSpaceFolderChange =
@@ -741,6 +752,7 @@ export async function activate(context: vscode.ExtensionContext) {
       console.log('工作区变化', vscode.workspace.workspaceFolders)
       vscode.commands.executeCommand(COMMAND_FLASH_MS_SANITIZER_RUN_DATA);
       vscode.commands.executeCommand(COMMAND_FLASH_PERFORMANCE_RUN_DATA);
+      vscode.commands.executeCommand(COMMAND_FLASH_DUMP_TENSOR_DATA);
       
       // 检测工作区中的算子工程
       const workspaceFolders = vscode.workspace.workspaceFolders;

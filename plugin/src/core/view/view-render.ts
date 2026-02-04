@@ -49,6 +49,7 @@ export class ViewRenderer extends vscode.Disposable {
         'ms-sanitizer-panel-view',
         'performance-run-data',
         'ms-sanitizer-run-data',
+        'dump-tensor-data'
       ];
 
       if (panelViews.includes(entryName)) {
