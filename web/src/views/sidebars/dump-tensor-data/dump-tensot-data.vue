@@ -4,7 +4,7 @@ import {
 } from 'vue';
 import FileTree from './components/file-tree.vue';
 import {
-  getPerformanceRunData, toggleRecordMark,
+  getDumpTensorData
 } from '@web/apis';
 import { PerformanceExecutionRecord } from '@shared/api-types';
 import {
@@ -22,7 +22,7 @@ function loadTreeData() {
     },
   };
 
-  getPerformanceRunData(params)
+  getDumpTensorData(params)
     .then((res) => {
       treeData.value = res.data;
     });
@@ -31,7 +31,9 @@ function loadTreeData() {
 loadTreeData();
 
 const eventListenerHandler = (event: MessageEvent) => {
-  if (event.data.command === 'iframeRefreshData') {
+  console.log('[dump-tensot-data.vue]: 事件监听', event)
+  
+  if (event.data.command === 'dumpTensorRefreshData') {
     loadTreeData();
   }
 };

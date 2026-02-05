@@ -6,6 +6,7 @@ import { taskMethods } from './task-controller';
 import { sanitizerViewMethods } from './sanitizer-controller';
 import { performanceDataMethods } from './performance-controller';
 import { welcomeMethods } from './welcome-controller';
+import { dumpTensorMethods } from './dump-tensor-controller'
 
 export const webviewMethods = {
   ...homeMethods,
@@ -16,4 +17,5 @@ export const webviewMethods = {
   ...sanitizerViewMethods,
   ...performanceDataMethods,
   ...welcomeMethods,
+  ...dumpTensorMethods
 };
