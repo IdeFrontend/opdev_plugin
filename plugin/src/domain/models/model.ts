@@ -64,7 +64,7 @@ function checkBuildShHasBishengConfig(): boolean {
 function getNpuDebugScript(type: string, scriptPath: string): string {
   if (type === 'ascend') {
     if (checkBuildShHasBishengConfig()) {
-      return `bash ${scriptPath} --pkg --soc=${soc_version} --vendor_name=custom --bisheng_flags=ccec_o0,ccec_g`
+      return `bash ${scriptPath} --pkg --soc=${soc_version} --vendor_name=custom --bisheng_flags=ccec_O0,ccec_g`
     }
     return `bash ${scriptPath} --pkg --soc=${soc_version} --vendor_name=custom --debug`
   }
