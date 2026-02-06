@@ -511,10 +511,10 @@ export class BuildService {
       // 构建编译选项
       let compileOption = ''
 
-      // 如果是标准自定义算子，添加 --bisheng-config=ccec_g
-      if (await isRootStandardCustom()) {
-        compileOption = '--bisheng-config=ccec_g';
-      }
+      // 如果是标准自定义算子，添加 --bisheng_flags=ccec_g
+      // if (await isRootStandardCustom()) {
+      //   compileOption = '--bisheng_flags=ccec_g';
+      // }
 
       const buildCommand = getBuildOpCommand(
         Number(simulatorItem?.config_id),
@@ -666,10 +666,10 @@ export class BuildService {
       // 构建编译选项
       let compileOption = ''
 
-      // 如果是标准自定义算子，添加 --bisheng-config=ccec_g
-      if (await isRootStandardCustom()) {
-        compileOption = '--bisheng-config=ccec_g';
-      }
+      // 如果是标准自定义算子，添加 --bisheng_flags=ccec_g
+      // if (await isRootStandardCustom()) {
+      //   compileOption = '--bisheng_flags=ccec_g';
+      // }
 
       const buildCommand = getBuildOpCommand(
         Number(configId),

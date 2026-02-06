@@ -17,7 +17,7 @@ import {
 } from '@shared/api-types';
 
 /**
- * 检查根目录 build.sh 是否包含 --bisheng-config
+ * 检查根目录 build.sh 是否包含 --bisheng_flags
  * 用于判断标准自定义算子是否支持异常检测和调优
  */
 function checkBuildShHasBishengConfig(rootPath: string): boolean {
@@ -25,7 +25,7 @@ function checkBuildShHasBishengConfig(rootPath: string): boolean {
   if (!fs.existsSync(buildShPath)) return false;
   try {
     const content = fs.readFileSync(buildShPath, 'utf-8');
-    return content.includes('--bisheng-config');
+    return content.includes('--bisheng_flags');
   } catch {
     return false;
   }
@@ -334,7 +334,7 @@ export const homeMethods = {
     hasMultiple: boolean;
     operators?: Array<{ id: number; name: string; path: string; isExperimental: boolean }>;
     isStandardCustom?: boolean;
-    /** 根目录为标准自定义算子时：build.sh 含 --bisheng-config 则支持异常检测与调优 */
+    /** 根目录为标准自定义算子时：build.sh 含 --bisheng_flags 则支持异常检测与调优 */
     supportsSanitizerAndTuning?: boolean;
   }> {
     const workspaceFolders = vscode.workspace.workspaceFolders;

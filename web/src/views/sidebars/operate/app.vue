@@ -238,9 +238,9 @@ const menuItems = computed(() => {
     );
   }
 
-  // 根目录为标准自定义算子且 build.sh 不含 --bisheng-config：隐藏性能调优
+  // 根目录为标准自定义算子且 build.sh 不含 --bisheng_flags：隐藏性能调优
   const filtered = isStandardCustom.value && !supportsSanitizerAndTuning.value
-    ? items.filter(item => item.key !== 'power')
+    ? items.filter(item => item.key !== 'power' && item.key !== 'runDebug')
     : items;
 
   // 过滤菜单项：buildExample 只在标准自定义算子中显示
@@ -601,7 +601,7 @@ const openSetting = async (key) => {
 // 算子工程选择器相关状态
 const hasMultipleOperators = ref(false);
 const isStandardCustom = ref(false); // 是否是标准自定义算子
-// 标准自定义算子是否支持异常检测与调优（build.sh 含 --bisheng-config）
+// 标准自定义算子是否支持异常检测与调优（build.sh 含 --bisheng_flags）
 const supportsSanitizerAndTuning = ref(true);
 const operatorSelectorVisible = ref(false);
 const searchKeyword = ref('');

@@ -90,13 +90,6 @@ export class AscendCommandStrategy implements CommandStrategy {
       cmd.addArgument(compileOption);
     }
 
-    // 如果是标准自定义算子且是调试编译（--debug 或 --simulator），添加 --bisheng-config=ccec_o0,ccec_g 参数
-    // const project = getProjectById(config.project_id);
-    // const isDebugCompile = compileOption === '--debug' || compileOption === '--simulator';
-    // if (project && project.project_type === 'ascend' && isDebugCompile) {
-    //   cmd.addArgument('--bisheng-config=ccec_o0,ccec_g');
-    // }
-
     if (advance_cmd) {
       cmd.addArgument(advance_cmd);
     }
