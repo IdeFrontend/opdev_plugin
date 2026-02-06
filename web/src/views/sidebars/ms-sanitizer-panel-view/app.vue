@@ -325,6 +325,11 @@ const customRow = (record: QuestionData) => {
     onClick: () => {
       questionDetails.value = record;
       showDetail.value = true;
+      
+      // 如果记录有文件链接，自动跳转并高亮显示错误信息
+      if (record.fileLink && record.row !== undefined && record.col !== undefined) {
+        handleJumpToFile(record);
+      }
     },
   };
 };
@@ -339,10 +344,16 @@ const handleJumpToFile = async (data: QuestionData | Record<string, any>) => {
   }
 
   try {
+    // 构建错误信息，优先使用 title，如果没有则使用 originData
+    const errorTitle = questionData.title || '';
+    const errorMessage = questionData.originData || '';
+
     await jumpToFileWebview({
       fileLink: questionData.fileLink,
       row: questionData.row,
       col: questionData.col,
+      errorTitle,
+      errorMessage,
     });
   }
   catch (error) {

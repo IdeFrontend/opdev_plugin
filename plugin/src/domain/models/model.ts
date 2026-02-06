@@ -402,6 +402,7 @@ export async function generateStructure(
           maxDebuglogSize: 1024, // 输入日志单个文件大小上限 1 - 10240
           useBlock: false,
           blockId: null, // 单block检测的blockId，0 - 200
+          fileMapList: [],
         },
       };
 
@@ -453,6 +454,7 @@ export async function generateStructure(
           renderInPlatform: false,
           dataStoragePath: getDefaultDirectory(),
           advance_param: [],
+          fileMapList: [],
         },
       };
       const simulate = {
@@ -471,6 +473,7 @@ export async function generateStructure(
           simulatorType: 'Ascend910B3',
           enableDump: false,
           advance_param: [],
+          fileMapList: [],
         },
       };
 

@@ -65,6 +65,8 @@ const opsMethods = {
   runDebug: taskMethods.runDebug,
   debugConfig: taskMethods.debugConfig,
   checkTaskStatus: taskMethods.checkTaskStatus,
+  getCurrentTaskName: taskMethods.getCurrentTaskName,
+  showConfirmDialog: taskMethods.showConfirmDialog,
 
   ...configMethods, // getConfigData, getBuildConfigs, saveBuildConfig, saveConfig, openConfig
   ...scriptMethods, // updateShScript

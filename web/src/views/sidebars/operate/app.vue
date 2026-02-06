@@ -27,6 +27,8 @@ import {
   setSelectedOperators,
   getSelectedOperators,
   getSelectedOperatorIds,
+  getCurrentTaskName,
+  showConfirmDialog,
 } from '@web/apis';
 import { SettingOutlined, CheckOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue';
 
@@ -40,6 +42,8 @@ const openKeys = ref(['submenu-build']);
 const isExecuting = ref(false);
 // 是否正在停止任务
 const isStopping = ref(false);
+// 当前任务名称
+const currentTaskName = ref(null);
 
 // 配置文件是否存在
 const hasDevtoolConfig = ref(false);
@@ -286,10 +290,7 @@ const areAllChildrenDisabledByMultipleOperators = (item) => {
 
 // 判断菜单项是否应该被禁用
 const isMenuItemDisabled = (itemKey) => {
-  // 如果当前有操作在执行，且该项是互斥操作，则禁用
-  if (isExecuting.value && mutuallyExclusiveKeys.includes(itemKey)) {
-    return true;
-  }
+  // 任务执行中时，允许点击其他按钮（不再禁用）
   // 如果选择了多个算子，且该菜单项不在允许列表中，则禁用
   if (isDisabledByMultipleOperators(itemKey)) {
     return true;
@@ -321,10 +322,59 @@ const handleMenuClick = async ({ key }) => {
 
   // 检查是否是互斥操作，且当前有操作正在执行
   if (mutuallyExclusiveKeys.includes(originalKey) && isExecuting.value) {
-    // 可以选择给用户提示，或者直接忽略点击
-    console.warn('有操作正在执行中，请稍后再试');
+    // 获取当前任务名称
+    try {
+      const taskName = await getCurrentTaskName();
+      if (taskName) {
+        // 获取新任务的名称
+        const newTaskNameMap = {
+          'build': '编译部署算子',
+          'runExample': '运行',
+          'sanitizer': '异常检测',
+          'onboard': '上板分析',
+          'simulation': '仿真分析',
+        };
+        const newTaskName = newTaskNameMap[originalKey] || originalKey;
 
-    return;
+        // 调用vscode弹窗进行二次确认
+        const result = await showConfirmDialog({
+          title: `任务"${taskName}"正在进行中`,
+          content: `任务无法同时进行，您是否希望停止当前"${taskName}"任务，并执行新任务？`,
+          confirmText: '停止并执行',
+          cancelText: '取消',
+        });
+
+        if (result === '停止并执行') {
+          // 先停止当前任务
+          isStopping.value = true;
+          try {
+            await stopTask();
+            // 等待任务停止后再执行新任务
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+          catch (error) {
+            console.error('[Operate] 停止任务失败:', error);
+            isStopping.value = false;
+            return;
+          }
+          finally {
+            isStopping.value = false;
+          }
+        }
+        else {
+          // 用户取消（点击取消按钮或关闭对话框），直接返回
+          return;
+        }
+      }
+      else {
+        console.warn('有操作正在执行中，但无法获取任务名称');
+        return;
+      }
+    }
+    catch (error) {
+      console.error('[Operate] 获取任务名称或显示确认对话框失败:', error);
+      return;
+    }
   }
 
   selectedKeys.value = [key]; // 使用带前缀的 key 以匹配模板
@@ -333,7 +383,7 @@ const handleMenuClick = async ({ key }) => {
 
   if (handler) {
     // 如果是互斥操作，设置执行状态
-    if (['build', 'runExample'].includes(originalKey)) {
+    if (mutuallyExclusiveKeys.includes(originalKey)) {
       console.log('[Operate] 开始执行操作:', originalKey, '，锁定按钮');
       isExecuting.value = true;
     }
@@ -346,7 +396,7 @@ const handleMenuClick = async ({ key }) => {
     }
     finally {
       // 操作完成后恢复按钮状态
-      if (['build', 'runExample'].includes(originalKey)) {
+      if (mutuallyExclusiveKeys.includes(originalKey)) {
         // 如果任务正在被停止，延迟清除执行状态，确保停止任务按钮不会过早消失
         if (isStopping.value) {
           console.log('[Operate] 任务正在被停止，延迟清除执行状态');
@@ -357,11 +407,13 @@ const handleMenuClick = async ({ key }) => {
             console.log('[Operate] 延迟后恢复按钮状态');
             isExecuting.value = false;
             isStopping.value = false;
+            currentTaskName.value = null;
           }, 10000); // 延迟10秒，确保任务真正停止（给进程足够时间完全停止）
         }
         else {
           console.log('[Operate] 操作完成，恢复按钮状态');
           isExecuting.value = false;
+          currentTaskName.value = null;
         }
       }
     }
@@ -499,6 +551,19 @@ onMounted(async () => {
       if (isExecuting.value !== isRunning) {
         console.log('[Operate] 同步后端任务状态:', isRunning);
         isExecuting.value = isRunning;
+      }
+      // 如果任务正在执行，获取任务名称
+      if (isRunning) {
+        try {
+          const taskName = await getCurrentTaskName();
+          currentTaskName.value = taskName;
+        }
+        catch (error) {
+          console.error('[Operate] 获取任务名称失败:', error);
+        }
+      }
+      else {
+        currentTaskName.value = null;
       }
     }
     catch (error) {
@@ -931,7 +996,7 @@ const handleConfirm = () => {
         <!-- 停止任务按钮 -->
         <div v-if="isExecuting" class="px-3 py-2 mb-2">
           <a-button danger size="small" class="w-full text-[11px] h-6" @click="handleStopTask">
-            停止任务
+            停止{{ currentTaskName ? `"${currentTaskName}"` : '任务' }}
           </a-button>
         </div>
 
@@ -1066,45 +1131,51 @@ const handleConfirm = () => {
             <a-sub-menu v-if="item.children && item.children.length > 0" :key="`submenu-${item.key}`">
               <template #title>
                 <a-tooltip v-if="areAllChildrenDisabledByMultipleOperators(item)" title="该功能只支持单算子执行" placement="right">
-                  <span v-if="item.icon" class="inline-flex items-center text-[11px]">
-                    <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
-                    <span class="text-white/85">{{ item.label }}</span>
-                    <a-tooltip
-                      v-if="item.key === 'build' && isStandardCustom"
-                      title="不选择算子，则默认编译整个算子包"
-                      placement="right"
-                    >
-                      <QuestionCircleOutlined
-                        class="info-icon ml-1"
-                        @click.stop
-                      />
-                    </a-tooltip>
-                    
-                    <div v-if="item.key === 'runDebug'" class="setting-box">
-                      <SettingOutlined @click.stop="debugConfig()" />
+                  <div v-if="item.icon" class="single-box">
+                    <span class="inline-flex items-center text-[11px]">
+                      <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
+                      <span class="text-white/85">{{ item.label }}</span>
+                    </span>
+                    <div class="flex items-center gap-1">
+                      <a-tooltip
+                        v-if="item.key === 'build' && isStandardCustom"
+                        title="不选择算子，则默认编译整个算子包"
+                        placement="right"
+                      >
+                        <QuestionCircleOutlined
+                          class="info-icon"
+                          @click.stop
+                        />
+                      </a-tooltip>
+                      <div v-if="item.key === 'runDebug'" class="setting-box">
+                        <SettingOutlined @click.stop="debugConfig()" />
+                      </div>
                     </div>
-                  </span>
+                  </div>
                   <span v-else class="text-white/85">{{ item.label }}</span>
                 </a-tooltip>
                 <template v-else>
-                  <span v-if="item.icon" class="inline-flex items-center text-[11px]">
-                    <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
-                    <span class="text-white/85">{{ item.label }}</span>
-                    <a-tooltip
-                      v-if="item.key === 'build' && isStandardCustom"
-                      title="不选择算子，则默认编译整个算子包"
-                      placement="right"
-                    >
-                      <QuestionCircleOutlined
-                        class="info-icon ml-1"
-                        @click.stop
-                      />
-                    </a-tooltip>
-                    
-                    <div v-if="item.key === 'runDebug'" class="setting-box">
-                      <SettingOutlined @click.stop="debugConfig()" />
+                  <div v-if="item.icon" class="single-box">
+                    <span class="inline-flex items-center text-[11px]">
+                      <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
+                      <span class="text-white/85">{{ item.label }}</span>
+                    </span>
+                    <div class="flex items-center gap-1">
+                      <a-tooltip
+                        v-if="item.key === 'build' && isStandardCustom"
+                        title="不选择算子，则默认编译整个算子包"
+                        placement="right"
+                      >
+                        <QuestionCircleOutlined
+                          class="info-icon"
+                          @click.stop
+                        />
+                      </a-tooltip>
+                      <div v-if="item.key === 'runDebug'" class="setting-box">
+                        <SettingOutlined @click.stop="debugConfig()" />
+                      </div>
                     </div>
-                  </span>
+                  </div>
                   <span v-else class="text-white/85">{{ item.label }}</span>
                 </template>
               </template>

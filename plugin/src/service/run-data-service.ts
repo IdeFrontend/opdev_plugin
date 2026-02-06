@@ -9,6 +9,8 @@ import {
   MarkRecordParams,
 } from '@shared/api-types';
 import { PerformanceRunData } from '@plugin/core/performance/performance-run-data';
+import { ProjectManager } from '@plugin/core/project/project-manager';
+import { getConfig } from '@plugin/domain';
 
 const MARKED_STORAGE_KEY = 'msSanitizer_marks';
 
@@ -97,6 +99,13 @@ export class RunDataService {
     }
 
     const workspacePath = workspaceFolders[0].uri.fsPath;
+    const res: Array<{
+      title: string;
+      timestamp: number;
+      id: string;
+      path: string;
+      marked: boolean;
+    }> = [];
 
     // 获取目录下.vscode/mindstudio_sanitizer_log文件夹中的所有文件
     const logPath = path.join(
@@ -104,31 +113,68 @@ export class RunDataService {
       '.vscode/mindstudio_sanitizer_log',
     );
 
-    // 文件夹不存在
-    if (!fs.existsSync(logPath)) {
-      return [];
+    const markSet = getMsSanitizerMarks();
+
+    // 读取目录下的文件
+    if (fs.existsSync(logPath)) {
+      const allFileNames = await fs.readdirSync(logPath);
+
+      for (const filename of allFileNames) {
+        const _filename = filename.replace('.log', '');
+        const [
+          title,
+          timestamp,
+        ] = _filename.split('_');
+
+        res.push({
+          title: `${title}-${formatTimestampToYYYYMMDD(+timestamp)}`,
+          timestamp: +timestamp,
+          id: filename,
+          path: path.join(logPath, filename),
+          marked: markSet.has(filename),
+        });
+      }
     }
 
-    const allFileNames = await fs.readdirSync(logPath);
+    // 读取配置中的fileMapList
+    try {
+      await ProjectManager.getInstance().initProject();
+      const projectId = ProjectManager.getInstance().projectId;
+      if (!projectId) {
+        return res;
+      }
+      const sanitizerConfigs = getConfig(Number(projectId), 'sanitizer');
 
-    const markSet = getMsSanitizerMarks();
-    const res = allFileNames.map((filename) => {
-      const _filename = filename.replace('.log', '');
-      const [
-        title,
-        timestamp,
-      ] = _filename.split('_');
+      for (const config of sanitizerConfigs) {
+        const userOptions = config.user_options as Record<string, unknown> | null;
+        if (userOptions && Array.isArray(userOptions.fileMapList)) {
+          const fileMapList = userOptions.fileMapList as Array<{ filePath: string; reportTime: number }>;
+          for (const fileMap of fileMapList) {
+            if (fs.existsSync(fileMap.filePath)) {
+              const stat = fs.statSync(fileMap.filePath);
+              if (stat.isFile()) {
+                // 异常检测只处理文件
+                const filename = path.basename(fileMap.filePath);
+                const id = `sanitizer_${fileMap.filePath}`;
+                res.push({
+                  title: filename,
+                  timestamp: fileMap.reportTime,
+                  id,
+                  path: fileMap.filePath,
+                  marked: markSet.has(id),
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+    catch (error) {
+      console.error('读取异常检测配置fileMapList失败:', error);
+    }
 
-      return {
-        title: `${title}-${formatTimestampToYYYYMMDD(+timestamp)}`,
-        timestamp: +timestamp,
-        id: filename,
-        path: path.join(logPath, filename),
-        marked: markSet.has(filename),
-      };
-    });
-
-    return res;
+    // 按照时间排序
+    return res.sort((a, b) => b.timestamp - a.timestamp);
   }
 
   /**

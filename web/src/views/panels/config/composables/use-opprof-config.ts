@@ -16,6 +16,12 @@ export interface AdvanceParam {
   key: number;
 }
 
+// 文件映射项类型
+export interface FileMapItem {
+  filePath: string; // 文件路径（绝对路径）
+  reportTime: number; // 文件时间（时间戳）
+}
+
 // 仿真配置数据类型
 export interface SimulationConfig {
   config_id: string;
@@ -34,6 +40,7 @@ export interface SimulationConfig {
     simulatorType: string;
     enableDump: boolean;
     advance_param: Array<AdvanceParam>;
+    fileMapList?: Array<FileMapItem>; // 文件映射列表
   };
 }
 
@@ -80,6 +87,7 @@ export interface OnboardConfig {
     renderInPlatform: boolean;
     dataStoragePath: string;
     advance_param: Array<AdvanceParam>;
+    fileMapList?: Array<FileMapItem>; // 文件映射列表
   };
 }
 
@@ -103,6 +111,7 @@ export function createDefaultSimulationConfig(): SimulationConfig {
       simulatorType: '', // 仿真器类型
       enableDump: false, // 控制仿真器dump文件是否生成
       advance_param: [],
+      fileMapList: [], // 文件映射列表
     },
   };
 }
@@ -153,6 +162,7 @@ export function createDefaultOnboardConfig(): OnboardConfig {
       renderInPlatform: false,
       dataStoragePath: '',
       advance_param: [],
+      fileMapList: [], // 文件映射列表
     },
   };
 }

@@ -110,6 +110,12 @@ export class PerformanceRunData {
       return runData;
     }
 
+    const project = Project.getInstance();
+    if (!project.workspaceIsProject()) {
+      return runData;
+    }
+
+    // 读取目录下的执行记录
     const executionEntries = await vscode.workspace.fs.readDirectory(this.rootUri);
 
     for (const [
@@ -132,6 +138,58 @@ export class PerformanceRunData {
       };
 
       runData.push(executionRecord);
+    }
+
+    // 读取配置中的fileMapList
+    const simulateConfigs = getConfig(project.projectId, 'simulate');
+    const onBoardConfigs = getConfig(project.projectId, 'on_board');
+
+    // 处理仿真配置的fileMapList
+    for (const config of simulateConfigs) {
+      const userOptions = config.user_options as Record<string, unknown> | null;
+      if (userOptions && Array.isArray(userOptions.fileMapList)) {
+        const fileMapList = userOptions.fileMapList as Array<{ filePath: string; reportTime: number }>;
+        for (const fileMap of fileMapList) {
+          if (await this.uriExists(vscode.Uri.file(fileMap.filePath))) {
+            const stat = await vscode.workspace.fs.stat(vscode.Uri.file(fileMap.filePath));
+            const isDirectory = stat.type === vscode.FileType.Directory;
+            const key = `simulate_${fileMap.filePath}`;
+            const executionRecord: PerformanceExecutionRecord = {
+              key,
+              title: path.basename(fileMap.filePath),
+              timestamp: fileMap.reportTime,
+              dirPath: fileMap.filePath,
+              marked: markedKeySet.has(key),
+              children: isDirectory ? await this.scanSubFiles(vscode.Uri.file(fileMap.filePath)) : [],
+            };
+            runData.push(executionRecord);
+          }
+        }
+      }
+    }
+
+    // 处理上板配置的fileMapList
+    for (const config of onBoardConfigs) {
+      const userOptions = config.user_options as Record<string, unknown> | null;
+      if (userOptions && Array.isArray(userOptions.fileMapList)) {
+        const fileMapList = userOptions.fileMapList as Array<{ filePath: string; reportTime: number }>;
+        for (const fileMap of fileMapList) {
+          if (await this.uriExists(vscode.Uri.file(fileMap.filePath))) {
+            const stat = await vscode.workspace.fs.stat(vscode.Uri.file(fileMap.filePath));
+            const isDirectory = stat.type === vscode.FileType.Directory;
+            const key = `onboard_${fileMap.filePath}`;
+            const executionRecord: PerformanceExecutionRecord = {
+              key,
+              title: path.basename(fileMap.filePath),
+              timestamp: fileMap.reportTime,
+              dirPath: fileMap.filePath,
+              marked: markedKeySet.has(key),
+              children: isDirectory ? await this.scanSubFiles(vscode.Uri.file(fileMap.filePath)) : [],
+            };
+            runData.push(executionRecord);
+          }
+        }
+      }
     }
 
     return runData;
