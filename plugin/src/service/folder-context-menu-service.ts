@@ -142,14 +142,14 @@ function findStandardCustomRoot(startPath: string): string | null {
 
 /**
  * 检查标准自定义算子是否支持异常检测与调优
- * 通过检查根目录的 build.sh 是否包含 --bisheng-config
+ * 通过检查根目录的 build.sh 是否包含 --bisheng_flags
  */
 function checkSupportsSanitizerAndTuning(rootPath: string): boolean {
   const buildShPath = path.join(rootPath, 'build.sh');
   if (!fs.existsSync(buildShPath)) return false;
   try {
     const content = fs.readFileSync(buildShPath, 'utf-8');
-    return content.includes('--bisheng-config');
+    return content.includes('--bisheng_flags');
   } catch {
     return false;
   }
@@ -883,12 +883,12 @@ export class FolderContextMenuService {
     const folderPath = uri.fsPath;
     const project = getProjectByPath(folderPath);
 
-    // 检查是否支持异常检测与调优（标准自定义算子需要检查 build.sh 是否包含 --bisheng-config）
+    // 检查是否支持异常检测与调优（标准自定义算子需要检查 build.sh 是否包含 --bisheng_flags
     const rootPath = findStandardCustomRoot(folderPath);
     if (rootPath) {
       const supportsSanitizerAndTuning = checkSupportsSanitizerAndTuning(rootPath);
       if (!supportsSanitizerAndTuning) {
-        vscode.window.showWarningMessage('暂不支持该功能，请确保 build.sh 中包含 --bisheng-config');
+        vscode.window.showWarningMessage('暂不支持该功能，请确保 build.sh 中包含 --bisheng_flags');
         return;
       }
     }
@@ -908,12 +908,12 @@ export class FolderContextMenuService {
     const project = getProjectByPath(folderPath);
 
 
-    // 检查是否支持异常检测与调优（标准自定义算子需要检查 build.sh 是否包含 --bisheng-config）
+    // 检查是否支持异常检测与调优（标准自定义算子需要检查 build.sh 是否包含 --bisheng_flags）
     const rootPath = findStandardCustomRoot(folderPath);
     if (rootPath) {
       const supportsSanitizerAndTuning = checkSupportsSanitizerAndTuning(rootPath);
       if (!supportsSanitizerAndTuning) {
-        vscode.window.showWarningMessage('暂不支持该功能，请确保 build.sh 中包含 --bisheng-config');
+        vscode.window.showWarningMessage('暂不支持该功能，请确保 build.sh 中包含 --bisheng_flags');
         return;
       }
     }
@@ -932,12 +932,12 @@ export class FolderContextMenuService {
     const folderPath = uri.fsPath;
     const project = getProjectByPath(folderPath);
 
-    // 检查是否支持异常检测与调优（标准自定义算子需要检查 build.sh 是否包含 --bisheng-config）
+    // 检查是否支持异常检测与调优（标准自定义算子需要检查 build.sh 是否包含 --bisheng_flags）
     const rootPath = findStandardCustomRoot(folderPath);
     if (rootPath) {
       const supportsSanitizerAndTuning = checkSupportsSanitizerAndTuning(rootPath);
       if (!supportsSanitizerAndTuning) {
-        vscode.window.showWarningMessage('暂不支持该功能，请确保 build.sh 中包含 --bisheng-config');
+        vscode.window.showWarningMessage('暂不支持该功能，请确保 build.sh 中包含 --bisheng_flags');
         return;
       }
     }

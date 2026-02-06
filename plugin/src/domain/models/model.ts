@@ -1,3 +1,4 @@
+import * as vscode from 'vscode';
 import path from 'path';
 import fs from 'fs-extra';
 import config from './config';
@@ -37,6 +38,78 @@ type OpsStore = {
   lastId: number;
   ops: OpRecord[];
 };
+
+/**
+ * 检查根目录 build.sh 是否包含 --bisheng_flags
+ * 用于修改标准自定义算子
+ */
+function checkBuildShHasBishengConfig(): boolean {
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+
+  if (!workspaceFolders || workspaceFolders.length === 0) {
+    return false;
+  }
+  
+  const workspacePath = workspaceFolders[0].uri.fsPath;
+  const buildShPath = path.join(workspacePath, 'build.sh');
+  if (!fs.existsSync(buildShPath)) return false;
+  try {
+    const content = fs.readFileSync(buildShPath, 'utf-8');
+    return content.includes('--bisheng_flags');
+  } catch {
+    return false;
+  }
+}
+
+function getNpuDebugScript(type: string, scriptPath: string): string {
+  if (type === 'ascend') {
+    if (checkBuildShHasBishengConfig()) {
+      return `bash ${scriptPath} --pkg --soc=${soc_version} --vendor_name=custom --bisheng_flags=ccec_o0,ccec_g`
+    }
+    return `bash ${scriptPath} --pkg --soc=${soc_version} --vendor_name=custom --debug`
+  }
+  return `bash ${scriptPath} --debug`
+}
+
+function getCpuDebugScript(type: string, scriptPath: string): string {
+  if (type === 'ascend') {
+    if (checkBuildShHasBishengConfig()) {
+      return `bash ${scriptPath} --pkg --soc=${soc_version} --vendor_name=custom --bisheng_flags=ccec_g`
+    }
+    return `bash ${scriptPath} --pkg --soc=${soc_version} --vendor_name=custom --simulator`
+  }
+  return `bash ${scriptPath} --simulator`
+}
+
+function getSimulateScript(type: string, scriptPath: string): string {
+ if (type === 'ascend') {
+    if (checkBuildShHasBishengConfig()) {
+      return `bash ${scriptPath} --pkg --soc=${soc_version} --vendor_name=custom --bisheng_flags=ccec_g`
+    }
+    return `bash ${scriptPath} --pkg --soc=${soc_version} --vendor_name=custom --simulator Ascend910B3`
+  }
+  return `bash ${scriptPath} --simulator Ascend910B3`
+}
+
+function getOnBoardScript(type: string, scriptPath: string): string {
+   if (type === 'ascend') {
+    if (checkBuildShHasBishengConfig()) {
+      return `bash ${scriptPath} --pkg --soc=${soc_version} --vendor_name=custom --bisheng_flags=ccec_g`
+    }
+    return `bash ${scriptPath} --pkg --soc=${soc_version} --vendor_name=custom --onboard`
+  }
+  return `bash ${scriptPath} --onboard`
+}
+
+function getExampleScript(type: string, scriptPath: string): string {
+  if (type === 'ascend') {
+    if (checkBuildShHasBishengConfig()) {
+      return `bash ${scriptPath} --vendor_name=custom --simulator --soc=${soc_version}`
+    }
+    return `bash ${scriptPath} --vendor_name=custom --run_example`
+  }
+  return `bash ${scriptPath}`
+}
 
 function ensureStore(): OpsStore {
   const dataDir = getDataDir();
@@ -276,15 +349,15 @@ export async function generateStructure(
           config_name: record.op_name,
           target_dir: targetDir,
           target_file: targetFile,
-          cpu_debug_script: record.op_type === 'ascend' ? `bash ${opScriptPath} --pkg --soc=${soc_version} --vendor_name=custom --simulator` : `bash ${opScriptPath} --simulator`,
-          npu_debug_script: record.op_type === 'ascend' ? `bash ${opScriptPath} --pkg --soc=${soc_version} --vendor_name=custom --debug` : `bash ${opScriptPath} --debug`
+          cpu_debug_script: getCpuDebugScript(record.op_type, opScriptPath),
+          npu_debug_script: getNpuDebugScript(record.op_type, opScriptPath)
         },
       };
       const buildExample = {
         project_id: project.id,
         user_options: {
           op: record.op_name,
-          script: record.op_type === 'ascend' ? `bash ${exampleScriptPath} --vendor_name=custom --run_example` : `bash ${exampleScriptPath}`,
+          script: getExampleScript(record.op_type, exampleScriptPath),
           config_name: record.op_name,
           target_dir: targetDir,
           target_file: targetExampleFile,
@@ -343,7 +416,7 @@ export async function generateStructure(
         project_id: project.id,
         user_options: {
           op: record.op_name,
-          script: record.op_type === 'ascend' ? `bash ${opScriptPath} --pkg --soc=${soc_version} --vendor_name=custom --onboard` : `bash ${opScriptPath} --onboard`,
+          script: getOnBoardScript(record.op_type, opScriptPath),
           config_name: record.op_name,
           // 内存分析图 相关
           // 核间负载分析图
@@ -386,7 +459,7 @@ export async function generateStructure(
         project_id: project.id,
         user_options: {
           op: record.op_name,
-          script: record.op_type === 'ascend' ? `bash ${opScriptPath} --pkg --soc=${soc_version} --vendor_name=custom simulator Ascend910B3` : `bash ${opScriptPath} simulator Ascend910B3`,
+          script: getSimulateScript(record.op_type, opScriptPath),
           config_name: record.op_name,
           soc_version: soc_version,
           ResourceConflictRatio: true,
