@@ -85,7 +85,7 @@ export function checkMultipleOperators() {
     hasMultiple: boolean; 
     operators?: Array<{ id: number; name: string; path: string; isExperimental: boolean; isCompiled?: boolean }>;
     isStandardCustom?: boolean;
-    /** 根目录为标准自定义算子时：build.sh 含 --bisheng-config 则支持异常检测与调优 */
+    /** 根目录为标准自定义算子时：build.sh 含 --bisheng_flags 则支持异常检测与调优 */
     supportsSanitizerAndTuning?: boolean;
   }>('webview/checkMultipleOperators');
 }

@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://gitcode.com/kaocong/mstt"
   },
-  "version": "1.2.34",
+  "version": "1.2.35",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -104,12 +104,6 @@
         {
           "id": "performanceSidebarView",
           "name": "性能调优结果可视化",
-          "type": "webview",
-          "visibility": "collapsed"
-        },
-        {
-          "id": "dumpTensorSidebarView",
-          "name": "DumpTensor数据",
           "type": "webview",
           "visibility": "collapsed"
         }
