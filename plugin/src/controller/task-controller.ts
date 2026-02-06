@@ -267,6 +267,9 @@ export const taskMethods = {
     try {
       await ProjectManager.getInstance()
         .initProject();
+      // 保存当前 executor 引用，用于可能的终止操作
+      currentExecutor = ProjectManager.getInstance()
+        .getExecutor();
       // 设置当前任务类型
       currentTaskType = 'buildAndDebug';
       
@@ -281,6 +284,10 @@ export const taskMethods = {
 
         if (!isPyFile) {
           vscode.window.showErrorMessage('请先打开一个 .py 文件');
+          // 清除状态
+          currentExecutor = null;
+          currentTaskType = null;
+          ProjectManager.getInstance().clearExecutor();
           return;
         }
 
@@ -288,6 +295,10 @@ export const taskMethods = {
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders || workspaceFolders.length === 0) {
           vscode.window.showErrorMessage('未找到工作区路径');
+          // 清除状态
+          currentExecutor = null;
+          currentTaskType = null;
+          ProjectManager.getInstance().clearExecutor();
           return;
         }
 
@@ -349,8 +360,11 @@ export const taskMethods = {
       throw error;
     }
     finally {
-      // 清除任务类型
+      // 清除 executor 引用和任务类型
+      currentExecutor = null;
       currentTaskType = null;
+      ProjectManager.getInstance()
+        .clearExecutor();
     }
   },
 
@@ -376,6 +390,9 @@ export const taskMethods = {
     try {
       await ProjectManager.getInstance()
         .initProject();
+      // 保存当前 executor 引用，用于可能的终止操作
+      currentExecutor = ProjectManager.getInstance()
+        .getExecutor();
       // 设置当前任务类型
       currentTaskType = 'buildAndCpuDebug';
       
@@ -390,6 +407,10 @@ export const taskMethods = {
 
         if (!isPyFile) {
           vscode.window.showErrorMessage('请先打开一个 .py 文件');
+          // 清除状态
+          currentExecutor = null;
+          currentTaskType = null;
+          ProjectManager.getInstance().clearExecutor();
           return;
         }
 
@@ -397,6 +418,10 @@ export const taskMethods = {
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders || workspaceFolders.length === 0) {
           vscode.window.showErrorMessage('未找到工作区路径');
+          // 清除状态
+          currentExecutor = null;
+          currentTaskType = null;
+          ProjectManager.getInstance().clearExecutor();
           return;
         }
 
@@ -458,8 +483,11 @@ export const taskMethods = {
       throw error;
     }
     finally {
-      // 清除任务类型
+      // 清除 executor 引用和任务类型
+      currentExecutor = null;
       currentTaskType = null;
+      ProjectManager.getInstance()
+        .clearExecutor();
     }
   },
 

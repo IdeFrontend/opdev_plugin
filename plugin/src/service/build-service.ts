@@ -354,7 +354,7 @@ export class BuildService {
               config_type: 'build_op',
               user_options: {
                 ...buildOpConfig.user_options,
-                target_file: relativePath,
+                target_file: `python3 ${relativePath}`,
               },
             };
 
@@ -496,7 +496,7 @@ export class BuildService {
             config_type: 'build_op',
             user_options: {
               ...buildOpConfig.user_options,
-              target_file: relativePath,
+              target_file: `python3 ${relativePath}`,
             },
           };
 
@@ -652,7 +652,7 @@ export class BuildService {
             config_type: 'build_op',
             user_options: {
               ...buildOpConfig.user_options,
-              target_file: relativePath,
+              target_file: `python3 ${relativePath}`,
             },
           };
 
