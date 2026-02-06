@@ -21,6 +21,7 @@ import { getConfigById } from '@plugin/domain/services/configuration';
 import { OperatorProjectType, OperatorProjectDetector } from '@plugin/domain/services/operator-project-detector';
 import { markOperatorsAsCompiled, getProjectByPath } from '@plugin/domain/models/project-model';
 import { homeMethods } from '../controller/home-controller';
+import { soc_version } from '@plugin/domain/utils/ascend-util';
 
 const CONFIG_TYPES = {
   BUILD_OP: 'build_op',
@@ -406,11 +407,6 @@ export class BuildService {
       // 构建编译选项
       let compileOption = ''
 
-      // 如果是标准自定义算子，添加 --bisheng_flags=ccec_g
-      // if (await isRootStandardCustom()) {
-      //   compileOption = '--bisheng_flags=ccec_g';
-      // }
-
       const buildCommand = getBuildOpCommand(
         Number(simulatorItem?.config_id),
         compileOption,
@@ -439,7 +435,7 @@ export class BuildService {
       // 如果是标准自定义算子，需要编译 example 并添加 --simulator --soc
       if (await isRootStandardCustom()) {
         const exConfigId = await this.getBuildExampleConfigId();
-        const exampleCompileOption = '--simulator --soc';
+        const exampleCompileOption = `--simulator --soc=${soc_version}`;
         const exampleBuildCommand = getBuildExampleCommand(
           Number(exConfigId),
           exampleCompileOption,
@@ -509,11 +505,6 @@ export class BuildService {
     if (!isPyascType) {
       // 构建编译选项
       let compileOption = ''
-
-      // 如果是标准自定义算子，添加 --bisheng_flags=ccec_g
-      // if (await isRootStandardCustom()) {
-      //   compileOption = '--bisheng_flags=ccec_g';
-      // }
 
       const buildCommand = getBuildOpCommand(
         Number(configId),

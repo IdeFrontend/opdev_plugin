@@ -104,7 +104,7 @@ function getOnBoardScript(type: string, scriptPath: string): string {
 function getExampleScript(type: string, scriptPath: string): string {
   if (type === 'ascend') {
     if (checkBuildShHasBishengConfig()) {
-      return `bash ${scriptPath} --vendor_name=custom --simulator --soc=${soc_version}`
+      return `bash ${scriptPath} --vendor_name=custom --run_example`
     }
     return `bash ${scriptPath} --vendor_name=custom --run_example`
   }
