@@ -63,6 +63,8 @@ const mutuallyExclusiveKeys = [
   'sanitizer',
   'onboard',
   'simulation',
+  'buildAndCpuDebug',
+  'buildAndDebug',
 ];
 
 // 基础菜单配置（不包含调试菜单）
@@ -333,6 +335,8 @@ const handleMenuClick = async ({ key }) => {
           'sanitizer': '异常检测',
           'onboard': '上板分析',
           'simulation': '仿真分析',
+          'buildAndCpuDebug': 'CPU调试',
+          'buildAndDebug': 'NPU调试',
         };
         const newTaskName = newTaskNameMap[originalKey] || originalKey;
 

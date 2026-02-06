@@ -281,6 +281,7 @@ const showPowerScript = computed(() => {
         />
       </a-form-item>
       <a-form-item
+        v-if="projectType !== 'pyasc'"
         :label="isStandardCustom ? '算子部署命令' : '算子运行命令行'"
         name="ipAddress"
       >
