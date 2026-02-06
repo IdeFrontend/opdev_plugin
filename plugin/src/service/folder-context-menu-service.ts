@@ -33,6 +33,10 @@ import { getOpsByProjectId, getOpByProjectIdAndOpName } from '@plugin/domain/mod
 import { getConfig, getConfigById, postConfig } from '@plugin/domain/services/configuration';
 import { buildService } from './build-service';
 import { taskMethods } from '../controller/task-controller';
+import {
+  COMMAND_FLASH_MS_SANITIZER_RUN_DATA,
+  COMMAND_FLASH_PERFORMANCE_RUN_DATA,
+} from '@plugin/constants';
 
 /**
  * 根目录下的算子合集白名单
@@ -1004,4 +1008,174 @@ export class FolderContextMenuService {
       projectType: project.project_type || undefined,
     };
   }
+
+  /**
+   * 初始化算子工程配置
+   * @param detection 算子工程检测结果
+   * @param projectId 项目ID
+   * @param skipVscodeFiles 是否跳过创建 .vscode 和 .arts 文件（默认 false）
+   */
+  private static async initializeOperatorProject(
+    detection: OperatorProjectDetectionResult,
+    projectId: number,
+    skipVscodeFiles: boolean = false,
+  ): Promise<void> {
+    if (!detection.isOperatorProject || !detection.projectType) {
+      return;
+    }
+
+    try {
+      const context = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
+        .extensionContext;
+
+      if (!context) {
+        return;
+      }
+
+      // 根据算子工程类型确定模板名称和类型
+      let templateName: string | undefined;
+      let opType: string = 'ascend';
+
+      switch (detection.projectType) {
+        case OperatorProjectType.ASCEND_C:
+          templateName = 'hello_world';
+          opType = 'ascend';
+          break;
+        case OperatorProjectType.TORCH_LIBRARY:
+          templateName = 'torch_library_template';
+          opType = 'ascend';
+          break;
+        case OperatorProjectType.PYASC:
+          // pyasc算子工程，使用 pyasc_temple 模板
+          templateName = 'pyasc_temple';
+          opType = 'pyasc';
+          console.log(`[FolderContextMenuService] PYASC类型，使用 pyasc_temple 模板`);
+          break;
+        case OperatorProjectType.STANDARD_CUSTOM:
+          opType = 'cann';
+          // 标准自定义算子不需要模板
+          break;
+        default:
+          return;
+      }
+
+      // 调用 generateStructure 初始化配置
+      // 对于标准自定义算子，如果没有模板，跳过模板解压，只创建配置
+      const isSkipUnZip = detection.projectType === OperatorProjectType.STANDARD_CUSTOM && !templateName;
+      await generateStructure(
+        {
+          project_id: projectId,
+          op_type: opType,
+          op_name: detection.projectName,
+          template_name: templateName,
+          op_path: detection.projectPath,
+          skipExisting: true, // 不覆盖已有文件
+        } as any,
+        context.extensionPath,
+        isSkipUnZip, // 标准自定义算子且无模板时，跳过模板解压
+        skipVscodeFiles, // 是否跳过创建 .vscode 和 .arts 文件
+      );
+
+      // 验证配置是否创建成功
+      const ops = getOpsByProjectId(projectId);
+      const buildOpConfigs = getConfig(projectId, 'build_op');
+    } catch (error) {
+      // 初始化失败不应该阻止标记操作，只记录错误
+    }
+  }
+
+  /**
+   * 将文件/文件夹添加到配置的fileMapList
+   * @param uri 文件或文件夹URI
+   * @param configType 配置类型：'sanitizer' | 'on_board' | 'simulate'
+   */
+  static async addReportToFileMapList(uri: vscode.Uri, configType: 'sanitizer' | 'on_board' | 'simulate'): Promise<void> {
+    try {
+      const filePath = uri.fsPath;
+      const stat = await vscode.workspace.fs.stat(uri);
+      const isFile = stat.type === vscode.FileType.File;
+      const isDirectory = stat.type === vscode.FileType.Directory;
+
+      // 异常检测只支持文件
+      if (configType === 'sanitizer' && !isFile) {
+        vscode.window.showErrorMessage('异常检测只支持文件，请选择文件');
+        return;
+      }
+
+      // 上板分析和仿真分析支持文件夹
+      if ((configType === 'on_board' || configType === 'simulate') && !isDirectory && !isFile) {
+        vscode.window.showErrorMessage('请选择文件或文件夹');
+        return;
+      }
+
+      await ProjectManager.getInstance().initProject();
+      const projectId = ProjectManager.getInstance().projectId;
+      if (!projectId) {
+        vscode.window.showErrorMessage('未找到项目ID');
+        return;
+      }
+
+      // 获取配置
+      const configs = getConfig(Number(projectId), configType);
+      if (configs.length === 0) {
+        vscode.window.showErrorMessage(`未找到${configType === 'sanitizer' ? '异常检测' : configType === 'on_board' ? '上板分析' : '仿真分析'}配置`);
+        return;
+      }
+
+      // 使用第一个配置
+      const config = configs[0];
+      const userOptions = (config.user_options as Record<string, unknown>) || {};
+      const fileMapList = (userOptions.fileMapList as Array<{ filePath: string; reportTime: number }>) || [];
+
+      // 检查是否已存在
+      const exists = fileMapList.some(item => item.filePath === filePath);
+      if (exists) {
+        vscode.window.showInformationMessage('该文件/文件夹已存在于配置中');
+        return;
+      }
+
+      // 添加新的文件映射
+      const newFileMap = {
+        filePath,
+        reportTime: Date.now(),
+      };
+      fileMapList.push(newFileMap);
+
+      // 更新配置
+      const updatedUserOptions = {
+        ...userOptions,
+        fileMapList,
+      };
+
+      await postConfig(configType, [{
+        config_id: config.config_id,
+        project_id: config.project_id,
+        user_options: updatedUserOptions,
+      }]);
+
+      vscode.window.showInformationMessage('已添加到报告可视化列表');
+
+      // 刷新对应的面板
+      try {
+        if (configType === 'sanitizer') {
+          // 刷新异常检测面板
+          await vscode.commands.executeCommand(COMMAND_FLASH_MS_SANITIZER_RUN_DATA);
+        }
+        else if (configType === 'on_board' || configType === 'simulate') {
+          // 刷新性能调优面板
+          await vscode.commands.executeCommand(COMMAND_FLASH_PERFORMANCE_RUN_DATA);
+        }
+      }
+      catch (refreshError) {
+        console.error('刷新面板失败:', refreshError);
+        // 不显示错误，因为配置已经成功添加
+      }
+    }
+    catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      vscode.window.showErrorMessage(`添加失败: ${errorMessage}`);
+      console.error('addReportToFileMapList error:', error);
+    }
+  }
+
 }

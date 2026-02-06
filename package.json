@@ -257,6 +257,18 @@
         "title": "仿真分析"
       },
       {
+        "command": "huawei-op-devtools.reportVisualizationSanitizer",
+        "title": "报告可视化：异常检测"
+      },
+      {
+        "command": "huawei-op-devtools.reportVisualizationOnBoard",
+        "title": "报告可视化：上板分析"
+      },
+      {
+        "command": "huawei-op-devtools.reportVisualizationSimulation",
+        "title": "报告可视化：仿真分析"
+      },
+      {
         "command": "huawei-op-devtools.refreshFolderDecorations",
         "title": "刷新文件夹装饰"
       }
@@ -269,6 +281,10 @@
       {
         "id": "operator.performance",
         "label": "性能调优"
+      },
+      {
+        "id": "operator.reportVisualization",
+        "label": "报告可视化"
       }
     ],
     "menus": {
@@ -342,6 +358,11 @@
           "submenu": "operator.performance",
           "when": "explorerResourceIsFolder || resourceExtname == '.py'",
           "group": "operator@3.5"
+        },
+        {
+          "submenu": "operator.reportVisualization",
+          "when": "explorerResourceIsFolder || resourceScheme == 'file'",
+          "group": "operator@3.6"
         }
       ],
       "operator.debug": [
@@ -358,6 +379,20 @@
         },
         {
           "command": "huawei-op-devtools.operatorProjectSimulation"
+        }
+      ],
+      "operator.reportVisualization": [
+        {
+          "command": "huawei-op-devtools.reportVisualizationSanitizer",
+          "when": "resourceScheme == 'file' && resourceExtname == '.log'"
+        },
+        {
+          "command": "huawei-op-devtools.reportVisualizationOnBoard",
+          "when": "explorerResourceIsFolder"
+        },
+        {
+          "command": "huawei-op-devtools.reportVisualizationSimulation",
+          "when": "explorerResourceIsFolder"
         }
       ]
     },

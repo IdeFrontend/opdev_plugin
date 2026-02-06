@@ -111,6 +111,8 @@ export type JumpToFileParams = {
   fileLink: string;
   row: number;
   col: number;
+  errorMessage?: string; // 错误信息，用于在高亮时显示
+  errorTitle?: string; // 错误标题
 };
 
 export type BuildCreateOpsParams = {
