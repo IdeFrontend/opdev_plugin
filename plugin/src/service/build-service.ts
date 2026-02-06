@@ -269,6 +269,7 @@ export class BuildService {
         Number(configId),
         params.compileOption,
         params.operatorNames,
+        params.scriptField
       );
       console.log('[startBuild] 生成的编译命令:', buildCommand);
       const executor = ProjectManager.getInstance()
@@ -400,20 +401,18 @@ export class BuildService {
     const project = projectId ? getProjectById(Number(projectId)) : null;
     const isPyascType = project?.project_type === 'pyasc';
 
+    // 仿真分析前编译，pyasc 类型不需要编译
     if (!isPyascType) {
-      // 仿真分析前编译，pyasc 类型不需要编译
-      const buildConfigId = await this.getBuildConfigId();
-
       // 构建编译选项
-      let compileOption = objectToCommandString({ [`simulator ${simulatorType || ''}`]: true });
+      let compileOption = ''
 
       // 如果是标准自定义算子，添加 --bisheng-config=ccec_g
       if (await isRootStandardCustom()) {
-        compileOption = compileOption ? `${compileOption} --bisheng-config=ccec_g` : '--bisheng-config=ccec_g';
+        compileOption = '--bisheng-config=ccec_g';
       }
 
       const buildCommand = getBuildOpCommand(
-        Number(buildConfigId),
+        Number(simulatorItem?.config_id),
         compileOption,
         params.operatorNames,
       );
@@ -435,7 +434,7 @@ export class BuildService {
         return;
       }
 
-      await tryMarkOperatorsAsCompiled(Number(buildConfigId), params.operatorNames);
+      await tryMarkOperatorsAsCompiled(Number(simulatorItem?.config_id), params.operatorNames);
 
       // 如果是标准自定义算子，需要编译 example 并添加 --simulator --soc
       if (await isRootStandardCustom()) {
@@ -505,21 +504,19 @@ export class BuildService {
     const projectId = ProjectManager.getInstance().projectId;
     const project = projectId ? getProjectById(Number(projectId)) : null;
     const isPyascType = project?.project_type === 'pyasc';
-
+    const configId = await this.getOnBoardConfigId();
     // 上板分析前编译（pyasc 类型跳过）
     if (!isPyascType) {
-      const buildConfigId = await this.getBuildConfigId();
-
       // 构建编译选项
-      let compileOption = objectToCommandString({ onboard: true });
+      let compileOption = ''
 
       // 如果是标准自定义算子，添加 --bisheng-config=ccec_g
       if (await isRootStandardCustom()) {
-        compileOption = compileOption ? `${compileOption} --bisheng-config=ccec_g` : '--bisheng-config=ccec_g';
+        compileOption = '--bisheng-config=ccec_g';
       }
 
       const buildCommand = getBuildOpCommand(
-        Number(buildConfigId),
+        Number(configId),
         compileOption,
         params.operatorNames,
       );
@@ -541,7 +538,7 @@ export class BuildService {
         return;
       }
 
-      await tryMarkOperatorsAsCompiled(Number(buildConfigId), params.operatorNames);
+      await tryMarkOperatorsAsCompiled(Number(configId), params.operatorNames);
 
       // 如果是标准自定义算子，需要编译 example
       if (await isRootStandardCustom()) {
@@ -571,7 +568,6 @@ export class BuildService {
       }
     }
 
-    const configId = await this.getOnBoardConfigId();
     const exConfigId = await this.getBuildExampleConfigId();
 
     console.log('onboard configId', configId, exConfigId);

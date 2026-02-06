@@ -42,6 +42,7 @@ export type StartBuildParams = {
   operatorNames?: string; // 算子名称，多个用逗号分隔
   operatorType?: string; // 算子类型，用于标识编译哪种类型的算子（如 'standard-custom'）
   projectId?: string | number; // 项目ID
+  scriptField?: string; // 指定使用哪个字段作为脚本
 };
 
 export type StartRunParams = {

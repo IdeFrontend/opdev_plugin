@@ -26,6 +26,8 @@ export const COMMAND_FLASH_MS_SANITIZER_RUN_DATA = `${COMMAND_PREFIX}.flashMsSan
 
 export const COMMAND_FLASH_PERFORMANCE_RUN_DATA = `${COMMAND_PREFIX}.flashPerformanceRunData`;
 
+export const COMMAND_FLASH_DUMP_TENSOR_DATA = `${COMMAND_PREFIX}.flashDumpTensorData`;
+
 export const COMMAND_SIMULATOR_OPTIONS = `${COMMAND_PREFIX}.simulatorOptions`;
 
 export const COMMAND_ON_BOARD_OPTIONS = `${COMMAND_PREFIX}.onBoardOptions`;
@@ -52,6 +54,8 @@ export const VIEW_MS_SANITIZER = 'ms-sanitizer-panel-view';
 export const VIEW_PERFORMANCE_RUN_DATA = 'performance-run-data';
 
 export const VIEW_MS_SANITIZER_RUN_DATA = 'ms-sanitizer-run-data';
+
+export const VIEW_DUMP_TENSOR_DATA = 'dump-tensor-data'
 
 export const VIEW_OPS_CONFIG = 'ops-config';
 

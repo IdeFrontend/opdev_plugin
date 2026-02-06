@@ -71,25 +71,13 @@ export class AscendCommandStrategy implements CommandStrategy {
   buildOpCommand(params: CommandBuildParams): string {
     const { config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames } = params;
 
-    let soc = soc_version;
-    let vendor_name = 'custom';
-    const args = parse_cmd_options(config.custom_options || null);
+    const scriptField = params.scriptField || 'script'
 
-    if (args && args.vendor_name) {
-      vendor_name = args.vendor_name;
-    }
+    const userOptions = (config.user_options as Record<string, unknown> | null | undefined) || {}
 
-    if (args && args.soc) {
-      soc = args.soc;
-    }
+    const cmd = new Command(userOptions[scriptField] as string || '');
 
-    const cmd = new Command(config.script || '');
-
-    const options: Record<string, unknown> = {
-      pkg: true,
-      soc,
-      vendor_name,
-    };
+    const options: Record<string, unknown> = {};
 
     // 只有当 operatorNames 存在且不为空时，才添加 ops 参数
     if (operatorNames && operatorNames.trim()) {
@@ -123,25 +111,12 @@ export class AscendCommandStrategy implements CommandStrategy {
 
     const options = (config.user_options as Record<string, unknown> | null | undefined) || {};
     const mode = options.execution_mode as string || 'eager';
-    let vendor_name = 'custom';
     let pkg_mode = 'cust';
     // 如果提供了 operatorNames，优先使用它；否则使用 config.op
     const op = operatorNames || '';
-    const args = parse_cmd_options(config.custom_options || null);
-
-    if (args && args.vendor_name) {
-      vendor_name = args.vendor_name;
-    }
-
-    if (args && args.pkg_mode) {
-      pkg_mode = args.pkg_mode;
-    }
 
     const cmd = new Command(config.script || '');
 
-    const vendor_name_options: Record<string, unknown> = { vendor_name };
-
-    cmd.addOption('run_example', true);
     cmd.addArgument(op);
     cmd.addArgument(mode);
     cmd.addArgument(pkg_mode);
@@ -152,13 +127,6 @@ export class AscendCommandStrategy implements CommandStrategy {
 
     if (advance_cmd) {
       cmd.addArgument(advance_cmd);
-    }
-
-    // 将 vendor_name_options 转换为字符串并作为最后一个位置参数添加
-    const vendor_name_options_str = objectToCommandString(vendor_name_options as Record<string, string | number | boolean | (string | number)[] | null | undefined>);
-
-    if (vendor_name_options_str) {
-      cmd.addArgument(vendor_name_options_str);
     }
 
     return joinCommands(sourceCannCmd, cdCmd, cmd.toString());
