@@ -6,7 +6,6 @@ import {
   FlagFilled,
   CopyOutlined,
   DownloadOutlined,
-  SwapOutlined,
 } from '@ant-design/icons-vue';
 import type { DirectoryTreeProps } from 'ant-design-vue';
 import {
@@ -20,20 +19,12 @@ import {
 } from '@shared/api-types';
 
 import {
-  openCsvView,
-  openInsightView,
-  saveFileToLocal, 
+  openFile,
   diffFiles
 } from '@web/apis';
 
-import { formatTimestamp } from '@web/views/sidebars/performance-run-data/utils/timestamp';
-
 const props = defineProps<{
   treeData: PerformanceExecutionRecord[];
-}>();
-
-const emit = defineEmits<{
-  (e: 'toggle-mark', key: string, marked: boolean): void;
 }>();
 
 const expandedKeys = ref<string[]>([]);
@@ -42,16 +33,15 @@ const maxSelectedCount = 2; // 最大选择数量
 
 const checkedKeys = ref<string[]>([]);
 
-// 处理树数据，为目录节点添加 disableCheckbox 属性
+// 处理树数据
 const processedTreeData = computed(() => {
   const processNode = (node: any): any => {
     // 检查是否为目录（即非文件节点）
     const isDirectory = !isComparableFile(node);
 
-    // 为目录节点添加 disableCheckbox 属性
     const processedNode = {
       ...node,
-      disableCheckbox: isDirectory, // 目录节点禁用复选框
+      checkable: !isDirectory, // 目录节点禁用复选框
     };
 
     // 如果有子节点，递归处理
@@ -89,26 +79,25 @@ function isRootDir(row: object): row is PerformanceExecutionRecord {
   return Reflect.has(row, 'timestamp') && Reflect.has(row, 'dirPath');
 }
 
-function isCsvFile(row: object): row is PerformanceRunDataFile {
+function isTxtFile(row: object): row is PerformanceRunDataFile {
   return (
     Reflect.has(row, 'filePath')
-    && Reflect.get(row as PerformanceRunDataFile, 'fileType') === 'csv'
+    && Reflect.get(row as PerformanceRunDataFile, 'fileType') === 'txt'
   );
 }
 
-function isInsightFile(row: object): row is PerformanceRunDataFile {
+function isBinFile(row: object): row is PerformanceRunDataFile {
   return (
     Reflect.has(row, 'filePath')
     && [
       'bin',
-      'json',
     ].includes(Reflect.get(row as PerformanceRunDataFile, 'fileType'))
   );
 }
 
 // 检查是否为可比较的文件类型
 function isComparableFile(row: object): row is PerformanceRunDataFile {
-  return isCsvFile(row) || isInsightFile(row);
+  return isTxtFile(row) || isBinFile(row);
 }
 
 /**
@@ -122,10 +111,6 @@ function performFileComparison() {
 
   // 这里可以调用实际的文件对比功能
   console.log('执行文件对比:', selectedFiles.value);
-  message.success(`正在比较 ${selectedFiles.value[0].filePath.split('/').pop()} 和 ${selectedFiles.value[1].filePath.split('/').pop()}`);
-
-  // 显示文件对比模态框
-  showFileComparisonModal.value = true;
 
   try {
     diffFiles({
@@ -139,27 +124,17 @@ function performFileComparison() {
   }
 }
 
-// 控制文件对比模态框的显示
-const showFileComparisonModal = ref(false);
-
-
 /**
  * 点击节点
  */
 const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
   const node = info.node;
   const data = node.dataRef || node;
+  
+  console.log('[onClickNode]: 打开文件', data)
 
-  // 对于文件，如果是可比较的文件类型，则打开对比选择，否则直接打开文件
-  if (isComparableFile(data)) {
-    // 如果是可比较的文件，不直接打开，而是让用户通过复选框选择进行对比
-    // 或者双击打开文件
-    console.log('可比较文件被点击:', data);
-  } else if (isCsvFile(data)) {
-    openCsvView(data.filePath);
-  }
-  else if (isInsightFile(data)) {
-    openInsightView(data.filePath);
+  if (isTxtFile(data) || isBinFile(data)) {
+    openFile({ file: data.filePath });
   }
 };
 
@@ -191,10 +166,6 @@ function onCheck(checkedKeysValue: any, e: { checked: boolean; node: any }) {
 
     // 更新 selectedFiles 数组
     selectedFiles.value = getFileObjectsFromKeys(fileKeys, props.treeData);
-  }
-
-  if (selectedFiles.value.length > 0) {
-    message.info(`已选择 ${selectedFiles.value.length} 个文件`);
   }
 }
 
@@ -243,31 +214,40 @@ function getFileObjectsFromKeys(keys: string[], nodes: any[]): PerformanceRunDat
 
   return files;
 }
+
+const updateExpand = (e) => {
+  expandedKeys.value = e
+}
+
+// 是否正在进行对比
+const isComparing = ref(false)
+
+const cancelCompare = () => {
+  isComparing.value = false
+
+  selectedFiles.value = [];
+  checkedKeys.value = []
+}
+
+const openCompare = () => {
+  isComparing.value = true
+}
 </script>
 
 <template>
   <div
     class="w-full relative [&_.ant-tree]:!text-white [&_.ant-tree]:!bg-transparent [&_.ant-tree-treenode]:!w-full [&_.ant-tree-node-content-wrapper]:!w-0 hover:[&_.ant-tree-treenode]:!bg-transparent"
   >
-    <div class="flex justify-between items-center mb-2 px-2">
-      <div class="text-sm text-gray-400">
-        已选择 {{ selectedFiles.length }}/{{ maxSelectedCount }} 个文件
-        <span v-if="selectedFiles.length > 0">
-          ({{ selectedFiles.map(f => f.filePath.split('/').pop()).join(', ') }})
-        </span>
+    <template v-if="processedTreeData && processedTreeData.length">
+      <div v-show="isComparing" class="filter-bar">
+        <a-button type="primary" @click="performFileComparison">开始对比</a-button>
+        <a-button class="default-btn" @click="cancelCompare">取消</a-button>
       </div>
-      <a-button
-        v-if="selectedFiles.length > 0"
-        size="small"
-        :disabled="selectedFiles.length < 2"
-        @click="performFileComparison"
-      >
-        <template #icon>
-          <SwapOutlined />
-        </template>
-        比较文件
-      </a-button>
-    </div>
+      <div v-show="!isComparing" class="filter-bar">
+        <a-button class="default-btn">导入</a-button>
+        <a-button class="default-btn" @click="openCompare">对比</a-button>
+      </div>
+    </template>
 
     <a-directory-tree
       :tree-data="processedTreeData"
@@ -275,9 +255,9 @@ function getFileObjectsFromKeys(keys: string[], nodes: any[]): PerformanceRunDat
       :show-icon="false"
       :switcher-icon="SwitcherIcon"
       :expanded-keys="expandedKeys"
-      :checkable="true"
+      :checkable="isComparing"
       :checked-keys="checkedKeys"
-      @update:expanded-keys="expandedKeys = $event as string[]"
+      @update:expanded-keys="updateExpand"
       @select="onClickNode"
       @check="onCheck"
     >
@@ -295,15 +275,23 @@ function getFileObjectsFromKeys(keys: string[], nodes: any[]): PerformanceRunDat
           >
             {{ dataRef.title }}
           </div>
-          <template v-if="isRootDir(dataRef)">
-            <div
-              class="text-white/65 text-xs mt-1 leading-4 absolute bottom-[-16px] left-0 hidden"
-            >
-              {{ formatTimestamp(dataRef.timestamp) }}
-            </div>
-          </template>
         </div>
       </template>
     </a-directory-tree>
   </div>
 </template>
+
+<style scpoed>
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.default-btn {
+  background-color: rgba(20, 20, 20, 0.96) !important;
+  border-color: rgb(72, 72, 73) !important;
+  color: rgba(255, 255, 255, 0.855) !important;
+  box-shadow: rgba(255, 255, 255, 0.04) !important;
+}
+</style>

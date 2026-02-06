@@ -23,13 +23,10 @@ export const linkMethods = {
       return;
     }
 
-    const workspacePath = workspaceFolders[0].uri.fsPath;
-    const absolutePath = path.join(workspacePath, filePath);
-
-    if (fs.existsSync(absolutePath)) {
+    if (fs.existsSync(filePath)) {
       vscode.commands.executeCommand(
         'vscode.open',
-        vscode.Uri.file(absolutePath),
+        vscode.Uri.file(filePath),
       );
     }
     else {
