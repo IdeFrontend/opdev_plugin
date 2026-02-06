@@ -25,6 +25,7 @@ export interface CommandBuildParams {
   compileOption?: string;
   advance_cmd?: string;
   operatorNames?: string; // 算子名称，多个用逗号分隔（用于标准自定义算子等场景）
+  scriptField?: string | undefined | null // 脚本字段，默认是script，还有cpu_debug_script和npu_debug_script
 }
 
 /**
