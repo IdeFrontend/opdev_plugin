@@ -1,11 +1,14 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 
 import { CommandExecutor } from '@plugin/class/command-options';
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import { buildService } from '@plugin/service/build-service';
 import { sanitizerService } from '@plugin/service/sanitizer-service';
 import { homeMethods } from './home-controller';
-import { StartBuildParams, StartBuildExampleParams } from '@shared/api-types';
+import { StartBuildParams, StartBuildExampleParams, StartRunParams } from '@shared/api-types';
+import { getConfig, postConfig } from '@plugin/domain';
+import { OperatorProjectType } from '@plugin/domain/services/operator-project-detector';
 
 // 全局任务管理器：用于追踪和终止正在执行的任务
 let currentExecutor: CommandExecutor | null = null;
@@ -16,6 +19,8 @@ const taskNameMap: Record<string, string> = {
   'sanitizer': '异常检测',
   'onboard': '上板分析',
   'simulation': '仿真分析',
+  'buildAndCpuDebug': 'CPU调试',
+  'buildAndDebug': 'NPU调试',
 };
 // 当前正在执行的任务类型
 let currentTaskType: string | null = null;
@@ -46,7 +51,7 @@ export const taskMethods = {
   /**
    * 运行算子
    */
-  async startRun(): Promise<void> {
+  async startRun(params: StartRunParams = {}): Promise<void> {
     try {
       await ProjectManager.getInstance()
         .initProject();
@@ -54,7 +59,7 @@ export const taskMethods = {
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
       currentTaskType = 'runExample';
-      await buildService.startRun({});
+      await buildService.startRun(params);
     }
     finally {
       // 清除 executor 引用
@@ -262,6 +267,65 @@ export const taskMethods = {
     try {
       await ProjectManager.getInstance()
         .initProject();
+      // 设置当前任务类型
+      currentTaskType = 'buildAndDebug';
+      
+      // 对于 pyasc 类型，检查当前是否打开了 .py 文件并更新配置
+      const projectTypeInfo = await homeMethods.getProjectType();
+      const isPyasc = projectTypeInfo.projectType === OperatorProjectType.PYASC;
+      
+      if (isPyasc) {
+        // 检查当前是否打开了 .py 文件
+        const activeEditor = vscode.window.activeTextEditor;
+        const isPyFile = activeEditor?.document.fileName.endsWith('.py');
+
+        if (!isPyFile) {
+          vscode.window.showErrorMessage('请先打开一个 .py 文件');
+          return;
+        }
+
+        // 获取工作区路径
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders || workspaceFolders.length === 0) {
+          vscode.window.showErrorMessage('未找到工作区路径');
+          return;
+        }
+
+        const workspacePath = workspaceFolders[0].uri.fsPath;
+        const filePath = activeEditor!.document.uri.fsPath;
+
+        // 计算相对路径
+        const relativePath = path.relative(workspacePath, filePath).replace(/\\/g, '/');
+
+        // 获取 build_op 配置并更新 target_file
+        const buildConfigId = await buildService.getBuildConfigId();
+        if (buildConfigId) {
+          // 获取项目ID
+          const projectIdStr = ProjectManager.getInstance().projectId;
+          if (projectIdStr) {
+            const projectId = Number(projectIdStr);
+            // 获取 build_op 配置
+            const configs = await getConfig(projectId, 'build_op');
+            const buildOpConfig = configs.find((c: any) => c.config_id === buildConfigId);
+
+            if (buildOpConfig) {
+              // 更新配置的 target_file
+              const updatedConfig = {
+                config_id: buildConfigId,
+                config_type: 'build_op',
+                user_options: {
+                  ...buildOpConfig.user_options,
+                  target_file: relativePath,
+                },
+              };
+
+              // 保存配置
+              await postConfig('build_op', [updatedConfig]);
+            }
+          }
+        }
+      }
+      
       // debug前编译，使用--debug参数
       await buildService.startBuild({ compileOption: '--debug' });
       await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
@@ -283,6 +347,10 @@ export const taskMethods = {
     catch (error) {
       console.error('打开NPU debug时出错:', error);
       throw error;
+    }
+    finally {
+      // 清除任务类型
+      currentTaskType = null;
     }
   },
 
@@ -308,6 +376,65 @@ export const taskMethods = {
     try {
       await ProjectManager.getInstance()
         .initProject();
+      // 设置当前任务类型
+      currentTaskType = 'buildAndCpuDebug';
+      
+      // 对于 pyasc 类型，检查当前是否打开了 .py 文件并更新配置
+      const projectTypeInfo = await homeMethods.getProjectType();
+      const isPyasc = projectTypeInfo.projectType === OperatorProjectType.PYASC;
+      
+      if (isPyasc) {
+        // 检查当前是否打开了 .py 文件
+        const activeEditor = vscode.window.activeTextEditor;
+        const isPyFile = activeEditor?.document.fileName.endsWith('.py');
+
+        if (!isPyFile) {
+          vscode.window.showErrorMessage('请先打开一个 .py 文件');
+          return;
+        }
+
+        // 获取工作区路径
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders || workspaceFolders.length === 0) {
+          vscode.window.showErrorMessage('未找到工作区路径');
+          return;
+        }
+
+        const workspacePath = workspaceFolders[0].uri.fsPath;
+        const filePath = activeEditor!.document.uri.fsPath;
+
+        // 计算相对路径
+        const relativePath = path.relative(workspacePath, filePath).replace(/\\/g, '/');
+
+        // 获取 build_op 配置并更新 target_file
+        const buildConfigId = await buildService.getBuildConfigId();
+        if (buildConfigId) {
+          // 获取项目ID
+          const projectIdStr = ProjectManager.getInstance().projectId;
+          if (projectIdStr) {
+            const projectId = Number(projectIdStr);
+            // 获取 build_op 配置
+            const configs = await getConfig(projectId, 'build_op');
+            const buildOpConfig = configs.find((c: any) => c.config_id === buildConfigId);
+
+            if (buildOpConfig) {
+              // 更新配置的 target_file
+              const updatedConfig = {
+                config_id: buildConfigId,
+                config_type: 'build_op',
+                user_options: {
+                  ...buildOpConfig.user_options,
+                  target_file: relativePath,
+                },
+              };
+
+              // 保存配置
+              await postConfig('build_op', [updatedConfig]);
+            }
+          }
+        }
+      }
+      
       // CPU调试前编译，使用--simulator参数
       await buildService.startBuild({ compileOption: '--simulator' });
       await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
@@ -329,6 +456,10 @@ export const taskMethods = {
     catch (error) {
       console.error('打开CPU debug时出错:', error);
       throw error;
+    }
+    finally {
+      // 清除任务类型
+      currentTaskType = null;
     }
   },
 

@@ -24,6 +24,7 @@ export interface StartBuildDto {
 
 export interface StartRunDto {
   configId?: number;
+  filePath?: string; // 文件路径（右键调用时传入）
 }
 
 export interface StartBuildExampleDto {

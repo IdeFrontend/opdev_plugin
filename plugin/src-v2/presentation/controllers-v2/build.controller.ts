@@ -6,6 +6,11 @@ import { INotificationService } from '@plugin-v2/application/interfaces/notifica
 import { ResultUtils } from '@plugin-v2/domain/shared/types/result.type';
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import { CommandExecutor } from '@plugin/class/command-options';
+import { homeMethods } from '@plugin/controller/home-controller';
+import { OperatorProjectType } from '@plugin/domain/services/operator-project-detector';
+import { ConfigService } from '@plugin/service/config-service';
+import { getConfig, postConfig } from '@plugin/domain';
+import { Project } from '@plugin/core/project/project';
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -75,7 +80,68 @@ export class BuildControllerV2 {
       // 保存当前 executor 引用
       BuildControllerV2.currentExecutor = this.projectManager.getExecutor();
 
-      const dto = { configId: params.configId ? Number(params.configId) : undefined };
+      // 对于 pyasc 类型，检查当前是否打开了 .py 文件
+      // 如果传入了 filePath 参数（右键调用），则跳过检测
+      const projectTypeInfo = await homeMethods.getProjectType();
+      const isPyasc = projectTypeInfo.projectType === OperatorProjectType.PYASC;
+
+      if (isPyasc && !params.filePath) {
+        // 检查当前是否打开了 .py 文件
+        const activeEditor = vscode.window.activeTextEditor;
+        const isPyFile = activeEditor?.document.fileName.endsWith('.py');
+
+        if (!isPyFile) {
+          this.notification.showError('请先打开一个 .py 文件');
+          return;
+        }
+
+        // 获取工作区路径
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders || workspaceFolders.length === 0) {
+          this.notification.showError('未找到工作区路径');
+          return;
+        }
+
+        const workspacePath = workspaceFolders[0].uri.fsPath;
+        const filePath = activeEditor!.document.uri.fsPath;
+
+        // 计算相对路径
+        const relativePath = path.relative(workspacePath, filePath).replace(/\\/g, '/');
+
+        // 获取 build_op 配置并更新 target_file
+        const buildConfigId = await this.getBuildConfigId();
+        if (buildConfigId) {
+          // 获取项目ID
+          const project = Project.getInstance();
+          if (project.workspaceIsProject()) {
+            const projectId = project.projectId;
+            
+            // 获取 build_op 配置
+            const configs = await getConfig(projectId, 'build_op');
+            const buildOpConfig = configs.find((c: any) => c.config_id === buildConfigId);
+            
+            if (buildOpConfig) {
+              // 更新配置的 target_file
+              const updatedConfig = {
+                config_id: buildConfigId,
+                config_type: 'build_op',
+                user_options: {
+                  ...buildOpConfig.user_options,
+                  target_file: relativePath,
+                },
+              };
+
+              // 保存配置
+              await postConfig('build_op', [updatedConfig]);
+            }
+          }
+        }
+      }
+
+      const dto = { 
+        configId: params.configId ? Number(params.configId) : undefined,
+        filePath: params.filePath,
+      };
 
       const result = await this.buildService.startRun(dto);
 
@@ -218,6 +284,63 @@ export class BuildControllerV2 {
       // 保存当前 executor 引用
       BuildControllerV2.currentExecutor = this.projectManager.getExecutor();
 
+      // 对于 pyasc 类型，检查当前是否打开了 .py 文件
+      const projectTypeInfo = await homeMethods.getProjectType();
+      const isPyasc = projectTypeInfo.projectType === OperatorProjectType.PYASC;
+
+      if (isPyasc) {
+        // 检查当前是否打开了 .py 文件
+        const activeEditor = vscode.window.activeTextEditor;
+        const isPyFile = activeEditor?.document.fileName.endsWith('.py');
+
+        if (!isPyFile) {
+          this.notification.showError('请先打开一个 .py 文件');
+          return;
+        }
+
+        // 获取工作区路径
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders || workspaceFolders.length === 0) {
+          this.notification.showError('未找到工作区路径');
+          return;
+        }
+
+        const workspacePath = workspaceFolders[0].uri.fsPath;
+        const filePath = activeEditor!.document.uri.fsPath;
+
+        // 计算相对路径
+        const relativePath = path.relative(workspacePath, filePath).replace(/\\/g, '/');
+
+        // 获取 build_op 配置并更新 target_file
+        const buildConfigId = await this.getBuildConfigId();
+        if (buildConfigId) {
+          // 获取项目ID
+          const project = Project.getInstance();
+          if (project.workspaceIsProject()) {
+            const projectId = project.projectId;
+            
+            // 获取 build_op 配置
+            const configs = await getConfig(projectId, 'build_op');
+            const buildOpConfig = configs.find((c: any) => c.config_id === buildConfigId);
+            
+            if (buildOpConfig) {
+              // 更新配置的 target_file
+              const updatedConfig = {
+                config_id: buildConfigId,
+                config_type: 'build_op',
+                user_options: {
+                  ...buildOpConfig.user_options,
+                  target_file: relativePath,
+                },
+              };
+
+              // 保存配置
+              await postConfig('build_op', [updatedConfig]);
+            }
+          }
+        }
+      }
+
       const result = await this.buildService.startSimulate();
 
       if (ResultUtils.isErr(result)) {
@@ -250,6 +373,63 @@ export class BuildControllerV2 {
 
       // 保存当前 executor 引用
       BuildControllerV2.currentExecutor = this.projectManager.getExecutor();
+
+      // 对于 pyasc 类型，检查当前是否打开了 .py 文件
+      const projectTypeInfo = await homeMethods.getProjectType();
+      const isPyasc = projectTypeInfo.projectType === OperatorProjectType.PYASC;
+
+      if (isPyasc) {
+        // 检查当前是否打开了 .py 文件
+        const activeEditor = vscode.window.activeTextEditor;
+        const isPyFile = activeEditor?.document.fileName.endsWith('.py');
+
+        if (!isPyFile) {
+          this.notification.showError('请先打开一个 .py 文件');
+          return;
+        }
+
+        // 获取工作区路径
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders || workspaceFolders.length === 0) {
+          this.notification.showError('未找到工作区路径');
+          return;
+        }
+
+        const workspacePath = workspaceFolders[0].uri.fsPath;
+        const filePath = activeEditor!.document.uri.fsPath;
+
+        // 计算相对路径
+        const relativePath = path.relative(workspacePath, filePath).replace(/\\/g, '/');
+
+        // 获取 build_op 配置并更新 target_file
+        const buildConfigId = await this.getBuildConfigId();
+        if (buildConfigId) {
+          // 获取项目ID
+          const project = Project.getInstance();
+          if (project.workspaceIsProject()) {
+            const projectId = project.projectId;
+            
+            // 获取 build_op 配置
+            const configs = await getConfig(projectId, 'build_op');
+            const buildOpConfig = configs.find((c: any) => c.config_id === buildConfigId);
+            
+            if (buildOpConfig) {
+              // 更新配置的 target_file
+              const updatedConfig = {
+                config_id: buildConfigId,
+                config_type: 'build_op',
+                user_options: {
+                  ...buildOpConfig.user_options,
+                  target_file: relativePath,
+                },
+              };
+
+              // 保存配置
+              await postConfig('build_op', [updatedConfig]);
+            }
+          }
+        }
+      }
 
       const result = await this.buildService.startOnBoard();
 
