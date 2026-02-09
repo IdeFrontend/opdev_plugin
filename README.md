@@ -1,6 +1,7 @@
 # Huawei OP DevTools 插件使用说明
 
 华为算子一站式开发平台 VS Code 插件。提供算子开发、调试、性能分析等一站式功能。
+插件使用指导: https://gitcode.com/org/cann/discussions/54
 
 ## 核心特性
 -  适配生态主流编辑器，优化生态算子开发体验，提升开吧效率。

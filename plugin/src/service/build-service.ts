@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import {
@@ -14,6 +15,7 @@ import {
   getBuildOpCommand,
   getRunCommand,
   getConfig,
+  postConfig,
   objectToCommandString,
   getProjectById,
 } from '@plugin/domain';
@@ -21,6 +23,7 @@ import { getConfigById } from '@plugin/domain/services/configuration';
 import { OperatorProjectType, OperatorProjectDetector } from '@plugin/domain/services/operator-project-detector';
 import { markOperatorsAsCompiled, getProjectByPath } from '@plugin/domain/models/project-model';
 import { homeMethods } from '../controller/home-controller';
+import { soc_version } from '@plugin/domain/utils/ascend-util';
 
 const CONFIG_TYPES = {
   BUILD_OP: 'build_op',
@@ -306,13 +309,67 @@ export class BuildService {
    * 运行算子
    */
   async startRun(params: StartRunParams): Promise<void> {
+    // 使用 getProjectType 方法获取项目类型，如果是 pyasc，使用 build_op 配置，否则使用 build_example 配置
+    const projectTypeInfo = await homeMethods.getProjectType();
+    const isPyasc = projectTypeInfo.projectType === OperatorProjectType.PYASC;
+
+    // 对于 pyasc 类型，检查当前是否打开了 .py 文件
+    // 如果传入了 filePath 参数（右键调用），则跳过检测
+    if (isPyasc && !params.filePath) {
+      // 检查当前是否打开了 .py 文件
+      const activeEditor = vscode.window.activeTextEditor;
+      const isPyFile = activeEditor?.document.fileName.endsWith('.py');
+
+      if (!isPyFile) {
+        vscode.window.showErrorMessage('请先打开一个 .py 文件');
+        return;
+      }
+
+      // 获取工作区路径
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (!workspaceFolders || workspaceFolders.length === 0) {
+        vscode.window.showErrorMessage('未找到工作区路径');
+        return;
+      }
+
+      const workspacePath = workspaceFolders[0].uri.fsPath;
+      const filePath = activeEditor!.document.uri.fsPath;
+
+      // 计算相对路径
+      const relativePath = path.relative(workspacePath, filePath).replace(/\\/g, '/');
+
+      // 获取 build_op 配置并更新 target_file
+      const buildConfigId = await this.getBuildConfigId();
+      if (buildConfigId) {
+        // 获取项目ID
+        const projectIdStr = ProjectManager.getInstance().projectId;
+        if (projectIdStr) {
+          const projectId = Number(projectIdStr);
+          // 获取 build_op 配置
+          const configs = await getConfig(projectId, 'build_op');
+          const buildOpConfig = configs.find((c: any) => c.config_id === buildConfigId);
+
+          if (buildOpConfig) {
+            // 更新配置的 target_file
+            const updatedConfig = {
+              config_id: buildConfigId,
+              config_type: 'build_op',
+              user_options: {
+                ...buildOpConfig.user_options,
+                target_file: `python3 ${relativePath}`,
+              },
+            };
+
+            // 保存配置
+            await postConfig('build_op', [updatedConfig]);
+          }
+        }
+      }
+    }
+
     let configId = params.configId ? Number(params.configId) : undefined;
 
     if (!configId) {
-      // 使用 getProjectType 方法获取项目类型，如果是 pyasc，使用 build_op 配置，否则使用 build_example 配置
-      const projectTypeInfo = await homeMethods.getProjectType();
-      const isPyasc = projectTypeInfo.projectType === OperatorProjectType.PYASC;
-      
       if (isPyasc) {
         configId = await this.getBuildConfigId();
       } else {
@@ -401,15 +458,59 @@ export class BuildService {
     const project = projectId ? getProjectById(Number(projectId)) : null;
     const isPyascType = project?.project_type === 'pyasc';
 
-    // 仿真分析前编译，pyasc 类型不需要编译
+    // 对于 pyasc 类型，检查当前是否打开了 .py 文件
+    // 如果传入了 operatorNames 参数（右键操作），则跳过检测
+    if (isPyascType && !params.operatorNames) {
+      // 检查当前是否打开了 .py 文件
+      const activeEditor = vscode.window.activeTextEditor;
+      const isPyFile = activeEditor?.document.fileName.endsWith('.py');
+
+      if (!isPyFile) {
+        vscode.window.showErrorMessage('请先打开一个 .py 文件');
+        return;
+      }
+
+      // 获取工作区路径
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (!workspaceFolders || workspaceFolders.length === 0) {
+        vscode.window.showErrorMessage('未找到工作区路径');
+        return;
+      }
+
+      const workspacePath = workspaceFolders[0].uri.fsPath;
+      const filePath = activeEditor!.document.uri.fsPath;
+
+      // 计算相对路径
+      const relativePath = path.relative(workspacePath, filePath).replace(/\\/g, '/');
+
+      // 获取 build_op 配置并更新 target_file
+      const buildConfigId = await this.getBuildConfigId();
+      if (buildConfigId && projectId) {
+        const projectIdNum = Number(projectId);
+        // 获取 build_op 配置
+        const configs = await getConfig(projectIdNum, 'build_op');
+        const buildOpConfig = configs.find((c: any) => c.config_id === buildConfigId);
+
+        if (buildOpConfig) {
+          // 更新配置的 target_file
+          const updatedConfig = {
+            config_id: buildConfigId,
+            config_type: 'build_op',
+            user_options: {
+              ...buildOpConfig.user_options,
+              target_file: `python3 ${relativePath}`,
+            },
+          };
+
+          // 保存配置
+          await postConfig('build_op', [updatedConfig]);
+        }
+      }
+    }
+
     if (!isPyascType) {
       // 构建编译选项
       let compileOption = ''
-
-      // 如果是标准自定义算子，添加 --bisheng_flags=ccec_g
-      // if (await isRootStandardCustom()) {
-      //   compileOption = '--bisheng_flags=ccec_g';
-      // }
 
       const buildCommand = getBuildOpCommand(
         Number(simulatorItem?.config_id),
@@ -439,7 +540,7 @@ export class BuildService {
       // 如果是标准自定义算子，需要编译 example 并添加 --simulator --soc
       if (await isRootStandardCustom()) {
         const exConfigId = await this.getBuildExampleConfigId();
-        const exampleCompileOption = '--simulator --soc';
+        const exampleCompileOption = `--simulator --soc=${soc_version}`;
         const exampleBuildCommand = getBuildExampleCommand(
           Number(exConfigId),
           exampleCompileOption,
@@ -504,16 +605,62 @@ export class BuildService {
     const projectId = ProjectManager.getInstance().projectId;
     const project = projectId ? getProjectById(Number(projectId)) : null;
     const isPyascType = project?.project_type === 'pyasc';
+
+    // 对于 pyasc 类型，检查当前是否打开了 .py 文件
+    // 如果传入了 operatorNames 参数（右键操作），则跳过检测
+    if (isPyascType && !params.operatorNames) {
+      // 检查当前是否打开了 .py 文件
+      const activeEditor = vscode.window.activeTextEditor;
+      const isPyFile = activeEditor?.document.fileName.endsWith('.py');
+
+      if (!isPyFile) {
+        vscode.window.showErrorMessage('请先打开一个 .py 文件');
+        return;
+      }
+
+      // 获取工作区路径
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (!workspaceFolders || workspaceFolders.length === 0) {
+        vscode.window.showErrorMessage('未找到工作区路径');
+        return;
+      }
+
+      const workspacePath = workspaceFolders[0].uri.fsPath;
+      const filePath = activeEditor!.document.uri.fsPath;
+
+      // 计算相对路径
+      const relativePath = path.relative(workspacePath, filePath).replace(/\\/g, '/');
+
+      // 获取 build_op 配置并更新 target_file
+      const buildConfigId = await this.getBuildConfigId();
+      if (buildConfigId && projectId) {
+        const projectIdNum = Number(projectId);
+        // 获取 build_op 配置
+        const configs = await getConfig(projectIdNum, 'build_op');
+        const buildOpConfig = configs.find((c: any) => c.config_id === buildConfigId);
+
+        if (buildOpConfig) {
+          // 更新配置的 target_file
+          const updatedConfig = {
+            config_id: buildConfigId,
+            config_type: 'build_op',
+            user_options: {
+              ...buildOpConfig.user_options,
+              target_file: `python3 ${relativePath}`,
+            },
+          };
+
+          // 保存配置
+          await postConfig('build_op', [updatedConfig]);
+        }
+      }
+    }
+
     const configId = await this.getOnBoardConfigId();
     // 上板分析前编译（pyasc 类型跳过）
     if (!isPyascType) {
       // 构建编译选项
       let compileOption = ''
-
-      // 如果是标准自定义算子，添加 --bisheng_flags=ccec_g
-      // if (await isRootStandardCustom()) {
-      //   compileOption = '--bisheng_flags=ccec_g';
-      // }
 
       const buildCommand = getBuildOpCommand(
         Number(configId),

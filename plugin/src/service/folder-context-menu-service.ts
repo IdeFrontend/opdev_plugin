@@ -33,6 +33,7 @@ import { getOpsByProjectId, getOpByProjectIdAndOpName } from '@plugin/domain/mod
 import { getConfig, getConfigById, postConfig } from '@plugin/domain/services/configuration';
 import { buildService } from './build-service';
 import { taskMethods } from '../controller/task-controller';
+import { homeMethods } from '../controller/home-controller';
 import {
   COMMAND_FLASH_MS_SANITIZER_RUN_DATA,
   COMMAND_FLASH_PERFORMANCE_RUN_DATA,
@@ -160,6 +161,75 @@ function checkSupportsSanitizerAndTuning(rootPath: string): boolean {
 }
 
 /**
+ * 根据路径获取算子工程类型
+ * 优先使用 getProjectType API，其次从已注册项目中读取，最后使用检测器检测
+ */
+async function getOperatorProjectTypeByPath(
+  folderPath: string,
+): Promise<OperatorProjectType | undefined> {
+  // 1. 优先使用 getProjectType API（它会自动处理工作区根目录的类型检测）
+  try {
+    const projectTypeResult = await homeMethods.getProjectType();
+    if (projectTypeResult?.projectType) {
+      return projectTypeResult.projectType as OperatorProjectType;
+    }
+  } catch {
+    // 忽略 API 调用失败，继续使用其他方式
+  }
+
+  // 2. 尝试从 projects.json 中读取（针对指定路径）
+  try {
+    const project = getProjectByPath(folderPath);
+    if (project?.project_type) {
+      return project.project_type as OperatorProjectType;
+    }
+  } catch {
+    // 忽略读取失败，继续使用检测器
+  }
+
+  // 3. 使用检测器直接检测该目录
+  try {
+    const detection = await OperatorProjectDetector.detectOperatorProject(folderPath);
+    if (detection.isOperatorProject && detection.projectType) {
+      return detection.projectType;
+    }
+  } catch {
+    // 忽略检测失败，继续尝试工作区根目录
+  }
+
+  // 4. 回退到工作区根目录
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+  if (workspaceFolders && workspaceFolders.length > 0) {
+    const workspaceRootPath = workspaceFolders[0].uri.fsPath;
+
+    try {
+      const project = getProjectByPath(workspaceRootPath);
+      if (project?.project_type) {
+        return project.project_type as OperatorProjectType;
+      }
+    } catch {
+      // 忽略读取失败
+    }
+
+    try {
+      const detection = await OperatorProjectDetector.detectOperatorProject(workspaceRootPath);
+      if (detection.isOperatorProject && detection.projectType) {
+        return detection.projectType;
+      }
+    } catch {
+      // 忽略检测失败
+    }
+  }
+
+  return undefined;
+}
+
+function isAscendLikeOperator(type?: OperatorProjectType): boolean {
+  return type === OperatorProjectType.ASCEND_C
+    || type === OperatorProjectType.TORCH_LIBRARY;
+}
+
+/**
  * 文件夹右键菜单服务
  * 处理文件夹右键菜单的相关操作
  */
@@ -173,6 +243,20 @@ export class FolderContextMenuService {
     const folderPath = uri.fsPath;
 
     try {
+      const operatorType = await getOperatorProjectTypeByPath(folderPath);
+
+      // <<<>>> 类型算子：所有右键菜单操作均不支持（报告可视化除外）
+      if (isAscendLikeOperator(operatorType)) {
+        vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
+        return;
+      }
+
+      // pyasc 算子：不支持标记/取消标记算子或算子合集
+      if (operatorType === OperatorProjectType.PYASC) {
+        vscode.window.showWarningMessage('pyasc算子不支持标记/取消标记算子或算子合集');
+        return;
+      }
+
       // 1. 找到根目录（标准自定义算子）
       const rootPath = findStandardCustomRoot(folderPath);
       if (!rootPath) {
@@ -262,6 +346,20 @@ export class FolderContextMenuService {
     const folderPath = uri.fsPath;
 
     try {
+      const operatorType = await getOperatorProjectTypeByPath(folderPath);
+
+      // <<<>>> 类型算子：所有右键菜单操作均不支持（报告可视化除外）
+      if (isAscendLikeOperator(operatorType)) {
+        vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
+        return;
+      }
+
+      // pyasc 算子：不支持标记/取消标记算子或算子合集
+      if (operatorType === OperatorProjectType.PYASC) {
+        vscode.window.showWarningMessage('pyasc算子不支持标记/取消标记算子或算子合集');
+        return;
+      }
+
       // 1. 找到根目录（标准自定义算子）
       const rootPath = findStandardCustomRoot(folderPath);
       if (!rootPath) {
@@ -432,6 +530,20 @@ export class FolderContextMenuService {
     const folderPath = uri.fsPath;
 
     try {
+      const operatorType = await getOperatorProjectTypeByPath(folderPath);
+
+      // <<<>>> 类型算子：所有右键菜单操作均不支持（报告可视化除外）
+      if (isAscendLikeOperator(operatorType)) {
+        vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
+        return;
+      }
+
+      // pyasc 算子：不支持标记/取消标记算子或算子合集
+      if (operatorType === OperatorProjectType.PYASC) {
+        vscode.window.showWarningMessage('pyasc算子不支持标记/取消标记算子或算子合集');
+        return;
+      }
+
       // 1. 找到根目录（标准自定义算子）
       const rootPath = findStandardCustomRoot(folderPath);
       if (!rootPath) {
@@ -511,6 +623,20 @@ export class FolderContextMenuService {
     const folderPath = uri.fsPath;
 
     try {
+      const operatorType = await getOperatorProjectTypeByPath(folderPath);
+
+      // <<<>>> 类型算子：所有右键菜单操作均不支持（报告可视化除外）
+      if (isAscendLikeOperator(operatorType)) {
+        vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
+        return;
+      }
+
+      // pyasc 算子：不支持标记/取消标记算子或算子合集
+      if (operatorType === OperatorProjectType.PYASC) {
+        vscode.window.showWarningMessage('pyasc算子不支持标记/取消标记算子或算子合集');
+        return;
+      }
+
       // 1. 找到根目录（标准自定义算子）
       const rootPath = findStandardCustomRoot(folderPath);
       if (!rootPath) {
@@ -630,6 +756,12 @@ export class FolderContextMenuService {
     const isPyasc = rootDetection.isOperatorProject
       && rootDetection.projectType === OperatorProjectType.PYASC;
 
+    // <<<>>> 类型算子：所有右键菜单操作均不支持（报告可视化除外）
+    if (isAscendLikeOperator(rootDetection.projectType)) {
+      vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
+      return;
+    }
+
     // 情况1: 选中的是文件夹，且当前项目根目录是标准自定义算子
     if (isFolder && isStandardCustom) {
       // 获取用户选中的文件夹名称作为 operatorNames
@@ -718,6 +850,12 @@ export class FolderContextMenuService {
     const isPyasc = rootDetection.isOperatorProject
       && rootDetection.projectType === OperatorProjectType.PYASC;
 
+    // <<<>>> 类型算子：所有右键菜单操作均不支持（报告可视化除外）
+    if (isAscendLikeOperator(rootDetection.projectType)) {
+      vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
+      return;
+    }
+
     // 情况1: 选中的是文件夹，且当前项目根目录是标准自定义算子
     if (isFolder && isStandardCustom) {
       // 参考 app.vue 运行验证逻辑：operatorNames 为选中的文件夹名，projectId 从根目录在 projects.json 中查找
@@ -796,7 +934,9 @@ export class FolderContextMenuService {
         }
       }
       
-      await taskMethods.startRun();
+      // 如果选择了 .py 文件，传入文件路径
+      const filePath = isPyFile ? path.basename(uri.fsPath) : undefined;
+      await taskMethods.startRun({ filePath });
       return;
     }
 
@@ -809,6 +949,14 @@ export class FolderContextMenuService {
    */
   static async cpuDebugOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
+
+    const operatorType = await getOperatorProjectTypeByPath(folderPath);
+    // <<<>>> 类型算子：所有右键菜单操作均不支持（报告可视化除外）
+    if (isAscendLikeOperator(operatorType)) {
+      vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
+      return;
+    }
+
     const project = getProjectByPath(folderPath);
 
     // 检查是否是算子工程
@@ -828,6 +976,14 @@ export class FolderContextMenuService {
    */
   static async npuDebugOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
+
+    const operatorType = await getOperatorProjectTypeByPath(folderPath);
+    // <<<>>> 类型算子：所有右键菜单操作均不支持（报告可视化除外）
+    if (isAscendLikeOperator(operatorType)) {
+      vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
+      return;
+    }
+
     const project = getProjectByPath(folderPath);
 
     // 检查是否是算子工程
@@ -847,6 +1003,14 @@ export class FolderContextMenuService {
    */
   static async cpuDebugConfigOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
+
+    const operatorType = await getOperatorProjectTypeByPath(folderPath);
+    // <<<>>> 类型算子：所有右键菜单操作均不支持（报告可视化除外）
+    if (isAscendLikeOperator(operatorType)) {
+      vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
+      return;
+    }
+
     const project = getProjectByPath(folderPath);
 
     // 检查是否是算子工程
@@ -866,6 +1030,14 @@ export class FolderContextMenuService {
    */
   static async npuDebugConfigOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
+
+    const operatorType = await getOperatorProjectTypeByPath(folderPath);
+    // <<<>>> 类型算子：所有右键菜单操作均不支持（报告可视化除外）
+    if (isAscendLikeOperator(operatorType)) {
+      vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
+      return;
+    }
+
     const project = getProjectByPath(folderPath);
 
     // 检查是否是算子工程
@@ -885,6 +1057,14 @@ export class FolderContextMenuService {
    */
   static async sanitizerOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
+
+    const operatorType = await getOperatorProjectTypeByPath(folderPath);
+    // <<<>>> 类型算子：所有右键菜单操作均不支持（报告可视化除外）
+    if (isAscendLikeOperator(operatorType)) {
+      vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
+      return;
+    }
+
     const project = getProjectByPath(folderPath);
 
     // 检查是否支持异常检测与调优（标准自定义算子需要检查 build.sh 是否包含 --bisheng_flags
@@ -909,6 +1089,19 @@ export class FolderContextMenuService {
    */
   static async onBoardOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
+
+    const operatorType = await getOperatorProjectTypeByPath(folderPath);
+    // <<<>>> 类型算子：所有右键菜单操作均不支持（报告可视化除外）
+    if (isAscendLikeOperator(operatorType)) {
+      vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
+      return;
+    }
+    // 标准自定义算子：不支持性能调优
+    if (operatorType === OperatorProjectType.STANDARD_CUSTOM) {
+      vscode.window.showWarningMessage('标准自定义算子暂不支持性能调优');
+      return;
+    }
+
     const project = getProjectByPath(folderPath);
 
 
@@ -934,6 +1127,19 @@ export class FolderContextMenuService {
    */
   static async simulationOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
+
+    const operatorType = await getOperatorProjectTypeByPath(folderPath);
+    // <<<>>> 类型算子：所有右键菜单操作均不支持（报告可视化除外）
+    if (isAscendLikeOperator(operatorType)) {
+      vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
+      return;
+    }
+    // 标准自定义算子：不支持性能调优
+    if (operatorType === OperatorProjectType.STANDARD_CUSTOM) {
+      vscode.window.showWarningMessage('标准自定义算子暂不支持性能调优');
+      return;
+    }
+
     const project = getProjectByPath(folderPath);
 
     // 检查是否支持异常检测与调优（标准自定义算子需要检查 build.sh 是否包含 --bisheng_flags）

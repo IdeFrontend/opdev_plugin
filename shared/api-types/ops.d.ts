@@ -47,6 +47,7 @@ export type StartBuildParams = {
 
 export type StartRunParams = {
   configId?: string;
+  filePath?: string; // 文件路径（右键调用时传入）
 };
 
 export type StartBuildExampleParams = {

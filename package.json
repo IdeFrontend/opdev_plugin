@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://gitcode.com/kaocong/mstt"
   },
-  "version": "1.2.35",
+  "version": "1.2.3",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -258,15 +258,15 @@
       },
       {
         "command": "huawei-op-devtools.reportVisualizationSanitizer",
-        "title": "报告可视化：异常检测"
+        "title": "异常检测"
       },
       {
         "command": "huawei-op-devtools.reportVisualizationOnBoard",
-        "title": "报告可视化：上板分析"
+        "title": "上板分析"
       },
       {
         "command": "huawei-op-devtools.reportVisualizationSimulation",
-        "title": "报告可视化：仿真分析"
+        "title": "仿真分析"
       },
       {
         "command": "huawei-op-devtools.refreshFolderDecorations",
@@ -284,7 +284,7 @@
       },
       {
         "id": "operator.reportVisualization",
-        "label": "报告可视化"
+        "label": "添加到可视化视图"
       }
     ],
     "menus": {

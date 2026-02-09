@@ -10,6 +10,8 @@ export const COMMAND_CONFIG = `${COMMAND_PREFIX}.config`;
 
 export const COMMAND_OPEN_MS_SANITIZER_PANEL_VIEW = `${COMMAND_PREFIX}.open-ms-sanitizer-panel-view`;
 
+export const COMMAND_OPEN_PERFORMANCE_PANEL_VIEW = `${COMMAND_PREFIX}.open-performance-panel-view`;
+
 export const COMMAND_CREATE_OPERATOR_IN_WORKSPACE = `${COMMAND_PREFIX}.createOperatorInWorkspace`;
 
 export const COMMAND_TOGGLE_OPS_OPERATE = `${COMMAND_PREFIX}.toggleOpsOperate`;
@@ -50,6 +52,8 @@ export const VIEW_PROJECT_SH = 'project-sh';
 export const VIEW_OPERATE = 'operate';
 
 export const VIEW_MS_SANITIZER = 'ms-sanitizer-panel-view';
+
+export const VIEW_PERFORMANCE_PANEL = 'performance-panel-view';
 
 export const VIEW_PERFORMANCE_RUN_DATA = 'performance-run-data';
 
