@@ -21,6 +21,7 @@ const taskNameMap: Record<string, string> = {
   'simulation': '仿真分析',
   'buildAndCpuDebug': 'CPU调试',
   'buildAndDebug': 'NPU调试',
+  'dumpTensor': '执行DumpTensor'
 };
 // 当前正在执行的任务类型
 let currentTaskType: string | null = null;
@@ -148,6 +149,28 @@ export const taskMethods = {
         .getExecutor();
       currentTaskType = 'sanitizer';
       await sanitizerService.runSanitizer(params);
+    }
+    finally {
+      // 清除 executor 引用
+      currentExecutor = null;
+      currentTaskType = null;
+      ProjectManager.getInstance()
+        .clearExecutor();
+    }
+  },
+
+  /**
+   * 执行DumpTensor
+   */
+  async startDumpTensor(params: { operatorNames?: string, compileOption?: string } = {}): Promise<void> {
+    try {
+      await ProjectManager.getInstance()
+        .initProject();
+      // 保存当前 executor 引用
+      currentExecutor = ProjectManager.getInstance()
+        .getExecutor();
+      currentTaskType = 'dumpTensor';
+      await buildService.startDumpTensor(params);
     }
     finally {
       // 清除 executor 引用

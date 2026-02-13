@@ -451,7 +451,6 @@ export class BuildService {
   async startSimulate(params: { operatorNames?: string } = {}): Promise<void> {
     const configData = await this.getBuildConfigsList();
     const simulatorItem = configData.find((v) => v.config_type === CONFIG_TYPES.SIMULATE);
-    const simulatorType = (simulatorItem?.user_options?.simulatorType as string | undefined) ?? '';
 
     // 检查项目类型，pyasc 类型不需要编译
     const projectId = ProjectManager.getInstance().projectId;
@@ -743,6 +742,83 @@ export class BuildService {
     }
     catch (e: unknown) {
       vscode.window.showErrorMessage(`获取上板命令失败 ${(e as Error).message}`);
+    }
+  }
+
+  /**
+   * 开始DumpTensor分析
+   */
+  async startDumpTensor(params: { operatorNames?: string, compileOption?: string } = {}): Promise<void> {
+    let configId = await this.getBuildConfigId();
+    console.log('[startDumpTensor] 查询到 configId:', configId);
+
+    const buildCommand = getBuildOpCommand(
+      Number(configId),
+      params.compileOption,
+      params.operatorNames,
+    );
+    console.log('[startDumpTensor] 生成的编译命令:', buildCommand);
+
+    const executor = ProjectManager.getInstance()
+      .getExecutor();
+    console.log('[startDumpTensor] 开始执行编译命令...');
+
+    const res = await executor.execute(buildCommand, [], [], {}, true);
+    console.log('[startDumpTensor] 编译执行结果:', {
+      code: res.code,
+      output: res.output,
+    });
+
+    if (res.code !== 0) {
+      console.error('[startDumpTensor] 编译失败，退出码:', res.code, '输出:', res.output);
+      vscode.window.showErrorMessage(`编译算子失败 ${res.output}`);
+      return;
+    }
+
+    await tryMarkOperatorsAsCompiled(Number(configId), params.operatorNames);
+
+    const exConfigId = await this.getBuildExampleConfigId();
+    if (await isRootStandardCustom()) {
+      const exampleBuildCommand = getBuildExampleCommand(
+        Number(exConfigId),
+        params.compileOption,
+        params.operatorNames,
+      );
+      const exampleBuildExecutor = ProjectManager.getInstance()
+        .getExecutor();
+      const exampleBuildRes = await exampleBuildExecutor.execute(
+        exampleBuildCommand,
+        [],
+        [],
+        {},
+        true,
+      );
+      console.log('[startDumpTensor] example buildRes', exampleBuildRes);
+
+      if (exampleBuildRes.code !== 0) {
+        vscode.window.showErrorMessage(`执行失败 ${exampleBuildRes.output}`);
+        return;
+      }
+      vscode.window.showInformationMessage('执行DumpTensor成功');
+    } else {
+      try {
+        const runCommand = getRunCommand(Number(exConfigId));
+        console.log('[startDumpTensor] runCommand', runCommand);
+
+        const executor = ProjectManager.getInstance()
+          .getExecutor();
+        const res = await executor.execute(runCommand, [], [], {}, true);
+        console.log('[startDumpTensor] runRes', res);
+
+        if (res.code !== 0) {
+          vscode.window.showErrorMessage(`运行失败 ${res.output}`);
+          return;
+        }
+        vscode.window.showInformationMessage('执行DumpTensor成功');
+      }
+      catch (e) {
+        vscode.window.showErrorMessage(`获取运行命令失败 ${(e as Error).message}`);
+      }
     }
   }
 }

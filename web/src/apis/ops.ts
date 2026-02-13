@@ -154,6 +154,15 @@ export function runSanitizer(params: { operatorNames?: string } = {}) {
   );
 }
 
+/** 开始执行DumpTensor */
+export function startDumpTensor(params: { operatorNames?: string, compileOption?: string } = {}) {
+  return request.post<{ operatorNames?: string, compileOption?: string }, void>(
+    'ops/startDumpTensor',
+    params,
+    { timeout: Number.POSITIVE_INFINITY }, // 运行可能耗时很长，设置无超时限制
+  );
+}
+
 /** 更新脚本文件 */
 export function updateShScript(params: UpdateShScriptParams) {
   return request.post<UpdateShScriptParams, string>(
@@ -240,3 +249,4 @@ export function getSelectedOperatorIds() {
 export function getSelectedOperators() {
   return request.post<undefined, string | undefined>('ops/getSelectedOperators', undefined);
 }
+

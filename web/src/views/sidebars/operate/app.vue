@@ -9,6 +9,7 @@ import runIcon from '@web/assets/svg/run.svg';
 import powerIcon from '@web/assets/svg/power.svg';
 import debugIcon from '@web/assets/svg/debug.svg';
 import checkIcon from '@web/assets/svg/check.svg';
+import tensorIcon from '@web/assets/svg/tensor.svg';
 import {
   startBuild,
   startBuildExample,
@@ -29,6 +30,7 @@ import {
   getSelectedOperatorIds,
   getCurrentTaskName,
   showConfirmDialog,
+  startDumpTensor
 } from '@web/apis';
 import { SettingOutlined, CheckOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue';
 
@@ -54,7 +56,29 @@ const debugModeEnabled = ref(false);
 // 当前项目类型
 const projectTypeName = ref('');
 const projectType = ref('');  // 项目类型  'cann' | 'ascend' | 'pyasc'
-const projectTemplateName = ref(''); // 项目子类型  'hello_world' | 'addn_custom' | 'torch_library_template'
+const projectTemplateName = ref(''); // 项目子类型  'hello_world' | 'torch_library_template'
+
+// 获取算子参数的通用函数
+const getOperatorParams = () => {
+  let operatorNames;
+  let operatorType;
+  let compileOption;
+
+  if (selectedOperators.value.length > 0) {
+    operatorNames = selectedOperators.value.map((op) => op.name).join(',');
+    // 如果是标准自定义算子，设置类型
+    if (isStandardCustom.value) {
+      operatorType = 'standard-custom';
+      // 检查选中的算子中是否有 experimental 算子（hasEx 为 true）
+      const hasExperimental = selectedOperators.value.some((op) => op.hasEx);
+      if (hasExperimental) {
+        compileOption = '--experimental';
+      }
+    }
+  }
+
+  return { operatorNames, operatorType, compileOption };
+};
 
 // 需要互斥的操作按钮（执行时其他按钮应该禁用）
 const mutuallyExclusiveKeys = [
@@ -65,6 +89,7 @@ const mutuallyExclusiveKeys = [
   'simulation',
   'buildAndCpuDebug',
   'buildAndDebug',
+  'dumpTensor'
 ];
 
 // 基础菜单配置（不包含调试菜单）
@@ -82,23 +107,7 @@ const baseMenuItems = [
     label: '编译部署算子',
     icon: buildIcon,
     handler: async () => {
-      // 如果有选中的算子，将选中算子的名称用逗号拼接传入
-      let operatorNames;
-      let operatorType;
-      let compileOption;
-
-      if (selectedOperators.value.length > 0) {
-        operatorNames = selectedOperators.value.map((op) => op.name).join(',');
-        // 如果是标准自定义算子，设置类型
-        if (isStandardCustom.value) {
-          operatorType = 'standard-custom';
-          // 检查选中的算子中是否有 experimental 算子（hasEx 为 true）
-          const hasExperimental = selectedOperators.value.some((op) => op.hasEx);
-          if (hasExperimental) {
-            compileOption = '--experimental';
-          }
-        }
-      }
+      const { operatorNames, operatorType, compileOption } = getOperatorParams();
 
       try {
         await startBuild({
@@ -123,28 +132,7 @@ const baseMenuItems = [
     icon: runIcon,
     handler: async () => {
       if (hasMultipleOperators.value) {
-        // 如果有选中的算子，将选中算子的名称用逗号拼接传入
-        let operatorNames;
-        let operatorType;
-        let compileOption;
-
-        if (selectedOperators.value.length > 0) {
-          operatorNames = selectedOperators.value.map((op) => op.name).join(',');
-          // 如果是标准自定义算子，设置类型
-          if (isStandardCustom.value) {
-            operatorType = 'standard-custom';
-          }
-        }
-
-        if (isStandardCustom.value) {
-          operatorType = 'standard-custom';
-          // 检查选中的算子中是否有 experimental 算子（hasEx 为 true）
-          const hasExperimental = selectedOperators.value.some((op) => op.hasEx);
-          if (hasExperimental) {
-            compileOption = '--experimental';
-          }
-        }
-
+        const { operatorNames, operatorType, compileOption } = getOperatorParams();
         await startBuildExample({
           operatorNames,
           operatorType,
@@ -183,6 +171,15 @@ const baseMenuItems = [
         },
       },
     ],
+  },
+  {
+    key: 'dumpTensor',
+    label: '执行DumpTensor',
+    icon: tensorIcon,
+    handler: async () => {
+      const { operatorNames, compileOption } = getOperatorParams();
+      await startDumpTensor({ operatorNames, compileOption })
+    },
   },
 ];
 
@@ -234,7 +231,8 @@ const menuItems = computed(() => {
     return items.filter(item =>
       item.key !== 'build' &&
       item.key !== 'sanitizer' &&
-      item.key !== 'runDebug'
+      item.key !== 'runDebug' && 
+      item.key !== 'dumpTensor'
     );
   }
 
@@ -328,18 +326,6 @@ const handleMenuClick = async ({ key }) => {
     try {
       const taskName = await getCurrentTaskName();
       if (taskName) {
-        // 获取新任务的名称
-        const newTaskNameMap = {
-          'build': '编译部署算子',
-          'runExample': '运行',
-          'sanitizer': '异常检测',
-          'onboard': '上板分析',
-          'simulation': '仿真分析',
-          'buildAndCpuDebug': 'CPU调试',
-          'buildAndDebug': 'NPU调试',
-        };
-        const newTaskName = newTaskNameMap[originalKey] || originalKey;
-
         // 调用vscode弹窗进行二次确认
         const result = await showConfirmDialog({
           title: `任务"${taskName}"正在进行中`,
