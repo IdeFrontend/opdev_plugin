@@ -20,6 +20,7 @@ import {
 import { ViewServer } from './core/view/view-server';
 import { routes } from './routes';
 import { apis } from './api-routes';
+import { homeMethods } from './controller/home-controller';
 import { PermanentStorage } from './class/permanent-storage';
 import { ExtensionConfig } from './core/extension-config';
 import { RemoteConfig } from './helpers/remote-config';
@@ -414,20 +415,30 @@ export async function activate(context: vscode.ExtensionContext) {
   } = getPerformancePanelViewProvider(context, apiServer);
   context.subscriptions.push(performancePanelView, openPerformanceDisposable);
 
-  // 初始化'仿真分析-选择采集内容'页面的Webview
+  // 初始化'仿真分析-选择采集内容'页面的Webview（打开配置页面前做 pyasc .py 校验）
   const simulatorOptionsProvider = new WebviewProvider(context, apiServer);
   const simulatorOptionsCommand = vscode.commands.registerCommand(
     COMMAND_SIMULATOR_OPTIONS,
     async () => {
+      const pyascCheck = await homeMethods.validatePyascForAnalysis();
+      if (!pyascCheck.valid) {
+        vscode.window.showWarningMessage(pyascCheck.message ?? '请先打开一个 .py 文件');
+        return;
+      }
       simulatorOptionsProvider.show(VIEW_OPTIONS_SIMULATOR);
     },
   );
 
-  // 初始化'上板分析-选择采集内容'页面的Webview
+  // 初始化'上板分析-选择采集内容'页面的Webview（打开配置页面前做 pyasc .py 校验）
   const onBoardOptionsProvider = new WebviewProvider(context, apiServer);
   const onBoardOptionsCommand = vscode.commands.registerCommand(
     COMMAND_ON_BOARD_OPTIONS,
     async () => {
+      const pyascCheck = await homeMethods.validatePyascForAnalysis();
+      if (!pyascCheck.valid) {
+        vscode.window.showWarningMessage(pyascCheck.message ?? '请先打开一个 .py 文件');
+        return;
+      }
       onBoardOptionsProvider.show(VIEW_OPTIONS_ON_BOARD);
     },
   );

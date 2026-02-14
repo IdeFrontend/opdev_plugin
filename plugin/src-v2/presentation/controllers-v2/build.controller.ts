@@ -91,14 +91,14 @@ export class BuildControllerV2 {
         const isPyFile = activeEditor?.document.fileName.endsWith('.py');
 
         if (!isPyFile) {
-          this.notification.showError('请先打开一个 .py 文件');
+          this.notification.showWarning('请先打开一个 .py 文件');
           return;
         }
 
         // 获取工作区路径
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders || workspaceFolders.length === 0) {
-          this.notification.showError('未找到工作区路径');
+          this.notification.showWarning('未找到工作区路径');
           return;
         }
 
@@ -294,14 +294,14 @@ export class BuildControllerV2 {
         const isPyFile = activeEditor?.document.fileName.endsWith('.py');
 
         if (!isPyFile) {
-          this.notification.showError('请先打开一个 .py 文件');
+          this.notification.showWarning('请先打开一个 .py 文件');
           return;
         }
 
         // 获取工作区路径
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders || workspaceFolders.length === 0) {
-          this.notification.showError('未找到工作区路径');
+          this.notification.showWarning('未找到工作区路径');
           return;
         }
 
@@ -384,14 +384,14 @@ export class BuildControllerV2 {
         const isPyFile = activeEditor?.document.fileName.endsWith('.py');
 
         if (!isPyFile) {
-          this.notification.showError('请先打开一个 .py 文件');
+          this.notification.showWarning('请先打开一个 .py 文件');
           return;
         }
 
         // 获取工作区路径
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders || workspaceFolders.length === 0) {
-          this.notification.showError('未找到工作区路径');
+          this.notification.showWarning('未找到工作区路径');
           return;
         }
 

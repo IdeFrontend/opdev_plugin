@@ -43,7 +43,7 @@ export function getProjectType() {
 }
 
 /**
- * pyasc 类型仿真分析/性能调优前置校验（点击按钮时调用）
+ * pyasc 类型仿真分析/性能调优前置校验（打开配置页面前由插件侧调用）
  * 仅 pyasc 项目时校验是否已打开 .py 文件及工作区
  */
 export function validatePyascForAnalysis() {

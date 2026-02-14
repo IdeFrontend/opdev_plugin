@@ -290,7 +290,7 @@ export const homeMethods = {
   },
 
   /**
-   * pyasc 类型仿真分析/性能调优前置校验：点击按钮时即可触发
+   * pyasc 类型仿真分析/性能调优前置校验：在打开配置页面前触发
    * 仅当项目为 pyasc 时校验是否已打开 .py 文件及工作区
    * @returns { valid: true } 或 { valid: false, message: string }
    */
