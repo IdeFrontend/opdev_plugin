@@ -89,4 +89,5 @@ export const COMMAND_OPERATOR_PROJECT_SIMULATION = `${COMMAND_PREFIX}.operatorPr
 export const COMMAND_REPORT_VISUALIZATION_SANITIZER = `${COMMAND_PREFIX}.reportVisualizationSanitizer`;
 export const COMMAND_REPORT_VISUALIZATION_ON_BOARD = `${COMMAND_PREFIX}.reportVisualizationOnBoard`;
 export const COMMAND_REPORT_VISUALIZATION_SIMULATION = `${COMMAND_PREFIX}.reportVisualizationSimulation`;
+export const COMMAND_REPORT_VISUALIZATION_PERFORMANCE = `${COMMAND_PREFIX}.reportVisualizationPerformance`;
 export const COMMAND_REFRESH_FOLDER_DECORATIONS = `${COMMAND_PREFIX}.refreshFolderDecorations`;

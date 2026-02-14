@@ -5,7 +5,7 @@ import {
 import { theme, message } from 'ant-design-vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import {
-  getConfigData, saveConfig, openExternalLink, startOnBoard, executeVscodeCommand, checkTaskStatus, getSelectedOperators
+  getConfigData, saveConfig, openExternalLink, startOnBoard, executeVscodeCommand, checkTaskStatus, getSelectedOperators, validatePyascForAnalysis
 } from '@web/apis';
 
 const themeConfig = { algorithm: theme.darkAlgorithm };
@@ -65,6 +65,11 @@ const handleConfirm = async () => {
     return;
   }
   try {
+    const pyascCheck = await validatePyascForAnalysis();
+    if (!pyascCheck.valid) {
+      message.warning(pyascCheck.message ?? '请先打开一个 .py 文件');
+      return;
+    }
     isExecuting.value = true;
     
     // 获取已选择的算子名称（如果是标准自定义算子）

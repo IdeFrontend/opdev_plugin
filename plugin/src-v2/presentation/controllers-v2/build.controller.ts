@@ -355,7 +355,7 @@ export class BuildControllerV2 {
       this.notification.showInfo('执行仿真分析成功');
 
       // 触发 UI 刷新命令
-      await vscode.commands.executeCommand('performanceSidebarView.focus');
+      await vscode.commands.executeCommand('huawei-op-devtools.open-performance-panel-view');
       await vscode.commands.executeCommand('huawei-op-devtools.flashPerformanceRunData');
     }
     finally {
@@ -445,7 +445,7 @@ export class BuildControllerV2 {
       this.notification.showInfo('执行上板分析成功');
 
       // 触发 UI 刷新命令
-      await vscode.commands.executeCommand('performanceSidebarView.focus');
+      await vscode.commands.executeCommand('huawei-op-devtools.open-performance-panel-view');
       await vscode.commands.executeCommand('huawei-op-devtools.flashPerformanceRunData');
     }
     finally {
@@ -480,8 +480,8 @@ export class BuildControllerV2 {
 
       this.notification.showInfo('异常检测成功');
 
-      // 触发 UI 刷新命令
-      await vscode.commands.executeCommand('msSanitizerSidebarView.focus');
+      // 聚焦异常检测面板并刷新左侧报告列表
+      await vscode.commands.executeCommand('msSanitizerPanelView.focus');
       await vscode.commands.executeCommand('huawei-op-devtools.flashMsSanitizerRunData');
     }
     finally {

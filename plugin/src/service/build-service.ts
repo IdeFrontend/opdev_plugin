@@ -467,14 +467,14 @@ export class BuildService {
 
       if (!isPyFile) {
         vscode.window.showErrorMessage('请先打开一个 .py 文件');
-        return;
+        throw new Error('请先打开一个 .py 文件');
       }
 
       // 获取工作区路径
       const workspaceFolders = vscode.workspace.workspaceFolders;
       if (!workspaceFolders || workspaceFolders.length === 0) {
         vscode.window.showErrorMessage('未找到工作区路径');
-        return;
+        throw new Error('未找到工作区路径');
       }
 
       const workspacePath = workspaceFolders[0].uri.fsPath;
@@ -531,8 +531,7 @@ export class BuildService {
 
       if (buildRes.code !== 0) {
         vscode.window.showErrorMessage(`编译算子失败 ${buildRes.output}`);
-
-        return;
+        throw new Error(`编译算子失败: ${buildRes.output}`);
       }
 
       await tryMarkOperatorsAsCompiled(Number(simulatorItem?.config_id), params.operatorNames);
@@ -560,7 +559,7 @@ export class BuildService {
 
         if (exampleBuildRes.code !== 0) {
           vscode.window.showErrorMessage(`执行失败 ${exampleBuildRes.output}`);
-          return;
+          throw new Error(`执行失败: ${exampleBuildRes.output}`);
         }
       }
     }
@@ -584,16 +583,16 @@ export class BuildService {
 
       if (res.code !== 0) {
         vscode.window.showErrorMessage('执行仿真分析失败');
-
-        return;
+        throw new Error(`执行仿真分析失败: ${res.output ?? ''}`);
       }
 
       vscode.window.showInformationMessage('执行仿真分析成功');
-      vscode.commands.executeCommand('performanceSidebarView.focus');
+      vscode.commands.executeCommand('huawei-op-devtools.open-performance-panel-view');
       vscode.commands.executeCommand('huawei-op-devtools.flashPerformanceRunData');
     }
     catch (e: unknown) {
       vscode.window.showErrorMessage(`获取仿真命令失败 ${(e as Error).message}`);
+      throw e;
     }
   }
 
@@ -738,7 +737,7 @@ export class BuildService {
       }
 
       vscode.window.showInformationMessage('执行上板分析成功');
-      vscode.commands.executeCommand('performanceSidebarView.focus');
+      vscode.commands.executeCommand('huawei-op-devtools.open-performance-panel-view');
       vscode.commands.executeCommand('huawei-op-devtools.flashPerformanceRunData');
     }
     catch (e: unknown) {

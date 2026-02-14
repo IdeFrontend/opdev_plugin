@@ -1,20 +1,101 @@
 <template>
   <a-config-provider :theme="themeConfig">
-    <div
-      v-if="msScantinizerInfo.title"
-      class="flex h-full"
-    >
-      <div class="flex-1 h-full overflow-hidden flex flex-col">
-        <div
-          class="leading-6 bg-white/10 px-5 flex justify-between items-center"
-        >
-          <span>检测结果</span>
-          <LeftSquareOutlined
-            v-if="!showDetail"
-            class="cursor-pointer"
-            @click="showDetail = true"
-          />
+    <div class="flex h-full">
+      <!-- 左侧：报告列表（原异常检测结果可视化） -->
+      <div class="w-[260px] shrink-0 flex flex-col border-r border-white/10">
+        <div class="leading-6 bg-white/10 px-3 flex justify-between items-center">
+          <span>异常检测结果</span>
         </div>
+        <div class="flex gap-2 my-3 px-3">
+          <a-button
+            type="default"
+            class="execute-time-sorter-button"
+            @click="handleExecutionTime"
+          >
+            <div class="flex items-center">
+              执行时间
+              <div class="sort-icons">
+                <CaretUpFilled v-if="sortOrder === 'asc'" />
+                <UpOutlined v-else />
+                <CaretDownFilled v-if="sortOrder === 'desc'" />
+                <DownOutlined v-else />
+              </div>
+            </div>
+          </a-button>
+          <a-button
+            class="execute-time-sorter-button"
+            @click="filterMark"
+          >
+            已标记
+            <FlagFilled
+              v-if="isMarkedOnly"
+              class="flag-outlined-icon"
+            />
+            <FlagOutlined
+              v-else
+              class="flag-outlined-icon"
+            />
+          </a-button>
+        </div>
+        <div
+          v-if="renderListData.length > 0"
+          class="flex-1 overflow-auto"
+        >
+          <div
+            v-for="(item, index) in renderListData"
+            :key="index"
+            class="h-[50px] w-full px-3 py-1.5 flex cursor-pointer transition-all duration-100 hover:bg-white/10 group"
+            :class="{ 'bg-white/15': selectedReportPath === item.path }"
+            @click="handleSelectReport(item)"
+          >
+            <div class="flex-1 text-xs min-w-0">
+              <p class="text-white leading-[22px] m-0 truncate">
+                {{ item.title }}
+              </p>
+              <p class="text-[#87878b] leading-4 m-0">
+                {{ formatTimestamp(item.timestamp) }}
+              </p>
+            </div>
+            <div
+              class="flex gap-1 justify-center items-center pointer-events-none opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-hover:pointer-events-auto shrink-0"
+            >
+              <a-button
+                type="text"
+                :icon="h(CopyOutlined)"
+                @click.stop="handleCopyReport(item)"
+              />
+              <a-button
+                :class="{ 'opacity-100': item.marked }"
+                type="text"
+                :icon="h(MarkedIcon, { marked: item.marked })"
+                @click.stop="handleMark(item)"
+              />
+            </div>
+          </div>
+        </div>
+        <div
+          v-else
+          class="flex-1 flex items-center justify-center text-[#8e8e8f] text-sm"
+        >
+          暂无报告
+        </div>
+      </div>
+      <!-- 右侧：选中报告的检测结果 -->
+      <div
+        v-if="msScantinizerInfo.title"
+        class="flex-1 flex h-full min-w-0"
+      >
+        <div class="flex-1 h-full overflow-hidden flex flex-col">
+          <div
+            class="leading-6 bg-white/10 px-5 flex justify-between items-center"
+          >
+            <span>检测结果</span>
+            <LeftSquareOutlined
+              v-if="!showDetail"
+              class="cursor-pointer"
+              @click="showDetail = true"
+            />
+          </div>
         <div class="h-14 flex justify-between items-center px-5">
           <div class="text-sm">
             {{ msScantinizerInfo.title }}
@@ -180,24 +261,35 @@
           </div>
         </div>
       </div>
-    </div>
-    <div v-else>
-      请选择异常检测日志查看详情
+      </div>
+      <div
+        v-else
+        class="flex-1 flex items-center justify-center text-[#8e8e8f] text-sm bg-white/5"
+      >
+        请选择左侧报告查看检测结果
+      </div>
     </div>
   </a-config-provider>
 </template>
 
 <script setup lang="ts">
 import {
-  ref, computed, onBeforeUnmount, onMounted,
+  ref, computed, onBeforeUnmount, onMounted, type Component, h,
 } from 'vue';
-import { theme } from 'ant-design-vue';
+import { theme, message } from 'ant-design-vue';
 import {
   CloseCircleOutlined,
   WarningOutlined,
   InfoCircleOutlined,
   RightSquareOutlined,
   LeftSquareOutlined,
+  UpOutlined,
+  DownOutlined,
+  CaretUpFilled,
+  CaretDownFilled,
+  FlagOutlined,
+  FlagFilled,
+  CopyOutlined,
 } from '@ant-design/icons-vue';
 import {
   questionMap,
@@ -208,10 +300,75 @@ import {
   uninitializedSet,
   synchronizeSet,
 } from './constant';
-import { jumpToFileWebview } from '@web/apis';
+import {
+  jumpToFileWebview,
+  getMsSanitizerRunData,
+  toggleMsSanitizerMark,
+} from '@web/apis';
 import { formatTimestamp } from '@web/views/sidebars/performance-run-data/utils/timestamp';
+import { vscode } from '@web/utils/vscode';
 
 const themeConfig = { algorithm: theme.darkAlgorithm };
+
+// 左侧报告列表（原异常检测结果可视化）
+const sortOrder = ref<'asc' | 'desc'>('desc');
+const isMarkedOnly = ref(false);
+const listData = ref<any[]>([]);
+const selectedReportPath = ref<string | null>(null);
+
+const renderListData = computed(() => {
+  const data = listData.value.filter((item) => {
+    if (isMarkedOnly.value) {
+      return item.marked;
+    }
+    return true;
+  });
+  return data.sort((a, b) =>
+    sortOrder.value === 'asc'
+      ? b.timestamp - a.timestamp
+      : a.timestamp - b.timestamp);
+});
+
+const handleExecutionTime = () => {
+  sortOrder.value = sortOrder.value === 'desc' ? 'asc' : 'desc';
+};
+
+const filterMark = () => {
+  isMarkedOnly.value = !isMarkedOnly.value;
+};
+
+const getListData = async () => {
+  listData.value = await getMsSanitizerRunData({});
+};
+
+/** 点击左侧报告，在右侧展示该报告的检测结果 */
+const handleSelectReport = (item: { path: string; title?: string; timestamp?: number }) => {
+  selectedReportPath.value = item.path;
+  // 直接通过 VSCode API 发给扩展，确保能触发右侧详情刷新
+  vscode.postMessage({
+    command: 'vscodeLoadMsSanitizerReport',
+    data: item,
+  });
+};
+
+const handleCopyReport = async (data: { path: string }) => {
+  try {
+    await navigator.clipboard.writeText(data.path);
+    message.success('路径已复制到剪贴板');
+  }
+  catch (error) {
+    console.error('复制路径失败:', error);
+    message.error('复制路径失败');
+  }
+};
+
+const handleMark = async (data: any) => {
+  await toggleMsSanitizerMark(data);
+  getListData();
+};
+
+const MarkedIcon: Component<{ marked: boolean }> = ({ marked }) =>
+  h(marked ? FlagFilled : FlagOutlined, { style: { color: marked ? '#d32029' : undefined } });
 
 const questionTypes = Array.from(questionMap)
   .map((item) => ({
@@ -409,34 +566,67 @@ const filterTableData = async (type: string) => {
 };
 
 onMounted(() => {
-  // 监听来自 iframe 的消息
+  getListData();
+
   const messageHandler = (event: MessageEvent) => {
     if (
       event.data.command === 'iframeRemoteMsSanitizerPanelViewSetRenderList'
     ) {
-      const {
-        data, title, timestamp,
-      } = event.data.data;
+      const payload = event.data.data || {};
+      const { data, title, timestamp, path } = payload;
 
-      msScantinizerInfo.value = {
-        title,
-        timestamp,
-      };
+      msScantinizerInfo.value = title
+        ? { title, timestamp: String(timestamp ?? '') }
+        : {};
       tableData.value = data || [];
+      if (path) {
+        selectedReportPath.value = path;
+      }
+    }
+    if (event.data.command === 'iframeFlashMsSanitizerRunData') {
+      getListData();
     }
   };
 
   window.addEventListener('message', messageHandler);
 
-  // 发送消息给父窗口请求数据
+  // 请求初始数据（如从“打开面板”命令带入的报告）
   window.postMessage({ command: 'vscodeGetMsSanitizerPanelViewData' }, '*');
 
-  // 清理函数
   onBeforeUnmount(() => {
     window.removeEventListener('message', messageHandler);
   });
 });
 </script>
+
+<style lang="less" scoped>
+.execute-time-sorter-button {
+  border-radius: 2px;
+}
+.execute-time-sorter-button:hover,
+.execute-time-sorter-button:focus,
+.execute-time-sorter-button:active {
+  background-color: rgba(20, 20, 20, 0.96) !important;
+  border-color: rgb(72, 72, 73) !important;
+  color: rgba(255, 255, 255, 0.855) !important;
+  box-shadow: rgba(255, 255, 255, 0.04) !important;
+}
+.sort-icons {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-left: 4px;
+}
+.sort-icons :deep(.anticon) {
+  display: block;
+  width: 10px;
+  height: 10px;
+}
+.flag-outlined-icon {
+  position: relative;
+  bottom: 2px;
+}
+</style>
 
 <style lang="less">
 #app {
