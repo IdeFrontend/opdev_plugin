@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://gitcode.com/kaocong/mstt"
   },
-  "version": "1.2.3",
+  "version": "1.2.42",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -99,6 +99,24 @@
           "type": "webview",
           "id": "OpsOperateProvider",
           "name": "算子开发流程菜单"
+        },
+        {
+          "id": "msSanitizerSidebarView",
+          "name": "异常检测结果可视化",
+          "type": "webview",
+          "visibility": "collapsed"
+        },
+        {
+          "id": "performanceSidebarView",
+          "name": "性能调优结果可视化",
+          "type": "webview",
+          "visibility": "collapsed"
+        },
+        { 
+           "id": "dumpTensorSidebarView", 
+           "name": "DumpTensor数据", 
+           "type": "webview", 
+           "visibility": "collapsed" 
         }
       ],
       "ms-sanitizer-panel-view": [
