@@ -2,10 +2,9 @@
   <a-collapse
     v-model:active-key="activeKey"
     :bordered="false"
-    class="[&_.ant-collapse-header-text]:!text-white [&_.ant-collapse-expand-icon]:!text-white"
   >
-    <div style="margin-bottom: 15px">
-      <span class="text-white">
+    <div style="margin-bottom: 15px" :class="textContentClass">
+      <span>
         点击打开<a-button
           type="link"
           style="display: contents;"
@@ -41,8 +40,14 @@
   </a-collapse>
 </template>
 <script lang="ts" setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { vscode } from '@web/utils/vscode';
+import { useTheme } from '@web/composables/use-theme';
+
+const { actualTheme } = useTheme();
+
+// 根据主题获取文本颜色类
+const textContentClass = computed(() => actualTheme.value === 'dark' ? 'text-dark' : 'text-light');
 
 const activeKey = ref(['1']);
 
@@ -68,3 +73,13 @@ const openHelpPage = () => {
   });
 };
 </script>
+
+<style lang="less" scoped>
+.text-dark {
+  color: #ffffff;
+}
+
+.text-light {
+  color: #1f1f1f;
+}
+</style>

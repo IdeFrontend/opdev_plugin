@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, inject, computed } from 'vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import { useLinkSSH } from '../composables/use-link-ssh';
 import { FormRulesFactory } from '../composables/form-rules';
@@ -10,6 +10,26 @@ import tipBase_1_3 from '@/assets/imgs/torch_library_template.png';
 import {
   getProjectType,
 } from '@web/apis';
+
+// 从父组件注入主题状态，避免重复调用 useTheme
+const actualTheme = inject('actualTheme', computed(() => 'dark'));
+
+// 根据主题获取文本颜色
+const getTextColorClass = () => actualTheme.value === 'dark' ? 'text-white' : 'text-[#1f1f1f]';
+// 根据主题获取边框颜色
+const getBorderColorClass = () => actualTheme.value === 'dark' ? 'border-[#464646]' : 'border-[#d9d9d9]';
+// 根据主题获取选中状态的边框和阴影
+const getSelectedBorderClass = () => actualTheme.value === 'dark' 
+  ? 'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)]' 
+  : 'border-[#1890ff] shadow-[0_0_0_3px_rgba(24,144,255,0.15)]';
+// 根据主题获取分割线颜色（背景色）
+const getDividerClass = () => actualTheme.value === 'dark' ? 'bg-white/15' : 'bg-gray-300';
+// 根据主题获取边框颜色（用于 border-t 等）
+const getDividerBorderClass = () => actualTheme.value === 'dark' ? 'border-white/15' : 'border-gray-300';
+// 根据主题获取卡片背景色
+const getCardBgClass = () => actualTheme.value === 'dark' ? '' : 'bg-white';
+// 根据主题获取描述文本颜色
+const getDescTextClass = () => actualTheme.value === 'dark' ? 'text-white' : 'text-[#595959]';
 
 defineProps({
   connected: {
@@ -110,22 +130,24 @@ onMounted(async () => {
   <div class="">
     <div class="flex w-full items-stretch max-[960px]:flex-wrap">
       <div class="w-[35%] max-[960px]:flex-auto max-[960px]:w-full max-[960px]:min-w-0">
-        <div class="text-base leading-[22px] font-bold text-white mb-6">
+        <div class="text-base leading-[22px] font-bold mb-6" :class="getTextColorClass()">
           工程类型
         </div>
         <div class="">
           <div class="mb-5">
             <div v-for="item in items_type" :key="item.id"
-              class="bg-transparent p-5 my-5 border border-[#464646] rounded-lg cursor-pointer transition-all duration-300 overflow-hidden relative hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)] group max-[960px]:flex-auto max-[960px]:min-w-0"
-              :class="{
-                'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)] selected':
-                  selectedId_type === item.id,
-              }" @click="selectedId_type = item.id">
-              <div class="font-extrabold text-[initial] mb-[25px] text-white">
+              class="p-5 my-5 border rounded-lg cursor-pointer transition-all duration-300 overflow-hidden relative hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)] group max-[960px]:flex-auto max-[960px]:min-w-0"
+              :class="[
+                getBorderColorClass(),
+                getCardBgClass(),
+                selectedId_type === item.id ? getSelectedBorderClass() : '',
+              ]" @click="selectedId_type = item.id">
+              <div class="font-extrabold text-[initial] mb-[25px]" :class="getTextColorClass()">
                 {{ item.title }}
               </div>
               <div
-                class="leading-8 mt-2.5 text-white text-[13px] mb-2.5 whitespace-nowrap overflow-hidden text-ellipsis group-[.selected]:whitespace-normal group-[.selected]:overflow-visible group-[.selected]:text-clip"
+                class="leading-8 mt-2.5 text-[13px] mb-2.5 whitespace-nowrap overflow-hidden text-ellipsis group-[.selected]:whitespace-normal group-[.selected]:overflow-visible group-[.selected]:text-clip"
+                :class="getDescTextClass()"
                 v-html="item.id === 1 ? getTemplateDesc(selectedTemplate) : item.desc">
               </div>
               <a-tag v-if="item.id === 1 || item.id === 2" color="blue" class="mt-2.5 mr-2">
@@ -158,8 +180,9 @@ onMounted(async () => {
               </div>
               <transition name="slide-fade">
                 <div v-if="selectedId_type === item.id"
-                  class="mt-5 pt-5 border-t border-white/15 transition-all duration-300">
-                  <div style="margin-bottom: 20px; margin-top: 20px">
+                  class="mt-5 pt-5 border-t transition-all duration-300"
+                  :class="getDividerBorderClass()">
+                  <div style="margin-bottom: 20px; margin-top: 20px" :class="getTextColorClass()">
                     工程目录结构示意
                   </div>
                   <div class="overflow-hidden max-w-full transition-all duration-300">
@@ -172,10 +195,11 @@ onMounted(async () => {
           </div>
         </div>
       </div>
-      <div class="w-px bg-white/15 mx-4 shrink-0 self-stretch" />
+      <div class="w-px shrink-0 self-stretch mx-4" :class="getDividerClass()" />
       <div
-        class="w-[65%] text-left text-sm font-normal leading-[22px] max-[960px]:flex-auto max-[960px]:w-full max-[960px]:min-w-0 [&_.ant-form-item-label_.help-icon]:text-white/45 [&_.ant-form-item-label_.help-icon]:cursor-help [&_.ant-form-item-label_.help-icon]:text-sm [&_.ant-form-item-label_.help-icon]:ml-1">
-        <div class="text-base leading-[22px] font-bold text-white mb-6">
+        class="w-[65%] text-left text-sm font-normal leading-[22px] max-[960px]:flex-auto max-[960px]:w-full max-[960px]:min-w-0"
+        :class="getTextColorClass()">
+        <div class="text-base leading-[22px] font-bold mb-6" :class="getTextColorClass()">
           工程配置
         </div>
         <a-form ref="connectionFormRef" :model="projectFormData" :label-col="{ span: 6 }" :wrapper-col="{ span: 24 }"
@@ -221,7 +245,7 @@ onMounted(async () => {
   </div>
 </template>
 <style scoped lang="less">
-/* 针对整个页面的滚动条 */
+/* 针对整个页面的滚动条 - 深色主题样式 */
 ::-webkit-scrollbar {
   width: 12px;
   /* 垂直滚动条宽度 */
@@ -229,39 +253,39 @@ onMounted(async () => {
   /* 水平滚动条高度 */
 }
 
-/* 滚动条轨道 */
+/* 滚动条轨道 - 深色主题 */
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: #1f1f1f;
   /* 轨道背景色 */
   border-radius: 6px;
   /* 轨道圆角 */
 }
 
-/* 滚动条滑块 */
+/* 滚动条滑块 - 深色主题 */
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: #4a4a4a;
   /* 滑块颜色 */
   border-radius: 6px;
   /* 滑块圆角 */
-  border: 2px solid #f1f1f1;
+  border: 2px solid #1f1f1f;
   /* 滑块边框，与轨道背景色相同形成间隔效果 */
 }
 
-/* 滑块悬停状态 */
+/* 滑块悬停状态 - 深色主题 */
 ::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: #5a5a5a;
   /* 悬停时颜色变深 */
 }
 
-/* 滑块激活状态（点击时） */
+/* 滑块激活状态（点击时） - 深色主题 */
 ::-webkit-scrollbar-thumb:active {
-  background: #787878;
+  background: #3a3a3a;
   /* 点击时颜色更深 */
 }
 
-/* 滚动条角落（垂直和水平滚动条交汇处） */
+/* 滚动条角落（垂直和水平滚动条交汇处） - 深色主题 */
 ::-webkit-scrollbar-corner {
-  background: #f1f1f1;
+  background: #1f1f1f;
 }
 
 // 展开/收缩动画

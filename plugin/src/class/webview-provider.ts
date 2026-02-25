@@ -15,7 +15,7 @@ import { ApiServer } from '@plugin/core/api-server';
 import { registerConfigPage, unregisterConfigPage } from '@plugin/controller/navigation-controller';
 
 /**
- * Webview提供者 - 负责创建和管理Webview面板
+ * Webview 提供者 - 负责创建和管理 Webview 面板
  */
 export class WebviewProvider {
   private panel: vscode.WebviewPanel | undefined;
@@ -23,6 +23,7 @@ export class WebviewProvider {
   private context: vscode.ExtensionContext;
   private readonly userInfo: os.UserInfo<string | number>;
   private pluginSidebarDisposable: vscode.Disposable | undefined;
+  private themeChangeDisposable: vscode.Disposable | undefined;
 
   constructor(
     context: vscode.ExtensionContext,
@@ -35,7 +36,7 @@ export class WebviewProvider {
   }
 
   /**
-   * 显示Webview面板
+   * 显示 Webview 面板
    */
   public async show(router: string): Promise<void> {
     try {
@@ -48,7 +49,7 @@ export class WebviewProvider {
       }
     }
     catch (error) {
-      const errorMsg = `打开Huawei OP DevTools失败: ${error}`;
+      const errorMsg = `打开 Huawei OP DevTools 失败：${error}`;
 
       console.error(errorMsg);
       vscode.window.showErrorMessage(errorMsg);
@@ -56,7 +57,7 @@ export class WebviewProvider {
   }
 
   /**
-   * 向Webview发送消息
+   * 向 Webview 发送消息
    */
   public postMessage(message: unknown): void {
     if (this.panel?.webview) {
@@ -65,14 +66,14 @@ export class WebviewProvider {
   }
 
   /**
-   * 创建Webview面板
+   * 创建 Webview 面板
    */
   public showLeftPage(router: string): vscode.Disposable {
     return this.createLeftNavWebview(router);
   }
 
   /**
-   * 创建Webview面板
+   * 创建 Webview 面板
    */
   private createLeftNavWebview(router: string = ''): vscode.Disposable {
     try {
@@ -103,7 +104,22 @@ export class WebviewProvider {
               webviewView.webview,
               `sidebars/${router}`,
             );
-            // 处理Webview消息
+
+            // 监听 VSCode 主题变化并通知 Webview
+            this.themeChangeDisposable = vscode.window.onDidChangeActiveColorTheme((theme) => {
+              webviewView.webview.postMessage({
+                command: 'updateTheme',
+                themeName: theme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
+              });
+            });
+
+            // 初始化时发送当前主题
+            webviewView.webview.postMessage({
+              command: 'updateTheme',
+              themeName: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
+            });
+
+            // 处理 Webview 消息
             webviewView.webview.onDidReceiveMessage(
               (message: unknown) => {
                 this.handleWebviewMessage(message);
@@ -127,7 +143,7 @@ export class WebviewProvider {
   }
 
   /**
-   * 创建Webview面板
+   * 创建 Webview 面板
    */
   private async createPanel(router: string = ''): Promise<void> {
     try {
@@ -148,8 +164,26 @@ export class WebviewProvider {
         registerConfigPage('config', this.panel.webview);
       }
 
-      // 设置Webview内容
+      // 设置 Webview 内容
       await this.updateWebviewContent(router);
+
+      // 监听 VSCode 主题变化并通知 Webview
+      this.themeChangeDisposable = vscode.window.onDidChangeActiveColorTheme((theme) => {
+        if (this.panel) {
+          this.panel.webview.postMessage({
+            command: 'updateTheme',
+            themeName: theme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
+          });
+        }
+      });
+
+      // 初始化时发送当前主题
+      if (this.panel) {
+        this.panel.webview.postMessage({
+          command: 'updateTheme',
+          themeName: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
+        });
+      }
 
       // 处理面板关闭事件
       this.panel.onDidDispose(
@@ -164,7 +198,7 @@ export class WebviewProvider {
         this.context.subscriptions,
       );
 
-      // 处理Webview消息
+      // 处理 Webview 消息
       this.panel.webview.onDidReceiveMessage(
         (message: unknown) => {
           this.handleWebviewMessage(message);
@@ -179,7 +213,7 @@ export class WebviewProvider {
   }
 
   /**
-   * 更新Webview内容
+   * 更新 Webview 内容
    */
   private async updateWebviewContent(router: string): Promise<void> {
     if (!this.panel) {
@@ -210,13 +244,13 @@ export class WebviewProvider {
       );
     }
     catch (error) {
-      // 如果读取文件失败，使用fallback内容
+      // 如果读取文件失败，使用 fallback 内容
       console.log(error);
     }
   }
 
   /**
-   * 处理来自Webview的消息
+   * 处理来自 Webview 的消息
    */
   private handleWebviewMessage(message: unknown): void {
     const msg = message as { command: string;
@@ -241,6 +275,11 @@ export class WebviewProvider {
     if (this.pluginSidebarDisposable) {
       this.pluginSidebarDisposable.dispose();
       this.pluginSidebarDisposable = undefined;
+    }
+
+    if (this.themeChangeDisposable) {
+      this.themeChangeDisposable.dispose();
+      this.themeChangeDisposable = undefined;
     }
   }
 }

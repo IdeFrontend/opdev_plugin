@@ -5,19 +5,18 @@
  * LICENSE file in the root directory of this source tree. -->
 
 <script setup>
-import { theme } from 'ant-design-vue';
-import {
-  ref, nextTick, onMounted, onUnmounted
-} from 'vue';
+import { ref, nextTick, onMounted, onUnmounted, provide } from 'vue';
+import { useTheme } from '@web/composables/use-theme';
 import optionsList from './components/options-list.vue';
 import configDetail from './components/config-detail.vue';
 import { getConfigData, getTargetTab, checkMultipleOperators, getProjectType } from '@web/apis';
 import { useOpprofConfig } from './composables/use-opprof-config'
 
-const themeConfig = {
-  // 使用暗色算法[1](@ref)
-  algorithm: theme.darkAlgorithm,
-};
+// 使用主题管理组合式函数
+const { themeConfig, actualTheme } = useTheme();
+
+// 向子组件提供主题状态，避免重复调用 useTheme
+provide('actualTheme', actualTheme);
 const activeConfig = ref('');
 const activeOption = ref('build');
 const configDetailRef = ref();
@@ -115,16 +114,18 @@ onUnmounted(() => {
 <template>
   <a-config-provider :theme="themeConfig">
     <div class="w-full h-full flex flex-col overflow-hidden">
-      <div class="w-full p-5 shadow-[0_2px_12px_0_rgba(0,0,0,0.48)] z-10">
+      <div class="w-full p-5 shadow-[0_2px_12px_0_rgba(0,0,0,0.48)] z-10" :class="actualTheme === 'dark' ? 'bg-[#1f1f1f]' : 'bg-white'">
         <div class="flex items-center justify-between">
-          <div class="text-[22px] font-bold text-white">
+          <div class="text-[22px] font-bold" :class="actualTheme === 'dark' ? 'text-white' : 'text-[#1f1f1f]'">
             算子工程配置
           </div>
         </div>
       </div>
       <div class="flex-1 flex overflow-hidden w-full">
         <div
-          class="w-[163px] min-w-[163px] border-r border-[#424242] overflow-hidden bg-black/20 min-h-[calc(100vh-75px)]"
+          class="w-[163px] min-w-[163px]"
+          :class="[actualTheme === 'dark' ? 'border-[#424242] bg-[#141414]' : 'border-[#d9d9d9] bg-gray-50']"
+          style="border-right-width: 1px; overflow: hidden;"
         >
           <optionsList
             :active-config="activeConfig"

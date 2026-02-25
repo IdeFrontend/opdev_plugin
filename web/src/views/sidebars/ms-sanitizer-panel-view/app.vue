@@ -210,8 +210,10 @@ import {
 } from './constant';
 import { jumpToFileWebview } from '@web/apis';
 import { formatTimestamp } from '@web/views/sidebars/performance-run-data/utils/timestamp';
+import { useTheme } from '@web/composables/use-theme';
 
-const themeConfig = { algorithm: theme.darkAlgorithm };
+// 使用主题管理组合式函数
+const { themeConfig, actualTheme } = useTheme();
 
 const questionTypes = Array.from(questionMap)
   .map((item) => ({

@@ -20,14 +20,12 @@ import {
   downloadMsSanitizerReport,
 } from '@web/apis';
 import {
-  theme,
   message,
 } from 'ant-design-vue';
+import { useTheme } from '@web/composables/use-theme';
 
-const themeConfig = {
-  // 使用暗色算法
-  algorithm: theme.darkAlgorithm,
-};
+// 使用主题管理组合式函数
+const { themeConfig, actualTheme } = useTheme();
 
 const sortOrder = ref<'asc' | 'desc'>('desc');
 const isMarkedOnly = ref<boolean>(false);

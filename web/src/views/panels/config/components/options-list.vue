@@ -6,8 +6,11 @@
 
 <script setup>
 import {
-  ref, watch,
+  ref, watch, inject, computed,
 } from 'vue';
+
+// 从父组件注入主题状态
+const actualTheme = inject('actualTheme', computed(() => 'dark'));
 
 const Actived = ref('build');
 
@@ -54,7 +57,7 @@ const updateActiveOption = (item) => {
     <div class="options-list">
       <div
         class="options-list-item"
-        :class="[Actived === 'build' ? 'is-active' : '']"
+        :class="[Actived === 'build' ? 'is-active' : '', actualTheme === 'dark' ? 'item-dark' : 'item-light']"
         @click="updateActiveOption('build')"
       >
         <img
@@ -67,7 +70,7 @@ const updateActiveOption = (item) => {
       <div
         v-if="projectType !== 'pyasc'"
         class="options-list-item"
-        :class="[Actived === 'sanitizer' ? 'is-active' : '']"
+        :class="[Actived === 'sanitizer' ? 'is-active' : '', actualTheme === 'dark' ? 'item-dark' : 'item-light']"
         @click="updateActiveOption('sanitizer')"
       >
         <img
@@ -80,7 +83,7 @@ const updateActiveOption = (item) => {
       <div
         v-if="supportsSanitizerAndTuning"
         class="options-list-item"
-        :class="[Actived === 'opprof' ? 'is-active' : '']"
+        :class="[Actived === 'opprof' ? 'is-active' : '', actualTheme === 'dark' ? 'item-dark' : 'item-light']"
         @click="updateActiveOption('opprof')"
       >
         <img
@@ -92,7 +95,7 @@ const updateActiveOption = (item) => {
       </div>
       <div
         class="options-list-item"
-        :class="[Actived === 'env' ? 'is-active' : '']"
+        :class="[Actived === 'env' ? 'is-active' : '', actualTheme === 'dark' ? 'item-dark' : 'item-light']"
         @click="updateActiveOption('env')"
       >
         <img
@@ -116,7 +119,6 @@ const updateActiveOption = (item) => {
 
 .options-list {
   font-size: 12px;
-  color: #ffffff;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -137,16 +139,48 @@ const updateActiveOption = (item) => {
     overflow: hidden;
     text-overflow: ellipsis;
     width: 112px;
+    color: #ffffff;
 
     .img {
       margin-right: 4px;
       width: 14px;
       height: 14px;
       flex-shrink: 0;
+      // 默认深色主题下保持原色
+      filter: none;
     }
 
     &:hover {
       background-color: rgba(255, 255, 255, 0.05);
+    }
+  }
+
+  // 深色主题样式
+  .item-dark {
+    color: #ffffff;
+    border-color: #424242;
+
+    .img {
+      filter: none;
+    }
+
+    &:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+  }
+
+  // 浅色主题样式
+  .item-light {
+    color: #1f1f1f;
+    border-color: #d9d9d9;
+
+    .img {
+      // 浅色主题下使用滤镜使图标变深
+      filter: brightness(0) saturate(100%) invert(20%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(90%);
+    }
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.05);
     }
   }
 

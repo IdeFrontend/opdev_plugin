@@ -7,12 +7,10 @@ import {
   FlagOutlined,
   FlagFilled,
 } from '@ant-design/icons-vue';
-import { theme } from 'ant-design-vue';
+import { useTheme } from '@web/composables/use-theme';
 
-const themeConfig = {
-  // 使用暗色算法
-  algorithm: theme.darkAlgorithm,
-};
+// 使用主题管理组合式函数
+const { themeConfig, actualTheme } = useTheme();
 
 /** 正序/倒序 */
 const sortOrder = defineModel<'asc' | 'desc'>('sortOrder');

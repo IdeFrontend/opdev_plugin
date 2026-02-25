@@ -2,17 +2,19 @@
 import {
     ref, onBeforeMount,
 } from 'vue';
-import { theme, message } from 'ant-design-vue';
+import { message } from 'ant-design-vue';
+import { useTheme } from '@web/composables/use-theme';
 import {
-    getSanitizerConfigs, 
-    saveSanitizerForm as saveSanitizerFormAPI, 
-    runSanitizer, 
-    checkTaskStatus, 
+    getSanitizerConfigs,
+    saveSanitizerForm as saveSanitizerFormAPI,
+    runSanitizer,
+    checkTaskStatus,
     executeVscodeCommand,
     getSelectedOperators
 } from '@web/apis';
 
-const themeConfig = { algorithm: theme.darkAlgorithm };
+// 使用主题管理组合式函数
+const { themeConfig, actualTheme } = useTheme();
 const isExecuting = ref(false)
 const form = ref({
   tool: {
@@ -141,7 +143,7 @@ const handleConfirm = async () => {
   .page-header {
     font-size: 22px;
     font-weight: bold;
-    border-bottom: 1px #424242 solid;
+    border-bottom: 1px solid v-bind('actualTheme === "dark" ? "#424242" : "#d9d9d9"');
     text-align: left;
     padding: 20px;
   }
@@ -155,7 +157,7 @@ const handleConfirm = async () => {
     margin-top: 8px;
     padding: 12px;
     border-radius: 4px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: 1px solid v-bind('actualTheme === "dark" ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)"');
     .desc {
         margin-bottom: 8px;
     }

@@ -1,13 +1,17 @@
 <template>
   <a-config-provider :theme="themeConfig">
     <div
-      class="p-6 h-full flex justify-center items-start bg-transparent text-white/85"
+      class="p-6 h-full flex justify-center items-start bg-transparent"
+      :class="actualTheme === 'dark' ? 'text-white/85' : 'text-[#1f1f1f]/85'"
     >
       <div class="w-full max-w-[600px]">
-        <div class="text-2xl leading-7 font-bold text-white mb-6 text-left">
+        <div class="text-2xl leading-7 font-bold mb-6 text-left"
+             :class="actualTheme === 'dark' ? 'text-white' : 'text-[#1f1f1f]'">
           环境配置
         </div>
-        <div class="h-px bg-white/20 mb-6" />
+        <div class="h-px"
+             :class="actualTheme === 'dark' ? 'bg-white/20' : 'bg-gray-300'"
+             style="margin-bottom: 1.5rem;" />
         <a-form
           ref="formRef"
           :model="formData"
@@ -17,7 +21,7 @@
         >
           <a-form-item
             name="projectSH"
-            class="[&_label]:!text-white/85 [&_.ant-form-item-label_label]:flex [&_.ant-form-item-label_label]:items-center [&_.ant-form-item-label_label]:gap-1"
+            class="[&_.ant-form-item-label_label]:flex [&_.ant-form-item-label_label]:items-center [&_.ant-form-item-label_label]:gap-1"
           >
             <template #label>
               <span>环境变量配置脚本</span>
@@ -25,7 +29,7 @@
                 title="安装CANN包后需要执行set_env.sh脚本的绝对路径信息，如果使用的是一站式开发平台提供的容器镜像，则此处可以置空。若出现报错提示路径不存在，说明非有效环境变量脚本路径，需要输入设置环境变量脚本的绝对路径"
               >
                 <QuestionCircleOutlined
-                  class="text-white/65 cursor-help text-sm"
+                  class="cursor-help text-sm"
                 />
               </a-tooltip>
             </template>
@@ -40,7 +44,6 @@
                 placement="bottomLeft"
                 :get-popup-container="getPopupContainer"
                 placeholder="请输入环境变量.sh文件地址，支持远程搜索"
-                class="[&_.ant-input]:!bg-black [&_.ant-input]:!border-white/20 [&_.ant-input]:!text-white/85 hover:[&_.ant-input]:!border-[#4ba5f4] focus:[&_.ant-input]:!border-[#4ba5f4] focus:[&_.ant-input]:!shadow-[0_0_0_2px_rgba(75,165,244,0.2)]"
                 @search="(val) => remoteSearch('projectSH', val)"
                 @focus="handleSelectFile"
               />
@@ -75,12 +78,10 @@ import { selectFile } from '@web/apis/performance-run-data';
 import type { FormInstance as AntdVForm } from 'ant-design-vue';
 import { message as antdMessage } from 'ant-design-vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
-import { theme } from 'ant-design-vue';
+import { useTheme } from '@web/composables/use-theme';
 
-const themeConfig = {
-  // 使用暗色算法
-  algorithm: theme.darkAlgorithm,
-};
+// 使用主题管理组合式函数
+const { themeConfig, actualTheme } = useTheme();
 
 const formRef = ref<AntdVForm | null>(null);
 const autoCompleteContainer = ref<HTMLElement | null>(null);

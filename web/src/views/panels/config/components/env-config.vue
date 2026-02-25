@@ -6,7 +6,7 @@
 
 <script setup lang="ts">
 import {
-  ref, reactive, onMounted,
+  ref, reactive, onMounted, inject, computed,
 } from 'vue';
 import {
   checkPathExists,
@@ -18,6 +18,9 @@ import { selectFile } from '@web/apis/performance-run-data';
 import type { FormInstance as AntdVForm } from 'ant-design-vue';
 import { message as antdMessage } from 'ant-design-vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
+
+// 从父组件注入主题状态
+const actualTheme = inject('actualTheme', computed(() => 'dark'));
 
 const formRef = ref<AntdVForm | null>(null);
 const autoCompleteContainer = ref<HTMLElement | null>(null);
@@ -167,7 +170,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="env-config">
+  <div class="env-config" :class="actualTheme === 'dark' ? 'theme-dark' : 'theme-light'">
     <a-form
       ref="formRef"
       :model="formData"
@@ -177,7 +180,7 @@ onMounted(async () => {
     >
       <a-form-item
         name="projectSH"
-        class="[&_label]:!text-white/85 [&_.ant-form-item-label_label]:flex [&_.ant-form-item-label_label]:items-center [&_.ant-form-item-label_label]:gap-1"
+        class="[&_.ant-form-item-label_label]:flex [&_.ant-form-item-label_label]:items-center [&_.ant-form-item-label_label]:gap-1"
       >
         <template #label>
           <span>环境变量配置脚本</span>
@@ -185,7 +188,7 @@ onMounted(async () => {
             title="安装CANN包后需要执行set_env.sh脚本的绝对路径信息，如果使用的是一站式开发平台提供的容器镜像，则此处可以置空。若出现报错提示路径不存在，说明非有效环境变量脚本路径，需要输入设置环境变量脚本的绝对路径"
           >
             <QuestionCircleOutlined
-              class="text-white/65 cursor-help text-sm"
+              class="cursor-help text-sm"
             />
           </a-tooltip>
         </template>
@@ -200,7 +203,6 @@ onMounted(async () => {
             placement="bottomLeft"
             :get-popup-container="getPopupContainer"
             placeholder="请输入环境变量.sh文件地址，支持远程搜索"
-            class="[&_.ant-input]:!bg-black [&_.ant-input]:!border-white/20 [&_.ant-input]:!text-white/85 hover:[&_.ant-input]:!border-[#4ba5f4] focus:[&_.ant-input]:!border-[#4ba5f4] focus:[&_.ant-input]:!shadow-[0_0_0_2px_rgba(75,165,244,0.2)]"
             @search="(val) => remoteSearch('projectSH', val)"
             @focus="handleSelectFile"
           />
@@ -222,8 +224,17 @@ onMounted(async () => {
 <style lang="less" scoped>
 .env-config {
   width: 100%;
-  color: #ffffff;
   text-align: left;
   font-size: 14px;
+
+  // 深色主题
+  &.theme-dark {
+    color: #ffffff;
+  }
+
+  // 浅色主题
+  &.theme-light {
+    color: #1f1f1f;
+  }
 }
 </style>
