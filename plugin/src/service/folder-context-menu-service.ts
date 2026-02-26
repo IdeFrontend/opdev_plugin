@@ -1291,6 +1291,18 @@ export class FolderContextMenuService {
   }
 
   /**
+   * 规范化路径用于去重比较（统一分隔符、去除尾部斜杠、解析为绝对路径）
+   */
+  private static normalizePathForCompare(p: string): string {
+    try {
+      const resolved = path.resolve(p);
+      return path.normalize(resolved).replace(/[/\\]+$/, '').toLowerCase();
+    } catch {
+      return path.normalize(p).replace(/[/\\]+$/, '').toLowerCase();
+    }
+  }
+
+  /**
    * 将文件/文件夹添加到配置的fileMapList
    * @param uri 文件或文件夹URI
    * @param configType 配置类型：'sanitizer' | 'on_board' | 'simulate'
@@ -1331,14 +1343,26 @@ export class FolderContextMenuService {
       // 使用第一个配置
       const config = configs[0];
       const userOptions = (config.user_options as Record<string, unknown>) || {};
-      const fileMapList = (userOptions.fileMapList as Array<{ filePath: string; reportTime: number }>) || [];
+      let fileMapList = (userOptions.fileMapList as Array<{ filePath: string; reportTime: number }>) || [];
 
-      // 检查是否已存在
-      const exists = fileMapList.some(item => item.filePath === filePath);
+      // 路径去重：按规范化路径比较（统一分隔符、大小写等），避免重复添加
+      const normalizedNewPath = this.normalizePathForCompare(filePath);
+      const exists = fileMapList.some(
+        item => this.normalizePathForCompare(item.filePath) === normalizedNewPath,
+      );
       if (exists) {
         vscode.window.showInformationMessage('该文件/文件夹已存在于配置中');
         return;
       }
+
+      // 去重现有列表中的重复路径后添加新项
+      const seen = new Set<string>();
+      fileMapList = fileMapList.filter(item => {
+        const norm = this.normalizePathForCompare(item.filePath);
+        if (seen.has(norm)) return false;
+        seen.add(norm);
+        return true;
+      });
 
       // 添加新的文件映射
       const newFileMap = {

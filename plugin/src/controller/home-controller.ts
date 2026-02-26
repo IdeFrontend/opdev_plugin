@@ -208,6 +208,17 @@ async function checkMultipleOperatorsInternal(): Promise<{
   }
 }
 
+/** 仅解析当前工作区项目类型，供 validatePyascForAnalysis 等使用 */
+async function getProjectTypeValue(): Promise<string | null> {
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+  if (!workspaceFolders || workspaceFolders.length === 0) return null;
+  const workspacePath = workspaceFolders[0].uri.fsPath;
+  const project = getProjectByPath(workspacePath);
+  if (project?.project_type) return project.project_type;
+  const detection = await OperatorProjectDetector.detectOperatorProject(workspacePath);
+  return (detection.isOperatorProject && detection.projectType) ? detection.projectType : null;
+}
+
 export const homeMethods = {
   /**
    * 获取项目ID
@@ -275,6 +286,34 @@ export const homeMethods = {
     catch (error) {
       console.error('[getProjectType] 获取项目类型失败:', error);
       return { projectType: null, projectTypeName: '' };
+    }
+  },
+
+  /**
+   * pyasc 类型仿真分析/性能调优前置校验：在打开配置页面前触发
+   * 仅当项目为 pyasc 时校验是否已打开 .py 文件及工作区
+   * @returns { valid: true } 或 { valid: false, message: string }
+   */
+  async validatePyascForAnalysis(): Promise<{ valid: boolean; message?: string }> {
+    try {
+      const projectType = await getProjectTypeValue();
+      if (projectType !== OperatorProjectType.PYASC) {
+        return { valid: true };
+      }
+      const activeEditor = vscode.window.activeTextEditor;
+      const isPyFile = activeEditor?.document.fileName.endsWith('.py');
+      if (!isPyFile) {
+        return { valid: false, message: '请先打开一个 .py 文件' };
+      }
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (!workspaceFolders || workspaceFolders.length === 0) {
+        return { valid: false, message: '未找到工作区路径' };
+      }
+      return { valid: true };
+    }
+    catch (error) {
+      console.error('[validatePyascForAnalysis] 校验失败:', error);
+      return { valid: false, message: (error as Error).message };
     }
   },
 

@@ -76,6 +76,7 @@ const handleConfirm = async () => {
   }
   catch (error) {
     console.error('仿真启动失败: ', error);
+    message.error('仿真分析失败，已停止');
   }
   finally {
     isExecuting.value = false;
