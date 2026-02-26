@@ -17,6 +17,7 @@ implements vscode.WebviewViewProvider {
   private _extensionUri: vscode.Uri;
   private _context: vscode.ExtensionContext;
   private _apiServer: ApiServer;
+  private _themeChangeDisposable: vscode.Disposable | undefined;
 
   constructor(context: vscode.ExtensionContext, apiServer: ApiServer) {
     this._extensionUri = context.extensionUri;
@@ -56,12 +57,36 @@ implements vscode.WebviewViewProvider {
       );
     }
     catch (error) {
-      console.error('[PerformancePanelViewProvider] HTML加载失败:', error);
+      console.error('[PerformancePanelViewProvider] HTML 加载失败:', error);
       throw error;
     }
+
+    // 监听 VSCode 主题变化并通知 Webview
+    this._themeChangeDisposable = vscode.window.onDidChangeActiveColorTheme((theme) => {
+      webviewView.webview.postMessage({
+        command: 'updateTheme',
+        themeName: theme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
+      });
+    });
+
+    // 初始化时发送当前主题
+    webviewView.webview.postMessage({
+      command: 'updateTheme',
+      themeName: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
+    });
   }
 
   private handleWebviewMessage(message: any): void {
+    // 处理获取主题命令
+    if (message.command === 'getTheme') {
+      const currentTheme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
+      this._view?.webview.postMessage({
+        command: 'updateTheme',
+        themeName: currentTheme,
+      });
+      return;
+    }
+
     for (const messageItem of webviewMessageList) {
       if (message.command === messageItem.command) {
         messageItem.callback(message, this);
@@ -71,6 +96,16 @@ implements vscode.WebviewViewProvider {
 
   getWebview(): vscode.Webview | undefined {
     return this._view?.webview;
+  }
+
+  /**
+   * 清理资源
+   */
+  public dispose() {
+    if (this._themeChangeDisposable) {
+      this._themeChangeDisposable.dispose();
+      this._themeChangeDisposable = undefined;
+    }
   }
 }
 

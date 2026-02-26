@@ -1,5 +1,6 @@
 import { ref, computed, onBeforeMount, onUnmounted } from 'vue';
 import { theme } from 'ant-design-vue';
+import { vscode } from '@web/utils/vscode';
 
 const LOG_PREFIX = '[useTheme]';
 
@@ -40,7 +41,9 @@ export function useTheme() {
     window.addEventListener('message', handleVscodeThemeMessage);
     console.log(`${LOG_PREFIX} 已注册 VSCode 主题消息监听器`);
 
-    console.log(`${LOG_PREFIX} onBeforeMount：初始化完成，当前 actualTheme='${actualTheme.value}'`);
+    // 主动请求当前主题（确保切换回页面时主题正确）
+    vscode.postMessage({ command: 'getTheme' });
+    console.log(`${LOG_PREFIX} onBeforeMount：已请求当前主题，actualTheme='${actualTheme.value}'`);
   });
 
   // 清理监听器

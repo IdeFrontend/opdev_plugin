@@ -150,6 +150,16 @@ implements vscode.WebviewViewProvider {
    * 处理来自 Webview 的消息
    */
   private handleWebviewMessage(message: any): void {
+    // 处理获取主题命令
+    if (message.command === 'getTheme') {
+      const currentTheme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
+      this._view?.webview.postMessage({
+        command: 'updateTheme',
+        themeName: currentTheme,
+      });
+      return;
+    }
+
     for (const messageItem of webviewMessageList) {
       if (message.command === messageItem.command) {
         messageItem.callback(message, this);

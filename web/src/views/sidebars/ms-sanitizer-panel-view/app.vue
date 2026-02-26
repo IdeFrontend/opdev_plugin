@@ -1,10 +1,10 @@
 <template>
   <a-config-provider :theme="themeConfig">
-    <div class="flex h-full">
+    <div class="flex h-full" :class="isDark ? 'theme-dark' : 'theme-light'">
       <!-- 左侧：报告列表（原异常检测结果可视化） -->
-      <div class="w-[260px] shrink-0 flex flex-col border-r border-white/10">
-        <div class="leading-6 bg-white/10 px-3 flex justify-between items-center">
-          <span>异常检测结果</span>
+      <div class="w-[260px] shrink-0 flex flex-col border-r" :class="getBorderClass()">
+        <div class="leading-6 px-3 flex justify-between items-center" :class="getBgLightClass()">
+          <span :class="getTextClass()">异常检测结果</span>
         </div>
         <div class="flex gap-2 my-3 px-3">
           <a-button
@@ -44,15 +44,15 @@
           <div
             v-for="(item, index) in renderListData"
             :key="index"
-            class="h-[50px] w-full px-3 py-1.5 flex cursor-pointer transition-all duration-100 hover:bg-white/10 group"
-            :class="{ 'bg-white/15': selectedReportPath === item.path }"
+            class="h-[50px] w-full px-3 py-1.5 flex cursor-pointer transition-all duration-100 group"
+            :class="[getBgHoverClass(), { 'bg-white/15': selectedReportPath === item.path }]"
             @click="handleSelectReport(item)"
           >
             <div class="flex-1 text-xs min-w-0">
-              <p class="text-white leading-[22px] m-0 truncate">
+              <p class="leading-[22px] m-0 truncate" :class="getTextClass()">
                 {{ item.title }}
               </p>
-              <p class="text-[#87878b] leading-4 m-0">
+              <p class="leading-4 m-0" :class="getTextSecondaryClass()">
                 {{ formatTimestamp(item.timestamp) }}
               </p>
             </div>
@@ -75,7 +75,8 @@
         </div>
         <div
           v-else
-          class="flex-1 flex items-center justify-center text-[#8e8e8f] text-sm"
+          class="flex-1 flex items-center justify-center text-sm"
+          :class="getTextMutedClass()"
         >
           暂无报告
         </div>
@@ -87,9 +88,10 @@
       >
         <div class="flex-1 h-full overflow-hidden flex flex-col">
           <div
-            class="leading-6 bg-white/10 px-5 flex justify-between items-center"
+            class="leading-6 px-5 flex justify-between items-center"
+            :class="getBgLightClass()"
           >
-            <span>检测结果</span>
+            <span :class="getTextClass()">检测结果</span>
             <LeftSquareOutlined
               v-if="!showDetail"
               class="cursor-pointer"
@@ -97,90 +99,97 @@
             />
           </div>
         <div class="h-14 flex justify-between items-center px-5">
-          <div class="text-sm">
+          <div class="text-sm" :class="getTextClass()">
             {{ msScantinizerInfo.title }}
           </div>
           <div class="ms-panel-title-right">
             <a-popover placement="bottomRight">
               <template #content>
                 <div class="w-[378px]">
-                  <p class="text-sm m-0">
+                  <p class="text-sm m-0" :class="getTextClass()">
                     检测信息
                   </p>
-                  <p class="text-[#8e8e8f] text-xs leading-4 py-0.5 m-0">
+                  <p class="text-xs leading-4 py-0.5 m-0" :class="getTextMutedClass()">
                     检测时间
                   </p>
-                  <p class="leading-4 text-xs py-0.5 m-0">
+                  <p class="leading-4 text-xs py-0.5 m-0" :class="getTextClass()">
                     {{ formatTimestamp(msScantinizerInfo.timestamp) }}
                   </p>
-                  <p class="text-[#8e8e8f] text-xs leading-4 py-0.5 m-0">
+                  <p class="text-xs leading-4 py-0.5 m-0" :class="getTextMutedClass()">
                     检测内容
                   </p>
-                  <p class="leading-4 text-xs py-0.5 m-0">
+                  <p class="leading-4 text-xs py-0.5 m-0" :class="getTextClass()">
                     内存检测：非法读写、多核踩踏、非对齐访问和非法释放，内存泄漏、分配内存未使用、Device侧内存检测、CANN软件栈内存检测、竞争检测、未初始化监测
                   </p>
-                  <p class="text-[#8e8e8f] text-xs leading-4 py-0.5 m-0">
+                  <p class="text-xs leading-4 py-0.5 m-0" :class="getTextMutedClass()">
                     检测范围
                   </p>
-                  <p class="leading-4 text-xs py-0.5 m-0">
+                  <p class="leading-4 text-xs py-0.5 m-0" :class="getTextClass()">
                     全局监测
                   </p>
                 </div>
               </template>
-              <InfoCircleOutlined class="cursor-pointer" />
+              <InfoCircleOutlined class="cursor-pointer" :class="getTextSecondaryClass()" />
             </a-popover>
           </div>
         </div>
         <div class="flex mb-1 px-5">
           <div
-            class="h-11 w-[60px] flex flex-col justify-center items-center mx-2 cursor-pointer transition-all duration-100 rounded hover:bg-white/10"
+            class="h-11 w-[60px] flex flex-col justify-center items-center mx-2 cursor-pointer transition-all duration-100 rounded"
+            :class="getBgHoverClass()"
             @click="filterTableData('error')"
           >
-            <span>
+            <span :class="getTextClass()">
               <CloseCircleOutlined style="color: #ff4d4f" />
             </span>
-            <span class="pt-1">{{ errorCount }}</span>
+            <span class="pt-1" :class="getTextClass()">{{ errorCount }}</span>
           </div>
           <div
-            class="h-11 w-[60px] flex flex-col justify-center items-center mx-2 cursor-pointer transition-all duration-100 rounded hover:bg-white/10"
+            class="h-11 w-[60px] flex flex-col justify-center items-center mx-2 cursor-pointer transition-all duration-100 rounded"
+            :class="getBgHoverClass()"
             @click="filterTableData('warning')"
           >
-            <span>
+            <span :class="getTextClass()">
               <WarningOutlined style="color: #faad14" />
             </span>
-            <span class="pt-1">{{ warningCount }}</span>
+            <span class="pt-1" :class="getTextClass()">{{ warningCount }}</span>
           </div>
           <a-divider
             style="height: 44px"
             type="vertical"
+            :class="getBorderClass()"
           />
           <div
-            class="h-11 w-[60px] flex flex-col justify-center items-center mx-2 cursor-pointer transition-all duration-100 rounded hover:bg-white/10"
+            class="h-11 w-[60px] flex flex-col justify-center items-center mx-2 cursor-pointer transition-all duration-100 rounded"
+            :class="getBgHoverClass()"
             @click="filterTableData('memory')"
           >
-            <span>内存</span>
-            <span class="pt-1">{{ memoryCount }}</span>
+            <span :class="getTextClass()">内存</span>
+            <span class="pt-1" :class="getTextClass()">{{ memoryCount }}</span>
           </div>
           <div
-            class="h-11 w-[60px] flex flex-col justify-center items-center mx-2 cursor-pointer transition-all duration-100 rounded hover:bg-white/10"
+            class="h-11 w-[60px] flex flex-col justify-center items-center mx-2 cursor-pointer transition-all duration-100 rounded"
+            :class="getBgHoverClass()"
             @click="filterTableData('memoryContention')"
           >
-            <span>内存竞争</span>
-            <span class="pt-1">{{ memoryContentionCount }}</span>
+            <span :class="getTextClass()">内存竞争</span>
+            <span class="pt-1" :class="getTextClass()">{{ memoryContentionCount }}</span>
           </div>
           <div
-            class="h-11 w-[60px] flex flex-col justify-center items-center mx-2 cursor-pointer transition-all duration-100 rounded hover:bg-white/10"
+            class="h-11 w-[60px] flex flex-col justify-center items-center mx-2 cursor-pointer transition-all duration-100 rounded"
+            :class="getBgHoverClass()"
             @click="filterTableData('uninitialized')"
           >
-            <span>未初始化</span>
-            <span class="pt-1">{{ uninitializedCount }}</span>
+            <span :class="getTextClass()">未初始化</span>
+            <span class="pt-1" :class="getTextClass()">{{ uninitializedCount }}</span>
           </div>
           <div
-            class="h-11 w-[60px] flex flex-col justify-center items-center mx-2 cursor-pointer transition-all duration-100 rounded hover:bg-white/10"
+            class="h-11 w-[60px] flex flex-col justify-center items-center mx-2 cursor-pointer transition-all duration-100 rounded"
+            :class="getBgHoverClass()"
             @click="filterTableData('synchronize')"
           >
-            <span>同步</span>
-            <span class="pt-1">{{ synchronizeCount }}</span>
+            <span :class="getTextClass()">同步</span>
+            <span class="pt-1" :class="getTextClass()">{{ synchronizeCount }}</span>
           </div>
         </div>
         <div style="padding: 0 20px">
@@ -227,8 +236,8 @@
         v-if="showDetail"
         class="w-[400px] overflow-hidden"
       >
-        <div class="leading-6 bg-white/10 px-5">
-          详情
+        <div class="leading-6 px-5" :class="getBgLightClass()">
+          <span :class="getTextClass()">详情</span>
           <RightSquareOutlined
             class="cursor-pointer"
             @click="showDetail = false"
@@ -237,26 +246,26 @@
         <div class="px-5 break-all">
           <div class="flex items-center mt-5">
             <div class="h-2.5 w-1 bg-white mr-1" />
-            <span>问题</span>
+            <span :class="getTextClass()">问题</span>
           </div>
-          <div class="mt-2.5">
+          <div class="mt-2.5" :class="getTextClass()">
             {{ questionDetails.title }}
           </div>
           <div class="flex items-center mt-5">
             <div class="h-2.5 w-1 bg-white mr-1" />
-            <span>问题详情</span>
+            <span :class="getTextSecondaryClass()">问题详情</span>
           </div>
-          <div class="mt-2.5">
+          <div class="mt-2.5" :class="getTextClass()">
             {{ questionDetails.originData }}
           </div>
           <div class="flex items-center mt-5">
             <div class="h-2.5 w-1 bg-white mr-1" />
-            <span>问题类型详情</span>
+            <span :class="getTextClass()">问题类型详情</span>
           </div>
-          <div class="mt-2.5">
+          <div class="mt-2.5" :class="getTextClass()">
             {{ questionMap.get(questionDetails.question || '') }}
           </div>
-          <div class="mt-2.5">
+          <div class="mt-2.5" :class="getTextClass()">
             {{ questionHandlerMap.get(questionDetails.question || '') }}
           </div>
         </div>
@@ -264,7 +273,8 @@
       </div>
       <div
         v-else
-        class="flex-1 flex items-center justify-center text-[#8e8e8f] text-sm bg-white/5"
+        class="flex-1 flex items-center justify-center text-sm"
+        :class="[getTextMutedClass(), getBgEmptyClass()]"
       >
         请选择左侧报告查看检测结果
       </div>
@@ -312,6 +322,23 @@ import { vscode } from '@web/utils/vscode';
 // 使用主题管理组合式函数
 const { themeConfig, actualTheme } = useTheme();
 
+// 主题相关的样式辅助函数
+const isDark = computed(() => actualTheme.value === 'dark');
+
+// 获取边框颜色类
+const getBorderClass = () => isDark.value ? 'border-white/10' : 'border-gray-200';
+
+// 获取背景色类
+const getBgLightClass = () => isDark.value ? 'bg-white/10' : 'bg-gray-100';
+const getBgHoverClass = () => isDark.value ? 'hover:bg-white/10' : 'hover:bg-gray-50';
+const getBgSelectedClass = () => isDark.value ? 'bg-white/15' : 'bg-gray-200';
+const getBgEmptyClass = () => isDark.value ? 'bg-white/5' : 'bg-gray-50';
+
+// 获取文本颜色类
+const getTextClass = () => isDark.value ? 'text-white' : 'text-[#1f1f1f]';
+const getTextSecondaryClass = () => isDark.value ? 'text-[#87878b]' : 'text-gray-400';
+const getTextMutedClass = () => isDark.value ? 'text-[#8e8e8f]' : 'text-gray-500';
+
 // 左侧报告列表（原异常检测结果可视化）
 const sortOrder = ref<'asc' | 'desc'>('desc');
 const isMarkedOnly = ref(false);
@@ -349,7 +376,7 @@ const handleSelectReport = (item: { path: string; title?: string; timestamp?: nu
   // 直接通过 VSCode API 发给扩展，确保能触发右侧详情刷新
   vscode.postMessage({
     command: 'vscodeLoadMsSanitizerReport',
-    data: item,
+    data: JSON.parse(JSON.stringify(item)),
   });
 };
 
@@ -605,25 +632,40 @@ onMounted(() => {
 .execute-time-sorter-button {
   border-radius: 2px;
 }
-.execute-time-sorter-button:hover,
-.execute-time-sorter-button:focus,
-.execute-time-sorter-button:active {
+
+// 深色主题样式
+:deep(.theme-dark .execute-time-sorter-button):hover,
+:deep(.theme-dark .execute-time-sorter-button):focus,
+:deep(.theme-dark .execute-time-sorter-button):active {
   background-color: rgba(20, 20, 20, 0.96) !important;
   border-color: rgb(72, 72, 73) !important;
   color: rgba(255, 255, 255, 0.855) !important;
   box-shadow: rgba(255, 255, 255, 0.04) !important;
 }
+
+// 浅色主题样式
+:deep(.theme-light .execute-time-sorter-button):hover,
+:deep(.theme-light .execute-time-sorter-button):focus,
+:deep(.theme-light .execute-time-sorter-button):active {
+  background-color: #f5f5f5 !important;
+  border-color: #d9d9d9 !important;
+  color: #1f1f1f !important;
+  box-shadow: rgba(0, 0, 0, 0.04) !important;
+}
+
 .sort-icons {
   display: inline-flex;
   flex-direction: column;
   gap: 2px;
   margin-left: 4px;
 }
+
 .sort-icons :deep(.anticon) {
   display: block;
   width: 10px;
   height: 10px;
 }
+
 .flag-outlined-icon {
   position: relative;
   bottom: 2px;

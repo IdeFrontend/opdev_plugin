@@ -1,13 +1,20 @@
 <script setup lang="ts">
 import {
-  computed, ref, watch, onMounted, onBeforeUnmount,
+  computed, ref, watch, onMounted, onBeforeUnmount, provide,
 } from 'vue';
+import { useTheme } from '@web/composables/use-theme';
 import FilterBar from './components/filter-bar.vue';
 import FileTree from './components/file-tree.vue';
 import {
   getPerformanceRunData, toggleRecordMark,
 } from '@web/apis';
 import { PerformanceExecutionRecord } from '@shared/api-types';
+
+// 使用主题管理组合式函数
+const { themeConfig, actualTheme } = useTheme();
+
+// 向子组件提供主题状态
+provide('actualTheme', actualTheme);
 
 const sortOrder = ref<'asc' | 'desc'>('desc');
 const markedOnly = ref<boolean>(false);
@@ -72,24 +79,26 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div
-    class="flex flex-col"
-    @contextmenu.prevent
-  >
-    <FilterBar
-      v-model:sort-order="sortOrder"
-      v-model:marked-only="markedOnly"
-      @reload="loadTreeData"
-    />
-    <FileTree
-      :tree-data="renderTreeData"
-      @toggle-mark="handleToggleMark"
-    />
+  <a-config-provider :theme="themeConfig">
     <div
-      v-if="!renderTreeData || !renderTreeData.length"
-      class="text-center mt-[20px]"
+      class="flex flex-col"
+      @contextmenu.prevent
     >
-      暂无数据
+      <FilterBar
+        v-model:sort-order="sortOrder"
+        v-model:marked-only="markedOnly"
+        @reload="loadTreeData"
+      />
+      <FileTree
+        :tree-data="renderTreeData"
+        @toggle-mark="handleToggleMark"
+      />
+      <div
+        v-if="!renderTreeData || !renderTreeData.length"
+        class="text-center mt-[20px]"
+      >
+        暂无数据
+      </div>
     </div>
-  </div>
+  </a-config-provider>
 </template>

@@ -256,6 +256,21 @@ export class WebviewProvider {
     const msg = message as { command: string;
       [key: string]: unknown };
 
+    // 处理获取主题命令
+    // if (msg.command === 'getTheme') {
+    //   const currentTheme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
+    //   if (this.panel) {
+    //     this.panel.webview.postMessage({
+    //       command: 'updateTheme',
+    //       themeName: currentTheme,
+    //     });
+    //   }
+    //   // 对于 sidebar 类型的 webview，需要通过不同的方式发送
+    //   // sidebar 的消息处理在各自的 provider 中
+
+    //   return;
+    // }
+
     for (const messageItem of webviewMessageList) {
       if (msg.command === messageItem.command) {
         messageItem.callback(msg, this);
