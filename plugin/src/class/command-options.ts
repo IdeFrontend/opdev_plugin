@@ -32,8 +32,25 @@ class CommandExecutor extends EventEmitter {
   private stderr: string = '';
   private output: string = '';
 
+  // ANSI 转义码正则表达式
+  private readonly ansiRegex = /\x1b\[[0-9;]*[a-zA-Z]/g;
+  
+  // 退格字符正则表达式（\b 或 \x08）
+  private readonly backspaceRegex = /\x08/g;
+
   constructor() {
     super();
+  }
+
+  /**
+   * 过滤 ANSI 转义码和退格字符（同步方式）
+   */
+  private stripAnsiCodes(text: string): string {
+    // 先过滤退格字符
+    let cleanText = text.replace(this.backspaceRegex, '');
+    // 再过滤 ANSI 转义码
+    cleanText = cleanText.replace(this.ansiRegex, '');
+    return cleanText;
   }
 
   /**
@@ -102,28 +119,30 @@ class CommandExecutor extends EventEmitter {
       // 处理标准输出
       child.stdout?.on('data', async (data: Buffer) => {
         const text = data.toString();
+        // 过滤 ANSI 转义码
+        const cleanText = this.stripAnsiCodes(text);
 
         if (outputChannel) {
-          outputChannel.appendLine(text);
+          outputChannel.appendLine(cleanText);
         }
 
-        console.log('execute command, stdout:', text);
-        this.stdout += text;
-        this.output += text;
+        console.log('execute command, stdout:', cleanText);
+        this.stdout += cleanText;
+        this.output += cleanText;
 
-        this.emit('stdout', text);
+        this.emit('stdout', cleanText);
 
         if (options.streaming) {
-          process.stdout.write(text);
+          process.stdout.write(cleanText);
         }
 
-        if (this.checkErrorKeywords(text)) {
+        if (this.checkErrorKeywords(cleanText)) {
           await this.cleanup();
           resolve(this.getResult(-1));
         }
 
         // 检查是否包含停止关键字
-        if (this.checkStopKeywords(text, stopKeywords)) {
+        if (this.checkStopKeywords(cleanText, stopKeywords)) {
           await this.cleanup();
           resolve(this.getResult(0));
         }
@@ -132,23 +151,25 @@ class CommandExecutor extends EventEmitter {
       // 处理错误输出
       child.stderr?.on('data', async (data: Buffer) => {
         const text = data.toString();
+        // 过滤 ANSI 转义码
+        const cleanText = this.stripAnsiCodes(text);
 
-        console.error('execute command, stderr:', text);
-        this.stderr += text;
-        this.output += text;
+        console.error('execute command, stderr:', cleanText);
+        this.stderr += cleanText;
+        this.output += cleanText;
 
         if (outputChannel) {
-          outputChannel.appendLine(text);
+          outputChannel.appendLine(cleanText);
         }
 
-        this.emit('stderr', text);
+        this.emit('stderr', cleanText);
 
         if (options.streaming) {
-          process.stderr.write(text);
+          process.stderr.write(cleanText);
         }
 
         // 检查是否包含停止关键字
-        if (this.checkStopKeywords(text, stopKeywords)) {
+        if (this.checkStopKeywords(cleanText, stopKeywords)) {
           await this.cleanup();
           resolve(this.getResult(0));
         }

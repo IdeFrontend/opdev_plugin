@@ -46,20 +46,23 @@ const themeVars = computed(() => ({
   '--text-disabled': isDark.value ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.25)',
   '--text-highlight': isDark.value ? 'rgba(255, 255, 255, 0.85)' : 'rgba(0, 0, 0, 0.88)',
   '--text-info': isDark.value ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.45)',
-  
+
   // 背景色
   '--bg-default': isDark.value ? '#1f1f1f' : '#ffffff',
   '--bg-card': isDark.value ? '#262729' : '#fafafa',
   '--bg-hover': isDark.value ? '#262729' : '#f5f5f5',
   '--bg-selected': isDark.value ? '#111b26' : '#e6f7ff',
-  
+
   // 边框颜色
   '--border-primary': isDark.value ? '#434343' : '#d9d9d9',
   '--border-hover': isDark.value ? '#177ddc' : '#40a9ff',
-  
+
   // 强调色
   '--color-primary': isDark.value ? '#177ddc' : '#1890ff',
   '--color-selected': isDark.value ? '#177ddc' : '#1890ff',
+
+  // 图标滤镜（浅色主题下使图标变深色）
+  '--icon-filter': isDark.value ? 'none' : 'brightness(0) saturate(100%) invert(20%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(90%)',
 }));
 
 // 文本颜色
@@ -1401,6 +1404,11 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+
+  // 浅色主题下，菜单图标使用滤镜变深色
+  img.w-4.h-4 {
+    filter: var(--icon-filter, none);
+  }
 }
 
 .single-box:hover .setting-box {
