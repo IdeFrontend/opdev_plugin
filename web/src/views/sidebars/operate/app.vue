@@ -30,7 +30,7 @@ import {
   showConfirmDialog,
   startDumpTensor
 } from '@web/apis';
-import { SettingOutlined, CheckOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue';
+import { SettingOutlined, CheckOutlined, QuestionCircleOutlined, DeleteOutlined } from '@ant-design/icons-vue';
 
 // 使用主题管理组合式函数
 const { themeConfig, actualTheme } = useTheme();
@@ -958,6 +958,13 @@ const removeOperator = (operatorId) => {
   saveSelectedOperators();
 };
 
+// 清除所有已选择的算子
+const clearAllSelected = () => {
+  selectedOperatorIds.value = [];
+  // 保存已选择的算子
+  saveSelectedOperators();
+};
+
 // 保存已选择的算子到 projects
 const saveSelectedOperators = async () => {
   if (!isStandardCustom.value) {
@@ -1084,7 +1091,10 @@ const handleConfirm = () => {
                 <!-- 第一个模块：已选择的内容 -->
                 <div class="selected-section">
                   <div class="selected-header">
-                    已选择 {{ selectedOperators.length }} 项
+                    <span>已选择 {{ selectedOperators.length }} 项</span>
+                    <a-button v-if="selectedOperators.length > 0" type="text" size="small" @click="clearAllSelected">
+                      <template #icon><DeleteOutlined /></template>
+                    </a-button>
                   </div>
                   <div class="selected-tags">
                     <a-tag v-for="op in selectedOperators" :key="op.id" closable class="mb-2 mr-2"
@@ -1187,7 +1197,10 @@ const handleConfirm = () => {
           class="px-3 py-2 mb-2">
           <div class="selected-display-section">
             <div class="selected-display-header">
-              已选择 {{ selectedOperators.length }} 项
+              <span>已选择 {{ selectedOperators.length }} 项</span>
+              <a-button type="text" size="small" @click="clearAllSelected">
+                <template #icon><DeleteOutlined /></template>
+              </a-button>
             </div>
             <div class="selected-display-tags">
               <a-tag v-for="op in selectedOperators" :key="op.id" closable class="mb-2 mr-2"
@@ -1506,9 +1519,21 @@ body {
 }
 
 .selected-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   font-size: 11px;
   color: var(--text-primary);
   margin-bottom: 8px;
+}
+
+.selected-header :deep(.ant-btn) {
+  color: var(--text-info);
+  transition: color 0.2s;
+}
+
+.selected-header :deep(.ant-btn:hover) {
+  color: var(--text-primary);
 }
 
 .selected-tags {
@@ -1637,9 +1662,21 @@ body {
 }
 
 .selected-display-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   font-size: 11px;
   color: var(--text-secondary);
   margin-bottom: 8px;
+}
+
+.selected-display-header :deep(.ant-btn) {
+  color: var(--text-info);
+  transition: color 0.2s;
+}
+
+.selected-display-header :deep(.ant-btn:hover) {
+  color: var(--text-primary);
 }
 
 .selected-display-tags {
