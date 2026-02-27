@@ -100,18 +100,6 @@
           "id": "OpsOperateProvider",
           "name": "算子开发流程菜单"
         },
-        {
-          "id": "msSanitizerSidebarView",
-          "name": "异常检测结果可视化",
-          "type": "webview",
-          "visibility": "collapsed"
-        },
-        {
-          "id": "performanceSidebarView",
-          "name": "性能调优结果可视化",
-          "type": "webview",
-          "visibility": "collapsed"
-        },
         { 
            "id": "dumpTensorSidebarView", 
            "name": "DumpTensor数据", 
