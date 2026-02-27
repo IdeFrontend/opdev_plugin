@@ -2,13 +2,15 @@
 import {
   ref, onMounted, computed, watch
 } from 'vue';
-import { theme, message } from 'ant-design-vue';
+import { message } from 'ant-design-vue';
+import { useTheme } from '@web/composables/use-theme';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import {
   getConfigData, saveConfig, openExternalLink, startOnBoard, executeVscodeCommand, checkTaskStatus, getSelectedOperators
 } from '@web/apis';
 
-const themeConfig = { algorithm: theme.darkAlgorithm };
+// 使用主题管理组合式函数
+const { themeConfig, actualTheme } = useTheme();
 const guide = 'https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODtools/Operatordevelopmenttools/atlasopdev_16_0082.html';
 const onboardData = ref({ user_options: {
     Occupancy: true,
@@ -188,7 +190,7 @@ onMounted(() => {
         <a-alert
             type="info"
             show-icon
-            style="margin-top: 12px"
+            style="margin-bottom: 12px"
             class="board-alert-info-content"
         >
           <template #message>
@@ -332,7 +334,7 @@ onMounted(() => {
   .page-header {
     font-size: 22px;
     font-weight: bold;
-    border-bottom: 1px #424242 solid;
+    border-bottom: 1px solid v-bind('actualTheme === "dark" ? "#424242" : "#d9d9d9"');
     text-align: left;
     padding: 20px;
   }
@@ -357,7 +359,7 @@ onMounted(() => {
     margin-top: 8px;
     padding: 12px;
     border-radius: 4px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: 1px solid v-bind('actualTheme === "dark" ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)"');
   }
 
   .nested-checkbox-group {
@@ -366,7 +368,7 @@ onMounted(() => {
     margin-top: 8px;
     padding: 12px;
     border-radius: 4px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: 1px solid v-bind('actualTheme === "dark" ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)"');
     display: flex;
     flex-wrap: wrap;
     gap: 16px;

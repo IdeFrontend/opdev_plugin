@@ -11,9 +11,12 @@ import opprofConfig from './opprof-config.vue';
 import envConfig from './env-config.vue';
 
 import {
-  ref, watch, nextTick, onMounted,
+  ref, watch, nextTick, onMounted, inject, computed,
 } from 'vue';
 import { checkMultipleOperators } from '@web/apis';
+
+// 从父组件注入主题状态
+const actualTheme = inject('actualTheme', computed(() => 'dark'));
 
 const props = defineProps({
   activeOption: {
@@ -158,7 +161,7 @@ watch(
 );
 </script>
 <template>
-  <div class="config-detial">
+  <div class="config-detial" :class="actualTheme === 'dark' ? 'theme-dark' : 'theme-light'">
     <buildConfig
       v-if="props.activeOption === 'build'"
       v-model:build-config-forme="buildConfigForme"
@@ -188,10 +191,17 @@ watch(
   max-width: 1000px;
   overflow-y: auto;
   height: 100%;
-  color: #ffffff;
   text-align: left;
   font-size: 14px;
   padding: 20px 32px;
   box-sizing: border-box;
+}
+
+.theme-dark {
+  color: #ffffff;
+}
+
+.theme-light {
+  color: #1f1f1f;
 }
 </style>

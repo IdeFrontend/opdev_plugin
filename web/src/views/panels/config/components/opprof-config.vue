@@ -8,6 +8,10 @@
 import SimulationTab from './simulation-tab.vue';
 import OnboardTab from './onboard-tab.vue';
 import { useOpprofConfig } from '@web/views/panels/config/composables/use-opprof-config';
+import { inject, computed } from 'vue';
+
+// 从父组件注入主题状态
+const actualTheme = inject('actualTheme', computed(() => 'dark'));
 
 const props = defineProps({
   activeConfig: {
@@ -44,7 +48,7 @@ defineExpose({ init });
 </script>
 
 <template>
-  <div class="opprof-config">
+  <div class="opprof-config" :class="actualTheme === 'dark' ? 'theme-dark' : 'theme-light'">
     <!-- eslint-disable-next-line vue/no-v-model-argument -->
     <a-tabs v-model:active-key="activeTab">
       <!-- 仿真页签 -->
@@ -82,23 +86,48 @@ defineExpose({ init });
 <style lang="less" scoped>
 .opprof-config {
   width: 100%;
-  color: #ffffff;
   text-align: left;
   font-size: 14px;
 
-  :deep(.ant-tabs) {
-    .ant-tabs-tab {
-      color: rgba(255, 255, 255, 0.65);
+  // 深色主题
+  &.theme-dark {
+    color: #ffffff;
 
-      &.ant-tabs-tab-active {
-        .ant-tabs-tab-btn {
-          color: #1668dc;
+    :deep(.ant-tabs) {
+      .ant-tabs-tab {
+        color: rgba(255, 255, 255, 0.65);
+
+        &.ant-tabs-tab-active {
+          .ant-tabs-tab-btn {
+            color: #1668dc;
+          }
         }
       }
-    }
 
-    .ant-tabs-ink-bar {
-      background: #1668dc;
+      .ant-tabs-ink-bar {
+        background: #1668dc;
+      }
+    }
+  }
+
+  // 浅色主题
+  &.theme-light {
+    color: #1f1f1f;
+
+    :deep(.ant-tabs) {
+      .ant-tabs-tab {
+        color: rgba(0, 0, 0, 0.65);
+
+        &.ant-tabs-tab-active {
+          .ant-tabs-tab-btn {
+            color: #1668dc;
+          }
+        }
+      }
+
+      .ant-tabs-ink-bar {
+        background: #1668dc;
+      }
     }
   }
 }

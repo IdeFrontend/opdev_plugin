@@ -12,6 +12,7 @@ export class OpsOperateProvider implements vscode.WebviewViewProvider {
   private readonly _extensionUri: vscode.Uri;
   private _context: vscode.ExtensionContext;
   private _apiServer: ApiServer;
+  private _themeChangeDisposable: vscode.Disposable | undefined;
 
   constructor(context: vscode.ExtensionContext, apiServer: ApiServer) {
     this._extensionUri = context.extensionUri;
@@ -24,7 +25,7 @@ export class OpsOperateProvider implements vscode.WebviewViewProvider {
     _context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken,
   ) {
-    // 配置WebView
+    // 配置 WebView
     webviewView.webview.options = {
       enableScripts: true,
       localResourceRoots: [this._extensionUri],
@@ -32,6 +33,29 @@ export class OpsOperateProvider implements vscode.WebviewViewProvider {
 
     // 注册 webview 到 ApiServer
     this._apiServer.addWebview(VIEW_OPERATE, webviewView.webview);
+
+    // 设置 HTML 内容
+    const distPath = path.join(this._extensionUri.fsPath, 'out', 'web');
+
+    webviewView.webview.html = await HtmlTransformer.transformDistHtml(
+      distPath,
+      webviewView.webview,
+      `sidebars/${VIEW_OPERATE}`,
+    );
+
+    // 监听 VSCode 主题变化并通知 Webview
+    this._themeChangeDisposable = vscode.window.onDidChangeActiveColorTheme((theme) => {
+      webviewView.webview.postMessage({
+        command: 'updateTheme',
+        themeName: theme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
+      });
+    });
+
+    // 初始化时发送当前主题
+    webviewView.webview.postMessage({
+      command: 'updateTheme',
+      themeName: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
+    });
 
     // 消息处理
     webviewView.webview.onDidReceiveMessage(
@@ -41,25 +65,26 @@ export class OpsOperateProvider implements vscode.WebviewViewProvider {
       undefined,
       this._context.subscriptions,
     );
-
-    // 设置HTML内容
-    const distPath = path.join(this._extensionUri.fsPath, 'out', 'web');
-
-    webviewView.webview.html = await HtmlTransformer.transformDistHtml(
-      distPath,
-      webviewView.webview,
-      `sidebars/${VIEW_OPERATE}`,
-    );
   }
 
   /**
-   * 处理来自Webview的消息
+   * 处理来自 Webview 的消息
    */
   private handleWebviewMessage(message: any): void {
     for (const messageItem of webviewMessageList) {
       if (message.command === messageItem.command) {
         messageItem.callback(message, this);
       }
+    }
+  }
+
+  /**
+   * 清理资源
+   */
+  public dispose() {
+    if (this._themeChangeDisposable) {
+      this._themeChangeDisposable.dispose();
+      this._themeChangeDisposable = undefined;
     }
   }
 }

@@ -21,6 +21,7 @@ implements vscode.WebviewViewProvider {
   private _extensionUri: vscode.Uri;
   private _context: vscode.ExtensionContext;
   private _apiServer: ApiServer;
+  private _themeChangeDisposable: vscode.Disposable | undefined;
 
   constructor(context: vscode.ExtensionContext, apiServer: ApiServer) {
     this._extensionUri = context.extensionUri;
@@ -33,22 +34,22 @@ implements vscode.WebviewViewProvider {
     _context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken,
   ) {
-    console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] 开始解析webview视图');
+    console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] 开始解析 webview 视图');
     console.log(`[MsSanitizerPanelViewProvider.resolveWebviewView] viewType: ${MsSanitizerPanelViewProvider.viewType}`);
     console.log(`[MsSanitizerPanelViewProvider.resolveWebviewView] extensionUri: ${this._extensionUri.toString()}`);
 
     this._view = webviewView;
 
-    // 配置WebView
+    // 配置 WebView
     webviewView.webview.options = {
       enableScripts: true,
       localResourceRoots: [this._extensionUri],
     };
-    console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] WebView配置完成');
+    console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] WebView 配置完成');
 
     // 注册 webview 到 ApiServer
     this._apiServer.addWebview('MsSanitizerPanelView', webviewView.webview);
-    console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] WebView已注册到ApiServer');
+    console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] WebView 已注册到 ApiServer');
 
     // 消息处理
     webviewView.webview.onDidReceiveMessage(
@@ -56,7 +57,7 @@ implements vscode.WebviewViewProvider {
         console.log('[MsSanitizerPanelViewProvider] 收到消息:', message.command);
 
         if (message.command === 'vscodeGetMsSanitizerPanelViewData') {
-          // 发送数据 后续优化 先通过_view.webview方式下发内容
+          // 发送数据 后续优化 先通过_view.webview 方式下发内容
           if (!MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams) {
             console.log('[MsSanitizerPanelViewProvider] 无数据参数，发送空数据');
             webviewView.webview.postMessage({
@@ -111,10 +112,10 @@ implements vscode.WebviewViewProvider {
     );
     console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] 消息处理器已注册');
 
-    // 设置HTML内容
+    // 设置 HTML 内容
     const distPath = path.join(this._extensionUri.fsPath, 'out', 'web');
 
-    console.log(`[MsSanitizerPanelViewProvider.resolveWebviewView] 开始加载HTML，distPath: ${distPath}`);
+    console.log(`[MsSanitizerPanelViewProvider.resolveWebviewView] 开始加载 HTML，distPath: ${distPath}`);
     console.log(`[MsSanitizerPanelViewProvider.resolveWebviewView] router: ${VIEW_MS_SANITIZER}`);
 
     try {
@@ -123,22 +124,56 @@ implements vscode.WebviewViewProvider {
         webviewView.webview,
         `sidebars/${VIEW_MS_SANITIZER}`,
       );
-      console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] HTML加载完成');
+      console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] HTML 加载完成');
     }
     catch (error) {
-      console.error('[MsSanitizerPanelViewProvider.resolveWebviewView] HTML加载失败:', error);
+      console.error('[MsSanitizerPanelViewProvider.resolveWebviewView] HTML 加载失败:', error);
       throw error;
     }
+
+    // 监听 VSCode 主题变化并通知 Webview
+    this._themeChangeDisposable = vscode.window.onDidChangeActiveColorTheme((theme) => {
+      webviewView.webview.postMessage({
+        command: 'updateTheme',
+        themeName: theme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
+      });
+    });
+
+    // 初始化时发送当前主题
+    webviewView.webview.postMessage({
+      command: 'updateTheme',
+      themeName: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
+    });
   }
 
   /**
-   * 处理来自Webview的消息
+   * 处理来自 Webview 的消息
    */
   private handleWebviewMessage(message: any): void {
+    // 处理获取主题命令
+    if (message.command === 'getTheme') {
+      const currentTheme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
+      this._view?.webview.postMessage({
+        command: 'updateTheme',
+        themeName: currentTheme,
+      });
+      return;
+    }
+
     for (const messageItem of webviewMessageList) {
       if (message.command === messageItem.command) {
         messageItem.callback(message, this);
       }
+    }
+  }
+
+  /**
+   * 清理资源
+   */
+  public dispose() {
+    if (this._themeChangeDisposable) {
+      this._themeChangeDisposable.dispose();
+      this._themeChangeDisposable = undefined;
     }
   }
 

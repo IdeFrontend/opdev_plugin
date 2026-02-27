@@ -9,7 +9,7 @@ import {
 } from '@ant-design/icons-vue';
 import type { DirectoryTreeProps } from 'ant-design-vue';
 import {
-  Component, h, ref, watch,
+  Component, h, ref, watch, inject, computed,
 } from 'vue';
 import { message } from 'ant-design-vue';
 
@@ -23,6 +23,9 @@ import {
 } from '@web/apis';
 
 import { formatTimestamp } from '@web/views/sidebars/performance-run-data/utils/timestamp';
+
+// 从父组件注入主题状态
+const actualTheme = inject('actualTheme', computed(() => 'dark'));
 
 const props = defineProps<{
   treeData: PerformanceExecutionRecord[];
@@ -46,10 +49,11 @@ watch(
 
 // 自定义切换图标（三角箭头）
 const SwitcherIcon: Component = ({ expanded }) => {
+  const iconColor = actualTheme.value === 'dark' ? '#fff' : '#1f1f1f';
   return h(expanded ? DownOutlined : RightOutlined, {
     style: {
       fontSize: '12px',
-      color: '#fff',
+      color: iconColor,
     },
   });
 };
@@ -167,7 +171,7 @@ const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
 
 <template>
   <div
-    class="w-full relative [&_.ant-tree]:!text-white [&_.ant-tree]:!bg-transparent [&_.ant-tree-treenode]:!w-full [&_.ant-tree-node-content-wrapper]:!w-0 hover:[&_.ant-tree-treenode]:!bg-transparent"
+    class="w-full relative"
   >
     <a-directory-tree
       :tree-data="treeData as any"
@@ -180,18 +184,18 @@ const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
     >
       <template #title="{ dataRef }">
         <div
-          class="text-white w-full relative group flex items-center"
+          class="w-full relative group flex items-center"
           style="padding-right: 100px;"
           :class="{ 'pr-8': isRootDir(dataRef) }"
         >
           <div
-            class="text-white w-full overflow-hidden text-ellipsis whitespace-nowrap"
+            class="w-full overflow-hidden text-ellipsis whitespace-nowrap"
           >
             {{ dataRef.title }}
           </div>
           <template v-if="isRootDir(dataRef)">
             <div
-              class="text-white/65 text-xs mt-1 leading-4 absolute bottom-[-16px] left-0 hidden"
+              class="text-xs mt-1 leading-4 absolute bottom-[-16px] left-0 hidden"
             >
               {{ formatTimestamp(dataRef.timestamp) }}
             </div>
