@@ -1,8 +1,6 @@
 <script setup>
-import { theme } from 'ant-design-vue';
-import {
-  ref, computed, onMounted, onUnmounted
-} from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { useTheme } from '@web/composables/use-theme';
 import settingIcon from '@web/assets/svg/setting.svg';
 import buildIcon from '@web/assets/svg/build.svg';
 import runIcon from '@web/assets/svg/run.svg';
@@ -32,9 +30,79 @@ import {
   showConfirmDialog,
   startDumpTensor
 } from '@web/apis';
-import { SettingOutlined, CheckOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue';
+import { SettingOutlined, CheckOutlined, QuestionCircleOutlined, DeleteOutlined } from '@ant-design/icons-vue';
 
-const themeConfig = { algorithm: theme.darkAlgorithm };
+// 使用主题管理组合式函数
+const { themeConfig, actualTheme } = useTheme();
+
+// 主题相关的样式辅助函数
+const isDark = computed(() => actualTheme.value === 'dark');
+
+// 主题 CSS 变量
+const themeVars = computed(() => ({
+  // 文本颜色
+  '--text-primary': isDark.value ? 'rgba(255, 255, 255, 0.85)' : 'rgba(0, 0, 0, 0.88)',
+  '--text-secondary': isDark.value ? 'rgba(255, 255, 255, 0.65)' : 'rgba(0, 0, 0, 0.45)',
+  '--text-disabled': isDark.value ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.25)',
+  '--text-highlight': isDark.value ? 'rgba(255, 255, 255, 0.85)' : 'rgba(0, 0, 0, 0.88)',
+  '--text-info': isDark.value ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.45)',
+
+  // 背景色
+  '--bg-default': isDark.value ? '#1f1f1f' : '#ffffff',
+  '--bg-card': isDark.value ? '#262729' : '#fafafa',
+  '--bg-hover': isDark.value ? '#262729' : '#f5f5f5',
+  '--bg-selected': isDark.value ? '#111b26' : '#e6f7ff',
+
+  // 边框颜色
+  '--border-primary': isDark.value ? '#434343' : '#d9d9d9',
+  '--border-hover': isDark.value ? '#177ddc' : '#40a9ff',
+
+  // 强调色
+  '--color-primary': isDark.value ? '#177ddc' : '#1890ff',
+  '--color-selected': isDark.value ? '#177ddc' : '#1890ff',
+
+  // 图标滤镜（浅色主题下使图标变深色）
+  '--icon-filter': isDark.value ? 'none' : 'brightness(0) saturate(100%) invert(20%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(90%)',
+}));
+
+// 文本颜色
+const getTextColorClass = (level = 'normal') => {
+  if (level === 'disabled') {
+    return isDark.value ? 'text-white/25' : 'text-black/25';
+  }
+  if (level === 'secondary') {
+    return isDark.value ? 'text-white/65' : 'text-black/45';
+  }
+  if (level === 'highlight') {
+    return isDark.value ? 'text-white/85' : 'text-black/88';
+  }
+  return isDark.value ? 'text-white' : 'text-[#1f1f1f]';
+};
+
+// 背景色
+const getBgColorClass = (type = 'default') => {
+  if (type === 'card') {
+    return isDark.value ? 'bg-[#1f1f1f]' : 'bg-white';
+  }
+  if (type === 'hover') {
+    return isDark.value ? 'hover:bg-[#262729]' : 'hover:bg-gray-50';
+  }
+  if (type === 'selected') {
+    return isDark.value ? 'bg-[#111b26]' : 'bg-blue-50';
+  }
+  return isDark.value ? 'bg-[#1f1f1f]' : 'bg-white';
+};
+
+// 边框颜色
+const getBorderColorClass = () => {
+  return isDark.value ? 'border-[#434343]' : 'border-[#d9d9d9]';
+};
+
+// 分割线颜色
+const getDividerClass = () => {
+  return isDark.value ? 'bg-[#434343]' : 'bg-[#d9d9d9]';
+};
+
 const activeConfig = ref('');
 const configArray = ref([]);
 const selectedKeys = ref([]);
@@ -172,15 +240,16 @@ const baseMenuItems = [
       },
     ],
   },
-  {
-    key: 'dumpTensor',
-    label: '执行DumpTensor',
-    icon: tensorIcon,
-    handler: async () => {
-      const { operatorNames, compileOption } = getOperatorParams();
-      await startDumpTensor({ operatorNames, compileOption })
-    },
-  },
+  // 需要时开启
+  // {
+  //   key: 'dumpTensor',
+  //   label: '执行DumpTensor',
+  //   icon: tensorIcon,
+  //   handler: async () => {
+  //     const { operatorNames, compileOption } = getOperatorParams();
+  //     await startDumpTensor({ operatorNames, compileOption })
+  //   },
+  // },
 ];
 
 // 动态计算菜单项（根据调试模式开关决定是否包含调试菜单）
@@ -889,6 +958,13 @@ const removeOperator = (operatorId) => {
   saveSelectedOperators();
 };
 
+// 清除所有已选择的算子
+const clearAllSelected = () => {
+  selectedOperatorIds.value = [];
+  // 保存已选择的算子
+  saveSelectedOperators();
+};
+
 // 保存已选择的算子到 projects
 const saveSelectedOperators = async () => {
   if (!isStandardCustom.value) {
@@ -964,6 +1040,21 @@ const handlePopoverOpenChange = async (open) => {
   }
 };
 
+// 将 CSS 变量应用到 :root
+const updateRootCssVars = () => {
+  const root = document.documentElement;
+  const vars = themeVars.value;
+  Object.entries(vars).forEach(([key, value]) => {
+    root.style.setProperty(key, String(value));
+  });
+};
+
+// 监听 actualTheme 变化并更新 :root 上的 CSS 变量
+watch(actualTheme, () => {
+  console.log('[Operate] actualTheme 变化，更新 :root CSS 变量');
+  updateRootCssVars();
+}, { immediate: true });
+
 // 处理确认按钮点击，关闭下拉框
 const handleConfirm = () => {
   operatorSelectorVisible.value = false;
@@ -972,10 +1063,10 @@ const handleConfirm = () => {
 
 <template>
   <a-config-provider :theme="themeConfig">
-    <div class="pt-3 w-full min-w-[138px]">
+    <div class="pt-3 w-full min-w-[138px]" :style="themeVars">
       <!-- 如果配置文件不存在且不是标准自定义算子，显示提示信息 -->
       <div v-if="!hasDevtoolConfig && !isStandardCustom" class="flex items-center justify-center min-h-[200px] p-5">
-        <div class="text-xs text-white/65 text-center leading-relaxed">
+        <div class="text-xs text-center leading-relaxed" :class="getTextColorClass('secondary')">
           您需要新建算子工程或通过一站式平台插件打开算子工程才可以使用操作面板
         </div>
       </div>
@@ -1000,7 +1091,10 @@ const handleConfirm = () => {
                 <!-- 第一个模块：已选择的内容 -->
                 <div class="selected-section">
                   <div class="selected-header">
-                    已选择 {{ selectedOperators.length }} 项
+                    <span>已选择 {{ selectedOperators.length }} 项</span>
+                    <a-button v-if="selectedOperators.length > 0" type="text" size="small" @click="clearAllSelected">
+                      <template #icon><DeleteOutlined /></template>
+                    </a-button>
                   </div>
                   <div class="selected-tags">
                     <a-tag v-for="op in selectedOperators" :key="op.id" closable class="mb-2 mr-2"
@@ -1103,7 +1197,10 @@ const handleConfirm = () => {
           class="px-3 py-2 mb-2">
           <div class="selected-display-section">
             <div class="selected-display-header">
-              已选择 {{ selectedOperators.length }} 项
+              <span>已选择 {{ selectedOperators.length }} 项</span>
+              <a-button type="text" size="small" @click="clearAllSelected">
+                <template #icon><DeleteOutlined /></template>
+              </a-button>
             </div>
             <div class="selected-display-tags">
               <a-tag v-for="op in selectedOperators" :key="op.id" closable class="mb-2 mr-2"
@@ -1124,7 +1221,7 @@ const handleConfirm = () => {
                   <div v-if="item.icon" class="single-box">
                     <span class="inline-flex items-center text-[11px]">
                       <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
-                      <span class="text-white/85">{{ item.label }}</span>
+                      <span :class="getTextColorClass('highlight')">{{ item.label }}</span>
                     </span>
                     <div class="flex items-center gap-1">
                       <a-tooltip
@@ -1142,13 +1239,13 @@ const handleConfirm = () => {
                       </div>
                     </div>
                   </div>
-                  <span v-else class="text-white/85">{{ item.label }}</span>
+                  <span v-else :class="getTextColorClass('highlight')">{{ item.label }}</span>
                 </a-tooltip>
                 <template v-else>
                   <div v-if="item.icon" class="single-box">
                     <span class="inline-flex items-center text-[11px]">
                       <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
-                      <span class="text-white/85">{{ item.label }}</span>
+                      <span :class="getTextColorClass('highlight')">{{ item.label }}</span>
                     </span>
                     <div class="flex items-center gap-1">
                       <a-tooltip
@@ -1166,7 +1263,7 @@ const handleConfirm = () => {
                       </div>
                     </div>
                   </div>
-                  <span v-else class="text-white/85">{{ item.label }}</span>
+                  <span v-else :class="getTextColorClass('highlight')">{{ item.label }}</span>
                 </template>
               </template>
               <template v-for="child in item.children">
@@ -1215,7 +1312,7 @@ const handleConfirm = () => {
                 <div v-if="item.icon" class="single-box">
                   <div class="inline-flex items-center text-[11px]">
                     <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
-                    <span class="text-white/85">{{ item.label }}</span>
+                    <span :class="getTextColorClass('highlight')">{{ item.label }}</span>
                   </div>
                   <a-tooltip
                     v-if="item.key === 'build' && isStandardCustom"
@@ -1231,13 +1328,13 @@ const handleConfirm = () => {
                     <SettingOutlined @click.stop="openSetting(item.key)" />
                   </div>
                 </div>
-                <span v-else class="text-white/85">{{ item.label }}</span>
+                <span v-else :class="getTextColorClass('highlight')">{{ item.label }}</span>
               </a-tooltip>
               <template v-else>
                 <div v-if="item.icon" class="single-box">
                   <div class="inline-flex items-center text-[11px]">
                     <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
-                    <span class="text-white/85">{{ item.label }}</span>
+                    <span :class="getTextColorClass('highlight')">{{ item.label }}</span>
                   </div>
                   <a-tooltip
                     v-if="item.key === 'build' && isStandardCustom"
@@ -1253,7 +1350,7 @@ const handleConfirm = () => {
                     <SettingOutlined @click.stop="openSetting(item.key)" />
                   </div>
                 </div>
-                <span v-else class="text-white/85">{{ item.label }}</span>
+                <span v-else :class="getTextColorClass('highlight')">{{ item.label }}</span>
               </template>
             </a-menu-item>
           </template>
@@ -1267,7 +1364,7 @@ const handleConfirm = () => {
 body {
   width: 100% !important;
   height: 100% !important;
-  background-color: #262729 !important;
+  background-color: var(--bg-card) !important;
   padding: 0px;
 }
 </style>
@@ -1287,21 +1384,21 @@ body {
 
 :deep(.ant-menu-inline) {
   border-right: none !important;
-  background-color: #262729 !important;
+  background-color: var(--bg-card) !important;
 }
 
 :deep(.ant-menu-item-selected) {
-  color: rgba(255, 255, 255, 0.85);
-  background-color: #262729 !important;
+  color: var(--text-primary);
+  background-color: var(--bg-card) !important;
 }
 
 :deep(.ant-menu-title-content) {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--text-primary);
 }
 
 :deep(.ant-menu-submenu-arrow) {
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--text-primary);
 }
 
 :deep(.ant-menu-item),
@@ -1320,6 +1417,11 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+
+  // 浅色主题下，菜单图标使用滤镜变深色
+  img.w-4.h-4 {
+    filter: var(--icon-filter, none);
+  }
 }
 
 .single-box:hover .setting-box {
@@ -1337,18 +1439,18 @@ body {
 }
 
 .setting-box:hover {
-  background-color: #262729 !important;
+  background-color: var(--bg-hover) !important;
 }
 
 .info-icon {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--text-info);
   cursor: help;
   transition: color 0.2s;
 }
 
 .info-icon:hover {
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--text-primary);
 }
 
 /* 算子工程选择器样式 */
@@ -1359,21 +1461,21 @@ body {
   width: 100%;
   height: 32px;
   padding: 4px 11px;
-  background-color: #262729;
-  border: 1px solid #434343;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-primary);
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--text-primary);
 }
 
 .operator-selector-trigger:hover {
-  border-color: #177ddc;
+  border-color: var(--border-hover);
 }
 
 .operator-selector-trigger.has-selection {
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--text-primary);
 }
 
 .selector-text {
@@ -1381,18 +1483,18 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: rgba(255, 255, 255, 0.25);
+  color: var(--text-disabled);
 }
 
 .operator-selector-trigger.has-selection .selector-text {
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--text-primary);
 }
 
 .selector-arrow {
   display: flex;
   align-items: center;
   margin-left: 8px;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--text-info);
   transition: transform 0.2s;
   flex-shrink: 0;
 }
@@ -1409,7 +1511,7 @@ body {
 
 .operator-selector-content {
   padding: 8px;
-  background-color: #1f1f1f;
+  background-color: var(--bg-default);
 }
 
 .selected-section {
@@ -1417,9 +1519,21 @@ body {
 }
 
 .selected-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--text-primary);
   margin-bottom: 8px;
+}
+
+.selected-header :deep(.ant-btn) {
+  color: var(--text-info);
+  transition: color 0.2s;
+}
+
+.selected-header :deep(.ant-btn:hover) {
+  color: var(--text-primary);
 }
 
 .selected-tags {
@@ -1430,7 +1544,7 @@ body {
 
 .divider {
   height: 1px;
-  background-color: #434343;
+  background-color: var(--border-primary);
   margin: 0;
 }
 
@@ -1441,7 +1555,7 @@ body {
 .confirm-section {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #434343;
+  border-top: 1px solid var(--border-primary);
   display: flex;
   justify-content: flex-end;
 }
@@ -1454,19 +1568,19 @@ body {
 
 .operator-collapse {
   :deep(.ant-collapse-item) {
-    background-color: #262729;
+    background-color: var(--bg-card);
     border: none;
   }
 
   :deep(.ant-collapse-header) {
     padding: 8px !important;
-    background-color: rgb(31, 31, 31);
-    color: rgba(255, 255, 255, 0.85) !important;
+    background-color: var(--bg-default);
+    color: var(--text-primary) !important;
     font-size: 11px;
   }
 
   :deep(.ant-collapse-content) {
-    background-color: rgb(31, 31, 31);
+    background-color: var(--bg-default);
     border: none;
   }
 
@@ -1477,7 +1591,7 @@ body {
   }
 
   :deep(.ant-collapse-expand-icon) {
-    color: rgba(255, 255, 255, 0.85) !important;
+    color: var(--text-primary) !important;
   }
 }
 
@@ -1494,21 +1608,21 @@ body {
   cursor: pointer;
   transition: background-color 0.2s;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--text-primary);
 
   &:hover:not(.disabled) {
-    background-color: #262729;
+    background-color: var(--bg-hover);
   }
 
   &.selected {
-    background-color: #111b26;
-    color: #177ddc;
+    background-color: var(--bg-selected);
+    color: var(--color-primary);
   }
 
   &.disabled {
     opacity: 0.5;
     cursor: not-allowed;
-    color: rgba(255, 255, 255, 0.25);
+    color: var(--text-disabled);
   }
 
   >span {
@@ -1524,17 +1638,17 @@ body {
   justify-content: center;
   width: 20px;
   height: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.45);
+  border: 1px solid var(--text-info);
   border-radius: 2px;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--text-primary);
   background-color: transparent;
   margin-left: 6px;
   flex-shrink: 0;
 }
 
 .check-icon {
-  color: #177ddc;
+  color: var(--color-primary);
   font-size: 11px;
   flex-shrink: 0;
   margin-left: auto;
@@ -1542,15 +1656,27 @@ body {
 
 .selected-display-section {
   padding: 8px;
-  background-color: #1f1f1f;
+  background-color: var(--bg-default);
   border-radius: 6px;
-  border: 1px solid #434343;
+  border: 1px solid var(--border-primary);
 }
 
 .selected-display-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--text-secondary);
   margin-bottom: 8px;
+}
+
+.selected-display-header :deep(.ant-btn) {
+  color: var(--text-info);
+  transition: color 0.2s;
+}
+
+.selected-display-header :deep(.ant-btn:hover) {
+  color: var(--text-primary);
 }
 
 .selected-display-tags {

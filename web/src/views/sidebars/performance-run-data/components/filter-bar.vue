@@ -7,12 +7,10 @@ import {
   FlagOutlined,
   FlagFilled,
 } from '@ant-design/icons-vue';
-import { theme } from 'ant-design-vue';
+import { inject, computed } from 'vue';
 
-const themeConfig = {
-  // 使用暗色算法
-  algorithm: theme.darkAlgorithm,
-};
+// 从父组件注入主题状态
+const actualTheme = inject('actualTheme', computed(() => 'dark'));
 
 /** 正序/倒序 */
 const sortOrder = defineModel<'asc' | 'desc'>('sortOrder');
@@ -31,37 +29,35 @@ function handleMarked() {
 </script>
 
 <template>
-  <a-config-provider :theme="themeConfig">
-    <div class="filter-bar">
-      <a-button
-        class="execute-time-sorter-button"
-        type="default"
-        @click="handleExecutionTime"
-      >
-        <div class="execute-time-sorter-inner">
-          执行时间
-          <div class="sort-icons">
-            <CaretUpFilled v-if="sortOrder === 'asc'" />
-            <UpOutlined v-else />
-            <CaretDownFilled v-if="sortOrder === 'desc'" />
-            <DownOutlined v-else />
-          </div>
+  <div class="filter-bar" :class="actualTheme === 'dark' ? 'theme-dark' : 'theme-light'">
+    <a-button
+      class="execute-time-sorter-button"
+      type="default"
+      @click="handleExecutionTime"
+    >
+      <div class="execute-time-sorter-inner">
+        执行时间
+        <div class="sort-icons">
+          <CaretUpFilled v-if="sortOrder === 'asc'" />
+          <UpOutlined v-else />
+          <CaretDownFilled v-if="sortOrder === 'desc'" />
+          <DownOutlined v-else />
         </div>
-      </a-button>
-      <a-button
-        class="execute-time-sorter-button"
-        @click="handleMarked"
-      >
-        已标记 <FlagFilled
-          v-if="isMarkedOnly"
-          class="flag-outlined-icon"
-        /><FlagOutlined
-          v-else
-          class="flag-outlined-icon"
-        />
-      </a-button>
-    </div>
-  </a-config-provider>
+      </div>
+    </a-button>
+    <a-button
+      class="execute-time-sorter-button"
+      @click="handleMarked"
+    >
+      已标记 <FlagFilled
+        v-if="isMarkedOnly"
+        class="flag-outlined-icon"
+      /><FlagOutlined
+        v-else
+        class="flag-outlined-icon"
+      />
+    </a-button>
+  </div>
 </template>
 
 <style lang="less" scoped>
@@ -74,13 +70,44 @@ function handleMarked() {
 .execute-time-sorter-button {
   border-radius: 2px;
 
-  &:hover,
-  &:focus,
-  &:active {
+  // 深色主题样式
+  :deep(.theme-dark &) {
     background-color: rgba(20, 20, 20, 0.96) !important;
     border-color: rgb(72, 72, 73) !important;
     color: rgba(255, 255, 255, 0.855) !important;
-    box-shadow: rgba(255, 255, 255, 0.04) !important;
+
+    &:hover,
+    &:focus,
+    &:active {
+      background-color: rgba(30, 30, 30, 0.96) !important;
+      border-color: rgb(90, 90, 91) !important;
+      color: rgba(255, 255, 255, 0.855) !important;
+      box-shadow: rgba(255, 255, 255, 0.04) !important;
+    }
+
+    .anticon {
+      border-color: rgba(225, 225, 225, 0.85) !important;
+    }
+  }
+
+  // 浅色主题样式
+  :deep(.theme-light &) {
+    background-color: #ffffff !important;
+    border-color: #d9d9d9 !important;
+    color: #1f1f1f !important;
+
+    &:hover,
+    &:focus,
+    &:active {
+      background-color: #f5f5f5 !important;
+      border-color: #d9d9d9 !important;
+      color: #1f1f1f !important;
+      box-shadow: rgba(0, 0, 0, 0.04) !important;
+    }
+
+    .anticon {
+      border-color: rgba(0, 0, 0, 0.85) !important;
+    }
   }
 
   .execute-time-sorter-inner {
@@ -100,7 +127,6 @@ function handleMarked() {
         height: 10px;
         transition: all 0.2s cubic-bezier(0.645, 0.045, 0.355, 1);
         border-style: solid;
-        border-color: rgba(225, 225, 225, 0.85);
         border-width: 0;
         position: relative;
         :deep(svg) {

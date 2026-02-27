@@ -1,22 +1,24 @@
 <script setup lang="ts">
-import { theme } from 'ant-design-vue';
+import { provide } from 'vue';
+import { useTheme } from '@web/composables/use-theme';
 import linkSSH from './components/link-ssh.vue';
 
-const themeConfig = {
-  // 使用暗色算法[1](@ref)
-  algorithm: theme.darkAlgorithm,
-};
+// 使用主题管理组合式函数
+const { themeConfig, actualTheme } = useTheme();
+
+// 向子组件提供主题状态，避免重复调用 useTheme
+provide('actualTheme', actualTheme);
 </script>
 <template>
   <a-config-provider :theme="themeConfig">
     <div class="!w-full !ml-[10px] !mr-auto !p-8 !text-left !h-screen">
       <div class="flex items-center mb-6">
-        <div class="font-bold text-2xl leading-7 m-0 text-white mr-10">
+        <div class="font-bold text-2xl leading-7 m-0" :class="actualTheme === 'dark' ? 'text-white' : 'text-[#1f1f1f]'">
           新建算子工程
         </div>
       </div>
-      <div class="h-px bg-white/15 mb-6 w-full" />
-      <div class="text-white">
+      <div class="h-px" :class="actualTheme === 'dark' ? 'bg-white/15' : 'bg-gray-300'" style="margin-bottom: 1.5rem; width: 100%;" />
+      <div :class="actualTheme === 'dark' ? 'text-white' : 'text-[#1f1f1f]'">
         <div class="flex flex-col">
           <linkSSH />
         </div>

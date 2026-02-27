@@ -233,6 +233,9 @@ const showNpuDebugScript = computed(() => {
   if (projectType.value === 'pyasc') {
     return false
   }
+  if (projectType.value === 'ascend') {
+    return debugModeEnabled.value && supportsSanitizerAndTuning.value
+  }
   return debugModeEnabled.value
 })
 const showPowerScript = computed(() => {

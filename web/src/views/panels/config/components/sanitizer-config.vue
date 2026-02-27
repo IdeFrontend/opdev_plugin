@@ -6,7 +6,7 @@
 
 <script setup>
 import {
-  ref, onBeforeMount,
+  ref, onBeforeMount, inject, computed,
 } from 'vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 
@@ -14,6 +14,9 @@ import {
   getSanitizerConfigs,
   saveSanitizerForm as saveSanitizerFormAPI,
 } from '@web/apis';
+
+// 从父组件注入主题状态
+const actualTheme = inject('actualTheme', computed(() => 'dark'));
 
 const props = defineProps({
   activeConfig: {
@@ -72,7 +75,7 @@ onBeforeMount(async () => {
 </script>
 
 <template>
-  <div class="sanitizer-config">
+  <div class="sanitizer-config" :class="actualTheme === 'dark' ? 'theme-dark' : 'theme-light'">
     <a-form
       ref="connectionFormRef"
       :model="form"
@@ -165,7 +168,6 @@ onBeforeMount(async () => {
 <style lang="less" scoped>
 .sanitizer-config {
   width: 100%;
-  color: #ffffff;
   text-align: left;
   font-size: 14px;
 
@@ -173,7 +175,24 @@ onBeforeMount(async () => {
     margin-bottom: 16px;
     font-size: 16px;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.85);
+  }
+
+  // 深色主题
+  &.theme-dark {
+    color: #ffffff;
+
+    .section-title {
+      color: rgba(255, 255, 255, 0.85);
+    }
+  }
+
+  // 浅色主题
+  &.theme-light {
+    color: #1f1f1f;
+
+    .section-title {
+      color: rgba(0, 0, 0, 0.85);
+    }
   }
 
   :deep(.ant-form) {
@@ -182,7 +201,6 @@ onBeforeMount(async () => {
     }
 
     .ant-form-item-label > label {
-      color: rgba(255, 255, 255, 0.85);
       font-size: 14px;
     }
 
@@ -196,46 +214,13 @@ onBeforeMount(async () => {
       }
 
       .ant-checkbox-wrapper {
-        color: rgba(255, 255, 255, 0.85);
         font-size: 14px;
-      }
-
-      .mem-check {
-        margin-left: 24px;
-        margin-bottom: 8px;
-        padding: 12px;
-        background: rgba(255, 255, 255, 0.04);
-        border: 1px dashed rgba(255, 255, 255, 0.2);
-        border-radius: 4px;
-
-        .desc {
-          margin-bottom: 8px;
-          color: rgba(255, 255, 255, 0.65);
-          font-size: 13px;
-          line-height: 1.6;
-
-          &:last-of-type {
-            margin-bottom: 0;
-          }
-        }
-
-        .mem-option {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 16px;
-          margin-top: 8px;
-
-          .ant-checkbox-wrapper {
-            color: rgba(255, 255, 255, 0.85);
-          }
-        }
       }
     }
 
     .ant-radio-wrapper {
       display: block;
       margin-bottom: 8px;
-      color: rgba(255, 255, 255, 0.85);
       font-size: 14px;
     }
 
@@ -246,36 +231,7 @@ onBeforeMount(async () => {
 
     .help-icon {
       margin-left: 4px;
-      color: rgba(255, 255, 255, 0.45);
       cursor: help;
-
-      &:hover {
-        color: #1668dc;
-      }
-    }
-  }
-
-  :deep(.ant-collapse) {
-    background: transparent;
-    border: none;
-
-    .ant-collapse-header {
-      color: rgba(255, 255, 255, 0.85);
-      font-size: 14px;
-      padding: 12px 0;
-
-      &:hover {
-        color: #1668dc;
-      }
-    }
-
-    .ant-collapse-content {
-      background: transparent;
-      border: none;
-
-      .ant-collapse-content-box {
-        padding: 16px 0;
-      }
     }
   }
 

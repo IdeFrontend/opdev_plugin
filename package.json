@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://gitcode.com/kaocong/mstt"
   },
-  "version": "1.2.42",
+  "version": "1.2.62",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -99,12 +99,6 @@
           "type": "webview",
           "id": "OpsOperateProvider",
           "name": "算子开发流程菜单"
-        },
-        { 
-           "id": "dumpTensorSidebarView", 
-           "name": "DumpTensor数据", 
-           "type": "webview", 
-           "visibility": "collapsed" 
         }
       ],
       "ms-sanitizer-panel-view": [

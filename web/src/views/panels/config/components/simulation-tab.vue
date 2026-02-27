@@ -135,42 +135,6 @@ const jumpToGuide = () => {
     margin-top: 12px;
   }
 
-  .nested-checkbox-group {
-    // margin-left: 24px;
-    margin-top: 8px;
-    padding: 12px;
-    border-radius: 4px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    max-width: 600px;
-    width: fit-content;
-
-    .ant-checkbox-wrapper {
-      // display: block;
-      // margin-bottom: 8px;
-      display: inline-flex;
-      margin-bottom: 0;
-
-      &:last-child {
-        margin-bottom: 0;
-      }
-    }
-
-    &.horizontal {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 16px;
-
-      .ant-checkbox-wrapper {
-        display: inline-flex;
-        margin-bottom: 0;
-      }
-    }
-  }
-
-  :deep(.ant-checkbox-wrapper) {
-    color: rgba(255, 255, 255, 0.85);
-  }
-
   :deep(.ant-form-item) {
     margin-bottom: 0;
   }

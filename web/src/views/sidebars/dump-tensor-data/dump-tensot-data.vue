@@ -7,9 +7,7 @@ import {
   getDumpTensorData
 } from '@web/apis';
 import { PerformanceExecutionRecord } from '@shared/api-types';
-import {
-  theme,
-} from 'ant-design-vue';
+import { useTheme } from '@web/composables/use-theme';
 
 const treeData = ref<PerformanceExecutionRecord[]>([]);
 // const renderTreeData = computed<PerformanceExecutionRecord[]>(() => treeData.value);
@@ -32,7 +30,7 @@ loadTreeData();
 
 const eventListenerHandler = (event: MessageEvent) => {
   console.log('[dump-tensot-data.vue]: 事件监听', event)
-  
+
   if (event.data.command === 'dumpTensorRefreshData') {
     loadTreeData();
   }
@@ -51,10 +49,8 @@ onBeforeUnmount(() => {
   window.removeEventListener('message', eventListenerHandler);
 });
 
-const themeConfig = {
-  // 使用暗色算法
-  algorithm: theme.darkAlgorithm,
-};
+// 使用主题管理组合式函数
+const { themeConfig, actualTheme } = useTheme();
 </script>
 
 <template>
