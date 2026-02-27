@@ -77,6 +77,31 @@ implements vscode.WebviewViewProvider {
             data: panelData,
           });
         }
+        else if (message.command === 'vscodeLoadMsSanitizerReport') {
+          // 点击左侧报告列表项时，加载该报告并在右侧展示检测结果（支持直接 postMessage 或经 main 转发的格式）
+          const params = message.message?.data ?? message.data ?? message.message;
+          if (!params?.path) {
+            webviewView.webview.postMessage({
+              command: 'iframeRemoteMsSanitizerPanelViewSetRenderList',
+              data: {},
+            });
+            return;
+          }
+          try {
+            const panelData = await getPanelData(params);
+            webviewView.webview.postMessage({
+              command: 'iframeRemoteMsSanitizerPanelViewSetRenderList',
+              data: panelData,
+            });
+          }
+          catch (err) {
+            console.error('[MsSanitizerPanelViewProvider] 加载报告失败:', err);
+            webviewView.webview.postMessage({
+              command: 'iframeRemoteMsSanitizerPanelViewSetRenderList',
+              data: {},
+            });
+          }
+        }
         else {
           this.handleWebviewMessage(message);
         }
@@ -115,6 +140,13 @@ implements vscode.WebviewViewProvider {
         messageItem.callback(message, this);
       }
     }
+  }
+
+  /**
+   * 获取当前 webview，供刷新报告列表等命令使用
+   */
+  getWebview(): vscode.Webview | undefined {
+    return this._view?.webview;
   }
 }
 
@@ -170,8 +202,13 @@ export const getMsSanitizerPanelViewProvider = (
     },
   );
 
+  /** 获取异常检测面板 webview，用于下发刷新报告列表等消息 */
+  const getMsSanitizerPanelWebview = (): vscode.Webview | undefined =>
+    msSanitizerPanelViewProvider.getWebview();
+
   return {
     msSanitizerPanelView,
     openMsSanitizerDisposable,
+    getMsSanitizerPanelWebview,
   };
 };

@@ -20,12 +20,14 @@ import {
 import { ViewServer } from './core/view/view-server';
 import { routes } from './routes';
 import { apis } from './api-routes';
+import { homeMethods } from './controller/home-controller';
 import { PermanentStorage } from './class/permanent-storage';
 import { ExtensionConfig } from './core/extension-config';
 import { RemoteConfig } from './helpers/remote-config';
 
 import { OpsOperateProvider } from './class/ops-operate-provider';
 import { getMsSanitizerPanelViewProvider } from './class/ms-sanitizer-panel-view';
+import { getPerformancePanelViewProvider } from './class/performance-panel-view';
 
 import { MindStudioPluginInstaller } from './class/mind-studio-plugin-installer';
 import {
@@ -71,6 +73,7 @@ import {
   COMMAND_REPORT_VISUALIZATION_SANITIZER,
   COMMAND_REPORT_VISUALIZATION_ON_BOARD,
   COMMAND_REPORT_VISUALIZATION_SIMULATION,
+  COMMAND_REPORT_VISUALIZATION_PERFORMANCE,
   COMMAND_REFRESH_FOLDER_DECORATIONS,
 } from './constants';
 import { FolderContextMenuService } from './service/folder-context-menu-service';
@@ -396,27 +399,46 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   }
 
-  // 异常检测视图
+  // 异常检测视图（报告列表已迁入面板左侧，右侧展示对应报告检测结果）
   const {
-    openMsSanitizerDisposable, msSanitizerPanelView,
-  } =
-    getMsSanitizerPanelViewProvider(context, apiServer);
+    openMsSanitizerDisposable,
+    msSanitizerPanelView,
+    getMsSanitizerPanelWebview,
+  } = getMsSanitizerPanelViewProvider(context, apiServer);
   context.subscriptions.push(msSanitizerPanelView, openMsSanitizerDisposable);
 
-  // 初始化'仿真分析-选择采集内容'页面的Webview
+  // 性能调优视图（中间面板）
+  const {
+    performancePanelView,
+    openPerformanceDisposable,
+    getWebview: getPerformancePanelWebview,
+  } = getPerformancePanelViewProvider(context, apiServer);
+  context.subscriptions.push(performancePanelView, openPerformanceDisposable);
+
+  // 初始化'仿真分析-选择采集内容'页面的Webview（打开配置页面前做 pyasc .py 校验）
   const simulatorOptionsProvider = new WebviewProvider(context, apiServer);
   const simulatorOptionsCommand = vscode.commands.registerCommand(
     COMMAND_SIMULATOR_OPTIONS,
     async () => {
+      const pyascCheck = await homeMethods.validatePyascForAnalysis();
+      if (!pyascCheck.valid) {
+        vscode.window.showWarningMessage(pyascCheck.message ?? '请先打开一个 .py 文件');
+        return;
+      }
       simulatorOptionsProvider.show(VIEW_OPTIONS_SIMULATOR);
     },
   );
 
-  // 初始化'上板分析-选择采集内容'页面的Webview
+  // 初始化'上板分析-选择采集内容'页面的Webview（打开配置页面前做 pyasc .py 校验）
   const onBoardOptionsProvider = new WebviewProvider(context, apiServer);
   const onBoardOptionsCommand = vscode.commands.registerCommand(
     COMMAND_ON_BOARD_OPTIONS,
     async () => {
+      const pyascCheck = await homeMethods.validatePyascForAnalysis();
+      if (!pyascCheck.valid) {
+        vscode.window.showWarningMessage(pyascCheck.message ?? '请先打开一个 .py 文件');
+        return;
+      }
       onBoardOptionsProvider.show(VIEW_OPTIONS_ON_BOARD);
     },
   );
@@ -672,6 +694,18 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
+  // 报告可视化：性能调优可视化视图（复用上板分析逻辑）
+  const reportVisualizationPerformanceCommand = vscode.commands.registerCommand(
+    COMMAND_REPORT_VISUALIZATION_PERFORMANCE,
+    async (uri?: vscode.Uri) => {
+      if (!uri) {
+        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        return;
+      }
+      await FolderContextMenuService.addReportToFileMapList(uri, 'on_board');
+    },
+  );
+
   context.subscriptions.push(
     markAsOperatorProjectCommand,
     markAsMultiOperatorProjectCommand,
@@ -689,6 +723,7 @@ export async function activate(context: vscode.ExtensionContext) {
     reportVisualizationSanitizerCommand,
     reportVisualizationOnBoardCommand,
     reportVisualizationSimulationCommand,
+    reportVisualizationPerformanceCommand,
   );
 
   // 初始化上下文变量
@@ -750,13 +785,9 @@ export async function activate(context: vscode.ExtensionContext) {
   const flashMsSanitizerRunData = vscode.commands.registerCommand(
     COMMAND_FLASH_MS_SANITIZER_RUN_DATA,
     async () => {
-      // 后续待优化点，目前通过非法操作方式拿到视图实例
-      // 拿到MsSanitizerRunData的视图实例，主动下发刷新命令
-      const msSanitizerRunData =
-        ViewServer.getInstance().providerWebViewMap.msSanitizerSidebarView;
-
-      console.log('ViewServer.getInstance()', msSanitizerRunData);
-      msSanitizerRunData?.webview?.postMessage({ command: 'iframeFlashMsSanitizerRunData' });
+      // 报告列表已迁入异常检测面板左侧，向面板下发刷新命令
+      const webview = getMsSanitizerPanelWebview();
+      webview?.postMessage({ command: 'iframeFlashMsSanitizerRunData' });
     },
   );
   context.subscriptions.push(flashMsSanitizerRunData);
@@ -764,12 +795,9 @@ export async function activate(context: vscode.ExtensionContext) {
   const flashPerformanceRunData = vscode.commands.registerCommand(
     COMMAND_FLASH_PERFORMANCE_RUN_DATA,
     async () => {
-      // 拿到PerformanceRunData的视图实例，主动下发刷新命令
-      const performanceRunData =
-        ViewServer.getInstance().providerWebViewMap.performanceSidebarView;
-
-      console.log('ViewServer.getInstance()', performanceRunData);
-      performanceRunData?.webview?.postMessage({ command: 'iframeRefreshData' });
+      // 拿到性能调优面板的 webview，主动下发刷新命令
+      const webview = getPerformancePanelWebview();
+      webview?.postMessage({ command: 'iframeRefreshData' });
     },
   );
   context.subscriptions.push(flashPerformanceRunData);

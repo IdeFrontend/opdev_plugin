@@ -306,7 +306,7 @@ export const taskMethods = {
         const isPyFile = activeEditor?.document.fileName.endsWith('.py');
 
         if (!isPyFile) {
-          vscode.window.showErrorMessage('请先打开一个 .py 文件');
+          vscode.window.showWarningMessage('请先打开一个 .py 文件');
           // 清除状态
           currentExecutor = null;
           currentTaskType = null;
@@ -317,7 +317,7 @@ export const taskMethods = {
         // 获取工作区路径
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders || workspaceFolders.length === 0) {
-          vscode.window.showErrorMessage('未找到工作区路径');
+          vscode.window.showWarningMessage('未找到工作区路径');
           // 清除状态
           currentExecutor = null;
           currentTaskType = null;
@@ -429,7 +429,7 @@ export const taskMethods = {
         const isPyFile = activeEditor?.document.fileName.endsWith('.py');
 
         if (!isPyFile) {
-          vscode.window.showErrorMessage('请先打开一个 .py 文件');
+          vscode.window.showWarningMessage('请先打开一个 .py 文件');
           // 清除状态
           currentExecutor = null;
           currentTaskType = null;
@@ -440,7 +440,7 @@ export const taskMethods = {
         // 获取工作区路径
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders || workspaceFolders.length === 0) {
-          vscode.window.showErrorMessage('未找到工作区路径');
+          vscode.window.showWarningMessage('未找到工作区路径');
           // 清除状态
           currentExecutor = null;
           currentTaskType = null;

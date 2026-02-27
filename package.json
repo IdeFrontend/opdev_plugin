@@ -78,6 +78,11 @@
           "id": "ms-sanitizer-panel-view",
           "title": "异常检测结果",
           "icon": "web/resources/ops_icon_mono.svg"
+        },
+        {
+          "id": "performance-panel-view",
+          "title": "性能调优结果",
+          "icon": "web/resources/power.svg"
         }
       ]
     },
@@ -119,6 +124,14 @@
           "type": "webview",
           "id": "msSanitizerPanelView",
           "name": "异常检测",
+          "when": "true"
+        }
+      ],
+      "performance-panel-view": [
+        {
+          "type": "webview",
+          "id": "performancePanelView",
+          "name": "性能调优",
           "when": "true"
         }
       ],
@@ -185,6 +198,10 @@
       {
         "command": "huawei-op-devtools.open-ms-sanitizer-panel-view",
         "title": "异常检测"
+      },
+      {
+        "command": "huawei-op-devtools.open-performance-panel-view",
+        "title": "性能调优"
       },
       {
         "command": "vscodeJumpToFile",
@@ -264,7 +281,7 @@
       },
       {
         "command": "huawei-op-devtools.reportVisualizationSanitizer",
-        "title": "异常检测"
+        "title": "添加为异常检测可视化视图"
       },
       {
         "command": "huawei-op-devtools.reportVisualizationOnBoard",
@@ -273,6 +290,10 @@
       {
         "command": "huawei-op-devtools.reportVisualizationSimulation",
         "title": "仿真分析"
+      },
+      {
+        "command": "huawei-op-devtools.reportVisualizationPerformance",
+        "title": "添加为性能调优可视化视图"
       },
       {
         "command": "huawei-op-devtools.refreshFolderDecorations",
@@ -287,10 +308,6 @@
       {
         "id": "operator.performance",
         "label": "性能调优"
-      },
-      {
-        "id": "operator.reportVisualization",
-        "label": "添加到可视化视图"
       }
     ],
     "menus": {
@@ -366,8 +383,13 @@
           "group": "operator@3.5"
         },
         {
-          "submenu": "operator.reportVisualization",
-          "when": "explorerResourceIsFolder || resourceScheme == 'file'",
+          "command": "huawei-op-devtools.reportVisualizationSanitizer",
+          "when": "resourceScheme == 'file' && resourceExtname == '.log'",
+          "group": "operator@3.6"
+        },
+        {
+          "command": "huawei-op-devtools.reportVisualizationPerformance",
+          "when": "explorerResourceIsFolder",
           "group": "operator@3.6"
         }
       ],
@@ -385,20 +407,6 @@
         },
         {
           "command": "huawei-op-devtools.operatorProjectSimulation"
-        }
-      ],
-      "operator.reportVisualization": [
-        {
-          "command": "huawei-op-devtools.reportVisualizationSanitizer",
-          "when": "resourceScheme == 'file' && resourceExtname == '.log'"
-        },
-        {
-          "command": "huawei-op-devtools.reportVisualizationOnBoard",
-          "when": "explorerResourceIsFolder"
-        },
-        {
-          "command": "huawei-op-devtools.reportVisualizationSimulation",
-          "when": "explorerResourceIsFolder"
         }
       ]
     },
