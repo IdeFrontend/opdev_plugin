@@ -313,13 +313,38 @@ export const performanceDataMethods = {
         );
       }
 
-      // 5秒后移除高亮（延长显示时间以便查看错误信息）
-      setTimeout(() => {
-        decorationType.dispose();
-        if (afterDecorationType) {
-          afterDecorationType.dispose();
-        }
-      }, 5000);
+      // 监听光标位置变化，在同一文档中光标“离开当前错误位置”后移除高亮
+      const targetDocUri = document.uri.toString();
+      const targetLine = line;
+      const targetChar = charactor;
+
+      const selectionDisposable = vscode.window.onDidChangeTextEditorSelection(
+        (e) => {
+          // 只关注同一文档
+          if (e.textEditor.document.uri.toString() !== targetDocUri) {
+            return;
+          }
+
+          const selection = e.selections[0];
+          if (!selection) {
+            return;
+          }
+
+          const active = selection.active;
+
+          // 如果光标还停留在当前错误位置，则不清除高亮
+          if (active.line === targetLine && active.character === targetChar) {
+            return;
+          }
+
+          // 光标真正移动到其他位置后，再移除高亮
+          decorationType.dispose();
+          if (afterDecorationType) {
+            afterDecorationType.dispose();
+          }
+          selectionDisposable.dispose();
+        },
+      );
     }
     catch (error) {
       console.log('jumpToFile', error);

@@ -373,7 +373,15 @@ const getListData = async () => {
 /** 点击左侧报告，在右侧展示该报告的检测结果 */
 const handleSelectReport = (item: { path: string; title?: string; timestamp?: number }) => {
   selectedReportPath.value = item.path;
-  // 直接通过 VSCode API 发给扩展，确保能触发右侧详情刷新
+
+  // 只发送可结构化克隆的纯数据，避免 DataCloneError
+  const payload = {
+    path: item.path,
+    title: item.title ?? '',
+    timestamp: item.timestamp ?? 0,
+  };
+
+  // 通过 VSCode API 发给扩展，触发右侧详情刷新
   vscode.postMessage({
     command: 'vscodeLoadMsSanitizerReport',
     data: JSON.parse(JSON.stringify(item)),
