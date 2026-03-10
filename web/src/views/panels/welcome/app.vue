@@ -21,7 +21,7 @@
 
         <!-- 导航步骤条（位于标题和核心功能模块之间） -->
         <div class="w-full flex justify-center mb-8 max-[992px]:mb-6">
-          <a-steps class="welcome-steps max-w-[1200px] w-full" type="navigation" :current="currentStep"
+          <a-steps class="welcome-steps max-w-[900px] w-full" type="navigation" :current="currentStep"
             @change="onStepChange">
             <a-step>
               <template #icon>
@@ -34,6 +34,12 @@
                 <img :src="buildIcon" alt="算子开发" class="step-icon" />
               </template>
               <template #title>算子开发</template>
+            </a-step>
+            <a-step>
+              <template #icon>
+                <img :src="debugIcon" alt="算子调试" class="step-icon" />
+              </template>
+              <template #title>算子调试</template>
             </a-step>
             <a-step>
               <template #icon>
@@ -50,37 +56,46 @@
           </a-steps>
         </div>
 
-        <!-- 核心功能模块区域：根据步骤展示 4 个面板（内容先留空） -->
+        <!-- 核心功能模块区域：根据步骤展示 5 个面板 -->
         <div
           class="flex items-stretch justify-center bg-[#27272b] gap-[15px] max-w-[1200px] w-full mb-[30px] py-[30px] px-[20px] flex-none rounded-xl min-h-[300px] max-[992px]:gap-3 max-[992px]:px-[15px] max-[992px]:py-[25px] max-[992px]:min-h-[400px] max-[576px]:gap-2 max-[576px]:p-[20px_10px] max-[576px]:min-h-[350px]"
           @click.stop>
           <!-- Step 0 / 1: 新建算子工程 -->
-          <div v-show="currentStep === 0"
-            class="flex-1 rounded-lg box-border flex flex-col min-w-0 max-[992px]:p-[15px] max-[576px]:p-3 text-[#f0f0f0]">
-            <h3 class="text-[20px] font-semibold mb-3">
-              新建算子工程
-            </h3>
-            <p class="text-[14px] text-[#bfbfbf] leading-relaxed mb-6 max-[576px]:text-xs">
-              提供您算子开发环境开箱即用能力，支持基于Ascend C、Python等算子开发，支持&lt;&lt;&lt;&gt;&gt;&gt;算子工程和标准自定义算子工程的快速创建。
-            </p>
-            <div class="mb-6">
-              <button
-                class="bg-[#3d8bfd] hover:bg-[#5b9dff] text-white text-sm px-5 py-2.5 rounded-md border border-transparent transition-colors duration-150 cursor-pointer"
-                @click="handleAscendCProject">
-                立即创建
-              </button>
+          <div
+            v-show="currentStep === 0"
+            class="flex-1 box-border flex min-w-0 text-[#f0f0f0]"
+          >
+            <!-- 左侧：标题、描述、立即创建 -->
+            <div class="w-1/2 pr-8 max-[992px]:w-full max-[992px]:pr-0">
+              <h3 class="text-[20px] font-semibold mb-6">
+                新建算子工程
+              </h3>
+              <p class="text-[12px] text-[#bfbfbf] leading-relaxed mb-6 max-[576px]:text-xs">
+                提供您算子开发环境开箱即用能力，支持基于Ascend C、Python等算子开发，支持&lt;&lt;&lt;&gt;&gt;&gt;算子工程和标准自定义算子工程的快速创建。
+              </p>
+              <div>
+                <button
+                  class="bg-[#3d8bfd] hover:bg-[#5b9dff] text-white text-sm px-5 py-2.5 rounded-md border border-transparent transition-colors duration-150 cursor-pointer"
+                  @click="handleAscendCProject"
+                >
+                  立即创建
+                </button>
+              </div>
             </div>
 
-            <!-- 工程类型展示（与 link-ssh.vue 中工程类型区风格保持一致，3 种类型横向排列） -->
-            <div class="mt-2">
-              <div class="flex gap-4 max-[992px]:flex-col">
+            <!-- 右侧：工程类型（3 种类型纵向排列） -->
+            <div class="w-1/2 max-[992px]:w-full max-[992px]:mt-6">
+              <div class="flex flex-col gap-4">
                 <!-- 【Ascend C】<<<>>>算子工程 -->
                 <div
-                  class="flex-1 bg-transparent p-4 border border-[#464646] rounded-lg overflow-hidden relative transition-all duration-300 hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)]">
+                  class="flex-1 bg-transparent p-4 border rounded-lg overflow-hidden relative transition-all duration-300 cursor-pointer hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)]"
+                  :class="selectedProjectTypeId === 1 ? 'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)]' : 'border-[#464646]'"
+                  @click="selectedProjectTypeId = 1"
+                >
                   <div class="font-extrabold text-[initial] mb-3 text-white">
                     【Ascend C】&lt;&lt;&lt;&gt;&gt;&gt;算子工程
                   </div>
-                  <div class="leading-7 mt-1 text-white text-[14px] mb-2.5 whitespace-normal"
+                  <div class="leading-7 mt-1 text-white text-[12px] mb-2.5 whitespace-normal"
                     v-html="getTemplateDesc(selectedTemplate)" />
                   <a-tag color="blue" class="mt-2 mr-2">
                     语言：Ascend C
@@ -88,37 +103,42 @@
                   <a-tag color="purple" class="mt-2 mr-2">
                     类型：&lt;&lt;&lt;&gt;&gt;&gt;
                   </a-tag>
-                  <div class="mt-4 flex items-center gap-3">
-                    <span class="text-[13px] text-[#ffffff] whitespace-nowrap">
-                      样例
-                    </span>
-                    <a-radio-group v-model:value="selectedTemplate" class="sample-radio-group flex gap-4">
-                      <a-radio value="helloworld">
-                        helloworld
-                      </a-radio>
-                      <a-radio value="addn">
-                        addn
-                      </a-radio>
-                      <a-radio value="torch_library_template">
-                        torch_library
-                      </a-radio>
-                    </a-radio-group>
-                  </div>
-                  <div class="mt-4">
-                    <div class="overflow-hidden max-w-full transition-all duration-300">
-                      <a-image :src="getTemplateImage(selectedTemplate)"
-                        class="block max-w-full h-auto object-contain transition-opacity duration-300 transform" />
+                  <template v-if="selectedProjectTypeId === 1">
+                    <div class="mt-4 flex items-center gap-3">
+                      <span class="text-[13px] text-[#ffffff] whitespace-nowrap">
+                        样例
+                      </span>
+                      <a-radio-group v-model:value="selectedTemplate" class="sample-radio-group flex gap-4">
+                        <a-radio value="helloworld">
+                          helloworld
+                        </a-radio>
+                        <a-radio value="addn">
+                          addn
+                        </a-radio>
+                        <a-radio value="torch_library_template">
+                          torch_library
+                        </a-radio>
+                      </a-radio-group>
                     </div>
-                  </div>
+                    <div class="mt-4">
+                      <div class="overflow-hidden max-w-full transition-all duration-300">
+                        <a-image :src="getTemplateImage(selectedTemplate)"
+                          class="block max-w-full h-auto object-contain transition-opacity duration-300 transform" />
+                      </div>
+                    </div>
+                  </template>
                 </div>
 
                 <!-- 【Ascend C】标准自定义算子工程 -->
                 <div
-                  class="flex-1 bg-transparent p-4 border border-[#464646] rounded-lg overflow-hidden relative transition-all duration-300 hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)]">
+                  class="flex-1 bg-transparent p-4 border rounded-lg overflow-hidden relative transition-all duration-300 cursor-pointer hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)]"
+                  :class="selectedProjectTypeId === 2 ? 'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)]' : 'border-[#464646]'"
+                  @click="selectedProjectTypeId = 2"
+                >
                   <div class="font-extrabold text-[initial] mb-3 text-white">
                     【Ascend C】标准自定义算子工程
                   </div>
-                  <div class="leading-7 mt-1 text-white text-[14px] mb-2.5 whitespace-normal">
+                  <div class="leading-7 mt-1 text-white text-[12px] mb-2.5 whitespace-normal">
                     基于Ascend C语言的标准自定义算子工程，op_host存放在CPC侧的代码实现，op_kermel存放NPU侧的代码实现，op_graph存放图模式下的代码实现
                   </div>
                   <a-tag color="blue" class="mt-2 mr-2">
@@ -127,7 +147,7 @@
                   <a-tag color="green" class="mt-2 mr-2">
                     类型：标准自定义
                   </a-tag>
-                  <div class="mt-4">
+                  <div v-if="selectedProjectTypeId === 2" class="mt-4">
                     <div class="overflow-hidden max-w-full transition-all duration-300">
                       <a-image :src="tipBase_0"
                         class="block max-w-full h-auto object-contain transition-opacity duration-300 transform" />
@@ -137,11 +157,14 @@
 
                 <!-- 【Python】pyasc算子工程 -->
                 <div
-                  class="flex-1 bg-transparent p-4 border border-[#464646] rounded-lg overflow-hidden relative transition-all duration-300 hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)]">
+                  class="flex-1 bg-transparent p-4 border rounded-lg overflow-hidden relative transition-all duration-300 cursor-pointer hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)]"
+                  :class="selectedProjectTypeId === 3 ? 'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)]' : 'border-[#464646]'"
+                  @click="selectedProjectTypeId = 3"
+                >
                   <div class="font-extrabold text-[initial] mb-3 text-white">
                     【Python】pyasc算子工程
                   </div>
-                  <div class="leading-7 mt-1 text-white text-[14px] mb-2.5 whitespace-normal">
+                  <div class="leading-7 mt-1 text-white text-[12px] mb-2.5 whitespace-normal">
                     基于pyasc创建自定义Add算子样例工程。
                   </div>
                   <a-tag color="blue" class="mt-2 mr-2">
@@ -150,7 +173,7 @@
                   <a-tag color="purple" class="mt-2 mr-2">
                     类型：pyasc
                   </a-tag>
-                  <div class="mt-4">
+                  <div v-if="selectedProjectTypeId === 3" class="mt-4">
                     <div class="overflow-hidden max-w-full transition-all duration-300">
                       <a-image :src="tipBase_0"
                         class="block max-w-full h-auto object-contain transition-opacity duration-300 transform" />
@@ -161,7 +184,7 @@
             </div>
           </div>
 
-        <!-- Step 1 / 2: 算子开发 -->
+          <!-- Step 1 / 2: 算子开发 -->
         <div
           v-show="currentStep === 1"
           class="flex-1 box-border flex min-w-0 text-[#f0f0f0]"
@@ -171,7 +194,7 @@
             <h3 class="text-[20px] font-semibold mb-6">
               算子开发
             </h3>
-            <p class="text-[14px] text-[#bfbfbf] leading-relaxed mb-6 max-[576px]:text-xs">
+            <p class="text-[12px] text-[#bfbfbf] leading-relaxed mb-6 max-[576px]:text-xs">
               开发过程中支持Ascend C语法高亮、代码补全、代码跳转等。提供算子编译，算子部署到CANN包，算子异常检测编译，算子example编译等能力。
             </p>
             <ul
@@ -183,12 +206,12 @@
               <li>代码补全</li>
               <li>算子编译部署</li>
             </ul>
-            <a-button
+              <!-- <a-button
               type="link"
-              class="!p-0 !h-auto text-[14px]"
+              class="!p-0 !h-auto text-[12px]"
             >
               查看使用指南
-            </a-button>
+            </a-button> -->
           </div>
 
           <!-- 右侧：算子开发 3 个步骤示意 Tab -->
@@ -216,17 +239,25 @@
           </div>
         </div>
 
-          <!-- Step 2 / 3: 算子异常检测 -->
+          <!-- Step 2: 算子调试 -->
           <div
             v-show="currentStep === 2"
+            class="flex-1 rounded-lg box-border flex flex-col min-w-0 text-[#f0f0f0]"
+          >
+            <!-- 算子调试内容占位，后续由业务填充 -->
+          </div>
+
+          <!-- Step 3: 算子异常检测 -->
+          <div
+            v-show="currentStep === 3"
             class="flex-1 box-border flex min-w-0 text-[#f0f0f0]"
           >
             <!-- 左侧：算子异常检测介绍 -->
             <div class="w-1/2 pr-8 max-[992px]:w-full max-[992px]:pr-0">
               <h3 class="text-[20px] font-semibold mb-6">
-                算子异常检测
+                异常检测
               </h3>
-              <p class="text-[14px] text-[#bfbfbf] leading-relaxed mb-6 max-[576px]:text-xs">
+              <p class="text-[12px] text-[#bfbfbf] leading-relaxed mb-6 max-[576px]:text-xs">
                 集成 msSanitizer 工具，提供内存检测、竞争检测和未初始化检测功能，全面覆盖算子功能正确性检测。
               </p>
               <ul
@@ -236,38 +267,48 @@
                 <li>竞争检测</li>
                 <li>未初始化检测</li>
               </ul>
-              <p class="text-[14px] text-[#bfbfbf] leading-relaxed mb-6 max-[576px]:text-xs">
+              <p class="text-[12px] text-[#bfbfbf] leading-relaxed mb-6 max-[576px]:text-xs">
                 1. 点击操作面板中的“异常检测”按钮，选择检测内容。<br />
                 2. 运行完成后，点击面板中的“异常检测结果”菜单，可查看异常检测报告，支持查看详情和代码行跳转。
               </p>
-              <a-button
+              <!-- <a-button
                 type="link"
-                class="!p-0 !h-auto text-[14px]"
+                class="!p-0 !h-auto text-[12px]"
               >
                 查看使用指南
-              </a-button>
+              </a-button> -->
             </div>
 
-            <!-- 右侧：异常检测界面示意图 -->
+            <!-- 右侧：异常检测 2 个 Tab -->
             <div class="w-1/2 max-[992px]:w-full max-[992px]:mt-6">
-              <a-image
-                :src="checkImg"
-                class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
-              />
+              <a-tabs v-model:activeKey="checkTabKey">
+                <a-tab-pane key="select" tab="选择检测内容">
+                  <a-image
+                    :src="selectCheckImg"
+                    class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
+                  />
+                </a-tab-pane>
+                <a-tab-pane key="result" tab="查看检测结果">
+                  <a-image
+                    :src="checkImg"
+                    class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
+                  />
+                </a-tab-pane>
+              </a-tabs>
             </div>
           </div>
 
-          <!-- Step 3 / 4: 算子性能调优 -->
+          <!-- Step 4: 算子性能调优 -->
           <div
-            v-show="currentStep === 3"
+            v-show="currentStep === 4"
             class="flex-1 box-border flex min-w-0 text-[#f0f0f0]"
           >
             <!-- 左侧：算子性能调优介绍 -->
             <div class="w-1/2 pr-8 max-[992px]:w-full max-[992px]:pr-0">
               <h3 class="text-[20px] font-semibold mb-6">
-                算子性能调优
+                性能调优
               </h3>
-              <p class="text-[14px] text-[#bfbfbf] leading-relaxed mb-6 max-[576px]:text-xs">
+              <p class="text-[12px] text-[#bfbfbf] leading-relaxed mb-6 max-[576px]:text-xs">
                 快速定位算子的软硬件性能瓶颈，提供计算内存热力图、Roofline瓶颈分析图、Cache热力图、通算流水图（MC2算子）、指令流水图、算子代码热力图、性能数据等分析能力。
               </p>
               <ul
@@ -276,31 +317,41 @@
                 <li>上板分析</li>
                 <li>仿真分析</li>
               </ul>
-              <p class="text-[14px] text-[#bfbfbf] leading-relaxed mb-6 max-[576px]:text-xs">
+              <p class="text-[12px] text-[#bfbfbf] leading-relaxed mb-6 max-[576px]:text-xs">
                 1. 点击操作面板中的“性能分析”按钮下的“上板分析”或“仿真分析”，选择分析内容。<br />
                 2. 运行完成后，点击面板中的“性能调优结果”菜单，可查看并分析性能调优相关数据。
               </p>
-              <a-button
+              <!-- <a-button
                 type="link"
-                class="!p-0 !h-auto text-[14px]"
+                class="!p-0 !h-auto text-[12px]"
               >
                 查看使用指南
-              </a-button>
+              </a-button> -->
             </div>
 
-            <!-- 右侧：性能调优分析界面示意图 -->
+            <!-- 右侧：性能调优 2 个 Tab -->
             <div class="w-1/2 max-[992px]:w-full max-[992px]:mt-6">
-              <a-image
-                :src="analysisImg"
-                class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
-              />
+              <a-tabs v-model:activeKey="perfTabKey">
+                <a-tab-pane key="select" tab="选择分析内容">
+                  <a-image
+                    :src="selectAnalysisImg"
+                    class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
+                  />
+                </a-tab-pane>
+                <a-tab-pane key="result" tab="查看分析结果">
+                  <a-image
+                    :src="analysisImg"
+                    class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
+                  />
+                </a-tab-pane>
+              </a-tabs>
             </div>
           </div>
         </div>
 
         <!-- 底部步骤导航 -->
         <div
-          class="w-full flex justify-center items-center gap-6 mt-4 text-[14px]"
+          class="w-full flex justify-center items-center gap-6 mt-4 text-[12px]"
           @click.stop
         >
           <span
@@ -311,7 +362,7 @@
             上一步
           </span>
           <span
-            v-if="currentStep < 3"
+            v-if="currentStep < 4"
             class="text-[#4ba5f4] cursor-pointer hover:text-[#76b9ff] transition-colors"
             @click="goNextStep"
           >
@@ -329,16 +380,19 @@ import { theme } from 'ant-design-vue';
 import settingIcon from '@/assets/svg/setting.svg';
 import buildIcon from '@/assets/svg/build.svg';
 import checkIcon from '@/assets/svg/check.svg';
+import debugIcon from '@/assets/svg/debug.svg';
 import powerIcon from '@/assets/svg/power.svg';
 import tipBase_0 from '@/assets/imgs/add.png';
 import tipBase_1_1 from '@/assets/imgs/hello_world.png';
 import tipBase_1_2 from '@/assets/imgs/add_custom.png';
 import tipBase_1_3 from '@/assets/imgs/torch_library_template.png';
 import writeImg from '@/assets/imgs/write.png';
-import buildImg from '@/assets/imgs/build.jpeg';
-import runImg from '@/assets/imgs/run.jpeg';
-import checkImg from '@/assets/imgs/check.png';
-import analysisImg from '@/assets/imgs/analysis.png';
+import buildImg from '@/assets/imgs/build.gif';
+import runImg from '@/assets/imgs/run.gif';
+import checkImg from '@/assets/imgs/check.gif';
+import selectCheckImg from '@/assets/imgs/selectCheck.gif';
+import analysisImg from '@/assets/imgs/analysis.gif';
+import selectAnalysisImg from '@/assets/imgs/selectAnalysis.gif';
 
 
 const themeConfig = {
@@ -348,6 +402,11 @@ const themeConfig = {
 
 const currentStep = ref(0);
 const devTabKey = ref('code');
+const checkTabKey = ref('select');
+const perfTabKey = ref('select');
+
+// 新建算子工程：当前选中的工程类型（1=<<<>>> 2=标准自定义 3=pyasc），默认第一个
+const selectedProjectTypeId = ref(1);
 
 // <<<>>> 算子工程模板选择（helloworld / addn / torch_library）
 const selectedTemplate = ref<'helloworld' | 'addn' | 'torch_library_template'>(
@@ -412,7 +471,7 @@ const goPrevStep = () => {
 };
 
 const goNextStep = () => {
-  if (currentStep.value < 3) {
+  if (currentStep.value < 4) {
     currentStep.value += 1;
   }
 };
