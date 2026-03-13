@@ -12,6 +12,8 @@ export const COMMAND_OPEN_MS_SANITIZER_PANEL_VIEW = `${COMMAND_PREFIX}.open-ms-s
 
 export const COMMAND_OPEN_PERFORMANCE_PANEL_VIEW = `${COMMAND_PREFIX}.open-performance-panel-view`;
 
+export const COMMAND_OPEN_DUMP_TENSOR_PANEL_VIEW = `${COMMAND_PREFIX}.open-dump-tensor-panel-view`;
+
 export const COMMAND_CREATE_OPERATOR_IN_WORKSPACE = `${COMMAND_PREFIX}.createOperatorInWorkspace`;
 
 export const COMMAND_TOGGLE_OPS_OPERATE = `${COMMAND_PREFIX}.toggleOpsOperate`;

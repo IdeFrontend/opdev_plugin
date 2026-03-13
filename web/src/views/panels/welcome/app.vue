@@ -73,9 +73,16 @@
               <p class="text-[12px] text-[#bfbfbf] leading-relaxed mb-6 max-[576px]:text-xs">
                 提供您算子开发环境开箱即用能力，支持基于Ascend C、Python等算子开发，支持&lt;&lt;&lt;&gt;&gt;&gt;算子工程和标准自定义算子工程的快速创建。
               </p>
+              <ul
+                class="feature-list mb-6 grid grid-cols-2 gap-y-1 list-disc list-inside text-[15px] font-semibold text-[#d1d1d1] leading-[32px] max-[576px]:grid-cols-1"
+              >
+                <li>环境开箱即用</li>
+                <li>Ascend C 算子工程</li>
+                <li>Pyasc 算子工程</li>
+              </ul>
               <div>
                 <button
-                  class="bg-[#3d8bfd] hover:bg-[#5b9dff] text-white text-sm px-5 py-2.5 rounded-md border border-transparent transition-colors duration-150 cursor-pointer"
+                  class="bg-[#3d8bfd] hover:bg-[#5b9dff] text-white px-5 py-2.5 rounded-md border border-transparent transition-colors duration-150 cursor-pointer"
                   @click="handleAscendCProject"
                 >
                   立即创建
@@ -242,9 +249,35 @@
           <!-- Step 2: 算子调试 -->
           <div
             v-show="currentStep === 2"
-            class="flex-1 rounded-lg box-border flex flex-col min-w-0 text-[#f0f0f0]"
+            class="flex-1 box-border flex min-w-0 text-[#f0f0f0]"
           >
-            <!-- 算子调试内容占位，后续由业务填充 -->
+            <!-- 左侧：算子调试文案与要点 -->
+            <div class="w-1/2 pr-8 max-[992px]:w-full max-[992px]:pr-0">
+              <h3 class="text-[20px] font-semibold mb-6">
+                算子调试
+              </h3>
+              <p class="text-[12px] text-[#bfbfbf] leading-relaxed mb-6 max-[576px]:text-xs">
+                基于msdebug工具提供NPU上板可视化调试Ascend算子工程，包括断点调试、单步执行调试、查看变量/寄存器/堆栈/断点信息、内存查询、核切和NPU coredump文件可视化调试等。
+              </p>
+              <ul
+                class="feature-list mb-6 grid grid-cols-2 gap-y-1 list-disc list-inside text-[15px] font-semibold text-[#d1d1d1] leading-[32px] max-[576px]:grid-cols-1"
+              >
+                <li>断点调试</li>
+                <li>单步执行调试</li>
+                <li>内存查询</li>
+                <li>核切</li>
+                <li>查看变量/寄存器/堆栈/断点信息</li>
+                <li>NPU coredump文件可视化调试</li>
+              </ul>
+            </div>
+
+            <!-- 右侧：算子调试示意图 -->
+            <div class="w-1/2 max-[992px]:w-full max-[992px]:mt-6">
+              <a-image
+                :src="runImg"
+                class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
+              />
+            </div>
           </div>
 
           <!-- Step 3: 算子异常检测 -->

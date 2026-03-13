@@ -114,13 +114,18 @@ function performFileComparison() {
 
   try {
     diffFiles({
-      filePath1: selectedFiles.value[0].filePath,
-      filePath2: selectedFiles.value[1].filePath
+      filePath1: (selectedFiles.value[0].filePath || '').replace(/\.bin$/, '.txt'),
+      filePath2: (selectedFiles.value[1].filePath || '').replace(/\.bin$/, '.txt')
+    }).finally(() => {
+      // 对比完成后取消对比状态
+      cancelCompare();
     })
     message.success('正在启动VSCode文件对比...');
   } catch (error) {
     console.error('调用VSCode文件对比功能失败:', error);
     message.error('启动VSCode文件对比失败');
+    // 出错时也取消对比状态
+    cancelCompare();
   }
 }
 
@@ -134,7 +139,7 @@ const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
   console.log('[onClickNode]: 打开文件', data)
 
   if (isTxtFile(data) || isBinFile(data)) {
-    openFile({ file: data.filePath });
+    openFile({ file: (data.filePath || '').replace(/\.bin$/, '.txt') });
   }
 };
 

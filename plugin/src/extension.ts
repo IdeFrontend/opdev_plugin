@@ -28,6 +28,7 @@ import { RemoteConfig } from './helpers/remote-config';
 import { OpsOperateProvider } from './class/ops-operate-provider';
 import { getMsSanitizerPanelViewProvider } from './class/ms-sanitizer-panel-view';
 import { getPerformancePanelViewProvider } from './class/performance-panel-view';
+import { getDumpTensorPanelViewProvider } from './class/dump-tensor-panel-view';
 
 import { MindStudioPluginInstaller } from './class/mind-studio-plugin-installer';
 import {
@@ -414,6 +415,14 @@ export async function activate(context: vscode.ExtensionContext) {
     getWebview: getPerformancePanelWebview,
   } = getPerformancePanelViewProvider(context, apiServer);
   context.subscriptions.push(performancePanelView, openPerformanceDisposable);
+
+  // DumpTensor数据视图（中间面板）
+  const {
+    dumpTensorPanelView,
+    openDumpTensorDisposable,
+    getWebview: getDumpTensorPanelWebview,
+  } = getDumpTensorPanelViewProvider(context, apiServer);
+  context.subscriptions.push(dumpTensorPanelView, openDumpTensorDisposable);
 
   // 初始化'仿真分析-选择采集内容'页面的Webview（打开配置页面前做 pyasc .py 校验）
   const simulatorOptionsProvider = new WebviewProvider(context, apiServer);
@@ -805,12 +814,9 @@ export async function activate(context: vscode.ExtensionContext) {
   const flashDumpTensorData = vscode.commands.registerCommand(
     COMMAND_FLASH_DUMP_TENSOR_DATA,
     async () => {
-      // 拿到dumpTensorRunData的视图实例，主动下发刷新命令
-      const dumpTensorRunData =
-        ViewServer.getInstance().providerWebViewMap.dumpTensorSidebarView;
-
-      console.log('ViewServer.getInstance()', dumpTensorRunData);
-      dumpTensorRunData?.webview?.postMessage({ command: 'dumpTensorRefreshData' });
+      // 拿到DumpTensor面板的webview，主动下发刷新命令
+      const webview = getDumpTensorPanelWebview();
+      webview?.postMessage({ command: 'dumpTensorRefreshData' });
     },
   );
   context.subscriptions.push(flashDumpTensorData);

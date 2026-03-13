@@ -83,6 +83,11 @@
           "id": "performance-panel-view",
           "title": "性能调优结果",
           "icon": "web/resources/power.svg"
+        },
+        {
+          "id": "dump-tensor-panel-view",
+          "title": "DumpTensor数据",
+          "icon": "web/resources/tensor.svg"
         }
       ]
     },
@@ -114,6 +119,14 @@
           "type": "webview",
           "id": "performancePanelView",
           "name": "性能调优",
+          "when": "true"
+        }
+      ],
+      "dump-tensor-panel-view": [
+        {
+          "type": "webview",
+          "id": "dumpTensorPanelView",
+          "name": "DumpTensor数据",
           "when": "true"
         }
       ],
@@ -184,6 +197,10 @@
       {
         "command": "huawei-op-devtools.open-performance-panel-view",
         "title": "性能调优"
+      },
+      {
+        "command": "huawei-op-devtools.open-dump-tensor-panel-view",
+        "title": "DumpTensor数据"
       },
       {
         "command": "vscodeJumpToFile",
