@@ -461,6 +461,7 @@
     "@mstt/shared": "workspace:*"
   },
   "devDependencies": {
+    "@rolldown/binding-win32-x64-msvc": "1.0.0-rc.9",
     "@eslint/js": "^9.39.2",
     "@stylistic/eslint-plugin": "^5.6.1",
     "@types/node": "^24.6.0",
@@ -486,7 +487,7 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.50.0",
     "unplugin-vue-components": "^30.0.0",
-    "vite": "npm:rolldown-vite@7.1.14",
+    "vite": "^8.0.0",
     "vue-tsc": "^3.2.1"
   }
 }
