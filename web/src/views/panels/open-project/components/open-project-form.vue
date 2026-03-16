@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { QuestionCircleOutlined } from '@ant-design/icons-vue';
+import { FileOutlined, FolderOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue';
 import { useOpenProject } from '../composables/use-open-project';
 import { OpenProjectFormRulesFactory } from '../composables/form-rules';
 
@@ -31,9 +31,19 @@ const connectionFormRules = OpenProjectFormRulesFactory.createFormRules();
             <QuestionCircleOutlined class="help-icon" />
           </a-tooltip>
         </template>
-        <a-auto-complete v-model:value="projectFormData.projectPath" :options="projectPathOptions"
-          :loading="projectPathLoading" placeholder="请输入工程位置，支持远程搜索"
-          @search="(val) => remoteSearch('projectPath', val)" @focus="handleSelectFolder" />
+        <div class="flex gap-2 items-center">
+          <a-auto-complete
+            v-model:value="projectFormData.projectPath"
+            :options="projectPathOptions"
+            :loading="projectPathLoading"
+            placeholder="请输入工程位置，支持远程搜索"
+            class="flex-1 min-w-0"
+            @search="(val) => remoteSearch('projectPath', val)"
+          />
+          <a-button type="default" size="middle" title="选择文件夹" @click="handleSelectFolder">
+            <template #icon><FolderOutlined /></template>
+          </a-button>
+        </div>
       </a-form-item>
       <a-form-item name="projectSH">
         <template #label>
@@ -43,9 +53,19 @@ const connectionFormRules = OpenProjectFormRulesFactory.createFormRules();
             <QuestionCircleOutlined class="help-icon" />
           </a-tooltip>
         </template>
-        <a-auto-complete v-model:value="projectFormData.projectSH" :options="projectSHOptions"
-          :loading="projectSHLoading" placeholder="请输入环境变量.sh文件地址，支持远程搜索"
-          @search="(val) => remoteSearch('projectSH', val)" @focus="handleSelectFile" />
+        <div class="flex gap-2 items-center">
+          <a-auto-complete
+            v-model:value="projectFormData.projectSH"
+            :options="projectSHOptions"
+            :loading="projectSHLoading"
+            placeholder="请输入环境变量.sh文件地址，支持远程搜索"
+            class="flex-1 min-w-0"
+            @search="(val) => remoteSearch('projectSH', val)"
+          />
+          <a-button type="default" size="middle" title="选择文件" @click="handleSelectFile">
+            <template #icon><FileOutlined /></template>
+          </a-button>
+        </div>
       </a-form-item>
     </a-form>
     <a-button type="primary" class="!mt-6 !w-[84px] !h-8 !rounded-none" style="float: right;" @click="handleOpenProject">
