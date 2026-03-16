@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://gitcode.com/kaocong/mstt"
   },
-  "version": "1.2.62",
+  "version": "1.2.7",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -297,6 +297,10 @@
       {
         "command": "huawei-op-devtools.refreshFolderDecorations",
         "title": "刷新文件夹装饰"
+      },
+      {
+        "command": "huawei-op-devtools.importDumpTensorBinFile",
+        "title": "解析生成DumpTensors数据"
       }
     ],
     "submenus": [
@@ -390,6 +394,11 @@
           "command": "huawei-op-devtools.reportVisualizationPerformance",
           "when": "explorerResourceIsFolder",
           "group": "operator@3.6"
+        },
+        {
+          "command": "huawei-op-devtools.importDumpTensorBinFile",
+          "when": "resourceScheme == 'file' && resourceExtname == '.bin'",
+          "group": "operator@3.7"
         }
       ],
       "operator.debug": [

@@ -20,8 +20,10 @@ import {
 
 import {
   openFile,
-  diffFiles
+  diffFiles,
+  importDumpTensorBinFile
 } from '@web/apis';
+import { selectFile } from '@web/apis/performance-run-data';
 
 const props = defineProps<{
   treeData: PerformanceExecutionRecord[];
@@ -237,6 +239,32 @@ const cancelCompare = () => {
 const openCompare = () => {
   isComparing.value = true
 }
+
+// 处理导入操作
+const handleImport = async () => {
+  try {
+    // 调用selectFile API选择bin文件
+    const selectedFilePath = await selectFile({
+      fileTypes: [
+        {
+          label: 'Binary Files',
+          extensions: ['bin']
+        }
+      ]
+    });
+
+    if (selectedFilePath) {
+      // 调用API导入bin文件
+      await importDumpTensorBinFile({ binFilePath: selectedFilePath });
+      message.success('导入成功');
+      // 通知父组件刷新数据
+      window.dispatchEvent(new CustomEvent('refreshTreeData'));
+    }
+  } catch (error) {
+    console.error('导入操作失败:', error);
+    message.error('导入操作失败');
+  }
+}
 </script>
 
 <template>
@@ -249,7 +277,7 @@ const openCompare = () => {
         <a-button class="default-btn" @click="cancelCompare">取消</a-button>
       </div>
       <div v-show="!isComparing" class="filter-bar">
-        <a-button class="default-btn">导入</a-button>
+        <a-button class="default-btn" @click="handleImport">导入</a-button>
         <a-button class="default-btn" @click="openCompare">对比</a-button>
       </div>
     </template>

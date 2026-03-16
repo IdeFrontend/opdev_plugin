@@ -897,6 +897,59 @@ export class BuildService {
       console.error('[startDumpTensor] 打开DumpTensor数据面板失败:', error);
     }
   }
+
+  /**
+   * 导入DumpTensor .bin文件
+   */
+  async importDumpTensorBinFile(binFilePath: string): Promise<void> {
+    try {
+      console.log('[importDumpTensorBinFile] 开始导入.bin文件:', binFilePath);
+      
+      // 获取当前目录
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (!workspaceFolders || workspaceFolders.length === 0) {
+        vscode.window.showErrorMessage('未找到工作区路径');
+        return;
+      }
+      const currentDir = workspaceFolders[0].uri.fsPath;
+      const tempDataPath = path.join(currentDir, '.vscode', 'dump_tensor_temp_data');
+      const dumpTensorPath = path.join(currentDir, '.vscode', 'DumpTensor');
+
+      // 删除临时数据目录
+      console.log('[importDumpTensorBinFile] 删除临时数据目录:', tempDataPath);
+      try {
+        if (fs.existsSync(tempDataPath)) {
+          fs.rmSync(tempDataPath, { recursive: true, force: true });
+          console.log('[importDumpTensorBinFile] 临时数据目录已删除');
+        }
+      } catch (error) {
+        console.error('[importDumpTensorBinFile] 删除临时数据目录失败:', error);
+      }
+
+      // 确保临时数据目录存在
+      if (!fs.existsSync(tempDataPath)) {
+        fs.mkdirSync(tempDataPath, { recursive: true });
+        console.log('[importDumpTensorBinFile] 创建临时数据目录:', tempDataPath);
+      }
+
+      // 复制选中的.bin文件到临时目录
+      const fileName = path.basename(binFilePath);
+      const destPath = path.join(tempDataPath, fileName);
+      fs.copyFileSync(binFilePath, destPath);
+      console.log('[importDumpTensorBinFile] .bin文件已复制到临时目录:', destPath);
+
+      // 执行show_kernel_debug_data命令
+      await this.executeShowKernelDebugData(tempDataPath, dumpTensorPath);
+      
+      vscode.window.showInformationMessage('导入DumpTensor .bin文件成功');
+      
+      // 打开DumpTensor数据面板并刷新数据
+      await this.openDumpTensorPanel();
+    } catch (error) {
+      console.error('[importDumpTensorBinFile] 导入DumpTensor .bin文件失败:', error);
+      vscode.window.showErrorMessage('导入DumpTensor .bin文件失败');
+    }
+  }
 }
 
 export const buildService = new BuildService();

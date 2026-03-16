@@ -76,7 +76,7 @@ implements vscode.WebviewViewProvider {
     });
   }
 
-  private handleWebviewMessage(message: any): void {
+  private async handleWebviewMessage(message: any) {
     // 处理获取主题命令
     if (message.command === 'getTheme') {
       const currentTheme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
@@ -87,10 +87,44 @@ implements vscode.WebviewViewProvider {
       return;
     }
 
+    // 处理导入DumpTensor .bin文件命令
+    if (message.command === 'importDumpTensorBinFile') {
+      await this.importDumpTensorBinFile();
+      return;
+    }
+
     for (const messageItem of webviewMessageList) {
       if (message.command === messageItem.command) {
         messageItem.callback(message, this);
       }
+    }
+  }
+
+  private async importDumpTensorBinFile() {
+    try {
+      // 打开文件选择对话框，只允许选择.bin文件
+      const fileUri = await vscode.window.showOpenDialog({
+        canSelectFiles: true,
+        canSelectFolders: false,
+        canSelectMany: false,
+        filters: {
+          'Binary Files': ['bin'],
+          'All Files': ['*']
+        },
+        title: '选择DumpTensor .bin文件'
+      });
+
+      if (fileUri && fileUri.length > 0) {
+        const binFilePath = fileUri[0].fsPath;
+        console.log('[DumpTensorPanelView] 选择的.bin文件路径:', binFilePath);
+        
+        // 调用API导入文件
+        const { buildService } = await import('../service/build-service.js');
+        await buildService.importDumpTensorBinFile(binFilePath);
+      }
+    } catch (error) {
+      console.error('[DumpTensorPanelView] 导入DumpTensor .bin文件失败:', error);
+      vscode.window.showErrorMessage('导入DumpTensor .bin文件失败');
     }
   }
 

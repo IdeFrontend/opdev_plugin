@@ -274,7 +274,7 @@
             <!-- 右侧：算子调试示意图 -->
             <div class="w-1/2 max-[992px]:w-full max-[992px]:mt-6">
               <a-image
-                :src="runImg"
+                :src="debug"
                 class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
               />
             </div>
@@ -422,6 +422,7 @@ import tipBase_1_3 from '@/assets/imgs/torch_library_template.png';
 import writeImg from '@/assets/imgs/write.png';
 import buildImg from '@/assets/imgs/build.gif';
 import runImg from '@/assets/imgs/run.gif';
+import debug from '@/assets/imgs/debug.gif';
 import checkImg from '@/assets/imgs/check.gif';
 import selectCheckImg from '@/assets/imgs/selectCheck.gif';
 import analysisImg from '@/assets/imgs/analysis.gif';

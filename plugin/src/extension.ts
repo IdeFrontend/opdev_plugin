@@ -816,10 +816,31 @@ export async function activate(context: vscode.ExtensionContext) {
     async () => {
       // 拿到DumpTensor面板的webview，主动下发刷新命令
       const webview = getDumpTensorPanelWebview();
-      webview?.postMessage({ command: 'dumpTensorRefreshData' });
+      if (webview) {
+        webview.postMessage({ command: 'dumpTensorRefreshData' });
+      } else {
+        console.log('[flashDumpTensorData] Webview not available, skipping refresh');
+      }
     },
   );
   context.subscriptions.push(flashDumpTensorData);
+
+  // 注册导入DumpTensor .bin文件命令
+  const importDumpTensorBinFileCommand = vscode.commands.registerCommand(
+    'huawei-op-devtools.importDumpTensorBinFile',
+    async (uri) => {
+      try {
+        if (uri && uri.fsPath) {
+          const { buildService } = await import('./service/build-service.js');
+          await buildService.importDumpTensorBinFile(uri.fsPath);
+        }
+      } catch (error) {
+        console.error('导入DumpTensor .bin文件失败:', error);
+        vscode.window.showErrorMessage('导入DumpTensor .bin文件失败');
+      }
+    },
+  );
+  context.subscriptions.push(importDumpTensorBinFileCommand);
 
   // 工作区变化监听
   const watchWorkSpaceFolderChange =
