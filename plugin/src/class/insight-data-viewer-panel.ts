@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -44,7 +45,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     this.insightPluginBasePath = this.getInsightPluginBasePath();
 
     if (this.insightPluginBasePath === '') {
-      vscode.window.showInformationMessage('从环境变量获取 insight-vscode-plugin 路径失败，请检查环境变量 INSIGHT_HOME_PATH 是否正确，如不存在请联系管理员设置');
+      vscode.window.showInformationMessage(t('insight.insightPathFailed'));
 
       return;
     }
@@ -128,7 +129,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     // 创建新的 panel
     const panel = vscode.window.createWebviewPanel(
       'insightDataViewer',
-      '性能分析',
+      t('insight.performanceAnalysis'),
       column || vscode.ViewColumn.Active,
       {
         enableScripts: true,
@@ -460,7 +461,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       const port = await this.scanPort();
 
       if (!port) {
-        const errorMsg = '无法获取可用端口';
+        const errorMsg = t('insight.cannotGetPort');
 
         console.error(`[InsightDataViewerPanel] ${errorMsg}`);
         vscode.window.showErrorMessage(errorMsg);
@@ -513,7 +514,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
         this.profilerServerProcess = null;
 
         if (code !== 0 && code !== null) {
-          vscode.window.showWarningMessage(`profiler_server 进程异常退出，退出码: ${code}`);
+          vscode.window.showWarningMessage(t('insight.profilerServerExitCode', { code: String(code) }));
         }
       });
 
@@ -523,7 +524,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
           '[InsightDataViewerPanel] 启动 profiler_server 失败:',
           error,
         );
-        vscode.window.showErrorMessage(`启动 profiler_server 失败: ${error.message}`);
+        vscode.window.showErrorMessage(t('insight.profilerServerStartFailed', { error: error.message }));
         this.profilerServerProcess = null;
       });
 

@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import { getOpRunPath } from '@plugin/domain/utils/op-util';
 import {
   joinCommands,
@@ -65,12 +66,12 @@ export class PyAscCommandStrategy implements CommandStrategy {
 
   buildOpCommand(params: CommandBuildParams): string {
     // PyAsc 类型不支持 buildExampleCommand
-    throw new Error('PyAsc 类型不支持 buildOpCommand 操作');
+    throw new Error(t('pyasc.buildOpNotSupported'));
   }
 
   buildExampleCommand(params: CommandBuildParams): string {
     // PyAsc 类型不支持 buildExampleCommand
-    throw new Error('PyAsc 类型不支持 buildExampleCommand 操作');
+    throw new Error(t('pyasc.buildExampleNotSupported'));
   }
 
   buildSanitizerCommand(
@@ -81,7 +82,7 @@ export class PyAscCommandStrategy implements CommandStrategy {
     exampleTargetFile?: string
   ): string {
     // PyAsc 类型不支持 buildSanitizerCommand
-    throw new Error('PyAsc 类型不支持 buildSanitizerCommand 操作');
+    throw new Error(t('pyasc.buildSanitizerNotSupported'));
   }
 
   buildSimulateCommand(params: ProfilerCommandParams): string {
@@ -92,7 +93,7 @@ export class PyAscCommandStrategy implements CommandStrategy {
 
     if (!effectiveOperator) {
       if (!project || !project.project_path) {
-        throw new Error(`无法生成仿真命令：找不到算子记录 ${config.op}，且项目路径不可用`);
+        throw new Error(t('cann.cannotGenerateSimulateCommand', { op: config.op }));
       }
 
       // 创建临时算子对象，使用项目路径作为 op_path
@@ -123,7 +124,7 @@ export class PyAscCommandStrategy implements CommandStrategy {
 
     if (!effectiveOperator) {
       if (!project || !project.project_path) {
-        throw new Error(`无法生成上板命令：找不到算子记录 ${config.op}，且项目路径不可用`);
+        throw new Error(t('cann.cannotGenerateOnBoardCommand', { op: config.op }));
       }
 
       // 创建临时算子对象，使用项目路径作为 op_path

@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -38,11 +39,11 @@ export class ConfigService {
       await postConfig('build', params.data as unknown[]);
 
       if (params.showMessage) {
-        vscode.window.showInformationMessage('保存编译配置成功');
+        vscode.window.showInformationMessage(t('config.saveBuildConfigSuccess'));
       }
     }
     catch {
-      vscode.window.showErrorMessage('保存编译配置失败');
+      vscode.window.showErrorMessage(t('config.saveBuildConfigFailed'));
     }
   }
 
@@ -53,7 +54,7 @@ export class ConfigService {
     await postConfig(params.type, params.data as unknown[]);
 
     if (params.showMessage) {
-      vscode.window.showInformationMessage('保存配置成功');
+      vscode.window.showInformationMessage(t('config.saveConfigSuccess'));
     }
   }
 
@@ -139,11 +140,11 @@ export class ConfigService {
       ]);
 
       if (params.showMessage) {
-        vscode.window.showInformationMessage('保存异常检测配置成功');
+        vscode.window.showInformationMessage(t('config.saveSanitizerConfigSuccess'));
       }
     }
     catch {
-      vscode.window.showErrorMessage('保存异常检测配置失败');
+      vscode.window.showErrorMessage(t('config.saveSanitizerConfigFailed'));
     }
   }
 }

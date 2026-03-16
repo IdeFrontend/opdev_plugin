@@ -6,13 +6,13 @@
 
 <script setup>
 import { ref, nextTick, onMounted, onUnmounted, provide } from 'vue';
+import { t } from 'i18next';
 import { useTheme } from '@web/composables/use-theme';
 import optionsList from './components/options-list.vue';
 import configDetail from './components/config-detail.vue';
 import { getConfigData, getTargetTab, checkMultipleOperators, getProjectType } from '@web/apis';
 import { useOpprofConfig } from './composables/use-opprof-config'
 
-// 使用主题管理组合式函数
 const { themeConfig, actualTheme } = useTheme();
 
 // 向子组件提供主题状态，避免重复调用 useTheme
@@ -117,7 +117,7 @@ onUnmounted(() => {
       <div class="w-full p-5 shadow-[0_2px_12px_0_rgba(0,0,0,0.48)] z-10" :class="actualTheme === 'dark' ? 'bg-[#1f1f1f]' : 'bg-white'">
         <div class="flex items-center justify-between">
           <div class="text-[22px] font-bold" :class="actualTheme === 'dark' ? 'text-white' : 'text-[#1f1f1f]'">
-            算子工程配置
+            {{ t('web.config.title') }}
           </div>
         </div>
       </div>

@@ -2,6 +2,7 @@
 import {
     ref, onBeforeMount,
 } from 'vue';
+import { t } from 'i18next';
 import { message } from 'ant-design-vue';
 import { useTheme } from '@web/composables/use-theme';
 import {
@@ -55,7 +56,7 @@ const handleConfirm = async () => {
   const hasRunningTask = await checkTaskStatus();
   console.log('hasRunningTask', hasRunningTask);
   if (hasRunningTask) {
-    message.info('存在未执行完毕的任务，请稍后再试');
+    message.info(t('web.options.taskRunning'));
     return;
   }
   try {
@@ -80,6 +81,7 @@ const handleConfirm = async () => {
   }
   catch (error) {
     console.error('异常检测启动失败: ', error);
+    message.error(t('web.options.sanitizerFailed'));
   }
   finally {
     isExecuting.value = false;
@@ -91,46 +93,46 @@ const handleConfirm = async () => {
     <a-config-provider :theme="themeConfig">
         <div class="sanitizer-config-page">
             <div class="page-header">
-                异常检测-选择检测内容
+                {{ t('web.options.sanitizer.title') }}
             </div>
 
             <div class="sanitizer-content">
                 <a-checkbox v-model:checked="form.tool.memcheck" @change="saveSanitizerForm">
-                    内存检测
+                    {{ t('web.options.sanitizer.memory') }}
                 </a-checkbox>
                 <div v-if="form.tool.memcheck" class="mem-check">
                     <div class="desc">
-                        基础检测:默认会开启非法读写、多核踩踏、非对齐访问和非法释放
+                        {{ t('web.options.sanitizer.memoryBase') }}
                     </div>
                     <div class="desc">
-                        可选检测:
+                        {{ t('web.options.sanitizer.memoryExtra') }}
                     </div>
                     <div class="mem-option">
                         <a-checkbox v-model:checked="form.memcheckOption['leak-check']" @change="saveSanitizerForm">
-                            内存泄漏
+                            {{ t('web.options.sanitizer.memoryLeak') }}
                         </a-checkbox>
                         <a-checkbox 
                             v-model:checked="form.memcheckOption['check-unused-memory']"
                             style="margin-left: 12px;"
                             @change="saveSanitizerForm">
-                            分配内存未使用
+                            {{ t('web.options.sanitizer.allocUnused') }}
                         </a-checkbox>
                     </div>
                 </div>
                 <div class="check-item-row">
                     <a-checkbox v-model:checked="form.tool.racecheck" @change="saveSanitizerForm">
-                        竞争检测
+                        {{ t('web.options.sanitizer.race') }}
                     </a-checkbox>
                 </div>
                 <div class="check-item-row">
                     <a-checkbox v-model:checked="form.tool.initcheck" @change="saveSanitizerForm">
-                        未初始化检测
+                        {{ t('web.options.sanitizer.uninit') }}
                     </a-checkbox>
                 </div>
 
                 <div class="footer-actions">
                     <a-button type="primary" :loading="isExecuting" @click="handleConfirm">
-                        立即开始
+                        {{ t('web.options.sanitizer.startNow') }}
                     </a-button>
                 </div>
             </div>

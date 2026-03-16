@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as path from 'path';
 import AdmZip from 'adm-zip';
@@ -91,7 +92,7 @@ export const performanceMethods = {
     const { dirPath } = params;
 
     if (!dirPath) {
-      throw new Error('目录路径不能为空');
+      throw new Error(t('performanceData.dirPathEmpty'));
     }
 
     try {
@@ -102,28 +103,28 @@ export const performanceMethods = {
       try {
         const stat = await vscode.workspace.fs.stat(dirUri);
         if (stat.type !== vscode.FileType.Directory) {
-          throw new Error('路径不是目录');
+          throw new Error(t('performanceData.pathNotDir'));
         }
       }
       catch {
-        throw new Error(`目录不存在: ${dirPath}`);
+        throw new Error(t('performanceData.dirNotExist', { path: dirPath }));
       }
 
       // 读取目录下所有文件内容
       const content = await readDirectoryFiles(dirPath);
 
       if (!content.trim()) {
-        vscode.window.showWarningMessage('目录为空，无内容可复制');
+        vscode.window.showWarningMessage(t('performanceData.dirEmptyNoCopy'));
         return;
       }
 
       // 复制到剪贴板
       await vscode.env.clipboard.writeText(content);
-      vscode.window.showInformationMessage('报告内容已复制到剪贴板');
+      vscode.window.showInformationMessage(t('performanceData.reportCopied'));
     }
     catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      vscode.window.showErrorMessage(`复制报告失败: ${errorMessage}`);
+      vscode.window.showErrorMessage(t('performanceData.copyReportFailed', { error: errorMessage }));
       throw error;
     }
   },
@@ -136,20 +137,20 @@ export const performanceMethods = {
     const { dirPath } = params;
 
     if (!dirPath) {
-      throw new Error('目录路径不能为空');
+      throw new Error(t('performanceData.dirPathEmpty'));
     }
 
     // 显示下载进度
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: '正在下载报告',
+        title: t('performanceData.downloadingReport'),
         cancellable: false,
       },
       async (progress) => {
         progress.report({
           increment: 0,
-          message: '正在检查目录...',
+          message: t('performanceData.checkingDir'),
         });
 
         // 创建目录 URI
@@ -157,13 +158,13 @@ export const performanceMethods = {
 
         // 检查目录是否存在
         try {
-          const stat = await vscode.workspace.fs.stat(dirUri);
-          if (stat.type !== vscode.FileType.Directory) {
-            throw new Error('路径不是目录');
+const stat = await vscode.workspace.fs.stat(dirUri);
+        if (stat.type !== vscode.FileType.Directory) {
+            throw new Error(t('performanceData.pathNotDir'));
           }
         }
         catch {
-          throw new Error(`目录不存在: ${dirPath}`);
+          throw new Error(t('performanceData.dirNotExist', { path: dirPath }));
         }
 
         // 获取目录名
@@ -172,7 +173,7 @@ export const performanceMethods = {
 
         progress.report({
           increment: 20,
-          message: '正在准备下载...',
+          message: t('performanceData.preparingDownload'),
         });
 
         try {
@@ -180,30 +181,30 @@ export const performanceMethods = {
           const result = await fileService.saveFileToLocal({
             sourcePath: dirPath,
             filename: zipFileName,
-            dialogTitle: '保存报告文件',
+            dialogTitle: t('performanceData.saveReportFile'),
             allowedTypes: ['zip'],
           });
 
           if (result) {
             progress.report({
               increment: 100,
-              message: '下载完成',
+              message: t('performanceData.downloadComplete'),
             });
 
             // 如果是桌面版本（返回 boolean），显示成功消息
             if (typeof result === 'boolean' && result) {
-              vscode.window.showInformationMessage('文件已成功下载');
+              vscode.window.showInformationMessage(t('performanceData.fileDownloaded'));
             }
             // Web 版本会通过浏览器自动下载，不需要额外提示
           }
           else {
             // 用户取消了保存对话框
-            vscode.window.showInformationMessage('下载已取消');
+            vscode.window.showInformationMessage(t('performanceData.downloadCancelled'));
           }
         }
         catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
-          vscode.window.showErrorMessage(`下载报告失败: ${errorMessage}`);
+          vscode.window.showErrorMessage(t('performanceData.downloadReportFailed', { error: errorMessage }));
           throw error;
         }
       },
@@ -214,7 +215,7 @@ export const performanceMethods = {
     const { filePath1, filePath2 } = params;
 
     if (!filePath1 || !filePath2) {
-      vscode.window.showErrorMessage('缺少文件路径参数');
+      vscode.window.showErrorMessage(t('performanceData.missingFilePath'));
       return;
     }
 
@@ -234,7 +235,7 @@ export const performanceMethods = {
       console.log(`[diffFiles]:成功打开文件对比: ${filePath1} ↔ ${filePath2}`);
     } catch (error) {
       console.error('[diffFiles]:执行文件对比命令失败:', error);
-      vscode.window.showErrorMessage(`文件对比失败: ${(error as Error).message}`);
+      vscode.window.showErrorMessage(t('performanceData.fileCompareFailed', { error: (error as Error).message }));
     }
   },
 };

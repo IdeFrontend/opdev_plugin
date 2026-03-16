@@ -10,6 +10,7 @@ import {
   getWorkspace,
 } from '@web/apis';
 import { selectFolder, selectFile } from '@web/apis/performance-run-data';
+import { t } from 'i18next';
 import { ValidationStrategyFactory } from './validation-strategies';
 import { MessageHandlerStrategyManager } from './message-handler-strategies';
 import { SearchStrategyFactory } from './search-strategies';
@@ -119,11 +120,10 @@ export function useLinkSSH(selectedTemplate?: Ref<'helloworld' | 'addn' | 'torch
     }
     catch (error) {
       console.error('选择目录失败:', error);
-      message.error('选择目录失败');
+      message.error(t('web.link.selectFolderFailed'));
     }
   };
 
-  // 选择文件
   const handleSelectFile = async () => {
     try {
       const selectedPath = await selectFile({
@@ -135,11 +135,10 @@ export function useLinkSSH(selectedTemplate?: Ref<'helloworld' | 'addn' | 'torch
     }
     catch (error) {
       console.error('选择文件失败:', error);
-      message.error('选择文件失败');
+      message.error(t('web.link.selectFileFailed'));
     }
   };
 
-  // 创建项目
   const handleCreatedProject = async () => {
     // 先进行表单校验
     try {
@@ -166,11 +165,11 @@ export function useLinkSSH(selectedTemplate?: Ref<'helloworld' | 'addn' | 'torch
         createOperatorProjectDictoryFileType: selectedId_type.value,
         templateName,
       });
-      message.success('算子工程创建成功');
+      message.success(t('web.link.projectCreated'));
     }
     catch (error) {
       console.error('创建项目失败:', error);
-      message.error('创建项目失败');
+      message.error(t('web.link.projectCreateFailed'));
     }
   };
 

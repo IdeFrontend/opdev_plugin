@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -105,7 +106,7 @@ async function checkMultipleOperatorsInternal(): Promise<{
         console.log(
           '[checkMultipleOperators] 标准自定义算子，从 ops_list 读取:',
           `普通算子: ${opsList.length}, experimental算子: ${experimentalOpsList.length}`,
-          '算子列表:',
+          t('home.operatorList'),
           operators.map(op => `${op.name} (${op.isExperimental ? 'ex' : 'normal'}, compiled: ${op.isCompiled})`),
         );
 
@@ -134,7 +135,7 @@ async function checkMultipleOperatorsInternal(): Promise<{
       console.log(
         '[checkMultipleOperators] 标准自定义算子，找到算子工程数量:',
         operators.length,
-        '算子列表:',
+        t('home.operatorList'),
         operators.map(op => `${op.name} (${op.isExperimental ? 'ex' : 'normal'})`),
       );
 
@@ -196,7 +197,7 @@ async function checkMultipleOperatorsInternal(): Promise<{
     console.log(
       '[checkMultipleOperators] 找到算子工程数量:',
       operatorProjects.length,
-      '路径:',
+      t('home.path'),
       operatorProjects,
     );
 
@@ -251,13 +252,13 @@ export const homeMethods = {
         // 如果没有注册的项目，尝试直接检测工作区路径
         const detection = await OperatorProjectDetector.detectOperatorProject(workspacePath);
         if (detection.isOperatorProject && detection.projectType) {
-          const typeNameMap: Record<string, string> = {
-            [OperatorProjectType.STANDARD_CUSTOM]: '标准自定义算子',
-            [OperatorProjectType.ASCEND_C]: '<<<>>>算子',
-            [OperatorProjectType.TORCH_LIBRARY]: 'torch_library算子',
-            [OperatorProjectType.PYASC]: 'pyasc算子',
+          const typeNameKeyMap: Record<string, string> = {
+            [OperatorProjectType.STANDARD_CUSTOM]: 'home.projectTypeStandardCustom',
+            [OperatorProjectType.ASCEND_C]: 'home.projectTypeAscendC',
+            [OperatorProjectType.TORCH_LIBRARY]: 'home.projectTypeTorchLibrary',
+            [OperatorProjectType.PYASC]: 'home.projectTypePyasc',
           };
-          const projectTypeName = typeNameMap[detection.projectType] || detection.projectType;
+          const projectTypeName = typeNameKeyMap[detection.projectType] ? t(typeNameKeyMap[detection.projectType]) : detection.projectType;
           return {
             projectType: detection.projectType,
             projectTypeName,
@@ -268,14 +269,14 @@ export const homeMethods = {
       }
 
       // 将项目类型转换为中文名称（只包括实际的算子类型）
-      const typeNameMap: Record<string, string> = {
-        [OperatorProjectType.STANDARD_CUSTOM]: '标准自定义算子',
-        [OperatorProjectType.ASCEND_C]: '<<<>>>算子',
-        [OperatorProjectType.TORCH_LIBRARY]: 'torch_library算子',
-        [OperatorProjectType.PYASC]: 'pyasc算子',
+      const typeNameKeyMap: Record<string, string> = {
+        [OperatorProjectType.STANDARD_CUSTOM]: 'home.projectTypeStandardCustom',
+        [OperatorProjectType.ASCEND_C]: 'home.projectTypeAscendC',
+        [OperatorProjectType.TORCH_LIBRARY]: 'home.projectTypeTorchLibrary',
+        [OperatorProjectType.PYASC]: 'home.projectTypePyasc',
       };
 
-      const projectTypeName = typeNameMap[project.project_type] || project.project_type;
+      const projectTypeName = typeNameKeyMap[project.project_type] ? t(typeNameKeyMap[project.project_type]) : project.project_type;
 
       return {
         projectType: project.project_type,
@@ -303,11 +304,11 @@ export const homeMethods = {
       const activeEditor = vscode.window.activeTextEditor;
       const isPyFile = activeEditor?.document.fileName.endsWith('.py');
       if (!isPyFile) {
-        return { valid: false, message: '请先打开一个 .py 文件' };
+        return { valid: false, message: t('extension.openPyFirst') };
       }
       const workspaceFolders = vscode.workspace.workspaceFolders;
       if (!workspaceFolders || workspaceFolders.length === 0) {
-        return { valid: false, message: '未找到工作区路径' };
+        return { valid: false, message: t('task.workspacePathNotFound') };
       }
       return { valid: true };
     }
@@ -445,9 +446,9 @@ export const homeMethods = {
           console.log(
             '[checkMultipleOperators] 标准自定义算子，从 ops_list 读取:',
             `普通算子: ${opsList.length}, experimental算子: ${experimentalOpsList.length}`,
-            '算子列表:',
+            t('home.operatorList'),
             operators.map(op => `${op.name} (${op.isExperimental ? 'ex' : 'normal'}, compiled: ${op.isCompiled})`),
-            '支持异常检测与调优:',
+            t('home.supportsSanitizerAndTuning'),
             supportsSanitizerAndTuning,
           );
 
@@ -477,7 +478,7 @@ export const homeMethods = {
         console.log(
           '[checkMultipleOperators] 标准自定义算子，找到算子工程数量:',
           operators.length,
-          '算子列表:',
+          t('home.operatorList'),
           operators.map(op => `${op.name} (${op.isExperimental ? 'ex' : 'normal'})`),
         );
 
@@ -539,7 +540,7 @@ export const homeMethods = {
       console.log(
         '[checkMultipleOperators] 找到算子工程数量:',
         operatorProjects.length,
-        '路径:',
+        t('home.path'),
         operatorProjects,
       );
 

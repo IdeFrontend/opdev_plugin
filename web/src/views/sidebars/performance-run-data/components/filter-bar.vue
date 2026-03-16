@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from 'i18next';
 import {
   UpOutlined,
   CaretUpFilled,
@@ -36,7 +37,7 @@ function handleMarked() {
       @click="handleExecutionTime"
     >
       <div class="execute-time-sorter-inner">
-        执行时间
+        {{ t('web.perf.executionTime') }}
         <div class="sort-icons">
           <CaretUpFilled v-if="sortOrder === 'asc'" />
           <UpOutlined v-else />
@@ -49,7 +50,7 @@ function handleMarked() {
       class="execute-time-sorter-button"
       @click="handleMarked"
     >
-      已标记 <FlagFilled
+      {{ t('web.perf.marked') }} <FlagFilled
         v-if="isMarkedOnly"
         class="flag-outlined-icon"
       /><FlagOutlined

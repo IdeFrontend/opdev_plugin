@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -24,7 +25,7 @@ function formatTimestampToYYYYMMDD(timestamp: number): string {
 
   // Validate date
   if (isNaN(date.getTime())) {
-    throw new Error('无效的时间戳');
+    throw new Error(t('runData.invalidTimestamp'));
   }
 
   const year = date.getFullYear();

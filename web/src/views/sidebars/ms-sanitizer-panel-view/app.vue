@@ -4,7 +4,7 @@
       <!-- 左侧：报告列表（原异常检测结果可视化） -->
       <div class="w-[260px] shrink-0 flex flex-col border-r" :class="getBorderClass()">
         <div class="leading-6 px-3 flex justify-between items-center" :class="getBgLightClass()">
-          <span :class="getTextClass()">异常检测结果</span>
+          <span :class="getTextClass()">{{ t('web.sanitizerPanel.sanitizerResult') }}</span>
         </div>
         <div class="flex gap-2 my-3 px-3">
           <a-button
@@ -13,7 +13,7 @@
             @click="handleExecutionTime"
           >
             <div class="flex items-center">
-              执行时间
+              {{ t('web.perf.executionTime') }}
               <div class="sort-icons">
                 <CaretUpFilled v-if="sortOrder === 'asc'" />
                 <UpOutlined v-else />
@@ -26,7 +26,7 @@
             class="execute-time-sorter-button"
             @click="filterMark"
           >
-            已标记
+            {{ t('web.perf.marked') }}
             <FlagFilled
               v-if="isMarkedOnly"
               class="flag-outlined-icon"
@@ -78,7 +78,7 @@
           class="flex-1 flex items-center justify-center text-sm"
           :class="getTextMutedClass()"
         >
-          暂无报告
+          {{ t('web.sanitizerPanel.noReport') }}
         </div>
       </div>
       <!-- 右侧：选中报告的检测结果 -->
@@ -91,7 +91,7 @@
             class="leading-6 px-5 flex justify-between items-center"
             :class="getBgLightClass()"
           >
-            <span :class="getTextClass()">检测结果</span>
+            <span :class="getTextClass()">{{ t('web.sanitizerPanel.detectionResult') }}</span>
             <LeftSquareOutlined
               v-if="!showDetail"
               class="cursor-pointer"
@@ -107,25 +107,25 @@
               <template #content>
                 <div class="w-[378px]">
                   <p class="text-sm m-0" :class="getTextClass()">
-                    检测信息
+                    {{ t('web.sanitizerPanel.detectionInfo') }}
                   </p>
                   <p class="text-xs leading-4 py-0.5 m-0" :class="getTextMutedClass()">
-                    检测时间
+                    {{ t('web.sanitizerPanel.detectionTime') }}
                   </p>
                   <p class="leading-4 text-xs py-0.5 m-0" :class="getTextClass()">
                     {{ formatTimestamp(msScantinizerInfo.timestamp) }}
                   </p>
                   <p class="text-xs leading-4 py-0.5 m-0" :class="getTextMutedClass()">
-                    检测内容
+                    {{ t('web.sanitizerPanel.detectionContent') }}
                   </p>
                   <p class="leading-4 text-xs py-0.5 m-0" :class="getTextClass()">
-                    内存检测：非法读写、多核踩踏、非对齐访问和非法释放，内存泄漏、分配内存未使用、Device侧内存检测、CANN软件栈内存检测、竞争检测、未初始化监测
+                    {{ t('web.sanitizerPanel.detectionContentDesc') }}
                   </p>
                   <p class="text-xs leading-4 py-0.5 m-0" :class="getTextMutedClass()">
-                    检测范围
+                    {{ t('web.sanitizerPanel.detectionScope') }}
                   </p>
                   <p class="leading-4 text-xs py-0.5 m-0" :class="getTextClass()">
-                    全局监测
+                    {{ t('web.sanitizerPanel.globalMonitor') }}
                   </p>
                 </div>
               </template>
@@ -164,7 +164,7 @@
             :class="getBgHoverClass()"
             @click="filterTableData('memory')"
           >
-            <span :class="getTextClass()">内存</span>
+            <span :class="getTextClass()">{{ t('web.sanitizerPanel.memory') }}</span>
             <span class="pt-1" :class="getTextClass()">{{ memoryCount }}</span>
           </div>
           <div
@@ -172,7 +172,7 @@
             :class="getBgHoverClass()"
             @click="filterTableData('memoryContention')"
           >
-            <span :class="getTextClass()">内存竞争</span>
+            <span :class="getTextClass()">{{ t('web.sanitizerPanel.memoryRace') }}</span>
             <span class="pt-1" :class="getTextClass()">{{ memoryContentionCount }}</span>
           </div>
           <div
@@ -180,7 +180,7 @@
             :class="getBgHoverClass()"
             @click="filterTableData('uninitialized')"
           >
-            <span :class="getTextClass()">未初始化</span>
+            <span :class="getTextClass()">{{ t('web.sanitizerPanel.uninitialized') }}</span>
             <span class="pt-1" :class="getTextClass()">{{ uninitializedCount }}</span>
           </div>
           <div
@@ -188,7 +188,7 @@
             :class="getBgHoverClass()"
             @click="filterTableData('synchronize')"
           >
-            <span :class="getTextClass()">同步</span>
+            <span :class="getTextClass()">{{ t('web.sanitizerPanel.sync') }}</span>
             <span class="pt-1" :class="getTextClass()">{{ synchronizeCount }}</span>
           </div>
         </div>
@@ -222,7 +222,7 @@
                   {{ record.fileLink }}
                 </a-button>
                 <span v-else>
-                  该问题为HOST侧的问题，按照右侧详情信息进行排查。
+                  {{ t('web.sanitizerPanel.hostSideHint') }}
                 </span>
               </template>
               <template v-if="column.dataIndex === 'question'">
@@ -237,7 +237,7 @@
         class="w-[400px] overflow-hidden"
       >
         <div class="leading-6 px-5" :class="getBgLightClass()">
-          <span :class="getTextClass()">详情</span>
+          <span :class="getTextClass()">{{ t('web.sanitizerPanel.detail') }}</span>
           <RightSquareOutlined
             class="cursor-pointer"
             @click="showDetail = false"
@@ -246,21 +246,21 @@
         <div class="px-5 break-all">
           <div class="flex items-center mt-5">
             <div class="h-2.5 w-1 bg-white mr-1" />
-            <span :class="getTextClass()">问题</span>
+            <span :class="getTextClass()">{{ t('web.sanitizerPanel.problem') }}</span>
           </div>
           <div class="mt-2.5" :class="getTextClass()">
             {{ questionDetails.title }}
           </div>
           <div class="flex items-center mt-5">
             <div class="h-2.5 w-1 bg-white mr-1" />
-            <span :class="getTextSecondaryClass()">问题详情</span>
+            <span :class="getTextSecondaryClass()">{{ t('web.sanitizerPanel.problemDetail') }}</span>
           </div>
           <div class="mt-2.5" :class="getTextClass()">
             {{ questionDetails.originData }}
           </div>
           <div class="flex items-center mt-5">
             <div class="h-2.5 w-1 bg-white mr-1" />
-            <span :class="getTextClass()">问题类型详情</span>
+            <span :class="getTextClass()">{{ t('web.sanitizerPanel.problemTypeDetail') }}</span>
           </div>
           <div class="mt-2.5" :class="getTextClass()">
             {{ questionMap.get(questionDetails.question || '') }}
@@ -276,13 +276,14 @@
         class="flex-1 flex items-center justify-center text-sm"
         :class="[getTextMutedClass(), getBgEmptyClass()]"
       >
-        请选择左侧报告查看检测结果
+        {{ t('web.sanitizerPanel.selectReportHint') }}
       </div>
     </div>
   </a-config-provider>
 </template>
 
 <script setup lang="ts">
+import { t } from 'i18next';
 import {
   ref, computed, onBeforeUnmount, onMounted, type Component, h,
 } from 'vue';
@@ -391,11 +392,11 @@ const handleSelectReport = (item: { path: string; title?: string; timestamp?: nu
 const handleCopyReport = async (data: { path: string }) => {
   try {
     await navigator.clipboard.writeText(data.path);
-    message.success('路径已复制到剪贴板');
+    message.success(t('web.perf.pathCopied'));
   }
   catch (error) {
     console.error('复制路径失败:', error);
-    message.error('复制路径失败');
+    message.error(t('web.perf.copyFailed'));
   }
 };
 
@@ -442,7 +443,7 @@ const columns = computed(() => {
 
   return [
     {
-      title: '问题描述',
+      title: t('web.sanitizerPanel.problemDesc'),
       dataIndex: 'type',
       width: '50%',
       ellipsis: true,
@@ -452,7 +453,7 @@ const columns = computed(() => {
         record.type?.includes(String(value)) ?? false,
     },
     {
-      title: '问题类型',
+      title: t('web.sanitizerPanel.problemType'),
       dataIndex: 'question',
       width: '12%',
       filters: questionTypes,
@@ -461,7 +462,7 @@ const columns = computed(() => {
         record.question?.includes(String(value)) ?? false,
     },
     {
-      title: '源码文件',
+      title: t('web.sanitizerPanel.sourceFile'),
       dataIndex: 'fileLink',
       width: '30%',
       filters: allFilePath.value,
@@ -471,7 +472,7 @@ const columns = computed(() => {
       ellipsis: true,
     },
     {
-      title: '行数',
+      title: t('web.sanitizerPanel.lineNumber'),
       dataIndex: 'row',
       width: '8%',
     },

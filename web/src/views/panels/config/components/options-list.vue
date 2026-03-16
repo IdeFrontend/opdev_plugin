@@ -8,8 +8,8 @@
 import {
   ref, watch, inject, computed,
 } from 'vue';
+import { t } from 'i18next';
 
-// 从父组件注入主题状态
 const actualTheme = inject('actualTheme', computed(() => 'dark'));
 
 const Actived = ref('build');
@@ -65,7 +65,7 @@ const updateActiveOption = (item) => {
           alt=""
           class="img"
         />
-        编译部署
+        {{ t('web.config.optionBuild') }}
       </div>
       <div
         v-if="projectType !== 'pyasc'"
@@ -78,7 +78,7 @@ const updateActiveOption = (item) => {
           alt=""
           class="img"
         />
-        异常检测
+        {{ t('web.config.optionSanitizer') }}
       </div>
       <div
         v-if="supportsSanitizerAndTuning"
@@ -91,7 +91,7 @@ const updateActiveOption = (item) => {
           alt=""
           class="img"
         />
-        性能调优
+        {{ t('web.config.optionPerformance') }}
       </div>
       <div
         class="options-list-item"
@@ -103,7 +103,7 @@ const updateActiveOption = (item) => {
           alt=""
           class="img"
         />
-        环境变量
+        {{ t('web.config.optionEnv') }}
       </div>
     </div>
   </div>

@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import * as vscode from 'vscode';
 
 import { InsightDataViewerPanel } from '@plugin/class/insight-data-viewer-panel';
@@ -58,7 +59,7 @@ export class ViewOpener {
     ).extensionContext;
 
     if (!binPath) {
-      vscode.window.showErrorMessage('BIN文件路径不能为空');
+      vscode.window.showErrorMessage(t('view.binPathEmpty'));
 
       return;
     }
@@ -67,7 +68,7 @@ export class ViewOpener {
       InsightDataViewerPanel.createOrShow(context, binPath);
     }
     catch (error) {
-      vscode.window.showErrorMessage(`加载数据文件失败: ${error}`);
+      vscode.window.showErrorMessage(t('view.loadDataFileFailed', { error: String(error) }));
     }
   }
 }

@@ -1,3 +1,5 @@
+import { t } from 'i18next';
+
 export interface Result {
   // 问题名称
   title: string;
@@ -79,23 +81,10 @@ export const exceptionTpyeMap = new Map<string, string>([
 ]);
 
 export const exceptionMap = new Map<string, string>([
-  // 注意：顺序很重要，更具体的匹配应该放在前面
-  [
-    'memory',
-    '内存',
-  ],
-  [
-    'memoryContention',
-    '竞争',
-  ],
-  [
-    'uninitialized',
-    '未初始化',
-  ],
-  [
-    'synchronize',
-    '同步',
-  ],
+  ['memory', 'exceptionParser.memory'],
+  ['memoryContention', 'exceptionParser.race'],
+  ['uninitialized', 'exceptionParser.uninitialized'],
+  ['synchronize', 'exceptionParser.sync'],
 ]);
 
 /**
@@ -104,55 +93,18 @@ export const exceptionMap = new Map<string, string>([
  * value: 中文异常名
  */
 export const exceptionNameMap = new Map<string, string>([
-  // 注意：顺序很重要，更具体的匹配应该放在前面
-  [
-    'Potential RAW hazard detected',
-    '(Reaqd-After-White)内存数据竞争访问',
-  ],
-  [
-    'Potential WAR hazard detected',
-    '(White-After-Read)内存数据竞争访问',
-  ],
-  [
-    'Potential WAW hazard detected',
-    '(White-After-White)内存数据竞争访问',
-  ],
-  [
-    'LeakCheck: detected memory leaks',
-    '内存泄漏',
-  ],
-  [
-    'illegal free()',
-    '非法释放',
-  ],
-  [
-    'illegal read of size',
-    '非法读',
-  ],
-  [
-    'illegal write of size',
-    '非法写',
-  ],
-  [
-    'out of bounds of size',
-    '多核踩踏',
-  ],
-  [
-    'Unused memory',
-    '分配内存未使用',
-  ],
-  [
-    'uninitialized read of size',
-    '未初始化异常',
-  ],
-  [
-    'Unpaired set_flag insetructions detected',
-    '同步异常',
-  ],
-  [
-    'misaligned access of size',
-    '非对齐访问',
-  ],
+  ['Potential RAW hazard detected', 'exceptionParser.rawHazard'],
+  ['Potential WAR hazard detected', 'exceptionParser.warHazard'],
+  ['Potential WAW hazard detected', 'exceptionParser.wawHazard'],
+  ['LeakCheck: detected memory leaks', 'exceptionParser.memoryLeak'],
+  ['illegal free()', 'exceptionParser.illegalFree'],
+  ['illegal read of size', 'exceptionParser.illegalRead'],
+  ['illegal write of size', 'exceptionParser.illegalWrite'],
+  ['out of bounds of size', 'exceptionParser.multiCoreStomp'],
+  ['Unused memory', 'exceptionParser.allocUnused'],
+  ['uninitialized read of size', 'exceptionParser.uninitException'],
+  ['Unpaired set_flag insetructions detected', 'exceptionParser.syncException'],
+  ['misaligned access of size', 'exceptionParser.unalignedAccess'],
 ]);
 
 /**
@@ -207,7 +159,8 @@ export function getChineseQuestionType(questionType: string): string {
     return questionType;
   }
 
-  return exceptionMap.get(questionType) || questionType;
+  const key = exceptionMap.get(questionType);
+  return key ? t(key) : questionType;
 }
 
 /**
@@ -225,7 +178,7 @@ export function getChineseExceptionName(exceptionName: string): string {
 
   // 1. 首先尝试精确匹配（大小写敏感）
   if (exceptionNameMap.has(trimmedName)) {
-    return exceptionNameMap.get(trimmedName)!;
+    return t(exceptionNameMap.get(trimmedName)!);
   }
 
   // 2. 按键的长度从长到短排序，优先匹配更具体的键
@@ -238,7 +191,7 @@ export function getChineseExceptionName(exceptionName: string): string {
     value,
   ] of sortedEntries) {
     if (trimmedName.includes(key)) {
-      return value;
+      return t(value);
     }
   }
 
@@ -250,7 +203,7 @@ export function getChineseExceptionName(exceptionName: string): string {
     const lowerKey = key.toLowerCase();
 
     if (lowerTrimmedName.includes(lowerKey)) {
-      return value;
+      return t(value);
     }
   }
 

@@ -7,6 +7,7 @@
 
 import * as path from 'path';
 import * as os from 'os';
+import { t } from 'i18next';
 import * as vscode from 'vscode';
 import { PermanentStorage } from './permanent-storage';
 import webviewMessageList from './webview-message-list';
@@ -49,8 +50,7 @@ export class WebviewProvider {
       }
     }
     catch (error) {
-      const errorMsg = `打开 Huawei OP DevTools 失败：${error}`;
-
+      const errorMsg = t('extension.openDevToolsFailed', { error: String(error) });
       console.error(errorMsg);
       vscode.window.showErrorMessage(errorMsg);
     }

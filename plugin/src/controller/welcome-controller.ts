@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -38,28 +39,27 @@ async function openFolderFn(url: string) {
   // 如果项目已存在，直接打开目录
   const localUri = vscode.Uri.file(url);
 
-  // 询问用户是在当前窗口打开还是新窗口打开
+  const openCurrent = t('welcome.openInCurrentWindow');
+  const openNew = t('welcome.openInNewWindow');
   const choice = await vscode.window.showInformationMessage(
-    '选择打开方式',
+    t('welcome.chooseOpenMode'),
     { modal: true },
-    '当前窗口',
-    '新窗口',
+    openCurrent,
+    openNew,
   );
 
-  // 如果用户取消了选择，则不执行打开操作
   if (!choice) {
     return;
   }
 
-  const forceNewWindow = choice === '新窗口';
+  const forceNewWindow = choice === openNew;
 
-  // 打开文件夹
   try {
-    await vscode.commands.executeCommand('vscode.openFolder', localUri, { forceNewWindow: forceNewWindow });
-    vscode.window.showInformationMessage('打开算子工程目录成功');
+    await vscode.commands.executeCommand('vscode.openFolder', localUri, { forceNewWindow });
+    vscode.window.showInformationMessage(t('welcome.openProjectDirSuccess'));
   }
   catch (e) {
-    vscode.window.showErrorMessage(`打开算子工程目录失败: ${e instanceof Error ? e.message : String(e)}`);
+    vscode.window.showErrorMessage(t('welcome.openProjectDirFailed', { error: e instanceof Error ? e.message : String(e) }));
   }
 }
 
@@ -99,7 +99,7 @@ export const welcomeMethods = {
 
       context.globalState.update('lastProjectPath', originalProjectPath);
 
-      vscode.window.showInformationMessage('初始化中');
+      vscode.window.showInformationMessage(t('welcome.initializing'));
 
       const executor = new CommandExecutor();
 
@@ -190,7 +190,7 @@ export const welcomeMethods = {
             console.log('在project.json配置中未找到对应项目');
           }
         } else {
-          vscode.window.showInformationMessage('不支持在该位置创建算子工程');
+          vscode.window.showInformationMessage(t('welcome.cannotCreateHere'));
         }
       } else {
         try {
@@ -232,7 +232,7 @@ export const welcomeMethods = {
       console.log('vscode.openFolder，打开新目录', localUri);
 
       // 显示创建成功消息
-      vscode.window.showInformationMessage(`算子工程创建成功: ${params.projectName}`);
+      vscode.window.showInformationMessage(t('welcome.projectCreated', { name: params.projectName }));
 
       if (viewIdToProjectType(params.createOperatorProjectDictoryFileType) === 'ascend') {
         const fullPath = path.join(params.projectPath, params.projectName)
@@ -262,13 +262,13 @@ export const welcomeMethods = {
         await vscode.window.withProgress(
           {
             location: vscode.ProgressLocation.Notification,
-            title: '开始创建算子文件...',
+            title: t('welcome.createFilesProgressTitle'),
             cancellable: false,
           },
           async (progress) => {
             progress.report({
               increment: 0,
-              message: '准备创建算子文件...',
+              message: t('welcome.createFilesProgressMessage'),
             });
             console.log('createdProject: 执行命令 huawei-op-devtools.createDictory');
             console.log('createdProject: 命令参数:', { createOperatorProjectDirectoryFileType: params.createOperatorProjectDictoryFileType });
@@ -290,38 +290,36 @@ export const welcomeMethods = {
         console.error('createdProject: 执行创建算子文件命令失败:', error);
         console.error('createdProject: 错误详情:', error instanceof Error ? error.stack : String(error));
         // 即使创建算子文件失败，项目目录已经创建成功
-        vscode.window.showWarningMessage(`算子工程目录已创建，但创建算子文件时出错: ${error instanceof Error ? error.message : String(error)}`);
+        vscode.window.showWarningMessage(t('welcome.createDirOkCreateFilesError', { error: error instanceof Error ? error.message : String(error) }));
       }
 
-      // 询问用户是在当前窗口打开还是新窗口打开
+      const openCurrent = t('welcome.openInCurrentWindow');
+      const openNew = t('welcome.openInNewWindow');
       const choice = await vscode.window.showInformationMessage(
-        '选择打开方式',
+        t('welcome.chooseOpenMode'),
         { modal: true },
-        '当前窗口',
-        '新窗口',
+        openCurrent,
+        openNew,
       );
 
-      // 如果用户取消了选择，则不执行打开操作，但已经创建成功
       if (!choice) {
         return;
       }
 
-      const forceNewWindow = choice === '新窗口';
+      const forceNewWindow = choice === openNew;
 
-      // 打开文件夹
       try {
-        await vscode.commands.executeCommand('vscode.openFolder', localUri, { forceNewWindow: forceNewWindow });
-        vscode.window.showInformationMessage('打开算子工程目录成功');
+        await vscode.commands.executeCommand('vscode.openFolder', localUri, { forceNewWindow });
+        vscode.window.showInformationMessage(t('welcome.openProjectDirSuccess'));
       }
       catch (e) {
-        vscode.window.showErrorMessage(`打开算子工程目录失败: ${e instanceof Error ? e.message : String(e)}`);
+        vscode.window.showErrorMessage(t('welcome.openProjectDirFailed', { error: e instanceof Error ? e.message : String(e) }));
       }
     }
     catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-
-      vscode.window.showErrorMessage(`创建算子工程失败: ${errorMessage}`);
+      vscode.window.showErrorMessage(t('welcome.createProjectFailed', { error: errorMessage }));
       throw error; // 重新抛出错误，让 API 服务器能够捕获并返回给前端
     }
   },
@@ -455,8 +453,8 @@ export const welcomeMethods = {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
 
-      vscode.window.showErrorMessage(`打开算子工程失败: ${errorMessage}`);
-      throw error; // 重新抛出错误，让 API 服务器能够捕获并返回给前端
+      vscode.window.showErrorMessage(t('welcome.openProjectFailed', { error: errorMessage }));
+      throw error;
     }
   }
 };

@@ -10,10 +10,16 @@ defineProps<{
 }>();
 
 const modelValue = defineModel();
+
+/** Resolve label for current locale; supports both 'zh-cn' and legacy 'zh' keys. */
+function getI18nLabel(labels: Record<string, string>): string {
+  const lang = i18next.language;
+  return labels[lang] ?? labels['zh-cn'] ?? labels['zh'] ?? labels['en'] ?? '';
+}
 </script>
 
 <template>
-  <a-form-item :label="attr.label[i18next.language]">
+  <a-form-item :label="getI18nLabel(attr.label as Record<string, string>)">
     <a-switch
       v-if="attr.type === 'boolean'"
       v-model:checked="modelValue as unknown as boolean"
@@ -21,11 +27,9 @@ const modelValue = defineModel();
     <a-input v-else-if="attr.type === 'string'" />
     <a-input-number v-else-if="attr.type === 'number'" />
     <a-select v-else-if="attr.type === 'enum'">
-      <template v-for="option in attr.options">
+      <template v-for="option in attr.options" :key="String(option.value)">
         <a-select-option :value="option.value">
-          {{
-            option.label[i18next.language]
-          }}
+          {{ getI18nLabel(option.label as Record<string, string>) }}
         </a-select-option>
       </template>
     </a-select>

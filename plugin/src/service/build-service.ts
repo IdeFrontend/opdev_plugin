@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -274,7 +275,7 @@ export class BuildService {
     }
 
     if (!configId) {
-      const errorMsg = '未找到编译配置，请先在配置面板添加编译配置';
+      const errorMsg = t('build.noBuildConfig');
       console.error('[startBuild]', errorMsg);
       vscode.window.showErrorMessage(errorMsg);
 
@@ -309,19 +310,19 @@ export class BuildService {
 
       if (res.code !== 0) {
         console.error('[startBuild] 编译失败，退出码:', res.code, '输出:', res.output);
-        vscode.window.showErrorMessage(`编译算子失败 ${res.output}`);
+        vscode.window.showErrorMessage(t('build.compileFailed', { output: res.output }));
 
         return;
       }
 
       console.log('[startBuild] 编译成功');
-      vscode.window.showInformationMessage("编译算子成功");
+      vscode.window.showInformationMessage(t('build.compileSuccess'));
 
       await tryMarkOperatorsAsCompiled(Number(configId), params.operatorNames);
     }
     catch (e) {
       console.error('[startBuild] 编译过程出错:', e);
-      vscode.window.showErrorMessage(`获取编译算子命令失败 ${(e as Error).message}`);
+      vscode.window.showErrorMessage(t('build.getCompileCommandFailed', { error: (e as Error).message }));
     }
 
     console.log('[startBuild] ========== 结束编译算子 ==========');
@@ -343,14 +344,14 @@ export class BuildService {
       const isPyFile = activeEditor?.document.fileName.endsWith('.py');
 
       if (!isPyFile) {
-        vscode.window.showWarningMessage('请先打开一个 .py 文件');
+        vscode.window.showWarningMessage(t('build.openPyFirst'));
         return;
       }
 
       // 获取工作区路径
       const workspaceFolders = vscode.workspace.workspaceFolders;
       if (!workspaceFolders || workspaceFolders.length === 0) {
-        vscode.window.showWarningMessage('未找到工作区路径');
+        vscode.window.showWarningMessage(t('build.workspacePathNotFound'));
         return;
       }
 
@@ -410,15 +411,15 @@ export class BuildService {
       console.log('runRes', res);
 
       if (res.code !== 0) {
-        vscode.window.showErrorMessage(`运行失败 ${res.output}`);
+        vscode.window.showErrorMessage(t('build.runFailed', { output: res.output }));
 
         return;
       }
 
-      vscode.window.showInformationMessage('运行成功');
+      vscode.window.showInformationMessage(t('build.runSuccess'));
     }
     catch (e) {
-      vscode.window.showErrorMessage(`获取运行命令失败 ${(e as Error).message}`);
+      vscode.window.showErrorMessage(t('build.getRunCommandFailed', { error: (e as Error).message }));
     }
   }
 
@@ -455,15 +456,15 @@ export class BuildService {
       const res = await executor.execute(buildCommand, [], [], {}, true);
 
       if (res.code !== 0) {
-        vscode.window.showErrorMessage('执行失败');
+        vscode.window.showErrorMessage(t('build.executeFailed', { output: '' }));
 
         return;
       }
 
-      vscode.window.showInformationMessage('执行成功');
+      vscode.window.showInformationMessage(t('build.executeSuccess'));
     }
     catch (e) {
-      vscode.window.showErrorMessage(`获取执行命令失败 ${(e as Error).message}`);
+      vscode.window.showErrorMessage(t('build.getExecuteCommandFailed', { error: (e as Error).message }));
     }
   }
 
@@ -487,15 +488,15 @@ export class BuildService {
       const isPyFile = activeEditor?.document.fileName.endsWith('.py');
 
       if (!isPyFile) {
-        vscode.window.showWarningMessage('请先打开一个 .py 文件');
-        throw new Error('请先打开一个 .py 文件');
+        vscode.window.showWarningMessage(t('build.openPyFirst'));
+        throw new Error(t('task.openPyFirst'));
       }
 
       // 获取工作区路径
       const workspaceFolders = vscode.workspace.workspaceFolders;
       if (!workspaceFolders || workspaceFolders.length === 0) {
-        vscode.window.showWarningMessage('未找到工作区路径');
-        throw new Error('未找到工作区路径');
+        vscode.window.showWarningMessage(t('build.workspacePathNotFound'));
+        throw new Error(t('task.workspacePathNotFound'));
       }
 
       const workspacePath = workspaceFolders[0].uri.fsPath;
@@ -551,8 +552,8 @@ export class BuildService {
       console.log('buildRes', buildRes);
 
       if (buildRes.code !== 0) {
-        vscode.window.showErrorMessage(`编译算子失败 ${buildRes.output}`);
-        throw new Error(`编译算子失败: ${buildRes.output}`);
+        vscode.window.showErrorMessage(t('build.compileFailed', { output: buildRes.output }));
+        throw new Error(t('build.compileFailedThrow', { output: buildRes.output }));
       }
 
       await tryMarkOperatorsAsCompiled(Number(simulatorItem?.config_id), params.operatorNames);
@@ -579,8 +580,8 @@ export class BuildService {
         console.log('example buildRes', exampleBuildRes);
 
         if (exampleBuildRes.code !== 0) {
-          vscode.window.showErrorMessage(`执行失败 ${exampleBuildRes.output}`);
-          throw new Error(`执行失败: ${exampleBuildRes.output}`);
+          vscode.window.showErrorMessage(t('build.executeFailed', { output: exampleBuildRes.output }));
+          throw new Error(t('build.executeFailedThrow', { output: exampleBuildRes.output }));
         }
       }
     }
@@ -603,16 +604,16 @@ export class BuildService {
       const res = await executor.execute(simulateCommand, [], [], {}, true);
 
       if (res.code !== 0) {
-        vscode.window.showErrorMessage('执行仿真分析失败');
-        throw new Error(`执行仿真分析失败: ${res.output ?? ''}`);
+        vscode.window.showErrorMessage(t('build.simulationFailed'));
+        throw new Error(t('build.simulationFailedThrow', { output: res.output ?? '' }));
       }
 
-      vscode.window.showInformationMessage('执行仿真分析成功');
+      vscode.window.showInformationMessage(t('build.simulationSuccess'));
       vscode.commands.executeCommand('huawei-op-devtools.open-performance-panel-view');
       vscode.commands.executeCommand('huawei-op-devtools.flashPerformanceRunData');
     }
     catch (e: unknown) {
-      vscode.window.showErrorMessage(`获取仿真命令失败 ${(e as Error).message}`);
+      vscode.window.showErrorMessage(t('build.getSimulationCommandFailed', { error: (e as Error).message }));
       throw e;
     }
   }
@@ -634,14 +635,14 @@ export class BuildService {
       const isPyFile = activeEditor?.document.fileName.endsWith('.py');
 
       if (!isPyFile) {
-        vscode.window.showWarningMessage('请先打开一个 .py 文件');
+        vscode.window.showWarningMessage(t('build.openPyFirst'));
         return;
       }
 
       // 获取工作区路径
       const workspaceFolders = vscode.workspace.workspaceFolders;
       if (!workspaceFolders || workspaceFolders.length === 0) {
-        vscode.window.showWarningMessage('未找到工作区路径');
+        vscode.window.showWarningMessage(t('build.workspacePathNotFound'));
         return;
       }
 
@@ -700,7 +701,7 @@ export class BuildService {
       console.log('buildRes', buildRes);
 
       if (buildRes.code !== 0) {
-        vscode.window.showErrorMessage(`编译算子失败 ${buildRes.output}`);
+        vscode.window.showErrorMessage(t('build.compileFailed', { output: buildRes.output }));
 
         return;
       }
@@ -729,7 +730,7 @@ export class BuildService {
         console.log('example buildRes', exampleBuildRes);
 
         if (exampleBuildRes.code !== 0) {
-          vscode.window.showErrorMessage(`执行失败 ${exampleBuildRes.output}`);
+          vscode.window.showErrorMessage(t('build.executeFailed', { output: exampleBuildRes.output }));
           return;
         }
       }
@@ -752,17 +753,17 @@ export class BuildService {
       const res = await executor.execute(onBoardCommand, [], [], {}, true);
 
       if (res.code !== 0) {
-        vscode.window.showErrorMessage('执行上板分析失败');
+        vscode.window.showErrorMessage(t('build.onBoardFailed'));
 
         return;
       }
 
-      vscode.window.showInformationMessage('执行上板分析成功');
+      vscode.window.showInformationMessage(t('build.onBoardSuccess'));
       vscode.commands.executeCommand('huawei-op-devtools.open-performance-panel-view');
       vscode.commands.executeCommand('huawei-op-devtools.flashPerformanceRunData');
     }
     catch (e: unknown) {
-      vscode.window.showErrorMessage(`获取上板命令失败 ${(e as Error).message}`);
+      vscode.window.showErrorMessage(t('build.getOnBoardCommandFailed', { error: (e as Error).message }));
     }
   }
 
@@ -813,7 +814,7 @@ export class BuildService {
 
     if (res.code !== 0) {
       console.error('[startDumpTensor] 编译失败，退出码:', res.code, '输出:', res.output);
-      vscode.window.showErrorMessage(`编译算子失败 ${res.output}`);
+      vscode.window.showErrorMessage(t('build.compileFailed', { output: res.output }));
       return;
     }
 
@@ -838,15 +839,15 @@ export class BuildService {
       console.log('[startDumpTensor] example buildRes', exampleBuildRes);
 
       if (exampleBuildRes.code !== 0) {
-        vscode.window.showErrorMessage(`执行失败 ${exampleBuildRes.output}`);
+        vscode.window.showErrorMessage(t('build.executeFailed', { output: exampleBuildRes.output }));
         return;
       }
-      
+
       // 执行show_kernel_debug_data命令
       await this.executeShowKernelDebugData(tempDataPath, dumpTensorPath);
-      
-      vscode.window.showInformationMessage('执行DumpTensor成功');
-      
+
+      vscode.window.showInformationMessage(t('build.dumpTensorSuccess'));
+
       // 打开DumpTensor数据面板并刷新数据
       await this.openDumpTensorPanel();
     } else {
@@ -860,20 +861,20 @@ export class BuildService {
         console.log('[startDumpTensor] runRes', res);
 
         if (res.code !== 0) {
-          vscode.window.showErrorMessage(`运行失败 ${res.output}`);
+          vscode.window.showErrorMessage(t('build.runFailed', { output: res.output }));
           return;
         }
-        
+
         // 执行show_kernel_debug_data命令
         await this.executeShowKernelDebugData(tempDataPath, dumpTensorPath);
-        
-        vscode.window.showInformationMessage('执行DumpTensor成功');
-        
+
+        vscode.window.showInformationMessage(t('build.dumpTensorSuccess'));
+
         // 打开DumpTensor数据面板并刷新数据
         await this.openDumpTensorPanel();
       }
       catch (e) {
-        vscode.window.showErrorMessage(`获取运行命令失败 ${(e as Error).message}`);
+        vscode.window.showErrorMessage(t('build.getRunCommandFailed', { error: (e as Error).message }));
       }
     }
   }

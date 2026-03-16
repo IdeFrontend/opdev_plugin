@@ -6,16 +6,17 @@
 <script setup>
 import {
   ref,
-  watch, 
-  onBeforeMount, 
+  watch,
+  onBeforeMount,
   computed
 } from 'vue';
+import { t } from 'i18next';
 import {
   saveBuildConfig as saveBuildConfigAPI,
-  getSanitizerConfigs, 
-  saveSanitizerForm, 
+  getSanitizerConfigs,
+  saveSanitizerForm,
   saveConfig,
-  getConfigData, 
+  getConfigData,
   getProjectType,
   getDebugMode,
   checkMultipleOperators
@@ -279,7 +280,7 @@ const showPowerScript = computed(() => {
 <template>
   <div class="build-config">
     <div class="model-title">
-      算子编译配置
+      {{ t('web.config.buildTitle') }}
     </div>
     <a-form
       ref="connectionFormRef"
@@ -289,57 +290,57 @@ const showPowerScript = computed(() => {
       layout="vertical"
     >
       <a-form-item
-        label="要编译的算子名称"
+        :label="t('web.config.opLabel')"
         name="op"
       >
         <a-input
           v-model:value="localBuildConfigForme.op"
-          placeholder="请输入算子名称"
+          :placeholder="t('web.config.opPlaceholder')"
           @change="handleBuildConfigChange"
         />
       </a-form-item>
 
       <a-form-item
         v-if="false"
-        label="编译生成文件位置"
+        :label="t('web.config.targetDirLabel')"
         name="target_dir"
       >
         <a-input
           v-model:value="localBuildConfigForme.target_dir"
-          placeholder="请输入生成文件位置"
+          :placeholder="t('web.config.targetDirPlaceholder')"
           @change="handleBuildConfigChange"
         />
       </a-form-item>
       <a-form-item
         v-if="projectType !== 'pyasc'"
-        :label="isStandardCustom ? '算子部署命令' : '算子运行命令行'"
+        :label="isStandardCustom ? t('web.config.deployCommandLabel') : t('web.config.runCommandLabel')"
         name="ipAddress"
       >
         <a-input
           v-model:value="localBuildConfigForme.target_file"
-          :placeholder="isStandardCustom ? '请输入算子部署命令' : '请输入算子运行命令行'"
+          :placeholder="isStandardCustom ? t('web.config.deployCommandPlaceholder') : t('web.config.runCommandPlaceholder')"
           @change="handleBuildConfigChange"
         />
       </a-form-item>
       <a-form-item
         v-if="projectType !== 'pyasc'"
-        label="编译命令行"
+        :label="t('web.config.compileCommandLabel')"
         name="script"
       >
         <a-input
           v-model:value="localBuildConfigForme.script"
-          placeholder="请输入编译命令行"
+          :placeholder="t('web.config.compileCommandPlaceholder')"
           @change="handleBuildConfigChange"
         />
       </a-form-item>
       <a-form-item
         v-if="showCpuDebugScript"
-        label="CPU调试编译命令行"
+        :label="t('web.config.cpuDebugScriptLabel')"
         name="cpu_debug_script"
       >
         <a-input
           v-model:value="localBuildConfigForme.cpu_debug_script"
-          placeholder="请输入CPU调试编译命令行"
+          :placeholder="t('web.config.cpuDebugScriptPlaceholder')"
           @change="handleBuildConfigChange"
         />
       </a-form-item>
@@ -356,45 +357,45 @@ const showPowerScript = computed(() => {
       </a-form-item>
       <a-form-item
         v-if="showNpuDebugScript"
-        label="NPU调试编译命令行"
+        :label="t('web.config.npuDebugScriptLabel')"
         name="npu_debug_script"
       >
         <a-input
           v-model:value="localBuildConfigForme.npu_debug_script"
-          placeholder="请输入NPU调试编译命令行"
+          :placeholder="t('web.config.npuDebugScriptPlaceholder')"
           @change="handleBuildConfigChange"
         />
       </a-form-item>
       <a-form-item
         v-if="projectType !== 'pyasc'"      
-        label="异常检测编译命令行"
+        :label="t('web.config.sanitizerScriptLabel')"
         name="sanitizerScript"
       >
         <a-input
           v-model:value="sanitizerScript"
-          placeholder="请输入异常检测编译命令行"
+          :placeholder="t('web.config.sanitizerScriptPlaceholder')"
           @change="handSanitizerConfigChange"
         />
       </a-form-item>
       <a-form-item
         v-if="showPowerScript"
-        label="上板分析编译命令行"
+        :label="t('web.config.onboardScriptLabel')"
         name="onBoardScript"
       >
         <a-input
           v-model:value="onboardData.user_options.script"
-          placeholder="请输入上板分析编译命令行"
+          :placeholder="t('web.config.onboardScriptPlaceholder')"
           @change="handleOnBoardScriptChange"
         />
       </a-form-item>
       <a-form-item
         v-if="showPowerScript"
-        label="仿真分析编译命令行"
+        :label="t('web.config.simulateScriptLabel')"
         name="simulateScript"
       >
         <a-input
           v-model:value="simulateOptions.user_options.script"
-          placeholder="请输入仿真分析编译命令行"
+          :placeholder="t('web.config.simulateScriptPlaceholder')"
           @change="handleSimulateScriptChange"
         />
       </a-form-item>
@@ -403,7 +404,7 @@ const showPowerScript = computed(() => {
       v-if="isStandardCustom"
       class="model-title"
     >
-      example编译配置
+      {{ t('web.config.exampleConfigTitle') }}
     </div>
     <a-form
       v-if="isStandardCustom"
@@ -414,7 +415,7 @@ const showPowerScript = computed(() => {
       layout="vertical"
     >
       <a-form-item
-        label="执行模式"
+        :label="t('web.config.executionModeLabel')"
         name="execution_mode"
       >
         <a-radio-group
@@ -422,21 +423,21 @@ const showPowerScript = computed(() => {
           @change="handleExampleConfigChange"
         >
           <a-radio value="eager">
-            eager（aclnn调用）
+            {{ t('web.config.executionModeEager') }}
           </a-radio>
           <a-radio value="graph">
-            graph（图模式调用）
+            {{ t('web.config.executionModeGraph') }}
           </a-radio>
         </a-radio-group>
       </a-form-item>
       <a-form-item
-        label="算子运行命令行"
+        :label="t('web.config.exampleRunCommandLabel')"
         name="script"
-        tooltip="执行该命令时，会自动在后面拼接算子名称、执行模式和和包模式"
+        :tooltip="t('web.config.exampleRunCommandTooltip')"
       >
         <a-input
           v-model:value="localExampleConfigForme.script"
-          placeholder="请输入算子运行命令行"
+          :placeholder="t('web.config.exampleRunCommandPlaceholder')"
           @change="handleExampleConfigChange"
         />
       </a-form-item>

@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import { message } from 'ant-design-vue';
 import { checkPathExists } from '@web/apis';
 
@@ -103,22 +104,16 @@ export class ProjectNameValidationStrategy implements ValidationStrategy {
     const strValue = value as string;
 
     if (!strValue || strValue.trim() === '') {
-      throw new Error('请输入算子工程名称');
+      throw new Error(t('web.link.validation.projectNameRequired'));
     }
-
-    // 规则1: 只能使用字母、数字和下划线
     if (!/^[a-zA-Z0-9_]+$/.test(strValue)) {
-      throw new Error('算子工程名称只能包含字母、数字和下划线');
+      throw new Error(t('web.link.validation.projectNameChars'));
     }
-
-    // 规则2: 首字母必须是字母
     if (!/^[a-zA-Z]/.test(strValue)) {
-      throw new Error('算子工程名称必须以字母开头');
+      throw new Error(t('web.link.validation.projectNameStart'));
     }
-
-    // 规则3: 不能是C++关键字
     if (CPP_KEYWORDS.includes(strValue.toLowerCase())) {
-      throw new Error('算子工程名称不能是C++关键字');
+      throw new Error(t('web.link.validation.projectNameKeyword'));
     }
   }
 }
@@ -131,13 +126,11 @@ export class ProjectPathValidationStrategy implements ValidationStrategy {
     const strValue = value as string;
 
     if (!strValue) {
-      throw new Error('请输入算子工程位置');
+      throw new Error(t('web.link.validation.projectPathRequired'));
     }
-
     const pathExists = await checkPathExists({ path: strValue });
-
     if (!pathExists) {
-      throw new Error('目录不存在，请先创建目录');
+      throw new Error(t('web.link.validation.dirNotExist'));
     }
   }
 }
@@ -149,17 +142,10 @@ export class ProjectSHValidationStrategy implements ValidationStrategy {
   async validate(value: unknown): Promise<void> {
     const strValue = value as string;
 
-    if (!strValue) {
-      return; // 允许为空
-    }
-
-    const pathExists = await checkPathExists({
-      path: strValue,
-      mustFile: true,
-    });
-
+    if (!strValue) return;
+    const pathExists = await checkPathExists({ path: strValue, mustFile: true });
     if (!pathExists) {
-      throw new Error('脚本文件不存在，请确认');
+      throw new Error(t('web.link.validation.scriptNotExist'));
     }
   }
 }
@@ -207,7 +193,7 @@ export class ValidationStrategyFactory {
     }
     catch (error: unknown) {
       const messageText =
-        error instanceof Error ? error.message : (error as string) || '验证失败';
+        error instanceof Error ? error.message : (error as string) || t('web.link.validation.failed');
 
       message.error(messageText);
 

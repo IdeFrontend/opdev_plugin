@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from 'i18next';
 import { FileOutlined, FolderOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue';
 import { useOpenProject } from '../composables/use-open-project';
 import { OpenProjectFormRulesFactory } from '../composables/form-rules';
@@ -26,8 +27,8 @@ const connectionFormRules = OpenProjectFormRulesFactory.createFormRules();
       :rules="connectionFormRules as any" layout="vertical">
       <a-form-item name="projectPath">
         <template #label>
-          <span>算子工程位置</span>
-          <a-tooltip title="您要打开的算子工程的存储路径。">
+          <span>{{ t('web.openProject.projectPathLabel') }}</span>
+          <a-tooltip :title="t('web.openProject.projectPathTooltip')">
             <QuestionCircleOutlined class="help-icon" />
           </a-tooltip>
         </template>
@@ -36,20 +37,19 @@ const connectionFormRules = OpenProjectFormRulesFactory.createFormRules();
             v-model:value="projectFormData.projectPath"
             :options="projectPathOptions"
             :loading="projectPathLoading"
-            placeholder="请输入工程位置，支持远程搜索"
+            :placeholder="t('web.openProject.projectPathPlaceholder')"
             class="flex-1 min-w-0"
             @search="(val) => remoteSearch('projectPath', val)"
           />
-          <a-button type="default" size="middle" title="选择文件夹" @click="handleSelectFolder">
+          <a-button type="default" size="middle" :title="t('common.selectFolder')" @click="handleSelectFolder">
             <template #icon><FolderOutlined /></template>
           </a-button>
         </div>
       </a-form-item>
       <a-form-item name="projectSH">
         <template #label>
-          <span>环境变量配置脚本</span>
-          <a-tooltip
-            title="安装CANN包后需要执行的set_env.sh脚本的绝对路径信息，如果使用的是一站式开发平台提供的容器镜像，则此处可以置空。若出现报错提示路径不存在，说明非有效环境变量脚本路径，需要输入设置环境变量脚本的绝对路径。">
+          <span>{{ t('web.openProject.envScriptLabel') }}</span>
+          <a-tooltip :title="t('web.openProject.envScriptTooltip')">
             <QuestionCircleOutlined class="help-icon" />
           </a-tooltip>
         </template>
@@ -58,18 +58,18 @@ const connectionFormRules = OpenProjectFormRulesFactory.createFormRules();
             v-model:value="projectFormData.projectSH"
             :options="projectSHOptions"
             :loading="projectSHLoading"
-            placeholder="请输入环境变量.sh文件地址，支持远程搜索"
+            :placeholder="t('web.openProject.envScriptPlaceholder')"
             class="flex-1 min-w-0"
             @search="(val) => remoteSearch('projectSH', val)"
           />
-          <a-button type="default" size="middle" title="选择文件" @click="handleSelectFile">
+          <a-button type="default" size="middle" :title="t('common.selectFile')" @click="handleSelectFile">
             <template #icon><FileOutlined /></template>
           </a-button>
         </div>
       </a-form-item>
     </a-form>
     <a-button type="primary" class="!mt-6 !w-[84px] !h-8 !rounded-none" style="float: right;" @click="handleOpenProject">
-      立即打开
+      {{ t('web.openProject.openNow') }}
     </a-button>
   </div>
 </template>

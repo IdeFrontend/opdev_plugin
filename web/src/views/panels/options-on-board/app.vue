@@ -2,6 +2,7 @@
 import {
   ref, onMounted, computed, watch
 } from 'vue';
+import { t } from 'i18next';
 import { message } from 'ant-design-vue';
 import { useTheme } from '@web/composables/use-theme';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
@@ -63,7 +64,7 @@ const handleConfirm = async () => {
   const hasRunningTask = await checkTaskStatus();
   console.log('hasRunningTask', hasRunningTask);
   if (hasRunningTask) {
-    message.info('存在未执行完毕的任务，请稍后再试');
+    message.info(t('web.options.taskRunning'));
     return;
   }
   try {
@@ -89,6 +90,7 @@ const handleConfirm = async () => {
   }
   catch (error) {
     console.error('上板启动失败: ', error);
+    message.error(t('web.options.onboardFailed'));
   }
   finally {
     isExecuting.value = false;
@@ -183,7 +185,7 @@ onMounted(() => {
   <a-config-provider :theme="themeConfig">
     <div class="board-config-page">
       <div class="page-header">
-        上板分析-选择采集内容
+        {{ t('web.options.onboard.title') }}
       </div>
 
       <div class="board-content">
@@ -195,21 +197,18 @@ onMounted(() => {
         >
           <template #message>
             <div style="white-space: pre-line;">
-              <div>
-                1、执行上板调优，需在代码中修改使用NPU的配置，具体可参考README。
-              </div>
-              <div>
-                2、若勾选"Roofline瓶颈分析"或"Cache热力图"，将默认采集所有算子性能指标。
-              </div>
+              <div>{{ t('web.options.onboard.alert1') }}</div>
+              <div>{{ t('web.options.onboard.alert2') }}</div>
             </div>
           </template>
         </a-alert>
         <div class="board-title">
-          采集内容
+          {{ t('web.options.onboard.collectContent') }}
           <a-tooltip :overlay-style="{ maxWidth: '300px' }">
             <template #title>
               <div>
-                具体图形案例请参考 <span style="color: #1677ff; cursor: pointer;" @click="jumpToGuide">算子调优工具概述</span>
+                {{ t('web.options.simulator.guideRef') }}
+                <span style="color: #1677ff; cursor: pointer;" @click="jumpToGuide">{{ t('web.options.guideLinkText') }}</span>
               </div>
             </template>
             <QuestionCircleOutlined class="help-icon" />
@@ -217,28 +216,28 @@ onMounted(() => {
         </div>
 
         <div style="margin-top: 12px">
-          计算内存热力图（默认采集）
+          {{ t('web.options.onboard.memoryHeatmap') }}
         </div>
         <div class="compute-group">
           <div style="margin-bottom: 12px">
-            默认采集：基础信息、计算工作负载分析、内存负载分析
+            {{ t('web.options.onboard.memoryHeatmapDesc') }}
           </div>
 
-          <span>默认选项：</span>
+          <span>{{ t('web.options.onboard.defaultOptions') }}</span>
           <a-checkbox
             v-model:checked="onboardData.user_options.Occupancy"
             @change="handleSave"
           >
-            核间负载分析图
+            {{ t('web.options.onboard.interCoreLoad') }}
           </a-checkbox>
           <a-checkbox
             v-model:checked="onboardData.user_options.Roofline"
             style="margin-left: 12px;"
             @change="handleSave"
           >
-            Roofline瓶颈分析
+            {{ t('web.options.onboard.roofline') }}
           </a-checkbox>
-          <a-tooltip title="若勾选该选项，将默认采集所有算子性能指标">
+          <a-tooltip :title="t('web.options.onboard.rooflineTooltip')">
             <QuestionCircleOutlined class="help-icon" />
           </a-tooltip>
         </div>
@@ -248,7 +247,7 @@ onMounted(() => {
             v-model:checked="onboardData.user_options.Source"
             @change="handleSave"
           >
-            算子代码热点图
+            {{ t('web.options.onboard.codeHotspot') }}
           </a-checkbox>
         </div>
 
@@ -257,9 +256,9 @@ onMounted(() => {
             v-model:checked="onboardData.user_options.MemoryDetail"
             @change="handleSave"
           >
-            Cache热力图
+            {{ t('web.options.onboard.cacheHeatmap') }}
           </a-checkbox>
-          <a-tooltip title="若勾选该选项，将默认采集所有算子性能指标">
+          <a-tooltip :title="t('web.options.onboard.cacheHeatmapTooltip')">
             <QuestionCircleOutlined class="help-icon" />
           </a-tooltip>
         </div>
@@ -270,7 +269,7 @@ onMounted(() => {
             :indeterminate="performanceSelectedHalf"
             @change="handleOperatorPerformanceChange"
           >
-            算子性能指标
+            {{ t('web.options.onboard.operatorMetrics') }}
           </a-checkbox>
         </div>
         <div class="nested-checkbox-group">
@@ -278,50 +277,50 @@ onMounted(() => {
             v-model:checked="onboardData.user_options.ArithmeticUtilization"
             @change="handleSave"
           >
-            Cube及Vector类型指令耗时和占比
+            {{ t('web.options.onboard.cubeVector') }}
           </a-checkbox>
           <a-checkbox
             v-model:checked="onboardData.user_options.L2Cache"
             @change="handleSave"
           >
-            L2 Cache命中率
+            {{ t('web.options.onboard.l2HitRate') }}
           </a-checkbox>
           <a-checkbox
             v-model:checked="onboardData.user_options.Memory"
             @change="handleSave"
           >
-            内存读写带宽速率
+            {{ t('web.options.onboard.memoryBandwidth') }}
           </a-checkbox>
           <a-checkbox
             v-model:checked="onboardData.user_options.MemoryL0"
             @change="handleSave"
           >
-            L0读写带宽速率
+            {{ t('web.options.onboard.l0Bandwidth') }}
           </a-checkbox>
           <a-checkbox
             v-model:checked="onboardData.user_options.MemoryUB"
             @change="handleSave"
           >
-            UB读写带宽速率
+            {{ t('web.options.onboard.ubBandwidth') }}
           </a-checkbox>
           <a-checkbox
             v-model:checked="onboardData.user_options.PipeUtilization"
             @change="handleSave"
           >
-            计算单元和搬运单元耗时占比
+            {{ t('web.options.onboard.computeMoveRatio') }}
           </a-checkbox>
           <a-checkbox
             v-model:checked="onboardData.user_options.ResourceConflictRatio"
             @change="handleSave"
           >
-            资源冲突占比
+            {{ t('web.options.onboard.resourceConflict') }}
           </a-checkbox>
         </div>
 
 
         <div class="footer-actions">
           <a-button type="primary" :loading="isExecuting" @click="handleConfirm">
-            立即开始
+            {{ t('web.options.onboard.startNow') }}
           </a-button>
         </div>
       </div>

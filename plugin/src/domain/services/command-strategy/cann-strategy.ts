@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import * as vscode from "vscode";
 import * as path from "path";
 import { getOpRunPath } from "@plugin/domain/utils/op-util";
@@ -75,7 +76,7 @@ export class CannCommandStrategy implements CommandStrategy {
     const userOptions = config.user_options as Record<string, unknown> | null | undefined;
 
     if (!userOptions || !userOptions[scriptField]) {
-      throw new Error(`配置缺少脚本信息，且找不到算子记录: ${config.op}`);
+      throw new Error(t('cann.configMissingScript', { op: config.op }));
     }
 
     const cmd = new Command(userOptions[scriptField] as string);
@@ -104,7 +105,7 @@ export class CannCommandStrategy implements CommandStrategy {
     const { config, sourceCannCmd, cdCmd, compileOption, advance_cmd } = params;
 
     if (!config.script) {
-      throw new Error(`配置缺少脚本信息，且找不到算子记录: ${config.op}`);
+      throw new Error(t('cann.configMissingScript', { op: config.op }));
     }
 
     const cmd = new Command(config.script || "");
@@ -199,9 +200,7 @@ export class CannCommandStrategy implements CommandStrategy {
 
     if (!effectiveOperator) {
       if (!project || !project.project_path) {
-        throw new Error(
-          `无法生成仿真命令：找不到算子记录 ${config.op}，且项目路径不可用`
-        );
+        throw new Error(t('cann.cannotGenerateSimulateCommand', { op: config.op }));
       }
 
       // 创建临时算子对象，使用项目路径作为 op_path
@@ -238,9 +237,7 @@ export class CannCommandStrategy implements CommandStrategy {
 
     if (!effectiveOperator) {
       if (!project || !project.project_path) {
-        throw new Error(
-          `无法生成上板命令：找不到算子记录 ${config.op}，且项目路径不可用`
-        );
+        throw new Error(t('cann.cannotGenerateOnBoardCommand', { op: config.op }));
       }
 
       // 创建临时算子对象，使用项目路径作为 op_path

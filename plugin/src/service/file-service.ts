@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -57,7 +58,7 @@ export class FileService {
       filters: params.allowedTypes
         ? { default: params.allowedTypes }
         : undefined,
-      title: params.dialogTitle ?? '保存至',
+      title: params.dialogTitle ?? t('file.saveTo'),
     });
 
     if (!savingUri) {
@@ -78,7 +79,7 @@ export class FileService {
       sourceStat = await vscode.workspace.fs.stat(sourceUri);
     }
     catch {
-      throw new Error('保存失败，源文件不存在');
+      throw new Error(t('file.saveFailedSourceNotExist'));
     }
 
     // 尝试直接保存到用户选择的位置（如果 VSCode Web 支持）
@@ -200,7 +201,7 @@ export class FileService {
       filters: params.allowedTypes
         ? { default: params.allowedTypes }
         : undefined,
-      title: params.dialogTitle ?? '保存至',
+      title: params.dialogTitle ?? t('file.saveTo'),
     });
 
     if (!savingUri) {
@@ -214,7 +215,7 @@ export class FileService {
       sourceStat = await vscode.workspace.fs.stat(sourceUri);
     }
     catch {
-      throw new Error('保存失败，源文件不存在');
+      throw new Error(t('file.saveFailedSourceNotExist'));
     }
 
     if (sourceStat.type === vscode.FileType.File) {

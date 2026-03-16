@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import * as vscode from 'vscode';
 
 /** 最大渲染行数 */
@@ -109,7 +110,7 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
       // 返回空数组或单行错误信息
       return [
         [
-          '解析错误',
+          t('csv.parseError'),
           String(error),
         ],
       ];

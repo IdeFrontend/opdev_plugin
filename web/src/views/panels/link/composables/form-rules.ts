@@ -1,19 +1,16 @@
+import { t } from 'i18next';
 import {
   ProjectNameValidationStrategy,
   ProjectPathValidationStrategy,
   ProjectSHValidationStrategy,
 } from './validation-strategies';
 
-// 微重构1.4：
 export class FormRulesFactory {
-  /**
-   * 项目路径校验规则
-   */
   static createProjectPathRule() {
     return [
       {
         required: true,
-        message: '请输入算子工程位置',
+        message: t('web.link.validation.projectPathRequired'),
         trigger: 'blur',
       },
       {
@@ -47,7 +44,7 @@ export class FormRulesFactory {
     return [
       {
         required: true,
-        message: '请输入算子工程名称',
+        message: t('web.link.validation.projectNameRequired'),
         trigger: 'blur',
       },
       {

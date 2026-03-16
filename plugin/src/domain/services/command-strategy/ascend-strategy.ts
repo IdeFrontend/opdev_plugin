@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import { soc_version } from '@plugin/domain/utils/ascend-util';
 import { parse_cmd_options } from '@plugin/domain/utils/aicore-utils';
 import { getOpRunPath } from '@plugin/domain/utils/op-util';
@@ -232,7 +233,7 @@ export class AscendCommandStrategy implements CommandStrategy {
 
     if (!effectiveOperator) {
       if (!project || !project.project_path) {
-        throw new Error(`无法生成仿真命令：找不到算子记录 ${config.op}，且项目路径不可用`);
+        throw new Error(t('cann.cannotGenerateSimulateCommand', { op: config.op }));
       }
 
       // 创建临时算子对象，使用项目路径作为 op_path
@@ -263,7 +264,7 @@ export class AscendCommandStrategy implements CommandStrategy {
 
     if (!effectiveOperator) {
       if (!project || !project.project_path) {
-        throw new Error(`无法生成上板命令：找不到算子记录 ${config.op}，且项目路径不可用`);
+        throw new Error(t('cann.cannotGenerateOnBoardCommand', { op: config.op }));
       }
 
       // 创建临时算子对象，使用项目路径作为 op_path

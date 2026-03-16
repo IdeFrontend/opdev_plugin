@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, inject, computed } from 'vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
+import { t } from 'i18next';
 import { useLinkSSH } from '../composables/use-link-ssh';
 import { FormRulesFactory } from '../composables/form-rules';
 import tipBase_0 from '@/assets/imgs/add.png';
@@ -8,11 +9,8 @@ import AscendC from '@/assets/imgs/AscendC.png';
 import tipBase_1_1 from '@/assets/imgs/hello_world.png';
 import tipBase_1_2 from '@/assets/imgs/add_custom.png';
 import tipBase_1_3 from '@/assets/imgs/torch_library_template.png';
-import {
-  getProjectType,
-} from '@web/apis';
+import { getProjectType } from '@web/apis';
 
-// 从父组件注入主题状态，避免重复调用 useTheme
 const actualTheme = inject('actualTheme', computed(() => 'dark'));
 
 // 根据主题获取文本颜色
@@ -57,17 +55,16 @@ const {
   handleCreatedProject,
 } = useLinkSSH(selectedTemplate);
 
-// 根据模板类型获取描述
 const getTemplateDesc = (template: string) => {
   switch (template) {
     case 'helloworld':
-      return '生成<<<>>>异构运行的.asc代码，默认打印"Hello World"';
+      return t('web.welcome.templateDescHelloworld');
     case 'addn':
-      return '生成<<<>>>异构运行的.asc，默认实现addn算子';
+      return t('web.welcome.templateDescAddn');
     case 'torch_library_template':
-      return '生成<<<>>>接入torch library的.asc代码，默认实现add算子';
+      return t('web.welcome.templateDescTorchLibrary');
     default:
-      return '生成<<<>>>异构运行的.asc代码，默认打印"Hello World"';
+      return t('web.welcome.templateDescHelloworld');
   }
 };
 
@@ -85,23 +82,10 @@ const getTemplateImage = (template: string) => {
   }
 };
 
-// 工程类型相关配置
-const cannProject = {
-  id: 1,
-  title: '【Ascend C】<<<>>>算子工程',
-  desc: '创建<<<>>>调用的addn工程样例，支持".asc"后缀的异构编译。',
-}
-const ascendProject = {
-  id: 2,
-  title: '【Ascend C】标准自定义算子工程',
-  desc: '基于Ascend C语言的标准自定义算子工程，op_host存放在CPC侧的代码实现，op_kermel存放NPU侧的代码实现，op_graph存放图模式下的代码实现 <span style="color: #ff4d4f; font-weight: bold;">(因为该算子的编译依赖ops-math项目，该算子将自动放到ops-math项目中math目录中，后续提交代码需要迁移到自己的fork代码仓中操作)</span>'
-}
-const pyascProject = {
-  id: 3,
-  title: '【Python】pyasc算子工程',
-  desc: '基于pyasc创建自定义Add算子样例工程'
-}
-const items_type = ref([cannProject, pyascProject])
+const cannProject = { id: 1, titleKey: 'web.welcome.ascendCOpProject' as const, descKey: 'web.link.ascendCOpDesc' as const };
+const ascendProject = { id: 2, titleKey: 'web.welcome.ascendCStandardProject' as const, descKey: 'web.link.ascendCStandardDesc' as const };
+const pyascProject = { id: 3, titleKey: 'web.welcome.pythonPyascProject' as const, descKey: 'web.link.pythonPyascDesc' as const };
+const items_type = ref([cannProject, pyascProject]);
 
 
 
@@ -132,7 +116,7 @@ onMounted(async () => {
     <div class="flex w-full items-stretch max-[960px]:flex-wrap">
       <div class="w-[35%] max-[960px]:flex-auto max-[960px]:w-full max-[960px]:min-w-0">
         <div class="text-base leading-[22px] font-bold mb-6" :class="getTextColorClass()">
-          工程类型
+          {{ t('web.link.projectType') }}
         </div>
         <div class="">
           <div class="mb-5">
@@ -144,27 +128,27 @@ onMounted(async () => {
                 selectedId_type === item.id ? getSelectedBorderClass() : '',
               ]" @click="selectedId_type = item.id">
               <div class="font-extrabold text-[initial] mb-[25px]" :class="getTextColorClass()">
-                {{ item.title }}
+                {{ t(item.titleKey) }}
               </div>
               <div
                 class="leading-8 mt-2.5 text-[13px] mb-2.5 whitespace-nowrap overflow-hidden text-ellipsis group-[.selected]:whitespace-normal group-[.selected]:overflow-visible group-[.selected]:text-clip"
                 :class="getDescTextClass()"
-                v-html="item.id === 1 ? getTemplateDesc(selectedTemplate) : item.desc">
+                v-html="item.id === 1 ? getTemplateDesc(selectedTemplate) : t(item.descKey)">
               </div>
               <a-tag v-if="item.id === 1 || item.id === 2" color="blue" class="mt-2.5 mr-2">
-                语言：Ascend C
+                {{ t('web.welcome.langAscendC') }}
               </a-tag>
               <a-tag v-if="item.id === 3" color="blue" class="mt-2.5 mr-2">
-                语言：Python
+                {{ t('web.welcome.langPython') }}
               </a-tag>
               <a-tag v-if="item.id === 1" color="purple" class="mt-2.5 mr-2">
-                类型：<<<>>>
+                {{ t('web.welcome.typeAngle') }}
               </a-tag>
               <a-tag v-if="item.id === 2" color="green" class="mt-2.5 mr-2">
-                类型：标准自定义
+                {{ t('web.welcome.typeStandardCustom') }}
               </a-tag>
               <a-tag v-if="item.id === 3" color="purple" class="mt-2.5 mr-2">
-                类型：pyasc
+                {{ t('web.welcome.typePyasc') }}
               </a-tag>
               <div v-if="item.id === 1" class="mt-4 flex gap-4">
                 <a-radio-group v-model:value="selectedTemplate" class="flex gap-4">
@@ -184,7 +168,7 @@ onMounted(async () => {
                   class="mt-5 pt-5 border-t transition-all duration-300"
                   :class="getDividerBorderClass()">
                   <div style="margin-bottom: 20px; margin-top: 20px" :class="getTextColorClass()">
-                    工程目录结构示意
+                    {{ t('web.link.structureDiagram') }}
                   </div>
                   <div class="overflow-hidden max-w-full transition-all duration-300">
                     <a-image v-if="item.id === 2" :src="AscendC"
@@ -203,45 +187,44 @@ onMounted(async () => {
         class="w-[65%] text-left text-sm font-normal leading-[22px] max-[960px]:flex-auto max-[960px]:w-full max-[960px]:min-w-0"
         :class="getTextColorClass()">
         <div class="text-base leading-[22px] font-bold mb-6" :class="getTextColorClass()">
-          工程配置
+          {{ t('web.link.projectConfig') }}
         </div>
         <a-form ref="connectionFormRef" :model="projectFormData" :label-col="{ span: 6 }" :wrapper-col="{ span: 24 }"
           :rules="connectionFormRules as any" layout="vertical">
           <a-form-item name="projectName">
             <template #label>
-              <span>算子工程名称</span>
-              <a-tooltip title="新建算子的名称，用于代码中的算子的定义，并默认用于工程名称。支持数字、字母、下划线">
+              <span>{{ t('web.link.projectNameLabel') }}</span>
+              <a-tooltip :title="t('web.link.projectNameTooltip')">
                 <QuestionCircleOutlined class="help-icon" />
               </a-tooltip>
             </template>
-            <a-input v-model:value="projectFormData.projectName" placeholder="请输入算子工程名称（只能包含字母、数字和下划线，必须以字母开头）" />
+            <a-input v-model:value="projectFormData.projectName" :placeholder="t('web.link.projectNamePlaceholder')" />
           </a-form-item>
           <a-form-item name="projectPath">
             <template #label>
-              <span>算子工程位置</span>
-              <a-tooltip title="您所创建的算子工程的存储路径。">
+              <span>{{ t('web.link.projectPathLabel') }}</span>
+              <a-tooltip :title="t('web.link.projectPathTooltip')">
                 <QuestionCircleOutlined class="help-icon" />
               </a-tooltip>
             </template>
             <a-auto-complete v-model:value="projectFormData.projectPath" :options="projectPathOptions"
-              :loading="projectPathLoading" placeholder="请输入工程位置，支持远程搜索"
+              :loading="projectPathLoading" :placeholder="t('web.link.projectPathPlaceholder')"
               @search="(val) => remoteSearch('projectPath', val)" @focus="handleSelectFolder" />
           </a-form-item>
           <a-form-item name="projectSH">
             <template #label>
-              <span>环境变量配置脚本</span>
-              <a-tooltip
-                title="安装CANN包后需要执行的set_env.sh脚本的绝对路径信息，如果使用的是一站式开发平台提供的容器镜像，则此处可以置空。若出现报错提示路径不存在，说明非有效环境变量脚本路径，需要输入设置环境变量脚本的绝对路径。">
+              <span>{{ t('web.link.envScriptLabel') }}</span>
+              <a-tooltip :title="t('web.link.envScriptTooltip')">
                 <QuestionCircleOutlined class="help-icon" />
               </a-tooltip>
             </template>
             <a-auto-complete v-model:value="projectFormData.projectSH" :options="projectSHOptions"
-              :loading="projectSHLoading" placeholder="请输入环境变量.sh文件地址，支持远程搜索"
+              :loading="projectSHLoading" :placeholder="t('web.link.envScriptPlaceholder')"
               @search="(val) => remoteSearch('projectSH', val)" @focus="handleSelectFile" />
           </a-form-item>
         </a-form>
         <a-button type="primary" class="!mt-6 !w-[84px] !h-8 !rounded-none" @click="handleCreatedProject">
-          立即创建
+          {{ t('web.link.createNow') }}
         </a-button>
       </div>
     </div>

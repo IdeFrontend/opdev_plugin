@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import { getOpByProjectIdAndOpName } from './ops';
 import { getProjectById } from '@plugin/domain';
 import {
@@ -22,7 +23,7 @@ function getBaseContext(configId: number): BaseContext {
   const config = getConfigById(configId) as unknown as ConfigRecord;
 
   if (!config) {
-    throw new Error('配置不存在');
+    throw new Error(t('command.configNotFound'));
   }
 
   const project = getProjectById(config.project_id);
@@ -67,7 +68,7 @@ export function getBuildOpCommand(config_id: number, compileOption?: string, ope
     });
   }
   catch (e: unknown) {
-    throw new Error(`生成编译命令失败:${(e as Error).message}`);
+    throw new Error(t('command.getBuildCommandFailed', { error: (e as Error).message }));
   }
 }
 
@@ -93,7 +94,7 @@ export function getRunCommand(config_id: number) {
     return strategy.buildRunCommand(context);
   }
   catch (e: unknown) {
-    throw new Error(`生成运行命令失败:${(e as Error).message}`);
+    throw new Error(t('command.getRunCommandFailed', { error: (e as Error).message }));
   }
 }
 
@@ -130,7 +131,7 @@ export function getBuildExampleCommand(
     });
   }
   catch (e: unknown) {
-    throw new Error(`生成编译命令失败:${(e as Error).message}`);
+    throw new Error(t('command.getBuildCommandFailed', { error: (e as Error).message }));
   }
 }
 
@@ -180,7 +181,7 @@ export function getSimulateCommand(
     });
   }
   catch (e: unknown) {
-    throw new Error(`获取仿真命令失败 ${(e as Error).message}`);
+    throw new Error(t('command.getSimulateCommandFailed', { error: (e as Error).message }));
   }
 }
 
@@ -226,7 +227,7 @@ export function getOnBoardCommand(
     });
   }
   catch (e: unknown) {
-    throw new Error(`获取上板命令失败 ${(e as Error).message}`);
+    throw new Error(t('command.getOnBoardCommandFailed', { error: (e as Error).message }));
   }
 }
 
@@ -271,7 +272,7 @@ export function getSanitizerCommand(
     );
   }
   catch (e: unknown) {
-    throw new Error(`生成异常检测命令失败: ${(e as Error).message}`);
+    throw new Error(t('command.getSanitizerCommandFailed', { error: (e as Error).message }));
   }
 }
 

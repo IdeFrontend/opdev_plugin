@@ -21,10 +21,10 @@
         <!-- 顶部标题区域 -->
         <div class="text-center mb-8 w-full max-[992px]:mb-[20px]">
           <h5 class="text-[25px] font-normal m-0 mb-2.5">
-            欢迎使用
+            {{ t('web.welcome.welcomeTitle') }}
           </h5>
           <h1 class="text-[32px] font-semibold m-0">
-            OP DevTools 算子一站式开发平台
+            {{ t('web.welcome.platformTitle') }}
           </h1>
         </div>
 
@@ -34,33 +34,33 @@
             @change="onStepChange">
             <a-step>
               <template #icon>
-                <img :src="settingIcon" alt="新建算子工程" class="step-icon" />
+                <img :src="settingIcon" :alt="t('web.welcome.stepNewProject')" class="step-icon" />
               </template>
-              <template #title>新建算子工程</template>
+              <template #title>{{ t('web.welcome.stepNewProject') }}</template>
             </a-step>
             <a-step>
               <template #icon>
-                <img :src="buildIcon" alt="算子开发" class="step-icon" />
+                <img :src="buildIcon" :alt="t('web.welcome.stepDev')" class="step-icon" />
               </template>
-              <template #title>算子开发</template>
+              <template #title>{{ t('web.welcome.stepDev') }}</template>
             </a-step>
             <a-step>
               <template #icon>
-                <img :src="debugIcon" alt="算子调试" class="step-icon" />
+                <img :src="debugIcon" :alt="t('web.welcome.stepDebug')" class="step-icon" />
               </template>
-              <template #title>算子调试</template>
+              <template #title>{{ t('web.welcome.stepDebug') }}</template>
             </a-step>
             <a-step>
               <template #icon>
-                <img :src="checkIcon" alt="算子异常检测" class="step-icon" />
+                <img :src="checkIcon" :alt="t('web.welcome.stepSanitizer')" class="step-icon" />
               </template>
-              <template #title>算子异常检测</template>
+              <template #title>{{ t('web.welcome.stepSanitizer') }}</template>
             </a-step>
             <a-step>
               <template #icon>
-                <img :src="powerIcon" alt="算子性能调优" class="step-icon" />
+                <img :src="powerIcon" :alt="t('web.welcome.stepPerformance')" class="step-icon" />
               </template>
-              <template #title>算子性能调优</template>
+              <template #title>{{ t('web.welcome.stepPerformance') }}</template>
             </a-step>
           </a-steps>
         </div>
@@ -83,13 +83,13 @@
             <!-- 左侧：标题、描述、立即创建 -->
             <div class="w-1/2 pr-8 max-[992px]:w-full max-[992px]:pr-0">
               <h3 class="text-[20px] font-semibold mb-6">
-                新建算子工程
+                {{ t('web.welcome.sectionNewProject') }}
               </h3>
               <p :class="[
                 'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
                 actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
               ]">
-                提供您算子开发环境开箱即用能力，支持基于Ascend C、Python等算子开发，支持&lt;&lt;&lt;&gt;&gt;&gt;算子工程和标准自定义算子工程的快速创建。
+                {{ t('web.welcome.sectionNewProjectDesc') }}
               </p>
               <ul
                 :class="[
@@ -97,9 +97,9 @@
                   actualTheme === 'dark' ? 'text-[#d1d1d1]' : 'text-gray-700'
                 ]"
               >
-                <li>环境开箱即用</li>
-                <li>Ascend C 算子工程</li>
-                <li>Pyasc 算子工程</li>
+                <li>{{ t('web.welcome.featureEnvReady') }}</li>
+                <li>{{ t('web.welcome.featureAscendC') }}</li>
+                <li>{{ t('web.welcome.featurePyascProjectShort') }}</li>
               </ul>
               <div>
                 <button
@@ -111,7 +111,7 @@
                   ]"
                   @click="handleAscendCProject"
                 >
-                  立即创建
+                  {{ t('web.welcome.createNow') }}
                 </button>
               </div>
             </div>
@@ -131,18 +131,20 @@
                     'font-extrabold text-[initial] mb-3',
                     actualTheme === 'dark' ? 'text-white' : 'text-gray-800'
                   ]">
-                    【Ascend C】&lt;&lt;&lt;&gt;&gt;&gt;算子工程
+                    {{ t('web.welcome.ascendCOpProject') }}
                   </div>
                   <div :class="[
                     'leading-7 mt-1 text-[12px] mb-2.5 whitespace-normal',
                     actualTheme === 'dark' ? 'text-white' : 'text-gray-700'
                   ]"
-                    v-html="getTemplateDesc(selectedTemplate)" />
+                  >
+                    {{ getTemplateDesc(selectedTemplate) }}
+                  </div>
                   <a-tag color="blue" class="mt-2 mr-2">
-                    语言：Ascend C
+                    {{ t('web.welcome.langAscendC') }}
                   </a-tag>
                   <a-tag color="purple" class="mt-2 mr-2">
-                    类型：&lt;&lt;&lt;&gt;&gt;&gt;
+                    {{ t('web.welcome.typeAngle') }}
                   </a-tag>
                   <template v-if="selectedProjectTypeId === 1">
                     <div class="mt-4 flex items-center gap-3">
@@ -150,7 +152,7 @@
                         'text-[13px] whitespace-nowrap',
                         actualTheme === 'dark' ? 'text-[#ffffff]' : 'text-gray-800'
                       ]">
-                        样例
+                        {{ t('web.welcome.sample') }}
                       </span>
                       <a-radio-group v-model:value="selectedTemplate" class="sample-radio-group flex gap-4">
                         <a-radio value="helloworld">
@@ -185,19 +187,19 @@
                     'font-extrabold text-[initial] mb-3',
                     actualTheme === 'dark' ? 'text-white' : 'text-gray-800'
                   ]">
-                    【Ascend C】标准自定义算子工程
+                    {{ t('web.welcome.ascendCStandardProject') }}
                   </div>
                   <div :class="[
                     'leading-7 mt-1 text-[12px] mb-2.5 whitespace-normal',
                     actualTheme === 'dark' ? 'text-white' : 'text-gray-700'
                   ]">
-                    基于Ascend C语言的标准自定义算子工程，op_host存放在CPC侧的代码实现，op_kermel存放NPU侧的代码实现，op_graph存放图模式下的代码实现
+                    {{ t('web.welcome.ascendCStandardDesc') }}
                   </div>
                   <a-tag color="blue" class="mt-2 mr-2">
-                    语言：Ascend C
+                    {{ t('web.welcome.langAscendC') }}
                   </a-tag>
                   <a-tag color="green" class="mt-2 mr-2">
-                    类型：标准自定义
+                    {{ t('web.welcome.typeStandardCustom') }}
                   </a-tag>
                   <div v-if="selectedProjectTypeId === 2" class="mt-4">
                     <div class="overflow-hidden max-w-full transition-all duration-300">
@@ -219,19 +221,19 @@
                     'font-extrabold text-[initial] mb-3',
                     actualTheme === 'dark' ? 'text-white' : 'text-gray-800'
                   ]">
-                    【Python】pyasc算子工程
+                    {{ t('web.welcome.pythonPyascProject') }}
                   </div>
                   <div :class="[
                     'leading-7 mt-1 text-[12px] mb-2.5 whitespace-normal',
                     actualTheme === 'dark' ? 'text-white' : 'text-gray-700'
                   ]">
-                    基于pyasc创建自定义Add算子样例工程。
+                    {{ t('web.welcome.pythonPyascDesc') }}
                   </div>
                   <a-tag color="blue" class="mt-2 mr-2">
-                    语言：Python
+                    {{ t('web.welcome.langPython') }}
                   </a-tag>
                   <a-tag color="purple" class="mt-2 mr-2">
-                    类型：pyasc
+                    {{ t('web.welcome.typePyasc') }}
                   </a-tag>
                   <div v-if="selectedProjectTypeId === 3" class="mt-4">
                     <div class="overflow-hidden max-w-full transition-all duration-300">
@@ -255,13 +257,13 @@
           <!-- 左侧：算子开发文案与要点 -->
           <div class="w-1/2 pr-8 max-[992px]:w-full max-[992px]:pr-0">
             <h3 class="text-[20px] font-semibold mb-6">
-              算子开发
+              {{ t('web.welcome.sectionDev') }}
             </h3>
             <p :class="[
               'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
               actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
             ]">
-              开发过程中支持Ascend C语法高亮、代码补全、代码跳转等。提供算子编译，算子部署到CANN包，算子异常检测编译，算子example编译等能力。
+              {{ t('web.welcome.sectionDevDesc') }}
             </p>
             <ul
               :class="[
@@ -269,11 +271,11 @@
                 actualTheme === 'dark' ? 'text-[#d1d1d1]' : 'text-gray-700'
               ]"
             >
-              <li>Tiling开发</li>
-              <li>Kernel开发</li>
-              <li>语法高亮</li>
-              <li>代码补全</li>
-              <li>算子编译部署</li>
+              <li>{{ t('web.welcome.featureTiling') }}</li>
+              <li>{{ t('web.welcome.featureKernel') }}</li>
+              <li>{{ t('web.welcome.featureHighlight') }}</li>
+              <li>{{ t('web.welcome.featureCompletion') }}</li>
+              <li>{{ t('web.welcome.featureCompileDeploy') }}</li>
             </ul>
               <!-- <a-button
               type="link"
@@ -286,19 +288,19 @@
           <!-- 右侧：算子开发 3 个步骤示意 Tab -->
           <div class="w-1/2 max-[992px]:w-full max-[992px]:mt-6">
             <a-tabs v-model:activeKey="devTabKey">
-              <a-tab-pane key="code" tab="编写算子代码">
+              <a-tab-pane key="code" :tab="t('web.welcome.tabWriteCode')">
                 <a-image
                   :src="writeImg"
                   class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
                 />
               </a-tab-pane>
-              <a-tab-pane key="build" tab="编译部署算子">
+              <a-tab-pane key="build" :tab="t('web.welcome.tabCompileDeploy')">
                 <a-image
                   :src="buildImg"
                   class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
                 />
               </a-tab-pane>
-              <a-tab-pane key="run" tab="运行算子">
+              <a-tab-pane key="run" :tab="t('web.welcome.tabRun')">
                 <a-image
                   :src="runImg"
                   class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
@@ -319,13 +321,13 @@
             <!-- 左侧：算子调试文案与要点 -->
             <div class="w-1/2 pr-8 max-[992px]:w-full max-[992px]:pr-0">
               <h3 class="text-[20px] font-semibold mb-6">
-                算子调试
+                {{ t('web.welcome.sectionDebug') }}
               </h3>
               <p :class="[
                 'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
                 actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
               ]">
-                基于msdebug工具提供NPU上板可视化调试Ascend算子工程，包括断点调试、单步执行调试、查看变量/寄存器/堆栈/断点信息、内存查询、核切和NPU coredump文件可视化调试等。
+                {{ t('web.welcome.sectionDebugDesc') }}
               </p>
               <ul
                 :class="[
@@ -333,12 +335,12 @@
                   actualTheme === 'dark' ? 'text-[#d1d1d1]' : 'text-gray-700'
                 ]"
               >
-                <li>断点调试</li>
-                <li>单步执行调试</li>
-                <li>内存查询</li>
-                <li>核切</li>
-                <li>查看变量/寄存器/堆栈/断点信息</li>
-                <li>NPU coredump文件可视化调试</li>
+                <li>{{ t('web.welcome.featureDebugBreakpoint') }}</li>
+                <li>{{ t('web.welcome.featureDebugStep') }}</li>
+                <li>{{ t('web.welcome.featureDebugMemory') }}</li>
+                <li>{{ t('web.welcome.featureDebugCoreSwitch') }}</li>
+                <li>{{ t('web.welcome.featureDebugInspect') }}</li>
+                <li>{{ t('web.welcome.featureDebugCoredump') }}</li>
               </ul>
             </div>
 
@@ -362,13 +364,13 @@
             <!-- 左侧：算子异常检测介绍 -->
             <div class="w-1/2 pr-8 max-[992px]:w-full max-[992px]:pr-0">
               <h3 class="text-[20px] font-semibold mb-6">
-                异常检测
+                {{ t('web.welcome.sectionSanitizer') }}
               </h3>
               <p :class="[
                 'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
                 actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
               ]">
-                集成 msSanitizer 工具，提供内存检测、竞争检测和未初始化检测功能，全面覆盖算子功能正确性检测。
+                {{ t('web.welcome.sectionSanitizerDesc') }}
               </p>
               <ul
                 :class="[
@@ -376,17 +378,17 @@
                   actualTheme === 'dark' ? 'text-[#d1d1d1]' : 'text-gray-700'
                 ]"
               >
-                <li>内存检测</li>
-                <li>竞争检测</li>
-                <li>未初始化检测</li>
+                <li>{{ t('web.welcome.featureMemory') }}</li>
+                <li>{{ t('web.welcome.featureRace') }}</li>
+                <li>{{ t('web.welcome.featureUninit') }}</li>
               </ul>
-              <p :class="[
-                'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
-                actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
-              ]">
-                1. 点击操作面板中的“异常检测”按钮，选择检测内容。<br />
-                2. 运行完成后，点击面板中的“异常检测结果”菜单，可查看异常检测报告，支持查看详情和代码行跳转。
-              </p>
+              <p
+                :class="[
+                  'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
+                  actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
+                ]"
+                v-html="t('web.welcome.sanitizerSteps')"
+              />
               <!-- <a-button
                 type="link"
                 class="!p-0 !h-auto text-[12px]"
@@ -398,13 +400,13 @@
             <!-- 右侧：异常检测 2 个 Tab -->
             <div class="w-1/2 max-[992px]:w-full max-[992px]:mt-6">
               <a-tabs v-model:activeKey="checkTabKey">
-                <a-tab-pane key="select" tab="选择检测内容">
+                <a-tab-pane key="select" :tab="t('web.welcome.tabSelectCheckContent')">
                   <a-image
                     :src="selectCheckImg"
                     class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
                   />
                 </a-tab-pane>
-                <a-tab-pane key="result" tab="查看检测结果">
+                <a-tab-pane key="result" :tab="t('web.welcome.tabViewCheckResult')">
                   <a-image
                     :src="checkImg"
                     class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
@@ -425,13 +427,13 @@
             <!-- 左侧：算子性能调优介绍 -->
             <div class="w-1/2 pr-8 max-[992px]:w-full max-[992px]:pr-0">
               <h3 class="text-[20px] font-semibold mb-6">
-                性能调优
+                {{ t('web.welcome.sectionPerformance') }}
               </h3>
               <p :class="[
                 'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
                 actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
               ]">
-                快速定位算子的软硬件性能瓶颈，提供计算内存热力图、Roofline瓶颈分析图、Cache热力图、通算流水图（MC2算子）、指令流水图、算子代码热力图、性能数据等分析能力。
+                {{ t('web.welcome.sectionPerformanceDesc') }}
               </p>
               <ul
                 :class="[
@@ -439,16 +441,16 @@
                   actualTheme === 'dark' ? 'text-[#d1d1d1]' : 'text-gray-700'
                 ]"
               >
-                <li>上板分析</li>
-                <li>仿真分析</li>
+                <li>{{ t('web.welcome.featureOnboard') }}</li>
+                <li>{{ t('web.welcome.featureSimulation') }}</li>
               </ul>
-              <p :class="[
-                'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
-                actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
-              ]">
-                1. 点击操作面板中的“性能分析”按钮下的“上板分析”或“仿真分析”，选择分析内容。<br />
-                2. 运行完成后，点击面板中的“性能调优结果”菜单，可查看并分析性能调优相关数据。
-              </p>
+              <p
+                :class="[
+                  'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
+                  actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
+                ]"
+                v-html="t('web.welcome.performanceSteps')"
+              />
               <!-- <a-button
                 type="link"
                 class="!p-0 !h-auto text-[12px]"
@@ -460,13 +462,13 @@
             <!-- 右侧：性能调优 2 个 Tab -->
             <div class="w-1/2 max-[992px]:w-full max-[992px]:mt-6">
               <a-tabs v-model:activeKey="perfTabKey">
-                <a-tab-pane key="select" tab="选择分析内容">
+                <a-tab-pane key="select" :tab="t('web.welcome.tabSelectAnalysisContent')">
                   <a-image
                     :src="selectAnalysisImg"
                     class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
                   />
                 </a-tab-pane>
-                <a-tab-pane key="result" tab="查看分析结果">
+                <a-tab-pane key="result" :tab="t('web.welcome.tabViewAnalysisResult')">
                   <a-image
                     :src="analysisImg"
                     class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
@@ -490,7 +492,7 @@
             ]"
             @click="goPrevStep"
           >
-            上一步
+            {{ t('web.welcome.prevStep') }}
           </span>
           <span
             v-if="currentStep < 4"
@@ -500,7 +502,7 @@
             ]"
             @click="goNextStep"
           >
-            下一步
+            {{ t('web.welcome.nextStep') }}
           </span>
         </div>
       </div>
@@ -510,6 +512,7 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue';
+import { t } from 'i18next';
 import { useTheme } from '@web/composables/use-theme';
 import settingIcon from '@/assets/svg/setting.svg';
 import buildIcon from '@/assets/svg/build.svg';
@@ -548,13 +551,13 @@ const selectedTemplate = ref<'helloworld' | 'addn' | 'torch_library_template'>(
 const getTemplateDesc = (template: string) => {
   switch (template) {
     case 'helloworld':
-      return '生成&lt;&lt;&lt;&gt;&gt;&gt;异构运行的.asc代码，默认打印"Hello World"';
+      return t('web.welcome.templateDescHelloworld');
     case 'addn':
-      return '生成&lt;&lt;&lt;&gt;&gt;&gt;异构运行的.asc，默认实现addn算子';
+      return t('web.welcome.templateDescAddn');
     case 'torch_library_template':
-      return '生成&lt;&lt;&lt;&gt;&gt;&gt;接入rotch licrary的.asc代码，默认实现add算子';
+      return t('web.welcome.templateDescTorchLibrary');
     default:
-      return '生成&lt;&lt;&lt;&gt;&gt;&gt;异构运行的.asc代码，默认打印"Hello World"';
+      return t('web.welcome.templateDescHelloworld');
   }
 };
 

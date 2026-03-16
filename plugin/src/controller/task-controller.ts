@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as path from 'path';
 
@@ -12,17 +13,17 @@ import { OperatorProjectType } from '@plugin/domain/services/operator-project-de
 
 // 全局任务管理器：用于追踪和终止正在执行的任务
 let currentExecutor: CommandExecutor | null = null;
-// 当前任务名称映射
-const taskNameMap: Record<string, string> = {
-  'build': '编译部署算子',
-  'runExample': '运行',
-  'sanitizer': '异常检测',
-  'onboard': '上板分析',
-  'simulation': '仿真分析',
-  'buildAndCpuDebug': 'CPU调试',
-  'buildAndDebug': 'NPU调试',
-  'dumpTensor': '执行DumpTensor',
-  'utTest': 'UT测试'
+// 当前任务名称映射（key -> i18n key）
+const taskNameKeyMap: Record<string, string> = {
+  'build': 'task.taskName.build',
+  'runExample': 'task.taskName.runExample',
+  'sanitizer': 'task.taskName.sanitizer',
+  'onboard': 'task.taskName.onboard',
+  'simulation': 'task.taskName.simulation',
+  'buildAndCpuDebug': 'task.taskName.buildAndCpuDebug',
+  'buildAndDebug': 'task.taskName.buildAndDebug',
+  'dumpTensor': 'task.taskName.dumpTensor',
+  'utTest': 'task.taskName.utTest',
 };
 // 当前正在执行的任务类型
 let currentTaskType: string | null = null;
@@ -275,11 +276,11 @@ export const taskMethods = {
       currentTaskType = null;
       ProjectManager.getInstance()
         .clearExecutor();
-      vscode.window.showWarningMessage('任务已被手动停止');
+      vscode.window.showWarningMessage(t('task.stoppedByUser'));
     }
     else {
       console.log('[stopTask] 没有正在执行的任务');
-      vscode.window.showInformationMessage('当前没有正在执行的任务');
+      vscode.window.showInformationMessage(t('task.noRunningTask'));
     }
   },
 
@@ -288,8 +289,8 @@ export const taskMethods = {
    * @returns 当前任务名称，如果没有任务则返回null
    */
   async getCurrentTaskName(): Promise<string | null> {
-    if (currentTaskType && taskNameMap[currentTaskType]) {
-      return taskNameMap[currentTaskType];
+    if (currentTaskType && taskNameKeyMap[currentTaskType]) {
+      return t(taskNameKeyMap[currentTaskType]);
     }
     return null;
   },
@@ -344,18 +345,16 @@ export const taskMethods = {
         const isPyFile = activeEditor?.document.fileName.endsWith('.py');
 
         if (!isPyFile) {
-          vscode.window.showWarningMessage('请先打开一个 .py 文件');
-          // 清除状态
+          vscode.window.showWarningMessage(t('task.openPyFirst'));
           currentExecutor = null;
           currentTaskType = null;
           ProjectManager.getInstance().clearExecutor();
           return;
         }
 
-        // 获取工作区路径
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders || workspaceFolders.length === 0) {
-          vscode.window.showWarningMessage('未找到工作区路径');
+          vscode.window.showWarningMessage(t('task.workspacePathNotFound'));
           // 清除状态
           currentExecutor = null;
           currentTaskType = null;
@@ -435,11 +434,11 @@ export const taskMethods = {
   async debugConfig(): Promise<void> {
     try {
       await vscode.commands.executeCommand('workbench.action.debug.configure');
-      vscode.window.showInformationMessage('已打开 launch.json 文件');
+      vscode.window.showInformationMessage(t('task.launchJsonOpened'));
     }
     catch (error) {
       console.error('打开 launch.json 时出错:', error);
-      vscode.window.showErrorMessage(`无法打开 launch.json: ${error instanceof Error ? error.message : String(error)}`);
+      vscode.window.showErrorMessage(t('task.cannotOpenLaunchJson', { error: error instanceof Error ? error.message : String(error) }));
       throw error;
     }
   },
@@ -467,18 +466,16 @@ export const taskMethods = {
         const isPyFile = activeEditor?.document.fileName.endsWith('.py');
 
         if (!isPyFile) {
-          vscode.window.showWarningMessage('请先打开一个 .py 文件');
-          // 清除状态
+          vscode.window.showWarningMessage(t('task.openPyFirst'));
           currentExecutor = null;
           currentTaskType = null;
           ProjectManager.getInstance().clearExecutor();
           return;
         }
 
-        // 获取工作区路径
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders || workspaceFolders.length === 0) {
-          vscode.window.showWarningMessage('未找到工作区路径');
+          vscode.window.showWarningMessage(t('task.workspacePathNotFound'));
           // 清除状态
           currentExecutor = null;
           currentTaskType = null;
@@ -558,11 +555,11 @@ export const taskMethods = {
   async cpuDebugConfig(): Promise<void> {
     try {
       await vscode.commands.executeCommand('workbench.action.debug.configure');
-      vscode.window.showInformationMessage('已打开 launch.json 文件');
+      vscode.window.showInformationMessage(t('task.launchJsonOpened'));
     }
     catch (error) {
       console.error('打开 launch.json 时出错:', error);
-      vscode.window.showErrorMessage(`无法打开 launch.json: ${error instanceof Error ? error.message : String(error)}`);
+      vscode.window.showErrorMessage(t('task.cannotOpenLaunchJson', { error: error instanceof Error ? error.message : String(error) }));
       throw error;
     }
   },

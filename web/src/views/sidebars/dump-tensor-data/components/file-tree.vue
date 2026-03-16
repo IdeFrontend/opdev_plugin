@@ -11,6 +11,7 @@ import type { DirectoryTreeProps } from 'ant-design-vue';
 import {
   Component, h, ref, watch, computed,
 } from 'vue';
+import { t } from 'i18next';
 import { message, Dropdown } from 'ant-design-vue';
 
 import {
@@ -106,7 +107,7 @@ function isComparableFile(row: object): row is PerformanceRunDataFile {
  */
 function performFileComparison() {
   if (selectedFiles.value.length < 2) {
-    message.warning('请选择至少两个文件进行比较');
+    message.warning(t('web.dump.selectTwoFiles'));
     return;
   }
 
@@ -121,11 +122,10 @@ function performFileComparison() {
       // 对比完成后取消对比状态
       cancelCompare();
     })
-    message.success('正在启动VSCode文件对比...');
+    message.success(t('web.dump.compareStarting'));
   } catch (error) {
     console.error('调用VSCode文件对比功能失败:', error);
-    message.error('启动VSCode文件对比失败');
-    // 出错时也取消对比状态
+    message.error(t('web.dump.compareFailed'));
     cancelCompare();
   }
 }
@@ -166,7 +166,7 @@ function onCheck(checkedKeysValue: any, e: { checked: boolean; node: any }) {
     // 更新 selectedFiles 数组
     selectedFiles.value = getFileObjectsFromKeys(limitedFileKeys, props.treeData);
 
-    message.warning(`最多只能选择 ${maxSelectedCount} 个文件进行比较`);
+    message.warning(t('web.dump.maxSelectCount', { count: maxSelectedCount }));
   } else {
     checkedKeys.value = fileKeys;
 
@@ -272,12 +272,12 @@ const handleImport = async () => {
   >
     <template v-if="processedTreeData && processedTreeData.length">
       <div v-show="isComparing" class="filter-bar">
-        <a-button type="primary" @click="performFileComparison">开始对比</a-button>
-        <a-button class="default-btn" @click="cancelCompare">取消</a-button>
+        <a-button type="primary" @click="performFileComparison">{{ t('web.dump.startCompare') }}</a-button>
+        <a-button class="default-btn" @click="cancelCompare">{{ t('web.dump.cancel') }}</a-button>
       </div>
       <div v-show="!isComparing" class="filter-bar">
-        <a-button class="default-btn" @click="handleImport">导入</a-button>
-        <a-button class="default-btn" @click="openCompare">对比</a-button>
+        <a-button class="default-btn" @click="handleImport">{{ t('web.dump.import') }}</a-button>
+        <a-button class="default-btn" @click="openCompare">{{ t('web.dump.compare') }}</a-button>
       </div>
     </template>
 

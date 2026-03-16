@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -30,7 +31,7 @@ export const linkMethods = {
       );
     }
     else {
-      vscode.window.showErrorMessage(`文件不存在: ${filePath}`);
+      vscode.window.showErrorMessage(t('link.fileNotExist', { path: filePath }));
     }
   },
 

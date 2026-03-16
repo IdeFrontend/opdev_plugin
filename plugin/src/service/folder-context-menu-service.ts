@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -247,33 +248,33 @@ export class FolderContextMenuService {
 
       // <<<>>> type: context menu not supported (except report visualization)
       if (isAscendLikeOperator(operatorType)) {
-        vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
+        vscode.window.showWarningMessage(t('folderContext.angleOpsNotSupported'));
         return;
       }
 
       // pyasc: mark/unmark operator or collection not supported
       if (operatorType === OperatorProjectType.PYASC) {
-        vscode.window.showWarningMessage('pyasc算子不支持标记/取消标记算子或算子合集');
+        vscode.window.showWarningMessage(t('folderContext.pyascNoMarkUnmark'));
         return;
       }
 
       // 1. Find root (standard custom operator)
       const rootPath = findStandardCustomRoot(folderPath);
       if (!rootPath) {
-        vscode.window.showWarningMessage('未找到标准自定义算子根目录，请先对包含 build.sh 的根目录执行「标记为算子工程」');
+        vscode.window.showWarningMessage(t('folderContext.noOperatorRoot'));
         return;
       }
 
       // 2. Get project info (project already created by default)
       const rootProject = getProjectByPath(rootPath);
       if (!rootProject) {
-        vscode.window.showErrorMessage('未找到项目信息');
+        vscode.window.showErrorMessage(t('folderContext.noProjectInfo'));
         return;
       }
 
       // 3. Check selected dir is operator (has CMakeLists.txt)
       if (!isStandardCustomSubOperator(folderPath)) {
-        vscode.window.showWarningMessage('该目录不是算子文件（不包含 CMakeLists.txt）');
+        vscode.window.showWarningMessage(t('folderContext.notOperatorDir'));
         return;
       }
 
@@ -292,7 +293,7 @@ export class FolderContextMenuService {
       const targetList = isExperimental ? currentExperimentalOpsList : currentOpsList;
       const existing = targetList.find((op) => op.path === folderPath || op.name === operatorName);
       if (existing) {
-        vscode.window.showInformationMessage('该算子已标记');
+        vscode.window.showInformationMessage(t('folderContext.operatorAlreadyMarked'));
         return;
       }
 
@@ -330,10 +331,10 @@ export class FolderContextMenuService {
         OperatorProjectIconTheme.getInstance(ctx).fireDecorationUpdate(uri);
       }
 
-      vscode.window.showInformationMessage(`已标记为算子: ${operatorName}`);
+      vscode.window.showInformationMessage(t('folderContext.markedAsOperator', { name: operatorName }));
     } catch (error) {
       vscode.window.showErrorMessage(
-        `标记为算子失败: ${error instanceof Error ? error.message : String(error)}`,
+        t('folderContext.markAsOperatorFailed', { error: error instanceof Error ? error.message : String(error) }),
       );
     }
   }
@@ -350,27 +351,27 @@ export class FolderContextMenuService {
 
       // <<<>>> type: context menu not supported (except report visualization)
       if (isAscendLikeOperator(operatorType)) {
-        vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
+        vscode.window.showWarningMessage(t('folderContext.angleOpsNotSupported'));
         return;
       }
 
       // pyasc: mark/unmark not supported
       if (operatorType === OperatorProjectType.PYASC) {
-        vscode.window.showWarningMessage('pyasc算子不支持标记/取消标记算子或算子合集');
+        vscode.window.showWarningMessage(t('folderContext.pyascNoMarkUnmark'));
         return;
       }
 
       // 1. Find root (standard custom operator)
       const rootPath = findStandardCustomRoot(folderPath);
       if (!rootPath) {
-        vscode.window.showWarningMessage('未找到标准自定义算子根目录，请先对包含 build.sh 的根目录执行「标记为算子工程」');
+        vscode.window.showWarningMessage(t('folderContext.noOperatorRoot'));
         return;
       }
 
       // 2. Get project info (project already created by default)
       const rootProject = getProjectByPath(rootPath);
       if (!rootProject) {
-        vscode.window.showErrorMessage('未找到项目信息');
+        vscode.window.showErrorMessage(t('folderContext.noProjectInfo'));
         return;
       }
 
@@ -388,7 +389,7 @@ export class FolderContextMenuService {
         // Operator collection under experimental
         const parts = relativePath.split('/');
         if (parts.length < 2) {
-          vscode.window.showWarningMessage('该目录不是有效的算子合集');
+          vscode.window.showWarningMessage(t('folderContext.notValidCollection'));
           return;
         }
         collectionName = parts[1];
@@ -397,7 +398,7 @@ export class FolderContextMenuService {
 
         // Check if in experimental operator collection whitelist
         if (!EXPERIMENTAL_OPERATOR_COLLECTIONS.has(collectionName)) {
-          vscode.window.showWarningMessage(`该目录不在experimental算子合集白名单中: ${collectionName}`);
+          vscode.window.showWarningMessage(t('folderContext.notInExperimentalWhitelist', { name: collectionName }));
           return;
         }
       } else {
@@ -408,7 +409,7 @@ export class FolderContextMenuService {
 
         // Check if in root operator collection whitelist
         if (!ROOT_OPERATOR_COLLECTIONS.has(collectionName)) {
-          vscode.window.showWarningMessage(`该目录不在算子合集白名单中: ${collectionName}`);
+          vscode.window.showWarningMessage(t('folderContext.notInWhitelist', { name: collectionName }));
           return;
         }
       }
@@ -449,7 +450,7 @@ export class FolderContextMenuService {
       }
 
       if (!hasOperators) {
-        vscode.window.showWarningMessage('该目录下没有找到算子（不包含 CMakeLists.txt 的子目录）');
+        vscode.window.showWarningMessage(t('folderContext.noOperatorsInDir'));
         return;
       }
 
@@ -462,7 +463,7 @@ export class FolderContextMenuService {
       const meetName = isExperimental ? `experimental/${collectionName}` : collectionName;
       const existingMeet = currentOpsMeet.find((m) => m.path === collectionPath || m.name === meetName);
       if (existingMeet) {
-        vscode.window.showInformationMessage('该算子合集已标记');
+        vscode.window.showInformationMessage(t('folderContext.collectionAlreadyMarked'));
         return;
       }
 
@@ -514,11 +515,11 @@ export class FolderContextMenuService {
       }
 
       vscode.window.showInformationMessage(
-        `已标记为算子合集: ${meetName}（包含 ${operators.length} 个算子）`,
+        t('folderContext.markedAsCollection', { name: meetName, count: operators.length }),
       );
     } catch (error) {
       vscode.window.showErrorMessage(
-        `标记为算子合集失败: ${error instanceof Error ? error.message : String(error)}`,
+        t('folderContext.markAsCollectionFailed', { error: error instanceof Error ? error.message : String(error) }),
       );
     }
   }
@@ -534,33 +535,33 @@ export class FolderContextMenuService {
 
       // <<<>>> type: context menu not supported (except report visualization)
       if (isAscendLikeOperator(operatorType)) {
-        vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
+        vscode.window.showWarningMessage(t('folderContext.angleOpsNotSupported'));
         return;
       }
 
       // pyasc: mark/unmark not supported
       if (operatorType === OperatorProjectType.PYASC) {
-        vscode.window.showWarningMessage('pyasc算子不支持标记/取消标记算子或算子合集');
+        vscode.window.showWarningMessage(t('folderContext.pyascNoMarkUnmark'));
         return;
       }
 
       // 1. Find root (standard custom operator)
       const rootPath = findStandardCustomRoot(folderPath);
       if (!rootPath) {
-        vscode.window.showWarningMessage('未找到标准自定义算子根目录');
+        vscode.window.showWarningMessage(t('folderContext.noOperatorRootShort'));
         return;
       }
 
       // 2. Verify root is standard custom operator
       if (!isStandardCustomRoot(rootPath)) {
-        vscode.window.showWarningMessage('根目录不是标准自定义算子');
+        vscode.window.showWarningMessage(t('folderContext.rootNotStandardOperator'));
         return;
       }
 
       // 3. Get project info (project already created by default)
       const rootProject = getProjectByPath(rootPath);
       if (!rootProject) {
-        vscode.window.showErrorMessage('未找到项目信息');
+        vscode.window.showErrorMessage(t('folderContext.noProjectInfo'));
         return;
       }
 
@@ -579,7 +580,7 @@ export class FolderContextMenuService {
       );
 
       if (opsListIndex === -1 && experimentalOpsListIndex === -1) {
-        vscode.window.showInformationMessage('该目录未被标记为算子');
+        vscode.window.showInformationMessage(t('folderContext.dirNotMarkedAsOperator'));
         return;
       }
 
@@ -607,10 +608,10 @@ export class FolderContextMenuService {
         OperatorProjectIconTheme.getInstance(ctx).fireDecorationUpdate(uri);
       }
 
-      vscode.window.showInformationMessage(`已取消标记为算子: ${operatorName}`);
+      vscode.window.showInformationMessage(t('folderContext.unmarkedAsOperator', { name: operatorName }));
     } catch (error) {
       vscode.window.showErrorMessage(
-        `取消标记失败: ${error instanceof Error ? error.message : String(error)}`,
+        t('folderContext.unmarkFailed', { error: error instanceof Error ? error.message : String(error) }),
       );
     }
   }
@@ -627,33 +628,33 @@ export class FolderContextMenuService {
 
       // <<<>>> type: context menu not supported (except report visualization)
       if (isAscendLikeOperator(operatorType)) {
-        vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
+        vscode.window.showWarningMessage(t('folderContext.angleOpsNotSupported'));
         return;
       }
 
       // pyasc: mark/unmark not supported
       if (operatorType === OperatorProjectType.PYASC) {
-        vscode.window.showWarningMessage('pyasc算子不支持标记/取消标记算子或算子合集');
+        vscode.window.showWarningMessage(t('folderContext.pyascNoMarkUnmark'));
         return;
       }
 
       // 1. Find root (standard custom operator)
       const rootPath = findStandardCustomRoot(folderPath);
       if (!rootPath) {
-        vscode.window.showWarningMessage('未找到标准自定义算子根目录');
+        vscode.window.showWarningMessage(t('folderContext.noOperatorRootShort'));
         return;
       }
 
       // 2. Verify root is standard custom operator
       if (!isStandardCustomRoot(rootPath)) {
-        vscode.window.showWarningMessage('根目录不是标准自定义算子');
+        vscode.window.showWarningMessage(t('folderContext.rootNotStandardOperator'));
         return;
       }
 
       // 3. Get project info (project already created by default)
       const rootProject = getProjectByPath(rootPath);
       if (!rootProject) {
-        vscode.window.showErrorMessage('未找到项目信息');
+        vscode.window.showErrorMessage(t('folderContext.noProjectInfo'));
         return;
       }
 
@@ -662,7 +663,7 @@ export class FolderContextMenuService {
       const meetIndex = currentOpsMeet.findIndex((m) => m.path === folderPath);
 
       if (meetIndex === -1) {
-        vscode.window.showInformationMessage('该目录未被标记为算子合集');
+        vscode.window.showInformationMessage(t('folderContext.dirNotMarkedAsCollection'));
         return;
       }
 
@@ -710,10 +711,10 @@ export class FolderContextMenuService {
         OperatorProjectIconTheme.getInstance(ctx).fireDecorationUpdate(uri);
       }
 
-      vscode.window.showInformationMessage(`已取消标记为算子合集: ${meetInfo.name}`);
+      vscode.window.showInformationMessage(t('folderContext.unmarkedAsCollection', { name: meetInfo.name }));
     } catch (error) {
       vscode.window.showErrorMessage(
-        `取消标记失败: ${error instanceof Error ? error.message : String(error)}`,
+        t('folderContext.unmarkFailed', { error: error instanceof Error ? error.message : String(error) }),
       );
     }
   }
@@ -729,7 +730,7 @@ export class FolderContextMenuService {
     // Get current workspace root
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders || workspaceFolders.length === 0) {
-      vscode.window.showErrorMessage('未打开工作区，无法运行验证');
+      vscode.window.showErrorMessage(t('folderContext.noWorkspaceCannotRun'));
       return;
     }
     const workspaceRootPath = workspaceFolders[0].uri.fsPath;
@@ -758,7 +759,7 @@ export class FolderContextMenuService {
 
     // <<<>>> type: context menu not supported (except report visualization)
     if (isAscendLikeOperator(rootDetection.projectType)) {
-      vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
+      vscode.window.showWarningMessage(t('folderContext.angleOpsNotSupported'));
       return;
     }
 
@@ -787,7 +788,7 @@ export class FolderContextMenuService {
       }
 
       if (!projectId) {
-        vscode.window.showErrorMessage('未找到对应的项目ID，请先标记为算子工程');
+        vscode.window.showErrorMessage(t('folderContext.noProjectIdMarkFirst'));
         return;
       }
 
@@ -812,7 +813,7 @@ export class FolderContextMenuService {
     }
 
     // Other cases: prompt user
-    vscode.window.showWarningMessage('该文件/文件夹无算子可运行验证');
+    vscode.window.showWarningMessage(t('folderContext.noOperatorsToValidate'));
   }
 
   /**
@@ -823,7 +824,7 @@ export class FolderContextMenuService {
     // Get current workspace root
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders || workspaceFolders.length === 0) {
-      vscode.window.showErrorMessage('未打开工作区，无法运行验证');
+      vscode.window.showErrorMessage(t('folderContext.noWorkspaceCannotRun'));
       return;
     }
     const workspaceRootPath = workspaceFolders[0].uri.fsPath;
@@ -852,7 +853,7 @@ export class FolderContextMenuService {
 
     // <<<>>> type: context menu not supported (except report visualization)
     if (isAscendLikeOperator(rootDetection.projectType)) {
-      vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
+      vscode.window.showWarningMessage(t('folderContext.angleOpsNotSupported'));
       return;
     }
 
@@ -861,7 +862,7 @@ export class FolderContextMenuService {
       // Same as app.vue: operatorNames = selected folder name, projectId from projects.json at root
       const project = getProjectByPath(workspaceRootPath);
       if (!project) {
-        vscode.window.showErrorMessage('根目录未在 projects.json 中注册，无法运行验证');
+        vscode.window.showErrorMessage(t('folderContext.rootNotInProjectsJson'));
         return;
       }
 
@@ -941,7 +942,7 @@ export class FolderContextMenuService {
     }
 
     // Other cases: prompt user
-    vscode.window.showWarningMessage('该文件/文件夹无算子可运行验证');
+    vscode.window.showWarningMessage(t('folderContext.noOperatorsToValidate'));
   }
 
   /**
@@ -953,7 +954,7 @@ export class FolderContextMenuService {
     const operatorType = await getOperatorProjectTypeByPath(folderPath);
     // <<<>>> type: context menu not supported (except report visualization)
     if (isAscendLikeOperator(operatorType)) {
-      vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
+      vscode.window.showWarningMessage(t('folderContext.angleOpsNotSupported'));
       return;
     }
 
@@ -961,7 +962,7 @@ export class FolderContextMenuService {
 
     // Check if operator project
     if (!project) {
-      vscode.window.showWarningMessage('该文件夹不是算子工程');
+      vscode.window.showWarningMessage(t('folderContext.folderNotOperatorProject'));
       return;
     }
 
@@ -980,7 +981,7 @@ export class FolderContextMenuService {
     const operatorType = await getOperatorProjectTypeByPath(folderPath);
     // <<<>>> type: context menu not supported (except report visualization)
     if (isAscendLikeOperator(operatorType)) {
-      vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
+      vscode.window.showWarningMessage(t('folderContext.angleOpsNotSupported'));
       return;
     }
 
@@ -988,7 +989,7 @@ export class FolderContextMenuService {
 
     // Check if operator project
     if (!project) {
-      vscode.window.showWarningMessage('该文件夹不是算子工程');
+      vscode.window.showWarningMessage(t('folderContext.folderNotOperatorProject'));
       return;
     }
 
@@ -1007,7 +1008,7 @@ export class FolderContextMenuService {
     const operatorType = await getOperatorProjectTypeByPath(folderPath);
     // <<<>>> type: context menu not supported (except report visualization)
     if (isAscendLikeOperator(operatorType)) {
-      vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
+      vscode.window.showWarningMessage(t('folderContext.angleOpsNotSupported'));
       return;
     }
 
@@ -1015,7 +1016,7 @@ export class FolderContextMenuService {
 
     // Check if operator project
     if (!project) {
-      vscode.window.showWarningMessage('该文件夹不是算子工程');
+      vscode.window.showWarningMessage(t('folderContext.folderNotOperatorProject'));
       return;
     }
 
@@ -1034,7 +1035,7 @@ export class FolderContextMenuService {
     const operatorType = await getOperatorProjectTypeByPath(folderPath);
     // <<<>>> type: context menu not supported (except report visualization)
     if (isAscendLikeOperator(operatorType)) {
-      vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
+      vscode.window.showWarningMessage(t('folderContext.angleOpsNotSupported'));
       return;
     }
 
@@ -1042,7 +1043,7 @@ export class FolderContextMenuService {
 
     // Check if operator project
     if (!project) {
-      vscode.window.showWarningMessage('该文件夹不是算子工程');
+      vscode.window.showWarningMessage(t('folderContext.folderNotOperatorProject'));
       return;
     }
 
@@ -1061,7 +1062,7 @@ export class FolderContextMenuService {
     const operatorType = await getOperatorProjectTypeByPath(folderPath);
     // <<<>>> type: context menu not supported (except report visualization)
     if (isAscendLikeOperator(operatorType)) {
-      vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
+      vscode.window.showWarningMessage(t('folderContext.angleOpsNotSupported'));
       return;
     }
 
@@ -1072,7 +1073,7 @@ export class FolderContextMenuService {
     if (rootPath) {
       const supportsSanitizerAndTuning = checkSupportsSanitizerAndTuning(rootPath);
       if (!supportsSanitizerAndTuning) {
-        vscode.window.showWarningMessage('暂不支持该功能，请确保 build.sh 中包含 --bisheng_flags');
+        vscode.window.showWarningMessage(t('folderContext.needBishengFlags'));
         return;
       }
     }
@@ -1093,12 +1094,12 @@ export class FolderContextMenuService {
     const operatorType = await getOperatorProjectTypeByPath(folderPath);
     // <<<>>> type: context menu not supported (except report visualization)
     if (isAscendLikeOperator(operatorType)) {
-      vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
+      vscode.window.showWarningMessage(t('folderContext.angleOpsNotSupported'));
       return;
     }
     // Standard custom: performance tuning not supported
     if (operatorType === OperatorProjectType.STANDARD_CUSTOM) {
-      vscode.window.showWarningMessage('标准自定义算子暂不支持性能调优');
+      vscode.window.showWarningMessage(t('folderContext.standardOpsNoTuning'));
       return;
     }
 
@@ -1110,7 +1111,7 @@ export class FolderContextMenuService {
     if (rootPath) {
       const supportsSanitizerAndTuning = checkSupportsSanitizerAndTuning(rootPath);
       if (!supportsSanitizerAndTuning) {
-        vscode.window.showWarningMessage('暂不支持该功能，请确保 build.sh 中包含 --bisheng_flags');
+        vscode.window.showWarningMessage(t('folderContext.needBishengFlags'));
         return;
       }
     }
@@ -1131,12 +1132,12 @@ export class FolderContextMenuService {
     const operatorType = await getOperatorProjectTypeByPath(folderPath);
     // <<<>>> type: context menu not supported (except report visualization)
     if (isAscendLikeOperator(operatorType)) {
-      vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
+      vscode.window.showWarningMessage(t('folderContext.angleOpsNotSupported'));
       return;
     }
     // Standard custom: performance tuning not supported
     if (operatorType === OperatorProjectType.STANDARD_CUSTOM) {
-      vscode.window.showWarningMessage('标准自定义算子暂不支持性能调优');
+      vscode.window.showWarningMessage(t('folderContext.standardOpsNoTuning'));
       return;
     }
 
@@ -1147,7 +1148,7 @@ export class FolderContextMenuService {
     if (rootPath) {
       const supportsSanitizerAndTuning = checkSupportsSanitizerAndTuning(rootPath);
       if (!supportsSanitizerAndTuning) {
-        vscode.window.showWarningMessage('暂不支持该功能，请确保 build.sh 中包含 --bisheng_flags');
+        vscode.window.showWarningMessage(t('folderContext.needBishengFlags'));
         return;
       }
     }
@@ -1170,7 +1171,7 @@ export class FolderContextMenuService {
     const project = getProjectByPath(folderPath);
 
     if (!project) {
-      vscode.window.showErrorMessage('该文件夹不是算子工程');
+      vscode.window.showErrorMessage(t('folderContext.folderNotOperatorProject'));
       return;
     }
 
@@ -1185,7 +1186,7 @@ export class FolderContextMenuService {
       await action();
     } catch (error) {
       vscode.window.showErrorMessage(
-        `操作失败: ${error instanceof Error ? error.message : String(error)}`,
+        t('folderContext.actionFailed', { error: error instanceof Error ? error.message : String(error) }),
       );
     }
   }
@@ -1316,27 +1317,29 @@ export class FolderContextMenuService {
 
       // 异常检测只支持文件
       if (configType === 'sanitizer' && !isFile) {
-        vscode.window.showErrorMessage('异常检测只支持文件，请选择文件');
+        vscode.window.showErrorMessage(t('folderContext.sanitizerSelectFile'));
         return;
       }
 
       // 上板分析和仿真分析支持文件夹
       if ((configType === 'on_board' || configType === 'simulate') && !isDirectory && !isFile) {
-        vscode.window.showErrorMessage('请选择文件或文件夹');
+        vscode.window.showErrorMessage(t('folderContext.selectFileOrFolder'));
         return;
       }
 
       await ProjectManager.getInstance().initProject();
       const projectId = ProjectManager.getInstance().projectId;
       if (!projectId) {
-        vscode.window.showErrorMessage('未找到项目ID');
+        vscode.window.showErrorMessage(t('folderContext.noProjectId'));
         return;
       }
 
       // 获取配置
       const configs = getConfig(Number(projectId), configType);
       if (configs.length === 0) {
-        vscode.window.showErrorMessage(`未找到${configType === 'sanitizer' ? '异常检测' : configType === 'on_board' ? '上板分析' : '仿真分析'}配置`);
+        vscode.window.showErrorMessage(t('folderContext.noConfigFound', {
+        type: configType === 'sanitizer' ? t('folderContext.configTypeSanitizer') : configType === 'on_board' ? t('folderContext.configTypeOnBoard') : t('folderContext.configTypeSimulation'),
+      }));
         return;
       }
 
@@ -1351,7 +1354,7 @@ export class FolderContextMenuService {
         item => this.normalizePathForCompare(item.filePath) === normalizedNewPath,
       );
       if (exists) {
-        vscode.window.showInformationMessage('该文件/文件夹已存在于配置中');
+        vscode.window.showInformationMessage(t('folderContext.alreadyInConfig'));
         return;
       }
 
@@ -1383,7 +1386,7 @@ export class FolderContextMenuService {
         user_options: updatedUserOptions,
       }]);
 
-      vscode.window.showInformationMessage('已添加到报告可视化列表');
+      vscode.window.showInformationMessage(t('folderContext.addedToReportList'));
 
       // 刷新对应的面板
       try {
@@ -1403,7 +1406,7 @@ export class FolderContextMenuService {
     }
     catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      vscode.window.showErrorMessage(`添加失败: ${errorMessage}`);
+      vscode.window.showErrorMessage(t('folderContext.addFailed', { error: errorMessage }));
       console.error('addReportToFileMapList error:', error);
     }
   }

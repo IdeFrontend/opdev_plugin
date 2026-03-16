@@ -8,6 +8,7 @@
 import {
   ref, onBeforeMount, inject, computed,
 } from 'vue';
+import { t } from 'i18next';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 
 import {
@@ -15,7 +16,6 @@ import {
   saveSanitizerForm as saveSanitizerFormAPI,
 } from '@web/apis';
 
-// 从父组件注入主题状态
 const actualTheme = inject('actualTheme', computed(() => 'dark'));
 
 const props = defineProps({
@@ -83,30 +83,27 @@ onBeforeMount(async () => {
       :wrapper-col="{ span: 24 }"
       layout="vertical"
     >
-      <!-- 报告输出等级 -->
-      <a-form-item label="报告输出等级">
+      <a-form-item :label="t('web.config.sanitizer.logLevel')">
         <a-radio-group
           v-model:value="form.logLevel"
           @change="saveSanitizerForm"
         >
           <a-radio value="info">
-            info:输出info/warn/error级别的运行信息
+            {{ t('web.config.sanitizer.logLevelInfo') }}
           </a-radio>
           <a-radio value="warn">
-            warn:输出warn/error级别的运行信息
+            {{ t('web.config.sanitizer.logLevelWarn') }}
           </a-radio>
           <a-radio value="error">
-            error:输出error级别的运行信息
+            {{ t('web.config.sanitizer.logLevelError') }}
           </a-radio>
         </a-radio-group>
       </a-form-item>
 
       <a-form-item>
         <template #label>
-          <span>输出日志中单个文件大小的上限</span>
-          <a-tooltip
-            title="可设定范围为1~10240之间的整数,单位为MB。默认值为1024。"
-          >
+          <span>{{ t('web.config.sanitizer.maxLogSize') }}</span>
+          <a-tooltip :title="t('web.config.sanitizer.maxLogSizeTooltip')">
             <QuestionCircleOutlined class="help-icon" />
           </a-tooltip>
         </template>
@@ -121,16 +118,8 @@ onBeforeMount(async () => {
 
       <a-form-item>
         <template #label>
-          <span>检测范围</span>
-          <a-tooltip
-            title="可设定范围为0~200之间的整数。
-启用前
-内存检测、未初始化检测和同步检测:默认检测所有block。
-竞争检测:核间默认检测所有block,核内默认检测block 0的流水内及流水间的竞争。
-启用后
-内存检测、未初始化检测和同步检测:检测指定block。
-竞争检测:核间不进行检测,检测指定block的流水内及流水间的竞争。"
-          >
+          <span>{{ t('web.config.sanitizer.scope') }}</span>
+          <a-tooltip :title="t('web.config.sanitizer.scopeTooltip')">
             <QuestionCircleOutlined class="help-icon" />
           </a-tooltip>
         </template>
@@ -140,10 +129,10 @@ onBeforeMount(async () => {
           @change="isUseBlock"
         >
           <a-radio :value="false">
-            全局检测
+            {{ t('web.config.sanitizer.scopeGlobal') }}
           </a-radio>
           <a-radio :value="true">
-            单block检测
+            {{ t('web.config.sanitizer.scopeBlock') }}
           </a-radio>
         </a-radio-group>
 

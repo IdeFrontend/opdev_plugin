@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from 'i18next';
 import {
   RightOutlined,
   DownOutlined,
@@ -93,11 +94,11 @@ function handleToggleMarked(
 async function handleCopyReport(record: PerformanceExecutionRecord) {
   try {
     await navigator.clipboard.writeText(record.dirPath);
-    message.success('路径已复制到剪贴板');
+    message.success(t('web.perf.pathCopied'));
   }
   catch (error) {
     console.error('复制路径失败:', error);
-    message.error('复制路径失败');
+    message.error(t('web.perf.copyFailed'));
   }
 }
 
@@ -117,13 +118,13 @@ async function handleClickDownload(record: PerformanceExecutionRecord) {
     console.log('开始下载，路径:', dirPath, '文件名:', filename);
 
     // 显示加载提示
-    const hide = message.loading('正在准备下载...', 0);
+    const hide = message.loading(t('web.perf.preparingDownload'), 0);
 
     try {
       const result = await saveFileToLocal({
         sourcePath: dirPath,
         filename,
-        dialogTitle: '保存文件',
+        dialogTitle: t('web.perf.saveFile'),
         allowedTypes: ['zip'],
       });
 
@@ -132,16 +133,16 @@ async function handleClickDownload(record: PerformanceExecutionRecord) {
       if (result) {
         // 延迟一下再显示成功消息，确保下载已开始
         setTimeout(() => {
-          message.success('下载成功');
+          message.success(t('web.perf.downloadSuccess'));
         }, 500);
       }
       else {
-        message.warning('下载已取消或未完成');
+        message.warning(t('web.perf.downloadCancelled'));
       }
     }
     catch (error) {
       console.error('下载失败:', error);
-      message.error(error instanceof Error ? error.message : '下载失败');
+      message.error(error instanceof Error ? error.message : t('web.perf.downloadFailed'));
     }
     finally {
       hide();
@@ -149,7 +150,7 @@ async function handleClickDownload(record: PerformanceExecutionRecord) {
   }
   catch (error) {
     console.error('下载处理失败:', error);
-    message.error('下载处理失败');
+    message.error(t('web.perf.downloadFailedGeneric'));
   }
 }
 

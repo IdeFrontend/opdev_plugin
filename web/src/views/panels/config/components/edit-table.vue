@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree. -->
 
 <script setup>
+import { computed } from 'vue';
+import { t } from 'i18next';
 import {
   PlusOutlined,
   DeleteOutlined,
@@ -16,23 +18,12 @@ const emit = defineEmits([
   'deleteTableItem',
   'onChange',
 ]);
-const columns = [
-  {
-    title: '参数名称',
-    dataIndex: 'name',
-    width: '40%',
-  },
-  {
-    title: '参数值',
-    dataIndex: 'value',
-    width: '50%',
-  },
-  {
-    title: '操作',
-    dataIndex: 'operation',
-    width: '10%',
-  },
-];
+
+const columns = computed(() => [
+  { title: t('web.config.editTable.paramName'), dataIndex: 'name', width: '40%' },
+  { title: t('web.config.editTable.paramValue'), dataIndex: 'value', width: '50%' },
+  { title: t('web.config.editTable.action'), dataIndex: 'operation', width: '10%' },
+]);
 const props = defineProps({
   dataSource: {
     type: Array,
@@ -61,11 +52,9 @@ const onChange = () => {
         class="add-table-item"
         @click="addTableItem"
       >
-        <PlusOutlined /> 新增参数
+        <PlusOutlined /> {{ t('web.config.editTable.addParam') }}
       </div>
-      <a-tooltip
-        title="这里添加的参数，参数会追加到命令行，具体参数可在终端窗口中执行 msprof op -h 获取具体参数信息，基础配置中已设置了 aic-metrics 参数"
-      >
+      <a-tooltip :title="t('web.config.editTable.addParamTooltip')">
         <QuestionCircleOutlined class="help-icon" />
       </a-tooltip>
     </div>
@@ -78,8 +67,8 @@ const onChange = () => {
     >
       <template #headerCell="{ column }">
         <template v-if="column.dataIndex === 'name'">
-          <span>参数名称</span>
-          <a-tooltip title="参数名称默认自带--前缀，无需手动添加">
+          <span>{{ t('web.config.editTable.paramName') }}</span>
+          <a-tooltip :title="t('web.config.editTable.paramNameTooltip')">
             <QuestionCircleOutlined
               class="help-icon"
               style="margin-left: 4px"

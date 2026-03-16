@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import * as vscode from 'vscode';
 
 import { ProjectManager } from '@plugin/core/project/project-manager';
@@ -52,7 +53,7 @@ export class ProjectService {
         context.extensionPath,
       );
 
-      vscode.window.showInformationMessage('新建算子原型文件成功');
+      vscode.window.showInformationMessage(t('project.createPrototypeSuccess'));
 
       // Check and set .vscode directory permissions
       await pm.checkVscode();
@@ -60,7 +61,7 @@ export class ProjectService {
       return result;
     }
     catch {
-      vscode.window.showErrorMessage('新建算子原型文件失败');
+      vscode.window.showErrorMessage(t('project.createPrototypeFailed'));
 
       return '';
     }
@@ -83,7 +84,7 @@ export class ProjectService {
       console.log('createOpsByPrototype: Converted projectId:', projectId);
 
       if (!projectId || isNaN(projectId)) {
-        throw new Error(`无效的 projectId: ${pm.projectId}`);
+        throw new Error(t('project.invalidProjectId', { projectId: pm.projectId }));
       }
 
       console.log('createOpsByPrototype: Calling generateStructure...');
@@ -107,12 +108,12 @@ export class ProjectService {
         },
       );
 
-      vscode.window.showInformationMessage('新建算子文件成功');
+      vscode.window.showInformationMessage(t('project.createOpFileSuccess'));
       await pm.checkVscode();
     }
     catch (e) {
       console.error('createOpsByPrototype: Failed to create operator', e);
-      vscode.window.showErrorMessage(`新建算子文件失败 ${e instanceof Error ? e.message : ''}`);
+      vscode.window.showErrorMessage(t('project.createOpFileFailed', { error: e instanceof Error ? e.message : '' }));
       throw e; // Re-throw so caller knows it failed
     }
   }

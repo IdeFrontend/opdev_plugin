@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -160,11 +161,11 @@ export class MindStudioPluginInstaller {
       );
 
       // 提示用户 debug 插件已自动安装完成
-      vscode.window.showInformationMessage('✅ 相关 Debug 插件已自动安装完成，可立即使用。');
+      vscode.window.showInformationMessage(t('mindStudio.debugPluginsInstalled'));
     }
     catch (err) {
       console.error('Desktop install failed:', err);
-      vscode.window.showErrorMessage(`安装失败：${(err as Error).message}`);
+      vscode.window.showErrorMessage(t('mindStudio.installFailed', { error: (err as Error).message }));
     }
   }
 
@@ -235,11 +236,11 @@ export class MindStudioPluginInstaller {
       await this.updateExtensionsJson(extensionsDir, pluginId, pluginVersion);
 
       // 提示用户 debug 插件已自动安装完成
-      vscode.window.showInformationMessage('✅ 相关 Debug 插件已自动安装完成，可立即使用。');
+      vscode.window.showInformationMessage(t('mindStudio.debugPluginsInstalled'));
     }
     catch (err) {
       console.error('code-server/CodeArts install failed:', err);
-      vscode.window.showErrorMessage(`安装失败：${(err as Error).message}`);
+      vscode.window.showErrorMessage(t('mindStudio.installFailed', { error: (err as Error).message }));
     }
   }
 
@@ -344,22 +345,22 @@ export class MindStudioPluginInstaller {
       }
       else {
         await vscode.window.showWarningMessage(
-          '当前 Web 环境不支持自动安装，请手动配置。',
-          '确定',
+          t('mindStudio.webManualConfig'),
+          t('common.confirm'),
         );
 
         return;
       }
     }
     catch (err) {
-      vscode.window.showErrorMessage(`配置文件生成失败：${(err as Error).message}`);
+      vscode.window.showErrorMessage(t('mindStudio.configGenerateFailed', { error: (err as Error).message }));
 
       return;
     }
 
     if (generated) {
       // 提示用户 debug 插件已自动安装完成
-      vscode.window.showInformationMessage('✅ 相关 Debug 插件已自动安装完成，可立即使用。');
+      vscode.window.showInformationMessage(t('mindStudio.debugPluginsInstalled'));
     }
   }
 

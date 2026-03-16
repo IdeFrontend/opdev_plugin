@@ -8,6 +8,7 @@
 import {
   ref, reactive, onMounted, inject, computed,
 } from 'vue';
+import { t } from 'i18next';
 import {
   checkPathExists,
   getProjectEnv,
@@ -19,7 +20,6 @@ import type { FormInstance as AntdVForm } from 'ant-design-vue';
 import { message as antdMessage } from 'ant-design-vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 
-// 从父组件注入主题状态
 const actualTheme = inject('actualTheme', computed(() => 'dark'));
 
 const props = defineProps({
@@ -62,7 +62,7 @@ const formRules = {
 
         return pathExists
           ? Promise.resolve()
-          : Promise.reject('脚本文件不存在，请确认');
+          : Promise.reject(t('web.link.validation.scriptNotExist'));
       },
     },
   ],
@@ -117,7 +117,7 @@ const handleSelectFile = async () => {
   }
   catch (error) {
     console.error('选择文件失败:', error);
-    antdMessage.error('选择文件失败');
+    antdMessage.error(t('web.link.selectFileFailed'));
   }
 };
 
@@ -145,10 +145,10 @@ const handleSubmit = async () => {
       },
       '*',
     );
-    antdMessage.success('环境变量配置已保存');
+    antdMessage.success(t('web.config.env.saveSuccess'));
   }
   catch {
-    antdMessage.error('环境变量设置失败');
+    antdMessage.error(t('web.config.env.saveFailed'));
   }
   finally {
     submitting.value = false;
@@ -195,10 +195,8 @@ onMounted(async () => {
         class="[&_.ant-form-item-label_label]:flex [&_.ant-form-item-label_label]:items-center [&_.ant-form-item-label_label]:gap-1"
       >
         <template #label>
-          <span>环境变量配置脚本</span>
-          <a-tooltip
-            title="安装CANN包后需要执行set_env.sh脚本的绝对路径信息，如果使用的是一站式开发平台提供的容器镜像，则此处可以置空。若出现报错提示路径不存在，说明非有效环境变量脚本路径，需要输入设置环境变量脚本的绝对路径"
-          >
+          <span>{{ t('web.link.envScriptLabel') }}</span>
+          <a-tooltip :title="t('web.link.envScriptTooltip')">
             <QuestionCircleOutlined
               class="cursor-help text-sm"
             />
@@ -214,7 +212,7 @@ onMounted(async () => {
             :loading="projectSHLoading"
             placement="bottomLeft"
             :get-popup-container="getPopupContainer"
-            placeholder="请输入环境变量.sh文件地址，支持远程搜索"
+            :placeholder="t('web.link.envScriptPlaceholder')"
             @search="(val) => remoteSearch('projectSH', val)"
             @focus="handleSelectFile"
           />
@@ -246,7 +244,7 @@ onMounted(async () => {
           :loading="submitting"
           @click="handleSubmit"
         >
-          确认
+          {{ t('web.config.env.confirm') }}
         </a-button>
       </a-form-item>
     </a-form>

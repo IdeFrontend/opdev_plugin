@@ -5,12 +5,12 @@
  * LICENSE file in the root directory of this source tree. -->
 
 <script setup>
+import { inject, computed } from 'vue';
+import { t } from 'i18next';
 import SimulationTab from './simulation-tab.vue';
 import OnboardTab from './onboard-tab.vue';
 import { useOpprofConfig } from '@web/views/panels/config/composables/use-opprof-config';
-import { inject, computed } from 'vue';
 
-// 从父组件注入主题状态
 const actualTheme = inject('actualTheme', computed(() => 'dark'));
 
 const props = defineProps({
@@ -51,10 +51,9 @@ defineExpose({ init });
   <div class="opprof-config" :class="actualTheme === 'dark' ? 'theme-dark' : 'theme-light'">
     <!-- eslint-disable-next-line vue/no-v-model-argument -->
     <a-tabs v-model:active-key="activeTab">
-      <!-- 仿真页签 -->
       <a-tab-pane
         key="simulation"
-        tab="仿真"
+        :tab="t('web.config.opprofTabSimulate')"
       >
         <SimulationTab
           v-model:simulation-data="simulationData"
@@ -64,10 +63,9 @@ defineExpose({ init });
         />
       </a-tab-pane>
 
-      <!-- 上板页签 -->
       <a-tab-pane
         key="onboard"
-        tab="上板"
+        :tab="t('web.config.opprofTabOnboard')"
       >
         <OnboardTab
           v-model:onboard-data="onboardData"

@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-import i18next from 'i18next';
+import i18next, { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -251,8 +251,7 @@ export async function activate(context: vscode.ExtensionContext) {
       const workspaceFolders = vscode.workspace.workspaceFolders;
 
       if (!workspaceFolders || workspaceFolders.length === 0) {
-        vscode.window.showErrorMessage('请先打开一个工作区');
-
+        vscode.window.showErrorMessage(t('extension.openWorkspaceFirst'));
         return;
       }
 
@@ -354,7 +353,7 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_CLEAR_LAST_PROJECT_PATH,
     async () => {
       RemoteConfig.clearLastProjectPath();
-      vscode.window.showInformationMessage('已清除缓存的算子工程位置');
+      vscode.window.showInformationMessage(t('extension.clearedProjectPath'));
     },
   );
 
@@ -431,7 +430,7 @@ export async function activate(context: vscode.ExtensionContext) {
     async () => {
       const pyascCheck = await homeMethods.validatePyascForAnalysis();
       if (!pyascCheck.valid) {
-        vscode.window.showWarningMessage(pyascCheck.message ?? '请先打开一个 .py 文件');
+        vscode.window.showWarningMessage(pyascCheck.message ?? t('extension.openPyFirst'));
         return;
       }
       simulatorOptionsProvider.show(VIEW_OPTIONS_SIMULATOR);
@@ -445,7 +444,7 @@ export async function activate(context: vscode.ExtensionContext) {
     async () => {
       const pyascCheck = await homeMethods.validatePyascForAnalysis();
       if (!pyascCheck.valid) {
-        vscode.window.showWarningMessage(pyascCheck.message ?? '请先打开一个 .py 文件');
+        vscode.window.showWarningMessage(pyascCheck.message ?? t('extension.openPyFirst'));
         return;
       }
       onBoardOptionsProvider.show(VIEW_OPTIONS_ON_BOARD);
@@ -487,7 +486,7 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_REFRESH_FOLDER_DECORATIONS,
     () => {
       iconTheme.fireDecorationUpdate();
-      vscode.window.showInformationMessage('已刷新文件夹装饰，请查看左侧资源管理器');
+      vscode.window.showInformationMessage(t('extension.folderDecorationsRefreshed'));
     },
   );
   context.subscriptions.push(refreshDecorationsCommand);
@@ -500,7 +499,7 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_MARK_AS_OPERATOR_PROJECT,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹');
+        vscode.window.showErrorMessage(t('extension.rightClickFolder'));
         return;
       }
       await FolderContextMenuService.markAsOperatorProject(uri);
@@ -517,7 +516,7 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_MARK_AS_MULTI_OPERATOR_PROJECT,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹');
+        vscode.window.showErrorMessage(t('extension.rightClickFolder'));
         return;
       }
       await FolderContextMenuService.markAsMultiOperatorProject(uri);
@@ -533,7 +532,7 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_UNMARK_AS_OPERATOR_PROJECT,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹');
+        vscode.window.showErrorMessage(t('extension.rightClickFolder'));
         return;
       }
       await FolderContextMenuService.unmarkAsOperatorProject(uri);
@@ -549,7 +548,7 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_UNMARK_AS_MULTI_OPERATOR_PROJECT,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹');
+        vscode.window.showErrorMessage(t('extension.rightClickFolder'));
         return;
       }
       await FolderContextMenuService.unmarkAsMultiOperatorProject(uri);
@@ -565,7 +564,7 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_BUILD,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
         return;
       }
       await FolderContextMenuService.buildOperatorProject(uri);
@@ -576,7 +575,7 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_RUN,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
         return;
       }
       await FolderContextMenuService.runOperatorProject(uri);
@@ -587,7 +586,7 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_CPU_DEBUG,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
         return;
       }
       const folderUri = getFolderUri(uri);
@@ -599,7 +598,7 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_NPU_DEBUG,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
         return;
       }
       const folderUri = getFolderUri(uri);
@@ -611,7 +610,7 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_CPU_DEBUG_CONFIG,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
         return;
       }
       const folderUri = getFolderUri(uri);
@@ -623,7 +622,7 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_NPU_DEBUG_CONFIG,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
         return;
       }
       const folderUri = getFolderUri(uri);
@@ -635,7 +634,7 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_SANITIZER,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
         return;
       }
       const folderUri = getFolderUri(uri);
@@ -647,7 +646,7 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_ON_BOARD,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
         return;
       }
       const folderUri = getFolderUri(uri);
@@ -659,7 +658,7 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_SIMULATION,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
         return;
       }
       const folderUri = getFolderUri(uri);
@@ -672,7 +671,7 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_REPORT_VISUALIZATION_SANITIZER,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件');
+        vscode.window.showErrorMessage(t('extension.rightClickFile'));
         return;
       }
       await FolderContextMenuService.addReportToFileMapList(uri, 'sanitizer');
@@ -684,7 +683,7 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_REPORT_VISUALIZATION_ON_BOARD,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
         return;
       }
       await FolderContextMenuService.addReportToFileMapList(uri, 'on_board');
@@ -696,7 +695,7 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_REPORT_VISUALIZATION_SIMULATION,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
         return;
       }
       await FolderContextMenuService.addReportToFileMapList(uri, 'simulate');
@@ -708,7 +707,7 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_REPORT_VISUALIZATION_PERFORMANCE,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
         return;
       }
       await FolderContextMenuService.addReportToFileMapList(uri, 'on_board');
@@ -772,10 +771,10 @@ export async function activate(context: vscode.ExtensionContext) {
         canSelectFiles: true,
         canSelectFolders: false,
         canSelectMany: false,
-        openLabel: '打开',
+        openLabel: t('common.open'),
         filters: {
-          'CSV 文件': ['csv'],
-          所有文件: ['*'],
+          [t('common.csvFile')]: ['csv'],
+          [t('common.allFiles')]: ['*'],
         },
       });
 
@@ -893,6 +892,7 @@ async function initI18n() {
   await i18next.init({
     resources: i18nResource,
     lng: vscode.env.language,
+    fallbackLng: 'en',
     interpolation: { escapeValue: false },
   });
 }

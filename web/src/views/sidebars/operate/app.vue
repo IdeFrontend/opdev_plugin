@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { t } from 'i18next';
 import { useTheme } from '@web/composables/use-theme';
 import settingIcon from '@web/assets/svg/setting.svg';
 import buildIcon from '@web/assets/svg/build.svg';
@@ -163,10 +164,10 @@ const mutuallyExclusiveKeys = [
 ];
 
 // 基础菜单配置（不包含调试菜单）
-const baseMenuItems = [
+const baseMenuItems = computed(() => [
   {
     key: 'projectConfig',
-    label: '工程配置',
+    label: t('web.operate.projectConfig'),
     icon: settingIcon,
     handler: async () => {
       await openConfig({ configName: 'huawei-op-devtools.config' });
@@ -174,7 +175,7 @@ const baseMenuItems = [
   },
   {
     key: 'build',
-    label: '编译部署算子',
+    label: t('web.operate.compileDeploy'),
     icon: buildIcon,
     handler: async () => {
       const { operatorNames, operatorType, compileOption } = getOperatorParams();
@@ -198,7 +199,7 @@ const baseMenuItems = [
   },
   {
     key: 'runExample',
-    label: '运行',
+    label: t('web.operate.run'),
     icon: runIcon,
     handler: async () => {
       if (hasMultipleOperators.value) {
@@ -215,7 +216,7 @@ const baseMenuItems = [
   },
   {
     key: 'sanitizer',
-    label: '异常检测',
+    label: t('web.operate.sanitizer'),
     icon: checkIcon,
     handler: async () => {
       await openConfig({ configName: 'huawei-op-devtools.sanitizerOptions' });
@@ -223,19 +224,19 @@ const baseMenuItems = [
   },
   {
     key: 'power',
-    label: '性能调优',
+    label: t('web.operate.performanceTuning'),
     icon: powerIcon,
     children: [
       {
         key: 'onboard',
-        label: '上板分析',
+        label: t('web.operate.onBoardAnalysis'),
         handler: async () => {
           await openConfig({ configName: 'huawei-op-devtools.onBoardOptions' });
         },
       },
       {
         key: 'simulation',
-        label: '仿真分析',
+        label: t('web.operate.simulationAnalysis'),
         handler: async () => {
           await openConfig({ configName: 'huawei-op-devtools.simulatorOptions' });
         },
@@ -245,7 +246,7 @@ const baseMenuItems = [
   // UT测试菜单
   {
     key: 'utTest',
-    label: 'UT测试',
+    label: t('web.operate.utTest'),
     icon: checkIcon,
     handler: async () => {
       const { operatorNames } = getOperatorParams();
@@ -255,21 +256,20 @@ const baseMenuItems = [
       });
     },
   },
-  // 需要时开启
   {
     key: 'dumpTensor',
-    label: '执行DumpTensor',
+    label: t('web.operate.dumpTensor'),
     icon: tensorIcon,
     handler: async () => {
       const { operatorNames, compileOption } = getOperatorParams();
       await startDumpTensor({ operatorNames, compileOption })
     },
   },
-];
+]);
 
 // 动态计算菜单项（根据调试模式开关决定是否包含调试菜单）
 const menuItems = computed(() => {
-  const items = [...baseMenuItems];
+  const items = [...baseMenuItems.value];
 
   // 构建调试菜单的子菜单项
   const debugChildren = [];
@@ -279,7 +279,7 @@ const menuItems = computed(() => {
   if (projectType.value !== 'ascend' && !isCannTorchLibrary) {
     debugChildren.push({
       key: 'buildAndCpuDebug',
-      label: 'CPU调试',
+      label: t('web.operate.cpuDebug'),
       handler: async () => {
         await runCpuDebug();
       },
@@ -290,7 +290,7 @@ const menuItems = computed(() => {
   if (debugModeEnabled.value) {
     debugChildren.push({
       key: 'buildAndDebug',
-      label: 'NPU调试',
+      label: t('web.operate.npuDebug'),
       handler: async () => {
         await runDebug();
       },
@@ -303,7 +303,7 @@ const menuItems = computed(() => {
     if (runExampleIndex !== -1) {
       items.splice(runExampleIndex + 1, 0, {
         key: 'runDebug',
-        label: '调试',
+        label: t('web.operate.debug'),
         icon: debugIcon,
         children: debugChildren,
       });
@@ -420,14 +420,15 @@ const handleMenuClick = async ({ key }) => {
       const taskName = await getCurrentTaskName();
       if (taskName) {
         // 调用vscode弹窗进行二次确认
+        const stopAndRunText = t('web.operate.stopAndRun');
         const result = await showConfirmDialog({
-          title: `任务"${taskName}"正在进行中`,
-          content: `任务无法同时进行，您是否希望停止当前"${taskName}"任务，并执行新任务？`,
-          confirmText: '停止并执行',
-          cancelText: '取消',
+          title: t('web.operate.taskRunningTitle', { taskName }),
+          content: t('web.operate.taskRunningContent', { taskName }),
+          confirmText: stopAndRunText,
+          cancelText: t('web.operate.cancel'),
         });
 
-        if (result === '停止并执行') {
+        if (result === stopAndRunText) {
           // 先停止当前任务
           isStopping.value = true;
           try {
@@ -552,14 +553,14 @@ onMounted(async () => {
   // 获取当前项目类型
   try {
     const result = await getProjectType();
-    projectTypeName.value = result.projectTypeName || '未知';
+    projectTypeName.value = result.projectTypeName || t('web.operate.unknownProjectType');
     projectType.value = result.projectType || '';
     projectTemplateName.value = result.projectTemplateName || '';
     console.log('[Operate] 当前项目类型:', JSON.stringify(result));
   }
   catch (error) {
     console.error('[Operate] 获取项目类型失败:', error);
-    projectTypeName.value = '未知';
+    projectTypeName.value = t('web.operate.unknownProjectType');
   }
 
   // 检查是否有多个算子工程
@@ -1091,7 +1092,7 @@ const handleConfirm = () => {
       <!-- 如果配置文件不存在且不是标准自定义算子，显示提示信息 -->
       <div v-if="!hasDevtoolConfig && !isStandardCustom" class="flex items-center justify-center min-h-[200px] p-5">
         <div class="text-xs text-center leading-relaxed" :class="getTextColorClass('secondary')">
-          您需要新建算子工程或通过一站式平台插件打开算子工程才可以使用操作面板
+          {{ t('web.operate.needProjectHint') }}
         </div>
       </div>
 
@@ -1101,7 +1102,7 @@ const handleConfirm = () => {
         <!-- 停止任务按钮 -->
         <div v-if="isExecuting" class="px-3 py-2 mb-2">
           <a-button danger size="small" class="w-full text-[11px] h-6" @click="handleStopTask">
-            停止{{ currentTaskName ? `"${currentTaskName}"` : '任务' }}
+            {{ t('web.operate.stopTask', { name: currentTaskName ? `"${currentTaskName}"` : t('web.operate.stopTaskDefault') }) }}
           </a-button>
         </div>
 
@@ -1115,7 +1116,7 @@ const handleConfirm = () => {
                 <!-- 第一个模块：已选择的内容 -->
                 <div class="selected-section">
                   <div class="selected-header">
-                    <span>已选择 {{ selectedOperators.length }} 项</span>
+                    <span>{{ t('web.operate.selectedCount', { count: selectedOperators.length }) }}</span>
                     <a-button v-if="selectedOperators.length > 0" type="text" size="small" @click="clearAllSelected">
                       <template #icon><DeleteOutlined /></template>
                     </a-button>
@@ -1131,18 +1132,18 @@ const handleConfirm = () => {
 
                 <!-- 第二个模块：搜索和选择 -->
                 <div class="search-section">
-                  <a-input v-model:value="searchKeyword" placeholder="搜索算子工程" class="mb-3" allow-clear />
+                  <a-input v-model:value="searchKeyword" :placeholder="t('web.operate.searchOperatorProject')" class="mb-3" allow-clear />
 
                   <!-- 编译成功的算子工程 -->
                   <a-collapse v-model:active-key="compiledOperatorsActiveKey" :bordered="false"
                     class="operator-collapse">
-                    <a-collapse-panel key="1" header="编译成功的算子工程">
+                    <a-collapse-panel key="1" :header="t('web.operate.compiledOperators')">
                       <div class="operator-list">
                         <div class="operator-item select-all" :class="{
                           selected: isCompiledAllSelected,
                           disabled: isCompiledAllDisabled,
                         }" @click="!isCompiledAllDisabled && toggleCompiledAll()">
-                          <span>全选</span>
+                          <span>{{ t('web.operate.selectAll') }}</span>
                           <CheckOutlined v-if="isCompiledAllSelected" class="check-icon" />
                         </div>
                         <div v-for="op in filteredCompiledOperators" :key="op.id" class="operator-item" :class="{
@@ -1164,13 +1165,13 @@ const handleConfirm = () => {
                   <!-- 预备算子工程 -->
                   <a-collapse v-model:active-key="preparedOperatorsActiveKey" :bordered="false"
                     class="operator-collapse mt-3">
-                    <a-collapse-panel key="1" header="预备算子工程">
+                    <a-collapse-panel key="1" :header="t('web.operate.preparedOperators')">
                       <div class="operator-list">
                         <div class="operator-item select-all" :class="{
                           selected: isPreparedAllSelected,
                           disabled: isPreparedAllDisabled,
                         }" @click="!isPreparedAllDisabled && togglePreparedAll()">
-                          <span>全选</span>
+                          <span>{{ t('web.operate.selectAll') }}</span>
                           <CheckOutlined v-if="isPreparedAllSelected" class="check-icon" />
                         </div>
                         <div v-for="op in filteredPreparedOperators" :key="op.id" class="operator-item" :class="{
@@ -1193,7 +1194,7 @@ const handleConfirm = () => {
                 <!-- 确认按钮 -->
                 <div class="confirm-section">
                   <a-button type="primary" class="confirm-button" @click="handleConfirm">
-                    确认
+                    {{ t('web.operate.confirm') }}
                   </a-button>
                 </div>
               </div>
@@ -1202,7 +1203,7 @@ const handleConfirm = () => {
               <div ref="operatorSelectorTriggerRef" class="operator-selector-trigger"
                 :class="{ 'has-selection': selectedOperators.length > 0 }">
                 <span class="selector-text">
-                  请选择算子工程
+                  {{ t('web.operate.pleaseSelectOperatorProject') }}
                 </span>
                 <span class="selector-arrow">
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1221,7 +1222,7 @@ const handleConfirm = () => {
           class="px-3 py-2 mb-2">
           <div class="selected-display-section">
             <div class="selected-display-header">
-              <span>已选择 {{ selectedOperators.length }} 项</span>
+              <span>{{ t('web.operate.selectedCount', { count: selectedOperators.length }) }}</span>
               <a-button type="text" size="small" @click="clearAllSelected">
                 <template #icon><DeleteOutlined /></template>
               </a-button>
@@ -1241,7 +1242,7 @@ const handleConfirm = () => {
             <!-- 有子菜单的情况 -->
             <a-sub-menu v-if="item.children && item.children.length > 0" :key="`submenu-${item.key}`">
               <template #title>
-                <a-tooltip v-if="areAllChildrenDisabledByMultipleOperators(item)" title="该功能只支持单算子执行" placement="right">
+                <a-tooltip v-if="areAllChildrenDisabledByMultipleOperators(item)" :title="t('web.operate.singleOperatorOnly')" placement="right">
                   <div v-if="item.icon" class="single-box">
                     <span class="inline-flex items-center text-[11px]">
                       <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
@@ -1250,7 +1251,7 @@ const handleConfirm = () => {
                     <div class="flex items-center gap-1">
                       <a-tooltip
                         v-if="item.key === 'build' && isStandardCustom"
-                        title="不选择算子，则默认编译整个算子包"
+                        :title="t('web.operate.noSelectCompileAll')"
                         placement="right"
                       >
                         <QuestionCircleOutlined
@@ -1274,7 +1275,7 @@ const handleConfirm = () => {
                     <div class="flex items-center gap-1">
                       <a-tooltip
                         v-if="item.key === 'build' && isStandardCustom"
-                        title="不选择算子，则默认编译整个算子包"
+                        :title="t('web.operate.noSelectCompileAll')"
                         placement="right"
                       >
                         <QuestionCircleOutlined
@@ -1297,7 +1298,7 @@ const handleConfirm = () => {
                     'opacity-50 cursor-not-allowed':
                       isMenuItemDisabled(child.key),
                   }">
-                  <a-tooltip v-if="isDisabledByMultipleOperators(child.key)" title="该功能只支持单算子执行" placement="right">
+                  <a-tooltip v-if="isDisabledByMultipleOperators(child.key)" :title="t('web.operate.singleOperatorOnly')" placement="right">
                     <div class="single-box">
                       {{ child.label }}
                       <div class="flex items-center gap-1">
@@ -1332,15 +1333,15 @@ const handleConfirm = () => {
               'opacity-50 cursor-not-allowed':
                 isMenuItemDisabled(item.key),
             }">
-              <a-tooltip v-if="isDisabledByMultipleOperators(item.key)" title="该功能只支持单算子执行" placement="right">
-                <div v-if="item.icon" class="single-box">
+<a-tooltip v-if="isDisabledByMultipleOperators(item.key)" :title="t('web.operate.singleOperatorOnly')" placement="right">
+              <div v-if="item.icon" class="single-box">
                   <div class="inline-flex items-center text-[11px]">
                     <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
                     <span :class="getTextColorClass('highlight')">{{ item.label }}</span>
                   </div>
                   <a-tooltip
                     v-if="item.key === 'build' && isStandardCustom"
-                    title="不选择算子，则默认编译整个算子包"
+                    :title="t('web.operate.noSelectCompileAll')"
                     placement="right"
                   >
                     <QuestionCircleOutlined
@@ -1362,7 +1363,7 @@ const handleConfirm = () => {
                   </div>
                   <a-tooltip
                     v-if="item.key === 'build' && isStandardCustom"
-                    title="不选择算子，则默认编译整个算子包"
+                    :title="t('web.operate.noSelectCompileAll')"
                     placement="right"
                   >
                     <QuestionCircleOutlined

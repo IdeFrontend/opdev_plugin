@@ -2,6 +2,7 @@
 import {
   ref, onMounted,
 } from 'vue';
+import { t } from 'i18next';
 import { message } from 'ant-design-vue';
 import { useTheme } from '@web/composables/use-theme';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
@@ -51,7 +52,7 @@ const handleConfirm = async () => {
   const hasRunningTask = await checkTaskStatus();
   console.log('hasRunningTask', hasRunningTask);
   if (hasRunningTask) {
-    message.info('存在未执行完毕的任务，请稍后再试');
+    message.info(t('web.options.taskRunning'));
     return;
   }
   try {
@@ -76,7 +77,7 @@ const handleConfirm = async () => {
   }
   catch (error) {
     console.error('仿真启动失败: ', error);
-    message.error('仿真分析失败，已停止');
+    message.error(t('web.options.simulationFailed'));
   }
   finally {
     isExecuting.value = false;
@@ -96,17 +97,18 @@ onMounted(() => {
   <a-config-provider :theme="themeConfig">
     <div class="simulate-config-page">
       <div class="page-header">
-        仿真分析-选择采集内容
+        {{ t('web.options.simulator.title') }}
       </div>
 
       <div class="simulate-content">
-        <a-alert type="info" show-icon message="执行仿真调优，需在代码中修改使用Model的配置，具体可参考README。" style="margin-bottom: 12px" />
+        <a-alert type="info" show-icon :message="t('web.options.simulator.alert')" style="margin-bottom: 12px" />
         <div class="simulate-title">
-          采集内容
+          {{ t('web.options.simulator.collectContent') }}
           <a-tooltip :overlay-style="{ maxWidth: '300px' }">
             <template #title>
               <div>
-                具体图形案例请参考<span style="color: #1677ff; cursor: pointer;" @click="jumpToGuide">算子调优工具概述</span>
+                {{ t('web.options.simulator.guideRef') }}
+                <span style="color: #1677ff; cursor: pointer;" @click="jumpToGuide">{{ t('web.options.guideLinkText') }}</span>
               </div>
             </template>
             <QuestionCircleOutlined class="help-icon" />
@@ -114,31 +116,31 @@ onMounted(() => {
         </div>
 
         <div style="margin-top: 12px">
-          指令流水图（默认采集）
+          {{ t('web.options.simulator.instructionPipeline') }}
         </div>
         <div class="nested-checkbox-group">
           <div style="margin-bottom: 12px">
-            默认采集：计算单元和搬运单元指令耗时占比指标
+            {{ t('web.options.simulator.instructionPipelineDesc') }}
           </div>
-          附加选项：
+          {{ t('web.options.simulator.extraOptions') }}
           <a-checkbox v-model:checked="simulateOptions.user_options.PMSampling" @change="handleChange">
-            内存通路吞吐率波形子图
+            {{ t('web.options.simulator.memoryThroughput') }}
           </a-checkbox>
         </div>
 
         <div style="margin-top: 12px">
-          算子代码热点图（默认采集）
+          {{ t('web.options.simulator.codeHotspot') }}
         </div>
         <div class="nested-checkbox-group">
-          附加选项：
+          {{ t('web.options.simulator.extraOptions') }}
           <a-checkbox v-model:checked="simulateOptions.user_options.ResourceConflictRatio" @change="handleChange">
-            资源冲突占比指标
+            {{ t('web.options.simulator.resourceConflict') }}
           </a-checkbox>
         </div>
 
         <div class="footer-actions">
           <a-button type="primary" :loading="isExecuting" @click="handleConfirm">
-            立即开始
+            {{ t('web.options.simulator.startNow') }}
           </a-button>
         </div>
       </div>

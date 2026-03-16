@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -60,7 +61,7 @@ export class OperatorProjectIconTheme implements vscode.FileDecorationProvider {
           path.normalize(collection.path) === path.normalize(folderPath))) {
         // 算子工程集合 - 紫色
         return {
-          tooltip: '算子工程集合',
+          tooltip: t('iconTheme.operatorProjectCollection'),
           color: new vscode.ThemeColor('charts.purple'),
         };
       }
@@ -75,7 +76,7 @@ export class OperatorProjectIconTheme implements vscode.FileDecorationProvider {
       if (isOperatorProject) {
         // 单个算子工程 - 蓝色
         return {
-          tooltip: '算子工程',
+          tooltip: t('iconTheme.operatorProject'),
           color: new vscode.ThemeColor('charts.blue'),
         };
       }

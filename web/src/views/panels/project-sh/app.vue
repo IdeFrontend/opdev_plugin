@@ -7,7 +7,7 @@
       <div class="w-full max-w-[600px]">
         <div class="text-2xl leading-7 font-bold mb-6 text-left"
              :class="actualTheme === 'dark' ? 'text-white' : 'text-[#1f1f1f]'">
-          环境配置
+          {{ t('web.projectSh.title') }}
         </div>
         <div class="h-px"
              :class="actualTheme === 'dark' ? 'bg-white/20' : 'bg-gray-300'"
@@ -24,10 +24,8 @@
             class="[&_.ant-form-item-label_label]:flex [&_.ant-form-item-label_label]:items-center [&_.ant-form-item-label_label]:gap-1"
           >
             <template #label>
-              <span>环境变量配置脚本</span>
-              <a-tooltip
-                title="安装CANN包后需要执行set_env.sh脚本的绝对路径信息，如果使用的是一站式开发平台提供的容器镜像，则此处可以置空。若出现报错提示路径不存在，说明非有效环境变量脚本路径，需要输入设置环境变量脚本的绝对路径"
-              >
+              <span>{{ t('web.link.envScriptLabel') }}</span>
+              <a-tooltip :title="t('web.link.envScriptTooltip')">
                 <QuestionCircleOutlined
                   class="cursor-help text-sm"
                 />
@@ -43,7 +41,7 @@
                 :loading="projectSHLoading"
                 placement="bottomLeft"
                 :get-popup-container="getPopupContainer"
-                placeholder="请输入环境变量.sh文件地址，支持远程搜索"
+                :placeholder="t('web.link.envScriptPlaceholder')"
                 @search="(val) => remoteSearch('projectSH', val)"
                 @focus="handleSelectFile"
               />
@@ -55,7 +53,7 @@
               :loading="submitting"
               @click="handleSubmit"
             >
-              确认
+              {{ t('web.config.env.confirm') }}
             </a-button>
           </a-form-item>
         </a-form>
@@ -68,6 +66,7 @@
 import {
   ref, reactive, onMounted,
 } from 'vue';
+import { t } from 'i18next';
 import {
   checkPathExists,
   getProjectSH,
@@ -80,7 +79,6 @@ import { message as antdMessage } from 'ant-design-vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import { useTheme } from '@web/composables/use-theme';
 
-// 使用主题管理组合式函数
 const { themeConfig, actualTheme } = useTheme();
 
 const formRef = ref<AntdVForm | null>(null);
@@ -116,7 +114,7 @@ const formRules = {
 
         return pathExists
           ? Promise.resolve()
-          : Promise.reject('脚本文件不存在，请确认');
+          : Promise.reject(t('web.link.validation.scriptNotExist'));
       },
     },
   ],
@@ -171,7 +169,7 @@ const handleSelectFile = async () => {
   }
   catch (error) {
     console.error('选择文件失败:', error);
-    antdMessage.error('选择文件失败');
+    antdMessage.error(t('web.link.selectFileFailed'));
   }
 };
 
@@ -198,7 +196,7 @@ const handleSubmit = async () => {
     );
   }
   catch {
-    antdMessage.error('环境变量设置失败');
+    antdMessage.error(t('web.config.env.saveFailed'));
   }
   finally {
     submitting.value = false;

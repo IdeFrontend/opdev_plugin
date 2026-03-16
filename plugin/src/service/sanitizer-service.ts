@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -50,7 +51,7 @@ export class SanitizerService {
       );
 
       if (buildRes.code !== 0) {
-        vscode.window.showErrorMessage(`编译算子失败 ${buildRes.output}`);
+        vscode.window.showErrorMessage(t('sanitizer.compileFailed', { output: buildRes.output }));
 
         return;
       }
@@ -84,7 +85,7 @@ export class SanitizerService {
             console.log('example buildRes', exampleBuildRes);
 
             if (exampleBuildRes.code !== 0) {
-              vscode.window.showErrorMessage(`编译示例失败 ${exampleBuildRes.output}`);
+              vscode.window.showErrorMessage(t('sanitizer.exampleCompileFailed', { output: exampleBuildRes.output }));
               return;
             }
           }
@@ -123,19 +124,19 @@ export class SanitizerService {
       const res = await executor.execute(sanitizerCommand, [], [], {}, true);
 
       if (res.code !== 0) {
-        vscode.window.showErrorMessage(`异常检测失败 ${res.output}`);
+        vscode.window.showErrorMessage(t('sanitizer.detectionFailed', { output: res.output }));
 
         return;
       }
 
-      vscode.window.showInformationMessage('异常检测成功');
+      vscode.window.showInformationMessage(t('sanitizer.detectionSuccess'));
 
       // After detection, focus sanitizer panel and refresh report list
       await vscode.commands.executeCommand('msSanitizerPanelView.focus');
       await vscode.commands.executeCommand('huawei-op-devtools.flashMsSanitizerRunData');
     }
     catch (e: unknown) {
-      vscode.window.showErrorMessage(`异常检测失败: ${(e as Error).message}`);
+      vscode.window.showErrorMessage(t('sanitizer.detectionFailedError', { error: (e as Error).message }));
     }
   }
 }

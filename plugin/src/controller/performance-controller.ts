@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as path from 'path';
 
@@ -21,20 +22,20 @@ export const performanceDataMethods = {
     const remoteFilePath = params.filePath || params.nodeKey;
 
     if (!remoteFilePath) {
-      throw new Error('文件路径不能为空');
+      throw new Error(t('performance.filePathEmpty'));
     }
 
     // 显示下载进度
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: '正在下载文件',
+        title: t('performance.downloadingFile'),
         cancellable: false,
       },
       async (progress) => {
         progress.report({
           increment: 0,
-          message: '正在读取远程文件...',
+          message: t('performance.readingRemoteFile'),
         });
 
         // 创建远程文件 URI
@@ -50,13 +51,13 @@ export const performanceDataMethods = {
           });
         }
         catch {
-          throw new Error(`远程文件不存在: ${remoteFilePath}`);
+          throw new Error(t('performance.remoteFileNotExist', { path: remoteFilePath }));
         }
 
         // 读取远程文件内容
         progress.report({
           increment: 40,
-          message: '正在读取文件内容...',
+          message: t('performance.readingFileContent'),
         });
         const fileData = await vscode.workspace.fs.readFile(remoteFileUri);
 
@@ -65,14 +66,14 @@ export const performanceDataMethods = {
 
         progress.report({
           increment: 60,
-          message: '请选择保存位置...',
+          message: t('common.selectSaveLocation'),
         });
 
         // 让用户选择本地保存位置
         const localFileUri = await vscode.window.showSaveDialog({
           defaultUri: vscode.Uri.file(fileName),
-          saveLabel: '保存',
-          filters: { 所有文件: ['*'] },
+          saveLabel: t('common.save'),
+          filters: { [t('common.allFiles')]: ['*'] },
         });
 
         if (!localFileUri) {
@@ -83,15 +84,15 @@ export const performanceDataMethods = {
         // 将文件内容写入本地
         progress.report({
           increment: 80,
-          message: '正在保存文件...',
+          message: t('common.savingFile'),
         });
         await vscode.workspace.fs.writeFile(localFileUri, fileData);
 
         progress.report({
           increment: 100,
-          message: '下载完成',
+          message: t('common.downloadComplete'),
         });
-        vscode.window.showInformationMessage(`文件已成功下载到: ${localFileUri.fsPath}`);
+        vscode.window.showInformationMessage(t('performance.fileDownloadedTo', { path: localFileUri.fsPath }));
       },
     );
   },
@@ -102,20 +103,21 @@ export const performanceDataMethods = {
    */
   async deleteNode(params: DeleteNodeParams): Promise<void> {
     if (!params.nodeKey) {
-      throw new Error('节点信息不能为空');
+      throw new Error(t('performance.nodeKeyRequired'));
     }
 
     // 确认删除
+    const confirmBtn = t('common.confirm');
+    const cancelBtn = t('common.cancel');
     const result = await vscode.window.showWarningMessage(
-      `确定要删除 ${params.nodeKey} 吗？`,
-      '确定',
-      '取消',
+      t('performance.confirmDelete', { key: params.nodeKey }),
+      confirmBtn,
+      cancelBtn,
     );
 
-    if (result === '确定') {
+    if (result === confirmBtn) {
       console.log('删除节点:', params.nodeKey, params.filePath);
-      // 这里可以添加删除文件的逻辑
-      vscode.window.showInformationMessage(`已删除: ${params.nodeKey}`);
+      vscode.window.showInformationMessage(t('performance.deleted', { key: params.nodeKey }));
     }
   },
 
@@ -129,7 +131,7 @@ export const performanceDataMethods = {
       canSelectFiles: false,
       canSelectFolders: true,
       canSelectMany: false,
-      openLabel: '选择目录',
+      openLabel: t('common.selectFolder'),
     };
 
     // 如果提供了默认路径，使用它作为初始路径
@@ -181,8 +183,11 @@ export const performanceDataMethods = {
       canSelectFiles: true,
       canSelectFolders: false,
       canSelectMany: false,
-      openLabel: '选择文件',
-      filters: {},
+      openLabel: t('common.selectFile'),
+      filters: {
+        [t('common.shellScript')]: ['sh'],
+        [t('common.allFiles')]: ['*'],
+      },
     };
 
     // 如果提供了文件类型，使用它们
@@ -192,8 +197,8 @@ export const performanceDataMethods = {
       });
     } else {
       // 默认过滤器
-      options.filters!['Shell脚本'] = ['sh'];
-      options.filters!['所有文件'] = ['*'];
+      options.filters![t('common.shellScript')] = ['sh'];
+      options.filters![t('common.allFiles')] = ['*'];
     }
 
     // 如果提供了默认路径，使用它作为初始路径
@@ -314,7 +319,7 @@ export const performanceDataMethods = {
 
       // 如果有错误信息，显示通知
       if (errorTitle || errorMessage) {
-        const notificationMessage = errorTitle || errorMessage || '检测到错误';
+        const notificationMessage = errorTitle || errorMessage || t('performance.errorDetected');
         vscode.window.showInformationMessage(
           notificationMessage,
           { modal: false },
@@ -356,7 +361,7 @@ export const performanceDataMethods = {
     }
     catch (error) {
       console.log('jumpToFile', error);
-      vscode.window.showErrorMessage(`打开文件失败：${error}`);
+      vscode.window.showErrorMessage(t('performance.openFileFailed', { error: String(error) }));
       throw error;
     }
   },

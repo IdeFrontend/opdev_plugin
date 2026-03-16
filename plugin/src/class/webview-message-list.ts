@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { t } from 'i18next';
 import * as vscode from 'vscode';
 
 import { ProjectManager } from '@plugin/core/project/project-manager';
@@ -34,7 +35,7 @@ const webviewMessageList: messageItem[] = [
     command: 'loaded',
     callback: (message: any) => {
       if (message.status === 'error') {
-        vscode.window.showWarningMessage(`Opsuite加载异常: ${message.message}`);
+        vscode.window.showWarningMessage(t('webview.opsuiteLoadError', { message: message.message }));
       }
     },
   },
@@ -113,7 +114,7 @@ export async function handleOperatorProjectDirectoryFile(
       // 显示连接进度
       progress.report({
         increment: 25,
-        message: '开始创建算子文件...',
+        message: t('welcome.createFilesProgressTitle'),
       });
 
       if (message.createOperatorProjectDirectoryFileType === 1) {
@@ -199,7 +200,7 @@ export async function handleOperatorProjectDirectoryFile(
           console.log('通过原型创建算子工程完成');
         }
         else {
-          throw new Error('创建算子原型文件失败：返回路径为空');
+          throw new Error(t('webview.createPrototypeFailedEmptyPath'));
         }
 
         await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
@@ -207,9 +208,9 @@ export async function handleOperatorProjectDirectoryFile(
 
       progress.report({
         increment: 100,
-        message: '算子文件创建完成',
+        message: t('webview.opFileCreated'),
       });
-      vscode.window.showInformationMessage('算子文件创建完成');
+      vscode.window.showInformationMessage(t('webview.opFileCreated'));
     }
     catch (error) {
       const errorMessage =
@@ -218,9 +219,9 @@ export async function handleOperatorProjectDirectoryFile(
       console.error('创建算子文件失败:', error);
       progress.report({
         increment: 100,
-        message: '算子文件创建失败',
+        message: t('webview.createOpFileFailed', { error: errorMessage }),
       });
-      vscode.window.showErrorMessage(`创建算子文件失败: ${errorMessage}`);
+      vscode.window.showErrorMessage(t('webview.createOpFileFailed', { error: errorMessage }));
       throw error;
     }
   }

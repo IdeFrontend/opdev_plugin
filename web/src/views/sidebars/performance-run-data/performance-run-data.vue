@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from 'i18next';
 import {
   computed, ref, watch, onMounted, onBeforeUnmount, provide,
 } from 'vue';
@@ -97,7 +98,7 @@ onBeforeUnmount(() => {
         v-if="!renderTreeData || !renderTreeData.length"
         class="text-center mt-[20px]"
       >
-        暂无数据
+        {{ t('web.perf.noData') }}
       </div>
     </div>
   </a-config-provider>
