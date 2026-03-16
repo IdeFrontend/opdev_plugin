@@ -1,0 +1,12 @@
+{
+  "name": "CANN Python 3.12 (mstt)",
+  "image": "swr.cn-north-4.myhuaweicloud.com/ci_cann/cann-pod-python3.12:1.0.0",
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+  "remoteUser": "developer",
+  "customizations": {
+    "vscode": {
+      "extensions": []
+    }
+  }
+}
