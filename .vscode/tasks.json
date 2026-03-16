@@ -2,6 +2,30 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "Ensure CANN container running",
+      "type": "shell",
+      "command": "docker start cann-dev 2>/dev/null || true",
+      "presentation": { "reveal": "silent", "echo": false },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run in CANN container: compile (debug)",
+      "type": "shell",
+      "command": "docker exec cann-dev bash -lc 'cd /home/developer/workspace && pnpm install && pnpm run compile:debug'",
+      "dependsOn": "Ensure CANN container running",
+      "group": "build",
+      "presentation": { "reveal": "always", "echo": true, "focus": false },
+      "problemMatcher": ["$tsc"]
+    },
+    {
+      "label": "Run in CANN container: shell",
+      "type": "shell",
+      "command": "docker exec -it cann-dev bash -lc 'cd /home/developer/workspace && exec bash'",
+      "dependsOn": "Ensure CANN container running",
+      "presentation": { "reveal": "always", "echo": true },
+      "problemMatcher": []
+    },
+    {
       "type": "npm",
       "script": "compile",
       "group": "build",
