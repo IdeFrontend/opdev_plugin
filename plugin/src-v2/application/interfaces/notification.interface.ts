@@ -1,25 +1,25 @@
 /**
- * 通知服务接口
- * 抽象 UI 交互,使业务逻辑层不依赖具体的 UI 实现
+ * Notification service interface
+ * Abstracts UI interaction so business logic does not depend on concrete UI
  */
 export interface INotificationService {
   /**
-   * 显示信息提示
+   * Show info message
    */
   showInfo(message: string): void;
 
   /**
-   * 显示错误提示
+   * Show error message
    */
   showError(message: string): void;
 
   /**
-   * 显示警告提示
+   * Show warning message
    */
   showWarning(message: string): void;
 
   /**
-   * 显示进度提示
+   * Show progress
    */
   showProgress(title: string, task: ()=> Promise<void>): Promise<void>;
 }

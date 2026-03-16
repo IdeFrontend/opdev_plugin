@@ -12,7 +12,7 @@ const CONFIG_TYPES = { SANITIZER: 'sanitizer' } as const;
 
 export class SanitizerService {
   /**
-   * 获取异常检测配置ID
+   * Get anomaly detection (sanitizer) config ID
    */
   async getSanitizerConfigIdInternal(): Promise<number | undefined> {
     try {
@@ -27,11 +27,11 @@ export class SanitizerService {
   }
 
   /**
-   * 运行异常检测
+   * Run anomaly detection (sanitizer)
    */
   async runSanitizer(params: { operatorNames?: string } = {}): Promise<void> {
     try {
-      // 异常检测前编译
+      // Build before running sanitizer
       const sanitizerConfigId: number | undefined =
         await this.getSanitizerConfigIdInternal();
       const buildCommand = getBuildOpCommand(
@@ -55,7 +55,7 @@ export class SanitizerService {
         return;
       }
 
-      // 如果是标准自定义算子，需要编译 example
+      // For standard custom operators, build example first
       const workspaceFolders = vscode.workspace.workspaceFolders;
       if (workspaceFolders && workspaceFolders.length > 0) {
         const workspacePath = workspaceFolders[0].uri.fsPath;
@@ -90,11 +90,11 @@ export class SanitizerService {
           }
         }
         catch (error) {
-          console.warn('[runSanitizer] 检测项目类型失败:', error);
+          console.warn('[runSanitizer] Failed to detect project type:', error);
         }
       }
 
-      // 创建文件夹
+      // Create log directory
       if (workspaceFolders && workspaceFolders.length > 0) {
         const workspacePath = workspaceFolders[0].uri.fsPath;
         const logPath = path.join(
@@ -108,7 +108,7 @@ export class SanitizerService {
         }
       }
 
-      // 开启异常检测
+      // Run anomaly detection
       const exampleConfigId: number | undefined | string =
         await buildService.getBuildExampleConfigId();
 
@@ -130,7 +130,7 @@ export class SanitizerService {
 
       vscode.window.showInformationMessage('异常检测成功');
 
-      // 执行完检测后，聚焦异常检测面板并刷新左侧报告列表
+      // After detection, focus sanitizer panel and refresh report list
       await vscode.commands.executeCommand('msSanitizerPanelView.focus');
       await vscode.commands.executeCommand('huawei-op-devtools.flashMsSanitizerRunData');
     }

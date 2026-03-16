@@ -14,8 +14,8 @@ import {
 } from './steps/analysis-steps';
 
 /**
- * 标准仿真策略
- * 步骤: 仿真前编译 -> 仿真分析
+ * Standard simulate strategy
+ * Steps: pre-simulate build -> simulate analysis
  */
 export class StandardSimulateStrategy extends AbstractExecutionStrategy {
   readonly strategyName = 'standard-simulate';
@@ -33,8 +33,8 @@ export class StandardSimulateStrategy extends AbstractExecutionStrategy {
 }
 
 /**
- * 标准上板策略
- * 步骤: 上板前编译 -> 上板分析
+ * Standard on-board strategy
+ * Steps: pre-on-board build -> on-board analysis
  */
 export class StandardOnBoardStrategy extends AbstractExecutionStrategy {
   readonly strategyName = 'standard-onboard';
@@ -52,8 +52,8 @@ export class StandardOnBoardStrategy extends AbstractExecutionStrategy {
 }
 
 /**
- * 标准异常检测策略
- * 步骤: 异常检测前编译 -> 异常检测
+ * Standard sanitizer strategy
+ * Steps: pre-sanitizer build -> sanitizer
  */
 export class StandardSanitizerStrategy extends AbstractExecutionStrategy {
   readonly strategyName = 'standard-sanitizer';
@@ -71,9 +71,9 @@ export class StandardSanitizerStrategy extends AbstractExecutionStrategy {
 }
 
 /**
- * 自定义上板策略示例
- * 步骤: 普通编译 -> 验证 -> 上板分析
- * 演示如何扩展新策略
+ * Custom on-board strategy example
+ * Steps: build -> validation -> on-board analysis
+ * Shows how to extend with new strategies
  */
 export class CustomOnBoardWithValidationStrategy extends AbstractExecutionStrategy {
   readonly strategyName = 'custom-onboard-with-validation';
@@ -84,24 +84,24 @@ export class CustomOnBoardWithValidationStrategy extends AbstractExecutionStrate
 
   getSteps(): IExecutionStep[] {
     return [
-      // 先进行普通编译
+      // Normal build first
       new BuildStep(this.commandGenerator, undefined, 'PreValidationBuild'),
 
-      // 自定义验证步骤 (示例)
+      // Custom validation step (example)
       // new ValidationStep(),
 
-      // 上板前编译
+      // Pre-on-board build
       new BuildForOnBoardStep(this.commandGenerator),
 
-      // 上板分析
+      // On-board analysis
       new OnBoardStep(this.commandGenerator),
     ];
   }
 }
 
 /**
- * 快速上板策略 (跳过编译)
- * 适用于已编译的算子
+ * Fast on-board strategy (skip build)
+ * For already-built operators
  */
 export class FastOnBoardStrategy extends AbstractExecutionStrategy {
   readonly strategyName = 'fast-onboard';
@@ -112,7 +112,7 @@ export class FastOnBoardStrategy extends AbstractExecutionStrategy {
 
   getSteps(): IExecutionStep[] {
     return [
-      // 直接上板,跳过编译
+      // On-board only, skip build
       new OnBoardStep(this.commandGenerator),
     ];
   }

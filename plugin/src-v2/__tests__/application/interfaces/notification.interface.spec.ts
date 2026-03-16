@@ -2,9 +2,9 @@ import {
   INotificationService 
 } from '../../application/interfaces/notification.interface';
 
-// 这个测试确保接口定义正确且可以被实现
+// Ensures interface is well-defined and implementable
 describe('Notification Service Interface', () => {
-  // 创建一个模拟实现来测试接口
+  // Mock implementation to test interface
   const mockNotificationService: INotificationService = {
     showInfo: jest.fn(),
     showError: jest.fn(),

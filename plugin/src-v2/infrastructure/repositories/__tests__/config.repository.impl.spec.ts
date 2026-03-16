@@ -139,7 +139,7 @@ describe('ConfigRepositoryImpl', () => {
 
       if (ResultUtils.isErr(result)) {
         expect(result.error.message)
-          .toContain('无法解析配置类型');
+          .toContain('Cannot parse config type');
       }
     });
   });

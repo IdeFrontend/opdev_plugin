@@ -40,7 +40,7 @@ import {
 } from '@plugin/constants';
 
 /**
- * 根目录下的算子合集白名单
+ * Whitelist of operator collections under root
  */
 const ROOT_OPERATOR_COLLECTIONS = new Set([
   'image',
@@ -72,7 +72,7 @@ const ROOT_OPERATOR_COLLECTIONS = new Set([
 ]);
 
 /**
- * experimental 目录下的算子合集白名单
+ * Whitelist of operator collections under experimental directory
  */
 const EXPERIMENTAL_OPERATOR_COLLECTIONS = new Set([
   'image',
@@ -105,7 +105,7 @@ const EXPERIMENTAL_OPERATOR_COLLECTIONS = new Set([
 ]);
 
 /**
- * 判断目录是否为标准自定义算子的根目录（含 build.sh 且包含 --genop）
+ * Check if directory is standard custom operator root (has build.sh with --genop)
  */
 function isStandardCustomRoot(dirPath: string): boolean {
   const buildSh = path.join(dirPath, 'build.sh');
@@ -124,7 +124,7 @@ function isStandardCustomRoot(dirPath: string): boolean {
 }
 
 /**
- * 判断目录是否为标准自定义算子的子算子（包含 CMakeLists.txt）
+ * Check if directory is a standard custom sub-operator (contains CMakeLists.txt)
  */
 function isStandardCustomSubOperator(dirPath: string): boolean {
   const cmakeListsPath = path.join(dirPath, 'CMakeLists.txt');
@@ -132,7 +132,7 @@ function isStandardCustomSubOperator(dirPath: string): boolean {
 }
 
 /**
- * 向上查找标准自定义算子根目录（含 build.sh --genop），最多查找 5 层
+ * Walk up to find standard custom operator root (build.sh with --genop), max 5 levels
  */
 function findStandardCustomRoot(startPath: string): string | null {
   let dir = path.normalize(startPath);
@@ -146,8 +146,8 @@ function findStandardCustomRoot(startPath: string): string | null {
 }
 
 /**
- * 检查标准自定义算子是否支持异常检测与调优
- * 通过检查根目录的 build.sh 是否包含 --bisheng_flags
+ * Check if standard custom operator supports sanitizer and tuning
+ * By checking root build.sh for --bisheng_flags
  */
 function checkSupportsSanitizerAndTuning(rootPath: string): boolean {
   const buildShPath = path.join(rootPath, 'build.sh');
@@ -161,43 +161,43 @@ function checkSupportsSanitizerAndTuning(rootPath: string): boolean {
 }
 
 /**
- * 根据路径获取算子工程类型
- * 优先使用 getProjectType API，其次从已注册项目中读取，最后使用检测器检测
+ * Get operator project type by path
+ * Prefer getProjectType API, then registered projects, then detector
  */
 async function getOperatorProjectTypeByPath(
   folderPath: string,
 ): Promise<OperatorProjectType | undefined> {
-  // 1. 优先使用 getProjectType API（它会自动处理工作区根目录的类型检测）
+  // 1. Prefer getProjectType API (handles workspace root type detection)
   try {
     const projectTypeResult = await homeMethods.getProjectType();
     if (projectTypeResult?.projectType) {
       return projectTypeResult.projectType as OperatorProjectType;
     }
   } catch {
-    // 忽略 API 调用失败，继续使用其他方式
+    // Ignore API failure, try other means
   }
 
-  // 2. 尝试从 projects.json 中读取（针对指定路径）
+  // 2. Try reading from projects.json (for given path)
   try {
     const project = getProjectByPath(folderPath);
     if (project?.project_type) {
       return project.project_type as OperatorProjectType;
     }
   } catch {
-    // 忽略读取失败，继续使用检测器
+    // Ignore read failure, use detector
   }
 
-  // 3. 使用检测器直接检测该目录
+  // 3. Use detector on this directory
   try {
     const detection = await OperatorProjectDetector.detectOperatorProject(folderPath);
     if (detection.isOperatorProject && detection.projectType) {
       return detection.projectType;
     }
   } catch {
-    // 忽略检测失败，继续尝试工作区根目录
+    // Ignore detection failure, try workspace root
   }
 
-  // 4. 回退到工作区根目录
+  // 4. Fallback to workspace root
   const workspaceFolders = vscode.workspace.workspaceFolders;
   if (workspaceFolders && workspaceFolders.length > 0) {
     const workspaceRootPath = workspaceFolders[0].uri.fsPath;
@@ -208,7 +208,7 @@ async function getOperatorProjectTypeByPath(
         return project.project_type as OperatorProjectType;
       }
     } catch {
-      // 忽略读取失败
+      // Ignore read failure
     }
 
     try {
@@ -217,7 +217,7 @@ async function getOperatorProjectTypeByPath(
         return detection.projectType;
       }
     } catch {
-      // 忽略检测失败
+      // Ignore detection failure
     }
   }
 
@@ -230,14 +230,14 @@ function isAscendLikeOperator(type?: OperatorProjectType): boolean {
 }
 
 /**
- * 文件夹右键菜单服务
- * 处理文件夹右键菜单的相关操作
+ * Folder context menu service
+ * Handles folder right-click menu actions
  */
 export class FolderContextMenuService {
   /**
-   * 标记文件夹为算子工程
-   * 1. 仅根目录（含 build.sh --genop）可记为标准自定义算子，并在 projects 中新建一项。
-   * 2. 算子集合、子算子不再在 projects 中新建；其信息存于根项目的 ops_meet、ops_list、experimental_ops_list。
+   * Mark folder as operator project
+   * 1. Only root (with build.sh --genop) is registered as standard custom and gets a project entry.
+   * 2. Collections and sub-operators are not new projects; info lives in root's ops_meet, ops_list, experimental_ops_list.
    */
   static async markAsOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
@@ -245,50 +245,50 @@ export class FolderContextMenuService {
     try {
       const operatorType = await getOperatorProjectTypeByPath(folderPath);
 
-      // <<<>>> 类型算子：所有右键菜单操作均不支持（报告可视化除外）
+      // <<<>>> type: context menu not supported (except report visualization)
       if (isAscendLikeOperator(operatorType)) {
         vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
         return;
       }
 
-      // pyasc 算子：不支持标记/取消标记算子或算子合集
+      // pyasc: mark/unmark operator or collection not supported
       if (operatorType === OperatorProjectType.PYASC) {
         vscode.window.showWarningMessage('pyasc算子不支持标记/取消标记算子或算子合集');
         return;
       }
 
-      // 1. 找到根目录（标准自定义算子）
+      // 1. Find root (standard custom operator)
       const rootPath = findStandardCustomRoot(folderPath);
       if (!rootPath) {
         vscode.window.showWarningMessage('未找到标准自定义算子根目录，请先对包含 build.sh 的根目录执行「标记为算子工程」');
         return;
       }
 
-      // 2. 获取项目信息（项目默认已创建）
+      // 2. Get project info (project already created by default)
       const rootProject = getProjectByPath(rootPath);
       if (!rootProject) {
         vscode.window.showErrorMessage('未找到项目信息');
         return;
       }
 
-      // 3. 检查选中的目录是否为算子文件（包含CMakeLists.txt）
+      // 3. Check selected dir is operator (has CMakeLists.txt)
       if (!isStandardCustomSubOperator(folderPath)) {
         vscode.window.showWarningMessage('该目录不是算子文件（不包含 CMakeLists.txt）');
         return;
       }
 
-      // 4. 判断是否在experimental目录下
+      // 4. Check if under experimental directory
       const normalizedFolderPath = path.normalize(folderPath).replace(/\\/g, '/').toLowerCase();
       const normalizedRootPath = path.normalize(rootPath).replace(/\\/g, '/').toLowerCase();
       const relativePath = normalizedFolderPath.replace(normalizedRootPath, '').replace(/^[/\\]/, '');
       const isExperimental = relativePath.toLowerCase().startsWith('experimental/');
 
-      // 5. 获取当前项目信息
+      // 5. Get current project info
       const currentOpsList = rootProject.ops_list || [];
       const currentExperimentalOpsList = rootProject.experimental_ops_list || [];
       const operatorName = path.basename(folderPath);
 
-      // 6. 检查是否已存在
+      // 6. Check if already exists
       const targetList = isExperimental ? currentExperimentalOpsList : currentOpsList;
       const existing = targetList.find((op) => op.path === folderPath || op.name === operatorName);
       if (existing) {
@@ -296,26 +296,26 @@ export class FolderContextMenuService {
         return;
       }
 
-      // 7. 检查编译状态
+      // 7. Check build status
       const buildDir = path.join(folderPath, 'build');
       const outDir = path.join(folderPath, 'out');
       const isCompiled = fs.existsSync(buildDir) || fs.existsSync(outDir);
 
-      // 8. 创建算子信息
+      // 8. Create operator info
       const operatorInfo: SubOperatorInfo = {
         name: operatorName,
         path: folderPath,
         isCompiled,
       };
 
-      // 9. 添加到对应的列表
+      // 9. Add to corresponding list
       if (isExperimental) {
         currentExperimentalOpsList.push(operatorInfo);
       } else {
         currentOpsList.push(operatorInfo);
       }
 
-      // 10. 更新项目信息（保持ops_meet不变）
+      // 10. Update project info (keep ops_meet unchanged)
       await updateStandardCustomOperators(
         rootPath,
         rootProject.ops_meet || [],
@@ -323,7 +323,7 @@ export class FolderContextMenuService {
         currentExperimentalOpsList,
       );
 
-      // 11. 更新文件夹图标装饰
+      // 11. Update folder icon decoration
       const ctx = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
         .extensionContext;
       if (ctx) {
@@ -339,8 +339,8 @@ export class FolderContextMenuService {
   }
 
   /**
-   * 标记文件夹为算子工程集合
-   * 不再为算子集合或子算子在 projects 中新建项目；只从根目录全量扫描，更新根项目的 ops_meet、ops_list、experimental_ops_list。
+   * Mark folder as operator collection
+   * No new project entries for collections/sub-operators; full scan from root, update root's ops_meet, ops_list, experimental_ops_list.
    */
   static async markAsMultiOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
@@ -348,33 +348,33 @@ export class FolderContextMenuService {
     try {
       const operatorType = await getOperatorProjectTypeByPath(folderPath);
 
-      // <<<>>> 类型算子：所有右键菜单操作均不支持（报告可视化除外）
+      // <<<>>> type: context menu not supported (except report visualization)
       if (isAscendLikeOperator(operatorType)) {
         vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
         return;
       }
 
-      // pyasc 算子：不支持标记/取消标记算子或算子合集
+      // pyasc: mark/unmark not supported
       if (operatorType === OperatorProjectType.PYASC) {
         vscode.window.showWarningMessage('pyasc算子不支持标记/取消标记算子或算子合集');
         return;
       }
 
-      // 1. 找到根目录（标准自定义算子）
+      // 1. Find root (standard custom operator)
       const rootPath = findStandardCustomRoot(folderPath);
       if (!rootPath) {
         vscode.window.showWarningMessage('未找到标准自定义算子根目录，请先对包含 build.sh 的根目录执行「标记为算子工程」');
         return;
       }
 
-      // 2. 获取项目信息（项目默认已创建）
+      // 2. Get project info (project already created by default)
       const rootProject = getProjectByPath(rootPath);
       if (!rootProject) {
         vscode.window.showErrorMessage('未找到项目信息');
         return;
       }
 
-      // 3. 判断选中的目录是否为算子合集（在白名单中）
+      // 3. Check selected dir is operator collection (in whitelist)
       const normalizedFolderPath = path.normalize(folderPath).replace(/\\/g, '/').toLowerCase();
       const normalizedRootPath = path.normalize(rootPath).replace(/\\/g, '/').toLowerCase();
       const relativePath = normalizedFolderPath.replace(normalizedRootPath, '').replace(/^[/\\]/, '');
@@ -383,9 +383,9 @@ export class FolderContextMenuService {
       let collectionPath: string;
       let isExperimental: boolean;
 
-      // 判断是根目录下的算子合集还是experimental目录下的算子合集
+      // Determine if root-level collection or under experimental/
       if (relativePath.toLowerCase().startsWith('experimental/')) {
-        // experimental目录下的算子合集
+        // Operator collection under experimental
         const parts = relativePath.split('/');
         if (parts.length < 2) {
           vscode.window.showWarningMessage('该目录不是有效的算子合集');
@@ -395,25 +395,25 @@ export class FolderContextMenuService {
         collectionPath = folderPath;
         isExperimental = true;
 
-        // 检查是否在experimental算子合集白名单中
+        // Check if in experimental operator collection whitelist
         if (!EXPERIMENTAL_OPERATOR_COLLECTIONS.has(collectionName)) {
           vscode.window.showWarningMessage(`该目录不在experimental算子合集白名单中: ${collectionName}`);
           return;
         }
       } else {
-        // 根目录下的算子合集
+        // Operator collection under root
         collectionName = path.basename(folderPath);
         collectionPath = folderPath;
         isExperimental = false;
 
-        // 检查是否在根目录算子合集白名单中
+        // Check if in root operator collection whitelist
         if (!ROOT_OPERATOR_COLLECTIONS.has(collectionName)) {
           vscode.window.showWarningMessage(`该目录不在算子合集白名单中: ${collectionName}`);
           return;
         }
       }
 
-      // 4. 扫描该目录下的算子
+      // 4. Scan operators under this directory
       const operators: SubOperatorInfo[] = [];
       let hasOperators = false;
 
@@ -445,7 +445,7 @@ export class FolderContextMenuService {
           operators.push(operatorInfo);
         }
       } catch {
-        // 忽略扫描失败
+        // Ignore scan failure
       }
 
       if (!hasOperators) {
@@ -453,12 +453,12 @@ export class FolderContextMenuService {
         return;
       }
 
-      // 5. 获取当前项目信息
+      // 5. Get current project info
       const currentOpsMeet = rootProject.ops_meet || [];
       const currentOpsList = rootProject.ops_list || [];
       const currentExperimentalOpsList = rootProject.experimental_ops_list || [];
 
-      // 6. 检查算子合集是否已存在
+      // 6. Check if collection already exists
       const meetName = isExperimental ? `experimental/${collectionName}` : collectionName;
       const existingMeet = currentOpsMeet.find((m) => m.path === collectionPath || m.name === meetName);
       if (existingMeet) {
@@ -466,13 +466,13 @@ export class FolderContextMenuService {
         return;
       }
 
-      // 7. 添加到算子合集列表
+      // 7. Add to operator collection list
       currentOpsMeet.push({
         name: meetName,
         path: collectionPath,
       });
 
-      // 8. 添加算子到对应的列表（保留已有算子的编译状态）
+      // 8. Add operators to corresponding lists (preserve existing compile status)
       const updatedOpsList = [...currentOpsList];
       const updatedExperimentalOpsList = [...currentExperimentalOpsList];
 
@@ -482,17 +482,17 @@ export class FolderContextMenuService {
         if (!existing) {
           targetList.push(op);
         } else {
-          // 保留已有算子的编译状态
+          // Preserve existing operator compile status
           if (existing.isCompiled) {
             op.isCompiled = true;
           }
-          // 更新路径（如果路径变化）
+          // Update path if changed
           const index = targetList.indexOf(existing);
           targetList[index] = op;
         }
       });
 
-      // 9. 更新项目信息
+      // 9. Update project info
       await updateStandardCustomOperators(
         rootPath,
         currentOpsMeet,
@@ -500,7 +500,7 @@ export class FolderContextMenuService {
         updatedExperimentalOpsList,
       );
 
-      // 10. 更新文件夹图标装饰
+      // 10. Update folder icon decoration
       const ctx = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
         .extensionContext;
       if (ctx) {
@@ -524,7 +524,7 @@ export class FolderContextMenuService {
   }
 
   /**
-   * 取消标记为算子工程
+   * Unmark folder as operator project
    */
   static async unmarkAsOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
@@ -532,48 +532,48 @@ export class FolderContextMenuService {
     try {
       const operatorType = await getOperatorProjectTypeByPath(folderPath);
 
-      // <<<>>> 类型算子：所有右键菜单操作均不支持（报告可视化除外）
+      // <<<>>> type: context menu not supported (except report visualization)
       if (isAscendLikeOperator(operatorType)) {
         vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
         return;
       }
 
-      // pyasc 算子：不支持标记/取消标记算子或算子合集
+      // pyasc: mark/unmark not supported
       if (operatorType === OperatorProjectType.PYASC) {
         vscode.window.showWarningMessage('pyasc算子不支持标记/取消标记算子或算子合集');
         return;
       }
 
-      // 1. 找到根目录（标准自定义算子）
+      // 1. Find root (standard custom operator)
       const rootPath = findStandardCustomRoot(folderPath);
       if (!rootPath) {
         vscode.window.showWarningMessage('未找到标准自定义算子根目录');
         return;
       }
 
-      // 2. 校验根目录是否为标准自定义算子
+      // 2. Verify root is standard custom operator
       if (!isStandardCustomRoot(rootPath)) {
         vscode.window.showWarningMessage('根目录不是标准自定义算子');
         return;
       }
 
-      // 3. 获取项目信息（项目默认已创建）
+      // 3. Get project info (project already created by default)
       const rootProject = getProjectByPath(rootPath);
       if (!rootProject) {
         vscode.window.showErrorMessage('未找到项目信息');
         return;
       }
 
-      // 4. 检查该目录是否被标记为算子
+      // 4. Check if this dir is marked as operator
       const currentOpsList = rootProject.ops_list || [];
       const currentExperimentalOpsList = rootProject.experimental_ops_list || [];
       const operatorName = path.basename(folderPath);
 
-      // 在ops_list中查找
+      // Look up in ops_list
       const opsListIndex = currentOpsList.findIndex(
         (op) => op.path === folderPath || op.name === operatorName,
       );
-      // 在experimental_ops_list中查找
+      // Look up in experimental_ops_list
       const experimentalOpsListIndex = currentExperimentalOpsList.findIndex(
         (op) => op.path === folderPath || op.name === operatorName,
       );
@@ -583,7 +583,7 @@ export class FolderContextMenuService {
         return;
       }
 
-      // 5. 从对应的列表中移除
+      // 5. Remove from corresponding list
       if (opsListIndex !== -1) {
         currentOpsList.splice(opsListIndex, 1);
       }
@@ -592,7 +592,7 @@ export class FolderContextMenuService {
         currentExperimentalOpsList.splice(experimentalOpsListIndex, 1);
       }
 
-      // 6. 更新项目信息（保持ops_meet不变）
+      // 6. Update project info (keep ops_meet unchanged)
       await updateStandardCustomOperators(
         rootPath,
         rootProject.ops_meet || [],
@@ -600,7 +600,7 @@ export class FolderContextMenuService {
         currentExperimentalOpsList,
       );
 
-      // 7. 更新文件夹图标装饰
+      // 7. Update folder icon decoration
       const ctx = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
         .extensionContext;
       if (ctx) {
@@ -616,8 +616,8 @@ export class FolderContextMenuService {
   }
 
   /**
-   * 取消标记为算子工程集合
-   * 同时取消标记目录下所有已标记为算子的目录
+   * Unmark folder as operator collection
+   * Also unmarks all operators under that directory
    */
   static async unmarkAsMultiOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
@@ -625,39 +625,39 @@ export class FolderContextMenuService {
     try {
       const operatorType = await getOperatorProjectTypeByPath(folderPath);
 
-      // <<<>>> 类型算子：所有右键菜单操作均不支持（报告可视化除外）
+      // <<<>>> type: context menu not supported (except report visualization)
       if (isAscendLikeOperator(operatorType)) {
         vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
         return;
       }
 
-      // pyasc 算子：不支持标记/取消标记算子或算子合集
+      // pyasc: mark/unmark not supported
       if (operatorType === OperatorProjectType.PYASC) {
         vscode.window.showWarningMessage('pyasc算子不支持标记/取消标记算子或算子合集');
         return;
       }
 
-      // 1. 找到根目录（标准自定义算子）
+      // 1. Find root (standard custom operator)
       const rootPath = findStandardCustomRoot(folderPath);
       if (!rootPath) {
         vscode.window.showWarningMessage('未找到标准自定义算子根目录');
         return;
       }
 
-      // 2. 校验根目录是否为标准自定义算子
+      // 2. Verify root is standard custom operator
       if (!isStandardCustomRoot(rootPath)) {
         vscode.window.showWarningMessage('根目录不是标准自定义算子');
         return;
       }
 
-      // 3. 获取项目信息（项目默认已创建）
+      // 3. Get project info (project already created by default)
       const rootProject = getProjectByPath(rootPath);
       if (!rootProject) {
         vscode.window.showErrorMessage('未找到项目信息');
         return;
       }
 
-      // 4. 检查该目录是否被标记为算子合集
+      // 4. Check if this dir is marked as operator collection
       const currentOpsMeet = rootProject.ops_meet || [];
       const meetIndex = currentOpsMeet.findIndex((m) => m.path === folderPath);
 
@@ -671,14 +671,14 @@ export class FolderContextMenuService {
         .replace(/\\/g, '/')
         .toLowerCase();
 
-      // 5. 从算子合集列表中移除
+      // 5. Remove from operator collection list
       currentOpsMeet.splice(meetIndex, 1);
 
-      // 6. 移除该合集下的所有算子
+      // 6. Remove all operators under this collection
       const currentOpsList = rootProject.ops_list || [];
       const currentExperimentalOpsList = rootProject.experimental_ops_list || [];
 
-      // 过滤掉该合集下的算子
+      // Filter out operators under this collection
       const updatedOpsList = currentOpsList.filter((op) => {
         const normalizedOpPath = path.normalize(op.path)
           .replace(/\\/g, '/')
@@ -695,7 +695,7 @@ export class FolderContextMenuService {
         return !normalizedOpPath.startsWith(normalizedFolderPath + '/');
       });
 
-      // 7. 更新项目信息
+      // 7. Update project info
       await updateStandardCustomOperators(
         rootPath,
         currentOpsMeet,
@@ -703,7 +703,7 @@ export class FolderContextMenuService {
         updatedExperimentalOpsList,
       );
 
-      // 8. 更新文件夹图标装饰
+      // 8. Update folder icon decoration
       const ctx = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
         .extensionContext;
       if (ctx) {
@@ -719,14 +719,14 @@ export class FolderContextMenuService {
   }
 
   /**
-   * 编译部署算子工程（运行验证）
-   * 1. 如果选中的是文件夹，且当前项目根目录是标准自定义算子，则执行编译example操作
-   * 2. 如果选中的是 .py 文件，且当前项目根目录是 pyasc 算子，则执行 pyasc 相关操作（暂时留空）
-   * 3. 其他情况提示用户
-   * @param uri 右键目标（文件夹或文件）
+   * Build/deploy operator project (run verification)
+   * 1. If folder selected and root is standard custom: build example
+   * 2. If .py file selected and root is pyasc: pyasc flow (placeholder for now)
+   * 3. Otherwise prompt user
+   * @param uri Context menu target (folder or file)
    */
   static async buildOperatorProject(uri: vscode.Uri): Promise<void> {
-    // 获取当前打开工程的根目录
+    // Get current workspace root
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders || workspaceFolders.length === 0) {
       vscode.window.showErrorMessage('未打开工作区，无法运行验证');
@@ -748,38 +748,38 @@ export class FolderContextMenuService {
       isPyFile = false;
     }
 
-    // 判断当前项目的根目录是否为标准自定义算子或 pyasc 算子
-    // 使用 OperatorProjectDetector.detectOperatorProject 来判断
+    // Check if workspace root is standard custom or pyasc
+    // Use OperatorProjectDetector.detectOperatorProject
     const rootDetection = await OperatorProjectDetector.detectOperatorProject(workspaceRootPath);
     const isStandardCustom = rootDetection.isOperatorProject
       && rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM;
     const isPyasc = rootDetection.isOperatorProject
       && rootDetection.projectType === OperatorProjectType.PYASC;
 
-    // <<<>>> 类型算子：所有右键菜单操作均不支持（报告可视化除外）
+    // <<<>>> type: context menu not supported (except report visualization)
     if (isAscendLikeOperator(rootDetection.projectType)) {
       vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
       return;
     }
 
-    // 情况1: 选中的是文件夹，且当前项目根目录是标准自定义算子
+    // Case 1: folder selected and root is standard custom
     if (isFolder && isStandardCustom) {
-      // 获取用户选中的文件夹名称作为 operatorNames
+      // Use selected folder name as operatorNames
       const operatorNames = path.basename(uri.fsPath);
 
-      // 判断是否在experimental目录下
+      // Check if under experimental directory
       const normalizedUriPath = path.normalize(uri.fsPath).replace(/\\/g, '/').toLowerCase();
       const normalizedRootPath = path.normalize(workspaceRootPath).replace(/\\/g, '/').toLowerCase();
       const relativePath = normalizedUriPath.replace(normalizedRootPath, '').replace(/^[/\\]/, '');
       const isExperimental = relativePath.toLowerCase().startsWith('experimental/');
 
-      // 从根目录找到对应的 projectId
+      // Resolve projectId from root
       let projectId: number | undefined;
       const containingProject = getContainingStandardCustomProject(uri.fsPath);
       if (containingProject) {
         projectId = containingProject.id;
       } else {
-        // 如果找不到包含的项目，尝试直接通过根目录查找
+        // If no containing project, try root directly
         const rootProject = getProjectByPath(workspaceRootPath);
         if (rootProject) {
           projectId = rootProject.id;
@@ -791,10 +791,10 @@ export class FolderContextMenuService {
         return;
       }
 
-      // 如果在experimental目录下，添加 --experimental 参数
+      // If under experimental, add --experimental
       const compileOption = isExperimental ? '--experimental' : undefined;
 
-      // 调用 startBuild，传入 operatorNames、operatorType、projectId 和 compileOption
+      // Call startBuild with operatorNames, operatorType, projectId, compileOption
       await buildService.startBuild({
         operatorNames,
         operatorType: 'standard-custom',
@@ -804,23 +804,23 @@ export class FolderContextMenuService {
       return;
     }
 
-    // 情况2: 选中的是 .py 文件，且当前项目根目录是 pyasc 算子
+    // Case 2: .py file selected and root is pyasc
     if (isPyFile && isPyasc) {
-      // 暂时留空，后续实现 pyasc 相关操作
-      console.log('[buildOperatorProject] pyasc 算子运行验证功能暂未实现');
+      // Placeholder; pyasc run verification to be implemented
+      console.log('[buildOperatorProject] pyasc run verification not implemented yet');
       return;
     }
 
-    // 其他情况：提示用户
+    // Other cases: prompt user
     vscode.window.showWarningMessage('该文件/文件夹无算子可运行验证');
   }
 
   /**
-   * 运行验证算子工程
-   * 如果是标准自定义算子，则执行编译example的逻辑；其他算子执行运行验证的现有逻辑
+   * Run verification for operator project
+   * Standard custom: build example logic; others: existing run verification logic
    */
   static async runOperatorProject(uri: vscode.Uri): Promise<void> {
-    // 获取当前打开工程的根目录
+    // Get current workspace root
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders || workspaceFolders.length === 0) {
       vscode.window.showErrorMessage('未打开工作区，无法运行验证');
@@ -828,7 +828,7 @@ export class FolderContextMenuService {
     }
     const workspaceRootPath = workspaceFolders[0].uri.fsPath;
 
-    // 判断当前选中的是文件夹还是文件
+    // Determine if selection is folder or file
     let isFolder = false;
     let isPyFile = false;
     try {
@@ -842,30 +842,30 @@ export class FolderContextMenuService {
       isPyFile = false;
     }
 
-    // 判断当前项目的根目录是否为标准自定义算子或 pyasc 算子
-    // 使用 OperatorProjectDetector.detectOperatorProject 来判断
+    // Check if workspace root is standard custom or pyasc
+    // Use OperatorProjectDetector.detectOperatorProject
     const rootDetection = await OperatorProjectDetector.detectOperatorProject(workspaceRootPath);
     const isStandardCustom = rootDetection.isOperatorProject
       && rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM;
     const isPyasc = rootDetection.isOperatorProject
       && rootDetection.projectType === OperatorProjectType.PYASC;
 
-    // <<<>>> 类型算子：所有右键菜单操作均不支持（报告可视化除外）
+    // <<<>>> type: context menu not supported (except report visualization)
     if (isAscendLikeOperator(rootDetection.projectType)) {
       vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
       return;
     }
 
-    // 情况1: 选中的是文件夹，且当前项目根目录是标准自定义算子
+    // Case 1: folder selected and root is standard custom
     if (isFolder && isStandardCustom) {
-      // 参考 app.vue 运行验证逻辑：operatorNames 为选中的文件夹名，projectId 从根目录在 projects.json 中查找
+      // Same as app.vue: operatorNames = selected folder name, projectId from projects.json at root
       const project = getProjectByPath(workspaceRootPath);
       if (!project) {
         vscode.window.showErrorMessage('根目录未在 projects.json 中注册，无法运行验证');
         return;
       }
 
-      // 判断是否在experimental目录下
+      // Check if under experimental directory
       const normalizedUriPath = path.normalize(uri.fsPath).replace(/\\/g, '/').toLowerCase();
       const normalizedRootPath = path.normalize(workspaceRootPath).replace(/\\/g, '/').toLowerCase();
       const relativePath = normalizedUriPath.replace(normalizedRootPath, '').replace(/^[/\\]/, '');
@@ -874,7 +874,7 @@ export class FolderContextMenuService {
       const operatorNames = path.basename(uri.fsPath);
       const operatorType = 'standard-custom';
 
-      // 如果在experimental目录下，添加 --experimental 参数
+      // If under experimental, add --experimental
       const compileOption = isExperimental ? '--experimental' : undefined;
 
       await taskMethods.startBuildExample({
@@ -886,36 +886,36 @@ export class FolderContextMenuService {
       return;
     }
 
-    // 情况2: 当前项目根目录是 pyasc 算子
+    // Case 2: workspace root is pyasc
     if (isPyasc) {
-      // 如果选择了 .py 文件，更新配置的 target_file
+      // If .py file selected, update config target_file
       if (isPyFile) {
         try {
-          // 获取 build_op 配置
+          // Get build_op config
           const configId = await buildService.getBuildConfigId();
           if (configId) {
             const config = getConfigById(configId);
             if (config) {
-              // 获取项目信息
+              // Get project info
               const project = getProjectByPath(workspaceRootPath);
               if (project) {
-                // 获取算子信息以获取运行路径
+                // Get operator info for run path
                 const operator = getOpByProjectIdAndOpName(project.id, config.op);
                 const runPath = operator?.op_path || project.project_path;
                 
-                // 计算选择的文件相对于运行路径的相对路径
+                // Compute relative path of selected file to run path
                 const selectedFilePath = uri.fsPath;
                 const relativePath = path.relative(runPath, selectedFilePath);
-                // 将路径分隔符统一为 /，并确保以 ./ 开头（如果不在根目录）
+                // Normalize path separators to / and ensure ./ prefix if not at root
                 const normalizedRelativePath = relativePath.replace(/\\/g, '/');
                 const targetPath = normalizedRelativePath.startsWith('.') 
                   ? normalizedRelativePath 
                   : `./${normalizedRelativePath}`;
                 
-                // 更新 target_file 为 python3 ${相对路径}
+                // Update target_file to python3 ${relativePath}
                 const newTargetFile = `python3 ${targetPath}`;
                 
-                // 更新配置
+                // Update config
                 const userOptions = config.user_options as any || {};
                 await postConfig('build_op', [{
                   config_id: configId,
@@ -929,29 +929,29 @@ export class FolderContextMenuService {
             }
           }
         } catch (error) {
-          console.error('[runOperatorProject] 更新配置失败:', error);
-          // 即使更新配置失败，也继续执行运行
+          console.error('[runOperatorProject] Failed to update config:', error);
+          // Continue run even if config update fails
         }
       }
       
-      // 如果选择了 .py 文件，传入文件路径
+      // If .py file selected, pass file path
       const filePath = isPyFile ? path.basename(uri.fsPath) : undefined;
       await taskMethods.startRun({ filePath });
       return;
     }
 
-    // 其他情况：提示用户
+    // Other cases: prompt user
     vscode.window.showWarningMessage('该文件/文件夹无算子可运行验证');
   }
 
   /**
-   * CPU调试算子工程
+   * CPU debug operator project
    */
   static async cpuDebugOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
 
     const operatorType = await getOperatorProjectTypeByPath(folderPath);
-    // <<<>>> 类型算子：所有右键菜单操作均不支持（报告可视化除外）
+    // <<<>>> type: context menu not supported (except report visualization)
     if (isAscendLikeOperator(operatorType)) {
       vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
       return;
@@ -959,26 +959,26 @@ export class FolderContextMenuService {
 
     const project = getProjectByPath(folderPath);
 
-    // 检查是否是算子工程
+    // Check if operator project
     if (!project) {
       vscode.window.showWarningMessage('该文件夹不是算子工程');
       return;
     }
 
     await this.switchToProject(uri, async () => {
-      // 调用CPU调试，与看板逻辑保持一致
+      // Invoke CPU debug, same as dashboard logic
       await taskMethods.runCpuDebug();
     });
   }
 
   /**
-   * NPU调试算子工程
+   * NPU debug operator project
    */
   static async npuDebugOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
 
     const operatorType = await getOperatorProjectTypeByPath(folderPath);
-    // <<<>>> 类型算子：所有右键菜单操作均不支持（报告可视化除外）
+    // <<<>>> type: context menu not supported (except report visualization)
     if (isAscendLikeOperator(operatorType)) {
       vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
       return;
@@ -986,26 +986,26 @@ export class FolderContextMenuService {
 
     const project = getProjectByPath(folderPath);
 
-    // 检查是否是算子工程
+    // Check if operator project
     if (!project) {
       vscode.window.showWarningMessage('该文件夹不是算子工程');
       return;
     }
 
     await this.switchToProject(uri, async () => {
-      // 调用NPU调试，与看板逻辑保持一致
+      // Invoke NPU debug, same as dashboard logic
       await taskMethods.runDebug();
     });
   }
 
   /**
-   * CPU调试配置算子工程
+   * CPU debug config for operator project
    */
   static async cpuDebugConfigOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
 
     const operatorType = await getOperatorProjectTypeByPath(folderPath);
-    // <<<>>> 类型算子：所有右键菜单操作均不支持（报告可视化除外）
+    // <<<>>> type: context menu not supported (except report visualization)
     if (isAscendLikeOperator(operatorType)) {
       vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
       return;
@@ -1013,26 +1013,26 @@ export class FolderContextMenuService {
 
     const project = getProjectByPath(folderPath);
 
-    // 检查是否是算子工程
+    // Check if operator project
     if (!project) {
       vscode.window.showWarningMessage('该文件夹不是算子工程');
       return;
     }
 
     await this.switchToProject(uri, async () => {
-      // 调用CPU调试配置，与看板逻辑保持一致
+      // Invoke CPU debug config, same as dashboard logic
       await taskMethods.cpuDebugConfig();
     });
   }
 
   /**
-   * NPU调试配置算子工程
+   * NPU debug config for operator project
    */
   static async npuDebugConfigOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
 
     const operatorType = await getOperatorProjectTypeByPath(folderPath);
-    // <<<>>> 类型算子：所有右键菜单操作均不支持（报告可视化除外）
+    // <<<>>> type: context menu not supported (except report visualization)
     if (isAscendLikeOperator(operatorType)) {
       vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
       return;
@@ -1040,26 +1040,26 @@ export class FolderContextMenuService {
 
     const project = getProjectByPath(folderPath);
 
-    // 检查是否是算子工程
+    // Check if operator project
     if (!project) {
       vscode.window.showWarningMessage('该文件夹不是算子工程');
       return;
     }
 
     await this.switchToProject(uri, async () => {
-      // 调用NPU调试配置，与看板逻辑保持一致
+      // Invoke NPU debug config, same as dashboard logic
       await taskMethods.debugConfig();
     });
   }
 
   /**
-   * 异常检测
+   * Anomaly detection (sanitizer)
    */
   static async sanitizerOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
 
     const operatorType = await getOperatorProjectTypeByPath(folderPath);
-    // <<<>>> 类型算子：所有右键菜单操作均不支持（报告可视化除外）
+    // <<<>>> type: context menu not supported (except report visualization)
     if (isAscendLikeOperator(operatorType)) {
       vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
       return;
@@ -1067,7 +1067,7 @@ export class FolderContextMenuService {
 
     const project = getProjectByPath(folderPath);
 
-    // 检查是否支持异常检测与调优（标准自定义算子需要检查 build.sh 是否包含 --bisheng_flags
+    // Check if sanitizer/tuning supported (standard custom: build.sh must contain --bisheng_flags)
     const rootPath = findStandardCustomRoot(folderPath);
     if (rootPath) {
       const supportsSanitizerAndTuning = checkSupportsSanitizerAndTuning(rootPath);
@@ -1078,25 +1078,25 @@ export class FolderContextMenuService {
     }
 
     await this.switchToProject(uri, async () => {
-      // 打开异常检测配置，与看板逻辑保持一致
+      // Open sanitizer config, same as dashboard logic
       const sanitizerCommand = 'huawei-op-devtools.sanitizerOptions';
       await vscode.commands.executeCommand(sanitizerCommand);
     });
   }
 
   /**
-   * 上板分析
+   * On-board analysis
    */
   static async onBoardOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
 
     const operatorType = await getOperatorProjectTypeByPath(folderPath);
-    // <<<>>> 类型算子：所有右键菜单操作均不支持（报告可视化除外）
+    // <<<>>> type: context menu not supported (except report visualization)
     if (isAscendLikeOperator(operatorType)) {
       vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
       return;
     }
-    // 标准自定义算子：不支持性能调优
+    // Standard custom: performance tuning not supported
     if (operatorType === OperatorProjectType.STANDARD_CUSTOM) {
       vscode.window.showWarningMessage('标准自定义算子暂不支持性能调优');
       return;
@@ -1105,7 +1105,7 @@ export class FolderContextMenuService {
     const project = getProjectByPath(folderPath);
 
 
-    // 检查是否支持异常检测与调优（标准自定义算子需要检查 build.sh 是否包含 --bisheng_flags）
+    // Check sanitizer/tuning support (standard custom: build.sh must have --bisheng_flags)
     const rootPath = findStandardCustomRoot(folderPath);
     if (rootPath) {
       const supportsSanitizerAndTuning = checkSupportsSanitizerAndTuning(rootPath);
@@ -1116,25 +1116,25 @@ export class FolderContextMenuService {
     }
 
     await this.switchToProject(uri, async () => {
-      // 打开上板分析配置，与看板逻辑保持一致
+      // Open on-board analysis config, same as dashboard logic
       const onBoardCommand = 'huawei-op-devtools.onBoardOptions';
       await vscode.commands.executeCommand(onBoardCommand);
     });
   }
 
   /**
-   * 仿真分析
+   * Simulation analysis
    */
   static async simulationOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
 
     const operatorType = await getOperatorProjectTypeByPath(folderPath);
-    // <<<>>> 类型算子：所有右键菜单操作均不支持（报告可视化除外）
+    // <<<>>> type: context menu not supported (except report visualization)
     if (isAscendLikeOperator(operatorType)) {
       vscode.window.showWarningMessage('<<<>>>类型算子暂不支持该右键菜单操作');
       return;
     }
-    // 标准自定义算子：不支持性能调优
+    // Standard custom: performance tuning not supported
     if (operatorType === OperatorProjectType.STANDARD_CUSTOM) {
       vscode.window.showWarningMessage('标准自定义算子暂不支持性能调优');
       return;
@@ -1142,7 +1142,7 @@ export class FolderContextMenuService {
 
     const project = getProjectByPath(folderPath);
 
-    // 检查是否支持异常检测与调优（标准自定义算子需要检查 build.sh 是否包含 --bisheng_flags）
+    // Check sanitizer/tuning support (standard custom: build.sh must have --bisheng_flags)
     const rootPath = findStandardCustomRoot(folderPath);
     if (rootPath) {
       const supportsSanitizerAndTuning = checkSupportsSanitizerAndTuning(rootPath);

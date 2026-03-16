@@ -1,29 +1,29 @@
 /**
- * 依赖注入令牌
- * 用于标识和获取依赖
+ * Dependency injection tokens
+ * Identify and resolve dependencies
  */
 export const DI_TOKENS = {
-  // 基础设施层
+  // Infrastructure layer
   NotificationService: Symbol('NotificationService'),
   CommandExecutor: Symbol('CommandExecutor'),
   FileSystem: Symbol('FileSystem'),
   Logger: Symbol('Logger'),
 
-  // 领域层 - 仓储
+  // Domain layer - repositories
   ConfigRepository: Symbol('ConfigRepository'),
   OperatorRepository: Symbol('OperatorRepository'),
 
-  // 领域层 - 服务
+  // Domain layer - services
   CommandGeneratorService: Symbol('CommandGeneratorService'),
   BuildOrchestratorService: Symbol('BuildOrchestratorService'),
 
-  // 应用层
+  // Application layer
   BuildApplicationService: Symbol('BuildApplicationService'),
 
-  // 表现层
+  // Presentation layer
   BuildController: Symbol('BuildController'),
 
-  // 核心
+  // Core
   ProjectManager: Symbol('ProjectManager'),
 } as const;
 

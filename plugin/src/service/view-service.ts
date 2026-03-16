@@ -5,7 +5,7 @@ import { COMMAND_OPEN_MS_SANITIZER_PANEL_VIEW } from '@plugin/constants';
 
 export class ViewService {
   /**
-   * 打开 CSV 文件预览
+   * Open CSV file preview
    */
   async openCsvFile(filePath: string) {
     const fileUri = vscode.Uri.file(filePath);
@@ -14,7 +14,7 @@ export class ViewService {
   }
 
   /**
-   * 打开 Insight 数据视图
+   * Open Insight data view
    */
   async openInsight(filePath: string) {
     const fileUri = vscode.Uri.file(filePath);
@@ -23,10 +23,10 @@ export class ViewService {
   }
 
   /**
-   * 打开异常检测面板
+   * Open anomaly detection (sanitizer) panel
    */
   openMsSanitizerPanelView(params: unknown) {
-    // 打开异常检测数据面板
+    // Open anomaly detection data panel
     vscode.commands.executeCommand(
       COMMAND_OPEN_MS_SANITIZER_PANEL_VIEW,
       params,

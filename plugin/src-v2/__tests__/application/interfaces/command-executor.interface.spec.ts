@@ -3,9 +3,9 @@ import {
   CommandExecutionResult 
 } from '../../application/interfaces/command-executor.interface';
 
-// 这个测试确保接口定义正确且可以被实现
+// Ensures interface is well-defined and implementable
 describe('Command Executor Interface', () => {
-  // 创建一个模拟实现来测试接口
+  // Mock implementation to test interface
   const mockCommandExecutor: ICommandExecutor = {
     execute: jest.fn(),
     kill: jest.fn(),

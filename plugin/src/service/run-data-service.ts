@@ -15,14 +15,14 @@ import { getConfig } from '@plugin/domain';
 const MARKED_STORAGE_KEY = 'msSanitizer_marks';
 
 /**
- * 格式化时间戳
- * @param {number} timestamp - 时间戳
- * @returns {string} 格式化后的日期字符串 (YYYYMMDD)
+ * Format timestamp to date string
+ * @param {number} timestamp - Unix timestamp
+ * @returns {string} Formatted date string (YYYYMMDD)
  */
 function formatTimestampToYYYYMMDD(timestamp: number): string {
   const date = new Date(timestamp);
 
-  // 检查日期是否有效
+  // Validate date
   if (isNaN(date.getTime())) {
     throw new Error('无效的时间戳');
   }
@@ -38,8 +38,8 @@ function formatTimestampToYYYYMMDD(timestamp: number): string {
 }
 
 /**
- * 获取标记的记录
- * @returns {Set<string>} 标记集合
+ * Get marked records
+ * @returns {Set<string>} Set of marked IDs
  */
 function getMsSanitizerMarks() {
   const storageValue = PermanentStorage.getInstance()
@@ -52,8 +52,8 @@ function getMsSanitizerMarks() {
 }
 
 /**
- * 设置标记记录
- * @param {string[]} vals - 标记列表
+ * Set marked records
+ * @param {string[]} vals - List of marked IDs
  */
 function setMsSanitizerMarks(vals: string[]) {
   PermanentStorage.getInstance()
@@ -62,7 +62,7 @@ function setMsSanitizerMarks(vals: string[]) {
 
 export class RunDataService {
   /**
-   * 获取性能运行数据
+   * Get performance run data
    */
   async getPerformanceRunData(params: GetPerformanceRunDataParams): Promise<GetPerformanceRunDataResult> {
     const data = await PerformanceRunData.getInstance()
@@ -75,7 +75,7 @@ export class RunDataService {
   }
 
   /**
-   * 切换性能记录的标记状态
+   * Toggle performance record mark state
    */
   togglePerformanceRecordMark(params: MarkRecordParams): void {
     if (params.marked) {
@@ -89,7 +89,7 @@ export class RunDataService {
   }
 
   /**
-   * 获取异常检测运行数据列表
+   * Get sanitizer (anomaly detection) run data list
    */
   async getSanitizerRunData() {
     const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -107,7 +107,7 @@ export class RunDataService {
       marked: boolean;
     }> = [];
 
-    // 获取目录下.vscode/mindstudio_sanitizer_log文件夹中的所有文件
+    // Get all files under .vscode/mindstudio_sanitizer_log
     const logPath = path.join(
       workspacePath,
       '.vscode/mindstudio_sanitizer_log',
@@ -115,7 +115,7 @@ export class RunDataService {
 
     const markSet = getMsSanitizerMarks();
 
-    // 读取目录下的文件
+    // Read files in the log directory
     if (fs.existsSync(logPath)) {
       const allFileNames = await fs.readdirSync(logPath);
 
@@ -136,7 +136,7 @@ export class RunDataService {
       }
     }
 
-    // 读取配置中的fileMapList
+    // Read fileMapList from config
     try {
       await ProjectManager.getInstance().initProject();
       const projectId = ProjectManager.getInstance().projectId;
@@ -153,7 +153,7 @@ export class RunDataService {
             if (fs.existsSync(fileMap.filePath)) {
               const stat = fs.statSync(fileMap.filePath);
               if (stat.isFile()) {
-                // 异常检测只处理文件
+                // Sanitizer only handles files
                 const filename = path.basename(fileMap.filePath);
                 const id = `sanitizer_${fileMap.filePath}`;
                 res.push({
@@ -170,19 +170,19 @@ export class RunDataService {
       }
     }
     catch (error) {
-      console.error('读取异常检测配置fileMapList失败:', error);
+      console.error('Failed to read sanitizer config fileMapList:', error);
     }
 
-    // 按照时间排序
+    // Sort by time
     return res.sort((a, b) => b.timestamp - a.timestamp);
   }
 
   /**
-   * 切换异常检测标记状态
+   * Toggle sanitizer mark state
    */
   async toggleSanitizerMark(params: { id: string }) {
     const { id } = params;
-    // 修改mark标记状态
+    // Update mark state
     const markSet = getMsSanitizerMarks();
 
     if (markSet.has(id)) {

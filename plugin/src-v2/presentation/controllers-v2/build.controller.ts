@@ -16,11 +16,11 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 /**
- * 构建控制器 V2
- * 表现层,负责处理 API 请求和 UI 交互
+ * Build controller V2
+ * Presentation layer; handles API requests and UI interaction
  */
 export class BuildControllerV2 {
-  // 全局任务执行器引用,用于支持停止任务功能
+  // Global executor reference for stop-task support
   private static currentExecutor: CommandExecutor | null = null;
 
   constructor(
@@ -30,17 +30,17 @@ export class BuildControllerV2 {
   ) {}
 
   /**
-   * 开始构建算子
+   * Start operator build
    */
   async startBuild(params: StartBuildParams = {}): Promise<void> {
     try {
-      // 确保项目已初始化
+      // Ensure project is initialized
       await this.projectManager.initProject();
 
-      // 保存当前 executor 引用,用于可能的停止操作
+      // Store executor reference for possible stop
       BuildControllerV2.currentExecutor = this.projectManager.getExecutor();
 
-      // 转换参数
+      // Map params
       const dto = {
         configId: params.configId ? Number(params.configId) : undefined,
         compileOption: params.compileOption,
@@ -48,10 +48,10 @@ export class BuildControllerV2 {
         operatorType: params.operatorType,
       };
 
-      // 执行构建
+      // Run build
       const result = await this.buildService.startBuild(dto);
 
-      // 处理结果
+      // Handle result
       if (ResultUtils.isErr(result)) {
         const errorMessage = result.error instanceof Error
           ? result.error.message
@@ -64,29 +64,29 @@ export class BuildControllerV2 {
       this.notification.showInfo('编译算子成功');
     }
     finally {
-      // 清理执行器引用
+      // Clear executor reference
       BuildControllerV2.currentExecutor = null;
       this.projectManager.clearExecutor();
     }
   }
 
   /**
-   * 开始运行算子
+   * Start operator run
    */
   async startRun(params: StartRunParams = {}): Promise<void> {
     try {
       await this.projectManager.initProject();
 
-      // 保存当前 executor 引用
+      // Store executor reference
       BuildControllerV2.currentExecutor = this.projectManager.getExecutor();
 
-      // 对于 pyasc 类型，检查当前是否打开了 .py 文件
-      // 如果传入了 filePath 参数（右键调用），则跳过检测
+      // For pyasc: check if a .py file is open
+      // Skip if filePath was passed (e.g. context menu)
       const projectTypeInfo = await homeMethods.getProjectType();
       const isPyasc = projectTypeInfo.projectType === OperatorProjectType.PYASC;
 
       if (isPyasc && !params.filePath) {
-        // 检查当前是否打开了 .py 文件
+        // Check if a .py file is currently open
         const activeEditor = vscode.window.activeTextEditor;
         const isPyFile = activeEditor?.document.fileName.endsWith('.py');
 
@@ -95,7 +95,7 @@ export class BuildControllerV2 {
           return;
         }
 
-        // 获取工作区路径
+        // Get workspace path
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders || workspaceFolders.length === 0) {
           this.notification.showWarning('未找到工作区路径');
@@ -105,23 +105,23 @@ export class BuildControllerV2 {
         const workspacePath = workspaceFolders[0].uri.fsPath;
         const filePath = activeEditor!.document.uri.fsPath;
 
-        // 计算相对路径
+        // Compute relative path
         const relativePath = path.relative(workspacePath, filePath).replace(/\\/g, '/');
 
-        // 获取 build_op 配置并更新 target_file
+        // Get build_op config and update target_file
         const buildConfigId = await this.getBuildConfigId();
         if (buildConfigId) {
-          // 获取项目ID
+          // Get project ID
           const project = Project.getInstance();
           if (project.workspaceIsProject()) {
             const projectId = project.projectId;
             
-            // 获取 build_op 配置
+            // Get build_op config
             const configs = await getConfig(projectId, 'build_op');
             const buildOpConfig = configs.find((c: any) => c.config_id === buildConfigId);
             
             if (buildOpConfig) {
-              // 更新配置的 target_file
+              // Update config target_file
               const updatedConfig = {
                 config_id: buildConfigId,
                 config_type: 'build_op',
@@ -131,7 +131,7 @@ export class BuildControllerV2 {
                 },
               };
 
-              // 保存配置
+              // Save config
               await postConfig('build_op', [updatedConfig]);
             }
           }
@@ -163,13 +163,13 @@ export class BuildControllerV2 {
   }
 
   /**
-   * 开始构建示例
+   * Start build example
    */
   async startBuildExample(params: StartBuildExampleParams = {}): Promise<void> {
     try {
       await this.projectManager.initProject();
 
-      // 保存当前 executor 引用
+      // Store executor reference
       BuildControllerV2.currentExecutor = this.projectManager.getExecutor();
 
       const dto = {
@@ -198,7 +198,7 @@ export class BuildControllerV2 {
   }
 
   /**
-   * 获取构建配置ID
+   * Get build config ID
    */
   async getBuildConfigId(): Promise<number | undefined> {
     const result = await this.buildService.getBuildConfigId();
@@ -207,7 +207,7 @@ export class BuildControllerV2 {
   }
 
   /**
-   * 获取示例构建配置ID
+   * Get build example config ID
    */
   async getBuildExampleConfigId(): Promise<number | undefined> {
     const result = await this.buildService.getBuildExampleConfigId();
@@ -216,7 +216,7 @@ export class BuildControllerV2 {
   }
 
   /**
-   * 获取仿真配置ID (返回字符串以保持与 V1 API 兼容)
+   * Get simulate config ID (returns string for V1 API compatibility)
    */
   async getSimulateConfigId(): Promise<string> {
     const result = await this.buildService.getSimulateConfigId();
@@ -225,7 +225,7 @@ export class BuildControllerV2 {
   }
 
   /**
-   * 获取上板配置ID (返回字符串以保持与 V1 API 兼容)
+   * Get on-board config ID (returns string for V1 API compatibility)
    */
   async getOnBoardConfigId(): Promise<string> {
     const result = await this.buildService.getOnBoardConfigId();
@@ -234,7 +234,7 @@ export class BuildControllerV2 {
   }
 
   /**
-   * 获取异常检测配置ID
+   * Get sanitizer (anomaly detection) config ID
    */
   async getSanitizerConfigId(): Promise<number | undefined> {
     const result = await this.buildService.getSanitizerConfigId();
@@ -243,7 +243,7 @@ export class BuildControllerV2 {
   }
 
   /**
-   * 获取异常检测配置列表
+   * Get sanitizer config list
    */
   async getSanitizerConfigs(): Promise<unknown[]> {
     const result = await this.buildService.getSanitizerConfigs();
@@ -252,7 +252,7 @@ export class BuildControllerV2 {
   }
 
   /**
-   * 保存异常检测配置
+   * Save sanitizer config
    */
   async saveSanitizerForm(params: {
     data: unknown;
@@ -275,21 +275,21 @@ export class BuildControllerV2 {
   }
 
   /**
-   * 开始仿真分析
+   * Start simulation analysis
    */
   async startSimulate(): Promise<void> {
     try {
       await this.projectManager.initProject();
 
-      // 保存当前 executor 引用
+      // Store executor reference
       BuildControllerV2.currentExecutor = this.projectManager.getExecutor();
 
-      // 对于 pyasc 类型，检查当前是否打开了 .py 文件
+      // For pyasc: check if a .py file is open
       const projectTypeInfo = await homeMethods.getProjectType();
       const isPyasc = projectTypeInfo.projectType === OperatorProjectType.PYASC;
 
       if (isPyasc) {
-        // 检查当前是否打开了 .py 文件
+        // Check if a .py file is open
         const activeEditor = vscode.window.activeTextEditor;
         const isPyFile = activeEditor?.document.fileName.endsWith('.py');
 
@@ -298,7 +298,7 @@ export class BuildControllerV2 {
           return;
         }
 
-        // 获取工作区路径
+        // Get workspace path
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders || workspaceFolders.length === 0) {
           this.notification.showWarning('未找到工作区路径');
@@ -308,23 +308,23 @@ export class BuildControllerV2 {
         const workspacePath = workspaceFolders[0].uri.fsPath;
         const filePath = activeEditor!.document.uri.fsPath;
 
-        // 计算相对路径
+        // Compute relative path
         const relativePath = path.relative(workspacePath, filePath).replace(/\\/g, '/');
 
-        // 获取 build_op 配置并更新 target_file
+        // Get build_op config and update target_file
         const buildConfigId = await this.getBuildConfigId();
         if (buildConfigId) {
-          // 获取项目ID
+          // Get project ID
           const project = Project.getInstance();
           if (project.workspaceIsProject()) {
             const projectId = project.projectId;
             
-            // 获取 build_op 配置
+            // Get build_op config
             const configs = await getConfig(projectId, 'build_op');
             const buildOpConfig = configs.find((c: any) => c.config_id === buildConfigId);
             
             if (buildOpConfig) {
-              // 更新配置的 target_file
+              // Update config target_file
               const updatedConfig = {
                 config_id: buildConfigId,
                 config_type: 'build_op',
@@ -334,7 +334,7 @@ export class BuildControllerV2 {
                 },
               };
 
-              // 保存配置
+              // Save config
               await postConfig('build_op', [updatedConfig]);
             }
           }
@@ -354,7 +354,7 @@ export class BuildControllerV2 {
 
       this.notification.showInfo('执行仿真分析成功');
 
-      // 触发 UI 刷新命令
+      // Trigger UI refresh commands
       await vscode.commands.executeCommand('huawei-op-devtools.open-performance-panel-view');
       await vscode.commands.executeCommand('huawei-op-devtools.flashPerformanceRunData');
     }
@@ -365,21 +365,21 @@ export class BuildControllerV2 {
   }
 
   /**
-   * 开始上板分析
+   * Start on-board analysis
    */
   async startOnBoard(): Promise<void> {
     try {
       await this.projectManager.initProject();
 
-      // 保存当前 executor 引用
+      // Store executor reference
       BuildControllerV2.currentExecutor = this.projectManager.getExecutor();
 
-      // 对于 pyasc 类型，检查当前是否打开了 .py 文件
+      // For pyasc: check if a .py file is open
       const projectTypeInfo = await homeMethods.getProjectType();
       const isPyasc = projectTypeInfo.projectType === OperatorProjectType.PYASC;
 
       if (isPyasc) {
-        // 检查当前是否打开了 .py 文件
+        // Check if a .py file is open
         const activeEditor = vscode.window.activeTextEditor;
         const isPyFile = activeEditor?.document.fileName.endsWith('.py');
 
@@ -388,7 +388,7 @@ export class BuildControllerV2 {
           return;
         }
 
-        // 获取工作区路径
+        // Get workspace path
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders || workspaceFolders.length === 0) {
           this.notification.showWarning('未找到工作区路径');
@@ -398,23 +398,23 @@ export class BuildControllerV2 {
         const workspacePath = workspaceFolders[0].uri.fsPath;
         const filePath = activeEditor!.document.uri.fsPath;
 
-        // 计算相对路径
+        // Compute relative path
         const relativePath = path.relative(workspacePath, filePath).replace(/\\/g, '/');
 
-        // 获取 build_op 配置并更新 target_file
+        // Get build_op config and update target_file
         const buildConfigId = await this.getBuildConfigId();
         if (buildConfigId) {
-          // 获取项目ID
+          // Get project ID
           const project = Project.getInstance();
           if (project.workspaceIsProject()) {
             const projectId = project.projectId;
             
-            // 获取 build_op 配置
+            // Get build_op config
             const configs = await getConfig(projectId, 'build_op');
             const buildOpConfig = configs.find((c: any) => c.config_id === buildConfigId);
             
             if (buildOpConfig) {
-              // 更新配置的 target_file
+              // Update config target_file
               const updatedConfig = {
                 config_id: buildConfigId,
                 config_type: 'build_op',
@@ -424,7 +424,7 @@ export class BuildControllerV2 {
                 },
               };
 
-              // 保存配置
+              // Save config
               await postConfig('build_op', [updatedConfig]);
             }
           }
@@ -444,7 +444,7 @@ export class BuildControllerV2 {
 
       this.notification.showInfo('执行上板分析成功');
 
-      // 触发 UI 刷新命令
+      // Trigger UI refresh commands
       await vscode.commands.executeCommand('huawei-op-devtools.open-performance-panel-view');
       await vscode.commands.executeCommand('huawei-op-devtools.flashPerformanceRunData');
     }
@@ -455,16 +455,16 @@ export class BuildControllerV2 {
   }
 
   /**
-   * 运行异常检测
+   * Run sanitizer (anomaly detection)
    */
   async runSanitizer(): Promise<void> {
     try {
       await this.projectManager.initProject();
 
-      // 保存当前 executor 引用
+      // Store executor reference
       BuildControllerV2.currentExecutor = this.projectManager.getExecutor();
 
-      // 创建日志目录
+      // Create log directory
       this.ensureSanitizerLogDir();
 
       const result = await this.buildService.runSanitizer();
@@ -480,7 +480,7 @@ export class BuildControllerV2 {
 
       this.notification.showInfo('异常检测成功');
 
-      // 聚焦异常检测面板并刷新左侧报告列表
+      // Focus sanitizer panel and refresh report list
       await vscode.commands.executeCommand('msSanitizerPanelView.focus');
       await vscode.commands.executeCommand('huawei-op-devtools.flashMsSanitizerRunData');
     }
@@ -491,8 +491,8 @@ export class BuildControllerV2 {
   }
 
   /**
-   * 确保异常检测日志目录存在
-   * 私有辅助方法,处理文件系统操作
+   * Ensure sanitizer log directory exists
+   * Private helper for filesystem operations
    */
   private ensureSanitizerLogDir(): void {
     const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -515,20 +515,20 @@ export class BuildControllerV2 {
   }
 
   /**
-   * 停止当前正在执行的任务
+   * Stop the currently running task
    */
   async stopTask(): Promise<void> {
-    console.log('[BuildControllerV2.stopTask] 收到停止任务请求');
+    console.log('[BuildControllerV2.stopTask] Stop task requested');
 
     if (BuildControllerV2.currentExecutor) {
-      console.log('[BuildControllerV2.stopTask] 终止正在执行的任务');
+      console.log('[BuildControllerV2.stopTask] Killing running task');
       await BuildControllerV2.currentExecutor.kill();
       BuildControllerV2.currentExecutor = null;
       this.projectManager.clearExecutor();
       vscode.window.showWarningMessage('任务已被手动停止');
     }
     else {
-      console.log('[BuildControllerV2.stopTask] 没有正在执行的任务');
+      console.log('[BuildControllerV2.stopTask] No task running');
       vscode.window.showInformationMessage('当前没有正在执行的任务');
     }
   }

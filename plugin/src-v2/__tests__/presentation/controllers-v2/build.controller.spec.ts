@@ -4,7 +4,7 @@ import { INotificationService } from '../../../../application/interfaces/notific
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import { ResultUtils } from '../../../../domain/shared/types/result.type';
 
-// Mock 依赖项
+// Mock dependencies
 const mockBuildService = {
   startBuild: jest.fn(),
   startRun: jest.fn(),

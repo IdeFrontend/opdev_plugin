@@ -19,8 +19,8 @@ import {
 } from '@plugin-v2/domain/operator/strategies/execution-strategy.factory';
 
 /**
- * 构建应用服务 V2
- * 集成策略配置,支持基于工程类型的差异化执行
+ * Build application service V2
+ * Integrates strategy config; execution varies by project type
  */
 export class BuildApplicationServiceV2 {
   constructor(
@@ -31,40 +31,40 @@ export class BuildApplicationServiceV2 {
   ) {}
 
   /**
-   * 执行上板分析 (智能策略选择)
+   * Execute on-board analysis (strategy chosen by project config)
    */
   async startOnBoard(): Promise<
     Result<void, OnBoardFailedError | BuildFailedError | ConfigNotFoundError>
   > {
-    // 1. 获取工程配置,确定使用哪个策略
+    // 1. Get project config to determine strategy
     const projectConfig = await this.strategyConfigRepo.getProjectConfig(this.projectId);
 
-    // 2. 获取上板配置
+    // 2. Get on-board config
     const onBoardConfigResult = await this.configRepo.findByType(ConfigType.ON_BOARD);
 
     if (ResultUtils.isErr(onBoardConfigResult)) {
       return ResultUtils.err(new ConfigNotFoundError('on_board', { reason: '未找到上板配置' }));
     }
 
-    // 3. 获取构建配置ID
+    // 3. Get build config ID
     const buildConfigResult = await this.configRepo.findByType(ConfigType.BUILD_OP);
 
     if (ResultUtils.isErr(buildConfigResult)) {
       return ResultUtils.err(new ConfigNotFoundError('build_op', { reason: '未找到构建配置' }));
     }
 
-    // 4. 获取示例配置ID
+    // 4. Get example config ID
     const exampleConfigResult = await this.configRepo.findByType(ConfigType.BUILD_EXAMPLE);
 
     if (ResultUtils.isErr(exampleConfigResult)) {
       return ResultUtils.err(new ConfigNotFoundError('build_example', { reason: '未找到示例配置' }));
     }
 
-    // 5. 根据工程配置选择策略变体
+    // 5. Select strategy variant from project config
     const strategyConfig = projectConfig.taskStrategies[TaskType.ON_BOARD];
     const variant = strategyConfig?.variant || StrategyVariant.STANDARD;
 
-    // 6. 执行上板 (使用选定的策略)
+    // 6. Execute on-board (with selected strategy)
     return this.buildOrchestrator.onBoard(
       buildConfigResult.value.configId,
       onBoardConfigResult.value.configId,
@@ -74,8 +74,8 @@ export class BuildApplicationServiceV2 {
   }
 
   /**
-   * 使用指定策略执行上板
-   * 提供给高级用户手动指定策略
+   * Execute on-board with specified strategy
+   * For advanced users who want to pick strategy manually
    */
   async startOnBoardWithStrategy(variant: StrategyVariant): Promise<
     Result<void, OnBoardFailedError | BuildFailedError | ConfigNotFoundError>
@@ -98,7 +98,7 @@ export class BuildApplicationServiceV2 {
       return ResultUtils.err(new ConfigNotFoundError('build_example', { reason: '未找到示例配置' }));
     }
 
-    // 使用指定的策略变体
+    // Use specified strategy variant
     return this.buildOrchestrator.onBoard(
       buildConfigResult.value.configId,
       onBoardConfigResult.value.configId,
@@ -107,5 +107,5 @@ export class BuildApplicationServiceV2 {
     );
   }
 
-  // 其他方法类似...
+  // Other methods similar...
 }

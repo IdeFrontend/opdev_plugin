@@ -18,9 +18,9 @@ import {
 import { ExecutionContext } from '../strategies/execution-step.interface';
 
 /**
- * 构建编排服务
- * 领域服务,负责算子构建的核心业务逻辑
- * V2: 支持策略模式,保持向后兼容
+ * Build orchestrator service
+ * Domain service; core build business logic
+ * V2: supports strategy pattern, backward compatible
  */
 export class BuildOrchestratorService {
   private strategyFactory: ExecutionStrategyFactory;
@@ -29,29 +29,29 @@ export class BuildOrchestratorService {
     private commandGenerator: CommandGeneratorService,
     private executor: ICommandExecutor,
   ) {
-    // 初始化策略工厂
+    // Initialize strategy factory
     this.strategyFactory = new ExecutionStrategyFactory(commandGenerator);
   }
 
   /**
-   * 执行算子构建
+   * Execute operator build
    */
   async build(
     configId: number,
     compileOption?: string,
     operatorNames?: string,
   ): Promise<Result<void, BuildFailedError>> {
-    // 1. 生成构建命令
+    // 1. Generate build command
     const command = this.commandGenerator.generateBuildCommand(
       configId,
       compileOption,
       operatorNames,
     );
 
-    // 2. 执行命令
+    // 2. Execute command
     const execResult = await this.executor.execute(command, [], [], {}, true);
 
-    // 3. 处理结果
+    // 3. Handle result
     if (execResult.code !== 0) {
       return ResultUtils.err(new BuildFailedError('编译算子失败', {
         command,
@@ -64,7 +64,7 @@ export class BuildOrchestratorService {
   }
 
   /**
-   * 执行示例构建
+   * Execute example build
    */
   async buildExample(configId: number, operatorNames?: string): Promise<Result<void, BuildFailedError>> {
     const command = this.commandGenerator.generateBuildExampleCommand(configId, operatorNames);
@@ -82,7 +82,7 @@ export class BuildOrchestratorService {
   }
 
   /**
-   * 执行算子运行
+   * Execute operator run
    */
   async run(configId: number): Promise<Result<void, BuildFailedError>> {
     const command = this.commandGenerator.generateRunCommand(configId);
@@ -100,10 +100,8 @@ export class BuildOrchestratorService {
   }
 
   /**
-   * 执行仿真分析
-   * 包含两步:
-   * 1. 使用指定仿真器类型编译算子
-   * 2. 执行仿真分析命令
+   * Execute simulation analysis
+   * Two steps: 1) build with simulator type 2) run simulate command
    */
   async simulate(
     buildConfigId: number,
@@ -111,7 +109,7 @@ export class BuildOrchestratorService {
     exampleConfigId: number,
     simulatorType: string,
   ): Promise<Result<void, SimulateFailedError | BuildFailedError>> {
-    // 步骤 1: 仿真前编译 (带仿真器参数)
+    // Step 1: pre-simulate build (with simulator params)
     const buildCommand = this.commandGenerator.generateBuildWithSimulatorCommand(
       buildConfigId,
       simulatorType,
@@ -127,7 +125,7 @@ export class BuildOrchestratorService {
       }));
     }
 
-    // 步骤 2: 执行仿真分析
+    // Step 2: execute simulation analysis
     const simulateCommand = this.commandGenerator.generateSimulateCommand(
       simulateConfigId,
       exampleConfigId,
@@ -152,17 +150,15 @@ export class BuildOrchestratorService {
   }
 
   /**
-   * 执行上板分析
-   * 包含两步:
-   * 1. 上板前编译 (带 onboard 参数)
-   * 2. 执行上板分析命令
+   * Execute on-board analysis
+   * Two steps: 1) pre-on-board build 2) run on-board command
    */
   async onBoard(
     buildConfigId: number,
     onBoardConfigId: number,
     exampleConfigId: number,
   ): Promise<Result<void, OnBoardFailedError | BuildFailedError>> {
-    // 步骤 1: 上板前编译 (带 onboard 参数)
+    // Step 1: pre-on-board build (with onboard param)
     const buildCommand = this.commandGenerator.generateBuildForOnBoardCommand(buildConfigId);
     const buildResult = await this.executor.execute(buildCommand, [], [], {}, true);
 
@@ -175,7 +171,7 @@ export class BuildOrchestratorService {
       }));
     }
 
-    // 步骤 2: 执行上板分析
+    // Step 2: execute on-board analysis
     const onBoardCommand = this.commandGenerator.generateOnBoardCommand(
       onBoardConfigId,
       exampleConfigId,
@@ -200,17 +196,15 @@ export class BuildOrchestratorService {
   }
 
   /**
-   * 执行异常检测
-   * 包含两步:
-   * 1. 异常检测前编译 (带 --mssanitizer 参数)
-   * 2. 执行异常检测命令
+   * Execute sanitizer (anomaly detection)
+   * Two steps: 1) pre-sanitizer build (--mssanitizer) 2) run sanitizer command
    */
   async sanitizer(
     buildConfigId: number,
     sanitizerConfigId: number,
     exampleConfigId: number,
   ): Promise<Result<void, SanitizerFailedError | BuildFailedError>> {
-    // 步骤 1: 异常检测前编译 (带 --mssanitizer 参数)
+    // Step 1: pre-sanitizer build (with --mssanitizer)
     const buildCommand = this.commandGenerator.generateBuildForSanitizerCommand(buildConfigId);
     const buildResult = await this.executor.execute(buildCommand, [], [], {}, true);
 
@@ -223,7 +217,7 @@ export class BuildOrchestratorService {
       }));
     }
 
-    // 步骤 2: 执行异常检测
+    // Step 2: execute sanitizer
     const sanitizerCommand = this.commandGenerator.generateSanitizerCommand(
       sanitizerConfigId,
       exampleConfigId,
@@ -248,12 +242,12 @@ export class BuildOrchestratorService {
   }
 
   /**
-   * 使用策略执行仿真 (新方法)
-   * @param buildConfigId 构建配置ID
-   * @param simulateConfigId 仿真配置ID
-   * @param exampleConfigId 示例配置ID
-   * @param simulatorType 仿真器类型
-   * @param variant 策略变体
+   * Execute simulate with strategy (new API)
+   * @param buildConfigId Build config ID
+   * @param simulateConfigId Simulate config ID
+   * @param exampleConfigId Example config ID
+   * @param simulatorType Simulator type
+   * @param variant Strategy variant
    */
   async simulateWithStrategy(
     buildConfigId: number,
@@ -281,11 +275,11 @@ export class BuildOrchestratorService {
   }
 
   /**
-   * 使用策略执行上板 (新方法)
-   * @param buildConfigId 构建配置ID
-   * @param onBoardConfigId 上板配置ID
-   * @param exampleConfigId 示例配置ID
-   * @param variant 策略变体
+   * Execute on-board with strategy (new API)
+   * @param buildConfigId Build config ID
+   * @param onBoardConfigId On-board config ID
+   * @param exampleConfigId Example config ID
+   * @param variant Strategy variant
    */
   async onBoardWithStrategy(
     buildConfigId: number,
@@ -311,11 +305,11 @@ export class BuildOrchestratorService {
   }
 
   /**
-   * 使用策略执行异常检测 (新方法)
-   * @param buildConfigId 构建配置ID
-   * @param sanitizerConfigId 异常检测配置ID
-   * @param exampleConfigId 示例配置ID
-   * @param variant 策略变体
+   * Execute sanitizer with strategy (new API)
+   * @param buildConfigId Build config ID
+   * @param sanitizerConfigId Sanitizer config ID
+   * @param exampleConfigId Example config ID
+   * @param variant Strategy variant
    */
   async sanitizerWithStrategy(
     buildConfigId: number,
@@ -341,7 +335,7 @@ export class BuildOrchestratorService {
   }
 
   /**
-   * 获取策略工厂 (用于扩展和注册自定义策略)
+   * Get strategy factory (for extension and custom strategy registration)
    */
   getStrategyFactory(): ExecutionStrategyFactory {
     return this.strategyFactory;

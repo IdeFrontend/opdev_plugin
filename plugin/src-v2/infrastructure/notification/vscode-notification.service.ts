@@ -3,8 +3,8 @@ import * as vscode from 'vscode';
 import { INotificationService } from '@plugin-v2/application/interfaces/notification.interface';
 
 /**
- * VSCode 通知服务实现
- * 基础设施层,封装 VSCode API
+ * VSCode notification service implementation
+ * Infrastructure layer; wraps VSCode API
  */
 export class VscodeNotificationService implements INotificationService {
   showInfo(message: string): void {

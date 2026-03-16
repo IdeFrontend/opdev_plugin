@@ -1,6 +1,6 @@
 /**
- * 基础领域错误类
- * 所有业务错误都应继承此类
+ * Base domain error class
+ * All business errors should extend this
  */
 export abstract class DomainError extends Error {
   constructor(
@@ -11,12 +11,12 @@ export abstract class DomainError extends Error {
     super(message);
     this.name = this.constructor.name;
 
-    // 保持正确的原型链
+    // Preserve prototype chain
     Object.setPrototypeOf(this, new.target.prototype);
   }
 
   /**
-   * 转换为可序列化的对象
+   * Convert to serializable object
    */
   toJSON() {
     return {
@@ -30,7 +30,7 @@ export abstract class DomainError extends Error {
 }
 
 /**
- * 配置相关错误
+ * Config-related error
  */
 export class ConfigError extends DomainError {
   constructor(message: string, context?: Record<string, unknown>) {
@@ -39,7 +39,7 @@ export class ConfigError extends DomainError {
 }
 
 /**
- * 配置不存在错误
+ * Config not found error
  */
 export class ConfigNotFoundError extends DomainError {
   constructor(configType: string, context?: Record<string, unknown>) {

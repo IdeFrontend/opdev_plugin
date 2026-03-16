@@ -5,8 +5,8 @@ import {
 } from '@plugin-v2/application/interfaces/command-executor.interface';
 
 /**
- * 命令执行器适配器
- * 将现有的 CommandExecutor 适配为 ICommandExecutor 接口
+ * Command executor adapter
+ * Adapts existing CommandExecutor to ICommandExecutor interface
  */
 export class CommandExecutorAdapter implements ICommandExecutor {
   constructor(private executor: CommandExecutor) {}
@@ -20,7 +20,7 @@ export class CommandExecutorAdapter implements ICommandExecutor {
   ): Promise<CommandExecutionResult> {
     const result = await this.executor.execute(command, args, extraArgs, env, showOutput);
 
-    // 适配返回类型
+    // Adapt return type
     return {
       code: result.code ?? 0,
       output: result.output,

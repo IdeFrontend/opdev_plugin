@@ -2,49 +2,49 @@ import { Result } from '@plugin-v2/domain/shared/types/result.type';
 import { ICommandExecutor } from '@plugin-v2/application/interfaces/command-executor.interface';
 
 /**
- * 执行步骤上下文
- * 包含执行所需的所有配置和状态
+ * Execution step context
+ * Holds all config and state needed for execution
  */
 export interface ExecutionContext {
-  /** 主配置 ID (如上板配置、仿真配置) */
+  /** Primary config ID (e.g. on-board, simulate) */
   primaryConfigId: number;
 
-  /** 构建配置 ID */
+  /** Build config ID */
   buildConfigId: number;
 
-  /** 示例配置 ID */
+  /** Example config ID */
   exampleConfigId: number;
 
-  /** 算子类型特定参数 */
+  /** Operator-type-specific parameters */
   parameters?: Record<string, unknown>;
 
-  /** 执行器 */
+  /** Executor */
   executor: ICommandExecutor;
 
-  /** 前序步骤的执行结果 (用于责任链传递) */
+  /** Previous step result (for chain passing) */
   previousResult?: unknown;
 }
 
 /**
- * 执行步骤接口
- * 每个步骤都是独立的、可组合的单元
+ * Execution step interface
+ * Each step is an independent, composable unit
  */
 export interface IExecutionStep {
   /**
-   * 步骤名称 (用于日志和错误追踪)
+   * Step name (for logging and error tracking)
    */
   readonly name: string;
 
   /**
-   * 执行步骤
-   * @param context 执行上下文
-   * @returns 执行结果,包含可能传递给下一步的数据
+   * Execute the step
+   * @param context Execution context
+   * @returns Result, possibly with data for next step
    */
   execute(context: ExecutionContext): Promise<Result<unknown, Error>>;
 
   /**
-   * 是否可以跳过此步骤 (可选)
-   * @param context 执行上下文
+   * Whether this step can be skipped (optional)
+   * @param context Execution context
    */
   canSkip?(context: ExecutionContext): boolean;
 }

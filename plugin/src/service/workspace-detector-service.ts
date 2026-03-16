@@ -18,21 +18,21 @@ import {
 } from '@plugin/domain/models/project-model';
 
 /**
- * 工作区检测服务
- * 负责检测工作区是否为算子工程，如果不是则扫描子目录
+ * Workspace detector service
+ * Detects whether the workspace is an operator project; if not, scans subdirectories
  */
 export class WorkspaceDetectorService {
   /**
-   * 检测并注册工作区中的算子工程
-   * 只处理标准自定义算子类型
-   * @param workspacePath 工作区路径
+   * Detect and register operator projects in the workspace
+   * Only handles standard custom operator type
+   * @param workspacePath Workspace path
    */
   static async detectAndRegisterWorkspace(workspacePath: string): Promise<void> {
     try {
-      // 检测根目录是否为算子工程
+      // Check if root is an operator project
       const rootDetection = await OperatorProjectDetector.detectOperatorProject(workspacePath);
 
-      // 只处理标准自定义算子类型
+      // Only process standard custom operator type
       if (
         rootDetection.isOperatorProject
         && rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM
@@ -41,12 +41,12 @@ export class WorkspaceDetectorService {
       }
     }
     catch (error) {
-      // 忽略错误
+      // Ignore errors
     }
   }
 
   /**
-   * 根目录下的算子合集白名单
+   * Whitelist of operator collections under root
    */
   private static readonly ROOT_OPERATOR_COLLECTIONS = new Set([
     'image',
@@ -78,7 +78,7 @@ export class WorkspaceDetectorService {
   ]);
 
   /**
-   * experimental 目录下的算子合集白名单
+   * Whitelist of operator collections under experimental directory
    */
   private static readonly EXPERIMENTAL_OPERATOR_COLLECTIONS = new Set([
     'image',
@@ -111,14 +111,14 @@ export class WorkspaceDetectorService {
   ]);
 
   /**
-   * 扫描根目录下的算子合集(ops_meet)与算子(ops_list/experimental_ops_list)。
-   * 供 WorkspaceDetectorService、FolderContextMenuService 等复用。
+   * Scan operator collections (ops_meet) and operators (ops_list/experimental_ops_list) under root.
+   * Shared by WorkspaceDetectorService, FolderContextMenuService, etc.
    *
-   * 扫描规则：
-   * 1. 根目录下的特定文件夹（ROOT_OPERATOR_COLLECTIONS）标记为算子合集
-   * 2. experimental 目录下的特定文件夹（EXPERIMENTAL_OPERATOR_COLLECTIONS）也标记为算子合集
-   * 3. experimental 目录下的算子合集里的算子，都是 experimental 的算子
-   * 4. 识别算子的逻辑不变：检查子目录是否包含 CMakeLists.txt 文件
+   * Scan rules:
+   * 1. Folders in ROOT_OPERATOR_COLLECTIONS under root are treated as operator collections
+   * 2. Folders in EXPERIMENTAL_OPERATOR_COLLECTIONS under experimental/ are also operator collections
+   * 3. Operators under experimental/ collections are all experimental operators
+   * 4. Operator detection unchanged: subdir must contain CMakeLists.txt
    */
   static scanOpsMeetAndOpsLists(rootPath: string): {
     opsMeet: OperatorCollectionInfo[];
@@ -143,7 +143,7 @@ export class WorkspaceDetectorService {
 
       const collectionPath = path.join(rootPath, dirName);
 
-      // 处理根目录下的算子合集
+      // Process operator collections under root
       if (this.ROOT_OPERATOR_COLLECTIONS.has(dirName)) {
         const {
           hasOperators,
@@ -158,7 +158,7 @@ export class WorkspaceDetectorService {
           operators.forEach((op) => opsList.push(op));
         }
       }
-      // 处理 experimental 目录
+      // Process experimental directory
       else if (dirName.toLowerCase() === 'experimental') {
         try {
           const experimentalEntries = fs.readdirSync(collectionPath, { withFileTypes: true });
@@ -170,7 +170,7 @@ export class WorkspaceDetectorService {
 
             const expCollectionName = expEntry.name;
 
-            // 检查是否在 experimental 算子合集白名单中
+            // Check if in experimental operator collection whitelist
             if (this.EXPERIMENTAL_OPERATOR_COLLECTIONS.has(expCollectionName)) {
               const expCollectionPath = path.join(collectionPath, expCollectionName);
               const {
@@ -179,7 +179,7 @@ export class WorkspaceDetectorService {
               } = this.scanOperatorsInCollection(expCollectionPath, true);
 
               if (hasOperators) {
-                // experimental 目录下的算子合集，使用完整路径作为名称（如 experimental/image）
+                // Use full path as name for experimental collections (e.g. experimental/image)
                 opsMeet.push({
                   name: `experimental/${expCollectionName}`,
                   path: expCollectionPath,
@@ -190,7 +190,7 @@ export class WorkspaceDetectorService {
           }
         }
         catch {
-          // 忽略 experimental 目录扫描失败
+          // Ignore experimental dir scan failure
         }
       }
     }
@@ -203,10 +203,10 @@ export class WorkspaceDetectorService {
   }
 
   /**
-   * 扫描算子合集目录下的算子
-   * @param collectionPath 算子合集路径
-   * @param isExperimental 是否为 experimental 算子（当前未使用，保留用于未来扩展）
-   * @returns 是否包含算子及算子列表
+   * Scan operators under an operator collection directory
+   * @param collectionPath Operator collection path
+   * @param isExperimental Whether experimental (currently unused, reserved for future)
+   * @returns Whether it has operators and the operator list
    */
   private static scanOperatorsInCollection(
     collectionPath: string,
@@ -247,7 +247,7 @@ export class WorkspaceDetectorService {
       }
     }
     catch {
-      // 忽略单目录扫描失败
+      // Ignore single-dir scan failure
     }
 
     return {
@@ -257,30 +257,30 @@ export class WorkspaceDetectorService {
   }
 
   /**
-   * 扫描标准自定义算子（特殊规则）
-   * 只扫描算子合集(ops_meet)和算子(ops_list/experimental_ops_list)，更新根项目信息。
-   * 不再为算子集合或子算子在 projects 中新建项目。
+   * Scan standard custom operators (special rules)
+   * Only scans collections (ops_meet) and operators (ops_list/experimental_ops_list), updates root project info.
+   * Does not create new projects in projects for collections or sub-operators.
    */
   private static async scanStandardCustomOperators(workspacePath: string): Promise<void> {
     try {
-      console.log('[scanStandardCustomOperators] 开始扫描算子合集和算子...');
+      console.log('[scanStandardCustomOperators] Scanning operator collections and operators...');
       const {
         opsMeet,
         opsList,
         experimentalOpsList,
       } = this.scanOpsMeetAndOpsLists(workspacePath);
 
-      console.log('[scanStandardCustomOperators] 算子合集列表:', opsMeet.map((m) => m.name));
-      console.log('[scanStandardCustomOperators] 普通算子列表:', opsList.map((o) => o.name));
+      console.log('[scanStandardCustomOperators] Operator collections:', opsMeet.map((m) => m.name));
+      console.log('[scanStandardCustomOperators] Operators:', opsList.map((o) => o.name));
       console.log(
-        '[scanStandardCustomOperators] experimental算子列表:',
+        '[scanStandardCustomOperators] Experimental operators:',
         experimentalOpsList.map((o) => o.name),
       );
       await updateStandardCustomOperators(workspacePath, opsMeet, opsList, experimentalOpsList);
-      console.log(`[scanStandardCustomOperators] 已更新: ${opsMeet.length} 个算子合集, ${opsList.length} 个普通算子, ${experimentalOpsList.length} 个experimental算子`);
+      console.log(`[scanStandardCustomOperators] Updated: ${opsMeet.length} collections, ${opsList.length} operators, ${experimentalOpsList.length} experimental`);
     }
     catch (error) {
-      console.warn(`[scanStandardCustomOperators] 更新算子信息失败: ${error instanceof Error ? error.message : String(error)}`);
+      console.warn(`[scanStandardCustomOperators] Failed to update operator info: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 }

@@ -8,8 +8,8 @@ import {
 } from '../execution-step.interface';
 
 /**
- * 通用构建步骤
- * 可配置编译参数
+ * Generic build step
+ * Supports configurable compile options
  */
 export class BuildStep implements IExecutionStep {
   readonly name: string;
@@ -47,7 +47,7 @@ export class BuildStep implements IExecutionStep {
 }
 
 /**
- * 带仿真器参数的构建步骤
+ * Build step with simulator parameters
  */
 export class BuildWithSimulatorStep implements IExecutionStep {
   readonly name = 'BuildWithSimulator';
@@ -81,7 +81,7 @@ export class BuildWithSimulatorStep implements IExecutionStep {
 }
 
 /**
- * 上板前构建步骤 (带 onboard 参数)
+ * Pre-on-board build step (with onboard params)
  */
 export class BuildForOnBoardStep implements IExecutionStep {
   readonly name = 'BuildForOnBoard';
@@ -110,7 +110,7 @@ export class BuildForOnBoardStep implements IExecutionStep {
 }
 
 /**
- * 异常检测前构建步骤 (带 --mssanitizer 参数)
+ * Pre-sanitizer build step (with --mssanitizer)
  */
 export class BuildForSanitizerStep implements IExecutionStep {
   readonly name = 'BuildForSanitizer';

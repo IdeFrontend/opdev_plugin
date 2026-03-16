@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 
 /**
- * V2 功能开关脚本
- * 用于快速启用/禁用 V2 功能
+ * V2 feature toggle script
+ * Quickly enable/disable V2 features
  *
- * 使用方法:
- *   node toggle-v2.js enable build       # 启用 V2 构建
- *   node toggle-v2.js disable build      # 禁用 V2 构建
- *   node toggle-v2.js enable all         # 启用所有 V2 功能
- *   node toggle-v2.js status             # 查看当前状态
+ * Usage:
+ *   node toggle-v2.js enable build       # Enable V2 build
+ *   node toggle-v2.js disable build      # Disable V2 build
+ *   node toggle-v2.js enable all         # Enable all V2 features
+ *   node toggle-v2.js status             # Show current status
  */
 
 const fs = require('fs');
@@ -55,8 +55,8 @@ function toggleFeature(feature, enable) {
   const flag = FEATURES[feature];
 
   if (!flag) {
-    console.error(`❌ 未知功能: ${feature}`);
-    console.log(`可用功能: ${Object.keys(FEATURES)
+    console.error(`❌ Unknown feature: ${feature}`);
+    console.log(`Available: ${Object.keys(FEATURES)
       .join(', ')}, all`);
     process.exit(1);
   }
@@ -82,16 +82,16 @@ function toggleAll(enable) {
 function showStatus() {
   const { flags } = readFeatureFlags();
 
-  console.log('\n📊 V2 功能状态:\n');
+  console.log('\n📊 V2 feature status:\n');
   console.log('┌─────────────────┬──────────┐');
-  console.log('│ 功能            │ 状态     │');
+  console.log('│ Feature         │ Status   │');
   console.log('├─────────────────┼──────────┤');
 
   for (const [
     feature,
     enabled,
   ] of Object.entries(flags)) {
-    const status = enabled ? '✅ 启用' : '❌ 禁用';
+    const status = enabled ? '✅ ON ' : '❌ OFF';
     const padding = ' '.repeat(15 - feature.length);
 
     console.log(`│ ${feature}${padding} │ ${status}  │`);
@@ -104,13 +104,13 @@ function showStatus() {
   const totalCount = Object.keys(flags).length;
   const progress = ((enabledCount / totalCount) * 100).toFixed(0);
 
-  console.log(`进度: ${enabledCount}/${totalCount} (${progress}%) 功能已迁移到 V2\n`);
+  console.log(`Progress: ${enabledCount}/${totalCount} (${progress}%) migrated to V2\n`);
 
   if (enabledCount === 0) {
-    console.log('💡 提示: 运行 `node toggle-v2.js enable build` 启用构建功能');
+    console.log('💡 Tip: run `node toggle-v2.js enable build` to enable build');
   }
   else if (enabledCount === totalCount) {
-    console.log('🎉 所有功能已启用 V2!');
+    console.log('🎉 All V2 features enabled!');
   }
 }
 
@@ -134,7 +134,7 @@ function main() {
       toggleFeature(feature, true);
     }
     else {
-      console.error('❌ 请指定功能名称或 "all"');
+      console.error('❌ Specify feature name or "all"');
       process.exit(1);
     }
   }
@@ -146,22 +146,22 @@ function main() {
       toggleFeature(feature, false);
     }
     else {
-      console.error('❌ 请指定功能名称或 "all"');
+      console.error('❌ Specify feature name or "all"');
       process.exit(1);
     }
   }
   else {
-    console.error('❌ 未知操作:', action);
-    console.log('\n用法:');
-    console.log('  node toggle-v2.js status                 # 查看状态');
-    console.log('  node toggle-v2.js enable <feature|all>   # 启用功能');
-    console.log('  node toggle-v2.js disable <feature|all>  # 禁用功能');
-    console.log('\n可用功能:', Object.keys(FEATURES)
+    console.error('❌ Unknown action:', action);
+    console.log('\nUsage:');
+    console.log('  node toggle-v2.js status                 # Show status');
+    console.log('  node toggle-v2.js enable <feature|all>   # Enable feature(s)');
+    console.log('  node toggle-v2.js disable <feature|all>  # Disable feature(s)');
+    console.log('\nAvailable:', Object.keys(FEATURES)
       .join(', '));
     process.exit(1);
   }
 
-  console.log('\n💡 提示: 修改后需要重新编译插件 (npm run compile)');
+  console.log('\n💡 Tip: recompile plugin after changes (npm run compile)');
 }
 
 main();

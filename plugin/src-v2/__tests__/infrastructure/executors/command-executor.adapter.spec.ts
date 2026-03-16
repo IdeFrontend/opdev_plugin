@@ -1,7 +1,7 @@
 import { CommandExecutorAdapter } from '../../../infrastructure/executors/command-executor.adapter';
 import { ICommandExecutor, CommandExecutionResult } from '../../../application/interfaces/command-executor.interface';
 
-// 模拟原始的 CommandExecutor
+// Mock original CommandExecutor
 class MockCommandExecutor {
   execute = jest.fn();
   kill = jest.fn();

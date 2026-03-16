@@ -15,8 +15,8 @@ import {
 import { ExecutionContext } from '../strategies/execution-step.interface';
 
 /**
- * 构建编排服务 V2
- * 使用策略模式重构,支持灵活的执行流程定制
+ * Build orchestrator service V2
+ * Refactored with strategy pattern for flexible execution flow
  */
 export class BuildOrchestratorServiceV2 {
   private strategyFactory: ExecutionStrategyFactory;
@@ -29,12 +29,12 @@ export class BuildOrchestratorServiceV2 {
   }
 
   /**
-   * 执行仿真分析
-   * @param buildConfigId 构建配置ID
-   * @param simulateConfigId 仿真配置ID
-   * @param exampleConfigId 示例配置ID
-   * @param simulatorType 仿真器类型
-   * @param variant 策略变体 (默认标准策略)
+   * Execute simulation analysis
+   * @param buildConfigId Build config ID
+   * @param simulateConfigId Simulate config ID
+   * @param exampleConfigId Example config ID
+   * @param simulatorType Simulator type
+   * @param variant Strategy variant (default standard)
    */
   async simulate(
     buildConfigId: number,
@@ -62,11 +62,11 @@ export class BuildOrchestratorServiceV2 {
   }
 
   /**
-   * 执行上板分析
-   * @param buildConfigId 构建配置ID
-   * @param onBoardConfigId 上板配置ID
-   * @param exampleConfigId 示例配置ID
-   * @param variant 策略变体 (默认标准策略)
+   * Execute on-board analysis
+   * @param buildConfigId Build config ID
+   * @param onBoardConfigId On-board config ID
+   * @param exampleConfigId Example config ID
+   * @param variant Strategy variant (default standard)
    */
   async onBoard(
     buildConfigId: number,
@@ -92,11 +92,11 @@ export class BuildOrchestratorServiceV2 {
   }
 
   /**
-   * 执行异常检测
-   * @param buildConfigId 构建配置ID
-   * @param sanitizerConfigId 异常检测配置ID
-   * @param exampleConfigId 示例配置ID
-   * @param variant 策略变体 (默认标准策略)
+   * Execute sanitizer (anomaly detection)
+   * @param buildConfigId Build config ID
+   * @param sanitizerConfigId Sanitizer config ID
+   * @param exampleConfigId Example config ID
+   * @param variant Strategy variant (default standard)
    */
   async sanitizer(
     buildConfigId: number,
@@ -122,9 +122,9 @@ export class BuildOrchestratorServiceV2 {
   }
 
   /**
-   * 使用自定义策略执行任务
-   * @param customStrategyId 自定义策略ID
-   * @param context 执行上下文
+   * Execute task with custom strategy
+   * @param customStrategyId Custom strategy ID
+   * @param context Execution context
    */
   async executeWithCustomStrategy(
     customStrategyId: string,
@@ -136,7 +136,7 @@ export class BuildOrchestratorServiceV2 {
   }
 
   /**
-   * 获取策略工厂 (用于注册自定义策略)
+   * Get strategy factory (for registering custom strategies)
    */
   getStrategyFactory(): ExecutionStrategyFactory {
     return this.strategyFactory;

@@ -1,6 +1,6 @@
 /**
- * 配置类型值对象
- * 使用值对象模式避免魔法字符串
+ * Config type value object
+ * Avoids magic strings via value object pattern
  */
 export class ConfigType {
   static readonly BUILD_OP = new ConfigType('build_op');
@@ -20,7 +20,7 @@ export class ConfigType {
   }
 
   /**
-   * 从字符串创建 ConfigType
+   * Create ConfigType from string
    */
   static fromString(value: string): ConfigType | undefined {
     switch (value) {
