@@ -102,6 +102,7 @@ export default {
   'build.workspacePathNotFound': '未找到工作区路径',
   'build.runFailed': '运行失败 {{output}}',
   'build.runFailedQemuSegfault': '运行失败（可能是架构不匹配：可执行文件为其他 CPU 架构如 aarch64 编译，却在 x86_64 下通过 QEMU 运行）。请在匹配的主机上运行或在本环境中重新编译。 {{output}}',
+  'build.runFailedPyascRuntime': 'PyAsc 运行失败：未找到 Ascend 运行时库（如 runtime_camodel）。请将项目的「Ascend 环境脚本」设置为 CANN 环境脚本（如 source /usr/local/Ascend/ascend-toolkit/set_env.sh），并确保当前环境已安装 CANN 运行时。详见 docs/run-integration.md。 {{output}}',
   'build.runSuccess': '运行成功',
   'build.getRunCommandFailed': '获取运行命令失败 {{error}}',
   'build.executeFailed': '执行失败 {{output}}',

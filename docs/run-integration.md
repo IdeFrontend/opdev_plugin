@@ -289,3 +289,26 @@ This error appears when you press **Run** and the executed binary crashes under 
 
 3. **Use simulator / profiling**  
    For analysis without real hardware, use the plugin’s **仿真分析** (simulate) or other tooling that runs on the current architecture instead of the built example binary.
+
+### PyAsc: `cannot find -lruntime_camodel` / `RuntimeError: Runtime library must be available!`
+
+This error appears when you **run a PyAsc sample** (e.g. from the pyasc template) and the **ASC Python runtime** cannot load the Ascend runtime library:
+
+- **Linker:** `/usr/bin/ld: cannot find -lruntime_camodel: No such file or directory`
+- **Python:** `RuntimeError: Runtime library must be available!` from `asc.runtime.config.set_platform`
+
+**Cause:** The run command uses an **environment script** (the project’s **Ascend env script**) to set `LD_LIBRARY_PATH` and other variables. If that script is only `/etc/profile`, the CANN/Ascend runtime is not on the library path and `libruntime_camodel.so` cannot be found.
+
+**What to do:**
+
+1. **Set the project’s Ascend environment script**  
+   In the plugin, set the **Ascend env script** (项目环境脚本 / projectSH) to the **CANN environment script** that exports the Ascend toolkit paths, for example:
+   - `source /usr/local/Ascend/ascend-toolkit/set_env.sh`, or  
+   - The path provided by your CANN/Ascend installation (e.g. under `/usr/local/Ascend/` or the path shown in CANN docs).  
+   Do **not** use only `/etc/profile` for PyAsc runs if it does not set up CANN.
+
+2. **Install CANN with the runtime for your platform**  
+   Ensure the machine or container where you run has CANN (and the Ascend Python `asc` package) installed, including the runtime that provides `libruntime_camodel` (e.g. for camodel/simulation or the target NPU). If you run in a container, the image must include the required CANN runtime libraries.
+
+3. **Re-run**  
+   After updating the env script (and ensuring CANN is installed), run the PyAsc sample again. The run command will source your script before `cd` and `python3 pyasc_sample.py`.

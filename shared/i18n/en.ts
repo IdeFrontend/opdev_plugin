@@ -102,6 +102,7 @@ export default {
   'build.workspacePathNotFound': 'Workspace path not found',
   'build.runFailed': 'Run failed {{output}}',
   'build.runFailedQemuSegfault': 'Run failed (likely architecture mismatch: binary was built for a different CPU, e.g. aarch64, but is running under QEMU on x86_64). Run on a matching host or rebuild in this environment. {{output}}',
+  'build.runFailedPyascRuntime': 'PyAsc run failed: Ascend runtime library not found (e.g. runtime_camodel). Set the project Ascend env script to the CANN env script (e.g. source /usr/local/Ascend/ascend-toolkit/set_env.sh) and ensure CANN runtime is installed. See docs/run-integration.md. {{output}}',
   'build.runSuccess': 'Run succeeded',
   'build.getRunCommandFailed': 'Failed to get run command: {{error}}',
   'build.executeFailed': 'Execution failed {{output}}',

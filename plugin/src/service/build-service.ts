@@ -413,9 +413,12 @@ export class BuildService {
       if (res.code !== 0) {
         const output = res.output ?? '';
         const isQemuSegfault = /qemu/i.test(output) && (/signal\s+11|Segmentation\s+fault/i.test(output) || /core\s+dumped/i.test(output));
+        const isPyascRuntime = isPyasc && /runtime_camodel|cannot find -lruntime_camodel|Runtime library must be available/i.test(output);
         const message = isQemuSegfault
           ? t('build.runFailedQemuSegfault', { output })
-          : t('build.runFailed', { output });
+          : isPyascRuntime
+            ? t('build.runFailedPyascRuntime', { output })
+            : t('build.runFailed', { output });
         vscode.window.showErrorMessage(message);
 
         return;
