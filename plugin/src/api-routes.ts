@@ -68,6 +68,7 @@ const opsMethods = {
   getCurrentTaskName: taskMethods.getCurrentTaskName,
   showConfirmDialog: taskMethods.showConfirmDialog,
   startDumpTensor: taskMethods.startDumpTensor,
+  importDumpTensorBinFile: taskMethods.importDumpTensorBinFile,
 
   ...configMethods, // getConfigData, getBuildConfigs, saveBuildConfig, saveConfig, openConfig
   ...scriptMethods, // updateShScript

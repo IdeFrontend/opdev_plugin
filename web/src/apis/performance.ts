@@ -43,3 +43,7 @@ export function getDumpTensorData(params: GetPerformanceRunDataParams) {
 export function openFile(params: { file: string }) {
   return request.post<{ file: string }, void>('webview/openFile', params);
 }
+
+export function importDumpTensorBinFile(params: { binFilePath: string }) {
+  return request.post<{ binFilePath: string }, void>('ops/importDumpTensorBinFile', params);
+}

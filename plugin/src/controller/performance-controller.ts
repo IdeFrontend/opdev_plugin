@@ -182,11 +182,19 @@ export const performanceDataMethods = {
       canSelectFolders: false,
       canSelectMany: false,
       openLabel: '选择文件',
-      filters: {
-        'Shell脚本': ['sh'],
-        '所有文件': ['*'],
-      },
+      filters: {},
     };
+
+    // 如果提供了文件类型，使用它们
+    if (params?.fileTypes && params.fileTypes.length > 0) {
+      params.fileTypes.forEach((fileType) => {
+        options.filters![fileType.label] = fileType.extensions;
+      });
+    } else {
+      // 默认过滤器
+      options.filters!['Shell脚本'] = ['sh'];
+      options.filters!['所有文件'] = ['*'];
+    }
 
     // 如果提供了默认路径，使用它作为初始路径
     if (params?.defaultPath) {

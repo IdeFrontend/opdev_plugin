@@ -4,10 +4,12 @@ import {
 } from 'vue';
 import FileTree from './components/file-tree.vue';
 import {
-  getDumpTensorData
+  getDumpTensorData,
+  importDumpTensorBinFile
 } from '@web/apis';
 import { PerformanceExecutionRecord } from '@shared/api-types';
 import { useTheme } from '@web/composables/use-theme';
+import { message } from 'ant-design-vue';
 
 const treeData = ref<PerformanceExecutionRecord[]>([]);
 // const renderTreeData = computed<PerformanceExecutionRecord[]>(() => treeData.value);
@@ -36,9 +38,15 @@ const eventListenerHandler = (event: MessageEvent) => {
   }
 };
 
+// 监听本地事件以刷新数据
+const handleRefreshTreeData = () => {
+  loadTreeData();
+};
+
 // 添加全局消息监听 监听刷新列表数据
 const addEventListener = () => {
   window.addEventListener('message', eventListenerHandler);
+  window.addEventListener('refreshTreeData', handleRefreshTreeData);
 };
 
 onMounted(() => {
@@ -47,6 +55,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('message', eventListenerHandler);
+  window.removeEventListener('refreshTreeData', handleRefreshTreeData);
 });
 
 // 使用主题管理组合式函数

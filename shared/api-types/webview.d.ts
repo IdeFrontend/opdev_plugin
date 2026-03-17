@@ -101,6 +101,10 @@ export type SelectFolderResult = string;
 
 export type SelectFileParams = {
   defaultPath?: string;
+  fileTypes?: Array<{
+    label: string;
+    extensions: string[];
+  }>;
 };
 
 export type SelectFileResult = string;

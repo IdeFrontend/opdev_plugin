@@ -241,15 +241,15 @@ const baseMenuItems = [
     ],
   },
   // 需要时开启
-  // {
-  //   key: 'dumpTensor',
-  //   label: '执行DumpTensor',
-  //   icon: tensorIcon,
-  //   handler: async () => {
-  //     const { operatorNames, compileOption } = getOperatorParams();
-  //     await startDumpTensor({ operatorNames, compileOption })
-  //   },
-  // },
+  {
+    key: 'dumpTensor',
+    label: '执行DumpTensor',
+    icon: tensorIcon,
+    handler: async () => {
+      const { operatorNames, compileOption } = getOperatorParams();
+      await startDumpTensor({ operatorNames, compileOption })
+    },
+  },
 ];
 
 // 动态计算菜单项（根据调试模式开关决定是否包含调试菜单）

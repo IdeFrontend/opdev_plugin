@@ -28,6 +28,7 @@ import { RemoteConfig } from './helpers/remote-config';
 import { OpsOperateProvider } from './class/ops-operate-provider';
 import { getMsSanitizerPanelViewProvider } from './class/ms-sanitizer-panel-view';
 import { getPerformancePanelViewProvider } from './class/performance-panel-view';
+import { getDumpTensorPanelViewProvider } from './class/dump-tensor-panel-view';
 
 import { MindStudioPluginInstaller } from './class/mind-studio-plugin-installer';
 import {
@@ -414,6 +415,14 @@ export async function activate(context: vscode.ExtensionContext) {
     getWebview: getPerformancePanelWebview,
   } = getPerformancePanelViewProvider(context, apiServer);
   context.subscriptions.push(performancePanelView, openPerformanceDisposable);
+
+  // DumpTensor数据视图（中间面板）
+  const {
+    dumpTensorPanelView,
+    openDumpTensorDisposable,
+    getWebview: getDumpTensorPanelWebview,
+  } = getDumpTensorPanelViewProvider(context, apiServer);
+  context.subscriptions.push(dumpTensorPanelView, openDumpTensorDisposable);
 
   // 初始化'仿真分析-选择采集内容'页面的Webview（打开配置页面前做 pyasc .py 校验）
   const simulatorOptionsProvider = new WebviewProvider(context, apiServer);
@@ -805,15 +814,33 @@ export async function activate(context: vscode.ExtensionContext) {
   const flashDumpTensorData = vscode.commands.registerCommand(
     COMMAND_FLASH_DUMP_TENSOR_DATA,
     async () => {
-      // 拿到dumpTensorRunData的视图实例，主动下发刷新命令
-      const dumpTensorRunData =
-        ViewServer.getInstance().providerWebViewMap.dumpTensorSidebarView;
-
-      console.log('ViewServer.getInstance()', dumpTensorRunData);
-      dumpTensorRunData?.webview?.postMessage({ command: 'dumpTensorRefreshData' });
+      // 拿到DumpTensor面板的webview，主动下发刷新命令
+      const webview = getDumpTensorPanelWebview();
+      if (webview) {
+        webview.postMessage({ command: 'dumpTensorRefreshData' });
+      } else {
+        console.log('[flashDumpTensorData] Webview not available, skipping refresh');
+      }
     },
   );
   context.subscriptions.push(flashDumpTensorData);
+
+  // 注册导入DumpTensor .bin文件命令
+  const importDumpTensorBinFileCommand = vscode.commands.registerCommand(
+    'huawei-op-devtools.importDumpTensorBinFile',
+    async (uri) => {
+      try {
+        if (uri && uri.fsPath) {
+          const { buildService } = await import('./service/build-service.js');
+          await buildService.importDumpTensorBinFile(uri.fsPath);
+        }
+      } catch (error) {
+        console.error('导入DumpTensor .bin文件失败:', error);
+        vscode.window.showErrorMessage('导入DumpTensor .bin文件失败');
+      }
+    },
+  );
+  context.subscriptions.push(importDumpTensorBinFileCommand);
 
   // 工作区变化监听
   const watchWorkSpaceFolderChange =

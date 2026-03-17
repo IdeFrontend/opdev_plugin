@@ -117,7 +117,6 @@ export class DumpTensorData {
 
         // 仅显示以下后缀的文件
         if ([
-          'txt',
           'bin',
         ].includes(fileType)) {
           const filePath = path.join(parentUri.fsPath, subPath);

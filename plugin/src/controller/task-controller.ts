@@ -182,6 +182,21 @@ export const taskMethods = {
   },
 
   /**
+   * 导入DumpTensor .bin文件
+   */
+  async importDumpTensorBinFile(params: { binFilePath: string }): Promise<void> {
+    try {
+      await ProjectManager.getInstance()
+        .initProject();
+      await buildService.importDumpTensorBinFile(params.binFilePath);
+    }
+    finally {
+      ProjectManager.getInstance()
+        .clearExecutor();
+    }
+  },
+
+  /**
    * 构建算子 (webview 兼容)
    */
   async buildOp(): Promise<void> {

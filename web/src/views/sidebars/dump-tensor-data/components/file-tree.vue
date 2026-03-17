@@ -20,8 +20,10 @@ import {
 
 import {
   openFile,
-  diffFiles
+  diffFiles,
+  importDumpTensorBinFile
 } from '@web/apis';
+import { selectFile } from '@web/apis/performance-run-data';
 
 const props = defineProps<{
   treeData: PerformanceExecutionRecord[];
@@ -70,7 +72,6 @@ const SwitcherIcon: Component = ({ expanded }) => {
   return h(expanded ? DownOutlined : RightOutlined, {
     style: {
       fontSize: '12px',
-      color: '#fff',
     },
   });
 };
@@ -114,13 +115,18 @@ function performFileComparison() {
 
   try {
     diffFiles({
-      filePath1: selectedFiles.value[0].filePath,
-      filePath2: selectedFiles.value[1].filePath
+      filePath1: (selectedFiles.value[0].filePath || '').replace(/\.bin$/, '.txt'),
+      filePath2: (selectedFiles.value[1].filePath || '').replace(/\.bin$/, '.txt')
+    }).finally(() => {
+      // 对比完成后取消对比状态
+      cancelCompare();
     })
     message.success('正在启动VSCode文件对比...');
   } catch (error) {
     console.error('调用VSCode文件对比功能失败:', error);
     message.error('启动VSCode文件对比失败');
+    // 出错时也取消对比状态
+    cancelCompare();
   }
 }
 
@@ -134,7 +140,7 @@ const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
   console.log('[onClickNode]: 打开文件', data)
 
   if (isTxtFile(data) || isBinFile(data)) {
-    openFile({ file: data.filePath });
+    openFile({ file: (data.filePath || '').replace(/\.bin$/, '.txt') });
   }
 };
 
@@ -232,11 +238,37 @@ const cancelCompare = () => {
 const openCompare = () => {
   isComparing.value = true
 }
+
+// 处理导入操作
+const handleImport = async () => {
+  try {
+    // 调用selectFile API选择bin文件
+    const selectedFilePath = await selectFile({
+      fileTypes: [
+        {
+          label: 'Binary Files',
+          extensions: ['bin']
+        }
+      ]
+    });
+
+    if (selectedFilePath) {
+      // 调用API导入bin文件
+      await importDumpTensorBinFile({ binFilePath: selectedFilePath });
+      message.success('导入成功');
+      // 通知父组件刷新数据
+      window.dispatchEvent(new CustomEvent('refreshTreeData'));
+    }
+  } catch (error) {
+    console.error('导入操作失败:', error);
+    message.error('导入操作失败');
+  }
+}
 </script>
 
 <template>
   <div
-    class="w-full relative [&_.ant-tree]:!text-white [&_.ant-tree]:!bg-transparent [&_.ant-tree-treenode]:!w-full [&_.ant-tree-node-content-wrapper]:!w-0 hover:[&_.ant-tree-treenode]:!bg-transparent"
+    class="w-full relative [&_.ant-tree]:!bg-transparent [&_.ant-tree-treenode]:!w-full [&_.ant-tree-node-content-wrapper]:!w-0 hover:[&_.ant-tree-treenode]:!bg-transparent"
   >
     <template v-if="processedTreeData && processedTreeData.length">
       <div v-show="isComparing" class="filter-bar">
@@ -244,7 +276,7 @@ const openCompare = () => {
         <a-button class="default-btn" @click="cancelCompare">取消</a-button>
       </div>
       <div v-show="!isComparing" class="filter-bar">
-        <a-button class="default-btn">导入</a-button>
+        <a-button class="default-btn" @click="handleImport">导入</a-button>
         <a-button class="default-btn" @click="openCompare">对比</a-button>
       </div>
     </template>
@@ -263,15 +295,14 @@ const openCompare = () => {
     >
       <template #title="{ dataRef }">
         <div
-          class="text-white w-full relative group flex items-center"
+          class="w-full relative group flex items-center"
           style="padding-right: 100px;"
           :class="{
-            'pr-8': isRootDir(dataRef),
-            '!bg-blue-500/20': selectedFiles.some(f => f.filePath === (dataRef as PerformanceRunDataFile).filePath)
+            'pr-8': isRootDir(dataRef)
           }"
         >
           <div
-            class="text-white w-full overflow-hidden text-ellipsis whitespace-nowrap"
+            class="w-full overflow-hidden text-ellipsis whitespace-nowrap"
           >
             {{ dataRef.title }}
           </div>
@@ -286,12 +317,5 @@ const openCompare = () => {
   display: flex;
   gap: 8px;
   margin: 12px 0;
-}
-
-.default-btn {
-  background-color: rgba(20, 20, 20, 0.96) !important;
-  border-color: rgb(72, 72, 73) !important;
-  color: rgba(255, 255, 255, 0.855) !important;
-  box-shadow: rgba(255, 255, 255, 0.04) !important;
 }
 </style>
