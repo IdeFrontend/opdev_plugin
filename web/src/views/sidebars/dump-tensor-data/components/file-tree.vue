@@ -320,11 +320,4 @@ const handleImport = async () => {
   gap: 8px;
   margin: 12px 0;
 }
-
-.default-btn {
-  background-color: rgba(20, 20, 20, 0.96) !important;
-  border-color: rgb(72, 72, 73) !important;
-  color: rgba(255, 255, 255, 0.855) !important;
-  box-shadow: rgba(255, 255, 255, 0.04) !important;
-}
 </style>
