@@ -1,14 +1,23 @@
 <template>
   <a-config-provider :theme="themeConfig">
     <div
-      class="w-full min-h-screen bg-[#1a1a1d] text-[#f0f0f0] px-20 py-10 font-['Microsoft_Yahei',sans-serif] flex flex-col items-center relative box-border max-[992px]:px-[30px] max-[992px]:py-[20px] max-[576px]:p-[15px]"
+      :class="[
+        'w-full min-h-screen px-20 py-10 font-\'Microsoft_Yahei\',sans-serif flex flex-col items-center relative box-border max-[992px]:px-[30px] max-[992px]:py-[20px] max-[576px]:p-[15px]',
+        actualTheme === 'dark' ? 'bg-[#1a1a1d] text-[#f0f0f0]' : 'bg-white text-gray-800'
+      ]"
       @click="handleClick">
       <!-- 背景层（芯片图 + 深色遮罩） -->
-      <div class="absolute top-0 left-0 w-full h-full bg-cover bg-[#121417] bg-opacity-90 bg-blend-overlay z-[1]" />
+      <div :class="[
+        'absolute top-0 left-0 w-full h-full bg-cover bg-opacity-90 bg-blend-overlay z-[1]',
+        actualTheme === 'dark' ? 'bg-[#121417]' : 'bg-gray-100'
+      ]" />
 
       <!-- 内容层 -->
       <div
-        class="relative z-[2] w-full h-full flex flex-col items-center justify-center text-white px-[50px] box-border">
+        :class="[
+          'relative z-[2] w-full h-full flex flex-col items-center justify-center px-[50px] box-border',
+          actualTheme === 'dark' ? 'text-white' : 'text-gray-800'
+        ]">
         <!-- 顶部标题区域 -->
         <div class="text-center mb-8 w-full max-[992px]:mb-[20px]">
           <h5 class="text-[25px] font-normal m-0 mb-2.5">
@@ -58,23 +67,35 @@
 
         <!-- 核心功能模块区域：根据步骤展示 5 个面板 -->
         <div
-          class="flex items-stretch justify-center bg-[#27272b] gap-[15px] max-w-[1200px] w-full mb-[30px] py-[30px] px-[20px] flex-none rounded-xl min-h-[300px] max-[992px]:gap-3 max-[992px]:px-[15px] max-[992px]:py-[25px] max-[992px]:min-h-[400px] max-[576px]:gap-2 max-[576px]:p-[20px_10px] max-[576px]:min-h-[350px]"
+          :class="[
+            'flex items-stretch justify-center gap-[15px] max-w-[1200px] w-full mb-[30px] py-[30px] px-[20px] flex-none rounded-xl min-h-[300px] max-[992px]:gap-3 max-[992px]:px-[15px] max-[992px]:py-[25px] max-[992px]:min-h-[400px] max-[576px]:gap-2 max-[576px]:p-[20px_10px] max-[576px]:min-h-[350px]',
+            actualTheme === 'dark' ? 'bg-[#27272b]' : 'bg-gray-200'
+          ]"
           @click.stop>
           <!-- Step 0 / 1: 新建算子工程 -->
           <div
             v-show="currentStep === 0"
-            class="flex-1 box-border flex min-w-0 text-[#f0f0f0]"
+            :class="[
+              'flex-1 box-border flex min-w-0',
+              actualTheme === 'dark' ? 'text-[#f0f0f0]' : 'text-gray-800'
+            ]"
           >
             <!-- 左侧：标题、描述、立即创建 -->
             <div class="w-1/2 pr-8 max-[992px]:w-full max-[992px]:pr-0">
               <h3 class="text-[20px] font-semibold mb-6">
                 新建算子工程
               </h3>
-              <p class="text-[12px] text-[#bfbfbf] leading-relaxed mb-6 max-[576px]:text-xs">
+              <p :class="[
+                'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
+                actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
+              ]">
                 提供您算子开发环境开箱即用能力，支持基于Ascend C、Python等算子开发，支持&lt;&lt;&lt;&gt;&gt;&gt;算子工程和标准自定义算子工程的快速创建。
               </p>
               <ul
-                class="feature-list mb-6 grid grid-cols-2 gap-y-1 list-disc list-inside text-[15px] font-semibold text-[#d1d1d1] leading-[32px] max-[576px]:grid-cols-1"
+                :class="[
+                  'feature-list mb-6 grid grid-cols-2 gap-y-1 list-disc list-inside text-[15px] font-semibold leading-[32px] max-[576px]:grid-cols-1',
+                  actualTheme === 'dark' ? 'text-[#d1d1d1]' : 'text-gray-700'
+                ]"
               >
                 <li>环境开箱即用</li>
                 <li>Ascend C 算子工程</li>
@@ -82,7 +103,12 @@
               </ul>
               <div>
                 <button
-                  class="bg-[#3d8bfd] hover:bg-[#5b9dff] text-white px-5 py-2.5 rounded-md border border-transparent transition-colors duration-150 cursor-pointer"
+                  :class="[
+                    'px-5 py-2.5 rounded-md border border-transparent transition-colors duration-150 cursor-pointer',
+                    actualTheme === 'dark' 
+                      ? 'bg-[#3d8bfd] hover:bg-[#5b9dff] text-white' 
+                      : 'bg-[#1890ff] hover:bg-[#40a9ff] text-white'
+                  ]"
                   @click="handleAscendCProject"
                 >
                   立即创建
@@ -95,14 +121,22 @@
               <div class="flex flex-col gap-4">
                 <!-- 【Ascend C】<<<>>>算子工程 -->
                 <div
-                  class="flex-1 bg-transparent p-4 border rounded-lg overflow-hidden relative transition-all duration-300 cursor-pointer hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)]"
-                  :class="selectedProjectTypeId === 1 ? 'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)]' : 'border-[#464646]'"
+                  :class="[
+                    'flex-1 bg-transparent p-4 border rounded-lg overflow-hidden relative transition-all duration-300 cursor-pointer hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)]',
+                    selectedProjectTypeId === 1 ? 'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)]' : (actualTheme === 'dark' ? 'border-[#464646]' : 'border-gray-300')
+                  ]"
                   @click="selectedProjectTypeId = 1"
                 >
-                  <div class="font-extrabold text-[initial] mb-3 text-white">
+                  <div :class="[
+                    'font-extrabold text-[initial] mb-3',
+                    actualTheme === 'dark' ? 'text-white' : 'text-gray-800'
+                  ]">
                     【Ascend C】&lt;&lt;&lt;&gt;&gt;&gt;算子工程
                   </div>
-                  <div class="leading-7 mt-1 text-white text-[12px] mb-2.5 whitespace-normal"
+                  <div :class="[
+                    'leading-7 mt-1 text-[12px] mb-2.5 whitespace-normal',
+                    actualTheme === 'dark' ? 'text-white' : 'text-gray-700'
+                  ]"
                     v-html="getTemplateDesc(selectedTemplate)" />
                   <a-tag color="blue" class="mt-2 mr-2">
                     语言：Ascend C
@@ -112,7 +146,10 @@
                   </a-tag>
                   <template v-if="selectedProjectTypeId === 1">
                     <div class="mt-4 flex items-center gap-3">
-                      <span class="text-[13px] text-[#ffffff] whitespace-nowrap">
+                      <span :class="[
+                        'text-[13px] whitespace-nowrap',
+                        actualTheme === 'dark' ? 'text-[#ffffff]' : 'text-gray-800'
+                      ]">
                         样例
                       </span>
                       <a-radio-group v-model:value="selectedTemplate" class="sample-radio-group flex gap-4">
@@ -138,14 +175,22 @@
 
                 <!-- 【Ascend C】标准自定义算子工程 -->
                 <div
-                  class="flex-1 bg-transparent p-4 border rounded-lg overflow-hidden relative transition-all duration-300 cursor-pointer hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)]"
-                  :class="selectedProjectTypeId === 2 ? 'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)]' : 'border-[#464646]'"
+                  :class="[
+                    'flex-1 bg-transparent p-4 border rounded-lg overflow-hidden relative transition-all duration-300 cursor-pointer hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)]',
+                    selectedProjectTypeId === 2 ? 'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)]' : (actualTheme === 'dark' ? 'border-[#464646]' : 'border-gray-300')
+                  ]"
                   @click="selectedProjectTypeId = 2"
                 >
-                  <div class="font-extrabold text-[initial] mb-3 text-white">
+                  <div :class="[
+                    'font-extrabold text-[initial] mb-3',
+                    actualTheme === 'dark' ? 'text-white' : 'text-gray-800'
+                  ]">
                     【Ascend C】标准自定义算子工程
                   </div>
-                  <div class="leading-7 mt-1 text-white text-[12px] mb-2.5 whitespace-normal">
+                  <div :class="[
+                    'leading-7 mt-1 text-[12px] mb-2.5 whitespace-normal',
+                    actualTheme === 'dark' ? 'text-white' : 'text-gray-700'
+                  ]">
                     基于Ascend C语言的标准自定义算子工程，op_host存放在CPC侧的代码实现，op_kermel存放NPU侧的代码实现，op_graph存放图模式下的代码实现
                   </div>
                   <a-tag color="blue" class="mt-2 mr-2">
@@ -164,14 +209,22 @@
 
                 <!-- 【Python】pyasc算子工程 -->
                 <div
-                  class="flex-1 bg-transparent p-4 border rounded-lg overflow-hidden relative transition-all duration-300 cursor-pointer hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)]"
-                  :class="selectedProjectTypeId === 3 ? 'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)]' : 'border-[#464646]'"
+                  :class="[
+                    'flex-1 bg-transparent p-4 border rounded-lg overflow-hidden relative transition-all duration-300 cursor-pointer hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)]',
+                    selectedProjectTypeId === 3 ? 'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)]' : (actualTheme === 'dark' ? 'border-[#464646]' : 'border-gray-300')
+                  ]"
                   @click="selectedProjectTypeId = 3"
                 >
-                  <div class="font-extrabold text-[initial] mb-3 text-white">
+                  <div :class="[
+                    'font-extrabold text-[initial] mb-3',
+                    actualTheme === 'dark' ? 'text-white' : 'text-gray-800'
+                  ]">
                     【Python】pyasc算子工程
                   </div>
-                  <div class="leading-7 mt-1 text-white text-[12px] mb-2.5 whitespace-normal">
+                  <div :class="[
+                    'leading-7 mt-1 text-[12px] mb-2.5 whitespace-normal',
+                    actualTheme === 'dark' ? 'text-white' : 'text-gray-700'
+                  ]">
                     基于pyasc创建自定义Add算子样例工程。
                   </div>
                   <a-tag color="blue" class="mt-2 mr-2">
@@ -194,18 +247,27 @@
           <!-- Step 1 / 2: 算子开发 -->
         <div
           v-show="currentStep === 1"
-          class="flex-1 box-border flex min-w-0 text-[#f0f0f0]"
+          :class="[
+            'flex-1 box-border flex min-w-0',
+            actualTheme === 'dark' ? 'text-[#f0f0f0]' : 'text-gray-800'
+          ]"
         >
           <!-- 左侧：算子开发文案与要点 -->
           <div class="w-1/2 pr-8 max-[992px]:w-full max-[992px]:pr-0">
             <h3 class="text-[20px] font-semibold mb-6">
               算子开发
             </h3>
-            <p class="text-[12px] text-[#bfbfbf] leading-relaxed mb-6 max-[576px]:text-xs">
+            <p :class="[
+              'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
+              actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
+            ]">
               开发过程中支持Ascend C语法高亮、代码补全、代码跳转等。提供算子编译，算子部署到CANN包，算子异常检测编译，算子example编译等能力。
             </p>
             <ul
-              class="feature-list mb-6 grid grid-cols-2 gap-y-1 list-disc list-inside text-[15px] font-semibold text-[#d1d1d1] leading-[32px] max-[576px]:grid-cols-1"
+              :class="[
+                'feature-list mb-6 grid grid-cols-2 gap-y-1 list-disc list-inside text-[15px] font-semibold leading-[32px] max-[576px]:grid-cols-1',
+                actualTheme === 'dark' ? 'text-[#d1d1d1]' : 'text-gray-700'
+              ]"
             >
               <li>Tiling开发</li>
               <li>Kernel开发</li>
@@ -249,18 +311,27 @@
           <!-- Step 2: 算子调试 -->
           <div
             v-show="currentStep === 2"
-            class="flex-1 box-border flex min-w-0 text-[#f0f0f0]"
+            :class="[
+              'flex-1 box-border flex min-w-0',
+              actualTheme === 'dark' ? 'text-[#f0f0f0]' : 'text-gray-800'
+            ]"
           >
             <!-- 左侧：算子调试文案与要点 -->
             <div class="w-1/2 pr-8 max-[992px]:w-full max-[992px]:pr-0">
               <h3 class="text-[20px] font-semibold mb-6">
                 算子调试
               </h3>
-              <p class="text-[12px] text-[#bfbfbf] leading-relaxed mb-6 max-[576px]:text-xs">
+              <p :class="[
+                'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
+                actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
+              ]">
                 基于msdebug工具提供NPU上板可视化调试Ascend算子工程，包括断点调试、单步执行调试、查看变量/寄存器/堆栈/断点信息、内存查询、核切和NPU coredump文件可视化调试等。
               </p>
               <ul
-                class="feature-list mb-6 grid grid-cols-2 gap-y-1 list-disc list-inside text-[15px] font-semibold text-[#d1d1d1] leading-[32px] max-[576px]:grid-cols-1"
+                :class="[
+                  'feature-list mb-6 grid grid-cols-2 gap-y-1 list-disc list-inside text-[15px] font-semibold leading-[32px] max-[576px]:grid-cols-1',
+                  actualTheme === 'dark' ? 'text-[#d1d1d1]' : 'text-gray-700'
+                ]"
               >
                 <li>断点调试</li>
                 <li>单步执行调试</li>
@@ -283,24 +354,36 @@
           <!-- Step 3: 算子异常检测 -->
           <div
             v-show="currentStep === 3"
-            class="flex-1 box-border flex min-w-0 text-[#f0f0f0]"
+            :class="[
+              'flex-1 box-border flex min-w-0',
+              actualTheme === 'dark' ? 'text-[#f0f0f0]' : 'text-gray-800'
+            ]"
           >
             <!-- 左侧：算子异常检测介绍 -->
             <div class="w-1/2 pr-8 max-[992px]:w-full max-[992px]:pr-0">
               <h3 class="text-[20px] font-semibold mb-6">
                 异常检测
               </h3>
-              <p class="text-[12px] text-[#bfbfbf] leading-relaxed mb-6 max-[576px]:text-xs">
+              <p :class="[
+                'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
+                actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
+              ]">
                 集成 msSanitizer 工具，提供内存检测、竞争检测和未初始化检测功能，全面覆盖算子功能正确性检测。
               </p>
               <ul
-                class="feature-list mb-6 list-disc list-inside text-[15px] font-semibold text-[#d1d1d1] leading-[32px]"
+                :class="[
+                  'feature-list mb-6 list-disc list-inside text-[15px] font-semibold leading-[32px]',
+                  actualTheme === 'dark' ? 'text-[#d1d1d1]' : 'text-gray-700'
+                ]"
               >
                 <li>内存检测</li>
                 <li>竞争检测</li>
                 <li>未初始化检测</li>
               </ul>
-              <p class="text-[12px] text-[#bfbfbf] leading-relaxed mb-6 max-[576px]:text-xs">
+              <p :class="[
+                'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
+                actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
+              ]">
                 1. 点击操作面板中的“异常检测”按钮，选择检测内容。<br />
                 2. 运行完成后，点击面板中的“异常检测结果”菜单，可查看异常检测报告，支持查看详情和代码行跳转。
               </p>
@@ -334,23 +417,35 @@
           <!-- Step 4: 算子性能调优 -->
           <div
             v-show="currentStep === 4"
-            class="flex-1 box-border flex min-w-0 text-[#f0f0f0]"
+            :class="[
+              'flex-1 box-border flex min-w-0',
+              actualTheme === 'dark' ? 'text-[#f0f0f0]' : 'text-gray-800'
+            ]"
           >
             <!-- 左侧：算子性能调优介绍 -->
             <div class="w-1/2 pr-8 max-[992px]:w-full max-[992px]:pr-0">
               <h3 class="text-[20px] font-semibold mb-6">
                 性能调优
               </h3>
-              <p class="text-[12px] text-[#bfbfbf] leading-relaxed mb-6 max-[576px]:text-xs">
+              <p :class="[
+                'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
+                actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
+              ]">
                 快速定位算子的软硬件性能瓶颈，提供计算内存热力图、Roofline瓶颈分析图、Cache热力图、通算流水图（MC2算子）、指令流水图、算子代码热力图、性能数据等分析能力。
               </p>
               <ul
-                class="feature-list mb-6 list-disc list-inside text-[15px] font-semibold text-[#d1d1d1] leading-[32px]"
+                :class="[
+                  'feature-list mb-6 list-disc list-inside text-[15px] font-semibold leading-[32px]',
+                  actualTheme === 'dark' ? 'text-[#d1d1d1]' : 'text-gray-700'
+                ]"
               >
                 <li>上板分析</li>
                 <li>仿真分析</li>
               </ul>
-              <p class="text-[12px] text-[#bfbfbf] leading-relaxed mb-6 max-[576px]:text-xs">
+              <p :class="[
+                'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
+                actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
+              ]">
                 1. 点击操作面板中的“性能分析”按钮下的“上板分析”或“仿真分析”，选择分析内容。<br />
                 2. 运行完成后，点击面板中的“性能调优结果”菜单，可查看并分析性能调优相关数据。
               </p>
@@ -389,14 +484,20 @@
         >
           <span
             v-if="currentStep > 0"
-            class="text-[#4ba5f4] cursor-pointer hover:text-[#76b9ff] transition-colors"
+            :class="[
+              'cursor-pointer transition-colors',
+              actualTheme === 'dark' ? 'text-[#4ba5f4] hover:text-[#76b9ff]' : 'text-[#1890ff] hover:text-[#40a9ff]'
+            ]"
             @click="goPrevStep"
           >
             上一步
           </span>
           <span
             v-if="currentStep < 4"
-            class="text-[#4ba5f4] cursor-pointer hover:text-[#76b9ff] transition-colors"
+            :class="[
+              'cursor-pointer transition-colors',
+              actualTheme === 'dark' ? 'text-[#4ba5f4] hover:text-[#76b9ff]' : 'text-[#1890ff] hover:text-[#40a9ff]'
+            ]"
             @click="goNextStep"
           >
             下一步
@@ -408,8 +509,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { theme } from 'ant-design-vue';
+import { ref, watch, onMounted } from 'vue';
+import { useTheme } from '@web/composables/use-theme';
 import settingIcon from '@/assets/svg/setting.svg';
 import buildIcon from '@/assets/svg/build.svg';
 import checkIcon from '@/assets/svg/check.svg';
@@ -429,10 +530,7 @@ import analysisImg from '@/assets/imgs/analysis.gif';
 import selectAnalysisImg from '@/assets/imgs/selectAnalysis.gif';
 
 
-const themeConfig = {
-  // 使用暗色算法[1](@ref)
-  algorithm: theme.darkAlgorithm,
-};
+const { themeConfig, actualTheme } = useTheme();
 
 const currentStep = ref(0);
 const devTabKey = ref('code');
@@ -509,6 +607,22 @@ const goNextStep = () => {
     currentStep.value += 1;
   }
 };
+
+// 设置 CSS 变量以适配主题
+const updateThemeVariables = () => {
+  const root = document.documentElement;
+  root.style.setProperty('--text-color', actualTheme.value === 'dark' ? '#ffffff' : '#333333');
+};
+
+// 初始化主题变量
+onMounted(() => {
+  updateThemeVariables();
+});
+
+// 监听主题变化
+watch(actualTheme, () => {
+  updateThemeVariables();
+});
 </script>
 
 <style scoped>
@@ -579,15 +693,15 @@ const goNextStep = () => {
 
 /* 欢迎页导航步骤条（a-steps navigation） */
 .welcome-steps {
-  color: #ffffff;
+  color: var(--text-color);
 }
 
 .welcome-steps .ant-steps-item {
-  color: #ffffff;
+  color: var(--text-color);
 }
 
 .welcome-steps .ant-steps-item::after {
-  border-color: #ffffff;
+  border-color: var(--text-color);
 }
 
 .welcome-steps .ant-steps-item-description {
@@ -596,7 +710,7 @@ const goNextStep = () => {
 
 .welcome-steps .ant-steps-item-icon {
   background: transparent;
-  border-color: #ffffff;
+  border-color: var(--text-color);
 }
 
 :deep(.welcome-steps .ant-steps-item-container) {
@@ -607,7 +721,7 @@ const goNextStep = () => {
 
 :deep(.welcome-steps .ant-steps-item .ant-steps-item-container .ant-steps-item-content .ant-steps-item-title) {
   font-size: 18px;
-  color: #ffffff;
+  color: var(--text-color);
 }
 
 .welcome-steps .ant-steps-item-icon,

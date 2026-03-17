@@ -72,7 +72,6 @@ const SwitcherIcon: Component = ({ expanded }) => {
   return h(expanded ? DownOutlined : RightOutlined, {
     style: {
       fontSize: '12px',
-      color: '#fff',
     },
   });
 };
@@ -269,7 +268,7 @@ const handleImport = async () => {
 
 <template>
   <div
-    class="w-full relative [&_.ant-tree]:!text-white [&_.ant-tree]:!bg-transparent [&_.ant-tree-treenode]:!w-full [&_.ant-tree-node-content-wrapper]:!w-0 hover:[&_.ant-tree-treenode]:!bg-transparent"
+    class="w-full relative [&_.ant-tree]:!bg-transparent [&_.ant-tree-treenode]:!w-full [&_.ant-tree-node-content-wrapper]:!w-0 hover:[&_.ant-tree-treenode]:!bg-transparent"
   >
     <template v-if="processedTreeData && processedTreeData.length">
       <div v-show="isComparing" class="filter-bar">
@@ -296,15 +295,14 @@ const handleImport = async () => {
     >
       <template #title="{ dataRef }">
         <div
-          class="text-white w-full relative group flex items-center"
+          class="w-full relative group flex items-center"
           style="padding-right: 100px;"
           :class="{
-            'pr-8': isRootDir(dataRef),
-            '!bg-blue-500/20': selectedFiles.some(f => f.filePath === (dataRef as PerformanceRunDataFile).filePath)
+            'pr-8': isRootDir(dataRef)
           }"
         >
           <div
-            class="text-white w-full overflow-hidden text-ellipsis whitespace-nowrap"
+            class="w-full overflow-hidden text-ellipsis whitespace-nowrap"
           >
             {{ dataRef.title }}
           </div>
