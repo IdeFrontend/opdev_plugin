@@ -34,13 +34,6 @@
       "request": "launch",
       "type": "node-terminal",
       "preLaunchTask": "npm: compile:debug"
-    },
-    {
-      "name": "Launch extension in VS Code",
-      "type": "node-terminal",
-      "request": "launch",
-      "command": "code --extensionDevelopmentPath=${workspaceFolder} ${workspaceFolder}",
-      "preLaunchTask": "npm: compile:debug"
     }
   ]
 }
