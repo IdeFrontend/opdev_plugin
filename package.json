@@ -35,7 +35,7 @@
     },
     "colors": [
       {
-        "id": "huawei-op-devtools.operatorProject",
+        "id": "huawei.op.devtools.operatorProject",
         "description": "%colors.operatorProject.description%",
         "defaults": {
           "dark": "#5CB3FF",
@@ -43,7 +43,7 @@
         }
       },
       {
-        "id": "huawei-op-devtools.operatorProjectCollection",
+        "id": "huawei.op.devtools.operatorProjectCollection",
         "description": "%colors.operatorProjectCollection.description%",
         "defaults": {
           "dark": "#B37FEB",
