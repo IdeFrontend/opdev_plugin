@@ -101,6 +101,7 @@ export default {
   'build.openPyFirst': 'Please open a .py file first',
   'build.workspacePathNotFound': 'Workspace path not found',
   'build.runFailed': 'Run failed {{output}}',
+  'build.runFailedQemuSegfault': 'Run failed (likely architecture mismatch: binary was built for a different CPU, e.g. aarch64, but is running under QEMU on x86_64). Run on a matching host or rebuild in this environment. {{output}}',
   'build.runSuccess': 'Run succeeded',
   'build.getRunCommandFailed': 'Failed to get run command: {{error}}',
   'build.executeFailed': 'Execution failed {{output}}',

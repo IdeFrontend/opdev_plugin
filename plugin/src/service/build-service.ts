@@ -411,7 +411,12 @@ export class BuildService {
       console.log('runRes', res);
 
       if (res.code !== 0) {
-        vscode.window.showErrorMessage(t('build.runFailed', { output: res.output }));
+        const output = res.output ?? '';
+        const isQemuSegfault = /qemu/i.test(output) && (/signal\s+11|Segmentation\s+fault/i.test(output) || /core\s+dumped/i.test(output));
+        const message = isQemuSegfault
+          ? t('build.runFailedQemuSegfault', { output })
+          : t('build.runFailed', { output });
+        vscode.window.showErrorMessage(message);
 
         return;
       }
@@ -861,7 +866,10 @@ export class BuildService {
         console.log('[startDumpTensor] runRes', res);
 
         if (res.code !== 0) {
-          vscode.window.showErrorMessage(t('build.runFailed', { output: res.output }));
+          const output = res.output ?? '';
+          const isQemuSegfault = /qemu/i.test(output) && (/signal\s+11|Segmentation\s+fault/i.test(output) || /core\s+dumped/i.test(output));
+          const message = isQemuSegfault ? t('build.runFailedQemuSegfault', { output }) : t('build.runFailed', { output });
+          vscode.window.showErrorMessage(message);
           return;
         }
 

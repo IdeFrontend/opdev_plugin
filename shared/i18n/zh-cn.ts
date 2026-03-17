@@ -101,6 +101,7 @@ export default {
   'build.openPyFirst': '请先打开一个 .py 文件',
   'build.workspacePathNotFound': '未找到工作区路径',
   'build.runFailed': '运行失败 {{output}}',
+  'build.runFailedQemuSegfault': '运行失败（可能是架构不匹配：可执行文件为其他 CPU 架构如 aarch64 编译，却在 x86_64 下通过 QEMU 运行）。请在匹配的主机上运行或在本环境中重新编译。 {{output}}',
   'build.runSuccess': '运行成功',
   'build.getRunCommandFailed': '获取运行命令失败 {{error}}',
   'build.executeFailed': '执行失败 {{output}}',

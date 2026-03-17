@@ -266,3 +266,26 @@ When feature flag **USE_V2_RUN** is enabled, `ops/startRun` is handled by **Buil
 - **Config:** Run uses **build_op** for PyAsc (with optional target_file update from active .py or filePath) and **build_example** for Ascend/CANN. target_file is resolved by strategy (getRunTargetFile).
 - **Command:** getRunCommand(configId) → strategy.buildCommandContext, strategy.getRunTargetFile (→ context.config.target_file), strategy.buildRunCommand → one shell string (source env, cd, then run target).
 - **Architecture:** Operate → ops.startRun → TaskController → BuildService.startRun (config selection, optional PyAsc config update) → getRunCommand → strategy → CommandExecutor. The plugin provides orchestration and command generation; the actual run is the target binary or Python command in the workspace environment.
+
+---
+
+## Troubleshooting
+
+### `qemu: uncaught target signal 11 (Segmentation fault) - core dumped`
+
+This error appears when you press **Run** and the executed binary crashes under **QEMU user-mode emulation**. It usually means an **architecture mismatch**:
+
+- The **run environment** (e.g. the devcontainer or your host) is **x86_64**.
+- The **binary** (e.g. `ascend_addn` in `build/`) was **built for a different architecture**, typically **aarch64** (ARM), which is common for Ascend NPU host environments.
+- On x86_64, Linux may run the non-native binary via QEMU; the binary then hits a segmentation fault (signal 11) under emulation.
+
+**What to do:**
+
+1. **Run on the correct environment**  
+   Run the operator on a machine or container that matches the build architecture (e.g. aarch64 Ascend host). Do not run the same binary inside an x86_64-only devcontainer if it was built for aarch64.
+
+2. **Build and run in the same environment**  
+   If you want to run inside the current devcontainer, build the sample **in that same environment** so the resulting binary is native (e.g. x86_64). This may not be supported for all CANN/Ascend samples; check your CANN docs for supported build/run hosts.
+
+3. **Use simulator / profiling**  
+   For analysis without real hardware, use the plugin’s **仿真分析** (simulate) or other tooling that runs on the current architecture instead of the built example binary.
