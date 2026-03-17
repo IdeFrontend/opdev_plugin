@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "调试vscode扩展",
+      "name": "Debug VS Code Extension",
       "type": "extensionHost",
       "request": "launch",
       "args": [
@@ -14,7 +14,7 @@
       "preLaunchTask": "npm: compile:debug"
     },
     {
-      "name": "调试vscode扩展 (Hot Mode)",
+      "name": "Debug VS Code Extension (Hot Mode)",
       "type": "extensionHost",
       "request": "launch",
       "args": [
@@ -30,7 +30,7 @@
     },
     {
       "command": "npm run start-web",
-      "name": "调试vscode web扩展",
+      "name": "Debug VS Code Web Extension",
       "request": "launch",
       "type": "node-terminal",
       "preLaunchTask": "npm: compile:debug"
