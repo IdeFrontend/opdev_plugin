@@ -12,13 +12,18 @@ import 'ant-design-vue/dist/reset.css';
 import '../../../assets/css/tailwind.css';
 import { vscode } from '@web/utils/vscode';
 import i18nResource from '@shared/i18n';
+import { getWebviewLang } from '@web/utils/lang';
 
-const lang = (typeof window !== 'undefined' && (window as unknown as { __VSCODE_LANG__?: string }).__VSCODE_LANG__) || 'en';
+const lang = getWebviewLang();
 void i18next.init({
   resources: i18nResource,
   lng: lang,
   fallbackLng: 'en',
   interpolation: { escapeValue: false },
+}).then(() => {
+  if (typeof console !== 'undefined' && console.debug) {
+    console.debug('[OP DevTools i18n] home', { requested: lang, resolved: i18next.language, resolvedDir: i18next.languages });
+  }
 });
 
 window.addEventListener('message', (event) => {

@@ -41,6 +41,7 @@ export class OpsOperateProvider implements vscode.WebviewViewProvider {
       distPath,
       webviewView.webview,
       `sidebars/${VIEW_OPERATE}`,
+      { lang: vscode.env.language.toLowerCase() },
     );
 
     // 监听 VSCode 主题变化并通知 Webview

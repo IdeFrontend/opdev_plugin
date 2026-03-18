@@ -891,7 +891,7 @@ export async function activate(context: vscode.ExtensionContext) {
 async function initI18n() {
   await i18next.init({
     resources: i18nResource,
-    lng: vscode.env.language,
+    lng: vscode.env.language.toLowerCase(),
     fallbackLng: 'en',
     interpolation: { escapeValue: false },
   });

@@ -11,8 +11,9 @@ import App from './dump-tensot-data.vue';
 import i18nResource from '@shared/i18n';
 import 'ant-design-vue/dist/reset.css';
 import '../../../assets/css/tailwind.css';
+import { getWebviewLang } from '@web/utils/lang';
 
-const lang = (typeof window !== 'undefined' && (window as unknown as { __VSCODE_LANG__?: string }).__VSCODE_LANG__) || 'en';
+const lang = getWebviewLang();
 
 let isInitRun = false;
 

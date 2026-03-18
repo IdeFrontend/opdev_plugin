@@ -108,7 +108,7 @@ export class ViewServer extends vscode.Disposable {
 
     await this.renderer.render(
       webview,
-      { lang: vscode.env.language },
+      { lang: vscode.env.language.toLowerCase() },
       routePath,
     );
     console.log('[ViewServer.activeWebview] 渲染完成');

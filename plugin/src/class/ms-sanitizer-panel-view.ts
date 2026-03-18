@@ -123,6 +123,7 @@ implements vscode.WebviewViewProvider {
         distPath,
         webviewView.webview,
         `sidebars/${VIEW_MS_SANITIZER}`,
+        { lang: vscode.env.language.toLowerCase() },
       );
       console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] HTML 加载完成');
     }

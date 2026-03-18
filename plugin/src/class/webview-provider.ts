@@ -103,6 +103,7 @@ export class WebviewProvider {
               distPath,
               webviewView.webview,
               `sidebars/${router}`,
+              { lang: vscode.env.language.toLowerCase() },
             );
 
             // 监听 VSCode 主题变化并通知 Webview
@@ -241,6 +242,7 @@ export class WebviewProvider {
         distPath,
         this.panel.webview,
         viewPath,
+        { lang: vscode.env.language.toLowerCase() },
       );
     }
     catch (error) {

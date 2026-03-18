@@ -54,6 +54,7 @@ implements vscode.WebviewViewProvider {
         distPath,
         webviewView.webview,
         `sidebars/${VIEW_PERFORMANCE_RUN_DATA}`,
+        { lang: vscode.env.language.toLowerCase() },
       );
     }
     catch (error) {
