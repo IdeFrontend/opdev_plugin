@@ -1,6 +1,6 @@
 {
   "name": "CANN Python 3.12 (mstt)",
-  "image": "swr.cn-north-4.myhuaweicloud.com/ci_cann/cann-pod-python3.12:1.0.0",
+  "image": "swr.cn-north-4.myhuaweicloud.com/ci_cann/cann_master:py3.12-arm-20260314",
   "workspaceFolder": "/workspace",
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
   "mounts": [
