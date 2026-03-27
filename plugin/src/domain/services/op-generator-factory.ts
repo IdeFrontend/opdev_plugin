@@ -1,15 +1,16 @@
 import fs from 'fs-extra';
 import path from 'path';
 import AdmZip from 'adm-zip';
+import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 
-type Project = {
+export type OpGenProject = {
   id?: number;
   project_path: string;
   project_name?: string;
   ascend_env_script?: string | null;
 };
 
-type Params = {
+export type OpGenParams = {
   project_id?: number;
   op_type?: string;
   ops_prototype_file?: string | null;
@@ -17,10 +18,15 @@ type Params = {
   template_name?: string | null;
   soc_version?: string | null;
   op_path?: string | null;
-  skipExisting?: boolean; // 是否跳过已有文件
+  skipExisting?: boolean;
 };
 
-class BaseOpGenerator {
+/** @deprecated Use OpGenParams */
+type Params = OpGenParams;
+/** @deprecated Use OpGenProject */
+type Project = OpGenProject;
+
+export class BaseOpGenerator {
   params: Params;
   project: Project;
   op_path: string;
@@ -208,7 +214,7 @@ class BaseOpGenerator {
   }
 }
 
-class AscendOpGenerator extends BaseOpGenerator {
+export class AscendOpGenerator extends BaseOpGenerator {
   parseMeta(): string {
     const opsPrototype = this.params.ops_prototype_file;
 
@@ -297,7 +303,7 @@ class AscendOpGenerator extends BaseOpGenerator {
   }
 }
 
-class CannOpGenerator extends BaseOpGenerator {
+export class CannOpGenerator extends BaseOpGenerator {
   parseMeta(): string {
     this.op_name =
       this.params.op_name
@@ -367,7 +373,7 @@ class CannOpGenerator extends BaseOpGenerator {
   }
 }
 
-class PyAscOpGenerator extends BaseOpGenerator {
+export class PyAscOpGenerator extends BaseOpGenerator {
   parseMeta(): string {
     this.op_name =
       this.params.op_name
@@ -442,17 +448,7 @@ export const OpGeneratorFactory = {
     project: Project,
     extensionPath: string,
   ): BaseOpGenerator {
-    const opType = (params.op_type || 'ascend').toLowerCase();
-
-    if (opType === 'cann') {
-      return new CannOpGenerator(params, project, extensionPath);
-    }
-
-    if (opType === 'pyasc') {
-      return new PyAscOpGenerator(params, project, extensionPath);
-    }
-
-    return new AscendOpGenerator(params, project, extensionPath);
+    return OperatorPluginRegistry.getProjectGenerator(params, project, extensionPath);
   },
 };
 

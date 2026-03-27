@@ -6,6 +6,8 @@ import {
   BuildForOnBoardStep,
   BuildForSanitizerStep,
   BuildStep,
+  ActiveFileCheckStep,
+  ExampleBuildStep,
 } from './steps/build-steps';
 import {
   SimulateStep,
@@ -15,7 +17,11 @@ import {
 
 /**
  * Standard simulate strategy
- * Steps: pre-simulate build -> simulate analysis
+ * Steps: active-file check -> build -> example build (STANDARD_CUSTOM only) -> simulate
+ *
+ * ActiveFileCheckStep and BuildStep use canSkip() driven by context.opPlugin.buildBehavior.
+ * ExampleBuildStep uses canSkip() driven by context.projectType.
+ * When context.opPlugin/projectType are not provided, steps run unconditionally (V1 parity).
  */
 export class StandardSimulateStrategy extends AbstractExecutionStrategy {
   readonly strategyName = 'standard-simulate';
@@ -26,7 +32,9 @@ export class StandardSimulateStrategy extends AbstractExecutionStrategy {
 
   getSteps(): IExecutionStep[] {
     return [
+      new ActiveFileCheckStep(),
       new BuildWithSimulatorStep(this.commandGenerator),
+      new ExampleBuildStep(this.commandGenerator, '--simulator'),
       new SimulateStep(this.commandGenerator),
     ];
   }
@@ -34,7 +42,7 @@ export class StandardSimulateStrategy extends AbstractExecutionStrategy {
 
 /**
  * Standard on-board strategy
- * Steps: pre-on-board build -> on-board analysis
+ * Steps: active-file check -> build -> example build (STANDARD_CUSTOM only) -> on-board
  */
 export class StandardOnBoardStrategy extends AbstractExecutionStrategy {
   readonly strategyName = 'standard-onboard';
@@ -45,7 +53,9 @@ export class StandardOnBoardStrategy extends AbstractExecutionStrategy {
 
   getSteps(): IExecutionStep[] {
     return [
+      new ActiveFileCheckStep(),
       new BuildForOnBoardStep(this.commandGenerator),
+      new ExampleBuildStep(this.commandGenerator),
       new OnBoardStep(this.commandGenerator),
     ];
   }

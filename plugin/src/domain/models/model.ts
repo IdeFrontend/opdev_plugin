@@ -6,6 +6,7 @@ import * as projectModel from './project-model';
 import * as configModel from './config-model';
 import { OpGeneratorFactory } from '@plugin/domain/services/op-generator-factory';
 import { getDefaultPath } from '@plugin/domain/utils/op-util';
+import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import { soc_version } from '@plugin/domain/utils/ascend-util';
 import {
   getDefaultDirectory,
@@ -38,78 +39,6 @@ type OpsStore = {
   lastId: number;
   ops: OpRecord[];
 };
-
-/**
- * 检查根目录 build.sh 是否包含 --bisheng_flags
- * 用于修改标准自定义算子
- */
-function checkBuildShHasBishengConfig(): boolean {
-  const workspaceFolders = vscode.workspace.workspaceFolders;
-
-  if (!workspaceFolders || workspaceFolders.length === 0) {
-    return false;
-  }
-  
-  const workspacePath = workspaceFolders[0].uri.fsPath;
-  const buildShPath = path.join(workspacePath, 'build.sh');
-  if (!fs.existsSync(buildShPath)) return false;
-  try {
-    const content = fs.readFileSync(buildShPath, 'utf-8');
-    return content.includes('--bisheng_flags');
-  } catch {
-    return false;
-  }
-}
-
-function getNpuDebugScript(type: string, scriptPath: string): string {
-  if (type === 'ascend') {
-    if (checkBuildShHasBishengConfig()) {
-      return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --bisheng_flags=ccec_O0,ccec_g`
-    }
-    return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --debug`
-  }
-  return `bash ${scriptPath} --debug`
-}
-
-function getCpuDebugScript(type: string, scriptPath: string): string {
-  if (type === 'ascend') {
-    if (checkBuildShHasBishengConfig()) {
-      return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --bisheng_flags=ccec_g`
-    }
-    return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --simulator`
-  }
-  return `bash ${scriptPath} --simulator`
-}
-
-function getSimulateScript(type: string, scriptPath: string): string {
- if (type === 'ascend') {
-    if (checkBuildShHasBishengConfig()) {
-      return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --bisheng_flags=ccec_g`
-    }
-    return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --simulator Ascend910B3`
-  }
-  return `bash ${scriptPath} --simulator Ascend910B3`
-}
-
-function getOnBoardScript(type: string, scriptPath: string): string {
-   if (type === 'ascend') {
-    if (checkBuildShHasBishengConfig()) {
-      return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --bisheng_flags=ccec_g`
-    }
-    return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --onboard`
-  }
-  return `bash ${scriptPath} --onboard`
-}
-
-function getExampleScript(type: string, scriptPath: string): string {
-  if (type === 'ascend') {
-    if (checkBuildShHasBishengConfig()) {
-      return `bash ${scriptPath} --vendor_name=custom --run_example`
-    }
-    return `bash ${scriptPath} --vendor_name=custom --run_example`
-  }
-  return `bash ${scriptPath}`
-}
 
 function ensureStore(): OpsStore {
   const dataDir = getDataDir();
@@ -336,32 +265,38 @@ export async function generateStructure(
         targetOpFile,
         targetExampleFile,
       });
+
+      // Resolve the workspace root for bisheng-flag detection (used by AscendPlugin).
+      const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? opScriptPath;
+      const scripts = OperatorPluginRegistry.getOpPlugin(record.op_type)
+        .getInitialConfigScripts(record, workspaceRoot);
+
       // Build: 创建 build_op 和 build_example 两种配置
       // 如果是 torch_library_template 类型，设置 target_file 为 python ../run.py
-      const targetFile = record.template_name === 'torch_library_template' 
-        ? 'python ../run.py' 
+      const targetFile = record.template_name === 'torch_library_template'
+        ? 'python ../run.py'
         : targetOpFile;
       const buildOp = {
         project_id: project.id,
         user_options: {
           op: record.op_name,
-          script: record.op_type === 'ascend' ? `bash ${opScriptPath} --pkg --soc={soc_version} --vendor_name=custom` : `bash ${opScriptPath}`,
+          script: scripts.buildScript,
           config_name: record.op_name,
           target_dir: targetDir,
           target_file: targetFile,
-          cpu_debug_script: getCpuDebugScript(record.op_type, opScriptPath),
-          npu_debug_script: getNpuDebugScript(record.op_type, opScriptPath)
+          cpu_debug_script: scripts.cpuDebugScript,
+          npu_debug_script: scripts.npuDebugScript,
         },
       };
       const buildExample = {
         project_id: project.id,
         user_options: {
-          op: record.op_name,
-          script: getExampleScript(record.op_type, exampleScriptPath),
-          config_name: record.op_name,
-          target_dir: targetDir,
-          target_file: targetExampleFile,
-          execution_mode: 'eager'
+          op:             record.op_name,
+          script:         scripts.exampleScript,
+          config_name:    record.op_name,
+          target_dir:     targetDir,
+          target_file:    targetExampleFile,
+          execution_mode: 'eager',
         },
       };
 
@@ -370,14 +305,15 @@ export async function generateStructure(
         project_id: project.id,
         user_options: {
           op: record.op_name,
-          script: record.op_type === 'ascend' ? `bash ${opScriptPath} --soc={soc_version} --ops={operatorNames} -u` : `bash ${opScriptPath} -u`,
+          script: record.op_type === 'ascend'
+            ? `bash ${opScriptPath} --soc={soc_version} --ops={operatorNames} -u`
+            : `bash ${opScriptPath} -u`,
           config_name: record.op_name,
           target_dir: targetDir,
-          target_file: targetExampleFile
+          target_file: targetExampleFile,
         },
       };
 
-      // 调用 postConfig，确保配置创建完成
       console.log('generateStructure: 开始创建 build_op 配置');
       console.log('generateStructure: build_op 配置数据:', JSON.stringify(buildOp, null, 2));
       const buildOpResult = await configModel.postConfig('build_op', [buildOp]);
@@ -401,25 +337,25 @@ export async function generateStructure(
         project_id: project.id,
         user_options: {
           op: record.op_name,
-          script: record.op_type === 'ascend' ? `bash ${opScriptPath} --pkg --soc={soc_version} --vendor_name=custom --mssanitizer` : `bash ${opScriptPath} --mssanitizer`,
-           target_file: targetFile,
+          script: scripts.sanitizerScript,
+          target_file: targetFile,
           config_name: record.op_name,
           tool: {
             memcheck: true,
             racecheck: false,
             initcheck: false,
             synccheck: false,
-          }, // 检测内容
+          },
           memcheckOption: {
             'check-unused-memory': false,
             'leak-check': false,
             'check-device-heap': false,
             'check-cann-heap': false,
-          }, // 内存检测可选项
-          logLevel: 'warn', // 报告输出等级
-          maxDebuglogSize: 1024, // 输入日志单个文件大小上限 1 - 10240
+          },
+          logLevel: 'warn',
+          maxDebuglogSize: 1024,
           useBlock: false,
-          blockId: null, // 单block检测的blockId，0 - 200
+          blockId: null,
           fileMapList: [],
         },
       };
@@ -434,8 +370,8 @@ export async function generateStructure(
       const onBoard = {
         project_id: project.id,
         user_options: {
-          op: record.op_name,
-          script: getOnBoardScript(record.op_type, opScriptPath),
+          op:          record.op_name,
+          script:      scripts.onBoardScript,
           config_name: record.op_name,
           // 内存分析图 相关
           // 核间负载分析图
@@ -478,8 +414,8 @@ export async function generateStructure(
       const simulate = {
         project_id: project.id,
         user_options: {
-          op: record.op_name,
-          script: getSimulateScript(record.op_type, opScriptPath),
+          op:          record.op_name,
+          script:      scripts.simulateScript,
           config_name: record.op_name,
           soc_version: soc_version,
           ResourceConflictRatio: true,

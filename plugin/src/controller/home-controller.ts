@@ -17,20 +17,7 @@ import {
   GetLastProjectPathResult,
 } from '@shared/api-types';
 
-/**
- * 检查根目录 build.sh 是否包含 --bisheng_flags
- * 用于判断标准自定义算子是否支持异常检测和调优
- */
-function checkBuildShHasBishengConfig(rootPath: string): boolean {
-  const buildShPath = path.join(rootPath, 'build.sh');
-  if (!fs.existsSync(buildShPath)) return false;
-  try {
-    const content = fs.readFileSync(buildShPath, 'utf-8');
-    return content.includes('--bisheng_flags');
-  } catch {
-    return false;
-  }
-}
+import { checkBuildShHasBishengConfig } from '@plugin/domain/utils/build-utils';
 
 // 先定义 checkMultipleOperators 函数，以便在 getSelectedOperators 中使用
 async function checkMultipleOperatorsInternal(): Promise<{

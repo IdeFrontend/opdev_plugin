@@ -22,6 +22,15 @@ export class BuildStep implements IExecutionStep {
     this.name = stepName;
   }
 
+  /**
+   * Skip if the operator plugin declares no build is required before analysis.
+   * False for pyasc — it runs Python files directly.
+   */
+  canSkip(context: ExecutionContext): boolean {
+    return context.opPlugin !== undefined
+      && !context.opPlugin.buildBehavior.requiresBuildBeforeAnalysis;
+  }
+
   async execute(context: ExecutionContext): Promise<Result<unknown, Error>> {
     const command = this.commandGenerator.generateBuildCommand(
       context.buildConfigId,
@@ -43,6 +52,68 @@ export class BuildStep implements IExecutionStep {
       command,
       output: result.output,
     });
+  }
+}
+
+/**
+ * Active file check step
+ * For operator types like pyasc that require an active file in the editor.
+ * This step is a no-op in V2 strategy context (the check happens in the controller);
+ * the canSkip logic is provided so strategies accurately reflect the required steps.
+ */
+export class ActiveFileCheckStep implements IExecutionStep {
+  readonly name = 'ActiveFileCheck';
+
+  canSkip(context: ExecutionContext): boolean {
+    // Skip for types that don't require an active file (ascend, cann, etc.)
+    return !context.opPlugin?.buildBehavior.requiresActiveFileCheck;
+  }
+
+  async execute(_context: ExecutionContext): Promise<Result<unknown, Error>> {
+    // Active file validation is handled at the controller/service layer before
+    // the strategy executes. This step is a marker for step composition clarity.
+    return ResultUtils.ok({ skipped: true });
+  }
+}
+
+/**
+ * Example build step
+ * Required before analysis for STANDARD_CUSTOM projects.
+ * Whether this step runs is determined by the project type, not the operator type.
+ */
+export class ExampleBuildStep implements IExecutionStep {
+  readonly name = 'ExampleBuild';
+
+  constructor(private commandGenerator: CommandGeneratorService, private compileOptions?: string) {}
+
+  /**
+   * Skip for non-STANDARD_CUSTOM projects.
+   * requiresExampleBuildForAnalysis is a project-level concern — not on IOperatorPlugin.buildBehavior.
+   */
+  canSkip(context: ExecutionContext): boolean {
+    if (context.projectType === undefined) return true;
+    const { OperatorProjectType } = require('@plugin/domain/models/operator-project-type');
+    return context.projectType !== OperatorProjectType.STANDARD_CUSTOM;
+  }
+
+  async execute(context: ExecutionContext): Promise<Result<unknown, Error>> {
+    const command = this.commandGenerator.generateBuildExampleCommand(
+      context.exampleConfigId,
+      this.compileOptions,
+    );
+
+    const result = await context.executor.execute(command, [], [], {}, true);
+
+    if (result.code !== 0) {
+      return ResultUtils.err(new BuildFailedError('ExampleBuild失败', {
+        command,
+        exitCode: result.code,
+        output: result.output,
+        phase: 'example-build',
+      }));
+    }
+
+    return ResultUtils.ok({ command, output: result.output });
   }
 }
 

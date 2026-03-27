@@ -26,10 +26,11 @@ import { getOpRunPath } from '@plugin/domain/utils/op-util';
 import { getOpByProjectIdAndOpName } from '@plugin/domain/models/model';
 import { joinCommands } from '@plugin/domain/utils/command-utils';
 import { getConfigById } from '@plugin/domain/services/configuration';
-import { OperatorProjectType, OperatorProjectDetector } from '@plugin/domain/services/operator-project-detector';
+import { OperatorProjectType } from '@plugin/domain/services/operator-project-detector';
 import { markOperatorsAsCompiled, getProjectByPath } from '@plugin/domain/models/project-model';
 import { homeMethods } from '../controller/home-controller';
 import { soc_version } from '@plugin/domain/utils/ascend-util';
+import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 
 const CONFIG_TYPES = {
   BUILD_OP: 'build_op',
@@ -40,17 +41,15 @@ const CONFIG_TYPES = {
 } as const;
 
 /**
- * 检查根目录是否是标准自定义算子
+ * Checks whether the VS Code workspace root is a STANDARD_CUSTOM operator project.
+ * Uses OperatorPluginRegistry.detectProject() — routing through the plugin registry.
  */
 async function isRootStandardCustom(): Promise<boolean> {
   const workspaceFolders = vscode.workspace.workspaceFolders;
-  if (!workspaceFolders || workspaceFolders.length === 0) {
-    return false;
-  }
-  const workspacePath = workspaceFolders[0].uri.fsPath;
+  if (!workspaceFolders || workspaceFolders.length === 0) return false;
   try {
-    const rootDetection = await OperatorProjectDetector.detectOperatorProject(workspacePath);
-    return rootDetection.isOperatorProject && rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM;
+    const match = await OperatorPluginRegistry.detectProject(workspaceFolders[0].uri.fsPath);
+    return match?.projectType === OperatorProjectType.STANDARD_CUSTOM;
   } catch (error) {
     console.warn('[isRootStandardCustom] 检测失败:', error);
     return false;
@@ -85,16 +84,14 @@ async function tryMarkOperatorsAsCompiled(
       return;
     }
 
-    // 使用 OperatorProjectDetector 检测项目类型，而不是直接使用 project.project_type
     try {
-      const rootDetection = await OperatorProjectDetector.detectOperatorProject(project.project_path);
-      if (!rootDetection.isOperatorProject || rootDetection.projectType !== OperatorProjectType.STANDARD_CUSTOM) {
+      const match = await OperatorPluginRegistry.detectProject(project.project_path);
+      if (match?.projectType !== OperatorProjectType.STANDARD_CUSTOM) {
         return;
       }
     }
     catch (error) {
       console.warn('[tryMarkOperatorsAsCompiled] 检测项目类型失败:', error);
-
       return;
     }
 
@@ -332,23 +329,21 @@ export class BuildService {
    * 运行算子
    */
   async startRun(params: StartRunParams): Promise<void> {
-    // 使用 getProjectType 方法获取项目类型，如果是 pyasc，使用 build_op 配置，否则使用 build_example 配置
+    // Option A: preserve V1 behavior exactly — startRun uses homeMethods.getProjectType()
+    // (live detection) and skips the active-file check when params.filePath is set.
     const projectTypeInfo = await homeMethods.getProjectType();
-    const isPyasc = projectTypeInfo.projectType === OperatorProjectType.PYASC;
+    const opPlugin = OperatorPluginRegistry.getOpPlugin(projectTypeInfo.projectType);
+    const behavior = opPlugin.buildBehavior;
 
-    // 对于 pyasc 类型，检查当前是否打开了 .py 文件
-    // 如果传入了 filePath 参数（右键调用），则跳过检测
-    if (isPyasc && !params.filePath) {
-      // 检查当前是否打开了 .py 文件
+    if (behavior.requiresActiveFileCheck && !params.filePath) {
       const activeEditor = vscode.window.activeTextEditor;
-      const isPyFile = activeEditor?.document.fileName.endsWith('.py');
+      const isPyFile = activeEditor?.document.fileName.endsWith(behavior.activeFileExtension!);
 
       if (!isPyFile) {
         vscode.window.showWarningMessage(t('build.openPyFirst'));
         return;
       }
 
-      // 获取工作区路径
       const workspaceFolders = vscode.workspace.workspaceFolders;
       if (!workspaceFolders || workspaceFolders.length === 0) {
         vscode.window.showWarningMessage(t('build.workspacePathNotFound'));
@@ -357,34 +352,24 @@ export class BuildService {
 
       const workspacePath = workspaceFolders[0].uri.fsPath;
       const filePath = activeEditor!.document.uri.fsPath;
-
-      // 计算相对路径
       const relativePath = path.relative(workspacePath, filePath).replace(/\\/g, '/');
 
-      // 获取 build_op 配置并更新 target_file
       const buildConfigId = await this.getBuildConfigId();
       if (buildConfigId) {
-        // 获取项目ID
         const projectIdStr = ProjectManager.getInstance().projectId;
         if (projectIdStr) {
           const projectId = Number(projectIdStr);
-          // 获取 build_op 配置
           const configs = await getConfig(projectId, 'build_op');
           const buildOpConfig = configs.find((c: any) => c.config_id === buildConfigId);
-
           if (buildOpConfig) {
-            // 更新配置的 target_file
-            const updatedConfig = {
+            await postConfig('build_op', [{
               config_id: buildConfigId,
               config_type: 'build_op',
               user_options: {
                 ...buildOpConfig.user_options,
                 target_file: `python3 ${relativePath}`,
               },
-            };
-
-            // 保存配置
-            await postConfig('build_op', [updatedConfig]);
+            }]);
           }
         }
       }
@@ -393,19 +378,17 @@ export class BuildService {
     let configId = params.configId ? Number(params.configId) : undefined;
 
     if (!configId) {
-      if (isPyasc) {
-        configId = await this.getBuildConfigId();
-      } else {
-        configId = await this.getBuildExampleConfigId();
-      }
+      // pyasc uses build_op config (no separate example build); others use build_example
+      configId = behavior.requiresBuildBeforeAnalysis
+        ? await this.getBuildExampleConfigId()
+        : await this.getBuildConfigId();
     }
 
     try {
       const runCommand = getRunCommand(Number(configId));
 
       console.log('runCommand', runCommand);
-      const executor = ProjectManager.getInstance()
-        .getExecutor();
+      const executor = ProjectManager.getInstance().getExecutor();
       const res = await executor.execute(runCommand, [], [], {}, true);
 
       console.log('runRes', res);
@@ -413,14 +396,13 @@ export class BuildService {
       if (res.code !== 0) {
         const output = res.output ?? '';
         const isQemuSegfault = /qemu/i.test(output) && (/signal\s+11|Segmentation\s+fault/i.test(output) || /core\s+dumped/i.test(output));
-        const isPyascRuntime = isPyasc && /runtime_camodel|cannot find -lruntime_camodel|Runtime library must be available/i.test(output);
+        const isPyascRuntime = !behavior.requiresBuildBeforeAnalysis && /runtime_camodel|cannot find -lruntime_camodel|Runtime library must be available/i.test(output);
         const message = isQemuSegfault
           ? t('build.runFailedQemuSegfault', { output })
           : isPyascRuntime
             ? t('build.runFailedPyascRuntime', { output })
             : t('build.runFailed', { output });
         vscode.window.showErrorMessage(message);
-
         return;
       }
 
@@ -483,24 +465,22 @@ export class BuildService {
     const configData = await this.getBuildConfigsList();
     const simulatorItem = configData.find((v) => v.config_type === CONFIG_TYPES.SIMULATE);
 
-    // 检查项目类型，pyasc 类型不需要编译
     const projectId = ProjectManager.getInstance().projectId;
     const project = projectId ? getProjectById(Number(projectId)) : null;
-    const isPyascType = project?.project_type === 'pyasc';
+    // Option A: preserve V1 behavior — startSimulate reads project.project_type (stored value)
+    // and throws on active-file-check failure.
+    const opPlugin = OperatorPluginRegistry.getOpPlugin(project?.project_type);
+    const behavior = opPlugin.buildBehavior;
 
-    // 对于 pyasc 类型，检查当前是否打开了 .py 文件
-    // 如果传入了 operatorNames 参数（右键操作），则跳过检测
-    if (isPyascType && !params.operatorNames) {
-      // 检查当前是否打开了 .py 文件
+    if (behavior.requiresActiveFileCheck && !params.operatorNames) {
       const activeEditor = vscode.window.activeTextEditor;
-      const isPyFile = activeEditor?.document.fileName.endsWith('.py');
+      const isPyFile = activeEditor?.document.fileName.endsWith(behavior.activeFileExtension!);
 
       if (!isPyFile) {
         vscode.window.showWarningMessage(t('build.openPyFirst'));
         throw new Error(t('task.openPyFirst'));
       }
 
-      // 获取工作区路径
       const workspaceFolders = vscode.workspace.workspaceFolders;
       if (!workspaceFolders || workspaceFolders.length === 0) {
         vscode.window.showWarningMessage(t('build.workspacePathNotFound'));
@@ -509,53 +489,28 @@ export class BuildService {
 
       const workspacePath = workspaceFolders[0].uri.fsPath;
       const filePath = activeEditor!.document.uri.fsPath;
-
-      // 计算相对路径
       const relativePath = path.relative(workspacePath, filePath).replace(/\\/g, '/');
 
-      // 获取 build_op 配置并更新 target_file
       const buildConfigId = await this.getBuildConfigId();
       if (buildConfigId && projectId) {
-        const projectIdNum = Number(projectId);
-        // 获取 build_op 配置
-        const configs = await getConfig(projectIdNum, 'build_op');
+        const configs = await getConfig(Number(projectId), 'build_op');
         const buildOpConfig = configs.find((c: any) => c.config_id === buildConfigId);
-
         if (buildOpConfig) {
-          // 更新配置的 target_file
-          const updatedConfig = {
+          await postConfig('build_op', [{
             config_id: buildConfigId,
             config_type: 'build_op',
             user_options: {
               ...buildOpConfig.user_options,
               target_file: `python3 ${relativePath}`,
             },
-          };
-
-          // 保存配置
-          await postConfig('build_op', [updatedConfig]);
+          }]);
         }
       }
     }
 
-    if (!isPyascType) {
-      // 构建编译选项
-      let compileOption = ''
-
-      const buildCommand = getBuildOpCommand(
-        Number(simulatorItem?.config_id),
-        compileOption,
-        params.operatorNames,
-      );
-      const buildExecutor = ProjectManager.getInstance()
-        .getExecutor();
-      const buildRes = await buildExecutor.execute(
-        buildCommand,
-        [],
-        [],
-        {},
-        true,
-      );
+    if (behavior.requiresBuildBeforeAnalysis) {
+      const buildCommand = getBuildOpCommand(Number(simulatorItem?.config_id), '', params.operatorNames);
+      const buildRes = await ProjectManager.getInstance().getExecutor().execute(buildCommand, [], [], {}, true);
 
       console.log('buildRes', buildRes);
 
@@ -566,24 +521,15 @@ export class BuildService {
 
       await tryMarkOperatorsAsCompiled(Number(simulatorItem?.config_id), params.operatorNames);
 
-      // 如果是标准自定义算子，需要编译 example 并添加 --simulator --soc
       if (await isRootStandardCustom()) {
         const exConfigId = await this.getBuildExampleConfigId();
-        const exampleCompileOption = `--simulator --soc=${soc_version}`;
         const exampleBuildCommand = getBuildExampleCommand(
           Number(exConfigId),
-          exampleCompileOption,
+          `--simulator --soc=${soc_version}`,
           params.operatorNames,
         );
-        const exampleBuildExecutor = ProjectManager.getInstance()
-          .getExecutor();
-        const exampleBuildRes = await exampleBuildExecutor.execute(
-          exampleBuildCommand,
-          [],
-          [],
-          {},
-          true,
-        );
+        const exampleBuildRes = await ProjectManager.getInstance().getExecutor()
+          .execute(exampleBuildCommand, [], [], {}, true);
 
         console.log('example buildRes', exampleBuildRes);
 
@@ -600,16 +546,10 @@ export class BuildService {
     console.log('simulate configId', configId, exConfigId);
 
     try {
-      const simulateCommand = getSimulateCommand(
-        Number(configId),
-        Number(exConfigId),
-        params.operatorNames,
-      );
+      const simulateCommand = getSimulateCommand(Number(configId), Number(exConfigId), params.operatorNames);
 
       console.log('simulateCommand', simulateCommand);
-      const executor = ProjectManager.getInstance()
-        .getExecutor();
-      const res = await executor.execute(simulateCommand, [], [], {}, true);
+      const res = await ProjectManager.getInstance().getExecutor().execute(simulateCommand, [], [], {}, true);
 
       if (res.code !== 0) {
         vscode.window.showErrorMessage(t('build.simulationFailed'));
@@ -630,24 +570,22 @@ export class BuildService {
    * 开始上板分析
    */
   async startOnBoard(params: { operatorNames?: string } = {}): Promise<void> {
-    // 检查项目类型，pyasc 类型不需要编译
     const projectId = ProjectManager.getInstance().projectId;
     const project = projectId ? getProjectById(Number(projectId)) : null;
-    const isPyascType = project?.project_type === 'pyasc';
+    // Option A: preserve V1 behavior — startOnBoard reads project.project_type (stored value)
+    // and returns (not throws) on active-file-check failure.
+    const opPlugin = OperatorPluginRegistry.getOpPlugin(project?.project_type);
+    const behavior = opPlugin.buildBehavior;
 
-    // 对于 pyasc 类型，检查当前是否打开了 .py 文件
-    // 如果传入了 operatorNames 参数（右键操作），则跳过检测
-    if (isPyascType && !params.operatorNames) {
-      // 检查当前是否打开了 .py 文件
+    if (behavior.requiresActiveFileCheck && !params.operatorNames) {
       const activeEditor = vscode.window.activeTextEditor;
-      const isPyFile = activeEditor?.document.fileName.endsWith('.py');
+      const isPyFile = activeEditor?.document.fileName.endsWith(behavior.activeFileExtension!);
 
       if (!isPyFile) {
         vscode.window.showWarningMessage(t('build.openPyFirst'));
         return;
       }
 
-      // 获取工作区路径
       const workspaceFolders = vscode.workspace.workspaceFolders;
       if (!workspaceFolders || workspaceFolders.length === 0) {
         vscode.window.showWarningMessage(t('build.workspacePathNotFound'));
@@ -656,84 +594,45 @@ export class BuildService {
 
       const workspacePath = workspaceFolders[0].uri.fsPath;
       const filePath = activeEditor!.document.uri.fsPath;
-
-      // 计算相对路径
       const relativePath = path.relative(workspacePath, filePath).replace(/\\/g, '/');
 
-      // 获取 build_op 配置并更新 target_file
       const buildConfigId = await this.getBuildConfigId();
       if (buildConfigId && projectId) {
-        const projectIdNum = Number(projectId);
-        // 获取 build_op 配置
-        const configs = await getConfig(projectIdNum, 'build_op');
+        const configs = await getConfig(Number(projectId), 'build_op');
         const buildOpConfig = configs.find((c: any) => c.config_id === buildConfigId);
-
         if (buildOpConfig) {
-          // 更新配置的 target_file
-          const updatedConfig = {
+          await postConfig('build_op', [{
             config_id: buildConfigId,
             config_type: 'build_op',
             user_options: {
               ...buildOpConfig.user_options,
               target_file: `python3 ${relativePath}`,
             },
-          };
-
-          // 保存配置
-          await postConfig('build_op', [updatedConfig]);
+          }]);
         }
       }
     }
 
     const configId = await this.getOnBoardConfigId();
-    // 上板分析前编译（pyasc 类型跳过）
-    if (!isPyascType) {
-      // 构建编译选项
-      let compileOption = ''
 
-      const buildCommand = getBuildOpCommand(
-        Number(configId),
-        compileOption,
-        params.operatorNames,
-      );
-      const buildExecutor = ProjectManager.getInstance()
-        .getExecutor();
-      const buildRes = await buildExecutor.execute(
-        buildCommand,
-        [],
-        [],
-        {},
-        true,
-      );
+    if (behavior.requiresBuildBeforeAnalysis) {
+      const buildCommand = getBuildOpCommand(Number(configId), '', params.operatorNames);
+      const buildRes = await ProjectManager.getInstance().getExecutor().execute(buildCommand, [], [], {}, true);
 
       console.log('buildRes', buildRes);
 
       if (buildRes.code !== 0) {
         vscode.window.showErrorMessage(t('build.compileFailed', { output: buildRes.output }));
-
         return;
       }
 
       await tryMarkOperatorsAsCompiled(Number(configId), params.operatorNames);
 
-      // 如果是标准自定义算子，需要编译 example
       if (await isRootStandardCustom()) {
         const exConfigId = await this.getBuildExampleConfigId();
-        const exampleCompileOption = '';
-        const exampleBuildCommand = getBuildExampleCommand(
-          Number(exConfigId),
-          exampleCompileOption,
-          params.operatorNames,
-        );
-        const exampleBuildExecutor = ProjectManager.getInstance()
-          .getExecutor();
-        const exampleBuildRes = await exampleBuildExecutor.execute(
-          exampleBuildCommand,
-          [],
-          [],
-          {},
-          true,
-        );
+        const exampleBuildCommand = getBuildExampleCommand(Number(exConfigId), '', params.operatorNames);
+        const exampleBuildRes = await ProjectManager.getInstance().getExecutor()
+          .execute(exampleBuildCommand, [], [], {}, true);
 
         console.log('example buildRes', exampleBuildRes);
 
@@ -749,20 +648,13 @@ export class BuildService {
     console.log('onboard configId', configId, exConfigId);
 
     try {
-      const onBoardCommand = getOnBoardCommand(
-        Number(configId),
-        Number(exConfigId),
-        params.operatorNames,
-      );
+      const onBoardCommand = getOnBoardCommand(Number(configId), Number(exConfigId), params.operatorNames);
 
       console.log('onBoardCommand', onBoardCommand);
-      const executor = ProjectManager.getInstance()
-        .getExecutor();
-      const res = await executor.execute(onBoardCommand, [], [], {}, true);
+      const res = await ProjectManager.getInstance().getExecutor().execute(onBoardCommand, [], [], {}, true);
 
       if (res.code !== 0) {
         vscode.window.showErrorMessage(t('build.onBoardFailed'));
-
         return;
       }
 

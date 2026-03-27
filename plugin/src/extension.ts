@@ -31,6 +31,7 @@ import { getPerformancePanelViewProvider } from './class/performance-panel-view'
 import { getDumpTensorPanelViewProvider } from './class/dump-tensor-panel-view';
 
 import { MindStudioPluginInstaller } from './class/mind-studio-plugin-installer';
+import { registerOperatorPlugins } from './domain/plugins';
 import {
   COMMAND_OPEN,
   COMMAND_PROJECT_SH,
@@ -180,10 +181,13 @@ const updateContextForUri = async (uri: vscode.Uri | undefined) => {
  */
 export async function activate(context: vscode.ExtensionContext) {
   extensionContext = context;
-  // 将 context 设置到全局对象以便 API 层使用
   (
     globalThis as unknown as { extensionContext: vscode.ExtensionContext }
   ).extensionContext = context;
+
+  // Register all operator-type plugins and project-type detectors.
+  // Must be called before any code that uses OperatorPluginRegistry.
+  registerOperatorPlugins();
 
   // api接口
   const apiServer = initApiServer();
