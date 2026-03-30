@@ -19,6 +19,7 @@ export {
   getSimulateCommand,
   getOnBoardCommand,
   getSanitizerCommand,
+  getUtTestCommand,
 } from './services/command';
 
 export { getFiles } from './services/system';

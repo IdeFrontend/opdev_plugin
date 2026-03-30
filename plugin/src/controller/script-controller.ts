@@ -5,6 +5,7 @@ import {
   UpdateShScriptParams,
   SaveProjectSHParams,
 } from '@shared/api-types';
+import { getProjectById } from '@plugin/domain';
 
 export const scriptMethods = {
   /**
@@ -19,22 +20,41 @@ export const scriptMethods = {
     return await projectService.updateShScript(params);
   },
 
+
+
   /**
-   * 获取项目SH脚本
-   * @returns 项目SH脚本结果
+   * 获取项目环境配置
+   * @returns 项目环境配置
    */
-  async getProjectSH(): Promise<GetProjectSHResult> {
-    return await projectService.getProjectSH();
+  async getProjectEnv(): Promise<{ ascendEnvScript: string; socVersion: string }> {
+    const pm = ProjectManager.getInstance();
+    await pm.initProject();
+    await pm.ensureProjectId();
+    const projectId = pm.projectId;
+
+    if (!projectId) {
+      return { ascendEnvScript: '', socVersion: '' };
+    }
+
+    const project = getProjectById(Number(projectId));
+
+    return {
+      ascendEnvScript: project?.ascend_env_script || '',
+      socVersion: project?.soc_version || ''
+    };
   },
 
   /**
-   * 保存项目SH脚本
+   * 保存项目环境配置
    * @param params 保存参数
    */
-  async saveProjectSH(params: SaveProjectSHParams): Promise<void> {
+  async saveProjectEnv(params: { ascendEnvScript: string; socVersion: string }): Promise<void> {
     await ProjectManager.getInstance()
       .initProject();
     // 复用 updateShScript 逻辑
-    await projectService.updateShScript({ ascendEnvScript: params.ascendEnvScript });
+    await projectService.updateShScript({ 
+      ascendEnvScript: params.ascendEnvScript,
+      soc_version: params.socVersion 
+    });
   },
 };

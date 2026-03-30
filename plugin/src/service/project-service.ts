@@ -131,10 +131,12 @@ export class ProjectService {
     }
 
     const ascend_env_script = params.ascendEnvScript || undefined;
+    const soc_version = params.soc_version || undefined;
     const projectRes = await updateShScript({
       project_name,
       project_path,
       ascend_env_script,
+      soc_version,
     });
 
     console.log('projectRes', projectRes);
@@ -150,23 +152,7 @@ export class ProjectService {
       .checkVscode();
   }
 
-  /**
-   * 获取项目脚本
-   */
-  async getProjectSH(): Promise<string> {
-    const pm = ProjectManager.getInstance();
 
-    await pm.ensureProjectId();
-    const projectId = pm.projectId;
-
-    if (!projectId) {
-      return '';
-    }
-
-    const project = getProjectById(Number(projectId));
-
-    return project?.ascend_env_script || '';
-  }
 }
 
 export const projectService = new ProjectService();

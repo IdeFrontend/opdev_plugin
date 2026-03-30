@@ -4,6 +4,7 @@ import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import { useLinkSSH } from '../composables/use-link-ssh';
 import { FormRulesFactory } from '../composables/form-rules';
 import tipBase_0 from '@/assets/imgs/add.png';
+import AscendC from '@/assets/imgs/AscendC.png';
 import tipBase_1_1 from '@/assets/imgs/hello_world.png';
 import tipBase_1_2 from '@/assets/imgs/add_custom.png';
 import tipBase_1_3 from '@/assets/imgs/torch_library_template.png';
@@ -64,7 +65,7 @@ const getTemplateDesc = (template: string) => {
     case 'addn':
       return '生成<<<>>>异构运行的.asc，默认实现addn算子';
     case 'torch_library_template':
-      return '生成<<<>>>接入rotch licrary的.asc代码，默认实现add算子';
+      return '生成<<<>>>接入torch library的.asc代码，默认实现add算子';
     default:
       return '生成<<<>>>异构运行的.asc代码，默认打印"Hello World"';
   }
@@ -186,7 +187,9 @@ onMounted(async () => {
                     工程目录结构示意
                   </div>
                   <div class="overflow-hidden max-w-full transition-all duration-300">
-                    <a-image :src="item.id === 1 ? getTemplateImage(selectedTemplate) : tipBase_0"
+                    <a-image v-if="item.id === 2" :src="AscendC"
+                      class="block max-w-full h-auto object-contain transition-opacity duration-300 transform" />
+                    <a-image v-else :src="item.id === 1 ? getTemplateImage(selectedTemplate) : tipBase_0"
                       class="block max-w-full h-auto object-contain transition-opacity duration-300 transform" />
                   </div>
                 </div>

@@ -76,6 +76,7 @@ export type SaveSanitizerFormParams = {
 
 export type UpdateShScriptParams = {
   ascendEnvScript?: string;
+  soc_version?: string;
 };
 
 export type OperatorInfo = {
@@ -84,4 +85,10 @@ export type OperatorInfo = {
   op_type: string;
   op_path: string;
   config_name: string;
+};
+
+export type StartUtTestParams = {
+  operatorNames?: string; // 算子名称，多个用逗号分隔
+  configId?: string;
+  projectId?: string | number; // 项目ID
 };

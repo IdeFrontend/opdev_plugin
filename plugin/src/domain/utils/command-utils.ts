@@ -131,6 +131,11 @@ function isCommand(str: string): boolean {
     return true;
   }
   
+  // 如果包含通配符，认为是需要特殊处理的路径
+  if (str.includes('*')) {
+    return true;
+  }
+  
   // 如果以常见的命令前缀开头，认为是命令
   const commandPrefixes = ['python', 'bash', 'sh', 'node', 'npm', 'yarn', 'java', 'perl', 'ruby'];
   const firstWord = str.split(' ')[0].split('/').pop() || '';
@@ -149,6 +154,11 @@ export function getExecutableCommand(
 ): string {
   if (!file) {
     return '';
+  }
+
+  // 如果包含通配符，使用 find 命令找到实际文件
+  if (file.includes('*')) {
+    return `RUN_FILE=$(find ${file}) && chmod +x "$RUN_FILE" && "$RUN_FILE"`;
   }
 
   // 如果是命令（如 python ../run.py），不执行 chmod，直接返回命令

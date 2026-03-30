@@ -64,9 +64,9 @@ function checkBuildShHasBishengConfig(): boolean {
 function getNpuDebugScript(type: string, scriptPath: string): string {
   if (type === 'ascend') {
     if (checkBuildShHasBishengConfig()) {
-      return `bash ${scriptPath} --pkg --soc=${soc_version} --vendor_name=custom --bisheng_flags=ccec_O0,ccec_g`
+      return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --bisheng_flags=ccec_O0,ccec_g`
     }
-    return `bash ${scriptPath} --pkg --soc=${soc_version} --vendor_name=custom --debug`
+    return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --debug`
   }
   return `bash ${scriptPath} --debug`
 }
@@ -74,9 +74,9 @@ function getNpuDebugScript(type: string, scriptPath: string): string {
 function getCpuDebugScript(type: string, scriptPath: string): string {
   if (type === 'ascend') {
     if (checkBuildShHasBishengConfig()) {
-      return `bash ${scriptPath} --pkg --soc=${soc_version} --vendor_name=custom --bisheng_flags=ccec_g`
+      return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --bisheng_flags=ccec_g`
     }
-    return `bash ${scriptPath} --pkg --soc=${soc_version} --vendor_name=custom --simulator`
+    return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --simulator`
   }
   return `bash ${scriptPath} --simulator`
 }
@@ -84,9 +84,9 @@ function getCpuDebugScript(type: string, scriptPath: string): string {
 function getSimulateScript(type: string, scriptPath: string): string {
  if (type === 'ascend') {
     if (checkBuildShHasBishengConfig()) {
-      return `bash ${scriptPath} --pkg --soc=${soc_version} --vendor_name=custom --bisheng_flags=ccec_g`
+      return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --bisheng_flags=ccec_g`
     }
-    return `bash ${scriptPath} --pkg --soc=${soc_version} --vendor_name=custom --simulator Ascend910B3`
+    return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --simulator Ascend910B3`
   }
   return `bash ${scriptPath} --simulator Ascend910B3`
 }
@@ -94,9 +94,9 @@ function getSimulateScript(type: string, scriptPath: string): string {
 function getOnBoardScript(type: string, scriptPath: string): string {
    if (type === 'ascend') {
     if (checkBuildShHasBishengConfig()) {
-      return `bash ${scriptPath} --pkg --soc=${soc_version} --vendor_name=custom --bisheng_flags=ccec_g`
+      return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --bisheng_flags=ccec_g`
     }
-    return `bash ${scriptPath} --pkg --soc=${soc_version} --vendor_name=custom --onboard`
+    return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --onboard`
   }
   return `bash ${scriptPath} --onboard`
 }
@@ -345,7 +345,7 @@ export async function generateStructure(
         project_id: project.id,
         user_options: {
           op: record.op_name,
-          script: record.op_type === 'ascend' ? `bash ${opScriptPath} --pkg --soc=${soc_version} --vendor_name=custom` : `bash ${opScriptPath}`,
+          script: record.op_type === 'ascend' ? `bash ${opScriptPath} --pkg --soc={soc_version} --vendor_name=custom` : `bash ${opScriptPath}`,
           config_name: record.op_name,
           target_dir: targetDir,
           target_file: targetFile,
@@ -365,6 +365,18 @@ export async function generateStructure(
         },
       };
 
+      // UT测试: 创建一个基础 ut_test 配置
+      const utTestCfg = {
+        project_id: project.id,
+        user_options: {
+          op: record.op_name,
+          script: record.op_type === 'ascend' ? `bash ${opScriptPath} --soc={soc_version} --ops={operatorNames} -u` : `bash ${opScriptPath} -u`,
+          config_name: record.op_name,
+          target_dir: targetDir,
+          target_file: targetExampleFile
+        },
+      };
+
       // 调用 postConfig，确保配置创建完成
       console.log('generateStructure: 开始创建 build_op 配置');
       console.log('generateStructure: build_op 配置数据:', JSON.stringify(buildOp, null, 2));
@@ -378,12 +390,18 @@ export async function generateStructure(
 
       console.log('generateStructure: build_example 配置创建结果:', JSON.stringify(buildExampleResult, null, 2));
 
+      console.log('generateStructure: 开始创建 ut_test 配置');
+      console.log('generateStructure: ut_test 配置数据:', JSON.stringify(utTestCfg, null, 2));
+      const utTestResult = await configModel.postConfig('ut_test', [utTestCfg]);
+
+      console.log('generateStructure: ut_test 配置创建结果:', JSON.stringify(utTestResult, null, 2));
+
       // Sanitizer: 创建一个基础 sanitizer 配置
       const sanitizerCfg = {
         project_id: project.id,
         user_options: {
           op: record.op_name,
-          script: record.op_type === 'ascend' ? `bash ${opScriptPath} --pkg --soc=${soc_version} --vendor_name=custom --mssanitizer` : `bash ${opScriptPath} --mssanitizer`,
+          script: record.op_type === 'ascend' ? `bash ${opScriptPath} --pkg --soc={soc_version} --vendor_name=custom --mssanitizer` : `bash ${opScriptPath} --mssanitizer`,
            target_file: targetFile,
           config_name: record.op_name,
           tool: {

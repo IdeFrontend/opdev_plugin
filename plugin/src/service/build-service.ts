@@ -15,11 +15,15 @@ import {
   getOnBoardCommand,
   getBuildOpCommand,
   getRunCommand,
+  getUtTestCommand,
   getConfig,
   postConfig,
   objectToCommandString,
   getProjectById,
 } from '@plugin/domain';
+import { getOpRunPath } from '@plugin/domain/utils/op-util';
+import { getOpByProjectIdAndOpName } from '@plugin/domain/models/model';
+import { joinCommands } from '@plugin/domain/utils/command-utils';
 import { getConfigById } from '@plugin/domain/services/configuration';
 import { OperatorProjectType, OperatorProjectDetector } from '@plugin/domain/services/operator-project-detector';
 import { markOperatorsAsCompiled, getProjectByPath } from '@plugin/domain/models/project-model';
@@ -31,6 +35,7 @@ const CONFIG_TYPES = {
   BUILD_EXAMPLE: 'build_example',
   SIMULATE: 'simulate',
   ON_BOARD: 'on_board',
+  UT_TEST: 'ut_test',
 } as const;
 
 /**
@@ -118,12 +123,14 @@ export class BuildService {
       getConfig(Number(projectId), CONFIG_TYPES.BUILD_EXAMPLE),
       getConfig(Number(projectId), CONFIG_TYPES.SIMULATE),
       getConfig(Number(projectId), CONFIG_TYPES.ON_BOARD),
+      getConfig(Number(projectId), CONFIG_TYPES.UT_TEST),
     ];
     const [
       opConfig,
       exampleConfig,
       simulateConfig,
       onBoardConfig,
+      utTestConfig,
     ] = await Promise.all(array);
 
     console.log('getBuildConfigsList: 查询结果', {
@@ -131,6 +138,7 @@ export class BuildService {
       build_example: exampleConfig.length,
       simulate: simulateConfig.length,
       on_board: onBoardConfig.length,
+      ut_test: utTestConfig.length,
     });
 
     return [
@@ -147,6 +155,10 @@ export class BuildService {
         user_options: c.user_options ? (c.user_options as Record<string, unknown>) : undefined,
       })),
       ...onBoardConfig.map((c) => ({
+        ...c,
+        user_options: c.user_options ? (c.user_options as Record<string, unknown>) : undefined,
+      })),
+      ...utTestConfig.map((c) => ({
         ...c,
         user_options: c.user_options ? (c.user_options as Record<string, unknown>) : undefined,
       })),
@@ -201,6 +213,15 @@ export class BuildService {
     const config = await this.getConfigByType(CONFIG_TYPES.ON_BOARD);
 
     return config?.config_id ? String(config.config_id) : '';
+  }
+
+  /**
+   * 获取UT测试配置ID
+   */
+  async getUtTestConfigId(): Promise<number | undefined> {
+    const config = await this.getConfigByType(CONFIG_TYPES.UT_TEST);
+
+    return config?.config_id;
   }
 
   /**
@@ -854,6 +875,51 @@ export class BuildService {
       catch (e) {
         vscode.window.showErrorMessage(`获取运行命令失败 ${(e as Error).message}`);
       }
+    }
+  }
+
+  /**
+   * 执行UT测试
+   */
+  async startUtTest(params: { operatorNames?: string, projectId?: string | number, configId?: string } = {}): Promise<void> {
+    const pm = ProjectManager.getInstance();
+
+    // 如果传入了 projectId，则设置 ProjectManager 的项目信息
+    if (params.projectId !== undefined) {
+      const project = getProjectById(Number(params.projectId));
+      if (project) {
+        pm['_projectId'] = String(params.projectId);
+        pm['_projectName'] = project.project_name;
+        pm['_projectPath'] = project.project_path;
+      }
+    }
+
+    let configId = params.configId ? Number(params.configId) : undefined;
+
+    if (!configId) {
+      configId = await this.getUtTestConfigId();
+    }
+
+    try {
+      // 构建UT测试命令
+      const buildCommand = getUtTestCommand(
+        Number(configId),
+        params.operatorNames,
+      );
+      
+      const executor = ProjectManager.getInstance()
+        .getExecutor();
+      const res = await executor.execute(buildCommand, [], [], {}, true);
+
+      if (res.code !== 0) {
+        vscode.window.showErrorMessage('UT测试执行失败');
+        return;
+      }
+
+      vscode.window.showInformationMessage('UT测试执行成功');
+    }
+    catch (e) {
+      vscode.window.showErrorMessage(`获取UT测试命令失败 ${(e as Error).message}`);
     }
   }
 

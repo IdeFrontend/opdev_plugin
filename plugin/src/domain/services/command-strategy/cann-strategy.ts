@@ -275,4 +275,35 @@ export class CannCommandStrategy implements CommandStrategy {
     const buildOpConfig = buildOpConfigs.length > 0 ? buildOpConfigs[0] : null;
     return buildOpConfig?.target_file || '';
   }
+
+  buildUtTestCommand(params: CommandBuildParams): string {
+    const { config, sourceCannCmd, cdCmd, advance_cmd, operatorNames } = params;
+
+    const userOptions = config.user_options as Record<string, unknown> | null | undefined;
+    
+    if (!userOptions || !userOptions.script) {
+      throw new Error(`配置缺少脚本信息，且找不到算子记录: ${config.op}`);
+    }
+
+    let script = userOptions.script as string;
+    
+    // 替换 {operatorNames} 为传入的算子名称
+    if (operatorNames) {
+      script = script.replace('{operatorNames}', operatorNames);
+    } else {
+      script = script.replace('{operatorNames}', '');
+    }
+
+    const cmd = new Command(script);
+
+    if (config.custom_options) {
+      cmd.addArgument(config.custom_options);
+    }
+
+    if (advance_cmd) {
+      cmd.addArgument(advance_cmd);
+    }
+
+    return joinCommands(sourceCannCmd, cdCmd, cmd.toString());
+  }
 }
