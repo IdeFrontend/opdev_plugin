@@ -24,6 +24,25 @@ import { getProjectById } from '@plugin/domain/models/project-model';
  * Ascend 类型命令策略
  */
 export class AscendCommandStrategy implements CommandStrategy {
+  /**
+   * 替换脚本中的 {soc_version} 占位符
+   * @param script 原始脚本字符串
+   * @param projectId 项目ID
+   * @returns 替换后的脚本字符串
+   */
+  private replaceSocVersion(script: string, projectId: number): string {
+    if (projectId) {
+      const project = getProjectById(projectId);
+      if (project && project.soc_version) {
+        return script.replace(/{soc_version}/g, project.soc_version);
+      } else {
+        // 如果项目配置中没有 soc_version，使用默认值
+        return script.replace(/{soc_version}/g, soc_version);
+      }
+    }
+    return script;
+  }
+
   buildCommandContext(baseContext: BaseContext): CommandContext {
     const { config, project, operator } = baseContext;
 
@@ -75,7 +94,11 @@ export class AscendCommandStrategy implements CommandStrategy {
 
     const userOptions = (config.user_options as Record<string, unknown> | null | undefined) || {}
 
-    const cmd = new Command(userOptions[scriptField] as string || '');
+    let script = userOptions[scriptField] as string || '';
+    // 替换 {soc_version} 为项目配置中的 soc_version
+    script = this.replaceSocVersion(script, config.project_id);
+
+    const cmd = new Command(script);
 
     const options: Record<string, unknown> = {};
 
@@ -108,7 +131,11 @@ export class AscendCommandStrategy implements CommandStrategy {
     // 如果提供了 operatorNames，优先使用它；否则使用 config.op
     const op = operatorNames || '';
 
-    const cmd = new Command(config.script || '');
+    let script = config.script || '';
+    // 替换 {soc_version} 为项目配置中的 soc_version
+    script = this.replaceSocVersion(script, config.project_id);
+
+    const cmd = new Command(script);
 
     cmd.addArgument(op);
     cmd.addArgument(mode);
@@ -125,6 +152,29 @@ export class AscendCommandStrategy implements CommandStrategy {
     return joinCommands(sourceCannCmd, cdCmd, cmd.toString());
   }
 
+  buildUtTestCommand(params: CommandBuildParams): string {
+    const { config, sourceCannCmd, cdCmd, advance_cmd, operatorNames } = params;
+
+    let script = config.script || '';
+    // 替换 {soc_version} 为项目配置中的 soc_version
+    script = this.replaceSocVersion(script, config.project_id);
+
+    // 替换 {operatorNames} 为传入的算子名称
+    if (operatorNames) {
+      script = script.replace('{operatorNames}', operatorNames);
+    } else {
+      script = script.replace('{operatorNames}', '');
+    }
+
+    const cmd = new Command(script);
+
+    if (advance_cmd) {
+      cmd.addArgument(advance_cmd);
+    }
+
+    return joinCommands(sourceCannCmd, cdCmd, cmd.toString());
+  }
+
   buildSanitizerCommand(
     config: ConfigRecord,
     operator: OpRecord | null,
@@ -132,6 +182,10 @@ export class AscendCommandStrategy implements CommandStrategy {
     cdCmd: string,
     exampleTargetFile?: string
   ): string {
+    // 替换 {soc_version} 为项目配置中的 soc_version
+    let script = config.script || '';
+    script = this.replaceSocVersion(script, config.project_id);
+
     const mssanitizer = new Command('mssanitizer');
 
     // 添加目标文件

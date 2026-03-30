@@ -101,6 +101,11 @@ export interface CommandStrategy {
   buildOnBoardCommand(params: ProfilerCommandParams): string;
 
   /**
+   * 生成UT测试命令
+   */
+  buildUtTestCommand(params: CommandBuildParams): string;
+
+  /**
    * 获取运行命令的目标文件
    * @param config 当前配置
    * @param operator 算子信息

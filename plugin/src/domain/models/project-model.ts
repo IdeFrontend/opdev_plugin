@@ -27,6 +27,7 @@ export type ProjectRecord = {
   template_name?: string | null; // 模板名称: helloworld addn torch_library
   project_type?: string | null; // 算子工程类型：cann ascend pyasc
   ascend_env_script?: string | null;
+  soc_version?: string | null; // SOC版本
   create_by?: string | null;
   create_time?: string;
   update_by?: string | null;
@@ -75,6 +76,7 @@ export interface CreateProjectParams {
   template_name?: string,
   project_type?: string; // 算子工程类型
   ascend_env_script?: string;
+  soc_version?: string; // SOC版本
   create_by?: string;
   sub_project_ids?: number[]; // 多算子工程集合的子项目ID列表
   is_experimental?: boolean; // 是否为experimental算子
@@ -90,7 +92,12 @@ export async function updateShScript(data: CreateProjectParams) {
   const existing = store.projects.find((p) => p.project_path === data.project_path);
 
   if (existing) {
-    existing.ascend_env_script = data.ascend_env_script;
+    if (data.ascend_env_script) {
+      existing.ascend_env_script = data.ascend_env_script;
+    }
+    if (data.soc_version) {
+      existing.soc_version = data.soc_version;
+    }
     existing.update_time = new Date()
       .toISOString();
     writeStore(store);
@@ -114,6 +121,9 @@ export async function createProject(data: CreateProjectParams) {
     }
     if (data.template_name) {
       existing.template_name = data.template_name
+    }
+    if (data.soc_version) {
+      existing.soc_version = data.soc_version;
     }
     if (data.sub_project_ids) {
       existing.sub_project_ids = data.sub_project_ids;
@@ -150,6 +160,7 @@ export async function createProject(data: CreateProjectParams) {
     template_name: data.template_name || null,
     project_type: data.project_type || null,
     ascend_env_script: data.ascend_env_script || null,
+    soc_version: data.soc_version || null,
     create_by: data.create_by || null,
     create_time: now,
     update_by: null,

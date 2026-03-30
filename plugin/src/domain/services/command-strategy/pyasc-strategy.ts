@@ -156,4 +156,9 @@ export class PyAscCommandStrategy implements CommandStrategy {
     const buildOpConfig = buildOpConfigs.length > 0 ? buildOpConfigs[0] : null;
     return buildOpConfig?.target_file || '';
   }
+
+  buildUtTestCommand(params: CommandBuildParams): string {
+    // PyAsc 类型不支持 buildUtTestCommand
+    throw new Error('PyAsc 类型不支持 buildUtTestCommand 操作');
+  }
 }

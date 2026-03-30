@@ -10,8 +10,8 @@ import {
 } from 'vue';
 import {
   checkPathExists,
-  getProjectSH,
-  saveProjectSH,
+  getProjectEnv,
+  saveProjectEnv,
   remotePathSearch,
 } from '@web/apis';
 import { selectFile } from '@web/apis/performance-run-data';
@@ -21,6 +21,13 @@ import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 
 // 从父组件注入主题状态
 const actualTheme = inject('actualTheme', computed(() => 'dark'));
+
+const props = defineProps({
+  isStandardCustom: {
+    type: Boolean,
+    default: false,
+  },
+});
 
 const formRef = ref<AntdVForm | null>(null);
 const autoCompleteContainer = ref<HTMLElement | null>(null);
@@ -36,7 +43,7 @@ const getPopupContainer = (triggerNode: HTMLElement): HTMLElement => {
 };
 
 // 表单数据
-const formData = reactive({ projectSH: '/etc/profile' });
+const formData = reactive({ projectSH: '/etc/profile', socVersion: '' });
 
 // 表单校验规则
 const formRules = {
@@ -126,7 +133,10 @@ const handleSubmit = async () => {
   submitting.value = true;
 
   try {
-    await saveProjectSH({ ascendEnvScript: formData.projectSH });
+    await saveProjectEnv({ 
+      ascendEnvScript: formData.projectSH, 
+      socVersion: formData.socVersion 
+    });
     // 发送消息给 iframe
     window.postMessage(
       {
@@ -147,13 +157,15 @@ const handleSubmit = async () => {
 
 onMounted(async () => {
   try {
-    const result = await getProjectSH();
-    // result 本身就是 string 类型
-    const projectSH = result || '';
+    const result = await getProjectEnv();
+    const projectSH = result?.ascendEnvScript || '';
+    const socVersion = result?.socVersion || '';
 
     console.log('projectSH', projectSH);
+    console.log('socVersion', socVersion);
 
     formData.projectSH = projectSH;
+    formData.socVersion = socVersion;
     // 发送消息给 iframe
     window.postMessage(
       {
@@ -164,7 +176,7 @@ onMounted(async () => {
     );
   }
   catch (error) {
-    console.error('获取项目SH失败:', error);
+    console.error('获取项目环境配置失败:', error);
   }
 });
 </script>
@@ -207,6 +219,26 @@ onMounted(async () => {
             @focus="handleSelectFile"
           />
         </div>
+      </a-form-item>
+      <a-form-item
+        v-if="props.isStandardCustom"
+        name="socVersion"
+        class="[&_.ant-form-item-label_label]:flex [&_.ant-form-item-label_label]:items-center [&_.ant-form-item-label_label]:gap-1"
+      >
+        <template #label>
+          <span>SOC版本</span>
+          <a-tooltip
+            title="项目的SOC版本配置，常用soc版本：ascend10b, ascend950等"
+          >
+            <QuestionCircleOutlined
+              class="cursor-help text-sm"
+            />
+          </a-tooltip>
+        </template>
+        <a-input
+          v-model:value="formData.socVersion"
+          placeholder="请输入SOC版本"
+        />
       </a-form-item>
       <a-form-item>
         <a-button

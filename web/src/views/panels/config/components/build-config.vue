@@ -34,6 +34,10 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  utTestConfigForme: {
+    type: Object,
+    default: () => ({}),
+  },
   exampleConfigId: {
     type: String,
     default: '',
@@ -62,6 +66,7 @@ const emit = defineEmits([
 
 const localBuildConfigForme = ref({});
 const localExampleConfigForme = ref({});
+const utTestOptions = ref({ user_options: { script: '' } });
 
 watch(
   () => props.buildConfigForme,
@@ -123,6 +128,27 @@ const getSaveData = () => {
   return JSON.parse(JSON.stringify(data));
 };
 
+const fetchUtTestConfig = async () => {
+  try {
+    const configObj = await getConfigData();
+    const keys = Object.keys(configObj || {})
+    const configData = configObj[keys[0]] || []
+    const utTestConfig = configData.find(v => v.config_type === 'ut_test')
+    if (utTestConfig) {
+      utTestOptions.value = JSON.parse(JSON.stringify(utTestConfig));
+    }
+  }
+  catch (error) {
+    console.error('[fetchUtTestConfig]获取UT测试配置失败: ', error);
+  }
+};
+const handleUtTestScriptChange = async () => {
+  await saveConfig({
+    type: 'ut_test',
+    data: [utTestOptions.value],
+  });
+};
+
 const sanitizerScript = ref('')
 
 const handSanitizerConfigChange = () => {
@@ -138,6 +164,7 @@ onBeforeMount(async () => {
 
   fetchOnBoardConfig()
   fetchSimulateConfig()
+  fetchUtTestConfig()
 
   // 获取当前项目类型
   try {
@@ -314,6 +341,17 @@ const showPowerScript = computed(() => {
           v-model:value="localBuildConfigForme.cpu_debug_script"
           placeholder="请输入CPU调试编译命令行"
           @change="handleBuildConfigChange"
+        />
+      </a-form-item>
+      <a-form-item
+        v-if="isStandardCustom"
+        label="UT Test调试编译命令行"
+        name="ut_test_script"
+      >
+        <a-input
+          v-model:value="utTestOptions.user_options.script"
+          placeholder="请输入UT Test调试编译命令行"
+          @change="handleUtTestScriptChange"
         />
       </a-form-item>
       <a-form-item

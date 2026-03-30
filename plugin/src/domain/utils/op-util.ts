@@ -83,14 +83,9 @@ function getDefaultTarget(opRunPath: string, op: Op) {
   let targetOpFile: string;
   let targetExampleFile: string;
 
-  // 已知部分run包名称
-  const runPackageMap = {
-    'ops-math': `cann-${op.op_name}-custom_linux-${architecture}.run`,
-    'ops-transformer': `cann-${op.op_name}-custom_linux-${architecture}.run`,
-    'ops-nn': `cann-${op.op_name}-custom-linux.${architecture}.run`,
-    'ops-cv': `cann-${op.op_name}-custom-linux.${architecture}.run`
-  }
-  const runPackageName = runPackageMap[op.op_name]
+  // 使用*.run作为runPackageName
+  const runPackageName = '*.run';
+
   if (op.op_type === 'ascend') {
     targetOpFile = path.join(
       opRunPath,

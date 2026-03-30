@@ -275,6 +275,40 @@ export function getSanitizerCommand(
   }
 }
 
+/**
+ * 生成UT测试命令
+ *
+ * @param config_id 配置ID
+ * @param operatorNames 算子名称，多个用逗号分隔（用于标准自定义算子等场景）
+ * @returns 完整的shell执行命令字符串
+ */
+export function getUtTestCommand(
+  config_id: number,
+  operatorNames?: string,
+) {
+  try {
+    const baseContext = getBaseContext(config_id);
+    const strategy = CommandStrategyFactory.getStrategy(baseContext.operator?.op_type);
+
+    const context = strategy.buildCommandContext(baseContext);
+
+    const userOptions = context.config.user_options as Record<string, unknown> | null | undefined;
+    const advance_cmd = getAdvanceCmd(userOptions?.advance_param);
+
+    return strategy.buildUtTestCommand({
+      config: context.config,
+      operator: context.operator,
+      sourceCannCmd: context.sourceCannCmd,
+      cdCmd: context.cdCmd,
+      advance_cmd,
+      operatorNames,
+    });
+  }
+  catch (e: unknown) {
+    throw new Error(`生成UT测试命令失败:${(e as Error).message}`);
+  }
+}
+
 // 导出策略相关类型和工厂，以便外部注册新策略
 export { CommandStrategyFactory } from './command-strategy';
 

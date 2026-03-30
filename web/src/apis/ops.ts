@@ -163,6 +163,15 @@ export function startDumpTensor(params: { operatorNames?: string, compileOption?
   );
 }
 
+/** 执行UT测试 */
+export function startUtTest(params: { operatorNames?: string } = {}) {
+  return request.post<{ operatorNames?: string }, void>(
+    'ops/startUtTest',
+    params,
+    { timeout: Number.POSITIVE_INFINITY }, // 运行可能耗时很长，设置无超时限制
+  );
+}
+
 /** 更新脚本文件 */
 export function updateShScript(params: UpdateShScriptParams) {
   return request.post<UpdateShScriptParams, string>(
@@ -248,5 +257,15 @@ export function getSelectedOperatorIds() {
 /** 获取已选择的算子名称列表 */
 export function getSelectedOperators() {
   return request.post<undefined, string | undefined>('ops/getSelectedOperators', undefined);
+}
+
+/** 获取项目环境配置 */
+export function getProjectEnv() {
+  return request.post<undefined, { ascendEnvScript: string; socVersion: string }>('ops/getProjectEnv');
+}
+
+/** 保存项目环境配置 */
+export function saveProjectEnv(params: { ascendEnvScript: string; socVersion: string }) {
+  return request.post<{ ascendEnvScript: string; socVersion: string }, void>('ops/saveProjectEnv', params);
 }
 

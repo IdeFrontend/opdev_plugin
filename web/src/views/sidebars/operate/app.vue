@@ -28,7 +28,8 @@ import {
   getSelectedOperatorIds,
   getCurrentTaskName,
   showConfirmDialog,
-  startDumpTensor
+  startDumpTensor,
+  startUtTest
 } from '@web/apis';
 import { SettingOutlined, CheckOutlined, QuestionCircleOutlined, DeleteOutlined } from '@ant-design/icons-vue';
 
@@ -157,7 +158,8 @@ const mutuallyExclusiveKeys = [
   'simulation',
   'buildAndCpuDebug',
   'buildAndDebug',
-  'dumpTensor'
+  'dumpTensor',
+  'utTest'
 ];
 
 // 基础菜单配置（不包含调试菜单）
@@ -240,6 +242,19 @@ const baseMenuItems = [
       },
     ],
   },
+  // UT测试菜单
+  {
+    key: 'utTest',
+    label: 'UT测试',
+    icon: checkIcon,
+    handler: async () => {
+      const { operatorNames } = getOperatorParams();
+      // 构建UT测试命令：bash build.sh --soc={soc_version} --ops={operatorNames} -u
+      await startUtTest({
+        operatorNames
+      });
+    },
+  },
   // 需要时开启
   {
     key: 'dumpTensor',
@@ -301,14 +316,23 @@ const menuItems = computed(() => {
       item.key !== 'build' &&
       item.key !== 'sanitizer' &&
       item.key !== 'runDebug' && 
-      item.key !== 'dumpTensor'
+      item.key !== 'dumpTensor' &&
+      item.key !== 'utTest'
     );
   }
 
   // 根目录为标准自定义算子且 build.sh 不含 --bisheng_flags：隐藏性能调优
-  const filtered = isStandardCustom.value && !supportsSanitizerAndTuning.value
+  let filtered = isStandardCustom.value && !supportsSanitizerAndTuning.value
     ? items.filter(item => item.key !== 'power' && item.key !== 'runDebug')
     : items;
+
+  // 过滤菜单项：UT测试只在标准自定义算子中显示
+  filtered = filtered.filter(item => {
+    if (item.key === 'utTest') {
+      return isStandardCustom.value;
+    }
+    return true;
+  });
 
   // 过滤菜单项：buildExample 只在标准自定义算子中显示
   return filtered.map(item => {

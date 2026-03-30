@@ -40,6 +40,7 @@ const exampleConfigId = ref('');
 
 const simulateConfigData = ref({});
 const onBoardConfigData = ref({});
+const utTestConfigData = ref({});
 const isStandardCustom = ref(false);
 
 const init = (obj) => {
@@ -91,6 +92,9 @@ const init = (obj) => {
 
   // 上板表单参数
   onBoardConfigData.value = ConfigData[props.activeConfig].find((v) => v.config_type === 'on_board');
+
+  // UT Test表单参数
+  utTestConfigData.value = ConfigData[props.activeConfig].find((v) => v.config_type === 'ut_test');
 };
 
 const addBuildTableItem = () => {
@@ -167,6 +171,7 @@ watch(
       v-model:build-config-forme="buildConfigForme"
       v-model:example-config-forme="exampleConfigForme"
       :example-config-id="exampleConfigId"
+      :ut-test-config-forme="utTestConfigForme"
       :build-config-id="buildConfigId"
       :active-config="activeConfig"
       :is-standard-custom="isStandardCustom"
@@ -181,7 +186,7 @@ watch(
       v-if="props.activeOption === 'opprof'"
       ref="opprofRef"
     />
-    <envConfig v-if="props.activeOption === 'env'" />
+    <envConfig v-if="props.activeOption === 'env'" :is-standard-custom="isStandardCustom" />
   </div>
 </template>
 

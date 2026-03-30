@@ -4,6 +4,8 @@ import * as fs from 'fs';
 import { CommandExecutor } from '@plugin/class/command-options';
 import { ExplorerRootUtils } from '@plugin/class/explorer-root-utils';
 import { createProject } from '@plugin/domain';
+import { getProjectByPath } from '@plugin/domain/models/project-model';
+import { soc_version } from '@plugin/domain/utils/ascend-util';
 
 /**
  * 项目管理器
@@ -125,13 +127,20 @@ export class ProjectManager {
       return this._projectId;
     }
 
-    const ascend_env_script = params.ascendEnvScript || undefined;
+    // 检查是否存在现有项目
+    const existingProject = getProjectByPath(this._projectPath);
+    
+    // 优先使用现有项目的配置，然后是参数传入的值，最后是默认值
+    const ascend_env_script = params.ascendEnvScript || existingProject?.ascend_env_script || undefined;
+    const project_soc_version = existingProject?.soc_version || soc_version;
+    
     const projectRes = await createProject({
       project_name: this._projectName ?? '',
       project_path: this._projectPath,
       ascend_env_script,
       template_name: params.templateName,
-      project_type: params.projectType
+      project_type: params.projectType,
+      soc_version: project_soc_version
     });
 
     this._projectId = String(projectRes);
