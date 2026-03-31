@@ -735,7 +735,7 @@ export class FolderContextMenuService {
     }
     const workspaceRootPath = workspaceFolders[0].uri.fsPath;
 
-    // 判断当前选中的是文件夹还是文件
+    // Determine whether the currently selected folder or file is
     let isFolder = false;
     let isPyFile = false;
     try {
@@ -1154,14 +1154,14 @@ export class FolderContextMenuService {
     }
 
     await this.switchToProject(uri, async () => {
-      // 打开仿真分析配置，与看板逻辑保持一致
+      // Open the simulation analysis configuration and keep it consistent with the Kanban logic
       const simulationCommand = 'huawei-op-devtools.simulatorOptions';
       await vscode.commands.executeCommand(simulationCommand);
     });
   }
 
   /**
-   * 切换到指定项目并执行操作
+   * Switch to the specified project and perform the operation
    */
   private static async switchToProject(
     uri: vscode.Uri,
@@ -1176,13 +1176,13 @@ export class FolderContextMenuService {
     }
 
     try {
-      // 设置 ProjectManager 的项目信息
+      // Set project information for ProjectManager
       const pm = ProjectManager.getInstance();
       pm['_projectId'] = String(project.id);
       pm['_projectName'] = project.project_name;
       pm['_projectPath'] = project.project_path;
 
-      // 执行操作
+      // perform operations
       await action();
     } catch (error) {
       vscode.window.showErrorMessage(
@@ -1192,7 +1192,7 @@ export class FolderContextMenuService {
   }
 
   /**
-   * 检查文件夹是否为算子工程
+   * Check whether the folder is an operator project
    */
   static async checkIsOperatorProject(uri: vscode.Uri): Promise<{
     isOperatorProject: boolean;
@@ -1217,10 +1217,10 @@ export class FolderContextMenuService {
   }
 
   /**
-   * 初始化算子工程配置
-   * @param detection 算子工程检测结果
-   * @param projectId 项目ID
-   * @param skipVscodeFiles 是否跳过创建 .vscode 和 .arts 文件（默认 false）
+   * Initialization operator project configuration
+   * @param detection operator engineering detection result
+   * @param projectId project ID
+   * @param skipVscodeFiles Whether to skip creating .vscode and .arts files (default false)
    */
   private static async initializeOperatorProject(
     detection: OperatorProjectDetectionResult,
@@ -1239,7 +1239,7 @@ export class FolderContextMenuService {
         return;
       }
 
-      // 根据算子工程类型确定模板名称和类型
+      // Determine the template name and type based on the operator project type
       let templateName: string | undefined;
       let opType: string = 'ascend';
 
@@ -1253,21 +1253,21 @@ export class FolderContextMenuService {
           opType = 'ascend';
           break;
         case OperatorProjectType.PYASC:
-          // pyasc算子工程，使用 pyasc_temple 模板
+          // pyasc operator project, using pyasc_temple template
           templateName = 'pyasc_temple';
           opType = 'pyasc';
-          console.log(`[FolderContextMenuService] PYASC类型，使用 pyasc_temple 模板`);
+          console.log(`[FolderContextMenuService] PYASC type, using pyasc_temple template`);
           break;
         case OperatorProjectType.STANDARD_CUSTOM:
           opType = 'cann';
-          // 标准自定义算子不需要模板
+          // Standard custom operators do not require templates
           break;
         default:
           return;
       }
 
-      // 调用 generateStructure 初始化配置
-      // 对于标准自定义算子，如果没有模板，跳过模板解压，只创建配置
+      // Call generateStructure to initialize the configuration
+      // For standard custom operators, if there is no template, template decompression is skipped and only the configuration is created.
       const isSkipUnZip = detection.projectType === OperatorProjectType.STANDARD_CUSTOM && !templateName;
       await generateStructure(
         {
@@ -1276,23 +1276,23 @@ export class FolderContextMenuService {
           op_name: detection.projectName,
           template_name: templateName,
           op_path: detection.projectPath,
-          skipExisting: true, // 不覆盖已有文件
+          skipExisting: true, // Do not overwrite existing files
         } as any,
         context.extensionPath,
-        isSkipUnZip, // 标准自定义算子且无模板时，跳过模板解压
-        skipVscodeFiles, // 是否跳过创建 .vscode 和 .arts 文件
+        isSkipUnZip, // When a standard custom operator is used and there is no template, template decompression is skipped.
+        skipVscodeFiles, // Whether to skip creating .vscode and .arts files
       );
 
-      // 验证配置是否创建成功
+      // Verify that the configuration is created successfully
       const ops = getOpsByProjectId(projectId);
       const buildOpConfigs = getConfig(projectId, 'build_op');
     } catch (error) {
-      // 初始化失败不应该阻止标记操作，只记录错误
+      // Initialization failures should not prevent marking operations, only log errors
     }
   }
 
   /**
-   * 规范化路径用于去重比较（统一分隔符、去除尾部斜杠、解析为绝对路径）
+   * Normalized paths are used for deduplication comparisons (unify delimiters, remove trailing slashes, resolve to absolute paths)
    */
   private static normalizePathForCompare(p: string): string {
     try {
@@ -1304,9 +1304,9 @@ export class FolderContextMenuService {
   }
 
   /**
-   * 将文件/文件夹添加到配置的fileMapList
-   * @param uri 文件或文件夹URI
-   * @param configType 配置类型：'sanitizer' | 'on_board' | 'simulate'
+   * Add files/folders to configured fileMapList
+   * @param uri file or folder URI
+   * @param configType Configuration type: 'sanitizer' | 'on_board' | 'simulate'
    */
   static async addReportToFileMapList(uri: vscode.Uri, configType: 'sanitizer' | 'on_board' | 'simulate'): Promise<void> {
     try {
@@ -1315,13 +1315,13 @@ export class FolderContextMenuService {
       const isFile = stat.type === vscode.FileType.File;
       const isDirectory = stat.type === vscode.FileType.Directory;
 
-      // 异常检测只支持文件
+      // Anomaly detection only supports files
       if (configType === 'sanitizer' && !isFile) {
         vscode.window.showErrorMessage(t('folderContext.sanitizerSelectFile'));
         return;
       }
 
-      // 上板分析和仿真分析支持文件夹
+      // On-board analysis and simulation analysis support folders
       if ((configType === 'on_board' || configType === 'simulate') && !isDirectory && !isFile) {
         vscode.window.showErrorMessage(t('folderContext.selectFileOrFolder'));
         return;
@@ -1334,7 +1334,7 @@ export class FolderContextMenuService {
         return;
       }
 
-      // 获取配置
+      // Get configuration
       const configs = getConfig(Number(projectId), configType);
       if (configs.length === 0) {
         vscode.window.showErrorMessage(t('folderContext.noConfigFound', {
@@ -1343,12 +1343,12 @@ export class FolderContextMenuService {
         return;
       }
 
-      // 使用第一个配置
+      // Use the first configuration
       const config = configs[0];
       const userOptions = (config.user_options as Record<string, unknown>) || {};
       let fileMapList = (userOptions.fileMapList as Array<{ filePath: string; reportTime: number }>) || [];
 
-      // 路径去重：按规范化路径比较（统一分隔符、大小写等），避免重复添加
+      // Path deduplication: Compare according to standardized paths (unify separators, capitalization, etc.) to avoid repeated additions
       const normalizedNewPath = this.normalizePathForCompare(filePath);
       const exists = fileMapList.some(
         item => this.normalizePathForCompare(item.filePath) === normalizedNewPath,
@@ -1358,7 +1358,7 @@ export class FolderContextMenuService {
         return;
       }
 
-      // 去重现有列表中的重复路径后添加新项
+      // Add new items after removing duplicate paths in existing list
       const seen = new Set<string>();
       fileMapList = fileMapList.filter(item => {
         const norm = this.normalizePathForCompare(item.filePath);
@@ -1367,14 +1367,14 @@ export class FolderContextMenuService {
         return true;
       });
 
-      // 添加新的文件映射
+      // Add new file mapping
       const newFileMap = {
         filePath,
         reportTime: Date.now(),
       };
       fileMapList.push(newFileMap);
 
-      // 更新配置
+      // Update configuration
       const updatedUserOptions = {
         ...userOptions,
         fileMapList,
@@ -1388,20 +1388,20 @@ export class FolderContextMenuService {
 
       vscode.window.showInformationMessage(t('folderContext.addedToReportList'));
 
-      // 刷新对应的面板
+      // Refresh the corresponding panel
       try {
         if (configType === 'sanitizer') {
-          // 刷新异常检测面板
+          // Refresh the anomaly detection panel
           await vscode.commands.executeCommand(COMMAND_FLASH_MS_SANITIZER_RUN_DATA);
         }
         else if (configType === 'on_board' || configType === 'simulate') {
-          // 刷新性能调优面板
+          // Refresh the performance tuning panel
           await vscode.commands.executeCommand(COMMAND_FLASH_PERFORMANCE_RUN_DATA);
         }
       }
       catch (refreshError) {
-        console.error('刷新面板失败:', refreshError);
-        // 不显示错误，因为配置已经成功添加
+        console.error('Failed to refresh panel:', refreshError);
+        // No error is displayed because the configuration has been added successfully
       }
     }
     catch (error) {

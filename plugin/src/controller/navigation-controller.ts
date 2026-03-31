@@ -1,34 +1,34 @@
 import * as vscode from 'vscode';
 
-// 存储已打开的配置页面webview
+// Store the opened configuration page webview
 const openedConfigPages = new Map<string, vscode.Webview>();
 
 /**
- * 注册配置页面
+ * Registration configuration page
  */
 export function registerConfigPage(pageType: string, webview: vscode.Webview) {
   openedConfigPages.set(pageType, webview);
 }
 
 /**
- * 注销配置页面
+ * Logout configuration page
  */
 export function unregisterConfigPage(pageType: string) {
   openedConfigPages.delete(pageType);
 }
 
 /**
- * 页面导航控制器
+ * Page navigation controller
  */
 export const navigationController = {
   /**
-   * 导航到指定标签页
-   * @param params 包含tab信息的参数
+   * Navigate to the specified tab
+   * @param params Parameters containing tab information
    */
   async navigateToTab(params: { tab: string }) {
-    // 向所有已注册的配置页面发送导航消息
+    // Send navigation messages to all registered configuration pages
     for (const [pageType, webview] of openedConfigPages.entries()) {
-      // 只向配置页面发送消息
+      // Only send messages to the configuration page
       if (pageType === 'config') {
         webview.postMessage({
           command: 'navigateToTab',

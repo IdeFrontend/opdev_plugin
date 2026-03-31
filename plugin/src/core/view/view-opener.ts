@@ -3,39 +3,39 @@ import * as vscode from 'vscode';
 
 import { InsightDataViewerPanel } from '@plugin/class/insight-data-viewer-panel';
 
-// 跟踪已打开的CSV文件目录
+// Track opened CSV file directories
 const openedCsvDirectories = new Map<string, vscode.Uri>();
 
 export class ViewOpener {
   /**
-   * 打开csv表格预览
-   * @param uri csv文件uri
+   * Open csv table preview
+   * @param uri csv file uri
    */
   public static async openCsvPreview(uri: vscode.Uri): Promise<void> {
     const targetDir = vscode.Uri.joinPath(
       uri,
       '../',
-    ).fsPath.toLocaleLowerCase(); // 使用小写进行比较，避免路径大小写问题
+    ).fsPath.toLocaleLowerCase(); // Use lowercase for comparisons to avoid path case issues
 
-    // 检查是否有相同目录的文件已经打开
+    // Check if a file in the same directory is already open
     const existingUri = openedCsvDirectories.get(targetDir);
 
-    // 先打开新文件（使用自定义编辑器），这样新文件会立即显示
-    // 使用 openWith 命令，VSCode 会自动处理，不会闪现源文件
+    // Open the new file first (using a custom editor) so the new file appears immediately
+    // Use the openWith command, VSCode will automatically handle it and will not flash the source file.
     await vscode.commands.executeCommand('vscode.openWith', uri, 'csvViewer');
 
-    // 如果相同目录的不同文件已打开，在新文件打开后关闭旧文件
-    // 这样新文件已经显示，关闭旧文件时不会闪现源文件
+    // If different files in the same directory are open, close the old file after the new file is opened
+    // This way the new file is already displayed and the source file will not flash when closing the old file.
     if (existingUri && existingUri.fsPath !== uri.fsPath) {
-      // 等待新文件完全打开
+      // Wait for the new file to fully open
       await new Promise((resolve) => setTimeout(resolve, 300));
 
-      // 尝试关闭旧文件
-      // 检查当前打开的文本编辑器，找到旧文件并关闭
+      // Try closing the old file
+      // Check the currently open text editor, find the old file and close it
 
       for (const editor of vscode.window.visibleTextEditors) {
         if (editor.document.uri.fsPath === existingUri.fsPath) {
-          // 切换到旧文件并关闭（此时新文件已经打开并显示，所以不会闪现）
+          // Switch to the old file and close it (the new file is already open and displayed at this point, so it won't flash)
           await vscode.window.showTextDocument(editor.document, { preview: false });
           await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
           break;
@@ -43,16 +43,16 @@ export class ViewOpener {
       }
     }
 
-    // 记录已打开的目录
+    // Record opened directories
     openedCsvDirectories.set(targetDir, uri);
   }
 
   /**
-   * 打开insight性能分析图
-   * @param uri bin文件uri
+   * Open the insight performance analysis graph
+   * @param uri bin file uri
    */
   public static async openInsight(uri: vscode.Uri): Promise<void> {
-    // 从消息中获取BIN文件路径
+    // Get BIN file path from message
     const binPath = uri.fsPath;
     const context = (
       globalThis as unknown as { extensionContext: vscode.ExtensionContext }

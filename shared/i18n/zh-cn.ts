@@ -51,6 +51,7 @@ export default {
   'extension.rightClickFolderOrFile': '请右键点击文件夹或文件',
   'extension.rightClickFile': '请右键点击文件',
   'extension.openDevToolsFailed': '打开 Huawei OP DevTools 失败：{{error}}',
+  'extension.importDumpTensorBinFailed': '导入 DumpTensor .bin 文件失败',
 
   // folder-context-menu
   'folderContext.angleOpsNotSupported': '<<<>>>类型算子暂不支持该右键菜单操作',

@@ -8,8 +8,8 @@
 import * as vscode from 'vscode';
 
 /**
- * VSCode 插件永久性数据存储类
- * 使用 VSCode 的 ExtensionContext.globalState 实现数据持久化
+ * VSCode plug-in permanent data storage class
+ * Use VSCode’s ExtensionContext.globalState to achieve data persistence
  */
 export class PermanentStorage {
   private static instance: PermanentStorage;
@@ -28,18 +28,18 @@ export class PermanentStorage {
   }
 
   /**
-   * 存储数据
-   * @param key 存储键名
-   * @param value 存储的值（支持任何可序列化的数据）
+   * Store data
+   * @param key storage key name
+   * @param value stored value (supports any serializable data)
    */
   async set<T>(key: string, value: T): Promise<void> {
     await this.context.globalState.update(key, value);
   }
 
   /**
-   * 获取数据
-   * @param key 要获取的键名
-   * @returns 存储的值或默认值
+   * Get data
+   * @param key The key name to be obtained
+   * @returns stored value or default value
    */
   get<T>(key: string): T | undefined;
   get<T>(key: string, defaultValue: T): T;
@@ -48,33 +48,33 @@ export class PermanentStorage {
   }
 
   /**
-   * 检查键是否存在
-   * @param key 要检查的键名
-   * @returns 是否存在
+   * Check if key exists
+   * @param key The key name to check
+   * @returns exists
    */
   has(key: string): boolean {
     return this.context.globalState.get(key) !== undefined;
   }
 
   /**
-   * 删除指定键值对
-   * @param key 要删除的键名
+   * Delete the specified key-value pair
+   * @param key The key name to be deleted
    */
   async delete(key: string): Promise<void> {
     await this.context.globalState.update(key, undefined);
   }
 
   /**
-   * 获取所有存储的键
-   * @returns 所有键的数组
+   * Get all stored keys
+   * @returns array of all keys
    */
   keys(): readonly string[] {
-    // 注意：globalState.keys() 返回的是当前扩展的所有状态键
+    // Note: globalState.keys() returns all state keys of the current expansion
     return this.context.globalState.keys();
   }
 
   /**
-   * 清空所有存储的数据
+   * Clear all stored data
    */
   async clear(): Promise<void> {
     const allKeys = this.keys();
@@ -85,8 +85,8 @@ export class PermanentStorage {
   }
 
   /**
-   * 获取整个存储对象（用于调试或备份）
-   * @returns 包含所有键值对的对象
+   * Get the entire storage object (for debugging or backup)
+   * @returns an object containing all key-value pairs
    */
   getAll(): { [key: string]: any } {
     const result: { [key: string]: any } = {};
@@ -100,8 +100,8 @@ export class PermanentStorage {
   }
 
   /**
-   * 批量设置多个键值对
-   * @param items 键值对对象
+   * Set multiple key-value pairs in batches
+   * @param items key-value pair object
    */
   async setMultiple(items: { [key: string]: any }): Promise<void> {
     for (const [
@@ -113,9 +113,9 @@ export class PermanentStorage {
   }
 
   /**
-   * 批量获取多个键的值
-   * @param keys 要获取的键名数组
-   * @returns 对应的值对象
+   * Get the values ​​of multiple keys in batches
+   * @param keys The array of key names to be obtained
+   * @returns corresponding value object
    */
   getMultiple(keys: string[]): { [key: string]: any } {
     const result: { [key: string]: any } = {};

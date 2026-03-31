@@ -39,7 +39,7 @@ export class PerformanceRunData {
     const [performanceConfig] = getConfig(project.projectId, 'build_op');
 
     if (!performanceConfig) {
-      // 如果项目没有 build_op 配置（例如非插件创建的项目），不进行任何处理
+      // If the project does not have a build_op configuration (such as a project created by a non-plugin), no processing will be done
       return;
     }
 
@@ -55,7 +55,7 @@ export class PerformanceRunData {
   }
 
   /**
-   * 读取性能调优执行记录
+   * Read performance tuning execution records
    */
   public async queryExecutionRecords(
     sortBy: 'timestamp',
@@ -69,7 +69,7 @@ export class PerformanceRunData {
   }
 
   /**
-   * 标记
+   * mark
    */
   public markRecord(key: string): void {
     const keySet = this.queryMarkedRecordKeySet();
@@ -80,7 +80,7 @@ export class PerformanceRunData {
   }
 
   /**
-   * 取消标记
+   * Unmark
    */
   public unmarkRecord(key: string): void {
     const keySet = this.queryMarkedRecordKeySet();
@@ -91,7 +91,7 @@ export class PerformanceRunData {
   }
 
   /**
-   * 查询已有标记
+   * Query existing tags
    */
   private queryMarkedRecordKeySet(): Set<string> {
     const storageValue = PermanentStorage.getInstance()
@@ -115,7 +115,7 @@ export class PerformanceRunData {
       return runData;
     }
 
-    // 读取目录下的执行记录
+    // Read the execution record in the directory
     const executionEntries = await vscode.workspace.fs.readDirectory(this.rootUri);
 
     for (const [
@@ -140,11 +140,11 @@ export class PerformanceRunData {
       runData.push(executionRecord);
     }
 
-    // 读取配置中的fileMapList
+    // Read fileMapList in configuration
     const simulateConfigs = getConfig(project.projectId, 'simulate');
     const onBoardConfigs = getConfig(project.projectId, 'on_board');
 
-    // 处理仿真配置的fileMapList
+    // FileMapList that handles simulation configuration
     for (const config of simulateConfigs) {
       const userOptions = config.user_options as Record<string, unknown> | null;
       if (userOptions && Array.isArray(userOptions.fileMapList)) {
@@ -168,7 +168,7 @@ export class PerformanceRunData {
       }
     }
 
-    // 处理上板配置的fileMapList
+    // Process fileMapList configured on the board
     for (const config of onBoardConfigs) {
       const userOptions = config.user_options as Record<string, unknown> | null;
       if (userOptions && Array.isArray(userOptions.fileMapList)) {
@@ -219,7 +219,7 @@ export class PerformanceRunData {
         const fileType = path.extname(subPath)
           .replace(/^\./, '');
 
-        // 仅显示以下后缀的文件
+        // Show only files with the following suffixes
         if ([
           'csv',
           'bin',

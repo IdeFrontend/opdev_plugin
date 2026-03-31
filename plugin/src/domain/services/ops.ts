@@ -14,7 +14,7 @@ interface GenerateStructureParams {
   ascend_env_script?: string;
   examples?: string;
   create_by?: string;
-  /** 暂未启用 */
+  /** Not enabled yet */
   ops_prototype_file?: string;
   template_name?: string;
 }

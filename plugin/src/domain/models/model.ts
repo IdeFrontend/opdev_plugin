@@ -98,9 +98,9 @@ export function getOpByProjectIdAndOpName(
 }
 
 /**
- * 获取项目下的所有算子
- * @param project_id 项目ID
- * @returns 算子列表
+ * Get all operators under the project
+ * @param project_id project ID
+ * @returns operator list
  */
 export function getOpsByProjectId(project_id: number): OpRecord[] {
   const store = ensureStore();
@@ -117,11 +117,11 @@ export async function generateStructure(
   const project = projectModel.getProjectById(data.project_id as number);
 
   if (!project) {
-    console.error('项目未找到，project_id:', data.project_id);
+    console.error('Project not found, project_id:', data.project_id);
     throw Object.assign(new Error('project not found'), { name: 'InvalidRequest' });
   }
 
-  console.log('generateStructure: 项目信息', {
+  console.log('generateStructure: project info', {
     project_id: project.id,
     project_name: project.project_name,
     project_path: project.project_path,
@@ -140,32 +140,32 @@ export async function generateStructure(
     skipExisting: (data as { skipExisting?: boolean }).skipExisting ?? false,
   } as unknown;
 
-  // 确保在算子工程目录创建 devtool_config.json
-  // project.project_path 是算子工程完整路径（如 /path/to/project/operator_name）
-  // op_path 也是算子工程路径，应该在这里创建 .vscode 目录
+  // Make sure to create devtool_config.json in the operator project directory
+  // project.project_path is the full path of the operator project (such as /path/to/project/operator_name)
+  // op_path is also the operator project path, the .vscode directory should be created here
   const opPath = (params as { op_path: string }).op_path ?? project.project_path;
 
-  console.log('generateStructure: 准备创建配置文件');
-  console.log('generateStructure: 算子工程路径 (op_path):', opPath);
+  console.log('generateStructure: preparing to create config files');
+  console.log('generateStructure: operator project path (op_path):', opPath);
   console.log('generateStructure: project.project_path:', project.project_path);
   console.log('generateStructure: create_by:', data.create_by);
   console.log('generateStructure: skipVscodeFiles:', skipVscodeFiles);
 
-  // 如果 skipVscodeFiles 为 true，跳过创建 .vscode 和 .arts 文件
+  // If skipVscodeFiles is true, skip creating .vscode and .arts files
   if (!skipVscodeFiles) {
     try {
       await ensureLaunchJsonExists(
         opPath,
         data.create_by,
       );
-      console.log('generateStructure: 配置文件创建完成');
+      console.log('generateStructure: config files created');
     }
     catch (error) {
-      console.error('generateStructure: 配置文件创建失败:', error);
-      // 配置文件创建失败不应该阻止算子创建，只记录错误
+      console.error('generateStructure: failed to create config files:', error);
+      // Configuration file creation failure should not prevent operator creation, only log errors
     }
   } else {
-    console.log('generateStructure: 跳过创建 .vscode 和 .arts 文件');
+    console.log('generateStructure: skipped creating .vscode and .arts files');
   }
 
   // 3) get generator and parse meta
@@ -246,7 +246,7 @@ export async function generateStructure(
 
   try {
     if (project) {
-      console.log('generateStructure: 开始获取默认路径, record:', {
+      console.log('generateStructure: starting to get default path, record:', {
         op_name: record.op_name,
         op_type: record.op_type,
         op_path: record.op_path,
@@ -258,7 +258,7 @@ export async function generateStructure(
         targetOpFile,
         targetExampleFile,
       } = getDefaultPath(record);
-      console.log('generateStructure: 默认路径获取成功:', {
+      console.log('generateStructure: default path obtained successfully:', {
         opScriptPath,
         exampleScriptPath,
         targetDir,
@@ -271,8 +271,8 @@ export async function generateStructure(
       const scripts = OperatorPluginRegistry.getOpPlugin(record.op_type)
         .getInitialConfigScripts(record, workspaceRoot);
 
-      // Build: 创建 build_op 和 build_example 两种配置
-      // 如果是 torch_library_template 类型，设置 target_file 为 python ../run.py
+      // Build: Create two configurations build_op and build_example
+      // If it is torch_library_template type, set target_file to python ../run.py
       const targetFile = record.template_name === 'torch_library_template'
         ? 'python ../run.py'
         : targetOpFile;
@@ -300,7 +300,7 @@ export async function generateStructure(
         },
       };
 
-      // UT测试: 创建一个基础 ut_test 配置
+      // UT test: create a basic ut_test config
       const utTestCfg = {
         project_id: project.id,
         user_options: {
@@ -314,25 +314,25 @@ export async function generateStructure(
         },
       };
 
-      console.log('generateStructure: 开始创建 build_op 配置');
-      console.log('generateStructure: build_op 配置数据:', JSON.stringify(buildOp, null, 2));
+      console.log('generateStructure: start creating build_op config');
+      console.log('generateStructure: build_op config data:', JSON.stringify(buildOp, null, 2));
       const buildOpResult = await configModel.postConfig('build_op', [buildOp]);
 
-      console.log('generateStructure: build_op 配置创建结果:', JSON.stringify(buildOpResult, null, 2));
+      console.log('generateStructure: build_op config creation result:', JSON.stringify(buildOpResult, null, 2));
 
-      console.log('generateStructure: 开始创建 build_example 配置');
-      console.log('generateStructure: build_example 配置数据:', JSON.stringify(buildExample, null, 2));
+      console.log('generateStructure: start creating build_example config');
+      console.log('generateStructure: build_example config data:', JSON.stringify(buildExample, null, 2));
       const buildExampleResult = await configModel.postConfig('build_example', [buildExample]);
 
-      console.log('generateStructure: build_example 配置创建结果:', JSON.stringify(buildExampleResult, null, 2));
+      console.log('generateStructure: build_example config creation result:', JSON.stringify(buildExampleResult, null, 2));
 
-      console.log('generateStructure: 开始创建 ut_test 配置');
-      console.log('generateStructure: ut_test 配置数据:', JSON.stringify(utTestCfg, null, 2));
+      console.log('generateStructure: start creating ut_test config');
+      console.log('generateStructure: ut_test config data:', JSON.stringify(utTestCfg, null, 2));
       const utTestResult = await configModel.postConfig('ut_test', [utTestCfg]);
 
-      console.log('generateStructure: ut_test 配置创建结果:', JSON.stringify(utTestResult, null, 2));
+      console.log('generateStructure: ut_test config creation result:', JSON.stringify(utTestResult, null, 2));
 
-      // Sanitizer: 创建一个基础 sanitizer 配置
+      // Sanitizer: Create a basic sanitizer configuration
       const sanitizerCfg = {
         project_id: project.id,
         user_options: {
@@ -360,49 +360,49 @@ export async function generateStructure(
         },
       };
 
-      console.log('generateStructure: 开始创建 sanitizer 配置');
-      console.log('generateStructure: sanitizer 配置数据:', JSON.stringify(sanitizerCfg, null, 2));
+      console.log('generateStructure: start creating sanitizer config');
+      console.log('generateStructure: sanitizer config data:', JSON.stringify(sanitizerCfg, null, 2));
       const sanitizerResult = await configModel.postConfig('sanitizer', [sanitizerCfg]);
 
-      console.log('generateStructure: sanitizer 配置创建结果:', JSON.stringify(sanitizerResult, null, 2));
+      console.log('generateStructure: sanitizer config creation result:', JSON.stringify(sanitizerResult, null, 2));
 
-      // Opprof: 创建 on_board 和 simulate 两种配置
+      // Opprof: Create two configurations: on_board and simulate
       const onBoard = {
         project_id: project.id,
         user_options: {
           op:          record.op_name,
           script:      scripts.onBoardScript,
           config_name: record.op_name,
-          // 内存分析图 相关
-          // 核间负载分析图
+          // Memory Analysis Chart Related
+          // Inter-core load analysis chart
           Occupancy: true,
-          // Roofline瓶颈分析
+          // Roofline bottleneck analysis
           Roofline: true,
 
-          // 算子代码热点图
+          // Operator code heat map
           Source: true,
-          // Cache热力图
+          // Cache heat map
           MemoryDetail: true,
 
-          // 算子性能数据文件 相关
-          // Cube及Vector类型指令耗时和占比
+          // Operator performance data file related
+          // Time consumption and proportion of Cube and Vector type instructions
           ArithmeticUtilization: true,
-          // L2 Cache命中率
+          // L2 Cache hit rate
           L2Cache: true,
-          // 内存读写带宽速率
+          // Memory read and write bandwidth rate
           Memory: true,
-          // L0读写带宽速率
+          // L0 read and write bandwidth rate
           MemoryL0: true,
-          // UB读写带宽速率
+          // UB read and write bandwidth rate
           MemoryUB: true,
-          // 算子基础信息
+          // Basic information about operators
           // BasicInfo: false,
-          // 计算单元和搬运单元耗时占比
+          // The proportion of time spent in computing units and handling units
           PipeUtilization: true,
-          // 资源冲突占比
+          // Proportion of resource conflicts
           ResourceConflictRatio: true,
 
-          // 使能Kernel侧制定代码段性能采集
+          // Enable code segment performance collection on the Kernel side
           KernelScale: false,
           downloadToLocal: true,
           renderInPlatform: false,
@@ -422,7 +422,7 @@ export async function generateStructure(
           PMSampling: true,
           downloadToLocal: true,
           renderInPlatform: false,
-          // 数据存放位置默认值
+          // Data storage location default value
           dataStoragePath: getDefaultDirectory(),
           simulatorType: 'Ascend910B3',
           enableDump: false,
@@ -431,27 +431,27 @@ export async function generateStructure(
         },
       };
 
-      console.log('generateStructure: 开始创建 on_board 配置');
-      console.log('generateStructure: on_board 配置数据:', JSON.stringify(onBoard, null, 2));
+      console.log('generateStructure: start creating on_board config');
+      console.log('generateStructure: on_board config data:', JSON.stringify(onBoard, null, 2));
       const onBoardResult = await configModel.postConfig('on_board', [onBoard]);
 
-      console.log('generateStructure: on_board 配置创建结果:', JSON.stringify(onBoardResult, null, 2));
+      console.log('generateStructure: on_board config creation result:', JSON.stringify(onBoardResult, null, 2));
 
-      console.log('generateStructure: 开始创建 simulate 配置');
-      console.log('generateStructure: simulate 配置数据:', JSON.stringify(simulate, null, 2));
+      console.log('generateStructure: start creating simulate config');
+      console.log('generateStructure: simulate config data:', JSON.stringify(simulate, null, 2));
       const simulateResult = await configModel.postConfig('simulate', [simulate]);
 
-      console.log('generateStructure: simulate 配置创建结果:', JSON.stringify(simulateResult, null, 2));
+      console.log('generateStructure: simulate config creation result:', JSON.stringify(simulateResult, null, 2));
     }
   }
   catch (e) {
-    // 忽略配置创建错误，但打印日志以便调试
+    // Ignore configuration creation errors but print logs for debugging
     console.error('generateStructure: failed to create default configs', e);
     if (e instanceof Error) {
-      console.error('generateStructure: 错误详情:', e.message);
-      console.error('generateStructure: 错误堆栈:', e.stack);
+      console.error('generateStructure: error details:', e.message);
+      console.error('generateStructure: error stack:', e.stack);
     }
-    // 不抛出错误，让算子记录能够创建成功
+    // Do not throw an error and allow the operator record to be created successfully.
   }
 
   return nextId;

@@ -8,7 +8,7 @@ import {
 
 export const sanitizerViewMethods = {
   /**
-   * 获取 Sanitizer 配置列表 (ops/getSanitizerConfigs)
+   * Get a list of Sanitizer configurations (ops/getSanitizerConfigs)
    */
   async getSanitizerConfigs() {
     await ProjectManager.getInstance()
@@ -18,8 +18,8 @@ export const sanitizerViewMethods = {
   },
 
   /**
-   * 获取 Sanitizer 配置ID
-   * @returns Sanitizer 配置ID
+   * Get Sanitizer configuration ID
+   * @returns Sanitizer configuration ID
    */
   async getSanitizerConfigId(): Promise<number | undefined> {
     await ProjectManager.getInstance()
@@ -30,8 +30,8 @@ export const sanitizerViewMethods = {
   },
 
   /**
-   * 获取 Sanitizer 配置
-   * @returns Sanitizer 配置对象
+   * Get Sanitizer configuration
+   * @returns Sanitizer configuration object
    */
   async getSanitizerForm(): Promise<GetSanitizerFormResult> {
     await ProjectManager.getInstance()
@@ -42,9 +42,9 @@ export const sanitizerViewMethods = {
   },
 
   /**
-   * 保存 Sanitizer 配置
-   * @param params 保存参数
-   * @returns 更新后的 Sanitizer 配置对象
+   * Save Sanitizer configuration
+   * @param params save parameters
+   * @returns updated Sanitizer configuration object
    */
   async saveSanitizerForm(params: SaveSanitizerFormParams): Promise<GetSanitizerFormResult> {
     await ProjectManager.getInstance()
@@ -56,7 +56,7 @@ export const sanitizerViewMethods = {
   },
 
   /**
-   * 运行 Sanitizer
+   * Run Sanitizer
    */
   async runSanitizer(): Promise<void> {
     try {

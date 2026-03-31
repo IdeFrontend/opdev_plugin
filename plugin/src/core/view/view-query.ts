@@ -3,21 +3,21 @@ import * as vscode from 'vscode';
 import { WebviewConnector } from '@plugin/core/connector';
 
 /**
- * 页面参数
+ * Page parameters
  */
 export type QueryParams = {
-  /** 路由地址 */
+  /** routing address */
   _path: string;
 
   [key: string]: unknown;
 };
 
 /**
- * 页面参数通信器
- * @description 页面启动时增加pendingQuery，页面加载后推送query
+ * Page parameter communicator
+ * @description Add pendingQuery when the page starts, and push the query after the page is loaded.
  */
 export class ViewQuery extends vscode.Disposable {
-  /** 页面参数通信器 */
+  /** Page parameter communicator */
   private queryConnector: WebviewConnector<QueryParams, null>;
 
   constructor() {
@@ -26,7 +26,7 @@ export class ViewQuery extends vscode.Disposable {
   }
 
   /**
-   * 设置页面参数
+   * Set page parameters
    */
   public setQuery(webview: vscode.Webview, query: QueryParams): void {
     this.queryConnector.addWebview(webview);

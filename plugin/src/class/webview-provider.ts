@@ -16,7 +16,7 @@ import { ApiServer } from '@plugin/core/api-server';
 import { registerConfigPage, unregisterConfigPage } from '@plugin/controller/navigation-controller';
 
 /**
- * Webview 提供者 - 负责创建和管理 Webview 面板
+ * Webview provider - Responsible for creating and managing Webview panels
  */
 export class WebviewProvider {
   private panel: vscode.WebviewPanel | undefined;
@@ -37,11 +37,11 @@ export class WebviewProvider {
   }
 
   /**
-   * 显示 Webview 面板
+   * Show Webview panel
    */
   public async show(router: string): Promise<void> {
     try {
-      // 创建或显示面板
+      // Create or display a panel
       if (this.panel) {
         this.panel.reveal();
       }
@@ -57,7 +57,7 @@ export class WebviewProvider {
   }
 
   /**
-   * 向 Webview 发送消息
+   * Send message to webview
    */
   public postMessage(message: unknown): void {
     if (this.panel?.webview) {
@@ -66,18 +66,18 @@ export class WebviewProvider {
   }
 
   /**
-   * 创建 Webview 面板
+   * Create a Webview panel
    */
   public showLeftPage(router: string): vscode.Disposable {
     return this.createLeftNavWebview(router);
   }
 
   /**
-   * 创建 Webview 面板
+   * Create a Webview panel
    */
   private createLeftNavWebview(router: string = ''): vscode.Disposable {
     try {
-      // 如果已经注册过，先释放旧的
+      // If it has already been registered, release the old one first
       if (this.pluginSidebarDisposable) {
         this.pluginSidebarDisposable.dispose();
       }
@@ -106,7 +106,7 @@ export class WebviewProvider {
               { lang: vscode.env.language.toLowerCase() },
             );
 
-            // 监听 VSCode 主题变化并通知 Webview
+            // Listen to VSCode theme changes and notify Webview
             this.themeChangeDisposable = vscode.window.onDidChangeActiveColorTheme((theme) => {
               webviewView.webview.postMessage({
                 command: 'updateTheme',
@@ -114,13 +114,13 @@ export class WebviewProvider {
               });
             });
 
-            // 初始化时发送当前主题
+            // Send the current topic on initialization
             webviewView.webview.postMessage({
               command: 'updateTheme',
               themeName: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
             });
 
-            // 处理 Webview 消息
+            // Handling Webview messages
             webviewView.webview.onDidReceiveMessage(
               (message: unknown) => {
                 this.handleWebviewMessage(message);
@@ -136,15 +136,15 @@ export class WebviewProvider {
       return this.pluginSidebarDisposable;
     }
     catch (error) {
-      console.error('注册 pluginSidebar webview provider 失败:', error);
+      console.error('Failed to register pluginSidebar webview provider:', error);
 
-      // 返回一个空的 disposable 以避免错误
+      // Return an empty disposable to avoid errors
       return { dispose: () => {} };
     }
   }
 
   /**
-   * 创建 Webview 面板
+   * Create a Webview panel
    */
   private async createPanel(router: string = ''): Promise<void> {
     try {
@@ -160,15 +160,15 @@ export class WebviewProvider {
 
       this.apiServer?.addWebview(router, this.panel.webview);
 
-      // 如果是配置页面，注册到导航控制器
+      // If it is a configuration page, register it to the navigation controller
       if (router === 'config') {
         registerConfigPage('config', this.panel.webview);
       }
 
-      // 设置 Webview 内容
+      // Set Webview content
       await this.updateWebviewContent(router);
 
-      // 监听 VSCode 主题变化并通知 Webview
+      // Listen to VSCode theme changes and notify Webview
       this.themeChangeDisposable = vscode.window.onDidChangeActiveColorTheme((theme) => {
         if (this.panel) {
           this.panel.webview.postMessage({
@@ -178,7 +178,7 @@ export class WebviewProvider {
         }
       });
 
-      // 初始化时发送当前主题
+      // Send the current topic on initialization
       if (this.panel) {
         this.panel.webview.postMessage({
           command: 'updateTheme',
@@ -186,10 +186,10 @@ export class WebviewProvider {
         });
       }
 
-      // 处理面板关闭事件
+      // Handle panel close event
       this.panel.onDidDispose(
         () => {
-          // 注销配置页面
+          // Logout configuration page
           if (router === 'config') {
             unregisterConfigPage(router);
           }
@@ -199,7 +199,7 @@ export class WebviewProvider {
         this.context.subscriptions,
       );
 
-      // 处理 Webview 消息
+      // Handling Webview messages
       this.panel.webview.onDidReceiveMessage(
         (message: unknown) => {
           this.handleWebviewMessage(message);
@@ -214,7 +214,7 @@ export class WebviewProvider {
   }
 
   /**
-   * 更新 Webview 内容
+   * Update Webview content
    */
   private async updateWebviewContent(router: string): Promise<void> {
     if (!this.panel) {
@@ -224,7 +224,7 @@ export class WebviewProvider {
     try {
       const distPath = path.join(this.context.extensionPath, 'out', 'web');
 
-      // 判断是 panel 还是 sidebar 类型的视图
+      // Determine whether it is a panel or sidebar type view
       const panelViews = [
         'config',
         'link',
@@ -246,19 +246,19 @@ export class WebviewProvider {
       );
     }
     catch (error) {
-      // 如果读取文件失败，使用 fallback 内容
+      // If reading the file fails, use fallback content
       console.log(error);
     }
   }
 
   /**
-   * 处理来自 Webview 的消息
+   * Handle messages from Webview
    */
   private handleWebviewMessage(message: unknown): void {
     const msg = message as { command: string;
       [key: string]: unknown };
 
-    // 处理获取主题命令
+    // Handle gettopic command
     // if (msg.command === 'getTheme') {
     //   const currentTheme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
     //   if (this.panel) {
@@ -267,8 +267,8 @@ export class WebviewProvider {
     //       themeName: currentTheme,
     //     });
     //   }
-    //   // 对于 sidebar 类型的 webview，需要通过不同的方式发送
-    //   // sidebar 的消息处理在各自的 provider 中
+    // // For sidebar type webview, it needs to be sent in different ways
+    // // Sidebar messages are processed in their respective providers
 
     //   return;
     // }
@@ -281,7 +281,7 @@ export class WebviewProvider {
   }
 
   /**
-   * 清理资源
+   * Clean up resources
    */
   public dispose(): void {
     if (this.panel) {

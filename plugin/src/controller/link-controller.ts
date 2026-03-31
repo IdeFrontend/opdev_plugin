@@ -12,11 +12,11 @@ import {
 
 export const linkMethods = {
   /**
-   * 打开文件
-   * @param params 打开文件参数
+   * open file
+   * @param params open file parameters
    */
   async openFile(params: OpenFileParams): Promise<void> {
-    // 兼容以前的逻辑
+    // Compatible with previous logic
     const filePath = params.file;
     const workspaceFolders = vscode.workspace.workspaceFolders;
 
@@ -36,24 +36,24 @@ export const linkMethods = {
   },
 
   /**
-   * 打开链接
-   * @param params 打开链接参数
+   * open link
+   * @param params open link parameters
    */
   async openLink(params: OpenLinkParams): Promise<void> {
     vscode.env.openExternal(vscode.Uri.parse(params.url));
   },
 
   /**
-   * 检查 .vscode 文件夹权限
-   * @returns 检查结果
+   * Check .vscode folder permissions
+   * @returns check results
    */
   async checkVscodeFolder(): Promise<boolean> {
     return await projectService.checkVscode();
   },
 
   /**
-   * 检查 devtool_config.json
-   * @returns 检查结果
+   * Check devtool_config.json
+   * @returns check results
    */
   async checkDevtoolConfig(): Promise<boolean> {
     return await configService.checkDevtoolConfig();

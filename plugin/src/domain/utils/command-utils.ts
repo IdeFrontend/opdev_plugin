@@ -1,30 +1,30 @@
 /**
- * 命令生成配置选项
+ * Command generation configuration options
  */
 export interface CommandStringConfig {
   /**
-   * 指定某些 key 的数组值应该用什么分隔符连接。
-   * 默认情况下，数组会生成多个 --key=val。
-   * 如果指定了分隔符，则生成 --key=val1,val2 (假设分隔符是 ,)
+   * Specifies what delimiter should be used to concatenate array values ​​for certain keys.
+   * By default, arrays generate multiple --key=val.
+   * Generates --key=val1,val2 if delimiter is specified (assuming delimiter is ,)
    */
   separators?: Record<string, string>;
 }
 
 /**
- * 将对象转换为命令行参数字符串
+ * Convert object to command line argument string
  *
- * 示例:
+ * Example:
  * { pkg: true, soc: 'Ascend310' } -> "--pkg --soc=Ascend310"
  * { tool: ['memcheck', 'leak'] } -> "--tool=memcheck --tool=leak"
  * { metrics: ['A', 'B'] }, { separators: { metrics: ',' } } -> "--metrics=A,B"
  *
- * 规则:
+ * rule:
  * - value === true: --key
- * - value === false | undefined | null: 忽略
- * - value 是数组:
- *   - 如果在 config.separators 中指定了分隔符: --key=item1,item2
- *   - 否则: --key=item1 --key=item2 ...
- * - 其他: --key=value
+ * - value === false | undefined | null: ignore
+ * - value is an array:
+ * - If separators are specified in config.separators: --key=item1,item2
+ * - Otherwise: --key=item1 --key=item2 ...
+ * - Others: --key=value
  */
 export function objectToCommandString(
   options: Record<
@@ -63,9 +63,9 @@ export function objectToCommandString(
 }
 
 /**
- * 连接多个命令，过滤掉空命令
- * @param commands 命令列表
- * @returns 连接后的命令字符串
+ * Concatenate multiple commands and filter out empty commands
+ * @param commands command list
+ * @returns command string after connection
  */
 export function joinCommands(...commands: (string | undefined | null)[]): string {
   return commands.filter(Boolean)
@@ -79,11 +79,11 @@ export interface PermissionConfig {
 }
 
 /**
- * 生成 chmod 命令
+ * Generate chmod command
  *
- * @param file 目标文件
- * @param mode 权限配置对象，默认 { execute: true }
- * @returns chmod 命令字符串
+ * @param file target file
+ * @param mode permission configuration object, default { execute: true }
+ * @returns chmod command string
  */
 export function generateChmodCommand(
   file: string,
@@ -117,36 +117,36 @@ export function generateChmodCommand(
 }
 
 /**
- * 检查字符串是否是命令（而不是文件路径）
- * @param str 要检查的字符串
- * @returns 如果是命令返回 true，否则返回 false
+ * Check if a string is a command (not a file path)
+ * @param str The string to check
+ * @returns Returns true if it is a command, otherwise returns false
  */
 function isCommand(str: string): boolean {
   if (!str) {
     return false;
   }
   
-  // 如果包含空格，很可能是命令
+  // If it contains spaces, it is most likely the command
   if (str.includes(' ')) {
     return true;
   }
   
-  // 如果包含通配符，认为是需要特殊处理的路径
+  // Wildcards indicate a path that needs special handling
   if (str.includes('*')) {
     return true;
   }
-  
-  // 如果以常见的命令前缀开头，认为是命令
+
+  // If it starts with a common command prefix, treat it as a command
   const commandPrefixes = ['python', 'bash', 'sh', 'node', 'npm', 'yarn', 'java', 'perl', 'ruby'];
   const firstWord = str.split(' ')[0].split('/').pop() || '';
   return commandPrefixes.some(prefix => firstWord.startsWith(prefix));
 }
 
 /**
- * 生成带 chmod 的运行命令
- * @param file 可执行文件路径或命令
- * @param mode 权限配置对象，默认 { execute: true }
- * @returns 完整的运行命令
+ * Generate run command with chmod
+ * @param file executable file path or command
+ * @param mode permission configuration object, default { execute: true }
+ * @returns complete run command
  */
 export function getExecutableCommand(
   file: string,
@@ -156,12 +156,12 @@ export function getExecutableCommand(
     return '';
   }
 
-  // 如果包含通配符，使用 find 命令找到实际文件
+  // Wildcards: resolve with find, then chmod + execute
   if (file.includes('*')) {
     return `RUN_FILE=$(find ${file}) && chmod +x "$RUN_FILE" && "$RUN_FILE"`;
   }
 
-  // 如果是命令（如 python ../run.py），不执行 chmod，直接返回命令
+  // Commands (e.g. python ../run.py): return as-is without chmod
   if (isCommand(file)) {
     return file;
   }
@@ -170,8 +170,8 @@ export function getExecutableCommand(
 }
 
 /**
- * 命令行构建类
- * 支持 a b --key=value 形式的命令生成
+ * Command line build class
+ * Supports command generation in the form of a b --key=value
  */
 export class Command {
   private _options: Record<string, unknown> = {};
@@ -184,9 +184,9 @@ export class Command {
   ) { }
 
   /**
-   * 添加选项参数
-   * @param key 参数名
-   * @param value 参数值
+   * Add option parameters
+   * @param key parameter name
+   * @param value parameter value
    */
   public addOption(key: string, value: unknown): Command {
     this._options[key] = value;
@@ -195,8 +195,8 @@ export class Command {
   }
 
   /**
-   * 批量添加选项
-   * @param options 选项对象
+   * Bulk add options
+   * @param options option object
    */
   public addOptions(options: Record<string, unknown>): Command {
     Object.assign(this._options, options);
@@ -205,8 +205,8 @@ export class Command {
   }
 
   /**
-   * 添加位置参数
-   * @param arg 参数值
+   * Add positional parameters
+   * @param arg parameter value
    */
   public addArgument(arg: string): Command {
     if (arg) {
@@ -217,8 +217,8 @@ export class Command {
   }
 
   /**
-   * 设置子命令
-   * @param cmd 子命令对象或名称
+   * Set subcommand
+   * @param cmd subcommand object or name
    */
   public setSubCommand(cmd: Command | string): Command {
     if (typeof cmd === 'string') {
@@ -233,9 +233,9 @@ export class Command {
   }
 
   /**
-   * 创建并返回子命令
-   * @param name 子命令名称
-   * @param config 子命令配置
+   * Create and return subcommands
+   * @param name subcommand name
+   * @param config subcommand configuration
    */
   public sub(name: string, config?: CommandStringConfig): Command {
     const subCmd = new Command(name, config);
@@ -246,12 +246,12 @@ export class Command {
   }
 
   /**
-   * 生成完整的命令字符串
+   * Generate complete command string
    */
   public toString(): string {
     const parts = [this.name];
 
-    // 1. 自身的选项
+    // 1. Your own options
     const optionsStr = objectToCommandString(
       this._options as Record<
         string,
@@ -264,12 +264,12 @@ export class Command {
       parts.push(optionsStr);
     }
 
-    // 2. 位置参数
+    // 2. Positional parameters
     if (this._args.length) {
       parts.push(this._args.join(' '));
     }
 
-    // 3. 子命令 (递归生成)
+    // 3. Subcommand (recursively generated)
     if (this._subCommand) {
       parts.push(this._subCommand.toString());
     }
@@ -279,9 +279,9 @@ export class Command {
 }
 
 /**
- * 处理高级参数
- * @param advance_param 高级参数数组
- * @returns 格式化后的参数字符串
+ * Handle advanced parameters
+ * @param advance_param advanced parameter array
+ * @returns formatted parameter string
  */
 export function getAdvanceCmd(advance_param: unknown): string {
   if (

@@ -29,14 +29,14 @@ import { WorkspaceDetectorService } from '@plugin/service/workspace-detector-ser
 import { OpGeneratorFactory } from '@plugin/domain/services/op-generator-factory';
 import { OperatorProjectIconTheme } from '../class/operator-project-icon-theme';
 
-// 辅助函数：获取 extension context
+// Auxiliary function: get extension context
 function getExtensionContext(): vscode.ExtensionContext {
   return (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
     .extensionContext;
 }
 
 async function openFolderFn(url: string) {
-  // 如果项目已存在，直接打开目录
+  // If the project already exists, open the directory directly
   const localUri = vscode.Uri.file(url);
 
   const openCurrent = t('welcome.openInCurrentWindow');
@@ -65,9 +65,9 @@ async function openFolderFn(url: string) {
 
 export const welcomeMethods = {
   /**
-   * 创建算子工程
-   * @param params - 参数
-   * @returns 结果
+   * Create an operator project
+   * @param params - parameters
+   * @returns results
    */
   async createOps(params: CreateOpsParams): Promise<string> {
     await ProjectManager.getInstance()
@@ -77,8 +77,8 @@ export const welcomeMethods = {
   },
 
   /**
-   * 通过原型创建算子
-   * @param params - 参数
+   * Create operators through prototypes
+   * @param params - parameters
    */
   async createOpsByPrototype(params: CreateOpsByPrototypeParams): Promise<void> {
     await ProjectManager.getInstance()
@@ -87,14 +87,14 @@ export const welcomeMethods = {
   },
 
   /**
-   * 创建项目 (webview/createdProject)
-   * @param params - 参数
+   * Create project (webview/createdProject)
+   * @param params - parameters
    */
   async createdProject(params: CreatedProjectParams): Promise<void> {
     try {
       const context = getExtensionContext();
 
-      // 缓存 projectPath 到 globalState
+      // Cache projectPath to globalState
       const originalProjectPath = params.projectPath;
 
       context.globalState.update('lastProjectPath', originalProjectPath);
@@ -104,7 +104,7 @@ export const welcomeMethods = {
       const executor = new CommandExecutor();
 
       try {
-        // 使用 fs.mkdirSync 创建目录（跨平台兼容）
+        // Create directories using fs.mkdirSync (cross-platform compatible)
         const projectDir = path.join(params.projectPath, params.projectName);
 
         if (!fs.existsSync(projectDir)) {
@@ -121,73 +121,73 @@ export const welcomeMethods = {
           await executor.execute(`${params.projectSH}`);
         }
         catch (error) {
-          console.warn(`执行环境变量脚本失败: ${error instanceof Error ? error.message : String(error)}`);
-          // 环境变量脚本执行失败不影响项目创建，只记录警告
+          console.warn(`Failed to execute environment variable script: ${error instanceof Error ? error.message : String(error)}`);
+          // Failure to execute the environment variable script does not affect project creation, only warnings are logged
         }
       }
 
-      // 调用 projectService.init (对应旧代码的 OpsAPI.init)
+      // Call projectService.init (corresponds to OpsAPI.init of the old code)
       if (viewIdToProjectType(params.createOperatorProjectDictoryFileType) === 'ascend') {
-        // 获取当前 VSCode 中打开的工作区目录
+        // Get the workspace directory currently opened in VSCode
         const currentWorkspaceFolders = vscode.workspace.workspaceFolders;
         const currentExplorerPath = currentWorkspaceFolders && currentWorkspaceFolders.length > 0
           ? currentWorkspaceFolders[0].uri.fsPath
           : undefined;
-        console.log('当前资源管理器打开的目录:', currentExplorerPath);
+        console.log('Current directory opened in explorer:', currentExplorerPath);
 
         if (currentExplorerPath?.includes('experimental')) {
-          // 根据 currentExplorerPath 在project.json配置数据中查找project，查找到之后插入到它的experimental_ops_list中
+          // Find the project in the project.json configuration data according to currentExplorerPath, and insert it into its experimental_ops_list after finding it.
           const project = getProjectByPath(currentExplorerPath);
           if (project) {
-            console.log('在experimental目录下找到项目:', project);
+            console.log('Found project in experimental directory:', project);
 
-            // 创建新的子算子信息
+            // Create new sub-operator information
             const newSubOperator: SubOperatorInfo = {
               name: params.projectName,
               path: path.join(params.projectPath, params.projectName),
               isCompiled: false
             };
 
-            // 更新项目的experimental_ops_list
+            // Update the project's experimental_ops_list
             const updatedExperimentalOpsList = [...(project.experimental_ops_list || []), newSubOperator];
 
-            // 更新项目记录
+            // Update project record
             await createProject({
               project_name: project.project_name,
               project_path: project.project_path,
               experimental_ops_list: updatedExperimentalOpsList,
             });
 
-            console.log('已将新算子添加到experimental_ops_list:', newSubOperator.name);
+            console.log('Added new operator to experimental_ops_list:', newSubOperator.name);
           } else {
-            console.log('在project.json配置中未找到对应项目');
+            console.log('No matching project found in project.json config');
           }
         } else if (currentExplorerPath?.includes('math')) {
-          // 根据 currentExplorerPath 在project.json配置数据中查找project，查找到之后插入到它的ops_list中
+          // Find the project in the project.json configuration data according to currentExplorerPath, and insert it into its ops_list after finding it.
           const project = getProjectByPath(currentExplorerPath);
           if (project) {
-            console.log('在math目录下找到项目:', project);
+            console.log('Found project in math directory:', project);
 
-            // 创建新的子算子信息
+            // Create new sub-operator information
             const newSubOperator: SubOperatorInfo = {
               name: params.projectName,
               path: path.join(params.projectPath, params.projectName),
               isCompiled: false
             };
 
-            // 更新项目的ops_list
+            // Update the ops_list of the project
             const updatedOpsList = [...(project.ops_list || []), newSubOperator];
 
-            // 更新项目记录
+            // Update project record
             await createProject({
               project_name: project.project_name,
               project_path: project.project_path,
               ops_list: updatedOpsList,
             });
 
-            console.log('已将新算子添加到ops_list:', newSubOperator.name);
+            console.log('Added new operator to ops_list:', newSubOperator.name);
           } else {
-            console.log('在project.json配置中未找到对应项目');
+            console.log('No matching project found in project.json config');
           }
         } else {
           vscode.window.showInformationMessage(t('welcome.cannotCreateHere'));
@@ -214,11 +214,11 @@ export const welcomeMethods = {
         );
       }
       catch (error) {
-        console.warn(`在资源管理器中显示失败: ${error instanceof Error ? error.message : String(error)}`);
-        // 这个失败不影响项目创建，只记录警告
+        console.warn(`Failed to reveal in explorer: ${error instanceof Error ? error.message : String(error)}`);
+        // This failure does not affect project creation, only a warning is logged
       }
 
-      // 规范化路径
+      // normalized path
       const normalizedProjectPath = path.normalize(params.projectPath);
       const normalizedProjectName = path.normalize(params.projectName);
       const fullProjectPath = path.join(
@@ -226,12 +226,12 @@ export const welcomeMethods = {
         normalizedProjectName,
       );
 
-      // 在远程环境中，我们可以直接打开本地路径（相对于远程系统）
+      // In a remote environment we can directly open the local path (relative to the remote system)
       const localUri = vscode.Uri.file(fullProjectPath);
 
-      console.log('vscode.openFolder，打开新目录', localUri);
+      console.log('vscode.openFolder, opening new directory', localUri);
 
-      // 显示创建成功消息
+      // Show creation success message
       vscode.window.showInformationMessage(t('welcome.projectCreated', { name: params.projectName }));
 
       if (viewIdToProjectType(params.createOperatorProjectDictoryFileType) === 'ascend') {
@@ -248,13 +248,13 @@ export const welcomeMethods = {
         return
       }
 
-      // 保存 templateName 到 globalState，以便后续使用
+      // Save templateName to globalState for subsequent use
       if (params.templateName) {
         context.globalState.update('templateName', params.templateName);
       }
 
-      // 执行创建算子文件命令
-      console.log('createdProject: 准备执行创建算子文件命令');
+      // Execute the command to create an operator file
+      console.log('createdProject: preparing to run create operator file command');
       console.log('createdProject: createOperatorProjectDictoryFileType:', params.createOperatorProjectDictoryFileType);
       console.log('createdProject: templateName:', params.templateName);
 
@@ -270,8 +270,8 @@ export const welcomeMethods = {
               increment: 0,
               message: t('welcome.createFilesProgressMessage'),
             });
-            console.log('createdProject: 执行命令 huawei-op-devtools.createDictory');
-            console.log('createdProject: 命令参数:', { createOperatorProjectDirectoryFileType: params.createOperatorProjectDictoryFileType });
+            console.log('createdProject: running command huawei-op-devtools.createDictory');
+            console.log('createdProject: command params:', { createOperatorProjectDirectoryFileType: params.createOperatorProjectDictoryFileType });
             const result = await vscode.commands.executeCommand(
               'huawei-op-devtools.createDictory',
               {
@@ -281,15 +281,15 @@ export const welcomeMethods = {
               progress,
             );
 
-            console.log('createdProject: 命令执行完成，结果:', result);
+            console.log('createdProject: command completed, result:', result);
           },
         );
-        console.log('createdProject: 创建算子文件命令执行成功');
+        console.log('createdProject: create operator file command executed successfully');
       }
       catch (error) {
-        console.error('createdProject: 执行创建算子文件命令失败:', error);
-        console.error('createdProject: 错误详情:', error instanceof Error ? error.stack : String(error));
-        // 即使创建算子文件失败，项目目录已经创建成功
+        console.error('createdProject: failed to execute create operator file command:', error);
+        console.error('createdProject: error details:', error instanceof Error ? error.stack : String(error));
+        // Even if the creation of the operator file fails, the project directory has been created successfully.
         vscode.window.showWarningMessage(t('welcome.createDirOkCreateFilesError', { error: error instanceof Error ? error.message : String(error) }));
       }
 
@@ -320,67 +320,67 @@ export const welcomeMethods = {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
       vscode.window.showErrorMessage(t('welcome.createProjectFailed', { error: errorMessage }));
-      throw error; // 重新抛出错误，让 API 服务器能够捕获并返回给前端
+      throw error; // Rethrow the error so that the API server can catch it and return it to the front end
     }
   },
 
   /**
-   * 打开算子工程 (webview/openProject)
-   * @param params - 参数
+   * Open the operator project (webview/openProject)
+   * @param params - parameters
    */
   async openProject(params: OpenProjectParams, isFromSystem: boolean = false): Promise<void> {
     try {
-      // 首先检查项目是否已在用户的配置数据中
+      // First check if the project is already in the user's configuration data
       const existingProject = getProjectByPath(params.projectPath);
 
       if (existingProject) {
-        console.log(`[openProject] 项目已在配置中: ${existingProject.project_name} (${existingProject.project_path})`);
+        console.log(`[openProject] Project already exists in config: ${existingProject.project_name} (${existingProject.project_path})`);
 
         if (!isFromSystem) {
           openFolderFn(params.projectPath)
         }
 
-        return; // 退出函数，不再执行后续初始化操作
+        return; // Exit the function and no longer perform subsequent initialization operations
       }
 
-      // 如果项目不存在于配置中，继续执行初始化流程
-      // 如果没有提供 projectName，从路径中提取
+      // If the project does not exist in the configuration, continue with the initialization process
+      // If projectName is not provided, extract it from the path
       if (!params.projectName) {
         params.projectName = path.basename(params.projectPath);
-        console.log(`[openProject] 未提供项目名称，从路径提取: ${params.projectName}`);
+        console.log(`[openProject] Project name not provided, extracted from path: ${params.projectName}`);
 
-        // 截断 projectPath，移除项目名称部分
+        // Truncate projectPath, removing project name part
         const dirPath = path.dirname(params.projectPath);
         params.projectPath = dirPath;
-        console.log(`[openProject] 更新 projectPath (移除项目名称后): ${params.projectPath}`);
+        console.log(`[openProject] Updated projectPath (after removing project name): ${params.projectPath}`);
       }
 
       const context = getExtensionContext();
 
       const executor = new CommandExecutor();
 
-      // 如果是系统打开而且没有环境变量脚本，则默认设置环境变量脚本
+      // If the system is opened and there is no environment variable script, the environment variable script is set by default.
       if (isFromSystem && !params.projectSH) {
         params.projectSH = '/etc/profile'
       }
 
-      // 处理环境变量配置脚本
+      // Handle environment variable configuration script
       if (params.projectSH) {
         try {
           await executor.execute(`chmod +x ${params.projectSH}`);
           await executor.execute(`${params.projectSH}`);
         }
         catch (error) {
-          console.warn(`执行环境变量脚本失败: ${error instanceof Error ? error.message : String(error)}`);
-          // 环境变量脚本执行失败不影响项目创建，只记录警告
+          console.warn(`Failed to execute environment variable script: ${error instanceof Error ? error.message : String(error)}`);
+          // Failure to execute the environment variable script does not affect project creation, only warnings are logged
         }
       }
 
-      // 检测算子工程类型
+      // Detection operator project type
       const projectFullPath = path.join(params.projectPath, params.projectName);
       const rootDetection = await OperatorProjectDetector.detectOperatorProject(projectFullPath);
 
-      // 检测到打开的目录并不是算子工程
+      // It is detected that the opened directory is not an operator project
       if (!rootDetection.projectType) {
         if (!isFromSystem) {
           openFolderFn(projectFullPath)
@@ -388,7 +388,7 @@ export const welcomeMethods = {
         return
       }
 
-      // 将配置写入project.json文件
+      // Write the configuration to the project.json file
       try {
         await projectService.init({
           ascendEnvScript: params.projectSH,
@@ -402,7 +402,7 @@ export const welcomeMethods = {
         throw new Error(`初始化算子工程失败: ${error instanceof Error ? error.message : String(error)}`);
       }
 
-      // 处理配置文件
+      // Process configuration files
       const pm = ProjectManager.getInstance();
       const projectId = Number(pm.projectId);
       await generateStructure(
@@ -421,31 +421,31 @@ export const welcomeMethods = {
         await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
       }
 
-      // 如果是标准自定义算子，扫描算子合集与算子并更新根项目（不为之新建 projects 项）
+      // If it is a standard custom operator, scan the operator collection and operator and update the root project (do not create a new projects item for it)
       if (rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM) {
         try {
-          console.log('[openProject] 检测到标准自定义算子，开始扫描算子合集和算子...');
+          console.log('[openProject] Standard custom operators detected, scanning operator groups and operators...');
           const { opsMeet, opsList, experimentalOpsList } = WorkspaceDetectorService.scanOpsMeetAndOpsLists(projectFullPath);
-          console.log(`[openProject] 算子合集列表: ${opsMeet.map((m) => m.name).join(', ')}`);
-          console.log(`[openProject] 普通算子: ${opsList.length}, experimental算子: ${experimentalOpsList.length}`);
+          console.log(`[openProject] Operator group list: ${opsMeet.map((m) => m.name).join(', ')}`);
+          console.log(`[openProject] Regular operators: ${opsList.length}, experimental operators: ${experimentalOpsList.length}`);
           await updateStandardCustomOperators(projectFullPath, opsMeet, opsList, experimentalOpsList);
-          console.log(`[openProject] 已存储 ${opsMeet.length} 个算子合集, ${opsList.length} 个普通算子, ${experimentalOpsList.length} 个experimental算子`);
+          console.log(`[openProject] Stored ${opsMeet.length} operator groups, ${opsList.length} regular operators, and ${experimentalOpsList.length} experimental operators`);
         }
         catch (error) {
-          console.warn(`[openProject] 检测算子信息失败: ${error instanceof Error ? error.message : String(error)}`);
+          console.warn(`[openProject] Failed to detect operator info: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
 
-      // 规范化路径
+      // normalized path
       const normalizedProjectPath = path.normalize(params.projectPath);
       const normalizedProjectName = path.normalize(params.projectName);
       const fullProjectPath = path.join(normalizedProjectPath, normalizedProjectName);
       if (isFromSystem) {
-        // 系统级打开算子工程，只需刷新文件夹装饰
+        // To open the operator project at the system level, just refresh the folder decoration
         const iconTheme = OperatorProjectIconTheme.getInstance(context);
         iconTheme.fireDecorationUpdate();
       } else {
-        // 通过打开页打开算子工程
+        // Open the operator project by opening the page
         openFolderFn(fullProjectPath)
       }
     }

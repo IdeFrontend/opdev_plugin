@@ -8,26 +8,26 @@ import { getProjectByPath } from '@plugin/domain/models/project-model';
 import { soc_version } from '@plugin/domain/utils/ascend-util';
 
 /**
- * 项目管理器
- * 负责管理当前操作的项目上下文（ID, 名称, 路径）以及任务执行器状态
+ * project manager
+ * Responsible for managing the project context (ID, name, path) of the current operation and the task executor status
  */
 export class ProjectManager {
   private static instance: ProjectManager;
 
-  /** 项目ID */
+  /** Project ID */
   private _projectId: string = '';
-  /** 项目名称 */
+  /** Project name */
   private _projectName: string | undefined;
-  /** 项目路径 */
+  /** Project path */
   private _projectPath: string | undefined;
-  /** 当前任务执行器 */
+  /** current task executor */
   private _currentExecutor: CommandExecutor | null = null;
 
   private constructor() {}
 
   /**
-   * 获取 ProjectManager 单例实例
-   * @returns {ProjectManager} 单例实例
+   * Get the ProjectManager singleton instance
+   * @returns {ProjectManager} singleton instance
    */
   public static getInstance(): ProjectManager {
     if (!ProjectManager.instance) {
@@ -38,16 +38,16 @@ export class ProjectManager {
   }
 
   /**
-   * 获取项目ID
+   * Get project ID
    */
   public get projectId(): string {
     return this._projectId;
   }
 
   /**
-   * 获取或创建任务执行器
-   * 如果当前没有执行器，则创建一个新的
-   * @returns {CommandExecutor} 任务执行器
+   * Get or create a task executor
+   * If there is currently no executor, create a new one
+   * @returns {CommandExecutor} task executor
    */
   public getExecutor(): CommandExecutor {
     if (!this._currentExecutor) {
@@ -58,17 +58,17 @@ export class ProjectManager {
   }
 
   /**
-   * 清除当前任务执行器
-   * 通常在任务完成后调用
+   * Clear current task executor
+   * Usually called after the task is completed
    */
   public clearExecutor(): void {
     this._currentExecutor = null;
   }
   /**
-   * 获取项目信息
-   * 优先使用传入参数，其次使用缓存信息，最后尝试从工作区获取
-   * @param params 可选的项目路径和名称参数
-   * @returns 项目名称和路径对象
+   * Get project information
+   * First use the incoming parameters, secondly use the cached information, and finally try to get it from the workspace
+   * @param params optional project path and name parameters
+   * @returns project name and path object
    */
   public getProjectInfo(params?: {
     projectPath?: string;
@@ -97,10 +97,10 @@ export class ProjectManager {
   }
 
   /**
-   * 初始化项目上下文
-   * 设置项目路径、名称，并调用后端创建/获取项目ID
-   * @param params 初始化参数
-   * @returns 项目ID
+   * Initialize project context
+   * Set the project path and name, and call the backend to create/get the project ID
+   * @param params initialization parameters
+   * @returns project ID
    */
   public async initProject(params: {
     projectPath?: string;
@@ -120,7 +120,7 @@ export class ProjectManager {
       this._projectPath = info.path;
     }
 
-    // 获取项目ID
+    // Get project ID
     if (this._projectPath === undefined) {
       this._projectId = '';
 
@@ -149,8 +149,8 @@ export class ProjectManager {
   }
 
   /**
-   * 确保 projectId 已初始化
-   * 如果 projectId 为空，则尝试自动初始化
+   * Make sure projectId is initialized
+   * If projectId is empty, try to initialize automatically
    */
   public async ensureProjectId(): Promise<void> {
     if (!this._projectId) {
@@ -159,9 +159,9 @@ export class ProjectManager {
   }
 
   /**
-   * 检查并修复 .vscode 目录权限
-   * 确保 .vscode 目录权限为 750
-   * @returns {Promise<boolean>} 总是返回 false (保留原逻辑返回值)
+   * Check and fix .vscode directory permissions
+   * Make sure the .vscode directory permissions are 750
+   * @returns {Promise<boolean>} always returns false (retains the original logical return value)
    */
   public async checkVscode(): Promise<boolean> {
     const workspaceFolders = vscode.workspace.workspaceFolders;

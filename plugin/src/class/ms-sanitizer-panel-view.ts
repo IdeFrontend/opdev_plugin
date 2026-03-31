@@ -34,32 +34,32 @@ implements vscode.WebviewViewProvider {
     _context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken,
   ) {
-    console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] 开始解析 webview 视图');
+    console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] Start resolving webview view');
     console.log(`[MsSanitizerPanelViewProvider.resolveWebviewView] viewType: ${MsSanitizerPanelViewProvider.viewType}`);
     console.log(`[MsSanitizerPanelViewProvider.resolveWebviewView] extensionUri: ${this._extensionUri.toString()}`);
 
     this._view = webviewView;
 
-    // 配置 WebView
+    // Configure WebView
     webviewView.webview.options = {
       enableScripts: true,
       localResourceRoots: [this._extensionUri],
     };
-    console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] WebView 配置完成');
+    console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] WebView configuration completed');
 
-    // 注册 webview 到 ApiServer
+    // Register webview to ApiServer
     this._apiServer.addWebview('MsSanitizerPanelView', webviewView.webview);
-    console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] WebView 已注册到 ApiServer');
+    console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] WebView registered to ApiServer');
 
-    // 消息处理
+    // Message processing
     webviewView.webview.onDidReceiveMessage(
       async (message: any) => {
-        console.log('[MsSanitizerPanelViewProvider] 收到消息:', message.command);
+        console.log('[MsSanitizerPanelViewProvider] Received message:', message.command);
 
         if (message.command === 'vscodeGetMsSanitizerPanelViewData') {
-          // 发送数据 后续优化 先通过_view.webview 方式下发内容
+          // Send data for subsequent optimization. First deliver content through _view.webview.
           if (!MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams) {
-            console.log('[MsSanitizerPanelViewProvider] 无数据参数，发送空数据');
+            console.log('[MsSanitizerPanelViewProvider] No data params, sending empty data');
             webviewView.webview.postMessage({
               command: 'iframeRemoteMsSanitizerPanelViewSetRenderList',
               data: {},
@@ -68,18 +68,18 @@ implements vscode.WebviewViewProvider {
             return;
           }
 
-          console.log('[MsSanitizerPanelViewProvider] 开始获取面板数据');
+          console.log('[MsSanitizerPanelViewProvider] Start fetching panel data');
           const panelData = await getPanelData(MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams);
 
           MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams = null;
-          console.log('[MsSanitizerPanelViewProvider] 面板数据获取完成，发送数据');
+          console.log('[MsSanitizerPanelViewProvider] Panel data fetched, sending data');
           webviewView.webview.postMessage({
             command: 'iframeRemoteMsSanitizerPanelViewSetRenderList',
             data: panelData,
           });
         }
         else if (message.command === 'vscodeLoadMsSanitizerReport') {
-          // 点击左侧报告列表项时，加载该报告并在右侧展示检测结果（支持直接 postMessage 或经 main 转发的格式）
+          // When you click the report list item on the left, the report is loaded and the detection results are displayed on the right (supports direct postMessage or format forwarded via main)
           const params = message.message?.data ?? message.data ?? message.message;
           if (!params?.path) {
             webviewView.webview.postMessage({
@@ -96,7 +96,7 @@ implements vscode.WebviewViewProvider {
             });
           }
           catch (err) {
-            console.error('[MsSanitizerPanelViewProvider] 加载报告失败:', err);
+            console.error('[MsSanitizerPanelViewProvider] Failed to load report:', err);
             webviewView.webview.postMessage({
               command: 'iframeRemoteMsSanitizerPanelViewSetRenderList',
               data: {},
@@ -110,12 +110,12 @@ implements vscode.WebviewViewProvider {
       undefined,
       this._context.subscriptions,
     );
-    console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] 消息处理器已注册');
+    console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] Message handler registered');
 
-    // 设置 HTML 内容
+    // Set HTML content
     const distPath = path.join(this._extensionUri.fsPath, 'out', 'web');
 
-    console.log(`[MsSanitizerPanelViewProvider.resolveWebviewView] 开始加载 HTML，distPath: ${distPath}`);
+    console.log(`[MsSanitizerPanelViewProvider.resolveWebviewView] Start loading HTML, distPath: ${distPath}`);
     console.log(`[MsSanitizerPanelViewProvider.resolveWebviewView] router: ${VIEW_MS_SANITIZER}`);
 
     try {
@@ -125,14 +125,14 @@ implements vscode.WebviewViewProvider {
         `sidebars/${VIEW_MS_SANITIZER}`,
         { lang: vscode.env.language.toLowerCase() },
       );
-      console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] HTML 加载完成');
+      console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] HTML loaded');
     }
     catch (error) {
-      console.error('[MsSanitizerPanelViewProvider.resolveWebviewView] HTML 加载失败:', error);
+      console.error('[MsSanitizerPanelViewProvider.resolveWebviewView] HTML load failed:', error);
       throw error;
     }
 
-    // 监听 VSCode 主题变化并通知 Webview
+    // Listen to VSCode theme changes and notify Webview
     this._themeChangeDisposable = vscode.window.onDidChangeActiveColorTheme((theme) => {
       webviewView.webview.postMessage({
         command: 'updateTheme',
@@ -140,7 +140,7 @@ implements vscode.WebviewViewProvider {
       });
     });
 
-    // 初始化时发送当前主题
+    // Send the current topic on initialization
     webviewView.webview.postMessage({
       command: 'updateTheme',
       themeName: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
@@ -148,10 +148,10 @@ implements vscode.WebviewViewProvider {
   }
 
   /**
-   * 处理来自 Webview 的消息
+   * Handle messages from Webview
    */
   private handleWebviewMessage(message: any): void {
-    // 处理获取主题命令
+    // Handle gettopic command
     if (message.command === 'getTheme') {
       const currentTheme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
       this._view?.webview.postMessage({
@@ -169,7 +169,7 @@ implements vscode.WebviewViewProvider {
   }
 
   /**
-   * 清理资源
+   * Clean up resources
    */
   public dispose() {
     if (this._themeChangeDisposable) {
@@ -179,7 +179,7 @@ implements vscode.WebviewViewProvider {
   }
 
   /**
-   * 获取当前 webview，供刷新报告列表等命令使用
+   * Get the current webview for use by commands such as refreshing the report list
    */
   getWebview(): vscode.Webview | undefined {
     return this._view?.webview;
@@ -199,10 +199,10 @@ const getPanelData = (params: Record<string, any>) => {
 
   const inputContent = fs.readFileSync(params.path, 'utf-8');
   const parser = new ExceptionParser({ matchPath: workspacePath });
-  // 直接传入整个文件内容进行解析
+  // Directly pass in the entire file content for parsing
   const data = parser.parseAll(inputContent);
 
-  console.log('异常检测详情数据：', data);
+  console.log('Anomaly detection detail data:', data);
 
   return {
     ...params,
@@ -224,21 +224,21 @@ export const getMsSanitizerPanelViewProvider = (
     { webviewOptions: { retainContextWhenHidden: false } },
   );
 
-  // 注册打开终端和 Webview 的命令
+  // Register commands to open terminal and Webview
   const openMsSanitizerDisposable = vscode.commands.registerCommand(
     COMMAND_OPEN_MS_SANITIZER_PANEL_VIEW,
     async (data: any) => {
-      // 打开底部区域面板
+      // Open the bottom area panel
       await vscode.commands.executeCommand('workbench.action.togglePanel');
 
-      // 定位到异常检测面板
+      // Navigate to the anomaly detection panel
       await vscode.commands.executeCommand('msSanitizerPanelView.focus');
 
       MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams = data;
     },
   );
 
-  /** 获取异常检测面板 webview，用于下发刷新报告列表等消息 */
+  /** Obtain the anomaly detection panel webview, which is used to issue messages such as refreshing the report list */
   const getMsSanitizerPanelWebview = (): vscode.Webview | undefined =>
     msSanitizerPanelViewProvider.getWebview();
 

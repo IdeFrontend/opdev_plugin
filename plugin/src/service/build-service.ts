@@ -51,34 +51,34 @@ async function isRootStandardCustom(): Promise<boolean> {
     const match = await OperatorPluginRegistry.detectProject(workspaceFolders[0].uri.fsPath);
     return match?.projectType === OperatorProjectType.STANDARD_CUSTOM;
   } catch (error) {
-    console.warn('[isRootStandardCustom] 检测失败:', error);
+    console.warn('[isRootStandardCustom] Detection failed:', error);
     return false;
   }
 }
 
 /**
- * 编译成功后，将 operatorNames（逗号分隔）对应的算子标记为已编译，写入 projects.json。
- * 仅对标准自定义算子工程生效。
+ * After successful compilation, mark the operators corresponding to operatorNames (comma separated) as compiled and write them to projects.json.
+ * It only takes effect for standard custom operator projects.
  */
 async function tryMarkOperatorsAsCompiled(
   configId: number,
   operatorNames: string | undefined,
 ): Promise<void> {
-  console.log('[tryMarkOperatorsAsCompiled] 编译成功后，将 operatorNames（逗号分隔）对应的算子标记为已编译，写入 projects.json。', operatorNames);
+  console.log('[tryMarkOperatorsAsCompiled] After successful build, mark operators in operatorNames (comma-separated) as compiled and write to projects.json.', operatorNames);
   if (!operatorNames || !operatorNames.trim()) {
     return;
   }
 
   try {
     const config = getConfigById(configId);
-    console.log('[tryMarkOperatorsAsCompiled] 找到配置，config:', config);
+    console.log('[tryMarkOperatorsAsCompiled] Found config, config:', config);
     if (!config) {
-      console.warn('[tryMarkOperatorsAsCompiled] 未找到配置，configId:', configId);
+      console.warn('[tryMarkOperatorsAsCompiled] Config not found, configId:', configId);
       return;
     }
 
     const project = getProjectById(config.project_id);
-    console.log('[tryMarkOperatorsAsCompiled] 找到项目，project:', project);
+    console.log('[tryMarkOperatorsAsCompiled] Found project, project:', project);
 
     if (!project || !project.project_path) {
       return;
@@ -91,17 +91,17 @@ async function tryMarkOperatorsAsCompiled(
       }
     }
     catch (error) {
-      console.warn('[tryMarkOperatorsAsCompiled] 检测项目类型失败:', error);
+      console.warn('[tryMarkOperatorsAsCompiled] Failed to detect project type:', error);
       return;
     }
 
-    console.log('[tryMarkOperatorsAsCompiled] 开始标记算子为已编译');
+    console.log('[tryMarkOperatorsAsCompiled] Start marking operators as compiled');
     await markOperatorsAsCompiled(project.project_path, operatorNames);
-    console.log('[tryMarkOperatorsAsCompiled] 已标记算子为已编译:', operatorNames);
+    console.log('[tryMarkOperatorsAsCompiled] Marked operators as compiled:', operatorNames);
   }
   catch (error) {
     console.warn(
-      '[tryMarkOperatorsAsCompiled] 更新算子编译状态失败:',
+      '[tryMarkOperatorsAsCompiled] Failed to update operator compile status:',
       error instanceof Error ? error.message : String(error),
     );
   }
@@ -109,13 +109,13 @@ async function tryMarkOperatorsAsCompiled(
 
 export class BuildService {
   /**
-   * 获取构建配置列表
+   * Get a list of build configurations
    */
   async getBuildConfigsList(): Promise<BuildConfig[]> {
     await ProjectManager.getInstance().initProject();
     const projectId = ProjectManager.getInstance().projectId;
 
-    console.log('getBuildConfigsList: 查询配置，projectId:', projectId);
+    console.log('getBuildConfigsList: querying configs, projectId:', projectId);
     const array = [
       getConfig(Number(projectId), CONFIG_TYPES.BUILD_OP),
       getConfig(Number(projectId), CONFIG_TYPES.BUILD_EXAMPLE),
@@ -131,7 +131,7 @@ export class BuildService {
       utTestConfig,
     ] = await Promise.all(array);
 
-    console.log('getBuildConfigsList: 查询结果', {
+    console.log('getBuildConfigsList: query result', {
       build_op: opConfig.length,
       build_example: exampleConfig.length,
       simulate: simulateConfig.length,
@@ -164,7 +164,7 @@ export class BuildService {
   }
 
   /**
-   * 根据类型获取配置
+   * Get configuration based on type
    */
   async getConfigByType(type: string): Promise<BuildConfig | undefined> {
     try {
@@ -178,7 +178,7 @@ export class BuildService {
   }
 
   /**
-   * 获取构建配置ID
+   * Get build configuration ID
    */
   async getBuildConfigId(): Promise<number | undefined> {
     const config = await this.getConfigByType(CONFIG_TYPES.BUILD_OP);
@@ -187,7 +187,7 @@ export class BuildService {
   }
 
   /**
-   * 获取示例构建配置ID
+   * Get sample build configuration ID
    */
   async getBuildExampleConfigId(): Promise<number | undefined> {
     const config = await this.getConfigByType(CONFIG_TYPES.BUILD_EXAMPLE);
@@ -196,7 +196,7 @@ export class BuildService {
   }
 
   /**
-   * 获取仿真配置ID
+   * Get simulation configuration ID
    */
   async getSimulateConfigId(): Promise<string> {
     const config = await this.getConfigByType(CONFIG_TYPES.SIMULATE);
@@ -205,7 +205,7 @@ export class BuildService {
   }
 
   /**
-   * 获取上板配置ID
+   * Get board configuration ID
    */
   async getOnBoardConfigId(): Promise<string> {
     const config = await this.getConfigByType(CONFIG_TYPES.ON_BOARD);
@@ -214,7 +214,7 @@ export class BuildService {
   }
 
   /**
-   * 获取UT测试配置ID
+   * Get UT test configuration ID
    */
   async getUtTestConfigId(): Promise<number | undefined> {
     const config = await this.getConfigByType(CONFIG_TYPES.UT_TEST);
@@ -223,21 +223,21 @@ export class BuildService {
   }
 
   /**
-   * 编译算子
+   * Compile operator
    */
   async startBuild(params: StartBuildParams): Promise<void> {
-    console.log('[startBuild] ========== 开始编译算子 ==========');
-    console.log('[startBuild] 传入参数:', JSON.stringify(params, null, 2));
+    console.log('[startBuild] ========== Start building operators ==========');
+    console.log('[startBuild] Input params:', JSON.stringify(params, null, 2));
     const pm = ProjectManager.getInstance();
 
-    // 如果传入了 projectId，则设置 ProjectManager 的项目ID
+    // If projectId is passed in, set the project ID of ProjectManager
     if (params.projectId !== undefined) {
-      console.log('[startBuild] 检测到传入的 projectId:', params.projectId);
+      console.log('[startBuild] Detected incoming projectId:', params.projectId);
       const projectIdStr = String(params.projectId);
       const project = getProjectById(Number(params.projectId));
 
       if (project) {
-        console.log('[startBuild] 找到项目信息:', {
+        console.log('[startBuild] Found project info:', {
           id: project.id,
           project_name: project.project_name,
           project_path: project.project_path,
@@ -246,29 +246,29 @@ export class BuildService {
         pm['_projectId'] = projectIdStr;
         pm['_projectName'] = project.project_name;
         pm['_projectPath'] = project.project_path;
-        console.log('[startBuild] 已设置 ProjectManager 项目信息');
+        console.log('[startBuild] ProjectManager project info set');
       } else {
-        console.warn('[startBuild] 未找到对应的项目，projectId:', params.projectId);
+        console.warn('[startBuild] Matching project not found, projectId:', params.projectId);
       }
     } else {
-      console.log('[startBuild] 未传入 projectId，使用 ProjectManager 中的项目ID');
+      console.log('[startBuild] projectId not provided, using project ID in ProjectManager');
     }
 
     const projectId = pm.projectId;
-    console.log('[startBuild] 当前使用的项目ID:', projectId);
-    console.log('[startBuild] ProjectManager 项目信息:', {
+    console.log('[startBuild] Current project ID in use:', projectId);
+    console.log('[startBuild] ProjectManager project info:', {
       projectId: pm.projectId,
       projectName: pm['_projectName'],
       projectPath: pm['_projectPath'],
     });
 
     let configId = params.configId ? Number(params.configId) : undefined;
-    console.log('[startBuild] 传入的 configId:', configId);
+    console.log('[startBuild] Input configId:', configId);
 
     if (!configId) {
-      console.log('[startBuild] 未传入 configId，尝试获取当前项目的配置');
+      console.log('[startBuild] configId not provided, trying to get current project config');
       configId = await this.getBuildConfigId();
-      console.log('[startBuild] 获取到的 configId:', configId);
+      console.log('[startBuild] Retrieved configId:', configId);
     }
 
     if (!configId) {
@@ -279,8 +279,8 @@ export class BuildService {
       return;
     }
 
-    console.log('[startBuild] 使用配置ID:', configId);
-    console.log('[startBuild] 编译参数:', {
+    console.log('[startBuild] Using config ID:', configId);
+    console.log('[startBuild] Build params:', {
       configId,
       compileOption: params.compileOption,
       operatorNames: params.operatorNames,
@@ -294,39 +294,39 @@ export class BuildService {
         params.operatorNames,
         params.scriptField
       );
-      console.log('[startBuild] 生成的编译命令:', buildCommand);
+      console.log('[startBuild] Generated build command:', buildCommand);
       const executor = ProjectManager.getInstance()
         .getExecutor();
-      console.log('[startBuild] 开始执行编译命令...');
+      console.log('[startBuild] Start executing build command...');
       const res = await executor.execute(buildCommand, [], [], {}, true);
 
-      console.log('[startBuild] 编译执行结果:', {
+      console.log('[startBuild] Build execution result:', {
         code: res.code,
         output: res.output,
       });
 
       if (res.code !== 0) {
-        console.error('[startBuild] 编译失败，退出码:', res.code, '输出:', res.output);
+        console.error('[startBuild] Build failed, exit code:', res.code, 'output:', res.output);
         vscode.window.showErrorMessage(t('build.compileFailed', { output: res.output }));
 
         return;
       }
 
-      console.log('[startBuild] 编译成功');
+      console.log('[startBuild] Build succeeded');
       vscode.window.showInformationMessage(t('build.compileSuccess'));
 
       await tryMarkOperatorsAsCompiled(Number(configId), params.operatorNames);
     }
     catch (e) {
-      console.error('[startBuild] 编译过程出错:', e);
+      console.error('[startBuild] Build process error:', e);
       vscode.window.showErrorMessage(t('build.getCompileCommandFailed', { error: (e as Error).message }));
     }
 
-    console.log('[startBuild] ========== 结束编译算子 ==========');
+    console.log('[startBuild] ========== Finished building operators ==========');
   }
 
   /**
-   * 运行算子
+   * Run operator
    */
   async startRun(params: StartRunParams): Promise<void> {
     // Option A: preserve V1 behavior exactly — startRun uses homeMethods.getProjectType()
@@ -414,12 +414,12 @@ export class BuildService {
   }
 
   /**
-   * 编译示例
+   * Compile example
    */
   async startBuildExample(params: StartBuildExampleParams): Promise<void> {
     const pm = ProjectManager.getInstance();
 
-    // 如果传入了 projectId，则设置 ProjectManager 的项目信息（与 startBuild 一致）
+    // If projectId is passed in, set the project information of ProjectManager (consistent with startBuild)
     if (params.projectId !== undefined) {
       const project = getProjectById(Number(params.projectId));
       if (project) {
@@ -459,7 +459,7 @@ export class BuildService {
   }
 
   /**
-   * 开始仿真分析
+   * Start simulation analysis
    */
   async startSimulate(params: { operatorNames?: string } = {}): Promise<void> {
     const configData = await this.getBuildConfigsList();
@@ -567,7 +567,7 @@ export class BuildService {
   }
 
   /**
-   * 开始上板分析
+   * Start board analysis
    */
   async startOnBoard(params: { operatorNames?: string } = {}): Promise<void> {
     const projectId = ProjectManager.getInstance().projectId;
@@ -668,11 +668,11 @@ export class BuildService {
   }
 
   /**
-   * 开始DumpTensor分析
+   * Start DumpTensor analysis
    */
   async startDumpTensor(params: { operatorNames?: string, compileOption?: string } = {}): Promise<void> {
     let configId = await this.getBuildConfigId();
-    console.log('[startDumpTensor] 查询到 configId:', configId);
+    console.log('[startDumpTensor] Queried configId:', configId);
 
     // 获取当前目录
     const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -700,20 +700,20 @@ export class BuildService {
       params.compileOption,
       params.operatorNames,
     );
-    console.log('[startDumpTensor] 生成的编译命令:', buildCommand);
+    console.log('[startDumpTensor] Generated build command:', buildCommand);
 
     const executor = ProjectManager.getInstance()
       .getExecutor();
-    console.log('[startDumpTensor] 开始执行编译命令...');
+    console.log('[startDumpTensor] Start executing build command...');
 
     const res = await executor.execute(buildCommand, [], [], {}, true);
-    console.log('[startDumpTensor] 编译执行结果:', {
+    console.log('[startDumpTensor] Build execution result:', {
       code: res.code,
       output: res.output,
     });
 
     if (res.code !== 0) {
-      console.error('[startDumpTensor] 编译失败，退出码:', res.code, '输出:', res.output);
+      console.error('[startDumpTensor] Build failed, exit code:', res.code, 'output:', res.output);
       vscode.window.showErrorMessage(t('build.compileFailed', { output: res.output }));
       return;
     }

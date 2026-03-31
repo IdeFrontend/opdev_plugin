@@ -17,16 +17,16 @@ export { CONNECTOR_READY_CHANNEL };
 type ExtensionListener<T> = (message: T, webview: Webview)=> void;
 
 /**
- * 多webview通信器（extension端使用）
+ * Multi-webview communicator (used on the extension side)
  */
 export class WebviewConnector<T = unknown, R = T> {
   /**
-   * webview端通信器是否激活
+   * Is the webview communicator activated?
    */
   private webviewReady: WeakMap<Webview, boolean> = new WeakMap();
 
   /**
-   * webview端通信器激活前暂存的消息
+   * Messages temporarily stored before activation of the webview communicator
    */
   private pendingDataList: WeakMap<Webview, T[]> = new WeakMap();
 
@@ -57,7 +57,7 @@ export class WebviewConnector<T = unknown, R = T> {
 
   public addWebview(webview: Webview): void {
     const receiver = webview.onDidReceiveMessage((res) => {
-      // 客户端初始化
+      // Client initialization
       if (isWebviewReadyMessage(res, this.channel)) {
         this.startConnector(webview);
 

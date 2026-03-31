@@ -7,15 +7,15 @@ import { fileService } from '@plugin/service/file-service';
 
 export const msSanitizerMethods = {
   /**
-   * 获取异常检测运行数据列表
-   * @returns {Promise<any[]>} 运行数据列表
+   * Get anomaly detection running data list
+   * @returns {Promise<any[]>} running data list
    */
   async getRunData() {
     return await runDataService.getSanitizerRunData();
   },
 
   /**
-   * 切换标记状态
+   * Toggle mark status
    * @param params
    */
   async toggleMark(params: { id: string }) {
@@ -23,16 +23,16 @@ export const msSanitizerMethods = {
   },
 
   /**
-   * 打开异常检测数据面板
-   * @param params - 参数
+   * Open the anomaly detection data panel
+   * @param params - parameters
    */
   openPanel(params: unknown) {
     viewService.openMsSanitizerPanelView(params);
   },
 
   /**
-   * 复制报告内容到剪贴板
-   * @param params - 参数，包含文件路径
+   * Copy report content to clipboard
+   * @param params - parameters, including file path
    */
   async copyReport(params: { path: string }): Promise<void> {
     const { path: filePath } = params;
@@ -42,10 +42,10 @@ export const msSanitizerMethods = {
     }
 
     try {
-      // 创建文件 URI
+      // Create file URI
       const fileUri = vscode.Uri.file(filePath);
 
-      // 检查文件是否存在
+      // Check if the file exists
       try {
         await vscode.workspace.fs.stat(fileUri);
       }
@@ -53,11 +53,11 @@ export const msSanitizerMethods = {
         throw new Error(t('link.fileNotExist', { path: filePath }));
       }
 
-      // 读取文件内容
+      // Read file contents
       const fileData = await vscode.workspace.fs.readFile(fileUri);
       const content = Buffer.from(fileData).toString('utf-8');
 
-      // 复制到剪贴板
+      // copy to clipboard
       await vscode.env.clipboard.writeText(content);
       vscode.window.showInformationMessage(t('msSanitizer.reportCopied'));
     }
@@ -69,8 +69,8 @@ export const msSanitizerMethods = {
   },
 
   /**
-   * 下载报告文件
-   * @param params - 参数，包含文件路径
+   * Download report file
+   * @param params - parameters, including file path
    */
   async downloadReport(params: { path: string }): Promise<void> {
     const { path: filePath } = params;
@@ -79,7 +79,7 @@ export const msSanitizerMethods = {
       throw new Error(t('msSanitizer.filePathEmpty'));
     }
 
-    // 显示下载进度
+    // Show download progress
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
@@ -92,10 +92,10 @@ export const msSanitizerMethods = {
           message: t('msSanitizer.checkingFile'),
         });
 
-        // 创建文件 URI
+        // Create file URI
         const fileUri = vscode.Uri.file(filePath);
 
-        // 检查文件是否存在
+        // Check if the file exists
         try {
           const stat = await vscode.workspace.fs.stat(fileUri);
           if (stat.type !== vscode.FileType.File && stat.type !== vscode.FileType.Directory) {
@@ -106,7 +106,7 @@ export const msSanitizerMethods = {
           throw new Error(t('link.fileNotExist', { path: filePath }));
         }
 
-        // 获取文件名（确保是 .zip 扩展名）
+        // Get the file name (make sure it is a .zip extension)
         const fileName = path.basename(filePath);
         const zipFileName = fileName.endsWith('.zip')
           ? fileName
@@ -118,8 +118,8 @@ export const msSanitizerMethods = {
         });
 
         try {
-          // 使用 fileService.saveFileToLocal 方法，它会自动处理 Web 版本和桌面版本
-          // 对于单个文件，会自动复制到临时文件夹并压缩为 zip
+          // Use the fileService.saveFileToLocal method, which automatically handles web and desktop versions
+          // For individual files, they are automatically copied to a temporary folder and compressed into zip
           const result = await fileService.saveFileToLocal({
             sourcePath: filePath,
             filename: zipFileName,
@@ -133,14 +133,14 @@ export const msSanitizerMethods = {
               message: t('msSanitizer.downloadComplete'),
             });
 
-            // 如果是桌面版本（返回 boolean），显示成功消息
+            // If it is a desktop version (returns boolean), display a success message
             if (typeof result === 'boolean' && result) {
               vscode.window.showInformationMessage(t('msSanitizer.fileDownloaded'));
             }
-            // Web 版本会通过浏览器自动下载，不需要额外提示
+            // The web version will be downloaded automatically through the browser without any additional prompts.
           }
           else {
-            // 用户取消了保存对话框
+            // User canceled save dialog
             vscode.window.showInformationMessage(t('msSanitizer.downloadCancelled'));
           }
         }

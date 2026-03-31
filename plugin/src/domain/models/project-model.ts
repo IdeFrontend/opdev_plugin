@@ -7,42 +7,42 @@ const dataDir = path.join(config.user_data_dir, 'data');
 const projectsFile = path.join(dataDir, 'projects.json');
 const storage = new JsonStorage(projectsFile);
 
-// 子算子信息
+// Sub-operator information
 export type SubOperatorInfo = {
-  name: string; // 算子名称
-  path: string; // 算子路径
-  isCompiled?: boolean; // 是否已编译
+  name: string; // Operator name
+  path: string; // operator path
+  isCompiled?: boolean; // Has it been compiled?
 };
 
-// 算子合集信息
+// Operator collection information
 export type OperatorCollectionInfo = {
-  name: string; // 算子合集名称
-  path: string; // 算子合集路径
+  name: string; // Operator collection name
+  path: string; // Operator collection path
 };
 
 export type ProjectRecord = {
   id: number;
   project_name: string;
   project_path: string;
-  template_name?: string | null; // 模板名称: helloworld addn torch_library
-  project_type?: string | null; // 算子工程类型：cann ascend pyasc
+  template_name?: string | null; // Template name: helloworld addn torch_library
+  project_type?: string | null; // Operator project type: cann ascend pyasc
   ascend_env_script?: string | null;
   soc_version?: string | null; // SOC版本
   create_by?: string | null;
   create_time?: string;
   update_by?: string | null;
   update_time?: string;
-  // 多算子工程集合的子项目ID列表
+  // List of subproject IDs of multi-operator project collections
   sub_project_ids?: number[] | null;
-  // 是否为experimental算子（仅在experimental目录下的算子）
+  // Whether it is an experimental operator (only operators in the experimental directory)
   is_experimental?: boolean | null;
-  // 标准自定义算子工程的算子合集列表
+  // Operator collection list of standard custom operator project
   ops_meet?: OperatorCollectionInfo[] | null;
-  // 标准自定义算子工程的子算子列表（非experimental）
+  // Sub-operator list of standard custom operator project (non-experimental)
   ops_list?: SubOperatorInfo[] | null;
-  // 标准自定义算子工程的experimental子算子列表
+  // Experimental sub-operator list of standard custom operator project
   experimental_ops_list?: SubOperatorInfo[] | null;
-  // 已选择的算子ID列表（用于标准自定义算子场景）
+  // List of selected operator IDs (for standard custom operator scenarios)
   selected_operator_ids?: number[] | null;
 };
 
@@ -58,7 +58,7 @@ function ensureStore(): ProjectsStore {
   };
   const data = storage.read<ProjectsStore>(init);
 
-  // 简单的校验
+  // Simple verification
   if (!Array.isArray(data.projects)) {
     return init;
   }
@@ -74,20 +74,20 @@ export interface CreateProjectParams {
   project_name: string;
   project_path: string;
   template_name?: string,
-  project_type?: string; // 算子工程类型
+  project_type?: string; // Operator project type
   ascend_env_script?: string;
   soc_version?: string; // SOC版本
   create_by?: string;
-  sub_project_ids?: number[]; // 多算子工程集合的子项目ID列表
-  is_experimental?: boolean; // 是否为experimental算子
-  ops_meet?: OperatorCollectionInfo[]; // 标准自定义算子工程的算子合集列表
-  ops_list?: SubOperatorInfo[]; // 标准自定义算子工程的子算子列表（非experimental）
-  experimental_ops_list?: SubOperatorInfo[]; // 标准自定义算子工程的experimental子算子列表
-  selected_operator_ids?: number[]; // 已选择的算子ID列表（用于标准自定义算子场景）
+  sub_project_ids?: number[]; // List of subproject IDs of multi-operator project collections
+  is_experimental?: boolean; // Whether it is an experimental operator
+  ops_meet?: OperatorCollectionInfo[]; // Operator collection list of standard custom operator project
+  ops_list?: SubOperatorInfo[]; // Sub-operator list of standard custom operator project (non-experimental)
+  experimental_ops_list?: SubOperatorInfo[]; // Experimental sub-operator list of standard custom operator project
+  selected_operator_ids?: number[]; // List of selected operator IDs (for standard custom operator scenarios)
 }
 
 export async function updateShScript(data: CreateProjectParams) {
-  // 数据库 操作
+  // Database operations
   const store = ensureStore();
   const existing = store.projects.find((p) => p.project_path === data.project_path);
 
@@ -107,12 +107,12 @@ export async function updateShScript(data: CreateProjectParams) {
 }
 
 export async function createProject(data: CreateProjectParams) {
-  // 数据库 操作
+  // Database operations
   const store = ensureStore();
   const existing = store.projects.find((p) => p.project_path === data.project_path);
 
   if (existing) {
-    // 更新现有项目
+    // Update existing project
     if (data.ascend_env_script) {
       existing.ascend_env_script = data.ascend_env_script;
     }
@@ -182,13 +182,13 @@ export async function createProject(data: CreateProjectParams) {
 
 export function getProjectByPath(projectPath: string): ProjectRecord | undefined {
   if (!projectPath || typeof projectPath !== 'string') {
-    console.warn('[getProjectByPath] 项目路径为空或无效:', projectPath);
+    console.warn('[getProjectByPath] Project path is empty or invalid:', projectPath);
     return undefined;
   }
 
   const store = ensureStore();
   
-  // 规范化路径比较（Windows 上路径大小写不敏感）
+  // Normalized path comparison (paths are not case sensitive on Windows)
   const normalizedPath = path.normalize(projectPath).replace(/\\/g, '/').toLowerCase();
 
   return store.projects.find((p) => {
@@ -201,10 +201,10 @@ export function getProjectByPath(projectPath: string): ProjectRecord | undefined
 }
 
 /**
- * 查找包含指定路径的标准自定义算子工程（含多算子集合）
- * 用于右键子文件夹编译时，定位到根项目。
- * @param folderPath 文件夹路径（如子算子目录）
- * @returns 包含该路径的 STANDARD_CUSTOM 项目，按路径最长优先；未找到返回 undefined
+ * Find standard custom operator projects (including multiple operator sets) containing the specified path
+ * Used to right-click a subfolder to locate the root project when compiling.
+ * @param folderPath Folder path (such as sub-operator directory)
+ * @returns The STANDARD_CUSTOM item containing the path, with the longest path first; if not found, undefined is returned
  */
 export function getContainingStandardCustomProject(folderPath: string): ProjectRecord | undefined {
   if (!folderPath || typeof folderPath !== 'string') {
@@ -253,13 +253,13 @@ export function getProjectById(project_id: number) {
 
 export function deleteProject(projectPath: string): boolean {
   if (!projectPath || typeof projectPath !== 'string') {
-    console.warn('[deleteProject] 项目路径为空或无效:', projectPath);
+    console.warn('[deleteProject] Project path is empty or invalid:', projectPath);
     return false;
   }
 
   const store = ensureStore();
   
-  // 规范化路径比较（Windows 上路径大小写不敏感）
+  // Normalized path comparison (paths are not case sensitive on Windows)
   const normalizedPath = path.normalize(projectPath).replace(/\\/g, '/').toLowerCase();
   
   const index = store.projects.findIndex((p) => {
@@ -286,11 +286,11 @@ export function getAllProjects(): ProjectRecord[] {
 }
 
 /**
- * 更新标准自定义算子工程的算子信息
- * @param projectPath 项目路径
- * @param opsMeet 算子合集列表
- * @param opsList 普通算子列表
- * @param experimentalOpsList experimental算子列表
+ * Update the operator information of the standard custom operator project
+ * @param projectPath project path
+ * @param opsMeet operator collection list
+ * @param opsList ordinary operator list
+ * @param experimentalOpsList experimental operator list
  */
 export async function updateStandardCustomOperators(
   projectPath: string,
@@ -310,16 +310,16 @@ export async function updateStandardCustomOperators(
   });
 
   if (project) {
-    console.log(`[updateStandardCustomOperators] 更新项目: ${projectPath}`);
-    console.log(`[updateStandardCustomOperators] ops_meet: ${opsMeet.length} 个算子合集`, opsMeet.map(m => m.name));
-    console.log(`[updateStandardCustomOperators] ops_list: ${opsList.length} 个算子`, opsList.map(o => o.name));
-    console.log(`[updateStandardCustomOperators] experimental_ops_list: ${experimentalOpsList.length} 个算子`, experimentalOpsList.map(o => o.name));
+    console.log(`[updateStandardCustomOperators] Updating project: ${projectPath}`);
+    console.log(`[updateStandardCustomOperators] ops_meet: ${opsMeet.length} operator groups`, opsMeet.map(m => m.name));
+    console.log(`[updateStandardCustomOperators] ops_list: ${opsList.length} operators`, opsList.map(o => o.name));
+    console.log(`[updateStandardCustomOperators] experimental_ops_list: ${experimentalOpsList.length} operators`, experimentalOpsList.map(o => o.name));
     
-    // 保留已有算子的 isCompiled 状态
+    // Keep the isCompiled status of existing operators
     const existingOpsList = project.ops_list || [];
     const existingExperimentalOpsList = project.experimental_ops_list || [];
     
-    // 创建已有算子的 isCompiled 状态映射（以算子名称为 key）
+    // Create an isCompiled state map of an existing operator (using the operator name as the key)
     const existingOpsCompiledMap = new Map<string, boolean>();
     existingOpsList.forEach((op) => {
       if (op.isCompiled === true) {
@@ -332,10 +332,10 @@ export async function updateStandardCustomOperators(
       }
     });
     
-    // 更新算子列表，保留已有的 isCompiled: true 状态
+    // Update the operator list and retain the existing isCompiled: true state
     const updatedOpsList = opsList.map((op) => {
       const existingIsCompiled = existingOpsCompiledMap.get(op.name);
-      // 如果已有算子的 isCompiled 为 true，则保留；否则使用扫描的结果
+      // If isCompiled of an existing operator is true, keep it; otherwise, use the result of the scan
       return {
         ...op,
         isCompiled: existingIsCompiled === true ? true : op.isCompiled,
@@ -344,7 +344,7 @@ export async function updateStandardCustomOperators(
     
     const updatedExperimentalOpsList = experimentalOpsList.map((op) => {
       const existingIsCompiled = existingOpsCompiledMap.get(op.name);
-      // 如果已有算子的 isCompiled 为 true，则保留；否则使用扫描的结果
+      // If isCompiled of an existing operator is true, keep it; otherwise, use the result of the scan
       return {
         ...op,
         isCompiled: existingIsCompiled === true ? true : op.isCompiled,
@@ -357,23 +357,23 @@ export async function updateStandardCustomOperators(
     project.update_time = new Date().toISOString();
     writeStore(store);
     
-    console.log(`[updateStandardCustomOperators] 更新完成，已保留 ${existingOpsCompiledMap.size} 个已编译算子的状态`);
+    console.log(`[updateStandardCustomOperators] Update completed, preserved compiled status for ${existingOpsCompiledMap.size} compiled operators`);
   } else {
-    console.warn(`[updateStandardCustomOperators] 未找到项目: ${projectPath}`);
-    console.warn(`[updateStandardCustomOperators] 现有项目路径:`, store.projects.map(p => p.project_path));
+    console.warn(`[updateStandardCustomOperators] Project not found: ${projectPath}`);
+    console.warn(`[updateStandardCustomOperators] Existing project paths:`, store.projects.map(p => p.project_path));
   }
 }
 
 /**
- * 标记标准自定义算子工程的子算子为已编译
- * @param projectPath 项目路径
- * @param operatorNames 算子名称列表（逗号分隔的字符串或数组）
+ * Mark the sub-operators of the standard custom operator project as compiled
+ * @param projectPath project path
+ * @param operatorNames list of operator names (comma separated string or array)
  */
 export async function markOperatorsAsCompiled(
   projectPath: string,
   operatorNames: string | string[],
 ): Promise<void> {
-  console.log('[markOperatorsAsCompiled] 标记标准自定义算子工程的子算子为已编译', projectPath, operatorNames);
+  console.log('[markOperatorsAsCompiled] Marking sub-operators in standard custom operator project as compiled', projectPath, operatorNames);
   const store = ensureStore();
   const normalizedPath = path.normalize(projectPath).replace(/\\/g, '/').toLowerCase();
   
@@ -386,23 +386,23 @@ export async function markOperatorsAsCompiled(
   });
 
   if (!project) {
-    console.warn(`[markOperatorsAsCompiled] 未找到项目: ${projectPath}`);
+    console.warn(`[markOperatorsAsCompiled] Project not found: ${projectPath}`);
     return;
   }
 
-  // 将 operatorNames 转换为数组
+  // Convert operatorNames to array
   const operatorNameArray = Array.isArray(operatorNames)
     ? operatorNames
     : operatorNames.split(',').map(name => name.trim()).filter(name => name.length > 0);
 
   if (operatorNameArray.length === 0) {
-    console.warn(`[markOperatorsAsCompiled] 算子名称列表为空`);
+    console.warn(`[markOperatorsAsCompiled] Operator name list is empty`);
     return;
   }
 
   let updated = false;
 
-  // 更新普通算子列表
+  // Update common operator list
   if (project.ops_list && project.ops_list.length > 0) {
     for (const op of project.ops_list) {
       if (operatorNameArray.includes(op.name)) {
@@ -412,7 +412,7 @@ export async function markOperatorsAsCompiled(
     }
   }
 
-  // 更新experimental算子列表
+  // Update experimental operator list
   if (project.experimental_ops_list && project.experimental_ops_list.length > 0) {
     for (const op of project.experimental_ops_list) {
       if (operatorNameArray.includes(op.name)) {
@@ -425,9 +425,9 @@ export async function markOperatorsAsCompiled(
   if (updated) {
     project.update_time = new Date().toISOString();
     writeStore(store);
-    console.log(`[markOperatorsAsCompiled] 已标记 ${operatorNameArray.length} 个算子为已编译`);
+    console.log(`[markOperatorsAsCompiled] Marked ${operatorNameArray.length} operators as compiled`);
   } else {
-    console.warn(`[markOperatorsAsCompiled] 未找到要标记的算子: ${operatorNameArray.join(', ')}`);
+    console.warn(`[markOperatorsAsCompiled] Operators to mark were not found: ${operatorNameArray.join(', ')}`);
   }
 }
 

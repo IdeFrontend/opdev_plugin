@@ -20,7 +20,7 @@ const CONFIG_TYPES = { SANITIZER: 'sanitizer' } as const;
 
 export class ConfigService {
   /**
-   * 远程路径搜索
+   * Remote path search
    */
   async remotePathSearch(params: RemotePathSearchParams): Promise<RemotePathSearchResult> {
     const res = getFiles(params.keyword);
@@ -32,7 +32,7 @@ export class ConfigService {
   }
 
   /**
-   * 保存构建配置
+   * Save build configuration
    */
   async saveBuildConfig(params: SaveBuildConfigParams): Promise<void> {
     try {
@@ -48,7 +48,7 @@ export class ConfigService {
   }
 
   /**
-   * 保存配置（仿真/上板）
+   * Save configuration (simulation/boarding)
    */
   async saveConfig(params: SaveConfigParams): Promise<void> {
     await postConfig(params.type, params.data as unknown[]);
@@ -59,32 +59,32 @@ export class ConfigService {
   }
 
   /**
-   * 检查 devtool_config.json 配置文件是否存在
-   * 优先检查 ProjectManager 中的项目路径，如果不存在则检查当前工作区
+   * Check whether the devtool_config.json configuration file exists
+   * First check the project path in ProjectManager, if it does not exist, check the current workspace
    */
   async checkDevtoolConfig(): Promise<boolean> {
     const pm = ProjectManager.getInstance();
 
-    // 优先使用 ProjectManager 的项目路径
+    // Prioritize the project path of ProjectManager
     const projectInfo = pm.getProjectInfo();
     let checkPath: string | undefined;
 
     if (projectInfo?.path) {
       checkPath = projectInfo.path;
-      console.log('checkDevtoolConfig: 使用 ProjectManager 项目路径:', checkPath);
+      console.log('checkDevtoolConfig: using ProjectManager project path:', checkPath);
     }
     else {
-      // 回退到工作区路径
+      // Fallback to workspace path
       const workspaceFolders = vscode.workspace.workspaceFolders;
 
       if (workspaceFolders && workspaceFolders.length > 0) {
         checkPath = workspaceFolders[0].uri.fsPath;
-        console.log('checkDevtoolConfig: 使用工作区路径:', checkPath);
+        console.log('checkDevtoolConfig: using workspace path:', checkPath);
       }
     }
 
     if (!checkPath) {
-      console.log('checkDevtoolConfig: 没有可用的路径，返回 false');
+      console.log('checkDevtoolConfig: no available path, return false');
 
       return false;
     }
@@ -98,19 +98,19 @@ export class ConfigService {
     try {
       const exists = fs.existsSync(devtoolConfigPath);
 
-      console.log('checkDevtoolConfig: 配置文件路径:', devtoolConfigPath, '存在:', exists);
+      console.log('checkDevtoolConfig: config file path:', devtoolConfigPath, 'exists:', exists);
 
       return exists;
     }
     catch (error) {
-      console.error('检查 devtool_config.json 文件时出错:', error);
+      console.error('Error while checking devtool_config.json file:', error);
 
       return false;
     }
   }
 
   /**
-   * 获取异常检测配置列表
+   * Get anomaly detection configuration list
    */
   async getSanitizerConfigsList(): Promise<BuildConfig[]> {
     const projectId = ProjectManager.getInstance().projectId;
@@ -123,7 +123,7 @@ export class ConfigService {
   }
 
   /**
-   * 保存异常检测表单配置
+   * Save anomaly detection form configuration
    */
   async saveSanitizerForm(params: SaveSanitizerFormParams): Promise<void> {
     try {

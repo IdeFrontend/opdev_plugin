@@ -14,21 +14,21 @@ import { OperatorProjectType } from '@plugin/domain/models/operator-project-type
 export { OperatorProjectType };
 
 /**
- * 算子工程检测结果
+ * Operator engineering test results
  */
 export interface OperatorProjectDetectionResult {
-  /** 是否为算子工程 */
+  /** Is it an operator project? */
   isOperatorProject: boolean;
-  /** 算子工程类型 */
+  /** Operator project type */
   projectType?: OperatorProjectType;
-  /** 项目路径 */
+  /** Project path */
   projectPath: string;
-  /** 项目名称 */
+  /** Project name */
   projectName: string;
 }
 
 /**
- * 算子工程检测器
+ * Operator Engineering Detector
  *
  * Thin wrapper around OperatorPluginRegistry.detectProject().
  * Detection heuristics now live in the individual IProjectDetector implementations
@@ -36,7 +36,7 @@ export interface OperatorProjectDetectionResult {
  */
 export class OperatorProjectDetector {
   /**
-   * 检测目录是否为算子工程
+   * Check whether the directory is an operator project
    */
   static async detectOperatorProject(dirPath: string): Promise<OperatorProjectDetectionResult> {
     const projectName = path.basename(dirPath);
@@ -55,7 +55,7 @@ export class OperatorProjectDetector {
   }
 
   /**
-   * 递归扫描目录，查找算子工程（最多扫描3层）
+   * Recursively scan directories to find operator projects (up to 3 layers can be scanned)
    */
   static async scanForOperatorProjects(
     rootPath: string,
@@ -98,7 +98,7 @@ export class OperatorProjectDetector {
   }
 
   /**
-   * 扫描 rootPath 目录下的第一层文件夹，查找标准自定义算子工程
+   * Scan the first-level folders under the rootPath directory to find standard custom operator projects
    */
   static async scanForStandardCustomOperatorProjects(
     rootPath: string,

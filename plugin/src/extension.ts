@@ -85,9 +85,9 @@ import { welcomeMethods } from './controller/welcome-controller'
 let extensionContext: vscode.ExtensionContext | undefined;
 
 /**
- * 将文件 URI 转换为文件夹 URI
- * 如果传入的是文件夹 URI，则直接返回
- * 如果传入的是文件 URI，则返回文件所在的文件夹 URI
+ * Convert file URI to folder URI
+ * If a folder URI is passed in, it will be returned directly.
+ * If a file URI is passed in, the folder URI where the file is located is returned.
  */
 function getFolderUri(uri: vscode.Uri): vscode.Uri {
   try {
@@ -95,17 +95,17 @@ function getFolderUri(uri: vscode.Uri): vscode.Uri {
     if (stat.isDirectory()) {
       return uri;
     }
-    // 如果是文件，返回文件所在的文件夹
+    // If it is a file, return the folder where the file is located
     return vscode.Uri.file(path.dirname(uri.fsPath));
   } catch {
-    // 如果无法获取文件信息，假设是文件，返回父目录
+    // If the file information cannot be obtained, assuming it is a file, return to the parent directory
     return vscode.Uri.file(path.dirname(uri.fsPath));
   }
 }
 
 /**
- * 检查当前工作区是否存在 .vscode/devtool_config.json 文件
- * @returns 如果文件存在返回 true，否则返回 false
+ * Check whether the .vscode/devtool_config.json file exists in the current workspace
+ * @returns Returns true if the file exists, false otherwise
  */
 async function checkDevtoolConfigExists(): Promise<boolean> {
   const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -125,28 +125,28 @@ async function checkDevtoolConfigExists(): Promise<boolean> {
     return fs.existsSync(devtoolConfigPath);
   }
   catch (error) {
-    console.error('检查 devtool_config.json 文件时出错:', error);
+    console.error('Error while checking devtool_config.json file:', error);
 
     return false;
   }
 }
 
 /**
- * 关闭辅助侧边栏
+ * Close secondary sidebar
  */
 const closeAuxiliaryBar = async () => {
   try {
-    // 检查辅助侧边栏是否可见，如果可见则关闭
+    // Check if the secondary sidebar is visible and close it if visible
     await vscode.commands.executeCommand('workbench.action.closeAuxiliaryBar');
-    console.log('已关闭辅助侧边栏');
+    console.log('Auxiliary sidebar closed');
   }
   catch (error) {
-    console.error('关闭辅助侧边栏时出错:', error);
+    console.error('Error while closing auxiliary sidebar:', error);
   }
 };
 
-// 注册资源选择变化监听，动态更新上下文变量
-// 在命令执行前更新上下文变量，这样菜单显示逻辑才能正确工作
+// Register resource selection change monitoring and dynamically update context variables
+// Update context variables before command execution so menu display logic works correctly
 const updateContextForUri = async (uri: vscode.Uri | undefined) => {
   if (!uri) {
     await vscode.commands.executeCommand('setContext', 'operatorProjectMarked', false);
@@ -176,8 +176,8 @@ const updateContextForUri = async (uri: vscode.Uri | undefined) => {
 };
 
 /**
- * 插件激活入口函数
- * @param context VSCode扩展上下文
+ * Plug-in activation entry function
+ * @param context VSCode extended context
  */
 export async function activate(context: vscode.ExtensionContext) {
   extensionContext = context;
@@ -189,50 +189,50 @@ export async function activate(context: vscode.ExtensionContext) {
   // Must be called before any code that uses OperatorPluginRegistry.
   registerOperatorPlugins();
 
-  // api接口
+  // api interface
   const apiServer = initApiServer();
 
-  // 初始化配置页面的Webview
+  // Initialize the Webview of the configuration page
   const configProvider = new WebviewProvider(context, apiServer);
 
-  // 注册 pluginSidebar webview provider 并添加到 subscriptions
+  // Register pluginSidebar webview provider and add to subscriptions
   const pluginSidebarDisposable = configProvider.showLeftPage(VIEW_HOME);
 
   context.subscriptions.push(pluginSidebarDisposable);
 
-  // 国际化
+  // internationalization
   await initI18n();
 
-  // 检查 devtool_config.json 文件是否存在
+  // Check if the devtool_config.json file exists
   const hasDevtoolConfig = await checkDevtoolConfigExists();
 
-  console.log('文件是否存在:', hasDevtoolConfig);
-  // 设置 context 来控制命令可见性
+  console.log('Does file exist:', hasDevtoolConfig);
+  // Set context to control command visibility
   await vscode.commands.executeCommand(
     'setContext',
     'hasDevtoolConfig',
     hasDevtoolConfig,
   );
 
-  // 视图
+  // view
   const viewServer = initViews(context, apiServer);
 
   ExtensionConfig.init(context);
   PermanentStorage.setInstance(context);
 
-  // 初始化新建算子工程的Webview
+  // Initialize the Webview of the new operator project
   const createOpsProvider = new WebviewProvider(context, apiServer);
 
-  // 初始化配置页面的Webview
+  // Initialize the Webview of the configuration page
   const configWelcomeProvider = new WebviewProvider(context, apiServer);
 
-  // 初始化环境脚本配置页面的Webview
+  // Initialize the Webview of the environment script configuration page
   const configProjectSHProvider = new WebviewProvider(context, apiServer);
 
-  // 初始化打开算子工程的Webview
+  // Initialize and open the Webview of the operator project
   const openProjectProvider = new WebviewProvider(context, apiServer);
 
-  // 注册新建算子工程命令
+  // Register the new operator project command
   const openCommand = vscode.commands.registerCommand(
     COMMAND_OPEN,
     async () => {
@@ -240,7 +240,7 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // 注册打开算子工程命令
+  // Register and open the operator project command
   const openProjectCommand = vscode.commands.registerCommand(
     COMMAND_OPEN_PROJECT,
     async () => {
@@ -248,7 +248,7 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // 注册在当前目录下新建算子工程命令
+  // Register the command to create a new operator project in the current directory
   const createOperatorInWorkspaceCommand = vscode.commands.registerCommand(
     COMMAND_CREATE_OPERATOR_IN_WORKSPACE,
     async (uri?: vscode.Uri) => {
@@ -259,11 +259,11 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      // 如果提供了 uri（在文件上右键），使用该路径；否则使用工作区根目录
+      // If a uri is provided (right click on the file), use that path; otherwise use the workspace root
       const targetPath = uri ? uri.fsPath : workspaceFolders[0].uri.fsPath;
 
       await createOpsProvider.show(VIEW_LINK);
-      // 等待 webview 加载完成后发送路径
+      // Wait for the webview to finish loading and send the path
       setTimeout(() => {
         createOpsProvider.postMessage({
           command: 'iframeSetProjectPath',
@@ -273,7 +273,7 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // 打开环境变量命令
+  // Open environment variables command
   const openProjectSH = vscode.commands.registerCommand(
     COMMAND_PROJECT_SH,
     async () => {
@@ -281,12 +281,12 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // 注册打开关闭算子工作-操作命令
+  // Register open and close operator work-operation command
   const toggleOpsOperateCommand = vscode.commands.registerCommand(
     COMMAND_TOGGLE_OPS_OPERATE,
     async () => {
       try {
-        // 打开/关闭右侧辅助侧栏
+        // Open/close the auxiliary sidebar on the right
         await vscode.commands.executeCommand('workbench.action.toggleAuxiliaryBar');
       }
       catch (error) {
@@ -295,7 +295,7 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // 注册视图
+  // Register view
   const opsOperateProvider = new OpsOperateProvider(context, apiServer);
   const opsOperateView = vscode.window.registerWebviewViewProvider(
     OpsOperateProvider.viewType,
@@ -304,30 +304,30 @@ export async function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(opsOperateView);
-  // 注册命令（无论文件是否存在都要注册）
+  // Register command (register regardless of whether the file exists)
   context.subscriptions.push(toggleOpsOperateCommand);
 
-  // 根据 devtool_config.json 文件是否存在来决定展开或关闭侧边栏
+  // Expand or close the sidebar based on whether the devtool_config.json file exists
   if (hasDevtoolConfig) {
-    // 延迟执行，确保 UI 已就绪
+    // Delay execution to ensure UI is ready
     setTimeout(async () => {
       try {
-        console.log('文件存在执行展开：123123123132');
+        console.log('File exists, executing expand: 123123123132');
         await vscode.commands.executeCommand('OpsOperateProvider.focus');
       }
       catch (error) {
-        console.error('聚焦 OpsOperateProvider 视图时出错:', error);
+        console.error('Error while focusing OpsOperateProvider view:', error);
       }
     }, 1000);
   }
   else {
-    // 如果文件不存在，关闭侧边栏
+    // If the file does not exist, close the sidebar
     setTimeout(async () => {
       await closeAuxiliaryBar();
     }, 500);
   }
 
-  // 注册打开工程配置页命令
+  // Register the command to open the project configuration page
   const ConfigCommand = vscode.commands.registerCommand(
     COMMAND_CONFIG,
     async () => {
@@ -335,7 +335,7 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // 注册打开欢迎页命令
+  // Register to open the welcome page command
   const welcomeCommand = vscode.commands.registerCommand(
     COMMAND_WELCOME,
     async () => {
@@ -343,16 +343,16 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // 注册删除欢迎页计数命令（用于手动重置）
+  // Register delete welcome page count command (for manual reset)
   const clearWelcomeCountCommand = vscode.commands.registerCommand(
     COMMAND_CLEAR_WELCOME_COUNT,
     async () => {
       await context.globalState.update('welcomeShowCount', undefined);
-      console.log('welcomeShowCount 已删除');
+      console.log('welcomeShowCount deleted');
     },
   );
 
-  // 注册清除缓存的算子工程位置命令
+  // Register the operator project location command to clear the cache
   const clearLastProjectPathCommand = vscode.commands.registerCommand(
     COMMAND_CLEAR_LAST_PROJECT_PATH,
     async () => {
@@ -361,7 +361,7 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // 注册创建算子工程命令，会执行回调函数
+  // Register the command to create an operator project, and the callback function will be executed.
   const createOptionsCommand = vscode.commands.registerCommand(
     COMMAND_CREATE_DIRECTORY,
     async (
@@ -377,7 +377,7 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // 获取home
+  // Get home
   const getHome = vscode.commands.registerCommand(
     COMMAND_GET_HOME,
     async (_data: unknown) => {
@@ -387,14 +387,14 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const [workspaceFolder] = vscode.workspace.workspaceFolders ?? [];
 
-  console.log(workspaceFolder, '是否打开了文件夹');
+  console.log(workspaceFolder, 'Is a folder open');
 
-  // 仅在未打开任何工程/文件夹时弹出欢迎页，且在本地缓存中记录次数，最多弹出两次
+  // The welcome page will only pop up when no project/folder is open, and the number of times will be recorded in the local cache, with a maximum of two pop-ups.
   if (!workspaceFolder) {
     const welcomeShowCount =
       context.globalState.get<number>('welcomeShowCount') ?? 0;
 
-    console.log(welcomeShowCount, '打开次数');
+    console.log(welcomeShowCount, 'Open count');
 
     if (welcomeShowCount < 2) {
       vscode.commands.executeCommand(COMMAND_WELCOME);
@@ -403,7 +403,7 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   }
 
-  // 异常检测视图（报告列表已迁入面板左侧，右侧展示对应报告检测结果）
+  // Anomaly detection view (the report list has been moved to the left side of the panel, and the corresponding report detection results are displayed on the right side)
   const {
     openMsSanitizerDisposable,
     msSanitizerPanelView,
@@ -411,7 +411,7 @@ export async function activate(context: vscode.ExtensionContext) {
   } = getMsSanitizerPanelViewProvider(context, apiServer);
   context.subscriptions.push(msSanitizerPanelView, openMsSanitizerDisposable);
 
-  // 性能调优视图（中间面板）
+  // Performance tuning view (middle panel)
   const {
     performancePanelView,
     openPerformanceDisposable,
@@ -419,7 +419,7 @@ export async function activate(context: vscode.ExtensionContext) {
   } = getPerformancePanelViewProvider(context, apiServer);
   context.subscriptions.push(performancePanelView, openPerformanceDisposable);
 
-  // DumpTensor数据视图（中间面板）
+  // DumpTensor data view (middle panel)
   const {
     dumpTensorPanelView,
     openDumpTensorDisposable,
@@ -427,7 +427,7 @@ export async function activate(context: vscode.ExtensionContext) {
   } = getDumpTensorPanelViewProvider(context, apiServer);
   context.subscriptions.push(dumpTensorPanelView, openDumpTensorDisposable);
 
-  // 初始化'仿真分析-选择采集内容'页面的Webview（打开配置页面前做 pyasc .py 校验）
+  // Simulation analysis — select collection content (pyasc .py check before opening config)
   const simulatorOptionsProvider = new WebviewProvider(context, apiServer);
   const simulatorOptionsCommand = vscode.commands.registerCommand(
     COMMAND_SIMULATOR_OPTIONS,
@@ -441,7 +441,7 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // 初始化'上板分析-选择采集内容'页面的Webview（打开配置页面前做 pyasc .py 校验）
+  // Initialize the Webview of the 'Onboard Analysis-Select Collected Content' page (do pyasc.py verification before opening the configuration page)
   const onBoardOptionsProvider = new WebviewProvider(context, apiServer);
   const onBoardOptionsCommand = vscode.commands.registerCommand(
     COMMAND_ON_BOARD_OPTIONS,
@@ -455,7 +455,7 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // 初始化'异常检测-选择检测内容'页面的Webview
+  // Initialize the Webview of the 'Anomaly Detection-Select Detection Content' page
   const sanitizerOptionsProvider = new WebviewProvider(context, apiServer);
   const sanitizerOptionsCommand = vscode.commands.registerCommand(
     COMMAND_SANITIZER_OPTIONS,
@@ -464,7 +464,7 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // 订阅销毁事件
+  // Subscription to destruction event
   context.subscriptions.push(apiServer);
   context.subscriptions.push(viewServer);
   context.subscriptions.push(createOptionsCommand);
@@ -475,17 +475,17 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(welcomeCommand);
   context.subscriptions.push(clearWelcomeCountCommand);
   context.subscriptions.push(clearLastProjectPathCommand);
-  // 注意: createOptionsCommand 已在上面添加,不要重复添加
+  // Note: createOptionsCommand has been added above, do not add it again
   context.subscriptions.push(getHome);
   context.subscriptions.push(createOperatorInWorkspaceCommand);
   context.subscriptions.push(simulatorOptionsCommand);
   context.subscriptions.push(onBoardOptionsCommand);
   context.subscriptions.push(sanitizerOptionsCommand);
 
-  // 初始化文件夹装饰提供者
+  // Initialize folder decoration provider
   const iconTheme = OperatorProjectIconTheme.getInstance(context);
 
-  // 注册刷新文件夹装饰的命令
+  // Register a command to refresh folder decorations
   const refreshDecorationsCommand = vscode.commands.registerCommand(
     COMMAND_REFRESH_FOLDER_DECORATIONS,
     () => {
@@ -495,10 +495,10 @@ export async function activate(context: vscode.ExtensionContext) {
   );
   context.subscriptions.push(refreshDecorationsCommand);
 
-  // 注意：不在插件激活时自动检测并标记算子工程合集
-  // 只在用户明确打开项目时（link-controller.ts）才进行自动检测
+  // Note: Do not automatically detect and mark the operator project collection when the plug-in is activated.
+  // Automatic detection only occurs when the user explicitly opens the project (link-controller.ts)
 
-  // 注册文件夹右键菜单命令
+  // Register folder right-click menu command
   const markAsOperatorProjectCommand = vscode.commands.registerCommand(
     COMMAND_MARK_AS_OPERATOR_PROJECT,
     async (uri?: vscode.Uri) => {
@@ -508,7 +508,7 @@ export async function activate(context: vscode.ExtensionContext) {
       }
       await FolderContextMenuService.markAsOperatorProject(uri);
 
-      // 操作完成后触发装饰更新（先刷新涉及 URI，再全量刷新确保 Explorer 重绘）
+      // Trigger decoration update after the operation is completed (refresh the involved URI first, then refresh in full to ensure Explorer is redrawn)
       iconTheme.fireDecorationUpdate(uri);
       iconTheme.fireDecorationUpdate();
 
@@ -670,7 +670,7 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // 报告可视化：异常检测
+  // Reporting Visualization: Anomaly Detection
   const reportVisualizationSanitizerCommand = vscode.commands.registerCommand(
     COMMAND_REPORT_VISUALIZATION_SANITIZER,
     async (uri?: vscode.Uri) => {
@@ -682,7 +682,7 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // 报告可视化：上板分析
+  // Report visualization: On-board analysis
   const reportVisualizationOnBoardCommand = vscode.commands.registerCommand(
     COMMAND_REPORT_VISUALIZATION_ON_BOARD,
     async (uri?: vscode.Uri) => {
@@ -694,7 +694,7 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // 报告可视化：仿真分析
+  // Report visualization: simulation analysis
   const reportVisualizationSimulationCommand = vscode.commands.registerCommand(
     COMMAND_REPORT_VISUALIZATION_SIMULATION,
     async (uri?: vscode.Uri) => {
@@ -706,7 +706,7 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // 报告可视化：性能调优可视化视图（复用上板分析逻辑）
+  // Report visualization: performance tuning visual view (reusing on-board analysis logic)
   const reportVisualizationPerformanceCommand = vscode.commands.registerCommand(
     COMMAND_REPORT_VISUALIZATION_PERFORMANCE,
     async (uri?: vscode.Uri) => {
@@ -738,22 +738,22 @@ export async function activate(context: vscode.ExtensionContext) {
     reportVisualizationPerformanceCommand,
   );
 
-  // 初始化上下文变量
+  // Initialize context variables
   await vscode.commands.executeCommand('setContext', 'operatorProjectMarked', false);
   await vscode.commands.executeCommand('setContext', 'multiOperatorProjectMarked', false);
   await vscode.commands.executeCommand('setContext', 'operatorProjectType', '');
 
-  // 注意：由于 VSCode API 限制，无法在菜单显示前更新上下文变量
-  // 菜单的 when 条件在菜单显示时评估，此时上下文变量可能不是最新的
-  // 解决方案：在命令执行时检查状态，如果不是对应的类型就静默返回
-  // 这样即使菜单显示了，也不会执行错误操作
+  // Note: Due to VSCode API limitations, context variables cannot be updated before the menu is displayed.
+  // The menu's when condition is evaluated when the menu is displayed, at which point the context variables may not be up to date.
+  // Solution: Check the status when the command is executed, and return silently if it is not of the corresponding type.
+  // In this way, even if the menu is displayed, no wrong operation will be performed.
 
-  // 监听资源管理器选择变化，动态更新上下文变量
-  // 注意：VSCode 没有直接的 API 来监听资源管理器的选择变化
-  // 我们通过在命令执行前更新上下文变量来实现
-  // 但更好的方式是使用 onDidChangeTreeData 或其他方式
+  // Monitor resource manager selection changes and dynamically update context variables
+  // Note: VSCode does not have a direct API to listen for resource manager selection changes
+  // We do this by updating the context variables before the command is executed
+  // But a better way is to use onDidChangeTreeData or other ways
 
-  // 注册 CSV 编辑器提供者
+  // Register a CSV editor provider
   const csvEditorProvider = new CsvEditorProvider();
   const csvEditorRegistration = vscode.window.registerCustomEditorProvider(
     CsvEditorProvider.viewType,
@@ -766,11 +766,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(csvEditorRegistration);
 
-  // 注册打开 CSV 文件的命令
+  // Register a command to open a CSV file
   const openCsvCommand = vscode.commands.registerCommand(
     'csv-viewer.openCsv',
     async () => {
-      // 方式1：让用户选择文件
+      // Way 1: Let the user select the file
       const fileUri = await vscode.window.showOpenDialog({
         canSelectFiles: true,
         canSelectFolders: false,
@@ -783,7 +783,7 @@ export async function activate(context: vscode.ExtensionContext) {
       });
 
       if (fileUri && fileUri[0]) {
-        // 使用自定义编辑器打开文件
+        // Open the file using a custom editor
         await vscode.commands.executeCommand(
           'vscode.openWith',
           fileUri[0],
@@ -797,7 +797,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const flashMsSanitizerRunData = vscode.commands.registerCommand(
     COMMAND_FLASH_MS_SANITIZER_RUN_DATA,
     async () => {
-      // 报告列表已迁入异常检测面板左侧，向面板下发刷新命令
+      // The report list has been moved to the left side of the anomaly detection panel, and a refresh command is issued to the panel.
       const webview = getMsSanitizerPanelWebview();
       webview?.postMessage({ command: 'iframeFlashMsSanitizerRunData' });
     },
@@ -807,7 +807,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const flashPerformanceRunData = vscode.commands.registerCommand(
     COMMAND_FLASH_PERFORMANCE_RUN_DATA,
     async () => {
-      // 拿到性能调优面板的 webview，主动下发刷新命令
+      // Get the webview of the performance tuning panel and proactively issue a refresh command
       const webview = getPerformancePanelWebview();
       webview?.postMessage({ command: 'iframeRefreshData' });
     },
@@ -817,7 +817,6 @@ export async function activate(context: vscode.ExtensionContext) {
   const flashDumpTensorData = vscode.commands.registerCommand(
     COMMAND_FLASH_DUMP_TENSOR_DATA,
     async () => {
-      // 拿到DumpTensor面板的webview，主动下发刷新命令
       const webview = getDumpTensorPanelWebview();
       if (webview) {
         webview.postMessage({ command: 'dumpTensorRefreshData' });
@@ -828,7 +827,6 @@ export async function activate(context: vscode.ExtensionContext) {
   );
   context.subscriptions.push(flashDumpTensorData);
 
-  // 注册导入DumpTensor .bin文件命令
   const importDumpTensorBinFileCommand = vscode.commands.registerCommand(
     'huawei-op-devtools.importDumpTensorBinFile',
     async (uri) => {
@@ -838,29 +836,29 @@ export async function activate(context: vscode.ExtensionContext) {
           await buildService.importDumpTensorBinFile(uri.fsPath);
         }
       } catch (error) {
-        console.error('导入DumpTensor .bin文件失败:', error);
-        vscode.window.showErrorMessage('导入DumpTensor .bin文件失败');
+        console.error('Failed to import DumpTensor .bin file:', error);
+        vscode.window.showErrorMessage(t('extension.importDumpTensorBinFailed'));
       }
     },
   );
   context.subscriptions.push(importDumpTensorBinFileCommand);
 
-  // 工作区变化监听
+  // Workspace folder change listener
   const watchWorkSpaceFolderChange =
     vscode.workspace.onDidChangeWorkspaceFolders(async () => {
-      console.log('工作区变化', vscode.workspace.workspaceFolders)
+      console.log('Workspace changed', vscode.workspace.workspaceFolders)
       vscode.commands.executeCommand(COMMAND_FLASH_MS_SANITIZER_RUN_DATA);
       vscode.commands.executeCommand(COMMAND_FLASH_PERFORMANCE_RUN_DATA);
       vscode.commands.executeCommand(COMMAND_FLASH_DUMP_TENSOR_DATA);
       
-      // 检测工作区中的算子工程
+      // Detect operator projects in the workspace
       const workspaceFolders = vscode.workspace.workspaceFolders;
       if (workspaceFolders && workspaceFolders.length > 0) {
         const { WorkspaceDetectorService } = await import('./service/workspace-detector-service.js');
         
         for (const folder of workspaceFolders) {
           await WorkspaceDetectorService.detectAndRegisterWorkspace(folder.uri.fsPath).catch((error) => {
-            console.error('检测工作区算子工程失败:', error);
+            console.error('Failed to detect workspace operator project:', error);
           });
         }
       }
@@ -868,16 +866,16 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(watchWorkSpaceFolderChange);
 
-  // 插件激活时检测当前工作区
+  // Detect current workspace when plugin is activated
   if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
-    // 延迟执行，确保插件完全初始化
+    // Delay execution to ensure the plugin is fully initialized
     setTimeout(async () => {
       welcomeMethods.openProject({ projectPath: vscode.workspace.workspaceFolders![0].uri.fsPath }, true)
     }, 2000);
   }
 
-  console.log('激活', vscode.workspace.workspaceFolders);
-  console.log('🧠 MindStudio 插件加载器已激活。');
+  console.log('Activate', vscode.workspace.workspaceFolders);
+  console.log('🧠 MindStudio plugin loader activated.');
   const installer = new MindStudioPluginInstaller(context, {
     pluginId: 'ascend.mindstudio-debug-vscode-plugin',
     vsixRelativePath:
@@ -886,11 +884,11 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   await installer.installIfNeeded();
-  console.log('执行了', context);
+  console.log('Executed', context);
 }
 
 /**
- * 国际化
+ * internationalization
  */
 async function initI18n() {
   await i18next.init({
@@ -902,16 +900,16 @@ async function initI18n() {
 }
 
 /**
- * 接口
+ * interface
  */
 function initApiServer() {
   return new ApiServer(apis as ApiGroup);
 }
 
 /**
- * 视图
- * @param context 扩展上下文
- * @param apiServer api服务
+ * view
+ * @param context extended context
+ * @param apiServer api service
  */
 function initViews(
   context: vscode.ExtensionContext,
@@ -931,7 +929,7 @@ function initViews(
 
 export function deactivate() {
   if (extensionContext) {
-    // 卸载/禁用扩展时清空欢迎页弹出计数
+    // Clear welcome page popup count when uninstalling/disabling extensions
     extensionContext.globalState.update('welcomeShowCount', undefined);
   }
 }

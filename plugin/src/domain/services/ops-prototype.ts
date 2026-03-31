@@ -29,7 +29,7 @@ async function generateOpsPrototypeJson(
   );
 
   if (!(await fs.pathExists(opsPrototypeJsonPath))) {
-    console.error('✗ 不存在的 ops_prototype模板');
+    console.error('✗ Non-existent ops_prototype template');
     throw Object.assign(new Error('✗ 不存在的 ops_prototype模板'), { name: 'InvalidRequest' });
   }
 
@@ -48,12 +48,12 @@ async function generateOpsPrototypeJson(
       encoding: 'utf8',
     });
 
-    console.info(`✓ 成功创建 json: ${path.basename(opsPath)}`);
+    console.info(`✓ Successfully created json: ${path.basename(opsPath)}`);
 
     return opsPath;
   }
   catch (e: unknown) {
-    console.error(`✗ 处理ops_prototype.json失败: ${e}`);
+    console.error(`✗ Failed to process ops_prototype.json: ${e}`);
     throw e;
   }
 }

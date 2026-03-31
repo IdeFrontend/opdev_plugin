@@ -12,10 +12,10 @@ export async function ensureLaunchJsonExists(
   op_path: string | undefined,
   create_by?: string | null,
 ) {
-  console.log('ensureLaunchJsonExists 被调用，op_path:', op_path, 'create_by:', create_by);
+  console.log('ensureLaunchJsonExists called, op_path:', op_path, 'create_by:', create_by);
 
   if (!op_path || typeof op_path !== 'string') {
-    console.warn('ensureLaunchJsonExists: op_path 无效，跳过创建配置文件');
+    console.warn('ensureLaunchJsonExists: op_path is invalid, skipping config file creation');
 
     return;
   }
@@ -25,13 +25,13 @@ export async function ensureLaunchJsonExists(
   const devtoolConfigPath = path.join(vscodeDir, 'devtool_config.json');
   const launchJsonPath = path.join(vscodeDir, 'launch.json');
 
-  console.log('ensureLaunchJsonExists: 项目目录:', projectDir);
-  console.log('ensureLaunchJsonExists: .vscode 目录:', vscodeDir);
-  console.log('ensureLaunchJsonExists: 配置文件路径:', devtoolConfigPath);
-  console.log('ensureLaunchJsonExists: launch.json 路径:', launchJsonPath);
+  console.log('ensureLaunchJsonExists: project directory:', projectDir);
+  console.log('ensureLaunchJsonExists: .vscode directory:', vscodeDir);
+  console.log('ensureLaunchJsonExists: config file path:', devtoolConfigPath);
+  console.log('ensureLaunchJsonExists: launch.json path:', launchJsonPath);
 
   if (!fs.existsSync(projectDir)) {
-    console.error('ensureLaunchJsonExists: 项目目录不存在:', projectDir);
+    console.error('ensureLaunchJsonExists: project directory does not exist:', projectDir);
     const e = new Error('project_dir不存在');
 
     (e as Error & { name: string }).name = 'InvalidRequest';
@@ -39,38 +39,38 @@ export async function ensureLaunchJsonExists(
   }
 
   if (fs.existsSync(devtoolConfigPath)) {
-    console.log('ensureLaunchJsonExists: 配置文件已存在，跳过创建');
+    console.log('ensureLaunchJsonExists: config file already exists, skip creation');
 
     return;
   }
 
-  console.log('ensureLaunchJsonExists: 创建 .vscode 目录...');
+  console.log('ensureLaunchJsonExists: creating .vscode directory...');
   await fs.ensureDir(vscodeDir);
-  console.log('ensureLaunchJsonExists: .vscode 目录创建成功');
+  console.log('ensureLaunchJsonExists: .vscode directory created successfully');
 
-  // 创建 devtool_config.json 文件
+  // Create devtool_config.json file
   const devtoolConfig = { type: create_by || '1' };
 
-  console.log('ensureLaunchJsonExists: 创建 devtool_config.json 文件...');
+  console.log('ensureLaunchJsonExists: creating devtool_config.json file...');
   await fs.writeFile(
     devtoolConfigPath,
     JSON.stringify(devtoolConfig, null, 2),
     'utf-8',
   );
-  console.log('ensureLaunchJsonExists: devtool_config.json 文件创建成功');
+  console.log('ensureLaunchJsonExists: devtool_config.json file created successfully');
 
-  // 创建 launch.json
+  // Create launch.json
   if (!fs.existsSync(launchJsonPath)) {
-    console.log('ensureLaunchJsonExists: 创建 launch.json 文件...');
+    console.log('ensureLaunchJsonExists: creating launch.json file...');
     const launchJsonContent = JSON.stringify(debugLaunch, null, 2);
     await fs.writeFile(
       launchJsonPath,
       launchJsonContent,
       'utf-8',
     );
-    console.log('ensureLaunchJsonExists: launch.json 文件创建成功');
+    console.log('ensureLaunchJsonExists: launch.json file created successfully');
 
-    // 同时在 .arts 目录下也创建一份 launch.json
+    // At the same time, create a copy of launch.json in the .arts directory
     const artsDir = path.join(projectDir, '.arts');
     const artsLaunchJsonPath = path.join(artsDir, 'launch.json');
     try {
@@ -80,29 +80,29 @@ export async function ensureLaunchJsonExists(
         launchJsonContent,
         'utf-8',
       );
-      console.log('ensureLaunchJsonExists: .arts/launch.json 文件创建成功');
+      console.log('ensureLaunchJsonExists: .arts/launch.json file created successfully');
     }
     catch (error) {
-      console.error('ensureLaunchJsonExists: 创建 .arts/launch.json 失败:', error);
-      // 不影响主流程，只记录错误
+      console.error('ensureLaunchJsonExists: failed to create .arts/launch.json:', error);
+      // Does not affect the main process, only errors are recorded
     }
   }
   else {
-    console.log('ensureLaunchJsonExists: launch.json 文件已存在，跳过创建');
+    console.log('ensureLaunchJsonExists: launch.json file already exists, skip creation');
   }
 
   try {
     await exportEnvToFile(projectDir);
-    console.log('ensureLaunchJsonExists: 环境变量导出完成');
+    console.log('ensureLaunchJsonExists: environment variables exported');
   }
   catch (error) {
-    console.error('ensureLaunchJsonExists: 环境变量导出失败:', error);
-    // 环境变量导出失败不影响配置文件创建
+    console.error('ensureLaunchJsonExists: failed to export environment variables:', error);
+    // Failure to export environment variables does not affect configuration file creation
   }
 }
 
 export function getDefaultDirectory(): string {
-  // os.homedir() 返回当前用户的主目录（跨平台）
+  // os.homedir() returns the current user’s home directory (cross-platform)
   // Windows: C:\Users\zhangsan
   // macOS: /Users/zhangsan
   // Linux: /home/zhangsan
@@ -112,10 +112,10 @@ export function getDefaultDirectory(): string {
 }
 
 /**
- * 在扩展根目录执行环境导出命令
+ * Execute the environment export command in the extension root directory
  */
 async function exportEnvToFile(projectDir: string) {
-  // 优先使用当前工作区根目录作为执行目录，其次回退到扩展安装目录
+  // Prioritize using the current workspace root directory as the execution directory, and then fall back to the extension installation directory.
   // const selectedFiles = ExplorerRootUtils.getPrimaryRoot();
   // console.log(selectedFiles);
   const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
@@ -139,7 +139,7 @@ async function exportEnvToFile(projectDir: string) {
       shell: '/bin/bash',
       windowsHide: true,
     });
-    console.log(`环境变量已导出到: ${targetFile}`);
+    console.log(`Environment variables exported to: ${targetFile}`);
 
     await execAsync('mkdir build', {
       cwd,
@@ -148,7 +148,7 @@ async function exportEnvToFile(projectDir: string) {
     });
   }
   catch (error) {
-    console.error('导出环境变量失败:', error);
+    console.error('Failed to export environment variables:', error);
   }
 }
 

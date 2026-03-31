@@ -14,18 +14,18 @@ import {
 
 export const performanceDataMethods = {
   /**
-   * 下载数据
-   * @param params 下载参数
+   * Download data
+   * @param params download parameters
    */
   async downloadData(params: DownloadDataParams): Promise<void> {
-    // 使用 filePath 优先，如果没有则使用 nodeKey
+    // Use filePath first, if not then use nodeKey
     const remoteFilePath = params.filePath || params.nodeKey;
 
     if (!remoteFilePath) {
       throw new Error(t('performance.filePathEmpty'));
     }
 
-    // 显示下载进度
+    // Show download progress
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
@@ -38,10 +38,10 @@ export const performanceDataMethods = {
           message: t('performance.readingRemoteFile'),
         });
 
-        // 创建远程文件 URI
+        // Create a remote file URI
         const remoteFileUri = vscode.Uri.file(remoteFilePath);
 
-        // 检查远程文件是否存在
+        // Check if remote file exists
         try {
           const stat = await vscode.workspace.fs.stat(remoteFileUri);
 
@@ -54,14 +54,14 @@ export const performanceDataMethods = {
           throw new Error(t('performance.remoteFileNotExist', { path: remoteFilePath }));
         }
 
-        // 读取远程文件内容
+        // Read remote file contents
         progress.report({
           increment: 40,
           message: t('performance.readingFileContent'),
         });
         const fileData = await vscode.workspace.fs.readFile(remoteFileUri);
 
-        // 获取文件名
+        // Get file name
         const fileName = path.basename(remoteFilePath);
 
         progress.report({
@@ -69,7 +69,7 @@ export const performanceDataMethods = {
           message: t('common.selectSaveLocation'),
         });
 
-        // 让用户选择本地保存位置
+        // Let users choose a local save location
         const localFileUri = await vscode.window.showSaveDialog({
           defaultUri: vscode.Uri.file(fileName),
           saveLabel: t('common.save'),
@@ -77,11 +77,11 @@ export const performanceDataMethods = {
         });
 
         if (!localFileUri) {
-          // 用户取消了保存对话框
+          // User canceled save dialog
           return;
         }
 
-        // 将文件内容写入本地
+        // Write file contents locally
         progress.report({
           increment: 80,
           message: t('common.savingFile'),
@@ -98,15 +98,15 @@ export const performanceDataMethods = {
   },
 
   /**
-   * 删除节点
-   * @param params 删除参数
+   * Delete node
+   * @param params delete parameters
    */
   async deleteNode(params: DeleteNodeParams): Promise<void> {
     if (!params.nodeKey) {
       throw new Error(t('performance.nodeKeyRequired'));
     }
 
-    // 确认删除
+    // Confirm deletion
     const confirmBtn = t('common.confirm');
     const cancelBtn = t('common.cancel');
     const result = await vscode.window.showWarningMessage(
@@ -116,15 +116,15 @@ export const performanceDataMethods = {
     );
 
     if (result === confirmBtn) {
-      console.log('删除节点:', params.nodeKey, params.filePath);
+      console.log('Delete node:', params.nodeKey, params.filePath);
       vscode.window.showInformationMessage(t('performance.deleted', { key: params.nodeKey }));
     }
   },
 
   /**
-   * 选择文件夹
-   * @param params 选择参数，包含可选的默认路径
-   * @returns 选择的文件夹路径
+   * Select folder
+   * @param params selection parameters, including optional default path
+   * @returns selected folder path
    */
   async selectFolder(params?: SelectFolderParams): Promise<SelectFolderResult | null> {
     const options: vscode.OpenDialogOptions = {
@@ -134,23 +134,23 @@ export const performanceDataMethods = {
       openLabel: t('common.selectFolder'),
     };
 
-    // 如果提供了默认路径，使用它作为初始路径
+    // If a default path is provided, use it as the initial path
     if (params?.defaultPath) {
       try {
         const defaultUri = vscode.Uri.file(params.defaultPath);
         const stat = await vscode.workspace.fs.stat(defaultUri);
         
-        // 如果路径是目录，直接使用
+        // If the path is a directory, use it directly
         if (stat.type === vscode.FileType.Directory) {
           options.defaultUri = defaultUri;
         }
-        // 如果路径是文件，使用其父目录
+        // If the path is a file, use its parent directory
         else {
           options.defaultUri = vscode.Uri.file(path.dirname(params.defaultPath));
         }
       }
       catch {
-        // 如果路径不存在或无效，尝试使用父目录
+        // If the path does not exist or is invalid, try using the parent directory
         try {
           const parentPath = path.dirname(params.defaultPath);
           if (parentPath && parentPath !== params.defaultPath) {
@@ -158,12 +158,12 @@ export const performanceDataMethods = {
           }
         }
         catch {
-          // 忽略错误，使用默认行为
+          // Ignore errors and use default behavior
         }
       }
     }
 
-    // 调用 VS Code 原生对话框（支持选择目录）
+    // Call the VS Code native dialog box (supports directory selection)
     const uris = await vscode.window.showOpenDialog(options);
 
     if (uris && uris[0]) {
@@ -174,9 +174,9 @@ export const performanceDataMethods = {
   },
 
   /**
-   * 选择文件
-   * @param params 选择参数，包含可选的默认路径
-   * @returns 选择的文件路径
+   * Select file
+   * @param params selection parameters, including optional default path
+   * @returns selected file path
    */
   async selectFile(params?: SelectFileParams): Promise<SelectFileResult | null> {
     const options: vscode.OpenDialogOptions = {
@@ -190,34 +190,34 @@ export const performanceDataMethods = {
       },
     };
 
-    // 如果提供了文件类型，使用它们
+    // If file types are provided, use them
     if (params?.fileTypes && params.fileTypes.length > 0) {
       params.fileTypes.forEach((fileType) => {
         options.filters![fileType.label] = fileType.extensions;
       });
     } else {
-      // 默认过滤器
+      // Default filters
       options.filters![t('common.shellScript')] = ['sh'];
       options.filters![t('common.allFiles')] = ['*'];
     }
 
-    // 如果提供了默认路径，使用它作为初始路径
+    // If a default path is provided, use it as the initial path
     if (params?.defaultPath) {
       try {
         const defaultUri = vscode.Uri.file(params.defaultPath);
         const stat = await vscode.workspace.fs.stat(defaultUri);
         
-        // 如果路径是文件，直接使用
+        // If the path is a file, use it directly
         if (stat.type === vscode.FileType.File) {
           options.defaultUri = defaultUri;
         }
-        // 如果路径是目录，使用该目录
+        // If the path is a directory, use that directory
         else {
           options.defaultUri = defaultUri;
         }
       }
       catch {
-        // 如果路径不存在，尝试使用父目录
+        // If the path does not exist, try using the parent directory
         try {
           const parentPath = path.dirname(params.defaultPath);
           if (parentPath && parentPath !== params.defaultPath) {
@@ -225,12 +225,12 @@ export const performanceDataMethods = {
           }
         }
         catch {
-          // 忽略错误，使用默认行为
+          // Ignore errors and use default behavior
         }
       }
     }
 
-    // 调用 VS Code 原生对话框（支持选择文件）
+    // Call the VS Code native dialog box (supports file selection)
     const uris = await vscode.window.showOpenDialog(options);
 
     if (uris && uris[0]) {
@@ -241,8 +241,8 @@ export const performanceDataMethods = {
   },
 
   /**
-   * 跳转到文件
-   * @param params 跳转参数
+   * jump to file
+   * @param params jump parameters
    */
   async jumpToFile(params: JumpToFileParams): Promise<void> {
     try {
@@ -261,16 +261,16 @@ export const performanceDataMethods = {
       const charactor = Math.max(0, col - 1);
       const pos = new vscode.Position(line, charactor);
 
-      // 设置光标位置
+      // Set cursor position
       editor.selection = new vscode.Selection(pos, pos);
 
-      // 滚动到目标行，并将其置于视图中央
+      // Scroll to the target row and center it in the view
       editor.revealRange(
         new vscode.Range(pos, pos),
         vscode.TextEditorRevealType.InCenter,
       );
 
-      // 构建错误信息显示文本
+      // Build error message display text
       let errorDisplayText = '';
       if (errorTitle || errorMessage) {
         if (errorTitle && errorMessage) {
@@ -281,14 +281,14 @@ export const performanceDataMethods = {
         }
       }
 
-      // 创建高亮装饰
+      // Create highlight decorations
       const decorationType = vscode.window.createTextEditorDecorationType({
-        backgroundColor: 'rgba(255, 200, 0, 0.3)', // 黄色半透明背景
-        border: '1px solid rgba(255, 200, 0, 0.8)', // 黄色边框
-        isWholeLine: true, // 高亮整行
+        backgroundColor: 'rgba(255, 200, 0, 0.3)', // Yellow translucent background
+        border: '1px solid rgba(255, 200, 0, 0.8)', // yellow border
+        isWholeLine: true, // Highlight entire line
       });
 
-      // 如果有错误信息，创建行尾装饰来显示错误信息
+      // If there is an error message, create an end-of-line decoration to display the error message
       let afterDecorationType: vscode.TextEditorDecorationType | undefined;
       if (errorDisplayText) {
         afterDecorationType = vscode.window.createTextEditorDecorationType({
@@ -301,7 +301,7 @@ export const performanceDataMethods = {
         });
       }
 
-      // 应用高亮到目标行
+      // Apply highlighting to target row
       const lineRange = new vscode.Range(
         new vscode.Position(line, 0),
         new vscode.Position(line, document.lineAt(line).text.length),
@@ -309,7 +309,7 @@ export const performanceDataMethods = {
 
       editor.setDecorations(decorationType, [lineRange]);
 
-      // 如果有错误信息，在行尾显示
+      // If there is an error message, it is displayed at the end of the line
       if (afterDecorationType && errorDisplayText) {
         const endPos = new vscode.Position(line, document.lineAt(line).text.length);
         editor.setDecorations(afterDecorationType, [{
@@ -317,7 +317,7 @@ export const performanceDataMethods = {
         }]);
       }
 
-      // 如果有错误信息，显示通知
+      // If there is an error message, display a notification
       if (errorTitle || errorMessage) {
         const notificationMessage = errorTitle || errorMessage || t('performance.errorDetected');
         vscode.window.showInformationMessage(
@@ -326,14 +326,14 @@ export const performanceDataMethods = {
         );
       }
 
-      // 监听光标位置变化，在同一文档中光标“离开当前错误位置”后移除高亮
+      // Monitor the change of cursor position and remove the highlight after the cursor "leave the current error position" in the same document
       const targetDocUri = document.uri.toString();
       const targetLine = line;
       const targetChar = charactor;
 
       const selectionDisposable = vscode.window.onDidChangeTextEditorSelection(
         (e) => {
-          // 只关注同一文档
+          // Only focus on the same document
           if (e.textEditor.document.uri.toString() !== targetDocUri) {
             return;
           }
@@ -345,12 +345,12 @@ export const performanceDataMethods = {
 
           const active = selection.active;
 
-          // 如果光标还停留在当前错误位置，则不清除高亮
+          // If the cursor remains at the current error position, the highlight will not be cleared
           if (active.line === targetLine && active.character === targetChar) {
             return;
           }
 
-          // 光标真正移动到其他位置后，再移除高亮
+          // After the cursor actually moves to another position, remove the highlight
           decorationType.dispose();
           if (afterDecorationType) {
             afterDecorationType.dispose();

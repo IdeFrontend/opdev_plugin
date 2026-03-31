@@ -20,14 +20,14 @@ import {
 import { getConfig, getConfigById } from '../../services/configuration';
 
 /**
- * CANN 类型命令策略
- * CANN (Compute Architecture for Neural Networks) 是华为的AI计算架构
+ * CANN type command strategy
+ * CANN (Compute Architecture for Neural Networks) is Huawei’s AI computing architecture
  */
 export class CannCommandStrategy implements CommandStrategy {
   buildCommandContext(baseContext: BaseContext): CommandContext {
     const { config, project, operator } = baseContext;
 
-    // CANN 类型使用 ascend_env_script 作为环境脚本
+    // CANN type uses ascend_env_script as environment script
     const sourceCannCmd =
       project && project.ascend_env_script
         ? `. ${project.ascend_env_script}`
@@ -38,7 +38,7 @@ export class CannCommandStrategy implements CommandStrategy {
     if (operator) {
       runPath = getOpRunPath(operator);
     } else {
-      // 如果找不到算子，但有配置脚本，使用项目路径作为运行路径
+      // If the operator cannot be found but there is a configuration script, use the project path as the running path
       if (config.script && project) {
         runPath = project.project_path;
       } else {
@@ -85,7 +85,7 @@ export class CannCommandStrategy implements CommandStrategy {
       cmd.addArgument(config.custom_options);
     }
 
-    // 如果有算子名称，将其作为参数添加到命令中（用于标准自定义算子等场景）
+    // If there is an operator name, add it as a parameter to the command (for scenarios such as standard custom operators)
     if (operatorNames) {
       cmd.addArgument(operatorNames);
     }
@@ -135,12 +135,12 @@ export class CannCommandStrategy implements CommandStrategy {
   ): string {
     const mssanitizer = new Command("mssanitizer");
 
-    // 添加目标文件
+    // Add target file
     if (exampleTargetFile) {
       mssanitizer.addArgument(exampleTargetFile);
     }
 
-    // 处理配置选项
+    // Handle configuration options
     const options =
       (config.user_options as Record<string, unknown> | null | undefined) || {};
     const toolOptions =
@@ -195,7 +195,7 @@ export class CannCommandStrategy implements CommandStrategy {
       exampleTargetFile,
     } = params;
 
-    // 如果找不到算子记录，但有项目路径，创建一个临时算子对象
+    // If the operator record is not found but the project path is available, create a temporary operator object
     let effectiveOperator = operator;
 
     if (!effectiveOperator) {
@@ -203,7 +203,7 @@ export class CannCommandStrategy implements CommandStrategy {
         throw new Error(t('cann.cannotGenerateSimulateCommand', { op: config.op }));
       }
 
-      // 创建临时算子对象，使用项目路径作为 op_path
+      // Create a temporary operator object, using the project path as op_path
       effectiveOperator = {
         id: 0,
         project_id: config.project_id,
@@ -232,7 +232,7 @@ export class CannCommandStrategy implements CommandStrategy {
       exampleTargetFile,
     } = params;
 
-    // 如果找不到算子记录，但有项目路径，创建一个临时算子对象
+    // If the operator record is not found but the project path is available, create a temporary operator object
     let effectiveOperator = operator;
 
     if (!effectiveOperator) {
@@ -240,7 +240,7 @@ export class CannCommandStrategy implements CommandStrategy {
         throw new Error(t('cann.cannotGenerateOnBoardCommand', { op: config.op }));
       }
 
-      // 创建临时算子对象，使用项目路径作为 op_path
+      // Create a temporary operator object, using the project path as op_path
       effectiveOperator = {
         id: 0,
         project_id: config.project_id,
@@ -260,14 +260,14 @@ export class CannCommandStrategy implements CommandStrategy {
   }
 
   getRunTargetFile(config: ConfigRecord, operator: OpRecord | null): string {
-    // CANN 类型：使用 build_op 配置的 target_file
+    // CANN type: target_file configured using build_op
     const buildOpConfigs = getConfig(config.project_id, 'build_op', config.op);
     const buildOpConfig = buildOpConfigs.length > 0 ? buildOpConfigs[0] : null;
     return buildOpConfig?.target_file || config.target_file || '';
   }
 
   getProfilerTargetFile(config: ConfigRecord, operator: OpRecord | null, exampleConfigId: number): string {
-    // CANN 类型：使用 build_op 配置的 target_file
+    // CANN type: target_file configured using build_op
     const buildOpConfigs = getConfig(config.project_id, 'build_op', config.op);
     const buildOpConfig = buildOpConfigs.length > 0 ? buildOpConfigs[0] : null;
     return buildOpConfig?.target_file || '';

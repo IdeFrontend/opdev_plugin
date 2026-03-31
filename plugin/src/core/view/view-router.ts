@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
 
 export interface ViewRouteRaw {
-  /** 路由路径 */
+  /** routing path */
   path: string;
 
-  /** 页面标题 */
+  /** Page title */
   title?: string;
 
-  /** vscode固定视图类型，extension启动时自动注册 */
+  /** vscode fixed view type, automatically registered when extension starts */
   providerViewType?: string;
 }
 
@@ -23,15 +23,15 @@ export class ViewRouter extends vscode.Disposable {
   }
 
   /**
-   * 读取路由
-   * @param path 路由地址
+   * Read route
+   * @param path routing address
    */
   public getRaw(path: string): ViewRouteRaw | undefined {
     return this.routeRawMap.get(path);
   }
 
   /**
-   *  获取所有注册了Provider的路由
+   * Get all routes registered with Provider
    */
   public getAllProviderRaws(): ViewRouteRaw[] {
     const allRoutes = Array.from(this.routeRawMap.values());
@@ -40,8 +40,8 @@ export class ViewRouter extends vscode.Disposable {
   }
 
   /**
-   * 注册路由
-   * @param route 路由配置
+   * Register route
+   * @param route routing configuration
    */
   private registerRoute(route: ViewRouteRaw): void {
     this.routeRawMap.set(route.path, route);

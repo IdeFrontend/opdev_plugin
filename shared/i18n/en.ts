@@ -51,6 +51,7 @@ export default {
   'extension.rightClickFolderOrFile': 'Please right-click a folder or file',
   'extension.rightClickFile': 'Please right-click a file',
   'extension.openDevToolsFailed': 'Failed to open Huawei OP DevTools: {{error}}',
+  'extension.importDumpTensorBinFailed': 'Failed to import DumpTensor .bin file',
 
   // folder-context-menu
   'folderContext.angleOpsNotSupported': '<<<>>> operator type does not support this context menu action',

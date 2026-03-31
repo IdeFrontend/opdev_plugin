@@ -1,33 +1,33 @@
 /**
- * 命令策略模块
+ * Command strategy module
  *
- * 提供了基于策略模式的命令生成系统，支持不同类型的算子命令生成。
+ * Provides a command generation system based on strategy mode, supporting the generation of different types of operator commands.
  *
  * @module command-strategy
  *
  * @example
- * // 导入策略工厂
+ * //Import strategy factory
  * import { CommandStrategyFactory } from './command-strategy';
  *
- * // 获取策略
+ * // Get strategy
  * const strategy = CommandStrategyFactory.getStrategy('ascend');
  *
- * // 使用策略生成命令
+ * // Use strategy to generate commands
  * const command = strategy.buildOpCommand(params);
  *
  * @example
- * // 注册自定义策略
+ * //Register custom strategy
  * import { CommandStrategyFactory } from './command-strategy';
  * import type { CommandStrategy } from './command-strategy';
  *
  * class CustomStrategy implements CommandStrategy {
- *   // 实现接口方法...
+ * // Implement interface methods...
  * }
  *
  * CommandStrategyFactory.register('custom', new CustomStrategy());
  */
 
-// 导出类型定义
+// Export type definition
 export type {
   CommandContext,
   CommandBuildParams,
@@ -36,10 +36,10 @@ export type {
   CommandStrategy,
 } from './types';
 
-// 导出策略实现
+// Export strategy implementation
 export { AscendCommandStrategy } from './ascend-strategy';
 export { CannCommandStrategy } from './cann-strategy';
 export { PyAscCommandStrategy } from './pyasc-strategy';
 
-// 导出工厂类
+// Export factory class
 export { CommandStrategyFactory } from './factory';

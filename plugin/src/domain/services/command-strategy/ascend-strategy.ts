@@ -22,7 +22,7 @@ import { getConfig, getConfigById } from '../../services/configuration';
 import { getProjectById } from '@plugin/domain/models/project-model';
 
 /**
- * Ascend 类型命令策略
+ * Ascend type command strategy
  */
 export class AscendCommandStrategy implements CommandStrategy {
   /**
@@ -47,7 +47,7 @@ export class AscendCommandStrategy implements CommandStrategy {
   buildCommandContext(baseContext: BaseContext): CommandContext {
     const { config, project, operator } = baseContext;
 
-    // Ascend 类型使用 ascend_env_script 作为环境脚本
+    // Ascend type uses ascend_env_script as environment script
     const sourceCannCmd =
       project && project.ascend_env_script
         ? `. ${project.ascend_env_script}`
@@ -59,7 +59,7 @@ export class AscendCommandStrategy implements CommandStrategy {
       runPath = getOpRunPath(operator, config);
     }
     else {
-      // 如果找不到算子，但有配置脚本，使用项目路径作为运行路径
+      // If the operator cannot be found but there is a configuration script, use the project path as the running path
       if (config.script && project) {
         runPath = project.project_path;
       }
@@ -103,7 +103,7 @@ export class AscendCommandStrategy implements CommandStrategy {
 
     const options: Record<string, unknown> = {};
 
-    // 只有当 operatorNames 存在且不为空时，才添加 ops 参数
+    // Add ops parameter only if operatorNames exists and is not empty
     if (operatorNames && operatorNames.trim()) {
       options.ops = operatorNames;
     }
@@ -129,7 +129,7 @@ export class AscendCommandStrategy implements CommandStrategy {
     const options = (config.user_options as Record<string, unknown> | null | undefined) || {};
     const mode = options.execution_mode as string || 'eager';
     let pkg_mode = 'cust';
-    // 如果提供了 operatorNames，优先使用它；否则使用 config.op
+    // If operatorNames is provided, it takes precedence; otherwise config.op is used
     const op = operatorNames || '';
 
     let script = config.script || '';
@@ -189,12 +189,12 @@ export class AscendCommandStrategy implements CommandStrategy {
 
     const mssanitizer = new Command('mssanitizer');
 
-    // 添加目标文件
+    // Add target file
     if (exampleTargetFile) {
       mssanitizer.addArgument(exampleTargetFile);
     }
 
-    // 处理配置选项
+    // Handle configuration options
     const options = (config.user_options as Record<string, unknown> | null | undefined) || {};
     const toolOptions = (options.tool as Record<string, unknown> | undefined) || {};
     const tools = Object.keys(toolOptions)
@@ -228,7 +228,7 @@ export class AscendCommandStrategy implements CommandStrategy {
   buildSimulateCommand(params: ProfilerCommandParams): string {
     const { config, project, operator, sourceCannCmd, cdBuildCmd, exampleTargetFile } = params;
 
-    // 如果找不到算子记录，但有项目路径，创建一个临时算子对象
+    // If the operator record is not found but the project path is available, create a temporary operator object
     let effectiveOperator = operator;
 
     if (!effectiveOperator) {
@@ -236,7 +236,7 @@ export class AscendCommandStrategy implements CommandStrategy {
         throw new Error(t('cann.cannotGenerateSimulateCommand', { op: config.op }));
       }
 
-      // 创建临时算子对象，使用项目路径作为 op_path
+      // Create a temporary operator object, using the project path as op_path
       effectiveOperator = {
         id: 0,
         project_id: config.project_id,
@@ -259,7 +259,7 @@ export class AscendCommandStrategy implements CommandStrategy {
   buildOnBoardCommand(params: ProfilerCommandParams): string {
     const { config, project, operator, sourceCannCmd, cdBuildCmd, exampleTargetFile } = params;
 
-    // 如果找不到算子记录，但有项目路径，创建一个临时算子对象
+    // If the operator record is not found but the project path is available, create a temporary operator object
     let effectiveOperator = operator;
 
     if (!effectiveOperator) {
@@ -267,7 +267,7 @@ export class AscendCommandStrategy implements CommandStrategy {
         throw new Error(t('cann.cannotGenerateOnBoardCommand', { op: config.op }));
       }
 
-      // 创建临时算子对象，使用项目路径作为 op_path
+      // Create a temporary operator object, using the project path as op_path
       effectiveOperator = {
         id: 0,
         project_id: config.project_id,
@@ -288,12 +288,12 @@ export class AscendCommandStrategy implements CommandStrategy {
   }
 
   getRunTargetFile(config: ConfigRecord, operator: OpRecord | null): string {
-    // ascend 类型：使用当前配置的 target_file
+    // ascend type: use the currently configured target_file
     return config.target_file || '';
   }
 
   getProfilerTargetFile(config: ConfigRecord, operator: OpRecord | null, exampleConfigId: number): string {
-    // ascend 类型：使用示例配置的 target_file
+    // ascend type: target_file using example configuration
     const exConfig = getConfigById(exampleConfigId) as unknown as ConfigRecord;
     return exConfig?.target_file || '';
   }

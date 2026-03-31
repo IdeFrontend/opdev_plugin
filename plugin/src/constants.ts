@@ -40,7 +40,7 @@ export const COMMAND_SANITIZER_OPTIONS = `${COMMAND_PREFIX}.sanitizerOptions`;
 
 export const COMMAND_OPEN_PROJECT = `${COMMAND_PREFIX}.openProject`;
 
-// 视图名称常量（对应 web/src/views 下的目录名）
+// View name constant (corresponding to the directory name under web/src/views)
 export const VIEW_HOME = 'home';
 
 export const VIEW_CONFIG = 'config';
@@ -73,7 +73,7 @@ export const VIEW_OPTIONS_SANITIZER = 'options-sanitizer';
 
 export const VIEW_OPEN_PROJECT = 'open-project';
 
-// 文件夹右键菜单命令
+// Folder right-click menu commands
 export const COMMAND_MARK_AS_OPERATOR_PROJECT = `${COMMAND_PREFIX}.markAsOperatorProject`;
 export const COMMAND_MARK_AS_MULTI_OPERATOR_PROJECT = `${COMMAND_PREFIX}.markAsMultiOperatorProject`;
 export const COMMAND_UNMARK_AS_OPERATOR_PROJECT = `${COMMAND_PREFIX}.unmarkAsOperatorProject`;

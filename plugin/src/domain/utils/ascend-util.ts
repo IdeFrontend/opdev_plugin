@@ -89,12 +89,12 @@ function refreshAscendEnv() {
 
 function refreshSocVersion() {
   try {
-    // 在Windows上使用chcp 65001设置UTF-8编码以避免乱码
+    // Set UTF-8 encoding using chcp 65001 on Windows to avoid garbled characters
     const isWindows = process.platform === 'win32';
     let out: string;
 
     if (isWindows) {
-      // 在Windows上先设置UTF-8编码,然后执行命令
+      // First set UTF-8 encoding on Windows, and then execute the command
       try {
         out = child_process.execSync('chcp 65001 >nul && npu-smi info', {
           encoding: 'utf8',
@@ -102,7 +102,7 @@ function refreshSocVersion() {
         });
       }
       catch (e) {
-        // 如果上面的方法失败,尝试直接执行
+        // If the above method fails, try to execute it directly
         out = child_process.execSync('npu-smi info', { encoding: 'utf8' });
       }
     }
@@ -136,17 +136,17 @@ function refreshSocVersion() {
   }
   catch (e: unknown) {
     if ((e as { code?: string }).code === 'ENOENT') {
-      console.error('未找到npu-smi命令，请确保已安装昇腾驱动并正确设置环境变量');
+      console.error('npu-smi command not found; ensure Ascend driver is installed and environment variables are set correctly');
     }
     else if ((e as { status?: number }).status !== undefined) {
-      console.error(`执行npu-smi命令失败，错误码: ${(e as { status: number }).status}`);
+      console.error(`npu-smi command failed, error code: ${(e as { status: number }).status}`);
 
       if ((e as { stderr?: string }).stderr) {
-        console.error(`错误输出: ${(e as { stderr: string }).stderr}`);
+        console.error(`stderr: ${(e as { stderr: string }).stderr}`);
       }
     }
     else {
-      console.error(`使用npu-smi命令时出错: ${e}`);
+      console.error(`Error while using npu-smi command: ${e}`);
     }
 
     return null;

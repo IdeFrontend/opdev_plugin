@@ -1,12 +1,12 @@
-// Node (扩展主机) 端的 WebviewSocket 桥接器
-// 接收来自 webview 的 postMessage 调用，使用 `ws` 包打开真实的 WebSocket 连接到后端，然后转发事件
-// 注意：所有来自 webview 的消息都已包含 'id' 字段，直接使用该字段
+// WebviewSocket bridge on Node (extension host) side
+// Receive the postMessage call from the webview, use the `ws` package to open a real WebSocket connection to the backend, and then forward the event
+// Note: All messages from webview already contain the 'id' field, use this field directly
 import * as vscode from 'vscode';
 import { WebSocket } from 'ws';
 
 type OutgoingFromView = {
   type: 'ws:open' | 'ws:send' | 'ws:close';
-  id: string; // 由 webview 提供的 ID，直接使用
+  id: string; // ID provided by webview, used directly
   payload?: any;
   url?: string;
   protocols?: string | string[];
@@ -14,7 +14,7 @@ type OutgoingFromView = {
 
 type IncomingToView = {
   type: 'ws:opened' | 'ws:message' | 'ws:error' | 'ws:closed';
-  id: string; // 来自 webview 的 ID，原样返回
+  id: string; // ID from webview, returned unchanged
   payload?: any;
   reason?: string;
   code?: number;
@@ -44,7 +44,7 @@ export class NodeWebviewSocketBridge implements vscode.Disposable {
         ws.close();
       }
       catch {
-        /* 忽略错误 */
+        /* ignore errors */
       }
     }
 
@@ -56,12 +56,12 @@ export class NodeWebviewSocketBridge implements vscode.Disposable {
       return;
     }
 
-    // 验证消息格式 - id 必须由 webview 提供
+    // Validation message format - id must be provided by webview
     if (!msg || !msg.type || !msg.id) {
       return;
     }
 
-    // 直接使用来自 webview 消息的 id
+    // Use id directly from webview message
     const { id } = msg;
 
     switch (msg.type) {
@@ -69,7 +69,7 @@ export class NodeWebviewSocketBridge implements vscode.Disposable {
         this.openSocket(msg);
         break;
       case 'ws:send': {
-        // 提取接口信息（如果payload是JSON格式）
+        // Extract interface information (if payload is in JSON format)
         let apiName = 'unknown';
 
         try {
@@ -93,10 +93,10 @@ export class NodeWebviewSocketBridge implements vscode.Disposable {
           }
         }
         catch {
-          // 无法解析payload，使用默认值
+          // Unable to parse payload, use default value
         }
 
-        console.log(`[转发请求入口] 接口: ${apiName}, ID: ${id}, 类型: ${msg.type}`);
+        console.log(`[Forward request entry] API: ${apiName}, ID: ${id}, Type: ${msg.type}`);
         this.forwardSend(msg);
         break;
       }
@@ -108,7 +108,7 @@ export class NodeWebviewSocketBridge implements vscode.Disposable {
   };
 
   private openSocket(msg: OutgoingFromView) {
-    // 直接从 webview 消息中提取 id - 不生成 id
+    // Extract id directly from webview message - no id generated
     const {
       id, url, protocols,
     } = msg;
@@ -123,7 +123,7 @@ export class NodeWebviewSocketBridge implements vscode.Disposable {
       return;
     }
 
-    // 避免相同 id 的重复连接（id 来自 webview）
+    // Avoid duplicate connections with the same id (id comes from webview)
     if (this.sockets.has(id)) {
       this.closeSocket(id);
     }
@@ -143,7 +143,7 @@ export class NodeWebviewSocketBridge implements vscode.Disposable {
       ws.on('message', (data: any) => {
         const normalizedPayload = this.normalizeMessagePayload(data);
 
-        // 提取接口信息用于日志
+        // Extract interface information for logs
         let apiName = 'unknown';
 
         try {
@@ -172,7 +172,7 @@ export class NodeWebviewSocketBridge implements vscode.Disposable {
           }
         }
         catch {
-          // 无法解析payload，使用默认值
+          // Unable to parse payload, use default value
         }
 
         const payloadPreview =
@@ -183,7 +183,7 @@ export class NodeWebviewSocketBridge implements vscode.Disposable {
             : JSON.stringify(normalizedPayload || '')
               .substring(0, 200);
 
-        console.log(`[转发响应] 后端WebSocket -> Web端 | 接口: ${apiName}, ID: ${id}, Payload: ${payloadPreview}`);
+        console.log(`[Forward response] Backend WebSocket -> Web | API: ${apiName}, ID: ${id}, Payload: ${payloadPreview}`);
 
         this.postToView({
           type: 'ws:message',
@@ -222,23 +222,23 @@ export class NodeWebviewSocketBridge implements vscode.Disposable {
   }
 
   private forwardSend(msg: OutgoingFromView) {
-    // 直接使用来自 webview 消息的 id
+    // Use id directly from webview message
     const { id } = msg;
     const ws = this.sockets.get(id);
 
     if (!ws) {
-      console.warn(`[转发发送] WebSocket连接不存在, ID: ${id}`);
+      console.warn(`[Forward send] WebSocket connection does not exist, ID: ${id}`);
 
       return;
     }
 
     if (ws.readyState !== WebSocket.OPEN) {
-      console.warn(`[转发发送] WebSocket未打开, ID: ${id}, readyState: ${ws.readyState}`);
+      console.warn(`[Forward send] WebSocket is not open, ID: ${id}, readyState: ${ws.readyState}`);
 
       return;
     }
 
-    // 提取接口信息用于日志
+    // Extract interface information for logs
     let apiName = 'unknown';
 
     try {
@@ -262,7 +262,7 @@ export class NodeWebviewSocketBridge implements vscode.Disposable {
       }
     }
     catch {
-      // 无法解析payload，使用默认值
+      // Unable to parse payload, use default value
     }
 
     const payloadPreview =
@@ -273,12 +273,12 @@ export class NodeWebviewSocketBridge implements vscode.Disposable {
         : JSON.stringify(msg.payload || '')
           .substring(0, 200);
 
-    console.log(`[转发发送] Web端 -> 后端WebSocket | 接口: ${apiName}, ID: ${id}, Payload: ${payloadPreview}`);
+    console.log(`[Forward send] Web -> Backend WebSocket | API: ${apiName}, ID: ${id}, Payload: ${payloadPreview}`);
     ws.send(msg.payload);
   }
 
   private closeSocket(id: string, code?: number, reason?: string) {
-    // id 来自 webview，直接使用
+    // id comes from webview, used directly
     const ws = this.sockets.get(id);
 
     if (!ws) {
@@ -289,25 +289,25 @@ export class NodeWebviewSocketBridge implements vscode.Disposable {
       ws.close(code, reason);
     }
     catch {
-      // 忽略关闭错误
+      // Ignore shutdown errors
     }
 
     this.sockets.delete(id);
   }
 
   private postToView(msg: IncomingToView) {
-    // 尽力而为；忽略失败
-    // msg.id 来自 webview，原样返回
+    // Do your best; ignore failure
+    // msg.id comes from webview and is returned as is
     try {
       this.webview.postMessage(msg);
     }
     catch {
-      // 忽略 postMessage 错误
+      // Ignore postMessage errors
     }
   }
 
   private normalizeMessagePayload(data: any) {
-    // ws RawData 可以是 Buffer | ArrayBuffer | Buffer[] | ArrayBufferView | string
+    // ws RawData can be Buffer | ArrayBuffer | Buffer[] | ArrayBufferView | string
     if (typeof data === 'string') {
       return data;
     }

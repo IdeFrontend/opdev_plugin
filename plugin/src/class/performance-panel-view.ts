@@ -58,11 +58,11 @@ implements vscode.WebviewViewProvider {
       );
     }
     catch (error) {
-      console.error('[PerformancePanelViewProvider] HTML 加载失败:', error);
+      console.error('[PerformancePanelViewProvider] HTML load failed:', error);
       throw error;
     }
 
-    // 监听 VSCode 主题变化并通知 Webview
+    // Listen to VSCode theme changes and notify Webview
     this._themeChangeDisposable = vscode.window.onDidChangeActiveColorTheme((theme) => {
       webviewView.webview.postMessage({
         command: 'updateTheme',
@@ -70,7 +70,7 @@ implements vscode.WebviewViewProvider {
       });
     });
 
-    // 初始化时发送当前主题
+    // Send the current topic on initialization
     webviewView.webview.postMessage({
       command: 'updateTheme',
       themeName: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
@@ -78,7 +78,7 @@ implements vscode.WebviewViewProvider {
   }
 
   private handleWebviewMessage(message: any): void {
-    // 处理获取主题命令
+    // Handle gettopic command
     if (message.command === 'getTheme') {
       const currentTheme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
       this._view?.webview.postMessage({
@@ -100,7 +100,7 @@ implements vscode.WebviewViewProvider {
   }
 
   /**
-   * 清理资源
+   * Clean up resources
    */
   public dispose() {
     if (this._themeChangeDisposable) {

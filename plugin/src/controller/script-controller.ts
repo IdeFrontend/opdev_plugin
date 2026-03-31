@@ -9,9 +9,9 @@ import { getProjectById } from '@plugin/domain';
 
 export const scriptMethods = {
   /**
-   * 更新脚本文件
-   * @param params 更新参数
-   * @returns 更新结果
+   * Update script file
+   * @param params update parameters
+   * @returns update results
    */
   async updateShScript(params: UpdateShScriptParams): Promise<GetProjectSHResult> {
     await ProjectManager.getInstance()
@@ -23,8 +23,8 @@ export const scriptMethods = {
 
 
   /**
-   * 获取项目环境配置
-   * @returns 项目环境配置
+   * Get project environment configuration (Ascend script and SoC version)
+   * @returns project environment values
    */
   async getProjectEnv(): Promise<{ ascendEnvScript: string; socVersion: string }> {
     const pm = ProjectManager.getInstance();
@@ -45,16 +45,16 @@ export const scriptMethods = {
   },
 
   /**
-   * 保存项目环境配置
-   * @param params 保存参数
+   * Save project environment configuration
+   * @param params save parameters
    */
   async saveProjectEnv(params: { ascendEnvScript: string; socVersion: string }): Promise<void> {
     await ProjectManager.getInstance()
       .initProject();
-    // 复用 updateShScript 逻辑
-    await projectService.updateShScript({ 
+    // Reuse updateShScript logic
+    await projectService.updateShScript({
       ascendEnvScript: params.ascendEnvScript,
-      soc_version: params.socVersion 
+      soc_version: params.socVersion,
     });
   },
 };
