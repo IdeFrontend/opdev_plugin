@@ -1,13 +1,21 @@
 <script setup lang="ts">
 import {
-  ref, onMounted,
+  ref, onBeforeMount,
 } from 'vue';
 import { t } from 'i18next';
 import { message } from 'ant-design-vue';
 import { useTheme } from '@web/composables/use-theme';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import {
-  getConfigData, saveConfig, startSimulate, openExternalLink, checkTaskStatus, executeVscodeCommand, getSelectedOperators
+  getConfigData,
+  saveConfig,
+  startSimulate,
+  openExternalLink,
+  checkTaskStatus,
+  executeVscodeCommand,
+  getSelectedOperators,
+  getSimulationShowQuickOptions,
+  setSimulationShowQuickOptions,
 } from '@web/apis';
 
 // 使用主题管理组合式函数
@@ -15,6 +23,8 @@ const { themeConfig, actualTheme } = useTheme();
 const simulateOptions = ref({ user_options: { PMSampling: true, ResourceConflictRatio: true } });
 const loading = ref(false);
 const isExecuting = ref(false);
+/** When true, workspace `performanceTuning.simulation.showQuickOptions` is false (tree runs without opening this panel). */
+const doNotShowAgain = ref(false);
 const guide = 'https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODtools/Operatordevelopmenttools/atlasopdev_16_0082.html';
 
 const fetchConfig = async () => {
@@ -88,8 +98,19 @@ const jumpToGuide = () => {
   openExternalLink(guide);
 };
 
-onMounted(() => {
-  fetchConfig();
+async function syncDoNotShowToWorkspace() {
+  await setSimulationShowQuickOptions(!doNotShowAgain.value);
+}
+
+onBeforeMount(async () => {
+  await fetchConfig();
+  try {
+    const showQuick = await getSimulationShowQuickOptions();
+    doNotShowAgain.value = !showQuick;
+  }
+  catch {
+    doNotShowAgain.value = false;
+  }
 });
 </script>
 
@@ -138,6 +159,15 @@ onMounted(() => {
           </a-checkbox>
         </div>
 
+        <div class="do-not-show-row">
+          <a-checkbox
+            v-model:checked="doNotShowAgain"
+            @change="syncDoNotShowToWorkspace"
+          >
+            {{ t('web.options.sanitizer.doNotShowAgain') }}
+          </a-checkbox>
+        </div>
+
         <div class="footer-actions">
           <a-button type="primary" :loading="isExecuting" @click="handleConfirm">
             {{ t('web.options.simulator.startNow') }}
@@ -178,6 +208,12 @@ onMounted(() => {
     padding: 12px;
     border-radius: 4px;
     border: 1px solid v-bind('actualTheme === "dark" ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)"');
+  }
+
+  .do-not-show-row {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid v-bind('actualTheme === "dark" ? "rgba(255, 255, 255, 0.12)" : "rgba(0, 0, 0, 0.08)"');
   }
 
   .footer-actions {

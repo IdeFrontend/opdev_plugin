@@ -75,8 +75,9 @@ export interface CreateProjectParams {
   project_path: string;
   template_name?: string,
   project_type?: string; // Operator project type
-  ascend_env_script?: string;
-  soc_version?: string; // SOC版本
+  /** Set to `null` to clear stored env script (e.g. when workspace setting is empty). */
+  ascend_env_script?: string | null;
+  soc_version?: string;
   create_by?: string;
   sub_project_ids?: number[]; // List of subproject IDs of multi-operator project collections
   is_experimental?: boolean; // Whether it is an experimental operator
@@ -92,10 +93,10 @@ export async function updateShScript(data: CreateProjectParams) {
   const existing = store.projects.find((p) => p.project_path === data.project_path);
 
   if (existing) {
-    if (data.ascend_env_script) {
-      existing.ascend_env_script = data.ascend_env_script;
+    if (data.ascend_env_script !== undefined) {
+      existing.ascend_env_script = data.ascend_env_script ?? null;
     }
-    if (data.soc_version) {
+    if (data.soc_version !== undefined) {
       existing.soc_version = data.soc_version;
     }
     existing.update_time = new Date()

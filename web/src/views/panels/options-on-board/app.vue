@@ -1,13 +1,21 @@
 <script setup lang="ts">
 import {
-  ref, onMounted, computed, watch
+  ref, onMounted, computed,
 } from 'vue';
 import { t } from 'i18next';
 import { message } from 'ant-design-vue';
 import { useTheme } from '@web/composables/use-theme';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import {
-  getConfigData, saveConfig, openExternalLink, startOnBoard, executeVscodeCommand, checkTaskStatus, getSelectedOperators
+  getConfigData,
+  saveConfig,
+  openExternalLink,
+  startOnBoard,
+  executeVscodeCommand,
+  checkTaskStatus,
+  getSelectedOperators,
+  getOnBoardAnalysisShowQuickOptions,
+  setOnBoardAnalysisShowQuickOptions,
 } from '@web/apis';
 
 // 使用主题管理组合式函数
@@ -28,6 +36,8 @@ const onboardData = ref({ user_options: {
 } });
 const loading = ref(false);
 const isExecuting = ref(false);
+/** When true, workspace `performanceTuning.onBoard.showQuickOptions` is false (tree runs without opening this panel). */
+const doNotShowAgain = ref(false);
 
 const fetchConfig = async () => {
   try {
@@ -101,83 +111,60 @@ const jumpToGuide = () => {
   openExternalLink(guide);
 };
 
-const performanceSelectedAll = ref(true);
-// 算子性能数据文件，这组半选
-const performanceSelectedHalf = computed(() => {
-  let count = 0;
-  const keyArray = [
-    'ArithmeticUtilization',
-    'L2Cache',
-    'Memory',
-    'MemoryL0',
-    'MemoryUB',
-    'PipeUtilization',
-    'ResourceConflictRatio',
-  ];
+/** Keys under “Operator metrics”; parent checkbox must not use v-model + watch (that re-fired @change and synced every key). */
+const PERFORMANCE_METRIC_KEYS = [
+  'ArithmeticUtilization',
+  'L2Cache',
+  'Memory',
+  'MemoryL0',
+  'MemoryUB',
+  'PipeUtilization',
+  'ResourceConflictRatio',
+] as const;
 
-  keyArray.forEach((key) => {
-    if (onboardData.value.user_options?.[key]) {
-      count += 1;
-    }
-  });
-
-  return count > 0 && count < keyArray.length;
+const allPerformanceMetricsSelected = computed(() => {
+  const uo = onboardData.value.user_options;
+  if (!uo) {
+    return false;
+  }
+  return PERFORMANCE_METRIC_KEYS.every((key) => Boolean(uo[key]));
 });
 
-const handleOperatorPerformanceChange = (e) => {
-  const checked = typeof e === 'boolean' ? e : (e.target?.checked ?? false);
+const performanceMetricsIndeterminate = computed(() => {
+  const uo = onboardData.value.user_options;
+  if (!uo) {
+    return false;
+  }
+  const count = PERFORMANCE_METRIC_KEYS.filter((key) => uo[key]).length;
+  return count > 0 && count < PERFORMANCE_METRIC_KEYS.length;
+});
 
-  const keyArray= [
-    'ArithmeticUtilization',
-    'L2Cache',
-    'Memory',
-    'MemoryL0',
-    'MemoryUB',
-    'PipeUtilization',
-    'ResourceConflictRatio',
-  ];
+/** Only the group header checkbox should call this — toggles all metrics together. */
+const handleOperatorPerformanceChange = (e: unknown) => {
+  const checked = typeof e === 'boolean'
+    ? e
+    : ((e as { target?: { checked?: boolean } })?.target?.checked ?? false);
 
-  keyArray.forEach((key) => {
+  PERFORMANCE_METRIC_KEYS.forEach((key) => {
     onboardData.value.user_options[key] = checked;
   });
 
   handleSave();
 };
 
-// 组内选项全部选中时，自动选上“全选”
-watch(
-  () => onboardData.value.user_options,
-  () => {
-    if (!onboardData.value.user_options) {
-      return;
-    }
+async function syncDoNotShowToWorkspace() {
+  await setOnBoardAnalysisShowQuickOptions(!doNotShowAgain.value);
+}
 
-    let count = 0;
-    const keyArray = [
-      'ArithmeticUtilization',
-      'L2Cache',
-      'Memory',
-      'MemoryL0',
-      'MemoryUB',
-      'PipeUtilization',
-      'ResourceConflictRatio',
-    ];
-
-    keyArray.forEach((key) => {
-      if (onboardData.value.user_options[key]) {
-        count += 1;
-      }
-    });
-    performanceSelectedAll.value = count === keyArray.length;
-  },
-  {
-    deep: true,
-    immediate: true,
-  },
-);
-
-onMounted(() => {
-  fetchConfig();
+onMounted(async () => {
+  await fetchConfig();
+  try {
+    const showQuick = await getOnBoardAnalysisShowQuickOptions();
+    doNotShowAgain.value = !showQuick;
+  }
+  catch {
+    doNotShowAgain.value = false;
+  }
 });
 </script>
 
@@ -265,8 +252,8 @@ onMounted(() => {
 
         <div>
           <a-checkbox
-            v-model:checked="performanceSelectedAll"
-            :indeterminate="performanceSelectedHalf"
+            :checked="allPerformanceMetricsSelected"
+            :indeterminate="performanceMetricsIndeterminate"
             @change="handleOperatorPerformanceChange"
           >
             {{ t('web.options.onboard.operatorMetrics') }}
@@ -317,6 +304,15 @@ onMounted(() => {
           </a-checkbox>
         </div>
 
+
+        <div class="do-not-show-row">
+          <a-checkbox
+            v-model:checked="doNotShowAgain"
+            @change="syncDoNotShowToWorkspace"
+          >
+            {{ t('web.options.sanitizer.doNotShowAgain') }}
+          </a-checkbox>
+        </div>
 
         <div class="footer-actions">
           <a-button type="primary" :loading="isExecuting" @click="handleConfirm">
@@ -375,6 +371,12 @@ onMounted(() => {
       display: inline-flex;
       margin-bottom: 0;
     }
+  }
+
+  .do-not-show-row {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid v-bind('actualTheme === "dark" ? "rgba(255, 255, 255, 0.12)" : "rgba(0, 0, 0, 0.08)"');
   }
 
   .footer-actions {

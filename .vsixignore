@@ -4,6 +4,8 @@
 # Source files
 plugin/src/**
 web/src/**
+# Packaged tree SVGs (extension tree icons); must ship with VSIX
+!web/src/assets/**
 shared/**
 
 # Development files

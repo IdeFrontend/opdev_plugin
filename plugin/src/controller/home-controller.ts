@@ -179,7 +179,14 @@ async function checkMultipleOperatorsInternal(): Promise<{
 
     findOperatorProjects(workspacePath);
 
-    const hasMultiple = operatorProjects.length > 1;
+    const operators = operatorProjects.map((projectPath, index) => ({
+      id: 900000 + index,
+      name: path.basename(projectPath),
+      path: projectPath,
+      isExperimental: false,
+      isCompiled: false,
+    }));
+    const hasMultiple = operators.length > 1;
 
     console.log(
       '[checkMultipleOperators] Found operator project count:',
@@ -188,7 +195,7 @@ async function checkMultipleOperatorsInternal(): Promise<{
       operatorProjects,
     );
 
-    return { hasMultiple, isStandardCustom: false };
+    return { hasMultiple, isStandardCustom: false, operators };
   }
   catch (error) {
     console.error('[checkMultipleOperators] Failed to check operator projects:', error);
@@ -522,7 +529,14 @@ export const homeMethods = {
 
       findOperatorProjects(workspacePath);
 
-      const hasMultiple = operatorProjects.length > 1;
+      const operators = operatorProjects.map((projectPath, index) => ({
+        id: 900000 + index,
+        name: path.basename(projectPath),
+        path: projectPath,
+        isExperimental: false,
+        isCompiled: false,
+      }));
+      const hasMultiple = operators.length > 1;
 
       console.log(
         '[checkMultipleOperators] Found operator project count:',
@@ -531,7 +545,7 @@ export const homeMethods = {
         operatorProjects,
       );
 
-      return { hasMultiple, isStandardCustom: false };
+      return { hasMultiple, isStandardCustom: false, operators };
     }
     catch (error) {
       console.error('[checkMultipleOperators] Failed to check operator projects:', error);

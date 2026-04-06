@@ -72,6 +72,24 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     // Set webview content
     this.setupWebview();
 
+    // Send initial theme and subscribe to theme changes
+    const getThemeName = (kind: vscode.ColorThemeKind) =>
+      kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
+
+    this.panel.webview.postMessage({
+      command: 'updateTheme',
+      themeName: getThemeName(vscode.window.activeColorTheme.kind),
+    });
+
+    context.subscriptions.push(
+      vscode.window.onDidChangeActiveColorTheme((theme) => {
+        this.panel.webview.postMessage({
+          command: 'updateTheme',
+          themeName: getThemeName(theme.kind),
+        });
+      }),
+    );
+
     // Listen for panel closing events
     this.panel.onDidDispose(() => this.dispose(), null, context.subscriptions);
 
@@ -176,6 +194,27 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>数据查看器</title>
+    <style>
+        body {
+            background-color: var(--vscode-editor-background);
+            color: var(--vscode-editor-foreground);
+            font-family: var(--vscode-font-family);
+            font-size: var(--vscode-font-size);
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            font-weight: 400;
+            margin-bottom: 16px;
+        }
+        p {
+            margin: 8px 0;
+            color: var(--vscode-editor-foreground);
+        }
+        span {
+            color: var(--vscode-descriptionForeground);
+        }
+    </style>
 </head>
 <body>
     <div id="app">
@@ -185,15 +224,15 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     </div>
     <script>
         const vscode = acquireVsCodeApi();
-        
+
         // Listen for messages from extensions
         window.addEventListener('message', event => {
             const message = event.data;
-            
+
             // Handle WebSocket bridge messages (from NodeWebviewSocketBridge)
             if (message.type && message.type.startsWith('ws:')) {
                 console.log('WebSocket bridge message:', message);
-                
+
                 switch (message.type) {
                     case 'ws:opened':
                         console.log('WebSocket opened:', message.id);
@@ -210,8 +249,8 @@ export class InsightDataViewerPanel implements vscode.Disposable {
                 }
             }
         });
-        
-        // Notification extension is ready to receive messages
+
+        // Notify extension that the webview is ready to receive messages
         vscode.postMessage({ command: 'ready' });
     </script>
 </body>

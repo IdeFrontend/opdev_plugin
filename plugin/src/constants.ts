@@ -93,3 +93,30 @@ export const COMMAND_REPORT_VISUALIZATION_ON_BOARD = `${COMMAND_PREFIX}.reportVi
 export const COMMAND_REPORT_VISUALIZATION_SIMULATION = `${COMMAND_PREFIX}.reportVisualizationSimulation`;
 export const COMMAND_REPORT_VISUALIZATION_PERFORMANCE = `${COMMAND_PREFIX}.reportVisualizationPerformance`;
 export const COMMAND_REFRESH_FOLDER_DECORATIONS = `${COMMAND_PREFIX}.refreshFolderDecorations`;
+
+// Sidebar tree commands
+export const COMMAND_SIDEBAR_PROJECT_CONFIG = `${COMMAND_PREFIX}.sidebar.projectConfig`;
+export const COMMAND_SIDEBAR_BUILD = `${COMMAND_PREFIX}.sidebar.build`;
+export const COMMAND_SIDEBAR_RUN = `${COMMAND_PREFIX}.sidebar.run`;
+export const COMMAND_SIDEBAR_CPU_DEBUG = `${COMMAND_PREFIX}.sidebar.cpuDebug`;
+export const COMMAND_SIDEBAR_NPU_DEBUG = `${COMMAND_PREFIX}.sidebar.npuDebug`;
+export const COMMAND_SIDEBAR_SANITIZER = `${COMMAND_PREFIX}.sidebar.sanitizer`;
+export const COMMAND_SIDEBAR_ON_BOARD = `${COMMAND_PREFIX}.sidebar.onBoard`;
+export const COMMAND_SIDEBAR_SIMULATION = `${COMMAND_PREFIX}.sidebar.simulation`;
+export const COMMAND_SIDEBAR_DEBUG_SETTINGS = `${COMMAND_PREFIX}.operate.debugSettings`;
+export const COMMAND_SIDEBAR_SANITIZER_SETTINGS = `${COMMAND_PREFIX}.operate.sanitizerSettings`;
+export const COMMAND_SIDEBAR_ON_BOARD_SETTINGS = `${COMMAND_PREFIX}.operate.onBoardSettings`;
+export const COMMAND_SIDEBAR_SIMULATION_SETTINGS = `${COMMAND_PREFIX}.operate.simulationSettings`;
+export const COMMAND_SIDEBAR_SELECT_OPERATORS = `${COMMAND_PREFIX}.sidebar.selectOperators`;
+export const COMMAND_SIDEBAR_CLEAR_SELECTED_OPERATORS = `${COMMAND_PREFIX}.sidebar.clearSelectedOperators`;
+export const COMMAND_SIDEBAR_SEARCH_OPERATORS = `${COMMAND_PREFIX}.sidebar.searchOperators`;
+export const COMMAND_SIDEBAR_CLEAR_OPERATOR_PROJECTS_SEARCH = `${COMMAND_PREFIX}.sidebar.clearOperatorProjectsSearch`;
+export const COMMAND_SIDEBAR_TOGGLE_OPERATOR = `${COMMAND_PREFIX}.sidebar.toggleOperator`;
+export const COMMAND_SIDEBAR_SELECT_ALL_OPERATORS = `${COMMAND_PREFIX}.sidebar.selectAllOperators`;
+export const COMMAND_SIDEBAR_SELECT_ALL_COMPILED_OPERATORS = `${COMMAND_PREFIX}.sidebar.selectAllCompiledOperators`;
+export const COMMAND_SIDEBAR_SELECT_ALL_PREPARED_OPERATORS = `${COMMAND_PREFIX}.sidebar.selectAllPreparedOperators`;
+export const COMMAND_SIDEBAR_DESELECT_ALL_PREPARED_OPERATORS = `${COMMAND_PREFIX}.sidebar.deselectAllPreparedOperators`;
+/** Stops the task started from the Actions tree (inline on the running row). */
+export const COMMAND_SIDEBAR_STOP_FLOW_TASK = `${COMMAND_PREFIX}.sidebar.stopFlowTask`;
+export const COMMAND_SIDEBAR_OPEN_WELCOME = `${COMMAND_PREFIX}.sidebar.openWelcome`;
+export const COMMAND_SIDEBAR_OPEN_HELP = `${COMMAND_PREFIX}.sidebar.openHelp`;

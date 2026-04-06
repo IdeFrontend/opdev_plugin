@@ -31,6 +31,8 @@ import { markOperatorsAsCompiled, getProjectByPath } from '@plugin/domain/models
 import { homeMethods } from '../controller/home-controller';
 import { soc_version } from '@plugin/domain/utils/ascend-util';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
+import { mergeBuildConfigsWithOperatorProjectWorkspace } from '@plugin/helpers/operator-project-workspace-config';
+import { requestSidebarContextsRefresh } from '@plugin/helpers/sidebar-context-refresh';
 
 const CONFIG_TYPES = {
   BUILD_OP: 'build_op',
@@ -107,6 +109,18 @@ async function tryMarkOperatorsAsCompiled(
   }
 }
 
+/**
+ * After a successful compile: persist `isCompiled` in the projects store when applicable, then refresh
+ * the Operators / Actions trees so labels and selection state match.
+ */
+export async function notifyBuildSucceededForSidebar(
+  configId: number,
+  operatorNames: string | undefined,
+): Promise<void> {
+  await tryMarkOperatorsAsCompiled(configId, operatorNames);
+  await requestSidebarContextsRefresh();
+}
+
 export class BuildService {
   /**
    * Get a list of build configurations
@@ -139,7 +153,7 @@ export class BuildService {
       ut_test: utTestConfig.length,
     });
 
-    return [
+    const configs = [
       ...opConfig.map((c) => ({
         ...c,
         user_options: c.user_options ? (c.user_options as Record<string, unknown>) : undefined,
@@ -161,6 +175,8 @@ export class BuildService {
         user_options: c.user_options ? (c.user_options as Record<string, unknown>) : undefined,
       })),
     ] as BuildConfig[];
+
+    return mergeBuildConfigsWithOperatorProjectWorkspace(configs);
   }
 
   /**
@@ -315,7 +331,7 @@ export class BuildService {
       console.log('[startBuild] Build succeeded');
       vscode.window.showInformationMessage(t('build.compileSuccess'));
 
-      await tryMarkOperatorsAsCompiled(Number(configId), params.operatorNames);
+      await notifyBuildSucceededForSidebar(Number(configId), params.operatorNames);
     }
     catch (e) {
       console.error('[startBuild] Build process error:', e);
@@ -519,7 +535,7 @@ export class BuildService {
         throw new Error(t('build.compileFailedThrow', { output: buildRes.output }));
       }
 
-      await tryMarkOperatorsAsCompiled(Number(simulatorItem?.config_id), params.operatorNames);
+      await notifyBuildSucceededForSidebar(Number(simulatorItem?.config_id), params.operatorNames);
 
       if (await isRootStandardCustom()) {
         const exConfigId = await this.getBuildExampleConfigId();
@@ -626,7 +642,7 @@ export class BuildService {
         return;
       }
 
-      await tryMarkOperatorsAsCompiled(Number(configId), params.operatorNames);
+      await notifyBuildSucceededForSidebar(Number(configId), params.operatorNames);
 
       if (await isRootStandardCustom()) {
         const exConfigId = await this.getBuildExampleConfigId();
@@ -718,7 +734,7 @@ export class BuildService {
       return;
     }
 
-    await tryMarkOperatorsAsCompiled(Number(configId), params.operatorNames);
+    await notifyBuildSucceededForSidebar(Number(configId), params.operatorNames);
 
     const exConfigId = await this.getBuildExampleConfigId();
     if (await isRootStandardCustom()) {

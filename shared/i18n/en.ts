@@ -52,6 +52,12 @@ export default {
   'extension.rightClickFile': 'Please right-click a file',
   'extension.openDevToolsFailed': 'Failed to open Huawei OP DevTools: {{error}}',
   'extension.importDumpTensorBinFailed': 'Failed to import DumpTensor .bin file',
+  'extension.environmentScript.missing': 'Workspace setting Environment script (set_env.sh) is empty. Set it before running actions from the Actions view, or choose a file now.',
+  'extension.environmentScript.invalidPath': 'The workspace Environment script path does not exist on disk. Choose a valid set_env.sh or update the setting.',
+  'extension.environmentScript.browse': 'Choose file…',
+  'extension.environmentScript.selectFile': 'Select environment script',
+  'extension.environmentScript.saved': 'Environment script path saved to workspace settings.',
+  'extension.environmentScript.fileNotFound': 'The selected path could not be accessed.',
 
   // folder-context-menu
   'folderContext.angleOpsNotSupported': '<<<>>> operator type does not support this context menu action',
@@ -345,6 +351,8 @@ export default {
   'web.operate.searchOperatorProject': 'Search operator project',
   'web.operate.compiledOperators': 'Compiled operators',
   'web.operate.preparedOperators': 'Prepared operators',
+  'web.operate.operatorProjects': 'Operators',
+  'web.operate.clearAll': 'Clear all',
   'web.operate.selectAll': 'Select all',
   'web.operate.confirm': 'Confirm',
   'web.operate.pleaseSelectOperatorProject': 'Please select an operator project',
@@ -586,7 +594,7 @@ export default {
   'web.options.sanitizerFailed': 'Sanitizer failed',
 
   // web options-simulator
-  'web.options.simulator.title': 'Simulation – select content',
+  'web.options.simulator.title': 'Simulation Analysis Quick Options',
   'web.options.simulator.alert': 'For simulation tuning, update Model config in code. See README.',
   'web.options.simulator.collectContent': 'Collect content',
   'web.options.simulator.guideRef': 'See operator tuning overview for examples.',
@@ -600,7 +608,7 @@ export default {
   'web.options.simulator.startNow': 'Start now',
 
   // web options-on-board
-  'web.options.onboard.title': 'On-board – select content',
+  'web.options.onboard.title': 'On-board Analysis Quick Options',
   'web.options.onboard.alert1': '1. For on-board tuning, update NPU config in code. See README.',
   'web.options.onboard.alert2': '2. If "Roofline" or "Cache heatmap" is checked, all operator metrics are collected by default.',
   'web.options.onboard.collectContent': 'Collect content',
@@ -624,7 +632,7 @@ export default {
   'web.options.onboard.startNow': 'Start now',
 
   // web options-sanitizer
-  'web.options.sanitizer.title': 'Sanitizer – select content',
+  'web.options.sanitizer.title': 'Sanitizer Quick Options',
   'web.options.sanitizer.memory': 'Memory',
   'web.options.sanitizer.memoryBase': 'Base: illegal read/write, multi-core stomp, unaligned access, illegal free',
   'web.options.sanitizer.memoryExtra': 'Optional:',
@@ -633,6 +641,7 @@ export default {
   'web.options.sanitizer.race': 'Race',
   'web.options.sanitizer.uninit': 'Uninitialized',
   'web.options.sanitizer.startNow': 'Start now',
+  'web.options.sanitizer.doNotShowAgain': 'Do not show again',
 
   // web project-sh
   'web.projectSh.title': 'Environment config',

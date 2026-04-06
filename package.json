@@ -17,22 +17,264 @@
   "main": "./out/extension.js",
   "browser": "./out/extension.js",
   "activationEvents": [
-    "onView:pluginSidebar",
+    "onView:opdevtoolsHomeTree",
     "workspaceContains:package.json",
     "onStartupFinished"
   ],
   "icon": "web/resources/extension_icon.png",
   "contributes": {
-    "configuration": {
-      "title": "%config.title%",
-      "properties": {
-        "op-devtools.debugMode": {
-          "type": "boolean",
-          "default": true,
-          "description": "%config.op-devtools.debugMode.description%"
+    "configuration": [
+      {
+        "id": "op-devtools.compileAndDeploy",
+        "title": "%config.category.compileAndDeploy.title%",
+        "type": "object",
+        "properties": {
+          "op-devtools.debugMode": {
+            "type": "boolean",
+            "default": true,
+            "description": "%config.op-devtools.debugMode.description%"
+          },
+          "op-devtools.compileAndDeploy.buildConfig.operatorNameToCompile": {
+            "type": "string",
+            "order": 100
+          },
+          "op-devtools.compileAndDeploy.buildConfig.deployCommandOrRunCommand": {
+            "type": "string",
+            "order": 101
+          },
+          "op-devtools.compileAndDeploy.buildConfig.compileCommand": {
+            "type": "string",
+            "order": 102
+          },
+          "op-devtools.compileAndDeploy.buildConfig.cpuDebugCompileCommand": {
+            "type": "string",
+            "order": 103
+          },
+          "op-devtools.compileAndDeploy.buildConfig.npuDebugCompileCommand": {
+            "type": "string",
+            "order": 104
+          },
+          "op-devtools.compileAndDeploy.buildConfig.sanitizerCompileCommand": {
+            "type": "string",
+            "order": 105
+          },
+          "op-devtools.compileAndDeploy.buildConfig.onBoardCompileCommand": {
+            "type": "string",
+            "order": 106
+          },
+          "op-devtools.compileAndDeploy.buildConfig.simulationCompileCommand": {
+            "type": "string",
+            "order": 107
+          },
+          "op-devtools.compileAndDeploy.exampleBuildConfig.executionMode": {
+            "type": "string",
+            "order": 108,
+            "enum": [
+              "eager",
+              "graph"
+            ]
+          },
+          "op-devtools.compileAndDeploy.exampleBuildConfig.runCommand": {
+            "type": "string",
+            "order": 110,
+            "markdownDescription": "%config.op-devtools.compileAndDeploy.exampleBuildConfig.runCommand.markdownDescription%"
+          }
+        }
+      },
+      {
+        "id": "op-devtools.sanitizer",
+        "title": "%config.category.sanitizer.title%",
+        "type": "object",
+        "properties": {
+          "op-devtools.sanitizer.showQuickOptions": {
+            "type": "boolean",
+            "default": true,
+            "order": 100,
+            "description": "%config.op-devtools.sanitizer.showQuickOptions.description%",
+            "markdownDescription": "%config.op-devtools.sanitizer.showQuickOptions.markdownDescription%"
+          },
+          "op-devtools.sanitizer.memory": {
+            "type": "boolean",
+            "order": 200,
+            "markdownDescription": "%config.op-devtools.sanitizer.memory.markdownDescription%"
+          },
+          "op-devtools.sanitizer.memoryLeak": {
+            "type": "boolean",
+            "order": 201,
+            "markdownDescription": "%config.op-devtools.sanitizer.memoryLeak.markdownDescription%"
+          },
+          "op-devtools.sanitizer.allocUnused": {
+            "type": "boolean",
+            "order": 202,
+            "markdownDescription": "%config.op-devtools.sanitizer.allocUnused.markdownDescription%"
+          },
+          "op-devtools.sanitizer.race": {
+            "type": "boolean",
+            "order": 203
+          },
+          "op-devtools.sanitizer.uninitialized": {
+            "type": "boolean",
+            "order": 204
+          },
+          "op-devtools.sanitizer.reportLogLevel": {
+            "type": "string",
+            "order": 205,
+            "enum": [
+              "info",
+              "warn",
+              "error"
+            ]
+          },
+          "op-devtools.sanitizer.maxSingleLogFileSize": {
+            "type": "number",
+            "order": 206,
+            "minimum": 1,
+            "maximum": 10240,
+            "markdownDescription": "%config.op-devtools.sanitizer.maxSingleLogFileSize.markdownDescription%"
+          },
+          "op-devtools.sanitizer.detectionScope": {
+            "type": "string",
+            "order": 207,
+            "enum": [
+              "global",
+              "singleBlock"
+            ],
+            "markdownDescription": "%config.op-devtools.sanitizer.detectionScope.markdownDescription%"
+          },
+          "op-devtools.sanitizer.blockId": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "order": 208,
+            "minimum": 0,
+            "maximum": 200
+          }
+        }
+      },
+      {
+        "id": "op-devtools.performanceTuning",
+        "title": "%config.category.performanceTuning.title%",
+        "type": "object",
+        "properties": {
+          "op-devtools.performanceTuning.simulation.showQuickOptions": {
+            "type": "boolean",
+            "default": true,
+            "order": 298,
+            "description": "%config.op-devtools.performanceTuning.simulation.showQuickOptions.description%",
+            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.showQuickOptions.markdownDescription%"
+          },
+          "op-devtools.performanceTuning.simulation.simulatorType": {
+            "type": "string",
+            "order": 300,
+            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.simulatorType.markdownDescription%"
+          },
+          "op-devtools.performanceTuning.simulation.memoryThroughputWaveform": {
+            "type": "boolean",
+            "order": 301,
+            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.memoryThroughputWaveform.markdownDescription%"
+          },
+          "op-devtools.performanceTuning.simulation.resourceConflictRatio": {
+            "type": "boolean",
+            "order": 302,
+            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.resourceConflictRatio.markdownDescription%"
+          },
+          "op-devtools.performanceTuning.simulation.parameters": {
+            "type": "object",
+            "order": 303,
+            "default": {},
+            "additionalProperties": {
+              "type": "string"
+            },
+            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.parameters.markdownDescription%"
+          },
+          "op-devtools.performanceTuning.onBoard.showQuickOptions": {
+            "type": "boolean",
+            "default": true,
+            "order": 309,
+            "description": "%config.op-devtools.performanceTuning.onBoard.showQuickOptions.description%",
+            "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.showQuickOptions.markdownDescription%"
+          },
+          "op-devtools.performanceTuning.onBoard.interCoreLoad": {
+            "type": "boolean",
+            "order": 310
+          },
+          "op-devtools.performanceTuning.onBoard.roofline": {
+            "type": "boolean",
+            "order": 311,
+            "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.roofline.markdownDescription%"
+          },
+          "op-devtools.performanceTuning.onBoard.operatorCodeHotspot": {
+            "type": "boolean",
+            "order": 312
+          },
+          "op-devtools.performanceTuning.onBoard.cacheHeatmap": {
+            "type": "boolean",
+            "order": 313,
+            "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.cacheHeatmap.markdownDescription%"
+          },
+          "op-devtools.performanceTuning.onBoard.operatorMetrics": {
+            "type": "boolean",
+            "order": 314,
+            "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.operatorMetrics.markdownDescription%"
+          },
+          "op-devtools.performanceTuning.onBoard.cubeAndVectorInstructionTimeAndRatio": {
+            "type": "boolean",
+            "order": 315
+          },
+          "op-devtools.performanceTuning.onBoard.l2CacheHitRate": {
+            "type": "boolean",
+            "order": 316
+          },
+          "op-devtools.performanceTuning.onBoard.memoryReadWriteBandwidth": {
+            "type": "boolean",
+            "order": 317
+          },
+          "op-devtools.performanceTuning.onBoard.l0ReadWriteBandwidth": {
+            "type": "boolean",
+            "order": 318
+          },
+          "op-devtools.performanceTuning.onBoard.ubReadWriteBandwidth": {
+            "type": "boolean",
+            "order": 319
+          },
+          "op-devtools.performanceTuning.onBoard.computeAndMoveUnitTimeRatio": {
+            "type": "boolean",
+            "order": 320
+          },
+          "op-devtools.performanceTuning.onBoard.resourceConflictRatio": {
+            "type": "boolean",
+            "order": 321
+          },
+          "op-devtools.performanceTuning.onBoard.enableKernelCodeSegmentProfiling": {
+            "type": "boolean",
+            "order": 322,
+            "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.enableKernelCodeSegmentProfiling.markdownDescription%"
+          },
+          "op-devtools.performanceTuning.onBoard.parameters": {
+            "type": "object",
+            "order": 323,
+            "default": {},
+            "additionalProperties": {
+              "type": "string"
+            },
+            "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.parameters.markdownDescription%"
+          }
+        }
+      },
+      {
+        "id": "op-devtools.environment",
+        "title": "%config.category.environment.title%",
+        "type": "object",
+        "properties": {
+          "op-devtools.environment.environmentScript": {
+            "type": "string",
+            "order": 400,
+            "markdownDescription": "%config.op-devtools.environment.environmentScript.markdownDescription%"
+          }
         }
       }
-    },
+    ],
     "colors": [
       {
         "id": "huawei.op.devtools.operatorProject",
@@ -94,16 +336,19 @@
     "views": {
       "mindstudio-opssuite-vscode-plugin": [
         {
-          "id": "pluginSidebar",
-          "name": "%view.pluginSidebar.name%",
-          "type": "webview"
-        }
-      ],
-      "huawei-op-devtools-secondary-sidebar": [
+          "id": "opdevtoolsHomeTree",
+          "name": "Home",
+          "when": "opDevtools.showHomeTree"
+        },
         {
-          "type": "webview",
-          "id": "OpsOperateProvider",
-          "name": "%view.opsOperate.name%"
+          "id": "opdevtoolsOperatorProjectsTree",
+          "name": "%view.operatorProjects.name%",
+          "when": "opDevtools.showOperatorProjects"
+        },
+        {
+          "id": "opdevtoolsOperateTree",
+          "name": "%view.opsOperate.name%",
+          "when": "opDevtools.showOperateTree"
         }
       ],
       "ms-sanitizer-panel-view": [
@@ -135,7 +380,8 @@
     "commands": [
       {
         "command": "huawei-op-devtools.open",
-        "title": "%command.open.title%"
+        "title": "%command.open.title%",
+        "icon": "$(add)"
       },
       {
         "command": "huawei-op-devtools.openProject",
@@ -301,6 +547,129 @@
       {
         "command": "huawei-op-devtools.importDumpTensorBinFile",
         "title": "%command.importDumpTensorBinFile.title%"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.projectConfig",
+        "title": "Project Config",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.build",
+        "title": "Compile & Deploy"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.run",
+        "title": "Run"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.cpuDebug",
+        "title": "CPU Debug"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.npuDebug",
+        "title": "NPU Debug"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.sanitizer",
+        "title": "Sanitizer"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.onBoard",
+        "title": "On-board Analysis"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.simulation",
+        "title": "Simulation Analysis"
+      },
+      {
+        "command": "huawei-op-devtools.operate.debugSettings",
+        "title": "Debug Settings",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "huawei-op-devtools.operate.sanitizerSettings",
+        "title": "Sanitizer Settings",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "huawei-op-devtools.operate.onBoardSettings",
+        "title": "On-board Settings",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "huawei-op-devtools.operate.simulationSettings",
+        "title": "Simulation Settings",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.selectOperators",
+        "title": "Select Operator Projects"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.clearSelectedOperators",
+        "title": "%command.sidebar.clearSelectedOperators.title%",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.searchOperators",
+        "title": "Search Operator Projects",
+        "icon": "$(search)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.clearOperatorProjectsSearch",
+        "title": "%command.sidebar.clearOperatorProjectsSearch.title%",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.toggleOperator",
+        "title": "Toggle Operator"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.selectAllCompiledOperators",
+        "title": "%command.sidebar.selectAll.title%",
+        "icon": "$(check-all)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.selectAllPreparedOperators",
+        "title": "%command.sidebar.selectAll.title%",
+        "icon": "$(check-all)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.selectAllOperators",
+        "title": "%command.sidebar.selectAll.title%",
+        "icon": "$(check-all)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.deselectAllPreparedOperators",
+        "title": "%command.sidebar.clearSelectedOperators.title%",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.stopFlowTask",
+        "title": "%command.sidebar.stopFlowTask.title%",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.openWelcome",
+        "title": "Open Welcome"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.openHelp",
+        "title": "Open Help Guide"
+      }
+    ],
+    "viewsWelcome": [
+      {
+        "view": "opdevtoolsHomeTree",
+        "contents": "Click [Help Guide](command:huawei-op-devtools.sidebar.openHelp) or [Welcome Home](command:huawei-op-devtools.sidebar.openWelcome) to view plugin introduction."
+      },
+      {
+        "view": "opdevtoolsHomeTree",
+        "contents": "[New Operator Project](command:huawei-op-devtools.open)"
+      },
+      {
+        "view": "opdevtoolsHomeTree",
+        "contents": "[Open Operator Project](command:huawei-op-devtools.openProject)"
       }
     ],
     "submenus": [
@@ -326,7 +695,70 @@
           "title": "%menu.file.new.open.title%"
         }
       ],
-      "view/title": [],
+      "view/title": [
+        {
+          "command": "huawei-op-devtools.open",
+          "when": "view == opdevtoolsOperateTree",
+          "group": "navigation@0"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.projectConfig",
+          "when": "view == opdevtoolsOperateTree",
+          "group": "navigation@1"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.selectAllOperators",
+          "when": "view == opdevtoolsOperatorProjectsTree && opDevtools.showOperatorSearch && !opDevtools.allOperatorsSelected",
+          "group": "navigation@3"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.clearSelectedOperators",
+          "when": "view == opdevtoolsOperatorProjectsTree && opDevtools.showOperatorSearch && opDevtools.allOperatorsSelected",
+          "group": "navigation@4"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.clearOperatorProjectsSearch",
+          "when": "view == opdevtoolsOperatorProjectsTree && opDevtools.showOperatorSearch && opDevtools.operatorProjectsSearchActive",
+          "group": "navigation@5"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.searchOperators",
+          "when": "view == opdevtoolsOperatorProjectsTree && opDevtools.showOperatorSearch",
+          "group": "navigation@6"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "huawei-op-devtools.sidebar.clearSelectedOperators",
+          "when": "view == opdevtoolsOperatorProjectsTree && viewItem =~ /operator-projects-selected/",
+          "group": "inline@1"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.stopFlowTask",
+          "when": "view == opdevtoolsOperateTree && viewItem =~ /opdevtools\\.flowRunning/",
+          "group": "inline@1"
+        },
+        {
+          "command": "huawei-op-devtools.operate.debugSettings",
+          "when": "view == opdevtoolsOperateTree && viewItem =~ /opdevtools\\.debug/",
+          "group": "inline@2"
+        },
+        {
+          "command": "huawei-op-devtools.operate.sanitizerSettings",
+          "when": "view == opdevtoolsOperateTree && viewItem =~ /opdevtools\\.sanitizer/",
+          "group": "inline@2"
+        },
+        {
+          "command": "huawei-op-devtools.operate.onBoardSettings",
+          "when": "view == opdevtoolsOperateTree && viewItem =~ /opdevtools\\.onboard/",
+          "group": "inline@2"
+        },
+        {
+          "command": "huawei-op-devtools.operate.simulationSettings",
+          "when": "view == opdevtoolsOperateTree && viewItem =~ /opdevtools\\.simulation/",
+          "group": "inline@2"
+        }
+      ],
       "editor/title": [
         {
           "command": "huawei-op-devtools.toggleOpsOperate",

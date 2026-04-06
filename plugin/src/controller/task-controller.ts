@@ -396,8 +396,9 @@ export const taskMethods = {
         }
       }
       
-      // Compile before debugging, use the --debug parameter
-      await buildService.startBuild({ scriptField: 'npu_debug_script' });
+      const operatorNames = await homeMethods.getSelectedOperators();
+      // Compile before NPU debug, use --debug
+      await buildService.startBuild({ scriptField: 'npu_debug_script', operatorNames });
       await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
 
       // Get the project type and template name to determine whether to use msdebug-python
@@ -517,8 +518,9 @@ export const taskMethods = {
         }
       }
       
-      // Compile before CPU debugging, use the --simulator parameter
-      await buildService.startBuild({ scriptField: 'cpu_debug_script' });
+      const operatorNames = await homeMethods.getSelectedOperators();
+      // Compile before CPU debug, use --simulator
+      await buildService.startBuild({ scriptField: 'cpu_debug_script', operatorNames });
       await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
 
       // Get the project type and template name to determine whether to use msdebug-python

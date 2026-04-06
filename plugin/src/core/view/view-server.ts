@@ -82,7 +82,35 @@ export class ViewServer extends vscode.Disposable {
             };
             console.log('[ViewServer.registerViewProviders] WebView configured, starting webview activation');
             await this.activeWebview(webviewView.webview, routeRaw.path);
-            console.log(`[ViewServer.registerViewProviders] WebViewActivatecompleted: ${routeRaw.providerViewType}`);
+            console.log(`[ViewServer.registerViewProviders] WebView activation completed: ${routeRaw.providerViewType}`);
+
+            const getThemeName = (kind: vscode.ColorThemeKind) =>
+              kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
+
+            webviewView.webview.postMessage({
+              command: 'updateTheme',
+              themeName: getThemeName(vscode.window.activeColorTheme.kind),
+            });
+
+            const themeDisposable = vscode.window.onDidChangeActiveColorTheme((theme) => {
+              webviewView.webview.postMessage({
+                command: 'updateTheme',
+                themeName: getThemeName(theme.kind),
+              });
+            });
+
+            const messageDisposable = webviewView.webview.onDidReceiveMessage(
+              (message: { command: string }) => {
+                if (message.command === 'getTheme') {
+                  webviewView.webview.postMessage({
+                    command: 'updateTheme',
+                    themeName: getThemeName(vscode.window.activeColorTheme.kind),
+                  });
+                }
+              },
+            );
+
+            this.viewProviders.push(themeDisposable, messageDisposable);
           },
         },
         { webviewOptions: { retainContextWhenHidden: true } },

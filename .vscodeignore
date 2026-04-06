@@ -31,4 +31,7 @@ prettier.config.mjs
 
 # 显式保留的文件/目录 (用 ! 开头)
 !web/resources/
+# Tree view icons (OperateTreeProvider getAssetIcon); web/ is ignored above
+!web/src/
+!web/src/assets/
 !out/plugin/mindstudio-debug-vscode-plugin

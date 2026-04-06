@@ -16,6 +16,7 @@ import {
   StrategyVariant,
 } from '../strategies/execution-strategy.factory';
 import { ExecutionContext } from '../strategies/execution-step.interface';
+import { notifyBuildSucceededForSidebar } from '@plugin/service/build-service';
 
 /**
  * Build orchestrator service
@@ -59,6 +60,8 @@ export class BuildOrchestratorService {
         output: execResult.output,
       }));
     }
+
+    await notifyBuildSucceededForSidebar(configId, operatorNames);
 
     return ResultUtils.ok(undefined);
   }
@@ -125,6 +128,8 @@ export class BuildOrchestratorService {
       }));
     }
 
+    await notifyBuildSucceededForSidebar(buildConfigId, undefined);
+
     // Step 2: execute simulation analysis
     const simulateCommand = this.commandGenerator.generateSimulateCommand(
       simulateConfigId,
@@ -171,6 +176,8 @@ export class BuildOrchestratorService {
       }));
     }
 
+    await notifyBuildSucceededForSidebar(buildConfigId, undefined);
+
     // Step 2: execute on-board analysis
     const onBoardCommand = this.commandGenerator.generateOnBoardCommand(
       onBoardConfigId,
@@ -216,6 +223,8 @@ export class BuildOrchestratorService {
         phase: 'pre-sanitizer-build',
       }));
     }
+
+    await notifyBuildSucceededForSidebar(buildConfigId, undefined);
 
     // Step 2: execute sanitizer
     const sanitizerCommand = this.commandGenerator.generateSanitizerCommand(

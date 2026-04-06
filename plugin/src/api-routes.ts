@@ -11,6 +11,7 @@ import { sanitizerViewMethods } from './controller/sanitizer-controller';
 import { homeMethods } from './controller/home-controller';
 import { performanceMethods } from './controller/performance-data-controller';
 import { navigationController } from './controller/navigation-controller';
+import { OperateTreeProvider } from './class/operate-tree-provider';
 
 // V2 version controller
 import { taskMethodsV2 } from '../src-v2/presentation/controllers-v2';
@@ -34,15 +35,17 @@ const opsMethods = {
     ? taskMethodsV2.startBuildExample
     : taskMethods.startBuildExample,
 
-  // Emulation - supports v1/v2 switching
+  // Emulation - supports v1/v2 switching (webview "Start now" uses same flow row UI as the tree)
   startSimulate: getFeatureFlag('USE_V2_SIMULATE')
-    ? taskMethodsV2.startSimulate
-    : taskMethods.startSimulate,
+    ? () => OperateTreeProvider.runFlowActionFromWebview('simulation', () => taskMethodsV2.startSimulate())
+    : (params: { operatorNames?: string } = {}) =>
+        OperateTreeProvider.runFlowActionFromWebview('simulation', () => taskMethods.startSimulate(params)),
 
   // On-board - supports v1/v2 switching
   startOnBoard: getFeatureFlag('USE_V2_ON_BOARD')
-    ? taskMethodsV2.startOnBoard
-    : taskMethods.startOnBoard,
+    ? () => OperateTreeProvider.runFlowActionFromWebview('onboard', () => taskMethodsV2.startOnBoard())
+    : (params: { operatorNames?: string } = {}) =>
+        OperateTreeProvider.runFlowActionFromWebview('onboard', () => taskMethods.startOnBoard(params)),
 
   // StopTask - If any V2 features are enabled, use the V2 version of stopTask
   stopTask: (
@@ -81,8 +84,9 @@ const opsMethods = {
   getSanitizerForm: sanitizerViewMethods.getSanitizerForm,
   saveSanitizerForm: sanitizerViewMethods.saveSanitizerForm,
   runSanitizer: getFeatureFlag('USE_V2_SANITIZER')
-    ? taskMethodsV2.runSanitizer
-    : taskMethods.runSanitizer,
+    ? () => OperateTreeProvider.runFlowActionFromWebview('sanitizer', () => taskMethodsV2.runSanitizer())
+    : (params: { operatorNames?: string } = {}) =>
+        OperateTreeProvider.runFlowActionFromWebview('sanitizer', () => taskMethods.runSanitizer(params)),
 
   ...homeMethods, // getProjectId
 };

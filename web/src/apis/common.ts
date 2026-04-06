@@ -99,3 +99,27 @@ export function executeVscodeCommand(command: string, ...args: any[]) {
     { command, args }
   );
 }
+
+export function getSanitizerShowQuickOptions() {
+  return request.post<undefined, boolean>('common/getSanitizerShowQuickOptions', undefined);
+}
+
+export function setSanitizerShowQuickOptions(value: boolean) {
+  return request.post<{ value: boolean }, void>('common/setSanitizerShowQuickOptions', { value });
+}
+
+export function getSimulationShowQuickOptions() {
+  return request.post<undefined, boolean>('common/getSimulationShowQuickOptions', undefined);
+}
+
+export function setSimulationShowQuickOptions(value: boolean) {
+  return request.post<{ value: boolean }, void>('common/setSimulationShowQuickOptions', { value });
+}
+
+export function getOnBoardAnalysisShowQuickOptions() {
+  return request.post<undefined, boolean>('common/getOnBoardAnalysisShowQuickOptions', undefined);
+}
+
+export function setOnBoardAnalysisShowQuickOptions(value: boolean) {
+  return request.post<{ value: boolean }, void>('common/setOnBoardAnalysisShowQuickOptions', { value });
+}

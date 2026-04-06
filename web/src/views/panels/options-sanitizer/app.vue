@@ -11,12 +11,16 @@ import {
     runSanitizer,
     checkTaskStatus,
     executeVscodeCommand,
-    getSelectedOperators
+    getSelectedOperators,
+    getSanitizerShowQuickOptions,
+    setSanitizerShowQuickOptions,
 } from '@web/apis';
 
 // 使用主题管理组合式函数
 const { themeConfig, actualTheme } = useTheme();
-const isExecuting = ref(false)
+const isExecuting = ref(false);
+/** When true, workspace `sanitizer.showQuickOptions` is false (tree runs without opening this panel). */
+const doNotShowAgain = ref(false);
 const form = ref({
   tool: {
     memcheck: true,
@@ -47,7 +51,18 @@ async function saveSanitizerForm() {
 
 onBeforeMount(async () => {
   await loadSanitizerForm();
+  try {
+    const showQuick = await getSanitizerShowQuickOptions();
+    doNotShowAgain.value = !showQuick;
+  }
+  catch {
+    doNotShowAgain.value = false;
+  }
 });
+
+async function syncDoNotShowToWorkspace() {
+  await setSanitizerShowQuickOptions(!doNotShowAgain.value);
+}
 
 const handleConfirm = async () => {
   if (!form.value || isExecuting.value) {
@@ -130,6 +145,15 @@ const handleConfirm = async () => {
                     </a-checkbox>
                 </div>
 
+                <div class="do-not-show-row">
+                    <a-checkbox
+                        v-model:checked="doNotShowAgain"
+                        @change="syncDoNotShowToWorkspace"
+                    >
+                        {{ t('web.options.sanitizer.doNotShowAgain') }}
+                    </a-checkbox>
+                </div>
+
                 <div class="footer-actions">
                     <a-button type="primary" :loading="isExecuting" @click="handleConfirm">
                         {{ t('web.options.sanitizer.startNow') }}
@@ -167,6 +191,12 @@ const handleConfirm = async () => {
 
   .check-item-row {
     margin-top: 12px;
+  }
+
+  .do-not-show-row {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid v-bind('actualTheme === "dark" ? "rgba(255, 255, 255, 0.12)" : "rgba(0, 0, 0, 0.08)"');
   }
 
   .footer-actions {

@@ -1,6 +1,7 @@
 import {
   Result, ResultUtils,
 } from '@plugin-v2/domain/shared/types/result.type';
+import { notifyBuildSucceededForSidebar } from '@plugin/service/build-service';
 import { BuildFailedError } from '../../errors/operator.error';
 import { CommandGeneratorService } from '../../services/command-generator.service';
 import {
@@ -47,6 +48,9 @@ export class BuildStep implements IExecutionStep {
         phase: this.name.toLowerCase(),
       }));
     }
+
+    const operatorNames = context.parameters?.operatorNames as string | undefined;
+    await notifyBuildSucceededForSidebar(context.buildConfigId, operatorNames);
 
     return ResultUtils.ok({
       command,
@@ -144,6 +148,9 @@ export class BuildWithSimulatorStep implements IExecutionStep {
       }));
     }
 
+    const operatorNames = context.parameters?.operatorNames as string | undefined;
+    await notifyBuildSucceededForSidebar(context.buildConfigId, operatorNames);
+
     return ResultUtils.ok({
       command,
       output: result.output,
@@ -173,6 +180,9 @@ export class BuildForOnBoardStep implements IExecutionStep {
       }));
     }
 
+    const operatorNames = context.parameters?.operatorNames as string | undefined;
+    await notifyBuildSucceededForSidebar(context.buildConfigId, operatorNames);
+
     return ResultUtils.ok({
       command,
       output: result.output,
@@ -201,6 +211,9 @@ export class BuildForSanitizerStep implements IExecutionStep {
         phase: 'pre-sanitizer-build',
       }));
     }
+
+    const operatorNames = context.parameters?.operatorNames as string | undefined;
+    await notifyBuildSucceededForSidebar(context.buildConfigId, operatorNames);
 
     return ResultUtils.ok({
       command,

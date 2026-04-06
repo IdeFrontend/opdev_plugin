@@ -1,23 +1,14 @@
 <template>
   <a-config-provider :theme="themeConfig">
     <div
-      :class="[
-        'w-full min-h-screen px-20 py-10 font-\'Microsoft_Yahei\',sans-serif flex flex-col items-center relative box-border max-[992px]:px-[30px] max-[992px]:py-[20px] max-[576px]:p-[15px]',
-        actualTheme === 'dark' ? 'bg-[#1a1a1d] text-[#f0f0f0]' : 'bg-white text-gray-800'
-      ]"
+      class="welcome-page w-full min-h-screen px-20 py-10 font-['Microsoft_Yahei',sans-serif] flex flex-col items-center relative box-border max-[992px]:px-[30px] max-[992px]:py-[20px] max-[576px]:p-[15px]"
       @click="handleClick">
-      <!-- 背景层（芯片图 + 深色遮罩） -->
-      <div :class="[
-        'absolute top-0 left-0 w-full h-full bg-cover bg-opacity-90 bg-blend-overlay z-[1]',
-        actualTheme === 'dark' ? 'bg-[#121417]' : 'bg-gray-100'
-      ]" />
+      <!-- 背景层（芯片图 + 主题色遮罩） -->
+      <div class="welcome-overlay absolute top-0 left-0 w-full h-full bg-cover z-[1]" />
 
       <!-- 内容层 -->
       <div
-        :class="[
-          'relative z-[2] w-full h-full flex flex-col items-center justify-center px-[50px] box-border',
-          actualTheme === 'dark' ? 'text-white' : 'text-gray-800'
-        ]">
+        class="relative z-[2] w-full h-full flex flex-col items-center justify-center px-[50px] box-border">
         <!-- 顶部标题区域 -->
         <div class="text-center mb-8 w-full max-[992px]:mb-[20px]">
           <h5 class="text-[25px] font-normal m-0 mb-2.5">
@@ -30,7 +21,7 @@
 
         <!-- 导航步骤条（位于标题和核心功能模块之间） -->
         <div class="w-full flex justify-center mb-8 max-[992px]:mb-6">
-          <a-steps class="welcome-steps max-w-[900px] w-full" type="navigation" :current="currentStep"
+          <a-steps class="welcome-steps max-w-[1200px] w-full" type="navigation" :current="currentStep"
             @change="onStepChange">
             <a-step>
               <template #icon>
@@ -43,12 +34,6 @@
                 <img :src="buildIcon" :alt="t('web.welcome.stepDev')" class="step-icon" />
               </template>
               <template #title>{{ t('web.welcome.stepDev') }}</template>
-            </a-step>
-            <a-step>
-              <template #icon>
-                <img :src="debugIcon" :alt="t('web.welcome.stepDebug')" class="step-icon" />
-              </template>
-              <template #title>{{ t('web.welcome.stepDebug') }}</template>
             </a-step>
             <a-step>
               <template #icon>
@@ -65,134 +50,71 @@
           </a-steps>
         </div>
 
-        <!-- 核心功能模块区域：根据步骤展示 5 个面板 -->
+        <!-- 核心功能模块区域：根据步骤展示 4 个面板 -->
         <div
-          :class="[
-            'flex items-stretch justify-center gap-[15px] max-w-[1200px] w-full mb-[30px] py-[30px] px-[20px] flex-none rounded-xl min-h-[300px] max-[992px]:gap-3 max-[992px]:px-[15px] max-[992px]:py-[25px] max-[992px]:min-h-[400px] max-[576px]:gap-2 max-[576px]:p-[20px_10px] max-[576px]:min-h-[350px]',
-            actualTheme === 'dark' ? 'bg-[#27272b]' : 'bg-gray-200'
-          ]"
+          class="welcome-card flex items-stretch justify-center gap-[15px] max-w-[1200px] w-full mb-[30px] py-[30px] px-[20px] flex-none rounded-xl min-h-[300px] max-[992px]:gap-3 max-[992px]:px-[15px] max-[992px]:py-[25px] max-[992px]:min-h-[400px] max-[576px]:gap-2 max-[576px]:p-[20px_10px] max-[576px]:min-h-[350px]"
           @click.stop>
           <!-- Step 0 / 1: 新建算子工程 -->
-          <div
-            v-show="currentStep === 0"
-            :class="[
-              'flex-1 box-border flex min-w-0',
-              actualTheme === 'dark' ? 'text-[#f0f0f0]' : 'text-gray-800'
-            ]"
-          >
-            <!-- 左侧：标题、描述、立即创建 -->
-            <div class="w-1/2 pr-8 max-[992px]:w-full max-[992px]:pr-0">
-              <h3 class="text-[20px] font-semibold mb-6">
-                {{ t('web.welcome.sectionNewProject') }}
-              </h3>
-              <p :class="[
-                'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
-                actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
-              ]">
-                {{ t('web.welcome.sectionNewProjectDesc') }}
-              </p>
-              <ul
-                :class="[
-                  'feature-list mb-6 grid grid-cols-2 gap-y-1 list-disc list-inside text-[15px] font-semibold leading-[32px] max-[576px]:grid-cols-1',
-                  actualTheme === 'dark' ? 'text-[#d1d1d1]' : 'text-gray-700'
-                ]"
-              >
-                <li>{{ t('web.welcome.featureEnvReady') }}</li>
-                <li>{{ t('web.welcome.featureAscendC') }}</li>
-                <li>{{ t('web.welcome.featurePyascProjectShort') }}</li>
-              </ul>
-              <div>
-                <button
-                  :class="[
-                    'px-5 py-2.5 rounded-md border border-transparent transition-colors duration-150 cursor-pointer',
-                    actualTheme === 'dark' 
-                      ? 'bg-[#3d8bfd] hover:bg-[#5b9dff] text-white' 
-                      : 'bg-[#1890ff] hover:bg-[#40a9ff] text-white'
-                  ]"
-                  @click="handleAscendCProject"
-                >
-                  {{ t('web.welcome.createNow') }}
-                </button>
-              </div>
+          <div v-show="currentStep === 0"
+            class="flex-1 rounded-lg box-border flex flex-col min-w-0 max-[992px]:p-[15px] max-[576px]:p-3">
+            <h3 class="text-[20px] font-semibold mb-3">
+              {{ t('web.welcome.sectionNewProject') }}
+            </h3>
+            <p class="welcome-text-muted text-[14px] leading-relaxed mb-6 max-[576px]:text-xs">
+              {{ t('web.welcome.sectionNewProjectDesc') }}
+            </p>
+            <div class="mb-6">
+              <a-button type="primary" @click="handleAscendCProject">
+                {{ t('web.welcome.createNow') }}
+              </a-button>
             </div>
 
-            <!-- 右侧：工程类型（3 种类型纵向排列） -->
-            <div class="w-1/2 max-[992px]:w-full max-[992px]:mt-6">
-              <div class="flex flex-col gap-4">
+            <!-- 工程类型展示（3 种类型横向排列） -->
+            <div class="mt-2">
+              <div class="flex gap-4 max-[992px]:flex-col">
                 <!-- 【Ascend C】<<<>>>算子工程 -->
-                <div
-                  :class="[
-                    'flex-1 bg-transparent p-4 border rounded-lg overflow-hidden relative transition-all duration-300 cursor-pointer hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)]',
-                    selectedProjectTypeId === 1 ? 'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)]' : (actualTheme === 'dark' ? 'border-[#464646]' : 'border-gray-300')
-                  ]"
-                  @click="selectedProjectTypeId = 1"
-                >
-                  <div :class="[
-                    'font-extrabold text-[initial] mb-3',
-                    actualTheme === 'dark' ? 'text-white' : 'text-gray-800'
-                  ]">
+                <div class="project-type-card flex-1 p-4 rounded-lg overflow-hidden relative">
+                  <div class="font-extrabold mb-3">
                     {{ t('web.welcome.ascendCOpProject') }}
                   </div>
-                  <div :class="[
-                    'leading-7 mt-1 text-[12px] mb-2.5 whitespace-normal',
-                    actualTheme === 'dark' ? 'text-white' : 'text-gray-700'
-                  ]"
-                  >
-                    {{ getTemplateDesc(selectedTemplate) }}
-                  </div>
+                  <div class="leading-7 mt-1 text-[14px] mb-2.5 whitespace-normal"
+                    v-html="getTemplateDesc(selectedTemplate)" />
                   <a-tag color="blue" class="mt-2 mr-2">
                     {{ t('web.welcome.langAscendC') }}
                   </a-tag>
                   <a-tag color="purple" class="mt-2 mr-2">
                     {{ t('web.welcome.typeAngle') }}
                   </a-tag>
-                  <template v-if="selectedProjectTypeId === 1">
-                    <div class="mt-4 flex items-center gap-3">
-                      <span :class="[
-                        'text-[13px] whitespace-nowrap',
-                        actualTheme === 'dark' ? 'text-[#ffffff]' : 'text-gray-800'
-                      ]">
-                        {{ t('web.welcome.sample') }}
-                      </span>
-                      <a-radio-group v-model:value="selectedTemplate" class="sample-radio-group flex gap-4">
-                        <a-radio value="helloworld">
-                          helloworld
-                        </a-radio>
-                        <a-radio value="addn">
-                          addn
-                        </a-radio>
-                        <a-radio value="torch_library_template">
-                          torch_library
-                        </a-radio>
-                      </a-radio-group>
+                  <div class="mt-4 flex items-center gap-3">
+                    <span class="text-[13px] whitespace-nowrap">
+                      {{ t('web.welcome.sample') }}
+                    </span>
+                    <a-radio-group v-model:value="selectedTemplate" class="sample-radio-group flex gap-4">
+                      <a-radio value="helloworld">
+                        helloworld
+                      </a-radio>
+                      <a-radio value="addn">
+                        addn
+                      </a-radio>
+                      <a-radio value="torch_library_template">
+                        torch_library
+                      </a-radio>
+                    </a-radio-group>
+                  </div>
+                  <div class="mt-4">
+                    <div class="overflow-hidden max-w-full transition-all duration-300">
+                      <a-image :src="getTemplateImage(selectedTemplate)"
+                        class="block max-w-full h-auto object-contain transition-opacity duration-300 transform" />
                     </div>
-                    <div class="mt-4">
-                      <div class="overflow-hidden max-w-full transition-all duration-300">
-                        <a-image :src="getTemplateImage(selectedTemplate)"
-                          class="block max-w-full h-auto object-contain transition-opacity duration-300 transform" />
-                      </div>
-                    </div>
-                  </template>
+                  </div>
                 </div>
 
                 <!-- 【Ascend C】标准自定义算子工程 -->
-                <div
-                  :class="[
-                    'flex-1 bg-transparent p-4 border rounded-lg overflow-hidden relative transition-all duration-300 cursor-pointer hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)]',
-                    selectedProjectTypeId === 2 ? 'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)]' : (actualTheme === 'dark' ? 'border-[#464646]' : 'border-gray-300')
-                  ]"
-                  @click="selectedProjectTypeId = 2"
-                >
-                  <div :class="[
-                    'font-extrabold text-[initial] mb-3',
-                    actualTheme === 'dark' ? 'text-white' : 'text-gray-800'
-                  ]">
+                <div class="project-type-card flex-1 p-4 rounded-lg overflow-hidden relative">
+                  <div class="font-extrabold mb-3">
                     {{ t('web.welcome.ascendCStandardProject') }}
                   </div>
-                  <div :class="[
-                    'leading-7 mt-1 text-[12px] mb-2.5 whitespace-normal',
-                    actualTheme === 'dark' ? 'text-white' : 'text-gray-700'
-                  ]">
+                  <div class="leading-7 mt-1 text-[14px] mb-2.5 whitespace-normal">
                     {{ t('web.welcome.ascendCStandardDesc') }}
                   </div>
                   <a-tag color="blue" class="mt-2 mr-2">
@@ -201,7 +123,7 @@
                   <a-tag color="green" class="mt-2 mr-2">
                     {{ t('web.welcome.typeStandardCustom') }}
                   </a-tag>
-                  <div v-if="selectedProjectTypeId === 2" class="mt-4">
+                  <div class="mt-4">
                     <div class="overflow-hidden max-w-full transition-all duration-300">
                       <a-image :src="tipBase_0"
                         class="block max-w-full h-auto object-contain transition-opacity duration-300 transform" />
@@ -210,23 +132,11 @@
                 </div>
 
                 <!-- 【Python】pyasc算子工程 -->
-                <div
-                  :class="[
-                    'flex-1 bg-transparent p-4 border rounded-lg overflow-hidden relative transition-all duration-300 cursor-pointer hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)]',
-                    selectedProjectTypeId === 3 ? 'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)]' : (actualTheme === 'dark' ? 'border-[#464646]' : 'border-gray-300')
-                  ]"
-                  @click="selectedProjectTypeId = 3"
-                >
-                  <div :class="[
-                    'font-extrabold text-[initial] mb-3',
-                    actualTheme === 'dark' ? 'text-white' : 'text-gray-800'
-                  ]">
+                <div class="project-type-card flex-1 p-4 rounded-lg overflow-hidden relative">
+                  <div class="font-extrabold mb-3">
                     {{ t('web.welcome.pythonPyascProject') }}
                   </div>
-                  <div :class="[
-                    'leading-7 mt-1 text-[12px] mb-2.5 whitespace-normal',
-                    actualTheme === 'dark' ? 'text-white' : 'text-gray-700'
-                  ]">
+                  <div class="leading-7 mt-1 text-[14px] mb-2.5 whitespace-normal">
                     {{ t('web.welcome.pythonPyascDesc') }}
                   </div>
                   <a-tag color="blue" class="mt-2 mr-2">
@@ -235,7 +145,7 @@
                   <a-tag color="purple" class="mt-2 mr-2">
                     {{ t('web.welcome.typePyasc') }}
                   </a-tag>
-                  <div v-if="selectedProjectTypeId === 3" class="mt-4">
+                  <div class="mt-4">
                     <div class="overflow-hidden max-w-full transition-all duration-300">
                       <a-image :src="tipBase_0"
                         class="block max-w-full h-auto object-contain transition-opacity duration-300 transform" />
@@ -246,30 +156,21 @@
             </div>
           </div>
 
-          <!-- Step 1 / 2: 算子开发 -->
+        <!-- Step 1 / 2: 算子开发 -->
         <div
           v-show="currentStep === 1"
-          :class="[
-            'flex-1 box-border flex min-w-0',
-            actualTheme === 'dark' ? 'text-[#f0f0f0]' : 'text-gray-800'
-          ]"
+          class="flex-1 box-border flex min-w-0"
         >
           <!-- 左侧：算子开发文案与要点 -->
           <div class="w-1/2 pr-8 max-[992px]:w-full max-[992px]:pr-0">
             <h3 class="text-[20px] font-semibold mb-6">
               {{ t('web.welcome.sectionDev') }}
             </h3>
-            <p :class="[
-              'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
-              actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
-            ]">
+            <p class="welcome-text-muted text-[14px] leading-relaxed mb-6 max-[576px]:text-xs">
               {{ t('web.welcome.sectionDevDesc') }}
             </p>
             <ul
-              :class="[
-                'feature-list mb-6 grid grid-cols-2 gap-y-1 list-disc list-inside text-[15px] font-semibold leading-[32px] max-[576px]:grid-cols-1',
-                actualTheme === 'dark' ? 'text-[#d1d1d1]' : 'text-gray-700'
-              ]"
+              class="feature-list mb-6 grid grid-cols-2 gap-y-1 list-disc list-inside text-[15px] font-semibold leading-[32px] max-[576px]:grid-cols-1"
             >
               <li>{{ t('web.welcome.featureTiling') }}</li>
               <li>{{ t('web.welcome.featureKernel') }}</li>
@@ -277,12 +178,12 @@
               <li>{{ t('web.welcome.featureCompletion') }}</li>
               <li>{{ t('web.welcome.featureCompileDeploy') }}</li>
             </ul>
-              <!-- <a-button
+            <a-button
               type="link"
-              class="!p-0 !h-auto text-[12px]"
+              class="!p-0 !h-auto text-[14px]"
             >
-              查看使用指南
-            </a-button> -->
+              {{ t('web.welcome.viewGuide') }}
+            </a-button>
           </div>
 
           <!-- 右侧：算子开发 3 个步骤示意 Tab -->
@@ -310,196 +211,97 @@
           </div>
         </div>
 
-          <!-- Step 2: 算子调试 -->
+          <!-- Step 2 / 3: 算子异常检测 -->
           <div
             v-show="currentStep === 2"
-            :class="[
-              'flex-1 box-border flex min-w-0',
-              actualTheme === 'dark' ? 'text-[#f0f0f0]' : 'text-gray-800'
-            ]"
-          >
-            <!-- 左侧：算子调试文案与要点 -->
-            <div class="w-1/2 pr-8 max-[992px]:w-full max-[992px]:pr-0">
-              <h3 class="text-[20px] font-semibold mb-6">
-                {{ t('web.welcome.sectionDebug') }}
-              </h3>
-              <p :class="[
-                'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
-                actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
-              ]">
-                {{ t('web.welcome.sectionDebugDesc') }}
-              </p>
-              <ul
-                :class="[
-                  'feature-list mb-6 grid grid-cols-2 gap-y-1 list-disc list-inside text-[15px] font-semibold leading-[32px] max-[576px]:grid-cols-1',
-                  actualTheme === 'dark' ? 'text-[#d1d1d1]' : 'text-gray-700'
-                ]"
-              >
-                <li>{{ t('web.welcome.featureDebugBreakpoint') }}</li>
-                <li>{{ t('web.welcome.featureDebugStep') }}</li>
-                <li>{{ t('web.welcome.featureDebugMemory') }}</li>
-                <li>{{ t('web.welcome.featureDebugCoreSwitch') }}</li>
-                <li>{{ t('web.welcome.featureDebugInspect') }}</li>
-                <li>{{ t('web.welcome.featureDebugCoredump') }}</li>
-              </ul>
-            </div>
-
-            <!-- 右侧：算子调试示意图 -->
-            <div class="w-1/2 max-[992px]:w-full max-[992px]:mt-6">
-              <a-image
-                :src="debug"
-                class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
-              />
-            </div>
-          </div>
-
-          <!-- Step 3: 算子异常检测 -->
-          <div
-            v-show="currentStep === 3"
-            :class="[
-              'flex-1 box-border flex min-w-0',
-              actualTheme === 'dark' ? 'text-[#f0f0f0]' : 'text-gray-800'
-            ]"
+            class="flex-1 box-border flex min-w-0"
           >
             <!-- 左侧：算子异常检测介绍 -->
             <div class="w-1/2 pr-8 max-[992px]:w-full max-[992px]:pr-0">
               <h3 class="text-[20px] font-semibold mb-6">
                 {{ t('web.welcome.sectionSanitizer') }}
               </h3>
-              <p :class="[
-                'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
-                actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
-              ]">
+              <p class="welcome-text-muted text-[14px] leading-relaxed mb-6 max-[576px]:text-xs">
                 {{ t('web.welcome.sectionSanitizerDesc') }}
               </p>
               <ul
-                :class="[
-                  'feature-list mb-6 list-disc list-inside text-[15px] font-semibold leading-[32px]',
-                  actualTheme === 'dark' ? 'text-[#d1d1d1]' : 'text-gray-700'
-                ]"
+                class="feature-list mb-6 list-disc list-inside text-[15px] font-semibold leading-[32px]"
               >
                 <li>{{ t('web.welcome.featureMemory') }}</li>
                 <li>{{ t('web.welcome.featureRace') }}</li>
                 <li>{{ t('web.welcome.featureUninit') }}</li>
               </ul>
-              <p
-                :class="[
-                  'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
-                  actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
-                ]"
-                v-html="t('web.welcome.sanitizerSteps')"
-              />
-              <!-- <a-button
+              <p class="welcome-text-muted text-[14px] leading-relaxed mb-6 max-[576px]:text-xs" v-html="t('web.welcome.sanitizerSteps')" />
+              <a-button
                 type="link"
-                class="!p-0 !h-auto text-[12px]"
+                class="!p-0 !h-auto text-[14px]"
               >
-                查看使用指南
-              </a-button> -->
+                {{ t('web.welcome.viewGuide') }}
+              </a-button>
             </div>
 
-            <!-- 右侧：异常检测 2 个 Tab -->
+            <!-- 右侧：异常检测界面示意图 -->
             <div class="w-1/2 max-[992px]:w-full max-[992px]:mt-6">
-              <a-tabs v-model:activeKey="checkTabKey">
-                <a-tab-pane key="select" :tab="t('web.welcome.tabSelectCheckContent')">
-                  <a-image
-                    :src="selectCheckImg"
-                    class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
-                  />
-                </a-tab-pane>
-                <a-tab-pane key="result" :tab="t('web.welcome.tabViewCheckResult')">
-                  <a-image
-                    :src="checkImg"
-                    class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
-                  />
-                </a-tab-pane>
-              </a-tabs>
+              <a-image
+                :src="checkImg"
+                class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
+              />
             </div>
           </div>
 
-          <!-- Step 4: 算子性能调优 -->
+          <!-- Step 3 / 4: 算子性能调优 -->
           <div
-            v-show="currentStep === 4"
-            :class="[
-              'flex-1 box-border flex min-w-0',
-              actualTheme === 'dark' ? 'text-[#f0f0f0]' : 'text-gray-800'
-            ]"
+            v-show="currentStep === 3"
+            class="flex-1 box-border flex min-w-0"
           >
             <!-- 左侧：算子性能调优介绍 -->
             <div class="w-1/2 pr-8 max-[992px]:w-full max-[992px]:pr-0">
               <h3 class="text-[20px] font-semibold mb-6">
                 {{ t('web.welcome.sectionPerformance') }}
               </h3>
-              <p :class="[
-                'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
-                actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
-              ]">
+              <p class="welcome-text-muted text-[14px] leading-relaxed mb-6 max-[576px]:text-xs">
                 {{ t('web.welcome.sectionPerformanceDesc') }}
               </p>
               <ul
-                :class="[
-                  'feature-list mb-6 list-disc list-inside text-[15px] font-semibold leading-[32px]',
-                  actualTheme === 'dark' ? 'text-[#d1d1d1]' : 'text-gray-700'
-                ]"
+                class="feature-list mb-6 list-disc list-inside text-[15px] font-semibold leading-[32px]"
               >
                 <li>{{ t('web.welcome.featureOnboard') }}</li>
                 <li>{{ t('web.welcome.featureSimulation') }}</li>
               </ul>
-              <p
-                :class="[
-                  'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
-                  actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
-                ]"
-                v-html="t('web.welcome.performanceSteps')"
-              />
-              <!-- <a-button
+              <p class="welcome-text-muted text-[14px] leading-relaxed mb-6 max-[576px]:text-xs" v-html="t('web.welcome.performanceSteps')" />
+              <a-button
                 type="link"
-                class="!p-0 !h-auto text-[12px]"
+                class="!p-0 !h-auto text-[14px]"
               >
-                查看使用指南
-              </a-button> -->
+                {{ t('web.welcome.viewGuide') }}
+              </a-button>
             </div>
 
-            <!-- 右侧：性能调优 2 个 Tab -->
+            <!-- 右侧：性能调优分析界面示意图 -->
             <div class="w-1/2 max-[992px]:w-full max-[992px]:mt-6">
-              <a-tabs v-model:activeKey="perfTabKey">
-                <a-tab-pane key="select" :tab="t('web.welcome.tabSelectAnalysisContent')">
-                  <a-image
-                    :src="selectAnalysisImg"
-                    class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
-                  />
-                </a-tab-pane>
-                <a-tab-pane key="result" :tab="t('web.welcome.tabViewAnalysisResult')">
-                  <a-image
-                    :src="analysisImg"
-                    class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
-                  />
-                </a-tab-pane>
-              </a-tabs>
+              <a-image
+                :src="analysisImg"
+                class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
+              />
             </div>
           </div>
         </div>
 
         <!-- 底部步骤导航 -->
         <div
-          class="w-full flex justify-center items-center gap-6 mt-4 text-[12px]"
+          class="w-full flex justify-center items-center gap-6 mt-4 text-[14px]"
           @click.stop
         >
           <span
             v-if="currentStep > 0"
-            :class="[
-              'cursor-pointer transition-colors',
-              actualTheme === 'dark' ? 'text-[#4ba5f4] hover:text-[#76b9ff]' : 'text-[#1890ff] hover:text-[#40a9ff]'
-            ]"
+            class="welcome-link cursor-pointer transition-colors"
             @click="goPrevStep"
           >
             {{ t('web.welcome.prevStep') }}
           </span>
           <span
-            v-if="currentStep < 4"
-            :class="[
-              'cursor-pointer transition-colors',
-              actualTheme === 'dark' ? 'text-[#4ba5f4] hover:text-[#76b9ff]' : 'text-[#1890ff] hover:text-[#40a9ff]'
-            ]"
+            v-if="currentStep < 3"
+            class="welcome-link cursor-pointer transition-colors"
             @click="goNextStep"
           >
             {{ t('web.welcome.nextStep') }}
@@ -511,39 +313,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue';
+import { ref } from 'vue';
 import { t } from 'i18next';
 import { useTheme } from '@web/composables/use-theme';
 import settingIcon from '@/assets/svg/setting.svg';
 import buildIcon from '@/assets/svg/build.svg';
 import checkIcon from '@/assets/svg/check.svg';
-import debugIcon from '@/assets/svg/debug.svg';
 import powerIcon from '@/assets/svg/power.svg';
 import tipBase_0 from '@/assets/imgs/add.png';
 import tipBase_1_1 from '@/assets/imgs/hello_world.png';
 import tipBase_1_2 from '@/assets/imgs/add_custom.png';
 import tipBase_1_3 from '@/assets/imgs/torch_library_template.png';
 import writeImg from '@/assets/imgs/write.png';
-import buildImg from '@/assets/imgs/build.gif';
-import runImg from '@/assets/imgs/run.gif';
-import debug from '@/assets/imgs/debug.gif';
-import checkImg from '@/assets/imgs/check.gif';
-import selectCheckImg from '@/assets/imgs/selectCheck.gif';
-import analysisImg from '@/assets/imgs/analysis.gif';
-import selectAnalysisImg from '@/assets/imgs/selectAnalysis.gif';
+import buildImg from '@/assets/imgs/build.jpeg';
+import runImg from '@/assets/imgs/run.jpeg';
+import checkImg from '@/assets/imgs/check.png';
+import analysisImg from '@/assets/imgs/analysis.png';
 
-
-const { themeConfig, actualTheme } = useTheme();
+const { themeConfig } = useTheme();
 
 const currentStep = ref(0);
 const devTabKey = ref('code');
-const checkTabKey = ref('select');
-const perfTabKey = ref('select');
 
-// 新建算子工程：当前选中的工程类型（1=<<<>>> 2=标准自定义 3=pyasc），默认第一个
-const selectedProjectTypeId = ref(1);
-
-// <<<>>> 算子工程模板选择（helloworld / addn / torch_library）
 const selectedTemplate = ref<'helloworld' | 'addn' | 'torch_library_template'>(
   'helloworld',
 );
@@ -583,7 +374,6 @@ const handleClick = () => {
   }
 };
 
-// 处理Ascend C算子工程按钮点击
 const handleAscendCProject = () => {
   if (window.vscode) {
     window.vscode.postMessage({
@@ -593,7 +383,6 @@ const handleAscendCProject = () => {
   }
 };
 
-// 步骤条点击：仅切换当前高亮，不改变核心模块展示
 const onStepChange = (step: number) => {
   currentStep.value = step;
   console.log('step changed: ', step);
@@ -606,30 +395,50 @@ const goPrevStep = () => {
 };
 
 const goNextStep = () => {
-  if (currentStep.value < 4) {
+  if (currentStep.value < 3) {
     currentStep.value += 1;
   }
 };
-
-// 设置 CSS 变量以适配主题
-const updateThemeVariables = () => {
-  const root = document.documentElement;
-  root.style.setProperty('--text-color', actualTheme.value === 'dark' ? '#ffffff' : '#333333');
-};
-
-// 初始化主题变量
-onMounted(() => {
-  updateThemeVariables();
-});
-
-// 监听主题变化
-watch(actualTheme, () => {
-  updateThemeVariables();
-});
 </script>
 
 <style scoped>
-/* Keeping complex icon backgrounds in CSS for now */
+.welcome-page {
+  background-color: var(--vscode-editor-background);
+  color: var(--vscode-editor-foreground);
+}
+
+.welcome-overlay {
+  background-color: var(--vscode-editor-background);
+  opacity: 0.85;
+}
+
+.welcome-card {
+  background-color: var(--vscode-editorWidget-background);
+}
+
+.welcome-text-muted {
+  color: var(--vscode-descriptionForeground);
+}
+
+.welcome-link {
+  color: var(--vscode-textLink-foreground);
+}
+
+.welcome-link:hover {
+  color: var(--vscode-textLink-activeForeground);
+}
+
+.project-type-card {
+  background: transparent;
+  border: 1px solid var(--vscode-panel-border);
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.project-type-card:hover {
+  border-color: var(--vscode-focusBorder);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--vscode-focusBorder) 15%, transparent);
+}
+
 .icon {
   margin-right: 12px;
 }
@@ -674,12 +483,11 @@ watch(actualTheme, () => {
   vertical-align: middle;
 }
 
-/* Functional Buttons */
 .func-btn {
-  background-color: #38383d;
-  border: none;
+  background-color: var(--vscode-button-secondaryBackground);
+  border: 1px solid var(--vscode-panel-border);
   border-radius: 6px;
-  color: #b8b8b8;
+  color: var(--vscode-button-secondaryForeground);
   padding: 10px 12px;
   font-size: 13px;
   cursor: pointer;
@@ -694,37 +502,26 @@ watch(actualTheme, () => {
   line-height: 1.4;
 }
 
-/* 欢迎页导航步骤条（a-steps navigation） */
 .welcome-steps {
-  color: var(--text-color);
+  color: var(--vscode-editor-foreground);
 }
 
 .welcome-steps .ant-steps-item {
-  color: var(--text-color);
+  color: var(--vscode-editor-foreground);
 }
 
 .welcome-steps .ant-steps-item::after {
-  border-color: var(--text-color);
-}
-
-.welcome-steps .ant-steps-item-description {
-  display: none;
+  border-color: var(--vscode-editor-foreground);
 }
 
 .welcome-steps .ant-steps-item-icon {
   background: transparent;
-  border-color: var(--text-color);
-}
-
-:deep(.welcome-steps .ant-steps-item-container) {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border-color: var(--vscode-editor-foreground);
 }
 
 :deep(.welcome-steps .ant-steps-item .ant-steps-item-container .ant-steps-item-content .ant-steps-item-title) {
   font-size: 18px;
-  color: var(--text-color);
+  color: var(--vscode-editor-foreground);
 }
 
 .welcome-steps .ant-steps-item-icon,
@@ -739,11 +536,10 @@ watch(actualTheme, () => {
   display: block;
 }
 
-::deep(.sample-radio-group .ant-radio-wrapper) {
-  color: #ffffff;
+:deep(.sample-radio-group .ant-radio-wrapper) {
+  color: var(--vscode-editor-foreground);
 }
 
-/* Responsive adjustments for buttons that are hard to do purely with utility classes inline without getting messy */
 @media (max-width: 992px) {
   .func-btn {
     font-size: 12px;

@@ -14,6 +14,10 @@ import {
   generateStructure,
   getProjectById,
 } from '@plugin/domain';
+import {
+  getAscendEnvScriptWithWorkspaceOverride,
+  getEnvironmentScriptPathFromWorkspace,
+} from '@plugin/helpers/operator-project-workspace-config';
 
 export class ProjectService {
   /**
@@ -168,7 +172,26 @@ export class ProjectService {
 
     const project = getProjectById(Number(projectId));
 
-    return project?.ascend_env_script || '';
+    return getAscendEnvScriptWithWorkspaceOverride(project?.ascend_env_script || '');
+  }
+
+  /**
+   * Mirror workspace env script settings into `projects.json` (`ascend_env_script`) for the current project.
+   * Call when `op-devtools.environment.environmentScript` (or legacy operatorProject env) changes.
+   */
+  async syncAscendEnvScriptFromWorkspaceSettings(): Promise<void> {
+    const pm = ProjectManager.getInstance();
+    await pm.ensureProjectId();
+    const info = pm.getProjectInfo();
+    if (!info?.path) {
+      return;
+    }
+    const scriptPath = getEnvironmentScriptPathFromWorkspace();
+    await updateShScript({
+      project_name: info.name ?? '',
+      project_path: info.path,
+      ascend_env_script: scriptPath ? scriptPath : null,
+    });
   }
 }
 

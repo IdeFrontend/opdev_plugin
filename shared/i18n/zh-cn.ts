@@ -52,6 +52,12 @@ export default {
   'extension.rightClickFile': '请右键点击文件',
   'extension.openDevToolsFailed': '打开 Huawei OP DevTools 失败：{{error}}',
   'extension.importDumpTensorBinFailed': '导入 DumpTensor .bin 文件失败',
+  'extension.environmentScript.missing': '工作区「环境脚本」(set_env.sh) 未设置。请先配置后再在「操作」中执行操作，或现在选择文件。',
+  'extension.environmentScript.invalidPath': '工作区「环境脚本」路径在磁盘上不存在。请选择有效的 set_env.sh 或更新该设置。',
+  'extension.environmentScript.browse': '选择文件…',
+  'extension.environmentScript.selectFile': '选择环境脚本',
+  'extension.environmentScript.saved': '环境脚本路径已保存到工作区设置。',
+  'extension.environmentScript.fileNotFound': '无法访问所选路径。',
 
   // folder-context-menu
   'folderContext.angleOpsNotSupported': '<<<>>>类型算子暂不支持该右键菜单操作',
@@ -347,6 +353,8 @@ export default {
   'web.operate.searchOperatorProject': '搜索算子工程',
   'web.operate.compiledOperators': '编译成功的算子工程',
   'web.operate.preparedOperators': '预备算子工程',
+  'web.operate.operatorProjects': '算子',
+  'web.operate.clearAll': '清空全部',
   'web.operate.selectAll': '全选',
   'web.operate.confirm': '确认',
   'web.operate.pleaseSelectOperatorProject': '请选择算子工程',
@@ -588,7 +596,7 @@ export default {
   'web.options.sanitizerFailed': '异常检测启动失败',
 
   // web options-simulator
-  'web.options.simulator.title': '仿真分析-选择采集内容',
+  'web.options.simulator.title': '仿真分析快速选项',
   'web.options.simulator.alert': '执行仿真调优，需在代码中修改使用Model的配置，具体可参考README。',
   'web.options.simulator.collectContent': '采集内容',
   'web.options.simulator.guideRef': '具体图形案例请参考算子调优工具概述',
@@ -602,7 +610,7 @@ export default {
   'web.options.simulator.startNow': '立即开始',
 
   // web options-on-board
-  'web.options.onboard.title': '上板分析-选择采集内容',
+  'web.options.onboard.title': '上板分析快速选项',
   'web.options.onboard.alert1': '1、执行上板调优，需在代码中修改使用NPU的配置，具体可参考README。',
   'web.options.onboard.alert2': '2、若勾选"Roofline瓶颈分析"或"Cache热力图"，将默认采集所有算子性能指标。',
   'web.options.onboard.collectContent': '采集内容',
@@ -626,7 +634,7 @@ export default {
   'web.options.onboard.startNow': '立即开始',
 
   // web options-sanitizer
-  'web.options.sanitizer.title': '异常检测-选择检测内容',
+  'web.options.sanitizer.title': '异常检测快速选项',
   'web.options.sanitizer.memory': '内存检测',
   'web.options.sanitizer.memoryBase': '基础检测:默认会开启非法读写、多核踩踏、非对齐访问和非法释放',
   'web.options.sanitizer.memoryExtra': '可选检测:',
@@ -635,6 +643,7 @@ export default {
   'web.options.sanitizer.race': '竞争检测',
   'web.options.sanitizer.uninit': '未初始化检测',
   'web.options.sanitizer.startNow': '立即开始',
+  'web.options.sanitizer.doNotShowAgain': '不再显示',
 
   // web project-sh
   'web.projectSh.title': '环境配置',

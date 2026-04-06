@@ -208,8 +208,8 @@ onMounted(async () => {
               </a-tooltip>
             </template>
             <a-auto-complete v-model:value="projectFormData.projectPath" :options="projectPathOptions"
-              :loading="projectPathLoading" :placeholder="t('web.link.projectPathPlaceholder')"
-              @search="(val) => remoteSearch('projectPath', val)" @focus="handleSelectFolder" />
+            :loading="projectPathLoading" :placeholder="t('web.link.projectPathPlaceholder')"
+              @search="(val) => remoteSearch('projectPath', val)" @click="handleSelectFolder" />
           </a-form-item>
           <a-form-item name="projectSH">
             <template #label>

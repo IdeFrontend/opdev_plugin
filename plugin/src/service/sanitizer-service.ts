@@ -6,7 +6,7 @@ import * as fs from 'fs';
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import { getSanitizerCommand, getBuildExampleCommand } from '@plugin/domain';
 import { configService } from './config-service';
-import { buildService } from './build-service';
+import { buildService, notifyBuildSucceededForSidebar } from './build-service';
 import { OperatorProjectType, OperatorProjectDetector } from '@plugin/domain/services/operator-project-detector';
 
 const CONFIG_TYPES = { SANITIZER: 'sanitizer' } as const;
@@ -93,6 +93,10 @@ export class SanitizerService {
         catch (error) {
           console.warn('[runSanitizer] Failed to detect project type:', error);
         }
+      }
+
+      if (sanitizerConfigId != null) {
+        await notifyBuildSucceededForSidebar(Number(sanitizerConfigId), params.operatorNames);
       }
 
       // Create log directory

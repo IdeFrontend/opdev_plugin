@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useTheme } from '@web/composables/use-theme';
 
 import {
   FormAttribute, FormAttributeType,
 } from './types';
+
+const { themeConfig } = useTheme();
 import AttrController from './components/attr-controller.vue';
 
 const mockSchema: FormAttribute<FormAttributeType>[] = [
@@ -84,12 +87,14 @@ const formModel = ref<Record<string, unknown>>({});
 </script>
 
 <template>
-  <a-form :model="formModel">
-    <template
-      v-for="attr in mockSchema"
-      :key="attr.key"
-    >
-      <attr-controller :attr="attr" />
-    </template>
-  </a-form>
+  <a-config-provider :theme="themeConfig">
+    <a-form :model="formModel">
+      <template
+        v-for="attr in mockSchema"
+        :key="attr.key"
+      >
+        <attr-controller :attr="attr" />
+      </template>
+    </a-form>
+  </a-config-provider>
 </template>
