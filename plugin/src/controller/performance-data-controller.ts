@@ -28,7 +28,10 @@ async function readDirectoryFiles(dirPath: string, basePath: string = dirPath): 
         contents.push(`\n========== ${relativePath} ==========\n${content}\n`);
       }
       catch (error) {
-        contents.push(`\n========== ${relativePath} ==========\n[读取文件失败: ${error}]\n`);
+        const errMsg = error instanceof Error ? error.message : String(error);
+        contents.push(
+          `\n========== ${relativePath} ==========\n${t('performanceData.fileReadFailedLine', { error: errMsg })}\n`,
+        );
       }
     }
     else if (type === vscode.FileType.Directory) {
@@ -229,7 +232,10 @@ const stat = await vscode.workspace.fs.stat(dirUri);
         'vscode.diff',
         fileUri1,
         fileUri2,
-        `对比: ${filePath1.split('/').pop()} ↔ ${filePath2.split('/').pop()}`
+        t('performanceData.diffCompareTitle', {
+          left: filePath1.split('/').pop() ?? filePath1,
+          right: filePath2.split('/').pop() ?? filePath2,
+        }),
       );
 
       console.log(`[diffFiles]: opened file diff successfully: ${filePath1} ↔ ${filePath2}`);

@@ -32,6 +32,8 @@ export default {
   'welcome.createDirOkCreateFilesError': 'Project directory created, but creating operator files failed: {{error}}',
   'welcome.createProjectFailed': 'Failed to create operator project: {{error}}',
   'welcome.openProjectFailed': 'Failed to open operator project: {{error}}',
+  'welcome.createProjectDirFailed': 'Failed to create project directory: {{error}}',
+  'welcome.initOperatorProjectFailed': 'Failed to initialize operator project: {{error}}',
 
   // task
   'task.stoppedByUser': 'Task was stopped by user',
@@ -140,6 +142,8 @@ export default {
   'performanceData.downloadReportFailed': 'Failed to download report: {{error}}',
   'performanceData.missingFilePath': 'Missing file path parameter',
   'performanceData.fileCompareFailed': 'File compare failed: {{error}}',
+  'performanceData.fileReadFailedLine': '[Failed to read file: {{error}}]',
+  'performanceData.diffCompareTitle': 'Compare: {{left}} ↔ {{right}}',
 
   // sanitizer
   'sanitizer.detectionSuccess': 'Sanitizer detection succeeded',
@@ -215,6 +219,8 @@ export default {
 
   // project (additional)
   'project.invalidProjectId': 'Invalid projectId: {{projectId}}',
+  'project.projectDirNotExist': 'Project directory does not exist',
+  'project.opsPrototypeTemplateMissing': 'Ops prototype template not found: {{path}}',
 
   // run-data
   'runData.invalidTimestamp': 'Invalid timestamp',
@@ -261,6 +267,7 @@ export default {
   'performance.readingRemoteFile': 'Reading remote file...',
   'performance.readingFileContent': 'Reading file content...',
   'performance.errorDetected': 'Error detected',
+  'performance.fileSizeKb': 'File size: {{size}} KB',
 
   // ms-sanitizer (progress/dialog)
   'msSanitizer.filePathEmpty': 'File path cannot be empty',
@@ -277,6 +284,16 @@ export default {
   // insight (additional)
   'insight.performanceAnalysis': 'Performance analysis',
   'insight.cannotGetPort': 'Cannot get available port',
+  'insight.dataViewerTitle': 'Data viewer',
+  'insight.binFilePathLabel': 'BIN file path:',
+  'insight.wsPortLabel': 'WebSocket port:',
+  'insight.placeholderLoading': 'Loading…',
+  'insight.placeholderWsStarting': 'Starting…',
+  'insight.unzipFailed': 'Unzip failed: {{error}}',
+  'insight.serverZipMissing': 'Server directory is missing and zip was not found: {{path}}',
+  'insight.serverDirStillMissing': 'Unzip finished but server directory is still missing: {{path}}',
+  'insight.profilerServerFileStillMissing': 'Unzip finished but profiler_server file is still missing: {{path}}',
+  'insight.unzipArchiveFailed': 'Failed to unzip {{fileName}}: {{error}}',
 
   // icon-theme
   'iconTheme.operatorProjectCollection': 'Operator project collection',
@@ -302,6 +319,13 @@ export default {
 
   // csv
   'csv.parseError': 'Parse error',
+  'csv.tableViewTitle': 'CSV table view',
+  'csv.rowsCountOnly': '{{count}} row(s) total',
+  'csv.rowsCountTruncated': '{{count}} row(s) total; showing first {{max}} only',
+  'csv.fileEmpty': 'CSV file is empty',
+  'csv.errorPageTitle': 'CSV table view — error',
+  'csv.errorLoadFailed': 'Unable to load CSV file',
+  'csv.errorDetailsLabel': 'Error:',
 
   // routes
   'routes.configTitle': 'Operator config',

@@ -9,7 +9,7 @@ import { sanitizerService } from '@plugin/service/sanitizer-service';
 import { homeMethods } from './home-controller';
 import { StartBuildParams, StartBuildExampleParams, StartRunParams } from '@shared/api-types';
 import { getConfig, postConfig } from '@plugin/domain';
-import { OperatorProjectType } from '@plugin/domain/services/operator-project-detector';
+import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 
 // Global task manager: used to track and terminate executing tasks
 let currentExecutor: CommandExecutor | null = null;
@@ -25,7 +25,13 @@ const taskNameKeyMap: Record<string, string> = {
   'dumpTensor': 'task.taskName.dumpTensor',
   'utTest': 'task.taskName.utTest',
 };
-// The type of task currently being executed
+
+function isPythonLikeProjectType(projectType: string | null | undefined): boolean {
+  const behavior = OperatorPluginRegistry.getBuildBehaviorByProjectType(projectType);
+  return behavior.requiresActiveFileCheck && behavior.activeFileExtension === '.py';
+}
+
+/** Currently running task type (maps to taskNameKeyMap keys). */
 let currentTaskType: string | null = null;
 
 export const taskMethods = {
@@ -336,10 +342,9 @@ export const taskMethods = {
       
       // For the pyasc type, check if a .py file is currently open and update the configuration
       const projectTypeInfo = await homeMethods.getProjectType();
-      const isPyasc = projectTypeInfo.projectType === OperatorProjectType.PYASC;
-      
-      if (isPyasc) {
-        // Check if a .py file is currently open
+      const needsActivePyFile = isPythonLikeProjectType(projectTypeInfo.projectType);
+
+      if (needsActivePyFile) {
         const activeEditor = vscode.window.activeTextEditor;
         const isPyFile = activeEditor?.document.fileName.endsWith('.py');
 
@@ -458,10 +463,9 @@ export const taskMethods = {
       
       // For the pyasc type, check if a .py file is currently open and update the configuration
       const projectTypeInfo = await homeMethods.getProjectType();
-      const isPyasc = projectTypeInfo.projectType === OperatorProjectType.PYASC;
-      
-      if (isPyasc) {
-        // Check if a .py file is currently open
+      const needsActivePyFile = isPythonLikeProjectType(projectTypeInfo.projectType);
+
+      if (needsActivePyFile) {
         const activeEditor = vscode.window.activeTextEditor;
         const isPyFile = activeEditor?.document.fileName.endsWith('.py');
 

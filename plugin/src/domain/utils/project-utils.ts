@@ -1,5 +1,6 @@
 import fs from 'fs-extra';
 import path from 'path';
+import { t } from 'i18next';
 import * as os from 'os';
 import { promisify } from 'util';
 import { exec } from 'child_process';
@@ -32,7 +33,7 @@ export async function ensureLaunchJsonExists(
 
   if (!fs.existsSync(projectDir)) {
     console.error('ensureLaunchJsonExists: project directory does not exist:', projectDir);
-    const e = new Error('project_dir不存在');
+    const e = new Error(t('project.projectDirNotExist'));
 
     (e as Error & { name: string }).name = 'InvalidRequest';
     throw e;

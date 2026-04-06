@@ -112,7 +112,8 @@ export const welcomeMethods = {
         }
       }
       catch (error) {
-        throw new Error(`创建工程目录失败: ${error instanceof Error ? error.message : String(error)}`);
+        const msg = error instanceof Error ? error.message : String(error);
+        throw new Error(t('welcome.createProjectDirFailed', { error: msg }));
       }
 
       if (params.projectSH) {
@@ -126,9 +127,10 @@ export const welcomeMethods = {
         }
       }
 
-      // Call projectService.init (corresponds to OpsAPI.init of the old code)
-      if (viewIdToProjectType(params.createOperatorProjectDictoryFileType) === 'ascend') {
-        // Get the workspace directory currently opened in VSCode
+      // Call projectService.init (replaces legacy OpsAPI.init)
+      const projectType = viewIdToProjectType(params.createOperatorProjectDictoryFileType);
+      if (projectType === 'ascend') {
+        // Workspace folder currently open in VS Code
         const currentWorkspaceFolders = vscode.workspace.workspaceFolders;
         const currentExplorerPath = currentWorkspaceFolders && currentWorkspaceFolders.length > 0
           ? currentWorkspaceFolders[0].uri.fsPath
@@ -199,11 +201,12 @@ export const welcomeMethods = {
             projectPath: params.projectPath,
             projectName: params.projectName,
             templateName: params.templateName,
-            projectType: viewIdToProjectType(params.createOperatorProjectDictoryFileType)
+            projectType,
           });
         }
         catch (error) {
-          throw new Error(`初始化算子工程失败: ${error instanceof Error ? error.message : String(error)}`);
+          const msg = error instanceof Error ? error.message : String(error);
+          throw new Error(t('welcome.initOperatorProjectFailed', { error: msg }));
         }
       }
 
@@ -399,7 +402,8 @@ export const welcomeMethods = {
         });
       }
       catch (error) {
-        throw new Error(`初始化算子工程失败: ${error instanceof Error ? error.message : String(error)}`);
+        const msg = error instanceof Error ? error.message : String(error);
+        throw new Error(t('welcome.initOperatorProjectFailed', { error: msg }));
       }
 
       // Process configuration files
@@ -409,7 +413,7 @@ export const welcomeMethods = {
         {
           ops_prototype_file: '',
           project_id: projectId,
-          // cann ascend pyasc
+          // op_type from detection (ascend, cann, pyasc, triton, …)
           op_type: viewIdToProjectType(rootDetection.projectType),
           template_name: rootDetection.projectType === OperatorProjectType.TORCH_LIBRARY ? 'torch_library_template' : '',
         },

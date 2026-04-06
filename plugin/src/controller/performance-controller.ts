@@ -47,7 +47,9 @@ export const performanceDataMethods = {
 
           progress.report({
             increment: 30,
-            message: `文件大小: ${(stat.size / 1024).toFixed(2)} KB`,
+            message: t('performance.fileSizeKb', {
+              size: (stat.size / 1024).toFixed(2),
+            }),
           });
         }
         catch {

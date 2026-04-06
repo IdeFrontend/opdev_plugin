@@ -188,12 +188,18 @@ export class InsightDataViewerPanel implements vscode.Disposable {
    * Get default HTML content
    */
   private getDefaultHtml(): string {
+    const title = t('insight.dataViewerTitle');
+    const binLabel = t('insight.binFilePathLabel');
+    const wsLabel = t('insight.wsPortLabel');
+    const loading = t('insight.placeholderLoading');
+    const starting = t('insight.placeholderWsStarting');
+
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>数据查看器</title>
+    <title>${title}</title>
     <style>
         body {
             background-color: var(--vscode-editor-background);
@@ -218,9 +224,9 @@ export class InsightDataViewerPanel implements vscode.Disposable {
 </head>
 <body>
     <div id="app">
-        <h1>数据查看器</h1>
-        <p>BIN 文件路径: <span id="binPath">等待加载...</span></p>
-        <p>WebSocket 端口: <span id="wsPort">等待启动...</span></p>
+        <h1>${title}</h1>
+        <p>${binLabel} <span id="binPath">${loading}</span></p>
+        <p>${wsLabel} <span id="wsPort">${starting}</span></p>
     </div>
     <script>
         const vscode = acquireVsCodeApi();
@@ -356,8 +362,9 @@ export class InsightDataViewerPanel implements vscode.Disposable {
         resolve();
       }
       catch (error) {
-        console.error(`Unzip failed: ${error instanceof Error ? error.message : String(error)}`);
-        reject(new Error(`解压失败: ${error instanceof Error ? error.message : String(error)}`));
+        const errMsg = error instanceof Error ? error.message : String(error);
+        console.error(`Unzip failed: ${errMsg}`);
+        reject(new Error(t('insight.unzipFailed', { error: errMsg })));
       }
     });
   }
@@ -414,7 +421,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
 
     // Check if zip file exists
     if (!fs.existsSync(zipPath)) {
-      const errorMsg = `server 目录不存在，且找不到对应的 zip 文件: ${zipPath}`;
+      const errorMsg = t('insight.serverZipMissing', { path: zipPath });
 
       console.error(`[InsightDataViewerPanel] ${errorMsg}`);
       vscode.window.showErrorMessage(errorMsg);
@@ -431,7 +438,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
 
       // Check whether the server directory exists after decompression
       if (!fs.existsSync(this.serverDir)) {
-        const errorMsg = `解压完成，但 server 目录仍不存在: ${this.serverDir}`;
+        const errorMsg = t('insight.serverDirStillMissing', { path: this.serverDir });
 
         console.error(`[InsightDataViewerPanel] ${errorMsg}`);
         vscode.window.showErrorMessage(errorMsg);
@@ -441,7 +448,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
 
       // Check if profiler_server file exists
       if (!fs.existsSync(this.serverPath)) {
-        const errorMsg = `解压完成，但 profiler_server 文件仍不存在: ${this.serverPath}`;
+        const errorMsg = t('insight.profilerServerFileStillMissing', { path: this.serverPath });
 
         console.error(`[InsightDataViewerPanel] ${errorMsg}`);
         vscode.window.showErrorMessage(errorMsg);
@@ -466,7 +473,10 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       return true;
     }
     catch (error: any) {
-      const errorMsg = `解压 ${zipFileName} 失败: ${error.message}`;
+      const errorMsg = t('insight.unzipArchiveFailed', {
+        fileName: zipFileName,
+        error: error?.message ?? String(error),
+      });
 
       console.error(`[InsightDataViewerPanel] ${errorMsg}`, error);
       vscode.window.showErrorMessage(errorMsg);
@@ -573,7 +583,9 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       resolvePort();
     }
     catch (error: any) {
-      const errorMsg = `启动 profiler_server 失败: ${error.message}`;
+      const errorMsg = t('insight.profilerServerStartFailed', {
+        error: error?.message ?? String(error),
+      });
 
       console.error(`[InsightDataViewerPanel] ${errorMsg}`, error);
       vscode.window.showErrorMessage(errorMsg);

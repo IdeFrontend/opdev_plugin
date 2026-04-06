@@ -123,6 +123,9 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
   private getHtmlForWebview(csvData: string[][]): string {
     const displayRows = csvData.slice(0, MAX_RENDER_ROWS);
     const isOverMaxRows = csvData.length > MAX_RENDER_ROWS;
+    const rowSummary = isOverMaxRows
+      ? t('csv.rowsCountTruncated', { count: csvData.length, max: MAX_RENDER_ROWS })
+      : t('csv.rowsCountOnly', { count: csvData.length });
 
     // Generate header
     let headerHtml = '';
@@ -154,11 +157,11 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
     bodyHtml += '</tbody>';
 
     return `<!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSV 表格视图</title>
+    <title>${this.escapeHtml(t('csv.tableViewTitle'))}</title>
     <style>
         * {
             margin: 0;
@@ -249,7 +252,7 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
 </head>
 <body>
     <div class="container">
-        <span>共 ${csvData.length} 行${isOverMaxRows ? `，仅显示前${MAX_RENDER_ROWS}行` : ''}</span>
+        <span>${this.escapeHtml(rowSummary)}</span>
         <div class="table-container">
             ${
               displayRows.length > 0
@@ -257,7 +260,7 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
                 ${headerHtml}
                 ${bodyHtml}
             </table>`
-                : '<div class="empty">CSV 文件为空</div>'
+                : `<div class="empty">${this.escapeHtml(t('csv.fileEmpty'))}</div>`
             }
         </div>
     </div>
@@ -333,11 +336,11 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
    */
   private getErrorHtml(errorMessage: string): string {
     return `<!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSV 表格视图 - 错误</title>
+    <title>${this.escapeHtml(t('csv.errorPageTitle'))}</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -367,8 +370,8 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
 </head>
 <body>
     <div class="error-container">
-        <h1>无法加载 CSV 文件</h1>
-        <p>错误信息：</p>
+        <h1>${this.escapeHtml(t('csv.errorLoadFailed'))}</h1>
+        <p>${this.escapeHtml(t('csv.errorDetailsLabel'))}</p>
         <pre>${this.escapeHtml(errorMessage)}</pre>
     </div>
 </body>

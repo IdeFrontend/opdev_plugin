@@ -32,6 +32,8 @@ export default {
   'welcome.createDirOkCreateFilesError': '算子工程目录已创建，但创建算子文件时出错: {{error}}',
   'welcome.createProjectFailed': '创建算子工程失败: {{error}}',
   'welcome.openProjectFailed': '打开算子工程失败: {{error}}',
+  'welcome.createProjectDirFailed': '创建工程目录失败: {{error}}',
+  'welcome.initOperatorProjectFailed': '初始化算子工程失败: {{error}}',
 
   // task
   'task.stoppedByUser': '任务已被手动停止',
@@ -130,6 +132,7 @@ export default {
   'performance.deleted': '已删除: {{key}}',
   'performance.openFileFailed': '打开文件失败：{{error}}',
   'performance.nodeKeyRequired': '节点信息不能为空',
+  'performance.fileSizeKb': '文件大小: {{size}} KB',
 
   // performance-data
   'performanceData.dirEmptyNoCopy': '目录为空，无内容可复制',
@@ -140,6 +143,8 @@ export default {
   'performanceData.downloadReportFailed': '下载报告失败: {{error}}',
   'performanceData.missingFilePath': '缺少文件路径参数',
   'performanceData.fileCompareFailed': '文件对比失败: {{error}}',
+  'performanceData.fileReadFailedLine': '[读取文件失败: {{error}}]',
+  'performanceData.diffCompareTitle': '对比: {{left}} ↔ {{right}}',
 
   // sanitizer
   'sanitizer.detectionSuccess': '异常检测成功',
@@ -215,6 +220,8 @@ export default {
 
   // project (additional)
   'project.invalidProjectId': '无效的 projectId: {{projectId}}',
+  'project.projectDirNotExist': '工程目录不存在',
+  'project.opsPrototypeTemplateMissing': '未找到算子原型模板: {{path}}',
 
   // run-data
   'runData.invalidTimestamp': '无效的时间戳',
@@ -277,6 +284,16 @@ export default {
   // insight (additional)
   'insight.performanceAnalysis': '性能分析',
   'insight.cannotGetPort': '无法获取可用端口',
+  'insight.dataViewerTitle': '数据查看器',
+  'insight.binFilePathLabel': 'BIN 文件路径：',
+  'insight.wsPortLabel': 'WebSocket 端口：',
+  'insight.placeholderLoading': '加载中…',
+  'insight.placeholderWsStarting': '启动中…',
+  'insight.unzipFailed': '解压失败: {{error}}',
+  'insight.serverZipMissing': '未找到 server 目录且未找到 zip: {{path}}',
+  'insight.serverDirStillMissing': '解压完成但 server 目录仍不存在: {{path}}',
+  'insight.profilerServerFileStillMissing': '解压完成但未找到 profiler_server 文件: {{path}}',
+  'insight.unzipArchiveFailed': '解压 {{fileName}} 失败: {{error}}',
 
   // icon-theme
   'iconTheme.operatorProjectCollection': '算子工程集合',
@@ -302,6 +319,13 @@ export default {
 
   // csv
   'csv.parseError': '解析错误',
+  'csv.tableViewTitle': 'CSV 表格视图',
+  'csv.rowsCountOnly': '共 {{count}} 行',
+  'csv.rowsCountTruncated': '共 {{count}} 行，仅显示前 {{max}} 行',
+  'csv.fileEmpty': 'CSV 文件为空',
+  'csv.errorPageTitle': 'CSV 表格视图 — 错误',
+  'csv.errorLoadFailed': '无法加载 CSV 文件',
+  'csv.errorDetailsLabel': '错误：',
 
   // routes
   'routes.configTitle': '算子配置',

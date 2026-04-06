@@ -8,6 +8,7 @@ import { ExplorerRootUtils } from '@plugin/class/explorer-root-utils';
 import { RemoteConfig } from '@plugin/helpers/remote-config';
 import { getAllProjects, getProjectByPath, getProjectById, createProject } from '@plugin/domain/models/project-model';
 import { OperatorProjectType, OperatorProjectDetector } from '@plugin/domain/services/operator-project-detector';
+import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import { getWorkspaceFolder } from '@plugin/domain/models/config';
 import {
   GetProjectIdResult,
@@ -285,19 +286,21 @@ export const homeMethods = {
   },
 
   /**
-   * pyasc type simulation analysis/performance tuning pre-verification: triggered before opening the configuration page
-   * Verify whether the .py file and workspace are open only when the project is pyasc
-   * @returns { valid: true } or { valid: false, message: string }
+   * Pre-check for simulation / on-board flows before opening their config UIs.
+   * For types that require an active source file (e.g. pyasc), verifies the editor
+   * has the suffix from the op plugin’s build behavior.
    */
   async validatePyascForAnalysis(): Promise<{ valid: boolean; message?: string }> {
     try {
       const projectType = await getProjectTypeValue();
-      if (projectType !== OperatorProjectType.PYASC) {
+      const behavior = OperatorPluginRegistry.getBuildBehaviorByProjectType(projectType);
+      if (!behavior.requiresActiveFileCheck || !behavior.activeFileExtension) {
         return { valid: true };
       }
       const activeEditor = vscode.window.activeTextEditor;
-      const isPyFile = activeEditor?.document.fileName.endsWith('.py');
-      if (!isPyFile) {
+      const suffix = behavior.activeFileExtension;
+      const hasExpectedFile = activeEditor?.document.fileName.endsWith(suffix);
+      if (!hasExpectedFile) {
         return { valid: false, message: t('extension.openPyFirst') };
       }
       const workspaceFolders = vscode.workspace.workspaceFolders;

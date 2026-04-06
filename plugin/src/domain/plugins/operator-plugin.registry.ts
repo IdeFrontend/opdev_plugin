@@ -1,4 +1,9 @@
-import type { IOperatorPlugin, OpGenParams, OpGenProject } from './operator-plugin.interface';
+import type {
+  IOperatorPlugin,
+  OpGenParams,
+  OpGenProject,
+  OperatorBuildBehavior,
+} from './operator-plugin.interface';
 import type { IProjectDetector, OperatorProjectType } from './project-detector.interface';
 import type { BaseOpGenerator } from '@plugin/domain/services/op-generator-factory';
 import type { OpRecord } from '@plugin/domain/models/model';
@@ -105,6 +110,13 @@ export class OperatorPluginRegistry {
   /** Get default file paths for the given op descriptor. */
   static getDefaultPaths(op: OpDescriptor) {
     return this.getOpPlugin(op.op_type).getDefaultPaths(op as OpRecord);
+  }
+
+  /** Build pre-flight behavior for the given op_type string (falls back to cann). */
+  static getBuildBehaviorByProjectType(
+    projectType: string | null | undefined,
+  ): OperatorBuildBehavior {
+    return this.getOpPlugin(projectType).buildBehavior;
   }
 
   static getRegisteredOpTypes(): string[] {

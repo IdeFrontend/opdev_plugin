@@ -209,10 +209,10 @@ export async function activate(context: vscode.ExtensionContext) {
   // Initialize the Webview of the configuration page
   const configProvider = new WebviewProvider(context, apiServer);
 
-  // 国际化
+  // Internationalization (i18n)
   await initI18n();
 
-  // 检查 devtool_config.json 文件是否存在
+  // Whether devtool_config.json exists (drives command visibility)
   let hasDevtoolConfig = await checkDevtoolConfigExists();
 
   const homeTreeProvider = new HomeTreeProvider();
@@ -484,7 +484,7 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_TOGGLE_OPS_OPERATE,
     async () => {
       try {
-        // 保留该命令作为视图容器可见性开关
+        // Keep this command as the sidebar visibility toggle for the view container
         await vscode.commands.executeCommand('workbench.action.toggleSidebarVisibility');
       }
       catch (error) {

@@ -175,6 +175,33 @@ export async function handleOperatorProjectDirectoryFile(
         await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
       }
 
+      if (message.createOperatorProjectDirectoryFileType === 4) {
+        // Triton operator project: scaffold from template
+        console.log('Creating Triton operator project (type 4)...');
+        const pm = ProjectManager.getInstance();
+
+        if (!pm.projectId) {
+          console.log('projectId not set; initializing project...');
+          await pm.ensureProjectId();
+        }
+
+        console.log('Current projectId:', pm.projectId);
+        console.log('Creating Triton operator prototype...');
+
+        await welcomeMethods.createOpsByPrototype({
+          opsPrototypeFile: '',
+          opType: 'triton',
+          templateName: templateName || 'triton_vector_add',
+        });
+        console.log('Triton operator prototype creation completed');
+
+        if (templateName) {
+          context.globalState.update('templateName', undefined);
+        }
+
+        await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+      }
+
       if (message.createOperatorProjectDirectoryFileType === 2) {
         // Start link creation operator
         console.log('Start creating operator (type 2)...');
