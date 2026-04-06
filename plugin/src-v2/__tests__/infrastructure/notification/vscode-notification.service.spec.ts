@@ -9,9 +9,7 @@ jest.mock('vscode', () => ({
     showErrorMessage: jest.fn(),
     showWarningMessage: jest.fn(),
     withProgress: jest.fn(),
-    ProgressLocation: {
-      Notification: 1,
-    },
+    ProgressLocation: { Notification: 1 },
   },
 }));
 
@@ -32,7 +30,8 @@ describe('VscodeNotificationService', () => {
       notificationService.showInfo(message);
 
       // Assert
-      expect(vscode.window.showInformationMessage).toHaveBeenCalledWith(message);
+      expect(vscode.window.showInformationMessage)
+        .toHaveBeenCalledWith(message);
     });
   });
 
@@ -45,7 +44,8 @@ describe('VscodeNotificationService', () => {
       notificationService.showError(message);
 
       // Assert
-      expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(message);
+      expect(vscode.window.showErrorMessage)
+        .toHaveBeenCalledWith(message);
     });
   });
 
@@ -58,7 +58,8 @@ describe('VscodeNotificationService', () => {
       notificationService.showWarning(message);
 
       // Assert
-      expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(message);
+      expect(vscode.window.showWarningMessage)
+        .toHaveBeenCalledWith(message);
     });
   });
 
@@ -66,36 +67,41 @@ describe('VscodeNotificationService', () => {
     it('should call vscode.window.withProgress with correct options', async () => {
       // Arrange
       const title = 'Test Progress';
-      const mockTask = jest.fn().mockResolvedValue(undefined);
+      const mockTask = jest.fn()
+        .mockResolvedValue(undefined);
 
       // Act
       await notificationService.showProgress(title, mockTask);
 
       // Assert
-      expect(vscode.window.withProgress).toHaveBeenCalledWith(
-        {
-          location: vscode.ProgressLocation.Notification,
-          title,
-          cancellable: false,
-        },
-        expect.any(Function) // The callback function that executes the task
-      );
-      expect(mockTask).toHaveBeenCalled();
+      expect(vscode.window.withProgress)
+        .toHaveBeenCalledWith(
+          {
+            location: vscode.ProgressLocation.Notification,
+            title,
+            cancellable: false,
+          },
+          expect.any(Function), // The callback function that executes the task
+        );
+      expect(mockTask)
+        .toHaveBeenCalled();
     });
 
     it('should properly execute the task within progress wrapper', async () => {
       // Arrange
       const title = 'Test Progress';
-      const mockTask = jest.fn().mockResolvedValue('task result');
+      const mockTask = jest.fn()
+        .mockResolvedValue('task result');
 
       // Act
       await notificationService.showProgress(title, mockTask);
 
       // Extract the callback function that was passed to withProgress
       const progressCallback = (vscode.window.withProgress as jest.Mock).mock.calls[0][1];
-      
+
       // Verify that the task was executed
-      expect(mockTask).toHaveBeenCalled();
+      expect(mockTask)
+        .toHaveBeenCalled();
     });
   });
 });

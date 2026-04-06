@@ -74,8 +74,10 @@ describe('BuildApplicationService', () => {
       });
 
       // Assert
-      expect(ResultUtils.isOk(result)).toBe(true);
-      expect(mockBuildOrchestrator.build).toHaveBeenCalledWith(MOCK_BUILD_CONFIG_ID, '--debug');
+      expect(ResultUtils.isOk(result))
+        .toBe(true);
+      expect(mockBuildOrchestrator.build)
+        .toHaveBeenCalledWith(MOCK_BUILD_CONFIG_ID, '--debug');
       // Should not look up config when ID provided
       expect(mockConfigRepo.findByType).not.toHaveBeenCalled();
     });
@@ -99,9 +101,12 @@ describe('BuildApplicationService', () => {
       const result = await service.startBuild({ compileOption: '--release' });
 
       // Assert
-      expect(ResultUtils.isOk(result)).toBe(true);
-      expect(mockConfigRepo.findByType).toHaveBeenCalledWith(ConfigType.BUILD_OP);
-      expect(mockBuildOrchestrator.build).toHaveBeenCalledWith(456, '--release');
+      expect(ResultUtils.isOk(result))
+        .toBe(true);
+      expect(mockConfigRepo.findByType)
+        .toHaveBeenCalledWith(ConfigType.BUILD_OP);
+      expect(mockBuildOrchestrator.build)
+        .toHaveBeenCalledWith(456, '--release');
     });
 
     /**
@@ -115,11 +120,14 @@ describe('BuildApplicationService', () => {
       const result = await service.startBuild({});
 
       // Assert error
-      expect(ResultUtils.isErr(result)).toBe(true);
+      expect(ResultUtils.isErr(result))
+        .toBe(true);
 
       if (ResultUtils.isErr(result)) {
-        expect(result.error).toBeInstanceOf(ConfigNotFoundError);
-        expect(result.error.message).toContain('build_op');
+        expect(result.error)
+          .toBeInstanceOf(ConfigNotFoundError);
+        expect(result.error.message)
+          .toContain('build_op');
       }
     });
   });
@@ -139,8 +147,10 @@ describe('BuildApplicationService', () => {
       const result = await service.startRun({ configId: MOCK_RUN_CONFIG_ID });
 
       // Assert
-      expect(ResultUtils.isOk(result)).toBe(true);
-      expect(mockBuildOrchestrator.run).toHaveBeenCalledWith(MOCK_RUN_CONFIG_ID);
+      expect(ResultUtils.isOk(result))
+        .toBe(true);
+      expect(mockBuildOrchestrator.run)
+        .toHaveBeenCalledWith(MOCK_RUN_CONFIG_ID);
     });
 
     /**
@@ -162,9 +172,12 @@ describe('BuildApplicationService', () => {
       const result = await service.startRun({});
 
       // Assert
-      expect(ResultUtils.isOk(result)).toBe(true);
-      expect(mockConfigRepo.findByType).toHaveBeenCalledWith(ConfigType.BUILD_EXAMPLE);
-      expect(mockBuildOrchestrator.run).toHaveBeenCalledWith(101);
+      expect(ResultUtils.isOk(result))
+        .toBe(true);
+      expect(mockConfigRepo.findByType)
+        .toHaveBeenCalledWith(ConfigType.BUILD_EXAMPLE);
+      expect(mockBuildOrchestrator.run)
+        .toHaveBeenCalledWith(101);
     });
   });
 
@@ -183,8 +196,10 @@ describe('BuildApplicationService', () => {
       const result = await service.startBuildExample({ configId: MOCK_EXAMPLE_CONFIG_ID });
 
       // Assert
-      expect(ResultUtils.isOk(result)).toBe(true);
-      expect(mockBuildOrchestrator.buildExample).toHaveBeenCalledWith(MOCK_EXAMPLE_CONFIG_ID, undefined);
+      expect(ResultUtils.isOk(result))
+        .toBe(true);
+      expect(mockBuildOrchestrator.buildExample)
+        .toHaveBeenCalledWith(MOCK_EXAMPLE_CONFIG_ID, undefined);
     });
 
     /**
@@ -202,8 +217,10 @@ describe('BuildApplicationService', () => {
       });
 
       // Assert
-      expect(ResultUtils.isOk(result)).toBe(true);
-      expect(mockBuildOrchestrator.buildExample).toHaveBeenCalledWith(MOCK_EXAMPLE_CONFIG_ID, 'op1,op2');
+      expect(ResultUtils.isOk(result))
+        .toBe(true);
+      expect(mockBuildOrchestrator.buildExample)
+        .toHaveBeenCalledWith(MOCK_EXAMPLE_CONFIG_ID, 'op1,op2');
     });
   });
 
@@ -246,14 +263,17 @@ describe('BuildApplicationService', () => {
       const result = await service.startSimulate();
 
       // Assert
-      expect(ResultUtils.isOk(result)).toBe(true);
-      expect(mockConfigRepo.findByType).toHaveBeenCalledTimes(3);
-      expect(mockBuildOrchestrator.simulate).toHaveBeenCalledWith(
-        100,  // build config ID
-        MOCK_SIMULATE_CONFIG_ID,  // simulate config ID
-        200,  // example config ID
-        'aicore',  // simulator type
-      );
+      expect(ResultUtils.isOk(result))
+        .toBe(true);
+      expect(mockConfigRepo.findByType)
+        .toHaveBeenCalledTimes(3);
+      expect(mockBuildOrchestrator.simulate)
+        .toHaveBeenCalledWith(
+          100,  // build config ID
+          MOCK_SIMULATE_CONFIG_ID,  // simulate config ID
+          200,  // example config ID
+          'aicore',  // simulator type
+        );
     });
 
     /**
@@ -291,12 +311,13 @@ describe('BuildApplicationService', () => {
       await service.startSimulate();
 
       // Assert simulator type param is empty string
-      expect(mockBuildOrchestrator.simulate).toHaveBeenCalledWith(
-        100,  // build config ID
-        MOCK_SIMULATE_CONFIG_ID,  // simulate config ID
-        200,  // example config ID
-        '',  // simulator type (empty string)
-      );
+      expect(mockBuildOrchestrator.simulate)
+        .toHaveBeenCalledWith(
+          100,  // build config ID
+          MOCK_SIMULATE_CONFIG_ID,  // simulate config ID
+          200,  // example config ID
+          '',  // simulator type (empty string)
+        );
     });
 
     /**
@@ -310,11 +331,14 @@ describe('BuildApplicationService', () => {
       const result = await service.startSimulate();
 
       // Assert error
-      expect(ResultUtils.isErr(result)).toBe(true);
+      expect(ResultUtils.isErr(result))
+        .toBe(true);
 
       if (ResultUtils.isErr(result)) {
-        expect(result.error).toBeInstanceOf(ConfigNotFoundError);
-        expect(result.error.message).toContain('simulate');
+        expect(result.error)
+          .toBeInstanceOf(ConfigNotFoundError);
+        expect(result.error.message)
+          .toContain('simulate');
       }
     });
 
@@ -338,11 +362,14 @@ describe('BuildApplicationService', () => {
       const result = await service.startSimulate();
 
       // Assert error
-      expect(ResultUtils.isErr(result)).toBe(true);
+      expect(ResultUtils.isErr(result))
+        .toBe(true);
 
       if (ResultUtils.isErr(result)) {
-        expect(result.error).toBeInstanceOf(ConfigNotFoundError);
-        expect(result.error.message).toContain('build_op');
+        expect(result.error)
+          .toBeInstanceOf(ConfigNotFoundError);
+        expect(result.error.message)
+          .toContain('build_op');
       }
     });
 
@@ -372,11 +399,14 @@ describe('BuildApplicationService', () => {
       const result = await service.startSimulate();
 
       // Assert error
-      expect(ResultUtils.isErr(result)).toBe(true);
+      expect(ResultUtils.isErr(result))
+        .toBe(true);
 
       if (ResultUtils.isErr(result)) {
-        expect(result.error).toBeInstanceOf(ConfigNotFoundError);
-        expect(result.error.message).toContain('build_example');
+        expect(result.error)
+          .toBeInstanceOf(ConfigNotFoundError);
+        expect(result.error.message)
+          .toContain('build_example');
       }
     });
   });
@@ -403,10 +433,12 @@ describe('BuildApplicationService', () => {
       const result = await service.getBuildConfigId();
 
       // Assert
-      expect(ResultUtils.isOk(result)).toBe(true);
+      expect(ResultUtils.isOk(result))
+        .toBe(true);
 
       if (ResultUtils.isOk(result)) {
-        expect(result.value).toBe(999);
+        expect(result.value)
+          .toBe(999);
       }
     });
 
@@ -421,10 +453,12 @@ describe('BuildApplicationService', () => {
       const result = await service.getBuildConfigId();
 
       // Assert error
-      expect(ResultUtils.isErr(result)).toBe(true);
+      expect(ResultUtils.isErr(result))
+        .toBe(true);
 
       if (ResultUtils.isErr(result)) {
-        expect(result.error).toBeInstanceOf(ConfigNotFoundError);
+        expect(result.error)
+          .toBeInstanceOf(ConfigNotFoundError);
       }
     });
   });
@@ -451,10 +485,12 @@ describe('BuildApplicationService', () => {
       const result = await service.getBuildExampleConfigId();
 
       // Assert
-      expect(ResultUtils.isOk(result)).toBe(true);
+      expect(ResultUtils.isOk(result))
+        .toBe(true);
 
       if (ResultUtils.isOk(result)) {
-        expect(result.value).toBe(888);
+        expect(result.value)
+          .toBe(888);
       }
     });
   });
@@ -497,16 +533,22 @@ describe('BuildApplicationService', () => {
       const result = await service.startOnBoard();
 
       // Assert
-      expect(ResultUtils.isOk(result)).toBe(true);
-      expect(mockConfigRepo.findByType).toHaveBeenCalledTimes(3);
-      expect(mockConfigRepo.findByType).toHaveBeenCalledWith(ConfigType.ON_BOARD);
-      expect(mockConfigRepo.findByType).toHaveBeenCalledWith(ConfigType.BUILD_OP);
-      expect(mockConfigRepo.findByType).toHaveBeenCalledWith(ConfigType.BUILD_EXAMPLE);
-      expect(mockBuildOrchestrator.onBoard).toHaveBeenCalledWith(
-        100,  // build config ID
-        MOCK_ONBOARD_CONFIG_ID,  // on board config ID
-        200,  // example config ID
-      );
+      expect(ResultUtils.isOk(result))
+        .toBe(true);
+      expect(mockConfigRepo.findByType)
+        .toHaveBeenCalledTimes(3);
+      expect(mockConfigRepo.findByType)
+        .toHaveBeenCalledWith(ConfigType.ON_BOARD);
+      expect(mockConfigRepo.findByType)
+        .toHaveBeenCalledWith(ConfigType.BUILD_OP);
+      expect(mockConfigRepo.findByType)
+        .toHaveBeenCalledWith(ConfigType.BUILD_EXAMPLE);
+      expect(mockBuildOrchestrator.onBoard)
+        .toHaveBeenCalledWith(
+          100,  // build config ID
+          MOCK_ONBOARD_CONFIG_ID,  // on board config ID
+          200,  // example config ID
+        );
     });
 
     /**
@@ -520,11 +562,14 @@ describe('BuildApplicationService', () => {
       const result = await service.startOnBoard();
 
       // Assert error
-      expect(ResultUtils.isErr(result)).toBe(true);
+      expect(ResultUtils.isErr(result))
+        .toBe(true);
 
       if (ResultUtils.isErr(result)) {
-        expect(result.error).toBeInstanceOf(ConfigNotFoundError);
-        expect(result.error.message).toContain('on_board');
+        expect(result.error)
+          .toBeInstanceOf(ConfigNotFoundError);
+        expect(result.error.message)
+          .toContain('on_board');
       }
     });
 
@@ -548,11 +593,14 @@ describe('BuildApplicationService', () => {
       const result = await service.startOnBoard();
 
       // Assert error
-      expect(ResultUtils.isErr(result)).toBe(true);
+      expect(ResultUtils.isErr(result))
+        .toBe(true);
 
       if (ResultUtils.isErr(result)) {
-        expect(result.error).toBeInstanceOf(ConfigNotFoundError);
-        expect(result.error.message).toContain('build_op');
+        expect(result.error)
+          .toBeInstanceOf(ConfigNotFoundError);
+        expect(result.error.message)
+          .toContain('build_op');
       }
     });
 
@@ -582,11 +630,14 @@ describe('BuildApplicationService', () => {
       const result = await service.startOnBoard();
 
       // Assert error
-      expect(ResultUtils.isErr(result)).toBe(true);
+      expect(ResultUtils.isErr(result))
+        .toBe(true);
 
       if (ResultUtils.isErr(result)) {
-        expect(result.error).toBeInstanceOf(ConfigNotFoundError);
-        expect(result.error.message).toContain('build_example');
+        expect(result.error)
+          .toBeInstanceOf(ConfigNotFoundError);
+        expect(result.error.message)
+          .toContain('build_example');
       }
     });
   });
@@ -629,16 +680,22 @@ describe('BuildApplicationService', () => {
       const result = await service.runSanitizer();
 
       // Assert
-      expect(ResultUtils.isOk(result)).toBe(true);
-      expect(mockConfigRepo.findByType).toHaveBeenCalledTimes(3);
-      expect(mockConfigRepo.findByType).toHaveBeenCalledWith(ConfigType.SANITIZER);
-      expect(mockConfigRepo.findByType).toHaveBeenCalledWith(ConfigType.BUILD_OP);
-      expect(mockConfigRepo.findByType).toHaveBeenCalledWith(ConfigType.BUILD_EXAMPLE);
-      expect(mockBuildOrchestrator.sanitizer).toHaveBeenCalledWith(
-        100,  // build config ID
-        MOCK_SANITIZER_CONFIG_ID,  // sanitizer config ID
-        200,  // example config ID
-      );
+      expect(ResultUtils.isOk(result))
+        .toBe(true);
+      expect(mockConfigRepo.findByType)
+        .toHaveBeenCalledTimes(3);
+      expect(mockConfigRepo.findByType)
+        .toHaveBeenCalledWith(ConfigType.SANITIZER);
+      expect(mockConfigRepo.findByType)
+        .toHaveBeenCalledWith(ConfigType.BUILD_OP);
+      expect(mockConfigRepo.findByType)
+        .toHaveBeenCalledWith(ConfigType.BUILD_EXAMPLE);
+      expect(mockBuildOrchestrator.sanitizer)
+        .toHaveBeenCalledWith(
+          100,  // build config ID
+          MOCK_SANITIZER_CONFIG_ID,  // sanitizer config ID
+          200,  // example config ID
+        );
     });
 
     /**
@@ -652,11 +709,14 @@ describe('BuildApplicationService', () => {
       const result = await service.runSanitizer();
 
       // Assert error
-      expect(ResultUtils.isErr(result)).toBe(true);
+      expect(ResultUtils.isErr(result))
+        .toBe(true);
 
       if (ResultUtils.isErr(result)) {
-        expect(result.error).toBeInstanceOf(ConfigNotFoundError);
-        expect(result.error.message).toContain('sanitizer');
+        expect(result.error)
+          .toBeInstanceOf(ConfigNotFoundError);
+        expect(result.error.message)
+          .toContain('sanitizer');
       }
     });
 
@@ -680,11 +740,14 @@ describe('BuildApplicationService', () => {
       const result = await service.runSanitizer();
 
       // Assert error
-      expect(ResultUtils.isErr(result)).toBe(true);
+      expect(ResultUtils.isErr(result))
+        .toBe(true);
 
       if (ResultUtils.isErr(result)) {
-        expect(result.error).toBeInstanceOf(ConfigNotFoundError);
-        expect(result.error.message).toContain('build_op');
+        expect(result.error)
+          .toBeInstanceOf(ConfigNotFoundError);
+        expect(result.error.message)
+          .toContain('build_op');
       }
     });
 
@@ -714,11 +777,14 @@ describe('BuildApplicationService', () => {
       const result = await service.runSanitizer();
 
       // Assert error
-      expect(ResultUtils.isErr(result)).toBe(true);
+      expect(ResultUtils.isErr(result))
+        .toBe(true);
 
       if (ResultUtils.isErr(result)) {
-        expect(result.error).toBeInstanceOf(ConfigNotFoundError);
-        expect(result.error.message).toContain('build_example');
+        expect(result.error)
+          .toBeInstanceOf(ConfigNotFoundError);
+        expect(result.error.message)
+          .toContain('build_example');
       }
     });
   });

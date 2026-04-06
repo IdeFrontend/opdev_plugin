@@ -274,7 +274,8 @@ export async function postConfig(config_type: string, dataList: unknown[]) {
 
 export function getConfigById(config_id: number) {
   const store = ensureStore();
-  console.log('getConfigById - store', store, config_id)
+
+  console.log('getConfigById - store', store, config_id);
   const row = store.configs.find((c) => c.id === config_id);
 
   if (!row) {

@@ -17,14 +17,19 @@ async function readDirectoryFiles(dirPath: string, basePath: string = dirPath): 
   const entries = await vscode.workspace.fs.readDirectory(vscode.Uri.file(dirPath));
   const contents: string[] = [];
 
-  for (const [name, type] of entries) {
+  for (const [
+    name,
+    type,
+  ] of entries) {
     const fullPath = path.join(dirPath, name);
     const relativePath = path.relative(basePath, fullPath);
 
     if (type === vscode.FileType.File) {
       try {
         const fileData = await vscode.workspace.fs.readFile(vscode.Uri.file(fullPath));
-        const content = Buffer.from(fileData).toString('utf-8');
+        const content = Buffer.from(fileData)
+          .toString('utf-8');
+
         contents.push(`\n========== ${relativePath} ==========\n${content}\n`);
       }
       catch (error) {
@@ -36,6 +41,7 @@ async function readDirectoryFiles(dirPath: string, basePath: string = dirPath): 
     }
     else if (type === vscode.FileType.Directory) {
       const subContent = await readDirectoryFiles(fullPath, basePath);
+
       contents.push(subContent);
     }
   }
@@ -53,13 +59,17 @@ async function addDirectoryToZip(
 ): Promise<void> {
   const entries = await vscode.workspace.fs.readDirectory(dirUri);
 
-  for (const [name, type] of entries) {
+  for (const [
+    name,
+    type,
+  ] of entries) {
     const entryUri = vscode.Uri.joinPath(dirUri, name);
     const relativePath = path.relative(basePath, entryUri.fsPath);
 
     if (type === vscode.FileType.File) {
       // Read file contents and add to zip
       const fileData = await vscode.workspace.fs.readFile(entryUri);
+
       zip.addFile(relativePath, Buffer.from(fileData));
     }
     else if (type === vscode.FileType.Directory) {
@@ -105,6 +115,7 @@ export const performanceMethods = {
       // Check if directory exists
       try {
         const stat = await vscode.workspace.fs.stat(dirUri);
+
         if (stat.type !== vscode.FileType.Directory) {
           throw new Error(t('performanceData.pathNotDir'));
         }
@@ -118,6 +129,7 @@ export const performanceMethods = {
 
       if (!content.trim()) {
         vscode.window.showWarningMessage(t('performanceData.dirEmptyNoCopy'));
+
         return;
       }
 
@@ -127,6 +139,7 @@ export const performanceMethods = {
     }
     catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
+
       vscode.window.showErrorMessage(t('performanceData.copyReportFailed', { error: errorMessage }));
       throw error;
     }
@@ -161,8 +174,9 @@ export const performanceMethods = {
 
         // Check if directory exists
         try {
-const stat = await vscode.workspace.fs.stat(dirUri);
-        if (stat.type !== vscode.FileType.Directory) {
+          const stat = await vscode.workspace.fs.stat(dirUri);
+
+          if (stat.type !== vscode.FileType.Directory) {
             throw new Error(t('performanceData.pathNotDir'));
           }
         }
@@ -207,6 +221,7 @@ const stat = await vscode.workspace.fs.stat(dirUri);
         }
         catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
+
           vscode.window.showErrorMessage(t('performanceData.downloadReportFailed', { error: errorMessage }));
           throw error;
         }
@@ -214,11 +229,14 @@ const stat = await vscode.workspace.fs.stat(dirUri);
     );
   },
   async diffFiles(params: any)  {
-    console.log('[diffFiles]: comparing file params', params)
-    const { filePath1, filePath2 } = params;
+    console.log('[diffFiles]: comparing file params', params);
+    const {
+      filePath1, filePath2,
+    } = params;
 
     if (!filePath1 || !filePath2) {
       vscode.window.showErrorMessage(t('performanceData.missingFilePath'));
+
       return;
     }
 
@@ -232,14 +250,14 @@ const stat = await vscode.workspace.fs.stat(dirUri);
         'vscode.diff',
         fileUri1,
         fileUri2,
-        t('performanceData.diffCompareTitle', {
-          left: filePath1.split('/').pop() ?? filePath1,
-          right: filePath2.split('/').pop() ?? filePath2,
-        }),
+        `对比: ${filePath1.split('/')
+          .pop()} ↔ ${filePath2.split('/')
+          .pop()}`,
       );
 
       console.log(`[diffFiles]: opened file diff successfully: ${filePath1} ↔ ${filePath2}`);
-    } catch (error) {
+    }
+    catch (error) {
       console.error('[diffFiles]: Failed to execute file diff command:', error);
       vscode.window.showErrorMessage(t('performanceData.fileCompareFailed', { error: (error as Error).message }));
     }

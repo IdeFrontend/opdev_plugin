@@ -64,7 +64,7 @@ export function getBuildOpCommand(config_id: number, compileOption?: string, ope
       compileOption,
       advance_cmd,
       operatorNames,
-      scriptField
+      scriptField,
     });
   }
   catch (e: unknown) {
@@ -165,6 +165,7 @@ export function getSimulateCommand(
     if (operatorNames && targetFile) {
       const delimiter = 'test_aclnn_';
       const parts = targetFile.split(delimiter);
+
       if (parts.length >= 2) {
         targetFile = `${parts[0]}${delimiter}${operatorNames}`;
       }
@@ -211,6 +212,7 @@ export function getOnBoardCommand(
     if (operatorNames && targetFile) {
       const delimiter = 'test_aclnn_';
       const parts = targetFile.split(delimiter);
+
       if (parts.length >= 2) {
         targetFile = `${parts[0]}${delimiter}${operatorNames}`;
       }
@@ -257,6 +259,7 @@ export function getSanitizerCommand(
     if (operatorNames && targetFile) {
       const delimiter = 'test_aclnn_';
       const parts = targetFile.split(delimiter);
+
       if (parts.length >= 2) {
         targetFile = `${parts[0]}${delimiter}${operatorNames}`;
       }

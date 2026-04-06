@@ -4,10 +4,14 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 import { ProjectManager } from '@plugin/core/project/project-manager';
-import { getSanitizerCommand, getBuildExampleCommand } from '@plugin/domain';
+import {
+  getSanitizerCommand, getBuildExampleCommand,
+} from '@plugin/domain';
 import { configService } from './config-service';
-import { buildService, notifyBuildSucceededForSidebar } from './build-service';
-import { OperatorProjectType, OperatorProjectDetector } from '@plugin/domain/services/operator-project-detector';
+import { buildService } from './build-service';
+import {
+  OperatorProjectType, OperatorProjectDetector,
+} from '@plugin/domain/services/operator-project-detector';
 
 const CONFIG_TYPES = { SANITIZER: 'sanitizer' } as const;
 
@@ -58,8 +62,10 @@ export class SanitizerService {
 
       // For standard custom operators, build example first
       const workspaceFolders = vscode.workspace.workspaceFolders;
+
       if (workspaceFolders && workspaceFolders.length > 0) {
         const workspacePath = workspaceFolders[0].uri.fsPath;
+
         try {
           const rootDetection = await OperatorProjectDetector.detectOperatorProject(workspacePath);
           const isRootStandardCustom = rootDetection.isOperatorProject && rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM;
@@ -86,6 +92,7 @@ export class SanitizerService {
 
             if (exampleBuildRes.code !== 0) {
               vscode.window.showErrorMessage(t('sanitizer.exampleCompileFailed', { output: exampleBuildRes.output }));
+
               return;
             }
           }

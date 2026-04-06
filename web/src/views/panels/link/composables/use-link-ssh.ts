@@ -9,7 +9,9 @@ import {
   getLastProjectPath,
   getWorkspace,
 } from '@web/apis';
-import { selectFolder, selectFile } from '@web/apis/performance-run-data';
+import {
+  selectFolder, selectFile,
+} from '@web/apis/performance-run-data';
 import { t } from 'i18next';
 import { ValidationStrategyFactory } from './validation-strategies';
 import { MessageHandlerStrategyManager } from './message-handler-strategies';
@@ -97,23 +99,26 @@ export function useLinkSSH(selectedTemplate?: Ref<'helloworld' | 'addn' | 'torch
 
   // 模板名称映射
   const getTemplateName = (template: 'helloworld' | 'addn' | 'torch_library_template' | undefined): string | undefined => {
-    if (!template) return undefined;
+    if (!template) {
+      return undefined;
+    }
+
     const mapping: Record<'helloworld' | 'addn' | 'torch_library_template', string> = {
       helloworld: 'hello_world',
       addn: 'addn_custom',
       torch_library_template: 'torch_library_template',
     };
+
     return mapping[template];
   };
 
   // 选择目录
   const handleSelectFolder = async () => {
     try {
-      const selectedPath = await selectFolder({
-        defaultPath: projectFormData.projectPath,
-      });
+      const selectedPath = await selectFolder({ defaultPath: projectFormData.projectPath });
+
       console.log(selectedPath);
-      
+
       if (selectedPath) {
         projectFormData.projectPath = selectedPath;
       }
@@ -126,9 +131,8 @@ export function useLinkSSH(selectedTemplate?: Ref<'helloworld' | 'addn' | 'torch
 
   const handleSelectFile = async () => {
     try {
-      const selectedPath = await selectFile({
-        defaultPath: projectFormData.projectSH,
-      });
+      const selectedPath = await selectFile({ defaultPath: projectFormData.projectSH });
+
       if (selectedPath) {
         projectFormData.projectSH = selectedPath;
       }
@@ -156,10 +160,10 @@ export function useLinkSSH(selectedTemplate?: Ref<'helloworld' | 'addn' | 'torch
     }
 
     try {
-      const templateName = selectedTemplate?.value 
-        ? getTemplateName(selectedTemplate.value) 
+      const templateName = selectedTemplate?.value
+        ? getTemplateName(selectedTemplate.value)
         : undefined;
-      
+
       await createdProject({
         ...projectFormData,
         createOperatorProjectDictoryFileType: selectedId_type.value,

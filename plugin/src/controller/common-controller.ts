@@ -30,8 +30,12 @@ export const commonMethods = {
   /**
    * Execute VSCode command
    */
-  async executeVscodeCommand(params: { command: string; args: any[] }) {
-    const { command, args } = params;
+  async executeVscodeCommand(params: { command: string;
+    args: any[] }) {
+    const {
+      command, args,
+    } = params;
+
     return await vscode.commands.executeCommand(command, ...args);
   },
 

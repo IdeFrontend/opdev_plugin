@@ -21,8 +21,12 @@ if (typeof acquireVsCodeApi !== 'undefined' && !window.vscode) {
 
 window.addEventListener('message', (event) => {
   const message = event.data;
+
   if (message?.command?.indexOf('vscode') === 0 && (window as any).vscode) {
-    (window as any).vscode.postMessage({ command: message.command, message });
+    (window as any).vscode.postMessage({
+      command: message.command,
+      message,
+    });
   }
 });
 
@@ -31,6 +35,8 @@ void i18next.init({
   lng: lang,
   fallbackLng: 'en',
   interpolation: { escapeValue: false },
-}).then(() => {
-  createApp(App).mount('#app');
-});
+})
+  .then(() => {
+    createApp(App)
+      .mount('#app');
+  });

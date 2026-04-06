@@ -12,7 +12,9 @@ import {
 import { PerformanceExecutionRecord } from '@shared/api-types';
 
 // 使用主题管理组合式函数
-const { themeConfig, actualTheme } = useTheme();
+const {
+  themeConfig, actualTheme,
+} = useTheme();
 
 // 向子组件提供主题状态
 provide('actualTheme', actualTheme);

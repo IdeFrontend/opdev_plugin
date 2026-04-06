@@ -30,8 +30,12 @@ import { ProjectManager } from '@plugin/core/project/project-manager';
 import { projectService } from './project-service';
 import { OperatorProjectIconTheme } from '@plugin/class/operator-project-icon-theme';
 import { generateStructure } from '@plugin/domain';
-import { getOpsByProjectId, getOpByProjectIdAndOpName } from '@plugin/domain/models/model';
-import { getConfig, getConfigById, postConfig } from '@plugin/domain/services/configuration';
+import {
+  getOpsByProjectId, getOpByProjectIdAndOpName,
+} from '@plugin/domain/models/model';
+import {
+  getConfig, getConfigById, postConfig,
+} from '@plugin/domain/services/configuration';
 import { buildService } from './build-service';
 import { taskMethods } from '../controller/task-controller';
 import { homeMethods } from '../controller/home-controller';
@@ -119,7 +123,8 @@ function isStandardCustomRoot(dirPath: string): boolean {
     const content = fs.readFileSync(buildSh, 'utf-8');
 
     return content.includes('--genop');
-  } catch {
+  }
+  catch {
     return false;
   }
 }
@@ -129,6 +134,7 @@ function isStandardCustomRoot(dirPath: string): boolean {
  */
 function isStandardCustomSubOperator(dirPath: string): boolean {
   const cmakeListsPath = path.join(dirPath, 'CMakeLists.txt');
+
   return fs.existsSync(cmakeListsPath);
 }
 
@@ -137,12 +143,21 @@ function isStandardCustomSubOperator(dirPath: string): boolean {
  */
 function findStandardCustomRoot(startPath: string): string | null {
   let dir = path.normalize(startPath);
+
   for (let i = 0; i < 5; i++) {
-    if (isStandardCustomRoot(dir)) return dir;
+    if (isStandardCustomRoot(dir)) {
+      return dir;
+    }
+
     const parent = path.dirname(dir);
-    if (parent === dir) break;
+
+    if (parent === dir) {
+      break;
+    }
+
     dir = parent;
   }
+
   return null;
 }
 
@@ -152,11 +167,17 @@ function findStandardCustomRoot(startPath: string): string | null {
  */
 function checkSupportsSanitizerAndTuning(rootPath: string): boolean {
   const buildShPath = path.join(rootPath, 'build.sh');
-  if (!fs.existsSync(buildShPath)) return false;
+
+  if (!fs.existsSync(buildShPath)) {
+    return false;
+  }
+
   try {
     const content = fs.readFileSync(buildShPath, 'utf-8');
+
     return content.includes('--bisheng_flags');
-  } catch {
+  }
+  catch {
     return false;
   }
 }
@@ -165,59 +186,68 @@ function checkSupportsSanitizerAndTuning(rootPath: string): boolean {
  * Get operator project type by path
  * Prefer getProjectType API, then registered projects, then detector
  */
-async function getOperatorProjectTypeByPath(
-  folderPath: string,
-): Promise<OperatorProjectType | undefined> {
+async function getOperatorProjectTypeByPath(folderPath: string): Promise<OperatorProjectType | undefined> {
   // 1. Prefer getProjectType API (handles workspace root type detection)
   try {
     const projectTypeResult = await homeMethods.getProjectType();
+
     if (projectTypeResult?.projectType) {
       return projectTypeResult.projectType as OperatorProjectType;
     }
-  } catch {
+  }
+  catch {
     // Ignore API failure, try other means
   }
 
   // 2. Try reading from projects.json (for given path)
   try {
     const project = getProjectByPath(folderPath);
+
     if (project?.project_type) {
       return project.project_type as OperatorProjectType;
     }
-  } catch {
+  }
+  catch {
     // Ignore read failure, use detector
   }
 
   // 3. Use detector on this directory
   try {
     const detection = await OperatorProjectDetector.detectOperatorProject(folderPath);
+
     if (detection.isOperatorProject && detection.projectType) {
       return detection.projectType;
     }
-  } catch {
+  }
+  catch {
     // Ignore detection failure, try workspace root
   }
 
   // 4. Fallback to workspace root
   const workspaceFolders = vscode.workspace.workspaceFolders;
+
   if (workspaceFolders && workspaceFolders.length > 0) {
     const workspaceRootPath = workspaceFolders[0].uri.fsPath;
 
     try {
       const project = getProjectByPath(workspaceRootPath);
+
       if (project?.project_type) {
         return project.project_type as OperatorProjectType;
       }
-    } catch {
+    }
+    catch {
       // Ignore read failure
     }
 
     try {
       const detection = await OperatorProjectDetector.detectOperatorProject(workspaceRootPath);
+
       if (detection.isOperatorProject && detection.projectType) {
         return detection.projectType;
       }
-    } catch {
+    }
+    catch {
       // Ignore detection failure
     }
   }
@@ -249,40 +279,53 @@ export class FolderContextMenuService {
       // <<<>>> type: context menu not supported (except report visualization)
       if (isAscendLikeOperator(operatorType)) {
         vscode.window.showWarningMessage(t('folderContext.angleOpsNotSupported'));
+
         return;
       }
 
       // pyasc: mark/unmark operator or collection not supported
       if (operatorType === OperatorProjectType.PYASC) {
         vscode.window.showWarningMessage(t('folderContext.pyascNoMarkUnmark'));
+
         return;
       }
 
       // 1. Find root (standard custom operator)
       const rootPath = findStandardCustomRoot(folderPath);
+
       if (!rootPath) {
         vscode.window.showWarningMessage(t('folderContext.noOperatorRoot'));
+
         return;
       }
 
       // 2. Get project info (project already created by default)
       const rootProject = getProjectByPath(rootPath);
+
       if (!rootProject) {
         vscode.window.showErrorMessage(t('folderContext.noProjectInfo'));
+
         return;
       }
 
       // 3. Check selected dir is operator (has CMakeLists.txt)
       if (!isStandardCustomSubOperator(folderPath)) {
         vscode.window.showWarningMessage(t('folderContext.notOperatorDir'));
+
         return;
       }
 
       // 4. Check if under experimental directory
-      const normalizedFolderPath = path.normalize(folderPath).replace(/\\/g, '/').toLowerCase();
-      const normalizedRootPath = path.normalize(rootPath).replace(/\\/g, '/').toLowerCase();
-      const relativePath = normalizedFolderPath.replace(normalizedRootPath, '').replace(/^[/\\]/, '');
-      const isExperimental = relativePath.toLowerCase().startsWith('experimental/');
+      const normalizedFolderPath = path.normalize(folderPath)
+        .replace(/\\/g, '/')
+        .toLowerCase();
+      const normalizedRootPath = path.normalize(rootPath)
+        .replace(/\\/g, '/')
+        .toLowerCase();
+      const relativePath = normalizedFolderPath.replace(normalizedRootPath, '')
+        .replace(/^[/\\]/, '');
+      const isExperimental = relativePath.toLowerCase()
+        .startsWith('experimental/');
 
       // 5. Get current project info
       const currentOpsList = rootProject.ops_list || [];
@@ -292,8 +335,10 @@ export class FolderContextMenuService {
       // 6. Check if already exists
       const targetList = isExperimental ? currentExperimentalOpsList : currentOpsList;
       const existing = targetList.find((op) => op.path === folderPath || op.name === operatorName);
+
       if (existing) {
         vscode.window.showInformationMessage(t('folderContext.operatorAlreadyMarked'));
+
         return;
       }
 
@@ -312,7 +357,8 @@ export class FolderContextMenuService {
       // 9. Add to corresponding list
       if (isExperimental) {
         currentExperimentalOpsList.push(operatorInfo);
-      } else {
+      }
+      else {
         currentOpsList.push(operatorInfo);
       }
 
@@ -327,15 +373,16 @@ export class FolderContextMenuService {
       // 11. Update folder icon decoration
       const ctx = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
         .extensionContext;
+
       if (ctx) {
-        OperatorProjectIconTheme.getInstance(ctx).fireDecorationUpdate(uri);
+        OperatorProjectIconTheme.getInstance(ctx)
+          .fireDecorationUpdate(uri);
       }
 
       vscode.window.showInformationMessage(t('folderContext.markedAsOperator', { name: operatorName }));
-    } catch (error) {
-      vscode.window.showErrorMessage(
-        t('folderContext.markAsOperatorFailed', { error: error instanceof Error ? error.message : String(error) }),
-      );
+    }
+    catch (error) {
+      vscode.window.showErrorMessage(t('folderContext.markAsOperatorFailed', { error: error instanceof Error ? error.message : String(error) }));
     }
   }
 
@@ -352,46 +399,61 @@ export class FolderContextMenuService {
       // <<<>>> type: context menu not supported (except report visualization)
       if (isAscendLikeOperator(operatorType)) {
         vscode.window.showWarningMessage(t('folderContext.angleOpsNotSupported'));
+
         return;
       }
 
       // pyasc: mark/unmark not supported
       if (operatorType === OperatorProjectType.PYASC) {
         vscode.window.showWarningMessage(t('folderContext.pyascNoMarkUnmark'));
+
         return;
       }
 
       // 1. Find root (standard custom operator)
       const rootPath = findStandardCustomRoot(folderPath);
+
       if (!rootPath) {
         vscode.window.showWarningMessage(t('folderContext.noOperatorRoot'));
+
         return;
       }
 
       // 2. Get project info (project already created by default)
       const rootProject = getProjectByPath(rootPath);
+
       if (!rootProject) {
         vscode.window.showErrorMessage(t('folderContext.noProjectInfo'));
+
         return;
       }
 
       // 3. Check selected dir is operator collection (in whitelist)
-      const normalizedFolderPath = path.normalize(folderPath).replace(/\\/g, '/').toLowerCase();
-      const normalizedRootPath = path.normalize(rootPath).replace(/\\/g, '/').toLowerCase();
-      const relativePath = normalizedFolderPath.replace(normalizedRootPath, '').replace(/^[/\\]/, '');
+      const normalizedFolderPath = path.normalize(folderPath)
+        .replace(/\\/g, '/')
+        .toLowerCase();
+      const normalizedRootPath = path.normalize(rootPath)
+        .replace(/\\/g, '/')
+        .toLowerCase();
+      const relativePath = normalizedFolderPath.replace(normalizedRootPath, '')
+        .replace(/^[/\\]/, '');
 
       let collectionName: string;
       let collectionPath: string;
       let isExperimental: boolean;
 
       // Determine if root-level collection or under experimental/
-      if (relativePath.toLowerCase().startsWith('experimental/')) {
+      if (relativePath.toLowerCase()
+        .startsWith('experimental/')) {
         // Operator collection under experimental
         const parts = relativePath.split('/');
+
         if (parts.length < 2) {
           vscode.window.showWarningMessage(t('folderContext.notValidCollection'));
+
           return;
         }
+
         collectionName = parts[1];
         collectionPath = folderPath;
         isExperimental = true;
@@ -399,9 +461,11 @@ export class FolderContextMenuService {
         // Check if in experimental operator collection whitelist
         if (!EXPERIMENTAL_OPERATOR_COLLECTIONS.has(collectionName)) {
           vscode.window.showWarningMessage(t('folderContext.notInExperimentalWhitelist', { name: collectionName }));
+
           return;
         }
-      } else {
+      }
+      else {
         // Operator collection under root
         collectionName = path.basename(folderPath);
         collectionPath = folderPath;
@@ -410,6 +474,7 @@ export class FolderContextMenuService {
         // Check if in root operator collection whitelist
         if (!ROOT_OPERATOR_COLLECTIONS.has(collectionName)) {
           vscode.window.showWarningMessage(t('folderContext.notInWhitelist', { name: collectionName }));
+
           return;
         }
       }
@@ -445,12 +510,14 @@ export class FolderContextMenuService {
 
           operators.push(operatorInfo);
         }
-      } catch {
+      }
+      catch {
         // Ignore scan failure
       }
 
       if (!hasOperators) {
         vscode.window.showWarningMessage(t('folderContext.noOperatorsInDir'));
+
         return;
       }
 
@@ -462,8 +529,10 @@ export class FolderContextMenuService {
       // 6. Check if collection already exists
       const meetName = isExperimental ? `experimental/${collectionName}` : collectionName;
       const existingMeet = currentOpsMeet.find((m) => m.path === collectionPath || m.name === meetName);
+
       if (existingMeet) {
         vscode.window.showInformationMessage(t('folderContext.collectionAlreadyMarked'));
+
         return;
       }
 
@@ -480,15 +549,19 @@ export class FolderContextMenuService {
       operators.forEach((op) => {
         const targetList = isExperimental ? updatedExperimentalOpsList : updatedOpsList;
         const existing = targetList.find((existingOp) => existingOp.path === op.path || existingOp.name === op.name);
+
         if (!existing) {
           targetList.push(op);
-        } else {
+        }
+        else {
           // Preserve existing operator compile status
           if (existing.isCompiled) {
             op.isCompiled = true;
           }
+
           // Update path if changed
           const index = targetList.indexOf(existing);
+
           targetList[index] = op;
         }
       });
@@ -504,23 +577,26 @@ export class FolderContextMenuService {
       // 10. Update folder icon decoration
       const ctx = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
         .extensionContext;
+
       if (ctx) {
         const urisToUpdate: vscode.Uri[] = [uri];
+
         operators.forEach((op) => {
           if (op.path) {
             urisToUpdate.push(vscode.Uri.file(op.path));
           }
         });
-        OperatorProjectIconTheme.getInstance(ctx).fireDecorationUpdate(urisToUpdate);
+        OperatorProjectIconTheme.getInstance(ctx)
+          .fireDecorationUpdate(urisToUpdate);
       }
 
-      vscode.window.showInformationMessage(
-        t('folderContext.markedAsCollection', { name: meetName, count: operators.length }),
-      );
-    } catch (error) {
-      vscode.window.showErrorMessage(
-        t('folderContext.markAsCollectionFailed', { error: error instanceof Error ? error.message : String(error) }),
-      );
+      vscode.window.showInformationMessage(t('folderContext.markedAsCollection', {
+        name: meetName,
+        count: operators.length,
+      }));
+    }
+    catch (error) {
+      vscode.window.showErrorMessage(t('folderContext.markAsCollectionFailed', { error: error instanceof Error ? error.message : String(error) }));
     }
   }
 
@@ -536,32 +612,39 @@ export class FolderContextMenuService {
       // <<<>>> type: context menu not supported (except report visualization)
       if (isAscendLikeOperator(operatorType)) {
         vscode.window.showWarningMessage(t('folderContext.angleOpsNotSupported'));
+
         return;
       }
 
       // pyasc: mark/unmark not supported
       if (operatorType === OperatorProjectType.PYASC) {
         vscode.window.showWarningMessage(t('folderContext.pyascNoMarkUnmark'));
+
         return;
       }
 
       // 1. Find root (standard custom operator)
       const rootPath = findStandardCustomRoot(folderPath);
+
       if (!rootPath) {
         vscode.window.showWarningMessage(t('folderContext.noOperatorRootShort'));
+
         return;
       }
 
       // 2. Verify root is standard custom operator
       if (!isStandardCustomRoot(rootPath)) {
         vscode.window.showWarningMessage(t('folderContext.rootNotStandardOperator'));
+
         return;
       }
 
       // 3. Get project info (project already created by default)
       const rootProject = getProjectByPath(rootPath);
+
       if (!rootProject) {
         vscode.window.showErrorMessage(t('folderContext.noProjectInfo'));
+
         return;
       }
 
@@ -571,16 +654,13 @@ export class FolderContextMenuService {
       const operatorName = path.basename(folderPath);
 
       // Look up in ops_list
-      const opsListIndex = currentOpsList.findIndex(
-        (op) => op.path === folderPath || op.name === operatorName,
-      );
+      const opsListIndex = currentOpsList.findIndex((op) => op.path === folderPath || op.name === operatorName);
       // Look up in experimental_ops_list
-      const experimentalOpsListIndex = currentExperimentalOpsList.findIndex(
-        (op) => op.path === folderPath || op.name === operatorName,
-      );
+      const experimentalOpsListIndex = currentExperimentalOpsList.findIndex((op) => op.path === folderPath || op.name === operatorName);
 
       if (opsListIndex === -1 && experimentalOpsListIndex === -1) {
         vscode.window.showInformationMessage(t('folderContext.dirNotMarkedAsOperator'));
+
         return;
       }
 
@@ -604,15 +684,16 @@ export class FolderContextMenuService {
       // 7. Update folder icon decoration
       const ctx = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
         .extensionContext;
+
       if (ctx) {
-        OperatorProjectIconTheme.getInstance(ctx).fireDecorationUpdate(uri);
+        OperatorProjectIconTheme.getInstance(ctx)
+          .fireDecorationUpdate(uri);
       }
 
       vscode.window.showInformationMessage(t('folderContext.unmarkedAsOperator', { name: operatorName }));
-    } catch (error) {
-      vscode.window.showErrorMessage(
-        t('folderContext.unmarkFailed', { error: error instanceof Error ? error.message : String(error) }),
-      );
+    }
+    catch (error) {
+      vscode.window.showErrorMessage(t('folderContext.unmarkFailed', { error: error instanceof Error ? error.message : String(error) }));
     }
   }
 
@@ -629,32 +710,39 @@ export class FolderContextMenuService {
       // <<<>>> type: context menu not supported (except report visualization)
       if (isAscendLikeOperator(operatorType)) {
         vscode.window.showWarningMessage(t('folderContext.angleOpsNotSupported'));
+
         return;
       }
 
       // pyasc: mark/unmark not supported
       if (operatorType === OperatorProjectType.PYASC) {
         vscode.window.showWarningMessage(t('folderContext.pyascNoMarkUnmark'));
+
         return;
       }
 
       // 1. Find root (standard custom operator)
       const rootPath = findStandardCustomRoot(folderPath);
+
       if (!rootPath) {
         vscode.window.showWarningMessage(t('folderContext.noOperatorRootShort'));
+
         return;
       }
 
       // 2. Verify root is standard custom operator
       if (!isStandardCustomRoot(rootPath)) {
         vscode.window.showWarningMessage(t('folderContext.rootNotStandardOperator'));
+
         return;
       }
 
       // 3. Get project info (project already created by default)
       const rootProject = getProjectByPath(rootPath);
+
       if (!rootProject) {
         vscode.window.showErrorMessage(t('folderContext.noProjectInfo'));
+
         return;
       }
 
@@ -664,6 +752,7 @@ export class FolderContextMenuService {
 
       if (meetIndex === -1) {
         vscode.window.showInformationMessage(t('folderContext.dirNotMarkedAsCollection'));
+
         return;
       }
 
@@ -707,15 +796,16 @@ export class FolderContextMenuService {
       // 8. Update folder icon decoration
       const ctx = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
         .extensionContext;
+
       if (ctx) {
-        OperatorProjectIconTheme.getInstance(ctx).fireDecorationUpdate(uri);
+        OperatorProjectIconTheme.getInstance(ctx)
+          .fireDecorationUpdate(uri);
       }
 
       vscode.window.showInformationMessage(t('folderContext.unmarkedAsCollection', { name: meetInfo.name }));
-    } catch (error) {
-      vscode.window.showErrorMessage(
-        t('folderContext.unmarkFailed', { error: error instanceof Error ? error.message : String(error) }),
-      );
+    }
+    catch (error) {
+      vscode.window.showErrorMessage(t('folderContext.unmarkFailed', { error: error instanceof Error ? error.message : String(error) }));
     }
   }
 
@@ -729,22 +819,29 @@ export class FolderContextMenuService {
   static async buildOperatorProject(uri: vscode.Uri): Promise<void> {
     // Get current workspace root
     const workspaceFolders = vscode.workspace.workspaceFolders;
+
     if (!workspaceFolders || workspaceFolders.length === 0) {
       vscode.window.showErrorMessage(t('folderContext.noWorkspaceCannotRun'));
+
       return;
     }
+
     const workspaceRootPath = workspaceFolders[0].uri.fsPath;
 
     // Determine whether the currently selected folder or file is
     let isFolder = false;
     let isPyFile = false;
+
     try {
       const stat = fs.statSync(uri.fsPath);
+
       isFolder = stat.isDirectory();
+
       if (!isFolder) {
         isPyFile = uri.fsPath.endsWith('.py');
       }
-    } catch {
+    }
+    catch {
       isFolder = false;
       isPyFile = false;
     }
@@ -760,6 +857,7 @@ export class FolderContextMenuService {
     // <<<>>> type: context menu not supported (except report visualization)
     if (isAscendLikeOperator(rootDetection.projectType)) {
       vscode.window.showWarningMessage(t('folderContext.angleOpsNotSupported'));
+
       return;
     }
 
@@ -769,19 +867,28 @@ export class FolderContextMenuService {
       const operatorNames = path.basename(uri.fsPath);
 
       // Check if under experimental directory
-      const normalizedUriPath = path.normalize(uri.fsPath).replace(/\\/g, '/').toLowerCase();
-      const normalizedRootPath = path.normalize(workspaceRootPath).replace(/\\/g, '/').toLowerCase();
-      const relativePath = normalizedUriPath.replace(normalizedRootPath, '').replace(/^[/\\]/, '');
-      const isExperimental = relativePath.toLowerCase().startsWith('experimental/');
+      const normalizedUriPath = path.normalize(uri.fsPath)
+        .replace(/\\/g, '/')
+        .toLowerCase();
+      const normalizedRootPath = path.normalize(workspaceRootPath)
+        .replace(/\\/g, '/')
+        .toLowerCase();
+      const relativePath = normalizedUriPath.replace(normalizedRootPath, '')
+        .replace(/^[/\\]/, '');
+      const isExperimental = relativePath.toLowerCase()
+        .startsWith('experimental/');
 
       // Resolve projectId from root
       let projectId: number | undefined;
       const containingProject = getContainingStandardCustomProject(uri.fsPath);
+
       if (containingProject) {
         projectId = containingProject.id;
-      } else {
+      }
+      else {
         // If no containing project, try root directly
         const rootProject = getProjectByPath(workspaceRootPath);
+
         if (rootProject) {
           projectId = rootProject.id;
         }
@@ -789,6 +896,7 @@ export class FolderContextMenuService {
 
       if (!projectId) {
         vscode.window.showErrorMessage(t('folderContext.noProjectIdMarkFirst'));
+
         return;
       }
 
@@ -802,6 +910,7 @@ export class FolderContextMenuService {
         projectId,
         compileOption,
       });
+
       return;
     }
 
@@ -809,6 +918,7 @@ export class FolderContextMenuService {
     if (isPyFile && isPyasc) {
       // Placeholder; pyasc run verification to be implemented
       console.log('[buildOperatorProject] pyasc run verification not implemented yet');
+
       return;
     }
 
@@ -823,22 +933,29 @@ export class FolderContextMenuService {
   static async runOperatorProject(uri: vscode.Uri): Promise<void> {
     // Get current workspace root
     const workspaceFolders = vscode.workspace.workspaceFolders;
+
     if (!workspaceFolders || workspaceFolders.length === 0) {
       vscode.window.showErrorMessage(t('folderContext.noWorkspaceCannotRun'));
+
       return;
     }
+
     const workspaceRootPath = workspaceFolders[0].uri.fsPath;
 
     // Determine if selection is folder or file
     let isFolder = false;
     let isPyFile = false;
+
     try {
       const stat = fs.statSync(uri.fsPath);
+
       isFolder = stat.isDirectory();
+
       if (!isFolder) {
         isPyFile = uri.fsPath.endsWith('.py');
       }
-    } catch {
+    }
+    catch {
       isFolder = false;
       isPyFile = false;
     }
@@ -854,6 +971,7 @@ export class FolderContextMenuService {
     // <<<>>> type: context menu not supported (except report visualization)
     if (isAscendLikeOperator(rootDetection.projectType)) {
       vscode.window.showWarningMessage(t('folderContext.angleOpsNotSupported'));
+
       return;
     }
 
@@ -861,16 +979,24 @@ export class FolderContextMenuService {
     if (isFolder && isStandardCustom) {
       // Same as app.vue: operatorNames = selected folder name, projectId from projects.json at root
       const project = getProjectByPath(workspaceRootPath);
+
       if (!project) {
         vscode.window.showErrorMessage(t('folderContext.rootNotInProjectsJson'));
+
         return;
       }
 
       // Check if under experimental directory
-      const normalizedUriPath = path.normalize(uri.fsPath).replace(/\\/g, '/').toLowerCase();
-      const normalizedRootPath = path.normalize(workspaceRootPath).replace(/\\/g, '/').toLowerCase();
-      const relativePath = normalizedUriPath.replace(normalizedRootPath, '').replace(/^[/\\]/, '');
-      const isExperimental = relativePath.toLowerCase().startsWith('experimental/');
+      const normalizedUriPath = path.normalize(uri.fsPath)
+        .replace(/\\/g, '/')
+        .toLowerCase();
+      const normalizedRootPath = path.normalize(workspaceRootPath)
+        .replace(/\\/g, '/')
+        .toLowerCase();
+      const relativePath = normalizedUriPath.replace(normalizedRootPath, '')
+        .replace(/^[/\\]/, '');
+      const isExperimental = relativePath.toLowerCase()
+        .startsWith('experimental/');
 
       const operatorNames = path.basename(uri.fsPath);
       const operatorType = 'standard-custom';
@@ -884,6 +1010,7 @@ export class FolderContextMenuService {
         projectId: project.id,
         compileOption,
       });
+
       return;
     }
 
@@ -894,50 +1021,59 @@ export class FolderContextMenuService {
         try {
           // Get build_op config
           const configId = await buildService.getBuildConfigId();
+
           if (configId) {
             const config = getConfigById(configId);
+
             if (config) {
               // Get project info
               const project = getProjectByPath(workspaceRootPath);
+
               if (project) {
                 // Get operator info for run path
                 const operator = getOpByProjectIdAndOpName(project.id, config.op);
                 const runPath = operator?.op_path || project.project_path;
-                
+
                 // Compute relative path of selected file to run path
                 const selectedFilePath = uri.fsPath;
                 const relativePath = path.relative(runPath, selectedFilePath);
                 // Normalize path separators to / and ensure ./ prefix if not at root
                 const normalizedRelativePath = relativePath.replace(/\\/g, '/');
-                const targetPath = normalizedRelativePath.startsWith('.') 
-                  ? normalizedRelativePath 
+                const targetPath = normalizedRelativePath.startsWith('.')
+                  ? normalizedRelativePath
                   : `./${normalizedRelativePath}`;
-                
+
                 // Update target_file to python3 ${relativePath}
                 const newTargetFile = `python3 ${targetPath}`;
-                
+
                 // Update config
                 const userOptions = config.user_options as any || {};
-                await postConfig('build_op', [{
-                  config_id: configId,
-                  project_id: project.id,
-                  user_options: {
-                    ...userOptions,
-                    target_file: newTargetFile,
+
+                await postConfig('build_op', [
+                  {
+                    config_id: configId,
+                    project_id: project.id,
+                    user_options: {
+                      ...userOptions,
+                      target_file: newTargetFile,
+                    },
                   },
-                }]);
+                ]);
               }
             }
           }
-        } catch (error) {
+        }
+        catch (error) {
           console.error('[runOperatorProject] Failed to update config:', error);
           // Continue run even if config update fails
         }
       }
-      
+
       // If .py file selected, pass file path
       const filePath = isPyFile ? path.basename(uri.fsPath) : undefined;
+
       await taskMethods.startRun({ filePath });
+
       return;
     }
 
@@ -952,9 +1088,11 @@ export class FolderContextMenuService {
     const folderPath = uri.fsPath;
 
     const operatorType = await getOperatorProjectTypeByPath(folderPath);
+
     // <<<>>> type: context menu not supported (except report visualization)
     if (isAscendLikeOperator(operatorType)) {
       vscode.window.showWarningMessage(t('folderContext.angleOpsNotSupported'));
+
       return;
     }
 
@@ -963,6 +1101,7 @@ export class FolderContextMenuService {
     // Check if operator project
     if (!project) {
       vscode.window.showWarningMessage(t('folderContext.folderNotOperatorProject'));
+
       return;
     }
 
@@ -979,9 +1118,11 @@ export class FolderContextMenuService {
     const folderPath = uri.fsPath;
 
     const operatorType = await getOperatorProjectTypeByPath(folderPath);
+
     // <<<>>> type: context menu not supported (except report visualization)
     if (isAscendLikeOperator(operatorType)) {
       vscode.window.showWarningMessage(t('folderContext.angleOpsNotSupported'));
+
       return;
     }
 
@@ -990,6 +1131,7 @@ export class FolderContextMenuService {
     // Check if operator project
     if (!project) {
       vscode.window.showWarningMessage(t('folderContext.folderNotOperatorProject'));
+
       return;
     }
 
@@ -1006,9 +1148,11 @@ export class FolderContextMenuService {
     const folderPath = uri.fsPath;
 
     const operatorType = await getOperatorProjectTypeByPath(folderPath);
+
     // <<<>>> type: context menu not supported (except report visualization)
     if (isAscendLikeOperator(operatorType)) {
       vscode.window.showWarningMessage(t('folderContext.angleOpsNotSupported'));
+
       return;
     }
 
@@ -1017,6 +1161,7 @@ export class FolderContextMenuService {
     // Check if operator project
     if (!project) {
       vscode.window.showWarningMessage(t('folderContext.folderNotOperatorProject'));
+
       return;
     }
 
@@ -1033,9 +1178,11 @@ export class FolderContextMenuService {
     const folderPath = uri.fsPath;
 
     const operatorType = await getOperatorProjectTypeByPath(folderPath);
+
     // <<<>>> type: context menu not supported (except report visualization)
     if (isAscendLikeOperator(operatorType)) {
       vscode.window.showWarningMessage(t('folderContext.angleOpsNotSupported'));
+
       return;
     }
 
@@ -1044,6 +1191,7 @@ export class FolderContextMenuService {
     // Check if operator project
     if (!project) {
       vscode.window.showWarningMessage(t('folderContext.folderNotOperatorProject'));
+
       return;
     }
 
@@ -1060,9 +1208,11 @@ export class FolderContextMenuService {
     const folderPath = uri.fsPath;
 
     const operatorType = await getOperatorProjectTypeByPath(folderPath);
+
     // <<<>>> type: context menu not supported (except report visualization)
     if (isAscendLikeOperator(operatorType)) {
       vscode.window.showWarningMessage(t('folderContext.angleOpsNotSupported'));
+
       return;
     }
 
@@ -1070,10 +1220,13 @@ export class FolderContextMenuService {
 
     // Check if sanitizer/tuning supported (standard custom: build.sh must contain --bisheng_flags)
     const rootPath = findStandardCustomRoot(folderPath);
+
     if (rootPath) {
       const supportsSanitizerAndTuning = checkSupportsSanitizerAndTuning(rootPath);
+
       if (!supportsSanitizerAndTuning) {
         vscode.window.showWarningMessage(t('folderContext.needBishengFlags'));
+
         return;
       }
     }
@@ -1081,6 +1234,7 @@ export class FolderContextMenuService {
     await this.switchToProject(uri, async () => {
       // Open sanitizer config, same as dashboard logic
       const sanitizerCommand = 'huawei-op-devtools.sanitizerOptions';
+
       await vscode.commands.executeCommand(sanitizerCommand);
     });
   }
@@ -1092,26 +1246,32 @@ export class FolderContextMenuService {
     const folderPath = uri.fsPath;
 
     const operatorType = await getOperatorProjectTypeByPath(folderPath);
+
     // <<<>>> type: context menu not supported (except report visualization)
     if (isAscendLikeOperator(operatorType)) {
       vscode.window.showWarningMessage(t('folderContext.angleOpsNotSupported'));
+
       return;
     }
+
     // Standard custom: performance tuning not supported
     if (operatorType === OperatorProjectType.STANDARD_CUSTOM) {
       vscode.window.showWarningMessage(t('folderContext.standardOpsNoTuning'));
+
       return;
     }
 
     const project = getProjectByPath(folderPath);
 
-
     // Check sanitizer/tuning support (standard custom: build.sh must have --bisheng_flags)
     const rootPath = findStandardCustomRoot(folderPath);
+
     if (rootPath) {
       const supportsSanitizerAndTuning = checkSupportsSanitizerAndTuning(rootPath);
+
       if (!supportsSanitizerAndTuning) {
         vscode.window.showWarningMessage(t('folderContext.needBishengFlags'));
+
         return;
       }
     }
@@ -1119,6 +1279,7 @@ export class FolderContextMenuService {
     await this.switchToProject(uri, async () => {
       // Open on-board analysis config, same as dashboard logic
       const onBoardCommand = 'huawei-op-devtools.onBoardOptions';
+
       await vscode.commands.executeCommand(onBoardCommand);
     });
   }
@@ -1130,14 +1291,18 @@ export class FolderContextMenuService {
     const folderPath = uri.fsPath;
 
     const operatorType = await getOperatorProjectTypeByPath(folderPath);
+
     // <<<>>> type: context menu not supported (except report visualization)
     if (isAscendLikeOperator(operatorType)) {
       vscode.window.showWarningMessage(t('folderContext.angleOpsNotSupported'));
+
       return;
     }
+
     // Standard custom: performance tuning not supported
     if (operatorType === OperatorProjectType.STANDARD_CUSTOM) {
       vscode.window.showWarningMessage(t('folderContext.standardOpsNoTuning'));
+
       return;
     }
 
@@ -1145,10 +1310,13 @@ export class FolderContextMenuService {
 
     // Check sanitizer/tuning support (standard custom: build.sh must have --bisheng_flags)
     const rootPath = findStandardCustomRoot(folderPath);
+
     if (rootPath) {
       const supportsSanitizerAndTuning = checkSupportsSanitizerAndTuning(rootPath);
+
       if (!supportsSanitizerAndTuning) {
         vscode.window.showWarningMessage(t('folderContext.needBishengFlags'));
+
         return;
       }
     }
@@ -1156,6 +1324,7 @@ export class FolderContextMenuService {
     await this.switchToProject(uri, async () => {
       // Open the simulation analysis configuration and keep it consistent with the Kanban logic
       const simulationCommand = 'huawei-op-devtools.simulatorOptions';
+
       await vscode.commands.executeCommand(simulationCommand);
     });
   }
@@ -1165,29 +1334,30 @@ export class FolderContextMenuService {
    */
   private static async switchToProject(
     uri: vscode.Uri,
-    action: () => Promise<void>,
+    action: ()=> Promise<void>,
   ): Promise<void> {
     const folderPath = uri.fsPath;
     const project = getProjectByPath(folderPath);
 
     if (!project) {
       vscode.window.showErrorMessage(t('folderContext.folderNotOperatorProject'));
+
       return;
     }
 
     try {
       // Set project information for ProjectManager
       const pm = ProjectManager.getInstance();
+
       pm['_projectId'] = String(project.id);
       pm['_projectName'] = project.project_name;
       pm['_projectPath'] = project.project_path;
 
       // perform operations
       await action();
-    } catch (error) {
-      vscode.window.showErrorMessage(
-        t('folderContext.actionFailed', { error: error instanceof Error ? error.message : String(error) }),
-      );
+    }
+    catch (error) {
+      vscode.window.showErrorMessage(t('folderContext.actionFailed', { error: error instanceof Error ? error.message : String(error) }));
     }
   }
 
@@ -1256,7 +1426,7 @@ export class FolderContextMenuService {
           // pyasc operator project, using pyasc_temple template
           templateName = 'pyasc_temple';
           opType = 'pyasc';
-          console.log(`[FolderContextMenuService] PYASC type, using pyasc_temple template`);
+          console.log('[FolderContextMenuService] PYASC type, using pyasc_temple template');
           break;
         case OperatorProjectType.STANDARD_CUSTOM:
           opType = 'cann';
@@ -1269,6 +1439,7 @@ export class FolderContextMenuService {
       // Call generateStructure to initialize the configuration
       // For standard custom operators, if there is no template, template decompression is skipped and only the configuration is created.
       const isSkipUnZip = detection.projectType === OperatorProjectType.STANDARD_CUSTOM && !templateName;
+
       await generateStructure(
         {
           project_id: projectId,
@@ -1286,7 +1457,8 @@ export class FolderContextMenuService {
       // Verify that the configuration is created successfully
       const ops = getOpsByProjectId(projectId);
       const buildOpConfigs = getConfig(projectId, 'build_op');
-    } catch (error) {
+    }
+    catch (error) {
       // Initialization failures should not prevent marking operations, only log errors
     }
   }
@@ -1297,9 +1469,15 @@ export class FolderContextMenuService {
   private static normalizePathForCompare(p: string): string {
     try {
       const resolved = path.resolve(p);
-      return path.normalize(resolved).replace(/[/\\]+$/, '').toLowerCase();
-    } catch {
-      return path.normalize(p).replace(/[/\\]+$/, '').toLowerCase();
+
+      return path.normalize(resolved)
+        .replace(/[/\\]+$/, '')
+        .toLowerCase();
+    }
+    catch {
+      return path.normalize(p)
+        .replace(/[/\\]+$/, '')
+        .toLowerCase();
     }
   }
 
@@ -1318,52 +1496,64 @@ export class FolderContextMenuService {
       // Anomaly detection only supports files
       if (configType === 'sanitizer' && !isFile) {
         vscode.window.showErrorMessage(t('folderContext.sanitizerSelectFile'));
+
         return;
       }
 
       // On-board analysis and simulation analysis support folders
       if ((configType === 'on_board' || configType === 'simulate') && !isDirectory && !isFile) {
         vscode.window.showErrorMessage(t('folderContext.selectFileOrFolder'));
+
         return;
       }
 
-      await ProjectManager.getInstance().initProject();
+      await ProjectManager.getInstance()
+        .initProject();
       const projectId = ProjectManager.getInstance().projectId;
+
       if (!projectId) {
         vscode.window.showErrorMessage(t('folderContext.noProjectId'));
+
         return;
       }
 
       // Get configuration
       const configs = getConfig(Number(projectId), configType);
+
       if (configs.length === 0) {
-        vscode.window.showErrorMessage(t('folderContext.noConfigFound', {
-        type: configType === 'sanitizer' ? t('folderContext.configTypeSanitizer') : configType === 'on_board' ? t('folderContext.configTypeOnBoard') : t('folderContext.configTypeSimulation'),
-      }));
+        vscode.window.showErrorMessage(t('folderContext.noConfigFound', { type: configType === 'sanitizer' ? t('folderContext.configTypeSanitizer') : configType === 'on_board' ? t('folderContext.configTypeOnBoard') : t('folderContext.configTypeSimulation') }));
+
         return;
       }
 
       // Use the first configuration
       const config = configs[0];
       const userOptions = (config.user_options as Record<string, unknown>) || {};
-      let fileMapList = (userOptions.fileMapList as Array<{ filePath: string; reportTime: number }>) || [];
+      let fileMapList = (userOptions.fileMapList as Array<{ filePath: string;
+        reportTime: number }>) || [];
 
       // Path deduplication: Compare according to standardized paths (unify separators, capitalization, etc.) to avoid repeated additions
       const normalizedNewPath = this.normalizePathForCompare(filePath);
-      const exists = fileMapList.some(
-        item => this.normalizePathForCompare(item.filePath) === normalizedNewPath,
-      );
+      const exists = fileMapList.some((item) => this.normalizePathForCompare(item.filePath) === normalizedNewPath);
+
       if (exists) {
         vscode.window.showInformationMessage(t('folderContext.alreadyInConfig'));
+
         return;
       }
 
       // Add new items after removing duplicate paths in existing list
       const seen = new Set<string>();
-      fileMapList = fileMapList.filter(item => {
+
+      fileMapList = fileMapList.filter((item) => {
         const norm = this.normalizePathForCompare(item.filePath);
-        if (seen.has(norm)) return false;
+
+        if (seen.has(norm)) {
+          return false;
+        }
+
         seen.add(norm);
+
         return true;
       });
 
@@ -1372,6 +1562,7 @@ export class FolderContextMenuService {
         filePath,
         reportTime: Date.now(),
       };
+
       fileMapList.push(newFileMap);
 
       // Update configuration
@@ -1380,11 +1571,13 @@ export class FolderContextMenuService {
         fileMapList,
       };
 
-      await postConfig(configType, [{
-        config_id: config.config_id,
-        project_id: config.project_id,
-        user_options: updatedUserOptions,
-      }]);
+      await postConfig(configType, [
+        {
+          config_id: config.config_id,
+          project_id: config.project_id,
+          user_options: updatedUserOptions,
+        },
+      ]);
 
       vscode.window.showInformationMessage(t('folderContext.addedToReportList'));
 
@@ -1406,6 +1599,7 @@ export class FolderContextMenuService {
     }
     catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
+
       vscode.window.showErrorMessage(t('folderContext.addFailed', { error: errorMessage }));
       console.error('addReportToFileMapList error:', error);
     }

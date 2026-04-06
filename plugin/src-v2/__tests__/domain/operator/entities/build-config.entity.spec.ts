@@ -15,14 +15,18 @@ describe('BuildConfigEntity', () => {
         configId,
         configName,
         configType,
-        userOptions
+        userOptions,
       );
 
       // Assert
-      expect(entity.configId).toBe(configId);
-      expect(entity.configName).toBe(configName);
-      expect(entity.configType).toBe(configType);
-      expect(entity.userOptions).toEqual(userOptions);
+      expect(entity.configId)
+        .toBe(configId);
+      expect(entity.configName)
+        .toBe(configName);
+      expect(entity.configType)
+        .toBe(configType);
+      expect(entity.userOptions)
+        .toEqual(userOptions);
     });
 
     it('should create entity with optional userOptions as undefined', () => {
@@ -35,14 +39,18 @@ describe('BuildConfigEntity', () => {
       const entity = new BuildConfigEntity(
         configId,
         configName,
-        configType
+        configType,
       );
 
       // Assert
-      expect(entity.configId).toBe(configId);
-      expect(entity.configName).toBe(configName);
-      expect(entity.configType).toBe(configType);
-      expect(entity.userOptions).toBeUndefined();
+      expect(entity.configId)
+        .toBe(configId);
+      expect(entity.configName)
+        .toBe(configName);
+      expect(entity.configType)
+        .toBe(configType);
+      expect(entity.userOptions)
+        .toBeUndefined();
     });
   });
 
@@ -60,11 +68,16 @@ describe('BuildConfigEntity', () => {
       const entity = BuildConfigEntity.fromRaw(rawData);
 
       // Assert
-      expect(entity).toBeDefined();
-      expect(entity!.configId).toBe(1);
-      expect(entity!.configName).toBe('Test Config');
-      expect(entity!.configType.equals(ConfigType.BUILD_OP)).toBeTruthy();
-      expect(entity!.userOptions).toEqual({ option1: 'value1' });
+      expect(entity)
+        .toBeDefined();
+      expect(entity!.configId)
+        .toBe(1);
+      expect(entity!.configName)
+        .toBe('Test Config');
+      expect(entity!.configType.equals(ConfigType.BUILD_OP))
+        .toBeTruthy();
+      expect(entity!.userOptions)
+        .toEqual({ option1: 'value1' });
     });
 
     it('should return undefined for invalid config type', () => {
@@ -80,7 +93,8 @@ describe('BuildConfigEntity', () => {
       const entity = BuildConfigEntity.fromRaw(rawData);
 
       // Assert
-      expect(entity).toBeUndefined();
+      expect(entity)
+        .toBeUndefined();
     });
 
     it('should handle missing user_options', () => {
@@ -95,11 +109,16 @@ describe('BuildConfigEntity', () => {
       const entity = BuildConfigEntity.fromRaw(rawData);
 
       // Assert
-      expect(entity).toBeDefined();
-      expect(entity!.configId).toBe(1);
-      expect(entity!.configName).toBe('Test Config');
-      expect(entity!.configType.equals(ConfigType.BUILD_OP)).toBeTruthy();
-      expect(entity!.userOptions).toBeUndefined();
+      expect(entity)
+        .toBeDefined();
+      expect(entity!.configId)
+        .toBe(1);
+      expect(entity!.configName)
+        .toBe('Test Config');
+      expect(entity!.configType.equals(ConfigType.BUILD_OP))
+        .toBeTruthy();
+      expect(entity!.userOptions)
+        .toBeUndefined();
     });
   });
 
@@ -110,19 +129,20 @@ describe('BuildConfigEntity', () => {
         1,
         'Test Config',
         ConfigType.BUILD_OP,
-        { option1: 'value1' }
+        { option1: 'value1' },
       );
 
       // Act
       const rawData = entity.toRaw();
 
       // Assert
-      expect(rawData).toEqual({
-        config_id: 1,
-        config_name: 'Test Config',
-        config_type: 'build_op',
-        user_options: { option1: 'value1' },
-      });
+      expect(rawData)
+        .toEqual({
+          config_id: 1,
+          config_name: 'Test Config',
+          config_type: 'build_op',
+          user_options: { option1: 'value1' },
+        });
     });
 
     it('should handle undefined userOptions', () => {
@@ -130,19 +150,20 @@ describe('BuildConfigEntity', () => {
       const entity = new BuildConfigEntity(
         1,
         'Test Config',
-        ConfigType.BUILD_OP
+        ConfigType.BUILD_OP,
       );
 
       // Act
       const rawData = entity.toRaw();
 
       // Assert
-      expect(rawData).toEqual({
-        config_id: 1,
-        config_name: 'Test Config',
-        config_type: 'build_op',
-        user_options: undefined,
-      });
+      expect(rawData)
+        .toEqual({
+          config_id: 1,
+          config_name: 'Test Config',
+          config_type: 'build_op',
+          user_options: undefined,
+        });
     });
   });
 
@@ -153,19 +174,26 @@ describe('BuildConfigEntity', () => {
         1,
         'Test Config',
         ConfigType.BUILD_OP,
-        { option1: 'old_value' }
+        { option1: 'old_value' },
       );
-      const newOptions = { option1: 'new_value', option2: 'added_value' };
+      const newOptions = {
+        option1: 'new_value',
+        option2: 'added_value',
+      };
 
       // Act
       const updatedEntity = originalEntity.updateUserOptions(newOptions);
 
       // Assert
       expect(updatedEntity).not.toBe(originalEntity); // New instance
-      expect(updatedEntity.configId).toBe(originalEntity.configId);
-      expect(updatedEntity.configName).toBe(originalEntity.configName);
-      expect(updatedEntity.configType.equals(originalEntity.configType)).toBeTruthy();
-      expect(updatedEntity.userOptions).toEqual(newOptions);
+      expect(updatedEntity.configId)
+        .toBe(originalEntity.configId);
+      expect(updatedEntity.configName)
+        .toBe(originalEntity.configName);
+      expect(updatedEntity.configType.equals(originalEntity.configType))
+        .toBeTruthy();
+      expect(updatedEntity.userOptions)
+        .toEqual(newOptions);
     });
 
     it('should preserve other properties when updating user options', () => {
@@ -174,7 +202,7 @@ describe('BuildConfigEntity', () => {
         1,
         'Test Config',
         ConfigType.BUILD_EXAMPLE,
-        { option1: 'old_value' }
+        { option1: 'old_value' },
       );
       const newOptions = { option2: 'new_value' };
 
@@ -182,10 +210,14 @@ describe('BuildConfigEntity', () => {
       const updatedEntity = originalEntity.updateUserOptions(newOptions);
 
       // Assert
-      expect(updatedEntity.configId).toBe(1);
-      expect(updatedEntity.configName).toBe('Test Config');
-      expect(updatedEntity.configType.equals(ConfigType.BUILD_EXAMPLE)).toBeTruthy();
-      expect(updatedEntity.userOptions).toEqual(newOptions);
+      expect(updatedEntity.configId)
+        .toBe(1);
+      expect(updatedEntity.configName)
+        .toBe('Test Config');
+      expect(updatedEntity.configType.equals(ConfigType.BUILD_EXAMPLE))
+        .toBeTruthy();
+      expect(updatedEntity.userOptions)
+        .toEqual(newOptions);
     });
   });
 });

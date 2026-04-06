@@ -223,7 +223,10 @@ export async function handleOperatorProjectDirectoryFile(
 
         if (opsPrototypeFilePath) {
           console.log('Start creating operator project from prototype...');
-          await welcomeMethods.createOpsByPrototype({ opsPrototypeFile: opsPrototypeFilePath, opType: 'ascend' });
+          await welcomeMethods.createOpsByPrototype({
+            opsPrototypeFile: opsPrototypeFilePath,
+            opType: 'ascend',
+          });
           console.log('Operator project created from prototype');
         }
         else {

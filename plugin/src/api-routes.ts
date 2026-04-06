@@ -40,7 +40,16 @@ const opsMethods = {
   startOnBoard: dispatchOnBoard,
 
   // StopTask - If any V2 features are enabled, use the V2 version of stopTask
-  stopTask: dispatchStopTask,
+  stopTask: (
+    getFeatureFlag('USE_V2_BUILD')
+    || getFeatureFlag('USE_V2_RUN')
+    || getFeatureFlag('USE_V2_BUILD_EXAMPLE')
+    || getFeatureFlag('USE_V2_SIMULATE')
+    || getFeatureFlag('USE_V2_ON_BOARD')
+    || getFeatureFlag('USE_V2_SANITIZER')
+  )
+    ? taskMethodsV2.stopTask
+    : taskMethods.stopTask,
 
   // Other methods continue to use v1
   buildOp: taskMethods.buildOp,

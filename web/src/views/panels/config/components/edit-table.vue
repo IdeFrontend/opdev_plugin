@@ -20,9 +20,21 @@ const emit = defineEmits([
 ]);
 
 const columns = computed(() => [
-  { title: t('web.config.editTable.paramName'), dataIndex: 'name', width: '40%' },
-  { title: t('web.config.editTable.paramValue'), dataIndex: 'value', width: '50%' },
-  { title: t('web.config.editTable.action'), dataIndex: 'operation', width: '10%' },
+  {
+    title: t('web.config.editTable.paramName'),
+    dataIndex: 'name',
+    width: '40%',
+  },
+  {
+    title: t('web.config.editTable.paramValue'),
+    dataIndex: 'value',
+    width: '50%',
+  },
+  {
+    title: t('web.config.editTable.action'),
+    dataIndex: 'operation',
+    width: '10%',
+  },
 ]);
 const props = defineProps({
   dataSource: {

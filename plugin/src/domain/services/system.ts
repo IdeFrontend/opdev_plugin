@@ -31,6 +31,7 @@ export function getFiles(dirPath: string): FileItem[] {
 
     // Check if the path is a directory, if not return an empty array
     const stats = fs.statSync(basePath);
+
     if (!stats.isDirectory()) {
       return [];
     }

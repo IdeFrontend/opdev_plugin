@@ -27,14 +27,17 @@ export const navigationController = {
    */
   async navigateToTab(params: { tab: string }) {
     // Send navigation messages to all registered configuration pages
-    for (const [pageType, webview] of openedConfigPages.entries()) {
+    for (const [
+      pageType,
+      webview,
+    ] of openedConfigPages.entries()) {
       // Only send messages to the configuration page
       if (pageType === 'config') {
         webview.postMessage({
           command: 'navigateToTab',
-          tab: params.tab
+          tab: params.tab,
         });
       }
     }
-  }
+  },
 };

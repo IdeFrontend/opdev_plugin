@@ -64,6 +64,7 @@ export async function ensureLaunchJsonExists(
   if (!fs.existsSync(launchJsonPath)) {
     console.log('ensureLaunchJsonExists: creating launch.json file...');
     const launchJsonContent = JSON.stringify(debugLaunch, null, 2);
+
     await fs.writeFile(
       launchJsonPath,
       launchJsonContent,
@@ -74,6 +75,7 @@ export async function ensureLaunchJsonExists(
     // At the same time, create a copy of launch.json in the .arts directory
     const artsDir = path.join(projectDir, '.arts');
     const artsLaunchJsonPath = path.join(artsDir, 'launch.json');
+
     try {
       await fs.ensureDir(artsDir);
       await fs.writeFile(
@@ -161,10 +163,12 @@ const map = {
   'ascend-c': 'cann',
   'torch-library': 'cann',
   'pyasc': 'pyasc',
-}
+};
+
 export function viewIdToProjectType(id: string | number | undefined) {
   if (!id) {
-    return 'cann'
+    return 'cann';
   }
-  return map[id] || 'cann'
+
+  return map[id] || 'cann';
 }

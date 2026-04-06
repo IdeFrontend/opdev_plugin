@@ -14,7 +14,9 @@ import {
   CommandBuildParams,
   ProfilerCommandParams,
 } from './types';
-import { getConfig, getConfigById } from '../../services/configuration';
+import {
+  getConfig, getConfigById,
+} from '../../services/configuration';
 
 /**
  * PyAsc type command strategy
@@ -22,7 +24,9 @@ import { getConfig, getConfigById } from '../../services/configuration';
  */
 export class PyAscCommandStrategy implements CommandStrategy {
   buildCommandContext(baseContext: BaseContext): CommandContext {
-    const { config, project, operator } = baseContext;
+    const {
+      config, project, operator,
+    } = baseContext;
 
     // PyAsc types use ascend_env_script as environment script (same as CANN)
     const sourceCannCmd =
@@ -59,7 +63,9 @@ export class PyAscCommandStrategy implements CommandStrategy {
   }
 
   buildRunCommand(context: CommandContext): string {
-    const { config, sourceCannCmd, cdCmd } = context;
+    const {
+      config, sourceCannCmd, cdCmd,
+    } = context;
 
     return joinCommands(sourceCannCmd, cdCmd, config.target_file);
   }
@@ -79,14 +85,16 @@ export class PyAscCommandStrategy implements CommandStrategy {
     operator: OpRecord | null,
     sourceCannCmd: string,
     cdCmd: string,
-    exampleTargetFile?: string
+    exampleTargetFile?: string,
   ): string {
     // PyAsc type does not support buildSanitizerCommand
     throw new Error(t('pyasc.buildSanitizerNotSupported'));
   }
 
   buildSimulateCommand(params: ProfilerCommandParams): string {
-    const { config, project, operator, sourceCannCmd, cdCmd, exampleTargetFile } = params;
+    const {
+      config, project, operator, sourceCannCmd, cdCmd, exampleTargetFile,
+    } = params;
 
     // If the operator record is not found but the project path is available, create a temporary operator object
     let effectiveOperator = operator;
@@ -117,7 +125,9 @@ export class PyAscCommandStrategy implements CommandStrategy {
   }
 
   buildOnBoardCommand(params: ProfilerCommandParams): string {
-    const { config, project, operator, sourceCannCmd, cdCmd, exampleTargetFile } = params;
+    const {
+      config, project, operator, sourceCannCmd, cdCmd, exampleTargetFile,
+    } = params;
 
     // If the operator record is not found but the project path is available, create a temporary operator object
     let effectiveOperator = operator;
@@ -155,6 +165,7 @@ export class PyAscCommandStrategy implements CommandStrategy {
   getProfilerTargetFile(config: ConfigRecord, operator: OpRecord | null, exampleConfigId: number): string {
     const buildOpConfigs = getConfig(config.project_id, 'build_op', config.op);
     const buildOpConfig = buildOpConfigs.length > 0 ? buildOpConfigs[0] : null;
+
     return buildOpConfig?.target_file || '';
   }
 

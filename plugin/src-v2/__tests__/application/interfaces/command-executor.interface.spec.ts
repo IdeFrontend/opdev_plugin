@@ -1,6 +1,6 @@
-import { 
-  ICommandExecutor, 
-  CommandExecutionResult 
+import {
+  ICommandExecutor,
+  CommandExecutionResult,
 } from '../../application/interfaces/command-executor.interface';
 
 // Ensures interface is well-defined and implementable
@@ -12,11 +12,13 @@ describe('Command Executor Interface', () => {
   };
 
   it('should have execute method with correct signature', () => {
-    expect(typeof mockCommandExecutor.execute).toBe('function');
+    expect(typeof mockCommandExecutor.execute)
+      .toBe('function');
   });
 
   it('should have kill method with correct signature', () => {
-    expect(typeof mockCommandExecutor.kill).toBe('function');
+    expect(typeof mockCommandExecutor.kill)
+      .toBe('function');
   });
 
   it('should define CommandExecutionResult interface correctly', () => {
@@ -25,9 +27,13 @@ describe('Command Executor Interface', () => {
       output: 'test output',
     };
 
-    expect(result).toHaveProperty('code');
-    expect(result).toHaveProperty('output');
-    expect(typeof result.code).toBe('number');
-    expect(typeof result.output).toBe('string');
+    expect(result)
+      .toHaveProperty('code');
+    expect(result)
+      .toHaveProperty('output');
+    expect(typeof result.code)
+      .toBe('number');
+    expect(typeof result.output)
+      .toBe('string');
   });
 });

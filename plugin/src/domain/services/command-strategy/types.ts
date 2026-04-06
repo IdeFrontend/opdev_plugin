@@ -1,6 +1,6 @@
-import { ConfigRecord } from "@plugin/domain/models/config-model";
-import { ProjectRecord } from "@plugin/domain/models/project-model";
-import { OpRecord } from "@plugin/domain/models/model";
+import { ConfigRecord } from '@plugin/domain/models/config-model';
+import { ProjectRecord } from '@plugin/domain/models/project-model';
+import { OpRecord } from '@plugin/domain/models/model';
 
 /**
  * Context interface, containing basic information required to generate commands

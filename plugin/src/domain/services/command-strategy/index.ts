@@ -38,7 +38,9 @@ export type {
 
 // Export strategy implementation
 export { AscendCommandStrategy } from './ascend-strategy';
+
 export { CannCommandStrategy } from './cann-strategy';
+
 export { PyAscCommandStrategy } from './pyasc-strategy';
 
 // Export factory class

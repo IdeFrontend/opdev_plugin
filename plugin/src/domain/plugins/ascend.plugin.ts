@@ -1,16 +1,24 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { AscendCommandStrategy } from '@plugin/domain/services/command-strategy/ascend-strategy';
-import { AscendOpGenerator, OpGenParams, OpGenProject } from '@plugin/domain/services/op-generator-factory';
+import {
+  AscendOpGenerator, OpGenParams, OpGenProject,
+} from '@plugin/domain/services/op-generator-factory';
 import { OpRecord } from '@plugin/domain/models/model';
 import { OperatorProjectType } from '@plugin/domain/models/operator-project-type';
 import { soc_version } from '@plugin/domain/utils/ascend-util';
 import { getDetailedSystemInfo } from '@plugin/domain/utils/op-util';
 import { checkBuildShHasBishengConfig } from '@plugin/domain/utils/build-utils';
 import { AbstractOperatorPlugin } from './abstract-operator-plugin';
-import { IProjectDetector, ProjectDetectionResult } from './project-detector.interface';
-import { OperatorConfigScripts, OperatorDefaultPaths } from './operator-plugin.interface';
-import { hasAscFiles, hasPyFilesInRoot } from './detection-utils';
+import {
+  IProjectDetector, ProjectDetectionResult,
+} from './project-detector.interface';
+import {
+  OperatorConfigScripts, OperatorDefaultPaths,
+} from './operator-plugin.interface';
+import {
+  hasAscFiles, hasPyFilesInRoot,
+} from './detection-utils';
 
 /**
  * Plugin for op_type='ascend' (Ascend C operators).
@@ -26,6 +34,7 @@ export class AscendPlugin extends AbstractOperatorPlugin implements IProjectDete
     const hasCmake = fs.existsSync(path.join(dirPath, 'CMakeLists.txt'));
     const hasAsc = hasAscFiles(dirPath);
     const hasPy = hasPyFilesInRoot(dirPath);
+
     return {
       isMatch: hasCmake && hasAsc && !hasPy,
       confidence: 'heuristic',
@@ -57,6 +66,7 @@ export class AscendPlugin extends AbstractOperatorPlugin implements IProjectDete
     const script = path.join(op.op_path, 'build.sh');
     const h = checkBuildShHasBishengConfig(workspaceRoot);
     const base = `bash ${script} --pkg --soc=${soc_version} --vendor_name=custom`;
+
     return {
       // V1 inline ternary for build_op.script had NO bisheng variant — always the plain base.
       buildScript:     base,

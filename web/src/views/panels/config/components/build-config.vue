@@ -8,7 +8,7 @@ import {
   ref,
   watch,
   onBeforeMount,
-  computed
+  computed,
 } from 'vue';
 import { t } from 'i18next';
 import {
@@ -19,7 +19,7 @@ import {
   getConfigData,
   getProjectType,
   getDebugMode,
-  checkMultipleOperators
+  checkMultipleOperators,
 } from '@web/apis';
 
 const props = defineProps({
@@ -84,6 +84,7 @@ watch(
   () => props.exampleConfigForme,
   (val) => {
     localExampleConfigForme.value = { ...val };
+
     // 如果是标准自定义算子且没有执行模式，初始化为 eager
     if (props.isStandardCustom && !localExampleConfigForme.value.execution_mode) {
       localExampleConfigForme.value.execution_mode = 'eager';
@@ -129,28 +130,7 @@ const getSaveData = () => {
   return JSON.parse(JSON.stringify(data));
 };
 
-const fetchUtTestConfig = async () => {
-  try {
-    const configObj = await getConfigData();
-    const keys = Object.keys(configObj || {})
-    const configData = configObj[keys[0]] || []
-    const utTestConfig = configData.find(v => v.config_type === 'ut_test')
-    if (utTestConfig) {
-      utTestOptions.value = JSON.parse(JSON.stringify(utTestConfig));
-    }
-  }
-  catch (error) {
-    console.error('[fetchUtTestConfig]获取UT测试配置失败: ', error);
-  }
-};
-const handleUtTestScriptChange = async () => {
-  await saveConfig({
-    type: 'ut_test',
-    data: [utTestOptions.value],
-  });
-};
-
-const sanitizerScript = ref('')
+const sanitizerScript = ref('');
 
 const handSanitizerConfigChange = () => {
   saveSanitizerForm({ data: { script: sanitizerScript.value } });
@@ -159,17 +139,19 @@ const handSanitizerConfigChange = () => {
 onBeforeMount(async () => {
   // 查询各个编译脚本配置
   const configs = await getSanitizerConfigs();
-  console.log('[build-config] 查询异常检测配置', configs)
+
+  console.log('[build-config] 查询异常检测配置', configs);
   const obj = (configs[0] || {})?.user_options || {};
+
   sanitizerScript.value = obj.script || '';
 
-  fetchOnBoardConfig()
-  fetchSimulateConfig()
-  fetchUtTestConfig()
+  fetchOnBoardConfig();
+  fetchSimulateConfig();
 
   // 获取当前项目类型
   try {
     const result = await getProjectType();
+
     projectType.value = result.projectType || '';
     projectTemplateName.value = result.projectTemplateName || '';
     console.log('[build-config] 当前项目类型:', JSON.stringify(result));
@@ -191,6 +173,7 @@ onBeforeMount(async () => {
   // 检查标准自定义算子是否支持性能调优
   try {
     const result = await checkMultipleOperators();
+
     supportsSanitizerAndTuning.value = result.supportsSanitizerAndTuning ?? true;
     console.log('[build-config] 是否支持异常检测与调优:', supportsSanitizerAndTuning.value);
   }
@@ -203,9 +186,10 @@ const simulateOptions = ref({ user_options: { script: true } });
 const fetchSimulateConfig = async () => {
   try {
     const configObj = await getConfigData();
-    const keys = Object.keys(configObj || {})
-    const configData = configObj[keys[0]] || []
-    const simulateConfig = configData.find(v => v.config_type === 'simulate')
+    const keys = Object.keys(configObj || {});
+    const configData = configObj[keys[0]] || [];
+    const simulateConfig = configData.find((v) => v.config_type === 'simulate');
+
     if (simulateConfig) {
       simulateOptions.value = JSON.parse(JSON.stringify(simulateConfig));
     }
@@ -225,9 +209,10 @@ const onboardData = ref({ user_options: { script: true } });
 const fetchOnBoardConfig = async () => {
   try {
     const configObj = await getConfigData();
-    const keys = Object.keys(configObj || {})
-    const configData = configObj[keys[0]] || []
-    const onBoardConfig = configData.find(v => v.config_type === 'on_board')
+    const keys = Object.keys(configObj || {});
+    const configData = configObj[keys[0]] || [];
+    const onBoardConfig = configData.find((v) => v.config_type === 'on_board');
+
     if (onBoardConfig) {
       onboardData.value = JSON.parse(JSON.stringify(onBoardConfig));
     }
@@ -243,38 +228,45 @@ const handleOnBoardScriptChange = async () => {
   });
 };
 
-const supportsSanitizerAndTuning = ref(true)
-const debugModeEnabled = ref(false)
+const supportsSanitizerAndTuning = ref(true);
+const debugModeEnabled = ref(false);
 const projectType = ref('');  // 项目类型  'cann' | 'ascend' | 'pyasc'
 const projectTemplateName = ref(''); // 项目子类型  'hello_world' | 'addn_custom' | 'torch_library_template'
 const showCpuDebugScript = computed(() => {
   if (projectType.value === 'pyasc') {
-    return false
+    return false;
   }
+
   const isCannTorchLibrary = projectType.value === 'cann' && projectTemplateName.value === 'torch_library_template';
+
   if (projectType.value !== 'ascend' && !isCannTorchLibrary) {
-    return true
+    return true;
   }
-  return false
-})
+
+  return false;
+});
 const showNpuDebugScript = computed(() => {
   if (projectType.value === 'pyasc') {
-    return false
+    return false;
   }
+
   if (projectType.value === 'ascend') {
-    return debugModeEnabled.value && supportsSanitizerAndTuning.value
+    return debugModeEnabled.value && supportsSanitizerAndTuning.value;
   }
-  return debugModeEnabled.value
-})
+
+  return debugModeEnabled.value;
+});
 const showPowerScript = computed(() => {
   if (projectType.value === 'pyasc') {
-    return false
+    return false;
   }
+
   if (projectType.value === 'cann') {
-    return true
+    return true;
   }
-  return projectType.value === 'ascend' && supportsSanitizerAndTuning.value
-})
+
+  return projectType.value === 'ascend' && supportsSanitizerAndTuning.value;
+});
 </script>
 
 <template>
@@ -367,7 +359,7 @@ const showPowerScript = computed(() => {
         />
       </a-form-item>
       <a-form-item
-        v-if="projectType !== 'pyasc'"      
+        v-if="projectType !== 'pyasc'"
         :label="t('web.config.sanitizerScriptLabel')"
         name="sanitizerScript"
       >

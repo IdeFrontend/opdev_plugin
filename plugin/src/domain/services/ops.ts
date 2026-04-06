@@ -23,7 +23,7 @@ export async function generateStructure(
   data: GenerateStructureParams,
   extensionPath: string,
   isSkipUnZip: boolean = false,
-  skipVscodeFiles: boolean = false
+  skipVscodeFiles: boolean = false,
 ): Promise<number> {
   return await model.generateStructure(data, extensionPath, isSkipUnZip, skipVscodeFiles);
 }

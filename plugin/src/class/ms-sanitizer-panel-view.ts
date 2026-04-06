@@ -81,15 +81,19 @@ implements vscode.WebviewViewProvider {
         else if (message.command === 'vscodeLoadMsSanitizerReport') {
           // When you click the report list item on the left, the report is loaded and the detection results are displayed on the right (supports direct postMessage or format forwarded via main)
           const params = message.message?.data ?? message.data ?? message.message;
+
           if (!params?.path) {
             webviewView.webview.postMessage({
               command: 'iframeRemoteMsSanitizerPanelViewSetRenderList',
               data: {},
             });
+
             return;
           }
+
           try {
             const panelData = await getPanelData(params);
+
             webviewView.webview.postMessage({
               command: 'iframeRemoteMsSanitizerPanelViewSetRenderList',
               data: panelData,
@@ -136,14 +140,14 @@ implements vscode.WebviewViewProvider {
     this._themeChangeDisposable = vscode.window.onDidChangeActiveColorTheme((theme) => {
       webviewView.webview.postMessage({
         command: 'updateTheme',
-        themeName: theme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
+        themeName: theme.kind === vscode.ColorThemeKind.Dark || theme.kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light',
       });
     });
 
     // Send the current topic on initialization
     webviewView.webview.postMessage({
       command: 'updateTheme',
-      themeName: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
+      themeName: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark || vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light',
     });
   }
 
@@ -153,11 +157,13 @@ implements vscode.WebviewViewProvider {
   private handleWebviewMessage(message: any): void {
     // Handle gettopic command
     if (message.command === 'getTheme') {
-      const currentTheme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
+      const currentTheme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark || vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light';
+
       this._view?.webview.postMessage({
         command: 'updateTheme',
         themeName: currentTheme,
       });
+
       return;
     }
 

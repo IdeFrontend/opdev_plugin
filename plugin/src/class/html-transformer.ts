@@ -23,6 +23,7 @@ export class HtmlTransformer {
       try {
         const url = `${devServerUrl}/src/views/${router}/${viewName}.html`;
         let htmlContent = await this.fetchHtml(url);
+
         htmlContent = this.applyTemplateValues(htmlContent, templateValues);
 
         return this.processDevResourcePaths(htmlContent, devServerUrl, url);
@@ -43,6 +44,7 @@ export class HtmlTransformer {
       }
 
       let htmlContent = fs.readFileSync(indexPath, 'utf8');
+
       htmlContent = this.applyTemplateValues(htmlContent, templateValues);
 
       const htmlFileDir = path.dirname(indexPath);
@@ -66,10 +68,14 @@ export class HtmlTransformer {
     content: string,
     templateValues: Record<string, string>,
   ): string {
-    return Object.entries(templateValues).reduce(
-      (acc, [key, value]) => acc.replace(`{{${key}}}`, value),
-      content,
-    );
+    return Object.entries(templateValues)
+      .reduce(
+        (acc, [
+          key,
+          value,
+        ]) => acc.replace(`{{${key}}}`, value),
+        content,
+      );
   }
 
   public static fetchHtml(url: string): Promise<string> {

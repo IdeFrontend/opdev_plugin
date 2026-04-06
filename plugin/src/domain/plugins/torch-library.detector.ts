@@ -1,7 +1,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { OperatorProjectType } from '@plugin/domain/models/operator-project-type';
-import { IProjectDetector, ProjectDetectionResult } from './project-detector.interface';
+import {
+  IProjectDetector, ProjectDetectionResult,
+} from './project-detector.interface';
 import { hasPyFilesInRoot } from './detection-utils';
 
 /**
@@ -18,6 +20,7 @@ export class TorchLibraryDetector implements IProjectDetector {
   async detectProject(dirPath: string): Promise<ProjectDetectionResult> {
     const hasCmake = fs.existsSync(path.join(dirPath, 'CMakeLists.txt'));
     const hasPy = hasPyFilesInRoot(dirPath);
+
     return {
       isMatch: hasCmake && hasPy,
       confidence: 'heuristic',

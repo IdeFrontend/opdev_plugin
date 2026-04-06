@@ -20,13 +20,13 @@ import {
   openMsSanitizerPanel,
   downloadMsSanitizerReport,
 } from '@web/apis';
-import {
-  message,
-} from 'ant-design-vue';
+import { message } from 'ant-design-vue';
 import { useTheme } from '@web/composables/use-theme';
 
 // 使用主题管理组合式函数
-const { themeConfig, actualTheme } = useTheme();
+const {
+  themeConfig, actualTheme,
+} = useTheme();
 
 const sortOrder = ref<'asc' | 'desc'>('desc');
 const isMarkedOnly = ref<boolean>(false);

@@ -1,7 +1,9 @@
 import * as path from 'path';
 import { CommandStrategy } from '@plugin/domain/services/command-strategy/types';
 import { OpRecord } from '@plugin/domain/models/model';
-import { BaseOpGenerator, OpGenParams, OpGenProject } from '@plugin/domain/services/op-generator-factory';
+import {
+  BaseOpGenerator, OpGenParams, OpGenProject,
+} from '@plugin/domain/services/op-generator-factory';
 import {
   IOperatorPlugin,
   OperatorBuildBehavior,
@@ -32,6 +34,7 @@ export abstract class AbstractOperatorPlugin implements IOperatorPlugin {
 
   getDefaultPaths(op: OpRecord): OperatorDefaultPaths {
     const buildPath = path.join(op.op_path, 'build', op.op_name);
+
     return {
       opScriptPath:      path.join(op.op_path, 'build.sh'),
       exampleScriptPath: path.join(op.op_path, 'build.sh'),
@@ -43,6 +46,7 @@ export abstract class AbstractOperatorPlugin implements IOperatorPlugin {
 
   getInitialConfigScripts(op: OpRecord, _workspaceRoot: string): OperatorConfigScripts {
     const script = path.join(op.op_path, 'build.sh');
+
     return {
       buildScript:     `bash ${script}`,
       exampleScript:   `bash ${script}`,

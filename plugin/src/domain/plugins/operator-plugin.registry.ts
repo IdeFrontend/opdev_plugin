@@ -1,10 +1,9 @@
 import type {
-  IOperatorPlugin,
-  OpGenParams,
-  OpGenProject,
-  OperatorBuildBehavior,
+  IOperatorPlugin, OpGenParams, OpGenProject,
 } from './operator-plugin.interface';
-import type { IProjectDetector, OperatorProjectType } from './project-detector.interface';
+import type {
+  IProjectDetector, OperatorProjectType,
+} from './project-detector.interface';
 import type { BaseOpGenerator } from '@plugin/domain/services/op-generator-factory';
 import type { OpRecord } from '@plugin/domain/models/model';
 
@@ -66,7 +65,10 @@ export class OperatorPluginRegistry {
    * Falls back to 'cann' if not found — same behavior as CommandStrategyFactory.
    */
   static getOpPlugin(opType: string | null | undefined): IOperatorPlugin {
-    if (!opType) return this.opPlugins.get('cann')!;
+    if (!opType) {
+      return this.opPlugins.get('cann')!;
+    }
+
     return this.opPlugins.get(opType) ?? this.opPlugins.get('cann')!;
   }
 
@@ -83,18 +85,31 @@ export class OperatorPluginRegistry {
     let heuristicMatch: IProjectDetector | null = null;
 
     for (const detector of this.detectors) {
-      const { isMatch, confidence } = await detector.detectProject(dirPath);
-      if (!isMatch) continue;
-      if (confidence === 'definitive') {
-        return { detector, projectType: detector.projectType };
+      const {
+        isMatch, confidence,
+      } = await detector.detectProject(dirPath);
+
+      if (!isMatch) {
+        continue;
       }
+
+      if (confidence === 'definitive') {
+        return {
+          detector,
+          projectType: detector.projectType,
+        };
+      }
+
       if (!heuristicMatch) {
         heuristicMatch = detector;
       }
     }
 
     return heuristicMatch
-      ? { detector: heuristicMatch, projectType: heuristicMatch.projectType }
+      ? {
+        detector: heuristicMatch,
+        projectType: heuristicMatch.projectType,
+      }
       : null;
   }
 
@@ -104,12 +119,14 @@ export class OperatorPluginRegistry {
     project: OpGenProject,
     extensionPath: string,
   ): BaseOpGenerator {
-    return this.getOpPlugin(params.op_type).createProjectGenerator(params, project, extensionPath);
+    return this.getOpPlugin(params.op_type)
+      .createProjectGenerator(params, project, extensionPath);
   }
 
   /** Get default file paths for the given op descriptor. */
   static getDefaultPaths(op: OpDescriptor) {
-    return this.getOpPlugin(op.op_type).getDefaultPaths(op as OpRecord);
+    return this.getOpPlugin(op.op_type)
+      .getDefaultPaths(op as OpRecord);
   }
 
   /** Build pre-flight behavior for the given op_type string (falls back to cann). */

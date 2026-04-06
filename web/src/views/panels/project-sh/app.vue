@@ -5,13 +5,17 @@
       :class="actualTheme === 'dark' ? 'text-white/85' : 'text-[#1f1f1f]/85'"
     >
       <div class="w-full max-w-[600px]">
-        <div class="text-2xl leading-7 font-bold mb-6 text-left"
-             :class="actualTheme === 'dark' ? 'text-white' : 'text-[#1f1f1f]'">
+        <div
+          class="text-2xl leading-7 font-bold mb-6 text-left"
+          :class="actualTheme === 'dark' ? 'text-white' : 'text-[#1f1f1f]'"
+        >
           {{ t('web.projectSh.title') }}
         </div>
-        <div class="h-px"
-             :class="actualTheme === 'dark' ? 'bg-white/20' : 'bg-gray-300'"
-             style="margin-bottom: 1.5rem;" />
+        <div
+          class="h-px"
+          :class="actualTheme === 'dark' ? 'bg-white/20' : 'bg-gray-300'"
+          style="margin-bottom: 1.5rem;"
+        />
         <a-form
           ref="formRef"
           :model="formData"
@@ -79,7 +83,9 @@ import { message as antdMessage } from 'ant-design-vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import { useTheme } from '@web/composables/use-theme';
 
-const { themeConfig, actualTheme } = useTheme();
+const {
+  themeConfig, actualTheme,
+} = useTheme();
 
 const formRef = ref<AntdVForm | null>(null);
 const autoCompleteContainer = ref<HTMLElement | null>(null);
@@ -160,9 +166,8 @@ const remoteSearch = async (type, keyword) => {
 // 选择文件
 const handleSelectFile = async () => {
   try {
-    const selectedPath = await selectFile({
-      defaultPath: formData.projectSH,
-    });
+    const selectedPath = await selectFile({ defaultPath: formData.projectSH });
+
     if (selectedPath) {
       formData.projectSH = selectedPath;
     }

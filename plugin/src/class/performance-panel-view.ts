@@ -66,25 +66,27 @@ implements vscode.WebviewViewProvider {
     this._themeChangeDisposable = vscode.window.onDidChangeActiveColorTheme((theme) => {
       webviewView.webview.postMessage({
         command: 'updateTheme',
-        themeName: theme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
+        themeName: theme.kind === vscode.ColorThemeKind.Dark || theme.kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light',
       });
     });
 
     // Send the current topic on initialization
     webviewView.webview.postMessage({
       command: 'updateTheme',
-      themeName: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
+      themeName: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark || vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light',
     });
   }
 
   private handleWebviewMessage(message: any): void {
     // Handle gettopic command
     if (message.command === 'getTheme') {
-      const currentTheme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
+      const currentTheme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark || vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light';
+
       this._view?.webview.postMessage({
         command: 'updateTheme',
         themeName: currentTheme,
       });
+
       return;
     }
 

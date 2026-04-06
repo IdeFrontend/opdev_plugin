@@ -6,9 +6,12 @@ import { ProjectManager } from '@plugin/core/project/project-manager';
 import { projectService } from '@plugin/service/project-service';
 import { ExplorerRootUtils } from '@plugin/class/explorer-root-utils';
 import { RemoteConfig } from '@plugin/helpers/remote-config';
-import { getAllProjects, getProjectByPath, getProjectById, createProject } from '@plugin/domain/models/project-model';
-import { OperatorProjectType, OperatorProjectDetector } from '@plugin/domain/services/operator-project-detector';
-import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
+import {
+  getAllProjects, getProjectByPath, getProjectById, createProject,
+} from '@plugin/domain/models/project-model';
+import {
+  OperatorProjectType, OperatorProjectDetector,
+} from '@plugin/domain/services/operator-project-detector';
 import { getWorkspaceFolder } from '@plugin/domain/models/config';
 import {
   GetProjectIdResult,
@@ -23,7 +26,11 @@ import { checkBuildShHasBishengConfig } from '@plugin/domain/utils/build-utils';
 // First define the checkMultipleOperators function for use in getSelectedOperators
 async function checkMultipleOperatorsInternal(): Promise<{
   hasMultiple: boolean;
-  operators?: Array<{ id: number; name: string; path: string; isExperimental: boolean; isCompiled?: boolean }>;
+  operators?: Array<{ id: number;
+    name: string;
+    path: string;
+    isExperimental: boolean;
+    isCompiled?: boolean }>;
   isStandardCustom?: boolean;
 }> {
   const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -37,21 +44,20 @@ async function checkMultipleOperatorsInternal(): Promise<{
   try {
     // First check whether the root directory is recognized as a standard custom operator (via the detector)
     const rootDetection = await OperatorProjectDetector.detectOperatorProject(workspacePath);
-    const isRootStandardCustom = rootDetection.isOperatorProject &&
-      rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM;
+    const isRootStandardCustom = rootDetection.isOperatorProject
+      && rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM;
 
     // Get all registered operator projects
     const allProjects = getAllProjects();
 
     // Filter out standard custom operators (exclude collection types) and ensure that the operator is within the workspace
-    const standardCustomOperators = allProjects.filter(
-      p => p.project_type === OperatorProjectType.STANDARD_CUSTOM &&
-        p.project_path &&
-        // Make sure the operator is within the workspace
-        path.normalize(p.project_path).toLowerCase().startsWith(
-          path.normalize(workspacePath).toLowerCase()
-        )
-    );
+    const standardCustomOperators = allProjects.filter((p) => p.project_type === OperatorProjectType.STANDARD_CUSTOM
+      && p.project_path
+    // Make sure the operator is within the workspace
+      && path.normalize(p.project_path)
+        .toLowerCase()
+        .startsWith(path.normalize(workspacePath)
+          .toLowerCase()));
 
     // If the root directory is a standard custom operator, read the operator list from the project's ops_list and experimental_ops_list
     if (isRootStandardCustom) {
@@ -65,7 +71,11 @@ async function checkMultipleOperatorsInternal(): Promise<{
 
         // Combine all operators and convert them to the format required by the front end
         // Use the project ID as the base ID to generate a unique ID for each operator
-        const operators: Array<{ id: number; name: string; path: string; isExperimental: boolean; isCompiled?: boolean }> = [];
+        const operators: Array<{ id: number;
+          name: string;
+          path: string;
+          isExperimental: boolean;
+          isCompiled?: boolean }> = [];
 
         // Add ordinary operators
         opsList.forEach((op, index) => {
@@ -95,7 +105,7 @@ async function checkMultipleOperatorsInternal(): Promise<{
           '[checkMultipleOperators] Standard custom operator, read from ops_list:',
           `Regular operators: ${opsList.length}, experimental operators: ${experimentalOpsList.length}`,
           t('home.operatorList'),
-          operators.map(op => `${op.name} (${op.isExperimental ? 'ex' : 'normal'}, compiled: ${op.isCompiled})`),
+          operators.map((op) => `${op.name} (${op.isExperimental ? 'ex' : 'normal'}, compiled: ${op.isCompiled})`),
         );
 
         return {
@@ -103,7 +113,8 @@ async function checkMultipleOperatorsInternal(): Promise<{
           operators,
           isStandardCustom: true,
         };
-      } else {
+      }
+      else {
         console.warn('[checkMultipleOperators] Root directory is a standard custom operator, but no project record was found');
       }
     }
@@ -111,7 +122,7 @@ async function checkMultipleOperatorsInternal(): Promise<{
     // If there is a standard custom operator project in the workspace (but not the root directory), use the original logic
     if (standardCustomOperators.length > 0) {
       // Convert to the format required by the front end
-      const operators = standardCustomOperators.map(p => ({
+      const operators = standardCustomOperators.map((p) => ({
         id: p.id,
         name: path.basename(p.project_path || ''),
         path: p.project_path || '',
@@ -124,7 +135,7 @@ async function checkMultipleOperatorsInternal(): Promise<{
         '[checkMultipleOperators] Standard custom operator, found operator project count:',
         operators.length,
         t('home.operatorList'),
-        operators.map(op => `${op.name} (${op.isExperimental ? 'ex' : 'normal'})`),
+        operators.map((op) => `${op.name} (${op.isExperimental ? 'ex' : 'normal'})`),
       );
 
       return {
@@ -196,22 +207,38 @@ async function checkMultipleOperatorsInternal(): Promise<{
       operatorProjects,
     );
 
-    return { hasMultiple, isStandardCustom: false, operators };
+    return {
+      hasMultiple,
+      isStandardCustom: false,
+    };
   }
   catch (error) {
     console.error('[checkMultipleOperators] Failed to check operator projects:', error);
-    return { hasMultiple: false, isStandardCustom: false };
+
+    return {
+      hasMultiple: false,
+      isStandardCustom: false,
+    };
   }
 }
 
 /** Only parses the current workspace project type for use by validatePyascForAnalysis etc. */
 async function getProjectTypeValue(): Promise<string | null> {
   const workspaceFolders = vscode.workspace.workspaceFolders;
-  if (!workspaceFolders || workspaceFolders.length === 0) return null;
+
+  if (!workspaceFolders || workspaceFolders.length === 0) {
+    return null;
+  }
+
   const workspacePath = workspaceFolders[0].uri.fsPath;
   const project = getProjectByPath(workspacePath);
-  if (project?.project_type) return project.project_type;
+
+  if (project?.project_type) {
+    return project.project_type;
+  }
+
   const detection = await OperatorProjectDetector.detectOperatorProject(workspacePath);
+
   return (detection.isOperatorProject && detection.projectType) ? detection.projectType : null;
 }
 
@@ -232,12 +259,17 @@ export const homeMethods = {
    * Only the actual operator type is returned, excluding "operator engineering collection"
    * @returns project type information
    */
-  async getProjectType(): Promise<{ projectType: string | null; projectTypeName: string; projectTemplateName?: string }> {
+  async getProjectType(): Promise<{ projectType: string | null;
+    projectTypeName: string;
+    projectTemplateName?: string }> {
     try {
       const workspaceFolders = vscode.workspace.workspaceFolders;
 
       if (!workspaceFolders || workspaceFolders.length === 0) {
-        return { projectType: null, projectTypeName: '' };
+        return {
+          projectType: null,
+          projectTypeName: '',
+        };
       }
 
       const workspacePath = workspaceFolders[0].uri.fsPath;
@@ -246,6 +278,7 @@ export const homeMethods = {
       if (!project || !project.project_type) {
         // If there is no registered project, try to detect the workspace path directly
         const detection = await OperatorProjectDetector.detectOperatorProject(workspacePath);
+
         if (detection.isOperatorProject && detection.projectType) {
           const typeNameKeyMap: Record<string, string> = {
             [OperatorProjectType.STANDARD_CUSTOM]: 'home.projectTypeStandardCustom',
@@ -254,13 +287,18 @@ export const homeMethods = {
             [OperatorProjectType.PYASC]: 'home.projectTypePyasc',
           };
           const projectTypeName = typeNameKeyMap[detection.projectType] ? t(typeNameKeyMap[detection.projectType]) : detection.projectType;
+
           return {
             projectType: detection.projectType,
             projectTypeName,
-            projectTemplateName: detection.projectType === OperatorProjectType.TORCH_LIBRARY ? 'torch_library_template' : ''
+            projectTemplateName: detection.projectType === OperatorProjectType.TORCH_LIBRARY ? 'torch_library_template' : '',
           };
         }
-        return { projectType: null, projectTypeName: '' };
+
+        return {
+          projectType: null,
+          projectTypeName: '',
+        };
       }
 
       // Convert item type to Chinese name (only actual operator type included)
@@ -276,12 +314,16 @@ export const homeMethods = {
       return {
         projectType: project.project_type,
         projectTypeName,
-        projectTemplateName: project.template_name || ''
+        projectTemplateName: project.template_name || '',
       };
     }
     catch (error) {
       console.error('[getProjectType] Failed to get project type:', error);
-      return { projectType: null, projectTypeName: '' };
+
+      return {
+        projectType: null,
+        projectTypeName: '',
+      };
     }
   },
 
@@ -290,28 +332,43 @@ export const homeMethods = {
    * For types that require an active source file (e.g. pyasc), verifies the editor
    * has the suffix from the op plugin’s build behavior.
    */
-  async validatePyascForAnalysis(): Promise<{ valid: boolean; message?: string }> {
+  async validatePyascForAnalysis(): Promise<{ valid: boolean;
+    message?: string }> {
     try {
       const projectType = await getProjectTypeValue();
-      const behavior = OperatorPluginRegistry.getBuildBehaviorByProjectType(projectType);
-      if (!behavior.requiresActiveFileCheck || !behavior.activeFileExtension) {
+
+      if (projectType !== OperatorProjectType.PYASC) {
         return { valid: true };
       }
+
       const activeEditor = vscode.window.activeTextEditor;
-      const suffix = behavior.activeFileExtension;
-      const hasExpectedFile = activeEditor?.document.fileName.endsWith(suffix);
-      if (!hasExpectedFile) {
-        return { valid: false, message: t('extension.openPyFirst') };
+      const isPyFile = activeEditor?.document.fileName.endsWith('.py');
+
+      if (!isPyFile) {
+        return {
+          valid: false,
+          message: t('extension.openPyFirst'),
+        };
       }
+
       const workspaceFolders = vscode.workspace.workspaceFolders;
+
       if (!workspaceFolders || workspaceFolders.length === 0) {
-        return { valid: false, message: t('task.workspacePathNotFound') };
+        return {
+          valid: false,
+          message: t('task.workspacePathNotFound'),
+        };
       }
+
       return { valid: true };
     }
     catch (error) {
       console.error('[validatePyascForAnalysis] Validation failed:', error);
-      return { valid: false, message: (error as Error).message };
+
+      return {
+        valid: false,
+        message: (error as Error).message,
+      };
     }
   },
 
@@ -369,7 +426,10 @@ export const homeMethods = {
    */
   async checkMultipleOperators(): Promise<{
     hasMultiple: boolean;
-    operators?: Array<{ id: number; name: string; path: string; isExperimental: boolean }>;
+    operators?: Array<{ id: number;
+      name: string;
+      path: string;
+      isExperimental: boolean }>;
     isStandardCustom?: boolean;
     /** When the root directory is a standard custom operator: build.sh contains --bisheng_flags to support anomaly detection and tuning. */
     supportsSanitizerAndTuning?: boolean;
@@ -385,21 +445,20 @@ export const homeMethods = {
     try {
       // First check whether the root directory is recognized as a standard custom operator (via the detector)
       const rootDetection = await OperatorProjectDetector.detectOperatorProject(workspacePath);
-      const isRootStandardCustom = rootDetection.isOperatorProject &&
-        rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM;
+      const isRootStandardCustom = rootDetection.isOperatorProject
+        && rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM;
 
       // Get all registered operator projects
       const allProjects = getAllProjects();
 
       // Filter out standard custom operators (exclude collection types) and ensure that the operator is within the workspace
-      const standardCustomOperators = allProjects.filter(
-        p => p.project_type === OperatorProjectType.STANDARD_CUSTOM &&
-          p.project_path &&
-          // Make sure the operator is within the workspace
-          path.normalize(p.project_path).toLowerCase().startsWith(
-            path.normalize(workspacePath).toLowerCase()
-          )
-      );
+      const standardCustomOperators = allProjects.filter((p) => p.project_type === OperatorProjectType.STANDARD_CUSTOM
+        && p.project_path
+      // Make sure the operator is within the workspace
+        && path.normalize(p.project_path)
+          .toLowerCase()
+          .startsWith(path.normalize(workspacePath)
+            .toLowerCase()));
 
       // If the root directory is a standard custom operator, read the operator list from the project's ops_list and experimental_ops_list
       if (isRootStandardCustom) {
@@ -413,7 +472,11 @@ export const homeMethods = {
 
           // Combine all operators and convert them to the format required by the front end
           // Use the project ID as the base ID to generate a unique ID for each operator
-          const operators: Array<{ id: number; name: string; path: string; isExperimental: boolean; isCompiled?: boolean }> = [];
+          const operators: Array<{ id: number;
+            name: string;
+            path: string;
+            isExperimental: boolean;
+            isCompiled?: boolean }> = [];
 
           // Add ordinary operators
           opsList.forEach((op, index) => {
@@ -440,11 +503,12 @@ export const homeMethods = {
           const hasMultiple = operators.length > 1;
 
           const supportsSanitizerAndTuning = checkBuildShHasBishengConfig(workspacePath);
+
           console.log(
             '[checkMultipleOperators] Standard custom operator, read from ops_list:',
             `Regular operators: ${opsList.length}, experimental operators: ${experimentalOpsList.length}`,
             t('home.operatorList'),
-            operators.map(op => `${op.name} (${op.isExperimental ? 'ex' : 'normal'}, compiled: ${op.isCompiled})`),
+            operators.map((op) => `${op.name} (${op.isExperimental ? 'ex' : 'normal'}, compiled: ${op.isCompiled})`),
             t('home.supportsSanitizerAndTuning'),
             supportsSanitizerAndTuning,
           );
@@ -455,7 +519,8 @@ export const homeMethods = {
             isStandardCustom: true,
             supportsSanitizerAndTuning,
           };
-        } else {
+        }
+        else {
           console.warn('[checkMultipleOperators] Root directory is a standard custom operator, but no project record was found');
         }
       }
@@ -463,7 +528,7 @@ export const homeMethods = {
       // If there is a standard custom operator project in the workspace (but not the root directory), use the original logic
       if (standardCustomOperators.length > 0) {
         // Convert to the format required by the front end
-        const operators = standardCustomOperators.map(p => ({
+        const operators = standardCustomOperators.map((p) => ({
           id: p.id,
           name: path.basename(p.project_path || ''),
           path: p.project_path || '',
@@ -476,7 +541,7 @@ export const homeMethods = {
           '[checkMultipleOperators] Standard custom operator, found operator project count:',
           operators.length,
           t('home.operatorList'),
-          operators.map(op => `${op.name} (${op.isExperimental ? 'ex' : 'normal'})`),
+          operators.map((op) => `${op.name} (${op.isExperimental ? 'ex' : 'normal'})`),
         );
 
         return {
@@ -548,11 +613,18 @@ export const homeMethods = {
         operatorProjects,
       );
 
-      return { hasMultiple, isStandardCustom: false, operators };
+      return {
+        hasMultiple,
+        isStandardCustom: false,
+      };
     }
     catch (error) {
       console.error('[checkMultipleOperators] Failed to check operator projects:', error);
-      return { hasMultiple: false, isStandardCustom: false };
+
+      return {
+        hasMultiple: false,
+        isStandardCustom: false,
+      };
     }
   },
 
@@ -562,6 +634,7 @@ export const homeMethods = {
    */
   async setSelectedOperators(params: { operatorIds: number[] } = { operatorIds: [] }): Promise<void> {
     const workspaceFolders = vscode.workspace.workspaceFolders;
+
     if (!workspaceFolders || workspaceFolders.length === 0) {
       return;
     }
@@ -581,8 +654,8 @@ export const homeMethods = {
 
       // Make sure operatorIds is a numeric array
       const numericIds = operatorIds
-        .map(id => typeof id === 'string' ? Number(id) : id)
-        .filter(id => typeof id === 'number' && !isNaN(id));
+        .map((id) => typeof id === 'string' ? Number(id) : id)
+        .filter((id) => typeof id === 'number' && !isNaN(id));
 
       console.log('[setSelectedOperators] Saved operator IDs:', numericIds);
 
@@ -600,6 +673,7 @@ export const homeMethods = {
    */
   async getSelectedOperatorIds(): Promise<number[] | undefined> {
     const workspaceFolders = vscode.workspace.workspaceFolders;
+
     if (!workspaceFolders || workspaceFolders.length === 0) {
       return undefined;
     }
@@ -613,18 +687,22 @@ export const homeMethods = {
 
     // Make sure selected_operator_ids is an array type
     let selectedOperatorIds: number[] = [];
+
     if (project.selected_operator_ids) {
       if (Array.isArray(project.selected_operator_ids)) {
         // Make sure the elements in the array are all numbers
         selectedOperatorIds = project.selected_operator_ids
-          .map(id => typeof id === 'string' ? Number(id) : id)
-          .filter(id => typeof id === 'number' && !isNaN(id));
+          .map((id) => typeof id === 'string' ? Number(id) : id)
+          .filter((id) => typeof id === 'number' && !isNaN(id));
         console.log('[getSelectedOperatorIds] Converted selected_operator_ids:', selectedOperatorIds);
-      } else {
+      }
+      else {
         console.warn('[getSelectedOperatorIds] selected_operator_ids is not an array:', typeof project.selected_operator_ids, project.selected_operator_ids);
+
         return undefined;
       }
-    } else {
+    }
+    else {
       console.log('[getSelectedOperatorIds] project.selected_operator_ids is empty');
     }
 
@@ -637,6 +715,7 @@ export const homeMethods = {
    */
   async getSelectedOperators(): Promise<string | undefined> {
     const workspaceFolders = vscode.workspace.workspaceFolders;
+
     if (!workspaceFolders || workspaceFolders.length === 0) {
       return undefined;
     }
@@ -650,19 +729,23 @@ export const homeMethods = {
 
     // Make sure selected_operator_ids is an array type
     let selectedOperatorIds: number[] = [];
+
     if (project.selected_operator_ids) {
       if (Array.isArray(project.selected_operator_ids)) {
         // Make sure the elements in the array are all numbers
         selectedOperatorIds = project.selected_operator_ids
-          .map(id => typeof id === 'string' ? Number(id) : id)
-          .filter(id => typeof id === 'number' && !isNaN(id));
+          .map((id) => typeof id === 'string' ? Number(id) : id)
+          .filter((id) => typeof id === 'number' && !isNaN(id));
         console.log('[getSelectedOperators] Converted selected_operator_ids:', selectedOperatorIds);
-      } else {
+      }
+      else {
         // If not an array, try converting (maybe to string or other type)
         console.warn('[getSelectedOperators] selected_operator_ids is not an array:', typeof project.selected_operator_ids, project.selected_operator_ids);
+
         return undefined;
       }
-    } else {
+    }
+    else {
       console.log('[getSelectedOperators] project.selected_operator_ids is empty');
     }
 
@@ -672,14 +755,15 @@ export const homeMethods = {
 
     // Get all operator information
     const result = await checkMultipleOperatorsInternal();
+
     if (!result.isStandardCustom || !result.operators) {
       return undefined;
     }
 
     // Match operator name based on ID
     const selectedOperatorNames = result.operators
-      .filter(op => selectedOperatorIds.includes(op.id))
-      .map(op => op.name);
+      .filter((op) => selectedOperatorIds.includes(op.id))
+      .map((op) => op.name);
 
     return selectedOperatorNames.length > 0 ? selectedOperatorNames.join(',') : undefined;
   },

@@ -106,12 +106,15 @@ export class ProjectNameValidationStrategy implements ValidationStrategy {
     if (!strValue || strValue.trim() === '') {
       throw new Error(t('web.link.validation.projectNameRequired'));
     }
+
     if (!/^[a-zA-Z0-9_]+$/.test(strValue)) {
       throw new Error(t('web.link.validation.projectNameChars'));
     }
+
     if (!/^[a-zA-Z]/.test(strValue)) {
       throw new Error(t('web.link.validation.projectNameStart'));
     }
+
     if (CPP_KEYWORDS.includes(strValue.toLowerCase())) {
       throw new Error(t('web.link.validation.projectNameKeyword'));
     }
@@ -128,7 +131,9 @@ export class ProjectPathValidationStrategy implements ValidationStrategy {
     if (!strValue) {
       throw new Error(t('web.link.validation.projectPathRequired'));
     }
+
     const pathExists = await checkPathExists({ path: strValue });
+
     if (!pathExists) {
       throw new Error(t('web.link.validation.dirNotExist'));
     }
@@ -142,8 +147,15 @@ export class ProjectSHValidationStrategy implements ValidationStrategy {
   async validate(value: unknown): Promise<void> {
     const strValue = value as string;
 
-    if (!strValue) return;
-    const pathExists = await checkPathExists({ path: strValue, mustFile: true });
+    if (!strValue) {
+      return;
+    }
+
+    const pathExists = await checkPathExists({
+      path: strValue,
+      mustFile: true,
+    });
+
     if (!pathExists) {
       throw new Error(t('web.link.validation.scriptNotExist'));
     }

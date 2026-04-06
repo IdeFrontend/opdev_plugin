@@ -12,11 +12,17 @@ import * as path from 'path';
  */
 export function checkBuildShHasBishengConfig(rootPath: string): boolean {
   const buildShPath = path.join(rootPath, 'build.sh');
-  if (!fs.existsSync(buildShPath)) return false;
+
+  if (!fs.existsSync(buildShPath)) {
+    return false;
+  }
+
   try {
     const content = fs.readFileSync(buildShPath, 'utf-8');
+
     return content.includes('--bisheng_flags');
-  } catch {
+  }
+  catch {
     return false;
   }
 }

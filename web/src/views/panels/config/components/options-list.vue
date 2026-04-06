@@ -65,7 +65,7 @@ const updateActiveOption = (item) => {
           alt=""
           class="img"
         />
-        {{ t('web.config.optionBuild') }}
+        <span class="text-content">{{ t('web.config.optionBuild') }}</span>
       </div>
       <div
         v-if="projectType !== 'pyasc'"
@@ -78,7 +78,7 @@ const updateActiveOption = (item) => {
           alt=""
           class="img"
         />
-        {{ t('web.config.optionSanitizer') }}
+        <span class="text-content">{{ t('web.config.optionSanitizer') }}</span>
       </div>
       <div
         v-if="supportsSanitizerAndTuning"
@@ -91,7 +91,7 @@ const updateActiveOption = (item) => {
           alt=""
           class="img"
         />
-        {{ t('web.config.optionPerformance') }}
+        <span class="text-content">{{ t('web.config.optionPerformance') }}</span>
       </div>
       <div
         class="options-list-item"
@@ -103,7 +103,7 @@ const updateActiveOption = (item) => {
           alt=""
           class="img"
         />
-        {{ t('web.config.optionEnv') }}
+        <span class="text-content">{{ t('web.config.optionEnv') }}</span>
       </div>
     </div>
   </div>
@@ -123,31 +123,36 @@ const updateActiveOption = (item) => {
   flex-direction: column;
   gap: 8px;
   overflow: hidden;
-  padding-left: 12px;
 
   .options-list-item {
     border-radius: 4px;
     border: 1px solid #424242;
     display: flex;
     align-items: center;
-    justify-content: center;
-    padding: 8px 4px;
+    justify-content: flex-start;
+    padding: 8px 12px;
     font-size: 12px;
     cursor: pointer;
     transition: all 0.2s;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    width: 112px;
+    width: 100%;
+    box-sizing: border-box;
     color: #ffffff;
 
     .img {
-      margin-right: 4px;
+      margin-right: 8px;
       width: 14px;
       height: 14px;
       flex-shrink: 0;
       // 默认深色主题下保持原色
       filter: none;
+    }
+
+    .text-content {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+      text-align: left;
     }
 
     &:hover {

@@ -9,21 +9,21 @@ import {
   CreateOpsParams,
   CreateOpsByPrototypeParams,
   CreatedProjectParams,
-  OpenProjectParams
+  OpenProjectParams,
 } from '@shared/api-types';
+import { generateStructure } from '@plugin/domain';
 import {
-  generateStructure
-} from '@plugin/domain';
-import { viewIdToProjectType, ensureLaunchJsonExists } from '../domain/utils/project-utils'
+  viewIdToProjectType, ensureLaunchJsonExists,
+} from '../domain/utils/project-utils';
 import {
   OperatorProjectDetector,
-  OperatorProjectType
+  OperatorProjectType,
 } from '@plugin/domain/services/operator-project-detector';
 import {
   getProjectByPath,
   updateStandardCustomOperators,
   createProject,
-  SubOperatorInfo
+  SubOperatorInfo,
 } from '@plugin/domain/models/project-model';
 import { WorkspaceDetectorService } from '@plugin/service/workspace-detector-service';
 import { OpGeneratorFactory } from '@plugin/domain/services/op-generator-factory';
@@ -135,11 +135,13 @@ export const welcomeMethods = {
         const currentExplorerPath = currentWorkspaceFolders && currentWorkspaceFolders.length > 0
           ? currentWorkspaceFolders[0].uri.fsPath
           : undefined;
+
         console.log('Current directory opened in explorer:', currentExplorerPath);
 
         if (currentExplorerPath?.includes('experimental')) {
           // Find the project in the project.json configuration data according to currentExplorerPath, and insert it into its experimental_ops_list after finding it.
           const project = getProjectByPath(currentExplorerPath);
+
           if (project) {
             console.log('Found project in experimental directory:', project);
 
@@ -147,11 +149,14 @@ export const welcomeMethods = {
             const newSubOperator: SubOperatorInfo = {
               name: params.projectName,
               path: path.join(params.projectPath, params.projectName),
-              isCompiled: false
+              isCompiled: false,
             };
 
             // Update the project's experimental_ops_list
-            const updatedExperimentalOpsList = [...(project.experimental_ops_list || []), newSubOperator];
+            const updatedExperimentalOpsList = [
+              ...(project.experimental_ops_list || []),
+              newSubOperator,
+            ];
 
             // Update project record
             await createProject({
@@ -161,12 +166,15 @@ export const welcomeMethods = {
             });
 
             console.log('Added new operator to experimental_ops_list:', newSubOperator.name);
-          } else {
+          }
+          else {
             console.log('No matching project found in project.json config');
           }
-        } else if (currentExplorerPath?.includes('math')) {
+        }
+        else if (currentExplorerPath?.includes('math')) {
           // Find the project in the project.json configuration data according to currentExplorerPath, and insert it into its ops_list after finding it.
           const project = getProjectByPath(currentExplorerPath);
+
           if (project) {
             console.log('Found project in math directory:', project);
 
@@ -174,11 +182,14 @@ export const welcomeMethods = {
             const newSubOperator: SubOperatorInfo = {
               name: params.projectName,
               path: path.join(params.projectPath, params.projectName),
-              isCompiled: false
+              isCompiled: false,
             };
 
             // Update the ops_list of the project
-            const updatedOpsList = [...(project.ops_list || []), newSubOperator];
+            const updatedOpsList = [
+              ...(project.ops_list || []),
+              newSubOperator,
+            ];
 
             // Update project record
             await createProject({
@@ -188,20 +199,23 @@ export const welcomeMethods = {
             });
 
             console.log('Added new operator to ops_list:', newSubOperator.name);
-          } else {
+          }
+          else {
             console.log('No matching project found in project.json config');
           }
-        } else {
+        }
+        else {
           vscode.window.showInformationMessage(t('welcome.cannotCreateHere'));
         }
-      } else {
+      }
+      else {
         try {
           await projectService.init({
             ascendEnvScript: params.projectSH,
             projectPath: params.projectPath,
             projectName: params.projectName,
             templateName: params.templateName,
-            projectType,
+            projectType: viewIdToProjectType(params.createOperatorProjectDictoryFileType),
           });
         }
         catch (error) {
@@ -238,17 +252,23 @@ export const welcomeMethods = {
       vscode.window.showInformationMessage(t('welcome.projectCreated', { name: params.projectName }));
 
       if (viewIdToProjectType(params.createOperatorProjectDictoryFileType) === 'ascend') {
-        const fullPath = path.join(params.projectPath, params.projectName)
+        const fullPath = path.join(params.projectPath, params.projectName);
+
         await ensureLaunchJsonExists(fullPath);
         const generator = OpGeneratorFactory.getGenerator(
-          {op_path: fullPath},
-          {project_name: params.projectName, project_path: params.projectPath},
+          { op_path: fullPath },
+          {
+            project_name: params.projectName,
+            project_path: params.projectPath,
+          },
           context.extensionPath,
         );
+
         generator.parseMeta();
         await generator.executeGeneration();
         vscode.commands.executeCommand('workbench.action.closeActiveEditor');
-        return
+
+        return;
       }
 
       // Save templateName to globalState for subsequent use
@@ -322,6 +342,7 @@ export const welcomeMethods = {
     catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
+
       vscode.window.showErrorMessage(t('welcome.createProjectFailed', { error: errorMessage }));
       throw error; // Rethrow the error so that the API server can catch it and return it to the front end
     }
@@ -340,7 +361,7 @@ export const welcomeMethods = {
         console.log(`[openProject] Project already exists in config: ${existingProject.project_name} (${existingProject.project_path})`);
 
         if (!isFromSystem) {
-          openFolderFn(params.projectPath)
+          openFolderFn(params.projectPath);
         }
 
         return; // Exit the function and no longer perform subsequent initialization operations
@@ -354,6 +375,7 @@ export const welcomeMethods = {
 
         // Truncate projectPath, removing project name part
         const dirPath = path.dirname(params.projectPath);
+
         params.projectPath = dirPath;
         console.log(`[openProject] Updated projectPath (after removing project name): ${params.projectPath}`);
       }
@@ -364,7 +386,7 @@ export const welcomeMethods = {
 
       // If the system is opened and there is no environment variable script, the environment variable script is set by default.
       if (isFromSystem && !params.projectSH) {
-        params.projectSH = '/etc/profile'
+        params.projectSH = '/etc/profile';
       }
 
       // Handle environment variable configuration script
@@ -386,9 +408,10 @@ export const welcomeMethods = {
       // It is detected that the opened directory is not an operator project
       if (!rootDetection.projectType) {
         if (!isFromSystem) {
-          openFolderFn(projectFullPath)
+          openFolderFn(projectFullPath);
         }
-        return
+
+        return;
       }
 
       // Write the configuration to the project.json file
@@ -398,7 +421,7 @@ export const welcomeMethods = {
           projectPath: params.projectPath,
           projectName: params.projectName,
           templateName: rootDetection.projectType === OperatorProjectType.TORCH_LIBRARY ? 'torch_library_template' : '',
-          projectType: viewIdToProjectType(rootDetection.projectType)
+          projectType: viewIdToProjectType(rootDetection.projectType),
         });
       }
       catch (error) {
@@ -409,6 +432,7 @@ export const welcomeMethods = {
       // Process configuration files
       const pm = ProjectManager.getInstance();
       const projectId = Number(pm.projectId);
+
       await generateStructure(
         {
           ops_prototype_file: '',
@@ -418,9 +442,10 @@ export const welcomeMethods = {
           template_name: rootDetection.projectType === OperatorProjectType.TORCH_LIBRARY ? 'torch_library_template' : '',
         },
         context.extensionPath,
-        true
+        true,
       );
       await pm.checkVscode();
+
       if (!isFromSystem) {
         await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
       }
@@ -429,8 +454,12 @@ export const welcomeMethods = {
       if (rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM) {
         try {
           console.log('[openProject] Standard custom operators detected, scanning operator groups and operators...');
-          const { opsMeet, opsList, experimentalOpsList } = WorkspaceDetectorService.scanOpsMeetAndOpsLists(projectFullPath);
-          console.log(`[openProject] Operator group list: ${opsMeet.map((m) => m.name).join(', ')}`);
+          const {
+            opsMeet, opsList, experimentalOpsList,
+          } = WorkspaceDetectorService.scanOpsMeetAndOpsLists(projectFullPath);
+
+          console.log(`[openProject] Operator group list: ${opsMeet.map((m) => m.name)
+            .join(', ')}`);
           console.log(`[openProject] Regular operators: ${opsList.length}, experimental operators: ${experimentalOpsList.length}`);
           await updateStandardCustomOperators(projectFullPath, opsMeet, opsList, experimentalOpsList);
           console.log(`[openProject] Stored ${opsMeet.length} operator groups, ${opsList.length} regular operators, and ${experimentalOpsList.length} experimental operators`);
@@ -444,13 +473,16 @@ export const welcomeMethods = {
       const normalizedProjectPath = path.normalize(params.projectPath);
       const normalizedProjectName = path.normalize(params.projectName);
       const fullProjectPath = path.join(normalizedProjectPath, normalizedProjectName);
+
       if (isFromSystem) {
         // To open the operator project at the system level, just refresh the folder decoration
         const iconTheme = OperatorProjectIconTheme.getInstance(context);
+
         iconTheme.fireDecorationUpdate();
-      } else {
+      }
+      else {
         // Open the operator project by opening the page
-        openFolderFn(fullProjectPath)
+        openFolderFn(fullProjectPath);
       }
     }
     catch (error) {
@@ -460,5 +492,5 @@ export const welcomeMethods = {
       vscode.window.showErrorMessage(t('welcome.openProjectFailed', { error: errorMessage }));
       throw error;
     }
-  }
+  },
 };

@@ -1,6 +1,4 @@
-import { 
-  INotificationService 
-} from '../../application/interfaces/notification.interface';
+import { INotificationService } from '../../application/interfaces/notification.interface';
 
 // Ensures interface is well-defined and implementable
 describe('Notification Service Interface', () => {
@@ -13,18 +11,22 @@ describe('Notification Service Interface', () => {
   };
 
   it('should have showInfo method with correct signature', () => {
-    expect(typeof mockNotificationService.showInfo).toBe('function');
+    expect(typeof mockNotificationService.showInfo)
+      .toBe('function');
   });
 
   it('should have showError method with correct signature', () => {
-    expect(typeof mockNotificationService.showError).toBe('function');
+    expect(typeof mockNotificationService.showError)
+      .toBe('function');
   });
 
   it('should have showWarning method with correct signature', () => {
-    expect(typeof mockNotificationService.showWarning).toBe('function');
+    expect(typeof mockNotificationService.showWarning)
+      .toBe('function');
   });
 
   it('should have showProgress method with correct signature', () => {
-    expect(typeof mockNotificationService.showProgress).toBe('function');
+    expect(typeof mockNotificationService.showProgress)
+      .toBe('function');
   });
 });

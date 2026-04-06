@@ -111,6 +111,7 @@ export class PerformanceRunData {
     }
 
     const project = Project.getInstance();
+
     if (!project.workspaceIsProject()) {
       return runData;
     }
@@ -147,8 +148,11 @@ export class PerformanceRunData {
     // FileMapList that handles simulation configuration
     for (const config of simulateConfigs) {
       const userOptions = config.user_options as Record<string, unknown> | null;
+
       if (userOptions && Array.isArray(userOptions.fileMapList)) {
-        const fileMapList = userOptions.fileMapList as Array<{ filePath: string; reportTime: number }>;
+        const fileMapList = userOptions.fileMapList as Array<{ filePath: string;
+          reportTime: number }>;
+
         for (const fileMap of fileMapList) {
           if (await this.uriExists(vscode.Uri.file(fileMap.filePath))) {
             const stat = await vscode.workspace.fs.stat(vscode.Uri.file(fileMap.filePath));
@@ -162,6 +166,7 @@ export class PerformanceRunData {
               marked: markedKeySet.has(key),
               children: isDirectory ? await this.scanSubFiles(vscode.Uri.file(fileMap.filePath)) : [],
             };
+
             runData.push(executionRecord);
           }
         }
@@ -171,8 +176,11 @@ export class PerformanceRunData {
     // Process fileMapList configured on the board
     for (const config of onBoardConfigs) {
       const userOptions = config.user_options as Record<string, unknown> | null;
+
       if (userOptions && Array.isArray(userOptions.fileMapList)) {
-        const fileMapList = userOptions.fileMapList as Array<{ filePath: string; reportTime: number }>;
+        const fileMapList = userOptions.fileMapList as Array<{ filePath: string;
+          reportTime: number }>;
+
         for (const fileMap of fileMapList) {
           if (await this.uriExists(vscode.Uri.file(fileMap.filePath))) {
             const stat = await vscode.workspace.fs.stat(vscode.Uri.file(fileMap.filePath));
@@ -186,6 +194,7 @@ export class PerformanceRunData {
               marked: markedKeySet.has(key),
               children: isDirectory ? await this.scanSubFiles(vscode.Uri.file(fileMap.filePath)) : [],
             };
+
             runData.push(executionRecord);
           }
         }

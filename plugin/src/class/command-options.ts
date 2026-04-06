@@ -34,7 +34,7 @@ class CommandExecutor extends EventEmitter {
 
   // ANSI escape code regular expression
   private readonly ansiRegex = /\x1b\[[0-9;]*[a-zA-Z]/g;
-  
+
   // Backspace character regular expression (\b or \x08)
   private readonly backspaceRegex = /\x08/g;
 
@@ -48,8 +48,10 @@ class CommandExecutor extends EventEmitter {
   private stripAnsiCodes(text: string): string {
     // Filter backspace characters first
     let cleanText = text.replace(this.backspaceRegex, '');
+
     // Then filter ANSI escape codes
     cleanText = cleanText.replace(this.ansiRegex, '');
+
     return cleanText;
   }
 
@@ -235,6 +237,7 @@ class CommandExecutor extends EventEmitter {
    */
   private async cleanup(): Promise<void> {
     const child = this.process;
+
     if (!child) {
       return;
     }
@@ -247,11 +250,16 @@ class CommandExecutor extends EventEmitter {
       let finished = false;
 
       const finish = () => {
-        if (finished) return;
+        if (finished) {
+          return;
+        }
+
         finished = true;
+
         if (timeoutId) {
           clearTimeout(timeoutId);
         }
+
         // Remove listeners to avoid memory leaks
         child.removeListener('exit', finish);
         child.removeListener('close', finish);
@@ -273,6 +281,7 @@ class CommandExecutor extends EventEmitter {
       try {
         if (process.platform === 'win32') {
           const pid = child.pid;
+
           if (pid) {
             // Use taskkill on Windows to force kill a process and all its children (/F /T)
             exec(`taskkill /pid ${pid} /T /F`, (error) => {
@@ -280,23 +289,28 @@ class CommandExecutor extends EventEmitter {
                 console.error('CommandExecutor: failed to kill process tree:', error);
               }
             });
-          } else {
+          }
+          else {
             finish();
           }
-        } else {
+        }
+        else {
           // On Linux/macOS, kill an entire process group with a negative PID
           if (child.pid) {
             try {
               process.kill(-child.pid, 'SIGTERM');
-            } catch (e) {
+            }
+            catch (e) {
               // If process group termination fails, fall back to terminating a single process
               child.kill('SIGTERM');
             }
-          } else {
+          }
+          else {
             finish();
           }
         }
-      } catch (error) {
+      }
+      catch (error) {
         console.error('CommandExecutor: error during process cleanup:', error);
         finish();
       }

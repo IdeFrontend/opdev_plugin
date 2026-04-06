@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, inject, computed } from 'vue';
+import {
+  ref, onMounted, inject, computed,
+} from 'vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import { t } from 'i18next';
 import { useLinkSSH } from '../composables/use-link-ssh';
@@ -18,8 +20,8 @@ const getTextColorClass = () => actualTheme.value === 'dark' ? 'text-white' : 't
 // 根据主题获取边框颜色
 const getBorderColorClass = () => actualTheme.value === 'dark' ? 'border-[#464646]' : 'border-[#d9d9d9]';
 // 根据主题获取选中状态的边框和阴影
-const getSelectedBorderClass = () => actualTheme.value === 'dark' 
-  ? 'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)]' 
+const getSelectedBorderClass = () => actualTheme.value === 'dark'
+  ? 'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)]'
   : 'border-[#1890ff] shadow-[0_0_0_3px_rgba(24,144,255,0.15)]';
 // 根据主题获取分割线颜色（背景色）
 const getDividerClass = () => actualTheme.value === 'dark' ? 'bg-white/15' : 'bg-gray-300';
@@ -82,76 +84,127 @@ const getTemplateImage = (template: string) => {
   }
 };
 
-const cannProject = { id: 1, titleKey: 'web.welcome.ascendCOpProject' as const, descKey: 'web.link.ascendCOpDesc' as const };
-const ascendProject = { id: 2, titleKey: 'web.welcome.ascendCStandardProject' as const, descKey: 'web.link.ascendCStandardDesc' as const };
-const pyascProject = { id: 3, titleKey: 'web.welcome.pythonPyascProject' as const, descKey: 'web.link.pythonPyascDesc' as const };
-const items_type = ref([cannProject, pyascProject]);
-
-
+const cannProject = {
+  id: 1,
+  titleKey: 'web.welcome.ascendCOpProject' as const,
+  descKey: 'web.link.ascendCOpDesc' as const,
+};
+const ascendProject = {
+  id: 2,
+  titleKey: 'web.welcome.ascendCStandardProject' as const,
+  descKey: 'web.link.ascendCStandardDesc' as const,
+};
+const pyascProject = {
+  id: 3,
+  titleKey: 'web.welcome.pythonPyascProject' as const,
+  descKey: 'web.link.pythonPyascDesc' as const,
+};
+const items_type = ref([
+  cannProject,
+  pyascProject,
+]);
 
 const connectionFormRules = FormRulesFactory.createFormRules();
 
-const currentProjectType = ref('')
+const currentProjectType = ref('');
+
 onMounted(async () => {
   // 获取当前项目类型
   try {
     const result = await getProjectType();
+
     currentProjectType.value = result.projectType || '';
     console.log('[Operate] 当前项目类型:', currentProjectType.value);
 
     // 标准自定义算子大目录下，只能新建标准自定义算子
     if (currentProjectType.value === 'ascend') {
-      items_type.value = [ascendProject]
-      selectedId_type.value = 2
+      items_type.value = [ascendProject];
+      selectedId_type.value = 2;
     }
   }
   catch (error) {
     console.error('[Operate] 获取项目类型失败:', error);
     currentProjectType.value = '';
   }
-})
+});
 </script>
 <template>
   <div class="">
     <div class="flex w-full items-stretch max-[960px]:flex-wrap">
       <div class="w-[35%] max-[960px]:flex-auto max-[960px]:w-full max-[960px]:min-w-0">
-        <div class="text-base leading-[22px] font-bold mb-6" :class="getTextColorClass()">
+        <div
+          class="text-base leading-[22px] font-bold mb-6"
+          :class="getTextColorClass()"
+        >
           {{ t('web.link.projectType') }}
         </div>
         <div class="">
           <div class="mb-5">
-            <div v-for="item in items_type" :key="item.id"
+            <div
+              v-for="item in items_type"
+              :key="item.id"
               class="p-5 my-5 border rounded-lg cursor-pointer transition-all duration-300 overflow-hidden relative hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)] group max-[960px]:flex-auto max-[960px]:min-w-0"
               :class="[
                 getBorderColorClass(),
                 getCardBgClass(),
                 selectedId_type === item.id ? getSelectedBorderClass() : '',
-              ]" @click="selectedId_type = item.id">
-              <div class="font-extrabold text-[initial] mb-[25px]" :class="getTextColorClass()">
+              ]"
+              @click="selectedId_type = item.id"
+            >
+              <div
+                class="font-extrabold text-[initial] mb-[25px]"
+                :class="getTextColorClass()"
+              >
                 {{ t(item.titleKey) }}
               </div>
               <div
                 class="leading-8 mt-2.5 text-[13px] mb-2.5 whitespace-nowrap overflow-hidden text-ellipsis group-[.selected]:whitespace-normal group-[.selected]:overflow-visible group-[.selected]:text-clip"
                 :class="getDescTextClass()"
-                v-html="item.id === 1 ? getTemplateDesc(selectedTemplate) : t(item.descKey)">
-              </div>
-              <a-tag v-if="item.id === 1 || item.id === 2" color="blue" class="mt-2.5 mr-2">
+                v-html="item.id === 1 ? getTemplateDesc(selectedTemplate) : t(item.descKey)"
+              />
+              <a-tag
+                v-if="item.id === 1 || item.id === 2"
+                color="blue"
+                class="mt-2.5 mr-2"
+              >
                 {{ t('web.welcome.langAscendC') }}
               </a-tag>
-              <a-tag v-if="item.id === 3" color="blue" class="mt-2.5 mr-2">
+              <a-tag
+                v-if="item.id === 3"
+                color="blue"
+                class="mt-2.5 mr-2"
+              >
                 {{ t('web.welcome.langPython') }}
               </a-tag>
-              <a-tag v-if="item.id === 1" color="purple" class="mt-2.5 mr-2">
+              <a-tag
+                v-if="item.id === 1"
+                color="purple"
+                class="mt-2.5 mr-2"
+              >
                 {{ t('web.welcome.typeAngle') }}
               </a-tag>
-              <a-tag v-if="item.id === 2" color="green" class="mt-2.5 mr-2">
+              <a-tag
+                v-if="item.id === 2"
+                color="green"
+                class="mt-2.5 mr-2"
+              >
                 {{ t('web.welcome.typeStandardCustom') }}
               </a-tag>
-              <a-tag v-if="item.id === 3" color="purple" class="mt-2.5 mr-2">
+              <a-tag
+                v-if="item.id === 3"
+                color="purple"
+                class="mt-2.5 mr-2"
+              >
                 {{ t('web.welcome.typePyasc') }}
               </a-tag>
-              <div v-if="item.id === 1" class="mt-4 flex gap-4">
-                <a-radio-group v-model:value="selectedTemplate" class="flex gap-4">
+              <div
+                v-if="item.id === 1"
+                class="mt-4 flex gap-4"
+              >
+                <a-radio-group
+                  v-model:value="selectedTemplate"
+                  class="flex gap-4"
+                >
                   <a-radio value="helloworld">
                     helloworld
                   </a-radio>
@@ -164,17 +217,22 @@ onMounted(async () => {
                 </a-radio-group>
               </div>
               <transition name="slide-fade">
-                <div v-if="selectedId_type === item.id"
+                <div
+                  v-if="selectedId_type === item.id"
                   class="mt-5 pt-5 border-t transition-all duration-300"
-                  :class="getDividerBorderClass()">
-                  <div style="margin-bottom: 20px; margin-top: 20px" :class="getTextColorClass()">
+                  :class="getDividerBorderClass()"
+                >
+                  <div
+                    style="margin-bottom: 20px; margin-top: 20px"
+                    :class="getTextColorClass()"
+                  >
                     {{ t('web.link.structureDiagram') }}
                   </div>
                   <div class="overflow-hidden max-w-full transition-all duration-300">
-                    <a-image v-if="item.id === 2" :src="AscendC"
-                      class="block max-w-full h-auto object-contain transition-opacity duration-300 transform" />
-                    <a-image v-else :src="item.id === 1 ? getTemplateImage(selectedTemplate) : tipBase_0"
-                      class="block max-w-full h-auto object-contain transition-opacity duration-300 transform" />
+                    <a-image
+                      :src="item.id === 1 ? getTemplateImage(selectedTemplate) : tipBase_0"
+                      class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
+                    />
                   </div>
                 </div>
               </transition>
@@ -182,15 +240,28 @@ onMounted(async () => {
           </div>
         </div>
       </div>
-      <div class="w-px shrink-0 self-stretch mx-4" :class="getDividerClass()" />
+      <div
+        class="w-px shrink-0 self-stretch mx-4"
+        :class="getDividerClass()"
+      />
       <div
         class="w-[65%] text-left text-sm font-normal leading-[22px] max-[960px]:flex-auto max-[960px]:w-full max-[960px]:min-w-0"
-        :class="getTextColorClass()">
-        <div class="text-base leading-[22px] font-bold mb-6" :class="getTextColorClass()">
+        :class="getTextColorClass()"
+      >
+        <div
+          class="text-base leading-[22px] font-bold mb-6"
+          :class="getTextColorClass()"
+        >
           {{ t('web.link.projectConfig') }}
         </div>
-        <a-form ref="connectionFormRef" :model="projectFormData" :label-col="{ span: 6 }" :wrapper-col="{ span: 24 }"
-          :rules="connectionFormRules as any" layout="vertical">
+        <a-form
+          ref="connectionFormRef"
+          :model="projectFormData"
+          :label-col="{ span: 6 }"
+          :wrapper-col="{ span: 24 }"
+          :rules="connectionFormRules as any"
+          layout="vertical"
+        >
           <a-form-item name="projectName">
             <template #label>
               <span>{{ t('web.link.projectNameLabel') }}</span>
@@ -198,7 +269,10 @@ onMounted(async () => {
                 <QuestionCircleOutlined class="help-icon" />
               </a-tooltip>
             </template>
-            <a-input v-model:value="projectFormData.projectName" :placeholder="t('web.link.projectNamePlaceholder')" />
+            <a-input
+              v-model:value="projectFormData.projectName"
+              :placeholder="t('web.link.projectNamePlaceholder')"
+            />
           </a-form-item>
           <a-form-item name="projectPath">
             <template #label>
@@ -207,9 +281,14 @@ onMounted(async () => {
                 <QuestionCircleOutlined class="help-icon" />
               </a-tooltip>
             </template>
-            <a-auto-complete v-model:value="projectFormData.projectPath" :options="projectPathOptions"
-            :loading="projectPathLoading" :placeholder="t('web.link.projectPathPlaceholder')"
-              @search="(val) => remoteSearch('projectPath', val)" @click="handleSelectFolder" />
+            <a-auto-complete
+              v-model:value="projectFormData.projectPath"
+              :options="projectPathOptions"
+              :loading="projectPathLoading"
+              :placeholder="t('web.link.projectPathPlaceholder')"
+              @search="(val) => remoteSearch('projectPath', val)"
+              @focus="handleSelectFolder"
+            />
           </a-form-item>
           <a-form-item name="projectSH">
             <template #label>
@@ -218,12 +297,21 @@ onMounted(async () => {
                 <QuestionCircleOutlined class="help-icon" />
               </a-tooltip>
             </template>
-            <a-auto-complete v-model:value="projectFormData.projectSH" :options="projectSHOptions"
-              :loading="projectSHLoading" :placeholder="t('web.link.envScriptPlaceholder')"
-              @search="(val) => remoteSearch('projectSH', val)" @focus="handleSelectFile" />
+            <a-auto-complete
+              v-model:value="projectFormData.projectSH"
+              :options="projectSHOptions"
+              :loading="projectSHLoading"
+              :placeholder="t('web.link.envScriptPlaceholder')"
+              @search="(val) => remoteSearch('projectSH', val)"
+              @focus="handleSelectFile"
+            />
           </a-form-item>
         </a-form>
-        <a-button type="primary" class="!mt-6 !w-[84px] !h-8 !rounded-none" @click="handleCreatedProject">
+        <a-button
+          type="primary"
+          class="!mt-6 !w-auto !min-w-[84px] !px-4 !h-8 !rounded-none"
+          @click="handleCreatedProject"
+        >
           {{ t('web.link.createNow') }}
         </a-button>
       </div>

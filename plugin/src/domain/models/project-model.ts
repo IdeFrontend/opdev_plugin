@@ -117,33 +117,39 @@ export async function createProject(data: CreateProjectParams) {
     if (data.ascend_env_script) {
       existing.ascend_env_script = data.ascend_env_script;
     }
+
     if (data.project_type) {
       existing.project_type = data.project_type;
     }
+
     if (data.template_name) {
-      existing.template_name = data.template_name
+      existing.template_name = data.template_name;
     }
-    if (data.soc_version) {
-      existing.soc_version = data.soc_version;
-    }
+
     if (data.sub_project_ids) {
       existing.sub_project_ids = data.sub_project_ids;
     }
+
     if (data.is_experimental !== undefined) {
       existing.is_experimental = data.is_experimental;
     }
+
     if (data.ops_list !== undefined) {
       existing.ops_list = data.ops_list;
     }
+
     if (data.experimental_ops_list !== undefined) {
       existing.experimental_ops_list = data.experimental_ops_list;
     }
+
     if (data.ops_meet !== undefined) {
       existing.ops_meet = data.ops_meet;
     }
+
     if (data.selected_operator_ids !== undefined) {
       existing.selected_operator_ids = data.selected_operator_ids;
     }
+
     existing.update_time = new Date()
       .toISOString();
     writeStore(store);
@@ -184,19 +190,26 @@ export async function createProject(data: CreateProjectParams) {
 export function getProjectByPath(projectPath: string): ProjectRecord | undefined {
   if (!projectPath || typeof projectPath !== 'string') {
     console.warn('[getProjectByPath] Project path is empty or invalid:', projectPath);
+
     return undefined;
   }
 
   const store = ensureStore();
-  
+
   // Normalized path comparison (paths are not case sensitive on Windows)
-  const normalizedPath = path.normalize(projectPath).replace(/\\/g, '/').toLowerCase();
+  const normalizedPath = path.normalize(projectPath)
+    .replace(/\\/g, '/')
+    .toLowerCase();
 
   return store.projects.find((p) => {
     if (!p.project_path) {
       return false;
     }
-    const normalizedProjectPath = path.normalize(p.project_path).replace(/\\/g, '/').toLowerCase();
+
+    const normalizedProjectPath = path.normalize(p.project_path)
+      .replace(/\\/g, '/')
+      .toLowerCase();
+
     return normalizedProjectPath === normalizedPath;
   });
 }
@@ -213,22 +226,31 @@ export function getContainingStandardCustomProject(folderPath: string): ProjectR
   }
 
   const store = ensureStore();
-  const normalizedFolder = path.normalize(folderPath).replace(/\\/g, '/').toLowerCase();
+  const normalizedFolder = path.normalize(folderPath)
+    .replace(/\\/g, '/')
+    .toLowerCase();
 
   const containing = store.projects.filter((p) => {
     if (!p.project_path || !p.project_type) {
       return false;
     }
+
     if (
       p.project_type !== OperatorProjectType.STANDARD_CUSTOM
     ) {
       return false;
     }
-    const normalizedProject = path.normalize(p.project_path).replace(/\\/g, '/').toLowerCase();
+
+    const normalizedProject = path.normalize(p.project_path)
+      .replace(/\\/g, '/')
+      .toLowerCase();
+
     if (normalizedFolder === normalizedProject) {
       return true;
     }
+
     const prefix = normalizedProject.endsWith('/') ? normalizedProject : `${normalizedProject}/`;
+
     return normalizedFolder.startsWith(prefix);
   });
 
@@ -237,8 +259,11 @@ export function getContainingStandardCustomProject(folderPath: string): ProjectR
   }
 
   containing.sort((a, b) => {
-    const na = path.normalize(a.project_path || '').replace(/\\/g, '/').length;
-    const nb = path.normalize(b.project_path || '').replace(/\\/g, '/').length;
+    const na = path.normalize(a.project_path || '')
+      .replace(/\\/g, '/').length;
+    const nb = path.normalize(b.project_path || '')
+      .replace(/\\/g, '/').length;
+
     return nb - na;
   });
 
@@ -255,34 +280,42 @@ export function getProjectById(project_id: number) {
 export function deleteProject(projectPath: string): boolean {
   if (!projectPath || typeof projectPath !== 'string') {
     console.warn('[deleteProject] Project path is empty or invalid:', projectPath);
+
     return false;
   }
 
   const store = ensureStore();
-  
+
   // Normalized path comparison (paths are not case sensitive on Windows)
-  const normalizedPath = path.normalize(projectPath).replace(/\\/g, '/').toLowerCase();
-  
+  const normalizedPath = path.normalize(projectPath)
+    .replace(/\\/g, '/')
+    .toLowerCase();
+
   const index = store.projects.findIndex((p) => {
     if (!p.project_path) {
       return false;
     }
-    const normalizedProjectPath = path.normalize(p.project_path).replace(/\\/g, '/').toLowerCase();
+
+    const normalizedProjectPath = path.normalize(p.project_path)
+      .replace(/\\/g, '/')
+      .toLowerCase();
+
     return normalizedProjectPath === normalizedPath;
   });
-  
+
   if (index === -1) {
     return false;
   }
-  
+
   store.projects.splice(index, 1);
   writeStore(store);
-  
+
   return true;
 }
 
 export function getAllProjects(): ProjectRecord[] {
   const store = ensureStore();
+
   return store.projects;
 }
 
@@ -300,28 +333,35 @@ export async function updateStandardCustomOperators(
   experimentalOpsList: SubOperatorInfo[],
 ): Promise<void> {
   const store = ensureStore();
-  const normalizedPath = path.normalize(projectPath).replace(/\\/g, '/').toLowerCase();
-  
+  const normalizedPath = path.normalize(projectPath)
+    .replace(/\\/g, '/')
+    .toLowerCase();
+
   const project = store.projects.find((p) => {
     if (!p.project_path) {
       return false;
     }
-    const normalizedProjectPath = path.normalize(p.project_path).replace(/\\/g, '/').toLowerCase();
+
+    const normalizedProjectPath = path.normalize(p.project_path)
+      .replace(/\\/g, '/')
+      .toLowerCase();
+
     return normalizedProjectPath === normalizedPath;
   });
 
   if (project) {
     console.log(`[updateStandardCustomOperators] Updating project: ${projectPath}`);
-    console.log(`[updateStandardCustomOperators] ops_meet: ${opsMeet.length} operator groups`, opsMeet.map(m => m.name));
-    console.log(`[updateStandardCustomOperators] ops_list: ${opsList.length} operators`, opsList.map(o => o.name));
-    console.log(`[updateStandardCustomOperators] experimental_ops_list: ${experimentalOpsList.length} operators`, experimentalOpsList.map(o => o.name));
-    
+    console.log(`[updateStandardCustomOperators] ops_meet: ${opsMeet.length} operator groups`, opsMeet.map((m) => m.name));
+    console.log(`[updateStandardCustomOperators] ops_list: ${opsList.length} operators`, opsList.map((o) => o.name));
+    console.log(`[updateStandardCustomOperators] experimental_ops_list: ${experimentalOpsList.length} operators`, experimentalOpsList.map((o) => o.name));
+
     // Keep the isCompiled status of existing operators
     const existingOpsList = project.ops_list || [];
     const existingExperimentalOpsList = project.experimental_ops_list || [];
-    
+
     // Create an isCompiled state map of an existing operator (using the operator name as the key)
     const existingOpsCompiledMap = new Map<string, boolean>();
+
     existingOpsList.forEach((op) => {
       if (op.isCompiled === true) {
         existingOpsCompiledMap.set(op.name, true);
@@ -332,36 +372,40 @@ export async function updateStandardCustomOperators(
         existingOpsCompiledMap.set(op.name, true);
       }
     });
-    
+
     // Update the operator list and retain the existing isCompiled: true state
     const updatedOpsList = opsList.map((op) => {
       const existingIsCompiled = existingOpsCompiledMap.get(op.name);
+
       // If isCompiled of an existing operator is true, keep it; otherwise, use the result of the scan
       return {
         ...op,
         isCompiled: existingIsCompiled === true ? true : op.isCompiled,
       };
     });
-    
+
     const updatedExperimentalOpsList = experimentalOpsList.map((op) => {
       const existingIsCompiled = existingOpsCompiledMap.get(op.name);
+
       // If isCompiled of an existing operator is true, keep it; otherwise, use the result of the scan
       return {
         ...op,
         isCompiled: existingIsCompiled === true ? true : op.isCompiled,
       };
     });
-    
+
     project.ops_meet = opsMeet;
     project.ops_list = updatedOpsList;
     project.experimental_ops_list = updatedExperimentalOpsList;
-    project.update_time = new Date().toISOString();
+    project.update_time = new Date()
+      .toISOString();
     writeStore(store);
-    
+
     console.log(`[updateStandardCustomOperators] Update completed, preserved compiled status for ${existingOpsCompiledMap.size} compiled operators`);
-  } else {
+  }
+  else {
     console.warn(`[updateStandardCustomOperators] Project not found: ${projectPath}`);
-    console.warn(`[updateStandardCustomOperators] Existing project paths:`, store.projects.map(p => p.project_path));
+    console.warn('[updateStandardCustomOperators] Existing project paths:', store.projects.map((p) => p.project_path));
   }
 }
 
@@ -376,28 +420,38 @@ export async function markOperatorsAsCompiled(
 ): Promise<void> {
   console.log('[markOperatorsAsCompiled] Marking sub-operators in standard custom operator project as compiled', projectPath, operatorNames);
   const store = ensureStore();
-  const normalizedPath = path.normalize(projectPath).replace(/\\/g, '/').toLowerCase();
-  
+  const normalizedPath = path.normalize(projectPath)
+    .replace(/\\/g, '/')
+    .toLowerCase();
+
   const project = store.projects.find((p) => {
     if (!p.project_path) {
       return false;
     }
-    const normalizedProjectPath = path.normalize(p.project_path).replace(/\\/g, '/').toLowerCase();
+
+    const normalizedProjectPath = path.normalize(p.project_path)
+      .replace(/\\/g, '/')
+      .toLowerCase();
+
     return normalizedProjectPath === normalizedPath;
   });
 
   if (!project) {
     console.warn(`[markOperatorsAsCompiled] Project not found: ${projectPath}`);
+
     return;
   }
 
   // Convert operatorNames to array
   const operatorNameArray = Array.isArray(operatorNames)
     ? operatorNames
-    : operatorNames.split(',').map(name => name.trim()).filter(name => name.length > 0);
+    : operatorNames.split(',')
+      .map((name) => name.trim())
+      .filter((name) => name.length > 0);
 
   if (operatorNameArray.length === 0) {
-    console.warn(`[markOperatorsAsCompiled] Operator name list is empty`);
+    console.warn('[markOperatorsAsCompiled] Operator name list is empty');
+
     return;
   }
 
@@ -424,10 +478,12 @@ export async function markOperatorsAsCompiled(
   }
 
   if (updated) {
-    project.update_time = new Date().toISOString();
+    project.update_time = new Date()
+      .toISOString();
     writeStore(store);
     console.log(`[markOperatorsAsCompiled] Marked ${operatorNameArray.length} operators as compiled`);
-  } else {
+  }
+  else {
     console.warn(`[markOperatorsAsCompiled] Operators to mark were not found: ${operatorNameArray.join(', ')}`);
   }
 }

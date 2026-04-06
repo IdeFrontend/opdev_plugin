@@ -1,5 +1,7 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import {
+  ref, computed, onMounted, onUnmounted, watch,
+} from 'vue';
 import { t } from 'i18next';
 import { useTheme } from '@web/composables/use-theme';
 import settingIcon from '@web/assets/svg/setting.svg';
@@ -30,12 +32,15 @@ import {
   getCurrentTaskName,
   showConfirmDialog,
   startDumpTensor,
-  startUtTest
 } from '@web/apis';
-import { SettingOutlined, CheckOutlined, QuestionCircleOutlined, DeleteOutlined } from '@ant-design/icons-vue';
+import {
+  SettingOutlined, CheckOutlined, QuestionCircleOutlined, DeleteOutlined,
+} from '@ant-design/icons-vue';
 
 // 使用主题管理组合式函数
-const { themeConfig, actualTheme } = useTheme();
+const {
+  themeConfig, actualTheme,
+} = useTheme();
 
 // 主题相关的样式辅助函数
 const isDark = computed(() => actualTheme.value === 'dark');
@@ -43,25 +48,25 @@ const isDark = computed(() => actualTheme.value === 'dark');
 // 主题 CSS 变量
 const themeVars = computed(() => ({
   // 文本颜色
-  '--text-primary': isDark.value ? 'rgba(255, 255, 255, 0.85)' : 'rgba(0, 0, 0, 0.88)',
-  '--text-secondary': isDark.value ? 'rgba(255, 255, 255, 0.65)' : 'rgba(0, 0, 0, 0.45)',
-  '--text-disabled': isDark.value ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.25)',
-  '--text-highlight': isDark.value ? 'rgba(255, 255, 255, 0.85)' : 'rgba(0, 0, 0, 0.88)',
-  '--text-info': isDark.value ? 'rgba(255, 255, 255, 0.45)' : 'rgba(0, 0, 0, 0.45)',
+  '--text-primary': 'var(--vscode-foreground)',
+  '--text-secondary': 'var(--vscode-descriptionForeground)',
+  '--text-disabled': 'var(--vscode-disabledForeground)',
+  '--text-highlight': 'var(--vscode-foreground)',
+  '--text-info': 'var(--vscode-descriptionForeground)',
 
   // 背景色
-  '--bg-default': isDark.value ? '#1f1f1f' : '#ffffff',
-  '--bg-card': isDark.value ? '#262729' : '#fafafa',
-  '--bg-hover': isDark.value ? '#262729' : '#f5f5f5',
-  '--bg-selected': isDark.value ? '#111b26' : '#e6f7ff',
+  '--bg-default': 'var(--vscode-sideBar-background)',
+  '--bg-card': 'var(--vscode-sideBar-background)',
+  '--bg-hover': 'var(--vscode-list-hoverBackground)',
+  '--bg-selected': 'var(--vscode-list-activeSelectionBackground)',
 
   // 边框颜色
-  '--border-primary': isDark.value ? '#434343' : '#d9d9d9',
-  '--border-hover': isDark.value ? '#177ddc' : '#40a9ff',
+  '--border-primary': 'var(--vscode-sideBarSectionHeader-border)',
+  '--border-hover': 'var(--vscode-focusBorder)',
 
   // 强调色
-  '--color-primary': isDark.value ? '#177ddc' : '#1890ff',
-  '--color-selected': isDark.value ? '#177ddc' : '#1890ff',
+  '--color-primary': 'var(--vscode-textLink-foreground)',
+  '--color-selected': 'var(--vscode-textLink-activeForeground)',
 
   // 图标滤镜（浅色主题下使图标变深色）
   '--icon-filter': isDark.value ? 'none' : 'brightness(0) saturate(100%) invert(20%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(90%)',
@@ -70,39 +75,45 @@ const themeVars = computed(() => ({
 // 文本颜色
 const getTextColorClass = (level = 'normal') => {
   if (level === 'disabled') {
-    return isDark.value ? 'text-white/25' : 'text-black/25';
+    return 'text-[var(--vscode-disabledForeground)]';
   }
+
   if (level === 'secondary') {
-    return isDark.value ? 'text-white/65' : 'text-black/45';
+    return 'text-[var(--vscode-descriptionForeground)]';
   }
+
   if (level === 'highlight') {
-    return isDark.value ? 'text-white/85' : 'text-black/88';
+    return 'text-[var(--vscode-foreground)]';
   }
-  return isDark.value ? 'text-white' : 'text-[#1f1f1f]';
+
+  return 'text-[var(--vscode-foreground)]';
 };
 
 // 背景色
 const getBgColorClass = (type = 'default') => {
   if (type === 'card') {
-    return isDark.value ? 'bg-[#1f1f1f]' : 'bg-white';
+    return 'bg-[var(--vscode-sideBar-background)]';
   }
+
   if (type === 'hover') {
-    return isDark.value ? 'hover:bg-[#262729]' : 'hover:bg-gray-50';
+    return 'hover:bg-[var(--vscode-list-hoverBackground)]';
   }
+
   if (type === 'selected') {
-    return isDark.value ? 'bg-[#111b26]' : 'bg-blue-50';
+    return 'bg-[var(--vscode-list-activeSelectionBackground)]';
   }
-  return isDark.value ? 'bg-[#1f1f1f]' : 'bg-white';
+
+  return 'bg-[var(--vscode-sideBar-background)]';
 };
 
 // 边框颜色
 const getBorderColorClass = () => {
-  return isDark.value ? 'border-[#434343]' : 'border-[#d9d9d9]';
+  return 'border-[var(--vscode-sideBarSectionHeader-border)]';
 };
 
 // 分割线颜色
 const getDividerClass = () => {
-  return isDark.value ? 'bg-[#434343]' : 'bg-[#d9d9d9]';
+  return 'bg-[var(--vscode-sideBarSectionHeader-border)]';
 };
 
 const activeConfig = ref('');
@@ -135,19 +146,26 @@ const getOperatorParams = () => {
   let compileOption;
 
   if (selectedOperators.value.length > 0) {
-    operatorNames = selectedOperators.value.map((op) => op.name).join(',');
+    operatorNames = selectedOperators.value.map((op) => op.name)
+      .join(',');
+
     // 如果是标准自定义算子，设置类型
     if (isStandardCustom.value) {
       operatorType = 'standard-custom';
       // 检查选中的算子中是否有 experimental 算子（hasEx 为 true）
       const hasExperimental = selectedOperators.value.some((op) => op.hasEx);
+
       if (hasExperimental) {
         compileOption = '--experimental';
       }
     }
   }
 
-  return { operatorNames, operatorType, compileOption };
+  return {
+    operatorNames,
+    operatorType,
+    compileOption,
+  };
 };
 
 // 需要互斥的操作按钮（执行时其他按钮应该禁用）
@@ -160,7 +178,6 @@ const mutuallyExclusiveKeys = [
   'buildAndCpuDebug',
   'buildAndDebug',
   'dumpTensor',
-  'utTest'
 ];
 
 // 基础菜单配置（不包含调试菜单）
@@ -178,7 +195,9 @@ const baseMenuItems = computed(() => [
     label: t('web.operate.compileDeploy'),
     icon: buildIcon,
     handler: async () => {
-      const { operatorNames, operatorType, compileOption } = getOperatorParams();
+      const {
+        operatorNames, operatorType, compileOption,
+      } = getOperatorParams();
 
       try {
         await startBuild({
@@ -186,6 +205,7 @@ const baseMenuItems = computed(() => [
           operatorType,
           compileOption,
         });
+
         // 编译成功后，刷新算子列表以更新编译状态
         if (isStandardCustom.value && operatorNames) {
           console.log('[Operate] 编译成功，刷新算子列表');
@@ -203,13 +223,17 @@ const baseMenuItems = computed(() => [
     icon: runIcon,
     handler: async () => {
       if (hasMultipleOperators.value) {
-        const { operatorNames, operatorType, compileOption } = getOperatorParams();
+        const {
+          operatorNames, operatorType, compileOption,
+        } = getOperatorParams();
+
         await startBuildExample({
           operatorNames,
           operatorType,
-          compileOption
+          compileOption,
         });
-      } else {
+      }
+      else {
         await startRun();
       }
     },
@@ -276,6 +300,7 @@ const menuItems = computed(() => {
 
   // 如果项目类型不是 ascend，且不是 cann 类型的 torch_library_template，添加CPU调试子菜单项
   const isCannTorchLibrary = projectType.value === 'cann' && projectTemplateName.value === 'torch_library_template';
+
   if (projectType.value !== 'ascend' && !isCannTorchLibrary) {
     debugChildren.push({
       key: 'buildAndCpuDebug',
@@ -299,7 +324,8 @@ const menuItems = computed(() => {
 
   // 只有当有子菜单项时才显示调试菜单
   if (debugChildren.length > 0) {
-    const runExampleIndex = items.findIndex(item => item.key === 'runExample');
+    const runExampleIndex = items.findIndex((item) => item.key === 'runExample');
+
     if (runExampleIndex !== -1) {
       items.splice(runExampleIndex + 1, 0, {
         key: 'runDebug',
@@ -312,18 +338,16 @@ const menuItems = computed(() => {
 
   // 如果项目类型是 pyasc，隐藏编译部署、调试、异常检测
   if (projectType.value === 'pyasc') {
-    return items.filter(item =>
-      item.key !== 'build' &&
-      item.key !== 'sanitizer' &&
-      item.key !== 'runDebug' && 
-      item.key !== 'dumpTensor' &&
-      item.key !== 'utTest'
-    );
+    return items.filter((item) =>
+      item.key !== 'build'
+      && item.key !== 'sanitizer'
+      && item.key !== 'runDebug'
+      && item.key !== 'dumpTensor');
   }
 
   // 根目录为标准自定义算子且 build.sh 不含 --bisheng_flags：隐藏性能调优
-  let filtered = isStandardCustom.value && !supportsSanitizerAndTuning.value
-    ? items.filter(item => item.key !== 'power' && item.key !== 'runDebug')
+  const filtered = isStandardCustom.value && !supportsSanitizerAndTuning.value
+    ? items.filter((item) => item.key !== 'power' && item.key !== 'runDebug')
     : items;
 
   // 过滤菜单项：UT测试只在标准自定义算子中显示
@@ -335,19 +359,21 @@ const menuItems = computed(() => {
   });
 
   // 过滤菜单项：buildExample 只在标准自定义算子中显示
-  return filtered.map(item => {
+  return filtered.map((item) => {
     if (item.key === 'build' && item.children) {
       return {
         ...item,
-        children: item.children.filter(child => {
+        children: item.children.filter((child) => {
           // buildExample 只在标准自定义算子中显示
           if (child.key === 'buildExample') {
             return isStandardCustom.value;
           }
+
           return true;
         }),
       };
     }
+
     return item;
   });
 });
@@ -358,7 +384,10 @@ const hasMultipleSelectedOperators = computed(() => {
 });
 
 // 允许在多算子选择时使用的菜单项
-const allowedKeysForMultipleOperators = ['projectConfig', 'build'];
+const allowedKeysForMultipleOperators = [
+  'projectConfig',
+  'build',
+];
 
 // 判断菜单项是否因为多算子选择而被禁用
 const isDisabledByMultipleOperators = (itemKey) => {
@@ -371,12 +400,14 @@ const areAllChildrenDisabledByMultipleOperators = (item) => {
   if (!item.children || item.children.length === 0) {
     return false;
   }
+
   // 检查所有子项是否都因为多算子选择而被禁用
-  return item.children.every(child => {
+  return item.children.every((child) => {
     if (child.children) {
       // 如果有嵌套子菜单，递归检查
       return areAllChildrenDisabledByMultipleOperators(child);
     }
+
     return isDisabledByMultipleOperators(child.key);
   });
 };
@@ -388,6 +419,7 @@ const isMenuItemDisabled = (itemKey) => {
   if (isDisabledByMultipleOperators(itemKey)) {
     return true;
   }
+
   return false;
 };
 
@@ -418,6 +450,7 @@ const handleMenuClick = async ({ key }) => {
     // 获取当前任务名称
     try {
       const taskName = await getCurrentTaskName();
+
       if (taskName) {
         // 调用vscode弹窗进行二次确认
         const stopAndRunText = t('web.operate.stopAndRun');
@@ -431,14 +464,16 @@ const handleMenuClick = async ({ key }) => {
         if (result === stopAndRunText) {
           // 先停止当前任务
           isStopping.value = true;
+
           try {
             await stopTask();
             // 等待任务停止后再执行新任务
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise((resolve) => setTimeout(resolve, 1000));
           }
           catch (error) {
             console.error('[Operate] 停止任务失败:', error);
             isStopping.value = false;
+
             return;
           }
           finally {
@@ -452,11 +487,13 @@ const handleMenuClick = async ({ key }) => {
       }
       else {
         console.warn('有操作正在执行中，但无法获取任务名称');
+
         return;
       }
     }
     catch (error) {
       console.error('[Operate] 获取任务名称或显示确认对话框失败:', error);
+
       return;
     }
   }
@@ -553,6 +590,7 @@ onMounted(async () => {
   // 获取当前项目类型
   try {
     const result = await getProjectType();
+
     projectTypeName.value = result.projectTypeName || t('web.operate.unknownProjectType');
     projectType.value = result.projectType || '';
     projectTemplateName.value = result.projectTemplateName || '';
@@ -566,6 +604,7 @@ onMounted(async () => {
   // 检查是否有多个算子工程
   try {
     const result = await checkMultipleOperators();
+
     hasMultipleOperators.value = result.hasMultiple || false;
     isStandardCustom.value = result.isStandardCustom || false;
     supportsSanitizerAndTuning.value = result.supportsSanitizerAndTuning ?? true;
@@ -597,7 +636,8 @@ onMounted(async () => {
         // 根据编译成功判断逻辑，将编译成功的算子移到编译成功的算子工程列表中
         if (isOperatorCompiled(operatorItem)) {
           compiledOperators.value.push(operatorItem);
-        } else {
+        }
+        else {
           preparedOperators.value.push(operatorItem);
         }
       });
@@ -616,7 +656,7 @@ onMounted(async () => {
       console.log('[Operate] 标准自定义算子，加载配置列表:', configArray.value);
 
       // 等待一下确保算子列表已完全加载，然后加载已选择的算子
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       await loadSelectedOperators();
     }
   }
@@ -631,15 +671,18 @@ onMounted(async () => {
   statusTimer = setInterval(async () => {
     try {
       const isRunning = await checkTaskStatus();
+
       // 只有当状态发生变化时才更新，避免不必要的重绘
       if (isExecuting.value !== isRunning) {
         console.log('[Operate] 同步后端任务状态:', isRunning);
         isExecuting.value = isRunning;
       }
+
       // 如果任务正在执行，获取任务名称
       if (isRunning) {
         try {
           const taskName = await getCurrentTaskName();
+
           currentTaskName.value = taskName;
         }
         catch (error) {
@@ -663,17 +706,20 @@ onUnmounted(() => {
   }
 });
 
-
 const openSetting = async (key) => {
   const configKey = key === 'simulation' || key === 'onboard' ? `opprof-${key}` : key;
 
   // 首先尝试打开配置页面
-  await openConfig({ configName: 'huawei-op-devtools.config', key: configKey });
+  await openConfig({
+    configName: 'huawei-op-devtools.config',
+    key: configKey,
+  });
 
   // 然后向已打开的配置页面发送导航消息
   try {
     await navigateToTab(configKey);
-  } catch (error) {
+  }
+  catch (error) {
     console.error('导航到标签页失败:', error);
   }
 };
@@ -697,6 +743,7 @@ const isOperatorCompiled = (operator) => {
   if (operator.isCompiled !== undefined) {
     return operator.isCompiled;
   }
+
   // 否则默认返回 false
   return false;
 };
@@ -727,7 +774,8 @@ const refreshOperatorList = async () => {
         // 根据编译成功判断逻辑，将编译成功的算子移到编译成功的算子工程列表中
         if (isOperatorCompiled(operatorItem)) {
           compiledOperators.value.push(operatorItem);
-        } else {
+        }
+        else {
           preparedOperators.value.push(operatorItem);
         }
       });
@@ -745,7 +793,7 @@ const refreshOperatorList = async () => {
       console.log('[Operate] 刷新算子列表完成，预备算子列表:', preparedOperators.value);
 
       // 等待一下确保算子列表已完全加载，然后加载已选择的算子
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       await loadSelectedOperators();
     }
   }
@@ -775,8 +823,8 @@ const filteredCompiledOperators = computed(() => {
   const keyword = searchKeyword.value.toLowerCase();
 
   return compiledOperators.value.filter((op) =>
-    op.name.toLowerCase().includes(keyword),
-  );
+    op.name.toLowerCase()
+      .includes(keyword));
 });
 
 const filteredPreparedOperators = computed(() => {
@@ -787,15 +835,14 @@ const filteredPreparedOperators = computed(() => {
   const keyword = searchKeyword.value.toLowerCase();
 
   return preparedOperators.value.filter((op) =>
-    op.name.toLowerCase().includes(keyword),
-  );
+    op.name.toLowerCase()
+      .includes(keyword));
 });
 
 // 获取已选择的算子工程
 const selectedOperators = computed(() => {
   return allOperators.value.filter((op) => selectedOperatorIds.value.includes(op.id));
 });
-
 
 // 获取已选择项的类型（ex 或 无ex）
 const selectedType = computed(() => {
@@ -883,7 +930,8 @@ const toggleOperator = (operator) => {
   if (isSelected) {
     // 取消选择
     selectedOperatorIds.value = selectedOperatorIds.value.filter((id) => id !== operator.id);
-  } else {
+  }
+  else {
     // 检查是否违反规则：不能同时选择带ex和不带ex的条目
     const selectedOps = selectedOperators.value;
 
@@ -905,7 +953,7 @@ const toggleOperator = (operator) => {
     // 允许选择
     selectedOperatorIds.value.push(operator.id);
   }
-  
+
   // 保存已选择的算子
   saveSelectedOperators();
 };
@@ -928,9 +976,9 @@ const toggleCompiledAll = () => {
   if (isCompiledAllSelected.value) {
     // 取消全选 - 只取消目标类型的项
     selectedOperatorIds.value = selectedOperatorIds.value.filter((id) =>
-      !targetItems.some((op) => op.id === id),
-    );
-  } else {
+      !targetItems.some((op) => op.id === id));
+  }
+  else {
     // 全选目标类型的项
     targetItems.forEach((op) => {
       if (!selectedOperatorIds.value.includes(op.id)) {
@@ -938,7 +986,7 @@ const toggleCompiledAll = () => {
       }
     });
   }
-  
+
   // 保存已选择的算子
   saveSelectedOperators();
 };
@@ -961,9 +1009,9 @@ const togglePreparedAll = () => {
   if (isPreparedAllSelected.value) {
     // 取消全选 - 只取消目标类型的项
     selectedOperatorIds.value = selectedOperatorIds.value.filter((id) =>
-      !targetItems.some((op) => op.id === id),
-    );
-  } else {
+      !targetItems.some((op) => op.id === id));
+  }
+  else {
     // 全选目标类型的项
     targetItems.forEach((op) => {
       if (!selectedOperatorIds.value.includes(op.id)) {
@@ -971,7 +1019,7 @@ const togglePreparedAll = () => {
       }
     });
   }
-  
+
   // 保存已选择的算子
   saveSelectedOperators();
 };
@@ -995,9 +1043,11 @@ const saveSelectedOperators = async () => {
   if (!isStandardCustom.value) {
     return;
   }
+
   try {
-    await setSelectedOperators(selectedOperatorIds.value.map(id => Number(id)));
-  } catch (error) {
+    await setSelectedOperators(selectedOperatorIds.value.map((id) => Number(id)));
+  }
+  catch (error) {
     console.error('[Operate] 保存已选择的算子失败:', error);
   }
 };
@@ -1007,31 +1057,44 @@ const loadSelectedOperators = async () => {
   if (!isStandardCustom.value) {
     return;
   }
+
   try {
     const selectedIds = await getSelectedOperatorIds();
+
     console.log('[Operate] 从后端获取的已选择算子ID:', selectedIds);
 
-    const allOps = [...compiledOperators.value, ...preparedOperators.value];
+    const allOps = [
+      ...compiledOperators.value,
+      ...preparedOperators.value,
+    ];
 
     if (selectedIds && selectedIds.length > 0) {
       const matchedIds = allOps
-        .filter(op => {
+        .filter((op) => {
           const opIdNum = Number(op.id);
           const isMatch = selectedIds.includes(opIdNum);
+
           if (isMatch) {
             console.log('[Operate] 匹配到算子:', op.name, 'ID:', op.id, '数字ID:', opIdNum);
           }
+
           return isMatch;
         })
-        .map(op => op.id);
+        .map((op) => op.id);
 
       if (matchedIds.length > 0) {
         selectedOperatorIds.value = matchedIds;
         console.log('[Operate] 成功恢复已选择的算子:', matchedIds);
+
         return;
       }
-      console.warn('[Operate] 未找到匹配的算子，保存的ID:', selectedIds, '可用的算子:', allOps.map(op => ({ id: op.id, name: op.name })));
-    } else {
+
+      console.warn('[Operate] 未找到匹配的算子，保存的ID:', selectedIds, '可用的算子:', allOps.map((op) => ({
+        id: op.id,
+        name: op.name,
+      })));
+    }
+    else {
       console.log('[Operate] 没有保存的已选择算子');
     }
 
@@ -1042,10 +1105,12 @@ const loadSelectedOperators = async () => {
 
     const sorted = [...allOps].sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
     const first = sorted[0];
+
     selectedOperatorIds.value = [first.id];
     await setSelectedOperators([Number(first.id)]);
     console.log('[Operate] 已设置初始选中算子（按字母排序第一个）:', first.name);
-  } catch (error) {
+  }
+  catch (error) {
     console.error('[Operate] 加载已选择的算子失败:', error);
   }
 };
@@ -1055,6 +1120,7 @@ const handlePopoverOpenChange = async (open) => {
   if (open && operatorSelectorTriggerRef.value) {
     // 当 Popover 打开时，获取触发器的宽度
     const triggerWidth = operatorSelectorTriggerRef.value.offsetWidth;
+
     popoverWidth.value = `${triggerWidth}px`;
 
     // 每次打开算子选择器时，从 projects.json 重新读取数据并分类
@@ -1069,9 +1135,14 @@ const handlePopoverOpenChange = async (open) => {
 const updateRootCssVars = () => {
   const root = document.documentElement;
   const vars = themeVars.value;
-  Object.entries(vars).forEach(([key, value]) => {
-    root.style.setProperty(key, String(value));
-  });
+
+  Object.entries(vars)
+    .forEach(([
+      key,
+      value,
+    ]) => {
+      root.style.setProperty(key, String(value));
+    });
 };
 
 // 监听 actualTheme 变化并更新 :root 上的 CSS 变量
@@ -1088,42 +1159,78 @@ const handleConfirm = () => {
 
 <template>
   <a-config-provider :theme="themeConfig">
-    <div class="pt-3 w-full min-w-[138px]" :style="themeVars">
+    <div
+      class="pt-3 w-full min-w-[138px]"
+      :style="themeVars"
+    >
       <!-- 如果配置文件不存在且不是标准自定义算子，显示提示信息 -->
-      <div v-if="!hasDevtoolConfig && !isStandardCustom" class="flex items-center justify-center min-h-[200px] p-5">
-        <div class="text-xs text-center leading-relaxed" :class="getTextColorClass('secondary')">
+      <div
+        v-if="!hasDevtoolConfig && !isStandardCustom"
+        class="flex items-center justify-center min-h-[200px] p-5"
+      >
+        <div
+          class="text-xs text-center leading-relaxed"
+          :class="getTextColorClass('secondary')"
+        >
           {{ t('web.operate.needProjectHint') }}
         </div>
       </div>
 
       <!-- 如果配置文件存在或是标准自定义算子，显示正常菜单 -->
       <template v-else>
-
         <!-- 停止任务按钮 -->
-        <div v-if="isExecuting" class="px-3 py-2 mb-2">
-          <a-button danger size="small" class="w-full text-[11px] h-6" @click="handleStopTask">
+        <div
+          v-if="isExecuting"
+          class="px-3 py-2 mb-2"
+        >
+          <a-button
+            danger
+            size="small"
+            class="w-full text-[11px] h-6"
+            @click="handleStopTask"
+          >
             {{ t('web.operate.stopTask', { name: currentTaskName ? `"${currentTaskName}"` : t('web.operate.stopTaskDefault') }) }}
           </a-button>
         </div>
 
         <!-- 算子工程选择器 -->
-        <div v-if="hasMultipleOperators || isStandardCustom" class="px-3 py-2 mb-2 operator-selector-wrapper">
-          <a-popover v-model:open="operatorSelectorVisible" placement="bottomLeft" trigger="click"
-            :overlay-style="{ width: popoverWidth, padding: '0' }" overlay-class-name="operator-selector-popover"
-            @open-change="handlePopoverOpenChange">
+        <div
+          v-if="hasMultipleOperators || isStandardCustom"
+          class="px-3 py-2 mb-2 operator-selector-wrapper"
+        >
+          <a-popover
+            v-model:open="operatorSelectorVisible"
+            placement="bottomLeft"
+            trigger="click"
+            :overlay-style="{ width: popoverWidth, padding: '0' }"
+            overlay-class-name="operator-selector-popover"
+            @open-change="handlePopoverOpenChange"
+          >
             <template #content>
               <div class="operator-selector-content">
                 <!-- 第一个模块：已选择的内容 -->
                 <div class="selected-section">
                   <div class="selected-header">
                     <span>{{ t('web.operate.selectedCount', { count: selectedOperators.length }) }}</span>
-                    <a-button v-if="selectedOperators.length > 0" type="text" size="small" @click="clearAllSelected">
-                      <template #icon><DeleteOutlined /></template>
+                    <a-button
+                      v-if="selectedOperators.length > 0"
+                      type="text"
+                      size="small"
+                      @click="clearAllSelected"
+                    >
+                      <template #icon>
+                        <DeleteOutlined />
+                      </template>
                     </a-button>
                   </div>
                   <div class="selected-tags">
-                    <a-tag v-for="op in selectedOperators" :key="op.id" closable class="mb-2 mr-2"
-                      @close="removeOperator(op.id)">
+                    <a-tag
+                      v-for="op in selectedOperators"
+                      :key="op.id"
+                      closable
+                      class="mb-2 mr-2"
+                      @close="removeOperator(op.id)"
+                    >
                       {{ op.name }}
                     </a-tag>
                   </div>
@@ -1132,59 +1239,114 @@ const handleConfirm = () => {
 
                 <!-- 第二个模块：搜索和选择 -->
                 <div class="search-section">
-                  <a-input v-model:value="searchKeyword" :placeholder="t('web.operate.searchOperatorProject')" class="mb-3" allow-clear />
+                  <a-input
+                    v-model:value="searchKeyword"
+                    :placeholder="t('web.operate.searchOperatorProject')"
+                    class="mb-3"
+                    allow-clear
+                  />
 
                   <!-- 编译成功的算子工程 -->
-                  <a-collapse v-model:active-key="compiledOperatorsActiveKey" :bordered="false"
-                    class="operator-collapse">
-                    <a-collapse-panel key="1" :header="t('web.operate.compiledOperators')">
+                  <a-collapse
+                    v-model:active-key="compiledOperatorsActiveKey"
+                    :bordered="false"
+                    class="operator-collapse"
+                  >
+                    <a-collapse-panel
+                      key="1"
+                      :header="t('web.operate.compiledOperators')"
+                    >
                       <div class="operator-list">
-                        <div class="operator-item select-all" :class="{
-                          selected: isCompiledAllSelected,
-                          disabled: isCompiledAllDisabled,
-                        }" @click="!isCompiledAllDisabled && toggleCompiledAll()">
+                        <div
+                          class="operator-item select-all"
+                          :class="{
+                            selected: isCompiledAllSelected,
+                            disabled: isCompiledAllDisabled,
+                          }"
+                          @click="!isCompiledAllDisabled && toggleCompiledAll()"
+                        >
                           <span>{{ t('web.operate.selectAll') }}</span>
-                          <CheckOutlined v-if="isCompiledAllSelected" class="check-icon" />
+                          <CheckOutlined
+                            v-if="isCompiledAllSelected"
+                            class="check-icon"
+                          />
                         </div>
-                        <div v-for="op in filteredCompiledOperators" :key="op.id" class="operator-item" :class="{
-                          selected: selectedOperatorIds.includes(op.id),
-                          disabled: isOperatorDisabled(op),
-                        }" @click="!isOperatorDisabled(op) && toggleOperator(op)">
+                        <div
+                          v-for="op in filteredCompiledOperators"
+                          :key="op.id"
+                          class="operator-item"
+                          :class="{
+                            selected: selectedOperatorIds.includes(op.id),
+                            disabled: isOperatorDisabled(op),
+                          }"
+                          @click="!isOperatorDisabled(op) && toggleOperator(op)"
+                        >
                           <span>
                             {{ op.name }}
-                            <div v-if="op.hasEx" class="ex-icon">
+                            <div
+                              v-if="op.hasEx"
+                              class="ex-icon"
+                            >
                               ex
                             </div>
                           </span>
-                          <CheckOutlined v-if="selectedOperatorIds.includes(op.id)" class="check-icon" />
+                          <CheckOutlined
+                            v-if="selectedOperatorIds.includes(op.id)"
+                            class="check-icon"
+                          />
                         </div>
                       </div>
                     </a-collapse-panel>
                   </a-collapse>
 
                   <!-- 预备算子工程 -->
-                  <a-collapse v-model:active-key="preparedOperatorsActiveKey" :bordered="false"
-                    class="operator-collapse mt-3">
-                    <a-collapse-panel key="1" :header="t('web.operate.preparedOperators')">
+                  <a-collapse
+                    v-model:active-key="preparedOperatorsActiveKey"
+                    :bordered="false"
+                    class="operator-collapse mt-3"
+                  >
+                    <a-collapse-panel
+                      key="1"
+                      :header="t('web.operate.preparedOperators')"
+                    >
                       <div class="operator-list">
-                        <div class="operator-item select-all" :class="{
-                          selected: isPreparedAllSelected,
-                          disabled: isPreparedAllDisabled,
-                        }" @click="!isPreparedAllDisabled && togglePreparedAll()">
+                        <div
+                          class="operator-item select-all"
+                          :class="{
+                            selected: isPreparedAllSelected,
+                            disabled: isPreparedAllDisabled,
+                          }"
+                          @click="!isPreparedAllDisabled && togglePreparedAll()"
+                        >
                           <span>{{ t('web.operate.selectAll') }}</span>
-                          <CheckOutlined v-if="isPreparedAllSelected" class="check-icon" />
+                          <CheckOutlined
+                            v-if="isPreparedAllSelected"
+                            class="check-icon"
+                          />
                         </div>
-                        <div v-for="op in filteredPreparedOperators" :key="op.id" class="operator-item" :class="{
-                          selected: selectedOperatorIds.includes(op.id),
-                          disabled: isOperatorDisabled(op),
-                        }" @click="!isOperatorDisabled(op) && toggleOperator(op)">
+                        <div
+                          v-for="op in filteredPreparedOperators"
+                          :key="op.id"
+                          class="operator-item"
+                          :class="{
+                            selected: selectedOperatorIds.includes(op.id),
+                            disabled: isOperatorDisabled(op),
+                          }"
+                          @click="!isOperatorDisabled(op) && toggleOperator(op)"
+                        >
                           <span>
                             {{ op.name }}
-                            <div v-if="op.hasEx" class="ex-icon">
+                            <div
+                              v-if="op.hasEx"
+                              class="ex-icon"
+                            >
                               ex
                             </div>
                           </span>
-                          <CheckOutlined v-if="selectedOperatorIds.includes(op.id)" class="check-icon" />
+                          <CheckOutlined
+                            v-if="selectedOperatorIds.includes(op.id)"
+                            class="check-icon"
+                          />
                         </div>
                       </div>
                     </a-collapse-panel>
@@ -1193,22 +1355,40 @@ const handleConfirm = () => {
 
                 <!-- 确认按钮 -->
                 <div class="confirm-section">
-                  <a-button type="primary" class="confirm-button" @click="handleConfirm">
+                  <a-button
+                    type="primary"
+                    class="confirm-button"
+                    @click="handleConfirm"
+                  >
                     {{ t('web.operate.confirm') }}
                   </a-button>
                 </div>
               </div>
             </template>
             <template #default>
-              <div ref="operatorSelectorTriggerRef" class="operator-selector-trigger"
-                :class="{ 'has-selection': selectedOperators.length > 0 }">
+              <div
+                ref="operatorSelectorTriggerRef"
+                class="operator-selector-trigger"
+                :class="{ 'has-selection': selectedOperators.length > 0 }"
+              >
                 <span class="selector-text">
                   {{ t('web.operate.pleaseSelectOperatorProject') }}
                 </span>
                 <span class="selector-arrow">
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M2 4L6 8L10 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
-                      stroke-linejoin="round" />
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M2 4L6 8L10 4"
+                      stroke="currentColor"
+                      stroke-width="1.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
                   </svg>
                 </span>
               </div>
@@ -1219,33 +1399,65 @@ const handleConfirm = () => {
         <!-- 已选择的算子工程显示区域（组件收起后显示） -->
         <div
           v-if="(hasMultipleOperators || isStandardCustom) && !operatorSelectorVisible && selectedOperators.length > 0"
-          class="px-3 py-2 mb-2">
+          class="px-3 py-2 mb-2"
+        >
           <div class="selected-display-section">
             <div class="selected-display-header">
               <span>{{ t('web.operate.selectedCount', { count: selectedOperators.length }) }}</span>
-              <a-button type="text" size="small" @click="clearAllSelected">
-                <template #icon><DeleteOutlined /></template>
+              <a-button
+                type="text"
+                size="small"
+                @click="clearAllSelected"
+              >
+                <template #icon>
+                  <DeleteOutlined />
+                </template>
               </a-button>
             </div>
             <div class="selected-display-tags">
-              <a-tag v-for="op in selectedOperators" :key="op.id" closable class="mb-2 mr-2"
-                @close="removeOperator(op.id)">
+              <a-tag
+                v-for="op in selectedOperators"
+                :key="op.id"
+                closable
+                class="mb-2 mr-2"
+                @close="removeOperator(op.id)"
+              >
                 {{ op.name }}
               </a-tag>
             </div>
           </div>
         </div>
 
-        <a-menu mode="inline" :open-keys="openKeys" :selected-keys="selectedKeys"
-          class="border-r-0 bg-transparent -ml-3" @open-change="onOpenChange" @click="handleMenuClick">
+        <a-menu
+          mode="inline"
+          :open-keys="openKeys"
+          :selected-keys="selectedKeys"
+          class="border-r-0 bg-transparent -ml-3"
+          @open-change="onOpenChange"
+          @click="handleMenuClick"
+        >
           <template v-for="item in menuItems">
             <!-- 有子菜单的情况 -->
-            <a-sub-menu v-if="item.children && item.children.length > 0" :key="`submenu-${item.key}`">
+            <a-sub-menu
+              v-if="item.children && item.children.length > 0"
+              :key="`submenu-${item.key}`"
+            >
               <template #title>
-                <a-tooltip v-if="areAllChildrenDisabledByMultipleOperators(item)" :title="t('web.operate.singleOperatorOnly')" placement="right">
-                  <div v-if="item.icon" class="single-box">
+                <a-tooltip
+                  v-if="areAllChildrenDisabledByMultipleOperators(item)"
+                  :title="t('web.operate.singleOperatorOnly')"
+                  placement="right"
+                >
+                  <div
+                    v-if="item.icon"
+                    class="single-box"
+                  >
                     <span class="inline-flex items-center text-[11px]">
-                      <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
+                      <img
+                        :src="item.icon"
+                        alt=""
+                        class="w-4 h-4 mr-2 align-middle"
+                      />
                       <span :class="getTextColorClass('highlight')">{{ item.label }}</span>
                     </span>
                     <div class="flex items-center gap-1">
@@ -1259,17 +1471,30 @@ const handleConfirm = () => {
                           @click.stop
                         />
                       </a-tooltip>
-                      <div v-if="item.key === 'runDebug'" class="setting-box">
+                      <div
+                        v-if="item.key === 'runDebug'"
+                        class="setting-box"
+                      >
                         <SettingOutlined @click.stop="debugConfig()" />
                       </div>
                     </div>
                   </div>
-                  <span v-else :class="getTextColorClass('highlight')">{{ item.label }}</span>
+                  <span
+                    v-else
+                    :class="getTextColorClass('highlight')"
+                  >{{ item.label }}</span>
                 </a-tooltip>
                 <template v-else>
-                  <div v-if="item.icon" class="single-box">
+                  <div
+                    v-if="item.icon"
+                    class="single-box"
+                  >
                     <span class="inline-flex items-center text-[11px]">
-                      <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
+                      <img
+                        :src="item.icon"
+                        alt=""
+                        class="w-4 h-4 mr-2 align-middle"
+                      />
                       <span :class="getTextColorClass('highlight')">{{ item.label }}</span>
                     </span>
                     <div class="flex items-center gap-1">
@@ -1283,60 +1508,105 @@ const handleConfirm = () => {
                           @click.stop
                         />
                       </a-tooltip>
-                      <div v-if="item.key === 'runDebug'" class="setting-box">
+                      <div
+                        v-if="item.key === 'runDebug'"
+                        class="setting-box"
+                      >
                         <SettingOutlined @click.stop="debugConfig()" />
                       </div>
                     </div>
                   </div>
-                  <span v-else :class="getTextColorClass('highlight')">{{ item.label }}</span>
+                  <span
+                    v-else
+                    :class="getTextColorClass('highlight')"
+                  >{{ item.label }}</span>
                 </template>
               </template>
               <template v-for="child in item.children">
                 <!-- 子菜单项 -->
-                <a-menu-item v-if="!child.children || child.children.length === 0" :key="`menuitem-${child.key}`"
-                  :disabled="isMenuItemDisabled(child.key)" :class="{
+                <a-menu-item
+                  v-if="!child.children || child.children.length === 0"
+                  :key="`menuitem-${child.key}`"
+                  :disabled="isMenuItemDisabled(child.key)"
+                  :class="{
                     'opacity-50 cursor-not-allowed':
                       isMenuItemDisabled(child.key),
-                  }">
-                  <a-tooltip v-if="isDisabledByMultipleOperators(child.key)" :title="t('web.operate.singleOperatorOnly')" placement="right">
+                  }"
+                >
+                  <a-tooltip
+                    v-if="isDisabledByMultipleOperators(child.key)"
+                    :title="t('web.operate.singleOperatorOnly')"
+                    placement="right"
+                  >
                     <div class="single-box">
                       {{ child.label }}
                       <div class="flex items-center gap-1">
-                        <div v-if="child.key === 'simulation' || child.key === 'onboard'" class="setting-box">
+                        <div
+                          v-if="child.key === 'simulation' || child.key === 'onboard'"
+                          class="setting-box"
+                        >
                           <SettingOutlined @click.stop="openSetting(child.key)" />
                         </div>
                       </div>
                     </div>
                   </a-tooltip>
-                  <div v-else class="single-box">
+                  <div
+                    v-else
+                    class="single-box"
+                  >
                     {{ child.label }}
                     <div class="flex items-center gap-1">
-                      <div v-if="child.key === 'simulation' || child.key === 'onboard'" class="setting-box">
+                      <div
+                        v-if="child.key === 'simulation' || child.key === 'onboard'"
+                        class="setting-box"
+                      >
                         <SettingOutlined @click.stop="openSetting(child.key)" />
                       </div>
                     </div>
                   </div>
                 </a-menu-item>
                 <!-- 嵌套子菜单 -->
-                <a-sub-menu v-else :key="`submenu-${child.key}`">
+                <a-sub-menu
+                  v-else
+                  :key="`submenu-${child.key}`"
+                >
                   <template #title>
                     <span>{{ child.label }}</span>
                   </template>
-                  <a-menu-item v-for="grandChild in child.children" :key="grandChild.key">
+                  <a-menu-item
+                    v-for="grandChild in child.children"
+                    :key="grandChild.key"
+                  >
                     {{ grandChild.label }}
                   </a-menu-item>
                 </a-sub-menu>
               </template>
             </a-sub-menu>
             <!-- 普通菜单项 -->
-            <a-menu-item v-else :key="`menuitem-${item.key}`" :disabled="isMenuItemDisabled(item.key)" :class="{
-              'opacity-50 cursor-not-allowed':
-                isMenuItemDisabled(item.key),
-            }">
-<a-tooltip v-if="isDisabledByMultipleOperators(item.key)" :title="t('web.operate.singleOperatorOnly')" placement="right">
-              <div v-if="item.icon" class="single-box">
+            <a-menu-item
+              v-else
+              :key="`menuitem-${item.key}`"
+              :disabled="isMenuItemDisabled(item.key)"
+              :class="{
+                'opacity-50 cursor-not-allowed':
+                  isMenuItemDisabled(item.key),
+              }"
+            >
+              <a-tooltip
+                v-if="isDisabledByMultipleOperators(item.key)"
+                :title="t('web.operate.singleOperatorOnly')"
+                placement="right"
+              >
+                <div
+                  v-if="item.icon"
+                  class="single-box"
+                >
                   <div class="inline-flex items-center text-[11px]">
-                    <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
+                    <img
+                      :src="item.icon"
+                      alt=""
+                      class="w-4 h-4 mr-2 align-middle"
+                    />
                     <span :class="getTextColorClass('highlight')">{{ item.label }}</span>
                   </div>
                   <a-tooltip
@@ -1349,16 +1619,29 @@ const handleConfirm = () => {
                       @click.stop
                     />
                   </a-tooltip>
-                  <div v-if="item.key === 'sanitizer'" class="setting-box">
+                  <div
+                    v-if="item.key === 'sanitizer'"
+                    class="setting-box"
+                  >
                     <SettingOutlined @click.stop="openSetting(item.key)" />
                   </div>
                 </div>
-                <span v-else :class="getTextColorClass('highlight')">{{ item.label }}</span>
+                <span
+                  v-else
+                  :class="getTextColorClass('highlight')"
+                >{{ item.label }}</span>
               </a-tooltip>
               <template v-else>
-                <div v-if="item.icon" class="single-box">
+                <div
+                  v-if="item.icon"
+                  class="single-box"
+                >
                   <div class="inline-flex items-center text-[11px]">
-                    <img :src="item.icon" alt="" class="w-4 h-4 mr-2 align-middle" />
+                    <img
+                      :src="item.icon"
+                      alt=""
+                      class="w-4 h-4 mr-2 align-middle"
+                    />
                     <span :class="getTextColorClass('highlight')">{{ item.label }}</span>
                   </div>
                   <a-tooltip
@@ -1371,11 +1654,17 @@ const handleConfirm = () => {
                       @click.stop
                     />
                   </a-tooltip>
-                  <div v-if="item.key === 'sanitizer'" class="setting-box">
+                  <div
+                    v-if="item.key === 'sanitizer'"
+                    class="setting-box"
+                  >
                     <SettingOutlined @click.stop="openSetting(item.key)" />
                   </div>
                 </div>
-                <span v-else :class="getTextColorClass('highlight')">{{ item.label }}</span>
+                <span
+                  v-else
+                  :class="getTextColorClass('highlight')"
+                >{{ item.label }}</span>
               </template>
             </a-menu-item>
           </template>

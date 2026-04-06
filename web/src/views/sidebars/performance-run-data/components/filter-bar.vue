@@ -8,7 +8,9 @@ import {
   FlagOutlined,
   FlagFilled,
 } from '@ant-design/icons-vue';
-import { inject, computed } from 'vue';
+import {
+  inject, computed,
+} from 'vue';
 
 // 从父组件注入主题状态
 const actualTheme = inject('actualTheme', computed(() => 'dark'));
@@ -30,7 +32,10 @@ function handleMarked() {
 </script>
 
 <template>
-  <div class="filter-bar" :class="actualTheme === 'dark' ? 'theme-dark' : 'theme-light'">
+  <div
+    class="filter-bar"
+    :class="actualTheme === 'dark' ? 'theme-dark' : 'theme-light'"
+  >
     <a-button
       class="execute-time-sorter-button"
       type="default"

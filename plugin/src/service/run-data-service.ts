@@ -139,24 +139,32 @@ export class RunDataService {
 
     // Read fileMapList from config
     try {
-      await ProjectManager.getInstance().initProject();
+      await ProjectManager.getInstance()
+        .initProject();
       const projectId = ProjectManager.getInstance().projectId;
+
       if (!projectId) {
         return res;
       }
+
       const sanitizerConfigs = getConfig(Number(projectId), 'sanitizer');
 
       for (const config of sanitizerConfigs) {
         const userOptions = config.user_options as Record<string, unknown> | null;
+
         if (userOptions && Array.isArray(userOptions.fileMapList)) {
-          const fileMapList = userOptions.fileMapList as Array<{ filePath: string; reportTime: number }>;
+          const fileMapList = userOptions.fileMapList as Array<{ filePath: string;
+            reportTime: number }>;
+
           for (const fileMap of fileMapList) {
             if (fs.existsSync(fileMap.filePath)) {
               const stat = fs.statSync(fileMap.filePath);
+
               if (stat.isFile()) {
                 // Sanitizer only handles files
                 const filename = path.basename(fileMap.filePath);
                 const id = `sanitizer_${fileMap.filePath}`;
+
                 res.push({
                   title: filename,
                   timestamp: fileMap.reportTime,

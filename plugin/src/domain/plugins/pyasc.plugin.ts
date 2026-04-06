@@ -1,12 +1,18 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { PyAscCommandStrategy } from '@plugin/domain/services/command-strategy/pyasc-strategy';
-import { PyAscOpGenerator, OpGenParams, OpGenProject } from '@plugin/domain/services/op-generator-factory';
+import {
+  PyAscOpGenerator, OpGenParams, OpGenProject,
+} from '@plugin/domain/services/op-generator-factory';
 import { OpRecord } from '@plugin/domain/models/model';
 import { OperatorProjectType } from '@plugin/domain/models/operator-project-type';
 import { AbstractOperatorPlugin } from './abstract-operator-plugin';
-import { IProjectDetector, ProjectDetectionResult } from './project-detector.interface';
-import { OperatorBuildBehavior, OperatorDefaultPaths } from './operator-plugin.interface';
+import {
+  IProjectDetector, ProjectDetectionResult,
+} from './project-detector.interface';
+import {
+  OperatorBuildBehavior, OperatorDefaultPaths,
+} from './operator-plugin.interface';
 import { hasPyFilesInRoot } from './detection-utils';
 
 /**
@@ -32,6 +38,7 @@ export class PyAscPlugin extends AbstractOperatorPlugin implements IProjectDetec
   async detectProject(dirPath: string): Promise<ProjectDetectionResult> {
     const hasPy = hasPyFilesInRoot(dirPath);
     const hasCmake = fs.existsSync(path.join(dirPath, 'CMakeLists.txt'));
+
     return {
       isMatch: hasPy && !hasCmake,
       confidence: 'heuristic',
@@ -40,6 +47,7 @@ export class PyAscPlugin extends AbstractOperatorPlugin implements IProjectDetec
 
   getDefaultPaths(op: OpRecord): OperatorDefaultPaths {
     const pyTarget = `python3 ./${op.op_name}.py`;
+
     return {
       opScriptPath:      path.join(op.op_path, 'build.sh'),
       exampleScriptPath: path.join(op.op_path, 'build.sh'),

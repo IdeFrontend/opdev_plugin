@@ -15,6 +15,7 @@ import i18nResource from '@shared/i18n';
 import { getWebviewLang } from '@web/utils/lang';
 
 const lang = getWebviewLang();
+
 void i18next.init({
   resources: i18nResource,
   lng: lang,

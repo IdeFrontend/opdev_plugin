@@ -4,10 +4,7 @@ import {
 } from 'vue';
 import { t } from 'i18next';
 import FileTree from './components/file-tree.vue';
-import {
-  getDumpTensorData,
-  importDumpTensorBinFile
-} from '@web/apis';
+import { getDumpTensorData } from '@web/apis';
 import { PerformanceExecutionRecord } from '@shared/api-types';
 import { useTheme } from '@web/composables/use-theme';
 import { message } from 'ant-design-vue';
@@ -32,7 +29,7 @@ function loadTreeData() {
 loadTreeData();
 
 const eventListenerHandler = (event: MessageEvent) => {
-  console.log('[dump-tensot-data.vue]: event received', event)
+  console.log('[dump-tensot-data.vue]: 事件监听', event);
 
   if (event.data.command === 'dumpTensorRefreshData') {
     loadTreeData();
@@ -60,24 +57,26 @@ onBeforeUnmount(() => {
 });
 
 // 使用主题管理组合式函数
-const { themeConfig, actualTheme } = useTheme();
+const {
+  themeConfig, actualTheme,
+} = useTheme();
 </script>
 
 <template>
   <a-config-provider :theme="themeConfig">
     <div
-        class="flex flex-col"
-        @contextmenu.prevent
+      class="flex flex-col"
+      @contextmenu.prevent
     >
-        <FileTree
-            :tree-data="treeData"
-        />
-        <div
-            v-if="!treeData || !treeData.length"
-            class="text-center mt-[20px]"
-        >
-          {{ t('web.perf.noData') }}
-        </div>
+      <FileTree
+        :tree-data="treeData"
+      />
+      <div
+        v-if="!treeData || !treeData.length"
+        class="text-center mt-[20px]"
+      >
+        {{ t('web.perf.noData') }}
+      </div>
     </div>
   </a-config-provider>
 </template>

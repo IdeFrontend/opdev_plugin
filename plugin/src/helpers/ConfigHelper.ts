@@ -16,6 +16,7 @@ export class ConfigHelper {
    */
   static isDebugModeEnabled(): boolean {
     const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
+
     return config.get<boolean>('debugMode', true);
   }
 
@@ -26,9 +27,10 @@ export class ConfigHelper {
    */
   static async setDebugMode(
     enabled: boolean,
-    target: vscode.ConfigurationTarget = vscode.ConfigurationTarget.Workspace
+    target: vscode.ConfigurationTarget = vscode.ConfigurationTarget.Workspace,
   ): Promise<void> {
     const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
+
     await config.update('debugMode', enabled, target);
   }
 
@@ -37,12 +39,11 @@ export class ConfigHelper {
    * @param callback configuration change callback function
    * @returns destroys the Disposable object of the listener
    */
-  static onConfigurationChanged(
-    callback: (debugMode: boolean) => void
-  ): vscode.Disposable {
+  static onConfigurationChanged(callback: (debugMode: boolean)=> void): vscode.Disposable {
     return vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration(`${this.CONFIG_SECTION}.debugMode`)) {
         const newValue = this.isDebugModeEnabled();
+
         callback(newValue);
       }
     });
@@ -55,6 +56,7 @@ export class ConfigHelper {
    */
   static get<T>(key: string, defaultValue: T): T {
     const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
+
     return config.get<T>(key, defaultValue);
   }
 
@@ -67,9 +69,10 @@ export class ConfigHelper {
   static async set<T>(
     key: string,
     value: T,
-    target: vscode.ConfigurationTarget = vscode.ConfigurationTarget.Workspace
+    target: vscode.ConfigurationTarget = vscode.ConfigurationTarget.Workspace,
   ): Promise<void> {
     const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
+
     await config.update(key, value, target);
   }
 }

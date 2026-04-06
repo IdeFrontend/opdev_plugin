@@ -108,9 +108,8 @@ const remoteSearch = async (type, keyword) => {
 // 选择文件
 const handleSelectFile = async () => {
   try {
-    const selectedPath = await selectFile({
-      defaultPath: formData.projectSH,
-    });
+    const selectedPath = await selectFile({ defaultPath: formData.projectSH });
+
     if (selectedPath) {
       formData.projectSH = selectedPath;
     }
@@ -182,7 +181,10 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="env-config" :class="actualTheme === 'dark' ? 'theme-dark' : 'theme-light'">
+  <div
+    class="env-config"
+    :class="actualTheme === 'dark' ? 'theme-dark' : 'theme-light'"
+  >
     <a-form
       ref="formRef"
       :model="formData"

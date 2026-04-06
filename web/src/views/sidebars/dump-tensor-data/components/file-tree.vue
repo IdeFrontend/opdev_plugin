@@ -12,7 +12,9 @@ import {
   Component, h, ref, watch, computed,
 } from 'vue';
 import { t } from 'i18next';
-import { message, Dropdown } from 'ant-design-vue';
+import {
+  message, Dropdown,
+} from 'ant-design-vue';
 
 import {
   PerformanceExecutionRecord,
@@ -22,7 +24,6 @@ import {
 import {
   openFile,
   diffFiles,
-  importDumpTensorBinFile
 } from '@web/apis';
 import { selectFile } from '@web/apis/performance-run-data';
 
@@ -91,9 +92,7 @@ function isTxtFile(row: object): row is PerformanceRunDataFile {
 function isBinFile(row: object): row is PerformanceRunDataFile {
   return (
     Reflect.has(row, 'filePath')
-    && [
-      'bin',
-    ].includes(Reflect.get(row as PerformanceRunDataFile, 'fileType'))
+    && ['bin'].includes(Reflect.get(row as PerformanceRunDataFile, 'fileType'))
   );
 }
 
@@ -108,6 +107,7 @@ function isComparableFile(row: object): row is PerformanceRunDataFile {
 function performFileComparison() {
   if (selectedFiles.value.length < 2) {
     message.warning(t('web.dump.selectTwoFiles'));
+
     return;
   }
 
@@ -115,15 +115,13 @@ function performFileComparison() {
 
   try {
     diffFiles({
-      filePath1: (selectedFiles.value[0].filePath || '').replace(/\.bin$/, '.txt'),
-      filePath2: (selectedFiles.value[1].filePath || '').replace(/\.bin$/, '.txt')
-    }).finally(() => {
-      // Reset compare mode after compare completes.
-      cancelCompare();
-    })
+      filePath1: selectedFiles.value[0].filePath,
+      filePath2: selectedFiles.value[1].filePath,
+    });
     message.success(t('web.dump.compareStarting'));
-  } catch (error) {
-    console.error('[DumpTensor] VSCode file compare failed:', error);
+  }
+  catch (error) {
+    console.error('调用VSCode文件对比功能失败:', error);
     message.error(t('web.dump.compareFailed'));
     cancelCompare();
   }
@@ -135,8 +133,8 @@ function performFileComparison() {
 const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
   const node = info.node;
   const data = node.dataRef || node;
-  
-  console.log('[DumpTensor] Open file:', data)
+
+  console.log('[onClickNode]: 打开文件', data);
 
   if (isTxtFile(data) || isBinFile(data)) {
     openFile({ file: (data.filePath || '').replace(/\.bin$/, '.txt') });
@@ -146,8 +144,9 @@ const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
 /**
  * Handle checkbox selection.
  */
-function onCheck(checkedKeysValue: any, e: { checked: boolean; node: any }) {
-  // Gather checked keys.
+function onCheck(checkedKeysValue: any, e: { checked: boolean;
+  node: any }) {
+  // 从 checkedKeysValue 中获取所有被勾选的 keys
   const allCheckedKeys = Array.isArray(checkedKeysValue) ? checkedKeysValue : checkedKeysValue.checked;
 
   // Walk the tree to identify file nodes.
@@ -160,13 +159,15 @@ function onCheck(checkedKeysValue: any, e: { checked: boolean; node: any }) {
   if (fileKeys.length > maxSelectedCount) {
     // Keep only most-recent selections.
     const limitedFileKeys = fileKeys.slice(-maxSelectedCount);
+
     checkedKeys.value = limitedFileKeys;
 
     // Update selected file models.
     selectedFiles.value = getFileObjectsFromKeys(limitedFileKeys, props.treeData);
 
     message.warning(t('web.dump.maxSelectCount', { count: maxSelectedCount }));
-  } else {
+  }
+  else {
     checkedKeys.value = fileKeys;
 
     // Update selected file models.
@@ -181,7 +182,7 @@ function getAllFileKeys(nodes: any[]): string[] {
   let keys: string[] = [];
 
   const traverse = (nodeList: any[]) => {
-    nodeList.forEach(node => {
+    nodeList.forEach((node) => {
       if (isComparableFile(node)) {
         keys.push(node.key);
       }
@@ -204,7 +205,7 @@ function getFileObjectsFromKeys(keys: string[], nodes: any[]): PerformanceRunDat
   const files: PerformanceRunDataFile[] = [];
 
   const traverse = (nodeList: any[]) => {
-    nodeList.forEach(node => {
+    nodeList.forEach((node) => {
       if (isComparableFile(node) && keys.includes(node.key)) {
         files.push(node as PerformanceRunDataFile);
       }
@@ -221,48 +222,22 @@ function getFileObjectsFromKeys(keys: string[], nodes: any[]): PerformanceRunDat
 }
 
 const updateExpand = (e) => {
-  expandedKeys.value = e
-}
+  expandedKeys.value = e;
+};
 
-// Whether compare mode is enabled.
-const isComparing = ref(false)
+// 是否正在进行对比
+const isComparing = ref(false);
 
 const cancelCompare = () => {
-  isComparing.value = false
+  isComparing.value = false;
 
   selectedFiles.value = [];
-  checkedKeys.value = []
-}
+  checkedKeys.value = [];
+};
 
 const openCompare = () => {
-  isComparing.value = true
-}
-
-// Handle import action.
-const handleImport = async () => {
-  try {
-    // Open file picker for .bin files.
-    const selectedFilePath = await selectFile({
-      fileTypes: [
-        {
-          label: 'Binary Files',
-          extensions: ['bin']
-        }
-      ]
-    });
-
-    if (selectedFilePath) {
-      // Import selected .bin file.
-      await importDumpTensorBinFile({ binFilePath: selectedFilePath });
-      message.success(t('web.dump.importSuccess'));
-      // Ask parent to refresh data.
-      window.dispatchEvent(new CustomEvent('refreshTreeData'));
-    }
-  } catch (error) {
-    console.error('[DumpTensor] Import action failed:', error);
-    message.error(t('web.dump.importFailed'));
-  }
-}
+  isComparing.value = true;
+};
 </script>
 
 <template>
@@ -270,13 +245,36 @@ const handleImport = async () => {
     class="w-full relative [&_.ant-tree]:!bg-transparent [&_.ant-tree-treenode]:!w-full [&_.ant-tree-node-content-wrapper]:!w-0 hover:[&_.ant-tree-treenode]:!bg-transparent"
   >
     <template v-if="processedTreeData && processedTreeData.length">
-      <div v-show="isComparing" class="filter-bar">
-        <a-button type="primary" @click="performFileComparison">{{ t('web.dump.startCompare') }}</a-button>
-        <a-button class="default-btn" @click="cancelCompare">{{ t('web.dump.cancel') }}</a-button>
+      <div
+        v-show="isComparing"
+        class="filter-bar"
+      >
+        <a-button
+          type="primary"
+          @click="performFileComparison"
+        >
+          {{ t('web.dump.startCompare') }}
+        </a-button>
+        <a-button
+          class="default-btn"
+          @click="cancelCompare"
+        >
+          {{ t('web.dump.cancel') }}
+        </a-button>
       </div>
-      <div v-show="!isComparing" class="filter-bar">
-        <a-button class="default-btn" @click="handleImport">{{ t('web.dump.import') }}</a-button>
-        <a-button class="default-btn" @click="openCompare">{{ t('web.dump.compare') }}</a-button>
+      <div
+        v-show="!isComparing"
+        class="filter-bar"
+      >
+        <a-button class="default-btn">
+          {{ t('web.dump.import') }}
+        </a-button>
+        <a-button
+          class="default-btn"
+          @click="openCompare"
+        >
+          {{ t('web.dump.compare') }}
+        </a-button>
       </div>
     </template>
 
@@ -316,5 +314,12 @@ const handleImport = async () => {
   display: flex;
   gap: 8px;
   margin: 12px 0;
+}
+
+.default-btn {
+  background-color: rgba(20, 20, 20, 0.96) !important;
+  border-color: rgb(72, 72, 73) !important;
+  color: rgba(255, 255, 255, 0.855) !important;
+  box-shadow: rgba(255, 255, 255, 0.04) !important;
 }
 </style>

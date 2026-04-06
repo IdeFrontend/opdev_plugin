@@ -6,9 +6,15 @@ export function getWebviewLang(): string {
   const win = typeof window !== 'undefined' ? (window as unknown as { __VSCODE_LANG__?: string }) : null;
   const raw = win?.__VSCODE_LANG__;
   const resolved = (raw || 'en').toLowerCase();
+
   // Debug: in Extension Development Host, open Webview DevTools (right-click webview → "Open Webview Developer Tools") to see this
   if (typeof console !== 'undefined' && console.debug) {
-    console.debug('[OP DevTools i18n]', { __VSCODE_LANG__: raw, resolved, note: 'If __VSCODE_LANG__ is undefined or "{{lang}}", the plugin did not inject the locale.' });
+    console.debug('[OP DevTools i18n]', {
+      __VSCODE_LANG__: raw,
+      resolved,
+      note: 'If __VSCODE_LANG__ is undefined or "{{lang}}", the plugin did not inject the locale.',
+    });
   }
+
   return resolved;
 }

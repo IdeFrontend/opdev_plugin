@@ -48,14 +48,14 @@ export class OpsOperateProvider implements vscode.WebviewViewProvider {
     this._themeChangeDisposable = vscode.window.onDidChangeActiveColorTheme((theme) => {
       webviewView.webview.postMessage({
         command: 'updateTheme',
-        themeName: theme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
+        themeName: theme.kind === vscode.ColorThemeKind.Dark || theme.kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light',
       });
     });
 
     // Send the current topic on initialization
     webviewView.webview.postMessage({
       command: 'updateTheme',
-      themeName: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
+      themeName: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark || vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light',
     });
 
     // Message processing

@@ -9,8 +9,10 @@ import * as path from 'path';
 export function hasPyFilesInRoot(dirPath: string): boolean {
   try {
     const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+
     return entries.some((e) => e.isFile() && e.name.endsWith('.py'));
-  } catch {
+  }
+  catch {
     return false;
   }
 }
@@ -18,31 +20,48 @@ export function hasPyFilesInRoot(dirPath: string): boolean {
 export function hasAscFiles(dirPath: string): boolean {
   try {
     const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+
     for (const entry of entries) {
-      if (entry.isFile() && entry.name.endsWith('.asc')) return true;
+      if (entry.isFile() && entry.name.endsWith('.asc')) {
+        return true;
+      }
+
       if (entry.isDirectory() && hasAscFilesRecursive(path.join(dirPath, entry.name), 2)) {
         return true;
       }
     }
-  } catch {
+  }
+  catch {
     // ignore
   }
+
   return false;
 }
 
 export function hasAscFilesRecursive(dirPath: string, maxDepth: number): boolean {
-  if (maxDepth <= 0) return false;
+  if (maxDepth <= 0) {
+    return false;
+  }
+
   try {
     const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+
     for (const entry of entries) {
-      if (entry.isFile() && entry.name.endsWith('.asc')) return true;
+      if (entry.isFile() && entry.name.endsWith('.asc')) {
+        return true;
+      }
+
       if (entry.isDirectory() && maxDepth > 1) {
-        if (hasAscFilesRecursive(path.join(dirPath, entry.name), maxDepth - 1)) return true;
+        if (hasAscFilesRecursive(path.join(dirPath, entry.name), maxDepth - 1)) {
+          return true;
+        }
       }
     }
-  } catch {
+  }
+  catch {
     // ignore
   }
+
   return false;
 }
 
@@ -53,22 +72,35 @@ export function hasAscFilesRecursive(dirPath: string, maxDepth: number): boolean
 export function hasAncestorBuildShWithGenop(dirPath: string): boolean {
   try {
     let current = path.dirname(dirPath);
+
     for (let i = 0; i < 3; i++) {
       const buildSh = path.join(current, 'build.sh');
+
       if (fs.existsSync(buildSh)) {
         try {
           const content = fs.readFileSync(buildSh, 'utf-8');
-          if (content.includes('--genop')) return true;
-        } catch {
+
+          if (content.includes('--genop')) {
+            return true;
+          }
+        }
+        catch {
           // ignore read error
         }
       }
+
       const parent = path.dirname(current);
-      if (parent === current) break;
+
+      if (parent === current) {
+        break;
+      }
+
       current = parent;
     }
-  } catch {
+  }
+  catch {
     // ignore
   }
+
   return false;
 }

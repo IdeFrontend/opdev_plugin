@@ -30,7 +30,8 @@ export class DumpTensorData {
 
   constructor() {
     const project = Project.getInstance();
-    console.log('dump-tensor-service]: looking up current project', project)
+
+    console.log('dump-tensor-service]: looking up current project', project);
 
     if (!project.workspaceIsProject()) {
       return;
@@ -55,7 +56,6 @@ export class DumpTensorData {
       order === 'asc' ? a[sortBy] - b[sortBy] : b[sortBy] - a[sortBy]);
   }
 
-
   private async scanRunDataDirectory() {
     const runData: PerformanceExecutionRecord[] = [];
 
@@ -64,7 +64,8 @@ export class DumpTensorData {
     }
 
     const executionEntries = await vscode.workspace.fs.readDirectory(this.rootUri);
-    console.log('dump-tensor-service]: scanning dumpTensor output directory', executionEntries)
+
+    console.log('dump-tensor-service]: scanning dumpTensor output directory', executionEntries);
 
     for (const [
       subPath,

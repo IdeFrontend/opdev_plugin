@@ -18,16 +18,21 @@ const lang = getWebviewLang();
 let isInitRun = false;
 
 function init() {
-  if (isInitRun) return;
+  if (isInitRun) {
+    return;
+  }
+
   isInitRun = true;
   void i18next.init({
     resources: i18nResource,
     lng: lang,
     fallbackLng: 'en',
     interpolation: { escapeValue: false },
-  }).then(() => {
-    createApp(App).mount('#app');
-  });
+  })
+    .then(() => {
+      createApp(App)
+        .mount('#app');
+    });
 }
 
 init();

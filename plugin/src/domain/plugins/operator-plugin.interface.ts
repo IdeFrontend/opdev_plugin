@@ -1,8 +1,12 @@
 import { CommandStrategy } from '@plugin/domain/services/command-strategy/types';
 import { OpRecord } from '@plugin/domain/models/model';
-import { BaseOpGenerator, OpGenParams, OpGenProject } from '@plugin/domain/services/op-generator-factory';
+import {
+  BaseOpGenerator, OpGenParams, OpGenProject,
+} from '@plugin/domain/services/op-generator-factory';
 
-export type { OpGenParams, OpGenProject };
+export type {
+  OpGenParams, OpGenProject,
+};
 
 export interface OperatorDefaultPaths {
   opScriptPath: string;

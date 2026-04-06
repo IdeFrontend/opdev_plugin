@@ -1,5 +1,7 @@
 import { CannCommandStrategy } from '@plugin/domain/services/command-strategy/cann-strategy';
-import { CannOpGenerator, OpGenParams, OpGenProject } from '@plugin/domain/services/op-generator-factory';
+import {
+  CannOpGenerator, OpGenParams, OpGenProject,
+} from '@plugin/domain/services/op-generator-factory';
 import { AbstractOperatorPlugin } from './abstract-operator-plugin';
 
 /**

@@ -17,9 +17,18 @@ import { PyAscCommandStrategy } from './pyasc-strategy';
  */
 export class CommandStrategyFactory {
   private static strategies: Map<string, CommandStrategy> = new Map([
-    ['ascend', new AscendCommandStrategy()],
-    ['cann', new CannCommandStrategy()],
-    ['pyasc', new PyAscCommandStrategy()],
+    [
+      'ascend',
+      new AscendCommandStrategy(),
+    ],
+    [
+      'cann',
+      new CannCommandStrategy(),
+    ],
+    [
+      'pyasc',
+      new PyAscCommandStrategy(),
+    ],
   ]);
 
   /**

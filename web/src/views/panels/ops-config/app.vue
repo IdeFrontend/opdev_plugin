@@ -84,6 +84,10 @@ const mockSchema: FormAttribute<FormAttributeType>[] = [
 ];
 
 const formModel = ref<Record<string, unknown>>({});
+
+import { useTheme } from '@web/composables/use-theme';
+
+const { themeConfig } = useTheme();
 </script>
 
 <template>

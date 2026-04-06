@@ -13,7 +13,9 @@ import { PermanentStorage } from './permanent-storage';
 import webviewMessageList from './webview-message-list';
 import { HtmlTransformer } from './html-transformer';
 import { ApiServer } from '@plugin/core/api-server';
-import { registerConfigPage, unregisterConfigPage } from '@plugin/controller/navigation-controller';
+import {
+  registerConfigPage, unregisterConfigPage,
+} from '@plugin/controller/navigation-controller';
 
 /**
  * Webview provider - Responsible for creating and managing Webview panels
@@ -51,6 +53,7 @@ export class WebviewProvider {
     }
     catch (error) {
       const errorMsg = t('extension.openDevToolsFailed', { error: String(error) });
+
       console.error(errorMsg);
       vscode.window.showErrorMessage(errorMsg);
     }
@@ -110,14 +113,14 @@ export class WebviewProvider {
             this.themeChangeDisposable = vscode.window.onDidChangeActiveColorTheme((theme) => {
               webviewView.webview.postMessage({
                 command: 'updateTheme',
-                themeName: theme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
+                themeName: theme.kind === vscode.ColorThemeKind.Dark || theme.kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light',
               });
             });
 
             // Send the current topic on initialization
             webviewView.webview.postMessage({
               command: 'updateTheme',
-              themeName: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
+              themeName: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark || vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light',
             });
 
             // Handling Webview messages
@@ -173,7 +176,7 @@ export class WebviewProvider {
         if (this.panel) {
           this.panel.webview.postMessage({
             command: 'updateTheme',
-            themeName: theme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
+            themeName: theme.kind === vscode.ColorThemeKind.Dark || theme.kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light',
           });
         }
       });
@@ -182,7 +185,7 @@ export class WebviewProvider {
       if (this.panel) {
         this.panel.webview.postMessage({
           command: 'updateTheme',
-          themeName: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
+          themeName: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark || vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light',
         });
       }
 
@@ -193,6 +196,7 @@ export class WebviewProvider {
           if (router === 'config') {
             unregisterConfigPage(router);
           }
+
           this.dispose();
         },
         null,
@@ -234,7 +238,7 @@ export class WebviewProvider {
         'options-simulator',
         'options-on-board',
         'options-sanitizer',
-        'open-project'
+        'open-project',
       ];
       const viewPath = panelViews.includes(router) ? `panels/${router}` : router;
 
@@ -260,7 +264,7 @@ export class WebviewProvider {
 
     // Handle gettopic command
     // if (msg.command === 'getTheme') {
-    //   const currentTheme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
+    //   const currentTheme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark || vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light';
     //   if (this.panel) {
     //     this.panel.webview.postMessage({
     //       command: 'updateTheme',

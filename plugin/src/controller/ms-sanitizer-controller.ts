@@ -55,7 +55,8 @@ export const msSanitizerMethods = {
 
       // Read file contents
       const fileData = await vscode.workspace.fs.readFile(fileUri);
-      const content = Buffer.from(fileData).toString('utf-8');
+      const content = Buffer.from(fileData)
+        .toString('utf-8');
 
       // copy to clipboard
       await vscode.env.clipboard.writeText(content);
@@ -63,6 +64,7 @@ export const msSanitizerMethods = {
     }
     catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
+
       vscode.window.showErrorMessage(t('msSanitizer.copyReportFailed', { error: errorMessage }));
       throw error;
     }
@@ -98,6 +100,7 @@ export const msSanitizerMethods = {
         // Check if the file exists
         try {
           const stat = await vscode.workspace.fs.stat(fileUri);
+
           if (stat.type !== vscode.FileType.File && stat.type !== vscode.FileType.Directory) {
             throw new Error(t('msSanitizer.pathNotFileOrDir'));
           }
@@ -146,6 +149,7 @@ export const msSanitizerMethods = {
         }
         catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
+
           vscode.window.showErrorMessage(t('msSanitizer.downloadReportFailed', { error: errorMessage }));
           throw error;
         }

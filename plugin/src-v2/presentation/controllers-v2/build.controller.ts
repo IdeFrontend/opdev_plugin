@@ -16,7 +16,9 @@ import { CommandExecutor } from '@plugin/class/command-options';
 import { homeMethods } from '@plugin/controller/home-controller';
 import { OperatorProjectType } from '@plugin/domain/services/operator-project-detector';
 import { ConfigService } from '@plugin/service/config-service';
-import { getConfig, postConfig } from '@plugin/domain';
+import {
+  getConfig, postConfig,
+} from '@plugin/domain';
 import { Project } from '@plugin/core/project/project';
 import * as vscode from 'vscode';
 import * as path from 'path';
@@ -99,13 +101,16 @@ export class BuildControllerV2 {
 
         if (!isPyFile) {
           this.notification.showWarning('请先打开一个 .py 文件');
+
           return;
         }
 
         // Get workspace path
         const workspaceFolders = vscode.workspace.workspaceFolders;
+
         if (!workspaceFolders || workspaceFolders.length === 0) {
           this.notification.showWarning('未找到工作区路径');
+
           return;
         }
 
@@ -113,20 +118,23 @@ export class BuildControllerV2 {
         const filePath = activeEditor!.document.uri.fsPath;
 
         // Compute relative path
-        const relativePath = path.relative(workspacePath, filePath).replace(/\\/g, '/');
+        const relativePath = path.relative(workspacePath, filePath)
+          .replace(/\\/g, '/');
 
         // Get build_op config and update target_file
         const buildConfigId = await this.getBuildConfigId();
+
         if (buildConfigId) {
           // Get project ID
           const project = Project.getInstance();
+
           if (project.workspaceIsProject()) {
             const projectId = project.projectId;
-            
+
             // Get build_op config
             const configs = await getConfig(projectId, 'build_op');
             const buildOpConfig = configs.find((c: any) => c.config_id === buildConfigId);
-            
+
             if (buildOpConfig) {
               // Update config target_file
               const updatedConfig = {
@@ -145,7 +153,7 @@ export class BuildControllerV2 {
         }
       }
 
-      const dto = { 
+      const dto = {
         configId: params.configId ? Number(params.configId) : undefined,
         filePath: params.filePath,
       };
@@ -302,13 +310,16 @@ export class BuildControllerV2 {
 
         if (!isPyFile) {
           this.notification.showWarning('请先打开一个 .py 文件');
+
           return;
         }
 
         // Get workspace path
         const workspaceFolders = vscode.workspace.workspaceFolders;
+
         if (!workspaceFolders || workspaceFolders.length === 0) {
           this.notification.showWarning('未找到工作区路径');
+
           return;
         }
 
@@ -316,20 +327,23 @@ export class BuildControllerV2 {
         const filePath = activeEditor!.document.uri.fsPath;
 
         // Compute relative path
-        const relativePath = path.relative(workspacePath, filePath).replace(/\\/g, '/');
+        const relativePath = path.relative(workspacePath, filePath)
+          .replace(/\\/g, '/');
 
         // Get build_op config and update target_file
         const buildConfigId = await this.getBuildConfigId();
+
         if (buildConfigId) {
           // Get project ID
           const project = Project.getInstance();
+
           if (project.workspaceIsProject()) {
             const projectId = project.projectId;
-            
+
             // Get build_op config
             const configs = await getConfig(projectId, 'build_op');
             const buildOpConfig = configs.find((c: any) => c.config_id === buildConfigId);
-            
+
             if (buildOpConfig) {
               // Update config target_file
               const updatedConfig = {
@@ -392,13 +406,16 @@ export class BuildControllerV2 {
 
         if (!isPyFile) {
           this.notification.showWarning('请先打开一个 .py 文件');
+
           return;
         }
 
         // Get workspace path
         const workspaceFolders = vscode.workspace.workspaceFolders;
+
         if (!workspaceFolders || workspaceFolders.length === 0) {
           this.notification.showWarning('未找到工作区路径');
+
           return;
         }
 
@@ -406,20 +423,23 @@ export class BuildControllerV2 {
         const filePath = activeEditor!.document.uri.fsPath;
 
         // Compute relative path
-        const relativePath = path.relative(workspacePath, filePath).replace(/\\/g, '/');
+        const relativePath = path.relative(workspacePath, filePath)
+          .replace(/\\/g, '/');
 
         // Get build_op config and update target_file
         const buildConfigId = await this.getBuildConfigId();
+
         if (buildConfigId) {
           // Get project ID
           const project = Project.getInstance();
+
           if (project.workspaceIsProject()) {
             const projectId = project.projectId;
-            
+
             // Get build_op config
             const configs = await getConfig(projectId, 'build_op');
             const buildOpConfig = configs.find((c: any) => c.config_id === buildConfigId);
-            
+
             if (buildOpConfig) {
               // Update config target_file
               const updatedConfig = {

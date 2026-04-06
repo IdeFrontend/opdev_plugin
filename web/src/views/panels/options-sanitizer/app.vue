@@ -1,25 +1,24 @@
 <script setup lang="ts">
 import {
-    ref, onBeforeMount,
+  ref, onBeforeMount,
 } from 'vue';
 import { t } from 'i18next';
 import { message } from 'ant-design-vue';
 import { useTheme } from '@web/composables/use-theme';
 import {
-    getSanitizerConfigs,
-    saveSanitizerForm as saveSanitizerFormAPI,
-    runSanitizer,
-    executeVscodeCommand,
-    getSelectedOperators,
-    getSanitizerShowQuickOptions,
-    setSanitizerShowQuickOptions,
+  getSanitizerConfigs,
+  saveSanitizerForm as saveSanitizerFormAPI,
+  runSanitizer,
+  checkTaskStatus,
+  executeVscodeCommand,
+  getSelectedOperators,
 } from '@web/apis';
 
 // 使用主题管理组合式函数
-const { themeConfig, actualTheme } = useTheme();
+const {
+  themeConfig, actualTheme,
+} = useTheme();
 const isExecuting = ref(false);
-/** When true, workspace `sanitizer.showQuickOptions` is false (tree runs without opening this panel). */
-const doNotShowAgain = ref(false);
 const form = ref({
   tool: {
     memcheck: true,
@@ -67,20 +66,34 @@ const handleConfirm = async () => {
   if (!form.value || isExecuting.value) {
     return;
   }
+
+  const hasRunningTask = await checkTaskStatus();
+
+  console.log('hasRunningTask', hasRunningTask);
+
+  if (hasRunningTask) {
+    message.info(t('web.options.taskRunning'));
+
+    return;
+  }
+
   try {
     isExecuting.value = true;
-    
+
     // 获取已选择的算子名称（如果是标准自定义算子）
     let operatorNames: string | undefined;
+
     try {
       const selectedOperators = await getSelectedOperators();
+
       if (selectedOperators) {
         operatorNames = selectedOperators;
       }
-    } catch (error) {
+    }
+    catch (error) {
       console.warn('获取已选择的算子失败:', error);
     }
-    
+
     // 执行异常检测
     runSanitizer({ operatorNames });
     setTimeout(() => {
@@ -98,63 +111,74 @@ const handleConfirm = async () => {
 </script>
 
 <template>
-    <a-config-provider :theme="themeConfig">
-        <div class="sanitizer-config-page">
-            <div class="page-header">
-                {{ t('web.options.sanitizer.title') }}
-            </div>
+  <a-config-provider :theme="themeConfig">
+    <div class="sanitizer-config-page">
+      <div class="page-header">
+        {{ t('web.options.sanitizer.title') }}
+      </div>
 
-            <div class="sanitizer-content">
-                <a-checkbox v-model:checked="form.tool.memcheck" @change="saveSanitizerForm">
-                    {{ t('web.options.sanitizer.memory') }}
-                </a-checkbox>
-                <div v-if="form.tool.memcheck" class="mem-check">
-                    <div class="desc">
-                        {{ t('web.options.sanitizer.memoryBase') }}
-                    </div>
-                    <div class="desc">
-                        {{ t('web.options.sanitizer.memoryExtra') }}
-                    </div>
-                    <div class="mem-option">
-                        <a-checkbox v-model:checked="form.memcheckOption['leak-check']" @change="saveSanitizerForm">
-                            {{ t('web.options.sanitizer.memoryLeak') }}
-                        </a-checkbox>
-                        <a-checkbox 
-                            v-model:checked="form.memcheckOption['check-unused-memory']"
-                            style="margin-left: 12px;"
-                            @change="saveSanitizerForm">
-                            {{ t('web.options.sanitizer.allocUnused') }}
-                        </a-checkbox>
-                    </div>
-                </div>
-                <div class="check-item-row">
-                    <a-checkbox v-model:checked="form.tool.racecheck" @change="saveSanitizerForm">
-                        {{ t('web.options.sanitizer.race') }}
-                    </a-checkbox>
-                </div>
-                <div class="check-item-row">
-                    <a-checkbox v-model:checked="form.tool.initcheck" @change="saveSanitizerForm">
-                        {{ t('web.options.sanitizer.uninit') }}
-                    </a-checkbox>
-                </div>
-
-                <div class="do-not-show-row">
-                    <a-checkbox
-                        v-model:checked="doNotShowAgain"
-                        @change="syncDoNotShowToWorkspace"
-                    >
-                        {{ t('web.options.sanitizer.doNotShowAgain') }}
-                    </a-checkbox>
-                </div>
-
-                <div class="footer-actions">
-                    <a-button type="primary" :loading="isExecuting" @click="handleConfirm">
-                        {{ t('web.options.sanitizer.startNow') }}
-                    </a-button>
-                </div>
-            </div>
+      <div class="sanitizer-content">
+        <a-checkbox
+          v-model:checked="form.tool.memcheck"
+          @change="saveSanitizerForm"
+        >
+          {{ t('web.options.sanitizer.memory') }}
+        </a-checkbox>
+        <div
+          v-if="form.tool.memcheck"
+          class="mem-check"
+        >
+          <div class="desc">
+            {{ t('web.options.sanitizer.memoryBase') }}
+          </div>
+          <div class="desc">
+            {{ t('web.options.sanitizer.memoryExtra') }}
+          </div>
+          <div class="mem-option">
+            <a-checkbox
+              v-model:checked="form.memcheckOption['leak-check']"
+              @change="saveSanitizerForm"
+            >
+              {{ t('web.options.sanitizer.memoryLeak') }}
+            </a-checkbox>
+            <a-checkbox
+              v-model:checked="form.memcheckOption['check-unused-memory']"
+              style="margin-left: 12px;"
+              @change="saveSanitizerForm"
+            >
+              {{ t('web.options.sanitizer.allocUnused') }}
+            </a-checkbox>
+          </div>
         </div>
-    </a-config-provider>
+        <div class="check-item-row">
+          <a-checkbox
+            v-model:checked="form.tool.racecheck"
+            @change="saveSanitizerForm"
+          >
+            {{ t('web.options.sanitizer.race') }}
+          </a-checkbox>
+        </div>
+        <div class="check-item-row">
+          <a-checkbox
+            v-model:checked="form.tool.initcheck"
+            @change="saveSanitizerForm"
+          >
+            {{ t('web.options.sanitizer.uninit') }}
+          </a-checkbox>
+        </div>
+
+        <div class="footer-actions">
+          <a-button
+            type="primary"
+            :loading="isExecuting"
+            @click="handleConfirm"
+          >
+            {{ t('web.options.sanitizer.startNow') }}
+          </a-button>
+        </div>
+      </div>
+    </div>
+  </a-config-provider>
 </template>
 
 <style lang="less" scoped>

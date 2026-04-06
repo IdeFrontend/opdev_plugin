@@ -7,19 +7,19 @@ import { message } from 'ant-design-vue';
 import { useTheme } from '@web/composables/use-theme';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import {
-  getConfigData,
-  saveConfig,
-  startSimulate,
-  openExternalLink,
-  executeVscodeCommand,
-  getSelectedOperators,
-  getSimulationShowQuickOptions,
-  setSimulationShowQuickOptions,
+  getConfigData, saveConfig, startSimulate, openExternalLink, checkTaskStatus, executeVscodeCommand, getSelectedOperators,
 } from '@web/apis';
 
 // 使用主题管理组合式函数
-const { themeConfig, actualTheme } = useTheme();
-const simulateOptions = ref({ user_options: { PMSampling: true, ResourceConflictRatio: true } });
+const {
+  themeConfig, actualTheme,
+} = useTheme();
+const simulateOptions = ref({
+  user_options: {
+    PMSampling: true,
+    ResourceConflictRatio: true,
+  },
+});
 const loading = ref(false);
 const isExecuting = ref(false);
 /** When true, workspace `performanceTuning.simulation.showQuickOptions` is false (tree runs without opening this panel). */
@@ -30,11 +30,14 @@ const fetchConfig = async () => {
   try {
     loading.value = true;
     const configObj = await getConfigData();
-    console.log('configObj', configObj)
-    const keys = Object.keys(configObj || {})
-    const configData = configObj[keys[0]] || []
-    const simulateConfig = configData.find(v => v.config_type === 'simulate')
-    console.log('simulateConfig', simulateConfig)
+
+    console.log('configObj', configObj);
+    const keys = Object.keys(configObj || {});
+    const configData = configObj[keys[0]] || [];
+    const simulateConfig = configData.find((v) => v.config_type === 'simulate');
+
+    console.log('simulateConfig', simulateConfig);
+
     if (simulateConfig) {
       simulateOptions.value = JSON.parse(JSON.stringify(simulateConfig));
     }
@@ -58,17 +61,31 @@ const handleConfirm = async () => {
   if (!simulateOptions.value || isExecuting.value) {
     return;
   }
+
+  const hasRunningTask = await checkTaskStatus();
+
+  console.log('hasRunningTask', hasRunningTask);
+
+  if (hasRunningTask) {
+    message.info(t('web.options.taskRunning'));
+
+    return;
+  }
+
   try {
     isExecuting.value = true;
 
     // 获取已选择的算子名称（如果是标准自定义算子）
     let operatorNames;
+
     try {
       const selectedOperators = await getSelectedOperators();
+
       if (selectedOperators) {
         operatorNames = selectedOperators;
       }
-    } catch (error) {
+    }
+    catch (error) {
       console.warn('获取已选择的算子失败:', error);
     }
 
@@ -115,14 +132,22 @@ onBeforeMount(async () => {
       </div>
 
       <div class="simulate-content">
-        <a-alert type="info" show-icon :message="t('web.options.simulator.alert')" style="margin-bottom: 12px" />
+        <a-alert
+          type="info"
+          show-icon
+          :message="t('web.options.simulator.alert')"
+          style="margin-bottom: 12px"
+        />
         <div class="simulate-title">
           {{ t('web.options.simulator.collectContent') }}
           <a-tooltip :overlay-style="{ maxWidth: '300px' }">
             <template #title>
               <div>
                 {{ t('web.options.simulator.guideRef') }}
-                <span style="color: #1677ff; cursor: pointer;" @click="jumpToGuide">{{ t('web.options.guideLinkText') }}</span>
+                <span
+                  style="color: #1677ff; cursor: pointer;"
+                  @click="jumpToGuide"
+                >{{ t('web.options.guideLinkText') }}</span>
               </div>
             </template>
             <QuestionCircleOutlined class="help-icon" />
@@ -137,7 +162,10 @@ onBeforeMount(async () => {
             {{ t('web.options.simulator.instructionPipelineDesc') }}
           </div>
           {{ t('web.options.simulator.extraOptions') }}
-          <a-checkbox v-model:checked="simulateOptions.user_options.PMSampling" @change="handleChange">
+          <a-checkbox
+            v-model:checked="simulateOptions.user_options.PMSampling"
+            @change="handleChange"
+          >
             {{ t('web.options.simulator.memoryThroughput') }}
           </a-checkbox>
         </div>
@@ -147,7 +175,10 @@ onBeforeMount(async () => {
         </div>
         <div class="nested-checkbox-group">
           {{ t('web.options.simulator.extraOptions') }}
-          <a-checkbox v-model:checked="simulateOptions.user_options.ResourceConflictRatio" @change="handleChange">
+          <a-checkbox
+            v-model:checked="simulateOptions.user_options.ResourceConflictRatio"
+            @change="handleChange"
+          >
             {{ t('web.options.simulator.resourceConflict') }}
           </a-checkbox>
         </div>
@@ -162,7 +193,11 @@ onBeforeMount(async () => {
         </div>
 
         <div class="footer-actions">
-          <a-button type="primary" :loading="isExecuting" @click="handleConfirm">
+          <a-button
+            type="primary"
+            :loading="isExecuting"
+            @click="handleConfirm"
+          >
             {{ t('web.options.simulator.startNow') }}
           </a-button>
         </div>

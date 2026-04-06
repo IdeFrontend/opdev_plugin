@@ -12,21 +12,25 @@ declare module '*.vue' {
 // Vite 已经提供了这些类型，但为了确保兼容性，我们显式声明
 declare module '*.png' {
   const src: string;
+
   export default src;
 }
 
 declare module '*.jpg' {
   const src: string;
+
   export default src;
 }
 
 declare module '*.jpeg' {
   const src: string;
+
   export default src;
 }
 
 declare module '*.svg' {
   const src: string;
+
   export default src;
 }
 

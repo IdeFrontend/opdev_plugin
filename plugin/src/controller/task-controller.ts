@@ -8,17 +8,12 @@ import { buildService } from '@plugin/service/build-service';
 import { sanitizerService } from '@plugin/service/sanitizer-service';
 import { homeMethods } from './home-controller';
 import {
-  StartBuildParams,
-  StartBuildExampleParams,
-  StartRunParams,
-  StartSimulateParams,
-  StartOnBoardParams,
-  StartSanitizerParams,
-  StartDumpTensorParams,
-  StartUtTestParams,
+  StartBuildParams, StartBuildExampleParams, StartRunParams,
 } from '@shared/api-types';
-import { getConfig, postConfig } from '@plugin/domain';
-import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
+import {
+  getConfig, postConfig,
+} from '@plugin/domain';
+import { OperatorProjectType } from '@plugin/domain/services/operator-project-detector';
 
 // Global task manager: used to track and terminate executing tasks
 let currentExecutor: CommandExecutor | null = null;
@@ -179,7 +174,8 @@ export const taskMethods = {
   /**
    * Execute DumpTensor
    */
-  async startDumpTensor(params: StartDumpTensorParams = {}): Promise<void> {
+  async startDumpTensor(params: { operatorNames?: string,
+    compileOption?: string } = {}): Promise<void> {
     try {
       await ProjectManager.getInstance()
         .initProject();
@@ -306,6 +302,7 @@ export const taskMethods = {
     if (currentTaskType && taskNameKeyMap[currentTaskType]) {
       return t(taskNameKeyMap[currentTaskType]);
     }
+
     return null;
   },
 
@@ -330,6 +327,7 @@ export const taskMethods = {
       { modal: true },
       params.confirmText,
     );
+
     // Return the results selected by the user:
     // - If the user clicks the "Stop and Execute" button, return confirmText
     // - If the user clicks the close button (X) or presses ESC, returns undefined (equivalent to cancel)
@@ -348,12 +346,13 @@ export const taskMethods = {
         .getExecutor();
       // Set current task type
       currentTaskType = 'buildAndDebug';
-      
+
       // For the pyasc type, check if a .py file is currently open and update the configuration
       const projectTypeInfo = await homeMethods.getProjectType();
-      const needsActivePyFile = isPythonLikeProjectType(projectTypeInfo.projectType);
+      const isPyasc = projectTypeInfo.projectType === OperatorProjectType.PYASC;
 
-      if (needsActivePyFile) {
+      if (isPyasc) {
+        // Check if a .py file is currently open
         const activeEditor = vscode.window.activeTextEditor;
         const isPyFile = activeEditor?.document.fileName.endsWith('.py');
 
@@ -361,17 +360,22 @@ export const taskMethods = {
           vscode.window.showWarningMessage(t('task.openPyFirst'));
           currentExecutor = null;
           currentTaskType = null;
-          ProjectManager.getInstance().clearExecutor();
+          ProjectManager.getInstance()
+            .clearExecutor();
+
           return;
         }
 
         const workspaceFolders = vscode.workspace.workspaceFolders;
+
         if (!workspaceFolders || workspaceFolders.length === 0) {
           vscode.window.showWarningMessage(t('task.workspacePathNotFound'));
           // clear status
           currentExecutor = null;
           currentTaskType = null;
-          ProjectManager.getInstance().clearExecutor();
+          ProjectManager.getInstance()
+            .clearExecutor();
+
           return;
         }
 
@@ -379,13 +383,16 @@ export const taskMethods = {
         const filePath = activeEditor!.document.uri.fsPath;
 
         // Calculate relative paths
-        const relativePath = path.relative(workspacePath, filePath).replace(/\\/g, '/');
+        const relativePath = path.relative(workspacePath, filePath)
+          .replace(/\\/g, '/');
 
         // Get build_op configuration and update target_file
         const buildConfigId = await buildService.getBuildConfigId();
+
         if (buildConfigId) {
           // Get project ID
           const projectIdStr = ProjectManager.getInstance().projectId;
+
           if (projectIdStr) {
             const projectId = Number(projectIdStr);
             // Get build_op configuration
@@ -409,10 +416,9 @@ export const taskMethods = {
           }
         }
       }
-      
-      const operatorNames = await homeMethods.getSelectedOperators();
-      // Compile before NPU debug, use --debug
-      await buildService.startBuild({ scriptField: 'npu_debug_script', operatorNames });
+
+      // Compile before debugging, use the --debug parameter
+      await buildService.startBuild({ scriptField: 'npu_debug_script' });
       await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
 
       // Get the project type and template name to determine whether to use msdebug-python
@@ -421,8 +427,10 @@ export const taskMethods = {
 
       // Start debug configuration
       const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+
       if (workspaceFolder) {
         const debugConfigName = usePythonDebug ? 'msdebug-python' : 'msdebug';
+
         await vscode.debug.startDebugging(workspaceFolder, debugConfigName);
       }
       else {
@@ -469,12 +477,13 @@ export const taskMethods = {
         .getExecutor();
       // Set current task type
       currentTaskType = 'buildAndCpuDebug';
-      
+
       // For the pyasc type, check if a .py file is currently open and update the configuration
       const projectTypeInfo = await homeMethods.getProjectType();
-      const needsActivePyFile = isPythonLikeProjectType(projectTypeInfo.projectType);
+      const isPyasc = projectTypeInfo.projectType === OperatorProjectType.PYASC;
 
-      if (needsActivePyFile) {
+      if (isPyasc) {
+        // Check if a .py file is currently open
         const activeEditor = vscode.window.activeTextEditor;
         const isPyFile = activeEditor?.document.fileName.endsWith('.py');
 
@@ -482,17 +491,22 @@ export const taskMethods = {
           vscode.window.showWarningMessage(t('task.openPyFirst'));
           currentExecutor = null;
           currentTaskType = null;
-          ProjectManager.getInstance().clearExecutor();
+          ProjectManager.getInstance()
+            .clearExecutor();
+
           return;
         }
 
         const workspaceFolders = vscode.workspace.workspaceFolders;
+
         if (!workspaceFolders || workspaceFolders.length === 0) {
           vscode.window.showWarningMessage(t('task.workspacePathNotFound'));
           // clear status
           currentExecutor = null;
           currentTaskType = null;
-          ProjectManager.getInstance().clearExecutor();
+          ProjectManager.getInstance()
+            .clearExecutor();
+
           return;
         }
 
@@ -500,13 +514,16 @@ export const taskMethods = {
         const filePath = activeEditor!.document.uri.fsPath;
 
         // Calculate relative paths
-        const relativePath = path.relative(workspacePath, filePath).replace(/\\/g, '/');
+        const relativePath = path.relative(workspacePath, filePath)
+          .replace(/\\/g, '/');
 
         // Get build_op configuration and update target_file
         const buildConfigId = await buildService.getBuildConfigId();
+
         if (buildConfigId) {
           // Get project ID
           const projectIdStr = ProjectManager.getInstance().projectId;
+
           if (projectIdStr) {
             const projectId = Number(projectIdStr);
             // Get build_op configuration
@@ -530,10 +547,9 @@ export const taskMethods = {
           }
         }
       }
-      
-      const operatorNames = await homeMethods.getSelectedOperators();
-      // Compile before CPU debug, use --simulator
-      await buildService.startBuild({ scriptField: 'cpu_debug_script', operatorNames });
+
+      // Compile before CPU debugging, use the --simulator parameter
+      await buildService.startBuild({ scriptField: 'cpu_debug_script' });
       await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
 
       // Get the project type and template name to determine whether to use msdebug-python
@@ -542,8 +558,10 @@ export const taskMethods = {
 
       // Start debug configuration
       const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+
       if (workspaceFolder) {
         const debugConfigName = usePythonDebug ? 'msdebug-python' : 'msdebug-cpu';
+
         await vscode.debug.startDebugging(workspaceFolder, debugConfigName);
       }
       else {

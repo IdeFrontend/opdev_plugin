@@ -1,26 +1,22 @@
 <script setup lang="ts">
 import {
-  ref, onMounted, computed,
+  ref, onMounted, computed, watch,
 } from 'vue';
 import { t } from 'i18next';
 import { message } from 'ant-design-vue';
 import { useTheme } from '@web/composables/use-theme';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import {
-  getConfigData,
-  saveConfig,
-  openExternalLink,
-  startOnBoard,
-  executeVscodeCommand,
-  getSelectedOperators,
-  getOnBoardAnalysisShowQuickOptions,
-  setOnBoardAnalysisShowQuickOptions,
+  getConfigData, saveConfig, openExternalLink, startOnBoard, executeVscodeCommand, checkTaskStatus, getSelectedOperators,
 } from '@web/apis';
 
 // 使用主题管理组合式函数
-const { themeConfig, actualTheme } = useTheme();
+const {
+  themeConfig, actualTheme,
+} = useTheme();
 const guide = 'https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODtools/Operatordevelopmenttools/atlasopdev_16_0082.html';
-const onboardData = ref({ user_options: {
+const onboardData = ref({
+  user_options: {
     Occupancy: true,
     Roofline: true,
     Source: true,
@@ -32,7 +28,8 @@ const onboardData = ref({ user_options: {
     MemoryUB: true,
     PipeUtilization: true,
     ResourceConflictRatio: true,
-} });
+  },
+});
 const loading = ref(false);
 const isExecuting = ref(false);
 /** When true, workspace `performanceTuning.onBoard.showQuickOptions` is false (tree runs without opening this panel). */
@@ -42,11 +39,14 @@ const fetchConfig = async () => {
   try {
     loading.value = true;
     const configObj = await getConfigData();
-    console.log('configObj', configObj)
-    const keys = Object.keys(configObj || {})
-    const configData = configObj[keys[0]] || []
-    const onBoardConfig = configData.find(v => v.config_type === 'on_board')
-    console.log('onBoardConfig', onBoardConfig)
+
+    console.log('configObj', configObj);
+    const keys = Object.keys(configObj || {});
+    const configData = configObj[keys[0]] || [];
+    const onBoardConfig = configData.find((v) => v.config_type === 'on_board');
+
+    console.log('onBoardConfig', onBoardConfig);
+
     if (onBoardConfig) {
       onboardData.value = JSON.parse(JSON.stringify(onBoardConfig));
     }
@@ -64,26 +64,40 @@ const handleSave = async () => {
     type: 'on_board',
     data: [onboardData.value],
   });
-}
+};
 
 const handleConfirm = async () => {
   if (!onboardData.value || isExecuting.value) {
     return;
   }
+
+  const hasRunningTask = await checkTaskStatus();
+
+  console.log('hasRunningTask', hasRunningTask);
+
+  if (hasRunningTask) {
+    message.info(t('web.options.taskRunning'));
+
+    return;
+  }
+
   try {
     isExecuting.value = true;
-    
+
     // 获取已选择的算子名称（如果是标准自定义算子）
     let operatorNames;
+
     try {
       const selectedOperators = await getSelectedOperators();
+
       if (selectedOperators) {
         operatorNames = selectedOperators;
       }
-    } catch (error) {
+    }
+    catch (error) {
       console.warn('获取已选择的算子失败', error);
     }
-    
+
     // 执行上板
     startOnBoard({ operatorNames });
     // 关闭当前页面
@@ -132,11 +146,15 @@ const performanceMetricsIndeterminate = computed(() => {
   return count > 0 && count < PERFORMANCE_METRIC_KEYS.length;
 });
 
-/** Only the group header checkbox should call this — toggles all metrics together. */
-const handleOperatorPerformanceChange = (e: unknown) => {
-  const checked = typeof e === 'boolean'
-    ? e
-    : ((e as { target?: { checked?: boolean } })?.target?.checked ?? false);
+  const keyArray = [
+    'ArithmeticUtilization',
+    'L2Cache',
+    'Memory',
+    'MemoryL0',
+    'MemoryUB',
+    'PipeUtilization',
+    'ResourceConflictRatio',
+  ];
 
   PERFORMANCE_METRIC_KEYS.forEach((key) => {
     onboardData.value.user_options[key] = checked;
@@ -170,10 +188,10 @@ onMounted(async () => {
 
       <div class="board-content">
         <a-alert
-            type="info"
-            show-icon
-            style="margin-bottom: 12px"
-            class="board-alert-info-content"
+          type="info"
+          show-icon
+          style="margin-bottom: 12px"
+          class="board-alert-info-content"
         >
           <template #message>
             <div style="white-space: pre-line;">
@@ -188,7 +206,10 @@ onMounted(async () => {
             <template #title>
               <div>
                 {{ t('web.options.simulator.guideRef') }}
-                <span style="color: #1677ff; cursor: pointer;" @click="jumpToGuide">{{ t('web.options.guideLinkText') }}</span>
+                <span
+                  style="color: #1677ff; cursor: pointer;"
+                  @click="jumpToGuide"
+                >{{ t('web.options.guideLinkText') }}</span>
               </div>
             </template>
             <QuestionCircleOutlined class="help-icon" />
@@ -297,18 +318,12 @@ onMounted(async () => {
           </a-checkbox>
         </div>
 
-
-        <div class="do-not-show-row">
-          <a-checkbox
-            v-model:checked="doNotShowAgain"
-            @change="syncDoNotShowToWorkspace"
-          >
-            {{ t('web.options.sanitizer.doNotShowAgain') }}
-          </a-checkbox>
-        </div>
-
         <div class="footer-actions">
-          <a-button type="primary" :loading="isExecuting" @click="handleConfirm">
+          <a-button
+            type="primary"
+            :loading="isExecuting"
+            @click="handleConfirm"
+          >
             {{ t('web.options.onboard.startNow') }}
           </a-button>
         </div>

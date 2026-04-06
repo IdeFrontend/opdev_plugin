@@ -31,15 +31,19 @@ export async function saveFileToLocal(params: SaveFileParams): Promise<boolean> 
       // 将 Base64 转换为 Blob
       const binaryString = atob(result.data);
       const bytes = new Uint8Array(binaryString.length);
+
       for (let i = 0; i < binaryString.length; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
+
       const blob = new Blob([bytes], { type: 'application/zip' });
+
       console.log('Blob 创建成功，大小:', blob.size, 'bytes');
 
       // 创建下载链接并触发下载
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
+
       link.href = url;
       link.download = result.filename || 'download.zip';
       link.style.display = 'none';
@@ -57,11 +61,13 @@ export async function saveFileToLocal(params: SaveFileParams): Promise<boolean> 
         if (link.parentNode) {
           document.body.removeChild(link);
         }
+
         URL.revokeObjectURL(url);
         console.log('下载链接已清理');
       }, 1000);
 
       console.log('下载已触发，文件名:', result.filename, '文件大小:', blob.size, 'bytes');
+
       return true;
     }
     catch (error) {
@@ -96,7 +102,10 @@ export function openExternalLink(url: string) {
 export function executeVscodeCommand(command: string, ...args: any[]) {
   return request.post(
     'common/executeVscodeCommand',
-    { command, args }
+    {
+      command,
+      args,
+    },
   );
 }
 

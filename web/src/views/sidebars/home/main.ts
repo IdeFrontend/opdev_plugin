@@ -15,19 +15,26 @@ import i18nResource from '@shared/i18n';
 import { getWebviewLang } from '@web/utils/lang';
 
 const lang = getWebviewLang();
+
 void i18next.init({
   resources: i18nResource,
   lng: lang,
   fallbackLng: 'en',
   interpolation: { escapeValue: false },
-}).then(() => {
-  if (typeof console !== 'undefined' && console.debug) {
-    console.debug('[OP DevTools i18n] home', { requested: lang, resolved: i18next.language, resolvedDir: i18next.languages });
-  }
-});
+})
+  .then(() => {
+    if (typeof console !== 'undefined' && console.debug) {
+      console.debug('[OP DevTools i18n] home', {
+        requested: lang,
+        resolved: i18next.language,
+        resolvedDir: i18next.languages,
+      });
+    }
+  });
 
 window.addEventListener('message', (event) => {
   const message = event.data;
+
   if (message?.command?.indexOf('vscode') === 0) {
     vscode?.postMessage({
       command: message.command,
@@ -36,4 +43,5 @@ window.addEventListener('message', (event) => {
   }
 });
 
-createApp(App).mount('#app');
+createApp(App)
+  .mount('#app');

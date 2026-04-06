@@ -81,10 +81,22 @@ export const exceptionTpyeMap = new Map<string, string>([
 ]);
 
 export const exceptionMap = new Map<string, string>([
-  ['memory', 'exceptionParser.memory'],
-  ['memoryContention', 'exceptionParser.race'],
-  ['uninitialized', 'exceptionParser.uninitialized'],
-  ['synchronize', 'exceptionParser.sync'],
+  [
+    'memory',
+    'exceptionParser.memory',
+  ],
+  [
+    'memoryContention',
+    'exceptionParser.race',
+  ],
+  [
+    'uninitialized',
+    'exceptionParser.uninitialized',
+  ],
+  [
+    'synchronize',
+    'exceptionParser.sync',
+  ],
 ]);
 
 /**
@@ -93,18 +105,54 @@ export const exceptionMap = new Map<string, string>([
  * value: Chinese exception name
  */
 export const exceptionNameMap = new Map<string, string>([
-  ['Potential RAW hazard detected', 'exceptionParser.rawHazard'],
-  ['Potential WAR hazard detected', 'exceptionParser.warHazard'],
-  ['Potential WAW hazard detected', 'exceptionParser.wawHazard'],
-  ['LeakCheck: detected memory leaks', 'exceptionParser.memoryLeak'],
-  ['illegal free()', 'exceptionParser.illegalFree'],
-  ['illegal read of size', 'exceptionParser.illegalRead'],
-  ['illegal write of size', 'exceptionParser.illegalWrite'],
-  ['out of bounds of size', 'exceptionParser.multiCoreStomp'],
-  ['Unused memory', 'exceptionParser.allocUnused'],
-  ['uninitialized read of size', 'exceptionParser.uninitException'],
-  ['Unpaired set_flag insetructions detected', 'exceptionParser.syncException'],
-  ['misaligned access of size', 'exceptionParser.unalignedAccess'],
+  [
+    'Potential RAW hazard detected',
+    'exceptionParser.rawHazard',
+  ],
+  [
+    'Potential WAR hazard detected',
+    'exceptionParser.warHazard',
+  ],
+  [
+    'Potential WAW hazard detected',
+    'exceptionParser.wawHazard',
+  ],
+  [
+    'LeakCheck: detected memory leaks',
+    'exceptionParser.memoryLeak',
+  ],
+  [
+    'illegal free()',
+    'exceptionParser.illegalFree',
+  ],
+  [
+    'illegal read of size',
+    'exceptionParser.illegalRead',
+  ],
+  [
+    'illegal write of size',
+    'exceptionParser.illegalWrite',
+  ],
+  [
+    'out of bounds of size',
+    'exceptionParser.multiCoreStomp',
+  ],
+  [
+    'Unused memory',
+    'exceptionParser.allocUnused',
+  ],
+  [
+    'uninitialized read of size',
+    'exceptionParser.uninitException',
+  ],
+  [
+    'Unpaired set_flag insetructions detected',
+    'exceptionParser.syncException',
+  ],
+  [
+    'misaligned access of size',
+    'exceptionParser.unalignedAccess',
+  ],
 ]);
 
 /**
@@ -160,6 +208,7 @@ export function getChineseQuestionType(questionType: string): string {
   }
 
   const key = exceptionMap.get(questionType);
+
   return key ? t(key) : questionType;
 }
 

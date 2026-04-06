@@ -140,7 +140,6 @@ export class ProjectManager {
       ascend_env_script,
       template_name: params.templateName,
       project_type: params.projectType,
-      soc_version: project_soc_version
     });
 
     this._projectId = String(projectRes);

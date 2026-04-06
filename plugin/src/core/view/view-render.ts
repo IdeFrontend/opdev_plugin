@@ -41,7 +41,7 @@ export class ViewRenderer extends vscode.Disposable {
         'ops-config',
         'options-simulator',
         'options-on-board',
-        'options-sanitizer'
+        'options-sanitizer',
       ];
       const sidebarViews = [
         'home',
@@ -49,7 +49,7 @@ export class ViewRenderer extends vscode.Disposable {
         'ms-sanitizer-panel-view',
         'performance-run-data',
         'ms-sanitizer-run-data',
-        'dump-tensor-data'
+        'dump-tensor-data',
       ];
 
       if (panelViews.includes(entryName)) {

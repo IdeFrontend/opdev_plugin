@@ -9,7 +9,9 @@ import {
   getWorkspace,
   openProject,
 } from '@web/apis';
-import { selectFolder, selectFile } from '@web/apis/performance-run-data';
+import {
+  selectFolder, selectFile,
+} from '@web/apis/performance-run-data';
 import { MessageHandlerStrategyManager } from '../../link/composables/message-handler-strategies';
 import { SearchStrategyFactory } from '../../link/composables/search-strategies';
 
@@ -93,9 +95,8 @@ export function useOpenProject() {
   // 选择目录
   const handleSelectFolder = async () => {
     try {
-      const selectedPath = await selectFolder({
-        defaultPath: projectFormData.projectPath,
-      });
+      const selectedPath = await selectFolder({ defaultPath: projectFormData.projectPath });
+
       if (selectedPath) {
         projectFormData.projectPath = selectedPath;
       }
@@ -109,9 +110,8 @@ export function useOpenProject() {
   // 选择文件
   const handleSelectFile = async () => {
     try {
-      const selectedPath = await selectFile({
-        defaultPath: projectFormData.projectSH,
-      });
+      const selectedPath = await selectFile({ defaultPath: projectFormData.projectSH });
+
       if (selectedPath) {
         projectFormData.projectSH = selectedPath;
       }
@@ -136,7 +136,7 @@ export function useOpenProject() {
       await openProject({
         projectPath: projectFormData.projectPath,
         projectSH: projectFormData.projectSH,
-        projectName: ''
+        projectName: '',
       });
       message.success('算子工程打开成功');
     }

@@ -141,7 +141,7 @@ export const performanceDataMethods = {
       try {
         const defaultUri = vscode.Uri.file(params.defaultPath);
         const stat = await vscode.workspace.fs.stat(defaultUri);
-        
+
         // If the path is a directory, use it directly
         if (stat.type === vscode.FileType.Directory) {
           options.defaultUri = defaultUri;
@@ -155,6 +155,7 @@ export const performanceDataMethods = {
         // If the path does not exist or is invalid, try using the parent directory
         try {
           const parentPath = path.dirname(params.defaultPath);
+
           if (parentPath && parentPath !== params.defaultPath) {
             options.defaultUri = vscode.Uri.file(parentPath);
           }
@@ -208,7 +209,7 @@ export const performanceDataMethods = {
       try {
         const defaultUri = vscode.Uri.file(params.defaultPath);
         const stat = await vscode.workspace.fs.stat(defaultUri);
-        
+
         // If the path is a file, use it directly
         if (stat.type === vscode.FileType.File) {
           options.defaultUri = defaultUri;
@@ -222,6 +223,7 @@ export const performanceDataMethods = {
         // If the path does not exist, try using the parent directory
         try {
           const parentPath = path.dirname(params.defaultPath);
+
           if (parentPath && parentPath !== params.defaultPath) {
             options.defaultUri = vscode.Uri.file(parentPath);
           }
@@ -274,6 +276,7 @@ export const performanceDataMethods = {
 
       // Build error message display text
       let errorDisplayText = '';
+
       if (errorTitle || errorMessage) {
         if (errorTitle && errorMessage) {
           errorDisplayText = `${errorTitle}: ${errorMessage.substring(0, 100)}${errorMessage.length > 100 ? '...' : ''}`;
@@ -292,6 +295,7 @@ export const performanceDataMethods = {
 
       // If there is an error message, create an end-of-line decoration to display the error message
       let afterDecorationType: vscode.TextEditorDecorationType | undefined;
+
       if (errorDisplayText) {
         afterDecorationType = vscode.window.createTextEditorDecorationType({
           after: {
@@ -314,14 +318,14 @@ export const performanceDataMethods = {
       // If there is an error message, it is displayed at the end of the line
       if (afterDecorationType && errorDisplayText) {
         const endPos = new vscode.Position(line, document.lineAt(line).text.length);
-        editor.setDecorations(afterDecorationType, [{
-          range: new vscode.Range(endPos, endPos),
-        }]);
+
+        editor.setDecorations(afterDecorationType, [{ range: new vscode.Range(endPos, endPos) }]);
       }
 
       // If there is an error message, display a notification
       if (errorTitle || errorMessage) {
         const notificationMessage = errorTitle || errorMessage || t('performance.errorDetected');
+
         vscode.window.showInformationMessage(
           notificationMessage,
           { modal: false },
@@ -333,33 +337,34 @@ export const performanceDataMethods = {
       const targetLine = line;
       const targetChar = charactor;
 
-      const selectionDisposable = vscode.window.onDidChangeTextEditorSelection(
-        (e) => {
-          // Only focus on the same document
-          if (e.textEditor.document.uri.toString() !== targetDocUri) {
-            return;
-          }
+      const selectionDisposable = vscode.window.onDidChangeTextEditorSelection((e) => {
+        // Only focus on the same document
+        if (e.textEditor.document.uri.toString() !== targetDocUri) {
+          return;
+        }
 
-          const selection = e.selections[0];
-          if (!selection) {
-            return;
-          }
+        const selection = e.selections[0];
 
-          const active = selection.active;
+        if (!selection) {
+          return;
+        }
 
-          // If the cursor remains at the current error position, the highlight will not be cleared
-          if (active.line === targetLine && active.character === targetChar) {
-            return;
-          }
+        const active = selection.active;
 
-          // After the cursor actually moves to another position, remove the highlight
-          decorationType.dispose();
-          if (afterDecorationType) {
-            afterDecorationType.dispose();
-          }
-          selectionDisposable.dispose();
-        },
-      );
+        // If the cursor remains at the current error position, the highlight will not be cleared
+        if (active.line === targetLine && active.character === targetChar) {
+          return;
+        }
+
+        // After the cursor actually moves to another position, remove the highlight
+        decorationType.dispose();
+
+        if (afterDecorationType) {
+          afterDecorationType.dispose();
+        }
+
+        selectionDisposable.dispose();
+      });
     }
     catch (error) {
       console.log('jumpToFile', error);

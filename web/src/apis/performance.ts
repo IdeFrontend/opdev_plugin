@@ -32,8 +32,10 @@ export function downloadPerformanceReport(params: { dirPath: string }) {
   return request.post<{ dirPath: string }, void>('performance/downloadReport', params);
 }
 
-export function diffFiles(params: { filePath1: string, filePath2: string }) {
-  return request.post<{ filePath1: string, filePath2: string }, void>('performance/diffFiles', params);
+export function diffFiles(params: { filePath1: string,
+  filePath2: string }) {
+  return request.post<{ filePath1: string,
+    filePath2: string }, void>('performance/diffFiles', params);
 }
 
 export function getDumpTensorData(params: GetPerformanceRunDataParams) {
@@ -42,8 +44,4 @@ export function getDumpTensorData(params: GetPerformanceRunDataParams) {
 
 export function openFile(params: { file: string }) {
   return request.post<{ file: string }, void>('webview/openFile', params);
-}
-
-export function importDumpTensorBinFile(params: { binFilePath: string }) {
-  return request.post<{ binFilePath: string }, void>('ops/importDumpTensorBinFile', params);
 }

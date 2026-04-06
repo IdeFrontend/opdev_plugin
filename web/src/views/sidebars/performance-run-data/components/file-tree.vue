@@ -51,6 +51,7 @@ watch(
 // 自定义切换图标（三角箭头）
 const SwitcherIcon: Component = ({ expanded }) => {
   const iconColor = actualTheme.value === 'dark' ? '#fff' : '#1f1f1f';
+
   return h(expanded ? DownOutlined : RightOutlined, {
     style: {
       fontSize: '12px',

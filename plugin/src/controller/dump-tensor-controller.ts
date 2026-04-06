@@ -17,6 +17,6 @@ export const dumpTensorMethods = {
         params.sort.order,
       );
 
-    return { data };  
+    return { data };
   },
-}
+};

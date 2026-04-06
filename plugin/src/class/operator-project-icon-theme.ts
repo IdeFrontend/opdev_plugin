@@ -32,6 +32,7 @@ export class OperatorProjectIconTheme implements vscode.FileDecorationProvider {
     if (!OperatorProjectIconTheme.instance) {
       OperatorProjectIconTheme.instance = new OperatorProjectIconTheme(context);
     }
+
     return OperatorProjectIconTheme.instance;
   }
 
@@ -44,10 +45,12 @@ export class OperatorProjectIconTheme implements vscode.FileDecorationProvider {
     // Check if it is a folder
     try {
       const stats = fs.statSync(folderPath);
+
       if (!stats.isDirectory()) {
         return undefined;
       }
-    } catch {
+    }
+    catch {
       return undefined;
     }
 
@@ -57,8 +60,8 @@ export class OperatorProjectIconTheme implements vscode.FileDecorationProvider {
     // Traverse all projects to find whether the current folder is in the configuration of a project
     for (const project of allProjects) {
       // Check whether the current folder is in the ops_meet of the project (operator project collection)
-      if (project.ops_meet && project.ops_meet.some(collection =>
-          path.normalize(collection.path) === path.normalize(folderPath))) {
+      if (project.ops_meet && project.ops_meet.some((collection) =>
+        path.normalize(collection.path) === path.normalize(folderPath))) {
         // Operator Engineering Collection - Purple
         return {
           tooltip: t('iconTheme.operatorProjectCollection'),
@@ -68,9 +71,9 @@ export class OperatorProjectIconTheme implements vscode.FileDecorationProvider {
 
       // Check whether the current folder is in the project's ops_list or experimental_ops_list (operator project)
       const isOperatorProject =
-        (project.ops_list && project.ops_list.some(op =>
-          path.normalize(op.path) === path.normalize(folderPath))) ||
-        (project.experimental_ops_list && project.experimental_ops_list.some(op =>
+        (project.ops_list && project.ops_list.some((op) =>
+          path.normalize(op.path) === path.normalize(folderPath)))
+        || (project.experimental_ops_list && project.experimental_ops_list.some((op) =>
           path.normalize(op.path) === path.normalize(folderPath)));
 
       if (isOperatorProject) {
@@ -92,8 +95,10 @@ export class OperatorProjectIconTheme implements vscode.FileDecorationProvider {
   private getAllProjectsFromConfig(): any[] {
     try {
       return getAllProjects();
-    } catch (error) {
+    }
+    catch (error) {
       console.error('[OperatorProjectIconTheme] Failed to get all projects:', error);
+
       return [];
     }
   }
@@ -105,6 +110,7 @@ export class OperatorProjectIconTheme implements vscode.FileDecorationProvider {
     if (!this.onDidChangeFileDecorationsEmitter) {
       this.onDidChangeFileDecorationsEmitter = new vscode.EventEmitter<vscode.Uri | vscode.Uri[] | undefined>();
     }
+
     return this.onDidChangeFileDecorationsEmitter.event;
   }
 

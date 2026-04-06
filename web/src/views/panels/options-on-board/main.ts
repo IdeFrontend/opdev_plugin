@@ -19,6 +19,8 @@ void i18next.init({
   lng: lang,
   fallbackLng: 'en',
   interpolation: { escapeValue: false },
-}).then(() => {
-  createApp(App).mount('#app');
-});
+})
+  .then(() => {
+    createApp(App)
+      .mount('#app');
+  });

@@ -43,7 +43,11 @@ export class OperatorProjectDetector {
     const match = await OperatorPluginRegistry.detectProject(dirPath);
 
     if (!match) {
-      return { isOperatorProject: false, projectPath: dirPath, projectName };
+      return {
+        isOperatorProject: false,
+        projectPath: dirPath,
+        projectName,
+      };
     }
 
     return {
@@ -62,7 +66,9 @@ export class OperatorProjectDetector {
     maxDepth: number = 3,
   ): Promise<OperatorProjectDetectionResult[]> {
     const results: OperatorProjectDetectionResult[] = [];
+
     await this.scanDirectory(rootPath, 0, maxDepth, results);
+
     return results;
   }
 
@@ -72,27 +78,38 @@ export class OperatorProjectDetector {
     maxDepth: number,
     results: OperatorProjectDetectionResult[],
   ): Promise<void> {
-    if (currentDepth > maxDepth) return;
+    if (currentDepth > maxDepth) {
+      return;
+    }
 
     try {
       const detection = await this.detectOperatorProject(dirPath);
+
       if (detection.isOperatorProject) {
         results.push(detection);
+
         return;
       }
 
       if (currentDepth < maxDepth) {
         const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+
         for (const entry of entries) {
-          if (!entry.isDirectory()) continue;
+          if (!entry.isDirectory()) {
+            continue;
+          }
+
           const name = entry.name;
+
           if (name.startsWith('.') || name === 'node_modules' || name === 'out' || name === 'build') {
             continue;
           }
+
           await this.scanDirectory(path.join(dirPath, name), currentDepth + 1, maxDepth, results);
         }
       }
-    } catch {
+    }
+    catch {
       // ignore
     }
   }
@@ -100,20 +117,25 @@ export class OperatorProjectDetector {
   /**
    * Scan the first-level folders under the rootPath directory to find standard custom operator projects
    */
-  static async scanForStandardCustomOperatorProjects(
-    rootPath: string,
-  ): Promise<OperatorProjectDetectionResult[]> {
+  static async scanForStandardCustomOperatorProjects(rootPath: string): Promise<OperatorProjectDetectionResult[]> {
     const results: OperatorProjectDetectionResult[] = [];
 
     try {
       const entries = fs.readdirSync(rootPath, { withFileTypes: true });
+
       for (const entry of entries) {
-        if (!entry.isDirectory()) continue;
+        if (!entry.isDirectory()) {
+          continue;
+        }
+
         const name = entry.name;
+
         if (name.startsWith('.') || name === 'node_modules' || name === 'out' || name === 'build') {
           continue;
         }
+
         const folderPath = path.join(rootPath, name);
+
         if (fs.existsSync(path.join(folderPath, 'CMakeLists.txt'))) {
           results.push({
             isOperatorProject: true,
@@ -123,7 +145,8 @@ export class OperatorProjectDetector {
           });
         }
       }
-    } catch {
+    }
+    catch {
       // ignore
     }
 

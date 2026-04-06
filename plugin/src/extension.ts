@@ -109,18 +109,7 @@ import { buildService } from './service/build-service';
 import { configService } from './service/config-service';
 import { projectService } from './service/project-service';
 import { OperatorProjectIconTheme } from './class/operator-project-icon-theme';
-import { registerSidebarContextsRefresh } from './helpers/sidebar-context-refresh';
-import { welcomeMethods } from './controller/welcome-controller'
-import {
-  dispatchStartBuild,
-  dispatchStartRun,
-  dispatchRunSanitizer,
-  dispatchStartOnBoard,
-  dispatchStartSimulate,
-  dispatchStartUtTest,
-  dispatchStartDumpTensor,
-  dispatchStopTask,
-} from './helpers/task-method-dispatch';
+import { welcomeMethods } from './controller/welcome-controller';
 
 let extensionContext: vscode.ExtensionContext | undefined;
 
@@ -132,12 +121,15 @@ let extensionContext: vscode.ExtensionContext | undefined;
 function getFolderUri(uri: vscode.Uri): vscode.Uri {
   try {
     const stat = fs.statSync(uri.fsPath);
+
     if (stat.isDirectory()) {
       return uri;
     }
+
     // If it is a file, return the folder where the file is located
     return vscode.Uri.file(path.dirname(uri.fsPath));
-  } catch {
+  }
+  catch {
     // If the file information cannot be obtained, assuming it is a file, return to the parent directory
     return vscode.Uri.file(path.dirname(uri.fsPath));
   }
@@ -178,11 +170,12 @@ const updateContextForUri = async (uri: vscode.Uri | undefined) => {
     await vscode.commands.executeCommand('setContext', 'operatorProjectMarked', false);
     await vscode.commands.executeCommand('setContext', 'multiOperatorProjectMarked', false);
     await vscode.commands.executeCommand('setContext', 'operatorProjectType', '');
+
     return;
   }
 
   const checkResult = await FolderContextMenuService.checkIsOperatorProject(uri);
-  
+
   await vscode.commands.executeCommand(
     'setContext',
     'operatorProjectMarked',
@@ -193,7 +186,7 @@ const updateContextForUri = async (uri: vscode.Uri | undefined) => {
     'multiOperatorProjectMarked',
     checkResult.isMultiProject,
   );
-  
+
   await vscode.commands.executeCommand(
     'setContext',
     'operatorProjectType',
@@ -520,6 +513,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
       if (!workspaceFolders || workspaceFolders.length === 0) {
         vscode.window.showErrorMessage(t('extension.openWorkspaceFirst'));
+
         return;
       }
 
@@ -585,35 +579,13 @@ export async function activate(context: vscode.ExtensionContext) {
     return await homeMethods.getSelectedOperators();
   };
 
-  const getCompileOptionFromSelection = async (): Promise<string | undefined> => {
-    const selectedIds = await homeMethods.getSelectedOperatorIds() || [];
-    if (selectedIds.length === 0) {
-      return undefined;
-    }
-    const multiple = await homeMethods.checkMultipleOperators();
-    if (!multiple.isStandardCustom || !multiple.operators) {
-      return undefined;
-    }
-    const selectedSet = new Set(selectedIds);
-    const hasExperimental = multiple.operators.some((op) => selectedSet.has(op.id) && op.isExperimental);
-    return hasExperimental ? '--experimental' : undefined;
-  };
-
-  const sidebarBuildCommand = vscode.commands.registerCommand(
-    COMMAND_SIDEBAR_BUILD,
-    async () =>
-      operateTreeProvider.runFlowAction('build', async () => {
-        const operatorNames = await getOperatorNamesFromSelection();
-        await dispatchStartBuild({ operatorNames });
-      }),
-  );
-  const sidebarRunCommand = vscode.commands.registerCommand(
-    COMMAND_SIDEBAR_RUN,
-    async () => {
-      const selectedIds = await homeMethods.getSelectedOperatorIds();
-      if (selectedIds && selectedIds.length > 1) {
-        vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
-        return;
+  // Expand or close the sidebar based on whether the devtool_config.json file exists
+  if (hasDevtoolConfig) {
+    // Delay execution to ensure UI is ready
+    setTimeout(async () => {
+      try {
+        console.log('[Extension] devtool_config.json found, focusing OpsOperateProvider');
+        await vscode.commands.executeCommand('OpsOperateProvider.focus');
       }
       await operateTreeProvider.runFlowAction('run', async () => {
         await dispatchStartRun();
@@ -1030,6 +1002,7 @@ export async function activate(context: vscode.ExtensionContext) {
     msSanitizerPanelView,
     getMsSanitizerPanelWebview,
   } = getMsSanitizerPanelViewProvider(context, apiServer);
+
   context.subscriptions.push(msSanitizerPanelView, openMsSanitizerDisposable);
 
   // Performance tuning view (middle panel)
@@ -1038,6 +1011,7 @@ export async function activate(context: vscode.ExtensionContext) {
     openPerformanceDisposable,
     getWebview: getPerformancePanelWebview,
   } = getPerformancePanelViewProvider(context, apiServer);
+
   context.subscriptions.push(performancePanelView, openPerformanceDisposable);
 
   // DumpTensor data view (middle panel)
@@ -1054,14 +1028,30 @@ export async function activate(context: vscode.ExtensionContext) {
   const simulatorOptionsCommand = vscode.commands.registerCommand(
     COMMAND_SIMULATOR_OPTIONS,
     async () => {
-      await simulatorOptionsProvider.show(VIEW_OPTIONS_SIMULATOR);
+      const pyascCheck = await homeMethods.validatePyascForAnalysis();
+
+      if (!pyascCheck.valid) {
+        vscode.window.showWarningMessage(pyascCheck.message ?? t('extension.openPyFirst'));
+
+        return;
+      }
+
+      simulatorOptionsProvider.show(VIEW_OPTIONS_SIMULATOR);
     },
   );
 
   const onBoardOptionsCommand = vscode.commands.registerCommand(
     COMMAND_ON_BOARD_OPTIONS,
     async () => {
-      await onBoardOptionsProvider.show(VIEW_OPTIONS_ON_BOARD);
+      const pyascCheck = await homeMethods.validatePyascForAnalysis();
+
+      if (!pyascCheck.valid) {
+        vscode.window.showWarningMessage(pyascCheck.message ?? t('extension.openPyFirst'));
+
+        return;
+      }
+
+      onBoardOptionsProvider.show(VIEW_OPTIONS_ON_BOARD);
     },
   );
 
@@ -1129,6 +1119,7 @@ export async function activate(context: vscode.ExtensionContext) {
       vscode.window.showInformationMessage(t('extension.folderDecorationsRefreshed'));
     },
   );
+
   context.subscriptions.push(refreshDecorationsCommand);
 
   // Note: Do not automatically detect and mark the operator project collection when the plug-in is activated.
@@ -1140,8 +1131,10 @@ export async function activate(context: vscode.ExtensionContext) {
     async (uri?: vscode.Uri) => {
       if (!uri) {
         vscode.window.showErrorMessage(t('extension.rightClickFolder'));
+
         return;
       }
+
       await FolderContextMenuService.markAsOperatorProject(uri);
 
       // Trigger decoration update after the operation is completed (refresh the involved URI first, then refresh in full to ensure Explorer is redrawn)
@@ -1157,8 +1150,10 @@ export async function activate(context: vscode.ExtensionContext) {
     async (uri?: vscode.Uri) => {
       if (!uri) {
         vscode.window.showErrorMessage(t('extension.rightClickFolder'));
+
         return;
       }
+
       await FolderContextMenuService.markAsMultiOperatorProject(uri);
 
       iconTheme.fireDecorationUpdate(uri);
@@ -1173,8 +1168,10 @@ export async function activate(context: vscode.ExtensionContext) {
     async (uri?: vscode.Uri) => {
       if (!uri) {
         vscode.window.showErrorMessage(t('extension.rightClickFolder'));
+
         return;
       }
+
       await FolderContextMenuService.unmarkAsOperatorProject(uri);
 
       iconTheme.fireDecorationUpdate(uri);
@@ -1189,8 +1186,10 @@ export async function activate(context: vscode.ExtensionContext) {
     async (uri?: vscode.Uri) => {
       if (!uri) {
         vscode.window.showErrorMessage(t('extension.rightClickFolder'));
+
         return;
       }
+
       await FolderContextMenuService.unmarkAsMultiOperatorProject(uri);
 
       iconTheme.fireDecorationUpdate(uri);
@@ -1205,8 +1204,10 @@ export async function activate(context: vscode.ExtensionContext) {
     async (uri?: vscode.Uri) => {
       if (!uri) {
         vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
+
         return;
       }
+
       await FolderContextMenuService.buildOperatorProject(uri);
     },
   );
@@ -1216,8 +1217,10 @@ export async function activate(context: vscode.ExtensionContext) {
     async (uri?: vscode.Uri) => {
       if (!uri) {
         vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
+
         return;
       }
+
       await FolderContextMenuService.runOperatorProject(uri);
     },
   );
@@ -1227,9 +1230,12 @@ export async function activate(context: vscode.ExtensionContext) {
     async (uri?: vscode.Uri) => {
       if (!uri) {
         vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
+
         return;
       }
+
       const folderUri = getFolderUri(uri);
+
       await FolderContextMenuService.cpuDebugOperatorProject(folderUri);
     },
   );
@@ -1239,9 +1245,12 @@ export async function activate(context: vscode.ExtensionContext) {
     async (uri?: vscode.Uri) => {
       if (!uri) {
         vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
+
         return;
       }
+
       const folderUri = getFolderUri(uri);
+
       await FolderContextMenuService.npuDebugOperatorProject(folderUri);
     },
   );
@@ -1251,9 +1260,12 @@ export async function activate(context: vscode.ExtensionContext) {
     async (uri?: vscode.Uri) => {
       if (!uri) {
         vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
+
         return;
       }
+
       const folderUri = getFolderUri(uri);
+
       await FolderContextMenuService.cpuDebugConfigOperatorProject(folderUri);
     },
   );
@@ -1263,9 +1275,12 @@ export async function activate(context: vscode.ExtensionContext) {
     async (uri?: vscode.Uri) => {
       if (!uri) {
         vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
+
         return;
       }
+
       const folderUri = getFolderUri(uri);
+
       await FolderContextMenuService.npuDebugConfigOperatorProject(folderUri);
     },
   );
@@ -1275,9 +1290,12 @@ export async function activate(context: vscode.ExtensionContext) {
     async (uri?: vscode.Uri) => {
       if (!uri) {
         vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
+
         return;
       }
+
       const folderUri = getFolderUri(uri);
+
       await FolderContextMenuService.sanitizerOperatorProject(folderUri);
     },
   );
@@ -1287,9 +1305,12 @@ export async function activate(context: vscode.ExtensionContext) {
     async (uri?: vscode.Uri) => {
       if (!uri) {
         vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
+
         return;
       }
+
       const folderUri = getFolderUri(uri);
+
       await FolderContextMenuService.onBoardOperatorProject(folderUri);
     },
   );
@@ -1299,9 +1320,12 @@ export async function activate(context: vscode.ExtensionContext) {
     async (uri?: vscode.Uri) => {
       if (!uri) {
         vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
+
         return;
       }
+
       const folderUri = getFolderUri(uri);
+
       await FolderContextMenuService.simulationOperatorProject(folderUri);
     },
   );
@@ -1312,8 +1336,10 @@ export async function activate(context: vscode.ExtensionContext) {
     async (uri?: vscode.Uri) => {
       if (!uri) {
         vscode.window.showErrorMessage(t('extension.rightClickFile'));
+
         return;
       }
+
       await FolderContextMenuService.addReportToFileMapList(uri, 'sanitizer');
     },
   );
@@ -1324,8 +1350,10 @@ export async function activate(context: vscode.ExtensionContext) {
     async (uri?: vscode.Uri) => {
       if (!uri) {
         vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
+
         return;
       }
+
       await FolderContextMenuService.addReportToFileMapList(uri, 'on_board');
     },
   );
@@ -1336,8 +1364,10 @@ export async function activate(context: vscode.ExtensionContext) {
     async (uri?: vscode.Uri) => {
       if (!uri) {
         vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
+
         return;
       }
+
       await FolderContextMenuService.addReportToFileMapList(uri, 'simulate');
     },
   );
@@ -1348,8 +1378,10 @@ export async function activate(context: vscode.ExtensionContext) {
     async (uri?: vscode.Uri) => {
       if (!uri) {
         vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
+
         return;
       }
+
       await FolderContextMenuService.addReportToFileMapList(uri, 'on_board');
     },
   );
@@ -1428,6 +1460,7 @@ export async function activate(context: vscode.ExtensionContext) {
       }
     },
   );
+
   context.subscriptions.push(openCsvCommand);
 
   const flashMsSanitizerRunData = vscode.commands.registerCommand(
@@ -1435,9 +1468,11 @@ export async function activate(context: vscode.ExtensionContext) {
     async () => {
       // The report list has been moved to the left side of the anomaly detection panel, and a refresh command is issued to the panel.
       const webview = getMsSanitizerPanelWebview();
+
       webview?.postMessage({ command: 'iframeFlashMsSanitizerRunData' });
     },
   );
+
   context.subscriptions.push(flashMsSanitizerRunData);
 
   const flashPerformanceRunData = vscode.commands.registerCommand(
@@ -1445,9 +1480,11 @@ export async function activate(context: vscode.ExtensionContext) {
     async () => {
       // Get the webview of the performance tuning panel and proactively issue a refresh command
       const webview = getPerformancePanelWebview();
+
       webview?.postMessage({ command: 'iframeRefreshData' });
     },
   );
+
   context.subscriptions.push(flashPerformanceRunData);
 
   const flashDumpTensorData = vscode.commands.registerCommand(
@@ -1461,6 +1498,7 @@ export async function activate(context: vscode.ExtensionContext) {
       }
     },
   );
+
   context.subscriptions.push(flashDumpTensorData);
 
   const importDumpTensorBinFileCommand = vscode.commands.registerCommand(
@@ -1482,21 +1520,22 @@ export async function activate(context: vscode.ExtensionContext) {
   // Workspace folder change listener
   const watchWorkSpaceFolderChange =
     vscode.workspace.onDidChangeWorkspaceFolders(async () => {
-      console.log('Workspace changed', vscode.workspace.workspaceFolders)
+      console.log('Workspace changed', vscode.workspace.workspaceFolders);
       vscode.commands.executeCommand(COMMAND_FLASH_MS_SANITIZER_RUN_DATA);
       vscode.commands.executeCommand(COMMAND_FLASH_PERFORMANCE_RUN_DATA);
       vscode.commands.executeCommand(COMMAND_FLASH_DUMP_TENSOR_DATA);
-      await refreshSidebarContexts();
-      
+
       // Detect operator projects in the workspace
       const workspaceFolders = vscode.workspace.workspaceFolders;
+
       if (workspaceFolders && workspaceFolders.length > 0) {
         const { WorkspaceDetectorService } = await import('./service/workspace-detector-service.js');
-        
+
         for (const folder of workspaceFolders) {
-          await WorkspaceDetectorService.detectAndRegisterWorkspace(folder.uri.fsPath).catch((error) => {
-            console.error('Failed to detect workspace operator project:', error);
-          });
+          await WorkspaceDetectorService.detectAndRegisterWorkspace(folder.uri.fsPath)
+            .catch((error) => {
+              console.error('Failed to detect workspace operator project:', error);
+            });
         }
       }
     });
@@ -1606,7 +1645,7 @@ export async function activate(context: vscode.ExtensionContext) {
   if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
     // Delay execution to ensure the plugin is fully initialized
     setTimeout(async () => {
-      welcomeMethods.openProject({ projectPath: vscode.workspace.workspaceFolders![0].uri.fsPath }, true)
+      welcomeMethods.openProject({ projectPath: vscode.workspace.workspaceFolders![0].uri.fsPath }, true);
     }, 2000);
   }
 

@@ -18,7 +18,9 @@ import {
   ProfilerCommandParams,
 } from './types';
 import { ConfigRecord } from '@plugin/domain/models/config-model';
-import { getConfig, getConfigById } from '../../services/configuration';
+import {
+  getConfig, getConfigById,
+} from '../../services/configuration';
 import { getProjectById } from '@plugin/domain/models/project-model';
 
 /**
@@ -45,7 +47,9 @@ export class AscendCommandStrategy implements CommandStrategy {
   }
 
   buildCommandContext(baseContext: BaseContext): CommandContext {
-    const { config, project, operator } = baseContext;
+    const {
+      config, project, operator,
+    } = baseContext;
 
     // Ascend type uses ascend_env_script as environment script
     const sourceCannCmd =
@@ -82,18 +86,22 @@ export class AscendCommandStrategy implements CommandStrategy {
   }
 
   buildRunCommand(context: CommandContext): string {
-    const { config, sourceCannCmd, cdCmd } = context;
+    const {
+      config, sourceCannCmd, cdCmd,
+    } = context;
     const run_cmd = getExecutableCommand(config.target_file || '', { execute: true });
 
     return joinCommands(sourceCannCmd, cdCmd, run_cmd);
   }
 
   buildOpCommand(params: CommandBuildParams): string {
-    const { config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames } = params;
+    const {
+      config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames,
+    } = params;
 
-    const scriptField = params.scriptField || 'script'
+    const scriptField = params.scriptField || 'script';
 
-    const userOptions = (config.user_options as Record<string, unknown> | null | undefined) || {}
+    const userOptions = (config.user_options as Record<string, unknown> | null | undefined) || {};
 
     let script = userOptions[scriptField] as string || '';
     // 替换 {soc_version} 为项目配置中的 soc_version
@@ -124,11 +132,13 @@ export class AscendCommandStrategy implements CommandStrategy {
   }
 
   buildExampleCommand(params: CommandBuildParams): string {
-    const { config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames } = params;
+    const {
+      config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames,
+    } = params;
 
     const options = (config.user_options as Record<string, unknown> | null | undefined) || {};
     const mode = options.execution_mode as string || 'eager';
-    let pkg_mode = 'cust';
+    const pkg_mode = 'cust';
     // If operatorNames is provided, it takes precedence; otherwise config.op is used
     const op = operatorNames || '';
 
@@ -181,7 +191,7 @@ export class AscendCommandStrategy implements CommandStrategy {
     operator: OpRecord | null,
     sourceCannCmd: string,
     cdCmd: string,
-    exampleTargetFile?: string
+    exampleTargetFile?: string,
   ): string {
     // 替换 {soc_version} 为项目配置中的 soc_version
     let script = config.script || '';
@@ -226,7 +236,9 @@ export class AscendCommandStrategy implements CommandStrategy {
   }
 
   buildSimulateCommand(params: ProfilerCommandParams): string {
-    const { config, project, operator, sourceCannCmd, cdBuildCmd, exampleTargetFile } = params;
+    const {
+      config, project, operator, sourceCannCmd, cdBuildCmd, exampleTargetFile,
+    } = params;
 
     // If the operator record is not found but the project path is available, create a temporary operator object
     let effectiveOperator = operator;
@@ -257,7 +269,9 @@ export class AscendCommandStrategy implements CommandStrategy {
   }
 
   buildOnBoardCommand(params: ProfilerCommandParams): string {
-    const { config, project, operator, sourceCannCmd, cdBuildCmd, exampleTargetFile } = params;
+    const {
+      config, project, operator, sourceCannCmd, cdBuildCmd, exampleTargetFile,
+    } = params;
 
     // If the operator record is not found but the project path is available, create a temporary operator object
     let effectiveOperator = operator;
@@ -295,6 +309,7 @@ export class AscendCommandStrategy implements CommandStrategy {
   getProfilerTargetFile(config: ConfigRecord, operator: OpRecord | null, exampleConfigId: number): string {
     // ascend type: target_file using example configuration
     const exConfig = getConfigById(exampleConfigId) as unknown as ConfigRecord;
+
     return exConfig?.target_file || '';
   }
 }

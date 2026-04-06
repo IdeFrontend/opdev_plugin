@@ -95,8 +95,12 @@ export class ExampleBuildStep implements IExecutionStep {
    * requiresExampleBuildForAnalysis is a project-level concern — not on IOperatorPlugin.buildBehavior.
    */
   canSkip(context: ExecutionContext): boolean {
-    if (context.projectType === undefined) return true;
+    if (context.projectType === undefined) {
+      return true;
+    }
+
     const { OperatorProjectType } = require('@plugin/domain/models/operator-project-type');
+
     return context.projectType !== OperatorProjectType.STANDARD_CUSTOM;
   }
 
@@ -117,7 +121,10 @@ export class ExampleBuildStep implements IExecutionStep {
       }));
     }
 
-    return ResultUtils.ok({ command, output: result.output });
+    return ResultUtils.ok({
+      command,
+      output: result.output,
+    });
   }
 }
 

@@ -14,7 +14,8 @@ import {
 import { getOpsByProjectId } from '@plugin/domain/models/model';
 
 let targetTab: string | undefined;
-let targetOperator: { opName: string; projectId?: number } | undefined;
+let targetOperator: { opName: string;
+  projectId?: number } | undefined;
 
 export const configMethods = {
   /**
@@ -33,7 +34,8 @@ export const configMethods = {
    * Get the target operator and clear it
    * @returns target operator information
    */
-  async getTargetOperator(): Promise<{ opName: string; projectId?: number } | undefined> {
+  async getTargetOperator(): Promise<{ opName: string;
+    projectId?: number } | undefined> {
     const operator = targetOperator;
 
     targetOperator = undefined; // Clear immediately after reading
@@ -57,25 +59,29 @@ export const configMethods = {
    * @param params parameter object, including opName and projectId
    * @returns configuration data
    */
-  async getConfigData(params?: { opName?: string; projectId?: number } | string): Promise<GetConfigDataResult> {
+  async getConfigData(params?: { opName?: string;
+    projectId?: number } | string): Promise<GetConfigDataResult> {
     // Compatible with older versions: If a string is passed in, it will be treated as opName.
     let opName: string | undefined;
     let projectId: number | undefined;
-    
+
     if (typeof params === 'string') {
       opName = params;
-    } else if (params) {
+    }
+    else if (params) {
       opName = params.opName;
       projectId = params.projectId;
     }
+
     // If projectId is specified, temporarily set the projectId of ProjectManager
     const pm = ProjectManager.getInstance();
     const originalProjectId = pm.projectId;
-    
+
     if (projectId) {
       // Temporarily set projectId
       (pm as any)._projectId = String(projectId);
-    } else {
+    }
+    else {
       // Make sure projectId is initialized
       await pm.ensureProjectId();
     }
@@ -93,20 +99,25 @@ export const configMethods = {
       // If an operator name is specified, only the configuration of the operator is returned.
       if (opName) {
         // Get config_name from user_options for matching
-        const filteredConfigs = buildConfigs.filter(config => {
+        const filteredConfigs = buildConfigs.filter((config) => {
           const configName = (config.user_options as any)?.config_name || config.config_name;
+
           return configName === opName;
         });
+
         if (filteredConfigs.length > 0) {
           return { [opName]: filteredConfigs };
         }
+
         return {};
       }
 
       // If no operator name is specified, the configuration of the first operator is returned.
       const firstConfigName = (buildConfigs[0].user_options as any)?.config_name || buildConfigs[0].config_name;
+
       return { [firstConfigName]: buildConfigs };
-    } finally {
+    }
+    finally {
       // Restore original projectId
       if (projectId) {
         (pm as any)._projectId = originalProjectId;
@@ -121,15 +132,18 @@ export const configMethods = {
   async getOperators(): Promise<OperatorInfo[]> {
     // Make sure projectId is initialized
     const pm = ProjectManager.getInstance();
+
     await pm.ensureProjectId();
-    
+
     const projectId = parseInt(pm.projectId || '0', 10);
+
     if (!projectId) {
       return [];
     }
 
     const ops = getOpsByProjectId(projectId);
-    return ops.map(op => ({
+
+    return ops.map((op) => ({
       id: op.id,
       op_name: op.op_name,
       op_type: op.op_type,
@@ -215,7 +229,10 @@ export const configMethods = {
    * Open configuration page
    * @param params parameters
    */
-  async openConfig(params: { configName?: string, key?: string, opName?: string, projectId?: number }) {
+  async openConfig(params: { configName?: string,
+    key?: string,
+    opName?: string,
+    projectId?: number }) {
     if (params.key) {
       targetTab = params.key;
     }

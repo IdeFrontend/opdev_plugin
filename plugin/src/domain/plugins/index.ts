@@ -34,6 +34,13 @@ export function registerOperatorPlugins(): void {
 }
 
 export { OperatorPluginRegistry } from './operator-plugin.registry';
-export type { IOperatorPlugin, OperatorBuildBehavior, OperatorConfigScripts, OperatorDefaultPaths } from './operator-plugin.interface';
-export type { IProjectDetector, ProjectDetectionResult } from './project-detector.interface';
+
+export type {
+  IOperatorPlugin, OperatorBuildBehavior, OperatorConfigScripts, OperatorDefaultPaths,
+} from './operator-plugin.interface';
+
+export type {
+  IProjectDetector, ProjectDetectionResult,
+} from './project-detector.interface';
+
 export { AbstractOperatorPlugin } from './abstract-operator-plugin';

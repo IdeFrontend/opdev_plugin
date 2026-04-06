@@ -5,7 +5,9 @@
  * LICENSE file in the root directory of this source tree. -->
 
 <script setup>
-import { inject, computed } from 'vue';
+import {
+  inject, computed,
+} from 'vue';
 import { t } from 'i18next';
 import SimulationTab from './simulation-tab.vue';
 import OnboardTab from './onboard-tab.vue';
@@ -48,7 +50,10 @@ defineExpose({ init });
 </script>
 
 <template>
-  <div class="opprof-config" :class="actualTheme === 'dark' ? 'theme-dark' : 'theme-light'">
+  <div
+    class="opprof-config"
+    :class="actualTheme === 'dark' ? 'theme-dark' : 'theme-light'"
+  >
     <!-- eslint-disable-next-line vue/no-v-model-argument -->
     <a-tabs v-model:active-key="activeTab">
       <a-tab-pane

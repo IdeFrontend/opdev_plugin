@@ -1,23 +1,25 @@
 import { t } from 'i18next';
-import * as vscode from "vscode";
-import * as path from "path";
-import { getOpRunPath } from "@plugin/domain/utils/op-util";
+import * as vscode from 'vscode';
+import * as path from 'path';
+import { getOpRunPath } from '@plugin/domain/utils/op-util';
 import {
   joinCommands,
   getExecutableCommand,
   Command,
-} from "@plugin/domain/utils/command-utils";
-import { ConfigRecord } from "@plugin/domain/models/config-model";
-import { OpRecord } from "@plugin/domain/models/model";
-import { ProfilerFactory } from "../profiler-service";
+} from '@plugin/domain/utils/command-utils';
+import { ConfigRecord } from '@plugin/domain/models/config-model';
+import { OpRecord } from '@plugin/domain/models/model';
+import { ProfilerFactory } from '../profiler-service';
 import {
   CommandStrategy,
   BaseContext,
   CommandContext,
   CommandBuildParams,
   ProfilerCommandParams,
-} from "./types";
-import { getConfig, getConfigById } from '../../services/configuration';
+} from './types';
+import {
+  getConfig, getConfigById,
+} from '../../services/configuration';
 
 /**
  * CANN type command strategy
@@ -25,23 +27,27 @@ import { getConfig, getConfigById } from '../../services/configuration';
  */
 export class CannCommandStrategy implements CommandStrategy {
   buildCommandContext(baseContext: BaseContext): CommandContext {
-    const { config, project, operator } = baseContext;
+    const {
+      config, project, operator,
+    } = baseContext;
 
     // CANN type uses ascend_env_script as environment script
     const sourceCannCmd =
       project && project.ascend_env_script
         ? `. ${project.ascend_env_script}`
-        : "";
+        : '';
 
     let runPath: string;
 
     if (operator) {
       runPath = getOpRunPath(operator);
-    } else {
+    }
+    else {
       // If the operator cannot be found but there is a configuration script, use the project path as the running path
       if (config.script && project) {
         runPath = project.project_path;
-      } else {
+      }
+      else {
         throw new Error(`Operator not found: ${config.op}`);
       }
     }
@@ -60,18 +66,20 @@ export class CannCommandStrategy implements CommandStrategy {
   }
 
   buildRunCommand(context: CommandContext): string {
-    const { config, sourceCannCmd, cdBuildCmd } = context;
-    const run_cmd = getExecutableCommand(config.target_file || "", {
-      execute: true,
-    });
+    const {
+      config, sourceCannCmd, cdBuildCmd,
+    } = context;
+    const run_cmd = getExecutableCommand(config.target_file || '', { execute: true });
 
     return joinCommands(sourceCannCmd, cdBuildCmd, run_cmd);
   }
 
   buildOpCommand(params: CommandBuildParams): string {
-    const { config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames } = params;
+    const {
+      config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames,
+    } = params;
 
-    const scriptField = params.scriptField || 'script'
+    const scriptField = params.scriptField || 'script';
 
     const userOptions = config.user_options as Record<string, unknown> | null | undefined;
 
@@ -102,13 +110,15 @@ export class CannCommandStrategy implements CommandStrategy {
   }
 
   buildExampleCommand(params: CommandBuildParams): string {
-    const { config, sourceCannCmd, cdCmd, compileOption, advance_cmd } = params;
+    const {
+      config, sourceCannCmd, cdCmd, compileOption, advance_cmd,
+    } = params;
 
     if (!config.script) {
       throw new Error(t('cann.configMissingScript', { op: config.op }));
     }
 
-    const cmd = new Command(config.script || "");
+    const cmd = new Command(config.script || '');
 
     if (config.custom_options) {
       cmd.addArgument(config.custom_options);
@@ -133,7 +143,7 @@ export class CannCommandStrategy implements CommandStrategy {
     exampleTargetFile?: string,
     cdBuildCmd?: string,
   ): string {
-    const mssanitizer = new Command("mssanitizer");
+    const mssanitizer = new Command('mssanitizer');
 
     // Add target file
     if (exampleTargetFile) {
@@ -145,29 +155,31 @@ export class CannCommandStrategy implements CommandStrategy {
       (config.user_options as Record<string, unknown> | null | undefined) || {};
     const toolOptions =
       (options.tool as Record<string, unknown> | undefined) || {};
-    const tools = Object.keys(toolOptions).filter((key) => toolOptions[key]);
+    const tools = Object.keys(toolOptions)
+      .filter((key) => toolOptions[key]);
 
-    mssanitizer.addOption("tool", tools);
+    mssanitizer.addOption('tool', tools);
 
     if (toolOptions.memcheck) {
       const memcheckOptions =
         (options.memcheckOption as Record<string, unknown> | undefined) || {};
 
-      Object.keys(memcheckOptions).forEach((key) => {
-        if (memcheckOptions[key]) {
-          mssanitizer.addOption(key, "yes");
-        }
-      });
+      Object.keys(memcheckOptions)
+        .forEach((key) => {
+          if (memcheckOptions[key]) {
+            mssanitizer.addOption(key, 'yes');
+          }
+        });
     }
 
-    mssanitizer.addOption("log-level", options.logLevel as string | undefined);
+    mssanitizer.addOption('log-level', options.logLevel as string | undefined);
     mssanitizer.addOption(
-      "max-debuglog-size",
-      options.maxDebuglogSize as string | undefined
+      'max-debuglog-size',
+      options.maxDebuglogSize as string | undefined,
     );
     mssanitizer.addOption(
-      "block-id",
-      options.blockId as string | number | undefined
+      'block-id',
+      options.blockId as string | number | undefined,
     );
 
     const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -208,16 +220,17 @@ export class CannCommandStrategy implements CommandStrategy {
         id: 0,
         project_id: config.project_id,
         op_name: config.op,
-        op_type: "cann",
+        op_type: 'cann',
         op_path: project.project_path,
       } as OpRecord;
     }
 
-    const simulatorCmd = ProfilerFactory.getStrategy("simulator").generate(
-      config,
-      effectiveOperator,
-      exampleTargetFile
-    );
+    const simulatorCmd = ProfilerFactory.getStrategy('simulator')
+      .generate(
+        config,
+        effectiveOperator,
+        exampleTargetFile,
+      );
 
     return joinCommands(sourceCannCmd, cdBuildCmd, simulatorCmd);
   }
@@ -245,16 +258,17 @@ export class CannCommandStrategy implements CommandStrategy {
         id: 0,
         project_id: config.project_id,
         op_name: config.op,
-        op_type: "cann",
+        op_type: 'cann',
         op_path: project.project_path,
       } as OpRecord;
     }
 
-    const opprofCmd = ProfilerFactory.getStrategy("onboard").generate(
-      config,
-      effectiveOperator,
-      exampleTargetFile
-    );
+    const opprofCmd = ProfilerFactory.getStrategy('onboard')
+      .generate(
+        config,
+        effectiveOperator,
+        exampleTargetFile,
+      );
 
     return joinCommands(sourceCannCmd, cdBuildCmd, opprofCmd);
   }
@@ -263,6 +277,7 @@ export class CannCommandStrategy implements CommandStrategy {
     // CANN type: target_file configured using build_op
     const buildOpConfigs = getConfig(config.project_id, 'build_op', config.op);
     const buildOpConfig = buildOpConfigs.length > 0 ? buildOpConfigs[0] : null;
+
     return buildOpConfig?.target_file || config.target_file || '';
   }
 
@@ -270,6 +285,7 @@ export class CannCommandStrategy implements CommandStrategy {
     // CANN type: target_file configured using build_op
     const buildOpConfigs = getConfig(config.project_id, 'build_op', config.op);
     const buildOpConfig = buildOpConfigs.length > 0 ? buildOpConfigs[0] : null;
+
     return buildOpConfig?.target_file || '';
   }
 

@@ -75,7 +75,10 @@ onBeforeMount(async () => {
 </script>
 
 <template>
-  <div class="sanitizer-config" :class="actualTheme === 'dark' ? 'theme-dark' : 'theme-light'">
+  <div
+    class="sanitizer-config"
+    :class="actualTheme === 'dark' ? 'theme-dark' : 'theme-light'"
+  >
     <a-form
       ref="connectionFormRef"
       :model="form"

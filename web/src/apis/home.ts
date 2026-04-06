@@ -39,7 +39,9 @@ export function getWorkspace() {
  * 获取当前项目类型
  */
 export function getProjectType() {
-  return request.post<undefined, { projectType: string | null; projectTypeName: string; projectTemplateName: string }>('webview/getProjectType');
+  return request.post<undefined, { projectType: string | null;
+    projectTypeName: string;
+    projectTemplateName: string }>('webview/getProjectType');
 }
 
 /**
@@ -47,5 +49,6 @@ export function getProjectType() {
  * 仅 pyasc 项目时校验是否已打开 .py 文件及工作区
  */
 export function validatePyascForAnalysis() {
-  return request.post<undefined, { valid: boolean; message?: string }>('webview/validatePyascForAnalysis');
+  return request.post<undefined, { valid: boolean;
+    message?: string }>('webview/validatePyascForAnalysis');
 }

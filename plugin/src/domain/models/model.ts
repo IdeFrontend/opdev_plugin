@@ -104,6 +104,7 @@ export function getOpByProjectIdAndOpName(
  */
 export function getOpsByProjectId(project_id: number): OpRecord[] {
   const store = ensureStore();
+
   return store.ops.filter((o) => o.project_id === project_id);
 }
 
@@ -111,7 +112,7 @@ export async function generateStructure(
   data: Partial<OpRecord>,
   extensionPath: string,
   isSkipUnZip: boolean = false,
-  skipVscodeFiles: boolean = false
+  skipVscodeFiles: boolean = false,
 ): Promise<number> {
   // 1) basic checks
   const project = projectModel.getProjectById(data.project_id as number);
@@ -164,7 +165,8 @@ export async function generateStructure(
       console.error('generateStructure: failed to create config files:', error);
       // Configuration file creation failure should not prevent operator creation, only log errors
     }
-  } else {
+  }
+  else {
     console.log('generateStructure: skipped creating .vscode and .arts files');
   }
 
@@ -197,7 +199,7 @@ export async function generateStructure(
   let nextId: number;
 
   const existingOp = getOpByProjectIdAndOpName(project.id as number, opName);
-  const index = existingOp ? store.ops.findIndex(op => op.id === existingOp.id) : -1;
+  const index = existingOp ? store.ops.findIndex((op) => op.id === existingOp.id) : -1;
 
   const templateName = (params as { template_name?: string }).template_name ?? null;
 
@@ -219,7 +221,8 @@ export async function generateStructure(
     record = store.ops[index];
     nextId = record.id; // Use the existing record's ID
     writeStore(store);
-  } else {
+  }
+  else {
     // Create new record (both when existingOp is null and when index is -1)
     nextId = store.lastId + 1;
     record = {
@@ -258,6 +261,7 @@ export async function generateStructure(
         targetOpFile,
         targetExampleFile,
       } = getDefaultPath(record);
+
       console.log('generateStructure: default path obtained successfully:', {
         opScriptPath,
         exampleScriptPath,
@@ -447,6 +451,7 @@ export async function generateStructure(
   catch (e) {
     // Ignore configuration creation errors but print logs for debugging
     console.error('generateStructure: failed to create default configs', e);
+
     if (e instanceof Error) {
       console.error('generateStructure: error details:', e.message);
       console.error('generateStructure: error stack:', e.stack);

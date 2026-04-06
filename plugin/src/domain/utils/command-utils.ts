@@ -125,21 +125,28 @@ function isCommand(str: string): boolean {
   if (!str) {
     return false;
   }
-  
+
   // If it contains spaces, it is most likely the command
   if (str.includes(' ')) {
     return true;
   }
-  
-  // Wildcards indicate a path that needs special handling
-  if (str.includes('*')) {
-    return true;
-  }
 
-  // If it starts with a common command prefix, treat it as a command
-  const commandPrefixes = ['python', 'bash', 'sh', 'node', 'npm', 'yarn', 'java', 'perl', 'ruby'];
-  const firstWord = str.split(' ')[0].split('/').pop() || '';
-  return commandPrefixes.some(prefix => firstWord.startsWith(prefix));
+  // If it starts with a common command prefix, it is considered a command
+  const commandPrefixes = [
+    'python',
+    'bash',
+    'sh',
+    'node',
+    'npm',
+    'yarn',
+    'java',
+    'perl',
+    'ruby',
+  ];
+  const firstWord = str.split(' ')[0].split('/')
+    .pop() || '';
+
+  return commandPrefixes.some((prefix) => firstWord.startsWith(prefix));
 }
 
 /**
