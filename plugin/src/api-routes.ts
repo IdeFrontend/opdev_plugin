@@ -11,11 +11,17 @@ import { sanitizerViewMethods } from './controller/sanitizer-controller';
 import { homeMethods } from './controller/home-controller';
 import { performanceMethods } from './controller/performance-data-controller';
 import { navigationController } from './controller/navigation-controller';
-import { OperateTreeProvider } from './class/operate-tree-provider';
-
-// V2 version controller
-import { taskMethodsV2 } from '../src-v2/presentation/controllers-v2';
-import { getFeatureFlag } from './feature-flags';
+import {
+  dispatchStartBuild,
+  dispatchStartRun,
+  dispatchStartBuildExample,
+  dispatchStartDumpTensor,
+  dispatchStartUtTest,
+  dispatchStopTask,
+  dispatchOnBoard,
+  dispatchSimulator,
+  dispatchSanitizer,
+} from './helpers/task-method-dispatch';
 
 // Aggregate all methods under the ops namespace
 // Dynamically select v1 or v2 through Feature Flags
@@ -23,41 +29,18 @@ const opsMethods = {
   ...welcomeMethods, // init, createOps, createOpsByPrototype
 
   // Build related - support v1/v2 switching
-  startBuild: getFeatureFlag('USE_V2_BUILD')
-    ? taskMethodsV2.startBuild
-    : taskMethods.startBuild,
-
-  startRun: getFeatureFlag('USE_V2_RUN')
-    ? taskMethodsV2.startRun
-    : taskMethods.startRun,
-
-  startBuildExample: getFeatureFlag('USE_V2_BUILD_EXAMPLE')
-    ? taskMethodsV2.startBuildExample
-    : taskMethods.startBuildExample,
+  startBuild: dispatchStartBuild,
+  startRun: dispatchStartRun,
+  startBuildExample: dispatchStartBuildExample,
 
   // Emulation - supports v1/v2 switching (webview "Start now" uses same flow row UI as the tree)
-  startSimulate: getFeatureFlag('USE_V2_SIMULATE')
-    ? () => OperateTreeProvider.runFlowActionFromWebview('simulation', () => taskMethodsV2.startSimulate())
-    : (params: { operatorNames?: string } = {}) =>
-        OperateTreeProvider.runFlowActionFromWebview('simulation', () => taskMethods.startSimulate(params)),
+  startSimulate: dispatchSimulator,
 
   // On-board - supports v1/v2 switching
-  startOnBoard: getFeatureFlag('USE_V2_ON_BOARD')
-    ? () => OperateTreeProvider.runFlowActionFromWebview('onboard', () => taskMethodsV2.startOnBoard())
-    : (params: { operatorNames?: string } = {}) =>
-        OperateTreeProvider.runFlowActionFromWebview('onboard', () => taskMethods.startOnBoard(params)),
+  startOnBoard: dispatchOnBoard,
 
   // StopTask - If any V2 features are enabled, use the V2 version of stopTask
-  stopTask: (
-    getFeatureFlag('USE_V2_BUILD') ||
-    getFeatureFlag('USE_V2_RUN') ||
-    getFeatureFlag('USE_V2_BUILD_EXAMPLE') ||
-    getFeatureFlag('USE_V2_SIMULATE') ||
-    getFeatureFlag('USE_V2_ON_BOARD') ||
-    getFeatureFlag('USE_V2_SANITIZER')
-  )
-    ? taskMethodsV2.stopTask
-    : taskMethods.stopTask,
+  stopTask: dispatchStopTask,
 
   // Other methods continue to use v1
   buildOp: taskMethods.buildOp,
@@ -70,9 +53,9 @@ const opsMethods = {
   checkTaskStatus: taskMethods.checkTaskStatus,
   getCurrentTaskName: taskMethods.getCurrentTaskName,
   showConfirmDialog: taskMethods.showConfirmDialog,
-  startDumpTensor: taskMethods.startDumpTensor,
+  startDumpTensor: dispatchStartDumpTensor,
   importDumpTensorBinFile: taskMethods.importDumpTensorBinFile,
-  startUtTest: taskMethods.startUtTest,
+  startUtTest: dispatchStartUtTest,
 
   ...configMethods, // getConfigData, getBuildConfigs, saveBuildConfig, saveConfig, openConfig
   ...scriptMethods, // updateShScript
@@ -83,10 +66,7 @@ const opsMethods = {
   getSanitizerConfigId: sanitizerViewMethods.getSanitizerConfigId,
   getSanitizerForm: sanitizerViewMethods.getSanitizerForm,
   saveSanitizerForm: sanitizerViewMethods.saveSanitizerForm,
-  runSanitizer: getFeatureFlag('USE_V2_SANITIZER')
-    ? () => OperateTreeProvider.runFlowActionFromWebview('sanitizer', () => taskMethodsV2.runSanitizer())
-    : (params: { operatorNames?: string } = {}) =>
-        OperateTreeProvider.runFlowActionFromWebview('sanitizer', () => taskMethods.runSanitizer(params)),
+  runSanitizer: dispatchSanitizer,
 
   ...homeMethods, // getProjectId
 };

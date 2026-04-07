@@ -9,7 +9,6 @@ import {
     getSanitizerConfigs,
     saveSanitizerForm as saveSanitizerFormAPI,
     runSanitizer,
-    checkTaskStatus,
     executeVscodeCommand,
     getSelectedOperators,
     getSanitizerShowQuickOptions,
@@ -66,12 +65,6 @@ async function syncDoNotShowToWorkspace() {
 
 const handleConfirm = async () => {
   if (!form.value || isExecuting.value) {
-    return;
-  }
-  const hasRunningTask = await checkTaskStatus();
-  console.log('hasRunningTask', hasRunningTask);
-  if (hasRunningTask) {
-    message.info(t('web.options.taskRunning'));
     return;
   }
   try {

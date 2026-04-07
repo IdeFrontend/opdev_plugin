@@ -22,6 +22,12 @@ export const FEATURE_FLAGS = {
 
   /** Use V2 sanitizer (anomaly detection) service */
   USE_V2_SANITIZER: false,
+
+  /** Use V2 dump tensor service */
+  USE_V2_DUMP_TENSOR: false,
+
+  /** Use V2 UT test service */
+  USE_V2_UT_TEST: false,
 } as const;
 
 export type FeatureFlagKey = keyof typeof FEATURE_FLAGS;

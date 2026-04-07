@@ -12,7 +12,6 @@ import {
   openExternalLink,
   startOnBoard,
   executeVscodeCommand,
-  checkTaskStatus,
   getSelectedOperators,
   getOnBoardAnalysisShowQuickOptions,
   setOnBoardAnalysisShowQuickOptions,
@@ -69,12 +68,6 @@ const handleSave = async () => {
 
 const handleConfirm = async () => {
   if (!onboardData.value || isExecuting.value) {
-    return;
-  }
-  const hasRunningTask = await checkTaskStatus();
-  console.log('hasRunningTask', hasRunningTask);
-  if (hasRunningTask) {
-    message.info(t('web.options.taskRunning'));
     return;
   }
   try {

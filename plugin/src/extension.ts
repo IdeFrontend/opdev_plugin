@@ -85,6 +85,8 @@ import {
   COMMAND_SIDEBAR_SANITIZER,
   COMMAND_SIDEBAR_ON_BOARD,
   COMMAND_SIDEBAR_SIMULATION,
+  COMMAND_SIDEBAR_UT_TEST,
+  COMMAND_SIDEBAR_DUMP_TENSOR,
   COMMAND_SIDEBAR_DEBUG_SETTINGS,
   COMMAND_SIDEBAR_SANITIZER_SETTINGS,
   COMMAND_SIDEBAR_ON_BOARD_SETTINGS,
@@ -109,6 +111,16 @@ import { projectService } from './service/project-service';
 import { OperatorProjectIconTheme } from './class/operator-project-icon-theme';
 import { registerSidebarContextsRefresh } from './helpers/sidebar-context-refresh';
 import { welcomeMethods } from './controller/welcome-controller'
+import {
+  dispatchStartBuild,
+  dispatchStartRun,
+  dispatchRunSanitizer,
+  dispatchStartOnBoard,
+  dispatchStartSimulate,
+  dispatchStartUtTest,
+  dispatchStartDumpTensor,
+  dispatchStopTask,
+} from './helpers/task-method-dispatch';
 
 let extensionContext: vscode.ExtensionContext | undefined;
 
@@ -239,6 +251,30 @@ export async function activate(context: vscode.ExtensionContext) {
   };
 
   const syncOperatorProjectWorkspaceSettings = async () => {
+    const normalizeScriptTokens = (
+      raw: unknown,
+      options?: { socVersion?: string; opName?: string; includeOperatorNamesToken?: boolean },
+    ): unknown => {
+      if (typeof raw !== 'string') {
+        return raw;
+      }
+      let script = raw;
+      const socVersion = options?.socVersion?.trim();
+      const opName = options?.opName?.trim();
+      if (socVersion) {
+        const escapedSocVersion = socVersion.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        script = script.replace(new RegExp(`--soc=${escapedSocVersion}\\b`, 'g'), '--soc={soc_version}');
+      }
+      if (options?.includeOperatorNamesToken) {
+        if (opName) {
+          const escapedOpName = opName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          script = script.replace(new RegExp(`--ops=${escapedOpName}\\b`, 'g'), '--ops={operatorNames}');
+        }
+        script = script.replace(/--ops=\b/g, '--ops={operatorNames}');
+      }
+      return script;
+    };
+
     const toKeyValueMap = (raw: unknown): Record<string, string> => {
       if (!Array.isArray(raw)) {
         return {};
@@ -265,23 +301,52 @@ export async function activate(context: vscode.ExtensionContext) {
       const buildExample = buildConfigs.find((c) => c.config_type === 'build_example');
       const simulate = buildConfigs.find((c) => c.config_type === 'simulate');
       const onBoard = buildConfigs.find((c) => c.config_type === 'on_board');
+      const utTest = buildConfigs.find((c) => (c as { config_type?: string }).config_type === 'ut_test');
       const sanitizer = (await configService.getSanitizerConfigsList())[0];
       const projectSH = await projectService.getProjectSH();
+      const projectSocVersion = await projectService.getProjectSocVersion();
 
       const buildOpOpts = (buildOp?.user_options || {}) as Record<string, unknown>;
       const buildExampleOpts = (buildExample?.user_options || {}) as Record<string, unknown>;
       const simulateOpts = (simulate?.user_options || {}) as Record<string, unknown>;
       const onBoardOpts = (onBoard?.user_options || {}) as Record<string, unknown>;
+      const utTestOpts = (utTest?.user_options || {}) as Record<string, unknown>;
       const sanitizerOpts = (sanitizer?.user_options || {}) as Record<string, unknown>;
 
       await syncSettingIfUnset('compileAndDeploy.buildConfig.operatorNameToCompile', buildOpOpts.op);
       await syncSettingIfUnset('compileAndDeploy.buildConfig.deployCommandOrRunCommand', buildOpOpts.target_file);
-      await syncSettingIfUnset('compileAndDeploy.buildConfig.compileCommand', buildOpOpts.script);
-      await syncSettingIfUnset('compileAndDeploy.buildConfig.cpuDebugCompileCommand', buildOpOpts.cpu_debug_script);
-      await syncSettingIfUnset('compileAndDeploy.buildConfig.npuDebugCompileCommand', buildOpOpts.npu_debug_script);
-      await syncSettingIfUnset('compileAndDeploy.buildConfig.sanitizerCompileCommand', sanitizerOpts.script);
-      await syncSettingIfUnset('compileAndDeploy.buildConfig.onBoardCompileCommand', onBoardOpts.script);
-      await syncSettingIfUnset('compileAndDeploy.buildConfig.simulationCompileCommand', simulateOpts.script);
+      await syncSettingIfUnset(
+        'compileAndDeploy.buildConfig.compileCommand',
+        normalizeScriptTokens(buildOpOpts.script, { socVersion: projectSocVersion as string }),
+      );
+      await syncSettingIfUnset(
+        'compileAndDeploy.buildConfig.cpuDebugCompileCommand',
+        normalizeScriptTokens(buildOpOpts.cpu_debug_script, { socVersion: projectSocVersion as string }),
+      );
+      await syncSettingIfUnset(
+        'compileAndDeploy.buildConfig.npuDebugCompileCommand',
+        normalizeScriptTokens(buildOpOpts.npu_debug_script, { socVersion: projectSocVersion as string }),
+      );
+      await syncSettingIfUnset(
+        'compileAndDeploy.buildConfig.sanitizerCompileCommand',
+        normalizeScriptTokens(sanitizerOpts.script, { socVersion: projectSocVersion as string }),
+      );
+      await syncSettingIfUnset(
+        'compileAndDeploy.buildConfig.onBoardCompileCommand',
+        normalizeScriptTokens(onBoardOpts.script, { socVersion: projectSocVersion as string }),
+      );
+      await syncSettingIfUnset(
+        'compileAndDeploy.buildConfig.simulationCompileCommand',
+        normalizeScriptTokens(simulateOpts.script, { socVersion: projectSocVersion as string }),
+      );
+      await syncSettingIfUnset(
+        'compileAndDeploy.buildConfig.utTestCompileCommand',
+        normalizeScriptTokens(utTestOpts.script, {
+          socVersion: projectSocVersion as string,
+          opName: typeof buildOpOpts.op === 'string' ? buildOpOpts.op : undefined,
+          includeOperatorNamesToken: true,
+        }),
+      );
 
       const shouldExposeExampleBuildConfig = Boolean(multiResult.isStandardCustom && multiResult.hasMultiple);
       if (shouldExposeExampleBuildConfig) {
@@ -357,6 +422,7 @@ export async function activate(context: vscode.ExtensionContext) {
         toKeyValueMap(onBoardOpts.advance_param),
       );
       await syncSettingIfUnset('environment.environmentScript', projectSH);
+      await syncSettingIfUnset('environment.socVersion', projectSocVersion);
     }
     catch (error) {
       console.warn('[syncOperatorProjectWorkspaceSettings] failed:', error);
@@ -519,12 +585,26 @@ export async function activate(context: vscode.ExtensionContext) {
     return await homeMethods.getSelectedOperators();
   };
 
+  const getCompileOptionFromSelection = async (): Promise<string | undefined> => {
+    const selectedIds = await homeMethods.getSelectedOperatorIds() || [];
+    if (selectedIds.length === 0) {
+      return undefined;
+    }
+    const multiple = await homeMethods.checkMultipleOperators();
+    if (!multiple.isStandardCustom || !multiple.operators) {
+      return undefined;
+    }
+    const selectedSet = new Set(selectedIds);
+    const hasExperimental = multiple.operators.some((op) => selectedSet.has(op.id) && op.isExperimental);
+    return hasExperimental ? '--experimental' : undefined;
+  };
+
   const sidebarBuildCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_BUILD,
     async () =>
       operateTreeProvider.runFlowAction('build', async () => {
         const operatorNames = await getOperatorNamesFromSelection();
-        await taskMethods.startBuild({ operatorNames });
+        await dispatchStartBuild({ operatorNames });
       }),
   );
   const sidebarRunCommand = vscode.commands.registerCommand(
@@ -536,7 +616,7 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
       await operateTreeProvider.runFlowAction('run', async () => {
-        await taskMethods.startRun();
+        await dispatchStartRun();
       });
     },
   );
@@ -578,13 +658,11 @@ export async function activate(context: vscode.ExtensionContext) {
       const showQuickOptions = vscode.workspace.getConfiguration('op-devtools')
         .get<boolean>('sanitizer.showQuickOptions', true) ?? true;
       if (showQuickOptions) {
-        await operateTreeProvider.runFlowAction('sanitizer', async () => {
-          await vscode.commands.executeCommand(COMMAND_SANITIZER_OPTIONS);
-        });
+        await vscode.commands.executeCommand(COMMAND_SANITIZER_OPTIONS);
         return;
       }
       await operateTreeProvider.runFlowAction('sanitizer', async () => {
-        await taskMethods.runSanitizer({ operatorNames });
+        await dispatchRunSanitizer({ operatorNames });
       });
     },
   );
@@ -600,9 +678,7 @@ export async function activate(context: vscode.ExtensionContext) {
       const showQuickOptions = vscode.workspace.getConfiguration('op-devtools')
         .get<boolean>('performanceTuning.onBoard.showQuickOptions', true) ?? true;
       if (showQuickOptions) {
-        await operateTreeProvider.runFlowAction('onboard', async () => {
-          await vscode.commands.executeCommand(COMMAND_ON_BOARD_OPTIONS);
-        });
+        await vscode.commands.executeCommand(COMMAND_ON_BOARD_OPTIONS);
         return;
       }
       await operateTreeProvider.runFlowAction('onboard', async () => {
@@ -611,7 +687,7 @@ export async function activate(context: vscode.ExtensionContext) {
           vscode.window.showWarningMessage(pyascCheck.message ?? t('extension.openPyFirst'));
           return;
         }
-        await taskMethods.startOnBoard({ operatorNames });
+        await dispatchStartOnBoard({ operatorNames });
       });
     },
   );
@@ -627,9 +703,7 @@ export async function activate(context: vscode.ExtensionContext) {
       const showQuickOptions = vscode.workspace.getConfiguration('op-devtools')
         .get<boolean>('performanceTuning.simulation.showQuickOptions', true) ?? true;
       if (showQuickOptions) {
-        await operateTreeProvider.runFlowAction('simulation', async () => {
-          await vscode.commands.executeCommand(COMMAND_SIMULATOR_OPTIONS);
-        });
+        await vscode.commands.executeCommand(COMMAND_SIMULATOR_OPTIONS);
         return;
       }
       await operateTreeProvider.runFlowAction('simulation', async () => {
@@ -638,7 +712,36 @@ export async function activate(context: vscode.ExtensionContext) {
           vscode.window.showWarningMessage(pyascCheck.message ?? t('extension.openPyFirst'));
           return;
         }
-        await taskMethods.startSimulate({ operatorNames });
+        await dispatchStartSimulate({ operatorNames });
+      });
+    },
+  );
+  const sidebarUtTestCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_UT_TEST,
+    async () => {
+      const selectedIds = await homeMethods.getSelectedOperatorIds();
+      if (selectedIds && selectedIds.length > 1) {
+        vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
+        return;
+      }
+      const operatorNames = await getOperatorNamesFromSelection();
+      await operateTreeProvider.runFlowAction('utTest', async () => {
+        await dispatchStartUtTest({ operatorNames });
+      });
+    },
+  );
+  const sidebarDumpTensorCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_DUMP_TENSOR,
+    async () => {
+      const selectedIds = await homeMethods.getSelectedOperatorIds();
+      if (selectedIds && selectedIds.length > 1) {
+        vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
+        return;
+      }
+      const operatorNames = await getOperatorNamesFromSelection();
+      const compileOption = await getCompileOptionFromSelection();
+      await operateTreeProvider.runFlowAction('dumpTensor', async () => {
+        await dispatchStartDumpTensor({ operatorNames, compileOption });
       });
     },
   );
@@ -840,7 +943,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const sidebarStopFlowTaskCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_STOP_FLOW_TASK,
     async () => {
-      await taskMethods.stopTask();
+      await dispatchStopTask();
       operateTreeProvider.clearFlowExecutionState();
     },
   );
@@ -996,6 +1099,8 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(sidebarSanitizerCommand);
   context.subscriptions.push(sidebarOnBoardCommand);
   context.subscriptions.push(sidebarSimulationCommand);
+  context.subscriptions.push(sidebarUtTestCommand);
+  context.subscriptions.push(sidebarDumpTensorCommand);
   context.subscriptions.push(sidebarDebugSettingsCommand);
   context.subscriptions.push(sidebarSanitizerSettingsCommand);
   context.subscriptions.push(sidebarOnBoardSettingsCommand);

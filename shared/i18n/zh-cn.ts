@@ -54,6 +54,7 @@ export default {
   'extension.rightClickFile': '请右键点击文件',
   'extension.openDevToolsFailed': '打开 Huawei OP DevTools 失败：{{error}}',
   'extension.importDumpTensorBinFailed': '导入 DumpTensor .bin 文件失败',
+  'extension.selectDumpTensorBinFile': '选择 DumpTensor .bin 文件',
   'extension.environmentScript.missing': '工作区「环境脚本」(set_env.sh) 未设置。请先配置后再在「操作」中执行操作，或现在选择文件。',
   'extension.environmentScript.invalidPath': '工作区「环境脚本」路径在磁盘上不存在。请选择有效的 set_env.sh 或更新该设置。',
   'extension.environmentScript.browse': '选择文件…',
@@ -124,6 +125,10 @@ export default {
   'build.onBoardSuccess': '执行上板分析成功',
   'build.getOnBoardCommandFailed': '获取上板命令失败 {{error}}',
   'build.dumpTensorSuccess': '执行DumpTensor成功',
+  'build.utTestFailed': 'UT测试执行失败',
+  'build.utTestSuccess': 'UT测试执行成功',
+  'build.getUtTestCommandFailed': '获取UT测试命令失败：{{error}}',
+  'build.importDumpTensorBinSuccess': '导入 DumpTensor .bin 文件成功',
   'build.getRunCommandFailedAgain': '获取运行命令失败 {{error}}',
 
   // performance
@@ -612,6 +617,8 @@ export default {
   'web.dump.cancel': '取消',
   'web.dump.import': '导入',
   'web.dump.compare': '对比',
+  'web.dump.importSuccess': '导入成功',
+  'web.dump.importFailed': '导入失败',
 
   // web options (shared)
   'web.options.taskRunning': '存在未执行完毕的任务，请稍后再试',

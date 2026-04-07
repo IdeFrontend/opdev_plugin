@@ -1,5 +1,12 @@
 import {
-  StartBuildParams, StartRunParams, StartBuildExampleParams,
+  StartBuildParams,
+  StartRunParams,
+  StartBuildExampleParams,
+  StartSimulateParams,
+  StartOnBoardParams,
+  StartSanitizerParams,
+  StartDumpTensorParams,
+  StartUtTestParams,
 } from '@shared/api-types';
 import { BuildApplicationService } from '@plugin-v2/application/services/operator/build.application';
 import { INotificationService } from '@plugin-v2/application/interfaces/notification.interface';
@@ -277,7 +284,7 @@ export class BuildControllerV2 {
   /**
    * Start simulation analysis
    */
-  async startSimulate(): Promise<void> {
+  async startSimulate(params: StartSimulateParams = {}): Promise<void> {
     try {
       await this.projectManager.initProject();
 
@@ -341,7 +348,7 @@ export class BuildControllerV2 {
         }
       }
 
-      const result = await this.buildService.startSimulate();
+      const result = await this.buildService.startSimulate({ operatorNames: params.operatorNames });
 
       if (ResultUtils.isErr(result)) {
         const errorMessage = result.error instanceof Error
@@ -367,7 +374,7 @@ export class BuildControllerV2 {
   /**
    * Start on-board analysis
    */
-  async startOnBoard(): Promise<void> {
+  async startOnBoard(params: StartOnBoardParams = {}): Promise<void> {
     try {
       await this.projectManager.initProject();
 
@@ -431,7 +438,7 @@ export class BuildControllerV2 {
         }
       }
 
-      const result = await this.buildService.startOnBoard();
+      const result = await this.buildService.startOnBoard({ operatorNames: params.operatorNames });
 
       if (ResultUtils.isErr(result)) {
         const errorMessage = result.error instanceof Error
@@ -457,7 +464,7 @@ export class BuildControllerV2 {
   /**
    * Run sanitizer (anomaly detection)
    */
-  async runSanitizer(): Promise<void> {
+  async runSanitizer(params: StartSanitizerParams = {}): Promise<void> {
     try {
       await this.projectManager.initProject();
 
@@ -467,7 +474,7 @@ export class BuildControllerV2 {
       // Create log directory
       this.ensureSanitizerLogDir();
 
-      const result = await this.buildService.runSanitizer();
+      const result = await this.buildService.runSanitizer({ operatorNames: params.operatorNames });
 
       if (ResultUtils.isErr(result)) {
         const errorMessage = result.error instanceof Error
@@ -515,6 +522,64 @@ export class BuildControllerV2 {
   }
 
   /**
+   * Start DumpTensor flow.
+   */
+  async startDumpTensor(
+    params: StartDumpTensorParams = {},
+  ): Promise<void> {
+    try {
+      await this.projectManager.initProject();
+      BuildControllerV2.currentExecutor = this.projectManager.getExecutor();
+      const projectTypeInfo = await homeMethods.checkMultipleOperators();
+      const result = await this.buildService.startDumpTensor({
+        ...params,
+        isStandardCustom: projectTypeInfo.isStandardCustom,
+      });
+      if (ResultUtils.isErr(result)) {
+        const errorMessage = result.error instanceof Error
+          ? result.error.message
+          : String(result.error);
+        this.notification.showError(`DumpTensor 执行失败: ${errorMessage}`);
+        throw result.error;
+      }
+
+      this.notification.showInfo('DumpTensor 执行成功');
+      await vscode.commands.executeCommand('huawei-op-devtools.open-dump-tensor-panel-view');
+      await vscode.commands.executeCommand('huawei-op-devtools.flashDumpTensorData');
+    }
+    finally {
+      BuildControllerV2.currentExecutor = null;
+      this.projectManager.clearExecutor();
+    }
+  }
+
+  /**
+   * Start UT test flow.
+   */
+  async startUtTest(
+    params: StartUtTestParams = {},
+  ): Promise<void> {
+    try {
+      await this.projectManager.initProject();
+      BuildControllerV2.currentExecutor = this.projectManager.getExecutor();
+      const result = await this.buildService.startUtTest(params);
+      if (ResultUtils.isErr(result)) {
+        const errorMessage = result.error instanceof Error
+          ? result.error.message
+          : String(result.error);
+        this.notification.showError(`UT 测试执行失败: ${errorMessage}`);
+        throw result.error;
+      }
+
+      this.notification.showInfo('UT 测试执行成功');
+    }
+    finally {
+      BuildControllerV2.currentExecutor = null;
+      this.projectManager.clearExecutor();
+    }
+  }
+
+  /**
    * Stop the currently running task
    */
   async stopTask(): Promise<void> {
@@ -531,5 +596,12 @@ export class BuildControllerV2 {
       console.log('[BuildControllerV2.stopTask] No task running');
       vscode.window.showInformationMessage('当前没有正在执行的任务');
     }
+  }
+
+  /**
+   * Check whether a task is currently running in V2.
+   */
+  async checkTaskStatus(): Promise<boolean> {
+    return BuildControllerV2.currentExecutor !== null;
   }
 }

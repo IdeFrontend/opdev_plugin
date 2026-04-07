@@ -11,7 +11,6 @@ import {
   saveConfig,
   startSimulate,
   openExternalLink,
-  checkTaskStatus,
   executeVscodeCommand,
   getSelectedOperators,
   getSimulationShowQuickOptions,
@@ -57,12 +56,6 @@ const handleChange = async () => {
 
 const handleConfirm = async () => {
   if (!simulateOptions.value || isExecuting.value) {
-    return;
-  }
-  const hasRunningTask = await checkTaskStatus();
-  console.log('hasRunningTask', hasRunningTask);
-  if (hasRunningTask) {
-    message.info(t('web.options.taskRunning'));
     return;
   }
   try {

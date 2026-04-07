@@ -32,7 +32,7 @@ function loadTreeData() {
 loadTreeData();
 
 const eventListenerHandler = (event: MessageEvent) => {
-  console.log('[dump-tensot-data.vue]: 事件监听', event)
+  console.log('[dump-tensot-data.vue]: event received', event)
 
   if (event.data.command === 'dumpTensorRefreshData') {
     loadTreeData();

@@ -3,9 +3,7 @@ import { projectService } from '@plugin/service/project-service';
 import {
   GetProjectSHResult,
   UpdateShScriptParams,
-  SaveProjectSHParams,
 } from '@shared/api-types';
-import { getProjectById } from '@plugin/domain';
 
 export const scriptMethods = {
   /**
@@ -27,20 +25,9 @@ export const scriptMethods = {
    * @returns project environment values
    */
   async getProjectEnv(): Promise<{ ascendEnvScript: string; socVersion: string }> {
-    const pm = ProjectManager.getInstance();
-    await pm.initProject();
-    await pm.ensureProjectId();
-    const projectId = pm.projectId;
-
-    if (!projectId) {
-      return { ascendEnvScript: '', socVersion: '' };
-    }
-
-    const project = getProjectById(Number(projectId));
-
     return {
-      ascendEnvScript: project?.ascend_env_script || '',
-      socVersion: project?.soc_version || ''
+      ascendEnvScript: await projectService.getProjectSH(),
+      socVersion: await projectService.getProjectSocVersion(),
     };
   },
 

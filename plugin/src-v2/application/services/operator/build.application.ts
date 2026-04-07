@@ -33,6 +33,28 @@ export interface StartBuildExampleDto {
   operatorType?: string; // Operator type for build (e.g. 'standard-custom')
 }
 
+export interface StartSimulateDto {
+  operatorNames?: string;
+}
+
+export interface StartOnBoardDto {
+  operatorNames?: string;
+}
+
+export interface RunSanitizerDto {
+  operatorNames?: string;
+}
+
+export interface StartDumpTensorDto {
+  operatorNames?: string;
+  compileOption?: string;
+  isStandardCustom?: boolean;
+}
+
+export interface StartUtTestDto {
+  operatorNames?: string;
+}
+
 /**
  * Build application service
  * Application layer; business orchestration
@@ -177,7 +199,7 @@ export class BuildApplicationService {
    * Start simulation analysis
    * Flow: 1) get simulate config and simulator type 2) get build/example configs 3) run simulate (with pre-build)
    */
-  async startSimulate(): Promise<
+  async startSimulate(dto: StartSimulateDto = {}): Promise<
     Result<void, SimulateFailedError | BuildFailedError | ConfigNotFoundError>
   > {
     // 1. Get simulate config and simulator type
@@ -212,6 +234,7 @@ export class BuildApplicationService {
       simulateConfigResult.value.configId,
       exampleConfigResult.value.configId,
       simulatorType,
+      dto.operatorNames,
     );
   }
 
@@ -219,7 +242,7 @@ export class BuildApplicationService {
    * Start on-board analysis
    * Flow: 1) get on-board config 2) get build/example configs 3) run on-board (with pre-build)
    */
-  async startOnBoard(): Promise<
+  async startOnBoard(dto: StartOnBoardDto = {}): Promise<
     Result<void, OnBoardFailedError | BuildFailedError | ConfigNotFoundError>
   > {
     // 1. Get on-board config
@@ -248,6 +271,7 @@ export class BuildApplicationService {
       buildConfigResult.value.configId,
       onBoardConfigResult.value.configId,
       exampleConfigResult.value.configId,
+      dto.operatorNames,
     );
   }
 
@@ -255,7 +279,7 @@ export class BuildApplicationService {
    * Run sanitizer (anomaly detection)
    * Flow: 1) get sanitizer config 2) get build/example configs 3) run sanitizer (with pre-build)
    */
-  async runSanitizer(): Promise<
+  async runSanitizer(dto: RunSanitizerDto = {}): Promise<
     Result<void, SanitizerFailedError | BuildFailedError | ConfigNotFoundError>
   > {
     // 1. Get sanitizer config
@@ -284,6 +308,7 @@ export class BuildApplicationService {
       buildConfigResult.value.configId,
       sanitizerConfigResult.value.configId,
       exampleConfigResult.value.configId,
+      dto.operatorNames,
     );
   }
 
@@ -377,5 +402,47 @@ export class BuildApplicationService {
     catch (error) {
       return ResultUtils.err(error as Error);
     }
+  }
+
+  /**
+   * Start DumpTensor flow.
+   */
+  async startDumpTensor(
+    dto: StartDumpTensorDto = {},
+  ): Promise<Result<void, BuildFailedError | ConfigNotFoundError>> {
+    const buildConfigResult = await this.configRepo.findByType(ConfigType.BUILD_OP);
+    if (ResultUtils.isErr(buildConfigResult)) {
+      return ResultUtils.err(new ConfigNotFoundError('build_op', { reason: '未找到构建配置' }));
+    }
+
+    const exampleConfigResult = await this.configRepo.findByType(ConfigType.BUILD_EXAMPLE);
+    if (ResultUtils.isErr(exampleConfigResult)) {
+      return ResultUtils.err(new ConfigNotFoundError('build_example', { reason: '未找到示例配置' }));
+    }
+
+    return this.buildOrchestrator.dumpTensor(
+      buildConfigResult.value.configId,
+      exampleConfigResult.value.configId,
+      dto.isStandardCustom ?? false,
+      dto.compileOption,
+      dto.operatorNames,
+    );
+  }
+
+  /**
+   * Start UT test flow.
+   */
+  async startUtTest(
+    dto: StartUtTestDto = {},
+  ): Promise<Result<void, BuildFailedError | ConfigNotFoundError>> {
+    const utTestConfigResult = await this.configRepo.findByType(ConfigType.UT_TEST);
+    if (ResultUtils.isErr(utTestConfigResult)) {
+      return ResultUtils.err(new ConfigNotFoundError('ut_test', { reason: '未找到 UT 测试配置' }));
+    }
+
+    return this.buildOrchestrator.utTest(
+      utTestConfigResult.value.configId,
+      dto.operatorNames,
+    );
   }
 }

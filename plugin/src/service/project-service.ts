@@ -16,7 +16,9 @@ import {
 } from '@plugin/domain';
 import {
   getAscendEnvScriptWithWorkspaceOverride,
+  getEnvironmentSocVersionFromWorkspace,
   getEnvironmentScriptPathFromWorkspace,
+  getSocVersionWithWorkspaceOverride,
 } from '@plugin/helpers/operator-project-workspace-config';
 
 export class ProjectService {
@@ -176,8 +178,26 @@ export class ProjectService {
   }
 
   /**
-   * Mirror workspace env script settings into `projects.json` (`ascend_env_script`) for the current project.
-   * Call when `op-devtools.environment.environmentScript` (or legacy operatorProject env) changes.
+   * Get project SoC version with workspace override.
+   */
+  async getProjectSocVersion(): Promise<string> {
+    const pm = ProjectManager.getInstance();
+
+    await pm.ensureProjectId();
+    const projectId = pm.projectId;
+
+    if (!projectId) {
+      return '';
+    }
+
+    const project = getProjectById(Number(projectId));
+
+    return getSocVersionWithWorkspaceOverride(project?.soc_version || '');
+  }
+
+  /**
+   * Mirror workspace environment settings into `projects.json` for the current project.
+   * Call when `op-devtools.environment.*` (or legacy operatorProject env keys) changes.
    */
   async syncAscendEnvScriptFromWorkspaceSettings(): Promise<void> {
     const pm = ProjectManager.getInstance();
@@ -187,10 +207,12 @@ export class ProjectService {
       return;
     }
     const scriptPath = getEnvironmentScriptPathFromWorkspace();
+    const socVersion = getEnvironmentSocVersionFromWorkspace();
     await updateShScript({
       project_name: info.name ?? '',
       project_path: info.path,
       ascend_env_script: scriptPath ? scriptPath : null,
+      soc_version: socVersion ? socVersion : undefined,
     });
   }
 }

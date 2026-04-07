@@ -54,6 +54,7 @@ export default {
   'extension.rightClickFile': 'Please right-click a file',
   'extension.openDevToolsFailed': 'Failed to open Huawei OP DevTools: {{error}}',
   'extension.importDumpTensorBinFailed': 'Failed to import DumpTensor .bin file',
+  'extension.selectDumpTensorBinFile': 'Select DumpTensor .bin file',
   'extension.environmentScript.missing': 'Workspace setting Environment script (set_env.sh) is empty. Set it before running actions from the Actions view, or choose a file now.',
   'extension.environmentScript.invalidPath': 'The workspace Environment script path does not exist on disk. Choose a valid set_env.sh or update the setting.',
   'extension.environmentScript.browse': 'Choose file…',
@@ -124,6 +125,10 @@ export default {
   'build.onBoardSuccess': 'On-board analysis succeeded',
   'build.getOnBoardCommandFailed': 'Failed to get on-board command: {{error}}',
   'build.dumpTensorSuccess': 'DumpTensor succeeded',
+  'build.utTestFailed': 'UT test failed',
+  'build.utTestSuccess': 'UT test succeeded',
+  'build.getUtTestCommandFailed': 'Failed to get UT test command: {{error}}',
+  'build.importDumpTensorBinSuccess': 'DumpTensor .bin file imported successfully',
   'build.getRunCommandFailedAgain': 'Failed to get run command: {{error}}',
 
   // performance
@@ -360,7 +365,7 @@ export default {
   'web.operate.onBoardAnalysis': 'On-board analysis',
   'web.operate.simulationAnalysis': 'Simulation analysis',
   'web.operate.utTest': 'UT test',
-  'web.operate.dumpTensor': 'Run DumpTensor',
+  'web.operate.dumpTensor': 'Dump Tensor',
   'web.operate.cpuDebug': 'CPU debug',
   'web.operate.npuDebug': 'NPU debug',
   'web.operate.debug': 'Debug',
@@ -610,6 +615,8 @@ export default {
   'web.dump.cancel': 'Cancel',
   'web.dump.import': 'Import',
   'web.dump.compare': 'Compare',
+  'web.dump.importSuccess': 'Import succeeded',
+  'web.dump.importFailed': 'Import failed',
 
   // web options-simulator / options-on-board / options-sanitizer (shared)
   'web.options.taskRunning': 'A task is still running. Please try again later.',

@@ -16,6 +16,8 @@ export type OperateNodeId =
   | 'power'
   | 'onboard'
   | 'simulation'
+  | 'utTest'
+  | 'dumpTensor'
   | 'selectOperators'
   | 'selectedOperators'
   | 'operatorItem';
@@ -84,6 +86,14 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     return p.runFlowAction(nodeId, action);
   }
 
+  static runFlowActionFromWebviewWithParams<P, T>(
+    nodeId: OperateNodeId,
+    action: (params: P) => Promise<T>,
+    params: P,
+  ): Promise<T | undefined> {
+    return OperateTreeProvider.runFlowActionFromWebview(nodeId, () => action(params));
+  }
+
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly kind: OperateTreeKind = 'flow',
@@ -144,6 +154,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     if (options?.skipFlowExecutionUi) {
       return await action();
     }
+    const executionNodeId = nodeId;
     this.executingFlowNodeId = nodeId;
     this.onDidChangeTreeDataEmitter.fire();
     // Let the tree view repaint before the action runs; otherwise loading/stop may never appear
@@ -153,8 +164,12 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       return await action();
     }
     finally {
-      this.executingFlowNodeId = null;
-      this.onDidChangeTreeDataEmitter.fire();
+      // Avoid clobbering a newer flow state: if another action started while this one
+      // was stopping, it owns `executingFlowNodeId` now and must keep its loading UI.
+      if (this.executingFlowNodeId === executionNodeId) {
+        this.executingFlowNodeId = null;
+        this.onDidChangeTreeDataEmitter.fire();
+      }
     }
   }
 
@@ -400,6 +415,40 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       ));
     }
 
+    if (!isPyasc && this.state.isStandardCustom) {
+      nodes.push(this.createItem(
+        'utTest',
+        t('web.operate.utTest'),
+        hasMultipleSelectedOperators ? undefined : 'huawei-op-devtools.sidebar.utTest',
+        vscode.TreeItemCollapsibleState.None,
+        undefined,
+        hasMultipleSelectedOperators
+          ? disabledIcon
+          : this.pickFlowIcon('utTest', this.getAssetIcon('beaker.svg')),
+        undefined,
+        undefined,
+        undefined,
+        singleOnlyTooltip,
+      ));
+    }
+
+    if (!isPyasc) {
+      nodes.push(this.createItem(
+        'dumpTensor',
+        t('web.operate.dumpTensor'),
+        hasMultipleSelectedOperators ? undefined : 'huawei-op-devtools.sidebar.dumpTensor',
+        vscode.TreeItemCollapsibleState.None,
+        undefined,
+        hasMultipleSelectedOperators
+          ? disabledIcon
+          : this.pickFlowIcon('dumpTensor', this.getAssetIcon('tensor.svg')),
+        undefined,
+        undefined,
+        undefined,
+        singleOnlyTooltip,
+      ));
+    }
+
     return nodes;
   }
 
@@ -579,13 +628,18 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   }
 
   private isOperatorDisabled(operator: { hasEx: boolean }): boolean {
-    const selectedType = this.getSelectedType();
-    if (selectedType === null) return false;
+    if (this.state.selectedOperatorIds.length === 0) {
+      return false;
+    }
 
-    if (selectedType === 'ex' && !operator.hasEx) return true;
-    if (selectedType === 'nonEx' && operator.hasEx) return true;
+    const selectedOps = this.state.operators.filter((o) => this.state.selectedOperatorIds.includes(o.id));
+    const hasSelectedEx = selectedOps.some((op) => op.hasEx);
+    const hasSelectedNonEx = selectedOps.some((op) => !op.hasEx);
 
-    return false;
+    if (operator.hasEx) {
+      return hasSelectedNonEx;
+    }
+    return hasSelectedEx;
   }
 
   private getFilteredCompiledOperators() {
@@ -704,10 +758,15 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     });
 
     const nodes: OperateNode[] = [];
+    const disabledIcon = new vscode.ThemeIcon('circle-slash', new vscode.ThemeColor('disabledForeground'));
     for (const op of list) {
       const isDisabled = this.isOperatorDisabled(op);
       const isSelected = this.state.selectedOperatorIds.includes(op.id);
-      const iconPath = isSelected ? new vscode.ThemeIcon('check') : undefined;
+      const iconPath = isSelected
+        ? new vscode.ThemeIcon('check')
+        : isDisabled
+          ? disabledIcon
+          : undefined;
       nodes.push(
         this.createItem(
           'operatorItem',

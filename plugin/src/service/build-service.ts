@@ -690,25 +690,25 @@ export class BuildService {
     let configId = await this.getBuildConfigId();
     console.log('[startDumpTensor] Queried configId:', configId);
 
-    // 获取当前目录
+    // Resolve workspace paths used by dump tensor flow.
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders || workspaceFolders.length === 0) {
-      vscode.window.showErrorMessage('未找到工作区路径');
+      vscode.window.showErrorMessage(t('build.workspacePathNotFound'));
       return;
     }
     const currentDir = workspaceFolders[0].uri.fsPath;
     const tempDataPath = path.join(currentDir, '.vscode', 'dump_tensor_temp_data');
     const dumpTensorPath = path.join(currentDir, '.vscode', 'DumpTensor');
 
-    // 删除临时数据目录
-    console.log('[startDumpTensor] 删除临时数据目录:', tempDataPath);
+    // Remove temp data folder from previous runs.
+    console.log('[startDumpTensor] Removing temp data directory:', tempDataPath);
     try {
       if (fs.existsSync(tempDataPath)) {
         fs.rmSync(tempDataPath, { recursive: true, force: true });
-        console.log('[startDumpTensor] 临时数据目录已删除');
+        console.log('[startDumpTensor] Temp data directory removed');
       }
     } catch (error) {
-      console.error('[startDumpTensor] 删除临时数据目录失败:', error);
+      console.error('[startDumpTensor] Failed to remove temp data directory:', error);
     }
 
     const buildCommand = getBuildOpCommand(
@@ -759,12 +759,12 @@ export class BuildService {
         return;
       }
 
-      // 执行show_kernel_debug_data命令
+      // Post-process dump files and build tree data.
       await this.executeShowKernelDebugData(tempDataPath, dumpTensorPath);
 
       vscode.window.showInformationMessage(t('build.dumpTensorSuccess'));
 
-      // 打开DumpTensor数据面板并刷新数据
+      // Open dump tensor panel and refresh.
       await this.openDumpTensorPanel();
     } else {
       try {
@@ -784,12 +784,12 @@ export class BuildService {
           return;
         }
 
-        // 执行show_kernel_debug_data命令
+        // Post-process dump files and build tree data.
         await this.executeShowKernelDebugData(tempDataPath, dumpTensorPath);
 
         vscode.window.showInformationMessage(t('build.dumpTensorSuccess'));
 
-        // 打开DumpTensor数据面板并刷新数据
+        // Open dump tensor panel and refresh.
         await this.openDumpTensorPanel();
       }
       catch (e) {
@@ -799,12 +799,12 @@ export class BuildService {
   }
 
   /**
-   * 执行UT测试
+   * Start UT test.
    */
   async startUtTest(params: { operatorNames?: string, projectId?: string | number, configId?: string } = {}): Promise<void> {
     const pm = ProjectManager.getInstance();
 
-    // 如果传入了 projectId，则设置 ProjectManager 的项目信息
+    // For external entry points, allow overriding project context.
     if (params.projectId !== undefined) {
       const project = getProjectById(Number(params.projectId));
       if (project) {
@@ -821,7 +821,7 @@ export class BuildService {
     }
 
     try {
-      // 构建UT测试命令
+      // Build UT test command.
       const buildCommand = getUtTestCommand(
         Number(configId),
         params.operatorNames,
@@ -832,108 +832,106 @@ export class BuildService {
       const res = await executor.execute(buildCommand, [], [], {}, true);
 
       if (res.code !== 0) {
-        vscode.window.showErrorMessage('UT测试执行失败');
+        vscode.window.showErrorMessage(t('build.utTestFailed'));
         return;
       }
 
-      vscode.window.showInformationMessage('UT测试执行成功');
+      vscode.window.showInformationMessage(t('build.utTestSuccess'));
     }
     catch (e) {
-      vscode.window.showErrorMessage(`获取UT测试命令失败 ${(e as Error).message}`);
+      vscode.window.showErrorMessage(t('build.getUtTestCommandFailed', { error: (e as Error).message }));
     }
   }
 
   /**
-   * 执行show_kernel_debug_data命令
+   * Execute show_kernel_debug_data command.
    */
   private async executeShowKernelDebugData(tempDataPath: string, dumpTensorPath: string): Promise<void> {
     try {
       const showCommand = `show_kernel_debug_data ${tempDataPath} ${dumpTensorPath}`;
-      console.log('[startDumpTensor] 执行show_kernel_debug_data命令:', showCommand);
+      console.log('[startDumpTensor] Running show_kernel_debug_data command:', showCommand);
       
       const executor = ProjectManager.getInstance().getExecutor();
       const showRes = await executor.execute(showCommand, [], [], {}, true);
-      console.log('[startDumpTensor] show_kernel_debug_data执行结果:', {
+      console.log('[startDumpTensor] show_kernel_debug_data result:', {
         code: showRes.code,
         output: showRes.output,
       });
       
       if (showRes.code !== 0) {
-        console.error('[startDumpTensor] show_kernel_debug_data执行失败，退出码:', showRes.code, '输出:', showRes.output);
-        // 不影响主流程，只记录错误
+        console.error('[startDumpTensor] show_kernel_debug_data failed, exit code:', showRes.code, 'output:', showRes.output);
+        // Non-blocking error: keep primary flow going.
       }
     } catch (error) {
-      console.error('[startDumpTensor] 执行show_kernel_debug_data命令失败:', error);
-      // 不影响主流程，只记录错误
+      console.error('[startDumpTensor] Failed to run show_kernel_debug_data command:', error);
+      // Non-blocking error: keep primary flow going.
     }
   }
 
   /**
-   * 打开DumpTensor数据面板并刷新数据
+   * Open dump tensor panel and refresh data.
    */
   private async openDumpTensorPanel(): Promise<void> {
     try {
-      console.log('[startDumpTensor] 打开DumpTensor数据面板');
-      // 打开DumpTensor数据面板
+      console.log('[startDumpTensor] Opening dump tensor data panel');
       await vscode.commands.executeCommand('huawei-op-devtools.open-dump-tensor-panel-view');
-      // 刷新DumpTensor数据
       await vscode.commands.executeCommand('huawei-op-devtools.flashDumpTensorData');
-      console.log('[startDumpTensor] DumpTensor数据面板已打开并刷新');
+      console.log('[startDumpTensor] Dump tensor panel opened and refreshed');
     } catch (error) {
-      console.error('[startDumpTensor] 打开DumpTensor数据面板失败:', error);
+      console.error('[startDumpTensor] Failed to open dump tensor panel:', error);
     }
   }
 
   /**
-   * 导入DumpTensor .bin文件
+   * Import DumpTensor .bin file.
    */
   async importDumpTensorBinFile(binFilePath: string): Promise<void> {
     try {
-      console.log('[importDumpTensorBinFile] 开始导入.bin文件:', binFilePath);
+      console.log('[importDumpTensorBinFile] Importing .bin file:', binFilePath);
       
-      // 获取当前目录
+      // Resolve workspace paths used by dump tensor flow.
       const workspaceFolders = vscode.workspace.workspaceFolders;
       if (!workspaceFolders || workspaceFolders.length === 0) {
-        vscode.window.showErrorMessage('未找到工作区路径');
+        vscode.window.showErrorMessage(t('build.workspacePathNotFound'));
         return;
       }
       const currentDir = workspaceFolders[0].uri.fsPath;
       const tempDataPath = path.join(currentDir, '.vscode', 'dump_tensor_temp_data');
       const dumpTensorPath = path.join(currentDir, '.vscode', 'DumpTensor');
 
-      // 删除临时数据目录
-      console.log('[importDumpTensorBinFile] 删除临时数据目录:', tempDataPath);
+      // Remove temp data folder from previous runs.
+      console.log('[importDumpTensorBinFile] Removing temp data directory:', tempDataPath);
       try {
         if (fs.existsSync(tempDataPath)) {
           fs.rmSync(tempDataPath, { recursive: true, force: true });
-          console.log('[importDumpTensorBinFile] 临时数据目录已删除');
+          console.log('[importDumpTensorBinFile] Temp data directory removed');
         }
       } catch (error) {
-        console.error('[importDumpTensorBinFile] 删除临时数据目录失败:', error);
+        console.error('[importDumpTensorBinFile] Failed to remove temp data directory:', error);
       }
 
-      // 确保临时数据目录存在
+      // Ensure temp data directory exists.
       if (!fs.existsSync(tempDataPath)) {
         fs.mkdirSync(tempDataPath, { recursive: true });
-        console.log('[importDumpTensorBinFile] 创建临时数据目录:', tempDataPath);
+        console.log('[importDumpTensorBinFile] Created temp data directory:', tempDataPath);
       }
 
-      // 复制选中的.bin文件到临时目录
+      // Copy selected .bin file into temp directory.
       const fileName = path.basename(binFilePath);
       const destPath = path.join(tempDataPath, fileName);
       fs.copyFileSync(binFilePath, destPath);
-      console.log('[importDumpTensorBinFile] .bin文件已复制到临时目录:', destPath);
+      console.log('[importDumpTensorBinFile] Copied .bin file to temp directory:', destPath);
 
-      // 执行show_kernel_debug_data命令
+      // Post-process dump files and build tree data.
       await this.executeShowKernelDebugData(tempDataPath, dumpTensorPath);
       
-      vscode.window.showInformationMessage('导入DumpTensor .bin文件成功');
+      vscode.window.showInformationMessage(t('build.importDumpTensorBinSuccess'));
       
-      // 打开DumpTensor数据面板并刷新数据
+      // Open dump tensor panel and refresh.
       await this.openDumpTensorPanel();
     } catch (error) {
-      console.error('[importDumpTensorBinFile] 导入DumpTensor .bin文件失败:', error);
-      vscode.window.showErrorMessage('导入DumpTensor .bin文件失败');
+      console.error('[importDumpTensorBinFile] Failed to import DumpTensor .bin file:', error);
+      vscode.window.showErrorMessage(t('extension.importDumpTensorBinFailed'));
     }
   }
 }

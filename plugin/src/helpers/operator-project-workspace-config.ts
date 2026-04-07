@@ -213,6 +213,17 @@ export function mergeBuildConfigsWithOperatorProjectWorkspace(configs: BuildConf
       });
     }
 
+    if ((config as { config_type?: string }).config_type === 'ut_test') {
+      return withUserOptions(config, (opts) => {
+        const script = getConfiguredValue<string>(cfg, [
+          'compileAndDeploy.buildConfig.utTestCompileCommand',
+        ]);
+        if (script !== undefined) {
+          opts.script = script;
+        }
+      });
+    }
+
     if (config.config_type === 'on_board') {
       return withUserOptions(config, (opts) => {
         const script = getConfiguredValue<string>(cfg, [
@@ -448,6 +459,27 @@ export function getEnvironmentScriptPathFromWorkspace(): string {
   return '';
 }
 
+export function getEnvironmentSocVersionFromWorkspace(): string {
+  const folder = vscode.workspace.workspaceFolders?.[0];
+  const cfg = vscode.workspace.getConfiguration(SECTION, folder?.uri);
+  const explicit = getConfiguredValue<string>(cfg, [
+    'environment.socVersion',
+    'operatorProject.env.socVersion',
+  ]);
+  if (explicit !== undefined && String(explicit).trim() !== '') {
+    return String(explicit).trim();
+  }
+  const primary = cfg.get<string>('environment.socVersion', '') ?? '';
+  if (typeof primary === 'string' && primary.trim()) {
+    return primary.trim();
+  }
+  const legacy = cfg.get<string>('operatorProject.env.socVersion', '') ?? '';
+  if (typeof legacy === 'string' && legacy.trim()) {
+    return legacy.trim();
+  }
+  return '';
+}
+
 export function getAscendEnvScriptWithWorkspaceOverride(
   storedScript: string | null | undefined,
 ): string {
@@ -458,4 +490,16 @@ export function getAscendEnvScriptWithWorkspaceOverride(
     'operatorProject.env.projectSH',
   ]);
   return script !== undefined ? script : (storedScript || '');
+}
+
+export function getSocVersionWithWorkspaceOverride(
+  storedSocVersion: string | null | undefined,
+): string {
+  const folder = vscode.workspace.workspaceFolders?.[0];
+  const cfg = vscode.workspace.getConfiguration(SECTION, folder?.uri);
+  const socVersion = getConfiguredValue<string>(cfg, [
+    'environment.socVersion',
+    'operatorProject.env.socVersion',
+  ]);
+  return socVersion !== undefined ? socVersion : (storedSocVersion || '');
 }

@@ -5,6 +5,7 @@ import {
   getSimulateCommand,
   getOnBoardCommand,
   getSanitizerCommand,
+  getUtTestCommand,
   objectToCommandString,
 } from '@plugin/domain';
 
@@ -23,8 +24,12 @@ export class CommandGeneratorService {
   /**
    * Generate build example command
    */
-  generateBuildExampleCommand(configId: number, operatorNames?: string): string {
-    return getBuildExampleCommand(configId, undefined, operatorNames);
+  generateBuildExampleCommand(
+    configId: number,
+    compileOption?: string,
+    operatorNames?: string,
+  ): string {
+    return getBuildExampleCommand(configId, compileOption, operatorNames);
   }
 
   /**
@@ -40,8 +45,9 @@ export class CommandGeneratorService {
   generateSimulateCommand(
     simulateConfigId: number,
     exampleConfigId: number,
+    operatorNames?: string,
   ): string {
-    return getSimulateCommand(simulateConfigId, exampleConfigId);
+    return getSimulateCommand(simulateConfigId, exampleConfigId, operatorNames);
   }
 
   /**
@@ -50,8 +56,9 @@ export class CommandGeneratorService {
   generateOnBoardCommand(
     onBoardConfigId: number,
     exampleConfigId: number,
+    operatorNames?: string,
   ): string {
-    return getOnBoardCommand(onBoardConfigId, exampleConfigId);
+    return getOnBoardCommand(onBoardConfigId, exampleConfigId, operatorNames);
   }
 
   /**
@@ -60,8 +67,9 @@ export class CommandGeneratorService {
   generateSanitizerCommand(
     sanitizerConfigId: number,
     exampleConfigId: number,
+    operatorNames?: string,
   ): string {
-    return getSanitizerCommand(sanitizerConfigId, exampleConfigId);
+    return getSanitizerCommand(sanitizerConfigId, exampleConfigId, operatorNames);
   }
 
   /**
@@ -70,24 +78,33 @@ export class CommandGeneratorService {
   generateBuildWithSimulatorCommand(
     configId: number,
     simulatorType: string,
+    operatorNames?: string,
   ): string {
     return getBuildOpCommand(
       configId,
       objectToCommandString({ [`simulator ${simulatorType || ''}`]: true }),
+      operatorNames,
     );
   }
 
   /**
    * Generate pre-on-board build command
    */
-  generateBuildForOnBoardCommand(configId: number): string {
-    return getBuildOpCommand(configId, objectToCommandString({ onboard: true }));
+  generateBuildForOnBoardCommand(configId: number, operatorNames?: string): string {
+    return getBuildOpCommand(configId, objectToCommandString({ onboard: true }), operatorNames);
   }
 
   /**
    * Generate pre-sanitizer build command
    */
-  generateBuildForSanitizerCommand(configId: number): string {
-    return getBuildOpCommand(configId, '--mssanitizer');
+  generateBuildForSanitizerCommand(configId: number, operatorNames?: string): string {
+    return getBuildOpCommand(configId, '--mssanitizer', operatorNames);
+  }
+
+  /**
+   * Generate UT test command
+   */
+  generateUtTestCommand(configId: number, operatorNames?: string): string {
+    return getUtTestCommand(configId, operatorNames);
   }
 }

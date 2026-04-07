@@ -7,6 +7,7 @@ export class ConfigType {
   static readonly BUILD_EXAMPLE = new ConfigType('build_example');
   static readonly SIMULATE = new ConfigType('simulate');
   static readonly ON_BOARD = new ConfigType('on_board');
+  static readonly UT_TEST = new ConfigType('ut_test');
   static readonly SANITIZER = new ConfigType('sanitizer');
 
   private constructor(public readonly value: string) {}
@@ -32,6 +33,8 @@ export class ConfigType {
         return ConfigType.SIMULATE;
       case 'on_board':
         return ConfigType.ON_BOARD;
+      case 'ut_test':
+        return ConfigType.UT_TEST;
       case 'sanitizer':
         return ConfigType.SANITIZER;
       default:

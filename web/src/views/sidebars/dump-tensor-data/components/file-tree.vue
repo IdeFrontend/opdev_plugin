@@ -32,22 +32,22 @@ const props = defineProps<{
 
 const expandedKeys = ref<string[]>([]);
 const selectedFiles = ref<PerformanceRunDataFile[]>([]);
-const maxSelectedCount = 2; // 最大选择数量
+const maxSelectedCount = 2; // Max files selectable for compare.
 
 const checkedKeys = ref<string[]>([]);
 
-// 处理树数据
+// Normalize tree nodes for compare behavior.
 const processedTreeData = computed(() => {
   const processNode = (node: any): any => {
-    // 检查是否为目录（即非文件节点）
+    // Directory nodes are non-file nodes.
     const isDirectory = !isComparableFile(node);
 
     const processedNode = {
       ...node,
-      checkable: !isDirectory, // 目录节点禁用复选框
+      checkable: !isDirectory, // Disable checkbox for directories.
     };
 
-    // 如果有子节点，递归处理
+    // Recurse children.
     if (node.children && Array.isArray(node.children)) {
       processedNode.children = node.children.map(processNode);
     }
@@ -68,7 +68,7 @@ watch(
   { immediate: true },
 );
 
-// 自定义切换图标（三角箭头）
+// Custom switcher icon (triangle).
 const SwitcherIcon: Component = ({ expanded }) => {
   return h(expanded ? DownOutlined : RightOutlined, {
     style: {
@@ -97,13 +97,13 @@ function isBinFile(row: object): row is PerformanceRunDataFile {
   );
 }
 
-// 检查是否为可比较的文件类型
+// Comparable file types.
 function isComparableFile(row: object): row is PerformanceRunDataFile {
   return isTxtFile(row) || isBinFile(row);
 }
 
 /**
- * 执行文件对比
+ * Run file comparison.
  */
 function performFileComparison() {
   if (selectedFiles.value.length < 2) {
@@ -111,33 +111,32 @@ function performFileComparison() {
     return;
   }
 
-  // 这里可以调用实际的文件对比功能
-  console.log('执行文件对比:', selectedFiles.value);
+  console.log('[DumpTensor] Compare files:', selectedFiles.value);
 
   try {
     diffFiles({
       filePath1: (selectedFiles.value[0].filePath || '').replace(/\.bin$/, '.txt'),
       filePath2: (selectedFiles.value[1].filePath || '').replace(/\.bin$/, '.txt')
     }).finally(() => {
-      // 对比完成后取消对比状态
+      // Reset compare mode after compare completes.
       cancelCompare();
     })
     message.success(t('web.dump.compareStarting'));
   } catch (error) {
-    console.error('调用VSCode文件对比功能失败:', error);
+    console.error('[DumpTensor] VSCode file compare failed:', error);
     message.error(t('web.dump.compareFailed'));
     cancelCompare();
   }
 }
 
 /**
- * 点击节点
+ * Handle tree node click.
  */
 const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
   const node = info.node;
   const data = node.dataRef || node;
   
-  console.log('[onClickNode]: 打开文件', data)
+  console.log('[DumpTensor] Open file:', data)
 
   if (isTxtFile(data) || isBinFile(data)) {
     openFile({ file: (data.filePath || '').replace(/\.bin$/, '.txt') });
@@ -145,38 +144,38 @@ const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
 };
 
 /**
- * 处理复选框勾选
+ * Handle checkbox selection.
  */
 function onCheck(checkedKeysValue: any, e: { checked: boolean; node: any }) {
-  // 从 checkedKeysValue 中获取所有被勾选的 keys
+  // Gather checked keys.
   const allCheckedKeys = Array.isArray(checkedKeysValue) ? checkedKeysValue : checkedKeysValue.checked;
 
-  // 由于我们无法直接获取节点信息，我们需要遍历整个树来确定哪些是文件节点
+  // Walk the tree to identify file nodes.
   const allFileKeys = getAllFileKeys(props.treeData);
 
-  // 过滤出只包含文件的 keys
+  // Keep file keys only.
   const fileKeys = allCheckedKeys.filter((key: string) => allFileKeys.includes(key));
 
-  // 限制最多选择2个文件
+  // Limit to max selectable files.
   if (fileKeys.length > maxSelectedCount) {
-    // 只保留最后选择的几个文件
+    // Keep only most-recent selections.
     const limitedFileKeys = fileKeys.slice(-maxSelectedCount);
     checkedKeys.value = limitedFileKeys;
 
-    // 更新 selectedFiles 数组
+    // Update selected file models.
     selectedFiles.value = getFileObjectsFromKeys(limitedFileKeys, props.treeData);
 
     message.warning(t('web.dump.maxSelectCount', { count: maxSelectedCount }));
   } else {
     checkedKeys.value = fileKeys;
 
-    // 更新 selectedFiles 数组
+    // Update selected file models.
     selectedFiles.value = getFileObjectsFromKeys(fileKeys, props.treeData);
   }
 }
 
 /**
- * 递归获取树中所有文件类型的节点 keys
+ * Recursively collect all file keys from tree.
  */
 function getAllFileKeys(nodes: any[]): string[] {
   let keys: string[] = [];
@@ -199,7 +198,7 @@ function getAllFileKeys(nodes: any[]): string[] {
 }
 
 /**
- * 根据 keys 获取对应的文件对象
+ * Resolve file objects by keys.
  */
 function getFileObjectsFromKeys(keys: string[], nodes: any[]): PerformanceRunDataFile[] {
   const files: PerformanceRunDataFile[] = [];
@@ -225,7 +224,7 @@ const updateExpand = (e) => {
   expandedKeys.value = e
 }
 
-// 是否正在进行对比
+// Whether compare mode is enabled.
 const isComparing = ref(false)
 
 const cancelCompare = () => {
@@ -239,10 +238,10 @@ const openCompare = () => {
   isComparing.value = true
 }
 
-// 处理导入操作
+// Handle import action.
 const handleImport = async () => {
   try {
-    // 调用selectFile API选择bin文件
+    // Open file picker for .bin files.
     const selectedFilePath = await selectFile({
       fileTypes: [
         {
@@ -253,15 +252,15 @@ const handleImport = async () => {
     });
 
     if (selectedFilePath) {
-      // 调用API导入bin文件
+      // Import selected .bin file.
       await importDumpTensorBinFile({ binFilePath: selectedFilePath });
-      message.success('导入成功');
-      // 通知父组件刷新数据
+      message.success(t('web.dump.importSuccess'));
+      // Ask parent to refresh data.
       window.dispatchEvent(new CustomEvent('refreshTreeData'));
     }
   } catch (error) {
-    console.error('导入操作失败:', error);
-    message.error('导入操作失败');
+    console.error('[DumpTensor] Import action failed:', error);
+    message.error(t('web.dump.importFailed'));
   }
 }
 </script>

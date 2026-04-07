@@ -7,7 +7,16 @@ import { ProjectManager } from '@plugin/core/project/project-manager';
 import { buildService } from '@plugin/service/build-service';
 import { sanitizerService } from '@plugin/service/sanitizer-service';
 import { homeMethods } from './home-controller';
-import { StartBuildParams, StartBuildExampleParams, StartRunParams } from '@shared/api-types';
+import {
+  StartBuildParams,
+  StartBuildExampleParams,
+  StartRunParams,
+  StartSimulateParams,
+  StartOnBoardParams,
+  StartSanitizerParams,
+  StartDumpTensorParams,
+  StartUtTestParams,
+} from '@shared/api-types';
 import { getConfig, postConfig } from '@plugin/domain';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 
@@ -104,7 +113,7 @@ export const taskMethods = {
   /**
    * Simulation analysis
    */
-  async startSimulate(params: { operatorNames?: string } = {}): Promise<void> {
+  async startSimulate(params: StartSimulateParams = {}): Promise<void> {
     try {
       await ProjectManager.getInstance()
         .initProject();
@@ -126,7 +135,7 @@ export const taskMethods = {
   /**
    * On-board analysis
    */
-  async startOnBoard(params: { operatorNames?: string } = {}): Promise<void> {
+  async startOnBoard(params: StartOnBoardParams = {}): Promise<void> {
     try {
       await ProjectManager.getInstance()
         .initProject();
@@ -148,7 +157,7 @@ export const taskMethods = {
   /**
    * Anomaly detection
    */
-  async runSanitizer(params: { operatorNames?: string } = {}): Promise<void> {
+  async runSanitizer(params: StartSanitizerParams = {}): Promise<void> {
     try {
       await ProjectManager.getInstance()
         .initProject();
@@ -170,7 +179,7 @@ export const taskMethods = {
   /**
    * Execute DumpTensor
    */
-  async startDumpTensor(params: { operatorNames?: string, compileOption?: string } = {}): Promise<void> {
+  async startDumpTensor(params: StartDumpTensorParams = {}): Promise<void> {
     try {
       await ProjectManager.getInstance()
         .initProject();
@@ -192,7 +201,7 @@ export const taskMethods = {
   /**
    * Run UT tests
    */
-  async startUtTest(params: { operatorNames?: string } = {}): Promise<void> {
+  async startUtTest(params: StartUtTestParams = {}): Promise<void> {
     try {
       await ProjectManager.getInstance()
         .initProject();

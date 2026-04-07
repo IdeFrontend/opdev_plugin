@@ -1,6 +1,9 @@
 import {
   Result, ResultUtils,
 } from '@plugin-v2/domain/shared/types/result.type';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as vscode from 'vscode';
 import {
   BuildFailedError,
   CommandExecutionError,
@@ -111,11 +114,13 @@ export class BuildOrchestratorService {
     simulateConfigId: number,
     exampleConfigId: number,
     simulatorType: string,
+    operatorNames?: string,
   ): Promise<Result<void, SimulateFailedError | BuildFailedError>> {
     // Step 1: pre-simulate build (with simulator params)
     const buildCommand = this.commandGenerator.generateBuildWithSimulatorCommand(
       buildConfigId,
       simulatorType,
+      operatorNames,
     );
     const buildResult = await this.executor.execute(buildCommand, [], [], {}, true);
 
@@ -128,12 +133,13 @@ export class BuildOrchestratorService {
       }));
     }
 
-    await notifyBuildSucceededForSidebar(buildConfigId, undefined);
+    await notifyBuildSucceededForSidebar(buildConfigId, operatorNames);
 
     // Step 2: execute simulation analysis
     const simulateCommand = this.commandGenerator.generateSimulateCommand(
       simulateConfigId,
       exampleConfigId,
+      operatorNames,
     );
     const simulateResult = await this.executor.execute(
       simulateCommand,
@@ -162,9 +168,10 @@ export class BuildOrchestratorService {
     buildConfigId: number,
     onBoardConfigId: number,
     exampleConfigId: number,
+    operatorNames?: string,
   ): Promise<Result<void, OnBoardFailedError | BuildFailedError>> {
     // Step 1: pre-on-board build (with onboard param)
-    const buildCommand = this.commandGenerator.generateBuildForOnBoardCommand(buildConfigId);
+    const buildCommand = this.commandGenerator.generateBuildForOnBoardCommand(buildConfigId, operatorNames);
     const buildResult = await this.executor.execute(buildCommand, [], [], {}, true);
 
     if (buildResult.code !== 0) {
@@ -176,12 +183,13 @@ export class BuildOrchestratorService {
       }));
     }
 
-    await notifyBuildSucceededForSidebar(buildConfigId, undefined);
+    await notifyBuildSucceededForSidebar(buildConfigId, operatorNames);
 
     // Step 2: execute on-board analysis
     const onBoardCommand = this.commandGenerator.generateOnBoardCommand(
       onBoardConfigId,
       exampleConfigId,
+      operatorNames,
     );
     const onBoardResult = await this.executor.execute(
       onBoardCommand,
@@ -210,9 +218,10 @@ export class BuildOrchestratorService {
     buildConfigId: number,
     sanitizerConfigId: number,
     exampleConfigId: number,
+    operatorNames?: string,
   ): Promise<Result<void, SanitizerFailedError | BuildFailedError>> {
     // Step 1: pre-sanitizer build (with --mssanitizer)
-    const buildCommand = this.commandGenerator.generateBuildForSanitizerCommand(buildConfigId);
+    const buildCommand = this.commandGenerator.generateBuildForSanitizerCommand(buildConfigId, operatorNames);
     const buildResult = await this.executor.execute(buildCommand, [], [], {}, true);
 
     if (buildResult.code !== 0) {
@@ -224,12 +233,13 @@ export class BuildOrchestratorService {
       }));
     }
 
-    await notifyBuildSucceededForSidebar(buildConfigId, undefined);
+    await notifyBuildSucceededForSidebar(buildConfigId, operatorNames);
 
     // Step 2: execute sanitizer
     const sanitizerCommand = this.commandGenerator.generateSanitizerCommand(
       sanitizerConfigId,
       exampleConfigId,
+      operatorNames,
     );
     const sanitizerResult = await this.executor.execute(
       sanitizerCommand,
@@ -348,5 +358,118 @@ export class BuildOrchestratorService {
    */
   getStrategyFactory(): ExecutionStrategyFactory {
     return this.strategyFactory;
+  }
+
+  /**
+   * Execute UT test.
+   */
+  async utTest(
+    utTestConfigId: number,
+    operatorNames?: string,
+  ): Promise<Result<void, BuildFailedError>> {
+    const command = this.commandGenerator.generateUtTestCommand(utTestConfigId, operatorNames);
+    const execResult = await this.executor.execute(command, [], [], {}, true);
+    if (execResult.code !== 0) {
+      return ResultUtils.err(new BuildFailedError('UT 测试失败', {
+        command,
+        exitCode: execResult.code,
+        output: execResult.output,
+      }));
+    }
+    return ResultUtils.ok(undefined);
+  }
+
+  /**
+   * Execute DumpTensor flow.
+   */
+  async dumpTensor(
+    buildConfigId: number,
+    exampleConfigId: number,
+    isStandardCustom: boolean,
+    compileOption?: string,
+    operatorNames?: string,
+  ): Promise<Result<void, BuildFailedError>> {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders || workspaceFolders.length === 0) {
+      return ResultUtils.err(new BuildFailedError('Workspace path not found'));
+    }
+
+    const currentDir = workspaceFolders[0].uri.fsPath;
+    const tempDataPath = path.join(currentDir, '.vscode', 'dump_tensor_temp_data');
+    const dumpTensorPath = path.join(currentDir, '.vscode', 'DumpTensor');
+
+    try {
+      if (fs.existsSync(tempDataPath)) {
+        fs.rmSync(tempDataPath, { recursive: true, force: true });
+      }
+    }
+    catch {
+      // Non-blocking cleanup failure.
+    }
+
+    const buildCommand = this.commandGenerator.generateBuildCommand(
+      buildConfigId,
+      compileOption,
+      operatorNames,
+    );
+    const buildResult = await this.executor.execute(buildCommand, [], [], {}, true);
+    if (buildResult.code !== 0) {
+      return ResultUtils.err(new BuildFailedError('DumpTensor pre-build failed', {
+        command: buildCommand,
+        exitCode: buildResult.code,
+        output: buildResult.output,
+      }));
+    }
+
+    await notifyBuildSucceededForSidebar(buildConfigId, operatorNames);
+
+    const dumpEnvPrefix = 'export ASCEND_GLOBAL_LOG_LEVEL=1 && export ASCEND_DUMP_PATH=../.vscode/dump_tensor_temp_data && ';
+    if (isStandardCustom) {
+      const exampleBuildCommand = this.commandGenerator.generateBuildExampleCommand(
+        exampleConfigId,
+        compileOption,
+        operatorNames,
+      );
+      const exampleBuildResult = await this.executor.execute(
+        `${dumpEnvPrefix}${exampleBuildCommand}`,
+        [],
+        [],
+        {},
+        true,
+      );
+      if (exampleBuildResult.code !== 0) {
+        return ResultUtils.err(new BuildFailedError('DumpTensor example build failed', {
+          command: exampleBuildCommand,
+          exitCode: exampleBuildResult.code,
+          output: exampleBuildResult.output,
+        }));
+      }
+    }
+    else {
+      const runCommand = this.commandGenerator.generateRunCommand(exampleConfigId);
+      const runResult = await this.executor.execute(
+        `${dumpEnvPrefix}${runCommand}`,
+        [],
+        [],
+        {},
+        true,
+      );
+      if (runResult.code !== 0) {
+        return ResultUtils.err(new BuildFailedError('DumpTensor run failed', {
+          command: runCommand,
+          exitCode: runResult.code,
+          output: runResult.output,
+        }));
+      }
+    }
+
+    const showCommand = `show_kernel_debug_data ${tempDataPath} ${dumpTensorPath}`;
+    const showResult = await this.executor.execute(showCommand, [], [], {}, true);
+    if (showResult.code !== 0) {
+      // Keep behavior non-blocking as V1: do not fail whole flow on post-process error.
+      console.warn('[V2 dumpTensor] show_kernel_debug_data failed:', showResult.output);
+    }
+
+    return ResultUtils.ok(undefined);
   }
 }

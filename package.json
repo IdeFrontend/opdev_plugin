@@ -7,7 +7,7 @@
     "type": "git",
     "url": "https://gitcode.com/kaocong/mstt"
   },
-  "version": "1.2.7",
+  "version": "1.2.9",
   "engines": {
     "vscode": "^1.80.0"
   },
@@ -46,7 +46,7 @@
             "type": "string",
             "order": 102
           },
-          "op-devtools.compileAndDeploy.buildConfig.cpuDebugCompileCommand": {
+          "op-devtools.compileAndDeploy.buildConfig.utTestCompileCommand": {
             "type": "string",
             "order": 103
           },
@@ -54,21 +54,25 @@
             "type": "string",
             "order": 104
           },
-          "op-devtools.compileAndDeploy.buildConfig.sanitizerCompileCommand": {
+          "op-devtools.compileAndDeploy.buildConfig.cpuDebugCompileCommand": {
             "type": "string",
             "order": 105
           },
-          "op-devtools.compileAndDeploy.buildConfig.onBoardCompileCommand": {
+          "op-devtools.compileAndDeploy.buildConfig.sanitizerCompileCommand": {
             "type": "string",
             "order": 106
           },
-          "op-devtools.compileAndDeploy.buildConfig.simulationCompileCommand": {
+          "op-devtools.compileAndDeploy.buildConfig.onBoardCompileCommand": {
             "type": "string",
             "order": 107
           },
+          "op-devtools.compileAndDeploy.buildConfig.simulationCompileCommand": {
+            "type": "string",
+            "order": 108
+          },
           "op-devtools.compileAndDeploy.exampleBuildConfig.executionMode": {
             "type": "string",
-            "order": 108,
+            "order": 109,
             "enum": [
               "eager",
               "graph"
@@ -76,7 +80,7 @@
           },
           "op-devtools.compileAndDeploy.exampleBuildConfig.runCommand": {
             "type": "string",
-            "order": 110,
+            "order": 111,
             "markdownDescription": "%config.op-devtools.compileAndDeploy.exampleBuildConfig.runCommand.markdownDescription%"
           }
         }
@@ -271,6 +275,11 @@
             "type": "string",
             "order": 400,
             "markdownDescription": "%config.op-devtools.environment.environmentScript.markdownDescription%"
+          },
+          "op-devtools.environment.socVersion": {
+            "type": "string",
+            "order": 401,
+            "markdownDescription": "%config.op-devtools.environment.socVersion.markdownDescription%"
           }
         }
       }
@@ -328,7 +337,7 @@
         },
         {
           "id": "dump-tensor-panel-view",
-          "title": "DumpTensor数据",
+          "title": "%viewContainer.panel.dumpTensor.title%",
           "icon": "web/resources/tensor.svg"
         }
       ]
@@ -371,7 +380,7 @@
         {
           "type": "webview",
           "id": "dumpTensorPanelView",
-          "name": "DumpTensor数据",
+          "name": "%view.dumpTensor.name%",
           "when": "true"
         }
       ],
@@ -446,7 +455,7 @@
       },
       {
         "command": "huawei-op-devtools.open-dump-tensor-panel-view",
-        "title": "DumpTensor数据"
+        "title": "%command.openDumpTensor.title%"
       },
       {
         "command": "vscodeJumpToFile",
@@ -580,6 +589,14 @@
       {
         "command": "huawei-op-devtools.sidebar.simulation",
         "title": "Simulation Analysis"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.utTest",
+        "title": "UT Test"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.dumpTensor",
+        "title": "Dump Tensor"
       },
       {
         "command": "huawei-op-devtools.operate.debugSettings",

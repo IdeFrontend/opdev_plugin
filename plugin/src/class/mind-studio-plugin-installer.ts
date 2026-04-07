@@ -29,6 +29,10 @@ export class MindStudioPluginInstaller {
     this.options = options;
   }
 
+  private isCursorHost(): boolean {
+    return /cursor/i.test(vscode.env.appName || '');
+  }
+
   /**
    * Main entrance: Check whether the target plug-in has been activated. If it is not installed, it will be automatically installed according to the current environment.
    */
@@ -344,10 +348,12 @@ export class MindStudioPluginInstaller {
         generated = await this.generateGitpodConfig();
       }
       else {
-        await vscode.window.showWarningMessage(
-          t('mindStudio.webManualConfig'),
-          t('common.confirm'),
-        );
+        if (!this.isCursorHost()) {
+          await vscode.window.showWarningMessage(
+            t('mindStudio.webManualConfig'),
+            t('common.confirm'),
+          );
+        }
 
         return;
       }

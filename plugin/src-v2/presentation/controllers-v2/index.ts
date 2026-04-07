@@ -5,6 +5,11 @@ import type {
   StartBuildParams,
   StartRunParams,
   StartBuildExampleParams,
+  StartSimulateParams,
+  StartOnBoardParams,
+  StartSanitizerParams,
+  StartDumpTensorParams,
+  StartUtTestParams,
 } from '@shared/api-types';
 
 /**
@@ -60,14 +65,14 @@ export const taskMethodsV2 = {
   },
 
   // Other methods return undefined for now; to be implemented
-  async startSimulate(): Promise<void> {
+  async startSimulate(params: StartSimulateParams = {}): Promise<void> {
     return getBuildController()
-      .startSimulate();
+      .startSimulate(params);
   },
 
-  async startOnBoard(): Promise<void> {
+  async startOnBoard(params: StartOnBoardParams = {}): Promise<void> {
     return getBuildController()
-      .startOnBoard();
+      .startOnBoard(params);
   },
 
   async getSimulateConfig(): Promise<string> {
@@ -98,9 +103,23 @@ export const taskMethodsV2 = {
       .saveSanitizerForm(params);
   },
 
-  async runSanitizer(): Promise<void> {
+  async runSanitizer(params: StartSanitizerParams = {}): Promise<void> {
     return getBuildController()
-      .runSanitizer();
+      .runSanitizer(params);
+  },
+
+  async startDumpTensor(
+    params: StartDumpTensorParams = {},
+  ): Promise<void> {
+    return getBuildController()
+      .startDumpTensor(params);
+  },
+
+  async startUtTest(
+    params: StartUtTestParams = {},
+  ): Promise<void> {
+    return getBuildController()
+      .startUtTest(params);
   },
 
   /**
@@ -109,5 +128,13 @@ export const taskMethodsV2 = {
   async stopTask(): Promise<void> {
     return getBuildController()
       .stopTask();
+  },
+
+  /**
+   * Check task execution status
+   */
+  async checkTaskStatus(): Promise<boolean> {
+    return getBuildController()
+      .checkTaskStatus();
   },
 };
