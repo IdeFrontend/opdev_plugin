@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {
-  ref, onMounted, computed, watch,
+  ref, onMounted, computed,
 } from 'vue';
 import { t } from 'i18next';
 import { message } from 'ant-design-vue';
@@ -8,6 +8,7 @@ import { useTheme } from '@web/composables/use-theme';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import {
   getConfigData, saveConfig, openExternalLink, startOnBoard, executeVscodeCommand, checkTaskStatus, getSelectedOperators,
+  getOnBoardAnalysisShowQuickOptions, setOnBoardAnalysisShowQuickOptions,
 } from '@web/apis';
 
 // 使用主题管理组合式函数
@@ -146,10 +147,10 @@ const performanceMetricsIndeterminate = computed(() => {
   return count > 0 && count < PERFORMANCE_METRIC_KEYS.length;
 });
 
-const handleOperatorPerformanceChange = (checked: boolean) => {
-  if (!onboardData.value.user_options) {
-    return;
-  }
+const handleOperatorPerformanceChange = (e: unknown) => {
+  const checked = typeof e === 'boolean'
+    ? e
+    : ((e as { target?: { checked?: boolean } })?.target?.checked ?? false);
   PERFORMANCE_METRIC_KEYS.forEach((key) => {
     onboardData.value.user_options[key] = checked;
   });
@@ -309,6 +310,15 @@ onMounted(async () => {
             @change="handleSave"
           >
             {{ t('web.options.onboard.resourceConflict') }}
+          </a-checkbox>
+        </div>
+
+        <div class="do-not-show-row">
+          <a-checkbox
+            v-model:checked="doNotShowAgain"
+            @change="syncDoNotShowToWorkspace"
+          >
+            {{ t('web.options.sanitizer.doNotShowAgain') }}
           </a-checkbox>
         </div>
 

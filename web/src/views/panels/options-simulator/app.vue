@@ -8,6 +8,7 @@ import { useTheme } from '@web/composables/use-theme';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import {
   getConfigData, saveConfig, startSimulate, openExternalLink, checkTaskStatus, executeVscodeCommand, getSelectedOperators,
+  getSimulationShowQuickOptions, setSimulationShowQuickOptions,
 } from '@web/apis';
 
 // 使用主题管理组合式函数

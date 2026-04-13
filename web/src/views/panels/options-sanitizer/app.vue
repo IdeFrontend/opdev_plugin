@@ -12,6 +12,8 @@ import {
   checkTaskStatus,
   executeVscodeCommand,
   getSelectedOperators,
+  getSanitizerShowQuickOptions,
+  setSanitizerShowQuickOptions,
 } from '@web/apis';
 
 // 使用主题管理组合式函数
@@ -19,6 +21,8 @@ const {
   themeConfig, actualTheme,
 } = useTheme();
 const isExecuting = ref(false);
+/** When true, workspace `sanitizer.showQuickOptions` is false (tree runs without opening this panel). */
+const doNotShowAgain = ref(false);
 const form = ref({
   tool: {
     memcheck: true,
@@ -164,6 +168,15 @@ const handleConfirm = async () => {
             @change="saveSanitizerForm"
           >
             {{ t('web.options.sanitizer.uninit') }}
+          </a-checkbox>
+        </div>
+
+        <div class="do-not-show-row">
+          <a-checkbox
+            v-model:checked="doNotShowAgain"
+            @change="syncDoNotShowToWorkspace"
+          >
+            {{ t('web.options.sanitizer.doNotShowAgain') }}
           </a-checkbox>
         </div>
 
