@@ -660,6 +660,11 @@
         "icon": "$(debug-stop)"
       },
       {
+        "command": "huawei-op-devtools.sidebar.stopAllOperatorActions",
+        "title": "%command.sidebar.stopAllOperatorActions.title%",
+        "icon": "$(debug-stop)"
+      },
+      {
         "command": "huawei-op-devtools.sidebar.openWelcome",
         "title": "Open Welcome"
       },
@@ -707,14 +712,19 @@
       ],
       "view/title": [
         {
+          "command": "huawei-op-devtools.sidebar.stopAllOperatorActions",
+          "when": "view == opdevtoolsOperateTree && opDevtools.operatorActionQueueStopAllVisible",
+          "group": "navigation@0"
+        },
+        {
           "command": "huawei-op-devtools.open",
           "when": "view == opdevtoolsOperateTree",
-          "group": "navigation@0"
+          "group": "navigation@1"
         },
         {
           "command": "huawei-op-devtools.sidebar.projectConfig",
           "when": "view == opdevtoolsOperateTree",
-          "group": "navigation@1"
+          "group": "navigation@2"
         },
         {
           "command": "huawei-op-devtools.sidebar.selectAllOperators",

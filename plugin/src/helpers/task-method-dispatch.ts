@@ -11,7 +11,13 @@ import type {
 import { taskMethods } from '@plugin/controller/task-controller';
 import { taskMethodsV2 } from '@plugin-v2/presentation/controllers-v2';
 import { getFeatureFlag } from '@plugin/feature-flags';
+import { homeMethods } from '@plugin/controller/home-controller';
+import * as vscode from 'vscode';
 import { OperateTreeProvider, type OperateNodeId } from '../class/operate-tree-provider';
+import {
+  OperatorActionQueueManager,
+  QueueableActionType,
+} from './operator-action-queue';
 
 function isAnyV2FlowEnabled(): boolean {
   return (
@@ -98,23 +104,87 @@ export async function dispatchStopTask(): Promise<void> {
   await taskMethods.stopTask();
 }
 
-async function dispatchCheckTaskStatus(): Promise<boolean> {
-  if (isAnyV2FlowEnabled()) {
-    return taskMethodsV2.checkTaskStatus();
+const operatorActionQueue = new OperatorActionQueueManager(async () => {
+  await dispatchStopTask();
+});
+
+async function getOperatorQueueScopeKey(): Promise<string> {
+  let projectId = 'unknown';
+  try {
+    const id = await homeMethods.getProjectId();
+    if (id) {
+      projectId = String(id);
+    }
   }
-  return taskMethods.checkTaskStatus();
+  catch {
+    // fall back to unknown project id
+  }
+
+  let selected = 'default';
+  try {
+    const ids = await homeMethods.getSelectedOperatorIds();
+    if (ids && ids.length > 0) {
+      selected = ids.slice().sort((a, b) => a - b).join(',');
+    }
+  }
+  catch {
+    // fall back to default operator selection
+  }
+
+  return `${projectId}::${selected}`;
 }
 
-async function waitUntilTaskStopped(maxWaitMs = 10000, intervalMs = 200): Promise<boolean> {
-  const started = Date.now();
-  while (Date.now() - started < maxWaitMs) {
-    const running = await dispatchCheckTaskStatus();
-    if (!running) {
-      return true;
-    }
-    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+async function enqueueQueueableAction<P>(
+  actionType: QueueableActionType,
+  params: P,
+  runner: (payload: P) => Promise<void>,
+): Promise<void> {
+  const scopeKey = await getOperatorQueueScopeKey();
+  const result = await operatorActionQueue.enqueue(scopeKey, actionType, params, runner);
+  if (!result.accepted) {
+    vscode.window.showWarningMessage(result.reason ?? 'Action is already queued');
   }
-  return !(await dispatchCheckTaskStatus());
+}
+
+export async function dispatchGetOperatorActionQueueStatus(): Promise<{
+  items: Array<{
+    id: string;
+    actionType: QueueableActionType;
+    internalState: 'queued' | 'running' | 'cancel_failed';
+    displayStatus: 'currently executed';
+    isProcessAlive: boolean;
+    createdAt: number;
+    startedAt?: number;
+    position: number;
+  }>;
+}> {
+  const scopeKey = await getOperatorQueueScopeKey();
+  return {
+    items: operatorActionQueue.getActions(scopeKey),
+  };
+}
+
+export async function dispatchStopOperatorAction(
+  params: { actionType: QueueableActionType },
+): Promise<void> {
+  const scopeKey = await getOperatorQueueScopeKey();
+  const stopped = await operatorActionQueue.stopByActionType(scopeKey, params.actionType);
+  if (!stopped) {
+    vscode.window.showInformationMessage('No matching queued/running action found');
+  }
+}
+
+export async function dispatchStopAllOperatorActions(): Promise<void> {
+  const scopeKey = await getOperatorQueueScopeKey();
+  await operatorActionQueue.stopAllAndClearQueue(scopeKey);
+}
+
+export async function dispatchEnqueueNativeOperatorAction<P>(
+  actionType: QueueableActionType,
+  params: P,
+  runner: (payload: P) => Promise<void>,
+): Promise<void> {
+  await enqueueQueueableAction(actionType, params, runner);
 }
 
 export function dispatchFlowFromWebview<P>(
@@ -126,37 +196,24 @@ export function dispatchFlowFromWebview<P>(
   };
 }
 
-export function dispatchExclusiveFlowFromWebview<P>(
-  nodeId: OperateNodeId,
-  runner: (params: P) => Promise<void>,
-): (params: P) => Promise<void | undefined> {
-  return (params: P = {} as P) => {
-    return OperateTreeProvider.runFlowActionFromWebviewWithParams(nodeId, async (p: P) => {
-      const isRunning = await dispatchCheckTaskStatus();
-      if (isRunning) {
-        await dispatchStopTask();
-        const stopped = await waitUntilTaskStopped();
-        if (!stopped) {
-          return;
-        }
-      }
-      await runner(p);
-    }, params);
-  };
-}
-
-export const dispatchOnBoard = dispatchExclusiveFlowFromWebview<StartOnBoardParams>(
+export const dispatchOnBoard = dispatchFlowFromWebview<StartOnBoardParams>(
   'onboard',
-  dispatchStartOnBoard,
+  async (params) => {
+    await dispatchEnqueueNativeOperatorAction('onboard', params, dispatchStartOnBoard);
+  },
 );
 
-export const dispatchSimulator = dispatchExclusiveFlowFromWebview<StartSimulateParams>(
+export const dispatchSimulator = dispatchFlowFromWebview<StartSimulateParams>(
   'simulation',
-  dispatchStartSimulate,
+  async (params) => {
+    await dispatchEnqueueNativeOperatorAction('simulation', params, dispatchStartSimulate);
+  },
 );
 
-export const dispatchSanitizer = dispatchExclusiveFlowFromWebview<StartSanitizerParams>(
+export const dispatchSanitizer = dispatchFlowFromWebview<StartSanitizerParams>(
   'sanitizer',
-  dispatchRunSanitizer,
+  async (params) => {
+    await dispatchEnqueueNativeOperatorAction('sanitizer', params, dispatchRunSanitizer);
+  },
 );
 

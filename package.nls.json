@@ -93,5 +93,6 @@
   "command.sidebar.selectAll.title": "Select all",
   "command.sidebar.clearSelectedOperators.title": "Clear Selected Operators",
   "command.sidebar.stopFlowTask.title": "Stop task",
+  "command.sidebar.stopAllOperatorActions.title": "Stop all",
   "customEditor.csvViewer.displayName": "CSV Table View"
 }

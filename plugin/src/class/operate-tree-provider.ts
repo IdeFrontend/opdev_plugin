@@ -130,6 +130,21 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
   /** Flow tree only: which menu row is running an action (shows `loading~spin` on that item). */
   private executingFlowNodeId: OperateNodeId | null = null;
+  /** Flow tree only: queue status for queueable operator actions. */
+  private queuedFlowStates: Partial<Record<OperateNodeId, 'queued' | 'running' | 'cancel_failed'>> = {};
+
+  setQueuedFlowStates(states: Partial<Record<OperateNodeId, 'queued' | 'running' | 'cancel_failed'>>): void {
+    if (this.kind !== 'flow') {
+      return;
+    }
+    const prev = JSON.stringify(this.queuedFlowStates);
+    const next = JSON.stringify(states ?? {});
+    if (prev === next) {
+      return;
+    }
+    this.queuedFlowStates = states ?? {};
+    this.onDidChangeTreeDataEmitter.fire();
+  }
 
   /**
    * Run an async action for the Actions tree and show a spinning icon on that row while it runs.
@@ -227,6 +242,10 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
   /** True when this tree row should show the loading spinner (parent + active subitem while a flow child action runs). */
   private isFlowExecutingIcon(nodeId: OperateNodeId): boolean {
+    const q = this.queuedFlowStates[nodeId];
+    if (q === 'running' || q === 'queued' || q === 'cancel_failed') {
+      return true;
+    }
     return this.matchesFlowExecutingNode(nodeId);
   }
 
@@ -237,6 +256,11 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     if (!this.isFlowExecutingIcon(nodeId)) {
       return normalIcon;
     }
+    const q = this.queuedFlowStates[nodeId];
+    // Waiting in the operator queue (not the active runner): themed animated SVG hourglass.
+    if (q === 'queued') {
+      return this.getAssetIcon('hourglass.svg');
+    }
     return new vscode.ThemeIcon('loading~spin');
   }
 
@@ -244,7 +268,9 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
   /** Appends `opdevtools.flowRunning` while this row is the active flow action (inline stop in tree). */
   private mergeFlowRunningContext(nodeId: OperateNodeId, base?: string): string | undefined {
-    if (!this.matchesFlowExecutingNode(nodeId)) {
+    const queuedState = this.queuedFlowStates[nodeId];
+    const isQueuedCancellable = queuedState === 'queued' || queuedState === 'running' || queuedState === 'cancel_failed';
+    if (!this.matchesFlowExecutingNode(nodeId) && !isQueuedCancellable) {
       return base;
     }
     return base ? `${base} ${OperateTreeProvider.FLOW_RUNNING_CONTEXT}` : OperateTreeProvider.FLOW_RUNNING_CONTEXT;

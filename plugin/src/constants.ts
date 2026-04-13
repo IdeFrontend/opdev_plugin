@@ -138,5 +138,7 @@ export const COMMAND_SIDEBAR_SELECT_ALL_PREPARED_OPERATORS = `${COMMAND_PREFIX}.
 export const COMMAND_SIDEBAR_DESELECT_ALL_PREPARED_OPERATORS = `${COMMAND_PREFIX}.sidebar.deselectAllPreparedOperators`;
 /** Stops the task started from the Actions tree (inline on the running row). */
 export const COMMAND_SIDEBAR_STOP_FLOW_TASK = `${COMMAND_PREFIX}.sidebar.stopFlowTask`;
+/** Clears the operator action queue and stops the current task (Actions view title). */
+export const COMMAND_SIDEBAR_STOP_ALL_OPERATOR_ACTIONS = `${COMMAND_PREFIX}.sidebar.stopAllOperatorActions`;
 export const COMMAND_SIDEBAR_OPEN_WELCOME = `${COMMAND_PREFIX}.sidebar.openWelcome`;
 export const COMMAND_SIDEBAR_OPEN_HELP = `${COMMAND_PREFIX}.sidebar.openHelp`;

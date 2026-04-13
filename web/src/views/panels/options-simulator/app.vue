@@ -7,7 +7,7 @@ import { message } from 'ant-design-vue';
 import { useTheme } from '@web/composables/use-theme';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import {
-  getConfigData, saveConfig, startSimulate, openExternalLink, checkTaskStatus, executeVscodeCommand, getSelectedOperators,
+  getConfigData, saveConfig, startSimulate, openExternalLink, executeVscodeCommand, getSelectedOperators,
   getSimulationShowQuickOptions, setSimulationShowQuickOptions,
 } from '@web/apis';
 
@@ -60,16 +60,6 @@ const handleChange = async () => {
 
 const handleConfirm = async () => {
   if (!simulateOptions.value || isExecuting.value) {
-    return;
-  }
-
-  const hasRunningTask = await checkTaskStatus();
-
-  console.log('hasRunningTask', hasRunningTask);
-
-  if (hasRunningTask) {
-    message.info(t('web.options.taskRunning'));
-
     return;
   }
 

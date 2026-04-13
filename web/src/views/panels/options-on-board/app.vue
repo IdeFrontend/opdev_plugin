@@ -7,7 +7,7 @@ import { message } from 'ant-design-vue';
 import { useTheme } from '@web/composables/use-theme';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import {
-  getConfigData, saveConfig, openExternalLink, startOnBoard, executeVscodeCommand, checkTaskStatus, getSelectedOperators,
+  getConfigData, saveConfig, openExternalLink, startOnBoard, executeVscodeCommand, getSelectedOperators,
   getOnBoardAnalysisShowQuickOptions, setOnBoardAnalysisShowQuickOptions,
 } from '@web/apis';
 
@@ -69,16 +69,6 @@ const handleSave = async () => {
 
 const handleConfirm = async () => {
   if (!onboardData.value || isExecuting.value) {
-    return;
-  }
-
-  const hasRunningTask = await checkTaskStatus();
-
-  console.log('hasRunningTask', hasRunningTask);
-
-  if (hasRunningTask) {
-    message.info(t('web.options.taskRunning'));
-
     return;
   }
 

@@ -101,6 +101,7 @@ import {
   COMMAND_SIDEBAR_SELECT_ALL_PREPARED_OPERATORS,
   COMMAND_SIDEBAR_DESELECT_ALL_PREPARED_OPERATORS,
   COMMAND_SIDEBAR_STOP_FLOW_TASK,
+  COMMAND_SIDEBAR_STOP_ALL_OPERATOR_ACTIONS,
   COMMAND_SIDEBAR_OPEN_WELCOME,
   COMMAND_SIDEBAR_OPEN_HELP,
 } from './constants';
@@ -120,8 +121,13 @@ import {
   dispatchStartSimulate,
   dispatchStartUtTest,
   dispatchStartDumpTensor,
+  dispatchEnqueueNativeOperatorAction,
+  dispatchGetOperatorActionQueueStatus,
+  dispatchStopOperatorAction,
+  dispatchStopAllOperatorActions,
   dispatchStopTask,
 } from './helpers/task-method-dispatch';
+import type { QueueableActionType } from './helpers/operator-action-queue';
 
 let extensionContext: vscode.ExtensionContext | undefined;
 
@@ -417,9 +423,57 @@ export async function activate(context: vscode.ExtensionContext) {
     homeTreeProvider.refresh();
   };
 
+  const queueActionToNodeId: Record<QueueableActionType, 'sanitizer' | 'onboard' | 'simulation' | 'utTest' | 'dumpTensor'> = {
+    sanitizer: 'sanitizer',
+    onboard: 'onboard',
+    simulation: 'simulation',
+    utTest: 'utTest',
+    dumpTensor: 'dumpTensor',
+  };
+
+  const nodeIdToQueueAction: Partial<Record<string, QueueableActionType>> = {
+    sanitizer: 'sanitizer',
+    onboard: 'onboard',
+    simulation: 'simulation',
+    utTest: 'utTest',
+    dumpTensor: 'dumpTensor',
+  };
+
+  const syncNativeQueueState = async () => {
+    try {
+      const { items } = await dispatchGetOperatorActionQueueStatus();
+      await vscode.commands.executeCommand(
+        'setContext',
+        'opDevtools.operatorActionQueueStopAllVisible',
+        items.length >= 2,
+      );
+      const states: Partial<Record<'sanitizer' | 'onboard' | 'simulation' | 'utTest' | 'dumpTensor', 'queued' | 'running' | 'cancel_failed'>> = {};
+      items.forEach((item) => {
+        const nodeId = queueActionToNodeId[item.actionType];
+        if (!nodeId) {
+          return;
+        }
+        states[nodeId] = item.internalState;
+      });
+      operateTreeProvider.setQueuedFlowStates(states);
+    }
+    catch (error) {
+      console.warn('[syncNativeQueueState] failed:', error);
+      await vscode.commands.executeCommand('setContext', 'opDevtools.operatorActionQueueStopAllVisible', false);
+    }
+  };
+
   registerSidebarContextsRefresh(refreshSidebarContexts);
 
   await refreshSidebarContexts();
+  await syncNativeQueueState();
+
+  const queueStatusTimer = setInterval(() => {
+    void syncNativeQueueState();
+  }, 1000);
+  context.subscriptions.push({
+    dispose: () => clearInterval(queueStatusTimer),
+  });
 
   const watchColorThemeChange = vscode.window.onDidChangeActiveColorTheme(async () => {
     await refreshSidebarContexts();
@@ -637,7 +691,7 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
       await operateTreeProvider.runFlowAction('sanitizer', async () => {
-        await dispatchRunSanitizer({ operatorNames });
+        await dispatchEnqueueNativeOperatorAction('sanitizer', { operatorNames }, dispatchRunSanitizer);
       });
     },
   );
@@ -662,7 +716,7 @@ export async function activate(context: vscode.ExtensionContext) {
           vscode.window.showWarningMessage(pyascCheck.message ?? t('extension.openPyFirst'));
           return;
         }
-        await dispatchStartOnBoard({ operatorNames });
+        await dispatchEnqueueNativeOperatorAction('onboard', { operatorNames }, dispatchStartOnBoard);
       });
     },
   );
@@ -687,7 +741,7 @@ export async function activate(context: vscode.ExtensionContext) {
           vscode.window.showWarningMessage(pyascCheck.message ?? t('extension.openPyFirst'));
           return;
         }
-        await dispatchStartSimulate({ operatorNames });
+        await dispatchEnqueueNativeOperatorAction('simulation', { operatorNames }, dispatchStartSimulate);
       });
     },
   );
@@ -701,7 +755,7 @@ export async function activate(context: vscode.ExtensionContext) {
       }
       const operatorNames = await getOperatorNamesFromSelection();
       await operateTreeProvider.runFlowAction('utTest', async () => {
-        await dispatchStartUtTest({ operatorNames });
+        await dispatchEnqueueNativeOperatorAction('utTest', { operatorNames }, dispatchStartUtTest);
       });
     },
   );
@@ -716,7 +770,11 @@ export async function activate(context: vscode.ExtensionContext) {
       const operatorNames = await getOperatorNamesFromSelection();
       const compileOption = await getCompileOptionFromSelection();
       await operateTreeProvider.runFlowAction('dumpTensor', async () => {
-        await dispatchStartDumpTensor({ operatorNames, compileOption });
+        await dispatchEnqueueNativeOperatorAction(
+          'dumpTensor',
+          { operatorNames, compileOption },
+          dispatchStartDumpTensor,
+        );
       });
     },
   );
@@ -917,9 +975,25 @@ export async function activate(context: vscode.ExtensionContext) {
   );
   const sidebarStopFlowTaskCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_STOP_FLOW_TASK,
-    async () => {
+    async (node?: { nodeId?: string }) => {
+      const actionType = node?.nodeId ? nodeIdToQueueAction[node.nodeId] : undefined;
+      if (actionType) {
+        await dispatchStopOperatorAction({ actionType });
+        await syncNativeQueueState();
+        return;
+      }
       await dispatchStopTask();
       operateTreeProvider.clearFlowExecutionState();
+      await syncNativeQueueState();
+    },
+  );
+
+  const sidebarStopAllOperatorActionsCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_STOP_ALL_OPERATOR_ACTIONS,
+    async () => {
+      await dispatchStopAllOperatorActions();
+      operateTreeProvider.clearFlowExecutionState();
+      await syncNativeQueueState();
     },
   );
 
@@ -1107,7 +1181,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(sidebarSelectAllCompiledOperatorsCommand);
   context.subscriptions.push(sidebarSelectAllPreparedOperatorsCommand);
   context.subscriptions.push(sidebarDeselectAllPreparedOperatorsCommand);
-  context.subscriptions.push(sidebarStopFlowTaskCommand);
+  context.subscriptions.push(sidebarStopFlowTaskCommand, sidebarStopAllOperatorActionsCommand);
   context.subscriptions.push(sidebarOpenWelcomeCommand);
   context.subscriptions.push(sidebarOpenHelpCommand);
 

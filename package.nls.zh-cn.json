@@ -93,5 +93,6 @@
   "command.sidebar.selectAll.title": "全选",
   "command.sidebar.clearSelectedOperators.title": "清除所选算子",
   "command.sidebar.stopFlowTask.title": "停止任务",
+  "command.sidebar.stopAllOperatorActions.title": "全部停止",
   "customEditor.csvViewer.displayName": "CSV 表格视图"
 }
