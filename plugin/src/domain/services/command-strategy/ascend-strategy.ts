@@ -22,28 +22,28 @@ import {
   getConfig, getConfigById,
 } from '../../services/configuration';
 import { getProjectById } from '@plugin/domain/models/project-model';
+import { getEnvironmentSocVersionFromWorkspace } from '@plugin/helpers/operator-project-workspace-config';
 
 /**
  * Ascend type command strategy
  */
 export class AscendCommandStrategy implements CommandStrategy {
   /**
-   * 替换脚本中的 {soc_version} 占位符
-   * @param script 原始脚本字符串
-   * @param projectId 项目ID
-   * @returns 替换后的脚本字符串
+   * Replace `{soc_version}` using `op-devtools.environment.socVersion` (workspace) first,
+   * then project storage, then runtime default.
    */
   private replaceSocVersion(script: string, projectId: number): string {
+    const fromWorkspace = getEnvironmentSocVersionFromWorkspace().trim();
+    if (fromWorkspace) {
+      return script.replace(/{soc_version}/g, fromWorkspace);
+    }
     if (projectId) {
       const project = getProjectById(projectId);
-      if (project && project.soc_version) {
+      if (project?.soc_version) {
         return script.replace(/{soc_version}/g, project.soc_version);
-      } else {
-        // 如果项目配置中没有 soc_version，使用默认值
-        return script.replace(/{soc_version}/g, soc_version);
       }
     }
-    return script;
+    return script.replace(/{soc_version}/g, soc_version);
   }
 
   buildCommandContext(baseContext: BaseContext): CommandContext {

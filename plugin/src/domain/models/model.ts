@@ -7,7 +7,6 @@ import * as configModel from './config-model';
 import { OpGeneratorFactory } from '@plugin/domain/services/op-generator-factory';
 import { getDefaultPath } from '@plugin/domain/utils/op-util';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
-import { soc_version } from '@plugin/domain/utils/ascend-util';
 import {
   getDefaultDirectory,
   ensureLaunchJsonExists,
@@ -421,7 +420,6 @@ export async function generateStructure(
           op:          record.op_name,
           script:      scripts.simulateScript,
           config_name: record.op_name,
-          soc_version: soc_version,
           ResourceConflictRatio: true,
           PMSampling: true,
           downloadToLocal: true,

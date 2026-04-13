@@ -278,6 +278,7 @@
           },
           "op-devtools.environment.socVersion": {
             "type": "string",
+            "default": "ascend910b",
             "order": 401,
             "markdownDescription": "%config.op-devtools.environment.socVersion.markdownDescription%"
           }

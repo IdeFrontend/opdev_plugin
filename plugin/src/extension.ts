@@ -256,30 +256,6 @@ export async function activate(context: vscode.ExtensionContext) {
   };
 
   const syncOperatorProjectWorkspaceSettings = async () => {
-    const normalizeScriptTokens = (
-      raw: unknown,
-      options?: { socVersion?: string; opName?: string; includeOperatorNamesToken?: boolean },
-    ): unknown => {
-      if (typeof raw !== 'string') {
-        return raw;
-      }
-      let script = raw;
-      const socVersion = options?.socVersion?.trim();
-      const opName = options?.opName?.trim();
-      if (socVersion) {
-        const escapedSocVersion = socVersion.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        script = script.replace(new RegExp(`--soc=${escapedSocVersion}\\b`, 'g'), '--soc={soc_version}');
-      }
-      if (options?.includeOperatorNamesToken) {
-        if (opName) {
-          const escapedOpName = opName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          script = script.replace(new RegExp(`--ops=${escapedOpName}\\b`, 'g'), '--ops={operatorNames}');
-        }
-        script = script.replace(/--ops=\b/g, '--ops={operatorNames}');
-      }
-      return script;
-    };
-
     const toKeyValueMap = (raw: unknown): Record<string, string> => {
       if (!Array.isArray(raw)) {
         return {};
@@ -309,7 +285,8 @@ export async function activate(context: vscode.ExtensionContext) {
       const utTest = buildConfigs.find((c) => (c as { config_type?: string }).config_type === 'ut_test');
       const sanitizer = (await configService.getSanitizerConfigsList())[0];
       const projectSH = await projectService.getProjectSH();
-      const projectSocVersion = await projectService.getProjectSocVersion();
+      const projectSocVersion =
+        (await projectService.getProjectSocVersion()).trim() || 'ascend910b';
 
       const buildOpOpts = (buildOp?.user_options || {}) as Record<string, unknown>;
       const buildExampleOpts = (buildExample?.user_options || {}) as Record<string, unknown>;
@@ -320,38 +297,13 @@ export async function activate(context: vscode.ExtensionContext) {
 
       await syncSettingIfUnset('compileAndDeploy.buildConfig.operatorNameToCompile', buildOpOpts.op);
       await syncSettingIfUnset('compileAndDeploy.buildConfig.deployCommandOrRunCommand', buildOpOpts.target_file);
-      await syncSettingIfUnset(
-        'compileAndDeploy.buildConfig.compileCommand',
-        normalizeScriptTokens(buildOpOpts.script, { socVersion: projectSocVersion as string }),
-      );
-      await syncSettingIfUnset(
-        'compileAndDeploy.buildConfig.cpuDebugCompileCommand',
-        normalizeScriptTokens(buildOpOpts.cpu_debug_script, { socVersion: projectSocVersion as string }),
-      );
-      await syncSettingIfUnset(
-        'compileAndDeploy.buildConfig.npuDebugCompileCommand',
-        normalizeScriptTokens(buildOpOpts.npu_debug_script, { socVersion: projectSocVersion as string }),
-      );
-      await syncSettingIfUnset(
-        'compileAndDeploy.buildConfig.sanitizerCompileCommand',
-        normalizeScriptTokens(sanitizerOpts.script, { socVersion: projectSocVersion as string }),
-      );
-      await syncSettingIfUnset(
-        'compileAndDeploy.buildConfig.onBoardCompileCommand',
-        normalizeScriptTokens(onBoardOpts.script, { socVersion: projectSocVersion as string }),
-      );
-      await syncSettingIfUnset(
-        'compileAndDeploy.buildConfig.simulationCompileCommand',
-        normalizeScriptTokens(simulateOpts.script, { socVersion: projectSocVersion as string }),
-      );
-      await syncSettingIfUnset(
-        'compileAndDeploy.buildConfig.utTestCompileCommand',
-        normalizeScriptTokens(utTestOpts.script, {
-          socVersion: projectSocVersion as string,
-          opName: typeof buildOpOpts.op === 'string' ? buildOpOpts.op : undefined,
-          includeOperatorNamesToken: true,
-        }),
-      );
+      await syncSettingIfUnset('compileAndDeploy.buildConfig.compileCommand', buildOpOpts.script);
+      await syncSettingIfUnset('compileAndDeploy.buildConfig.cpuDebugCompileCommand', buildOpOpts.cpu_debug_script);
+      await syncSettingIfUnset('compileAndDeploy.buildConfig.npuDebugCompileCommand', buildOpOpts.npu_debug_script);
+      await syncSettingIfUnset('compileAndDeploy.buildConfig.sanitizerCompileCommand', sanitizerOpts.script);
+      await syncSettingIfUnset('compileAndDeploy.buildConfig.onBoardCompileCommand', onBoardOpts.script);
+      await syncSettingIfUnset('compileAndDeploy.buildConfig.simulationCompileCommand', simulateOpts.script);
+      await syncSettingIfUnset('compileAndDeploy.buildConfig.utTestCompileCommand', utTestOpts.script);
 
       const shouldExposeExampleBuildConfig = Boolean(multiResult.isStandardCustom && multiResult.hasMultiple);
       if (shouldExposeExampleBuildConfig) {

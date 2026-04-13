@@ -33,7 +33,10 @@ import {
 import { homeMethods } from '../controller/home-controller';
 import { soc_version } from '@plugin/domain/utils/ascend-util';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
-import { mergeBuildConfigsWithOperatorProjectWorkspace } from '@plugin/helpers/operator-project-workspace-config';
+import {
+  getEnvironmentSocVersionFromWorkspace,
+  mergeBuildConfigsWithOperatorProjectWorkspace,
+} from '@plugin/helpers/operator-project-workspace-config';
 import { requestSidebarContextsRefresh } from '@plugin/helpers/sidebar-context-refresh';
 
 const CONFIG_TYPES = {
@@ -584,9 +587,10 @@ export class BuildService {
 
       if (await isRootStandardCustom()) {
         const exConfigId = await this.getBuildExampleConfigId();
+        const socForExample = getEnvironmentSocVersionFromWorkspace().trim() || soc_version;
         const exampleBuildCommand = getBuildExampleCommand(
           Number(exConfigId),
-          `--simulator --soc=${soc_version}`,
+          `--simulator --soc=${socForExample}`,
           params.operatorNames,
         );
         const exampleBuildRes = await ProjectManager.getInstance()

@@ -6,7 +6,6 @@ import {
 } from '@plugin/domain/services/op-generator-factory';
 import { OpRecord } from '@plugin/domain/models/model';
 import { OperatorProjectType } from '@plugin/domain/models/operator-project-type';
-import { soc_version } from '@plugin/domain/utils/ascend-util';
 import { checkBuildShHasBishengConfig } from '@plugin/domain/utils/build-utils';
 import { AbstractOperatorPlugin } from './abstract-operator-plugin';
 import {
@@ -56,7 +55,7 @@ export class AscendPlugin extends AbstractOperatorPlugin implements IProjectDete
   getInitialConfigScripts(op: OpRecord, workspaceRoot: string): OperatorConfigScripts {
     const script = path.join(op.op_path, 'build.sh');
     const h = checkBuildShHasBishengConfig(workspaceRoot);
-    const base = `bash ${script} --pkg --soc=${soc_version} --vendor_name=custom`;
+    const base = `bash ${script} --pkg --soc={soc_version} --vendor_name=custom`;
 
     return {
       // V1 inline ternary for build_op.script had NO bisheng variant — always the plain base.
