@@ -314,6 +314,19 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     return { showOperatorSearch, showOperatorProjects };
   }
 
+  /**
+   * Flow-tree cached state from refreshState(checkMultipleOperators):
+   * true when workspace currently has multiple operators.
+   */
+  hasMultipleOperators(): boolean {
+    return this.state.hasMultipleOperators;
+  }
+
+  /** Flow-tree cached state: true when current context is standard-custom. */
+  isStandardCustomContext(): boolean {
+    return this.state.isStandardCustom;
+  }
+
   getTreeItem(element: OperateNode): vscode.TreeItem {
     return element;
   }
@@ -478,7 +491,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         undefined,
         hasMultipleSelectedOperators
           ? disabledIcon
-          : this.pickFlowIcon('cpuDebug', this.getAssetIcon('debug.svg')),
+          : this.pickFlowIcon('cpuDebug', this.getAssetIcon('debug-cpu.svg')),
         undefined,
         undefined,
         undefined,
@@ -495,7 +508,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         undefined,
         hasMultipleSelectedOperators
           ? disabledIcon
-          : this.pickFlowIcon('npuDebug', this.getAssetIcon('debug.svg')),
+          : this.pickFlowIcon('npuDebug', this.getAssetIcon('debug-npu.svg')),
         undefined,
         undefined,
         undefined,

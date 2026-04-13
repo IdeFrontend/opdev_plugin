@@ -1,6 +1,7 @@
 import type {
   IOperatorPlugin, OpGenParams, OpGenProject,
 } from './operator-plugin.interface';
+import type { OperatorBuildBehavior } from './operator-plugin.interface';
 import type {
   IProjectDetector, OperatorProjectType,
 } from './project-detector.interface';

@@ -8,12 +8,20 @@ import { buildService } from '@plugin/service/build-service';
 import { sanitizerService } from '@plugin/service/sanitizer-service';
 import { homeMethods } from './home-controller';
 import {
-  StartBuildParams, StartBuildExampleParams, StartRunParams,
+  StartBuildParams,
+  StartBuildExampleParams,
+  StartRunParams,
+  StartSimulateParams,
+  StartOnBoardParams,
+  StartSanitizerParams,
+  StartDumpTensorParams,
+  StartUtTestParams,
 } from '@shared/api-types';
 import {
   getConfig, postConfig,
 } from '@plugin/domain';
 import { OperatorProjectType } from '@plugin/domain/services/operator-project-detector';
+import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 
 // Global task manager: used to track and terminate executing tasks
 let currentExecutor: CommandExecutor | null = null;

@@ -833,6 +833,7 @@ export class BuildService {
       }
 
       vscode.window.showInformationMessage(t('build.dumpTensorSuccess'));
+      await this.openDumpTensorPanel();
     }
     else {
       try {

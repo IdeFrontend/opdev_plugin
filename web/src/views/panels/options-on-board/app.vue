@@ -146,16 +146,10 @@ const performanceMetricsIndeterminate = computed(() => {
   return count > 0 && count < PERFORMANCE_METRIC_KEYS.length;
 });
 
-  const keyArray = [
-    'ArithmeticUtilization',
-    'L2Cache',
-    'Memory',
-    'MemoryL0',
-    'MemoryUB',
-    'PipeUtilization',
-    'ResourceConflictRatio',
-  ];
-
+const handleOperatorPerformanceChange = (checked: boolean) => {
+  if (!onboardData.value.user_options) {
+    return;
+  }
   PERFORMANCE_METRIC_KEYS.forEach((key) => {
     onboardData.value.user_options[key] = checked;
   });

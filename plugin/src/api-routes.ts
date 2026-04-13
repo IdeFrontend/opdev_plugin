@@ -39,17 +39,8 @@ const opsMethods = {
   // On-board - supports v1/v2 switching
   startOnBoard: dispatchOnBoard,
 
-  // StopTask - If any V2 features are enabled, use the V2 version of stopTask
-  stopTask: (
-    getFeatureFlag('USE_V2_BUILD')
-    || getFeatureFlag('USE_V2_RUN')
-    || getFeatureFlag('USE_V2_BUILD_EXAMPLE')
-    || getFeatureFlag('USE_V2_SIMULATE')
-    || getFeatureFlag('USE_V2_ON_BOARD')
-    || getFeatureFlag('USE_V2_SANITIZER')
-  )
-    ? taskMethodsV2.stopTask
-    : taskMethods.stopTask,
+  // StopTask - shared V1/V2 dispatch
+  stopTask: dispatchStopTask,
 
   // Other methods continue to use v1
   buildOp: taskMethods.buildOp,

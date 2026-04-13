@@ -169,6 +169,14 @@ export function startDumpTensor(params: { operatorNames?: string,
   );
 }
 
+/** 导入DumpTensor二进制文件 */
+export function importDumpTensorBinFile(params: { binFilePath: string }) {
+  return request.post<{ binFilePath: string }, void>(
+    'ops/importDumpTensorBinFile',
+    params,
+  );
+}
+
 /** 执行UT测试 */
 export function startUtTest(params: { operatorNames?: string } = {}) {
   return request.post<{ operatorNames?: string }, void>(
@@ -182,6 +190,21 @@ export function startUtTest(params: { operatorNames?: string } = {}) {
 export function updateShScript(params: UpdateShScriptParams) {
   return request.post<UpdateShScriptParams, string>(
     'ops/updateShScript',
+    params,
+  );
+}
+
+/** 获取项目环境配置 */
+export function getProjectEnv() {
+  return request.post<undefined, { ascendEnvScript: string; socVersion: string }>(
+    'ops/getProjectEnv',
+  );
+}
+
+/** 保存项目环境配置 */
+export function saveProjectEnv(params: { ascendEnvScript: string; socVersion: string }) {
+  return request.post<{ ascendEnvScript: string; socVersion: string }, void>(
+    'ops/saveProjectEnv',
     params,
   );
 }

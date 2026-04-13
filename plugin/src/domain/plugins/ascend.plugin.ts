@@ -7,7 +7,6 @@ import {
 import { OpRecord } from '@plugin/domain/models/model';
 import { OperatorProjectType } from '@plugin/domain/models/operator-project-type';
 import { soc_version } from '@plugin/domain/utils/ascend-util';
-import { getDetailedSystemInfo } from '@plugin/domain/utils/op-util';
 import { checkBuildShHasBishengConfig } from '@plugin/domain/utils/build-utils';
 import { AbstractOperatorPlugin } from './abstract-operator-plugin';
 import {
@@ -42,24 +41,16 @@ export class AscendPlugin extends AbstractOperatorPlugin implements IProjectDete
   }
 
   getDefaultPaths(op: OpRecord): OperatorDefaultPaths {
-    const { architecture } = getDetailedSystemInfo();
-    // Mirrors the runPackageMap in op-util.ts getDefaultTarget().
-    // Note: runPackageName may be undefined for unknown op names — preserves V1 behavior.
-    const runPackageMap: Record<string, string> = {
-      'ops-math':        `cann-${op.op_name}-custom_linux-${architecture}.run`,
-      'ops-transformer': `cann-${op.op_name}-custom_linux-${architecture}.run`,
-      'ops-nn':          `cann-${op.op_name}-custom-linux.${architecture}.run`,
-      'ops-cv':          `cann-${op.op_name}-custom-linux.${architecture}.run`,
-    };
-    const runPackageName = runPackageMap[op.op_name];
+    // Keep V1 behavior from 06847/3816: use wildcard .run target for deploy/run.
+    const runPackageName = '*.run';
 
-    return {
-      opScriptPath:      path.join(op.op_path, 'build.sh'),
-      exampleScriptPath: path.join(op.op_path, 'build.sh'),
-      targetDir:         path.resolve(op.op_path, 'build_out'),
-      targetOpFile:      path.join(op.op_path, 'build_out', runPackageName),
-      targetExampleFile: path.join(op.op_path, 'build', `test_aclnn_${op.op_name}`),
-    };
+      return {
+        opScriptPath:      path.join(op.op_path, 'build.sh'),
+        exampleScriptPath: path.join(op.op_path, 'build.sh'),
+        targetDir:         path.resolve(op.op_path, 'build_out'),
+        targetOpFile:      path.join(op.op_path, 'build_out', runPackageName),
+        targetExampleFile: path.join(op.op_path, 'build', `test_aclnn_${op.op_name}`),
+      };
   }
 
   getInitialConfigScripts(op: OpRecord, workspaceRoot: string): OperatorConfigScripts {

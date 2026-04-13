@@ -302,6 +302,15 @@ When feature flag `USE_V2_BUILD` (or `USE_V2_BUILD_EXAMPLE`) is enabled, `ops.st
 
 ---
 
+## DumpTensor Behavior Note
+
+- `BuildService.startDumpTensor` opens the DumpTensor panel (`openDumpTensorPanel`) after successful execution in both flow branches:
+  - standard-custom path (build example command branch)
+  - non-standard-custom path (run command branch)
+- This keeps DumpTensor panel visibility consistent regardless of project/custom-type branching.
+
+---
+
 ## Summary
 
 - **Protocols:** Webview ↔ plugin via `ops` (startBuild, startBuildExample) and config APIs; plugin runs the generated shell command via ProjectManager.getExecutor(); no separate “build protocol” — execution is generic shell.

@@ -351,7 +351,7 @@ const menuItems = computed(() => {
     : items;
 
   // 过滤菜单项：UT测试只在标准自定义算子中显示
-  filtered = filtered.filter(item => {
+  const filteredWithUtTest = filtered.filter((item) => {
     if (item.key === 'utTest') {
       return isStandardCustom.value;
     }
@@ -359,7 +359,7 @@ const menuItems = computed(() => {
   });
 
   // 过滤菜单项：buildExample 只在标准自定义算子中显示
-  return filtered.map((item) => {
+  return filteredWithUtTest.map((item) => {
     if (item.key === 'build' && item.children) {
       return {
         ...item,

@@ -130,6 +130,28 @@ const getSaveData = () => {
   return JSON.parse(JSON.stringify(data));
 };
 
+const fetchUtTestConfig = async () => {
+  try {
+    const configObj = await getConfigData();
+    const keys = Object.keys(configObj || {});
+    const configData = configObj[keys[0]] || [];
+    const utTestConfig = configData.find((v) => v.config_type === 'ut_test');
+    if (utTestConfig) {
+      utTestOptions.value = JSON.parse(JSON.stringify(utTestConfig));
+    }
+  }
+  catch (error) {
+    console.error('[fetchUtTestConfig]获取UT测试配置失败: ', error);
+  }
+};
+
+const handleUtTestScriptChange = async () => {
+  await saveConfig({
+    type: 'ut_test',
+    data: [utTestOptions.value],
+  });
+};
+
 const sanitizerScript = ref('');
 
 const handSanitizerConfigChange = () => {
@@ -147,6 +169,7 @@ onBeforeMount(async () => {
 
   fetchOnBoardConfig();
   fetchSimulateConfig();
+  fetchUtTestConfig();
 
   // 获取当前项目类型
   try {

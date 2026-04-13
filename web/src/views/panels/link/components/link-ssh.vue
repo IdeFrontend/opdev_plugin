@@ -27,8 +27,6 @@ const getSelectedBorderClass = () => actualTheme.value === 'dark'
 const getDividerClass = () => actualTheme.value === 'dark' ? 'bg-white/15' : 'bg-gray-300';
 // 根据主题获取边框颜色（用于 border-t 等）
 const getDividerBorderClass = () => actualTheme.value === 'dark' ? 'border-white/15' : 'border-gray-300';
-// 根据主题获取卡片背景色
-const getCardBgClass = () => actualTheme.value === 'dark' ? '' : 'bg-white';
 // 根据主题获取描述文本颜色
 const getDescTextClass = () => actualTheme.value === 'dark' ? 'text-white' : 'text-[#595959]';
 
@@ -143,10 +141,9 @@ onMounted(async () => {
             <div
               v-for="item in items_type"
               :key="item.id"
-              class="p-5 my-5 border rounded-lg cursor-pointer transition-all duration-300 overflow-hidden relative hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)] group max-[960px]:flex-auto max-[960px]:min-w-0"
+              class="p-5 my-5 border rounded-lg cursor-pointer overflow-hidden relative hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)] group max-[960px]:flex-auto max-[960px]:min-w-0"
               :class="[
                 getBorderColorClass(),
-                getCardBgClass(),
                 selectedId_type === item.id ? getSelectedBorderClass() : '',
               ]"
               @click="selectedId_type = item.id"
@@ -219,7 +216,7 @@ onMounted(async () => {
               <transition name="slide-fade">
                 <div
                   v-if="selectedId_type === item.id"
-                  class="mt-5 pt-5 border-t transition-all duration-300"
+                  class="mt-5 pt-5 border-t"
                   :class="getDividerBorderClass()"
                 >
                   <div

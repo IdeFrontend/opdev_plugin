@@ -24,6 +24,7 @@ import {
 import {
   openFile,
   diffFiles,
+  importDumpTensorBinFile,
 } from '@web/apis';
 import { selectFile } from '@web/apis/performance-run-data';
 
@@ -115,8 +116,11 @@ function performFileComparison() {
 
   try {
     diffFiles({
-      filePath1: selectedFiles.value[0].filePath,
-      filePath2: selectedFiles.value[1].filePath,
+      filePath1: (selectedFiles.value[0].filePath || '').replace(/\.bin$/, '.txt'),
+      filePath2: (selectedFiles.value[1].filePath || '').replace(/\.bin$/, '.txt'),
+    }).finally(() => {
+      // Reset compare mode after compare completes.
+      cancelCompare();
     });
     message.success(t('web.dump.compareStarting'));
   }
@@ -238,6 +242,33 @@ const cancelCompare = () => {
 const openCompare = () => {
   isComparing.value = true;
 };
+
+// Handle import action.
+const handleImport = async () => {
+  try {
+    // Open file picker for .bin files.
+    const selectedFilePath = await selectFile({
+      fileTypes: [
+        {
+          label: 'Binary Files',
+          extensions: ['bin'],
+        },
+      ],
+    });
+
+    if (selectedFilePath) {
+      // Import selected .bin file.
+      await importDumpTensorBinFile({ binFilePath: selectedFilePath });
+      message.success(t('web.dump.importSuccess'));
+      // Ask parent to refresh data.
+      window.dispatchEvent(new CustomEvent('refreshTreeData'));
+    }
+  }
+  catch (error) {
+    console.error('[DumpTensor] Import action failed:', error);
+    message.error(t('web.dump.importFailed'));
+  }
+};
 </script>
 
 <template>
@@ -266,7 +297,10 @@ const openCompare = () => {
         v-show="!isComparing"
         class="filter-bar"
       >
-        <a-button class="default-btn">
+        <a-button
+          class="default-btn"
+          @click="handleImport"
+        >
           {{ t('web.dump.import') }}
         </a-button>
         <a-button

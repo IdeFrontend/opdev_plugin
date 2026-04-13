@@ -110,6 +110,18 @@ import { configService } from './service/config-service';
 import { projectService } from './service/project-service';
 import { OperatorProjectIconTheme } from './class/operator-project-icon-theme';
 import { welcomeMethods } from './controller/welcome-controller';
+import { registerSidebarContextsRefresh } from './helpers/sidebar-context-refresh';
+import {
+  dispatchStartBuild,
+  dispatchStartRun,
+  dispatchStartBuildExample,
+  dispatchRunSanitizer,
+  dispatchStartOnBoard,
+  dispatchStartSimulate,
+  dispatchStartUtTest,
+  dispatchStartDumpTensor,
+  dispatchStopTask,
+} from './helpers/task-method-dispatch';
 
 let extensionContext: vscode.ExtensionContext | undefined;
 
@@ -579,6 +591,45 @@ export async function activate(context: vscode.ExtensionContext) {
     return await homeMethods.getSelectedOperators();
   };
 
+  const getCompileOptionFromSelection = async (): Promise<string | undefined> => {
+    const selectedIds = await homeMethods.getSelectedOperatorIds() || [];
+    if (selectedIds.length === 0) {
+      return undefined;
+    }
+    const multiple = await homeMethods.checkMultipleOperators();
+    if (!multiple.isStandardCustom || !multiple.operators) {
+      return undefined;
+    }
+    const selectedSet = new Set(selectedIds);
+    const hasExperimental = multiple.operators.some((op) => selectedSet.has(op.id) && op.isExperimental);
+    return hasExperimental ? '--experimental' : undefined;
+  };
+
+  const sidebarBuildCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_BUILD,
+    async () =>
+      operateTreeProvider.runFlowAction('build', async () => {
+        const operatorNames = await getOperatorNamesFromSelection();
+        await dispatchStartBuild({ operatorNames });
+      }),
+  );
+
+  const sidebarRunCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_RUN,
+    async () => {
+      await operateTreeProvider.runFlowAction('run', async () => {
+        if (operateTreeProvider.hasMultipleOperators()) {
+          const operatorNames = await getOperatorNamesFromSelection();
+          const compileOption = await getCompileOptionFromSelection();
+          const operatorType = operateTreeProvider.isStandardCustomContext() ? 'standard-custom' : undefined;
+          await dispatchStartBuildExample({ operatorNames, operatorType, compileOption });
+          return;
+        }
+        await dispatchStartRun();
+      });
+    },
+  );
+
   // Expand or close the sidebar based on whether the devtool_config.json file exists
   if (hasDevtoolConfig) {
     // Delay execution to ensure UI is ready
@@ -587,11 +638,11 @@ export async function activate(context: vscode.ExtensionContext) {
         console.log('[Extension] devtool_config.json found, focusing OpsOperateProvider');
         await vscode.commands.executeCommand('OpsOperateProvider.focus');
       }
-      await operateTreeProvider.runFlowAction('run', async () => {
-        await dispatchStartRun();
-      });
-    },
-  );
+      catch (error) {
+        console.warn('[Extension] Failed to focus OpsOperateProvider:', error);
+      }
+    }, 300);
+  }
   const sidebarCpuDebugCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_CPU_DEBUG,
     async () => {

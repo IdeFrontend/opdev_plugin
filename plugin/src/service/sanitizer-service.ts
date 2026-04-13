@@ -5,10 +5,10 @@ import * as fs from 'fs';
 
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import {
-  getSanitizerCommand, getBuildExampleCommand,
+  getSanitizerCommand, getBuildExampleCommand, getBuildOpCommand,
 } from '@plugin/domain';
 import { configService } from './config-service';
-import { buildService } from './build-service';
+import { buildService, notifyBuildSucceededForSidebar } from './build-service';
 import {
   OperatorProjectType, OperatorProjectDetector,
 } from '@plugin/domain/services/operator-project-detector';
@@ -151,8 +151,5 @@ export class SanitizerService {
     }
   }
 }
-
-// Helper for importing getBuildOpCommand which is not exported by autogen-server directly in all cases or needs import
-import { getBuildOpCommand } from '@plugin/domain';
 
 export const sanitizerService = new SanitizerService();

@@ -64,7 +64,7 @@ V1 uses two overlapping systems to classify operator behavior, and this is the r
 
 **Location 3 — `getDefaultTarget` in `op-util.ts` ❌**
 
-if-else on `op_type`. Note: the `ascend` branch depends on a `runPackageMap` keyed by `op.op_name` (only 4 known package names) plus `getDetailedSystemInfo()` for CPU architecture. Adding a type requires an `else if`.
+if-else on `op_type`. Note: the `ascend` branch uses a wildcard run package target (`build_out/*.run`). Adding a type requires an `else if`.
 
 **Location 4 — `OperatorProjectDetector.detectOperatorProject()` ❌**
 
@@ -173,8 +173,8 @@ export interface IOperatorPlugin {
    * Default file paths when a new operator is first registered.
    * Replaces the if-else chain in getDefaultTarget() in op-util.ts.
    *
-   * Note: for the 'ascend' type, targetOpFile depends on a runPackageMap
-   * (keyed by op.op_name) and getDetailedSystemInfo() for CPU architecture.
+   * Note: for the 'ascend' type, targetOpFile uses wildcard `.run`
+   * (`build_out/*.run`) to match current V1 behavior.
    * This logic must be preserved in AscendPlugin.getDefaultPaths().
    */
   getDefaultPaths(op: OpRecord): OperatorDefaultPaths;
@@ -440,16 +440,8 @@ export class AscendPlugin extends AbstractOperatorPlugin implements IProjectDete
   }
 
   getDefaultPaths(op: OpRecord): OperatorDefaultPaths {
-    // Mirrors the actual V1 runPackageMap in getDefaultTarget().
-    // runPackageMap is keyed by op.op_name; the format string differs by package family.
-    const { architecture } = getDetailedSystemInfo();
-    const runPackageMap: Record<string, string> = {
-      'ops-math':        `cann-${op.op_name}-custom_linux-${architecture}.run`,
-      'ops-transformer': `cann-${op.op_name}-custom_linux-${architecture}.run`,
-      'ops-nn':          `cann-${op.op_name}-custom-linux.${architecture}.run`,
-      'ops-cv':          `cann-${op.op_name}-custom-linux.${architecture}.run`,
-    };
-    const runPackageName = runPackageMap[op.op_name]; // may be undefined for unknown packages
+    // Mirrors current V1 behavior for ascend run/deploy target.
+    const runPackageName = '*.run';
 
     return {
       opScriptPath:      path.join(op.op_path, 'build.sh'),
@@ -856,7 +848,7 @@ Create the new directory and files; no consumers change.
 
 ### Phase 2 — Implement All Plugins and Detectors
 
-- `ascend.plugin.ts` — implements `IOperatorPlugin` + `IProjectDetector` for ASCEND_C. Note: `getDefaultPaths()` must replicate the `runPackageMap` + `getDetailedSystemInfo()` logic from `op-util.ts`. `getInitialConfigScripts()` must include bisheng conditionals for all 7 script fields, including `onBoardScript` and `cpuDebugScript` (which V1 also branches on bisheng).
+- `ascend.plugin.ts` — implements `IOperatorPlugin` + `IProjectDetector` for ASCEND_C. Note: `getDefaultPaths()` must replicate the current `op-util.ts` behavior for ascend target path (`build_out/*.run`). `getInitialConfigScripts()` must include bisheng conditionals for all 7 script fields, including `onBoardScript` and `cpuDebugScript` (which V1 also branches on bisheng).
 - `cann.plugin.ts` — implements `IOperatorPlugin` only (no detection needed).
 - `pyasc.plugin.ts` — implements both.
 - `standard-custom.detector.ts` — implements `IProjectDetector` only. Must replicate **both** detection paths from V1: Path 1 (build.sh content, `'definitive'`) and Path 2 (CMakeLists + path heuristics, `'heuristic'`).
@@ -874,7 +866,7 @@ Register from `extension.ts` at startup. Verify output of `getInitialConfigScrip
 Replace `getDefaultTarget()` if-else body with `OperatorPluginRegistry.getOpPlugin(op.op_type).getDefaultPaths(op)`.
 
 **Files changed:** `domain/utils/op-util.ts` (~20 lines removed)
-**Risk:** Low. Verify ascend paths (including `runPackageMap` output for known op names), cann paths, pyasc paths.
+**Risk:** Low. Verify ascend paths (including `build_out/*.run` target), cann paths, pyasc paths.
 
 ---
 
