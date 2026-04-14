@@ -273,6 +273,7 @@
         "properties": {
           "op-devtools.environment.environmentScript": {
             "type": "string",
+            "default": "/etc/profile",
             "order": 400,
             "markdownDescription": "%config.op-devtools.environment.environmentScript.markdownDescription%"
           },

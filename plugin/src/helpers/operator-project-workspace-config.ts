@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import type { BuildConfig } from '@shared/api-types';
 
 const SECTION = 'op-devtools';
+const DEFAULT_ENVIRONMENT_SCRIPT = '/etc/profile';
 
 type InspectValue<T> =
   | {
@@ -448,7 +449,7 @@ export function getEnvironmentScriptPathFromWorkspace(): string {
   if (explicit !== undefined && String(explicit).trim() !== '') {
     return String(explicit).trim();
   }
-  const primary = cfg.get<string>('environment.environmentScript', '') ?? '';
+  const primary = cfg.get<string>('environment.environmentScript', DEFAULT_ENVIRONMENT_SCRIPT) ?? DEFAULT_ENVIRONMENT_SCRIPT;
   if (typeof primary === 'string' && primary.trim()) {
     return primary.trim();
   }
@@ -456,7 +457,7 @@ export function getEnvironmentScriptPathFromWorkspace(): string {
   if (typeof legacy === 'string' && legacy.trim()) {
     return legacy.trim();
   }
-  return '';
+  return DEFAULT_ENVIRONMENT_SCRIPT;
 }
 
 export function getEnvironmentSocVersionFromWorkspace(): string {
