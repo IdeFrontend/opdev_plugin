@@ -12,6 +12,7 @@ import { taskMethods } from '@plugin/controller/task-controller';
 import { taskMethodsV2 } from '@plugin-v2/presentation/controllers-v2';
 import { getFeatureFlag } from '@plugin/feature-flags';
 import { homeMethods } from '@plugin/controller/home-controller';
+import { getProjectByPath } from '@plugin/domain/models/project-model';
 import * as vscode from 'vscode';
 import { OperateTreeProvider, type OperateNodeId } from '../class/operate-tree-provider';
 import {
@@ -109,15 +110,16 @@ const operatorActionQueue = new OperatorActionQueueManager(async () => {
 });
 
 async function getOperatorQueueScopeKey(): Promise<string> {
-  let projectId = 'unknown';
-  try {
-    const id = await homeMethods.getProjectId();
-    if (id) {
-      projectId = String(id);
+  const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+  let projectScope = 'unknown';
+  if (workspacePath) {
+    const existingProject = getProjectByPath(workspacePath);
+    if (existingProject?.id !== undefined && existingProject.id !== null) {
+      projectScope = `id:${String(existingProject.id)}`;
+    } else {
+      const normalizedPath = workspacePath.replace(/\\/g, '/').toLowerCase();
+      projectScope = `path:${normalizedPath}`;
     }
-  }
-  catch {
-    // fall back to unknown project id
   }
 
   let selected = 'default';
@@ -131,7 +133,7 @@ async function getOperatorQueueScopeKey(): Promise<string> {
     // fall back to default operator selection
   }
 
-  return `${projectId}::${selected}`;
+  return `${projectScope}::${selected}`;
 }
 
 async function enqueueQueueableAction<P>(
