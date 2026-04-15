@@ -1,41 +1,18 @@
-# Source map files (development only)
-**/*.map
+**/*
 
-# Source files
-plugin/src/**
-web/src/**
-# Packaged tree SVGs (extension tree icons); must ship with VSIX
-!web/src/assets/**
-shared/**
-
-# Development files
-scripts/**
-.vscode/**
-.git/**
-.gitignore
-.gitattributes
-
-# Build configs
-tsconfig.json
-vite.config.ts
-web/vite.config.ts
-web/tsconfig.json
-eslint.config.mjs
-
-# Dependencies
-node_modules/**
-web/node_modules/**
-pnpm-lock.yaml
-web/pnpm-lock.yaml
-
-# Documentation
-*.md
+!out/extension.js
+!out/extension.js.map
+!out/plugin/**
+!out/web/**
+!out/templates/webview.html
+!out/templates/ops_prototype/**
+!out/templates/code_template/ascend_template/**
+!out/templates/code_template/cann_template/**
+!resources/**
+!web/resources/**
+!package.json
+!package.nls.json
+!package.nls.zh-cn.json
 !README.md
-
-# Test files
-**/*.test.ts
-**/*.spec.ts
-
-# Temp files
-.DS_Store
-*.log
+!README.en.md
+!LICENSE
