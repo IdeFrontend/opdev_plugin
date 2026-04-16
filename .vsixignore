@@ -10,6 +10,7 @@
 !out/templates/code_template/cann_template/**
 !resources/**
 !web/resources/**
+!web/src/assets/svg/**
 !package.json
 !package.nls.json
 !package.nls.zh-cn.json
