@@ -428,6 +428,11 @@ export default {
   'web.sanitizerPanel.problemType': 'Type',
   'web.sanitizerPanel.sourceFile': 'Source file',
   'web.sanitizerPanel.lineNumber': 'Line',
+  'web.sanitizerPanel.aiFix': 'AI fix',
+  'web.sanitizerPanel.fixing': 'fixing',
+  'web.sanitizerPanel.queued': 'queued',
+  'web.sanitizerPanel.connecting': 'connecting',
+  'web.sanitizerPanel.fixed': 'fixed',
 
   // web welcome panel
   'web.welcome.welcomeTitle': 'Welcome',

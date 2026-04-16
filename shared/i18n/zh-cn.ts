@@ -430,6 +430,11 @@ export default {
   'web.sanitizerPanel.problemType': '问题类型',
   'web.sanitizerPanel.sourceFile': '源码文件',
   'web.sanitizerPanel.lineNumber': '行数',
+  'web.sanitizerPanel.aiFix': 'AI 修复',
+  'web.sanitizerPanel.fixing': '修复中',
+  'web.sanitizerPanel.queued': '排队中',
+  'web.sanitizerPanel.connecting': '连接中',
+  'web.sanitizerPanel.fixed': '已修复',
 
   // web welcome panel
   'web.welcome.welcomeTitle': '欢迎使用',

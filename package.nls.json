@@ -13,6 +13,8 @@
   "config.op-devtools.sanitizer.allocUnused.markdownDescription": "Optional memory check item (effective when Memory is enabled).",
   "config.op-devtools.sanitizer.maxSingleLogFileSize.markdownDescription": "Max single log file size. Integer `1-10240`, unit `MB`. Default `1024`.",
   "config.op-devtools.sanitizer.detectionScope.markdownDescription": "Detection scope (`global` or `singleBlock`). Integer `0-200`. Before enable: memory/init/sync detect all blocks; race: inter-core all blocks, intra-core block `0`. After enable: memory/init/sync detect specified block; race: no inter-core, specified block intra-core.",
+  "config.op-devtools.sanitizer.enableMsAgentAiFix.description": "Enable msAgent AI fix for sanitizer (experimental)",
+  "config.op-devtools.sanitizer.enableMsAgentAiFix.markdownDescription": "When enabled, and the **msAgent** extension is installed, the sanitizer sidebar can offer **AI fix** actions and the latest sanitizer log is loaded into msAgent automatically after a successful run. When disabled or msAgent is missing, those controls stay hidden. msAgent is not bundled; install it separately until it is published to the Marketplace.",
   "config.op-devtools.performanceTuning.simulation.showQuickOptions.description": "Show quick options",
   "config.op-devtools.performanceTuning.simulation.showQuickOptions.markdownDescription": "When enabled, choosing **Simulation analysis** in **Actions** opens the quick options panel; start the run from the panel. When disabled, simulation runs immediately from the tree.",
   "config.op-devtools.performanceTuning.simulation.simulatorType.markdownDescription": "Simulator type. See supported types under CANN path `ascend-toolkit/latest/tools/simulator`.",

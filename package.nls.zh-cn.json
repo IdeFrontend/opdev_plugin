@@ -13,6 +13,8 @@
   "config.op-devtools.sanitizer.allocUnused.markdownDescription": "可选内存检测项（仅在启用 Memory 时生效）。",
   "config.op-devtools.sanitizer.maxSingleLogFileSize.markdownDescription": "单个日志文件最大大小。整数 `1-10240`，单位 `MB`，默认 `1024`。",
   "config.op-devtools.sanitizer.detectionScope.markdownDescription": "检测范围（`global` 或 `singleBlock`）。整数 `0-200`。启用前：内存/init/sync 检测所有 block；race：核间所有 block、核内 block `0`。启用后：内存/init/sync 检测指定 block；race：不做核间，仅检测指定 block 核内。",
+  "config.op-devtools.sanitizer.enableMsAgentAiFix.description": "启用 msAgent 异常检测 AI 修复（实验性）",
+  "config.op-devtools.sanitizer.enableMsAgentAiFix.markdownDescription": "开启且已安装 **msAgent** 扩展时，异常检测侧边栏可提供 **AI 修复** 操作，且在异常检测成功结束后会自动将最新日志加载到 msAgent。关闭或未安装 msAgent 时不显示相关入口。msAgent 未随本扩展分发，在正式发布前需单独安装。",
   "config.op-devtools.performanceTuning.simulation.showQuickOptions.description": "显示快速选项",
   "config.op-devtools.performanceTuning.simulation.showQuickOptions.markdownDescription": "开启时，在**操作**中点击**仿真分析**会打开快速选项面板，并在面板中开始运行。关闭时，从树中点击后直接运行仿真分析，不打开面板。",
   "config.op-devtools.performanceTuning.simulation.simulatorType.markdownDescription": "仿真器类型。支持类型可参考 CANN 路径 `ascend-toolkit/latest/tools/simulator`。",

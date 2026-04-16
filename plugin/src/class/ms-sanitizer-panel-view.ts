@@ -10,6 +10,13 @@ import {
   COMMAND_OPEN_MS_SANITIZER_PANEL_VIEW,
   VIEW_MS_SANITIZER,
 } from '@plugin/constants';
+import { resolveSanitizerSourceFsPath } from '@plugin/helpers/sanitizer-source-path';
+import {
+  msAgentBridgeService,
+  type MsAgentAiFixQueueSnapshot,
+  type MsAgentAiFixState,
+} from '@plugin/service/ms-agent-bridge.service';
+import { sanitizerDiagnosticsService } from '@plugin/service/sanitizer-diagnostics.service';
 
 export class MsSanitizerPanelViewProvider
 implements vscode.WebviewViewProvider {
@@ -22,6 +29,9 @@ implements vscode.WebviewViewProvider {
   private _context: vscode.ExtensionContext;
   private _apiServer: ApiServer;
   private _themeChangeDisposable: vscode.Disposable | undefined;
+  private _msAgentFixStatesPoll: ReturnType<typeof setInterval> | undefined;
+  /** In-flight sanitizer AI fix calls; used to avoid empty bulk updates clearing UI and to stop polling safely. */
+  private _pendingMsAgentFixRequests = 0;
 
   constructor(context: vscode.ExtensionContext, apiServer: ApiServer) {
     this._extensionUri = context.extensionUri;
@@ -56,6 +66,39 @@ implements vscode.WebviewViewProvider {
       async (message: any) => {
         console.log('[MsSanitizerPanelViewProvider] Received message:', message.command);
 
+        if (message.command === 'vscodeRequestMsAgentSanitizerIntegration') {
+          const available = await msAgentBridgeService.isMsAgentIntegrationAvailable();
+
+          webviewView.webview.postMessage({
+            command: 'iframeMsAgentSanitizerIntegration',
+            available,
+          });
+
+          return;
+        }
+
+        if (message.command === 'vscodeMsAgentAiFix') {
+          const inner = message.message ?? message;
+          const raw = message.index
+            ?? message.data?.index
+            ?? inner.index
+            ?? inner.data?.index;
+          const idx = typeof raw === 'number' ? raw : Number(raw);
+
+          if (Number.isInteger(idx) && idx >= 0) {
+            console.log('[MsSanitizerPanelViewProvider] AI Fix requested for index', idx);
+            void this.runMsAgentAiFixForIndex(webviewView.webview, idx);
+          }
+
+          return;
+        }
+        if (message.command === 'vscodeRequestMsAgentAiFixStates') {
+          console.log('[MsSanitizerPanelViewProvider] Explicit AI Fix state snapshot requested');
+          await this.pushMsAgentFixStatesBulk(webviewView.webview);
+
+          return;
+        }
+
         if (message.command === 'vscodeGetMsSanitizerPanelViewData') {
           // Send data for subsequent optimization. First deliver content through _view.webview.
           if (!MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams) {
@@ -77,6 +120,7 @@ implements vscode.WebviewViewProvider {
             command: 'iframeRemoteMsSanitizerPanelViewSetRenderList',
             data: panelData,
           });
+          await this.pushMsAgentFixStatesBulk(webviewView.webview);
         }
         else if (message.command === 'vscodeLoadMsSanitizerReport') {
           // When you click the report list item on the left, the report is loaded and the detection results are displayed on the right (supports direct postMessage or format forwarded via main)
@@ -98,6 +142,7 @@ implements vscode.WebviewViewProvider {
               command: 'iframeRemoteMsSanitizerPanelViewSetRenderList',
               data: panelData,
             });
+            await this.pushMsAgentFixStatesBulk(webviewView.webview);
           }
           catch (err) {
             console.error('[MsSanitizerPanelViewProvider] Failed to load report:', err);
@@ -178,6 +223,11 @@ implements vscode.WebviewViewProvider {
    * Clean up resources
    */
   public dispose() {
+    this._pendingMsAgentFixRequests = 0;
+    if (this._msAgentFixStatesPoll) {
+      clearInterval(this._msAgentFixStatesPoll);
+      this._msAgentFixStatesPoll = undefined;
+    }
     if (this._themeChangeDisposable) {
       this._themeChangeDisposable.dispose();
       this._themeChangeDisposable = undefined;
@@ -189,6 +239,97 @@ implements vscode.WebviewViewProvider {
    */
   getWebview(): vscode.Webview | undefined {
     return this._view?.webview;
+  }
+
+  private postMsAgentFixState(webview: vscode.Webview, index: number, status: string): void {
+    webview.postMessage({
+      command: 'iframeMsAgentAiFixState',
+      index,
+      status,
+    });
+  }
+
+  private async pushMsAgentFixStatesBulk(
+    webview: vscode.Webview,
+  ): Promise<MsAgentAiFixQueueSnapshot> {
+    const snapshot = await msAgentBridgeService.getAiFixQueueSnapshot();
+    const states = snapshot.states;
+    console.log('[MsSanitizerPanelViewProvider] pushMsAgentFixStatesBulk snapshot', snapshot);
+    // Empty snapshots are normal before ms-agent enqueues, or if getAiFixQueueStates is missing.
+    // Broadcasting {} would wipe optimistic per-row state in the webview; skip until the request finishes.
+    if (Object.keys(states).length === 0 && this._pendingMsAgentFixRequests > 0) {
+      return snapshot;
+    }
+    webview.postMessage({
+      command: 'iframeMsAgentAiFixStates',
+      snapshot,
+      states,
+    });
+
+    return snapshot;
+  }
+
+  private ensureMsAgentFixStatesPolling(webview: vscode.Webview): void {
+    if (this._msAgentFixStatesPoll) {
+      return;
+    }
+    this._msAgentFixStatesPoll = setInterval(() => {
+      void (async () => {
+        const states = await this.pushMsAgentFixStatesBulk(webview);
+        const hasLiveQueueStates = Object.values(states.states)
+          .some((state: MsAgentAiFixState) => state === 'queued' || state === 'running');
+        if (
+          this._pendingMsAgentFixRequests === 0
+          && !states.hasPendingTasks
+          && !hasLiveQueueStates
+          && this._msAgentFixStatesPoll
+        ) {
+          clearInterval(this._msAgentFixStatesPoll);
+          this._msAgentFixStatesPoll = undefined;
+        }
+      })();
+    }, 400);
+  }
+
+  private async runMsAgentAiFixForIndex(webview: vscode.Webview, idx: number): Promise<void> {
+    this._pendingMsAgentFixRequests++;
+    console.log('[MsSanitizerPanelViewProvider] runMsAgentAiFixForIndex start', {
+      idx,
+      pending: this._pendingMsAgentFixRequests,
+    });
+    this.postMsAgentFixState(webview, idx, 'connecting');
+    this.ensureMsAgentFixStatesPolling(webview);
+    const fixPromise = msAgentBridgeService.fixMsAgentProblem(idx, {
+      suppressProgressNotification: true,
+    });
+    setTimeout(() => {
+      void this.pushMsAgentFixStatesBulk(webview);
+    }, 0);
+    try {
+      const result = await fixPromise;
+      console.log('[MsSanitizerPanelViewProvider] runMsAgentAiFixForIndex result', {
+        idx,
+        status: result.status,
+      });
+      if (result.status === 'already_running') {
+        await this.pushMsAgentFixStatesBulk(webview);
+        this.postMsAgentFixState(webview, idx, 'queued');
+      }
+      else if (result.status === 'completed') {
+        this.postMsAgentFixState(webview, idx, 'fixed');
+      }
+      else {
+        this.postMsAgentFixState(webview, idx, result.status);
+      }
+    }
+    finally {
+      this._pendingMsAgentFixRequests--;
+      console.log('[MsSanitizerPanelViewProvider] runMsAgentAiFixForIndex done', {
+        idx,
+        pending: this._pendingMsAgentFixRequests,
+      });
+      await this.pushMsAgentFixStatesBulk(webview);
+    }
   }
 }
 
@@ -205,8 +346,19 @@ const getPanelData = (params: Record<string, any>) => {
 
   const inputContent = fs.readFileSync(params.path, 'utf-8');
   const parser = new ExceptionParser({ matchPath: workspacePath });
-  // Directly pass in the entire file content for parsing
-  const data = parser.parseAll(inputContent);
+  const data = parser.parseAll(inputContent)
+    .map((r, msAgentIndex) => {
+      const resolved = resolveSanitizerSourceFsPath(workspacePath, r.fileLink);
+
+      return {
+        ...r,
+        fileLink: resolved ?? r.fileLink,
+        msAgentIndex,
+      };
+    });
+
+  sanitizerDiagnosticsService.publishFromLogFile(params.path, workspacePath);
+  void msAgentBridgeService.tryLoadLogWithIntegration(params.path);
 
   console.log('Anomaly detection detail data:', data);
 

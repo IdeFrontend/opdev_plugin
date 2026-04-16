@@ -153,6 +153,13 @@
             "order": 208,
             "minimum": 0,
             "maximum": 200
+          },
+          "op-devtools.sanitizer.enableMsAgentAiFix": {
+            "type": "boolean",
+            "default": true,
+            "order": 209,
+            "description": "%config.op-devtools.sanitizer.enableMsAgentAiFix.description%",
+            "markdownDescription": "%config.op-devtools.sanitizer.enableMsAgentAiFix.markdownDescription%"
           }
         }
       },

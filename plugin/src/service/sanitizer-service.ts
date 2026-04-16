@@ -12,6 +12,9 @@ import { buildService, notifyBuildSucceededForSidebar } from './build-service';
 import {
   OperatorProjectType, OperatorProjectDetector,
 } from '@plugin/domain/services/operator-project-detector';
+import { getLatestSanitizerLogAbsPath } from '@plugin/helpers/sanitizer-log-path';
+import { msAgentBridgeService } from '@plugin/service/ms-agent-bridge.service';
+import { sanitizerDiagnosticsService } from '@plugin/service/sanitizer-diagnostics.service';
 
 const CONFIG_TYPES = { SANITIZER: 'sanitizer' } as const;
 
@@ -141,6 +144,15 @@ export class SanitizerService {
       }
 
       vscode.window.showInformationMessage(t('sanitizer.detectionSuccess'));
+
+      const wfAfter = vscode.workspace.workspaceFolders?.[0];
+      if (wfAfter) {
+        const logAbs = getLatestSanitizerLogAbsPath(wfAfter.uri.fsPath);
+        if (logAbs && fs.existsSync(logAbs)) {
+          sanitizerDiagnosticsService.publishFromLogFile(logAbs, wfAfter.uri.fsPath);
+          void msAgentBridgeService.tryLoadLogWithIntegration(logAbs);
+        }
+      }
 
       // After detection, focus sanitizer panel and refresh report list
       await vscode.commands.executeCommand('msSanitizerPanelView.focus');

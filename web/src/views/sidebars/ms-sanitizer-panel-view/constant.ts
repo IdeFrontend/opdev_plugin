@@ -15,6 +15,8 @@ export interface QuestionData {
   col?: number;
   // 原始数据
   originData: string;
+  /** 0-based index aligned with ms-agent logParser / fixProblem (when integration enabled). */
+  msAgentIndex?: number;
 }
 
 // 问题大类
@@ -31,6 +33,7 @@ export const memorySet = new Set([
   'out of bounds of size',
   'misaligned access of size',
   'LeakCheck: detected memory leaks',
+  'direct leak of',
   'illegal free()',
   'Unused memory',
 ]);
@@ -68,6 +71,10 @@ export const questionMap = new Map([
   ],
   [
     'LeakCheck: detected memory leaks',
+    '内存泄漏',
+  ],
+  [
+    'direct leak of',
     '内存泄漏',
   ],
   [
@@ -119,6 +126,10 @@ export const questionHandlerMap = new Map([
   ],
   [
     'LeakCheck: detected memory leaks',
+    '内存检测可以检测出Device侧的内存泄漏问题，这些问题通常是开发者没有正确释放使用AscendCL接口申请的内存导致的，由于内部存储（Local Memory）目前不存在内存分配的概念，因此内存泄漏只可能出现在GM上。通过指定命令行参数“--leak-check=yes”可以开启内存泄漏检测。',
+  ],
+  [
+    'direct leak of',
     '内存检测可以检测出Device侧的内存泄漏问题，这些问题通常是开发者没有正确释放使用AscendCL接口申请的内存导致的，由于内部存储（Local Memory）目前不存在内存分配的概念，因此内存泄漏只可能出现在GM上。通过指定命令行参数“--leak-check=yes”可以开启内存泄漏检测。',
   ],
   [

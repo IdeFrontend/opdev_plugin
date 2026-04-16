@@ -265,6 +265,47 @@ function isAscendLikeOperator(type?: OperatorProjectType): boolean {
  * Handles folder right-click menu actions
  */
 export class FolderContextMenuService {
+  private static async ensureSanitizerConfigExists(projectId: number): Promise<void> {
+    const existingConfigs = getConfig(projectId, 'sanitizer');
+
+    if (existingConfigs.length > 0) {
+      return;
+    }
+
+    const project = getProjectById(projectId);
+    const defaultConfigName = project?.project_name || `project-${projectId}`;
+    const defaultOp = defaultConfigName;
+
+    await postConfig('sanitizer', [
+      {
+        project_id: projectId,
+        user_options: {
+          op: defaultOp,
+          config_name: defaultConfigName,
+          script: '',
+          target_file: '',
+          tool: {
+            memcheck: true,
+            racecheck: false,
+            initcheck: false,
+            synccheck: false,
+          },
+          memcheckOption: {
+            'check-unused-memory': false,
+            'leak-check': false,
+            'check-device-heap': false,
+            'check-cann-heap': false,
+          },
+          logLevel: 'warn',
+          maxDebuglogSize: 1024,
+          useBlock: false,
+          blockId: null,
+          fileMapList: [],
+        },
+      },
+    ]);
+  }
+
   /**
    * Mark folder as operator project
    * 1. Only root (with build.sh --genop) is registered as standard custom and gets a project entry.
@@ -1518,7 +1559,13 @@ export class FolderContextMenuService {
       }
 
       // Get configuration
-      const configs = getConfig(Number(projectId), configType);
+      const numericProjectId = Number(projectId);
+
+      if (configType === 'sanitizer') {
+        await this.ensureSanitizerConfigExists(numericProjectId);
+      }
+
+      const configs = getConfig(numericProjectId, configType);
 
       if (configs.length === 0) {
         vscode.window.showErrorMessage(t('folderContext.noConfigFound', { type: configType === 'sanitizer' ? t('folderContext.configTypeSanitizer') : configType === 'on_board' ? t('folderContext.configTypeOnBoard') : t('folderContext.configTypeSimulation') }));

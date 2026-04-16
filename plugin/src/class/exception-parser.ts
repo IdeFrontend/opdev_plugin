@@ -449,6 +449,25 @@ export class ExceptionParser {
    * Only handle exception types defined in SUPPORTED_EXCEPTION_PATTERNS (corresponding to the keys of ignoredKeys in result.ts)
    */
   private detectExceptionStart(line: string): boolean {
+    const trimmed = line.trim();
+
+    // MemorySanitizer leak summary lines use no ERROR:/WARNING: prefix (align with ms-agent LEAK_HEADER_RE).
+    if (/^direct leak of\b/i.test(trimmed)) {
+      const questionType =
+        getQuestionTypeByExceptionName(trimmed) || 'memory';
+      const title = getChineseQuestionType(questionType);
+
+      this.currentResult = {
+        type: 'error',
+        questionType: questionType as QuestionType,
+        title,
+        exceptionName: trimmed,
+        question: trimmed,
+      };
+
+      return true;
+    }
+
     // Extract exception name
     const exceptionName = this.extractExceptionName(line);
 
@@ -550,7 +569,6 @@ export class ExceptionParser {
               !this.currentResult.fileLink
               || stackLevel > this.currentStackLevel
             ) {
-              console.log('aaaaaaaaaaaaaaa', filePath);
               this.currentResult.fileLink = fileName;
               this.currentResult.row = row;
               this.currentResult.col = col;
@@ -571,6 +589,16 @@ export class ExceptionParser {
       if (codeMatch && !this.currentResult.fileLink) {
         this.currentResult.fileLink = codeMatch[1].trim();
         this.currentResult.row = parseInt(codeMatch[2], 10);
+      }
+    }
+
+    // Leak blocks: "allocated in main.cpp:55" (ms-agent FILELINE_RE)
+    if (line.includes('allocated in') && !this.currentResult.fileLink) {
+      const allocMatch = line.match(/allocated\s+in\s+([^:(\s]+):(\d+)/);
+
+      if (allocMatch) {
+        this.currentResult.fileLink = allocMatch[1].trim();
+        this.currentResult.row = parseInt(allocMatch[2], 10);
       }
     }
   }

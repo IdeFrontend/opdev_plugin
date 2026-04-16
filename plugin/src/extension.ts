@@ -29,6 +29,7 @@ import { PermanentStorage } from './class/permanent-storage';
 import { ExtensionConfig } from './core/extension-config';
 import { RemoteConfig } from './helpers/remote-config';
 import { getMsSanitizerPanelViewProvider } from './class/ms-sanitizer-panel-view';
+import { sanitizerDiagnosticsService } from './service/sanitizer-diagnostics.service';
 import { getPerformancePanelViewProvider } from './class/performance-panel-view';
 import { getDumpTensorPanelViewProvider } from './class/dump-tensor-panel-view';
 
@@ -225,6 +226,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // Register all operator-type plugins and project-type detectors.
   // Must be called before any code that uses OperatorPluginRegistry.
   registerOperatorPlugins();
+  sanitizerDiagnosticsService.activate(context);
 
   // api interface
   const apiServer = initApiServer();
