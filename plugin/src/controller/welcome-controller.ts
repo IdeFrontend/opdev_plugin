@@ -11,7 +11,8 @@ import {
   OpenProjectParams
 } from '@shared/api-types';
 import {
-  generateStructure
+  generateStructure,
+  completeProjectConfigs
 } from '@plugin/domain';
 import { viewIdToProjectType, ensureLaunchJsonExists } from '../domain/utils/project-utils'
 import {
@@ -337,6 +338,15 @@ export const welcomeMethods = {
 
       if (existingProject) {
         console.log(`[openProject] 项目已在配置中: ${existingProject.project_name} (${existingProject.project_path})`);
+
+        // 补全配置
+        try {
+          const projectId = existingProject.id;
+          await completeProjectConfigs(projectId);
+          console.log(`[openProject] 配置补全完成`);
+        } catch (error) {
+          console.warn(`[openProject] 补全配置失败: ${error instanceof Error ? error.message : String(error)}`);
+        }
 
         if (!isFromSystem) {
           openFolderFn(params.projectPath)

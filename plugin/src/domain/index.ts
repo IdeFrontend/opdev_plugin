@@ -10,7 +10,7 @@ export {
 
 export { generateOpsPrototype } from './services/ops-prototype';
 
-export { generateStructure } from './services/ops';
+export { generateStructure, completeProjectConfigs } from './services/ops';
 
 export {
   getBuildOpCommand,

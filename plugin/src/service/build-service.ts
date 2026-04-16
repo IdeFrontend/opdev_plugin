@@ -560,7 +560,7 @@ export class BuildService {
       // 如果是标准自定义算子，需要编译 example 并添加 --simulator --soc
       if (await isRootStandardCustom()) {
         const exConfigId = await this.getBuildExampleConfigId();
-        const exampleCompileOption = `--simulator --soc=${soc_version}`;
+        const exampleCompileOption = `--simulator --soc={soc_version}`;
         const exampleBuildCommand = getBuildExampleCommand(
           Number(exConfigId),
           exampleCompileOption,

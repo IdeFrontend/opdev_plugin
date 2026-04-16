@@ -142,7 +142,8 @@ export class AscendCommandStrategy implements CommandStrategy {
     cmd.addArgument(pkg_mode);
 
     if (compileOption) {
-      cmd.addArgument(compileOption);
+    // 替换 {soc_version} 为项目配置中的 soc_version
+      cmd.addArgument(this.replaceSocVersion(compileOption, config.project_id));
     }
 
     if (advance_cmd) {

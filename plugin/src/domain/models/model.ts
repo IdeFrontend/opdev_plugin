@@ -111,6 +111,187 @@ function getExampleScript(type: string, scriptPath: string): string {
   return `bash ${scriptPath}`
 }
 
+async function createBuildOpConfig(
+  project_id: number,
+  record: OpRecord,
+  opScriptPath: string,
+  targetDir: string,
+  targetFile: string
+): Promise<void> {
+  const buildOp = {
+    project_id,
+    user_options: {
+      op: record.op_name,
+      script: record.op_type === 'ascend' ? `bash ${opScriptPath} --pkg --soc={soc_version} --vendor_name=custom` : `bash ${opScriptPath}`,
+      config_name: record.op_name,
+      target_dir: targetDir,
+      target_file: targetFile,
+      cpu_debug_script: getCpuDebugScript(record.op_type, opScriptPath),
+      npu_debug_script: getNpuDebugScript(record.op_type, opScriptPath)
+    },
+  };
+
+  console.log('generateStructure: 开始创建 build_op 配置');
+  console.log('generateStructure: build_op 配置数据:', JSON.stringify(buildOp, null, 2));
+  const buildOpResult = await configModel.postConfig('build_op', [buildOp]);
+  console.log('generateStructure: build_op 配置创建结果:', JSON.stringify(buildOpResult, null, 2));
+}
+
+async function createBuildExampleConfig(
+  project_id: number,
+  record: OpRecord,
+  exampleScriptPath: string,
+  targetDir: string,
+  targetExampleFile: string
+): Promise<void> {
+  const buildExample = {
+    project_id,
+    user_options: {
+      op: record.op_name,
+      script: getExampleScript(record.op_type, exampleScriptPath),
+      config_name: record.op_name,
+      target_dir: targetDir,
+      target_file: targetExampleFile,
+      execution_mode: 'eager'
+    },
+  };
+
+  console.log('generateStructure: 开始创建 build_example 配置');
+  console.log('generateStructure: build_example 配置数据:', JSON.stringify(buildExample, null, 2));
+  const buildExampleResult = await configModel.postConfig('build_example', [buildExample]);
+  console.log('generateStructure: build_example 配置创建结果:', JSON.stringify(buildExampleResult, null, 2));
+}
+
+async function createUtTestConfig(
+  project_id: number,
+  record: OpRecord,
+  opScriptPath: string,
+  targetDir: string,
+  targetExampleFile: string
+): Promise<void> {
+  const utTestCfg = {
+    project_id,
+    user_options: {
+      op: record.op_name,
+      script: record.op_type === 'ascend' ? `bash ${opScriptPath} --soc={soc_version} --ops={operatorNames} -u` : `bash ${opScriptPath} -u`,
+      config_name: record.op_name,
+      target_dir: targetDir,
+      target_file: targetExampleFile
+    },
+  };
+
+  console.log('generateStructure: 开始创建 ut_test 配置');
+  console.log('generateStructure: ut_test 配置数据:', JSON.stringify(utTestCfg, null, 2));
+  const utTestResult = await configModel.postConfig('ut_test', [utTestCfg]);
+  console.log('generateStructure: ut_test 配置创建结果:', JSON.stringify(utTestResult, null, 2));
+}
+
+async function createSanitizerConfig(
+  project_id: number,
+  record: OpRecord,
+  opScriptPath: string,
+  targetFile: string
+): Promise<void> {
+  const sanitizerCfg = {
+    project_id,
+    user_options: {
+      op: record.op_name,
+      script: record.op_type === 'ascend' ? `bash ${opScriptPath} --pkg --soc={soc_version} --vendor_name=custom --mssanitizer` : `bash ${opScriptPath} --mssanitizer`,
+       target_file: targetFile,
+      config_name: record.op_name,
+      tool: {
+        memcheck: true,
+        racecheck: false,
+        initcheck: false,
+        synccheck: false,
+      },
+      memcheckOption: {
+        'check-unused-memory': false,
+        'leak-check': false,
+        'check-device-heap': false,
+        'check-cann-heap': false,
+      },
+      logLevel: 'warn',
+      maxDebuglogSize: 1024,
+      useBlock: false,
+      blockId: null,
+      fileMapList: [],
+    },
+  };
+
+  console.log('generateStructure: 开始创建 sanitizer 配置');
+  console.log('generateStructure: sanitizer 配置数据:', JSON.stringify(sanitizerCfg, null, 2));
+  const sanitizerResult = await configModel.postConfig('sanitizer', [sanitizerCfg]);
+  console.log('generateStructure: sanitizer 配置创建结果:', JSON.stringify(sanitizerResult, null, 2));
+}
+
+async function createOnBoardConfig(
+  project_id: number,
+  record: OpRecord,
+  opScriptPath: string
+): Promise<void> {
+  const onBoard = {
+    project_id,
+    user_options: {
+      op: record.op_name,
+      script: getOnBoardScript(record.op_type, opScriptPath),
+      config_name: record.op_name,
+      Occupancy: true,
+      Roofline: true,
+      Source: true,
+      MemoryDetail: true,
+      ArithmeticUtilization: true,
+      L2Cache: true,
+      Memory: true,
+      MemoryL0: true,
+      MemoryUB: true,
+      PipeUtilization: true,
+      ResourceConflictRatio: true,
+      KernelScale: false,
+      downloadToLocal: true,
+      renderInPlatform: false,
+      dataStoragePath: getDefaultDirectory(),
+      advance_param: [],
+      fileMapList: [],
+    },
+  };
+
+  console.log('generateStructure: 开始创建 on_board 配置');
+  console.log('generateStructure: on_board 配置数据:', JSON.stringify(onBoard, null, 2));
+  const onBoardResult = await configModel.postConfig('on_board', [onBoard]);
+  console.log('generateStructure: on_board 配置创建结果:', JSON.stringify(onBoardResult, null, 2));
+}
+
+async function createSimulateConfig(
+  project_id: number,
+  record: OpRecord,
+  opScriptPath: string
+): Promise<void> {
+  const simulate = {
+    project_id,
+    user_options: {
+      op: record.op_name,
+      script: getSimulateScript(record.op_type, opScriptPath),
+      config_name: record.op_name,
+      soc_version: soc_version,
+      ResourceConflictRatio: true,
+      PMSampling: true,
+      downloadToLocal: true,
+      renderInPlatform: false,
+      dataStoragePath: getDefaultDirectory(),
+      simulatorType: 'Ascend910B3',
+      enableDump: false,
+      advance_param: [],
+      fileMapList: [],
+    },
+  };
+
+  console.log('generateStructure: 开始创建 simulate 配置');
+  console.log('generateStructure: simulate 配置数据:', JSON.stringify(simulate, null, 2));
+  const simulateResult = await configModel.postConfig('simulate', [simulate]);
+  console.log('generateStructure: simulate 配置创建结果:', JSON.stringify(simulateResult, null, 2));
+}
+
 function ensureStore(): OpsStore {
   const dataDir = getDataDir();
   const opsFile = getOpsFile();
@@ -341,171 +522,14 @@ export async function generateStructure(
       const targetFile = record.template_name === 'torch_library_template' 
         ? 'python ../run.py' 
         : targetOpFile;
-      const buildOp = {
-        project_id: project.id,
-        user_options: {
-          op: record.op_name,
-          script: record.op_type === 'ascend' ? `bash ${opScriptPath} --pkg --soc={soc_version} --vendor_name=custom` : `bash ${opScriptPath}`,
-          config_name: record.op_name,
-          target_dir: targetDir,
-          target_file: targetFile,
-          cpu_debug_script: getCpuDebugScript(record.op_type, opScriptPath),
-          npu_debug_script: getNpuDebugScript(record.op_type, opScriptPath)
-        },
-      };
-      const buildExample = {
-        project_id: project.id,
-        user_options: {
-          op: record.op_name,
-          script: getExampleScript(record.op_type, exampleScriptPath),
-          config_name: record.op_name,
-          target_dir: targetDir,
-          target_file: targetExampleFile,
-          execution_mode: 'eager'
-        },
-      };
 
-      // UT测试: 创建一个基础 ut_test 配置
-      const utTestCfg = {
-        project_id: project.id,
-        user_options: {
-          op: record.op_name,
-          script: record.op_type === 'ascend' ? `bash ${opScriptPath} --soc={soc_version} --ops={operatorNames} -u` : `bash ${opScriptPath} -u`,
-          config_name: record.op_name,
-          target_dir: targetDir,
-          target_file: targetExampleFile
-        },
-      };
-
-      // 调用 postConfig，确保配置创建完成
-      console.log('generateStructure: 开始创建 build_op 配置');
-      console.log('generateStructure: build_op 配置数据:', JSON.stringify(buildOp, null, 2));
-      const buildOpResult = await configModel.postConfig('build_op', [buildOp]);
-
-      console.log('generateStructure: build_op 配置创建结果:', JSON.stringify(buildOpResult, null, 2));
-
-      console.log('generateStructure: 开始创建 build_example 配置');
-      console.log('generateStructure: build_example 配置数据:', JSON.stringify(buildExample, null, 2));
-      const buildExampleResult = await configModel.postConfig('build_example', [buildExample]);
-
-      console.log('generateStructure: build_example 配置创建结果:', JSON.stringify(buildExampleResult, null, 2));
-
-      console.log('generateStructure: 开始创建 ut_test 配置');
-      console.log('generateStructure: ut_test 配置数据:', JSON.stringify(utTestCfg, null, 2));
-      const utTestResult = await configModel.postConfig('ut_test', [utTestCfg]);
-
-      console.log('generateStructure: ut_test 配置创建结果:', JSON.stringify(utTestResult, null, 2));
-
-      // Sanitizer: 创建一个基础 sanitizer 配置
-      const sanitizerCfg = {
-        project_id: project.id,
-        user_options: {
-          op: record.op_name,
-          script: record.op_type === 'ascend' ? `bash ${opScriptPath} --pkg --soc={soc_version} --vendor_name=custom --mssanitizer` : `bash ${opScriptPath} --mssanitizer`,
-           target_file: targetFile,
-          config_name: record.op_name,
-          tool: {
-            memcheck: true,
-            racecheck: false,
-            initcheck: false,
-            synccheck: false,
-          }, // 检测内容
-          memcheckOption: {
-            'check-unused-memory': false,
-            'leak-check': false,
-            'check-device-heap': false,
-            'check-cann-heap': false,
-          }, // 内存检测可选项
-          logLevel: 'warn', // 报告输出等级
-          maxDebuglogSize: 1024, // 输入日志单个文件大小上限 1 - 10240
-          useBlock: false,
-          blockId: null, // 单block检测的blockId，0 - 200
-          fileMapList: [],
-        },
-      };
-
-      console.log('generateStructure: 开始创建 sanitizer 配置');
-      console.log('generateStructure: sanitizer 配置数据:', JSON.stringify(sanitizerCfg, null, 2));
-      const sanitizerResult = await configModel.postConfig('sanitizer', [sanitizerCfg]);
-
-      console.log('generateStructure: sanitizer 配置创建结果:', JSON.stringify(sanitizerResult, null, 2));
-
-      // Opprof: 创建 on_board 和 simulate 两种配置
-      const onBoard = {
-        project_id: project.id,
-        user_options: {
-          op: record.op_name,
-          script: getOnBoardScript(record.op_type, opScriptPath),
-          config_name: record.op_name,
-          // 内存分析图 相关
-          // 核间负载分析图
-          Occupancy: true,
-          // Roofline瓶颈分析
-          Roofline: true,
-
-          // 算子代码热点图
-          Source: true,
-          // Cache热力图
-          MemoryDetail: true,
-
-          // 算子性能数据文件 相关
-          // Cube及Vector类型指令耗时和占比
-          ArithmeticUtilization: true,
-          // L2 Cache命中率
-          L2Cache: true,
-          // 内存读写带宽速率
-          Memory: true,
-          // L0读写带宽速率
-          MemoryL0: true,
-          // UB读写带宽速率
-          MemoryUB: true,
-          // 算子基础信息
-          // BasicInfo: false,
-          // 计算单元和搬运单元耗时占比
-          PipeUtilization: true,
-          // 资源冲突占比
-          ResourceConflictRatio: true,
-
-          // 使能Kernel侧制定代码段性能采集
-          KernelScale: false,
-          downloadToLocal: true,
-          renderInPlatform: false,
-          dataStoragePath: getDefaultDirectory(),
-          advance_param: [],
-          fileMapList: [],
-        },
-      };
-      const simulate = {
-        project_id: project.id,
-        user_options: {
-          op: record.op_name,
-          script: getSimulateScript(record.op_type, opScriptPath),
-          config_name: record.op_name,
-          soc_version: soc_version,
-          ResourceConflictRatio: true,
-          PMSampling: true,
-          downloadToLocal: true,
-          renderInPlatform: false,
-          // 数据存放位置默认值
-          dataStoragePath: getDefaultDirectory(),
-          simulatorType: 'Ascend910B3',
-          enableDump: false,
-          advance_param: [],
-          fileMapList: [],
-        },
-      };
-
-      console.log('generateStructure: 开始创建 on_board 配置');
-      console.log('generateStructure: on_board 配置数据:', JSON.stringify(onBoard, null, 2));
-      const onBoardResult = await configModel.postConfig('on_board', [onBoard]);
-
-      console.log('generateStructure: on_board 配置创建结果:', JSON.stringify(onBoardResult, null, 2));
-
-      console.log('generateStructure: 开始创建 simulate 配置');
-      console.log('generateStructure: simulate 配置数据:', JSON.stringify(simulate, null, 2));
-      const simulateResult = await configModel.postConfig('simulate', [simulate]);
-
-      console.log('generateStructure: simulate 配置创建结果:', JSON.stringify(simulateResult, null, 2));
+      // 调用抽取的配置创建方法
+      await createBuildOpConfig(project.id, record, opScriptPath, targetDir, targetFile);
+      await createBuildExampleConfig(project.id, record, exampleScriptPath, targetDir, targetExampleFile);
+      await createUtTestConfig(project.id, record, opScriptPath, targetDir, targetExampleFile);
+      await createSanitizerConfig(project.id, record, opScriptPath, targetFile);
+      await createOnBoardConfig(project.id, record, opScriptPath);
+      await createSimulateConfig(project.id, record, opScriptPath);
     }
   }
   catch (e) {
@@ -524,4 +548,104 @@ export async function generateStructure(
 export function _resetOpsForTest(): void {
   // helper for tests/dev: remove store
   fs.removeSync(getOpsFile());
+}
+
+/**
+ * 检查指定config_type的配置是否存在，若不存在则初始化对应的配置
+ * @param project_id 项目ID
+ * @param config_type 配置类型
+ * @param record 算子记录
+ * @param opScriptPath 算子脚本路径
+ * @param exampleScriptPath 示例脚本路径
+ * @param targetDir 目标目录
+ * @param targetFile 目标文件
+ * @param targetExampleFile 目标示例文件
+ */
+export async function ensureConfigExists(
+  project_id: number,
+  config_type: string,
+  record: OpRecord,
+  opScriptPath: string,
+  exampleScriptPath: string,
+  targetDir: string,
+  targetFile: string,
+  targetExampleFile: string
+): Promise<void> {
+  // 检查配置是否存在
+  const existingConfigs = configModel.getConfig(project_id, config_type, record.op_name);
+  
+  if (existingConfigs.length === 0) {
+    console.log(`ensureConfigExists: 配置 ${config_type} 不存在，开始初始化`);
+    
+    // 根据不同的config_type初始化对应的配置
+    switch (config_type) {
+      case 'build_op':
+        await createBuildOpConfig(project_id, record, opScriptPath, targetDir, targetFile);
+        break;
+      case 'build_example':
+        await createBuildExampleConfig(project_id, record, exampleScriptPath, targetDir, targetExampleFile);
+        break;
+      case 'ut_test':
+        await createUtTestConfig(project_id, record, opScriptPath, targetDir, targetExampleFile);
+        break;
+      case 'sanitizer':
+        await createSanitizerConfig(project_id, record, opScriptPath, targetFile);
+        break;
+      case 'on_board':
+        await createOnBoardConfig(project_id, record, opScriptPath);
+        break;
+      case 'simulate':
+        await createSimulateConfig(project_id, record, opScriptPath);
+        break;
+      default:
+        console.warn(`ensureConfigExists: 未知的配置类型 ${config_type}`);
+        break;
+    }
+  } else {
+    console.log(`ensureConfigExists: 配置 ${config_type} 已存在，跳过初始化`);
+  }
+}
+
+/**
+ * 补全项目的所有配置
+ * @param project_id 项目ID
+ */
+export async function completeProjectConfigs(project_id: number): Promise<void> {
+  try {
+    console.log(`completeProjectConfigs: 开始补全项目 ${project_id} 的配置`);
+    
+    // 获取项目下的所有算子
+    const ops = getOpsByProjectId(project_id);
+    console.log(`completeProjectConfigs: 找到 ${ops.length} 个算子`);
+    
+    for (const op of ops) {
+      console.log(`completeProjectConfigs: 为算子 ${op.op_name} 补全配置`);
+      
+      // 获取默认路径
+      const {
+        opScriptPath,
+        exampleScriptPath,
+        targetDir,
+        targetOpFile,
+        targetExampleFile,
+      } = getDefaultPath(op);
+      
+      // 确定目标文件
+      const targetFile = op.template_name === 'torch_library_template' 
+        ? 'python ../run.py' 
+        : targetOpFile;
+      
+      // 补全各种配置类型
+      await ensureConfigExists(project_id, 'build_op', op, opScriptPath, exampleScriptPath, targetDir, targetFile, targetExampleFile);
+      await ensureConfigExists(project_id, 'build_example', op, opScriptPath, exampleScriptPath, targetDir, targetFile, targetExampleFile);
+      await ensureConfigExists(project_id, 'ut_test', op, opScriptPath, exampleScriptPath, targetDir, targetFile, targetExampleFile);
+      await ensureConfigExists(project_id, 'sanitizer', op, opScriptPath, exampleScriptPath, targetDir, targetFile, targetExampleFile);
+      await ensureConfigExists(project_id, 'on_board', op, opScriptPath, exampleScriptPath, targetDir, targetFile, targetExampleFile);
+      await ensureConfigExists(project_id, 'simulate', op, opScriptPath, exampleScriptPath, targetDir, targetFile, targetExampleFile);
+    }
+    
+    console.log(`completeProjectConfigs: 项目 ${project_id} 的配置补全完成`);
+  } catch (error) {
+    console.warn(`completeProjectConfigs: 补全配置失败: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
