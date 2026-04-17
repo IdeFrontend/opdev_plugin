@@ -149,6 +149,35 @@ function refreshSocVersion() {
       console.error(`使用npu-smi命令时出错: ${e}`);
     }
 
+    // 执行兜底方案
+    try {
+      console.info('尝试使用兜底方案获取SOC版本');
+      // 找到第一个cann的set_env.sh脚本
+      const findCmd = 'find / -path "*/cann*/set_env.sh" 2>/dev/null | head -1';
+      const setEnvScript = child_process.execSync(findCmd, { encoding: 'utf8', shell: '/bin/bash' }).trim();
+      
+      if (setEnvScript) {
+        console.info(`找到set_env.sh脚本: ${setEnvScript}`);
+        // source脚本后执行asys info命令
+        const asysCmd = `source ${setEnvScript} && asys info -r=status | grep "Ascend"`;
+        const asysOutput = child_process.execSync(asysCmd, { encoding: 'utf8', shell: '/bin/bash' });
+        
+        console.info(`asys info输出: ${asysOutput}`);
+        
+        if (asysOutput.includes('Ascend 950PR_9589')) {
+          soc_version = 'ascend950';
+          console.info('通过兜底方案确定SOC版本为: ascend950');
+        } else if (asysOutput.includes('Ascend 910B3')) {
+          soc_version = 'ascend910b';
+          console.info('通过兜底方案确定SOC版本为: ascend910b');
+        }
+      } else {
+        console.error('未找到cann的set_env.sh脚本');
+      }
+    } catch (fallbackError) {
+      console.error(`执行兜底方案失败: ${fallbackError}`);
+    }
+
     return null;
   }
 }
