@@ -11,7 +11,10 @@ import {
   CreatedProjectParams,
   OpenProjectParams,
 } from '@shared/api-types';
-import { generateStructure } from '@plugin/domain';
+import {
+  generateStructure,
+  completeProjectConfigs,
+} from '@plugin/domain';
 import {
   viewIdToProjectType, ensureLaunchJsonExists,
 } from '../domain/utils/project-utils';
@@ -359,6 +362,15 @@ export const welcomeMethods = {
 
       if (existingProject) {
         console.log(`[openProject] Project already exists in config: ${existingProject.project_name} (${existingProject.project_path})`);
+
+        // Complete missing configs
+        try {
+          const projectId = existingProject.id;
+          await completeProjectConfigs(projectId);
+          console.log('[openProject] Config completion finished');
+        } catch (error) {
+          console.warn(`[openProject] Config completion failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
 
         if (!isFromSystem) {
           openFolderFn(params.projectPath);

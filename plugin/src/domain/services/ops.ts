@@ -27,3 +27,24 @@ export async function generateStructure(
 ): Promise<number> {
   return await model.generateStructure(data, extensionPath, isSkipUnZip, skipVscodeFiles);
 }
+
+export async function ensureConfigExists(
+  project_id: number,
+  config_type: string,
+  record: any,
+  opScriptPath: string,
+  exampleScriptPath: string,
+  targetDir: string,
+  targetFile: string,
+  targetExampleFile: string
+): Promise<void> {
+  return await model.ensureConfigExists(project_id, config_type, record, opScriptPath, exampleScriptPath, targetDir, targetFile, targetExampleFile);
+}
+
+export async function completeProjectConfigs(project_id: number): Promise<void> {
+  return await model.completeProjectConfigs(project_id);
+}
+
+export function getOpsByProjectId(project_id: number) {
+  return model.getOpsByProjectId(project_id);
+}

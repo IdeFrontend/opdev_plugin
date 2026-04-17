@@ -149,6 +149,35 @@ function refreshSocVersion() {
       console.error(`Error while using npu-smi command: ${e}`);
     }
 
+    // Execute fallback logic.
+    try {
+      console.info('Attempting to detect SOC version with fallback logic');
+      // Find the first CANN set_env.sh script.
+      const findCmd = 'find / -path "*/cann*/set_env.sh" 2>/dev/null | head -1';
+      const setEnvScript = child_process.execSync(findCmd, { encoding: 'utf8', shell: '/bin/bash' }).trim();
+      
+      if (setEnvScript) {
+        console.info(`Found set_env.sh script: ${setEnvScript}`);
+        // Source the script, then run `asys info`.
+        const asysCmd = `source ${setEnvScript} && asys info -r=status | grep "Ascend"`;
+        const asysOutput = child_process.execSync(asysCmd, { encoding: 'utf8', shell: '/bin/bash' });
+        
+        console.info(`asys info output: ${asysOutput}`);
+        
+        if (asysOutput.includes('Ascend 950PR_9589')) {
+          soc_version = 'ascend950';
+          console.info('Fallback detected SOC version: ascend950');
+        } else if (asysOutput.includes('Ascend 910B3')) {
+          soc_version = 'ascend910b';
+          console.info('Fallback detected SOC version: ascend910b');
+        }
+      } else {
+        console.error('No CANN set_env.sh script was found');
+      }
+    } catch (fallbackError) {
+      console.error(`Fallback execution failed: ${fallbackError}`);
+    }
+
     return null;
   }
 }

@@ -460,6 +460,209 @@ export async function generateStructure(
   return nextId;
 }
 
+function getInitialConfigScripts(
+  record: OpRecord,
+  opScriptPath: string,
+) {
+  const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? path.dirname(opScriptPath);
+
+  return OperatorPluginRegistry.getOpPlugin(record.op_type)
+    .getInitialConfigScripts(record, workspaceRoot);
+}
+
+function getConfigPayload(
+  config_type: string,
+  project_id: number,
+  record: OpRecord,
+  opScriptPath: string,
+  exampleScriptPath: string,
+  targetDir: string,
+  targetFile: string,
+  targetExampleFile: string,
+): { project_id: number;
+  user_options: Record<string, unknown> } {
+  const scripts = getInitialConfigScripts(record, opScriptPath);
+
+  switch (config_type) {
+    case 'build_op':
+      return {
+        project_id,
+        user_options: {
+          op: record.op_name,
+          script: scripts.buildScript,
+          config_name: record.op_name,
+          target_dir: targetDir,
+          target_file: targetFile,
+          cpu_debug_script: scripts.cpuDebugScript,
+          npu_debug_script: scripts.npuDebugScript,
+        },
+      };
+    case 'build_example':
+      return {
+        project_id,
+        user_options: {
+          op: record.op_name,
+          script: scripts.exampleScript,
+          config_name: record.op_name,
+          target_dir: targetDir,
+          target_file: targetExampleFile,
+          execution_mode: 'eager',
+        },
+      };
+    case 'ut_test':
+      return {
+        project_id,
+        user_options: {
+          op: record.op_name,
+          script: record.op_type === 'ascend'
+            ? `bash ${opScriptPath} --soc={soc_version} --ops={operatorNames} -u`
+            : `bash ${opScriptPath} -u`,
+          config_name: record.op_name,
+          target_dir: targetDir,
+          target_file: targetExampleFile,
+        },
+      };
+    case 'sanitizer':
+      return {
+        project_id,
+        user_options: {
+          op: record.op_name,
+          script: scripts.sanitizerScript,
+          target_file: targetFile,
+          config_name: record.op_name,
+          tool: {
+            memcheck: true,
+            racecheck: false,
+            initcheck: false,
+            synccheck: false,
+          },
+          memcheckOption: {
+            'check-unused-memory': false,
+            'leak-check': false,
+            'check-device-heap': false,
+            'check-cann-heap': false,
+          },
+          logLevel: 'warn',
+          maxDebuglogSize: 1024,
+          useBlock: false,
+          blockId: null,
+          fileMapList: [],
+        },
+      };
+    case 'on_board':
+      return {
+        project_id,
+        user_options: {
+          op: record.op_name,
+          script: scripts.onBoardScript,
+          config_name: record.op_name,
+          Occupancy: true,
+          Roofline: true,
+          Source: true,
+          MemoryDetail: true,
+          ArithmeticUtilization: true,
+          L2Cache: true,
+          Memory: true,
+          MemoryL0: true,
+          MemoryUB: true,
+          PipeUtilization: true,
+          ResourceConflictRatio: true,
+          KernelScale: false,
+          downloadToLocal: true,
+          renderInPlatform: false,
+          dataStoragePath: getDefaultDirectory(),
+          advance_param: [],
+          fileMapList: [],
+        },
+      };
+    case 'simulate':
+      return {
+        project_id,
+        user_options: {
+          op: record.op_name,
+          script: scripts.simulateScript,
+          config_name: record.op_name,
+          ResourceConflictRatio: true,
+          PMSampling: true,
+          downloadToLocal: true,
+          renderInPlatform: false,
+          dataStoragePath: getDefaultDirectory(),
+          simulatorType: 'Ascend910B3',
+          enableDump: false,
+          advance_param: [],
+          fileMapList: [],
+        },
+      };
+    default:
+      throw new Error(`unknown config type: ${config_type}`);
+  }
+}
+
+/**
+ * Ensure one config exists for an operator; create it when missing.
+ */
+export async function ensureConfigExists(
+  project_id: number,
+  config_type: string,
+  record: OpRecord,
+  opScriptPath: string,
+  exampleScriptPath: string,
+  targetDir: string,
+  targetFile: string,
+  targetExampleFile: string,
+): Promise<void> {
+  const existingConfigs = configModel.getConfig(project_id, config_type, record.op_name);
+
+  if (existingConfigs.length > 0) {
+    return;
+  }
+
+  const payload = getConfigPayload(
+    config_type,
+    project_id,
+    record,
+    opScriptPath,
+    exampleScriptPath,
+    targetDir,
+    targetFile,
+    targetExampleFile,
+  );
+
+  await configModel.postConfig(config_type, [payload]);
+}
+
+/**
+ * Fill in all missing default configs for each operator under a project.
+ */
+export async function completeProjectConfigs(project_id: number): Promise<void> {
+  try {
+    const ops = getOpsByProjectId(project_id);
+
+    for (const op of ops) {
+      const {
+        opScriptPath,
+        exampleScriptPath,
+        targetDir,
+        targetOpFile,
+        targetExampleFile,
+      } = getDefaultPath(op);
+      const targetFile = op.template_name === 'torch_library_template'
+        ? 'python ../run.py'
+        : targetOpFile;
+
+      await ensureConfigExists(project_id, 'build_op', op, opScriptPath, exampleScriptPath, targetDir, targetFile, targetExampleFile);
+      await ensureConfigExists(project_id, 'build_example', op, opScriptPath, exampleScriptPath, targetDir, targetFile, targetExampleFile);
+      await ensureConfigExists(project_id, 'ut_test', op, opScriptPath, exampleScriptPath, targetDir, targetFile, targetExampleFile);
+      await ensureConfigExists(project_id, 'sanitizer', op, opScriptPath, exampleScriptPath, targetDir, targetFile, targetExampleFile);
+      await ensureConfigExists(project_id, 'on_board', op, opScriptPath, exampleScriptPath, targetDir, targetFile, targetExampleFile);
+      await ensureConfigExists(project_id, 'simulate', op, opScriptPath, exampleScriptPath, targetDir, targetFile, targetExampleFile);
+    }
+  }
+  catch (error) {
+    console.warn(`completeProjectConfigs failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
 export function _resetOpsForTest(): void {
   // helper for tests/dev: remove store
   fs.removeSync(getOpsFile());

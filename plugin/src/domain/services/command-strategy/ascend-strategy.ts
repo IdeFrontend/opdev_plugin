@@ -104,7 +104,7 @@ export class AscendCommandStrategy implements CommandStrategy {
     const userOptions = (config.user_options as Record<string, unknown> | null | undefined) || {};
 
     let script = userOptions[scriptField] as string || '';
-    // 替换 {soc_version} 为项目配置中的 soc_version
+    // Replace {soc_version} with the project-configured soc_version
     script = this.replaceSocVersion(script, config.project_id);
 
     const cmd = new Command(script);
@@ -143,7 +143,7 @@ export class AscendCommandStrategy implements CommandStrategy {
     const op = operatorNames || '';
 
     let script = config.script || '';
-    // 替换 {soc_version} 为项目配置中的 soc_version
+    // Replace {soc_version} with the project-configured soc_version
     script = this.replaceSocVersion(script, config.project_id);
 
     const cmd = new Command(script);
@@ -153,7 +153,8 @@ export class AscendCommandStrategy implements CommandStrategy {
     cmd.addArgument(pkg_mode);
 
     if (compileOption) {
-      cmd.addArgument(compileOption);
+    // Replace {soc_version} with the project-configured soc_version
+      cmd.addArgument(this.replaceSocVersion(compileOption, config.project_id));
     }
 
     if (advance_cmd) {
@@ -167,10 +168,10 @@ export class AscendCommandStrategy implements CommandStrategy {
     const { config, sourceCannCmd, cdCmd, advance_cmd, operatorNames } = params;
 
     let script = config.script || '';
-    // 替换 {soc_version} 为项目配置中的 soc_version
+    // Replace {soc_version} with the project-configured soc_version
     script = this.replaceSocVersion(script, config.project_id);
 
-    // 替换 {operatorNames} 为传入的算子名称
+    // Replace {operatorNames} with the incoming operator names
     if (operatorNames) {
       script = script.replace('{operatorNames}', operatorNames);
     } else {
@@ -193,7 +194,7 @@ export class AscendCommandStrategy implements CommandStrategy {
     cdCmd: string,
     exampleTargetFile?: string,
   ): string {
-    // 替换 {soc_version} 为项目配置中的 soc_version
+    // Replace {soc_version} with the project-configured soc_version
     let script = config.script || '';
     script = this.replaceSocVersion(script, config.project_id);
 
