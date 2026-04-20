@@ -227,6 +227,11 @@
           case 'setUrl':
             iframe.src = message.url;
             break;
+          case 'updateTheme':
+            if (iframe.contentWindow) {
+              iframe.contentWindow.postMessage(message, '*');
+            }
+            break;
         }
 
         if (message.command.indexOf('vscode') === 0) {
