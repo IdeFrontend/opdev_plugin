@@ -6,7 +6,7 @@ import * as projectModel from './project-model';
 import * as configModel from './config-model';
 import { OpGeneratorFactory } from '@plugin/domain/services/op-generator-factory';
 import { getDefaultPath } from '@plugin/domain/utils/op-util';
-import { soc_version } from '@plugin/domain/utils/ascend-util';
+import { soc_version, emulator_type } from '@plugin/domain/utils/ascend-util';
 import {
   getDefaultDirectory,
   ensureLaunchJsonExists,
@@ -86,9 +86,9 @@ function getSimulateScript(type: string, scriptPath: string): string {
     if (checkBuildShHasBishengConfig()) {
       return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --bisheng_flags=ccec_g`
     }
-    return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --simulator Ascend910B3`
+    return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --simulator ${emulator_type}`
   }
-  return `bash ${scriptPath} --simulator Ascend910B3`
+  return `bash ${scriptPath} --simulator ${emulator_type}`
 }
 
 function getOnBoardScript(type: string, scriptPath: string): string {
@@ -279,7 +279,7 @@ async function createSimulateConfig(
       downloadToLocal: true,
       renderInPlatform: false,
       dataStoragePath: getDefaultDirectory(),
-      simulatorType: 'Ascend910B3',
+      simulatorType: emulator_type,
       enableDump: false,
       advance_param: [],
       fileMapList: [],
