@@ -73,6 +73,7 @@ export const ascend_env_script: string =
   process.env.ASCEND_ENV_SCRIPT || getDefaultAscendEnvScript();
 
 export let soc_version: string = process.env.SOC_VERSION || 'ascend910b';
+export let emulator_type: string = process.env.EMULATOR_TYPE || 'Ascend910B3'; // 仿真器类型
 
 function refreshAscendEnv() {
   try {
@@ -88,6 +89,47 @@ function refreshAscendEnv() {
 }
 
 function refreshSocVersion() {
+  // 优先执行兜底方案
+  try {
+    console.info('尝试使用兜底方案获取SOC版本');
+    // 找到第一个cann的set_env.sh脚本
+    const findCmd = 'find / -path "*/cann*/set_env.sh" 2>/dev/null | head -1';
+    const setEnvScript = child_process.execSync(findCmd, { encoding: 'utf8', shell: '/bin/bash' }).trim();
+    
+    if (setEnvScript) {
+      console.info(`找到set_env.sh脚本: ${setEnvScript}`);
+      // source脚本后执行asys info命令
+      const asysCmd = `source ${setEnvScript} && asys info -r=status | grep "Ascend"`;
+      const asysOutput = child_process.execSync(asysCmd, { encoding: 'utf8', shell: '/bin/bash' });
+      
+      console.info(`asys info输出: ${asysOutput}`);
+      if (asysOutput) {
+        emulator_type = `Ascend${(asysOutput.split('Ascend ')[1] || '').split(' ')[0] || ''}`;
+        console.info(`emulator_type: ${emulator_type}`);
+      }
+      if (asysOutput.includes('Ascend 950PR_9589')) {
+        soc_version = 'ascend950';
+        console.info('通过兜底方案确定SOC版本为: ascend950');
+      } else if (asysOutput.includes('Ascend 910B3')) {
+        soc_version = 'ascend910b';
+        console.info('通过兜底方案确定SOC版本为: ascend910b');
+      }
+      
+      // 兜底方案成功找到soc_version后返回
+      if (soc_version) {
+        console.info(`soc_version: ${soc_version}`);
+        return null;
+      }
+    } else {
+      console.error('未找到cann的set_env.sh脚本');
+    }
+  } catch (fallbackError) {
+    console.error(`执行兜底方案失败: ${fallbackError}`);
+    // 兜底方案失败，尝试使用原来的npu-smi info命令
+    console.info('兜底方案失败，尝试使用npu-smi info命令获取SOC版本');
+  }
+
+  // 兜底方案失败后，执行原来的npu-smi info命令
   try {
     // Set UTF-8 encoding using chcp 65001 on Windows to avoid garbled characters
     const isWindows = process.platform === 'win32';
@@ -176,35 +218,6 @@ function refreshSocVersion() {
       }
     } catch (fallbackError) {
       console.error(`Fallback execution failed: ${fallbackError}`);
-    }
-
-    // 执行兜底方案
-    try {
-      console.info('尝试使用兜底方案获取SOC版本');
-      // 找到第一个cann的set_env.sh脚本
-      const findCmd = 'find / -path "*/cann*/set_env.sh" 2>/dev/null | head -1';
-      const setEnvScript = child_process.execSync(findCmd, { encoding: 'utf8', shell: '/bin/bash' }).trim();
-      
-      if (setEnvScript) {
-        console.info(`找到set_env.sh脚本: ${setEnvScript}`);
-        // source脚本后执行asys info命令
-        const asysCmd = `source ${setEnvScript} && asys info -r=status | grep "Ascend"`;
-        const asysOutput = child_process.execSync(asysCmd, { encoding: 'utf8', shell: '/bin/bash' });
-        
-        console.info(`asys info输出: ${asysOutput}`);
-        
-        if (asysOutput.includes('Ascend 950PR_9589')) {
-          soc_version = 'ascend950';
-          console.info('通过兜底方案确定SOC版本为: ascend950');
-        } else if (asysOutput.includes('Ascend 910B3')) {
-          soc_version = 'ascend910b';
-          console.info('通过兜底方案确定SOC版本为: ascend910b');
-        }
-      } else {
-        console.error('未找到cann的set_env.sh脚本');
-      }
-    } catch (fallbackError) {
-      console.error(`执行兜底方案失败: ${fallbackError}`);
     }
 
     return null;
