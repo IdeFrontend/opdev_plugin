@@ -1,7 +1,7 @@
 import { ConfigType } from '../value-objects/config-type.vo';
 
 /**
- * 构建配置实体
+ * Build config entity
  */
 export class BuildConfigEntity {
   constructor(
@@ -12,7 +12,7 @@ export class BuildConfigEntity {
   ) {}
 
   /**
-   * 从原始数据创建实体
+   * Create entity from raw data
    */
   static fromRaw(data: {
     config_id: number;
@@ -35,7 +35,7 @@ export class BuildConfigEntity {
   }
 
   /**
-   * 转换为原始数据
+   * Convert to raw data
    */
   toRaw(): {
     config_id: number;
@@ -52,7 +52,7 @@ export class BuildConfigEntity {
   }
 
   /**
-   * 更新用户选项（返回新实体，保持不可变性）
+   * Update user options (returns new entity, immutable)
    */
   updateUserOptions(newOptions: Record<string, unknown>): BuildConfigEntity {
     return new BuildConfigEntity(

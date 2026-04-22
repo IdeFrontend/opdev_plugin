@@ -1,7 +1,7 @@
 import { DomainError } from '@plugin-v2/domain/shared/errors/base.error';
 
 /**
- * 构建失败错误
+ * Build failed error
  */
 export class BuildFailedError extends DomainError {
   constructor(message: string, context?: Record<string, unknown>) {
@@ -10,7 +10,7 @@ export class BuildFailedError extends DomainError {
 }
 
 /**
- * 编译选项无效错误
+ * Invalid compile option error
  */
 export class InvalidCompileOptionError extends DomainError {
   constructor(option: string, context?: Record<string, unknown>) {
@@ -22,7 +22,7 @@ export class InvalidCompileOptionError extends DomainError {
 }
 
 /**
- * 命令执行错误
+ * Command execution error
  */
 export class CommandExecutionError extends DomainError {
   constructor(
@@ -41,7 +41,7 @@ export class CommandExecutionError extends DomainError {
 }
 
 /**
- * 运行失败错误
+ * Run failed error
  */
 export class RunFailedError extends DomainError {
   constructor(message: string, context?: Record<string, unknown>) {
@@ -50,7 +50,7 @@ export class RunFailedError extends DomainError {
 }
 
 /**
- * 仿真失败错误
+ * Simulate failed error
  */
 export class SimulateFailedError extends DomainError {
   constructor(message: string, context?: Record<string, unknown>) {
@@ -59,7 +59,7 @@ export class SimulateFailedError extends DomainError {
 }
 
 /**
- * 上板失败错误
+ * On-board failed error
  */
 export class OnBoardFailedError extends DomainError {
   constructor(message: string, context?: Record<string, unknown>) {
@@ -68,7 +68,7 @@ export class OnBoardFailedError extends DomainError {
 }
 
 /**
- * 异常检测失败错误
+ * Sanitizer (anomaly detection) failed error
  */
 export class SanitizerFailedError extends DomainError {
   constructor(message: string, context?: Record<string, unknown>) {

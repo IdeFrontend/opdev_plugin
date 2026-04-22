@@ -129,9 +129,11 @@ const deleteExampleTableItem = (key) => {
 const checkStandardCustom = async () => {
   try {
     const result = await checkMultipleOperators();
+
     isStandardCustom.value = result.isStandardCustom || false;
     console.log('[config-detail] isStandardCustom:', isStandardCustom.value);
-  } catch (error) {
+  }
+  catch (error) {
     console.error('[config-detail] 获取标准自定义算子状态失败:', error);
     isStandardCustom.value = false;
   }
@@ -165,7 +167,10 @@ watch(
 );
 </script>
 <template>
-  <div class="config-detial" :class="actualTheme === 'dark' ? 'theme-dark' : 'theme-light'">
+  <div
+    class="config-detial"
+    :class="actualTheme === 'dark' ? 'theme-dark' : 'theme-light'"
+  >
     <buildConfig
       v-if="props.activeOption === 'build'"
       v-model:build-config-forme="buildConfigForme"

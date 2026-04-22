@@ -1,34 +1,19 @@
-.vscode/
-.vscode-test-web/
-# 忽略源码目录
-web/
-plugin/
-plugins/
-server/
-scripts/
-shared/
-node_modules/
+**/*
 
-# 忽略配置文件
-vite.config.ts
-tsconfig.json
-package-lock.json
-.gitignore
-.prettierrc.json
-.eslintrc.js
-.eslintignore
-eslint.config.mjs
-package.json.workspace
-pnpm-lock.yaml
-pnpm-workspace.yaml
-prettier.config.mjs
-.husky/
-.idea/
-
-# 忽略特定文件类型
-*.ts
-*.map
-
-# 显式保留的文件/目录 (用 ! 开头)
-!web/resources/
-!out/plugin/mindstudio-debug-vscode-plugin
+!out/extension.js
+!out/extension.js.map
+!out/plugin/**
+!out/web/**
+!out/templates/webview.html
+!out/templates/ops_prototype/**
+!out/templates/code_template/ascend_template/**
+!out/templates/code_template/cann_template/**
+!resources/**
+!web/resources/**
+!web/src/assets/svg/**
+!package.json
+!package.nls.json
+!package.nls.zh-cn.json
+!README.md
+!README.en.md
+!LICENSE

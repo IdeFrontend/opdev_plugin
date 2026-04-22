@@ -1,5 +1,6 @@
 import path from 'path';
 import fs from 'fs-extra';
+import { t } from 'i18next';
 import { getProjectById } from '@plugin/domain';
 
 async function generateOpsPrototypeJson(
@@ -12,15 +13,15 @@ async function generateOpsPrototypeJson(
   const projectExists = await fs.pathExists(projectDir);
 
   if (!projectExists) {
-    throw Object.assign(new Error('project dir does not exist'), { name: 'InvalidRequest' });
+    throw Object.assign(new Error(t('project.projectDirNotExist')), { name: 'InvalidRequest' });
   }
 
   let opsPath = path.join(projectDir, `${opName}.json`);
-  let t = 1;
+  let suffix = 1;
 
   while (await fs.pathExists(opsPath)) {
-    opsPath = path.join(projectDir, `${opName}_${t}.json`);
-    t += 1;
+    opsPath = path.join(projectDir, `${opName}_${suffix}.json`);
+    suffix += 1;
   }
 
   const opsPrototypeJsonPath = path.resolve(
@@ -29,8 +30,11 @@ async function generateOpsPrototypeJson(
   );
 
   if (!(await fs.pathExists(opsPrototypeJsonPath))) {
-    console.error('✗ 不存在的 ops_prototype模板');
-    throw Object.assign(new Error('✗ 不存在的 ops_prototype模板'), { name: 'InvalidRequest' });
+    console.error('✗ Non-existent ops_prototype template');
+    throw Object.assign(
+      new Error(t('project.opsPrototypeTemplateMissing', { path: opsPrototypeJsonPath })),
+      { name: 'InvalidRequest' },
+    );
   }
 
   try {
@@ -48,12 +52,12 @@ async function generateOpsPrototypeJson(
       encoding: 'utf8',
     });
 
-    console.info(`✓ 成功创建 json: ${path.basename(opsPath)}`);
+    console.info(`✓ Successfully created json: ${path.basename(opsPath)}`);
 
     return opsPath;
   }
   catch (e: unknown) {
-    console.error(`✗ 处理ops_prototype.json失败: ${e}`);
+    console.error(`✗ Failed to process ops_prototype.json: ${e}`);
     throw e;
   }
 }

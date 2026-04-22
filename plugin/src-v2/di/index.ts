@@ -2,34 +2,34 @@ import { Container } from './container';
 import { DI_TOKENS } from './tokens';
 import { ProjectManager } from '@plugin/core/project/project-manager';
 
-// 基础设施层
+// Infrastructure layer
 import { VscodeNotificationService } from '@plugin-v2/infrastructure/notification/vscode-notification.service';
 import { CommandExecutorAdapter } from '@plugin-v2/infrastructure/executors/command-executor.adapter';
 import { ConfigRepositoryImpl } from '@plugin-v2/infrastructure/repositories/config.repository.impl';
 
-// 领域层
+// Domain layer
 import { CommandGeneratorService } from '@plugin-v2/domain/operator/services/command-generator.service';
 import { BuildOrchestratorService } from '@plugin-v2/domain/operator/services/build-orchestrator.service';
 
-// 应用层
+// Application layer
 import { BuildApplicationService } from '@plugin-v2/application/services/operator/build.application';
 
-// 表现层
+// Presentation layer
 import { BuildControllerV2 } from '@plugin-v2/presentation/controllers-v2/build.controller';
 
 /**
- * 创建并配置依赖注入容器
+ * Create and configure DI container
  */
 export function createContainer(): Container {
   const container = new Container();
 
-  // 注册 ProjectManager (使用现有的单例)
+  // Register ProjectManager (use existing singleton)
   container.registerInstance(
     DI_TOKENS.ProjectManager,
     ProjectManager.getInstance(),
   );
 
-  // 注册基础设施层服务
+  // Register infrastructure layer services
   container.registerSingleton(
     DI_TOKENS.NotificationService,
     () => new VscodeNotificationService(),
@@ -48,7 +48,7 @@ export function createContainer(): Container {
     return new ConfigRepositoryImpl(projectId);
   });
 
-  // 注册领域层服务
+  // Register domain layer services
   container.registerSingleton(
     DI_TOKENS.CommandGeneratorService,
     () => new CommandGeneratorService(),
@@ -61,7 +61,7 @@ export function createContainer(): Container {
     return new BuildOrchestratorService(commandGenerator, executor);
   });
 
-  // 注册应用层服务
+  // Register application layer services
   container.registerSingleton(DI_TOKENS.BuildApplicationService, (c) => {
     const configRepo = c.get<ConfigRepositoryImpl>(DI_TOKENS.ConfigRepository);
     const buildOrchestrator = c.get<BuildOrchestratorService>(DI_TOKENS.BuildOrchestratorService);
@@ -69,7 +69,7 @@ export function createContainer(): Container {
     return new BuildApplicationService(configRepo, buildOrchestrator);
   });
 
-  // 注册表现层控制器
+  // Register presentation layer controller
   container.registerSingleton(DI_TOKENS.BuildController, (c) => {
     const buildService = c.get<BuildApplicationService>(DI_TOKENS.BuildApplicationService);
     const notification = c.get<VscodeNotificationService>(DI_TOKENS.NotificationService);
@@ -81,5 +81,5 @@ export function createContainer(): Container {
   return container;
 }
 
-// 创建全局容器实例
+// Create global container instance
 export const containerV2 = createContainer();

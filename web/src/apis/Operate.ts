@@ -81,9 +81,13 @@ export function cpuDebugConfig() {
  * 检查当前目录下是否有多个算子工程
  */
 export function checkMultipleOperators() {
-  return request.post<undefined, { 
-    hasMultiple: boolean; 
-    operators?: Array<{ id: number; name: string; path: string; isExperimental: boolean; isCompiled?: boolean }>;
+  return request.post<undefined, {
+    hasMultiple: boolean;
+    operators?: Array<{ id: number;
+      name: string;
+      path: string;
+      isExperimental: boolean;
+      isCompiled?: boolean }>;
     isStandardCustom?: boolean;
     /** 根目录为标准自定义算子时：build.sh 含 --bisheng_flags 则支持异常检测与调优 */
     supportsSanitizerAndTuning?: boolean;

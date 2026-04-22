@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-import i18next from 'i18next';
+import i18next, { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -14,6 +14,8 @@ import i18nResource from '@shared/i18n';
 import { WebviewProvider } from './class/webview-provider';
 import { handleOperatorProjectDirectoryFile } from './class/webview-message-list';
 import { CsvEditorProvider } from './class/csv-editor-provider';
+import { HomeTreeProvider } from './class/home-tree-provider';
+import { OperateTreeProvider } from './class/operate-tree-provider';
 import {
   ApiServer, type ApiGroup,
 } from './core/api-server';
@@ -21,16 +23,18 @@ import { ViewServer } from './core/view/view-server';
 import { routes } from './routes';
 import { apis } from './api-routes';
 import { homeMethods } from './controller/home-controller';
+import { taskMethods } from './controller/task-controller';
+import { configMethods } from './controller/config-controller';
 import { PermanentStorage } from './class/permanent-storage';
 import { ExtensionConfig } from './core/extension-config';
 import { RemoteConfig } from './helpers/remote-config';
-
-import { OpsOperateProvider } from './class/ops-operate-provider';
 import { getMsSanitizerPanelViewProvider } from './class/ms-sanitizer-panel-view';
+import { sanitizerDiagnosticsService } from './service/sanitizer-diagnostics.service';
 import { getPerformancePanelViewProvider } from './class/performance-panel-view';
 import { getDumpTensorPanelViewProvider } from './class/dump-tensor-panel-view';
 
 import { MindStudioPluginInstaller } from './class/mind-studio-plugin-installer';
+import { registerOperatorPlugins } from './domain/plugins';
 import {
   COMMAND_OPEN,
   COMMAND_PROJECT_SH,
@@ -45,19 +49,17 @@ import {
   COMMAND_FLASH_MS_SANITIZER_RUN_DATA,
   COMMAND_FLASH_PERFORMANCE_RUN_DATA,
   COMMAND_FLASH_DUMP_TENSOR_DATA,
-  VIEW_HOME,
   VIEW_CONFIG,
   VIEW_LINK,
   VIEW_WELCOME,
   VIEW_PROJECT_SH,
   COMMAND_SIMULATOR_OPTIONS,
-  VIEW_OPTIONS_SIMULATOR,
   COMMAND_ON_BOARD_OPTIONS,
-  VIEW_OPTIONS_ON_BOARD,
   COMMAND_SANITIZER_OPTIONS,
   VIEW_OPTIONS_SANITIZER,
+  VIEW_OPTIONS_SIMULATOR,
+  VIEW_OPTIONS_ON_BOARD,
   COMMAND_OPEN_PROJECT,
-  VIEW_OPEN_PROJECT,
   COMMAND_MARK_AS_OPERATOR_PROJECT,
   COMMAND_MARK_AS_MULTI_OPERATOR_PROJECT,
   COMMAND_UNMARK_AS_OPERATOR_PROJECT,
@@ -76,35 +78,85 @@ import {
   COMMAND_REPORT_VISUALIZATION_SIMULATION,
   COMMAND_REPORT_VISUALIZATION_PERFORMANCE,
   COMMAND_REFRESH_FOLDER_DECORATIONS,
+  COMMAND_SIDEBAR_PROJECT_CONFIG,
+  COMMAND_SIDEBAR_BUILD,
+  COMMAND_SIDEBAR_RUN,
+  COMMAND_SIDEBAR_CPU_DEBUG,
+  COMMAND_SIDEBAR_NPU_DEBUG,
+  COMMAND_SIDEBAR_SANITIZER,
+  COMMAND_SIDEBAR_ON_BOARD,
+  COMMAND_SIDEBAR_SIMULATION,
+  COMMAND_SIDEBAR_UT_TEST,
+  COMMAND_SIDEBAR_DUMP_TENSOR,
+  COMMAND_SIDEBAR_DEBUG_SETTINGS,
+  COMMAND_SIDEBAR_SANITIZER_SETTINGS,
+  COMMAND_SIDEBAR_ON_BOARD_SETTINGS,
+  COMMAND_SIDEBAR_SIMULATION_SETTINGS,
+  COMMAND_SIDEBAR_SELECT_OPERATORS,
+  COMMAND_SIDEBAR_CLEAR_SELECTED_OPERATORS,
+  COMMAND_SIDEBAR_SEARCH_OPERATORS,
+  COMMAND_SIDEBAR_CLEAR_OPERATOR_PROJECTS_SEARCH,
+  COMMAND_SIDEBAR_TOGGLE_OPERATOR,
+  COMMAND_SIDEBAR_SELECT_ALL_OPERATORS,
+  COMMAND_SIDEBAR_SELECT_ALL_COMPILED_OPERATORS,
+  COMMAND_SIDEBAR_SELECT_ALL_PREPARED_OPERATORS,
+  COMMAND_SIDEBAR_DESELECT_ALL_PREPARED_OPERATORS,
+  COMMAND_SIDEBAR_STOP_FLOW_TASK,
+  COMMAND_SIDEBAR_STOP_ALL_OPERATOR_ACTIONS,
+  COMMAND_SIDEBAR_OPEN_WELCOME,
+  COMMAND_SIDEBAR_OPEN_HELP,
 } from './constants';
 import { FolderContextMenuService } from './service/folder-context-menu-service';
+import { buildService } from './service/build-service';
+import { configService } from './service/config-service';
+import { projectService } from './service/project-service';
 import { OperatorProjectIconTheme } from './class/operator-project-icon-theme';
-import { welcomeMethods } from './controller/welcome-controller'
+import { welcomeMethods } from './controller/welcome-controller';
+import { registerSidebarContextsRefresh } from './helpers/sidebar-context-refresh';
+import {
+  dispatchStartBuild,
+  dispatchStartRun,
+  dispatchStartBuildExample,
+  dispatchRunSanitizer,
+  dispatchStartOnBoard,
+  dispatchStartSimulate,
+  dispatchStartUtTest,
+  dispatchStartDumpTensor,
+  dispatchEnqueueNativeOperatorAction,
+  dispatchGetOperatorActionQueueStatus,
+  dispatchStopOperatorAction,
+  dispatchStopAllOperatorActions,
+  dispatchStopTask,
+} from './helpers/task-method-dispatch';
+import type { QueueableActionType } from './helpers/operator-action-queue';
 
 let extensionContext: vscode.ExtensionContext | undefined;
 
 /**
- * 将文件 URI 转换为文件夹 URI
- * 如果传入的是文件夹 URI，则直接返回
- * 如果传入的是文件 URI，则返回文件所在的文件夹 URI
+ * Convert file URI to folder URI
+ * If a folder URI is passed in, it will be returned directly.
+ * If a file URI is passed in, the folder URI where the file is located is returned.
  */
 function getFolderUri(uri: vscode.Uri): vscode.Uri {
   try {
     const stat = fs.statSync(uri.fsPath);
+
     if (stat.isDirectory()) {
       return uri;
     }
-    // 如果是文件，返回文件所在的文件夹
+
+    // If it is a file, return the folder where the file is located
     return vscode.Uri.file(path.dirname(uri.fsPath));
-  } catch {
-    // 如果无法获取文件信息，假设是文件，返回父目录
+  }
+  catch {
+    // If the file information cannot be obtained, assuming it is a file, return to the parent directory
     return vscode.Uri.file(path.dirname(uri.fsPath));
   }
 }
 
 /**
- * 检查当前工作区是否存在 .vscode/devtool_config.json 文件
- * @returns 如果文件存在返回 true，否则返回 false
+ * Check whether the .vscode/devtool_config.json file exists in the current workspace
+ * @returns Returns true if the file exists, false otherwise
  */
 async function checkDevtoolConfigExists(): Promise<boolean> {
   const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -124,38 +176,25 @@ async function checkDevtoolConfigExists(): Promise<boolean> {
     return fs.existsSync(devtoolConfigPath);
   }
   catch (error) {
-    console.error('检查 devtool_config.json 文件时出错:', error);
+    console.error('Error while checking devtool_config.json file:', error);
 
     return false;
   }
 }
 
-/**
- * 关闭辅助侧边栏
- */
-const closeAuxiliaryBar = async () => {
-  try {
-    // 检查辅助侧边栏是否可见，如果可见则关闭
-    await vscode.commands.executeCommand('workbench.action.closeAuxiliaryBar');
-    console.log('已关闭辅助侧边栏');
-  }
-  catch (error) {
-    console.error('关闭辅助侧边栏时出错:', error);
-  }
-};
-
-// 注册资源选择变化监听，动态更新上下文变量
-// 在命令执行前更新上下文变量，这样菜单显示逻辑才能正确工作
+// Register resource selection change monitoring and dynamically update context variables.
+// Update context variables before command execution so menu display logic works correctly.
 const updateContextForUri = async (uri: vscode.Uri | undefined) => {
   if (!uri) {
     await vscode.commands.executeCommand('setContext', 'operatorProjectMarked', false);
     await vscode.commands.executeCommand('setContext', 'multiOperatorProjectMarked', false);
     await vscode.commands.executeCommand('setContext', 'operatorProjectType', '');
+
     return;
   }
 
   const checkResult = await FolderContextMenuService.checkIsOperatorProject(uri);
-  
+
   await vscode.commands.executeCommand(
     'setContext',
     'operatorProjectMarked',
@@ -166,7 +205,7 @@ const updateContextForUri = async (uri: vscode.Uri | undefined) => {
     'multiOperatorProjectMarked',
     checkResult.isMultiProject,
   );
-  
+
   await vscode.commands.executeCommand(
     'setContext',
     'operatorProjectType',
@@ -175,60 +214,302 @@ const updateContextForUri = async (uri: vscode.Uri | undefined) => {
 };
 
 /**
- * 插件激活入口函数
- * @param context VSCode扩展上下文
+ * Plug-in activation entry function
+ * @param context VSCode extended context
  */
 export async function activate(context: vscode.ExtensionContext) {
   extensionContext = context;
-  // 将 context 设置到全局对象以便 API 层使用
   (
     globalThis as unknown as { extensionContext: vscode.ExtensionContext }
   ).extensionContext = context;
 
-  // api接口
+  // Register all operator-type plugins and project-type detectors.
+  // Must be called before any code that uses OperatorPluginRegistry.
+  registerOperatorPlugins();
+  sanitizerDiagnosticsService.activate(context);
+
+  // api interface
   const apiServer = initApiServer();
 
-  // 初始化配置页面的Webview
+  // Initialize the Webview of the configuration page
   const configProvider = new WebviewProvider(context, apiServer);
 
-  // 注册 pluginSidebar webview provider 并添加到 subscriptions
-  const pluginSidebarDisposable = configProvider.showLeftPage(VIEW_HOME);
-
-  context.subscriptions.push(pluginSidebarDisposable);
-
-  // 国际化
+  // Internationalization (i18n)
   await initI18n();
 
-  // 检查 devtool_config.json 文件是否存在
-  const hasDevtoolConfig = await checkDevtoolConfigExists();
+  // Whether devtool_config.json exists (drives command visibility)
+  let hasDevtoolConfig = await checkDevtoolConfigExists();
 
-  console.log('文件是否存在:', hasDevtoolConfig);
-  // 设置 context 来控制命令可见性
-  await vscode.commands.executeCommand(
-    'setContext',
-    'hasDevtoolConfig',
-    hasDevtoolConfig,
-  );
+  const homeTreeProvider = new HomeTreeProvider();
+  const operateTreeProvider = new OperateTreeProvider(context.extensionUri, 'flow', context);
+  OperateTreeProvider.registerOperateFlowTreeProvider(operateTreeProvider);
+  const operatorProjectsTreeProvider = new OperateTreeProvider(context.extensionUri, 'operatorProjects', context);
 
-  // 视图
+  const syncSettingIfUnset = async (key: string, value: unknown) => {
+    if (value === undefined) {
+      return;
+    }
+    const cfg = vscode.workspace.getConfiguration('op-devtools');
+    const inspection = cfg.inspect<unknown>(key);
+    const explicitlySet = inspection
+      && (
+        inspection.workspaceFolderValue !== undefined
+        || inspection.workspaceValue !== undefined
+        || inspection.globalValue !== undefined
+      );
+    if (explicitlySet) {
+      return;
+    }
+    await cfg.update(key, value, vscode.ConfigurationTarget.Workspace);
+  };
+
+  const syncOperatorProjectWorkspaceSettings = async () => {
+    const toKeyValueMap = (raw: unknown): Record<string, string> => {
+      if (!Array.isArray(raw)) {
+        return {};
+      }
+      return raw.reduce((acc, item) => {
+        if (!item || typeof item !== 'object') {
+          return acc;
+        }
+        const row = item as Record<string, unknown>;
+        const name = row.name;
+        if (typeof name !== 'string' || name.trim().length === 0) {
+          return acc;
+        }
+        const value = row.value;
+        acc[name] = value === undefined || value === null ? '' : String(value);
+        return acc;
+      }, {} as Record<string, string>);
+    };
+
+    try {
+      const buildConfigs = await buildService.getBuildConfigsList();
+      const multiResult = await homeMethods.checkMultipleOperators();
+      const buildOp = buildConfigs.find((c) => c.config_type === 'build_op');
+      const buildExample = buildConfigs.find((c) => c.config_type === 'build_example');
+      const simulate = buildConfigs.find((c) => c.config_type === 'simulate');
+      const onBoard = buildConfigs.find((c) => c.config_type === 'on_board');
+      const utTest = buildConfigs.find((c) => (c as { config_type?: string }).config_type === 'ut_test');
+      const sanitizer = (await configService.getSanitizerConfigsList())[0];
+      const projectSH = await projectService.getProjectSH();
+      const projectSocVersion =
+        (await projectService.getProjectSocVersion()).trim() || 'ascend910b';
+
+      const buildOpOpts = (buildOp?.user_options || {}) as Record<string, unknown>;
+      const buildExampleOpts = (buildExample?.user_options || {}) as Record<string, unknown>;
+      const simulateOpts = (simulate?.user_options || {}) as Record<string, unknown>;
+      const onBoardOpts = (onBoard?.user_options || {}) as Record<string, unknown>;
+      const utTestOpts = (utTest?.user_options || {}) as Record<string, unknown>;
+      const sanitizerOpts = (sanitizer?.user_options || {}) as Record<string, unknown>;
+
+      await syncSettingIfUnset('compileAndDeploy.buildConfig.operatorNameToCompile', buildOpOpts.op);
+      await syncSettingIfUnset('compileAndDeploy.buildConfig.deployCommandOrRunCommand', buildOpOpts.target_file);
+      await syncSettingIfUnset('compileAndDeploy.buildConfig.compileCommand', buildOpOpts.script);
+      await syncSettingIfUnset('compileAndDeploy.buildConfig.cpuDebugCompileCommand', buildOpOpts.cpu_debug_script);
+      await syncSettingIfUnset('compileAndDeploy.buildConfig.npuDebugCompileCommand', buildOpOpts.npu_debug_script);
+      await syncSettingIfUnset('compileAndDeploy.buildConfig.sanitizerCompileCommand', sanitizerOpts.script);
+      await syncSettingIfUnset('compileAndDeploy.buildConfig.onBoardCompileCommand', onBoardOpts.script);
+      await syncSettingIfUnset('compileAndDeploy.buildConfig.simulationCompileCommand', simulateOpts.script);
+      await syncSettingIfUnset('compileAndDeploy.buildConfig.utTestCompileCommand', utTestOpts.script);
+
+      const shouldExposeExampleBuildConfig = Boolean(multiResult.isStandardCustom && multiResult.hasMultiple);
+      if (shouldExposeExampleBuildConfig) {
+        await syncSettingIfUnset('compileAndDeploy.exampleBuildConfig.executionMode', buildExampleOpts.execution_mode);
+        await syncSettingIfUnset('compileAndDeploy.exampleBuildConfig.runCommand', buildExampleOpts.script);
+      }
+
+      await syncSettingIfUnset('sanitizer.reportLogLevel', sanitizerOpts.logLevel);
+      await syncSettingIfUnset('sanitizer.maxSingleLogFileSize', sanitizerOpts.maxDebuglogSize);
+      const sanitizerTool = (sanitizerOpts.tool || {}) as Record<string, unknown>;
+      const sanitizerMemcheckOption = (sanitizerOpts.memcheckOption || {}) as Record<string, unknown>;
+      await syncSettingIfUnset('sanitizer.memory', sanitizerTool.memcheck);
+      await syncSettingIfUnset('sanitizer.race', sanitizerTool.racecheck);
+      await syncSettingIfUnset('sanitizer.uninitialized', sanitizerTool.initcheck);
+      await syncSettingIfUnset('sanitizer.memoryLeak', sanitizerMemcheckOption['leak-check']);
+      await syncSettingIfUnset('sanitizer.allocUnused', sanitizerMemcheckOption['check-unused-memory']);
+      const useBlock = sanitizerOpts.useBlock;
+      if (typeof useBlock === 'boolean') {
+        await syncSettingIfUnset('sanitizer.detectionScope', useBlock ? 'singleBlock' : 'global');
+      }
+      await syncSettingIfUnset('sanitizer.blockId', sanitizerOpts.blockId ?? null);
+
+      await syncSettingIfUnset('performanceTuning.simulation.simulatorType', simulateOpts.simulatorType);
+      await syncSettingIfUnset(
+        'performanceTuning.simulation.memoryThroughputWaveform',
+        simulateOpts.PMSampling,
+      );
+      await syncSettingIfUnset(
+        'performanceTuning.simulation.resourceConflictRatio',
+        simulateOpts.ResourceConflictRatio,
+      );
+      await syncSettingIfUnset(
+        'performanceTuning.simulation.parameters',
+        toKeyValueMap(simulateOpts.advance_param),
+      );
+      await syncSettingIfUnset('performanceTuning.onBoard.interCoreLoad', onBoardOpts.Occupancy);
+      await syncSettingIfUnset('performanceTuning.onBoard.roofline', onBoardOpts.Roofline);
+      await syncSettingIfUnset('performanceTuning.onBoard.operatorCodeHotspot', onBoardOpts.Source);
+      await syncSettingIfUnset('performanceTuning.onBoard.cacheHeatmap', onBoardOpts.MemoryDetail);
+      await syncSettingIfUnset(
+        'performanceTuning.onBoard.cubeAndVectorInstructionTimeAndRatio',
+        onBoardOpts.ArithmeticUtilization,
+      );
+      await syncSettingIfUnset('performanceTuning.onBoard.l2CacheHitRate', onBoardOpts.L2Cache);
+      await syncSettingIfUnset(
+        'performanceTuning.onBoard.memoryReadWriteBandwidth',
+        onBoardOpts.Memory,
+      );
+      await syncSettingIfUnset('performanceTuning.onBoard.l0ReadWriteBandwidth', onBoardOpts.MemoryL0);
+      await syncSettingIfUnset('performanceTuning.onBoard.ubReadWriteBandwidth', onBoardOpts.MemoryUB);
+      await syncSettingIfUnset(
+        'performanceTuning.onBoard.computeAndMoveUnitTimeRatio',
+        onBoardOpts.PipeUtilization,
+      );
+      await syncSettingIfUnset(
+        'performanceTuning.onBoard.resourceConflictRatio',
+        onBoardOpts.ResourceConflictRatio,
+      );
+      await syncSettingIfUnset('performanceTuning.onBoard.enableKernelCodeSegmentProfiling', onBoardOpts.KernelScale);
+      const metricKeys = [
+        'ArithmeticUtilization',
+        'L2Cache',
+        'Memory',
+        'MemoryL0',
+        'MemoryUB',
+        'PipeUtilization',
+        'ResourceConflictRatio',
+      ] as const;
+      const allMetricEnabled = metricKeys.every((key) => onBoardOpts[key] === true);
+      await syncSettingIfUnset('performanceTuning.onBoard.operatorMetrics', allMetricEnabled);
+      await syncSettingIfUnset(
+        'performanceTuning.onBoard.parameters',
+        toKeyValueMap(onBoardOpts.advance_param),
+      );
+      await syncSettingIfUnset('environment.environmentScript', projectSH);
+      await syncSettingIfUnset('environment.socVersion', projectSocVersion);
+    }
+    catch (error) {
+      console.warn('[syncOperatorProjectWorkspaceSettings] failed:', error);
+    }
+  };
+
+  const refreshSidebarContexts = async () => {
+    hasDevtoolConfig = await checkDevtoolConfigExists();
+    if (hasDevtoolConfig) {
+      await syncOperatorProjectWorkspaceSettings();
+    }
+    await vscode.commands.executeCommand('setContext', 'hasDevtoolConfig', hasDevtoolConfig);
+    await vscode.commands.executeCommand('setContext', 'opDevtools.showHomeTree', !hasDevtoolConfig);
+    await vscode.commands.executeCommand('setContext', 'opDevtools.showOperateTree', hasDevtoolConfig);
+    const { showOperatorSearch, showOperatorProjects } = await operateTreeProvider.refreshState(hasDevtoolConfig);
+    // Keep both tree views in sync.
+    await operatorProjectsTreeProvider.refreshState(hasDevtoolConfig);
+    await vscode.commands.executeCommand('setContext', 'opDevtools.showOperatorSearch', showOperatorSearch);
+    await vscode.commands.executeCommand('setContext', 'opDevtools.showOperatorProjects', showOperatorProjects);
+    await vscode.commands.executeCommand(
+      'setContext',
+      'opDevtools.operatorProjectsSearchActive',
+      operatorProjectsTreeProvider.getSearchKeyword().trim().length > 0,
+    );
+    await vscode.commands.executeCommand(
+      'setContext',
+      'opDevtools.allOperatorsSelected',
+      operatorProjectsTreeProvider.getAllOperatorsSelected(),
+    );
+    await vscode.commands.executeCommand(
+      'setContext',
+      'opDevtools.preparedAllSelected',
+      operatorProjectsTreeProvider.getPreparedAllSelected(),
+    );
+    homeTreeProvider.refresh();
+  };
+
+  const queueActionToNodeId: Record<QueueableActionType, 'sanitizer' | 'onboard' | 'simulation' | 'utTest' | 'dumpTensor'> = {
+    sanitizer: 'sanitizer',
+    onboard: 'onboard',
+    simulation: 'simulation',
+    utTest: 'utTest',
+    dumpTensor: 'dumpTensor',
+  };
+
+  const nodeIdToQueueAction: Partial<Record<string, QueueableActionType>> = {
+    sanitizer: 'sanitizer',
+    onboard: 'onboard',
+    simulation: 'simulation',
+    utTest: 'utTest',
+    dumpTensor: 'dumpTensor',
+  };
+
+  const syncNativeQueueState = async () => {
+    try {
+      const { items } = await dispatchGetOperatorActionQueueStatus();
+      await vscode.commands.executeCommand(
+        'setContext',
+        'opDevtools.operatorActionQueueStopAllVisible',
+        items.length >= 2,
+      );
+      const states: Partial<Record<'sanitizer' | 'onboard' | 'simulation' | 'utTest' | 'dumpTensor', 'queued' | 'running' | 'cancel_failed'>> = {};
+      items.forEach((item) => {
+        const nodeId = queueActionToNodeId[item.actionType];
+        if (!nodeId) {
+          return;
+        }
+        states[nodeId] = item.internalState;
+      });
+      operateTreeProvider.setQueuedFlowStates(states);
+    }
+    catch (error) {
+      console.warn('[syncNativeQueueState] failed:', error);
+      await vscode.commands.executeCommand('setContext', 'opDevtools.operatorActionQueueStopAllVisible', false);
+    }
+  };
+
+  registerSidebarContextsRefresh(refreshSidebarContexts);
+
+  await refreshSidebarContexts();
+  await syncNativeQueueState();
+
+  const queueStatusTimer = setInterval(() => {
+    void syncNativeQueueState();
+  }, 1000);
+  context.subscriptions.push({
+    dispose: () => clearInterval(queueStatusTimer),
+  });
+
+  const watchColorThemeChange = vscode.window.onDidChangeActiveColorTheme(async () => {
+    await refreshSidebarContexts();
+  });
+  context.subscriptions.push(watchColorThemeChange);
+
+  const watchOpDevtoolsEnvAndOperatorConfig = vscode.workspace.onDidChangeConfiguration(async (e) => {
+    if (
+      e.affectsConfiguration('op-devtools.environment')
+      || e.affectsConfiguration('op-devtools.operatorProject')
+    ) {
+      await projectService.syncAscendEnvScriptFromWorkspaceSettings();
+      operateTreeProvider.notifyConfigurationChanged();
+      operatorProjectsTreeProvider.notifyConfigurationChanged();
+    }
+  });
+  context.subscriptions.push(watchOpDevtoolsEnvAndOperatorConfig);
+
+  // view
   const viewServer = initViews(context, apiServer);
 
   ExtensionConfig.init(context);
   PermanentStorage.setInstance(context);
 
-  // 初始化新建算子工程的Webview
+  // Initialize the Webview of the new operator project
   const createOpsProvider = new WebviewProvider(context, apiServer);
 
-  // 初始化配置页面的Webview
+  // Initialize the Webview of the configuration page
   const configWelcomeProvider = new WebviewProvider(context, apiServer);
 
-  // 初始化环境脚本配置页面的Webview
+  // Initialize the Webview of the environment script configuration page
   const configProjectSHProvider = new WebviewProvider(context, apiServer);
 
-  // 初始化打开算子工程的Webview
-  const openProjectProvider = new WebviewProvider(context, apiServer);
-
-  // 注册新建算子工程命令
+  // Register the new operator project command
   const openCommand = vscode.commands.registerCommand(
     COMMAND_OPEN,
     async () => {
@@ -236,31 +517,31 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // 注册打开算子工程命令
+  // Register and open the operator project command (native Open Folder dialog)
   const openProjectCommand = vscode.commands.registerCommand(
     COMMAND_OPEN_PROJECT,
     async () => {
-      openProjectProvider.show(VIEW_OPEN_PROJECT);
+      await vscode.commands.executeCommand('workbench.action.files.openFolder');
     },
   );
 
-  // 注册在当前目录下新建算子工程命令
+  // Register the command to create a new operator project in the current directory
   const createOperatorInWorkspaceCommand = vscode.commands.registerCommand(
     COMMAND_CREATE_OPERATOR_IN_WORKSPACE,
     async (uri?: vscode.Uri) => {
       const workspaceFolders = vscode.workspace.workspaceFolders;
 
       if (!workspaceFolders || workspaceFolders.length === 0) {
-        vscode.window.showErrorMessage('请先打开一个工作区');
+        vscode.window.showErrorMessage(t('extension.openWorkspaceFirst'));
 
         return;
       }
 
-      // 如果提供了 uri（在文件上右键），使用该路径；否则使用工作区根目录
+      // If a uri is provided (right click on the file), use that path; otherwise use the workspace root
       const targetPath = uri ? uri.fsPath : workspaceFolders[0].uri.fsPath;
 
       await createOpsProvider.show(VIEW_LINK);
-      // 等待 webview 加载完成后发送路径
+      // Wait for the webview to finish loading and send the path
       setTimeout(() => {
         createOpsProvider.postMessage({
           command: 'iframeSetProjectPath',
@@ -270,7 +551,7 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // 打开环境变量命令
+  // Open environment variables command
   const openProjectSH = vscode.commands.registerCommand(
     COMMAND_PROJECT_SH,
     async () => {
@@ -278,13 +559,13 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // 注册打开关闭算子工作-操作命令
+  // Register open and close operator work-operation command
   const toggleOpsOperateCommand = vscode.commands.registerCommand(
     COMMAND_TOGGLE_OPS_OPERATE,
     async () => {
       try {
-        // 打开/关闭右侧辅助侧栏
-        await vscode.commands.executeCommand('workbench.action.toggleAuxiliaryBar');
+        // Keep this command as the sidebar visibility toggle for the view container
+        await vscode.commands.executeCommand('workbench.action.toggleSidebarVisibility');
       }
       catch (error) {
         console.log(error);
@@ -292,39 +573,433 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // 注册视图
-  const opsOperateProvider = new OpsOperateProvider(context, apiServer);
-  const opsOperateView = vscode.window.registerWebviewViewProvider(
-    OpsOperateProvider.viewType,
-    opsOperateProvider,
-    { webviewOptions: { retainContextWhenHidden: true } },
+  const homeTreeView = vscode.window.createTreeView('opdevtoolsHomeTree', {
+    treeDataProvider: homeTreeProvider,
+    showCollapseAll: false,
+  });
+  const operateTreeView = vscode.window.createTreeView('opdevtoolsOperateTree', {
+    treeDataProvider: operateTreeProvider,
+    showCollapseAll: false,
+  });
+  const operatorProjectsTreeView = vscode.window.createTreeView('opdevtoolsOperatorProjectsTree', {
+    treeDataProvider: operatorProjectsTreeProvider,
+    showCollapseAll: false,
+  });
+  context.subscriptions.push(homeTreeView, operateTreeView, operatorProjectsTreeView, toggleOpsOperateCommand);
+
+  const sidebarProjectConfigCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_PROJECT_CONFIG,
+    async () => vscode.commands.executeCommand(
+      'workbench.action.openWorkspaceSettings',
+      '@ext:huawei.huawei-op-devtools-vscode-plugin op-devtools',
+    ),
   );
 
-  context.subscriptions.push(opsOperateView);
-  // 注册命令（无论文件是否存在都要注册）
-  context.subscriptions.push(toggleOpsOperateCommand);
+  const getOperatorNamesFromSelection = async (): Promise<string | undefined> => {
+    return await homeMethods.getSelectedOperators();
+  };
 
-  // 根据 devtool_config.json 文件是否存在来决定展开或关闭侧边栏
+  const getCompileOptionFromSelection = async (): Promise<string | undefined> => {
+    const selectedIds = await homeMethods.getSelectedOperatorIds() || [];
+    if (selectedIds.length === 0) {
+      return undefined;
+    }
+    const multiple = await homeMethods.checkMultipleOperators();
+    if (!multiple.isStandardCustom || !multiple.operators) {
+      return undefined;
+    }
+    const selectedSet = new Set(selectedIds);
+    const hasExperimental = multiple.operators.some((op) => selectedSet.has(op.id) && op.isExperimental);
+    return hasExperimental ? '--experimental' : undefined;
+  };
+
+  const sidebarBuildCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_BUILD,
+    async () =>
+      operateTreeProvider.runFlowAction('build', async () => {
+        const operatorNames = await getOperatorNamesFromSelection();
+        await dispatchStartBuild({ operatorNames });
+      }),
+  );
+
+  const sidebarRunCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_RUN,
+    async () => {
+      await operateTreeProvider.runFlowAction('run', async () => {
+        if (operateTreeProvider.hasMultipleOperators()) {
+          const operatorNames = await getOperatorNamesFromSelection();
+          const compileOption = await getCompileOptionFromSelection();
+          const operatorType = operateTreeProvider.isStandardCustomContext() ? 'standard-custom' : undefined;
+          await dispatchStartBuildExample({ operatorNames, operatorType, compileOption });
+          return;
+        }
+        await dispatchStartRun();
+      });
+    },
+  );
+
+  // Expand or close the sidebar based on whether the devtool_config.json file exists
   if (hasDevtoolConfig) {
-    // 延迟执行，确保 UI 已就绪
+    // Delay execution to ensure UI is ready
     setTimeout(async () => {
       try {
-        console.log('文件存在执行展开：123123123132');
+        console.log('[Extension] devtool_config.json found, focusing OpsOperateProvider');
         await vscode.commands.executeCommand('OpsOperateProvider.focus');
       }
       catch (error) {
-        console.error('聚焦 OpsOperateProvider 视图时出错:', error);
+        console.warn('[Extension] Failed to focus OpsOperateProvider:', error);
       }
-    }, 1000);
+    }, 300);
   }
-  else {
-    // 如果文件不存在，关闭侧边栏
-    setTimeout(async () => {
-      await closeAuxiliaryBar();
-    }, 500);
-  }
+  const sidebarCpuDebugCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_CPU_DEBUG,
+    async () => {
+      const selectedIds = await homeMethods.getSelectedOperatorIds();
+      if (selectedIds && selectedIds.length > 1) {
+        vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
+        return;
+      }
+      await operateTreeProvider.runFlowAction('cpuDebug', async () => {
+        await taskMethods.runCpuDebug();
+      });
+    },
+  );
+  const sidebarNpuDebugCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_NPU_DEBUG,
+    async () => {
+      const selectedIds = await homeMethods.getSelectedOperatorIds();
+      if (selectedIds && selectedIds.length > 1) {
+        vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
+        return;
+      }
+      await operateTreeProvider.runFlowAction('npuDebug', async () => {
+        await taskMethods.runDebug();
+      });
+    },
+  );
+  const sidebarSanitizerCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SANITIZER,
+    async () => {
+      const selectedIds = await homeMethods.getSelectedOperatorIds();
+      if (selectedIds && selectedIds.length > 1) {
+        vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
+        return;
+      }
+      const operatorNames = await getOperatorNamesFromSelection();
+      const showQuickOptions = vscode.workspace.getConfiguration('op-devtools')
+        .get<boolean>('sanitizer.showQuickOptions', true) ?? true;
+      if (showQuickOptions) {
+        await vscode.commands.executeCommand(COMMAND_SANITIZER_OPTIONS);
+        return;
+      }
+      await operateTreeProvider.runFlowAction('sanitizer', async () => {
+        await dispatchEnqueueNativeOperatorAction('sanitizer', { operatorNames }, dispatchRunSanitizer);
+      });
+    },
+  );
+  const sidebarOnBoardCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_ON_BOARD,
+    async () => {
+      const selectedIds = await homeMethods.getSelectedOperatorIds();
+      if (selectedIds && selectedIds.length > 1) {
+        vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
+        return;
+      }
+      const operatorNames = await getOperatorNamesFromSelection();
+      const showQuickOptions = vscode.workspace.getConfiguration('op-devtools')
+        .get<boolean>('performanceTuning.onBoard.showQuickOptions', true) ?? true;
+      if (showQuickOptions) {
+        await vscode.commands.executeCommand(COMMAND_ON_BOARD_OPTIONS);
+        return;
+      }
+      await operateTreeProvider.runFlowAction('onboard', async () => {
+        const pyascCheck = await homeMethods.validatePyascForAnalysis();
+        if (!pyascCheck.valid) {
+          vscode.window.showWarningMessage(pyascCheck.message ?? t('extension.openPyFirst'));
+          return;
+        }
+        await dispatchEnqueueNativeOperatorAction('onboard', { operatorNames }, dispatchStartOnBoard);
+      });
+    },
+  );
+  const sidebarSimulationCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SIMULATION,
+    async () => {
+      const selectedIds = await homeMethods.getSelectedOperatorIds();
+      if (selectedIds && selectedIds.length > 1) {
+        vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
+        return;
+      }
+      const operatorNames = await getOperatorNamesFromSelection();
+      const showQuickOptions = vscode.workspace.getConfiguration('op-devtools')
+        .get<boolean>('performanceTuning.simulation.showQuickOptions', true) ?? true;
+      if (showQuickOptions) {
+        await vscode.commands.executeCommand(COMMAND_SIMULATOR_OPTIONS);
+        return;
+      }
+      await operateTreeProvider.runFlowAction('simulation', async () => {
+        const pyascCheck = await homeMethods.validatePyascForAnalysis();
+        if (!pyascCheck.valid) {
+          vscode.window.showWarningMessage(pyascCheck.message ?? t('extension.openPyFirst'));
+          return;
+        }
+        await dispatchEnqueueNativeOperatorAction('simulation', { operatorNames }, dispatchStartSimulate);
+      });
+    },
+  );
+  const sidebarUtTestCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_UT_TEST,
+    async () => {
+      const selectedIds = await homeMethods.getSelectedOperatorIds();
+      if (selectedIds && selectedIds.length > 1) {
+        vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
+        return;
+      }
+      const operatorNames = await getOperatorNamesFromSelection();
+      await operateTreeProvider.runFlowAction('utTest', async () => {
+        await dispatchEnqueueNativeOperatorAction('utTest', { operatorNames }, dispatchStartUtTest);
+      });
+    },
+  );
+  const sidebarDumpTensorCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_DUMP_TENSOR,
+    async () => {
+      const selectedIds = await homeMethods.getSelectedOperatorIds();
+      if (selectedIds && selectedIds.length > 1) {
+        vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
+        return;
+      }
+      const operatorNames = await getOperatorNamesFromSelection();
+      const compileOption = await getCompileOptionFromSelection();
+      await operateTreeProvider.runFlowAction('dumpTensor', async () => {
+        await dispatchEnqueueNativeOperatorAction(
+          'dumpTensor',
+          { operatorNames, compileOption },
+          dispatchStartDumpTensor,
+        );
+      });
+    },
+  );
+  const sidebarDebugSettingsCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_DEBUG_SETTINGS,
+    async () => {
+      const selectedIds = await homeMethods.getSelectedOperatorIds();
+      if (selectedIds && selectedIds.length > 1) {
+        vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
+        return;
+      }
+      await operateTreeProvider.runFlowAction(
+        'debug',
+        async () => {
+          await taskMethods.debugConfig();
+        },
+        { skipEnvironmentScriptCheck: true, skipFlowExecutionUi: true },
+      );
+    },
+  );
+  const sidebarSanitizerSettingsCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SANITIZER_SETTINGS,
+    async () => {
+      const selectedIds = await homeMethods.getSelectedOperatorIds();
+      if (selectedIds && selectedIds.length > 1) {
+        vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
+        return;
+      }
+      await operateTreeProvider.runFlowAction(
+        'sanitizer',
+        async () => {
+          await vscode.commands.executeCommand(
+            'workbench.action.openWorkspaceSettings',
+            '@ext:huawei.huawei-op-devtools-vscode-plugin op-devtools.sanitizer',
+          );
+        },
+        { skipEnvironmentScriptCheck: true, skipFlowExecutionUi: true },
+      );
+    },
+  );
+  const sidebarOnBoardSettingsCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_ON_BOARD_SETTINGS,
+    async () => {
+      const selectedIds = await homeMethods.getSelectedOperatorIds();
+      if (selectedIds && selectedIds.length > 1) {
+        vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
+        return;
+      }
+      await operateTreeProvider.runFlowAction(
+        'onboard',
+        async () => {
+          await vscode.commands.executeCommand(
+            'workbench.action.openWorkspaceSettings',
+            '@ext:huawei.huawei-op-devtools-vscode-plugin op-devtools.performanceTuning.onBoard',
+          );
+        },
+        { skipEnvironmentScriptCheck: true, skipFlowExecutionUi: true },
+      );
+    },
+  );
+  const sidebarSimulationSettingsCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SIMULATION_SETTINGS,
+    async () => {
+      const selectedIds = await homeMethods.getSelectedOperatorIds();
+      if (selectedIds && selectedIds.length > 1) {
+        vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
+        return;
+      }
+      await operateTreeProvider.runFlowAction(
+        'simulation',
+        async () => {
+          await vscode.commands.executeCommand(
+            'workbench.action.openWorkspaceSettings',
+            '@ext:huawei.huawei-op-devtools-vscode-plugin op-devtools.performanceTuning.simulation',
+          );
+        },
+        { skipEnvironmentScriptCheck: true, skipFlowExecutionUi: true },
+      );
+    },
+  );
+  const sidebarOpenWelcomeCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_OPEN_WELCOME,
+    async () => vscode.commands.executeCommand(COMMAND_WELCOME),
+  );
+  const sidebarOpenHelpCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_OPEN_HELP,
+    async () => vscode.env.openExternal(vscode.Uri.parse('https://gitcode.com/org/cann/discussions/54')),
+  );
+  const sidebarSelectOperatorsCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SELECT_OPERATORS,
+    async () => {
+      const result = await homeMethods.checkMultipleOperators();
+      if (!result.isStandardCustom || !result.operators || result.operators.length === 0) {
+        vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
+        return;
+      }
 
-  // 注册打开工程配置页命令
+      const selectedIds = await homeMethods.getSelectedOperatorIds() || [];
+      const picks = result.operators.map((op) => ({
+        label: op.name,
+        description: op.isExperimental ? 'ex' : 'normal',
+        picked: selectedIds.includes(op.id),
+        operator: op,
+      }));
+      const chosen = await vscode.window.showQuickPick(picks, {
+        canPickMany: true,
+        placeHolder: t('web.operate.pleaseSelectOperatorProject'),
+      });
+      if (!chosen) {
+        return;
+      }
+
+      const hasEx = chosen.some((item) => item.operator.isExperimental);
+      const hasNonEx = chosen.some((item) => !item.operator.isExperimental);
+      if (hasEx && hasNonEx) {
+        vscode.window.showWarningMessage(t('web.operate.singleOperatorOnly'));
+        return;
+      }
+
+      await homeMethods.setSelectedOperators({
+        operatorIds: chosen.map((item) => item.operator.id),
+      });
+      await refreshSidebarContexts();
+    },
+  );
+  const sidebarClearSelectedOperatorsCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_CLEAR_SELECTED_OPERATORS,
+    async () => {
+      await homeMethods.setSelectedOperators({ operatorIds: [] });
+      await refreshSidebarContexts();
+    },
+  );
+
+  const sidebarSearchOperatorsCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SEARCH_OPERATORS,
+    async () => {
+      const current = operatorProjectsTreeProvider.getSearchKeyword();
+      const keyword = await vscode.window.showInputBox({
+        prompt: t('web.operate.searchOperatorProject'),
+        value: current,
+        ignoreFocusOut: true,
+        placeHolder: t('web.operate.searchOperatorProject'),
+      });
+      if (keyword === undefined) {
+        return;
+      }
+
+      operatorProjectsTreeProvider.setSearchKeyword(keyword);
+      await refreshSidebarContexts();
+    },
+  );
+
+  const sidebarClearOperatorProjectsSearchCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_CLEAR_OPERATOR_PROJECTS_SEARCH,
+    async () => {
+      operatorProjectsTreeProvider.setSearchKeyword('');
+      await refreshSidebarContexts();
+    },
+  );
+
+  const sidebarToggleOperatorCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_TOGGLE_OPERATOR,
+    async (operatorId: number) => {
+      await operatorProjectsTreeProvider.toggleOperator(operatorId);
+      await refreshSidebarContexts();
+    },
+  );
+
+  const sidebarSelectAllOperatorsCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SELECT_ALL_OPERATORS,
+    async () => {
+      await operatorProjectsTreeProvider.selectAllOperators();
+      await refreshSidebarContexts();
+    },
+  );
+
+  const sidebarSelectAllCompiledOperatorsCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SELECT_ALL_COMPILED_OPERATORS,
+    async () => {
+      await operatorProjectsTreeProvider.toggleCompiledAll();
+      await refreshSidebarContexts();
+    },
+  );
+
+  const sidebarSelectAllPreparedOperatorsCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SELECT_ALL_PREPARED_OPERATORS,
+    async () => {
+      await operatorProjectsTreeProvider.togglePreparedAll();
+      await refreshSidebarContexts();
+    },
+  );
+  const sidebarDeselectAllPreparedOperatorsCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_DESELECT_ALL_PREPARED_OPERATORS,
+    async () => {
+      await operatorProjectsTreeProvider.togglePreparedAll();
+      await refreshSidebarContexts();
+    },
+  );
+  const sidebarStopFlowTaskCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_STOP_FLOW_TASK,
+    async (node?: { nodeId?: string }) => {
+      const actionType = node?.nodeId ? nodeIdToQueueAction[node.nodeId] : undefined;
+      if (actionType) {
+        await dispatchStopOperatorAction({ actionType });
+        await syncNativeQueueState();
+        return;
+      }
+      await dispatchStopTask();
+      operateTreeProvider.clearFlowExecutionState();
+      await syncNativeQueueState();
+    },
+  );
+
+  const sidebarStopAllOperatorActionsCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_STOP_ALL_OPERATOR_ACTIONS,
+    async () => {
+      await dispatchStopAllOperatorActions();
+      operateTreeProvider.clearFlowExecutionState();
+      await syncNativeQueueState();
+    },
+  );
+
+  // Register the command to open the project configuration page
   const ConfigCommand = vscode.commands.registerCommand(
     COMMAND_CONFIG,
     async () => {
@@ -332,7 +1007,7 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // 注册打开欢迎页命令
+  // Register to open the welcome page command
   const welcomeCommand = vscode.commands.registerCommand(
     COMMAND_WELCOME,
     async () => {
@@ -340,25 +1015,25 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // 注册删除欢迎页计数命令（用于手动重置）
+  // Register delete welcome page count command (for manual reset)
   const clearWelcomeCountCommand = vscode.commands.registerCommand(
     COMMAND_CLEAR_WELCOME_COUNT,
     async () => {
       await context.globalState.update('welcomeShowCount', undefined);
-      console.log('welcomeShowCount 已删除');
+      console.log('welcomeShowCount deleted');
     },
   );
 
-  // 注册清除缓存的算子工程位置命令
+  // Register the operator project location command to clear the cache
   const clearLastProjectPathCommand = vscode.commands.registerCommand(
     COMMAND_CLEAR_LAST_PROJECT_PATH,
     async () => {
       RemoteConfig.clearLastProjectPath();
-      vscode.window.showInformationMessage('已清除缓存的算子工程位置');
+      vscode.window.showInformationMessage(t('extension.clearedProjectPath'));
     },
   );
 
-  // 注册创建算子工程命令，会执行回调函数
+  // Register the command to create an operator project, and the callback function will be executed.
   const createOptionsCommand = vscode.commands.registerCommand(
     COMMAND_CREATE_DIRECTORY,
     async (
@@ -374,7 +1049,7 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // 获取home
+  // Get home
   const getHome = vscode.commands.registerCommand(
     COMMAND_GET_HOME,
     async (_data: unknown) => {
@@ -384,14 +1059,14 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const [workspaceFolder] = vscode.workspace.workspaceFolders ?? [];
 
-  console.log(workspaceFolder, '是否打开了文件夹');
+  console.log(workspaceFolder, 'Is a folder open');
 
-  // 仅在未打开任何工程/文件夹时弹出欢迎页，且在本地缓存中记录次数，最多弹出两次
+  // The welcome page will only pop up when no project/folder is open, and the number of times will be recorded in the local cache, with a maximum of two pop-ups.
   if (!workspaceFolder) {
     const welcomeShowCount =
       context.globalState.get<number>('welcomeShowCount') ?? 0;
 
-    console.log(welcomeShowCount, '打开次数');
+    console.log(welcomeShowCount, 'Open count');
 
     if (welcomeShowCount < 2) {
       vscode.commands.executeCommand(COMMAND_WELCOME);
@@ -400,23 +1075,25 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   }
 
-  // 异常检测视图（报告列表已迁入面板左侧，右侧展示对应报告检测结果）
+  // Anomaly detection view (the report list has been moved to the left side of the panel, and the corresponding report detection results are displayed on the right side)
   const {
     openMsSanitizerDisposable,
     msSanitizerPanelView,
     getMsSanitizerPanelWebview,
   } = getMsSanitizerPanelViewProvider(context, apiServer);
+
   context.subscriptions.push(msSanitizerPanelView, openMsSanitizerDisposable);
 
-  // 性能调优视图（中间面板）
+  // Performance tuning view (middle panel)
   const {
     performancePanelView,
     openPerformanceDisposable,
     getWebview: getPerformancePanelWebview,
   } = getPerformancePanelViewProvider(context, apiServer);
+
   context.subscriptions.push(performancePanelView, openPerformanceDisposable);
 
-  // DumpTensor数据视图（中间面板）
+  // DumpTensor data view (middle panel)
   const {
     dumpTensorPanelView,
     openDumpTensorDisposable,
@@ -424,35 +1101,40 @@ export async function activate(context: vscode.ExtensionContext) {
   } = getDumpTensorPanelViewProvider(context, apiServer);
   context.subscriptions.push(dumpTensorPanelView, openDumpTensorDisposable);
 
-  // 初始化'仿真分析-选择采集内容'页面的Webview（打开配置页面前做 pyasc .py 校验）
+  // Simulation / on-board quick options panels (collection picker)
   const simulatorOptionsProvider = new WebviewProvider(context, apiServer);
+  const onBoardOptionsProvider = new WebviewProvider(context, apiServer);
   const simulatorOptionsCommand = vscode.commands.registerCommand(
     COMMAND_SIMULATOR_OPTIONS,
     async () => {
       const pyascCheck = await homeMethods.validatePyascForAnalysis();
+
       if (!pyascCheck.valid) {
-        vscode.window.showWarningMessage(pyascCheck.message ?? '请先打开一个 .py 文件');
+        vscode.window.showWarningMessage(pyascCheck.message ?? t('extension.openPyFirst'));
+
         return;
       }
+
       simulatorOptionsProvider.show(VIEW_OPTIONS_SIMULATOR);
     },
   );
 
-  // 初始化'上板分析-选择采集内容'页面的Webview（打开配置页面前做 pyasc .py 校验）
-  const onBoardOptionsProvider = new WebviewProvider(context, apiServer);
   const onBoardOptionsCommand = vscode.commands.registerCommand(
     COMMAND_ON_BOARD_OPTIONS,
     async () => {
       const pyascCheck = await homeMethods.validatePyascForAnalysis();
+
       if (!pyascCheck.valid) {
-        vscode.window.showWarningMessage(pyascCheck.message ?? '请先打开一个 .py 文件');
+        vscode.window.showWarningMessage(pyascCheck.message ?? t('extension.openPyFirst'));
+
         return;
       }
+
       onBoardOptionsProvider.show(VIEW_OPTIONS_ON_BOARD);
     },
   );
 
-  // 初始化'异常检测-选择检测内容'页面的Webview
+  // Initialize the Webview of the 'Anomaly Detection-Select Detection Content' page
   const sanitizerOptionsProvider = new WebviewProvider(context, apiServer);
   const sanitizerOptionsCommand = vscode.commands.registerCommand(
     COMMAND_SANITIZER_OPTIONS,
@@ -461,7 +1143,7 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // 订阅销毁事件
+  // Subscription to destruction event
   context.subscriptions.push(apiServer);
   context.subscriptions.push(viewServer);
   context.subscriptions.push(createOptionsCommand);
@@ -472,40 +1154,69 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(welcomeCommand);
   context.subscriptions.push(clearWelcomeCountCommand);
   context.subscriptions.push(clearLastProjectPathCommand);
-  // 注意: createOptionsCommand 已在上面添加,不要重复添加
+  // Note: createOptionsCommand has been added above, do not add it again
   context.subscriptions.push(getHome);
   context.subscriptions.push(createOperatorInWorkspaceCommand);
   context.subscriptions.push(simulatorOptionsCommand);
   context.subscriptions.push(onBoardOptionsCommand);
   context.subscriptions.push(sanitizerOptionsCommand);
+  context.subscriptions.push(sidebarProjectConfigCommand);
+  context.subscriptions.push(sidebarBuildCommand);
+  context.subscriptions.push(sidebarRunCommand);
+  context.subscriptions.push(sidebarCpuDebugCommand);
+  context.subscriptions.push(sidebarNpuDebugCommand);
+  context.subscriptions.push(sidebarSanitizerCommand);
+  context.subscriptions.push(sidebarOnBoardCommand);
+  context.subscriptions.push(sidebarSimulationCommand);
+  context.subscriptions.push(sidebarUtTestCommand);
+  context.subscriptions.push(sidebarDumpTensorCommand);
+  context.subscriptions.push(sidebarDebugSettingsCommand);
+  context.subscriptions.push(sidebarSanitizerSettingsCommand);
+  context.subscriptions.push(sidebarOnBoardSettingsCommand);
+  context.subscriptions.push(sidebarSimulationSettingsCommand);
+  context.subscriptions.push(sidebarSelectOperatorsCommand);
+  context.subscriptions.push(sidebarClearSelectedOperatorsCommand);
+  context.subscriptions.push(sidebarSearchOperatorsCommand);
+  context.subscriptions.push(sidebarClearOperatorProjectsSearchCommand);
+  context.subscriptions.push(sidebarToggleOperatorCommand);
+  context.subscriptions.push(sidebarSelectAllOperatorsCommand);
+  context.subscriptions.push(sidebarSelectAllCompiledOperatorsCommand);
+  context.subscriptions.push(sidebarSelectAllPreparedOperatorsCommand);
+  context.subscriptions.push(sidebarDeselectAllPreparedOperatorsCommand);
+  context.subscriptions.push(sidebarStopFlowTaskCommand, sidebarStopAllOperatorActionsCommand);
+  context.subscriptions.push(sidebarOpenWelcomeCommand);
+  context.subscriptions.push(sidebarOpenHelpCommand);
 
-  // 初始化文件夹装饰提供者
+  // Initialize folder decoration provider
   const iconTheme = OperatorProjectIconTheme.getInstance(context);
 
-  // 注册刷新文件夹装饰的命令
+  // Register a command to refresh folder decorations
   const refreshDecorationsCommand = vscode.commands.registerCommand(
     COMMAND_REFRESH_FOLDER_DECORATIONS,
     () => {
       iconTheme.fireDecorationUpdate();
-      vscode.window.showInformationMessage('已刷新文件夹装饰，请查看左侧资源管理器');
+      vscode.window.showInformationMessage(t('extension.folderDecorationsRefreshed'));
     },
   );
+
   context.subscriptions.push(refreshDecorationsCommand);
 
-  // 注意：不在插件激活时自动检测并标记算子工程合集
-  // 只在用户明确打开项目时（link-controller.ts）才进行自动检测
+  // Note: Do not automatically detect and mark the operator project collection when the plug-in is activated.
+  // Automatic detection only occurs when the user explicitly opens the project (link-controller.ts)
 
-  // 注册文件夹右键菜单命令
+  // Register folder right-click menu command
   const markAsOperatorProjectCommand = vscode.commands.registerCommand(
     COMMAND_MARK_AS_OPERATOR_PROJECT,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹');
+        vscode.window.showErrorMessage(t('extension.rightClickFolder'));
+
         return;
       }
+
       await FolderContextMenuService.markAsOperatorProject(uri);
 
-      // 操作完成后触发装饰更新（先刷新涉及 URI，再全量刷新确保 Explorer 重绘）
+      // Trigger decoration update after the operation is completed (refresh the involved URI first, then refresh in full to ensure Explorer is redrawn)
       iconTheme.fireDecorationUpdate(uri);
       iconTheme.fireDecorationUpdate();
 
@@ -517,9 +1228,11 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_MARK_AS_MULTI_OPERATOR_PROJECT,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹');
+        vscode.window.showErrorMessage(t('extension.rightClickFolder'));
+
         return;
       }
+
       await FolderContextMenuService.markAsMultiOperatorProject(uri);
 
       iconTheme.fireDecorationUpdate(uri);
@@ -533,9 +1246,11 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_UNMARK_AS_OPERATOR_PROJECT,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹');
+        vscode.window.showErrorMessage(t('extension.rightClickFolder'));
+
         return;
       }
+
       await FolderContextMenuService.unmarkAsOperatorProject(uri);
 
       iconTheme.fireDecorationUpdate(uri);
@@ -549,9 +1264,11 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_UNMARK_AS_MULTI_OPERATOR_PROJECT,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹');
+        vscode.window.showErrorMessage(t('extension.rightClickFolder'));
+
         return;
       }
+
       await FolderContextMenuService.unmarkAsMultiOperatorProject(uri);
 
       iconTheme.fireDecorationUpdate(uri);
@@ -565,9 +1282,11 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_BUILD,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
+
         return;
       }
+
       await FolderContextMenuService.buildOperatorProject(uri);
     },
   );
@@ -576,9 +1295,11 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_RUN,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
+
         return;
       }
+
       await FolderContextMenuService.runOperatorProject(uri);
     },
   );
@@ -587,10 +1308,13 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_CPU_DEBUG,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
+
         return;
       }
+
       const folderUri = getFolderUri(uri);
+
       await FolderContextMenuService.cpuDebugOperatorProject(folderUri);
     },
   );
@@ -599,10 +1323,13 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_NPU_DEBUG,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
+
         return;
       }
+
       const folderUri = getFolderUri(uri);
+
       await FolderContextMenuService.npuDebugOperatorProject(folderUri);
     },
   );
@@ -611,10 +1338,13 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_CPU_DEBUG_CONFIG,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
+
         return;
       }
+
       const folderUri = getFolderUri(uri);
+
       await FolderContextMenuService.cpuDebugConfigOperatorProject(folderUri);
     },
   );
@@ -623,10 +1353,13 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_NPU_DEBUG_CONFIG,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
+
         return;
       }
+
       const folderUri = getFolderUri(uri);
+
       await FolderContextMenuService.npuDebugConfigOperatorProject(folderUri);
     },
   );
@@ -635,10 +1368,13 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_SANITIZER,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
+
         return;
       }
+
       const folderUri = getFolderUri(uri);
+
       await FolderContextMenuService.sanitizerOperatorProject(folderUri);
     },
   );
@@ -647,10 +1383,13 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_ON_BOARD,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
+
         return;
       }
+
       const folderUri = getFolderUri(uri);
+
       await FolderContextMenuService.onBoardOperatorProject(folderUri);
     },
   );
@@ -659,58 +1398,69 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_OPERATOR_PROJECT_SIMULATION,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
+
         return;
       }
+
       const folderUri = getFolderUri(uri);
+
       await FolderContextMenuService.simulationOperatorProject(folderUri);
     },
   );
 
-  // 报告可视化：异常检测
+  // Reporting Visualization: Anomaly Detection
   const reportVisualizationSanitizerCommand = vscode.commands.registerCommand(
     COMMAND_REPORT_VISUALIZATION_SANITIZER,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件');
+        vscode.window.showErrorMessage(t('extension.rightClickFile'));
+
         return;
       }
+
       await FolderContextMenuService.addReportToFileMapList(uri, 'sanitizer');
     },
   );
 
-  // 报告可视化：上板分析
+  // Report visualization: On-board analysis
   const reportVisualizationOnBoardCommand = vscode.commands.registerCommand(
     COMMAND_REPORT_VISUALIZATION_ON_BOARD,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
+
         return;
       }
+
       await FolderContextMenuService.addReportToFileMapList(uri, 'on_board');
     },
   );
 
-  // 报告可视化：仿真分析
+  // Report visualization: simulation analysis
   const reportVisualizationSimulationCommand = vscode.commands.registerCommand(
     COMMAND_REPORT_VISUALIZATION_SIMULATION,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
+
         return;
       }
+
       await FolderContextMenuService.addReportToFileMapList(uri, 'simulate');
     },
   );
 
-  // 报告可视化：性能调优可视化视图（复用上板分析逻辑）
+  // Report visualization: performance tuning visual view (reusing on-board analysis logic)
   const reportVisualizationPerformanceCommand = vscode.commands.registerCommand(
     COMMAND_REPORT_VISUALIZATION_PERFORMANCE,
     async (uri?: vscode.Uri) => {
       if (!uri) {
-        vscode.window.showErrorMessage('请右键点击文件夹或文件');
+        vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
+
         return;
       }
+
       await FolderContextMenuService.addReportToFileMapList(uri, 'on_board');
     },
   );
@@ -735,22 +1485,22 @@ export async function activate(context: vscode.ExtensionContext) {
     reportVisualizationPerformanceCommand,
   );
 
-  // 初始化上下文变量
+  // Initialize context variables
   await vscode.commands.executeCommand('setContext', 'operatorProjectMarked', false);
   await vscode.commands.executeCommand('setContext', 'multiOperatorProjectMarked', false);
   await vscode.commands.executeCommand('setContext', 'operatorProjectType', '');
 
-  // 注意：由于 VSCode API 限制，无法在菜单显示前更新上下文变量
-  // 菜单的 when 条件在菜单显示时评估，此时上下文变量可能不是最新的
-  // 解决方案：在命令执行时检查状态，如果不是对应的类型就静默返回
-  // 这样即使菜单显示了，也不会执行错误操作
+  // Note: Due to VSCode API limitations, context variables cannot be updated before the menu is displayed.
+  // The menu's when condition is evaluated when the menu is displayed, at which point the context variables may not be up to date.
+  // Solution: Check the status when the command is executed, and return silently if it is not of the corresponding type.
+  // In this way, even if the menu is displayed, no wrong operation will be performed.
 
-  // 监听资源管理器选择变化，动态更新上下文变量
-  // 注意：VSCode 没有直接的 API 来监听资源管理器的选择变化
-  // 我们通过在命令执行前更新上下文变量来实现
-  // 但更好的方式是使用 onDidChangeTreeData 或其他方式
+  // Monitor resource manager selection changes and dynamically update context variables
+  // Note: VSCode does not have a direct API to listen for resource manager selection changes
+  // We do this by updating the context variables before the command is executed
+  // But a better way is to use onDidChangeTreeData or other ways
 
-  // 注册 CSV 编辑器提供者
+  // Register a CSV editor provider
   const csvEditorProvider = new CsvEditorProvider();
   const csvEditorRegistration = vscode.window.registerCustomEditorProvider(
     CsvEditorProvider.viewType,
@@ -763,24 +1513,24 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(csvEditorRegistration);
 
-  // 注册打开 CSV 文件的命令
+  // Register a command to open a CSV file
   const openCsvCommand = vscode.commands.registerCommand(
     'csv-viewer.openCsv',
     async () => {
-      // 方式1：让用户选择文件
+      // Way 1: Let the user select the file
       const fileUri = await vscode.window.showOpenDialog({
         canSelectFiles: true,
         canSelectFolders: false,
         canSelectMany: false,
-        openLabel: '打开',
+        openLabel: t('common.open'),
         filters: {
-          'CSV 文件': ['csv'],
-          所有文件: ['*'],
+          [t('common.csvFile')]: ['csv'],
+          [t('common.allFiles')]: ['*'],
         },
       });
 
       if (fileUri && fileUri[0]) {
-        // 使用自定义编辑器打开文件
+        // Open the file using a custom editor
         await vscode.commands.executeCommand(
           'vscode.openWith',
           fileUri[0],
@@ -789,32 +1539,36 @@ export async function activate(context: vscode.ExtensionContext) {
       }
     },
   );
+
   context.subscriptions.push(openCsvCommand);
 
   const flashMsSanitizerRunData = vscode.commands.registerCommand(
     COMMAND_FLASH_MS_SANITIZER_RUN_DATA,
     async () => {
-      // 报告列表已迁入异常检测面板左侧，向面板下发刷新命令
+      // The report list has been moved to the left side of the anomaly detection panel, and a refresh command is issued to the panel.
       const webview = getMsSanitizerPanelWebview();
+
       webview?.postMessage({ command: 'iframeFlashMsSanitizerRunData' });
     },
   );
+
   context.subscriptions.push(flashMsSanitizerRunData);
 
   const flashPerformanceRunData = vscode.commands.registerCommand(
     COMMAND_FLASH_PERFORMANCE_RUN_DATA,
     async () => {
-      // 拿到性能调优面板的 webview，主动下发刷新命令
+      // Get the webview of the performance tuning panel and proactively issue a refresh command
       const webview = getPerformancePanelWebview();
+
       webview?.postMessage({ command: 'iframeRefreshData' });
     },
   );
+
   context.subscriptions.push(flashPerformanceRunData);
 
   const flashDumpTensorData = vscode.commands.registerCommand(
     COMMAND_FLASH_DUMP_TENSOR_DATA,
     async () => {
-      // 拿到DumpTensor面板的webview，主动下发刷新命令
       const webview = getDumpTensorPanelWebview();
       if (webview) {
         webview.postMessage({ command: 'dumpTensorRefreshData' });
@@ -823,9 +1577,9 @@ export async function activate(context: vscode.ExtensionContext) {
       }
     },
   );
+
   context.subscriptions.push(flashDumpTensorData);
 
-  // 注册导入DumpTensor .bin文件命令
   const importDumpTensorBinFileCommand = vscode.commands.registerCommand(
     'huawei-op-devtools.importDumpTensorBinFile',
     async (uri) => {
@@ -835,46 +1589,147 @@ export async function activate(context: vscode.ExtensionContext) {
           await buildService.importDumpTensorBinFile(uri.fsPath);
         }
       } catch (error) {
-        console.error('导入DumpTensor .bin文件失败:', error);
-        vscode.window.showErrorMessage('导入DumpTensor .bin文件失败');
+        console.error('Failed to import DumpTensor .bin file:', error);
+        vscode.window.showErrorMessage(t('extension.importDumpTensorBinFailed'));
       }
     },
   );
   context.subscriptions.push(importDumpTensorBinFileCommand);
 
-  // 工作区变化监听
+  // Workspace folder change listener
   const watchWorkSpaceFolderChange =
     vscode.workspace.onDidChangeWorkspaceFolders(async () => {
-      console.log('工作区变化', vscode.workspace.workspaceFolders)
+      console.log('Workspace changed', vscode.workspace.workspaceFolders);
       vscode.commands.executeCommand(COMMAND_FLASH_MS_SANITIZER_RUN_DATA);
       vscode.commands.executeCommand(COMMAND_FLASH_PERFORMANCE_RUN_DATA);
       vscode.commands.executeCommand(COMMAND_FLASH_DUMP_TENSOR_DATA);
-      
-      // 检测工作区中的算子工程
+
+      // Detect operator projects in the workspace
       const workspaceFolders = vscode.workspace.workspaceFolders;
+
       if (workspaceFolders && workspaceFolders.length > 0) {
         const { WorkspaceDetectorService } = await import('./service/workspace-detector-service.js');
-        
+
         for (const folder of workspaceFolders) {
-          await WorkspaceDetectorService.detectAndRegisterWorkspace(folder.uri.fsPath).catch((error) => {
-            console.error('检测工作区算子工程失败:', error);
-          });
+          await WorkspaceDetectorService.detectAndRegisterWorkspace(folder.uri.fsPath)
+            .catch((error) => {
+              console.error('Failed to detect workspace operator project:', error);
+            });
         }
       }
     });
 
   context.subscriptions.push(watchWorkSpaceFolderChange);
 
-  // 插件激活时检测当前工作区
+  let isSyncingOnBoardOperatorMetrics = false;
+  const onBoardOperatorMetricsSync = vscode.workspace.onDidChangeConfiguration(async (event) => {
+    if (isSyncingOnBoardOperatorMetrics) {
+      return;
+    }
+    if (!event.affectsConfiguration('op-devtools.performanceTuning.onBoard.operatorMetrics')) {
+      return;
+    }
+
+    const cfg = vscode.workspace.getConfiguration('op-devtools');
+    const debugEnabled = cfg.get<boolean>('debugMode') === true;
+
+    const parentKey = 'performanceTuning.onBoard.operatorMetrics';
+    const parentInspect = cfg.inspect<boolean>(parentKey);
+    const desired = cfg.get<boolean>(parentKey);
+
+    if (typeof desired !== 'boolean') {
+      if (debugEnabled) {
+        console.log('[onBoardOperatorMetricsSync] skip: desired is not boolean', desired);
+      }
+      return;
+    }
+
+    const metricKeys = [
+      'performanceTuning.onBoard.cubeAndVectorInstructionTimeAndRatio',
+      'performanceTuning.onBoard.l2CacheHitRate',
+      'performanceTuning.onBoard.memoryReadWriteBandwidth',
+      'performanceTuning.onBoard.l0ReadWriteBandwidth',
+      'performanceTuning.onBoard.ubReadWriteBandwidth',
+      'performanceTuning.onBoard.computeAndMoveUnitTimeRatio',
+      'performanceTuning.onBoard.resourceConflictRatio',
+    ];
+
+    const applyForWorkspace = async () => {
+      await Promise.all(
+        metricKeys.map((k) => cfg.update(k, desired, vscode.ConfigurationTarget.Workspace)),
+      );
+    };
+
+    const applyForGlobal = async () => {
+      await Promise.all(
+        metricKeys.map((k) => cfg.update(k, desired, vscode.ConfigurationTarget.Global)),
+      );
+    };
+
+    const applyForAllFolders = async () => {
+      const folders = vscode.workspace.workspaceFolders || [];
+      await Promise.all(
+        folders.map(async (folder) => {
+          const folderCfg = vscode.workspace.getConfiguration('op-devtools', folder.uri);
+          await Promise.all(
+            metricKeys.map((k) => folderCfg.update(k, desired, vscode.ConfigurationTarget.WorkspaceFolder)),
+          );
+        }),
+      );
+    };
+
+    isSyncingOnBoardOperatorMetrics = true;
+    try {
+      if (debugEnabled) {
+        console.log('[onBoardOperatorMetricsSync] desired:', desired, 'inspect:', parentInspect);
+      }
+
+      const wroteAnyExplicitScope = Boolean(
+        typeof parentInspect?.workspaceFolderValue === 'boolean'
+        || typeof parentInspect?.workspaceValue === 'boolean'
+        || typeof parentInspect?.globalValue === 'boolean',
+      );
+
+      // If user explicitly set parent at certain scopes, update children in those scopes too.
+      if (typeof parentInspect?.workspaceFolderValue === 'boolean') {
+        await applyForAllFolders();
+      }
+      if (typeof parentInspect?.workspaceValue === 'boolean') {
+        await applyForWorkspace();
+      }
+      if (typeof parentInspect?.globalValue === 'boolean') {
+        await applyForGlobal();
+      }
+
+      // Always ensure workspace has the value too, so Settings UI reflects immediately even
+      // when parent scope is ambiguous.
+      if (!wroteAnyExplicitScope || typeof parentInspect?.workspaceValue !== 'boolean') {
+        await applyForWorkspace();
+      }
+    } catch (error) {
+      console.warn('[onBoardOperatorMetricsSync] failed:', error);
+    } finally {
+      isSyncingOnBoardOperatorMetrics = false;
+    }
+  });
+  context.subscriptions.push(onBoardOperatorMetricsSync);
+
+  const devtoolConfigWatcher = vscode.workspace.createFileSystemWatcher('**/.vscode/devtool_config.json');
+  const watchDevtoolConfigCreate = devtoolConfigWatcher.onDidCreate(async () => refreshSidebarContexts());
+  const watchDevtoolConfigChange = devtoolConfigWatcher.onDidChange(async () => refreshSidebarContexts());
+  const watchDevtoolConfigDelete = devtoolConfigWatcher.onDidDelete(async () => refreshSidebarContexts());
+  context.subscriptions.push(devtoolConfigWatcher, watchDevtoolConfigCreate, watchDevtoolConfigChange, watchDevtoolConfigDelete);
+
+  // Detect current workspace when plugin is activated
   if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
-    // 延迟执行，确保插件完全初始化
+    // Delay execution to ensure the plugin is fully initialized
     setTimeout(async () => {
-      welcomeMethods.openProject({ projectPath: vscode.workspace.workspaceFolders![0].uri.fsPath }, true)
+      welcomeMethods.openProject({ projectPath: vscode.workspace.workspaceFolders![0].uri.fsPath }, true);
     }, 2000);
   }
 
-  console.log('激活', vscode.workspace.workspaceFolders);
-  console.log('🧠 MindStudio 插件加载器已激活。');
+  console.log('Activate', vscode.workspace.workspaceFolders);
+  console.log('🧠 MindStudio plugin loader activated.');
   const installer = new MindStudioPluginInstaller(context, {
     pluginId: 'ascend.mindstudio-debug-vscode-plugin',
     vsixRelativePath:
@@ -883,31 +1738,32 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   await installer.installIfNeeded();
-  console.log('执行了', context);
+  console.log('Executed', context);
 }
 
 /**
- * 国际化
+ * internationalization
  */
 async function initI18n() {
   await i18next.init({
     resources: i18nResource,
-    lng: vscode.env.language,
+    lng: vscode.env.language.toLowerCase(),
+    fallbackLng: 'en',
     interpolation: { escapeValue: false },
   });
 }
 
 /**
- * 接口
+ * interface
  */
 function initApiServer() {
   return new ApiServer(apis as ApiGroup);
 }
 
 /**
- * 视图
- * @param context 扩展上下文
- * @param apiServer api服务
+ * view
+ * @param context extended context
+ * @param apiServer api service
  */
 function initViews(
   context: vscode.ExtensionContext,
@@ -927,7 +1783,7 @@ function initViews(
 
 export function deactivate() {
   if (extensionContext) {
-    // 卸载/禁用扩展时清空欢迎页弹出计数
+    // Clear welcome page popup count when uninstalling/disabling extensions
     extensionContext.globalState.update('welcomeShowCount', undefined);
   }
 }

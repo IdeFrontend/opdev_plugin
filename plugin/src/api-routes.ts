@@ -11,52 +11,38 @@ import { sanitizerViewMethods } from './controller/sanitizer-controller';
 import { homeMethods } from './controller/home-controller';
 import { performanceMethods } from './controller/performance-data-controller';
 import { navigationController } from './controller/navigation-controller';
+import {
+  dispatchStartBuild,
+  dispatchStartRun,
+  dispatchStartBuildExample,
+  dispatchStartDumpTensor,
+  dispatchStartUtTest,
+  dispatchStopTask,
+  dispatchOnBoard,
+  dispatchSimulator,
+  dispatchSanitizer,
+} from './helpers/task-method-dispatch';
 
-// V2 版本控制器
-import { taskMethodsV2 } from '../src-v2/presentation/controllers-v2';
-import { getFeatureFlag } from './feature-flags';
-
-// 聚合 ops 命名空间下的所有方法
-// 通过 Feature Flags 动态选择 v1 或 v2 实现
+// Aggregate all methods under the ops namespace
+// Dynamically select v1 or v2 through Feature Flags
 const opsMethods = {
   ...welcomeMethods, // init, createOps, createOpsByPrototype
 
-  // 构建相关 - 支持 v1/v2 切换
-  startBuild: getFeatureFlag('USE_V2_BUILD')
-    ? taskMethodsV2.startBuild
-    : taskMethods.startBuild,
+  // Build related - support v1/v2 switching
+  startBuild: dispatchStartBuild,
+  startRun: dispatchStartRun,
+  startBuildExample: dispatchStartBuildExample,
 
-  startRun: getFeatureFlag('USE_V2_RUN')
-    ? taskMethodsV2.startRun
-    : taskMethods.startRun,
+  // Emulation - supports v1/v2 switching (webview "Start now" uses same flow row UI as the tree)
+  startSimulate: dispatchSimulator,
 
-  startBuildExample: getFeatureFlag('USE_V2_BUILD_EXAMPLE')
-    ? taskMethodsV2.startBuildExample
-    : taskMethods.startBuildExample,
+  // On-board - supports v1/v2 switching
+  startOnBoard: dispatchOnBoard,
 
-  // 仿真 - 支持 v1/v2 切换
-  startSimulate: getFeatureFlag('USE_V2_SIMULATE')
-    ? taskMethodsV2.startSimulate
-    : taskMethods.startSimulate,
+  // StopTask - shared V1/V2 dispatch
+  stopTask: dispatchStopTask,
 
-  // 上板 - 支持 v1/v2 切换
-  startOnBoard: getFeatureFlag('USE_V2_ON_BOARD')
-    ? taskMethodsV2.startOnBoard
-    : taskMethods.startOnBoard,
-
-  // 停止任务 - 如果任意 V2 功能启用,使用 V2 版本的 stopTask
-  stopTask: (
-    getFeatureFlag('USE_V2_BUILD') ||
-    getFeatureFlag('USE_V2_RUN') ||
-    getFeatureFlag('USE_V2_BUILD_EXAMPLE') ||
-    getFeatureFlag('USE_V2_SIMULATE') ||
-    getFeatureFlag('USE_V2_ON_BOARD') ||
-    getFeatureFlag('USE_V2_SANITIZER')
-  )
-    ? taskMethodsV2.stopTask
-    : taskMethods.stopTask,
-
-  // 其他方法继续使用 v1
+  // Other methods continue to use v1
   buildOp: taskMethods.buildOp,
   buildExample: taskMethods.buildExample,
   runExample: taskMethods.runExample,
@@ -67,22 +53,20 @@ const opsMethods = {
   checkTaskStatus: taskMethods.checkTaskStatus,
   getCurrentTaskName: taskMethods.getCurrentTaskName,
   showConfirmDialog: taskMethods.showConfirmDialog,
-  startDumpTensor: taskMethods.startDumpTensor,
+  startDumpTensor: dispatchStartDumpTensor,
   importDumpTensorBinFile: taskMethods.importDumpTensorBinFile,
-  startUtTest: taskMethods.startUtTest,
+  startUtTest: dispatchStartUtTest,
 
   ...configMethods, // getConfigData, getBuildConfigs, saveBuildConfig, saveConfig, openConfig
   ...scriptMethods, // updateShScript
   ...linkMethods, // checkVscode, checkDevtoolConfig
 
-  // Sanitizer 相关 - 支持 v1/v2 切换
+  // Sanitizer related - supports v1/v2 switching
   getSanitizerConfigs: sanitizerViewMethods.getSanitizerConfigs,
   getSanitizerConfigId: sanitizerViewMethods.getSanitizerConfigId,
   getSanitizerForm: sanitizerViewMethods.getSanitizerForm,
   saveSanitizerForm: sanitizerViewMethods.saveSanitizerForm,
-  runSanitizer: getFeatureFlag('USE_V2_SANITIZER')
-    ? taskMethodsV2.runSanitizer
-    : taskMethods.runSanitizer,
+  runSanitizer: dispatchSanitizer,
 
   ...homeMethods, // getProjectId
 };

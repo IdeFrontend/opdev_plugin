@@ -1,22 +1,24 @@
-import { 
-  ICommandExecutor, 
-  CommandExecutionResult 
+import {
+  ICommandExecutor,
+  CommandExecutionResult,
 } from '../../application/interfaces/command-executor.interface';
 
-// 这个测试确保接口定义正确且可以被实现
+// Ensures interface is well-defined and implementable
 describe('Command Executor Interface', () => {
-  // 创建一个模拟实现来测试接口
+  // Mock implementation to test interface
   const mockCommandExecutor: ICommandExecutor = {
     execute: jest.fn(),
     kill: jest.fn(),
   };
 
   it('should have execute method with correct signature', () => {
-    expect(typeof mockCommandExecutor.execute).toBe('function');
+    expect(typeof mockCommandExecutor.execute)
+      .toBe('function');
   });
 
   it('should have kill method with correct signature', () => {
-    expect(typeof mockCommandExecutor.kill).toBe('function');
+    expect(typeof mockCommandExecutor.kill)
+      .toBe('function');
   });
 
   it('should define CommandExecutionResult interface correctly', () => {
@@ -25,9 +27,13 @@ describe('Command Executor Interface', () => {
       output: 'test output',
     };
 
-    expect(result).toHaveProperty('code');
-    expect(result).toHaveProperty('output');
-    expect(typeof result.code).toBe('number');
-    expect(typeof result.output).toBe('string');
+    expect(result)
+      .toHaveProperty('code');
+    expect(result)
+      .toHaveProperty('output');
+    expect(typeof result.code)
+      .toBe('number');
+    expect(typeof result.output)
+      .toBe('string');
   });
 });

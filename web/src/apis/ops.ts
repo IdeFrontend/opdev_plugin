@@ -36,7 +36,11 @@ export function createOpsByPrototype(params: CreateOpsByPrototypeParams) {
 
 /** 获取配置数据 */
 export function getConfigData(opName?: string, projectId?: number) {
-  return request.post<{ opName?: string; projectId?: number }, GetConfigDataResult>('ops/getConfigData', { opName, projectId });
+  return request.post<{ opName?: string;
+    projectId?: number }, GetConfigDataResult>('ops/getConfigData', {
+    opName,
+    projectId,
+  });
 }
 
 /** 获取当前项目下的所有算子列表 */
@@ -155,11 +159,21 @@ export function runSanitizer(params: { operatorNames?: string } = {}) {
 }
 
 /** 开始执行DumpTensor */
-export function startDumpTensor(params: { operatorNames?: string, compileOption?: string } = {}) {
-  return request.post<{ operatorNames?: string, compileOption?: string }, void>(
+export function startDumpTensor(params: { operatorNames?: string,
+  compileOption?: string } = {}) {
+  return request.post<{ operatorNames?: string,
+    compileOption?: string }, void>(
     'ops/startDumpTensor',
     params,
     { timeout: Number.POSITIVE_INFINITY }, // 运行可能耗时很长，设置无超时限制
+  );
+}
+
+/** 导入DumpTensor二进制文件 */
+export function importDumpTensorBinFile(params: { binFilePath: string }) {
+  return request.post<{ binFilePath: string }, void>(
+    'ops/importDumpTensorBinFile',
+    params,
   );
 }
 
@@ -176,6 +190,21 @@ export function startUtTest(params: { operatorNames?: string } = {}) {
 export function updateShScript(params: UpdateShScriptParams) {
   return request.post<UpdateShScriptParams, string>(
     'ops/updateShScript',
+    params,
+  );
+}
+
+/** 获取项目环境配置 */
+export function getProjectEnv() {
+  return request.post<undefined, { ascendEnvScript: string; socVersion: string }>(
+    'ops/getProjectEnv',
+  );
+}
+
+/** 保存项目环境配置 */
+export function saveProjectEnv(params: { ascendEnvScript: string; socVersion: string }) {
+  return request.post<{ ascendEnvScript: string; socVersion: string }, void>(
+    'ops/saveProjectEnv',
     params,
   );
 }
@@ -236,7 +265,8 @@ export function getTargetTab() {
 
 /** 获取目标算子并清除 */
 export function getTargetOperator() {
-  return request.post<undefined, { opName: string; projectId?: number } | undefined>('ops/getTargetOperator');
+  return request.post<undefined, { opName: string;
+    projectId?: number } | undefined>('ops/getTargetOperator');
 }
 
 /** 打开配置页面 */
@@ -258,14 +288,3 @@ export function getSelectedOperatorIds() {
 export function getSelectedOperators() {
   return request.post<undefined, string | undefined>('ops/getSelectedOperators', undefined);
 }
-
-/** 获取项目环境配置 */
-export function getProjectEnv() {
-  return request.post<undefined, { ascendEnvScript: string; socVersion: string }>('ops/getProjectEnv');
-}
-
-/** 保存项目环境配置 */
-export function saveProjectEnv(params: { ascendEnvScript: string; socVersion: string }) {
-  return request.post<{ ascendEnvScript: string; socVersion: string }, void>('ops/saveProjectEnv', params);
-}
-

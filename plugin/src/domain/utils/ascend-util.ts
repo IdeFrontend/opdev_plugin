@@ -95,13 +95,13 @@ function refreshSocVersion() {
     // 找到第一个cann的set_env.sh脚本
     const findCmd = 'find / -path "*/cann*/set_env.sh" 2>/dev/null | head -1';
     const setEnvScript = child_process.execSync(findCmd, { encoding: 'utf8', shell: '/bin/bash' }).trim();
-    
+
     if (setEnvScript) {
       console.info(`找到set_env.sh脚本: ${setEnvScript}`);
       // source脚本后执行asys info命令
       const asysCmd = `source ${setEnvScript} && asys info -r=status | grep "Ascend"`;
       const asysOutput = child_process.execSync(asysCmd, { encoding: 'utf8', shell: '/bin/bash' });
-      
+
       console.info(`asys info输出: ${asysOutput}`);
       if (asysOutput) {
         emulator_type = `Ascend${(asysOutput.split('Ascend ')[1] || '').split(' ')[0] || ''}`;
@@ -114,7 +114,7 @@ function refreshSocVersion() {
         soc_version = 'ascend910b';
         console.info('通过兜底方案确定SOC版本为: ascend910b');
       }
-      
+
       // 兜底方案成功找到soc_version后返回
       if (soc_version) {
         console.info(`soc_version: ${soc_version}`);
@@ -131,12 +131,52 @@ function refreshSocVersion() {
 
   // 兜底方案失败后，执行原来的npu-smi info命令
   try {
-    // 在Windows上使用chcp 65001设置UTF-8编码以避免乱码
+    console.info('尝试使用兜底方案获取SOC版本');
+    // 找到第一个cann的set_env.sh脚本
+    const findCmd = 'find / -path "*/cann*/set_env.sh" 2>/dev/null | head -1';
+    const setEnvScript = child_process.execSync(findCmd, { encoding: 'utf8', shell: '/bin/bash' }).trim();
+
+    if (setEnvScript) {
+      console.info(`找到set_env.sh脚本: ${setEnvScript}`);
+      // source脚本后执行asys info命令
+      const asysCmd = `source ${setEnvScript} && asys info -r=status | grep "Ascend"`;
+      const asysOutput = child_process.execSync(asysCmd, { encoding: 'utf8', shell: '/bin/bash' });
+
+      console.info(`asys info输出: ${asysOutput}`);
+      if (asysOutput) {
+        emulator_type = `Ascend${(asysOutput.split('Ascend ')[1] || '').split(' ')[0] || ''}`;
+        console.info(`emulator_type: ${emulator_type}`);
+      }
+      if (asysOutput.includes('Ascend 950PR_9589')) {
+        soc_version = 'ascend950';
+        console.info('通过兜底方案确定SOC版本为: ascend950');
+      } else if (asysOutput.includes('Ascend 910B3')) {
+        soc_version = 'ascend910b';
+        console.info('通过兜底方案确定SOC版本为: ascend910b');
+      }
+
+      // 兜底方案成功找到soc_version后返回
+      if (soc_version) {
+        console.info(`soc_version: ${soc_version}`);
+        return null;
+      }
+    } else {
+      console.error('未找到cann的set_env.sh脚本');
+    }
+  } catch (fallbackError) {
+    console.error(`执行兜底方案失败: ${fallbackError}`);
+    // 兜底方案失败，尝试使用原来的npu-smi info命令
+    console.info('兜底方案失败，尝试使用npu-smi info命令获取SOC版本');
+  }
+
+  // 兜底方案失败后，执行原来的npu-smi info命令
+  try {
+    // Set UTF-8 encoding using chcp 65001 on Windows to avoid garbled characters
     const isWindows = process.platform === 'win32';
     let out: string;
 
     if (isWindows) {
-      // 在Windows上先设置UTF-8编码,然后执行命令
+      // First set UTF-8 encoding on Windows, and then execute the command
       try {
         out = child_process.execSync('chcp 65001 >nul && npu-smi info', {
           encoding: 'utf8',
@@ -144,7 +184,7 @@ function refreshSocVersion() {
         });
       }
       catch (e) {
-        // 如果上面的方法失败,尝试直接执行
+        // If the above method fails, try to execute it directly
         out = child_process.execSync('npu-smi info', { encoding: 'utf8' });
       }
     }
@@ -178,17 +218,17 @@ function refreshSocVersion() {
   }
   catch (e: unknown) {
     if ((e as { code?: string }).code === 'ENOENT') {
-      console.error('未找到npu-smi命令，请确保已安装昇腾驱动并正确设置环境变量');
+      console.error('npu-smi command not found; ensure Ascend driver is installed and environment variables are set correctly');
     }
     else if ((e as { status?: number }).status !== undefined) {
-      console.error(`执行npu-smi命令失败，错误码: ${(e as { status: number }).status}`);
+      console.error(`npu-smi command failed, error code: ${(e as { status: number }).status}`);
 
       if ((e as { stderr?: string }).stderr) {
-        console.error(`错误输出: ${(e as { stderr: string }).stderr}`);
+        console.error(`stderr: ${(e as { stderr: string }).stderr}`);
       }
     }
     else {
-      console.error(`使用npu-smi命令时出错: ${e}`);
+      console.error(`Error while using npu-smi command: ${e}`);
     }
 
     return null;

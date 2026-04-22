@@ -1,46 +1,53 @@
-import * as vscode from "vscode";
-import * as path from "path";
-import { getOpRunPath } from "@plugin/domain/utils/op-util";
+import { t } from 'i18next';
+import * as vscode from 'vscode';
+import * as path from 'path';
+import { getOpRunPath } from '@plugin/domain/utils/op-util';
 import {
   joinCommands,
   getExecutableCommand,
   Command,
-} from "@plugin/domain/utils/command-utils";
-import { ConfigRecord } from "@plugin/domain/models/config-model";
-import { OpRecord } from "@plugin/domain/models/model";
-import { ProfilerFactory } from "../profiler-service";
+} from '@plugin/domain/utils/command-utils';
+import { ConfigRecord } from '@plugin/domain/models/config-model';
+import { OpRecord } from '@plugin/domain/models/model';
+import { ProfilerFactory } from '../profiler-service';
 import {
   CommandStrategy,
   BaseContext,
   CommandContext,
   CommandBuildParams,
   ProfilerCommandParams,
-} from "./types";
-import { getConfig, getConfigById } from '../../services/configuration';
+} from './types';
+import {
+  getConfig, getConfigById,
+} from '../../services/configuration';
 
 /**
- * CANN 类型命令策略
- * CANN (Compute Architecture for Neural Networks) 是华为的AI计算架构
+ * CANN type command strategy
+ * CANN (Compute Architecture for Neural Networks) is Huawei’s AI computing architecture
  */
 export class CannCommandStrategy implements CommandStrategy {
   buildCommandContext(baseContext: BaseContext): CommandContext {
-    const { config, project, operator } = baseContext;
+    const {
+      config, project, operator,
+    } = baseContext;
 
-    // CANN 类型使用 ascend_env_script 作为环境脚本
+    // CANN type uses ascend_env_script as environment script
     const sourceCannCmd =
       project && project.ascend_env_script
         ? `. ${project.ascend_env_script}`
-        : "";
+        : '';
 
     let runPath: string;
 
     if (operator) {
       runPath = getOpRunPath(operator);
-    } else {
-      // 如果找不到算子，但有配置脚本，使用项目路径作为运行路径
+    }
+    else {
+      // If the operator cannot be found but there is a configuration script, use the project path as the running path
       if (config.script && project) {
         runPath = project.project_path;
-      } else {
+      }
+      else {
         throw new Error(`Operator not found: ${config.op}`);
       }
     }
@@ -59,23 +66,25 @@ export class CannCommandStrategy implements CommandStrategy {
   }
 
   buildRunCommand(context: CommandContext): string {
-    const { config, sourceCannCmd, cdBuildCmd } = context;
-    const run_cmd = getExecutableCommand(config.target_file || "", {
-      execute: true,
-    });
+    const {
+      config, sourceCannCmd, cdBuildCmd,
+    } = context;
+    const run_cmd = getExecutableCommand(config.target_file || '', { execute: true });
 
     return joinCommands(sourceCannCmd, cdBuildCmd, run_cmd);
   }
 
   buildOpCommand(params: CommandBuildParams): string {
-    const { config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames } = params;
+    const {
+      config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames,
+    } = params;
 
-    const scriptField = params.scriptField || 'script'
+    const scriptField = params.scriptField || 'script';
 
     const userOptions = config.user_options as Record<string, unknown> | null | undefined;
 
     if (!userOptions || !userOptions[scriptField]) {
-      throw new Error(`配置缺少脚本信息，且找不到算子记录: ${config.op}`);
+      throw new Error(t('cann.configMissingScript', { op: config.op }));
     }
 
     const cmd = new Command(userOptions[scriptField] as string);
@@ -84,7 +93,7 @@ export class CannCommandStrategy implements CommandStrategy {
       cmd.addArgument(config.custom_options);
     }
 
-    // 如果有算子名称，将其作为参数添加到命令中（用于标准自定义算子等场景）
+    // If there is an operator name, add it as a parameter to the command (for scenarios such as standard custom operators)
     if (operatorNames) {
       cmd.addArgument(operatorNames);
     }
@@ -101,13 +110,15 @@ export class CannCommandStrategy implements CommandStrategy {
   }
 
   buildExampleCommand(params: CommandBuildParams): string {
-    const { config, sourceCannCmd, cdCmd, compileOption, advance_cmd } = params;
+    const {
+      config, sourceCannCmd, cdCmd, compileOption, advance_cmd,
+    } = params;
 
     if (!config.script) {
-      throw new Error(`配置缺少脚本信息，且找不到算子记录: ${config.op}`);
+      throw new Error(t('cann.configMissingScript', { op: config.op }));
     }
 
-    const cmd = new Command(config.script || "");
+    const cmd = new Command(config.script || '');
 
     if (config.custom_options) {
       cmd.addArgument(config.custom_options);
@@ -132,41 +143,43 @@ export class CannCommandStrategy implements CommandStrategy {
     exampleTargetFile?: string,
     cdBuildCmd?: string,
   ): string {
-    const mssanitizer = new Command("mssanitizer");
+    const mssanitizer = new Command('mssanitizer');
 
-    // 添加目标文件
+    // Add target file
     if (exampleTargetFile) {
       mssanitizer.addArgument(exampleTargetFile);
     }
 
-    // 处理配置选项
+    // Handle configuration options
     const options =
       (config.user_options as Record<string, unknown> | null | undefined) || {};
     const toolOptions =
       (options.tool as Record<string, unknown> | undefined) || {};
-    const tools = Object.keys(toolOptions).filter((key) => toolOptions[key]);
+    const tools = Object.keys(toolOptions)
+      .filter((key) => toolOptions[key]);
 
-    mssanitizer.addOption("tool", tools);
+    mssanitizer.addOption('tool', tools);
 
     if (toolOptions.memcheck) {
       const memcheckOptions =
         (options.memcheckOption as Record<string, unknown> | undefined) || {};
 
-      Object.keys(memcheckOptions).forEach((key) => {
-        if (memcheckOptions[key]) {
-          mssanitizer.addOption(key, "yes");
-        }
-      });
+      Object.keys(memcheckOptions)
+        .forEach((key) => {
+          if (memcheckOptions[key]) {
+            mssanitizer.addOption(key, 'yes');
+          }
+        });
     }
 
-    mssanitizer.addOption("log-level", options.logLevel as string | undefined);
+    mssanitizer.addOption('log-level', options.logLevel as string | undefined);
     mssanitizer.addOption(
-      "max-debuglog-size",
-      options.maxDebuglogSize as string | undefined
+      'max-debuglog-size',
+      options.maxDebuglogSize as string | undefined,
     );
     mssanitizer.addOption(
-      "block-id",
-      options.blockId as string | number | undefined
+      'block-id',
+      options.blockId as string | number | undefined,
     );
 
     const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -194,31 +207,30 @@ export class CannCommandStrategy implements CommandStrategy {
       exampleTargetFile,
     } = params;
 
-    // 如果找不到算子记录，但有项目路径，创建一个临时算子对象
+    // If the operator record is not found but the project path is available, create a temporary operator object
     let effectiveOperator = operator;
 
     if (!effectiveOperator) {
       if (!project || !project.project_path) {
-        throw new Error(
-          `无法生成仿真命令：找不到算子记录 ${config.op}，且项目路径不可用`
-        );
+        throw new Error(t('cann.cannotGenerateSimulateCommand', { op: config.op }));
       }
 
-      // 创建临时算子对象，使用项目路径作为 op_path
+      // Create a temporary operator object, using the project path as op_path
       effectiveOperator = {
         id: 0,
         project_id: config.project_id,
         op_name: config.op,
-        op_type: "cann",
+        op_type: 'cann',
         op_path: project.project_path,
       } as OpRecord;
     }
 
-    const simulatorCmd = ProfilerFactory.getStrategy("simulator").generate(
-      config,
-      effectiveOperator,
-      exampleTargetFile
-    );
+    const simulatorCmd = ProfilerFactory.getStrategy('simulator')
+      .generate(
+        config,
+        effectiveOperator,
+        exampleTargetFile,
+      );
 
     return joinCommands(sourceCannCmd, cdBuildCmd, simulatorCmd);
   }
@@ -233,46 +245,47 @@ export class CannCommandStrategy implements CommandStrategy {
       exampleTargetFile,
     } = params;
 
-    // 如果找不到算子记录，但有项目路径，创建一个临时算子对象
+    // If the operator record is not found but the project path is available, create a temporary operator object
     let effectiveOperator = operator;
 
     if (!effectiveOperator) {
       if (!project || !project.project_path) {
-        throw new Error(
-          `无法生成上板命令：找不到算子记录 ${config.op}，且项目路径不可用`
-        );
+        throw new Error(t('cann.cannotGenerateOnBoardCommand', { op: config.op }));
       }
 
-      // 创建临时算子对象，使用项目路径作为 op_path
+      // Create a temporary operator object, using the project path as op_path
       effectiveOperator = {
         id: 0,
         project_id: config.project_id,
         op_name: config.op,
-        op_type: "cann",
+        op_type: 'cann',
         op_path: project.project_path,
       } as OpRecord;
     }
 
-    const opprofCmd = ProfilerFactory.getStrategy("onboard").generate(
-      config,
-      effectiveOperator,
-      exampleTargetFile
-    );
+    const opprofCmd = ProfilerFactory.getStrategy('onboard')
+      .generate(
+        config,
+        effectiveOperator,
+        exampleTargetFile,
+      );
 
     return joinCommands(sourceCannCmd, cdBuildCmd, opprofCmd);
   }
 
   getRunTargetFile(config: ConfigRecord, operator: OpRecord | null): string {
-    // CANN 类型：使用 build_op 配置的 target_file
+    // CANN type: target_file configured using build_op
     const buildOpConfigs = getConfig(config.project_id, 'build_op', config.op);
     const buildOpConfig = buildOpConfigs.length > 0 ? buildOpConfigs[0] : null;
+
     return buildOpConfig?.target_file || config.target_file || '';
   }
 
   getProfilerTargetFile(config: ConfigRecord, operator: OpRecord | null, exampleConfigId: number): string {
-    // CANN 类型：使用 build_op 配置的 target_file
+    // CANN type: target_file configured using build_op
     const buildOpConfigs = getConfig(config.project_id, 'build_op', config.op);
     const buildOpConfig = buildOpConfigs.length > 0 ? buildOpConfigs[0] : null;
+
     return buildOpConfig?.target_file || '';
   }
 

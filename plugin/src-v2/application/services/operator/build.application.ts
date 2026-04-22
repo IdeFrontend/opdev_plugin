@@ -13,29 +13,51 @@ import { BuildOrchestratorService } from '@plugin-v2/domain/operator/services/bu
 import { ConfigType } from '@plugin-v2/domain/operator/value-objects/config-type.vo';
 
 /**
- * 构建应用服务 DTO
+ * Build application service DTOs
  */
 export interface StartBuildDto {
   configId?: number;
   compileOption?: string;
-  operatorNames?: string; // 算子名称，多个用逗号分隔（用于标准自定义算子等场景）
-  operatorType?: string; // 算子类型，用于标识编译哪种类型的算子（如 'standard-custom'）
+  operatorNames?: string; // Operator names, comma-separated (e.g. standard custom)
+  operatorType?: string; // Operator type for build (e.g. 'standard-custom')
 }
 
 export interface StartRunDto {
   configId?: number;
-  filePath?: string; // 文件路径（右键调用时传入）
+  filePath?: string; // File path (e.g. when invoked from context menu)
 }
 
 export interface StartBuildExampleDto {
   configId?: number;
-  operatorNames?: string; // 算子名称，多个用逗号分隔（用于标准自定义算子等场景）
-  operatorType?: string; // 算子类型，用于标识编译哪种类型的算子（如 'standard-custom'）
+  operatorNames?: string; // Operator names, comma-separated (e.g. standard custom)
+  operatorType?: string; // Operator type for build (e.g. 'standard-custom')
+}
+
+export interface StartSimulateDto {
+  operatorNames?: string;
+}
+
+export interface StartOnBoardDto {
+  operatorNames?: string;
+}
+
+export interface RunSanitizerDto {
+  operatorNames?: string;
+}
+
+export interface StartDumpTensorDto {
+  operatorNames?: string;
+  compileOption?: string;
+  isStandardCustom?: boolean;
+}
+
+export interface StartUtTestDto {
+  operatorNames?: string;
 }
 
 /**
- * 构建应用服务
- * 应用层,负责业务编排
+ * Build application service
+ * Application layer; business orchestration
  */
 export class BuildApplicationService {
   constructor(
@@ -44,10 +66,10 @@ export class BuildApplicationService {
   ) {}
 
   /**
-   * 开始构建算子
+   * Start operator build
    */
   async startBuild(dto: StartBuildDto): Promise<Result<void, BuildFailedError | ConfigNotFoundError>> {
-    // 1. 获取配置ID
+    // 1. Resolve config ID
     let configId = dto.configId;
 
     if (!configId) {
@@ -60,15 +82,15 @@ export class BuildApplicationService {
       configId = configResult.value.configId;
     }
 
-    // 2. 执行构建
+    // 2. Execute build
     return this.buildOrchestrator.build(configId, dto.compileOption, dto.operatorNames);
   }
 
   /**
-   * 开始运行算子
+   * Start operator run
    */
   async startRun(dto: StartRunDto): Promise<Result<void, BuildFailedError | ConfigNotFoundError>> {
-    // 1. 获取配置ID
+    // 1. Resolve config ID
     let configId = dto.configId;
 
     if (!configId) {
@@ -81,15 +103,15 @@ export class BuildApplicationService {
       configId = configResult.value.configId;
     }
 
-    // 2. 执行运行
+    // 2. Execute run
     return this.buildOrchestrator.run(configId);
   }
 
   /**
-   * 开始构建示例
+   * Start build example
    */
   async startBuildExample(dto: StartBuildExampleDto): Promise<Result<void, BuildFailedError | ConfigNotFoundError>> {
-    // 1. 获取配置ID
+    // 1. Resolve config ID
     let configId = dto.configId;
 
     if (!configId) {
@@ -102,12 +124,12 @@ export class BuildApplicationService {
       configId = configResult.value.configId;
     }
 
-    // 2. 执行构建
+    // 2. Execute build
     return this.buildOrchestrator.buildExample(configId, dto.operatorNames);
   }
 
   /**
-   * 获取构建配置ID
+   * Get build config ID
    */
   async getBuildConfigId(): Promise<Result<number, ConfigNotFoundError>> {
     const configResult = await this.configRepo.findByType(ConfigType.BUILD_OP);
@@ -120,7 +142,7 @@ export class BuildApplicationService {
   }
 
   /**
-   * 获取示例构建配置ID
+   * Get build example config ID
    */
   async getBuildExampleConfigId(): Promise<
     Result<number, ConfigNotFoundError>
@@ -135,7 +157,7 @@ export class BuildApplicationService {
   }
 
   /**
-   * 获取仿真配置ID
+   * Get simulate config ID
    */
   async getSimulateConfigId(): Promise<Result<number, ConfigNotFoundError>> {
     const configResult = await this.configRepo.findByType(ConfigType.SIMULATE);
@@ -148,7 +170,7 @@ export class BuildApplicationService {
   }
 
   /**
-   * 获取上板配置ID
+   * Get on-board config ID
    */
   async getOnBoardConfigId(): Promise<Result<number, ConfigNotFoundError>> {
     const configResult = await this.configRepo.findByType(ConfigType.ON_BOARD);
@@ -161,7 +183,7 @@ export class BuildApplicationService {
   }
 
   /**
-   * 获取异常检测配置ID
+   * Get sanitizer config ID
    */
   async getSanitizerConfigId(): Promise<Result<number, ConfigNotFoundError>> {
     const configResult = await this.configRepo.findByType(ConfigType.SANITIZER);
@@ -174,16 +196,13 @@ export class BuildApplicationService {
   }
 
   /**
-   * 开始仿真分析
-   * 业务流程:
-   * 1. 获取仿真配置和仿真器类型
-   * 2. 获取构建配置和示例配置
-   * 3. 执行仿真 (包含前置编译)
+   * Start simulation analysis
+   * Flow: 1) get simulate config and simulator type 2) get build/example configs 3) run simulate (with pre-build)
    */
-  async startSimulate(): Promise<
+  async startSimulate(dto: StartSimulateDto = {}): Promise<
     Result<void, SimulateFailedError | BuildFailedError | ConfigNotFoundError>
   > {
-    // 1. 获取仿真配置及仿真器类型
+    // 1. Get simulate config and simulator type
     const simulateConfigResult = await this.configRepo.findByType(ConfigType.SIMULATE);
 
     if (ResultUtils.isErr(simulateConfigResult)) {
@@ -195,120 +214,117 @@ export class BuildApplicationService {
       | string
       | undefined) ?? '';
 
-    // 2. 获取构建配置ID
+    // 2. Get build config ID
     const buildConfigResult = await this.configRepo.findByType(ConfigType.BUILD_OP);
 
     if (ResultUtils.isErr(buildConfigResult)) {
       return ResultUtils.err(new ConfigNotFoundError('build_op', { reason: '未找到构建配置' }));
     }
 
-    // 3. 获取示例配置ID
+    // 3. Get example config ID
     const exampleConfigResult = await this.configRepo.findByType(ConfigType.BUILD_EXAMPLE);
 
     if (ResultUtils.isErr(exampleConfigResult)) {
       return ResultUtils.err(new ConfigNotFoundError('build_example', { reason: '未找到示例配置' }));
     }
 
-    // 4. 执行仿真
+    // 4. Execute simulate
     return this.buildOrchestrator.simulate(
       buildConfigResult.value.configId,
       simulateConfigResult.value.configId,
       exampleConfigResult.value.configId,
       simulatorType,
+      dto.operatorNames,
     );
   }
 
   /**
-   * 开始上板分析
-   * 业务流程:
-   * 1. 获取上板配置
-   * 2. 获取构建配置和示例配置
-   * 3. 执行上板 (包含前置编译)
+   * Start on-board analysis
+   * Flow: 1) get on-board config 2) get build/example configs 3) run on-board (with pre-build)
    */
-  async startOnBoard(): Promise<
+  async startOnBoard(dto: StartOnBoardDto = {}): Promise<
     Result<void, OnBoardFailedError | BuildFailedError | ConfigNotFoundError>
   > {
-    // 1. 获取上板配置
+    // 1. Get on-board config
     const onBoardConfigResult = await this.configRepo.findByType(ConfigType.ON_BOARD);
 
     if (ResultUtils.isErr(onBoardConfigResult)) {
       return ResultUtils.err(new ConfigNotFoundError('on_board', { reason: '未找到上板配置' }));
     }
 
-    // 2. 获取构建配置ID
+    // 2. Get build config ID
     const buildConfigResult = await this.configRepo.findByType(ConfigType.BUILD_OP);
 
     if (ResultUtils.isErr(buildConfigResult)) {
       return ResultUtils.err(new ConfigNotFoundError('build_op', { reason: '未找到构建配置' }));
     }
 
-    // 3. 获取示例配置ID
+    // 3. Get example config ID
     const exampleConfigResult = await this.configRepo.findByType(ConfigType.BUILD_EXAMPLE);
 
     if (ResultUtils.isErr(exampleConfigResult)) {
       return ResultUtils.err(new ConfigNotFoundError('build_example', { reason: '未找到示例配置' }));
     }
 
-    // 4. 执行上板
+    // 4. Execute on-board
     return this.buildOrchestrator.onBoard(
       buildConfigResult.value.configId,
       onBoardConfigResult.value.configId,
       exampleConfigResult.value.configId,
+      dto.operatorNames,
     );
   }
 
   /**
-   * 运行异常检测
-   * 业务流程:
-   * 1. 获取异常检测配置
-   * 2. 获取构建配置和示例配置
-   * 3. 执行异常检测 (包含前置编译)
+   * Run sanitizer (anomaly detection)
+   * Flow: 1) get sanitizer config 2) get build/example configs 3) run sanitizer (with pre-build)
    */
-  async runSanitizer(): Promise<
+  async runSanitizer(dto: RunSanitizerDto = {}): Promise<
     Result<void, SanitizerFailedError | BuildFailedError | ConfigNotFoundError>
   > {
-    // 1. 获取异常检测配置
+    // 1. Get sanitizer config
     const sanitizerConfigResult = await this.configRepo.findByType(ConfigType.SANITIZER);
 
     if (ResultUtils.isErr(sanitizerConfigResult)) {
       return ResultUtils.err(new ConfigNotFoundError('sanitizer', { reason: '未找到异常检测配置' }));
     }
 
-    // 2. 获取构建配置ID
+    // 2. Get build config ID
     const buildConfigResult = await this.configRepo.findByType(ConfigType.BUILD_OP);
 
     if (ResultUtils.isErr(buildConfigResult)) {
       return ResultUtils.err(new ConfigNotFoundError('build_op', { reason: '未找到构建配置' }));
     }
 
-    // 3. 获取示例配置ID
+    // 3. Get example config ID
     const exampleConfigResult = await this.configRepo.findByType(ConfigType.BUILD_EXAMPLE);
 
     if (ResultUtils.isErr(exampleConfigResult)) {
       return ResultUtils.err(new ConfigNotFoundError('build_example', { reason: '未找到示例配置' }));
     }
 
-    // 4. 执行异常检测
+    // 4. Execute sanitizer
     return this.buildOrchestrator.sanitizer(
       buildConfigResult.value.configId,
       sanitizerConfigResult.value.configId,
       exampleConfigResult.value.configId,
+      dto.operatorNames,
     );
   }
 
   /**
-   * 获取异常检测配置列表
+   * Get sanitizer config list
    */
   async getSanitizerConfigs(): Promise<Result<unknown[], Error>> {
     try {
       const configResult = await this.configRepo.findByType(ConfigType.SANITIZER);
 
       if (ResultUtils.isErr(configResult)) {
-        // 如果没有配置，返回空数组
+        // No config: return empty array
         return ResultUtils.ok([]);
       }
 
-      // 转换为前端需要的格式
+      // Convert to format expected by frontend
       const config = {
         config_id: configResult.value.configId,
         config_name: configResult.value.configName,
@@ -324,14 +340,14 @@ export class BuildApplicationService {
   }
 
   /**
-   * 保存异常检测表单配置
+   * Save sanitizer form config
    */
   async saveSanitizerForm(params: {
     data: unknown;
     showMessage?: boolean;
   }): Promise<Result<void, Error>> {
     try {
-      // 1. 获取当前配置
+      // 1. Get current config
       const configsResult = await this.getSanitizerConfigs();
 
       if (ResultUtils.isErr(configsResult)) {
@@ -349,7 +365,7 @@ export class BuildApplicationService {
         return ResultUtils.err(new Error('未找到异常检测配置'));
       }
 
-      // 2. 合并配置
+      // 2. Merge config
       const updatedConfig = {
         ...currentConfig,
         user_options: {
@@ -358,14 +374,14 @@ export class BuildApplicationService {
         },
       };
 
-      // 3. 保存配置
+      // 3. Save config
       const entities = await this.configRepo.findAll();
 
       if (ResultUtils.isErr(entities)) {
         return entities;
       }
 
-      // 找到 sanitizer 配置并更新
+      // Find sanitizer config and update
       const updatedEntities = entities.value.map((entity) => {
         if (entity.configType.value === 'sanitizer') {
           return entity.updateUserOptions(updatedConfig.user_options as Record<string, unknown>);
@@ -374,7 +390,7 @@ export class BuildApplicationService {
         return entity;
       });
 
-      // 保存
+      // Save
       const saveResult = await this.configRepo.save(updatedEntities);
 
       if (ResultUtils.isErr(saveResult)) {
@@ -386,5 +402,47 @@ export class BuildApplicationService {
     catch (error) {
       return ResultUtils.err(error as Error);
     }
+  }
+
+  /**
+   * Start DumpTensor flow.
+   */
+  async startDumpTensor(
+    dto: StartDumpTensorDto = {},
+  ): Promise<Result<void, BuildFailedError | ConfigNotFoundError>> {
+    const buildConfigResult = await this.configRepo.findByType(ConfigType.BUILD_OP);
+    if (ResultUtils.isErr(buildConfigResult)) {
+      return ResultUtils.err(new ConfigNotFoundError('build_op', { reason: '未找到构建配置' }));
+    }
+
+    const exampleConfigResult = await this.configRepo.findByType(ConfigType.BUILD_EXAMPLE);
+    if (ResultUtils.isErr(exampleConfigResult)) {
+      return ResultUtils.err(new ConfigNotFoundError('build_example', { reason: '未找到示例配置' }));
+    }
+
+    return this.buildOrchestrator.dumpTensor(
+      buildConfigResult.value.configId,
+      exampleConfigResult.value.configId,
+      dto.isStandardCustom ?? false,
+      dto.compileOption,
+      dto.operatorNames,
+    );
+  }
+
+  /**
+   * Start UT test flow.
+   */
+  async startUtTest(
+    dto: StartUtTestDto = {},
+  ): Promise<Result<void, BuildFailedError | ConfigNotFoundError>> {
+    const utTestConfigResult = await this.configRepo.findByType(ConfigType.UT_TEST);
+    if (ResultUtils.isErr(utTestConfigResult)) {
+      return ResultUtils.err(new ConfigNotFoundError('ut_test', { reason: '未找到 UT 测试配置' }));
+    }
+
+    return this.buildOrchestrator.utTest(
+      utTestConfigResult.value.configId,
+      dto.operatorNames,
+    );
   }
 }

@@ -5,7 +5,7 @@ import {
 } from '@plugin/domain/utils/command-utils';
 
 /**
- * msprof 命令生成策略接口
+ * msprof command generates policy interface
  */
 export interface ProfilerCommandStrategy {
   generate(
@@ -16,7 +16,7 @@ export interface ProfilerCommandStrategy {
 }
 
 /**
- * 仿真 Profiler 策略
+ * Simulation Profiler Strategy
  */
 export class SimulatorStrategy implements ProfilerCommandStrategy {
   generate(
@@ -37,7 +37,7 @@ export class SimulatorStrategy implements ProfilerCommandStrategy {
 
     const advance_cmd = getAdvanceCmd(userOptions?.advance_param);
 
-    // 构建 msprof op simulator 命令
+    // Build the msprof op simulator command
     const msprof = new Command('msprof');
     const simulator = msprof.sub('op')
       .sub('simulator', { separators: { 'aic-metrics': ',' } });
@@ -61,7 +61,7 @@ export class SimulatorStrategy implements ProfilerCommandStrategy {
 }
 
 /**
- * 上板 Profiler 策略
+ * Profiler strategy on board
  */
 export class OnBoardStrategy implements ProfilerCommandStrategy {
   generate(
@@ -73,7 +73,7 @@ export class OnBoardStrategy implements ProfilerCommandStrategy {
     const metrics = this.getOnBoardMetrics(userOptions as Record<string, boolean>);
     const advance_cmd = getAdvanceCmd(userOptions.advance_param);
 
-    // 构建 msprof op 命令
+    // Build msprof op command
     const msprof = new Command('msprof');
     const op = msprof.sub('op', { separators: { 'aic-metrics': ',' } });
 
@@ -94,7 +94,7 @@ export class OnBoardStrategy implements ProfilerCommandStrategy {
   }
 
   /**
-   * 获取上板图形参数指标
+   * Get graphic parameter indicators on the upper board
    */
   private getOnBoardMetrics(obj: Record<string, boolean>): string[] {
     const basicMetrics = [
@@ -133,7 +133,7 @@ export class OnBoardStrategy implements ProfilerCommandStrategy {
 }
 
 /**
- * Profiler 工厂
+ * Profiler Factory
  */
 export class ProfilerFactory {
   static getStrategy(type: 'simulator' | 'onboard'): ProfilerCommandStrategy {

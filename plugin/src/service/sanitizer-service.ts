@@ -1,18 +1,26 @@
+import { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 
 import { ProjectManager } from '@plugin/core/project/project-manager';
-import { getSanitizerCommand, getBuildExampleCommand } from '@plugin/domain';
+import {
+  getSanitizerCommand, getBuildExampleCommand, getBuildOpCommand,
+} from '@plugin/domain';
 import { configService } from './config-service';
-import { buildService } from './build-service';
-import { OperatorProjectType, OperatorProjectDetector } from '@plugin/domain/services/operator-project-detector';
+import { buildService, notifyBuildSucceededForSidebar } from './build-service';
+import {
+  OperatorProjectType, OperatorProjectDetector,
+} from '@plugin/domain/services/operator-project-detector';
+import { getLatestSanitizerLogAbsPath } from '@plugin/helpers/sanitizer-log-path';
+import { msAgentBridgeService } from '@plugin/service/ms-agent-bridge.service';
+import { sanitizerDiagnosticsService } from '@plugin/service/sanitizer-diagnostics.service';
 
 const CONFIG_TYPES = { SANITIZER: 'sanitizer' } as const;
 
 export class SanitizerService {
   /**
-   * 获取异常检测配置ID
+   * Get anomaly detection (sanitizer) config ID
    */
   async getSanitizerConfigIdInternal(): Promise<number | undefined> {
     try {
@@ -27,11 +35,11 @@ export class SanitizerService {
   }
 
   /**
-   * 运行异常检测
+   * Run anomaly detection (sanitizer)
    */
   async runSanitizer(params: { operatorNames?: string } = {}): Promise<void> {
     try {
-      // 异常检测前编译
+      // Build before running sanitizer
       const sanitizerConfigId: number | undefined =
         await this.getSanitizerConfigIdInternal();
       const buildCommand = getBuildOpCommand(
@@ -50,15 +58,17 @@ export class SanitizerService {
       );
 
       if (buildRes.code !== 0) {
-        vscode.window.showErrorMessage(`编译算子失败 ${buildRes.output}`);
+        vscode.window.showErrorMessage(t('sanitizer.compileFailed', { output: buildRes.output }));
 
         return;
       }
 
-      // 如果是标准自定义算子，需要编译 example
+      // For standard custom operators, build example first
       const workspaceFolders = vscode.workspace.workspaceFolders;
+
       if (workspaceFolders && workspaceFolders.length > 0) {
         const workspacePath = workspaceFolders[0].uri.fsPath;
+
         try {
           const rootDetection = await OperatorProjectDetector.detectOperatorProject(workspacePath);
           const isRootStandardCustom = rootDetection.isOperatorProject && rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM;
@@ -84,17 +94,22 @@ export class SanitizerService {
             console.log('example buildRes', exampleBuildRes);
 
             if (exampleBuildRes.code !== 0) {
-              vscode.window.showErrorMessage(`编译示例失败 ${exampleBuildRes.output}`);
+              vscode.window.showErrorMessage(t('sanitizer.exampleCompileFailed', { output: exampleBuildRes.output }));
+
               return;
             }
           }
         }
         catch (error) {
-          console.warn('[runSanitizer] 检测项目类型失败:', error);
+          console.warn('[runSanitizer] Failed to detect project type:', error);
         }
       }
 
-      // 创建文件夹
+      if (sanitizerConfigId != null) {
+        await notifyBuildSucceededForSidebar(Number(sanitizerConfigId), params.operatorNames);
+      }
+
+      // Create log directory
       if (workspaceFolders && workspaceFolders.length > 0) {
         const workspacePath = workspaceFolders[0].uri.fsPath;
         const logPath = path.join(
@@ -108,7 +123,7 @@ export class SanitizerService {
         }
       }
 
-      // 开启异常检测
+      // Run anomaly detection
       const exampleConfigId: number | undefined | string =
         await buildService.getBuildExampleConfigId();
 
@@ -123,24 +138,30 @@ export class SanitizerService {
       const res = await executor.execute(sanitizerCommand, [], [], {}, true);
 
       if (res.code !== 0) {
-        vscode.window.showErrorMessage(`异常检测失败 ${res.output}`);
+        vscode.window.showErrorMessage(t('sanitizer.detectionFailed', { output: res.output }));
 
         return;
       }
 
-      vscode.window.showInformationMessage('异常检测成功');
+      vscode.window.showInformationMessage(t('sanitizer.detectionSuccess'));
 
-      // 执行完检测后，聚焦异常检测面板并刷新左侧报告列表
+      const wfAfter = vscode.workspace.workspaceFolders?.[0];
+      if (wfAfter) {
+        const logAbs = getLatestSanitizerLogAbsPath(wfAfter.uri.fsPath);
+        if (logAbs && fs.existsSync(logAbs)) {
+          sanitizerDiagnosticsService.publishFromLogFile(logAbs, wfAfter.uri.fsPath);
+          void msAgentBridgeService.tryLoadLogWithIntegration(logAbs);
+        }
+      }
+
+      // After detection, focus sanitizer panel and refresh report list
       await vscode.commands.executeCommand('msSanitizerPanelView.focus');
       await vscode.commands.executeCommand('huawei-op-devtools.flashMsSanitizerRunData');
     }
     catch (e: unknown) {
-      vscode.window.showErrorMessage(`异常检测失败: ${(e as Error).message}`);
+      vscode.window.showErrorMessage(t('sanitizer.detectionFailedError', { error: (e as Error).message }));
     }
   }
 }
-
-// Helper for importing getBuildOpCommand which is not exported by autogen-server directly in all cases or needs import
-import { getBuildOpCommand } from '@plugin/domain';
 
 export const sanitizerService = new SanitizerService();

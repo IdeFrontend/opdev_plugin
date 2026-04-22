@@ -5,19 +5,25 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import i18next from 'i18next';
 import { createApp } from 'vue';
 import App from './app.vue';
 import 'ant-design-vue/dist/reset.css';
 import '../../../assets/css/tailwind.css';
 import { vscode } from '@web/utils/vscode';
+import i18nResource from '@shared/i18n';
+import { getWebviewLang } from '@web/utils/lang';
 
-// 监听来自VSCode扩展和iframe的消息
+const lang = getWebviewLang();
+
+if (typeof acquireVsCodeApi !== 'undefined' && !window.vscode) {
+  window.vscode = acquireVsCodeApi();
+}
+
 window.addEventListener('message', (event) => {
   const message = event.data;
 
-  console.log('外层页面接收到的message:', message);
-
-  if (message.command?.indexOf('vscode') === 0) {
+  if (message?.command?.indexOf('vscode') === 0 && vscode) {
     vscode.postMessage({
       command: message.command,
       message,
@@ -25,5 +31,13 @@ window.addEventListener('message', (event) => {
   }
 });
 
-createApp(App)
-  .mount('#app');
+void i18next.init({
+  resources: i18nResource,
+  lng: lang,
+  fallbackLng: 'en',
+  interpolation: { escapeValue: false },
+})
+  .then(() => {
+    createApp(App)
+      .mount('#app');
+  });

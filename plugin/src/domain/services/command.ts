@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import { getOpByProjectIdAndOpName } from './ops';
 import { getProjectById } from '@plugin/domain';
 import {
@@ -12,17 +13,17 @@ import {
 } from './command-strategy';
 
 /**
- * 获取基础上下文信息（不包含策略特定的处理）
+ * Get basic context information (does not include policy-specific processing)
  *
- * @param configId 配置ID
- * @returns BaseContext 基础上下文对象
- * @throws Error 如果配置不存在
+ * @param configId configuration ID
+ * @returns BaseContext base context object
+ * @throws Error if the configuration does not exist
  */
 function getBaseContext(configId: number): BaseContext {
   const config = getConfigById(configId) as unknown as ConfigRecord;
 
   if (!config) {
-    throw new Error('配置不存在');
+    throw new Error(t('command.configNotFound'));
   }
 
   const project = getProjectById(config.project_id);
@@ -36,20 +37,20 @@ function getBaseContext(configId: number): BaseContext {
 }
 
 /**
- * 生成算子编译命令
+ * Generate operator compilation command
  *
- * @param config_id 配置ID
- * @param compileOption 编译参数 --debug: debug模式 ；  --mssanitizer: 异常检测模式
- * @param operatorNames 算子名称，多个用逗号分隔（用于标准自定义算子等场景）
- * @param scriptField 脚本字段，指定使用哪个字段作为命令行脚本，script | cpu_debug_script | npu_debug_script
- * @returns 完整的shell执行命令字符串
+ * @param config_id configuration ID
+ * @param compileOption compilation parameters --debug: debug mode; --mssanitizer: anomaly detection mode
+ * @param operatorNames Operator names, multiple separated by commas (used in scenarios such as standard custom operators)
+ * @param scriptField script field, specifies which field to use as the command line script, script | cpu_debug_script | npu_debug_script
+ * @returns complete shell execution command string
  */
 export function getBuildOpCommand(config_id: number, compileOption?: string, operatorNames?: string, scriptField?: string) {
   try {
     const baseContext = getBaseContext(config_id);
     const strategy = CommandStrategyFactory.getStrategy(baseContext.operator?.op_type);
 
-    // 构建完整上下文
+    // Build the complete context
     const context = strategy.buildCommandContext(baseContext);
 
     const userOptions = context.config.user_options as Record<string, unknown> | null | undefined;
@@ -63,19 +64,19 @@ export function getBuildOpCommand(config_id: number, compileOption?: string, ope
       compileOption,
       advance_cmd,
       operatorNames,
-      scriptField
+      scriptField,
     });
   }
   catch (e: unknown) {
-    throw new Error(`生成编译命令失败:${(e as Error).message}`);
+    throw new Error(t('command.getBuildCommandFailed', { error: (e as Error).message }));
   }
 }
 
 /**
- * 生成算子运行命令
+ * Generate operator running command
  *
- * @param config_id 配置ID
- * @returns 完整的shell执行命令字符串
+ * @param config_id configuration ID
+ * @returns complete shell execution command string
  */
 export function getRunCommand(config_id: number) {
   try {
@@ -84,26 +85,26 @@ export function getRunCommand(config_id: number) {
 
     const context = strategy.buildCommandContext(baseContext);
 
-    // 使用策略来获取正确的 target_file
+    // Use strategies to get the correct target_file
     const targetFile = strategy.getRunTargetFile(context.config, context.operator);
 
-    // 更新上下文中的 target_file
+    // Update target_file in context
     context.config.target_file = targetFile;
 
     return strategy.buildRunCommand(context);
   }
   catch (e: unknown) {
-    throw new Error(`生成运行命令失败:${(e as Error).message}`);
+    throw new Error(t('command.getRunCommandFailed', { error: (e as Error).message }));
   }
 }
 
 /**
- * 生成示例编译命令
+ * Generate sample compilation commands
  *
- * @param config_id 配置ID
- * @param compileOption 编译选项
- * @param operatorNames 算子名称，多个用逗号分隔（用于标准自定义算子等场景）
- * @returns 完整的shell执行命令字符串
+ * @param config_id configuration ID
+ * @param compileOption compile option
+ * @param operatorNames Operator names, multiple separated by commas (used in scenarios such as standard custom operators)
+ * @returns complete shell execution command string
  */
 export function getBuildExampleCommand(
   config_id: number,
@@ -130,21 +131,21 @@ export function getBuildExampleCommand(
     });
   }
   catch (e: unknown) {
-    throw new Error(`生成编译命令失败:${(e as Error).message}`);
+    throw new Error(t('command.getBuildCommandFailed', { error: (e as Error).message }));
   }
 }
 
 /**
- * 生成仿真命令
+ * Generate simulation commands
  *
- * 示例:
+ * Example:
  * msprof op --output=$home/projects/output $home/projects/MyApp/out/main blockdim 1
  * msprof op simulator --soc-version=Ascendxxxyy --output=...
  *
- * @param config_id 配置ID
- * @param example_config_id 示例配置ID
- * @param operatorNames 算子名称，多个用逗号分隔（用于标准自定义算子场景）
- * @returns 完整的shell执行命令字符串
+ * @param config_id configuration ID
+ * @param example_config_id example configuration ID
+ * @param operatorNames Operator names, multiple separated by commas (for standard custom operator scenarios)
+ * @returns complete shell execution command string
  */
 export function getSimulateCommand(
   config_id: number,
@@ -157,13 +158,14 @@ export function getSimulateCommand(
 
     const context = strategy.buildCommandContext(baseContext);
 
-    // 使用策略来获取正确的 target_file
+    // Use strategies to get the correct target_file
     let targetFile = strategy.getProfilerTargetFile(context.config, context.operator, example_config_id);
 
-    // 如果提供了 operatorNames，用分隔符 test_aclnn_ 分割路径，取前缀 + test_aclnn_ + operatorNames
+    // If operatorNames is provided, use the separator test_aclnn_ to split the path and take the prefix + test_aclnn_ + operatorNames
     if (operatorNames && targetFile) {
       const delimiter = 'test_aclnn_';
       const parts = targetFile.split(delimiter);
+
       if (parts.length >= 2) {
         targetFile = `${parts[0]}${delimiter}${operatorNames}`;
       }
@@ -180,17 +182,17 @@ export function getSimulateCommand(
     });
   }
   catch (e: unknown) {
-    throw new Error(`获取仿真命令失败 ${(e as Error).message}`);
+    throw new Error(t('command.getSimulateCommandFailed', { error: (e as Error).message }));
   }
 }
 
 /**
- * 生成上板命令
+ * Generate board command
  *
- * @param config_id 配置ID
- * @param example_config_id 示例配置ID
- * @param operatorNames 算子名称，多个用逗号分隔（用于标准自定义算子场景）
- * @returns 完整的shell执行命令字符串
+ * @param config_id configuration ID
+ * @param example_config_id example configuration ID
+ * @param operatorNames Operator names, multiple separated by commas (for standard custom operator scenarios)
+ * @returns complete shell execution command string
  */
 export function getOnBoardCommand(
   config_id: number,
@@ -203,13 +205,14 @@ export function getOnBoardCommand(
 
     const context = strategy.buildCommandContext(baseContext);
 
-    // 使用策略来获取正确的 target_file
+    // Use strategies to get the correct target_file
     let targetFile = strategy.getProfilerTargetFile(context.config, context.operator, example_config_id);
 
-    // 如果提供了 operatorNames，用分隔符 test_aclnn_ 分割路径，取前缀 + test_aclnn_ + operatorNames
+    // If operatorNames is provided, use the separator test_aclnn_ to split the path and take the prefix + test_aclnn_ + operatorNames
     if (operatorNames && targetFile) {
       const delimiter = 'test_aclnn_';
       const parts = targetFile.split(delimiter);
+
       if (parts.length >= 2) {
         targetFile = `${parts[0]}${delimiter}${operatorNames}`;
       }
@@ -226,17 +229,17 @@ export function getOnBoardCommand(
     });
   }
   catch (e: unknown) {
-    throw new Error(`获取上板命令失败 ${(e as Error).message}`);
+    throw new Error(t('command.getOnBoardCommandFailed', { error: (e as Error).message }));
   }
 }
 
 /**
- * 生成Sanitizer(异常检测)命令
+ * Generate Sanitizer (anomaly detection) command
  *
- * @param sanitizerConfigId Sanitizer配置ID
- * @param example_config_id 示例配置ID
- * @param operatorNames 算子名称，多个用逗号分隔（用于标准自定义算子场景）
- * @returns 完整的shell执行命令字符串
+ * @param sanitizerConfigId Sanitizer configuration ID
+ * @param example_config_id example configuration ID
+ * @param operatorNames Operator names, multiple separated by commas (for standard custom operator scenarios)
+ * @returns complete shell execution command string
  */
 export function getSanitizerCommand(
   sanitizerConfigId: number,
@@ -249,13 +252,14 @@ export function getSanitizerCommand(
 
     const context = strategy.buildCommandContext(baseContext);
 
-    // 使用策略来获取正确的 target_file
+    // Use strategies to get the correct target_file
     let targetFile = strategy.getProfilerTargetFile(context.config, context.operator, example_config_id);
 
-    // 如果提供了 operatorNames，用分隔符 test_aclnn_ 分割路径，取前缀 + test_aclnn_ + operatorNames
+    // If operatorNames is provided, use the separator test_aclnn_ to split the path and take the prefix + test_aclnn_ + operatorNames
     if (operatorNames && targetFile) {
       const delimiter = 'test_aclnn_';
       const parts = targetFile.split(delimiter);
+
       if (parts.length >= 2) {
         targetFile = `${parts[0]}${delimiter}${operatorNames}`;
       }
@@ -271,16 +275,16 @@ export function getSanitizerCommand(
     );
   }
   catch (e: unknown) {
-    throw new Error(`生成异常检测命令失败: ${(e as Error).message}`);
+    throw new Error(t('command.getSanitizerCommandFailed', { error: (e as Error).message }));
   }
 }
 
 /**
- * 生成UT测试命令
+ * Build UT test command
  *
- * @param config_id 配置ID
- * @param operatorNames 算子名称，多个用逗号分隔（用于标准自定义算子等场景）
- * @returns 完整的shell执行命令字符串
+ * @param config_id configuration ID
+ * @param operatorNames operator names, comma-separated (e.g. standard custom operators)
+ * @returns full shell command string
  */
 export function getUtTestCommand(
   config_id: number,
@@ -305,11 +309,11 @@ export function getUtTestCommand(
     });
   }
   catch (e: unknown) {
-    throw new Error(`生成UT测试命令失败:${(e as Error).message}`);
+    throw new Error(`Failed to build UT test command: ${(e as Error).message}`);
   }
 }
 
-// 导出策略相关类型和工厂，以便外部注册新策略
+// Export strategy types and factory for registering new strategies externally
 export { CommandStrategyFactory } from './command-strategy';
 
 export type { CommandStrategy } from './command-strategy';

@@ -17,34 +17,294 @@
   "main": "./out/extension.js",
   "browser": "./out/extension.js",
   "activationEvents": [
-    "onView:pluginSidebar",
+    "onView:opdevtoolsHomeTree",
     "workspaceContains:package.json",
     "onStartupFinished"
   ],
   "icon": "web/resources/extension_icon.png",
   "contributes": {
-    "configuration": {
-      "title": "Huawei OP DevTools",
-      "properties": {
-        "op-devtools.debugMode": {
-          "type": "boolean",
-          "default": true,
-          "description": "启用调试功能（实验性功能）"
+    "configuration": [
+      {
+        "id": "op-devtools.compileAndDeploy",
+        "title": "%config.category.compileAndDeploy.title%",
+        "type": "object",
+        "properties": {
+          "op-devtools.debugMode": {
+            "type": "boolean",
+            "default": true,
+            "description": "%config.op-devtools.debugMode.description%"
+          },
+          "op-devtools.compileAndDeploy.buildConfig.operatorNameToCompile": {
+            "type": "string",
+            "order": 100
+          },
+          "op-devtools.compileAndDeploy.buildConfig.deployCommandOrRunCommand": {
+            "type": "string",
+            "order": 101
+          },
+          "op-devtools.compileAndDeploy.buildConfig.compileCommand": {
+            "type": "string",
+            "order": 102
+          },
+          "op-devtools.compileAndDeploy.buildConfig.utTestCompileCommand": {
+            "type": "string",
+            "order": 103
+          },
+          "op-devtools.compileAndDeploy.buildConfig.npuDebugCompileCommand": {
+            "type": "string",
+            "order": 104
+          },
+          "op-devtools.compileAndDeploy.buildConfig.cpuDebugCompileCommand": {
+            "type": "string",
+            "order": 105
+          },
+          "op-devtools.compileAndDeploy.buildConfig.sanitizerCompileCommand": {
+            "type": "string",
+            "order": 106
+          },
+          "op-devtools.compileAndDeploy.buildConfig.onBoardCompileCommand": {
+            "type": "string",
+            "order": 107
+          },
+          "op-devtools.compileAndDeploy.buildConfig.simulationCompileCommand": {
+            "type": "string",
+            "order": 108
+          },
+          "op-devtools.compileAndDeploy.exampleBuildConfig.executionMode": {
+            "type": "string",
+            "order": 109,
+            "enum": [
+              "eager",
+              "graph"
+            ]
+          },
+          "op-devtools.compileAndDeploy.exampleBuildConfig.runCommand": {
+            "type": "string",
+            "order": 111,
+            "markdownDescription": "%config.op-devtools.compileAndDeploy.exampleBuildConfig.runCommand.markdownDescription%"
+          }
+        }
+      },
+      {
+        "id": "op-devtools.sanitizer",
+        "title": "%config.category.sanitizer.title%",
+        "type": "object",
+        "properties": {
+          "op-devtools.sanitizer.showQuickOptions": {
+            "type": "boolean",
+            "default": true,
+            "order": 100,
+            "description": "%config.op-devtools.sanitizer.showQuickOptions.description%",
+            "markdownDescription": "%config.op-devtools.sanitizer.showQuickOptions.markdownDescription%"
+          },
+          "op-devtools.sanitizer.memory": {
+            "type": "boolean",
+            "order": 200,
+            "markdownDescription": "%config.op-devtools.sanitizer.memory.markdownDescription%"
+          },
+          "op-devtools.sanitizer.memoryLeak": {
+            "type": "boolean",
+            "order": 201,
+            "markdownDescription": "%config.op-devtools.sanitizer.memoryLeak.markdownDescription%"
+          },
+          "op-devtools.sanitizer.allocUnused": {
+            "type": "boolean",
+            "order": 202,
+            "markdownDescription": "%config.op-devtools.sanitizer.allocUnused.markdownDescription%"
+          },
+          "op-devtools.sanitizer.race": {
+            "type": "boolean",
+            "order": 203
+          },
+          "op-devtools.sanitizer.uninitialized": {
+            "type": "boolean",
+            "order": 204
+          },
+          "op-devtools.sanitizer.reportLogLevel": {
+            "type": "string",
+            "order": 205,
+            "enum": [
+              "info",
+              "warn",
+              "error"
+            ]
+          },
+          "op-devtools.sanitizer.maxSingleLogFileSize": {
+            "type": "number",
+            "order": 206,
+            "minimum": 1,
+            "maximum": 10240,
+            "markdownDescription": "%config.op-devtools.sanitizer.maxSingleLogFileSize.markdownDescription%"
+          },
+          "op-devtools.sanitizer.detectionScope": {
+            "type": "string",
+            "order": 207,
+            "enum": [
+              "global",
+              "singleBlock"
+            ],
+            "markdownDescription": "%config.op-devtools.sanitizer.detectionScope.markdownDescription%"
+          },
+          "op-devtools.sanitizer.blockId": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "order": 208,
+            "minimum": 0,
+            "maximum": 200
+          },
+          "op-devtools.sanitizer.enableMsAgentAiFix": {
+            "type": "boolean",
+            "default": true,
+            "order": 209,
+            "description": "%config.op-devtools.sanitizer.enableMsAgentAiFix.description%",
+            "markdownDescription": "%config.op-devtools.sanitizer.enableMsAgentAiFix.markdownDescription%"
+          }
+        }
+      },
+      {
+        "id": "op-devtools.performanceTuning",
+        "title": "%config.category.performanceTuning.title%",
+        "type": "object",
+        "properties": {
+          "op-devtools.performanceTuning.simulation.showQuickOptions": {
+            "type": "boolean",
+            "default": true,
+            "order": 298,
+            "description": "%config.op-devtools.performanceTuning.simulation.showQuickOptions.description%",
+            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.showQuickOptions.markdownDescription%"
+          },
+          "op-devtools.performanceTuning.simulation.simulatorType": {
+            "type": "string",
+            "order": 300,
+            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.simulatorType.markdownDescription%"
+          },
+          "op-devtools.performanceTuning.simulation.memoryThroughputWaveform": {
+            "type": "boolean",
+            "order": 301,
+            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.memoryThroughputWaveform.markdownDescription%"
+          },
+          "op-devtools.performanceTuning.simulation.resourceConflictRatio": {
+            "type": "boolean",
+            "order": 302,
+            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.resourceConflictRatio.markdownDescription%"
+          },
+          "op-devtools.performanceTuning.simulation.parameters": {
+            "type": "object",
+            "order": 303,
+            "default": {},
+            "additionalProperties": {
+              "type": "string"
+            },
+            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.parameters.markdownDescription%"
+          },
+          "op-devtools.performanceTuning.onBoard.showQuickOptions": {
+            "type": "boolean",
+            "default": true,
+            "order": 309,
+            "description": "%config.op-devtools.performanceTuning.onBoard.showQuickOptions.description%",
+            "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.showQuickOptions.markdownDescription%"
+          },
+          "op-devtools.performanceTuning.onBoard.interCoreLoad": {
+            "type": "boolean",
+            "order": 310
+          },
+          "op-devtools.performanceTuning.onBoard.roofline": {
+            "type": "boolean",
+            "order": 311,
+            "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.roofline.markdownDescription%"
+          },
+          "op-devtools.performanceTuning.onBoard.operatorCodeHotspot": {
+            "type": "boolean",
+            "order": 312
+          },
+          "op-devtools.performanceTuning.onBoard.cacheHeatmap": {
+            "type": "boolean",
+            "order": 313,
+            "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.cacheHeatmap.markdownDescription%"
+          },
+          "op-devtools.performanceTuning.onBoard.operatorMetrics": {
+            "type": "boolean",
+            "order": 314,
+            "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.operatorMetrics.markdownDescription%"
+          },
+          "op-devtools.performanceTuning.onBoard.cubeAndVectorInstructionTimeAndRatio": {
+            "type": "boolean",
+            "order": 315
+          },
+          "op-devtools.performanceTuning.onBoard.l2CacheHitRate": {
+            "type": "boolean",
+            "order": 316
+          },
+          "op-devtools.performanceTuning.onBoard.memoryReadWriteBandwidth": {
+            "type": "boolean",
+            "order": 317
+          },
+          "op-devtools.performanceTuning.onBoard.l0ReadWriteBandwidth": {
+            "type": "boolean",
+            "order": 318
+          },
+          "op-devtools.performanceTuning.onBoard.ubReadWriteBandwidth": {
+            "type": "boolean",
+            "order": 319
+          },
+          "op-devtools.performanceTuning.onBoard.computeAndMoveUnitTimeRatio": {
+            "type": "boolean",
+            "order": 320
+          },
+          "op-devtools.performanceTuning.onBoard.resourceConflictRatio": {
+            "type": "boolean",
+            "order": 321
+          },
+          "op-devtools.performanceTuning.onBoard.enableKernelCodeSegmentProfiling": {
+            "type": "boolean",
+            "order": 322,
+            "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.enableKernelCodeSegmentProfiling.markdownDescription%"
+          },
+          "op-devtools.performanceTuning.onBoard.parameters": {
+            "type": "object",
+            "order": 323,
+            "default": {},
+            "additionalProperties": {
+              "type": "string"
+            },
+            "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.parameters.markdownDescription%"
+          }
+        }
+      },
+      {
+        "id": "op-devtools.environment",
+        "title": "%config.category.environment.title%",
+        "type": "object",
+        "properties": {
+          "op-devtools.environment.environmentScript": {
+            "type": "string",
+            "default": "/etc/profile",
+            "order": 400,
+            "markdownDescription": "%config.op-devtools.environment.environmentScript.markdownDescription%"
+          },
+          "op-devtools.environment.socVersion": {
+            "type": "string",
+            "default": "ascend910b",
+            "order": 401,
+            "markdownDescription": "%config.op-devtools.environment.socVersion.markdownDescription%"
+          }
         }
       }
-    },
+    ],
     "colors": [
       {
-        "id": "huawei-op-devtools.operatorProject",
-        "description": "算子工程文件夹装饰颜色",
+        "id": "huawei.op.devtools.operatorProject",
+        "description": "%colors.operatorProject.description%",
         "defaults": {
           "dark": "#5CB3FF",
           "light": "#1890FF"
         }
       },
       {
-        "id": "huawei-op-devtools.operatorProjectCollection",
-        "description": "算子工程集合文件夹装饰颜色",
+        "id": "huawei.op.devtools.operatorProjectCollection",
+        "description": "%colors.operatorProjectCollection.description%",
         "defaults": {
           "dark": "#B37FEB",
           "light": "#722ED1"
@@ -55,38 +315,29 @@
       "activitybar": [
         {
           "id": "mindstudio-opssuite-vscode-plugin",
-          "title": "算子一站式交付平台",
+          "title": "%viewContainer.activitybar.title%",
           "icon": "web/resources/activitybar_logo_mono.svg"
-        }
-      ],
-      "secondarySidebar": [
+        },
         {
           "id": "huawei-op-devtools-secondary-sidebar",
-          "title": "算子一站式开发平台操作面板",
-          "icon": "web/resources/operate_icon_mono.svg"
-        }
-      ],
-      "secondaryActivitybar": [
-        {
-          "id": "huawei-op-devtools-secondary-sidebar",
-          "title": "算子一站式开发平台操作面板",
+          "title": "%viewContainer.secondarySidebar.title%",
           "icon": "web/resources/operate_icon_mono.svg"
         }
       ],
       "panel": [
         {
           "id": "ms-sanitizer-panel-view",
-          "title": "异常检测结果",
+          "title": "%viewContainer.panel.sanitizer.title%",
           "icon": "web/resources/ops_icon_mono.svg"
         },
         {
           "id": "performance-panel-view",
-          "title": "性能调优结果",
+          "title": "%viewContainer.panel.performance.title%",
           "icon": "web/resources/power.svg"
         },
         {
           "id": "dump-tensor-panel-view",
-          "title": "DumpTensor数据",
+          "title": "%viewContainer.panel.dumpTensor.title%",
           "icon": "web/resources/tensor.svg"
         }
       ]
@@ -94,23 +345,26 @@
     "views": {
       "mindstudio-opssuite-vscode-plugin": [
         {
-          "id": "pluginSidebar",
-          "name": "功能列表",
-          "type": "webview"
-        }
-      ],
-      "huawei-op-devtools-secondary-sidebar": [
+          "id": "opdevtoolsHomeTree",
+          "name": "Home",
+          "when": "opDevtools.showHomeTree"
+        },
         {
-          "type": "webview",
-          "id": "OpsOperateProvider",
-          "name": "算子开发流程菜单"
+          "id": "opdevtoolsOperatorProjectsTree",
+          "name": "%view.operatorProjects.name%",
+          "when": "opDevtools.showOperatorProjects"
+        },
+        {
+          "id": "opdevtoolsOperateTree",
+          "name": "%view.opsOperate.name%",
+          "when": "opDevtools.showOperateTree"
         }
       ],
       "ms-sanitizer-panel-view": [
         {
           "type": "webview",
           "id": "msSanitizerPanelView",
-          "name": "异常检测",
+          "name": "%view.msSanitizer.name%",
           "when": "true"
         }
       ],
@@ -118,7 +372,7 @@
         {
           "type": "webview",
           "id": "performancePanelView",
-          "name": "性能调优",
+          "name": "%view.performance.name%",
           "when": "true"
         }
       ],
@@ -126,7 +380,7 @@
         {
           "type": "webview",
           "id": "dumpTensorPanelView",
-          "name": "DumpTensor数据",
+          "name": "%view.dumpTensor.name%",
           "when": "true"
         }
       ],
@@ -135,182 +389,320 @@
     "commands": [
       {
         "command": "huawei-op-devtools.open",
-        "title": "新建算子工程"
+        "title": "%command.open.title%",
+        "icon": "$(add)"
       },
       {
         "command": "huawei-op-devtools.openProject",
-        "title": "打开算子工程"
+        "title": "%command.openProject.title%"
       },
       {
         "command": "huawei-op-devtools.buildOps",
-        "title": "编译算子"
+        "title": "%command.buildOps.title%"
       },
       {
         "command": "huawei-op-devtools.toggleOpsOperate",
-        "title": "一站式算子工程操作面板",
-        "category": "secondary Sidebar",
+        "title": "%command.toggleOpsOperate.title%",
+        "category": "%command.toggleOpsOperate.category%",
         "icon": "web/resources/operate.svg"
       },
       {
         "command": "huawei-op-devtools.config",
-        "title": "配置"
+        "title": "%command.config.title%"
       },
       {
         "command": "huawei-op-devtools.leftNaV",
-        "title": "左侧菜单配置"
+        "title": "%command.leftNav.title%"
       },
       {
         "command": "huawei-op-devtools.createOps",
-        "title": "新建算子原型文件",
+        "title": "%command.createOps.title%",
         "icon": "web/resources/ops_icon_mono.svg"
       },
       {
         "command": "extension.jsonButtonAction",
-        "title": "生成算子工程",
-        "category": "JSON Tools"
+        "title": "%command.jsonButtonAction.title%",
+        "category": "%command.jsonButtonAction.category%"
       },
       {
         "command": "csv-viewer.openCsv",
-        "title": "打开 CSV 文件",
-        "category": "CSV Viewer"
+        "title": "%command.openCsv.title%",
+        "category": "%command.openCsv.category%"
       },
       {
         "command": "huawei-op-devtools.test",
-        "title": "insight插件测试"
+        "title": "%command.test.title%"
       },
       {
         "command": "huawei-op-devtools.projectSH",
-        "title": "环境配置"
+        "title": "%command.projectSH.title%"
       },
       {
         "command": "huawei-op-devtools.welcome",
-        "title": "欢迎页"
+        "title": "%command.welcome.title%",
+        "category": "%config.title%"
       },
       {
         "command": "huawei-op-devtools.clearWelcomeCount",
-        "title": "清除欢迎页显示计数"
+        "title": "%command.clearWelcomeCount.title%"
       },
       {
         "command": "huawei-op-devtools.open-ms-sanitizer-panel-view",
-        "title": "异常检测"
+        "title": "%command.openMsSanitizer.title%"
       },
       {
         "command": "huawei-op-devtools.open-performance-panel-view",
-        "title": "性能调优"
+        "title": "%command.openPerformance.title%"
       },
       {
         "command": "huawei-op-devtools.open-dump-tensor-panel-view",
-        "title": "DumpTensor数据"
+        "title": "%command.openDumpTensor.title%"
       },
       {
         "command": "vscodeJumpToFile",
-        "title": "文件跳转定位"
+        "title": "%command.vscodeJumpToFile.title%"
       },
       {
         "command": "huawei-op-devtools.flashMsSanitizerRunData",
-        "title": "刷新异常检测列表数据"
+        "title": "%command.flashMsSanitizer.title%"
       },
       {
         "command": "huawei-op-devtools.flashPerformanceRunData",
-        "title": "刷新性能调优列表数据"
+        "title": "%command.flashPerformance.title%"
       },
       {
         "command": "huawei-op-devtools.createOperatorInWorkspace",
-        "title": "在当前目录下新建算子"
+        "title": "%command.createOperatorInWorkspace.title%"
       },
       {
         "command": "huawei-op-devtools.clearLastProjectPath",
-        "title": "清除缓存的算子工程位置"
+        "title": "%command.clearLastProjectPath.title%"
       },
       {
         "command": "huawei-op-devtools.simulatorOptions",
-        "title": "仿真分析-选择采集内容"
+        "title": "%command.simulatorOptions.title%"
       },
       {
         "command": "huawei-op-devtools.onBoardOptions",
-        "title": "上板分析-选择采集内容"
+        "title": "%command.onBoardOptions.title%"
       },
       {
         "command": "huawei-op-devtools.sanitizerOptions",
-        "title": "异常检测-选择检测内容"
+        "title": "%command.sanitizerOptions.title%"
       },
       {
         "command": "huawei-op-devtools.markAsOperatorProject",
-        "title": "标记为算子工程"
+        "title": "%command.markAsOperatorProject.title%"
       },
       {
         "command": "huawei-op-devtools.markAsMultiOperatorProject",
-        "title": "标记为算子工程集合"
+        "title": "%command.markAsMultiOperatorProject.title%"
       },
       {
         "command": "huawei-op-devtools.unmarkAsOperatorProject",
-        "title": "取消标记为算子工程"
+        "title": "%command.unmarkAsOperatorProject.title%"
       },
       {
         "command": "huawei-op-devtools.unmarkAsMultiOperatorProject",
-        "title": "取消标记为算子工程集合"
+        "title": "%command.unmarkAsMultiOperatorProject.title%"
       },
       {
         "command": "huawei-op-devtools.operatorProjectBuild",
-        "title": "编译部署算子"
+        "title": "%command.operatorProjectBuild.title%"
       },
       {
         "command": "huawei-op-devtools.operatorProjectRun",
-        "title": "运行验证"
+        "title": "%command.operatorProjectRun.title%"
       },
       {
         "command": "huawei-op-devtools.operatorProjectCpuDebug",
-        "title": "CPU调试"
+        "title": "%command.operatorProjectCpuDebug.title%"
       },
       {
         "command": "huawei-op-devtools.operatorProjectCpuDebugConfig",
-        "title": "CPU调试配置"
+        "title": "%command.operatorProjectCpuDebugConfig.title%"
       },
       {
         "command": "huawei-op-devtools.operatorProjectSanitizer",
-        "title": "异常检测"
+        "title": "%command.operatorProjectSanitizer.title%"
       },
       {
         "command": "huawei-op-devtools.operatorProjectOnBoard",
-        "title": "上板分析"
+        "title": "%command.operatorProjectOnBoard.title%"
       },
       {
         "command": "huawei-op-devtools.operatorProjectSimulation",
-        "title": "仿真分析"
+        "title": "%command.operatorProjectSimulation.title%"
       },
       {
         "command": "huawei-op-devtools.reportVisualizationSanitizer",
-        "title": "添加为异常检测可视化视图"
+        "title": "%command.reportVisualizationSanitizer.title%"
       },
       {
         "command": "huawei-op-devtools.reportVisualizationOnBoard",
-        "title": "上板分析"
+        "title": "%command.reportVisualizationOnBoard.title%"
       },
       {
         "command": "huawei-op-devtools.reportVisualizationSimulation",
-        "title": "仿真分析"
+        "title": "%command.reportVisualizationSimulation.title%"
       },
       {
         "command": "huawei-op-devtools.reportVisualizationPerformance",
-        "title": "添加为性能调优可视化视图"
+        "title": "%command.reportVisualizationPerformance.title%"
       },
       {
         "command": "huawei-op-devtools.refreshFolderDecorations",
-        "title": "刷新文件夹装饰"
+        "title": "%command.refreshFolderDecorations.title%"
       },
       {
         "command": "huawei-op-devtools.importDumpTensorBinFile",
-        "title": "解析生成DumpTensors数据"
+        "title": "%command.importDumpTensorBinFile.title%"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.projectConfig",
+        "title": "Project Config",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.build",
+        "title": "Compile & Deploy"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.run",
+        "title": "Run"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.cpuDebug",
+        "title": "CPU Debug"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.npuDebug",
+        "title": "NPU Debug"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.sanitizer",
+        "title": "Sanitizer"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.onBoard",
+        "title": "On-board Analysis"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.simulation",
+        "title": "Simulation Analysis"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.utTest",
+        "title": "UT Test"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.dumpTensor",
+        "title": "Dump Tensor"
+      },
+      {
+        "command": "huawei-op-devtools.operate.debugSettings",
+        "title": "Debug Settings",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "huawei-op-devtools.operate.sanitizerSettings",
+        "title": "Sanitizer Settings",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "huawei-op-devtools.operate.onBoardSettings",
+        "title": "On-board Settings",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "huawei-op-devtools.operate.simulationSettings",
+        "title": "Simulation Settings",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.selectOperators",
+        "title": "Select Operator Projects"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.clearSelectedOperators",
+        "title": "%command.sidebar.clearSelectedOperators.title%",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.searchOperators",
+        "title": "Search Operator Projects",
+        "icon": "$(search)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.clearOperatorProjectsSearch",
+        "title": "%command.sidebar.clearOperatorProjectsSearch.title%",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.toggleOperator",
+        "title": "Toggle Operator"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.selectAllCompiledOperators",
+        "title": "%command.sidebar.selectAll.title%",
+        "icon": "$(check-all)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.selectAllPreparedOperators",
+        "title": "%command.sidebar.selectAll.title%",
+        "icon": "$(check-all)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.selectAllOperators",
+        "title": "%command.sidebar.selectAll.title%",
+        "icon": "$(check-all)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.deselectAllPreparedOperators",
+        "title": "%command.sidebar.clearSelectedOperators.title%",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.stopFlowTask",
+        "title": "%command.sidebar.stopFlowTask.title%",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.stopAllOperatorActions",
+        "title": "%command.sidebar.stopAllOperatorActions.title%",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.openWelcome",
+        "title": "Open Welcome"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.openHelp",
+        "title": "Open Help Guide"
+      }
+    ],
+    "viewsWelcome": [
+      {
+        "view": "opdevtoolsHomeTree",
+        "contents": "Click [Help Guide](command:huawei-op-devtools.sidebar.openHelp) or [Welcome Home](command:huawei-op-devtools.sidebar.openWelcome) to view plugin introduction."
+      },
+      {
+        "view": "opdevtoolsHomeTree",
+        "contents": "[New Operator Project](command:huawei-op-devtools.open)"
+      },
+      {
+        "view": "opdevtoolsHomeTree",
+        "contents": "[Open Operator Project](command:huawei-op-devtools.openProject)"
       }
     ],
     "submenus": [
       {
         "id": "operator.debug",
-        "label": "调试"
+        "label": "%submenu.operator.debug.label%"
       },
       {
         "id": "operator.performance",
-        "label": "性能调优"
+        "label": "%submenu.operator.performance.label%"
       }
     ],
     "menus": {
@@ -323,10 +715,78 @@
       "menuBar/file/new": [
         {
           "command": "huawei-op-devtools.open",
-          "title": "新建算子工程"
+          "title": "%menu.file.new.open.title%"
         }
       ],
-      "view/title": [],
+      "view/title": [
+        {
+          "command": "huawei-op-devtools.sidebar.stopAllOperatorActions",
+          "when": "view == opdevtoolsOperateTree && opDevtools.operatorActionQueueStopAllVisible",
+          "group": "navigation@0"
+        },
+        {
+          "command": "huawei-op-devtools.open",
+          "when": "view == opdevtoolsOperateTree",
+          "group": "navigation@1"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.projectConfig",
+          "when": "view == opdevtoolsOperateTree",
+          "group": "navigation@2"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.selectAllOperators",
+          "when": "view == opdevtoolsOperatorProjectsTree && opDevtools.showOperatorSearch && !opDevtools.allOperatorsSelected",
+          "group": "navigation@3"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.clearSelectedOperators",
+          "when": "view == opdevtoolsOperatorProjectsTree && opDevtools.showOperatorSearch && opDevtools.allOperatorsSelected",
+          "group": "navigation@4"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.clearOperatorProjectsSearch",
+          "when": "view == opdevtoolsOperatorProjectsTree && opDevtools.showOperatorSearch && opDevtools.operatorProjectsSearchActive",
+          "group": "navigation@5"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.searchOperators",
+          "when": "view == opdevtoolsOperatorProjectsTree && opDevtools.showOperatorSearch",
+          "group": "navigation@6"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "huawei-op-devtools.sidebar.clearSelectedOperators",
+          "when": "view == opdevtoolsOperatorProjectsTree && viewItem =~ /operator-projects-selected/",
+          "group": "inline@1"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.stopFlowTask",
+          "when": "view == opdevtoolsOperateTree && viewItem =~ /opdevtools\\.flowRunning/",
+          "group": "inline@1"
+        },
+        {
+          "command": "huawei-op-devtools.operate.debugSettings",
+          "when": "view == opdevtoolsOperateTree && viewItem =~ /opdevtools\\.debug/",
+          "group": "inline@2"
+        },
+        {
+          "command": "huawei-op-devtools.operate.sanitizerSettings",
+          "when": "view == opdevtoolsOperateTree && viewItem =~ /opdevtools\\.sanitizer/",
+          "group": "inline@2"
+        },
+        {
+          "command": "huawei-op-devtools.operate.onBoardSettings",
+          "when": "view == opdevtoolsOperateTree && viewItem =~ /opdevtools\\.onboard/",
+          "group": "inline@2"
+        },
+        {
+          "command": "huawei-op-devtools.operate.simulationSettings",
+          "when": "view == opdevtoolsOperateTree && viewItem =~ /opdevtools\\.simulation/",
+          "group": "inline@2"
+        }
+      ],
       "editor/title": [
         {
           "command": "huawei-op-devtools.toggleOpsOperate",
@@ -421,7 +881,7 @@
     "customEditors": [
       {
         "viewType": "csvViewer",
-        "displayName": "CSV 表格视图",
+        "displayName": "%customEditor.csvViewer.displayName%",
         "selector": [
           {
             "filenamePattern": "*.csv"
@@ -432,16 +892,16 @@
     ]
   },
   "scripts": {
-    "package": "pnpm run compile && vsce package --no-dependencies",
+    "package": "pnpm run compile && vsce package --no-dependencies --allow-package-secrets privatekey --baseContentUrl https://gitcode.com/kaocong/mstt/raw/main/ --baseImagesUrl https://gitcode.com/kaocong/mstt/raw/main/",
     "build": "pnpm run compile",
     "compile": "pnpm run compile:web && pnpm run compile:plugin",
     "compile:web": "cd web && pnpm run build",
     "compile:plugin": "tsc --noEmit && tsx scripts/build-extension",
-    "package:debug": "pnpm run compile:debug && vsce package --no-dependencies",
+    "package:debug": "pnpm run compile:debug && vsce package --no-dependencies --allow-package-secrets privatekey --baseContentUrl https://gitcode.com/kaocong/mstt/raw/main/ --baseImagesUrl https://gitcode.com/kaocong/mstt/raw/main/",
     "compile:debug": "pnpm run compile:web:debug && pnpm run compile:plugin:debug",
     "compile:web:debug": "cd web && pnpm run build:debug",
     "compile:plugin:debug": "tsx scripts/build-extension --sourcemap",
-    "package:readable": "pnpm run compile:readable && vsce package --no-dependencies",
+    "package:readable": "pnpm run compile:readable && vsce package --no-dependencies --allow-package-secrets privatekey --baseContentUrl https://gitcode.com/kaocong/mstt/raw/main/ --baseImagesUrl https://gitcode.com/kaocong/mstt/raw/main/",
     "compile:readable": "pnpm run compile:web:readable && pnpm run compile:plugin:readable",
     "compile:web:readable": "cd web && pnpm run build --mode=readable",
     "compile:plugin:readable": "tsx scripts/build-extension --sourcemap --readable",
@@ -449,7 +909,8 @@
     "lint": "oxlint . && eslint .",
     "lint:fix": "eslint . --fix",
     "type-check": "tsc --noEmit && cd web && vue-tsc --noEmit",
-    "install:web": "cd web && pnpm install"
+    "install:web": "cd web && pnpm install",
+    "test:e2e": "playwright test"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,vue}": [
@@ -462,10 +923,13 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
+    "@playwright/test": "^1.59.1",
+    "@rolldown/binding-win32-x64-msvc": "1.0.0-rc.9",
     "@stylistic/eslint-plugin": "^5.6.1",
     "@types/node": "^24.6.0",
     "@types/vscode": "^1.60.0",
     "@vitejs/plugin-vue": "^6.0.1",
+    "@vscode/test-electron": "^2.5.2",
     "@vscode/test-web": "^0.0.77",
     "@vscode/vsce": "^3.7.1",
     "@vue/tsconfig": "^0.8.1",
@@ -486,7 +950,7 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.50.0",
     "unplugin-vue-components": "^30.0.0",
-    "vite": "npm:rolldown-vite@7.1.14",
+    "vite": "^8.0.0",
     "vue-tsc": "^3.2.1"
   }
 }

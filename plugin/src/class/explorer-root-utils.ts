@@ -2,11 +2,11 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 
 /**
- * VSCode 资源管理器根目录工具类
+ * VSCode resource manager root directory tool class
  */
 export class ExplorerRootUtils {
   /**
-   * 获取资源管理器的根目录信息
+   * Get the root directory information of the resource manager
    */
   public static getExplorerRoots(): Array<{
     name: string;
@@ -28,7 +28,7 @@ export class ExplorerRootUtils {
   }
 
   /**
-   * 获取主根目录（第一个工作区文件夹）
+   * Get the main root directory (first workspace folder)
    */
   public static getPrimaryRoot(): { name: string;
     path: string } | undefined {

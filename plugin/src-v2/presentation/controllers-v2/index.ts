@@ -5,22 +5,27 @@ import type {
   StartBuildParams,
   StartRunParams,
   StartBuildExampleParams,
+  StartSimulateParams,
+  StartOnBoardParams,
+  StartSanitizerParams,
+  StartDumpTensorParams,
+  StartUtTestParams,
 } from '@shared/api-types';
 
 /**
- * 获取 BuildController 实例
+ * Get BuildController instance
  */
 function getBuildController(): BuildControllerV2 {
   return containerV2.get<BuildControllerV2>(DI_TOKENS.BuildController);
 }
 
 /**
- * Task 控制器方法 V2
- * 导出给 api-routes 使用
+ * Task controller methods V2
+ * Exported for use by api-routes
  */
 export const taskMethodsV2 = {
   /**
-   * 开始构建算子
+   * Start operator build
    */
   async startBuild(params: StartBuildParams = {}): Promise<void> {
     return getBuildController()
@@ -28,7 +33,7 @@ export const taskMethodsV2 = {
   },
 
   /**
-   * 开始运行算子
+   * Start operator run
    */
   async startRun(params: StartRunParams = {}): Promise<void> {
     return getBuildController()
@@ -36,7 +41,7 @@ export const taskMethodsV2 = {
   },
 
   /**
-   * 开始构建示例
+   * Start build example
    */
   async startBuildExample(params: StartBuildExampleParams = {}): Promise<void> {
     return getBuildController()
@@ -44,7 +49,7 @@ export const taskMethodsV2 = {
   },
 
   /**
-   * 获取构建配置ID
+   * Get build config ID
    */
   async getBuildConfig(): Promise<number | undefined> {
     return getBuildController()
@@ -52,22 +57,22 @@ export const taskMethodsV2 = {
   },
 
   /**
-   * 获取示例构建配置ID
+   * Get build example config ID
    */
   async getBuildExampleConfig(): Promise<number | undefined> {
     return getBuildController()
       .getBuildExampleConfigId();
   },
 
-  // 其他方法暂时返回 undefined,待后续实现
-  async startSimulate(): Promise<void> {
+  // Other methods return undefined for now; to be implemented
+  async startSimulate(params: StartSimulateParams = {}): Promise<void> {
     return getBuildController()
-      .startSimulate();
+      .startSimulate(params);
   },
 
-  async startOnBoard(): Promise<void> {
+  async startOnBoard(params: StartOnBoardParams = {}): Promise<void> {
     return getBuildController()
-      .startOnBoard();
+      .startOnBoard(params);
   },
 
   async getSimulateConfig(): Promise<string> {
@@ -98,16 +103,38 @@ export const taskMethodsV2 = {
       .saveSanitizerForm(params);
   },
 
-  async runSanitizer(): Promise<void> {
+  async runSanitizer(params: StartSanitizerParams = {}): Promise<void> {
     return getBuildController()
-      .runSanitizer();
+      .runSanitizer(params);
+  },
+
+  async startDumpTensor(
+    params: StartDumpTensorParams = {},
+  ): Promise<void> {
+    return getBuildController()
+      .startDumpTensor(params);
+  },
+
+  async startUtTest(
+    params: StartUtTestParams = {},
+  ): Promise<void> {
+    return getBuildController()
+      .startUtTest(params);
   },
 
   /**
-   * 停止当前任务
+   * Stop current task
    */
   async stopTask(): Promise<void> {
     return getBuildController()
       .stopTask();
+  },
+
+  /**
+   * Check task execution status
+   */
+  async checkTaskStatus(): Promise<boolean> {
+    return getBuildController()
+      .checkTaskStatus();
   },
 };

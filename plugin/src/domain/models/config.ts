@@ -5,8 +5,8 @@ import { execSync } from 'child_process';
 import * as vscode from 'vscode';
 
 /**
- * 通过命令获取环境变量 WORKSPACE_FOLDER 的值
- * @returns WORKSPACE_FOLDER 的值，如果获取失败或未设置则返回 undefined
+ * Get the value of the environment variable WORKSPACE_FOLDER through the command
+ * @returns the value of WORKSPACE_FOLDER, if the acquisition fails or is not set, it returns undefined
  */
 export function getWorkspaceFolder(): string | undefined {
   try {
@@ -14,11 +14,11 @@ export function getWorkspaceFolder(): string | undefined {
     let cmd: string;
 
     if (platform === 'win32') {
-      // Windows: 使用 PowerShell 获取环境变量
+      // Windows: Using PowerShell to obtain environment variables
       cmd = 'powershell -Command "echo $env:WORKSPACE_FOLDER"';
     }
     else {
-      // Linux/Mac: 使用 echo 获取环境变量
+      // Linux/Mac: Use echo to obtain environment variables
       cmd = 'echo $WORKSPACE_FOLDER';
     }
 
@@ -26,42 +26,42 @@ export function getWorkspaceFolder(): string | undefined {
 
     const workspaceFolder = result.trim();
 
-    // 如果结果为空或只包含空白字符，视为未设置
+    // If the result is empty or contains only whitespace characters, it is considered unset
     if (!workspaceFolder || workspaceFolder.length === 0) {
-      console.log('[getWorkspaceFolder] WORKSPACE_FOLDER 未设置或为空');
+      console.log('[getWorkspaceFolder] WORKSPACE_FOLDER is not set or empty');
 
       return undefined;
     }
 
-    console.log('[getWorkspaceFolder] 通过命令获取 WORKSPACE_FOLDER:', workspaceFolder);
+    console.log('[getWorkspaceFolder] Obtained WORKSPACE_FOLDER via command:', workspaceFolder);
 
     return workspaceFolder;
   }
   catch (error) {
-    console.warn('[getWorkspaceFolder] 获取 WORKSPACE_FOLDER 失败:', error);
+    console.warn('[getWorkspaceFolder] Failed to get WORKSPACE_FOLDER:', error);
 
     return undefined;
   }
 }
 
 function getUserDataDir(): string {
-  // 通过封装的函数获取环境变量 WORKSPACE_FOLDER 的值
+  // Obtain the value of the environment variable WORKSPACE_FOLDER through the encapsulated function
   const workspaceFolder = getWorkspaceFolder();
 
   if (workspaceFolder) {
-    // 直接使用环境变量指定的路径，不添加额外子目录
+    // Directly use the path specified by the environment variable without adding additional subdirectories
     fs.ensureDirSync(workspaceFolder);
-    console.log('[getUserDataDir] 使用环境变量 WORKSPACE_FOLDER:', workspaceFolder);
+    console.log('[getUserDataDir] Using WORKSPACE_FOLDER environment variable:', workspaceFolder);
 
     return workspaceFolder;
   }
 
-  // 如果环境变量不存在，回退到原来的逻辑
+  // If the environment variable does not exist, fall back to the original logic
   const home = os.homedir();
   const dataDir = path.join(home, '.vscode-server', 'data', 'ms-op-suite');
 
   fs.ensureDirSync(dataDir);
-  console.log('[getUserDataDir] 使用默认路径:', dataDir);
+  console.log('[getUserDataDir] Using default path:', dataDir);
 
   return dataDir;
 }

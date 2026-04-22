@@ -14,7 +14,7 @@ interface GenerateStructureParams {
   ascend_env_script?: string;
   examples?: string;
   create_by?: string;
-  /** 暂未启用 */
+  /** Not enabled yet */
   ops_prototype_file?: string;
   template_name?: string;
 }
@@ -23,7 +23,7 @@ export async function generateStructure(
   data: GenerateStructureParams,
   extensionPath: string,
   isSkipUnZip: boolean = false,
-  skipVscodeFiles: boolean = false
+  skipVscodeFiles: boolean = false,
 ): Promise<number> {
   return await model.generateStructure(data, extensionPath, isSkipUnZip, skipVscodeFiles);
 }

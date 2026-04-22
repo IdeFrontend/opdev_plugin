@@ -1,17 +1,18 @@
+import { t } from 'i18next';
 import * as vscode from 'vscode';
 
-/** 最大渲染行数 */
+/** Maximum number of rendering lines */
 const MAX_RENDER_ROWS = 1000;
 
 /**
- * CSV 编辑器提供者 - 负责将 CSV 文件渲染为表格
+ * CSV Editor Provider - Responsible for rendering CSV files into tables
  */
 export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
   public static readonly viewType = 'csvViewer';
 
   /**
-   * 解析 CSV 文本为二维数组
-   * 支持 RFC 4180 标准 CSV 格式
+   * Parse CSV text into 2D array
+   * Supports RFC 4180 standard CSV format
    */
   private parseCsv(text: string): string[][] {
     try {
@@ -21,7 +22,7 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
         return rows;
       }
 
-      // 简化解析逻辑，使用更可靠的方法
+      // Simplify parsing logic and use more reliable methods
       const lines: string[] = [];
       let currentLine = '';
       let inQuotes = false;
@@ -32,20 +33,20 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
 
         if (char === '"') {
           if (inQuotes && nextChar === '"') {
-            // 转义的双引号
+            // escaped double quotes
             currentLine += '"';
-            i++; // 跳过下一个引号
+            i++; // skip next quote
           }
           else {
-            // 切换引号状态
+            // Toggle quote status
             inQuotes = !inQuotes;
             currentLine += char;
           }
         }
         else if ((char === '\n' || char === '\r') && !inQuotes) {
-          // 行结束
+          // end of line
           if (char === '\r' && nextChar === '\n') {
-            i++; // 跳过 \n
+            i++; // Skip \n
           }
 
           if (currentLine.trim() || lines.length === 0) {
@@ -59,15 +60,15 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
         }
       }
 
-      // 添加最后一行
+      // add last line
       if (currentLine.trim() || lines.length === 0) {
         lines.push(currentLine);
       }
 
-      // 解析每行为字段数组
+      // Parse array of fields per row
       for (const line of lines) {
         if (!line.trim() && rows.length > 0) {
-          continue; // 跳过空行（除了第一行）
+          continue; // Skip empty lines (except the first line)
         }
 
         const fields: string[] = [];
@@ -81,7 +82,7 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
           if (char === '"') {
             if (fieldInQuotes && nextChar === '"') {
               currentField += '"';
-              i++; // 跳过下一个引号
+              i++; // skip next quote
             }
             else {
               fieldInQuotes = !fieldInQuotes;
@@ -96,7 +97,7 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
           }
         }
 
-        // 添加最后一个字段
+        // Add last field
         fields.push(currentField);
         rows.push(fields);
       }
@@ -104,12 +105,12 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
       return rows;
     }
     catch (error) {
-      console.error('CSV 解析错误:', error);
+      console.error('CSV parse error:', error);
 
-      // 返回空数组或单行错误信息
+      // Return an empty array or a single line of error information
       return [
         [
-          '解析错误',
+          t('csv.parseError'),
           String(error),
         ],
       ];
@@ -117,13 +118,16 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
   }
 
   /**
-   * 生成 HTML 内容
+   * Generate HTML content
    */
   private getHtmlForWebview(csvData: string[][]): string {
     const displayRows = csvData.slice(0, MAX_RENDER_ROWS);
     const isOverMaxRows = csvData.length > MAX_RENDER_ROWS;
+    const rowSummary = isOverMaxRows
+      ? t('csv.rowsCountTruncated', { count: csvData.length, max: MAX_RENDER_ROWS })
+      : t('csv.rowsCountOnly', { count: csvData.length });
 
-    // 生成表头
+    // Generate header
     let headerHtml = '';
 
     if (displayRows.length > 0) {
@@ -137,7 +141,7 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
       headerHtml += '</tr></thead>';
     }
 
-    // 生成表体
+    // Generate table body
     let bodyHtml = '<tbody>';
 
     for (let i = 1; i < displayRows.length; i++) {
@@ -153,11 +157,11 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
     bodyHtml += '</tbody>';
 
     return `<!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSV 表格视图</title>
+    <title>${this.escapeHtml(t('csv.tableViewTitle'))}</title>
     <style>
         * {
             margin: 0;
@@ -248,7 +252,7 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
 </head>
 <body>
     <div class="container">
-        <span>共 ${csvData.length} 行${isOverMaxRows ? `，仅显示前${MAX_RENDER_ROWS}行` : ''}</span>
+        <span>${this.escapeHtml(rowSummary)}</span>
         <div class="table-container">
             ${
               displayRows.length > 0
@@ -256,7 +260,7 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
                 ${headerHtml}
                 ${bodyHtml}
             </table>`
-                : '<div class="empty">CSV 文件为空</div>'
+                : `<div class="empty">${this.escapeHtml(t('csv.fileEmpty'))}</div>`
             }
         </div>
     </div>
@@ -265,7 +269,7 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
   }
 
   /**
-   * HTML 转义
+   * HTML escaping
    */
   private escapeHtml(text: string): string {
     const map: { [key: string]: string } = {
@@ -280,17 +284,17 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
   }
 
   /**
-   * 解析并返回 Webview 内容
+   * Parse and return Webview content
    */
   public async resolveCustomTextEditor(
     document: vscode.TextDocument,
     webviewPanel: vscode.WebviewPanel,
   ): Promise<void> {
     try {
-      // 设置 Webview 选项
+      // Set Webview options
       webviewPanel.webview.options = { enableScripts: true };
 
-      // 初始化内容
+      // Initialization content
       const updateWebview = () => {
         try {
           const text = document.getText();
@@ -299,13 +303,13 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
           webviewPanel.webview.html = this.getHtmlForWebview(csvData);
         }
         catch (error) {
-          console.error('更新 Webview 错误:', error);
-          // 显示错误页面
+          console.error('Webview update error:', error);
+          // Show error page
           webviewPanel.webview.html = this.getErrorHtml(String(error));
         }
       };
 
-      // 监听文档变化
+      // Monitor document changes
       const changeDocumentSubscription =
         vscode.workspace.onDidChangeTextDocument((e) => {
           if (e.document.uri.toString() === document.uri.toString()) {
@@ -313,30 +317,30 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
           }
         });
 
-      // 清理订阅
+      // Clean up subscription
       webviewPanel.onDidDispose(() => {
         changeDocumentSubscription.dispose();
       });
 
-      // 初始更新
+      // initial update
       updateWebview();
     }
     catch (error) {
-      console.error('初始化 CSV 编辑器错误:', error);
+      console.error('Error initializing CSV editor:', error);
       webviewPanel.webview.html = this.getErrorHtml(String(error));
     }
   }
 
   /**
-   * 生成错误页面 HTML
+   * Generate error page HTML
    */
   private getErrorHtml(errorMessage: string): string {
     return `<!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CSV 表格视图 - 错误</title>
+    <title>${this.escapeHtml(t('csv.errorPageTitle'))}</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -366,8 +370,8 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
 </head>
 <body>
     <div class="error-container">
-        <h1>无法加载 CSV 文件</h1>
-        <p>错误信息：</p>
+        <h1>${this.escapeHtml(t('csv.errorLoadFailed'))}</h1>
+        <p>${this.escapeHtml(t('csv.errorDetailsLabel'))}</p>
         <pre>${this.escapeHtml(errorMessage)}</pre>
     </div>
 </body>

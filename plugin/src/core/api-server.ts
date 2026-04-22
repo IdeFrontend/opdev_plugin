@@ -1,5 +1,7 @@
 import { t } from 'i18next';
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 
 import type {
   RequestOptions,
@@ -7,6 +9,64 @@ import type {
   ResponseMessage,
 } from '@shared/api-server';
 import { WebviewConnector } from './connector';
+
+// E2E Mock imports - lazy loaded to avoid circular dependency issues
+let e2eMockApis: any = null;
+let _e2eMockModeCache: boolean | null = null;
+
+function isE2EMockMode(): boolean {
+  if (_e2eMockModeCache !== null) {
+    return _e2eMockModeCache;
+  }
+
+  // Check environment variable first
+  if (process.env.E2E_MOCK === 'true') {
+    _e2eMockModeCache = true;
+
+    return true;
+  }
+
+  // Check for marker file
+  try {
+    let currentDir = __dirname;
+
+    for (let i = 0; i < 5; i++) {
+      if (fs.existsSync(path.join(currentDir, '.e2e-mock'))) {
+        _e2eMockModeCache = true;
+
+        return true;
+      }
+
+      currentDir = path.dirname(currentDir);
+    }
+  }
+  catch {
+    // Ignore
+  }
+
+  _e2eMockModeCache = false;
+
+  return false;
+}
+
+function loadE2EMockApis(): any {
+  if (!e2eMockApis) {
+    try {
+      // Dynamic require to avoid issues during normal operation
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const mockModule = require('../mock-apis');
+
+      e2eMockApis = mockModule.mockApis;
+    }
+    catch (e) {
+      console.warn('[ApiServer] Failed to load E2E mock APIs:', e);
+
+      return null;
+    }
+  }
+
+  return e2eMockApis;
+}
 
 export type {
   RequestOptions, RequestMessage, ResponseMessage,
@@ -19,16 +79,16 @@ export type ApiGroup = {
 };
 
 /**
- * 接口服务，监听webview端请求
+ * Interface service, monitor webview side requests
  */
 export class ApiServer extends vscode.Disposable {
-  // 单例模式
+  // Singleton pattern
   private static instance: ApiServer;
   private linkedWebviews = new Map<string, vscode.Webview>();
   private connector: WebviewConnector<ResponseMessage, RequestMessage>;
 
   /**
-   * @param apis 接口配置
+   * @param apis interface configuration
    */
   constructor(private apis: ApiGroup) {
     super(() => {});
@@ -82,6 +142,31 @@ export class ApiServer extends vscode.Disposable {
 
   private getApi(apiPath: string): Api | undefined {
     const apiKeys = apiPath.split('/');
+
+    // Check for E2E mock mode and use mock APIs if available
+    if (isE2EMockMode()) {
+      const mockApis = loadE2EMockApis();
+
+      if (mockApis) {
+        let apiOrGroup: ApiGroup | Api | undefined = mockApis;
+
+        for (const apiKey of apiKeys) {
+          apiOrGroup = (apiOrGroup as ApiGroup)[apiKey];
+
+          if (!apiOrGroup) {
+            break;
+          }
+        }
+
+        if (apiOrGroup && apiOrGroup instanceof Function) {
+          console.log(`[ApiServer] Using E2E mock for: ${apiPath}`);
+
+          return apiOrGroup;
+        }
+      }
+    }
+
+    // Fall back to real APIs
     let apiOrGroup: ApiGroup | Api | undefined = this.apis;
 
     for (const apiKey of apiKeys) {
@@ -96,7 +181,7 @@ export class ApiServer extends vscode.Disposable {
   }
 
   /**
-   * 遍历数据流
+   * Traverse the data stream
    * @param webview
    * @param requestMessage
    * @param stream
@@ -186,7 +271,7 @@ export class ApiServer extends vscode.Disposable {
   }
 
   /**
-   * sendMessage无法发送error对象，转换成普通对象
+   * sendMessage cannot send an error object and converts it to a normal object
    * @param error
    * @returns
    */

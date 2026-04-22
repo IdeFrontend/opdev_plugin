@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from 'i18next';
 import {
   UpOutlined,
   CaretUpFilled,
@@ -19,13 +20,13 @@ import {
   openMsSanitizerPanel,
   downloadMsSanitizerReport,
 } from '@web/apis';
-import {
-  message,
-} from 'ant-design-vue';
+import { message } from 'ant-design-vue';
 import { useTheme } from '@web/composables/use-theme';
 
 // 使用主题管理组合式函数
-const { themeConfig, actualTheme } = useTheme();
+const {
+  themeConfig, actualTheme,
+} = useTheme();
 
 const sortOrder = ref<'asc' | 'desc'>('desc');
 const isMarkedOnly = ref<boolean>(false);
@@ -70,25 +71,25 @@ const MarkedIcon: Component = ({ marked }) =>
 const handleCopyReport = async (data) => {
   try {
     await navigator.clipboard.writeText(data.path);
-    message.success('路径已复制到剪贴板');
+    message.success(t('web.perf.pathCopied'));
   }
   catch (error) {
     console.error('复制路径失败:', error);
-    message.error('复制路径失败');
+    message.error(t('web.perf.copyFailed'));
   }
 };
 
 const handleDownloadReport = async (data) => {
   try {
-    const hide = message.loading('正在准备下载...', 0);
+    const hide = message.loading(t('web.perf.preparingDownload'), 0);
 
     try {
       await downloadMsSanitizerReport({ path: data.path });
-      message.success('下载成功');
+      message.success(t('web.perf.downloadSuccess'));
     }
     catch (error) {
       console.error('下载报告失败:', error);
-      message.error(error instanceof Error ? error.message : '下载失败');
+      message.error(error instanceof Error ? error.message : t('web.perf.downloadFailed'));
     }
     finally {
       hide();
@@ -96,7 +97,7 @@ const handleDownloadReport = async (data) => {
   }
   catch (error) {
     console.error('下载处理失败:', error);
-    message.error('下载处理失败');
+    message.error(t('web.perf.downloadFailedGeneric'));
   }
 };
 
@@ -135,7 +136,7 @@ onBeforeUnmount(() => {
           @click="handleExecutionTime"
         >
           <div class="flex items-center">
-            执行时间
+            {{ t('web.perf.executionTime') }}
             <div class="sort-icons">
               <CaretUpFilled v-if="sortOrder === 'asc'" />
               <UpOutlined v-else />
@@ -148,7 +149,7 @@ onBeforeUnmount(() => {
           class="execute-time-sorter-button"
           @click="filterMark"
         >
-          已标记
+          {{ t('web.perf.marked') }}
           <FlagFilled
             v-if="isMarkedOnly"
             class="flag-outlined-icon"
@@ -206,7 +207,7 @@ onBeforeUnmount(() => {
         v-else
         style="text-align: center; margin-top: 20px"
       >
-        暂无数据
+        {{ t('web.perf.noData') }}
       </div>
     </div>
   </a-config-provider>

@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -11,7 +12,7 @@ import {
 
 export class FileService {
   /**
-   * 检查路径是否存在
+   * Check if the path exists
    */
   pathExists(params: CheckPathExistsParams): Promise<boolean> {
     return new Promise((resolve) => {
@@ -27,28 +28,28 @@ export class FileService {
   }
 
   /**
-   * 保存文件到本地
-   * Web 版本返回文件数据，桌面版本返回 boolean
+   * Save file locally
+   * The web version returns file data, the desktop version returns boolean
    */
   async saveFileToLocal(params: SaveFileParams): Promise<SaveFileResult> {
-    // 检测是否是 Web 版本
+    // Check if it is the web version
     const isWeb = vscode.env.uiKind === vscode.UIKind.Web;
 
     if (isWeb) {
-      // Web 版本：返回文件数据供前端下载
+      // Web version: Return file data for front-end downloading
       return await this.saveFileToLocalWeb(params);
     }
     else {
-      // 桌面版本：使用原有的文件系统 API
+      // Desktop version: uses the original file system API
       return await this.saveFileToLocalDesktop(params);
     }
   }
 
   /**
-   * Web 版本：返回文件数据（Base64 编码）供前端下载
+   * Web version: Return file data (Base64 encoded) for front-end downloading
    */
   private async saveFileToLocalWeb(params: SaveFileParams): Promise<SaveFileResult> {
-    // 在 Web 版本中也显示保存对话框，让用户选择保存位置
+    // Also displays a save dialog in the web version, allowing the user to select a save location
     const savingUri = await vscode.window.showSaveDialog({
       defaultUri: vscode.Uri.from({
         scheme: 'vscode-local',
@@ -57,15 +58,15 @@ export class FileService {
       filters: params.allowedTypes
         ? { default: params.allowedTypes }
         : undefined,
-      title: params.dialogTitle ?? '保存至',
+      title: params.dialogTitle ?? t('file.saveTo'),
     });
 
     if (!savingUri) {
-      // 用户取消了保存对话框
+      // User canceled save dialog
       return false;
     }
 
-    // 从保存路径中提取文件名
+    // Extract filename from save path
     const selectedFilename = savingUri.path
       .split(/[/\\]/)
       .filter(Boolean)
@@ -78,53 +79,53 @@ export class FileService {
       sourceStat = await vscode.workspace.fs.stat(sourceUri);
     }
     catch {
-      throw new Error('保存失败，源文件不存在');
+      throw new Error(t('file.saveFailedSourceNotExist'));
     }
 
-    // 尝试直接保存到用户选择的位置（如果 VSCode Web 支持）
+    // Try saving directly to a user-selected location (if VSCode Web supports it)
     try {
       if (sourceStat.type === vscode.FileType.File) {
-        // 尝试直接复制文件到用户选择的位置
+        // Try copying the file directly to the location of the user's choice
         await vscode.workspace.fs.copy(sourceUri, savingUri, { overwrite: true });
-        console.log('[FileService] 文件已直接保存到:', savingUri.fsPath);
+        console.log('[FileService] File saved directly to:', savingUri.fsPath);
 
         return true;
       }
       else if (sourceStat.type === vscode.FileType.Directory) {
-        // 对于目录，先压缩，然后保存
-        console.log('[FileService] 开始压缩目录:', sourceUri.fsPath);
+        // For directories, compress first, then save
+        console.log('[FileService] Start zipping directory:', sourceUri.fsPath);
         const zipBuffer = await this.compressDirectoryWeb(sourceUri);
 
-        console.log('[FileService] 压缩完成，zip 大小:', zipBuffer.length, 'bytes');
+        console.log('[FileService] Zip completed, zip size:', zipBuffer.length, 'bytes');
 
-        // 将压缩后的数据写入到用户选择的位置
+        // Write compressed data to a location selected by the user
         await vscode.workspace.fs.writeFile(savingUri, zipBuffer);
-        console.log('[FileService] 文件已直接保存到:', savingUri.fsPath);
+        console.log('[FileService] File saved directly to:', savingUri.fsPath);
 
         return true;
       }
     }
     catch (directSaveError) {
-      // 如果直接保存失败（可能因为 Web 环境限制），回退到浏览器下载
-      console.log('[FileService] 直接保存失败，回退到浏览器下载:', directSaveError);
+      // If direct saving fails (perhaps due to limitations of the web environment), fall back to browser downloading.
+      console.log('[FileService] Direct save failed, falling back to browser download:', directSaveError);
 
       if (sourceStat.type === vscode.FileType.File) {
-        // 读取文件内容
+        // Read file contents
         const fileData = await vscode.workspace.fs.readFile(sourceUri);
 
-        // 将 Uint8Array 转换为 Base64
+        // Convert Uint8Array to Base64
         const base64 = Buffer
           .from(fileData)
           .toString('base64');
 
-        // 返回文件数据供前端下载，使用用户选择的文件名
+        // Return file data for the front end to download, using the file name selected by the user
         return {
           data: base64,
           filename: selectedFilename,
         };
       }
       else if (sourceStat.type === vscode.FileType.Directory) {
-        // Web 版本：递归读取目录并压缩为 zip
+        // Web version: recursively read directories and compress into zip
         const zipBuffer = await this.compressDirectoryWeb(sourceUri);
         const base64 = Buffer
           .from(zipBuffer)
@@ -135,7 +136,7 @@ export class FileService {
           filename: selectedFilename,
         };
 
-        console.log('[FileService] 返回结果供浏览器下载，文件名:', result.filename);
+        console.log('[FileService] Returning result for browser download, filename:', result.filename);
 
         return result;
       }
@@ -145,21 +146,21 @@ export class FileService {
   }
 
   /**
-   * Web 版本：递归读取目录并压缩为 zip
+   * Web version: recursively read directories and compress into zip
    */
   private async compressDirectoryWeb(dirUri: vscode.Uri): Promise<Buffer> {
     const zip = new AdmZip();
     const basePath = dirUri.fsPath;
 
-    // 递归读取目录中的所有文件
+    // Read all files in a directory recursively
     await this.addDirectoryToZip(zip, dirUri, basePath);
 
-    // 生成 zip 文件的 Buffer
+    // Generate Buffer for zip file
     return zip.toBuffer();
   }
 
   /**
-   * 递归将目录中的文件添加到 zip
+   * Recursively add files in a directory to zip
    */
   private async addDirectoryToZip(
     zip: AdmZip,
@@ -176,20 +177,20 @@ export class FileService {
       const relativePath = path.relative(basePath, entryUri.fsPath);
 
       if (type === vscode.FileType.File) {
-        // 读取文件内容并添加到 zip
+        // Read file contents and add to zip
         const fileData = await vscode.workspace.fs.readFile(entryUri);
 
         zip.addFile(relativePath, Buffer.from(fileData));
       }
       else if (type === vscode.FileType.Directory) {
-        // 递归处理子目录
+        // Process subdirectories recursively
         await this.addDirectoryToZip(zip, entryUri, basePath);
       }
     }
   }
 
   /**
-   * 桌面版本：保存文件到本地（原有逻辑）
+   * Desktop version: save files locally (original logic)
    */
   private async saveFileToLocalDesktop(params: SaveFileParams): Promise<boolean> {
     const savingUri = await vscode.window.showSaveDialog({
@@ -200,7 +201,7 @@ export class FileService {
       filters: params.allowedTypes
         ? { default: params.allowedTypes }
         : undefined,
-      title: params.dialogTitle ?? '保存至',
+      title: params.dialogTitle ?? t('file.saveTo'),
     });
 
     if (!savingUri) {
@@ -214,7 +215,7 @@ export class FileService {
       sourceStat = await vscode.workspace.fs.stat(sourceUri);
     }
     catch {
-      throw new Error('保存失败，源文件不存在');
+      throw new Error(t('file.saveFailedSourceNotExist'));
     }
 
     if (sourceStat.type === vscode.FileType.File) {

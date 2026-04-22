@@ -17,3 +17,9 @@ deletePackage.js
 package.bat
 package.js
 huawei-op-devtools-vscode-plugin*
+.codemate
+.vscode-test/**
+test-results/**
+artifacts/**
+tmp/**
+.e2e-mock

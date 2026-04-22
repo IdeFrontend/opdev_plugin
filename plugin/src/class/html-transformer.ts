@@ -8,11 +8,12 @@ export class HtmlTransformer {
     distPath: string,
     webview: vscode.Webview,
     router: string = 'index',
+    templateValues: Record<string, string> = {},
   ): Promise<string> {
     const devServerUrl = process.env.MSTT_DEV_SERVER_URL;
 
-    // 从 router 中提取视图名称（最后一段）
-    // 例如: 'sidebars/home' -> 'home', 'panels/config' -> 'config'
+    // Extract view name from router (last paragraph)
+    // For example: 'sidebars/home' -> 'home', 'panels/config' -> 'config'
     const viewName = router.includes('/')
       ? router.split('/')
         .pop()!
@@ -21,13 +22,15 @@ export class HtmlTransformer {
     if (devServerUrl) {
       try {
         const url = `${devServerUrl}/src/views/${router}/${viewName}.html`;
-        const htmlContent = await this.fetchHtml(url);
+        let htmlContent = await this.fetchHtml(url);
+
+        htmlContent = this.applyTemplateValues(htmlContent, templateValues);
 
         return this.processDevResourcePaths(htmlContent, devServerUrl, url);
       }
       catch (e) {
         console.error(
-          `[HtmlTransformer.transformDistHtml] 从开发服务器获取失败: ${devServerUrl}`,
+          `[HtmlTransformer.transformDistHtml] Failed to fetch from dev server: ${devServerUrl}`,
           e,
         );
       }
@@ -41,6 +44,8 @@ export class HtmlTransformer {
       }
 
       let htmlContent = fs.readFileSync(indexPath, 'utf8');
+
+      htmlContent = this.applyTemplateValues(htmlContent, templateValues);
 
       const htmlFileDir = path.dirname(indexPath);
       const htmlUri = webview.asWebviewUri(vscode.Uri.file(htmlFileDir));
@@ -57,6 +62,20 @@ export class HtmlTransformer {
     catch (error) {
       throw new Error(`Failed to transform HTML: ${error}`);
     }
+  }
+
+  private static applyTemplateValues(
+    content: string,
+    templateValues: Record<string, string>,
+  ): string {
+    return Object.entries(templateValues)
+      .reduce(
+        (acc, [
+          key,
+          value,
+        ]) => acc.replace(`{{${key}}}`, value),
+        content,
+      );
   }
 
   public static fetchHtml(url: string): Promise<string> {
@@ -84,22 +103,22 @@ export class HtmlTransformer {
     baseUrl: string,
     currentFileUrl: string,
   ): string {
-    // 1. 处理绝对路径 (以 / 开头)，指向 Dev Server Root
+    // 1. Handle absolute paths (starting with /), pointing to Dev Server Root
     let processedHtml = html.replace(
       /(src|href)="\/([^"]*)"/g,
       `$1="${baseUrl}/$2"`,
     );
 
-    // 2. 注入 <base> 标签，解决相对路径问题
-    // 计算当前文件的目录 URL，确保以 / 结尾
-    // 例如: http://localhost:5173/src/views/home/home.html -> http://localhost:5173/src/views/home/
+    // 2. Inject the <base> tag to solve the relative path problem
+    // Calculate the directory URL of the current file, making sure it ends with /
+    // For example: http://localhost:5173/src/views/home/home.html -> http://localhost:5173/src/views/home/
     const currentDirUrl = currentFileUrl.substring(
       0,
       currentFileUrl.lastIndexOf('/') + 1,
     );
 
-    // 在 <head> 后面插入 <base>
-    // 如果没有 <head> 标签（虽然不规范但可能存在），则尝试在 <html> 后面插入，或者直接在开头插入
+    // Insert <base> after <head>
+    // If there is no <head> tag (although it is not standardized but it may exist), try inserting it after <html>, or insert it directly at the beginning
     if (processedHtml.includes('<head>')) {
       processedHtml = processedHtml.replace(
         '<head>',
@@ -137,17 +156,17 @@ export class HtmlTransformer {
 
         let resolvedUri: vscode.Uri;
 
-        // 处理相对路径（包含 .. 或 . 的路径，或者不以 / 开头的路径）
+        // Handle relative paths (paths containing .. or . , or paths not starting with / )
         if (
           src.startsWith('../')
           || src.startsWith('./')
           || (!src.startsWith('/') && htmlFileDir)
         ) {
-          // 如果有 htmlFileDir，使用它来解析相对路径
+          // If there is htmlFileDir, use it to resolve relative paths
           if (htmlFileDir) {
             const resolvedPath = path.resolve(htmlFileDir, src);
 
-            // 使用 webview 转换 URI（如果提供了 webview）
+            // Convert URI using webview (if webview is provided)
             if (webview) {
               resolvedUri = webview.asWebviewUri(vscode.Uri.file(resolvedPath));
             }
@@ -156,12 +175,12 @@ export class HtmlTransformer {
             }
           }
           else {
-            // 回退到原来的方法（可能不工作，但保持兼容性）
+            // Fallback to the original method (may not work, but maintains compatibility)
             resolvedUri = vscode.Uri.joinPath(htmlUri, src);
           }
         }
         else {
-          // 绝对路径，直接使用 joinPath
+          // Absolute path, use joinPath directly
           resolvedUri = vscode.Uri.joinPath(htmlUri, src);
         }
 

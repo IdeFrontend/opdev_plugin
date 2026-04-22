@@ -48,7 +48,7 @@ export class Project<HasProject extends boolean = false> {
     });
   }
 
-  /** 当前工作区是否已创建工程 */
+  /** Whether a project has been created in the current workspace */
   public workspaceIsProject(): this is Project<true> {
     return this._workspaceProject !== null;
   }

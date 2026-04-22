@@ -5,89 +5,106 @@ import {
   getSimulateCommand,
   getOnBoardCommand,
   getSanitizerCommand,
+  getUtTestCommand,
   objectToCommandString,
 } from '@plugin/domain';
 
 /**
- * 命令生成器服务
- * 领域服务,负责生成各种算子操作命令
+ * Command generator service
+ * Domain service; generates operator operation commands
  */
 export class CommandGeneratorService {
   /**
-   * 生成构建算子命令
+   * Generate build operator command
    */
   generateBuildCommand(configId: number, compileOption?: string, operatorNames?: string): string {
     return getBuildOpCommand(configId, compileOption, operatorNames);
   }
 
   /**
-   * 生成构建示例命令
+   * Generate build example command
    */
-  generateBuildExampleCommand(configId: number, operatorNames?: string): string {
-    return getBuildExampleCommand(configId, undefined, operatorNames);
+  generateBuildExampleCommand(
+    configId: number,
+    compileOption?: string,
+    operatorNames?: string,
+  ): string {
+    return getBuildExampleCommand(configId, compileOption, operatorNames);
   }
 
   /**
-   * 生成运行命令
+   * Generate run command
    */
   generateRunCommand(configId: number): string {
     return getRunCommand(configId);
   }
 
   /**
-   * 生成仿真分析命令
+   * Generate simulate analysis command
    */
   generateSimulateCommand(
     simulateConfigId: number,
     exampleConfigId: number,
+    operatorNames?: string,
   ): string {
-    return getSimulateCommand(simulateConfigId, exampleConfigId);
+    return getSimulateCommand(simulateConfigId, exampleConfigId, operatorNames);
   }
 
   /**
-   * 生成上板分析命令
+   * Generate on-board analysis command
    */
   generateOnBoardCommand(
     onBoardConfigId: number,
     exampleConfigId: number,
+    operatorNames?: string,
   ): string {
-    return getOnBoardCommand(onBoardConfigId, exampleConfigId);
+    return getOnBoardCommand(onBoardConfigId, exampleConfigId, operatorNames);
   }
 
   /**
-   * 生成异常检测命令
+   * Generate sanitizer (anomaly detection) command
    */
   generateSanitizerCommand(
     sanitizerConfigId: number,
     exampleConfigId: number,
+    operatorNames?: string,
   ): string {
-    return getSanitizerCommand(sanitizerConfigId, exampleConfigId);
+    return getSanitizerCommand(sanitizerConfigId, exampleConfigId, operatorNames);
   }
 
   /**
-   * 生成带仿真器的构建命令
+   * Generate build command with simulator
    */
   generateBuildWithSimulatorCommand(
     configId: number,
     simulatorType: string,
+    operatorNames?: string,
   ): string {
     return getBuildOpCommand(
       configId,
       objectToCommandString({ [`simulator ${simulatorType || ''}`]: true }),
+      operatorNames,
     );
   }
 
   /**
-   * 生成上板前的构建命令
+   * Generate pre-on-board build command
    */
-  generateBuildForOnBoardCommand(configId: number): string {
-    return getBuildOpCommand(configId, objectToCommandString({ onboard: true }));
+  generateBuildForOnBoardCommand(configId: number, operatorNames?: string): string {
+    return getBuildOpCommand(configId, objectToCommandString({ onboard: true }), operatorNames);
   }
 
   /**
-   * 生成异常检测前的构建命令
+   * Generate pre-sanitizer build command
    */
-  generateBuildForSanitizerCommand(configId: number): string {
-    return getBuildOpCommand(configId, '--mssanitizer');
+  generateBuildForSanitizerCommand(configId: number, operatorNames?: string): string {
+    return getBuildOpCommand(configId, '--mssanitizer', operatorNames);
+  }
+
+  /**
+   * Generate UT test command
+   */
+  generateUtTestCommand(configId: number, operatorNames?: string): string {
+    return getUtTestCommand(configId, operatorNames);
   }
 }

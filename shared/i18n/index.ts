@@ -1,7 +1,9 @@
 import en from './en';
-import zh from './zh-cn';
+import zhCn from './zh-cn';
 
 export default {
   en: { translation: en },
-  zh: { translation: zh },
+  'zh-cn': { translation: zhCn },
+  // Alias so both zh-CN and zh-cn work (VSCode may send either)
+  'zh-CN': { translation: zhCn },
 };

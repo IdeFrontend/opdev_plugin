@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import { getOpRunPath } from '@plugin/domain/utils/op-util';
 import {
   joinCommands,
@@ -13,17 +14,21 @@ import {
   CommandBuildParams,
   ProfilerCommandParams,
 } from './types';
-import { getConfig, getConfigById } from '../../services/configuration';
+import {
+  getConfig, getConfigById,
+} from '../../services/configuration';
 
 /**
- * PyAsc 类型命令策略
- * PyAsc 是基于 Python 的算子实现方式，直接运行 Python 文件
+ * PyAsc type command strategy
+ * PyAsc is a Python-based operator implementation that directly runs Python files
  */
 export class PyAscCommandStrategy implements CommandStrategy {
   buildCommandContext(baseContext: BaseContext): CommandContext {
-    const { config, project, operator } = baseContext;
+    const {
+      config, project, operator,
+    } = baseContext;
 
-    // PyAsc 类型使用 ascend_env_script 作为环境脚本（与 CANN 一样）
+    // PyAsc types use ascend_env_script as environment script (same as CANN)
     const sourceCannCmd =
       project && project.ascend_env_script
         ? `. ${project.ascend_env_script}`
@@ -35,7 +40,7 @@ export class PyAscCommandStrategy implements CommandStrategy {
       runPath = getOpRunPath(operator);
     }
     else {
-      // 如果找不到算子，但有配置脚本，使用项目路径作为运行路径
+      // If the operator cannot be found but there is a configuration script, use the project path as the running path
       if (config.script && project) {
         runPath = project.project_path;
       }
@@ -58,19 +63,21 @@ export class PyAscCommandStrategy implements CommandStrategy {
   }
 
   buildRunCommand(context: CommandContext): string {
-    const { config, sourceCannCmd, cdCmd } = context;
+    const {
+      config, sourceCannCmd, cdCmd,
+    } = context;
 
     return joinCommands(sourceCannCmd, cdCmd, config.target_file);
   }
 
   buildOpCommand(params: CommandBuildParams): string {
-    // PyAsc 类型不支持 buildExampleCommand
-    throw new Error('PyAsc 类型不支持 buildOpCommand 操作');
+    // PyAsc type does not support buildExampleCommand
+    throw new Error(t('pyasc.buildOpNotSupported'));
   }
 
   buildExampleCommand(params: CommandBuildParams): string {
-    // PyAsc 类型不支持 buildExampleCommand
-    throw new Error('PyAsc 类型不支持 buildExampleCommand 操作');
+    // PyAsc type does not support buildExampleCommand
+    throw new Error(t('pyasc.buildExampleNotSupported'));
   }
 
   buildSanitizerCommand(
@@ -78,24 +85,26 @@ export class PyAscCommandStrategy implements CommandStrategy {
     operator: OpRecord | null,
     sourceCannCmd: string,
     cdCmd: string,
-    exampleTargetFile?: string
+    exampleTargetFile?: string,
   ): string {
-    // PyAsc 类型不支持 buildSanitizerCommand
-    throw new Error('PyAsc 类型不支持 buildSanitizerCommand 操作');
+    // PyAsc type does not support buildSanitizerCommand
+    throw new Error(t('pyasc.buildSanitizerNotSupported'));
   }
 
   buildSimulateCommand(params: ProfilerCommandParams): string {
-    const { config, project, operator, sourceCannCmd, cdCmd, exampleTargetFile } = params;
+    const {
+      config, project, operator, sourceCannCmd, cdCmd, exampleTargetFile,
+    } = params;
 
-    // 如果找不到算子记录，但有项目路径，创建一个临时算子对象
+    // If the operator record is not found but the project path is available, create a temporary operator object
     let effectiveOperator = operator;
 
     if (!effectiveOperator) {
       if (!project || !project.project_path) {
-        throw new Error(`无法生成仿真命令：找不到算子记录 ${config.op}，且项目路径不可用`);
+        throw new Error(t('cann.cannotGenerateSimulateCommand', { op: config.op }));
       }
 
-      // 创建临时算子对象，使用项目路径作为 op_path
+      // Create a temporary operator object, using the project path as op_path
       effectiveOperator = {
         id: 0,
         project_id: config.project_id,
@@ -116,17 +125,19 @@ export class PyAscCommandStrategy implements CommandStrategy {
   }
 
   buildOnBoardCommand(params: ProfilerCommandParams): string {
-    const { config, project, operator, sourceCannCmd, cdCmd, exampleTargetFile } = params;
+    const {
+      config, project, operator, sourceCannCmd, cdCmd, exampleTargetFile,
+    } = params;
 
-    // 如果找不到算子记录，但有项目路径，创建一个临时算子对象
+    // If the operator record is not found but the project path is available, create a temporary operator object
     let effectiveOperator = operator;
 
     if (!effectiveOperator) {
       if (!project || !project.project_path) {
-        throw new Error(`无法生成上板命令：找不到算子记录 ${config.op}，且项目路径不可用`);
+        throw new Error(t('cann.cannotGenerateOnBoardCommand', { op: config.op }));
       }
 
-      // 创建临时算子对象，使用项目路径作为 op_path
+      // Create a temporary operator object, using the project path as op_path
       effectiveOperator = {
         id: 0,
         project_id: config.project_id,
@@ -147,13 +158,14 @@ export class PyAscCommandStrategy implements CommandStrategy {
   }
 
   getRunTargetFile(config: ConfigRecord, operator: OpRecord | null): string {
-    // PyAsc 类型：使用当前配置的 target_file
+    // PyAsc type: use currently configured target_file
     return config.target_file || '';
   }
 
   getProfilerTargetFile(config: ConfigRecord, operator: OpRecord | null, exampleConfigId: number): string {
     const buildOpConfigs = getConfig(config.project_id, 'build_op', config.op);
     const buildOpConfig = buildOpConfigs.length > 0 ? buildOpConfigs[0] : null;
+
     return buildOpConfig?.target_file || '';
   }
 

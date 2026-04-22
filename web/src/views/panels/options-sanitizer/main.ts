@@ -5,13 +5,22 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import i18next from 'i18next';
 import { createApp } from 'vue';
 import App from './app.vue';
+import i18nResource from '@shared/i18n';
 import '../../../assets/css/tailwind.css';
+import { getWebviewLang } from '@web/utils/lang';
 
-function init() {
-  createApp(App)
-    .mount('#app');
-}
+const lang = getWebviewLang();
 
-init();
+void i18next.init({
+  resources: i18nResource,
+  lng: lang,
+  fallbackLng: 'en',
+  interpolation: { escapeValue: false },
+})
+  .then(() => {
+    createApp(App)
+      .mount('#app');
+  });

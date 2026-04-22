@@ -21,8 +21,5 @@
   },
   "devDependencies": {
     "@types/vscode-webview": "^1.57.5"
-  },
-  "overrides": {
-    "vite": "npm:rolldown-vite@7.1.14"
   }
 }

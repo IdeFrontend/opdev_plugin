@@ -1,9 +1,9 @@
-import { ConfigRecord } from "@plugin/domain/models/config-model";
-import { ProjectRecord } from "@plugin/domain/models/project-model";
-import { OpRecord } from "@plugin/domain/models/model";
+import { ConfigRecord } from '@plugin/domain/models/config-model';
+import { ProjectRecord } from '@plugin/domain/models/project-model';
+import { OpRecord } from '@plugin/domain/models/model';
 
 /**
- * 上下文接口，包含生成命令所需的基础信息
+ * Context interface, containing basic information required to generate commands
  */
 export interface CommandContext {
   config: ConfigRecord;
@@ -15,7 +15,7 @@ export interface CommandContext {
 }
 
 /**
- * 命令构建参数接口
+ * Command build parameter interface
  */
 export interface CommandBuildParams {
   config: ConfigRecord;
@@ -24,12 +24,12 @@ export interface CommandBuildParams {
   cdCmd: string;
   compileOption?: string;
   advance_cmd?: string;
-  operatorNames?: string; // 算子名称，多个用逗号分隔（用于标准自定义算子等场景）
-  scriptField?: string | undefined | null // 脚本字段，默认是script，还有cpu_debug_script和npu_debug_script
+  operatorNames?: string; // Operator name, multiple separated by commas (used in scenarios such as standard custom operators)
+  scriptField?: string | undefined | null // Script field, the default is script, there are also cpu_debug_script and npu_debug_script
 }
 
 /**
- * 仿真/上板命令构建参数接口
+ * Simulation/boarding command build parameter interface
  */
 export interface ProfilerCommandParams {
   config: ConfigRecord;
@@ -42,7 +42,7 @@ export interface ProfilerCommandParams {
 }
 
 /**
- * 基础上下文信息（用于确定策略类型）
+ * Basic context information (used to determine policy type)
  */
 export interface BaseContext {
   config: ConfigRecord;
@@ -51,35 +51,35 @@ export interface BaseContext {
 }
 
 /**
- * 命令策略接口
+ * command strategy interface
  */
 export interface CommandStrategy {
   /**
-   * 构建命令上下文
-   * @param baseContext 基础上下文信息
-   * @returns 完整的命令上下文
+   * Build command context
+   * @param baseContext basic context information
+   * @returns complete command context
    */
   buildCommandContext(baseContext: BaseContext): CommandContext;
 
   /**
-   * 生成运行命令
-   * @param context 命令上下文
-   * @returns 运行命令字符串
+   * Generate run command
+   * @param context command context
+   * @returns run command string
    */
   buildRunCommand(context: CommandContext): string;
 
   /**
-   * 生成编译命令
+   * Generate compilation command
    */
   buildOpCommand(params: CommandBuildParams): string;
 
   /**
-   * 生成示例编译命令
+   * Generate sample compilation commands
    */
   buildExampleCommand(params: CommandBuildParams): string;
 
   /**
-   * 生成Sanitizer命令
+   * Generate Sanitizer command
    */
   buildSanitizerCommand(
     config: ConfigRecord,
@@ -91,34 +91,34 @@ export interface CommandStrategy {
   ): string;
 
   /**
-   * 生成仿真命令
+   * Generate simulation commands
    */
   buildSimulateCommand(params: ProfilerCommandParams): string;
 
   /**
-   * 生成上板命令
+   * Generate board command
    */
   buildOnBoardCommand(params: ProfilerCommandParams): string;
 
   /**
-   * 生成UT测试命令
+   * Build UT test command
    */
   buildUtTestCommand(params: CommandBuildParams): string;
 
   /**
-   * 获取运行命令的目标文件
-   * @param config 当前配置
-   * @param operator 算子信息
-   * @returns 目标文件路径
+   * Get the target file for running the command
+   * @param config current configuration
+   * @param operator operator information
+   * @returns target file path
    */
   getRunTargetFile(config: ConfigRecord, operator: OpRecord | null): string;
 
   /**
-   * 获取仿真/上板/检测命令的目标文件
-   * @param config 当前配置
-   * @param operator 算子信息
-   * @param exampleConfigId 示例配置ID (用于ascend类型)
-   * @returns 目标文件路径
+   * Get the target file of the simulation/boarding/detection command
+   * @param config current configuration
+   * @param operator operator information
+   * @param exampleConfigId example configuration ID (for ascend type)
+   * @returns target file path
    */
   getProfilerTargetFile(config: ConfigRecord, operator: OpRecord | null, exampleConfigId: number): string;
 }

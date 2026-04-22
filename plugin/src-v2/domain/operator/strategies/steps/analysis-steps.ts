@@ -12,7 +12,7 @@ import {
 } from '../execution-step.interface';
 
 /**
- * 仿真分析步骤
+ * Simulation analysis step
  */
 export class SimulateStep implements IExecutionStep {
   readonly name = 'Simulate';
@@ -43,7 +43,7 @@ export class SimulateStep implements IExecutionStep {
 }
 
 /**
- * 上板分析步骤
+ * On-board analysis step
  */
 export class OnBoardStep implements IExecutionStep {
   readonly name = 'OnBoard';
@@ -74,7 +74,7 @@ export class OnBoardStep implements IExecutionStep {
 }
 
 /**
- * 异常检测步骤
+ * Sanitizer (anomaly detection) step
  */
 export class SanitizerStep implements IExecutionStep {
   readonly name = 'Sanitizer';
@@ -105,7 +105,7 @@ export class SanitizerStep implements IExecutionStep {
 }
 
 /**
- * 运行步骤
+ * Run step
  */
 export class RunStep implements IExecutionStep {
   readonly name = 'Run';
@@ -118,7 +118,7 @@ export class RunStep implements IExecutionStep {
     const result = await context.executor.execute(command, [], [], {}, true);
 
     if (result.code !== 0) {
-      return ResultUtils.err(new Error('运行失败')); // 可以创建专门的 RunFailedError
+      return ResultUtils.err(new Error('运行失败')); // Could add RunFailedError
     }
 
     return ResultUtils.ok({

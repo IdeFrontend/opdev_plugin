@@ -158,6 +158,7 @@ function makeSuccessHandler<T>(
     if (requestTimeout) {
       clearTimeout(requestTimeout);
     }
+
     resolve(value as T);
   };
 }
@@ -175,6 +176,7 @@ function makeErrorHandler(
     if (!options.useCustomErrorHandler) {
       // 这里进行自定义错误处理
     }
+
     // 默认会通过vscode弹出错误提示
     reject(error);
   };

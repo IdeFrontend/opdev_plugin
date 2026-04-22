@@ -3,25 +3,25 @@ import {
 } from '../strategies/execution-strategy.factory';
 
 /**
- * 算子工程类型枚举
+ * Operator project type enum
  */
 export enum OperatorProjectType {
-  /** 标准 AiCore 算子 */
+  /** Standard AiCore operator */
   AICORE_STANDARD = 'aicore-standard',
 
-  /** 标准 Vector 算子 */
+  /** Standard Vector operator */
   VECTOR_STANDARD = 'vector-standard',
 
-  /** 自定义算子 (需要特殊处理) */
+  /** Custom operator (special handling) */
   CUSTOM = 'custom',
 
-  /** 混合算子 */
+  /** Hybrid operator */
   HYBRID = 'hybrid',
 }
 
 /**
- * 任务策略配置
- * 定义某个算子工程类型在执行特定任务时使用的策略
+ * Task strategy config
+ * Strategy used by a project type for a given task
  */
 export interface TaskStrategyConfig {
   taskType: TaskType;
@@ -30,48 +30,48 @@ export interface TaskStrategyConfig {
 }
 
 /**
- * 算子工程配置
- * 从配置文件或数据库加载
+ * Operator project config
+ * Loaded from config file or database
  */
 export interface OperatorProjectConfig {
-  /** 工程ID */
+  /** Project ID */
   projectId: number;
 
-  /** 工程类型 */
+  /** Project type */
   projectType: OperatorProjectType;
 
-  /** 任务策略映射 */
+  /** Task strategy mapping */
   taskStrategies: Record<TaskType, TaskStrategyConfig>;
 
-  /** 自定义参数 */
+  /** Custom parameters */
   customParameters?: Record<string, unknown>;
 }
 
 /**
- * 策略配置仓储接口
+ * Strategy config repository interface
  */
 export interface IStrategyConfigRepository {
   /**
-   * 根据工程ID获取配置
+   * Get config by project ID
    */
   getProjectConfig(projectId: number): Promise<OperatorProjectConfig>;
 
   /**
-   * 根据工程类型获取默认配置
+   * Get default config by project type
    */
   getDefaultConfig(
     projectType: OperatorProjectType,
   ): Promise<OperatorProjectConfig>;
 
   /**
-   * 保存工程配置
+   * Save project config
    */
   saveProjectConfig(config: OperatorProjectConfig): Promise<void>;
 }
 
 /**
- * 默认策略配置
- * 当数据库无配置时使用
+ * Default strategy configs
+ * Used when no config in database
  */
 export class DefaultStrategyConfigs {
   static readonly CONFIGS: Record<OperatorProjectType, Partial<Record<TaskType, TaskStrategyConfig>>> = {
@@ -108,7 +108,7 @@ export class DefaultStrategyConfigs {
     [OperatorProjectType.CUSTOM]: {
       [TaskType.ON_BOARD]: {
         taskType: TaskType.ON_BOARD,
-        variant: StrategyVariant.WITH_VALIDATION, // 自定义算子需要验证步骤
+        variant: StrategyVariant.WITH_VALIDATION, // Custom operator needs validation step
       },
     },
 
@@ -121,7 +121,7 @@ export class DefaultStrategyConfigs {
   };
 
   /**
-   * 获取默认配置
+   * Get default config
    */
   static getDefault(projectType: OperatorProjectType): Partial<Record<TaskType, TaskStrategyConfig>> {
     return this.CONFIGS[projectType] || {};

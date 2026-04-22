@@ -6,32 +6,81 @@ import * as vscode from 'vscode';
 
 export const commonMethods = {
   /**
-   * 检查路径是否存在
+   * Check if the path exists
    */
   pathExists(params: CheckPathExistsParams): Promise<boolean> {
     return fileService.pathExists(params);
   },
 
   /**
-   * 保存文件到本地
-   * Web 版本返回文件数据，桌面版本返回 boolean
+   * Save file locally
+   * The web version returns file data, the desktop version returns boolean
    */
   async saveFileToLocal(params: SaveFileParams): Promise<SaveFileResult> {
     return await fileService.saveFileToLocal(params);
   },
 
   /**
-   * 打开外部网站
+   * Open external website
    */
   openExternalLink(url: string) {
     vscode.env.openExternal(vscode.Uri.parse(url));
   },
 
   /**
-   * 执行 VSCode 命令
+   * Execute VSCode command
    */
-  async executeVscodeCommand(params: { command: string; args: any[] }) {
-    const { command, args } = params;
+  async executeVscodeCommand(params: { command: string;
+    args: any[] }) {
+    const {
+      command, args,
+    } = params;
+
     return await vscode.commands.executeCommand(command, ...args);
+  },
+
+  /**
+   * Workspace setting: show sanitizer quick options panel from the Actions tree.
+   */
+  getSanitizerShowQuickOptions(): boolean {
+    return vscode.workspace.getConfiguration('op-devtools').get<boolean>('sanitizer.showQuickOptions', true) ?? true;
+  },
+
+  async setSanitizerShowQuickOptions(params: { value: boolean }): Promise<void> {
+    await vscode.workspace.getConfiguration('op-devtools').update(
+      'sanitizer.showQuickOptions',
+      params.value,
+      vscode.ConfigurationTarget.Workspace,
+    );
+  },
+
+  getSimulationShowQuickOptions(): boolean {
+    return vscode.workspace.getConfiguration('op-devtools').get<boolean>(
+      'performanceTuning.simulation.showQuickOptions',
+      true,
+    ) ?? true;
+  },
+
+  async setSimulationShowQuickOptions(params: { value: boolean }): Promise<void> {
+    await vscode.workspace.getConfiguration('op-devtools').update(
+      'performanceTuning.simulation.showQuickOptions',
+      params.value,
+      vscode.ConfigurationTarget.Workspace,
+    );
+  },
+
+  getOnBoardAnalysisShowQuickOptions(): boolean {
+    return vscode.workspace.getConfiguration('op-devtools').get<boolean>(
+      'performanceTuning.onBoard.showQuickOptions',
+      true,
+    ) ?? true;
+  },
+
+  async setOnBoardAnalysisShowQuickOptions(params: { value: boolean }): Promise<void> {
+    await vscode.workspace.getConfiguration('op-devtools').update(
+      'performanceTuning.onBoard.showQuickOptions',
+      params.value,
+      vscode.ConfigurationTarget.Workspace,
+    );
   },
 };

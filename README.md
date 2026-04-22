@@ -3,6 +3,8 @@
 华为算子一站式开发平台 VS Code 插件。提供算子开发、调试、性能分析等一站式功能。
 插件使用指导: <https://gitcode.com/org/cann/discussions/54>
 
+> **English:** See [README.en.md](./README.en.md) for an English README, including development setup and Dev Container usage.
+
 ## 核心特性
 
 - 适配生态主流编辑器，优化生态算子开发体验，提升开发效率。

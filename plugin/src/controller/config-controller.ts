@@ -14,38 +14,40 @@ import {
 import { getOpsByProjectId } from '@plugin/domain/models/model';
 
 let targetTab: string | undefined;
-let targetOperator: { opName: string; projectId?: number } | undefined;
+let targetOperator: { opName: string;
+  projectId?: number } | undefined;
 
 export const configMethods = {
   /**
-   * 获取目标标签页并清除
-   * @returns 目标标签页
+   * Get the target tab and clear it
+   * @returns target tab page
    */
   async getTargetTab(): Promise<string | undefined> {
     const tab = targetTab;
 
-    targetTab = undefined; // 读取后立即清除
+    targetTab = undefined; // Clear immediately after reading
 
     return tab;
   },
 
   /**
-   * 获取目标算子并清除
-   * @returns 目标算子信息
+   * Get the target operator and clear it
+   * @returns target operator information
    */
-  async getTargetOperator(): Promise<{ opName: string; projectId?: number } | undefined> {
+  async getTargetOperator(): Promise<{ opName: string;
+    projectId?: number } | undefined> {
     const operator = targetOperator;
 
-    targetOperator = undefined; // 读取后立即清除
+    targetOperator = undefined; // Clear immediately after reading
 
     return operator;
   },
   /**
-   * 获取构建配置列表
-   * @returns 构建配置列表
+   * Get a list of build configurations
+   * @returns build configuration list
    */
   async getBuildConfigs() {
-    // 确保projectId已初始化
+    // Make sure projectId is initialized
     await ProjectManager.getInstance()
       .ensureProjectId();
 
@@ -53,30 +55,34 @@ export const configMethods = {
   },
 
   /**
-   * 获取配置数据
-   * @param params 参数对象，包含 opName 和 projectId
-   * @returns 配置数据
+   * Get configuration data
+   * @param params parameter object, including opName and projectId
+   * @returns configuration data
    */
-  async getConfigData(params?: { opName?: string; projectId?: number } | string): Promise<GetConfigDataResult> {
-    // 兼容旧版本：如果传入的是字符串，当作 opName 处理
+  async getConfigData(params?: { opName?: string;
+    projectId?: number } | string): Promise<GetConfigDataResult> {
+    // Compatible with older versions: If a string is passed in, it will be treated as opName.
     let opName: string | undefined;
     let projectId: number | undefined;
-    
+
     if (typeof params === 'string') {
       opName = params;
-    } else if (params) {
+    }
+    else if (params) {
       opName = params.opName;
       projectId = params.projectId;
     }
-    // 如果指定了projectId，临时设置ProjectManager的projectId
+
+    // If projectId is specified, temporarily set the projectId of ProjectManager
     const pm = ProjectManager.getInstance();
     const originalProjectId = pm.projectId;
-    
+
     if (projectId) {
-      // 临时设置projectId
+      // Temporarily set projectId
       (pm as any)._projectId = String(projectId);
-    } else {
-      // 确保projectId已初始化
+    }
+    else {
+      // Make sure projectId is initialized
       await pm.ensureProjectId();
     }
 
@@ -90,24 +96,29 @@ export const configMethods = {
         return {};
       }
 
-      // 如果指定了算子名称，只返回该算子的配置
+      // If an operator name is specified, only the configuration of the operator is returned.
       if (opName) {
-        // 从user_options中获取config_name进行匹配
-        const filteredConfigs = buildConfigs.filter(config => {
+        // Get config_name from user_options for matching
+        const filteredConfigs = buildConfigs.filter((config) => {
           const configName = (config.user_options as any)?.config_name || config.config_name;
+
           return configName === opName;
         });
+
         if (filteredConfigs.length > 0) {
           return { [opName]: filteredConfigs };
         }
+
         return {};
       }
 
-      // 如果没有指定算子名称，返回第一个算子的配置
+      // If no operator name is specified, the configuration of the first operator is returned.
       const firstConfigName = (buildConfigs[0].user_options as any)?.config_name || buildConfigs[0].config_name;
+
       return { [firstConfigName]: buildConfigs };
-    } finally {
-      // 恢复原来的projectId
+    }
+    finally {
+      // Restore original projectId
       if (projectId) {
         (pm as any)._projectId = originalProjectId;
       }
@@ -115,21 +126,24 @@ export const configMethods = {
   },
 
   /**
-   * 获取当前项目下的所有算子列表
-   * @returns 算子列表
+   * Get a list of all operators under the current project
+   * @returns operator list
    */
   async getOperators(): Promise<OperatorInfo[]> {
-    // 确保projectId已初始化
+    // Make sure projectId is initialized
     const pm = ProjectManager.getInstance();
+
     await pm.ensureProjectId();
-    
+
     const projectId = parseInt(pm.projectId || '0', 10);
+
     if (!projectId) {
       return [];
     }
 
     const ops = getOpsByProjectId(projectId);
-    return ops.map(op => ({
+
+    return ops.map((op) => ({
       id: op.id,
       op_name: op.op_name,
       op_type: op.op_type,
@@ -139,8 +153,8 @@ export const configMethods = {
   },
 
   /**
-   * 保存构建配置
-   * @param params 保存参数
+   * Save build configuration
+   * @param params save parameters
    */
   async saveBuildConfig(params: SaveBuildConfigParams): Promise<void> {
     await ProjectManager.getInstance()
@@ -149,8 +163,8 @@ export const configMethods = {
   },
 
   /**
-   * 保存配置（仿真/上板）
-   * @param params 保存参数
+   * Save configuration (simulation/boarding)
+   * @param params save parameters
    */
   async saveConfig(params: SaveConfigParams): Promise<void> {
     await ProjectManager.getInstance()
@@ -159,17 +173,17 @@ export const configMethods = {
   },
 
   /**
-   * 远程路径搜索
-   * @param params 搜索参数
-   * @returns 搜索结果
+   * Remote path search
+   * @param params search parameters
+   * @returns search results
    */
   async remotePathSearch(params: RemotePathSearchParams): Promise<RemotePathSearchResult> {
     return await configService.remotePathSearch(params);
   },
 
   /**
-   * 获取构建配置ID
-   * @returns 构建配置ID
+   * Get build configuration ID
+   * @returns build configuration ID
    */
   async getBuildConfig(): Promise<number | undefined> {
     await ProjectManager.getInstance()
@@ -179,8 +193,8 @@ export const configMethods = {
   },
 
   /**
-   * 获取示例构建配置ID
-   * @returns 示例构建配置ID
+   * Get sample build configuration ID
+   * @returns sample build configuration ID
    */
   async getBuildExampleConfig(): Promise<number | undefined> {
     await ProjectManager.getInstance()
@@ -190,8 +204,8 @@ export const configMethods = {
   },
 
   /**
-   * 获取仿真配置ID
-   * @returns 仿真配置ID
+   * Get simulation configuration ID
+   * @returns simulation configuration ID
    */
   async getSimulateConfig(): Promise<string> {
     await ProjectManager.getInstance()
@@ -201,8 +215,8 @@ export const configMethods = {
   },
 
   /**
-   * 获取上板配置ID
-   * @returns 上板配置ID
+   * Get board configuration ID
+   * @returns Upper board configuration ID
    */
   async getOnBoardConfig(): Promise<string> {
     await ProjectManager.getInstance()
@@ -212,10 +226,13 @@ export const configMethods = {
   },
 
   /**
-   * 打开配置页面
-   * @param params 参数
+   * Open configuration page
+   * @param params parameters
    */
-  async openConfig(params: { configName?: string, key?: string, opName?: string, projectId?: number }) {
+  async openConfig(params: { configName?: string,
+    key?: string,
+    opName?: string,
+    projectId?: number }) {
     if (params.key) {
       targetTab = params.key;
     }
@@ -233,8 +250,8 @@ export const configMethods = {
   },
 
   /**
-   * 获取调试模式状态
-   * @returns 是否启用调试模式
+   * Get debug mode status
+   * @returns whether to enable debugging mode
    */
   async getDebugMode(): Promise<boolean> {
     return ConfigHelper.isDebugModeEnabled();

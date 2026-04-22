@@ -1,105 +1,102 @@
 <template>
   <a-config-provider :theme="themeConfig">
     <div
-      :class="[
-        'w-full min-h-screen px-20 py-10 font-\'Microsoft_Yahei\',sans-serif flex flex-col items-center relative box-border max-[992px]:px-[30px] max-[992px]:py-[20px] max-[576px]:p-[15px]',
-        actualTheme === 'dark' ? 'bg-[#1a1a1d] text-[#f0f0f0]' : 'bg-white text-gray-800'
-      ]"
+      class="w-full min-h-screen px-20 py-10 font-['Microsoft_Yahei',sans-serif] flex flex-col items-center relative box-border max-[992px]:px-[30px] max-[992px]:py-[20px] max-[576px]:p-[15px] bg-[var(--vscode-editor-background)] text-[var(--vscode-editor-foreground)]"
       @click="handleClick">
       <!-- 背景层（芯片图 + 深色遮罩） -->
-      <div :class="[
-        'absolute top-0 left-0 w-full h-full bg-cover bg-opacity-90 bg-blend-overlay z-[1]',
-        actualTheme === 'dark' ? 'bg-[#121417]' : 'bg-gray-100'
-      ]" />
+      <div class="absolute top-0 left-0 w-full h-full bg-cover bg-opacity-90 bg-blend-overlay z-[1] bg-[var(--vscode-editor-background)]" />
 
       <!-- 内容层 -->
       <div
-        :class="[
-          'relative z-[2] w-full h-full flex flex-col items-center justify-center px-[50px] box-border',
-          actualTheme === 'dark' ? 'text-white' : 'text-gray-800'
-        ]">
+        class="relative z-[2] w-full h-full flex flex-col items-center justify-center px-[50px] box-border text-[var(--vscode-foreground)]">
         <!-- 顶部标题区域 -->
         <div class="text-center mb-8 w-full max-[992px]:mb-[20px]">
           <h5 class="text-[25px] font-normal m-0 mb-2.5">
-            欢迎使用
+            {{ t('web.welcome.welcomeTitle') }}
           </h5>
           <h1 class="text-[32px] font-semibold m-0">
-            OP DevTools 算子一站式开发平台
+            {{ t('web.welcome.platformTitle') }}
           </h1>
         </div>
 
         <!-- 导航步骤条（位于标题和核心功能模块之间） -->
         <div class="w-full flex justify-center mb-8 max-[992px]:mb-6">
-          <a-steps class="welcome-steps max-w-[900px] w-full" type="navigation" :current="currentStep"
+          <a-steps class="welcome-steps w-full" type="navigation" :current="currentStep"
             @change="onStepChange">
             <a-step>
               <template #icon>
-                <img :src="settingIcon" alt="新建算子工程" class="step-icon" />
+                <span
+                  class="step-icon step-icon-svg"
+                  :aria-label="t('web.welcome.stepNewProject')"
+                  v-html="settingIconSvg"
+                />
               </template>
-              <template #title>新建算子工程</template>
+              <template #title>{{ t('web.welcome.stepNewProject') }}</template>
             </a-step>
             <a-step>
               <template #icon>
-                <img :src="buildIcon" alt="算子开发" class="step-icon" />
+                <span
+                  class="step-icon step-icon-svg"
+                  :aria-label="t('web.welcome.stepDev')"
+                  v-html="buildIconSvg"
+                />
               </template>
-              <template #title>算子开发</template>
+              <template #title>{{ t('web.welcome.stepDev') }}</template>
             </a-step>
             <a-step>
               <template #icon>
-                <img :src="debugIcon" alt="算子调试" class="step-icon" />
+                <span
+                  class="step-icon step-icon-svg"
+                  :aria-label="t('web.welcome.stepDebug')"
+                  v-html="debugIconSvg"
+                />
               </template>
-              <template #title>算子调试</template>
+              <template #title>{{ t('web.welcome.stepDebug') }}</template>
             </a-step>
             <a-step>
               <template #icon>
-                <img :src="checkIcon" alt="算子异常检测" class="step-icon" />
+                <span
+                  class="step-icon step-icon-svg"
+                  :aria-label="t('web.welcome.stepSanitizer')"
+                  v-html="checkIconSvg"
+                />
               </template>
-              <template #title>算子异常检测</template>
+              <template #title>{{ t('web.welcome.stepSanitizer') }}</template>
             </a-step>
             <a-step>
               <template #icon>
-                <img :src="powerIcon" alt="算子性能调优" class="step-icon" />
+                <span
+                  class="step-icon step-icon-svg"
+                  :aria-label="t('web.welcome.stepPerformance')"
+                  v-html="powerIconSvg"
+                />
               </template>
-              <template #title>算子性能调优</template>
+              <template #title>{{ t('web.welcome.stepPerformance') }}</template>
             </a-step>
           </a-steps>
         </div>
 
         <!-- 核心功能模块区域：根据步骤展示 5 个面板 -->
         <div
-          :class="[
-            'flex items-stretch justify-center gap-[15px] max-w-[1200px] w-full mb-[30px] py-[30px] px-[20px] flex-none rounded-xl min-h-[300px] max-[992px]:gap-3 max-[992px]:px-[15px] max-[992px]:py-[25px] max-[992px]:min-h-[400px] max-[576px]:gap-2 max-[576px]:p-[20px_10px] max-[576px]:min-h-[350px]',
-            actualTheme === 'dark' ? 'bg-[#27272b]' : 'bg-gray-200'
-          ]"
+          class="flex items-stretch justify-center gap-[15px] max-w-[1200px] w-full mb-[30px] py-[30px] px-[20px] flex-none rounded-xl min-h-[300px] max-[992px]:gap-3 max-[992px]:px-[15px] max-[992px]:py-[25px] max-[992px]:min-h-[400px] max-[576px]:gap-2 max-[576px]:p-[20px_10px] max-[576px]:min-h-[350px] bg-[var(--vscode-editorWidget-background)] shadow-md"
           @click.stop>
           <!-- Step 0 / 1: 新建算子工程 -->
           <div
             v-show="currentStep === 0"
-            :class="[
-              'flex-1 box-border flex min-w-0',
-              actualTheme === 'dark' ? 'text-[#f0f0f0]' : 'text-gray-800'
-            ]"
+            class="flex-1 box-border flex min-w-0 text-[var(--vscode-editor-foreground)]"
           >
             <!-- 左侧：标题、描述、立即创建 -->
             <div class="w-1/2 pr-8 max-[992px]:w-full max-[992px]:pr-0">
               <h3 class="text-[20px] font-semibold mb-6">
-                新建算子工程
+                {{ t('web.welcome.sectionNewProject') }}
               </h3>
-              <p :class="[
-                'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
-                actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
-              ]">
-                提供您算子开发环境开箱即用能力，支持基于Ascend C、Python等算子开发，支持&lt;&lt;&lt;&gt;&gt;&gt;算子工程和标准自定义算子工程的快速创建。
+              <p class="text-[12px] leading-relaxed mb-6 max-[576px]:text-xs text-[var(--vscode-descriptionForeground)]">
+                {{ t('web.welcome.sectionNewProjectDesc') }}
               </p>
-              <ul
-                :class="[
-                  'feature-list mb-6 grid grid-cols-2 gap-y-1 list-disc list-inside text-[15px] font-semibold leading-[32px] max-[576px]:grid-cols-1',
-                  actualTheme === 'dark' ? 'text-[#d1d1d1]' : 'text-gray-700'
-                ]"
-              >
-                <li>环境开箱即用</li>
-                <li>Ascend C 算子工程</li>
-                <li>Pyasc 算子工程</li>
+              <ul class="feature-list mb-6 grid grid-cols-2 gap-y-1 list-disc list-inside text-[15px] font-semibold leading-[32px] max-[576px]:grid-cols-1 text-[var(--vscode-editor-foreground)]">
+                <li>{{ t('web.welcome.featureEnvReady') }}</li>
+                <li>{{ t('web.welcome.featureAscendC') }}</li>
+                <li>{{ t('web.welcome.featurePyascProjectShort') }}</li>
               </ul>
               <div>
                 <button
@@ -111,7 +108,7 @@
                   ]"
                   @click="handleAscendCProject"
                 >
-                  立即创建
+                  {{ t('web.welcome.createNow') }}
                 </button>
               </div>
             </div>
@@ -131,7 +128,7 @@
                     'font-extrabold text-[initial] mb-3',
                     actualTheme === 'dark' ? 'text-white' : 'text-gray-800'
                   ]">
-                    【Ascend C】&lt;&lt;&lt;&gt;&gt;&gt;算子工程
+                    {{ t('web.welcome.ascendCOpProject') }}
                   </div>
                   <div :class="[
                     'leading-7 mt-1 text-[12px] mb-2.5 whitespace-normal',
@@ -139,10 +136,10 @@
                   ]"
                     v-html="getTemplateDesc(selectedTemplate)" />
                   <a-tag color="blue" class="mt-2 mr-2">
-                    语言：Ascend C
+                    {{ t('web.welcome.langAscendC') }}
                   </a-tag>
                   <a-tag color="purple" class="mt-2 mr-2">
-                    类型：&lt;&lt;&lt;&gt;&gt;&gt;
+                    {{ t('web.welcome.typeAngle') }}
                   </a-tag>
                   <template v-if="selectedProjectTypeId === 1">
                     <div class="mt-4 flex items-center gap-3">
@@ -150,7 +147,7 @@
                         'text-[13px] whitespace-nowrap',
                         actualTheme === 'dark' ? 'text-[#ffffff]' : 'text-gray-800'
                       ]">
-                        样例
+                        {{ t('web.welcome.sample') }}
                       </span>
                       <a-radio-group v-model:value="selectedTemplate" class="sample-radio-group flex gap-4">
                         <a-radio value="helloworld">
@@ -185,19 +182,19 @@
                     'font-extrabold text-[initial] mb-3',
                     actualTheme === 'dark' ? 'text-white' : 'text-gray-800'
                   ]">
-                    【Ascend C】标准自定义算子工程
+                    {{ t('web.welcome.ascendCStandardProject') }}
                   </div>
                   <div :class="[
                     'leading-7 mt-1 text-[12px] mb-2.5 whitespace-normal',
                     actualTheme === 'dark' ? 'text-white' : 'text-gray-700'
                   ]">
-                    基于Ascend C语言的标准自定义算子工程，op_host存放在CPC侧的代码实现，op_kermel存放NPU侧的代码实现，op_graph存放图模式下的代码实现
+                    {{ t('web.welcome.ascendCStandardDesc') }}
                   </div>
                   <a-tag color="blue" class="mt-2 mr-2">
-                    语言：Ascend C
+                    {{ t('web.welcome.langAscendC') }}
                   </a-tag>
                   <a-tag color="green" class="mt-2 mr-2">
-                    类型：标准自定义
+                    {{ t('web.welcome.typeStandardCustom') }}
                   </a-tag>
                   <div v-if="selectedProjectTypeId === 2" class="mt-4">
                     <div class="overflow-hidden max-w-full transition-all duration-300">
@@ -219,19 +216,19 @@
                     'font-extrabold text-[initial] mb-3',
                     actualTheme === 'dark' ? 'text-white' : 'text-gray-800'
                   ]">
-                    【Python】pyasc算子工程
+                    {{ t('web.welcome.pythonPyascProject') }}
                   </div>
                   <div :class="[
                     'leading-7 mt-1 text-[12px] mb-2.5 whitespace-normal',
                     actualTheme === 'dark' ? 'text-white' : 'text-gray-700'
                   ]">
-                    基于pyasc创建自定义Add算子样例工程。
+                    {{ t('web.welcome.pythonPyascDesc') }}
                   </div>
                   <a-tag color="blue" class="mt-2 mr-2">
-                    语言：Python
+                    {{ t('web.welcome.langPython') }}
                   </a-tag>
                   <a-tag color="purple" class="mt-2 mr-2">
-                    类型：pyasc
+                    {{ t('web.welcome.typePyasc') }}
                   </a-tag>
                   <div v-if="selectedProjectTypeId === 3" class="mt-4">
                     <div class="overflow-hidden max-w-full transition-all duration-300">
@@ -247,33 +244,22 @@
           <!-- Step 1 / 2: 算子开发 -->
         <div
           v-show="currentStep === 1"
-          :class="[
-            'flex-1 box-border flex min-w-0',
-            actualTheme === 'dark' ? 'text-[#f0f0f0]' : 'text-gray-800'
-          ]"
+          class="flex-1 box-border flex min-w-0 text-[var(--vscode-editor-foreground)]"
         >
           <!-- 左侧：算子开发文案与要点 -->
           <div class="w-1/2 pr-8 max-[992px]:w-full max-[992px]:pr-0">
             <h3 class="text-[20px] font-semibold mb-6">
-              算子开发
+              {{ t('web.welcome.sectionDev') }}
             </h3>
-            <p :class="[
-              'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
-              actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
-            ]">
-              开发过程中支持Ascend C语法高亮、代码补全、代码跳转等。提供算子编译，算子部署到CANN包，算子异常检测编译，算子example编译等能力。
+            <p class="text-[12px] leading-relaxed mb-6 max-[576px]:text-xs text-[var(--vscode-descriptionForeground)]">
+              {{ t('web.welcome.sectionDevDesc') }}
             </p>
-            <ul
-              :class="[
-                'feature-list mb-6 grid grid-cols-2 gap-y-1 list-disc list-inside text-[15px] font-semibold leading-[32px] max-[576px]:grid-cols-1',
-                actualTheme === 'dark' ? 'text-[#d1d1d1]' : 'text-gray-700'
-              ]"
-            >
-              <li>Tiling开发</li>
-              <li>Kernel开发</li>
-              <li>语法高亮</li>
-              <li>代码补全</li>
-              <li>算子编译部署</li>
+            <ul class="feature-list mb-6 grid grid-cols-2 gap-y-1 list-disc list-inside text-[15px] font-semibold leading-[32px] max-[576px]:grid-cols-1 text-[var(--vscode-editor-foreground)]">
+              <li>{{ t('web.welcome.featureTiling') }}</li>
+              <li>{{ t('web.welcome.featureKernel') }}</li>
+              <li>{{ t('web.welcome.featureHighlight') }}</li>
+              <li>{{ t('web.welcome.featureCompletion') }}</li>
+              <li>{{ t('web.welcome.featureCompileDeploy') }}</li>
             </ul>
               <!-- <a-button
               type="link"
@@ -286,19 +272,19 @@
           <!-- 右侧：算子开发 3 个步骤示意 Tab -->
           <div class="w-1/2 max-[992px]:w-full max-[992px]:mt-6">
             <a-tabs v-model:activeKey="devTabKey">
-              <a-tab-pane key="code" tab="编写算子代码">
+              <a-tab-pane key="code" :tab="t('web.welcome.tabWriteCode')">
                 <a-image
                   :src="writeImg"
                   class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
                 />
               </a-tab-pane>
-              <a-tab-pane key="build" tab="编译部署算子">
+              <a-tab-pane key="build" :tab="t('web.welcome.tabCompileDeploy')">
                 <a-image
                   :src="buildImg"
                   class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
                 />
               </a-tab-pane>
-              <a-tab-pane key="run" tab="运行算子">
+              <a-tab-pane key="run" :tab="t('web.welcome.tabRun')">
                 <a-image
                   :src="runImg"
                   class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
@@ -311,34 +297,23 @@
           <!-- Step 2: 算子调试 -->
           <div
             v-show="currentStep === 2"
-            :class="[
-              'flex-1 box-border flex min-w-0',
-              actualTheme === 'dark' ? 'text-[#f0f0f0]' : 'text-gray-800'
-            ]"
+            class="flex-1 box-border flex min-w-0 text-[var(--vscode-editor-foreground)]"
           >
             <!-- 左侧：算子调试文案与要点 -->
             <div class="w-1/2 pr-8 max-[992px]:w-full max-[992px]:pr-0">
               <h3 class="text-[20px] font-semibold mb-6">
-                算子调试
+                {{ t('web.welcome.sectionDebug') }}
               </h3>
-              <p :class="[
-                'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
-                actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
-              ]">
-                基于msdebug工具提供NPU上板可视化调试Ascend算子工程，包括断点调试、单步执行调试、查看变量/寄存器/堆栈/断点信息、内存查询、核切和NPU coredump文件可视化调试等。
+              <p class="text-[12px] leading-relaxed mb-6 max-[576px]:text-xs text-[var(--vscode-descriptionForeground)]">
+                {{ t('web.welcome.sectionDebugDesc') }}
               </p>
-              <ul
-                :class="[
-                  'feature-list mb-6 grid grid-cols-2 gap-y-1 list-disc list-inside text-[15px] font-semibold leading-[32px] max-[576px]:grid-cols-1',
-                  actualTheme === 'dark' ? 'text-[#d1d1d1]' : 'text-gray-700'
-                ]"
-              >
-                <li>断点调试</li>
-                <li>单步执行调试</li>
-                <li>内存查询</li>
-                <li>核切</li>
-                <li>查看变量/寄存器/堆栈/断点信息</li>
-                <li>NPU coredump文件可视化调试</li>
+              <ul class="feature-list mb-6 grid grid-cols-2 gap-y-1 list-disc list-inside text-[15px] font-semibold leading-[32px] max-[576px]:grid-cols-1 text-[var(--vscode-editor-foreground)]">
+                <li>{{ t('web.welcome.featureDebugBreakpoint') }}</li>
+                <li>{{ t('web.welcome.featureDebugStep') }}</li>
+                <li>{{ t('web.welcome.featureDebugMemory') }}</li>
+                <li>{{ t('web.welcome.featureDebugCoreSwitch') }}</li>
+                <li>{{ t('web.welcome.featureDebugInspect') }}</li>
+                <li>{{ t('web.welcome.featureDebugCoredump') }}</li>
               </ul>
             </div>
 
@@ -354,39 +329,22 @@
           <!-- Step 3: 算子异常检测 -->
           <div
             v-show="currentStep === 3"
-            :class="[
-              'flex-1 box-border flex min-w-0',
-              actualTheme === 'dark' ? 'text-[#f0f0f0]' : 'text-gray-800'
-            ]"
+            class="flex-1 box-border flex min-w-0 text-[var(--vscode-editor-foreground)]"
           >
             <!-- 左侧：算子异常检测介绍 -->
             <div class="w-1/2 pr-8 max-[992px]:w-full max-[992px]:pr-0">
               <h3 class="text-[20px] font-semibold mb-6">
-                异常检测
+                {{ t('web.welcome.sectionSanitizer') }}
               </h3>
-              <p :class="[
-                'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
-                actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
-              ]">
-                集成 msSanitizer 工具，提供内存检测、竞争检测和未初始化检测功能，全面覆盖算子功能正确性检测。
+              <p class="text-[12px] leading-relaxed mb-6 max-[576px]:text-xs text-[var(--vscode-descriptionForeground)]">
+                {{ t('web.welcome.sectionSanitizerDesc') }}
               </p>
-              <ul
-                :class="[
-                  'feature-list mb-6 list-disc list-inside text-[15px] font-semibold leading-[32px]',
-                  actualTheme === 'dark' ? 'text-[#d1d1d1]' : 'text-gray-700'
-                ]"
-              >
-                <li>内存检测</li>
-                <li>竞争检测</li>
-                <li>未初始化检测</li>
+              <ul class="feature-list mb-6 list-disc list-inside text-[15px] font-semibold leading-[32px] text-[var(--vscode-editor-foreground)]">
+                <li>{{ t('web.welcome.featureMemory') }}</li>
+                <li>{{ t('web.welcome.featureRace') }}</li>
+                <li>{{ t('web.welcome.featureUninit') }}</li>
               </ul>
-              <p :class="[
-                'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
-                actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
-              ]">
-                1. 点击操作面板中的“异常检测”按钮，选择检测内容。<br />
-                2. 运行完成后，点击面板中的“异常检测结果”菜单，可查看异常检测报告，支持查看详情和代码行跳转。
-              </p>
+              <p class="text-[12px] leading-relaxed mb-6 max-[576px]:text-xs text-[var(--vscode-descriptionForeground)]" v-html="t('web.welcome.sanitizerSteps')" />
               <!-- <a-button
                 type="link"
                 class="!p-0 !h-auto text-[12px]"
@@ -398,13 +356,13 @@
             <!-- 右侧：异常检测 2 个 Tab -->
             <div class="w-1/2 max-[992px]:w-full max-[992px]:mt-6">
               <a-tabs v-model:activeKey="checkTabKey">
-                <a-tab-pane key="select" tab="选择检测内容">
+                <a-tab-pane key="select" :tab="t('web.welcome.tabSelectCheckContent')">
                   <a-image
                     :src="selectCheckImg"
                     class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
                   />
                 </a-tab-pane>
-                <a-tab-pane key="result" tab="查看检测结果">
+                <a-tab-pane key="result" :tab="t('web.welcome.tabViewCheckResult')">
                   <a-image
                     :src="checkImg"
                     class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
@@ -417,38 +375,21 @@
           <!-- Step 4: 算子性能调优 -->
           <div
             v-show="currentStep === 4"
-            :class="[
-              'flex-1 box-border flex min-w-0',
-              actualTheme === 'dark' ? 'text-[#f0f0f0]' : 'text-gray-800'
-            ]"
+            class="flex-1 box-border flex min-w-0 text-[var(--vscode-editor-foreground)]"
           >
             <!-- 左侧：算子性能调优介绍 -->
             <div class="w-1/2 pr-8 max-[992px]:w-full max-[992px]:pr-0">
               <h3 class="text-[20px] font-semibold mb-6">
-                性能调优
+                {{ t('web.welcome.sectionPerformance') }}
               </h3>
-              <p :class="[
-                'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
-                actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
-              ]">
-                快速定位算子的软硬件性能瓶颈，提供计算内存热力图、Roofline瓶颈分析图、Cache热力图、通算流水图（MC2算子）、指令流水图、算子代码热力图、性能数据等分析能力。
+              <p class="text-[12px] leading-relaxed mb-6 max-[576px]:text-xs text-[var(--vscode-descriptionForeground)]">
+                {{ t('web.welcome.sectionPerformanceDesc') }}
               </p>
-              <ul
-                :class="[
-                  'feature-list mb-6 list-disc list-inside text-[15px] font-semibold leading-[32px]',
-                  actualTheme === 'dark' ? 'text-[#d1d1d1]' : 'text-gray-700'
-                ]"
-              >
-                <li>上板分析</li>
-                <li>仿真分析</li>
+              <ul class="feature-list mb-6 list-disc list-inside text-[15px] font-semibold leading-[32px] text-[var(--vscode-editor-foreground)]">
+                <li>{{ t('web.welcome.featureOnboard') }}</li>
+                <li>{{ t('web.welcome.featureSimulation') }}</li>
               </ul>
-              <p :class="[
-                'text-[12px] leading-relaxed mb-6 max-[576px]:text-xs',
-                actualTheme === 'dark' ? 'text-[#bfbfbf]' : 'text-gray-600'
-              ]">
-                1. 点击操作面板中的“性能分析”按钮下的“上板分析”或“仿真分析”，选择分析内容。<br />
-                2. 运行完成后，点击面板中的“性能调优结果”菜单，可查看并分析性能调优相关数据。
-              </p>
+              <p class="text-[12px] leading-relaxed mb-6 max-[576px]:text-xs text-[var(--vscode-descriptionForeground)]" v-html="t('web.welcome.performanceSteps')" />
               <!-- <a-button
                 type="link"
                 class="!p-0 !h-auto text-[12px]"
@@ -460,13 +401,13 @@
             <!-- 右侧：性能调优 2 个 Tab -->
             <div class="w-1/2 max-[992px]:w-full max-[992px]:mt-6">
               <a-tabs v-model:activeKey="perfTabKey">
-                <a-tab-pane key="select" tab="选择分析内容">
+                <a-tab-pane key="select" :tab="t('web.welcome.tabSelectAnalysisContent')">
                   <a-image
                     :src="selectAnalysisImg"
                     class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
                   />
                 </a-tab-pane>
-                <a-tab-pane key="result" tab="查看分析结果">
+                <a-tab-pane key="result" :tab="t('web.welcome.tabViewAnalysisResult')">
                   <a-image
                     :src="analysisImg"
                     class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
@@ -484,23 +425,17 @@
         >
           <span
             v-if="currentStep > 0"
-            :class="[
-              'cursor-pointer transition-colors',
-              actualTheme === 'dark' ? 'text-[#4ba5f4] hover:text-[#76b9ff]' : 'text-[#1890ff] hover:text-[#40a9ff]'
-            ]"
+            class="welcome-link cursor-pointer transition-colors"
             @click="goPrevStep"
           >
-            上一步
+            {{ t('web.welcome.prevStep') }}
           </span>
           <span
             v-if="currentStep < 4"
-            :class="[
-              'cursor-pointer transition-colors',
-              actualTheme === 'dark' ? 'text-[#4ba5f4] hover:text-[#76b9ff]' : 'text-[#1890ff] hover:text-[#40a9ff]'
-            ]"
+            class="welcome-link cursor-pointer transition-colors"
             @click="goNextStep"
           >
-            下一步
+            {{ t('web.welcome.nextStep') }}
           </span>
         </div>
       </div>
@@ -509,13 +444,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue';
+import { ref } from 'vue';
+import { t } from 'i18next';
 import { useTheme } from '@web/composables/use-theme';
-import settingIcon from '@/assets/svg/setting.svg';
-import buildIcon from '@/assets/svg/build.svg';
-import checkIcon from '@/assets/svg/check.svg';
-import debugIcon from '@/assets/svg/debug.svg';
-import powerIcon from '@/assets/svg/power.svg';
+import settingIconRaw from '@/assets/svg/setting.svg?raw';
+import buildIconRaw from '@/assets/svg/build.svg?raw';
+import checkIconRaw from '@/assets/svg/check.svg?raw';
+import debugIconRaw from '@/assets/svg/debug.svg?raw';
+import powerIconRaw from '@/assets/svg/power.svg?raw';
 import tipBase_0 from '@/assets/imgs/add.png';
 import tipBase_1_1 from '@/assets/imgs/hello_world.png';
 import tipBase_1_2 from '@/assets/imgs/add_custom.png';
@@ -531,6 +467,17 @@ import selectAnalysisImg from '@/assets/imgs/selectAnalysis.gif';
 
 
 const { themeConfig, actualTheme } = useTheme();
+
+const toCurrentColorSvg = (svg: string) =>
+  svg
+    .replace(/fill="(?!none|transparent|currentColor)[^"]*"/gi, 'fill="currentColor"')
+    .replace(/stroke="(?!none|transparent|currentColor)[^"]*"/gi, 'stroke="currentColor"');
+
+const settingIconSvg = toCurrentColorSvg(settingIconRaw);
+const buildIconSvg = toCurrentColorSvg(buildIconRaw);
+const checkIconSvg = toCurrentColorSvg(checkIconRaw);
+const debugIconSvg = toCurrentColorSvg(debugIconRaw);
+const powerIconSvg = toCurrentColorSvg(powerIconRaw);
 
 const currentStep = ref(0);
 const devTabKey = ref('code');
@@ -548,13 +495,13 @@ const selectedTemplate = ref<'helloworld' | 'addn' | 'torch_library_template'>(
 const getTemplateDesc = (template: string) => {
   switch (template) {
     case 'helloworld':
-      return '生成&lt;&lt;&lt;&gt;&gt;&gt;异构运行的.asc代码，默认打印"Hello World"';
+      return t('web.welcome.templateDescHelloworld');
     case 'addn':
-      return '生成&lt;&lt;&lt;&gt;&gt;&gt;异构运行的.asc，默认实现addn算子';
+      return t('web.welcome.templateDescAddn');
     case 'torch_library_template':
-      return '生成&lt;&lt;&lt;&gt;&gt;&gt;接入rotch licrary的.asc代码，默认实现add算子';
+      return t('web.welcome.templateDescTorchLibrary');
     default:
-      return '生成&lt;&lt;&lt;&gt;&gt;&gt;异构运行的.asc代码，默认打印"Hello World"';
+      return t('web.welcome.templateDescHelloworld');
   }
 };
 
@@ -608,21 +555,6 @@ const goNextStep = () => {
   }
 };
 
-// 设置 CSS 变量以适配主题
-const updateThemeVariables = () => {
-  const root = document.documentElement;
-  root.style.setProperty('--text-color', actualTheme.value === 'dark' ? '#ffffff' : '#333333');
-};
-
-// 初始化主题变量
-onMounted(() => {
-  updateThemeVariables();
-});
-
-// 监听主题变化
-watch(actualTheme, () => {
-  updateThemeVariables();
-});
 </script>
 
 <style scoped>
@@ -673,10 +605,10 @@ watch(actualTheme, () => {
 
 /* Functional Buttons */
 .func-btn {
-  background-color: #38383d;
-  border: none;
+  background-color: var(--vscode-button-secondaryBackground);
+  border: 1px solid var(--vscode-panel-border);
   border-radius: 6px;
-  color: #b8b8b8;
+  color: var(--vscode-button-secondaryForeground);
   padding: 10px 12px;
   font-size: 13px;
   cursor: pointer;
@@ -693,15 +625,29 @@ watch(actualTheme, () => {
 
 /* 欢迎页导航步骤条（a-steps navigation） */
 .welcome-steps {
-  color: var(--text-color);
+  color: var(--vscode-icon-foreground, var(--vscode-foreground));
+  overflow: hidden;
 }
 
 .welcome-steps .ant-steps-item {
-  color: var(--text-color);
+  color: var(--vscode-descriptionForeground, var(--vscode-foreground));
 }
 
-.welcome-steps .ant-steps-item::after {
-  border-color: var(--text-color);
+.welcome-steps .ant-steps-item-process {
+  color: var(--vscode-textLink-foreground, var(--vscode-foreground));
+}
+
+.welcome-steps .ant-steps-item-finish {
+  color: var(--vscode-foreground);
+}
+
+/* Navigation chevron: keep Ant Design positioning (nav.js), only theme the stroke */
+:deep(.welcome-steps.ant-steps-navigation .ant-steps-item::after) {
+  border-top-color: currentColor;
+  border-inline-end-color: currentColor;
+  /* Ant default: top calc(50% - paddingSM/2); transform translateY(-50%) translateX(-50%) rotate(45deg) */
+  top: calc(50% - 6px);
+  transform: translateY(calc(-50% + 1px)) translateX(-50%) rotate(45deg);
 }
 
 .welcome-steps .ant-steps-item-description {
@@ -710,7 +656,7 @@ watch(actualTheme, () => {
 
 .welcome-steps .ant-steps-item-icon {
   background: transparent;
-  border-color: var(--text-color);
+  border-color: var(--vscode-panel-border);
 }
 
 :deep(.welcome-steps .ant-steps-item-container) {
@@ -719,15 +665,30 @@ watch(actualTheme, () => {
   justify-content: center;
 }
 
-:deep(.welcome-steps .ant-steps-item .ant-steps-item-container .ant-steps-item-content .ant-steps-item-title) {
-  font-size: 18px;
-  color: var(--text-color);
+:deep(.welcome-steps .ant-steps-item-icon) {
+  margin-right: 6px;
 }
 
-.welcome-steps .ant-steps-item-icon,
-.welcome-steps .ant-steps-item-content {
+:deep(.welcome-steps .ant-steps-item-content) {
+  min-width: 0;
+}
+
+:deep(.welcome-steps .ant-steps-item .ant-steps-item-container .ant-steps-item-content .ant-steps-item-title) {
+  font-size: 18px;
+  color: currentColor;
+  line-height: 1;
   display: flex;
   align-items: center;
+}
+
+/* Prevent title truncation in all locales */
+:deep(.welcome-steps .ant-steps-item-title) {
+  max-width: none !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: nowrap !important;
+  word-break: normal;
+  overflow-wrap: normal;
 }
 
 .step-icon {
@@ -736,8 +697,33 @@ watch(actualTheme, () => {
   display: block;
 }
 
-::deep(.sample-radio-group .ant-radio-wrapper) {
-  color: #ffffff;
+.step-icon-svg {
+  color: currentColor;
+  line-height: 0;
+}
+
+/* Inactive steps: match workbench icon tint (not description text color) */
+:deep(.welcome-steps .ant-steps-item-wait .step-icon-svg),
+:deep(.welcome-steps .ant-steps-item-finish .step-icon-svg) {
+  color: var(--vscode-icon-foreground);
+}
+
+:deep(.step-icon-svg svg) {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+:deep(.sample-radio-group .ant-radio-wrapper) {
+  color: var(--vscode-editor-foreground);
+}
+
+.welcome-link {
+  color: var(--vscode-textLink-foreground);
+}
+
+.welcome-link:hover {
+  color: var(--vscode-textLink-activeForeground);
 }
 
 /* Responsive adjustments for buttons that are hard to do purely with utility classes inline without getting messy */

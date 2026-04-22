@@ -2,26 +2,26 @@ import { viewService } from '@plugin/service/view-service';
 
 export const viewMethods = {
   /**
-   * 打开 CSV 文件预览
-   * @param filePath CSV 文件路径
+   * Open CSV file preview
+   * @param filePath CSV file path
    */
   async openCsvFile(filePath: string) {
     await viewService.openCsvFile(filePath);
   },
 
   /**
-   * 打开 Insight 数据视图
-   * @param filePath Insight 数据文件路径
+   * Open Insight data view
+   * @param filePath Insight data file path
    */
   async openInsight(filePath: string) {
     await viewService.openInsight(filePath);
   },
 
   /**
-   * 打开异常检测面板
+   * Open the anomaly detection panel
    */
   openMsSanitizerPanelView() {
-    // 兼容旧接口，暂时留空或重定向
+    // Compatible with old interfaces, temporarily leave blank or redirect
     // viewService.openMsSanitizerPanelView({});
   },
 };

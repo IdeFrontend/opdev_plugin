@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as path from 'path';
 
@@ -6,43 +7,61 @@ import { ProjectManager } from '@plugin/core/project/project-manager';
 import { buildService } from '@plugin/service/build-service';
 import { sanitizerService } from '@plugin/service/sanitizer-service';
 import { homeMethods } from './home-controller';
-import { StartBuildParams, StartBuildExampleParams, StartRunParams } from '@shared/api-types';
-import { getConfig, postConfig } from '@plugin/domain';
+import {
+  StartBuildParams,
+  StartBuildExampleParams,
+  StartRunParams,
+  StartSimulateParams,
+  StartOnBoardParams,
+  StartSanitizerParams,
+  StartDumpTensorParams,
+  StartUtTestParams,
+} from '@shared/api-types';
+import {
+  getConfig, postConfig,
+} from '@plugin/domain';
 import { OperatorProjectType } from '@plugin/domain/services/operator-project-detector';
+import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 
-// 全局任务管理器：用于追踪和终止正在执行的任务
+// Global task manager: used to track and terminate executing tasks
 let currentExecutor: CommandExecutor | null = null;
-// 当前任务名称映射
-const taskNameMap: Record<string, string> = {
-  'build': '编译部署算子',
-  'runExample': '运行',
-  'sanitizer': '异常检测',
-  'onboard': '上板分析',
-  'simulation': '仿真分析',
-  'buildAndCpuDebug': 'CPU调试',
-  'buildAndDebug': 'NPU调试',
-  'dumpTensor': '执行DumpTensor',
-  'utTest': 'UT测试'
+// Current task name mapping (key -> i18n key)
+const taskNameKeyMap: Record<string, string> = {
+  'build': 'task.taskName.build',
+  'runExample': 'task.taskName.runExample',
+  'sanitizer': 'task.taskName.sanitizer',
+  'onboard': 'task.taskName.onboard',
+  'simulation': 'task.taskName.simulation',
+  'buildAndCpuDebug': 'task.taskName.buildAndCpuDebug',
+  'buildAndDebug': 'task.taskName.buildAndDebug',
+  'dumpTensor': 'task.taskName.dumpTensor',
+  'utTest': 'task.taskName.utTest',
 };
-// 当前正在执行的任务类型
+
+function isPythonLikeProjectType(projectType: string | null | undefined): boolean {
+  const behavior = OperatorPluginRegistry.getBuildBehaviorByProjectType(projectType);
+  return behavior.requiresActiveFileCheck && behavior.activeFileExtension === '.py';
+}
+
+/** Currently running task type (maps to taskNameKeyMap keys). */
 let currentTaskType: string | null = null;
 
 export const taskMethods = {
   /**
-   * 构建算子
+   * Build operator
    */
   async startBuild(params: StartBuildParams = {}): Promise<void> {
     try {
       await ProjectManager.getInstance()
         .initProject();
-      // 保存当前 executor 引用，用于可能的终止操作
+      // Save the current executor reference for possible termination operations
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
       currentTaskType = 'build';
       await buildService.startBuild(params);
     }
     finally {
-      // 清除 executor 引用
+      // Clear executor reference
       currentExecutor = null;
       currentTaskType = null;
       ProjectManager.getInstance()
@@ -51,20 +70,20 @@ export const taskMethods = {
   },
 
   /**
-   * 运行算子
+   * Run operator
    */
   async startRun(params: StartRunParams = {}): Promise<void> {
     try {
       await ProjectManager.getInstance()
         .initProject();
-      // 保存当前 executor 引用
+      // Save current executor reference
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
       currentTaskType = 'runExample';
       await buildService.startRun(params);
     }
     finally {
-      // 清除 executor 引用
+      // Clear executor reference
       currentExecutor = null;
       currentTaskType = null;
       ProjectManager.getInstance()
@@ -73,20 +92,20 @@ export const taskMethods = {
   },
 
   /**
-   * 构建示例
+   * Build example
    */
   async startBuildExample(params: StartBuildExampleParams = {}): Promise<void> {
     try {
       await ProjectManager.getInstance()
         .initProject();
-      // 保存当前 executor 引用
+      // Save current executor reference
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
       currentTaskType = 'build';
       await buildService.startBuildExample(params);
     }
     finally {
-      // 清除 executor 引用
+      // Clear executor reference
       currentExecutor = null;
       currentTaskType = null;
       ProjectManager.getInstance()
@@ -95,20 +114,20 @@ export const taskMethods = {
   },
 
   /**
-   * 仿真分析
+   * Simulation analysis
    */
-  async startSimulate(params: { operatorNames?: string } = {}): Promise<void> {
+  async startSimulate(params: StartSimulateParams = {}): Promise<void> {
     try {
       await ProjectManager.getInstance()
         .initProject();
-      // 保存当前 executor 引用
+      // Save current executor reference
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
       currentTaskType = 'simulation';
       await buildService.startSimulate(params);
     }
     finally {
-      // 清除 executor 引用
+      // Clear executor reference
       currentExecutor = null;
       currentTaskType = null;
       ProjectManager.getInstance()
@@ -117,20 +136,20 @@ export const taskMethods = {
   },
 
   /**
-   * 上板分析
+   * On-board analysis
    */
-  async startOnBoard(params: { operatorNames?: string } = {}): Promise<void> {
+  async startOnBoard(params: StartOnBoardParams = {}): Promise<void> {
     try {
       await ProjectManager.getInstance()
         .initProject();
-      // 保存当前 executor 引用
+      // Save current executor reference
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
       currentTaskType = 'onboard';
       await buildService.startOnBoard(params);
     }
     finally {
-      // 清除 executor 引用
+      // Clear executor reference
       currentExecutor = null;
       currentTaskType = null;
       ProjectManager.getInstance()
@@ -139,20 +158,20 @@ export const taskMethods = {
   },
 
   /**
-   * 异常检测
+   * Anomaly detection
    */
-  async runSanitizer(params: { operatorNames?: string } = {}): Promise<void> {
+  async runSanitizer(params: StartSanitizerParams = {}): Promise<void> {
     try {
       await ProjectManager.getInstance()
         .initProject();
-      // 保存当前 executor 引用，用于可能的终止操作
+      // Save the current executor reference for possible termination operations
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
       currentTaskType = 'sanitizer';
       await sanitizerService.runSanitizer(params);
     }
     finally {
-      // 清除 executor 引用
+      // Clear executor reference
       currentExecutor = null;
       currentTaskType = null;
       ProjectManager.getInstance()
@@ -161,20 +180,21 @@ export const taskMethods = {
   },
 
   /**
-   * 执行DumpTensor
+   * Execute DumpTensor
    */
-  async startDumpTensor(params: { operatorNames?: string, compileOption?: string } = {}): Promise<void> {
+  async startDumpTensor(params: { operatorNames?: string,
+    compileOption?: string } = {}): Promise<void> {
     try {
       await ProjectManager.getInstance()
         .initProject();
-      // 保存当前 executor 引用
+      // Save current executor reference
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
       currentTaskType = 'dumpTensor';
       await buildService.startDumpTensor(params);
     }
     finally {
-      // 清除 executor 引用
+      // Clear executor reference
       currentExecutor = null;
       currentTaskType = null;
       ProjectManager.getInstance()
@@ -183,20 +203,19 @@ export const taskMethods = {
   },
 
   /**
-   * 执行UT测试
+   * Run UT tests
    */
-  async startUtTest(params: { operatorNames?: string } = {}): Promise<void> {
+  async startUtTest(params: StartUtTestParams = {}): Promise<void> {
     try {
       await ProjectManager.getInstance()
         .initProject();
-      // 保存当前 executor 引用
+      // Keep executor reference for possible cancellation
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
       currentTaskType = 'utTest';
       await buildService.startUtTest(params);
     }
     finally {
-      // 清除 executor 引用
       currentExecutor = null;
       currentTaskType = null;
       ProjectManager.getInstance()
@@ -205,7 +224,7 @@ export const taskMethods = {
   },
 
   /**
-   * 导入DumpTensor .bin文件
+   * Import DumpTensor .bin file
    */
   async importDumpTensorBinFile(params: { binFilePath: string }): Promise<void> {
     try {
@@ -220,84 +239,85 @@ export const taskMethods = {
   },
 
   /**
-   * 构建算子 (webview 兼容)
+   * Build operator (webview compatible)
    */
   async buildOp(): Promise<void> {
     return this.startBuild();
   },
 
   /**
-   * 构建示例 (webview 兼容)
+   * Build example (webview compatible)
    */
   async buildExample(): Promise<void> {
     return this.startBuildExample();
   },
 
   /**
-   * 运行示例 (webview 兼容)
+   * Run the example (webview compatible)
    */
   async runExample(): Promise<void> {
     return this.startRun();
   },
 
   /**
-   * 仿真分析 (webview 兼容)
+   * Simulation analysis (webview compatible)
    */
   async simulate(): Promise<void> {
     return this.startSimulate();
   },
 
   /**
-   * 上板分析 (webview 兼容)
+   * On-board analysis (webview compatible)
    */
   async onBoard(): Promise<void> {
     return this.startOnBoard();
   },
 
   /**
-   * 检查任务执行状态
-   * @returns 是否有任务正在运行
+   * Check task execution status
+   * @returns whether there is a task running
    */
   async checkTaskStatus(): Promise<boolean> {
     return currentExecutor !== null;
   },
 
   /**
-   * 停止任务
+   * Stop task
    */
   async stopTask(): Promise<void> {
-    console.log('[stopTask] 收到停止任务请求');
+    console.log('[stopTask] Received stop task request');
 
     if (currentExecutor) {
-      console.log('[stopTask] 终止正在执行的任务');
+      console.log('[stopTask] Terminating running task');
       await currentExecutor.kill();
       currentExecutor = null;
       currentTaskType = null;
       ProjectManager.getInstance()
         .clearExecutor();
-      vscode.window.showWarningMessage('任务已被手动停止');
+      vscode.window.showWarningMessage(t('task.stoppedByUser'));
     }
     else {
-      console.log('[stopTask] 没有正在执行的任务');
-      vscode.window.showInformationMessage('当前没有正在执行的任务');
+      console.log('[stopTask] No running task');
+      vscode.window.showInformationMessage(t('task.noRunningTask'));
     }
   },
 
   /**
-   * 获取当前任务名称
-   * @returns 当前任务名称，如果没有任务则返回null
+   * Get the current task name
+   * @returns current task name, or null if there is no task
    */
   async getCurrentTaskName(): Promise<string | null> {
-    if (currentTaskType && taskNameMap[currentTaskType]) {
-      return taskNameMap[currentTaskType];
+    if (currentTaskType && taskNameKeyMap[currentTaskType]) {
+      return t(taskNameKeyMap[currentTaskType]);
     }
+
     return null;
   },
 
   /**
-   * 显示确认对话框
-   * @param params 对话框参数
-   * @returns 用户选择的结果，'停止并执行' 或 undefined（取消）
+   * Show confirmation dialog
+   * @param params dialog parameters
+   * @returns the result of user selection, 'stop and execute' or undefined (cancel)
    */
   async showConfirmDialog(params: {
     title: string;
@@ -305,83 +325,90 @@ export const taskMethods = {
     confirmText: string;
     cancelText: string;
   }): Promise<string | undefined> {
-    // VSCode的showWarningMessage不支持单独的title，将title和content合并显示
+    // VSCode's showWarningMessage does not support a separate title and displays the title and content together.
     const message = `${params.title}\n${params.content}`;
-    // 使用 modal: true 保持模态框，但只提供一个"停止并执行"按钮
-    // VSCode会自动添加关闭按钮（X），用户可以通过关闭对话框或按ESC来取消
-    // 这样只有一个取消方式（关闭按钮），不会出现两个取消按钮
+    // Use modal: true to keep the modal but only provide a "stop and execute" button
+    // VSCode will automatically add a close button (X), the user can cancel by closing the dialog box or pressing ESC
+    // In this way, there is only one way to cancel (the close button), and there will not be two cancel buttons.
     const result = await vscode.window.showWarningMessage(
       message,
       { modal: true },
       params.confirmText,
     );
-    // 返回用户选择的结果：
-    // - 如果用户点击"停止并执行"按钮，返回 confirmText
-    // - 如果用户点击关闭按钮（X）或按ESC，返回 undefined（相当于取消）
+
+    // Return the results selected by the user:
+    // - If the user clicks the "Stop and Execute" button, return confirmText
+    // - If the user clicks the close button (X) or presses ESC, returns undefined (equivalent to cancel)
     return result;
   },
 
   /**
-   * 运行NPU调试
+   * Run NPU debug
    */
   async runDebug(): Promise<void> {
     try {
       await ProjectManager.getInstance()
         .initProject();
-      // 保存当前 executor 引用，用于可能的终止操作
+      // Save the current executor reference for possible termination operations
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
-      // 设置当前任务类型
+      // Set current task type
       currentTaskType = 'buildAndDebug';
-      
-      // 对于 pyasc 类型，检查当前是否打开了 .py 文件并更新配置
+
+      // For the pyasc type, check if a .py file is currently open and update the configuration
       const projectTypeInfo = await homeMethods.getProjectType();
       const isPyasc = projectTypeInfo.projectType === OperatorProjectType.PYASC;
-      
+
       if (isPyasc) {
-        // 检查当前是否打开了 .py 文件
+        // Check if a .py file is currently open
         const activeEditor = vscode.window.activeTextEditor;
         const isPyFile = activeEditor?.document.fileName.endsWith('.py');
 
         if (!isPyFile) {
-          vscode.window.showWarningMessage('请先打开一个 .py 文件');
-          // 清除状态
+          vscode.window.showWarningMessage(t('task.openPyFirst'));
           currentExecutor = null;
           currentTaskType = null;
-          ProjectManager.getInstance().clearExecutor();
+          ProjectManager.getInstance()
+            .clearExecutor();
+
           return;
         }
 
-        // 获取工作区路径
         const workspaceFolders = vscode.workspace.workspaceFolders;
+
         if (!workspaceFolders || workspaceFolders.length === 0) {
-          vscode.window.showWarningMessage('未找到工作区路径');
-          // 清除状态
+          vscode.window.showWarningMessage(t('task.workspacePathNotFound'));
+          // clear status
           currentExecutor = null;
           currentTaskType = null;
-          ProjectManager.getInstance().clearExecutor();
+          ProjectManager.getInstance()
+            .clearExecutor();
+
           return;
         }
 
         const workspacePath = workspaceFolders[0].uri.fsPath;
         const filePath = activeEditor!.document.uri.fsPath;
 
-        // 计算相对路径
-        const relativePath = path.relative(workspacePath, filePath).replace(/\\/g, '/');
+        // Calculate relative paths
+        const relativePath = path.relative(workspacePath, filePath)
+          .replace(/\\/g, '/');
 
-        // 获取 build_op 配置并更新 target_file
+        // Get build_op configuration and update target_file
         const buildConfigId = await buildService.getBuildConfigId();
+
         if (buildConfigId) {
-          // 获取项目ID
+          // Get project ID
           const projectIdStr = ProjectManager.getInstance().projectId;
+
           if (projectIdStr) {
             const projectId = Number(projectIdStr);
-            // 获取 build_op 配置
+            // Get build_op configuration
             const configs = await getConfig(projectId, 'build_op');
             const buildOpConfig = configs.find((c: any) => c.config_id === buildConfigId);
 
             if (buildOpConfig) {
-              // 更新配置的 target_file
+              // Update configured target_file
               const updatedConfig = {
                 config_id: buildConfigId,
                 config_type: 'build_op',
@@ -391,25 +418,27 @@ export const taskMethods = {
                 },
               };
 
-              // 保存配置
+              // Save configuration
               await postConfig('build_op', [updatedConfig]);
             }
           }
         }
       }
-      
-      // debug前编译，使用--debug参数
+
+      // Compile before debugging, use the --debug parameter
       await buildService.startBuild({ scriptField: 'npu_debug_script' });
       await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
 
-      // 获取项目类型和模板名称，判断是否使用 msdebug-python
+      // Get the project type and template name to determine whether to use msdebug-python
       const projectInfo = await homeMethods.getProjectType();
       const usePythonDebug = projectInfo.projectType === 'ascend' && projectInfo.projectTemplateName === 'torch_library_template';
 
-      // 启动调试配置
+      // Start debug configuration
       const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+
       if (workspaceFolder) {
         const debugConfigName = usePythonDebug ? 'msdebug-python' : 'msdebug';
+
         await vscode.debug.startDebugging(workspaceFolder, debugConfigName);
       }
       else {
@@ -417,11 +446,11 @@ export const taskMethods = {
       }
     }
     catch (error) {
-      console.error('打开NPU debug时出错:', error);
+      console.error('Error while opening NPU debug:', error);
       throw error;
     }
     finally {
-      // 清除 executor 引用和任务类型
+      // Clear executor reference and task type
       currentExecutor = null;
       currentTaskType = null;
       ProjectManager.getInstance()
@@ -430,81 +459,87 @@ export const taskMethods = {
   },
 
   /**
-   * NPU调试配置
+   * NPU debugging configuration
    */
   async debugConfig(): Promise<void> {
     try {
       await vscode.commands.executeCommand('workbench.action.debug.configure');
-      vscode.window.showInformationMessage('已打开 launch.json 文件');
+      vscode.window.showInformationMessage(t('task.launchJsonOpened'));
     }
     catch (error) {
-      console.error('打开 launch.json 时出错:', error);
-      vscode.window.showErrorMessage(`无法打开 launch.json: ${error instanceof Error ? error.message : String(error)}`);
+      console.error('Error while opening launch.json:', error);
+      vscode.window.showErrorMessage(t('task.cannotOpenLaunchJson', { error: error instanceof Error ? error.message : String(error) }));
       throw error;
     }
   },
 
   /**
-   * 运行CPU调试
+   * Run CPU debug
    */
   async runCpuDebug(): Promise<void> {
     try {
       await ProjectManager.getInstance()
         .initProject();
-      // 保存当前 executor 引用，用于可能的终止操作
+      // Save the current executor reference for possible termination operations
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
-      // 设置当前任务类型
+      // Set current task type
       currentTaskType = 'buildAndCpuDebug';
-      
-      // 对于 pyasc 类型，检查当前是否打开了 .py 文件并更新配置
+
+      // For the pyasc type, check if a .py file is currently open and update the configuration
       const projectTypeInfo = await homeMethods.getProjectType();
       const isPyasc = projectTypeInfo.projectType === OperatorProjectType.PYASC;
-      
+
       if (isPyasc) {
-        // 检查当前是否打开了 .py 文件
+        // Check if a .py file is currently open
         const activeEditor = vscode.window.activeTextEditor;
         const isPyFile = activeEditor?.document.fileName.endsWith('.py');
 
         if (!isPyFile) {
-          vscode.window.showWarningMessage('请先打开一个 .py 文件');
-          // 清除状态
+          vscode.window.showWarningMessage(t('task.openPyFirst'));
           currentExecutor = null;
           currentTaskType = null;
-          ProjectManager.getInstance().clearExecutor();
+          ProjectManager.getInstance()
+            .clearExecutor();
+
           return;
         }
 
-        // 获取工作区路径
         const workspaceFolders = vscode.workspace.workspaceFolders;
+
         if (!workspaceFolders || workspaceFolders.length === 0) {
-          vscode.window.showWarningMessage('未找到工作区路径');
-          // 清除状态
+          vscode.window.showWarningMessage(t('task.workspacePathNotFound'));
+          // clear status
           currentExecutor = null;
           currentTaskType = null;
-          ProjectManager.getInstance().clearExecutor();
+          ProjectManager.getInstance()
+            .clearExecutor();
+
           return;
         }
 
         const workspacePath = workspaceFolders[0].uri.fsPath;
         const filePath = activeEditor!.document.uri.fsPath;
 
-        // 计算相对路径
-        const relativePath = path.relative(workspacePath, filePath).replace(/\\/g, '/');
+        // Calculate relative paths
+        const relativePath = path.relative(workspacePath, filePath)
+          .replace(/\\/g, '/');
 
-        // 获取 build_op 配置并更新 target_file
+        // Get build_op configuration and update target_file
         const buildConfigId = await buildService.getBuildConfigId();
+
         if (buildConfigId) {
-          // 获取项目ID
+          // Get project ID
           const projectIdStr = ProjectManager.getInstance().projectId;
+
           if (projectIdStr) {
             const projectId = Number(projectIdStr);
-            // 获取 build_op 配置
+            // Get build_op configuration
             const configs = await getConfig(projectId, 'build_op');
             const buildOpConfig = configs.find((c: any) => c.config_id === buildConfigId);
 
             if (buildOpConfig) {
-              // 更新配置的 target_file
+              // Update configured target_file
               const updatedConfig = {
                 config_id: buildConfigId,
                 config_type: 'build_op',
@@ -514,25 +549,27 @@ export const taskMethods = {
                 },
               };
 
-              // 保存配置
+              // Save configuration
               await postConfig('build_op', [updatedConfig]);
             }
           }
         }
       }
-      
-      // CPU调试前编译，使用--simulator参数
+
+      // Compile before CPU debugging, use the --simulator parameter
       await buildService.startBuild({ scriptField: 'cpu_debug_script' });
       await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
 
-      // 获取项目类型和模板名称，判断是否使用 msdebug-python
+      // Get the project type and template name to determine whether to use msdebug-python
       const projectInfo = await homeMethods.getProjectType();
       const usePythonDebug = projectInfo.projectType === 'ascend' && projectInfo.projectTemplateName === 'torch_library_template';
 
-      // 启动调试配置
+      // Start debug configuration
       const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+
       if (workspaceFolder) {
         const debugConfigName = usePythonDebug ? 'msdebug-python' : 'msdebug-cpu';
+
         await vscode.debug.startDebugging(workspaceFolder, debugConfigName);
       }
       else {
@@ -540,11 +577,11 @@ export const taskMethods = {
       }
     }
     catch (error) {
-      console.error('打开CPU debug时出错:', error);
+      console.error('Error while opening CPU debug:', error);
       throw error;
     }
     finally {
-      // 清除 executor 引用和任务类型
+      // Clear executor reference and task type
       currentExecutor = null;
       currentTaskType = null;
       ProjectManager.getInstance()
@@ -553,16 +590,16 @@ export const taskMethods = {
   },
 
   /**
-   * CPU调试配置
+   * CPU debug configuration
    */
   async cpuDebugConfig(): Promise<void> {
     try {
       await vscode.commands.executeCommand('workbench.action.debug.configure');
-      vscode.window.showInformationMessage('已打开 launch.json 文件');
+      vscode.window.showInformationMessage(t('task.launchJsonOpened'));
     }
     catch (error) {
-      console.error('打开 launch.json 时出错:', error);
-      vscode.window.showErrorMessage(`无法打开 launch.json: ${error instanceof Error ? error.message : String(error)}`);
+      console.error('Error while opening launch.json:', error);
+      vscode.window.showErrorMessage(t('task.cannotOpenLaunchJson', { error: error instanceof Error ? error.message : String(error) }));
       throw error;
     }
   },

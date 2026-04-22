@@ -1,25 +1,27 @@
+import { t } from 'i18next';
+
 export interface Result {
-  // 问题名称
+  // Question name
   title: string;
-  // 异常名（原始异常名称，如 "illegal read of size 224"）
+  // Exception name (original exception name, such as "illegal read of size 224")
   exceptionName: string;
-  //错误类型
-  type: string; // error warning 提示
-  //问题类型
+  //Error type
+  type: string; // error warning prompt
+  //Question type
   questionType: QuestionType;
-  // 问题描述
+  // Problem description
   question: string;
-  // 问题详情（完整的错误内容块）
+  // Problem details (complete error block)
   originData: string;
-  // 源码文件
+  // Source code files
   fileLink?: string;
-  // 行数
+  // Number of lines
   row?: number;
-  // 列数
+  // Number of columns
   col?: number;
 }
 
-// 问题大类
+// Question categories
 export type QuestionType =
   | 'memory'
   | 'memoryContention'
@@ -27,7 +29,7 @@ export type QuestionType =
   | 'synchronize';
 
 export const exceptionTpyeMap = new Map<string, string>([
-  // 注意：顺序很重要，更具体的匹配应该放在前面
+  // Note: Order is important, more specific matches should come first
   [
     'Potential RAW hazard detected',
     'memoryContention',
@@ -79,86 +81,84 @@ export const exceptionTpyeMap = new Map<string, string>([
 ]);
 
 export const exceptionMap = new Map<string, string>([
-  // 注意：顺序很重要，更具体的匹配应该放在前面
   [
     'memory',
-    '内存',
+    'exceptionParser.memory',
   ],
   [
     'memoryContention',
-    '竞争',
+    'exceptionParser.race',
   ],
   [
     'uninitialized',
-    '未初始化',
+    'exceptionParser.uninitialized',
   ],
   [
     'synchronize',
-    '同步',
+    'exceptionParser.sync',
   ],
 ]);
 
 /**
- * 异常名到中文的映射表
- * key: 异常名关键字（支持部分匹配）
- * value: 中文异常名
+ * Mapping table from exception names to Chinese
+ * key: exception name keyword (supports partial matching)
+ * value: Chinese exception name
  */
 export const exceptionNameMap = new Map<string, string>([
-  // 注意：顺序很重要，更具体的匹配应该放在前面
   [
     'Potential RAW hazard detected',
-    '(Reaqd-After-White)内存数据竞争访问',
+    'exceptionParser.rawHazard',
   ],
   [
     'Potential WAR hazard detected',
-    '(White-After-Read)内存数据竞争访问',
+    'exceptionParser.warHazard',
   ],
   [
     'Potential WAW hazard detected',
-    '(White-After-White)内存数据竞争访问',
+    'exceptionParser.wawHazard',
   ],
   [
     'LeakCheck: detected memory leaks',
-    '内存泄漏',
+    'exceptionParser.memoryLeak',
   ],
   [
     'illegal free()',
-    '非法释放',
+    'exceptionParser.illegalFree',
   ],
   [
     'illegal read of size',
-    '非法读',
+    'exceptionParser.illegalRead',
   ],
   [
     'illegal write of size',
-    '非法写',
+    'exceptionParser.illegalWrite',
   ],
   [
     'out of bounds of size',
-    '多核踩踏',
+    'exceptionParser.multiCoreStomp',
   ],
   [
     'Unused memory',
-    '分配内存未使用',
+    'exceptionParser.allocUnused',
   ],
   [
     'uninitialized read of size',
-    '未初始化异常',
+    'exceptionParser.uninitException',
   ],
   [
     'Unpaired set_flag insetructions detected',
-    '同步异常',
+    'exceptionParser.syncException',
   ],
   [
     'misaligned access of size',
-    '非对齐访问',
+    'exceptionParser.unalignedAccess',
   ],
 ]);
 
 /**
- * 根据异常名获取问题类型
- * @param exceptionName 原始异常名
- * @returns 问题类型，如果没有匹配则返回 null
+ * Get the problem type based on the exception name
+ * @param exceptionName original exception name
+ * @returns question type, or null if there is no match
  */
 export function getQuestionTypeByExceptionName(exceptionName: string): string | null {
   if (!exceptionName || exceptionName.trim() === '') {
@@ -168,11 +168,11 @@ export function getQuestionTypeByExceptionName(exceptionName: string): string | 
   const trimmedName = exceptionName.trim();
   const lowerTrimmedName = trimmedName.toLowerCase();
 
-  // 按键的长度从长到短排序，优先匹配更具体的键
+  // The length of the keys is sorted from longest to short, and more specific keys are matched first.
   const sortedEntries = Array.from(exceptionTpyeMap.entries())
     .sort((a, b) => b[0].length - a[0].length);
 
-  // 部分匹配：如果异常名包含映射键，则使用该映射（大小写敏感）
+  // Partial match: if the exception name contains a map key, use that map (case sensitive)
   for (const [
     key,
     value,
@@ -182,7 +182,7 @@ export function getQuestionTypeByExceptionName(exceptionName: string): string | 
     }
   }
 
-  // 大小写不敏感匹配：如果异常名包含映射键（忽略大小写），则使用该映射
+  // Case-insensitive matching: if the exception name contains a map key (ignoring case), use that map
   for (const [
     key,
     value,
@@ -198,22 +198,24 @@ export function getQuestionTypeByExceptionName(exceptionName: string): string | 
 }
 
 /**
- * 根据问题类型获取中文
- * @param questionType 问题类型
- * @returns 中文问题类型，如果没有匹配则返回原始问题类型
+ * Get Chinese based on question type
+ * @param questionType question type
+ * @returns Chinese question type, if there is no match, return the original question type
  */
 export function getChineseQuestionType(questionType: string): string {
   if (!questionType || questionType.trim() === '') {
     return questionType;
   }
 
-  return exceptionMap.get(questionType) || questionType;
+  const key = exceptionMap.get(questionType);
+
+  return key ? t(key) : questionType;
 }
 
 /**
- * 根据异常名获取中文映射
- * @param exceptionName 原始异常名
- * @returns 中文异常名，如果没有匹配则返回原始异常名
+ * Get Chinese mapping based on exception name
+ * @param exceptionName original exception name
+ * @returns Chinese exception name, if there is no match, return the original exception name
  */
 export function getChineseExceptionName(exceptionName: string): string {
   if (!exceptionName || exceptionName.trim() === '') {
@@ -223,26 +225,26 @@ export function getChineseExceptionName(exceptionName: string): string {
   const trimmedName = exceptionName.trim();
   const lowerTrimmedName = trimmedName.toLowerCase();
 
-  // 1. 首先尝试精确匹配（大小写敏感）
+  // 1. Try an exact match first (case sensitive)
   if (exceptionNameMap.has(trimmedName)) {
-    return exceptionNameMap.get(trimmedName)!;
+    return t(exceptionNameMap.get(trimmedName)!);
   }
 
-  // 2. 按键的长度从长到短排序，优先匹配更具体的键
+  // 2. Sort the key lengths from long to short, giving priority to matching more specific keys.
   const sortedEntries = Array.from(exceptionNameMap.entries())
     .sort((a, b) => b[0].length - a[0].length);
 
-  // 3. 部分匹配：如果异常名包含映射键，则使用该映射（大小写敏感）
+  // 3. Partial match: If the exception name contains a mapping key, use that mapping (case sensitive)
   for (const [
     key,
     value,
   ] of sortedEntries) {
     if (trimmedName.includes(key)) {
-      return value;
+      return t(value);
     }
   }
 
-  // 4. 大小写不敏感匹配：如果异常名包含映射键（忽略大小写），则使用该映射
+  // 4. Case-insensitive matching: If the exception name contains a mapping key (ignoring case), use that mapping
   for (const [
     key,
     value,
@@ -250,17 +252,17 @@ export function getChineseExceptionName(exceptionName: string): string {
     const lowerKey = key.toLowerCase();
 
     if (lowerTrimmedName.includes(lowerKey)) {
-      return value;
+      return t(value);
     }
   }
 
-  // 5. 如果没有找到匹配，返回原始异常名
+  // 5. If no match is found, return the original exception name
   return trimmedName;
 }
 
 /**
- * 需要处理的异常类型列表（对应 result.ts 中 ignoredKeys 的键）
- * 只处理这些类型的异常
+ * List of exception types that need to be handled (corresponding to the keys of ignoredKeys in result.ts)
+ * Only handle these types of exceptions
  */
 const SUPPORTED_EXCEPTION_PATTERNS = [
   {
@@ -326,16 +328,16 @@ const SUPPORTED_EXCEPTION_PATTERNS = [
 ] as const;
 
 /**
- * 异常检测结果解析器 V2
- * 专门处理以 ====== 开头的命令行输出格式
- * 支持流式输入，逐行解析异常检测工具的输出
- * 只处理 result.ts 中 ignoredKeys 列出的异常类型
+ * Anomaly detection result parser V2
+ * Specifically handles command line output formats starting with ======
+ * Supports streaming input and parses the output of anomaly detection tools line by line.
+ * Only handle exception types listed in ignoredKeys in result.ts
  */
 export class ExceptionParser {
   private results: Result[] = [];
   private currentResult: Partial<Result> | null = null;
-  private rawBuffer: string[] = []; // 原始行（保留 ====== 前缀，用于问题详情）
-  private currentStackLevel: number = -1; // 当前结果的最大调用栈层级
+  private rawBuffer: string[] = []; // Original line (retain ====== prefix for question details)
+  private currentStackLevel: number = -1; // The maximum call stack level of the current result
 
   private matchPath = '';
   constructor(config: Record<string, string>) {
@@ -343,16 +345,16 @@ export class ExceptionParser {
   }
 
   /**
-   * 处理一行输入
-   * @param line 控制台输出的一行文本（可能包含 ====== 前缀）
+   * Process a line of input
+   * @param line A line of text output by the console (may contain ====== prefix)
    */
   public processLine(line: string): void {
-    // 保存原始行（用于问题详情）
+    // Save original row (for issue details)
     const originalLine = line.trim();
 
-    // 检查是否为空行（完全没有内容，包括没有 ====== 前缀）
+    // Check if it is an empty line (no content at all, including no ====== prefix)
     if (!originalLine) {
-      // 空行：如果当前有异常在处理，结束它
+      // Empty line: If there is currently an exception being handled, end it
       if (this.currentResult) {
         this.finalizeCurrentResult();
       }
@@ -360,12 +362,12 @@ export class ExceptionParser {
       return;
     }
 
-    // 移除行首的 ====== 前缀和前后空白
+    // Remove the ====== prefix and leading and trailing whitespace at the beginning of the line
     const cleanedLine = this.cleanLine(line);
 
-    // 检查是否为SUMMARY行（异常块的结束标记）
+    // Check if it is a SUMMARY line (the end marker of the exception block)
     if (cleanedLine && cleanedLine.startsWith('SUMMARY:')) {
-      // SUMMARY行：结束当前异常（但不包含SUMMARY行）
+      // SUMMARY line: ends the current exception (but does not include the SUMMARY line)
       if (this.currentResult) {
         this.finalizeCurrentResult();
       }
@@ -374,7 +376,7 @@ export class ExceptionParser {
     }
 
     if (!cleanedLine) {
-      // 如果清理后为空，但原始行不为空（比如只有 ======），仍然收集
+      // If it is empty after cleaning, but the original row is not empty (for example, only ======), it is still collected
       if (this.currentResult) {
         this.collectExceptionInfo('', originalLine);
       }
@@ -382,37 +384,37 @@ export class ExceptionParser {
       return;
     }
 
-    // 检测异常类型和开始标记
-    // 先保存之前的异常结果（如果有）
+    // Detect exception types and start tags
+    // Save the previous abnormal results first (if any)
     const previousResult = this.currentResult;
-    // 检测新异常（这会设置新的 currentResult）
+    // Detect new exception (this sets new currentResult)
     const isNewException = this.detectExceptionStart(cleanedLine);
 
     if (isNewException) {
-      // 保存新异常的结果（detectExceptionStart 已经设置了）
+      // Save the result of the new exception (detectExceptionStart has been set)
       const newResult = this.currentResult;
 
-      // 恢复之前的异常结果，然后保存它
+      // Restore the previous exception result and save it
       this.currentResult = previousResult;
       this.finalizeCurrentResult();
-      // 恢复新异常的结果
+      // Restore the results of a new exception
       this.currentResult = newResult;
-      // 初始化 buffer
+      // initialize buffer
       this.startNewResult(originalLine);
     }
     else if (this.currentResult) {
-      // 收集异常详细信息（同时保存原始行）
+      // Collect exception details (while saving the original row)
       this.collectExceptionInfo(cleanedLine, originalLine);
     }
   }
 
   /**
-   * 清理行内容：移除 ====== 前缀和前后空白
+   * Clean line contents: remove ====== prefix and leading and trailing whitespace
    */
   private cleanLine(line: string): string {
     let cleaned = line.trim();
 
-    // 移除行首的 ====== 前缀
+    // Remove the ====== prefix from the beginning of the line
     if (cleaned.startsWith('======')) {
       cleaned = cleaned.substring(6)
         .trim();
@@ -422,17 +424,17 @@ export class ExceptionParser {
   }
 
   /**
-   * 提取异常名（从 ERROR: 或 WARNING: 后面提取）
+   * Extract the exception name (from after ERROR: or WARNING:)
    */
   private extractExceptionName(line: string): string {
-    // 匹配 ERROR: 或 WARNING: 后面的内容
+    // Matches the content following ERROR: or WARNING:
     const match = line.match(/^(?:ERROR|WARNING):\s*(.+?)(?:\s+at\s|$)/);
 
     if (match && match[1]) {
       return match[1].trim();
     }
 
-    // 如果没有匹配到，尝试提取 ERROR: 或 WARNING: 后面的所有内容
+    // If no match is found, try to extract everything following ERROR: or WARNING:
     const simpleMatch = line.match(/^(?:ERROR|WARNING):\s*(.+)/);
 
     if (simpleMatch && simpleMatch[1]) {
@@ -443,33 +445,52 @@ export class ExceptionParser {
   }
 
   /**
-   * 检测异常开始标记
-   * 只处理 SUPPORTED_EXCEPTION_PATTERNS 中定义的异常类型（对应 result.ts 中 ignoredKeys 的键）
+   * Detect abnormal start markers
+   * Only handle exception types defined in SUPPORTED_EXCEPTION_PATTERNS (corresponding to the keys of ignoredKeys in result.ts)
    */
   private detectExceptionStart(line: string): boolean {
-    // 提取异常名
+    const trimmed = line.trim();
+
+    // MemorySanitizer leak summary lines use no ERROR:/WARNING: prefix (align with ms-agent LEAK_HEADER_RE).
+    if (/^direct leak of\b/i.test(trimmed)) {
+      const questionType =
+        getQuestionTypeByExceptionName(trimmed) || 'memory';
+      const title = getChineseQuestionType(questionType);
+
+      this.currentResult = {
+        type: 'error',
+        questionType: questionType as QuestionType,
+        title,
+        exceptionName: trimmed,
+        question: trimmed,
+      };
+
+      return true;
+    }
+
+    // Extract exception name
     const exceptionName = this.extractExceptionName(line);
 
-    // 遍历支持的异常模式，按顺序匹配（更具体的模式应该放在前面）
+    // Traverse the supported exception patterns, matching them in order (more specific patterns should be placed first)
     for (const pattern of SUPPORTED_EXCEPTION_PATTERNS) {
-      // 检查行中是否包含该模式
-      // 先检查是否有正确的前缀（ERROR: 或 WARNING:），然后检查是否包含模式字符串
+      // Check if the pattern is contained in the line
+      // First check if you have the correct prefix (ERROR: or WARNING:), then check if the pattern string is included
       const hasErrorPrefix = line.includes('ERROR:');
       const hasWarningPrefix = line.includes('WARNING:');
       const hasCorrectPrefix =
         (pattern.errorType === 'error' && hasErrorPrefix)
         || (pattern.errorType === 'warning' && hasWarningPrefix);
 
-      // 如果行包含模式字符串（不区分大小写），并且有正确的前缀，则匹配成功
+      // If the line contains the pattern string (case-insensitive) and has the correct prefix, the match succeeds
       const lineLower = line.toLowerCase();
       const patternLower = pattern.pattern.toLowerCase();
 
       if (lineLower.includes(patternLower) && hasCorrectPrefix) {
-        // 根据异常名获取问题类型
+        // Get the problem type based on the exception name
         const questionType =
           getQuestionTypeByExceptionName(exceptionName) || pattern.type;
 
-        // 根据问题类型获取中文
+        // Get Chinese based on question type
         const title = getChineseQuestionType(questionType);
 
         this.currentResult = {
@@ -477,7 +498,7 @@ export class ExceptionParser {
           questionType: questionType as QuestionType,
           title: title,
           exceptionName: exceptionName,
-          question: exceptionName, // 问题描述取ERROR或WARNING后面的全部内容
+          question: exceptionName, // The problem description takes the entire content after ERROR or WARNING.
         };
 
         return true;
@@ -487,7 +508,7 @@ export class ExceptionParser {
     return false;
   }
   /**
-   * 收集异常详细信息
+   * Collect exception details
    */
   private collectExceptionInfo(line: string, originalLine: string): void {
     if (!this.currentResult) {
@@ -496,28 +517,28 @@ export class ExceptionParser {
 
     const trimmedLine = line.trim();
 
-    // 收集原始行（用于问题详情）
+    // Collect raw rows (for issue details)
     this.rawBuffer.push(originalLine);
 
-    // 解析调用栈信息（格式：#3 file/path.cpp:21:5）
-    // 格式说明：#3 是调用栈层级，file/path.cpp 是文件路径，21 是行号，5 是列号
-    // 只保存不包含环境变量（如 ${ASCEND_HOME_PATH}）的用户代码文件
+    // Parse call stack information (format: #3 file/path.cpp:21:5)
+    // Format description: #3 is the call stack level, file/path.cpp is the file path, 21 is the line number, 5 is the column number
+    // Only save user code files that do not contain environment variables (such as ${ASCEND_HOME_PATH})
     if (trimmedLine.startsWith('#')) {
       const stackMatch = line.match(/^\s*#(\d+)\s+(.+?):(\d+):(\d+)/);
 
       if (stackMatch) {
-        const stackLevel = parseInt(stackMatch[1], 10); // 调用栈层级（0, 1, 2, 3...）
+        const stackLevel = parseInt(stackMatch[1], 10); // Call stack level (0, 1, 2, 3...)
         const filePath = stackMatch[2].trim();
         const row = parseInt(stackMatch[3], 10);
         const col = parseInt(stackMatch[4], 10);
 
-        // 只保存用户代码文件（排除包含环境变量的系统路径）
-        // 包含 ${ASCEND_HOME_PATH} 的是系统调用栈，不是用户代码
+        // Save only user code files (excluding system paths containing environment variables)
+        // Containing ${ASCEND_HOME_PATH} is the system call stack, not user code
         const isSystem = this.isSystemPath(filePath);
 
         if (!isSystem) {
-          // 优先选择调用栈中编号最大的用户代码文件（通常是 #3）
-          // 如果还没有设置文件信息，或者当前调用栈层级更高，则更新
+          // Prioritize the user code file with the highest number in the call stack (usually #3)
+          // If the file information has not been set, or the current call stack level is higher, update
           if (
             !this.currentResult.fileLink
             && filePath.includes(this.matchPath)
@@ -525,14 +546,14 @@ export class ExceptionParser {
             this.currentResult.fileLink = filePath;
             this.currentResult.row = row;
             this.currentResult.col = col;
-            // 更新当前最大调用栈层级
+            // Update the current maximum call stack level
             this.currentStackLevel = stackLevel;
           }
         }
       }
       else {
-        // 如果行以 # 开头但没有匹配到格式，尝试更宽松的匹配
-        // 例如：#3 file.cpp:21 或 #3 file.cpp:21:5
+        // If a line starts with # but no pattern is matched, try a looser match
+        // For example: #3 file.cpp:21 or #3 file.cpp:21:5
         const looseMatch = line.match(/^\s*#(\d+)\s+(.+?):(\d+)(?::(\d+))?/);
 
         if (looseMatch) {
@@ -548,7 +569,6 @@ export class ExceptionParser {
               !this.currentResult.fileLink
               || stackLevel > this.currentStackLevel
             ) {
-              console.log('aaaaaaaaaaaaaaa', filePath);
               this.currentResult.fileLink = fileName;
               this.currentResult.row = row;
               this.currentResult.col = col;
@@ -559,10 +579,10 @@ export class ExceptionParser {
       }
     }
 
-    // 注意：问题描述（question）已经在 detectExceptionStart 中设置为 ERROR 或 WARNING 后面的全部内容
-    // 以下代码不再覆盖 question，只用于提取其他信息（如文件路径、行号等）
+    // Note: The problem description (question) has been set to everything after ERROR or WARNING in detectExceptionStart
+    // The following code no longer covers question, but is only used to extract other information (such as file path, line number, etc.)
 
-    // 解析代码定位信息（格式：code in file.cpp:84）
+    // Parse code positioning information (format: code in file.cpp:84)
     if (line.includes('code in') && line.includes('.cpp:')) {
       const codeMatch = line.match(/code\s+in\s+(.+?):(\d+)/);
 
@@ -571,21 +591,31 @@ export class ExceptionParser {
         this.currentResult.row = parseInt(codeMatch[2], 10);
       }
     }
+
+    // Leak blocks: "allocated in main.cpp:55" (ms-agent FILELINE_RE)
+    if (line.includes('allocated in') && !this.currentResult.fileLink) {
+      const allocMatch = line.match(/allocated\s+in\s+([^:(\s]+):(\d+)/);
+
+      if (allocMatch) {
+        this.currentResult.fileLink = allocMatch[1].trim();
+        this.currentResult.row = parseInt(allocMatch[2], 10);
+      }
+    }
   }
 
   /**
-   * 判断是否为系统路径
-   * 包含 ${ASCEND_HOME_PATH} 环境变量的路径是系统调用栈，不是用户代码
+   * Determine whether it is a system path
+   * The path containing the ${ASCEND_HOME_PATH} environment variable is the system call stack, not user code
    */
   private isSystemPath(filePath: string): boolean {
-    // 包含环境变量的路径是系统路径
+    // Paths containing environment variables are system paths
     const hasEnvVar = filePath.includes('${ASCEND_HOME_PATH}');
 
     if (hasEnvVar) {
       return true;
     }
 
-    // 其他系统路径特征
+    // Other system path characteristics
     return (
       filePath.includes('/compiler/')
       || filePath.includes('/tikcpp/')
@@ -597,50 +627,50 @@ export class ExceptionParser {
   }
 
   /**
-   * 从文件路径中提取文件名
-   * 例如：illegal_read_and_write/add_custom.cpp -> add_custom.cpp
+   * Extract file name from file path
+   * For example: illegal_read_and_write/add_custom.cpp -> add_custom.cpp
    *      out_of_bound/add_custom.cpp -> add_custom.cpp
    */
   private extractFileName(filePath: string): string {
-    // 使用 / 或 \ 分割路径，取最后一部分作为文件名
+    // Use / or \ to split the path and take the last part as the file name
     const parts = filePath.split(/[/\\]/);
 
     return parts[parts.length - 1] || filePath;
   }
 
   /**
-   * 开始新的结果收集
+   * Start new results collection
    */
   private startNewResult(originalLine: string): void {
     this.rawBuffer = [originalLine];
-    this.currentStackLevel = -1; // 重置调用栈层级
+    this.currentStackLevel = -1; // Reset call stack level
   }
 
   /**
-   * 完成当前结果的收集
+   * Complete collection of current results
    */
   private finalizeCurrentResult(): void {
     if (!this.currentResult) {
       return;
     }
 
-    // 如果没有提取到问题描述，使用异常名（ERROR或WARNING后面的全部内容）
+    // If no problem description is extracted, use the exception name (all the content after ERROR or WARNING)
     if (!this.currentResult.question) {
       this.currentResult.question = this.currentResult.exceptionName || '';
     }
 
-    // 获取原始异常名并转换为中文
+    // Get the original exception name and convert it to Chinese
     const originalExceptionName = this.currentResult.exceptionName || '';
     const chineseExceptionName = getChineseExceptionName(originalExceptionName);
 
-    // 保存完整的问题详情（原始错误内容块）
+    // Save full issue details (original error content block)
     const originData =
       this.rawBuffer.length > 0 ? this.rawBuffer.join('\n') : '';
 
-    // 确保所有必需字段都有值
+    // Make sure all required fields have values
     const result: Result = {
       title: this.currentResult.question,
-      exceptionName: chineseExceptionName, // 使用中文异常名
+      exceptionName: chineseExceptionName, // Use Chinese exception names
       type: this.currentResult.type || 'error',
       questionType: this.currentResult.questionType!,
       question: this.formatQuestionName(this.currentResult.question),
@@ -653,12 +683,12 @@ export class ExceptionParser {
     this.results.push(result);
     this.currentResult = null;
     this.rawBuffer = [];
-    this.currentStackLevel = -1; // 重置调用栈层级
+    this.currentStackLevel = -1; // Reset call stack level
   }
 
   /**
-   * 完成所有解析，返回结果列表
-   * 当控制台输出结束时调用此方法
+   * Complete all parsing and return the result list
+   * This method is called when console output ends
    */
   public finalize(): Result[] {
     this.finalizeCurrentResult();
@@ -667,29 +697,29 @@ export class ExceptionParser {
   }
 
   /**
-   * 一次性解析全部内容并返回结果
-   * 适用于已经获取完整内容的情况，不需要逐行处理
-   * @param content 多行字符串内容，会按换行符分割后逐行处理
-   * @returns 解析后的结果列表
+   * Parse the entire content at once and return the results
+   * Applicable to situations where the complete content has been obtained and no line-by-line processing is required.
+   * @param content Multi-line string content will be separated by newlines and processed line by line.
+   * @returns parsed result list
    */
   public parseAll(content: string): Result[] {
-    // 重置解析器状态，确保干净的状态
+    // Reset parser state to ensure a clean state
     this.reset();
 
-    // 按换行符分割内容
+    // Split content by newlines
     const lines = content.split(/\r?\n/);
 
-    // 逐行处理
+    // Line by line processing
     for (const line of lines) {
       this.processLine(line);
     }
 
-    // 完成解析并返回结果
+    // Complete parsing and return results
     return this.finalize();
   }
 
   /**
-   * 重置解析器状态
+   * Reset parser state
    */
   public reset(): void {
     this.results = [];

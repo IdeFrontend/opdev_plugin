@@ -1,18 +1,19 @@
+import { t } from 'i18next';
 import { ViewRouteRaw } from '@plugin/core/view/view-router';
 import {
   VIEW_OPS_CONFIG,
-  VIEW_DUMP_TENSOR_DATA
+  VIEW_DUMP_TENSOR_DATA,
 } from '@plugin/constants';
 
 export const routes: ViewRouteRaw[] = [
-  // 异常检测结果可视化已迁入异常检测面板左侧，不再使用独立侧栏
+  // The visualization of anomaly detection results has been moved to the left side of the anomaly detection panel, and an independent side bar is no longer used.
   {
     path: VIEW_DUMP_TENSOR_DATA,
-    title: 'DumpTensor数据-视图',
+    title: t('routes.dumpTensorViewTitle'),
     providerViewType: 'dumpTensorSidebarView',
   },
   {
     path: VIEW_OPS_CONFIG,
-    title: '算子配置',
+    title: t('routes.configTitle'),
   },
 ];

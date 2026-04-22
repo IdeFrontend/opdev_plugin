@@ -10,6 +10,13 @@ import {
   COMMAND_OPEN_MS_SANITIZER_PANEL_VIEW,
   VIEW_MS_SANITIZER,
 } from '@plugin/constants';
+import { resolveSanitizerSourceFsPath } from '@plugin/helpers/sanitizer-source-path';
+import {
+  msAgentBridgeService,
+  type MsAgentAiFixQueueSnapshot,
+  type MsAgentAiFixState,
+} from '@plugin/service/ms-agent-bridge.service';
+import { sanitizerDiagnosticsService } from '@plugin/service/sanitizer-diagnostics.service';
 
 export class MsSanitizerPanelViewProvider
 implements vscode.WebviewViewProvider {
@@ -22,6 +29,9 @@ implements vscode.WebviewViewProvider {
   private _context: vscode.ExtensionContext;
   private _apiServer: ApiServer;
   private _themeChangeDisposable: vscode.Disposable | undefined;
+  private _msAgentFixStatesPoll: ReturnType<typeof setInterval> | undefined;
+  /** In-flight sanitizer AI fix calls; used to avoid empty bulk updates clearing UI and to stop polling safely. */
+  private _pendingMsAgentFixRequests = 0;
 
   constructor(context: vscode.ExtensionContext, apiServer: ApiServer) {
     this._extensionUri = context.extensionUri;
@@ -34,32 +44,65 @@ implements vscode.WebviewViewProvider {
     _context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken,
   ) {
-    console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] 开始解析 webview 视图');
+    console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] Start resolving webview view');
     console.log(`[MsSanitizerPanelViewProvider.resolveWebviewView] viewType: ${MsSanitizerPanelViewProvider.viewType}`);
     console.log(`[MsSanitizerPanelViewProvider.resolveWebviewView] extensionUri: ${this._extensionUri.toString()}`);
 
     this._view = webviewView;
 
-    // 配置 WebView
+    // Configure WebView
     webviewView.webview.options = {
       enableScripts: true,
       localResourceRoots: [this._extensionUri],
     };
-    console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] WebView 配置完成');
+    console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] WebView configuration completed');
 
-    // 注册 webview 到 ApiServer
+    // Register webview to ApiServer
     this._apiServer.addWebview('MsSanitizerPanelView', webviewView.webview);
-    console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] WebView 已注册到 ApiServer');
+    console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] WebView registered to ApiServer');
 
-    // 消息处理
+    // Message processing
     webviewView.webview.onDidReceiveMessage(
       async (message: any) => {
-        console.log('[MsSanitizerPanelViewProvider] 收到消息:', message.command);
+        console.log('[MsSanitizerPanelViewProvider] Received message:', message.command);
+
+        if (message.command === 'vscodeRequestMsAgentSanitizerIntegration') {
+          const available = await msAgentBridgeService.isMsAgentIntegrationAvailable();
+
+          webviewView.webview.postMessage({
+            command: 'iframeMsAgentSanitizerIntegration',
+            available,
+          });
+
+          return;
+        }
+
+        if (message.command === 'vscodeMsAgentAiFix') {
+          const inner = message.message ?? message;
+          const raw = message.index
+            ?? message.data?.index
+            ?? inner.index
+            ?? inner.data?.index;
+          const idx = typeof raw === 'number' ? raw : Number(raw);
+
+          if (Number.isInteger(idx) && idx >= 0) {
+            console.log('[MsSanitizerPanelViewProvider] AI Fix requested for index', idx);
+            void this.runMsAgentAiFixForIndex(webviewView.webview, idx);
+          }
+
+          return;
+        }
+        if (message.command === 'vscodeRequestMsAgentAiFixStates') {
+          console.log('[MsSanitizerPanelViewProvider] Explicit AI Fix state snapshot requested');
+          await this.pushMsAgentFixStatesBulk(webviewView.webview);
+
+          return;
+        }
 
         if (message.command === 'vscodeGetMsSanitizerPanelViewData') {
-          // 发送数据 后续优化 先通过_view.webview 方式下发内容
+          // Send data for subsequent optimization. First deliver content through _view.webview.
           if (!MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams) {
-            console.log('[MsSanitizerPanelViewProvider] 无数据参数，发送空数据');
+            console.log('[MsSanitizerPanelViewProvider] No data params, sending empty data');
             webviewView.webview.postMessage({
               command: 'iframeRemoteMsSanitizerPanelViewSetRenderList',
               data: {},
@@ -68,35 +111,41 @@ implements vscode.WebviewViewProvider {
             return;
           }
 
-          console.log('[MsSanitizerPanelViewProvider] 开始获取面板数据');
+          console.log('[MsSanitizerPanelViewProvider] Start fetching panel data');
           const panelData = await getPanelData(MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams);
 
           MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams = null;
-          console.log('[MsSanitizerPanelViewProvider] 面板数据获取完成，发送数据');
+          console.log('[MsSanitizerPanelViewProvider] Panel data fetched, sending data');
           webviewView.webview.postMessage({
             command: 'iframeRemoteMsSanitizerPanelViewSetRenderList',
             data: panelData,
           });
+          await this.pushMsAgentFixStatesBulk(webviewView.webview);
         }
         else if (message.command === 'vscodeLoadMsSanitizerReport') {
-          // 点击左侧报告列表项时，加载该报告并在右侧展示检测结果（支持直接 postMessage 或经 main 转发的格式）
+          // When you click the report list item on the left, the report is loaded and the detection results are displayed on the right (supports direct postMessage or format forwarded via main)
           const params = message.message?.data ?? message.data ?? message.message;
+
           if (!params?.path) {
             webviewView.webview.postMessage({
               command: 'iframeRemoteMsSanitizerPanelViewSetRenderList',
               data: {},
             });
+
             return;
           }
+
           try {
             const panelData = await getPanelData(params);
+
             webviewView.webview.postMessage({
               command: 'iframeRemoteMsSanitizerPanelViewSetRenderList',
               data: panelData,
             });
+            await this.pushMsAgentFixStatesBulk(webviewView.webview);
           }
           catch (err) {
-            console.error('[MsSanitizerPanelViewProvider] 加载报告失败:', err);
+            console.error('[MsSanitizerPanelViewProvider] Failed to load report:', err);
             webviewView.webview.postMessage({
               command: 'iframeRemoteMsSanitizerPanelViewSetRenderList',
               data: {},
@@ -110,12 +159,12 @@ implements vscode.WebviewViewProvider {
       undefined,
       this._context.subscriptions,
     );
-    console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] 消息处理器已注册');
+    console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] Message handler registered');
 
-    // 设置 HTML 内容
+    // Set HTML content
     const distPath = path.join(this._extensionUri.fsPath, 'out', 'web');
 
-    console.log(`[MsSanitizerPanelViewProvider.resolveWebviewView] 开始加载 HTML，distPath: ${distPath}`);
+    console.log(`[MsSanitizerPanelViewProvider.resolveWebviewView] Start loading HTML, distPath: ${distPath}`);
     console.log(`[MsSanitizerPanelViewProvider.resolveWebviewView] router: ${VIEW_MS_SANITIZER}`);
 
     try {
@@ -123,40 +172,43 @@ implements vscode.WebviewViewProvider {
         distPath,
         webviewView.webview,
         `sidebars/${VIEW_MS_SANITIZER}`,
+        { lang: vscode.env.language.toLowerCase() },
       );
-      console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] HTML 加载完成');
+      console.log('[MsSanitizerPanelViewProvider.resolveWebviewView] HTML loaded');
     }
     catch (error) {
-      console.error('[MsSanitizerPanelViewProvider.resolveWebviewView] HTML 加载失败:', error);
+      console.error('[MsSanitizerPanelViewProvider.resolveWebviewView] HTML load failed:', error);
       throw error;
     }
 
-    // 监听 VSCode 主题变化并通知 Webview
+    // Listen to VSCode theme changes and notify Webview
     this._themeChangeDisposable = vscode.window.onDidChangeActiveColorTheme((theme) => {
       webviewView.webview.postMessage({
         command: 'updateTheme',
-        themeName: theme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
+        themeName: theme.kind === vscode.ColorThemeKind.Dark || theme.kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light',
       });
     });
 
-    // 初始化时发送当前主题
+    // Send the current topic on initialization
     webviewView.webview.postMessage({
       command: 'updateTheme',
-      themeName: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
+      themeName: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark || vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light',
     });
   }
 
   /**
-   * 处理来自 Webview 的消息
+   * Handle messages from Webview
    */
   private handleWebviewMessage(message: any): void {
-    // 处理获取主题命令
+    // Handle gettopic command
     if (message.command === 'getTheme') {
-      const currentTheme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
+      const currentTheme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark || vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light';
+
       this._view?.webview.postMessage({
         command: 'updateTheme',
         themeName: currentTheme,
       });
+
       return;
     }
 
@@ -168,9 +220,14 @@ implements vscode.WebviewViewProvider {
   }
 
   /**
-   * 清理资源
+   * Clean up resources
    */
   public dispose() {
+    this._pendingMsAgentFixRequests = 0;
+    if (this._msAgentFixStatesPoll) {
+      clearInterval(this._msAgentFixStatesPoll);
+      this._msAgentFixStatesPoll = undefined;
+    }
     if (this._themeChangeDisposable) {
       this._themeChangeDisposable.dispose();
       this._themeChangeDisposable = undefined;
@@ -178,10 +235,101 @@ implements vscode.WebviewViewProvider {
   }
 
   /**
-   * 获取当前 webview，供刷新报告列表等命令使用
+   * Get the current webview for use by commands such as refreshing the report list
    */
   getWebview(): vscode.Webview | undefined {
     return this._view?.webview;
+  }
+
+  private postMsAgentFixState(webview: vscode.Webview, index: number, status: string): void {
+    webview.postMessage({
+      command: 'iframeMsAgentAiFixState',
+      index,
+      status,
+    });
+  }
+
+  private async pushMsAgentFixStatesBulk(
+    webview: vscode.Webview,
+  ): Promise<MsAgentAiFixQueueSnapshot> {
+    const snapshot = await msAgentBridgeService.getAiFixQueueSnapshot();
+    const states = snapshot.states;
+    console.log('[MsSanitizerPanelViewProvider] pushMsAgentFixStatesBulk snapshot', snapshot);
+    // Empty snapshots are normal before ms-agent enqueues, or if getAiFixQueueStates is missing.
+    // Broadcasting {} would wipe optimistic per-row state in the webview; skip until the request finishes.
+    if (Object.keys(states).length === 0 && this._pendingMsAgentFixRequests > 0) {
+      return snapshot;
+    }
+    webview.postMessage({
+      command: 'iframeMsAgentAiFixStates',
+      snapshot,
+      states,
+    });
+
+    return snapshot;
+  }
+
+  private ensureMsAgentFixStatesPolling(webview: vscode.Webview): void {
+    if (this._msAgentFixStatesPoll) {
+      return;
+    }
+    this._msAgentFixStatesPoll = setInterval(() => {
+      void (async () => {
+        const states = await this.pushMsAgentFixStatesBulk(webview);
+        const hasLiveQueueStates = Object.values(states.states)
+          .some((state: MsAgentAiFixState) => state === 'queued' || state === 'running');
+        if (
+          this._pendingMsAgentFixRequests === 0
+          && !states.hasPendingTasks
+          && !hasLiveQueueStates
+          && this._msAgentFixStatesPoll
+        ) {
+          clearInterval(this._msAgentFixStatesPoll);
+          this._msAgentFixStatesPoll = undefined;
+        }
+      })();
+    }, 400);
+  }
+
+  private async runMsAgentAiFixForIndex(webview: vscode.Webview, idx: number): Promise<void> {
+    this._pendingMsAgentFixRequests++;
+    console.log('[MsSanitizerPanelViewProvider] runMsAgentAiFixForIndex start', {
+      idx,
+      pending: this._pendingMsAgentFixRequests,
+    });
+    this.postMsAgentFixState(webview, idx, 'connecting');
+    this.ensureMsAgentFixStatesPolling(webview);
+    const fixPromise = msAgentBridgeService.fixMsAgentProblem(idx, {
+      suppressProgressNotification: true,
+    });
+    setTimeout(() => {
+      void this.pushMsAgentFixStatesBulk(webview);
+    }, 0);
+    try {
+      const result = await fixPromise;
+      console.log('[MsSanitizerPanelViewProvider] runMsAgentAiFixForIndex result', {
+        idx,
+        status: result.status,
+      });
+      if (result.status === 'already_running') {
+        await this.pushMsAgentFixStatesBulk(webview);
+        this.postMsAgentFixState(webview, idx, 'queued');
+      }
+      else if (result.status === 'completed') {
+        this.postMsAgentFixState(webview, idx, 'fixed');
+      }
+      else {
+        this.postMsAgentFixState(webview, idx, result.status);
+      }
+    }
+    finally {
+      this._pendingMsAgentFixRequests--;
+      console.log('[MsSanitizerPanelViewProvider] runMsAgentAiFixForIndex done', {
+        idx,
+        pending: this._pendingMsAgentFixRequests,
+      });
+      await this.pushMsAgentFixStatesBulk(webview);
+    }
   }
 }
 
@@ -198,10 +346,21 @@ const getPanelData = (params: Record<string, any>) => {
 
   const inputContent = fs.readFileSync(params.path, 'utf-8');
   const parser = new ExceptionParser({ matchPath: workspacePath });
-  // 直接传入整个文件内容进行解析
-  const data = parser.parseAll(inputContent);
+  const data = parser.parseAll(inputContent)
+    .map((r, msAgentIndex) => {
+      const resolved = resolveSanitizerSourceFsPath(workspacePath, r.fileLink);
 
-  console.log('异常检测详情数据：', data);
+      return {
+        ...r,
+        fileLink: resolved ?? r.fileLink,
+        msAgentIndex,
+      };
+    });
+
+  sanitizerDiagnosticsService.publishFromLogFile(params.path, workspacePath);
+  void msAgentBridgeService.tryLoadLogWithIntegration(params.path);
+
+  console.log('Anomaly detection detail data:', data);
 
   return {
     ...params,
@@ -223,21 +382,21 @@ export const getMsSanitizerPanelViewProvider = (
     { webviewOptions: { retainContextWhenHidden: false } },
   );
 
-  // 注册打开终端和 Webview 的命令
+  // Register commands to open terminal and Webview
   const openMsSanitizerDisposable = vscode.commands.registerCommand(
     COMMAND_OPEN_MS_SANITIZER_PANEL_VIEW,
     async (data: any) => {
-      // 打开底部区域面板
+      // Open the bottom area panel
       await vscode.commands.executeCommand('workbench.action.togglePanel');
 
-      // 定位到异常检测面板
+      // Navigate to the anomaly detection panel
       await vscode.commands.executeCommand('msSanitizerPanelView.focus');
 
       MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams = data;
     },
   );
 
-  /** 获取异常检测面板 webview，用于下发刷新报告列表等消息 */
+  /** Obtain the anomaly detection panel webview, which is used to issue messages such as refreshing the report list */
   const getMsSanitizerPanelWebview = (): vscode.Webview | undefined =>
     msSanitizerPanelViewProvider.getWebview();
 

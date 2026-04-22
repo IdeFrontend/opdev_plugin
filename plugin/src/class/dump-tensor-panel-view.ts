@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import { t } from 'i18next';
 
 import { HtmlTransformer } from './html-transformer';
 import webviewMessageList from './webview-message-list';
@@ -57,11 +58,11 @@ implements vscode.WebviewViewProvider {
       );
     }
     catch (error) {
-      console.error('[DumpTensorPanelViewProvider] HTML 加载失败:', error);
+      console.error('[DumpTensorPanelViewProvider] Failed to load HTML:', error);
       throw error;
     }
 
-    // 监听 VSCode 主题变化并通知 Webview
+    // Forward VSCode theme changes to webview.
     this._themeChangeDisposable = vscode.window.onDidChangeActiveColorTheme((theme) => {
       webviewView.webview.postMessage({
         command: 'updateTheme',
@@ -69,7 +70,7 @@ implements vscode.WebviewViewProvider {
       });
     });
 
-    // 初始化时发送当前主题
+    // Send current theme on first render.
     webviewView.webview.postMessage({
       command: 'updateTheme',
       themeName: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
@@ -77,7 +78,7 @@ implements vscode.WebviewViewProvider {
   }
 
   private async handleWebviewMessage(message: any) {
-    // 处理获取主题命令
+    // Handle theme query command.
     if (message.command === 'getTheme') {
       const currentTheme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
       this._view?.webview.postMessage({
@@ -87,7 +88,7 @@ implements vscode.WebviewViewProvider {
       return;
     }
 
-    // 处理导入DumpTensor .bin文件命令
+    // Handle DumpTensor .bin import command.
     if (message.command === 'importDumpTensorBinFile') {
       await this.importDumpTensorBinFile();
       return;
@@ -102,7 +103,7 @@ implements vscode.WebviewViewProvider {
 
   private async importDumpTensorBinFile() {
     try {
-      // 打开文件选择对话框，只允许选择.bin文件
+      // Open file dialog and limit to .bin files.
       const fileUri = await vscode.window.showOpenDialog({
         canSelectFiles: true,
         canSelectFolders: false,
@@ -111,20 +112,20 @@ implements vscode.WebviewViewProvider {
           'Binary Files': ['bin'],
           'All Files': ['*']
         },
-        title: '选择DumpTensor .bin文件'
+        title: t('extension.selectDumpTensorBinFile')
       });
 
       if (fileUri && fileUri.length > 0) {
         const binFilePath = fileUri[0].fsPath;
-        console.log('[DumpTensorPanelView] 选择的.bin文件路径:', binFilePath);
+        console.log('[DumpTensorPanelView] Selected .bin file path:', binFilePath);
         
-        // 调用API导入文件
+        // Import selected file.
         const { buildService } = await import('../service/build-service.js');
         await buildService.importDumpTensorBinFile(binFilePath);
       }
     } catch (error) {
-      console.error('[DumpTensorPanelView] 导入DumpTensor .bin文件失败:', error);
-      vscode.window.showErrorMessage('导入DumpTensor .bin文件失败');
+      console.error('[DumpTensorPanelView] Failed to import DumpTensor .bin file:', error);
+      vscode.window.showErrorMessage(t('extension.importDumpTensorBinFailed'));
     }
   }
 
@@ -133,7 +134,7 @@ implements vscode.WebviewViewProvider {
   }
 
   /**
-   * 清理资源
+   * Dispose resources.
    */
   public dispose() {
     if (this._themeChangeDisposable) {

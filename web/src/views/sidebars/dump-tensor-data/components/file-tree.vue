@@ -11,7 +11,10 @@ import type { DirectoryTreeProps } from 'ant-design-vue';
 import {
   Component, h, ref, watch, computed,
 } from 'vue';
-import { message, Dropdown } from 'ant-design-vue';
+import { t } from 'i18next';
+import {
+  message, Dropdown,
+} from 'ant-design-vue';
 
 import {
   PerformanceExecutionRecord,
@@ -21,7 +24,7 @@ import {
 import {
   openFile,
   diffFiles,
-  importDumpTensorBinFile
+  importDumpTensorBinFile,
 } from '@web/apis';
 import { selectFile } from '@web/apis/performance-run-data';
 
@@ -31,22 +34,22 @@ const props = defineProps<{
 
 const expandedKeys = ref<string[]>([]);
 const selectedFiles = ref<PerformanceRunDataFile[]>([]);
-const maxSelectedCount = 2; // 最大选择数量
+const maxSelectedCount = 2; // Max files selectable for compare.
 
 const checkedKeys = ref<string[]>([]);
 
-// 处理树数据
+// Normalize tree nodes for compare behavior.
 const processedTreeData = computed(() => {
   const processNode = (node: any): any => {
-    // 检查是否为目录（即非文件节点）
+    // Directory nodes are non-file nodes.
     const isDirectory = !isComparableFile(node);
 
     const processedNode = {
       ...node,
-      checkable: !isDirectory, // 目录节点禁用复选框
+      checkable: !isDirectory, // Disable checkbox for directories.
     };
 
-    // 如果有子节点，递归处理
+    // Recurse children.
     if (node.children && Array.isArray(node.children)) {
       processedNode.children = node.children.map(processNode);
     }
@@ -67,7 +70,7 @@ watch(
   { immediate: true },
 );
 
-// 自定义切换图标（三角箭头）
+// Custom switcher icon (triangle).
 const SwitcherIcon: Component = ({ expanded }) => {
   return h(expanded ? DownOutlined : RightOutlined, {
     style: {
@@ -90,54 +93,52 @@ function isTxtFile(row: object): row is PerformanceRunDataFile {
 function isBinFile(row: object): row is PerformanceRunDataFile {
   return (
     Reflect.has(row, 'filePath')
-    && [
-      'bin',
-    ].includes(Reflect.get(row as PerformanceRunDataFile, 'fileType'))
+    && ['bin'].includes(Reflect.get(row as PerformanceRunDataFile, 'fileType'))
   );
 }
 
-// 检查是否为可比较的文件类型
+// Comparable file types.
 function isComparableFile(row: object): row is PerformanceRunDataFile {
   return isTxtFile(row) || isBinFile(row);
 }
 
 /**
- * 执行文件对比
+ * Run file comparison.
  */
 function performFileComparison() {
   if (selectedFiles.value.length < 2) {
-    message.warning('请选择至少两个文件进行比较');
+    message.warning(t('web.dump.selectTwoFiles'));
+
     return;
   }
 
-  // 这里可以调用实际的文件对比功能
-  console.log('执行文件对比:', selectedFiles.value);
+  console.log('[DumpTensor] Compare files:', selectedFiles.value);
 
   try {
     diffFiles({
       filePath1: (selectedFiles.value[0].filePath || '').replace(/\.bin$/, '.txt'),
-      filePath2: (selectedFiles.value[1].filePath || '').replace(/\.bin$/, '.txt')
+      filePath2: (selectedFiles.value[1].filePath || '').replace(/\.bin$/, '.txt'),
     }).finally(() => {
-      // 对比完成后取消对比状态
+      // Reset compare mode after compare completes.
       cancelCompare();
-    })
-    message.success('正在启动VSCode文件对比...');
-  } catch (error) {
+    });
+    message.success(t('web.dump.compareStarting'));
+  }
+  catch (error) {
     console.error('调用VSCode文件对比功能失败:', error);
-    message.error('启动VSCode文件对比失败');
-    // 出错时也取消对比状态
+    message.error(t('web.dump.compareFailed'));
     cancelCompare();
   }
 }
 
 /**
- * 点击节点
+ * Handle tree node click.
  */
 const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
   const node = info.node;
   const data = node.dataRef || node;
-  
-  console.log('[onClickNode]: 打开文件', data)
+
+  console.log('[onClickNode]: 打开文件', data);
 
   if (isTxtFile(data) || isBinFile(data)) {
     openFile({ file: (data.filePath || '').replace(/\.bin$/, '.txt') });
@@ -145,44 +146,47 @@ const onClickNode: DirectoryTreeProps['onSelect'] = function (_, info) {
 };
 
 /**
- * 处理复选框勾选
+ * Handle checkbox selection.
  */
-function onCheck(checkedKeysValue: any, e: { checked: boolean; node: any }) {
+function onCheck(checkedKeysValue: any, e: { checked: boolean;
+  node: any }) {
   // 从 checkedKeysValue 中获取所有被勾选的 keys
   const allCheckedKeys = Array.isArray(checkedKeysValue) ? checkedKeysValue : checkedKeysValue.checked;
 
-  // 由于我们无法直接获取节点信息，我们需要遍历整个树来确定哪些是文件节点
+  // Walk the tree to identify file nodes.
   const allFileKeys = getAllFileKeys(props.treeData);
 
-  // 过滤出只包含文件的 keys
+  // Keep file keys only.
   const fileKeys = allCheckedKeys.filter((key: string) => allFileKeys.includes(key));
 
-  // 限制最多选择2个文件
+  // Limit to max selectable files.
   if (fileKeys.length > maxSelectedCount) {
-    // 只保留最后选择的几个文件
+    // Keep only most-recent selections.
     const limitedFileKeys = fileKeys.slice(-maxSelectedCount);
+
     checkedKeys.value = limitedFileKeys;
 
-    // 更新 selectedFiles 数组
+    // Update selected file models.
     selectedFiles.value = getFileObjectsFromKeys(limitedFileKeys, props.treeData);
 
-    message.warning(`最多只能选择 ${maxSelectedCount} 个文件进行比较`);
-  } else {
+    message.warning(t('web.dump.maxSelectCount', { count: maxSelectedCount }));
+  }
+  else {
     checkedKeys.value = fileKeys;
 
-    // 更新 selectedFiles 数组
+    // Update selected file models.
     selectedFiles.value = getFileObjectsFromKeys(fileKeys, props.treeData);
   }
 }
 
 /**
- * 递归获取树中所有文件类型的节点 keys
+ * Recursively collect all file keys from tree.
  */
 function getAllFileKeys(nodes: any[]): string[] {
   let keys: string[] = [];
 
   const traverse = (nodeList: any[]) => {
-    nodeList.forEach(node => {
+    nodeList.forEach((node) => {
       if (isComparableFile(node)) {
         keys.push(node.key);
       }
@@ -199,13 +203,13 @@ function getAllFileKeys(nodes: any[]): string[] {
 }
 
 /**
- * 根据 keys 获取对应的文件对象
+ * Resolve file objects by keys.
  */
 function getFileObjectsFromKeys(keys: string[], nodes: any[]): PerformanceRunDataFile[] {
   const files: PerformanceRunDataFile[] = [];
 
   const traverse = (nodeList: any[]) => {
-    nodeList.forEach(node => {
+    nodeList.forEach((node) => {
       if (isComparableFile(node) && keys.includes(node.key)) {
         files.push(node as PerformanceRunDataFile);
       }
@@ -222,48 +226,49 @@ function getFileObjectsFromKeys(keys: string[], nodes: any[]): PerformanceRunDat
 }
 
 const updateExpand = (e) => {
-  expandedKeys.value = e
-}
+  expandedKeys.value = e;
+};
 
 // 是否正在进行对比
-const isComparing = ref(false)
+const isComparing = ref(false);
 
 const cancelCompare = () => {
-  isComparing.value = false
+  isComparing.value = false;
 
   selectedFiles.value = [];
-  checkedKeys.value = []
-}
+  checkedKeys.value = [];
+};
 
 const openCompare = () => {
-  isComparing.value = true
-}
+  isComparing.value = true;
+};
 
-// 处理导入操作
+// Handle import action.
 const handleImport = async () => {
   try {
-    // 调用selectFile API选择bin文件
+    // Open file picker for .bin files.
     const selectedFilePath = await selectFile({
       fileTypes: [
         {
           label: 'Binary Files',
-          extensions: ['bin']
-        }
-      ]
+          extensions: ['bin'],
+        },
+      ],
     });
 
     if (selectedFilePath) {
-      // 调用API导入bin文件
+      // Import selected .bin file.
       await importDumpTensorBinFile({ binFilePath: selectedFilePath });
-      message.success('导入成功');
-      // 通知父组件刷新数据
+      message.success(t('web.dump.importSuccess'));
+      // Ask parent to refresh data.
       window.dispatchEvent(new CustomEvent('refreshTreeData'));
     }
-  } catch (error) {
-    console.error('导入操作失败:', error);
-    message.error('导入操作失败');
   }
-}
+  catch (error) {
+    console.error('[DumpTensor] Import action failed:', error);
+    message.error(t('web.dump.importFailed'));
+  }
+};
 </script>
 
 <template>
@@ -271,13 +276,39 @@ const handleImport = async () => {
     class="w-full relative [&_.ant-tree]:!bg-transparent [&_.ant-tree-treenode]:!w-full [&_.ant-tree-node-content-wrapper]:!w-0 hover:[&_.ant-tree-treenode]:!bg-transparent"
   >
     <template v-if="processedTreeData && processedTreeData.length">
-      <div v-show="isComparing" class="filter-bar">
-        <a-button type="primary" @click="performFileComparison">开始对比</a-button>
-        <a-button class="default-btn" @click="cancelCompare">取消</a-button>
+      <div
+        v-show="isComparing"
+        class="filter-bar"
+      >
+        <a-button
+          type="primary"
+          @click="performFileComparison"
+        >
+          {{ t('web.dump.startCompare') }}
+        </a-button>
+        <a-button
+          class="default-btn"
+          @click="cancelCompare"
+        >
+          {{ t('web.dump.cancel') }}
+        </a-button>
       </div>
-      <div v-show="!isComparing" class="filter-bar">
-        <a-button class="default-btn" @click="handleImport">导入</a-button>
-        <a-button class="default-btn" @click="openCompare">对比</a-button>
+      <div
+        v-show="!isComparing"
+        class="filter-bar"
+      >
+        <a-button
+          class="default-btn"
+          @click="handleImport"
+        >
+          {{ t('web.dump.import') }}
+        </a-button>
+        <a-button
+          class="default-btn"
+          @click="openCompare"
+        >
+          {{ t('web.dump.compare') }}
+        </a-button>
       </div>
     </template>
 
@@ -317,5 +348,12 @@ const handleImport = async () => {
   display: flex;
   gap: 8px;
   margin: 12px 0;
+}
+
+.default-btn {
+  background-color: rgba(20, 20, 20, 0.96) !important;
+  border-color: rgb(72, 72, 73) !important;
+  color: rgba(255, 255, 255, 0.855) !important;
+  box-shadow: rgba(255, 255, 255, 0.04) !important;
 }
 </style>

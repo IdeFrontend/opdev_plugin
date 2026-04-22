@@ -15,7 +15,7 @@ interface CommandOptions {
   cwd?: string;
   env?: NodeJS.ProcessEnv;
   timeout?: number;
-  // 是否实时输出（流式输出）
+  // Whether to output in real time (streaming output)
   streaming?: boolean;
 }
 
@@ -32,10 +32,10 @@ class CommandExecutor extends EventEmitter {
   private stderr: string = '';
   private output: string = '';
 
-  // ANSI 转义码正则表达式
+  // ANSI escape code regular expression
   private readonly ansiRegex = /\x1b\[[0-9;]*[a-zA-Z]/g;
-  
-  // 退格字符正则表达式（\b 或 \x08）
+
+  // Backspace character regular expression (\b or \x08)
   private readonly backspaceRegex = /\x08/g;
 
   constructor() {
@@ -43,22 +43,24 @@ class CommandExecutor extends EventEmitter {
   }
 
   /**
-   * 过滤 ANSI 转义码和退格字符（同步方式）
+   * Filter ANSI escape codes and backspace characters (synchronous mode)
    */
   private stripAnsiCodes(text: string): string {
-    // 先过滤退格字符
+    // Filter backspace characters first
     let cleanText = text.replace(this.backspaceRegex, '');
-    // 再过滤 ANSI 转义码
+
+    // Then filter ANSI escape codes
     cleanText = cleanText.replace(this.ansiRegex, '');
+
     return cleanText;
   }
 
   /**
-   * 执行命令
-   * @param command 要执行的命令
-   * @param args 命令参数
-   * @param options 配置选项
-   * @param stopKeywords 触发提前结束的关键字数组
+   * execute command
+   * @param command The command to execute
+   * @param args command parameters
+   * @param options configuration options
+   * @param stopKeywords array of keywords that trigger early termination
    * @param isOpenTerminal
    * @returns Promise<CommandResult>
    */
@@ -91,8 +93,8 @@ class CommandExecutor extends EventEmitter {
           ...options.env,
         },
         shell: true,
-        // Windows 上需要设置 detached: false，否则无法终止
-        // Linux/macOS 上设置 detached: true 可以创建进程组
+        // On Windows, detached: false needs to be set, otherwise it cannot be terminated.
+        // Set detached: true on Linux/macOS to create a process group
         detached: process.platform !== 'win32',
       });
 
@@ -100,7 +102,7 @@ class CommandExecutor extends EventEmitter {
 
       let timeoutId: NodeJS.Timeout | null = null;
 
-      // 设置超时
+      // Set timeout
       if (options.timeout && options.timeout > 0) {
         timeoutId = setTimeout(async () => {
           await this.cleanup();
@@ -116,10 +118,10 @@ class CommandExecutor extends EventEmitter {
         this.process = null;
       };
 
-      // 处理标准输出
+      // Process standard output
       child.stdout?.on('data', async (data: Buffer) => {
         const text = data.toString();
-        // 过滤 ANSI 转义码
+        // Filter ANSI escape codes
         const cleanText = this.stripAnsiCodes(text);
 
         if (outputChannel) {
@@ -141,17 +143,17 @@ class CommandExecutor extends EventEmitter {
           resolve(this.getResult(-1));
         }
 
-        // 检查是否包含停止关键字
+        // Check if stop keyword is included
         if (this.checkStopKeywords(cleanText, stopKeywords)) {
           await this.cleanup();
           resolve(this.getResult(0));
         }
       });
 
-      // 处理错误输出
+      // Handle error output
       child.stderr?.on('data', async (data: Buffer) => {
         const text = data.toString();
-        // 过滤 ANSI 转义码
+        // Filter ANSI escape codes
         const cleanText = this.stripAnsiCodes(text);
 
         console.error('execute command, stderr:', cleanText);
@@ -168,14 +170,14 @@ class CommandExecutor extends EventEmitter {
           process.stderr.write(cleanText);
         }
 
-        // 检查是否包含停止关键字
+        // Check if stop keyword is included
         if (this.checkStopKeywords(cleanText, stopKeywords)) {
           await this.cleanup();
           resolve(this.getResult(0));
         }
       });
 
-      // 处理进程结束
+      // Processing ends
       child.on('close', (code: number) => {
         localCleanup();
         const result = this.getResult(code);
@@ -189,7 +191,7 @@ class CommandExecutor extends EventEmitter {
         }
       });
 
-      // 处理进程错误
+      // Handling process errors
       child.on('error', () => {
         localCleanup();
         resolve(this.getResult(-1));
@@ -198,7 +200,7 @@ class CommandExecutor extends EventEmitter {
   }
 
   /**
-   * 检查是否包含停止关键字
+   * Check if stop keyword is included
    */
   private checkStopKeywords(text: string, stopKeywords: string[]): boolean {
     if (stopKeywords.length === 0) {
@@ -211,7 +213,7 @@ class CommandExecutor extends EventEmitter {
   }
 
   /**
-   * 检查是否包含异常关键字
+   * Check if exception keyword is included
    */
   private checkErrorKeywords(text: string): boolean {
     return text.toLowerCase()
@@ -219,7 +221,7 @@ class CommandExecutor extends EventEmitter {
   }
 
   /**
-   * 获取执行结果
+   * Get execution results
    */
   private getResult(code: number): CommandResult {
     return {
@@ -231,15 +233,16 @@ class CommandExecutor extends EventEmitter {
   }
 
   /**
-   * 清理资源（异步终止进程并等待退出）
+   * Clean up resources (terminate process asynchronously and wait for exit)
    */
   private async cleanup(): Promise<void> {
     const child = this.process;
+
     if (!child) {
       return;
     }
 
-    // 立即清除成员变量引用，防止重复调用此方法
+    // Immediately clear member variable references to prevent repeated calls to this method
     this.process = null;
 
     return new Promise<void>((resolve) => {
@@ -247,24 +250,29 @@ class CommandExecutor extends EventEmitter {
       let finished = false;
 
       const finish = () => {
-        if (finished) return;
+        if (finished) {
+          return;
+        }
+
         finished = true;
+
         if (timeoutId) {
           clearTimeout(timeoutId);
         }
-        // 移除监听器以避免内存泄漏
+
+        // Remove listeners to avoid memory leaks
         child.removeListener('exit', finish);
         child.removeListener('close', finish);
         child.removeListener('error', finish);
         resolve();
       };
 
-      // 监听进程退出事件
+      // Listen for process exit events
       child.once('exit', finish);
       child.once('close', finish);
       child.once('error', finish);
 
-      // 设置 5 秒超时，防止进程卡死
+      // Set a 5-second timeout to prevent the process from getting stuck
       timeoutId = setTimeout(() => {
         console.warn('CommandExecutor: kill process timed out after 5s, force resolving');
         finish();
@@ -273,30 +281,36 @@ class CommandExecutor extends EventEmitter {
       try {
         if (process.platform === 'win32') {
           const pid = child.pid;
+
           if (pid) {
-            // 在 Windows 上使用 taskkill 强制终止进程及其所有子进程 (/F /T)
+            // Use taskkill on Windows to force kill a process and all its children (/F /T)
             exec(`taskkill /pid ${pid} /T /F`, (error) => {
               if (error) {
                 console.error('CommandExecutor: failed to kill process tree:', error);
               }
             });
-          } else {
-            finish();
           }
-        } else {
-          // 在 Linux/macOS 上，使用负 PID 终止整个进程组
-          if (child.pid) {
-            try {
-              process.kill(-child.pid, 'SIGTERM');
-            } catch (e) {
-              // 如果进程组终止失败，退回到终止单个进程
-              child.kill('SIGTERM');
-            }
-          } else {
+          else {
             finish();
           }
         }
-      } catch (error) {
+        else {
+          // On Linux/macOS, kill an entire process group with a negative PID
+          if (child.pid) {
+            try {
+              process.kill(-child.pid, 'SIGTERM');
+            }
+            catch (e) {
+              // If process group termination fails, fall back to terminating a single process
+              child.kill('SIGTERM');
+            }
+          }
+          else {
+            finish();
+          }
+        }
+      }
+      catch (error) {
         console.error('CommandExecutor: error during process cleanup:', error);
         finish();
       }
@@ -304,7 +318,7 @@ class CommandExecutor extends EventEmitter {
   }
 
   /**
-   * 强制终止命令执行（异步）
+   * Forcefully terminate command execution (asynchronously)
    */
   async kill(): Promise<void> {
     await this.cleanup();

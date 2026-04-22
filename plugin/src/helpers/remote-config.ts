@@ -1,14 +1,14 @@
 /**
- * 远程配置管理模块
- * 用于在远程服务器上存储和读取配置信息
- * 配置文件存储位置: ~/.vscode-server/data/ms-op-suite/config.json
+ * Remote configuration management module
+ * Used to store and read configuration information on remote servers
+ * Configuration file storage location: ~/.vscode-server/data/ms-op-suite/config.json
  */
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
 /**
- * 配置文件存储的数据结构
+ * Data structure of configuration file storage
  */
 interface RemoteConfigData {
   lastProjectPath?: string;
@@ -16,14 +16,14 @@ interface RemoteConfigData {
 }
 
 /**
- * 远程配置管理类
+ * Remote configuration management class
  */
 export class RemoteConfig {
   private static CONFIG_DIR = '.vscode-server/data/ms-op-suite';
   private static CONFIG_FILE = 'config.json';
 
   /**
-   * 获取配置文件的完整路径
+   * Get the full path to the configuration file
    */
   private static getConfigPath(): string {
     const homeDir = os.homedir();
@@ -33,7 +33,7 @@ export class RemoteConfig {
   }
 
   /**
-   * 确保配置目录存在
+   * Make sure the configuration directory exists
    */
   private static ensureConfigDir(): void {
     const homeDir = os.homedir();
@@ -45,7 +45,7 @@ export class RemoteConfig {
   }
 
   /**
-   * 读取配置文件
+   * Read configuration file
    */
   private static readConfig(): RemoteConfigData {
     const configPath = this.getConfigPath();
@@ -58,14 +58,14 @@ export class RemoteConfig {
       }
     }
     catch (error) {
-      console.error('读取远程配置文件失败:', error);
+      console.error('Failed to read remote config file:', error);
     }
 
     return {};
   }
 
   /**
-   * 写入配置文件
+   * Write configuration file
    */
   private static writeConfig(config: RemoteConfigData): void {
     this.ensureConfigDir();
@@ -75,13 +75,13 @@ export class RemoteConfig {
       fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
     }
     catch (error) {
-      console.error('写入远程配置文件失败:', error);
+      console.error('Failed to write remote config file:', error);
       throw error;
     }
   }
 
   /**
-   * 获取最后使用的项目路径
+   * Get the last used project path
    */
   static getLastProjectPath(): string | null {
     const config = this.readConfig();
@@ -90,7 +90,7 @@ export class RemoteConfig {
   }
 
   /**
-   * 设置最后使用的项目路径
+   * Set the last used project path
    */
   static setLastProjectPath(projectPath: string): void {
     const config = this.readConfig();
@@ -100,7 +100,7 @@ export class RemoteConfig {
   }
 
   /**
-   * 清除最后使用的项目路径
+   * Clear the last used project path
    */
   static clearLastProjectPath(): void {
     const config = this.readConfig();
@@ -110,7 +110,7 @@ export class RemoteConfig {
   }
 
   /**
-   * 获取配置项
+   * Get configuration items
    */
   static get(key: string): unknown {
     const config = this.readConfig();
@@ -119,7 +119,7 @@ export class RemoteConfig {
   }
 
   /**
-   * 设置配置项
+   * Set configuration items
    */
   static set(key: string, value: unknown): void {
     const config = this.readConfig();
@@ -129,7 +129,7 @@ export class RemoteConfig {
   }
 
   /**
-   * 删除配置项
+   * Delete configuration item
    */
   static delete(key: string): void {
     const config = this.readConfig();
@@ -139,15 +139,15 @@ export class RemoteConfig {
   }
 
   /**
-   * 清空所有配置
+   * Clear all configuration
    */
   static clear(): void {
     this.writeConfig({});
   }
 
   /**
-   * 搜索路径
-   * @param params 搜索参数
+   * search path
+   * @param params search parameters
    */
   static async searchPath(params: {
     keyword: string;
@@ -158,7 +158,7 @@ export class RemoteConfig {
       keyword, type,
     } = params;
 
-    // 如果关键词为空，返回空列表
+    // If the keyword is empty, an empty list is returned
     if (!keyword) {
       return {
         type,
@@ -166,7 +166,7 @@ export class RemoteConfig {
       };
     }
 
-    // 如果是绝对路径
+    // If it is an absolute path
     if (path.isAbsolute(keyword)) {
       try {
         const stats = await fs.promises.stat(keyword);
@@ -181,12 +181,12 @@ export class RemoteConfig {
         }
       }
       catch {
-        // 忽略错误
+        // ignore errors
       }
     }
 
-    // 默认行为：尝试列出目录内容或返回匹配项
-    // 这里简单实现：如果路径存在且是目录，返回目录下的文件；否则返回空
+    // Default behavior: Attempt to list directory contents or return matches
+    // Here is a simple implementation: if the path exists and is a directory, return the file in the directory; otherwise, return empty
     try {
       if (fs.existsSync(keyword)) {
         const stats = await fs.promises.stat(keyword);
@@ -203,7 +203,7 @@ export class RemoteConfig {
       }
     }
     catch {
-      // 忽略错误
+      // ignore errors
     }
 
     return {

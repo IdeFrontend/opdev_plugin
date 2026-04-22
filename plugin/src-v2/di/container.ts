@@ -1,13 +1,13 @@
 import { DIToken } from './tokens';
 
 /**
- * 服务工厂函数类型
+ * Service factory function type
  */
 type Factory<T> = (container: Container)=> T;
 
 /**
- * 简化版依赖注入容器
- * 不使用 inversify,保持轻量级
+ * Lightweight dependency injection container
+ * No inversify; kept minimal
  */
 export class Container {
   private services = new Map<DIToken, unknown>();
@@ -15,7 +15,7 @@ export class Container {
   private singletons = new Set<DIToken>();
 
   /**
-   * 注册单例服务
+   * Register singleton service
    */
   registerSingleton<T>(token: DIToken, factory: Factory<T>): void {
     this.factories.set(token, factory);
@@ -23,39 +23,39 @@ export class Container {
   }
 
   /**
-   * 注册瞬态服务(每次获取都创建新实例)
+   * Register transient service (new instance per get)
    */
   registerTransient<T>(token: DIToken, factory: Factory<T>): void {
     this.factories.set(token, factory);
   }
 
   /**
-   * 注册实例
+   * Register instance
    */
   registerInstance<T>(token: DIToken, instance: T): void {
     this.services.set(token, instance);
   }
 
   /**
-   * 获取服务
+   * Get service
    */
   get<T>(token: DIToken): T {
-    // 如果已经有实例,直接返回
+    // Return cached instance if present
     if (this.services.has(token)) {
       return this.services.get(token) as T;
     }
 
-    // 如果没有工厂,抛出错误
+    // No factory: throw
     const factory = this.factories.get(token);
 
     if (!factory) {
       throw new Error(`Service not registered: ${String(token)}`);
     }
 
-    // 创建实例
+    // Create instance
     const instance = factory(this) as T;
 
-    // 如果是单例,缓存实例
+    // Cache if singleton
     if (this.singletons.has(token)) {
       this.services.set(token, instance);
     }
@@ -64,14 +64,14 @@ export class Container {
   }
 
   /**
-   * 检查服务是否已注册
+   * Check if service is registered
    */
   has(token: DIToken): boolean {
     return this.services.has(token) || this.factories.has(token);
   }
 
   /**
-   * 清空容器
+   * Clear container
    */
   clear(): void {
     this.services.clear();

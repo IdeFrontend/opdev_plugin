@@ -10,64 +10,64 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 /**
- * 环境变量读取器
- * 优先从 process.env 直接读取，如果取不到则从 vscode 工作目录下的 .arts/.env 文件读取
+ * environment variable reader
+ * Priority is given to reading directly from process.env. If it cannot be obtained, it is read from the .arts/.env file in the vscode working directory.
  */
 export class EnvironmentVariableReader {
   private static envCache: Map<string, string> = new Map();
   private static isEnvLoaded: boolean = false;
 
   /**
-   * 获取指定的环境变量值
-   * @param varName 环境变量名称
-   * @param fallbackToEnvFile 如果直接读取失败，是否尝试从 .arts/.env 文件读取（默认 true）
-   * @returns 环境变量值，如果不存在则返回 undefined
+   * Get the specified environment variable value
+   * @param varName environment variable name
+   * @param fallbackToEnvFile If direct reading fails, whether to try to read from .arts/.env file (default true)
+   * @returns environment variable value, if it does not exist, return undefined
    */
   static getEnv(
     varName: string,
     fallbackToEnvFile: boolean = true,
   ): string | undefined {
-    // 优先从 process.env 直接读取
+    // Prioritize reading directly from process.env
     const directValue = process.env[varName];
 
     if (directValue) {
-      console.log(`[EnvironmentVariableReader] 从 process.env 直接获取环境变量 ${varName}: ${directValue}`);
+      console.log(`[EnvironmentVariableReader] Read environment variable ${varName} directly from process.env: ${directValue}`);
 
       return directValue;
     }
 
-    // 如果直接读取失败且允许从 .env 文件读取
+    // If direct reading fails and reading from .env file is allowed
     if (fallbackToEnvFile) {
       try {
-        // 加载 .env 文件（如果尚未加载）
+        // Load the .env file if it is not already loaded
         if (!this.isEnvLoaded) {
           this.loadEnvFile();
         }
 
-        // 从缓存中读取
+        // Read from cache
         const cachedValue = this.envCache.get(varName);
 
         if (cachedValue) {
-          console.log(`[EnvironmentVariableReader] 从 .arts/.env 文件获取环境变量 ${varName}: ${cachedValue}`);
+          console.log(`[EnvironmentVariableReader] Read environment variable ${varName} from .arts/.env: ${cachedValue}`);
 
           return cachedValue;
         }
       }
       catch (error) {
         console.warn(
-          `[EnvironmentVariableReader] 从 .arts/.env 文件读取 ${varName} 失败:`,
+          `[EnvironmentVariableReader] Failed to read ${varName} from .arts/.env:`,
           error,
         );
       }
     }
 
-    console.warn(`[EnvironmentVariableReader] 环境变量 ${varName} 不存在`);
+    console.warn(`[EnvironmentVariableReader] Environment variable ${varName} does not exist`);
 
     return undefined;
   }
 
   /**
-   * 从 vscode 工作目录下的 .arts/.env 文件加载环境变量
+   * Load environment variables from the .arts/.env file in the vscode working directory
    */
   private static loadEnvFile(): void {
     if (this.isEnvLoaded) {
@@ -75,49 +75,49 @@ export class EnvironmentVariableReader {
     }
 
     try {
-      // 获取工作区文件夹
+      // Get workspace folder
       const workspaceFolders = vscode.workspace.workspaceFolders;
 
       if (!workspaceFolders || workspaceFolders.length === 0) {
-        console.warn('[EnvironmentVariableReader] 未找到工作区文件夹，无法加载 .arts/.env 文件');
+        console.warn('[EnvironmentVariableReader] Workspace folder not found, cannot load .arts/.env file');
         this.isEnvLoaded = true;
 
         return;
       }
 
-      // 使用第一个工作区文件夹
+      // Use the first workspace folder
       const workspacePath = workspaceFolders[0].uri.fsPath;
       const envFilePath = path.join(workspacePath, '.arts', '.env');
 
-      // 检查文件是否存在
+      // Check if the file exists
       if (!fs.existsSync(envFilePath)) {
-        console.warn(`[EnvironmentVariableReader] .env 文件不存在: ${envFilePath}`);
+        console.warn(`[EnvironmentVariableReader] .env file does not exist: ${envFilePath}`);
         this.isEnvLoaded = true;
 
         return;
       }
 
-      // 读取文件内容
+      // Read file contents
       const envContent = fs.readFileSync(envFilePath, 'utf-8');
 
-      // 解析环境变量
+      // Parse environment variables
       this.parseEnvFile(envContent);
       this.isEnvLoaded = true;
-      console.log(`[EnvironmentVariableReader] 成功从 .arts/.env 文件加载环境变量，共 ${this.envCache.size} 个`);
+      console.log(`[EnvironmentVariableReader] Successfully loaded environment variables from .arts/.env, total ${this.envCache.size}`);
     }
     catch (error: any) {
       console.error(
-        '[EnvironmentVariableReader] 加载 .arts/.env 文件失败:',
+        '[EnvironmentVariableReader] Failed to load .arts/.env file:',
         error.message,
       );
-      // 即使失败也标记为已加载，避免重复尝试
+      // Mark as loaded even if it fails to avoid repeated attempts
       this.isEnvLoaded = true;
     }
   }
 
   /**
-   * 解析 .env 文件内容
-   * @param content .env 文件内容
+   * Parse .env file contents
+   * @param content .env file content
    */
   private static parseEnvFile(content: string): void {
     const lines = content.split('\n');
@@ -125,20 +125,20 @@ export class EnvironmentVariableReader {
     for (const line of lines) {
       const trimmedLine = line.trim();
 
-      // 跳过空行和注释行
+      // Skip empty lines and comment lines
       if (!trimmedLine || trimmedLine.startsWith('#')) {
         continue;
       }
 
-      // 解析格式：VAR_NAME=value 或 VAR_NAME="value" 或 VAR_NAME='value'
-      // 支持等号前后可能有空格
+      // Parsing format: VAR_NAME=value or VAR_NAME="value" or VAR_NAME='value'
+      // Supports possible spaces before and after the equal sign
       const match = trimmedLine.match(/^\s*([^=#\s]+)\s*=\s*(.*)$/);
 
       if (match) {
         const varName = match[1].trim();
         let varValue = match[2].trim();
 
-        // 移除引号（如果有）
+        // Remove quotes (if any)
         if (
           (varValue.startsWith('"') && varValue.endsWith('"'))
           || (varValue.startsWith("'") && varValue.endsWith("'"))
@@ -146,19 +146,19 @@ export class EnvironmentVariableReader {
           varValue = varValue.slice(1, -1);
         }
 
-        // 处理行尾注释（# 后面的内容）
+        // Process end-of-line comments (content after #)
         const commentIndex = varValue.indexOf('#');
 
         if (commentIndex !== -1) {
-          // 检查 # 是否在引号内
+          // Check if # is inside quotes
           const beforeComment = varValue.substring(0, commentIndex);
           const quoteCount = (beforeComment.match(/"/g) || []).length;
 
           if (quoteCount % 2 === 0) {
-            // # 不在引号内，移除注释
+            // # Without quotes, remove comments
             varValue = beforeComment.trim();
 
-            // 再次检查引号
+            // Check the quotes again
             if (
               (varValue.startsWith('"') && varValue.endsWith('"'))
               || (varValue.startsWith("'") && varValue.endsWith("'"))
@@ -174,18 +174,18 @@ export class EnvironmentVariableReader {
   }
 
   /**
-   * 清除环境变量缓存
-   * 用于强制重新加载 .env 文件
+   * Clear environment variable cache
+   * Used to force a reload of .env files
    */
   static clearCache(): void {
     this.envCache.clear();
     this.isEnvLoaded = false;
-    console.log('[EnvironmentVariableReader] 已清除环境变量缓存');
+    console.log('[EnvironmentVariableReader] Cleared environment variable cache');
   }
 
   /**
-   * 获取所有已缓存的环境变量
-   * @returns 环境变量键值对映射
+   * Get all cached environment variables
+   * @returns environment variable key-value pair mapping
    */
   static getAllCachedEnv(): Map<string, string> {
     return new Map(this.envCache);

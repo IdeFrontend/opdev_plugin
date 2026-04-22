@@ -25,39 +25,40 @@ export class OpsOperateProvider implements vscode.WebviewViewProvider {
     _context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken,
   ) {
-    // 配置 WebView
+    // Configure WebView
     webviewView.webview.options = {
       enableScripts: true,
       localResourceRoots: [this._extensionUri],
     };
 
-    // 注册 webview 到 ApiServer
+    // Register webview to ApiServer
     this._apiServer.addWebview(VIEW_OPERATE, webviewView.webview);
 
-    // 设置 HTML 内容
+    // Set HTML content
     const distPath = path.join(this._extensionUri.fsPath, 'out', 'web');
 
     webviewView.webview.html = await HtmlTransformer.transformDistHtml(
       distPath,
       webviewView.webview,
       `sidebars/${VIEW_OPERATE}`,
+      { lang: vscode.env.language.toLowerCase() },
     );
 
-    // 监听 VSCode 主题变化并通知 Webview
+    // Listen to VSCode theme changes and notify Webview
     this._themeChangeDisposable = vscode.window.onDidChangeActiveColorTheme((theme) => {
       webviewView.webview.postMessage({
         command: 'updateTheme',
-        themeName: theme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
+        themeName: theme.kind === vscode.ColorThemeKind.Dark || theme.kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light',
       });
     });
 
-    // 初始化时发送当前主题
+    // Send the current topic on initialization
     webviewView.webview.postMessage({
       command: 'updateTheme',
-      themeName: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
+      themeName: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark || vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light',
     });
 
-    // 消息处理
+    // Message processing
     webviewView.webview.onDidReceiveMessage(
       (message: any) => {
         this.handleWebviewMessage(message);
@@ -68,7 +69,7 @@ export class OpsOperateProvider implements vscode.WebviewViewProvider {
   }
 
   /**
-   * 处理来自 Webview 的消息
+   * Handle messages from Webview
    */
   private handleWebviewMessage(message: any): void {
     for (const messageItem of webviewMessageList) {
@@ -79,7 +80,7 @@ export class OpsOperateProvider implements vscode.WebviewViewProvider {
   }
 
   /**
-   * 清理资源
+   * Clean up resources
    */
   public dispose() {
     if (this._themeChangeDisposable) {

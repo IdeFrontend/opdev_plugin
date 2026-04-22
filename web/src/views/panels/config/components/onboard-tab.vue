@@ -8,6 +8,7 @@
 import {
   ref, computed, watch, nextTick,
 } from 'vue';
+import { t } from 'i18next';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import editTable from './edit-table.vue';
 import {
@@ -240,22 +241,22 @@ const jumpToGuide = (url) => {
           v-model:checked="onboardData.user_options.KernelScale"
           @change="saveConfig"
         >
-          使能Kernel侧指定代码段性能采集
+          {{ t('web.config.onboard.enableKernelProf') }}
           <a-tooltip>
             <QuestionCircleOutlined class="help-icon" />
             <template #title>
               <div>
-                指定代码段范围时，需要在算子Kernel侧对应的代码段前后调用MetricsProfStart和MetricsProfStop接口，具体调用方式请参见
+                {{ t('web.config.onboard.kernelProfHint') }}
                 <span
                   style="color: #1677ff; cursor: pointer;"
                   @click="jumpToGuide(startHref)"
                 >MetricsProfStart</span>
-                和
+                {{ t('web.config.onboard.and') }}
                 <span
                   style="color: #1677ff; cursor: pointer;"
                   @click="jumpToGuide(stopHref)"
                 >MetricsProfStop</span>
-                接口
+                {{ t('web.config.onboard.api') }}
               </div>
             </template>
           </a-tooltip>
@@ -268,18 +269,17 @@ const jumpToGuide = (url) => {
         style="margin-bottom: 12px;"
       >
         <template #message>
-          请确认是否在算子Kernal侧对应的代码段前后调用了MetricsProfStart和MetricsProfStop接口，若未调用，该选项将不会生效。
-          具体调用方式请参见
+          {{ t('web.config.onboard.confirmKernelProf') }}
           <span
             style="color: #1677ff; cursor: pointer;"
             @click="jumpToGuide(startHref)"
           >MetricsProfStart</span>
-          和
+          {{ t('web.config.onboard.and') }}
           <span
             style="color: #1677ff; cursor: pointer;"
             @click="jumpToGuide(stopHref)"
           >MetricsProfStop</span>
-          接口
+          {{ t('web.config.onboard.api') }}
         </template>
       </a-alert>
 

@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -14,12 +15,26 @@ import {
 import {
   postConfig, getConfig, getFiles,
 } from '@plugin/domain';
+import { mergeSanitizerConfigsWithOperatorProjectWorkspace } from '@plugin/helpers/operator-project-workspace-config';
 
-const CONFIG_TYPES = { SANITIZER: 'sanitizer' } as const;
+const CONFIG_TYPES = {
+  SANITIZER: 'sanitizer',
+  ON_BOARD: 'on_board',
+  SIMULATE: 'simulate',
+} as const;
 
 export class ConfigService {
+  private loadSanitizerConfigsFromDb(): BuildConfig[] {
+    const projectId = ProjectManager.getInstance().projectId;
+    const config = getConfig(Number(projectId), CONFIG_TYPES.SANITIZER);
+    return config.map((c) => ({
+      ...c,
+      user_options: c.user_options ? (c.user_options as Record<string, unknown>) : undefined,
+    })) as BuildConfig[];
+  }
+
   /**
-   * 远程路径搜索
+   * Remote path search
    */
   async remotePathSearch(params: RemotePathSearchParams): Promise<RemotePathSearchResult> {
     const res = getFiles(params.keyword);
@@ -31,59 +46,66 @@ export class ConfigService {
   }
 
   /**
-   * 保存构建配置
+   * Save build configuration
    */
   async saveBuildConfig(params: SaveBuildConfigParams): Promise<void> {
     try {
       await postConfig('build', params.data as unknown[]);
 
       if (params.showMessage) {
-        vscode.window.showInformationMessage('保存编译配置成功');
+        vscode.window.showInformationMessage(t('config.saveBuildConfigSuccess'));
       }
     }
     catch {
-      vscode.window.showErrorMessage('保存编译配置失败');
+      vscode.window.showErrorMessage(t('config.saveBuildConfigFailed'));
     }
   }
 
   /**
-   * 保存配置（仿真/上板）
+   * Save configuration (simulation/boarding)
    */
   async saveConfig(params: SaveConfigParams): Promise<void> {
     await postConfig(params.type, params.data as unknown[]);
 
+    if (params.type === CONFIG_TYPES.ON_BOARD) {
+      await this.pushOnBoardUserOptionsToWorkspaceSettings();
+    }
+    if (params.type === CONFIG_TYPES.SIMULATE) {
+      await this.pushSimulateUserOptionsToWorkspaceSettings();
+    }
+
     if (params.showMessage) {
-      vscode.window.showInformationMessage('保存配置成功');
+      vscode.window.showInformationMessage(t('config.saveConfigSuccess'));
     }
   }
 
   /**
-   * 检查 devtool_config.json 配置文件是否存在
-   * 优先检查 ProjectManager 中的项目路径，如果不存在则检查当前工作区
+   * Check whether the devtool_config.json configuration file exists
+   * First check the project path in ProjectManager, if it does not exist, check the current workspace
    */
   async checkDevtoolConfig(): Promise<boolean> {
     const pm = ProjectManager.getInstance();
 
-    // 优先使用 ProjectManager 的项目路径
+    // Prioritize the project path of ProjectManager
     const projectInfo = pm.getProjectInfo();
     let checkPath: string | undefined;
 
     if (projectInfo?.path) {
       checkPath = projectInfo.path;
-      console.log('checkDevtoolConfig: 使用 ProjectManager 项目路径:', checkPath);
+      console.log('checkDevtoolConfig: using ProjectManager project path:', checkPath);
     }
     else {
-      // 回退到工作区路径
+      // Fallback to workspace path
       const workspaceFolders = vscode.workspace.workspaceFolders;
 
       if (workspaceFolders && workspaceFolders.length > 0) {
         checkPath = workspaceFolders[0].uri.fsPath;
-        console.log('checkDevtoolConfig: 使用工作区路径:', checkPath);
+        console.log('checkDevtoolConfig: using workspace path:', checkPath);
       }
     }
 
     if (!checkPath) {
-      console.log('checkDevtoolConfig: 没有可用的路径，返回 false');
+      console.log('checkDevtoolConfig: no available path, return false');
 
       return false;
     }
@@ -97,36 +119,30 @@ export class ConfigService {
     try {
       const exists = fs.existsSync(devtoolConfigPath);
 
-      console.log('checkDevtoolConfig: 配置文件路径:', devtoolConfigPath, '存在:', exists);
+      console.log('checkDevtoolConfig: config file path:', devtoolConfigPath, 'exists:', exists);
 
       return exists;
     }
     catch (error) {
-      console.error('检查 devtool_config.json 文件时出错:', error);
+      console.error('Error while checking devtool_config.json file:', error);
 
       return false;
     }
   }
 
   /**
-   * 获取异常检测配置列表
+   * Get anomaly detection configuration list
    */
   async getSanitizerConfigsList(): Promise<BuildConfig[]> {
-    const projectId = ProjectManager.getInstance().projectId;
-    const config = getConfig(Number(projectId), CONFIG_TYPES.SANITIZER);
-
-    return config.map((c) => ({
-      ...c,
-      user_options: c.user_options ? (c.user_options as Record<string, unknown>) : undefined,
-    })) as BuildConfig[];
+    return mergeSanitizerConfigsWithOperatorProjectWorkspace(this.loadSanitizerConfigsFromDb());
   }
 
   /**
-   * 保存异常检测表单配置
+   * Save anomaly detection form configuration
    */
   async saveSanitizerForm(params: SaveSanitizerFormParams): Promise<void> {
     try {
-      const formData = (await this.getSanitizerConfigsList())[0];
+      const formData = this.loadSanitizerConfigsFromDb()[0];
 
       await postConfig(CONFIG_TYPES.SANITIZER, [
         {
@@ -138,12 +154,172 @@ export class ConfigService {
         },
       ]);
 
+      await this.pushSanitizerUserOptionsToWorkspaceSettings();
+
       if (params.showMessage) {
-        vscode.window.showInformationMessage('保存异常检测配置成功');
+        vscode.window.showInformationMessage(t('config.saveSanitizerConfigSuccess'));
       }
     }
     catch {
-      vscode.window.showErrorMessage('保存异常检测配置失败');
+      vscode.window.showErrorMessage(t('config.saveSanitizerConfigFailed'));
+    }
+  }
+
+  /**
+   * After devtool save, mirror sanitizer `user_options` into workspace `op-devtools.*`
+   * (same mapping as extension sync) so the panel and Settings stay aligned immediately.
+   */
+  private async pushSanitizerUserOptionsToWorkspaceSettings(): Promise<void> {
+    try {
+      const row = this.loadSanitizerConfigsFromDb()[0];
+      if (!row?.user_options) {
+        return;
+      }
+      const opts = row.user_options as Record<string, unknown>;
+      const cfg = vscode.workspace.getConfiguration('op-devtools');
+      const tool = (opts.tool || {}) as Record<string, unknown>;
+      const mem = (opts.memcheckOption || {}) as Record<string, unknown>;
+
+      const write = async (key: string, value: unknown) => {
+        if (value === undefined) {
+          return;
+        }
+        await cfg.update(key, value, vscode.ConfigurationTarget.Workspace);
+      };
+
+      await write('compileAndDeploy.buildConfig.sanitizerCompileCommand', opts.script);
+      await write('sanitizer.reportLogLevel', opts.logLevel);
+      await write('sanitizer.maxSingleLogFileSize', opts.maxDebuglogSize);
+      await write('sanitizer.memory', tool.memcheck);
+      await write('sanitizer.race', tool.racecheck);
+      await write('sanitizer.uninitialized', tool.initcheck);
+      await write('sanitizer.memoryLeak', mem['leak-check']);
+      await write('sanitizer.allocUnused', mem['check-unused-memory']);
+      if (typeof opts.useBlock === 'boolean') {
+        await write('sanitizer.detectionScope', opts.useBlock ? 'singleBlock' : 'global');
+      }
+      if (opts.blockId !== undefined) {
+        await cfg.update(
+          'sanitizer.blockId',
+          opts.blockId,
+          vscode.ConfigurationTarget.Workspace,
+        );
+      }
+    }
+    catch (error) {
+      console.warn('[pushSanitizerUserOptionsToWorkspaceSettings] failed:', error);
+    }
+  }
+
+  private static toKeyValueMapFromAdvanceParam(raw: unknown): Record<string, string> {
+    if (!Array.isArray(raw)) {
+      return {};
+    }
+    return raw.reduce((acc, item) => {
+      if (!item || typeof item !== 'object') {
+        return acc;
+      }
+      const row = item as Record<string, unknown>;
+      const name = row.name;
+      if (typeof name !== 'string' || name.trim().length === 0) {
+        return acc;
+      }
+      const value = row.value;
+      acc[name] = value === undefined || value === null ? '' : String(value);
+      return acc;
+    }, {} as Record<string, string>);
+  }
+
+  /** After on_board devtool save, mirror `user_options` into workspace `op-devtools.performanceTuning.onBoard.*` (and script). */
+  private async pushOnBoardUserOptionsToWorkspaceSettings(): Promise<void> {
+    try {
+      const projectId = ProjectManager.getInstance().projectId;
+      const rows = getConfig(Number(projectId), CONFIG_TYPES.ON_BOARD);
+      const row = rows[0];
+      if (!row?.user_options) {
+        return;
+      }
+      const onBoardOpts = row.user_options as Record<string, unknown>;
+      const cfg = vscode.workspace.getConfiguration('op-devtools');
+
+      const write = async (key: string, value: unknown) => {
+        if (value === undefined) {
+          return;
+        }
+        await cfg.update(key, value, vscode.ConfigurationTarget.Workspace);
+      };
+
+      await write('compileAndDeploy.buildConfig.onBoardCompileCommand', onBoardOpts.script);
+      await write('performanceTuning.onBoard.interCoreLoad', onBoardOpts.Occupancy);
+      await write('performanceTuning.onBoard.roofline', onBoardOpts.Roofline);
+      await write('performanceTuning.onBoard.operatorCodeHotspot', onBoardOpts.Source);
+      await write('performanceTuning.onBoard.cacheHeatmap', onBoardOpts.MemoryDetail);
+      await write(
+        'performanceTuning.onBoard.cubeAndVectorInstructionTimeAndRatio',
+        onBoardOpts.ArithmeticUtilization,
+      );
+      await write('performanceTuning.onBoard.l2CacheHitRate', onBoardOpts.L2Cache);
+      await write(
+        'performanceTuning.onBoard.memoryReadWriteBandwidth',
+        onBoardOpts.Memory,
+      );
+      await write('performanceTuning.onBoard.l0ReadWriteBandwidth', onBoardOpts.MemoryL0);
+      await write('performanceTuning.onBoard.ubReadWriteBandwidth', onBoardOpts.MemoryUB);
+      await write(
+        'performanceTuning.onBoard.computeAndMoveUnitTimeRatio',
+        onBoardOpts.PipeUtilization,
+      );
+      await write(
+        'performanceTuning.onBoard.resourceConflictRatio',
+        onBoardOpts.ResourceConflictRatio,
+      );
+      await write(
+        'performanceTuning.onBoard.enableKernelCodeSegmentProfiling',
+        onBoardOpts.KernelScale,
+      );
+      // Do not write `performanceTuning.onBoard.operatorMetrics` here. Updating that
+      // aggregate key triggers extension `onBoardOperatorMetricsSync`, which sets every
+      // metric child workspace key to the same boolean and wipes per-metric choices.
+      await write(
+        'performanceTuning.onBoard.parameters',
+        ConfigService.toKeyValueMapFromAdvanceParam(onBoardOpts.advance_param),
+      );
+    }
+    catch (error) {
+      console.warn('[pushOnBoardUserOptionsToWorkspaceSettings] failed:', error);
+    }
+  }
+
+  /** After simulate devtool save, mirror `user_options` into workspace simulation keys (and script). */
+  private async pushSimulateUserOptionsToWorkspaceSettings(): Promise<void> {
+    try {
+      const projectId = ProjectManager.getInstance().projectId;
+      const rows = getConfig(Number(projectId), CONFIG_TYPES.SIMULATE);
+      const row = rows[0];
+      if (!row?.user_options) {
+        return;
+      }
+      const simulateOpts = row.user_options as Record<string, unknown>;
+      const cfg = vscode.workspace.getConfiguration('op-devtools');
+
+      const write = async (key: string, value: unknown) => {
+        if (value === undefined) {
+          return;
+        }
+        await cfg.update(key, value, vscode.ConfigurationTarget.Workspace);
+      };
+
+      await write('compileAndDeploy.buildConfig.simulationCompileCommand', simulateOpts.script);
+      await write('performanceTuning.simulation.simulatorType', simulateOpts.simulatorType);
+      await write('performanceTuning.simulation.memoryThroughputWaveform', simulateOpts.PMSampling);
+      await write('performanceTuning.simulation.resourceConflictRatio', simulateOpts.ResourceConflictRatio);
+      await write(
+        'performanceTuning.simulation.parameters',
+        ConfigService.toKeyValueMapFromAdvanceParam(simulateOpts.advance_param),
+      );
+    }
+    catch (error) {
+      console.warn('[pushSimulateUserOptionsToWorkspaceSettings] failed:', error);
     }
   }
 }

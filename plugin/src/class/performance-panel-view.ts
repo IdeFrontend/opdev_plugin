@@ -54,36 +54,39 @@ implements vscode.WebviewViewProvider {
         distPath,
         webviewView.webview,
         `sidebars/${VIEW_PERFORMANCE_RUN_DATA}`,
+        { lang: vscode.env.language.toLowerCase() },
       );
     }
     catch (error) {
-      console.error('[PerformancePanelViewProvider] HTML 加载失败:', error);
+      console.error('[PerformancePanelViewProvider] HTML load failed:', error);
       throw error;
     }
 
-    // 监听 VSCode 主题变化并通知 Webview
+    // Listen to VSCode theme changes and notify Webview
     this._themeChangeDisposable = vscode.window.onDidChangeActiveColorTheme((theme) => {
       webviewView.webview.postMessage({
         command: 'updateTheme',
-        themeName: theme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
+        themeName: theme.kind === vscode.ColorThemeKind.Dark || theme.kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light',
       });
     });
 
-    // 初始化时发送当前主题
+    // Send the current topic on initialization
     webviewView.webview.postMessage({
       command: 'updateTheme',
-      themeName: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
+      themeName: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark || vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light',
     });
   }
 
   private handleWebviewMessage(message: any): void {
-    // 处理获取主题命令
+    // Handle gettopic command
     if (message.command === 'getTheme') {
-      const currentTheme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
+      const currentTheme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark || vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light';
+
       this._view?.webview.postMessage({
         command: 'updateTheme',
         themeName: currentTheme,
       });
+
       return;
     }
 
@@ -99,7 +102,7 @@ implements vscode.WebviewViewProvider {
   }
 
   /**
-   * 清理资源
+   * Clean up resources
    */
   public dispose() {
     if (this._themeChangeDisposable) {

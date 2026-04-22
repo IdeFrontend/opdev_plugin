@@ -16,7 +16,7 @@ export function getFiles(dirPath: string): FileItem[] {
     let basePath = path.resolve(dirPath);
     let searchKey = '';
 
-    // 转换成搜索模式
+    // Switch to search mode
     if (!fs.existsSync(basePath)) {
       searchKey = basePath.split(path.sep)
         .at(-1)!;
@@ -29,8 +29,9 @@ export function getFiles(dirPath: string): FileItem[] {
       return [];
     }
 
-    // 检查路径是否是目录，如果不是目录则返回空数组
+    // Check if the path is a directory, if not return an empty array
     const stats = fs.statSync(basePath);
+
     if (!stats.isDirectory()) {
       return [];
     }

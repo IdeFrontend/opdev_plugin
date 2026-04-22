@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { t } from 'i18next';
 import * as vscode from 'vscode';
 
 import { ProjectManager } from '@plugin/core/project/project-manager';
@@ -34,7 +35,7 @@ const webviewMessageList: messageItem[] = [
     command: 'loaded',
     callback: (message: any) => {
       if (message.status === 'error') {
-        vscode.window.showWarningMessage(`Opsuite加载异常: ${message.message}`);
+        vscode.window.showWarningMessage(t('webview.opsuiteLoadError', { message: message.message }));
       }
     },
   },
@@ -72,26 +73,26 @@ const webviewMessageList: messageItem[] = [
   },
 ];
 
-// 创建算子工程类型
-// 1 执行 vscodeBuildCreateOps 消息体内逻辑  data: 'cann'
-// 2 执行 vscodeStartLinkCreateOps 消息体内逻辑
+// Create operator project type
+// 1 Execute vscodeBuildCreateOps message body logic data: 'cann'
+// 2 Execute vscodeStartLinkCreateOps message body logic
 export async function handleOperatorProjectDirectoryFile(
   message: { createOperatorProjectDirectoryFileType: number } | undefined,
   _that: unknown,
   progress: vscode.Progress<{ message?: string;
     increment?: number }>,
 ) {
-  console.log('handleOperatorProjectDirectoryFile: 被调用');
+  console.log('handleOperatorProjectDirectoryFile: called');
   console.log('handleOperatorProjectDirectoryFile: message:', message);
-  console.log('handleOperatorProjectDirectoryFile: message 类型:', typeof message);
+  console.log('handleOperatorProjectDirectoryFile: message type:', typeof message);
 
   if (!message) {
-    console.warn('handleOperatorProjectDirectoryFile: message 为空，退出');
+    console.warn('handleOperatorProjectDirectoryFile: message is empty, exiting');
 
     return;
   }
 
-  // 获取 extension context 以读取 templateName
+  // Get extension context to read templateName
   const context = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
     .extensionContext;
   const templateName = context.globalState.get<string>('templateName');
@@ -107,38 +108,38 @@ export async function handleOperatorProjectDirectoryFile(
       3,
     ].includes(message.createOperatorProjectDirectoryFileType)
   ) {
-    console.log('handleOperatorProjectDirectoryFile: 类型验证通过，开始处理');
+    console.log('handleOperatorProjectDirectoryFile: type validation passed, start processing');
 
     try {
-      // 显示连接进度
+      // Show connection progress
       progress.report({
         increment: 25,
-        message: '开始创建算子文件...',
+        message: t('welcome.createFilesProgressTitle'),
       });
 
       if (message.createOperatorProjectDirectoryFileType === 1) {
-        // 创建算子（通过原型）
-        console.log('开始创建算子原型（类型1）...');
-        // 注意：项目已经在 createdProject 中初始化，这里不需要再次初始化
-        // 只需要确保 projectId 已设置
+        // Create operators (via prototypes)
+        console.log('Start creating operator prototype (type 1)...');
+        // Note: The project has been initialized in createdProject and does not need to be initialized again here.
+        // Just make sure projectId is set
         const pm = ProjectManager.getInstance();
 
         if (!pm.projectId) {
-          console.log('projectId 未设置，尝试初始化项目...');
+          console.log('projectId not set, trying to initialize project...');
           await pm.ensureProjectId();
         }
 
-        console.log('当前 projectId:', pm.projectId);
-        console.log('开始创建算子原型...');
+        console.log('Current projectId:', pm.projectId);
+        console.log('Start creating operator prototype...');
 
         await welcomeMethods.createOpsByPrototype({
           opsPrototypeFile: '',
           opType: 'cann',
           templateName,
         });
-        console.log('算子原型创建完成');
+        console.log('Operator prototype creation completed');
 
-        // 清理 templateName
+        // Clean templateName
         if (templateName) {
           context.globalState.update('templateName', undefined);
         }
@@ -147,26 +148,53 @@ export async function handleOperatorProjectDirectoryFile(
       }
 
       if (message.createOperatorProjectDirectoryFileType === 3) {
-        // pyasc 算子工程，使用模板创建
-        console.log('开始创建 pyasc 算子（类型3）...');
+        // pyasc operator project, created using templates
+        console.log('Start creating pyasc operator (type 3)...');
         const pm = ProjectManager.getInstance();
 
         if (!pm.projectId) {
-          console.log('projectId 未设置，尝试初始化项目...');
+          console.log('projectId not set, trying to initialize project...');
           await pm.ensureProjectId();
         }
 
-        console.log('当前 projectId:', pm.projectId);
-        console.log('开始创建 pyasc 算子原型...');
+        console.log('Current projectId:', pm.projectId);
+        console.log('Start creating pyasc operator prototype...');
 
         await welcomeMethods.createOpsByPrototype({
           opsPrototypeFile: '',
           opType: 'pyasc',
           templateName,
         });
-        console.log('pyasc 算子原型创建完成');
+        console.log('pyasc operator prototype creation completed');
 
-        // 清理 templateName
+        // Clean templateName
+        if (templateName) {
+          context.globalState.update('templateName', undefined);
+        }
+
+        await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+      }
+
+      if (message.createOperatorProjectDirectoryFileType === 4) {
+        // Triton operator project: scaffold from template
+        console.log('Creating Triton operator project (type 4)...');
+        const pm = ProjectManager.getInstance();
+
+        if (!pm.projectId) {
+          console.log('projectId not set; initializing project...');
+          await pm.ensureProjectId();
+        }
+
+        console.log('Current projectId:', pm.projectId);
+        console.log('Creating Triton operator prototype...');
+
+        await welcomeMethods.createOpsByPrototype({
+          opsPrototypeFile: '',
+          opType: 'triton',
+          templateName: templateName || 'triton_vector_add',
+        });
+        console.log('Triton operator prototype creation completed');
+
         if (templateName) {
           context.globalState.update('templateName', undefined);
         }
@@ -175,31 +203,34 @@ export async function handleOperatorProjectDirectoryFile(
       }
 
       if (message.createOperatorProjectDirectoryFileType === 2) {
-        // 开始链接创建算子
-        console.log('开始创建算子（类型2）...');
-        // 注意：项目已经在 createdProject 中初始化，这里不需要再次初始化
-        // 只需要确保 projectId 已设置
+        // Start link creation operator
+        console.log('Start creating operator (type 2)...');
+        // Note: The project has been initialized in createdProject and does not need to be initialized again here.
+        // Just make sure projectId is set
         const pm = ProjectManager.getInstance();
 
         if (!pm.projectId) {
-          console.log('projectId 未设置，尝试初始化项目...');
+          console.log('projectId not set, trying to initialize project...');
           await pm.ensureProjectId();
         }
 
-        console.log('当前 projectId:', pm.projectId);
-        console.log('开始创建算子原型文件...');
+        console.log('Current projectId:', pm.projectId);
+        console.log('Start creating operator prototype file...');
 
         const opsPrototypeFilePath = await welcomeMethods.createOps({});
 
-        console.log('算子原型文件路径:', opsPrototypeFilePath);
+        console.log('Operator prototype file path:', opsPrototypeFilePath);
 
         if (opsPrototypeFilePath) {
-          console.log('开始通过原型创建算子工程...');
-          await welcomeMethods.createOpsByPrototype({ opsPrototypeFile: opsPrototypeFilePath, opType: 'ascend' });
-          console.log('通过原型创建算子工程完成');
+          console.log('Start creating operator project from prototype...');
+          await welcomeMethods.createOpsByPrototype({
+            opsPrototypeFile: opsPrototypeFilePath,
+            opType: 'ascend',
+          });
+          console.log('Operator project created from prototype');
         }
         else {
-          throw new Error('创建算子原型文件失败：返回路径为空');
+          throw new Error(t('webview.createPrototypeFailedEmptyPath'));
         }
 
         await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
@@ -207,20 +238,20 @@ export async function handleOperatorProjectDirectoryFile(
 
       progress.report({
         increment: 100,
-        message: '算子文件创建完成',
+        message: t('webview.opFileCreated'),
       });
-      vscode.window.showInformationMessage('算子文件创建完成');
+      vscode.window.showInformationMessage(t('webview.opFileCreated'));
     }
     catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
 
-      console.error('创建算子文件失败:', error);
+      console.error('Failed to create operator file:', error);
       progress.report({
         increment: 100,
-        message: '算子文件创建失败',
+        message: t('webview.createOpFileFailed', { error: errorMessage }),
       });
-      vscode.window.showErrorMessage(`创建算子文件失败: ${errorMessage}`);
+      vscode.window.showErrorMessage(t('webview.createOpFileFailed', { error: errorMessage }));
       throw error;
     }
   }

@@ -1,6 +1,7 @@
 import {
   Result, ResultUtils,
 } from '@plugin-v2/domain/shared/types/result.type';
+import { notifyBuildSucceededForSidebar } from '@plugin/service/build-service';
 import { BuildFailedError } from '../../errors/operator.error';
 import { CommandGeneratorService } from '../../services/command-generator.service';
 import {
@@ -8,8 +9,8 @@ import {
 } from '../execution-step.interface';
 
 /**
- * 通用构建步骤
- * 可配置编译参数
+ * Generic build step
+ * Supports configurable compile options
  */
 export class BuildStep implements IExecutionStep {
   readonly name: string;
@@ -20,6 +21,15 @@ export class BuildStep implements IExecutionStep {
     stepName: string = 'Build',
   ) {
     this.name = stepName;
+  }
+
+  /**
+   * Skip if the operator plugin declares no build is required before analysis.
+   * False for pyasc — it runs Python files directly.
+   */
+  canSkip(context: ExecutionContext): boolean {
+    return context.opPlugin !== undefined
+      && !context.opPlugin.buildBehavior.requiresBuildBeforeAnalysis;
   }
 
   async execute(context: ExecutionContext): Promise<Result<unknown, Error>> {
@@ -39,6 +49,9 @@ export class BuildStep implements IExecutionStep {
       }));
     }
 
+    const operatorNames = context.parameters?.operatorNames as string | undefined;
+    await notifyBuildSucceededForSidebar(context.buildConfigId, operatorNames);
+
     return ResultUtils.ok({
       command,
       output: result.output,
@@ -47,7 +60,76 @@ export class BuildStep implements IExecutionStep {
 }
 
 /**
- * 带仿真器参数的构建步骤
+ * Active file check step
+ * For operator types like pyasc that require an active file in the editor.
+ * This step is a no-op in V2 strategy context (the check happens in the controller);
+ * the canSkip logic is provided so strategies accurately reflect the required steps.
+ */
+export class ActiveFileCheckStep implements IExecutionStep {
+  readonly name = 'ActiveFileCheck';
+
+  canSkip(context: ExecutionContext): boolean {
+    // Skip for types that don't require an active file (ascend, cann, etc.)
+    return !context.opPlugin?.buildBehavior.requiresActiveFileCheck;
+  }
+
+  async execute(_context: ExecutionContext): Promise<Result<unknown, Error>> {
+    // Active file validation is handled at the controller/service layer before
+    // the strategy executes. This step is a marker for step composition clarity.
+    return ResultUtils.ok({ skipped: true });
+  }
+}
+
+/**
+ * Example build step
+ * Required before analysis for STANDARD_CUSTOM projects.
+ * Whether this step runs is determined by the project type, not the operator type.
+ */
+export class ExampleBuildStep implements IExecutionStep {
+  readonly name = 'ExampleBuild';
+
+  constructor(private commandGenerator: CommandGeneratorService, private compileOptions?: string) {}
+
+  /**
+   * Skip for non-STANDARD_CUSTOM projects.
+   * requiresExampleBuildForAnalysis is a project-level concern — not on IOperatorPlugin.buildBehavior.
+   */
+  canSkip(context: ExecutionContext): boolean {
+    if (context.projectType === undefined) {
+      return true;
+    }
+
+    const { OperatorProjectType } = require('@plugin/domain/models/operator-project-type');
+
+    return context.projectType !== OperatorProjectType.STANDARD_CUSTOM;
+  }
+
+  async execute(context: ExecutionContext): Promise<Result<unknown, Error>> {
+    const command = this.commandGenerator.generateBuildExampleCommand(
+      context.exampleConfigId,
+      this.compileOptions,
+    );
+
+    const result = await context.executor.execute(command, [], [], {}, true);
+
+    if (result.code !== 0) {
+      return ResultUtils.err(new BuildFailedError('ExampleBuild失败', {
+        command,
+        exitCode: result.code,
+        output: result.output,
+        phase: 'example-build',
+      }));
+    }
+
+    return ResultUtils.ok({
+      command,
+      output: result.output,
+    });
+  }
+}
+
+/**
+ * Build step with simulator parameters
  */
 export class BuildWithSimulatorStep implements IExecutionStep {
   readonly name = 'BuildWithSimulator';
@@ -73,6 +155,9 @@ export class BuildWithSimulatorStep implements IExecutionStep {
       }));
     }
 
+    const operatorNames = context.parameters?.operatorNames as string | undefined;
+    await notifyBuildSucceededForSidebar(context.buildConfigId, operatorNames);
+
     return ResultUtils.ok({
       command,
       output: result.output,
@@ -81,7 +166,7 @@ export class BuildWithSimulatorStep implements IExecutionStep {
 }
 
 /**
- * 上板前构建步骤 (带 onboard 参数)
+ * Pre-on-board build step (with onboard params)
  */
 export class BuildForOnBoardStep implements IExecutionStep {
   readonly name = 'BuildForOnBoard';
@@ -102,6 +187,9 @@ export class BuildForOnBoardStep implements IExecutionStep {
       }));
     }
 
+    const operatorNames = context.parameters?.operatorNames as string | undefined;
+    await notifyBuildSucceededForSidebar(context.buildConfigId, operatorNames);
+
     return ResultUtils.ok({
       command,
       output: result.output,
@@ -110,7 +198,7 @@ export class BuildForOnBoardStep implements IExecutionStep {
 }
 
 /**
- * 异常检测前构建步骤 (带 --mssanitizer 参数)
+ * Pre-sanitizer build step (with --mssanitizer)
  */
 export class BuildForSanitizerStep implements IExecutionStep {
   readonly name = 'BuildForSanitizer';
@@ -130,6 +218,9 @@ export class BuildForSanitizerStep implements IExecutionStep {
         phase: 'pre-sanitizer-build',
       }));
     }
+
+    const operatorNames = context.parameters?.operatorNames as string | undefined;
+    await notifyBuildSucceededForSidebar(context.buildConfigId, operatorNames);
 
     return ResultUtils.ok({
       command,

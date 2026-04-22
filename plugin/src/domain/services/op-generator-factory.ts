@@ -1,15 +1,16 @@
 import fs from 'fs-extra';
 import path from 'path';
 import AdmZip from 'adm-zip';
+import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 
-type Project = {
+export type OpGenProject = {
   id?: number;
   project_path: string;
   project_name?: string;
   ascend_env_script?: string | null;
 };
 
-type Params = {
+export type OpGenParams = {
   project_id?: number;
   op_type?: string;
   ops_prototype_file?: string | null;
@@ -17,10 +18,15 @@ type Params = {
   template_name?: string | null;
   soc_version?: string | null;
   op_path?: string | null;
-  skipExisting?: boolean; // 是否跳过已有文件
+  skipExisting?: boolean;
 };
 
-class BaseOpGenerator {
+/** @deprecated Use OpGenParams */
+type Params = OpGenParams;
+/** @deprecated Use OpGenProject */
+type Project = OpGenProject;
+
+export class BaseOpGenerator {
   params: Params;
   project: Project;
   op_path: string;
@@ -70,7 +76,7 @@ class BaseOpGenerator {
         continue;
       }
 
-      // 如果 skipExisting 为 true，只重命名包含模板名称的文件（这些是从模板解压的新文件）
+      // If skipExisting is true, only files containing the template name are renamed (these are new files extracted from the template)
       if (name.includes(templateName)) {
         const newName = name.replace(
           new RegExp(templateName, 'g'),
@@ -78,7 +84,7 @@ class BaseOpGenerator {
         );
         const newPath = path.join(this.op_path, newName);
 
-        // 如果 skipExisting 为 true，且目标文件已存在，则跳过重命名
+        // If skipExisting is true and the target file already exists, skip renaming
         if (skipExisting && fs.pathExistsSync(newPath)) {
           continue;
         }
@@ -100,7 +106,7 @@ class BaseOpGenerator {
         continue;
       }
 
-      // 如果 skipExisting 为 true，只重命名包含模板名称的文件（这些是从模板解压的新文件）
+      // If skipExisting is true, only files containing the template name are renamed (these are new files extracted from the template)
       if (name.includes(templateName)) {
         const newName = name.replace(
           new RegExp(templateName, 'g'),
@@ -108,7 +114,7 @@ class BaseOpGenerator {
         );
         const newPath = path.join(path.dirname(full), newName);
 
-        // 如果 skipExisting 为 true，且目标文件已存在，则跳过重命名
+        // If skipExisting is true and the target file already exists, skip renaming
         if (skipExisting && fs.pathExistsSync(newPath)) {
           continue;
         }
@@ -154,28 +160,28 @@ class BaseOpGenerator {
           continue;
         }
 
-        // 如果 skipExisting 为 true，只替换模板文件（文件名或内容包含模板名称的文件）
+        // If skipExisting is true, only template files (those whose filename or content contains the template name) are replaced
         if (skipExisting) {
-          // 检查文件是否包含模板名称
+          // Check if the file contains the template name
           const fileName = path.basename(full);
           let fileContainsTemplate = fileName.includes(templateName);
 
-          // 如果文件名不包含模板名称，检查文件内容
+          // If the file name does not contain the template name, check the file contents
           if (!fileContainsTemplate) {
             try {
               const content = fs.readFileSync(full, 'utf8');
 
-              // 检查内容是否包含模板相关的字符串
+              // Check whether the content contains template-related strings
               fileContainsTemplate = Object.keys(replacements)
                 .some((key) => content.includes(key));
             }
             catch {
-              // 无法读取文件，跳过
+              // Unable to read file, skipping
               continue;
             }
           }
 
-          // 如果文件不包含模板相关内容，说明是已有文件，跳过替换
+          // If the file does not contain template-related content, it means that the file already exists and the replacement is skipped.
           if (!fileContainsTemplate) {
             continue;
           }
@@ -208,7 +214,7 @@ class BaseOpGenerator {
   }
 }
 
-class AscendOpGenerator extends BaseOpGenerator {
+export class AscendOpGenerator extends BaseOpGenerator {
   parseMeta(): string {
     const opsPrototype = this.params.ops_prototype_file;
 
@@ -242,21 +248,21 @@ class AscendOpGenerator extends BaseOpGenerator {
   executeGeneration(): boolean {
     const templateFilePath = path.resolve(
       this.extensionPath,
-      `out/templates/code_template/ascend_template/add_custom.zip`,
+      'out/templates/code_template/ascend_template/add_custom.zip',
     );
 
     if (!fs.pathExistsSync(templateFilePath)) {
       throw new Error(`Template file does not exist: ${templateFilePath}`);
     }
 
-    // 使用 adm-zip 解压缩（跨平台兼容）
-    // 如果 skipExisting 为 true，则不覆盖已有文件
+    // Unzip using adm-zip (cross-platform compatible)
+    // If skipExisting is true, existing files will not be overwritten.
     try {
       const zip = new AdmZip(templateFilePath);
       const skipExisting = this.params.skipExisting || false;
 
       if (skipExisting) {
-        // 不覆盖已有文件：逐个提取文件，如果文件已存在则跳过
+        // Do not overwrite existing files: extract files one by one, skip if the file already exists
         zip.getEntries()
           .forEach((entry) => {
             if (entry.isDirectory) {
@@ -266,10 +272,10 @@ class AscendOpGenerator extends BaseOpGenerator {
             const entryPath = path.join(this.op_path, entry.entryName);
             const entryDir = path.dirname(entryPath);
 
-            // 确保目录存在
+            // Make sure the directory exists
             fs.ensureDirSync(entryDir);
 
-            // 如果文件不存在，才提取
+            // Extract only if the file does not exist
             if (!fs.pathExistsSync(entryPath)) {
               const content = zip.readFile(entry);
 
@@ -280,7 +286,7 @@ class AscendOpGenerator extends BaseOpGenerator {
           });
       }
       else {
-        // 原有逻辑：覆盖已有文件
+        // Original logic: overwrite existing files
         zip.extractAllTo(this.op_path, true);
       }
     }
@@ -297,7 +303,7 @@ class AscendOpGenerator extends BaseOpGenerator {
   }
 }
 
-class CannOpGenerator extends BaseOpGenerator {
+export class CannOpGenerator extends BaseOpGenerator {
   parseMeta(): string {
     this.op_name =
       this.params.op_name
@@ -319,14 +325,14 @@ class CannOpGenerator extends BaseOpGenerator {
       throw new Error(`Template file does not exist: ${templateFilePath}`);
     }
 
-    // 使用 adm-zip 解压缩（跨平台兼容）
-    // 如果 skipExisting 为 true，则不覆盖已有文件
+    // Unzip using adm-zip (cross-platform compatible)
+    // If skipExisting is true, existing files will not be overwritten.
     try {
       const zip = new AdmZip(templateFilePath);
       const skipExisting = this.params.skipExisting || false;
 
       if (skipExisting) {
-        // 不覆盖已有文件：逐个提取文件，如果文件已存在则跳过
+        // Do not overwrite existing files: extract files one by one, skip if the file already exists
         zip.getEntries()
           .forEach((entry) => {
             if (entry.isDirectory) {
@@ -336,10 +342,10 @@ class CannOpGenerator extends BaseOpGenerator {
             const entryPath = path.join(this.op_path, entry.entryName);
             const entryDir = path.dirname(entryPath);
 
-            // 确保目录存在
+            // Make sure the directory exists
             fs.ensureDirSync(entryDir);
 
-            // 如果文件不存在，才提取
+            // Extract only if the file does not exist
             if (!fs.pathExistsSync(entryPath)) {
               const content = zip.readFile(entry);
 
@@ -350,7 +356,7 @@ class CannOpGenerator extends BaseOpGenerator {
           });
       }
       else {
-        // 原有逻辑：覆盖已有文件
+        // Original logic: overwrite existing files
         zip.extractAllTo(this.op_path, true);
       }
     }
@@ -367,7 +373,7 @@ class CannOpGenerator extends BaseOpGenerator {
   }
 }
 
-class PyAscOpGenerator extends BaseOpGenerator {
+export class PyAscOpGenerator extends BaseOpGenerator {
   parseMeta(): string {
     this.op_name =
       this.params.op_name
@@ -381,21 +387,21 @@ class PyAscOpGenerator extends BaseOpGenerator {
   executeGeneration(): boolean {
     const templateFilePath = path.resolve(
       this.extensionPath,
-      `out/templates/code_template/cann_template/pyasc_temple.zip`,
+      'out/templates/code_template/cann_template/pyasc_temple.zip',
     );
 
     if (!fs.pathExistsSync(templateFilePath)) {
       throw new Error(`Template file does not exist: ${templateFilePath}`);
     }
 
-    // 使用 adm-zip 解压缩（跨平台兼容）
-    // 如果 skipExisting 为 true，则不覆盖已有文件
+    // Unzip using adm-zip (cross-platform compatible)
+    // If skipExisting is true, existing files will not be overwritten.
     try {
       const zip = new AdmZip(templateFilePath);
       const skipExisting = this.params.skipExisting || false;
 
       if (skipExisting) {
-        // 不覆盖已有文件：逐个提取文件，如果文件已存在则跳过
+        // Do not overwrite existing files: extract files one by one, skip if the file already exists
         zip.getEntries()
           .forEach((entry) => {
             if (entry.isDirectory) {
@@ -405,10 +411,10 @@ class PyAscOpGenerator extends BaseOpGenerator {
             const entryPath = path.join(this.op_path, entry.entryName);
             const entryDir = path.dirname(entryPath);
 
-            // 确保目录存在
+            // Make sure the directory exists
             fs.ensureDirSync(entryDir);
 
-            // 如果文件不存在，才提取
+            // Extract only if the file does not exist
             if (!fs.pathExistsSync(entryPath)) {
               const content = zip.readFile(entry);
 
@@ -419,7 +425,7 @@ class PyAscOpGenerator extends BaseOpGenerator {
           });
       }
       else {
-        // 原有逻辑：覆盖已有文件
+        // Original logic: overwrite existing files
         zip.extractAllTo(this.op_path, true);
       }
     }
@@ -442,17 +448,7 @@ export const OpGeneratorFactory = {
     project: Project,
     extensionPath: string,
   ): BaseOpGenerator {
-    const opType = (params.op_type || 'ascend').toLowerCase();
-
-    if (opType === 'cann') {
-      return new CannOpGenerator(params, project, extensionPath);
-    }
-
-    if (opType === 'pyasc') {
-      return new PyAscOpGenerator(params, project, extensionPath);
-    }
-
-    return new AscendOpGenerator(params, project, extensionPath);
+    return OperatorPluginRegistry.getProjectGenerator(params, project, extensionPath);
   },
 };
 

@@ -1,21 +1,27 @@
 <script setup lang="ts">
 import {
-    ref, onBeforeMount,
+  ref, onBeforeMount,
 } from 'vue';
+import { t } from 'i18next';
 import { message } from 'ant-design-vue';
 import { useTheme } from '@web/composables/use-theme';
 import {
-    getSanitizerConfigs,
-    saveSanitizerForm as saveSanitizerFormAPI,
-    runSanitizer,
-    checkTaskStatus,
-    executeVscodeCommand,
-    getSelectedOperators
+  getSanitizerConfigs,
+  saveSanitizerForm as saveSanitizerFormAPI,
+  runSanitizer,
+  executeVscodeCommand,
+  getSelectedOperators,
+  getSanitizerShowQuickOptions,
+  setSanitizerShowQuickOptions,
 } from '@web/apis';
 
 // 使用主题管理组合式函数
-const { themeConfig, actualTheme } = useTheme();
-const isExecuting = ref(false)
+const {
+  themeConfig, actualTheme,
+} = useTheme();
+const isExecuting = ref(false);
+/** When true, workspace `sanitizer.showQuickOptions` is false (tree runs without opening this panel). */
+const doNotShowAgain = ref(false);
 const form = ref({
   tool: {
     memcheck: true,
@@ -46,32 +52,41 @@ async function saveSanitizerForm() {
 
 onBeforeMount(async () => {
   await loadSanitizerForm();
+  try {
+    const showQuick = await getSanitizerShowQuickOptions();
+    doNotShowAgain.value = !showQuick;
+  }
+  catch {
+    doNotShowAgain.value = false;
+  }
 });
+
+async function syncDoNotShowToWorkspace() {
+  await setSanitizerShowQuickOptions(!doNotShowAgain.value);
+}
 
 const handleConfirm = async () => {
   if (!form.value || isExecuting.value) {
     return;
   }
-  const hasRunningTask = await checkTaskStatus();
-  console.log('hasRunningTask', hasRunningTask);
-  if (hasRunningTask) {
-    message.info('存在未执行完毕的任务，请稍后再试');
-    return;
-  }
+
   try {
     isExecuting.value = true;
-    
+
     // 获取已选择的算子名称（如果是标准自定义算子）
     let operatorNames: string | undefined;
+
     try {
       const selectedOperators = await getSelectedOperators();
+
       if (selectedOperators) {
         operatorNames = selectedOperators;
       }
-    } catch (error) {
+    }
+    catch (error) {
       console.warn('获取已选择的算子失败:', error);
     }
-    
+
     // 执行异常检测
     runSanitizer({ operatorNames });
     setTimeout(() => {
@@ -80,6 +95,7 @@ const handleConfirm = async () => {
   }
   catch (error) {
     console.error('异常检测启动失败: ', error);
+    message.error(t('web.options.sanitizerFailed'));
   }
   finally {
     isExecuting.value = false;
@@ -88,54 +104,83 @@ const handleConfirm = async () => {
 </script>
 
 <template>
-    <a-config-provider :theme="themeConfig">
-        <div class="sanitizer-config-page">
-            <div class="page-header">
-                异常检测-选择检测内容
-            </div>
+  <a-config-provider :theme="themeConfig">
+    <div class="sanitizer-config-page">
+      <div class="page-header">
+        {{ t('web.options.sanitizer.title') }}
+      </div>
 
-            <div class="sanitizer-content">
-                <a-checkbox v-model:checked="form.tool.memcheck" @change="saveSanitizerForm">
-                    内存检测
-                </a-checkbox>
-                <div v-if="form.tool.memcheck" class="mem-check">
-                    <div class="desc">
-                        基础检测:默认会开启非法读写、多核踩踏、非对齐访问和非法释放
-                    </div>
-                    <div class="desc">
-                        可选检测:
-                    </div>
-                    <div class="mem-option">
-                        <a-checkbox v-model:checked="form.memcheckOption['leak-check']" @change="saveSanitizerForm">
-                            内存泄漏
-                        </a-checkbox>
-                        <a-checkbox 
-                            v-model:checked="form.memcheckOption['check-unused-memory']"
-                            style="margin-left: 12px;"
-                            @change="saveSanitizerForm">
-                            分配内存未使用
-                        </a-checkbox>
-                    </div>
-                </div>
-                <div class="check-item-row">
-                    <a-checkbox v-model:checked="form.tool.racecheck" @change="saveSanitizerForm">
-                        竞争检测
-                    </a-checkbox>
-                </div>
-                <div class="check-item-row">
-                    <a-checkbox v-model:checked="form.tool.initcheck" @change="saveSanitizerForm">
-                        未初始化检测
-                    </a-checkbox>
-                </div>
-
-                <div class="footer-actions">
-                    <a-button type="primary" :loading="isExecuting" @click="handleConfirm">
-                        立即开始
-                    </a-button>
-                </div>
-            </div>
+      <div class="sanitizer-content">
+        <a-checkbox
+          v-model:checked="form.tool.memcheck"
+          @change="saveSanitizerForm"
+        >
+          {{ t('web.options.sanitizer.memory') }}
+        </a-checkbox>
+        <div
+          v-if="form.tool.memcheck"
+          class="mem-check"
+        >
+          <div class="desc">
+            {{ t('web.options.sanitizer.memoryBase') }}
+          </div>
+          <div class="desc">
+            {{ t('web.options.sanitizer.memoryExtra') }}
+          </div>
+          <div class="mem-option">
+            <a-checkbox
+              v-model:checked="form.memcheckOption['leak-check']"
+              @change="saveSanitizerForm"
+            >
+              {{ t('web.options.sanitizer.memoryLeak') }}
+            </a-checkbox>
+            <a-checkbox
+              v-model:checked="form.memcheckOption['check-unused-memory']"
+              style="margin-left: 12px;"
+              @change="saveSanitizerForm"
+            >
+              {{ t('web.options.sanitizer.allocUnused') }}
+            </a-checkbox>
+          </div>
         </div>
-    </a-config-provider>
+        <div class="check-item-row">
+          <a-checkbox
+            v-model:checked="form.tool.racecheck"
+            @change="saveSanitizerForm"
+          >
+            {{ t('web.options.sanitizer.race') }}
+          </a-checkbox>
+        </div>
+        <div class="check-item-row">
+          <a-checkbox
+            v-model:checked="form.tool.initcheck"
+            @change="saveSanitizerForm"
+          >
+            {{ t('web.options.sanitizer.uninit') }}
+          </a-checkbox>
+        </div>
+
+        <div class="do-not-show-row">
+          <a-checkbox
+            v-model:checked="doNotShowAgain"
+            @change="syncDoNotShowToWorkspace"
+          >
+            {{ t('web.options.sanitizer.doNotShowAgain') }}
+          </a-checkbox>
+        </div>
+
+        <div class="footer-actions">
+          <a-button
+            type="primary"
+            :loading="isExecuting"
+            @click="handleConfirm"
+          >
+            {{ t('web.options.sanitizer.startNow') }}
+          </a-button>
+        </div>
+      </div>
+    </div>
+  </a-config-provider>
 </template>
 
 <style lang="less" scoped>
@@ -165,6 +210,12 @@ const handleConfirm = async () => {
 
   .check-item-row {
     margin-top: 12px;
+  }
+
+  .do-not-show-row {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid v-bind('actualTheme === "dark" ? "rgba(255, 255, 255, 0.12)" : "rgba(0, 0, 0, 0.08)"');
   }
 
   .footer-actions {

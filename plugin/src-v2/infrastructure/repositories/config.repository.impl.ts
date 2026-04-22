@@ -10,22 +10,22 @@ import {
 } from '@plugin/domain';
 
 /**
- * 配置仓储实现
- * 基础设施层,对接现有的 domain 层数据访问
+ * Config repository implementation
+ * Infrastructure layer; bridges to existing domain data access
  */
 export class ConfigRepositoryImpl implements IConfigRepository {
   constructor(private projectId: number) {}
 
   async findById(configId: number): Promise<Result<BuildConfigEntity, Error>> {
     try {
-      // 获取所有配置
+      // Get all configs
       const allConfigsResult = await this.findAll();
 
       if (ResultUtils.isErr(allConfigsResult)) {
         return allConfigsResult;
       }
 
-      // 查找指定ID的配置
+      // Find config by ID
       const config = allConfigsResult.value.find((c) => c.configId === configId);
 
       if (!config) {
@@ -44,14 +44,14 @@ export class ConfigRepositoryImpl implements IConfigRepository {
       const typeValue =
         typeof configType === 'string' ? configType : configType.value;
 
-      // 调用现有的 getConfig 函数
+      // Call existing getConfig
       const configs = await getConfig(this.projectId, typeValue);
 
       if (!configs || configs.length === 0) {
         return ResultUtils.err(new ConfigNotFoundError(typeValue, { configType: typeValue }));
       }
 
-      // 转换为实体 - 使用类型断言,因为 getConfig 返回的类型更复杂
+      // Convert to entity (type assertion: getConfig return type is more complex)
       const entity = BuildConfigEntity.fromRaw(configs[0] as unknown as {
         config_id: number;
         config_name: string;
@@ -60,7 +60,7 @@ export class ConfigRepositoryImpl implements IConfigRepository {
       });
 
       if (!entity) {
-        return ResultUtils.err(new Error(`无法解析配置类型: ${configs[0].config_type}`));
+        return ResultUtils.err(new Error(`Cannot parse config type: ${configs[0].config_type}`));
       }
 
       return ResultUtils.ok(entity);
@@ -72,7 +72,7 @@ export class ConfigRepositoryImpl implements IConfigRepository {
 
   async findAll(): Promise<Result<BuildConfigEntity[], Error>> {
     try {
-      // 获取所有类型的配置
+      // Get configs for all types
       const [
         opConfigs,
         exampleConfigs,
@@ -86,7 +86,7 @@ export class ConfigRepositoryImpl implements IConfigRepository {
           getConfig(this.projectId, 'on_board'),
         ]);
 
-      // 合并所有配置并转换为实体
+      // Merge all configs and convert to entities
       const allConfigs = [
         ...opConfigs,
         ...exampleConfigs,
@@ -112,10 +112,10 @@ export class ConfigRepositoryImpl implements IConfigRepository {
 
   async save(configs: BuildConfigEntity[]): Promise<Result<void, Error>> {
     try {
-      // 转换为原始数据格式
+      // Convert to raw format
       const rawConfigs = configs.map((c) => c.toRaw());
 
-      // 调用现有的 postConfig 函数
+      // Call existing postConfig
       await postConfig('build', rawConfigs);
 
       return ResultUtils.ok(undefined);

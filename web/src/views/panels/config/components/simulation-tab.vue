@@ -8,6 +8,7 @@
 import {
   ref, nextTick, watch,
 } from 'vue';
+import { t } from 'i18next';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import {
   saveConfig as saveConfigAPI, openExternalLink,
@@ -93,17 +94,15 @@ const jumpToGuide = () => {
         class="simulate-title"
         style="margin-bottom: 8px"
       >
-        仿真器类型
-        <a-tooltip
-          title="当前支持的仿真器类型可以在 CANN安装路径下 ascend-toolkit/latest/tools/simulator目录查看"
-        >
+        {{ t('web.config.simulatorType') }}
+        <a-tooltip :title="t('web.config.simulatorTypeTooltip')">
           <QuestionCircleOutlined class="help-icon" />
         </a-tooltip>
       </div>
       <a-form-item>
         <a-input
           v-model:value="localSimulationData.user_options.simulatorType"
-          placeholder="请输入仿真器类型"
+          :placeholder="t('web.config.simulatorTypePlaceholder')"
           @change="handleSimulationDataChange"
         />
       </a-form-item>

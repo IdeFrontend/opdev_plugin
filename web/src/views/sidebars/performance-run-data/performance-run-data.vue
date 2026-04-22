@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from 'i18next';
 import {
   computed, ref, watch, onMounted, onBeforeUnmount, provide,
 } from 'vue';
@@ -11,7 +12,9 @@ import {
 import { PerformanceExecutionRecord } from '@shared/api-types';
 
 // 使用主题管理组合式函数
-const { themeConfig, actualTheme } = useTheme();
+const {
+  themeConfig, actualTheme,
+} = useTheme();
 
 // 向子组件提供主题状态
 provide('actualTheme', actualTheme);
@@ -97,7 +100,7 @@ onBeforeUnmount(() => {
         v-if="!renderTreeData || !renderTreeData.length"
         class="text-center mt-[20px]"
       >
-        暂无数据
+        {{ t('web.perf.noData') }}
       </div>
     </div>
   </a-config-provider>

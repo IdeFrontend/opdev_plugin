@@ -7,6 +7,7 @@ import * as configModel from './config-model';
 import { OpGeneratorFactory } from '@plugin/domain/services/op-generator-factory';
 import { getDefaultPath } from '@plugin/domain/utils/op-util';
 import { soc_version, emulator_type } from '@plugin/domain/utils/ascend-util';
+import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import {
   getDefaultDirectory,
   ensureLaunchJsonExists,
@@ -350,12 +351,13 @@ export function getOpByProjectIdAndOpName(
 }
 
 /**
- * 获取项目下的所有算子
- * @param project_id 项目ID
- * @returns 算子列表
+ * Get all operators under the project
+ * @param project_id project ID
+ * @returns operator list
  */
 export function getOpsByProjectId(project_id: number): OpRecord[] {
   const store = ensureStore();
+
   return store.ops.filter((o) => o.project_id === project_id);
 }
 
@@ -363,17 +365,17 @@ export async function generateStructure(
   data: Partial<OpRecord>,
   extensionPath: string,
   isSkipUnZip: boolean = false,
-  skipVscodeFiles: boolean = false
+  skipVscodeFiles: boolean = false,
 ): Promise<number> {
   // 1) basic checks
   const project = projectModel.getProjectById(data.project_id as number);
 
   if (!project) {
-    console.error('项目未找到，project_id:', data.project_id);
+    console.error('Project not found, project_id:', data.project_id);
     throw Object.assign(new Error('project not found'), { name: 'InvalidRequest' });
   }
 
-  console.log('generateStructure: 项目信息', {
+  console.log('generateStructure: project info', {
     project_id: project.id,
     project_name: project.project_name,
     project_path: project.project_path,
@@ -392,32 +394,33 @@ export async function generateStructure(
     skipExisting: (data as { skipExisting?: boolean }).skipExisting ?? false,
   } as unknown;
 
-  // 确保在算子工程目录创建 devtool_config.json
-  // project.project_path 是算子工程完整路径（如 /path/to/project/operator_name）
-  // op_path 也是算子工程路径，应该在这里创建 .vscode 目录
+  // Make sure to create devtool_config.json in the operator project directory
+  // project.project_path is the full path of the operator project (such as /path/to/project/operator_name)
+  // op_path is also the operator project path, the .vscode directory should be created here
   const opPath = (params as { op_path: string }).op_path ?? project.project_path;
 
-  console.log('generateStructure: 准备创建配置文件');
-  console.log('generateStructure: 算子工程路径 (op_path):', opPath);
+  console.log('generateStructure: preparing to create config files');
+  console.log('generateStructure: operator project path (op_path):', opPath);
   console.log('generateStructure: project.project_path:', project.project_path);
   console.log('generateStructure: create_by:', data.create_by);
   console.log('generateStructure: skipVscodeFiles:', skipVscodeFiles);
 
-  // 如果 skipVscodeFiles 为 true，跳过创建 .vscode 和 .arts 文件
+  // If skipVscodeFiles is true, skip creating .vscode and .arts files
   if (!skipVscodeFiles) {
     try {
       await ensureLaunchJsonExists(
         opPath,
         data.create_by,
       );
-      console.log('generateStructure: 配置文件创建完成');
+      console.log('generateStructure: config files created');
     }
     catch (error) {
-      console.error('generateStructure: 配置文件创建失败:', error);
-      // 配置文件创建失败不应该阻止算子创建，只记录错误
+      console.error('generateStructure: failed to create config files:', error);
+      // Configuration file creation failure should not prevent operator creation, only log errors
     }
-  } else {
-    console.log('generateStructure: 跳过创建 .vscode 和 .arts 文件');
+  }
+  else {
+    console.log('generateStructure: skipped creating .vscode and .arts files');
   }
 
   // 3) get generator and parse meta
@@ -449,7 +452,7 @@ export async function generateStructure(
   let nextId: number;
 
   const existingOp = getOpByProjectIdAndOpName(project.id as number, opName);
-  const index = existingOp ? store.ops.findIndex(op => op.id === existingOp.id) : -1;
+  const index = existingOp ? store.ops.findIndex((op) => op.id === existingOp.id) : -1;
 
   const templateName = (params as { template_name?: string }).template_name ?? null;
 
@@ -471,7 +474,8 @@ export async function generateStructure(
     record = store.ops[index];
     nextId = record.id; // Use the existing record's ID
     writeStore(store);
-  } else {
+  }
+  else {
     // Create new record (both when existingOp is null and when index is -1)
     nextId = store.lastId + 1;
     record = {
@@ -498,7 +502,7 @@ export async function generateStructure(
 
   try {
     if (project) {
-      console.log('generateStructure: 开始获取默认路径, record:', {
+      console.log('generateStructure: starting to get default path, record:', {
         op_name: record.op_name,
         op_type: record.op_type,
         op_path: record.op_path,
@@ -510,56 +514,346 @@ export async function generateStructure(
         targetOpFile,
         targetExampleFile,
       } = getDefaultPath(record);
-      console.log('generateStructure: 默认路径获取成功:', {
+
+      console.log('generateStructure: default path obtained successfully:', {
         opScriptPath,
         exampleScriptPath,
         targetDir,
         targetOpFile,
         targetExampleFile,
       });
-      // Build: 创建 build_op 和 build_example 两种配置
-      // 如果是 torch_library_template 类型，设置 target_file 为 python ../run.py
-      const targetFile = record.template_name === 'torch_library_template' 
-        ? 'python ../run.py' 
-        : targetOpFile;
 
-      // 调用抽取的配置创建方法
-      await createBuildOpConfig(project.id, record, opScriptPath, targetDir, targetFile);
-      await createBuildExampleConfig(project.id, record, exampleScriptPath, targetDir, targetExampleFile);
-      await createUtTestConfig(project.id, record, opScriptPath, targetDir, targetExampleFile);
-      await createSanitizerConfig(project.id, record, opScriptPath, targetFile);
-      await createOnBoardConfig(project.id, record, opScriptPath);
-      await createSimulateConfig(project.id, record, opScriptPath);
+      // Resolve the workspace root for bisheng-flag detection (used by AscendPlugin).
+      const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? opScriptPath;
+      const scripts = OperatorPluginRegistry.getOpPlugin(record.op_type)
+        .getInitialConfigScripts(record, workspaceRoot);
+
+      // Build: Create two configurations build_op and build_example
+      // If it is torch_library_template type, set target_file to python ../run.py
+      const targetFile = record.template_name === 'torch_library_template'
+        ? 'python ../run.py'
+        : targetOpFile;
+      const buildOp = {
+        project_id: project.id,
+        user_options: {
+          op: record.op_name,
+          script: scripts.buildScript,
+          config_name: record.op_name,
+          target_dir: targetDir,
+          target_file: targetFile,
+          cpu_debug_script: scripts.cpuDebugScript,
+          npu_debug_script: scripts.npuDebugScript,
+        },
+      };
+      const buildExample = {
+        project_id: project.id,
+        user_options: {
+          op:             record.op_name,
+          script:         scripts.exampleScript,
+          config_name:    record.op_name,
+          target_dir:     targetDir,
+          target_file:    targetExampleFile,
+          execution_mode: 'eager',
+        },
+      };
+
+      // UT test: create a basic ut_test config
+      const utTestCfg = {
+        project_id: project.id,
+        user_options: {
+          op: record.op_name,
+          script: record.op_type === 'ascend'
+            ? `bash ${opScriptPath} --soc={soc_version} --ops={operatorNames} -u`
+            : `bash ${opScriptPath} -u`,
+          config_name: record.op_name,
+          target_dir: targetDir,
+          target_file: targetExampleFile,
+        },
+      };
+
+      console.log('generateStructure: start creating build_op config');
+      console.log('generateStructure: build_op config data:', JSON.stringify(buildOp, null, 2));
+      const buildOpResult = await configModel.postConfig('build_op', [buildOp]);
+
+      console.log('generateStructure: build_op config creation result:', JSON.stringify(buildOpResult, null, 2));
+
+      console.log('generateStructure: start creating build_example config');
+      console.log('generateStructure: build_example config data:', JSON.stringify(buildExample, null, 2));
+      const buildExampleResult = await configModel.postConfig('build_example', [buildExample]);
+
+      console.log('generateStructure: build_example config creation result:', JSON.stringify(buildExampleResult, null, 2));
+
+      console.log('generateStructure: start creating ut_test config');
+      console.log('generateStructure: ut_test config data:', JSON.stringify(utTestCfg, null, 2));
+      const utTestResult = await configModel.postConfig('ut_test', [utTestCfg]);
+
+      console.log('generateStructure: ut_test config creation result:', JSON.stringify(utTestResult, null, 2));
+
+      // Sanitizer: Create a basic sanitizer configuration
+      const sanitizerCfg = {
+        project_id: project.id,
+        user_options: {
+          op: record.op_name,
+          script: scripts.sanitizerScript,
+          target_file: targetFile,
+          config_name: record.op_name,
+          tool: {
+            memcheck: true,
+            racecheck: false,
+            initcheck: false,
+            synccheck: false,
+          },
+          memcheckOption: {
+            'check-unused-memory': false,
+            'leak-check': false,
+            'check-device-heap': false,
+            'check-cann-heap': false,
+          },
+          logLevel: 'warn',
+          maxDebuglogSize: 1024,
+          useBlock: false,
+          blockId: null,
+          fileMapList: [],
+        },
+      };
+
+      console.log('generateStructure: start creating sanitizer config');
+      console.log('generateStructure: sanitizer config data:', JSON.stringify(sanitizerCfg, null, 2));
+      const sanitizerResult = await configModel.postConfig('sanitizer', [sanitizerCfg]);
+
+      console.log('generateStructure: sanitizer config creation result:', JSON.stringify(sanitizerResult, null, 2));
+
+      // Opprof: Create two configurations: on_board and simulate
+      const onBoard = {
+        project_id: project.id,
+        user_options: {
+          op:          record.op_name,
+          script:      scripts.onBoardScript,
+          config_name: record.op_name,
+          // Memory Analysis Chart Related
+          // Inter-core load analysis chart
+          Occupancy: true,
+          // Roofline bottleneck analysis
+          Roofline: true,
+
+          // Operator code heat map
+          Source: true,
+          // Cache heat map
+          MemoryDetail: true,
+
+          // Operator performance data file related
+          // Time consumption and proportion of Cube and Vector type instructions
+          ArithmeticUtilization: true,
+          // L2 Cache hit rate
+          L2Cache: true,
+          // Memory read and write bandwidth rate
+          Memory: true,
+          // L0 read and write bandwidth rate
+          MemoryL0: true,
+          // UB read and write bandwidth rate
+          MemoryUB: true,
+          // Basic information about operators
+          // BasicInfo: false,
+          // The proportion of time spent in computing units and handling units
+          PipeUtilization: true,
+          // Proportion of resource conflicts
+          ResourceConflictRatio: true,
+
+          // Enable code segment performance collection on the Kernel side
+          KernelScale: false,
+          downloadToLocal: true,
+          renderInPlatform: false,
+          dataStoragePath: getDefaultDirectory(),
+          advance_param: [],
+          fileMapList: [],
+        },
+      };
+      const simulate = {
+        project_id: project.id,
+        user_options: {
+          op:          record.op_name,
+          script:      scripts.simulateScript,
+          config_name: record.op_name,
+          ResourceConflictRatio: true,
+          PMSampling: true,
+          downloadToLocal: true,
+          renderInPlatform: false,
+          // Data storage location default value
+          dataStoragePath: getDefaultDirectory(),
+          simulatorType: 'Ascend910B3',
+          enableDump: false,
+          advance_param: [],
+          fileMapList: [],
+        },
+      };
+
+      console.log('generateStructure: start creating on_board config');
+      console.log('generateStructure: on_board config data:', JSON.stringify(onBoard, null, 2));
+      const onBoardResult = await configModel.postConfig('on_board', [onBoard]);
+
+      console.log('generateStructure: on_board config creation result:', JSON.stringify(onBoardResult, null, 2));
+
+      console.log('generateStructure: start creating simulate config');
+      console.log('generateStructure: simulate config data:', JSON.stringify(simulate, null, 2));
+      const simulateResult = await configModel.postConfig('simulate', [simulate]);
+
+      console.log('generateStructure: simulate config creation result:', JSON.stringify(simulateResult, null, 2));
     }
   }
   catch (e) {
-    // 忽略配置创建错误，但打印日志以便调试
+    // Ignore configuration creation errors but print logs for debugging
     console.error('generateStructure: failed to create default configs', e);
+
     if (e instanceof Error) {
-      console.error('generateStructure: 错误详情:', e.message);
-      console.error('generateStructure: 错误堆栈:', e.stack);
+      console.error('generateStructure: error details:', e.message);
+      console.error('generateStructure: error stack:', e.stack);
     }
-    // 不抛出错误，让算子记录能够创建成功
+    // Do not throw an error and allow the operator record to be created successfully.
   }
 
   return nextId;
 }
 
-export function _resetOpsForTest(): void {
-  // helper for tests/dev: remove store
-  fs.removeSync(getOpsFile());
+function getInitialConfigScripts(
+  record: OpRecord,
+  opScriptPath: string,
+) {
+  const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? path.dirname(opScriptPath);
+
+  return OperatorPluginRegistry.getOpPlugin(record.op_type)
+    .getInitialConfigScripts(record, workspaceRoot);
+}
+
+function getConfigPayload(
+  config_type: string,
+  project_id: number,
+  record: OpRecord,
+  opScriptPath: string,
+  exampleScriptPath: string,
+  targetDir: string,
+  targetFile: string,
+  targetExampleFile: string,
+): { project_id: number;
+  user_options: Record<string, unknown> } {
+  const scripts = getInitialConfigScripts(record, opScriptPath);
+
+  switch (config_type) {
+    case 'build_op':
+      return {
+        project_id,
+        user_options: {
+          op: record.op_name,
+          script: scripts.buildScript,
+          config_name: record.op_name,
+          target_dir: targetDir,
+          target_file: targetFile,
+          cpu_debug_script: scripts.cpuDebugScript,
+          npu_debug_script: scripts.npuDebugScript,
+        },
+      };
+    case 'build_example':
+      return {
+        project_id,
+        user_options: {
+          op: record.op_name,
+          script: scripts.exampleScript,
+          config_name: record.op_name,
+          target_dir: targetDir,
+          target_file: targetExampleFile,
+          execution_mode: 'eager',
+        },
+      };
+    case 'ut_test':
+      return {
+        project_id,
+        user_options: {
+          op: record.op_name,
+          script: record.op_type === 'ascend'
+            ? `bash ${opScriptPath} --soc={soc_version} --ops={operatorNames} -u`
+            : `bash ${opScriptPath} -u`,
+          config_name: record.op_name,
+          target_dir: targetDir,
+          target_file: targetExampleFile,
+        },
+      };
+    case 'sanitizer':
+      return {
+        project_id,
+        user_options: {
+          op: record.op_name,
+          script: scripts.sanitizerScript,
+          target_file: targetFile,
+          config_name: record.op_name,
+          tool: {
+            memcheck: true,
+            racecheck: false,
+            initcheck: false,
+            synccheck: false,
+          },
+          memcheckOption: {
+            'check-unused-memory': false,
+            'leak-check': false,
+            'check-device-heap': false,
+            'check-cann-heap': false,
+          },
+          logLevel: 'warn',
+          maxDebuglogSize: 1024,
+          useBlock: false,
+          blockId: null,
+          fileMapList: [],
+        },
+      };
+    case 'on_board':
+      return {
+        project_id,
+        user_options: {
+          op: record.op_name,
+          script: scripts.onBoardScript,
+          config_name: record.op_name,
+          Occupancy: true,
+          Roofline: true,
+          Source: true,
+          MemoryDetail: true,
+          ArithmeticUtilization: true,
+          L2Cache: true,
+          Memory: true,
+          MemoryL0: true,
+          MemoryUB: true,
+          PipeUtilization: true,
+          ResourceConflictRatio: true,
+          KernelScale: false,
+          downloadToLocal: true,
+          renderInPlatform: false,
+          dataStoragePath: getDefaultDirectory(),
+          advance_param: [],
+          fileMapList: [],
+        },
+      };
+    case 'simulate':
+      return {
+        project_id,
+        user_options: {
+          op: record.op_name,
+          script: scripts.simulateScript,
+          config_name: record.op_name,
+          ResourceConflictRatio: true,
+          PMSampling: true,
+          downloadToLocal: true,
+          renderInPlatform: false,
+          dataStoragePath: getDefaultDirectory(),
+          simulatorType: 'Ascend910B3',
+          enableDump: false,
+          advance_param: [],
+          fileMapList: [],
+        },
+      };
+    default:
+      throw new Error(`unknown config type: ${config_type}`);
+  }
 }
 
 /**
- * 检查指定config_type的配置是否存在，若不存在则初始化对应的配置
- * @param project_id 项目ID
- * @param config_type 配置类型
- * @param record 算子记录
- * @param opScriptPath 算子脚本路径
- * @param exampleScriptPath 示例脚本路径
- * @param targetDir 目标目录
- * @param targetFile 目标文件
- * @param targetExampleFile 目标示例文件
+ * Ensure one config exists for an operator; create it when missing.
  */
 export async function ensureConfigExists(
   project_id: number,
@@ -569,59 +863,36 @@ export async function ensureConfigExists(
   exampleScriptPath: string,
   targetDir: string,
   targetFile: string,
-  targetExampleFile: string
+  targetExampleFile: string,
 ): Promise<void> {
-  // 检查配置是否存在
   const existingConfigs = configModel.getConfig(project_id, config_type, record.op_name);
-  
-  if (existingConfigs.length === 0) {
-    console.log(`ensureConfigExists: 配置 ${config_type} 不存在，开始初始化`);
-    
-    // 根据不同的config_type初始化对应的配置
-    switch (config_type) {
-      case 'build_op':
-        await createBuildOpConfig(project_id, record, opScriptPath, targetDir, targetFile);
-        break;
-      case 'build_example':
-        await createBuildExampleConfig(project_id, record, exampleScriptPath, targetDir, targetExampleFile);
-        break;
-      case 'ut_test':
-        await createUtTestConfig(project_id, record, opScriptPath, targetDir, targetExampleFile);
-        break;
-      case 'sanitizer':
-        await createSanitizerConfig(project_id, record, opScriptPath, targetFile);
-        break;
-      case 'on_board':
-        await createOnBoardConfig(project_id, record, opScriptPath);
-        break;
-      case 'simulate':
-        await createSimulateConfig(project_id, record, opScriptPath);
-        break;
-      default:
-        console.warn(`ensureConfigExists: 未知的配置类型 ${config_type}`);
-        break;
-    }
-  } else {
-    console.log(`ensureConfigExists: 配置 ${config_type} 已存在，跳过初始化`);
+
+  if (existingConfigs.length > 0) {
+    return;
   }
+
+  const payload = getConfigPayload(
+    config_type,
+    project_id,
+    record,
+    opScriptPath,
+    exampleScriptPath,
+    targetDir,
+    targetFile,
+    targetExampleFile,
+  );
+
+  await configModel.postConfig(config_type, [payload]);
 }
 
 /**
- * 补全项目的所有配置
- * @param project_id 项目ID
+ * Fill in all missing default configs for each operator under a project.
  */
 export async function completeProjectConfigs(project_id: number): Promise<void> {
   try {
-    console.log(`completeProjectConfigs: 开始补全项目 ${project_id} 的配置`);
-    
-    // 获取项目下的所有算子
     const ops = getOpsByProjectId(project_id);
-    console.log(`completeProjectConfigs: 找到 ${ops.length} 个算子`);
-    
+
     for (const op of ops) {
-      console.log(`completeProjectConfigs: 为算子 ${op.op_name} 补全配置`);
-      
-      // 获取默认路径
       const {
         opScriptPath,
         exampleScriptPath,
@@ -629,13 +900,10 @@ export async function completeProjectConfigs(project_id: number): Promise<void> 
         targetOpFile,
         targetExampleFile,
       } = getDefaultPath(op);
-      
-      // 确定目标文件
-      const targetFile = op.template_name === 'torch_library_template' 
-        ? 'python ../run.py' 
+      const targetFile = op.template_name === 'torch_library_template'
+        ? 'python ../run.py'
         : targetOpFile;
-      
-      // 补全各种配置类型
+
       await ensureConfigExists(project_id, 'build_op', op, opScriptPath, exampleScriptPath, targetDir, targetFile, targetExampleFile);
       await ensureConfigExists(project_id, 'build_example', op, opScriptPath, exampleScriptPath, targetDir, targetFile, targetExampleFile);
       await ensureConfigExists(project_id, 'ut_test', op, opScriptPath, exampleScriptPath, targetDir, targetFile, targetExampleFile);
@@ -643,9 +911,13 @@ export async function completeProjectConfigs(project_id: number): Promise<void> 
       await ensureConfigExists(project_id, 'on_board', op, opScriptPath, exampleScriptPath, targetDir, targetFile, targetExampleFile);
       await ensureConfigExists(project_id, 'simulate', op, opScriptPath, exampleScriptPath, targetDir, targetFile, targetExampleFile);
     }
-    
-    console.log(`completeProjectConfigs: 项目 ${project_id} 的配置补全完成`);
-  } catch (error) {
-    console.warn(`completeProjectConfigs: 补全配置失败: ${error instanceof Error ? error.message : String(error)}`);
   }
+  catch (error) {
+    console.warn(`completeProjectConfigs failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+export function _resetOpsForTest(): void {
+  // helper for tests/dev: remove store
+  fs.removeSync(getOpsFile());
 }

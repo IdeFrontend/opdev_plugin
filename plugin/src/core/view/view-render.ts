@@ -32,7 +32,7 @@ export class ViewRenderer extends vscode.Disposable {
     let targetHtmlPath = '';
 
     if (entryName) {
-      // 判断是 panel 还是 sidebar 类型的视图
+      // Determine whether it is a panel or sidebar type view
       const panelViews = [
         'config',
         'link',
@@ -41,7 +41,7 @@ export class ViewRenderer extends vscode.Disposable {
         'ops-config',
         'options-simulator',
         'options-on-board',
-        'options-sanitizer'
+        'options-sanitizer',
       ];
       const sidebarViews = [
         'home',
@@ -49,7 +49,7 @@ export class ViewRenderer extends vscode.Disposable {
         'ms-sanitizer-panel-view',
         'performance-run-data',
         'ms-sanitizer-run-data',
-        'dump-tensor-data'
+        'dump-tensor-data',
       ];
 
       if (panelViews.includes(entryName)) {
@@ -59,7 +59,7 @@ export class ViewRenderer extends vscode.Disposable {
         targetHtmlPath = `src/views/sidebars/${entryName}/${entryName}.html`;
       }
       else {
-        // 默认假定是 sidebar
+        // The default is assumed to be sidebar
         targetHtmlPath = `src/views/sidebars/${entryName}/${entryName}.html`;
       }
     }

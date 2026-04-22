@@ -19,7 +19,7 @@ export class JsonStorage {
     catch (error) {
       console.error(`Failed to read storage file: ${this.filePath}`, error);
 
-      // 备份损坏的文件
+      // Back up corrupted files
       if (fs.existsSync(this.filePath)) {
         try {
           fs.copySync(this.filePath, `${this.filePath}.bak`);

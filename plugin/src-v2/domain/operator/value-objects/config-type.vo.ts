@@ -1,12 +1,13 @@
 /**
- * 配置类型值对象
- * 使用值对象模式避免魔法字符串
+ * Config type value object
+ * Avoids magic strings via value object pattern
  */
 export class ConfigType {
   static readonly BUILD_OP = new ConfigType('build_op');
   static readonly BUILD_EXAMPLE = new ConfigType('build_example');
   static readonly SIMULATE = new ConfigType('simulate');
   static readonly ON_BOARD = new ConfigType('on_board');
+  static readonly UT_TEST = new ConfigType('ut_test');
   static readonly SANITIZER = new ConfigType('sanitizer');
 
   private constructor(public readonly value: string) {}
@@ -20,7 +21,7 @@ export class ConfigType {
   }
 
   /**
-   * 从字符串创建 ConfigType
+   * Create ConfigType from string
    */
   static fromString(value: string): ConfigType | undefined {
     switch (value) {
@@ -32,6 +33,8 @@ export class ConfigType {
         return ConfigType.SIMULATE;
       case 'on_board':
         return ConfigType.ON_BOARD;
+      case 'ut_test':
+        return ConfigType.UT_TEST;
       case 'sanitizer':
         return ConfigType.SANITIZER;
       default:

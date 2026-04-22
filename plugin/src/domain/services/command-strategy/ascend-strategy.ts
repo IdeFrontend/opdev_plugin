@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import { soc_version } from '@plugin/domain/utils/ascend-util';
 import { parse_cmd_options } from '@plugin/domain/utils/aicore-utils';
 import { getOpRunPath } from '@plugin/domain/utils/op-util';
@@ -17,36 +18,40 @@ import {
   ProfilerCommandParams,
 } from './types';
 import { ConfigRecord } from '@plugin/domain/models/config-model';
-import { getConfig, getConfigById } from '../../services/configuration';
+import {
+  getConfig, getConfigById,
+} from '../../services/configuration';
 import { getProjectById } from '@plugin/domain/models/project-model';
+import { getEnvironmentSocVersionFromWorkspace } from '@plugin/helpers/operator-project-workspace-config';
 
 /**
- * Ascend 类型命令策略
+ * Ascend type command strategy
  */
 export class AscendCommandStrategy implements CommandStrategy {
   /**
-   * 替换脚本中的 {soc_version} 占位符
-   * @param script 原始脚本字符串
-   * @param projectId 项目ID
-   * @returns 替换后的脚本字符串
+   * Replace `{soc_version}` using `op-devtools.environment.socVersion` (workspace) first,
+   * then project storage, then runtime default.
    */
   private replaceSocVersion(script: string, projectId: number): string {
+    const fromWorkspace = getEnvironmentSocVersionFromWorkspace().trim();
+    if (fromWorkspace) {
+      return script.replace(/{soc_version}/g, fromWorkspace);
+    }
     if (projectId) {
       const project = getProjectById(projectId);
-      if (project && project.soc_version) {
+      if (project?.soc_version) {
         return script.replace(/{soc_version}/g, project.soc_version);
-      } else {
-        // 如果项目配置中没有 soc_version，使用默认值
-        return script.replace(/{soc_version}/g, soc_version);
       }
     }
-    return script;
+    return script.replace(/{soc_version}/g, soc_version);
   }
 
   buildCommandContext(baseContext: BaseContext): CommandContext {
-    const { config, project, operator } = baseContext;
+    const {
+      config, project, operator,
+    } = baseContext;
 
-    // Ascend 类型使用 ascend_env_script 作为环境脚本
+    // Ascend type uses ascend_env_script as environment script
     const sourceCannCmd =
       project && project.ascend_env_script
         ? `. ${project.ascend_env_script}`
@@ -58,7 +63,7 @@ export class AscendCommandStrategy implements CommandStrategy {
       runPath = getOpRunPath(operator, config);
     }
     else {
-      // 如果找不到算子，但有配置脚本，使用项目路径作为运行路径
+      // If the operator cannot be found but there is a configuration script, use the project path as the running path
       if (config.script && project) {
         runPath = project.project_path;
       }
@@ -81,28 +86,32 @@ export class AscendCommandStrategy implements CommandStrategy {
   }
 
   buildRunCommand(context: CommandContext): string {
-    const { config, sourceCannCmd, cdCmd } = context;
+    const {
+      config, sourceCannCmd, cdCmd,
+    } = context;
     const run_cmd = getExecutableCommand(config.target_file || '', { execute: true });
 
     return joinCommands(sourceCannCmd, cdCmd, run_cmd);
   }
 
   buildOpCommand(params: CommandBuildParams): string {
-    const { config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames } = params;
+    const {
+      config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames,
+    } = params;
 
-    const scriptField = params.scriptField || 'script'
+    const scriptField = params.scriptField || 'script';
 
-    const userOptions = (config.user_options as Record<string, unknown> | null | undefined) || {}
+    const userOptions = (config.user_options as Record<string, unknown> | null | undefined) || {};
 
     let script = userOptions[scriptField] as string || '';
-    // 替换 {soc_version} 为项目配置中的 soc_version
+    // Replace {soc_version} with the project-configured soc_version
     script = this.replaceSocVersion(script, config.project_id);
 
     const cmd = new Command(script);
 
     const options: Record<string, unknown> = {};
 
-    // 只有当 operatorNames 存在且不为空时，才添加 ops 参数
+    // Add ops parameter only if operatorNames exists and is not empty
     if (operatorNames && operatorNames.trim()) {
       options.ops = operatorNames;
     }
@@ -123,16 +132,18 @@ export class AscendCommandStrategy implements CommandStrategy {
   }
 
   buildExampleCommand(params: CommandBuildParams): string {
-    const { config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames } = params;
+    const {
+      config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames,
+    } = params;
 
     const options = (config.user_options as Record<string, unknown> | null | undefined) || {};
     const mode = options.execution_mode as string || 'eager';
-    let pkg_mode = 'cust';
-    // 如果提供了 operatorNames，优先使用它；否则使用 config.op
+    const pkg_mode = 'cust';
+    // If operatorNames is provided, it takes precedence; otherwise config.op is used
     const op = operatorNames || '';
 
     let script = config.script || '';
-    // 替换 {soc_version} 为项目配置中的 soc_version
+    // Replace {soc_version} with the project-configured soc_version
     script = this.replaceSocVersion(script, config.project_id);
 
     const cmd = new Command(script);
@@ -142,7 +153,7 @@ export class AscendCommandStrategy implements CommandStrategy {
     cmd.addArgument(pkg_mode);
 
     if (compileOption) {
-    // 替换 {soc_version} 为项目配置中的 soc_version
+    // Replace {soc_version} with the project-configured soc_version
       cmd.addArgument(this.replaceSocVersion(compileOption, config.project_id));
     }
 
@@ -157,10 +168,10 @@ export class AscendCommandStrategy implements CommandStrategy {
     const { config, sourceCannCmd, cdCmd, advance_cmd, operatorNames } = params;
 
     let script = config.script || '';
-    // 替换 {soc_version} 为项目配置中的 soc_version
+    // Replace {soc_version} with the project-configured soc_version
     script = this.replaceSocVersion(script, config.project_id);
 
-    // 替换 {operatorNames} 为传入的算子名称
+    // Replace {operatorNames} with the incoming operator names
     if (operatorNames) {
       script = script.replace('{operatorNames}', operatorNames);
     } else {
@@ -181,20 +192,20 @@ export class AscendCommandStrategy implements CommandStrategy {
     operator: OpRecord | null,
     sourceCannCmd: string,
     cdCmd: string,
-    exampleTargetFile?: string
+    exampleTargetFile?: string,
   ): string {
-    // 替换 {soc_version} 为项目配置中的 soc_version
+    // Replace {soc_version} with the project-configured soc_version
     let script = config.script || '';
     script = this.replaceSocVersion(script, config.project_id);
 
     const mssanitizer = new Command('mssanitizer');
 
-    // 添加目标文件
+    // Add target file
     if (exampleTargetFile) {
       mssanitizer.addArgument(exampleTargetFile);
     }
 
-    // 处理配置选项
+    // Handle configuration options
     const options = (config.user_options as Record<string, unknown> | null | undefined) || {};
     const toolOptions = (options.tool as Record<string, unknown> | undefined) || {};
     const tools = Object.keys(toolOptions)
@@ -226,17 +237,19 @@ export class AscendCommandStrategy implements CommandStrategy {
   }
 
   buildSimulateCommand(params: ProfilerCommandParams): string {
-    const { config, project, operator, sourceCannCmd, cdBuildCmd, exampleTargetFile } = params;
+    const {
+      config, project, operator, sourceCannCmd, cdBuildCmd, exampleTargetFile,
+    } = params;
 
-    // 如果找不到算子记录，但有项目路径，创建一个临时算子对象
+    // If the operator record is not found but the project path is available, create a temporary operator object
     let effectiveOperator = operator;
 
     if (!effectiveOperator) {
       if (!project || !project.project_path) {
-        throw new Error(`无法生成仿真命令：找不到算子记录 ${config.op}，且项目路径不可用`);
+        throw new Error(t('cann.cannotGenerateSimulateCommand', { op: config.op }));
       }
 
-      // 创建临时算子对象，使用项目路径作为 op_path
+      // Create a temporary operator object, using the project path as op_path
       effectiveOperator = {
         id: 0,
         project_id: config.project_id,
@@ -257,17 +270,19 @@ export class AscendCommandStrategy implements CommandStrategy {
   }
 
   buildOnBoardCommand(params: ProfilerCommandParams): string {
-    const { config, project, operator, sourceCannCmd, cdBuildCmd, exampleTargetFile } = params;
+    const {
+      config, project, operator, sourceCannCmd, cdBuildCmd, exampleTargetFile,
+    } = params;
 
-    // 如果找不到算子记录，但有项目路径，创建一个临时算子对象
+    // If the operator record is not found but the project path is available, create a temporary operator object
     let effectiveOperator = operator;
 
     if (!effectiveOperator) {
       if (!project || !project.project_path) {
-        throw new Error(`无法生成上板命令：找不到算子记录 ${config.op}，且项目路径不可用`);
+        throw new Error(t('cann.cannotGenerateOnBoardCommand', { op: config.op }));
       }
 
-      // 创建临时算子对象，使用项目路径作为 op_path
+      // Create a temporary operator object, using the project path as op_path
       effectiveOperator = {
         id: 0,
         project_id: config.project_id,
@@ -288,13 +303,14 @@ export class AscendCommandStrategy implements CommandStrategy {
   }
 
   getRunTargetFile(config: ConfigRecord, operator: OpRecord | null): string {
-    // ascend 类型：使用当前配置的 target_file
+    // ascend type: use the currently configured target_file
     return config.target_file || '';
   }
 
   getProfilerTargetFile(config: ConfigRecord, operator: OpRecord | null, exampleConfigId: number): string {
-    // ascend 类型：使用示例配置的 target_file
+    // ascend type: target_file using example configuration
     const exConfig = getConfigById(exampleConfigId) as unknown as ConfigRecord;
+
     return exConfig?.target_file || '';
   }
 }

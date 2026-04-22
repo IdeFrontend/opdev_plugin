@@ -9,7 +9,7 @@ import {
 } from './concrete-strategies';
 
 /**
- * 任务类型枚举
+ * Task type enum
  */
 export enum TaskType {
   SIMULATE = 'simulate',
@@ -20,7 +20,7 @@ export enum TaskType {
 }
 
 /**
- * 策略变体 (同一任务的不同执行方式)
+ * Strategy variant (different execution for same task)
  */
 export enum StrategyVariant {
   STANDARD = 'standard',
@@ -30,18 +30,18 @@ export enum StrategyVariant {
 }
 
 /**
- * 策略选择器配置
+ * Strategy selector config
  */
 export interface StrategySelector {
   taskType: TaskType;
   variant?: StrategyVariant;
-  /** 自定义策略标识 (用于插件扩展) */
+  /** Custom strategy id (for plugin extension) */
   customStrategyId?: string;
 }
 
 /**
- * 执行策略工厂
- * 负责根据任务类型和变体创建对应的策略
+ * Execution strategy factory
+ * Creates strategy by task type and variant
  */
 export class ExecutionStrategyFactory {
   private strategyRegistry = new Map<string, ()=> IExecutionStrategy>();
@@ -51,17 +51,17 @@ export class ExecutionStrategyFactory {
   }
 
   /**
-   * 注册默认策略
+   * Register default strategies
    */
   private registerDefaultStrategies(): void {
-    // 仿真策略
+    // Simulate strategy
     this.register(
       TaskType.SIMULATE,
       StrategyVariant.STANDARD,
       () => new StandardSimulateStrategy(this.commandGenerator),
     );
 
-    // 上板策略
+    // On-board strategy
     this.register(
       TaskType.ON_BOARD,
       StrategyVariant.STANDARD,
@@ -80,7 +80,7 @@ export class ExecutionStrategyFactory {
       () => new FastOnBoardStrategy(this.commandGenerator),
     );
 
-    // 异常检测策略
+    // Sanitizer strategy
     this.register(
       TaskType.SANITIZER,
       StrategyVariant.STANDARD,
@@ -89,7 +89,7 @@ export class ExecutionStrategyFactory {
   }
 
   /**
-   * 注册策略 (支持插件扩展)
+   * Register strategy (supports plugin extension)
    */
   register(
     taskType: TaskType,
@@ -102,7 +102,7 @@ export class ExecutionStrategyFactory {
   }
 
   /**
-   * 注册自定义策略
+   * Register custom strategy
    */
   registerCustom(
     customStrategyId: string,
@@ -112,10 +112,10 @@ export class ExecutionStrategyFactory {
   }
 
   /**
-   * 创建策略
+   * Create strategy
    */
   create(selector: StrategySelector): IExecutionStrategy {
-    // 优先使用自定义策略
+    // Prefer custom strategy
     if (selector.customStrategyId) {
       const customStrategy = this.strategyRegistry.get(selector.customStrategyId);
 
@@ -124,7 +124,7 @@ export class ExecutionStrategyFactory {
       }
     }
 
-    // 使用标准策略
+    // Use standard strategy
     const variant = selector.variant || StrategyVariant.STANDARD;
     const key = this.getRegistryKey(selector.taskType, variant);
     const strategyFactory = this.strategyRegistry.get(key);
@@ -137,14 +137,14 @@ export class ExecutionStrategyFactory {
   }
 
   /**
-   * 获取注册键
+   * Get registry key
    */
   private getRegistryKey(taskType: TaskType, variant: StrategyVariant): string {
     return `${taskType}:${variant}`;
   }
 
   /**
-   * 列出所有已注册的策略
+   * List all registered strategies
    */
   listStrategies(): string[] {
     return Array.from(this.strategyRegistry.keys());

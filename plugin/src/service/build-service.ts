@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -25,10 +26,18 @@ import { getOpRunPath } from '@plugin/domain/utils/op-util';
 import { getOpByProjectIdAndOpName } from '@plugin/domain/models/model';
 import { joinCommands } from '@plugin/domain/utils/command-utils';
 import { getConfigById } from '@plugin/domain/services/configuration';
-import { OperatorProjectType, OperatorProjectDetector } from '@plugin/domain/services/operator-project-detector';
-import { markOperatorsAsCompiled, getProjectByPath } from '@plugin/domain/models/project-model';
+import { OperatorProjectType } from '@plugin/domain/services/operator-project-detector';
+import {
+  markOperatorsAsCompiled, getProjectByPath,
+} from '@plugin/domain/models/project-model';
 import { homeMethods } from '../controller/home-controller';
 import { soc_version } from '@plugin/domain/utils/ascend-util';
+import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
+import {
+  getEnvironmentSocVersionFromWorkspace,
+  mergeBuildConfigsWithOperatorProjectWorkspace,
+} from '@plugin/helpers/operator-project-workspace-config';
+import { requestSidebarContextsRefresh } from '@plugin/helpers/sidebar-context-refresh';
 
 const CONFIG_TYPES = {
   BUILD_OP: 'build_op',
@@ -39,85 +48,108 @@ const CONFIG_TYPES = {
 } as const;
 
 /**
- * 检查根目录是否是标准自定义算子
+ * Checks whether the VS Code workspace root is a STANDARD_CUSTOM operator project.
+ * Uses OperatorPluginRegistry.detectProject() — routing through the plugin registry.
  */
 async function isRootStandardCustom(): Promise<boolean> {
   const workspaceFolders = vscode.workspace.workspaceFolders;
+
   if (!workspaceFolders || workspaceFolders.length === 0) {
     return false;
   }
-  const workspacePath = workspaceFolders[0].uri.fsPath;
+
   try {
-    const rootDetection = await OperatorProjectDetector.detectOperatorProject(workspacePath);
-    return rootDetection.isOperatorProject && rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM;
-  } catch (error) {
-    console.warn('[isRootStandardCustom] 检测失败:', error);
+    const match = await OperatorPluginRegistry.detectProject(workspaceFolders[0].uri.fsPath);
+
+    return match?.projectType === OperatorProjectType.STANDARD_CUSTOM;
+  }
+  catch (error) {
+    console.warn('[isRootStandardCustom] Detection failed:', error);
+
     return false;
   }
 }
 
 /**
- * 编译成功后，将 operatorNames（逗号分隔）对应的算子标记为已编译，写入 projects.json。
- * 仅对标准自定义算子工程生效。
+ * After successful compilation, mark the operators corresponding to operatorNames (comma separated) as compiled and write them to projects.json.
+ * It only takes effect for standard custom operator projects.
  */
 async function tryMarkOperatorsAsCompiled(
   configId: number,
   operatorNames: string | undefined,
 ): Promise<void> {
-  console.log('[tryMarkOperatorsAsCompiled] 编译成功后，将 operatorNames（逗号分隔）对应的算子标记为已编译，写入 projects.json。', operatorNames);
+  console.log('[tryMarkOperatorsAsCompiled] After successful build, mark operators in operatorNames (comma-separated) as compiled and write to projects.json.', operatorNames);
+
   if (!operatorNames || !operatorNames.trim()) {
     return;
   }
 
   try {
     const config = getConfigById(configId);
-    console.log('[tryMarkOperatorsAsCompiled] 找到配置，config:', config);
+
+    console.log('[tryMarkOperatorsAsCompiled] Found config, config:', config);
+
     if (!config) {
-      console.warn('[tryMarkOperatorsAsCompiled] 未找到配置，configId:', configId);
+      console.warn('[tryMarkOperatorsAsCompiled] Config not found, configId:', configId);
+
       return;
     }
 
     const project = getProjectById(config.project_id);
-    console.log('[tryMarkOperatorsAsCompiled] 找到项目，project:', project);
+
+    console.log('[tryMarkOperatorsAsCompiled] Found project, project:', project);
 
     if (!project || !project.project_path) {
       return;
     }
 
-    // 使用 OperatorProjectDetector 检测项目类型，而不是直接使用 project.project_type
     try {
-      const rootDetection = await OperatorProjectDetector.detectOperatorProject(project.project_path);
-      if (!rootDetection.isOperatorProject || rootDetection.projectType !== OperatorProjectType.STANDARD_CUSTOM) {
+      const match = await OperatorPluginRegistry.detectProject(project.project_path);
+
+      if (match?.projectType !== OperatorProjectType.STANDARD_CUSTOM) {
         return;
       }
     }
     catch (error) {
-      console.warn('[tryMarkOperatorsAsCompiled] 检测项目类型失败:', error);
+      console.warn('[tryMarkOperatorsAsCompiled] Failed to detect project type:', error);
 
       return;
     }
 
-    console.log('[tryMarkOperatorsAsCompiled] 开始标记算子为已编译');
+    console.log('[tryMarkOperatorsAsCompiled] Start marking operators as compiled');
     await markOperatorsAsCompiled(project.project_path, operatorNames);
-    console.log('[tryMarkOperatorsAsCompiled] 已标记算子为已编译:', operatorNames);
+    console.log('[tryMarkOperatorsAsCompiled] Marked operators as compiled:', operatorNames);
   }
   catch (error) {
     console.warn(
-      '[tryMarkOperatorsAsCompiled] 更新算子编译状态失败:',
+      '[tryMarkOperatorsAsCompiled] Failed to update operator compile status:',
       error instanceof Error ? error.message : String(error),
     );
   }
 }
 
+/**
+ * After a successful compile: persist `isCompiled` in the projects store when applicable, then refresh
+ * the Operators / Actions trees so labels and selection state match.
+ */
+export async function notifyBuildSucceededForSidebar(
+  configId: number,
+  operatorNames: string | undefined,
+): Promise<void> {
+  await tryMarkOperatorsAsCompiled(configId, operatorNames);
+  await requestSidebarContextsRefresh();
+}
+
 export class BuildService {
   /**
-   * 获取构建配置列表
+   * Get a list of build configurations
    */
   async getBuildConfigsList(): Promise<BuildConfig[]> {
-    await ProjectManager.getInstance().initProject();
+    await ProjectManager.getInstance()
+      .initProject();
     const projectId = ProjectManager.getInstance().projectId;
 
-    console.log('getBuildConfigsList: 查询配置，projectId:', projectId);
+    console.log('getBuildConfigsList: querying configs, projectId:', projectId);
     const array = [
       getConfig(Number(projectId), CONFIG_TYPES.BUILD_OP),
       getConfig(Number(projectId), CONFIG_TYPES.BUILD_EXAMPLE),
@@ -133,7 +165,7 @@ export class BuildService {
       utTestConfig,
     ] = await Promise.all(array);
 
-    console.log('getBuildConfigsList: 查询结果', {
+    console.log('getBuildConfigsList: query result', {
       build_op: opConfig.length,
       build_example: exampleConfig.length,
       simulate: simulateConfig.length,
@@ -141,7 +173,7 @@ export class BuildService {
       ut_test: utTestConfig.length,
     });
 
-    return [
+    const configs = [
       ...opConfig.map((c) => ({
         ...c,
         user_options: c.user_options ? (c.user_options as Record<string, unknown>) : undefined,
@@ -163,10 +195,12 @@ export class BuildService {
         user_options: c.user_options ? (c.user_options as Record<string, unknown>) : undefined,
       })),
     ] as BuildConfig[];
+
+    return mergeBuildConfigsWithOperatorProjectWorkspace(configs);
   }
 
   /**
-   * 根据类型获取配置
+   * Get configuration based on type
    */
   async getConfigByType(type: string): Promise<BuildConfig | undefined> {
     try {
@@ -180,7 +214,7 @@ export class BuildService {
   }
 
   /**
-   * 获取构建配置ID
+   * Get build configuration ID
    */
   async getBuildConfigId(): Promise<number | undefined> {
     const config = await this.getConfigByType(CONFIG_TYPES.BUILD_OP);
@@ -189,7 +223,7 @@ export class BuildService {
   }
 
   /**
-   * 获取示例构建配置ID
+   * Get sample build configuration ID
    */
   async getBuildExampleConfigId(): Promise<number | undefined> {
     const config = await this.getConfigByType(CONFIG_TYPES.BUILD_EXAMPLE);
@@ -198,7 +232,7 @@ export class BuildService {
   }
 
   /**
-   * 获取仿真配置ID
+   * Get simulation configuration ID
    */
   async getSimulateConfigId(): Promise<string> {
     const config = await this.getConfigByType(CONFIG_TYPES.SIMULATE);
@@ -207,7 +241,7 @@ export class BuildService {
   }
 
   /**
-   * 获取上板配置ID
+   * Get board configuration ID
    */
   async getOnBoardConfigId(): Promise<string> {
     const config = await this.getConfigByType(CONFIG_TYPES.ON_BOARD);
@@ -216,7 +250,7 @@ export class BuildService {
   }
 
   /**
-   * 获取UT测试配置ID
+   * Get UT test configuration ID
    */
   async getUtTestConfigId(): Promise<number | undefined> {
     const config = await this.getConfigByType(CONFIG_TYPES.UT_TEST);
@@ -225,21 +259,21 @@ export class BuildService {
   }
 
   /**
-   * 编译算子
+   * Compile operator
    */
   async startBuild(params: StartBuildParams): Promise<void> {
-    console.log('[startBuild] ========== 开始编译算子 ==========');
-    console.log('[startBuild] 传入参数:', JSON.stringify(params, null, 2));
+    console.log('[startBuild] ========== Start building operators ==========');
+    console.log('[startBuild] Input params:', JSON.stringify(params, null, 2));
     const pm = ProjectManager.getInstance();
 
-    // 如果传入了 projectId，则设置 ProjectManager 的项目ID
+    // If projectId is passed in, set the project ID of ProjectManager
     if (params.projectId !== undefined) {
-      console.log('[startBuild] 检测到传入的 projectId:', params.projectId);
+      console.log('[startBuild] Detected incoming projectId:', params.projectId);
       const projectIdStr = String(params.projectId);
       const project = getProjectById(Number(params.projectId));
 
       if (project) {
-        console.log('[startBuild] 找到项目信息:', {
+        console.log('[startBuild] Found project info:', {
           id: project.id,
           project_name: project.project_name,
           project_path: project.project_path,
@@ -248,41 +282,46 @@ export class BuildService {
         pm['_projectId'] = projectIdStr;
         pm['_projectName'] = project.project_name;
         pm['_projectPath'] = project.project_path;
-        console.log('[startBuild] 已设置 ProjectManager 项目信息');
-      } else {
-        console.warn('[startBuild] 未找到对应的项目，projectId:', params.projectId);
+        console.log('[startBuild] ProjectManager project info set');
       }
-    } else {
-      console.log('[startBuild] 未传入 projectId，使用 ProjectManager 中的项目ID');
+      else {
+        console.warn('[startBuild] Matching project not found, projectId:', params.projectId);
+      }
+    }
+    else {
+      console.log('[startBuild] projectId not provided, using project ID in ProjectManager');
     }
 
     const projectId = pm.projectId;
-    console.log('[startBuild] 当前使用的项目ID:', projectId);
-    console.log('[startBuild] ProjectManager 项目信息:', {
+
+    console.log('[startBuild] Current project ID in use:', projectId);
+    console.log('[startBuild] ProjectManager project info:', {
       projectId: pm.projectId,
       projectName: pm['_projectName'],
       projectPath: pm['_projectPath'],
     });
 
     let configId = params.configId ? Number(params.configId) : undefined;
-    console.log('[startBuild] 传入的 configId:', configId);
+
+    console.log('[startBuild] Input configId:', configId);
 
     if (!configId) {
-      console.log('[startBuild] 未传入 configId，尝试获取当前项目的配置');
+      console.log('[startBuild] configId not provided, trying to get current project config');
       configId = await this.getBuildConfigId();
-      console.log('[startBuild] 获取到的 configId:', configId);
+      console.log('[startBuild] Retrieved configId:', configId);
     }
 
     if (!configId) {
-      const errorMsg = '未找到编译配置，请先在配置面板添加编译配置';
+      const errorMsg = t('build.noBuildConfig');
+
       console.error('[startBuild]', errorMsg);
       vscode.window.showErrorMessage(errorMsg);
 
       return;
     }
 
-    console.log('[startBuild] 使用配置ID:', configId);
-    console.log('[startBuild] 编译参数:', {
+    console.log('[startBuild] Using config ID:', configId);
+    console.log('[startBuild] Build params:', {
       configId,
       compileOption: params.compileOption,
       operatorNames: params.operatorNames,
@@ -294,96 +333,95 @@ export class BuildService {
         Number(configId),
         params.compileOption,
         params.operatorNames,
-        params.scriptField
+        params.scriptField,
       );
-      console.log('[startBuild] 生成的编译命令:', buildCommand);
+
+      console.log('[startBuild] Generated build command:', buildCommand);
       const executor = ProjectManager.getInstance()
         .getExecutor();
-      console.log('[startBuild] 开始执行编译命令...');
+
+      console.log('[startBuild] Start executing build command...');
       const res = await executor.execute(buildCommand, [], [], {}, true);
 
-      console.log('[startBuild] 编译执行结果:', {
+      console.log('[startBuild] Build execution result:', {
         code: res.code,
         output: res.output,
       });
 
       if (res.code !== 0) {
-        console.error('[startBuild] 编译失败，退出码:', res.code, '输出:', res.output);
-        vscode.window.showErrorMessage(`编译算子失败 ${res.output}`);
+        console.error('[startBuild] Build failed, exit code:', res.code, 'output:', res.output);
+        vscode.window.showErrorMessage(t('build.compileFailed', { output: res.output }));
 
         return;
       }
 
-      console.log('[startBuild] 编译成功');
-      vscode.window.showInformationMessage("编译算子成功");
+      console.log('[startBuild] Build succeeded');
+      vscode.window.showInformationMessage(t('build.compileSuccess'));
 
-      await tryMarkOperatorsAsCompiled(Number(configId), params.operatorNames);
+      await notifyBuildSucceededForSidebar(Number(configId), params.operatorNames);
     }
     catch (e) {
-      console.error('[startBuild] 编译过程出错:', e);
-      vscode.window.showErrorMessage(`获取编译算子命令失败 ${(e as Error).message}`);
+      console.error('[startBuild] Build process error:', e);
+      vscode.window.showErrorMessage(t('build.getCompileCommandFailed', { error: (e as Error).message }));
     }
 
-    console.log('[startBuild] ========== 结束编译算子 ==========');
+    console.log('[startBuild] ========== Finished building operators ==========');
   }
 
   /**
-   * 运行算子
+   * Run operator
    */
   async startRun(params: StartRunParams): Promise<void> {
-    // 使用 getProjectType 方法获取项目类型，如果是 pyasc，使用 build_op 配置，否则使用 build_example 配置
+    // Option A: preserve V1 behavior exactly — startRun uses homeMethods.getProjectType()
+    // (live detection) and skips the active-file check when params.filePath is set.
     const projectTypeInfo = await homeMethods.getProjectType();
-    const isPyasc = projectTypeInfo.projectType === OperatorProjectType.PYASC;
+    const opPlugin = OperatorPluginRegistry.getOpPlugin(projectTypeInfo.projectType);
+    const behavior = opPlugin.buildBehavior;
 
-    // 对于 pyasc 类型，检查当前是否打开了 .py 文件
-    // 如果传入了 filePath 参数（右键调用），则跳过检测
-    if (isPyasc && !params.filePath) {
-      // 检查当前是否打开了 .py 文件
+    if (behavior.requiresActiveFileCheck && !params.filePath) {
       const activeEditor = vscode.window.activeTextEditor;
-      const isPyFile = activeEditor?.document.fileName.endsWith('.py');
+      const isPyFile = activeEditor?.document.fileName.endsWith(behavior.activeFileExtension!);
 
       if (!isPyFile) {
-        vscode.window.showWarningMessage('请先打开一个 .py 文件');
+        vscode.window.showWarningMessage(t('build.openPyFirst'));
+
         return;
       }
 
-      // 获取工作区路径
       const workspaceFolders = vscode.workspace.workspaceFolders;
+
       if (!workspaceFolders || workspaceFolders.length === 0) {
-        vscode.window.showWarningMessage('未找到工作区路径');
+        vscode.window.showWarningMessage(t('build.workspacePathNotFound'));
+
         return;
       }
 
       const workspacePath = workspaceFolders[0].uri.fsPath;
       const filePath = activeEditor!.document.uri.fsPath;
+      const relativePath = path.relative(workspacePath, filePath)
+        .replace(/\\/g, '/');
 
-      // 计算相对路径
-      const relativePath = path.relative(workspacePath, filePath).replace(/\\/g, '/');
-
-      // 获取 build_op 配置并更新 target_file
       const buildConfigId = await this.getBuildConfigId();
+
       if (buildConfigId) {
-        // 获取项目ID
         const projectIdStr = ProjectManager.getInstance().projectId;
+
         if (projectIdStr) {
           const projectId = Number(projectIdStr);
-          // 获取 build_op 配置
           const configs = await getConfig(projectId, 'build_op');
           const buildOpConfig = configs.find((c: any) => c.config_id === buildConfigId);
 
           if (buildOpConfig) {
-            // 更新配置的 target_file
-            const updatedConfig = {
-              config_id: buildConfigId,
-              config_type: 'build_op',
-              user_options: {
-                ...buildOpConfig.user_options,
-                target_file: `python3 ${relativePath}`,
+            await postConfig('build_op', [
+              {
+                config_id: buildConfigId,
+                config_type: 'build_op',
+                user_options: {
+                  ...buildOpConfig.user_options,
+                  target_file: `python3 ${relativePath}`,
+                },
               },
-            };
-
-            // 保存配置
-            await postConfig('build_op', [updatedConfig]);
+            ]);
           }
         }
       }
@@ -392,11 +430,10 @@ export class BuildService {
     let configId = params.configId ? Number(params.configId) : undefined;
 
     if (!configId) {
-      if (isPyasc) {
-        configId = await this.getBuildConfigId();
-      } else {
-        configId = await this.getBuildExampleConfigId();
-      }
+      // pyasc uses build_op config (no separate example build); others use build_example
+      configId = behavior.requiresBuildBeforeAnalysis
+        ? await this.getBuildExampleConfigId()
+        : await this.getBuildConfigId();
     }
 
     try {
@@ -410,27 +447,37 @@ export class BuildService {
       console.log('runRes', res);
 
       if (res.code !== 0) {
-        vscode.window.showErrorMessage(`运行失败 ${res.output}`);
+        const output = res.output ?? '';
+        const isQemuSegfault = /qemu/i.test(output) && (/signal\s+11|Segmentation\s+fault/i.test(output) || /core\s+dumped/i.test(output));
+        const isPyascRuntime = !behavior.requiresBuildBeforeAnalysis && /runtime_camodel|cannot find -lruntime_camodel|Runtime library must be available/i.test(output);
+        const message = isQemuSegfault
+          ? t('build.runFailedQemuSegfault', { output })
+          : isPyascRuntime
+            ? t('build.runFailedPyascRuntime', { output })
+            : t('build.runFailed', { output });
+
+        vscode.window.showErrorMessage(message);
 
         return;
       }
 
-      vscode.window.showInformationMessage('运行成功');
+      vscode.window.showInformationMessage(t('build.runSuccess'));
     }
     catch (e) {
-      vscode.window.showErrorMessage(`获取运行命令失败 ${(e as Error).message}`);
+      vscode.window.showErrorMessage(t('build.getRunCommandFailed', { error: (e as Error).message }));
     }
   }
 
   /**
-   * 编译示例
+   * Compile example
    */
   async startBuildExample(params: StartBuildExampleParams): Promise<void> {
     const pm = ProjectManager.getInstance();
 
-    // 如果传入了 projectId，则设置 ProjectManager 的项目信息（与 startBuild 一致）
+    // If projectId is passed in, set the project information of ProjectManager (consistent with startBuild)
     if (params.projectId !== undefined) {
       const project = getProjectById(Number(params.projectId));
+
       if (project) {
         pm['_projectId'] = String(params.projectId);
         pm['_projectName'] = project.project_name;
@@ -455,132 +502,106 @@ export class BuildService {
       const res = await executor.execute(buildCommand, [], [], {}, true);
 
       if (res.code !== 0) {
-        vscode.window.showErrorMessage('执行失败');
+        vscode.window.showErrorMessage(t('build.executeFailed', { output: '' }));
 
         return;
       }
 
-      vscode.window.showInformationMessage('执行成功');
+      vscode.window.showInformationMessage(t('build.executeSuccess'));
     }
     catch (e) {
-      vscode.window.showErrorMessage(`获取执行命令失败 ${(e as Error).message}`);
+      vscode.window.showErrorMessage(t('build.getExecuteCommandFailed', { error: (e as Error).message }));
     }
   }
 
   /**
-   * 开始仿真分析
+   * Start simulation analysis
    */
   async startSimulate(params: { operatorNames?: string } = {}): Promise<void> {
     const configData = await this.getBuildConfigsList();
     const simulatorItem = configData.find((v) => v.config_type === CONFIG_TYPES.SIMULATE);
 
-    // 检查项目类型，pyasc 类型不需要编译
     const projectId = ProjectManager.getInstance().projectId;
     const project = projectId ? getProjectById(Number(projectId)) : null;
-    const isPyascType = project?.project_type === 'pyasc';
+    // Option A: preserve V1 behavior — startSimulate reads project.project_type (stored value)
+    // and throws on active-file-check failure.
+    const opPlugin = OperatorPluginRegistry.getOpPlugin(project?.project_type);
+    const behavior = opPlugin.buildBehavior;
 
-    // 对于 pyasc 类型，检查当前是否打开了 .py 文件
-    // 如果传入了 operatorNames 参数（右键操作），则跳过检测
-    if (isPyascType && !params.operatorNames) {
-      // 检查当前是否打开了 .py 文件
+    if (behavior.requiresActiveFileCheck && !params.operatorNames) {
       const activeEditor = vscode.window.activeTextEditor;
-      const isPyFile = activeEditor?.document.fileName.endsWith('.py');
+      const isPyFile = activeEditor?.document.fileName.endsWith(behavior.activeFileExtension!);
 
       if (!isPyFile) {
-        vscode.window.showWarningMessage('请先打开一个 .py 文件');
-        throw new Error('请先打开一个 .py 文件');
+        vscode.window.showWarningMessage(t('build.openPyFirst'));
+        throw new Error(t('task.openPyFirst'));
       }
 
-      // 获取工作区路径
       const workspaceFolders = vscode.workspace.workspaceFolders;
+
       if (!workspaceFolders || workspaceFolders.length === 0) {
-        vscode.window.showWarningMessage('未找到工作区路径');
-        throw new Error('未找到工作区路径');
+        vscode.window.showWarningMessage(t('build.workspacePathNotFound'));
+        throw new Error(t('task.workspacePathNotFound'));
       }
 
       const workspacePath = workspaceFolders[0].uri.fsPath;
       const filePath = activeEditor!.document.uri.fsPath;
+      const relativePath = path.relative(workspacePath, filePath)
+        .replace(/\\/g, '/');
 
-      // 计算相对路径
-      const relativePath = path.relative(workspacePath, filePath).replace(/\\/g, '/');
-
-      // 获取 build_op 配置并更新 target_file
       const buildConfigId = await this.getBuildConfigId();
+
       if (buildConfigId && projectId) {
-        const projectIdNum = Number(projectId);
-        // 获取 build_op 配置
-        const configs = await getConfig(projectIdNum, 'build_op');
+        const configs = await getConfig(Number(projectId), 'build_op');
         const buildOpConfig = configs.find((c: any) => c.config_id === buildConfigId);
 
         if (buildOpConfig) {
-          // 更新配置的 target_file
-          const updatedConfig = {
-            config_id: buildConfigId,
-            config_type: 'build_op',
-            user_options: {
-              ...buildOpConfig.user_options,
-              target_file: `python3 ${relativePath}`,
+          await postConfig('build_op', [
+            {
+              config_id: buildConfigId,
+              config_type: 'build_op',
+              user_options: {
+                ...buildOpConfig.user_options,
+                target_file: `python3 ${relativePath}`,
+              },
             },
-          };
-
-          // 保存配置
-          await postConfig('build_op', [updatedConfig]);
+          ]);
         }
       }
     }
 
-    if (!isPyascType) {
-      // 构建编译选项
-      let compileOption = ''
-
-      const buildCommand = getBuildOpCommand(
-        Number(simulatorItem?.config_id),
-        compileOption,
-        params.operatorNames,
-      );
-      const buildExecutor = ProjectManager.getInstance()
-        .getExecutor();
-      const buildRes = await buildExecutor.execute(
-        buildCommand,
-        [],
-        [],
-        {},
-        true,
-      );
+    if (behavior.requiresBuildBeforeAnalysis) {
+      const buildCommand = getBuildOpCommand(Number(simulatorItem?.config_id), '', params.operatorNames);
+      const buildRes = await ProjectManager.getInstance()
+        .getExecutor()
+        .execute(buildCommand, [], [], {}, true);
 
       console.log('buildRes', buildRes);
 
       if (buildRes.code !== 0) {
-        vscode.window.showErrorMessage(`编译算子失败 ${buildRes.output}`);
-        throw new Error(`编译算子失败: ${buildRes.output}`);
+        vscode.window.showErrorMessage(t('build.compileFailed', { output: buildRes.output }));
+        throw new Error(t('build.compileFailedThrow', { output: buildRes.output }));
       }
 
-      await tryMarkOperatorsAsCompiled(Number(simulatorItem?.config_id), params.operatorNames);
+      await notifyBuildSucceededForSidebar(Number(simulatorItem?.config_id), params.operatorNames);
 
-      // 如果是标准自定义算子，需要编译 example 并添加 --simulator --soc
       if (await isRootStandardCustom()) {
         const exConfigId = await this.getBuildExampleConfigId();
-        const exampleCompileOption = `--simulator --soc={soc_version}`;
+        const socForExample = getEnvironmentSocVersionFromWorkspace().trim() || soc_version;
         const exampleBuildCommand = getBuildExampleCommand(
           Number(exConfigId),
-          exampleCompileOption,
+          `--simulator --soc=${socForExample}`,
           params.operatorNames,
         );
-        const exampleBuildExecutor = ProjectManager.getInstance()
-          .getExecutor();
-        const exampleBuildRes = await exampleBuildExecutor.execute(
-          exampleBuildCommand,
-          [],
-          [],
-          {},
-          true,
-        );
+        const exampleBuildRes = await ProjectManager.getInstance()
+          .getExecutor()
+          .execute(exampleBuildCommand, [], [], {}, true);
 
         console.log('example buildRes', exampleBuildRes);
 
         if (exampleBuildRes.code !== 0) {
-          vscode.window.showErrorMessage(`执行失败 ${exampleBuildRes.output}`);
-          throw new Error(`执行失败: ${exampleBuildRes.output}`);
+          vscode.window.showErrorMessage(t('build.executeFailed', { output: exampleBuildRes.output }));
+          throw new Error(t('build.executeFailedThrow', { output: exampleBuildRes.output }));
         }
       }
     }
@@ -591,145 +612,113 @@ export class BuildService {
     console.log('simulate configId', configId, exConfigId);
 
     try {
-      const simulateCommand = getSimulateCommand(
-        Number(configId),
-        Number(exConfigId),
-        params.operatorNames,
-      );
+      const simulateCommand = getSimulateCommand(Number(configId), Number(exConfigId), params.operatorNames);
 
       console.log('simulateCommand', simulateCommand);
-      const executor = ProjectManager.getInstance()
-        .getExecutor();
-      const res = await executor.execute(simulateCommand, [], [], {}, true);
+      const res = await ProjectManager.getInstance()
+        .getExecutor()
+        .execute(simulateCommand, [], [], {}, true);
 
       if (res.code !== 0) {
-        vscode.window.showErrorMessage('执行仿真分析失败');
-        throw new Error(`执行仿真分析失败: ${res.output ?? ''}`);
+        vscode.window.showErrorMessage(t('build.simulationFailed'));
+        throw new Error(t('build.simulationFailedThrow', { output: res.output ?? '' }));
       }
 
-      vscode.window.showInformationMessage('执行仿真分析成功');
+      vscode.window.showInformationMessage(t('build.simulationSuccess'));
       vscode.commands.executeCommand('huawei-op-devtools.open-performance-panel-view');
       vscode.commands.executeCommand('huawei-op-devtools.flashPerformanceRunData');
     }
     catch (e: unknown) {
-      vscode.window.showErrorMessage(`获取仿真命令失败 ${(e as Error).message}`);
+      vscode.window.showErrorMessage(t('build.getSimulationCommandFailed', { error: (e as Error).message }));
       throw e;
     }
   }
 
   /**
-   * 开始上板分析
+   * Start board analysis
    */
   async startOnBoard(params: { operatorNames?: string } = {}): Promise<void> {
-    // 检查项目类型，pyasc 类型不需要编译
     const projectId = ProjectManager.getInstance().projectId;
     const project = projectId ? getProjectById(Number(projectId)) : null;
-    const isPyascType = project?.project_type === 'pyasc';
+    // Option A: preserve V1 behavior — startOnBoard reads project.project_type (stored value)
+    // and returns (not throws) on active-file-check failure.
+    const opPlugin = OperatorPluginRegistry.getOpPlugin(project?.project_type);
+    const behavior = opPlugin.buildBehavior;
 
-    // 对于 pyasc 类型，检查当前是否打开了 .py 文件
-    // 如果传入了 operatorNames 参数（右键操作），则跳过检测
-    if (isPyascType && !params.operatorNames) {
-      // 检查当前是否打开了 .py 文件
+    if (behavior.requiresActiveFileCheck && !params.operatorNames) {
       const activeEditor = vscode.window.activeTextEditor;
-      const isPyFile = activeEditor?.document.fileName.endsWith('.py');
+      const isPyFile = activeEditor?.document.fileName.endsWith(behavior.activeFileExtension!);
 
       if (!isPyFile) {
-        vscode.window.showWarningMessage('请先打开一个 .py 文件');
+        vscode.window.showWarningMessage(t('build.openPyFirst'));
+
         return;
       }
 
-      // 获取工作区路径
       const workspaceFolders = vscode.workspace.workspaceFolders;
+
       if (!workspaceFolders || workspaceFolders.length === 0) {
-        vscode.window.showWarningMessage('未找到工作区路径');
+        vscode.window.showWarningMessage(t('build.workspacePathNotFound'));
+
         return;
       }
 
       const workspacePath = workspaceFolders[0].uri.fsPath;
       const filePath = activeEditor!.document.uri.fsPath;
+      const relativePath = path.relative(workspacePath, filePath)
+        .replace(/\\/g, '/');
 
-      // 计算相对路径
-      const relativePath = path.relative(workspacePath, filePath).replace(/\\/g, '/');
-
-      // 获取 build_op 配置并更新 target_file
       const buildConfigId = await this.getBuildConfigId();
+
       if (buildConfigId && projectId) {
-        const projectIdNum = Number(projectId);
-        // 获取 build_op 配置
-        const configs = await getConfig(projectIdNum, 'build_op');
+        const configs = await getConfig(Number(projectId), 'build_op');
         const buildOpConfig = configs.find((c: any) => c.config_id === buildConfigId);
 
         if (buildOpConfig) {
-          // 更新配置的 target_file
-          const updatedConfig = {
-            config_id: buildConfigId,
-            config_type: 'build_op',
-            user_options: {
-              ...buildOpConfig.user_options,
-              target_file: `python3 ${relativePath}`,
+          await postConfig('build_op', [
+            {
+              config_id: buildConfigId,
+              config_type: 'build_op',
+              user_options: {
+                ...buildOpConfig.user_options,
+                target_file: `python3 ${relativePath}`,
+              },
             },
-          };
-
-          // 保存配置
-          await postConfig('build_op', [updatedConfig]);
+          ]);
         }
       }
     }
 
     const configId = await this.getOnBoardConfigId();
-    // 上板分析前编译（pyasc 类型跳过）
-    if (!isPyascType) {
-      // 构建编译选项
-      let compileOption = ''
 
-      const buildCommand = getBuildOpCommand(
-        Number(configId),
-        compileOption,
-        params.operatorNames,
-      );
-      const buildExecutor = ProjectManager.getInstance()
-        .getExecutor();
-      const buildRes = await buildExecutor.execute(
-        buildCommand,
-        [],
-        [],
-        {},
-        true,
-      );
+    if (behavior.requiresBuildBeforeAnalysis) {
+      const buildCommand = getBuildOpCommand(Number(configId), '', params.operatorNames);
+      const buildRes = await ProjectManager.getInstance()
+        .getExecutor()
+        .execute(buildCommand, [], [], {}, true);
 
       console.log('buildRes', buildRes);
 
       if (buildRes.code !== 0) {
-        vscode.window.showErrorMessage(`编译算子失败 ${buildRes.output}`);
+        vscode.window.showErrorMessage(t('build.compileFailed', { output: buildRes.output }));
 
         return;
       }
 
-      await tryMarkOperatorsAsCompiled(Number(configId), params.operatorNames);
+      await notifyBuildSucceededForSidebar(Number(configId), params.operatorNames);
 
-      // 如果是标准自定义算子，需要编译 example
       if (await isRootStandardCustom()) {
         const exConfigId = await this.getBuildExampleConfigId();
-        const exampleCompileOption = '';
-        const exampleBuildCommand = getBuildExampleCommand(
-          Number(exConfigId),
-          exampleCompileOption,
-          params.operatorNames,
-        );
-        const exampleBuildExecutor = ProjectManager.getInstance()
-          .getExecutor();
-        const exampleBuildRes = await exampleBuildExecutor.execute(
-          exampleBuildCommand,
-          [],
-          [],
-          {},
-          true,
-        );
+        const exampleBuildCommand = getBuildExampleCommand(Number(exConfigId), '', params.operatorNames);
+        const exampleBuildRes = await ProjectManager.getInstance()
+          .getExecutor()
+          .execute(exampleBuildCommand, [], [], {}, true);
 
         console.log('example buildRes', exampleBuildRes);
 
         if (exampleBuildRes.code !== 0) {
-          vscode.window.showErrorMessage(`执行失败 ${exampleBuildRes.output}`);
+          vscode.window.showErrorMessage(t('build.executeFailed', { output: exampleBuildRes.output }));
+
           return;
         }
       }
@@ -740,58 +729,56 @@ export class BuildService {
     console.log('onboard configId', configId, exConfigId);
 
     try {
-      const onBoardCommand = getOnBoardCommand(
-        Number(configId),
-        Number(exConfigId),
-        params.operatorNames,
-      );
+      const onBoardCommand = getOnBoardCommand(Number(configId), Number(exConfigId), params.operatorNames);
 
       console.log('onBoardCommand', onBoardCommand);
-      const executor = ProjectManager.getInstance()
-        .getExecutor();
-      const res = await executor.execute(onBoardCommand, [], [], {}, true);
+      const res = await ProjectManager.getInstance()
+        .getExecutor()
+        .execute(onBoardCommand, [], [], {}, true);
 
       if (res.code !== 0) {
-        vscode.window.showErrorMessage('执行上板分析失败');
+        vscode.window.showErrorMessage(t('build.onBoardFailed'));
 
         return;
       }
 
-      vscode.window.showInformationMessage('执行上板分析成功');
+      vscode.window.showInformationMessage(t('build.onBoardSuccess'));
       vscode.commands.executeCommand('huawei-op-devtools.open-performance-panel-view');
       vscode.commands.executeCommand('huawei-op-devtools.flashPerformanceRunData');
     }
     catch (e: unknown) {
-      vscode.window.showErrorMessage(`获取上板命令失败 ${(e as Error).message}`);
+      vscode.window.showErrorMessage(t('build.getOnBoardCommandFailed', { error: (e as Error).message }));
     }
   }
 
   /**
-   * 开始DumpTensor分析
+   * Start DumpTensor analysis
    */
-  async startDumpTensor(params: { operatorNames?: string, compileOption?: string } = {}): Promise<void> {
-    let configId = await this.getBuildConfigId();
-    console.log('[startDumpTensor] 查询到 configId:', configId);
+  async startDumpTensor(params: { operatorNames?: string,
+    compileOption?: string } = {}): Promise<void> {
+    const configId = await this.getBuildConfigId();
 
-    // 获取当前目录
+    console.log('[startDumpTensor] Queried configId:', configId);
+
+    // Resolve workspace paths used by dump tensor flow.
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders || workspaceFolders.length === 0) {
-      vscode.window.showErrorMessage('未找到工作区路径');
+      vscode.window.showErrorMessage(t('build.workspacePathNotFound'));
       return;
     }
     const currentDir = workspaceFolders[0].uri.fsPath;
     const tempDataPath = path.join(currentDir, '.vscode', 'dump_tensor_temp_data');
     const dumpTensorPath = path.join(currentDir, '.vscode', 'DumpTensor');
 
-    // 删除临时数据目录
-    console.log('[startDumpTensor] 删除临时数据目录:', tempDataPath);
+    // Remove temp data folder from previous runs.
+    console.log('[startDumpTensor] Removing temp data directory:', tempDataPath);
     try {
       if (fs.existsSync(tempDataPath)) {
         fs.rmSync(tempDataPath, { recursive: true, force: true });
-        console.log('[startDumpTensor] 临时数据目录已删除');
+        console.log('[startDumpTensor] Temp data directory removed');
       }
     } catch (error) {
-      console.error('[startDumpTensor] 删除临时数据目录失败:', error);
+      console.error('[startDumpTensor] Failed to remove temp data directory:', error);
     }
 
     const buildCommand = getBuildOpCommand(
@@ -799,27 +786,32 @@ export class BuildService {
       params.compileOption,
       params.operatorNames,
     );
-    console.log('[startDumpTensor] 生成的编译命令:', buildCommand);
+
+    console.log('[startDumpTensor] Generated build command:', buildCommand);
 
     const executor = ProjectManager.getInstance()
       .getExecutor();
-    console.log('[startDumpTensor] 开始执行编译命令...');
+
+    console.log('[startDumpTensor] Start executing build command...');
 
     const res = await executor.execute(buildCommand, [], [], {}, true);
-    console.log('[startDumpTensor] 编译执行结果:', {
+
+    console.log('[startDumpTensor] Build execution result:', {
       code: res.code,
       output: res.output,
     });
 
     if (res.code !== 0) {
-      console.error('[startDumpTensor] 编译失败，退出码:', res.code, '输出:', res.output);
-      vscode.window.showErrorMessage(`编译算子失败 ${res.output}`);
+      console.error('[startDumpTensor] Build failed, exit code:', res.code, 'output:', res.output);
+      vscode.window.showErrorMessage(t('build.compileFailed', { output: res.output }));
+
       return;
     }
 
-    await tryMarkOperatorsAsCompiled(Number(configId), params.operatorNames);
+    await notifyBuildSucceededForSidebar(Number(configId), params.operatorNames);
 
     const exConfigId = await this.getBuildExampleConfigId();
+
     if (await isRootStandardCustom()) {
       const exampleBuildCommand = getBuildExampleCommand(
         Number(exConfigId),
@@ -835,56 +827,58 @@ export class BuildService {
         {},
         true,
       );
+
       console.log('[startDumpTensor] example buildRes', exampleBuildRes);
 
       if (exampleBuildRes.code !== 0) {
-        vscode.window.showErrorMessage(`执行失败 ${exampleBuildRes.output}`);
+        vscode.window.showErrorMessage(t('build.executeFailed', { output: exampleBuildRes.output }));
+
         return;
       }
-      
-      // 执行show_kernel_debug_data命令
-      await this.executeShowKernelDebugData(tempDataPath, dumpTensorPath);
-      
-      vscode.window.showInformationMessage('执行DumpTensor成功');
-      
-      // 打开DumpTensor数据面板并刷新数据
+
+      vscode.window.showInformationMessage(t('build.dumpTensorSuccess'));
       await this.openDumpTensorPanel();
-    } else {
+    }
+    else {
       try {
         const runCommand = getRunCommand(Number(exConfigId));
+
         console.log('[startDumpTensor] runCommand', runCommand);
 
         const executor = ProjectManager.getInstance()
           .getExecutor();
-        const res = await executor.execute(`export ASCEND_GLOBAL_LOG_LEVEL=1 && export ASCEND_DUMP_PATH=../.vscode/dump_tensor_temp_data && ${runCommand}`, [], [], {}, true);
+        const res = await executor.execute(runCommand, [], [], {}, true);
+
         console.log('[startDumpTensor] runRes', res);
 
         if (res.code !== 0) {
-          vscode.window.showErrorMessage(`运行失败 ${res.output}`);
+          const output = res.output ?? '';
+          const isQemuSegfault = /qemu/i.test(output) && (/signal\s+11|Segmentation\s+fault/i.test(output) || /core\s+dumped/i.test(output));
+          const message = isQemuSegfault ? t('build.runFailedQemuSegfault', { output }) : t('build.runFailed', { output });
+
+          vscode.window.showErrorMessage(message);
+
           return;
         }
-        
-        // 执行show_kernel_debug_data命令
-        await this.executeShowKernelDebugData(tempDataPath, dumpTensorPath);
-        
-        vscode.window.showInformationMessage('执行DumpTensor成功');
-        
-        // 打开DumpTensor数据面板并刷新数据
+
+        vscode.window.showInformationMessage(t('build.dumpTensorSuccess'));
+
+        // Open dump tensor panel and refresh.
         await this.openDumpTensorPanel();
       }
       catch (e) {
-        vscode.window.showErrorMessage(`获取运行命令失败 ${(e as Error).message}`);
+        vscode.window.showErrorMessage(t('build.getRunCommandFailed', { error: (e as Error).message }));
       }
     }
   }
 
   /**
-   * 执行UT测试
+   * Start UT test.
    */
   async startUtTest(params: { operatorNames?: string, projectId?: string | number, configId?: string } = {}): Promise<void> {
     const pm = ProjectManager.getInstance();
 
-    // 如果传入了 projectId，则设置 ProjectManager 的项目信息
+    // For external entry points, allow overriding project context.
     if (params.projectId !== undefined) {
       const project = getProjectById(Number(params.projectId));
       if (project) {
@@ -901,7 +895,7 @@ export class BuildService {
     }
 
     try {
-      // 构建UT测试命令
+      // Build UT test command.
       const buildCommand = getUtTestCommand(
         Number(configId),
         params.operatorNames,
@@ -912,108 +906,106 @@ export class BuildService {
       const res = await executor.execute(buildCommand, [], [], {}, true);
 
       if (res.code !== 0) {
-        vscode.window.showErrorMessage('UT测试执行失败');
+        vscode.window.showErrorMessage(t('build.utTestFailed'));
         return;
       }
 
-      vscode.window.showInformationMessage('UT测试执行成功');
+      vscode.window.showInformationMessage(t('build.utTestSuccess'));
     }
     catch (e) {
-      vscode.window.showErrorMessage(`获取UT测试命令失败 ${(e as Error).message}`);
+      vscode.window.showErrorMessage(t('build.getUtTestCommandFailed', { error: (e as Error).message }));
     }
   }
 
   /**
-   * 执行show_kernel_debug_data命令
+   * Execute show_kernel_debug_data command.
    */
   private async executeShowKernelDebugData(tempDataPath: string, dumpTensorPath: string): Promise<void> {
     try {
       const showCommand = `show_kernel_debug_data ${tempDataPath} ${dumpTensorPath}`;
-      console.log('[startDumpTensor] 执行show_kernel_debug_data命令:', showCommand);
+      console.log('[startDumpTensor] Running show_kernel_debug_data command:', showCommand);
       
       const executor = ProjectManager.getInstance().getExecutor();
       const showRes = await executor.execute(showCommand, [], [], {}, true);
-      console.log('[startDumpTensor] show_kernel_debug_data执行结果:', {
+      console.log('[startDumpTensor] show_kernel_debug_data result:', {
         code: showRes.code,
         output: showRes.output,
       });
       
       if (showRes.code !== 0) {
-        console.error('[startDumpTensor] show_kernel_debug_data执行失败，退出码:', showRes.code, '输出:', showRes.output);
-        // 不影响主流程，只记录错误
+        console.error('[startDumpTensor] show_kernel_debug_data failed, exit code:', showRes.code, 'output:', showRes.output);
+        // Non-blocking error: keep primary flow going.
       }
     } catch (error) {
-      console.error('[startDumpTensor] 执行show_kernel_debug_data命令失败:', error);
-      // 不影响主流程，只记录错误
+      console.error('[startDumpTensor] Failed to run show_kernel_debug_data command:', error);
+      // Non-blocking error: keep primary flow going.
     }
   }
 
   /**
-   * 打开DumpTensor数据面板并刷新数据
+   * Open dump tensor panel and refresh data.
    */
   private async openDumpTensorPanel(): Promise<void> {
     try {
-      console.log('[startDumpTensor] 打开DumpTensor数据面板');
-      // 打开DumpTensor数据面板
+      console.log('[startDumpTensor] Opening dump tensor data panel');
       await vscode.commands.executeCommand('huawei-op-devtools.open-dump-tensor-panel-view');
-      // 刷新DumpTensor数据
       await vscode.commands.executeCommand('huawei-op-devtools.flashDumpTensorData');
-      console.log('[startDumpTensor] DumpTensor数据面板已打开并刷新');
+      console.log('[startDumpTensor] Dump tensor panel opened and refreshed');
     } catch (error) {
-      console.error('[startDumpTensor] 打开DumpTensor数据面板失败:', error);
+      console.error('[startDumpTensor] Failed to open dump tensor panel:', error);
     }
   }
 
   /**
-   * 导入DumpTensor .bin文件
+   * Import DumpTensor .bin file.
    */
   async importDumpTensorBinFile(binFilePath: string): Promise<void> {
     try {
-      console.log('[importDumpTensorBinFile] 开始导入.bin文件:', binFilePath);
+      console.log('[importDumpTensorBinFile] Importing .bin file:', binFilePath);
       
-      // 获取当前目录
+      // Resolve workspace paths used by dump tensor flow.
       const workspaceFolders = vscode.workspace.workspaceFolders;
       if (!workspaceFolders || workspaceFolders.length === 0) {
-        vscode.window.showErrorMessage('未找到工作区路径');
+        vscode.window.showErrorMessage(t('build.workspacePathNotFound'));
         return;
       }
       const currentDir = workspaceFolders[0].uri.fsPath;
       const tempDataPath = path.join(currentDir, '.vscode', 'dump_tensor_temp_data');
       const dumpTensorPath = path.join(currentDir, '.vscode', 'DumpTensor');
 
-      // 删除临时数据目录
-      console.log('[importDumpTensorBinFile] 删除临时数据目录:', tempDataPath);
+      // Remove temp data folder from previous runs.
+      console.log('[importDumpTensorBinFile] Removing temp data directory:', tempDataPath);
       try {
         if (fs.existsSync(tempDataPath)) {
           fs.rmSync(tempDataPath, { recursive: true, force: true });
-          console.log('[importDumpTensorBinFile] 临时数据目录已删除');
+          console.log('[importDumpTensorBinFile] Temp data directory removed');
         }
       } catch (error) {
-        console.error('[importDumpTensorBinFile] 删除临时数据目录失败:', error);
+        console.error('[importDumpTensorBinFile] Failed to remove temp data directory:', error);
       }
 
-      // 确保临时数据目录存在
+      // Ensure temp data directory exists.
       if (!fs.existsSync(tempDataPath)) {
         fs.mkdirSync(tempDataPath, { recursive: true });
-        console.log('[importDumpTensorBinFile] 创建临时数据目录:', tempDataPath);
+        console.log('[importDumpTensorBinFile] Created temp data directory:', tempDataPath);
       }
 
-      // 复制选中的.bin文件到临时目录
+      // Copy selected .bin file into temp directory.
       const fileName = path.basename(binFilePath);
       const destPath = path.join(tempDataPath, fileName);
       fs.copyFileSync(binFilePath, destPath);
-      console.log('[importDumpTensorBinFile] .bin文件已复制到临时目录:', destPath);
+      console.log('[importDumpTensorBinFile] Copied .bin file to temp directory:', destPath);
 
-      // 执行show_kernel_debug_data命令
+      // Post-process dump files and build tree data.
       await this.executeShowKernelDebugData(tempDataPath, dumpTensorPath);
       
-      vscode.window.showInformationMessage('导入DumpTensor .bin文件成功');
+      vscode.window.showInformationMessage(t('build.importDumpTensorBinSuccess'));
       
-      // 打开DumpTensor数据面板并刷新数据
+      // Open dump tensor panel and refresh.
       await this.openDumpTensorPanel();
     } catch (error) {
-      console.error('[importDumpTensorBinFile] 导入DumpTensor .bin文件失败:', error);
-      vscode.window.showErrorMessage('导入DumpTensor .bin文件失败');
+      console.error('[importDumpTensorBinFile] Failed to import DumpTensor .bin file:', error);
+      vscode.window.showErrorMessage(t('extension.importDumpTensorBinFailed'));
     }
   }
 }

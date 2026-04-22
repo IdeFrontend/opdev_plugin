@@ -3,8 +3,8 @@ import * as fs from 'fs-extra';
 import config from './config';
 import { JsonStorage } from '@plugin/core/storage/json-storage';
 
-// 使用 user_data_dir 而不是 workspace_data_dir，确保配置在新窗口打开时也能找到
-// 因为 workspace_data_dir 依赖于工作区路径，在新窗口打开时可能会不同
+// Use user_data_dir instead of workspace_data_dir to ensure that the configuration is also found when a new window opens
+// Because workspace_data_dir depends on the workspace path, it may be different when a new window is opened
 const getDataDir = () => {
   const userDataDir = config.user_data_dir;
   const dataDir = path.join(userDataDir, 'data');
@@ -22,7 +22,7 @@ const getConfigsFile = () => {
   return configsFile;
 };
 
-// 获取旧的配置文件路径（workspace_data_dir）
+// Get the old configuration file path (workspace_data_dir)
 const getOldConfigsFile = () => {
   try {
     const workspaceDataDir = (config as unknown as { workspace_data_dir: string }).workspace_data_dir;
@@ -39,17 +39,17 @@ function getStorage() {
   return new JsonStorage(getConfigsFile());
 }
 
-// 迁移旧配置（如果存在）
+// Migrate old configuration (if present)
 function migrateOldConfigsIfNeeded(): void {
   const oldConfigsFile = getOldConfigsFile();
   const newConfigsFile = getConfigsFile();
 
   if (!oldConfigsFile || !fs.existsSync(oldConfigsFile)) {
-    return; // 没有旧配置需要迁移
+    return; // No old configuration needs to be migrated
   }
 
   try {
-    console.log('getConfig: 发现旧配置文件，开始迁移:', oldConfigsFile, '->', newConfigsFile);
+    console.log('getConfig: old config file found, starting migration:', oldConfigsFile, '->', newConfigsFile);
     const oldStorage = new JsonStorage(oldConfigsFile);
     const oldStore = oldStorage.read<ConfigsStore>({
       lastId: 0,
@@ -57,7 +57,7 @@ function migrateOldConfigsIfNeeded(): void {
     });
 
     if (oldStore.configs.length === 0) {
-      return; // 旧配置为空，无需迁移
+      return; // The old configuration is empty and no migration is required
     }
 
     const newStorage = new JsonStorage(newConfigsFile);
@@ -66,14 +66,14 @@ function migrateOldConfigsIfNeeded(): void {
       configs: [],
     });
 
-    // 合并配置：将旧配置中不存在于新配置的配置项添加进去
+    // Merge configuration: Add configuration items in the old configuration that do not exist in the new configuration
     const existingIds = new Set(newStore.configs.map((c) => c.id));
     let migratedCount = 0;
     let maxId = newStore.lastId;
 
     for (const oldConfig of oldStore.configs) {
       if (!existingIds.has(oldConfig.id)) {
-        // 如果ID冲突，分配新的ID
+        // If IDs conflict, assign new IDs
         if (oldConfig.id <= maxId) {
           maxId = Math.max(maxId, oldConfig.id);
         }
@@ -83,19 +83,19 @@ function migrateOldConfigsIfNeeded(): void {
       }
     }
 
-    // 更新 lastId 为两个存储中的最大值
+    // Update lastId to the maximum value in the two stores
     newStore.lastId = Math.max(newStore.lastId, oldStore.lastId, maxId);
 
     if (migratedCount > 0) {
       newStorage.write(newStore);
-      console.log('getConfig: 配置迁移成功，迁移了', migratedCount, '个配置');
+      console.log('getConfig: config migration succeeded, migrated', migratedCount, 'configs');
     }
     else {
-      console.log('getConfig: 所有旧配置已存在于新配置中，无需迁移');
+      console.log('getConfig: all old configs already exist in new config, no migration needed');
     }
   }
   catch (error) {
-    console.error('getConfig: 配置迁移失败:', error);
+    console.error('getConfig: config migration failed:', error);
   }
 }
 
@@ -122,7 +122,7 @@ type ConfigsStore = {
 };
 
 function ensureStore(): ConfigsStore {
-  // 尝试迁移旧配置（如果存在）
+  // Attempt to migrate old configuration if present
   migrateOldConfigsIfNeeded();
 
   const init: ConfigsStore = {
@@ -166,7 +166,7 @@ export function getConfig(
 ) {
   const configsFile = getConfigsFile();
 
-  console.log('getConfig: 查询配置，project_id:', project_id, 'config_type:', config_type, 'op:', op, 'configsFile:', configsFile);
+  console.log('getConfig: querying config, project_id:', project_id, 'config_type:', config_type, 'op:', op, 'configsFile:', configsFile);
   const store = ensureStore();
 
   console.log('getConfig: store.configs.length:', store.configs.length);
@@ -181,7 +181,7 @@ export function getConfig(
     && c.config_type === config_type
     && (op ? c.op === op : true));
 
-  console.log('getConfig: 过滤后的配置数量:', filtered.length);
+  console.log('getConfig: filtered config count:', filtered.length);
 
   return filtered.map(mapRecordToConfig);
 }
@@ -274,7 +274,8 @@ export async function postConfig(config_type: string, dataList: unknown[]) {
 
 export function getConfigById(config_id: number) {
   const store = ensureStore();
-  console.log('getConfigById - store', store, config_id)
+
+  console.log('getConfigById - store', store, config_id);
   const row = store.configs.find((c) => c.id === config_id);
 
   if (!row) {

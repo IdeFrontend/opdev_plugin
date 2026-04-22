@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { ConfigRecord } from '../models/config-model';
+import { OperatorPluginRegistry } from '../plugins/operator-plugin.registry';
 
 interface Op {
   op_path: string;
@@ -9,7 +10,7 @@ interface Op {
   op_name: string;
 }
 
-function getDetailedSystemInfo(): {
+export function getDetailedSystemInfo(): {
   osName: string;
   architecture: string
 } {
@@ -58,83 +59,10 @@ function getDetailedSystemInfo(): {
   };
 }
 
-export function getOpRunPath(op: Op, config?: ConfigRecord): string {
-  const opPath = op.op_path;
-
-  // if (op.op_type === 'ascend') {
-  //   if (config) {
-  //     const options = (config.user_options as Record<string, unknown> | null | undefined) || {};
-  //     if (options.is_expermental == 'on') {
-  //       return path.resolve(opPath, '..', '..', '..');
-  //     }
-  //   }
-  //   return path.resolve(opPath, '..', '..');
-  // }
-
-  return opPath;
-}
-
-function getDefaultTarget(opRunPath: string, op: Op) {
-  const {
-    osName, architecture,
-  } = getDetailedSystemInfo();
-  const targetDir = path.join(opRunPath, 'build_out');
-
-  let targetOpFile: string;
-  let targetExampleFile: string;
-
-  // 使用*.run作为runPackageName
-  const runPackageName = '*.run';
-
-  if (op.op_type === 'ascend') {
-    targetOpFile = path.join(
-      opRunPath,
-      'build_out',
-      runPackageName,
-    );
-    targetExampleFile = path.join(
-      opRunPath,
-      'build',
-      `test_aclnn_${op.op_name}`,
-    );
-  }
-  else if (op.op_type === 'pyasc') {
-    targetOpFile = `python3 ./${op.op_name}.py`;
-    targetExampleFile = targetOpFile;
-  }
-  else {
-    targetOpFile = path.join(opRunPath, 'build', op.op_name);
-    targetExampleFile = targetOpFile;
-  }
-
-  return {
-    targetDir,
-    targetOpFile,
-    targetExampleFile,
-    osName,
-  };
-}
-
-function getBuildScriptPath(opRunPath: string): string {
-  return path.join(opRunPath, 'build.sh');
+export function getOpRunPath(op: Op, _config?: ConfigRecord): string {
+  return op.op_path;
 }
 
 export function getDefaultPath(op: Op) {
-  const opRunPath = getOpRunPath(op);
-  const {
-    targetDir, targetOpFile, targetExampleFile,
-  } = getDefaultTarget(
-    opRunPath,
-    op,
-  );
-  const opScriptPath = getBuildScriptPath(opRunPath);
-  const exampleScriptPath = opScriptPath;
-
-  return {
-    opScriptPath: opScriptPath,
-    exampleScriptPath: exampleScriptPath,
-    targetDir: path.resolve(targetDir),
-    targetOpFile: targetOpFile,
-    targetExampleFile: targetExampleFile,
-  };
+  return OperatorPluginRegistry.getDefaultPaths(op);
 }

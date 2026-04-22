@@ -12,7 +12,7 @@ import { Project } from '@plugin/core/project/project';
 import { getConfig } from '@plugin/domain';
 import { getOpByProjectIdAndOpName } from '@plugin/domain/models/model';
 
-// DumpTensor产物存放位置
+// DumpTensor product storage location
 const DUMP_TENSOR_DATA_ROOT = '.vscode/DumpTensor';
 
 export class DumpTensorData {
@@ -30,7 +30,8 @@ export class DumpTensorData {
 
   constructor() {
     const project = Project.getInstance();
-    console.log('dump-tensor-service]: 查找当前项目', project)
+
+    console.log('dump-tensor-service]: looking up current project', project);
 
     if (!project.workspaceIsProject()) {
       return;
@@ -43,7 +44,7 @@ export class DumpTensorData {
   }
 
   /**
-   * 读取dumpTensor执行记录
+   * Read dumpTensor execution record
    */
   public async queryExecutionRecords(
     sortBy: 'timestamp',
@@ -55,7 +56,6 @@ export class DumpTensorData {
       order === 'asc' ? a[sortBy] - b[sortBy] : b[sortBy] - a[sortBy]);
   }
 
-
   private async scanRunDataDirectory() {
     const runData: PerformanceExecutionRecord[] = [];
 
@@ -64,7 +64,8 @@ export class DumpTensorData {
     }
 
     const executionEntries = await vscode.workspace.fs.readDirectory(this.rootUri);
-    console.log('dump-tensor-service]: 扫描dumpTensor产物目录', executionEntries)
+
+    console.log('dump-tensor-service]: scanning dumpTensor output directory', executionEntries);
 
     for (const [
       subPath,
@@ -115,7 +116,7 @@ export class DumpTensorData {
         const fileType = path.extname(subPath)
           .replace(/^\./, '');
 
-        // 仅显示以下后缀的文件
+        // Show only files with the following suffixes
         if ([
           'bin',
         ].includes(fileType)) {
