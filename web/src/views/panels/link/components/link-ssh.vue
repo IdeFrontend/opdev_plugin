@@ -4,6 +4,7 @@ import {
 } from 'vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import { t } from 'i18next';
+import { OperatorProjectViewId, type OperatorProjectViewIdValue } from '@shared/project-type-view-id';
 import { useLinkSSH } from '../composables/use-link-ssh';
 import { FormRulesFactory } from '../composables/form-rules';
 import tipBase_0 from '@/assets/imgs/add.png';
@@ -11,7 +12,8 @@ import AscendC from '@/assets/imgs/AscendC.png';
 import tipBase_1_1 from '@/assets/imgs/hello_world.png';
 import tipBase_1_2 from '@/assets/imgs/add_custom.png';
 import tipBase_1_3 from '@/assets/imgs/torch_library_template.png';
-import { getProjectType } from '@web/apis';
+import tritonVectorAddPreview from '@/assets/imgs/triton_vector_add.png';
+import { getProjectType, getProjectTypeSupportEnabled } from '@web/apis';
 
 const actualTheme = inject('actualTheme', computed(() => 'dark'));
 
@@ -38,7 +40,7 @@ defineProps({
 });
 
 // 模板类型选择
-const selectedTemplate = ref<'helloworld' | 'addn' | 'torch_library_template'>('helloworld');
+const selectedTemplate = ref<'helloworld' | 'addn' | 'torch_library_template' | 'triton_vector_add'>('helloworld');
 
 // 使用 composable 获取业务逻辑
 const {
@@ -63,6 +65,8 @@ const getTemplateDesc = (template: string) => {
       return t('web.welcome.templateDescAddn');
     case 'torch_library_template':
       return t('web.welcome.templateDescTorchLibrary');
+    case 'triton_vector_add':
+      return t('web.welcome.templateDescTritonVectorAdd');
     default:
       return t('web.welcome.templateDescHelloworld');
   }
@@ -77,29 +81,61 @@ const getTemplateImage = (template: string) => {
       return tipBase_1_2;
     case 'torch_library_template':
       return tipBase_1_3;
+    case 'triton_vector_add':
+      return tritonVectorAddPreview;
     default:
       return tipBase_1_1;
   }
 };
 
-const cannProject = {
-  id: 1,
+const getProjectPreviewImage = (projectTypeId: OperatorProjectViewIdValue) => {
+  if (projectTypeId === OperatorProjectViewId.CANN) {
+    return getTemplateImage(selectedTemplate.value);
+  }
+  if (projectTypeId === OperatorProjectViewId.TRITON) {
+    return tritonVectorAddPreview;
+  }
+  return tipBase_0;
+};
+
+type ProjectTypeItem = {
+  id: OperatorProjectViewIdValue;
+  titleKey:
+    | 'web.welcome.ascendCOpProject'
+    | 'web.welcome.ascendCStandardProject'
+    | 'web.welcome.pythonPyascProject'
+    | 'web.welcome.pythonTritonProject';
+  descKey:
+    | 'web.link.ascendCOpDesc'
+    | 'web.link.ascendCStandardDesc'
+    | 'web.link.pythonPyascDesc'
+    | 'web.link.pythonTritonDesc';
+};
+
+const cannProject: ProjectTypeItem = {
+  id: OperatorProjectViewId.CANN,
   titleKey: 'web.welcome.ascendCOpProject' as const,
   descKey: 'web.link.ascendCOpDesc' as const,
 };
-const ascendProject = {
-  id: 2,
+const ascendProject: ProjectTypeItem = {
+  id: OperatorProjectViewId.STANDARD_CUSTOM,
   titleKey: 'web.welcome.ascendCStandardProject' as const,
   descKey: 'web.link.ascendCStandardDesc' as const,
 };
-const pyascProject = {
-  id: 3,
+const pyascProject: ProjectTypeItem = {
+  id: OperatorProjectViewId.PYASC,
   titleKey: 'web.welcome.pythonPyascProject' as const,
   descKey: 'web.link.pythonPyascDesc' as const,
 };
-const items_type = ref([
+const tritonProject: ProjectTypeItem = {
+  id: OperatorProjectViewId.TRITON,
+  titleKey: 'web.welcome.pythonTritonProject' as const,
+  descKey: 'web.link.pythonTritonDesc' as const,
+};
+const items_type = ref<ProjectTypeItem[]>([
   cannProject,
   pyascProject,
+  tritonProject,
 ]);
 
 const connectionFormRules = FormRulesFactory.createFormRules();
@@ -107,6 +143,19 @@ const connectionFormRules = FormRulesFactory.createFormRules();
 const currentProjectType = ref('');
 
 onMounted(async () => {
+  try {
+    const tritonEnabled = await getProjectTypeSupportEnabled(OperatorProjectViewId.TRITON);
+    if (!tritonEnabled) {
+      items_type.value = items_type.value.filter((item) => item.id !== OperatorProjectViewId.TRITON);
+      if (selectedId_type.value === OperatorProjectViewId.TRITON) {
+        selectedId_type.value = OperatorProjectViewId.CANN;
+      }
+    }
+  }
+  catch (error) {
+    console.error('[Link] Failed to read project type support setting:', error);
+  }
+
   // 获取当前项目类型
   try {
     const result = await getProjectType();
@@ -117,7 +166,7 @@ onMounted(async () => {
     // 标准自定义算子大目录下，只能新建标准自定义算子
     if (currentProjectType.value === 'ascend') {
       items_type.value = [ascendProject];
-      selectedId_type.value = 2;
+      selectedId_type.value = OperatorProjectViewId.STANDARD_CUSTOM;
     }
   }
   catch (error) {
@@ -157,45 +206,52 @@ onMounted(async () => {
               <div
                 class="leading-8 mt-2.5 text-[13px] mb-2.5 whitespace-nowrap overflow-hidden text-ellipsis group-[.selected]:whitespace-normal group-[.selected]:overflow-visible group-[.selected]:text-clip"
                 :class="getDescTextClass()"
-                v-html="item.id === 1 ? getTemplateDesc(selectedTemplate) : t(item.descKey)"
+                v-html="item.id === OperatorProjectViewId.CANN ? getTemplateDesc(selectedTemplate) : t(item.descKey)"
               />
               <a-tag
-                v-if="item.id === 1 || item.id === 2"
+                v-if="item.id === OperatorProjectViewId.CANN || item.id === OperatorProjectViewId.STANDARD_CUSTOM"
                 color="blue"
                 class="mt-2.5 mr-2"
               >
                 {{ t('web.welcome.langAscendC') }}
               </a-tag>
               <a-tag
-                v-if="item.id === 3"
+                v-if="item.id === OperatorProjectViewId.PYASC || item.id === OperatorProjectViewId.TRITON"
                 color="blue"
                 class="mt-2.5 mr-2"
               >
                 {{ t('web.welcome.langPython') }}
               </a-tag>
               <a-tag
-                v-if="item.id === 1"
+                v-if="item.id === OperatorProjectViewId.CANN"
                 color="purple"
                 class="mt-2.5 mr-2"
               >
                 {{ t('web.welcome.typeAngle') }}
               </a-tag>
               <a-tag
-                v-if="item.id === 2"
+                v-if="item.id === OperatorProjectViewId.STANDARD_CUSTOM"
                 color="green"
                 class="mt-2.5 mr-2"
               >
                 {{ t('web.welcome.typeStandardCustom') }}
               </a-tag>
               <a-tag
-                v-if="item.id === 3"
+                v-if="item.id === OperatorProjectViewId.PYASC"
                 color="purple"
                 class="mt-2.5 mr-2"
               >
                 {{ t('web.welcome.typePyasc') }}
               </a-tag>
+              <a-tag
+                v-if="item.id === OperatorProjectViewId.TRITON"
+                color="purple"
+                class="mt-2.5 mr-2"
+              >
+                {{ t('web.welcome.typeTriton') }}
+              </a-tag>
               <div
-                v-if="item.id === 1"
+                v-if="item.id === OperatorProjectViewId.CANN"
                 class="mt-4 flex gap-4"
               >
                 <a-radio-group
@@ -227,7 +283,7 @@ onMounted(async () => {
                   </div>
                   <div class="overflow-hidden max-w-full transition-all duration-300">
                     <a-image
-                      :src="item.id === 1 ? getTemplateImage(selectedTemplate) : tipBase_0"
+                      :src="getProjectPreviewImage(item.id)"
                       class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
                     />
                   </div>

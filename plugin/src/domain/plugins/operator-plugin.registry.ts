@@ -32,8 +32,9 @@ export type OpDescriptor = Pick<OpRecord, 'op_path' | 'op_type' | 'op_name'>;
  * Recommended detector registration order:
  *   1. StandardCustomDetector  (definitive — build.sh content check)
  *   2. TorchLibraryDetector    (heuristic — CMakeLists + .py files)
- *   3. PyAscPlugin             (heuristic — .py files, no CMakeLists)
- *   4. AscendPlugin            (heuristic — CMakeLists + .asc files)
+ *   3. TritonPlugin            (heuristic/definitive — before PyAsc)
+ *   4. PyAscPlugin             (heuristic — .py files, no CMakeLists)
+ *   5. AscendPlugin            (heuristic — CMakeLists + .asc files)
  */
 export class OperatorPluginRegistry {
   private static readonly opPlugins = new Map<string, IOperatorPlugin>();
@@ -71,6 +72,20 @@ export class OperatorPluginRegistry {
     }
 
     return this.opPlugins.get(opType) ?? this.opPlugins.get('cann')!;
+  }
+
+  /**
+   * Resolve plugin by detected projectType (structure-level type).
+   * Falls back to cann plugin for unknown/unsupported mappings.
+   */
+  static getProjectTypePlugin(projectType: string | null | undefined): IOperatorPlugin {
+    if (!projectType) return this.getOpPlugin(undefined);
+    for (const plugin of this.opPlugins.values()) {
+      if (plugin.projectTypeMappings?.includes(projectType as any)) {
+        return plugin;
+      }
+    }
+    return this.getOpPlugin(undefined);
   }
 
   /**
@@ -130,15 +145,50 @@ export class OperatorPluginRegistry {
       .getDefaultPaths(op as OpRecord);
   }
 
-  /** Build pre-flight behavior for the given op_type string (falls back to cann). */
+  /**
+   * Resolve build behavior by detected project type first, then fall back to op_type.
+   * Avoids conflating project_type (e.g. 'standard-custom', 'ascend-c') with op_type
+   * (e.g. 'ascend', 'cann', 'pyasc', 'triton').
+   */
   static getBuildBehaviorByProjectType(
     projectType: string | null | undefined,
   ): OperatorBuildBehavior {
+    if (!projectType) {
+      return this.getOpPlugin(undefined).buildBehavior;
+    }
+
+    for (const plugin of this.opPlugins.values()) {
+      if (plugin.projectTypeMappings?.includes(projectType as any)) {
+        return plugin.buildBehavior;
+      }
+    }
+
     return this.getOpPlugin(projectType).buildBehavior;
   }
 
   static getRegisteredOpTypes(): string[] {
     return [...this.opPlugins.keys()];
+  }
+
+  /**
+   * Whether a given project_type is currently supported by registered plugins.
+   * This reflects runtime capability (feature toggles may exclude some plugins).
+   */
+  static isProjectTypeSupported(projectType: string | null | undefined): boolean {
+    if (!projectType || projectType.trim().length === 0) {
+      return false;
+    }
+
+    for (const plugin of this.opPlugins.values()) {
+      if (plugin.opType === projectType) {
+        return true;
+      }
+      if (plugin.projectTypeMappings?.includes(projectType as any)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /** For testing only — resets registry state. */

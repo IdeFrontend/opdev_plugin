@@ -141,6 +141,19 @@ export async function notifyBuildSucceededForSidebar(
 }
 
 export class BuildService {
+  private async guardSupportedProjectTypeForCurrentProject(): Promise<boolean> {
+    const projectId = ProjectManager.getInstance().projectId;
+    const project = projectId ? getProjectById(Number(projectId)) : null;
+    const detectedType = project?.project_type || (await homeMethods.getProjectType()).projectType || '';
+
+    if (!OperatorPluginRegistry.isProjectTypeSupported(detectedType)) {
+      vscode.window.showErrorMessage(t('extension.unsupportedProjectTypeDisabled', { projectType: detectedType || 'unknown' }));
+      return false;
+    }
+
+    return true;
+  }
+
   /**
    * Get a list of build configurations
    */
@@ -262,6 +275,10 @@ export class BuildService {
    * Compile operator
    */
   async startBuild(params: StartBuildParams): Promise<void> {
+    if (!(await this.guardSupportedProjectTypeForCurrentProject())) {
+      return;
+    }
+
     console.log('[startBuild] ========== Start building operators ==========');
     console.log('[startBuild] Input params:', JSON.stringify(params, null, 2));
     const pm = ProjectManager.getInstance();
@@ -372,6 +389,10 @@ export class BuildService {
    * Run operator
    */
   async startRun(params: StartRunParams): Promise<void> {
+    if (!(await this.guardSupportedProjectTypeForCurrentProject())) {
+      return;
+    }
+
     // Option A: preserve V1 behavior exactly — startRun uses homeMethods.getProjectType()
     // (live detection) and skips the active-file check when params.filePath is set.
     const projectTypeInfo = await homeMethods.getProjectType();
@@ -472,6 +493,10 @@ export class BuildService {
    * Compile example
    */
   async startBuildExample(params: StartBuildExampleParams): Promise<void> {
+    if (!(await this.guardSupportedProjectTypeForCurrentProject())) {
+      return;
+    }
+
     const pm = ProjectManager.getInstance();
 
     // If projectId is passed in, set the project information of ProjectManager (consistent with startBuild)
@@ -518,6 +543,10 @@ export class BuildService {
    * Start simulation analysis
    */
   async startSimulate(params: { operatorNames?: string } = {}): Promise<void> {
+    if (!(await this.guardSupportedProjectTypeForCurrentProject())) {
+      return;
+    }
+
     const configData = await this.getBuildConfigsList();
     const simulatorItem = configData.find((v) => v.config_type === CONFIG_TYPES.SIMULATE);
 
@@ -638,6 +667,10 @@ export class BuildService {
    * Start board analysis
    */
   async startOnBoard(params: { operatorNames?: string } = {}): Promise<void> {
+    if (!(await this.guardSupportedProjectTypeForCurrentProject())) {
+      return;
+    }
+
     const projectId = ProjectManager.getInstance().projectId;
     const project = projectId ? getProjectById(Number(projectId)) : null;
     // Option A: preserve V1 behavior — startOnBoard reads project.project_type (stored value)
@@ -756,6 +789,10 @@ export class BuildService {
    */
   async startDumpTensor(params: { operatorNames?: string,
     compileOption?: string } = {}): Promise<void> {
+    if (!(await this.guardSupportedProjectTypeForCurrentProject())) {
+      return;
+    }
+
     const configId = await this.getBuildConfigId();
 
     console.log('[startDumpTensor] Queried configId:', configId);

@@ -15,6 +15,34 @@ import {
   COMMAND_WELCOME,
   COMMAND_OPEN_PROJECT,
 } from '@plugin/constants';
+import {
+  isOperatorProjectViewId,
+  OperatorProjectViewId,
+  type OperatorProjectViewIdValue,
+} from '@shared/project-type-view-id';
+import { isOperatorSupportEnabled } from '@plugin/helpers/feature-toggle';
+
+function normalizeViewIdToProjectType(id: OperatorProjectViewIdValue): string {
+  switch (id) {
+    case OperatorProjectViewId.CANN:
+      return 'cann';
+    case OperatorProjectViewId.STANDARD_CUSTOM:
+      return 'standard-custom';
+    case OperatorProjectViewId.PYASC:
+      return 'pyasc';
+    case OperatorProjectViewId.TRITON:
+      return 'triton';
+    default:
+      return '';
+  }
+}
+
+function isRequestedProjectTypeEnabled(projectType: string): boolean {
+  if (projectType === 'triton') {
+    return isOperatorSupportEnabled('triton');
+  }
+  return true;
+}
 
 export interface messageItem {
   command: string;
@@ -73,11 +101,11 @@ const webviewMessageList: messageItem[] = [
   },
 ];
 
-// Create operator project type
-// 1 Execute vscodeBuildCreateOps message body logic data: 'cann'
-// 2 Execute vscodeStartLinkCreateOps message body logic
+// Create operator project by view id:
+// - CANN / PYASC / TRITON create from template
+// - STANDARD_CUSTOM creates prototype first, then project
 export async function handleOperatorProjectDirectoryFile(
-  message: { createOperatorProjectDirectoryFileType: number } | undefined,
+  message: { createOperatorProjectDirectoryFileType: OperatorProjectViewIdValue } | undefined,
   _that: unknown,
   progress: vscode.Progress<{ message?: string;
     increment?: number }>,
@@ -92,6 +120,12 @@ export async function handleOperatorProjectDirectoryFile(
     return;
   }
 
+  const requestedProjectType = normalizeViewIdToProjectType(message.createOperatorProjectDirectoryFileType);
+  if (!isRequestedProjectTypeEnabled(requestedProjectType)) {
+    vscode.window.showErrorMessage(t('extension.unsupportedProjectTypeDisabled', { projectType: requestedProjectType }));
+    throw new Error(`Project type '${requestedProjectType}' is currently disabled by settings.`);
+  }
+
   // Get extension context to read templateName
   const context = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
     .extensionContext;
@@ -102,11 +136,7 @@ export async function handleOperatorProjectDirectoryFile(
 
   if (
     message
-    && [
-      1,
-      2,
-      3,
-    ].includes(message.createOperatorProjectDirectoryFileType)
+    && isOperatorProjectViewId(message.createOperatorProjectDirectoryFileType)
   ) {
     console.log('handleOperatorProjectDirectoryFile: type validation passed, start processing');
 
@@ -117,7 +147,7 @@ export async function handleOperatorProjectDirectoryFile(
         message: t('welcome.createFilesProgressTitle'),
       });
 
-      if (message.createOperatorProjectDirectoryFileType === 1) {
+      if (message.createOperatorProjectDirectoryFileType === OperatorProjectViewId.CANN) {
         // Create operators (via prototypes)
         console.log('Start creating operator prototype (type 1)...');
         // Note: The project has been initialized in createdProject and does not need to be initialized again here.
@@ -147,7 +177,7 @@ export async function handleOperatorProjectDirectoryFile(
         await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
       }
 
-      if (message.createOperatorProjectDirectoryFileType === 3) {
+      if (message.createOperatorProjectDirectoryFileType === OperatorProjectViewId.PYASC) {
         // pyasc operator project, created using templates
         console.log('Start creating pyasc operator (type 3)...');
         const pm = ProjectManager.getInstance();
@@ -175,7 +205,7 @@ export async function handleOperatorProjectDirectoryFile(
         await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
       }
 
-      if (message.createOperatorProjectDirectoryFileType === 4) {
+      if (message.createOperatorProjectDirectoryFileType === OperatorProjectViewId.TRITON) {
         // Triton operator project: scaffold from template
         console.log('Creating Triton operator project (type 4)...');
         const pm = ProjectManager.getInstance();
@@ -202,7 +232,7 @@ export async function handleOperatorProjectDirectoryFile(
         await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
       }
 
-      if (message.createOperatorProjectDirectoryFileType === 2) {
+      if (message.createOperatorProjectDirectoryFileType === OperatorProjectViewId.STANDARD_CUSTOM) {
         // Start link creation operator
         console.log('Start creating operator (type 2)...');
         // Note: The project has been initialized in createdProject and does not need to be initialized again here.

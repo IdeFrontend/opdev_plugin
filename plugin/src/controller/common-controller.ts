@@ -3,6 +3,8 @@ import {
 } from '@shared/api-types';
 import { fileService } from '@plugin/service/file-service';
 import * as vscode from 'vscode';
+import { OperatorProjectViewId } from '@shared/project-type-view-id';
+import { isOperatorSupportEnabled } from '@plugin/helpers/feature-toggle';
 
 export const commonMethods = {
   /**
@@ -82,5 +84,32 @@ export const commonMethods = {
       params.value,
       vscode.ConfigurationTarget.Workspace,
     );
+  },
+
+  getProjectTypeSupportEnabled(params: { projectType: string | number }): boolean {
+    const raw = params?.projectType;
+    let normalized = String(raw ?? '');
+
+    if (typeof raw === 'number') {
+      switch (raw) {
+        case OperatorProjectViewId.CANN:
+          normalized = 'cann';
+          break;
+        case OperatorProjectViewId.STANDARD_CUSTOM:
+          normalized = 'standard-custom';
+          break;
+        case OperatorProjectViewId.PYASC:
+          normalized = 'pyasc';
+          break;
+        case OperatorProjectViewId.TRITON:
+          normalized = 'triton';
+          break;
+        default:
+          normalized = '';
+      }
+    }
+
+    // Support API should reflect settings map in feature-toggle (source of truth).
+    return isOperatorSupportEnabled(normalized);
   },
 };

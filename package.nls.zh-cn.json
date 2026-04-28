@@ -4,6 +4,8 @@
   "config.category.sanitizer.title": "异常检测",
   "config.category.performanceTuning.title": "性能调优",
   "config.category.environment.title": "环境",
+  "config.category.operatorSupport.title": "算子支持",
+  "config.op-devtools.operatorSupport.triton.description": "启用 Triton 算子支持",
   "config.op-devtools.debugMode.description": "启用调试功能（实验性功能）",
   "config.op-devtools.compileAndDeploy.exampleBuildConfig.runCommand.markdownDescription": "运行命令。会自动追加算子名、执行模式与打包模式。",
   "config.op-devtools.sanitizer.showQuickOptions.description": "显示快速选项",

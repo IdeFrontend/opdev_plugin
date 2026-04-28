@@ -132,3 +132,10 @@ export function getOnBoardAnalysisShowQuickOptions() {
 export function setOnBoardAnalysisShowQuickOptions(value: boolean) {
   return request.post<{ value: boolean }, void>('common/setOnBoardAnalysisShowQuickOptions', { value });
 }
+
+export function getProjectTypeSupportEnabled(projectType: string | number) {
+  return request.post<{ projectType: string | number }, boolean>(
+    'common/getProjectTypeSupportEnabled',
+    { projectType },
+  );
+}

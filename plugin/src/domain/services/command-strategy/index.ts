@@ -42,6 +42,12 @@ export { AscendCommandStrategy } from './ascend-strategy';
 export { CannCommandStrategy } from './cann-strategy';
 
 export { PyAscCommandStrategy } from './pyasc-strategy';
+export { BasePythonCommandStrategy } from './base-python-strategy';
+export {
+  TritonCommandStrategy,
+  probeTritonPythonDependencies,
+} from './triton-strategy';
+export { resolvePythonExecutablePath } from './python-operator-strategy-shared';
 
 // Export factory class
 export { CommandStrategyFactory } from './factory';

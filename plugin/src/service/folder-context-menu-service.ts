@@ -1469,6 +1469,11 @@ export class FolderContextMenuService {
           opType = 'pyasc';
           console.log('[FolderContextMenuService] PYASC type, using pyasc_temple template');
           break;
+        case OperatorProjectType.TRITON:
+          templateName = 'triton_vector_add';
+          opType = 'triton';
+          console.log('[FolderContextMenuService] TRITON type, using triton_vector_add template');
+          break;
         case OperatorProjectType.STANDARD_CUSTOM:
           opType = 'cann';
           // Standard custom operators do not require templates

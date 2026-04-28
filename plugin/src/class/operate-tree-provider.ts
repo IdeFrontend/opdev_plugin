@@ -3,7 +3,9 @@ import * as vscode from 'vscode';
 
 import { configMethods } from '@plugin/controller/config-controller';
 import { homeMethods } from '@plugin/controller/home-controller';
+import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import { ensureEnvironmentScriptForOperateAction } from '@plugin/helpers/environment-script-guard';
+import { appendLog } from '@plugin/helpers/output-channel';
 import { COMMAND_SIDEBAR_TOGGLE_OPERATOR } from '../constants';
 
 export type OperateNodeId =
@@ -284,6 +286,17 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       homeMethods.checkMultipleOperators(),
       configMethods.getDebugMode(),
     ]);
+    const projectType = projectTypeResult.projectType || '';
+    const projectTypeSupported = OperatorPluginRegistry.isProjectTypeSupported(projectType);
+    appendLog(
+      '[op-devtools][sidebar]',
+      'refreshState:projectTypeSupport',
+      {
+        kind: this.kind,
+        projectType,
+        projectTypeSupported,
+      },
+    );
 
     const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
     if (workspacePath !== this.selectionWorkspaceKey) {
@@ -326,7 +339,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     this.state = {
       hasDevtoolConfig,
       debugModeEnabled,
-      projectType: projectTypeResult.projectType || '',
+      projectType,
       projectTemplateName: projectTypeResult.projectTemplateName || '',
       hasMultipleOperators,
       isStandardCustom,
@@ -384,13 +397,22 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   }
 
   private getFlowRootNodes(): OperateNode[] {
+    if (this.isUnsupportedProjectTypeContext()) {
+      return [];
+    }
+
     const nodes: OperateNode[] = [];
-    const isPyasc = this.state.projectType === 'pyasc';
+    const behavior = this.getCurrentBuildBehavior();
+    const canBuild = behavior.requiresBuildBeforeAnalysis;
+    const canSanitizer = this.supportsCapability(behavior.supportsSanitizer);
+    const canOnBoard = this.supportsCapability(behavior.supportsOnBoard);
+    const canSimulate = this.supportsCapability(behavior.supportsSimulate);
+    const canPower = canOnBoard || canSimulate;
     const hasMultipleSelectedOperators = this.state.selectedOperatorIds.length > 1;
     const singleOnlyTooltip = hasMultipleSelectedOperators ? t('web.operate.singleOperatorOnly') : undefined;
     const disabledIcon = new vscode.ThemeIcon('circle-slash', new vscode.ThemeColor('disabledForeground'));
 
-    if (!isPyasc) {
+    if (canBuild) {
       nodes.push(this.createItem(
         'build',
         t('web.operate.compileDeploy'),
@@ -416,7 +438,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
     const debugChildren = this.getDebugChildren();
     const hideDebugForStandardCustom = this.state.isStandardCustom && !this.state.supportsSanitizerAndTuning;
-    if (!isPyasc && !hideDebugForStandardCustom && debugChildren.length > 0) {
+    if (!hideDebugForStandardCustom && debugChildren.length > 0) {
       nodes.push(this.createItem(
         'debug',
         t('web.operate.debug'),
@@ -427,7 +449,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       ));
     }
 
-    if (!isPyasc) {
+    if (canSanitizer) {
       nodes.push(this.createItem(
         'sanitizer',
         t('web.operate.sanitizer'),
@@ -443,7 +465,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     }
 
     const hidePower = this.state.isStandardCustom && !this.state.supportsSanitizerAndTuning;
-    if (!hidePower) {
+    if (!hidePower && canPower) {
       nodes.push(this.createItem(
         'power',
         t('web.operate.performanceTuning'),
@@ -454,7 +476,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       ));
     }
 
-    if (!isPyasc && this.state.isStandardCustom) {
+    if (canBuild && this.state.isStandardCustom) {
       nodes.push(this.createItem(
         'utTest',
         t('web.operate.utTest'),
@@ -471,7 +493,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       ));
     }
 
-    if (!isPyasc) {
+    if (canBuild) {
       nodes.push(this.createItem(
         'dumpTensor',
         t('web.operate.dumpTensor'),
@@ -502,11 +524,12 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
   private getDebugChildren(): OperateNode[] {
     const children: OperateNode[] = [];
+    const behavior = this.getCurrentBuildBehavior();
     const hasMultipleSelectedOperators = this.state.selectedOperatorIds.length > 1;
     const singleOnlyTooltip = hasMultipleSelectedOperators ? t('web.operate.singleOperatorOnly') : undefined;
     const disabledIcon = new vscode.ThemeIcon('circle-slash', new vscode.ThemeColor('disabledForeground'));
     const isCannTorchLibrary = this.state.projectType === 'cann' && this.state.projectTemplateName === 'torch_library_template';
-    const showCpuDebug = this.state.projectType !== 'ascend' && !isCannTorchLibrary;
+    const showCpuDebug = this.supportsCapability(behavior.supportsCpuDebug) && !isCannTorchLibrary;
 
     if (showCpuDebug) {
       children.push(this.createItem(
@@ -525,7 +548,8 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       ));
     }
 
-    if (this.state.debugModeEnabled) {
+    const showNpuDebug = this.supportsCapability(behavior.supportsNpuDebug);
+    if (showNpuDebug && this.state.debugModeEnabled) {
       children.push(this.createItem(
         'npuDebug',
         t('web.operate.npuDebug'),
@@ -546,11 +570,15 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   }
 
   private getPerformanceChildren(): OperateNode[] {
+    const behavior = this.getCurrentBuildBehavior();
+    const showOnBoard = this.supportsCapability(behavior.supportsOnBoard);
+    const showSimulation = this.supportsCapability(behavior.supportsSimulate);
     const hasMultipleSelectedOperators = this.state.selectedOperatorIds.length > 1;
     const singleOnlyTooltip = hasMultipleSelectedOperators ? t('web.operate.singleOperatorOnly') : undefined;
     const disabledIcon = new vscode.ThemeIcon('circle-slash', new vscode.ThemeColor('disabledForeground'));
-    return [
-      this.createItem(
+    const items: OperateNode[] = [];
+    if (showOnBoard) {
+      items.push(this.createItem(
         'onboard',
         t('web.operate.onBoardAnalysis'),
         hasMultipleSelectedOperators ? undefined : 'huawei-op-devtools.sidebar.onBoard',
@@ -563,8 +591,10 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         undefined,
         undefined,
         singleOnlyTooltip,
-      ),
-      this.createItem(
+      ));
+    }
+    if (showSimulation) {
+      items.push(this.createItem(
         'simulation',
         t('web.operate.simulationAnalysis'),
         hasMultipleSelectedOperators ? undefined : 'huawei-op-devtools.sidebar.simulation',
@@ -577,8 +607,9 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         undefined,
         undefined,
         singleOnlyTooltip,
-      ),
-    ];
+      ));
+    }
+    return items;
   }
 
   getSearchKeyword(): string {
@@ -940,5 +971,16 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     }
   }
 
+  private getCurrentBuildBehavior() {
+    return OperatorPluginRegistry.getBuildBehaviorByProjectType(this.state.projectType);
+  }
+
+  private supportsCapability(value: boolean | undefined): boolean {
+    return value !== false;
+  }
+
+  private isUnsupportedProjectTypeContext(): boolean {
+    return !OperatorPluginRegistry.isProjectTypeSupported(this.state.projectType);
+  }
 }
 

@@ -8,6 +8,7 @@
 !out/templates/ops_prototype/**
 !out/templates/code_template/ascend_template/**
 !out/templates/code_template/cann_template/**
+!out/templates/code_template/triton_template/**
 !resources/**
 !web/resources/**
 !web/src/assets/svg/**

@@ -4,6 +4,8 @@
   "config.category.sanitizer.title": "Sanitizer",
   "config.category.performanceTuning.title": "Performance Tuning",
   "config.category.environment.title": "Environment",
+  "config.category.operatorSupport.title": "Operator Support",
+  "config.op-devtools.operatorSupport.triton.description": "Enable Triton project support",
   "config.op-devtools.debugMode.description": "Enable debug (experimental)",
   "config.op-devtools.compileAndDeploy.exampleBuildConfig.runCommand.markdownDescription": "Run command. Operator name, execution mode and package mode are appended automatically.",
   "config.op-devtools.sanitizer.showQuickOptions.description": "Show quick options",

@@ -442,6 +442,71 @@ export class PyAscOpGenerator extends BaseOpGenerator {
   }
 }
 
+export class TritonOpGenerator extends CannOpGenerator {
+  parseMeta(): string {
+    this.op_name =
+      this.params.op_name
+      || this.project.project_name
+      || path.basename(this.project.project_path);
+    this.template_name =
+      this.params.template_name || this.template_name || 'triton_vector_add';
+
+    return this.op_name;
+  }
+
+  executeGeneration(): boolean {
+    const templateFilePath = path.resolve(
+      this.extensionPath,
+      `out/templates/code_template/triton_template/${this.template_name}.zip`,
+    );
+
+    if (!fs.pathExistsSync(templateFilePath)) {
+      throw new Error(`Template file does not exist: ${templateFilePath}`);
+    }
+
+    try {
+      const zip = new AdmZip(templateFilePath);
+      const skipExisting = this.params.skipExisting || false;
+
+      if (skipExisting) {
+        zip.getEntries()
+          .forEach((entry) => {
+            if (entry.isDirectory) {
+              return;
+            }
+
+            const entryPath = path.join(this.op_path, entry.entryName);
+            const entryDir = path.dirname(entryPath);
+            fs.ensureDirSync(entryDir);
+
+            if (!fs.pathExistsSync(entryPath)) {
+              const content = zip.readFile(entry);
+              if (content) {
+                fs.writeFileSync(entryPath, content);
+              }
+            }
+          });
+      }
+      else {
+        zip.extractAllTo(this.op_path, true);
+      }
+    }
+    catch (error) {
+      throw new Error(`Failed to extract template: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    if (this.template_name && this.template_name != this.op_name) {
+      this._renameFiles(this.template_name);
+      this._replaceContent(this.template_name);
+    }
+
+    return true;
+  }
+}
+
+// Backward-compat export alias used by plugin layer.
+export { TritonOpGenerator as TritonGenerator };
+
 export const OpGeneratorFactory = {
   getGenerator(
     params: Params,

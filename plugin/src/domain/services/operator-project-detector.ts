@@ -32,7 +32,7 @@ export interface OperatorProjectDetectionResult {
  *
  * Thin wrapper around OperatorPluginRegistry.detectProject().
  * Detection heuristics now live in the individual IProjectDetector implementations
- * (StandardCustomDetector, TorchLibraryDetector, PyAscPlugin, AscendPlugin).
+ * (StandardCustomDetector, TorchLibraryDetector, TritonPlugin, PyAscPlugin, AscendPlugin).
  */
 export class OperatorProjectDetector {
   /**

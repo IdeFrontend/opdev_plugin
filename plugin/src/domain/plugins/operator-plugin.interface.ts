@@ -23,6 +23,18 @@ export interface OperatorBuildBehavior {
   requiresActiveFileCheck: boolean;
   /** Required when requiresActiveFileCheck is true. */
   activeFileExtension?: string;
+  /** Whether sanitizer pipeline is supported for this operator type. */
+  supportsSanitizer?: boolean;
+  /** Whether simulation analysis pipeline is supported for this operator type. */
+  supportsSimulate?: boolean;
+  /** Whether on-board analysis pipeline is supported for this operator type. */
+  supportsOnBoard?: boolean;
+  /** Whether CPU debug flow is supported for this operator type. */
+  supportsCpuDebug?: boolean;
+  /** Whether NPU debug flow is supported for this operator type. */
+  supportsNpuDebug?: boolean;
+  /** Whether NPU debug should use python profile (msdebug-python). */
+  supportsNpuPythonDebug?: boolean;
 }
 
 /**
@@ -56,6 +68,11 @@ export interface IOperatorPlugin {
   readonly opType: string;
 
   readonly displayName: string;
+  /**
+   * Optional mapping from detected project_type values to this plugin's behavior.
+   * Used when callers only know project_type (e.g. 'ascend-c', 'standard-custom').
+   */
+  readonly projectTypeMappings?: readonly string[];
 
   /** Reuses the existing CommandStrategy interface. No duplication with V1. */
   readonly commandStrategy: CommandStrategy;

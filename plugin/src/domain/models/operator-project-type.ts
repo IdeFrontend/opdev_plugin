@@ -8,6 +8,7 @@ export enum OperatorProjectType {
   ASCEND_C = 'ascend-c',
   TORCH_LIBRARY = 'torch-library',
   PYASC = 'pyasc',
+  TRITON = 'triton',
   /** Reserved — set by higher-level scan logic, never emitted by detectOperatorProject(). */
   MULTI_PROJECT = 'multi-project',
 }

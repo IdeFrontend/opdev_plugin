@@ -291,6 +291,19 @@
             "markdownDescription": "%config.op-devtools.environment.socVersion.markdownDescription%"
           }
         }
+      },
+      {
+        "id": "op-devtools.operatorSupport",
+        "title": "%config.category.operatorSupport.title%",
+        "type": "object",
+        "properties": {
+          "op-devtools.operatorSupport.triton": {
+            "type": "boolean",
+            "default": false,
+            "order": 500,
+            "description": "%config.op-devtools.operatorSupport.triton.description%"
+          }
+        }
       }
     ],
     "colors": [

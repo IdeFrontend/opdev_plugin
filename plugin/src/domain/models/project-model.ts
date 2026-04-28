@@ -2,6 +2,7 @@ import path from 'path';
 import config from './config';
 import { JsonStorage } from '@plugin/core/storage/json-storage';
 import { OperatorProjectType } from '@plugin/domain/services/operator-project-detector';
+import { appendLog } from '@plugin/helpers/output-channel';
 
 const dataDir = path.join(config.user_data_dir, 'data');
 const projectsFile = path.join(dataDir, 'projects.json');
@@ -70,6 +71,26 @@ function writeStore(store: ProjectsStore) {
   storage.write(store);
 }
 
+function hasSameFieldValue(current: unknown, next: unknown): boolean {
+  if (Object.is(current, next)) {
+    return true;
+  }
+  if (
+    current
+    && next
+    && typeof current === 'object'
+    && typeof next === 'object'
+  ) {
+    try {
+      return JSON.stringify(current) === JSON.stringify(next);
+    }
+    catch {
+      return false;
+    }
+  }
+  return false;
+}
+
 export interface CreateProjectParams {
   project_name: string;
   project_path: string;
@@ -93,18 +114,40 @@ export async function updateShScript(data: CreateProjectParams) {
   const existing = store.projects.find((p) => p.project_path === data.project_path);
 
   if (existing) {
+    appendLog('op-devtools/project-model', 'updateShScript:start', {
+      projectPath: data.project_path,
+      hasAscendEnvScript: data.ascend_env_script !== undefined,
+      hasSocVersion: data.soc_version !== undefined,
+    });
+    let changed = false;
     if (data.ascend_env_script !== undefined) {
-      existing.ascend_env_script = data.ascend_env_script ?? null;
+      const nextEnvScript = data.ascend_env_script ?? null;
+      if (!hasSameFieldValue(existing.ascend_env_script ?? null, nextEnvScript)) {
+        existing.ascend_env_script = nextEnvScript;
+        changed = true;
+      }
     }
     if (data.soc_version !== undefined) {
-      existing.soc_version = data.soc_version;
+      const nextSocVersion = data.soc_version;
+      if (!hasSameFieldValue(existing.soc_version ?? null, nextSocVersion ?? null)) {
+        existing.soc_version = nextSocVersion;
+        changed = true;
+      }
+    }
+    if (!changed) {
+      appendLog('op-devtools/project-model', 'updateShScript:noChanges');
+      return existing.id;
     }
     existing.update_time = new Date()
       .toISOString();
     writeStore(store);
+    appendLog('op-devtools/project-model', 'updateShScript:wroteStore');
 
     return existing.id;
   }
+  appendLog('op-devtools/project-model', 'updateShScript:projectNotFound', {
+    projectPath: data.project_path,
+  });
 }
 
 export async function createProject(data: CreateProjectParams) {
@@ -114,40 +157,72 @@ export async function createProject(data: CreateProjectParams) {
 
   if (existing) {
     // Update existing project
+    let changed = false;
     if (data.ascend_env_script) {
-      existing.ascend_env_script = data.ascend_env_script;
+      if (!hasSameFieldValue(existing.ascend_env_script, data.ascend_env_script)) {
+        existing.ascend_env_script = data.ascend_env_script;
+        changed = true;
+      }
     }
 
     if (data.project_type) {
-      existing.project_type = data.project_type;
+      if (!hasSameFieldValue(existing.project_type, data.project_type)) {
+        existing.project_type = data.project_type;
+        changed = true;
+      }
     }
 
     if (data.template_name) {
-      existing.template_name = data.template_name;
+      if (!hasSameFieldValue(existing.template_name, data.template_name)) {
+        existing.template_name = data.template_name;
+        changed = true;
+      }
     }
 
     if (data.sub_project_ids) {
-      existing.sub_project_ids = data.sub_project_ids;
+      if (!hasSameFieldValue(existing.sub_project_ids, data.sub_project_ids)) {
+        existing.sub_project_ids = data.sub_project_ids;
+        changed = true;
+      }
     }
 
     if (data.is_experimental !== undefined) {
-      existing.is_experimental = data.is_experimental;
+      if (!hasSameFieldValue(existing.is_experimental, data.is_experimental)) {
+        existing.is_experimental = data.is_experimental;
+        changed = true;
+      }
     }
 
     if (data.ops_list !== undefined) {
-      existing.ops_list = data.ops_list;
+      if (!hasSameFieldValue(existing.ops_list, data.ops_list)) {
+        existing.ops_list = data.ops_list;
+        changed = true;
+      }
     }
 
     if (data.experimental_ops_list !== undefined) {
-      existing.experimental_ops_list = data.experimental_ops_list;
+      if (!hasSameFieldValue(existing.experimental_ops_list, data.experimental_ops_list)) {
+        existing.experimental_ops_list = data.experimental_ops_list;
+        changed = true;
+      }
     }
 
     if (data.ops_meet !== undefined) {
-      existing.ops_meet = data.ops_meet;
+      if (!hasSameFieldValue(existing.ops_meet, data.ops_meet)) {
+        existing.ops_meet = data.ops_meet;
+        changed = true;
+      }
     }
 
     if (data.selected_operator_ids !== undefined) {
-      existing.selected_operator_ids = data.selected_operator_ids;
+      if (!hasSameFieldValue(existing.selected_operator_ids, data.selected_operator_ids)) {
+        existing.selected_operator_ids = data.selected_operator_ids;
+        changed = true;
+      }
+    }
+
+    if (!changed) {
+      return existing.id;
     }
 
     existing.update_time = new Date()
@@ -350,10 +425,19 @@ export async function updateStandardCustomOperators(
   });
 
   if (project) {
-    console.log(`[updateStandardCustomOperators] Updating project: ${projectPath}`);
-    console.log(`[updateStandardCustomOperators] ops_meet: ${opsMeet.length} operator groups`, opsMeet.map((m) => m.name));
-    console.log(`[updateStandardCustomOperators] ops_list: ${opsList.length} operators`, opsList.map((o) => o.name));
-    console.log(`[updateStandardCustomOperators] experimental_ops_list: ${experimentalOpsList.length} operators`, experimentalOpsList.map((o) => o.name));
+    appendLog('op-devtools/project-model', '[updateStandardCustomOperators] Updating project', { projectPath });
+    appendLog('[updateStandardCustomOperators]', 'ops_meet groups', {
+      count: opsMeet.length,
+      names: opsMeet.map((m) => m.name),
+    });
+    appendLog('[updateStandardCustomOperators]', 'ops_list operators', {
+      count: opsList.length,
+      names: opsList.map((o) => o.name),
+    });
+    appendLog('[updateStandardCustomOperators]', 'experimental_ops_list operators', {
+      count: experimentalOpsList.length,
+      names: experimentalOpsList.map((o) => o.name),
+    });
 
     // Keep the isCompiled status of existing operators
     const existingOpsList = project.ops_list || [];
@@ -394,6 +478,18 @@ export async function updateStandardCustomOperators(
       };
     });
 
+    const shouldUpdate = !hasSameFieldValue(project.ops_meet ?? null, opsMeet)
+      || !hasSameFieldValue(project.ops_list ?? null, updatedOpsList)
+      || !hasSameFieldValue(project.experimental_ops_list ?? null, updatedExperimentalOpsList);
+
+    if (!shouldUpdate) {
+      appendLog(
+        'op-devtools/project-model',
+        '[updateStandardCustomOperators] No operator list changes detected, skipping store write',
+      );
+      return;
+    }
+
     project.ops_meet = opsMeet;
     project.ops_list = updatedOpsList;
     project.experimental_ops_list = updatedExperimentalOpsList;
@@ -401,7 +497,11 @@ export async function updateStandardCustomOperators(
       .toISOString();
     writeStore(store);
 
-    console.log(`[updateStandardCustomOperators] Update completed, preserved compiled status for ${existingOpsCompiledMap.size} compiled operators`);
+    appendLog(
+      'op-devtools/project-model',
+      '[updateStandardCustomOperators] Update completed',
+      { preservedCompiledOperators: existingOpsCompiledMap.size },
+    );
   }
   else {
     console.warn(`[updateStandardCustomOperators] Project not found: ${projectPath}`);
@@ -418,7 +518,7 @@ export async function markOperatorsAsCompiled(
   projectPath: string,
   operatorNames: string | string[],
 ): Promise<void> {
-  console.log('[markOperatorsAsCompiled] Marking sub-operators in standard custom operator project as compiled', projectPath, operatorNames);
+  appendLog('op-devtools/project-model', '[markOperatorsAsCompiled] Start', { projectPath, operatorNames });
   const store = ensureStore();
   const normalizedPath = path.normalize(projectPath)
     .replace(/\\/g, '/')
@@ -460,7 +560,7 @@ export async function markOperatorsAsCompiled(
   // Update common operator list
   if (project.ops_list && project.ops_list.length > 0) {
     for (const op of project.ops_list) {
-      if (operatorNameArray.includes(op.name)) {
+      if (operatorNameArray.includes(op.name) && op.isCompiled !== true) {
         op.isCompiled = true;
         updated = true;
       }
@@ -470,7 +570,7 @@ export async function markOperatorsAsCompiled(
   // Update experimental operator list
   if (project.experimental_ops_list && project.experimental_ops_list.length > 0) {
     for (const op of project.experimental_ops_list) {
-      if (operatorNameArray.includes(op.name)) {
+      if (operatorNameArray.includes(op.name) && op.isCompiled !== true) {
         op.isCompiled = true;
         updated = true;
       }
@@ -481,7 +581,9 @@ export async function markOperatorsAsCompiled(
     project.update_time = new Date()
       .toISOString();
     writeStore(store);
-    console.log(`[markOperatorsAsCompiled] Marked ${operatorNameArray.length} operators as compiled`);
+    appendLog('op-devtools/project-model', '[markOperatorsAsCompiled] Marked operators', {
+      count: operatorNameArray.length,
+    });
   }
   else {
     console.warn(`[markOperatorsAsCompiled] Operators to mark were not found: ${operatorNameArray.join(', ')}`);

@@ -20,6 +20,7 @@ import {
   getEnvironmentScriptPathFromWorkspace,
   getSocVersionWithWorkspaceOverride,
 } from '@plugin/helpers/operator-project-workspace-config';
+import { appendLog } from '@plugin/helpers/output-channel';
 
 export class ProjectService {
   /**
@@ -200,20 +201,38 @@ export class ProjectService {
    * Call when `op-devtools.environment.*` (or legacy operatorProject env keys) changes.
    */
   async syncAscendEnvScriptFromWorkspaceSettings(): Promise<void> {
+    appendLog(
+      'op-devtools/project-service',
+      'syncAscendEnvScriptFromWorkspaceSettings:start',
+    );
     const pm = ProjectManager.getInstance();
     await pm.ensureProjectId();
     const info = pm.getProjectInfo();
     if (!info?.path) {
+      appendLog(
+        'op-devtools/project-service',
+        'syncAscendEnvScriptFromWorkspaceSettings:skip:noProjectPath',
+      );
       return;
     }
     const scriptPath = getEnvironmentScriptPathFromWorkspace();
     const socVersion = getEnvironmentSocVersionFromWorkspace();
+    appendLog('op-devtools/project-service', 'syncAscendEnvScriptFromWorkspaceSettings:values', {
+      projectPath: info.path,
+      projectName: info.name,
+      scriptPath,
+      socVersion,
+    });
     await updateShScript({
       project_name: info.name ?? '',
       project_path: info.path,
       ascend_env_script: scriptPath ? scriptPath : null,
       soc_version: socVersion ? socVersion : undefined,
     });
+    appendLog(
+      'op-devtools/project-service',
+      'syncAscendEnvScriptFromWorkspaceSettings:end',
+    );
   }
 }
 

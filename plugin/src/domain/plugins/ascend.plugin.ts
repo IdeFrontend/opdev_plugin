@@ -12,7 +12,7 @@ import {
   IProjectDetector, ProjectDetectionResult,
 } from './project-detector.interface';
 import {
-  OperatorConfigScripts, OperatorDefaultPaths,
+  OperatorBuildBehavior, OperatorConfigScripts, OperatorDefaultPaths,
 } from './operator-plugin.interface';
 import {
   hasAscFiles, hasPyFilesInRoot,
@@ -26,6 +26,20 @@ export class AscendPlugin extends AbstractOperatorPlugin implements IProjectDete
   readonly opType = 'ascend';
   readonly displayName = 'Ascend C';
   readonly commandStrategy = new AscendCommandStrategy();
+  override readonly buildBehavior: OperatorBuildBehavior = {
+    requiresBuildBeforeAnalysis: true,
+    requiresActiveFileCheck: false,
+    supportsSanitizer: true,
+    supportsSimulate: true,
+    supportsOnBoard: true,
+    supportsCpuDebug: true,
+    supportsNpuDebug: true,
+    supportsNpuPythonDebug: true,
+  };
+  readonly projectTypeMappings = [
+    OperatorProjectType.ASCEND_C,
+    OperatorProjectType.TORCH_LIBRARY,
+  ] as const;
   readonly projectType = OperatorProjectType.ASCEND_C;
 
   async detectProject(dirPath: string): Promise<ProjectDetectionResult> {
@@ -40,7 +54,6 @@ export class AscendPlugin extends AbstractOperatorPlugin implements IProjectDete
   }
 
   getDefaultPaths(op: OpRecord): OperatorDefaultPaths {
-    // Keep V1 behavior from 06847/3816: use wildcard .run target for deploy/run.
     const runPackageName = '*.run';
 
       return {
