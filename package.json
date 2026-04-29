@@ -29,6 +29,10 @@
         "title": "%config.category.compileAndDeploy.title%",
         "type": "object",
         "properties": {
+          "op-devtools": {
+            "type": "object",
+            "default": {}
+          },
           "op-devtools.debugMode": {
             "type": "boolean",
             "default": true,

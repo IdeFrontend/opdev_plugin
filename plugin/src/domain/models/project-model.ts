@@ -52,6 +52,12 @@ type ProjectsStore = {
   projects: ProjectRecord[];
 };
 
+function normalizeProjectPath(projectPath: string): string {
+  return path.normalize(projectPath)
+    .replace(/\\/g, '/')
+    .toLowerCase();
+}
+
 function ensureStore(): ProjectsStore {
   const init: ProjectsStore = {
     lastId: 0,
@@ -69,6 +75,16 @@ function ensureStore(): ProjectsStore {
 
 function writeStore(store: ProjectsStore) {
   storage.write(store);
+}
+
+function findProjectByPath(store: ProjectsStore, projectPath: string): ProjectRecord | undefined {
+  const normalizedPath = normalizeProjectPath(projectPath);
+  return store.projects.find((p) => {
+    if (!p.project_path) {
+      return false;
+    }
+    return normalizeProjectPath(p.project_path) === normalizedPath;
+  });
 }
 
 function hasSameFieldValue(current: unknown, next: unknown): boolean {
@@ -111,7 +127,7 @@ export interface CreateProjectParams {
 export async function updateShScript(data: CreateProjectParams) {
   // Database operations
   const store = ensureStore();
-  const existing = store.projects.find((p) => p.project_path === data.project_path);
+  const existing = findProjectByPath(store, data.project_path);
 
   if (existing) {
     appendLog('op-devtools/project-model', 'updateShScript:start', {
@@ -153,7 +169,7 @@ export async function updateShScript(data: CreateProjectParams) {
 export async function createProject(data: CreateProjectParams) {
   // Database operations
   const store = ensureStore();
-  const existing = store.projects.find((p) => p.project_path === data.project_path);
+  const existing = findProjectByPath(store, data.project_path);
 
   if (existing) {
     // Update existing project
@@ -270,23 +286,7 @@ export function getProjectByPath(projectPath: string): ProjectRecord | undefined
   }
 
   const store = ensureStore();
-
-  // Normalized path comparison (paths are not case sensitive on Windows)
-  const normalizedPath = path.normalize(projectPath)
-    .replace(/\\/g, '/')
-    .toLowerCase();
-
-  return store.projects.find((p) => {
-    if (!p.project_path) {
-      return false;
-    }
-
-    const normalizedProjectPath = path.normalize(p.project_path)
-      .replace(/\\/g, '/')
-      .toLowerCase();
-
-    return normalizedProjectPath === normalizedPath;
-  });
+  return findProjectByPath(store, projectPath);
 }
 
 /**
@@ -360,23 +360,8 @@ export function deleteProject(projectPath: string): boolean {
   }
 
   const store = ensureStore();
-
-  // Normalized path comparison (paths are not case sensitive on Windows)
-  const normalizedPath = path.normalize(projectPath)
-    .replace(/\\/g, '/')
-    .toLowerCase();
-
-  const index = store.projects.findIndex((p) => {
-    if (!p.project_path) {
-      return false;
-    }
-
-    const normalizedProjectPath = path.normalize(p.project_path)
-      .replace(/\\/g, '/')
-      .toLowerCase();
-
-    return normalizedProjectPath === normalizedPath;
-  });
+  const project = findProjectByPath(store, projectPath);
+  const index = project ? store.projects.indexOf(project) : -1;
 
   if (index === -1) {
     return false;
@@ -408,21 +393,7 @@ export async function updateStandardCustomOperators(
   experimentalOpsList: SubOperatorInfo[],
 ): Promise<void> {
   const store = ensureStore();
-  const normalizedPath = path.normalize(projectPath)
-    .replace(/\\/g, '/')
-    .toLowerCase();
-
-  const project = store.projects.find((p) => {
-    if (!p.project_path) {
-      return false;
-    }
-
-    const normalizedProjectPath = path.normalize(p.project_path)
-      .replace(/\\/g, '/')
-      .toLowerCase();
-
-    return normalizedProjectPath === normalizedPath;
-  });
+  const project = findProjectByPath(store, projectPath);
 
   if (project) {
     appendLog('op-devtools/project-model', '[updateStandardCustomOperators] Updating project', { projectPath });
@@ -520,21 +491,7 @@ export async function markOperatorsAsCompiled(
 ): Promise<void> {
   appendLog('op-devtools/project-model', '[markOperatorsAsCompiled] Start', { projectPath, operatorNames });
   const store = ensureStore();
-  const normalizedPath = path.normalize(projectPath)
-    .replace(/\\/g, '/')
-    .toLowerCase();
-
-  const project = store.projects.find((p) => {
-    if (!p.project_path) {
-      return false;
-    }
-
-    const normalizedProjectPath = path.normalize(p.project_path)
-      .replace(/\\/g, '/')
-      .toLowerCase();
-
-    return normalizedProjectPath === normalizedPath;
-  });
+  const project = findProjectByPath(store, projectPath);
 
   if (!project) {
     console.warn(`[markOperatorsAsCompiled] Project not found: ${projectPath}`);

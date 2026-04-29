@@ -280,26 +280,37 @@ export async function activate(context: vscode.ExtensionContext) {
     return false;
   };
 
-  const syncSettingIfUnset = async (key: string, value: unknown) => {
-    if (value === undefined) {
-      return;
+  const getOpDevtoolsObject = (scopeUri?: vscode.Uri): Record<string, unknown> => {
+    const value = vscode.workspace
+      .getConfiguration(undefined, scopeUri)
+      .get<Record<string, unknown>>('op-devtools', {});
+    return { ...(value || {}) };
+  };
+
+  const getValueByPath = (obj: Record<string, unknown>, path: string): unknown => {
+    const segments = path.split('.');
+    let current: unknown = obj;
+    for (const segment of segments) {
+      if (!current || typeof current !== 'object') {
+        return undefined;
+      }
+      current = (current as Record<string, unknown>)[segment];
     }
-    const cfg = vscode.workspace.getConfiguration('op-devtools');
-    const inspection = cfg.inspect<unknown>(key);
-    const explicitlySet = inspection
-      && (
-        inspection.workspaceFolderValue !== undefined
-        || inspection.workspaceValue !== undefined
-        || inspection.globalValue !== undefined
-      );
-    if (explicitlySet) {
-      return;
+    return current;
+  };
+
+  const setValueByPath = (obj: Record<string, unknown>, path: string, value: unknown): void => {
+    const segments = path.split('.');
+    let cursor = obj;
+    for (let i = 0; i < segments.length - 1; i += 1) {
+      const segment = segments[i];
+      const next = cursor[segment];
+      if (!next || typeof next !== 'object' || Array.isArray(next)) {
+        cursor[segment] = {};
+      }
+      cursor = cursor[segment] as Record<string, unknown>;
     }
-    const current = cfg.get<unknown>(key);
-    if (hasSameSettingValue(current, value)) {
-      return;
-    }
-    await cfg.update(key, value, vscode.ConfigurationTarget.Workspace);
+    cursor[segments[segments.length - 1]] = value;
   };
 
   const syncOperatorProjectWorkspaceSettings = async () => {
@@ -344,75 +355,99 @@ export async function activate(context: vscode.ExtensionContext) {
       const onBoardOpts = (onBoard?.user_options || {}) as Record<string, unknown>;
       const utTestOpts = (utTest?.user_options || {}) as Record<string, unknown>;
       const sanitizerOpts = (sanitizer?.user_options || {}) as Record<string, unknown>;
+      const cfg = vscode.workspace.getConfiguration('op-devtools');
+      const nextSettings = getOpDevtoolsObject();
+      let changed = false;
+      const syncSettingIfUnset = (key: string, value: unknown) => {
+        if (value === undefined) {
+          return;
+        }
+        const inspection = cfg.inspect<unknown>(key);
+        const explicitlySet = inspection
+          && (
+            inspection.workspaceFolderValue !== undefined
+            || inspection.workspaceValue !== undefined
+            || inspection.globalValue !== undefined
+          );
+        if (explicitlySet) {
+          return;
+        }
+        const current = getValueByPath(nextSettings, key);
+        if (hasSameSettingValue(current, value)) {
+          return;
+        }
+        setValueByPath(nextSettings, key, value);
+        changed = true;
+      };
 
-      await syncSettingIfUnset('compileAndDeploy.buildConfig.operatorNameToCompile', buildOpOpts.op);
-      await syncSettingIfUnset('compileAndDeploy.buildConfig.deployCommandOrRunCommand', buildOpOpts.target_file);
-      await syncSettingIfUnset('compileAndDeploy.buildConfig.compileCommand', buildOpOpts.script);
-      await syncSettingIfUnset('compileAndDeploy.buildConfig.cpuDebugCompileCommand', buildOpOpts.cpu_debug_script);
-      await syncSettingIfUnset('compileAndDeploy.buildConfig.npuDebugCompileCommand', buildOpOpts.npu_debug_script);
-      await syncSettingIfUnset('compileAndDeploy.buildConfig.sanitizerCompileCommand', sanitizerOpts.script);
-      await syncSettingIfUnset('compileAndDeploy.buildConfig.onBoardCompileCommand', onBoardOpts.script);
-      await syncSettingIfUnset('compileAndDeploy.buildConfig.simulationCompileCommand', simulateOpts.script);
-      await syncSettingIfUnset('compileAndDeploy.buildConfig.utTestCompileCommand', utTestOpts.script);
+      syncSettingIfUnset('compileAndDeploy.buildConfig.operatorNameToCompile', buildOpOpts.op);
+      syncSettingIfUnset('compileAndDeploy.buildConfig.deployCommandOrRunCommand', buildOpOpts.target_file);
+      syncSettingIfUnset('compileAndDeploy.buildConfig.compileCommand', buildOpOpts.script);
+      syncSettingIfUnset('compileAndDeploy.buildConfig.cpuDebugCompileCommand', buildOpOpts.cpu_debug_script);
+      syncSettingIfUnset('compileAndDeploy.buildConfig.npuDebugCompileCommand', buildOpOpts.npu_debug_script);
+      syncSettingIfUnset('compileAndDeploy.buildConfig.sanitizerCompileCommand', sanitizerOpts.script);
+      syncSettingIfUnset('compileAndDeploy.buildConfig.onBoardCompileCommand', onBoardOpts.script);
+      syncSettingIfUnset('compileAndDeploy.buildConfig.simulationCompileCommand', simulateOpts.script);
+      syncSettingIfUnset('compileAndDeploy.buildConfig.utTestCompileCommand', utTestOpts.script);
 
       const shouldExposeExampleBuildConfig = Boolean(multiResult.isStandardCustom && multiResult.hasMultiple);
       if (shouldExposeExampleBuildConfig) {
-        await syncSettingIfUnset('compileAndDeploy.exampleBuildConfig.executionMode', buildExampleOpts.execution_mode);
-        await syncSettingIfUnset('compileAndDeploy.exampleBuildConfig.runCommand', buildExampleOpts.script);
+        syncSettingIfUnset('compileAndDeploy.exampleBuildConfig.executionMode', buildExampleOpts.execution_mode);
+        syncSettingIfUnset('compileAndDeploy.exampleBuildConfig.runCommand', buildExampleOpts.script);
       }
 
-      await syncSettingIfUnset('sanitizer.reportLogLevel', sanitizerOpts.logLevel);
-      await syncSettingIfUnset('sanitizer.maxSingleLogFileSize', sanitizerOpts.maxDebuglogSize);
+      syncSettingIfUnset('sanitizer.reportLogLevel', sanitizerOpts.logLevel);
+      syncSettingIfUnset('sanitizer.maxSingleLogFileSize', sanitizerOpts.maxDebuglogSize);
       const sanitizerTool = (sanitizerOpts.tool || {}) as Record<string, unknown>;
       const sanitizerMemcheckOption = (sanitizerOpts.memcheckOption || {}) as Record<string, unknown>;
-      await syncSettingIfUnset('sanitizer.memory', sanitizerTool.memcheck);
-      await syncSettingIfUnset('sanitizer.race', sanitizerTool.racecheck);
-      await syncSettingIfUnset('sanitizer.uninitialized', sanitizerTool.initcheck);
-      await syncSettingIfUnset('sanitizer.memoryLeak', sanitizerMemcheckOption['leak-check']);
-      await syncSettingIfUnset('sanitizer.allocUnused', sanitizerMemcheckOption['check-unused-memory']);
+      syncSettingIfUnset('sanitizer.memory', sanitizerTool.memcheck);
+      syncSettingIfUnset('sanitizer.race', sanitizerTool.racecheck);
+      syncSettingIfUnset('sanitizer.uninitialized', sanitizerTool.initcheck);
+      syncSettingIfUnset('sanitizer.memoryLeak', sanitizerMemcheckOption['leak-check']);
+      syncSettingIfUnset('sanitizer.allocUnused', sanitizerMemcheckOption['check-unused-memory']);
       const useBlock = sanitizerOpts.useBlock;
       if (typeof useBlock === 'boolean') {
-        await syncSettingIfUnset('sanitizer.detectionScope', useBlock ? 'singleBlock' : 'global');
+        syncSettingIfUnset('sanitizer.detectionScope', useBlock ? 'singleBlock' : 'global');
       }
-      await syncSettingIfUnset('sanitizer.blockId', sanitizerOpts.blockId ?? null);
+      syncSettingIfUnset('sanitizer.blockId', sanitizerOpts.blockId ?? null);
 
-      await syncSettingIfUnset('performanceTuning.simulation.simulatorType', simulateOpts.simulatorType);
-      await syncSettingIfUnset(
+      syncSettingIfUnset('performanceTuning.simulation.simulatorType', simulateOpts.simulatorType);
+      syncSettingIfUnset(
         'performanceTuning.simulation.memoryThroughputWaveform',
         simulateOpts.PMSampling,
       );
-      await syncSettingIfUnset(
+      syncSettingIfUnset(
         'performanceTuning.simulation.resourceConflictRatio',
         simulateOpts.ResourceConflictRatio,
       );
-      await syncSettingIfUnset(
+      syncSettingIfUnset(
         'performanceTuning.simulation.parameters',
         toKeyValueMap(simulateOpts.advance_param),
       );
-      await syncSettingIfUnset('performanceTuning.onBoard.interCoreLoad', onBoardOpts.Occupancy);
-      await syncSettingIfUnset('performanceTuning.onBoard.roofline', onBoardOpts.Roofline);
-      await syncSettingIfUnset('performanceTuning.onBoard.operatorCodeHotspot', onBoardOpts.Source);
-      await syncSettingIfUnset('performanceTuning.onBoard.cacheHeatmap', onBoardOpts.MemoryDetail);
-      await syncSettingIfUnset(
+      syncSettingIfUnset('performanceTuning.onBoard.interCoreLoad', onBoardOpts.Occupancy);
+      syncSettingIfUnset('performanceTuning.onBoard.roofline', onBoardOpts.Roofline);
+      syncSettingIfUnset('performanceTuning.onBoard.operatorCodeHotspot', onBoardOpts.Source);
+      syncSettingIfUnset('performanceTuning.onBoard.cacheHeatmap', onBoardOpts.MemoryDetail);
+      syncSettingIfUnset(
         'performanceTuning.onBoard.cubeAndVectorInstructionTimeAndRatio',
         onBoardOpts.ArithmeticUtilization,
       );
-      await syncSettingIfUnset('performanceTuning.onBoard.l2CacheHitRate', onBoardOpts.L2Cache);
-      await syncSettingIfUnset(
+      syncSettingIfUnset('performanceTuning.onBoard.l2CacheHitRate', onBoardOpts.L2Cache);
+      syncSettingIfUnset(
         'performanceTuning.onBoard.memoryReadWriteBandwidth',
         onBoardOpts.Memory,
       );
-      await syncSettingIfUnset('performanceTuning.onBoard.l0ReadWriteBandwidth', onBoardOpts.MemoryL0);
-      await syncSettingIfUnset('performanceTuning.onBoard.ubReadWriteBandwidth', onBoardOpts.MemoryUB);
-      await syncSettingIfUnset(
+      syncSettingIfUnset('performanceTuning.onBoard.l0ReadWriteBandwidth', onBoardOpts.MemoryL0);
+      syncSettingIfUnset('performanceTuning.onBoard.ubReadWriteBandwidth', onBoardOpts.MemoryUB);
+      syncSettingIfUnset(
         'performanceTuning.onBoard.computeAndMoveUnitTimeRatio',
         onBoardOpts.PipeUtilization,
       );
-      await syncSettingIfUnset(
+      syncSettingIfUnset(
         'performanceTuning.onBoard.resourceConflictRatio',
         onBoardOpts.ResourceConflictRatio,
       );
-      await syncSettingIfUnset('performanceTuning.onBoard.enableKernelCodeSegmentProfiling', onBoardOpts.KernelScale);
+      syncSettingIfUnset('performanceTuning.onBoard.enableKernelCodeSegmentProfiling', onBoardOpts.KernelScale);
       const metricKeys = [
         'ArithmeticUtilization',
         'L2Cache',
@@ -423,13 +458,21 @@ export async function activate(context: vscode.ExtensionContext) {
         'ResourceConflictRatio',
       ] as const;
       const allMetricEnabled = metricKeys.every((key) => onBoardOpts[key] === true);
-      await syncSettingIfUnset('performanceTuning.onBoard.operatorMetrics', allMetricEnabled);
-      await syncSettingIfUnset(
+      syncSettingIfUnset('performanceTuning.onBoard.operatorMetrics', allMetricEnabled);
+      syncSettingIfUnset(
         'performanceTuning.onBoard.parameters',
         toKeyValueMap(onBoardOpts.advance_param),
       );
-      await syncSettingIfUnset('environment.environmentScript', projectSH);
-      await syncSettingIfUnset('environment.socVersion', projectSocVersion);
+      syncSettingIfUnset('environment.environmentScript', projectSH);
+      syncSettingIfUnset('environment.socVersion', projectSocVersion);
+
+      if (changed) {
+        await vscode.workspace.getConfiguration().update(
+          'op-devtools',
+          nextSettings,
+          vscode.ConfigurationTarget.Workspace,
+        );
+      }
     }
     catch (error) {
       logDebug('syncOperatorProjectWorkspaceSettings:error', error);
@@ -1780,26 +1823,29 @@ export async function activate(context: vscode.ExtensionContext) {
       'performanceTuning.onBoard.resourceConflictRatio',
     ];
 
-    const applyForWorkspace = async () => {
-      await Promise.all(
-        metricKeys.map((k) => cfg.update(k, desired, vscode.ConfigurationTarget.Workspace)),
+    const applyMetricKeys = async (target: vscode.ConfigurationTarget, scopeUri?: vscode.Uri) => {
+      const nextSettings = getOpDevtoolsObject(scopeUri);
+      metricKeys.forEach((k) => setValueByPath(nextSettings, k, desired));
+      await vscode.workspace.getConfiguration(undefined, scopeUri).update(
+        'op-devtools',
+        nextSettings,
+        target,
       );
     };
 
+    const applyForWorkspace = async () => {
+      await applyMetricKeys(vscode.ConfigurationTarget.Workspace);
+    };
+
     const applyForGlobal = async () => {
-      await Promise.all(
-        metricKeys.map((k) => cfg.update(k, desired, vscode.ConfigurationTarget.Global)),
-      );
+      await applyMetricKeys(vscode.ConfigurationTarget.Global);
     };
 
     const applyForAllFolders = async () => {
       const folders = vscode.workspace.workspaceFolders || [];
       await Promise.all(
         folders.map(async (folder) => {
-          const folderCfg = vscode.workspace.getConfiguration('op-devtools', folder.uri);
-          await Promise.all(
-            metricKeys.map((k) => folderCfg.update(k, desired, vscode.ConfigurationTarget.WorkspaceFolder)),
-          );
+          await applyMetricKeys(vscode.ConfigurationTarget.WorkspaceFolder, folder.uri);
         }),
       );
     };

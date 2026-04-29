@@ -24,6 +24,11 @@ const CONFIG_TYPES = {
 } as const;
 
 export class ConfigService {
+  private static getOpDevtoolsSettings(): Record<string, unknown> {
+    const settings = vscode.workspace.getConfiguration().get<Record<string, unknown>>('op-devtools', {});
+    return { ...settings };
+  }
+
   private loadSanitizerConfigsFromDb(): BuildConfig[] {
     const projectId = ProjectManager.getInstance().projectId;
     const config = getConfig(Number(projectId), CONFIG_TYPES.SANITIZER);
@@ -176,35 +181,43 @@ export class ConfigService {
         return;
       }
       const opts = row.user_options as Record<string, unknown>;
-      const cfg = vscode.workspace.getConfiguration('op-devtools');
       const tool = (opts.tool || {}) as Record<string, unknown>;
       const mem = (opts.memcheckOption || {}) as Record<string, unknown>;
+      const currentSettings = ConfigService.getOpDevtoolsSettings();
+      const compileAndDeploy = (currentSettings.compileAndDeploy as Record<string, unknown>) || {};
+      const buildConfig = (compileAndDeploy.buildConfig as Record<string, unknown>) || {};
+      const sanitizer = (currentSettings.sanitizer as Record<string, unknown>) || {};
 
-      const write = async (key: string, value: unknown) => {
-        if (value === undefined) {
-          return;
-        }
-        await cfg.update(key, value, vscode.ConfigurationTarget.Workspace);
+      const nextSettings: Record<string, unknown> = {
+        ...currentSettings,
+        compileAndDeploy: {
+          ...compileAndDeploy,
+          buildConfig: {
+            ...buildConfig,
+            ...(opts.script !== undefined ? { sanitizerCompileCommand: opts.script } : {}),
+          },
+        },
+        sanitizer: {
+          ...sanitizer,
+          ...(opts.logLevel !== undefined ? { reportLogLevel: opts.logLevel } : {}),
+          ...(opts.maxDebuglogSize !== undefined ? { maxSingleLogFileSize: opts.maxDebuglogSize } : {}),
+          ...(tool.memcheck !== undefined ? { memory: tool.memcheck } : {}),
+          ...(tool.racecheck !== undefined ? { race: tool.racecheck } : {}),
+          ...(tool.initcheck !== undefined ? { uninitialized: tool.initcheck } : {}),
+          ...(mem['leak-check'] !== undefined ? { memoryLeak: mem['leak-check'] } : {}),
+          ...(mem['check-unused-memory'] !== undefined ? { allocUnused: mem['check-unused-memory'] } : {}),
+          ...(typeof opts.useBlock === 'boolean'
+            ? { detectionScope: opts.useBlock ? 'singleBlock' : 'global' }
+            : {}),
+          ...(opts.blockId !== undefined ? { blockId: opts.blockId } : {}),
+        },
       };
 
-      await write('compileAndDeploy.buildConfig.sanitizerCompileCommand', opts.script);
-      await write('sanitizer.reportLogLevel', opts.logLevel);
-      await write('sanitizer.maxSingleLogFileSize', opts.maxDebuglogSize);
-      await write('sanitizer.memory', tool.memcheck);
-      await write('sanitizer.race', tool.racecheck);
-      await write('sanitizer.uninitialized', tool.initcheck);
-      await write('sanitizer.memoryLeak', mem['leak-check']);
-      await write('sanitizer.allocUnused', mem['check-unused-memory']);
-      if (typeof opts.useBlock === 'boolean') {
-        await write('sanitizer.detectionScope', opts.useBlock ? 'singleBlock' : 'global');
-      }
-      if (opts.blockId !== undefined) {
-        await cfg.update(
-          'sanitizer.blockId',
-          opts.blockId,
-          vscode.ConfigurationTarget.Workspace,
-        );
-      }
+      await vscode.workspace.getConfiguration().update(
+        'op-devtools',
+        nextSettings,
+        vscode.ConfigurationTarget.Workspace,
+      );
     }
     catch (error) {
       console.warn('[pushSanitizerUserOptionsToWorkspaceSettings] failed:', error);
@@ -240,49 +253,56 @@ export class ConfigService {
         return;
       }
       const onBoardOpts = row.user_options as Record<string, unknown>;
-      const cfg = vscode.workspace.getConfiguration('op-devtools');
-
-      const write = async (key: string, value: unknown) => {
-        if (value === undefined) {
-          return;
-        }
-        await cfg.update(key, value, vscode.ConfigurationTarget.Workspace);
-      };
-
-      await write('compileAndDeploy.buildConfig.onBoardCompileCommand', onBoardOpts.script);
-      await write('performanceTuning.onBoard.interCoreLoad', onBoardOpts.Occupancy);
-      await write('performanceTuning.onBoard.roofline', onBoardOpts.Roofline);
-      await write('performanceTuning.onBoard.operatorCodeHotspot', onBoardOpts.Source);
-      await write('performanceTuning.onBoard.cacheHeatmap', onBoardOpts.MemoryDetail);
-      await write(
-        'performanceTuning.onBoard.cubeAndVectorInstructionTimeAndRatio',
-        onBoardOpts.ArithmeticUtilization,
-      );
-      await write('performanceTuning.onBoard.l2CacheHitRate', onBoardOpts.L2Cache);
-      await write(
-        'performanceTuning.onBoard.memoryReadWriteBandwidth',
-        onBoardOpts.Memory,
-      );
-      await write('performanceTuning.onBoard.l0ReadWriteBandwidth', onBoardOpts.MemoryL0);
-      await write('performanceTuning.onBoard.ubReadWriteBandwidth', onBoardOpts.MemoryUB);
-      await write(
-        'performanceTuning.onBoard.computeAndMoveUnitTimeRatio',
-        onBoardOpts.PipeUtilization,
-      );
-      await write(
-        'performanceTuning.onBoard.resourceConflictRatio',
-        onBoardOpts.ResourceConflictRatio,
-      );
-      await write(
-        'performanceTuning.onBoard.enableKernelCodeSegmentProfiling',
-        onBoardOpts.KernelScale,
-      );
+      const currentSettings = ConfigService.getOpDevtoolsSettings();
+      const compileAndDeploy = (currentSettings.compileAndDeploy as Record<string, unknown>) || {};
+      const buildConfig = (compileAndDeploy.buildConfig as Record<string, unknown>) || {};
+      const performanceTuning = (currentSettings.performanceTuning as Record<string, unknown>) || {};
+      const onBoard = (performanceTuning.onBoard as Record<string, unknown>) || {};
       // Do not write `performanceTuning.onBoard.operatorMetrics` here. Updating that
       // aggregate key triggers extension `onBoardOperatorMetricsSync`, which sets every
       // metric child workspace key to the same boolean and wipes per-metric choices.
-      await write(
-        'performanceTuning.onBoard.parameters',
-        ConfigService.toKeyValueMapFromAdvanceParam(onBoardOpts.advance_param),
+      const nextSettings: Record<string, unknown> = {
+        ...currentSettings,
+        compileAndDeploy: {
+          ...compileAndDeploy,
+          buildConfig: {
+            ...buildConfig,
+            ...(onBoardOpts.script !== undefined ? { onBoardCompileCommand: onBoardOpts.script } : {}),
+          },
+        },
+        performanceTuning: {
+          ...performanceTuning,
+          onBoard: {
+            ...onBoard,
+            ...(onBoardOpts.Occupancy !== undefined ? { interCoreLoad: onBoardOpts.Occupancy } : {}),
+            ...(onBoardOpts.Roofline !== undefined ? { roofline: onBoardOpts.Roofline } : {}),
+            ...(onBoardOpts.Source !== undefined ? { operatorCodeHotspot: onBoardOpts.Source } : {}),
+            ...(onBoardOpts.MemoryDetail !== undefined ? { cacheHeatmap: onBoardOpts.MemoryDetail } : {}),
+            ...(onBoardOpts.ArithmeticUtilization !== undefined
+              ? { cubeAndVectorInstructionTimeAndRatio: onBoardOpts.ArithmeticUtilization }
+              : {}),
+            ...(onBoardOpts.L2Cache !== undefined ? { l2CacheHitRate: onBoardOpts.L2Cache } : {}),
+            ...(onBoardOpts.Memory !== undefined ? { memoryReadWriteBandwidth: onBoardOpts.Memory } : {}),
+            ...(onBoardOpts.MemoryL0 !== undefined ? { l0ReadWriteBandwidth: onBoardOpts.MemoryL0 } : {}),
+            ...(onBoardOpts.MemoryUB !== undefined ? { ubReadWriteBandwidth: onBoardOpts.MemoryUB } : {}),
+            ...(onBoardOpts.PipeUtilization !== undefined
+              ? { computeAndMoveUnitTimeRatio: onBoardOpts.PipeUtilization }
+              : {}),
+            ...(onBoardOpts.ResourceConflictRatio !== undefined
+              ? { resourceConflictRatio: onBoardOpts.ResourceConflictRatio }
+              : {}),
+            ...(onBoardOpts.KernelScale !== undefined
+              ? { enableKernelCodeSegmentProfiling: onBoardOpts.KernelScale }
+              : {}),
+            parameters: ConfigService.toKeyValueMapFromAdvanceParam(onBoardOpts.advance_param),
+          },
+        },
+      };
+
+      await vscode.workspace.getConfiguration().update(
+        'op-devtools',
+        nextSettings,
+        vscode.ConfigurationTarget.Workspace,
       );
     }
     catch (error) {
@@ -300,22 +320,39 @@ export class ConfigService {
         return;
       }
       const simulateOpts = row.user_options as Record<string, unknown>;
-      const cfg = vscode.workspace.getConfiguration('op-devtools');
+      const currentSettings = ConfigService.getOpDevtoolsSettings();
+      const compileAndDeploy = (currentSettings.compileAndDeploy as Record<string, unknown>) || {};
+      const buildConfig = (compileAndDeploy.buildConfig as Record<string, unknown>) || {};
+      const performanceTuning = (currentSettings.performanceTuning as Record<string, unknown>) || {};
+      const simulation = (performanceTuning.simulation as Record<string, unknown>) || {};
 
-      const write = async (key: string, value: unknown) => {
-        if (value === undefined) {
-          return;
-        }
-        await cfg.update(key, value, vscode.ConfigurationTarget.Workspace);
+      const nextSettings: Record<string, unknown> = {
+        ...currentSettings,
+        compileAndDeploy: {
+          ...compileAndDeploy,
+          buildConfig: {
+            ...buildConfig,
+            ...(simulateOpts.script !== undefined ? { simulationCompileCommand: simulateOpts.script } : {}),
+          },
+        },
+        performanceTuning: {
+          ...performanceTuning,
+          simulation: {
+            ...simulation,
+            ...(simulateOpts.simulatorType !== undefined ? { simulatorType: simulateOpts.simulatorType } : {}),
+            ...(simulateOpts.PMSampling !== undefined ? { memoryThroughputWaveform: simulateOpts.PMSampling } : {}),
+            ...(simulateOpts.ResourceConflictRatio !== undefined
+              ? { resourceConflictRatio: simulateOpts.ResourceConflictRatio }
+              : {}),
+            parameters: ConfigService.toKeyValueMapFromAdvanceParam(simulateOpts.advance_param),
+          },
+        },
       };
 
-      await write('compileAndDeploy.buildConfig.simulationCompileCommand', simulateOpts.script);
-      await write('performanceTuning.simulation.simulatorType', simulateOpts.simulatorType);
-      await write('performanceTuning.simulation.memoryThroughputWaveform', simulateOpts.PMSampling);
-      await write('performanceTuning.simulation.resourceConflictRatio', simulateOpts.ResourceConflictRatio);
-      await write(
-        'performanceTuning.simulation.parameters',
-        ConfigService.toKeyValueMapFromAdvanceParam(simulateOpts.advance_param),
+      await vscode.workspace.getConfiguration().update(
+        'op-devtools',
+        nextSettings,
+        vscode.ConfigurationTarget.Workspace,
       );
     }
     catch (error) {
