@@ -337,7 +337,7 @@ export const homeMethods = {
     try {
       const projectType = await getProjectTypeValue();
 
-      if (projectType !== OperatorProjectType.PYASC) {
+      if (projectType !== OperatorProjectType.PYASC && projectType !== OperatorProjectType.TRITON) {
         return { valid: true };
       }
 

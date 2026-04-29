@@ -363,6 +363,15 @@ export const welcomeMethods = {
       if (existingProject) {
         console.log(`[openProject] Project already exists in config: ${existingProject.project_name} (${existingProject.project_path})`);
 
+        // Ensure VS Code-side config files exist for already-registered projects too.
+        // Without devtool_config.json, the Operator Development sidebar remains hidden.
+        try {
+          await ensureLaunchJsonExists(existingProject.project_path);
+          console.log('[openProject] Ensured VS Code config files for existing project');
+        } catch (error) {
+          console.warn(`[openProject] Failed to ensure VS Code config files: ${error instanceof Error ? error.message : String(error)}`);
+        }
+
         // Complete missing configs
         try {
           const projectId = existingProject.id;

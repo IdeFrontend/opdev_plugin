@@ -2,6 +2,7 @@ import { CannCommandStrategy } from '@plugin/domain/services/command-strategy/ca
 import {
   CannOpGenerator, OpGenParams, OpGenProject,
 } from '@plugin/domain/services/op-generator-factory';
+import { OperatorProjectType } from '@plugin/domain/models/operator-project-type';
 import { AbstractOperatorPlugin } from './abstract-operator-plugin';
 
 /**
@@ -15,6 +16,7 @@ export class CannPlugin extends AbstractOperatorPlugin {
   readonly opType = 'cann';
   readonly displayName = 'CANN';
   readonly commandStrategy = new CannCommandStrategy();
+  readonly projectTypeMappings = [OperatorProjectType.STANDARD_CUSTOM] as const;
 
   createProjectGenerator(params: OpGenParams, project: OpGenProject, extensionPath: string) {
     return new CannOpGenerator(params, project, extensionPath);

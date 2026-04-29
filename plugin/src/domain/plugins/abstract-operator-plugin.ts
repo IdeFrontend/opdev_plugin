@@ -30,6 +30,12 @@ export abstract class AbstractOperatorPlugin implements IOperatorPlugin {
   readonly buildBehavior: OperatorBuildBehavior = {
     requiresBuildBeforeAnalysis: true,
     requiresActiveFileCheck: false,
+    supportsSanitizer: true,
+    supportsSimulate: true,
+    supportsOnBoard: true,
+    supportsCpuDebug: true,
+    supportsNpuDebug: true,
+    supportsNpuPythonDebug: false,
   };
 
   getDefaultPaths(op: OpRecord): OperatorDefaultPaths {

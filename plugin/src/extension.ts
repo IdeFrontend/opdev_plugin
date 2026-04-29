@@ -32,9 +32,11 @@ import { getMsSanitizerPanelViewProvider } from './class/ms-sanitizer-panel-view
 import { sanitizerDiagnosticsService } from './service/sanitizer-diagnostics.service';
 import { getPerformancePanelViewProvider } from './class/performance-panel-view';
 import { getDumpTensorPanelViewProvider } from './class/dump-tensor-panel-view';
+import { appendLog } from './helpers/output-channel';
 
 import { MindStudioPluginInstaller } from './class/mind-studio-plugin-installer';
 import { registerOperatorPlugins } from './domain/plugins';
+import { OperatorPluginRegistry } from './domain/plugins/operator-plugin.registry';
 import {
   COMMAND_OPEN,
   COMMAND_PROJECT_SH,
@@ -129,6 +131,7 @@ import {
   dispatchStopTask,
 } from './helpers/task-method-dispatch';
 import type { QueueableActionType } from './helpers/operator-action-queue';
+import type { OperatorProjectViewIdValue } from '@shared/project-type-view-id';
 
 let extensionContext: vscode.ExtensionContext | undefined;
 
@@ -218,6 +221,15 @@ const updateContextForUri = async (uri: vscode.Uri | undefined) => {
  * @param context VSCode extended context
  */
 export async function activate(context: vscode.ExtensionContext) {
+  const debugTag = '[op-devtools][activate]';
+  const logDebug = (...args: unknown[]) => {
+    const [message, payload] = args;
+    appendLog(debugTag, String(message ?? ''), payload);
+  };
+  logDebug('activate:start', {
+    workspaceFolders: (vscode.workspace.workspaceFolders || []).map((f) => f.uri.fsPath),
+  });
+
   extensionContext = context;
   (
     globalThis as unknown as { extensionContext: vscode.ExtensionContext }
@@ -244,6 +256,29 @@ export async function activate(context: vscode.ExtensionContext) {
   const operateTreeProvider = new OperateTreeProvider(context.extensionUri, 'flow', context);
   OperateTreeProvider.registerOperateFlowTreeProvider(operateTreeProvider);
   const operatorProjectsTreeProvider = new OperateTreeProvider(context.extensionUri, 'operatorProjects', context);
+  let isSyncingWorkspaceSettings = false;
+  let isRefreshingSidebarContexts = false;
+  let hasPendingSidebarRefresh = false;
+
+  const hasSameSettingValue = (current: unknown, next: unknown): boolean => {
+    if (Object.is(current, next)) {
+      return true;
+    }
+    if (
+      current
+      && next
+      && typeof current === 'object'
+      && typeof next === 'object'
+    ) {
+      try {
+        return JSON.stringify(current) === JSON.stringify(next);
+      }
+      catch {
+        return false;
+      }
+    }
+    return false;
+  };
 
   const syncSettingIfUnset = async (key: string, value: unknown) => {
     if (value === undefined) {
@@ -258,6 +293,10 @@ export async function activate(context: vscode.ExtensionContext) {
         || inspection.globalValue !== undefined
       );
     if (explicitlySet) {
+      return;
+    }
+    const current = cfg.get<unknown>(key);
+    if (hasSameSettingValue(current, value)) {
       return;
     }
     await cfg.update(key, value, vscode.ConfigurationTarget.Workspace);
@@ -283,6 +322,9 @@ export async function activate(context: vscode.ExtensionContext) {
       }, {} as Record<string, string>);
     };
 
+    isSyncingWorkspaceSettings = true;
+    const syncStart = Date.now();
+    logDebug('syncOperatorProjectWorkspaceSettings:start');
     try {
       const buildConfigs = await buildService.getBuildConfigsList();
       const multiResult = await homeMethods.checkMultipleOperators();
@@ -390,39 +432,92 @@ export async function activate(context: vscode.ExtensionContext) {
       await syncSettingIfUnset('environment.socVersion', projectSocVersion);
     }
     catch (error) {
+      logDebug('syncOperatorProjectWorkspaceSettings:error', error);
       console.warn('[syncOperatorProjectWorkspaceSettings] failed:', error);
+    }
+    finally {
+      isSyncingWorkspaceSettings = false;
+      logDebug('syncOperatorProjectWorkspaceSettings:end', {
+        elapsedMs: Date.now() - syncStart,
+      });
     }
   };
 
   const refreshSidebarContexts = async () => {
-    hasDevtoolConfig = await checkDevtoolConfigExists();
-    if (hasDevtoolConfig) {
-      await syncOperatorProjectWorkspaceSettings();
+    const refreshStart = Date.now();
+    if (isRefreshingSidebarContexts) {
+      hasPendingSidebarRefresh = true;
+      logDebug('refreshSidebarContexts:coalesced', {
+        hasPendingSidebarRefresh,
+        isSyncingWorkspaceSettings,
+      });
+      return;
     }
-    await vscode.commands.executeCommand('setContext', 'hasDevtoolConfig', hasDevtoolConfig);
-    await vscode.commands.executeCommand('setContext', 'opDevtools.showHomeTree', !hasDevtoolConfig);
-    await vscode.commands.executeCommand('setContext', 'opDevtools.showOperateTree', hasDevtoolConfig);
-    const { showOperatorSearch, showOperatorProjects } = await operateTreeProvider.refreshState(hasDevtoolConfig);
-    // Keep both tree views in sync.
-    await operatorProjectsTreeProvider.refreshState(hasDevtoolConfig);
-    await vscode.commands.executeCommand('setContext', 'opDevtools.showOperatorSearch', showOperatorSearch);
-    await vscode.commands.executeCommand('setContext', 'opDevtools.showOperatorProjects', showOperatorProjects);
-    await vscode.commands.executeCommand(
-      'setContext',
-      'opDevtools.operatorProjectsSearchActive',
-      operatorProjectsTreeProvider.getSearchKeyword().trim().length > 0,
-    );
-    await vscode.commands.executeCommand(
-      'setContext',
-      'opDevtools.allOperatorsSelected',
-      operatorProjectsTreeProvider.getAllOperatorsSelected(),
-    );
-    await vscode.commands.executeCommand(
-      'setContext',
-      'opDevtools.preparedAllSelected',
-      operatorProjectsTreeProvider.getPreparedAllSelected(),
-    );
-    homeTreeProvider.refresh();
+    isRefreshingSidebarContexts = true;
+    logDebug('refreshSidebarContexts:start', {
+      hasDevtoolConfig,
+      isSyncingWorkspaceSettings,
+    });
+    try {
+      do {
+        hasPendingSidebarRefresh = false;
+        hasDevtoolConfig = await checkDevtoolConfigExists();
+        let projectType = '';
+        let projectTypeSupported = true;
+        if (hasDevtoolConfig) {
+          const projectTypeResult = await homeMethods.getProjectType();
+          projectType = projectTypeResult.projectType || '';
+          projectTypeSupported = OperatorPluginRegistry.isProjectTypeSupported(projectType);
+        }
+        const effectiveHasDevtoolConfig = hasDevtoolConfig && projectTypeSupported;
+        logDebug('refreshSidebarContexts:devtoolConfigChecked', {
+          hasDevtoolConfig,
+          effectiveHasDevtoolConfig,
+          projectType,
+          projectTypeSupported,
+        });
+        if (effectiveHasDevtoolConfig) {
+          await syncOperatorProjectWorkspaceSettings();
+        }
+        await vscode.commands.executeCommand('setContext', 'hasDevtoolConfig', effectiveHasDevtoolConfig);
+        await vscode.commands.executeCommand('setContext', 'opDevtools.showHomeTree', !effectiveHasDevtoolConfig);
+        await vscode.commands.executeCommand('setContext', 'opDevtools.showOperateTree', effectiveHasDevtoolConfig);
+        const { showOperatorSearch, showOperatorProjects } = await operateTreeProvider.refreshState(effectiveHasDevtoolConfig);
+        // Keep both tree views in sync.
+        await operatorProjectsTreeProvider.refreshState(effectiveHasDevtoolConfig);
+        await vscode.commands.executeCommand('setContext', 'opDevtools.showOperatorSearch', showOperatorSearch);
+        await vscode.commands.executeCommand('setContext', 'opDevtools.showOperatorProjects', showOperatorProjects);
+        await vscode.commands.executeCommand(
+          'setContext',
+          'opDevtools.operatorProjectsSearchActive',
+          operatorProjectsTreeProvider.getSearchKeyword().trim().length > 0,
+        );
+        await vscode.commands.executeCommand(
+          'setContext',
+          'opDevtools.allOperatorsSelected',
+          operatorProjectsTreeProvider.getAllOperatorsSelected(),
+        );
+        await vscode.commands.executeCommand(
+          'setContext',
+          'opDevtools.preparedAllSelected',
+          operatorProjectsTreeProvider.getPreparedAllSelected(),
+        );
+        homeTreeProvider.refresh();
+        logDebug('refreshSidebarContexts:passComplete', {
+          hasPendingSidebarRefresh,
+          hasDevtoolConfig,
+          effectiveHasDevtoolConfig,
+        });
+      } while (hasPendingSidebarRefresh);
+    }
+    finally {
+      isRefreshingSidebarContexts = false;
+      logDebug('refreshSidebarContexts:end', {
+        elapsedMs: Date.now() - refreshStart,
+        hasPendingSidebarRefresh,
+        hasDevtoolConfig,
+      });
+    }
   };
 
   const queueActionToNodeId: Record<QueueableActionType, 'sanitizer' | 'onboard' | 'simulation' | 'utTest' | 'dumpTensor'> = {
@@ -478,18 +573,46 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   const watchColorThemeChange = vscode.window.onDidChangeActiveColorTheme(async () => {
+    logDebug('event:onDidChangeActiveColorTheme');
     await refreshSidebarContexts();
   });
   context.subscriptions.push(watchColorThemeChange);
 
   const watchOpDevtoolsEnvAndOperatorConfig = vscode.workspace.onDidChangeConfiguration(async (e) => {
+    const envAffected = e.affectsConfiguration('op-devtools.environment');
+    const operatorAffected = e.affectsConfiguration('op-devtools.operatorProject');
+    const operatorSupportAffected = e.affectsConfiguration('op-devtools.operatorSupport');
+    const tritonSupportAffected = e.affectsConfiguration('op-devtools.operatorSupport.triton');
+    logDebug('event:onDidChangeConfiguration', {
+      isSyncingWorkspaceSettings,
+      envAffected,
+      operatorAffected,
+      operatorSupportAffected,
+      tritonSupportAffected,
+    });
+    if (isSyncingWorkspaceSettings) {
+      logDebug('event:onDidChangeConfiguration:ignoredDueToSync');
+      return;
+    }
     if (
-      e.affectsConfiguration('op-devtools.environment')
-      || e.affectsConfiguration('op-devtools.operatorProject')
+      envAffected
+      || operatorAffected
+      || operatorSupportAffected
     ) {
+      logDebug('event:onDidChangeConfiguration:syncAscendEnvScriptFromWorkspaceSettings:start');
       await projectService.syncAscendEnvScriptFromWorkspaceSettings();
+      logDebug('event:onDidChangeConfiguration:syncAscendEnvScriptFromWorkspaceSettings:end');
       operateTreeProvider.notifyConfigurationChanged();
       operatorProjectsTreeProvider.notifyConfigurationChanged();
+    }
+
+    if (tritonSupportAffected) {
+      const reloadAction = t('extension.reloadWindowAction');
+      const message = t('extension.tritonSupportChangedReload');
+      const pick = await vscode.window.showInformationMessage(message, reloadAction);
+      if (pick === reloadAction) {
+        await vscode.commands.executeCommand('workbench.action.reloadWindow');
+      }
     }
   });
   context.subscriptions.push(watchOpDevtoolsEnvAndOperatorConfig);
@@ -1037,7 +1160,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const createOptionsCommand = vscode.commands.registerCommand(
     COMMAND_CREATE_DIRECTORY,
     async (
-      data: { createOperatorProjectDirectoryFileType: number },
+      data: { createOperatorProjectDirectoryFileType: OperatorProjectViewIdValue },
       progress: vscode.Progress<{ message?: string;
         increment?: number }>,
     ) => {
@@ -1599,6 +1722,9 @@ export async function activate(context: vscode.ExtensionContext) {
   // Workspace folder change listener
   const watchWorkSpaceFolderChange =
     vscode.workspace.onDidChangeWorkspaceFolders(async () => {
+      logDebug('event:onDidChangeWorkspaceFolders', {
+        workspaceFolders: (vscode.workspace.workspaceFolders || []).map((f) => f.uri.fsPath),
+      });
       console.log('Workspace changed', vscode.workspace.workspaceFolders);
       vscode.commands.executeCommand(COMMAND_FLASH_MS_SANITIZER_RUN_DATA);
       vscode.commands.executeCommand(COMMAND_FLASH_PERFORMANCE_RUN_DATA);
@@ -1715,16 +1841,33 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(onBoardOperatorMetricsSync);
 
   const devtoolConfigWatcher = vscode.workspace.createFileSystemWatcher('**/.vscode/devtool_config.json');
-  const watchDevtoolConfigCreate = devtoolConfigWatcher.onDidCreate(async () => refreshSidebarContexts());
-  const watchDevtoolConfigChange = devtoolConfigWatcher.onDidChange(async () => refreshSidebarContexts());
-  const watchDevtoolConfigDelete = devtoolConfigWatcher.onDidDelete(async () => refreshSidebarContexts());
+  const watchDevtoolConfigCreate = devtoolConfigWatcher.onDidCreate(async (uri) => {
+    logDebug('event:devtoolConfigWatcher:create', uri.fsPath);
+    await refreshSidebarContexts();
+  });
+  const watchDevtoolConfigChange = devtoolConfigWatcher.onDidChange(async (uri) => {
+    logDebug('event:devtoolConfigWatcher:change', uri.fsPath);
+    await refreshSidebarContexts();
+  });
+  const watchDevtoolConfigDelete = devtoolConfigWatcher.onDidDelete(async (uri) => {
+    logDebug('event:devtoolConfigWatcher:delete', uri.fsPath);
+    await refreshSidebarContexts();
+  });
   context.subscriptions.push(devtoolConfigWatcher, watchDevtoolConfigCreate, watchDevtoolConfigChange, watchDevtoolConfigDelete);
 
   // Detect current workspace when plugin is activated
   if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
     // Delay execution to ensure the plugin is fully initialized
     setTimeout(async () => {
-      welcomeMethods.openProject({ projectPath: vscode.workspace.workspaceFolders![0].uri.fsPath }, true);
+      const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      logDebug('activate:autoOpenProject:start', { workspacePath });
+      try {
+        await welcomeMethods.openProject({ projectPath: workspacePath || '' }, true);
+        logDebug('activate:autoOpenProject:end');
+      }
+      catch (error) {
+        logDebug('activate:autoOpenProject:error', error);
+      }
     }, 2000);
   }
 

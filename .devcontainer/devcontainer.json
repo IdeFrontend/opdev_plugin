@@ -1,12 +1,16 @@
 {
   "name": "CANN Python 3.12 (mstt)",
-  "image": "swr.cn-north-4.myhuaweicloud.com/ci_cann/cann_master:py3.12-arm-20260314",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "..",
+    "platform": "linux/arm64"
+  },
   "workspaceFolder": "/workspace",
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
   "mounts": [
     "source=${localWorkspaceFolder}/..,target=/workspace-parent,type=bind"
   ],
-  "remoteUser": "developer",
+  "remoteUser": "root",
   "customizations": {
     "vscode": {
       "extensions": []

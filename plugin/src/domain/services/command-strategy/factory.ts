@@ -2,6 +2,7 @@ import { CommandStrategy } from './types';
 import { AscendCommandStrategy } from './ascend-strategy';
 import { CannCommandStrategy } from './cann-strategy';
 import { PyAscCommandStrategy } from './pyasc-strategy';
+import { TritonCommandStrategy } from './triton-strategy';
 
 /**
  * command strategy factory
@@ -17,18 +18,10 @@ import { PyAscCommandStrategy } from './pyasc-strategy';
  */
 export class CommandStrategyFactory {
   private static strategies: Map<string, CommandStrategy> = new Map([
-    [
-      'ascend',
-      new AscendCommandStrategy(),
-    ],
-    [
-      'cann',
-      new CannCommandStrategy(),
-    ],
-    [
-      'pyasc',
-      new PyAscCommandStrategy(),
-    ],
+    ['ascend', new AscendCommandStrategy()],
+    ['cann', new CannCommandStrategy()],
+    ['pyasc', new PyAscCommandStrategy()],
+    ['triton', new TritonCommandStrategy()],
   ]);
 
   /**

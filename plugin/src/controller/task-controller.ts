@@ -38,9 +38,16 @@ const taskNameKeyMap: Record<string, string> = {
   'utTest': 'task.taskName.utTest',
 };
 
-function isPythonLikeProjectType(projectType: string | null | undefined): boolean {
-  const behavior = OperatorPluginRegistry.getBuildBehaviorByProjectType(projectType);
-  return behavior.requiresActiveFileCheck && behavior.activeFileExtension === '.py';
+
+async function guardSupportedProjectTypeOrNotify(): Promise<boolean> {
+  const projectTypeInfo = await homeMethods.getProjectType();
+  const projectType = projectTypeInfo.projectType || '';
+  if (!OperatorPluginRegistry.isProjectTypeSupported(projectType)) {
+    vscode.window.showErrorMessage(t('extension.unsupportedProjectTypeDisabled', { projectType: projectType || 'unknown' }));
+    return false;
+  }
+
+  return true;
 }
 
 /** Currently running task type (maps to taskNameKeyMap keys). */
@@ -347,6 +354,10 @@ export const taskMethods = {
    */
   async runDebug(): Promise<void> {
     try {
+      if (!(await guardSupportedProjectTypeOrNotify())) {
+        return;
+      }
+
       await ProjectManager.getInstance()
         .initProject();
       // Save the current executor reference for possible termination operations
@@ -357,9 +368,10 @@ export const taskMethods = {
 
       // For the pyasc type, check if a .py file is currently open and update the configuration
       const projectTypeInfo = await homeMethods.getProjectType();
-      const isPyasc = projectTypeInfo.projectType === OperatorProjectType.PYASC;
+      const isPythonOperator = projectTypeInfo.projectType === OperatorProjectType.PYASC
+        || projectTypeInfo.projectType === OperatorProjectType.TRITON;
 
-      if (isPyasc) {
+      if (isPythonOperator) {
         // Check if a .py file is currently open
         const activeEditor = vscode.window.activeTextEditor;
         const isPyFile = activeEditor?.document.fileName.endsWith('.py');
@@ -414,7 +426,7 @@ export const taskMethods = {
                 config_type: 'build_op',
                 user_options: {
                   ...buildOpConfig.user_options,
-                  target_file: relativePath,
+                  target_file: `python3 ${relativePath}`,
                 },
               };
 
@@ -478,6 +490,10 @@ export const taskMethods = {
    */
   async runCpuDebug(): Promise<void> {
     try {
+      if (!(await guardSupportedProjectTypeOrNotify())) {
+        return;
+      }
+
       await ProjectManager.getInstance()
         .initProject();
       // Save the current executor reference for possible termination operations
@@ -488,9 +504,10 @@ export const taskMethods = {
 
       // For the pyasc type, check if a .py file is currently open and update the configuration
       const projectTypeInfo = await homeMethods.getProjectType();
-      const isPyasc = projectTypeInfo.projectType === OperatorProjectType.PYASC;
+      const isPythonOperator = projectTypeInfo.projectType === OperatorProjectType.PYASC
+        || projectTypeInfo.projectType === OperatorProjectType.TRITON;
 
-      if (isPyasc) {
+      if (isPythonOperator) {
         // Check if a .py file is currently open
         const activeEditor = vscode.window.activeTextEditor;
         const isPyFile = activeEditor?.document.fileName.endsWith('.py');
@@ -545,7 +562,7 @@ export const taskMethods = {
                 config_type: 'build_op',
                 user_options: {
                   ...buildOpConfig.user_options,
-                  target_file: relativePath,
+                  target_file: `python3 ${relativePath}`,
                 },
               };
 

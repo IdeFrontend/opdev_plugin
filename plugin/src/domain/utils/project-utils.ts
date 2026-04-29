@@ -5,6 +5,7 @@ import * as os from 'os';
 import { promisify } from 'util';
 import { exec } from 'child_process';
 import * as vscode from 'vscode';
+import { OperatorProjectViewId } from '@shared/project-type-view-id';
 import debugLaunch from './debug-launch.json';
 
 const execAsync = promisify(exec);
@@ -155,20 +156,35 @@ async function exportEnvToFile(projectDir: string) {
   }
 }
 
-const map = {
-  1: 'cann',
-  2: 'ascend',
-  3: 'pyasc',
-  'standard-custom': 'ascend',
-  'ascend-c': 'cann',
-  'torch-library': 'cann',
-  'pyasc': 'pyasc',
-};
-
 export function viewIdToProjectType(id: string | number | undefined) {
   if (!id) {
     return 'cann';
   }
 
-  return map[id] || 'cann';
+  if (id === OperatorProjectViewId.CANN) {
+    return 'cann';
+  }
+  if (id === OperatorProjectViewId.STANDARD_CUSTOM) {
+    return 'ascend';
+  }
+  if (id === OperatorProjectViewId.PYASC) {
+    return 'pyasc';
+  }
+  if (id === OperatorProjectViewId.TRITON) {
+    return 'triton';
+  }
+  if (id === 'standard-custom') {
+    return 'ascend';
+  }
+  if (id === 'ascend-c' || id === 'torch-library') {
+    return 'cann';
+  }
+  if (id === 'pyasc') {
+    return 'pyasc';
+  }
+  if (id === 'triton') {
+    return 'triton';
+  }
+
+  return 'cann';
 }

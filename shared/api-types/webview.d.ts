@@ -1,4 +1,5 @@
 import { GetConfigDataResult } from './ops';
+import { OperatorProjectViewIdValue } from '../project-type-view-id';
 
 // Webview 相关类型定义
 
@@ -38,7 +39,7 @@ export type CreatedProjectParams = {
   projectPath: string;
   projectName: string;
   projectSH?: string;
-  createOperatorProjectDictoryFileType?: number;
+  createOperatorProjectDictoryFileType?: OperatorProjectViewIdValue;
   templateName?: string;
 };
 

@@ -97,6 +97,9 @@
                 <li>{{ t('web.welcome.featureEnvReady') }}</li>
                 <li>{{ t('web.welcome.featureAscendC') }}</li>
                 <li>{{ t('web.welcome.featurePyascProjectShort') }}</li>
+                <li v-if="tritonSupportEnabled">
+                  {{ t('web.welcome.featureTritonProjectShort') }}
+                </li>
               </ul>
               <div>
                 <button
@@ -120,9 +123,9 @@
                 <div
                   :class="[
                     'flex-1 bg-transparent p-4 border rounded-lg overflow-hidden relative transition-all duration-300 cursor-pointer hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)]',
-                    selectedProjectTypeId === 1 ? 'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)]' : (actualTheme === 'dark' ? 'border-[#464646]' : 'border-gray-300')
+                    selectedProjectTypeId === OperatorProjectViewId.CANN ? 'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)]' : (actualTheme === 'dark' ? 'border-[#464646]' : 'border-gray-300')
                   ]"
-                  @click="selectedProjectTypeId = 1"
+                  @click="selectedProjectTypeId = OperatorProjectViewId.CANN"
                 >
                   <div :class="[
                     'font-extrabold text-[initial] mb-3',
@@ -141,7 +144,7 @@
                   <a-tag color="purple" class="mt-2 mr-2">
                     {{ t('web.welcome.typeAngle') }}
                   </a-tag>
-                  <template v-if="selectedProjectTypeId === 1">
+                  <template v-if="selectedProjectTypeId === OperatorProjectViewId.CANN">
                     <div class="mt-4 flex items-center gap-3">
                       <span :class="[
                         'text-[13px] whitespace-nowrap',
@@ -174,9 +177,9 @@
                 <div
                   :class="[
                     'flex-1 bg-transparent p-4 border rounded-lg overflow-hidden relative transition-all duration-300 cursor-pointer hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)]',
-                    selectedProjectTypeId === 2 ? 'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)]' : (actualTheme === 'dark' ? 'border-[#464646]' : 'border-gray-300')
+                    selectedProjectTypeId === OperatorProjectViewId.STANDARD_CUSTOM ? 'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)]' : (actualTheme === 'dark' ? 'border-[#464646]' : 'border-gray-300')
                   ]"
-                  @click="selectedProjectTypeId = 2"
+                  @click="selectedProjectTypeId = OperatorProjectViewId.STANDARD_CUSTOM"
                 >
                   <div :class="[
                     'font-extrabold text-[initial] mb-3',
@@ -196,7 +199,7 @@
                   <a-tag color="green" class="mt-2 mr-2">
                     {{ t('web.welcome.typeStandardCustom') }}
                   </a-tag>
-                  <div v-if="selectedProjectTypeId === 2" class="mt-4">
+                  <div v-if="selectedProjectTypeId === OperatorProjectViewId.STANDARD_CUSTOM" class="mt-4">
                     <div class="overflow-hidden max-w-full transition-all duration-300">
                       <a-image :src="tipBase_0"
                         class="block max-w-full h-auto object-contain transition-opacity duration-300 transform" />
@@ -208,9 +211,9 @@
                 <div
                   :class="[
                     'flex-1 bg-transparent p-4 border rounded-lg overflow-hidden relative transition-all duration-300 cursor-pointer hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)]',
-                    selectedProjectTypeId === 3 ? 'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)]' : (actualTheme === 'dark' ? 'border-[#464646]' : 'border-gray-300')
+                    selectedProjectTypeId === OperatorProjectViewId.PYASC ? 'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)]' : (actualTheme === 'dark' ? 'border-[#464646]' : 'border-gray-300')
                   ]"
-                  @click="selectedProjectTypeId = 3"
+                  @click="selectedProjectTypeId = OperatorProjectViewId.PYASC"
                 >
                   <div :class="[
                     'font-extrabold text-[initial] mb-3',
@@ -230,10 +233,47 @@
                   <a-tag color="purple" class="mt-2 mr-2">
                     {{ t('web.welcome.typePyasc') }}
                   </a-tag>
-                  <div v-if="selectedProjectTypeId === 3" class="mt-4">
+                  <div v-if="selectedProjectTypeId === OperatorProjectViewId.PYASC" class="mt-4">
                     <div class="overflow-hidden max-w-full transition-all duration-300">
                       <a-image :src="tipBase_0"
                         class="block max-w-full h-auto object-contain transition-opacity duration-300 transform" />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 【Python】Triton 算子工程 -->
+                <div
+                  v-if="tritonSupportEnabled"
+                  :class="[
+                    'flex-1 bg-transparent p-4 border rounded-lg overflow-hidden relative transition-all duration-300 cursor-pointer hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)]',
+                    selectedProjectTypeId === OperatorProjectViewId.TRITON ? 'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)]' : (actualTheme === 'dark' ? 'border-[#464646]' : 'border-gray-300')
+                  ]"
+                  @click="selectedProjectTypeId = OperatorProjectViewId.TRITON"
+                >
+                  <div :class="[
+                    'font-extrabold text-[initial] mb-3',
+                    actualTheme === 'dark' ? 'text-white' : 'text-gray-800'
+                  ]">
+                    {{ t('web.welcome.pythonTritonProject') }}
+                  </div>
+                  <div :class="[
+                    'leading-7 mt-1 text-[12px] mb-2.5 whitespace-normal',
+                    actualTheme === 'dark' ? 'text-white' : 'text-gray-700'
+                  ]">
+                    {{ t('web.welcome.pythonTritonDesc') }}
+                  </div>
+                  <a-tag color="blue" class="mt-2 mr-2">
+                    {{ t('web.welcome.langPython') }}
+                  </a-tag>
+                  <a-tag color="purple" class="mt-2 mr-2">
+                    {{ t('web.welcome.typeTriton') }}
+                  </a-tag>
+                  <div v-if="selectedProjectTypeId === OperatorProjectViewId.TRITON" class="mt-4">
+                    <div class="overflow-hidden max-w-full transition-all duration-300">
+                      <a-image
+                        :src="tritonVectorAddPreview"
+                        class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
+                      />
                     </div>
                   </div>
                 </div>
@@ -444,9 +484,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { t } from 'i18next';
 import { useTheme } from '@web/composables/use-theme';
+import { OperatorProjectViewId } from '@shared/project-type-view-id';
+import { getProjectTypeSupportEnabled } from '@web/apis';
 import settingIconRaw from '@/assets/svg/setting.svg?raw';
 import buildIconRaw from '@/assets/svg/build.svg?raw';
 import checkIconRaw from '@/assets/svg/check.svg?raw';
@@ -456,6 +498,7 @@ import tipBase_0 from '@/assets/imgs/add.png';
 import tipBase_1_1 from '@/assets/imgs/hello_world.png';
 import tipBase_1_2 from '@/assets/imgs/add_custom.png';
 import tipBase_1_3 from '@/assets/imgs/torch_library_template.png';
+import tritonVectorAddPreview from '@/assets/imgs/triton_vector_add.png';
 import writeImg from '@/assets/imgs/write.png';
 import buildImg from '@/assets/imgs/build.gif';
 import runImg from '@/assets/imgs/run.gif';
@@ -484,13 +527,14 @@ const devTabKey = ref('code');
 const checkTabKey = ref('select');
 const perfTabKey = ref('select');
 
-// 新建算子工程：当前选中的工程类型（1=<<<>>> 2=标准自定义 3=pyasc），默认第一个
-const selectedProjectTypeId = ref(1);
+// 新建算子工程：当前选中的工程类型（<<<>>> / 标准自定义 / pyasc / triton），默认 <<<>>>
+const selectedProjectTypeId = ref(OperatorProjectViewId.CANN);
 
 // <<<>>> 算子工程模板选择（helloworld / addn / torch_library）
-const selectedTemplate = ref<'helloworld' | 'addn' | 'torch_library_template'>(
+const selectedTemplate = ref<'helloworld' | 'addn' | 'torch_library_template' | 'triton_vector_add'>(
   'helloworld',
 );
+const tritonSupportEnabled = ref(false);
 
 const getTemplateDesc = (template: string) => {
   switch (template) {
@@ -500,6 +544,8 @@ const getTemplateDesc = (template: string) => {
       return t('web.welcome.templateDescAddn');
     case 'torch_library_template':
       return t('web.welcome.templateDescTorchLibrary');
+    case 'triton_vector_add':
+      return t('web.welcome.templateDescTritonVectorAdd');
     default:
       return t('web.welcome.templateDescHelloworld');
   }
@@ -513,6 +559,8 @@ const getTemplateImage = (template: string) => {
       return tipBase_1_2;
     case 'torch_library_template':
       return tipBase_1_3;
+    case 'triton_vector_add':
+      return tritonVectorAddPreview;
     default:
       return tipBase_1_1;
   }
@@ -554,6 +602,19 @@ const goNextStep = () => {
     currentStep.value += 1;
   }
 };
+
+onMounted(async () => {
+  try {
+    tritonSupportEnabled.value = await getProjectTypeSupportEnabled(OperatorProjectViewId.TRITON);
+  }
+  catch (error) {
+    console.error('[Welcome] Failed to read project type support setting:', error);
+    tritonSupportEnabled.value = false;
+  }
+  if (!tritonSupportEnabled.value && selectedProjectTypeId.value === OperatorProjectViewId.TRITON) {
+    selectedProjectTypeId.value = OperatorProjectViewId.CANN;
+  }
+});
 
 </script>
 

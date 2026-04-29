@@ -7,12 +7,14 @@ import {
   createdProject,
   getHome,
   getLastProjectPath,
+  getProjectTypeSupportEnabled,
   getWorkspace,
 } from '@web/apis';
 import {
   selectFolder, selectFile,
 } from '@web/apis/performance-run-data';
 import { t } from 'i18next';
+import { OperatorProjectViewId } from '@shared/project-type-view-id';
 import { ValidationStrategyFactory } from './validation-strategies';
 import { MessageHandlerStrategyManager } from './message-handler-strategies';
 import { SearchStrategyFactory } from './search-strategies';
@@ -22,9 +24,9 @@ import { ProjectNameFactory } from './project-name-factory';
  * Link SSH Composable
  * 封装链接SSH相关的业务逻辑
  */
-export function useLinkSSH(selectedTemplate?: Ref<'helloworld' | 'addn' | 'torch_library_template'>) {
+export function useLinkSSH(selectedTemplate?: Ref<'helloworld' | 'addn' | 'torch_library_template' | 'triton_vector_add'>) {
   const connectionFormRef = ref<AntdVForm | null>(null);
-  const selectedId_type = ref(1);
+  const selectedId_type = ref(OperatorProjectViewId.CANN);
 
   // 路径相关状态
   const isPathSetFromContextMenu = ref(false);
@@ -98,18 +100,36 @@ export function useLinkSSH(selectedTemplate?: Ref<'helloworld' | 'addn' | 'torch
   };
 
   // 模板名称映射
-  const getTemplateName = (template: 'helloworld' | 'addn' | 'torch_library_template' | undefined): string | undefined => {
+  const getTemplateName = (template: 'helloworld' | 'addn' | 'torch_library_template' | 'triton_vector_add' | undefined): string | undefined => {
     if (!template) {
       return undefined;
     }
 
-    const mapping: Record<'helloworld' | 'addn' | 'torch_library_template', string> = {
+    const mapping: Record<'helloworld' | 'addn' | 'torch_library_template' | 'triton_vector_add', string> = {
       helloworld: 'hello_world',
       addn: 'addn_custom',
       torch_library_template: 'torch_library_template',
+      triton_vector_add: 'triton_vector_add',
     };
 
     return mapping[template];
+  };
+
+  /**
+   * Resolve template by selected project type.
+   * Triton currently has a single fixed template, so avoid forwarding stale
+   * Ascend C template state (e.g. "hello_world") into Triton creation flow.
+   */
+  const resolveTemplateNameByProjectType = (): string | undefined => {
+    if (selectedId_type.value === OperatorProjectViewId.CANN) {
+      return selectedTemplate?.value
+        ? getTemplateName(selectedTemplate.value)
+        : undefined;
+    }
+    if (selectedId_type.value === OperatorProjectViewId.TRITON) {
+      return 'triton_vector_add';
+    }
+    return undefined;
   };
 
   // 选择目录
@@ -160,9 +180,7 @@ export function useLinkSSH(selectedTemplate?: Ref<'helloworld' | 'addn' | 'torch
     }
 
     try {
-      const templateName = selectedTemplate?.value
-        ? getTemplateName(selectedTemplate.value)
-        : undefined;
+      const templateName = resolveTemplateNameByProjectType();
 
       await createdProject({
         ...projectFormData,
@@ -219,8 +237,24 @@ export function useLinkSSH(selectedTemplate?: Ref<'helloworld' | 'addn' | 'torch
     }
   };
 
+  const initFeatureToggles = async () => {
+    try {
+      const tritonEnabled = await getProjectTypeSupportEnabled(OperatorProjectViewId.TRITON);
+      if (!tritonEnabled && selectedId_type.value === OperatorProjectViewId.TRITON) {
+        selectedId_type.value = OperatorProjectViewId.CANN;
+      }
+    }
+    catch (error) {
+      console.error('[Link] Failed to read project type support setting:', error);
+      if (selectedId_type.value === OperatorProjectViewId.TRITON) {
+        selectedId_type.value = OperatorProjectViewId.CANN;
+      }
+    }
+  };
+
   onMounted(() => {
     window.addEventListener('message', messageHandler);
+    void initFeatureToggles();
     initPathInfo();
   });
 

@@ -17,6 +17,88 @@ export function hasPyFilesInRoot(dirPath: string): boolean {
   }
 }
 
+export function hasPyFilesRecursive(dirPath: string, maxDepth: number): boolean {
+  if (maxDepth < 0) {
+    return false;
+  }
+
+  try {
+    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const fullPath = path.join(dirPath, entry.name);
+      if (entry.isFile() && entry.name.endsWith('.py')) {
+        return true;
+      }
+      if (entry.isDirectory() && maxDepth > 0) {
+        if (hasPyFilesRecursive(fullPath, maxDepth - 1)) {
+          return true;
+        }
+      }
+    }
+  }
+  catch {
+    // ignore
+  }
+
+  return false;
+}
+
+/**
+ * Detect whether Python files contain Triton-specific imports/usages.
+ * Keeps scanning shallow and lightweight: recursive `.py` scan up to depth 2.
+ */
+export function hasTritonPythonIndicatorsInRoot(dirPath: string): boolean {
+  function hasTritonMarkersRecursive(scanPath: string, depth: number): boolean {
+    if (depth < 0) {
+      return false;
+    }
+    let entries: fs.Dirent[] = [];
+    try {
+      entries = fs.readdirSync(scanPath, { withFileTypes: true });
+    }
+    catch {
+      return false;
+    }
+
+    for (const entry of entries) {
+      const fullPath = path.join(scanPath, entry.name);
+      if (entry.isFile() && entry.name.endsWith('.py')) {
+        try {
+          const content = fs.readFileSync(fullPath, 'utf-8');
+          const hasIndicator =
+            /\bimport\s+triton\b/.test(content)
+            || /\bfrom\s+triton\b/.test(content)
+            || /\btriton\.jit\b/.test(content)
+            || /\btriton\.language\b/.test(content)
+            || /\btriton\.cdiv\b/.test(content);
+          if (hasIndicator) {
+            return true;
+          }
+        }
+        catch {
+          // ignore single-file read errors
+        }
+      }
+      if (entry.isDirectory() && depth > 0) {
+        if (hasTritonMarkersRecursive(fullPath, depth - 1)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  try {
+    return hasTritonMarkersRecursive(dirPath, 2);
+  }
+  catch {
+    // ignore
+  }
+
+  return false;
+}
+
 export function hasAscFiles(dirPath: string): boolean {
   try {
     const entries = fs.readdirSync(dirPath, { withFileTypes: true });

@@ -13,7 +13,10 @@ import {
 import {
   OperatorBuildBehavior, OperatorDefaultPaths,
 } from './operator-plugin.interface';
-import { hasPyFilesInRoot } from './detection-utils';
+import {
+  hasPyFilesRecursive,
+  hasTritonPythonIndicatorsInRoot,
+} from './detection-utils';
 
 /**
  * Plugin for op_type='pyasc' (Python-based ASC operators).
@@ -28,19 +31,27 @@ export class PyAscPlugin extends AbstractOperatorPlugin implements IProjectDetec
   readonly displayName = 'PyAsc';
   readonly commandStrategy = new PyAscCommandStrategy();
   readonly projectType = OperatorProjectType.PYASC;
+  readonly projectTypeMappings = [OperatorProjectType.PYASC] as const;
 
   override readonly buildBehavior: OperatorBuildBehavior = {
     requiresBuildBeforeAnalysis: false,
     requiresActiveFileCheck: true,
     activeFileExtension: '.py',
+    supportsSanitizer: false,
+    supportsSimulate: true,
+    supportsOnBoard: true,
+    supportsCpuDebug: false,
+    supportsNpuDebug: false,
+    supportsNpuPythonDebug: false,
   };
 
   async detectProject(dirPath: string): Promise<ProjectDetectionResult> {
-    const hasPy = hasPyFilesInRoot(dirPath);
+    const hasPy = hasPyFilesRecursive(dirPath, 2);
     const hasCmake = fs.existsSync(path.join(dirPath, 'CMakeLists.txt'));
+    const hasTritonMarkers = hasTritonPythonIndicatorsInRoot(dirPath);
 
     return {
-      isMatch: hasPy && !hasCmake,
+      isMatch: hasPy && !hasCmake && !hasTritonMarkers,
       confidence: 'heuristic',
     };
   }
