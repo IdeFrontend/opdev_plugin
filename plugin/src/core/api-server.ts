@@ -86,6 +86,24 @@ export class ApiServer extends vscode.Disposable {
   private static instance: ApiServer;
   private linkedWebviews = new Map<string, vscode.Webview>();
   private connector: WebviewConnector<ResponseMessage, RequestMessage>;
+  /**
+   * In some environments (e.g. Node 16 in VSCode remote), `globalThis.ReadableStream` may be undefined.
+   * `stream/web` still provides the constructor we need for `instanceof` checks.
+   */
+  private getReadableStreamCtor(): typeof ReadableStream | undefined {
+    const globalReadableStream = (globalThis as unknown as { ReadableStream?: typeof ReadableStream }).ReadableStream;
+    if (globalReadableStream) {
+      return globalReadableStream;
+    }
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      return require('stream/web').ReadableStream;
+    }
+    catch {
+      return undefined;
+    }
+  }
 
   /**
    * @param apis interface configuration
@@ -126,7 +144,8 @@ export class ApiServer extends vscode.Disposable {
       try {
         const resData = await currentApi(data);
 
-        if (resData instanceof ReadableStream) {
+        const ReadableStreamCtor = this.getReadableStreamCtor();
+        if (ReadableStreamCtor && resData instanceof ReadableStreamCtor) {
           this.resStream(webview, requestMessage, resData);
         }
         else {

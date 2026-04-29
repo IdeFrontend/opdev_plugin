@@ -21,7 +21,7 @@ VS Code extension for the Huawei operator one-stop development platform. It prov
 
 ### Prerequisites
 
-- **Node.js** 18+ (LTS recommended)
+- **Node.js** 16+ (LTS recommended)
 - **pnpm** 8+
 - **VS Code** 1.80+ (for running and debugging the extension)
 
