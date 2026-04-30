@@ -961,6 +961,11 @@
         "command": "huawei-op-devtools.sidebar.sanitizer.results.openGroupFile",
         "title": "%command.sidebar.sanitizer.results.openGroupFile.title%",
         "icon": "$(go-to-file)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.actionsQuickPick",
+        "title": "Actions",
+        "icon": "$(play-circle)"
       }
     ],
     "viewsWelcome": [
@@ -1168,6 +1173,11 @@
         {
           "command": "huawei-op-devtools.toggleOpsOperate",
           "group": "navigation",
+          "when": "hasDevtoolConfig"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.actionsQuickPick",
+          "group": "navigation@1",
           "when": "hasDevtoolConfig"
         }
       ],

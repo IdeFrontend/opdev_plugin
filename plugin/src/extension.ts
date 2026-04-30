@@ -109,6 +109,7 @@ import {
   COMMAND_SIDEBAR_STOP_ALL_OPERATOR_ACTIONS,
   COMMAND_SIDEBAR_OPEN_WELCOME,
   COMMAND_SIDEBAR_OPEN_HELP,
+  COMMAND_SIDEBAR_ACTIONS_QUICK_PICK,
   COMMAND_SIDEBAR_SANITIZER_REPORT_SELECT,
   COMMAND_SIDEBAR_SANITIZER_REPORT_COPY_PATH,
   COMMAND_SIDEBAR_SANITIZER_REPORT_TOGGLE_MARK,
@@ -1329,6 +1330,112 @@ export async function activate(context: vscode.ExtensionContext) {
       await operateTreeProvider.openSanitizerResultGroupFile(filePath);
     },
   );
+  const sidebarActionsQuickPickCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_ACTIONS_QUICK_PICK,
+    async () => {
+      const resolveOperateChildren = async (node?: unknown) => {
+        const children = await Promise.resolve(
+          operateTreeProvider.getChildren(node as never),
+        );
+        return Array.isArray(children) ? children : [];
+      };
+
+      const getNodeLabel = (node: vscode.TreeItem): string => {
+        if (typeof node.label === 'string') {
+          return node.label;
+        }
+        return node.label?.label ?? '';
+      };
+
+      const rootNodes = await resolveOperateChildren();
+      if (rootNodes.length === 0) {
+        vscode.window.showInformationMessage(t('web.operate.noActionsAvailable'));
+        return;
+      }
+
+      type FlatActionPick = vscode.QuickPickItem & {
+        commandId?: string;
+      };
+
+      const picks: FlatActionPick[] = [];
+      const seenCommands = new Set<string>();
+      let previousTopLevelNodeId: string | undefined;
+
+      const shouldInsertUnnamedTopLevelSeparator = (
+        previousNodeId: string | undefined,
+        currentNodeId: string | undefined,
+      ): boolean => {
+        return (
+          (previousNodeId === 'debug' && currentNodeId === 'sanitizer')
+          || (previousNodeId === 'power' && currentNodeId === 'utTest')
+        );
+      };
+
+      const collectVisibleActions = async (node?: vscode.TreeItem) => {
+        const nodes = await resolveOperateChildren(node);
+        for (const item of nodes) {
+          const itemLabel = getNodeLabel(item);
+          const hasChildren = item.collapsibleState !== vscode.TreeItemCollapsibleState.None;
+          const nodeId = (item as unknown as { nodeId?: string }).nodeId;
+
+          if (!node && shouldInsertUnnamedTopLevelSeparator(previousTopLevelNodeId, nodeId)) {
+            picks.push({
+              kind: vscode.QuickPickItemKind.Separator,
+              label: '',
+            });
+          }
+
+          if (hasChildren) {
+            picks.push({
+              kind: vscode.QuickPickItemKind.Separator,
+              label: itemLabel,
+            });
+          }
+
+          const commandId = item.command?.command;
+          if (commandId && !seenCommands.has(commandId)) {
+            seenCommands.add(commandId);
+            picks.push({
+              label: itemLabel,
+              detail: typeof item.description === 'string' ? item.description : undefined,
+              iconPath: typeof item.iconPath === 'string' ? undefined : item.iconPath,
+              commandId,
+            });
+          }
+
+          if (hasChildren) {
+            await collectVisibleActions(item);
+          }
+
+          if (!node) {
+            previousTopLevelNodeId = nodeId;
+          }
+        }
+      };
+
+      await collectVisibleActions();
+      if (picks.filter((item) => item.kind !== vscode.QuickPickItemKind.Separator).length === 0) {
+        vscode.window.showInformationMessage(t('web.operate.noActionsAvailable'));
+        return;
+      }
+
+      const selected = await vscode.window.showQuickPick(picks, {
+        title: t('web.operate.actionsTitle'),
+        placeHolder: t('web.operate.actionsTitle'),
+        ignoreFocusOut: true,
+        matchOnDescription: true,
+        matchOnDetail: true,
+      });
+
+      if (!selected?.commandId) {
+        return;
+      }
+
+      await vscode.commands.executeCommand(selected.commandId);
+      await refreshSidebarContexts();
+      await syncNativeQueueState();
+    },
+  );
   const sidebarSelectOperatorsCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_SELECT_OPERATORS,
     async () => {
@@ -1673,6 +1780,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(sidebarSanitizerResultsHideDuplicatesCommand);
   context.subscriptions.push(sidebarSanitizerResultsShowDuplicatesCommand);
   context.subscriptions.push(sidebarSanitizerResultsOpenGroupFileCommand);
+  context.subscriptions.push(sidebarActionsQuickPickCommand);
 
   // Initialize folder decoration provider
   const iconTheme = OperatorProjectIconTheme.getInstance(context);

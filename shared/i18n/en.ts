@@ -394,6 +394,8 @@ export default {
   'web.operate.pleaseSelectOperatorProject': 'Please select an operator project',
   'web.operate.singleOperatorOnly': 'This action supports single operator only',
   'web.operate.noSelectCompileAll': 'If none selected, the whole operator package is compiled',
+  'web.operate.actionsTitle': 'Actions',
+  'web.operate.noActionsAvailable': 'No actions available in current tree view.',
 
   // web performance-run-data / ms-sanitizer-run-data
   'web.perf.noData': 'No data',

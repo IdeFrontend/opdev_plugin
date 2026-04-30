@@ -396,6 +396,8 @@ export default {
   'web.operate.pleaseSelectOperatorProject': '请选择算子工程',
   'web.operate.singleOperatorOnly': '该功能只支持单算子执行',
   'web.operate.noSelectCompileAll': '不选择算子，则默认编译整个算子包',
+  'web.operate.actionsTitle': '操作',
+  'web.operate.noActionsAvailable': '当前树视图中没有可执行的操作。',
 
   // web performance-run-data / ms-sanitizer-run-data
   'web.perf.noData': '暂无数据',

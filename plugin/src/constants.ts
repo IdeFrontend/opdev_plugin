@@ -165,3 +165,4 @@ export const COMMAND_SIDEBAR_SANITIZER_RESULTS_GROUP_BY_FILE_ACTIVE = `${COMMAND
 export const COMMAND_SIDEBAR_SANITIZER_RESULTS_HIDE_DUPLICATES = `${COMMAND_PREFIX}.sidebar.sanitizer.results.hideDuplicates`;
 export const COMMAND_SIDEBAR_SANITIZER_RESULTS_SHOW_DUPLICATES = `${COMMAND_PREFIX}.sidebar.sanitizer.results.showDuplicates`;
 export const COMMAND_SIDEBAR_SANITIZER_RESULTS_OPEN_GROUP_FILE = `${COMMAND_PREFIX}.sidebar.sanitizer.results.openGroupFile`;
+export const COMMAND_SIDEBAR_ACTIONS_QUICK_PICK = `${COMMAND_PREFIX}.sidebar.actionsQuickPick`;
