@@ -154,8 +154,7 @@ export class SanitizerService {
         }
       }
 
-      // After detection, focus sanitizer panel and refresh report list
-      await vscode.commands.executeCommand('msSanitizerPanelView.focus');
+      // After detection, refresh sanitizer data without opening the legacy sanitizer webview.
       await vscode.commands.executeCommand('huawei-op-devtools.flashMsSanitizerRunData');
     }
     catch (e: unknown) {

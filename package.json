@@ -24,6 +24,169 @@
   ],
   "icon": "web/resources/extension_icon.png",
   "contributes": {
+    "icons": {
+      "opdevtools-beaker": {
+        "description": "Beaker icon",
+        "default": {
+          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontCharacter": "\\ea01"
+        }
+      },
+      "opdevtools-build": {
+        "description": "Build icon",
+        "default": {
+          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontCharacter": "\\ea02"
+        }
+      },
+      "opdevtools-check": {
+        "description": "Check icon",
+        "default": {
+          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontCharacter": "\\ea03"
+        }
+      },
+      "opdevtools-debug-cpu": {
+        "description": "CPU debug icon",
+        "default": {
+          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontCharacter": "\\ea04"
+        }
+      },
+      "opdevtools-debug-npu": {
+        "description": "NPU debug icon",
+        "default": {
+          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontCharacter": "\\ea05"
+        }
+      },
+      "opdevtools-debug": {
+        "description": "Debug icon",
+        "default": {
+          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontCharacter": "\\ea06"
+        }
+      },
+      "opdevtools-flag-filled": {
+        "description": "Filled flag icon",
+        "default": {
+          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontCharacter": "\\ea07"
+        }
+      },
+      "opdevtools-flag-outlined": {
+        "description": "Outlined flag icon",
+        "default": {
+          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontCharacter": "\\ea08"
+        }
+      },
+      "opdevtools-group-class": {
+        "description": "Group by class icon",
+        "default": {
+          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontCharacter": "\\ea0a"
+        }
+      },
+      "opdevtools-group-class-pressed": {
+        "description": "Group by class pressed icon",
+        "default": {
+          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontCharacter": "\\ea09"
+        }
+      },
+      "opdevtools-group-file": {
+        "description": "Group by file icon",
+        "default": {
+          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontCharacter": "\\ea0c"
+        }
+      },
+      "opdevtools-group-file-pressed": {
+        "description": "Group by file pressed icon",
+        "default": {
+          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontCharacter": "\\ea0b"
+        }
+      },
+      "opdevtools-group-severity-error": {
+        "description": "Error severity icon",
+        "default": {
+          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontCharacter": "\\ea0e"
+        }
+      },
+      "opdevtools-group-severity-error-pressed": {
+        "description": "Error severity pressed icon",
+        "default": {
+          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontCharacter": "\\ea0d"
+        }
+      },
+      "opdevtools-group-severity-warning": {
+        "description": "Warning severity icon",
+        "default": {
+          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontCharacter": "\\ea10"
+        }
+      },
+      "opdevtools-group-severity-warning-pressed": {
+        "description": "Warning severity pressed icon",
+        "default": {
+          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontCharacter": "\\ea0f"
+        }
+      },
+      "opdevtools-group-type": {
+        "description": "Group by type icon",
+        "default": {
+          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontCharacter": "\\ea12"
+        }
+      },
+      "opdevtools-group-type-pressed": {
+        "description": "Group by type pressed icon",
+        "default": {
+          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontCharacter": "\\ea11"
+        }
+      },
+      "opdevtools-onboard": {
+        "description": "Onboard icon",
+        "default": {
+          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontCharacter": "\\ea13"
+        }
+      },
+      "opdevtools-power": {
+        "description": "Power icon",
+        "default": {
+          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontCharacter": "\\ea14"
+        }
+      },
+      "opdevtools-run": {
+        "description": "Run icon",
+        "default": {
+          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontCharacter": "\\ea15"
+        }
+      },
+      "opdevtools-simulation": {
+        "description": "Simulation icon",
+        "default": {
+          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontCharacter": "\\ea18"
+        }
+      },
+      "opdevtools-tensor": {
+        "description": "Tensor icon",
+        "default": {
+          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontCharacter": "\\ea19"
+        }
+      }
+    },
     "configuration": [
       {
         "id": "op-devtools.compileAndDeploy",
@@ -344,11 +507,6 @@
       ],
       "panel": [
         {
-          "id": "ms-sanitizer-panel-view",
-          "title": "%viewContainer.panel.sanitizer.title%",
-          "icon": "web/resources/ops_icon_mono.svg"
-        },
-        {
           "id": "performance-panel-view",
           "title": "%viewContainer.panel.performance.title%",
           "icon": "web/resources/power.svg"
@@ -376,14 +534,11 @@
           "id": "opdevtoolsOperateTree",
           "name": "%view.opsOperate.name%",
           "when": "opDevtools.showOperateTree"
-        }
-      ],
-      "ms-sanitizer-panel-view": [
+        },
         {
-          "type": "webview",
-          "id": "msSanitizerPanelView",
-          "name": "%view.msSanitizer.name%",
-          "when": "true"
+          "id": "opdevtoolsSanitizerResultsTree",
+          "name": "%view.sanitizerResultsTree.name%",
+          "when": "opDevtools.showOperateTree"
         }
       ],
       "performance-panel-view": [
@@ -587,7 +742,8 @@
       },
       {
         "command": "huawei-op-devtools.sidebar.run",
-        "title": "Run"
+        "title": "Run",
+        "icon": "$(opdevtools-run)"
       },
       {
         "command": "huawei-op-devtools.sidebar.cpuDebug",
@@ -697,6 +853,114 @@
       {
         "command": "huawei-op-devtools.sidebar.openHelp",
         "title": "Open Help Guide"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.sanitizer.report.select",
+        "title": "%command.sidebar.sanitizer.report.select.title%"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.sanitizer.report.copyPath",
+        "title": "%command.sidebar.sanitizer.report.copyPath.title%",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.sanitizer.report.toggleMark",
+        "title": "%command.sidebar.sanitizer.report.toggleMark.title%",
+        "icon": "$(opdevtools-flag-outlined)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.sanitizer.report.mark",
+        "title": "%command.sidebar.sanitizer.report.mark.title%",
+        "icon": "$(opdevtools-flag-outlined)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.sanitizer.report.unmark",
+        "title": "%command.sidebar.sanitizer.report.unmark.title%",
+        "icon": "$(opdevtools-flag-filled)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.sanitizer.report.sortTime",
+        "title": "%command.sidebar.sanitizer.report.sortTime.title%",
+        "icon": "$(sort-precedence)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.sanitizer.report.filterMarked",
+        "title": "%command.sidebar.sanitizer.report.showMarkedOnly.title%",
+        "icon": "$(opdevtools-flag-outlined)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.sanitizer.report.showAll",
+        "title": "%command.sidebar.sanitizer.report.showAll.title%",
+        "icon": "$(opdevtools-flag-filled)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.sanitizer.report.add",
+        "title": "%command.sidebar.sanitizer.report.add.title%",
+        "icon": "$(add)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.sanitizer.message.jump",
+        "title": "%command.sidebar.sanitizer.message.jump.title%"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.sanitizer.message.aiFix",
+        "title": "%command.sidebar.sanitizer.message.aiFix.title%",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByClass",
+        "title": "%command.sidebar.sanitizer.results.groupByClass.title%",
+        "icon": "$(opdevtools-group-class)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByClassActive",
+        "title": "%command.sidebar.sanitizer.results.groupByClass.title%",
+        "icon": "$(opdevtools-group-class-pressed)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.sanitizer.results.groupBySeverity",
+        "title": "%command.sidebar.sanitizer.results.groupBySeverity.title%",
+        "icon": "$(opdevtools-group-severity-warning)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.sanitizer.results.groupBySeverityActive",
+        "title": "%command.sidebar.sanitizer.results.groupBySeverity.title%",
+        "icon": "$(opdevtools-group-severity-warning-pressed)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByType",
+        "title": "%command.sidebar.sanitizer.results.groupByType.title%",
+        "icon": "$(opdevtools-group-type)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByTypeActive",
+        "title": "%command.sidebar.sanitizer.results.groupByType.title%",
+        "icon": "$(opdevtools-group-type-pressed)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByFile",
+        "title": "%command.sidebar.sanitizer.results.groupByFile.title%",
+        "icon": "$(opdevtools-group-file)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByFileActive",
+        "title": "%command.sidebar.sanitizer.results.groupByFile.title%",
+        "icon": "$(opdevtools-group-file-pressed)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.sanitizer.results.hideDuplicates",
+        "title": "%command.sidebar.sanitizer.results.hideDuplicates.title%",
+        "icon": "$(layers)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.sanitizer.results.showDuplicates",
+        "title": "%command.sidebar.sanitizer.results.showDuplicates.title%",
+        "icon": "$(layers-active)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.sanitizer.results.openGroupFile",
+        "title": "%command.sidebar.sanitizer.results.openGroupFile.title%",
+        "icon": "$(go-to-file)"
       }
     ],
     "viewsWelcome": [
@@ -753,6 +1017,76 @@
           "group": "navigation@2"
         },
         {
+          "command": "huawei-op-devtools.sidebar.sanitizer.report.add",
+          "when": "view == opdevtoolsSanitizerResultsTree",
+          "group": "navigation@1"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.sanitizer.report.sortTime",
+          "when": "view == opdevtoolsSanitizerResultsTree",
+          "group": "navigation@2"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.sanitizer.results.hideDuplicates",
+          "when": "view == opdevtoolsSanitizerResultsTree && !opDevtools.sanitizerDuplicatesHidden",
+          "group": "navigation@3"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.sanitizer.results.showDuplicates",
+          "when": "view == opdevtoolsSanitizerResultsTree && opDevtools.sanitizerDuplicatesHidden",
+          "group": "navigation@3"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.sanitizer.report.filterMarked",
+          "when": "view == opdevtoolsSanitizerResultsTree && !opDevtools.sanitizerMarkedOnly",
+          "group": "navigation@4"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.sanitizer.report.showAll",
+          "when": "view == opdevtoolsSanitizerResultsTree && opDevtools.sanitizerMarkedOnly",
+          "group": "navigation@4"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByClass",
+          "when": "view == opdevtoolsSanitizerResultsTree && opDevtools.sanitizerResultsGroupBy != 'class'",
+          "group": "navigation@5"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByClassActive",
+          "when": "view == opdevtoolsSanitizerResultsTree && opDevtools.sanitizerResultsGroupBy == 'class'",
+          "group": "navigation@5"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByType",
+          "when": "view == opdevtoolsSanitizerResultsTree && opDevtools.sanitizerResultsGroupBy != 'type'",
+          "group": "navigation@6"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByTypeActive",
+          "when": "view == opdevtoolsSanitizerResultsTree && opDevtools.sanitizerResultsGroupBy == 'type'",
+          "group": "navigation@6"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.sanitizer.results.groupBySeverity",
+          "when": "view == opdevtoolsSanitizerResultsTree && opDevtools.sanitizerResultsGroupBy != 'severity'",
+          "group": "navigation@7"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.sanitizer.results.groupBySeverityActive",
+          "when": "view == opdevtoolsSanitizerResultsTree && opDevtools.sanitizerResultsGroupBy == 'severity'",
+          "group": "navigation@7"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByFile",
+          "when": "view == opdevtoolsSanitizerResultsTree && opDevtools.sanitizerResultsGroupBy != 'file'",
+          "group": "navigation@8"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.sanitizer.results.groupByFileActive",
+          "when": "view == opdevtoolsSanitizerResultsTree && opDevtools.sanitizerResultsGroupBy == 'file'",
+          "group": "navigation@8"
+        },
+        {
           "command": "huawei-op-devtools.sidebar.selectAllOperators",
           "when": "view == opdevtoolsOperatorProjectsTree && opDevtools.showOperatorSearch && !opDevtools.allOperatorsSelected",
           "group": "navigation@3"
@@ -802,6 +1136,31 @@
         {
           "command": "huawei-op-devtools.operate.simulationSettings",
           "when": "view == opdevtoolsOperateTree && viewItem =~ /opdevtools\\.simulation/",
+          "group": "inline@2"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.sanitizer.report.copyPath",
+          "when": "view == opdevtoolsSanitizerResultsTree && viewItem =~ /opdevtools\\.sanitizerReportItem/",
+          "group": "inline@3"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.sanitizer.report.unmark",
+          "when": "view == opdevtoolsSanitizerResultsTree && viewItem =~ /opdevtools\\.sanitizerReportItem\\.marked/",
+          "group": "inline@4"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.sanitizer.report.mark",
+          "when": "view == opdevtoolsSanitizerResultsTree && viewItem =~ /opdevtools\\.sanitizerReportItem\\.unmarked/",
+          "group": "inline@4"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.sanitizer.results.openGroupFile",
+          "when": "view == opdevtoolsSanitizerResultsTree && viewItem =~ /opdevtools\\.sanitizerPathGroupItem/",
+          "group": "inline@1"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.sanitizer.message.aiFix",
+          "when": "view == opdevtoolsSanitizerResultsTree && opDevtools.sanitizerAiFixAvailable && viewItem =~ /opdevtools\\.sanitizerMessage\\.aiFix/",
           "group": "inline@2"
         }
       ],
@@ -912,6 +1271,7 @@
   "scripts": {
     "package": "pnpm run compile && vsce package --no-dependencies --allow-package-secrets privatekey --baseContentUrl https://gitcode.com/kaocong/mstt/raw/main/ --baseImagesUrl https://gitcode.com/kaocong/mstt/raw/main/",
     "build": "pnpm run compile",
+    "build:icons-font": "node scripts/build-icons-font.mjs",
     "compile": "pnpm run compile:web && pnpm run compile:plugin",
     "compile:web": "cd web && pnpm run build",
     "compile:plugin": "tsc --noEmit && tsx scripts/build-extension",
@@ -963,6 +1323,7 @@
     "lint-staged": "^16.2.7",
     "oxlint": "^1.36.0",
     "postcss": "^8.5.6",
+    "svgtofont": "^6.5.1",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",

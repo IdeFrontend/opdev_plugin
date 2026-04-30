@@ -171,33 +171,6 @@ Across Sanitizer / On-board / Simulation, the target contract is:
 4. options are read from settings-backed config merge
 5. existing output/result panels continue to work
 
-## 3.2 Sanitizer migration
-
-Functional changes:
-
-- moved popup booleans (`memory`, `race`, `uninitialized`, `memoryLeak`, `allocUnused`) into settings keys
-- preserved log-level/scope/block settings in same unified settings section
-- sidebar sanitizer action now executes directly
-- sanitizer settings icon opens workspace settings filter instead of popup
-
-Runtime mapping details:
-
-- `op-devtools.compileAndDeploy.buildConfig.sanitizerCompileCommand` -> `sanitizer.user_options.script`
-- `op-devtools.sanitizer.memory` -> `sanitizer.user_options.tool.memcheck`
-- `op-devtools.sanitizer.memoryLeak` -> `sanitizer.user_options.memcheckOption['leak-check']`
-- `op-devtools.sanitizer.allocUnused` -> `sanitizer.user_options.memcheckOption['check-unused-memory']`
-- `op-devtools.sanitizer.race` -> `sanitizer.user_options.tool.racecheck`
-- `op-devtools.sanitizer.uninitialized` -> `sanitizer.user_options.tool.initcheck`
-- `op-devtools.sanitizer.reportLogLevel` -> `sanitizer.user_options.logLevel`
-- `op-devtools.sanitizer.maxSingleLogFileSize` -> `sanitizer.user_options.maxDebuglogSize`
-- `op-devtools.sanitizer.detectionScope` -> `sanitizer.user_options.useBlock` (`global` => `false`, `singleBlock` => `true`)
-- `op-devtools.sanitizer.blockId` -> `sanitizer.user_options.blockId`
-
-Primary code:
-
-- [`plugin/src/extension.ts`](plugin/src/extension.ts)
-- [`plugin/src/helpers/operator-project-workspace-config.ts`](plugin/src/helpers/operator-project-workspace-config.ts)
-
 ## 3.3 On-board migration
 
 Functional changes:

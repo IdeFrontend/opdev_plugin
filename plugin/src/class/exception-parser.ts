@@ -26,7 +26,8 @@ export type QuestionType =
   | 'memory'
   | 'memoryContention'
   | 'uninitialized'
-  | 'synchronize';
+  | 'synchronize'
+  | 'other';
 
 export const exceptionTpyeMap = new Map<string, string>([
   // Note: Order is important, more specific matches should come first
@@ -96,6 +97,10 @@ export const exceptionMap = new Map<string, string>([
   [
     'synchronize',
     'exceptionParser.sync',
+  ],
+  [
+    'other',
+    'exceptionParser.other',
   ],
 ]);
 
@@ -471,15 +476,13 @@ export class ExceptionParser {
     // Extract exception name
     const exceptionName = this.extractExceptionName(line);
 
+    const hasErrorPrefix = line.includes('ERROR:');
+    const hasWarningPrefix = line.includes('WARNING:');
     // Traverse the supported exception patterns, matching them in order (more specific patterns should be placed first)
     for (const pattern of SUPPORTED_EXCEPTION_PATTERNS) {
       // Check if the pattern is contained in the line
-      // First check if you have the correct prefix (ERROR: or WARNING:), then check if the pattern string is included
-      const hasErrorPrefix = line.includes('ERROR:');
-      const hasWarningPrefix = line.includes('WARNING:');
-      const hasCorrectPrefix =
-        (pattern.errorType === 'error' && hasErrorPrefix)
-        || (pattern.errorType === 'warning' && hasWarningPrefix);
+      // Accept both ERROR/WARNING prefixes and infer severity from actual prefix.
+      const hasCorrectPrefix = hasErrorPrefix || hasWarningPrefix;
 
       // If the line contains the pattern string (case-insensitive) and has the correct prefix, the match succeeds
       const lineLower = line.toLowerCase();
@@ -494,7 +497,7 @@ export class ExceptionParser {
         const title = getChineseQuestionType(questionType);
 
         this.currentResult = {
-          type: pattern.errorType,
+          type: hasWarningPrefix ? 'warning' : 'error',
           questionType: questionType as QuestionType,
           title: title,
           exceptionName: exceptionName,
@@ -503,6 +506,18 @@ export class ExceptionParser {
 
         return true;
       }
+    }
+
+    // Generic fallback: support unknown sanitizer messages under "other".
+    if ((hasErrorPrefix || hasWarningPrefix) && exceptionName) {
+      this.currentResult = {
+        type: hasWarningPrefix ? 'warning' : 'error',
+        questionType: 'other',
+        title: getChineseQuestionType('other'),
+        exceptionName,
+        question: exceptionName,
+      };
+      return true;
     }
 
     return false;
@@ -524,7 +539,7 @@ export class ExceptionParser {
     // Format description: #3 is the call stack level, file/path.cpp is the file path, 21 is the line number, 5 is the column number
     // Only save user code files that do not contain environment variables (such as ${ASCEND_HOME_PATH})
     if (trimmedLine.startsWith('#')) {
-      const stackMatch = line.match(/^\s*#(\d+)\s+(.+?):(\d+):(\d+)/);
+      const stackMatch = line.match(/^\s*#(\d+)\s+(.+):(\d+):(\d+)\s*$/);
 
       if (stackMatch) {
         const stackLevel = parseInt(stackMatch[1], 10); // Call stack level (0, 1, 2, 3...)
@@ -539,22 +554,23 @@ export class ExceptionParser {
         if (!isSystem) {
           // Prioritize the user code file with the highest number in the call stack (usually #3)
           // If the file information has not been set, or the current call stack level is higher, update
-          if (
-            !this.currentResult.fileLink
-            && filePath.includes(this.matchPath)
-          ) {
-            this.currentResult.fileLink = filePath;
-            this.currentResult.row = row;
-            this.currentResult.col = col;
-            // Update the current maximum call stack level
-            this.currentStackLevel = stackLevel;
+          const prefersWorkspacePath = !!this.matchPath && filePath.includes(this.matchPath);
+          const hasAbsolutePath = /^(?:[A-Za-z]:[\\/]|\/)/.test(filePath);
+          if (!this.currentResult.fileLink) {
+            if (prefersWorkspacePath || hasAbsolutePath) {
+              this.currentResult.fileLink = filePath;
+              this.currentResult.row = row;
+              this.currentResult.col = col;
+              // Update the current maximum call stack level
+              this.currentStackLevel = stackLevel;
+            }
           }
         }
       }
       else {
         // If a line starts with # but no pattern is matched, try a looser match
         // For example: #3 file.cpp:21 or #3 file.cpp:21:5
-        const looseMatch = line.match(/^\s*#(\d+)\s+(.+?):(\d+)(?::(\d+))?/);
+        const looseMatch = line.match(/^\s*#(\d+)\s+(.+):(\d+)(?::(\d+))?\s*$/);
 
         if (looseMatch) {
           const stackLevel = parseInt(looseMatch[1], 10);

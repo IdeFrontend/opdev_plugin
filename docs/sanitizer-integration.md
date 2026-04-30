@@ -419,6 +419,35 @@ So all sanitizer “windows” are this one sidebar webview; the plugin provides
 
 ## Summary
 
+- **Tree view solution (implemented):**
+  - Sanitizer results are shown in a unified native tree view with three levels: report -> group -> message.
+  - Report-level controls are in the title bar: import report (`+`), time sort toggle (asc/desc), and marked-only filter.
+  - Grouping controls are in the same title bar and support `class`, `severity`, `type`, and `file`.
+  - Title controls (left to right):
+    - `+` (import report): opens file picker, validates the selected path, adds the report to the runtime list, and immediately selects it for parsing/display.
+    - `sort by time`: toggles report ordering between newest-first (`desc`) and oldest-first (`asc`), with deterministic tie-breakers by title then path.
+    - `marked filter`: toggles between all reports and marked-only reports; if a mark toggle would make the list empty, the filter is auto-reset to keep content visible.
+    - `group by class`: groups messages into class buckets (`memory`, `memory race`, `uninitialized`, `sync`, `other`) for the selected report.
+    - `group by severity`: creates two groups and enforces stable order `Errors` first, `Warnings` second.
+    - `group by type`: groups by normalized problem type label; group ordering is `error-only` first, then mixed, then `warning-only`.
+    - `group by file`: groups by message file path; labels are normalized and workspace prefix is stripped when possible.
+  - Group-node controls:
+    - In `file` mode, each file-group row exposes inline open-file action (`go-to-file`) that opens the underlying file directly.
+  - Report-row controls:
+    - `copy path`: copies absolute report path to clipboard.
+    - `mark/unmark`: toggles persistent mark state for that report and updates icon/tooltip by state (`Mark` vs `Unmark`).
+    - Marked report rows show a filled flag icon on the left.
+  - Message-row controls and behavior:
+    - Clicking a message with location data (`fileLink`, `row`, `col`) jumps to source file position.
+    - Warning/error rows use VS Code severity icons for quick visual scanning.
+    - Tooltip content is resolved lazily via `resolveTreeItem` to avoid eager markdown rendering cost during group expansion.
+  - Grouping is applied per selected report. Severity groups are ordered `Errors` then `Warnings`; type groups are prioritized as error-only, mixed, warning-only.
+  - File grouping strips workspace prefix from labels when possible and exposes inline open-file action on file-group nodes.
+  - Report rows keep inline copy-path and mark/unmark actions, and marked rows show a filled flag icon.
+  - Message rows use severity icons, preserve jump-to-file behavior when location exists, and provide lazy-resolved rich tooltips.
+  - Data and rendering performance are optimized with layered caches: report list nodes, per-report parsed messages/derived fields, per-report-per-mode groups, and per-group message nodes, with targeted invalidation on sort/filter/group/mark changes.
+  - Toolbar and grouping icons are provided through contributed product icons backed by local SVG-to-WOFF assets.
+
 - **Protocols:** Webview ↔ plugin via `ops` and `msSanitizer` APIs; plugin ↔ VS Code via WebviewViewProvider and commands; plugin ↔ environment via executor running the `mssanitizer` CLI.
 - **Panel:** Single sidebar view “异常检测” (id `msSanitizerPanelView`), backed by `MsSanitizerPanelViewProvider`, loading `sidebars/ms-sanitizer-panel-view`; run data from `.vscode/mindstudio_sanitizer_log` and marks from `msSanitizer_marks`; report detail via `getPanelData` + `ExceptionParser`.
 - **Architecture:** Entry points (Operate/config + msSanitizer API) → task controller and ms-sanitizer controller → SanitizerService (build + mssanitizer) and RunDataService / ViewService; panel provider resolves webview and handles data/refresh messages. This repo provides orchestration, config, and UI; the detection engine is the external `mssanitizer` tool.

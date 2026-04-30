@@ -1,0 +1,549 @@
+[mssanitizer] Start memcheck, racecheck and initcheck sanitizer on kernel AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001
+====== ERROR: uninitialized read of size 8
+======    at 0xfeff0 on PRIVATE in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001
+======    in block aiv(0) on device 0
+======    code in pc current 0x33e1c (serialNo:258)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:643:45
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:238:17
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:157:9
+======    #3 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:69:12
+======    #4 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:52:5
+======    #5 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:57:5
+
+====== ERROR: illegal read of size 4
+======    at 0x123ffff8170c on PRIVATE in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001
+======    in block aiv(0) on device 0
+======    code in pc current 0x33ee8 (serialNo:260)
+======    #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:643:13
+======    #1 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:238:17
+======    #2 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:157:9
+======    #3 C:/Projects/ops-math/scripts/torch_extension/init.cpp:69:12
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:52:5
+======    #5 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:57:5
+
+====== ERROR: uninitialized read of size 32
+======    at 0x12c042200220 on GM in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001
+======    in block aiv(0) on device 0
+======    code in pc current 0x36760 (serialNo:285)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:643:13
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:238:17
+======    #2 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:157:9
+======    #3 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:69:12
+======    #4 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:52:5
+======    #5 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:57:5
+
+====== ERROR: illegal read of size 4
+======    at 0x123ffff8170c on PRIVATE in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001
+======    in block aiv(0) on device 0
+======    code in pc current 0x351f8 (serialNo:293)
+======    #0 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:646:13
+======    #1 C:/Projects/ops-math/scripts/torch_extension/init.cpp:238:17
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:157:9
+======    #3 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:69:12
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:52:5
+======    #5 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:57:5
+
+====== ERROR: illegal read of size 4
+======    at 0x123ffff8170c on PRIVATE in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001
+======    in block aiv(0) on device 0
+======    code in pc current 0x35410 (serialNo:300)
+======    #0 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:646:13
+======    #1 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:238:17
+======    #2 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:157:9
+======    #3 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:69:12
+======    #4 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:52:5
+======    #5 C:/Projects/ops-math/scripts/torch_extension/init.cpp:57:5
+
+====== ERROR: illegal read of size 4
+======    at 0x123ffff8170c on PRIVATE in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001
+======    in block aiv(0) on device 0
+======    code in pc current 0x36168 (serialNo:336)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:653:17
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:238:17
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:157:9
+======    #3 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:69:12
+======    #4 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:52:5
+======    #5 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:57:5
+
+====== WARNING: out of bounds of size 4
+======    at 0x12c042200424 on GM when writing data in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001
+======    in block aiv(1) on device 0
+======    code in pc current 0x2c534 (serialNo:525)
+======    #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:607:26
+======    #1 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:69:12
+======    #3 C:/Projects/ops-math/scripts/torch_extension/init.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:57:5
+
+====== WARNING: out of bounds of size 4
+======    at 0x12c042200420 on GM when writing data in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001
+======    in block aiv(1) on device 0
+======    code in pc current 0x2c7b4 (serialNo:535)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:69:12
+======    #3 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:57:5
+
+====== WARNING: out of bounds of size 4
+======    at 0x12c042200428 on GM when writing data in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001
+======    in block aiv(1) on device 0
+======    code in pc current 0x2c83c (serialNo:537)
+======    #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:623:25
+======    #1 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:69:12
+======    #3 C:/Projects/ops-math/scripts/torch_extension/init.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:57:5
+
+====== ERROR: illegal read of size 4
+======    at 0x123ffff816a8 on PRIVATE in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001
+======    in block aic(0) on device 0
+======    code in pc current 0x270f4 (serialNo:927)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:75:9
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:179:17
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:140:13
+======    #3 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:69:12
+======    #4 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:52:5
+======    #5 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:57:5
+
+====== ERROR: uninitialized read of size 8
+======    at 0xf690 on PRIVATE in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001
+======    in block aic(0) on device 0
+======    code in pc current 0x23568 (serialNo:1023)
+======    #0 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:529:41
+======    #1 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:210:21
+======    #2 C:/Projects/ops-math/scripts/torch_extension/init.cpp:157:9
+======    #3 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:69:12
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:52:5
+======    #5 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:57:5
+
+====== ERROR: illegal read of size 4
+======    at 0x123ffff816a8 on PRIVATE in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001
+======    in block aic(0) on device 0
+======    code in pc current 0x23624 (serialNo:1025)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:528:13
+======    #1 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:210:21
+======    #2 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:157:9
+======    #3 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:69:12
+======    #4 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:52:5
+======    #5 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:57:5
+
+====== ERROR: uninitialized read of size 480
+======    at 0x12c042200020 on GM in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001
+======    in block aic(0) on device 0
+======    code in pc current 0x23c6c (serialNo:1050)
+======    #0 C:/Projects/ops-math/scripts/torch_extension/init.cpp:528:13
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:210:21
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:157:9
+======    #3 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:69:12
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:52:5
+======    #5 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:57:5
+
+====== ERROR: illegal read of size 4
+======    at 0x123ffff816b0 on PRIVATE in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001
+======    in block aic(0) on device 0
+======    code in pc current 0x251cc (serialNo:1076)
+======    #0 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:452:9
+======    #1 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:212:21
+======    #2 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:157:9
+======    #3 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:69:12
+======    #4 C:/Projects/ops-math/scripts/torch_extension/init.cpp:52:5
+======    #5 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:57:5
+
+====== ERROR: Potential WAW hazard detected at GM in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001 on device 0:
+======    PIPE_S Write at WAW()+0x12c042200420 in block 0 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:189)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:69:12
+======    #3 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:57:5
+======    PIPE_S Write at WAW()+0x12c042200420 in block 1 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:535)
+======    #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:69:12
+======    #3 C:/Projects/ops-math/scripts/torch_extension/init.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:57:5
+
+====== ERROR: Potential WAW hazard detected at GM in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001 on device 0:
+======    PIPE_S Write at WAW()+0x12c042200420 in block 1 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:535)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:69:12
+======    #3 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:57:5
+======    PIPE_S Write at WAW()+0x12c042200420 in block 0 (aic) on device 0 at pc current 0x1fd14 (serialNo:799)
+======    #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:69:12
+======    #3 C:/Projects/ops-math/scripts/torch_extension/init.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:57:5
+
+====== ERROR: Potential WAW hazard detected at GM in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001 on device 0:
+======    PIPE_S Write at WAW()+0x12c042200420 in block 0 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:189)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:69:12
+======    #3 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:57:5
+======    PIPE_S Write at WAW()+0x12c042200420 in block 0 (aic) on device 0 at pc current 0x1fd14 (serialNo:799)
+======    #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:69:12
+======    #3 C:/Projects/ops-math/scripts/torch_extension/init.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:57:5
+
+====== ERROR: Potential WAW hazard detected at GM in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001 on device 0:
+======    PIPE_S Write at WAW()+0x12c042200420 in block 1 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:535)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:69:12
+======    #3 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:57:5
+======    PIPE_S Write at WAW()+0x12c042200420 in block 2 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:1337)
+======    #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:69:12
+======    #3 C:/Projects/ops-math/scripts/torch_extension/init.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:57:5
+
+====== ERROR: Potential WAW hazard detected at GM in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001 on device 0:
+======    PIPE_S Write at WAW()+0x12c042200420 in block 0 (aic) on device 0 at pc current 0x1fd14 (serialNo:799)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:69:12
+======    #3 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:57:5
+======    PIPE_S Write at WAW()+0x12c042200420 in block 2 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:1337)
+======    #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:69:12
+======    #3 C:/Projects/ops-math/scripts/torch_extension/init.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:57:5
+
+====== ERROR: Potential WAW hazard detected at GM in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001 on device 0:
+======    PIPE_S Write at WAW()+0x12c042200420 in block 0 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:189)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:69:12
+======    #3 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:57:5
+======    PIPE_S Write at WAW()+0x12c042200420 in block 2 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:1337)
+======    #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:69:12
+======    #3 C:/Projects/ops-math/scripts/torch_extension/init.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:57:5
+
+====== ERROR: Potential WAW hazard detected at GM in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001 on device 0:
+======    PIPE_S Write at WAW()+0x12c042200420 in block 2 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:1337)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:69:12
+======    #3 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:57:5
+======    PIPE_S Write at WAW()+0x12c042200420 in block 3 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:1560)
+======    #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:69:12
+======    #3 C:/Projects/ops-math/scripts/torch_extension/init.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:57:5
+
+====== ERROR: Potential WAW hazard detected at GM in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001 on device 0:
+======    PIPE_S Write at WAW()+0x12c042200420 in block 1 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:535)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:69:12
+======    #3 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:57:5
+======    PIPE_S Write at WAW()+0x12c042200420 in block 3 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:1560)
+======    #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:69:12
+======    #3 C:/Projects/ops-math/scripts/torch_extension/init.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:57:5
+
+====== ERROR: Potential WAW hazard detected at GM in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001 on device 0:
+======    PIPE_S Write at WAW()+0x12c042200420 in block 0 (aic) on device 0 at pc current 0x1fd14 (serialNo:799)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:69:12
+======    #3 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:57:5
+======    PIPE_S Write at WAW()+0x12c042200420 in block 3 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:1560)
+======    #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:69:12
+======    #3 C:/Projects/ops-math/scripts/torch_extension/init.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:57:5
+
+====== ERROR: Potential WAW hazard detected at GM in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001 on device 0:
+======    PIPE_S Write at WAW()+0x12c042200420 in block 0 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:189)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:69:12
+======    #3 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:57:5
+======    PIPE_S Write at WAW()+0x12c042200420 in block 3 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:1560)
+======    #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:69:12
+======    #3 C:/Projects/ops-math/scripts/torch_extension/init.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:57:5
+
+====== ERROR: Potential WAW hazard detected at GM in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001 on device 0:
+======    PIPE_S Write at WAW()+0x12c042200420 in block 3 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:1560)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:69:12
+======    #3 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:57:5
+======    PIPE_S Write at WAW()+0x12c042200420 in block 1 (aic) on device 0 at pc current 0x1fd14 (serialNo:1818)
+======    #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:69:12
+======    #3 C:/Projects/ops-math/scripts/torch_extension/init.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:57:5
+
+====== ERROR: Potential WAW hazard detected at GM in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001 on device 0:
+======    PIPE_S Write at WAW()+0x12c042200420 in block 2 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:1337)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:69:12
+======    #3 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:57:5
+======    PIPE_S Write at WAW()+0x12c042200420 in block 1 (aic) on device 0 at pc current 0x1fd14 (serialNo:1818)
+======    #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:69:12
+======    #3 C:/Projects/ops-math/scripts/torch_extension/init.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:57:5
+
+====== ERROR: Potential WAW hazard detected at GM in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001 on device 0:
+======    PIPE_S Write at WAW()+0x12c042200420 in block 1 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:535)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:69:12
+======    #3 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:57:5
+======    PIPE_S Write at WAW()+0x12c042200420 in block 1 (aic) on device 0 at pc current 0x1fd14 (serialNo:1818)
+======    #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:69:12
+======    #3 C:/Projects/ops-math/scripts/torch_extension/init.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:57:5
+
+====== ERROR: Potential WAW hazard detected at GM in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001 on device 0:
+======    PIPE_S Write at WAW()+0x12c042200420 in block 0 (aic) on device 0 at pc current 0x1fd14 (serialNo:799)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:69:12
+======    #3 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:57:5
+======    PIPE_S Write at WAW()+0x12c042200420 in block 1 (aic) on device 0 at pc current 0x1fd14 (serialNo:1818)
+======    #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:69:12
+======    #3 C:/Projects/ops-math/scripts/torch_extension/init.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:57:5
+
+====== ERROR: Potential WAW hazard detected at GM in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001 on device 0:
+======    PIPE_S Write at WAW()+0x12c042200420 in block 0 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:189)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:69:12
+======    #3 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:57:5
+======    PIPE_S Write at WAW()+0x12c042200420 in block 1 (aic) on device 0 at pc current 0x1fd14 (serialNo:1818)
+======    #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:69:12
+======    #3 C:/Projects/ops-math/scripts/torch_extension/init.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:57:5
+
+====== ERROR: Potential WAW hazard detected at GM in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001 on device 0:
+======    PIPE_S Write at WAW()+0x12c042200420 in block 3 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:1560)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:69:12
+======    #3 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:57:5
+======    PIPE_S Write at WAW()+0x12c042200420 in block 4 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:2120)
+======    #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:69:12
+======    #3 C:/Projects/ops-math/scripts/torch_extension/init.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:57:5
+
+====== ERROR: Potential WAW hazard detected at GM in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001 on device 0:
+======    PIPE_S Write at WAW()+0x12c042200420 in block 1 (aic) on device 0 at pc current 0x1fd14 (serialNo:1818)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:69:12
+======    #3 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:57:5
+======    PIPE_S Write at WAW()+0x12c042200420 in block 4 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:2120)
+======    #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:69:12
+======    #3 C:/Projects/ops-math/scripts/torch_extension/init.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:57:5
+
+====== ERROR: Potential WAW hazard detected at GM in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001 on device 0:
+======    PIPE_S Write at WAW()+0x12c042200420 in block 2 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:1337)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:69:12
+======    #3 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:57:5
+======    PIPE_S Write at WAW()+0x12c042200420 in block 4 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:2120)
+======    #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:69:12
+======    #3 C:/Projects/ops-math/scripts/torch_extension/init.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:57:5
+
+====== ERROR: Potential WAW hazard detected at GM in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001 on device 0:
+======    PIPE_S Write at WAW()+0x12c042200420 in block 1 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:535)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:69:12
+======    #3 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:57:5
+======    PIPE_S Write at WAW()+0x12c042200420 in block 4 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:2120)
+======    #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:69:12
+======    #3 C:/Projects/ops-math/scripts/torch_extension/init.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:57:5
+
+====== ERROR: Potential WAW hazard detected at GM in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001 on device 0:
+======    PIPE_S Write at WAW()+0x12c042200420 in block 0 (aic) on device 0 at pc current 0x1fd14 (serialNo:799)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:69:12
+======    #3 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:57:5
+======    PIPE_S Write at WAW()+0x12c042200420 in block 4 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:2120)
+======    #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:69:12
+======    #3 C:/Projects/ops-math/scripts/torch_extension/init.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:57:5
+
+====== ERROR: Potential WAW hazard detected at GM in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001 on device 0:
+======    PIPE_S Write at WAW()+0x12c042200420 in block 0 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:189)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:69:12
+======    #3 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:57:5
+======    PIPE_S Write at WAW()+0x12c042200420 in block 4 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:2120)
+======    #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:69:12
+======    #3 C:/Projects/ops-math/scripts/torch_extension/init.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:57:5
+
+====== ERROR: Potential WAW hazard detected at GM in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001 on device 0:
+======    PIPE_S Write at WAW()+0x12c042200420 in block 4 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:2120)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:69:12
+======    #3 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:57:5
+======    PIPE_S Write at WAW()+0x12c042200420 in block 5 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:2343)
+======    #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:69:12
+======    #3 C:/Projects/ops-math/scripts/torch_extension/init.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:57:5
+
+====== ERROR: Potential WAW hazard detected at GM in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001 on device 0:
+======    PIPE_S Write at WAW()+0x12c042200420 in block 3 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:1560)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:69:12
+======    #3 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:57:5
+======    PIPE_S Write at WAW()+0x12c042200420 in block 5 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:2343)
+======    #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:69:12
+======    #3 C:/Projects/ops-math/scripts/torch_extension/init.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:57:5
+
+====== ERROR: Potential WAW hazard detected at GM in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001 on device 0:
+======    PIPE_S Write at WAW()+0x12c042200420 in block 1 (aic) on device 0 at pc current 0x1fd14 (serialNo:1818)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:69:12
+======    #3 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:57:5
+======    PIPE_S Write at WAW()+0x12c042200420 in block 5 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:2343)
+======    #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:69:12
+======    #3 C:/Projects/ops-math/scripts/torch_extension/init.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:57:5
+
+====== ERROR: Potential WAW hazard detected at GM in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001 on device 0:
+======    PIPE_S Write at WAW()+0x12c042200420 in block 2 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:1337)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:69:12
+======    #3 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:57:5
+======    PIPE_S Write at WAW()+0x12c042200420 in block 5 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:2343)
+======    #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:69:12
+======    #3 C:/Projects/ops-math/scripts/torch_extension/init.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:57:5
+
+====== ERROR: Potential WAW hazard detected at GM in AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001 on device 0:
+======    PIPE_S Write at WAW()+0x12c042200420 in block 1 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:535)
+======    #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:69:12
+======    #3 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:57:5
+======    PIPE_S Write at WAW()+0x12c042200420 in block 5 (aiv) on device 0 at pc current 0x2c7b4 (serialNo:2343)
+======    #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:621:22
+======    #1 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:115:5
+======    #2 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:69:12
+======    #3 C:/Projects/ops-math/scripts/torch_extension/init.cpp:52:5
+======    #4 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:57:5
+[mssanitizer] Sanitizer finished on kernel AddLora_a1532827238e1555db7b997c7bce2928_high_performance_100001. See all detected errors above.
+====== WARNING: Unused memory of 80 byte(s)
+======    at 0x12c1000000d8 on GM
+======    code in :0 (serialNo:16053)
+
+====== WARNING: Unused memory of 32 byte(s)
+======    at 0x12c0c0014000 on GM
+======    code in :0 (serialNo:16055)
+
+====== WARNING: Unused memory of 32 byte(s)
+======    at 0x12c0c0015000 on GM
+======    code in :0 (serialNo:16056)
+
+====== WARNING: Unused memory of 32 byte(s)
+======    at 0x12c0c0016000 on GM
+======    code in :0 (serialNo:16057)
+
+====== WARNING: Unused memory of 60 byte(s)
+======    at 0x12c0c0017000 on GM
+======    code in :0 (serialNo:16058)
+
+====== WARNING: Unused memory of 32 byte(s)
+======    at 0x12c0c0018000 on GM
+======    code in :0 (serialNo:16059)
+
+====== WARNING: Unused memory of 32 byte(s)
+======    at 0x12c0c0019000 on GM
+======    code in :0 (serialNo:16060)
+
+====== WARNING: Unused memory of 17169076 byte(s)
+======    at 0x12c041200000 on GM
+======    code in :0 (serialNo:16061)
+
+====== SUMMARY: 17169376byte(s) unused memory in 8 allocation(s)

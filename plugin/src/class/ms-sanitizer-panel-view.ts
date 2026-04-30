@@ -112,7 +112,7 @@ implements vscode.WebviewViewProvider {
           }
 
           console.log('[MsSanitizerPanelViewProvider] Start fetching panel data');
-          const panelData = await getPanelData(MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams);
+          const panelData = await loadMsSanitizerPanelData(MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams);
 
           MsSanitizerPanelViewProvider.getMsSanitizerPanelViewDataParams = null;
           console.log('[MsSanitizerPanelViewProvider] Panel data fetched, sending data');
@@ -136,7 +136,7 @@ implements vscode.WebviewViewProvider {
           }
 
           try {
-            const panelData = await getPanelData(params);
+            const panelData = await loadMsSanitizerPanelData(params);
 
             webviewView.webview.postMessage({
               command: 'iframeRemoteMsSanitizerPanelViewSetRenderList',
@@ -333,13 +333,20 @@ implements vscode.WebviewViewProvider {
   }
 }
 
-const getPanelData = (params: Record<string, any>) => {
+export type MsSanitizerPanelData = {
+  path?: string;
+  title?: string;
+  timestamp?: number;
+  data: Array<Record<string, unknown>>;
+};
+
+export const loadMsSanitizerPanelData = (params: Record<string, any>): MsSanitizerPanelData => {
   const workspaceFolders = vscode.workspace.workspaceFolders;
 
   if (!workspaceFolders || workspaceFolders.length === 0) {
     console.log('getRunData1 no workspaceFolders');
 
-    return [];
+    return { data: [] };
   }
 
   const workspacePath = workspaceFolders[0].uri.fsPath;

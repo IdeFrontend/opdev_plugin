@@ -15,7 +15,7 @@ import { WebviewProvider } from './class/webview-provider';
 import { handleOperatorProjectDirectoryFile } from './class/webview-message-list';
 import { CsvEditorProvider } from './class/csv-editor-provider';
 import { HomeTreeProvider } from './class/home-tree-provider';
-import { OperateTreeProvider } from './class/operate-tree-provider';
+import { OperateTreeProvider, type OperateNode } from './class/operate-tree-provider';
 import {
   ApiServer, type ApiGroup,
 } from './core/api-server';
@@ -25,11 +25,13 @@ import { apis } from './api-routes';
 import { homeMethods } from './controller/home-controller';
 import { taskMethods } from './controller/task-controller';
 import { configMethods } from './controller/config-controller';
+import { performanceDataMethods } from './controller/performance-controller';
 import { PermanentStorage } from './class/permanent-storage';
 import { ExtensionConfig } from './core/extension-config';
 import { RemoteConfig } from './helpers/remote-config';
 import { getMsSanitizerPanelViewProvider } from './class/ms-sanitizer-panel-view';
 import { sanitizerDiagnosticsService } from './service/sanitizer-diagnostics.service';
+import { msAgentBridgeService } from './service/ms-agent-bridge.service';
 import { getPerformancePanelViewProvider } from './class/performance-panel-view';
 import { getDumpTensorPanelViewProvider } from './class/dump-tensor-panel-view';
 import { appendLog } from './helpers/output-channel';
@@ -107,6 +109,29 @@ import {
   COMMAND_SIDEBAR_STOP_ALL_OPERATOR_ACTIONS,
   COMMAND_SIDEBAR_OPEN_WELCOME,
   COMMAND_SIDEBAR_OPEN_HELP,
+  COMMAND_SIDEBAR_SANITIZER_REPORT_SELECT,
+  COMMAND_SIDEBAR_SANITIZER_REPORT_COPY_PATH,
+  COMMAND_SIDEBAR_SANITIZER_REPORT_TOGGLE_MARK,
+  COMMAND_SIDEBAR_SANITIZER_REPORT_MARK,
+  COMMAND_SIDEBAR_SANITIZER_REPORT_UNMARK,
+  COMMAND_SIDEBAR_SANITIZER_REPORT_SORT_TIME,
+  COMMAND_SIDEBAR_SANITIZER_REPORT_FILTER_MARKED,
+  COMMAND_SIDEBAR_SANITIZER_REPORT_SHOW_ALL,
+  COMMAND_SIDEBAR_SANITIZER_REPORT_ADD,
+  COMMAND_SIDEBAR_SANITIZER_MESSAGE_JUMP,
+  COMMAND_SIDEBAR_SANITIZER_MESSAGE_AI_FIX,
+  COMMAND_SIDEBAR_SANITIZER_STACK_JUMP,
+  COMMAND_SIDEBAR_SANITIZER_RESULTS_GROUP_BY_CLASS,
+  COMMAND_SIDEBAR_SANITIZER_RESULTS_GROUP_BY_SEVERITY,
+  COMMAND_SIDEBAR_SANITIZER_RESULTS_GROUP_BY_TYPE,
+  COMMAND_SIDEBAR_SANITIZER_RESULTS_GROUP_BY_FILE,
+  COMMAND_SIDEBAR_SANITIZER_RESULTS_GROUP_BY_CLASS_ACTIVE,
+  COMMAND_SIDEBAR_SANITIZER_RESULTS_GROUP_BY_SEVERITY_ACTIVE,
+  COMMAND_SIDEBAR_SANITIZER_RESULTS_GROUP_BY_TYPE_ACTIVE,
+  COMMAND_SIDEBAR_SANITIZER_RESULTS_GROUP_BY_FILE_ACTIVE,
+  COMMAND_SIDEBAR_SANITIZER_RESULTS_HIDE_DUPLICATES,
+  COMMAND_SIDEBAR_SANITIZER_RESULTS_SHOW_DUPLICATES,
+  COMMAND_SIDEBAR_SANITIZER_RESULTS_OPEN_GROUP_FILE,
 } from './constants';
 import { FolderContextMenuService } from './service/folder-context-menu-service';
 import { buildService } from './service/build-service';
@@ -747,11 +772,45 @@ export async function activate(context: vscode.ExtensionContext) {
     treeDataProvider: operateTreeProvider,
     showCollapseAll: false,
   });
+  const sanitizerResultsPanelProvider: vscode.TreeDataProvider<OperateNode> = {
+    onDidChangeTreeData: operateTreeProvider.onDidChangeTreeData,
+    getTreeItem: (element) => operateTreeProvider.getTreeItem(element),
+    resolveTreeItem: (item, element, token) => operateTreeProvider.resolveTreeItem(item, element as OperateNode, token),
+    getChildren: (element) => {
+      if (!element) {
+        return operateTreeProvider.getSanitizerResultsPanelNodes();
+      }
+      if (element.nodeId === 'sanitizerReportItem' || element.nodeId === 'sanitizerClass') {
+        return operateTreeProvider.getChildren(element);
+      }
+      return [];
+    },
+  };
+  const sanitizerResultsTreeView = vscode.window.createTreeView('opdevtoolsSanitizerResultsTree', {
+    treeDataProvider: sanitizerResultsPanelProvider,
+    showCollapseAll: false,
+  });
   const operatorProjectsTreeView = vscode.window.createTreeView('opdevtoolsOperatorProjectsTree', {
     treeDataProvider: operatorProjectsTreeProvider,
     showCollapseAll: false,
   });
-  context.subscriptions.push(homeTreeView, operateTreeView, operatorProjectsTreeView, toggleOpsOperateCommand);
+  context.subscriptions.push(
+    homeTreeView,
+    operateTreeView,
+    sanitizerResultsTreeView,
+    operatorProjectsTreeView,
+    toggleOpsOperateCommand,
+  );
+  await vscode.commands.executeCommand('setContext', 'opDevtools.sanitizerDuplicatesHidden', operateTreeProvider.isSanitizerHideDuplicatesEnabled());
+  await vscode.commands.executeCommand('setContext', 'opDevtools.sanitizerMarkedOnly', operateTreeProvider.isSanitizerMarkedOnlyEnabled());
+  await vscode.commands.executeCommand('setContext', 'opDevtools.sanitizerResultsGroupBy', operateTreeProvider.getSanitizerResultsGroupBy());
+  await vscode.commands.executeCommand(
+    'setContext',
+    'opDevtools.sanitizerAiFixAvailable',
+    await msAgentBridgeService.isMsAgentIntegrationAvailable(),
+  );
+  // Load sanitizer report tree data only after Actions/Operators views are initialized.
+  await operateTreeProvider.refreshSanitizerReports(false);
 
   const sidebarProjectConfigCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_PROJECT_CONFIG,
@@ -1030,6 +1089,245 @@ export async function activate(context: vscode.ExtensionContext) {
   const sidebarOpenHelpCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_OPEN_HELP,
     async () => vscode.env.openExternal(vscode.Uri.parse('https://gitcode.com/org/cann/discussions/54')),
+  );
+  const sidebarSanitizerReportSelectCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SANITIZER_REPORT_SELECT,
+    async (reportPath: string) => {
+      await operateTreeProvider.selectSanitizerReport(reportPath);
+    },
+  );
+  const sidebarSanitizerReportCopyPathCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SANITIZER_REPORT_COPY_PATH,
+    async (arg: string | { id?: string; command?: { arguments?: unknown[] } }) => {
+      const raw = typeof arg === 'string'
+        ? arg
+        : String(arg?.command?.arguments?.[0] ?? arg?.id ?? '');
+      const reportPath = raw.startsWith('sanitizer-report:')
+        ? decodeURIComponent(raw.replace(/^sanitizer-report:/, ''))
+        : raw;
+      if (!reportPath) {
+        return;
+      }
+      await operateTreeProvider.copySanitizerReportPath(reportPath);
+    },
+  );
+  const sidebarSanitizerReportToggleMarkCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SANITIZER_REPORT_TOGGLE_MARK,
+    async (arg: string | { id?: string; command?: { arguments?: unknown[] } }) => {
+      const raw = typeof arg === 'string'
+        ? arg
+        : String(arg?.command?.arguments?.[0] ?? arg?.id ?? '');
+      const reportPath = raw.startsWith('sanitizer-report:')
+        ? decodeURIComponent(raw.replace(/^sanitizer-report:/, ''))
+        : raw;
+      if (!reportPath) {
+        return;
+      }
+      const report = operateTreeProvider.getSanitizerReportByPath(reportPath);
+      if (!report) {
+        return;
+      }
+      const reportId = report.id;
+      await operateTreeProvider.toggleSanitizerReportMark(reportId);
+      await vscode.commands.executeCommand('setContext', 'opDevtools.sanitizerMarkedOnly', operateTreeProvider.isSanitizerMarkedOnlyEnabled());
+    },
+  );
+  const sidebarSanitizerReportMarkCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SANITIZER_REPORT_MARK,
+    async (arg: string | { id?: string; command?: { arguments?: unknown[] } }) => {
+      const raw = typeof arg === 'string'
+        ? arg
+        : String(arg?.command?.arguments?.[0] ?? arg?.id ?? '');
+      const reportPath = raw.startsWith('sanitizer-report:')
+        ? decodeURIComponent(raw.replace(/^sanitizer-report:/, ''))
+        : raw;
+      if (!reportPath) {
+        return;
+      }
+      const report = operateTreeProvider.getSanitizerReportByPath(reportPath);
+      if (!report) {
+        return;
+      }
+      await operateTreeProvider.toggleSanitizerReportMark(report.id);
+      await vscode.commands.executeCommand('setContext', 'opDevtools.sanitizerMarkedOnly', operateTreeProvider.isSanitizerMarkedOnlyEnabled());
+    },
+  );
+  const sidebarSanitizerReportUnmarkCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SANITIZER_REPORT_UNMARK,
+    async (arg: string | { id?: string; command?: { arguments?: unknown[] } }) => {
+      const raw = typeof arg === 'string'
+        ? arg
+        : String(arg?.command?.arguments?.[0] ?? arg?.id ?? '');
+      const reportPath = raw.startsWith('sanitizer-report:')
+        ? decodeURIComponent(raw.replace(/^sanitizer-report:/, ''))
+        : raw;
+      if (!reportPath) {
+        return;
+      }
+      const report = operateTreeProvider.getSanitizerReportByPath(reportPath);
+      if (!report) {
+        return;
+      }
+      await operateTreeProvider.toggleSanitizerReportMark(report.id);
+      await vscode.commands.executeCommand('setContext', 'opDevtools.sanitizerMarkedOnly', operateTreeProvider.isSanitizerMarkedOnlyEnabled());
+    },
+  );
+  const sidebarSanitizerReportSortTimeCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SANITIZER_REPORT_SORT_TIME,
+    async () => {
+      operateTreeProvider.toggleSanitizerSortOrder();
+    },
+  );
+  const sidebarSanitizerReportFilterMarkedCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SANITIZER_REPORT_FILTER_MARKED,
+    async () => {
+      operateTreeProvider.setSanitizerMarkedOnly(true);
+      await vscode.commands.executeCommand('setContext', 'opDevtools.sanitizerMarkedOnly', true);
+    },
+  );
+  const sidebarSanitizerReportShowAllCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SANITIZER_REPORT_SHOW_ALL,
+    async () => {
+      operateTreeProvider.setSanitizerMarkedOnly(false);
+      await vscode.commands.executeCommand('setContext', 'opDevtools.sanitizerMarkedOnly', false);
+    },
+  );
+  const sidebarSanitizerReportAddCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SANITIZER_REPORT_ADD,
+    async () => {
+      const picked = await vscode.window.showOpenDialog({
+        canSelectMany: false,
+        canSelectFiles: true,
+        canSelectFolders: false,
+        openLabel: t('web.openProject.openNow'),
+        filters: {
+          [t('web.sanitizerPanel.sanitizerResult')]: ['log', '*'],
+        },
+      });
+      const filePath = picked?.[0]?.fsPath;
+      if (!filePath) {
+        return;
+      }
+      await vscode.window.withProgress(
+        {
+          location: { viewId: 'opdevtoolsSanitizerResultsTree' },
+        },
+        async () => {
+          await operateTreeProvider.addSanitizerReportFromPath(filePath);
+        },
+      );
+    },
+  );
+  const sidebarSanitizerMessageJumpCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SANITIZER_MESSAGE_JUMP,
+    async (messageId: string) => {
+      await operateTreeProvider.jumpToSanitizerMessage(messageId);
+    },
+  );
+  const sidebarSanitizerMessageAiFixCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SANITIZER_MESSAGE_AI_FIX,
+    async (arg: string | { id?: string; command?: { arguments?: unknown[] } }) => {
+      if (!(await msAgentBridgeService.isMsAgentIntegrationAvailable())) {
+        return;
+      }
+      const aiFixIndex = operateTreeProvider.getSanitizerMessageAiFixIndex(arg);
+      if (aiFixIndex === undefined) {
+        return;
+      }
+      await msAgentBridgeService.fixMsAgentProblem(aiFixIndex);
+    },
+  );
+  const sidebarSanitizerStackJumpCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SANITIZER_STACK_JUMP,
+    async (params: { fileLink: string; row: number; col: number; errorTitle?: string; errorMessage?: string }) => {
+      await performanceDataMethods.jumpToFile(params);
+    },
+  );
+  const sidebarSanitizerResultsGroupByClassCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SANITIZER_RESULTS_GROUP_BY_CLASS,
+    async () => {
+      operateTreeProvider.setSanitizerResultsGroupBy('class');
+      await vscode.commands.executeCommand('setContext', 'opDevtools.sanitizerResultsGroupBy', 'class');
+    },
+  );
+  const sidebarSanitizerResultsGroupByClassActiveCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SANITIZER_RESULTS_GROUP_BY_CLASS_ACTIVE,
+    async () => {
+      operateTreeProvider.setSanitizerResultsGroupBy('class');
+      await vscode.commands.executeCommand('setContext', 'opDevtools.sanitizerResultsGroupBy', 'class');
+    },
+  );
+  const sidebarSanitizerResultsGroupBySeverityCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SANITIZER_RESULTS_GROUP_BY_SEVERITY,
+    async () => {
+      operateTreeProvider.setSanitizerResultsGroupBy('severity');
+      await vscode.commands.executeCommand('setContext', 'opDevtools.sanitizerResultsGroupBy', 'severity');
+    },
+  );
+  const sidebarSanitizerResultsGroupBySeverityActiveCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SANITIZER_RESULTS_GROUP_BY_SEVERITY_ACTIVE,
+    async () => {
+      operateTreeProvider.setSanitizerResultsGroupBy('severity');
+      await vscode.commands.executeCommand('setContext', 'opDevtools.sanitizerResultsGroupBy', 'severity');
+    },
+  );
+  const sidebarSanitizerResultsGroupByTypeCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SANITIZER_RESULTS_GROUP_BY_TYPE,
+    async () => {
+      operateTreeProvider.setSanitizerResultsGroupBy('type');
+      await vscode.commands.executeCommand('setContext', 'opDevtools.sanitizerResultsGroupBy', 'type');
+    },
+  );
+  const sidebarSanitizerResultsGroupByTypeActiveCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SANITIZER_RESULTS_GROUP_BY_TYPE_ACTIVE,
+    async () => {
+      operateTreeProvider.setSanitizerResultsGroupBy('type');
+      await vscode.commands.executeCommand('setContext', 'opDevtools.sanitizerResultsGroupBy', 'type');
+    },
+  );
+  const sidebarSanitizerResultsGroupByFileCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SANITIZER_RESULTS_GROUP_BY_FILE,
+    async () => {
+      operateTreeProvider.setSanitizerResultsGroupBy('file');
+      await vscode.commands.executeCommand('setContext', 'opDevtools.sanitizerResultsGroupBy', 'file');
+    },
+  );
+  const sidebarSanitizerResultsGroupByFileActiveCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SANITIZER_RESULTS_GROUP_BY_FILE_ACTIVE,
+    async () => {
+      operateTreeProvider.setSanitizerResultsGroupBy('file');
+      await vscode.commands.executeCommand('setContext', 'opDevtools.sanitizerResultsGroupBy', 'file');
+    },
+  );
+  const sidebarSanitizerResultsHideDuplicatesCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SANITIZER_RESULTS_HIDE_DUPLICATES,
+    async () => {
+      operateTreeProvider.setSanitizerHideDuplicates(true);
+      await vscode.commands.executeCommand('setContext', 'opDevtools.sanitizerDuplicatesHidden', true);
+    },
+  );
+  const sidebarSanitizerResultsShowDuplicatesCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SANITIZER_RESULTS_SHOW_DUPLICATES,
+    async () => {
+      operateTreeProvider.setSanitizerHideDuplicates(false);
+      await vscode.commands.executeCommand('setContext', 'opDevtools.sanitizerDuplicatesHidden', false);
+    },
+  );
+  const sidebarSanitizerResultsOpenGroupFileCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_SANITIZER_RESULTS_OPEN_GROUP_FILE,
+    async (arg: string | { id?: string }) => {
+      const raw = typeof arg === 'string' ? arg : String(arg?.id ?? '');
+      const marker = 'sanitizer-report-group:';
+      if (!raw.startsWith(marker)) {
+        return;
+      }
+      const [, encodedReportPath, mode, encodedGroupKey] = raw.split(':');
+      if (mode !== 'file' || !encodedGroupKey) {
+        return;
+      }
+      const filePath = decodeURIComponent(encodedGroupKey);
+      await operateTreeProvider.openSanitizerResultGroupFile(filePath);
+    },
   );
   const sidebarSelectOperatorsCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_SELECT_OPERATORS,
@@ -1352,6 +1650,29 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(sidebarStopFlowTaskCommand, sidebarStopAllOperatorActionsCommand);
   context.subscriptions.push(sidebarOpenWelcomeCommand);
   context.subscriptions.push(sidebarOpenHelpCommand);
+  context.subscriptions.push(sidebarSanitizerReportSelectCommand);
+  context.subscriptions.push(sidebarSanitizerReportCopyPathCommand);
+  context.subscriptions.push(sidebarSanitizerReportToggleMarkCommand);
+  context.subscriptions.push(sidebarSanitizerReportMarkCommand);
+  context.subscriptions.push(sidebarSanitizerReportUnmarkCommand);
+  context.subscriptions.push(sidebarSanitizerReportSortTimeCommand);
+  context.subscriptions.push(sidebarSanitizerReportFilterMarkedCommand);
+  context.subscriptions.push(sidebarSanitizerReportShowAllCommand);
+  context.subscriptions.push(sidebarSanitizerReportAddCommand);
+  context.subscriptions.push(sidebarSanitizerMessageJumpCommand);
+  context.subscriptions.push(sidebarSanitizerMessageAiFixCommand);
+  context.subscriptions.push(sidebarSanitizerStackJumpCommand);
+  context.subscriptions.push(sidebarSanitizerResultsGroupByClassCommand);
+  context.subscriptions.push(sidebarSanitizerResultsGroupByClassActiveCommand);
+  context.subscriptions.push(sidebarSanitizerResultsGroupBySeverityCommand);
+  context.subscriptions.push(sidebarSanitizerResultsGroupBySeverityActiveCommand);
+  context.subscriptions.push(sidebarSanitizerResultsGroupByTypeCommand);
+  context.subscriptions.push(sidebarSanitizerResultsGroupByTypeActiveCommand);
+  context.subscriptions.push(sidebarSanitizerResultsGroupByFileCommand);
+  context.subscriptions.push(sidebarSanitizerResultsGroupByFileActiveCommand);
+  context.subscriptions.push(sidebarSanitizerResultsHideDuplicatesCommand);
+  context.subscriptions.push(sidebarSanitizerResultsShowDuplicatesCommand);
+  context.subscriptions.push(sidebarSanitizerResultsOpenGroupFileCommand);
 
   // Initialize folder decoration provider
   const iconTheme = OperatorProjectIconTheme.getInstance(context);
@@ -1715,6 +2036,7 @@ export async function activate(context: vscode.ExtensionContext) {
       const webview = getMsSanitizerPanelWebview();
 
       webview?.postMessage({ command: 'iframeFlashMsSanitizerRunData' });
+      await operateTreeProvider.refreshSanitizerReports(true);
     },
   );
 

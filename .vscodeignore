@@ -11,7 +11,7 @@
 !out/templates/code_template/triton_template/**
 !resources/**
 !web/resources/**
-!web/src/assets/svg/**
+!web/src/assets/**
 !package.json
 !package.nls.json
 !package.nls.zh-cn.json
