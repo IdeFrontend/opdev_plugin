@@ -811,7 +811,6 @@ export async function activate(context: vscode.ExtensionContext) {
     await msAgentBridgeService.isMsAgentIntegrationAvailable(),
   );
   // Load sanitizer report tree data only after Actions/Operators views are initialized.
-  await operateTreeProvider.refreshSanitizerReports(false);
 
   const sidebarProjectConfigCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_PROJECT_CONFIG,
@@ -2334,17 +2333,18 @@ export async function activate(context: vscode.ExtensionContext) {
   // Detect current workspace when plugin is activated
   if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
     // Delay execution to ensure the plugin is fully initialized
-    setTimeout(async () => {
-      const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-      logDebug('activate:autoOpenProject:start', { workspacePath });
-      try {
-        await welcomeMethods.openProject({ projectPath: workspacePath || '' }, true);
-        logDebug('activate:autoOpenProject:end');
-      }
-      catch (error) {
-        logDebug('activate:autoOpenProject:error', error);
-      }
-    }, 2000);
+    const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    logDebug('activate:autoOpenProject:start', { workspacePath });
+    try {
+      await welcomeMethods.openProject({ projectPath: workspacePath || '' }, true);
+      await operateTreeProvider.refreshSanitizerReports(false);
+
+      logDebug('activate:autoOpenProject:end');
+    }
+    catch (error) {
+      logDebug('activate:autoOpenProject:error', error);
+    }
+  
   }
 
   console.log('Activate', vscode.workspace.workspaceFolders);
