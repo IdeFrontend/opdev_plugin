@@ -376,7 +376,6 @@ export class BuildControllerV2 {
       this.notification.showInfo('执行仿真分析成功');
 
       // Trigger UI refresh commands
-      await vscode.commands.executeCommand('huawei-op-devtools.open-performance-panel-view');
       await vscode.commands.executeCommand('huawei-op-devtools.flashPerformanceRunData');
     }
     finally {
@@ -472,7 +471,6 @@ export class BuildControllerV2 {
       this.notification.showInfo('执行上板分析成功');
 
       // Trigger UI refresh commands
-      await vscode.commands.executeCommand('huawei-op-devtools.open-performance-panel-view');
       await vscode.commands.executeCommand('huawei-op-devtools.flashPerformanceRunData');
     }
     finally {

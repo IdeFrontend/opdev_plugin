@@ -335,8 +335,6 @@ describe('BuildControllerV2', () => {
 
       // Verify UI refresh commands
       expect(mockExecuteCommand)
-        .toHaveBeenCalledWith('performanceSidebarView.focus');
-      expect(mockExecuteCommand)
         .toHaveBeenCalledWith('huawei-op-devtools.flashPerformanceRunData');
       expect(mockProjectManager.clearExecutor)
         .toHaveBeenCalled();
@@ -381,8 +379,6 @@ describe('BuildControllerV2', () => {
         .toHaveBeenCalledWith(ONBOARD_SUCCESS_MESSAGE);
 
       // Verify UI refresh commands
-      expect(mockExecuteCommand)
-        .toHaveBeenCalledWith('performanceSidebarView.focus');
       expect(mockExecuteCommand)
         .toHaveBeenCalledWith('huawei-op-devtools.flashPerformanceRunData');
       expect(mockProjectManager.clearExecutor)

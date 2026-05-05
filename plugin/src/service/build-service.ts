@@ -654,7 +654,6 @@ export class BuildService {
       }
 
       vscode.window.showInformationMessage(t('build.simulationSuccess'));
-      vscode.commands.executeCommand('huawei-op-devtools.open-performance-panel-view');
       vscode.commands.executeCommand('huawei-op-devtools.flashPerformanceRunData');
     }
     catch (e: unknown) {
@@ -776,7 +775,6 @@ export class BuildService {
       }
 
       vscode.window.showInformationMessage(t('build.onBoardSuccess'));
-      vscode.commands.executeCommand('huawei-op-devtools.open-performance-panel-view');
       vscode.commands.executeCommand('huawei-op-devtools.flashPerformanceRunData');
     }
     catch (e: unknown) {

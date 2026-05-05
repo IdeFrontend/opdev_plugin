@@ -1,0 +1,5 @@
+metric,unit,value
+cube_utilization,ratio,0.72
+vector_utilization,ratio,0.41
+memory_bound_stalls,cycles,182934
+l2_hit_rate,ratio,0.88

@@ -55,17 +55,15 @@ export class PerformanceRunData {
   }
 
   /**
-   * Read performance tuning execution records
+   * Read performance tuning execution records (unsorted scan order).
+   * Callers sort in memory; the sort toggle must not re-hit the filesystem.
    */
   public async queryExecutionRecords(
-    sortBy: 'timestamp',
-    order: 'asc' | 'desc',
+    _sortBy: 'timestamp',
+    _order: 'asc' | 'desc',
   ): Promise<PerformanceExecutionRecord[]> {
     const markedKeySet = this.queryMarkedRecordKeySet();
-    const records = await this.scanRunDataDirectory(markedKeySet);
-
-    return records.sort((a, b) =>
-      order === 'asc' ? a[sortBy] - b[sortBy] : b[sortBy] - a[sortBy]);
+    return await this.scanRunDataDirectory(markedKeySet);
   }
 
   /**
@@ -106,97 +104,77 @@ export class PerformanceRunData {
   private async scanRunDataDirectory(markedKeySet: Set<string>) {
     const runData: PerformanceExecutionRecord[] = [];
 
-    if (!this.rootUri || !(await this.uriExists(this.rootUri))) {
-      return runData;
-    }
-
     const project = Project.getInstance();
 
     if (!project.workspaceIsProject()) {
       return runData;
     }
 
-    // Read the execution record in the directory
-    const executionEntries = await vscode.workspace.fs.readDirectory(this.rootUri);
-
-    for (const [
-      subPath,
-      fileType,
-    ] of executionEntries) {
-      if (fileType !== vscode.FileType.Directory) {
-        continue;
-      }
-
-      const recordUri = vscode.Uri.joinPath(this.rootUri, subPath);
-      const stat = await vscode.workspace.fs.stat(recordUri);
-      const executionRecord: PerformanceExecutionRecord = {
-        key: subPath,
-        title: subPath,
-        timestamp: stat.ctime,
-        dirPath: recordUri.fsPath,
-        marked: markedKeySet.has(subPath),
-        children: await this.scanSubFiles(recordUri),
-      };
-
-      runData.push(executionRecord);
+    // Runs under <op>/.vscode/opprof/<runId>/ (optional — folder may not exist yet)
+    if (this.rootUri && (await this.uriExists(this.rootUri))) {
+      const executionEntries = await vscode.workspace.fs.readDirectory(this.rootUri);
+      const opprofDirs = executionEntries.filter(([, t]) => t === vscode.FileType.Directory)
+        .map(([name]) => name);
+      const opprofRecords = await Promise.all(
+        opprofDirs.map(async (subPath) => {
+          const recordUri = vscode.Uri.joinPath(this.rootUri!, subPath);
+          const [
+            stat,
+            children,
+          ] = await Promise.all([
+            vscode.workspace.fs.stat(recordUri),
+            this.scanSubFiles(recordUri),
+          ]);
+          return {
+            key: subPath,
+            title: subPath,
+            timestamp: stat.ctime,
+            dirPath: recordUri.fsPath,
+            marked: markedKeySet.has(subPath),
+            children,
+          } satisfies PerformanceExecutionRecord;
+        }),
+      );
+      runData.push(...opprofRecords);
     }
 
-    // Read fileMapList in configuration
+    // Manual / external reports from fileMapList (simulate + on_board) — must run even when opprof is absent
     const simulateConfigs = getConfig(project.projectId, 'simulate');
     const onBoardConfigs = getConfig(project.projectId, 'on_board');
 
-    // FileMapList that handles simulation configuration
+    const fileMapEntryTasks: Promise<PerformanceExecutionRecord | null>[] = [];
+
+    const pushSimulateFileMapTasks = (fileMapList: Array<{ filePath: string; reportTime: number }>) => {
+      for (const fileMap of fileMapList) {
+        fileMapEntryTasks.push(this.buildFileMapExecutionRecord(fileMap, 'simulate', markedKeySet));
+      }
+    };
+
+    const pushOnboardFileMapTasks = (fileMapList: Array<{ filePath: string; reportTime: number }>) => {
+      for (const fileMap of fileMapList) {
+        fileMapEntryTasks.push(this.buildFileMapExecutionRecord(fileMap, 'onboard', markedKeySet));
+      }
+    };
+
     for (const config of simulateConfigs) {
       const userOptions = config.user_options as Record<string, unknown> | null;
-
       if (userOptions && Array.isArray(userOptions.fileMapList)) {
-        const fileMapList = userOptions.fileMapList as Array<{ filePath: string;
-          reportTime: number }>;
-
-        for (const fileMap of fileMapList) {
-          if (await this.uriExists(vscode.Uri.file(fileMap.filePath))) {
-            const stat = await vscode.workspace.fs.stat(vscode.Uri.file(fileMap.filePath));
-            const isDirectory = stat.type === vscode.FileType.Directory;
-            const key = `simulate_${fileMap.filePath}`;
-            const executionRecord: PerformanceExecutionRecord = {
-              key,
-              title: path.basename(fileMap.filePath),
-              timestamp: fileMap.reportTime,
-              dirPath: fileMap.filePath,
-              marked: markedKeySet.has(key),
-              children: isDirectory ? await this.scanSubFiles(vscode.Uri.file(fileMap.filePath)) : [],
-            };
-
-            runData.push(executionRecord);
-          }
-        }
+        pushSimulateFileMapTasks(userOptions.fileMapList as Array<{ filePath: string; reportTime: number }>);
       }
     }
 
-    // Process fileMapList configured on the board
     for (const config of onBoardConfigs) {
       const userOptions = config.user_options as Record<string, unknown> | null;
-
       if (userOptions && Array.isArray(userOptions.fileMapList)) {
-        const fileMapList = userOptions.fileMapList as Array<{ filePath: string;
-          reportTime: number }>;
+        pushOnboardFileMapTasks(userOptions.fileMapList as Array<{ filePath: string; reportTime: number }>);
+      }
+    }
 
-        for (const fileMap of fileMapList) {
-          if (await this.uriExists(vscode.Uri.file(fileMap.filePath))) {
-            const stat = await vscode.workspace.fs.stat(vscode.Uri.file(fileMap.filePath));
-            const isDirectory = stat.type === vscode.FileType.Directory;
-            const key = `onboard_${fileMap.filePath}`;
-            const executionRecord: PerformanceExecutionRecord = {
-              key,
-              title: path.basename(fileMap.filePath),
-              timestamp: fileMap.reportTime,
-              dirPath: fileMap.filePath,
-              marked: markedKeySet.has(key),
-              children: isDirectory ? await this.scanSubFiles(vscode.Uri.file(fileMap.filePath)) : [],
-            };
-
-            runData.push(executionRecord);
-          }
+    if (fileMapEntryTasks.length > 0) {
+      const fromMaps = await Promise.all(fileMapEntryTasks);
+      for (const rec of fromMaps) {
+        if (rec) {
+          runData.push(rec);
         }
       }
     }
@@ -204,48 +182,83 @@ export class PerformanceRunData {
     return runData;
   }
 
+  private async buildFileMapExecutionRecord(
+    fileMap: { filePath: string; reportTime: number },
+    kind: 'simulate' | 'onboard',
+    markedKeySet: Set<string>,
+  ): Promise<PerformanceExecutionRecord | null> {
+    const uri = vscode.Uri.file(fileMap.filePath);
+    if (!(await this.uriExists(uri))) {
+      return null;
+    }
+    const stat = await vscode.workspace.fs.stat(uri);
+    const isDirectory = stat.type === vscode.FileType.Directory;
+    const keyPrefix = kind === 'simulate' ? 'simulate_' : 'onboard_';
+    const key = `${keyPrefix}${fileMap.filePath}`;
+    const children = isDirectory ? await this.scanSubFiles(uri) : [];
+    return {
+      key,
+      title: path.basename(fileMap.filePath),
+      timestamp: fileMap.reportTime,
+      dirPath: fileMap.filePath,
+      marked: markedKeySet.has(key),
+      children,
+    };
+  }
+
   private async scanSubFiles(parentUri: vscode.Uri): Promise<(PerformanceRunDataFolder | PerformanceRunDataFile)[]> {
     const subPathEntries = await vscode.workspace.fs.readDirectory(parentUri);
-    const subDirOrFiles: (PerformanceRunDataFolder | PerformanceRunDataFile)[] =
-      [];
-
-    for (const [
-      subPath,
-      fileType,
-    ] of subPathEntries) {
-      if (fileType === vscode.FileType.Directory) {
-        const subUri = vscode.Uri.joinPath(parentUri, subPath);
-        const children = await this.scanSubFiles(subUri);
-
-        if (children.length > 0) {
-          subDirOrFiles.push({
-            title: subPath,
-            children,
-          });
+    const mapped = await Promise.all(
+      subPathEntries.map(async ([
+        subPath,
+        entryType,
+      ]) => {
+        if (entryType === vscode.FileType.Directory) {
+          const subUri = vscode.Uri.joinPath(parentUri, subPath);
+          const children = await this.scanSubFiles(subUri);
+          if (children.length > 0) {
+            return { kind: 'folder' as const, title: subPath, children };
+          }
+          return null;
         }
-      }
-      else {
-        const fileType = path.extname(subPath)
+        const ext = path.extname(subPath)
           .replace(/^\./, '');
 
-        // Show only files with the following suffixes
         if ([
           'csv',
           'bin',
           'json',
-        ].includes(fileType)) {
+        ].includes(ext)) {
           const filePath = path.join(parentUri.fsPath, subPath);
-
-          subDirOrFiles.push({
-            key: filePath,
-            title: subPath,
-            filePath,
-            fileType,
-          });
+          return {
+            kind: 'file' as const,
+            node: {
+              key: filePath,
+              title: subPath,
+              filePath,
+              fileType: ext,
+            } satisfies PerformanceRunDataFile,
+          };
         }
+        return null;
+      }),
+    );
+
+    const subDirOrFiles: (PerformanceRunDataFolder | PerformanceRunDataFile)[] = [];
+    for (const item of mapped) {
+      if (!item) {
+        continue;
+      }
+      if (item.kind === 'folder') {
+        subDirOrFiles.push({
+          title: item.title,
+          children: item.children,
+        });
+      }
+      else {
+        subDirOrFiles.push(item.node);
       }
     }
-
     return subDirOrFiles;
   }
 

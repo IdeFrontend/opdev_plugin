@@ -52,6 +52,7 @@ export default {
   'extension.rightClickFolder': 'Please right-click a folder',
   'extension.rightClickFolderOrFile': 'Please right-click a folder or file',
   'extension.rightClickFile': 'Please right-click a file',
+  'extension.addPerformanceVisualizationPickFolderTitle': 'Select a folder to add to performance visualization',
   'extension.openDevToolsFailed': 'Failed to open Huawei OP DevTools: {{error}}',
   'extension.importDumpTensorBinFailed': 'Failed to import DumpTensor .bin file',
   'extension.selectDumpTensorBinFile': 'Select DumpTensor .bin file',
@@ -412,6 +413,8 @@ export default {
   'web.perf.copyReport': 'Copy report',
   'web.perf.downloadReport': 'Download report',
   'web.perf.markUnmark': 'Mark / Unmark',
+  'web.perf.markFailed': 'Mark operation failed',
+  'web.resultsTree.performanceTuningResults': 'Performance tuning results',
 
   // web ms-sanitizer-panel-view
   'web.sanitizerPanel.sanitizerResult': 'Sanitizer result',

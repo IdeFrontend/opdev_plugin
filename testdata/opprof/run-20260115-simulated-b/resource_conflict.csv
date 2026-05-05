@@ -1,0 +1,4 @@
+unit_id,conflict_events,duty_cycle
+MTE0,1200,0.77
+MTE1,800,0.82
+CUBE,400,0.91
