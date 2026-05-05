@@ -43,6 +43,7 @@
   "view.pluginSidebar.name": "Feature List",
   "view.opsOperate.name": "Actions",
   "view.sanitizerResultsTree.name": "Sanitizer Results",
+  "view.performanceResultsTree.name": "Performance tuning results",
   "view.sanitizerReportsTree.name": "Reports",
   "view.operatorProjects.name": "Operators",
   "view.msSanitizer.name": "Sanitizer",
@@ -119,5 +120,14 @@
   "command.sidebar.sanitizer.results.hideDuplicates.title": "Hide duplicate messages",
   "command.sidebar.sanitizer.results.showDuplicates.title": "Show duplicates",
   "command.sidebar.sanitizer.results.openGroupFile.title": "Open file",
+  "command.sidebar.performance.report.select.title": "Select report",
+  "command.sidebar.performance.report.copyPath.title": "Copy path",
+  "command.sidebar.performance.report.download.title": "Download report",
+  "command.sidebar.performance.report.mark.title": "Mark",
+  "command.sidebar.performance.report.unmark.title": "Unmark",
+  "command.sidebar.performance.report.sortTime.title": "Sort reports by time",
+  "command.sidebar.performance.report.showMarkedOnly.title": "Show marked only",
+  "command.sidebar.performance.report.showAll.title": "Show all",
+  "command.sidebar.performance.file.open.title": "Open file",
   "customEditor.csvViewer.displayName": "CSV Table View"
 }

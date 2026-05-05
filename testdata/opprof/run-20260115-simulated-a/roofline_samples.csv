@@ -1,0 +1,5 @@
+arithmetic_intensity,achieved_tflops,roof_tflops
+0.05,12.4,1200
+0.2,88.2,1200
+0.8,310.5,1200
+3.2,890.1,1200

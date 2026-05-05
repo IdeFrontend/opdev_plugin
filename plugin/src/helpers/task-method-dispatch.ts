@@ -140,9 +140,25 @@ async function enqueueQueueableAction<P>(
   actionType: QueueableActionType,
   params: P,
   runner: (payload: P) => Promise<void>,
+  onFinished?: (payload: P) => Promise<void> | void,
 ): Promise<void> {
   const scopeKey = await getOperatorQueueScopeKey();
-  const result = await operatorActionQueue.enqueue(scopeKey, actionType, params, runner);
+  const wrappedRunner = async (payload: P): Promise<void> => {
+    try {
+      await runner(payload);
+    }
+    finally {
+      if (onFinished) {
+        try {
+          await onFinished(payload);
+        }
+        catch {
+          // Post-action hooks must not break queue execution flow.
+        }
+      }
+    }
+  };
+  const result = await operatorActionQueue.enqueue(scopeKey, actionType, params, wrappedRunner);
   if (!result.accepted) {
     vscode.window.showWarningMessage(result.reason ?? 'Action is already queued');
   }
@@ -185,8 +201,9 @@ export async function dispatchEnqueueNativeOperatorAction<P>(
   actionType: QueueableActionType,
   params: P,
   runner: (payload: P) => Promise<void>,
+  onFinished?: (payload: P) => Promise<void> | void,
 ): Promise<void> {
-  await enqueueQueueableAction(actionType, params, runner);
+  await enqueueQueueableAction(actionType, params, runner, onFinished);
 }
 
 export function dispatchFlowFromWebview<P>(

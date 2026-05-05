@@ -507,11 +507,6 @@
       ],
       "panel": [
         {
-          "id": "performance-panel-view",
-          "title": "%viewContainer.panel.performance.title%",
-          "icon": "web/resources/power.svg"
-        },
-        {
           "id": "dump-tensor-panel-view",
           "title": "%viewContainer.panel.dumpTensor.title%",
           "icon": "web/resources/tensor.svg"
@@ -539,14 +534,11 @@
           "id": "opdevtoolsSanitizerResultsTree",
           "name": "%view.sanitizerResultsTree.name%",
           "when": "opDevtools.showOperateTree"
-        }
-      ],
-      "performance-panel-view": [
+        },
         {
-          "type": "webview",
-          "id": "performancePanelView",
-          "name": "%view.performance.name%",
-          "when": "true"
+          "id": "opdevtoolsPerformanceResultsTree",
+          "name": "%view.performanceResultsTree.name%",
+          "when": "opDevtools.showOperateTree"
         }
       ],
       "dump-tensor-panel-view": [
@@ -622,10 +614,6 @@
       {
         "command": "huawei-op-devtools.open-ms-sanitizer-panel-view",
         "title": "%command.openMsSanitizer.title%"
-      },
-      {
-        "command": "huawei-op-devtools.open-performance-panel-view",
-        "title": "%command.openPerformance.title%"
       },
       {
         "command": "huawei-op-devtools.open-dump-tensor-panel-view",
@@ -721,7 +709,8 @@
       },
       {
         "command": "huawei-op-devtools.reportVisualizationPerformance",
-        "title": "%command.reportVisualizationPerformance.title%"
+        "title": "%command.reportVisualizationPerformance.title%",
+        "icon": "$(add)"
       },
       {
         "command": "huawei-op-devtools.refreshFolderDecorations",
@@ -966,6 +955,50 @@
         "command": "huawei-op-devtools.sidebar.actionsQuickPick",
         "title": "Actions",
         "icon": "$(play-circle)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.performance.report.select",
+        "title": "%command.sidebar.performance.report.select.title%"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.performance.report.copyPath",
+        "title": "%command.sidebar.performance.report.copyPath.title%",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.performance.report.download",
+        "title": "%command.sidebar.performance.report.download.title%",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.performance.report.mark",
+        "title": "%command.sidebar.performance.report.mark.title%",
+        "icon": "$(opdevtools-flag-outlined)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.performance.report.unmark",
+        "title": "%command.sidebar.performance.report.unmark.title%",
+        "icon": "$(opdevtools-flag-filled)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.performance.report.sortTime",
+        "title": "%command.sidebar.performance.report.sortTime.title%",
+        "icon": "$(sort-precedence)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.performance.report.filterMarked",
+        "title": "%command.sidebar.performance.report.showMarkedOnly.title%",
+        "icon": "$(opdevtools-flag-outlined)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.performance.report.showAll",
+        "title": "%command.sidebar.performance.report.showAll.title%",
+        "icon": "$(opdevtools-flag-filled)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.performance.file.open",
+        "title": "%command.sidebar.performance.file.open.title%",
+        "icon": "$(go-to-file)"
       }
     ],
     "viewsWelcome": [
@@ -1092,6 +1125,26 @@
           "group": "navigation@8"
         },
         {
+          "command": "huawei-op-devtools.reportVisualizationPerformance",
+          "when": "view == opdevtoolsPerformanceResultsTree",
+          "group": "navigation@0"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.performance.report.sortTime",
+          "when": "view == opdevtoolsPerformanceResultsTree",
+          "group": "navigation@1"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.performance.report.filterMarked",
+          "when": "view == opdevtoolsPerformanceResultsTree && !opDevtools.performanceMarkedOnly",
+          "group": "navigation@2"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.performance.report.showAll",
+          "when": "view == opdevtoolsPerformanceResultsTree && opDevtools.performanceMarkedOnly",
+          "group": "navigation@3"
+        },
+        {
           "command": "huawei-op-devtools.sidebar.selectAllOperators",
           "when": "view == opdevtoolsOperatorProjectsTree && opDevtools.showOperatorSearch && !opDevtools.allOperatorsSelected",
           "group": "navigation@3"
@@ -1167,6 +1220,31 @@
           "command": "huawei-op-devtools.sidebar.sanitizer.message.aiFix",
           "when": "view == opdevtoolsSanitizerResultsTree && opDevtools.sanitizerAiFixAvailable && viewItem =~ /opdevtools\\.sanitizerMessage\\.aiFix/",
           "group": "inline@2"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.performance.report.copyPath",
+          "when": "view == opdevtoolsPerformanceResultsTree && viewItem =~ /opdevtools\\.performanceReportItem\\.(marked|unmarked)/",
+          "group": "inline@3"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.performance.report.download",
+          "when": "view == opdevtoolsPerformanceResultsTree && viewItem =~ /opdevtools\\.performanceReportItem\\.(marked|unmarked)/",
+          "group": "inline@4"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.performance.report.unmark",
+          "when": "view == opdevtoolsPerformanceResultsTree && viewItem =~ /opdevtools\\.performanceReportItem\\.marked/",
+          "group": "inline@5"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.performance.report.mark",
+          "when": "view == opdevtoolsPerformanceResultsTree && viewItem =~ /opdevtools\\.performanceReportItem\\.unmarked/",
+          "group": "inline@5"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.performance.file.open",
+          "when": "view == opdevtoolsPerformanceResultsTree && viewItem =~ /opdevtools\\.performanceFile\\./",
+          "group": "navigation@1"
         }
       ],
       "editor/title": [

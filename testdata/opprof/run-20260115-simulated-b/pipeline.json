@@ -1,0 +1,8 @@
+{
+  "fixture": true,
+  "run": "run-20260115-simulated-b",
+  "pipeline": {
+    "stages": ["load", "compute", "store"],
+    "overlap_score": 0.63
+  }
+}

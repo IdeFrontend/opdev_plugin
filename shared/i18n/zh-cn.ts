@@ -52,6 +52,7 @@ export default {
   'extension.rightClickFolder': '请右键点击文件夹',
   'extension.rightClickFolderOrFile': '请右键点击文件夹或文件',
   'extension.rightClickFile': '请右键点击文件',
+  'extension.addPerformanceVisualizationPickFolderTitle': '选择要添加到性能调优可视化的文件夹',
   'extension.openDevToolsFailed': '打开 Huawei OP DevTools 失败：{{error}}',
   'extension.importDumpTensorBinFailed': '导入 DumpTensor .bin 文件失败',
   'extension.selectDumpTensorBinFile': '选择 DumpTensor .bin 文件',
@@ -414,6 +415,8 @@ export default {
   'web.perf.copyReport': '复制报告',
   'web.perf.downloadReport': '下载报告',
   'web.perf.markUnmark': '标记/取消标记',
+  'web.perf.markFailed': '标记操作失败',
+  'web.resultsTree.performanceTuningResults': '性能调优结果',
 
   // web ms-sanitizer-panel-view
   'web.sanitizerPanel.sanitizerResult': '异常检测结果',

@@ -32,7 +32,6 @@ import { RemoteConfig } from './helpers/remote-config';
 import { getMsSanitizerPanelViewProvider } from './class/ms-sanitizer-panel-view';
 import { sanitizerDiagnosticsService } from './service/sanitizer-diagnostics.service';
 import { msAgentBridgeService } from './service/ms-agent-bridge.service';
-import { getPerformancePanelViewProvider } from './class/performance-panel-view';
 import { getDumpTensorPanelViewProvider } from './class/dump-tensor-panel-view';
 import { appendLog } from './helpers/output-channel';
 
@@ -133,6 +132,15 @@ import {
   COMMAND_SIDEBAR_SANITIZER_RESULTS_HIDE_DUPLICATES,
   COMMAND_SIDEBAR_SANITIZER_RESULTS_SHOW_DUPLICATES,
   COMMAND_SIDEBAR_SANITIZER_RESULTS_OPEN_GROUP_FILE,
+  COMMAND_SIDEBAR_PERFORMANCE_REPORT_SELECT,
+  COMMAND_SIDEBAR_PERFORMANCE_REPORT_COPY_PATH,
+  COMMAND_SIDEBAR_PERFORMANCE_REPORT_DOWNLOAD,
+  COMMAND_SIDEBAR_PERFORMANCE_REPORT_MARK,
+  COMMAND_SIDEBAR_PERFORMANCE_REPORT_UNMARK,
+  COMMAND_SIDEBAR_PERFORMANCE_REPORT_SORT_TIME,
+  COMMAND_SIDEBAR_PERFORMANCE_REPORT_FILTER_MARKED,
+  COMMAND_SIDEBAR_PERFORMANCE_REPORT_SHOW_ALL,
+  COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN,
 } from './constants';
 import { FolderContextMenuService } from './service/folder-context-menu-service';
 import { buildService } from './service/build-service';
@@ -181,6 +189,27 @@ function getFolderUri(uri: vscode.Uri): vscode.Uri {
     // If the file information cannot be obtained, assuming it is a file, return to the parent directory
     return vscode.Uri.file(path.dirname(uri.fsPath));
   }
+}
+
+function resolvePerformanceReportCommandKey(
+  arg: string | { id?: string; command?: { arguments?: unknown[] } } | undefined,
+): string {
+  const raw = typeof arg === 'string'
+    ? arg
+    : String(arg?.command?.arguments?.[0] ?? arg?.id ?? '');
+  if (raw.startsWith('performance-report:')) {
+    return decodeURIComponent(raw.replace(/^performance-report:/, ''));
+  }
+  return raw;
+}
+
+/** Explorer context passes a `file:` URI; `view/title` often passes unrelated values (e.g. `TreeView`). */
+function isExplorerResourceFileUri(candidate: unknown): candidate is vscode.Uri {
+  return (
+    candidate instanceof vscode.Uri
+    && candidate.scheme === 'file'
+    && candidate.fsPath.trim().length > 0
+  );
 }
 
 /**
@@ -791,6 +820,24 @@ export async function activate(context: vscode.ExtensionContext) {
     treeDataProvider: sanitizerResultsPanelProvider,
     showCollapseAll: false,
   });
+  const performanceResultsPanelProvider: vscode.TreeDataProvider<OperateNode> = {
+    onDidChangeTreeData: operateTreeProvider.onDidChangeTreeData,
+    getTreeItem: (element) => operateTreeProvider.getTreeItem(element),
+    resolveTreeItem: (item, element, token) => operateTreeProvider.resolveTreeItem(item, element as OperateNode, token),
+    getChildren: (element) => {
+      if (!element) {
+        return operateTreeProvider.getPerformanceResultsPanelNodes();
+      }
+      if (element.nodeId === 'performanceReportItem' || element.nodeId === 'performanceFolder') {
+        return operateTreeProvider.getChildren(element);
+      }
+      return [];
+    },
+  };
+  const performanceResultsTreeView = vscode.window.createTreeView('opdevtoolsPerformanceResultsTree', {
+    treeDataProvider: performanceResultsPanelProvider,
+    showCollapseAll: false,
+  });
   const operatorProjectsTreeView = vscode.window.createTreeView('opdevtoolsOperatorProjectsTree', {
     treeDataProvider: operatorProjectsTreeProvider,
     showCollapseAll: false,
@@ -799,11 +846,15 @@ export async function activate(context: vscode.ExtensionContext) {
     homeTreeView,
     operateTreeView,
     sanitizerResultsTreeView,
+    performanceResultsTreeView,
     operatorProjectsTreeView,
     toggleOpsOperateCommand,
   );
   await vscode.commands.executeCommand('setContext', 'opDevtools.sanitizerDuplicatesHidden', operateTreeProvider.isSanitizerHideDuplicatesEnabled());
   await vscode.commands.executeCommand('setContext', 'opDevtools.sanitizerMarkedOnly', operateTreeProvider.isSanitizerMarkedOnlyEnabled());
+  await vscode.commands.executeCommand('setContext', 'opDevtools.performanceMarkedOnly', operateTreeProvider.isPerformanceMarkedOnlyEnabled());
+  await vscode.commands.executeCommand('setContext', 'opDevtools.performanceReportSelected', false);
+  await vscode.commands.executeCommand('setContext', 'opDevtools.performanceSelectedReportMarked', false);
   await vscode.commands.executeCommand('setContext', 'opDevtools.sanitizerResultsGroupBy', operateTreeProvider.getSanitizerResultsGroupBy());
   await vscode.commands.executeCommand(
     'setContext',
@@ -943,7 +994,14 @@ export async function activate(context: vscode.ExtensionContext) {
           vscode.window.showWarningMessage(pyascCheck.message ?? t('extension.openPyFirst'));
           return;
         }
-        await dispatchEnqueueNativeOperatorAction('onboard', { operatorNames }, dispatchStartOnBoard);
+        await dispatchEnqueueNativeOperatorAction(
+          'onboard',
+          { operatorNames },
+          dispatchStartOnBoard,
+          async () => {
+            await operateTreeProvider.refreshPerformanceReports();
+          },
+        );
       });
     },
   );
@@ -968,7 +1026,14 @@ export async function activate(context: vscode.ExtensionContext) {
           vscode.window.showWarningMessage(pyascCheck.message ?? t('extension.openPyFirst'));
           return;
         }
-        await dispatchEnqueueNativeOperatorAction('simulation', { operatorNames }, dispatchStartSimulate);
+        await dispatchEnqueueNativeOperatorAction(
+          'simulation',
+          { operatorNames },
+          dispatchStartSimulate,
+          async () => {
+            await operateTreeProvider.refreshPerformanceReports();
+          },
+        );
       });
     },
   );
@@ -1435,6 +1500,102 @@ export async function activate(context: vscode.ExtensionContext) {
       await syncNativeQueueState();
     },
   );
+  const sidebarPerformanceReportSelectCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_PERFORMANCE_REPORT_SELECT,
+    async (reportKey: string) => {
+      operateTreeProvider.selectPerformanceReport(reportKey);
+      const selected = operateTreeProvider.getSelectedPerformanceReport();
+      await vscode.commands.executeCommand('setContext', 'opDevtools.performanceReportSelected', Boolean(selected));
+      await vscode.commands.executeCommand('setContext', 'opDevtools.performanceSelectedReportMarked', Boolean(selected?.marked));
+    },
+  );
+  const sidebarPerformanceReportCopyPathCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_PERFORMANCE_REPORT_COPY_PATH,
+    async (arg: string | { id?: string; command?: { arguments?: unknown[] } }) => {
+      const reportKeyRaw = resolvePerformanceReportCommandKey(arg);
+      const reportKey = reportKeyRaw || operateTreeProvider.getSelectedPerformanceReport()?.key || '';
+      if (!reportKey) {
+        return;
+      }
+      await operateTreeProvider.copyPerformanceReportPath(reportKey);
+    },
+  );
+  const sidebarPerformanceReportDownloadCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_PERFORMANCE_REPORT_DOWNLOAD,
+    async (arg: string | { id?: string; command?: { arguments?: unknown[] } }) => {
+      const reportKeyRaw = resolvePerformanceReportCommandKey(arg);
+      const reportKey = reportKeyRaw || operateTreeProvider.getSelectedPerformanceReport()?.key || '';
+      if (!reportKey) {
+        return;
+      }
+      await operateTreeProvider.downloadPerformanceReport(reportKey);
+    },
+  );
+  const sidebarPerformanceReportMarkCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_PERFORMANCE_REPORT_MARK,
+    async (arg: string | { id?: string; command?: { arguments?: unknown[] } }) => {
+      const reportKeyRaw = resolvePerformanceReportCommandKey(arg);
+      const reportKey = reportKeyRaw || operateTreeProvider.getSelectedPerformanceReport()?.key || '';
+      if (!reportKey) {
+        return;
+      }
+      const report = operateTreeProvider.getPerformanceReportByKey(reportKey);
+      if (report?.marked) {
+        return;
+      }
+      await operateTreeProvider.togglePerformanceReportMark(reportKey);
+      const selected = operateTreeProvider.getSelectedPerformanceReport();
+      await vscode.commands.executeCommand('setContext', 'opDevtools.performanceMarkedOnly', operateTreeProvider.isPerformanceMarkedOnlyEnabled());
+      await vscode.commands.executeCommand('setContext', 'opDevtools.performanceSelectedReportMarked', Boolean(selected?.marked));
+    },
+  );
+  const sidebarPerformanceReportUnmarkCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_PERFORMANCE_REPORT_UNMARK,
+    async (arg: string | { id?: string; command?: { arguments?: unknown[] } }) => {
+      const reportKeyRaw = resolvePerformanceReportCommandKey(arg);
+      const reportKey = reportKeyRaw || operateTreeProvider.getSelectedPerformanceReport()?.key || '';
+      if (!reportKey) {
+        return;
+      }
+      const report = operateTreeProvider.getPerformanceReportByKey(reportKey);
+      if (!report?.marked) {
+        return;
+      }
+      await operateTreeProvider.togglePerformanceReportMark(reportKey);
+      const selected = operateTreeProvider.getSelectedPerformanceReport();
+      await vscode.commands.executeCommand('setContext', 'opDevtools.performanceMarkedOnly', operateTreeProvider.isPerformanceMarkedOnlyEnabled());
+      await vscode.commands.executeCommand('setContext', 'opDevtools.performanceSelectedReportMarked', Boolean(selected?.marked));
+    },
+  );
+  const sidebarPerformanceReportSortTimeCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_PERFORMANCE_REPORT_SORT_TIME,
+    async () => {
+      operateTreeProvider.togglePerformanceSortOrder();
+    },
+  );
+  const sidebarPerformanceReportFilterMarkedCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_PERFORMANCE_REPORT_FILTER_MARKED,
+    async () => {
+      operateTreeProvider.setPerformanceMarkedOnly(true);
+      await vscode.commands.executeCommand('setContext', 'opDevtools.performanceMarkedOnly', true);
+    },
+  );
+  const sidebarPerformanceReportShowAllCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_PERFORMANCE_REPORT_SHOW_ALL,
+    async () => {
+      operateTreeProvider.setPerformanceMarkedOnly(false);
+      await vscode.commands.executeCommand('setContext', 'opDevtools.performanceMarkedOnly', false);
+    },
+  );
+  const sidebarPerformanceFileOpenCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN,
+    async (filePath: string, fileType: string) => {
+      if (!filePath || !fileType) {
+        return;
+      }
+      await operateTreeProvider.openPerformanceFile(filePath, fileType);
+    },
+  );
   const sidebarSelectOperatorsCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_SELECT_OPERATORS,
     async () => {
@@ -1654,15 +1815,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(msSanitizerPanelView, openMsSanitizerDisposable);
 
-  // Performance tuning view (middle panel)
-  const {
-    performancePanelView,
-    openPerformanceDisposable,
-    getWebview: getPerformancePanelWebview,
-  } = getPerformancePanelViewProvider(context, apiServer);
-
-  context.subscriptions.push(performancePanelView, openPerformanceDisposable);
-
   // DumpTensor data view (middle panel)
   const {
     dumpTensorPanelView,
@@ -1780,6 +1932,15 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(sidebarSanitizerResultsShowDuplicatesCommand);
   context.subscriptions.push(sidebarSanitizerResultsOpenGroupFileCommand);
   context.subscriptions.push(sidebarActionsQuickPickCommand);
+  context.subscriptions.push(sidebarPerformanceReportSelectCommand);
+  context.subscriptions.push(sidebarPerformanceReportCopyPathCommand);
+  context.subscriptions.push(sidebarPerformanceReportDownloadCommand);
+  context.subscriptions.push(sidebarPerformanceReportMarkCommand);
+  context.subscriptions.push(sidebarPerformanceReportUnmarkCommand);
+  context.subscriptions.push(sidebarPerformanceReportSortTimeCommand);
+  context.subscriptions.push(sidebarPerformanceReportFilterMarkedCommand);
+  context.subscriptions.push(sidebarPerformanceReportShowAllCommand);
+  context.subscriptions.push(sidebarPerformanceFileOpenCommand);
 
   // Initialize folder decoration provider
   const iconTheme = OperatorProjectIconTheme.getInstance(context);
@@ -2048,14 +2209,26 @@ export async function activate(context: vscode.ExtensionContext) {
   // Report visualization: performance tuning visual view (reusing on-board analysis logic)
   const reportVisualizationPerformanceCommand = vscode.commands.registerCommand(
     COMMAND_REPORT_VISUALIZATION_PERFORMANCE,
-    async (uri?: vscode.Uri) => {
-      if (!uri) {
-        vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
-
-        return;
+    async (firstArg?: unknown) => {
+      let targetUri: vscode.Uri | undefined;
+      if (isExplorerResourceFileUri(firstArg)) {
+        targetUri = firstArg;
+      }
+      if (!targetUri) {
+        const picked = await vscode.window.showOpenDialog({
+          canSelectMany: false,
+          canSelectFolders: true,
+          canSelectFiles: false,
+          title: t('extension.addPerformanceVisualizationPickFolderTitle'),
+          openLabel: t('common.selectFolder'),
+        });
+        targetUri = picked?.[0];
+        if (!targetUri) {
+          return;
+        }
       }
 
-      await FolderContextMenuService.addReportToFileMapList(uri, 'on_board');
+      await FolderContextMenuService.addReportToFileMapList(targetUri, 'on_board');
     },
   );
 
@@ -2152,10 +2325,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const flashPerformanceRunData = vscode.commands.registerCommand(
     COMMAND_FLASH_PERFORMANCE_RUN_DATA,
     async () => {
-      // Get the webview of the performance tuning panel and proactively issue a refresh command
-      const webview = getPerformancePanelWebview();
-
-      webview?.postMessage({ command: 'iframeRefreshData' });
+      await operateTreeProvider.refreshPerformanceReports();
     },
   );
 
@@ -2338,6 +2508,7 @@ export async function activate(context: vscode.ExtensionContext) {
     try {
       await welcomeMethods.openProject({ projectPath: workspacePath || '' }, true);
       await operateTreeProvider.refreshSanitizerReports(false);
+      await operateTreeProvider.refreshPerformanceReports();
 
       logDebug('activate:autoOpenProject:end');
     }

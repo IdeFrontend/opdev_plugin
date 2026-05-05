@@ -10,8 +10,6 @@ export const COMMAND_CONFIG = `${COMMAND_PREFIX}.config`;
 
 export const COMMAND_OPEN_MS_SANITIZER_PANEL_VIEW = `${COMMAND_PREFIX}.open-ms-sanitizer-panel-view`;
 
-export const COMMAND_OPEN_PERFORMANCE_PANEL_VIEW = `${COMMAND_PREFIX}.open-performance-panel-view`;
-
 export const COMMAND_OPEN_DUMP_TENSOR_PANEL_VIEW = `${COMMAND_PREFIX}.open-dump-tensor-panel-view`;
 
 export const COMMAND_CREATE_OPERATOR_IN_WORKSPACE = `${COMMAND_PREFIX}.createOperatorInWorkspace`;
@@ -54,10 +52,6 @@ export const VIEW_PROJECT_SH = 'project-sh';
 export const VIEW_OPERATE = 'operate';
 
 export const VIEW_MS_SANITIZER = 'ms-sanitizer-panel-view';
-
-export const VIEW_PERFORMANCE_PANEL = 'performance-panel-view';
-
-export const VIEW_PERFORMANCE_RUN_DATA = 'performance-run-data';
 
 export const VIEW_MS_SANITIZER_RUN_DATA = 'ms-sanitizer-run-data';
 
@@ -166,3 +160,12 @@ export const COMMAND_SIDEBAR_SANITIZER_RESULTS_HIDE_DUPLICATES = `${COMMAND_PREF
 export const COMMAND_SIDEBAR_SANITIZER_RESULTS_SHOW_DUPLICATES = `${COMMAND_PREFIX}.sidebar.sanitizer.results.showDuplicates`;
 export const COMMAND_SIDEBAR_SANITIZER_RESULTS_OPEN_GROUP_FILE = `${COMMAND_PREFIX}.sidebar.sanitizer.results.openGroupFile`;
 export const COMMAND_SIDEBAR_ACTIONS_QUICK_PICK = `${COMMAND_PREFIX}.sidebar.actionsQuickPick`;
+export const COMMAND_SIDEBAR_PERFORMANCE_REPORT_SELECT = `${COMMAND_PREFIX}.sidebar.performance.report.select`;
+export const COMMAND_SIDEBAR_PERFORMANCE_REPORT_COPY_PATH = `${COMMAND_PREFIX}.sidebar.performance.report.copyPath`;
+export const COMMAND_SIDEBAR_PERFORMANCE_REPORT_DOWNLOAD = `${COMMAND_PREFIX}.sidebar.performance.report.download`;
+export const COMMAND_SIDEBAR_PERFORMANCE_REPORT_MARK = `${COMMAND_PREFIX}.sidebar.performance.report.mark`;
+export const COMMAND_SIDEBAR_PERFORMANCE_REPORT_UNMARK = `${COMMAND_PREFIX}.sidebar.performance.report.unmark`;
+export const COMMAND_SIDEBAR_PERFORMANCE_REPORT_SORT_TIME = `${COMMAND_PREFIX}.sidebar.performance.report.sortTime`;
+export const COMMAND_SIDEBAR_PERFORMANCE_REPORT_FILTER_MARKED = `${COMMAND_PREFIX}.sidebar.performance.report.filterMarked`;
+export const COMMAND_SIDEBAR_PERFORMANCE_REPORT_SHOW_ALL = `${COMMAND_PREFIX}.sidebar.performance.report.showAll`;
+export const COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN = `${COMMAND_PREFIX}.sidebar.performance.file.open`;
