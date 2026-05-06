@@ -17,7 +17,7 @@ import { performanceMethods } from '@plugin/controller/performance-data-controll
 import { viewService } from '@plugin/service/view-service';
 import { ensureEnvironmentScriptForOperateAction } from '@plugin/helpers/environment-script-guard';
 import { appendLog } from '@plugin/helpers/output-channel';
-import { loadMsSanitizerPanelData } from '@plugin/class/ms-sanitizer-panel-view';
+import { sanitizerDiagnosticsService } from '@plugin/service/sanitizer-diagnostics.service';
 import { runDataService } from '@plugin/service/run-data-service';
 import {
   COMMAND_SIDEBAR_TOGGLE_OPERATOR,
@@ -993,7 +993,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     this.state.sanitizer.selectedReportPath = report.path;
     this.state.sanitizer.selectedReportTitle = report.title;
     this.onDidChangeTreeDataEmitter.fire();
-    const panelData = loadMsSanitizerPanelData({
+    const panelData = sanitizerDiagnosticsService.loadSanitizerPanelData({
       path: report.path,
       title: report.title,
       timestamp: report.timestamp,
@@ -1788,7 +1788,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     if (!report) {
       return [];
     }
-    const panelData = loadMsSanitizerPanelData({
+    const panelData = sanitizerDiagnosticsService.loadSanitizerPanelData({
       path: report.path,
       title: report.title,
       timestamp: report.timestamp,

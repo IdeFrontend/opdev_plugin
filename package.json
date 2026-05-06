@@ -572,10 +572,6 @@
         "icon": "web/resources/operate.svg"
       },
       {
-        "command": "huawei-op-devtools.config",
-        "title": "%command.config.title%"
-      },
-      {
         "command": "huawei-op-devtools.leftNaV",
         "title": "%command.leftNav.title%"
       },
@@ -599,10 +595,6 @@
         "title": "%command.test.title%"
       },
       {
-        "command": "huawei-op-devtools.projectSH",
-        "title": "%command.projectSH.title%"
-      },
-      {
         "command": "huawei-op-devtools.welcome",
         "title": "%command.welcome.title%",
         "category": "%config.title%"
@@ -610,10 +602,6 @@
       {
         "command": "huawei-op-devtools.clearWelcomeCount",
         "title": "%command.clearWelcomeCount.title%"
-      },
-      {
-        "command": "huawei-op-devtools.open-ms-sanitizer-panel-view",
-        "title": "%command.openMsSanitizer.title%"
       },
       {
         "command": "huawei-op-devtools.open-dump-tensor-panel-view",
@@ -1390,34 +1378,20 @@
   "devDependencies": {
     "@eslint/js": "^9.39.2",
     "@playwright/test": "^1.59.1",
-    "@rolldown/binding-win32-x64-msvc": "1.0.0-rc.9",
     "@stylistic/eslint-plugin": "^5.6.1",
     "@types/node": "^24.6.0",
-    "@types/vscode": "^1.60.0",
-    "@vitejs/plugin-vue": "^6.0.1",
     "@vscode/test-electron": "^2.5.2",
-    "@vscode/test-web": "^0.0.77",
     "@vscode/vsce": "^3.7.1",
-    "@vue/tsconfig": "^0.8.1",
-    "autoprefixer": "^10.4.23",
     "esbuild": "^0.27.1",
     "eslint": "^9.39.2",
     "eslint-plugin-oxlint": "^1.36.0",
     "eslint-plugin-vue": "^10.6.2",
     "globals": "^16.5.0",
-    "husky": "^9.1.7",
-    "less": "^4.4.2",
-    "less-loader": "^12.3.0",
     "lint-staged": "^16.2.7",
     "oxlint": "^1.36.0",
-    "postcss": "^8.5.6",
-    "svgtofont": "^6.5.1",
-    "tailwindcss": "^3.4.17",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.50.0",
-    "unplugin-vue-components": "^30.0.0",
-    "vite": "^8.0.0",
     "vue-tsc": "^3.2.1"
   }
 }

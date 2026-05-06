@@ -2,8 +2,15 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { ExceptionParser } from '@plugin/class/exception-parser';
 import { resolveSanitizerSourceFsPath } from '@plugin/helpers/sanitizer-source-path';
+import { msAgentBridgeService } from '@plugin/service/ms-agent-bridge.service';
 
 const COLLECTION_NAME = 'op-devtools-sanitizer';
+export type SanitizerPanelData = {
+  path?: string;
+  title?: string;
+  timestamp?: number;
+  data: Array<Record<string, unknown>>;
+};
 
 /**
  * Publishes sanitizer findings to the Problems view (mstt-owned).
@@ -75,6 +82,36 @@ export class SanitizerDiagnosticsService {
     for (const [key, diags] of byUri) {
       this.collection.set(vscode.Uri.parse(key), diags);
     }
+  }
+
+  loadSanitizerPanelData(params: Record<string, any>): SanitizerPanelData {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+
+    if (!workspaceFolders || workspaceFolders.length === 0) {
+      return { data: [] };
+    }
+
+    const workspacePath = workspaceFolders[0].uri.fsPath;
+    const inputContent = fs.readFileSync(params.path, 'utf-8');
+    const parser = new ExceptionParser({ matchPath: workspacePath });
+    const data = parser.parseAll(inputContent)
+      .map((r, msAgentIndex) => {
+        const resolved = resolveSanitizerSourceFsPath(workspacePath, r.fileLink);
+
+        return {
+          ...r,
+          fileLink: resolved ?? r.fileLink,
+          msAgentIndex,
+        };
+      });
+
+    this.publishFromLogFile(params.path, workspacePath);
+    void msAgentBridgeService.tryLoadLogWithIntegration(params.path);
+
+    return {
+      ...params,
+      data,
+    };
   }
 }
 

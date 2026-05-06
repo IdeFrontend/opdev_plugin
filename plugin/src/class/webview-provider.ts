@@ -13,9 +13,6 @@ import { PermanentStorage } from './permanent-storage';
 import webviewMessageList from './webview-message-list';
 import { HtmlTransformer } from './html-transformer';
 import { ApiServer } from '@plugin/core/api-server';
-import {
-  registerConfigPage, unregisterConfigPage,
-} from '@plugin/controller/navigation-controller';
 
 /**
  * Webview provider - Responsible for creating and managing Webview panels
@@ -163,11 +160,6 @@ export class WebviewProvider {
 
       this.apiServer?.addWebview(router, this.panel.webview);
 
-      // If it is a configuration page, register it to the navigation controller
-      if (router === 'config') {
-        registerConfigPage('config', this.panel.webview);
-      }
-
       // Set Webview content
       await this.updateWebviewContent(router);
 
@@ -192,11 +184,6 @@ export class WebviewProvider {
       // Handle panel close event
       this.panel.onDidDispose(
         () => {
-          // Logout configuration page
-          if (router === 'config') {
-            unregisterConfigPage(router);
-          }
-
           this.dispose();
         },
         null,
@@ -231,10 +218,8 @@ export class WebviewProvider {
       // Determine whether it is a panel or sidebar type view
       const panelViews = [
         'config',
-        'link',
+        'new-project',
         'welcome',
-        'project-sh',
-        'ops-config',
         'options-simulator',
         'options-on-board',
         'options-sanitizer',

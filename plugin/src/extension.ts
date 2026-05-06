@@ -24,12 +24,10 @@ import { routes } from './routes';
 import { apis } from './api-routes';
 import { homeMethods } from './controller/home-controller';
 import { taskMethods } from './controller/task-controller';
-import { configMethods } from './controller/config-controller';
 import { performanceDataMethods } from './controller/performance-controller';
 import { PermanentStorage } from './class/permanent-storage';
 import { ExtensionConfig } from './core/extension-config';
 import { RemoteConfig } from './helpers/remote-config';
-import { getMsSanitizerPanelViewProvider } from './class/ms-sanitizer-panel-view';
 import { sanitizerDiagnosticsService } from './service/sanitizer-diagnostics.service';
 import { msAgentBridgeService } from './service/ms-agent-bridge.service';
 import { getDumpTensorPanelViewProvider } from './class/dump-tensor-panel-view';
@@ -40,9 +38,7 @@ import { registerOperatorPlugins } from './domain/plugins';
 import { OperatorPluginRegistry } from './domain/plugins/operator-plugin.registry';
 import {
   COMMAND_OPEN,
-  COMMAND_PROJECT_SH,
   COMMAND_WELCOME,
-  COMMAND_CONFIG,
   COMMAND_CREATE_OPERATOR_IN_WORKSPACE,
   COMMAND_TOGGLE_OPS_OPERATE,
   COMMAND_CLEAR_WELCOME_COUNT,
@@ -52,10 +48,8 @@ import {
   COMMAND_FLASH_MS_SANITIZER_RUN_DATA,
   COMMAND_FLASH_PERFORMANCE_RUN_DATA,
   COMMAND_FLASH_DUMP_TENSOR_DATA,
-  VIEW_CONFIG,
-  VIEW_LINK,
+  VIEW_NEW_PROJECT,
   VIEW_WELCOME,
-  VIEW_PROJECT_SH,
   COMMAND_SIMULATOR_OPTIONS,
   COMMAND_ON_BOARD_OPTIONS,
   COMMAND_SANITIZER_OPTIONS,
@@ -297,9 +291,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // api interface
   const apiServer = initApiServer();
-
-  // Initialize the Webview of the configuration page
-  const configProvider = new WebviewProvider(context, apiServer);
 
   // Internationalization (i18n)
   await initI18n();
@@ -727,14 +718,11 @@ export async function activate(context: vscode.ExtensionContext) {
   // Initialize the Webview of the configuration page
   const configWelcomeProvider = new WebviewProvider(context, apiServer);
 
-  // Initialize the Webview of the environment script configuration page
-  const configProjectSHProvider = new WebviewProvider(context, apiServer);
-
   // Register the new operator project command
   const openCommand = vscode.commands.registerCommand(
     COMMAND_OPEN,
     async () => {
-      createOpsProvider.show(VIEW_LINK);
+      createOpsProvider.show(VIEW_NEW_PROJECT);
     },
   );
 
@@ -761,7 +749,7 @@ export async function activate(context: vscode.ExtensionContext) {
       // If a uri is provided (right click on the file), use that path; otherwise use the workspace root
       const targetPath = uri ? uri.fsPath : workspaceFolders[0].uri.fsPath;
 
-      await createOpsProvider.show(VIEW_LINK);
+      await createOpsProvider.show(VIEW_NEW_PROJECT);
       // Wait for the webview to finish loading and send the path
       setTimeout(() => {
         createOpsProvider.postMessage({
@@ -769,14 +757,6 @@ export async function activate(context: vscode.ExtensionContext) {
           data: targetPath,
         });
       }, 500);
-    },
-  );
-
-  // Open environment variables command
-  const openProjectSH = vscode.commands.registerCommand(
-    COMMAND_PROJECT_SH,
-    async () => {
-      configProjectSHProvider.show(VIEW_PROJECT_SH);
     },
   );
 
@@ -919,11 +899,11 @@ export async function activate(context: vscode.ExtensionContext) {
     // Delay execution to ensure UI is ready
     setTimeout(async () => {
       try {
-        console.log('[Extension] devtool_config.json found, focusing OpsOperateProvider');
-        await vscode.commands.executeCommand('OpsOperateProvider.focus');
+        console.log('[Extension] devtool_config.json found, focusing opdevtoolsOperateTree');
+        await vscode.commands.executeCommand('opdevtoolsOperateTree.focus');
       }
       catch (error) {
-        console.warn('[Extension] Failed to focus OpsOperateProvider:', error);
+        console.warn('[Extension] Failed to focus opdevtoolsOperateTree:', error);
       }
     }, 300);
   }
@@ -1730,14 +1710,6 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // Register the command to open the project configuration page
-  const ConfigCommand = vscode.commands.registerCommand(
-    COMMAND_CONFIG,
-    async () => {
-      configProvider.show(VIEW_CONFIG);
-    },
-  );
-
   // Register to open the welcome page command
   const welcomeCommand = vscode.commands.registerCommand(
     COMMAND_WELCOME,
@@ -1806,15 +1778,6 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   }
 
-  // Anomaly detection view (the report list has been moved to the left side of the panel, and the corresponding report detection results are displayed on the right side)
-  const {
-    openMsSanitizerDisposable,
-    msSanitizerPanelView,
-    getMsSanitizerPanelWebview,
-  } = getMsSanitizerPanelViewProvider(context, apiServer);
-
-  context.subscriptions.push(msSanitizerPanelView, openMsSanitizerDisposable);
-
   // DumpTensor data view (middle panel)
   const {
     dumpTensorPanelView,
@@ -1871,8 +1834,6 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(createOptionsCommand);
   context.subscriptions.push(openCommand);
   context.subscriptions.push(openProjectCommand);
-  context.subscriptions.push(openProjectSH);
-  context.subscriptions.push(ConfigCommand);
   context.subscriptions.push(welcomeCommand);
   context.subscriptions.push(clearWelcomeCountCommand);
   context.subscriptions.push(clearLastProjectPathCommand);
@@ -2312,10 +2273,6 @@ export async function activate(context: vscode.ExtensionContext) {
   const flashMsSanitizerRunData = vscode.commands.registerCommand(
     COMMAND_FLASH_MS_SANITIZER_RUN_DATA,
     async () => {
-      // The report list has been moved to the left side of the anomaly detection panel, and a refresh command is issued to the panel.
-      const webview = getMsSanitizerPanelWebview();
-
-      webview?.postMessage({ command: 'iframeFlashMsSanitizerRunData' });
       await operateTreeProvider.refreshSanitizerReports(true);
     },
   );

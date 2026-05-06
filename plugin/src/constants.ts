@@ -2,13 +2,7 @@ export const COMMAND_PREFIX = 'huawei-op-devtools';
 
 export const COMMAND_OPEN = `${COMMAND_PREFIX}.open`;
 
-export const COMMAND_PROJECT_SH = `${COMMAND_PREFIX}.projectSH`;
-
 export const COMMAND_WELCOME = `${COMMAND_PREFIX}.welcome`;
-
-export const COMMAND_CONFIG = `${COMMAND_PREFIX}.config`;
-
-export const COMMAND_OPEN_MS_SANITIZER_PANEL_VIEW = `${COMMAND_PREFIX}.open-ms-sanitizer-panel-view`;
 
 export const COMMAND_OPEN_DUMP_TENSOR_PANEL_VIEW = `${COMMAND_PREFIX}.open-dump-tensor-panel-view`;
 
@@ -41,23 +35,11 @@ export const COMMAND_OPEN_PROJECT = `${COMMAND_PREFIX}.openProject`;
 // View name constant (corresponding to the directory name under web/src/views)
 export const VIEW_HOME = 'home';
 
-export const VIEW_CONFIG = 'config';
-
-export const VIEW_LINK = 'link';
+export const VIEW_NEW_PROJECT = 'new-project';
 
 export const VIEW_WELCOME = 'welcome';
 
-export const VIEW_PROJECT_SH = 'project-sh';
-
-export const VIEW_OPERATE = 'operate';
-
-export const VIEW_MS_SANITIZER = 'ms-sanitizer-panel-view';
-
-export const VIEW_MS_SANITIZER_RUN_DATA = 'ms-sanitizer-run-data';
-
 export const VIEW_DUMP_TENSOR_DATA = 'dump-tensor-data';
-
-export const VIEW_OPS_CONFIG = 'ops-config';
 
 export const VIEW_OPTIONS_SIMULATOR = 'options-simulator';
 

@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { isMsAgentSanitizerAiFixEnabled } from '@plugin/feature-flags';
 
 export type MsAgentAiFixState = 'queued' | 'running' | 'fixed';
 export interface MsAgentAiFixQueueSnapshot {
@@ -14,6 +13,19 @@ export interface MsAgentAiFixQueueSnapshot {
  * See plugin/specs/MSAGENT_PLUGIN_INTEGRATION.md.
  */
 export class MsAgentBridgeService {
+  private isMsAgentAiFixEnabled(): boolean {
+    try {
+      return (
+        vscode.workspace
+          .getConfiguration('op-devtools')
+          .get<boolean>('sanitizer.enableMsAgentAiFix', false) ?? false
+      );
+    }
+    catch {
+      return false;
+    }
+  }
+
   private static readonly emptyQueueSnapshot: MsAgentAiFixQueueSnapshot = {
     paused: false,
     hasPendingTasks: false,
@@ -68,7 +80,7 @@ export class MsAgentBridgeService {
    * Feature flag on and msAgent contributed commands are present.
    */
   async isMsAgentIntegrationAvailable(): Promise<boolean> {
-    if (!isMsAgentSanitizerAiFixEnabled()) {
+    if (!this.isMsAgentAiFixEnabled()) {
       return false;
     }
 

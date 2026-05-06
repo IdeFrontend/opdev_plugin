@@ -3,12 +3,6 @@ export * from './home';
 
 export * from './config';
 
-export * from './project-sh';
-
 export * from './Operate';
-
-export * from './ms-sanitizer-panel-view';
-
-export * from './performance-run-data';
 
 export * from './welcome';

@@ -35,10 +35,8 @@ export class ViewRenderer extends vscode.Disposable {
       // Determine whether it is a panel or sidebar type view
       const panelViews = [
         'config',
-        'link',
+        'new-project',
         'welcome',
-        'project-sh',
-        'ops-config',
         'options-simulator',
         'options-on-board',
         'options-sanitizer',
@@ -46,9 +44,6 @@ export class ViewRenderer extends vscode.Disposable {
       const sidebarViews = [
         'home',
         'operate',
-        'ms-sanitizer-panel-view',
-        'performance-run-data',
-        'ms-sanitizer-run-data',
         'dump-tensor-data',
       ];
 
