@@ -38,7 +38,6 @@ export default {
   // task
   'task.stoppedByUser': 'Task was stopped by user',
   'task.noRunningTask': 'No task is currently running',
-  'task.stopAndRun': 'Stop and Run',
   'task.openPyFirst': 'Please open a .py file first',
   'task.workspacePathNotFound': 'Workspace path not found',
   'task.launchJsonOpened': 'launch.json opened',
@@ -133,7 +132,6 @@ export default {
   'build.utTestSuccess': 'UT test succeeded',
   'build.getUtTestCommandFailed': 'Failed to get UT test command: {{error}}',
   'build.importDumpTensorBinSuccess': 'DumpTensor .bin file imported successfully',
-  'build.getRunCommandFailedAgain': 'Failed to get run command: {{error}}',
 
   // performance
   'performance.fileDownloadedTo': 'File downloaded to: {{path}}',
@@ -152,7 +150,6 @@ export default {
   'performanceData.missingFilePath': 'Missing file path parameter',
   'performanceData.fileCompareFailed': 'File compare failed: {{error}}',
   'performanceData.fileReadFailedLine': '[Failed to read file: {{error}}]',
-  'performanceData.diffCompareTitle': 'Compare: {{left}} ↔ {{right}}',
 
   // sanitizer
   'sanitizer.detectionSuccess': 'Sanitizer detection succeeded',
@@ -174,13 +171,6 @@ export default {
   'project.createOpFileSuccess': 'Operator file created successfully',
   'project.createOpFileFailed': 'Failed to create operator file {{error}}',
 
-  // ms-sanitizer-controller
-  'msSanitizer.reportCopied': 'Report content copied to clipboard',
-  'msSanitizer.copyReportFailed': 'Failed to copy report: {{error}}',
-  'msSanitizer.fileDownloaded': 'File downloaded successfully',
-  'msSanitizer.downloadCancelled': 'Download cancelled',
-  'msSanitizer.downloadReportFailed': 'Failed to download report: {{error}}',
-
   // webview
   'webview.opsuiteLoadError': 'Opsuite load error: {{message}}',
   'webview.opFileCreated': 'Operator file created',
@@ -201,7 +191,6 @@ export default {
   'view.binPathEmpty': 'BIN file path cannot be empty',
   'view.loadDataFileFailed': 'Failed to load data file: {{error}}',
   'link.fileNotExist': 'File does not exist: {{path}}',
-  'web.link.tritonDisabled': 'Triton support is disabled. Enable op-devtools.operatorSupport.triton in Settings to use Triton.',
 
   // command (domain)
   'command.configNotFound': 'Config not found',
@@ -253,7 +242,6 @@ export default {
   // home
   'home.operatorList': 'Operator list:',
   'home.path': 'Path:',
-  'home.standardCustomOperator': 'Standard custom operator',
   'home.supportsSanitizerAndTuning': 'Supports sanitizer & tuning:',
   'home.projectTypeStandardCustom': 'Standard custom operator',
   'home.projectTypeAscendC': '<<<>>> operator',
@@ -280,13 +268,7 @@ export default {
   'performance.fileSizeKb': 'File size: {{size}} KB',
 
   // ms-sanitizer (progress/dialog)
-  'msSanitizer.filePathEmpty': 'File path cannot be empty',
   'msSanitizer.pathNotFileOrDir': 'Path is not a file or directory',
-  'msSanitizer.downloadingReport': 'Downloading report',
-  'msSanitizer.checkingFile': 'Checking file...',
-  'msSanitizer.preparingDownload': 'Preparing download...',
-  'msSanitizer.saveFile': 'Save file',
-  'msSanitizer.downloadComplete': 'Download complete',
 
   // webview (additional)
   'webview.createPrototypeFailedEmptyPath': 'Create operator prototype file failed: returned path is empty',
@@ -339,7 +321,6 @@ export default {
   'csv.errorDetailsLabel': 'Error:',
 
   // routes
-  'routes.configTitle': 'Operator config',
   'routes.dumpTensorViewTitle': 'DumpTensor data view',
 
   // web home sidebar
@@ -362,13 +343,9 @@ export default {
   'web.openProject.openNow': 'Open now',
 
   // web operate sidebar
-  'web.operate.needProjectHint': 'Create a new operator project or open one via the one-stop platform to use this panel.',
-  'web.operate.projectConfig': 'Project config',
   'web.operate.compileDeploy': 'Compile & deploy',
   'web.operate.run': 'Run',
   'web.operate.sanitizer': 'Sanitizer',
-  'web.operate.sanitizerResults': 'Sanitizer Results',
-  'web.operate.reports': 'Reports',
   'web.operate.performanceTuning': 'Performance tuning',
   'web.operate.onBoardAnalysis': 'On-board analysis',
   'web.operate.simulationAnalysis': 'Simulation analysis',
@@ -377,76 +354,29 @@ export default {
   'web.operate.cpuDebug': 'CPU debug',
   'web.operate.npuDebug': 'NPU debug',
   'web.operate.debug': 'Debug',
-  'web.operate.taskRunningTitle': 'Task "{{taskName}}" is running',
-  'web.operate.taskRunningContent': 'Only one task can run at a time. Stop the current "{{taskName}}" task and run the new one?',
-  'web.operate.stopAndRun': 'Stop and run',
-  'web.operate.cancel': 'Cancel',
-  'web.operate.stopTask': 'Stop {{name}}',
-  'web.operate.stopTaskDefault': 'Task',
   'web.operate.selectedCount': '{{count}} selected',
-  'web.operate.unknownProjectType': 'Unknown',
   'web.operate.searchOperatorProject': 'Search operator project',
-  'web.operate.compiledOperators': 'Compiled operators',
-  'web.operate.preparedOperators': 'Prepared operators',
-  'web.operate.operatorProjects': 'Operators',
-  'web.operate.clearAll': 'Clear all',
-  'web.operate.selectAll': 'Select all',
-  'web.operate.confirm': 'Confirm',
   'web.operate.pleaseSelectOperatorProject': 'Please select an operator project',
   'web.operate.singleOperatorOnly': 'This action supports single operator only',
-  'web.operate.noSelectCompileAll': 'If none selected, the whole operator package is compiled',
   'web.operate.actionsTitle': 'Actions',
   'web.operate.noActionsAvailable': 'No actions available in current tree view.',
 
   // web performance-run-data / ms-sanitizer-run-data
   'web.perf.noData': 'No data',
-  'web.perf.executionTime': 'Execution time',
-  'web.perf.marked': 'Marked',
   'web.perf.pathCopied': 'Path copied to clipboard',
-  'web.perf.copyFailed': 'Copy path failed',
-  'web.perf.preparingDownload': 'Preparing download...',
-  'web.perf.saveFile': 'Save file',
-  'web.perf.downloadSuccess': 'Download succeeded',
-  'web.perf.downloadCancelled': 'Download cancelled or incomplete',
-  'web.perf.downloadFailed': 'Download failed',
-  'web.perf.downloadFailedGeneric': 'Download failed',
-  'web.perf.copyReport': 'Copy report',
-  'web.perf.downloadReport': 'Download report',
-  'web.perf.markUnmark': 'Mark / Unmark',
   'web.perf.markFailed': 'Mark operation failed',
-  'web.resultsTree.performanceTuningResults': 'Performance tuning results',
 
   // web ms-sanitizer-panel-view
   'web.sanitizerPanel.sanitizerResult': 'Sanitizer result',
   'web.sanitizerPanel.noReport': 'No report',
   'web.sanitizerPanel.noReports': 'No reports',
-  'web.sanitizerPanel.detectionResult': 'Detection result',
-  'web.sanitizerPanel.detectionInfo': 'Detection info',
-  'web.sanitizerPanel.detectionTime': 'Detection time',
-  'web.sanitizerPanel.detectionContent': 'Detection content',
-  'web.sanitizerPanel.detectionContentDesc': 'Memory: illegal read/write, multi-core stomp, unaligned access, illegal free, leak, unused allocation, device memory, CANN stack, race, uninitialized.',
-  'web.sanitizerPanel.detectionScope': 'Scope',
-  'web.sanitizerPanel.globalMonitor': 'Global monitor',
   'web.sanitizerPanel.memory': 'Memory',
   'web.sanitizerPanel.memoryRace': 'Memory race',
   'web.sanitizerPanel.uninitialized': 'Uninitialized',
   'web.sanitizerPanel.sync': 'Sync',
   'web.sanitizerPanel.other': 'Other',
-  'web.sanitizerPanel.hostSideHint': 'This is a HOST-side issue. Check the details on the right.',
-  'web.sanitizerPanel.detail': 'Detail',
   'web.sanitizerPanel.problem': 'Problem',
-  'web.sanitizerPanel.problemDetail': 'Problem detail',
-  'web.sanitizerPanel.problemTypeDetail': 'Problem type detail',
   'web.sanitizerPanel.selectReportHint': 'Select a report on the left to view detection result',
-  'web.sanitizerPanel.problemDesc': 'Description',
-  'web.sanitizerPanel.problemType': 'Type',
-  'web.sanitizerPanel.sourceFile': 'Source file',
-  'web.sanitizerPanel.lineNumber': 'Line',
-  'web.sanitizerPanel.aiFix': 'AI fix',
-  'web.sanitizerPanel.fixing': 'fixing',
-  'web.sanitizerPanel.queued': 'queued',
-  'web.sanitizerPanel.connecting': 'connecting',
-  'web.sanitizerPanel.fixed': 'fixed',
   'web.sanitizerPanel.handler.illegalRead': 'Illegal read/write issues occur when operator code reads or writes memory that was not allocated. This usually occurs in GM or on-chip memory, caused by mismatched GM allocation/access range or by exceeding on-chip hardware capacity.',
   'web.sanitizerPanel.handler.illegalWrite': 'Illegal read/write issues occur when operator code reads or writes memory that was not allocated. This usually occurs in GM or on-chip memory, caused by mismatched GM allocation/access range or by exceeding on-chip hardware capacity.',
   'web.sanitizerPanel.handler.outOfBounds': 'AI Core is the compute core of Ascend AI processors. Without explicit inter-core synchronization, if cores access overlapping GM regions and at least one core writes, multi-core stomp may occur. Ownership-based checking reports out-of-bounds when another core accesses memory owned by a different core.',
@@ -507,7 +437,6 @@ export default {
   'web.welcome.featureHighlight': 'Syntax highlighting',
   'web.welcome.featureCompletion': 'Code completion',
   'web.welcome.featureCompileDeploy': 'Compile & deploy',
-  'web.welcome.viewGuide': 'View guide',
   'web.welcome.tabWriteCode': 'Write operator code',
   'web.welcome.tabCompileDeploy': 'Compile & deploy',
   'web.welcome.tabRun': 'Run operator',
@@ -569,87 +498,6 @@ export default {
   'web.link.validation.scriptNotExist': 'Script file does not exist. Please confirm.',
   'web.link.validation.failed': 'Validation failed',
 
-  // web config panel
-  'web.config.title': 'Operator project config',
-  'web.config.buildTitle': 'Build config',
-  'web.config.opLabel': 'Operator name to compile',
-  'web.config.opPlaceholder': 'Enter operator name',
-  'web.config.targetDirLabel': 'Compile output path',
-  'web.config.targetDirPlaceholder': 'Enter output path',
-  'web.config.deployCommandLabel': 'Deploy command',
-  'web.config.runCommandLabel': 'Run command',
-  'web.config.deployCommandPlaceholder': 'Enter deploy command',
-  'web.config.runCommandPlaceholder': 'Enter run command',
-  'web.config.compileCommandLabel': 'Compile command',
-  'web.config.compileCommandPlaceholder': 'Enter compile command',
-  'web.config.cpuDebugScriptLabel': 'CPU debug compile command',
-  'web.config.cpuDebugScriptPlaceholder': 'Enter CPU debug compile command',
-  'web.config.npuDebugScriptLabel': 'NPU debug compile command',
-  'web.config.npuDebugScriptPlaceholder': 'Enter NPU debug compile command',
-  'web.config.sanitizerScriptLabel': 'Sanitizer compile command',
-  'web.config.sanitizerScriptPlaceholder': 'Enter sanitizer compile command',
-  'web.config.onboardScriptLabel': 'On-board compile command',
-  'web.config.onboardScriptPlaceholder': 'Enter on-board compile command',
-  'web.config.simulateScriptLabel': 'Simulation compile command',
-  'web.config.simulateScriptPlaceholder': 'Enter simulation compile command',
-  'web.config.exampleConfigTitle': 'Example build config',
-  'web.config.executionModeLabel': 'Execution mode',
-  'web.config.executionModeEager': 'eager (aclnn)',
-  'web.config.executionModeGraph': 'graph (graph mode)',
-  'web.config.exampleRunCommandLabel': 'Run command',
-  'web.config.exampleRunCommandTooltip': 'Operator name, execution mode and package mode are appended automatically.',
-  'web.config.exampleRunCommandPlaceholder': 'Enter run command',
-
-  // web config options-list (sidebar menu)
-  'web.config.optionBuild': 'Compile & deploy',
-  'web.config.optionSanitizer': 'Sanitizer',
-  'web.config.optionPerformance': 'Performance tuning',
-  'web.config.optionEnv': 'Environment',
-
-  // web config sanitizer-config
-  'web.config.sanitizer.logLevel': 'Report log level',
-  'web.config.sanitizer.logLevelInfo': 'info: output info/warn/error',
-  'web.config.sanitizer.logLevelWarn': 'warn: output warn/error',
-  'web.config.sanitizer.logLevelError': 'error: output error only',
-  'web.config.sanitizer.maxLogSize': 'Max single log file size',
-  'web.config.sanitizer.maxLogSizeTooltip': 'Integer 1–10240, unit MB. Default 1024.',
-  'web.config.sanitizer.scope': 'Detection scope',
-  'web.config.sanitizer.scopeTooltip': 'Integer 0–200. Before enable: memory/init/sync detect all blocks; race: inter-core all blocks, intra-core block 0. After enable: memory/init/sync detect specified block; race: no inter-core, specified block intra-core.',
-  'web.config.sanitizer.scopeGlobal': 'Global',
-  'web.config.sanitizer.scopeBlock': 'Single block',
-
-  // web config simulation-tab
-  'web.config.simulatorType': 'Simulator type',
-  'web.config.simulatorTypeTooltip': 'See supported types under CANN path ascend-toolkit/latest/tools/simulator',
-  'web.config.simulatorTypePlaceholder': 'Enter simulator type',
-
-  // web config opprof-config
-  'web.config.opprofTabSimulate': 'Simulation',
-  'web.config.opprofTabOnboard': 'On-board',
-
-  // web config onboard-tab
-  'web.config.onboard.enableKernelProf': 'Enable kernel code-segment profiling',
-  'web.config.onboard.kernelProfHint': 'For custom range, call MetricsProfStart and MetricsProfStop in kernel code. See',
-  'web.config.onboard.and': 'and',
-  'web.config.onboard.api': 'API',
-  'web.config.onboard.confirmKernelProf': 'Confirm you have called MetricsProfStart and MetricsProfStop around the kernel code segment; otherwise this option has no effect. See',
-
-  // web config env-config (in config panel)
-  'web.config.env.saveSuccess': 'Environment config saved',
-  'web.config.env.saveFailed': 'Environment config failed',
-  'web.config.env.confirm': 'Confirm',
-
-  // web config edit-table
-  'web.config.editTable.paramName': 'Parameter name',
-  'web.config.editTable.paramValue': 'Parameter value',
-  'web.config.editTable.action': 'Action',
-  'web.config.editTable.addParam': 'Add parameter',
-  'web.config.editTable.addParamTooltip': 'Parameters are appended to command line. Run msprof op -h for options. aic-metrics is set in base config.',
-  'web.config.editTable.paramNameTooltip': 'Parameter name has -- prefix by default',
-
-  // web config-detail (tab title)
-  'web.config.configData': 'Config data',
-
   // web dump-tensor-data
   'web.dump.selectTwoFiles': 'Select at least two files to compare',
   'web.dump.maxSelectCount': 'At most {{count}} files can be selected for comparison',
@@ -663,7 +511,6 @@ export default {
   'web.dump.importFailed': 'Import failed',
 
   // web options-simulator / options-on-board / options-sanitizer (shared)
-  'web.options.taskRunning': 'A task is still running. Please try again later.',
   'web.options.simulationFailed': 'Simulation failed and stopped',
   'web.options.onboardFailed': 'On-board analysis failed',
   'web.options.sanitizerFailed': 'Sanitizer failed',
@@ -718,6 +565,4 @@ export default {
   'web.options.sanitizer.startNow': 'Start now',
   'web.options.sanitizer.doNotShowAgain': 'Do not show again',
 
-  // web project-sh
-  'web.projectSh.title': 'Environment config',
 };

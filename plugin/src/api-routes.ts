@@ -1,6 +1,5 @@
 import { webviewMethods } from './controller/index';
 import { commonMethods } from './controller/common-controller';
-import { msSanitizerMethods } from './controller/ms-sanitizer-controller';
 import { viewMethods } from './controller/view-controller';
 import { welcomeMethods } from './controller/welcome-controller';
 import { taskMethods } from './controller/task-controller';
@@ -10,7 +9,6 @@ import { linkMethods } from './controller/link-controller';
 import { sanitizerViewMethods } from './controller/sanitizer-controller';
 import { homeMethods } from './controller/home-controller';
 import { performanceMethods } from './controller/performance-data-controller';
-import { navigationController } from './controller/navigation-controller';
 import {
   dispatchStartBuild,
   dispatchStartRun,
@@ -74,9 +72,7 @@ const opsMethods = {
 export const apis = {
   webview: webviewMethods,
   common: commonMethods,
-  msSanitizer: msSanitizerMethods,
   view: viewMethods,
   ops: opsMethods,
   performance: performanceMethods,
-  navigation: navigationController,
 };
