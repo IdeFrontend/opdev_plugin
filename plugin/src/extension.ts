@@ -359,6 +359,72 @@ export async function activate(context: vscode.ExtensionContext) {
     cursor[segments[segments.length - 1]] = value;
   };
 
+  const getDeclaredOpDevtoolsDottedKeys = (): string[] => {
+    const prefix = 'op-devtools.';
+    const contributes = (context.extension.packageJSON as { contributes?: { configuration?: unknown } }).contributes;
+    const configuration = contributes?.configuration;
+    const blocks = Array.isArray(configuration) ? configuration : [configuration];
+    const keys = new Set<string>();
+
+    for (const block of blocks) {
+      if (!block || typeof block !== 'object') {
+        continue;
+      }
+      const properties = (block as { properties?: Record<string, unknown> }).properties;
+      if (!properties || typeof properties !== 'object') {
+        continue;
+      }
+
+      for (const key of Object.keys(properties)) {
+        if (!key.startsWith(prefix)) {
+          continue;
+        }
+        const relativeKey = key.slice(prefix.length);
+        if (relativeKey.length === 0) {
+          continue;
+        }
+        keys.add(relativeKey);
+      }
+    }
+
+    return Array.from(keys);
+  };
+
+  const DOTTED_OP_DEVTOOLS_KEYS = getDeclaredOpDevtoolsDottedKeys();
+
+  const normalizeDottedOpDevtoolsWorkspaceSettings = async (): Promise<boolean> => {
+    try {
+      const cfg = vscode.workspace.getConfiguration('op-devtools');
+      const nextSettings = getOpDevtoolsObject();
+      let changed = false;
+
+      for (const relativeKey of DOTTED_OP_DEVTOOLS_KEYS) {
+        const inspection = cfg.inspect<unknown>(relativeKey);
+        if (!inspection || inspection.workspaceValue === undefined) {
+          continue;
+        }
+        setValueByPath(nextSettings, relativeKey, inspection.workspaceValue);
+        await cfg.update(relativeKey, undefined, vscode.ConfigurationTarget.Workspace);
+        changed = true;
+      }
+
+      if (!changed) {
+        return false;
+      }
+
+      await vscode.workspace.getConfiguration().update(
+        'op-devtools',
+        nextSettings,
+        vscode.ConfigurationTarget.Workspace,
+      );
+      return true;
+    }
+    catch (error) {
+      console.warn('[normalizeDottedOpDevtoolsWorkspaceSettings] failed:', error);
+      return false;
+    }
+  };
+
   const syncOperatorProjectWorkspaceSettings = async () => {
     const toKeyValueMap = (raw: unknown): Record<string, string> => {
       if (!Array.isArray(raw)) {
@@ -672,16 +738,31 @@ export async function activate(context: vscode.ExtensionContext) {
     const operatorAffected = e.affectsConfiguration('op-devtools.operatorProject');
     const operatorSupportAffected = e.affectsConfiguration('op-devtools.operatorSupport');
     const tritonSupportAffected = e.affectsConfiguration('op-devtools.operatorSupport.triton');
+    const opDevtoolsAffected = e.affectsConfiguration('op-devtools');
     logDebug('event:onDidChangeConfiguration', {
       isSyncingWorkspaceSettings,
       envAffected,
       operatorAffected,
       operatorSupportAffected,
       tritonSupportAffected,
+      opDevtoolsAffected,
     });
     if (isSyncingWorkspaceSettings) {
       logDebug('event:onDidChangeConfiguration:ignoredDueToSync');
       return;
+    }
+    if (opDevtoolsAffected) {
+      isSyncingWorkspaceSettings = true;
+      try {
+        const normalized = await normalizeDottedOpDevtoolsWorkspaceSettings();
+        if (normalized) {
+          logDebug('event:onDidChangeConfiguration:normalizedDottedOpDevtoolsSettings');
+          return;
+        }
+      }
+      finally {
+        isSyncingWorkspaceSettings = false;
+      }
     }
     if (
       envAffected
