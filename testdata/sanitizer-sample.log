@@ -1,0 +1,374 @@
+====== WARNING: out of bounds of size 64 at test case 1
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:90:11
+====== detail: memory warning sample 1
+====== SUMMARY: memory warning 1
+
+====== WARNING: out of bounds of size 64 at test case 2
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:140:12
+====== detail: memory warning sample 2
+====== SUMMARY: memory warning 2
+
+====== WARNING: out of bounds of size 64 at test case 3
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:10:13
+====== detail: memory warning sample 3
+====== SUMMARY: memory warning 3
+
+====== WARNING: out of bounds of size 64 at test case 4
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:30:14
+====== detail: memory warning sample 4
+====== SUMMARY: memory warning 4
+
+====== WARNING: out of bounds of size 64 at test case 5
+====== #0 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:33:15
+====== detail: memory warning sample 5
+====== SUMMARY: memory warning 5
+
+====== WARNING: out of bounds of size 64 at test case 6
+====== #0 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:19:16
+====== detail: memory warning sample 6
+====== SUMMARY: memory warning 6
+
+====== WARNING: out of bounds of size 64 at test case 7
+====== #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:19:17
+====== detail: memory warning sample 7
+====== SUMMARY: memory warning 7
+
+====== WARNING: out of bounds of size 64 at test case 8
+====== #0 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:47:18
+====== detail: memory warning sample 8
+====== SUMMARY: memory warning 8
+
+====== WARNING: out of bounds of size 64 at test case 9
+====== #0 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:32:19
+====== detail: memory warning sample 9
+====== SUMMARY: memory warning 9
+
+====== WARNING: out of bounds of size 64 at test case 10
+====== #0 C:/Projects/ops-math/scripts/torch_extension/init.cpp:14:20
+====== detail: memory warning sample 10
+====== SUMMARY: memory warning 10
+
+====== ERROR: illegal read of size 32 at test case 1
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:90:21
+====== detail: memory error sample 1
+====== SUMMARY: memory error 1
+
+====== ERROR: illegal read of size 32 at test case 2
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:140:22
+====== detail: memory error sample 2
+====== SUMMARY: memory error 2
+
+====== ERROR: illegal read of size 32 at test case 3
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:10:23
+====== detail: memory error sample 3
+====== SUMMARY: memory error 3
+
+====== ERROR: illegal read of size 32 at test case 4
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:30:24
+====== detail: memory error sample 4
+====== SUMMARY: memory error 4
+
+====== ERROR: illegal read of size 32 at test case 5
+====== #0 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:33:25
+====== detail: memory error sample 5
+====== SUMMARY: memory error 5
+
+====== WARNING: Potential RAW hazard detected at test case 1
+====== #0 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:19:11
+====== detail: memory race warning sample 1
+====== SUMMARY: race warning 1
+
+====== WARNING: Potential RAW hazard detected at test case 2
+====== #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:19:12
+====== detail: memory race warning sample 2
+====== SUMMARY: race warning 2
+
+====== WARNING: Potential RAW hazard detected at test case 3
+====== #0 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:47:13
+====== detail: memory race warning sample 3
+====== SUMMARY: race warning 3
+
+====== WARNING: Potential RAW hazard detected at test case 4
+====== #0 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:32:14
+====== detail: memory race warning sample 4
+====== SUMMARY: race warning 4
+
+====== WARNING: Potential RAW hazard detected at test case 5
+====== #0 C:/Projects/ops-math/scripts/torch_extension/init.cpp:14:15
+====== detail: memory race warning sample 5
+====== SUMMARY: race warning 5
+
+====== WARNING: Potential RAW hazard detected at test case 6
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:90:16
+====== detail: memory race warning sample 6
+====== SUMMARY: race warning 6
+
+====== WARNING: Potential RAW hazard detected at test case 7
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:140:17
+====== detail: memory race warning sample 7
+====== SUMMARY: race warning 7
+
+====== WARNING: Potential RAW hazard detected at test case 8
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:10:18
+====== detail: memory race warning sample 8
+====== SUMMARY: race warning 8
+
+====== WARNING: Potential RAW hazard detected at test case 9
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:30:19
+====== detail: memory race warning sample 9
+====== SUMMARY: race warning 9
+
+====== WARNING: Potential RAW hazard detected at test case 10
+====== #0 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:33:20
+====== detail: memory race warning sample 10
+====== SUMMARY: race warning 10
+
+====== ERROR: Potential RAW hazard detected at test case 1
+====== #0 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:19:21
+====== detail: memory race error sample 1
+====== SUMMARY: race error 1
+
+====== ERROR: Potential RAW hazard detected at test case 2
+====== #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:19:22
+====== detail: memory race error sample 2
+====== SUMMARY: race error 2
+
+====== ERROR: Potential RAW hazard detected at test case 3
+====== #0 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:47:23
+====== detail: memory race error sample 3
+====== SUMMARY: race error 3
+
+====== ERROR: Potential RAW hazard detected at test case 4
+====== #0 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:32:24
+====== detail: memory race error sample 4
+====== SUMMARY: race error 4
+
+====== ERROR: Potential RAW hazard detected at test case 5
+====== #0 C:/Projects/ops-math/scripts/torch_extension/init.cpp:14:25
+====== detail: memory race error sample 5
+====== SUMMARY: race error 5
+
+====== WARNING: uninitialized read of size 16 at test case 1
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:90:11
+====== detail: uninitialized warning sample 1
+====== SUMMARY: uninitialized warning 1
+
+====== WARNING: uninitialized read of size 16 at test case 2
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:140:12
+====== detail: uninitialized warning sample 2
+====== SUMMARY: uninitialized warning 2
+
+====== WARNING: uninitialized read of size 16 at test case 3
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:10:13
+====== detail: uninitialized warning sample 3
+====== SUMMARY: uninitialized warning 3
+
+====== WARNING: uninitialized read of size 16 at test case 4
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:30:14
+====== detail: uninitialized warning sample 4
+====== SUMMARY: uninitialized warning 4
+
+====== WARNING: uninitialized read of size 16 at test case 5
+====== #0 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:33:15
+====== detail: uninitialized warning sample 5
+====== SUMMARY: uninitialized warning 5
+
+====== WARNING: uninitialized read of size 16 at test case 6
+====== #0 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:19:16
+====== detail: uninitialized warning sample 6
+====== SUMMARY: uninitialized warning 6
+
+====== WARNING: uninitialized read of size 16 at test case 7
+====== #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:19:17
+====== detail: uninitialized warning sample 7
+====== SUMMARY: uninitialized warning 7
+
+====== WARNING: uninitialized read of size 16 at test case 8
+====== #0 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:47:18
+====== detail: uninitialized warning sample 8
+====== SUMMARY: uninitialized warning 8
+
+====== WARNING: uninitialized read of size 16 at test case 9
+====== #0 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:32:19
+====== detail: uninitialized warning sample 9
+====== SUMMARY: uninitialized warning 9
+
+====== WARNING: uninitialized read of size 16 at test case 10
+====== #0 C:/Projects/ops-math/scripts/torch_extension/init.cpp:14:20
+====== detail: uninitialized warning sample 10
+====== SUMMARY: uninitialized warning 10
+
+====== ERROR: uninitialized read of size 16 at test case 1
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:90:21
+====== detail: uninitialized error sample 1
+====== SUMMARY: uninitialized error 1
+
+====== ERROR: uninitialized read of size 16 at test case 2
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:140:22
+====== detail: uninitialized error sample 2
+====== SUMMARY: uninitialized error 2
+
+====== ERROR: uninitialized read of size 16 at test case 3
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:10:23
+====== detail: uninitialized error sample 3
+====== SUMMARY: uninitialized error 3
+
+====== ERROR: uninitialized read of size 16 at test case 4
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:30:24
+====== detail: uninitialized error sample 4
+====== SUMMARY: uninitialized error 4
+
+====== ERROR: uninitialized read of size 16 at test case 5
+====== #0 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:33:25
+====== detail: uninitialized error sample 5
+====== SUMMARY: uninitialized error 5
+
+====== WARNING: Unpaired set_flag insetructions detected at test case 1
+====== #0 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:19:11
+====== detail: sync warning sample 1
+====== SUMMARY: sync warning 1
+
+====== WARNING: Unpaired set_flag insetructions detected at test case 2
+====== #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:19:12
+====== detail: sync warning sample 2
+====== SUMMARY: sync warning 2
+
+====== WARNING: Unpaired set_flag insetructions detected at test case 3
+====== #0 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:47:13
+====== detail: sync warning sample 3
+====== SUMMARY: sync warning 3
+
+====== WARNING: Unpaired set_flag insetructions detected at test case 4
+====== #0 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:32:14
+====== detail: sync warning sample 4
+====== SUMMARY: sync warning 4
+
+====== WARNING: Unpaired set_flag insetructions detected at test case 5
+====== #0 C:/Projects/ops-math/scripts/torch_extension/init.cpp:14:15
+====== detail: sync warning sample 5
+====== SUMMARY: sync warning 5
+
+====== WARNING: Unpaired set_flag insetructions detected at test case 6
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:90:16
+====== detail: sync warning sample 6
+====== SUMMARY: sync warning 6
+
+====== WARNING: Unpaired set_flag insetructions detected at test case 7
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:140:17
+====== detail: sync warning sample 7
+====== SUMMARY: sync warning 7
+
+====== WARNING: Unpaired set_flag insetructions detected at test case 8
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:10:18
+====== detail: sync warning sample 8
+====== SUMMARY: sync warning 8
+
+====== WARNING: Unpaired set_flag insetructions detected at test case 9
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:30:19
+====== detail: sync warning sample 9
+====== SUMMARY: sync warning 9
+
+====== WARNING: Unpaired set_flag insetructions detected at test case 10
+====== #0 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:33:20
+====== detail: sync warning sample 10
+====== SUMMARY: sync warning 10
+
+====== ERROR: Unpaired set_flag insetructions detected at test case 1
+====== #0 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:19:21
+====== detail: sync error sample 1
+====== SUMMARY: sync error 1
+
+====== ERROR: Unpaired set_flag insetructions detected at test case 2
+====== #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:19:22
+====== detail: sync error sample 2
+====== SUMMARY: sync error 2
+
+====== ERROR: Unpaired set_flag insetructions detected at test case 3
+====== #0 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:47:23
+====== detail: sync error sample 3
+====== SUMMARY: sync error 3
+
+====== ERROR: Unpaired set_flag insetructions detected at test case 4
+====== #0 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:32:24
+====== detail: sync error sample 4
+====== SUMMARY: sync error 4
+
+====== ERROR: Unpaired set_flag insetructions detected at test case 5
+====== #0 C:/Projects/ops-math/scripts/torch_extension/init.cpp:14:25
+====== detail: sync error sample 5
+====== SUMMARY: sync error 5
+
+====== WARNING: custom sanitizer issue for other class warning 1
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:90:11
+====== detail: other warning sample 1
+====== SUMMARY: other warning 1
+
+====== WARNING: custom sanitizer issue for other class warning 2
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:140:12
+====== detail: other warning sample 2
+====== SUMMARY: other warning 2
+
+====== WARNING: custom sanitizer issue for other class warning 3
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:10:13
+====== detail: other warning sample 3
+====== SUMMARY: other warning 3
+
+====== WARNING: custom sanitizer issue for other class warning 4
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:30:14
+====== detail: other warning sample 4
+====== SUMMARY: other warning 4
+
+====== WARNING: custom sanitizer issue for other class warning 5
+====== #0 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:33:15
+====== detail: other warning sample 5
+====== SUMMARY: other warning 5
+
+====== WARNING: custom sanitizer issue for other class warning 6
+====== #0 C:/Projects/ops-math/tests/ut/op_graph/test_op_graph_main.cpp:19:16
+====== detail: other warning sample 6
+====== SUMMARY: other warning 6
+
+====== WARNING: custom sanitizer issue for other class warning 7
+====== #0 C:/Projects/ops-math/tests/ut/op_api/test_op_api_main.cpp:19:17
+====== detail: other warning sample 7
+====== SUMMARY: other warning 7
+
+====== WARNING: custom sanitizer issue for other class warning 8
+====== #0 C:/Projects/ops-math/tests/ut/common/tiling_context_faker.cpp:47:18
+====== detail: other warning sample 8
+====== SUMMARY: other warning 8
+
+====== WARNING: custom sanitizer issue for other class warning 9
+====== #0 C:/Projects/ops-math/tests/ut/common/infershape_context_faker.cpp:32:19
+====== detail: other warning sample 9
+====== SUMMARY: other warning 9
+
+====== WARNING: custom sanitizer issue for other class warning 10
+====== #0 C:/Projects/ops-math/scripts/torch_extension/init.cpp:14:20
+====== detail: other warning sample 10
+====== SUMMARY: other warning 10
+
+====== ERROR: custom sanitizer issue for other class error 1
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_test_utils.cpp:90:21
+====== detail: other error sample 1
+====== SUMMARY: other error 1
+
+====== ERROR: custom sanitizer issue for other class error 2
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/utils/aicpu_read_file.cpp:140:22
+====== detail: other error sample 2
+====== SUMMARY: other error 2
+
+====== ERROR: custom sanitizer issue for other class error 3
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel_aicpu/test_op_kernel_aicpu_main.cpp:10:23
+====== detail: other error sample 3
+====== SUMMARY: other error 3
+
+====== ERROR: custom sanitizer issue for other class error 4
+====== #0 C:/Projects/ops-math/tests/ut/op_kernel/test_op_kernel_main.cpp:30:24
+====== detail: other error sample 4
+====== SUMMARY: other error 4
+
+====== ERROR: custom sanitizer issue for other class error 5
+====== #0 C:/Projects/ops-math/tests/ut/op_host/test_op_host_main.cpp:33:25
+====== detail: other error sample 5
+====== SUMMARY: other error 5

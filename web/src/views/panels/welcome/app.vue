@@ -319,14 +319,22 @@
                 />
               </a-tab-pane>
               <a-tab-pane key="build" :tab="t('web.welcome.tabCompileDeploy')">
-                <a-image
+                <video
                   :src="buildImg"
+                  autoplay
+                  loop
+                  muted
+                  playsinline
                   class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
                 />
               </a-tab-pane>
               <a-tab-pane key="run" :tab="t('web.welcome.tabRun')">
-                <a-image
+                <video
                   :src="runImg"
+                  autoplay
+                  loop
+                  muted
+                  playsinline
                   class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
                 />
               </a-tab-pane>
@@ -359,8 +367,12 @@
 
             <!-- 右侧：算子调试示意图 -->
             <div class="w-1/2 max-[992px]:w-full max-[992px]:mt-6">
-              <a-image
+              <video
                 :src="debug"
+                autoplay
+                loop
+                muted
+                playsinline
                 class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
               />
             </div>
@@ -397,14 +409,22 @@
             <div class="w-1/2 max-[992px]:w-full max-[992px]:mt-6">
               <a-tabs v-model:activeKey="checkTabKey">
                 <a-tab-pane key="select" :tab="t('web.welcome.tabSelectCheckContent')">
-                  <a-image
+                  <video
                     :src="selectCheckImg"
+                    autoplay
+                    loop
+                    muted
+                    playsinline
                     class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
                   />
                 </a-tab-pane>
                 <a-tab-pane key="result" :tab="t('web.welcome.tabViewCheckResult')">
-                  <a-image
+                  <video
                     :src="checkImg"
+                    autoplay
+                    loop
+                    muted
+                    playsinline
                     class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
                   />
                 </a-tab-pane>
@@ -442,14 +462,22 @@
             <div class="w-1/2 max-[992px]:w-full max-[992px]:mt-6">
               <a-tabs v-model:activeKey="perfTabKey">
                 <a-tab-pane key="select" :tab="t('web.welcome.tabSelectAnalysisContent')">
-                  <a-image
+                  <video
                     :src="selectAnalysisImg"
+                    autoplay
+                    loop
+                    muted
+                    playsinline
                     class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
                   />
                 </a-tab-pane>
                 <a-tab-pane key="result" :tab="t('web.welcome.tabViewAnalysisResult')">
-                  <a-image
+                  <video
                     :src="analysisImg"
+                    autoplay
+                    loop
+                    muted
+                    playsinline
                     class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
                   />
                 </a-tab-pane>
@@ -500,13 +528,13 @@ import tipBase_1_2 from '@/assets/imgs/add_custom.png';
 import tipBase_1_3 from '@/assets/imgs/torch_library_template.png';
 import tritonVectorAddPreview from '@/assets/imgs/triton_vector_add.png';
 import writeImg from '@/assets/imgs/write.png';
-import buildImg from '@/assets/imgs/build.gif';
-import runImg from '@/assets/imgs/run.gif';
-import debug from '@/assets/imgs/debug.gif';
-import checkImg from '@/assets/imgs/check.gif';
-import selectCheckImg from '@/assets/imgs/selectCheck.gif';
-import analysisImg from '@/assets/imgs/analysis.gif';
-import selectAnalysisImg from '@/assets/imgs/selectAnalysis.gif';
+import buildImg from '@/assets/imgs/build.mp4';
+import runImg from '@/assets/imgs/run.mp4';
+import debug from '@/assets/imgs/debug.mp4';
+import checkImg from '@/assets/imgs/check.mp4';
+import selectCheckImg from '@/assets/imgs/selectCheck.mp4';
+import analysisImg from '@/assets/imgs/analysis.mp4';
+import selectAnalysisImg from '@/assets/imgs/selectAnalysis.mp4';
 
 
 const { themeConfig, actualTheme } = useTheme();

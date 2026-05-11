@@ -1,12 +1,21 @@
 import { t } from 'i18next';
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
+import type { JumpToFileParams } from '@shared/api-types';
 
 import { configMethods } from '@plugin/controller/config-controller';
 import { homeMethods } from '@plugin/controller/home-controller';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
+import { performanceDataMethods } from '@plugin/controller/performance-controller';
 import { ensureEnvironmentScriptForOperateAction } from '@plugin/helpers/environment-script-guard';
 import { appendLog } from '@plugin/helpers/output-channel';
-import { COMMAND_SIDEBAR_TOGGLE_OPERATOR } from '../constants';
+import { loadMsSanitizerPanelData } from '@plugin/class/ms-sanitizer-panel-view';
+import { runDataService } from '@plugin/service/run-data-service';
+import {
+  COMMAND_SIDEBAR_TOGGLE_OPERATOR,
+  COMMAND_SIDEBAR_SANITIZER_STACK_JUMP,
+} from '../constants';
 
 export type OperateNodeId =
   | 'build'
@@ -20,12 +29,21 @@ export type OperateNodeId =
   | 'simulation'
   | 'utTest'
   | 'dumpTensor'
+  | 'sanitizerResultsRoot'
+  | 'sanitizerReportsRoot'
+  | 'sanitizerClass'
+  | 'sanitizerMessage'
+  | 'sanitizerReportItem'
   | 'selectOperators'
   | 'selectedOperators'
   | 'operatorItem';
 
 export interface OperateNode extends vscode.TreeItem {
   nodeId: OperateNodeId;
+  sanitizerTooltipMeta?: {
+    reportPath: string;
+    globalIndex: number;
+  };
 }
 
 type OperateSidebarState = {
@@ -46,7 +64,92 @@ type OperateSidebarState = {
 
   searchKeyword: string;
   selectedOperatorIds: number[];
+  sanitizer: {
+    reports: SanitizerReportRecord[];
+    sortOrder: 'asc' | 'desc';
+    markedOnly: boolean;
+    selectedReportPath?: string;
+    selectedReportTitle?: string;
+    selectedMessages: SanitizerMessageRecord[];
+    resultsGroupBy: 'class' | 'severity' | 'type' | 'file';
+    hideDuplicates: boolean;
+    reportRevision: number;
+    manualReports: SanitizerReportRecord[];
+  };
 };
+
+type SanitizerReportRecord = {
+  title: string;
+  timestamp: number;
+  id: string;
+  path: string;
+  marked: boolean;
+};
+
+type SanitizerMessageRecord = {
+  title: string;
+  type: 'error' | 'warning';
+  questionType: string;
+  question: string;
+  msAgentIndex?: number;
+  fileLink?: string;
+  row?: number;
+  col?: number;
+  originData: string;
+};
+
+type SanitizerGroupMode = 'class' | 'severity' | 'type' | 'file';
+
+type SanitizerMessageDerived = {
+  classKey: string;
+  classLabel: string;
+  typeKey: string;
+  typeLabel: string;
+  fileKey: string;
+  fileLabel: string;
+  severityRank: number;
+  tooltip?: vscode.MarkdownString;
+};
+
+type SanitizerGroupedReportNode = {
+  key: string;
+  label: string;
+  description: string;
+  contextValue?: string;
+  messageIndices: number[];
+};
+
+const sanitizerQuestionLabelKeyMap = new Map<string, string>([
+  ['illegal read of size', 'exceptionParser.illegalRead'],
+  ['illegal write of size', 'exceptionParser.illegalWrite'],
+  ['out of bounds of size', 'exceptionParser.multiCoreStomp'],
+  ['misaligned access of size', 'exceptionParser.unalignedAccess'],
+  ['LeakCheck: detected memory leaks', 'exceptionParser.memoryLeak'],
+  ['direct leak of', 'exceptionParser.memoryLeak'],
+  ['illegal free()', 'exceptionParser.illegalFree'],
+  ['Unused memory', 'exceptionParser.allocUnused'],
+  ['Potential RAW hazard detected', 'exceptionParser.rawHazard'],
+  ['Potential WAW hazard detected', 'exceptionParser.wawHazard'],
+  ['Potential WAR hazard detected', 'exceptionParser.warHazard'],
+  ['uninitialized read of size', 'exceptionParser.uninitException'],
+  ['Unpaired set_flag insetructions detected', 'exceptionParser.syncException'],
+]);
+
+const sanitizerQuestionHandlerKeyMap = new Map<string, string>([
+  ['illegal read of size', 'web.sanitizerPanel.handler.illegalRead'],
+  ['illegal write of size', 'web.sanitizerPanel.handler.illegalWrite'],
+  ['out of bounds of size', 'web.sanitizerPanel.handler.outOfBounds'],
+  ['misaligned access of size', 'web.sanitizerPanel.handler.misalignedAccess'],
+  ['LeakCheck: detected memory leaks', 'web.sanitizerPanel.handler.memoryLeak'],
+  ['direct leak of', 'web.sanitizerPanel.handler.memoryLeak'],
+  ['illegal free()', 'web.sanitizerPanel.handler.illegalFree'],
+  ['Unused memory', 'web.sanitizerPanel.handler.unusedMemory'],
+  ['Potential RAW hazard detected', 'web.sanitizerPanel.handler.rawHazard'],
+  ['Potential WAW hazard detected', 'web.sanitizerPanel.handler.wawHazard'],
+  ['Potential WAR hazard detected', 'web.sanitizerPanel.handler.warHazard'],
+  ['uninitialized read of size', 'web.sanitizerPanel.handler.uninitializedRead'],
+  ['Unpaired set_flag insetructions detected', 'web.sanitizerPanel.handler.unpairedSetFlag'],
+]);
 
 const INITIAL_STATE: OperateSidebarState = {
   hasDevtoolConfig: false,
@@ -59,6 +162,16 @@ const INITIAL_STATE: OperateSidebarState = {
   operators: [],
   searchKeyword: '',
   selectedOperatorIds: [],
+  sanitizer: {
+    reports: [],
+    sortOrder: 'desc',
+    markedOnly: false,
+    selectedMessages: [],
+    resultsGroupBy: 'class',
+    hideDuplicates: false,
+    reportRevision: 0,
+    manualReports: [],
+  },
 };
 
 export type OperateTreeKind = 'flow' | 'operatorProjects';
@@ -120,6 +233,44 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   private selectionWorkspaceKey = '';
   private hasAppliedDefaultSelection = false;
   private readonly themedIconCache = new Map<string, vscode.Uri>();
+  private readonly sanitizerReportMessagesCache = new Map<string, SanitizerMessageRecord[]>();
+  private readonly sanitizerReportDerivedCache = new Map<string, SanitizerMessageDerived[]>();
+  private readonly sanitizerVisibleMessagesCache = new Map<string, SanitizerMessageRecord[]>();
+  private readonly sanitizerVisibleDerivedCache = new Map<string, SanitizerMessageDerived[]>();
+  private readonly sanitizerFullDuplicateKeysCache = new Map<string, Map<number, string>>();
+  private readonly sanitizerDedupeResultCache = new Map<string, {
+    source: SanitizerMessageRecord[];
+    filtered: SanitizerMessageRecord[];
+  }>();
+  private readonly sanitizerReportGroupsCache = new Map<string, Map<SanitizerGroupMode, SanitizerGroupedReportNode[]>>();
+  private sanitizerReportRootNodesCache?: OperateNode[];
+  private readonly sanitizerGroupNodesCache = new Map<string, OperateNode[]>();
+  private readonly sanitizerGroupMessageNodesCache = new Map<string, OperateNode[]>();
+
+  private invalidateSanitizerPresentationCaches(): void {
+    this.sanitizerReportRootNodesCache = undefined;
+    this.sanitizerGroupNodesCache.clear();
+    this.sanitizerGroupMessageNodesCache.clear();
+  }
+
+  private invalidateSanitizerViewCaches(): void {
+    this.sanitizerVisibleMessagesCache.clear();
+    this.sanitizerVisibleDerivedCache.clear();
+    this.sanitizerDedupeResultCache.clear();
+    this.sanitizerReportGroupsCache.clear();
+    this.invalidateSanitizerPresentationCaches();
+  }
+
+  private invalidateSanitizerDataCaches(): void {
+    this.sanitizerReportMessagesCache.clear();
+    this.sanitizerReportDerivedCache.clear();
+    this.sanitizerFullDuplicateKeysCache.clear();
+    this.invalidateSanitizerViewCaches();
+  }
+
+  private getSanitizerViewCacheKey(reportPath: string): string {
+    return `${reportPath}\n${this.getNormalizedWorkspacePath().toLowerCase()}\n${this.state.sanitizer.hideDuplicates ? 'dedupe' : 'all'}`;
+  }
 
   /**
    * BCP 47 locale from {@link vscode.env.language} for string collation (sorting).
@@ -253,7 +404,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
   private pickFlowIcon(
     nodeId: OperateNodeId,
-    normalIcon: vscode.ThemeIcon | vscode.Uri | undefined,
+    normalIcon: vscode.ThemeIcon | undefined,
   ): vscode.ThemeIcon | vscode.Uri | undefined {
     if (!this.isFlowExecutingIcon(nodeId)) {
       return normalIcon;
@@ -347,7 +498,16 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       operators,
       searchKeyword: prevSearchKeyword,
       selectedOperatorIds,
+      sanitizer: this.state.sanitizer,
     };
+
+    if (!hasDevtoolConfig) {
+      this.state.sanitizer.reports = [];
+      this.state.sanitizer.selectedReportPath = undefined;
+      this.state.sanitizer.selectedReportTitle = undefined;
+      this.state.sanitizer.selectedMessages = [];
+      this.state.sanitizer.hideDuplicates = false;
+    }
 
     this.onDidChangeTreeDataEmitter.fire();
     return { showOperatorSearch, showOperatorProjects };
@@ -366,8 +526,550 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     return this.state.isStandardCustom;
   }
 
+  async refreshSanitizerReports(revealLatest = false): Promise<void> {
+    if (this.kind !== 'flow') {
+      return;
+    }
+    let reports: SanitizerReportRecord[] = [];
+    try {
+      reports = await runDataService.getSanitizerRunData() as SanitizerReportRecord[];
+    }
+    catch (error) {
+      console.warn('[OperateTreeProvider.refreshSanitizerReports] failed to read reports:', error);
+      this.state.sanitizer.reports = [];
+      this.invalidateSanitizerDataCaches();
+      this.onDidChangeTreeDataEmitter.fire();
+      return;
+    }
+    const manualReports = this.state.sanitizer.manualReports
+      .filter((item) => fs.existsSync(item.path));
+    this.state.sanitizer.manualReports = manualReports;
+    const merged = new Map<string, SanitizerReportRecord>();
+    for (const report of reports) {
+      merged.set(report.path, report);
+    }
+    for (const report of manualReports) {
+      if (!merged.has(report.path)) {
+        merged.set(report.path, report);
+      }
+    }
+    this.state.sanitizer.reports = Array.from(merged.values());
+    this.invalidateSanitizerDataCaches();
+
+    const selectedPath = this.state.sanitizer.selectedReportPath;
+    if (selectedPath && !reports.some((item) => item.path === selectedPath)) {
+      this.state.sanitizer.selectedReportPath = undefined;
+      this.state.sanitizer.selectedReportTitle = undefined;
+      this.state.sanitizer.selectedMessages = [];
+    }
+
+    if (revealLatest && !this.state.sanitizer.selectedReportPath && reports.length > 0) {
+      await this.selectSanitizerReport(reports[0].path);
+    }
+    else {
+      this.onDidChangeTreeDataEmitter.fire();
+    }
+  }
+
+  async addSanitizerReportFromPath(reportPath: string): Promise<void> {
+    if (!reportPath || !fs.existsSync(reportPath)) {
+      throw new Error(t('link.fileNotExist', { path: reportPath }));
+    }
+    const stat = fs.statSync(reportPath);
+    if (!stat.isFile()) {
+      throw new Error(t('msSanitizer.pathNotFileOrDir'));
+    }
+    const existing = this.state.sanitizer.reports.find((item) => item.path === reportPath);
+    if (existing) {
+      await this.selectSanitizerReport(existing.path);
+      return;
+    }
+    const report: SanitizerReportRecord = {
+      title: path.basename(reportPath),
+      timestamp: stat.mtimeMs,
+      id: `sanitizer_${reportPath}`,
+      path: reportPath,
+      marked: false,
+    };
+    this.state.sanitizer.manualReports = [...this.state.sanitizer.manualReports, report];
+    this.state.sanitizer.reports = [...this.state.sanitizer.reports, report];
+    this.updateSanitizerReportRootCache();
+    await this.selectSanitizerReport(reportPath);
+  }
+
+  private getSortedVisibleSanitizerReports(): SanitizerReportRecord[] {
+    return [...this.state.sanitizer.reports]
+      .filter((item) => (this.state.sanitizer.markedOnly ? item.marked : true))
+      .sort((a, b) => {
+        const order = this.state.sanitizer.sortOrder === 'desc' ? -1 : 1;
+        if (a.timestamp !== b.timestamp) {
+          return (a.timestamp - b.timestamp) * order;
+        }
+        const titleCompare = a.title.localeCompare(b.title, this.getLocaleForSort());
+        if (titleCompare !== 0) {
+          return titleCompare;
+        }
+        return a.path.localeCompare(b.path, this.getLocaleForSort());
+      });
+  }
+
+  private createSanitizerReportNode(report: SanitizerReportRecord): OperateNode {
+    const item = this.createItem(
+      'sanitizerReportItem',
+      report.title,
+      undefined,
+      vscode.TreeItemCollapsibleState.Collapsed,
+      `opdevtools.sanitizerReportItem.${report.marked ? 'marked' : 'unmarked'}`,
+      report.marked
+        ? this.getCustomProductIcon('flag-filled')
+        : undefined,
+      undefined,
+      `sanitizer-report:${encodeURIComponent(report.path)}`,
+      undefined,
+    );
+    item.description = new Date(report.timestamp).toLocaleString();
+    item.tooltip = report.path;
+    return item;
+  }
+
+  private updateSanitizerReportRootCache(): void {
+    if (!this.sanitizerReportRootNodesCache) {
+      return;
+    }
+    const reports = this.getSortedVisibleSanitizerReports();
+    if (reports.length === 0) {
+      this.sanitizerReportRootNodesCache = [
+        this.createItem(
+          'sanitizerReportItem',
+          t('web.sanitizerPanel.noReports'),
+          undefined,
+          vscode.TreeItemCollapsibleState.None,
+        ),
+      ];
+      return;
+    }
+
+    const cachedByPath = new Map<string, OperateNode>();
+    for (const node of this.sanitizerReportRootNodesCache) {
+      const rawId = String(node.id ?? '');
+      if (!rawId.startsWith('sanitizer-report:')) {
+        continue;
+      }
+      const reportPath = decodeURIComponent(rawId.replace(/^sanitizer-report:/, ''));
+      cachedByPath.set(reportPath, node);
+    }
+
+    this.sanitizerReportRootNodesCache = reports.map((report) => {
+      const cached = cachedByPath.get(report.path);
+      if (cached) {
+        return cached;
+      }
+      return this.createSanitizerReportNode(report);
+    });
+  }
+
+  toggleSanitizerSortOrder(): void {
+    this.state.sanitizer.sortOrder = this.state.sanitizer.sortOrder === 'desc' ? 'asc' : 'desc';
+    this.invalidateSanitizerPresentationCaches();
+    this.onDidChangeTreeDataEmitter.fire();
+  }
+
+  toggleSanitizerMarkedFilter(): void {
+    this.state.sanitizer.markedOnly = !this.state.sanitizer.markedOnly;
+    this.invalidateSanitizerPresentationCaches();
+    this.onDidChangeTreeDataEmitter.fire();
+  }
+
+  setSanitizerMarkedOnly(enabled: boolean): void {
+    if (this.state.sanitizer.markedOnly === enabled) {
+      return;
+    }
+    this.state.sanitizer.markedOnly = enabled;
+    this.invalidateSanitizerPresentationCaches();
+    this.onDidChangeTreeDataEmitter.fire();
+  }
+
+  isSanitizerMarkedOnlyEnabled(): boolean {
+    return this.state.sanitizer.markedOnly;
+  }
+
+  setSanitizerResultsGroupBy(mode: 'class' | 'severity' | 'type' | 'file'): void {
+    if (this.state.sanitizer.resultsGroupBy === mode) {
+      return;
+    }
+    this.state.sanitizer.resultsGroupBy = mode;
+    this.invalidateSanitizerPresentationCaches();
+    this.onDidChangeTreeDataEmitter.fire();
+  }
+
+  getSanitizerResultsGroupBy(): 'class' | 'severity' | 'type' | 'file' {
+    return this.state.sanitizer.resultsGroupBy;
+  }
+
+  toggleSanitizerHideDuplicates(): void {
+    this.state.sanitizer.hideDuplicates = !this.state.sanitizer.hideDuplicates;
+    this.invalidateSanitizerViewCaches();
+    this.onDidChangeTreeDataEmitter.fire();
+  }
+
+  setSanitizerHideDuplicates(enabled: boolean): void {
+    if (this.state.sanitizer.hideDuplicates === enabled) {
+      return;
+    }
+    this.state.sanitizer.hideDuplicates = enabled;
+    this.invalidateSanitizerViewCaches();
+    this.onDidChangeTreeDataEmitter.fire();
+  }
+
+  isSanitizerHideDuplicatesEnabled(): boolean {
+    return this.state.sanitizer.hideDuplicates;
+  }
+
+  private normalizeSanitizerPath(raw: string, normalizedWorkspacePath: string): string {
+    const normalized = raw.replace(/\\/g, '/').replace(/\/+/g, '/').trim();
+    if (!normalized) {
+      return '';
+    }
+    const isWindowsPath = /^[A-Za-z]:\//.test(normalized) || /^[A-Za-z]:\//.test(normalizedWorkspacePath);
+    const maybeLower = isWindowsPath ? normalized.toLowerCase() : normalized;
+    if (!normalizedWorkspacePath) {
+      return maybeLower;
+    }
+    const work = isWindowsPath ? normalizedWorkspacePath.toLowerCase() : normalizedWorkspacePath;
+    if (maybeLower === work) {
+      return '';
+    }
+    if (maybeLower.startsWith(`${work}/`)) {
+      return maybeLower.slice(work.length + 1);
+    }
+    return maybeLower;
+  }
+
+  private buildSanitizerFastDuplicateMessageKey(
+    msg: SanitizerMessageRecord,
+    normalizedWorkspacePath: string,
+  ): string {
+    const file = this.normalizeSanitizerPath(msg.fileLink ?? '', normalizedWorkspacePath);
+    const row = msg.row ?? '';
+    const col = msg.col ?? '';
+    const problem = (msg.title ?? '').replace(/\s+/g, ' ').trim();
+    return `${msg.type}\n${problem}\n${file}:${row}:${col}`;
+  }
+
+  private buildSanitizerFullDuplicateMessageKey(
+    msg: SanitizerMessageRecord,
+    normalizedWorkspacePath: string,
+  ): string {
+    const file = this.normalizeSanitizerPath(msg.fileLink ?? '', normalizedWorkspacePath);
+    const row = msg.row ?? '';
+    const col = msg.col ?? '';
+    const detailsSignature = this.getSanitizerMessageDetailsText(msg)
+      .split('\n')
+      .map((line) => line.replace(/\s+/g, ' ').trim())
+      .filter((line) => line.length > 0)
+      .join('\n');
+    const stackSignature = (msg.originData || '')
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => /^#\d+\s+/.test(line))
+      .map((line) => {
+        const match = line.match(/^#\d+\s+(.+?):(\d+):(\d+)(?:\s+.*)?$/);
+        if (!match) {
+          return line.replace(/\s+/g, ' ');
+        }
+        const [, framePath, frameRow, frameCol] = match;
+        return `${this.normalizeSanitizerPath(framePath, normalizedWorkspacePath)}:${frameRow}:${frameCol}`;
+      })
+      .join('\n');
+    const problem = (msg.title ?? '').replace(/\s+/g, ' ').trim();
+    if (!file) {
+      return `${problem}\n${detailsSignature}`;
+    }
+    return `${msg.type}\n${problem}\n${stackSignature || `${file}:${row}:${col}`}`;
+  }
+
+  private getSanitizerFullDuplicateKey(
+    reportPath: string | undefined,
+    messages: SanitizerMessageRecord[],
+    index: number,
+    normalizedWorkspacePath: string,
+    localCache?: Map<number, string>,
+  ): string {
+    if (!reportPath) {
+      if (!localCache) {
+        return this.buildSanitizerFullDuplicateMessageKey(messages[index], normalizedWorkspacePath);
+      }
+      const cachedLocal = localCache.get(index);
+      if (cachedLocal !== undefined) {
+        return cachedLocal;
+      }
+      const computedLocal = this.buildSanitizerFullDuplicateMessageKey(messages[index], normalizedWorkspacePath);
+      localCache.set(index, computedLocal);
+      return computedLocal;
+    }
+    const cacheKey = `${reportPath}\n${normalizedWorkspacePath.toLowerCase()}`;
+    let cachedByIndex = this.sanitizerFullDuplicateKeysCache.get(cacheKey);
+    if (!cachedByIndex) {
+      cachedByIndex = new Map<number, string>();
+      this.sanitizerFullDuplicateKeysCache.set(cacheKey, cachedByIndex);
+    }
+    const cached = cachedByIndex.get(index);
+    if (cached !== undefined) {
+      return cached;
+    }
+    const computed = this.buildSanitizerFullDuplicateMessageKey(messages[index], normalizedWorkspacePath);
+    cachedByIndex.set(index, computed);
+    return computed;
+  }
+
+  private getSanitizerMessageDetailsText(item: SanitizerMessageRecord): string {
+    const rawLines = (item.originData || '')
+      .split(/\r?\n/)
+      .map((line) => line.replace(/^=+\s*/, '').trim())
+      .filter((line) => line.length > 0);
+    const detailsLines: string[] = [];
+    let inStack = false;
+    for (const line of rawLines) {
+      if (/^#\d+\s+/.test(line)) {
+        inStack = true;
+        continue;
+      }
+      if (!inStack) {
+        if (/^(ERROR|WARNING):\s*/i.test(line)) {
+          continue;
+        }
+        detailsLines.push(line);
+      }
+    }
+    return detailsLines.join('\n');
+  }
+
+  private dedupeSanitizerMessages(
+    messages: SanitizerMessageRecord[],
+    reportPath?: string,
+  ): SanitizerMessageRecord[] {
+    if (!this.state.sanitizer.hideDuplicates) {
+      return messages;
+    }
+    const normalizedWorkspacePath = this.getNormalizedWorkspacePath();
+    const dedupeCacheKey = `${reportPath ?? '__selected__'}\n${normalizedWorkspacePath.toLowerCase()}`;
+    const dedupeCached = this.sanitizerDedupeResultCache.get(dedupeCacheKey);
+    if (dedupeCached && dedupeCached.source === messages) {
+      return dedupeCached.filtered;
+    }
+    const firstIndexByFast = new Map<string, number>();
+    const fullSeenByFast = new Map<string, Set<string>>();
+    const localFullKeyCache = reportPath ? undefined : new Map<number, string>();
+    const filtered: SanitizerMessageRecord[] = [];
+    for (let i = 0; i < messages.length; i += 1) {
+      const msg = messages[i];
+      const fastKey = this.buildSanitizerFastDuplicateMessageKey(msg, normalizedWorkspacePath);
+      const firstIndex = firstIndexByFast.get(fastKey);
+      if (firstIndex === undefined) {
+        firstIndexByFast.set(fastKey, i);
+        filtered.push(msg);
+        continue;
+      }
+      let seenForFast = fullSeenByFast.get(fastKey);
+      if (!seenForFast) {
+        seenForFast = new Set<string>();
+        seenForFast.add(this.getSanitizerFullDuplicateKey(
+          reportPath,
+          messages,
+          firstIndex,
+          normalizedWorkspacePath,
+          localFullKeyCache,
+        ));
+        fullSeenByFast.set(fastKey, seenForFast);
+      }
+      const fullKey = this.getSanitizerFullDuplicateKey(
+        reportPath,
+        messages,
+        i,
+        normalizedWorkspacePath,
+        localFullKeyCache,
+      );
+      if (seenForFast.has(fullKey)) {
+        continue;
+      }
+      seenForFast.add(fullKey);
+      filtered.push(msg);
+    }
+    this.sanitizerDedupeResultCache.set(dedupeCacheKey, {
+      source: messages,
+      filtered,
+    });
+    return filtered;
+  }
+
+  private getVisibleSanitizerSelectedMessages(): SanitizerMessageRecord[] {
+    return this.dedupeSanitizerMessages(this.state.sanitizer.selectedMessages);
+  }
+
+  async openSanitizerResultGroupFile(filePath: string): Promise<void> {
+    if (!filePath || filePath === t('web.sanitizerTree.group.noFile')) {
+      return;
+    }
+    const document = await vscode.workspace.openTextDocument(vscode.Uri.file(filePath));
+    await vscode.window.showTextDocument(document, { viewColumn: vscode.ViewColumn.One, preview: true });
+  }
+
+  async toggleSanitizerReportMark(reportId: string): Promise<void> {
+    await runDataService.toggleSanitizerMark({ id: reportId });
+    let changed = false;
+    this.state.sanitizer.reports = this.state.sanitizer.reports.map((item) => {
+      if (item.id !== reportId) {
+        return item;
+      }
+      changed = true;
+      return { ...item, marked: !item.marked };
+    });
+    this.state.sanitizer.manualReports = this.state.sanitizer.manualReports.map((item) => {
+      if (item.id !== reportId) {
+        return item;
+      }
+      return { ...item, marked: !item.marked };
+    });
+    if (!changed) {
+      return;
+    }
+    if (this.state.sanitizer.markedOnly && !this.state.sanitizer.reports.some((item) => item.marked)) {
+      // Keep list visible when filter would otherwise hide everything.
+      this.state.sanitizer.markedOnly = false;
+    }
+    this.invalidateSanitizerPresentationCaches();
+    this.onDidChangeTreeDataEmitter.fire();
+  }
+
+  getSanitizerReportByPath(reportPath: string): SanitizerReportRecord | undefined {
+    return this.state.sanitizer.reports.find((item) => item.path === reportPath);
+  }
+
+  async copySanitizerReportPath(reportPath: string): Promise<void> {
+    await vscode.env.clipboard.writeText(reportPath);
+    void vscode.window.showInformationMessage(t('web.perf.pathCopied'));
+  }
+
+  async selectSanitizerReport(reportPath: string): Promise<void> {
+    if (this.kind !== 'flow') {
+      return;
+    }
+    const report = this.state.sanitizer.reports.find((item) => item.path === reportPath);
+    if (!report) {
+      return;
+    }
+    const revision = this.state.sanitizer.reportRevision + 1;
+    this.state.sanitizer.reportRevision = revision;
+    this.state.sanitizer.selectedReportPath = report.path;
+    this.state.sanitizer.selectedReportTitle = report.title;
+    this.onDidChangeTreeDataEmitter.fire();
+    const panelData = loadMsSanitizerPanelData({
+      path: report.path,
+      title: report.title,
+      timestamp: report.timestamp,
+    });
+    if (this.state.sanitizer.reportRevision !== revision) {
+      return;
+    }
+    this.state.sanitizer.selectedMessages = (panelData.data ?? []) as SanitizerMessageRecord[];
+    this.onDidChangeTreeDataEmitter.fire();
+  }
+
+  async jumpToSanitizerMessage(messageId: string): Promise<void> {
+    const msg = this.state.sanitizer.selectedMessages[Number(messageId)];
+    if (!msg || !msg.fileLink || msg.row === undefined || msg.col === undefined) {
+      return;
+    }
+    const problemTypeKey = sanitizerQuestionLabelKeyMap.get(msg.question);
+    const problemType = problemTypeKey ? t(problemTypeKey) : msg.question;
+    const handlingKey = sanitizerQuestionHandlerKeyMap.get(msg.question);
+    const handling = handlingKey ? t(handlingKey) : '';
+    const tooltip = this.buildSanitizerMessageTooltip(msg, problemType, handling);
+    const params: JumpToFileParams = {
+      fileLink: msg.fileLink,
+      row: msg.row,
+      col: msg.col,
+      errorTitle: msg.title,
+      errorMessage: tooltip.value,
+    };
+    await performanceDataMethods.jumpToFile(params);
+  }
+
+  getSanitizerMessageAiFixIndex(
+    messageRef:
+    | string
+    | {
+      id?: string;
+      msAgentIndex?: number;
+      command?: { arguments?: unknown[] };
+    },
+  ): number | undefined {
+    if (typeof messageRef !== 'string') {
+      if (
+        typeof messageRef.msAgentIndex === 'number'
+        && Number.isInteger(messageRef.msAgentIndex)
+        && messageRef.msAgentIndex >= 0
+      ) {
+        return messageRef.msAgentIndex;
+      }
+    }
+    const rawId = typeof messageRef === 'string'
+      ? messageRef
+      : String(messageRef.command?.arguments?.[0] ?? messageRef.id ?? '');
+    let messageId = rawId;
+    if (!/^\d+$/.test(messageId) && messageId.startsWith('sanitizer-msg:')) {
+      const parts = messageId.split(':');
+      const maybeGlobalIndex = parts[parts.length - 2];
+      if (/^\d+$/.test(maybeGlobalIndex)) {
+        messageId = maybeGlobalIndex;
+      }
+    }
+    if (!/^\d+$/.test(messageId)) {
+      return undefined;
+    }
+    const msg = this.state.sanitizer.selectedMessages[Number(messageId)];
+    if (!msg) {
+      return undefined;
+    }
+    if (typeof msg.msAgentIndex === 'number' && Number.isInteger(msg.msAgentIndex) && msg.msAgentIndex >= 0) {
+      return msg.msAgentIndex;
+    }
+    return undefined;
+  }
+
   getTreeItem(element: OperateNode): vscode.TreeItem {
     return element;
+  }
+
+  async resolveTreeItem(
+    item: vscode.TreeItem,
+    _element: OperateNode,
+    _token: vscode.CancellationToken,
+  ): Promise<vscode.TreeItem> {
+    const node = item as OperateNode;
+    if (node.nodeId !== 'sanitizerMessage' || node.tooltip || !node.sanitizerTooltipMeta) {
+      return item;
+    }
+    const { reportPath, globalIndex } = node.sanitizerTooltipMeta;
+    const { messages, derived } = await this.getVisibleSanitizerReportData(reportPath);
+    const message = messages[globalIndex];
+    if (!message) {
+      return item;
+    }
+    const messageDerived = derived[globalIndex];
+    const problemType = messageDerived?.typeLabel ?? message.question;
+    const handlingKey = sanitizerQuestionHandlerKeyMap.get(message.question);
+    const handling = handlingKey ? t(handlingKey) : '';
+    if (messageDerived?.tooltip) {
+      node.tooltip = messageDerived.tooltip;
+      return item;
+    }
+    const tooltip = this.buildSanitizerMessageTooltip(message, problemType, handling);
+    if (messageDerived) {
+      messageDerived.tooltip = tooltip;
+    }
+    node.tooltip = tooltip;
+    return item;
   }
 
   getChildren(element?: OperateNode): vscode.ProviderResult<OperateNode[]> {
@@ -391,6 +1093,27 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
     if (element.nodeId === 'selectedOperators') {
       return this.getSelectedOperatorsChildren();
+    }
+
+    if (element.nodeId === 'sanitizerReportItem' && (element.id ?? '').startsWith('sanitizer-report:')) {
+      const encodedPath = (element.id ?? '').replace(/^sanitizer-report:/, '');
+      const reportPath = decodeURIComponent(encodedPath);
+      return this.getSanitizerSeverityNodes(reportPath);
+    }
+
+    if (element.nodeId === 'sanitizerClass' && (element.id ?? '').startsWith('sanitizer-report-group:')) {
+      const [, encodedReportPath, mode, encodedGroupKey] = (element.id ?? '').split(':');
+      const reportPath = decodeURIComponent(encodedReportPath ?? '');
+      const groupKey = decodeURIComponent(encodedGroupKey ?? '');
+      return this.getSanitizerMessageNodesForReportGroup(
+        reportPath,
+        mode as 'class' | 'severity' | 'type' | 'file',
+        groupKey,
+      );
+    }
+
+    if (element.nodeId === 'sanitizerClass') {
+      return this.getSanitizerMessageNodes(element.id ?? '');
     }
 
     return [];
@@ -419,7 +1142,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         'huawei-op-devtools.sidebar.build',
         vscode.TreeItemCollapsibleState.None,
         undefined,
-        this.pickFlowIcon('build', this.getAssetIcon('build.svg')),
+        this.pickFlowIcon('build', this.getCustomProductIcon('build')),
       ));
     }
 
@@ -429,7 +1152,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       hasMultipleSelectedOperators ? undefined : 'huawei-op-devtools.sidebar.run',
       vscode.TreeItemCollapsibleState.None,
       undefined,
-      this.pickFlowIcon('run', hasMultipleSelectedOperators ? disabledIcon : this.getAssetIcon('run.svg')),
+      this.pickFlowIcon('run', hasMultipleSelectedOperators ? disabledIcon : this.getCustomProductIcon('run')),
       undefined,
       undefined,
       undefined,
@@ -445,7 +1168,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         undefined,
         vscode.TreeItemCollapsibleState.Collapsed,
         'opdevtools.debug',
-        this.pickFlowIcon('debug', this.getAssetIcon('debug.svg')),
+        this.pickFlowIcon('debug', this.getCustomProductIcon('debug')),
       ));
     }
 
@@ -456,7 +1179,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         hasMultipleSelectedOperators ? undefined : 'huawei-op-devtools.sidebar.sanitizer',
         vscode.TreeItemCollapsibleState.None,
         'opdevtools.sanitizer',
-        this.pickFlowIcon('sanitizer', hasMultipleSelectedOperators ? disabledIcon : this.getAssetIcon('check.svg')),
+        this.pickFlowIcon('sanitizer', hasMultipleSelectedOperators ? disabledIcon : this.getCustomProductIcon('check')),
         undefined,
         undefined,
         undefined,
@@ -472,7 +1195,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         undefined,
         vscode.TreeItemCollapsibleState.Collapsed,
         undefined,
-        this.pickFlowIcon('power', this.getAssetIcon('power.svg')),
+        this.pickFlowIcon('power', this.getCustomProductIcon('power')),
       ));
     }
 
@@ -485,7 +1208,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         undefined,
         hasMultipleSelectedOperators
           ? disabledIcon
-          : this.pickFlowIcon('utTest', this.getAssetIcon('beaker.svg')),
+          : this.pickFlowIcon('utTest', this.getCustomProductIcon('beaker')),
         undefined,
         undefined,
         undefined,
@@ -502,7 +1225,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         undefined,
         hasMultipleSelectedOperators
           ? disabledIcon
-          : this.pickFlowIcon('dumpTensor', this.getAssetIcon('tensor.svg')),
+          : this.pickFlowIcon('dumpTensor', this.getCustomProductIcon('tensor')),
         undefined,
         undefined,
         undefined,
@@ -540,7 +1263,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         undefined,
         hasMultipleSelectedOperators
           ? disabledIcon
-          : this.pickFlowIcon('cpuDebug', this.getAssetIcon('debug-cpu.svg')),
+          : this.pickFlowIcon('cpuDebug', this.getCustomProductIcon('debug-cpu')),
         undefined,
         undefined,
         undefined,
@@ -558,7 +1281,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         undefined,
         hasMultipleSelectedOperators
           ? disabledIcon
-          : this.pickFlowIcon('npuDebug', this.getAssetIcon('debug-npu.svg')),
+          : this.pickFlowIcon('npuDebug', this.getCustomProductIcon('debug-npu')),
         undefined,
         undefined,
         undefined,
@@ -586,7 +1309,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         'opdevtools.onboard',
         hasMultipleSelectedOperators
           ? disabledIcon
-          : this.pickFlowIcon('onboard', this.getAssetIcon('onboard.svg')),
+          : this.pickFlowIcon('onboard', this.getCustomProductIcon('onboard')),
         undefined,
         undefined,
         undefined,
@@ -602,7 +1325,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         'opdevtools.simulation',
         hasMultipleSelectedOperators
           ? disabledIcon
-          : this.pickFlowIcon('simulation', this.getAssetIcon('simulation.svg')),
+          : this.pickFlowIcon('simulation', this.getCustomProductIcon('simulation')),
         undefined,
         undefined,
         undefined,
@@ -610,6 +1333,589 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       ));
     }
     return items;
+  }
+
+  private getSanitizerReportNodes(): OperateNode[] {
+    if (this.sanitizerReportRootNodesCache) {
+      return this.sanitizerReportRootNodesCache;
+    }
+    const reports = this.getSortedVisibleSanitizerReports();
+    if (reports.length === 0) {
+      this.sanitizerReportRootNodesCache = [
+        this.createItem(
+          'sanitizerReportItem',
+          t('web.sanitizerPanel.noReports'),
+          undefined,
+          vscode.TreeItemCollapsibleState.None,
+        ),
+      ];
+      return this.sanitizerReportRootNodesCache;
+    }
+    this.sanitizerReportRootNodesCache = reports.map((report) => this.createSanitizerReportNode(report));
+    return this.sanitizerReportRootNodesCache;
+  }
+
+  private getSanitizerResultGroupNodes(): OperateNode[] {
+    if (!this.state.sanitizer.selectedReportPath) {
+      return [
+        this.createItem(
+          'sanitizerMessage',
+          t('web.sanitizerPanel.selectReportHint'),
+          undefined,
+          vscode.TreeItemCollapsibleState.None,
+        ),
+      ];
+    }
+    const mode = this.state.sanitizer.resultsGroupBy;
+    const groups = this.getSanitizerResultGroups(mode);
+    return groups.map(({ key, label, messages }) => {
+      const errorCount = messages.filter((item) => item.type === 'error').length;
+      const warningCount = messages.filter((item) => item.type === 'warning').length;
+      const parts: string[] = [];
+      if (errorCount > 0) {
+        parts.push(`${errorCount} 🔴`);
+      }
+      if (warningCount > 0) {
+        parts.push(`${warningCount} 🟡`);
+      }
+      return this.createItem(
+        'sanitizerClass',
+        label,
+        undefined,
+        vscode.TreeItemCollapsibleState.Collapsed,
+        mode === 'file' && key !== t('web.sanitizerTree.group.noFile')
+          ? 'opdevtools.sanitizerPathGroupItem'
+          : undefined,
+        mode === 'severity'
+          ? (key === 'warning'
+            ? this.getCustomProductIcon('group-severity-warning')
+            : this.getCustomProductIcon('group-severity-error'))
+          : undefined,
+        parts.join(', '),
+        `sanitizer-group:${mode}:${encodeURIComponent(key)}`,
+      );
+    });
+  }
+
+  private getSanitizerResultGroups(
+    mode: 'class' | 'severity' | 'type' | 'file',
+  ): Array<{ key: string; label: string; messages: SanitizerMessageRecord[] }> {
+    const bucketOrder: Array<{ key: string; label: string }> = [
+      { key: 'memory', label: t('web.sanitizerPanel.memory') },
+      { key: 'memoryContention', label: t('web.sanitizerPanel.memoryRace') },
+      { key: 'uninitialized', label: t('web.sanitizerPanel.uninitialized') },
+      { key: 'synchronize', label: t('web.sanitizerPanel.sync') },
+      { key: 'other', label: t('web.sanitizerPanel.other') },
+    ];
+    const classSet = new Set(bucketOrder.map((bucket) => bucket.key));
+    if (mode === 'class') {
+      return bucketOrder
+        .map((bucket) => {
+          const messages = this.getVisibleSanitizerSelectedMessages().filter((msg) => {
+            const key = classSet.has(msg.questionType) ? msg.questionType : 'other';
+            return key === bucket.key;
+          });
+          return { key: bucket.key, label: bucket.label, messages };
+        })
+        .filter((group) => group.messages.length > 0);
+    }
+    if (mode === 'severity') {
+      const visibleMessages = this.getVisibleSanitizerSelectedMessages();
+      const warningMessages = visibleMessages.filter((msg) => msg.type === 'warning');
+      const errorMessages = visibleMessages.filter((msg) => msg.type === 'error');
+      return [
+        {
+          key: 'error',
+          label: t('web.sanitizerTree.group.error'),
+          messages: errorMessages,
+        },
+        {
+          key: 'warning',
+          label: t('web.sanitizerTree.group.warning'),
+          messages: warningMessages,
+        },
+      ].filter((group) => group.messages.length > 0);
+    }
+    const grouped = new Map<string, { label: string; messages: SanitizerMessageRecord[] }>();
+    for (const msg of this.getVisibleSanitizerSelectedMessages()) {
+      if (mode === 'type') {
+        const labelKey = sanitizerQuestionLabelKeyMap.get(msg.question);
+        const label = labelKey ? t(labelKey) : msg.question;
+        const key = msg.question || 'unknown';
+        const current = grouped.get(key);
+        if (current) {
+          current.messages.push(msg);
+        }
+        else {
+          grouped.set(key, { label, messages: [msg] });
+        }
+      }
+      else {
+        const filePath = msg.fileLink || t('web.sanitizerTree.group.noFile');
+        const key = filePath;
+        const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
+        let labelPath = filePath;
+        if (workspacePath && msg.fileLink) {
+          const normWorkRaw = workspacePath.replace(/\\/g, '/').replace(/\/+$/, '');
+          const normFileRaw = filePath.replace(/\\/g, '/');
+          const isWindowsPath = /^[A-Za-z]:\//.test(normWorkRaw) || /^[A-Za-z]:\//.test(normFileRaw);
+          const normWork = isWindowsPath ? normWorkRaw.toLowerCase() : normWorkRaw;
+          const normFile = isWindowsPath ? normFileRaw.toLowerCase() : normFileRaw;
+          if (normFile === normWork) {
+            labelPath = '';
+          }
+          else if (normFile.startsWith(`${normWork}/`)) {
+            labelPath = normFileRaw.slice(normWorkRaw.length + 1);
+          }
+        }
+        const current = grouped.get(key);
+        if (current) {
+          current.messages.push(msg);
+        }
+        else {
+          grouped.set(key, { label: labelPath || filePath, messages: [msg] });
+        }
+      }
+    }
+    return [...grouped.entries()]
+      .map(([key, value]) => ({
+        key,
+        label: value.label,
+        messages: value.messages,
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label, this.getLocaleForSort()));
+  }
+
+  getSanitizerReportsPanelNodes(): OperateNode[] {
+    return this.getSanitizerReportNodes();
+  }
+
+  getSanitizerResultsPanelNodes(): OperateNode[] {
+    return this.getSanitizerReportNodes();
+  }
+
+  private async getSanitizerMessagesForReport(reportPath: string): Promise<SanitizerMessageRecord[]> {
+    const cached = this.sanitizerReportMessagesCache.get(reportPath);
+    if (cached) {
+      return cached;
+    }
+    const report = this.state.sanitizer.reports.find((item) => item.path === reportPath);
+    if (!report) {
+      return [];
+    }
+    const panelData = loadMsSanitizerPanelData({
+      path: report.path,
+      title: report.title,
+      timestamp: report.timestamp,
+    });
+    const messages = (panelData.data ?? []) as SanitizerMessageRecord[];
+    this.sanitizerReportMessagesCache.set(reportPath, messages);
+    this.sanitizerReportDerivedCache.set(
+      reportPath,
+      messages.map((msg) => this.buildSanitizerMessageDerived(msg)),
+    );
+    this.sanitizerReportGroupsCache.delete(reportPath);
+    return messages;
+  }
+
+  private async getVisibleSanitizerReportData(reportPath: string): Promise<{
+    messages: SanitizerMessageRecord[];
+    derived: SanitizerMessageDerived[];
+  }> {
+    const cacheKey = this.getSanitizerViewCacheKey(reportPath);
+    const cachedMessages = this.sanitizerVisibleMessagesCache.get(cacheKey);
+    const cachedDerived = this.sanitizerVisibleDerivedCache.get(cacheKey);
+    if (cachedMessages && cachedDerived) {
+      return { messages: cachedMessages, derived: cachedDerived };
+    }
+
+    const sourceMessages = await this.getSanitizerMessagesForReport(reportPath);
+    const visibleMessages = this.dedupeSanitizerMessages(sourceMessages, reportPath);
+    const visibleDerived = visibleMessages.map((msg) => this.buildSanitizerMessageDerived(msg));
+
+    this.sanitizerVisibleMessagesCache.set(cacheKey, visibleMessages);
+    this.sanitizerVisibleDerivedCache.set(cacheKey, visibleDerived);
+
+    return { messages: visibleMessages, derived: visibleDerived };
+  }
+
+  private getNormalizedWorkspacePath(): string {
+    return (vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '').replace(/\\/g, '/').replace(/\/+$/, '');
+  }
+
+  private stripWorkspacePrefix(filePath: string): string {
+    const workspacePath = this.getNormalizedWorkspacePath();
+    if (!workspacePath) {
+      return filePath;
+    }
+    const normFileRaw = filePath.replace(/\\/g, '/');
+    const isWindowsPath = /^[A-Za-z]:\//.test(workspacePath) || /^[A-Za-z]:\//.test(normFileRaw);
+    const normWork = isWindowsPath ? workspacePath.toLowerCase() : workspacePath;
+    const normFile = isWindowsPath ? normFileRaw.toLowerCase() : normFileRaw;
+    if (normFile.startsWith(`${normWork}/`)) {
+      return normFileRaw.slice(workspacePath.length + 1);
+    }
+    return filePath;
+  }
+
+  private buildSanitizerMessageDerived(msg: SanitizerMessageRecord): SanitizerMessageDerived {
+    const classKey = ['memory', 'memoryContention', 'uninitialized', 'synchronize'].includes(msg.questionType)
+      ? msg.questionType
+      : 'other';
+    const classLabelMap: Record<string, string> = {
+      memory: t('web.sanitizerPanel.memory'),
+      memoryContention: t('web.sanitizerPanel.memoryRace'),
+      uninitialized: t('web.sanitizerPanel.uninitialized'),
+      synchronize: t('web.sanitizerPanel.sync'),
+      other: t('web.sanitizerPanel.other'),
+    };
+    const typeKey = msg.question || 'unknown';
+    const typeLabelKey = sanitizerQuestionLabelKeyMap.get(msg.question);
+    const typeLabel = typeLabelKey ? t(typeLabelKey) : msg.question;
+    const fileKey = msg.fileLink || t('web.sanitizerTree.group.noFile');
+    const fileLabel = msg.fileLink ? this.stripWorkspacePrefix(msg.fileLink) : t('web.sanitizerTree.group.noFile');
+    return {
+      classKey,
+      classLabel: classLabelMap[classKey] ?? classLabelMap.other,
+      typeKey,
+      typeLabel,
+      fileKey,
+      fileLabel,
+      severityRank: msg.type === 'error' ? 0 : 1,
+    };
+  }
+
+  private compareMessageIndicesByMode(
+    mode: SanitizerGroupMode,
+    derived: SanitizerMessageDerived[],
+    messages: SanitizerMessageRecord[],
+    a: number,
+    b: number,
+  ): number {
+    const da = derived[a];
+    const db = derived[b];
+    const severityDelta = da.severityRank - db.severityRank;
+    if (severityDelta !== 0) {
+      return severityDelta;
+    }
+    if (mode === 'class') {
+      const classRank: Record<string, number> = {
+        memory: 0,
+        memoryContention: 1,
+        uninitialized: 2,
+        synchronize: 3,
+        other: 4,
+      };
+      const d = (classRank[da.classKey] ?? 4) - (classRank[db.classKey] ?? 4);
+      if (d !== 0) return d;
+    }
+    else if (mode === 'type') {
+      const d = da.typeLabel.localeCompare(db.typeLabel, this.getLocaleForSort());
+      if (d !== 0) return d;
+    }
+    else if (mode === 'file') {
+      const d = da.fileLabel.localeCompare(db.fileLabel, this.getLocaleForSort());
+      if (d !== 0) return d;
+    }
+    return a - b;
+  }
+
+  private buildGroupedReportNodes(
+    mode: SanitizerGroupMode,
+    messages: SanitizerMessageRecord[],
+    derived: SanitizerMessageDerived[],
+  ): SanitizerGroupedReportNode[] {
+    const grouped = new Map<string, SanitizerGroupedReportNode>();
+    for (let i = 0; i < messages.length; i += 1) {
+      const msg = messages[i];
+      const d = derived[i];
+      let key = '';
+      let label = '';
+      if (mode === 'severity') {
+        key = msg.type;
+        label = msg.type === 'error' ? t('web.sanitizerTree.group.error') : t('web.sanitizerTree.group.warning');
+      }
+      else if (mode === 'class') {
+        key = d.classKey;
+        label = d.classLabel;
+      }
+      else if (mode === 'type') {
+        key = d.typeKey;
+        label = d.typeLabel;
+      }
+      else {
+        key = d.fileKey;
+        label = d.fileLabel;
+      }
+      const existing = grouped.get(key);
+      if (existing) {
+        existing.messageIndices.push(i);
+      }
+      else {
+        grouped.set(key, {
+          key,
+          label,
+          description: '',
+          contextValue: mode === 'file' && key !== t('web.sanitizerTree.group.noFile')
+            ? 'opdevtools.sanitizerPathGroupItem'
+            : undefined,
+          messageIndices: [i],
+        });
+      }
+    }
+
+    const groups = [...grouped.values()];
+    for (const group of groups) {
+      group.messageIndices.sort((a, b) => this.compareMessageIndicesByMode(mode, derived, messages, a, b));
+      if (mode === 'severity') {
+        group.description = String(group.messageIndices.length);
+      }
+      else {
+        let errors = 0;
+        let warnings = 0;
+        for (const idx of group.messageIndices) {
+          if (messages[idx].type === 'error') errors += 1;
+          else warnings += 1;
+        }
+        const parts: string[] = [];
+        if (errors > 0) parts.push(`${errors} 🔴`);
+        if (warnings > 0) parts.push(`${warnings} 🟡`);
+        group.description = parts.join(', ');
+      }
+    }
+
+    if (mode === 'severity') {
+      groups.sort((a, b) => (a.key === 'error' ? -1 : 1) - (b.key === 'error' ? -1 : 1));
+    }
+    else if (mode === 'type') {
+      const rank = (g: SanitizerGroupedReportNode): number => {
+        const hasError = g.messageIndices.some((idx) => messages[idx].type === 'error');
+        const hasWarning = g.messageIndices.some((idx) => messages[idx].type === 'warning');
+        if (hasError && !hasWarning) return 0;
+        if (hasError && hasWarning) return 1;
+        return 2;
+      };
+      groups.sort((a, b) => {
+        const d = rank(a) - rank(b);
+        if (d !== 0) return d;
+        return a.label.localeCompare(b.label, this.getLocaleForSort());
+      });
+    }
+    else {
+      groups.sort((a, b) => a.label.localeCompare(b.label, this.getLocaleForSort()));
+    }
+    return groups;
+  }
+
+  private async getGroupedReportNodes(reportPath: string, mode: SanitizerGroupMode): Promise<SanitizerGroupedReportNode[]> {
+    const viewCacheKey = this.getSanitizerViewCacheKey(reportPath);
+    const byMode = this.sanitizerReportGroupsCache.get(viewCacheKey) ?? new Map<SanitizerGroupMode, SanitizerGroupedReportNode[]>();
+    const cached = byMode.get(mode);
+    if (cached) {
+      return cached;
+    }
+    const { messages, derived } = await this.getVisibleSanitizerReportData(reportPath);
+    const built = this.buildGroupedReportNodes(mode, messages, derived);
+    byMode.set(mode, built);
+    this.sanitizerReportGroupsCache.set(viewCacheKey, byMode);
+    return built;
+  }
+
+  private async getSanitizerSeverityNodes(reportPath: string): Promise<OperateNode[]> {
+    const mode = this.state.sanitizer.resultsGroupBy;
+    const groupCacheKey = `${this.getSanitizerViewCacheKey(reportPath)}\n${mode}`;
+    const cached = this.sanitizerGroupNodesCache.get(groupCacheKey);
+    if (cached) {
+      return cached;
+    }
+    const groups = await this.getGroupedReportNodes(reportPath, mode);
+    const nodes = groups.map((group) => this.createItem(
+      'sanitizerClass',
+      group.label,
+      undefined,
+      vscode.TreeItemCollapsibleState.Collapsed,
+      group.contextValue,
+      mode === 'severity'
+        ? (group.key === 'warning'
+          ? this.getCustomProductIcon('group-severity-warning')
+          : this.getCustomProductIcon('group-severity-error'))
+        : undefined,
+      group.description,
+      `sanitizer-report-group:${encodeURIComponent(reportPath)}:${mode}:${encodeURIComponent(group.key)}`,
+    ));
+    this.sanitizerGroupNodesCache.set(groupCacheKey, nodes);
+    return nodes;
+  }
+
+  private async getSanitizerMessageNodesForReportGroup(
+    reportPath: string,
+    mode: 'class' | 'severity' | 'type' | 'file',
+    groupKey: string,
+  ): Promise<OperateNode[]> {
+    const messageCacheKey = `${this.getSanitizerViewCacheKey(reportPath)}\n${mode}\n${groupKey}`;
+    const cached = this.sanitizerGroupMessageNodesCache.get(messageCacheKey);
+    if (cached) {
+      return cached;
+    }
+    const { messages: visibleMessages } = await this.getVisibleSanitizerReportData(reportPath);
+    this.state.sanitizer.selectedMessages = visibleMessages;
+    const groups = await this.getGroupedReportNodes(reportPath, mode);
+    const group = groups.find((entry) => entry.key === groupKey);
+    if (!group) {
+      return [];
+    }
+    const nodes = group.messageIndices.map((globalIndex, index) => {
+      const item = visibleMessages[globalIndex];
+      const id = String(globalIndex);
+      const description = mode === 'file' ? undefined : this.getSanitizerMessageDescription(item);
+      const node = this.createItem(
+        'sanitizerMessage',
+        item.title,
+        item.fileLink && item.row !== undefined && item.col !== undefined
+          ? 'huawei-op-devtools.sidebar.sanitizer.message.jump'
+          : undefined,
+        vscode.TreeItemCollapsibleState.None,
+        typeof item.msAgentIndex === 'number' && Number.isInteger(item.msAgentIndex) && item.msAgentIndex >= 0
+          ? 'opdevtools.sanitizerMessage.aiFix'
+          : undefined,
+        item.type === 'warning'
+          ? new vscode.ThemeIcon('warning', new vscode.ThemeColor('problemsWarningIcon.foreground'))
+          : new vscode.ThemeIcon('error', new vscode.ThemeColor('problemsErrorIcon.foreground')),
+        description,
+        `sanitizer-msg:${encodeURIComponent(reportPath)}:${mode}:${encodeURIComponent(groupKey)}:${globalIndex}:${index}`,
+        item.fileLink && item.row !== undefined && item.col !== undefined ? [id] : undefined,
+      );
+      node.sanitizerTooltipMeta = {
+        reportPath,
+        globalIndex,
+      };
+      return node;
+    });
+    this.sanitizerGroupMessageNodesCache.set(messageCacheKey, nodes);
+    return nodes;
+  }
+
+  private getSanitizerMessageNodes(classId: string): OperateNode[] {
+    const prefix = 'sanitizer-group:';
+    const rawId = classId.startsWith(prefix) ? classId.slice(prefix.length) : classId;
+    const [modeRaw, ...rest] = rawId.split(':');
+    const mode = (modeRaw || this.state.sanitizer.resultsGroupBy) as 'class' | 'severity' | 'type' | 'file';
+    const key = decodeURIComponent(rest.join(':') || '');
+    const targetGroup = this.getSanitizerResultGroups(mode).find((group) => group.key === key);
+    const messages = (targetGroup?.messages ?? [])
+      .map((item, globalIndex) => ({ item, globalIndex }))
+      .sort((a, b) => a.globalIndex - b.globalIndex);
+    const reportPath = this.state.sanitizer.selectedReportPath;
+    return messages.map(({ item, globalIndex }, index) => {
+      const id = String(globalIndex);
+      const description = mode === 'file' ? undefined : this.getSanitizerMessageDescription(item);
+      const node = this.createItem(
+        'sanitizerMessage',
+        item.title,
+        item.fileLink && item.row !== undefined && item.col !== undefined
+          ? 'huawei-op-devtools.sidebar.sanitizer.message.jump'
+          : undefined,
+        vscode.TreeItemCollapsibleState.None,
+        typeof item.msAgentIndex === 'number' && Number.isInteger(item.msAgentIndex) && item.msAgentIndex >= 0
+          ? 'opdevtools.sanitizerMessage.aiFix'
+          : undefined,
+        item.type === 'warning'
+          ? new vscode.ThemeIcon('warning', new vscode.ThemeColor('problemsWarningIcon.foreground'))
+          : new vscode.ThemeIcon('error', new vscode.ThemeColor('problemsErrorIcon.foreground')),
+        description,
+        `sanitizer-msg:legacy:${mode}:${encodeURIComponent(key)}:${globalIndex}:${index}`,
+        item.fileLink && item.row !== undefined && item.col !== undefined ? [id] : undefined,
+      );
+      if (reportPath) {
+        node.sanitizerTooltipMeta = {
+          reportPath,
+          globalIndex,
+        };
+      }
+      return node;
+    });
+  }
+
+  private getSanitizerMessageDescription(item: SanitizerMessageRecord): string | undefined {
+    const fileName = item.fileLink ? path.basename(item.fileLink.replace(/\\/g, '/')) : '';
+    if (!fileName) {
+      return undefined;
+    }
+    if (item.row !== undefined && item.col !== undefined) {
+      return `${fileName} ${item.row}:${item.col}`;
+    }
+    return fileName;
+  }
+
+  private buildSanitizerMessageTooltip(
+    item: SanitizerMessageRecord,
+    problemType: string,
+    handling: string,
+  ): vscode.MarkdownString {
+    const rawLines = (item.originData || '')
+      .split(/\r?\n/)
+      .map((line) => line.replace(/^=+\s*/, '').trim())
+      .filter((line) => line.length > 0);
+    const detailsLines: string[] = [];
+    const stackLines: string[] = [];
+    let inStack = false;
+    for (const line of rawLines) {
+      if (/^#\d+\s+/.test(line)) {
+        inStack = true;
+        stackLines.push(line);
+        continue;
+      }
+      if (!inStack) {
+        if (/^(ERROR|WARNING):\s*/i.test(line)) {
+          continue;
+        }
+        detailsLines.push(line);
+      }
+    }
+    const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
+    const renderedStack = stackLines.map((line) => {
+      const m = line.match(/^#\d+\s+(.+):(\d+):(\d+)(?:\s+.*)?$/);
+      if (!m) {
+        return `- ${line.replace(/^#\d+\s+/, '')}`;
+      }
+      const fileLink = m[1];
+      // Sanitizer stack frame uses "line:position" ordering.
+      const lineNo = Number(m[2]);
+      const position = Number(m[3]);
+      let labelPath = fileLink;
+      if (workspacePath) {
+        const normWorkRaw = workspacePath.replace(/\\/g, '/').replace(/\/+$/, '');
+        const normFileRaw = fileLink.replace(/\\/g, '/');
+        const isWindowsPath = /^[A-Za-z]:\//.test(normWorkRaw) || /^[A-Za-z]:\//.test(normFileRaw);
+        const normWork = isWindowsPath ? normWorkRaw.toLowerCase() : normWorkRaw;
+        const normFile = isWindowsPath ? normFileRaw.toLowerCase() : normFileRaw;
+        if (normFile === normWork) {
+          labelPath = '';
+        }
+        else if (normFile.startsWith(`${normWork}/`)) {
+          labelPath = normFileRaw.slice(normWorkRaw.length + 1);
+        }
+      }
+      const cmdArgs = encodeURIComponent(JSON.stringify([{
+        fileLink,
+        row: lineNo,
+        col: position,
+        errorTitle: item.title,
+      }]));
+      const cmd = `command:${COMMAND_SIDEBAR_SANITIZER_STACK_JUMP}?${cmdArgs}`;
+      return `- [${labelPath}:${lineNo}:${position}](${cmd})`;
+    });
+    const md = new vscode.MarkdownString(
+      [
+        `**${t('web.sanitizerPanel.problem')}**: ${item.title}`,
+        `**${t('web.sanitizerTree.details')}**: ${this.getSanitizerMessageDetailsText(item)}`.trim(),
+        `**${t('web.sanitizerTree.type')}**: ${problemType}`,
+        handling ? `**${t('web.sanitizerTree.description')}**: ${handling}` : '',
+        renderedStack.length > 0 ? `**${t('web.sanitizerTree.stack')}**:\n${renderedStack.join('\n')}` : '',
+      ].filter(Boolean).join('\n\n'),
+    );
+    md.isTrusted = true;
+    return md;
   }
 
   getSearchKeyword(): string {
@@ -931,13 +2237,27 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     return item;
   }
 
-  /**
-   * Tree icons: packaged SVGs per `vscode.ColorThemeKind` under `web/src/assets/svg/<theme>/`.
-   * Root-level `svg/*.svg` (currentColor) remains for the web UI; the extension loads themed files only.
-   */
+  private getCustomProductIcon(name: string): vscode.ThemeIcon {
+    return new vscode.ThemeIcon(`opdevtools-${name}`);
+  }
+
+  private getThemedHourglassFileName(): string {
+    switch (vscode.window.activeColorTheme.kind) {
+      case vscode.ColorThemeKind.Light:
+        return 'animated/hourglass-light.svg';
+      case vscode.ColorThemeKind.HighContrastLight:
+        return 'animated/hourglass-high-contrast-light.svg';
+      case vscode.ColorThemeKind.HighContrast:
+        return 'animated/hourglass-high-contrast.svg';
+      case vscode.ColorThemeKind.Dark:
+      default:
+        return 'animated/hourglass-dark.svg';
+    }
+  }
+
   private getAssetIcon(fileName: string): vscode.Uri {
-    const subfolder = this.getThemeIconSubfolder();
-    const cacheKey = `${vscode.window.activeColorTheme.kind}:${subfolder}:${fileName}`;
+    const resolved = fileName === 'hourglass.svg' ? this.getThemedHourglassFileName() : fileName;
+    const cacheKey = `${vscode.window.activeColorTheme.kind}:${resolved}`;
     const cached = this.themedIconCache.get(cacheKey);
     if (cached) {
       return cached;
@@ -949,31 +2269,16 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       'src',
       'assets',
       'svg',
-      subfolder,
-      fileName,
+      resolved,
     );
     this.themedIconCache.set(cacheKey, iconFileUri);
     return iconFileUri;
   }
 
-  /** Folder names under `web/src/assets/svg/` matching pre-baked stroke/fill colors per theme. */
-  private getThemeIconSubfolder(): string {
-    switch (vscode.window.activeColorTheme.kind) {
-      case vscode.ColorThemeKind.Light:
-        return 'light';
-      case vscode.ColorThemeKind.HighContrastLight:
-        return 'high-contrast-light';
-      case vscode.ColorThemeKind.HighContrast:
-        return 'high-contrast';
-      case vscode.ColorThemeKind.Dark:
-      default:
-        return 'dark';
-    }
-  }
-
   private getCurrentBuildBehavior() {
     return OperatorPluginRegistry.getBuildBehaviorByProjectType(this.state.projectType);
   }
+
 
   private supportsCapability(value: boolean | undefined): boolean {
     return value !== false;

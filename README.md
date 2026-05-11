@@ -5,6 +5,21 @@
 
 > **English:** See [README.en.md](./README.en.md) for an English README, including development setup and Dev Container usage.
 
+## 图标字体重新生成（开发）
+
+- 脚本保留在仓库中：`scripts/build-icons-font.mjs`
+- 手动执行命令：
+
+```bash
+pnpm run build:icons-font
+```
+
+- 规则：
+  - 源目录：`web/src/assets/svg`
+  - 排除目录：`web/src/assets/svg/animated`
+  - 输出目录：`web/src/assets/fonts`
+  - 最终仅保留：`opdevtools-icons.woff`
+
 ## 核心特性
 
 - 适配生态主流编辑器，优化生态算子开发体验，提升开发效率。

@@ -12,6 +12,46 @@ import {
   JumpToFileParams,
 } from '@shared/api-types';
 
+const jumpToFileDiagnosticCollection = vscode.languages.createDiagnosticCollection('opdevtools-jump-to-file');
+
+function toDiagnosticMessage(message: string): string {
+  const lines = message.split(/\r?\n/);
+  const kept: string[] = [];
+  let inStackSection = false;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) {
+      continue;
+    }
+    if (/^\*\*.*stack.*\*\*:/i.test(line) || /^stack:/i.test(line)) {
+      inStackSection = true;
+      continue;
+    }
+    if (inStackSection) {
+      // Skip stack list items and links under Stack section.
+      if (/^[-*]\s+/.test(line) || /^\[.*\]\(.*\)$/.test(line)) {
+        continue;
+      }
+      // If another field starts, leave stack section.
+      if (/^\*\*.+\*\*:/.test(line) || /^[A-Za-z][^:]{1,40}:/.test(line)) {
+        inStackSection = false;
+      }
+      else {
+        continue;
+      }
+    }
+    kept.push(line);
+  }
+
+  return kept
+    .join('\n\n')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/\*\*/g, '')
+    .replace(/`/g, '')
+    .trim();
+}
+
 export const performanceDataMethods = {
   /**
    * Download data
@@ -274,38 +314,12 @@ export const performanceDataMethods = {
         vscode.TextEditorRevealType.InCenter,
       );
 
-      // Build error message display text
-      let errorDisplayText = '';
-
-      if (errorTitle || errorMessage) {
-        if (errorTitle && errorMessage) {
-          errorDisplayText = `${errorTitle}: ${errorMessage.substring(0, 100)}${errorMessage.length > 100 ? '...' : ''}`;
-        }
-        else {
-          errorDisplayText = errorTitle || errorMessage || '';
-        }
-      }
-
       // Create highlight decorations
       const decorationType = vscode.window.createTextEditorDecorationType({
         backgroundColor: 'rgba(255, 200, 0, 0.3)', // Yellow translucent background
         border: '1px solid rgba(255, 200, 0, 0.8)', // yellow border
         isWholeLine: true, // Highlight entire line
       });
-
-      // If there is an error message, create an end-of-line decoration to display the error message
-      let afterDecorationType: vscode.TextEditorDecorationType | undefined;
-
-      if (errorDisplayText) {
-        afterDecorationType = vscode.window.createTextEditorDecorationType({
-          after: {
-            contentText: `  ⚠ ${errorDisplayText}`,
-            color: 'rgba(255, 200, 0, 0.9)',
-            fontWeight: 'normal',
-            fontStyle: 'italic',
-          },
-        });
-      }
 
       // Apply highlighting to target row
       const lineRange = new vscode.Range(
@@ -315,21 +329,19 @@ export const performanceDataMethods = {
 
       editor.setDecorations(decorationType, [lineRange]);
 
-      // If there is an error message, it is displayed at the end of the line
-      if (afterDecorationType && errorDisplayText) {
-        const endPos = new vscode.Position(line, document.lineAt(line).text.length);
-
-        editor.setDecorations(afterDecorationType, [{ range: new vscode.Range(endPos, endPos) }]);
-      }
-
-      // If there is an error message, display a notification
+      // Put issue details into VS Code's native diagnostics UI (Alt+F8 navigation).
       if (errorTitle || errorMessage) {
-        const notificationMessage = errorTitle || errorMessage || t('performance.errorDetected');
-
-        vscode.window.showInformationMessage(
-          notificationMessage,
-          { modal: false },
+        const messageSource = errorMessage || errorTitle || t('performance.errorDetected');
+        const diagnostic = new vscode.Diagnostic(
+          new vscode.Range(pos, pos),
+          toDiagnosticMessage(messageSource),
+          vscode.DiagnosticSeverity.Warning,
         );
+        diagnostic.source = 'Sanitizer';
+        jumpToFileDiagnosticCollection.set(document.uri, [diagnostic]);
+      }
+      else {
+        jumpToFileDiagnosticCollection.delete(document.uri);
       }
 
       // Monitor the change of cursor position and remove the highlight after the cursor "leave the current error position" in the same document
@@ -358,10 +370,7 @@ export const performanceDataMethods = {
 
         // After the cursor actually moves to another position, remove the highlight
         decorationType.dispose();
-
-        if (afterDecorationType) {
-          afterDecorationType.dispose();
-        }
+        jumpToFileDiagnosticCollection.delete(document.uri);
 
         selectionDisposable.dispose();
       });

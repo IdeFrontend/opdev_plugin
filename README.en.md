@@ -21,7 +21,7 @@ VS Code extension for the Huawei operator one-stop development platform. It prov
 
 ### Prerequisites
 
-- **Node.js** 18+ (LTS recommended)
+- **Node.js** 16+ (LTS recommended)
 - **pnpm** 8+
 - **VS Code** 1.80+ (for running and debugging the extension)
 
@@ -49,12 +49,19 @@ pnpm run install:web
 | `pnpm run watch` | Watch plugin sources and rebuild on change (with source maps) |
 | `pnpm run compile:debug` | Build with debug/source maps for extension debugging |
 | `pnpm run package` | Build and pack a `.vsix` for distribution |
+| `pnpm run build:icons-font` | Regenerate icon font from `web/src/assets/svg` (excludes `animated/`), output only `web/src/assets/fonts/opdevtools-icons.woff` |
 
 First time or after pulling changes:
 
 ```bash
 pnpm install
 pnpm run compile
+```
+
+Regenerate icons manually when SVG sources change:
+
+```bash
+pnpm run build:icons-font
 ```
 
 ### Run the extension in VS Code
