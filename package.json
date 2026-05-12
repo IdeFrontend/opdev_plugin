@@ -493,16 +493,18 @@
       }
     ],
     "viewsContainers": {
-      "activitybar": [
+      "secondarySidebar": [
         {
           "id": "mindstudio-opssuite-vscode-plugin",
           "title": "%viewContainer.activitybar.title%",
           "icon": "web/resources/activitybar_logo_mono.svg"
-        },
+        }
+      ],
+      "secondaryActivitybar": [
         {
-          "id": "huawei-op-devtools-secondary-sidebar",
-          "title": "%viewContainer.secondarySidebar.title%",
-          "icon": "web/resources/operate_icon_mono.svg"
+          "id": "mindstudio-opssuite-vscode-plugin",
+          "title": "%viewContainer.activitybar.title%",
+          "icon": "web/resources/activitybar_logo_mono.svg"
         }
       ],
       "panel": [
