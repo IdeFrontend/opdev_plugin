@@ -270,6 +270,7 @@ const updateContextForUri = async (uri: vscode.Uri | undefined) => {
  * @param context VSCode extended context
  */
 export async function activate(context: vscode.ExtensionContext) {
+const myExtension = vscode.extensions.getExtension('publisher.extensionName');
   const debugTag = '[op-devtools][activate]';
   const logDebug = (...args: unknown[]) => {
     const [message, payload] = args;

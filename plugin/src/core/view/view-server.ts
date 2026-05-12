@@ -5,6 +5,10 @@ import {
 } from './view-router';
 import { ViewRenderer } from './view-render';
 import { ViewQuery } from './view-query';
+import {
+  handleThemeRequest,
+  registerWebviewThemeBridge,
+} from './webview-theme';
 
 /** Enable view hooks */
 type ViewOpenedCallback = (routePath: string, webview: vscode.Webview)=> void;
@@ -84,31 +88,11 @@ export class ViewServer extends vscode.Disposable {
             await this.activeWebview(webviewView.webview, routeRaw.path);
             console.log(`[ViewServer.registerViewProviders] WebView activation completed: ${routeRaw.providerViewType}`);
 
-            const getThemeName = (kind: vscode.ColorThemeKind) =>
-              kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
+            const themeDisposable = registerWebviewThemeBridge(webviewView.webview);
 
-            webviewView.webview.postMessage({
-              command: 'updateTheme',
-              themeName: getThemeName(vscode.window.activeColorTheme.kind),
+            const messageDisposable = webviewView.webview.onDidReceiveMessage((message: unknown) => {
+              handleThemeRequest(webviewView.webview, message);
             });
-
-            const themeDisposable = vscode.window.onDidChangeActiveColorTheme((theme) => {
-              webviewView.webview.postMessage({
-                command: 'updateTheme',
-                themeName: getThemeName(theme.kind),
-              });
-            });
-
-            const messageDisposable = webviewView.webview.onDidReceiveMessage(
-              (message: { command: string }) => {
-                if (message.command === 'getTheme') {
-                  webviewView.webview.postMessage({
-                    command: 'updateTheme',
-                    themeName: getThemeName(vscode.window.activeColorTheme.kind),
-                  });
-                }
-              },
-            );
 
             this.viewProviders.push(themeDisposable, messageDisposable);
           },

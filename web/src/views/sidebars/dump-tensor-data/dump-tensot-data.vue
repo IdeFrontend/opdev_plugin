@@ -58,7 +58,7 @@ onBeforeUnmount(() => {
 
 // 使用主题管理组合式函数
 const {
-  themeConfig, actualTheme,
+  themeConfig,
 } = useTheme();
 </script>
 

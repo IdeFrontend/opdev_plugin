@@ -4,26 +4,22 @@ import { useTheme } from '@web/composables/use-theme';
 import OpenProjectForm from './components/open-project-form.vue';
 
 const {
-  themeConfig, actualTheme,
+  themeConfig,
 } = useTheme();
 </script>
 <template>
   <a-config-provider :theme="themeConfig">
     <div class="!w-full !ml-[10px] !mr-auto !p-8 !text-left !h-screen">
       <div class="flex items-center mb-6">
-        <div
-          class="font-bold text-2xl leading-7 m-0"
-          :class="actualTheme === 'dark' ? 'text-white' : 'text-[#1f1f1f]'"
-        >
+        <div class="font-bold text-2xl leading-7 m-0 op-text">
           {{ t('web.openProject.title') }}
         </div>
       </div>
       <div
-        class="h-px"
-        :class="actualTheme === 'dark' ? 'bg-white/15' : 'bg-gray-300'"
+        class="h-px bg-[var(--op-devtools-border)]"
         style="margin-bottom: 1.5rem; width: 100%;"
       />
-      <div :class="actualTheme === 'dark' ? 'text-white' : 'text-[#1f1f1f]'">
+      <div class="op-text">
         <div class="flex flex-col">
           <OpenProjectForm />
         </div>

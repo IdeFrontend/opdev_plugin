@@ -14,7 +14,7 @@ import {
   selectFolder, selectFile,
 } from '@web/apis/performance-run-data';
 import { t } from 'i18next';
-import { OperatorProjectViewId } from '@shared/project-type-view-id';
+import { OperatorProjectViewId, type OperatorProjectViewIdValue } from '@shared/project-type-view-id';
 import { ValidationStrategyFactory } from './validation-strategies';
 import { MessageHandlerStrategyManager } from './message-handler-strategies';
 import { SearchStrategyFactory } from './search-strategies';
@@ -22,7 +22,7 @@ import { ProjectNameFactory } from './project-name-factory';
 
 export function useNewProjectSSH(selectedTemplate?: Ref<'helloworld' | 'addn' | 'torch_library_template' | 'triton_vector_add'>) {
   const connectionFormRef = ref<AntdVForm | null>(null);
-  const selectedId_type = ref(OperatorProjectViewId.CANN);
+  const selectedId_type = ref<OperatorProjectViewIdValue>(OperatorProjectViewId.CANN);
 
   const isPathSetFromContextMenu = ref(false);
   const workspacePath = ref<string | null>(null);
