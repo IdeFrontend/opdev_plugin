@@ -6,6 +6,10 @@ import { HtmlTransformer } from './html-transformer';
 import webviewMessageList from './webview-message-list';
 import { ApiServer } from '@plugin/core/api-server';
 import {
+  handleThemeRequest,
+  registerWebviewThemeBridge,
+} from '@plugin/core/view/webview-theme';
+import {
   COMMAND_OPEN_DUMP_TENSOR_PANEL_VIEW,
   VIEW_DUMP_TENSOR_DATA,
 } from '@plugin/constants';
@@ -62,29 +66,11 @@ implements vscode.WebviewViewProvider {
       throw error;
     }
 
-    // Forward VSCode theme changes to webview.
-    this._themeChangeDisposable = vscode.window.onDidChangeActiveColorTheme((theme) => {
-      webviewView.webview.postMessage({
-        command: 'updateTheme',
-        themeName: theme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
-      });
-    });
-
-    // Send current theme on first render.
-    webviewView.webview.postMessage({
-      command: 'updateTheme',
-      themeName: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
-    });
+    this._themeChangeDisposable = registerWebviewThemeBridge(webviewView.webview);
   }
 
   private async handleWebviewMessage(message: any) {
-    // Handle theme query command.
-    if (message.command === 'getTheme') {
-      const currentTheme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
-      this._view?.webview.postMessage({
-        command: 'updateTheme',
-        themeName: currentTheme,
-      });
+    if (this._view && handleThemeRequest(this._view.webview, message)) {
       return;
     }
 

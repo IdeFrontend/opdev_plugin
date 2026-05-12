@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {
-  ref, onMounted, inject, computed,
+  ref, onMounted,
 } from 'vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import { t } from 'i18next';
@@ -15,16 +15,20 @@ import tipBase_1_3 from '@/assets/imgs/torch_library_template.png';
 import tritonVectorAddPreview from '@/assets/imgs/triton_vector_add.png';
 import { getProjectType, getProjectTypeSupportEnabled } from '@web/apis';
 
-const actualTheme = inject('actualTheme', computed(() => 'dark'));
+const getTextColorClass = () => 'op-text';
+const getBorderColorClass = () => 'border-[var(--op-devtools-border)]';
+const getSelectedBorderClass = () =>
+  'border-[var(--op-devtools-focus-border)] shadow-[0_0_0_3px_rgba(24,144,255,0.15)]';
+const getDividerClass = () => 'bg-[var(--op-devtools-border)]';
+const getDividerBorderClass = () => 'border-[var(--op-devtools-border)]';
+const getDescTextClass = () => 'op-text-muted';
 
-const getTextColorClass = () => actualTheme.value === 'dark' ? 'text-white' : 'text-[#1f1f1f]';
-const getBorderColorClass = () => actualTheme.value === 'dark' ? 'border-[#464646]' : 'border-[#d9d9d9]';
-const getSelectedBorderClass = () => actualTheme.value === 'dark'
-  ? 'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)]'
-  : 'border-[#1890ff] shadow-[0_0_0_3px_rgba(24,144,255,0.15)]';
-const getDividerClass = () => actualTheme.value === 'dark' ? 'bg-white/15' : 'bg-gray-300';
-const getDividerBorderClass = () => actualTheme.value === 'dark' ? 'border-white/15' : 'border-gray-300';
-const getDescTextClass = () => actualTheme.value === 'dark' ? 'text-white' : 'text-[#595959]';
+// 根据主题获取文本颜色
+// 根据主题获取边框颜色
+// 根据主题获取选中状态的边框和阴影
+// 根据主题获取分割线颜色（背景色）
+// 根据主题获取边框颜色（用于 border-t 等）
+// 根据主题获取描述文本颜色
 
 defineProps({
   connected: {
@@ -367,26 +371,32 @@ onMounted(async () => {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1f1f1f;
+  background: var(--op-devtools-background);
+  /* 轨道背景色 */
   border-radius: 6px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #4a4a4a;
+  background: var(--vscode-scrollbarSlider-background, var(--op-devtools-border));
+  /* 滑块颜色 */
   border-radius: 6px;
-  border: 2px solid #1f1f1f;
+  /* 滑块圆角 */
+  border: 2px solid var(--op-devtools-background);
+  /* 滑块边框，与轨道背景色相同形成间隔效果 */
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #5a5a5a;
+  background: var(--vscode-scrollbarSlider-hoverBackground, var(--op-devtools-border));
+  /* 悬停时颜色变深 */
 }
 
 ::-webkit-scrollbar-thumb:active {
-  background: #3a3a3a;
+  background: var(--vscode-scrollbarSlider-activeBackground, var(--op-devtools-focus-border));
+  /* 点击时颜色更深 */
 }
 
 ::-webkit-scrollbar-corner {
-  background: #1f1f1f;
+  background: var(--op-devtools-background);
 }
 
 .slide-fade-enter-active {

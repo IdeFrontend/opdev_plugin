@@ -105,9 +105,7 @@
                 <button
                   :class="[
                     'px-5 py-2.5 rounded-md border border-transparent transition-colors duration-150 cursor-pointer',
-                    actualTheme === 'dark' 
-                      ? 'bg-[#3d8bfd] hover:bg-[#5b9dff] text-white' 
-                      : 'bg-[#1890ff] hover:bg-[#40a9ff] text-white'
+                    'bg-[var(--vscode-button-background)] hover:bg-[var(--vscode-button-hoverBackground)] text-[var(--vscode-button-foreground)]'
                   ]"
                   @click="handleAscendCProject"
                 >
@@ -123,19 +121,19 @@
                 <div
                   :class="[
                     'flex-1 bg-transparent p-4 border rounded-lg overflow-hidden relative transition-all duration-300 cursor-pointer hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)]',
-                    selectedProjectTypeId === OperatorProjectViewId.CANN ? 'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)]' : (actualTheme === 'dark' ? 'border-[#464646]' : 'border-gray-300')
+                    selectedProjectTypeId === OperatorProjectViewId.CANN ? 'border-[var(--op-devtools-focus-border)] shadow-[0_0_0_3px_rgba(24,144,255,0.15)]' : 'border-[var(--op-devtools-border)]'
                   ]"
                   @click="selectedProjectTypeId = OperatorProjectViewId.CANN"
                 >
                   <div :class="[
-                    'font-extrabold text-[initial] mb-3',
-                    actualTheme === 'dark' ? 'text-white' : 'text-gray-800'
+                    'font-extrabold mb-3',
+                    'op-text'
                   ]">
                     {{ t('web.welcome.ascendCOpProject') }}
                   </div>
                   <div :class="[
                     'leading-7 mt-1 text-[12px] mb-2.5 whitespace-normal',
-                    actualTheme === 'dark' ? 'text-white' : 'text-gray-700'
+                    'op-text-muted'
                   ]"
                     v-html="getTemplateDesc(selectedTemplate)" />
                   <a-tag color="blue" class="mt-2 mr-2">
@@ -148,7 +146,7 @@
                     <div class="mt-4 flex items-center gap-3">
                       <span :class="[
                         'text-[13px] whitespace-nowrap',
-                        actualTheme === 'dark' ? 'text-[#ffffff]' : 'text-gray-800'
+                        'op-text'
                       ]">
                         {{ t('web.welcome.sample') }}
                       </span>
@@ -177,19 +175,19 @@
                 <div
                   :class="[
                     'flex-1 bg-transparent p-4 border rounded-lg overflow-hidden relative transition-all duration-300 cursor-pointer hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)]',
-                    selectedProjectTypeId === OperatorProjectViewId.STANDARD_CUSTOM ? 'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)]' : (actualTheme === 'dark' ? 'border-[#464646]' : 'border-gray-300')
+                    selectedProjectTypeId === OperatorProjectViewId.STANDARD_CUSTOM ? 'border-[var(--op-devtools-focus-border)] shadow-[0_0_0_3px_rgba(24,144,255,0.15)]' : 'border-[var(--op-devtools-border)]'
                   ]"
                   @click="selectedProjectTypeId = OperatorProjectViewId.STANDARD_CUSTOM"
                 >
                   <div :class="[
-                    'font-extrabold text-[initial] mb-3',
-                    actualTheme === 'dark' ? 'text-white' : 'text-gray-800'
+                    'font-extrabold mb-3',
+                    'op-text'
                   ]">
                     {{ t('web.welcome.ascendCStandardProject') }}
                   </div>
                   <div :class="[
                     'leading-7 mt-1 text-[12px] mb-2.5 whitespace-normal',
-                    actualTheme === 'dark' ? 'text-white' : 'text-gray-700'
+                    'op-text-muted'
                   ]">
                     {{ t('web.welcome.ascendCStandardDesc') }}
                   </div>
@@ -211,19 +209,19 @@
                 <div
                   :class="[
                     'flex-1 bg-transparent p-4 border rounded-lg overflow-hidden relative transition-all duration-300 cursor-pointer hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)]',
-                    selectedProjectTypeId === OperatorProjectViewId.PYASC ? 'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)]' : (actualTheme === 'dark' ? 'border-[#464646]' : 'border-gray-300')
+                    selectedProjectTypeId === OperatorProjectViewId.PYASC ? 'border-[var(--op-devtools-focus-border)] shadow-[0_0_0_3px_rgba(24,144,255,0.15)]' : 'border-[var(--op-devtools-border)]'
                   ]"
                   @click="selectedProjectTypeId = OperatorProjectViewId.PYASC"
                 >
                   <div :class="[
-                    'font-extrabold text-[initial] mb-3',
-                    actualTheme === 'dark' ? 'text-white' : 'text-gray-800'
+                    'font-extrabold mb-3',
+                    'op-text'
                   ]">
                     {{ t('web.welcome.pythonPyascProject') }}
                   </div>
                   <div :class="[
                     'leading-7 mt-1 text-[12px] mb-2.5 whitespace-normal',
-                    actualTheme === 'dark' ? 'text-white' : 'text-gray-700'
+                    'op-text-muted'
                   ]">
                     {{ t('web.welcome.pythonPyascDesc') }}
                   </div>
@@ -246,19 +244,19 @@
                   v-if="tritonSupportEnabled"
                   :class="[
                     'flex-1 bg-transparent p-4 border rounded-lg overflow-hidden relative transition-all duration-300 cursor-pointer hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)]',
-                    selectedProjectTypeId === OperatorProjectViewId.TRITON ? 'border-[#4ba5f4] shadow-[0_0_0_3px_rgba(24,144,255,0.1)]' : (actualTheme === 'dark' ? 'border-[#464646]' : 'border-gray-300')
+                    selectedProjectTypeId === OperatorProjectViewId.TRITON ? 'border-[var(--op-devtools-focus-border)] shadow-[0_0_0_3px_rgba(24,144,255,0.15)]' : 'border-[var(--op-devtools-border)]'
                   ]"
                   @click="selectedProjectTypeId = OperatorProjectViewId.TRITON"
                 >
                   <div :class="[
-                    'font-extrabold text-[initial] mb-3',
-                    actualTheme === 'dark' ? 'text-white' : 'text-gray-800'
+                    'font-extrabold mb-3',
+                    'op-text'
                   ]">
                     {{ t('web.welcome.pythonTritonProject') }}
                   </div>
                   <div :class="[
                     'leading-7 mt-1 text-[12px] mb-2.5 whitespace-normal',
-                    actualTheme === 'dark' ? 'text-white' : 'text-gray-700'
+                    'op-text-muted'
                   ]">
                     {{ t('web.welcome.pythonTritonDesc') }}
                   </div>
@@ -515,7 +513,7 @@
 import { onMounted, ref } from 'vue';
 import { t } from 'i18next';
 import { useTheme } from '@web/composables/use-theme';
-import { OperatorProjectViewId } from '@shared/project-type-view-id';
+import { OperatorProjectViewId, type OperatorProjectViewIdValue } from '@shared/project-type-view-id';
 import { getProjectTypeSupportEnabled } from '@web/apis';
 import settingIconRaw from '@/assets/svg/setting.svg?raw';
 import buildIconRaw from '@/assets/svg/build.svg?raw';
@@ -537,7 +535,7 @@ import analysisImg from '@/assets/imgs/analysis.mp4';
 import selectAnalysisImg from '@/assets/imgs/selectAnalysis.mp4';
 
 
-const { themeConfig, actualTheme } = useTheme();
+const { themeConfig } = useTheme();
 
 const toCurrentColorSvg = (svg: string) =>
   svg
@@ -556,7 +554,7 @@ const checkTabKey = ref('select');
 const perfTabKey = ref('select');
 
 // 新建算子工程：当前选中的工程类型（<<<>>> / 标准自定义 / pyasc / triton），默认 <<<>>>
-const selectedProjectTypeId = ref(OperatorProjectViewId.CANN);
+const selectedProjectTypeId = ref<OperatorProjectViewIdValue>(OperatorProjectViewId.CANN);
 
 // <<<>>> 算子工程模板选择（helloworld / addn / torch_library）
 const selectedTemplate = ref<'helloworld' | 'addn' | 'torch_library_template' | 'triton_vector_add'>(

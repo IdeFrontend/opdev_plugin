@@ -1,3 +1,220 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light dark;
+    --op-devtools-background: var(--vscode-editor-background, #1e1e1e);
+    --op-devtools-foreground: var(--vscode-foreground, var(--vscode-editor-foreground, #f0f0f0));
+    --op-devtools-muted-foreground: var(--vscode-descriptionForeground, #a6a6a6);
+    --op-devtools-surface: var(--vscode-editorWidget-background, var(--op-devtools-background));
+    --op-devtools-elevated-surface: var(--vscode-dropdown-background, var(--op-devtools-surface));
+    --op-devtools-border: var(--vscode-widget-border, #454545);
+    --op-devtools-focus-border: var(--vscode-focusBorder, #007fd4);
+    --op-devtools-link: var(--vscode-textLink-foreground, #4ba5f4);
+    --op-devtools-hover: var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.08));
+    --op-devtools-selected: var(--vscode-list-activeSelectionBackground, rgba(24, 144, 255, 0.18));
+    --op-devtools-selected-foreground: var(--vscode-list-activeSelectionForeground, var(--op-devtools-foreground));
+  }
+
+  :root[data-op-devtools-theme="light"],
+  :root[data-op-devtools-theme="high-contrast-light"] {
+    --op-devtools-background: var(--vscode-editor-background, #ffffff);
+    --op-devtools-foreground: var(--vscode-foreground, var(--vscode-editor-foreground, #1f1f1f));
+    --op-devtools-muted-foreground: var(--vscode-descriptionForeground, #595959);
+    --op-devtools-border: var(--vscode-widget-border, #d9d9d9);
+    --op-devtools-hover: var(--vscode-list-hoverBackground, rgba(0, 0, 0, 0.05));
+    --op-devtools-selected: var(--vscode-list-activeSelectionBackground, #e6f4ff);
+  }
+
+  :root[data-op-devtools-theme="high-contrast"],
+  :root[data-op-devtools-theme="high-contrast-light"] {
+    --op-devtools-border: var(--vscode-contrastBorder, var(--vscode-focusBorder, #007fd4));
+    --op-devtools-focus-border: var(--vscode-focusBorder, var(--vscode-contrastBorder, #007fd4));
+  }
+
+  html,
+  body,
+  #app {
+    min-height: 100%;
+    background: var(--op-devtools-background);
+    color: var(--op-devtools-foreground);
+    font-family: var(--vscode-font-family, "Segoe UI", sans-serif);
+    font-size: var(--vscode-font-size, 13px);
+  }
+
+  body {
+    margin: 0;
+  }
+
+  a {
+    color: var(--op-devtools-link);
+  }
+
+  :focus-visible {
+    outline: 1px solid var(--op-devtools-focus-border);
+    outline-offset: 1px;
+  }
+
+  :root.op-devtools-theme-changing *,
+  :root.op-devtools-theme-changing *::before,
+  :root.op-devtools-theme-changing *::after {
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}
+
+@layer components {
+  .op-surface {
+    background: var(--op-devtools-surface);
+    color: var(--op-devtools-foreground);
+  }
+
+  .op-surface-elevated {
+    background: var(--op-devtools-elevated-surface);
+    color: var(--op-devtools-foreground);
+    border: 1px solid var(--op-devtools-border);
+  }
+
+  .op-text {
+    color: var(--op-devtools-foreground);
+  }
+
+  .op-text-muted {
+    color: var(--op-devtools-muted-foreground);
+  }
+
+  .op-border {
+    border-color: var(--op-devtools-border);
+  }
+
+  .op-hover:hover {
+    background: var(--op-devtools-hover);
+  }
+
+  .op-selected {
+    background: var(--op-devtools-selected);
+    color: var(--op-devtools-selected-foreground);
+  }
+
+  .op-focus-ring:focus-visible {
+    outline: 1px solid var(--op-devtools-focus-border);
+    outline-offset: 1px;
+  }
+
+  body .ant-app,
+  body .ant-typography,
+  body .ant-form,
+  body .ant-empty,
+  body .ant-table,
+  body .ant-tree,
+  body .ant-menu {
+    color: var(--op-devtools-foreground);
+  }
+
+  body .ant-dropdown,
+  body .ant-select-dropdown,
+  body .ant-picker-dropdown,
+  body .ant-cascader-dropdown,
+  body .ant-mentions-dropdown,
+  body .ant-popover-inner,
+  body .ant-modal-content,
+  body .ant-drawer-content,
+  body .ant-message-notice-content,
+  body .ant-notification-notice,
+  body .ant-tooltip-inner {
+    background: var(--op-devtools-elevated-surface);
+    color: var(--op-devtools-foreground);
+    border-color: var(--op-devtools-border);
+  }
+
+  body .ant-popover-arrow::before,
+  body .ant-tooltip-arrow::before {
+    background: var(--op-devtools-elevated-surface);
+  }
+
+  body .ant-dropdown-menu,
+  body .ant-menu,
+  body .ant-picker-panel-container {
+    background: var(--op-devtools-elevated-surface);
+    color: var(--op-devtools-foreground);
+  }
+
+  body .ant-dropdown-menu-item,
+  body .ant-select-item,
+  body .ant-cascader-menu-item,
+  body .ant-picker-cell-inner {
+    color: var(--op-devtools-foreground);
+  }
+
+  body .ant-dropdown-menu-item:hover,
+  body .ant-select-item-option-active:not(.ant-select-item-option-disabled),
+  body .ant-cascader-menu-item-active:not(.ant-cascader-menu-item-disabled),
+  body .ant-picker-cell-inner:hover {
+    background: var(--op-devtools-hover);
+  }
+
+  body .ant-select-item-option-selected:not(.ant-select-item-option-disabled),
+  body .ant-cascader-menu-item-active:not(.ant-cascader-menu-item-disabled),
+  body .ant-picker-cell-selected .ant-picker-cell-inner {
+    background: var(--op-devtools-selected);
+    color: var(--op-devtools-selected-foreground);
+  }
+
+  body .ant-input,
+  body .ant-input-number,
+  body .ant-input-number-input,
+  body .ant-input-affix-wrapper,
+  body .ant-select-selector,
+  body .ant-picker,
+  body .ant-mentions,
+  body .ant-checkbox-inner,
+  body .ant-radio-inner {
+    background: var(--vscode-input-background, var(--op-devtools-surface));
+    color: var(--vscode-input-foreground, var(--op-devtools-foreground));
+    border-color: var(--vscode-input-border, var(--op-devtools-border));
+  }
+
+  body .ant-input::placeholder,
+  body .ant-input-number-input::placeholder {
+    color: var(--vscode-input-placeholderForeground, var(--op-devtools-muted-foreground));
+  }
+
+  body .ant-input:hover,
+  body .ant-input:focus,
+  body .ant-input-focused,
+  body .ant-input-affix-wrapper:hover,
+  body .ant-input-affix-wrapper-focused,
+  body .ant-select-focused .ant-select-selector,
+  body .ant-picker:hover,
+  body .ant-picker-focused {
+    border-color: var(--op-devtools-focus-border);
+    box-shadow: 0 0 0 1px var(--op-devtools-focus-border);
+  }
+
+  body .ant-btn-default {
+    background: var(--vscode-button-secondaryBackground, var(--op-devtools-surface));
+    color: var(--vscode-button-secondaryForeground, var(--op-devtools-foreground));
+    border-color: var(--op-devtools-border);
+  }
+
+  body .ant-btn-default:hover {
+    background: var(--vscode-button-secondaryHoverBackground, var(--op-devtools-hover));
+    color: var(--vscode-button-secondaryForeground, var(--op-devtools-foreground));
+    border-color: var(--op-devtools-focus-border);
+  }
+
+  body .ant-btn-primary {
+    background: var(--vscode-button-background, var(--op-devtools-link));
+    color: var(--vscode-button-foreground, #ffffff);
+    border-color: var(--vscode-button-background, var(--op-devtools-link));
+  }
+
+  body .ant-btn-primary:hover {
+    background: var(--vscode-button-hoverBackground, var(--vscode-button-background, var(--op-devtools-link)));
+    color: var(--vscode-button-foreground, #ffffff);
+  }
+}

@@ -13,6 +13,10 @@ import { PermanentStorage } from './permanent-storage';
 import webviewMessageList from './webview-message-list';
 import { HtmlTransformer } from './html-transformer';
 import { ApiServer } from '@plugin/core/api-server';
+import {
+  handleThemeRequest,
+  registerWebviewThemeBridge,
+} from '@plugin/core/view/webview-theme';
 
 /**
  * Webview provider - Responsible for creating and managing Webview panels
@@ -23,7 +27,8 @@ export class WebviewProvider {
   private context: vscode.ExtensionContext;
   private readonly userInfo: os.UserInfo<string | number>;
   private pluginSidebarDisposable: vscode.Disposable | undefined;
-  private themeChangeDisposable: vscode.Disposable | undefined;
+  private pluginSidebarThemeDisposable: vscode.Disposable | undefined;
+  private panelThemeDisposable: vscode.Disposable | undefined;
 
   constructor(
     context: vscode.ExtensionContext,
@@ -82,6 +87,11 @@ export class WebviewProvider {
         this.pluginSidebarDisposable.dispose();
       }
 
+      if (this.pluginSidebarThemeDisposable) {
+        this.pluginSidebarThemeDisposable.dispose();
+        this.pluginSidebarThemeDisposable = undefined;
+      }
+
       const extensionUri = this.context.extensionUri;
       const viewRootUri = vscode.Uri.joinPath(extensionUri, 'out', 'web');
 
@@ -106,24 +116,12 @@ export class WebviewProvider {
               { lang: vscode.env.language.toLowerCase() },
             );
 
-            // Listen to VSCode theme changes and notify Webview
-            this.themeChangeDisposable = vscode.window.onDidChangeActiveColorTheme((theme) => {
-              webviewView.webview.postMessage({
-                command: 'updateTheme',
-                themeName: theme.kind === vscode.ColorThemeKind.Dark || theme.kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light',
-              });
-            });
-
-            // Send the current topic on initialization
-            webviewView.webview.postMessage({
-              command: 'updateTheme',
-              themeName: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark || vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light',
-            });
+            this.pluginSidebarThemeDisposable = registerWebviewThemeBridge(webviewView.webview);
 
             // Handling Webview messages
             webviewView.webview.onDidReceiveMessage(
               (message: unknown) => {
-                this.handleWebviewMessage(message);
+                this.handleWebviewMessage(message, webviewView.webview);
               },
               undefined,
               this.context.subscriptions,
@@ -139,7 +137,7 @@ export class WebviewProvider {
       console.error('Failed to register pluginSidebar webview provider:', error);
 
       // Return an empty disposable to avoid errors
-      return { dispose: () => {} };
+      return { dispose: () => { } };
     }
   }
 
@@ -163,22 +161,8 @@ export class WebviewProvider {
       // Set Webview content
       await this.updateWebviewContent(router);
 
-      // Listen to VSCode theme changes and notify Webview
-      this.themeChangeDisposable = vscode.window.onDidChangeActiveColorTheme((theme) => {
-        if (this.panel) {
-          this.panel.webview.postMessage({
-            command: 'updateTheme',
-            themeName: theme.kind === vscode.ColorThemeKind.Dark || theme.kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light',
-          });
-        }
-      });
-
-      // Send the current topic on initialization
       if (this.panel) {
-        this.panel.webview.postMessage({
-          command: 'updateTheme',
-          themeName: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark || vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light',
-        });
+        this.panelThemeDisposable = registerWebviewThemeBridge(this.panel.webview);
       }
 
       // Handle panel close event
@@ -193,7 +177,7 @@ export class WebviewProvider {
       // Handling Webview messages
       this.panel.webview.onDidReceiveMessage(
         (message: unknown) => {
-          this.handleWebviewMessage(message);
+          this.handleWebviewMessage(message, this.panel?.webview);
         },
         undefined,
         this.context.subscriptions,
@@ -243,24 +227,18 @@ export class WebviewProvider {
   /**
    * Handle messages from Webview
    */
-  private handleWebviewMessage(message: unknown): void {
-    const msg = message as { command: string;
-      [key: string]: unknown };
+  private handleWebviewMessage(
+    message: unknown,
+    sourceWebview?: vscode.Webview,
+  ): void {
+    if (sourceWebview && handleThemeRequest(sourceWebview, message)) {
+      return;
+    }
 
-    // Handle gettopic command
-    // if (msg.command === 'getTheme') {
-    //   const currentTheme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark || vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.HighContrast ? 'dark' : 'light';
-    //   if (this.panel) {
-    //     this.panel.webview.postMessage({
-    //       command: 'updateTheme',
-    //       themeName: currentTheme,
-    //     });
-    //   }
-    // // For sidebar type webview, it needs to be sent in different ways
-    // // Sidebar messages are processed in their respective providers
-
-    //   return;
-    // }
+    const msg = message as {
+      command: string;
+      [key: string]: unknown
+    };
 
     for (const messageItem of webviewMessageList) {
       if (msg.command === messageItem.command) {
@@ -283,9 +261,14 @@ export class WebviewProvider {
       this.pluginSidebarDisposable = undefined;
     }
 
-    if (this.themeChangeDisposable) {
-      this.themeChangeDisposable.dispose();
-      this.themeChangeDisposable = undefined;
+    if (this.pluginSidebarThemeDisposable) {
+      this.pluginSidebarThemeDisposable.dispose();
+      this.pluginSidebarThemeDisposable = undefined;
+    }
+
+    if (this.panelThemeDisposable) {
+      this.panelThemeDisposable.dispose();
+      this.panelThemeDisposable = undefined;
     }
   }
 }

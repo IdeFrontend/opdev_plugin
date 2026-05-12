@@ -13,7 +13,7 @@ import {
 
 // 使用主题管理组合式函数
 const {
-  themeConfig, actualTheme,
+  themeConfig,
 } = useTheme();
 const guide = 'https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODtools/Operatordevelopmenttools/atlasopdev_16_0082.html';
 const onboardData = ref({
@@ -331,7 +331,7 @@ onMounted(async () => {
   .page-header {
     font-size: 22px;
     font-weight: bold;
-    border-bottom: 1px solid v-bind('actualTheme === "dark" ? "#424242" : "#d9d9d9"');
+    border-bottom: 1px solid var(--op-devtools-border);
     text-align: left;
     padding: 20px;
   }
@@ -356,7 +356,7 @@ onMounted(async () => {
     margin-top: 8px;
     padding: 12px;
     border-radius: 4px;
-    border: 1px solid v-bind('actualTheme === "dark" ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)"');
+    border: 1px solid var(--op-devtools-border);
   }
 
   .nested-checkbox-group {
@@ -365,7 +365,7 @@ onMounted(async () => {
     margin-top: 8px;
     padding: 12px;
     border-radius: 4px;
-    border: 1px solid v-bind('actualTheme === "dark" ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.15)"');
+    border: 1px solid var(--op-devtools-border);
     display: flex;
     flex-wrap: wrap;
     gap: 16px;
@@ -378,7 +378,7 @@ onMounted(async () => {
   .do-not-show-row {
     margin-top: 16px;
     padding-top: 12px;
-    border-top: 1px solid v-bind('actualTheme === "dark" ? "rgba(255, 255, 255, 0.12)" : "rgba(0, 0, 0, 0.08)"');
+    border-top: 1px solid var(--op-devtools-border);
   }
 
   .footer-actions {

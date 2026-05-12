@@ -24,7 +24,7 @@ const connectionFormRules = OpenProjectFormRulesFactory.createFormRules();
 </script>
 <template>
   <div
-    class="text-left text-sm font-normal leading-[22px] [&_.ant-form-item-label_.help-icon]:text-white/45 [&_.ant-form-item-label_.help-icon]:cursor-help [&_.ant-form-item-label_.help-icon]:text-sm [&_.ant-form-item-label_.help-icon]:ml-1"
+    class="text-left text-sm font-normal leading-[22px] [&_.ant-form-item-label_.help-icon]:text-[var(--op-devtools-muted-foreground)] [&_.ant-form-item-label_.help-icon]:cursor-help [&_.ant-form-item-label_.help-icon]:text-sm [&_.ant-form-item-label_.help-icon]:ml-1"
   >
     <a-form
       ref="connectionFormRef"
