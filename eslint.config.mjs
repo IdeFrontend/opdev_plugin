@@ -9,6 +9,8 @@ import stylistic from '@stylistic/eslint-plugin';
 export default defineConfig([
   {
     ignores: [
+      // Operator code templates: plain CMake/shell/Python sources; not linted as app TS/JS.
+      'plugin/templates/code_template/**',
       'out/',
       'dist/',
       '**/dist/',

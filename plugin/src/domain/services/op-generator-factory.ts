@@ -82,6 +82,11 @@ export class BaseOpGenerator {
           new RegExp(templateName, 'g'),
           this.op_name || '',
         );
+
+        if (newName === name) {
+          continue;
+        }
+
         const newPath = path.join(this.op_path, newName);
 
         // If skipExisting is true and the target file already exists, skip renaming
@@ -112,6 +117,11 @@ export class BaseOpGenerator {
           new RegExp(templateName, 'g'),
           this.op_name || '',
         );
+
+        if (newName === name) {
+          continue;
+        }
+
         const newPath = path.join(path.dirname(full), newName);
 
         // If skipExisting is true and the target file already exists, skip renaming
@@ -212,6 +222,65 @@ export class BaseOpGenerator {
 
     walk(this.op_path);
   }
+
+  /**
+   * Replace reserved `__MSTT_OP_NAME_*__` placeholders (longest keys first so partial matches are safe).
+   * Used in templates where the operator id must track `op_name` but is not the template id string.
+   */
+  _replaceMsttPlaceholders() {
+    if (!fs.pathExistsSync(this.op_path) || !this.op_name) {
+      return;
+    }
+
+    const opName = this.op_name;
+    const opNameCapitalized = opName
+      .split('_')
+      .map((s) => s.charAt(0)
+        .toUpperCase() + s.slice(1))
+      .join('');
+
+    const replacements: Record<string, string> = {
+      __MSTT_OP_NAME_PASCAL__: opNameCapitalized,
+      __MSTT_OP_NAME_UPPER__: opName.toUpperCase(),
+      __MSTT_OP_NAME__: opName,
+    };
+
+    const walk = (dir: string) => {
+      const names = fs.readdirSync(dir);
+
+      for (const name of names) {
+        const full = path.join(dir, name);
+        const stat = fs.statSync(full);
+
+        if (stat.isDirectory()) {
+          walk(full);
+          continue;
+        }
+
+        try {
+          let content = fs.readFileSync(full, 'utf8');
+          let changed = false;
+
+          for (const oldKey of Object.keys(replacements)) {
+            if (content.includes(oldKey)) {
+              content = content.split(oldKey)
+                .join(replacements[oldKey]);
+              changed = true;
+            }
+          }
+
+          if (changed) {
+            fs.writeFileSync(full, content, 'utf8');
+          }
+        }
+        catch {
+          // skip binary or unreadable files
+        }
+      }
+    };
+
+    walk(this.op_path);
+  }
 }
 
 export class AscendOpGenerator extends BaseOpGenerator {
@@ -220,6 +289,12 @@ export class AscendOpGenerator extends BaseOpGenerator {
 
     this.template_name =
       this.params.template_name || this.template_name || 'add_custom';
+
+    if (this.params.op_name?.trim()) {
+      this.op_name = this.params.op_name.trim();
+
+      return this.op_name;
+    }
 
     if (!opsPrototype) {
       this.op_name =
@@ -294,9 +369,13 @@ export class AscendOpGenerator extends BaseOpGenerator {
       throw new Error(`Failed to extract template: ${error instanceof Error ? error.message : String(error)}`);
     }
 
-    if (this.template_name && this.template_name != this.op_name) {
+    if (this.template_name && this.op_name) {
       this._renameFiles(this.template_name);
       this._replaceContent(this.template_name);
+    }
+
+    if (this.op_name) {
+      this._replaceMsttPlaceholders();
     }
 
     return true;
@@ -364,9 +443,13 @@ export class CannOpGenerator extends BaseOpGenerator {
       throw new Error(`Failed to extract template: ${error instanceof Error ? error.message : String(error)}`);
     }
 
-    if (this.template_name && this.template_name != this.op_name) {
+    if (this.template_name && this.op_name) {
       this._renameFiles(this.template_name);
       this._replaceContent(this.template_name);
+    }
+
+    if (this.op_name) {
+      this._replaceMsttPlaceholders();
     }
 
     return true;
@@ -433,9 +516,13 @@ export class PyAscOpGenerator extends BaseOpGenerator {
       throw new Error(`Failed to extract template: ${error instanceof Error ? error.message : String(error)}`);
     }
 
-    if (this.template_name && this.template_name != this.op_name) {
+    if (this.template_name && this.op_name) {
       this._renameFiles(this.template_name);
       this._replaceContent(this.template_name);
+    }
+
+    if (this.op_name) {
+      this._replaceMsttPlaceholders();
     }
 
     return true;
@@ -495,9 +582,13 @@ export class TritonOpGenerator extends CannOpGenerator {
       throw new Error(`Failed to extract template: ${error instanceof Error ? error.message : String(error)}`);
     }
 
-    if (this.template_name && this.template_name != this.op_name) {
+    if (this.template_name && this.op_name) {
       this._renameFiles(this.template_name);
       this._replaceContent(this.template_name);
+    }
+
+    if (this.op_name) {
+      this._replaceMsttPlaceholders();
     }
 
     return true;

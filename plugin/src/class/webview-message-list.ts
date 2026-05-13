@@ -166,6 +166,7 @@ export async function handleOperatorProjectDirectoryFile(
           opsPrototypeFile: '',
           opType: 'cann',
           templateName,
+          opName: pm.getProjectName(),
         });
         console.log('Operator prototype creation completed');
 
@@ -194,6 +195,7 @@ export async function handleOperatorProjectDirectoryFile(
           opsPrototypeFile: '',
           opType: 'pyasc',
           templateName,
+          opName: pm.getProjectName(),
         });
         console.log('pyasc operator prototype creation completed');
 
@@ -222,6 +224,7 @@ export async function handleOperatorProjectDirectoryFile(
           opsPrototypeFile: '',
           opType: 'triton',
           templateName: templateName || 'triton_vector_add',
+          opName: pm.getProjectName(),
         });
         console.log('Triton operator prototype creation completed');
 
@@ -256,6 +259,7 @@ export async function handleOperatorProjectDirectoryFile(
           await welcomeMethods.createOpsByPrototype({
             opsPrototypeFile: opsPrototypeFilePath,
             opType: 'ascend',
+            opName: pm.getProjectName(),
           });
           console.log('Operator project created from prototype');
         }
