@@ -29,7 +29,6 @@ import {
   SubOperatorInfo,
 } from '@plugin/domain/models/project-model';
 import { WorkspaceDetectorService } from '@plugin/service/workspace-detector-service';
-import { OpGeneratorFactory } from '@plugin/domain/services/op-generator-factory';
 import { OperatorProjectIconTheme } from '../class/operator-project-icon-theme';
 
 // Auxiliary function: get extension context
@@ -130,7 +129,8 @@ export const welcomeMethods = {
         }
       }
 
-      // Call projectService.init (replaces legacy OpsAPI.init)
+      // Optional: when creating a standard-custom sub-operator inside a collection workspace,
+      // attach metadata to the root project record (does not replace standalone project registration).
       const projectType = viewIdToProjectType(params.createOperatorProjectDictoryFileType);
       if (projectType === 'ascend') {
         // Workspace folder currently open in VS Code
@@ -211,20 +211,19 @@ export const welcomeMethods = {
           vscode.window.showInformationMessage(t('welcome.cannotCreateHere'));
         }
       }
-      else {
-        try {
-          await projectService.init({
-            ascendEnvScript: params.projectSH,
-            projectPath: params.projectPath,
-            projectName: params.projectName,
-            templateName: params.templateName,
-            projectType: viewIdToProjectType(params.createOperatorProjectDictoryFileType),
-          });
-        }
-        catch (error) {
-          const msg = error instanceof Error ? error.message : String(error);
-          throw new Error(t('welcome.initOperatorProjectFailed', { error: msg }));
-        }
+
+      try {
+        await projectService.init({
+          ascendEnvScript: params.projectSH,
+          projectPath: params.projectPath,
+          projectName: params.projectName,
+          templateName: params.templateName,
+          projectType: viewIdToProjectType(params.createOperatorProjectDictoryFileType),
+        });
+      }
+      catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        throw new Error(t('welcome.initOperatorProjectFailed', { error: msg }));
       }
 
       try {
@@ -254,25 +253,7 @@ export const welcomeMethods = {
       // Show creation success message
       vscode.window.showInformationMessage(t('welcome.projectCreated', { name: params.projectName }));
 
-      if (viewIdToProjectType(params.createOperatorProjectDictoryFileType) === 'ascend') {
-        const fullPath = path.join(params.projectPath, params.projectName);
-
-        await ensureLaunchJsonExists(fullPath);
-        const generator = OpGeneratorFactory.getGenerator(
-          { op_path: fullPath },
-          {
-            project_name: params.projectName,
-            project_path: params.projectPath,
-          },
-          context.extensionPath,
-        );
-
-        generator.parseMeta();
-        await generator.executeGeneration();
-        vscode.commands.executeCommand('workbench.action.closeActiveEditor');
-
-        return;
-      }
+      await ensureLaunchJsonExists(fullProjectPath);
 
       // Save templateName to globalState for subsequent use
       if (params.templateName) {

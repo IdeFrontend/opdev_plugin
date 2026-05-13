@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import AdmZip from 'adm-zip';
 import esbuild from 'esbuild';
 
 const useSourcemap =
@@ -112,6 +113,66 @@ const copyAssets = () => {
   }
 };
 
+const outTemplatesRoot = path.resolve(__dirname, '../out/templates/');
+
+// Source templates are plain folders under plugin/templates/code_template/<group>/<name>/.
+// Runtime still expects flat .zip archives under out/templates (see OpGeneratorFactory).
+// After copying into out/, pack each template directory into "<name>.zip" and remove the folder.
+function packCodeTemplateSourceDirsToZips(templatesRoot: string) {
+  const codeTemplateRoot = path.join(templatesRoot, 'code_template');
+
+  if (!fs.existsSync(codeTemplateRoot)) {
+    console.warn('[build-extension] code_template missing under', templatesRoot);
+
+    return;
+  }
+
+  const filterZipPath = (zipEntryPath: string) => {
+    const parts = zipEntryPath.split(/[/\\]/);
+
+    return !parts.some((p) => p === '.DS_Store');
+  };
+
+  const groups = [
+    'cann_template',
+    'ascend_template',
+    'triton_template',
+  ] as const;
+
+  for (const group of groups) {
+    const groupDir = path.join(codeTemplateRoot, group);
+
+    if (!fs.existsSync(groupDir)) {
+      continue;
+    }
+
+    for (const name of fs.readdirSync(groupDir)) {
+      const dirPath = path.join(groupDir, name);
+      const dirStat = fs.statSync(dirPath);
+
+      if (!dirStat.isDirectory()) {
+        continue;
+      }
+
+      const outZip = path.join(groupDir, `${name}.zip`);
+      const zip = new AdmZip();
+
+      zip.addLocalFolder(dirPath, '', filterZipPath);
+      zip.writeZip(outZip);
+      fs.rmSync(dirPath, {
+        force: true,
+        recursive: true,
+      });
+      console.log('[build-extension] packed code template', path.relative(templatesRoot, outZip));
+    }
+  }
+}
+
+function copyAndPrepareTemplates() {
+  copyAssets();
+  packCodeTemplateSourceDirsToZips(outTemplatesRoot);
+}
+
 (async () => {
   if (isWatch) {
     const ctx = await esbuild.context({
@@ -126,7 +187,7 @@ const copyAssets = () => {
               }
               else {
                 console.log('Build succeeded');
-                copyAssets();
+                copyAndPrepareTemplates();
               }
             });
           },
@@ -139,6 +200,6 @@ const copyAssets = () => {
   }
   else {
     await esbuild.build(buildOptions);
-    copyAssets();
+    copyAndPrepareTemplates();
   }
 })();
