@@ -191,7 +191,7 @@ onMounted(async () => {
               @click="selectedId_type = item.id"
             >
               <div
-                class="font-extrabold text-[initial] mb-[25px]"
+                class="font-extrabold mb-[25px]"
                 :class="getTextColorClass()"
               >
                 {{ t(item.titleKey) }}
