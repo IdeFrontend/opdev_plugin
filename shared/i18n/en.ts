@@ -417,7 +417,7 @@ export default {
   'web.welcome.typeAngle': 'Type: <<<>>>',
   'web.welcome.sample': 'Sample',
   'web.welcome.ascendCStandardProject': '【Ascend C】Standard custom operator project',
-  'web.welcome.ascendCStandardDesc': 'Standard custom operator project in Ascend C. op_host on CPC, op_kernel on NPU, op_graph for graph mode.',
+  'web.welcome.ascendCStandardDesc': 'Standard custom operator project in Ascend C. op_host on CPU, op_kernel on NPU, op_graph for graph mode.',
   'web.welcome.typeStandardCustom': 'Type: Standard custom',
   'web.welcome.pythonPyascProject': '【Python】pyasc operator project',
   'web.welcome.pythonPyascDesc': 'Sample custom Add operator project with pyasc.',
@@ -470,7 +470,7 @@ export default {
   // web link panel (new operator project)
   'web.link.projectType': 'Project type',
   'web.link.ascendCOpDesc': 'Sample addn project for <<<>>> with .asc heterogeneous compile.',
-  'web.link.ascendCStandardDesc': 'Standard custom operator in Ascend C. op_host on CPC, op_kernel on NPU, op_graph for graph mode. <span style="color: #ff4d4f; font-weight: bold;">(Compile depends on ops-math; operator will be placed in ops-math/math. Move to your fork for submit.)</span>',
+  'web.link.ascendCStandardDesc': 'Standard custom operator in Ascend C. op_host on CPU, op_kernel on NPU, op_graph for graph mode. <span style="color: #ff4d4f; font-weight: bold;">(Compile depends on ops-math; operator will be placed in ops-math/math. Move to your fork for submit.)</span>',
   'web.link.pythonPyascDesc': 'Custom Add operator sample with pyasc.',
   'web.link.pythonTritonDesc': 'Custom vector-add operator sample with Triton.',
   'web.link.structureDiagram': 'Project structure',

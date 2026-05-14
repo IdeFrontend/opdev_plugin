@@ -129,5 +129,9 @@
   "command.sidebar.performance.report.showMarkedOnly.title": "Show marked only",
   "command.sidebar.performance.report.showAll.title": "Show all",
   "command.sidebar.performance.file.open.title": "Open file",
-  "customEditor.csvViewer.displayName": "CSV Table View"
+  "customEditor.csvViewer.displayName": "CSV Table View",
+  "view.homeTree.name": "Home",
+  "view.welcome.homeTree.intro": "Click [Help Guide](command:huawei-op-devtools.sidebar.openHelp) or [Welcome Home](command:huawei-op-devtools.sidebar.openWelcome) to view plugin introduction.",
+  "view.welcome.homeTree.newOperatorProject": "[New Operator Project](command:huawei-op-devtools.open)",
+  "view.welcome.homeTree.openOperatorProject": "[Open Operator Project](command:huawei-op-devtools.openProject)"
 }
