@@ -8,6 +8,7 @@ import { OperatorProjectViewId, type OperatorProjectViewIdValue } from '@shared/
 import { useNewProjectSSH } from '../composables/use-new-project-ssh';
 import { FormRulesFactory } from '../composables/form-rules';
 import tipBase_0 from '@/assets/imgs/add.png';
+import standardCustomPreview from '@/assets/imgs/standard_custom.png';
 import AscendC from '@/assets/imgs/AscendC.png';
 import tipBase_1_1 from '@/assets/imgs/hello_world.png';
 import tipBase_1_2 from '@/assets/imgs/add_custom.png';
@@ -89,6 +90,9 @@ const getProjectPreviewImage = (projectTypeId: OperatorProjectViewIdValue) => {
   }
   if (projectTypeId === OperatorProjectViewId.TRITON) {
     return tritonVectorAddPreview;
+  }
+  if (projectTypeId === OperatorProjectViewId.STANDARD_CUSTOM) {
+    return standardCustomPreview;
   }
   return tipBase_0;
 };

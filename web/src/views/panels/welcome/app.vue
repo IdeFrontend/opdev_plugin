@@ -199,7 +199,7 @@
                   </a-tag>
                   <div v-if="selectedProjectTypeId === OperatorProjectViewId.STANDARD_CUSTOM" class="mt-4">
                     <div class="overflow-hidden max-w-full transition-all duration-300">
-                      <a-image :src="tipBase_0"
+                      <a-image :src="standardCustomPreview"
                         class="block max-w-full h-auto object-contain transition-opacity duration-300 transform" />
                     </div>
                   </div>
@@ -521,6 +521,7 @@ import checkIconRaw from '@/assets/svg/check.svg?raw';
 import debugIconRaw from '@/assets/svg/debug.svg?raw';
 import powerIconRaw from '@/assets/svg/power.svg?raw';
 import tipBase_0 from '@/assets/imgs/add.png';
+import standardCustomPreview from '@/assets/imgs/standard_custom.png';
 import tipBase_1_1 from '@/assets/imgs/hello_world.png';
 import tipBase_1_2 from '@/assets/imgs/add_custom.png';
 import tipBase_1_3 from '@/assets/imgs/torch_library_template.png';
