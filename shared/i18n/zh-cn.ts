@@ -417,7 +417,7 @@ export default {
   'web.welcome.typeAngle': '类型：<<<>>>',
   'web.welcome.sample': '样例',
   'web.welcome.ascendCStandardProject': '【Ascend C】标准自定义算子工程',
-  'web.welcome.ascendCStandardDesc': '基于Ascend C语言的标准自定义算子工程，op_host存放在CPC侧的代码实现，op_kermel存放NPU侧的代码实现，op_graph存放图模式下的代码实现',
+  'web.welcome.ascendCStandardDesc': '基于Ascend C语言的标准自定义算子工程，op_host存放在CPU侧的代码实现，op_kermel存放NPU侧的代码实现，op_graph存放图模式下的代码实现',
   'web.welcome.typeStandardCustom': '类型：标准自定义',
   'web.welcome.pythonPyascProject': '【Python】pyasc算子工程',
   'web.welcome.pythonPyascDesc': '基于pyasc创建自定义Add算子样例工程。',
@@ -470,7 +470,7 @@ export default {
   // web link panel (new operator project)
   'web.link.projectType': '工程类型',
   'web.link.ascendCOpDesc': '创建<<<>>>调用的addn工程样例，支持".asc"后缀的异构编译。',
-  'web.link.ascendCStandardDesc': '基于Ascend C语言的标准自定义算子工程，op_host存放在CPC侧的代码实现，op_kermel存放NPU侧的代码实现，op_graph存放图模式下的代码实现 <span style="color: #ff4d4f; font-weight: bold;">(因为该算子的编译依赖ops-math项目，该算子将自动放到ops-math项目中math目录中，后续提交代码需要迁移到自己的fork代码仓中操作)</span>',
+  'web.link.ascendCStandardDesc': '基于Ascend C语言的标准自定义算子工程，op_host存放在CPU侧的代码实现，op_kermel存放NPU侧的代码实现，op_graph存放图模式下的代码实现 <span style="color: #ff4d4f; font-weight: bold;">(因为该算子的编译依赖ops-math项目，该算子将自动放到ops-math项目中math目录中，后续提交代码需要迁移到自己的fork代码仓中操作)</span>',
   'web.link.pythonPyascDesc': '基于pyasc创建自定义Add算子样例工程',
   'web.link.pythonTritonDesc': '基于 Triton 创建向量加法样例工程',
   'web.link.structureDiagram': '工程目录结构示意',

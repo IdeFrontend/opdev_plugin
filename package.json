@@ -519,7 +519,7 @@
       "mindstudio-opssuite-vscode-plugin": [
         {
           "id": "opdevtoolsHomeTree",
-          "name": "Home",
+          "name": "%view.homeTree.name%",
           "when": "opDevtools.showHomeTree"
         },
         {
@@ -994,15 +994,15 @@
     "viewsWelcome": [
       {
         "view": "opdevtoolsHomeTree",
-        "contents": "Click [Help Guide](command:huawei-op-devtools.sidebar.openHelp) or [Welcome Home](command:huawei-op-devtools.sidebar.openWelcome) to view plugin introduction."
+        "contents": "%view.welcome.homeTree.intro%"
       },
       {
         "view": "opdevtoolsHomeTree",
-        "contents": "[New Operator Project](command:huawei-op-devtools.open)"
+        "contents": "%view.welcome.homeTree.newOperatorProject%"
       },
       {
         "view": "opdevtoolsHomeTree",
-        "contents": "[Open Operator Project](command:huawei-op-devtools.openProject)"
+        "contents": "%view.welcome.homeTree.openOperatorProject%"
       }
     ],
     "submenus": [
