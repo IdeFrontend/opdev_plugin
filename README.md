@@ -1,80 +1,39 @@
-# Huawei OP DevTools 插件使用说明
+# Huawei OP DevTools
 
-华为算子一站式开发平台 VS Code 插件。提供算子开发、调试、性能分析等一站式功能。
-插件使用指导: <https://gitcode.com/org/cann/discussions/54>
+**Huawei OP DevTools（华为算子一站式开发工具）** 是面向昇腾算子开发的 Visual Studio Code 扩展：在编辑器内完成算子工程的编辑、编译、运行、调试、异常检测与性能调优等流程。
 
-> **English:** See [README.en.md](./README.en.md) for an English README, including development setup and Dev Container usage.
+**使用指导：** <https://gitcode.com/org/cann/discussions/54>
 
-## 图标字体重新生成（开发）
-
-- 脚本保留在仓库中：`scripts/build-icons-font.mjs`
-- 手动执行命令：
-
-```bash
-pnpm run build:icons-font
-```
-
-- 规则：
-  - 源目录：`web/src/assets/svg`
-  - 排除目录：`web/src/assets/svg/animated`
-  - 输出目录：`web/src/assets/fonts`
-  - 最终仅保留：`opdevtools-icons.woff`
+**源码仓库：** <https://gitcode.com/mlh0101/mstt>
 
 ## 核心特性
 
-- 适配生态主流编辑器，优化生态算子开发体验，提升开发效率。
-- 凭借VS Code 生态影响力，提供变成插件，提升IDE安装的便捷度。
-- 简化编程界面，集成mindstudio工具套件，提供编辑、编译、执行、调试、调优等完成端到端流程，提升项目开发效率。
-- 编辑界面语法高亮、代码智能提示，降低开发复杂度。
-- 调试调优中提供精度对比，性能泳道和结果分析拼图，提升开发效率。
-- VS Code提供本地IDE与云端资源联动，提供多样化项目的开发需求。
+- 在 VS Code 中一站式完成算子开发相关操作，贴合主流编辑器使用习惯。
+- 简化工作流：编辑、编译、执行、调试与调优集中在一套界面中。
+- 语法高亮与代码智能提示，降低开发与排错成本。
+- 调试与调优支持精度对比、性能泳道及结果可视化。
+- 支持本地开发环境；可与云端资源等多样化工程场景配合使用。
+- 支持多种算子工程类型（含标准自定义、pyasc、Triton 等，随版本演进）。
 
-## 版本迭代
+## 系统要求
 
-### 20260420
+- **Visual Studio Code** 1.80 或更高版本（与扩展 `engines.vscode` 一致）。
+- 算子编译、调试与调优依赖 **CANN / 昇腾** 等运行与工具链环境；具体版本与安装步骤请参考官方文档及团队提供的镜像或环境说明。
 
-- 标准自定义算子仿真分析适配芯片配置（适配A5环境）
-- 支持工程配置中芯片类型自动根据环境生成（适配A5环境）
+## 快速开始
 
-### 20260327
+1. 在 VS Code 扩展视图中安装 **Huawei OP DevTools**。
+2. 按[使用指导](https://gitcode.com/org/cann/discussions/54)配置环境与算子工程。
+3. 通过侧栏 **算子开发** 相关入口创建或打开工程，并按引导完成编译、调试或调优。
 
-- 基于printf/dumptensor的数据落盘能力，提供落盘数据可视化，dumptensor数据的精度对比能力
-- 支持标准自定义算子的UT测试能力
-- 支持工程配置中芯片类型的配置能力
+## 界面语言
 
-### 20260313
+扩展与 Web 界面支持 **简体中文（zh-cn）** 与 **英语**。文案随 VS Code 的显示语言切换：命令面板中执行 **Configure Display Language**，选择 **中文(简体)** 或 **English** 后重启 VS Code。详见 [Visual Studio Code 区域设置文档](https://code.visualstudio.com/docs/getstarted/locale)。
 
-- 首页添加用户使用向导，方便新手使用
-- 环境变量配置与工程配置合并
-- “文件”菜单支持新建算子工程
-- “停止”功能优化，简化用户开启新任务的操作
+## 更新记录
 
-### 20260206
+各版本变更说明见 **[CHANGELOG.md](https://gitcode.com/mlh0101/mstt/blob/vscode_plugin/CHANGELOG.md)**。
 
-- 异常检测的跳转的代码，鼠标放上去可提示错误信息
-- pyasc 的配置项去掉，用户点击运行的时候，执行用户激活的窗口的py文件（如果没有则不让用户点击执行、调优等操作）
-- 调试功能按钮支持防呆
-- 调试，异常检测，性能调优等操作前的编译命令行支持编辑
+## 参与扩展开发
 
-### 20260122
-
-- 支持打开存量工程
-- 支持pyasc算子和标准自定义算子的新建、编译、调试、异常检测和调优
-
-### 20260115
-
-- 支持<<<>>>三种场景的算子新建
-- 异常检测、性能调优体验优化
-- 异常检测和性能调优结果支持下载
-- 异常检测和性能调优结果支持赋值路径
-
-### 20260109
-
-- bug 修复
-
-### 20251230
-
-- 支持新建工程，目前只支持创建<<<>>>工程
-- 支持<<<>>>工程的编译、调试、调优
-- 集成到 Codearts IDE
-
+从源码构建、调试与 Dev Container 说明见 **[CONTRIBUTING.md](https://gitcode.com/mlh0101/mstt/blob/vscode_plugin/CONTRIBUTING.md)**（该文件随 Git 仓库提供，一般不打包进 `.vsix`）。
