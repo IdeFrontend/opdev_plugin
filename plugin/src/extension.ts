@@ -929,7 +929,7 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
     COMMAND_SIDEBAR_PROJECT_CONFIG,
     async () => vscode.commands.executeCommand(
       'workbench.action.openWorkspaceSettings',
-      '@ext:huawei.huawei-op-devtools-vscode-plugin op-devtools',
+      `@ext:${context.extension.id}`,
     ),
   );
 
