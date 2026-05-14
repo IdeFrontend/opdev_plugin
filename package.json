@@ -18,167 +18,167 @@
     "workspaceContains:package.json",
     "onStartupFinished"
   ],
-  "icon": "web/resources/extension_icon.png",
+  "icon": "out/web/branding/extension_icon.png",
   "contributes": {
     "icons": {
       "opdevtools-beaker": {
         "description": "Beaker icon",
         "default": {
-          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontPath": "./out/web/fonts/opdevtools-icons.woff",
           "fontCharacter": "\\ea01"
         }
       },
       "opdevtools-build": {
         "description": "Build icon",
         "default": {
-          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontPath": "./out/web/fonts/opdevtools-icons.woff",
           "fontCharacter": "\\ea02"
         }
       },
       "opdevtools-check": {
         "description": "Check icon",
         "default": {
-          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontPath": "./out/web/fonts/opdevtools-icons.woff",
           "fontCharacter": "\\ea03"
         }
       },
       "opdevtools-debug-cpu": {
         "description": "CPU debug icon",
         "default": {
-          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontPath": "./out/web/fonts/opdevtools-icons.woff",
           "fontCharacter": "\\ea04"
         }
       },
       "opdevtools-debug-npu": {
         "description": "NPU debug icon",
         "default": {
-          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontPath": "./out/web/fonts/opdevtools-icons.woff",
           "fontCharacter": "\\ea05"
         }
       },
       "opdevtools-debug": {
         "description": "Debug icon",
         "default": {
-          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontPath": "./out/web/fonts/opdevtools-icons.woff",
           "fontCharacter": "\\ea06"
         }
       },
       "opdevtools-flag-filled": {
         "description": "Filled flag icon",
         "default": {
-          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontPath": "./out/web/fonts/opdevtools-icons.woff",
           "fontCharacter": "\\ea07"
         }
       },
       "opdevtools-flag-outlined": {
         "description": "Outlined flag icon",
         "default": {
-          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontPath": "./out/web/fonts/opdevtools-icons.woff",
           "fontCharacter": "\\ea08"
         }
       },
       "opdevtools-group-class": {
         "description": "Group by class icon",
         "default": {
-          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontPath": "./out/web/fonts/opdevtools-icons.woff",
           "fontCharacter": "\\ea0a"
         }
       },
       "opdevtools-group-class-pressed": {
         "description": "Group by class pressed icon",
         "default": {
-          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontPath": "./out/web/fonts/opdevtools-icons.woff",
           "fontCharacter": "\\ea09"
         }
       },
       "opdevtools-group-file": {
         "description": "Group by file icon",
         "default": {
-          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontPath": "./out/web/fonts/opdevtools-icons.woff",
           "fontCharacter": "\\ea0c"
         }
       },
       "opdevtools-group-file-pressed": {
         "description": "Group by file pressed icon",
         "default": {
-          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontPath": "./out/web/fonts/opdevtools-icons.woff",
           "fontCharacter": "\\ea0b"
         }
       },
       "opdevtools-group-severity-error": {
         "description": "Error severity icon",
         "default": {
-          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontPath": "./out/web/fonts/opdevtools-icons.woff",
           "fontCharacter": "\\ea0e"
         }
       },
       "opdevtools-group-severity-error-pressed": {
         "description": "Error severity pressed icon",
         "default": {
-          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontPath": "./out/web/fonts/opdevtools-icons.woff",
           "fontCharacter": "\\ea0d"
         }
       },
       "opdevtools-group-severity-warning": {
         "description": "Warning severity icon",
         "default": {
-          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontPath": "./out/web/fonts/opdevtools-icons.woff",
           "fontCharacter": "\\ea10"
         }
       },
       "opdevtools-group-severity-warning-pressed": {
         "description": "Warning severity pressed icon",
         "default": {
-          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontPath": "./out/web/fonts/opdevtools-icons.woff",
           "fontCharacter": "\\ea0f"
         }
       },
       "opdevtools-group-type": {
         "description": "Group by type icon",
         "default": {
-          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontPath": "./out/web/fonts/opdevtools-icons.woff",
           "fontCharacter": "\\ea12"
         }
       },
       "opdevtools-group-type-pressed": {
         "description": "Group by type pressed icon",
         "default": {
-          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontPath": "./out/web/fonts/opdevtools-icons.woff",
           "fontCharacter": "\\ea11"
         }
       },
       "opdevtools-onboard": {
         "description": "Onboard icon",
         "default": {
-          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontPath": "./out/web/fonts/opdevtools-icons.woff",
           "fontCharacter": "\\ea13"
         }
       },
       "opdevtools-power": {
         "description": "Power icon",
         "default": {
-          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontPath": "./out/web/fonts/opdevtools-icons.woff",
           "fontCharacter": "\\ea14"
         }
       },
       "opdevtools-run": {
         "description": "Run icon",
         "default": {
-          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontPath": "./out/web/fonts/opdevtools-icons.woff",
           "fontCharacter": "\\ea15"
         }
       },
       "opdevtools-simulation": {
         "description": "Simulation icon",
         "default": {
-          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontPath": "./out/web/fonts/opdevtools-icons.woff",
           "fontCharacter": "\\ea18"
         }
       },
       "opdevtools-tensor": {
         "description": "Tensor icon",
         "default": {
-          "fontPath": "./web/src/assets/fonts/opdevtools-icons.woff",
+          "fontPath": "./out/web/fonts/opdevtools-icons.woff",
           "fontCharacter": "\\ea19"
         }
       }
@@ -520,21 +520,21 @@
         {
           "id": "mindstudio-opssuite-vscode-plugin",
           "title": "%viewContainer.activitybar.title%",
-          "icon": "web/resources/activitybar_logo_mono.svg"
+          "icon": "out/web/branding/activitybar_logo_mono.svg"
         }
       ],
       "secondaryActivitybar": [
         {
           "id": "mindstudio-opssuite-vscode-plugin",
           "title": "%viewContainer.activitybar.title%",
-          "icon": "web/resources/activitybar_logo_mono.svg"
+          "icon": "out/web/branding/activitybar_logo_mono.svg"
         }
       ],
       "panel": [
         {
           "id": "dump-tensor-panel-view",
           "title": "%viewContainer.panel.dumpTensor.title%",
-          "icon": "web/resources/tensor.svg"
+          "icon": "out/web/branding/tensor.svg"
         }
       ]
     },
@@ -594,7 +594,7 @@
         "command": "huawei-op-devtools.toggleOpsOperate",
         "title": "%command.toggleOpsOperate.title%",
         "category": "%command.toggleOpsOperate.category%",
-        "icon": "web/resources/operate.svg"
+        "icon": "out/web/branding/operate_icon_mono.svg"
       },
       {
         "command": "huawei-op-devtools.leftNaV",
@@ -603,7 +603,7 @@
       {
         "command": "huawei-op-devtools.createOps",
         "title": "%command.createOps.title%",
-        "icon": "web/resources/ops_icon_mono.svg"
+        "icon": "out/web/branding/ops_icon_mono.svg"
       },
       {
         "command": "extension.jsonButtonAction",

@@ -2642,13 +2642,15 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       return cached;
     }
 
+    // Packaged with the web build: `web/vite.config.ts` copies `src/assets/svg/animated` → `out/web/tree-icons/svg/animated`.
+    const segments = resolved.split('/').filter(Boolean);
     const iconFileUri = vscode.Uri.joinPath(
       this.extensionUri,
+      'out',
       'web',
-      'src',
-      'assets',
+      'tree-icons',
       'svg',
-      resolved,
+      ...segments,
     );
     this.themedIconCache.set(cacheKey, iconFileUri);
     return iconFileUri;

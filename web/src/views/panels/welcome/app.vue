@@ -652,21 +652,21 @@ onMounted(async () => {
 }
 
 .op-create-icon {
-  background: url('../../../../resources/welcomePage/welcome_op_create_color.svg') no-repeat center;
+  background: url('@/assets/welcomePage/welcome_op_create_color.svg') no-repeat center;
   background-size: contain;
   width: 26px;
   height: 26px;
 }
 
 .op-impl-icon {
-  background: url('../../../../resources/welcomePage/welcome_op_impl_color.svg') no-repeat center;
+  background: url('@/assets/welcomePage/welcome_op_impl_color.svg') no-repeat center;
   background-size: contain;
   width: 28px;
   height: 28px;
 }
 
 .op-inspect-icon {
-  background: url('../../../../resources/welcomePage/welcome_op_inspect_color.svg') no-repeat center;
+  background: url('@/assets/welcomePage/welcome_op_inspect_color.svg') no-repeat center;
   background-size: contain;
   width: 24px;
   height: 24px;
@@ -676,7 +676,7 @@ onMounted(async () => {
   display: block;
   height: 1.6em;
   aspect-ratio: 22 / 26;
-  background: url('../../../../resources/welcomePage/welcome_op_create_color.svg') no-repeat center;
+  background: url('@/assets/welcomePage/welcome_op_create_color.svg') no-repeat center;
   background-size: contain;
 }
 
@@ -686,7 +686,7 @@ onMounted(async () => {
   height: 14px;
   margin-right: 6px;
   flex-shrink: 0;
-  background: url('../../../../resources/welcomePage/welcome_bullet_mono.svg') no-repeat center;
+  background: url('@/assets/welcomePage/welcome_bullet_mono.svg') no-repeat center;
   background-size: contain;
   vertical-align: middle;
 }

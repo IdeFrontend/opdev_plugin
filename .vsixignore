@@ -10,8 +10,6 @@
 !out/templates/code_template/cann_template/**
 !out/templates/code_template/triton_template/**
 !resources/**
-!web/resources/**
-!web/src/assets/**
 !package.json
 !package.nls.json
 !package.nls.en.json

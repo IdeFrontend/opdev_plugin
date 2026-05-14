@@ -4,8 +4,50 @@ import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers';
 import path from 'path';
 import fs from 'fs';
 import { defineConfig } from 'vite';
+import type { Plugin } from 'vite';
 
 import { debugEntry } from './vite-plugins/debug-entry';
+
+/**
+ * Static files that must appear in the packaged VSIX under `out/web/` with stable paths:
+ * - package.json icons / font (branding, fonts)
+ * - native tree SVGs loaded by the extension host (`OperateTreeProvider.getAssetIcon`) under `tree-icons/svg/`
+ */
+function copyPackagedStaticAssets(): Plugin {
+  return {
+    name: 'copy-packaged-static-assets',
+    closeBundle() {
+      const outWeb = path.resolve(__dirname, '../out/web');
+      const brandingSrc = path.resolve(__dirname, 'src/assets/branding');
+      const brandingDest = path.join(outWeb, 'branding');
+      const fontSrc = path.resolve(__dirname, 'src/assets/fonts/opdevtools-icons.woff');
+      const fontDestDir = path.join(outWeb, 'fonts');
+      const animatedSrc = path.resolve(__dirname, 'src/assets/svg/animated');
+      const animatedDest = path.join(outWeb, 'tree-icons', 'svg', 'animated');
+
+      if (fs.existsSync(brandingSrc)) {
+        fs.mkdirSync(brandingDest, { recursive: true });
+        fs.cpSync(brandingSrc, brandingDest, { recursive: true });
+      }
+
+      fs.mkdirSync(fontDestDir, { recursive: true });
+      if (fs.existsSync(fontSrc)) {
+        fs.copyFileSync(fontSrc, path.join(fontDestDir, 'opdevtools-icons.woff'));
+      }
+      else {
+        console.warn('[vite] Missing src/assets/fonts/opdevtools-icons.woff — run pnpm run build:icons-font from repo root');
+      }
+
+      if (fs.existsSync(animatedSrc)) {
+        fs.mkdirSync(animatedDest, { recursive: true });
+        fs.cpSync(animatedSrc, animatedDest, { recursive: true });
+      }
+      else {
+        console.warn('[vite] Missing src/assets/svg/animated — native tree animated icons will not be packaged');
+      }
+    },
+  };
+}
 
 export default defineConfig(({ mode }) => {
   const buildInput: Record<string, string> = {};
@@ -68,6 +110,7 @@ export default defineConfig(({ mode }) => {
         ],
       }),
       debugEntry(),
+      copyPackagedStaticAssets(),
     ],
     server: { cors: true },
     build: {
