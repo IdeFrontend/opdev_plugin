@@ -1,61 +1,61 @@
-# Changelog
+# 更新日志
 
-Notable changes to **Huawei OP DevTools** are listed here. For the full project history, see the repository on [GitCode](https://gitcode.com/kaocong/mstt).
+本文列出 **Huawei OP DevTools（华为算子一站式开发工具）** 的重要变更。完整提交历史见 [GitCode](https://gitcode.com/mlh0101/mstt) 仓库。
 
-## 2026-05-14
+## 2026-05-15
 
-- Full VS Code color theme support for sidebars, webview panels, and Insight views (light, dark, high contrast), including when the theme changes while the extension is running.
-- Extension UI and messages follow VS Code display language: **English** and **Simplified Chinese (zh-cn)**.
-- Initial **Triton** operator project support in the new-project flow.
-- Save **Sanitizer** and **Profiling** options as workspace defaults with **Don’t show again** to reduce repeated configuration prompts on launch.
-- Sidebar actions align with detected operator project type; workflows previously opened as separate panels are consolidated in the sidebar.
-- Build, debug, and similar tasks can run in a queue; **Stop all** ends in-flight tasks; onboarding and quick-options panels remember **Don’t show again** per workspace.
-- Sanitizer results use a tree layout for grouping and jumping to source; fixes for incomplete or stale result lists after startup.
-- Performance tuning results view reorganized for quicker scanning; fixes for project paths and saved options not applying or matching correctly.
-- **Op Devtools** settings use VS Code **User** / **Workspace** scopes like other extensions. Welcome walkthrough demos use MP4 instead of GIF.
+- 侧栏、Webview 面板、Insight 视图全面适配 VS Code 颜色主题（浅色、深色、高对比度），扩展运行过程中切换主题时同步生效。
+- 扩展界面与提示文案随 VS Code 显示语言切换，支持 **英语** 与 **简体中文（zh-cn）**。
+- 新建工程流程新增 **Triton** 算子工程类型支持。
+- 支持将 **异常检测（Sanitizer）** 与 **性能调优（Profiling）** 选项存为工作区默认，配合 **不再提示** 减少启动后重复配置。
+- 侧栏操作与识别到的算子工程类型对齐；原先在独立面板中打开的工作流统一到侧栏。
+- 编译、调试等任务支持排队执行；**全部停止** 可终止进行中任务；新手引导与快捷选项面板的 **不再提示** 按工作区记忆。
+- 异常检测结果采用树形分组并支持跳转源码；修复启动后结果列表不完整或陈旧的问题。
+- 性能调优结果视图改版以便快速浏览；修复工程路径与已保存选项未正确应用或匹配的问题。
+- **Op Devtools** 设置项与 VS Code 其他扩展一致，支持 **用户** / **工作区** 作用域。欢迎引导演示视频由 GIF 改为 MP4。
 
 ## 2026-04-20
 
-- Standard custom operator simulation analysis aligned with chip configuration (A5 environment).
-- Project chip type can be generated automatically from the environment in project configuration (A5 environment).
+- 标准自定义算子仿真分析适配芯片配置（适配 A5 环境）。
+- 支持工程配置中芯片类型自动根据环境生成（适配 A5 环境）。
 
 ## 2026-03-27
 
-- Disk dump visualization for printf / dumptensor data; dumptensor precision comparison.
-- Unit test support for standard custom operators.
-- Chip type configuration in project settings.
+- 基于 printf / dumptensor 的数据落盘能力，提供落盘数据可视化，以及 dumptensor 数据的精度对比能力。
+- 支持标准自定义算子的单元测试（UT）能力。
+- 支持在工程配置中配置芯片类型。
 
 ## 2026-03-13
 
-- User onboarding wizard on the home page.
-- Environment variables merged into project configuration.
-- **File** menu: create new operator project.
-- **Stop** behavior improved for starting new tasks.
+- 首页添加用户使用向导，方便新手使用。
+- 环境变量配置与工程配置合并。
+- 「文件」菜单支持新建算子工程。
+- 「停止」功能优化，简化用户开启新任务的操作。
 
 ## 2026-02-06
 
-- Sanitizer navigation: hover shows error details on code.
-- pyasc configuration removed; run uses the active editor’s Python file (run/tune disabled when none).
-- Debug actions include misuse guards.
-- Editable compile command line before debug, sanitizer, and performance tuning runs.
+- 异常检测跳转至代码处时，鼠标悬停可提示错误信息。
+- 去掉 pyasc 配置项；用户点击运行时执行当前激活编辑器中的 Python 文件（若无激活文件则不允许执行、调优等操作）。
+- 调试功能按钮支持防呆处理。
+- 调试、异常检测、性能调优等操作前的编译命令行支持编辑。
 
 ## 2026-01-22
 
-- Open existing projects.
-- pyasc and standard custom operators: create, build, debug, sanitizer, and tuning.
+- 支持打开存量工程。
+- 支持 pyasc 算子与标准自定义算子的新建、编译、调试、异常检测和调优。
 
 ## 2026-01-15
 
-- Create operators for three `<<<>>>` scenarios.
-- Sanitizer and performance tuning UX improvements.
-- Download and copy path for sanitizer and performance tuning results.
+- 支持三种 `<<<>>>` 场景的算子新建。
+- 异常检测、性能调优体验优化。
+- 异常检测与性能调优结果支持下载与复制路径。
 
 ## 2026-01-09
 
-- Bug fixes.
+- Bug 修复。
 
 ## 2025-12-30
 
-- New project creation (`<<<>>>` scenario).
-- `<<<>>>` project build, debug, and tuning.
-- Integration with CodeArts IDE.
+- 支持新建工程（当前支持创建 `<<<>>>` 场景工程）。
+- 支持 `<<<>>>` 工程的编译、调试、调优。
+- 集成到 CodeArts IDE。

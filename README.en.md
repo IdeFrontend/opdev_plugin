@@ -6,7 +6,7 @@ VS Code extension for the Huawei operator one-stop development platform. It prov
 
 **User guide:** https://gitcode.com/org/cann/discussions/54
 
-**Repository:** https://gitcode.com/mlh0101/mstt
+**User feedback:** https://gitcode.com/opdevtools/plugin_release/issues
 
 ---
 
@@ -39,7 +39,10 @@ VS Code extension for the Huawei operator one-stop development platform. It prov
 
 ## Changelog
 
-Release notes are maintained in **[CHANGELOG.md](https://gitcode.com/mlh0101/mstt/blob/vscode_plugin/CHANGELOG.md)**.
+Release notes:
+
+- **English:** [CHANGELOG.en.md](https://gitcode.com/mlh0101/mstt/blob/vscode_plugin/CHANGELOG.en.md)
+- **简体中文：** [CHANGELOG.md](https://gitcode.com/mlh0101/mstt/blob/vscode_plugin/CHANGELOG.md)
 
 ---
 
