@@ -41,8 +41,8 @@ VS Code extension for the Huawei operator one-stop development platform. It prov
 
 Release notes:
 
-- **English:** [CHANGELOG.en.md](https://gitcode.com/mlh0101/mstt/blob/vscode_plugin/CHANGELOG.en.md)
-- **简体中文：** [CHANGELOG.md](https://gitcode.com/mlh0101/mstt/blob/vscode_plugin/CHANGELOG.md)
+- **English:** [CHANGELOG.en.md](./CHANGELOG.en.md)
+- **简体中文：** [CHANGELOG.md](./CHANGELOG.md)
 
 ---
 
@@ -55,4 +55,4 @@ Release notes:
 
 ## Contributing
 
-Build, debug, Dev Container, and layout notes for contributors are in **[CONTRIBUTING.md](https://gitcode.com/mlh0101/mstt/blob/vscode_plugin/CONTRIBUTING.md)** (shipped with the Git repository; not included in the published `.vsix` by default).
+Build, debug, Dev Container, and layout notes for contributors are in **[CONTRIBUTING.md](./CONTRIBUTING.md)** (shipped with the Git repository; not included in the published `.vsix` by default).

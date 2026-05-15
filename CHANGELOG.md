@@ -1,6 +1,6 @@
 # 更新日志
 
-本文列出 **Huawei OP DevTools（华为算子一站式开发工具）** 的重要变更。完整提交历史见 [GitCode](https://gitcode.com/mlh0101/mstt) 仓库。
+本文列出 **Huawei OP DevTools（华为算子一站式开发工具）** 的重要变更。
 
 ## 2026-05-15
 

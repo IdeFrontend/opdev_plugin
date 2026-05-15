@@ -3,10 +3,6 @@
   "displayName": "Huawei OP DevTools",
   "description": "Operator development, debugging, and performance analysis all-in-one platform for Ascend C language.",
   "publisher": "huawei",
-  "repository": {
-    "type": "git",
-    "url": "https://gitcode.com/mlh0101/mstt"
-  },
   "version": "1.3.0",
   "engines": {
     "node": ">=16.0.0",
@@ -1347,17 +1343,17 @@
     ]
   },
   "scripts": {
-    "package": "pnpm run compile && vsce package --no-dependencies --allow-package-secrets privatekey --baseContentUrl https://gitcode.com/kaocong/mstt/raw/main/ --baseImagesUrl https://gitcode.com/kaocong/mstt/raw/main/",
+    "package": "pnpm run compile && vsce package --no-dependencies",
     "build": "pnpm run compile",
     "build:icons-font": "node scripts/build-icons-font.mjs",
     "compile": "pnpm run compile:web && pnpm run compile:plugin",
     "compile:web": "cd web && pnpm run build",
     "compile:plugin": "tsc --noEmit && tsx scripts/build-extension",
-    "package:debug": "pnpm run compile:debug && vsce package --no-dependencies --allow-package-secrets privatekey --baseContentUrl https://gitcode.com/kaocong/mstt/raw/main/ --baseImagesUrl https://gitcode.com/kaocong/mstt/raw/main/",
+    "package:debug": "pnpm run compile:debug && vsce package --no-dependencies",
     "compile:debug": "pnpm run compile:web:debug && pnpm run compile:plugin:debug",
     "compile:web:debug": "cd web && pnpm run build:debug",
     "compile:plugin:debug": "tsx scripts/build-extension --sourcemap",
-    "package:readable": "pnpm run compile:readable && vsce package --no-dependencies --allow-package-secrets privatekey --baseContentUrl https://gitcode.com/kaocong/mstt/raw/main/ --baseImagesUrl https://gitcode.com/kaocong/mstt/raw/main/",
+    "package:readable": "pnpm run compile:readable && vsce package --no-dependencies",
     "compile:readable": "pnpm run compile:web:readable && pnpm run compile:plugin:readable",
     "compile:web:readable": "cd web && pnpm run build --mode=readable",
     "compile:plugin:readable": "tsx scripts/build-extension --sourcemap --readable",
