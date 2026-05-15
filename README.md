@@ -4,7 +4,7 @@
 
 **使用指导：** <https://gitcode.com/org/cann/discussions/54>
 
-**源码仓库：** <https://gitcode.com/mlh0101/mstt>
+**问题反馈：** <https://gitcode.com/opdevtools/plugin_release/issues>
 
 ## 核心特性
 
@@ -29,11 +29,3 @@
 ## 界面语言
 
 扩展与 Web 界面支持 **简体中文（zh-cn）** 与 **英语**。文案随 VS Code 的显示语言切换：命令面板中执行 **Configure Display Language**，选择 **中文(简体)** 或 **English** 后重启 VS Code。详见 [Visual Studio Code 区域设置文档](https://code.visualstudio.com/docs/getstarted/locale)。
-
-## 更新记录
-
-各版本变更说明见 **[CHANGELOG.md](https://gitcode.com/mlh0101/mstt/blob/vscode_plugin/CHANGELOG.md)**。
-
-## 参与扩展开发
-
-从源码构建、调试与 Dev Container 说明见 **[CONTRIBUTING.md](https://gitcode.com/mlh0101/mstt/blob/vscode_plugin/CONTRIBUTING.md)**（该文件随 Git 仓库提供，一般不打包进 `.vsix`）。
