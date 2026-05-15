@@ -529,28 +529,6 @@ export const mockPerformanceMethods = {
 };
 
 // ============================================================
-// SANITIZER METHODS - Anomaly detection configuration
-// ============================================================
-
-export const mockSanitizerMethods = {
-  async getSanitizerConfigs() {
-    return mockOpsMethods.getSanitizerConfigs();
-  },
-
-  async getSanitizerConfigId() {
-    return mockOpsMethods.getSanitizerConfigId();
-  },
-
-  async getSanitizerForm() {
-    return mockOpsMethods.getSanitizerForm();
-  },
-
-  async saveSanitizerForm(params: any) {
-    return mockOpsMethods.saveSanitizerForm(params);
-  },
-};
-
-// ============================================================
 // VIEW METHODS - Webview communication and UI state
 // ============================================================
 
@@ -697,31 +675,6 @@ export const mockCommonMethods = {
 };
 
 // ============================================================
-// NAVIGATION METHODS - View navigation
-// ============================================================
-
-export const mockNavigationMethods = {
-  async navigateTo(viewName: string, params?: any) {
-    console.log('[E2E Mock] navigateTo called:', viewName, params);
-    return { success: true, viewName };
-  },
-
-  async getCurrentView() {
-    return 'home';
-  },
-
-  async goBack() {
-    console.log('[E2E Mock] goBack called');
-    return { success: true };
-  },
-
-  async refreshCurrentView() {
-    console.log('[E2E Mock] refreshCurrentView called');
-    return { success: true };
-  },
-};
-
-// ============================================================
 // EXPORT - Aggregated mock API
 // ============================================================
 
@@ -791,23 +744,15 @@ export const mockApis = {
     getBuildExampleConfig: () => 10,
     getSimulateConfig: () => '20',
     getOnBoardConfig: () => '30',
-    getTargetTab: () => 'build',
-    getTargetOperator: () => ({ opName: 'e2e-operator-matmul', projectId: 10001 }),
     openConfig: (_params: any) => { console.log('[E2E Mock] ops.openConfig called'); },
   },
 
   // performance namespace for performance analysis
   performance: mockPerformanceMethods,
 
-  // msSanitizer namespace — must match 'msSanitizer' key in real api-routes.ts
-  msSanitizer: mockSanitizerMethods,
-
   // view namespace
   view: mockViewMethods,
 
   // common namespace
   common: mockCommonMethods,
-
-  // navigation namespace
-  navigation: mockNavigationMethods,
 };

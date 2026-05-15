@@ -2,15 +2,7 @@ export const COMMAND_PREFIX = 'huawei-op-devtools';
 
 export const COMMAND_OPEN = `${COMMAND_PREFIX}.open`;
 
-export const COMMAND_PROJECT_SH = `${COMMAND_PREFIX}.projectSH`;
-
 export const COMMAND_WELCOME = `${COMMAND_PREFIX}.welcome`;
-
-export const COMMAND_CONFIG = `${COMMAND_PREFIX}.config`;
-
-export const COMMAND_OPEN_MS_SANITIZER_PANEL_VIEW = `${COMMAND_PREFIX}.open-ms-sanitizer-panel-view`;
-
-export const COMMAND_OPEN_PERFORMANCE_PANEL_VIEW = `${COMMAND_PREFIX}.open-performance-panel-view`;
 
 export const COMMAND_OPEN_DUMP_TENSOR_PANEL_VIEW = `${COMMAND_PREFIX}.open-dump-tensor-panel-view`;
 
@@ -43,27 +35,11 @@ export const COMMAND_OPEN_PROJECT = `${COMMAND_PREFIX}.openProject`;
 // View name constant (corresponding to the directory name under web/src/views)
 export const VIEW_HOME = 'home';
 
-export const VIEW_CONFIG = 'config';
-
-export const VIEW_LINK = 'link';
+export const VIEW_NEW_PROJECT = 'new-project';
 
 export const VIEW_WELCOME = 'welcome';
 
-export const VIEW_PROJECT_SH = 'project-sh';
-
-export const VIEW_OPERATE = 'operate';
-
-export const VIEW_MS_SANITIZER = 'ms-sanitizer-panel-view';
-
-export const VIEW_PERFORMANCE_PANEL = 'performance-panel-view';
-
-export const VIEW_PERFORMANCE_RUN_DATA = 'performance-run-data';
-
-export const VIEW_MS_SANITIZER_RUN_DATA = 'ms-sanitizer-run-data';
-
 export const VIEW_DUMP_TENSOR_DATA = 'dump-tensor-data';
-
-export const VIEW_OPS_CONFIG = 'ops-config';
 
 export const VIEW_OPTIONS_SIMULATOR = 'options-simulator';
 
@@ -166,3 +142,12 @@ export const COMMAND_SIDEBAR_SANITIZER_RESULTS_HIDE_DUPLICATES = `${COMMAND_PREF
 export const COMMAND_SIDEBAR_SANITIZER_RESULTS_SHOW_DUPLICATES = `${COMMAND_PREFIX}.sidebar.sanitizer.results.showDuplicates`;
 export const COMMAND_SIDEBAR_SANITIZER_RESULTS_OPEN_GROUP_FILE = `${COMMAND_PREFIX}.sidebar.sanitizer.results.openGroupFile`;
 export const COMMAND_SIDEBAR_ACTIONS_QUICK_PICK = `${COMMAND_PREFIX}.sidebar.actionsQuickPick`;
+export const COMMAND_SIDEBAR_PERFORMANCE_REPORT_SELECT = `${COMMAND_PREFIX}.sidebar.performance.report.select`;
+export const COMMAND_SIDEBAR_PERFORMANCE_REPORT_COPY_PATH = `${COMMAND_PREFIX}.sidebar.performance.report.copyPath`;
+export const COMMAND_SIDEBAR_PERFORMANCE_REPORT_DOWNLOAD = `${COMMAND_PREFIX}.sidebar.performance.report.download`;
+export const COMMAND_SIDEBAR_PERFORMANCE_REPORT_MARK = `${COMMAND_PREFIX}.sidebar.performance.report.mark`;
+export const COMMAND_SIDEBAR_PERFORMANCE_REPORT_UNMARK = `${COMMAND_PREFIX}.sidebar.performance.report.unmark`;
+export const COMMAND_SIDEBAR_PERFORMANCE_REPORT_SORT_TIME = `${COMMAND_PREFIX}.sidebar.performance.report.sortTime`;
+export const COMMAND_SIDEBAR_PERFORMANCE_REPORT_FILTER_MARKED = `${COMMAND_PREFIX}.sidebar.performance.report.filterMarked`;
+export const COMMAND_SIDEBAR_PERFORMANCE_REPORT_SHOW_ALL = `${COMMAND_PREFIX}.sidebar.performance.report.showAll`;
+export const COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN = `${COMMAND_PREFIX}.sidebar.performance.file.open`;

@@ -1,7 +1,6 @@
 import { t } from 'i18next';
 import { ViewRouteRaw } from '@plugin/core/view/view-router';
 import {
-  VIEW_OPS_CONFIG,
   VIEW_DUMP_TENSOR_DATA,
 } from '@plugin/constants';
 
@@ -11,9 +10,5 @@ export const routes: ViewRouteRaw[] = [
     path: VIEW_DUMP_TENSOR_DATA,
     title: t('routes.dumpTensorViewTitle'),
     providerViewType: 'dumpTensorSidebarView',
-  },
-  {
-    path: VIEW_OPS_CONFIG,
-    title: t('routes.configTitle'),
   },
 ];

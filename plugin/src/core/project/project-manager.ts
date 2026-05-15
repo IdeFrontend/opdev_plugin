@@ -45,6 +45,13 @@ export class ProjectManager {
   }
 
   /**
+   * Cached operator project name from the last `initProject` with explicit path/name, or workspace-derived name.
+   */
+  public getProjectName(): string | undefined {
+    return this._projectName;
+  }
+
+  /**
    * Get or create a task executor
    * If there is currently no executor, create a new one
    * @returns {CommandExecutor} task executor

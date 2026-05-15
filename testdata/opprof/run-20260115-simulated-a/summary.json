@@ -1,0 +1,11 @@
+{
+  "fixture": true,
+  "run": "run-20260115-simulated-a",
+  "generatedFor": "op-devtools performance tree manual test",
+  "socVersion": "ascend910b",
+  "metricsVersion": 1,
+  "steps": [
+    { "name": "warmup", "durationMs": 12 },
+    { "name": "capture", "durationMs": 3400 }
+  ]
+}

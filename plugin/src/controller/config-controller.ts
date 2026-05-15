@@ -13,35 +13,7 @@ import {
 } from '@shared/api-types';
 import { getOpsByProjectId } from '@plugin/domain/models/model';
 
-let targetTab: string | undefined;
-let targetOperator: { opName: string;
-  projectId?: number } | undefined;
-
 export const configMethods = {
-  /**
-   * Get the target tab and clear it
-   * @returns target tab page
-   */
-  async getTargetTab(): Promise<string | undefined> {
-    const tab = targetTab;
-
-    targetTab = undefined; // Clear immediately after reading
-
-    return tab;
-  },
-
-  /**
-   * Get the target operator and clear it
-   * @returns target operator information
-   */
-  async getTargetOperator(): Promise<{ opName: string;
-    projectId?: number } | undefined> {
-    const operator = targetOperator;
-
-    targetOperator = undefined; // Clear immediately after reading
-
-    return operator;
-  },
   /**
    * Get a list of build configurations
    * @returns build configuration list
@@ -233,17 +205,6 @@ export const configMethods = {
     key?: string,
     opName?: string,
     projectId?: number }) {
-    if (params.key) {
-      targetTab = params.key;
-    }
-
-    if (params.opName) {
-      targetOperator = {
-        opName: params.opName,
-        projectId: params.projectId,
-      };
-    }
-
     if (params.configName) {
       await vscode.commands.executeCommand(params.configName, params.key);
     }

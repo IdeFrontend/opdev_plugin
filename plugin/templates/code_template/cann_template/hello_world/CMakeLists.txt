@@ -1,0 +1,64 @@
+# ----------------------------------------------------------------------------------------------------------
+# Copyright (c) 2025 Huawei Technologies Co., Ltd.
+# This program is free software, you can redistribute it and/or modify it under the terms and conditions of
+# CANN Open Software License Agreement Version 2.0 (the "License").
+# Please refer to the License for details. You may not use this file except in compliance with the License.
+# THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+# INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE.
+# See LICENSE in the root of the software repository for the full text of the License.
+# ----------------------------------------------------------------------------------------------------------
+
+cmake_minimum_required(VERSION 3.16)
+
+find_package(ASC REQUIRED HINTS $ENV{ASCEND_INSTALL_PATH}/compiler/tikcpp/ascendc_kernel_cmake)
+
+project(kernel_samples LANGUAGES ASC CXX)
+# 定义独立的选项
+option(ENABLE_DEBUG "Enable debug build" OFF)
+option(ENABLE_MS_SANITIZER "Enable memory sanitizer" OFF)
+option(ENABLE_SIMULATOR "Enable msopprof simulator" OFF)
+option(ENABLE_ON_BOARD "Enable msopprof on board" OFF)
+
+if(NOT DEFINED SOC_VERSION)
+    set(SOC_VERSION "Ascend910B1" CACHE STRING "SOC VERSION for simulator")
+endif()
+
+add_executable(hello_world
+    hello_world.asc
+)
+
+target_link_libraries(hello_world PRIVATE
+    tiling_api
+    register
+    platform
+    m
+)
+
+
+# 根据选项设置编译标志
+set(compile_options)
+if(ENABLE_DEBUG)
+    list(APPEND compile_options -Xaicore-start -O0 -Xaicore-end -g)
+elseif(ENABLE_MS_SANITIZER)
+    list(APPEND compile_options -O2 -g --cce-enable-sanitizer)
+    target_link_options(hello_world PRIVATE
+        --cce-fatobj-link
+        --cce-enable-sanitizer
+    )
+elseif(ENABLE_SIMULATOR)
+    list(APPEND compile_options -O2 -g)
+    target_link_libraries(hello_world PRIVATE
+        runtime_camodel
+        npu_drv
+    )
+    target_link_directories(hello_world PUBLIC "${ASCEND_HOME_PATH}/tools/simulator/${SOC_VERSION}/lib")
+elseif(ENABLE_ON_BOARD)
+    list(APPEND compile_options -O2 -g)
+else()
+    list(APPEND compile_options -O2)
+endif()
+
+target_compile_options(hello_world PRIVATE
+    $<$<COMPILE_LANGUAGE:ASC>:--npu-arch=dav-2201>
+    ${compile_options}
+)

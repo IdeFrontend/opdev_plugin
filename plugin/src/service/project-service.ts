@@ -95,12 +95,17 @@ export class ProjectService {
       }
 
       console.log('createOpsByPrototype: Calling generateStructure...');
+      const resolvedOpName =
+        params.opName?.trim()
+        || pm.getProjectName()?.trim()
+        || undefined;
       const result = await generateStructure(
         {
           ops_prototype_file: params.opsPrototypeFile,
           project_id: projectId,
           op_type: params.opType || 'ascend',
           template_name: params.templateName,
+          ...(resolvedOpName ? { op_name: resolvedOpName } : {}),
         },
         context.extensionPath,
       );

@@ -43,6 +43,7 @@
   "view.pluginSidebar.name": "功能列表",
   "view.opsOperate.name": "操作",
   "view.sanitizerResultsTree.name": "异常检测结果",
+  "view.performanceResultsTree.name": "性能调优结果",
   "view.sanitizerReportsTree.name": "报告",
   "view.operatorProjects.name": "算子",
   "view.msSanitizer.name": "异常检测",
@@ -119,5 +120,18 @@
   "command.sidebar.sanitizer.results.hideDuplicates.title": "隐藏重复消息",
   "command.sidebar.sanitizer.results.showDuplicates.title": "显示重复消息",
   "command.sidebar.sanitizer.results.openGroupFile.title": "打开文件",
-  "customEditor.csvViewer.displayName": "CSV 表格视图"
+  "command.sidebar.performance.report.select.title": "选择报告",
+  "command.sidebar.performance.report.copyPath.title": "复制路径",
+  "command.sidebar.performance.report.download.title": "下载报告",
+  "command.sidebar.performance.report.mark.title": "标记",
+  "command.sidebar.performance.report.unmark.title": "取消标记",
+  "command.sidebar.performance.report.sortTime.title": "按时间排序报告",
+  "command.sidebar.performance.report.showMarkedOnly.title": "仅显示已标记",
+  "command.sidebar.performance.report.showAll.title": "显示全部",
+  "command.sidebar.performance.file.open.title": "打开文件",
+  "customEditor.csvViewer.displayName": "CSV 表格视图",
+  "view.homeTree.name": "首页",
+  "view.welcome.homeTree.intro": "点击[帮助指导](command:huawei-op-devtools.sidebar.openHelp)或打开[欢迎首页](command:huawei-op-devtools.sidebar.openWelcome)，查看插件介绍。",
+  "view.welcome.homeTree.newOperatorProject": "[新建算子工程](command:huawei-op-devtools.open)",
+  "view.welcome.homeTree.openOperatorProject": "[打开算子工程](command:huawei-op-devtools.openProject)"
 }

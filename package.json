@@ -3,11 +3,7 @@
   "displayName": "Huawei OP DevTools",
   "description": "Operator development, debugging, and performance analysis all-in-one platform for Ascend C language.",
   "publisher": "huawei",
-  "repository": {
-    "type": "git",
-    "url": "https://gitcode.com/kaocong/mstt"
-  },
-  "version": "1.2.9",
+  "version": "1.3.0",
   "engines": {
     "node": ">=16.0.0",
     "vscode": "^1.80.0"
@@ -493,24 +489,21 @@
       }
     ],
     "viewsContainers": {
-      "activitybar": [
+      "secondarySidebar": [
         {
           "id": "mindstudio-opssuite-vscode-plugin",
           "title": "%viewContainer.activitybar.title%",
           "icon": "web/resources/activitybar_logo_mono.svg"
-        },
+        }
+      ],
+      "secondaryActivitybar": [
         {
-          "id": "huawei-op-devtools-secondary-sidebar",
-          "title": "%viewContainer.secondarySidebar.title%",
-          "icon": "web/resources/operate_icon_mono.svg"
+          "id": "mindstudio-opssuite-vscode-plugin",
+          "title": "%viewContainer.activitybar.title%",
+          "icon": "web/resources/activitybar_logo_mono.svg"
         }
       ],
       "panel": [
-        {
-          "id": "performance-panel-view",
-          "title": "%viewContainer.panel.performance.title%",
-          "icon": "web/resources/power.svg"
-        },
         {
           "id": "dump-tensor-panel-view",
           "title": "%viewContainer.panel.dumpTensor.title%",
@@ -522,7 +515,7 @@
       "mindstudio-opssuite-vscode-plugin": [
         {
           "id": "opdevtoolsHomeTree",
-          "name": "Home",
+          "name": "%view.homeTree.name%",
           "when": "opDevtools.showHomeTree"
         },
         {
@@ -539,14 +532,11 @@
           "id": "opdevtoolsSanitizerResultsTree",
           "name": "%view.sanitizerResultsTree.name%",
           "when": "opDevtools.showOperateTree"
-        }
-      ],
-      "performance-panel-view": [
+        },
         {
-          "type": "webview",
-          "id": "performancePanelView",
-          "name": "%view.performance.name%",
-          "when": "true"
+          "id": "opdevtoolsPerformanceResultsTree",
+          "name": "%view.performanceResultsTree.name%",
+          "when": "opDevtools.showOperateTree"
         }
       ],
       "dump-tensor-panel-view": [
@@ -580,10 +570,6 @@
         "icon": "web/resources/operate.svg"
       },
       {
-        "command": "huawei-op-devtools.config",
-        "title": "%command.config.title%"
-      },
-      {
         "command": "huawei-op-devtools.leftNaV",
         "title": "%command.leftNav.title%"
       },
@@ -607,10 +593,6 @@
         "title": "%command.test.title%"
       },
       {
-        "command": "huawei-op-devtools.projectSH",
-        "title": "%command.projectSH.title%"
-      },
-      {
         "command": "huawei-op-devtools.welcome",
         "title": "%command.welcome.title%",
         "category": "%config.title%"
@@ -618,14 +600,6 @@
       {
         "command": "huawei-op-devtools.clearWelcomeCount",
         "title": "%command.clearWelcomeCount.title%"
-      },
-      {
-        "command": "huawei-op-devtools.open-ms-sanitizer-panel-view",
-        "title": "%command.openMsSanitizer.title%"
-      },
-      {
-        "command": "huawei-op-devtools.open-performance-panel-view",
-        "title": "%command.openPerformance.title%"
       },
       {
         "command": "huawei-op-devtools.open-dump-tensor-panel-view",
@@ -721,7 +695,8 @@
       },
       {
         "command": "huawei-op-devtools.reportVisualizationPerformance",
-        "title": "%command.reportVisualizationPerformance.title%"
+        "title": "%command.reportVisualizationPerformance.title%",
+        "icon": "$(add)"
       },
       {
         "command": "huawei-op-devtools.refreshFolderDecorations",
@@ -966,20 +941,64 @@
         "command": "huawei-op-devtools.sidebar.actionsQuickPick",
         "title": "Actions",
         "icon": "$(play-circle)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.performance.report.select",
+        "title": "%command.sidebar.performance.report.select.title%"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.performance.report.copyPath",
+        "title": "%command.sidebar.performance.report.copyPath.title%",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.performance.report.download",
+        "title": "%command.sidebar.performance.report.download.title%",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.performance.report.mark",
+        "title": "%command.sidebar.performance.report.mark.title%",
+        "icon": "$(opdevtools-flag-outlined)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.performance.report.unmark",
+        "title": "%command.sidebar.performance.report.unmark.title%",
+        "icon": "$(opdevtools-flag-filled)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.performance.report.sortTime",
+        "title": "%command.sidebar.performance.report.sortTime.title%",
+        "icon": "$(sort-precedence)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.performance.report.filterMarked",
+        "title": "%command.sidebar.performance.report.showMarkedOnly.title%",
+        "icon": "$(opdevtools-flag-outlined)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.performance.report.showAll",
+        "title": "%command.sidebar.performance.report.showAll.title%",
+        "icon": "$(opdevtools-flag-filled)"
+      },
+      {
+        "command": "huawei-op-devtools.sidebar.performance.file.open",
+        "title": "%command.sidebar.performance.file.open.title%",
+        "icon": "$(go-to-file)"
       }
     ],
     "viewsWelcome": [
       {
         "view": "opdevtoolsHomeTree",
-        "contents": "Click [Help Guide](command:huawei-op-devtools.sidebar.openHelp) or [Welcome Home](command:huawei-op-devtools.sidebar.openWelcome) to view plugin introduction."
+        "contents": "%view.welcome.homeTree.intro%"
       },
       {
         "view": "opdevtoolsHomeTree",
-        "contents": "[New Operator Project](command:huawei-op-devtools.open)"
+        "contents": "%view.welcome.homeTree.newOperatorProject%"
       },
       {
         "view": "opdevtoolsHomeTree",
-        "contents": "[Open Operator Project](command:huawei-op-devtools.openProject)"
+        "contents": "%view.welcome.homeTree.openOperatorProject%"
       }
     ],
     "submenus": [
@@ -1092,6 +1111,26 @@
           "group": "navigation@8"
         },
         {
+          "command": "huawei-op-devtools.reportVisualizationPerformance",
+          "when": "view == opdevtoolsPerformanceResultsTree",
+          "group": "navigation@0"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.performance.report.sortTime",
+          "when": "view == opdevtoolsPerformanceResultsTree",
+          "group": "navigation@1"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.performance.report.filterMarked",
+          "when": "view == opdevtoolsPerformanceResultsTree && !opDevtools.performanceMarkedOnly",
+          "group": "navigation@2"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.performance.report.showAll",
+          "when": "view == opdevtoolsPerformanceResultsTree && opDevtools.performanceMarkedOnly",
+          "group": "navigation@3"
+        },
+        {
           "command": "huawei-op-devtools.sidebar.selectAllOperators",
           "when": "view == opdevtoolsOperatorProjectsTree && opDevtools.showOperatorSearch && !opDevtools.allOperatorsSelected",
           "group": "navigation@3"
@@ -1167,6 +1206,31 @@
           "command": "huawei-op-devtools.sidebar.sanitizer.message.aiFix",
           "when": "view == opdevtoolsSanitizerResultsTree && opDevtools.sanitizerAiFixAvailable && viewItem =~ /opdevtools\\.sanitizerMessage\\.aiFix/",
           "group": "inline@2"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.performance.report.copyPath",
+          "when": "view == opdevtoolsPerformanceResultsTree && viewItem =~ /opdevtools\\.performanceReportItem\\.(marked|unmarked)/",
+          "group": "inline@3"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.performance.report.download",
+          "when": "view == opdevtoolsPerformanceResultsTree && viewItem =~ /opdevtools\\.performanceReportItem\\.(marked|unmarked)/",
+          "group": "inline@4"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.performance.report.unmark",
+          "when": "view == opdevtoolsPerformanceResultsTree && viewItem =~ /opdevtools\\.performanceReportItem\\.marked/",
+          "group": "inline@5"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.performance.report.mark",
+          "when": "view == opdevtoolsPerformanceResultsTree && viewItem =~ /opdevtools\\.performanceReportItem\\.unmarked/",
+          "group": "inline@5"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.performance.file.open",
+          "when": "view == opdevtoolsPerformanceResultsTree && viewItem =~ /opdevtools\\.performanceFile\\./",
+          "group": "navigation@1"
         }
       ],
       "editor/title": [
@@ -1279,17 +1343,17 @@
     ]
   },
   "scripts": {
-    "package": "pnpm run compile && vsce package --no-dependencies --allow-package-secrets privatekey --baseContentUrl https://gitcode.com/kaocong/mstt/raw/main/ --baseImagesUrl https://gitcode.com/kaocong/mstt/raw/main/",
+    "package": "pnpm run compile && vsce package --no-dependencies",
     "build": "pnpm run compile",
     "build:icons-font": "node scripts/build-icons-font.mjs",
     "compile": "pnpm run compile:web && pnpm run compile:plugin",
     "compile:web": "cd web && pnpm run build",
     "compile:plugin": "tsc --noEmit && tsx scripts/build-extension",
-    "package:debug": "pnpm run compile:debug && vsce package --no-dependencies --allow-package-secrets privatekey --baseContentUrl https://gitcode.com/kaocong/mstt/raw/main/ --baseImagesUrl https://gitcode.com/kaocong/mstt/raw/main/",
+    "package:debug": "pnpm run compile:debug && vsce package --no-dependencies",
     "compile:debug": "pnpm run compile:web:debug && pnpm run compile:plugin:debug",
     "compile:web:debug": "cd web && pnpm run build:debug",
     "compile:plugin:debug": "tsx scripts/build-extension --sourcemap",
-    "package:readable": "pnpm run compile:readable && vsce package --no-dependencies --allow-package-secrets privatekey --baseContentUrl https://gitcode.com/kaocong/mstt/raw/main/ --baseImagesUrl https://gitcode.com/kaocong/mstt/raw/main/",
+    "package:readable": "pnpm run compile:readable && vsce package --no-dependencies",
     "compile:readable": "pnpm run compile:web:readable && pnpm run compile:plugin:readable",
     "compile:web:readable": "cd web && pnpm run build --mode=readable",
     "compile:plugin:readable": "tsx scripts/build-extension --sourcemap --readable",
@@ -1312,34 +1376,22 @@
   "devDependencies": {
     "@eslint/js": "^9.39.2",
     "@playwright/test": "^1.59.1",
-    "@rolldown/binding-win32-x64-msvc": "1.0.0-rc.9",
     "@stylistic/eslint-plugin": "^5.6.1",
+    "@types/adm-zip": "^0.5.7",
     "@types/node": "^24.6.0",
-    "@types/vscode": "^1.60.0",
-    "@vitejs/plugin-vue": "^6.0.1",
     "@vscode/test-electron": "^2.5.2",
-    "@vscode/test-web": "^0.0.77",
     "@vscode/vsce": "^3.7.1",
-    "@vue/tsconfig": "^0.8.1",
-    "autoprefixer": "^10.4.23",
+    "adm-zip": "^0.5.16",
     "esbuild": "^0.27.1",
     "eslint": "^9.39.2",
     "eslint-plugin-oxlint": "^1.36.0",
     "eslint-plugin-vue": "^10.6.2",
     "globals": "^16.5.0",
-    "husky": "^9.1.7",
-    "less": "^4.4.2",
-    "less-loader": "^12.3.0",
     "lint-staged": "^16.2.7",
     "oxlint": "^1.36.0",
-    "postcss": "^8.5.6",
-    "svgtofont": "^6.5.1",
-    "tailwindcss": "^3.4.17",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.50.0",
-    "unplugin-vue-components": "^30.0.0",
-    "vite": "^8.0.0",
     "vue-tsc": "^3.2.1"
   }
 }

@@ -18,6 +18,8 @@ export type CreateOpsByPrototypeParams = {
   opsPrototypeFile: string;
   opType?: 'ascend' | 'cann' | 'pyasc' | 'triton';
   templateName?: string;
+  /** Canonical operator / entrypoint name (e.g. New Project `projectName`). Passed to `generateStructure` as `op_name`. */
+  opName?: string;
 };
 
 export type BuildConfig = {

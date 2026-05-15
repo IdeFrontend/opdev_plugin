@@ -12,8 +12,8 @@ import {
 import {
   selectFolder, selectFile,
 } from '@web/apis/performance-run-data';
-import { MessageHandlerStrategyManager } from '../../link/composables/message-handler-strategies';
-import { SearchStrategyFactory } from '../../link/composables/search-strategies';
+import { MessageHandlerStrategyManager } from '../../new-project/composables/message-handler-strategies';
+import { SearchStrategyFactory } from '../../new-project/composables/search-strategies';
 
 /**
  * Open Project Composable

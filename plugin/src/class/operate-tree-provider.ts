@@ -2,15 +2,22 @@ import { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import type { JumpToFileParams } from '@shared/api-types';
+import type {
+  JumpToFileParams,
+  PerformanceExecutionRecord,
+  PerformanceRunDataFile,
+  PerformanceRunDataFolder,
+} from '@shared/api-types';
 
 import { configMethods } from '@plugin/controller/config-controller';
 import { homeMethods } from '@plugin/controller/home-controller';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import { performanceDataMethods } from '@plugin/controller/performance-controller';
+import { performanceMethods } from '@plugin/controller/performance-data-controller';
+import { viewService } from '@plugin/service/view-service';
 import { ensureEnvironmentScriptForOperateAction } from '@plugin/helpers/environment-script-guard';
 import { appendLog } from '@plugin/helpers/output-channel';
-import { loadMsSanitizerPanelData } from '@plugin/class/ms-sanitizer-panel-view';
+import { sanitizerDiagnosticsService } from '@plugin/service/sanitizer-diagnostics.service';
 import { runDataService } from '@plugin/service/run-data-service';
 import {
   COMMAND_SIDEBAR_TOGGLE_OPERATOR,
@@ -34,6 +41,10 @@ export type OperateNodeId =
   | 'sanitizerClass'
   | 'sanitizerMessage'
   | 'sanitizerReportItem'
+  | 'performanceResultsRoot'
+  | 'performanceReportItem'
+  | 'performanceFolder'
+  | 'performanceFile'
   | 'selectOperators'
   | 'selectedOperators'
   | 'operatorItem';
@@ -75,6 +86,12 @@ type OperateSidebarState = {
     hideDuplicates: boolean;
     reportRevision: number;
     manualReports: SanitizerReportRecord[];
+  };
+  performance: {
+    reports: PerformanceExecutionRecord[];
+    sortOrder: 'asc' | 'desc';
+    markedOnly: boolean;
+    selectedReportKey?: string;
   };
 };
 
@@ -172,6 +189,11 @@ const INITIAL_STATE: OperateSidebarState = {
     reportRevision: 0,
     manualReports: [],
   },
+  performance: {
+    reports: [],
+    sortOrder: 'desc',
+    markedOnly: false,
+  },
 };
 
 export type OperateTreeKind = 'flow' | 'operatorProjects';
@@ -246,6 +268,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   private sanitizerReportRootNodesCache?: OperateNode[];
   private readonly sanitizerGroupNodesCache = new Map<string, OperateNode[]>();
   private readonly sanitizerGroupMessageNodesCache = new Map<string, OperateNode[]>();
+  private readonly performanceNodesById = new Map<string, OperateNode[]>();
 
   private invalidateSanitizerPresentationCaches(): void {
     this.sanitizerReportRootNodesCache = undefined;
@@ -499,6 +522,11 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       searchKeyword: prevSearchKeyword,
       selectedOperatorIds,
       sanitizer: this.state.sanitizer,
+      performance: this.state.performance ?? {
+        reports: [],
+        sortOrder: 'desc',
+        markedOnly: false,
+      },
     };
 
     if (!hasDevtoolConfig) {
@@ -507,6 +535,8 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       this.state.sanitizer.selectedReportTitle = undefined;
       this.state.sanitizer.selectedMessages = [];
       this.state.sanitizer.hideDuplicates = false;
+      this.state.performance.reports = [];
+      this.state.performance.selectedReportKey = undefined;
     }
 
     this.onDidChangeTreeDataEmitter.fire();
@@ -963,7 +993,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     this.state.sanitizer.selectedReportPath = report.path;
     this.state.sanitizer.selectedReportTitle = report.title;
     this.onDidChangeTreeDataEmitter.fire();
-    const panelData = loadMsSanitizerPanelData({
+    const panelData = sanitizerDiagnosticsService.loadSanitizerPanelData({
       path: report.path,
       title: report.title,
       timestamp: report.timestamp,
@@ -1114,6 +1144,26 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
     if (element.nodeId === 'sanitizerClass') {
       return this.getSanitizerMessageNodes(element.id ?? '');
+    }
+
+    if (element.nodeId === 'performanceResultsRoot') {
+      return this.getPerformanceReportNodes();
+    }
+
+    if (element.nodeId === 'performanceReportItem' && (element.id ?? '').startsWith('performance-report:')) {
+      const reportKey = decodeURIComponent((element.id ?? '').replace(/^performance-report:/, ''));
+      return this.getPerformanceChildNodes(reportKey);
+    }
+
+    if (element.nodeId === 'performanceFolder' && (element.id ?? '').startsWith('performance-folder:')) {
+      const encoded = (element.id ?? '').replace(/^performance-folder:/, '');
+      const [
+        encodedReportKey,
+        ...pathParts
+      ] = encoded.split(':');
+      const reportKey = decodeURIComponent(encodedReportKey ?? '');
+      const folderPath = pathParts.map((part) => decodeURIComponent(part));
+      return this.getPerformanceFolderChildNodes(reportKey, folderPath);
     }
 
     return [];
@@ -1494,6 +1544,241 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     return this.getSanitizerReportNodes();
   }
 
+  getPerformanceResultsPanelNodes(): OperateNode[] {
+    return this.getPerformanceReportNodes();
+  }
+
+  /** Sort `state.performance.reports` by current `sortOrder` (in-memory only). */
+  private sortPerformanceReportsInPlace(): void {
+    const { reports, sortOrder } = this.state.performance;
+    if (reports.length <= 1) {
+      return;
+    }
+    reports.sort((a, b) => {
+      const byTime = sortOrder === 'asc' ? a.timestamp - b.timestamp : b.timestamp - a.timestamp;
+      return byTime !== 0 ? byTime : a.key.localeCompare(b.key);
+    });
+  }
+
+  async refreshPerformanceReports(): Promise<void> {
+    try {
+      const result = await performanceMethods.getRunData({
+        sort: {
+          by: 'timestamp',
+          order: this.state.performance.sortOrder,
+        },
+      });
+      this.state.performance.reports = result?.data ?? [];
+      this.sortPerformanceReportsInPlace();
+    }
+    catch (error) {
+      console.error('Failed to load performance reports:', error);
+      this.state.performance.reports = [];
+    }
+    this.performanceNodesById.clear();
+    this.onDidChangeTreeDataEmitter.fire();
+  }
+
+  /**
+   * Flip timestamp sort direction and reorder loaded rows only — no filesystem rescan.
+   */
+  togglePerformanceSortOrder(): void {
+    this.state.performance.sortOrder = this.state.performance.sortOrder === 'asc' ? 'desc' : 'asc';
+    this.sortPerformanceReportsInPlace();
+    this.performanceNodesById.clear();
+    this.onDidChangeTreeDataEmitter.fire();
+  }
+
+  setPerformanceMarkedOnly(markedOnly: boolean): void {
+    this.state.performance.markedOnly = markedOnly;
+    this.performanceNodesById.clear();
+    this.onDidChangeTreeDataEmitter.fire();
+  }
+
+  isPerformanceMarkedOnlyEnabled(): boolean {
+    return this.state.performance.markedOnly;
+  }
+
+  getPerformanceReportByKey(reportKey: string): PerformanceExecutionRecord | undefined {
+    return this.state.performance.reports.find((item) => item.key === reportKey);
+  }
+
+  selectPerformanceReport(reportKey: string): void {
+    this.state.performance.selectedReportKey = reportKey;
+    this.onDidChangeTreeDataEmitter.fire();
+  }
+
+  getSelectedPerformanceReport(): PerformanceExecutionRecord | undefined {
+    const key = this.state.performance.selectedReportKey;
+    if (!key) {
+      return undefined;
+    }
+    return this.getPerformanceReportByKey(key);
+  }
+
+  async togglePerformanceReportMark(reportKey: string): Promise<void> {
+    const report = this.getPerformanceReportByKey(reportKey);
+    if (!report) {
+      return;
+    }
+    const nextMarked = !Boolean(report.marked);
+    report.marked = nextMarked;
+    this.onDidChangeTreeDataEmitter.fire();
+    try {
+      performanceMethods.toggleRecordMark({
+        key: reportKey,
+        marked: nextMarked,
+      });
+    }
+    catch (error) {
+      report.marked = !nextMarked;
+      this.onDidChangeTreeDataEmitter.fire();
+      vscode.window.showErrorMessage(t('web.perf.markFailed'));
+      console.error('Failed to toggle performance mark:', error);
+    }
+  }
+
+  async copyPerformanceReportPath(reportKey: string): Promise<void> {
+    const report = this.getPerformanceReportByKey(reportKey);
+    if (!report?.dirPath) {
+      return;
+    }
+    try {
+      await performanceMethods.copyReport({ dirPath: report.dirPath });
+    }
+    catch (error) {
+      console.error('Failed to copy performance report:', error);
+    }
+  }
+
+  async downloadPerformanceReport(reportKey: string): Promise<void> {
+    const report = this.getPerformanceReportByKey(reportKey);
+    if (!report?.dirPath) {
+      return;
+    }
+    try {
+      await performanceMethods.downloadReport({ dirPath: report.dirPath });
+    }
+    catch (error) {
+      console.error('Failed to download performance report:', error);
+    }
+  }
+
+  async openPerformanceFile(filePath: string, fileType: string): Promise<void> {
+    if (fileType === 'csv') {
+      await viewService.openCsvFile(filePath);
+      return;
+    }
+    if (fileType === 'bin' || fileType === 'json') {
+      await viewService.openInsight(filePath);
+    }
+  }
+
+  private getVisiblePerformanceReports(): PerformanceExecutionRecord[] {
+    if (!this.state.performance.markedOnly) {
+      return this.state.performance.reports;
+    }
+    return this.state.performance.reports.filter((item) => Boolean(item.marked));
+  }
+
+  private getPerformanceReportNodes(): OperateNode[] {
+    const reports = this.getVisiblePerformanceReports();
+    if (reports.length === 0) {
+      return [
+        this.createItem(
+          'performanceReportItem',
+          t('web.perf.noData'),
+          undefined,
+          vscode.TreeItemCollapsibleState.None,
+        ),
+      ];
+    }
+    return reports.map((report) => {
+      const contextValue = report.marked
+        ? 'opdevtools.performanceReportItem.marked'
+        : 'opdevtools.performanceReportItem.unmarked';
+      const description = this.formatPerformanceTimestamp(report.timestamp);
+      const node = this.createItem(
+        'performanceReportItem',
+        report.title,
+        'huawei-op-devtools.sidebar.performance.report.select',
+        vscode.TreeItemCollapsibleState.Collapsed,
+        contextValue,
+        report.marked
+          ? this.getCustomProductIcon('flag-filled')
+          : undefined,
+        description,
+        `performance-report:${encodeURIComponent(report.key)}`,
+        [report.key],
+      );
+      this.performanceNodesById.set(node.id ?? '', []);
+      return node;
+    });
+  }
+
+  private getPerformanceChildNodes(reportKey: string): OperateNode[] {
+    const report = this.getPerformanceReportByKey(reportKey);
+    if (!report) {
+      return [];
+    }
+    return report.children.map((child, index) => this.createPerformanceChildNode(report.key, child, [String(index)]));
+  }
+
+  private getPerformanceFolderChildNodes(reportKey: string, folderPath: string[]): OperateNode[] {
+    const report = this.getPerformanceReportByKey(reportKey);
+    if (!report) {
+      return [];
+    }
+    let currentChildren: (PerformanceRunDataFolder | PerformanceRunDataFile)[] = report.children;
+    for (const segment of folderPath) {
+      const next = currentChildren[Number(segment)];
+      if (!next || !('children' in next)) {
+        return [];
+      }
+      currentChildren = next.children;
+    }
+    return currentChildren.map((child, index) => this.createPerformanceChildNode(report.key, child, [...folderPath, String(index)]));
+  }
+
+  private createPerformanceChildNode(
+    reportKey: string,
+    child: PerformanceRunDataFolder | PerformanceRunDataFile,
+    pathSegments: string[],
+  ): OperateNode {
+    if ('children' in child) {
+      const encodedSegments = pathSegments.map((segment) => encodeURIComponent(segment));
+      return this.createItem(
+        'performanceFolder',
+        child.title,
+        undefined,
+        vscode.TreeItemCollapsibleState.Collapsed,
+        'opdevtools.performanceFolder',
+        undefined,
+        undefined,
+        `performance-folder:${encodeURIComponent(reportKey)}:${encodedSegments.join(':')}`,
+      );
+    }
+    return this.createItem(
+      'performanceFile',
+      child.title,
+      'huawei-op-devtools.sidebar.performance.file.open',
+      vscode.TreeItemCollapsibleState.None,
+      `opdevtools.performanceFile.${child.fileType}`,
+      undefined,
+      undefined,
+      `performance-file:${encodeURIComponent(child.filePath)}`,
+      [child.filePath, child.fileType],
+    );
+  }
+
+  private formatPerformanceTimestamp(timestamp: number): string {
+    const date = new Date(timestamp);
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+    return date.toLocaleString();
+  }
+
   private async getSanitizerMessagesForReport(reportPath: string): Promise<SanitizerMessageRecord[]> {
     const cached = this.sanitizerReportMessagesCache.get(reportPath);
     if (cached) {
@@ -1503,7 +1788,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     if (!report) {
       return [];
     }
-    const panelData = loadMsSanitizerPanelData({
+    const panelData = sanitizerDiagnosticsService.loadSanitizerPanelData({
       path: report.path,
       title: report.title,
       timestamp: report.timestamp,

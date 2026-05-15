@@ -1,7 +1,7 @@
 import {
   ProjectPathValidationStrategy,
   ProjectSHValidationStrategy,
-} from '../../link/composables/validation-strategies';
+} from '../../new-project/composables/validation-strategies';
 
 /**
  * 打开项目表单校验规则工厂

@@ -1,0 +1,4 @@
+timestamp_ms,bank,read_gbps,write_gbps
+0,L2,412.3,98.1
+10,HBM,801.2,220.4
+20,L2,405.7,101.3

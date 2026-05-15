@@ -38,7 +38,6 @@ export default {
   // task
   'task.stoppedByUser': '任务已被手动停止',
   'task.noRunningTask': '当前没有正在执行的任务',
-  'task.stopAndRun': '停止并执行',
   'task.openPyFirst': '请先打开一个 .py 文件',
   'task.workspacePathNotFound': '未找到工作区路径',
   'task.launchJsonOpened': '已打开 launch.json 文件',
@@ -52,6 +51,7 @@ export default {
   'extension.rightClickFolder': '请右键点击文件夹',
   'extension.rightClickFolderOrFile': '请右键点击文件夹或文件',
   'extension.rightClickFile': '请右键点击文件',
+  'extension.addPerformanceVisualizationPickFolderTitle': '选择要添加到性能调优可视化的文件夹',
   'extension.openDevToolsFailed': '打开 Huawei OP DevTools 失败：{{error}}',
   'extension.importDumpTensorBinFailed': '导入 DumpTensor .bin 文件失败',
   'extension.selectDumpTensorBinFile': '选择 DumpTensor .bin 文件',
@@ -132,7 +132,6 @@ export default {
   'build.utTestSuccess': 'UT测试执行成功',
   'build.getUtTestCommandFailed': '获取UT测试命令失败：{{error}}',
   'build.importDumpTensorBinSuccess': '导入 DumpTensor .bin 文件成功',
-  'build.getRunCommandFailedAgain': '获取运行命令失败 {{error}}',
 
   // performance
   'performance.fileDownloadedTo': '文件已成功下载到: {{path}}',
@@ -152,7 +151,6 @@ export default {
   'performanceData.missingFilePath': '缺少文件路径参数',
   'performanceData.fileCompareFailed': '文件对比失败: {{error}}',
   'performanceData.fileReadFailedLine': '[读取文件失败: {{error}}]',
-  'performanceData.diffCompareTitle': '对比: {{left}} ↔ {{right}}',
 
   // sanitizer
   'sanitizer.detectionSuccess': '异常检测成功',
@@ -174,13 +172,6 @@ export default {
   'project.createOpFileSuccess': '新建算子文件成功',
   'project.createOpFileFailed': '新建算子文件失败 {{error}}',
 
-  // ms-sanitizer-controller
-  'msSanitizer.reportCopied': '报告内容已复制到剪贴板',
-  'msSanitizer.copyReportFailed': '复制报告失败: {{error}}',
-  'msSanitizer.fileDownloaded': '文件已成功下载',
-  'msSanitizer.downloadCancelled': '下载已取消',
-  'msSanitizer.downloadReportFailed': '下载报告失败: {{error}}',
-
   // webview
   'webview.opsuiteLoadError': 'Opsuite加载异常: {{message}}',
   'webview.opFileCreated': '算子文件创建完成',
@@ -201,7 +192,6 @@ export default {
   'view.binPathEmpty': 'BIN文件路径不能为空',
   'view.loadDataFileFailed': '加载数据文件失败: {{error}}',
   'link.fileNotExist': '文件不存在: {{path}}',
-  'web.link.tritonDisabled': '当前未启用 Triton 支持。请在设置中开启 op-devtools.operatorSupport.triton。',
 
   // command (domain)
   'command.configNotFound': '配置不存在',
@@ -253,7 +243,6 @@ export default {
   // home (validation / display)
   'home.operatorList': '算子列表:',
   'home.path': '路径:',
-  'home.standardCustomOperator': '标准自定义算子',
   'home.supportsSanitizerAndTuning': '支持异常检测与调优:',
   'home.projectTypeStandardCustom': '标准自定义算子',
   'home.projectTypeAscendC': '<<<>>>算子',
@@ -279,13 +268,7 @@ export default {
   'performance.errorDetected': '检测到错误',
 
   // ms-sanitizer (progress/dialog)
-  'msSanitizer.filePathEmpty': '文件路径不能为空',
   'msSanitizer.pathNotFileOrDir': '路径不是文件或目录',
-  'msSanitizer.downloadingReport': '正在下载报告',
-  'msSanitizer.checkingFile': '正在检查文件...',
-  'msSanitizer.preparingDownload': '正在准备下载...',
-  'msSanitizer.saveFile': '保存文件',
-  'msSanitizer.downloadComplete': '下载完成',
 
   // webview (additional)
   'webview.createPrototypeFailedEmptyPath': '创建算子原型文件失败：返回路径为空',
@@ -338,10 +321,7 @@ export default {
   'csv.errorDetailsLabel': '错误：',
 
   // routes
-  'routes.configTitle': '算子配置',
   'routes.dumpTensorViewTitle': 'DumpTensor数据-视图',
-
-  // api-server (uses core.message.* - already above)
 
   // web home sidebar
   'web.home.clickOpen': '点击打开',
@@ -363,13 +343,9 @@ export default {
   'web.openProject.openNow': '立即打开',
 
   // web operate sidebar
-  'web.operate.needProjectHint': '您需要新建算子工程或通过一站式平台插件打开算子工程才可以使用操作面板',
-  'web.operate.projectConfig': '工程配置',
   'web.operate.compileDeploy': '编译部署算子',
   'web.operate.run': '运行',
   'web.operate.sanitizer': '异常检测',
-  'web.operate.sanitizerResults': '异常检测结果',
-  'web.operate.reports': '报告',
   'web.operate.performanceTuning': '性能调优',
   'web.operate.onBoardAnalysis': '上板分析',
   'web.operate.simulationAnalysis': '仿真分析',
@@ -378,74 +354,29 @@ export default {
   'web.operate.cpuDebug': 'CPU调试',
   'web.operate.npuDebug': 'NPU调试',
   'web.operate.debug': '调试',
-  'web.operate.taskRunningTitle': '任务"{{taskName}}"正在进行中',
-  'web.operate.taskRunningContent': '任务无法同时进行，您是否希望停止当前"{{taskName}}"任务，并执行新任务？',
-  'web.operate.stopAndRun': '停止并执行',
-  'web.operate.cancel': '取消',
-  'web.operate.stopTask': '停止{{name}}',
-  'web.operate.stopTaskDefault': '任务',
   'web.operate.selectedCount': '已选择 {{count}} 项',
-  'web.operate.unknownProjectType': '未知',
   'web.operate.searchOperatorProject': '搜索算子工程',
-  'web.operate.compiledOperators': '编译成功的算子工程',
-  'web.operate.preparedOperators': '预备算子工程',
-  'web.operate.operatorProjects': '算子',
-  'web.operate.clearAll': '清空全部',
-  'web.operate.selectAll': '全选',
-  'web.operate.confirm': '确认',
   'web.operate.pleaseSelectOperatorProject': '请选择算子工程',
   'web.operate.singleOperatorOnly': '该功能只支持单算子执行',
-  'web.operate.noSelectCompileAll': '不选择算子，则默认编译整个算子包',
   'web.operate.actionsTitle': '操作',
   'web.operate.noActionsAvailable': '当前树视图中没有可执行的操作。',
 
   // web performance-run-data / ms-sanitizer-run-data
   'web.perf.noData': '暂无数据',
-  'web.perf.executionTime': '执行时间',
-  'web.perf.marked': '已标记',
   'web.perf.pathCopied': '路径已复制到剪贴板',
-  'web.perf.copyFailed': '复制路径失败',
-  'web.perf.preparingDownload': '正在准备下载...',
-  'web.perf.saveFile': '保存文件',
-  'web.perf.downloadSuccess': '下载成功',
-  'web.perf.downloadCancelled': '下载已取消或未完成',
-  'web.perf.downloadFailed': '下载失败',
-  'web.perf.downloadFailedGeneric': '下载处理失败',
-  'web.perf.copyReport': '复制报告',
-  'web.perf.downloadReport': '下载报告',
-  'web.perf.markUnmark': '标记/取消标记',
+  'web.perf.markFailed': '标记操作失败',
 
   // web ms-sanitizer-panel-view
   'web.sanitizerPanel.sanitizerResult': '异常检测结果',
   'web.sanitizerPanel.noReport': '暂无报告',
   'web.sanitizerPanel.noReports': '暂无报告',
-  'web.sanitizerPanel.detectionResult': '检测结果',
-  'web.sanitizerPanel.detectionInfo': '检测信息',
-  'web.sanitizerPanel.detectionTime': '检测时间',
-  'web.sanitizerPanel.detectionContent': '检测内容',
-  'web.sanitizerPanel.detectionContentDesc': '内存检测：非法读写、多核踩踏、非对齐访问和非法释放，内存泄漏、分配内存未使用、Device侧内存检测、CANN软件栈内存检测、竞争检测、未初始化监测',
-  'web.sanitizerPanel.detectionScope': '检测范围',
-  'web.sanitizerPanel.globalMonitor': '全局监测',
   'web.sanitizerPanel.memory': '内存',
   'web.sanitizerPanel.memoryRace': '内存竞争',
   'web.sanitizerPanel.uninitialized': '未初始化',
   'web.sanitizerPanel.sync': '同步',
   'web.sanitizerPanel.other': '其他',
-  'web.sanitizerPanel.hostSideHint': '该问题为HOST侧的问题，按照右侧详情信息进行排查。',
-  'web.sanitizerPanel.detail': '详情',
   'web.sanitizerPanel.problem': '问题',
-  'web.sanitizerPanel.problemDetail': '问题详情',
-  'web.sanitizerPanel.problemTypeDetail': '问题类型详情',
   'web.sanitizerPanel.selectReportHint': '请选择左侧报告查看检测结果',
-  'web.sanitizerPanel.problemDesc': '问题描述',
-  'web.sanitizerPanel.problemType': '问题类型',
-  'web.sanitizerPanel.sourceFile': '源码文件',
-  'web.sanitizerPanel.lineNumber': '行数',
-  'web.sanitizerPanel.aiFix': 'AI 修复',
-  'web.sanitizerPanel.fixing': '修复中',
-  'web.sanitizerPanel.queued': '排队中',
-  'web.sanitizerPanel.connecting': '连接中',
-  'web.sanitizerPanel.fixed': '已修复',
   'web.sanitizerPanel.handler.illegalRead': '非法读写异常信息的产生是由于算子程序中，通过读或写的方式访问了一块未分配的内存。此错误一般发生在GM或片上内存上，GM异常是由于GM分配的大小与实际算子程序中访问的范围不一致导致，而片上内存的异常是由于算子程序的访问范围超过硬件容量上限导致。',
   'web.sanitizerPanel.handler.illegalWrite': '非法读写异常信息的产生是由于算子程序中，通过读或写的方式访问了一块未分配的内存。此错误一般发生在GM或片上内存上，GM异常是由于GM分配的大小与实际算子程序中访问的范围不一致导致，而片上内存的异常是由于算子程序的访问范围超过硬件容量上限导致。',
   'web.sanitizerPanel.handler.outOfBounds': 'AI Core是昇腾AI处理器中的计算核心，AI处理器内部有多个AI Core，算子运行就在这些AI Core上。这些AI Core会在计算过程中从GM上搬入或搬出数据。当没有显式地进行核间同步时，如果各个核之间访问的GM内存存在重叠并且至少有一个核对重叠地址进行写入时，则会发生多核踩踏问题。这里我们通过所有者的概念来保证多核之间不会发生踩踏问题，当一块内存被某一个核写入后，这块内存就由该核所有。当其他核对这块内存进行访问时就会产生out of bounds异常。',
@@ -486,7 +417,7 @@ export default {
   'web.welcome.typeAngle': '类型：<<<>>>',
   'web.welcome.sample': '样例',
   'web.welcome.ascendCStandardProject': '【Ascend C】标准自定义算子工程',
-  'web.welcome.ascendCStandardDesc': '基于Ascend C语言的标准自定义算子工程，op_host存放在CPC侧的代码实现，op_kermel存放NPU侧的代码实现，op_graph存放图模式下的代码实现',
+  'web.welcome.ascendCStandardDesc': '基于Ascend C语言的标准自定义算子工程，op_host存放在CPU侧的代码实现，op_kermel存放NPU侧的代码实现，op_graph存放图模式下的代码实现',
   'web.welcome.typeStandardCustom': '类型：标准自定义',
   'web.welcome.pythonPyascProject': '【Python】pyasc算子工程',
   'web.welcome.pythonPyascDesc': '基于pyasc创建自定义Add算子样例工程。',
@@ -506,7 +437,6 @@ export default {
   'web.welcome.featureHighlight': '语法高亮',
   'web.welcome.featureCompletion': '代码补全',
   'web.welcome.featureCompileDeploy': '算子编译部署',
-  'web.welcome.viewGuide': '查看使用指南',
   'web.welcome.tabWriteCode': '编写算子代码',
   'web.welcome.tabCompileDeploy': '编译部署算子',
   'web.welcome.tabRun': '运行算子',
@@ -540,7 +470,7 @@ export default {
   // web link panel (new operator project)
   'web.link.projectType': '工程类型',
   'web.link.ascendCOpDesc': '创建<<<>>>调用的addn工程样例，支持".asc"后缀的异构编译。',
-  'web.link.ascendCStandardDesc': '基于Ascend C语言的标准自定义算子工程，op_host存放在CPC侧的代码实现，op_kermel存放NPU侧的代码实现，op_graph存放图模式下的代码实现 <span style="color: #ff4d4f; font-weight: bold;">(因为该算子的编译依赖ops-math项目，该算子将自动放到ops-math项目中math目录中，后续提交代码需要迁移到自己的fork代码仓中操作)</span>',
+  'web.link.ascendCStandardDesc': '基于Ascend C语言的标准自定义算子工程，op_host存放在CPU侧的代码实现，op_kermel存放NPU侧的代码实现，op_graph存放图模式下的代码实现 <span style="color: #ff4d4f; font-weight: bold;">(因为该算子的编译依赖ops-math项目，该算子将自动放到ops-math项目中math目录中，后续提交代码需要迁移到自己的fork代码仓中操作)</span>',
   'web.link.pythonPyascDesc': '基于pyasc创建自定义Add算子样例工程',
   'web.link.pythonTritonDesc': '基于 Triton 创建向量加法样例工程',
   'web.link.structureDiagram': '工程目录结构示意',
@@ -568,87 +498,6 @@ export default {
   'web.link.validation.scriptNotExist': '脚本文件不存在，请确认',
   'web.link.validation.failed': '验证失败',
 
-  // web config panel
-  'web.config.title': '算子工程配置',
-  'web.config.buildTitle': '算子编译配置',
-  'web.config.opLabel': '要编译的算子名称',
-  'web.config.opPlaceholder': '请输入算子名称',
-  'web.config.targetDirLabel': '编译生成文件位置',
-  'web.config.targetDirPlaceholder': '请输入生成文件位置',
-  'web.config.deployCommandLabel': '算子部署命令',
-  'web.config.runCommandLabel': '算子运行命令行',
-  'web.config.deployCommandPlaceholder': '请输入算子部署命令',
-  'web.config.runCommandPlaceholder': '请输入算子运行命令行',
-  'web.config.compileCommandLabel': '编译命令行',
-  'web.config.compileCommandPlaceholder': '请输入编译命令行',
-  'web.config.cpuDebugScriptLabel': 'CPU调试编译命令行',
-  'web.config.cpuDebugScriptPlaceholder': '请输入CPU调试编译命令行',
-  'web.config.npuDebugScriptLabel': 'NPU调试编译命令行',
-  'web.config.npuDebugScriptPlaceholder': '请输入NPU调试编译命令行',
-  'web.config.sanitizerScriptLabel': '异常检测编译命令行',
-  'web.config.sanitizerScriptPlaceholder': '请输入异常检测编译命令行',
-  'web.config.onboardScriptLabel': '上板分析编译命令行',
-  'web.config.onboardScriptPlaceholder': '请输入上板分析编译命令行',
-  'web.config.simulateScriptLabel': '仿真分析编译命令行',
-  'web.config.simulateScriptPlaceholder': '请输入仿真分析编译命令行',
-  'web.config.exampleConfigTitle': 'example编译配置',
-  'web.config.executionModeLabel': '执行模式',
-  'web.config.executionModeEager': 'eager（aclnn调用）',
-  'web.config.executionModeGraph': 'graph（图模式调用）',
-  'web.config.exampleRunCommandLabel': '算子运行命令行',
-  'web.config.exampleRunCommandTooltip': '执行该命令时，会自动在后面拼接算子名称、执行模式和和包模式',
-  'web.config.exampleRunCommandPlaceholder': '请输入算子运行命令行',
-
-  // web config options-list
-  'web.config.optionBuild': '编译部署',
-  'web.config.optionSanitizer': '异常检测',
-  'web.config.optionPerformance': '性能调优',
-  'web.config.optionEnv': '环境变量',
-
-  // web config sanitizer-config
-  'web.config.sanitizer.logLevel': '报告输出等级',
-  'web.config.sanitizer.logLevelInfo': 'info:输出info/warn/error级别的运行信息',
-  'web.config.sanitizer.logLevelWarn': 'warn:输出warn/error级别的运行信息',
-  'web.config.sanitizer.logLevelError': 'error:输出error级别的运行信息',
-  'web.config.sanitizer.maxLogSize': '输出日志中单个文件大小的上限',
-  'web.config.sanitizer.maxLogSizeTooltip': '可设定范围为1~10240之间的整数,单位为MB。默认值为1024。',
-  'web.config.sanitizer.scope': '检测范围',
-  'web.config.sanitizer.scopeTooltip': '可设定范围为0~200之间的整数。启用前：内存/未初始化/同步检测所有block；竞争检测核间所有block、核内block 0。启用后：内存/未初始化/同步检测指定block；竞争检测核间不检测，指定block流水内及流水间。',
-  'web.config.sanitizer.scopeGlobal': '全局检测',
-  'web.config.sanitizer.scopeBlock': '单block检测',
-
-  // web config simulation-tab
-  'web.config.simulatorType': '仿真器类型',
-  'web.config.simulatorTypeTooltip': '当前支持的仿真器类型可以在 CANN安装路径下 ascend-toolkit/latest/tools/simulator目录查看',
-  'web.config.simulatorTypePlaceholder': '请输入仿真器类型',
-
-  // web config opprof-config
-  'web.config.opprofTabSimulate': '仿真',
-  'web.config.opprofTabOnboard': '上板',
-
-  // web config onboard-tab
-  'web.config.onboard.enableKernelProf': '使能Kernel侧指定代码段性能采集',
-  'web.config.onboard.kernelProfHint': '指定代码段范围时，需要在算子Kernel侧对应的代码段前后调用MetricsProfStart和MetricsProfStop接口，具体调用方式请参见',
-  'web.config.onboard.and': '和',
-  'web.config.onboard.api': '接口',
-  'web.config.onboard.confirmKernelProf': '请确认是否在算子Kernal侧对应的代码段前后调用了MetricsProfStart和MetricsProfStop接口，若未调用，该选项将不会生效。具体调用方式请参见',
-
-  // web config env-config
-  'web.config.env.saveSuccess': '环境变量配置已保存',
-  'web.config.env.saveFailed': '环境变量设置失败',
-  'web.config.env.confirm': '确认',
-
-  // web config edit-table
-  'web.config.editTable.paramName': '参数名称',
-  'web.config.editTable.paramValue': '参数值',
-  'web.config.editTable.action': '操作',
-  'web.config.editTable.addParam': '新增参数',
-  'web.config.editTable.addParamTooltip': '这里添加的参数，参数会追加到命令行，具体参数可在终端窗口中执行 msprof op -h 获取具体参数信息，基础配置中已设置了 aic-metrics 参数',
-  'web.config.editTable.paramNameTooltip': '参数名称默认自带--前缀，无需手动添加',
-
-  // web config-detail
-  'web.config.configData': '配置数据',
-
   // web dump-tensor-data
   'web.dump.selectTwoFiles': '请选择至少两个文件进行比较',
   'web.dump.maxSelectCount': '最多只能选择 {{count}} 个文件进行比较',
@@ -662,7 +511,6 @@ export default {
   'web.dump.importFailed': '导入失败',
 
   // web options (shared)
-  'web.options.taskRunning': '存在未执行完毕的任务，请稍后再试',
   'web.options.simulationFailed': '仿真分析失败，已停止',
   'web.options.onboardFailed': '上板分析失败',
   'web.options.sanitizerFailed': '异常检测启动失败',
@@ -717,6 +565,4 @@ export default {
   'web.options.sanitizer.startNow': '立即开始',
   'web.options.sanitizer.doNotShowAgain': '不再显示',
 
-  // web project-sh
-  'web.projectSh.title': '环境配置',
 };

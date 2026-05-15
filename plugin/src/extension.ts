@@ -24,15 +24,12 @@ import { routes } from './routes';
 import { apis } from './api-routes';
 import { homeMethods } from './controller/home-controller';
 import { taskMethods } from './controller/task-controller';
-import { configMethods } from './controller/config-controller';
 import { performanceDataMethods } from './controller/performance-controller';
 import { PermanentStorage } from './class/permanent-storage';
 import { ExtensionConfig } from './core/extension-config';
 import { RemoteConfig } from './helpers/remote-config';
-import { getMsSanitizerPanelViewProvider } from './class/ms-sanitizer-panel-view';
 import { sanitizerDiagnosticsService } from './service/sanitizer-diagnostics.service';
 import { msAgentBridgeService } from './service/ms-agent-bridge.service';
-import { getPerformancePanelViewProvider } from './class/performance-panel-view';
 import { getDumpTensorPanelViewProvider } from './class/dump-tensor-panel-view';
 import { appendLog } from './helpers/output-channel';
 
@@ -41,9 +38,7 @@ import { registerOperatorPlugins } from './domain/plugins';
 import { OperatorPluginRegistry } from './domain/plugins/operator-plugin.registry';
 import {
   COMMAND_OPEN,
-  COMMAND_PROJECT_SH,
   COMMAND_WELCOME,
-  COMMAND_CONFIG,
   COMMAND_CREATE_OPERATOR_IN_WORKSPACE,
   COMMAND_TOGGLE_OPS_OPERATE,
   COMMAND_CLEAR_WELCOME_COUNT,
@@ -53,10 +48,8 @@ import {
   COMMAND_FLASH_MS_SANITIZER_RUN_DATA,
   COMMAND_FLASH_PERFORMANCE_RUN_DATA,
   COMMAND_FLASH_DUMP_TENSOR_DATA,
-  VIEW_CONFIG,
-  VIEW_LINK,
+  VIEW_NEW_PROJECT,
   VIEW_WELCOME,
-  VIEW_PROJECT_SH,
   COMMAND_SIMULATOR_OPTIONS,
   COMMAND_ON_BOARD_OPTIONS,
   COMMAND_SANITIZER_OPTIONS,
@@ -133,6 +126,15 @@ import {
   COMMAND_SIDEBAR_SANITIZER_RESULTS_HIDE_DUPLICATES,
   COMMAND_SIDEBAR_SANITIZER_RESULTS_SHOW_DUPLICATES,
   COMMAND_SIDEBAR_SANITIZER_RESULTS_OPEN_GROUP_FILE,
+  COMMAND_SIDEBAR_PERFORMANCE_REPORT_SELECT,
+  COMMAND_SIDEBAR_PERFORMANCE_REPORT_COPY_PATH,
+  COMMAND_SIDEBAR_PERFORMANCE_REPORT_DOWNLOAD,
+  COMMAND_SIDEBAR_PERFORMANCE_REPORT_MARK,
+  COMMAND_SIDEBAR_PERFORMANCE_REPORT_UNMARK,
+  COMMAND_SIDEBAR_PERFORMANCE_REPORT_SORT_TIME,
+  COMMAND_SIDEBAR_PERFORMANCE_REPORT_FILTER_MARKED,
+  COMMAND_SIDEBAR_PERFORMANCE_REPORT_SHOW_ALL,
+  COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN,
 } from './constants';
 import { FolderContextMenuService } from './service/folder-context-menu-service';
 import { buildService } from './service/build-service';
@@ -181,6 +183,27 @@ function getFolderUri(uri: vscode.Uri): vscode.Uri {
     // If the file information cannot be obtained, assuming it is a file, return to the parent directory
     return vscode.Uri.file(path.dirname(uri.fsPath));
   }
+}
+
+function resolvePerformanceReportCommandKey(
+  arg: string | { id?: string; command?: { arguments?: unknown[] } } | undefined,
+): string {
+  const raw = typeof arg === 'string'
+    ? arg
+    : String(arg?.command?.arguments?.[0] ?? arg?.id ?? '');
+  if (raw.startsWith('performance-report:')) {
+    return decodeURIComponent(raw.replace(/^performance-report:/, ''));
+  }
+  return raw;
+}
+
+/** Explorer context passes a `file:` URI; `view/title` often passes unrelated values (e.g. `TreeView`). */
+function isExplorerResourceFileUri(candidate: unknown): candidate is vscode.Uri {
+  return (
+    candidate instanceof vscode.Uri
+    && candidate.scheme === 'file'
+    && candidate.fsPath.trim().length > 0
+  );
 }
 
 /**
@@ -247,6 +270,7 @@ const updateContextForUri = async (uri: vscode.Uri | undefined) => {
  * @param context VSCode extended context
  */
 export async function activate(context: vscode.ExtensionContext) {
+const myExtension = vscode.extensions.getExtension('publisher.extensionName');
   const debugTag = '[op-devtools][activate]';
   const logDebug = (...args: unknown[]) => {
     const [message, payload] = args;
@@ -268,9 +292,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // api interface
   const apiServer = initApiServer();
-
-  // Initialize the Webview of the configuration page
-  const configProvider = new WebviewProvider(context, apiServer);
 
   // Internationalization (i18n)
   await initI18n();
@@ -337,6 +358,72 @@ export async function activate(context: vscode.ExtensionContext) {
       cursor = cursor[segment] as Record<string, unknown>;
     }
     cursor[segments[segments.length - 1]] = value;
+  };
+
+  const getDeclaredOpDevtoolsDottedKeys = (): string[] => {
+    const prefix = 'op-devtools.';
+    const contributes = (context.extension.packageJSON as { contributes?: { configuration?: unknown } }).contributes;
+    const configuration = contributes?.configuration;
+    const blocks = Array.isArray(configuration) ? configuration : [configuration];
+    const keys = new Set<string>();
+
+    for (const block of blocks) {
+      if (!block || typeof block !== 'object') {
+        continue;
+      }
+      const properties = (block as { properties?: Record<string, unknown> }).properties;
+      if (!properties || typeof properties !== 'object') {
+        continue;
+      }
+
+      for (const key of Object.keys(properties)) {
+        if (!key.startsWith(prefix)) {
+          continue;
+        }
+        const relativeKey = key.slice(prefix.length);
+        if (relativeKey.length === 0) {
+          continue;
+        }
+        keys.add(relativeKey);
+      }
+    }
+
+    return Array.from(keys);
+  };
+
+  const DOTTED_OP_DEVTOOLS_KEYS = getDeclaredOpDevtoolsDottedKeys();
+
+  const normalizeDottedOpDevtoolsWorkspaceSettings = async (): Promise<boolean> => {
+    try {
+      const cfg = vscode.workspace.getConfiguration('op-devtools');
+      const nextSettings = getOpDevtoolsObject();
+      let changed = false;
+
+      for (const relativeKey of DOTTED_OP_DEVTOOLS_KEYS) {
+        const inspection = cfg.inspect<unknown>(relativeKey);
+        if (!inspection || inspection.workspaceValue === undefined) {
+          continue;
+        }
+        setValueByPath(nextSettings, relativeKey, inspection.workspaceValue);
+        await cfg.update(relativeKey, undefined, vscode.ConfigurationTarget.Workspace);
+        changed = true;
+      }
+
+      if (!changed) {
+        return false;
+      }
+
+      await vscode.workspace.getConfiguration().update(
+        'op-devtools',
+        nextSettings,
+        vscode.ConfigurationTarget.Workspace,
+      );
+      return true;
+    }
+    catch (error) {
+      console.warn('[normalizeDottedOpDevtoolsWorkspaceSettings] failed:', error);
+      return false;
+    }
   };
 
   const syncOperatorProjectWorkspaceSettings = async () => {
@@ -652,16 +739,31 @@ export async function activate(context: vscode.ExtensionContext) {
     const operatorAffected = e.affectsConfiguration('op-devtools.operatorProject');
     const operatorSupportAffected = e.affectsConfiguration('op-devtools.operatorSupport');
     const tritonSupportAffected = e.affectsConfiguration('op-devtools.operatorSupport.triton');
+    const opDevtoolsAffected = e.affectsConfiguration('op-devtools');
     logDebug('event:onDidChangeConfiguration', {
       isSyncingWorkspaceSettings,
       envAffected,
       operatorAffected,
       operatorSupportAffected,
       tritonSupportAffected,
+      opDevtoolsAffected,
     });
     if (isSyncingWorkspaceSettings) {
       logDebug('event:onDidChangeConfiguration:ignoredDueToSync');
       return;
+    }
+    if (opDevtoolsAffected) {
+      isSyncingWorkspaceSettings = true;
+      try {
+        const normalized = await normalizeDottedOpDevtoolsWorkspaceSettings();
+        if (normalized) {
+          logDebug('event:onDidChangeConfiguration:normalizedDottedOpDevtoolsSettings');
+          return;
+        }
+      }
+      finally {
+        isSyncingWorkspaceSettings = false;
+      }
     }
     if (
       envAffected
@@ -698,14 +800,11 @@ export async function activate(context: vscode.ExtensionContext) {
   // Initialize the Webview of the configuration page
   const configWelcomeProvider = new WebviewProvider(context, apiServer);
 
-  // Initialize the Webview of the environment script configuration page
-  const configProjectSHProvider = new WebviewProvider(context, apiServer);
-
   // Register the new operator project command
   const openCommand = vscode.commands.registerCommand(
     COMMAND_OPEN,
     async () => {
-      createOpsProvider.show(VIEW_LINK);
+      createOpsProvider.show(VIEW_NEW_PROJECT);
     },
   );
 
@@ -732,7 +831,7 @@ export async function activate(context: vscode.ExtensionContext) {
       // If a uri is provided (right click on the file), use that path; otherwise use the workspace root
       const targetPath = uri ? uri.fsPath : workspaceFolders[0].uri.fsPath;
 
-      await createOpsProvider.show(VIEW_LINK);
+      await createOpsProvider.show(VIEW_NEW_PROJECT);
       // Wait for the webview to finish loading and send the path
       setTimeout(() => {
         createOpsProvider.postMessage({
@@ -740,14 +839,6 @@ export async function activate(context: vscode.ExtensionContext) {
           data: targetPath,
         });
       }, 500);
-    },
-  );
-
-  // Open environment variables command
-  const openProjectSH = vscode.commands.registerCommand(
-    COMMAND_PROJECT_SH,
-    async () => {
-      configProjectSHProvider.show(VIEW_PROJECT_SH);
     },
   );
 
@@ -791,6 +882,24 @@ export async function activate(context: vscode.ExtensionContext) {
     treeDataProvider: sanitizerResultsPanelProvider,
     showCollapseAll: false,
   });
+  const performanceResultsPanelProvider: vscode.TreeDataProvider<OperateNode> = {
+    onDidChangeTreeData: operateTreeProvider.onDidChangeTreeData,
+    getTreeItem: (element) => operateTreeProvider.getTreeItem(element),
+    resolveTreeItem: (item, element, token) => operateTreeProvider.resolveTreeItem(item, element as OperateNode, token),
+    getChildren: (element) => {
+      if (!element) {
+        return operateTreeProvider.getPerformanceResultsPanelNodes();
+      }
+      if (element.nodeId === 'performanceReportItem' || element.nodeId === 'performanceFolder') {
+        return operateTreeProvider.getChildren(element);
+      }
+      return [];
+    },
+  };
+  const performanceResultsTreeView = vscode.window.createTreeView('opdevtoolsPerformanceResultsTree', {
+    treeDataProvider: performanceResultsPanelProvider,
+    showCollapseAll: false,
+  });
   const operatorProjectsTreeView = vscode.window.createTreeView('opdevtoolsOperatorProjectsTree', {
     treeDataProvider: operatorProjectsTreeProvider,
     showCollapseAll: false,
@@ -799,11 +908,15 @@ export async function activate(context: vscode.ExtensionContext) {
     homeTreeView,
     operateTreeView,
     sanitizerResultsTreeView,
+    performanceResultsTreeView,
     operatorProjectsTreeView,
     toggleOpsOperateCommand,
   );
   await vscode.commands.executeCommand('setContext', 'opDevtools.sanitizerDuplicatesHidden', operateTreeProvider.isSanitizerHideDuplicatesEnabled());
   await vscode.commands.executeCommand('setContext', 'opDevtools.sanitizerMarkedOnly', operateTreeProvider.isSanitizerMarkedOnlyEnabled());
+  await vscode.commands.executeCommand('setContext', 'opDevtools.performanceMarkedOnly', operateTreeProvider.isPerformanceMarkedOnlyEnabled());
+  await vscode.commands.executeCommand('setContext', 'opDevtools.performanceReportSelected', false);
+  await vscode.commands.executeCommand('setContext', 'opDevtools.performanceSelectedReportMarked', false);
   await vscode.commands.executeCommand('setContext', 'opDevtools.sanitizerResultsGroupBy', operateTreeProvider.getSanitizerResultsGroupBy());
   await vscode.commands.executeCommand(
     'setContext',
@@ -816,7 +929,7 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_SIDEBAR_PROJECT_CONFIG,
     async () => vscode.commands.executeCommand(
       'workbench.action.openWorkspaceSettings',
-      '@ext:huawei.huawei-op-devtools-vscode-plugin op-devtools',
+      `@ext:${context.extension.id}`,
     ),
   );
 
@@ -868,11 +981,11 @@ export async function activate(context: vscode.ExtensionContext) {
     // Delay execution to ensure UI is ready
     setTimeout(async () => {
       try {
-        console.log('[Extension] devtool_config.json found, focusing OpsOperateProvider');
-        await vscode.commands.executeCommand('OpsOperateProvider.focus');
+        console.log('[Extension] devtool_config.json found, focusing opdevtoolsOperateTree');
+        await vscode.commands.executeCommand('opdevtoolsOperateTree.focus');
       }
       catch (error) {
-        console.warn('[Extension] Failed to focus OpsOperateProvider:', error);
+        console.warn('[Extension] Failed to focus opdevtoolsOperateTree:', error);
       }
     }, 300);
   }
@@ -943,7 +1056,14 @@ export async function activate(context: vscode.ExtensionContext) {
           vscode.window.showWarningMessage(pyascCheck.message ?? t('extension.openPyFirst'));
           return;
         }
-        await dispatchEnqueueNativeOperatorAction('onboard', { operatorNames }, dispatchStartOnBoard);
+        await dispatchEnqueueNativeOperatorAction(
+          'onboard',
+          { operatorNames },
+          dispatchStartOnBoard,
+          async () => {
+            await operateTreeProvider.refreshPerformanceReports();
+          },
+        );
       });
     },
   );
@@ -968,7 +1088,14 @@ export async function activate(context: vscode.ExtensionContext) {
           vscode.window.showWarningMessage(pyascCheck.message ?? t('extension.openPyFirst'));
           return;
         }
-        await dispatchEnqueueNativeOperatorAction('simulation', { operatorNames }, dispatchStartSimulate);
+        await dispatchEnqueueNativeOperatorAction(
+          'simulation',
+          { operatorNames },
+          dispatchStartSimulate,
+          async () => {
+            await operateTreeProvider.refreshPerformanceReports();
+          },
+        );
       });
     },
   );
@@ -1435,6 +1562,102 @@ export async function activate(context: vscode.ExtensionContext) {
       await syncNativeQueueState();
     },
   );
+  const sidebarPerformanceReportSelectCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_PERFORMANCE_REPORT_SELECT,
+    async (reportKey: string) => {
+      operateTreeProvider.selectPerformanceReport(reportKey);
+      const selected = operateTreeProvider.getSelectedPerformanceReport();
+      await vscode.commands.executeCommand('setContext', 'opDevtools.performanceReportSelected', Boolean(selected));
+      await vscode.commands.executeCommand('setContext', 'opDevtools.performanceSelectedReportMarked', Boolean(selected?.marked));
+    },
+  );
+  const sidebarPerformanceReportCopyPathCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_PERFORMANCE_REPORT_COPY_PATH,
+    async (arg: string | { id?: string; command?: { arguments?: unknown[] } }) => {
+      const reportKeyRaw = resolvePerformanceReportCommandKey(arg);
+      const reportKey = reportKeyRaw || operateTreeProvider.getSelectedPerformanceReport()?.key || '';
+      if (!reportKey) {
+        return;
+      }
+      await operateTreeProvider.copyPerformanceReportPath(reportKey);
+    },
+  );
+  const sidebarPerformanceReportDownloadCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_PERFORMANCE_REPORT_DOWNLOAD,
+    async (arg: string | { id?: string; command?: { arguments?: unknown[] } }) => {
+      const reportKeyRaw = resolvePerformanceReportCommandKey(arg);
+      const reportKey = reportKeyRaw || operateTreeProvider.getSelectedPerformanceReport()?.key || '';
+      if (!reportKey) {
+        return;
+      }
+      await operateTreeProvider.downloadPerformanceReport(reportKey);
+    },
+  );
+  const sidebarPerformanceReportMarkCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_PERFORMANCE_REPORT_MARK,
+    async (arg: string | { id?: string; command?: { arguments?: unknown[] } }) => {
+      const reportKeyRaw = resolvePerformanceReportCommandKey(arg);
+      const reportKey = reportKeyRaw || operateTreeProvider.getSelectedPerformanceReport()?.key || '';
+      if (!reportKey) {
+        return;
+      }
+      const report = operateTreeProvider.getPerformanceReportByKey(reportKey);
+      if (report?.marked) {
+        return;
+      }
+      await operateTreeProvider.togglePerformanceReportMark(reportKey);
+      const selected = operateTreeProvider.getSelectedPerformanceReport();
+      await vscode.commands.executeCommand('setContext', 'opDevtools.performanceMarkedOnly', operateTreeProvider.isPerformanceMarkedOnlyEnabled());
+      await vscode.commands.executeCommand('setContext', 'opDevtools.performanceSelectedReportMarked', Boolean(selected?.marked));
+    },
+  );
+  const sidebarPerformanceReportUnmarkCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_PERFORMANCE_REPORT_UNMARK,
+    async (arg: string | { id?: string; command?: { arguments?: unknown[] } }) => {
+      const reportKeyRaw = resolvePerformanceReportCommandKey(arg);
+      const reportKey = reportKeyRaw || operateTreeProvider.getSelectedPerformanceReport()?.key || '';
+      if (!reportKey) {
+        return;
+      }
+      const report = operateTreeProvider.getPerformanceReportByKey(reportKey);
+      if (!report?.marked) {
+        return;
+      }
+      await operateTreeProvider.togglePerformanceReportMark(reportKey);
+      const selected = operateTreeProvider.getSelectedPerformanceReport();
+      await vscode.commands.executeCommand('setContext', 'opDevtools.performanceMarkedOnly', operateTreeProvider.isPerformanceMarkedOnlyEnabled());
+      await vscode.commands.executeCommand('setContext', 'opDevtools.performanceSelectedReportMarked', Boolean(selected?.marked));
+    },
+  );
+  const sidebarPerformanceReportSortTimeCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_PERFORMANCE_REPORT_SORT_TIME,
+    async () => {
+      operateTreeProvider.togglePerformanceSortOrder();
+    },
+  );
+  const sidebarPerformanceReportFilterMarkedCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_PERFORMANCE_REPORT_FILTER_MARKED,
+    async () => {
+      operateTreeProvider.setPerformanceMarkedOnly(true);
+      await vscode.commands.executeCommand('setContext', 'opDevtools.performanceMarkedOnly', true);
+    },
+  );
+  const sidebarPerformanceReportShowAllCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_PERFORMANCE_REPORT_SHOW_ALL,
+    async () => {
+      operateTreeProvider.setPerformanceMarkedOnly(false);
+      await vscode.commands.executeCommand('setContext', 'opDevtools.performanceMarkedOnly', false);
+    },
+  );
+  const sidebarPerformanceFileOpenCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN,
+    async (filePath: string, fileType: string) => {
+      if (!filePath || !fileType) {
+        return;
+      }
+      await operateTreeProvider.openPerformanceFile(filePath, fileType);
+    },
+  );
   const sidebarSelectOperatorsCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_SELECT_OPERATORS,
     async () => {
@@ -1569,14 +1792,6 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // Register the command to open the project configuration page
-  const ConfigCommand = vscode.commands.registerCommand(
-    COMMAND_CONFIG,
-    async () => {
-      configProvider.show(VIEW_CONFIG);
-    },
-  );
-
   // Register to open the welcome page command
   const welcomeCommand = vscode.commands.registerCommand(
     COMMAND_WELCOME,
@@ -1645,24 +1860,6 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   }
 
-  // Anomaly detection view (the report list has been moved to the left side of the panel, and the corresponding report detection results are displayed on the right side)
-  const {
-    openMsSanitizerDisposable,
-    msSanitizerPanelView,
-    getMsSanitizerPanelWebview,
-  } = getMsSanitizerPanelViewProvider(context, apiServer);
-
-  context.subscriptions.push(msSanitizerPanelView, openMsSanitizerDisposable);
-
-  // Performance tuning view (middle panel)
-  const {
-    performancePanelView,
-    openPerformanceDisposable,
-    getWebview: getPerformancePanelWebview,
-  } = getPerformancePanelViewProvider(context, apiServer);
-
-  context.subscriptions.push(performancePanelView, openPerformanceDisposable);
-
   // DumpTensor data view (middle panel)
   const {
     dumpTensorPanelView,
@@ -1719,8 +1916,6 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(createOptionsCommand);
   context.subscriptions.push(openCommand);
   context.subscriptions.push(openProjectCommand);
-  context.subscriptions.push(openProjectSH);
-  context.subscriptions.push(ConfigCommand);
   context.subscriptions.push(welcomeCommand);
   context.subscriptions.push(clearWelcomeCountCommand);
   context.subscriptions.push(clearLastProjectPathCommand);
@@ -1780,6 +1975,15 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(sidebarSanitizerResultsShowDuplicatesCommand);
   context.subscriptions.push(sidebarSanitizerResultsOpenGroupFileCommand);
   context.subscriptions.push(sidebarActionsQuickPickCommand);
+  context.subscriptions.push(sidebarPerformanceReportSelectCommand);
+  context.subscriptions.push(sidebarPerformanceReportCopyPathCommand);
+  context.subscriptions.push(sidebarPerformanceReportDownloadCommand);
+  context.subscriptions.push(sidebarPerformanceReportMarkCommand);
+  context.subscriptions.push(sidebarPerformanceReportUnmarkCommand);
+  context.subscriptions.push(sidebarPerformanceReportSortTimeCommand);
+  context.subscriptions.push(sidebarPerformanceReportFilterMarkedCommand);
+  context.subscriptions.push(sidebarPerformanceReportShowAllCommand);
+  context.subscriptions.push(sidebarPerformanceFileOpenCommand);
 
   // Initialize folder decoration provider
   const iconTheme = OperatorProjectIconTheme.getInstance(context);
@@ -2048,14 +2252,26 @@ export async function activate(context: vscode.ExtensionContext) {
   // Report visualization: performance tuning visual view (reusing on-board analysis logic)
   const reportVisualizationPerformanceCommand = vscode.commands.registerCommand(
     COMMAND_REPORT_VISUALIZATION_PERFORMANCE,
-    async (uri?: vscode.Uri) => {
-      if (!uri) {
-        vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
-
-        return;
+    async (firstArg?: unknown) => {
+      let targetUri: vscode.Uri | undefined;
+      if (isExplorerResourceFileUri(firstArg)) {
+        targetUri = firstArg;
+      }
+      if (!targetUri) {
+        const picked = await vscode.window.showOpenDialog({
+          canSelectMany: false,
+          canSelectFolders: true,
+          canSelectFiles: false,
+          title: t('extension.addPerformanceVisualizationPickFolderTitle'),
+          openLabel: t('common.selectFolder'),
+        });
+        targetUri = picked?.[0];
+        if (!targetUri) {
+          return;
+        }
       }
 
-      await FolderContextMenuService.addReportToFileMapList(uri, 'on_board');
+      await FolderContextMenuService.addReportToFileMapList(targetUri, 'on_board');
     },
   );
 
@@ -2139,10 +2355,6 @@ export async function activate(context: vscode.ExtensionContext) {
   const flashMsSanitizerRunData = vscode.commands.registerCommand(
     COMMAND_FLASH_MS_SANITIZER_RUN_DATA,
     async () => {
-      // The report list has been moved to the left side of the anomaly detection panel, and a refresh command is issued to the panel.
-      const webview = getMsSanitizerPanelWebview();
-
-      webview?.postMessage({ command: 'iframeFlashMsSanitizerRunData' });
       await operateTreeProvider.refreshSanitizerReports(true);
     },
   );
@@ -2152,10 +2364,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const flashPerformanceRunData = vscode.commands.registerCommand(
     COMMAND_FLASH_PERFORMANCE_RUN_DATA,
     async () => {
-      // Get the webview of the performance tuning panel and proactively issue a refresh command
-      const webview = getPerformancePanelWebview();
-
-      webview?.postMessage({ command: 'iframeRefreshData' });
+      await operateTreeProvider.refreshPerformanceReports();
     },
   );
 
@@ -2338,6 +2547,7 @@ export async function activate(context: vscode.ExtensionContext) {
     try {
       await welcomeMethods.openProject({ projectPath: workspacePath || '' }, true);
       await operateTreeProvider.refreshSanitizerReports(false);
+      await operateTreeProvider.refreshPerformanceReports();
 
       logDebug('activate:autoOpenProject:end');
     }

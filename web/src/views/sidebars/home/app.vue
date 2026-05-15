@@ -46,7 +46,7 @@ import { vscode } from '@web/utils/vscode';
 import { useTheme } from '@web/composables/use-theme';
 
 const {
-  actualTheme, themeConfig,
+  themeConfig,
 } = useTheme();
 
 const handleMenuClick = () => {
