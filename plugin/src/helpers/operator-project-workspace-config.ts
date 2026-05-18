@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import type { BuildConfig } from '@shared/api-types';
+import { isAscendA5ProfilerCannSoc } from '@shared/msprof-onboard-env';
 
 const SECTION = 'op-devtools';
 const DEFAULT_ENVIRONMENT_SCRIPT = '/etc/profile';
@@ -266,10 +267,22 @@ export function mergeBuildConfigsWithOperatorProjectWorkspace(configs: BuildConf
           opts.Source = operatorCodeHotspot;
         }
 
+        const workspaceSoc = getConfiguredValue<string>(cfg, [
+          'environment.socVersion',
+        ]);
+        const isA5Profiler = isAscendA5ProfilerCannSoc(workspaceSoc);
+
+        const pcSampling = getConfiguredValue<boolean>(cfg, [
+          'performanceTuning.onBoard.pcSampling',
+        ]);
+        if (pcSampling !== undefined && isA5Profiler) {
+          opts.PCSampling = pcSampling;
+        }
+
         const cacheHeatmap = getConfiguredValue<boolean>(cfg, [
           'performanceTuning.onBoard.cacheHeatmap',
         ]);
-        if (cacheHeatmap !== undefined) {
+        if (cacheHeatmap !== undefined && !isA5Profiler) {
           opts.MemoryDetail = cacheHeatmap;
         }
 
@@ -458,6 +471,21 @@ export function getEnvironmentScriptPathFromWorkspace(): string {
     return legacy.trim();
   }
   return DEFAULT_ENVIRONMENT_SCRIPT;
+}
+
+/** Workspace override for msprof / cann simulator directory name (e.g. Ascend910B3). */
+export function getWorkspaceSimulatorType(): string {
+  const folder = vscode.workspace.workspaceFolders?.[0];
+  const cfg = vscode.workspace.getConfiguration(SECTION, folder?.uri);
+  const explicit = getConfiguredValue<string>(cfg, [
+    'performanceTuning.simulation.simulatorType',
+    'operatorProject.performance.simulation.simulatorType',
+    'operatorProject.simulate.simulatorType',
+  ]);
+  if (explicit !== undefined && String(explicit).trim() !== '') {
+    return String(explicit).trim();
+  }
+  return '';
 }
 
 export function getEnvironmentSocVersionFromWorkspace(): string {

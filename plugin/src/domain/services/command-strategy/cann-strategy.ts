@@ -20,6 +20,7 @@ import {
 import {
   getConfig, getConfigById,
 } from '../../services/configuration';
+import { resolveAscendEnv } from '@plugin/domain/utils/ascend-util';
 
 /**
  * CANN type command strategy
@@ -263,11 +264,13 @@ export class CannCommandStrategy implements CommandStrategy {
       } as OpRecord;
     }
 
+    const onboardCannSoc = resolveAscendEnv({ isSimulator: false }).socVersion;
     const opprofCmd = ProfilerFactory.getStrategy('onboard')
       .generate(
         config,
         effectiveOperator,
         exampleTargetFile,
+        { onboardCannSoc },
       );
 
     return joinCommands(sourceCannCmd, cdBuildCmd, opprofCmd);
@@ -290,20 +293,23 @@ export class CannCommandStrategy implements CommandStrategy {
   }
 
   buildUtTestCommand(params: CommandBuildParams): string {
-    const { config, sourceCannCmd, cdCmd, advance_cmd, operatorNames } = params;
+    const {
+      config, sourceCannCmd, cdCmd, advance_cmd, operatorNames,
+    } = params;
 
     const userOptions = config.user_options as Record<string, unknown> | null | undefined;
-    
+
     if (!userOptions || !userOptions.script) {
       throw new Error(`配置缺少脚本信息，且找不到算子记录: ${config.op}`);
     }
 
     let script = userOptions.script as string;
-    
+
     // 替换 {operatorNames} 为传入的算子名称
     if (operatorNames) {
       script = script.replace('{operatorNames}', operatorNames);
-    } else {
+    }
+    else {
       script = script.replace('{operatorNames}', '');
     }
 

@@ -11,12 +11,46 @@ import {
 import { EventEmitter } from 'events';
 import * as vscode from 'vscode';
 
+import {
+  appendLog,
+  getOperatorToolOutputChannel,
+  type OperatorToolOutputLabel,
+} from '@plugin/helpers/output-channel';
+
+const COMMAND_LOG_SCOPE = 'op-devtools/command';
+
+const ASCEND_SPAWN_ENV_KEYS = [
+  'SOC_VERSION',
+  'NPU_ARCH',
+  'SIMULATOR_TYPE',
+] as const;
+
+function pickAscendSpawnEnv(env?: NodeJS.ProcessEnv): Record<string, string> | undefined {
+  if (!env) {
+    return undefined;
+  }
+
+  const picked: Record<string, string> = {};
+
+  for (const key of ASCEND_SPAWN_ENV_KEYS) {
+    const value = env[key];
+
+    if (value !== undefined && value !== '') {
+      picked[key] = value;
+    }
+  }
+
+  return Object.keys(picked).length > 0 ? picked : undefined;
+}
+
 interface CommandOptions {
   cwd?: string;
   env?: NodeJS.ProcessEnv;
   timeout?: number;
   // Whether to output in real time (streaming output)
   streaming?: boolean;
+  /** Per-run tool output tab label, e.g. compile / run (see Op Dev Tools: …). */
+  toolOutputLabel?: OperatorToolOutputLabel | string;
 }
 
 interface CommandResult {
@@ -76,18 +110,27 @@ class CommandExecutor extends EventEmitter {
       this.stderr = '';
       this.output = '';
 
+      const cwd = options.cwd || process.cwd();
+      const ascendEnv = pickAscendSpawnEnv(options.env);
+
+      appendLog(COMMAND_LOG_SCOPE, 'Executing', {
+        command,
+        cwd,
+        ...(args.length > 0 ? { args } : {}),
+        ...(ascendEnv ? { env: ascendEnv } : {}),
+      });
+
       let outputChannel: vscode.OutputChannel | null = null;
 
-      console.log('isOpenTerminal', isOpenTerminal);
-
       if (isOpenTerminal) {
-        outputChannel = vscode.window.createOutputChannel('OP DevTools');
+        const label = options.toolOutputLabel ?? 'tool';
+        outputChannel = getOperatorToolOutputChannel(label);
         outputChannel.show();
-        outputChannel.appendLine(command + '\r\n');
+        outputChannel.appendLine(command);
       }
 
       const child = spawn(command, args, {
-        cwd: options.cwd || process.cwd(),
+        cwd,
         env: {
           ...process.env,
           ...options.env,

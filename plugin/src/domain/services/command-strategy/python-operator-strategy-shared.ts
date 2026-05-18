@@ -7,15 +7,18 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { ProfilerFactory } from '../profiler-service';
-import { BaseContext, CommandContext } from './types';
+import { resolveAscendEnv } from '@plugin/domain/utils/ascend-util';
+import {
+  BaseContext, CommandContext,
+} from './types';
 
 /**
  * Shared by PyAsc and Triton: Ascend env sourcing, operator run path, identical cd for build/run.
  */
-export function buildPythonOperatorCommandContext(
-  baseContext: BaseContext,
-): CommandContext {
-  const { config, project, operator } = baseContext;
+export function buildPythonOperatorCommandContext(baseContext: BaseContext): CommandContext {
+  const {
+    config, project, operator,
+  } = baseContext;
 
   const sourceCannCmd =
     project && project.ascend_env_script
@@ -23,6 +26,7 @@ export function buildPythonOperatorCommandContext(
       : '';
 
   let runPath: string;
+
   if (operator) {
     runPath = getOpRunPath(operator);
   }
@@ -62,9 +66,11 @@ export function resolveProfilerOperatorOrThrow(
   if (operator) {
     return operator;
   }
+
   if (!project?.project_path) {
     throw new Error(t(missingProjectI18nKey, { op: config.op }));
   }
+
   return {
     id: 0,
     project_id: config.project_id,
@@ -78,6 +84,7 @@ function quoteShellTokenIfNeeded(arg: string): string {
   if (/[\s"'`$]/.test(arg)) {
     return `'${arg.replace(/'/g, "'\\''")}'`;
   }
+
   return arg;
 }
 
@@ -94,11 +101,13 @@ function findLocalVenvPython(workspaceRoot: string): string | null {
         path.join(workspaceRoot, '.venv', 'bin', 'python3'),
         path.join(workspaceRoot, 'venv', 'bin', 'python3'),
       ];
+
   for (const p of candidates) {
     if (fs.existsSync(p)) {
       return p;
     }
   }
+
   return null;
 }
 
@@ -108,16 +117,22 @@ function findLocalVenvPython(workspaceRoot: string): string | null {
 export function resolvePythonExecutablePath(): string {
   try {
     const folder = vscode.workspace.workspaceFolders?.[0];
+
     if (!folder) {
       return 'python3';
     }
+
     const root = folder.uri.fsPath;
     const cfg = vscode.workspace.getConfiguration('python', folder.uri);
-    const interpreterPath = cfg.get<string>('defaultInterpreterPath')?.trim();
+    const interpreterPath = cfg.get<string>('defaultInterpreterPath')
+      ?.trim();
+
     if (interpreterPath && fs.existsSync(interpreterPath)) {
       return interpreterPath;
     }
+
     const venvPy = findLocalVenvPython(root);
+
     if (venvPy) {
       return venvPy;
     }
@@ -125,6 +140,7 @@ export function resolvePythonExecutablePath(): string {
   catch {
     // ignore
   }
+
   return 'python3';
 }
 
@@ -133,14 +149,19 @@ export function resolvePythonExecutablePath(): string {
  */
 export function normalizePythonCommandInterpreter(command: string): string {
   const script = (command || '').trim();
+
   if (!script) {
     return script;
   }
+
   const match = /^((python|python3|python\.exe))(\s+)([\s\S]+)$/i.exec(script);
+
   if (!match) {
     return script;
   }
+
   const resolved = quoteShellTokenIfNeeded(resolvePythonExecutablePath());
+
   return `${resolved}${match[3]}${match[4]}`;
 }
 
@@ -160,11 +181,13 @@ export function buildPythonSimulateCommand(
     opType,
     'cann.cannotGenerateSimulateCommand',
   );
-  const simulatorCmd = ProfilerFactory.getStrategy('simulator').generate(
-    config,
-    effectiveOperator,
-    exampleTargetFile,
-  );
+  const simulatorCmd = ProfilerFactory.getStrategy('simulator')
+    .generate(
+      config,
+      effectiveOperator,
+      exampleTargetFile,
+    );
+
   return joinCommands(sourceCannCmd, cdCmd, simulatorCmd);
 }
 
@@ -184,11 +207,15 @@ export function buildPythonOnBoardCommand(
     opType,
     'cann.cannotGenerateOnBoardCommand',
   );
-  const onBoardCmd = ProfilerFactory.getStrategy('onboard').generate(
-    config,
-    effectiveOperator,
-    exampleTargetFile,
-  );
+  const onboardCannSoc = resolveAscendEnv({ isSimulator: false }).socVersion;
+  const onBoardCmd = ProfilerFactory.getStrategy('onboard')
+    .generate(
+      config,
+      effectiveOperator,
+      exampleTargetFile,
+      { onboardCannSoc },
+    );
+
   return joinCommands(sourceCannCmd, cdCmd, onBoardCmd);
 }
 

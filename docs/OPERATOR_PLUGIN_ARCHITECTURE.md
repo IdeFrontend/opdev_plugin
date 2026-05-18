@@ -84,17 +84,18 @@ These are behavioral inconsistencies within V1 itself that the refactoring shoul
 Five helper functions (`getNpuDebugScript`, `getCpuDebugScript`, `getSimulateScript`, `getOnBoardScript`, `getExampleScript`) plus **two inline ternaries** all branch on `op_type === 'ascend'`. Total: **7 type-specific string sources**:
 
 ```typescript
-// 5 helpers for: npu_debug_script, cpu_debug_script, build_example.script,
-//                on_board.script, simulate.script
-// 2 inline ternaries for:
+// Current model.ts / ascend.plugin.ts use {soc_version} placeholders substituted at
+// command-build time via replaceOperatorScriptPlaceholders() (project SOC, then global).
 script: record.op_type === 'ascend'
-  ? `bash ${opScriptPath} --pkg --soc=${soc_version} --vendor_name=custom`       // build_op.script
+  ? `bash ${opScriptPath} --pkg --soc={soc_version} --vendor_name=custom`       // build_op.script
   : `bash ${opScriptPath}`,
 
 script: record.op_type === 'ascend'
-  ? `bash ${opScriptPath} --pkg --soc=${soc_version} --vendor_name=custom --mssanitizer`  // sanitizer.script
+  ? `bash ${opScriptPath} --pkg --soc={soc_version} --vendor_name=custom --mssanitizer`
   : `bash ${opScriptPath} --mssanitizer`,
 ```
+
+SOC / env behavior: **`docs/ascend-env-spec.md`** (canonical), **`docs/ascend-a5-support.md`** (A5 / Atlas A5), **`docs/OPERATOR_BEHAVIOR_SPECIFICATION.md`** (Ascend/CANN environment summary).
 
 Note: `getExampleScript()` has a V1 bug — both branches of its bisheng conditional return the identical string (`--vendor_name=custom --run_example`), making the bisheng check dead code.
 
@@ -396,10 +397,10 @@ export abstract class AbstractOperatorPlugin implements IOperatorPlugin {
     return {
       buildScript:     `bash ${script}`,
       exampleScript:   `bash ${script}`,
-      simulateScript:  `bash ${script} --simulator Ascend910B3`,
+      simulateScript:  `bash ${script} --simulator {simulator_type}`,
       onBoardScript:   `bash ${script} --onboard`,
       sanitizerScript: `bash ${script} --mssanitizer`,
-      cpuDebugScript:  `bash ${script} --simulator`,
+      cpuDebugScript:  `bash ${script} --simulator {simulator_type}`,
       npuDebugScript:  `bash ${script} --debug`,
     };
   }
@@ -457,14 +458,14 @@ export class AscendPlugin extends AbstractOperatorPlugin implements IProjectDete
     // checkBuildShHasBishengConfig() in V1 reads from VS Code workspace root, not op.op_path.
     // The workspaceRoot parameter mirrors this behavior.
     const h = checkBuildShHasBishengConfig(workspaceRoot);
-    const base = `bash ${script} --pkg --soc=${soc_version} --vendor_name=custom`;
+    const base = `bash ${script} --pkg --soc={soc_version} --vendor_name=custom`;
     return {
       buildScript:     h ? `${base} --bisheng_flags=ccec_g`          : base,
       exampleScript:   `${base} --run_example`,    // bisheng branch is a V1 no-op (both return same string)
-      simulateScript:  h ? `${base} --bisheng_flags=ccec_g`          : `${base} --simulator Ascend910B3`,
+      simulateScript:  h ? `${base} --bisheng_flags=ccec_g`          : `${base} --simulator {simulator_type}`,
       onBoardScript:   h ? `${base} --bisheng_flags=ccec_g`          : `${base} --onboard`,
       sanitizerScript: h ? `${base} --bisheng_flags=ccec_g`          : `${base} --mssanitizer`,
-      cpuDebugScript:  h ? `${base} --bisheng_flags=ccec_g`          : `${base} --simulator`,
+      cpuDebugScript:  h ? `${base} --bisheng_flags=ccec_g`          : `${base} --simulator {simulator_type}`,
       npuDebugScript:  h ? `${base} --bisheng_flags=ccec_O0,ccec_g`  : `${base} --debug`,
     };
   }
@@ -695,7 +696,8 @@ async startSimulate(params: { operatorNames?: string } = {}): Promise<void> {
 
     // STANDARD_CUSTOM example build (stays project-level — not in buildBehavior)
     if (await isRootStandardCustom()) {
-      await this.runExampleBuild(exConfigId, params.operatorNames, `--simulator --soc=${soc_version}`);
+      // Implementation: op_type-aware compileOption — cann `--simulator <simDir>`; ascend adds `--soc=<slug>`; spawn env via getOperatorSpawnEnv
+      await this.runExampleBuild(exConfigId, params.operatorNames, compileOption);
     }
   }
 

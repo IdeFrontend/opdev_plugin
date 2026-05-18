@@ -23,7 +23,6 @@ import {
   getProjectById,
 } from '@plugin/domain';
 import { getOpRunPath } from '@plugin/domain/utils/op-util';
-import { getOpByProjectIdAndOpName } from '@plugin/domain/models/model';
 import { joinCommands } from '@plugin/domain/utils/command-utils';
 import { getConfigById } from '@plugin/domain/services/configuration';
 import { OperatorProjectType } from '@plugin/domain/services/operator-project-detector';
@@ -31,12 +30,14 @@ import {
   markOperatorsAsCompiled, getProjectByPath,
 } from '@plugin/domain/models/project-model';
 import { homeMethods } from '../controller/home-controller';
-import { soc_version } from '@plugin/domain/utils/ascend-util';
-import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
+import { resolveAscendEnv } from '@plugin/domain/utils/ascend-util';
 import {
-  getEnvironmentSocVersionFromWorkspace,
-  mergeBuildConfigsWithOperatorProjectWorkspace,
-} from '@plugin/helpers/operator-project-workspace-config';
+  buildOperatorSpawnContext,
+  executeOperatorCommand,
+  resolveOpTypeForSpawn,
+} from '@plugin/service/operator-command-executor';
+import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
+import { mergeBuildConfigsWithOperatorProjectWorkspace } from '@plugin/helpers/operator-project-workspace-config';
 import { requestSidebarContextsRefresh } from '@plugin/helpers/sidebar-context-refresh';
 
 const CONFIG_TYPES = {
@@ -148,10 +149,35 @@ export class BuildService {
 
     if (!OperatorPluginRegistry.isProjectTypeSupported(detectedType)) {
       vscode.window.showErrorMessage(t('extension.unsupportedProjectTypeDisabled', { projectType: detectedType || 'unknown' }));
+
       return false;
     }
 
     return true;
+  }
+
+  /**
+   * Build the example-build `compileOption` for simulator runs.
+   *
+   * Uses a single {@link resolveAscendEnv} call so the simulator directory
+   * and the `--soc=<slug>` argument cannot drift apart. The plugin still
+   * emits `SOC_VERSION` / `NPU_ARCH` / `SIMULATOR_TYPE` in the spawn env via
+   * `executeOperatorCommand`; this option string only adds the Ascend
+   * `--soc=` CLI flag that the ascend operator `build.sh` expects.
+   */
+  private buildSimulateExampleCompileOption(
+    projectId: number | undefined,
+    operatorNames?: string,
+  ): string {
+    const resolved = resolveAscendEnv({ isSimulator: true });
+    const simDir = resolved.simulatorType ?? '';
+    const opType = resolveOpTypeForSpawn(projectId, operatorNames);
+
+    if (opType === 'ascend') {
+      return `--simulator ${simDir} --soc=${resolved.socVersion}`;
+    }
+
+    return `--simulator ${simDir}`;
   }
 
   /**
@@ -358,7 +384,15 @@ export class BuildService {
         .getExecutor();
 
       console.log('[startBuild] Start executing build command...');
-      const res = await executor.execute(buildCommand, [], [], {}, true);
+      const res = await executeOperatorCommand(
+        buildCommand,
+        buildOperatorSpawnContext({
+          configId,
+          operatorNames: params.operatorNames,
+          scriptField: params.scriptField,
+          script: buildCommand,
+        }),
+      );
 
       console.log('[startBuild] Build execution result:', {
         code: res.code,
@@ -461,9 +495,14 @@ export class BuildService {
       const runCommand = getRunCommand(Number(configId));
 
       console.log('runCommand', runCommand);
-      const executor = ProjectManager.getInstance()
-        .getExecutor();
-      const res = await executor.execute(runCommand, [], [], {}, true);
+      const res = await executeOperatorCommand(
+        runCommand,
+        buildOperatorSpawnContext({
+          configId,
+          script: runCommand,
+        }),
+        { outputLabel: 'run' },
+      );
 
       console.log('runRes', res);
 
@@ -522,9 +561,14 @@ export class BuildService {
         params.compileOption,
         params.operatorNames,
       );
-      const executor = ProjectManager.getInstance()
-        .getExecutor();
-      const res = await executor.execute(buildCommand, [], [], {}, true);
+      const res = await executeOperatorCommand(
+        buildCommand,
+        buildOperatorSpawnContext({
+          configId,
+          operatorNames: params.operatorNames,
+          script: buildCommand,
+        }),
+      );
 
       if (res.code !== 0) {
         vscode.window.showErrorMessage(t('build.executeFailed', { output: '' }));
@@ -600,10 +644,17 @@ export class BuildService {
     }
 
     if (behavior.requiresBuildBeforeAnalysis) {
-      const buildCommand = getBuildOpCommand(Number(simulatorItem?.config_id), '', params.operatorNames);
-      const buildRes = await ProjectManager.getInstance()
-        .getExecutor()
-        .execute(buildCommand, [], [], {}, true);
+      const simConfigId = Number(simulatorItem?.config_id);
+      const buildCommand = getBuildOpCommand(simConfigId, '', params.operatorNames);
+      const buildRes = await executeOperatorCommand(
+        buildCommand,
+        buildOperatorSpawnContext({
+          configId: simConfigId,
+          operatorNames: params.operatorNames,
+          script: buildCommand,
+        }),
+        { outputLabel: 'compile' },
+      );
 
       console.log('buildRes', buildRes);
 
@@ -616,15 +667,23 @@ export class BuildService {
 
       if (await isRootStandardCustom()) {
         const exConfigId = await this.getBuildExampleConfigId();
-        const socForExample = getEnvironmentSocVersionFromWorkspace().trim() || soc_version;
-        const exampleBuildCommand = getBuildExampleCommand(
-          Number(exConfigId),
-          `--simulator --soc=${socForExample}`,
+        const exampleCompileOption = this.buildSimulateExampleCompileOption(
+          project?.id,
           params.operatorNames,
         );
-        const exampleBuildRes = await ProjectManager.getInstance()
-          .getExecutor()
-          .execute(exampleBuildCommand, [], [], {}, true);
+        const exampleBuildCommand = getBuildExampleCommand(
+          Number(exConfigId),
+          exampleCompileOption,
+          params.operatorNames,
+        );
+        const exampleBuildRes = await executeOperatorCommand(
+          exampleBuildCommand,
+          buildOperatorSpawnContext({
+            configId: Number(exConfigId),
+            operatorNames: params.operatorNames,
+            script: exampleBuildCommand,
+          }),
+        );
 
         console.log('example buildRes', exampleBuildRes);
 
@@ -644,9 +703,14 @@ export class BuildService {
       const simulateCommand = getSimulateCommand(Number(configId), Number(exConfigId), params.operatorNames);
 
       console.log('simulateCommand', simulateCommand);
-      const res = await ProjectManager.getInstance()
-        .getExecutor()
-        .execute(simulateCommand, [], [], {}, true);
+      const res = await executeOperatorCommand(
+        simulateCommand,
+        buildOperatorSpawnContext({
+          configId: Number(configId),
+          operatorNames: params.operatorNames,
+          script: simulateCommand,
+        }),
+      );
 
       if (res.code !== 0) {
         vscode.window.showErrorMessage(t('build.simulationFailed'));
@@ -725,9 +789,15 @@ export class BuildService {
 
     if (behavior.requiresBuildBeforeAnalysis) {
       const buildCommand = getBuildOpCommand(Number(configId), '', params.operatorNames);
-      const buildRes = await ProjectManager.getInstance()
-        .getExecutor()
-        .execute(buildCommand, [], [], {}, true);
+      const buildRes = await executeOperatorCommand(
+        buildCommand,
+        buildOperatorSpawnContext({
+          configId: Number(configId),
+          operatorNames: params.operatorNames,
+          script: buildCommand,
+        }),
+        { outputLabel: 'compile' },
+      );
 
       console.log('buildRes', buildRes);
 
@@ -742,9 +812,14 @@ export class BuildService {
       if (await isRootStandardCustom()) {
         const exConfigId = await this.getBuildExampleConfigId();
         const exampleBuildCommand = getBuildExampleCommand(Number(exConfigId), '', params.operatorNames);
-        const exampleBuildRes = await ProjectManager.getInstance()
-          .getExecutor()
-          .execute(exampleBuildCommand, [], [], {}, true);
+        const exampleBuildRes = await executeOperatorCommand(
+          exampleBuildCommand,
+          buildOperatorSpawnContext({
+            configId: Number(exConfigId),
+            operatorNames: params.operatorNames,
+            script: exampleBuildCommand,
+          }),
+        );
 
         console.log('example buildRes', exampleBuildRes);
 
@@ -764,9 +839,14 @@ export class BuildService {
       const onBoardCommand = getOnBoardCommand(Number(configId), Number(exConfigId), params.operatorNames);
 
       console.log('onBoardCommand', onBoardCommand);
-      const res = await ProjectManager.getInstance()
-        .getExecutor()
-        .execute(onBoardCommand, [], [], {}, true);
+      const res = await executeOperatorCommand(
+        onBoardCommand,
+        buildOperatorSpawnContext({
+          configId: Number(configId),
+          operatorNames: params.operatorNames,
+          script: onBoardCommand,
+        }),
+      );
 
       if (res.code !== 0) {
         vscode.window.showErrorMessage(t('build.onBoardFailed'));
@@ -797,22 +877,30 @@ export class BuildService {
 
     // Resolve workspace paths used by dump tensor flow.
     const workspaceFolders = vscode.workspace.workspaceFolders;
+
     if (!workspaceFolders || workspaceFolders.length === 0) {
       vscode.window.showErrorMessage(t('build.workspacePathNotFound'));
+
       return;
     }
+
     const currentDir = workspaceFolders[0].uri.fsPath;
     const tempDataPath = path.join(currentDir, '.vscode', 'dump_tensor_temp_data');
     const dumpTensorPath = path.join(currentDir, '.vscode', 'DumpTensor');
 
     // Remove temp data folder from previous runs.
     console.log('[startDumpTensor] Removing temp data directory:', tempDataPath);
+
     try {
       if (fs.existsSync(tempDataPath)) {
-        fs.rmSync(tempDataPath, { recursive: true, force: true });
+        fs.rmSync(tempDataPath, {
+          recursive: true,
+          force: true,
+        });
         console.log('[startDumpTensor] Temp data directory removed');
       }
-    } catch (error) {
+    }
+    catch (error) {
       console.error('[startDumpTensor] Failed to remove temp data directory:', error);
     }
 
@@ -829,7 +917,14 @@ export class BuildService {
 
     console.log('[startDumpTensor] Start executing build command...');
 
-    const res = await executor.execute(buildCommand, [], [], {}, true);
+    const res = await executeOperatorCommand(
+      buildCommand,
+      buildOperatorSpawnContext({
+        configId: Number(configId),
+        operatorNames: params.operatorNames,
+        script: buildCommand,
+      }),
+    );
 
     console.log('[startDumpTensor] Build execution result:', {
       code: res.code,
@@ -855,12 +950,15 @@ export class BuildService {
       );
       const exampleBuildExecutor = ProjectManager.getInstance()
         .getExecutor();
-      const exampleBuildRes = await exampleBuildExecutor.execute(
-        `export ASCEND_GLOBAL_LOG_LEVEL=1 && export ASCEND_DUMP_PATH=../.vscode/dump_tensor_temp_data && ${exampleBuildCommand}`,
-        [],
-        [],
-        {},
-        true,
+      const exampleCmd =
+        `export ASCEND_GLOBAL_LOG_LEVEL=1 && export ASCEND_DUMP_PATH=../.vscode/dump_tensor_temp_data && ${exampleBuildCommand}`;
+      const exampleBuildRes = await executeOperatorCommand(
+        exampleCmd,
+        buildOperatorSpawnContext({
+          configId: Number(exConfigId),
+          operatorNames: params.operatorNames,
+          script: exampleBuildCommand,
+        }),
       );
 
       console.log('[startDumpTensor] example buildRes', exampleBuildRes);
@@ -880,9 +978,15 @@ export class BuildService {
 
         console.log('[startDumpTensor] runCommand', runCommand);
 
-        const executor = ProjectManager.getInstance()
-          .getExecutor();
-        const res = await executor.execute(runCommand, [], [], {}, true);
+        const res = await executeOperatorCommand(
+          runCommand,
+          buildOperatorSpawnContext({
+            configId: Number(exConfigId),
+            operatorNames: params.operatorNames,
+            script: runCommand,
+          }),
+          { outputLabel: 'run' },
+        );
 
         console.log('[startDumpTensor] runRes', res);
 
@@ -910,12 +1014,15 @@ export class BuildService {
   /**
    * Start UT test.
    */
-  async startUtTest(params: { operatorNames?: string, projectId?: string | number, configId?: string } = {}): Promise<void> {
+  async startUtTest(params: { operatorNames?: string,
+    projectId?: string | number,
+    configId?: string } = {}): Promise<void> {
     const pm = ProjectManager.getInstance();
 
     // For external entry points, allow overriding project context.
     if (params.projectId !== undefined) {
       const project = getProjectById(Number(params.projectId));
+
       if (project) {
         pm['_projectId'] = String(params.projectId);
         pm['_projectName'] = project.project_name;
@@ -935,13 +1042,21 @@ export class BuildService {
         Number(configId),
         params.operatorNames,
       );
-      
+
       const executor = ProjectManager.getInstance()
         .getExecutor();
-      const res = await executor.execute(buildCommand, [], [], {}, true);
+      const res = await executeOperatorCommand(
+        buildCommand,
+        buildOperatorSpawnContext({
+          configId,
+          operatorNames: params.operatorNames,
+          script: buildCommand,
+        }),
+      );
 
       if (res.code !== 0) {
         vscode.window.showErrorMessage(t('build.utTestFailed'));
+
         return;
       }
 
@@ -958,20 +1073,24 @@ export class BuildService {
   private async executeShowKernelDebugData(tempDataPath: string, dumpTensorPath: string): Promise<void> {
     try {
       const showCommand = `show_kernel_debug_data ${tempDataPath} ${dumpTensorPath}`;
+
       console.log('[startDumpTensor] Running show_kernel_debug_data command:', showCommand);
-      
-      const executor = ProjectManager.getInstance().getExecutor();
-      const showRes = await executor.execute(showCommand, [], [], {}, true);
+
+      const executor = ProjectManager.getInstance()
+        .getExecutor();
+      const showRes = await executor.execute(showCommand, [], [], { toolOutputLabel: 'debug' }, true);
+
       console.log('[startDumpTensor] show_kernel_debug_data result:', {
         code: showRes.code,
         output: showRes.output,
       });
-      
+
       if (showRes.code !== 0) {
         console.error('[startDumpTensor] show_kernel_debug_data failed, exit code:', showRes.code, 'output:', showRes.output);
         // Non-blocking error: keep primary flow going.
       }
-    } catch (error) {
+    }
+    catch (error) {
       console.error('[startDumpTensor] Failed to run show_kernel_debug_data command:', error);
       // Non-blocking error: keep primary flow going.
     }
@@ -986,7 +1105,8 @@ export class BuildService {
       await vscode.commands.executeCommand('huawei-op-devtools.open-dump-tensor-panel-view');
       await vscode.commands.executeCommand('huawei-op-devtools.flashDumpTensorData');
       console.log('[startDumpTensor] Dump tensor panel opened and refreshed');
-    } catch (error) {
+    }
+    catch (error) {
       console.error('[startDumpTensor] Failed to open dump tensor panel:', error);
     }
   }
@@ -997,25 +1117,33 @@ export class BuildService {
   async importDumpTensorBinFile(binFilePath: string): Promise<void> {
     try {
       console.log('[importDumpTensorBinFile] Importing .bin file:', binFilePath);
-      
+
       // Resolve workspace paths used by dump tensor flow.
       const workspaceFolders = vscode.workspace.workspaceFolders;
+
       if (!workspaceFolders || workspaceFolders.length === 0) {
         vscode.window.showErrorMessage(t('build.workspacePathNotFound'));
+
         return;
       }
+
       const currentDir = workspaceFolders[0].uri.fsPath;
       const tempDataPath = path.join(currentDir, '.vscode', 'dump_tensor_temp_data');
       const dumpTensorPath = path.join(currentDir, '.vscode', 'DumpTensor');
 
       // Remove temp data folder from previous runs.
       console.log('[importDumpTensorBinFile] Removing temp data directory:', tempDataPath);
+
       try {
         if (fs.existsSync(tempDataPath)) {
-          fs.rmSync(tempDataPath, { recursive: true, force: true });
+          fs.rmSync(tempDataPath, {
+            recursive: true,
+            force: true,
+          });
           console.log('[importDumpTensorBinFile] Temp data directory removed');
         }
-      } catch (error) {
+      }
+      catch (error) {
         console.error('[importDumpTensorBinFile] Failed to remove temp data directory:', error);
       }
 
@@ -1028,17 +1156,19 @@ export class BuildService {
       // Copy selected .bin file into temp directory.
       const fileName = path.basename(binFilePath);
       const destPath = path.join(tempDataPath, fileName);
+
       fs.copyFileSync(binFilePath, destPath);
       console.log('[importDumpTensorBinFile] Copied .bin file to temp directory:', destPath);
 
       // Post-process dump files and build tree data.
       await this.executeShowKernelDebugData(tempDataPath, dumpTensorPath);
-      
+
       vscode.window.showInformationMessage(t('build.importDumpTensorBinSuccess'));
-      
+
       // Open dump tensor panel and refresh.
       await this.openDumpTensorPanel();
-    } catch (error) {
+    }
+    catch (error) {
       console.error('[importDumpTensorBinFile] Failed to import DumpTensor .bin file:', error);
       vscode.window.showErrorMessage(t('extension.importDumpTensorBinFailed'));
     }

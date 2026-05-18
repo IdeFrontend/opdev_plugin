@@ -136,6 +136,8 @@ import {
   COMMAND_SIDEBAR_PERFORMANCE_REPORT_SHOW_ALL,
   COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN,
 } from './constants';
+import { isAscendA5ProfilerCannSoc } from './domain/utils/ascend-util';
+import { logGlobalEnvSnapshot } from './domain/utils/global-env-snapshot';
 import { FolderContextMenuService } from './service/folder-context-menu-service';
 import { buildService } from './service/build-service';
 import { configService } from './service/config-service';
@@ -291,15 +293,13 @@ const updateContextForUri = async (uri: vscode.Uri | undefined) => {
  * @param context VSCode extended context
  */
 export async function activate(context: vscode.ExtensionContext) {
-const myExtension = vscode.extensions.getExtension('publisher.extensionName');
+  const myExtension = vscode.extensions.getExtension('publisher.extensionName');
   const debugTag = '[op-devtools][activate]';
   const logDebug = (...args: unknown[]) => {
     const [message, payload] = args;
     appendLog(debugTag, String(message ?? ''), payload);
   };
-  logDebug('activate:start', {
-    workspaceFolders: (vscode.workspace.workspaceFolders || []).map((f) => f.uri.fsPath),
-  });
+  logDebug('activate:start', { workspaceFolders: (vscode.workspace.workspaceFolders || []).map((f) => f.uri.fsPath) });
 
   extensionContext = context;
   (
@@ -311,6 +311,13 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
   registerOperatorPlugins();
   sanitizerDiagnosticsService.activate(context);
 
+  // Merge CANN env into this process once, then set `SOC_VERSION` / `NPU_ARCH` for spawned tools when unset.
+  try {
+    logGlobalEnvSnapshot();
+  }
+  catch {
+    // ignore
+  }
   // api interface
   const apiServer = initApiServer();
 
@@ -434,11 +441,12 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
         return false;
       }
 
-      await vscode.workspace.getConfiguration().update(
-        'op-devtools',
-        nextSettings,
-        vscode.ConfigurationTarget.Workspace,
-      );
+      await vscode.workspace.getConfiguration()
+        .update(
+          'op-devtools',
+          nextSettings,
+          vscode.ConfigurationTarget.Workspace,
+        );
       return true;
     }
     catch (error) {
@@ -480,8 +488,8 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
       const utTest = buildConfigs.find((c) => (c as { config_type?: string }).config_type === 'ut_test');
       const sanitizer = (await configService.getSanitizerConfigsList())[0];
       const projectSH = await projectService.getProjectSH();
-      const projectSocVersion =
-        (await projectService.getProjectSocVersion()).trim() || 'ascend910b';
+      const rawProjectSocVersion = (await projectService.getProjectSocVersion()).trim();
+      const isA5ProfilerSoc = isAscendA5ProfilerCannSoc(rawProjectSocVersion);
 
       const buildOpOpts = (buildOp?.user_options || {}) as Record<string, unknown>;
       const buildExampleOpts = (buildExample?.user_options || {}) as Record<string, unknown>;
@@ -545,7 +553,6 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
       }
       syncSettingIfUnset('sanitizer.blockId', sanitizerOpts.blockId ?? null);
 
-      syncSettingIfUnset('performanceTuning.simulation.simulatorType', simulateOpts.simulatorType);
       syncSettingIfUnset(
         'performanceTuning.simulation.memoryThroughputWaveform',
         simulateOpts.PMSampling,
@@ -561,7 +568,12 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
       syncSettingIfUnset('performanceTuning.onBoard.interCoreLoad', onBoardOpts.Occupancy);
       syncSettingIfUnset('performanceTuning.onBoard.roofline', onBoardOpts.Roofline);
       syncSettingIfUnset('performanceTuning.onBoard.operatorCodeHotspot', onBoardOpts.Source);
-      syncSettingIfUnset('performanceTuning.onBoard.cacheHeatmap', onBoardOpts.MemoryDetail);
+      if (isA5ProfilerSoc) {
+        syncSettingIfUnset('performanceTuning.onBoard.pcSampling', onBoardOpts.PCSampling);
+      }
+      else {
+        syncSettingIfUnset('performanceTuning.onBoard.cacheHeatmap', onBoardOpts.MemoryDetail);
+      }
       syncSettingIfUnset(
         'performanceTuning.onBoard.cubeAndVectorInstructionTimeAndRatio',
         onBoardOpts.ArithmeticUtilization,
@@ -598,14 +610,14 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
         toKeyValueMap(onBoardOpts.advance_param),
       );
       syncSettingIfUnset('environment.environmentScript', projectSH);
-      syncSettingIfUnset('environment.socVersion', projectSocVersion);
 
       if (changed) {
-        await vscode.workspace.getConfiguration().update(
-          'op-devtools',
-          nextSettings,
-          vscode.ConfigurationTarget.Workspace,
-        );
+        await vscode.workspace.getConfiguration()
+          .update(
+            'op-devtools',
+            nextSettings,
+            vscode.ConfigurationTarget.Workspace,
+          );
       }
     }
     catch (error) {
@@ -614,9 +626,7 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
     }
     finally {
       isSyncingWorkspaceSettings = false;
-      logDebug('syncOperatorProjectWorkspaceSettings:end', {
-        elapsedMs: Date.now() - syncStart,
-      });
+      logDebug('syncOperatorProjectWorkspaceSettings:end', { elapsedMs: Date.now() - syncStart });
     }
   };
 
@@ -659,7 +669,9 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
         await vscode.commands.executeCommand('setContext', 'hasDevtoolConfig', effectiveHasDevtoolConfig);
         await vscode.commands.executeCommand('setContext', 'opDevtools.showHomeTree', !effectiveHasDevtoolConfig);
         await vscode.commands.executeCommand('setContext', 'opDevtools.showOperateTree', effectiveHasDevtoolConfig);
-        const { showOperatorSearch, showOperatorProjects } = await operateTreeProvider.refreshState(effectiveHasDevtoolConfig);
+        const {
+          showOperatorSearch, showOperatorProjects,
+        } = await operateTreeProvider.refreshState(effectiveHasDevtoolConfig);
         // Keep both tree views in sync.
         await operatorProjectsTreeProvider.refreshState(effectiveHasDevtoolConfig);
         await vscode.commands.executeCommand('setContext', 'opDevtools.showOperatorSearch', showOperatorSearch);
@@ -667,7 +679,8 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
         await vscode.commands.executeCommand(
           'setContext',
           'opDevtools.operatorProjectsSearchActive',
-          operatorProjectsTreeProvider.getSearchKeyword().trim().length > 0,
+          operatorProjectsTreeProvider.getSearchKeyword()
+            .trim().length > 0,
         );
         await vscode.commands.executeCommand(
           'setContext',
@@ -745,9 +758,7 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
   const queueStatusTimer = setInterval(() => {
     void syncNativeQueueState();
   }, 1000);
-  context.subscriptions.push({
-    dispose: () => clearInterval(queueStatusTimer),
-  });
+  context.subscriptions.push({ dispose: () => clearInterval(queueStatusTimer) });
 
   const watchColorThemeChange = vscode.window.onDidChangeActiveColorTheme(async () => {
     logDebug('event:onDidChangeActiveColorTheme');
@@ -923,19 +934,17 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
     showCollapseAll: false,
   });
   operateTreeProvider.setPerformanceResultsTreeView(performanceResultsTreeView);
-  context.subscriptions.push(
-    performanceResultsTreeView.onDidChangeSelection(async (event) => {
-      const node = event.selection[0];
-      if (!node) {
-        return;
-      }
-      const reportKey = resolvePerformanceReportKeyFromTreeItem(node);
-      if (!reportKey || operateTreeProvider.getSelectedPerformanceReport()?.key === reportKey) {
-        return;
-      }
-      await applyPerformanceReportSelection(operateTreeProvider, reportKey);
-    }),
-  );
+  context.subscriptions.push(performanceResultsTreeView.onDidChangeSelection(async (event) => {
+    const node = event.selection[0];
+    if (!node) {
+      return;
+    }
+    const reportKey = resolvePerformanceReportKeyFromTreeItem(node);
+    if (!reportKey || operateTreeProvider.getSelectedPerformanceReport()?.key === reportKey) {
+      return;
+    }
+    await applyPerformanceReportSelection(operateTreeProvider, reportKey);
+  }));
   const operatorProjectsTreeView = vscode.window.createTreeView('opdevtoolsOperatorProjectsTree', {
     treeDataProvider: operatorProjectsTreeProvider,
     showCollapseAll: false,
@@ -1004,7 +1013,11 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
           const operatorNames = await getOperatorNamesFromSelection();
           const compileOption = await getCompileOptionFromSelection();
           const operatorType = operateTreeProvider.isStandardCustomContext() ? 'standard-custom' : undefined;
-          await dispatchStartBuildExample({ operatorNames, operatorType, compileOption });
+          await dispatchStartBuildExample({
+            operatorNames,
+            operatorType,
+            compileOption,
+          });
           return;
         }
         await dispatchStartRun();
@@ -1162,7 +1175,10 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
       await operateTreeProvider.runFlowAction('dumpTensor', async () => {
         await dispatchEnqueueNativeOperatorAction(
           'dumpTensor',
-          { operatorNames, compileOption },
+          {
+            operatorNames,
+            compileOption,
+          },
           dispatchStartDumpTensor,
         );
       });
@@ -1181,7 +1197,10 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
         async () => {
           await taskMethods.debugConfig();
         },
-        { skipEnvironmentScriptCheck: true, skipFlowExecutionUi: true },
+        {
+          skipEnvironmentScriptCheck: true,
+          skipFlowExecutionUi: true,
+        },
       );
     },
   );
@@ -1201,7 +1220,10 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
             '@ext:huawei.huawei-op-devtools-vscode-plugin op-devtools.sanitizer',
           );
         },
-        { skipEnvironmentScriptCheck: true, skipFlowExecutionUi: true },
+        {
+          skipEnvironmentScriptCheck: true,
+          skipFlowExecutionUi: true,
+        },
       );
     },
   );
@@ -1221,7 +1243,10 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
             '@ext:huawei.huawei-op-devtools-vscode-plugin op-devtools.performanceTuning.onBoard',
           );
         },
-        { skipEnvironmentScriptCheck: true, skipFlowExecutionUi: true },
+        {
+          skipEnvironmentScriptCheck: true,
+          skipFlowExecutionUi: true,
+        },
       );
     },
   );
@@ -1241,7 +1266,10 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
             '@ext:huawei.huawei-op-devtools-vscode-plugin op-devtools.performanceTuning.simulation',
           );
         },
-        { skipEnvironmentScriptCheck: true, skipFlowExecutionUi: true },
+        {
+          skipEnvironmentScriptCheck: true,
+          skipFlowExecutionUi: true,
+        },
       );
     },
   );
@@ -1261,7 +1289,8 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
   );
   const sidebarSanitizerReportCopyPathCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_SANITIZER_REPORT_COPY_PATH,
-    async (arg: string | { id?: string; command?: { arguments?: unknown[] } }) => {
+    async (arg: string | { id?: string;
+      command?: { arguments?: unknown[] } }) => {
       const raw = typeof arg === 'string'
         ? arg
         : String(arg?.command?.arguments?.[0] ?? arg?.id ?? '');
@@ -1276,7 +1305,8 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
   );
   const sidebarSanitizerReportToggleMarkCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_SANITIZER_REPORT_TOGGLE_MARK,
-    async (arg: string | { id?: string; command?: { arguments?: unknown[] } }) => {
+    async (arg: string | { id?: string;
+      command?: { arguments?: unknown[] } }) => {
       const raw = typeof arg === 'string'
         ? arg
         : String(arg?.command?.arguments?.[0] ?? arg?.id ?? '');
@@ -1297,7 +1327,8 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
   );
   const sidebarSanitizerReportMarkCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_SANITIZER_REPORT_MARK,
-    async (arg: string | { id?: string; command?: { arguments?: unknown[] } }) => {
+    async (arg: string | { id?: string;
+      command?: { arguments?: unknown[] } }) => {
       const raw = typeof arg === 'string'
         ? arg
         : String(arg?.command?.arguments?.[0] ?? arg?.id ?? '');
@@ -1317,7 +1348,8 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
   );
   const sidebarSanitizerReportUnmarkCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_SANITIZER_REPORT_UNMARK,
-    async (arg: string | { id?: string; command?: { arguments?: unknown[] } }) => {
+    async (arg: string | { id?: string;
+      command?: { arguments?: unknown[] } }) => {
       const raw = typeof arg === 'string'
         ? arg
         : String(arg?.command?.arguments?.[0] ?? arg?.id ?? '');
@@ -1364,7 +1396,10 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
         canSelectFolders: false,
         openLabel: t('web.openProject.openNow'),
         filters: {
-          [t('web.sanitizerPanel.sanitizerResult')]: ['log', '*'],
+          [t('web.sanitizerPanel.sanitizerResult')]: [
+            'log',
+            '*',
+          ],
         },
       });
       const filePath = picked?.[0]?.fsPath;
@@ -1372,9 +1407,7 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
         return;
       }
       await vscode.window.withProgress(
-        {
-          location: { viewId: 'opdevtoolsSanitizerResultsTree' },
-        },
+        { location: { viewId: 'opdevtoolsSanitizerResultsTree' } },
         async () => {
           await operateTreeProvider.addSanitizerReportFromPath(filePath);
         },
@@ -1389,7 +1422,8 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
   );
   const sidebarSanitizerMessageAiFixCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_SANITIZER_MESSAGE_AI_FIX,
-    async (arg: string | { id?: string; command?: { arguments?: unknown[] } }) => {
+    async (arg: string | { id?: string;
+      command?: { arguments?: unknown[] } }) => {
       if (!(await msAgentBridgeService.isMsAgentIntegrationAvailable())) {
         return;
       }
@@ -1402,7 +1436,11 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
   );
   const sidebarSanitizerStackJumpCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_SANITIZER_STACK_JUMP,
-    async (params: { fileLink: string; row: number; col: number; errorTitle?: string; errorMessage?: string }) => {
+    async (params: { fileLink: string;
+      row: number;
+      col: number;
+      errorTitle?: string;
+      errorMessage?: string }) => {
       await performanceDataMethods.jumpToFile(params);
     },
   );
@@ -1484,7 +1522,11 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
       if (!raw.startsWith(marker)) {
         return;
       }
-      const [, encodedReportPath, mode, encodedGroupKey] = raw.split(':');
+      const [
+        , encodedReportPath,
+        mode,
+        encodedGroupKey,
+      ] = raw.split(':');
       if (mode !== 'file' || !encodedGroupKey) {
         return;
       }
@@ -1496,9 +1538,7 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
     COMMAND_SIDEBAR_ACTIONS_QUICK_PICK,
     async () => {
       const resolveOperateChildren = async (node?: unknown) => {
-        const children = await Promise.resolve(
-          operateTreeProvider.getChildren(node as never),
-        );
+        const children = await Promise.resolve(operateTreeProvider.getChildren(node as never));
         return Array.isArray(children) ? children : [];
       };
 
@@ -1606,7 +1646,8 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
   );
   const sidebarPerformanceReportCopyPathCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_PERFORMANCE_REPORT_COPY_PATH,
-    async (arg: string | { id?: string; command?: { arguments?: unknown[] } }) => {
+    async (arg: string | { id?: string;
+      command?: { arguments?: unknown[] } }) => {
       const reportKeyRaw = resolvePerformanceReportCommandKey(arg);
       const reportKey = reportKeyRaw || operateTreeProvider.getSelectedPerformanceReport()?.key || '';
       if (!reportKey) {
@@ -1617,7 +1658,8 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
   );
   const sidebarPerformanceReportDownloadCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_PERFORMANCE_REPORT_DOWNLOAD,
-    async (arg: string | { id?: string; command?: { arguments?: unknown[] } }) => {
+    async (arg: string | { id?: string;
+      command?: { arguments?: unknown[] } }) => {
       const reportKeyRaw = resolvePerformanceReportCommandKey(arg);
       const reportKey = reportKeyRaw || operateTreeProvider.getSelectedPerformanceReport()?.key || '';
       if (!reportKey) {
@@ -1628,7 +1670,8 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
   );
   const sidebarPerformanceReportMarkCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_PERFORMANCE_REPORT_MARK,
-    async (arg: string | { id?: string; command?: { arguments?: unknown[] } }) => {
+    async (arg: string | { id?: string;
+      command?: { arguments?: unknown[] } }) => {
       const reportKeyRaw = resolvePerformanceReportCommandKey(arg);
       const reportKey = reportKeyRaw || operateTreeProvider.getSelectedPerformanceReport()?.key || '';
       if (!reportKey) {
@@ -1646,7 +1689,8 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
   );
   const sidebarPerformanceReportUnmarkCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_PERFORMANCE_REPORT_UNMARK,
-    async (arg: string | { id?: string; command?: { arguments?: unknown[] } }) => {
+    async (arg: string | { id?: string;
+      command?: { arguments?: unknown[] } }) => {
       const reportKeyRaw = resolvePerformanceReportCommandKey(arg);
       const reportKey = reportKeyRaw || operateTreeProvider.getSelectedPerformanceReport()?.key || '';
       if (!reportKey) {
@@ -1721,10 +1765,7 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
         vscode.window.showWarningMessage(t('web.operate.singleOperatorOnly'));
         return;
       }
-
-      await homeMethods.setSelectedOperators({
-        operatorIds: chosen.map((item) => item.operator.id),
-      });
+      await homeMethods.setSelectedOperators({ operatorIds: chosen.map((item) => item.operator.id) });
       await refreshSidebarContexts();
     },
   );
@@ -2409,7 +2450,8 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
       const webview = getDumpTensorPanelWebview();
       if (webview) {
         webview.postMessage({ command: 'dumpTensorRefreshData' });
-      } else {
+      }
+      else {
         console.log('[flashDumpTensorData] Webview not available, skipping refresh');
       }
     },
@@ -2425,7 +2467,8 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
           const { buildService } = await import('./service/build-service.js');
           await buildService.importDumpTensorBinFile(uri.fsPath);
         }
-      } catch (error) {
+      }
+      catch (error) {
         console.error('Failed to import DumpTensor .bin file:', error);
         vscode.window.showErrorMessage(t('extension.importDumpTensorBinFailed'));
       }
@@ -2436,9 +2479,7 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
   // Workspace folder change listener
   const watchWorkSpaceFolderChange =
     vscode.workspace.onDidChangeWorkspaceFolders(async () => {
-      logDebug('event:onDidChangeWorkspaceFolders', {
-        workspaceFolders: (vscode.workspace.workspaceFolders || []).map((f) => f.uri.fsPath),
-      });
+      logDebug('event:onDidChangeWorkspaceFolders', { workspaceFolders: (vscode.workspace.workspaceFolders || []).map((f) => f.uri.fsPath) });
       console.log('Workspace changed', vscode.workspace.workspaceFolders);
       vscode.commands.executeCommand(COMMAND_FLASH_MS_SANITIZER_RUN_DATA);
       vscode.commands.executeCommand(COMMAND_FLASH_PERFORMANCE_RUN_DATA);
@@ -2497,11 +2538,12 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
     const applyMetricKeys = async (target: vscode.ConfigurationTarget, scopeUri?: vscode.Uri) => {
       const nextSettings = getOpDevtoolsObject(scopeUri);
       metricKeys.forEach((k) => setValueByPath(nextSettings, k, desired));
-      await vscode.workspace.getConfiguration(undefined, scopeUri).update(
-        'op-devtools',
-        nextSettings,
-        target,
-      );
+      await vscode.workspace.getConfiguration(undefined, scopeUri)
+        .update(
+          'op-devtools',
+          nextSettings,
+          target,
+        );
     };
 
     const applyForWorkspace = async () => {
@@ -2514,11 +2556,9 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
 
     const applyForAllFolders = async () => {
       const folders = vscode.workspace.workspaceFolders || [];
-      await Promise.all(
-        folders.map(async (folder) => {
-          await applyMetricKeys(vscode.ConfigurationTarget.WorkspaceFolder, folder.uri);
-        }),
-      );
+      await Promise.all(folders.map(async (folder) => {
+        await applyMetricKeys(vscode.ConfigurationTarget.WorkspaceFolder, folder.uri);
+      }));
     };
 
     isSyncingOnBoardOperatorMetrics = true;
@@ -2527,11 +2567,9 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
         console.log('[onBoardOperatorMetricsSync] desired:', desired, 'inspect:', parentInspect);
       }
 
-      const wroteAnyExplicitScope = Boolean(
-        typeof parentInspect?.workspaceFolderValue === 'boolean'
+      const wroteAnyExplicitScope = Boolean(typeof parentInspect?.workspaceFolderValue === 'boolean'
         || typeof parentInspect?.workspaceValue === 'boolean'
-        || typeof parentInspect?.globalValue === 'boolean',
-      );
+        || typeof parentInspect?.globalValue === 'boolean');
 
       // If user explicitly set parent at certain scopes, update children in those scopes too.
       if (typeof parentInspect?.workspaceFolderValue === 'boolean') {
@@ -2549,9 +2587,11 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
       if (!wroteAnyExplicitScope || typeof parentInspect?.workspaceValue !== 'boolean') {
         await applyForWorkspace();
       }
-    } catch (error) {
+    }
+    catch (error) {
       console.warn('[onBoardOperatorMetricsSync] failed:', error);
-    } finally {
+    }
+    finally {
       isSyncingOnBoardOperatorMetrics = false;
     }
   });
@@ -2587,7 +2627,6 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
     catch (error) {
       logDebug('activate:autoOpenProject:error', error);
     }
-  
   }
 
   console.log('Activate', vscode.workspace.workspaceFolders);

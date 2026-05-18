@@ -3,6 +3,16 @@ import { OpRecord } from '@plugin/domain/models/model';
 import {
   Command, getAdvanceCmd,
 } from '@plugin/domain/utils/command-utils';
+import {
+  isAscendA5ProfilerCannSoc,
+  resolveAscendEnv,
+} from '@plugin/domain/utils/ascend-util';
+
+/** Optional context for building msprof commands (on-board SOC capability matrix). */
+export type ProfilerGenerateContext = {
+  /** CANN-style project SOC (e.g. ascend950); drives A3 vs A5 on-board aic-metrics. */
+  onboardCannSoc?: string | null;
+};
 
 /**
  * msprof command generates policy interface
@@ -12,6 +22,7 @@ export interface ProfilerCommandStrategy {
     config: ConfigRecord,
     operator: OpRecord,
     targetFile: string,
+    context?: ProfilerGenerateContext,
   ): string;
 }
 
@@ -23,6 +34,7 @@ export class SimulatorStrategy implements ProfilerCommandStrategy {
     config: ConfigRecord,
     operator: OpRecord,
     targetFile: string,
+    _context?: ProfilerGenerateContext,
   ): string {
     const metrics = ['PipeUtilization'];
     const userOptions = config.user_options as Record<string, unknown> | null | undefined;
@@ -37,13 +49,15 @@ export class SimulatorStrategy implements ProfilerCommandStrategy {
 
     const advance_cmd = getAdvanceCmd(userOptions?.advance_param);
 
+    const msprofSocVersionArg = resolveAscendEnv({ isSimulator: true }).simulatorType ?? '';
+
     // Build the msprof op simulator command
     const msprof = new Command('msprof');
     const simulator = msprof.sub('op')
       .sub('simulator', { separators: { 'aic-metrics': ',' } });
 
     simulator.addOptions({
-      'soc-version': userOptions?.simulatorType as string | undefined,
+      'soc-version': msprofSocVersionArg,
       output: `${operator.op_path}/.vscode/opprof`,
       'aic-metrics': metrics,
     });
@@ -68,9 +82,11 @@ export class OnBoardStrategy implements ProfilerCommandStrategy {
     config: ConfigRecord,
     operator: OpRecord,
     targetFile: string,
+    context?: ProfilerGenerateContext,
   ): string {
     const userOptions = (config.user_options as Record<string, unknown> | null | undefined) || {};
-    const metrics = this.getOnBoardMetrics(userOptions as Record<string, boolean>);
+    const cannSoc = context?.onboardCannSoc;
+    const metrics = this.getOnBoardMetrics(userOptions as Record<string, boolean>, cannSoc);
     const advance_cmd = getAdvanceCmd(userOptions.advance_param);
 
     // Build msprof op command
@@ -96,18 +112,31 @@ export class OnBoardStrategy implements ProfilerCommandStrategy {
   /**
    * Get graphic parameter indicators on the upper board
    */
-  private getOnBoardMetrics(obj: Record<string, boolean>): string[] {
-    const basicMetrics = [
-      'Occupancy',
-      'Roofline',
-      'Source',
-      'MemoryDetail',
-      'KernelScale',
-    ];
+  private getOnBoardMetrics(obj: Record<string, boolean>, cannSoc?: string | null): string[] {
+    const isA5 = isAscendA5ProfilerCannSoc(cannSoc);
+    const basicMetrics = isA5
+      ? [
+        'Occupancy',
+        'Roofline',
+        'Source',
+        'PCSampling',
+        'KernelScale',
+      ]
+      : [
+        'Occupancy',
+        'Roofline',
+        'Source',
+        'MemoryDetail',
+        'KernelScale',
+      ];
 
     const result: string[] = basicMetrics.filter((k) => obj[k]);
 
-    if (result.includes('Roofline') || result.includes('MemoryDetail')) {
+    const needsDefault = isA5
+      ? result.includes('Roofline') || result.includes('PCSampling')
+      : result.includes('Roofline') || result.includes('MemoryDetail');
+
+    if (needsDefault) {
       result.push('Default');
     }
     else {

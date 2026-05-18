@@ -14,6 +14,8 @@ The plugin does **not** ship a compiler. It:
 
 The actual compilation is performed by the **script or tool** invoked by the generated command (e.g. a project-specific build script or CANN/Ascend toolchain); the plugin provides config, strategy-based command generation, and execution.
 
+**Extension host vs shell CANN environment** — At activation the extension only **logs** a frozen snapshot of `SOC_VERSION` / `SIMULATOR_TYPE` / `NPU_ARCH` / `ASCEND_ENV_SCRIPT`; it does not source env scripts or mutate `process.env`. Each build/simulate command prepends **`. ${project.ascend_env_script}`** when set and passes resolver output via spawn `env`. Full contract: **`docs/ascend-env-spec.md`**; A5 strings and checklist: **`docs/ascend-a5-support.md`**.
+
 ---
 
 ## Protocols

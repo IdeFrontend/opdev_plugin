@@ -56,10 +56,10 @@ export abstract class AbstractOperatorPlugin implements IOperatorPlugin {
     return {
       buildScript:     `bash ${script}`,
       exampleScript:   `bash ${script}`,
-      simulateScript:  `bash ${script} --simulator Ascend910B3`,
+      simulateScript:  `bash ${script} --simulator {simulator_type}`,
       onBoardScript:   `bash ${script} --onboard`,
       sanitizerScript: `bash ${script} --mssanitizer`,
-      cpuDebugScript:  `bash ${script} --simulator`,
+      cpuDebugScript:  `bash ${script} --simulator {simulator_type}`,
       npuDebugScript:  `bash ${script} --debug`,
     };
   }

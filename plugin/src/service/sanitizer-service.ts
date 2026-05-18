@@ -5,6 +5,10 @@ import * as fs from 'fs';
 
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import {
+  buildOperatorSpawnContext,
+  executeOperatorCommand,
+} from '@plugin/service/operator-command-executor';
+import {
   getSanitizerCommand, getBuildExampleCommand, getBuildOpCommand,
 } from '@plugin/domain';
 import { configService } from './config-service';
@@ -47,14 +51,14 @@ export class SanitizerService {
         '',
         params.operatorNames,
       );
-      const buildExecutor = ProjectManager.getInstance()
-        .getExecutor();
-      const buildRes = await buildExecutor.execute(
+      const buildRes = await executeOperatorCommand(
         buildCommand,
-        [],
-        [],
-        {},
-        true,
+        buildOperatorSpawnContext({
+          configId: Number(sanitizerConfigId),
+          operatorNames: params.operatorNames,
+          script: buildCommand,
+        }),
+        { outputLabel: 'compile' },
       );
 
       if (buildRes.code !== 0) {
@@ -83,12 +87,14 @@ export class SanitizerService {
             );
             const exampleBuildExecutor = ProjectManager.getInstance()
               .getExecutor();
-            const exampleBuildRes = await exampleBuildExecutor.execute(
+            const exampleBuildRes = await executeOperatorCommand(
               exampleBuildCommand,
-              [],
-              [],
-              {},
-              true,
+              buildOperatorSpawnContext({
+                configId: Number(exConfigId),
+                operatorNames: params.operatorNames,
+                script: exampleBuildCommand,
+              }),
+              { outputLabel: 'compile' },
             );
 
             console.log('example buildRes', exampleBuildRes);
@@ -135,7 +141,14 @@ export class SanitizerService {
         ) || '';
       const executor = ProjectManager.getInstance()
         .getExecutor();
-      const res = await executor.execute(sanitizerCommand, [], [], {}, true);
+      const res = await executeOperatorCommand(
+        sanitizerCommand,
+        buildOperatorSpawnContext({
+          configId: Number(sanitizerConfigId),
+          operatorNames: params.operatorNames,
+          script: sanitizerCommand,
+        }),
+      );
 
       if (res.code !== 0) {
         vscode.window.showErrorMessage(t('sanitizer.detectionFailed', { output: res.output }));

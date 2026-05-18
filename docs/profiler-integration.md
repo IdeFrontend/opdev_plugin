@@ -14,6 +14,16 @@ The plugin integrates **MindStudio Profiler** (`msprof` CLI) for operator perfor
 
 The actual profiling engine is the **msprof** binary (invoked by the plugin’s command strategy); the plugin provides orchestration, config, and UI.
 
+### A3 vs A5 on-board metrics
+
+On-board (`msprof op`) aic-metrics differ by CANN SOC slug. The plugin uses
+`isAscendA5ProfilerCannSoc()` (`ascend950` only) in `profiler-service.ts`
+`OnBoardStrategy`: A3-class targets use **Cache heatmap** (`MemoryDetail`);
+A5-class use **PC sampling** (`PCSampling`) and a different “collect all
+operators by default” rule when Roofline is enabled. Simulate profiling passes
+the resolved **simulator directory** to `msprof op simulator --soc-version`
+via `resolveAscendEnv({ isSimulator: true })`. Details: **`docs/ascend-a5-support.md`** §4.
+
 ---
 
 ## Protocols

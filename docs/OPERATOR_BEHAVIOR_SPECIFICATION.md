@@ -60,6 +60,89 @@ Behavior details:
 
 Action execution reads/updates these via `getConfig` / `postConfig`.
 
+## Ascend/CANN environment and SOC resolution
+
+The canonical, machine-checkable spec lives at **`docs/ascend-env-spec.md`**.
+Everything below is a summary aimed at the operator-action flow.
+
+### Single resolver — `resolveAscendEnv()`
+
+All consumers (script placeholders, spawn env, profiler, build-service,
+model defaults, workspace-settings sync) call
+`plugin/src/domain/utils/ascend-util.ts::resolveAscendEnv({ isSimulator })`. It returns the resolved `socVersion`,
+`npuArch`, and (for simulator runs) `simulatorType`, plus a `source` tag for
+each value so debug logs can explain where every choice came from.
+
+### Three channels (clearly separated, no longer conflated)
+
+| Channel | Source | Plugin reads it from |
+|---------|--------|----------------------|
+| **VS Code setting** | `op-devtools.environment.socVersion`, `op-devtools.performanceTuning.simulation.simulatorType` (explicit user / workspace / workspace-folder scope only) | `getSocVersionWithWorkspaceOverride` / `getWorkspaceSimulatorType` (`cfg.inspect`) |
+| **`projects.json` `soc_version`** | Env config UI (`saveProjectEnv`), `syncAscendEnvScriptFromWorkspaceSettings` | Display / APIs only — **not** read by `resolveAscendEnv` |
+| **Global env snapshot** | OS-level `SOC_VERSION` / `SIMULATOR_TYPE` / `NPU_ARCH` captured once at extension activation | `getGlobalEnvSnapshot()` |
+
+There is also a fourth, lazy channel: host autodetection via `asys info` then
+`npu-smi info`, cached for the extension lifetime.
+
+### Precedence rules (canonical)
+
+- **`simulatorType`** (only when `isSimulator`): workspace setting →
+  global-env snapshot → default-from-SOC.
+- **`socVersion`**:
+  - if `isSimulator` AND the simulator type came from the workspace setting →
+    derived from that simulator type (so SOC / sim cannot disagree);
+  - otherwise: workspace setting → global-env snapshot →
+    `asys` / `npu-smi` detection → `DEFAULT_FALLBACK_CANN_SOC` (empty string when
+    unset). A5 / Atlas A5 details: **`docs/ascend-a5-support.md`**.
+- **`npuArch`**: always `getNpuArchForCannSoc(socVersion)`.
+
+### Lifecycle
+
+- **At activation**: the plugin only logs the frozen global env snapshot.
+  It does **not** source `ASCEND_ENV_SCRIPT`, does **not** mutate
+  `process.env.{SOC_VERSION, NPU_ARCH, SIMULATOR_TYPE}`, and does **not** run
+  host detection eagerly.
+- **Per operator command**: the strategy prepends
+  `. ${project.ascend_env_script} && …` to the command when set; that is the
+  only place the plugin sources an env script.
+- **Per spawn**: `executeOperatorCommand` calls `getOperatorSpawnEnv` and
+  passes `{ env }` to `CommandExecutor.execute`. The child shell sees
+  authoritative values regardless of host `process.env`.
+
+### Command assembly (build / simulate / …)
+
+1. `getBuildOpCommand` / `getSimulateCommand` / … → `getBaseContext` →
+   `getProjectById` + config from `configs.json`.
+2. Strategy (`ascend-strategy`, `cann-strategy`, …) →
+   `replaceOperatorScriptPlaceholders(script)` (resolution from `resolveAscendEnvForOperatorCommand` at execute time):
+   - `{soc_version}` → `resolveAscendEnv(...).socVersion`
+   - `{simulator_type}` → `resolveAscendEnv(...).simulatorType`
+3. `executeOperatorCommand` (`operator-command-executor.ts`) →
+   `getOperatorSpawnEnv` merged into `CommandExecutor.execute(..., { env })`:
+   - **non-sim**: `SOC_VERSION=<slug>`, `NPU_ARCH` from slug.
+   - **simulator class**: `SIMULATOR_TYPE=<simDir>`, `NPU_ARCH` from slug,
+     `SOC_VERSION=<slug>` (or `<derived-from-sim>` per the rule above).
+4. Simulate **example** build (standard-custom): op_type-aware
+   `compileOption` — cann: `--simulator <simDir>`; ascend:
+   `--simulator <simDir> --soc=<slug>` (both from one `resolveAscendEnv`
+   call so they cannot drift).
+
+**Templates** (`plugin/templates/code_template/`) use the env → cache pattern
+for all platform-specific values (`SIMULATOR_TYPE`, `SOC_VERSION`,
+`NPU_ARCH`, and `SUPPORT_COMPUTE_UNIT` / `SUPPORT_TILING_DIR` in the ascend
+add_custom template), so the plugin can target new chip generations by
+injecting env values without editing the generated user project.
+
+### `ASCEND_ENV_SCRIPT` vs `op-devtools.environment.environmentScript`
+
+- **`ASCEND_ENV_SCRIPT`** — OS env at extension host start; recorded in the
+  global env snapshot for diagnostic purposes. The plugin no longer sources
+  this file.
+- **`op-devtools.environment.environmentScript`** — workspace setting →
+  `getEnvironmentScriptPathFromWorkspace` → can sync to `projects.json` →
+  per-command prefix `. ${project.ascend_env_script}`. This is the only env
+  script the plugin sources, and only at command time.
+
 ### Action capability by type
 
 | Type | Build | Run | Debug | Sanitizer | On-board/Simulate | Mark/Unmark |
@@ -155,3 +238,4 @@ Incremental behavior:
 - `plugin/src/domain/services/command-strategy/*.ts`
 - `plugin/src/domain/models/project-model.ts`
 - `plugin/src/domain/utils/project-utils.ts`
+- `plugin/src/helpers/operator-project-workspace-config.ts` (`getAscendEnvScriptWithWorkspaceOverride`, `getEnvironmentScriptPathFromWorkspace`)

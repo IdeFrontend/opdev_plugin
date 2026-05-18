@@ -5,7 +5,6 @@ import { CommandExecutor } from '@plugin/class/command-options';
 import { ExplorerRootUtils } from '@plugin/class/explorer-root-utils';
 import { createProject } from '@plugin/domain';
 import { getProjectByPath } from '@plugin/domain/models/project-model';
-import { soc_version } from '@plugin/domain/utils/ascend-util';
 
 /**
  * project manager
@@ -136,11 +135,10 @@ export class ProjectManager {
 
     // 检查是否存在现有项目
     const existingProject = getProjectByPath(this._projectPath);
-    
+
     // 优先使用现有项目的配置，然后是参数传入的值，最后是默认值
     const ascend_env_script = params.ascendEnvScript || existingProject?.ascend_env_script || undefined;
-    const project_soc_version = existingProject?.soc_version || soc_version;
-    
+
     const projectRes = await createProject({
       project_name: this._projectName ?? '',
       project_path: this._projectPath,

@@ -404,54 +404,59 @@
             "order": 313,
             "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.cacheHeatmap.markdownDescription%"
           },
-          "op-devtools.performanceTuning.onBoard.operatorMetrics": {
+          "op-devtools.performanceTuning.onBoard.pcSampling": {
             "type": "boolean",
             "order": 314,
+            "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.pcSampling.markdownDescription%"
+          },
+          "op-devtools.performanceTuning.onBoard.operatorMetrics": {
+            "type": "boolean",
+            "order": 315,
             "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.operatorMetrics.markdownDescription%"
           },
           "op-devtools.performanceTuning.onBoard.cubeAndVectorInstructionTimeAndRatio": {
             "type": "boolean",
-            "order": 315,
+            "order": 316,
             "description": "%config.op-devtools.performanceTuning.onBoard.cubeAndVectorInstructionTimeAndRatio.description%"
           },
           "op-devtools.performanceTuning.onBoard.l2CacheHitRate": {
             "type": "boolean",
-            "order": 316,
+            "order": 317,
             "description": "%config.op-devtools.performanceTuning.onBoard.l2CacheHitRate.description%"
           },
           "op-devtools.performanceTuning.onBoard.memoryReadWriteBandwidth": {
             "type": "boolean",
-            "order": 317,
+            "order": 318,
             "description": "%config.op-devtools.performanceTuning.onBoard.memoryReadWriteBandwidth.description%"
           },
           "op-devtools.performanceTuning.onBoard.l0ReadWriteBandwidth": {
             "type": "boolean",
-            "order": 318,
+            "order": 319,
             "description": "%config.op-devtools.performanceTuning.onBoard.l0ReadWriteBandwidth.description%"
           },
           "op-devtools.performanceTuning.onBoard.ubReadWriteBandwidth": {
             "type": "boolean",
-            "order": 319,
+            "order": 320,
             "description": "%config.op-devtools.performanceTuning.onBoard.ubReadWriteBandwidth.description%"
           },
           "op-devtools.performanceTuning.onBoard.computeAndMoveUnitTimeRatio": {
             "type": "boolean",
-            "order": 320,
+            "order": 321,
             "description": "%config.op-devtools.performanceTuning.onBoard.computeAndMoveUnitTimeRatio.description%"
           },
           "op-devtools.performanceTuning.onBoard.resourceConflictRatio": {
             "type": "boolean",
-            "order": 321,
+            "order": 322,
             "description": "%config.op-devtools.performanceTuning.onBoard.resourceConflictRatio.description%"
           },
           "op-devtools.performanceTuning.onBoard.enableKernelCodeSegmentProfiling": {
             "type": "boolean",
-            "order": 322,
+            "order": 323,
             "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.enableKernelCodeSegmentProfiling.markdownDescription%"
           },
           "op-devtools.performanceTuning.onBoard.parameters": {
             "type": "object",
-            "order": 323,
+            "order": 324,
             "default": {},
             "additionalProperties": {
               "type": "string"
@@ -473,7 +478,6 @@
           },
           "op-devtools.environment.socVersion": {
             "type": "string",
-            "default": "ascend910b",
             "order": 401,
             "markdownDescription": "%config.op-devtools.environment.socVersion.markdownDescription%"
           }
@@ -1401,6 +1405,7 @@
     "@playwright/test": "^1.59.1",
     "@stylistic/eslint-plugin": "^5.6.1",
     "@types/adm-zip": "^0.5.7",
+    "@types/jest": "^29.5.14",
     "@types/node": "^24.6.0",
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.7.1",

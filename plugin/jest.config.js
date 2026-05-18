@@ -1,6 +1,12 @@
+// Avoid slow or hanging SOC autodetection (find / + asys) when tests import ascend-util.
+if (!process.env.SOC_VERSION) {
+  process.env.SOC_VERSION = 'ascend910b';
+}
+
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
+  setupFilesAfterEnv: ['<rootDir>/src/__tests__/jest-setup.ts'],
   roots: ['<rootDir>/src'],
   testMatch: [
     '**/__tests__/**/*.spec.ts',
