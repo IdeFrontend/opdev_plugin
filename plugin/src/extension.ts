@@ -197,6 +197,27 @@ function resolvePerformanceReportCommandKey(
   return raw;
 }
 
+function resolvePerformanceReportKeyFromTreeItem(node: OperateNode): string | undefined {
+  if (node.nodeId !== 'performanceReportItem') {
+    return undefined;
+  }
+  const rawId = node.id ?? '';
+  if (!rawId.startsWith('performance-report:')) {
+    return undefined;
+  }
+  return decodeURIComponent(rawId.replace(/^performance-report:/, ''));
+}
+
+async function applyPerformanceReportSelection(
+  operateTreeProvider: OperateTreeProvider,
+  reportKey: string,
+): Promise<void> {
+  operateTreeProvider.selectPerformanceReport(reportKey);
+  const selected = operateTreeProvider.getSelectedPerformanceReport();
+  await vscode.commands.executeCommand('setContext', 'opDevtools.performanceReportSelected', Boolean(selected));
+  await vscode.commands.executeCommand('setContext', 'opDevtools.performanceSelectedReportMarked', Boolean(selected?.marked));
+}
+
 /** Explorer context passes a `file:` URI; `view/title` often passes unrelated values (e.g. `TreeView`). */
 function isExplorerResourceFileUri(candidate: unknown): candidate is vscode.Uri {
   return (
@@ -900,6 +921,19 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
     treeDataProvider: performanceResultsPanelProvider,
     showCollapseAll: false,
   });
+  context.subscriptions.push(
+    performanceResultsTreeView.onDidChangeSelection(async (event) => {
+      const node = event.selection[0];
+      if (!node) {
+        return;
+      }
+      const reportKey = resolvePerformanceReportKeyFromTreeItem(node);
+      if (!reportKey || operateTreeProvider.getSelectedPerformanceReport()?.key === reportKey) {
+        return;
+      }
+      await applyPerformanceReportSelection(operateTreeProvider, reportKey);
+    }),
+  );
   const operatorProjectsTreeView = vscode.window.createTreeView('opdevtoolsOperatorProjectsTree', {
     treeDataProvider: operatorProjectsTreeProvider,
     showCollapseAll: false,
@@ -1565,10 +1599,7 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
   const sidebarPerformanceReportSelectCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_PERFORMANCE_REPORT_SELECT,
     async (reportKey: string) => {
-      operateTreeProvider.selectPerformanceReport(reportKey);
-      const selected = operateTreeProvider.getSelectedPerformanceReport();
-      await vscode.commands.executeCommand('setContext', 'opDevtools.performanceReportSelected', Boolean(selected));
-      await vscode.commands.executeCommand('setContext', 'opDevtools.performanceSelectedReportMarked', Boolean(selected?.marked));
+      await applyPerformanceReportSelection(operateTreeProvider, reportKey);
     },
   );
   const sidebarPerformanceReportCopyPathCommand = vscode.commands.registerCommand(

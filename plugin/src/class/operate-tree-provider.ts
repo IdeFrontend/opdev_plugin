@@ -1701,7 +1701,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       const node = this.createItem(
         'performanceReportItem',
         report.title,
-        'huawei-op-devtools.sidebar.performance.report.select',
+        undefined,
         vscode.TreeItemCollapsibleState.Collapsed,
         contextValue,
         report.marked
@@ -1709,7 +1709,6 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
           : undefined,
         description,
         `performance-report:${encodeURIComponent(report.key)}`,
-        [report.key],
       );
       this.performanceNodesById.set(node.id ?? '', []);
       return node;
