@@ -7,6 +7,7 @@
 
 import * as path from 'path';
 import * as os from 'os';
+import * as fs from 'fs';
 import { t } from 'i18next';
 import * as vscode from 'vscode';
 import { PermanentStorage } from './permanent-storage';
@@ -41,12 +42,37 @@ export class WebviewProvider {
   }
 
   /**
+   * Icon shown on the editor tab for this webview panel (must exist on disk).
+   */
+  private getWebviewPanelIconPath(): vscode.Uri | { readonly light: vscode.Uri; readonly dark: vscode.Uri } | undefined {
+    const candidates = [
+      path.join(this.context.extensionPath, 'web', 'resources', 'extension_icon.png'),
+      path.join(this.context.extensionPath, 'resources', 'extension_icon.png'),
+    ];
+    for (const fsPath of candidates) {
+      if (fs.existsSync(fsPath)) {
+        const uri = vscode.Uri.file(fsPath);
+        return { light: uri, dark: uri };
+      }
+    }
+    return undefined;
+  }
+
+  private applyWebviewPanelIcon(panel: vscode.WebviewPanel): void {
+    const icon = this.getWebviewPanelIconPath();
+    if (icon) {
+      panel.iconPath = icon;
+    }
+  }
+
+  /**
    * Show Webview panel
    */
   public async show(router: string): Promise<void> {
     try {
       // Create or display a panel
       if (this.panel) {
+        this.applyWebviewPanelIcon(this.panel);
         this.panel.reveal();
       }
       else {
@@ -146,6 +172,8 @@ export class WebviewProvider {
    */
   private async createPanel(router: string = ''): Promise<void> {
     try {
+      const iconPath = this.getWebviewPanelIconPath();
+
       this.panel = vscode.window.createWebviewPanel(
         'mindstudioOpsuite',
         'Huawei OP DevTools',
@@ -153,13 +181,17 @@ export class WebviewProvider {
         {
           enableScripts: true,
           retainContextWhenHidden: true,
+          ...(iconPath ? { iconPath } : {}),
         },
       );
+
+      this.applyWebviewPanelIcon(this.panel);
 
       this.apiServer?.addWebview(router, this.panel.webview);
 
       // Set Webview content
       await this.updateWebviewContent(router);
+      this.applyWebviewPanelIcon(this.panel);
 
       if (this.panel) {
         this.panelThemeDisposable = registerWebviewThemeBridge(this.panel.webview);

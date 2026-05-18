@@ -11,9 +11,6 @@
         class="relative z-[2] w-full h-full flex flex-col items-center justify-center px-[50px] box-border text-[var(--vscode-foreground)]">
         <!-- 顶部标题区域 -->
         <div class="text-center mb-8 w-full max-[992px]:mb-[20px]">
-          <h5 class="text-[25px] font-normal m-0 mb-2.5">
-            {{ t('web.welcome.welcomeTitle') }}
-          </h5>
           <h1 class="text-[32px] font-semibold m-0">
             {{ t('web.welcome.platformTitle') }}
           </h1>
@@ -80,31 +77,132 @@
         <div
           class="flex items-stretch justify-center gap-[15px] max-w-[1200px] w-full mb-[30px] py-[30px] px-[20px] flex-none rounded-xl min-h-[300px] max-[992px]:gap-3 max-[992px]:px-[15px] max-[992px]:py-[25px] max-[992px]:min-h-[400px] max-[576px]:gap-2 max-[576px]:p-[20px_10px] max-[576px]:min-h-[350px] bg-[var(--vscode-editorWidget-background)] shadow-md"
           @click.stop>
-          <!-- Step 0 / 1: 新建算子工程 -->
+          <!-- Step 0: 新建算子工程 -->
           <div
             v-show="currentStep === 0"
-            class="flex-1 box-border flex min-w-0 text-[var(--vscode-editor-foreground)]"
+            class="welcome-step-body -mt-3 flex-1 box-border flex flex-col gap-0 min-w-0 w-full text-[var(--vscode-editor-foreground)]"
           >
-            <!-- 左侧：标题、描述、立即创建 -->
-            <div class="w-1/2 pr-8 max-[992px]:w-full max-[992px]:pr-0">
-              <h3 class="text-[20px] font-semibold mb-6">
-                {{ t('web.welcome.sectionNewProject') }}
-              </h3>
-              <p class="text-[12px] leading-relaxed mb-6 max-[576px]:text-xs text-[var(--vscode-descriptionForeground)]">
-                {{ t('web.welcome.sectionNewProjectDesc') }}
-              </p>
-              <ul class="feature-list mb-6 grid grid-cols-2 gap-y-1 list-disc list-inside text-[15px] font-semibold leading-[32px] max-[576px]:grid-cols-1 text-[var(--vscode-editor-foreground)]">
-                <li>{{ t('web.welcome.featureEnvReady') }}</li>
-                <li>{{ t('web.welcome.featureAscendC') }}</li>
-                <li>{{ t('web.welcome.featurePyascProjectShort') }}</li>
-                <li v-if="tritonSupportEnabled">
-                  {{ t('web.welcome.featureTritonProjectShort') }}
-                </li>
-              </ul>
-              <div>
+            <p class="welcome-step-intro mb-4 w-full shrink-0 text-[15px] max-[576px]:text-[14px] leading-relaxed text-[var(--vscode-descriptionForeground)]">
+              {{ t('web.welcome.sectionNewProjectDesc') }}
+            </p>
+
+            <div class="flex w-full min-h-0 min-w-0 flex-1 flex-col gap-4">
+              <div
+                class="welcome-step-media-tabs welcome-new-project-tabs box-border w-full min-h-0 min-w-0 flex-1 overflow-hidden rounded-lg border border-[var(--op-devtools-border)] p-3 max-[576px]:p-2.5"
+              >
+                <a-tabs v-model:activeKey="projectTypeTabKey" class="w-full" tab-position="left">
+                    <a-tab-pane :key="String(OperatorProjectViewId.CANN)" :tab="t('web.welcome.ascendCOpProject')">
+                      <div
+                        class="welcome-new-project-tab-desc mt-1 mb-2.5 whitespace-normal"
+                        v-html="getTemplateDesc(selectedTemplate)"
+                      />
+                      <a-tag color="blue" class="mt-2 mr-2">
+                        {{ t('web.welcome.langAscendC') }}
+                      </a-tag>
+                      <a-tag color="purple" class="mt-2 mr-2">
+                        {{ t('web.welcome.typeAngle') }}
+                      </a-tag>
+                      <div class="mt-4 flex flex-wrap items-center gap-3">
+                        <span class="welcome-new-project-tab-desc whitespace-nowrap op-text">
+                          {{ t('web.welcome.sample') }}
+                        </span>
+                        <a-radio-group v-model:value="selectedTemplate" class="sample-radio-group flex flex-wrap gap-4">
+                          <a-radio value="helloworld">
+                            helloworld
+                          </a-radio>
+                          <a-radio value="addn">
+                            addn
+                          </a-radio>
+                          <a-radio value="torch_library_template">
+                            torch_library
+                          </a-radio>
+                        </a-radio-group>
+                      </div>
+                      <div class="mt-4">
+                        <div class="transition-all duration-300">
+                          <a-image
+                            :src="getTemplateImage(selectedTemplate)"
+                            class="welcome-new-project-preview block transition-opacity duration-300 transform"
+                          />
+                        </div>
+                      </div>
+                    </a-tab-pane>
+
+                    <a-tab-pane
+                      :key="String(OperatorProjectViewId.STANDARD_CUSTOM)"
+                      :tab="t('web.welcome.ascendCStandardProject')"
+                    >
+                      <div class="welcome-new-project-tab-desc mt-1 mb-2.5 whitespace-normal">
+                        {{ t('web.welcome.ascendCStandardDesc') }}
+                      </div>
+                      <a-tag color="blue" class="mt-2 mr-2">
+                        {{ t('web.welcome.langAscendC') }}
+                      </a-tag>
+                      <a-tag color="green" class="mt-2 mr-2">
+                        {{ t('web.welcome.typeStandardCustom') }}
+                      </a-tag>
+                      <div class="mt-4">
+                        <div class="transition-all duration-300">
+                          <a-image
+                            :src="standardCustomPreview"
+                            class="welcome-new-project-preview block transition-opacity duration-300 transform"
+                          />
+                        </div>
+                      </div>
+                    </a-tab-pane>
+
+                    <a-tab-pane :key="String(OperatorProjectViewId.PYASC)" :tab="t('web.welcome.pythonPyascProject')">
+                      <div class="welcome-new-project-tab-desc mt-1 mb-2.5 whitespace-normal">
+                        {{ t('web.welcome.pythonPyascDesc') }}
+                      </div>
+                      <a-tag color="blue" class="mt-2 mr-2">
+                        {{ t('web.welcome.langPython') }}
+                      </a-tag>
+                      <a-tag color="purple" class="mt-2 mr-2">
+                        {{ t('web.welcome.typePyasc') }}
+                      </a-tag>
+                      <div class="mt-4">
+                        <div class="transition-all duration-300">
+                          <a-image
+                            :src="tipBase_0"
+                            class="welcome-new-project-preview block transition-opacity duration-300 transform"
+                          />
+                        </div>
+                      </div>
+                    </a-tab-pane>
+
+                    <a-tab-pane
+                      v-if="tritonSupportEnabled"
+                      :key="String(OperatorProjectViewId.TRITON)"
+                      :tab="t('web.welcome.pythonTritonProject')"
+                    >
+                      <div class="welcome-new-project-tab-desc mt-1 mb-2.5 whitespace-normal">
+                        {{ t('web.welcome.pythonTritonDesc') }}
+                      </div>
+                      <a-tag color="blue" class="mt-2 mr-2">
+                        {{ t('web.welcome.langPython') }}
+                      </a-tag>
+                      <a-tag color="purple" class="mt-2 mr-2">
+                        {{ t('web.welcome.typeTriton') }}
+                      </a-tag>
+                      <div class="mt-4">
+                        <div class="transition-all duration-300">
+                          <a-image
+                            :src="tritonVectorAddPreview"
+                            class="welcome-new-project-preview block transition-opacity duration-300 transform"
+                          />
+                        </div>
+                      </div>
+                    </a-tab-pane>
+                  </a-tabs>
+              </div>
+
+              <div class="flex w-full shrink-0 flex-col items-center">
                 <button
+                  type="button"
                   :class="[
-                    'px-5 py-2.5 rounded-md border border-transparent transition-colors duration-150 cursor-pointer',
+                    'rounded-md border border-transparent transition-colors duration-150 cursor-pointer',
+                    'px-10 py-5 text-xl max-[576px]:px-8 max-[576px]:py-4 max-[576px]:text-lg',
                     'bg-[var(--vscode-button-background)] hover:bg-[var(--vscode-button-hoverBackground)] text-[var(--vscode-button-foreground)]'
                   ]"
                   @click="handleAscendCProject"
@@ -113,298 +211,80 @@
                 </button>
               </div>
             </div>
-
-            <!-- 右侧：工程类型（3 种类型纵向排列） -->
-            <div class="w-1/2 max-[992px]:w-full max-[992px]:mt-6">
-              <div class="flex flex-col gap-4">
-                <!-- 【Ascend C】<<<>>>算子工程 -->
-                <div
-                  :class="[
-                    'flex-1 bg-transparent p-4 border rounded-lg overflow-hidden relative transition-all duration-300 cursor-pointer hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)]',
-                    selectedProjectTypeId === OperatorProjectViewId.CANN ? 'border-[var(--op-devtools-focus-border)] shadow-[0_0_0_3px_rgba(24,144,255,0.15)]' : 'border-[var(--op-devtools-border)]'
-                  ]"
-                  @click="selectedProjectTypeId = OperatorProjectViewId.CANN"
-                >
-                  <div :class="[
-                    'font-extrabold mb-3',
-                    'op-text'
-                  ]">
-                    {{ t('web.welcome.ascendCOpProject') }}
-                  </div>
-                  <div :class="[
-                    'leading-7 mt-1 text-[12px] mb-2.5 whitespace-normal',
-                    'op-text-muted'
-                  ]"
-                    v-html="getTemplateDesc(selectedTemplate)" />
-                  <a-tag color="blue" class="mt-2 mr-2">
-                    {{ t('web.welcome.langAscendC') }}
-                  </a-tag>
-                  <a-tag color="purple" class="mt-2 mr-2">
-                    {{ t('web.welcome.typeAngle') }}
-                  </a-tag>
-                  <template v-if="selectedProjectTypeId === OperatorProjectViewId.CANN">
-                    <div class="mt-4 flex items-center gap-3">
-                      <span :class="[
-                        'text-[13px] whitespace-nowrap',
-                        'op-text'
-                      ]">
-                        {{ t('web.welcome.sample') }}
-                      </span>
-                      <a-radio-group v-model:value="selectedTemplate" class="sample-radio-group flex gap-4">
-                        <a-radio value="helloworld">
-                          helloworld
-                        </a-radio>
-                        <a-radio value="addn">
-                          addn
-                        </a-radio>
-                        <a-radio value="torch_library_template">
-                          torch_library
-                        </a-radio>
-                      </a-radio-group>
-                    </div>
-                    <div class="mt-4">
-                      <div class="overflow-hidden max-w-full transition-all duration-300">
-                        <a-image :src="getTemplateImage(selectedTemplate)"
-                          class="block max-w-full h-auto object-contain transition-opacity duration-300 transform" />
-                      </div>
-                    </div>
-                  </template>
-                </div>
-
-                <!-- 【Ascend C】标准自定义算子工程 -->
-                <div
-                  :class="[
-                    'flex-1 bg-transparent p-4 border rounded-lg overflow-hidden relative transition-all duration-300 cursor-pointer hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)]',
-                    selectedProjectTypeId === OperatorProjectViewId.STANDARD_CUSTOM ? 'border-[var(--op-devtools-focus-border)] shadow-[0_0_0_3px_rgba(24,144,255,0.15)]' : 'border-[var(--op-devtools-border)]'
-                  ]"
-                  @click="selectedProjectTypeId = OperatorProjectViewId.STANDARD_CUSTOM"
-                >
-                  <div :class="[
-                    'font-extrabold mb-3',
-                    'op-text'
-                  ]">
-                    {{ t('web.welcome.ascendCStandardProject') }}
-                  </div>
-                  <div :class="[
-                    'leading-7 mt-1 text-[12px] mb-2.5 whitespace-normal',
-                    'op-text-muted'
-                  ]">
-                    {{ t('web.welcome.ascendCStandardDesc') }}
-                  </div>
-                  <a-tag color="blue" class="mt-2 mr-2">
-                    {{ t('web.welcome.langAscendC') }}
-                  </a-tag>
-                  <a-tag color="green" class="mt-2 mr-2">
-                    {{ t('web.welcome.typeStandardCustom') }}
-                  </a-tag>
-                  <div v-if="selectedProjectTypeId === OperatorProjectViewId.STANDARD_CUSTOM" class="mt-4">
-                    <div class="overflow-hidden max-w-full transition-all duration-300">
-                      <a-image :src="standardCustomPreview"
-                        class="block max-w-full h-auto object-contain transition-opacity duration-300 transform" />
-                    </div>
-                  </div>
-                </div>
-
-                <!-- 【Python】pyasc算子工程 -->
-                <div
-                  :class="[
-                    'flex-1 bg-transparent p-4 border rounded-lg overflow-hidden relative transition-all duration-300 cursor-pointer hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)]',
-                    selectedProjectTypeId === OperatorProjectViewId.PYASC ? 'border-[var(--op-devtools-focus-border)] shadow-[0_0_0_3px_rgba(24,144,255,0.15)]' : 'border-[var(--op-devtools-border)]'
-                  ]"
-                  @click="selectedProjectTypeId = OperatorProjectViewId.PYASC"
-                >
-                  <div :class="[
-                    'font-extrabold mb-3',
-                    'op-text'
-                  ]">
-                    {{ t('web.welcome.pythonPyascProject') }}
-                  </div>
-                  <div :class="[
-                    'leading-7 mt-1 text-[12px] mb-2.5 whitespace-normal',
-                    'op-text-muted'
-                  ]">
-                    {{ t('web.welcome.pythonPyascDesc') }}
-                  </div>
-                  <a-tag color="blue" class="mt-2 mr-2">
-                    {{ t('web.welcome.langPython') }}
-                  </a-tag>
-                  <a-tag color="purple" class="mt-2 mr-2">
-                    {{ t('web.welcome.typePyasc') }}
-                  </a-tag>
-                  <div v-if="selectedProjectTypeId === OperatorProjectViewId.PYASC" class="mt-4">
-                    <div class="overflow-hidden max-w-full transition-all duration-300">
-                      <a-image :src="tipBase_0"
-                        class="block max-w-full h-auto object-contain transition-opacity duration-300 transform" />
-                    </div>
-                  </div>
-                </div>
-
-                <!-- 【Python】Triton 算子工程 -->
-                <div
-                  v-if="tritonSupportEnabled"
-                  :class="[
-                    'flex-1 bg-transparent p-4 border rounded-lg overflow-hidden relative transition-all duration-300 cursor-pointer hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)]',
-                    selectedProjectTypeId === OperatorProjectViewId.TRITON ? 'border-[var(--op-devtools-focus-border)] shadow-[0_0_0_3px_rgba(24,144,255,0.15)]' : 'border-[var(--op-devtools-border)]'
-                  ]"
-                  @click="selectedProjectTypeId = OperatorProjectViewId.TRITON"
-                >
-                  <div :class="[
-                    'font-extrabold mb-3',
-                    'op-text'
-                  ]">
-                    {{ t('web.welcome.pythonTritonProject') }}
-                  </div>
-                  <div :class="[
-                    'leading-7 mt-1 text-[12px] mb-2.5 whitespace-normal',
-                    'op-text-muted'
-                  ]">
-                    {{ t('web.welcome.pythonTritonDesc') }}
-                  </div>
-                  <a-tag color="blue" class="mt-2 mr-2">
-                    {{ t('web.welcome.langPython') }}
-                  </a-tag>
-                  <a-tag color="purple" class="mt-2 mr-2">
-                    {{ t('web.welcome.typeTriton') }}
-                  </a-tag>
-                  <div v-if="selectedProjectTypeId === OperatorProjectViewId.TRITON" class="mt-4">
-                    <div class="overflow-hidden max-w-full transition-all duration-300">
-                      <a-image
-                        :src="tritonVectorAddPreview"
-                        class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
 
-          <!-- Step 1 / 2: 算子开发 -->
-        <div
-          v-show="currentStep === 1"
-          class="flex-1 box-border flex min-w-0 text-[var(--vscode-editor-foreground)]"
-        >
-          <!-- 左侧：算子开发文案与要点 -->
-          <div class="w-1/2 pr-8 max-[992px]:w-full max-[992px]:pr-0">
-            <h3 class="text-[20px] font-semibold mb-6">
-              {{ t('web.welcome.sectionDev') }}
-            </h3>
-            <p class="text-[12px] leading-relaxed mb-6 max-[576px]:text-xs text-[var(--vscode-descriptionForeground)]">
+          <!-- Step 1: 算子开发（简介 → 媒体） -->
+          <div
+            v-show="currentStep === 1"
+            class="welcome-step-body -mt-3 flex-1 box-border flex flex-col gap-0 min-w-0 w-full text-[var(--vscode-editor-foreground)]"
+          >
+            <p class="welcome-step-intro mb-1 w-full shrink-0 text-[15px] max-[576px]:text-[14px] leading-relaxed text-[var(--vscode-descriptionForeground)]">
               {{ t('web.welcome.sectionDevDesc') }}
             </p>
-            <ul class="feature-list mb-6 grid grid-cols-2 gap-y-1 list-disc list-inside text-[15px] font-semibold leading-[32px] max-[576px]:grid-cols-1 text-[var(--vscode-editor-foreground)]">
-              <li>{{ t('web.welcome.featureTiling') }}</li>
-              <li>{{ t('web.welcome.featureKernel') }}</li>
-              <li>{{ t('web.welcome.featureHighlight') }}</li>
-              <li>{{ t('web.welcome.featureCompletion') }}</li>
-              <li>{{ t('web.welcome.featureCompileDeploy') }}</li>
-            </ul>
-              <!-- <a-button
-              type="link"
-              class="!p-0 !h-auto text-[12px]"
-            >
-              查看使用指南
-            </a-button> -->
+
+            <div class="w-full min-w-0 welcome-step-media-tabs">
+              <a-tabs v-model:activeKey="devTabKey">
+                <a-tab-pane key="code" :tab="t('web.welcome.tabWriteCode')">
+                  <a-image
+                    :src="writeImg"
+                    class="welcome-media-full transition-opacity duration-300 transform"
+                  />
+                </a-tab-pane>
+                <a-tab-pane key="build" :tab="t('web.welcome.tabCompileDeploy')">
+                  <video
+                    :src="buildImg"
+                    autoplay
+                    loop
+                    muted
+                    playsinline
+                    class="welcome-media-full object-contain transition-opacity duration-300 transform"
+                  />
+                </a-tab-pane>
+                <a-tab-pane key="run" :tab="t('web.welcome.tabRun')">
+                  <video
+                    :src="runImg"
+                    autoplay
+                    loop
+                    muted
+                    playsinline
+                    class="welcome-media-full object-contain transition-opacity duration-300 transform"
+                  />
+                </a-tab-pane>
+              </a-tabs>
+            </div>
           </div>
 
-          <!-- 右侧：算子开发 3 个步骤示意 Tab -->
-          <div class="w-1/2 max-[992px]:w-full max-[992px]:mt-6">
-            <a-tabs v-model:activeKey="devTabKey">
-              <a-tab-pane key="code" :tab="t('web.welcome.tabWriteCode')">
-                <a-image
-                  :src="writeImg"
-                  class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
-                />
-              </a-tab-pane>
-              <a-tab-pane key="build" :tab="t('web.welcome.tabCompileDeploy')">
-                <video
-                  :src="buildImg"
-                  autoplay
-                  loop
-                  muted
-                  playsinline
-                  class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
-                />
-              </a-tab-pane>
-              <a-tab-pane key="run" :tab="t('web.welcome.tabRun')">
-                <video
-                  :src="runImg"
-                  autoplay
-                  loop
-                  muted
-                  playsinline
-                  class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
-                />
-              </a-tab-pane>
-            </a-tabs>
-          </div>
-        </div>
-
-          <!-- Step 2: 算子调试 -->
+          <!-- Step 2: 算子调试（简介 → 视频） -->
           <div
             v-show="currentStep === 2"
-            class="flex-1 box-border flex min-w-0 text-[var(--vscode-editor-foreground)]"
+            class="welcome-step-body -mt-3 flex-1 box-border flex flex-col gap-0 min-w-0 w-full text-[var(--vscode-editor-foreground)]"
           >
-            <!-- 左侧：算子调试文案与要点 -->
-            <div class="w-1/2 pr-8 max-[992px]:w-full max-[992px]:pr-0">
-              <h3 class="text-[20px] font-semibold mb-6">
-                {{ t('web.welcome.sectionDebug') }}
-              </h3>
-              <p class="text-[12px] leading-relaxed mb-6 max-[576px]:text-xs text-[var(--vscode-descriptionForeground)]">
-                {{ t('web.welcome.sectionDebugDesc') }}
-              </p>
-              <ul class="feature-list mb-6 grid grid-cols-2 gap-y-1 list-disc list-inside text-[15px] font-semibold leading-[32px] max-[576px]:grid-cols-1 text-[var(--vscode-editor-foreground)]">
-                <li>{{ t('web.welcome.featureDebugBreakpoint') }}</li>
-                <li>{{ t('web.welcome.featureDebugStep') }}</li>
-                <li>{{ t('web.welcome.featureDebugMemory') }}</li>
-                <li>{{ t('web.welcome.featureDebugCoreSwitch') }}</li>
-                <li>{{ t('web.welcome.featureDebugInspect') }}</li>
-                <li>{{ t('web.welcome.featureDebugCoredump') }}</li>
-              </ul>
-            </div>
+            <p class="welcome-step-intro mb-[18px] max-[992px]:mb-[13px] max-[576px]:mb-2 w-full shrink-0 text-[15px] max-[576px]:text-[14px] leading-relaxed text-[var(--vscode-descriptionForeground)]">
+              {{ t('web.welcome.sectionDebugDesc') }}
+            </p>
 
-            <!-- 右侧：算子调试示意图 -->
-            <div class="w-1/2 max-[992px]:w-full max-[992px]:mt-6">
+            <div class="w-full min-w-0">
               <video
                 :src="debug"
                 autoplay
                 loop
                 muted
                 playsinline
-                class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
+                class="welcome-media-full object-contain transition-opacity duration-300 transform"
               />
             </div>
           </div>
 
-          <!-- Step 3: 算子异常检测 -->
+          <!-- Step 3: 算子异常检测（简介 → 媒体） -->
           <div
             v-show="currentStep === 3"
-            class="flex-1 box-border flex min-w-0 text-[var(--vscode-editor-foreground)]"
+            class="welcome-step-body -mt-3 flex-1 box-border flex flex-col gap-0 min-w-0 w-full text-[var(--vscode-editor-foreground)]"
           >
-            <!-- 左侧：算子异常检测介绍 -->
-            <div class="w-1/2 pr-8 max-[992px]:w-full max-[992px]:pr-0">
-              <h3 class="text-[20px] font-semibold mb-6">
-                {{ t('web.welcome.sectionSanitizer') }}
-              </h3>
-              <p class="text-[12px] leading-relaxed mb-6 max-[576px]:text-xs text-[var(--vscode-descriptionForeground)]">
-                {{ t('web.welcome.sectionSanitizerDesc') }}
-              </p>
-              <ul class="feature-list mb-6 list-disc list-inside text-[15px] font-semibold leading-[32px] text-[var(--vscode-editor-foreground)]">
-                <li>{{ t('web.welcome.featureMemory') }}</li>
-                <li>{{ t('web.welcome.featureRace') }}</li>
-                <li>{{ t('web.welcome.featureUninit') }}</li>
-              </ul>
-              <p class="text-[12px] leading-relaxed mb-6 max-[576px]:text-xs text-[var(--vscode-descriptionForeground)]" v-html="t('web.welcome.sanitizerSteps')" />
-              <!-- <a-button
-                type="link"
-                class="!p-0 !h-auto text-[12px]"
-              >
-                查看使用指南
-              </a-button> -->
-            </div>
+            <p class="welcome-step-intro mb-1 w-full shrink-0 text-[15px] max-[576px]:text-[14px] leading-relaxed text-[var(--vscode-descriptionForeground)]">
+              {{ t('web.welcome.sectionSanitizerDesc') }}
+            </p>
 
-            <!-- 右侧：异常检测 2 个 Tab -->
-            <div class="w-1/2 max-[992px]:w-full max-[992px]:mt-6">
+            <div class="w-full min-w-0 welcome-step-media-tabs">
               <a-tabs v-model:activeKey="checkTabKey">
                 <a-tab-pane key="select" :tab="t('web.welcome.tabSelectCheckContent')">
                   <video
@@ -413,7 +293,7 @@
                     loop
                     muted
                     playsinline
-                    class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
+                    class="welcome-media-full object-contain transition-opacity duration-300 transform"
                   />
                 </a-tab-pane>
                 <a-tab-pane key="result" :tab="t('web.welcome.tabViewCheckResult')">
@@ -423,41 +303,23 @@
                     loop
                     muted
                     playsinline
-                    class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
+                    class="welcome-media-full object-contain transition-opacity duration-300 transform"
                   />
                 </a-tab-pane>
               </a-tabs>
             </div>
           </div>
 
-          <!-- Step 4: 算子性能调优 -->
+          <!-- Step 4: 算子性能调优（简介 → 媒体） -->
           <div
             v-show="currentStep === 4"
-            class="flex-1 box-border flex min-w-0 text-[var(--vscode-editor-foreground)]"
+            class="welcome-step-body -mt-3 flex-1 box-border flex flex-col gap-0 min-w-0 w-full text-[var(--vscode-editor-foreground)]"
           >
-            <!-- 左侧：算子性能调优介绍 -->
-            <div class="w-1/2 pr-8 max-[992px]:w-full max-[992px]:pr-0">
-              <h3 class="text-[20px] font-semibold mb-6">
-                {{ t('web.welcome.sectionPerformance') }}
-              </h3>
-              <p class="text-[12px] leading-relaxed mb-6 max-[576px]:text-xs text-[var(--vscode-descriptionForeground)]">
-                {{ t('web.welcome.sectionPerformanceDesc') }}
-              </p>
-              <ul class="feature-list mb-6 list-disc list-inside text-[15px] font-semibold leading-[32px] text-[var(--vscode-editor-foreground)]">
-                <li>{{ t('web.welcome.featureOnboard') }}</li>
-                <li>{{ t('web.welcome.featureSimulation') }}</li>
-              </ul>
-              <p class="text-[12px] leading-relaxed mb-6 max-[576px]:text-xs text-[var(--vscode-descriptionForeground)]" v-html="t('web.welcome.performanceSteps')" />
-              <!-- <a-button
-                type="link"
-                class="!p-0 !h-auto text-[12px]"
-              >
-                查看使用指南
-              </a-button> -->
-            </div>
+            <p class="welcome-step-intro mb-1 w-full shrink-0 text-[15px] max-[576px]:text-[14px] leading-relaxed text-[var(--vscode-descriptionForeground)]">
+              {{ t('web.welcome.sectionPerformanceDesc') }}
+            </p>
 
-            <!-- 右侧：性能调优 2 个 Tab -->
-            <div class="w-1/2 max-[992px]:w-full max-[992px]:mt-6">
+            <div class="w-full min-w-0 welcome-step-media-tabs">
               <a-tabs v-model:activeKey="perfTabKey">
                 <a-tab-pane key="select" :tab="t('web.welcome.tabSelectAnalysisContent')">
                   <video
@@ -466,7 +328,7 @@
                     loop
                     muted
                     playsinline
-                    class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
+                    class="welcome-media-full object-contain transition-opacity duration-300 transform"
                   />
                 </a-tab-pane>
                 <a-tab-pane key="result" :tab="t('web.welcome.tabViewAnalysisResult')">
@@ -476,33 +338,12 @@
                     loop
                     muted
                     playsinline
-                    class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
+                    class="welcome-media-full object-contain transition-opacity duration-300 transform"
                   />
                 </a-tab-pane>
               </a-tabs>
             </div>
           </div>
-        </div>
-
-        <!-- 底部步骤导航 -->
-        <div
-          class="w-full flex justify-center items-center gap-6 mt-4 text-[12px]"
-          @click.stop
-        >
-          <span
-            v-if="currentStep > 0"
-            class="welcome-link cursor-pointer transition-colors"
-            @click="goPrevStep"
-          >
-            {{ t('web.welcome.prevStep') }}
-          </span>
-          <span
-            v-if="currentStep < 4"
-            class="welcome-link cursor-pointer transition-colors"
-            @click="goNextStep"
-          >
-            {{ t('web.welcome.nextStep') }}
-          </span>
         </div>
       </div>
     </div>
@@ -510,10 +351,14 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { t } from 'i18next';
 import { useTheme } from '@web/composables/use-theme';
-import { OperatorProjectViewId, type OperatorProjectViewIdValue } from '@shared/project-type-view-id';
+import {
+  OperatorProjectViewId,
+  isOperatorProjectViewId,
+  type OperatorProjectViewIdValue,
+} from '@shared/project-type-view-id';
 import { getProjectTypeSupportEnabled } from '@web/apis';
 import settingIconRaw from '@/assets/svg/setting.svg?raw';
 import buildIconRaw from '@/assets/svg/build.svg?raw';
@@ -556,6 +401,16 @@ const perfTabKey = ref('select');
 
 // 新建算子工程：当前选中的工程类型（<<<>>> / 标准自定义 / pyasc / triton），默认 <<<>>>
 const selectedProjectTypeId = ref<OperatorProjectViewIdValue>(OperatorProjectViewId.CANN);
+
+const projectTypeTabKey = computed<string>({
+  get: () => String(selectedProjectTypeId.value),
+  set: (key: string) => {
+    const id = Number(key);
+    if (isOperatorProjectViewId(id)) {
+      selectedProjectTypeId.value = id;
+    }
+  },
+});
 
 // <<<>>> 算子工程模板选择（helloworld / addn / torch_library）
 const selectedTemplate = ref<'helloworld' | 'addn' | 'torch_library_template' | 'triton_vector_add'>(
@@ -616,18 +471,6 @@ const handleAscendCProject = () => {
 const onStepChange = (step: number) => {
   currentStep.value = step;
   console.log('step changed: ', step);
-};
-
-const goPrevStep = () => {
-  if (currentStep.value > 0) {
-    currentStep.value -= 1;
-  }
-};
-
-const goNextStep = () => {
-  if (currentStep.value < 4) {
-    currentStep.value += 1;
-  }
 };
 
 onMounted(async () => {
@@ -806,12 +649,157 @@ onMounted(async () => {
   color: var(--vscode-editor-foreground);
 }
 
-.welcome-link {
-  color: var(--vscode-textLink-foreground);
+.welcome-step-media-tabs {
+  width: 100%;
+  min-width: 0;
 }
 
-.welcome-link:hover {
-  color: var(--vscode-textLink-activeForeground);
+.welcome-new-project-tabs :deep(.ant-tabs-left) {
+  display: flex;
+  align-items: stretch;
+  min-height: 0;
+  flex: 1;
+}
+
+.welcome-new-project-tabs :deep(.ant-tabs-left > .ant-tabs-nav) {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  width: auto;
+  min-width: 10.5rem;
+  max-width: min(22rem, 46%);
+  height: auto;
+  max-height: none;
+  margin: 0 12px 0 0;
+}
+
+.welcome-new-project-tabs :deep(.ant-tabs-left .ant-tabs-nav-wrap) {
+  flex: none !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.welcome-new-project-tabs :deep(.ant-tabs-left .ant-tabs-nav-wrap::before),
+.welcome-new-project-tabs :deep(.ant-tabs-left .ant-tabs-nav-wrap::after) {
+  display: none !important;
+}
+
+.welcome-new-project-tabs :deep(.ant-tabs-left .ant-tabs-nav-list) {
+  flex-direction: column;
+  width: 100%;
+  align-items: stretch;
+  transform: none !important;
+}
+
+.welcome-new-project-tabs :deep(.ant-tabs-left .ant-tabs-nav-operations) {
+  display: none !important;
+}
+
+.welcome-new-project-tabs :deep(.ant-tabs-left .ant-tabs-tab) {
+  flex: 0 0 auto !important;
+  width: 100%;
+  justify-content: flex-start;
+  margin: 0 0 2px 0 !important;
+  padding: 8px 10px;
+  min-width: 0;
+  overflow: visible;
+}
+
+.welcome-new-project-tabs :deep(.ant-tabs-left .ant-tabs-tab-btn) {
+  max-width: none;
+  width: 100%;
+  overflow: visible;
+  text-overflow: unset;
+  white-space: normal;
+  text-align: left;
+  word-break: break-word;
+  font-size: 15px;
+  line-height: 1.625;
+}
+
+.welcome-new-project-tabs :deep(.ant-tabs-left .ant-tabs-content-holder) {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.welcome-new-project-tabs :deep(.ant-tabs-left .ant-tabs-tabpane) {
+  padding: 0 0 0 4px;
+}
+
+.welcome-new-project-tab-desc {
+  font-size: 15px;
+  line-height: 1.625;
+  color: var(--vscode-descriptionForeground);
+}
+
+.welcome-new-project-tabs :deep(.sample-radio-group .ant-radio-wrapper) {
+  font-size: 15px;
+  line-height: 1.625;
+}
+
+.welcome-new-project-tabs :deep(.ant-tag) {
+  font-size: 15px;
+  line-height: 1.625;
+}
+
+@media (max-width: 576px) {
+  .welcome-new-project-tabs :deep(.ant-tabs-left .ant-tabs-tab-btn) {
+    font-size: 14px;
+  }
+
+  .welcome-new-project-tab-desc {
+    font-size: 14px;
+  }
+
+  .welcome-new-project-tabs :deep(.sample-radio-group .ant-radio-wrapper) {
+    font-size: 14px;
+  }
+
+  .welcome-new-project-tabs :deep(.ant-tag) {
+    font-size: 14px;
+  }
+}
+
+.welcome-step-media-tabs.welcome-new-project-tabs :deep(.ant-tabs-left .ant-tabs-content-holder) {
+  width: auto;
+}
+
+.welcome-step-media-tabs :deep(.ant-tabs-content-holder),
+.welcome-step-media-tabs :deep(.ant-tabs-content),
+.welcome-step-media-tabs :deep(.ant-tabs-tabpane) {
+  width: 100%;
+}
+
+.welcome-media-full {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+}
+
+.welcome-step-media-tabs :deep(.ant-image) {
+  display: block;
+  width: 100%;
+}
+
+.welcome-step-media-tabs :deep(.ant-image-img) {
+  width: 100% !important;
+  height: auto !important;
+  object-fit: contain;
+}
+
+.welcome-step-media-tabs.welcome-new-project-tabs :deep(.ant-image) {
+  display: inline-block !important;
+  width: auto !important;
+  max-width: none;
+}
+
+.welcome-step-media-tabs.welcome-new-project-tabs :deep(.ant-image-img) {
+  width: auto !important;
+  max-width: none !important;
+  height: auto !important;
+  object-fit: none;
 }
 
 /* Responsive adjustments for buttons that are hard to do purely with utility classes inline without getting messy */
