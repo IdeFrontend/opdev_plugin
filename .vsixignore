@@ -14,7 +14,7 @@
 !web/src/assets/**
 !package.json
 !package.nls.json
-!package.nls.zh-cn.json
+!package.nls.en.json
 !README.md
 !README.en.md
 !LICENSE

@@ -73,7 +73,7 @@ For debugging:
 | `shared/` | Shared code and i18n (e.g. `shared/i18n` for en / zh-cn). |
 | `out/` | Compiled extension output (generated). |
 | `package.json` | Extension manifest and root scripts. |
-| `package.nls.json` / `package.nls.zh-cn.json` | Localized VS Code UI strings (commands, views, settings). |
+| `package.nls.json` (Chinese default) / `package.nls.en.json` | Localized VS Code UI strings (commands, views, settings). |
 
 ## Lint and type-check
 
