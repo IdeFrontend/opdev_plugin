@@ -250,6 +250,11 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
   readonly onDidChangeTreeData = this.onDidChangeTreeDataEmitter.event;
 
+  private readonly onDidChangePerformanceTreeDataEmitter = new vscode.EventEmitter<void>();
+
+  /** Performance results panel only — not fired when the Ops Operate flow tree updates. */
+  readonly onDidChangePerformanceTreeData = this.onDidChangePerformanceTreeDataEmitter.event;
+
   private state: OperateSidebarState = { ...INITIAL_STATE };
 
   private selectionWorkspaceKey = '';
@@ -269,6 +274,12 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   private readonly sanitizerGroupNodesCache = new Map<string, OperateNode[]>();
   private readonly sanitizerGroupMessageNodesCache = new Map<string, OperateNode[]>();
   private readonly performanceNodesById = new Map<string, OperateNode[]>();
+  private readonly performanceReportRootNodesByKey = new Map<string, OperateNode>();
+  private performanceResultsTreeView?: vscode.TreeView<OperateNode>;
+
+  setPerformanceResultsTreeView(treeView: vscode.TreeView<OperateNode>): void {
+    this.performanceResultsTreeView = treeView;
+  }
 
   private invalidateSanitizerPresentationCaches(): void {
     this.sanitizerReportRootNodesCache = undefined;
@@ -540,6 +551,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     }
 
     this.onDidChangeTreeDataEmitter.fire();
+    this.onDidChangePerformanceTreeDataEmitter.fire();
     return { showOperatorSearch, showOperatorProjects };
   }
 
@@ -1560,7 +1572,17 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     });
   }
 
-  async refreshPerformanceReports(): Promise<void> {
+  /** Root report rows have no parent; required for `TreeView.reveal` to update selection. */
+  getPerformanceTreeParent(element: OperateNode): vscode.ProviderResult<OperateNode | null | undefined> {
+    if (element.nodeId === 'performanceReportItem' && (element.id ?? '').startsWith('performance-report:')) {
+      return null;
+    }
+    return undefined;
+  }
+
+  /** Reload performance reports from disk/config; optionally focus and expand a newly added row. */
+  async refreshPerformanceReports(options?: { focusIfNew?: boolean }): Promise<void> {
+    const previousKeys = new Set(this.state.performance.reports.map((item) => item.key));
     try {
       const result = await performanceMethods.getRunData({
         sort: {
@@ -1576,7 +1598,63 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       this.state.performance.reports = [];
     }
     this.performanceNodesById.clear();
-    this.onDidChangeTreeDataEmitter.fire();
+    for (const key of [...this.performanceReportRootNodesByKey.keys()]) {
+      if (!this.state.performance.reports.some((item) => item.key === key)) {
+        this.performanceReportRootNodesByKey.delete(key);
+      }
+    }
+
+    const focusReportKey = options?.focusIfNew
+      ? this.findNewPerformanceReportKey(previousKeys)
+      : undefined;
+    this.onDidChangePerformanceTreeDataEmitter.fire();
+
+    if (focusReportKey) {
+      await OperateTreeProvider.yieldToUi();
+      await this.revealPerformanceReport(focusReportKey);
+    }
+  }
+
+  private findNewPerformanceReportKey(previousKeys: Set<string>): string | undefined {
+    const newReports = this.state.performance.reports.filter((item) => !previousKeys.has(item.key));
+    if (newReports.length === 0) {
+      return undefined;
+    }
+    if (previousKeys.size === 0 && newReports.length > 1) {
+      return undefined;
+    }
+    return newReports.reduce((latest, item) => (
+      item.timestamp > latest.timestamp ? item : latest
+    )).key;
+  }
+
+  private async revealPerformanceReport(reportKey: string): Promise<void> {
+    this.state.performance.selectedReportKey = reportKey;
+    const node = this.getPerformanceReportNodes().find((item) => {
+      const report = this.getPerformanceReportByKey(reportKey);
+      return report && item.id === `performance-report:${encodeURIComponent(report.key)}`;
+    }) ?? this.performanceReportRootNodesByKey.get(reportKey);
+    const treeView = this.performanceResultsTreeView;
+    if (!node || !treeView) {
+      await this.syncPerformanceSelectionContext();
+      return;
+    }
+
+    node.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
+    try {
+      await vscode.commands.executeCommand('opdevtoolsPerformanceResultsTree.focus');
+      await treeView.reveal(node, { select: true, focus: true, expand: true });
+    }
+    catch (error) {
+      console.warn('[OperateTreeProvider.revealPerformanceReport] reveal failed:', error);
+    }
+    await this.syncPerformanceSelectionContext();
+  }
+
+  private async syncPerformanceSelectionContext(): Promise<void> {
+    const selected = this.getSelectedPerformanceReport();
+    await vscode.commands.executeCommand('setContext', 'opDevtools.performanceReportSelected', Boolean(selected));
+    await vscode.commands.executeCommand('setContext', 'opDevtools.performanceSelectedReportMarked', Boolean(selected?.marked));
   }
 
   /**
@@ -1586,13 +1664,13 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     this.state.performance.sortOrder = this.state.performance.sortOrder === 'asc' ? 'desc' : 'asc';
     this.sortPerformanceReportsInPlace();
     this.performanceNodesById.clear();
-    this.onDidChangeTreeDataEmitter.fire();
+    this.onDidChangePerformanceTreeDataEmitter.fire();
   }
 
   setPerformanceMarkedOnly(markedOnly: boolean): void {
     this.state.performance.markedOnly = markedOnly;
     this.performanceNodesById.clear();
-    this.onDidChangeTreeDataEmitter.fire();
+    this.onDidChangePerformanceTreeDataEmitter.fire();
   }
 
   isPerformanceMarkedOnlyEnabled(): boolean {
@@ -1605,7 +1683,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
   selectPerformanceReport(reportKey: string): void {
     this.state.performance.selectedReportKey = reportKey;
-    this.onDidChangeTreeDataEmitter.fire();
+    void this.syncPerformanceSelectionContext();
   }
 
   getSelectedPerformanceReport(): PerformanceExecutionRecord | undefined {
@@ -1623,7 +1701,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     }
     const nextMarked = !Boolean(report.marked);
     report.marked = nextMarked;
-    this.onDidChangeTreeDataEmitter.fire();
+    this.onDidChangePerformanceTreeDataEmitter.fire();
     try {
       performanceMethods.toggleRecordMark({
         key: reportKey,
@@ -1632,7 +1710,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     }
     catch (error) {
       report.marked = !nextMarked;
-      this.onDidChangeTreeDataEmitter.fire();
+      this.onDidChangePerformanceTreeDataEmitter.fire();
       vscode.window.showErrorMessage(t('web.perf.markFailed'));
       console.error('Failed to toggle performance mark:', error);
     }
@@ -1684,6 +1762,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   private getPerformanceReportNodes(): OperateNode[] {
     const reports = this.getVisiblePerformanceReports();
     if (reports.length === 0) {
+      this.performanceReportRootNodesByKey.clear();
       return [
         this.createItem(
           'performanceReportItem',
@@ -1698,18 +1777,34 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         ? 'opdevtools.performanceReportItem.marked'
         : 'opdevtools.performanceReportItem.unmarked';
       const description = this.formatPerformanceTimestamp(report.timestamp);
-      const node = this.createItem(
-        'performanceReportItem',
-        report.title,
-        undefined,
-        vscode.TreeItemCollapsibleState.Collapsed,
-        contextValue,
-        report.marked
+      const nodeId = `performance-report:${encodeURIComponent(report.key)}`;
+      let node = this.performanceReportRootNodesByKey.get(report.key);
+      if (!node) {
+        node = this.createItem(
+          'performanceReportItem',
+          report.title,
+          undefined,
+          vscode.TreeItemCollapsibleState.Collapsed,
+          contextValue,
+          report.marked
+            ? this.getCustomProductIcon('flag-filled')
+            : undefined,
+          description,
+          nodeId,
+        );
+        this.performanceReportRootNodesByKey.set(report.key, node);
+      }
+      else {
+        node.label = report.title;
+        node.description = description;
+        node.contextValue = contextValue;
+        node.iconPath = report.marked
           ? this.getCustomProductIcon('flag-filled')
-          : undefined,
-        description,
-        `performance-report:${encodeURIComponent(report.key)}`,
-      );
+          : undefined;
+        if (this.state.performance.selectedReportKey !== report.key) {
+          node.collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
+        }
+      }
       this.performanceNodesById.set(node.id ?? '', []);
       return node;
     });

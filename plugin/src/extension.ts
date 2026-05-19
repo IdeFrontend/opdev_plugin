@@ -904,8 +904,9 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
     showCollapseAll: false,
   });
   const performanceResultsPanelProvider: vscode.TreeDataProvider<OperateNode> = {
-    onDidChangeTreeData: operateTreeProvider.onDidChangeTreeData,
+    onDidChangeTreeData: operateTreeProvider.onDidChangePerformanceTreeData,
     getTreeItem: (element) => operateTreeProvider.getTreeItem(element),
+    getParent: (element) => operateTreeProvider.getPerformanceTreeParent(element),
     resolveTreeItem: (item, element, token) => operateTreeProvider.resolveTreeItem(item, element as OperateNode, token),
     getChildren: (element) => {
       if (!element) {
@@ -921,6 +922,7 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
     treeDataProvider: performanceResultsPanelProvider,
     showCollapseAll: false,
   });
+  operateTreeProvider.setPerformanceResultsTreeView(performanceResultsTreeView);
   context.subscriptions.push(
     performanceResultsTreeView.onDidChangeSelection(async (event) => {
       const node = event.selection[0];
@@ -1095,7 +1097,7 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
           { operatorNames },
           dispatchStartOnBoard,
           async () => {
-            await operateTreeProvider.refreshPerformanceReports();
+            await operateTreeProvider.refreshPerformanceReports({ focusIfNew: true });
           },
         );
       });
@@ -1127,7 +1129,7 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
           { operatorNames },
           dispatchStartSimulate,
           async () => {
-            await operateTreeProvider.refreshPerformanceReports();
+            await operateTreeProvider.refreshPerformanceReports({ focusIfNew: true });
           },
         );
       });
@@ -2394,8 +2396,8 @@ const myExtension = vscode.extensions.getExtension('publisher.extensionName');
 
   const flashPerformanceRunData = vscode.commands.registerCommand(
     COMMAND_FLASH_PERFORMANCE_RUN_DATA,
-    async () => {
-      await operateTreeProvider.refreshPerformanceReports();
+    async (options?: { focusIfNew?: boolean }) => {
+      await operateTreeProvider.refreshPerformanceReports(options);
     },
   );
 

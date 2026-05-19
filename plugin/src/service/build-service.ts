@@ -654,7 +654,7 @@ export class BuildService {
       }
 
       vscode.window.showInformationMessage(t('build.simulationSuccess'));
-      vscode.commands.executeCommand('huawei-op-devtools.flashPerformanceRunData');
+      await vscode.commands.executeCommand('huawei-op-devtools.flashPerformanceRunData', { focusIfNew: true });
     }
     catch (e: unknown) {
       vscode.window.showErrorMessage(t('build.getSimulationCommandFailed', { error: (e as Error).message }));
@@ -775,7 +775,7 @@ export class BuildService {
       }
 
       vscode.window.showInformationMessage(t('build.onBoardSuccess'));
-      vscode.commands.executeCommand('huawei-op-devtools.flashPerformanceRunData');
+      await vscode.commands.executeCommand('huawei-op-devtools.flashPerformanceRunData', { focusIfNew: true });
     }
     catch (e: unknown) {
       vscode.window.showErrorMessage(t('build.getOnBoardCommandFailed', { error: (e as Error).message }));
