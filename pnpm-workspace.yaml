@@ -3,7 +3,6 @@ packages:
   - 'web'
   - 'shared'
 allowBuilds:
-  '@playwright/browser-chromium': true
   '@vscode/vsce-sign': true
   core-js: true
   esbuild: true
