@@ -588,7 +588,7 @@ export class BuildService {
   /**
    * Start simulation analysis
    */
-  async startSimulate(params: { operatorNames?: string } = {}): Promise<void> {
+  async startSimulate(params: { operatorNames?: string; compileOption?: string } = {}): Promise<void> {
     if (!(await this.guardSupportedProjectTypeForCurrentProject())) {
       return;
     }
@@ -647,7 +647,7 @@ export class BuildService {
 
     if (behavior.requiresBuildBeforeAnalysis) {
       const simConfigId = Number(simulatorItem?.config_id);
-      const buildCommand = getBuildOpCommand(simConfigId, '', params.operatorNames);
+      const buildCommand = getBuildOpCommand(simConfigId, params.compileOption, params.operatorNames);
       const buildRes = await executeOperatorCommand(
         buildCommand,
         buildOperatorSpawnContext({
@@ -675,7 +675,7 @@ export class BuildService {
         );
         const exampleBuildCommand = getBuildExampleCommand(
           Number(exConfigId),
-          exampleCompileOption,
+          params.compileOption ?? exampleCompileOption,
           params.operatorNames,
         );
         const exampleBuildRes = await executeOperatorCommand(
@@ -731,7 +731,7 @@ export class BuildService {
   /**
    * Start board analysis
    */
-  async startOnBoard(params: { operatorNames?: string } = {}): Promise<void> {
+  async startOnBoard(params: { operatorNames?: string; compileOption?: string } = {}): Promise<void> {
     if (!(await this.guardSupportedProjectTypeForCurrentProject())) {
       return;
     }
@@ -790,7 +790,7 @@ export class BuildService {
     const configId = await this.getOnBoardConfigId();
 
     if (behavior.requiresBuildBeforeAnalysis) {
-      const buildCommand = getBuildOpCommand(Number(configId), '', params.operatorNames);
+      const buildCommand = getBuildOpCommand(Number(configId), params.compileOption, params.operatorNames);
       const buildRes = await executeOperatorCommand(
         buildCommand,
         buildOperatorSpawnContext({
@@ -813,7 +813,11 @@ export class BuildService {
 
       if (await isRootStandardCustom()) {
         const exConfigId = await this.getBuildExampleConfigId();
-        const exampleBuildCommand = getBuildExampleCommand(Number(exConfigId), '', params.operatorNames);
+        const exampleBuildCommand = getBuildExampleCommand(
+          Number(exConfigId),
+          params.compileOption,
+          params.operatorNames,
+        );
         const exampleBuildRes = await executeOperatorCommand(
           exampleBuildCommand,
           buildOperatorSpawnContext({

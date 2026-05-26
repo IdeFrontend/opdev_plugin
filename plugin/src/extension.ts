@@ -146,6 +146,7 @@ import { OperatorProjectIconTheme } from './class/operator-project-icon-theme';
 import { welcomeMethods } from './controller/welcome-controller';
 import { registerSidebarContextsRefresh } from './helpers/sidebar-context-refresh';
 import { getDevtoolConfigPath, getIdeConfigDirName } from './helpers/ide-config-dir';
+import { getCompileOptionForSelectedOperators } from './helpers/compile-options';
 import {
   dispatchStartBuild,
   dispatchStartRun,
@@ -691,26 +692,13 @@ export async function activate(context: vscode.ExtensionContext) {
     return await homeMethods.getSelectedOperators();
   };
 
-  const getCompileOptionFromSelection = async (): Promise<string | undefined> => {
-    const selectedIds = await homeMethods.getSelectedOperatorIds() || [];
-    if (selectedIds.length === 0) {
-      return undefined;
-    }
-    const multiple = await homeMethods.checkMultipleOperators();
-    if (!multiple.isStandardCustom || !multiple.operators) {
-      return undefined;
-    }
-    const selectedSet = new Set(selectedIds);
-    const hasExperimental = multiple.operators.some((op) => selectedSet.has(op.id) && op.isExperimental);
-    return hasExperimental ? '--experimental' : undefined;
-  };
-
   const sidebarBuildCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_BUILD,
     async () =>
       operateTreeProvider.runFlowAction('build', async () => {
         const operatorNames = await getOperatorNamesFromSelection();
-        await dispatchStartBuild({ operatorNames });
+        const compileOption = await getCompileOptionForSelectedOperators();
+        await dispatchStartBuild({ operatorNames, compileOption });
       }),
   );
 
@@ -720,7 +708,7 @@ export async function activate(context: vscode.ExtensionContext) {
       await operateTreeProvider.runFlowAction('run', async () => {
         if (operateTreeProvider.hasMultipleOperators()) {
           const operatorNames = await getOperatorNamesFromSelection();
-          const compileOption = await getCompileOptionFromSelection();
+          const compileOption = await getCompileOptionForSelectedOperators();
           const operatorType = operateTreeProvider.isStandardCustomContext() ? 'standard-custom' : undefined;
           await dispatchStartBuildExample({
             operatorNames,
@@ -802,6 +790,7 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
       const operatorNames = await getOperatorNamesFromSelection();
+      const compileOption = await getCompileOptionForSelectedOperators();
       const showQuickOptions = vscode.workspace.getConfiguration('op-devtools')
         .get<boolean>('performanceTuning.onBoard.showQuickOptions', true) ?? true;
       if (showQuickOptions) {
@@ -816,7 +805,7 @@ export async function activate(context: vscode.ExtensionContext) {
         }
         await dispatchEnqueueNativeOperatorAction(
           'onboard',
-          { operatorNames },
+          { operatorNames, compileOption },
           dispatchStartOnBoard,
           async () => {
             await operateTreeProvider.refreshPerformanceReports({ focusIfNew: true });
@@ -834,6 +823,7 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
       const operatorNames = await getOperatorNamesFromSelection();
+      const compileOption = await getCompileOptionForSelectedOperators();
       const showQuickOptions = vscode.workspace.getConfiguration('op-devtools')
         .get<boolean>('performanceTuning.simulation.showQuickOptions', true) ?? true;
       if (showQuickOptions) {
@@ -848,7 +838,7 @@ export async function activate(context: vscode.ExtensionContext) {
         }
         await dispatchEnqueueNativeOperatorAction(
           'simulation',
-          { operatorNames },
+          { operatorNames, compileOption },
           dispatchStartSimulate,
           async () => {
             await operateTreeProvider.refreshPerformanceReports({ focusIfNew: true });

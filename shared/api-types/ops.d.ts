@@ -97,10 +97,12 @@ export type StartUtTestParams = {
 
 export type StartSimulateParams = {
   operatorNames?: string; // 算子名称，多个用逗号分隔
+  compileOption?: string;
 };
 
 export type StartOnBoardParams = {
   operatorNames?: string; // 算子名称，多个用逗号分隔
+  compileOption?: string;
 };
 
 export type StartSanitizerParams = {

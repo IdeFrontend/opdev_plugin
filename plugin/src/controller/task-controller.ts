@@ -22,6 +22,7 @@ import {
 } from '@plugin/domain';
 import { OperatorProjectType } from '@plugin/domain/services/operator-project-detector';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
+import { getCompileOptionForSelectedOperators } from '@plugin/helpers/compile-options';
 
 // Global task manager: used to track and terminate executing tasks
 let currentExecutor: CommandExecutor | null = null;
@@ -438,11 +439,13 @@ export const taskMethods = {
       }
 
       const operatorNames = await homeMethods.getSelectedOperators();
+      const compileOption = await getCompileOptionForSelectedOperators();
 
       // Compile before debugging, use the --debug parameter
       await buildService.startBuild({
         scriptField: 'npu_debug_script',
         operatorNames: operatorNames || undefined,
+        compileOption,
       });
       await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
 
