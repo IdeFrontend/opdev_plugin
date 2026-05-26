@@ -8,7 +8,7 @@
   "config.op-devtools.operatorSupport.triton.description": "启用 Triton 算子支持",
   "config.op-devtools.debugMode.description": "启用调试功能（实验性功能）",
   "config.op-devtools.compileAndDeploy.buildConfig.operatorNameToCompile.description": "要编译的算子名称",
-  "config.op-devtools.compileAndDeploy.buildConfig.deployCommandOrRunCommand.description": "算子部署命令或算子运行命令行",
+  "config.op-devtools.compileAndDeploy.buildConfig.deployCommandOrRunCommand.description": "算子 .run 包路径或通配符（如 build_out/*.run），用于 Ascend 编译后部署；勿在此填写 --force（插件会在安装 .run 时自动添加）。Cann 运行示例时作为测试二进制路径。",
   "config.op-devtools.compileAndDeploy.buildConfig.compileCommand.description": "编译命令行",
   "config.op-devtools.compileAndDeploy.buildConfig.utTestCompileCommand.description": "UT测试编译命令行",
   "config.op-devtools.compileAndDeploy.buildConfig.npuDebugCompileCommand.description": "NPU调试编译命令行",

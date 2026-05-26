@@ -18,8 +18,7 @@ This folder groups open and closed reports by theme, documents their current sta
 
 | Document | Issues | Priority |
 |----------|--------|----------|
-| [standard-custom-workflow.md](./standard-custom-workflow.md) | [#8](https://gitcode.com/opdevtools/plugin_release/issues/8), [#9](https://gitcode.com/opdevtools/plugin_release/issues/9), [#10](https://gitcode.com/opdevtools/plugin_release/issues/10) | P0 |
-| [verify-issues-8-9-10.md](./verify-issues-8-9-10.md) | Verification checklist + automated test commands for #8–#10 | P0 |
+| [standard-custom-workflow.md](./standard-custom-workflow.md) | [#8](https://gitcode.com/opdevtools/plugin_release/issues/8), [#9](https://gitcode.com/opdevtools/plugin_release/issues/9), [#10](https://gitcode.com/opdevtools/plugin_release/issues/10) — design, user guidance, verification | P0 |
 | [a5-environment.md](./a5-environment.md) | [#6](https://gitcode.com/opdevtools/plugin_release/issues/6) | P0 |
 | [profiling-and-insight.md](./profiling-and-insight.md) | [#1](https://gitcode.com/opdevtools/plugin_release/issues/1), [#2](https://gitcode.com/opdevtools/plugin_release/issues/2) | P1 |
 | [config-lifecycle.md](./config-lifecycle.md) | [#11](https://gitcode.com/opdevtools/plugin_release/issues/11) | P1 |

@@ -8,7 +8,7 @@
   "config.op-devtools.operatorSupport.triton.description": "Enable Triton project support",
   "config.op-devtools.debugMode.description": "Enable debug (experimental)",
   "config.op-devtools.compileAndDeploy.buildConfig.operatorNameToCompile.description": "Operator name to compile for the build.",
-  "config.op-devtools.compileAndDeploy.buildConfig.deployCommandOrRunCommand.description": "Deploy command or run command for the operator.",
+  "config.op-devtools.compileAndDeploy.buildConfig.deployCommandOrRunCommand.description": "Path or glob to the .run package (e.g. build_out/*.run) for Ascend deploy after Build. Do not put --force here; the plugin adds it on .run install. Cann run uses this as the test binary path.",
   "config.op-devtools.compileAndDeploy.buildConfig.compileCommand.description": "Compile script or command used for build.",
   "config.op-devtools.compileAndDeploy.buildConfig.utTestCompileCommand.description": "Unit test compile script or command.",
   "config.op-devtools.compileAndDeploy.buildConfig.npuDebugCompileCommand.description": "NPU debug compile script or command.",

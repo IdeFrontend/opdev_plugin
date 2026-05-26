@@ -2,7 +2,8 @@
 
 **Priority:** P0  
 **Reporter cluster:** `devin-cwd` (v1.2.9 / v1.3.0)  
-**Issues:** [#8](https://gitcode.com/opdevtools/plugin_release/issues/8), [#9](https://gitcode.com/opdevtools/plugin_release/issues/9), [#10](https://gitcode.com/opdevtools/plugin_release/issues/10)
+**Issues:** [#8](https://gitcode.com/opdevtools/plugin_release/issues/8), [#9](https://gitcode.com/opdevtools/plugin_release/issues/9), [#10](https://gitcode.com/opdevtools/plugin_release/issues/10)  
+**PR:** [IdeFrontend/mstt#114](https://github.com/IdeFrontend/mstt/pull/114)
 
 ---
 
@@ -16,164 +17,218 @@ flowchart LR
     A[source profile] --> B[cd + build.sh --pkg]
     B --> C[msprof op ...]
   end
-  subgraph expected [Expected chain]
-    D[source profile] --> E[cd + build.sh --pkg]
-    E --> F["deploy .run with --force"]
+  subgraph expected [Next release target]
+    D[source profile] --> E["cd + build.sh --pkg ... --force"]
+    E --> F["build.sh installs .run internally"]
     F --> G[msprof op ...]
   end
 ```
 
+### Design decision (deploy)
+
+**Deploy belongs in `build.sh` or user overrides** — not as a plugin-appended `RUN_FILE=$(find …)` shell fragment on cann onboard/sim.
+
+| Layer | Responsibility |
+|-------|------------------|
+| **New projects (plugin templates)** | Upgraded template `build.sh` may include deploy-after-`--pkg` for pkg/.run flows |
+| **[ops-math `build.sh`](https://gitcode.com/cann/ops-math/blob/master/build.sh)** | **Not auto-migrated** — script is CANN-owned; users fix deploy manually (see [User guidance](#user-guidance) below) |
+| **Plugin command generation** | Pass through flags (`--ops`, `--experimental`, `--force`, …) when defaults are used; do not append `RUN_FILE` for standard-custom cann |
+| **Workspace settings** | Escape hatch: override full compile script per flow (`onBoardCompileCommand`, etc.) |
+
+Historical note: `RUN_FILE` in [`command-utils.ts`](../../plugin/src/domain/utils/command-utils.ts) (2026-03-30) was wired only for **ascend Build** via `getExecutableCommand`; standard-custom onboard/sim never used it.
+
 ---
 
-## Issue #8 — Cannot deploy standard-custom operator (1.2.9)
+## Shipped in PR #114
 
-**State:** Open (created ~6 days ago, updated ~3 days ago)  
+| Issue | Shipped | Not auto-fixed |
+|-------|---------|----------------|
+| **#8** | `--force` after `"$RUN_FILE"` on **Ascend Build** deploy; NPU debug passes **selected operator** | Cann onboard/sim deploy; ops-math without `build.sh` / settings override |
+| **#9** | `--experimental` on Build, Run, On-board, Simulation, Dump tensor, NPU debug pre-build | UT test path (`compileOption` not wired to `getUtTestCommand`) |
+| **#10** | User guidance + [deploy_run_package.sh](../../plugin/templates/snippets/deploy_run_package.sh) snippet | Plugin does **not** append deploy before msprof for cann |
+
+### Key code changes
+
+| Area | Files |
+|------|-------|
+| Deploy `--force` (Ascend Build) | `command-utils.ts`, `ascend-strategy.ts`, `command-utils.spec.ts` |
+| `--experimental` threading | `compile-options.ts`, `extension.ts`, `task-controller.ts`, `build-service.ts` |
+| NPU debug operator selection | `extension.ts`, `build-service.ts` |
+| Deploy snippet for repos | `plugin/templates/snippets/deploy_run_package.sh` |
+
+---
+
+## User guidance
+
+Use when closing or commenting on ops-math / 一站式 deploy issues. **Automatic migration of upstream ops-math `build.sh` is out of scope.**
+
+### Why the plugin stops at `build.sh --pkg`
+
+For standard-custom repos (e.g. ops-math), the plugin runs your repository’s [`build.sh`](https://gitcode.com/cann/ops-math/blob/master/build.sh). Today that builds the `.run` under `build_out/` but does **not** install it before on-board/simulation profiling. The plugin does not append deploy for cann/onboard paths (this is not a regression — see historical note above).
+
+You can fix this in either of two ways:
+
+### Option A — Modify `build.sh` in your ops-math repo (recommended)
+
+Add a deploy helper and call it after a successful `--pkg` build when you need installation (on-board, simulation, or explicit deploy). Adapt paths to your CANN version.
+
+```bash
+# Add near the top or in your pkg completion path:
+deploy_run_package() {
+  local build_out="${BUILD_OUT_DIR:-build_out}"
+  local run_file
+  run_file=$(find "$build_out" -maxdepth 1 -name '*.run' | head -1)
+  if [[ -z "$run_file" ]]; then
+    echo "error: no .run package under $build_out" >&2
+    return 1
+  fi
+  chmod +x "$run_file"
+  if [[ "${DEPLOY_FORCE:-0}" == "1" ]] || [[ " $* " == *" --force "* ]]; then
+    "$run_file" --force
+  else
+    "$run_file"
+  fi
+}
+
+# After your existing --pkg logic produces build_out/*.run, e.g.:
+#   deploy_run_package "$@"
+```
+
+Then run from the plugin or terminal as usual; optionally pass `--force` through your script’s argument parser so the `.run` installer gets it (required on some 一站式 versions per [#8](https://gitcode.com/opdevtools/plugin_release/issues/8)).
+
+**Pros:** Same command in IDE and terminal; no plugin-specific overrides.  
+**Cons:** You maintain the fork/patch until CANN upstream merges the same behavior.
+
+Copy-paste helper: [`plugin/templates/snippets/deploy_run_package.sh`](../../plugin/templates/snippets/deploy_run_package.sh).
+
+### Option B — Override compile commands in VS Code settings
+
+If you cannot change `build.sh` immediately, set the **full** build script for the on-board (or simulation) pre-profiling step in workspace settings. Settings override defaults at runtime ([`operator-project-workspace-config.ts`](../../plugin/src/helpers/operator-project-workspace-config.ts)).
+
+**Settings → Extensions → Huawei OP DevTools → Compile & Deploy**, or edit `.vscode/settings.json`:
+
+```json
+{
+  "op-devtools.compileAndDeploy.buildConfig.onBoardCompileCommand": "bash build.sh --pkg --soc=ascend910b --vendor_name=custom --bisheng_flags=ccec_g --ops=add && RUN_FILE=$(find build_out -maxdepth 1 -name '*.run' | head -1) && chmod +x \"$RUN_FILE\" && \"$RUN_FILE\" --force"
+}
+```
+
+For **simulation**, use `simulationCompileCommand` instead. Replace `ascend910b`, `add`, and flags with your SOC and selected operator. For operators under `experimental/`, add `--experimental` to the `bash build.sh …` portion.
+
+**Pros:** No repo `build.sh` change; per-workspace.  
+**Cons:** Must keep settings in sync with CANN/ops-math updates; duplicated logic if teammates use different machines.
+
+### Related settings (reference)
+
+| Setting | Maps to | Use for |
+|---------|---------|---------|
+| `compileAndDeploy.buildConfig.deployCommandOrRunCommand` | `build_op.target_file` | **Path or glob** for `.run` find/chmod (e.g. `build_out/*.run`), not a full shell with flags. On **Ascend Build**, the plugin appends `"$RUN_FILE" --force` after resolve. **Not** used on cann onboard/sim. |
+| `compileAndDeploy.buildConfig.onBoardCompileCommand` | `on_board` build script | On-board profiling pre-build |
+| `compileAndDeploy.buildConfig.simulationCompileCommand` | `simulate` build script | Simulation pre-build |
+| `compileAndDeploy.buildConfig.compileCommand` | `build_op` build script | Sidebar **Build** |
+| `compileAndDeploy.exampleBuildConfig.runCommand` | `build_example` | Run example (multi-op standard-custom) |
+
+There is **no** separate “deploy only” setting for cann — override the whole compile command string, or fix `build.sh`.
+
+---
+
+## Issue details
+
+### #8 — Cannot deploy standard-custom operator
+
 **Link:** https://gitcode.com/opdevtools/plugin_release/issues/8
 
-### Reported symptoms
+**Reported:** NPU debug missing selected operator; deploy requires `--force` on 一站式.
 
-1. **NPU debug:** command does not specify the currently selected operator.
-2. **Deploy:** new platform validation requires `--force` on the deploy step; deploy fails without it.
+**Shipped:** Ascend Build appends `"$RUN_FILE" --force` via `getExecutableCommand` deploy mode; NPU debug pre-build receives selected `operatorNames`.
 
-### Current codebase behavior
+**Remaining:** Cann onboard/sim deploy still requires Option A or B above. Open questions for reporter: exact 一站式 version, UI path used, whether manual terminal deploy with `--force` succeeds.
 
-- Deploy with `getExecutableCommand()` exists in `ascend-strategy.ts` for Ascend deploy flows but is **not** wired the same way for standard-custom CANN deploy/debug paths.
-- Standard-custom operator selection flows through `extension.ts` (`getOperatorNamesFromSelection`, `operateTreeProvider`) and `welcome-controller.ts` / `workspace-detector-service.ts` for `ops_list` / `experimental_ops_list`.
-- No `--force` flag is appended anywhere in command generation today.
+**Key files:** `cann-strategy.ts`, `ascend-strategy.ts`, `command-utils.ts`, `extension.ts`, `build-service.ts`
 
-### Key files
+### #9 — Missing `--experimental` for experimental operators
 
-| File | Role |
-|------|------|
-| `plugin/src/domain/services/command-strategy/cann-strategy.ts` | CANN build/run/profiler commands |
-| `plugin/src/domain/services/command-strategy/ascend-strategy.ts` | Reference deploy pattern via `getExecutableCommand` |
-| `plugin/src/domain/utils/command-utils.ts` | `getExecutableCommand` with `find *.run` wildcard |
-| `plugin/src/extension.ts` | Sidebar commands, operator selection |
-| `plugin/src/service/workspace-detector-service.ts` | Scans ops-math layout |
-
-### Open questions
-
-1. Plugin version — 1.2.9 only, or also 1.3.0? Exact 一站式 / ops-math platform version?
-2. Paste exact **deploy command** from UI and full error without `--force`.
-3. Where should `--force` apply — `.run` installer only, `build.sh`, or both?
-4. For NPU debug: which operator was selected, and what command was generated (missing `--ops=` / operator name)?
-5. Which UI path — sidebar Deploy, Run, or Debug configuration?
-6. Does manual deploy from terminal with `--force` succeed?
-
-### Implementation plan
-
-1. **Audit standard-custom command entry points** — build, run example, deploy, debug, onboard, simulation — in `cann-strategy.ts`, build service, and debug integration.
-2. **Add deploy step** for standard-custom when `target_file` or `build_out/*.run` pattern is configured; reuse `getExecutableCommand('.../build_out/*.run')` from `command-utils.ts`.
-3. **Append `--force`** to `.run` deploy invocations (confirm exact flag with CANN docs / reporter).
-4. **Pass selected operator** into debug commands — ensure `operatorNames` from selection reaches debug command builder (same pattern as `buildOpCommand` in `cann-strategy.ts` lines 97–100).
-5. **Unit tests** — command string fixtures for standard-custom deploy/debug with `--force`, `--experimental`, and operator name.
-6. **Verify** against ops-math repo layout with reporter's environment.
-
----
-
-## Issue #9 — Missing `--experimental` for experimental operators
-
-**State:** Open (v1.3.0)  
 **Link:** https://gitcode.com/opdevtools/plugin_release/issues/9
 
-### Reported symptoms
+**Reported:** Operators under `experimental/` in ops-math do not get `--experimental` on `build.sh`.
 
-Building operators under the `experimental/` directory in ops-math does not pass `--experimental` to `build.sh`.
+**Shipped:** `getCompileOptionForSelectedOperators()` ([`compile-options.ts`](../../plugin/src/helpers/compile-options.ts)) adds `--experimental` when selected operators have `isExperimental: true` — wired to sidebar **Build**, **Run**, **On-board**, **Simulation**, **Dump tensor**, and **NPU debug** pre-build. `workspace-detector-service.ts` marks `experimental/` operators.
 
-### Current codebase behavior
+**Remaining:** UT test compile path. Open questions: which action failed for reporter, exact operator path, mixed regular + experimental selection.
 
-- `extension.ts` (`getCompileOptionFromSelection`, ~lines 985–996) adds `--experimental` when selected operators have `isExperimental: true` — but **only for sidebar build/run** via `dispatchStartBuild` / `dispatchStartBuildExample`.
-- `workspace-detector-service.ts` marks operators under `experimental/` collections as experimental and stores them in `experimental_ops_list`.
-- Profiler paths (onboard/simulation) and other build entry points may **not** propagate `compileOption`.
+**Key files:** `compile-options.ts`, `extension.ts`, `task-controller.ts`, `cann-strategy.ts`, `workspace-detector-service.ts`
 
-### Key files
+### #10 — Performance tuning missing deploy command
 
-| File | Role |
-|------|------|
-| `plugin/src/extension.ts` | `getCompileOptionFromSelection` |
-| `plugin/src/service/workspace-detector-service.ts` | Experimental operator detection |
-| `plugin/src/domain/services/command-strategy/cann-strategy.ts` | `buildOpCommand` accepts `compileOption` |
-| `plugin/src/controller/welcome-controller.ts` | Updates `experimental_ops_list` on new operators |
-
-### Open questions
-
-1. Which action fails — Build, Run example, On-board, Simulation, or Deploy?
-2. Exact operator path under `experimental/` (e.g. `experimental/image/...`)?
-3. Does the UI show the operator as experimental?
-4. Generated command vs command that works with manual `--experimental`?
-5. Same ops-math workspace as #8/#10?
-6. Single operator selected, or mixed regular + experimental?
-
-### Implementation plan
-
-1. **Centralize experimental flag resolution** — extract `getCompileOptionForOperators(operatorIds)` used by all command dispatchers (build, run, onboard, sim, deploy).
-2. **Ensure `isExperimental` is set** on all code paths that create or refresh operator records from disk scan.
-3. **Thread `compileOption`** through onboard/simulation command builders (currently only build/run example in sidebar).
-4. **Tests** — workspace fixture with `experimental/` operator; assert `--experimental` in build, onboard, and sim command strings.
-
----
-
-## Issue #10 — Performance tuning missing deploy command
-
-**State:** Open (v1.2.9 / v1.3.0)  
 **Link:** https://gitcode.com/opdevtools/plugin_release/issues/10
 
-### Reported symptoms
+**Reported:** On-board/simulation runs only `build.sh --pkg …` without installing `.run` before msprof.
 
-On-board and simulation performance commands run only:
+**Shipped:** Documentation and deploy snippet; plugin intentionally does not append `RUN_FILE` on cann onboard/sim (see design decision). Settings override (`onBoardCompileCommand` / `simulationCompileCommand`) remains the plugin-side escape hatch.
 
-```bash
-. /etc/profile && cd ... && bash .../build.sh --pkg --soc=... --vendor_name=custom --bisheng_flags=ccec_g --ops=add
-```
+**Remaining:** Template `build.sh` deploy for **new** plugin-generated projects (future). Open questions: on-board vs sim only, confirm `build_out/*.run` path after manual deploy.
 
-Expected (includes deploy):
-
-```bash
-... build.sh --pkg ... && RUN_FILE=$(find .../build_out/*.run) && chmod +x $RUN_FILE && $RUN_FILE
-```
-
-Comment on issue: should also add `--force`.
-
-### Current codebase behavior
-
-- `CannCommandStrategy.buildOnBoardCommand` and simulate equivalent chain: `sourceCannCmd + cdBuildCmd + opprofCmd` — **no deploy** between build and msprof.
-- `buildOnBoardCommand` is in `cann-strategy.ts` (~lines 239–276).
-
-### Key files
-
-| File | Role |
-|------|------|
-| `plugin/src/domain/services/command-strategy/cann-strategy.ts` | `buildOnBoardCommand`, simulate builder |
-| `plugin/src/domain/utils/command-utils.ts` | `getExecutableCommand` for `.run` files |
-| `plugin/src/extension.ts` | Sidebar onboard/sim dispatch with post-run `refreshPerformanceReports` |
-
-### Open questions
-
-1. On-board only, simulation only, or both?
-2. Standard-custom ops-math only, or all project types?
-3. Actual vs expected command (confirm `find` path for `build_out/*.run`)?
-4. Should `--force` apply to `.run` only or also `build.sh --pkg`?
-5. After manual deploy, does profiling succeed?
-6. Same workspace as #8/#9 for single repro?
-
-### Implementation plan
-
-1. **Shared helper** — `buildStandardCustomDeployCommand(projectPath: string, options?: { force?: boolean })` returning deploy shell fragment.
-2. **Insert deploy** between build and profiler in `buildOnBoardCommand` and simulate builder when project type is `standard-custom` (or when config indicates `build.sh --pkg` flow).
-3. **Add `--force`** to deploy invocation per reporter feedback and #8.
-4. **Combine with #9** — pass `--experimental` when operator is experimental.
-5. **Integration test** — full command string assertion for ops-math-style onboard/sim.
-6. **Ask reporter** to validate on 一站式 v1.2.9 and v1.3.0.
+**Key files:** `cann-strategy.ts`, `command-utils.ts`, `extension.ts`
 
 ---
 
-## Recommended delivery
+## Verification
 
-| Phase | Scope | Issues |
-|-------|-------|--------|
-| 1 | Deploy + `--force` in onboard/sim + deploy/debug paths | #8, #10 |
-| 2 | `--experimental` propagation to all command paths | #9 |
-| 3 | NPU debug operator selection fix | #8 |
-| 4 | End-to-end validation with ops-math fixture | All |
+### Automated tests
 
-Single PR is acceptable if changes stay in command-strategy layer and shared helpers; split if debug integration requires separate review.
+```bash
+cd plugin && npm test -- --testPathPattern="command-utils|compile-options|post-activate-bootstrap"
+```
+
+| File | Covers |
+|------|--------|
+| `command-utils.spec.ts` | #8 deploy/run modes, `--force` on `.run` |
+| `compile-options.spec.ts` | #9 experimental flag helper |
+| `post-activate-bootstrap.spec.ts` | Deferred startup (related #4 work in same PR branch) |
+
+### Manual QA prerequisites
+
+- [ ] Standard-custom workspace (e.g. ops-math) with regular + `experimental/` operators
+- [ ] Ascend project for #8 Ascend Build check (optional)
+- [ ] CANN + msprof on Linux host
+- [ ] Inspect commands in **Huawei OP Devtools** output channel
+
+### Manual checklist
+
+**#8 — Deploy `--force` + NPU debug**
+
+- [ ] **Build** (Ascend): command ends with `"$RUN_FILE" --force` (not `--force` inside `deployCommandOrRunCommand` setting)
+- [ ] **Run** (cann): test binary path; **no** `--force`
+- [ ] **NPU debug** pre-build includes `--ops=<selected>`; changing selection updates operator
+- [ ] `deployCommandOrRunCommand` = `build_out/*.run` only still works on Ascend Build
+
+**#9 — `--experimental`**
+
+- [ ] Experimental op → **Build**, **On-board**, **Simulation**, **Run**, **NPU debug**: compile step includes `--experimental`
+- [ ] Regular op → same actions: **no** `--experimental`
+
+**#10 — Onboard deploy (repo / settings)**
+
+- [ ] **Baseline:** default **On-board** = compile script only, then msprof (no plugin RUN_FILE deploy)
+- [ ] **Option B:** `onBoardCompileCommand` override runs compile + deploy + `--force` before msprof
+- [ ] **Option A:** `deploy_run_package` in repo `build.sh`; plugin **On-board** works without settings override
+
+### Sign-off template
+
+```
+Branch: nikitin/issues-fixes
+CANN version: ___
+Hardware: A3 / A5
+
+#8: automated PASS / manual: ___
+#9: automated PASS / manual: ___
+#10: automated PASS / manual: ___ (Option A / B / baseline)
+
+Blockers: ___
+```
+
+---
+
+## Out of scope
+
+Automatic analysis or patching of upstream [ops-math `build.sh`](https://gitcode.com/cann/ops-math/blob/master/build.sh).
