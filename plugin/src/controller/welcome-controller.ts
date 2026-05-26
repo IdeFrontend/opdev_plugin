@@ -39,9 +39,19 @@ function getExtensionContext(): vscode.ExtensionContext {
     .extensionContext;
 }
 
-async function openFolderFn(url: string) {
-  // If the project already exists, open the directory directly
-  const localUri = vscode.Uri.file(url);
+function hasOpenWorkspaceFolder(): boolean {
+  return (vscode.workspace.workspaceFolders?.length ?? 0) > 0;
+}
+
+/**
+ * When a folder workspace is open, ask current vs new window.
+ * With no workspace (empty window), open in the current window without prompting.
+ * @returns forceNewWindow for vscode.openFolder, or undefined if the user dismissed the prompt
+ */
+async function promptForceNewWindowForOpenFolder(): Promise<boolean | undefined> {
+  if (!hasOpenWorkspaceFolder()) {
+    return false;
+  }
 
   const openCurrent = t('welcome.openInCurrentWindow');
   const openNew = t('welcome.openInNewWindow');
@@ -53,10 +63,20 @@ async function openFolderFn(url: string) {
   );
 
   if (!choice) {
-    return;
+    return undefined;
   }
 
-  const forceNewWindow = choice === openNew;
+  return choice === openNew;
+}
+
+async function openFolderFn(url: string) {
+  // If the project already exists, open the directory directly
+  const localUri = vscode.Uri.file(url);
+
+  const forceNewWindow = await promptForceNewWindowForOpenFolder();
+  if (forceNewWindow === undefined) {
+    return;
+  }
 
   try {
     await vscode.commands.executeCommand('vscode.openFolder', localUri, { forceNewWindow });
@@ -302,20 +322,10 @@ export const welcomeMethods = {
         vscode.window.showWarningMessage(t('welcome.createDirOkCreateFilesError', { error: error instanceof Error ? error.message : String(error) }));
       }
 
-      const openCurrent = t('welcome.openInCurrentWindow');
-      const openNew = t('welcome.openInNewWindow');
-      const choice = await vscode.window.showInformationMessage(
-        t('welcome.chooseOpenMode'),
-        { modal: true },
-        openCurrent,
-        openNew,
-      );
-
-      if (!choice) {
+      const forceNewWindow = await promptForceNewWindowForOpenFolder();
+      if (forceNewWindow === undefined) {
         return;
       }
-
-      const forceNewWindow = choice === openNew;
 
       try {
         await vscode.commands.executeCommand('vscode.openFolder', localUri, { forceNewWindow });
