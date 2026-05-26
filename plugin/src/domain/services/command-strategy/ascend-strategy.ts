@@ -70,7 +70,7 @@ export class AscendCommandStrategy implements CommandStrategy {
     const {
       config, sourceCannCmd, cdCmd,
     } = context;
-    const run_cmd = getExecutableCommand(config.target_file || '', { execute: true });
+    const run_cmd = getExecutableCommand(config.target_file || '', { execute: true, mode: 'run' });
 
     return joinCommands(sourceCannCmd, cdCmd, run_cmd);
   }
@@ -105,7 +105,7 @@ export class AscendCommandStrategy implements CommandStrategy {
       cmd.addArgument(advance_cmd);
     }
 
-    const deploy_cmd = getExecutableCommand(config.target_file || '', { execute: true });
+    const deploy_cmd = getExecutableCommand(config.target_file || '', { execute: true, mode: 'deploy' });
 
     return joinCommands(sourceCannCmd, cdCmd, cmd.toString(), deploy_cmd);
   }

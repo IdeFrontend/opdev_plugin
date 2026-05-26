@@ -78,6 +78,51 @@ export interface PermissionConfig {
   execute?: boolean;
 }
 
+/** Whether getExecutableCommand treats target_file as a .run deploy or a generic run. */
+export type ExecutableCommandMode = 'run' | 'deploy';
+
+export interface GetExecutableCommandOptions extends PermissionConfig {
+  /** Default `run`. Use `deploy` for .run package install after build. */
+  mode?: ExecutableCommandMode;
+  /** When mode is `deploy` and target is a .run package, append `--force` (default true). */
+  deployForce?: boolean;
+}
+
+function normalizeExecutableOptions(options: GetExecutableCommandOptions | PermissionConfig = { execute: true }): GetExecutableCommandOptions {
+  if ('mode' in options || 'deployForce' in options) {
+    return {
+      execute: true,
+      ...options,
+    };
+  }
+
+  return {
+    ...options,
+    mode: 'run',
+  };
+}
+
+/** True when target_file refers to a .run installer (not a shell command string). */
+export function isRunPackageDeployTarget(file: string): boolean {
+  if (!file || isCommand(file)) {
+    return false;
+  }
+
+  return file.includes('.run');
+}
+
+function runPackageForceSuffix(options: GetExecutableCommandOptions): string {
+  if (options.mode !== 'deploy') {
+    return '';
+  }
+
+  if (options.deployForce === false) {
+    return '';
+  }
+
+  return ' --force';
+}
+
 /**
  * Generate chmod command
  *
@@ -157,15 +202,18 @@ function isCommand(str: string): boolean {
  */
 export function getExecutableCommand(
   file: string,
-  mode: PermissionConfig = { execute: true },
+  options: GetExecutableCommandOptions | PermissionConfig = { execute: true },
 ): string {
   if (!file) {
     return '';
   }
 
-  // Wildcards: resolve with find, then chmod + execute
+  const opts = normalizeExecutableOptions(options);
+  const forceSuffix = isRunPackageDeployTarget(file) ? runPackageForceSuffix(opts) : '';
+
+  // Wildcards: resolve with find, then chmod + execute (path only — no flags in `file`)
   if (file.includes('*')) {
-    return `RUN_FILE=$(find ${file}) && chmod +x "$RUN_FILE" && "$RUN_FILE"`;
+    return `RUN_FILE=$(find ${file}) && chmod +x "$RUN_FILE" && "$RUN_FILE"${forceSuffix}`;
   }
 
   // Commands (e.g. python ../run.py): return as-is without chmod
@@ -173,7 +221,12 @@ export function getExecutableCommand(
     return file;
   }
 
-  return joinCommands(generateChmodCommand(file, mode), file);
+  const chmodCmd = generateChmodCommand(file, opts);
+  const runTarget = file.endsWith('.run') && forceSuffix
+    ? `"${file}"${forceSuffix}`
+    : file;
+
+  return joinCommands(chmodCmd, runTarget);
 }
 
 /**

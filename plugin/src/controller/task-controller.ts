@@ -437,8 +437,13 @@ export const taskMethods = {
         }
       }
 
+      const operatorNames = await homeMethods.getSelectedOperators();
+
       // Compile before debugging, use the --debug parameter
-      await buildService.startBuild({ scriptField: 'npu_debug_script' });
+      await buildService.startBuild({
+        scriptField: 'npu_debug_script',
+        operatorNames: operatorNames || undefined,
+      });
       await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
 
       // Get the project type and template name to determine whether to use msdebug-python
