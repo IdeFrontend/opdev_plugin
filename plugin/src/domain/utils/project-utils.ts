@@ -6,9 +6,21 @@ import { promisify } from 'util';
 import { exec } from 'child_process';
 import * as vscode from 'vscode';
 import { OperatorProjectViewId } from '@shared/project-type-view-id';
+import { getIdeConfigDir, getIdeConfigDirName, joinIdeConfigPath } from '@plugin/helpers/ide-config-dir';
+
 import debugLaunch from './debug-launch.json';
 
 const execAsync = promisify(exec);
+
+function buildDebugLaunchConfig(): typeof debugLaunch {
+  const envScript = `\${workspaceFolder}/${getIdeConfigDirName()}/.env`;
+  return {
+    configurations: debugLaunch.configurations.map((config) => ({
+      ...config,
+      environmentScripts: [envScript],
+    })),
+  };
+}
 
 export async function ensureLaunchJsonExists(
   op_path: string | undefined,
@@ -23,12 +35,12 @@ export async function ensureLaunchJsonExists(
   }
 
   const projectDir = path.resolve(op_path);
-  const vscodeDir = path.join(projectDir, '.vscode');
-  const devtoolConfigPath = path.join(vscodeDir, 'devtool_config.json');
-  const launchJsonPath = path.join(vscodeDir, 'launch.json');
+  const ideConfigDir = getIdeConfigDir(projectDir);
+  const devtoolConfigPath = joinIdeConfigPath(projectDir, 'devtool_config.json');
+  const launchJsonPath = joinIdeConfigPath(projectDir, 'launch.json');
 
   console.log('ensureLaunchJsonExists: project directory:', projectDir);
-  console.log('ensureLaunchJsonExists: .vscode directory:', vscodeDir);
+  console.log(`ensureLaunchJsonExists: ${getIdeConfigDirName()} directory:`, ideConfigDir);
   console.log('ensureLaunchJsonExists: config file path:', devtoolConfigPath);
   console.log('ensureLaunchJsonExists: launch.json path:', launchJsonPath);
 
@@ -46,9 +58,9 @@ export async function ensureLaunchJsonExists(
     return;
   }
 
-  console.log('ensureLaunchJsonExists: creating .vscode directory...');
-  await fs.ensureDir(vscodeDir);
-  console.log('ensureLaunchJsonExists: .vscode directory created successfully');
+  console.log(`ensureLaunchJsonExists: creating ${getIdeConfigDirName()} directory...`);
+  await fs.ensureDir(ideConfigDir);
+  console.log(`ensureLaunchJsonExists: ${getIdeConfigDirName()} directory created successfully`);
 
   // Create devtool_config.json file
   const devtoolConfig = { type: create_by || '1' };
@@ -64,7 +76,7 @@ export async function ensureLaunchJsonExists(
   // Create launch.json
   if (!fs.existsSync(launchJsonPath)) {
     console.log('ensureLaunchJsonExists: creating launch.json file...');
-    const launchJsonContent = JSON.stringify(debugLaunch, null, 2);
+    const launchJsonContent = JSON.stringify(buildDebugLaunchConfig(), null, 2);
 
     await fs.writeFile(
       launchJsonPath,
@@ -72,24 +84,6 @@ export async function ensureLaunchJsonExists(
       'utf-8',
     );
     console.log('ensureLaunchJsonExists: launch.json file created successfully');
-
-    // At the same time, create a copy of launch.json in the .arts directory
-    const artsDir = path.join(projectDir, '.arts');
-    const artsLaunchJsonPath = path.join(artsDir, 'launch.json');
-
-    try {
-      await fs.ensureDir(artsDir);
-      await fs.writeFile(
-        artsLaunchJsonPath,
-        launchJsonContent,
-        'utf-8',
-      );
-      console.log('ensureLaunchJsonExists: .arts/launch.json file created successfully');
-    }
-    catch (error) {
-      console.error('ensureLaunchJsonExists: failed to create .arts/launch.json:', error);
-      // Does not affect the main process, only errors are recorded
-    }
   }
   else {
     console.log('ensureLaunchJsonExists: launch.json file already exists, skip creation');
@@ -128,17 +122,18 @@ async function exportEnvToFile(projectDir: string) {
   const cwd = projectDir;
 
   console.log('cwd', cwd);
-  const targetDir = path.join(cwd, '.arts');
+  const ideDirName = getIdeConfigDirName();
+  const targetDir = path.join(cwd, ideDirName);
   const targetFile = path.join(targetDir, 'env');
 
   try {
     await fs.promises.mkdir(targetDir, { recursive: true });
-    await execAsync('. /etc/profile && env > ./.arts/.env', {
+    await execAsync(`. /etc/profile && env > ./${ideDirName}/.env`, {
       cwd,
       shell: '/bin/bash',
       windowsHide: true,
     });
-    await execAsync('chmod -R 750 .vscode/', {
+    await execAsync(`chmod -R 750 ${ideDirName}/`, {
       cwd,
       shell: '/bin/bash',
       windowsHide: true,

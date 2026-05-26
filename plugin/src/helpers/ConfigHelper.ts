@@ -4,6 +4,8 @@
  */
 import * as vscode from 'vscode';
 
+import { ConfigService } from '@plugin/service/config-service';
+
 /**
  * Configuration helper class
  */
@@ -29,8 +31,11 @@ export class ConfigHelper {
     enabled: boolean,
     target: vscode.ConfigurationTarget = vscode.ConfigurationTarget.Workspace,
   ): Promise<void> {
+    if (target === vscode.ConfigurationTarget.Workspace) {
+      await ConfigService.writeOpDevtoolsDottedSettings({ debugMode: enabled });
+      return;
+    }
     const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
-
     await config.update('debugMode', enabled, target);
   }
 
@@ -71,8 +76,11 @@ export class ConfigHelper {
     value: T,
     target: vscode.ConfigurationTarget = vscode.ConfigurationTarget.Workspace,
   ): Promise<void> {
+    if (target === vscode.ConfigurationTarget.Workspace) {
+      await ConfigService.writeOpDevtoolsDottedSettings({ [key]: value });
+      return;
+    }
     const config = vscode.workspace.getConfiguration(this.CONFIG_SECTION);
-
     await config.update(key, value, target);
   }
 }

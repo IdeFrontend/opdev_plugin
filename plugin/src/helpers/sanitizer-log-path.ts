@@ -1,13 +1,13 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-const LOG_DIR_SEGMENTS = ['.vscode', 'mindstudio_sanitizer_log'] as const;
+import { joinIdeConfigPath } from '@plugin/helpers/ide-config-dir';
 
 /**
- * Newest `mssanitizer_*.log` under `<workspaceRoot>/.vscode/mindstudio_sanitizer_log` by mtime.
+ * Newest `mssanitizer_*.log` under `<workspaceRoot>/<ideConfig>/mindstudio_sanitizer_log` by mtime.
  */
 export function getLatestSanitizerLogAbsPath(workspaceRoot: string): string | undefined {
-  const logDir = path.join(workspaceRoot, ...LOG_DIR_SEGMENTS);
+  const logDir = joinIdeConfigPath(workspaceRoot, 'mindstudio_sanitizer_log');
 
   if (!fs.existsSync(logDir) || !fs.statSync(logDir).isDirectory()) {
     return undefined;

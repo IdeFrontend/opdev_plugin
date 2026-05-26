@@ -16,10 +16,10 @@ import {
   postConfig, getConfig, getFiles,
 } from '@plugin/domain';
 import { mergeSanitizerConfigsWithOperatorProjectWorkspace } from '@plugin/helpers/operator-project-workspace-config';
-import {
-  isAscendA5ProfilerCannSoc,
-  resolveAscendEnv,
-} from '@plugin/domain/utils/ascend-util';
+import { getDevtoolConfigPath, getIdeSettingsFilePath } from '@plugin/helpers/ide-config-dir';
+import { homeMethods } from '@plugin/controller/home-controller';
+import { buildService } from '@plugin/service/build-service';
+import { projectService } from '@plugin/service/project-service';
 
 const CONFIG_TYPES = {
   SANITIZER: 'sanitizer',
@@ -27,12 +27,350 @@ const CONFIG_TYPES = {
   SIMULATE: 'simulate',
 } as const;
 
-export class ConfigService {
-  private static getOpDevtoolsSettings(): Record<string, unknown> {
-    const settings = vscode.workspace.getConfiguration()
-      .get<Record<string, unknown>>('op-devtools', {});
+const OP_DEVTOOLS_PREFIX = 'op-devtools.';
 
-    return { ...settings };
+/** Relative dotted keys under `op-devtools` (e.g. `sanitizer.memory`). */
+export type OpDevtoolsDottedWrites = Record<string, unknown>;
+
+function resolveWorkspaceRoot(workspaceRoot?: string): string | undefined {
+  if (workspaceRoot) {
+    return workspaceRoot;
+  }
+  const projectInfo = ProjectManager.getInstance().getProjectInfo();
+  if (projectInfo?.path) {
+    return projectInfo.path;
+  }
+  return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+}
+
+function toFullDottedKey(relativeKey: string): string {
+  return relativeKey.startsWith(OP_DEVTOOLS_PREFIX)
+    ? relativeKey
+    : `${OP_DEVTOOLS_PREFIX}${relativeKey}`;
+}
+
+function flattenNestedOpDevtools(
+  nested: Record<string, unknown>,
+  prefix: string,
+  out: Record<string, unknown>,
+): void {
+  for (const [key, value] of Object.entries(nested)) {
+    const dottedKey = `${prefix}.${key}`;
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      flattenNestedOpDevtools(value as Record<string, unknown>, dottedKey, out);
+    }
+    else if (!(dottedKey in out)) {
+      out[dottedKey] = value;
+    }
+  }
+}
+
+function parseRawSettingsJson(filePath: string): Record<string, unknown> {
+  if (!fs.existsSync(filePath)) {
+    return {};
+  }
+  const raw = fs.readFileSync(filePath, 'utf8').trim();
+  if (!raw) {
+    return {};
+  }
+  return JSON.parse(raw) as Record<string, unknown>;
+}
+
+function isLegacyNestedOpDevtoolsRoot(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function readSettingsJsonFile(filePath: string): Record<string, unknown> {
+  try {
+    const parsed = parseRawSettingsJson(filePath);
+    if (Object.keys(parsed).length === 0) {
+      return {};
+    }
+    const nested = parsed['op-devtools'];
+    if (isLegacyNestedOpDevtoolsRoot(nested)) {
+      const { 'op-devtools': _removed, ...rest } = parsed;
+      flattenNestedOpDevtools(nested, 'op-devtools', rest);
+      return rest;
+    }
+    return parsed;
+  }
+  catch (error) {
+    console.warn('[readSettingsJsonFile] failed:', filePath, error);
+    return {};
+  }
+}
+
+function assignIfDefined(
+  updates: OpDevtoolsDottedWrites,
+  key: string,
+  value: unknown,
+): void {
+  if (value !== undefined) {
+    updates[key] = value;
+  }
+}
+
+function buildDottedOnlySettingsFileContent(filePath: string): Record<string, unknown> {
+  const raw = parseRawSettingsJson(filePath);
+  const flat = readSettingsJsonFile(filePath);
+  const output: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if (key === 'op-devtools' || key.startsWith('op-devtools.')) {
+      continue;
+    }
+    output[key] = value;
+  }
+  for (const [key, value] of Object.entries(flat)) {
+    if (key.startsWith('op-devtools.')) {
+      output[key] = value;
+    }
+  }
+  return output;
+}
+
+export class ConfigService {
+  /**
+   * Batch-write `op-devtools` settings as dotted keys in one `settings.json` update.
+   * Also rewrites legacy nested `"op-devtools": { ... }` to dotted keys when present,
+   * even when `updates` is empty (existing dotted keys win over nested values).
+   * Intentionally uses direct file I/O (not `cfg.update` per key) for performance.
+   * Concurrent callers may interleave; last writer wins.
+   * @returns true if settings.json was written, false if no-op
+   */
+  static async writeOpDevtoolsDottedSettings(
+    updates: OpDevtoolsDottedWrites = {},
+    workspaceRoot?: string,
+  ): Promise<boolean> {
+    const root = resolveWorkspaceRoot(workspaceRoot);
+    if (!root) {
+      console.warn('[writeOpDevtoolsDottedSettings] no workspace root');
+      return false;
+    }
+
+    const filePath = getIdeSettingsFilePath(root);
+    const hasUpdates = Object.keys(updates).length > 0;
+    const needsNestedMigration = isLegacyNestedOpDevtoolsRoot(
+      parseRawSettingsJson(filePath)['op-devtools'],
+    );
+
+    if (!needsNestedMigration && !hasUpdates) {
+      return false;
+    }
+
+    try {
+      await fs.promises.mkdir(path.dirname(filePath), { recursive: true });
+
+      const output = buildDottedOnlySettingsFileContent(filePath);
+      for (const [relativeKey, value] of Object.entries(updates)) {
+        const fullKey = toFullDottedKey(relativeKey);
+        if (value === undefined) {
+          delete output[fullKey];
+        }
+        else {
+          output[fullKey] = value;
+        }
+      }
+
+      await fs.promises.writeFile(
+        filePath,
+        `${JSON.stringify(output, null, 2)}\n`,
+        'utf8',
+      );
+      return true;
+    }
+    catch (error) {
+      console.warn('[writeOpDevtoolsDottedSettings] failed:', error);
+      return false;
+    }
+  }
+
+  /** Drop seed entries for keys that appeared in settings.json after the initial fileKeys snapshot. */
+  private static filterPendingWritesByCurrentFile(
+    pendingWrites: OpDevtoolsDottedWrites,
+    cfg: vscode.WorkspaceConfiguration,
+    workspaceRoot?: string,
+  ): OpDevtoolsDottedWrites {
+    const fileKeys = ConfigService.getWorkspaceSettingsFileKeySet(workspaceRoot);
+    const filtered: OpDevtoolsDottedWrites = {};
+    for (const [relativeKey, value] of Object.entries(pendingWrites)) {
+      const scratch: OpDevtoolsDottedWrites = {};
+      ConfigService.queueSettingIfMissingInFile(scratch, fileKeys, cfg, relativeKey, value);
+      if (relativeKey in scratch) {
+        filtered[relativeKey] = scratch[relativeKey];
+      }
+    }
+    return filtered;
+  }
+
+  private static getWorkspaceSettingsFileKeySet(workspaceRoot?: string): Set<string> {
+    const root = resolveWorkspaceRoot(workspaceRoot);
+    if (!root) {
+      return new Set();
+    }
+    return new Set(Object.keys(readSettingsJsonFile(getIdeSettingsFilePath(root))));
+  }
+
+  private static queueSettingIfMissingInFile(
+    pendingWrites: OpDevtoolsDottedWrites,
+    fileKeys: Set<string>,
+    cfg: vscode.WorkspaceConfiguration,
+    relativeKey: string,
+    value: unknown,
+  ): void {
+    if (value === undefined) {
+      return;
+    }
+    const inspection = cfg.inspect<unknown>(relativeKey);
+    const explicitlySet = inspection
+      && (
+        inspection.workspaceFolderValue !== undefined
+        || inspection.workspaceValue !== undefined
+        || inspection.globalValue !== undefined
+      );
+    if (explicitlySet) {
+      return;
+    }
+    if (fileKeys.has(toFullDottedKey(relativeKey))) {
+      return;
+    }
+    pendingWrites[relativeKey] = value;
+  }
+
+  /**
+   * Seed workspace settings.json with devtool DB values for keys not yet present in the file.
+   * Called after project open so sanitizer / on-board / simulation keys exist in settings UI.
+   */
+  async syncOperatorProjectWorkspaceSettings(): Promise<void> {
+    try {
+      const buildConfigs = await buildService.getBuildConfigsList();
+      const multiResult = await homeMethods.checkMultipleOperators();
+      const buildOp = buildConfigs.find((c) => c.config_type === 'build_op');
+      const buildExample = buildConfigs.find((c) => c.config_type === 'build_example');
+      const simulate = buildConfigs.find((c) => c.config_type === 'simulate');
+      const onBoard = buildConfigs.find((c) => c.config_type === 'on_board');
+      const utTest = buildConfigs.find((c) => (c as { config_type?: string }).config_type === 'ut_test');
+      const sanitizer = (await this.getSanitizerConfigsList())[0];
+      const projectSH = await projectService.getProjectSH();
+
+      const buildOpOpts = (buildOp?.user_options || {}) as Record<string, unknown>;
+      const buildExampleOpts = (buildExample?.user_options || {}) as Record<string, unknown>;
+      const simulateOpts = (simulate?.user_options || {}) as Record<string, unknown>;
+      const onBoardOpts = (onBoard?.user_options || {}) as Record<string, unknown>;
+      const utTestOpts = (utTest?.user_options || {}) as Record<string, unknown>;
+      const sanitizerOpts = (sanitizer?.user_options || {}) as Record<string, unknown>;
+      const cfg = vscode.workspace.getConfiguration('op-devtools');
+      const fileKeys = ConfigService.getWorkspaceSettingsFileKeySet();
+      const pendingWrites: OpDevtoolsDottedWrites = {};
+      const queue = (key: string, value: unknown) => {
+        ConfigService.queueSettingIfMissingInFile(pendingWrites, fileKeys, cfg, key, value);
+      };
+
+      queue('compileAndDeploy.buildConfig.operatorNameToCompile', buildOpOpts.op);
+      queue('compileAndDeploy.buildConfig.deployCommandOrRunCommand', buildOpOpts.target_file);
+      queue('compileAndDeploy.buildConfig.compileCommand', buildOpOpts.script);
+      queue('compileAndDeploy.buildConfig.cpuDebugCompileCommand', buildOpOpts.cpu_debug_script);
+      queue('compileAndDeploy.buildConfig.npuDebugCompileCommand', buildOpOpts.npu_debug_script);
+      queue('compileAndDeploy.buildConfig.sanitizerCompileCommand', sanitizerOpts.script);
+      queue('compileAndDeploy.buildConfig.onBoardCompileCommand', onBoardOpts.script);
+      queue('compileAndDeploy.buildConfig.simulationCompileCommand', simulateOpts.script);
+      queue('compileAndDeploy.buildConfig.utTestCompileCommand', utTestOpts.script);
+
+      if (multiResult.isStandardCustom && multiResult.hasMultiple) {
+        queue('compileAndDeploy.exampleBuildConfig.executionMode', buildExampleOpts.execution_mode);
+        queue('compileAndDeploy.exampleBuildConfig.runCommand', buildExampleOpts.script);
+      }
+
+      queue('sanitizer.showQuickOptions', true);
+      queue('sanitizer.reportLogLevel', sanitizerOpts.logLevel);
+      queue('sanitizer.maxSingleLogFileSize', sanitizerOpts.maxDebuglogSize);
+      const sanitizerTool = (sanitizerOpts.tool || {}) as Record<string, unknown>;
+      const sanitizerMemcheckOption = (sanitizerOpts.memcheckOption || {}) as Record<string, unknown>;
+      queue('sanitizer.memory', sanitizerTool.memcheck);
+      queue('sanitizer.race', sanitizerTool.racecheck);
+      queue('sanitizer.uninitialized', sanitizerTool.initcheck);
+      queue('sanitizer.memoryLeak', sanitizerMemcheckOption['leak-check']);
+      queue('sanitizer.allocUnused', sanitizerMemcheckOption['check-unused-memory']);
+      const useBlock = sanitizerOpts.useBlock;
+      if (typeof useBlock === 'boolean') {
+        queue('sanitizer.detectionScope', useBlock ? 'singleBlock' : 'global');
+      }
+      else {
+        queue('sanitizer.detectionScope', 'global');
+      }
+      queue('sanitizer.blockId', sanitizerOpts.blockId ?? null);
+
+      queue('performanceTuning.simulation.showQuickOptions', true);
+      queue('performanceTuning.simulation.memoryThroughputWaveform', simulateOpts.PMSampling);
+      queue('performanceTuning.simulation.resourceConflictRatio', simulateOpts.ResourceConflictRatio);
+      queue(
+        'performanceTuning.simulation.parameters',
+        ConfigService.toKeyValueMapFromAdvanceParam(simulateOpts.advance_param),
+      );
+
+      queue('performanceTuning.onBoard.showQuickOptions', true);
+      queue('performanceTuning.onBoard.interCoreLoad', onBoardOpts.Occupancy);
+      queue('performanceTuning.onBoard.roofline', onBoardOpts.Roofline);
+      queue('performanceTuning.onBoard.operatorCodeHotspot', onBoardOpts.Source);
+      // Seed both A5 and legacy on-board metric toggles so shared workspace settings work
+      // when switching projects/SOC; runtime applies only the relevant key (see
+      // mergeBuildConfigsWithOperatorProjectWorkspace + environment.socVersion).
+      queue('performanceTuning.onBoard.pcSampling', onBoardOpts.PCSampling);
+      queue('performanceTuning.onBoard.cacheHeatmap', onBoardOpts.MemoryDetail);
+
+      queue(
+        'performanceTuning.onBoard.cubeAndVectorInstructionTimeAndRatio',
+        onBoardOpts.ArithmeticUtilization,
+      );
+      queue('performanceTuning.onBoard.l2CacheHitRate', onBoardOpts.L2Cache);
+      queue('performanceTuning.onBoard.memoryReadWriteBandwidth', onBoardOpts.Memory);
+      queue('performanceTuning.onBoard.l0ReadWriteBandwidth', onBoardOpts.MemoryL0);
+      queue('performanceTuning.onBoard.ubReadWriteBandwidth', onBoardOpts.MemoryUB);
+      queue(
+        'performanceTuning.onBoard.computeAndMoveUnitTimeRatio',
+        onBoardOpts.PipeUtilization,
+      );
+      queue(
+        'performanceTuning.onBoard.resourceConflictRatio',
+        onBoardOpts.ResourceConflictRatio,
+      );
+      queue(
+        'performanceTuning.onBoard.enableKernelCodeSegmentProfiling',
+        onBoardOpts.KernelScale,
+      );
+      const metricKeys = [
+        'ArithmeticUtilization',
+        'L2Cache',
+        'Memory',
+        'MemoryL0',
+        'MemoryUB',
+        'PipeUtilization',
+        'ResourceConflictRatio',
+      ] as const;
+      const allMetricEnabled = metricKeys.every((key) => onBoardOpts[key] === true);
+      queue('performanceTuning.onBoard.operatorMetrics', allMetricEnabled);
+      queue(
+        'performanceTuning.onBoard.parameters',
+        ConfigService.toKeyValueMapFromAdvanceParam(onBoardOpts.advance_param),
+      );
+
+      queue('environment.environmentScript', projectSH);
+
+      /* Commented out until problems with settings sync for new projects are solved
+        const projectSocVersion = (await projectService.getProjectSocVersion()).trim();
+        queue('environment.socVersion', projectSocVersion);
+        queue('performanceTuning.simulation.simulatorType', simulateOpts.simulatorType);
+      */
+      const filteredWrites = ConfigService.filterPendingWritesByCurrentFile(
+        pendingWrites,
+        cfg,
+      );
+      if (Object.keys(filteredWrites).length > 0) {
+        await ConfigService.writeOpDevtoolsDottedSettings(filteredWrites);
+      }
+    }
+    catch (error) {
+      console.warn('[syncOperatorProjectWorkspaceSettings] failed:', error);
+    }
   }
 
   private loadSanitizerConfigsFromDb(): BuildConfig[] {
@@ -123,11 +461,7 @@ export class ConfigService {
       return false;
     }
 
-    const devtoolConfigPath = path.join(
-      checkPath,
-      '.vscode',
-      'devtool_config.json',
-    );
+    const devtoolConfigPath = getDevtoolConfigPath(checkPath);
 
     try {
       const exists = fs.existsSync(devtoolConfigPath);
@@ -193,42 +527,22 @@ export class ConfigService {
       const opts = row.user_options as Record<string, unknown>;
       const tool = (opts.tool || {}) as Record<string, unknown>;
       const mem = (opts.memcheckOption || {}) as Record<string, unknown>;
-      const currentSettings = ConfigService.getOpDevtoolsSettings();
-      const compileAndDeploy = (currentSettings.compileAndDeploy as Record<string, unknown>) || {};
-      const buildConfig = (compileAndDeploy.buildConfig as Record<string, unknown>) || {};
-      const sanitizer = (currentSettings.sanitizer as Record<string, unknown>) || {};
+      const updates: OpDevtoolsDottedWrites = {};
 
-      const nextSettings: Record<string, unknown> = {
-        ...currentSettings,
-        compileAndDeploy: {
-          ...compileAndDeploy,
-          buildConfig: {
-            ...buildConfig,
-            ...(opts.script !== undefined ? { sanitizerCompileCommand: opts.script } : {}),
-          },
-        },
-        sanitizer: {
-          ...sanitizer,
-          ...(opts.logLevel !== undefined ? { reportLogLevel: opts.logLevel } : {}),
-          ...(opts.maxDebuglogSize !== undefined ? { maxSingleLogFileSize: opts.maxDebuglogSize } : {}),
-          ...(tool.memcheck !== undefined ? { memory: tool.memcheck } : {}),
-          ...(tool.racecheck !== undefined ? { race: tool.racecheck } : {}),
-          ...(tool.initcheck !== undefined ? { uninitialized: tool.initcheck } : {}),
-          ...(mem['leak-check'] !== undefined ? { memoryLeak: mem['leak-check'] } : {}),
-          ...(mem['check-unused-memory'] !== undefined ? { allocUnused: mem['check-unused-memory'] } : {}),
-          ...(typeof opts.useBlock === 'boolean'
-            ? { detectionScope: opts.useBlock ? 'singleBlock' : 'global' }
-            : {}),
-          ...(opts.blockId !== undefined ? { blockId: opts.blockId } : {}),
-        },
-      };
+      assignIfDefined(updates, 'compileAndDeploy.buildConfig.sanitizerCompileCommand', opts.script);
+      assignIfDefined(updates, 'sanitizer.reportLogLevel', opts.logLevel);
+      assignIfDefined(updates, 'sanitizer.maxSingleLogFileSize', opts.maxDebuglogSize);
+      assignIfDefined(updates, 'sanitizer.memory', tool.memcheck);
+      assignIfDefined(updates, 'sanitizer.race', tool.racecheck);
+      assignIfDefined(updates, 'sanitizer.uninitialized', tool.initcheck);
+      assignIfDefined(updates, 'sanitizer.memoryLeak', mem['leak-check']);
+      assignIfDefined(updates, 'sanitizer.allocUnused', mem['check-unused-memory']);
+      if (typeof opts.useBlock === 'boolean') {
+        updates['sanitizer.detectionScope'] = opts.useBlock ? 'singleBlock' : 'global';
+      }
+      assignIfDefined(updates, 'sanitizer.blockId', opts.blockId);
 
-      await vscode.workspace.getConfiguration()
-        .update(
-          'op-devtools',
-          nextSettings,
-          vscode.ConfigurationTarget.Workspace,
-        );
+      await ConfigService.writeOpDevtoolsDottedSettings(updates);
     }
     catch (error) {
       console.warn('[pushSanitizerUserOptionsToWorkspaceSettings] failed:', error);
@@ -272,62 +586,44 @@ export class ConfigService {
       }
 
       const onBoardOpts = row.user_options as Record<string, unknown>;
-      const cannSoc = resolveAscendEnv({ isSimulator: false }).socVersion;
-      const isA5Profiler = isAscendA5ProfilerCannSoc(cannSoc);
-      const currentSettings = ConfigService.getOpDevtoolsSettings();
-      const compileAndDeploy = (currentSettings.compileAndDeploy as Record<string, unknown>) || {};
-      const buildConfig = (compileAndDeploy.buildConfig as Record<string, unknown>) || {};
-      const performanceTuning = (currentSettings.performanceTuning as Record<string, unknown>) || {};
-      const onBoard = (performanceTuning.onBoard as Record<string, unknown>) || {};
-      // Do not write `performanceTuning.onBoard.operatorMetrics` here. Updating that
-      // aggregate key triggers extension `onBoardOperatorMetricsSync`, which sets every
-      // metric child workspace key to the same boolean and wipes per-metric choices.
-      const nextSettings: Record<string, unknown> = {
-        ...currentSettings,
-        compileAndDeploy: {
-          ...compileAndDeploy,
-          buildConfig: {
-            ...buildConfig,
-            ...(onBoardOpts.script !== undefined ? { onBoardCompileCommand: onBoardOpts.script } : {}),
-          },
-        },
-        performanceTuning: {
-          ...performanceTuning,
-          onBoard: {
-            ...onBoard,
-            ...(onBoardOpts.Occupancy !== undefined ? { interCoreLoad: onBoardOpts.Occupancy } : {}),
-            ...(onBoardOpts.Roofline !== undefined ? { roofline: onBoardOpts.Roofline } : {}),
-            ...(onBoardOpts.Source !== undefined ? { operatorCodeHotspot: onBoardOpts.Source } : {}),
-            ...(isA5Profiler
-              ? (onBoardOpts.PCSampling !== undefined ? { pcSampling: onBoardOpts.PCSampling } : {})
-              : (onBoardOpts.MemoryDetail !== undefined ? { cacheHeatmap: onBoardOpts.MemoryDetail } : {})),
-            ...(onBoardOpts.ArithmeticUtilization !== undefined
-              ? { cubeAndVectorInstructionTimeAndRatio: onBoardOpts.ArithmeticUtilization }
-              : {}),
-            ...(onBoardOpts.L2Cache !== undefined ? { l2CacheHitRate: onBoardOpts.L2Cache } : {}),
-            ...(onBoardOpts.Memory !== undefined ? { memoryReadWriteBandwidth: onBoardOpts.Memory } : {}),
-            ...(onBoardOpts.MemoryL0 !== undefined ? { l0ReadWriteBandwidth: onBoardOpts.MemoryL0 } : {}),
-            ...(onBoardOpts.MemoryUB !== undefined ? { ubReadWriteBandwidth: onBoardOpts.MemoryUB } : {}),
-            ...(onBoardOpts.PipeUtilization !== undefined
-              ? { computeAndMoveUnitTimeRatio: onBoardOpts.PipeUtilization }
-              : {}),
-            ...(onBoardOpts.ResourceConflictRatio !== undefined
-              ? { resourceConflictRatio: onBoardOpts.ResourceConflictRatio }
-              : {}),
-            ...(onBoardOpts.KernelScale !== undefined
-              ? { enableKernelCodeSegmentProfiling: onBoardOpts.KernelScale }
-              : {}),
-            parameters: ConfigService.toKeyValueMapFromAdvanceParam(onBoardOpts.advance_param),
-          },
-        },
-      };
+      const updates: OpDevtoolsDottedWrites = {};
 
-      await vscode.workspace.getConfiguration()
-        .update(
-          'op-devtools',
-          nextSettings,
-          vscode.ConfigurationTarget.Workspace,
-        );
+      assignIfDefined(updates, 'compileAndDeploy.buildConfig.onBoardCompileCommand', onBoardOpts.script);
+      assignIfDefined(updates, 'performanceTuning.onBoard.interCoreLoad', onBoardOpts.Occupancy);
+      assignIfDefined(updates, 'performanceTuning.onBoard.roofline', onBoardOpts.Roofline);
+      assignIfDefined(updates, 'performanceTuning.onBoard.operatorCodeHotspot', onBoardOpts.Source);
+      assignIfDefined(updates, 'performanceTuning.onBoard.pcSampling', onBoardOpts.PCSampling);
+      assignIfDefined(updates, 'performanceTuning.onBoard.cacheHeatmap', onBoardOpts.MemoryDetail);
+
+      assignIfDefined(
+        updates,
+        'performanceTuning.onBoard.cubeAndVectorInstructionTimeAndRatio',
+        onBoardOpts.ArithmeticUtilization,
+      );
+      assignIfDefined(updates, 'performanceTuning.onBoard.l2CacheHitRate', onBoardOpts.L2Cache);
+      assignIfDefined(updates, 'performanceTuning.onBoard.memoryReadWriteBandwidth', onBoardOpts.Memory);
+      assignIfDefined(updates, 'performanceTuning.onBoard.l0ReadWriteBandwidth', onBoardOpts.MemoryL0);
+      assignIfDefined(updates, 'performanceTuning.onBoard.ubReadWriteBandwidth', onBoardOpts.MemoryUB);
+      assignIfDefined(
+        updates,
+        'performanceTuning.onBoard.computeAndMoveUnitTimeRatio',
+        onBoardOpts.PipeUtilization,
+      );
+      assignIfDefined(
+        updates,
+        'performanceTuning.onBoard.resourceConflictRatio',
+        onBoardOpts.ResourceConflictRatio,
+      );
+      assignIfDefined(
+        updates,
+        'performanceTuning.onBoard.enableKernelCodeSegmentProfiling',
+        onBoardOpts.KernelScale,
+      );
+      updates['performanceTuning.onBoard.parameters'] = ConfigService.toKeyValueMapFromAdvanceParam(
+        onBoardOpts.advance_param,
+      );
+
+      await ConfigService.writeOpDevtoolsDottedSettings(updates);
     }
     catch (error) {
       console.warn('[pushOnBoardUserOptionsToWorkspaceSettings] failed:', error);
@@ -346,40 +642,20 @@ export class ConfigService {
       }
 
       const simulateOpts = row.user_options as Record<string, unknown>;
-      const currentSettings = ConfigService.getOpDevtoolsSettings();
-      const compileAndDeploy = (currentSettings.compileAndDeploy as Record<string, unknown>) || {};
-      const buildConfig = (compileAndDeploy.buildConfig as Record<string, unknown>) || {};
-      const performanceTuning = (currentSettings.performanceTuning as Record<string, unknown>) || {};
-      const simulation = (performanceTuning.simulation as Record<string, unknown>) || {};
+      const updates: OpDevtoolsDottedWrites = {};
 
-      const nextSettings: Record<string, unknown> = {
-        ...currentSettings,
-        compileAndDeploy: {
-          ...compileAndDeploy,
-          buildConfig: {
-            ...buildConfig,
-            ...(simulateOpts.script !== undefined ? { simulationCompileCommand: simulateOpts.script } : {}),
-          },
-        },
-        performanceTuning: {
-          ...performanceTuning,
-          simulation: {
-            ...simulation,
-            ...(simulateOpts.PMSampling !== undefined ? { memoryThroughputWaveform: simulateOpts.PMSampling } : {}),
-            ...(simulateOpts.ResourceConflictRatio !== undefined
-              ? { resourceConflictRatio: simulateOpts.ResourceConflictRatio }
-              : {}),
-            parameters: ConfigService.toKeyValueMapFromAdvanceParam(simulateOpts.advance_param),
-          },
-        },
-      };
+      assignIfDefined(updates, 'compileAndDeploy.buildConfig.simulationCompileCommand', simulateOpts.script);
+      assignIfDefined(updates, 'performanceTuning.simulation.memoryThroughputWaveform', simulateOpts.PMSampling);
+      assignIfDefined(
+        updates,
+        'performanceTuning.simulation.resourceConflictRatio',
+        simulateOpts.ResourceConflictRatio,
+      );
+      updates['performanceTuning.simulation.parameters'] = ConfigService.toKeyValueMapFromAdvanceParam(
+        simulateOpts.advance_param,
+      );
 
-      await vscode.workspace.getConfiguration()
-        .update(
-          'op-devtools',
-          nextSettings,
-          vscode.ConfigurationTarget.Workspace,
-        );
+      await ConfigService.writeOpDevtoolsDottedSettings(updates);
     }
     catch (error) {
       console.warn('[pushSimulateUserOptionsToWorkspaceSettings] failed:', error);

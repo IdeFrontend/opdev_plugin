@@ -2,6 +2,7 @@ import {
   CheckPathExistsParams, SaveFileParams, SaveFileResult,
 } from '@shared/api-types';
 import { fileService } from '@plugin/service/file-service';
+import { ConfigService } from '@plugin/service/config-service';
 import * as vscode from 'vscode';
 import { OperatorProjectViewId } from '@shared/project-type-view-id';
 import { isOperatorSupportEnabled } from '@plugin/helpers/feature-toggle';
@@ -49,11 +50,9 @@ export const commonMethods = {
   },
 
   async setSanitizerShowQuickOptions(params: { value: boolean }): Promise<void> {
-    await vscode.workspace.getConfiguration('op-devtools').update(
-      'sanitizer.showQuickOptions',
-      params.value,
-      vscode.ConfigurationTarget.Workspace,
-    );
+    await ConfigService.writeOpDevtoolsDottedSettings({
+      'sanitizer.showQuickOptions': params.value,
+    });
   },
 
   getSimulationShowQuickOptions(): boolean {
@@ -64,11 +63,9 @@ export const commonMethods = {
   },
 
   async setSimulationShowQuickOptions(params: { value: boolean }): Promise<void> {
-    await vscode.workspace.getConfiguration('op-devtools').update(
-      'performanceTuning.simulation.showQuickOptions',
-      params.value,
-      vscode.ConfigurationTarget.Workspace,
-    );
+    await ConfigService.writeOpDevtoolsDottedSettings({
+      'performanceTuning.simulation.showQuickOptions': params.value,
+    });
   },
 
   getOnBoardAnalysisShowQuickOptions(): boolean {
@@ -79,11 +76,9 @@ export const commonMethods = {
   },
 
   async setOnBoardAnalysisShowQuickOptions(params: { value: boolean }): Promise<void> {
-    await vscode.workspace.getConfiguration('op-devtools').update(
-      'performanceTuning.onBoard.showQuickOptions',
-      params.value,
-      vscode.ConfigurationTarget.Workspace,
-    );
+    await ConfigService.writeOpDevtoolsDottedSettings({
+      'performanceTuning.onBoard.showQuickOptions': params.value,
+    });
   },
 
   getProjectTypeSupportEnabled(params: { projectType: string | number }): boolean {

@@ -22,6 +22,7 @@ import {
 } from '@shared/api-types';
 
 import { checkBuildShHasBishengConfig } from '@plugin/domain/utils/build-utils';
+import { getDevtoolConfigPath, getIdeConfigDirName } from '@plugin/helpers/ide-config-dir';
 
 // First define the checkMultipleOperators function for use in getSelectedOperators
 async function checkMultipleOperatorsInternal(): Promise<{
@@ -148,14 +149,15 @@ async function checkMultipleOperatorsInternal(): Promise<{
     // Non-standard custom operators, using original logic
     const operatorProjects: string[] = [];
 
-    // Recursively find all directories containing .vscode/devtool_config.json
+    // Recursively find all directories containing devtool_config.json under the IDE config dir
     const findOperatorProjects = (dir: string): void => {
       try {
         const entries = fs.readdirSync(dir, { withFileTypes: true });
+        const ideConfigDirName = getIdeConfigDirName();
 
         for (const entry of entries) {
           // Skip common directories such as node_modules and .git
-          if (entry.name.startsWith('.') && entry.name !== '.vscode') {
+          if (entry.name.startsWith('.') && entry.name !== ideConfigDirName) {
             continue;
           }
 
@@ -166,12 +168,7 @@ async function checkMultipleOperatorsInternal(): Promise<{
           const fullPath = path.join(dir, entry.name);
 
           if (entry.isDirectory()) {
-            // Check if there is .vscode/devtool_config.json in this directory
-            const devtoolConfigPath = path.join(
-              fullPath,
-              '.vscode',
-              'devtool_config.json',
-            );
+            const devtoolConfigPath = getDevtoolConfigPath(fullPath);
 
             if (fs.existsSync(devtoolConfigPath)) {
               operatorProjects.push(fullPath);
@@ -554,14 +551,15 @@ export const homeMethods = {
       // Non-standard custom operators, using original logic
       const operatorProjects: string[] = [];
 
-      // Recursively find all directories containing .vscode/devtool_config.json
+      // Recursively find all directories containing devtool_config.json under the IDE config dir
       const findOperatorProjects = (dir: string): void => {
         try {
           const entries = fs.readdirSync(dir, { withFileTypes: true });
+          const ideConfigDirName = getIdeConfigDirName();
 
           for (const entry of entries) {
             // Skip common directories such as node_modules and .git
-            if (entry.name.startsWith('.') && entry.name !== '.vscode') {
+            if (entry.name.startsWith('.') && entry.name !== ideConfigDirName) {
               continue;
             }
 
@@ -572,12 +570,7 @@ export const homeMethods = {
             const fullPath = path.join(dir, entry.name);
 
             if (entry.isDirectory()) {
-              // Check if there is .vscode/devtool_config.json in this directory
-              const devtoolConfigPath = path.join(
-                fullPath,
-                '.vscode',
-                'devtool_config.json',
-              );
+              const devtoolConfigPath = getDevtoolConfigPath(fullPath);
 
               if (fs.existsSync(devtoolConfigPath)) {
                 operatorProjects.push(fullPath);
@@ -694,10 +687,10 @@ export const homeMethods = {
         selectedOperatorIds = project.selected_operator_ids
           .map((id) => typeof id === 'string' ? Number(id) : id)
           .filter((id) => typeof id === 'number' && !isNaN(id));
-        console.log('[getSelectedOperatorIds] Converted selected_operator_ids:', selectedOperatorIds);
+        // console.log('[getSelectedOperatorIds] Converted selected_operator_ids:', selectedOperatorIds);
       }
       else {
-        console.warn('[getSelectedOperatorIds] selected_operator_ids is not an array:', typeof project.selected_operator_ids, project.selected_operator_ids);
+        // console.warn('[getSelectedOperatorIds] selected_operator_ids is not an array:', typeof project.selected_operator_ids, project.selected_operator_ids);
 
         return undefined;
       }
@@ -736,17 +729,17 @@ export const homeMethods = {
         selectedOperatorIds = project.selected_operator_ids
           .map((id) => typeof id === 'string' ? Number(id) : id)
           .filter((id) => typeof id === 'number' && !isNaN(id));
-        console.log('[getSelectedOperators] Converted selected_operator_ids:', selectedOperatorIds);
+        // console.log('[getSelectedOperators] Converted selected_operator_ids:', selectedOperatorIds);
       }
       else {
         // If not an array, try converting (maybe to string or other type)
-        console.warn('[getSelectedOperators] selected_operator_ids is not an array:', typeof project.selected_operator_ids, project.selected_operator_ids);
+        // console.warn('[getSelectedOperators] selected_operator_ids is not an array:', typeof project.selected_operator_ids, project.selected_operator_ids);
 
         return undefined;
       }
     }
     else {
-      console.log('[getSelectedOperators] project.selected_operator_ids is empty');
+      // console.log('[getSelectedOperators] project.selected_operator_ids is empty');
     }
 
     if (selectedOperatorIds.length === 0) {

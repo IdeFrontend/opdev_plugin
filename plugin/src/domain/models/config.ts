@@ -4,6 +4,8 @@ import fs from 'fs-extra';
 import { execSync } from 'child_process';
 import * as vscode from 'vscode';
 
+import { joinIdeConfigPath, joinIdeServerPath } from '@plugin/helpers/ide-config-dir';
+
 /**
  * Get the value of the environment variable WORKSPACE_FOLDER through the command
  * @returns the value of WORKSPACE_FOLDER, if the acquisition fails or is not set, it returns undefined
@@ -58,7 +60,7 @@ function getUserDataDir(): string {
 
   // If the environment variable does not exist, fall back to the original logic
   const home = os.homedir();
-  const dataDir = path.join(home, '.vscode-server', 'data', 'ms-op-suite');
+  const dataDir = joinIdeServerPath(home, 'data', 'ms-op-suite');
 
   fs.ensureDirSync(dataDir);
   console.log('[getUserDataDir] Using default path:', dataDir);
@@ -72,7 +74,7 @@ function getWorkspaceDataDir(): string {
 
     if (workspaceFolders && workspaceFolders.length > 0) {
       const workspacePath = workspaceFolders[0].uri.fsPath;
-      const dataDir = path.join(workspacePath, '.vscode', 'op_devtools');
+      const dataDir = joinIdeConfigPath(workspacePath, 'op_devtools');
 
       fs.ensureDirSync(dataDir);
 

@@ -1,6 +1,8 @@
 import { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as path from 'path';
+
+import { joinIdeConfigPath } from '@plugin/helpers/ide-config-dir';
 import { getOpRunPath } from '@plugin/domain/utils/op-util';
 import {
   joinCommands,
@@ -185,9 +187,8 @@ export class CannCommandStrategy implements CommandStrategy {
 
     const workspaceFolders = vscode.workspace.workspaceFolders;
     const workspacePath = workspaceFolders?.[0]?.uri.fsPath || process.cwd();
-    const logFilePath = path.join(
+    const logFilePath = joinIdeConfigPath(
       workspacePath,
-      '.vscode',
       'mindstudio_sanitizer_log',
       `mssanitizer_${new Date()
         .valueOf()}.log`,

@@ -140,11 +140,12 @@ import { isAscendA5ProfilerCannSoc } from './domain/utils/ascend-util';
 import { logGlobalEnvSnapshot } from './domain/utils/global-env-snapshot';
 import { FolderContextMenuService } from './service/folder-context-menu-service';
 import { buildService } from './service/build-service';
-import { configService } from './service/config-service';
+import { configService, ConfigService } from './service/config-service';
 import { projectService } from './service/project-service';
 import { OperatorProjectIconTheme } from './class/operator-project-icon-theme';
 import { welcomeMethods } from './controller/welcome-controller';
 import { registerSidebarContextsRefresh } from './helpers/sidebar-context-refresh';
+import { getDevtoolConfigPath, getIdeConfigDirName } from './helpers/ide-config-dir';
 import {
   dispatchStartBuild,
   dispatchStartRun,
@@ -230,7 +231,7 @@ function isExplorerResourceFileUri(candidate: unknown): candidate is vscode.Uri 
 }
 
 /**
- * Check whether the .vscode/devtool_config.json file exists in the current workspace
+ * Check whether the IDE config dir contains devtool_config.json in the current workspace
  * @returns Returns true if the file exists, false otherwise
  */
 async function checkDevtoolConfigExists(): Promise<boolean> {
@@ -241,11 +242,7 @@ async function checkDevtoolConfigExists(): Promise<boolean> {
   }
 
   const workspacePath = workspaceFolders[0].uri.fsPath;
-  const devtoolConfigPath = path.join(
-    workspacePath,
-    '.vscode',
-    'devtool_config.json',
-  );
+  const devtoolConfigPath = getDevtoolConfigPath(workspacePath);
 
   try {
     return fs.existsSync(devtoolConfigPath);
@@ -335,294 +332,15 @@ export async function activate(context: vscode.ExtensionContext) {
   let isRefreshingSidebarContexts = false;
   let hasPendingSidebarRefresh = false;
 
-  const hasSameSettingValue = (current: unknown, next: unknown): boolean => {
-    if (Object.is(current, next)) {
-      return true;
-    }
-    if (
-      current
-      && next
-      && typeof current === 'object'
-      && typeof next === 'object'
-    ) {
-      try {
-        return JSON.stringify(current) === JSON.stringify(next);
-      }
-      catch {
-        return false;
-      }
-    }
-    return false;
-  };
-
-  const getOpDevtoolsObject = (scopeUri?: vscode.Uri): Record<string, unknown> => {
-    const value = vscode.workspace
-      .getConfiguration(undefined, scopeUri)
-      .get<Record<string, unknown>>('op-devtools', {});
-    return { ...(value || {}) };
-  };
-
-  const getValueByPath = (obj: Record<string, unknown>, path: string): unknown => {
-    const segments = path.split('.');
-    let current: unknown = obj;
-    for (const segment of segments) {
-      if (!current || typeof current !== 'object') {
-        return undefined;
-      }
-      current = (current as Record<string, unknown>)[segment];
-    }
-    return current;
-  };
-
-  const setValueByPath = (obj: Record<string, unknown>, path: string, value: unknown): void => {
-    const segments = path.split('.');
-    let cursor = obj;
-    for (let i = 0; i < segments.length - 1; i += 1) {
-      const segment = segments[i];
-      const next = cursor[segment];
-      if (!next || typeof next !== 'object' || Array.isArray(next)) {
-        cursor[segment] = {};
-      }
-      cursor = cursor[segment] as Record<string, unknown>;
-    }
-    cursor[segments[segments.length - 1]] = value;
-  };
-
-  const getDeclaredOpDevtoolsDottedKeys = (): string[] => {
-    const prefix = 'op-devtools.';
-    const contributes = (context.extension.packageJSON as { contributes?: { configuration?: unknown } }).contributes;
-    const configuration = contributes?.configuration;
-    const blocks = Array.isArray(configuration) ? configuration : [configuration];
-    const keys = new Set<string>();
-
-    for (const block of blocks) {
-      if (!block || typeof block !== 'object') {
-        continue;
-      }
-      const properties = (block as { properties?: Record<string, unknown> }).properties;
-      if (!properties || typeof properties !== 'object') {
-        continue;
-      }
-
-      for (const key of Object.keys(properties)) {
-        if (!key.startsWith(prefix)) {
-          continue;
-        }
-        const relativeKey = key.slice(prefix.length);
-        if (relativeKey.length === 0) {
-          continue;
-        }
-        keys.add(relativeKey);
-      }
-    }
-
-    return Array.from(keys);
-  };
-
-  const DOTTED_OP_DEVTOOLS_KEYS = getDeclaredOpDevtoolsDottedKeys();
-
-  const normalizeDottedOpDevtoolsWorkspaceSettings = async (): Promise<boolean> => {
-    try {
-      const cfg = vscode.workspace.getConfiguration('op-devtools');
-      const nextSettings = getOpDevtoolsObject();
-      let changed = false;
-
-      for (const relativeKey of DOTTED_OP_DEVTOOLS_KEYS) {
-        const inspection = cfg.inspect<unknown>(relativeKey);
-        if (!inspection || inspection.workspaceValue === undefined) {
-          continue;
-        }
-        setValueByPath(nextSettings, relativeKey, inspection.workspaceValue);
-        await cfg.update(relativeKey, undefined, vscode.ConfigurationTarget.Workspace);
-        changed = true;
-      }
-
-      if (!changed) {
-        return false;
-      }
-
-      await vscode.workspace.getConfiguration()
-        .update(
-          'op-devtools',
-          nextSettings,
-          vscode.ConfigurationTarget.Workspace,
-        );
-      return true;
-    }
-    catch (error) {
-      console.warn('[normalizeDottedOpDevtoolsWorkspaceSettings] failed:', error);
-      return false;
-    }
-  };
-
   const syncOperatorProjectWorkspaceSettings = async () => {
-    const toKeyValueMap = (raw: unknown): Record<string, string> => {
-      if (!Array.isArray(raw)) {
-        return {};
-      }
-      return raw.reduce((acc, item) => {
-        if (!item || typeof item !== 'object') {
-          return acc;
-        }
-        const row = item as Record<string, unknown>;
-        const name = row.name;
-        if (typeof name !== 'string' || name.trim().length === 0) {
-          return acc;
-        }
-        const value = row.value;
-        acc[name] = value === undefined || value === null ? '' : String(value);
-        return acc;
-      }, {} as Record<string, string>);
-    };
-
     isSyncingWorkspaceSettings = true;
     const syncStart = Date.now();
     logDebug('syncOperatorProjectWorkspaceSettings:start');
     try {
-      const buildConfigs = await buildService.getBuildConfigsList();
-      const multiResult = await homeMethods.checkMultipleOperators();
-      const buildOp = buildConfigs.find((c) => c.config_type === 'build_op');
-      const buildExample = buildConfigs.find((c) => c.config_type === 'build_example');
-      const simulate = buildConfigs.find((c) => c.config_type === 'simulate');
-      const onBoard = buildConfigs.find((c) => c.config_type === 'on_board');
-      const utTest = buildConfigs.find((c) => (c as { config_type?: string }).config_type === 'ut_test');
-      const sanitizer = (await configService.getSanitizerConfigsList())[0];
-      const projectSH = await projectService.getProjectSH();
-      const rawProjectSocVersion = (await projectService.getProjectSocVersion()).trim();
-      const isA5ProfilerSoc = isAscendA5ProfilerCannSoc(rawProjectSocVersion);
-
-      const buildOpOpts = (buildOp?.user_options || {}) as Record<string, unknown>;
-      const buildExampleOpts = (buildExample?.user_options || {}) as Record<string, unknown>;
-      const simulateOpts = (simulate?.user_options || {}) as Record<string, unknown>;
-      const onBoardOpts = (onBoard?.user_options || {}) as Record<string, unknown>;
-      const utTestOpts = (utTest?.user_options || {}) as Record<string, unknown>;
-      const sanitizerOpts = (sanitizer?.user_options || {}) as Record<string, unknown>;
-      const cfg = vscode.workspace.getConfiguration('op-devtools');
-      const nextSettings = getOpDevtoolsObject();
-      let changed = false;
-      const syncSettingIfUnset = (key: string, value: unknown) => {
-        if (value === undefined) {
-          return;
-        }
-        const inspection = cfg.inspect<unknown>(key);
-        const explicitlySet = inspection
-          && (
-            inspection.workspaceFolderValue !== undefined
-            || inspection.workspaceValue !== undefined
-            || inspection.globalValue !== undefined
-          );
-        if (explicitlySet) {
-          return;
-        }
-        const current = getValueByPath(nextSettings, key);
-        if (hasSameSettingValue(current, value)) {
-          return;
-        }
-        setValueByPath(nextSettings, key, value);
-        changed = true;
-      };
-
-      syncSettingIfUnset('compileAndDeploy.buildConfig.operatorNameToCompile', buildOpOpts.op);
-      syncSettingIfUnset('compileAndDeploy.buildConfig.deployCommandOrRunCommand', buildOpOpts.target_file);
-      syncSettingIfUnset('compileAndDeploy.buildConfig.compileCommand', buildOpOpts.script);
-      syncSettingIfUnset('compileAndDeploy.buildConfig.cpuDebugCompileCommand', buildOpOpts.cpu_debug_script);
-      syncSettingIfUnset('compileAndDeploy.buildConfig.npuDebugCompileCommand', buildOpOpts.npu_debug_script);
-      syncSettingIfUnset('compileAndDeploy.buildConfig.sanitizerCompileCommand', sanitizerOpts.script);
-      syncSettingIfUnset('compileAndDeploy.buildConfig.onBoardCompileCommand', onBoardOpts.script);
-      syncSettingIfUnset('compileAndDeploy.buildConfig.simulationCompileCommand', simulateOpts.script);
-      syncSettingIfUnset('compileAndDeploy.buildConfig.utTestCompileCommand', utTestOpts.script);
-
-      const shouldExposeExampleBuildConfig = Boolean(multiResult.isStandardCustom && multiResult.hasMultiple);
-      if (shouldExposeExampleBuildConfig) {
-        syncSettingIfUnset('compileAndDeploy.exampleBuildConfig.executionMode', buildExampleOpts.execution_mode);
-        syncSettingIfUnset('compileAndDeploy.exampleBuildConfig.runCommand', buildExampleOpts.script);
-      }
-
-      syncSettingIfUnset('sanitizer.reportLogLevel', sanitizerOpts.logLevel);
-      syncSettingIfUnset('sanitizer.maxSingleLogFileSize', sanitizerOpts.maxDebuglogSize);
-      const sanitizerTool = (sanitizerOpts.tool || {}) as Record<string, unknown>;
-      const sanitizerMemcheckOption = (sanitizerOpts.memcheckOption || {}) as Record<string, unknown>;
-      syncSettingIfUnset('sanitizer.memory', sanitizerTool.memcheck);
-      syncSettingIfUnset('sanitizer.race', sanitizerTool.racecheck);
-      syncSettingIfUnset('sanitizer.uninitialized', sanitizerTool.initcheck);
-      syncSettingIfUnset('sanitizer.memoryLeak', sanitizerMemcheckOption['leak-check']);
-      syncSettingIfUnset('sanitizer.allocUnused', sanitizerMemcheckOption['check-unused-memory']);
-      const useBlock = sanitizerOpts.useBlock;
-      if (typeof useBlock === 'boolean') {
-        syncSettingIfUnset('sanitizer.detectionScope', useBlock ? 'singleBlock' : 'global');
-      }
-      syncSettingIfUnset('sanitizer.blockId', sanitizerOpts.blockId ?? null);
-
-      syncSettingIfUnset(
-        'performanceTuning.simulation.memoryThroughputWaveform',
-        simulateOpts.PMSampling,
-      );
-      syncSettingIfUnset(
-        'performanceTuning.simulation.resourceConflictRatio',
-        simulateOpts.ResourceConflictRatio,
-      );
-      syncSettingIfUnset(
-        'performanceTuning.simulation.parameters',
-        toKeyValueMap(simulateOpts.advance_param),
-      );
-      syncSettingIfUnset('performanceTuning.onBoard.interCoreLoad', onBoardOpts.Occupancy);
-      syncSettingIfUnset('performanceTuning.onBoard.roofline', onBoardOpts.Roofline);
-      syncSettingIfUnset('performanceTuning.onBoard.operatorCodeHotspot', onBoardOpts.Source);
-      if (isA5ProfilerSoc) {
-        syncSettingIfUnset('performanceTuning.onBoard.pcSampling', onBoardOpts.PCSampling);
-      }
-      else {
-        syncSettingIfUnset('performanceTuning.onBoard.cacheHeatmap', onBoardOpts.MemoryDetail);
-      }
-      syncSettingIfUnset(
-        'performanceTuning.onBoard.cubeAndVectorInstructionTimeAndRatio',
-        onBoardOpts.ArithmeticUtilization,
-      );
-      syncSettingIfUnset('performanceTuning.onBoard.l2CacheHitRate', onBoardOpts.L2Cache);
-      syncSettingIfUnset(
-        'performanceTuning.onBoard.memoryReadWriteBandwidth',
-        onBoardOpts.Memory,
-      );
-      syncSettingIfUnset('performanceTuning.onBoard.l0ReadWriteBandwidth', onBoardOpts.MemoryL0);
-      syncSettingIfUnset('performanceTuning.onBoard.ubReadWriteBandwidth', onBoardOpts.MemoryUB);
-      syncSettingIfUnset(
-        'performanceTuning.onBoard.computeAndMoveUnitTimeRatio',
-        onBoardOpts.PipeUtilization,
-      );
-      syncSettingIfUnset(
-        'performanceTuning.onBoard.resourceConflictRatio',
-        onBoardOpts.ResourceConflictRatio,
-      );
-      syncSettingIfUnset('performanceTuning.onBoard.enableKernelCodeSegmentProfiling', onBoardOpts.KernelScale);
-      const metricKeys = [
-        'ArithmeticUtilization',
-        'L2Cache',
-        'Memory',
-        'MemoryL0',
-        'MemoryUB',
-        'PipeUtilization',
-        'ResourceConflictRatio',
-      ] as const;
-      const allMetricEnabled = metricKeys.every((key) => onBoardOpts[key] === true);
-      syncSettingIfUnset('performanceTuning.onBoard.operatorMetrics', allMetricEnabled);
-      syncSettingIfUnset(
-        'performanceTuning.onBoard.parameters',
-        toKeyValueMap(onBoardOpts.advance_param),
-      );
-      syncSettingIfUnset('environment.environmentScript', projectSH);
-
-      if (changed) {
-        await vscode.workspace.getConfiguration()
-          .update(
-            'op-devtools',
-            nextSettings,
-            vscode.ConfigurationTarget.Workspace,
-          );
-      }
+      await configService.syncOperatorProjectWorkspaceSettings();
     }
     catch (error) {
       logDebug('syncOperatorProjectWorkspaceSettings:error', error);
-      console.warn('[syncOperatorProjectWorkspaceSettings] failed:', error);
     }
     finally {
       isSyncingWorkspaceSettings = false;
@@ -646,6 +364,7 @@ export async function activate(context: vscode.ExtensionContext) {
       isSyncingWorkspaceSettings,
     });
     try {
+      await ConfigService.writeOpDevtoolsDottedSettings({});
       do {
         hasPendingSidebarRefresh = false;
         hasDevtoolConfig = await checkDevtoolConfigExists();
@@ -785,17 +504,7 @@ export async function activate(context: vscode.ExtensionContext) {
       return;
     }
     if (opDevtoolsAffected) {
-      isSyncingWorkspaceSettings = true;
-      try {
-        const normalized = await normalizeDottedOpDevtoolsWorkspaceSettings();
-        if (normalized) {
-          logDebug('event:onDidChangeConfiguration:normalizedDottedOpDevtoolsSettings');
-          return;
-        }
-      }
-      finally {
-        isSyncingWorkspaceSettings = false;
-      }
+      await ConfigService.writeOpDevtoolsDottedSettings({});
     }
     if (
       envAffected
@@ -2507,6 +2216,9 @@ export async function activate(context: vscode.ExtensionContext) {
     if (isSyncingOnBoardOperatorMetrics) {
       return;
     }
+    if (isSyncingWorkspaceSettings) {
+      return;
+    }
     if (!event.affectsConfiguration('op-devtools.performanceTuning.onBoard.operatorMetrics')) {
       return;
     }
@@ -2535,19 +2247,20 @@ export async function activate(context: vscode.ExtensionContext) {
       'performanceTuning.onBoard.resourceConflictRatio',
     ];
 
+    const metricWrites = metricKeys.reduce((acc, k) => {
+      acc[k] = desired;
+      return acc;
+    }, {} as Record<string, unknown>);
+
     const applyMetricKeys = async (target: vscode.ConfigurationTarget, scopeUri?: vscode.Uri) => {
-      const nextSettings = getOpDevtoolsObject(scopeUri);
-      metricKeys.forEach((k) => setValueByPath(nextSettings, k, desired));
-      await vscode.workspace.getConfiguration(undefined, scopeUri)
-        .update(
-          'op-devtools',
-          nextSettings,
-          target,
-        );
+      const cfg = vscode.workspace.getConfiguration('op-devtools', scopeUri);
+      await Promise.all(
+        metricKeys.map((k) => cfg.update(k, desired, target)),
+      );
     };
 
     const applyForWorkspace = async () => {
-      await applyMetricKeys(vscode.ConfigurationTarget.Workspace);
+      await ConfigService.writeOpDevtoolsDottedSettings(metricWrites);
     };
 
     const applyForGlobal = async () => {
@@ -2597,7 +2310,9 @@ export async function activate(context: vscode.ExtensionContext) {
   });
   context.subscriptions.push(onBoardOperatorMetricsSync);
 
-  const devtoolConfigWatcher = vscode.workspace.createFileSystemWatcher('**/.vscode/devtool_config.json');
+  const devtoolConfigWatcher = vscode.workspace.createFileSystemWatcher(
+    `**/${getIdeConfigDirName()}/devtool_config.json`,
+  );
   const watchDevtoolConfigCreate = devtoolConfigWatcher.onDidCreate(async (uri) => {
     logDebug('event:devtoolConfigWatcher:create', uri.fsPath);
     await refreshSidebarContexts();
@@ -2619,6 +2334,7 @@ export async function activate(context: vscode.ExtensionContext) {
     logDebug('activate:autoOpenProject:start', { workspacePath });
     try {
       await welcomeMethods.openProject({ projectPath: workspacePath || '' }, true);
+      await refreshSidebarContexts();
       await operateTreeProvider.refreshSanitizerReports(false);
       await operateTreeProvider.refreshPerformanceReports();
 

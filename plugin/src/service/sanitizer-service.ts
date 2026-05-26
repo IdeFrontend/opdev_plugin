@@ -17,6 +17,7 @@ import {
   OperatorProjectType, OperatorProjectDetector,
 } from '@plugin/domain/services/operator-project-detector';
 import { getLatestSanitizerLogAbsPath } from '@plugin/helpers/sanitizer-log-path';
+import { joinIdeConfigPath } from '@plugin/helpers/ide-config-dir';
 import { msAgentBridgeService } from '@plugin/service/ms-agent-bridge.service';
 import { sanitizerDiagnosticsService } from '@plugin/service/sanitizer-diagnostics.service';
 
@@ -118,11 +119,7 @@ export class SanitizerService {
       // Create log directory
       if (workspaceFolders && workspaceFolders.length > 0) {
         const workspacePath = workspaceFolders[0].uri.fsPath;
-        const logPath = path.join(
-          workspacePath,
-          '.vscode',
-          'mindstudio_sanitizer_log',
-        );
+        const logPath = joinIdeConfigPath(workspacePath, 'mindstudio_sanitizer_log');
 
         if (!fs.existsSync(logPath)) {
           fs.mkdirSync(logPath, { mode: 0o750 });

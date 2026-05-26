@@ -8,6 +8,7 @@ import {
   objectToCommandString,
 } from '@plugin/domain/utils/command-utils';
 import { OpRecord } from '@plugin/domain/models/model';
+import { joinIdeConfigRelative } from '@plugin/helpers/ide-config-dir';
 import { ProfilerFactory } from '../profiler-service';
 import {
   CommandStrategy,
@@ -203,7 +204,7 @@ export class AscendCommandStrategy implements CommandStrategy {
     mssanitizer.addOption('block-id', options.blockId as string | number | undefined);
     mssanitizer.addOption(
       'log-file',
-      `${operator?.op_path}/.vscode/mindstudio_sanitizer_log/mssanitizer_${new Date()
+      `${operator?.op_path}/${joinIdeConfigRelative('mindstudio_sanitizer_log')}/mssanitizer_${new Date()
         .valueOf()}.log`,
     );
 

@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+
+import { getIdeConfigDir } from '@plugin/helpers/ide-config-dir';
 import * as fs from 'fs';
 import { CommandExecutor } from '@plugin/class/command-options';
 import { ExplorerRootUtils } from '@plugin/class/explorer-root-utils';
@@ -175,7 +177,7 @@ export class ProjectManager {
     }
 
     const workspacePath = workspaceFolders[0].uri.fsPath;
-    const vscodePath = path.join(workspacePath, '.vscode');
+    const vscodePath = getIdeConfigDir(workspacePath);
 
     if (fs.existsSync(vscodePath)) {
       const commandExecutor = new CommandExecutor();

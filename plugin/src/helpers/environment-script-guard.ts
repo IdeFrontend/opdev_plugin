@@ -4,14 +4,9 @@ import { t } from 'i18next';
 
 import { getEnvironmentScriptPathFromWorkspace } from '@plugin/helpers/operator-project-workspace-config';
 import { projectService } from '@plugin/service/project-service';
+import { ConfigService } from '@plugin/service/config-service';
 
-const CONFIG_SECTION = 'op-devtools';
 const CONFIG_KEY = 'environment.environmentScript';
-
-function getOpDevtoolsConfiguration(): vscode.WorkspaceConfiguration {
-  const folder = vscode.workspace.workspaceFolders?.[0];
-  return vscode.workspace.getConfiguration(CONFIG_SECTION, folder?.uri);
-}
 
 export function getEnvironmentScriptPath(): string {
   return getEnvironmentScriptPathFromWorkspace();
@@ -78,11 +73,9 @@ export async function ensureEnvironmentScriptForOperateAction(): Promise<boolean
     return false;
   }
 
-  await getOpDevtoolsConfiguration().update(
-    CONFIG_KEY,
-    fsPath,
-    vscode.ConfigurationTarget.Workspace,
-  );
+  await ConfigService.writeOpDevtoolsDottedSettings({
+    [CONFIG_KEY]: fsPath,
+  });
 
   await projectService.syncAscendEnvScriptFromWorkspaceSettings();
 

@@ -11,8 +11,9 @@ import { PermanentStorage } from '@plugin/class/permanent-storage';
 import { Project } from '@plugin/core/project/project';
 import { getConfig } from '@plugin/domain';
 import { getOpByProjectIdAndOpName } from '@plugin/domain/models/model';
+import { joinIdeConfigRelative } from '@plugin/helpers/ide-config-dir';
 
-const PERFORMANCE_RUN_DATA_ROOT = '.vscode/opprof';
+const getPerformanceRunDataRoot = (): string => joinIdeConfigRelative('opprof');
 
 const MARKED_STORAGE_KEY = 'marked_performance_records';
 
@@ -50,7 +51,7 @@ export class PerformanceRunData {
 
     this.rootUri = vscode.Uri.joinPath(
       vscode.Uri.file(op?.op_path || project.projectPath),
-      PERFORMANCE_RUN_DATA_ROOT,
+      getPerformanceRunDataRoot(),
     );
   }
 

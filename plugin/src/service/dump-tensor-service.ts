@@ -11,9 +11,9 @@ import { PermanentStorage } from '@plugin/class/permanent-storage';
 import { Project } from '@plugin/core/project/project';
 import { getConfig } from '@plugin/domain';
 import { getOpByProjectIdAndOpName } from '@plugin/domain/models/model';
+import { joinIdeConfigRelative } from '@plugin/helpers/ide-config-dir';
 
-// DumpTensor product storage location
-const DUMP_TENSOR_DATA_ROOT = '.vscode/DumpTensor';
+const getDumpTensorDataRoot = (): string => joinIdeConfigRelative('DumpTensor');
 
 export class DumpTensorData {
   private static instance: DumpTensorData;
@@ -39,7 +39,7 @@ export class DumpTensorData {
 
     this.rootUri = vscode.Uri.joinPath(
       vscode.Uri.file(project.projectPath),
-      DUMP_TENSOR_DATA_ROOT,
+      getDumpTensorDataRoot(),
     );
   }
 

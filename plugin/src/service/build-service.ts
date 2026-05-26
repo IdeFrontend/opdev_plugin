@@ -23,6 +23,8 @@ import {
   getProjectById,
 } from '@plugin/domain';
 import { getOpRunPath } from '@plugin/domain/utils/op-util';
+import { joinIdeConfigPath, joinIdeConfigRelative } from '@plugin/helpers/ide-config-dir';
+import { getOpByProjectIdAndOpName } from '@plugin/domain/models/model';
 import { joinCommands } from '@plugin/domain/utils/command-utils';
 import { getConfigById } from '@plugin/domain/services/configuration';
 import { OperatorProjectType } from '@plugin/domain/services/operator-project-detector';
@@ -885,8 +887,8 @@ export class BuildService {
     }
 
     const currentDir = workspaceFolders[0].uri.fsPath;
-    const tempDataPath = path.join(currentDir, '.vscode', 'dump_tensor_temp_data');
-    const dumpTensorPath = path.join(currentDir, '.vscode', 'DumpTensor');
+    const tempDataPath = joinIdeConfigPath(currentDir, 'dump_tensor_temp_data');
+    const dumpTensorPath = joinIdeConfigPath(currentDir, 'DumpTensor');
 
     // Remove temp data folder from previous runs.
     console.log('[startDumpTensor] Removing temp data directory:', tempDataPath);
@@ -1128,8 +1130,8 @@ export class BuildService {
       }
 
       const currentDir = workspaceFolders[0].uri.fsPath;
-      const tempDataPath = path.join(currentDir, '.vscode', 'dump_tensor_temp_data');
-      const dumpTensorPath = path.join(currentDir, '.vscode', 'DumpTensor');
+      const tempDataPath = joinIdeConfigPath(currentDir, 'dump_tensor_temp_data');
+      const dumpTensorPath = joinIdeConfigPath(currentDir, 'DumpTensor');
 
       // Remove temp data folder from previous runs.
       console.log('[importDumpTensorBinFile] Removing temp data directory:', tempDataPath);

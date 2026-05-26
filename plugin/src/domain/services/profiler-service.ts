@@ -3,6 +3,7 @@ import { OpRecord } from '@plugin/domain/models/model';
 import {
   Command, getAdvanceCmd,
 } from '@plugin/domain/utils/command-utils';
+import { joinIdeConfigRelative } from '@plugin/helpers/ide-config-dir';
 import {
   isAscendA5ProfilerCannSoc,
   resolveAscendEnv,
@@ -58,7 +59,7 @@ export class SimulatorStrategy implements ProfilerCommandStrategy {
 
     simulator.addOptions({
       'soc-version': msprofSocVersionArg,
-      output: `${operator.op_path}/.vscode/opprof`,
+      output: `${operator.op_path}/${joinIdeConfigRelative('opprof')}`,
       'aic-metrics': metrics,
     });
 
@@ -94,7 +95,7 @@ export class OnBoardStrategy implements ProfilerCommandStrategy {
     const op = msprof.sub('op', { separators: { 'aic-metrics': ',' } });
 
     op.addOptions({
-      output: `${operator.op_path}/.vscode/opprof`,
+      output: `${operator.op_path}/${joinIdeConfigRelative('opprof')}`,
       'aic-metrics': metrics.length > 0 ? metrics : undefined,
     });
 

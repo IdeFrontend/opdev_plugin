@@ -13,6 +13,7 @@ module.exports = {
     '**/?(*.)+(spec|test).ts',
   ],
   moduleNameMapper: {
+    '^vscode$': '<rootDir>/src/__tests__/mocks/vscode.ts',
     '^@plugin/(.*)$': '<rootDir>/src/$1',
     '^@shared/(.*)$': '<rootDir>/../shared/$1',
   },

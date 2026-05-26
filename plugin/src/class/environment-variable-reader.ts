@@ -9,6 +9,8 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 
+import { joinIdeConfigPath } from '@plugin/helpers/ide-config-dir';
+
 /**
  * environment variable reader
  * Priority is given to reading directly from process.env. If it cannot be obtained, it is read from the .arts/.env file in the vscode working directory.
@@ -87,7 +89,7 @@ export class EnvironmentVariableReader {
 
       // Use the first workspace folder
       const workspacePath = workspaceFolders[0].uri.fsPath;
-      const envFilePath = path.join(workspacePath, '.arts', '.env');
+      const envFilePath = joinIdeConfigPath(workspacePath, '.env');
 
       // Check if the file exists
       if (!fs.existsSync(envFilePath)) {

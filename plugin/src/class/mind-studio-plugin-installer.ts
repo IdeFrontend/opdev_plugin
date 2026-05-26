@@ -4,6 +4,12 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
 
+import {
+  getIdeServerDirName,
+  isCodeArtsIde,
+  joinIdeServerPath,
+} from '@plugin/helpers/ide-config-dir';
+
 /**
  * Plug-in installation configuration options
  */
@@ -93,15 +99,13 @@ export class MindStudioPluginInstaller {
       console.log(process.execPath);
       console.log(process.argv);
 
-      // ✅[Key] First determine whether it is VS Code official Remote (SSH / WSL / Container)
-      const isVSCodeOfficialRemote =
-        // The official Remote will definitely set this
+      // Official remote agent for the current IDE product (VS Code or CodeArts)
+      const isOfficialIdeRemote =
         process.env.VSCODE_AGENT_FOLDER !== undefined
-        // Or the process path contains the official server identifier
-        || process.execPath.includes('.vscode-server')
-        || process.execPath.includes('.vscode-remote');
+        || process.execPath.includes(getIdeServerDirName())
+        || (!isCodeArtsIde() && process.execPath.includes('.vscode-remote'));
 
-      if (isVSCodeOfficialRemote) {
+      if (isOfficialIdeRemote) {
         // Explicitly not code-server/CodeArts
         return {
           isWeb: false,
@@ -249,18 +253,11 @@ export class MindStudioPluginInstaller {
   }
 
   /**
-   * Get the extensions directory of code-server or CodeArts
-   * Return the CodeArts path first (~/.codearts-server/extensions)
+   * Get the extensions directory of code-server or the current IDE server.
    */
   private getCodeServerExtensionsDir(): string {
-    const codeartsDir = path.join(
-      os.homedir(),
-      '.codearts-server',
-      'extensions',
-    );
-
-    if (fs.existsSync(codeartsDir) || process.env.CODEARTS_SERVER_VERSION) {
-      return codeartsDir;
+    if (isCodeArtsIde() || process.env.CODEARTS_SERVER_VERSION) {
+      return joinIdeServerPath('extensions');
     }
 
     // Fallback to standard code-server path

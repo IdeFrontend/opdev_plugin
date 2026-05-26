@@ -1,11 +1,13 @@
 /**
  * Remote configuration management module
  * Used to store and read configuration information on remote servers
- * Configuration file storage location: ~/.vscode-server/data/ms-op-suite/config.json
+ * Configuration file storage location: ~/<ide-server>/data/ms-op-suite/config.json
  */
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+
+import { joinIdeServerRelative } from '@plugin/helpers/ide-config-dir';
 
 /**
  * Data structure of configuration file storage
@@ -19,15 +21,18 @@ interface RemoteConfigData {
  * Remote configuration management class
  */
 export class RemoteConfig {
-  private static CONFIG_DIR = '.vscode-server/data/ms-op-suite';
   private static CONFIG_FILE = 'config.json';
+
+  private static getConfigDir(): string {
+    return joinIdeServerRelative('data', 'ms-op-suite');
+  }
 
   /**
    * Get the full path to the configuration file
    */
   private static getConfigPath(): string {
     const homeDir = os.homedir();
-    const configDir = path.join(homeDir, this.CONFIG_DIR);
+    const configDir = path.join(homeDir, this.getConfigDir());
 
     return path.join(configDir, this.CONFIG_FILE);
   }
@@ -37,7 +42,7 @@ export class RemoteConfig {
    */
   private static ensureConfigDir(): void {
     const homeDir = os.homedir();
-    const configDir = path.join(homeDir, this.CONFIG_DIR);
+    const configDir = path.join(homeDir, this.getConfigDir());
 
     if (!fs.existsSync(configDir)) {
       fs.mkdirSync(configDir, { recursive: true });

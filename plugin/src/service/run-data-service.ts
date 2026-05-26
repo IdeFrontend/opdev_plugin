@@ -3,6 +3,8 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 
+import { joinIdeConfigPath } from '@plugin/helpers/ide-config-dir';
+
 import { PermanentStorage } from '@plugin/class/permanent-storage';
 import {
   GetPerformanceRunDataParams,
@@ -108,11 +110,7 @@ export class RunDataService {
       marked: boolean;
     }> = [];
 
-    // Get all files under .vscode/mindstudio_sanitizer_log
-    const logPath = path.join(
-      workspacePath,
-      '.vscode/mindstudio_sanitizer_log',
-    );
+    const logPath = joinIdeConfigPath(workspacePath, 'mindstudio_sanitizer_log');
 
     const markSet = getMsSanitizerMarks();
 

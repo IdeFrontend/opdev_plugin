@@ -6,6 +6,7 @@ import {
 } from '@plugin/domain/utils/command-utils';
 import { ConfigRecord } from '@plugin/domain/models/config-model';
 import { OpRecord } from '@plugin/domain/models/model';
+import { joinIdeConfigRelative } from '@plugin/helpers/ide-config-dir';
 import {
   CommandStrategy,
   CommandContext,
@@ -131,7 +132,7 @@ export class TritonCommandStrategy extends BasePythonCommandStrategy implements 
     const logRoot = operator?.op_path || '.';
     mssanitizer.addOption(
       'log-file',
-      `${logRoot}/.vscode/mindstudio_sanitizer_log/mssanitizer_${new Date().valueOf()}.log`,
+      `${logRoot}/${joinIdeConfigRelative('mindstudio_sanitizer_log')}/mssanitizer_${new Date().valueOf()}.log`,
     );
 
     return joinCommands(sourceCannCmd, cdCmd, mssanitizer.toString());
