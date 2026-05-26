@@ -23,6 +23,7 @@ import {
 import { OperatorProjectType } from '@plugin/domain/services/operator-project-detector';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import { getCompileOptionForSelectedOperators } from '@plugin/helpers/compile-options';
+import { whenPostActivateBootstrapReady } from '@plugin/helpers/post-activate-bootstrap';
 
 // Global task manager: used to track and terminate executing tasks
 let currentExecutor: CommandExecutor | null = null;
@@ -39,6 +40,10 @@ const taskNameKeyMap: Record<string, string> = {
   'utTest': 'task.taskName.utTest',
 };
 
+
+async function ensurePostActivateBootstrapReady(): Promise<void> {
+  await whenPostActivateBootstrapReady();
+}
 
 async function guardSupportedProjectTypeOrNotify(): Promise<boolean> {
   const projectTypeInfo = await homeMethods.getProjectType();
@@ -59,6 +64,7 @@ export const taskMethods = {
    * Build operator
    */
   async startBuild(params: StartBuildParams = {}): Promise<void> {
+    await ensurePostActivateBootstrapReady();
     try {
       await ProjectManager.getInstance()
         .initProject();
@@ -81,6 +87,7 @@ export const taskMethods = {
    * Run operator
    */
   async startRun(params: StartRunParams = {}): Promise<void> {
+    await ensurePostActivateBootstrapReady();
     try {
       await ProjectManager.getInstance()
         .initProject();
@@ -103,6 +110,7 @@ export const taskMethods = {
    * Build example
    */
   async startBuildExample(params: StartBuildExampleParams = {}): Promise<void> {
+    await ensurePostActivateBootstrapReady();
     try {
       await ProjectManager.getInstance()
         .initProject();
@@ -125,6 +133,7 @@ export const taskMethods = {
    * Simulation analysis
    */
   async startSimulate(params: StartSimulateParams = {}): Promise<void> {
+    await ensurePostActivateBootstrapReady();
     try {
       await ProjectManager.getInstance()
         .initProject();
@@ -147,6 +156,7 @@ export const taskMethods = {
    * On-board analysis
    */
   async startOnBoard(params: StartOnBoardParams = {}): Promise<void> {
+    await ensurePostActivateBootstrapReady();
     try {
       await ProjectManager.getInstance()
         .initProject();
@@ -169,6 +179,7 @@ export const taskMethods = {
    * Anomaly detection
    */
   async runSanitizer(params: StartSanitizerParams = {}): Promise<void> {
+    await ensurePostActivateBootstrapReady();
     try {
       await ProjectManager.getInstance()
         .initProject();
@@ -192,6 +203,7 @@ export const taskMethods = {
    */
   async startDumpTensor(params: { operatorNames?: string,
     compileOption?: string } = {}): Promise<void> {
+    await ensurePostActivateBootstrapReady();
     try {
       await ProjectManager.getInstance()
         .initProject();
@@ -214,6 +226,7 @@ export const taskMethods = {
    * Run UT tests
    */
   async startUtTest(params: StartUtTestParams = {}): Promise<void> {
+    await ensurePostActivateBootstrapReady();
     try {
       await ProjectManager.getInstance()
         .initProject();
@@ -235,6 +248,7 @@ export const taskMethods = {
    * Import DumpTensor .bin file
    */
   async importDumpTensorBinFile(params: { binFilePath: string }): Promise<void> {
+    await ensurePostActivateBootstrapReady();
     try {
       await ProjectManager.getInstance()
         .initProject();
@@ -354,6 +368,7 @@ export const taskMethods = {
    * Run NPU debug
    */
   async runDebug(): Promise<void> {
+    await ensurePostActivateBootstrapReady();
     try {
       if (!(await guardSupportedProjectTypeOrNotify())) {
         return;
@@ -482,6 +497,7 @@ export const taskMethods = {
    * NPU debugging configuration
    */
   async debugConfig(): Promise<void> {
+    await ensurePostActivateBootstrapReady();
     try {
       await vscode.commands.executeCommand('workbench.action.debug.configure');
       vscode.window.showInformationMessage(t('task.launchJsonOpened'));
@@ -497,6 +513,7 @@ export const taskMethods = {
    * Run CPU debug
    */
   async runCpuDebug(): Promise<void> {
+    await ensurePostActivateBootstrapReady();
     try {
       if (!(await guardSupportedProjectTypeOrNotify())) {
         return;
@@ -618,6 +635,7 @@ export const taskMethods = {
    * CPU debug configuration
    */
   async cpuDebugConfig(): Promise<void> {
+    await ensurePostActivateBootstrapReady();
     try {
       await vscode.commands.executeCommand('workbench.action.debug.configure');
       vscode.window.showInformationMessage(t('task.launchJsonOpened'));

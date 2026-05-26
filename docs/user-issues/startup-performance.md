@@ -85,14 +85,22 @@ sequenceDiagram
 ### Implementation plan
 
 1. **Profile activation** — ensure all major steps log `elapsedMs`; add summary line at end of `activate()`.
-2. **Defer non-critical work:**
-   - Move `openProject` auto-open to `setImmediate` / `vscode.window.onDidChangeWindowState` or first sidebar focus.
-   - Move `MindStudioPluginInstaller.installIfNeeded()` to background with progress notification.
-   - Lazy-init heavy webview providers if not needed at startup.
+2. **Defer non-critical work** (implemented in `post-activate-bootstrap.ts`):
+   - After `activate()` returns, run auto-`openProject`, `MindStudioPluginInstaller.installIfNeeded()`, and post-open sidebar refresh in a single-flight background task.
+   - Operator commands and user-initiated `openProject` call `whenPostActivateBootstrapReady()` so they do not race deferred startup (e.g. NPU debug before debug VSIX install).
 3. **Cache sidebar context** — avoid full `syncOperatorProjectWorkspaceSettings()` on every activation if hash of configs unchanged.
 4. **Skip `/etc/profile` exec** on auto-open when `ascend_env_script` or `.arts/.env` suffices.
 5. **Document** expected first-open time and remote-SSH overhead.
 6. **Measure** before/after with large ops-math workspace fixture.
+
+**Key files (defer + await):**
+
+| File | Role |
+|------|------|
+| `plugin/src/helpers/post-activate-bootstrap.ts` | Deferred bootstrap + `whenPostActivateBootstrapReady()` |
+| `plugin/src/extension.ts` | `startPostActivateBootstrap()` at end of `activate()` |
+| `plugin/src/controller/task-controller.ts` | Awaits bootstrap before build/run/debug/sanitizer flows |
+| `plugin/src/controller/welcome-controller.ts` | User `openProject` awaits bootstrap (not system auto-open) |
 
 ---
 

@@ -1,6 +1,7 @@
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import { configService } from '@plugin/service/config-service';
 import { sanitizerService } from '@plugin/service/sanitizer-service';
+import { whenPostActivateBootstrapReady } from '@plugin/helpers/post-activate-bootstrap';
 import {
   GetSanitizerFormResult,
   SaveSanitizerFormParams,
@@ -59,6 +60,7 @@ export const sanitizerViewMethods = {
    * Run Sanitizer
    */
   async runSanitizer(): Promise<void> {
+    await whenPostActivateBootstrapReady();
     try {
       await ProjectManager.getInstance()
         .initProject();

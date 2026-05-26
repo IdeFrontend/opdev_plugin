@@ -15,7 +15,9 @@ import { WebviewProvider } from './class/webview-provider';
 import { handleOperatorProjectDirectoryFile } from './class/webview-message-list';
 import { CsvEditorProvider } from './class/csv-editor-provider';
 import { HomeTreeProvider } from './class/home-tree-provider';
-import { OperateTreeProvider, type OperateNode } from './class/operate-tree-provider';
+import {
+  OperateTreeProvider, type OperateNode,
+} from './class/operate-tree-provider';
 import {
   ApiServer, type ApiGroup,
 } from './core/api-server';
@@ -33,7 +35,7 @@ import { msAgentBridgeService } from './service/ms-agent-bridge.service';
 import { getDumpTensorPanelViewProvider } from './class/dump-tensor-panel-view';
 import { appendLog } from './helpers/output-channel';
 
-import { MindStudioPluginInstaller } from './class/mind-studio-plugin-installer';
+import { startPostActivateBootstrap } from './helpers/post-activate-bootstrap';
 import { registerOperatorPlugins } from './domain/plugins';
 import { OperatorPluginRegistry } from './domain/plugins/operator-plugin.registry';
 import {
@@ -140,12 +142,16 @@ import { isAscendA5ProfilerCannSoc } from './domain/utils/ascend-util';
 import { logGlobalEnvSnapshot } from './domain/utils/global-env-snapshot';
 import { FolderContextMenuService } from './service/folder-context-menu-service';
 import { buildService } from './service/build-service';
-import { configService, ConfigService } from './service/config-service';
+import {
+  configService, ConfigService,
+} from './service/config-service';
 import { projectService } from './service/project-service';
 import { OperatorProjectIconTheme } from './class/operator-project-icon-theme';
 import { welcomeMethods } from './controller/welcome-controller';
 import { registerSidebarContextsRefresh } from './helpers/sidebar-context-refresh';
-import { getDevtoolConfigPath, getIdeConfigDirName } from './helpers/ide-config-dir';
+import {
+  getDevtoolConfigPath, getIdeConfigDirName,
+} from './helpers/ide-config-dir';
 import { getCompileOptionForSelectedOperators } from './helpers/compile-options';
 import {
   dispatchStartBuild,
@@ -189,15 +195,18 @@ function getFolderUri(uri: vscode.Uri): vscode.Uri {
   }
 }
 
-function resolvePerformanceReportCommandKey(
-  arg: string | { id?: string; command?: { arguments?: unknown[] } } | undefined,
-): string {
+function resolvePerformanceReportCommandKey(arg: string | {
+  id?: string;
+  command?: { arguments?: unknown[] }
+} | undefined): string {
   const raw = typeof arg === 'string'
     ? arg
     : String(arg?.command?.arguments?.[0] ?? arg?.id ?? '');
+
   if (raw.startsWith('performance-report:')) {
     return decodeURIComponent(raw.replace(/^performance-report:/, ''));
   }
+
   return raw;
 }
 
@@ -205,10 +214,13 @@ function resolvePerformanceReportKeyFromTreeItem(node: OperateNode): string | un
   if (node.nodeId !== 'performanceReportItem') {
     return undefined;
   }
+
   const rawId = node.id ?? '';
+
   if (!rawId.startsWith('performance-report:')) {
     return undefined;
   }
+
   return decodeURIComponent(rawId.replace(/^performance-report:/, ''));
 }
 
@@ -218,6 +230,7 @@ async function applyPerformanceReportSelection(
 ): Promise<void> {
   operateTreeProvider.selectPerformanceReport(reportKey);
   const selected = operateTreeProvider.getSelectedPerformanceReport();
+
   await vscode.commands.executeCommand('setContext', 'opDevtools.performanceReportSelected', Boolean(selected));
   await vscode.commands.executeCommand('setContext', 'opDevtools.performanceSelectedReportMarked', Boolean(selected?.marked));
 }
@@ -294,9 +307,14 @@ export async function activate(context: vscode.ExtensionContext) {
   const myExtension = vscode.extensions.getExtension('publisher.extensionName');
   const debugTag = '[op-devtools][activate]';
   const logDebug = (...args: unknown[]) => {
-    const [message, payload] = args;
+    const [
+      message,
+      payload,
+    ] = args;
+
     appendLog(debugTag, String(message ?? ''), payload);
   };
+
   logDebug('activate:start', { workspaceFolders: (vscode.workspace.workspaceFolders || []).map((f) => f.uri.fsPath) });
 
   extensionContext = context;
@@ -316,6 +334,7 @@ export async function activate(context: vscode.ExtensionContext) {
   catch {
     // ignore
   }
+
   // api interface
   const apiServer = initApiServer();
 
@@ -327,6 +346,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const homeTreeProvider = new HomeTreeProvider();
   const operateTreeProvider = new OperateTreeProvider(context.extensionUri, 'flow', context);
+
   OperateTreeProvider.registerOperateFlowTreeProvider(operateTreeProvider);
   const operatorProjectsTreeProvider = new OperateTreeProvider(context.extensionUri, 'operatorProjects', context);
   let isSyncingWorkspaceSettings = false;
@@ -336,7 +356,9 @@ export async function activate(context: vscode.ExtensionContext) {
   const syncOperatorProjectWorkspaceSettings = async () => {
     isSyncingWorkspaceSettings = true;
     const syncStart = Date.now();
+
     logDebug('syncOperatorProjectWorkspaceSettings:start');
+
     try {
       await configService.syncOperatorProjectWorkspaceSettings();
     }
@@ -351,19 +373,23 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const refreshSidebarContexts = async () => {
     const refreshStart = Date.now();
+
     if (isRefreshingSidebarContexts) {
       hasPendingSidebarRefresh = true;
       logDebug('refreshSidebarContexts:coalesced', {
         hasPendingSidebarRefresh,
         isSyncingWorkspaceSettings,
       });
+
       return;
     }
+
     isRefreshingSidebarContexts = true;
     logDebug('refreshSidebarContexts:start', {
       hasDevtoolConfig,
       isSyncingWorkspaceSettings,
     });
+
     try {
       await ConfigService.writeOpDevtoolsDottedSettings({});
       do {
@@ -371,27 +397,34 @@ export async function activate(context: vscode.ExtensionContext) {
         hasDevtoolConfig = await checkDevtoolConfigExists();
         let projectType = '';
         let projectTypeSupported = true;
+
         if (hasDevtoolConfig) {
           const projectTypeResult = await homeMethods.getProjectType();
+
           projectType = projectTypeResult.projectType || '';
           projectTypeSupported = OperatorPluginRegistry.isProjectTypeSupported(projectType);
         }
+
         const effectiveHasDevtoolConfig = hasDevtoolConfig && projectTypeSupported;
+
         logDebug('refreshSidebarContexts:devtoolConfigChecked', {
           hasDevtoolConfig,
           effectiveHasDevtoolConfig,
           projectType,
           projectTypeSupported,
         });
+
         if (effectiveHasDevtoolConfig) {
           await syncOperatorProjectWorkspaceSettings();
         }
+
         await vscode.commands.executeCommand('setContext', 'hasDevtoolConfig', effectiveHasDevtoolConfig);
         await vscode.commands.executeCommand('setContext', 'opDevtools.showHomeTree', !effectiveHasDevtoolConfig);
         await vscode.commands.executeCommand('setContext', 'opDevtools.showOperateTree', effectiveHasDevtoolConfig);
         const {
           showOperatorSearch, showOperatorProjects,
         } = await operateTreeProvider.refreshState(effectiveHasDevtoolConfig);
+
         // Keep both tree views in sync.
         await operatorProjectsTreeProvider.refreshState(effectiveHasDevtoolConfig);
         await vscode.commands.executeCommand('setContext', 'opDevtools.showOperatorSearch', showOperatorSearch);
@@ -449,17 +482,21 @@ export async function activate(context: vscode.ExtensionContext) {
   const syncNativeQueueState = async () => {
     try {
       const { items } = await dispatchGetOperatorActionQueueStatus();
+
       await vscode.commands.executeCommand(
         'setContext',
         'opDevtools.operatorActionQueueStopAllVisible',
         items.length >= 2,
       );
       const states: Partial<Record<'sanitizer' | 'onboard' | 'simulation' | 'utTest' | 'dumpTensor', 'queued' | 'running' | 'cancel_failed'>> = {};
+
       items.forEach((item) => {
         const nodeId = queueActionToNodeId[item.actionType];
+
         if (!nodeId) {
           return;
         }
+
         states[nodeId] = item.internalState;
       });
       operateTreeProvider.setQueuedFlowStates(states);
@@ -478,12 +515,14 @@ export async function activate(context: vscode.ExtensionContext) {
   const queueStatusTimer = setInterval(() => {
     void syncNativeQueueState();
   }, 1000);
+
   context.subscriptions.push({ dispose: () => clearInterval(queueStatusTimer) });
 
   const watchColorThemeChange = vscode.window.onDidChangeActiveColorTheme(async () => {
     logDebug('event:onDidChangeActiveColorTheme');
     await refreshSidebarContexts();
   });
+
   context.subscriptions.push(watchColorThemeChange);
 
   const watchOpDevtoolsEnvAndOperatorConfig = vscode.workspace.onDidChangeConfiguration(async (e) => {
@@ -492,6 +531,7 @@ export async function activate(context: vscode.ExtensionContext) {
     const operatorSupportAffected = e.affectsConfiguration('op-devtools.operatorSupport');
     const tritonSupportAffected = e.affectsConfiguration('op-devtools.operatorSupport.triton');
     const opDevtoolsAffected = e.affectsConfiguration('op-devtools');
+
     logDebug('event:onDidChangeConfiguration', {
       isSyncingWorkspaceSettings,
       envAffected,
@@ -500,13 +540,17 @@ export async function activate(context: vscode.ExtensionContext) {
       tritonSupportAffected,
       opDevtoolsAffected,
     });
+
     if (isSyncingWorkspaceSettings) {
       logDebug('event:onDidChangeConfiguration:ignoredDueToSync');
+
       return;
     }
+
     if (opDevtoolsAffected) {
       await ConfigService.writeOpDevtoolsDottedSettings({});
     }
+
     if (
       envAffected
       || operatorAffected
@@ -523,11 +567,13 @@ export async function activate(context: vscode.ExtensionContext) {
       const reloadAction = t('extension.reloadWindowAction');
       const message = t('extension.tritonSupportChangedReload');
       const pick = await vscode.window.showInformationMessage(message, reloadAction);
+
       if (pick === reloadAction) {
         await vscode.commands.executeCommand('workbench.action.reloadWindow');
       }
     }
   });
+
   context.subscriptions.push(watchOpDevtoolsEnvAndOperatorConfig);
 
   // view
@@ -614,9 +660,11 @@ export async function activate(context: vscode.ExtensionContext) {
       if (!element) {
         return operateTreeProvider.getSanitizerResultsPanelNodes();
       }
+
       if (element.nodeId === 'sanitizerReportItem' || element.nodeId === 'sanitizerClass') {
         return operateTreeProvider.getChildren(element);
       }
+
       return [];
     },
   };
@@ -633,9 +681,11 @@ export async function activate(context: vscode.ExtensionContext) {
       if (!element) {
         return operateTreeProvider.getPerformanceResultsPanelNodes();
       }
+
       if (element.nodeId === 'performanceReportItem' || element.nodeId === 'performanceFolder') {
         return operateTreeProvider.getChildren(element);
       }
+
       return [];
     },
   };
@@ -643,22 +693,28 @@ export async function activate(context: vscode.ExtensionContext) {
     treeDataProvider: performanceResultsPanelProvider,
     showCollapseAll: false,
   });
+
   operateTreeProvider.setPerformanceResultsTreeView(performanceResultsTreeView);
   context.subscriptions.push(performanceResultsTreeView.onDidChangeSelection(async (event) => {
     const node = event.selection[0];
+
     if (!node) {
       return;
     }
+
     const reportKey = resolvePerformanceReportKeyFromTreeItem(node);
+
     if (!reportKey || operateTreeProvider.getSelectedPerformanceReport()?.key === reportKey) {
       return;
     }
+
     await applyPerformanceReportSelection(operateTreeProvider, reportKey);
   }));
   const operatorProjectsTreeView = vscode.window.createTreeView('opdevtoolsOperatorProjectsTree', {
     treeDataProvider: operatorProjectsTreeProvider,
     showCollapseAll: false,
   });
+
   context.subscriptions.push(
     homeTreeView,
     operateTreeView,
@@ -698,7 +754,11 @@ export async function activate(context: vscode.ExtensionContext) {
       operateTreeProvider.runFlowAction('build', async () => {
         const operatorNames = await getOperatorNamesFromSelection();
         const compileOption = await getCompileOptionForSelectedOperators();
-        await dispatchStartBuild({ operatorNames, compileOption });
+
+        await dispatchStartBuild({
+          operatorNames,
+          compileOption,
+        });
       }),
   );
 
@@ -710,39 +770,32 @@ export async function activate(context: vscode.ExtensionContext) {
           const operatorNames = await getOperatorNamesFromSelection();
           const compileOption = await getCompileOptionForSelectedOperators();
           const operatorType = operateTreeProvider.isStandardCustomContext() ? 'standard-custom' : undefined;
+
           await dispatchStartBuildExample({
             operatorNames,
             operatorType,
             compileOption,
           });
+
           return;
         }
+
         await dispatchStartRun();
       });
     },
   );
 
-  // Expand or close the sidebar based on whether the devtool_config.json file exists
-  if (hasDevtoolConfig) {
-    // Delay execution to ensure UI is ready
-    setTimeout(async () => {
-      try {
-        console.log('[Extension] devtool_config.json found, focusing opdevtoolsOperateTree');
-        await vscode.commands.executeCommand('opdevtoolsOperateTree.focus');
-      }
-      catch (error) {
-        console.warn('[Extension] Failed to focus opdevtoolsOperateTree:', error);
-      }
-    }, 300);
-  }
   const sidebarCpuDebugCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_CPU_DEBUG,
     async () => {
       const selectedIds = await homeMethods.getSelectedOperatorIds();
+
       if (selectedIds && selectedIds.length > 1) {
         vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
+
         return;
       }
+
       await operateTreeProvider.runFlowAction('cpuDebug', async () => {
         await taskMethods.runCpuDebug();
       });
@@ -752,10 +805,13 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_SIDEBAR_NPU_DEBUG,
     async () => {
       const selectedIds = await homeMethods.getSelectedOperatorIds();
+
       if (selectedIds && selectedIds.length > 1) {
         vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
+
         return;
       }
+
       await operateTreeProvider.runFlowAction('npuDebug', async () => {
         await taskMethods.runDebug();
       });
@@ -765,17 +821,23 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_SIDEBAR_SANITIZER,
     async () => {
       const selectedIds = await homeMethods.getSelectedOperatorIds();
+
       if (selectedIds && selectedIds.length > 1) {
         vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
+
         return;
       }
+
       const operatorNames = await getOperatorNamesFromSelection();
       const showQuickOptions = vscode.workspace.getConfiguration('op-devtools')
         .get<boolean>('sanitizer.showQuickOptions', true) ?? true;
+
       if (showQuickOptions) {
         await vscode.commands.executeCommand(COMMAND_SANITIZER_OPTIONS);
+
         return;
       }
+
       await operateTreeProvider.runFlowAction('sanitizer', async () => {
         await dispatchEnqueueNativeOperatorAction('sanitizer', { operatorNames }, dispatchRunSanitizer);
       });
@@ -785,27 +847,39 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_SIDEBAR_ON_BOARD,
     async () => {
       const selectedIds = await homeMethods.getSelectedOperatorIds();
+
       if (selectedIds && selectedIds.length > 1) {
         vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
+
         return;
       }
+
       const operatorNames = await getOperatorNamesFromSelection();
       const compileOption = await getCompileOptionForSelectedOperators();
       const showQuickOptions = vscode.workspace.getConfiguration('op-devtools')
         .get<boolean>('performanceTuning.onBoard.showQuickOptions', true) ?? true;
+
       if (showQuickOptions) {
         await vscode.commands.executeCommand(COMMAND_ON_BOARD_OPTIONS);
+
         return;
       }
+
       await operateTreeProvider.runFlowAction('onboard', async () => {
         const pyascCheck = await homeMethods.validatePyascForAnalysis();
+
         if (!pyascCheck.valid) {
           vscode.window.showWarningMessage(pyascCheck.message ?? t('extension.openPyFirst'));
+
           return;
         }
+
         await dispatchEnqueueNativeOperatorAction(
           'onboard',
-          { operatorNames, compileOption },
+          {
+            operatorNames,
+            compileOption,
+          },
           dispatchStartOnBoard,
           async () => {
             await operateTreeProvider.refreshPerformanceReports({ focusIfNew: true });
@@ -818,27 +892,39 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_SIDEBAR_SIMULATION,
     async () => {
       const selectedIds = await homeMethods.getSelectedOperatorIds();
+
       if (selectedIds && selectedIds.length > 1) {
         vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
+
         return;
       }
+
       const operatorNames = await getOperatorNamesFromSelection();
       const compileOption = await getCompileOptionForSelectedOperators();
       const showQuickOptions = vscode.workspace.getConfiguration('op-devtools')
         .get<boolean>('performanceTuning.simulation.showQuickOptions', true) ?? true;
+
       if (showQuickOptions) {
         await vscode.commands.executeCommand(COMMAND_SIMULATOR_OPTIONS);
+
         return;
       }
+
       await operateTreeProvider.runFlowAction('simulation', async () => {
         const pyascCheck = await homeMethods.validatePyascForAnalysis();
+
         if (!pyascCheck.valid) {
           vscode.window.showWarningMessage(pyascCheck.message ?? t('extension.openPyFirst'));
+
           return;
         }
+
         await dispatchEnqueueNativeOperatorAction(
           'simulation',
-          { operatorNames, compileOption },
+          {
+            operatorNames,
+            compileOption,
+          },
           dispatchStartSimulate,
           async () => {
             await operateTreeProvider.refreshPerformanceReports({ focusIfNew: true });
@@ -851,11 +937,15 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_SIDEBAR_UT_TEST,
     async () => {
       const selectedIds = await homeMethods.getSelectedOperatorIds();
+
       if (selectedIds && selectedIds.length > 1) {
         vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
+
         return;
       }
+
       const operatorNames = await getOperatorNamesFromSelection();
+
       await operateTreeProvider.runFlowAction('utTest', async () => {
         await dispatchEnqueueNativeOperatorAction('utTest', { operatorNames }, dispatchStartUtTest);
       });
@@ -865,12 +955,16 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_SIDEBAR_DUMP_TENSOR,
     async () => {
       const selectedIds = await homeMethods.getSelectedOperatorIds();
+
       if (selectedIds && selectedIds.length > 1) {
         vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
+
         return;
       }
+
       const operatorNames = await getOperatorNamesFromSelection();
-      const compileOption = await getCompileOptionFromSelection();
+      const compileOption = await getCompileOptionForSelectedOperators();
+
       await operateTreeProvider.runFlowAction('dumpTensor', async () => {
         await dispatchEnqueueNativeOperatorAction(
           'dumpTensor',
@@ -887,10 +981,13 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_SIDEBAR_DEBUG_SETTINGS,
     async () => {
       const selectedIds = await homeMethods.getSelectedOperatorIds();
+
       if (selectedIds && selectedIds.length > 1) {
         vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
+
         return;
       }
+
       await operateTreeProvider.runFlowAction(
         'debug',
         async () => {
@@ -907,10 +1004,13 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_SIDEBAR_SANITIZER_SETTINGS,
     async () => {
       const selectedIds = await homeMethods.getSelectedOperatorIds();
+
       if (selectedIds && selectedIds.length > 1) {
         vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
+
         return;
       }
+
       await operateTreeProvider.runFlowAction(
         'sanitizer',
         async () => {
@@ -930,10 +1030,13 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_SIDEBAR_ON_BOARD_SETTINGS,
     async () => {
       const selectedIds = await homeMethods.getSelectedOperatorIds();
+
       if (selectedIds && selectedIds.length > 1) {
         vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
+
         return;
       }
+
       await operateTreeProvider.runFlowAction(
         'onboard',
         async () => {
@@ -953,10 +1056,13 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_SIDEBAR_SIMULATION_SETTINGS,
     async () => {
       const selectedIds = await homeMethods.getSelectedOperatorIds();
+
       if (selectedIds && selectedIds.length > 1) {
         vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
+
         return;
       }
+
       await operateTreeProvider.runFlowAction(
         'simulation',
         async () => {
@@ -988,80 +1094,103 @@ export async function activate(context: vscode.ExtensionContext) {
   );
   const sidebarSanitizerReportCopyPathCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_SANITIZER_REPORT_COPY_PATH,
-    async (arg: string | { id?: string;
-      command?: { arguments?: unknown[] } }) => {
+    async (arg: string | {
+      id?: string;
+      command?: { arguments?: unknown[] }
+    }) => {
       const raw = typeof arg === 'string'
         ? arg
         : String(arg?.command?.arguments?.[0] ?? arg?.id ?? '');
       const reportPath = raw.startsWith('sanitizer-report:')
         ? decodeURIComponent(raw.replace(/^sanitizer-report:/, ''))
         : raw;
+
       if (!reportPath) {
         return;
       }
+
       await operateTreeProvider.copySanitizerReportPath(reportPath);
     },
   );
   const sidebarSanitizerReportToggleMarkCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_SANITIZER_REPORT_TOGGLE_MARK,
-    async (arg: string | { id?: string;
-      command?: { arguments?: unknown[] } }) => {
+    async (arg: string | {
+      id?: string;
+      command?: { arguments?: unknown[] }
+    }) => {
       const raw = typeof arg === 'string'
         ? arg
         : String(arg?.command?.arguments?.[0] ?? arg?.id ?? '');
       const reportPath = raw.startsWith('sanitizer-report:')
         ? decodeURIComponent(raw.replace(/^sanitizer-report:/, ''))
         : raw;
+
       if (!reportPath) {
         return;
       }
+
       const report = operateTreeProvider.getSanitizerReportByPath(reportPath);
+
       if (!report) {
         return;
       }
+
       const reportId = report.id;
+
       await operateTreeProvider.toggleSanitizerReportMark(reportId);
       await vscode.commands.executeCommand('setContext', 'opDevtools.sanitizerMarkedOnly', operateTreeProvider.isSanitizerMarkedOnlyEnabled());
     },
   );
   const sidebarSanitizerReportMarkCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_SANITIZER_REPORT_MARK,
-    async (arg: string | { id?: string;
-      command?: { arguments?: unknown[] } }) => {
+    async (arg: string | {
+      id?: string;
+      command?: { arguments?: unknown[] }
+    }) => {
       const raw = typeof arg === 'string'
         ? arg
         : String(arg?.command?.arguments?.[0] ?? arg?.id ?? '');
       const reportPath = raw.startsWith('sanitizer-report:')
         ? decodeURIComponent(raw.replace(/^sanitizer-report:/, ''))
         : raw;
+
       if (!reportPath) {
         return;
       }
+
       const report = operateTreeProvider.getSanitizerReportByPath(reportPath);
+
       if (!report) {
         return;
       }
+
       await operateTreeProvider.toggleSanitizerReportMark(report.id);
       await vscode.commands.executeCommand('setContext', 'opDevtools.sanitizerMarkedOnly', operateTreeProvider.isSanitizerMarkedOnlyEnabled());
     },
   );
   const sidebarSanitizerReportUnmarkCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_SANITIZER_REPORT_UNMARK,
-    async (arg: string | { id?: string;
-      command?: { arguments?: unknown[] } }) => {
+    async (arg: string | {
+      id?: string;
+      command?: { arguments?: unknown[] }
+    }) => {
       const raw = typeof arg === 'string'
         ? arg
         : String(arg?.command?.arguments?.[0] ?? arg?.id ?? '');
       const reportPath = raw.startsWith('sanitizer-report:')
         ? decodeURIComponent(raw.replace(/^sanitizer-report:/, ''))
         : raw;
+
       if (!reportPath) {
         return;
       }
+
       const report = operateTreeProvider.getSanitizerReportByPath(reportPath);
+
       if (!report) {
         return;
       }
+
       await operateTreeProvider.toggleSanitizerReportMark(report.id);
       await vscode.commands.executeCommand('setContext', 'opDevtools.sanitizerMarkedOnly', operateTreeProvider.isSanitizerMarkedOnlyEnabled());
     },
@@ -1102,9 +1231,11 @@ export async function activate(context: vscode.ExtensionContext) {
         },
       });
       const filePath = picked?.[0]?.fsPath;
+
       if (!filePath) {
         return;
       }
+
       await vscode.window.withProgress(
         { location: { viewId: 'opdevtoolsSanitizerResultsTree' } },
         async () => {
@@ -1121,25 +1252,32 @@ export async function activate(context: vscode.ExtensionContext) {
   );
   const sidebarSanitizerMessageAiFixCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_SANITIZER_MESSAGE_AI_FIX,
-    async (arg: string | { id?: string;
-      command?: { arguments?: unknown[] } }) => {
+    async (arg: string | {
+      id?: string;
+      command?: { arguments?: unknown[] }
+    }) => {
       if (!(await msAgentBridgeService.isMsAgentIntegrationAvailable())) {
         return;
       }
+
       const aiFixIndex = operateTreeProvider.getSanitizerMessageAiFixIndex(arg);
+
       if (aiFixIndex === undefined) {
         return;
       }
+
       await msAgentBridgeService.fixMsAgentProblem(aiFixIndex);
     },
   );
   const sidebarSanitizerStackJumpCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_SANITIZER_STACK_JUMP,
-    async (params: { fileLink: string;
+    async (params: {
+      fileLink: string;
       row: number;
       col: number;
       errorTitle?: string;
-      errorMessage?: string }) => {
+      errorMessage?: string
+    }) => {
       await performanceDataMethods.jumpToFile(params);
     },
   );
@@ -1218,18 +1356,23 @@ export async function activate(context: vscode.ExtensionContext) {
     async (arg: string | { id?: string }) => {
       const raw = typeof arg === 'string' ? arg : String(arg?.id ?? '');
       const marker = 'sanitizer-report-group:';
+
       if (!raw.startsWith(marker)) {
         return;
       }
+
       const [
         , encodedReportPath,
         mode,
         encodedGroupKey,
       ] = raw.split(':');
+
       if (mode !== 'file' || !encodedGroupKey) {
         return;
       }
+
       const filePath = decodeURIComponent(encodedGroupKey);
+
       await operateTreeProvider.openSanitizerResultGroupFile(filePath);
     },
   );
@@ -1238,6 +1381,7 @@ export async function activate(context: vscode.ExtensionContext) {
     async () => {
       const resolveOperateChildren = async (node?: unknown) => {
         const children = await Promise.resolve(operateTreeProvider.getChildren(node as never));
+
         return Array.isArray(children) ? children : [];
       };
 
@@ -1245,12 +1389,15 @@ export async function activate(context: vscode.ExtensionContext) {
         if (typeof node.label === 'string') {
           return node.label;
         }
+
         return node.label?.label ?? '';
       };
 
       const rootNodes = await resolveOperateChildren();
+
       if (rootNodes.length === 0) {
         vscode.window.showInformationMessage(t('web.operate.noActionsAvailable'));
+
         return;
       }
 
@@ -1274,6 +1421,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
       const collectVisibleActions = async (node?: vscode.TreeItem) => {
         const nodes = await resolveOperateChildren(node);
+
         for (const item of nodes) {
           const itemLabel = getNodeLabel(item);
           const hasChildren = item.collapsibleState !== vscode.TreeItemCollapsibleState.None;
@@ -1294,6 +1442,7 @@ export async function activate(context: vscode.ExtensionContext) {
           }
 
           const commandId = item.command?.command;
+
           if (commandId && !seenCommands.has(commandId)) {
             seenCommands.add(commandId);
             picks.push({
@@ -1315,8 +1464,10 @@ export async function activate(context: vscode.ExtensionContext) {
       };
 
       await collectVisibleActions();
+
       if (picks.filter((item) => item.kind !== vscode.QuickPickItemKind.Separator).length === 0) {
         vscode.window.showInformationMessage(t('web.operate.noActionsAvailable'));
+
         return;
       }
 
@@ -1345,62 +1496,84 @@ export async function activate(context: vscode.ExtensionContext) {
   );
   const sidebarPerformanceReportCopyPathCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_PERFORMANCE_REPORT_COPY_PATH,
-    async (arg: string | { id?: string;
-      command?: { arguments?: unknown[] } }) => {
+    async (arg: string | {
+      id?: string;
+      command?: { arguments?: unknown[] }
+    }) => {
       const reportKeyRaw = resolvePerformanceReportCommandKey(arg);
       const reportKey = reportKeyRaw || operateTreeProvider.getSelectedPerformanceReport()?.key || '';
+
       if (!reportKey) {
         return;
       }
+
       await operateTreeProvider.copyPerformanceReportPath(reportKey);
     },
   );
   const sidebarPerformanceReportDownloadCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_PERFORMANCE_REPORT_DOWNLOAD,
-    async (arg: string | { id?: string;
-      command?: { arguments?: unknown[] } }) => {
+    async (arg: string | {
+      id?: string;
+      command?: { arguments?: unknown[] }
+    }) => {
       const reportKeyRaw = resolvePerformanceReportCommandKey(arg);
       const reportKey = reportKeyRaw || operateTreeProvider.getSelectedPerformanceReport()?.key || '';
+
       if (!reportKey) {
         return;
       }
+
       await operateTreeProvider.downloadPerformanceReport(reportKey);
     },
   );
   const sidebarPerformanceReportMarkCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_PERFORMANCE_REPORT_MARK,
-    async (arg: string | { id?: string;
-      command?: { arguments?: unknown[] } }) => {
+    async (arg: string | {
+      id?: string;
+      command?: { arguments?: unknown[] }
+    }) => {
       const reportKeyRaw = resolvePerformanceReportCommandKey(arg);
       const reportKey = reportKeyRaw || operateTreeProvider.getSelectedPerformanceReport()?.key || '';
+
       if (!reportKey) {
         return;
       }
+
       const report = operateTreeProvider.getPerformanceReportByKey(reportKey);
+
       if (report?.marked) {
         return;
       }
+
       await operateTreeProvider.togglePerformanceReportMark(reportKey);
       const selected = operateTreeProvider.getSelectedPerformanceReport();
+
       await vscode.commands.executeCommand('setContext', 'opDevtools.performanceMarkedOnly', operateTreeProvider.isPerformanceMarkedOnlyEnabled());
       await vscode.commands.executeCommand('setContext', 'opDevtools.performanceSelectedReportMarked', Boolean(selected?.marked));
     },
   );
   const sidebarPerformanceReportUnmarkCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_PERFORMANCE_REPORT_UNMARK,
-    async (arg: string | { id?: string;
-      command?: { arguments?: unknown[] } }) => {
+    async (arg: string | {
+      id?: string;
+      command?: { arguments?: unknown[] }
+    }) => {
       const reportKeyRaw = resolvePerformanceReportCommandKey(arg);
       const reportKey = reportKeyRaw || operateTreeProvider.getSelectedPerformanceReport()?.key || '';
+
       if (!reportKey) {
         return;
       }
+
       const report = operateTreeProvider.getPerformanceReportByKey(reportKey);
+
       if (!report?.marked) {
         return;
       }
+
       await operateTreeProvider.togglePerformanceReportMark(reportKey);
       const selected = operateTreeProvider.getSelectedPerformanceReport();
+
       await vscode.commands.executeCommand('setContext', 'opDevtools.performanceMarkedOnly', operateTreeProvider.isPerformanceMarkedOnlyEnabled());
       await vscode.commands.executeCommand('setContext', 'opDevtools.performanceSelectedReportMarked', Boolean(selected?.marked));
     },
@@ -1431,6 +1604,7 @@ export async function activate(context: vscode.ExtensionContext) {
       if (!filePath || !fileType) {
         return;
       }
+
       await operateTreeProvider.openPerformanceFile(filePath, fileType);
     },
   );
@@ -1438,8 +1612,10 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_SIDEBAR_SELECT_OPERATORS,
     async () => {
       const result = await homeMethods.checkMultipleOperators();
+
       if (!result.isStandardCustom || !result.operators || result.operators.length === 0) {
         vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
+
         return;
       }
 
@@ -1454,16 +1630,20 @@ export async function activate(context: vscode.ExtensionContext) {
         canPickMany: true,
         placeHolder: t('web.operate.pleaseSelectOperatorProject'),
       });
+
       if (!chosen) {
         return;
       }
 
       const hasEx = chosen.some((item) => item.operator.isExperimental);
       const hasNonEx = chosen.some((item) => !item.operator.isExperimental);
+
       if (hasEx && hasNonEx) {
         vscode.window.showWarningMessage(t('web.operate.singleOperatorOnly'));
+
         return;
       }
+
       await homeMethods.setSelectedOperators({ operatorIds: chosen.map((item) => item.operator.id) });
       await refreshSidebarContexts();
     },
@@ -1486,6 +1666,7 @@ export async function activate(context: vscode.ExtensionContext) {
         ignoreFocusOut: true,
         placeHolder: t('web.operate.searchOperatorProject'),
       });
+
       if (keyword === undefined) {
         return;
       }
@@ -1545,11 +1726,14 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_SIDEBAR_STOP_FLOW_TASK,
     async (node?: { nodeId?: string }) => {
       const actionType = node?.nodeId ? nodeIdToQueueAction[node.nodeId] : undefined;
+
       if (actionType) {
         await dispatchStopOperatorAction({ actionType });
         await syncNativeQueueState();
+
         return;
       }
+
       await dispatchStopTask();
       operateTreeProvider.clearFlowExecutionState();
       await syncNativeQueueState();
@@ -1596,8 +1780,10 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_CREATE_DIRECTORY,
     async (
       data: { createOperatorProjectDirectoryFileType: OperatorProjectViewIdValue },
-      progress: vscode.Progress<{ message?: string;
-        increment?: number }>,
+      progress: vscode.Progress<{
+        message?: string;
+        increment?: number
+      }>,
     ) => {
       await handleOperatorProjectDirectoryFile(
         data,
@@ -1639,6 +1825,7 @@ export async function activate(context: vscode.ExtensionContext) {
     openDumpTensorDisposable,
     getWebview: getDumpTensorPanelWebview,
   } = getDumpTensorPanelViewProvider(context, apiServer);
+
   context.subscriptions.push(dumpTensorPanelView, openDumpTensorDisposable);
 
   // Simulation / on-board quick options panels (collection picker)
@@ -2027,9 +2214,11 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_REPORT_VISUALIZATION_PERFORMANCE,
     async (firstArg?: unknown) => {
       let targetUri: vscode.Uri | undefined;
+
       if (isExplorerResourceFileUri(firstArg)) {
         targetUri = firstArg;
       }
+
       if (!targetUri) {
         const picked = await vscode.window.showOpenDialog({
           canSelectMany: false,
@@ -2038,7 +2227,9 @@ export async function activate(context: vscode.ExtensionContext) {
           title: t('extension.addPerformanceVisualizationPickFolderTitle'),
           openLabel: t('common.selectFolder'),
         });
+
         targetUri = picked?.[0];
+
         if (!targetUri) {
           return;
         }
@@ -2147,6 +2338,7 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_FLASH_DUMP_TENSOR_DATA,
     async () => {
       const webview = getDumpTensorPanelWebview();
+
       if (webview) {
         webview.postMessage({ command: 'dumpTensorRefreshData' });
       }
@@ -2163,8 +2355,7 @@ export async function activate(context: vscode.ExtensionContext) {
     async (uri) => {
       try {
         if (uri && uri.fsPath) {
-          const { buildService } = await import('./service/build-service.js');
-          await buildService.importDumpTensorBinFile(uri.fsPath);
+          await taskMethods.importDumpTensorBinFile({ binFilePath: uri.fsPath });
         }
       }
       catch (error) {
@@ -2173,6 +2364,7 @@ export async function activate(context: vscode.ExtensionContext) {
       }
     },
   );
+
   context.subscriptions.push(importDumpTensorBinFileCommand);
 
   // Workspace folder change listener
@@ -2206,9 +2398,11 @@ export async function activate(context: vscode.ExtensionContext) {
     if (isSyncingOnBoardOperatorMetrics) {
       return;
     }
+
     if (isSyncingWorkspaceSettings) {
       return;
     }
+
     if (!event.affectsConfiguration('op-devtools.performanceTuning.onBoard.operatorMetrics')) {
       return;
     }
@@ -2224,6 +2418,7 @@ export async function activate(context: vscode.ExtensionContext) {
       if (debugEnabled) {
         console.log('[onBoardOperatorMetricsSync] skip: desired is not boolean', desired);
       }
+
       return;
     }
 
@@ -2239,14 +2434,14 @@ export async function activate(context: vscode.ExtensionContext) {
 
     const metricWrites = metricKeys.reduce((acc, k) => {
       acc[k] = desired;
+
       return acc;
     }, {} as Record<string, unknown>);
 
     const applyMetricKeys = async (target: vscode.ConfigurationTarget, scopeUri?: vscode.Uri) => {
       const cfg = vscode.workspace.getConfiguration('op-devtools', scopeUri);
-      await Promise.all(
-        metricKeys.map((k) => cfg.update(k, desired, target)),
-      );
+
+      await Promise.all(metricKeys.map((k) => cfg.update(k, desired, target)));
     };
 
     const applyForWorkspace = async () => {
@@ -2259,12 +2454,14 @@ export async function activate(context: vscode.ExtensionContext) {
 
     const applyForAllFolders = async () => {
       const folders = vscode.workspace.workspaceFolders || [];
+
       await Promise.all(folders.map(async (folder) => {
         await applyMetricKeys(vscode.ConfigurationTarget.WorkspaceFolder, folder.uri);
       }));
     };
 
     isSyncingOnBoardOperatorMetrics = true;
+
     try {
       if (debugEnabled) {
         console.log('[onBoardOperatorMetricsSync] desired:', desired, 'inspect:', parentInspect);
@@ -2278,9 +2475,11 @@ export async function activate(context: vscode.ExtensionContext) {
       if (typeof parentInspect?.workspaceFolderValue === 'boolean') {
         await applyForAllFolders();
       }
+
       if (typeof parentInspect?.workspaceValue === 'boolean') {
         await applyForWorkspace();
       }
+
       if (typeof parentInspect?.globalValue === 'boolean') {
         await applyForGlobal();
       }
@@ -2298,11 +2497,10 @@ export async function activate(context: vscode.ExtensionContext) {
       isSyncingOnBoardOperatorMetrics = false;
     }
   });
+
   context.subscriptions.push(onBoardOperatorMetricsSync);
 
-  const devtoolConfigWatcher = vscode.workspace.createFileSystemWatcher(
-    `**/${getIdeConfigDirName()}/devtool_config.json`,
-  );
+  const devtoolConfigWatcher = vscode.workspace.createFileSystemWatcher(`**/${getIdeConfigDirName()}/devtool_config.json`);
   const watchDevtoolConfigCreate = devtoolConfigWatcher.onDidCreate(async (uri) => {
     logDebug('event:devtoolConfigWatcher:create', uri.fsPath);
     await refreshSidebarContexts();
@@ -2315,37 +2513,18 @@ export async function activate(context: vscode.ExtensionContext) {
     logDebug('event:devtoolConfigWatcher:delete', uri.fsPath);
     await refreshSidebarContexts();
   });
+
   context.subscriptions.push(devtoolConfigWatcher, watchDevtoolConfigCreate, watchDevtoolConfigChange, watchDevtoolConfigDelete);
-
-  // Detect current workspace when plugin is activated
-  if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
-    // Delay execution to ensure the plugin is fully initialized
-    const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-    logDebug('activate:autoOpenProject:start', { workspacePath });
-    try {
-      await welcomeMethods.openProject({ projectPath: workspacePath || '' }, true);
-      await refreshSidebarContexts();
-      await operateTreeProvider.refreshSanitizerReports(false);
-      await operateTreeProvider.refreshPerformanceReports();
-
-      logDebug('activate:autoOpenProject:end');
-    }
-    catch (error) {
-      logDebug('activate:autoOpenProject:error', error);
-    }
-  }
 
   console.log('Activate', vscode.workspace.workspaceFolders);
   console.log('🧠 MindStudio plugin loader activated.');
-  const installer = new MindStudioPluginInstaller(context, {
-    pluginId: 'ascend.mindstudio-debug-vscode-plugin',
-    vsixRelativePath:
-      './out/plugin/mindstudio-debug-vscode-plugin/MindStudio-Debug-VSCode-Plugin-1.0.8.vsix',
-    pluginVersion: '1.0.8',
+  logDebug('activate:returning; postActivate bootstrap scheduled');
+  startPostActivateBootstrap({
+    context,
+    operateTreeProvider,
+    logDebug,
+    checkDevtoolConfigExists,
   });
-
-  await installer.installIfNeeded();
-  console.log('Executed', context);
 }
 
 /**

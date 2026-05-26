@@ -31,6 +31,7 @@ import {
 } from '@plugin/domain/models/project-model';
 import { WorkspaceDetectorService } from '@plugin/service/workspace-detector-service';
 import { OperatorProjectIconTheme } from '../class/operator-project-icon-theme';
+import { whenPostActivateBootstrapReady } from '@plugin/helpers/post-activate-bootstrap';
 
 // Auxiliary function: get extension context
 function getExtensionContext(): vscode.ExtensionContext {
@@ -338,6 +339,9 @@ export const welcomeMethods = {
    * @param params - parameters
    */
   async openProject(params: OpenProjectParams, isFromSystem: boolean = false): Promise<void> {
+    if (!isFromSystem) {
+      await whenPostActivateBootstrapReady();
+    }
     try {
       // First check if the project is already in the user's configuration data
       const existingProject = getProjectByPath(params.projectPath);

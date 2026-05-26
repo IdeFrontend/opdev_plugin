@@ -945,7 +945,7 @@ export class FolderContextMenuService {
       const compileOption = isExperimental ? '--experimental' : undefined;
 
       // Call startBuild with operatorNames, operatorType, projectId, compileOption
-      await buildService.startBuild({
+      await taskMethods.startBuild({
         operatorNames,
         operatorType: 'standard-custom',
         projectId,

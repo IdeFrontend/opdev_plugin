@@ -16,6 +16,7 @@ module.exports = {
     '^vscode$': '<rootDir>/src/__tests__/mocks/vscode.ts',
     '^@plugin/(.*)$': '<rootDir>/src/$1',
     '^@shared/(.*)$': '<rootDir>/../shared/$1',
+    '^vscode$': '<rootDir>/src/__tests__/__mocks__/vscode.ts',
   },
   collectCoverageFrom: [
     'src/**/*.ts',
