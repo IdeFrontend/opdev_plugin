@@ -611,7 +611,9 @@ function getConfigPayload(
           op: record.op_name,
           script: record.op_type === 'ascend'
             ? `bash ${opScriptPath} --soc={soc_version} --ops={operatorNames} -u`
-            : `bash ${opScriptPath} -u`,
+            : (record.op_type === 'pyasc' || record.op_type === 'triton')
+              ? scripts.exampleScript
+              : `bash ${opScriptPath} -u`,
           config_name: record.op_name,
           target_dir: targetDir,
           target_file: targetExampleFile,

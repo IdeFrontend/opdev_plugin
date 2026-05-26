@@ -49,7 +49,16 @@ When the workspace sets **`op-devtools.performanceTuning.simulation.simulatorTyp
 | **Workspace sync** | `extension.ts` / `config-service.ts`: A5 syncs `performanceTuning.onBoard.pcSampling`; A3 syncs `cacheHeatmap` from `MemoryDetail`. |
 | **Config load from settings** | `operator-project-workspace-config.ts`: maps `pcSampling` vs `cacheHeatmap` using workspace `environment.socVersion` + `isAscendA5ProfilerCannSoc`. |
 | **i18n / package.nls** | User-facing copy for PC sampling vs cache heatmap on Ascend 950 / A5 (`shared/i18n`, `package.nls*.json`). |
-| **Unit tests** | `operator-spawn-env.spec.ts` (A5 sim → `ascend950` + `dav-3510`), `operator-script-placeholders.spec.ts`, `profiler-simulator-resolution.spec.ts`. |
+| **Unit tests** | `operator-spawn-env.spec.ts` (A5 sim → `ascend950` + `dav-3510` + `SUPPORT_*`), `operator-script-placeholders.spec.ts`, `profiler-simulator-resolution.spec.ts`, `pyasc-plugin.spec.ts`. |
+
+### 2.4 Project-type notes (templates)
+
+| Type | A4/A5 template status |
+|------|------------------------|
+| **CANN** (`cann_template/*`) | Env-driven `build.sh` / cmake — reference implementation |
+| **Ascend** (`ascend_template/add_custom`) | CMake reads spawn `SUPPORT_*`; plugin injects on every command |
+| **PyAsc** (`pyasc_temple`) | Python-only; configs use `python3 ./<op>.py`; profiler uses resolver |
+| **Triton** (`triton_vector_add`) | Python-only; no CANN env template contract; simulate/on-board disabled in plugin |
 
 ### 2.2 Not driven by `resolveAscendEnv` (intentional or legacy)
 
@@ -58,7 +67,7 @@ When the workspace sets **`op-devtools.performanceTuning.simulation.simulatorTyp
 | **`projects.json` `soc_version`** | Env config UI persists it for display/APIs; **`resolveAscendEnv` does not read it**. Operator commands use workspace SOC → global snapshot → detection → empty default. To target A5, set **`op-devtools.environment.socVersion`** to `ascend950`, export `SOC_VERSION=ascend950` before launching VS Code, rely on detection, or set workspace simulator `Ascend950PR_9589` for simulate runs. |
 | **`getProjectSocVersion()`** | Returns `getSocVersionWithWorkspaceOverride(project.soc_version)` — used for **workspace settings sync** and env webview display, not for spawn env. |
 | **`DEFAULT_FALLBACK_CANN_SOC`** | Empty string when settings, env, and detection all fail (no silent `ascend910b` in resolver). |
-| **`SUPPORT_COMPUTE_UNIT` / `SUPPORT_TILING_DIR`** | Ascend `add_custom` template still defaults to `ascend910_95` / `arch35` in cmake; plugin does not inject A5-specific values yet (`docs/ascend-env-spec.md` §6.2). |
+| **`SUPPORT_COMPUTE_UNIT` / `SUPPORT_TILING_DIR`** | Plugin injects `ascend910_95` / `arch35` on every spawn. For A5, `SOC_VERSION=ascend950` and `NPU_ARCH=dav-3510`; ACLNN compute unit remains `ascend910_95` (950-generation `SocVersion` in CANN `op_host`, not a separate `ascend950` string). |
 
 ### 2.3 Remaining gaps / operational caveats
 
@@ -131,7 +140,7 @@ On-board command build passes `onboardCannSoc` from `resolveAscendEnv({ isSimula
 | SOC rules, resolver, spawn env | `plugin/src/domain/utils/ascend-util.ts` |
 | Global env snapshot | `plugin/src/domain/utils/global-env-snapshot.ts` |
 | A5 profiler SOC helper | `shared/msprof-onboard-env.ts` |
-| Shared constants | `shared/cann-env-constants.ts` |
+| Shared constants | `shared/cann-env-constants.ts`, `shared/cann-aclnn-build-defaults.ts` |
 | Placeholders | `plugin/src/domain/utils/operator-script-placeholders.ts` |
 | Spawn entry | `plugin/src/service/operator-command-executor.ts` |
 | On-board / sim profiler strategies | `plugin/src/domain/services/profiler-service.ts` |

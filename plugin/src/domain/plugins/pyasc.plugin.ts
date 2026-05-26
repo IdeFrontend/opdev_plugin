@@ -11,7 +11,7 @@ import {
   IProjectDetector, ProjectDetectionResult,
 } from './project-detector.interface';
 import {
-  OperatorBuildBehavior, OperatorDefaultPaths,
+  OperatorBuildBehavior, OperatorConfigScripts, OperatorDefaultPaths,
 } from './operator-plugin.interface';
 import {
   hasPyFilesRecursive,
@@ -57,19 +57,34 @@ export class PyAscPlugin extends AbstractOperatorPlugin implements IProjectDetec
   }
 
   getDefaultPaths(op: OpRecord): OperatorDefaultPaths {
+    const pyEntry = path.join(op.op_path, `${op.op_name}.py`);
     const pyTarget = `python3 ./${op.op_name}.py`;
 
     return {
-      opScriptPath:      path.join(op.op_path, 'build.sh'),
-      exampleScriptPath: path.join(op.op_path, 'build.sh'),
+      opScriptPath:      pyEntry,
+      exampleScriptPath: pyEntry,
       targetDir:         path.resolve(op.op_path, 'build_out'),
       targetOpFile:      pyTarget,
       targetExampleFile: pyTarget,
     };
   }
 
-  // getInitialConfigScripts: inherits AbstractOperatorPlugin default (cann-format bash invocations).
-  // PyAsc uses the same simple script format as cann for initial configs.
+  /**
+   * PyAsc runs the operator `.py` entry directly (no bundled build.sh / cmake).
+   * Simulate and on-board use profiler strategies with resolveAscendEnv().
+   */
+  getInitialConfigScripts(op: OpRecord, _workspaceRoot: string): OperatorConfigScripts {
+    const py = `python3 ./${op.op_name}.py`;
+    return {
+      buildScript:     py,
+      exampleScript:   py,
+      simulateScript:  py,
+      onBoardScript:   py,
+      sanitizerScript: py,
+      cpuDebugScript:  py,
+      npuDebugScript:  py,
+    };
+  }
 
   createProjectGenerator(params: OpGenParams, project: OpGenProject, extensionPath: string) {
     return new PyAscOpGenerator(params, project, extensionPath);

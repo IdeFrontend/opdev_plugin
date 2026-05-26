@@ -17,11 +17,18 @@ import {
   SIMULATOR_ASCEND_950PR_9589, SIMULATOR_ASCEND_910B3,
 } from '@shared/cann-env-constants';
 import {
+  SUPPORT_COMPUTE_UNIT_ASCEND_910_95,
+  SUPPORT_COMPUTE_UNIT_ASCEND_950,
+  SUPPORT_TILING_DIR_ARCH22,
+  SUPPORT_TILING_DIR_ARCH35,
+} from '@shared/cann-aclnn-build-defaults';
+import {
   getSocVersionWithWorkspaceOverride,
   getWorkspaceSimulatorType,
 } from '@plugin/helpers/operator-project-workspace-config';
 import { getGlobalEnvSnapshot } from '@plugin/domain/utils/global-env-snapshot';
 import { appendLog } from '@plugin/helpers/output-channel';
+import { isAscendA5ProfilerCannSoc } from '@shared/msprof-onboard-env';
 
 const ASCEND_ENV_LOG_SCOPE = 'op-devtools/ascend-env';
 
@@ -41,6 +48,8 @@ function logAscendEnvResolution(
         + ` (source=${resolution.source.simulatorType})`
         : '')
       + `, npu_arch=${resolution.npuArch} (source=${resolution.source.npuArch})`
+      + `, support_compute_unit=${getSupportComputeUnitForCannSoc(resolution.socVersion)}`
+      + `, support_tiling_dir=${getSupportTilingDirForCannSoc(resolution.socVersion)}`
       + ` [isSimulator=${ctx.isSimulator}]`,
   );
 }
@@ -271,6 +280,29 @@ export function getNpuArchForCannSoc(cannSoc?: string | null): string {
 
   return NPU_ARCH_DAV_2201;
 }
+
+/**
+ * ACLNN `SUPPORT_COMPUTE_UNIT` for standard-custom ascend cmake (spawn env).
+ */
+export function getSupportComputeUnitForCannSoc(cannSoc?: string | null): string {
+  if (isAscendA5ProfilerCannSoc(normalizeCannSoc(cannSoc))) {
+    return SUPPORT_COMPUTE_UNIT_ASCEND_950;
+  }
+
+  return SUPPORT_COMPUTE_UNIT_ASCEND_910_95;
+}
+
+/**
+ * ACLNN `SUPPORT_TILING_DIR` paired with {@link getSupportComputeUnitForCannSoc}.
+ */
+export function getSupportTilingDirForCannSoc(cannSoc?: string | null): string {
+  if (isAscendA5ProfilerCannSoc(normalizeCannSoc(cannSoc))) {
+    return SUPPORT_TILING_DIR_ARCH35;
+  }
+
+  return SUPPORT_TILING_DIR_ARCH22;
+}
+
 
 // ---------------------------------------------------------------------------
 // Lazy host SOC detection
@@ -678,9 +710,9 @@ export function isSimulatorCompile(params: OperatorSpawnEnvContext): boolean {
  * `process.env`; spawn env overrides any inherited value in the child shell.
  *
  * `SOC_VERSION` and `NPU_ARCH` are always emitted so the cmake templates'
- * `$ENV{…}` fallbacks always see consistent values. `SIMULATOR_TYPE` is
- * emitted only for simulator runs to avoid leaking a value into non-simulator
- * builds.
+ * `$ENV{…}` fallbacks always see consistent values. `SUPPORT_COMPUTE_UNIT` and
+ * `SUPPORT_TILING_DIR` are emitted for ascend standard-custom cmake. `SIMULATOR_TYPE`
+ * is emitted only for simulator runs to avoid leaking a value into non-simulator builds.
  */
 export function buildOperatorSpawnEnvFromResolution(
   resolution: AscendEnvResolution,
@@ -689,6 +721,8 @@ export function buildOperatorSpawnEnvFromResolution(
   const env: Record<string, string> = {
     SOC_VERSION: resolution.socVersion,
     NPU_ARCH: resolution.npuArch,
+    SUPPORT_COMPUTE_UNIT: getSupportComputeUnitForCannSoc(resolution.socVersion),
+    SUPPORT_TILING_DIR: getSupportTilingDirForCannSoc(resolution.socVersion),
   };
 
   if (isSimulator && resolution.simulatorType) {

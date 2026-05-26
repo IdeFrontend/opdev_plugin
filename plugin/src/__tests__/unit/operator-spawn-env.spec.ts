@@ -19,12 +19,20 @@ import { getGlobalEnvSnapshot } from '@plugin/domain/utils/global-env-snapshot';
 import {
   getNpuArchForCannSoc,
   getOperatorSpawnEnv,
+  getSupportComputeUnitForCannSoc,
+  getSupportTilingDirForCannSoc,
   isSimulatorCompile,
   resolveAscendEnv,
   resolveEffectiveCannSoc,
   resolveSimulatorDir,
   simulatorTypeToCannSoc,
 } from '@plugin/domain/utils/ascend-util';
+import {
+  SUPPORT_COMPUTE_UNIT_ASCEND_910_95,
+  SUPPORT_COMPUTE_UNIT_ASCEND_950,
+  SUPPORT_TILING_DIR_ARCH22,
+  SUPPORT_TILING_DIR_ARCH35,
+} from '@shared/cann-aclnn-build-defaults';
 
 const snapshot = (overrides: Partial<{
   socVersion: string;
@@ -75,6 +83,17 @@ describe('operator spawn env', () => {
       .toBe('dav-2201');
   });
 
+  it('getSupportComputeUnitForCannSoc and getSupportTilingDirForCannSoc map A2/A3 vs A5', () => {
+    expect(getSupportComputeUnitForCannSoc('ascend910b'))
+      .toBe(SUPPORT_COMPUTE_UNIT_ASCEND_910_95);
+    expect(getSupportTilingDirForCannSoc('ascend910b'))
+      .toBe(SUPPORT_TILING_DIR_ARCH22);
+    expect(getSupportComputeUnitForCannSoc('ascend950'))
+      .toBe(SUPPORT_COMPUTE_UNIT_ASCEND_950);
+    expect(getSupportTilingDirForCannSoc('ascend950'))
+      .toBe(SUPPORT_TILING_DIR_ARCH35);
+  });
+
   it('resolveEffectiveCannSoc uses explicit workspace soc', () => {
     (getSocVersionWithWorkspaceOverride as jest.Mock).mockImplementation(() => 'ascend910b');
 
@@ -96,6 +115,8 @@ describe('operator spawn env', () => {
       .toEqual({
         SOC_VERSION: 'ascend950',
         NPU_ARCH: 'dav-3510',
+        SUPPORT_COMPUTE_UNIT: SUPPORT_COMPUTE_UNIT_ASCEND_950,
+        SUPPORT_TILING_DIR: SUPPORT_TILING_DIR_ARCH35,
       });
   });
 
@@ -113,6 +134,8 @@ describe('operator spawn env', () => {
       .toEqual({
         SOC_VERSION: 'ascend950',
         NPU_ARCH: 'dav-3510',
+        SUPPORT_COMPUTE_UNIT: SUPPORT_COMPUTE_UNIT_ASCEND_950,
+        SUPPORT_TILING_DIR: SUPPORT_TILING_DIR_ARCH35,
       });
   });
 
@@ -131,6 +154,8 @@ describe('operator spawn env', () => {
         SIMULATOR_TYPE: 'Ascend910B3',
         NPU_ARCH: 'dav-2201',
         SOC_VERSION: 'ascend910b',
+        SUPPORT_COMPUTE_UNIT: SUPPORT_COMPUTE_UNIT_ASCEND_910_95,
+        SUPPORT_TILING_DIR: SUPPORT_TILING_DIR_ARCH22,
       });
   });
 
@@ -149,6 +174,8 @@ describe('operator spawn env', () => {
         SIMULATOR_TYPE: 'Ascend950PR_9589',
         NPU_ARCH: 'dav-3510',
         SOC_VERSION: 'ascend950',
+        SUPPORT_COMPUTE_UNIT: SUPPORT_COMPUTE_UNIT_ASCEND_950,
+        SUPPORT_TILING_DIR: SUPPORT_TILING_DIR_ARCH35,
       });
   });
 
@@ -167,6 +194,8 @@ describe('operator spawn env', () => {
         SIMULATOR_TYPE: 'Ascend950PR_9589',
         NPU_ARCH: 'dav-3510',
         SOC_VERSION: 'ascend950',
+        SUPPORT_COMPUTE_UNIT: SUPPORT_COMPUTE_UNIT_ASCEND_950,
+        SUPPORT_TILING_DIR: SUPPORT_TILING_DIR_ARCH35,
       });
   });
 

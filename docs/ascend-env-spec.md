@@ -17,8 +17,8 @@ templates, generated scripts, and per-spawn environment.
 | `SOC_VERSION` | CANN SOC slug (e.g. `ascend910b`, `ascend950`) | Spawn env + `--soc=` CLI on ascend `build.sh` via `{soc_version}` placeholder |
 | `SIMULATOR_TYPE` | Simulator directory under `$ASCEND_HOME_PATH/tools/simulator/<dir>/lib` (e.g. `Ascend910B3`, `Ascend950PR_9589`) | Spawn env (sim runs only) + `--simulator <dir>` CLI on cann `build.sh` via `{simulator_type}` placeholder |
 | `NPU_ARCH` | AscendC `--npu-arch` (e.g. `dav-2201`, `dav-3510`) | Spawn env; read by templates' cmake via `$ENV{NPU_ARCH}` → cache |
-| `SUPPORT_COMPUTE_UNIT` *(opt.)* | ACLNN compute unit string for standard-custom ascend operators | Read by `ascend_template/add_custom/CMakeLists.txt` via `$ENV{...}` → cache. Plugin does not yet inject a mapped value (no authoritative CANN data); template provides safe defaults and env-override mechanism |
-| `SUPPORT_TILING_DIR` *(opt.)* | Tiling subdirectory under `op_host` for `SUPPORT_COMPUTE_UNIT` | Same template path as above |
+| `SUPPORT_COMPUTE_UNIT` | ACLNN compute unit string for standard-custom ascend operators | Spawn env on every operator command; read by `ascend_template/add_custom/CMakeLists.txt` via `$ENV{...}` → cache. Mapped by `getSupportComputeUnitForCannSoc()` in `ascend-util.ts` (constants in `shared/cann-aclnn-build-defaults.ts`) |
+| `SUPPORT_TILING_DIR` | Tiling subdirectory under `op_host` for `SUPPORT_COMPUTE_UNIT` | Same as above via `getSupportTilingDirForCannSoc()` |
 
 The plugin treats these as the **only** environment names it owns. Any other
 variable a project's env script defines passes through untouched.
@@ -161,10 +161,18 @@ take precedence in the child shell over anything the user has exported.
 
 `plugin/templates/code_template/ascend_template/add_custom/CMakeLists.txt`
 uses the same env → cache pattern for `SUPPORT_COMPUTE_UNIT` and
-`SUPPORT_TILING_DIR`. The template ships with conservative defaults
-(`ascend910_95` / `arch35`); the plugin can inject A5-specific values via
-spawn env once authoritative CANN values are known, with no template edit
-required.
+`SUPPORT_TILING_DIR` as cann templates use for `NPU_ARCH`: both must be set
+(explicit `-D`, environment, or extension spawn env) or cmake fails with
+`FATAL_ERROR`.
+
+`buildOperatorSpawnEnvFromResolution()` always sets `SUPPORT_COMPUTE_UNIT` and
+`SUPPORT_TILING_DIR` from `getSupportComputeUnitForCannSoc(socVersion)` /
+`getSupportTilingDirForCannSoc(socVersion)`.
+
+| CANN SOC slug (packaging / `--soc=`) | Spawn `SUPPORT_COMPUTE_UNIT` | Spawn `SUPPORT_TILING_DIR` | Notes |
+|--------------------------------------|------------------------------|----------------------------|-------|
+| `ascend910b`, `ascend910_93`, `ascend910`, empty fallback | `ascend910_95` | `arch22` | A2/A3 class |
+| `ascend950` (Atlas A5) | `ascend950` | `arch35` | A5 class; verify against your CANN ACLNN sample |
 
 ## 7. Logging
 
