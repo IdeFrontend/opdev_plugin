@@ -40,8 +40,7 @@ function isExplicitlySet<T>(
     return false;
   }
   return inspection.workspaceFolderValue !== undefined
-    || inspection.workspaceValue !== undefined
-    || inspection.globalValue !== undefined;
+    || inspection.workspaceValue !== undefined;
 }
 
 function getConfiguredValue<T>(

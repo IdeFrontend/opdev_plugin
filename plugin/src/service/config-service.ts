@@ -225,7 +225,6 @@ export class ConfigService {
       && (
         inspection.workspaceFolderValue !== undefined
         || inspection.workspaceValue !== undefined
-        || inspection.globalValue !== undefined
       );
     if (explicitlySet) {
       return;
