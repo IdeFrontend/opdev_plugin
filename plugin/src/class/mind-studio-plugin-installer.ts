@@ -7,7 +7,7 @@ import * as os from 'os';
 import {
   getIdeServerDirName,
   isCodeArtsIde,
-  joinIdeServerPath,
+  joinIdeServerRelative,
 } from '@plugin/helpers/ide-config-dir';
 
 /**
@@ -257,7 +257,7 @@ export class MindStudioPluginInstaller {
    */
   private getCodeServerExtensionsDir(): string {
     if (isCodeArtsIde() || process.env.CODEARTS_SERVER_VERSION) {
-      return joinIdeServerPath('extensions');
+      return path.join(os.homedir(), joinIdeServerRelative('extensions'));
     }
 
     // Fallback to standard code-server path
