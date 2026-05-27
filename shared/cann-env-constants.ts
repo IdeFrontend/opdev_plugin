@@ -29,7 +29,7 @@ export const NPU_ARCH_DAV_2201 = 'dav-2201' as const;
 /** AscendC `--npu-arch` for Ascend 950 / Atlas A5 class. */
 export const NPU_ARCH_DAV_3510 = 'dav-3510' as const;
 
-/** Default `--npu-arch` when SOC is empty or non-A5. */
+/** Default `--npu-arch` for known non-A5 SOCs (empty SOC leaves NPU_ARCH unset). */
 export const DEFAULT_NPU_ARCH = NPU_ARCH_DAV_2201;
 
 /** Simulator directory for 910B / A3 class (`tools/simulator/<name>/lib`). */

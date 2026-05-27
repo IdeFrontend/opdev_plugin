@@ -5,6 +5,26 @@ import { isAscendA5ProfilerCannSoc } from '@shared/msprof-onboard-env';
 
 const SECTION = 'op-devtools';
 const DEFAULT_ENVIRONMENT_SCRIPT = '/etc/profile';
+export const ENVIRONMENT_SCRIPT_SETTING = 'environment.environmentScript';
+
+export function getFirstWorkspaceFolder(): vscode.WorkspaceFolder | undefined {
+  return vscode.workspace.workspaceFolders?.[0];
+}
+
+export function getFirstWorkspaceFolderPath(): string | undefined {
+  return getFirstWorkspaceFolder()?.uri.fsPath;
+}
+
+function getOpDevtoolsWorkspaceConfiguration(): vscode.WorkspaceConfiguration {
+  return vscode.workspace.getConfiguration(SECTION, getFirstWorkspaceFolder()?.uri);
+}
+
+/** Workspace override only; `undefined` when the setting was never explicitly set. */
+function getExplicitEnvironmentScript(): string | undefined {
+  return getConfiguredValue<string>(getOpDevtoolsWorkspaceConfiguration(), [
+    ENVIRONMENT_SCRIPT_SETTING,
+  ]);
+}
 
 type InspectValue<T> =
   | {
@@ -448,34 +468,47 @@ export function mergeSanitizerConfigsWithOperatorProjectWorkspace(configs: Build
 }
 
 /**
- * Effective env script path from workspace / user settings (same keys as merge + legacy `operatorProject.env.projectSH`).
+ * Env script path only when the user explicitly set `environment.environmentScript`.
+ * Does not return schema defaults such as `/etc/profile` — use for host-side CANN
+ * tool discovery (`asys`, `npu-smi`).
+ */
+export function getConfiguredEnvironmentScriptPath(): string | undefined {
+  const explicit = getExplicitEnvironmentScript();
+
+  if (explicit === undefined) {
+    return undefined;
+  }
+
+  const trimmed = String(explicit).trim();
+
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+/**
+ * Effective env script path from workspace `environment.environmentScript`.
  * Uses the first workspace folder scope when present so folder-level settings apply.
  */
 export function getEnvironmentScriptPathFromWorkspace(): string {
-  const folder = vscode.workspace.workspaceFolders?.[0];
-  const cfg = vscode.workspace.getConfiguration(SECTION, folder?.uri);
-  const explicit = getConfiguredValue<string>(cfg, [
-    'environment.environmentScript',
-    'operatorProject.env.projectSH',
-  ]);
+  const explicit = getExplicitEnvironmentScript();
+
   if (explicit !== undefined && String(explicit).trim() !== '') {
     return String(explicit).trim();
   }
-  const primary = cfg.get<string>('environment.environmentScript', DEFAULT_ENVIRONMENT_SCRIPT) ?? DEFAULT_ENVIRONMENT_SCRIPT;
+
+  const cfg = getOpDevtoolsWorkspaceConfiguration();
+  const primary = cfg.get<string>(ENVIRONMENT_SCRIPT_SETTING, DEFAULT_ENVIRONMENT_SCRIPT)
+    ?? DEFAULT_ENVIRONMENT_SCRIPT;
+
   if (typeof primary === 'string' && primary.trim()) {
     return primary.trim();
   }
-  const legacy = cfg.get<string>('operatorProject.env.projectSH', '') ?? '';
-  if (typeof legacy === 'string' && legacy.trim()) {
-    return legacy.trim();
-  }
+
   return DEFAULT_ENVIRONMENT_SCRIPT;
 }
 
 /** Workspace override for msprof / cann simulator directory name (e.g. Ascend910B3). */
 export function getWorkspaceSimulatorType(): string {
-  const folder = vscode.workspace.workspaceFolders?.[0];
-  const cfg = vscode.workspace.getConfiguration(SECTION, folder?.uri);
+  const cfg = getOpDevtoolsWorkspaceConfiguration();
   const explicit = getConfiguredValue<string>(cfg, [
     'performanceTuning.simulation.simulatorType',
     'operatorProject.performance.simulation.simulatorType',
@@ -488,8 +521,7 @@ export function getWorkspaceSimulatorType(): string {
 }
 
 export function getEnvironmentSocVersionFromWorkspace(): string {
-  const folder = vscode.workspace.workspaceFolders?.[0];
-  const cfg = vscode.workspace.getConfiguration(SECTION, folder?.uri);
+  const cfg = getOpDevtoolsWorkspaceConfiguration();
   const explicit = getConfiguredValue<string>(cfg, [
     'environment.socVersion',
     'operatorProject.env.socVersion',
@@ -511,20 +543,15 @@ export function getEnvironmentSocVersionFromWorkspace(): string {
 export function getAscendEnvScriptWithWorkspaceOverride(
   storedScript: string | null | undefined,
 ): string {
-  const folder = vscode.workspace.workspaceFolders?.[0];
-  const cfg = vscode.workspace.getConfiguration(SECTION, folder?.uri);
-  const script = getConfiguredValue<string>(cfg, [
-    'environment.environmentScript',
-    'operatorProject.env.projectSH',
-  ]);
-  return script !== undefined ? script : (storedScript || '');
+  const explicit = getExplicitEnvironmentScript();
+
+  return explicit !== undefined ? String(explicit).trim() : (storedScript || '');
 }
 
 export function getSocVersionWithWorkspaceOverride(
   storedSocVersion: string | null | undefined,
 ): string {
-  const folder = vscode.workspace.workspaceFolders?.[0];
-  const cfg = vscode.workspace.getConfiguration(SECTION, folder?.uri);
+  const cfg = getOpDevtoolsWorkspaceConfiguration();
   const socVersion = getConfiguredValue<string>(cfg, [
     'environment.socVersion',
     'operatorProject.env.socVersion',

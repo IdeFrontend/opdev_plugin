@@ -1,5 +1,3 @@
-import child_process from 'child_process';
-
 import {
   CANN_SOC_ASCEND_310P,
   CANN_SOC_ASCEND_910,
@@ -8,7 +6,6 @@ import {
   CANN_SOC_ASCEND_950,
   DEFAULT_FALLBACK_CANN_SOC,
   DEFAULT_FALLBACK_SIMULATOR_DEVICE_NAME,
-  DEFAULT_NPU_ARCH,
   NPU_ARCH_DAV_2201,
   NPU_ARCH_DAV_3510,
   SIMULATOR_ASCEND_310P,
@@ -26,7 +23,12 @@ import {
   getSocVersionWithWorkspaceOverride,
   getWorkspaceSimulatorType,
 } from '@plugin/helpers/operator-project-workspace-config';
+import {
+  execBashWithCannEnv,
+  resolveCannSetEnvScriptForDetection,
+} from '@plugin/domain/utils/ascend-detection-env';
 import { getGlobalEnvSnapshot } from '@plugin/domain/utils/global-env-snapshot';
+import { maybeWarnSocNotDetected } from '@plugin/helpers/ascend-soc-warning';
 import { appendLog } from '@plugin/helpers/output-channel';
 import { isAscendA5ProfilerCannSoc } from '@shared/msprof-onboard-env';
 
@@ -266,7 +268,7 @@ export function getNpuArchForCannSoc(cannSoc?: string | null): string {
   const key = normalizeCannSoc(cannSoc);
 
   if (!key) {
-    return DEFAULT_NPU_ARCH;
+    return '';
   }
 
   const compact = key.replace(/\s+/g, '');
@@ -281,26 +283,41 @@ export function getNpuArchForCannSoc(cannSoc?: string | null): string {
   return NPU_ARCH_DAV_2201;
 }
 
+/** A2/A3 vs A5 branch for paired ACLNN spawn defaults ({@link getSupportComputeUnitForCannSoc}, etc.). */
+function resolveAclnnBuildDefaultForCannSoc(
+  cannSoc: string | null | undefined,
+  a5Value: string,
+  nonA5Value: string,
+): string {
+  const key = normalizeCannSoc(cannSoc);
+
+  if (!key) {
+    return '';
+  }
+
+  return isAscendA5ProfilerCannSoc(key) ? a5Value : nonA5Value;
+}
+
 /**
  * ACLNN `SUPPORT_COMPUTE_UNIT` for standard-custom ascend cmake (spawn env).
  */
 export function getSupportComputeUnitForCannSoc(cannSoc?: string | null): string {
-  if (isAscendA5ProfilerCannSoc(normalizeCannSoc(cannSoc))) {
-    return SUPPORT_COMPUTE_UNIT_ASCEND_950;
-  }
-
-  return SUPPORT_COMPUTE_UNIT_ASCEND_910_95;
+  return resolveAclnnBuildDefaultForCannSoc(
+    cannSoc,
+    SUPPORT_COMPUTE_UNIT_ASCEND_950,
+    SUPPORT_COMPUTE_UNIT_ASCEND_910_95,
+  );
 }
 
 /**
  * ACLNN `SUPPORT_TILING_DIR` paired with {@link getSupportComputeUnitForCannSoc}.
  */
 export function getSupportTilingDirForCannSoc(cannSoc?: string | null): string {
-  if (isAscendA5ProfilerCannSoc(normalizeCannSoc(cannSoc))) {
-    return SUPPORT_TILING_DIR_ARCH35;
-  }
-
-  return SUPPORT_TILING_DIR_ARCH22;
+  return resolveAclnnBuildDefaultForCannSoc(
+    cannSoc,
+    SUPPORT_TILING_DIR_ARCH35,
+    SUPPORT_TILING_DIR_ARCH22,
+  );
 }
 
 
@@ -319,25 +336,13 @@ let detectionState: DetectionState = { kind: 'pending' };
 
 function tryDetectSocViaAsys(): string | undefined {
   try {
-    const findCmd = 'find / -path "*/cann*/set_env.sh" 2>/dev/null | head -1';
-    const setEnvScript = child_process
-      .execSync(findCmd, {
-        encoding: 'utf8',
-        shell: '/bin/bash',
-        timeout: 30000,
-      })
-      .trim();
+    const setEnv = resolveCannSetEnvScriptForDetection();
 
-    if (!setEnvScript) {
+    if (!setEnv) {
       return undefined;
     }
 
-    const asysCmd = `source ${setEnvScript} && asys info -r=status`;
-    const asysOutput = child_process.execSync(asysCmd, {
-      encoding: 'utf8',
-      shell: '/bin/bash',
-      timeout: 30000,
-    });
+    const asysOutput = execBashWithCannEnv(setEnv, 'asys info -r=status', 30000);
 
     if (!/ascend/i.test(asysOutput)) {
       return undefined;
@@ -352,11 +357,8 @@ function tryDetectSocViaAsys(): string | undefined {
 
 function tryDetectSocViaNpuSmi(): string | undefined {
   try {
-    const out = child_process.execSync('npu-smi info', {
-      encoding: 'utf8',
-      shell: '/bin/bash',
-      timeout: 20000,
-    });
+    const setEnv = resolveCannSetEnvScriptForDetection();
+    const out = execBashWithCannEnv(setEnv, 'npu-smi info', 20000);
 
     return socFromCoreName(out);
   }
@@ -401,8 +403,7 @@ function detectSocOnce(): string | undefined {
   }
 
   detectionState = { kind: 'failed' };
-  logAscendEnv(`SOC autodetection failed (asys/npu-smi); `
-    + `falling back to default ${DEFAULT_FALLBACK_CANN_SOC}`);
+  logAscendEnv('SOC autodetection failed (asys/npu-smi); SOC_VERSION will be unset');
 
   return undefined;
 }
@@ -413,6 +414,11 @@ function detectSocOnce(): string | undefined {
  */
 export function _resetSocDetectionCacheForTest(): void {
   detectionState = { kind: 'pending' };
+}
+
+/** Test hook — skip slow host detection (`find` / `asys` / `npu-smi`). */
+export function _primeSocDetectionFailedForTest(): void {
+  detectionState = { kind: 'failed' };
 }
 
 // ---------------------------------------------------------------------------
@@ -615,6 +621,7 @@ export function resolveAscendEnvForOperatorCommand(
   );
 
   logAscendEnvResolution(resolution, resolveCtx);
+  maybeWarnSocNotDetected(resolution);
 
   return resolution;
 }
@@ -626,6 +633,7 @@ export function resolveAscendEnv(ctx: ResolveAscendEnvContext): AscendEnvResolut
   const resolution = computeAscendEnvResolution(ctx);
 
   logAscendEnvResolution(resolution, ctx);
+  maybeWarnSocNotDetected(resolution);
 
   return resolution;
 }

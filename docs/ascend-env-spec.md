@@ -82,7 +82,11 @@ below.
   1. Workspace setting `op-devtools.environment.socVersion` (explicit only).
   2. Global env snapshot `SOC_VERSION`.
   3. `asys info -r=status` then `npu-smi info` host detection, cached for the
-     extension lifetime.
+     extension lifetime. Each tool runs in a one-off bash that sources the first
+     usable `set_env.sh` from: explicit `op-devtools.environment.environmentScript`
+     → `ASCEND_ENV_SCRIPT` (activation snapshot) → `find / -path "*/cann*/set_env.sh"`.
+     Project `ascend_env_script` is not used here (it is synced from workspace settings).
+     The extension host `process.env` is not mutated.
   4. `DEFAULT_FALLBACK_CANN_SOC` (empty string in `shared/cann-env-constants.ts`
      when nothing else resolves).
 
@@ -93,6 +97,10 @@ for display and APIs, but the resolver does **not** read it.
 
 Always `getNpuArchForCannSoc(socVersion)`. There is no second path that maps
 the simulator dir to an NPU arch — once SOC is resolved, NPU arch is fixed.
+When `socVersion` is empty (autodetection failed and no override), `npuArch`
+and ACLNN `SUPPORT_*` spawn values are also empty so builds fail visibly instead
+of silently using 910-class defaults. The extension shows a one-time warning
+with remediation steps before the build script exits.
 
 ## 4. What the plugin passes to operator commands
 

@@ -17,6 +17,7 @@ import {
 } from '@plugin/helpers/operator-project-workspace-config';
 import { getGlobalEnvSnapshot } from '@plugin/domain/utils/global-env-snapshot';
 import {
+  _primeSocDetectionFailedForTest,
   buildOperatorSpawnEnvFromResolution,
   getNpuArchForCannSoc,
   getOperatorSpawnEnv,
@@ -28,6 +29,7 @@ import {
   resolveSimulatorDir,
   simulatorTypeToCannSoc,
 } from '@plugin/domain/utils/ascend-util';
+import { _resetSocUndetectedWarningForTest } from '@plugin/helpers/ascend-soc-warning';
 import {
   SUPPORT_COMPUTE_UNIT_ASCEND_910_95,
   SUPPORT_COMPUTE_UNIT_ASCEND_950,
@@ -53,6 +55,8 @@ const snapshot = (overrides: Partial<{
 describe('operator spawn env', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    _primeSocDetectionFailedForTest();
+    _resetSocUndetectedWarningForTest();
     (getWorkspaceSimulatorType as jest.Mock).mockReturnValue('');
     (getSocVersionWithWorkspaceOverride as jest.Mock).mockImplementation(() => '');
     (getGlobalEnvSnapshot as jest.Mock).mockReturnValue(snapshot());
@@ -84,6 +88,27 @@ describe('operator spawn env', () => {
       .toBe('dav-3510');
     expect(getNpuArchForCannSoc('ascend910b'))
       .toBe('dav-2201');
+    expect(getNpuArchForCannSoc(''))
+      .toBe('');
+    expect(getNpuArchForCannSoc(null))
+      .toBe('');
+  });
+
+  it('unresolved SOC emits empty spawn env (no silent 910-class defaults)', () => {
+    const env = getOperatorSpawnEnv({
+      opType: 'cann',
+      projectId: 1,
+      configType: 'build_op',
+      script: 'bash build.sh --onboard',
+    });
+
+    expect(env)
+      .toEqual({
+        SOC_VERSION: '',
+        NPU_ARCH: '',
+        SUPPORT_COMPUTE_UNIT: '',
+        SUPPORT_TILING_DIR: '',
+      });
   });
 
   it('getSupportComputeUnitForCannSoc and getSupportTilingDirForCannSoc map A2/A3 vs A5', () => {

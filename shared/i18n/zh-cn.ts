@@ -61,6 +61,14 @@ export default {
   'extension.environmentScript.selectFile': '选择环境脚本',
   'extension.environmentScript.saved': '环境脚本路径已保存到工作区设置。',
   'extension.environmentScript.fileNotFound': '无法访问所选路径。',
+  'extension.ascendEnv.socNotDetected.message':
+    '未能检测到 SoC 版本（asys 与 npu-smi 均失败）。算子构建需要有效的 SOC。\n\n'
+    + '解决方法：设置「op-devtools.environment.socVersion」（例如 Atlas A5 使用 ascend950，A3 使用 ascend910b），'
+    + '或在启动 VS Code 前 export SOC_VERSION。\n\n'
+    + '若找不到 asys 命令：先 source CANN 的 set_env.sh；安装或更新 CANN 工具包；'
+    + '确认本机 NPU 驱动与 npu-smi 可用；部分 A5 镜像中 asys 与 npu-smi 分包不同，'
+    + '或 find 无法在 */cann*/ 路径下定位 set_env.sh。',
+  'extension.ascendEnv.socNotDetected.openSettings': '打开 SoC 设置…',
   'extension.tritonSupportChangedReload': 'Triton 支持设置已变更。请重载窗口以应用算子支持变更。',
   'extension.reloadWindowAction': '重载窗口',
   'extension.unsupportedProjectTypeDisabled': '当前项目类型“{{projectType}}”未在「算子支持」设置中启用。',

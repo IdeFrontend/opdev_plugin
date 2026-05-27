@@ -15,7 +15,10 @@ import {
 import {
   postConfig, getConfig, getFiles,
 } from '@plugin/domain';
-import { mergeSanitizerConfigsWithOperatorProjectWorkspace } from '@plugin/helpers/operator-project-workspace-config';
+import {
+  getFirstWorkspaceFolderPath,
+  mergeSanitizerConfigsWithOperatorProjectWorkspace,
+} from '@plugin/helpers/operator-project-workspace-config';
 import { getDevtoolConfigPath, getIdeSettingsFilePath } from '@plugin/helpers/ide-config-dir';
 import { homeMethods } from '@plugin/controller/home-controller';
 import { buildService } from '@plugin/service/build-service';
@@ -40,7 +43,7 @@ function resolveWorkspaceRoot(workspaceRoot?: string): string | undefined {
   if (projectInfo?.path) {
     return projectInfo.path;
   }
-  return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+  return getFirstWorkspaceFolderPath();
 }
 
 function toFullDottedKey(relativeKey: string): string {
@@ -434,31 +437,15 @@ export class ConfigService {
    * First check the project path in ProjectManager, if it does not exist, check the current workspace
    */
   async checkDevtoolConfig(): Promise<boolean> {
-    const pm = ProjectManager.getInstance();
-
-    // Prioritize the project path of ProjectManager
-    const projectInfo = pm.getProjectInfo();
-    let checkPath: string | undefined;
-
-    if (projectInfo?.path) {
-      checkPath = projectInfo.path;
-      console.log('checkDevtoolConfig: using ProjectManager project path:', checkPath);
-    }
-    else {
-      // Fallback to workspace path
-      const workspaceFolders = vscode.workspace.workspaceFolders;
-
-      if (workspaceFolders && workspaceFolders.length > 0) {
-        checkPath = workspaceFolders[0].uri.fsPath;
-        console.log('checkDevtoolConfig: using workspace path:', checkPath);
-      }
-    }
+    const checkPath = resolveWorkspaceRoot();
 
     if (!checkPath) {
       console.log('checkDevtoolConfig: no available path, return false');
 
       return false;
     }
+
+    console.log('checkDevtoolConfig: using path:', checkPath);
 
     const devtoolConfigPath = getDevtoolConfigPath(checkPath);
 

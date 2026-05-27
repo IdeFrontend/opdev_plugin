@@ -2,11 +2,12 @@ import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { t } from 'i18next';
 
-import { getEnvironmentScriptPathFromWorkspace } from '@plugin/helpers/operator-project-workspace-config';
+import {
+  ENVIRONMENT_SCRIPT_SETTING,
+  getEnvironmentScriptPathFromWorkspace,
+} from '@plugin/helpers/operator-project-workspace-config';
 import { projectService } from '@plugin/service/project-service';
 import { ConfigService } from '@plugin/service/config-service';
-
-const CONFIG_KEY = 'environment.environmentScript';
 
 export function getEnvironmentScriptPath(): string {
   return getEnvironmentScriptPathFromWorkspace();
@@ -74,7 +75,7 @@ export async function ensureEnvironmentScriptForOperateAction(): Promise<boolean
   }
 
   await ConfigService.writeOpDevtoolsDottedSettings({
-    [CONFIG_KEY]: fsPath,
+    [ENVIRONMENT_SCRIPT_SETTING]: fsPath,
   });
 
   await projectService.syncAscendEnvScriptFromWorkspaceSettings();
