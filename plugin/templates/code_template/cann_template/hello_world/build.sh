@@ -2,6 +2,7 @@
 
 # 默认值
 cmake_args=""
+SOC_VERSION="Ascend910B1"
 
 # 显示帮助信息函数
 show_help() {
@@ -11,18 +12,14 @@ show_help() {
 选项(只支持一次调用其中一个选项):
     --debug         启用调试模式构建
     --mssanitizer   启用MSSanitizer构建
-    --simulator [SIMULATOR_TYPE]  启用仿真调优模式构建；仿真设备目录名可作为第二参数传入，或事先 export SIMULATOR_TYPE（如 Ascend910B3、Ascend950PR_9589）。cmake 读取 SIMULATOR_TYPE、NPU_ARCH；SOC_VERSION 为 CANN SOC  slug（如 ascend910b）。
+    --simulator [SOC_VERSION]  启用仿真调优模式构建，可选指定SOC版本（默认: Ascend910B1）
     --onboard       启用上板调优模式构建
     -h, --help      显示此帮助信息
 
-注意: AscendC 编译需要 NPU_ARCH（export NPU_ARCH=… 或 cmake -DNPU_ARCH=…，值以 CANN 文档为准）。从本扩展启动的任务通常会由宿主注入该环境变量。
-
 示例:
-    export NPU_ARCH=dav-2201   # 示例；请按你的芯片/CANN 版本填写
     $0
     $0 --debug
     $0 --simulator Ascend910B3
-    SIMULATOR_TYPE=Ascend950PR_9589 NPU_ARCH=dav-3510 SOC_VERSION=ascend950 $0 --simulator
 EOF
     exit 0
 }
@@ -44,14 +41,12 @@ while [[ $# -gt 0 ]]; do
         --simulator)
             cmake_args="-DENABLE_SIMULATOR=ON -DASCEND_HOME_PATH=${ASCEND_HOME_PATH}"
             if [[ $# -gt 1 ]] && [[ $2 != --* ]]; then
-                cmake_args="$cmake_args -DSIMULATOR_TYPE=$2"
-                break
-            elif [[ -n "${SIMULATOR_TYPE:-}" ]]; then
-                cmake_args="$cmake_args -DSIMULATOR_TYPE=${SIMULATOR_TYPE}"
+                cmake_args="$cmake_args -DSOC_VERSION=$2"
+                SOC_VERSION="$2"
                 break
             else
-                echo "错误: 仿真构建需要 SIMULATOR_TYPE：使用「$0 --simulator <设备目录名>」，或先 export SIMULATOR_TYPE（例如 Ascend910B3、Ascend950PR_9589）。" >&2
-                exit 1
+                cmake_args="$cmake_args -DSOC_VERSION=$SOC_VERSION"
+                break
             fi
             ;;
         --onboard | --prof_onboard)

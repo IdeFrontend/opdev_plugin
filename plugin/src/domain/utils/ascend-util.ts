@@ -710,27 +710,27 @@ export function isSimulatorCompile(params: OperatorSpawnEnvContext): boolean {
  * `process.env`; spawn env overrides any inherited value in the child shell.
  *
  * `SOC_VERSION` and `NPU_ARCH` are always emitted so the cmake templates'
- * `$ENV{…}` fallbacks always see consistent values. `SUPPORT_COMPUTE_UNIT` and
- * `SUPPORT_TILING_DIR` are emitted as env-only inputs for ascend standard-custom
- * cmake (never as `-D` cmake arguments). `SIMULATOR_TYPE`
- * is emitted only for simulator runs to avoid leaking a value into non-simulator builds.
+ * `$ENV{…}` fallbacks always see consistent values. For simulator-class runs,
+ * `SOC_VERSION` is the simulator device directory name (e.g. `Ascend910B3`) so
+ * cann `build.sh --simulator` and cmake can link `tools/simulator/${SOC_VERSION}/lib`;
+ * for other runs it is the CANN SOC slug (e.g. `ascend910b`). `NPU_ARCH` is always
+ * derived from the resolved internal SOC slug. `SUPPORT_COMPUTE_UNIT` and
+ * `SUPPORT_TILING_DIR` are env-only inputs for ascend standard-custom cmake.
  */
 export function buildOperatorSpawnEnvFromResolution(
   resolution: AscendEnvResolution,
   isSimulator: boolean,
 ): Record<string, string> {
-  const env: Record<string, string> = {
-    SOC_VERSION: resolution.socVersion,
+  const socVersionForSpawn = isSimulator
+    ? (resolution.simulatorType ?? getDefaultSimulatorTypeForCannSoc(resolution.socVersion))
+    : resolution.socVersion;
+
+  return {
+    SOC_VERSION: socVersionForSpawn,
     NPU_ARCH: resolution.npuArch,
     SUPPORT_COMPUTE_UNIT: getSupportComputeUnitForCannSoc(resolution.socVersion),
     SUPPORT_TILING_DIR: getSupportTilingDirForCannSoc(resolution.socVersion),
   };
-
-  if (isSimulator && resolution.simulatorType) {
-    env.SIMULATOR_TYPE = resolution.simulatorType;
-  }
-
-  return env;
 }
 
 /** @deprecated Prefer {@link resolveAscendEnvForOperatorCommand} for operator runs. */

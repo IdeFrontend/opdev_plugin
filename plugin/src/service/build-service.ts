@@ -163,7 +163,7 @@ export class BuildService {
    *
    * Uses a single {@link resolveAscendEnv} call so the simulator directory
    * and the `--soc=<slug>` argument cannot drift apart. The plugin still
-   * emits `SOC_VERSION` / `NPU_ARCH` / `SIMULATOR_TYPE` in the spawn env via
+   * emits `SOC_VERSION` (simulator device dir for cann sim) / `NPU_ARCH` in the spawn env via
    * `executeOperatorCommand`; this option string only adds the Ascend
    * `--soc=` CLI flag that the ascend operator `build.sh` expects.
    */

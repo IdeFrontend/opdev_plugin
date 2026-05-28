@@ -142,7 +142,7 @@ describe('operator spawn env', () => {
       });
   });
 
-  it('sim spawn with workspace simulator derives matching SOC and NPU_ARCH', () => {
+  it('sim spawn sets SOC_VERSION to simulator device dir and NPU_ARCH from resolved slug', () => {
     (getWorkspaceSimulatorType as jest.Mock).mockReturnValue('Ascend910B3');
 
     const env = getOperatorSpawnEnv({
@@ -154,15 +154,14 @@ describe('operator spawn env', () => {
 
     expect(env)
       .toEqual({
-        SIMULATOR_TYPE: 'Ascend910B3',
+        SOC_VERSION: 'Ascend910B3',
         NPU_ARCH: 'dav-2201',
-        SOC_VERSION: 'ascend910b',
         SUPPORT_COMPUTE_UNIT: SUPPORT_COMPUTE_UNIT_ASCEND_910_95,
         SUPPORT_TILING_DIR: SUPPORT_TILING_DIR_ARCH22,
       });
   });
 
-  it('sim spawn with workspace simulator targeting A5 derives ascend950', () => {
+  it('sim spawn with workspace simulator targeting A5 uses device dir in SOC_VERSION', () => {
     (getWorkspaceSimulatorType as jest.Mock).mockReturnValue('Ascend950PR_9589');
 
     const env = getOperatorSpawnEnv({
@@ -174,15 +173,14 @@ describe('operator spawn env', () => {
 
     expect(env)
       .toEqual({
-        SIMULATOR_TYPE: 'Ascend950PR_9589',
+        SOC_VERSION: 'Ascend950PR_9589',
         NPU_ARCH: 'dav-3510',
-        SOC_VERSION: 'ascend950',
         SUPPORT_COMPUTE_UNIT: SUPPORT_COMPUTE_UNIT_ASCEND_950,
         SUPPORT_TILING_DIR: SUPPORT_TILING_DIR_ARCH35,
       });
   });
 
-  it('sim spawn without workspace setting falls back to global env SOC then default sim', () => {
+  it('sim spawn without workspace setting falls back to global env SOC then default sim dir', () => {
     (getGlobalEnvSnapshot as jest.Mock).mockReturnValue(snapshot({ socVersion: 'ascend950' }));
 
     const env = getOperatorSpawnEnv({
@@ -194,9 +192,8 @@ describe('operator spawn env', () => {
 
     expect(env)
       .toEqual({
-        SIMULATOR_TYPE: 'Ascend950PR_9589',
+        SOC_VERSION: 'Ascend950PR_9589',
         NPU_ARCH: 'dav-3510',
-        SOC_VERSION: 'ascend950',
         SUPPORT_COMPUTE_UNIT: SUPPORT_COMPUTE_UNIT_ASCEND_950,
         SUPPORT_TILING_DIR: SUPPORT_TILING_DIR_ARCH35,
       });
@@ -260,7 +257,7 @@ describe('operator spawn env', () => {
       .toBe(false);
   });
 
-  it('buildOperatorSpawnEnvFromResolution emits SUPPORT_* as env only (never cmake -D)', () => {
+  it('buildOperatorSpawnEnvFromResolution uses simulator dir as SOC_VERSION for sim runs', () => {
     const env = buildOperatorSpawnEnvFromResolution({
       socVersion: 'ascend950',
       npuArch: 'dav-3510',
@@ -272,18 +269,13 @@ describe('operator spawn env', () => {
       },
     }, true);
 
-    expect(env.SUPPORT_COMPUTE_UNIT)
-      .toBe(SUPPORT_COMPUTE_UNIT_ASCEND_950);
-    expect(env.SUPPORT_TILING_DIR)
-      .toBe(SUPPORT_TILING_DIR_ARCH35);
-    expect(Object.keys(env))
-      .toEqual(expect.arrayContaining([
-        'SOC_VERSION',
-        'NPU_ARCH',
-        'SUPPORT_COMPUTE_UNIT',
-        'SUPPORT_TILING_DIR',
-        'SIMULATOR_TYPE',
-      ]));
+    expect(env)
+      .toEqual({
+        SOC_VERSION: 'Ascend950PR_9589',
+        NPU_ARCH: 'dav-3510',
+        SUPPORT_COMPUTE_UNIT: SUPPORT_COMPUTE_UNIT_ASCEND_950,
+        SUPPORT_TILING_DIR: SUPPORT_TILING_DIR_ARCH35,
+      });
   });
 
   it('ascend add_custom CMakeLists reads SUPPORT_* from env only', () => {

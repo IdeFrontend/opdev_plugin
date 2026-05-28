@@ -49,7 +49,7 @@ export function buildOperatorSpawnContext(options: {
 }
 
 /**
- * Resolve SOC/SIMULATOR_TYPE/NPU_ARCH once, substitute placeholders in the
+ * Resolve ascend env once, substitute placeholders in the
  * command string, and execute with matching spawn env.
  */
 export async function executeOperatorCommand(
