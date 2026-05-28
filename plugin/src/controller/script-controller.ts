@@ -1,4 +1,5 @@
 import { ProjectManager } from '@plugin/core/project/project-manager';
+import { resolveEffectiveCannSoc } from '@plugin/domain/utils/ascend-util';
 import { projectService } from '@plugin/service/project-service';
 import {
   GetProjectSHResult,
@@ -27,7 +28,7 @@ export const scriptMethods = {
   async getProjectEnv(): Promise<{ ascendEnvScript: string; socVersion: string }> {
     return {
       ascendEnvScript: await projectService.getProjectSH(),
-      socVersion: await projectService.getProjectSocVersion(),
+      socVersion: resolveEffectiveCannSoc(),
     };
   },
 

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 
 import type { BuildConfig } from '@shared/api-types';
 import { isAscendA5ProfilerCannSoc } from '@shared/msprof-onboard-env';
+import { resolveEffectiveCannSoc } from '@plugin/domain/utils/ascend-util';
 
 const SECTION = 'op-devtools';
 const DEFAULT_ENVIRONMENT_SCRIPT = '/etc/profile';
@@ -286,10 +287,8 @@ export function mergeBuildConfigsWithOperatorProjectWorkspace(configs: BuildConf
           opts.Source = operatorCodeHotspot;
         }
 
-        const workspaceSoc = getConfiguredValue<string>(cfg, [
-          'environment.socVersion',
-        ]);
-        const isA5Profiler = isAscendA5ProfilerCannSoc(workspaceSoc);
+        const effectiveSoc = resolveEffectiveCannSoc();
+        const isA5Profiler = isAscendA5ProfilerCannSoc(effectiveSoc);
 
         const pcSampling = getConfiguredValue<boolean>(cfg, [
           'performanceTuning.onBoard.pcSampling',
