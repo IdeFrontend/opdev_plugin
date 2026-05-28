@@ -5,6 +5,18 @@
 ## 支持的产品
 - Atlas A3 训练系列产品/Atlas A3 推理系列产品
 - Atlas A2 训练系列产品/Atlas A2 推理系列产品
+- Atlas A5 训练系列产品（Ascend 950）
+
+## A4 vs A5（910B-class vs Ascend 950 / Atlas A5）
+
+从 **Huawei OP DevTools** 侧边栏编译/运行时，扩展会在子进程中自动注入 `SOC_VERSION`、`NPU_ARCH` 等芯片环境变量（`CMakeLists.txt` 通过 `$ENV{NPU_ARCH}` 读取）。
+
+| 环境 | spawn 注入（扩展） | 手动终端 `bash build.sh` |
+|------|-------------------|-------------------------|
+| A4 / 910B-class | `SOC_VERSION=ascend910b`，`NPU_ARCH=dav-2201` | 须 `export` 上述变量 |
+| A5 / 950 | `SOC_VERSION=ascend950`，`NPU_ARCH=dav-3510`；仿真器可用 `Ascend950PR_9589` | 须 `export` 上述变量 |
+
+工作区设置 **`op-devtools.environment.socVersion`** 为 `ascend950` 时扩展会解析 A5 默认值。详见 [`docs/ascend-env-spec.md`](../../../../../docs/ascend-env-spec.md)。
 
 ## 基于一站式算子开发平台进行算子开发
 基于一站式算子开发平台快速完成算子创建、开发、异常检测、性能调优 \
