@@ -711,7 +711,8 @@ export function isSimulatorCompile(params: OperatorSpawnEnvContext): boolean {
  *
  * `SOC_VERSION` and `NPU_ARCH` are always emitted so the cmake templates'
  * `$ENV{…}` fallbacks always see consistent values. `SUPPORT_COMPUTE_UNIT` and
- * `SUPPORT_TILING_DIR` are emitted for ascend standard-custom cmake. `SIMULATOR_TYPE`
+ * `SUPPORT_TILING_DIR` are emitted as env-only inputs for ascend standard-custom
+ * cmake (never as `-D` cmake arguments). `SIMULATOR_TYPE`
  * is emitted only for simulator runs to avoid leaking a value into non-simulator builds.
  */
 export function buildOperatorSpawnEnvFromResolution(

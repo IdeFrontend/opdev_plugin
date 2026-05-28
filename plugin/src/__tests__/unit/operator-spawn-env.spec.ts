@@ -17,6 +17,7 @@ import {
 } from '@plugin/helpers/operator-project-workspace-config';
 import { getGlobalEnvSnapshot } from '@plugin/domain/utils/global-env-snapshot';
 import {
+  buildOperatorSpawnEnvFromResolution,
   getNpuArchForCannSoc,
   getOperatorSpawnEnv,
   getSupportComputeUnitForCannSoc,
@@ -33,6 +34,8 @@ import {
   SUPPORT_TILING_DIR_ARCH22,
   SUPPORT_TILING_DIR_ARCH35,
 } from '@shared/cann-aclnn-build-defaults';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const snapshot = (overrides: Partial<{
   socVersion: string;
@@ -255,5 +258,46 @@ describe('operator spawn env', () => {
       .toBe(true);
     expect(isSimulatorCompile({ script: 'bash build.sh --onboard' }))
       .toBe(false);
+  });
+
+  it('buildOperatorSpawnEnvFromResolution emits SUPPORT_* as env only (never cmake -D)', () => {
+    const env = buildOperatorSpawnEnvFromResolution({
+      socVersion: 'ascend950',
+      npuArch: 'dav-3510',
+      simulatorType: 'Ascend950PR_9589',
+      source: {
+        socVersion: 'derived-from-simulator',
+        simulatorType: 'workspace-setting',
+        npuArch: 'derived-from-soc',
+      },
+    }, true);
+
+    expect(env.SUPPORT_COMPUTE_UNIT)
+      .toBe(SUPPORT_COMPUTE_UNIT_ASCEND_950);
+    expect(env.SUPPORT_TILING_DIR)
+      .toBe(SUPPORT_TILING_DIR_ARCH35);
+    expect(Object.keys(env))
+      .toEqual(expect.arrayContaining([
+        'SOC_VERSION',
+        'NPU_ARCH',
+        'SUPPORT_COMPUTE_UNIT',
+        'SUPPORT_TILING_DIR',
+        'SIMULATOR_TYPE',
+      ]));
+  });
+
+  it('ascend add_custom CMakeLists reads SUPPORT_* from env only', () => {
+    const cmakePath = path.join(
+      __dirname,
+      '../../../templates/code_template/ascend_template/add_custom/CMakeLists.txt',
+    );
+    const cmake = fs.readFileSync(cmakePath, 'utf8');
+
+    expect(cmake).toContain('ENV{SUPPORT_COMPUTE_UNIT}');
+    expect(cmake).toContain('ENV{SUPPORT_TILING_DIR}');
+    expect(cmake).not.toMatch(/-DSUPPORT_COMPUTE_UNIT/);
+    expect(cmake).not.toMatch(/-DSUPPORT_TILING_DIR/);
+    expect(cmake).not.toMatch(/SUPPORT_COMPUTE_UNIT.*CACHE STRING/);
+    expect(cmake).not.toMatch(/SUPPORT_TILING_DIR.*CACHE STRING/);
   });
 });
