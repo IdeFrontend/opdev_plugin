@@ -1021,6 +1021,7 @@ export class BuildService {
    * Start UT test.
    */
   async startUtTest(params: { operatorNames?: string,
+    compileOption?: string,
     projectId?: string | number,
     configId?: string } = {}): Promise<void> {
     const pm = ProjectManager.getInstance();
@@ -1047,6 +1048,7 @@ export class BuildService {
       const buildCommand = getUtTestCommand(
         Number(configId),
         params.operatorNames,
+        params.compileOption,
       );
 
       const executor = ProjectManager.getInstance()

@@ -91,6 +91,7 @@ export type OperatorInfo = {
 
 export type StartUtTestParams = {
   operatorNames?: string; // 算子名称，多个用逗号分隔
+  compileOption?: string;
   configId?: string;
   projectId?: string | number; // 项目ID
 };

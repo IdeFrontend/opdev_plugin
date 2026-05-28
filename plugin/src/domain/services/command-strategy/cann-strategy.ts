@@ -295,7 +295,7 @@ export class CannCommandStrategy implements CommandStrategy {
 
   buildUtTestCommand(params: CommandBuildParams): string {
     const {
-      config, sourceCannCmd, cdCmd, advance_cmd, operatorNames,
+      config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames,
     } = params;
 
     const userOptions = config.user_options as Record<string, unknown> | null | undefined;
@@ -318,6 +318,10 @@ export class CannCommandStrategy implements CommandStrategy {
 
     if (config.custom_options) {
       cmd.addArgument(config.custom_options);
+    }
+
+    if (compileOption) {
+      cmd.addArgument(compileOption);
     }
 
     if (advance_cmd) {

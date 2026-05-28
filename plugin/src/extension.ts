@@ -769,7 +769,7 @@ export async function activate(context: vscode.ExtensionContext) {
     COMMAND_SIDEBAR_RUN,
     async () => {
       await operateTreeProvider.runFlowAction('run', async () => {
-        if (operateTreeProvider.hasMultipleOperators()) {
+        if (operateTreeProvider.hasMultipleOperators() || operateTreeProvider.isStandardCustomContext()) {
           const operatorNames = await getOperatorNamesFromSelection();
           const compileOption = await getCompileOptionForSelectedOperators();
           const operatorType = operateTreeProvider.isStandardCustomContext() ? 'standard-custom' : undefined;
@@ -948,9 +948,17 @@ export async function activate(context: vscode.ExtensionContext) {
       }
 
       const operatorNames = await getOperatorNamesFromSelection();
+      const compileOption = await getCompileOptionForSelectedOperators();
 
       await operateTreeProvider.runFlowAction('utTest', async () => {
-        await dispatchEnqueueNativeOperatorAction('utTest', { operatorNames }, dispatchStartUtTest);
+        await dispatchEnqueueNativeOperatorAction(
+          'utTest',
+          {
+            operatorNames,
+            compileOption,
+          },
+          dispatchStartUtTest,
+        );
       });
     },
   );

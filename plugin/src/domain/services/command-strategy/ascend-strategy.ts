@@ -142,7 +142,7 @@ export class AscendCommandStrategy implements CommandStrategy {
 
   buildUtTestCommand(params: CommandBuildParams): string {
     const {
-      config, sourceCannCmd, cdCmd, advance_cmd, operatorNames,
+      config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames,
     } = params;
     const options = (config.user_options as Record<string, unknown> | null | undefined) || {};
 
@@ -157,6 +157,10 @@ export class AscendCommandStrategy implements CommandStrategy {
     }
 
     const cmd = new Command(script);
+
+    if (compileOption) {
+      cmd.addArgument(compileOption);
+    }
 
     if (advance_cmd) {
       cmd.addArgument(advance_cmd);

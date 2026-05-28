@@ -289,6 +289,7 @@ export function getSanitizerCommand(
 export function getUtTestCommand(
   config_id: number,
   operatorNames?: string,
+  compileOption?: string,
 ) {
   try {
     const baseContext = getBaseContext(config_id);
@@ -306,6 +307,7 @@ export function getUtTestCommand(
       cdCmd: context.cdCmd,
       advance_cmd,
       operatorNames,
+      compileOption,
     });
   }
   catch (e: unknown) {
