@@ -17,6 +17,7 @@ import {
   getBuildOpCommand,
   getRunCommand,
   getUtTestCommand,
+  getStandardCustomDeployCommand,
   getConfig,
   postConfig,
   objectToCommandString,
@@ -297,6 +298,23 @@ export class BuildService {
     const config = await this.getConfigByType(CONFIG_TYPES.UT_TEST);
 
     return config?.config_id;
+  }
+
+  private async deployStandardCustomRunPackage(
+    buildConfigId: number,
+    operatorNames?: string,
+  ) {
+    const deployCommand = getStandardCustomDeployCommand(buildConfigId);
+
+    return executeOperatorCommand(
+      deployCommand,
+      buildOperatorSpawnContext({
+        configId: buildConfigId,
+        operatorNames,
+        script: deployCommand,
+      }),
+      { outputLabel: 'compile' },
+    );
   }
 
   /**
@@ -693,6 +711,16 @@ export class BuildService {
           vscode.window.showErrorMessage(t('build.executeFailed', { output: exampleBuildRes.output }));
           throw new Error(t('build.executeFailedThrow', { output: exampleBuildRes.output }));
         }
+
+        const deployRes = await this.deployStandardCustomRunPackage(
+          simConfigId,
+          params.operatorNames,
+        );
+
+        if (deployRes.code !== 0) {
+          vscode.window.showErrorMessage(t('build.executeFailed', { output: deployRes.output }));
+          throw new Error(t('build.executeFailedThrow', { output: deployRes.output ?? '' }));
+        }
       }
     }
 
@@ -831,6 +859,17 @@ export class BuildService {
 
         if (exampleBuildRes.code !== 0) {
           vscode.window.showErrorMessage(t('build.executeFailed', { output: exampleBuildRes.output }));
+
+          return;
+        }
+
+        const deployRes = await this.deployStandardCustomRunPackage(
+          Number(configId),
+          params.operatorNames,
+        );
+
+        if (deployRes.code !== 0) {
+          vscode.window.showErrorMessage(t('build.executeFailed', { output: deployRes.output }));
 
           return;
         }

@@ -5,7 +5,7 @@ import {
   getConfigById,
   getConfig,
 } from './configuration';
-import { getAdvanceCmd } from '@plugin/domain/utils/command-utils';
+import { getAdvanceCmd, getExecutableCommand, isRunPackageDeployTarget, joinCommands } from '@plugin/domain/utils/command-utils';
 import { ConfigRecord } from '@plugin/domain/models/config-model';
 import {
   CommandStrategyFactory,
@@ -312,6 +312,29 @@ export function getUtTestCommand(
   }
   catch (e: unknown) {
     throw new Error(`Failed to build UT test command: ${(e as Error).message}`);
+  }
+}
+
+/**
+ * Generate standard-custom `.run` deploy command after build_example succeeds.
+ * Uses build_op target_file when it references a .run package; otherwise `build_out/*.run`.
+ */
+export function getStandardCustomDeployCommand(config_id: number) {
+  try {
+    const baseContext = getBaseContext(config_id);
+    const strategy = CommandStrategyFactory.getStrategy(baseContext.operator?.op_type);
+    const context = strategy.buildCommandContext(baseContext);
+
+    const configuredTarget = strategy.getRunTargetFile(context.config, context.operator);
+    const deployTarget = isRunPackageDeployTarget(configuredTarget)
+      ? configuredTarget
+      : 'build_out/*.run';
+    const deployCmd = getExecutableCommand(deployTarget, { execute: true, mode: 'deploy' });
+
+    return joinCommands(context.sourceCannCmd, context.cdCmd, deployCmd);
+  }
+  catch (e: unknown) {
+    throw new Error(`Failed to build standard custom deploy command: ${(e as Error).message}`);
   }
 }
 

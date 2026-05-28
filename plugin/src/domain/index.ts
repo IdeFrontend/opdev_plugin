@@ -20,6 +20,7 @@ export {
   getOnBoardCommand,
   getSanitizerCommand,
   getUtTestCommand,
+  getStandardCustomDeployCommand,
 } from './services/command';
 
 export { getFiles } from './services/system';
