@@ -2,7 +2,6 @@
 
 # 默认值
 cmake_args=""
-SOC_VERSION="Ascend910B1"
 
 # 显示帮助信息函数
 show_help() {
@@ -12,7 +11,7 @@ show_help() {
 选项(只支持一次调用其中一个选项):
     --debug         启用调试模式构建
     --mssanitizer   启用MSSanitizer构建
-    --simulator [SOC_VERSION]  启用仿真调优模式构建，可选指定SOC版本（默认: Ascend910B1）
+    --simulator [SOC_VERSION]  启用仿真调优模式构建；设备目录名可作为第二参数传入，或事先 export SOC_VERSION（如 Ascend910B3、Ascend950PR_9589）
     --onboard       启用上板调优模式构建
     -h, --help      显示此帮助信息
 
@@ -42,7 +41,6 @@ while [[ $# -gt 0 ]]; do
             cmake_args="-DENABLE_SIMULATOR=ON -DASCEND_HOME_PATH=${ASCEND_HOME_PATH}"
             if [[ $# -gt 1 ]] && [[ $2 != --* ]]; then
                 cmake_args="$cmake_args -DSOC_VERSION=$2"
-                SOC_VERSION="$2"
                 break
             else
                 cmake_args="$cmake_args -DSOC_VERSION=$SOC_VERSION"
