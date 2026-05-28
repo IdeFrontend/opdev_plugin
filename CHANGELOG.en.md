@@ -2,6 +2,26 @@
 
 Notable changes to **Huawei OP DevTools** are listed here. For the full project history, see the repository on [GitCode](https://gitcode.com/mlh0101/mstt).
 
+## 1.3.1 — 2026-05-28
+
+Patch release: A5 environment alignment, standard-custom workflow fixes, faster startup, smaller download, output UX, and bug fixes.
+
+- Standard Custom builds use chip-specific environment variables injected from resolved SoC instead of hard-coded A3 defaults in generated CMake.
+- CANN project templates support A5 build and simulation; **SoC version** and **NPU arch** can be passed as CMake arguments (`-DSOC_VERSION=`, `-DNPU_ARCH=`) or via environment variables when not set on the command line. Builds from the extension inject chip env vars automatically.
+- When SoC is configured or detected as Atlas A5 (`ascend950`), on-board **performance tuning** quick options show **PC sampling** instead of **Cache heatmap**.
+- **SoC version** and **simulator type** settings default to unset; SOC is resolved at runtime (workspace settings, global environment variables such as `SOC_VERSION`, or host detection via Ascend tooling). Unset simulator type selects a default matching the resolved SOC for simulation. Updated setting descriptions explain resolution order.
+- Warning when SoC version cannot be auto-detected (Ascend tooling such as `asys` / `npu-smi` unavailable).
+- **`--force`** appended when installing generated `.run` packages after compile (Ascend Build deploy and standard-custom on-board/simulation profiling pre-steps).
+- **`--experimental`** for selected experimental operators in standard-custom projects (Build, Run, UT test, on-board profiling, simulation, dump tensor, and NPU debug pre-build).
+- Standard-custom on-board and simulation profiling automatically deploy the built `.run` package before `msprof` (no manual deploy step required for the default plugin flow).
+- NPU debug uses the operator selected in the sidebar.
+- Faster extension activation by deferring auto-open project, debug extension install, and sidebar refresh until after activation completes.
+- Reduced extension package size (slimmer VSIX packaging).
+- New projects open in the current window when no workspace is open, without an extra prompt.
+- Tool output grouped under labeled channels (e.g. `Op Dev Tools: compile`) with reuse per command type.
+- Fixed Insight performance viewer **Detail** and **Cache** tabs showing no content when opening profiling reports.
+- Improved workspace `settings.json` handling when syncing Op Devtools settings (dotted-key writes; avoids overwriting concurrent user edits).
+
 ## 2026-05-15
 
 - Full VS Code color theme support for sidebars, webview panels, and Insight views (light, dark, high contrast), including when the theme changes while the extension is running.
