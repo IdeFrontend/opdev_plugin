@@ -182,11 +182,6 @@ class CommandExecutor extends EventEmitter {
           process.stdout.write(cleanText);
         }
 
-        if (this.checkErrorKeywords(cleanText)) {
-          await this.cleanup();
-          resolve(this.getResult(-1));
-        }
-
         // Check if stop keyword is included
         if (this.checkStopKeywords(cleanText, stopKeywords)) {
           await this.cleanup();
@@ -254,14 +249,6 @@ class CommandExecutor extends EventEmitter {
     return stopKeywords.some((keyword) =>
       text.toLowerCase()
         .includes(keyword.toLowerCase()));
-  }
-
-  /**
-   * Check if exception keyword is included
-   */
-  private checkErrorKeywords(text: string): boolean {
-    return text.toLowerCase()
-      .includes('[error]');
   }
 
   /**
