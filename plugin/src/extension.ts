@@ -315,7 +315,10 @@ export async function activate(context: vscode.ExtensionContext) {
     appendLog(debugTag, String(message ?? ''), payload);
   };
 
-  logDebug('activate:start', { workspaceFolders: (vscode.workspace.workspaceFolders || []).map((f) => f.uri.fsPath) });
+  const activateStart = Date.now();
+  const workspaceFolderPaths = (vscode.workspace.workspaceFolders || []).map((f) => f.uri.fsPath);
+
+  logDebug('activate:start', { workspaceFolders: workspaceFolderPaths });
 
   extensionContext = context;
   (
@@ -2518,12 +2521,16 @@ export async function activate(context: vscode.ExtensionContext) {
 
   console.log('Activate', vscode.workspace.workspaceFolders);
   console.log('🧠 MindStudio plugin loader activated.');
-  logDebug('activate:returning; postActivate bootstrap scheduled');
   startPostActivateBootstrap({
     context,
     operateTreeProvider,
     logDebug,
     checkDevtoolConfigExists,
+  });
+  logDebug('activate:end', {
+    elapsedMs: Date.now() - activateStart,
+    workspaceFolders: workspaceFolderPaths,
+    postActivateBootstrapScheduled: true,
   });
 }
 
