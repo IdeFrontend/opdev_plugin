@@ -64,12 +64,12 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     {
       model: 'Compute',
       path: 'cache.html',
-      iframeName: 'Cache',
+      iframeName: 'CacheFrame',
     },
     {
       model: 'Compute',
       path: 'detail.html',
-      iframeName: 'Detail',
+      iframeName: 'Details',
     },
     {
       model: 'Compute',
