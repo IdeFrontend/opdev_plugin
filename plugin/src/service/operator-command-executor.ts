@@ -8,6 +8,7 @@ import {
   OperatorSpawnEnvContext,
   resolveAscendEnvForOperatorCommand,
 } from '@plugin/domain/utils/ascend-util';
+import { injectAscendEnvExports } from '@plugin/domain/utils/shell-env-exports';
 import {
   deriveOperatorToolOutputLabel,
   type OperatorToolOutputLabel,
@@ -49,8 +50,8 @@ export function buildOperatorSpawnContext(options: {
 }
 
 /**
- * Resolve ascend env once, substitute placeholders in the
- * command string, and execute with matching spawn env.
+ * Resolve ascend env once, substitute placeholders in the command string,
+ * embed resolved vars as `export … &&` prefixes, and execute.
  */
 export async function executeOperatorCommand(
   command: string,
@@ -65,9 +66,10 @@ export async function executeOperatorCommand(
   const resolution = resolveAscendEnvForOperatorCommand(ctxWithCommand);
   const env = buildOperatorSpawnEnvFromResolution(resolution, isSimulator);
   const finalCommand = applyAscendPlaceholdersToScript(command, resolution);
+  const runnableCommand = injectAscendEnvExports(finalCommand, env);
   const toolOutputLabel = meta?.outputLabel ?? deriveOperatorToolOutputLabel(ctxWithCommand);
 
   return ProjectManager.getInstance()
     .getExecutor()
-    .execute(finalCommand, [], [], { env, toolOutputLabel }, true);
+    .execute(runnableCommand, [], [], { toolOutputLabel }, true);
 }

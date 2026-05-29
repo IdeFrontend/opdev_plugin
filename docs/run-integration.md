@@ -53,7 +53,7 @@ flowchart LR
 | Layer | Role |
 |-------|------|
 | **Entry** | `huawei-op-devtools.sidebar.run` → `taskMethods.startRun`; PyAsc folder **Run** → `folder-context-menu-service` then `startRun({ filePath })` |
-| **Plugin → shell** | `executeOperatorCommand` → `ProjectManager.getExecutor().execute(..., { env, toolOutputLabel: 'run' })` |
+| **Plugin → shell** | `executeOperatorCommand` → `ProjectManager.getExecutor().execute(runnableCommand, …, { toolOutputLabel: 'run' })` — Ascend vars are embedded as `export … &&` in `runnableCommand`, not `options.env` |
 
 ---
 

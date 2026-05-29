@@ -32,7 +32,8 @@ variable a project's env script defines passes through untouched.
 `process.env.{SOC_VERSION, SIMULATOR_TYPE, NPU_ARCH, ASCEND_ENV_SCRIPT}` at
 module load and freezes the result. The plugin **never** writes back to
 `process.env` for any of these names; detection results and resolution outputs
-travel only through the resolver and the per-spawn `options.env`.
+travel only through the resolver and explicit `export … &&` prefixes in the
+operator command string (see §4.1).
 
 This means the spec's "global env" channel cannot be polluted by:
 
@@ -107,15 +108,23 @@ with remediation steps before the build script exits.
 
 ## 4. What the plugin passes to operator commands
 
-### 4.1 Spawn environment (`buildOperatorSpawnEnvFromResolution`)
+### 4.1 Ascend environment in the command line
 
 Built in `executeOperatorCommand` after `resolveAscendEnvForOperatorCommand()`.
 `isSimulatorCompile()` is true when `config_type === 'simulate'`,
 `scriptField === 'cpu_debug_script'`, or the script matches `--simulator`.
 
-For **every** operator command (build / build_example / on_board / simulate /
-sanitizer / ut_test / dump_tensor / run), the spawn `env` map contains exactly
-these four keys (via `buildOperatorSpawnEnvFromResolution`):
+For every operator command (build / build_example / on_board / simulate /
+sanitizer / ut_test / dump_tensor / run), `executeOperatorCommand` embeds
+resolved Ascend variables as explicit `export … &&` prefixes in the command
+string (via `injectAscendEnvExports` in `shell-env-exports.ts`). Keys are
+emitted only when non-empty:
+
+```
+export SOC_VERSION=<resolved> && export NPU_ARCH=<resolved> && …
+```
+
+`buildOperatorSpawnEnvFromResolution()` supplies exactly these four keys:
 
 | Key | Non-simulator run | Simulator-class run |
 |-----|-------------------|---------------------|
@@ -124,20 +133,28 @@ these four keys (via `buildOperatorSpawnEnvFromResolution`):
 | `SUPPORT_COMPUTE_UNIT` | From slug | From slug |
 | `SUPPORT_TILING_DIR` | From slug | From slug |
 
-The plugin does **not** set `SIMULATOR_TYPE` in spawn env. CANN simulator
-cmake reads the device dir from `$ENV{SOC_VERSION}` on sim builds (see
-template `CMakeLists.txt` comments). Host `SIMULATOR_TYPE` in the activation
-snapshot is only an input to **resolution**, not forwarded as a spawn key.
+Empty values are omitted from the command line. The plugin does **not** pass
+these via `options.env` on `CommandExecutor.execute` for operator runs — the
+command string is the single source of truth so the per-run output channel
+shows a copy-pasteable line.
 
-The spawn env is merged over `process.env` by `CommandExecutor.execute`:
-`{ ...process.env, ...options.env }`. Plugin values win in the child shell.
-Structured command logging (`op-devtools/command`) records only these four
-keys when present (`pickAscendSpawnEnv` in `command-options.ts`).
+The plugin does **not** set `SIMULATOR_TYPE` in the export chain. CANN
+simulator cmake reads the device dir from `$ENV{SOC_VERSION}` on sim builds
+(see template `CMakeLists.txt` comments). Host `SIMULATOR_TYPE` in the
+activation snapshot is only an input to **resolution**, not forwarded as an
+export key.
+
+When `project.ascend_env_script` is set, exports are inserted **before** the
+`. ${project.ascend_env_script} &&` source prefix so plugin-resolved values are
+established first; `set_env.sh` may still adjust other CANN variables for the
+rest of the chain.
 
 ### 4.2 Command line and placeholders
 
 - **`executeOperatorCommand`** resolves once (`resolveAscendEnvForOperatorCommand`),
-  builds spawn env, then `applyAscendPlaceholdersToScript` on the command string.
+  builds env via `buildOperatorSpawnEnvFromResolution`, applies
+  `applyAscendPlaceholdersToScript` on the command string, then
+  `injectAscendEnvExports`.
 - `{soc_version}` → `resolution.socVersion` (CANN slug, including
   `derived-from-simulator`).
 - `{simulator_type}` → `resolution.simulatorType`, or — when the script contains
@@ -163,7 +180,7 @@ keys when present (`pickAscendSpawnEnv` in `command-options.ts`).
 
 - Does **not** write to `process.env.SOC_VERSION` / `process.env.NPU_ARCH` /
   `process.env.SIMULATOR_TYPE` ever.
-- Does **not** set `SIMULATOR_TYPE` in per-command spawn env (simulator dir is
+- Does **not** set `SIMULATOR_TYPE` in per-command exports (simulator dir is
   passed as `SOC_VERSION` on simulator-class runs; see §4.1).
 - Does **not** source `$ASCEND_ENV_SCRIPT` (or any other env script) at
   activation. The OS-level `ASCEND_ENV_SCRIPT` is recorded in the snapshot
@@ -218,9 +235,10 @@ Two structured logs are enough to debug every reported mismatch:
   ```
 - On every spawned operator shell (same shared channel, scope `op-devtools/command`):
   ```
-  Executing {"command":"…","cwd":"…","env":{"SOC_VERSION":"…","NPU_ARCH":"…","SUPPORT_COMPUTE_UNIT":"…","SUPPORT_TILING_DIR":"…"}}
+  Executing {"command":"export SOC_VERSION='…' && export NPU_ARCH='…' && …","cwd":"…"}
   ```
-  (`SIMULATOR_TYPE` omitted — not part of spawn env.)
+  Ascend vars appear inside the logged `command` string (`export … &&` chain), not
+  as a separate `env` object. (`SIMULATOR_TYPE` is never exported.)
 - Live stdout/stderr from operator tools stream to a **per-run** output channel
   named `Op Dev Tools: <label>` (e.g. `compile`, `run`, `simulate`, `sanitizer`,
   `test`, `debug`). The channel is created when the process starts and disposed
@@ -234,6 +252,12 @@ won (`asys` vs `npu-smi`) and the resulting slug.
 - `plugin/src/__tests__/unit/operator-spawn-env.spec.ts` — full precedence
   matrix for `getOperatorSpawnEnv` and `resolveAscendEnv`, including the
   simulator-driven SOC rule and the workspace → global-env → default chain.
+- `plugin/src/__tests__/unit/shell-env-exports.spec.ts` — bash quoting,
+  `formatAscendEnvExports` key order, and `injectAscendEnvExports` (prepend vs
+  before `. set_env.sh &&` source prefix).
+- `plugin/src/__tests__/unit/operator-command-executor.spec.ts` —
+  `executeOperatorCommand` wires resolution → placeholders → export injection
+  and calls `CommandExecutor.execute` without `options.env`.
 - `plugin/src/__tests__/unit/operator-script-placeholders.spec.ts` —
   `{soc_version}` / `{simulator_type}` substitution, including the case where
   a workspace simulator drives SOC in a simulator script but not in an
@@ -260,9 +284,11 @@ behavior, verification steps, and remaining gaps.
 - Global env snapshot: `plugin/src/domain/utils/global-env-snapshot.ts`.
 - SOC warning: `plugin/src/helpers/ascend-soc-warning.ts` (`maybeWarnSocNotDetected`).
 - Spawn entry-point: `plugin/src/service/operator-command-executor.ts`.
+- Command-line exports: `plugin/src/domain/utils/shell-env-exports.ts`.
 - Placeholders: `plugin/src/domain/utils/operator-script-placeholders.ts`.
 - Workspace settings: `plugin/src/helpers/operator-project-workspace-config.ts`;
   doc: [`workspace-settings.md`](./workspace-settings.md).
-- Command logging: `plugin/src/class/command-options.ts` (`pickAscendSpawnEnv`).
+- Command logging: `plugin/src/class/command-options.ts` (operator runs log the
+  full command string; `pickAscendSpawnEnv` only applies when callers pass `env`).
 - Templates: `plugin/templates/code_template/cann_template/*/` and
   `plugin/templates/code_template/ascend_template/add_custom/`.

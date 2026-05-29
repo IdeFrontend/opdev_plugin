@@ -11,8 +11,8 @@ import { appendLog } from '@plugin/helpers/output-channel';
  * after import will not affect resolution.
  *
  * The plugin never writes back to `process.env.{SOC_VERSION, SIMULATOR_TYPE,
- * NPU_ARCH}`; those values are forwarded to spawned shells via the
- * `options.env` argument of `CommandExecutor.execute` instead.
+ * NPU_ARCH}`; operator commands forward resolved values as `export … &&`
+ * prefixes in the shell command string (see `operator-command-executor.ts`).
  */
 
 function readOptional(name: string): string | undefined {

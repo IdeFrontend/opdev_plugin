@@ -12,12 +12,12 @@ The plugin does **not** ship a compiler. It:
 
 - **Orchestrates** compilation using per-project **`configs.json` rows** (`build_op`, `build_example`). At command time, script fields and options come from workspace **`op-devtools.*`** via `ConfigService.getRuntimeConfigById` → `applyWorkspaceSettingsToConfigs` (see [Runtime config](#runtime-config-for-command-generation)). Row ids and DB-only fields (`fileMapList`, profiler `build_example.target_file`, …) stay in `configs.json`.
 - **Builds** shell command strings with **command strategies** keyed by `operator.op_type` (`ascend`, `cann`, `pyasc`, `triton`).
-- **Runs** commands through **`executeOperatorCommand`** (`operator-command-executor.ts`): one `resolveAscendEnvForOperatorCommand` pass, placeholder substitution, then `ProjectManager.getExecutor().execute(..., { env })` (same executor stack as run / sanitizer / simulate).
+- **Runs** commands through **`executeOperatorCommand`** (`operator-command-executor.ts`): one `resolveAscendEnvForOperatorCommand` pass, placeholder substitution, `export … &&` injection, then `ProjectManager.getExecutor().execute(..., { toolOutputLabel })` (same executor stack as run / sanitizer / simulate).
 - **Exposes** compile via VS Code commands → `taskMethods.startBuild` / `startBuildExample` (Actions tree **Build** row, folder menus, debug pre-build). **`ops` API** (`getConfigData` / `saveConfig`) is for simulate / on-board / sanitizer **settings only**, not compile RPC.
 
 Compilation is performed by the project script or toolchain named in the generated command.
 
-**Extension host vs shell CANN environment** — At activation the extension only **logs** a frozen global env snapshot; it does not source env scripts or mutate `process.env`. Strategies prepend **`. ${project.ascend_env_script} && …`** when set; spawn env is built per command (`SOC_VERSION`, `NPU_ARCH`, `SUPPORT_*`). Contract: [`ascend-env-spec.md`](./ascend-env-spec.md); A5: [`ascend-a5-support.md`](./ascend-a5-support.md).
+**Extension host vs shell CANN environment** — At activation the extension only **logs** a frozen global env snapshot; it does not source env scripts or mutate `process.env`. Strategies prepend **`. ${project.ascend_env_script} && …`** when set; `executeOperatorCommand` embeds `export SOC_VERSION=… && …` per command. Contract: [`ascend-env-spec.md`](./ascend-env-spec.md); A5: [`ascend-a5-support.md`](./ascend-a5-support.md).
 
 ---
 
@@ -58,7 +58,7 @@ flowchart LR
 |-------|----------|------|
 | **Webview → Plugin** | Custom request/response over ApiServer | Simulator / on-board panels call `ops/getConfigData`, `ops/saveConfig` (settings.json only). Compile / build-example are **not** exposed on `ops`; use VS Code commands → `taskMethods.startBuild` / `startBuildExample`. |
 | **Plugin → VS Code** | VS Code Extension API | Show success/error messages; project/workspace context. |
-| **Plugin → Environment** | Shell command (stdio) | `executeOperatorCommand` resolves ascend env, substitutes placeholders, then `CommandExecutor.execute` with merged `env` + optional per-run output channel (`Op Dev Tools: compile`, …). |
+| **Plugin → Environment** | Shell command (stdio) | `executeOperatorCommand` resolves ascend env, substitutes placeholders, embeds `export … &&` prefixes in the command string, then `CommandExecutor.execute` with optional per-run output channel (`Op Dev Tools: compile`, …). Ascend vars are not passed via `options.env`. |
 
 ---
 
@@ -83,7 +83,7 @@ flowchart TB
 
   subgraph Env["Execution environment"]
     PM["ProjectManager\ninitProject, getExecutor"]
-    Executor["CommandExecutor\nexecute(cmd, { env })"]
+    Executor["CommandExecutor\nexecute(cmd, { toolOutputLabel })"]
   end
 
   Tree --> TaskCtrl --> BuildSvc
@@ -130,8 +130,8 @@ sequenceDiagram
   Strategy-->>Build: buildCommand
 
   Build->>ExecOp: execute(buildCommand, spawnContext)
-  ExecOp->>ExecOp: resolveAscendEnv + placeholders
-  ExecOp->>Exec: execute(finalCommand, { env }, toolOutputLabel)
+  ExecOp->>ExecOp: resolveAscendEnv + placeholders + export prefixes
+  ExecOp->>Exec: execute(runnableCommand, { toolOutputLabel })
   Exec-->>Build: { code, output }
 
   alt code !== 0
@@ -348,5 +348,5 @@ flowchart TB
 - **Entry:** Actions tree **Build** / VS Code commands → `taskMethods` → `BuildService` (not operator action queue). Folder context and debug paths call the same `startBuild` with different `scriptField` / `compileOption`.
 - **Config:** `configs.json` rows + workspace `op-devtools.*` at runtime (`getRuntimeConfigById`); deploy target from `deployCommandOrRunCommand`; profiler binary path from DB `build_example.target_file`.
 - **Command build:** `CommandStrategyFactory` by `op_type`; pyasc **throws** on kernel `buildOpCommand`; triton uses Python scripts when enabled (`operatorSupport.triton`).
-- **Execution:** `executeOperatorCommand` — ascend env resolution, `{soc_version}` / `{simulator_type}` substitution, spawn env per [`ascend-env-spec.md`](./ascend-env-spec.md).
+- **Execution:** `executeOperatorCommand` — ascend env resolution, `{soc_version}` / `{simulator_type}` substitution, `export … &&` injection per [`ascend-env-spec.md`](./ascend-env-spec.md).
 - **Protocols:** `ops` = simulate/on-board/sanitizer settings only; compile is in-plugin via `taskMethods`, not webview RPC.

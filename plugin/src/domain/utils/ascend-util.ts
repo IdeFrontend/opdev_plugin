@@ -717,12 +717,12 @@ export function isSimulatorCompile(params: OperatorSpawnEnvContext): boolean {
 }
 
 /**
- * Environment variables passed via `options.env` to {@link CommandExecutor.execute}
- * for a single operator command. The plugin **never** writes these back to
- * `process.env`; spawn env overrides any inherited value in the child shell.
+ * Ascend variables for a single operator command. {@link executeOperatorCommand}
+ * embeds them as `export … &&` prefixes (see `shell-env-exports.ts`); the plugin
+ * **never** writes these back to `process.env`.
  *
- * `SOC_VERSION` and `NPU_ARCH` are always emitted so the cmake templates'
- * `$ENV{…}` fallbacks always see consistent values. For simulator-class runs,
+ * `SOC_VERSION` and `NPU_ARCH` are always emitted when non-empty so cmake
+ * `$ENV{…}` fallbacks see consistent values. For simulator-class runs,
  * `SOC_VERSION` is the simulator device directory name (e.g. `Ascend910B3`) so
  * cann `build.sh --simulator` and cmake can link `tools/simulator/${SOC_VERSION}/lib`;
  * for other runs it is the CANN SOC slug (e.g. `ascend910b`). `NPU_ARCH` is always
