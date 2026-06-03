@@ -23,10 +23,14 @@ other call sites use `resolveAscendEnv()`. Workspace keys:
 | `SUPPORT_COMPUTE_UNIT` | ACLNN compute unit for standard-custom ascend cmake | Literal `set()` in generated `CMakeLists.txt`; `resolveAclnnCmakeDefaultsForGeneration()` at scaffold time (`shared/cann-aclnn-build-defaults.ts`) |
 | `SUPPORT_TILING_DIR` | Tiling dir under `op_host` paired with compute unit | Same as `SUPPORT_COMPUTE_UNIT` (baked at generation, not spawn env) |
 
-The plugin treats `SOC_VERSION` and `NPU_ARCH` as the **only** spawn-exported
-environment names it owns. `SUPPORT_*` are project capability declarations, not
-runtime-detectable env vars. Any other
-variable a project's env script defines passes through untouched.
+The plugin treats `SOC_VERSION` and `NPU_ARCH` as the only spawn-exported
+environment names it owns, and only for project types whose CANN cmake reads
+`$ENV{SOC_VERSION}` / `$ENV{NPU_ARCH}` (`ascend-c`, `torch-library`, or
+`op_type=cann`). Standard-custom, pyasc, and triton runs use script placeholders
+only (`{soc_version}`, `{simulator_type}`) — see
+`IOperatorPlugin.getSpawnEnvExportKeys()` via `OperatorPluginRegistry.filterSpawnEnv()`.
+`SUPPORT_*` are baked at generation (`AscendPlugin.patchGeneratedProject`), not env.
+Any other variable a project's env script defines passes through untouched.
 
 ## 2. Global env snapshot (read once at activation)
 
@@ -127,7 +131,10 @@ emitted only when non-empty:
 export SOC_VERSION=<resolved> && export NPU_ARCH=<resolved> && …
 ```
 
-`buildOperatorSpawnEnvFromResolution()` supplies `SOC_VERSION` and `NPU_ARCH`:
+`buildOperatorSpawnEnvFromResolution()` resolves `SOC_VERSION` and `NPU_ARCH`;
+`OperatorPluginRegistry.filterSpawnEnv()` keeps keys declared by the op_type plugin
+(`CannPlugin` → both keys) unless project_type forces no export (`standard-custom`,
+`pyasc`, `triton`):
 
 | Key | Non-simulator run | Simulator-class run |
 |-----|-------------------|---------------------|

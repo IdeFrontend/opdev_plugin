@@ -1,3 +1,5 @@
+import fs from 'fs-extra';
+import path from 'path';
 import {
   CANN_SOC_ASCEND_310P,
   CANN_SOC_ASCEND_910,
@@ -28,6 +30,9 @@ import {
   resolveCannSetEnvScriptForDetection,
 } from '@plugin/domain/utils/ascend-detection-env';
 import { getGlobalEnvSnapshot } from '@plugin/domain/utils/global-env-snapshot';
+import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
+import { OperatorProjectType } from '@plugin/domain/models/operator-project-type';
+import type { OperatorOpType } from '@shared/operator-op-type';
 import { maybeWarnSocNotDetected } from '@plugin/helpers/ascend-soc-warning';
 import { appendLog } from '@plugin/helpers/output-channel';
 import { isAscendA5ProfilerCannSoc } from '@shared/msprof-onboard-env';
@@ -350,6 +355,26 @@ export function resolveAclnnCmakeDefaultsForGeneration(
   };
 }
 
+/** Replace `__MSTT_SUPPORT_*__` placeholders in the operator root CMakeLists.txt. */
+export function patchAclnnCmakeSupportVars(
+  opPath: string,
+  projectSoc?: string | null,
+): void {
+  const cmakePath = path.join(opPath, 'CMakeLists.txt');
+
+  if (!fs.pathExistsSync(cmakePath)) {
+    return;
+  }
+
+  const defaults = resolveAclnnCmakeDefaultsForGeneration(projectSoc);
+  let content = fs.readFileSync(cmakePath, 'utf8');
+
+  content = content.split(MSTT_SUPPORT_COMPUTE_UNIT_PLACEHOLDER)
+    .join(defaults.supportComputeUnit);
+  content = content.split(MSTT_SUPPORT_TILING_DIR_PLACEHOLDER)
+    .join(defaults.supportTilingDir);
+  fs.writeFileSync(cmakePath, content, 'utf8');
+}
 
 // ---------------------------------------------------------------------------
 // Lazy host SOC detection
@@ -721,8 +746,10 @@ export function resolveRuntimeCannSoc(
 
 /** Context for building per-spawn env overrides (merged over `process.env`). */
 export type OperatorSpawnEnvContext = {
-  opType?: string | null;
+  opType?: OperatorOpType | null;
   projectId?: number;
+  /** Resolved from `projects.json` when omitted; see {@link normalizeProjectTypeForSpawn}. */
+  projectType?: OperatorProjectType | null;
   configType?: string | null;
   scriptField?: string | null;
   script?: string | null;
@@ -747,8 +774,8 @@ export function isSimulatorCompile(params: OperatorSpawnEnvContext): boolean {
  * embeds them as `export … &&` prefixes (see `shell-env-exports.ts`); the plugin
  * **never** writes these back to `process.env`.
  *
- * `SOC_VERSION` and `NPU_ARCH` are always emitted when non-empty so cmake
- * `$ENV{…}` fallbacks see consistent values. For simulator-class runs,
+ * Full resolution yields `SOC_VERSION` and `NPU_ARCH`; {@link OperatorPluginRegistry.filterSpawnEnv}
+ * filters exports by plugin + project type. For simulator-class runs,
  * `SOC_VERSION` is the simulator device directory name (e.g. `Ascend910B3`) so
  * cann `build.sh --simulator` and cmake can link `tools/simulator/${SOC_VERSION}/lib`;
  * for other runs it is the CANN SOC slug (e.g. `ascend910b`). `NPU_ARCH` is always
@@ -777,6 +804,11 @@ export function getOperatorSpawnEnv(
   const resolved = resolution ?? computeAscendEnvResolution({
     isSimulator: isSimulatorCompile(ctx),
   });
+  const fullEnv = buildOperatorSpawnEnvFromResolution(resolved, isSimulatorCompile(ctx));
 
-  return buildOperatorSpawnEnvFromResolution(resolved, isSimulatorCompile(ctx));
+  return OperatorPluginRegistry.filterSpawnEnv(
+    fullEnv,
+    ctx.opType ?? undefined,
+    ctx.projectType,
+  );
 }

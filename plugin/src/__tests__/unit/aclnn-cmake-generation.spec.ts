@@ -8,6 +8,7 @@ jest.mock('@plugin/helpers/operator-project-workspace-config', () => ({
 }));
 
 import { getSocVersionWithWorkspaceOverride } from '@plugin/helpers/operator-project-workspace-config';
+import { AscendPlugin } from '@plugin/domain/plugins/ascend.plugin';
 import {
   MSTT_SUPPORT_COMPUTE_UNIT_PLACEHOLDER,
   MSTT_SUPPORT_TILING_DIR_PLACEHOLDER,
@@ -19,7 +20,6 @@ import {
   SUPPORT_TILING_DIR_ARCH22,
   SUPPORT_TILING_DIR_ARCH35,
 } from '@shared/cann-aclnn-build-defaults';
-import { AscendOpGenerator } from '@plugin/domain/services/op-generator-factory';
 
 describe('aclnn cmake generation', () => {
   beforeEach(() => {
@@ -48,7 +48,7 @@ describe('aclnn cmake generation', () => {
       });
   });
 
-  it('AscendOpGenerator patches CMakeLists placeholders after generation', () => {
+  it('AscendPlugin patches CMakeLists placeholders after generation', () => {
     (getSocVersionWithWorkspaceOverride as jest.Mock).mockReturnValue('ascend950');
 
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mstt-aclnn-gen-'));
@@ -61,13 +61,7 @@ describe('aclnn cmake generation', () => {
       'utf8',
     );
 
-    const generator = new AscendOpGenerator(
-      { soc_version: null },
-      { project_path: tmp },
-      '/ext',
-    );
-    (generator as { op_path: string }).op_path = tmp;
-    generator._patchAclnnCmakeSupportVars();
+    new AscendPlugin().patchGeneratedProject(tmp, { soc_version: null });
 
     const patched = fs.readFileSync(cmakePath, 'utf8');
 

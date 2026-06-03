@@ -1,6 +1,7 @@
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import { getConfigById } from '@plugin/domain/services/configuration';
 import { getOpByProjectIdAndOpName } from '@plugin/domain/models/model';
+import { getProjectById } from '@plugin/domain/models/project-model';
 import {
   applyAscendPlaceholdersToScript,
   buildOperatorSpawnEnvFromResolution,
@@ -8,6 +9,8 @@ import {
   OperatorSpawnEnvContext,
   resolveAscendEnvForOperatorCommand,
 } from '@plugin/domain/utils/ascend-util';
+import type { OperatorOpType } from '@shared/operator-op-type';
+import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import { injectAscendEnvExports } from '@plugin/domain/utils/shell-env-exports';
 import {
   deriveOperatorToolOutputLabel,
@@ -17,7 +20,7 @@ import {
 export function resolveOpTypeForSpawn(
   projectId: number | undefined,
   operatorNames?: string,
-): string | undefined {
+): OperatorOpType | undefined {
   if (!projectId || !operatorNames?.trim()) {
     return undefined;
   }
@@ -28,7 +31,9 @@ export function resolveOpTypeForSpawn(
     return undefined;
   }
 
-  return getOpByProjectIdAndOpName(projectId, first)?.op_type;
+  const raw = getOpByProjectIdAndOpName(projectId, first)?.op_type;
+
+  return OperatorPluginRegistry.normalizeOpTypeForSpawn(raw) ?? undefined;
 }
 
 export function buildOperatorSpawnContext(options: {
@@ -39,10 +44,12 @@ export function buildOperatorSpawnContext(options: {
 }): OperatorSpawnEnvContext {
   const config = options.configId ? getConfigById(options.configId) : undefined;
   const projectId = config?.project_id;
+  const project = projectId ? getProjectById(projectId) : undefined;
 
   return {
     opType: resolveOpTypeForSpawn(projectId, options.operatorNames),
     projectId,
+    projectType: OperatorPluginRegistry.normalizeProjectTypeForSpawn(project?.project_type),
     configType: config?.config_type ?? null,
     scriptField: options.scriptField ?? null,
     script: options.script ?? null,
@@ -53,18 +60,37 @@ export function buildOperatorSpawnContext(options: {
  * Resolve ascend env once, substitute placeholders in the command string,
  * embed resolved vars as `export … &&` prefixes, and execute.
  */
+function enrichOperatorSpawnContext(
+  spawnContext: OperatorSpawnEnvContext,
+  command: string,
+): OperatorSpawnEnvContext {
+  const projectId = spawnContext.projectId;
+  const project = projectId ? getProjectById(projectId) : undefined;
+
+  return {
+    ...spawnContext,
+    script: spawnContext.script ?? command,
+    projectType: spawnContext.projectType
+      ?? OperatorPluginRegistry.normalizeProjectTypeForSpawn(project?.project_type),
+    opType: spawnContext.opType
+      ?? resolveOpTypeForSpawn(projectId, undefined),
+  };
+}
+
 export async function executeOperatorCommand(
   command: string,
   spawnContext: OperatorSpawnEnvContext,
   meta?: { outputLabel?: OperatorToolOutputLabel },
 ) {
-  const ctxWithCommand: OperatorSpawnEnvContext = {
-    ...spawnContext,
-    script: spawnContext.script ?? command,
-  };
+  const ctxWithCommand = enrichOperatorSpawnContext(spawnContext, command);
   const isSimulator = isSimulatorCompile(ctxWithCommand);
   const resolution = resolveAscendEnvForOperatorCommand(ctxWithCommand);
-  const env = buildOperatorSpawnEnvFromResolution(resolution, isSimulator);
+  const fullEnv = buildOperatorSpawnEnvFromResolution(resolution, isSimulator);
+  const env = OperatorPluginRegistry.filterSpawnEnv(
+    fullEnv,
+    ctxWithCommand.opType ?? undefined,
+    ctxWithCommand.projectType,
+  );
   const finalCommand = applyAscendPlaceholdersToScript(command, resolution);
   const runnableCommand = injectAscendEnvExports(finalCommand, env);
   const toolOutputLabel = meta?.outputLabel ?? deriveOperatorToolOutputLabel(ctxWithCommand);

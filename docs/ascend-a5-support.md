@@ -56,7 +56,7 @@ When the workspace sets **`performanceTuning.simulation.simulatorType`** to `Asc
 | Type | A4/A5 template status |
 |------|------------------------|
 | **CANN** (`cann_template/*`) | Env-driven `build.sh` / cmake — reference implementation |
-| **Ascend** (`ascend_template/add_custom`) | `SUPPORT_*` literals in generated `CMakeLists.txt`; spawn env supplies `SOC_VERSION` / `NPU_ARCH` only |
+| **Ascend** (`ascend_template/add_custom`) | `SUPPORT_*` literals in generated `CMakeLists.txt`; `{soc_version}` placeholders on build (no `SOC_VERSION` / `NPU_ARCH` spawn export) |
 | **PyAsc** (`pyasc_temple`) | Python-only; configs use `python3 ./<op>.py`; profiler uses resolver |
 | **Triton** (`triton_vector_add`) | Python-only; no CANN env template contract; simulate/on-board disabled in plugin |
 

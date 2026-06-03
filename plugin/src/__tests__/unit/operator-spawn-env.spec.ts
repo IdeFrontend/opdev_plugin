@@ -11,6 +11,10 @@ jest.mock('@plugin/domain/utils/global-env-snapshot', () => ({
   })),
 }));
 
+import { OperatorProjectType } from '@plugin/domain/models/operator-project-type';
+import { AscendPlugin } from '@plugin/domain/plugins/ascend.plugin';
+import { CannPlugin } from '@plugin/domain/plugins/cann.plugin';
+import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import {
   getSocVersionWithWorkspaceOverride,
   getWorkspaceSimulatorType,
@@ -55,6 +59,9 @@ const snapshot = (overrides: Partial<{
 describe('operator spawn env', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    OperatorPluginRegistry._reset();
+    OperatorPluginRegistry.registerOpPlugin(new CannPlugin());
+    OperatorPluginRegistry.registerOpPlugin(new AscendPlugin());
     _primeSocDetectionFailedForTest();
     _resetSocUndetectedWarningForTest();
     (getWorkspaceSimulatorType as jest.Mock).mockReturnValue('');
@@ -97,16 +104,14 @@ describe('operator spawn env', () => {
   it('unresolved SOC emits empty spawn env (no silent 910-class defaults)', () => {
     const env = getOperatorSpawnEnv({
       opType: 'cann',
+      projectType: OperatorProjectType.ASCEND_C,
       projectId: 1,
       configType: 'build_op',
       script: 'bash build.sh --onboard',
     });
 
     expect(env)
-      .toEqual({
-        SOC_VERSION: '',
-        NPU_ARCH: '',
-      });
+      .toEqual({});
   });
 
   it('getSupportComputeUnitForCannSoc and getSupportTilingDirForCannSoc map A2/A3 vs A5', () => {
@@ -132,6 +137,7 @@ describe('operator spawn env', () => {
 
     const env = getOperatorSpawnEnv({
       opType: 'cann',
+      projectType: OperatorProjectType.ASCEND_C,
       projectId: 1,
       configType: 'build_op',
       script: 'bash build.sh --onboard',
@@ -144,21 +150,19 @@ describe('operator spawn env', () => {
       });
   });
 
-  it('non-sim ascend spawn also emits NPU_ARCH (always derived from SOC)', () => {
+  it('standard-custom ascend spawn does not export SOC_VERSION or NPU_ARCH', () => {
     (getSocVersionWithWorkspaceOverride as jest.Mock).mockImplementation(() => 'ascend950');
 
     const env = getOperatorSpawnEnv({
       opType: 'ascend',
+      projectType: OperatorProjectType.STANDARD_CUSTOM,
       projectId: 1,
       configType: 'build_op',
       script: 'bash build.sh --pkg --soc=ascend950',
     });
 
     expect(env)
-      .toEqual({
-        SOC_VERSION: 'ascend950',
-        NPU_ARCH: 'dav-3510',
-      });
+      .toEqual({});
   });
 
   it('sim spawn sets SOC_VERSION to simulator device dir and NPU_ARCH from resolved slug', () => {
@@ -166,6 +170,7 @@ describe('operator spawn env', () => {
 
     const env = getOperatorSpawnEnv({
       opType: 'cann',
+      projectType: OperatorProjectType.ASCEND_C,
       projectId: 1,
       configType: 'simulate',
       script: 'bash build.sh --simulator {simulator_type}',
@@ -183,6 +188,7 @@ describe('operator spawn env', () => {
 
     const env = getOperatorSpawnEnv({
       opType: 'cann',
+      projectType: OperatorProjectType.ASCEND_C,
       projectId: 1,
       configType: 'simulate',
       script: 'bash build.sh --simulator {simulator_type}',
@@ -200,6 +206,7 @@ describe('operator spawn env', () => {
 
     const env = getOperatorSpawnEnv({
       opType: 'cann',
+      projectType: OperatorProjectType.ASCEND_C,
       projectId: 1,
       configType: 'simulate',
       script: 'bash build.sh --simulator {simulator_type}',

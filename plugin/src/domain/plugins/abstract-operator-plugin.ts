@@ -4,11 +4,13 @@ import { OpRecord } from '@plugin/domain/models/model';
 import {
   BaseOpGenerator, OpGenParams, OpGenProject,
 } from '@plugin/domain/services/op-generator-factory';
+import type { OperatorOpType } from '@shared/operator-op-type';
 import {
   IOperatorPlugin,
   OperatorBuildBehavior,
   OperatorConfigScripts,
   OperatorDefaultPaths,
+  OperatorSpawnEnvKey,
 } from './operator-plugin.interface';
 
 /**
@@ -23,7 +25,7 @@ import {
  * createProjectGenerator() throws by default — every plugin must implement it.
  */
 export abstract class AbstractOperatorPlugin implements IOperatorPlugin {
-  abstract readonly opType: string;
+  abstract readonly opType: OperatorOpType;
   abstract readonly displayName: string;
   abstract readonly commandStrategy: CommandStrategy;
 
@@ -63,6 +65,14 @@ export abstract class AbstractOperatorPlugin implements IOperatorPlugin {
       npuDebugScript:  `bash ${script} --debug`,
       utTestScript:    `bash ${script} -u`,
     };
+  }
+
+  getSpawnEnvExportKeys(): readonly OperatorSpawnEnvKey[] {
+    return [];
+  }
+
+  patchGeneratedProject(_opPath: string, _params: OpGenParams): void {
+    // default noop
   }
 
   createProjectGenerator(

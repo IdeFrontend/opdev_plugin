@@ -1,5 +1,9 @@
 // 算子操作相关类型定义
 
+import type { OperatorOpType } from '../operator-op-type';
+
+export type { OperatorOpType };
+
 export type InitOpsParams = {
   ascendEnvScript?: string;
   projectPath?: string;
@@ -18,7 +22,7 @@ export type CreateOpsParams = {
 
 export type CreateOpsByPrototypeParams = {
   opsPrototypeFile: string;
-  opType?: 'ascend' | 'cann' | 'pyasc' | 'triton';
+  opType?: OperatorOpType;
   templateName?: string;
   /** Canonical operator / entrypoint name (e.g. New Project `projectName`). Passed to `generateStructure` as `op_name`. */
   opName?: string;

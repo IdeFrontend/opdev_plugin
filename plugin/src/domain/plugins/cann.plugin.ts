@@ -4,6 +4,7 @@ import {
 } from '@plugin/domain/services/op-generator-factory';
 import { OperatorProjectType } from '@plugin/domain/models/operator-project-type';
 import { AbstractOperatorPlugin } from './abstract-operator-plugin';
+import type { OperatorSpawnEnvKey } from './operator-plugin.interface';
 
 /**
  * Plugin for op_type='cann' (CANN framework operators).
@@ -17,6 +18,13 @@ export class CannPlugin extends AbstractOperatorPlugin {
   readonly displayName = 'CANN';
   readonly commandStrategy = new CannCommandStrategy();
   readonly projectTypeMappings = [OperatorProjectType.STANDARD_CUSTOM] as const;
+
+  override getSpawnEnvExportKeys(): readonly OperatorSpawnEnvKey[] {
+    return [
+      'SOC_VERSION',
+      'NPU_ARCH',
+    ];
+  }
 
   createProjectGenerator(params: OpGenParams, project: OpGenProject, extensionPath: string) {
     return new CannOpGenerator(params, project, extensionPath);

@@ -68,6 +68,8 @@ Key hooks used in production:
 - `getInitialConfigScripts(record, workspaceRoot)` — script bundle (`script`, debug scripts, `utTestScript`, example, sanitizer, on-board, simulation) for `generateStructure` / `completeProjectConfigs`  
 - `createProjectGenerator(...)` — template unzip / scaffold  
 - `buildBehavior` — `requiresBuildBeforeAnalysis`, `requiresActiveFileCheck`, `supportsSanitizer`, `supportsSimulate`, `supportsOnBoard`, CPU/NPU debug flags  
+- `getSpawnEnvExportKeys()` — which of `SOC_VERSION` / `NPU_ARCH` this op_type may export; filtered by `OperatorPluginRegistry.filterSpawnEnv()` (project_type can force none)  
+- `patchGeneratedProject(opPath, params)` — post-unzip template fixes (`AscendPlugin` → ACLNN `SUPPORT_*` in cmake)  
 - `detectProject(dir)` — when plugin also implements `IProjectDetector`
 
 Interfaces: `domain/plugins/operator-plugin.interface.ts`, `project-detector.interface.ts`, `abstract-operator-plugin.ts`.

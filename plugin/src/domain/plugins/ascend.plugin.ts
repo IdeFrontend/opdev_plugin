@@ -11,6 +11,7 @@ import { AbstractOperatorPlugin } from './abstract-operator-plugin';
 import {
   IProjectDetector, ProjectDetectionResult,
 } from './project-detector.interface';
+import { patchAclnnCmakeSupportVars } from '@plugin/domain/utils/ascend-util';
 import {
   OperatorBuildBehavior, OperatorConfigScripts, OperatorDefaultPaths,
 } from './operator-plugin.interface';
@@ -83,6 +84,10 @@ export class AscendPlugin extends AbstractOperatorPlugin implements IProjectDete
       npuDebugScript:  h ? `${base} --bisheng_flags=ccec_O0,ccec_g` : `${base} --debug`,
       utTestScript:    `bash ${script} --soc={soc_version} --ops={operatorNames} -u`,
     };
+  }
+
+  override patchGeneratedProject(opPath: string, params: OpGenParams): void {
+    patchAclnnCmakeSupportVars(opPath, params.soc_version);
   }
 
   createProjectGenerator(params: OpGenParams, project: OpGenProject, extensionPath: string) {

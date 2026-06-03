@@ -18,6 +18,13 @@ jest.mock('@plugin/domain/utils/global-env-snapshot', () => ({
   })),
 }));
 
+jest.mock('@plugin/domain/models/project-model', () => ({
+  getProjectById: jest.fn(() => ({ project_type: 'ascend-c' })),
+}));
+
+import { AscendPlugin } from '@plugin/domain/plugins/ascend.plugin';
+import { CannPlugin } from '@plugin/domain/plugins/cann.plugin';
+import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import { deriveOperatorToolOutputLabel } from '@plugin/helpers/output-channel';
 import {
@@ -30,6 +37,9 @@ describe('executeOperatorCommand', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    OperatorPluginRegistry._reset();
+    OperatorPluginRegistry.registerOpPlugin(new CannPlugin());
+    OperatorPluginRegistry.registerOpPlugin(new AscendPlugin());
     (getSocVersionWithWorkspaceOverride as jest.Mock).mockReturnValue('ascend950');
     (ProjectManager.getInstance as jest.Mock).mockReturnValue({
       getExecutor: () => ({ execute }),
@@ -115,6 +125,27 @@ describe('executeOperatorCommand', () => {
     expect(command).toContain('bash build.sh --soc=ascend950');
     expect(command).not.toContain('{soc_version}');
     expect(command).toMatch(/^export SOC_VERSION='/);
+  });
+
+  it('does not export SOC_VERSION or NPU_ARCH for standard-custom projects', async () => {
+    const { getProjectById } = jest.requireMock('@plugin/domain/models/project-model') as {
+      getProjectById: jest.Mock;
+    };
+
+    getProjectById.mockReturnValueOnce({ project_type: 'ascend' });
+
+    await executeOperatorCommand('bash build.sh --soc={soc_version}', {
+      projectId: 2,
+      configType: 'build_op',
+      scriptField: null,
+      script: null,
+    });
+
+    const [command] = execute.mock.calls[0] as [string];
+
+    expect(command).toBe('bash build.sh --soc=ascend950');
+    expect(command).not.toContain('export SOC_VERSION');
+    expect(command).not.toContain('export NPU_ARCH');
   });
 
   it('uses outputLabel from meta when provided', async () => {

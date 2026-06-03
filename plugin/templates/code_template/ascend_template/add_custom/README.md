@@ -8,7 +8,7 @@
 
 | 环境 | `CMakeLists.txt`（创建算子时写入） | 构建时扩展注入 |
 |------|-----------------------------------|----------------|
-| A4 / 910B-class | `SUPPORT_COMPUTE_UNIT=ascend910_95`，`SUPPORT_TILING_DIR=arch22` | `SOC_VERSION` / `NPU_ARCH`（spawn env） |
+| A4 / 910B-class | `SUPPORT_COMPUTE_UNIT=ascend910_95`，`SUPPORT_TILING_DIR=arch22` | `{soc_version}` 脚本占位符（非 spawn env） |
 | A5 / 950 | `SUPPORT_COMPUTE_UNIT=ascend950`，`SUPPORT_TILING_DIR=arch35` | 同上 |
 
-创建算子前请设置 **`op-devtools.environment.socVersion`**（或依赖扩展的 SOC 自动检测）；扩展会根据当前 SOC 将上述常量写入 `CMakeLists.txt`。构建命令仍通过 `{soc_version}` 与 spawn 环境注入 `SOC_VERSION`、`NPU_ARCH`。详见 [`docs/project-upgrade-a5.md`](../../../../docs/project-upgrade-a5.md) 与 [`docs/ascend-env-spec.md`](../../../../docs/ascend-env-spec.md)。
+创建算子前请设置 **`op-devtools.environment.socVersion`**（或依赖扩展的 SOC 自动检测）；扩展会根据当前 SOC 将上述常量写入 `CMakeLists.txt`。集合根目录 `build.sh` 通过 `{soc_version}` 占位符传入 SOC，不导出 `SOC_VERSION` / `NPU_ARCH` 环境变量。详见 [`docs/project-upgrade-a5.md`](../../../../docs/project-upgrade-a5.md) 与 [`docs/ascend-env-spec.md`](../../../../docs/ascend-env-spec.md)。

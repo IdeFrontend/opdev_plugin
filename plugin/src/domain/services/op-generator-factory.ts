@@ -2,11 +2,6 @@ import fs from 'fs-extra';
 import path from 'path';
 import AdmZip from 'adm-zip';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
-import {
-  MSTT_SUPPORT_COMPUTE_UNIT_PLACEHOLDER,
-  MSTT_SUPPORT_TILING_DIR_PLACEHOLDER,
-  resolveAclnnCmakeDefaultsForGeneration,
-} from '@plugin/domain/utils/ascend-util';
 
 export type OpGenProject = {
   id?: number;
@@ -383,27 +378,10 @@ export class AscendOpGenerator extends BaseOpGenerator {
       this._replaceMsttPlaceholders();
     }
 
-    this._patchAclnnCmakeSupportVars();
+    OperatorPluginRegistry.getOpPlugin('ascend')
+      .patchGeneratedProject(this.op_path, this.params);
 
     return true;
-  }
-
-  /** Replace generation placeholders in the operator root CMakeLists.txt. */
-  _patchAclnnCmakeSupportVars(): void {
-    const cmakePath = path.join(this.op_path, 'CMakeLists.txt');
-
-    if (!fs.pathExistsSync(cmakePath)) {
-      return;
-    }
-
-    const defaults = resolveAclnnCmakeDefaultsForGeneration(this.params.soc_version);
-    let content = fs.readFileSync(cmakePath, 'utf8');
-
-    content = content.split(MSTT_SUPPORT_COMPUTE_UNIT_PLACEHOLDER)
-      .join(defaults.supportComputeUnit);
-    content = content.split(MSTT_SUPPORT_TILING_DIR_PLACEHOLDER)
-      .join(defaults.supportTilingDir);
-    fs.writeFileSync(cmakePath, content, 'utf8');
   }
 }
 

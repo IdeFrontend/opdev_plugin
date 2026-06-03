@@ -3,6 +3,10 @@ import { OpRecord } from '@plugin/domain/models/model';
 import {
   BaseOpGenerator, OpGenParams, OpGenProject,
 } from '@plugin/domain/services/op-generator-factory';
+import type { OperatorOpType } from '@shared/operator-op-type';
+
+/** Ascend-owned variables emitted on operator spawn when this plugin allows it. */
+export type OperatorSpawnEnvKey = 'SOC_VERSION' | 'NPU_ARCH';
 
 export type {
   OpGenParams, OpGenProject,
@@ -66,7 +70,7 @@ export interface OperatorConfigScripts {
  */
 export interface IOperatorPlugin {
   /** Must match OpRecord.op_type exactly (e.g. 'ascend', 'cann', 'pyasc'). */
-  readonly opType: string;
+  readonly opType: OperatorOpType;
 
   readonly displayName: string;
   /**
@@ -111,4 +115,13 @@ export interface IOperatorPlugin {
    *   read from vscode.workspace.workspaceFolders[0].uri.fsPath.
    */
   getInitialConfigScripts(op: OpRecord, workspaceRoot: string): OperatorConfigScripts;
+
+  /**
+   * Spawn env keys this op_type may export after full ascend resolution.
+   * {@link OperatorPluginRegistry.filterSpawnEnv} may still clear exports by project_type.
+   */
+  getSpawnEnvExportKeys(): readonly OperatorSpawnEnvKey[];
+
+  /** Post-unzip template fixes (e.g. ascend ACLNN cmake placeholders). Default noop. */
+  patchGeneratedProject(opPath: string, params: OpGenParams): void;
 }

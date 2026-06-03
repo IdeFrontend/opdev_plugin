@@ -1,12 +1,46 @@
+import { OperatorProjectType } from '@plugin/domain/models/operator-project-type';
+import type { OperatorOpType } from '@shared/operator-op-type';
+import {
+  normalizeOpTypeForSpawn,
+  normalizeProjectTypeForSpawn,
+} from './operator-context-normalize';
 import type {
-  IOperatorPlugin, OpGenParams, OpGenProject,
+  IOperatorPlugin, OpGenParams, OpGenProject, OperatorSpawnEnvKey,
 } from './operator-plugin.interface';
 import type { OperatorBuildBehavior } from './operator-plugin.interface';
 import type {
-  IProjectDetector, OperatorProjectType,
+  IProjectDetector,
 } from './project-detector.interface';
 import type { BaseOpGenerator } from '@plugin/domain/services/op-generator-factory';
 import type { OpRecord } from '@plugin/domain/models/model';
+
+const CANN_SOC_PROJECT_TYPES: ReadonlySet<OperatorProjectType> = new Set([
+  OperatorProjectType.ASCEND_C,
+  OperatorProjectType.TORCH_LIBRARY,
+]);
+
+const NO_SPAWN_EXPORT_PROJECT_TYPES: ReadonlySet<OperatorProjectType> = new Set([
+  OperatorProjectType.STANDARD_CUSTOM,
+  OperatorProjectType.PYASC,
+  OperatorProjectType.TRITON,
+]);
+
+function pickSpawnEnvKeys(
+  env: Record<string, string>,
+  keys: readonly OperatorSpawnEnvKey[],
+): Record<string, string> {
+  const picked: Record<string, string> = {};
+
+  for (const key of keys) {
+    const value = env[key];
+
+    if (value !== undefined && value.trim() !== '') {
+      picked[key] = value;
+    }
+  }
+
+  return picked;
+}
 
 // NOTE: All imports above are type-only. This intentionally breaks the runtime
 // circular dependency cycles:
@@ -169,6 +203,50 @@ export class OperatorPluginRegistry {
   static getRegisteredOpTypes(): string[] {
     return [...this.opPlugins.keys()];
   }
+
+  /**
+   * Spawn env keys for one command. Project type can force no export; ascend-c /
+   * torch-library use cann cmake keys; otherwise defers to the op_type plugin.
+   */
+  static getSpawnEnvExportKeys(
+    opType: OperatorOpType | null | undefined,
+    projectType: OperatorProjectType | null | undefined,
+  ): readonly OperatorSpawnEnvKey[] {
+    const pt = projectType;
+
+    if (pt && NO_SPAWN_EXPORT_PROJECT_TYPES.has(pt)) {
+      return [];
+    }
+
+    if (pt && CANN_SOC_PROJECT_TYPES.has(pt)) {
+      return this.getOpPlugin('cann')?.getSpawnEnvExportKeys() ?? [];
+    }
+
+    const normalizedOp = normalizeOpTypeForSpawn(opType);
+
+    if (normalizedOp) {
+      return this.getOpPlugin(normalizedOp)?.getSpawnEnvExportKeys() ?? [];
+    }
+
+    return [];
+  }
+
+  static filterSpawnEnv(
+    fullEnv: Record<string, string>,
+    opType: OperatorOpType | null | undefined,
+    projectType: OperatorProjectType | null | undefined,
+  ): Record<string, string> {
+    return pickSpawnEnvKeys(
+      fullEnv,
+      this.getSpawnEnvExportKeys(opType, projectType),
+    );
+  }
+
+  /** Re-export for callers that resolve persisted project_type strings. */
+  static normalizeProjectTypeForSpawn = normalizeProjectTypeForSpawn;
+
+  /** Re-export for callers that resolve persisted op_type strings. */
+  static normalizeOpTypeForSpawn = normalizeOpTypeForSpawn;
 
   /**
    * Whether a given project_type is currently supported by registered plugins.
