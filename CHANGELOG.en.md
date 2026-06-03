@@ -1,6 +1,6 @@
 # Changelog
 
-Notable changes to **Huawei OP DevTools** are listed here.
+Notable changes to **Huawei OP DevTools** are listed here. For the full project history, see the repository on [GitCode](https://gitcode.com/mlh0101/mstt).
 
 ## 2026-05-15
 

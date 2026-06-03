@@ -17,7 +17,7 @@
 | 普通编译 | `bash build.sh` | 日常开发验证 |
 | 异常检测 | `bash build.sh --mssanitizer` | 问题检测 |
 | 上板调优 | `bash build.sh --onboard` | 真实环境性能分析 |
-| 仿真调优 | `bash build.sh --simulator` | 指令级详细分析 |
+| 仿真调优 | `bash build.sh --simulator <SOC版本>`，或先 `export SOC_VERSION=<SOC版本>` 再 `bash build.sh --simulator`（与工具链/IDE 解析的 SOC 一致） | 指令级详细分析 |
 
 ## 算子描述
 - 算子功能：  

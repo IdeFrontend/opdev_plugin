@@ -2,6 +2,8 @@
 
 This document is for **developers** who build or debug the extension from source. End-user documentation is linked from [README.md](./README.md) and [README.en.md](./README.en.md).
 
+**Repository:** https://gitcode.com/kaocong/mstt
+
 ## Prerequisites
 
 - **Node.js** 16+ (LTS recommended)
@@ -11,6 +13,9 @@ This document is for **developers** who build or debug the extension from source
 ## Setup
 
 ```bash
+git clone https://gitcode.com/kaocong/mstt.git
+cd mstt
+
 # Install dependencies (monorepo: root + plugin + web + shared)
 pnpm install
 
@@ -68,7 +73,7 @@ For debugging:
 | `shared/` | Shared code and i18n (e.g. `shared/i18n` for en / zh-cn). |
 | `out/` | Compiled extension output (generated). |
 | `package.json` | Extension manifest and root scripts. |
-| `package.nls.json` / `package.nls.zh-cn.json` | Localized VS Code UI strings (commands, views, settings). |
+| `package.nls.json` (Chinese default) / `package.nls.en.json` | Localized VS Code UI strings (commands, views, settings). |
 
 ## Lint and type-check
 

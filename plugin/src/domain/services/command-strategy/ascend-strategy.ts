@@ -1,5 +1,4 @@
 import { t } from 'i18next';
-import { soc_version } from '@plugin/domain/utils/ascend-util';
 import { parse_cmd_options } from '@plugin/domain/utils/aicore-utils';
 import { getOpRunPath } from '@plugin/domain/utils/op-util';
 import {
@@ -21,31 +20,12 @@ import { ConfigRecord } from '@plugin/domain/models/config-model';
 import {
   getConfig, getConfigById,
 } from '../../services/configuration';
-import { getProjectById } from '@plugin/domain/models/project-model';
-import { getEnvironmentSocVersionFromWorkspace } from '@plugin/helpers/operator-project-workspace-config';
+import { resolveAscendEnv } from '@plugin/domain/utils/ascend-util';
 
 /**
  * Ascend type command strategy
  */
 export class AscendCommandStrategy implements CommandStrategy {
-  /**
-   * Replace `{soc_version}` using `op-devtools.environment.socVersion` (workspace) first,
-   * then project storage, then runtime default.
-   */
-  private replaceSocVersion(script: string, projectId: number): string {
-    const fromWorkspace = getEnvironmentSocVersionFromWorkspace().trim();
-    if (fromWorkspace) {
-      return script.replace(/{soc_version}/g, fromWorkspace);
-    }
-    if (projectId) {
-      const project = getProjectById(projectId);
-      if (project?.soc_version) {
-        return script.replace(/{soc_version}/g, project.soc_version);
-      }
-    }
-    return script.replace(/{soc_version}/g, soc_version);
-  }
-
   buildCommandContext(baseContext: BaseContext): CommandContext {
     const {
       config, project, operator,
@@ -104,8 +84,6 @@ export class AscendCommandStrategy implements CommandStrategy {
     const userOptions = (config.user_options as Record<string, unknown> | null | undefined) || {};
 
     let script = userOptions[scriptField] as string || '';
-    // Replace {soc_version} with the project-configured soc_version
-    script = this.replaceSocVersion(script, config.project_id);
 
     const cmd = new Command(script);
 
@@ -143,8 +121,6 @@ export class AscendCommandStrategy implements CommandStrategy {
     const op = operatorNames || '';
 
     let script = config.script || '';
-    // Replace {soc_version} with the project-configured soc_version
-    script = this.replaceSocVersion(script, config.project_id);
 
     const cmd = new Command(script);
 
@@ -153,8 +129,7 @@ export class AscendCommandStrategy implements CommandStrategy {
     cmd.addArgument(pkg_mode);
 
     if (compileOption) {
-    // Replace {soc_version} with the project-configured soc_version
-      cmd.addArgument(this.replaceSocVersion(compileOption, config.project_id));
+      cmd.addArgument(compileOption);
     }
 
     if (advance_cmd) {
@@ -165,16 +140,18 @@ export class AscendCommandStrategy implements CommandStrategy {
   }
 
   buildUtTestCommand(params: CommandBuildParams): string {
-    const { config, sourceCannCmd, cdCmd, advance_cmd, operatorNames } = params;
+    const {
+      config, sourceCannCmd, cdCmd, advance_cmd, operatorNames,
+    } = params;
+    const options = (config.user_options as Record<string, unknown> | null | undefined) || {};
 
     let script = config.script || '';
-    // Replace {soc_version} with the project-configured soc_version
-    script = this.replaceSocVersion(script, config.project_id);
 
-    // Replace {operatorNames} with the incoming operator names
+    // Replace {operatorNames} with the provided operator names
     if (operatorNames) {
       script = script.replace('{operatorNames}', operatorNames);
-    } else {
+    }
+    else {
       script = script.replace('{operatorNames}', '');
     }
 
@@ -194,9 +171,7 @@ export class AscendCommandStrategy implements CommandStrategy {
     cdCmd: string,
     exampleTargetFile?: string,
   ): string {
-    // Replace {soc_version} with the project-configured soc_version
-    let script = config.script || '';
-    script = this.replaceSocVersion(script, config.project_id);
+    const options = (config.user_options as Record<string, unknown> | null | undefined) || {};
 
     const mssanitizer = new Command('mssanitizer');
 
@@ -206,7 +181,6 @@ export class AscendCommandStrategy implements CommandStrategy {
     }
 
     // Handle configuration options
-    const options = (config.user_options as Record<string, unknown> | null | undefined) || {};
     const toolOptions = (options.tool as Record<string, unknown> | undefined) || {};
     const tools = Object.keys(toolOptions)
       .filter((key) => toolOptions[key]);
@@ -292,11 +266,13 @@ export class AscendCommandStrategy implements CommandStrategy {
       } as OpRecord;
     }
 
+    const onboardCannSoc = resolveAscendEnv({ isSimulator: false }).socVersion;
     const opprofCmd = ProfilerFactory.getStrategy('onboard')
       .generate(
         config,
         effectiveOperator,
         exampleTargetFile,
+        { onboardCannSoc },
       );
 
     return joinCommands(sourceCannCmd, cdBuildCmd, opprofCmd);

@@ -6,8 +6,12 @@ import * as projectModel from './project-model';
 import * as configModel from './config-model';
 import { OpGeneratorFactory } from '@plugin/domain/services/op-generator-factory';
 import { getDefaultPath } from '@plugin/domain/utils/op-util';
-import { soc_version, emulator_type } from '@plugin/domain/utils/ascend-util';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
+import {
+  isAscendA5ProfilerCannSoc,
+  resolveAscendEnv,
+  resolveSimulatorDir,
+} from '@plugin/domain/utils/ascend-util';
 import {
   getDefaultDirectory,
   ensureLaunchJsonExists,
@@ -50,14 +54,20 @@ function checkBuildShHasBishengConfig(): boolean {
   if (!workspaceFolders || workspaceFolders.length === 0) {
     return false;
   }
-  
+
   const workspacePath = workspaceFolders[0].uri.fsPath;
   const buildShPath = path.join(workspacePath, 'build.sh');
-  if (!fs.existsSync(buildShPath)) return false;
+
+  if (!fs.existsSync(buildShPath)) {
+    return false;
+  }
+
   try {
     const content = fs.readFileSync(buildShPath, 'utf-8');
+
     return content.includes('--bisheng_flags');
-  } catch {
+  }
+  catch {
     return false;
   }
 }
@@ -65,232 +75,61 @@ function checkBuildShHasBishengConfig(): boolean {
 function getNpuDebugScript(type: string, scriptPath: string): string {
   if (type === 'ascend') {
     if (checkBuildShHasBishengConfig()) {
-      return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --bisheng_flags=ccec_O0,ccec_g`
+      return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --bisheng_flags=ccec_O0,ccec_g`;
     }
-    return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --debug`
+
+    return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --debug`;
   }
-  return `bash ${scriptPath} --debug`
+
+  return `bash ${scriptPath} --debug`;
 }
 
 function getCpuDebugScript(type: string, scriptPath: string): string {
   if (type === 'ascend') {
     if (checkBuildShHasBishengConfig()) {
-      return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --bisheng_flags=ccec_g`
+      return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --bisheng_flags=ccec_g`;
     }
-    return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --simulator`
+
+    return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --simulator {simulator_type}`;
   }
-  return `bash ${scriptPath} --simulator`
+
+  return `bash ${scriptPath} --simulator {simulator_type}`;
 }
 
 function getSimulateScript(type: string, scriptPath: string): string {
- if (type === 'ascend') {
+  if (type === 'ascend') {
     if (checkBuildShHasBishengConfig()) {
-      return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --bisheng_flags=ccec_g`
+      return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --bisheng_flags=ccec_g`;
     }
-    return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --simulator ${emulator_type}`
+
+    return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --simulator {simulator_type}`;
   }
-  return `bash ${scriptPath} --simulator ${emulator_type}`
+
+  return `bash ${scriptPath} --simulator {simulator_type}`;
 }
 
 function getOnBoardScript(type: string, scriptPath: string): string {
-   if (type === 'ascend') {
+  if (type === 'ascend') {
     if (checkBuildShHasBishengConfig()) {
-      return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --bisheng_flags=ccec_g`
+      return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --bisheng_flags=ccec_g`;
     }
-    return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --onboard`
+
+    return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --onboard`;
   }
-  return `bash ${scriptPath} --onboard`
+
+  return `bash ${scriptPath} --onboard`;
 }
 
 function getExampleScript(type: string, scriptPath: string): string {
   if (type === 'ascend') {
     if (checkBuildShHasBishengConfig()) {
-      return `bash ${scriptPath} --vendor_name=custom --run_example`
+      return `bash ${scriptPath} --vendor_name=custom --run_example`;
     }
-    return `bash ${scriptPath} --vendor_name=custom --run_example`
+
+    return `bash ${scriptPath} --vendor_name=custom --run_example`;
   }
-  return `bash ${scriptPath}`
-}
 
-async function createBuildOpConfig(
-  project_id: number,
-  record: OpRecord,
-  opScriptPath: string,
-  targetDir: string,
-  targetFile: string
-): Promise<void> {
-  const buildOp = {
-    project_id,
-    user_options: {
-      op: record.op_name,
-      script: record.op_type === 'ascend' ? `bash ${opScriptPath} --pkg --soc={soc_version} --vendor_name=custom` : `bash ${opScriptPath}`,
-      config_name: record.op_name,
-      target_dir: targetDir,
-      target_file: targetFile,
-      cpu_debug_script: getCpuDebugScript(record.op_type, opScriptPath),
-      npu_debug_script: getNpuDebugScript(record.op_type, opScriptPath)
-    },
-  };
-
-  console.log('generateStructure: 开始创建 build_op 配置');
-  console.log('generateStructure: build_op 配置数据:', JSON.stringify(buildOp, null, 2));
-  const buildOpResult = await configModel.postConfig('build_op', [buildOp]);
-  console.log('generateStructure: build_op 配置创建结果:', JSON.stringify(buildOpResult, null, 2));
-}
-
-async function createBuildExampleConfig(
-  project_id: number,
-  record: OpRecord,
-  exampleScriptPath: string,
-  targetDir: string,
-  targetExampleFile: string
-): Promise<void> {
-  const buildExample = {
-    project_id,
-    user_options: {
-      op: record.op_name,
-      script: getExampleScript(record.op_type, exampleScriptPath),
-      config_name: record.op_name,
-      target_dir: targetDir,
-      target_file: targetExampleFile,
-      execution_mode: 'eager'
-    },
-  };
-
-  console.log('generateStructure: 开始创建 build_example 配置');
-  console.log('generateStructure: build_example 配置数据:', JSON.stringify(buildExample, null, 2));
-  const buildExampleResult = await configModel.postConfig('build_example', [buildExample]);
-  console.log('generateStructure: build_example 配置创建结果:', JSON.stringify(buildExampleResult, null, 2));
-}
-
-async function createUtTestConfig(
-  project_id: number,
-  record: OpRecord,
-  opScriptPath: string,
-  targetDir: string,
-  targetExampleFile: string
-): Promise<void> {
-  const utTestCfg = {
-    project_id,
-    user_options: {
-      op: record.op_name,
-      script: record.op_type === 'ascend' ? `bash ${opScriptPath} --soc={soc_version} --ops={operatorNames} -u` : `bash ${opScriptPath} -u`,
-      config_name: record.op_name,
-      target_dir: targetDir,
-      target_file: targetExampleFile
-    },
-  };
-
-  console.log('generateStructure: 开始创建 ut_test 配置');
-  console.log('generateStructure: ut_test 配置数据:', JSON.stringify(utTestCfg, null, 2));
-  const utTestResult = await configModel.postConfig('ut_test', [utTestCfg]);
-  console.log('generateStructure: ut_test 配置创建结果:', JSON.stringify(utTestResult, null, 2));
-}
-
-async function createSanitizerConfig(
-  project_id: number,
-  record: OpRecord,
-  opScriptPath: string,
-  targetFile: string
-): Promise<void> {
-  const sanitizerCfg = {
-    project_id,
-    user_options: {
-      op: record.op_name,
-      script: record.op_type === 'ascend' ? `bash ${opScriptPath} --pkg --soc={soc_version} --vendor_name=custom --mssanitizer` : `bash ${opScriptPath} --mssanitizer`,
-       target_file: targetFile,
-      config_name: record.op_name,
-      tool: {
-        memcheck: true,
-        racecheck: false,
-        initcheck: false,
-        synccheck: false,
-      },
-      memcheckOption: {
-        'check-unused-memory': false,
-        'leak-check': false,
-        'check-device-heap': false,
-        'check-cann-heap': false,
-      },
-      logLevel: 'warn',
-      maxDebuglogSize: 1024,
-      useBlock: false,
-      blockId: null,
-      fileMapList: [],
-    },
-  };
-
-  console.log('generateStructure: 开始创建 sanitizer 配置');
-  console.log('generateStructure: sanitizer 配置数据:', JSON.stringify(sanitizerCfg, null, 2));
-  const sanitizerResult = await configModel.postConfig('sanitizer', [sanitizerCfg]);
-  console.log('generateStructure: sanitizer 配置创建结果:', JSON.stringify(sanitizerResult, null, 2));
-}
-
-async function createOnBoardConfig(
-  project_id: number,
-  record: OpRecord,
-  opScriptPath: string
-): Promise<void> {
-  const onBoard = {
-    project_id,
-    user_options: {
-      op: record.op_name,
-      script: getOnBoardScript(record.op_type, opScriptPath),
-      config_name: record.op_name,
-      Occupancy: true,
-      Roofline: true,
-      Source: true,
-      MemoryDetail: true,
-      ArithmeticUtilization: true,
-      L2Cache: true,
-      Memory: true,
-      MemoryL0: true,
-      MemoryUB: true,
-      PipeUtilization: true,
-      ResourceConflictRatio: true,
-      KernelScale: false,
-      downloadToLocal: true,
-      renderInPlatform: false,
-      dataStoragePath: getDefaultDirectory(),
-      advance_param: [],
-      fileMapList: [],
-    },
-  };
-
-  console.log('generateStructure: 开始创建 on_board 配置');
-  console.log('generateStructure: on_board 配置数据:', JSON.stringify(onBoard, null, 2));
-  const onBoardResult = await configModel.postConfig('on_board', [onBoard]);
-  console.log('generateStructure: on_board 配置创建结果:', JSON.stringify(onBoardResult, null, 2));
-}
-
-async function createSimulateConfig(
-  project_id: number,
-  record: OpRecord,
-  opScriptPath: string
-): Promise<void> {
-  const simulate = {
-    project_id,
-    user_options: {
-      op: record.op_name,
-      script: getSimulateScript(record.op_type, opScriptPath),
-      config_name: record.op_name,
-      soc_version: soc_version,
-      ResourceConflictRatio: true,
-      PMSampling: true,
-      downloadToLocal: true,
-      renderInPlatform: false,
-      dataStoragePath: getDefaultDirectory(),
-      simulatorType: emulator_type,
-      enableDump: false,
-      advance_param: [],
-      fileMapList: [],
-    },
-  };
-
-  console.log('generateStructure: 开始创建 simulate 配置');
-  console.log('generateStructure: simulate 配置数据:', JSON.stringify(simulate, null, 2));
-  const simulateResult = await configModel.postConfig('simulate', [simulate]);
-  console.log('generateStructure: simulate 配置创建结果:', JSON.stringify(simulateResult, null, 2));
+  return `bash ${scriptPath}`;
 }
 
 function ensureStore(): OpsStore {
@@ -624,6 +463,8 @@ export async function generateStructure(
       console.log('generateStructure: sanitizer config creation result:', JSON.stringify(sanitizerResult, null, 2));
 
       // Opprof: Create two configurations: on_board and simulate
+      const cannSocForProfiler = resolveAscendEnv({ isSimulator: false }).socVersion;
+      const a5Prof = isAscendA5ProfilerCannSoc(cannSocForProfiler);
       const onBoard = {
         project_id: project.id,
         user_options: {
@@ -638,8 +479,9 @@ export async function generateStructure(
 
           // Operator code heat map
           Source: true,
-          // Cache heat map
-          MemoryDetail: true,
+          // Cache heat map (A3); PC sampling (A5 / ascend950) — see msprof aic-metrics matrix
+          MemoryDetail: !a5Prof,
+          PCSampling: a5Prof,
 
           // Operator performance data file related
           // Time consumption and proportion of Cube and Vector type instructions
@@ -680,7 +522,6 @@ export async function generateStructure(
           renderInPlatform: false,
           // Data storage location default value
           dataStoragePath: getDefaultDirectory(),
-          simulatorType: 'Ascend910B3',
           enableDump: false,
           advance_param: [],
           fileMapList: [],
@@ -803,7 +644,10 @@ function getConfigPayload(
           fileMapList: [],
         },
       };
-    case 'on_board':
+    case 'on_board': {
+      const cannSocForProfiler = resolveAscendEnv({ isSimulator: false }).socVersion;
+      const a5Prof = isAscendA5ProfilerCannSoc(cannSocForProfiler);
+
       return {
         project_id,
         user_options: {
@@ -813,7 +657,8 @@ function getConfigPayload(
           Occupancy: true,
           Roofline: true,
           Source: true,
-          MemoryDetail: true,
+          MemoryDetail: !a5Prof,
+          PCSampling: a5Prof,
           ArithmeticUtilization: true,
           L2Cache: true,
           Memory: true,
@@ -829,6 +674,7 @@ function getConfigPayload(
           fileMapList: [],
         },
       };
+    }
     case 'simulate':
       return {
         project_id,
@@ -841,7 +687,7 @@ function getConfigPayload(
           downloadToLocal: true,
           renderInPlatform: false,
           dataStoragePath: getDefaultDirectory(),
-          simulatorType: 'Ascend910B3',
+          simulatorType: resolveSimulatorDir(),
           enableDump: false,
           advance_param: [],
           fileMapList: [],

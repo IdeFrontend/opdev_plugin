@@ -9,7 +9,9 @@ import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import {
   getConfigData, saveConfig, openExternalLink, startOnBoard, executeVscodeCommand, getSelectedOperators,
   getOnBoardAnalysisShowQuickOptions, setOnBoardAnalysisShowQuickOptions,
+  getProjectEnv,
 } from '@web/apis';
+import { isAscendA5ProfilerCannSoc } from '@shared/msprof-onboard-env';
 
 // 使用主题管理组合式函数
 const {
@@ -22,6 +24,7 @@ const onboardData = ref({
     Roofline: true,
     Source: true,
     MemoryDetail: true,
+    PCSampling: false,
     ArithmeticUtilization: true,
     L2Cache: true,
     Memory: true,
@@ -35,6 +38,9 @@ const loading = ref(false);
 const isExecuting = ref(false);
 /** When true, workspace `performanceTuning.onBoard.showQuickOptions` is false (tree runs without opening this panel). */
 const doNotShowAgain = ref(false);
+const projectCannSoc = ref('');
+
+const isAscendA5Profiler = computed(() => isAscendA5ProfilerCannSoc(projectCannSoc.value));
 
 const fetchConfig = async () => {
   try {
@@ -155,6 +161,20 @@ async function syncDoNotShowToWorkspace() {
 onMounted(async () => {
   await fetchConfig();
   try {
+    const env = await getProjectEnv();
+    projectCannSoc.value = (env?.socVersion || '').trim();
+  }
+  catch {
+    projectCannSoc.value = '';
+  }
+  if (isAscendA5ProfilerCannSoc(projectCannSoc.value)) {
+    const uo = onboardData.value.user_options as Record<string, unknown>;
+    uo.MemoryDetail = false;
+    if (typeof uo.PCSampling !== 'boolean') {
+      uo.PCSampling = true;
+    }
+  }
+  try {
     const showQuick = await getOnBoardAnalysisShowQuickOptions();
     doNotShowAgain.value = !showQuick;
   }
@@ -181,7 +201,11 @@ onMounted(async () => {
           <template #message>
             <div style="white-space: pre-line;">
               <div>{{ t('web.options.onboard.alert1') }}</div>
-              <div>{{ t('web.options.onboard.alert2') }}</div>
+              <div>
+                {{ isAscendA5Profiler
+                  ? t('web.options.onboard.alert2A5')
+                  : t('web.options.onboard.alert2') }}
+              </div>
             </div>
           </template>
         </a-alert>
@@ -237,7 +261,10 @@ onMounted(async () => {
           </a-checkbox>
         </div>
 
-        <div class="cache-box">
+        <div
+          v-if="!isAscendA5Profiler"
+          class="cache-box"
+        >
           <a-checkbox
             v-model:checked="onboardData.user_options.MemoryDetail"
             @change="handleSave"
@@ -245,6 +272,20 @@ onMounted(async () => {
             {{ t('web.options.onboard.cacheHeatmap') }}
           </a-checkbox>
           <a-tooltip :title="t('web.options.onboard.cacheHeatmapTooltip')">
+            <QuestionCircleOutlined class="help-icon" />
+          </a-tooltip>
+        </div>
+        <div
+          v-else
+          class="cache-box"
+        >
+          <a-checkbox
+            v-model:checked="onboardData.user_options.PCSampling"
+            @change="handleSave"
+          >
+            {{ t('web.options.onboard.pcSampling') }}
+          </a-checkbox>
+          <a-tooltip :title="t('web.options.onboard.pcSamplingTooltip')">
             <QuestionCircleOutlined class="help-icon" />
           </a-tooltip>
         </div>

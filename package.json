@@ -200,39 +200,48 @@
           },
           "op-devtools.compileAndDeploy.buildConfig.operatorNameToCompile": {
             "type": "string",
-            "order": 100
+            "order": 100,
+            "description": "%config.op-devtools.compileAndDeploy.buildConfig.operatorNameToCompile.description%"
           },
           "op-devtools.compileAndDeploy.buildConfig.deployCommandOrRunCommand": {
             "type": "string",
-            "order": 101
+            "order": 101,
+            "description": "%config.op-devtools.compileAndDeploy.buildConfig.deployCommandOrRunCommand.description%"
           },
           "op-devtools.compileAndDeploy.buildConfig.compileCommand": {
             "type": "string",
-            "order": 102
+            "order": 102,
+            "description": "%config.op-devtools.compileAndDeploy.buildConfig.compileCommand.description%"
           },
           "op-devtools.compileAndDeploy.buildConfig.utTestCompileCommand": {
             "type": "string",
-            "order": 103
+            "order": 103,
+            "description": "%config.op-devtools.compileAndDeploy.buildConfig.utTestCompileCommand.description%"
           },
           "op-devtools.compileAndDeploy.buildConfig.npuDebugCompileCommand": {
             "type": "string",
-            "order": 104
+            "order": 104,
+            "description": "%config.op-devtools.compileAndDeploy.buildConfig.npuDebugCompileCommand.description%"
           },
           "op-devtools.compileAndDeploy.buildConfig.cpuDebugCompileCommand": {
             "type": "string",
-            "order": 105
+            "order": 105,
+            "description": "%config.op-devtools.compileAndDeploy.buildConfig.cpuDebugCompileCommand.description%"
           },
           "op-devtools.compileAndDeploy.buildConfig.sanitizerCompileCommand": {
             "type": "string",
-            "order": 106
+            "order": 106,
+            "description": "%config.op-devtools.compileAndDeploy.buildConfig.sanitizerCompileCommand.description%"
           },
           "op-devtools.compileAndDeploy.buildConfig.onBoardCompileCommand": {
             "type": "string",
-            "order": 107
+            "order": 107,
+            "description": "%config.op-devtools.compileAndDeploy.buildConfig.onBoardCompileCommand.description%"
           },
           "op-devtools.compileAndDeploy.buildConfig.simulationCompileCommand": {
             "type": "string",
-            "order": 108
+            "order": 108,
+            "description": "%config.op-devtools.compileAndDeploy.buildConfig.simulationCompileCommand.description%"
           },
           "op-devtools.compileAndDeploy.exampleBuildConfig.executionMode": {
             "type": "string",
@@ -240,7 +249,8 @@
             "enum": [
               "eager",
               "graph"
-            ]
+            ],
+            "description": "%config.op-devtools.compileAndDeploy.exampleBuildConfig.executionMode.description%"
           },
           "op-devtools.compileAndDeploy.exampleBuildConfig.runCommand": {
             "type": "string",
@@ -278,11 +288,13 @@
           },
           "op-devtools.sanitizer.race": {
             "type": "boolean",
-            "order": 203
+            "order": 203,
+            "description": "%config.op-devtools.sanitizer.race.description%"
           },
           "op-devtools.sanitizer.uninitialized": {
             "type": "boolean",
-            "order": 204
+            "order": 204,
+            "description": "%config.op-devtools.sanitizer.uninitialized.description%"
           },
           "op-devtools.sanitizer.reportLogLevel": {
             "type": "string",
@@ -291,7 +303,8 @@
               "info",
               "warn",
               "error"
-            ]
+            ],
+            "description": "%config.op-devtools.sanitizer.reportLogLevel.description%"
           },
           "op-devtools.sanitizer.maxSingleLogFileSize": {
             "type": "number",
@@ -316,7 +329,8 @@
             ],
             "order": 208,
             "minimum": 0,
-            "maximum": 200
+            "maximum": 200,
+            "description": "%config.op-devtools.sanitizer.blockId.description%"
           },
           "op-devtools.sanitizer.enableMsAgentAiFix": {
             "type": "boolean",
@@ -372,7 +386,8 @@
           },
           "op-devtools.performanceTuning.onBoard.interCoreLoad": {
             "type": "boolean",
-            "order": 310
+            "order": 310,
+            "description": "%config.op-devtools.performanceTuning.onBoard.interCoreLoad.description%"
           },
           "op-devtools.performanceTuning.onBoard.roofline": {
             "type": "boolean",
@@ -381,54 +396,67 @@
           },
           "op-devtools.performanceTuning.onBoard.operatorCodeHotspot": {
             "type": "boolean",
-            "order": 312
+            "order": 312,
+            "description": "%config.op-devtools.performanceTuning.onBoard.operatorCodeHotspot.description%"
           },
           "op-devtools.performanceTuning.onBoard.cacheHeatmap": {
             "type": "boolean",
             "order": 313,
             "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.cacheHeatmap.markdownDescription%"
           },
-          "op-devtools.performanceTuning.onBoard.operatorMetrics": {
+          "op-devtools.performanceTuning.onBoard.pcSampling": {
             "type": "boolean",
             "order": 314,
+            "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.pcSampling.markdownDescription%"
+          },
+          "op-devtools.performanceTuning.onBoard.operatorMetrics": {
+            "type": "boolean",
+            "order": 315,
             "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.operatorMetrics.markdownDescription%"
           },
           "op-devtools.performanceTuning.onBoard.cubeAndVectorInstructionTimeAndRatio": {
             "type": "boolean",
-            "order": 315
+            "order": 316,
+            "description": "%config.op-devtools.performanceTuning.onBoard.cubeAndVectorInstructionTimeAndRatio.description%"
           },
           "op-devtools.performanceTuning.onBoard.l2CacheHitRate": {
             "type": "boolean",
-            "order": 316
+            "order": 317,
+            "description": "%config.op-devtools.performanceTuning.onBoard.l2CacheHitRate.description%"
           },
           "op-devtools.performanceTuning.onBoard.memoryReadWriteBandwidth": {
             "type": "boolean",
-            "order": 317
+            "order": 318,
+            "description": "%config.op-devtools.performanceTuning.onBoard.memoryReadWriteBandwidth.description%"
           },
           "op-devtools.performanceTuning.onBoard.l0ReadWriteBandwidth": {
             "type": "boolean",
-            "order": 318
+            "order": 319,
+            "description": "%config.op-devtools.performanceTuning.onBoard.l0ReadWriteBandwidth.description%"
           },
           "op-devtools.performanceTuning.onBoard.ubReadWriteBandwidth": {
             "type": "boolean",
-            "order": 319
+            "order": 320,
+            "description": "%config.op-devtools.performanceTuning.onBoard.ubReadWriteBandwidth.description%"
           },
           "op-devtools.performanceTuning.onBoard.computeAndMoveUnitTimeRatio": {
             "type": "boolean",
-            "order": 320
+            "order": 321,
+            "description": "%config.op-devtools.performanceTuning.onBoard.computeAndMoveUnitTimeRatio.description%"
           },
           "op-devtools.performanceTuning.onBoard.resourceConflictRatio": {
             "type": "boolean",
-            "order": 321
+            "order": 322,
+            "description": "%config.op-devtools.performanceTuning.onBoard.resourceConflictRatio.description%"
           },
           "op-devtools.performanceTuning.onBoard.enableKernelCodeSegmentProfiling": {
             "type": "boolean",
-            "order": 322,
+            "order": 323,
             "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.enableKernelCodeSegmentProfiling.markdownDescription%"
           },
           "op-devtools.performanceTuning.onBoard.parameters": {
             "type": "object",
-            "order": 323,
+            "order": 324,
             "default": {},
             "additionalProperties": {
               "type": "string"
@@ -450,7 +478,6 @@
           },
           "op-devtools.environment.socVersion": {
             "type": "string",
-            "default": "ascend910b",
             "order": 401,
             "markdownDescription": "%config.op-devtools.environment.socVersion.markdownDescription%"
           }
@@ -1378,6 +1405,7 @@
     "@playwright/test": "^1.59.1",
     "@stylistic/eslint-plugin": "^5.6.1",
     "@types/adm-zip": "^0.5.7",
+    "@types/jest": "^29.5.14",
     "@types/node": "^24.6.0",
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.7.1",

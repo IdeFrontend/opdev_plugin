@@ -56,31 +56,30 @@ export class AscendPlugin extends AbstractOperatorPlugin implements IProjectDete
   getDefaultPaths(op: OpRecord): OperatorDefaultPaths {
     const runPackageName = '*.run';
 
-      return {
-        opScriptPath:      path.join(op.op_path, 'build.sh'),
-        exampleScriptPath: path.join(op.op_path, 'build.sh'),
-        targetDir:         path.resolve(op.op_path, 'build_out'),
-        targetOpFile:      path.join(op.op_path, 'build_out', runPackageName),
-        targetExampleFile: path.join(op.op_path, 'build', `test_aclnn_${op.op_name}`),
-      };
+    return {
+      opScriptPath:      path.join(op.op_path, 'build.sh'),
+      exampleScriptPath: path.join(op.op_path, 'build.sh'),
+      targetDir:         path.resolve(op.op_path, 'build_out'),
+      targetOpFile:      path.join(op.op_path, 'build_out', runPackageName),
+      targetExampleFile: path.join(op.op_path, 'build', `test_aclnn_${op.op_name}`),
+    };
   }
 
   getInitialConfigScripts(op: OpRecord, workspaceRoot: string): OperatorConfigScripts {
     const script = path.join(op.op_path, 'build.sh');
     const h = checkBuildShHasBishengConfig(workspaceRoot);
     const base = `bash ${script} --pkg --soc={soc_version} --vendor_name=custom`;
-
     return {
       // V1 inline ternary for build_op.script had NO bisheng variant — always the plain base.
       buildScript:     base,
       // V1 getExampleScript for ascend returned `bash ... --vendor_name=custom --run_example`
       // with NO --pkg and NO --soc flags (and no bisheng variant — V1 bug preserved).
       exampleScript:   `bash ${script} --vendor_name=custom --run_example`,
-      simulateScript:  h ? `${base} --bisheng_flags=ccec_g`         : `${base} --simulator Ascend910B3`,
+      simulateScript:  h ? `${base} --bisheng_flags=ccec_g`         : `${base} --simulator {simulator_type}`,
       onBoardScript:   h ? `${base} --bisheng_flags=ccec_g`         : `${base} --onboard`,
       // V1 inline ternary for sanitizer.script had NO bisheng variant — always base + --mssanitizer.
       sanitizerScript: `${base} --mssanitizer`,
-      cpuDebugScript:  h ? `${base} --bisheng_flags=ccec_g`         : `${base} --simulator`,
+      cpuDebugScript:  h ? `${base} --bisheng_flags=ccec_g`         : `${base} --simulator {simulator_type}`,
       npuDebugScript:  h ? `${base} --bisheng_flags=ccec_O0,ccec_g` : `${base} --debug`,
     };
   }

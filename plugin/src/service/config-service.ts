@@ -16,6 +16,10 @@ import {
   postConfig, getConfig, getFiles,
 } from '@plugin/domain';
 import { mergeSanitizerConfigsWithOperatorProjectWorkspace } from '@plugin/helpers/operator-project-workspace-config';
+import {
+  isAscendA5ProfilerCannSoc,
+  resolveAscendEnv,
+} from '@plugin/domain/utils/ascend-util';
 
 const CONFIG_TYPES = {
   SANITIZER: 'sanitizer',
@@ -25,13 +29,16 @@ const CONFIG_TYPES = {
 
 export class ConfigService {
   private static getOpDevtoolsSettings(): Record<string, unknown> {
-    const settings = vscode.workspace.getConfiguration().get<Record<string, unknown>>('op-devtools', {});
+    const settings = vscode.workspace.getConfiguration()
+      .get<Record<string, unknown>>('op-devtools', {});
+
     return { ...settings };
   }
 
   private loadSanitizerConfigsFromDb(): BuildConfig[] {
     const projectId = ProjectManager.getInstance().projectId;
     const config = getConfig(Number(projectId), CONFIG_TYPES.SANITIZER);
+
     return config.map((c) => ({
       ...c,
       user_options: c.user_options ? (c.user_options as Record<string, unknown>) : undefined,
@@ -75,6 +82,7 @@ export class ConfigService {
     if (params.type === CONFIG_TYPES.ON_BOARD) {
       await this.pushOnBoardUserOptionsToWorkspaceSettings();
     }
+
     if (params.type === CONFIG_TYPES.SIMULATE) {
       await this.pushSimulateUserOptionsToWorkspaceSettings();
     }
@@ -177,9 +185,11 @@ export class ConfigService {
   private async pushSanitizerUserOptionsToWorkspaceSettings(): Promise<void> {
     try {
       const row = this.loadSanitizerConfigsFromDb()[0];
+
       if (!row?.user_options) {
         return;
       }
+
       const opts = row.user_options as Record<string, unknown>;
       const tool = (opts.tool || {}) as Record<string, unknown>;
       const mem = (opts.memcheckOption || {}) as Record<string, unknown>;
@@ -213,11 +223,12 @@ export class ConfigService {
         },
       };
 
-      await vscode.workspace.getConfiguration().update(
-        'op-devtools',
-        nextSettings,
-        vscode.ConfigurationTarget.Workspace,
-      );
+      await vscode.workspace.getConfiguration()
+        .update(
+          'op-devtools',
+          nextSettings,
+          vscode.ConfigurationTarget.Workspace,
+        );
     }
     catch (error) {
       console.warn('[pushSanitizerUserOptionsToWorkspaceSettings] failed:', error);
@@ -228,17 +239,23 @@ export class ConfigService {
     if (!Array.isArray(raw)) {
       return {};
     }
+
     return raw.reduce((acc, item) => {
       if (!item || typeof item !== 'object') {
         return acc;
       }
+
       const row = item as Record<string, unknown>;
       const name = row.name;
+
       if (typeof name !== 'string' || name.trim().length === 0) {
         return acc;
       }
+
       const value = row.value;
+
       acc[name] = value === undefined || value === null ? '' : String(value);
+
       return acc;
     }, {} as Record<string, string>);
   }
@@ -249,10 +266,14 @@ export class ConfigService {
       const projectId = ProjectManager.getInstance().projectId;
       const rows = getConfig(Number(projectId), CONFIG_TYPES.ON_BOARD);
       const row = rows[0];
+
       if (!row?.user_options) {
         return;
       }
+
       const onBoardOpts = row.user_options as Record<string, unknown>;
+      const cannSoc = resolveAscendEnv({ isSimulator: false }).socVersion;
+      const isA5Profiler = isAscendA5ProfilerCannSoc(cannSoc);
       const currentSettings = ConfigService.getOpDevtoolsSettings();
       const compileAndDeploy = (currentSettings.compileAndDeploy as Record<string, unknown>) || {};
       const buildConfig = (compileAndDeploy.buildConfig as Record<string, unknown>) || {};
@@ -277,7 +298,9 @@ export class ConfigService {
             ...(onBoardOpts.Occupancy !== undefined ? { interCoreLoad: onBoardOpts.Occupancy } : {}),
             ...(onBoardOpts.Roofline !== undefined ? { roofline: onBoardOpts.Roofline } : {}),
             ...(onBoardOpts.Source !== undefined ? { operatorCodeHotspot: onBoardOpts.Source } : {}),
-            ...(onBoardOpts.MemoryDetail !== undefined ? { cacheHeatmap: onBoardOpts.MemoryDetail } : {}),
+            ...(isA5Profiler
+              ? (onBoardOpts.PCSampling !== undefined ? { pcSampling: onBoardOpts.PCSampling } : {})
+              : (onBoardOpts.MemoryDetail !== undefined ? { cacheHeatmap: onBoardOpts.MemoryDetail } : {})),
             ...(onBoardOpts.ArithmeticUtilization !== undefined
               ? { cubeAndVectorInstructionTimeAndRatio: onBoardOpts.ArithmeticUtilization }
               : {}),
@@ -299,11 +322,12 @@ export class ConfigService {
         },
       };
 
-      await vscode.workspace.getConfiguration().update(
-        'op-devtools',
-        nextSettings,
-        vscode.ConfigurationTarget.Workspace,
-      );
+      await vscode.workspace.getConfiguration()
+        .update(
+          'op-devtools',
+          nextSettings,
+          vscode.ConfigurationTarget.Workspace,
+        );
     }
     catch (error) {
       console.warn('[pushOnBoardUserOptionsToWorkspaceSettings] failed:', error);
@@ -316,9 +340,11 @@ export class ConfigService {
       const projectId = ProjectManager.getInstance().projectId;
       const rows = getConfig(Number(projectId), CONFIG_TYPES.SIMULATE);
       const row = rows[0];
+
       if (!row?.user_options) {
         return;
       }
+
       const simulateOpts = row.user_options as Record<string, unknown>;
       const currentSettings = ConfigService.getOpDevtoolsSettings();
       const compileAndDeploy = (currentSettings.compileAndDeploy as Record<string, unknown>) || {};
@@ -339,7 +365,6 @@ export class ConfigService {
           ...performanceTuning,
           simulation: {
             ...simulation,
-            ...(simulateOpts.simulatorType !== undefined ? { simulatorType: simulateOpts.simulatorType } : {}),
             ...(simulateOpts.PMSampling !== undefined ? { memoryThroughputWaveform: simulateOpts.PMSampling } : {}),
             ...(simulateOpts.ResourceConflictRatio !== undefined
               ? { resourceConflictRatio: simulateOpts.ResourceConflictRatio }
@@ -349,11 +374,12 @@ export class ConfigService {
         },
       };
 
-      await vscode.workspace.getConfiguration().update(
-        'op-devtools',
-        nextSettings,
-        vscode.ConfigurationTarget.Workspace,
-      );
+      await vscode.workspace.getConfiguration()
+        .update(
+          'op-devtools',
+          nextSettings,
+          vscode.ConfigurationTarget.Workspace,
+        );
     }
     catch (error) {
       console.warn('[pushSimulateUserOptionsToWorkspaceSettings] failed:', error);

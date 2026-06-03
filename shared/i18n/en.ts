@@ -532,7 +532,8 @@ export default {
   // web options-on-board
   'web.options.onboard.title': 'On-board Analysis Quick Options',
   'web.options.onboard.alert1': '1. For on-board tuning, update NPU config in code. See README.',
-  'web.options.onboard.alert2': '2. If "Roofline" or "Cache heatmap" is checked, all operator metrics are collected by default.',
+  'web.options.onboard.alert2': '2. If "Roofline" or "Cache heatmap" is checked, all operator metrics are collected by default',
+  'web.options.onboard.alert2A5': '2. If "Roofline" or "PC sampling" is checked, all operator metrics are collected by default',
   'web.options.onboard.collectContent': 'Collect content',
   'web.options.onboard.memoryHeatmap': 'Memory heatmap (default)',
   'web.options.onboard.memoryHeatmapDesc': 'Default: basic info, compute workload, memory workload',
@@ -543,6 +544,8 @@ export default {
   'web.options.onboard.codeHotspot': 'Operator code hotspot',
   'web.options.onboard.cacheHeatmap': 'Cache heatmap',
   'web.options.onboard.cacheHeatmapTooltip': 'Checking this collects all operator performance metrics by default',
+  'web.options.onboard.pcSampling': 'PC sampling',
+  'web.options.onboard.pcSamplingTooltip': 'Ascend 950 / A5: checking this collects all operator performance metrics by default',
   'web.options.onboard.operatorMetrics': 'Operator metrics',
   'web.options.onboard.cubeVector': 'Cube & Vector instruction time and ratio',
   'web.options.onboard.l2HitRate': 'L2 Cache hit rate',
