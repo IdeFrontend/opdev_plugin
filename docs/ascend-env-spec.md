@@ -1,9 +1,12 @@
 # Ascend / CANN environment resolution — canonical spec
 
-Status: implemented in `plugin/src/domain/utils/ascend-util.ts` and
-`plugin/src/domain/utils/global-env-snapshot.ts`. Consumers route through the
-single `resolveAscendEnv()` entry-point so this contract holds across
-templates, generated scripts, and per-spawn environment.
+Status: implemented in `plugin/src/domain/utils/ascend-util.ts`,
+`plugin/src/domain/utils/global-env-snapshot.ts`, and
+`plugin/src/domain/utils/ascend-detection-env.ts`. Operator commands use
+`resolveAscendEnvForOperatorCommand()` → `buildOperatorSpawnEnvFromResolution()`;
+other call sites use `resolveAscendEnv()`. Workspace keys:
+[`workspace-settings.md`](./workspace-settings.md) (`environment.*`,
+`performanceTuning.simulation.simulatorType`).
 
 > If something disagrees with this document, the document is the contract —
 > file a bug against the implementation, not the doc.
@@ -14,11 +17,11 @@ templates, generated scripts, and per-spawn environment.
 
 | Name | Meaning | Where it lands |
 |------|---------|----------------|
-| `SOC_VERSION` | CANN SOC slug (e.g. `ascend910b`, `ascend950`) | Spawn env + `--soc=` CLI on ascend `build.sh` via `{soc_version}` placeholder |
-| `SIMULATOR_TYPE` | Simulator directory under `$ASCEND_HOME_PATH/tools/simulator/<dir>/lib` (e.g. `Ascend910B3`, `Ascend950PR_9589`) | Spawn env (sim runs only) + `--simulator <dir>` CLI on cann `build.sh` via `{simulator_type}` placeholder |
-| `NPU_ARCH` | AscendC `--npu-arch` (e.g. `dav-2201`, `dav-3510`) | Spawn env; read by templates' cmake via `$ENV{NPU_ARCH}` → cache |
-| `SUPPORT_COMPUTE_UNIT` | ACLNN compute unit string for standard-custom ascend operators | Spawn env on every operator command; read by `ascend_template/add_custom/CMakeLists.txt` via `$ENV{...}` → cache. Mapped by `getSupportComputeUnitForCannSoc()` in `ascend-util.ts` (constants in `shared/cann-aclnn-build-defaults.ts`) |
-| `SUPPORT_TILING_DIR` | Tiling subdirectory under `op_host` for `SUPPORT_COMPUTE_UNIT` | Same as above via `getSupportTilingDirForCannSoc()` |
+| `SOC_VERSION` | CANN SOC slug (e.g. `ascend910b`, `ascend950`) for non-simulator runs; on **simulator-class** runs the spawn env value is the **simulator device directory name** (e.g. `Ascend910B3`, `Ascend950PR_9589`) so CANN cmake can link `tools/simulator/${SOC_VERSION}/lib` | Spawn env (see §4.1) + `{soc_version}` placeholder (always the resolved **slug**, not the sim dir) + `--soc=` on ascend `build.sh` when applicable |
+| `simulatorType` (resolution field, not an env var) | Simulator directory name under `tools/simulator/<dir>/lib` | `AscendEnvResolution.simulatorType`; `{simulator_type}` placeholder; `--simulator <dir>` CLI flags. Read from workspace / global snapshot / default-from-SOC — **not** emitted as `process.env.SIMULATOR_TYPE` by the plugin |
+| `NPU_ARCH` | AscendC `--npu-arch` (e.g. `dav-2201`, `dav-3510`) | Spawn env; derived from resolved SOC slug via `getNpuArchForCannSoc()`; cmake `$ENV{NPU_ARCH}` → cache |
+| `SUPPORT_COMPUTE_UNIT` | ACLNN compute unit for standard-custom ascend cmake | Spawn env on **every** operator command; `getSupportComputeUnitForCannSoc(socVersion)` (`shared/cann-aclnn-build-defaults.ts`) |
+| `SUPPORT_TILING_DIR` | Tiling dir under `op_host` paired with compute unit | Spawn env on every operator command; `getSupportTilingDirForCannSoc(socVersion)` |
 
 The plugin treats these as the **only** environment names it owns. Any other
 variable a project's env script defines passes through untouched.
@@ -45,9 +48,9 @@ This means the spec's "global env" channel cannot be polluted by:
 
 ```ts
 {
-  socVersion:    string,                                  // never empty
-  npuArch:       string,                                  // derived from socVersion
-  simulatorType: string | undefined,                      // only when isSimulator
+  socVersion:    string,                                  // may be '' (DEFAULT_FALLBACK_CANN_SOC)
+  npuArch:       string,                                  // derived from socVersion ('' when slug empty)
+  simulatorType: string | undefined,                      // set when isSimulator (after default-from-soc fill-in)
   source: {
     socVersion:    'workspace-setting' | 'global-env' |
                    'detected' | 'derived-from-simulator' | 'default',
@@ -104,38 +107,46 @@ with remediation steps before the build script exits.
 
 ## 4. What the plugin passes to operator commands
 
-### 4.1 Spawn environment (`getOperatorSpawnEnv`)
+### 4.1 Spawn environment (`buildOperatorSpawnEnvFromResolution`)
 
-For every operator command (build / build_example / on_board / simulate /
-sanitizer / ut_test / dump_tensor / run), the spawn `env` map always contains:
+Built in `executeOperatorCommand` after `resolveAscendEnvForOperatorCommand()`.
+`isSimulatorCompile()` is true when `config_type === 'simulate'`,
+`scriptField === 'cpu_debug_script'`, or the script matches `--simulator`.
 
-```
-SOC_VERSION = <resolved.socVersion>
-NPU_ARCH    = <resolved.npuArch>
-```
+For **every** operator command (build / build_example / on_board / simulate /
+sanitizer / ut_test / dump_tensor / run), the spawn `env` map contains exactly
+these four keys (via `buildOperatorSpawnEnvFromResolution`):
 
-For simulator-class runs (`config_type === 'simulate'`, `scriptField ===
-'cpu_debug_script'`, or the script contains `--simulator`), the map also
-contains:
+| Key | Non-simulator run | Simulator-class run |
+|-----|-------------------|---------------------|
+| `SOC_VERSION` | Resolved CANN slug (`resolution.socVersion`) | Simulator **directory name** (`resolution.simulatorType`, or `getDefaultSimulatorTypeForCannSoc(slug)` if still unset) |
+| `NPU_ARCH` | From slug | From slug (same internal SOC resolution) |
+| `SUPPORT_COMPUTE_UNIT` | From slug | From slug |
+| `SUPPORT_TILING_DIR` | From slug | From slug |
 
-```
-SIMULATOR_TYPE = <resolved.simulatorType>
-```
+The plugin does **not** set `SIMULATOR_TYPE` in spawn env. CANN simulator
+cmake reads the device dir from `$ENV{SOC_VERSION}` on sim builds (see
+template `CMakeLists.txt` comments). Host `SIMULATOR_TYPE` in the activation
+snapshot is only an input to **resolution**, not forwarded as a spawn key.
 
-The plugin does not emit any other Ascend-related variable. The spawn env is
-merged over `process.env` by `CommandExecutor.execute`:
-`{ ...process.env, ...options.env }`. That means the plugin-resolved values
-take precedence in the child shell over anything the user has exported.
+The spawn env is merged over `process.env` by `CommandExecutor.execute`:
+`{ ...process.env, ...options.env }`. Plugin values win in the child shell.
+Structured command logging (`op-devtools/command`) records only these four
+keys when present (`pickAscendSpawnEnv` in `command-options.ts`).
 
-### 4.2 Command line
+### 4.2 Command line and placeholders
 
-- `replaceOperatorScriptPlaceholders(script)` (or with a precomputed resolution)
-  substitutes:
-  - `{soc_version}` → `resolveAscendEnv(...).socVersion`
-  - `{simulator_type}` → `resolveAscendEnv(...).simulatorType`
-  using the same resolver call (with `isSimulator` derived from the script
-  itself), so the placeholder substitution cannot diverge from the spawn env
-  emitted for the same command.
+- **`executeOperatorCommand`** resolves once (`resolveAscendEnvForOperatorCommand`),
+  builds spawn env, then `applyAscendPlaceholdersToScript` on the command string.
+- `{soc_version}` → `resolution.socVersion` (CANN slug, including
+  `derived-from-simulator`).
+- `{simulator_type}` → `resolution.simulatorType`, or — when the script contains
+  `{simulator_type}` but the run is not simulator-class —
+  `enrichAscendResolutionForPlaceholders()` fills simulator dir without changing
+  SOC resolution (workspace → global env → default-from-soc).
+- Legacy call sites may use `replaceOperatorScriptPlaceholders()` in
+  `operator-script-placeholders.ts` (computes without per-command logging when
+  no resolution is passed).
 - The simulator example-build CLI flag (`build-service.ts`) routes through
   the same resolver:
   - `op_type === 'ascend'` → `--simulator <simulatorType> --soc=<socVersion>`
@@ -149,6 +160,8 @@ take precedence in the child shell over anything the user has exported.
 
 - Does **not** write to `process.env.SOC_VERSION` / `process.env.NPU_ARCH` /
   `process.env.SIMULATOR_TYPE` ever.
+- Does **not** set `SIMULATOR_TYPE` in per-command spawn env (simulator dir is
+  passed as `SOC_VERSION` on simulator-class runs; see §4.1).
 - Does **not** source `$ASCEND_ENV_SCRIPT` (or any other env script) at
   activation. The OS-level `ASCEND_ENV_SCRIPT` is recorded in the snapshot
   but never executed by the plugin.
@@ -159,11 +172,12 @@ take precedence in the child shell over anything the user has exported.
 
 ### 6.1 CANN templates (`plugin/templates/code_template/cann_template/*/`)
 
-- `build.sh` accepts `--simulator [SIMULATOR_TYPE]` and falls back to
-  `$SIMULATOR_TYPE` env.
-- `CMakeLists.txt` uses an env → cache pattern for `SIMULATOR_TYPE`,
-  `SOC_VERSION`, `NPU_ARCH`. `NPU_ARCH` is mandatory for simulator and
-  non-simulator builds; cmake errors out when it is empty.
+- `build.sh` `--simulator [dir]` passes `-DSOC_VERSION=<dir>` or uses
+  `$SOC_VERSION` from the environment (plugin injects the sim dir as
+  `SOC_VERSION` on simulator-class runs).
+- `CMakeLists.txt` uses env → cache for `SOC_VERSION` (sim device dir when
+  `ENABLE_SIMULATOR`) and `NPU_ARCH`. `NPU_ARCH` is mandatory; cmake errors when
+  empty.
 
 ### 6.2 Ascend `add_custom` template
 
@@ -186,25 +200,24 @@ uses the same env → cache pattern for `SUPPORT_COMPUTE_UNIT` and
 
 Two structured logs are enough to debug every reported mismatch:
 
-- On activation:
+- On activation (`logGlobalEnvSnapshot` → **Huawei Op Devtools** channel, scope
+  `op-devtools/ascend-env`):
   ```
-  [op-devtools][ascend-env] global env snapshot: SOC_VERSION=… SIMULATOR_TYPE=…
-                                                  NPU_ARCH=… ASCEND_ENV_SCRIPT=…
+  global env snapshot: SOC_VERSION=…, SIMULATOR_TYPE=…, NPU_ARCH=…, ASCEND_ENV_SCRIPT=…
   ```
-- **Once per operator command execution** (`executeOperatorCommand` →
-  `resolveAscendEnvForOperatorCommand`):
+- **Once per operator command** (`resolveAscendEnvForOperatorCommand`) or per
+  `resolveAscendEnv()` call (config bootstrap / profiler):
   ```
-  [op-devtools/ascend-env] Ascend Environment Resolved: soc=ascend950 (source=derived-from-simulator),
+  Ascend Environment Resolved: soc=ascend950 (source=derived-from-simulator),
     simulator=Ascend950PR_9589 (source=workspace-setting),
-    npu_arch=dav-3510 (source=derived-from-soc)
-    [isSimulator=true]
+    npu_arch=dav-3510 (source=derived-from-soc),
+    support_compute_unit=ascend950, support_tiling_dir=arch35 [isSimulator=true]
   ```
-  Config bootstrap / profiler helpers may still call `resolveAscendEnv` separately.
-- On every spawned operator shell command (in the shared **Huawei Op Devtools**
-  output channel only):
+- On every spawned operator shell (same shared channel, scope `op-devtools/command`):
   ```
-  [op-devtools/command] Executing {"command":"…","cwd":"…","env":{"SOC_VERSION":"…","NPU_ARCH":"…"}}
+  Executing {"command":"…","cwd":"…","env":{"SOC_VERSION":"…","NPU_ARCH":"…","SUPPORT_COMPUTE_UNIT":"…","SUPPORT_TILING_DIR":"…"}}
   ```
+  (`SIMULATOR_TYPE` omitted — not part of spawn env.)
 - Live stdout/stderr from operator tools stream to a **per-run** output channel
   named `Op Dev Tools: <label>` (e.g. `compile`, `run`, `simulate`, `sanitizer`,
   `test`, `debug`). The channel is created when the process starts and disposed
@@ -235,12 +248,18 @@ behavior, verification steps, and remaining gaps.
 
 ## 10. Pointers
 
-- Resolver: `plugin/src/domain/utils/ascend-util.ts` (`resolveAscendEnv`,
-  `getOperatorSpawnEnv`, `isSimulatorCompile`).
+- Resolver: `plugin/src/domain/utils/ascend-util.ts` — `computeAscendEnvResolution`,
+  `resolveAscendEnv`, `resolveAscendEnvForOperatorCommand`,
+  `buildOperatorSpawnEnvFromResolution`, `isSimulatorCompile`,
+  `enrichAscendResolutionForPlaceholders` (`getOperatorSpawnEnv` is deprecated).
+- Host detection env: `plugin/src/domain/utils/ascend-detection-env.ts` —
+  `resolveCannSetEnvScriptForDetection`, `execBashWithCannEnv`.
 - Global env snapshot: `plugin/src/domain/utils/global-env-snapshot.ts`.
+- SOC warning: `plugin/src/helpers/ascend-soc-warning.ts` (`maybeWarnSocNotDetected`).
 - Spawn entry-point: `plugin/src/service/operator-command-executor.ts`.
-- Placeholder substitution:
-  `plugin/src/domain/utils/operator-script-placeholders.ts`.
-- Workspace setting helpers: `plugin/src/helpers/operator-project-workspace-config.ts`.
+- Placeholders: `plugin/src/domain/utils/operator-script-placeholders.ts`.
+- Workspace settings: `plugin/src/helpers/operator-project-workspace-config.ts`;
+  doc: [`workspace-settings.md`](./workspace-settings.md).
+- Command logging: `plugin/src/class/command-options.ts` (`pickAscendSpawnEnv`).
 - Templates: `plugin/templates/code_template/cann_template/*/` and
   `plugin/templates/code_template/ascend_template/add_custom/`.

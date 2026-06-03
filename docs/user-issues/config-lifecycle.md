@@ -48,7 +48,7 @@ No attachment or specific file names in the issue body yet.
 | `plugin/src/domain/models/config-model.ts` | Config persistence and migration |
 | `plugin/src/controller/welcome-controller.ts` | Project open, `completeProjectConfigs` |
 | `plugin/src/service/config-service.ts` | Config checks |
-| `docs/GENERATED_FILES_SPECIFICATION.md` | Spec for generated files |
+| `docs/generated-files-specification.md` | Spec for generated files |
 
 ### Config layers (what "reset" might mean)
 
@@ -99,7 +99,7 @@ flowchart TB
    - Call `completeProjectConfigs(projectId)` for all operators in workspace.
    - Re-run `generateStructure`-equivalent for missing config types only (do not wipe user edits unless opted in).
    - Re-run `maybeMigrateLegacySettingsToWorkspace()` if migration flag was reset, 
-   - Env script / SOC in `projects.json` update when the user changes `op-devtools.environment.*` (not during one-time migrate).
+   - Env script / SOC in `projects.json` update when the user changes `environment.*` workspace settings ([`workspace-settings.md`](../workspace-settings.md); not during one-time migrate).
 4. **Optional SOC refresh** — re-resolve `resolveAscendEnv()` and update simulate/on_board metric defaults when chip class changed.
 
 ### Phase 2 — Migration checker (if added)
@@ -118,7 +118,7 @@ flowchart TB
 
 ### Phase 4 — Documentation
 
-1. Add section to `GENERATED_FILES_SPECIFICATION.md` — manual reset procedure (delete which files).
+1. Add section to `generated-files-specification.md` — manual reset procedure (delete which files).
 2. Link from README troubleshooting to config-lifecycle doc.
 
 ### Safety rules

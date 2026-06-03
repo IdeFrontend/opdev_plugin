@@ -6,8 +6,8 @@ This document specifies current behavior implemented in `plugin/src` for operato
 
 The code uses two related type systems:
 
-- **Detection types** (`OperatorProjectType`): `standard-custom`, `ascend-c`, `torch-library`, `pyasc`, `multi-project`.
-- **Runtime strategy types** (`op_type`): `ascend`, `cann`, `pyasc` (used by command strategy and template generator).
+- **Detection types** (`OperatorProjectType`): `standard-custom`, `ascend-c`, `torch-library`, `pyasc`, `triton`, `multi-project`.
+- **Runtime strategy types** (`op_type`): `ascend`, `cann`, `pyasc`, `triton` (used by command strategy and template generator). Triton is registered only when `op-devtools.operatorSupport.triton` is enabled.
 
 ## Operator types and project structures
 
@@ -27,6 +27,11 @@ The code uses two related type systems:
 ### `pyasc`
 - Root contains `.py` files.
 - No `CMakeLists.txt`.
+
+### `triton`
+- Root contains `.py` files, no `CMakeLists.txt`.
+- Heuristic detection: Triton Python markers in sources (`import triton`, `@triton.jit`, etc.) — see `TritonPlugin.detectProject` / `detection-utils.ts`.
+- Default template: `triton_vector_add` (`TritonOpGenerator`).
 
 ## Detection and collection in workspace
 
@@ -51,97 +56,27 @@ Behavior details:
 ## Supported actions and configuration
 
 ### Config model
-`generateStructure` creates default config records in `configs.json`:
-- `build_op`
-- `build_example`
-- `sanitizer`
-- `on_board`
-- `simulate`
 
-Action execution reads/updates these via `getConfig` / `postConfig`.
+**Canonical reference:** [`workspace-settings.md`](./workspace-settings.md) (keys, merge, migration).
+
+`generateStructure` creates default **rows** in `configs.json` per operator (`build_op`, `build_example`, `sanitizer`, `on_board`, `simulate`). Initial script strings come from `OperatorPluginRegistry.getOpPlugin(op_type).getInitialConfigScripts()` at creation time.
+
+**At command time** (after one-time legacy migration, `op-devtools.internal.settingsMigratedFromLegacy`):
+
+| Source | Holds |
+|--------|--------|
+| Workspace `settings.json` (`op-devtools.*`) | Compile/deploy scripts, sanitizer options, simulation/on-board options, env script path, SOC/simulator overrides |
+| `configs.json` row | Row id, `config_type`, operator linkage, **DB-only** fields (`fileMapList`, `config_name`, `target_dir`, …) and **`build_example.target_file`** (profiler binary path) |
+
+Runtime `user_options` for commands are built by **`ConfigService.buildUserOptionsFromWorkspaceSettings`** + **`applyWorkspaceSettingsToConfigs`** (`getRuntimeConfigById`), not by re-reading stored script fields from the DB row. Writes to settings use **`ConfigService.writeOpDevtoolsDottedSettings`** only.
+
+`getConfig` / `postConfig` remain for row lifecycle (create structure, list configs, DB-only updates); they do **not** drive compile script strings after migration.
 
 ## Ascend/CANN environment and SOC resolution
 
-The canonical, machine-checkable spec lives at **`docs/ascend-env-spec.md`**.
-Everything below is a summary aimed at the operator-action flow.
+**Canonical spec:** [`ascend-env-spec.md`](./ascend-env-spec.md) (precedence, spawn env, placeholders, logging). **A5:** [`ascend-a5-support.md`](./ascend-a5-support.md). **Workspace keys:** [`workspace-settings.md`](./workspace-settings.md#environment-op-devtoolsenvironment).
 
-### Single resolver — `resolveAscendEnv()`
-
-All consumers (script placeholders, spawn env, profiler, build-service,
-model defaults, workspace-settings sync) call
-`plugin/src/domain/utils/ascend-util.ts::resolveAscendEnv({ isSimulator })`. It returns the resolved `socVersion`,
-`npuArch`, and (for simulator runs) `simulatorType`, plus a `source` tag for
-each value so debug logs can explain where every choice came from.
-
-### Three channels (clearly separated, no longer conflated)
-
-| Channel | Source | Plugin reads it from |
-|---------|--------|----------------------|
-| **VS Code setting** | `op-devtools.environment.socVersion`, `op-devtools.performanceTuning.simulation.simulatorType` (explicit user / workspace / workspace-folder scope only) | `getSocVersionWithWorkspaceOverride` / `getWorkspaceSimulatorType` (`cfg.inspect`) |
-| **`projects.json` `soc_version`** | Env config UI (`saveProjectEnv`), `syncAscendEnvScriptFromWorkspaceSettings` | Display / APIs only — **not** read by `resolveAscendEnv` |
-| **Global env snapshot** | OS-level `SOC_VERSION` / `SIMULATOR_TYPE` / `NPU_ARCH` captured once at extension activation | `getGlobalEnvSnapshot()` |
-
-There is also a fourth, lazy channel: host autodetection via `asys info` then
-`npu-smi info`, cached for the extension lifetime.
-
-### Precedence rules (canonical)
-
-- **`simulatorType`** (only when `isSimulator`): workspace setting →
-  global-env snapshot → default-from-SOC.
-- **`socVersion`**:
-  - if `isSimulator` AND the simulator type came from the workspace setting →
-    derived from that simulator type (so SOC / sim cannot disagree);
-  - otherwise: workspace setting → global-env snapshot →
-    `asys` / `npu-smi` detection → `DEFAULT_FALLBACK_CANN_SOC` (empty string when
-    unset). A5 / Atlas A5 details: **`docs/ascend-a5-support.md`**.
-- **`npuArch`**: always `getNpuArchForCannSoc(socVersion)`.
-
-### Lifecycle
-
-- **At activation**: the plugin only logs the frozen global env snapshot.
-  It does **not** source `ASCEND_ENV_SCRIPT`, does **not** mutate
-  `process.env.{SOC_VERSION, NPU_ARCH, SIMULATOR_TYPE}`, and does **not** run
-  host detection eagerly.
-- **Per operator command**: the strategy prepends
-  `. ${project.ascend_env_script} && …` to the command when set; that is the
-  only place the plugin sources an env script.
-- **Per spawn**: `executeOperatorCommand` calls `getOperatorSpawnEnv` and
-  passes `{ env }` to `CommandExecutor.execute`. The child shell sees
-  authoritative values regardless of host `process.env`.
-
-### Command assembly (build / simulate / …)
-
-1. `getBuildOpCommand` / `getSimulateCommand` / … → `getBaseContext` →
-   `getProjectById` + config from `configs.json`.
-2. Strategy (`ascend-strategy`, `cann-strategy`, …) →
-   `replaceOperatorScriptPlaceholders(script)` (resolution from `resolveAscendEnvForOperatorCommand` at execute time):
-   - `{soc_version}` → `resolveAscendEnv(...).socVersion`
-   - `{simulator_type}` → `resolveAscendEnv(...).simulatorType`
-3. `executeOperatorCommand` (`operator-command-executor.ts`) →
-   `getOperatorSpawnEnv` merged into `CommandExecutor.execute(..., { env })`:
-   - **non-sim**: `SOC_VERSION=<slug>`, `NPU_ARCH` from slug.
-   - **simulator class**: `SIMULATOR_TYPE=<simDir>`, `NPU_ARCH` from slug,
-     `SOC_VERSION=<slug>` (or `<derived-from-sim>` per the rule above).
-4. Simulate **example** build (standard-custom): op_type-aware
-   `compileOption` — cann: `--simulator <simDir>`; ascend:
-   `--simulator <simDir> --soc=<slug>` (both from one `resolveAscendEnv`
-   call so they cannot drift).
-
-**Templates** (`plugin/templates/code_template/`) use the env → cache pattern
-for all platform-specific values (`SIMULATOR_TYPE`, `SOC_VERSION`,
-`NPU_ARCH`, and `SUPPORT_COMPUTE_UNIT` / `SUPPORT_TILING_DIR` in the ascend
-add_custom template), so the plugin can target new chip generations by
-injecting env values without editing the generated user project.
-
-### `ASCEND_ENV_SCRIPT` vs `op-devtools.environment.environmentScript`
-
-- **`ASCEND_ENV_SCRIPT`** — OS env at extension host start; recorded in the
-  global env snapshot for diagnostic purposes. The plugin no longer sources
-  this file.
-- **`op-devtools.environment.environmentScript`** — workspace setting →
-  `getEnvironmentScriptPathFromWorkspace` → can sync to `projects.json` →
-  per-command prefix `. ${project.ascend_env_script}`. This is the only env
-  script the plugin sources, and only at command time.
+Operator commands use `resolveAscendEnvForOperatorCommand` → `executeOperatorCommand` ([`build-integration.md`](./build-integration.md)). Strategies may prepend `. ${project.ascend_env_script} &&` when `projects.json` has a script path synced from `environment.environmentScript`.
 
 ### Action capability by type
 
@@ -151,10 +86,12 @@ injecting env values without editing the generated user project.
 | `ascend-c` | Strategy exists, menu actions blocked | Blocked in folder menu | Blocked | Blocked | Blocked | Blocked |
 | `torch-library` | Strategy/init exists, menu actions blocked | Blocked in folder menu | Blocked | Blocked | Blocked | Blocked |
 | `pyasc` | Build/build_example unsupported in strategy | Yes | Yes | Unsupported in strategy | Yes | Blocked |
+| `triton` | Python script via `build_op` / `build_example` (not CANN `build.sh`) | Yes | No (plugin disables CPU/NPU debug rows) | Hidden in Actions tree (`supportsSanitizer: false`) | No (`supportsSimulate` / `supportsOnBoard: false`) | Blocked |
 
 Notes:
-- `pyasc` run/debug/profile paths require/select a `.py` target and rewrite `build_op.target_file`.
-- Debug flows compile first with script-field overrides (`npu_debug_script` / `cpu_debug_script`), then launch debug configuration.
+- `pyasc` and `triton` run paths require/select a `.py` target and rewrite `build_op.target_file` when needed.
+- `triton` uses `TritonCommandStrategy` (shared Python-operator shell assembly with PyAsc); probe `torch` + `triton` imports via `probeTritonPythonDependencies()` where used.
+- Debug flows compile first with script-field overrides (`npu_debug_script` / `cpu_debug_script`), then launch debug configuration — not exposed for Triton in the Actions tree.
 
 ## Templates per operator type and rationale
 
@@ -162,11 +99,13 @@ Template mapping:
 - `op_type=ascend` -> `ascend_template/add_custom.zip`
 - `op_type=cann` -> `cann_template/<template>.zip` (default `hello_world`)
 - `op_type=pyasc` -> `cann_template/pyasc_temple.zip`
+- `op_type=triton` -> `triton_template/triton_vector_add.zip` (default template name)
 
 Detection/init mapping:
 - `ascend-c` -> template `hello_world`
 - `torch-library` -> template `torch_library_template`
 - `pyasc` -> template `pyasc_temple`
+- `triton` -> template `triton_vector_add`
 - `standard-custom` -> usually skip unzip, initialize configs only
 
 Rationale in current code:
@@ -176,7 +115,7 @@ Rationale in current code:
 ## How users add new operators
 
 - **Inside standard-custom**: create operator under valid collection; metadata updates into root project’s `ops_list` / `experimental_ops_list`.
-- **Inside pyasc**: add/select `.py` files and use run/debug/profile flows.
+- **Inside pyasc / triton**: add/select `.py` files and use run flows (debug/profile for pyasc; triton has no debug rows in Actions tree).
 
 ## Why separate Open Operator command exists
 
@@ -194,7 +133,7 @@ Without this, plugin state/config may be incomplete.
 ```mermaid
 flowchart LR
   A[Action request] --> B{Type}
-  B -->|pyasc| C[Skip compile; set target .py]
+  B -->|pyasc / triton| C[Skip compile; set target .py]
   B -->|others| D[Build first]
   D --> E{Action}
   E --> F[Run]
@@ -225,6 +164,7 @@ Incremental behavior:
 
 ## Key source files
 
+- `plugin/src/domain/plugins/` — registry ([`operator-plugin-registry.md`](./operator-plugin-registry.md))
 - `plugin/src/domain/services/operator-project-detector.ts`
 - `plugin/src/service/workspace-detector-service.ts`
 - `plugin/src/controller/welcome-controller.ts`

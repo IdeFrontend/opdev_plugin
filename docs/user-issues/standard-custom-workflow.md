@@ -104,7 +104,7 @@ Copy-paste helper: [`plugin/templates/snippets/deploy_run_package.sh`](../../plu
 
 ### Option B — Override compile commands in VS Code settings
 
-If you cannot change `build.sh` immediately, set the **full** build script for the on-board (or simulation) pre-profiling step in workspace settings. Settings override defaults at runtime ([`operator-project-workspace-config.ts`](../../plugin/src/helpers/operator-project-workspace-config.ts)).
+If you cannot change `build.sh` immediately, set the **full** build script for the on-board (or simulation) pre-profiling step in workspace settings ([`workspace-settings.md`](../workspace-settings.md) — `onBoardCompileCommand` / `simulationCompileCommand`).
 
 **Settings → Extensions → Huawei OP DevTools → Compile & Deploy**, or edit `.vscode/settings.json`:
 
@@ -119,17 +119,9 @@ For **simulation**, use `simulationCompileCommand` instead. Replace `ascend910b`
 **Pros:** No repo `build.sh` change; per-workspace.  
 **Cons:** Must keep settings in sync with CANN/ops-math updates; duplicated logic if teammates use different machines.
 
-### Related settings (reference)
+### Related settings
 
-| Setting | Maps to | Use for |
-|---------|---------|---------|
-| `compileAndDeploy.buildConfig.deployCommandOrRunCommand` | `build_op.target_file` | **Path or glob** for `.run` find/chmod (e.g. `build_out/*.run`), not a full shell with flags. On **Ascend Build**, the plugin appends `"$RUN_FILE" --force` after resolve. **Not** used on cann onboard/sim. |
-| `compileAndDeploy.buildConfig.onBoardCompileCommand` | `on_board` build script | On-board profiling pre-build |
-| `compileAndDeploy.buildConfig.simulationCompileCommand` | `simulate` build script | Simulation pre-build |
-| `compileAndDeploy.buildConfig.compileCommand` | `build_op` build script | Sidebar **Build** |
-| `compileAndDeploy.exampleBuildConfig.runCommand` | `build_example` | Run example (multi-op standard-custom) |
-
-There is **no** separate “deploy only” setting for cann — override the whole compile command string, or fix `build.sh`.
+Key list and `user_options` mapping: [`workspace-settings.md`](../workspace-settings.md). For standard-custom deploy, **`deployCommandOrRunCommand`** is a path/glob (e.g. `build_out/*.run`); on **Ascend Build** the plugin appends `"$RUN_FILE" --force` after resolve — not a full shell with flags. There is **no** separate “deploy only” setting for cann — override the whole compile command string, or fix `build.sh`.
 
 ---
 

@@ -4,7 +4,7 @@ This document is the **A5-focused guide** for the Mind Studio / operator VS Code
 
 **Canonical environment resolution** (precedence, spawn env, placeholders, lifecycle) lives in **`docs/ascend-env-spec.md`**. Read that first for “how SOC / simulator / NPU arch are chosen”; this file covers **A5-specific values and behavior** on top of that contract.
 
-**Historical context** for the env refactor (bug list, motivation): **`docs/review-a3-a5-environment-support.md`**.
+**A3 vs A5 behavior split** (detailed matrix): **`docs/review-a3-a5-environment-support.md`**. Pre-refactor bug list: git history (`b0a3a7557`).
 
 There is **no separate “A5” product mode**. A5 support means the plugin consistently uses the correct **CANN SOC slug**, **simulator directory**, **`NPU_ARCH`**, **host detection** substrings, and **on-board profiler** metric matrix for Ascend 950 / Atlas A5 class targets.
 
@@ -29,7 +29,7 @@ Shared constants: `shared/cann-env-constants.ts`. Detection and mapping: `plugin
 | `SIMULATOR_TYPE` | `Ascend950PR_9589` | Directory under `$ASCEND_HOME_PATH/tools/simulator/<name>/lib` |
 | `NPU_ARCH` | `dav-3510` | AscendC `--npu-arch` |
 
-When the workspace sets **`op-devtools.performanceTuning.simulation.simulatorType`** to `Ascend950PR_9589`, `resolveAscendEnv` **derives** `SOC_VERSION=ascend950` and `NPU_ARCH=dav-3510` for that simulate run so SOC and simulator cannot disagree (see **`docs/ascend-env-spec.md`** §3).
+When the workspace sets **`performanceTuning.simulation.simulatorType`** to `Ascend950PR_9589` ([`workspace-settings.md`](./workspace-settings.md)), `resolveAscendEnv` **derives** `SOC_VERSION=ascend950` and `NPU_ARCH=dav-3510` for that simulate run so SOC and simulator cannot disagree (see [`ascend-env-spec.md`](./ascend-env-spec.md) §3).
 
 ---
 
@@ -64,10 +64,10 @@ When the workspace sets **`op-devtools.performanceTuning.simulation.simulatorTyp
 
 | Item | Detail |
 |------|--------|
-| **`projects.json` `soc_version`** | Env config UI persists it for display/APIs; **`resolveAscendEnv` does not read it**. Operator commands use workspace SOC → global snapshot → detection → empty default. To target A5, set **`op-devtools.environment.socVersion`** to `ascend950`, export `SOC_VERSION=ascend950` before launching VS Code, rely on detection, or set workspace simulator `Ascend950PR_9589` for simulate runs. |
+| **`projects.json` `soc_version`** | Env config UI persists it for display/APIs; **`resolveAscendEnv` does not read it**. To target A5, set **`environment.socVersion`** or **`simulation.simulatorType`** in workspace settings ([`workspace-settings.md`](./workspace-settings.md)), export `SOC_VERSION=ascend950` before launch, or rely on detection. |
 | **`getProjectSocVersion()`** | Returns `getSocVersionWithWorkspaceOverride(project.soc_version)` — used for **workspace settings sync** and env webview display, not for spawn env. |
 | **`DEFAULT_FALLBACK_CANN_SOC`** | Empty string when settings, env, and detection all fail (no silent `ascend910b` in resolver). |
-| **`SUPPORT_COMPUTE_UNIT` / `SUPPORT_TILING_DIR`** | Plugin injects `ascend910_95` / `arch35` on every spawn. For A5, `SOC_VERSION=ascend950` and `NPU_ARCH=dav-3510`; ACLNN compute unit remains `ascend910_95` (950-generation `SocVersion` in CANN `op_host`, not a separate `ascend950` string). |
+| **`SUPPORT_COMPUTE_UNIT` / `SUPPORT_TILING_DIR`** | Injected on every spawn from `getSupportComputeUnitForCannSoc` / `getSupportTilingDirForCannSoc`: A3-class → `ascend910_95` + `arch22`; A5-class → `ascend950` + `arch35` ([`cann-aclnn-build-defaults.ts`](../shared/cann-aclnn-build-defaults.ts), matrix in [`review-a3-a5-environment-support.md`](./review-a3-a5-environment-support.md)). |
 
 ### 2.3 Remaining gaps / operational caveats
 
@@ -125,7 +125,7 @@ On-board command build passes `onboardCannSoc` from `resolveAscendEnv({ isSimula
 |------|--------|
 | Host identity | Run `npu-smi info` (and optionally `asys info -r=status` after sourcing CANN). Record exact core/product strings. |
 | CANN toolkit | Confirm `ascend950` and simulator dir name against **your** CANN operator guide and `ls $ASCEND_HOME_PATH/tools/simulator`. |
-| Workspace | Set `op-devtools.environment.socVersion` to `ascend950` **or** `performanceTuning.simulation.simulatorType` to `Ascend950PR_9589` for simulate-driven resolution. |
+| Workspace | Set `environment.socVersion` to `ascend950` **or** `simulation.simulatorType` to `Ascend950PR_9589` ([`workspace-settings.md`](./workspace-settings.md)). |
 | Build / simulate | Run compile + simulate; check output channel for `Ascend Environment Resolved` and spawn `env` with `SOC_VERSION`, `NPU_ARCH`, and `SIMULATOR_TYPE` when applicable. |
 | On-board opprof | New operator on A5 should default `PCSampling: true`, `MemoryDetail: false`; run 上板分析 and confirm `msprof op` aic-metrics in generated command. |
 | Placeholders | Scripts with `{soc_version}` / `{simulator_type}` should show `ascend950` / `Ascend950PR_9589` after resolution, not baked-in 910B literals. |

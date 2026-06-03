@@ -116,7 +116,7 @@ Failure at any step → blank panes (other tabs may still work).
 3. `profiler_server` failed to start (port conflict, missing `zip/server_*.zip`)
 4. WebSocket bridge not initialized — shell loads, no data
 5. Empty or corrupt `.bin` report file
-6. Theme/CSS hides content ([theming-issues.md](../theming-issues.md))
+6. Theme/CSS hides content — see `injectThemeOverrides()` in `plugin/src/class/insight-data-viewer-panel.ts`
 
 ### Key files
 
@@ -125,7 +125,6 @@ Failure at any step → blank panes (other tabs may still work).
 | `plugin/src/class/insight-data-viewer-panel.ts` | Insight panel, iframes, server startup |
 | `plugin/src/core/view/view-opener.ts` | Opens Insight from report list |
 | `plugin/src/helpers/environment-variable-reader.ts` | Reads `INSIGHT_HOME_PATH` |
-| `docs/theming-issues.md` | Theme override issues |
 
 ### Open questions
 
@@ -146,7 +145,7 @@ Failure at any step → blank panes (other tabs may still work).
 2. **Improve server startup errors** — surface `profiler_server` failure, port exhaustion, missing zip to user (toast + Output channel).
 3. **Health check command** — palette command "Diagnose Insight environment" for support.
 4. **Retry / fallback** — if server fails, show inline message in webview instead of blank iframes.
-5. **Document** Insight prerequisites in profiler-integration.md or user guide.
+5. **Document** Insight prerequisites in `performance.md` or user guide.
 6. **Investigate Remote-SSH** — server binary arch (`server_x86.zip` vs `server_arm.zip`) and path resolution on remote hosts.
 
 ---

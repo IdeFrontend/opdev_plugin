@@ -17,7 +17,7 @@ Related internal documentation:
 
 - [ascend-env-spec.md](../ascend-env-spec.md) — resolution precedence and spawn env contract
 - [ascend-a5-support.md](../ascend-a5-support.md) — A5 canonical strings and known gaps
-- [review-a3-a5-environment-support.md](../review-a3-a5-environment-support.md) — historical bug list
+- [review-a3-a5-environment-support.md](../review-a3-a5-environment-support.md) — A3 vs A5 differences (current implementation)
 
 ---
 
@@ -68,7 +68,7 @@ The reporter may be conflating `SOC_VERSION` with `SIMULATOR_TYPE`, **or** a tem
 2. Which file shows the wrong value — generated `CMakeLists.txt`, build log, or UI display?
 3. Exact wrong vs expected values on the A5 host?
 4. CANN version and `npu-smi info` / `asys info -r=status` output?
-5. Is `op-devtools.environment.socVersion` set to `ascend950` in workspace settings?
+5. Is `environment.socVersion` set to `ascend950` in workspace settings? ([`workspace-settings.md`](../workspace-settings.md))
 6. Does reporter expect `Ascend950PR_9589` in `SOC_VERSION` or in `SIMULATOR_TYPE`?
 
 ### Implementation plan
@@ -118,7 +118,7 @@ Possible failure modes:
 | `plugin/src/extension.ts` | Post-onboard refresh callback |
 | `plugin/src/class/operate-tree-provider.ts` | `refreshPerformanceReports`, `revealPerformanceReport` |
 | `plugin/src/core/performance/performance-run-data.ts` | Scans opprof output |
-| `docs/performance_results_view.md` | Performance sidebar behavior |
+| `docs/performance.md` | Performance results tree and msprof flow |
 
 ### Open questions
 

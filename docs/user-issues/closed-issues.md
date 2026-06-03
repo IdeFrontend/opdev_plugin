@@ -27,7 +27,7 @@ Closed without detailed resolution comment on GitCode. Likely addressed in a rec
 | File | Role |
 |------|------|
 | `plugin/src/class/operate-tree-provider.ts` | Performance report tree nodes |
-| `docs/performance_results_view.md` | Performance sidebar spec |
+| `docs/performance.md` | Performance profiling and results tree |
 
 ### Follow-up questions (only if reopened)
 
@@ -59,10 +59,10 @@ Known VS Code localization bug (similar to [vscode-cpptools discussion #9192](ht
 
 | File | Role |
 |------|------|
-| `plugin/src/extension.ts` | `initI18n()` |
-| `shared/i18n/` | Translation bundles |
-| `docs/i18n-debugging.md` | i18n debugging notes |
-| `package.nls.json`, `package.nls.zh-cn.json` | Localized manifest strings |
+| `plugin/src/extension.ts` | `initI18n()` — `lng: vscode.env.language` via i18next |
+| [`shared/i18n/`](../../shared/i18n/) | Webview/extension strings (`en.ts`, `zh-cn.ts`) |
+| `package.nls.json`, `package.nls.zh-cn.json`, `package.nls.en.json` | Manifest / Settings UI labels (VS Code locale) |
+| [`README.md`](../../README.md) | User-facing locale setup (Configure Display Language) |
 
 ### Open questions (only if reopened)
 

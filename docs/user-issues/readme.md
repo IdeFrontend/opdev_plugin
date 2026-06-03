@@ -35,7 +35,7 @@ This folder groups open and closed reports by theme, documents their current sta
 
 - [ascend-env-spec.md](../ascend-env-spec.md) — SOC / simulator / NPU arch resolution contract
 - [ascend-a5-support.md](../ascend-a5-support.md) — A5-specific behavior and gaps
-- [GENERATED_FILES_SPECIFICATION.md](../GENERATED_FILES_SPECIFICATION.md) — `devtool_config.json`, configs store
-- [performance_results_view.md](../performance_results_view.md) — Performance results sidebar
-- [profiler-integration.md](../profiler-integration.md) — On-board / simulation profiler flow
-- [theming-issues.md](../theming-issues.md) — Insight viewer theme/CSS
+- [generated-files-specification.md](../generated-files-specification.md) — `devtool_config.json`, configs store
+- [performance.md](../performance.md) — Simulation / on-board profiling and results tree
+- [operator-treeview.md](../operator-treeview.md) — Sidebar native trees (Home, Actions, Operators, sanitizer/performance results)
+- [workspace-settings.md](../workspace-settings.md) — Workspace `op-devtools.*` settings and runtime mapping

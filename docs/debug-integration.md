@@ -1,235 +1,220 @@
-# Debug Integration Architecture
+# Debug integration (current state)
 
-This document describes how debugging is integrated in the Huawei OP DevTools VS Code extension: protocols, VS Code debug UI usage, and the full architecture from entry points to the MindStudio Debug extension.
+How debugging works in the Huawei OP DevTools VS Code extension: entry points, build-then-launch flow, launch configs, and delegation to the **MindStudio Debug** extension (`ascend.mindstudio-debug-vscode-plugin`).
+
+Sidebar Actions tree behavior (visibility, multi-operator rules, gear icon): [`operator-treeview.md`](operator-treeview.md).
 
 ---
 
 ## Overview
 
-The plugin does **not** implement a debug adapter. It:
+This extension does **not** implement a Debug Adapter. It:
 
-- Ensures the **MindStudio Debug** extension (`ascend.mindstudio-debug-vscode-plugin`) is installed.
-- Injects **launch configurations** (`msdebug`, `msdebug-cpu`, `msdebug-python`) into operator projects.
-- **Starts** debug sessions by name via the VS Code Debug API and opens the standard debug UI (Configure, REPL).
+1. Ensures **MindStudio Debug** is installed (bundled VSIX, post-activate bootstrap).
+2. Seeds **`launch.json`** in the workspace IDE config directory when a new operator project is created.
+3. Runs a **debug-oriented build** (`cpu_debug_script` / `npu_debug_script`), then starts a named launch configuration via `vscode.debug.startDebugging`.
 
-The actual debug engine uses the **Debug Adapter Protocol (DAP)** and is implemented by the MindStudio Debug extension.
-
----
-
-## Protocols
-
-```mermaid
-flowchart LR
-  subgraph Plugin["This plugin"]
-    Tree[Operate tree / Explorer\ncontext menu]
-    TaskCtrl[Task controller]
-    Tree --> TaskCtrl
-  end
-
-  subgraph VSCode["VS Code"]
-    DebugAPI[vscode.debug API]
-    DebugUI[Debug UI / RUN AND DEBUG]
-  end
-
-  subgraph External["MindStudio Debug extension"]
-    DAPAdapter[Debug Adapter]
-  end
-
-  subgraph Target["Debug target"]
-    GDB[GDB / Python / NPU]
-  end
-
-  TaskCtrl -->|startDebugging(name)| DebugAPI
-  DebugAPI --> DebugUI
-  DebugAPI -->|"resolve type msdebug-mi"| DAPAdapter
-  DAPAdapter <-->|DAP JSON-RPC| DebugUI
-  DAPAdapter -->|stdio/socket| GDB
-```
-
-| Layer | Protocol | Role |
-|-------|----------|------|
-| **Entry → Plugin** | VS Code commands / Operate tree / explorer context menu | Calls `taskMethods.runDebug`, `debugConfig`, `runCpuDebug`, `cpuDebugConfig` in-process. (`webview/*` still exposes `taskMethods` via `webviewMethods` spread, but no web client calls debug RPC today.) |
-| **Plugin → VS Code** | VS Code Extension API (`vscode.debug`, `vscode.commands`) | Start session by config name; open Configure / REPL |
-| **VS Code ↔ Debug Adapter** | **Debug Adapter Protocol (DAP)** | JSON-RPC over stdio/socket; implemented by MindStudio Debug extension |
-| **Debug Adapter → Target** | Tool-specific (GDB MI, Python, NPU) | MindStudio adapter talks to GDB / Python / NPU debuggee |
+The adapter type is **`msdebug-mi`** (DAP implemented by MindStudio Debug).
 
 ---
 
-## High-Level Architecture
+## Architecture
 
 ```mermaid
 flowchart TB
   subgraph Entry["Entry points"]
-    Explorer["Explorer context menu\n(调试 submenu)"]
-    Tree["Operate tree /\nExplorer menu"]
+    Tree["opdevtoolsOperateTree\nCPU / NPU debug rows"]
+    Explorer["Explorer operator menu\noperator.debug submenu"]
+    Gear["operate.debugSettings\n→ launch.json configure"]
   end
 
-  subgraph Plugin["Plugin (plugin/src)"]
-    Commands["extension.ts\nRegistered commands"]
-    FolderSvc["FolderContextMenuService"]
-    TaskCtrl["TaskController\nrunDebug / runCpuDebug\ndebugConfig / cpuDebugConfig"]
-    LaunchJson["debug-launch.json\n(msdebug, msdebug-cpu, msdebug-python)"]
-    ProjectUtils["project-utils\nensureLaunchJsonExists"]
-    Installer["MindStudioPluginInstaller\n(install msdebug extension)"]
+  subgraph Plugin["plugin/src"]
+    Ext["extension.ts\nsidebar + explorer commands"]
+    Folder["FolderContextMenuService\nswitchToProject → taskMethods"]
+    Task["task-controller.ts\nrunDebug / runCpuDebug\ndebugConfig / cpuDebugConfig"]
+    Launch["debug-launch.json → ensureLaunchJsonExists"]
+    Install["post-activate-bootstrap\nMindStudioPluginInstaller"]
   end
 
   subgraph VSCode["VS Code"]
-    DebugAPI["vscode.debug.startDebugging\nworkbench.action.debug.*"]
-    Resolve["Resolve config by name\n→ launch.json"]
+    Build["BuildService.startBuild"]
+    DebugAPI["vscode.debug.startDebugging"]
+    UI["RUN AND DEBUG UI"]
   end
 
-  subgraph Ext["External extension"]
-    MSDebug["ascend.mindstudio-debug-vscode-plugin\n(type: msdebug-mi)"]
+  subgraph MS["ascend.mindstudio-debug-vscode-plugin"]
+    DAP["msdebug-mi adapter"]
   end
 
-  Explorer --> Commands --> FolderSvc --> TaskCtrl
-  Tree --> Commands --> TaskCtrl
-  TaskCtrl --> LaunchJson
-  ProjectUtils --> LaunchJson
-  TaskCtrl --> DebugAPI
-  extension.ts --> Installer
-  Installer -.->|"ensure installed"| MSDebug
-  DebugAPI --> Resolve --> MSDebug
+  Tree --> Ext --> Task
+  Explorer --> Ext --> Folder --> Task
+  Gear --> Ext --> Task
+  Task --> Build
+  Task --> DebugAPI
+  Launch --> DebugAPI
+  Install -.-> MS
+  DebugAPI --> UI
+  DebugAPI --> DAP
 ```
+
+| Layer | Mechanism |
+|-------|-----------|
+| UI → plugin | VS Code commands; `taskMethods.*` in-process (not `ops` RPC) |
+| Plugin → VS Code | `vscode.debug.startDebugging`, `workbench.action.debug.configure`, `workbench.debug.action.toggleRepl` |
+| VS Code ↔ adapter | **DAP** (MindStudio Debug) |
 
 ---
 
-## Debug Session Start Flow
+## Entry points
+
+### Actions tree (`opdevtoolsOperateTree`)
+
+Registered in `extension.ts`; rows built in `operate-tree-provider.ts`.
+
+| Row | Command | Task method | Notes |
+|-----|---------|-------------|--------|
+| **CPU Debug** | `huawei-op-devtools.sidebar.cpuDebug` | `runCpuDebug` | Hidden for `projectType === 'ascend'` and `cann` + `torch_library_template`; also hidden when plugin `buildBehavior.supportsCpuDebug` is false (**Triton**) |
+| **NPU Debug** | `huawei-op-devtools.sidebar.npuDebug` | `runDebug` | Shown only if registry supports NPU debug **and** `op-devtools.debugMode` is true (`ConfigHelper.isDebugModeEnabled`); hidden for **Triton** (`supportsNpuDebug: false`) |
+| **Debug** group gear | `huawei-op-devtools.operate.debugSettings` | `debugConfig` | Opens configure UI; `skipFlowExecutionUi` (no spinner) |
+
+Both debug runs use `operateTreeProvider.runFlowAction(...)` for row loading/stop UI. They are **not** enqueued in `OperatorActionQueueManager` (unlike sanitizer/simulation/on-board).
+
+Multi-operator selection (`selectedOperatorIds.length > 1`) blocks debug commands with an information message.
+
+### Explorer context menu
+
+`FolderContextMenuService` switches workspace to the operator folder, then calls the same `taskMethods` as the tree.
+
+| Command | Handler | In `operator.debug` submenu? |
+|---------|---------|------------------------------|
+| `huawei-op-devtools.operatorProjectCpuDebug` | `cpuDebugOperatorProject` → `runCpuDebug` | **Yes** |
+| `huawei-op-devtools.operatorProjectCpuDebugConfig` | `cpuDebugConfigOperatorProject` → `cpuDebugConfig` | **Yes** |
+| `huawei-op-devtools.operatorProjectNpuDebug` | `npuDebugOperatorProject` → `runDebug` | **No** (command exists; not listed under `operator.debug` in `package.json`) |
+| `huawei-op-devtools.operatorProjectNpuDebugConfig` | `npuDebugConfigOperatorProject` → `debugConfig` | **No** |
+
+Ascend-like operator folders (`<<<>>>`) are rejected for debug menu actions.
+
+### APIs
+
+| API | Debug support |
+|-----|----------------|
+| **`ops`** (`api-routes.ts`) | None for start/configure debug |
+| **`webview`** (`controller/index.ts` → `webviewMethods`) | No debug methods |
+| **`taskMethods`** | Used only from extension commands / folder menu (in-process) |
+
+---
+
+## Session start flow
 
 ```mermaid
 sequenceDiagram
   participant User
-  participant UI as Operate tree / Explorer
   participant Cmd as extension command
-  participant Task as TaskController
+  participant Task as task-controller
   participant Build as BuildService
   participant VSCode as VS Code
   participant MS as MindStudio Debug
 
-  User->>UI: Click CPU/NPU Debug or Configure
-  UI->>Cmd: registered command
-  Cmd->>Task: runDebug() / runCpuDebug() / debugConfig()
-
-  alt Start debugging
-    Task->>Build: startBuild(npu_debug_script / cpu_debug_script)
-    Build-->>Task: build done
-    Task->>Task: getProjectType() → choose config name
-    Task->>VSCode: startDebugging(workspaceFolder, "msdebug"|"msdebug-cpu"|"msdebug-python")
-    VSCode->>VSCode: Read .vscode/launch.json
-    VSCode->>MS: Activate adapter for type "msdebug-mi"
-    MS-->>VSCode: DAP session
-    VSCode->>User: Open Debug sidebar, Console, etc.
-  else Configure
-    Task->>VSCode: executeCommand(workbench.action.debug.configure)
-    VSCode->>User: Open launch.json
+  User->>Cmd: CPU or NPU debug
+  Cmd->>Task: runCpuDebug / runDebug
+  Note over Task: ensurePostActivateBootstrapReady
+  Task->>Task: guardSupportedProjectTypeOrNotify
+  Task->>Task: ProjectManager.initProject
+  opt pyasc / triton
+    Task->>Task: require active .py; update deploy target
   end
+  alt NPU
+    Task->>Build: startBuild(npu_debug_script, operatorNames, compileOption)
+  else CPU
+    Task->>Build: startBuild(cpu_debug_script)
+  end
+  Task->>VSCode: workbench.debug.action.toggleRepl
+  Task->>Task: pick msdebug / msdebug-cpu / msdebug-python
+  Task->>VSCode: startDebugging(workspaceFolder, name)
+  VSCode->>MS: resolve msdebug-mi from launch.json
+  MS-->>User: DAP session, debug UI
 ```
+
+**Configure-only** (`debugConfig`, `cpuDebugConfig`): `workbench.action.debug.configure` + info toast (`task.launchJsonOpened`). No build, no `startDebugging`.
 
 ---
 
-## Launch Configurations
+## Launch configurations
 
-Configurations are defined in `plugin/src/domain/utils/debug-launch.json` and copied into each operator project’s `.vscode/launch.json` (and `.arts/launch.json`) by `ensureLaunchJsonExists()`.
+Template: `plugin/src/domain/utils/debug-launch.json`.
 
-```mermaid
-flowchart LR
-  subgraph Template["debug-launch.json"]
-    C1["msdebug\nNPU"]
-    C2["msdebug-cpu\nCPU, GDB"]
-    C3["msdebug-python\nPython torch_library"]
-  end
+Written once per new project by `ensureLaunchJsonExists()` in `project-utils.ts` (from `welcome-controller` / project model):
 
-  subgraph Project[Operator project]
-    VSC[".vscode/launch.json"]
-    Arts[".arts/launch.json"]
-  end
+- Path: **`<ideConfigDir>/launch.json`** where `ideConfigDir` is `.vscode` (VS Code) or `.arts` (CodeArts) — see `helpers/ide-config-dir.ts`.
+- **Not** duplicated to both directories; one file per workspace IDE flavor.
+- `environmentScripts` in the written file point at **`<ideConfigDir>/.env`** (template’s `.arts/.env` is overridden in `buildDebugLaunchConfig()`).
 
-  C1 --> VSC
-  C2 --> VSC
-  C3 --> VSC
-  C1 --> Arts
-  C2 --> Arts
-  C3 --> Arts
-```
-
-| Name | Type | Use case |
-|------|------|----------|
-| **msdebug** | `msdebug-mi` | NPU debug; target: `build/${workspaceFolderBasename}` |
+| Config name | `type` | Used when |
+|-------------|--------|-----------|
+| **msdebug** | `msdebug-mi` | NPU debug; target `build/${workspaceFolderBasename}` |
 | **msdebug-cpu** | `msdebug-mi` | CPU debug; `msdebugMiPath`: `/usr/bin/gdb` |
-| **msdebug-python** | `msdebug-mi` | Python (e.g. `torch_library_template`); target: `/usr/local/bin/python`, args: `run.py` |
+| **msdebug-python** | `msdebug-mi` | `projectType === 'ascend'` **and** `projectTemplateName === 'torch_library_template'` (CPU and NPU paths) |
 
-Config selection in code:
+Selection in `task-controller.ts`:
 
-- **NPU:** `ascend` + `torch_library_template` → `msdebug-python`, else `msdebug`.
-- **CPU:** same project/template check → `msdebug-python` or `msdebug-cpu`.
+- NPU: `msdebug-python` vs `msdebug`
+- CPU: `msdebug-python` vs `msdebug-cpu`
+
+If no workspace folder: falls back to `workbench.action.debug.start`.
+
+Debug pre-build scripts come from workspace settings ([`workspace-settings.md`](./workspace-settings.md#compile--deploy-op-devtoolscompileanddeploy) — `cpuDebugCompileCommand` / `npuDebugCompileCommand`).
 
 ---
 
-## Component Map (plugin/src)
+## MindStudio Debug extension install
 
-```mermaid
-flowchart TB
-  subgraph Config["Config & bootstrap"]
-    A["domain/utils/debug-launch.json"]
-    B["domain/utils/project-utils.ts\nensureLaunchJsonExists"]
-    C["extension.ts\nCommands + MindStudioPluginInstaller"]
-  end
+Not run synchronously in `activate()`. Deferred in `helpers/post-activate-bootstrap.ts`:
 
-  subgraph Execution["Execution path"]
-    D["controller/task-controller.ts\nrunDebug, runCpuDebug,\ndebugConfig, cpuDebugConfig"]
-    E["service/folder-context-menu-service.ts\ncpu/npuDebugOperatorProject\ncpu/npuDebugConfigOperatorProject"]
-    F["api-routes.ts → controller/index.ts\nwebviewMethods includes taskMethods"]
-  end
+- Plugin ID: `ascend.mindstudio-debug-vscode-plugin`
+- Bundled VSIX: `out/plugin/mindstudio-debug-vscode-plugin/MindStudio-Debug-VSCode-Plugin-1.0.8.vsix`
+- `MindStudioPluginInstaller.installIfNeeded()` (skip if already active)
 
-  subgraph Manifest["Manifest"]
-    G["package.json\noperator.debug submenu\ncontributes.commands"]
-  end
+`runDebug` / `runCpuDebug` await `ensurePostActivateBootstrapReady()` so install/auto-open can finish first.
 
-  A --> B
-  C --> E
-  C --> D
-  F --> D
-  E --> D
-  D --> A
-  G --> C
-```
+---
+
+## VS Code debug UI
+
+No custom debug views in this extension. The plugin triggers:
+
+1. **Session** — `vscode.debug.startDebugging` → standard Debug sidebar, variables, call stack, breakpoints.
+2. **Configure** — `workbench.action.debug.configure`.
+3. **REPL** — `workbench.debug.action.toggleRepl` before starting CPU/NPU debug.
+
+---
+
+## Settings
+
+Debug-related workspace keys (`debugMode`, CPU/NPU debug compile commands): [`workspace-settings.md`](./workspace-settings.md).
+
+---
+
+## Key files
 
 | File | Role |
 |------|------|
-| `domain/utils/debug-launch.json` | Template for the three `msdebug-mi` launch configs |
-| `domain/utils/project-utils.ts` | Writes template to `.vscode/launch.json` and `.arts/launch.json` for new projects |
-| `controller/task-controller.ts` | Build + `startDebugging(name)` or `workbench.action.debug.configure` |
-| `service/folder-context-menu-service.ts` | Explorer menu handlers that call task controller methods |
-| `api-routes.ts` | Debug **not** on `ops`; only in-plugin / optional `webview/*` via `webviewMethods` + `taskMethods` spread |
-| `extension.ts` | Registers debug commands; runs MindStudioPluginInstaller on activate |
-| `class/mind-studio-plugin-installer.ts` | Ensures `ascend.mindstudio-debug-vscode-plugin` is installed |
-| `constants.ts` | Command IDs for the four debug-related commands |
-| Root `package.json` | `contributes`: `operator.debug` submenu, commands, configuration (`op-devtools.debugMode`) |
-
----
-
-## VS Code Debug UI Integration
-
-The plugin does not add custom debug views. It uses the built-in RUN AND DEBUG experience:
-
-1. **Starting a session**  
-   `vscode.debug.startDebugging(workspaceFolder, debugConfigName)` causes VS Code to:
-   - Resolve the named config from `launch.json`
-   - Activate the extension that contributes the debug type (`msdebug-mi`)
-   - Run that extension’s Debug Adapter and open the default Debug sidebar, Debug Console, Variables, Call Stack, etc.
-
-2. **Configuring**  
-   `workbench.action.debug.configure` opens the standard `launch.json` editor.
-
-3. **REPL**  
-   `workbench.debug.action.toggleRepl` toggles the Debug Console.
-
-So all “debug windows” are VS Code’s native debug UI; the plugin only triggers them.
+| `controller/task-controller.ts` | `runDebug`, `runCpuDebug`, `debugConfig`, `cpuDebugConfig` |
+| `extension.ts` | Sidebar debug commands; explorer command registration |
+| `service/folder-context-menu-service.ts` | Explorer → project switch → task methods |
+| `class/operate-tree-provider.ts` | Debug group visibility and commands |
+| `domain/utils/debug-launch.json` | Launch config template |
+| `domain/utils/project-utils.ts` | `ensureLaunchJsonExists` |
+| `helpers/post-activate-bootstrap.ts` | MindStudio Debug VSIX install |
+| `class/mind-studio-plugin-installer.ts` | Install logic (VS Code / remote / CodeArts) |
+| `helpers/ConfigHelper.ts` | `debugMode` read |
+| `constants.ts` | `COMMAND_SIDEBAR_*_DEBUG`, `COMMAND_OPERATOR_PROJECT_*_DEBUG` |
+| `package.json` | `operator.debug` submenu, `op-devtools.debugMode`, compile debug script settings |
 
 ---
 
 ## Summary
 
-- **Protocols:** DAP (VS Code ↔ MindStudio Debug adapter), Extension API (plugin ↔ VS Code). Entry via commands / Operate tree / explorer menu, not `ops` RPC.
-- **VS Code debug UI:** Standard RUN AND DEBUG views; the plugin starts sessions and opens Configure/REPL via the Debug API and built-in commands.
-- **Architecture:** Explorer / Operate tree → `taskMethods` → optional build → `startDebugging` → MindStudio Debug extension (DAP).
+- **DAP** via MindStudio Debug (`msdebug-mi`); this extension orchestrates build + `startDebugging`.
+- **Entry:** Actions tree (primary), Explorer **CPU** debug submenu; NPU explorer commands registered but not in that submenu.
+- **No** `ops` / webview RPC for debug; **no** operator action queue.
+- **`launch.json`** lives under `.vscode` or `.arts` (one per IDE), seeded on new project creation.

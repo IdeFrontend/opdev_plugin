@@ -78,7 +78,9 @@ The scope covers runtime behavior in `plugin/src`, including workspace-local art
 - **Used by**:
   - compile/run pipelines and strategy-generated commands that enter build dirs.
 
-## `.vscode/mindstudio_sanitizer_log/*.log`
+## `<ideConfig>/mindstudio_sanitizer_log/*.log`
+
+(`<ideConfig>` is `.vscode` or `.arts` — see `getIdeConfigDirName()`.)
 
 - **Purpose**: sanitizer report logs.
 - **Created when**: sanitizer command runs with generated `--log-file` path.
@@ -86,7 +88,7 @@ The scope covers runtime behavior in `plugin/src`, including workspace-local art
 - **Deleted when**: no plugin auto-delete in normal flows.
 - **Used by**:
   - run data list collection (`RunDataService.getSanitizerRunData`),
-  - sanitizer panel/report visualization.
+  - native results tree `opdevtoolsSanitizerResultsTree` and Problems diagnostics (`SanitizerDiagnosticsService`).
 
 ---
 
@@ -130,8 +132,9 @@ The scope covers runtime behavior in `plugin/src`, including workspace-local art
   - first config read/write via `JsonStorage`,
   - default config generation in `generateStructure`.
 - **Updated when**:
-  - user/config UI changes (`postConfig`),
-  - pyasc run/debug/profile flows rewrite `build_op.target_file`,
+  - row lifecycle / DB-only fields via `postConfig` (structure creation, `fileMapList`, sanitizer reports, etc.),
+  - **not** compile script strings after workspace migration — those live in `settings.json` ([`workspace-settings.md`](./workspace-settings.md)),
+  - PyAsc/Triton run may set deploy target via `ConfigService.writeBuildOpDeployTarget` (`python3 <relativePath>`) → workspace `deployCommandOrRunCommand`, not legacy script columns,
   - add-report actions append/update `fileMapList`.
 - **Deleted when**:
   - only by test helper `_resetConfigsForTest()`.
@@ -282,7 +285,7 @@ ANOTHER_KEY=value
 ...
 ```
 
-## `.vscode/mindstudio_sanitizer_log/*.log`
+## `<ideConfig>/mindstudio_sanitizer_log/*.log`
 
 - **Filename schema**:
 
