@@ -29,6 +29,8 @@ export default {
   'welcome.projectCreated': '算子工程创建成功: {{name}}',
   'welcome.createFilesProgressTitle': '开始创建算子文件...',
   'welcome.createFilesProgressMessage': '准备创建算子文件...',
+  'welcome.genopRunning': '正在通过 build.sh --genop 生成算子…',
+  'welcome.genopFellBack': 'build.sh --genop 未生成算子源码，已回退到模板脚手架生成。',
   'welcome.createDirOkCreateFilesError': '算子工程目录已创建，但创建算子文件时出错: {{error}}',
   'welcome.createProjectFailed': '创建算子工程失败: {{error}}',
   'welcome.openProjectFailed': '打开算子工程失败: {{error}}',

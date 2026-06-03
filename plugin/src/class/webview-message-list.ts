@@ -113,6 +113,7 @@ export async function handleOperatorProjectDirectoryFile(
         parentProjectId: number;
         opName: string;
         outputPath: string;
+        skipFileGeneration?: boolean;
       };
     }
     | undefined,
@@ -277,6 +278,7 @@ export async function handleOperatorProjectDirectoryFile(
               ? {
                 projectId: ctx.parentProjectId,
                 opPath: ctx.outputPath,
+                skipFileGeneration: ctx.skipFileGeneration === true,
               }
               : {}),
           });

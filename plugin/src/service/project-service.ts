@@ -113,6 +113,7 @@ export class ProjectService {
           ...(params.opPath ? { op_path: params.opPath } : {}),
         },
         context.extensionPath,
+        params.skipFileGeneration === true,
       );
 
       console.log(

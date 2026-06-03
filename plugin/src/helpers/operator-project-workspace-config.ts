@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 
+import { DEFAULT_GEN_OP_COMMAND } from '@plugin/domain/utils/genop-command';
+
 const SECTION = 'op-devtools';
 const DEFAULT_ENVIRONMENT_SCRIPT = '/etc/profile';
 export const ENVIRONMENT_SCRIPT_SETTING = 'environment.environmentScript';
@@ -143,6 +145,19 @@ export function getWorkspaceSimulatorType(): string {
     return String(explicit).trim();
   }
   return '';
+}
+
+/**
+ * Workspace-overridable command template used to generate an operator in a
+ * standard-custom project (issue #14). Returns the default template when unset/blank.
+ */
+export function getWorkspaceGenOpCommand(): string {
+  const cfg = getOpDevtoolsWorkspaceConfiguration();
+  const value = cfg.get<string>(
+    'compileAndDeploy.buildConfig.genOpCommand',
+    DEFAULT_GEN_OP_COMMAND,
+  );
+  return typeof value === 'string' && value.trim() ? value : DEFAULT_GEN_OP_COMMAND;
 }
 
 export function getEnvironmentSocVersionFromWorkspace(): string {

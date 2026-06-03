@@ -16,6 +16,7 @@
   "config.op-devtools.compileAndDeploy.buildConfig.sanitizerCompileCommand.description": "Sanitizer compile script or command.",
   "config.op-devtools.compileAndDeploy.buildConfig.onBoardCompileCommand.description": "On-board analysis compile script or command.",
   "config.op-devtools.compileAndDeploy.buildConfig.simulationCompileCommand.description": "Simulation analysis compile script or command.",
+  "config.op-devtools.compileAndDeploy.buildConfig.genOpCommand.description": "Command used to generate an operator in a standard-custom operator project. Supports the {path} and {operatorname} placeholders (default: bash build.sh --genop={path}/{operatorname}).",
   "config.op-devtools.compileAndDeploy.exampleBuildConfig.executionMode.description": "Example execution mode (`eager` or `graph`).",
   "config.op-devtools.compileAndDeploy.exampleBuildConfig.runCommand.markdownDescription": "Run command. Operator name, execution mode and package mode are appended automatically.",
   "config.op-devtools.sanitizer.showQuickOptions.description": "Show quick options",

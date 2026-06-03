@@ -1844,6 +1844,7 @@ export async function activate(context: vscode.ExtensionContext) {
           parentProjectId: number;
           opName: string;
           outputPath: string;
+          skipFileGeneration?: boolean;
         };
       },
       progress: vscode.Progress<{

@@ -239,6 +239,12 @@
             "order": 108,
             "description": "%config.op-devtools.compileAndDeploy.buildConfig.simulationCompileCommand.description%"
           },
+          "op-devtools.compileAndDeploy.buildConfig.genOpCommand": {
+            "type": "string",
+            "order": 108.5,
+            "default": "bash build.sh --genop={path}/{operatorname}",
+            "description": "%config.op-devtools.compileAndDeploy.buildConfig.genOpCommand.description%"
+          },
           "op-devtools.compileAndDeploy.exampleBuildConfig.executionMode": {
             "type": "string",
             "order": 109,

@@ -29,6 +29,8 @@ export default {
   'welcome.projectCreated': 'Operator project created successfully: {{name}}',
   'welcome.createFilesProgressTitle': 'Creating operator files...',
   'welcome.createFilesProgressMessage': 'Preparing to create operator files...',
+  'welcome.genopRunning': 'Generating operator via build.sh --genop…',
+  'welcome.genopFellBack': 'build.sh --genop did not produce operator source; falling back to template scaffolding.',
   'welcome.createDirOkCreateFilesError': 'Project directory created, but creating operator files failed: {{error}}',
   'welcome.createProjectFailed': 'Failed to create operator project: {{error}}',
   'welcome.openProjectFailed': 'Failed to open operator project: {{error}}',

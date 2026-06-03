@@ -26,6 +26,11 @@ export type CreateOpsByPrototypeParams = {
   projectId?: string | number;
   /** Override the operator output directory passed to generateStructure as op_path. */
   opPath?: string;
+  /**
+   * When true, skip operator source-file generation in generateStructure
+   * (genop already produced the source) and only register metadata/IDE artifacts.
+   */
+  skipFileGeneration?: boolean;
 };
 
 export type BuildConfig = {

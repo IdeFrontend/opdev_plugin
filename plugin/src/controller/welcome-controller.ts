@@ -37,11 +37,73 @@ import {
 import { WorkspaceDetectorService } from '@plugin/service/workspace-detector-service';
 import { OperatorProjectIconTheme } from '../class/operator-project-icon-theme';
 import { whenPostActivateBootstrapReady } from '@plugin/helpers/post-activate-bootstrap';
+import { getWorkspaceGenOpCommand } from '@plugin/helpers/operator-project-workspace-config';
+import {
+  buildGenOpCommand, decideSkipFileGeneration,
+} from '@plugin/domain/utils/genop-command';
 
 // Auxiliary function: get extension context
 function getExtensionContext(): vscode.ExtensionContext {
   return (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
     .extensionContext;
+}
+
+/**
+ * Run the configured `build.sh --genop` for a standard-custom sub-operator from the
+ * collection root. Returns true only when the command succeeded AND left operator
+ * source on disk (skip the plugin's own source generation). Any failure, missing bash,
+ * a build.sh without --genop, or an exit-0-but-no-output result returns false → the
+ * caller falls back to the template scaffolding (issue #13 behaviour).
+ */
+async function tryGenOpScaffold(opts: {
+  executor: CommandExecutor;
+  collectionRoot: string;
+  projectPath: string;
+  operatorName: string;
+  subOpDir: string;
+}): Promise<boolean> {
+  try {
+    const template = getWorkspaceGenOpCommand();
+
+    if (!template.trim()) {
+      return false;
+    }
+
+    const command = buildGenOpCommand(template, opts.projectPath, opts.operatorName);
+
+    vscode.window.showInformationMessage(t('welcome.genopRunning'));
+
+    const result = await opts.executor.execute(
+      command,
+      [],
+      [],
+      {
+        cwd: opts.collectionRoot,
+        toolOutputLabel: 'create',
+      },
+      true,
+    );
+
+    const skip = decideSkipFileGeneration({
+      commandSucceeded: result.code === 0,
+      opDir: opts.subOpDir,
+    });
+
+    if (!skip) {
+      vscode.window.showWarningMessage(t('welcome.genopFellBack'));
+    }
+
+    return skip;
+  }
+  catch (error) {
+    console.warn(
+      'genop scaffold failed, falling back to template scaffolding:',
+      error instanceof Error ? error.message : String(error),
+    );
+    vscode.window.showWarningMessage(t('welcome.genopFellBack'));
+
+    return false;
+  }
 }
 
 function hasOpenWorkspaceFolder(): boolean {
@@ -133,20 +195,6 @@ export const welcomeMethods = {
 
       const executor = new CommandExecutor();
 
-      try {
-        // Create directories using fs.mkdirSync (cross-platform compatible)
-        const projectDir = path.join(params.projectPath, params.projectName);
-
-        if (!fs.existsSync(projectDir)) {
-          fs.mkdirSync(projectDir, { recursive: true });
-        }
-      }
-      catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-
-        throw new Error(t('welcome.createProjectDirFailed', { error: msg }));
-      }
-
       const subOpDir = path.join(params.projectPath, params.projectName);
       const collectionRoot = findAncestorGenopCollectionRoot(subOpDir);
       const isSubOp = isSubOperatorCreation({
@@ -161,6 +209,32 @@ export const welcomeMethods = {
       const parentCollection = isSubOp && collectionRoot
         ? getProjectByPath(collectionRoot)
         : undefined;
+
+      // Issue #14: prefer the project's own `build.sh --genop` to generate sub-operator
+      // source. Only attempt it for a sub-operator with a resolved collection.
+      let genopSkipFileGeneration = false;
+
+      if (isSubOp && parentCollection && collectionRoot) {
+        genopSkipFileGeneration = await tryGenOpScaffold({
+          executor,
+          collectionRoot,
+          projectPath: params.projectPath,
+          operatorName: params.projectName,
+          subOpDir,
+        });
+      }
+
+      try {
+        // Create the operator directory unless genop already produced it.
+        if (!genopSkipFileGeneration && !fs.existsSync(subOpDir)) {
+          fs.mkdirSync(subOpDir, { recursive: true });
+        }
+      }
+      catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+
+        throw new Error(t('welcome.createProjectDirFailed', { error: msg }));
+      }
 
       if (params.projectSH) {
         try {
@@ -289,6 +363,7 @@ export const welcomeMethods = {
                       parentProjectId: Number(parentCollection.id),
                       opName: params.projectName,
                       outputPath: subOpDir,
+                      skipFileGeneration: genopSkipFileGeneration,
                     },
                   }
                   : {}),

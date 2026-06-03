@@ -16,6 +16,7 @@
   "config.op-devtools.compileAndDeploy.buildConfig.sanitizerCompileCommand.description": "异常检测编译命令行",
   "config.op-devtools.compileAndDeploy.buildConfig.onBoardCompileCommand.description": "上板分析编译命令行",
   "config.op-devtools.compileAndDeploy.buildConfig.simulationCompileCommand.description": "仿真分析编译命令行",
+  "config.op-devtools.compileAndDeploy.buildConfig.genOpCommand.description": "标准自定义算子工程生成算子的命令行，支持占位符 {path} 与 {operatorname}（默认：bash build.sh --genop={path}/{operatorname}）",
   "config.op-devtools.compileAndDeploy.exampleBuildConfig.executionMode.description": "执行模式",
   "config.op-devtools.compileAndDeploy.exampleBuildConfig.runCommand.markdownDescription": "运行命令。会自动追加算子名、执行模式与打包模式。",
   "config.op-devtools.sanitizer.showQuickOptions.description": "显示快速选项",
