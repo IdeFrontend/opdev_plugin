@@ -2,7 +2,7 @@
 
 This document describes how **simulation** and **on-board** performance analysis (`msprof` CLI) are integrated in Huawei OP DevTools **as implemented today**: build/deploy pre-steps, profiler command generation, output under `opprof`, and a **native VS Code tree** for browsing results. The extension orchestrates tooling; **msprof** runs in the operator environment.
 
-For CANN/Ascend spawn environment (`SOC_VERSION`, `NPU_ARCH`, `SUPPORT_COMPUTE_UNIT`, `SUPPORT_TILING_DIR`; simulator-class runs use simulator dir as spawn `SOC_VERSION`), see [`ascend-env-spec.md`](./ascend-env-spec.md). For A5 on-board metric matrices, see [`ascend-a5-support.md`](./ascend-a5-support.md). For `op-devtools.performanceTuning.*` keys and mapping, see [`workspace-settings.md`](./workspace-settings.md).
+For CANN/Ascend spawn environment (`SOC_VERSION`, `NPU_ARCH`; simulator-class runs use simulator dir as spawn `SOC_VERSION`) and ACLNN cmake defaults at generation, see [`ascend-env-spec.md`](./ascend-env-spec.md). For A5 on-board metric matrices, see [`ascend-a5-support.md`](./ascend-a5-support.md). For `op-devtools.performanceTuning.*` keys and mapping, see [`workspace-settings.md`](./workspace-settings.md).
 
 ---
 

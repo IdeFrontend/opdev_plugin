@@ -1,6 +1,6 @@
 /**
  * ACLNN standard-custom build parameters for ascend_template/add_custom CMakeLists.
- * Values are read from spawn env as SUPPORT_COMPUTE_UNIT / SUPPORT_TILING_DIR.
+ * Values are injected into CMakeLists.txt at project generation (see resolveAclnnCmakeDefaultsForGeneration).
  *
  * CANN naming (Huawei ascend add_custom template + op_host SocVersion API):
  * - Packaging / build slug: `ascend950` (SOC_VERSION, build.sh --soc=).

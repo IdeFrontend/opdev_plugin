@@ -106,8 +106,6 @@ describe('operator spawn env', () => {
       .toEqual({
         SOC_VERSION: '',
         NPU_ARCH: '',
-        SUPPORT_COMPUTE_UNIT: '',
-        SUPPORT_TILING_DIR: '',
       });
   });
 
@@ -143,8 +141,6 @@ describe('operator spawn env', () => {
       .toEqual({
         SOC_VERSION: 'ascend950',
         NPU_ARCH: 'dav-3510',
-        SUPPORT_COMPUTE_UNIT: SUPPORT_COMPUTE_UNIT_ASCEND_950,
-        SUPPORT_TILING_DIR: SUPPORT_TILING_DIR_ARCH35,
       });
   });
 
@@ -162,8 +158,6 @@ describe('operator spawn env', () => {
       .toEqual({
         SOC_VERSION: 'ascend950',
         NPU_ARCH: 'dav-3510',
-        SUPPORT_COMPUTE_UNIT: SUPPORT_COMPUTE_UNIT_ASCEND_950,
-        SUPPORT_TILING_DIR: SUPPORT_TILING_DIR_ARCH35,
       });
   });
 
@@ -181,8 +175,6 @@ describe('operator spawn env', () => {
       .toEqual({
         SOC_VERSION: 'Ascend910B3',
         NPU_ARCH: 'dav-2201',
-        SUPPORT_COMPUTE_UNIT: SUPPORT_COMPUTE_UNIT_ASCEND_910_95,
-        SUPPORT_TILING_DIR: SUPPORT_TILING_DIR_ARCH22,
       });
   });
 
@@ -200,8 +192,6 @@ describe('operator spawn env', () => {
       .toEqual({
         SOC_VERSION: 'Ascend950PR_9589',
         NPU_ARCH: 'dav-3510',
-        SUPPORT_COMPUTE_UNIT: SUPPORT_COMPUTE_UNIT_ASCEND_950,
-        SUPPORT_TILING_DIR: SUPPORT_TILING_DIR_ARCH35,
       });
   });
 
@@ -219,8 +209,6 @@ describe('operator spawn env', () => {
       .toEqual({
         SOC_VERSION: 'Ascend950PR_9589',
         NPU_ARCH: 'dav-3510',
-        SUPPORT_COMPUTE_UNIT: SUPPORT_COMPUTE_UNIT_ASCEND_950,
-        SUPPORT_TILING_DIR: SUPPORT_TILING_DIR_ARCH35,
       });
   });
 
@@ -298,23 +286,19 @@ describe('operator spawn env', () => {
       .toEqual({
         SOC_VERSION: 'Ascend950PR_9589',
         NPU_ARCH: 'dav-3510',
-        SUPPORT_COMPUTE_UNIT: SUPPORT_COMPUTE_UNIT_ASCEND_950,
-        SUPPORT_TILING_DIR: SUPPORT_TILING_DIR_ARCH35,
       });
   });
 
-  it('ascend add_custom CMakeLists reads SUPPORT_* from env only', () => {
+  it('ascend add_custom CMakeLists uses generation placeholders', () => {
     const cmakePath = path.join(
       __dirname,
       '../../../templates/code_template/ascend_template/add_custom/CMakeLists.txt',
     );
     const cmake = fs.readFileSync(cmakePath, 'utf8');
 
-    expect(cmake).toContain('ENV{SUPPORT_COMPUTE_UNIT}');
-    expect(cmake).toContain('ENV{SUPPORT_TILING_DIR}');
-    expect(cmake).not.toMatch(/-DSUPPORT_COMPUTE_UNIT/);
-    expect(cmake).not.toMatch(/-DSUPPORT_TILING_DIR/);
-    expect(cmake).not.toMatch(/SUPPORT_COMPUTE_UNIT.*CACHE STRING/);
-    expect(cmake).not.toMatch(/SUPPORT_TILING_DIR.*CACHE STRING/);
+    expect(cmake).toContain('set(SUPPORT_COMPUTE_UNIT "__MSTT_SUPPORT_COMPUTE_UNIT__")');
+    expect(cmake).toContain('set(SUPPORT_TILING_DIR "__MSTT_SUPPORT_TILING_DIR__")');
+    expect(cmake).not.toContain('ENV{SUPPORT_COMPUTE_UNIT}');
+    expect(cmake).not.toContain('ENV{SUPPORT_TILING_DIR}');
   });
 });

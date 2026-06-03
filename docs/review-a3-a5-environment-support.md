@@ -29,7 +29,7 @@ Both generations use the same entry points:
 2. **`resolveAscendEnvForOperatorCommand(ctx)`** — one resolution per operator command (build, run, simulate, on-board, sanitizer, …).
 3. **`buildOperatorSpawnEnvFromResolution`** — child-process `env` only; the extension host **does not** write `SOC_VERSION` / `NPU_ARCH` back to `process.env`.
 4. **`operator-script-placeholders`** — `{soc_version}` always the **CANN slug**; `{simulator_type}` the simulator **directory name** under `tools/simulator/`.
-5. **Templates** — CANN / Ascend cmake read `$ENV{SOC_VERSION}`, `$ENV{NPU_ARCH}`, `$ENV{SUPPORT_COMPUTE_UNIT}`, `$ENV{SUPPORT_TILING_DIR}` when cache is empty (see `plugin/templates/code_template/`).
+5. **Templates** — CANN cmake reads `$ENV{SOC_VERSION}`, `$ENV{NPU_ARCH}` when cache is empty; Ascend `add_custom` bakes `SUPPORT_*` at generation (see `plugin/templates/code_template/`).
 
 **Not used for resolution:** `projects.json` `soc_version` (display / legacy APIs only). Prefer workspace `environment.socVersion` or explicit `performanceTuning.simulation.simulatorType`.
 
@@ -48,10 +48,10 @@ This block is the **authoritative split** for product and support. Everything el
 | CANN SOC slug (`SOC_VERSION` on non-sim runs; `{soc_version}`) | `ascend910b` | `ascend950` | `CANN_SOC_ASCEND_910B`, `CANN_SOC_ASCEND_950` |
 | Default simulator directory (`tools/simulator/<dir>/lib`) | `Ascend910B3` | `Ascend950PR_9589` | `SIMULATOR_ASCEND_910B3`, `SIMULATOR_ASCEND_950PR_9589` |
 | AscendC `--npu-arch` (`NPU_ARCH`) | `dav-2201` | `dav-3510` | `NPU_ARCH_DAV_2201`, `NPU_ARCH_DAV_3510` |
-| ACLNN `SUPPORT_COMPUTE_UNIT` (spawn → ascend standard-custom cmake) | `ascend910_95` | `ascend950` | `cann-aclnn-build-defaults.ts` |
+| ACLNN `SUPPORT_COMPUTE_UNIT` (generation → ascend standard-custom cmake) | `ascend910_95` | `ascend950` | `cann-aclnn-build-defaults.ts` |
 | ACLNN `SUPPORT_TILING_DIR` | `arch22` | `arch35` | same file |
 
-**Do not conflate:** `SOC_VERSION=ascend950` (packaging / `build.sh --soc=`) vs `SUPPORT_COMPUTE_UNIT=ascend950` (ACLNN `SocVersion` in op_host) vs `NPU_ARCH=dav-3510` (AscendC). All three are set together on A5 via the resolver + spawn env.
+**Do not conflate:** `SOC_VERSION=ascend950` (packaging / `build.sh --soc=`) vs `SUPPORT_COMPUTE_UNIT=ascend950` (ACLNN `SocVersion` in op_host) vs `NPU_ARCH=dav-3510` (AscendC). On A5, spawn env sets `SOC_VERSION` + `NPU_ARCH`; `SUPPORT_*` are fixed in cmake when the operator is created.
 
 ### 2. Host detection (`ASCEND_SOC_RULES`)
 

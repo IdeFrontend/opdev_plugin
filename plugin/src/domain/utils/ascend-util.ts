@@ -302,8 +302,17 @@ function resolveAclnnBuildDefaultForCannSoc(
   return isAscendA5ProfilerCannSoc(key) ? a5Value : nonA5Value;
 }
 
+/** Placeholders in ascend `add_custom` CMakeLists.txt replaced at project generation. */
+export const MSTT_SUPPORT_COMPUTE_UNIT_PLACEHOLDER = '__MSTT_SUPPORT_COMPUTE_UNIT__' as const;
+export const MSTT_SUPPORT_TILING_DIR_PLACEHOLDER = '__MSTT_SUPPORT_TILING_DIR__' as const;
+
+export type AclnnCmakeDefaults = {
+  supportComputeUnit: string;
+  supportTilingDir: string;
+};
+
 /**
- * ACLNN `SUPPORT_COMPUTE_UNIT` for standard-custom ascend cmake (spawn env).
+ * ACLNN `SUPPORT_COMPUTE_UNIT` / `SUPPORT_TILING_DIR` for standard-custom ascend cmake.
  */
 export function getSupportComputeUnitForCannSoc(cannSoc?: string | null): string {
   return resolveAclnnBuildDefaultForCannSoc(
@@ -322,6 +331,23 @@ export function getSupportTilingDirForCannSoc(cannSoc?: string | null): string {
     SUPPORT_TILING_DIR_ARCH35,
     SUPPORT_TILING_DIR_ARCH22,
   );
+}
+
+/**
+ * Resolve ACLNN cmake capability constants when scaffolding ascend `add_custom`.
+ * Uses workspace/project SOC when set, otherwise the same chain as
+ * {@link computeAscendEnvResolution} (global env → detection → default).
+ */
+export function resolveAclnnCmakeDefaultsForGeneration(
+  projectSoc?: string | null,
+): AclnnCmakeDefaults {
+  const cannSoc = normalizeCannSoc(getSocVersionWithWorkspaceOverride(projectSoc))
+    || computeAscendEnvResolution({ isSimulator: false }).socVersion;
+
+  return {
+    supportComputeUnit: getSupportComputeUnitForCannSoc(cannSoc),
+    supportTilingDir: getSupportTilingDirForCannSoc(cannSoc),
+  };
 }
 
 
@@ -726,8 +752,8 @@ export function isSimulatorCompile(params: OperatorSpawnEnvContext): boolean {
  * `SOC_VERSION` is the simulator device directory name (e.g. `Ascend910B3`) so
  * cann `build.sh --simulator` and cmake can link `tools/simulator/${SOC_VERSION}/lib`;
  * for other runs it is the CANN SOC slug (e.g. `ascend910b`). `NPU_ARCH` is always
- * derived from the resolved internal SOC slug. `SUPPORT_COMPUTE_UNIT` and
- * `SUPPORT_TILING_DIR` are env-only inputs for ascend standard-custom cmake.
+ * derived from the resolved internal SOC slug. Standard-custom ACLNN capability
+ * (`SUPPORT_COMPUTE_UNIT` / `SUPPORT_TILING_DIR`) is baked into cmake at generation.
  */
 export function buildOperatorSpawnEnvFromResolution(
   resolution: AscendEnvResolution,
@@ -740,8 +766,6 @@ export function buildOperatorSpawnEnvFromResolution(
   return {
     SOC_VERSION: socVersionForSpawn,
     NPU_ARCH: resolution.npuArch,
-    SUPPORT_COMPUTE_UNIT: getSupportComputeUnitForCannSoc(resolution.socVersion),
-    SUPPORT_TILING_DIR: getSupportTilingDirForCannSoc(resolution.socVersion),
   };
 }
 

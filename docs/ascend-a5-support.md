@@ -49,14 +49,14 @@ When the workspace sets **`performanceTuning.simulation.simulatorType`** to `Asc
 | **Workspace sync** | `extension.ts` / `config-service.ts`: A5 syncs `performanceTuning.onBoard.pcSampling`; A3 syncs `cacheHeatmap` from `MemoryDetail`. |
 | **Config load from settings** | `operator-project-workspace-config.ts`: maps `pcSampling` vs `cacheHeatmap` using workspace `environment.socVersion` + `isAscendA5ProfilerCannSoc`. |
 | **i18n / package.nls** | User-facing copy for PC sampling vs cache heatmap on Ascend 950 / A5 (`shared/i18n`, `package.nls*.json`). |
-| **Unit tests** | `operator-spawn-env.spec.ts` (A5 sim → `ascend950` + `dav-3510` + `SUPPORT_*`), `operator-script-placeholders.spec.ts`, `profiler-simulator-resolution.spec.ts`, `pyasc-plugin.spec.ts`. |
+| **Unit tests** | `operator-spawn-env.spec.ts` (A5 sim → `ascend950` + `dav-3510`), `aclnn-cmake-generation.spec.ts` (`SUPPORT_*` at generation), `operator-script-placeholders.spec.ts`, `profiler-simulator-resolution.spec.ts`, `pyasc-plugin.spec.ts`. |
 
 ### 2.4 Project-type notes (templates)
 
 | Type | A4/A5 template status |
 |------|------------------------|
 | **CANN** (`cann_template/*`) | Env-driven `build.sh` / cmake — reference implementation |
-| **Ascend** (`ascend_template/add_custom`) | CMake reads spawn `SUPPORT_*`; plugin injects on every command |
+| **Ascend** (`ascend_template/add_custom`) | `SUPPORT_*` literals in generated `CMakeLists.txt`; spawn env supplies `SOC_VERSION` / `NPU_ARCH` only |
 | **PyAsc** (`pyasc_temple`) | Python-only; configs use `python3 ./<op>.py`; profiler uses resolver |
 | **Triton** (`triton_vector_add`) | Python-only; no CANN env template contract; simulate/on-board disabled in plugin |
 
@@ -67,7 +67,7 @@ When the workspace sets **`performanceTuning.simulation.simulatorType`** to `Asc
 | **`projects.json` `soc_version`** | Env config UI persists it for display/APIs; **`resolveAscendEnv` does not read it**. To target A5, set **`environment.socVersion`** or **`simulation.simulatorType`** in workspace settings ([`workspace-settings.md`](./workspace-settings.md)), export `SOC_VERSION=ascend950` before launch, or rely on detection. |
 | **`getProjectSocVersion()`** | Returns `getSocVersionWithWorkspaceOverride(project.soc_version)` — used for **workspace settings sync** and env webview display, not for spawn env. |
 | **`DEFAULT_FALLBACK_CANN_SOC`** | Empty string when settings, env, and detection all fail (no silent `ascend910b` in resolver). |
-| **`SUPPORT_COMPUTE_UNIT` / `SUPPORT_TILING_DIR`** | Injected on every spawn from `getSupportComputeUnitForCannSoc` / `getSupportTilingDirForCannSoc`: A3-class → `ascend910_95` + `arch22`; A5-class → `ascend950` + `arch35` ([`cann-aclnn-build-defaults.ts`](../shared/cann-aclnn-build-defaults.ts), matrix in [`review-a3-a5-environment-support.md`](./review-a3-a5-environment-support.md)). |
+| **`SUPPORT_COMPUTE_UNIT` / `SUPPORT_TILING_DIR`** | Baked into generated `CMakeLists.txt` via `resolveAclnnCmakeDefaultsForGeneration`: A3-class → `ascend910_95` + `arch22`; A5-class → `ascend950` + `arch35` ([`cann-aclnn-build-defaults.ts`](../shared/cann-aclnn-build-defaults.ts), matrix in [`review-a3-a5-environment-support.md`](./review-a3-a5-environment-support.md)). |
 
 ### 2.3 Remaining gaps / operational caveats
 

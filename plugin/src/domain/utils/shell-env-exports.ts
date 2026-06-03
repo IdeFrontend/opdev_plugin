@@ -1,8 +1,6 @@
 const ASCEND_EXPORT_KEYS = [
   'SOC_VERSION',
   'NPU_ARCH',
-  'SUPPORT_COMPUTE_UNIT',
-  'SUPPORT_TILING_DIR',
 ] as const;
 
 const SOURCE_PREFIX_RE = /^\.\s+[^&]+\s+&&\s+/;

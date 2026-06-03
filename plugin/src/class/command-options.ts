@@ -22,8 +22,6 @@ const COMMAND_LOG_SCOPE = 'op-devtools/command';
 const ASCEND_SPAWN_ENV_KEYS = [
   'SOC_VERSION',
   'NPU_ARCH',
-  'SUPPORT_COMPUTE_UNIT',
-  'SUPPORT_TILING_DIR',
 ] as const;
 
 function pickAscendSpawnEnv(env?: NodeJS.ProcessEnv): Record<string, string> | undefined {

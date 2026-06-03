@@ -54,11 +54,10 @@ describe('executeOperatorCommand', () => {
     ];
 
     expect(command).toMatch(
-      /^export SOC_VERSION='ascend950' && export NPU_ARCH='dav-3510' && /,
+      /^export SOC_VERSION='ascend950' && export NPU_ARCH='dav-3510' && cd build && \.\/build\.sh$/,
     );
-    expect(command).toContain("export SUPPORT_COMPUTE_UNIT='ascend950'");
-    expect(command).toContain("export SUPPORT_TILING_DIR='arch35'");
-    expect(command).toMatch(/ && cd build && \.\/build\.sh$/);
+    expect(command).not.toContain('SUPPORT_COMPUTE_UNIT');
+    expect(command).not.toContain('SUPPORT_TILING_DIR');
     expect(options.env).toBeUndefined();
     expect(isOpenTerminal).toBe(true);
   });

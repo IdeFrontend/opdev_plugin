@@ -21,10 +21,7 @@ describe('shell-env-exports', () => {
     });
 
     expect(result)
-      .toBe(
-        "export SOC_VERSION='ascend950' && export NPU_ARCH='dav-3510' && "
-        + "export SUPPORT_COMPUTE_UNIT='ascend950' && export SUPPORT_TILING_DIR='arch35'",
-      );
+      .toBe("export SOC_VERSION='ascend950' && export NPU_ARCH='dav-3510'");
   });
 
   it('formatAscendEnvExports skips empty values', () => {
@@ -34,7 +31,7 @@ describe('shell-env-exports', () => {
       SUPPORT_COMPUTE_UNIT: 'ascend910_95',
       SUPPORT_TILING_DIR: '',
     }))
-      .toBe("export SUPPORT_COMPUTE_UNIT='ascend910_95'");
+      .toBe('');
   });
 
   it('injectAscendEnvExports returns command unchanged when all values empty', () => {
@@ -58,7 +55,6 @@ describe('shell-env-exports', () => {
     }))
       .toBe(
         "export SOC_VERSION='ascend950' && export NPU_ARCH='dav-3510' && "
-        + "export SUPPORT_COMPUTE_UNIT='ascend950' && export SUPPORT_TILING_DIR='arch35' && "
         + 'cd build && ./build.sh',
       );
   });
@@ -72,7 +68,6 @@ describe('shell-env-exports', () => {
     }))
       .toBe(
         "export SOC_VERSION='ascend950' && export NPU_ARCH='dav-3510' && "
-        + "export SUPPORT_COMPUTE_UNIT='ascend950' && export SUPPORT_TILING_DIR='arch35' && "
         + '. /cann/set_env.sh && cd build && ./build.sh',
       );
   });

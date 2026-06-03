@@ -20,10 +20,12 @@ other call sites use `resolveAscendEnv()`. Workspace keys:
 | `SOC_VERSION` | CANN SOC slug (e.g. `ascend910b`, `ascend950`) for non-simulator runs; on **simulator-class** runs the spawn env value is the **simulator device directory name** (e.g. `Ascend910B3`, `Ascend950PR_9589`) so CANN cmake can link `tools/simulator/${SOC_VERSION}/lib` | Spawn env (see §4.1) + `{soc_version}` placeholder (always the resolved **slug**, not the sim dir) + `--soc=` on ascend `build.sh` when applicable |
 | `simulatorType` (resolution field, not an env var) | Simulator directory name under `tools/simulator/<dir>/lib` | `AscendEnvResolution.simulatorType`; `{simulator_type}` placeholder; `--simulator <dir>` CLI flags. Read from workspace / global snapshot / default-from-SOC — **not** emitted as `process.env.SIMULATOR_TYPE` by the plugin |
 | `NPU_ARCH` | AscendC `--npu-arch` (e.g. `dav-2201`, `dav-3510`) | Spawn env; derived from resolved SOC slug via `getNpuArchForCannSoc()`; cmake `$ENV{NPU_ARCH}` → cache |
-| `SUPPORT_COMPUTE_UNIT` | ACLNN compute unit for standard-custom ascend cmake | Spawn env on **every** operator command; `getSupportComputeUnitForCannSoc(socVersion)` (`shared/cann-aclnn-build-defaults.ts`) |
-| `SUPPORT_TILING_DIR` | Tiling dir under `op_host` paired with compute unit | Spawn env on every operator command; `getSupportTilingDirForCannSoc(socVersion)` |
+| `SUPPORT_COMPUTE_UNIT` | ACLNN compute unit for standard-custom ascend cmake | Literal `set()` in generated `CMakeLists.txt`; `resolveAclnnCmakeDefaultsForGeneration()` at scaffold time (`shared/cann-aclnn-build-defaults.ts`) |
+| `SUPPORT_TILING_DIR` | Tiling dir under `op_host` paired with compute unit | Same as `SUPPORT_COMPUTE_UNIT` (baked at generation, not spawn env) |
 
-The plugin treats these as the **only** environment names it owns. Any other
+The plugin treats `SOC_VERSION` and `NPU_ARCH` as the **only** spawn-exported
+environment names it owns. `SUPPORT_*` are project capability declarations, not
+runtime-detectable env vars. Any other
 variable a project's env script defines passes through untouched.
 
 ## 2. Global env snapshot (read once at activation)
@@ -102,8 +104,9 @@ for display and APIs, but the resolver does **not** read it.
 Always `getNpuArchForCannSoc(socVersion)`. There is no second path that maps
 the simulator dir to an NPU arch — once SOC is resolved, NPU arch is fixed.
 When `socVersion` is empty (autodetection failed and no override), `npuArch`
-and ACLNN `SUPPORT_*` spawn values are also empty so builds fail visibly instead
-of silently using 910-class defaults. The extension shows a one-time warning
+is also empty so builds fail visibly instead of silently using 910-class defaults.
+At operator **generation**, empty SOC still maps `SUPPORT_*` via the same resolver
+(fallback slug); regenerate the operator after fixing SOC settings if needed. The extension shows a one-time warning
 with remediation steps before the build script exits.
 
 ## 4. What the plugin passes to operator commands
@@ -124,14 +127,12 @@ emitted only when non-empty:
 export SOC_VERSION=<resolved> && export NPU_ARCH=<resolved> && …
 ```
 
-`buildOperatorSpawnEnvFromResolution()` supplies exactly these four keys:
+`buildOperatorSpawnEnvFromResolution()` supplies `SOC_VERSION` and `NPU_ARCH`:
 
 | Key | Non-simulator run | Simulator-class run |
 |-----|-------------------|---------------------|
 | `SOC_VERSION` | Resolved CANN slug (`resolution.socVersion`) | Simulator **directory name** (`resolution.simulatorType`, or `getDefaultSimulatorTypeForCannSoc(slug)` if still unset) |
 | `NPU_ARCH` | From slug | From slug (same internal SOC resolution) |
-| `SUPPORT_COMPUTE_UNIT` | From slug | From slug |
-| `SUPPORT_TILING_DIR` | From slug | From slug |
 
 Empty values are omitted from the command line. The plugin does **not** pass
 these via `options.env` on `CommandExecutor.execute` for operator runs — the
@@ -202,18 +203,14 @@ rest of the chain.
 ### 6.2 Ascend `add_custom` template
 
 `plugin/templates/code_template/ascend_template/add_custom/CMakeLists.txt`
-uses the same env → cache pattern for `SUPPORT_COMPUTE_UNIT` and
-`SUPPORT_TILING_DIR` as cann templates use for `NPU_ARCH`: both must be set
-(explicit `-D`, environment, or extension spawn env) or cmake fails with
-`FATAL_ERROR`.
+ships `__MSTT_SUPPORT_COMPUTE_UNIT__` / `__MSTT_SUPPORT_TILING_DIR__`
+placeholders. `AscendOpGenerator` replaces them after unzip using
+`resolveAclnnCmakeDefaultsForGeneration()` (workspace / project SOC → global
+env → detection → default, same SOC chain as operator commands).
 
-`buildOperatorSpawnEnvFromResolution()` always sets `SUPPORT_COMPUTE_UNIT` and
-`SUPPORT_TILING_DIR` from `getSupportComputeUnitForCannSoc(socVersion)` /
-`getSupportTilingDirForCannSoc(socVersion)`.
-
-| CANN SOC slug (packaging / `--soc=`) | Spawn `SUPPORT_COMPUTE_UNIT` | Spawn `SUPPORT_TILING_DIR` | Notes |
-|--------------------------------------|------------------------------|----------------------------|-------|
-| `ascend910_93`, `ascend910b`, `ascend910`, empty fallback | `ascend910_95` | `arch22` | A2/A3 class |
+| CANN SOC slug (at generation) | `SUPPORT_COMPUTE_UNIT` | `SUPPORT_TILING_DIR` | Notes |
+|-------------------------------|------------------------|----------------------|-------|
+| `ascend910b`, `ascend910_93`, `ascend910`, empty fallback | `ascend910_95` | `arch22` | A2/A3 class |
 | `ascend950` (Atlas A5) | `ascend950` | `arch35` | A5 class; verify against your CANN ACLNN sample |
 
 ## 7. Logging
