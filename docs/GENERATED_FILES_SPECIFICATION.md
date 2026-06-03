@@ -374,7 +374,6 @@ mssanitizer_<timestamp>.log
       "script": "string",
       "target_dir": "string|null",
       "target_file": "string|null",
-      "custom_options": "string|null",
       "user_options": "object|null",
       "project_id": "number",
       "op": "string|null",
@@ -387,6 +386,7 @@ mssanitizer_<timestamp>.log
 }
 ```
 
+- **Legacy field**: older `configs.json` rows may still contain `custom_options` on disk; the plugin no longer reads, writes, or maps this column (removed from `ConfigRecord` and CANN command building).
 - **`user_options` schema**: depends on `config_type`:
   - `build_op`: includes `op`, `script`, `config_name`, `target_dir`, `target_file`, debug script fields.
   - `build_example`: includes `op`, `script`, `config_name`, `target_dir`, `target_file`, `execution_mode`.

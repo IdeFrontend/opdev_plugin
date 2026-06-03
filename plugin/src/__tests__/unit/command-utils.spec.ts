@@ -1,3 +1,8 @@
+jest.mock('@plugin/domain/utils/ascend-util', () => ({
+  resolveEffectiveCannSoc: jest.fn(() => 'ascend950'),
+}));
+
+import { resolveEffectiveCannSoc } from '@plugin/domain/utils/ascend-util';
 import {
   getExecutableCommand,
   isRunPackageDeployTarget,
@@ -58,6 +63,15 @@ describe('getExecutableCommand', () => {
       deployForce: false,
     });
 
+    expect(cmd).not.toContain('--force');
+  });
+
+  it('does not append --force for deploy on non-A5 SOC', () => {
+    (resolveEffectiveCannSoc as jest.Mock).mockReturnValueOnce('ascend910b');
+
+    const cmd = getExecutableCommand('build_out/*.run', { execute: true, mode: 'deploy' });
+
+    expect(cmd).toContain('"$RUN_FILE"');
     expect(cmd).not.toContain('--force');
   });
 });

@@ -19,19 +19,12 @@ import {
   getUtTestCommand,
   getStandardCustomDeployCommand,
   getConfig,
-  postConfig,
-  objectToCommandString,
   getProjectById,
 } from '@plugin/domain';
-import { getOpRunPath } from '@plugin/domain/utils/op-util';
 import { joinIdeConfigPath, joinIdeConfigRelative } from '@plugin/helpers/ide-config-dir';
-import { getOpByProjectIdAndOpName } from '@plugin/domain/models/model';
-import { joinCommands } from '@plugin/domain/utils/command-utils';
 import { getConfigById } from '@plugin/domain/services/configuration';
 import { OperatorProjectType } from '@plugin/domain/services/operator-project-detector';
-import {
-  markOperatorsAsCompiled, getProjectByPath,
-} from '@plugin/domain/models/project-model';
+import { markOperatorsAsCompiled } from '@plugin/domain/models/project-model';
 import { homeMethods } from '../controller/home-controller';
 import { resolveAscendEnv } from '@plugin/domain/utils/ascend-util';
 import {
@@ -40,7 +33,7 @@ import {
   resolveOpTypeForSpawn,
 } from '@plugin/service/operator-command-executor';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
-import { mergeBuildConfigsWithOperatorProjectWorkspace } from '@plugin/helpers/operator-project-workspace-config';
+import { ConfigService } from '@plugin/service/config-service';
 import { requestSidebarContextsRefresh } from '@plugin/helpers/sidebar-context-refresh';
 
 const CONFIG_TYPES = {
@@ -238,7 +231,7 @@ export class BuildService {
       })),
     ] as BuildConfig[];
 
-    return mergeBuildConfigsWithOperatorProjectWorkspace(configs);
+    return ConfigService.applyWorkspaceSettingsToConfigs(configs);
   }
 
   /**
@@ -400,9 +393,6 @@ export class BuildService {
       );
 
       console.log('[startBuild] Generated build command:', buildCommand);
-      const executor = ProjectManager.getInstance()
-        .getExecutor();
-
       console.log('[startBuild] Start executing build command...');
       const res = await executeOperatorCommand(
         buildCommand,
@@ -482,22 +472,8 @@ export class BuildService {
         const projectIdStr = ProjectManager.getInstance().projectId;
 
         if (projectIdStr) {
-          const projectId = Number(projectIdStr);
-          const configs = await getConfig(projectId, 'build_op');
-          const buildOpConfig = configs.find((c: any) => c.config_id === buildConfigId);
-
-          if (buildOpConfig) {
-            await postConfig('build_op', [
-              {
-                config_id: buildConfigId,
-                config_type: 'build_op',
-                user_options: {
-                  ...buildOpConfig.user_options,
-                  target_file: `python3 ${relativePath}`,
-                },
-              },
-            ]);
-          }
+          const deployTarget = `python3 ${relativePath}`;
+          await ConfigService.writeBuildOpDeployTarget(deployTarget);
         }
       }
     }
@@ -645,21 +621,8 @@ export class BuildService {
       const buildConfigId = await this.getBuildConfigId();
 
       if (buildConfigId && projectId) {
-        const configs = await getConfig(Number(projectId), 'build_op');
-        const buildOpConfig = configs.find((c: any) => c.config_id === buildConfigId);
-
-        if (buildOpConfig) {
-          await postConfig('build_op', [
-            {
-              config_id: buildConfigId,
-              config_type: 'build_op',
-              user_options: {
-                ...buildOpConfig.user_options,
-                target_file: `python3 ${relativePath}`,
-              },
-            },
-          ]);
-        }
+        const deployTarget = `python3 ${relativePath}`;
+        await ConfigService.writeBuildOpDeployTarget(deployTarget);
       }
     }
 
@@ -797,21 +760,8 @@ export class BuildService {
       const buildConfigId = await this.getBuildConfigId();
 
       if (buildConfigId && projectId) {
-        const configs = await getConfig(Number(projectId), 'build_op');
-        const buildOpConfig = configs.find((c: any) => c.config_id === buildConfigId);
-
-        if (buildOpConfig) {
-          await postConfig('build_op', [
-            {
-              config_id: buildConfigId,
-              config_type: 'build_op',
-              user_options: {
-                ...buildOpConfig.user_options,
-                target_file: `python3 ${relativePath}`,
-              },
-            },
-          ]);
-        }
+        const deployTarget = `python3 ${relativePath}`;
+        await ConfigService.writeBuildOpDeployTarget(deployTarget);
       }
     }
 
@@ -931,7 +881,6 @@ export class BuildService {
 
     const currentDir = workspaceFolders[0].uri.fsPath;
     const tempDataPath = joinIdeConfigPath(currentDir, 'dump_tensor_temp_data');
-    const dumpTensorPath = joinIdeConfigPath(currentDir, 'DumpTensor');
 
     // Remove temp data folder from previous runs.
     console.log('[startDumpTensor] Removing temp data directory:', tempDataPath);
@@ -956,10 +905,6 @@ export class BuildService {
     );
 
     console.log('[startDumpTensor] Generated build command:', buildCommand);
-
-    const executor = ProjectManager.getInstance()
-      .getExecutor();
-
     console.log('[startDumpTensor] Start executing build command...');
 
     const res = await executeOperatorCommand(
@@ -993,10 +938,8 @@ export class BuildService {
         params.compileOption,
         params.operatorNames,
       );
-      const exampleBuildExecutor = ProjectManager.getInstance()
-        .getExecutor();
       const exampleCmd =
-        `export ASCEND_GLOBAL_LOG_LEVEL=1 && export ASCEND_DUMP_PATH=../.vscode/dump_tensor_temp_data && ${exampleBuildCommand}`;
+        `export ASCEND_GLOBAL_LOG_LEVEL=1 && export ASCEND_DUMP_PATH=../${joinIdeConfigRelative('dump_tensor_temp_data')} && ${exampleBuildCommand}`;
       const exampleBuildRes = await executeOperatorCommand(
         exampleCmd,
         buildOperatorSpawnContext({
@@ -1097,8 +1040,6 @@ export class BuildService {
         params.compileOption,
       );
 
-      const executor = ProjectManager.getInstance()
-        .getExecutor();
       const res = await executeOperatorCommand(
         buildCommand,
         buildOperatorSpawnContext({

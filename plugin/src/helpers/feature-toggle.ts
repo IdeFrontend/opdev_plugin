@@ -1,6 +1,5 @@
-import * as vscode from 'vscode';
+import { ConfigHelper } from '@plugin/helpers/ConfigHelper';
 
-const CONFIG_SECTION = 'op-devtools';
 const OPERATOR_SUPPORT_KEYS: Record<string, string> = {
   triton: 'operatorSupport.triton',
 };
@@ -14,12 +13,5 @@ export function isOperatorSupportEnabled(operatorType: string): boolean {
     return true;
   }
 
-  const cfg = vscode.workspace.getConfiguration(CONFIG_SECTION);
-  const nextValue = cfg.get<boolean>(key);
-
-  if (typeof nextValue === 'boolean') {
-    return nextValue;
-  }
-
-  return true;
+  return ConfigHelper.get<boolean>(key, true);
 }

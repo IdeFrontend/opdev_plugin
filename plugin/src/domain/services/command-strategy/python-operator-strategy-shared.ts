@@ -11,6 +11,7 @@ import { resolveAscendEnv } from '@plugin/domain/utils/ascend-util';
 import {
   BaseContext, CommandContext,
 } from './types';
+import { ConfigService } from '@plugin/service/config-service';
 
 /**
  * Shared by PyAsc and Triton: Ascend env sourcing, operator run path, identical cd for build/run.
@@ -219,6 +220,6 @@ export function buildPythonOnBoardCommand(
   return joinCommands(sourceCannCmd, cdCmd, onBoardCmd);
 }
 
-export function getPythonRunTargetFile(config: ConfigRecord): string {
-  return config.target_file || '';
+export function getPythonRunTargetFile(_config: ConfigRecord): string {
+  return ConfigService.readBuildOpDeployTargetFromWorkspace() || '';
 }

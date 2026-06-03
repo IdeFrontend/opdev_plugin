@@ -406,7 +406,7 @@ export function getOperatorSpawnEnv(ctx: OperatorSpawnEnvContext) {
 
 The same `resolveAscendEnv` powers `replaceOperatorScriptPlaceholders`,
 `buildSimulateExampleCompileOption`, `SimulatorStrategy` and the profiler,
-`config-service`, and `extension.ts::syncOperatorProjectWorkspaceSettings`.
+`config-service`, `operator-project-workspace-config.ts` (`environment.socVersion`, `performanceTuning.simulation.simulatorType` only), and post-migrate hooks in `extension.ts`.
 Every consumer now agrees on the resolution, by construction.
 
 The set of public helpers shrinks significantly:

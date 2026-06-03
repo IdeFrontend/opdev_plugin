@@ -98,7 +98,8 @@ flowchart TB
 3. **Regeneration logic** (reuse existing primitives):
    - Call `completeProjectConfigs(projectId)` for all operators in workspace.
    - Re-run `generateStructure`-equivalent for missing config types only (do not wipe user edits unless opted in).
-   - Sync workspace settings from current SOC via existing `syncOperatorProjectWorkspaceSettings()` / `config-service.ts` A5 sync.
+   - Re-run `maybeMigrateLegacySettingsToWorkspace()` if migration flag was reset, 
+   - Env script / SOC in `projects.json` update when the user changes `op-devtools.environment.*` (not during one-time migrate).
 4. **Optional SOC refresh** — re-resolve `resolveAscendEnv()` and update simulate/on_board metric defaults when chip class changed.
 
 ### Phase 2 — Migration checker (if added)

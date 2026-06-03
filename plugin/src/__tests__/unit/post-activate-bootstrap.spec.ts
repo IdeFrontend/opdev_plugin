@@ -20,9 +20,16 @@ jest.mock('@plugin/helpers/sidebar-context-refresh', () => ({
   requestSidebarContextsRefresh: jest.fn().mockResolvedValue(undefined),
 }));
 
+jest.mock('@plugin/service/config-service', () => ({
+  configService: {
+    checkDevtoolConfig: jest.fn().mockResolvedValue(false),
+  },
+}));
+
 import * as vscode from 'vscode';
 import { welcomeMethods } from '@plugin/controller/welcome-controller';
 import { requestSidebarContextsRefresh } from '@plugin/helpers/sidebar-context-refresh';
+import { configService } from '@plugin/service/config-service';
 import {
   startPostActivateBootstrap,
   whenPostActivateBootstrapReady,
@@ -47,11 +54,11 @@ describe('post-activate-bootstrap', () => {
   });
 
   it('runs bootstrap once and awaits install without workspace', async () => {
+    (configService.checkDevtoolConfig as jest.Mock).mockResolvedValue(false);
     startPostActivateBootstrap({
       context: {} as never,
       operateTreeProvider,
       logDebug: jest.fn(),
-      checkDevtoolConfigExists: jest.fn().mockResolvedValue(false),
     });
 
     await whenPostActivateBootstrapReady();
@@ -65,11 +72,11 @@ describe('post-activate-bootstrap', () => {
       { uri: { fsPath: '/proj' } },
     ];
 
+    (configService.checkDevtoolConfig as jest.Mock).mockResolvedValue(true);
     const deps = {
       context: {} as never,
       operateTreeProvider,
       logDebug: jest.fn(),
-      checkDevtoolConfigExists: jest.fn().mockResolvedValue(true),
     };
 
     startPostActivateBootstrap(deps);

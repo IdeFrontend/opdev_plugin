@@ -150,6 +150,7 @@ export class TritonCommandStrategy extends BasePythonCommandStrategy implements 
     return script;
   }
 
+  // FIXME: Profiler/sanitizer target still comes from legacy configs.json (this row's target_file column), not workspace settings.
   getProfilerTargetFile(config: ConfigRecord, _operator: OpRecord | null, _exampleConfigId: number): string {
     return config.target_file || '';
   }

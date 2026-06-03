@@ -1,223 +1,23 @@
 import { t } from 'i18next';
 import * as vscode from 'vscode';
-import * as fs from 'fs';
 import * as path from 'path';
 import { ProjectManager } from '@plugin/core/project/project-manager';
-import { projectService } from '@plugin/service/project-service';
 import { ExplorerRootUtils } from '@plugin/class/explorer-root-utils';
 import { RemoteConfig } from '@plugin/helpers/remote-config';
 import {
-  getAllProjects, getProjectByPath, getProjectById, createProject,
+  getProjectByPath, getProjectById, createProject,
 } from '@plugin/domain/models/project-model';
 import {
   OperatorProjectType, OperatorProjectDetector,
 } from '@plugin/domain/services/operator-project-detector';
 import { getWorkspaceFolder } from '@plugin/domain/models/config';
 import {
-  GetProjectIdResult,
   GetHomeResult,
-  InitOpsParams,
   GetWorkspaceResult,
   GetLastProjectPathResult,
 } from '@shared/api-types';
 
-import { checkBuildShHasBishengConfig } from '@plugin/domain/utils/build-utils';
-import { getDevtoolConfigPath, getIdeConfigDirName } from '@plugin/helpers/ide-config-dir';
-
-// First define the checkMultipleOperators function for use in getSelectedOperators
-async function checkMultipleOperatorsInternal(): Promise<{
-  hasMultiple: boolean;
-  operators?: Array<{ id: number;
-    name: string;
-    path: string;
-    isExperimental: boolean;
-    isCompiled?: boolean }>;
-  isStandardCustom?: boolean;
-}> {
-  const workspaceFolders = vscode.workspace.workspaceFolders;
-
-  if (!workspaceFolders || workspaceFolders.length === 0) {
-    return { hasMultiple: false };
-  }
-
-  const workspacePath = workspaceFolders[0].uri.fsPath;
-
-  try {
-    // First check whether the root directory is recognized as a standard custom operator (via the detector)
-    const rootDetection = await OperatorProjectDetector.detectOperatorProject(workspacePath);
-    const isRootStandardCustom = rootDetection.isOperatorProject
-      && rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM;
-
-    // Get all registered operator projects
-    const allProjects = getAllProjects();
-
-    // Filter out standard custom operators (exclude collection types) and ensure that the operator is within the workspace
-    const standardCustomOperators = allProjects.filter((p) => p.project_type === OperatorProjectType.STANDARD_CUSTOM
-      && p.project_path
-    // Make sure the operator is within the workspace
-      && path.normalize(p.project_path)
-        .toLowerCase()
-        .startsWith(path.normalize(workspacePath)
-          .toLowerCase()));
-
-    // If the root directory is a standard custom operator, read the operator list from the project's ops_list and experimental_ops_list
-    if (isRootStandardCustom) {
-      // Find the project record corresponding to the root directory
-      const rootProject = getProjectByPath(workspacePath);
-
-      if (rootProject) {
-        // Read operators from ops_list and experimental_ops_list
-        const opsList = rootProject.ops_list || [];
-        const experimentalOpsList = rootProject.experimental_ops_list || [];
-
-        // Combine all operators and convert them to the format required by the front end
-        // Use the project ID as the base ID to generate a unique ID for each operator
-        const operators: Array<{ id: number;
-          name: string;
-          path: string;
-          isExperimental: boolean;
-          isCompiled?: boolean }> = [];
-
-        // Add ordinary operators
-        opsList.forEach((op, index) => {
-          operators.push({
-            id: rootProject.id * 10000 + index, // Generate unique ID
-            name: op.name,
-            path: op.path,
-            isExperimental: false,
-            isCompiled: op.isCompiled || false,
-          });
-        });
-
-        // Add experimental operator
-        experimentalOpsList.forEach((op, index) => {
-          operators.push({
-            id: rootProject.id * 10000 + 1000 + index, // Generate unique ID
-            name: op.name,
-            path: op.path,
-            isExperimental: true,
-            isCompiled: op.isCompiled || false,
-          });
-        });
-
-        const hasMultiple = operators.length > 1;
-
-        console.log(
-          '[checkMultipleOperators] Standard custom operator, read from ops_list:',
-          `Regular operators: ${opsList.length}, experimental operators: ${experimentalOpsList.length}`,
-          t('home.operatorList'),
-          operators.map((op) => `${op.name} (${op.isExperimental ? 'ex' : 'normal'}, compiled: ${op.isCompiled})`),
-        );
-
-        return {
-          hasMultiple,
-          operators,
-          isStandardCustom: true,
-        };
-      }
-      else {
-        console.warn('[checkMultipleOperators] Root directory is a standard custom operator, but no project record was found');
-      }
-    }
-
-    // If there is a standard custom operator project in the workspace (but not the root directory), use the original logic
-    if (standardCustomOperators.length > 0) {
-      // Convert to the format required by the front end
-      const operators = standardCustomOperators.map((p) => ({
-        id: p.id,
-        name: path.basename(p.project_path || ''),
-        path: p.project_path || '',
-        isExperimental: p.is_experimental || false,
-      }));
-
-      const hasMultiple = operators.length > 1;
-
-      console.log(
-        '[checkMultipleOperators] Standard custom operator, found operator project count:',
-        operators.length,
-        t('home.operatorList'),
-        operators.map((op) => `${op.name} (${op.isExperimental ? 'ex' : 'normal'})`),
-      );
-
-      return {
-        hasMultiple,
-        operators,
-        isStandardCustom: true,
-      };
-    }
-
-    // Non-standard custom operators, using original logic
-    const operatorProjects: string[] = [];
-
-    // Recursively find all directories containing devtool_config.json under the IDE config dir
-    const findOperatorProjects = (dir: string): void => {
-      try {
-        const entries = fs.readdirSync(dir, { withFileTypes: true });
-        const ideConfigDirName = getIdeConfigDirName();
-
-        for (const entry of entries) {
-          // Skip common directories such as node_modules and .git
-          if (entry.name.startsWith('.') && entry.name !== ideConfigDirName) {
-            continue;
-          }
-
-          if (entry.name === 'node_modules' || entry.name === '.git') {
-            continue;
-          }
-
-          const fullPath = path.join(dir, entry.name);
-
-          if (entry.isDirectory()) {
-            const devtoolConfigPath = getDevtoolConfigPath(fullPath);
-
-            if (fs.existsSync(devtoolConfigPath)) {
-              operatorProjects.push(fullPath);
-            }
-            else {
-              // Continue recursively searching subdirectories
-              findOperatorProjects(fullPath);
-            }
-          }
-        }
-      }
-      catch (error) {
-        // Ignore inaccessible directories
-        console.warn(`[checkMultipleOperators] Unable to access directory: ${dir}`, error);
-      }
-    };
-
-    findOperatorProjects(workspacePath);
-
-    const operators = operatorProjects.map((projectPath, index) => ({
-      id: 900000 + index,
-      name: path.basename(projectPath),
-      path: projectPath,
-      isExperimental: false,
-      isCompiled: false,
-    }));
-    const hasMultiple = operators.length > 1;
-
-    console.log(
-      '[checkMultipleOperators] Found operator project count:',
-      operatorProjects.length,
-      t('home.path'),
-      operatorProjects,
-    );
-
-    return {
-      hasMultiple,
-      isStandardCustom: false,
-    };
-  }
-  catch (error) {
-    console.error('[checkMultipleOperators] Failed to check operator projects:', error);
-
-    return {
-      hasMultiple: false,
-      isStandardCustom: false,
-    };
-  }
-}
+import { checkMultipleOperatorsCore } from '@plugin/helpers/check-multiple-operators';
 
 /** Only parses the current workspace project type for use by validatePyascForAnalysis etc. */
 async function getProjectTypeValue(): Promise<string | null> {
@@ -240,17 +40,6 @@ async function getProjectTypeValue(): Promise<string | null> {
 }
 
 export const homeMethods = {
-  /**
-   * Get project ID
-   * @returns project ID
-   */
-  async getProjectId(): Promise<GetProjectIdResult> {
-    await ProjectManager.getInstance()
-      .initProject();
-
-    return ProjectManager.getInstance().projectId;
-  },
-
   /**
    * Get the current project type
    * Only the actual operator type is returned, excluding "operator engineering collection"
@@ -388,15 +177,6 @@ export const homeMethods = {
   },
 
   /**
-   * Initialization project
-   * @param params - initialization parameters
-   * @returns initialization results
-   */
-  async initOps(params: InitOpsParams): Promise<GetHomeResult> {
-    return await projectService.init(params);
-  },
-
-  /**
    * Get HOME directory
    * @returns HOME directory
    */
@@ -405,15 +185,6 @@ export const homeMethods = {
     const workspaceFolder = getWorkspaceFolder();
 
     return workspaceFolder || process.env.HOME || process.env.USERPROFILE || '';
-  },
-
-  /**
-   * UpdateProject
-   */
-  async updateProject(): Promise<void> {
-    // Refresh project information
-    await ProjectManager.getInstance()
-      .initProject();
   },
 
   /**
@@ -437,188 +208,9 @@ export const homeMethods = {
       return { hasMultiple: false };
     }
 
-    const workspacePath = workspaceFolders[0].uri.fsPath;
-
-    try {
-      // First check whether the root directory is recognized as a standard custom operator (via the detector)
-      const rootDetection = await OperatorProjectDetector.detectOperatorProject(workspacePath);
-      const isRootStandardCustom = rootDetection.isOperatorProject
-        && rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM;
-
-      // Get all registered operator projects
-      const allProjects = getAllProjects();
-
-      // Filter out standard custom operators (exclude collection types) and ensure that the operator is within the workspace
-      const standardCustomOperators = allProjects.filter((p) => p.project_type === OperatorProjectType.STANDARD_CUSTOM
-        && p.project_path
-      // Make sure the operator is within the workspace
-        && path.normalize(p.project_path)
-          .toLowerCase()
-          .startsWith(path.normalize(workspacePath)
-            .toLowerCase()));
-
-      // If the root directory is a standard custom operator, read the operator list from the project's ops_list and experimental_ops_list
-      if (isRootStandardCustom) {
-        // Find the project record corresponding to the root directory
-        const rootProject = getProjectByPath(workspacePath);
-
-        if (rootProject) {
-          // Read operators from ops_list and experimental_ops_list
-          const opsList = rootProject.ops_list || [];
-          const experimentalOpsList = rootProject.experimental_ops_list || [];
-
-          // Combine all operators and convert them to the format required by the front end
-          // Use the project ID as the base ID to generate a unique ID for each operator
-          const operators: Array<{ id: number;
-            name: string;
-            path: string;
-            isExperimental: boolean;
-            isCompiled?: boolean }> = [];
-
-          // Add ordinary operators
-          opsList.forEach((op, index) => {
-            operators.push({
-              id: rootProject.id * 10000 + index, // Generate unique ID
-              name: op.name,
-              path: op.path,
-              isExperimental: false,
-              isCompiled: op.isCompiled || false,
-            });
-          });
-
-          // Add experimental operator
-          experimentalOpsList.forEach((op, index) => {
-            operators.push({
-              id: rootProject.id * 10000 + 1000 + index, // Generate unique ID
-              name: op.name,
-              path: op.path,
-              isExperimental: true,
-              isCompiled: op.isCompiled || false,
-            });
-          });
-
-          const hasMultiple = operators.length > 1;
-
-          const supportsSanitizerAndTuning = checkBuildShHasBishengConfig(workspacePath);
-
-          console.log(
-            '[checkMultipleOperators] Standard custom operator, read from ops_list:',
-            `Regular operators: ${opsList.length}, experimental operators: ${experimentalOpsList.length}`,
-            t('home.operatorList'),
-            operators.map((op) => `${op.name} (${op.isExperimental ? 'ex' : 'normal'}, compiled: ${op.isCompiled})`),
-            t('home.supportsSanitizerAndTuning'),
-            supportsSanitizerAndTuning,
-          );
-
-          return {
-            hasMultiple,
-            operators,
-            isStandardCustom: true,
-            supportsSanitizerAndTuning,
-          };
-        }
-        else {
-          console.warn('[checkMultipleOperators] Root directory is a standard custom operator, but no project record was found');
-        }
-      }
-
-      // If there is a standard custom operator project in the workspace (but not the root directory), use the original logic
-      if (standardCustomOperators.length > 0) {
-        // Convert to the format required by the front end
-        const operators = standardCustomOperators.map((p) => ({
-          id: p.id,
-          name: path.basename(p.project_path || ''),
-          path: p.project_path || '',
-          isExperimental: p.is_experimental || false,
-        }));
-
-        const hasMultiple = operators.length > 1;
-
-        console.log(
-          '[checkMultipleOperators] Standard custom operator, found operator project count:',
-          operators.length,
-          t('home.operatorList'),
-          operators.map((op) => `${op.name} (${op.isExperimental ? 'ex' : 'normal'})`),
-        );
-
-        return {
-          hasMultiple,
-          operators,
-          isStandardCustom: true,
-        };
-      }
-
-      // Non-standard custom operators, using original logic
-      const operatorProjects: string[] = [];
-
-      // Recursively find all directories containing devtool_config.json under the IDE config dir
-      const findOperatorProjects = (dir: string): void => {
-        try {
-          const entries = fs.readdirSync(dir, { withFileTypes: true });
-          const ideConfigDirName = getIdeConfigDirName();
-
-          for (const entry of entries) {
-            // Skip common directories such as node_modules and .git
-            if (entry.name.startsWith('.') && entry.name !== ideConfigDirName) {
-              continue;
-            }
-
-            if (entry.name === 'node_modules' || entry.name === '.git') {
-              continue;
-            }
-
-            const fullPath = path.join(dir, entry.name);
-
-            if (entry.isDirectory()) {
-              const devtoolConfigPath = getDevtoolConfigPath(fullPath);
-
-              if (fs.existsSync(devtoolConfigPath)) {
-                operatorProjects.push(fullPath);
-              }
-              else {
-                // Continue recursively searching subdirectories
-                findOperatorProjects(fullPath);
-              }
-            }
-          }
-        }
-        catch (error) {
-          // Ignore inaccessible directories
-          console.warn(`[checkMultipleOperators] Unable to access directory: ${dir}`, error);
-        }
-      };
-
-      findOperatorProjects(workspacePath);
-
-      const operators = operatorProjects.map((projectPath, index) => ({
-        id: 900000 + index,
-        name: path.basename(projectPath),
-        path: projectPath,
-        isExperimental: false,
-        isCompiled: false,
-      }));
-      const hasMultiple = operators.length > 1;
-
-      console.log(
-        '[checkMultipleOperators] Found operator project count:',
-        operatorProjects.length,
-        t('home.path'),
-        operatorProjects,
-      );
-
-      return {
-        hasMultiple,
-        isStandardCustom: false,
-      };
-    }
-    catch (error) {
-      console.error('[checkMultipleOperators] Failed to check operator projects:', error);
-
-      return {
-        hasMultiple: false,
-        isStandardCustom: false,
-      };
-    }
+    return checkMultipleOperatorsCore(workspaceFolders[0].uri.fsPath, {
+      includeSupportsSanitizerAndTuning: true,
+    });
   },
 
   /**
@@ -747,7 +339,7 @@ export const homeMethods = {
     }
 
     // Get all operator information
-    const result = await checkMultipleOperatorsInternal();
+    const result = await checkMultipleOperatorsCore(workspacePath);
 
     if (!result.isStandardCustom || !result.operators) {
       return undefined;

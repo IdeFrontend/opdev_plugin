@@ -167,8 +167,6 @@ export default {
   'sanitizer.detectionFailedError': 'Sanitizer detection failed: {{error}}',
 
   // config
-  'config.saveBuildConfigSuccess': 'Build config saved successfully',
-  'config.saveBuildConfigFailed': 'Failed to save build config',
   'config.saveConfigSuccess': 'Config saved successfully',
   'config.saveSanitizerConfigSuccess': 'Sanitizer config saved successfully',
   'config.saveSanitizerConfigFailed': 'Failed to save sanitizer config',
@@ -235,17 +233,6 @@ export default {
   // file
   'file.saveTo': 'Save to',
   'file.saveFailedSourceNotExist': 'Save failed: source file does not exist',
-
-  // task (task names)
-  'task.taskName.build': 'Compile & deploy',
-  'task.taskName.runExample': 'Run',
-  'task.taskName.sanitizer': 'Sanitizer',
-  'task.taskName.onboard': 'On-board analysis',
-  'task.taskName.simulation': 'Simulation analysis',
-  'task.taskName.dumpTensor': 'DumpTensor',
-  'task.taskName.buildAndCpuDebug': 'CPU debug',
-  'task.taskName.buildAndDebug': 'NPU debug',
-  'task.taskName.utTest': 'UT test',
 
   // home
   'home.operatorList': 'Operator list:',

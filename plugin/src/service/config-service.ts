@@ -5,7 +5,6 @@ import * as path from 'path';
 
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import {
-  SaveBuildConfigParams,
   SaveConfigParams,
   SaveSanitizerFormParams,
   BuildConfig,
@@ -13,15 +12,25 @@ import {
   RemotePathSearchResult,
 } from '@shared/api-types';
 import {
-  postConfig, getConfig, getFiles,
-} from '@plugin/domain';
+  getConfig, getConfigById,
+} from '@plugin/domain/services/configuration';
+import { getFiles } from '@plugin/domain/services/system';
 import {
   getFirstWorkspaceFolderPath,
-  mergeSanitizerConfigsWithOperatorProjectWorkspace,
+  getOpDevtoolsWorkspaceConfiguration,
+  mapKeyValueObjectToAdvanceParams,
+  mapSanitizerScopeToUseBlock,
 } from '@plugin/helpers/operator-project-workspace-config';
+import { isAscendA5ProfilerCannSoc } from '@shared/msprof-onboard-env';
+import { resolveEffectiveCannSoc } from '@plugin/domain/utils/ascend-util';
+import { AsyncSingleFlight } from '@plugin/helpers/async-single-flight';
+import {
+  ON_BOARD_METRIC_LEGACY_TO_DOTTED,
+  SIMULATE_METRIC_LEGACY_TO_DOTTED,
+  collectDottedEntriesFromLegacyPairs,
+  readLegacyFieldsFromDottedPairs,
+} from '@plugin/helpers/workspace-user-options-dotted-map';
 import { getDevtoolConfigPath, getIdeSettingsFilePath } from '@plugin/helpers/ide-config-dir';
-import { homeMethods } from '@plugin/controller/home-controller';
-import { buildService } from '@plugin/service/build-service';
 import { projectService } from '@plugin/service/project-service';
 
 const CONFIG_TYPES = {
@@ -31,6 +40,19 @@ const CONFIG_TYPES = {
 } as const;
 
 const OP_DEVTOOLS_PREFIX = 'op-devtools.';
+
+/** Relative key under `op-devtools`; written as `op-devtools.internal.settingsMigratedFromLegacy`. */
+export const SETTINGS_MIGRATED_FROM_LEGACY_KEY = 'internal.settingsMigratedFromLegacy';
+
+const DB_ONLY_USER_OPTION_KEYS = new Set([
+  'fileMapList',
+  'config_name',
+  'target_dir',
+  'downloadToLocal',
+  'renderInPlatform',
+  'dataStoragePath',
+  'enableDump',
+]);
 
 /** Relative dotted keys under `op-devtools` (e.g. `sanitizer.memory`). */
 export type OpDevtoolsDottedWrites = Record<string, unknown>;
@@ -113,6 +135,149 @@ function assignIfDefined(
   }
 }
 
+function assignNonEmptyStringIfDefined(
+  updates: OpDevtoolsDottedWrites,
+  key: string,
+  value: unknown,
+): void {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed) {
+      updates[key] = trimmed;
+    }
+  }
+}
+
+function setIfDefined(
+  opts: Record<string, unknown>,
+  key: string,
+  value: unknown,
+): void {
+  if (value !== undefined) {
+    opts[key] = value;
+  }
+}
+
+/** Non-empty string from workspace settings only (empty/whitespace → undefined). */
+function readNonEmptyOpDevtoolsSetting(relativeKey: string): string | undefined {
+  const value = ConfigService.readOpDevtoolsSetting<string>(relativeKey);
+
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+
+  return trimmed ? trimmed : undefined;
+}
+
+function normalizeExecutionMode(value: unknown): 'eager' | 'graph' | undefined {
+  if (value === 'eager' || value === 'graph') {
+    return value;
+  }
+  if (typeof value === 'string' && value.trim()) {
+    const normalized = value.trim();
+    if (normalized === 'eager' || normalized === 'graph') {
+      return normalized;
+    }
+  }
+  return undefined;
+}
+
+function extractDbOnlyUserOptionFields(
+  userOptions: Record<string, unknown> | undefined,
+): Record<string, unknown> {
+  if (!userOptions) {
+    return {};
+  }
+  const out: Record<string, unknown> = {};
+  for (const key of DB_ONLY_USER_OPTION_KEYS) {
+    if (userOptions[key] !== undefined) {
+      out[key] = userOptions[key];
+    }
+  }
+  return out;
+}
+
+function sanitizerUserOptionsToDottedWrites(opts: Record<string, unknown>): OpDevtoolsDottedWrites {
+  const tool = (opts.tool || {}) as Record<string, unknown>;
+  const mem = (opts.memcheckOption || {}) as Record<string, unknown>;
+  const updates: OpDevtoolsDottedWrites = {};
+
+  assignNonEmptyStringIfDefined(updates, 'compileAndDeploy.buildConfig.sanitizerCompileCommand', opts.script);
+  assignIfDefined(updates, 'sanitizer.reportLogLevel', opts.logLevel);
+  assignIfDefined(updates, 'sanitizer.maxSingleLogFileSize', opts.maxDebuglogSize);
+  assignIfDefined(updates, 'sanitizer.memory', tool.memcheck);
+  assignIfDefined(updates, 'sanitizer.race', tool.racecheck);
+  assignIfDefined(updates, 'sanitizer.uninitialized', tool.initcheck);
+  assignIfDefined(updates, 'sanitizer.memoryLeak', mem['leak-check']);
+  assignIfDefined(updates, 'sanitizer.allocUnused', mem['check-unused-memory']);
+  if (typeof opts.useBlock === 'boolean') {
+    updates['sanitizer.detectionScope'] = opts.useBlock ? 'singleBlock' : 'global';
+  }
+  assignIfDefined(updates, 'sanitizer.blockId', opts.blockId);
+
+  return updates;
+}
+
+function toKeyValueMapFromAdvanceParam(raw: unknown): Record<string, string> {
+  if (!Array.isArray(raw)) {
+    return {};
+  }
+
+  return raw.reduce((acc, item) => {
+    if (!item || typeof item !== 'object') {
+      return acc;
+    }
+
+    const row = item as Record<string, unknown>;
+    const name = row.name;
+
+    if (typeof name !== 'string' || name.trim().length === 0) {
+      return acc;
+    }
+
+    const value = row.value;
+
+    acc[name] = value === undefined || value === null ? '' : String(value);
+
+    return acc;
+  }, {} as Record<string, string>);
+}
+
+function onBoardUserOptionsToDottedWrites(opts: Record<string, unknown>): OpDevtoolsDottedWrites {
+  const updates: OpDevtoolsDottedWrites = {};
+
+  assignNonEmptyStringIfDefined(updates, 'compileAndDeploy.buildConfig.onBoardCompileCommand', opts.script);
+  for (const [dotted, value] of collectDottedEntriesFromLegacyPairs(ON_BOARD_METRIC_LEGACY_TO_DOTTED, opts)) {
+    assignIfDefined(updates, dotted, value);
+  }
+  assignIfDefined(updates, 'performanceTuning.onBoard.pcSampling', opts.PCSampling);
+  assignIfDefined(updates, 'performanceTuning.onBoard.cacheHeatmap', opts.MemoryDetail);
+  updates['performanceTuning.onBoard.parameters'] = toKeyValueMapFromAdvanceParam(
+    opts.advance_param,
+  );
+  if (typeof opts.operatorMetrics === 'boolean') {
+    updates['performanceTuning.onBoard.operatorMetrics'] = opts.operatorMetrics;
+  }
+
+  return updates;
+}
+
+function simulateUserOptionsToDottedWrites(opts: Record<string, unknown>): OpDevtoolsDottedWrites {
+  const updates: OpDevtoolsDottedWrites = {};
+
+  assignNonEmptyStringIfDefined(updates, 'compileAndDeploy.buildConfig.simulationCompileCommand', opts.script);
+  for (const [dotted, value] of collectDottedEntriesFromLegacyPairs(SIMULATE_METRIC_LEGACY_TO_DOTTED, opts)) {
+    assignIfDefined(updates, dotted, value);
+  }
+  updates['performanceTuning.simulation.parameters'] = toKeyValueMapFromAdvanceParam(
+    opts.advance_param,
+  );
+
+  return updates;
+}
+
 function buildDottedOnlySettingsFileContent(filePath: string): Record<string, unknown> {
   const raw = parseRawSettingsJson(filePath);
   const flat = readSettingsJsonFile(filePath);
@@ -129,6 +294,17 @@ function buildDottedOnlySettingsFileContent(filePath: string): Record<string, un
     }
   }
   return output;
+}
+
+const legacySettingsMigrationFlight = new AsyncSingleFlight<void>();
+
+export function isLegacySettingsMigrationInFlight(): boolean {
+  return legacySettingsMigrationFlight.pending !== undefined;
+}
+
+/** @internal */
+export function resetLegacySettingsMigrationFlightForTest(): void {
+  legacySettingsMigrationFlight.reset();
 }
 
 export class ConfigService {
@@ -187,7 +363,10 @@ export class ConfigService {
     }
   }
 
-  /** Drop seed entries for keys that appeared in settings.json after the initial fileKeys snapshot. */
+  /**
+   * Drop seed/migration entries for keys that appeared in settings.json after the initial snapshot,
+   * or are explicitly set in the VS Code configuration layer.
+   */
   private static filterPendingWritesByCurrentFile(
     pendingWrites: OpDevtoolsDottedWrites,
     cfg: vscode.WorkspaceConfiguration,
@@ -238,141 +417,371 @@ export class ConfigService {
     pendingWrites[relativeKey] = value;
   }
 
+  /** Queue every dotted key from a legacy→settings batch (same contract as single `queue` calls). */
+  private static queueLegacyDottedWritesBatch(
+    pendingWrites: OpDevtoolsDottedWrites,
+    fileKeys: Set<string>,
+    cfg: vscode.WorkspaceConfiguration,
+    batch: OpDevtoolsDottedWrites,
+  ): void {
+    for (const [relativeKey, value] of Object.entries(batch)) {
+      ConfigService.queueSettingIfMissingInFile(pendingWrites, fileKeys, cfg, relativeKey, value);
+    }
+  }
+
+  static isSettingsMigratedFromLegacy(): boolean {
+    return getOpDevtoolsWorkspaceConfiguration().get<boolean>(SETTINGS_MIGRATED_FROM_LEGACY_KEY) === true;
+  }
+
+  /** Persist build_op deploy/run target to workspace settings only. */
+  static async writeBuildOpDeployTarget(deployTarget: string): Promise<void> {
+    await ConfigService.writeOpDevtoolsDottedSettings({
+      'compileAndDeploy.buildConfig.deployCommandOrRunCommand': deployTarget,
+    });
+  }
+
+  /** Direct read of one `op-devtools` key via VS Code configuration API (backed by settings.json). */
+  static readOpDevtoolsSetting<T>(relativeKey: string): T | undefined {
+    return getOpDevtoolsWorkspaceConfiguration().get<T>(relativeKey);
+  }
+
   /**
-   * Seed workspace settings.json with devtool DB values for keys not yet present in the file.
-   * Called after project open so sanitizer / on-board / simulation keys exist in settings UI.
+   * Build `user_options` for runtime entirely from workspace settings (no legacy DB values).
+   * `dbOnlyFields` preserves non-settings metadata still stored only in configs.json (e.g. fileMapList).
    */
-  async syncOperatorProjectWorkspaceSettings(): Promise<void> {
-    try {
-      const buildConfigs = await buildService.getBuildConfigsList();
-      const multiResult = await homeMethods.checkMultipleOperators();
-      const buildOp = buildConfigs.find((c) => c.config_type === 'build_op');
-      const buildExample = buildConfigs.find((c) => c.config_type === 'build_example');
-      const simulate = buildConfigs.find((c) => c.config_type === 'simulate');
-      const onBoard = buildConfigs.find((c) => c.config_type === 'on_board');
-      const utTest = buildConfigs.find((c) => (c as { config_type?: string }).config_type === 'ut_test');
-      const sanitizer = (await this.getSanitizerConfigsList())[0];
-      const projectSH = await projectService.getProjectSH();
+  static buildUserOptionsFromWorkspaceSettings(
+    configType: string,
+    dbOnlyFields: Record<string, unknown> = {},
+  ): Record<string, unknown> {
+    const opts: Record<string, unknown> = { ...dbOnlyFields };
 
-      const buildOpOpts = (buildOp?.user_options || {}) as Record<string, unknown>;
-      const buildExampleOpts = (buildExample?.user_options || {}) as Record<string, unknown>;
-      const simulateOpts = (simulate?.user_options || {}) as Record<string, unknown>;
-      const onBoardOpts = (onBoard?.user_options || {}) as Record<string, unknown>;
-      const utTestOpts = (utTest?.user_options || {}) as Record<string, unknown>;
-      const sanitizerOpts = (sanitizer?.user_options || {}) as Record<string, unknown>;
-      const cfg = vscode.workspace.getConfiguration('op-devtools');
-      const fileKeys = ConfigService.getWorkspaceSettingsFileKeySet();
-      const pendingWrites: OpDevtoolsDottedWrites = {};
-      const queue = (key: string, value: unknown) => {
-        ConfigService.queueSettingIfMissingInFile(pendingWrites, fileKeys, cfg, key, value);
+    if (configType === 'build_op') {
+      setIfDefined(opts, 'op', ConfigService.readOpDevtoolsSetting<string>('compileAndDeploy.buildConfig.operatorNameToCompile'));
+      setIfDefined(opts, 'target_file', ConfigService.readOpDevtoolsSetting<string>('compileAndDeploy.buildConfig.deployCommandOrRunCommand'));
+      setIfDefined(opts, 'script', readNonEmptyOpDevtoolsSetting('compileAndDeploy.buildConfig.compileCommand'));
+      setIfDefined(opts, 'cpu_debug_script', readNonEmptyOpDevtoolsSetting('compileAndDeploy.buildConfig.cpuDebugCompileCommand'));
+      setIfDefined(opts, 'npu_debug_script', readNonEmptyOpDevtoolsSetting('compileAndDeploy.buildConfig.npuDebugCompileCommand'));
+      return opts;
+    }
+
+    if (configType === 'build_example') {
+      setIfDefined(opts, 'script', readNonEmptyOpDevtoolsSetting('compileAndDeploy.exampleBuildConfig.runCommand'));
+      setIfDefined(
+        opts,
+        'execution_mode',
+        normalizeExecutionMode(readNonEmptyOpDevtoolsSetting('compileAndDeploy.exampleBuildConfig.executionMode')),
+      );
+      return opts;
+    }
+
+    if (configType === 'simulate') {
+      setIfDefined(opts, 'script', readNonEmptyOpDevtoolsSetting('compileAndDeploy.buildConfig.simulationCompileCommand'));
+      setIfDefined(opts, 'simulatorType', ConfigService.readOpDevtoolsSetting<string>('performanceTuning.simulation.simulatorType'));
+      setIfDefined(opts, 'PMSampling', ConfigService.readOpDevtoolsSetting<boolean>('performanceTuning.simulation.memoryThroughputWaveform'));
+      setIfDefined(opts, 'ResourceConflictRatio', ConfigService.readOpDevtoolsSetting<boolean>('performanceTuning.simulation.resourceConflictRatio'));
+      const params = ConfigService.readOpDevtoolsSetting<unknown>('performanceTuning.simulation.parameters');
+      const advance = mapKeyValueObjectToAdvanceParams(params)
+        ?? (Array.isArray(params) ? params : undefined);
+      if (advance !== undefined) {
+        opts.advance_param = advance;
+      }
+      return opts;
+    }
+
+    if (configType === 'ut_test') {
+      setIfDefined(opts, 'script', readNonEmptyOpDevtoolsSetting('compileAndDeploy.buildConfig.utTestCompileCommand'));
+      return opts;
+    }
+
+    if (configType === 'on_board') {
+      setIfDefined(opts, 'script', readNonEmptyOpDevtoolsSetting('compileAndDeploy.buildConfig.onBoardCompileCommand'));
+      readLegacyFieldsFromDottedPairs(
+        ON_BOARD_METRIC_LEGACY_TO_DOTTED,
+        (key) => ConfigService.readOpDevtoolsSetting(key),
+        opts,
+        setIfDefined,
+      );
+
+      const isA5Profiler = isAscendA5ProfilerCannSoc(resolveEffectiveCannSoc());
+      const pcSampling = ConfigService.readOpDevtoolsSetting<boolean>('performanceTuning.onBoard.pcSampling');
+      if (pcSampling !== undefined && isA5Profiler) {
+        opts.PCSampling = pcSampling;
+      }
+      const cacheHeatmap = ConfigService.readOpDevtoolsSetting<boolean>('performanceTuning.onBoard.cacheHeatmap');
+      if (cacheHeatmap !== undefined && !isA5Profiler) {
+        opts.MemoryDetail = cacheHeatmap;
+      }
+
+      const onBoardParams = ConfigService.readOpDevtoolsSetting<unknown>('performanceTuning.onBoard.parameters');
+      const onBoardAdvance = mapKeyValueObjectToAdvanceParams(onBoardParams)
+        ?? (Array.isArray(onBoardParams) ? onBoardParams : undefined);
+      if (onBoardAdvance !== undefined) {
+        opts.advance_param = onBoardAdvance;
+      }
+      setIfDefined(
+        opts,
+        'operatorMetrics',
+        ConfigService.readOpDevtoolsSetting<boolean>('performanceTuning.onBoard.operatorMetrics'),
+      );
+      return opts;
+    }
+
+    if (configType === 'sanitizer') {
+      setIfDefined(opts, 'script', readNonEmptyOpDevtoolsSetting('compileAndDeploy.buildConfig.sanitizerCompileCommand'));
+      setIfDefined(opts, 'logLevel', ConfigService.readOpDevtoolsSetting<string>('sanitizer.reportLogLevel'));
+      setIfDefined(opts, 'maxDebuglogSize', ConfigService.readOpDevtoolsSetting<number>('sanitizer.maxSingleLogFileSize'));
+
+      const scope = ConfigService.readOpDevtoolsSetting<string>('sanitizer.detectionScope');
+      if (scope !== undefined) {
+        const useBlock = mapSanitizerScopeToUseBlock(scope);
+        if (useBlock !== undefined) {
+          opts.useBlock = useBlock;
+        }
+      }
+      setIfDefined(opts, 'blockId', ConfigService.readOpDevtoolsSetting<number>('sanitizer.blockId'));
+
+      const tool: Record<string, unknown> = {};
+      const memory = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.memory');
+      if (memory !== undefined) {
+        tool.memcheck = memory;
+      }
+      const race = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.race');
+      if (race !== undefined) {
+        tool.racecheck = race;
+      }
+      const uninitialized = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.uninitialized');
+      if (uninitialized !== undefined) {
+        tool.initcheck = uninitialized;
+      }
+      if (Object.keys(tool).length > 0) {
+        opts.tool = tool;
+      }
+
+      const memcheckOption: Record<string, unknown> = {};
+      const memoryLeak = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.memoryLeak');
+      if (memoryLeak !== undefined) {
+        memcheckOption['leak-check'] = memoryLeak;
+      }
+      const allocUnused = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.allocUnused');
+      if (allocUnused !== undefined) {
+        memcheckOption['check-unused-memory'] = allocUnused;
+      }
+      if (Object.keys(memcheckOption).length > 0) {
+        opts.memcheckOption = memcheckOption;
+      }
+      return opts;
+    }
+
+    return opts;
+  }
+
+  /**
+   * Attach workspace-sourced `user_options` to config rows (operate tree / commands run post-migration).
+   * Legacy DB supplies row identity and db-only fields (e.g. fileMapList) only.
+   */
+  static applyWorkspaceSettingsToConfigs(configs: BuildConfig[]): BuildConfig[] {
+    return configs.map((config) => {
+      const configType = (config.config_type
+        ?? (config as { config_type?: string }).config_type) as string;
+      const dbOnly = extractDbOnlyUserOptionFields(
+        config.user_options as Record<string, unknown> | undefined,
+      );
+      const user_options = ConfigService.buildUserOptionsFromWorkspaceSettings(configType, dbOnly);
+      const script = user_options.script as string | undefined;
+      const target_file = configType === 'build_op'
+        ? (user_options.target_file as string | undefined)
+          ?? ConfigService.readBuildOpDeployTargetFromWorkspace()
+        : undefined;
+
+      return {
+        ...config,
+        user_options,
+        script,
+        target_file: configType === 'build_op' ? target_file : undefined,
       };
+    });
+  }
 
-      queue('compileAndDeploy.buildConfig.operatorNameToCompile', buildOpOpts.op);
-      queue('compileAndDeploy.buildConfig.deployCommandOrRunCommand', buildOpOpts.target_file);
-      queue('compileAndDeploy.buildConfig.compileCommand', buildOpOpts.script);
-      queue('compileAndDeploy.buildConfig.cpuDebugCompileCommand', buildOpOpts.cpu_debug_script);
-      queue('compileAndDeploy.buildConfig.npuDebugCompileCommand', buildOpOpts.npu_debug_script);
-      queue('compileAndDeploy.buildConfig.sanitizerCompileCommand', sanitizerOpts.script);
-      queue('compileAndDeploy.buildConfig.onBoardCompileCommand', onBoardOpts.script);
-      queue('compileAndDeploy.buildConfig.simulationCompileCommand', simulateOpts.script);
-      queue('compileAndDeploy.buildConfig.utTestCompileCommand', utTestOpts.script);
+  /** Config row for command generation: DB identity + workspace settings only after migration. */
+  static getRuntimeConfigById(configId: number): BuildConfig | undefined {
+    const raw = getConfigById(configId) as Record<string, unknown> | undefined;
+    if (!raw) {
+      return undefined;
+    }
+    const config = {
+      ...raw,
+      user_options: raw.user_options
+        ? (raw.user_options as Record<string, unknown>)
+        : undefined,
+    } as BuildConfig;
 
-      if (multiResult.isStandardCustom && multiResult.hasMultiple) {
-        queue('compileAndDeploy.exampleBuildConfig.executionMode', buildExampleOpts.execution_mode);
-        queue('compileAndDeploy.exampleBuildConfig.runCommand', buildExampleOpts.script);
+    const [resolved] = ConfigService.applyWorkspaceSettingsToConfigs([config]);
+    return resolved;
+  }
+
+  /** build_op deploy/run target from workspace settings (post-migration path). */
+  static readBuildOpDeployTargetFromWorkspace(): string | undefined {
+    return ConfigService.readOpDevtoolsSetting<string>('compileAndDeploy.buildConfig.deployCommandOrRunCommand');
+  }
+
+  /**
+   * One-time legacy DB → settings.json migration when the flag is absent.
+   * Safe to call from project open, sidebar refresh, or right after legacy config creation.
+   * Concurrent callers share one in-flight migration (single-flight).
+   */
+  async maybeMigrateLegacySettingsToWorkspace(): Promise<void> {
+    if (ConfigService.isSettingsMigratedFromLegacy()) {
+      return;
+    }
+
+    await legacySettingsMigrationFlight.run(async () => {
+      try {
+        await this.migrateLegacySettingsToWorkspace();
       }
-
-      queue('sanitizer.showQuickOptions', true);
-      queue('sanitizer.reportLogLevel', sanitizerOpts.logLevel);
-      queue('sanitizer.maxSingleLogFileSize', sanitizerOpts.maxDebuglogSize);
-      const sanitizerTool = (sanitizerOpts.tool || {}) as Record<string, unknown>;
-      const sanitizerMemcheckOption = (sanitizerOpts.memcheckOption || {}) as Record<string, unknown>;
-      queue('sanitizer.memory', sanitizerTool.memcheck);
-      queue('sanitizer.race', sanitizerTool.racecheck);
-      queue('sanitizer.uninitialized', sanitizerTool.initcheck);
-      queue('sanitizer.memoryLeak', sanitizerMemcheckOption['leak-check']);
-      queue('sanitizer.allocUnused', sanitizerMemcheckOption['check-unused-memory']);
-      const useBlock = sanitizerOpts.useBlock;
-      if (typeof useBlock === 'boolean') {
-        queue('sanitizer.detectionScope', useBlock ? 'singleBlock' : 'global');
+      catch (error) {
+        console.warn('[maybeMigrateLegacySettingsToWorkspace] failed:', error);
       }
-      else {
-        queue('sanitizer.detectionScope', 'global');
+    });
+  }
+
+  /**
+   * Copy all in-scope legacy `user_options` into workspace settings.json and set the migration flag.
+   * Caller must invoke only after legacy rows exist (see plan doc for hook sites).
+   */
+  async migrateLegacySettingsToWorkspace(): Promise<void> {
+    if (ConfigService.isSettingsMigratedFromLegacy()) {
+      return;
+    }
+    const projectId = ProjectManager.getInstance().projectId;
+    if (!projectId) {
+      return;
+    }
+    const buildOpRows = getConfig(Number(projectId), 'build_op');
+    if (buildOpRows.length === 0) {
+      return;
+    }
+
+    const pendingWrites = await ConfigService.buildLegacySettingsMigrationWrites();
+    const cfg = getOpDevtoolsWorkspaceConfiguration();
+    const filteredWrites = ConfigService.filterPendingWritesByCurrentFile(pendingWrites, cfg);
+    const seedKeys = Object.keys(filteredWrites).filter(
+      (key) => key !== SETTINGS_MIGRATED_FROM_LEGACY_KEY,
+    );
+    if (seedKeys.length === 0) {
+      return;
+    }
+    filteredWrites[SETTINGS_MIGRATED_FROM_LEGACY_KEY] = true;
+    const wrote = await ConfigService.writeOpDevtoolsDottedSettings(filteredWrites);
+    if (!wrote) {
+      return;
+    }
+  }
+
+  private static async buildLegacySettingsMigrationWrites(): Promise<OpDevtoolsDottedWrites> {
+    const projectId = Number(ProjectManager.getInstance().projectId);
+    const configs = ConfigService.loadBuildConfigsFromDb(projectId);
+    const buildOp = configs.find((c) => c.config_type === 'build_op');
+    const buildExample = configs.find((c) => c.config_type === 'build_example');
+    const simulate = configs.find((c) => c.config_type === 'simulate');
+    const onBoard = configs.find((c) => c.config_type === 'on_board');
+    const utTest = configs.find((c) => (c as { config_type?: string }).config_type === 'ut_test');
+    const sanitizerRows = getConfig(projectId, CONFIG_TYPES.SANITIZER);
+    const sanitizerOpts = (sanitizerRows[0]?.user_options || {}) as Record<string, unknown>;
+    const projectSH = await projectService.getProjectSH();
+
+    const buildOpOpts = (buildOp?.user_options || {}) as Record<string, unknown>;
+    const buildExampleOpts = (buildExample?.user_options || {}) as Record<string, unknown>;
+    const simulateOpts = (simulate?.user_options || {}) as Record<string, unknown>;
+    const onBoardOpts = (onBoard?.user_options || {}) as Record<string, unknown>;
+    const utTestOpts = (utTest?.user_options || {}) as Record<string, unknown>;
+
+    const cfg = getOpDevtoolsWorkspaceConfiguration();
+    const fileKeys = ConfigService.getWorkspaceSettingsFileKeySet();
+    const pendingWrites: OpDevtoolsDottedWrites = {};
+    const queue = (key: string, value: unknown) => {
+      ConfigService.queueSettingIfMissingInFile(pendingWrites, fileKeys, cfg, key, value);
+    };
+    const queueNonEmptyString = (key: string, value: unknown) => {
+      if (typeof value === 'string' && value.trim()) {
+        queue(key, value.trim());
       }
-      queue('sanitizer.blockId', sanitizerOpts.blockId ?? null);
+    };
 
-      queue('performanceTuning.simulation.showQuickOptions', true);
-      queue('performanceTuning.simulation.memoryThroughputWaveform', simulateOpts.PMSampling);
-      queue('performanceTuning.simulation.resourceConflictRatio', simulateOpts.ResourceConflictRatio);
-      queue(
-        'performanceTuning.simulation.parameters',
-        ConfigService.toKeyValueMapFromAdvanceParam(simulateOpts.advance_param),
-      );
+    queue('compileAndDeploy.buildConfig.operatorNameToCompile', buildOpOpts.op);
+    queue('compileAndDeploy.buildConfig.deployCommandOrRunCommand', buildOpOpts.target_file);
+    queueNonEmptyString('compileAndDeploy.buildConfig.compileCommand', buildOpOpts.script);
+    queueNonEmptyString('compileAndDeploy.buildConfig.cpuDebugCompileCommand', buildOpOpts.cpu_debug_script);
+    queueNonEmptyString('compileAndDeploy.buildConfig.npuDebugCompileCommand', buildOpOpts.npu_debug_script);
+    queueNonEmptyString('compileAndDeploy.buildConfig.onBoardCompileCommand', onBoardOpts.script);
+    queueNonEmptyString('compileAndDeploy.buildConfig.simulationCompileCommand', simulateOpts.script);
+    queueNonEmptyString('compileAndDeploy.buildConfig.utTestCompileCommand', utTestOpts.script);
 
-      queue('performanceTuning.onBoard.showQuickOptions', true);
-      queue('performanceTuning.onBoard.interCoreLoad', onBoardOpts.Occupancy);
-      queue('performanceTuning.onBoard.roofline', onBoardOpts.Roofline);
-      queue('performanceTuning.onBoard.operatorCodeHotspot', onBoardOpts.Source);
-      // Seed both A5 and legacy on-board metric toggles so shared workspace settings work
-      // when switching projects/SOC; runtime applies only the relevant key (see
-      // mergeBuildConfigsWithOperatorProjectWorkspace + environment.socVersion).
-      queue('performanceTuning.onBoard.pcSampling', onBoardOpts.PCSampling);
-      queue('performanceTuning.onBoard.cacheHeatmap', onBoardOpts.MemoryDetail);
+    if (buildExample) {
+      queue(
+        'compileAndDeploy.exampleBuildConfig.executionMode',
+        normalizeExecutionMode(buildExampleOpts.execution_mode) ?? 'eager',
+      );
+      queueNonEmptyString('compileAndDeploy.exampleBuildConfig.runCommand', buildExampleOpts.script);
+    }
 
-      queue(
-        'performanceTuning.onBoard.cubeAndVectorInstructionTimeAndRatio',
-        onBoardOpts.ArithmeticUtilization,
-      );
-      queue('performanceTuning.onBoard.l2CacheHitRate', onBoardOpts.L2Cache);
-      queue('performanceTuning.onBoard.memoryReadWriteBandwidth', onBoardOpts.Memory);
-      queue('performanceTuning.onBoard.l0ReadWriteBandwidth', onBoardOpts.MemoryL0);
-      queue('performanceTuning.onBoard.ubReadWriteBandwidth', onBoardOpts.MemoryUB);
-      queue(
-        'performanceTuning.onBoard.computeAndMoveUnitTimeRatio',
-        onBoardOpts.PipeUtilization,
-      );
-      queue(
-        'performanceTuning.onBoard.resourceConflictRatio',
-        onBoardOpts.ResourceConflictRatio,
-      );
-      queue(
-        'performanceTuning.onBoard.enableKernelCodeSegmentProfiling',
-        onBoardOpts.KernelScale,
-      );
-      const metricKeys = [
-        'ArithmeticUtilization',
-        'L2Cache',
-        'Memory',
-        'MemoryL0',
-        'MemoryUB',
-        'PipeUtilization',
-        'ResourceConflictRatio',
-      ] as const;
-      const allMetricEnabled = metricKeys.every((key) => onBoardOpts[key] === true);
-      queue('performanceTuning.onBoard.operatorMetrics', allMetricEnabled);
-      queue(
-        'performanceTuning.onBoard.parameters',
-        ConfigService.toKeyValueMapFromAdvanceParam(onBoardOpts.advance_param),
-      );
+    ConfigService.queueLegacyDottedWritesBatch(
+      pendingWrites,
+      fileKeys,
+      cfg,
+      sanitizerUserOptionsToDottedWrites(sanitizerOpts),
+    );
+    queue('sanitizer.showQuickOptions', true);
+    if (typeof sanitizerOpts.useBlock !== 'boolean') {
+      queue('sanitizer.detectionScope', 'global');
+    }
+    queue('sanitizer.blockId', sanitizerOpts.blockId ?? null);
 
-      queue('environment.environmentScript', projectSH);
+    queue('performanceTuning.simulation.showQuickOptions', true);
+    ConfigService.queueLegacyDottedWritesBatch(
+      pendingWrites,
+      fileKeys,
+      cfg,
+      simulateUserOptionsToDottedWrites(simulateOpts),
+    );
 
-      /* Commented out until problems with settings sync for new projects are solved
-        const projectSocVersion = (await projectService.getProjectSocVersion()).trim();
-        queue('environment.socVersion', projectSocVersion);
-        queue('performanceTuning.simulation.simulatorType', simulateOpts.simulatorType);
-      */
-      const filteredWrites = ConfigService.filterPendingWritesByCurrentFile(
-        pendingWrites,
-        cfg,
-      );
-      if (Object.keys(filteredWrites).length > 0) {
-        await ConfigService.writeOpDevtoolsDottedSettings(filteredWrites);
+    queue('performanceTuning.onBoard.showQuickOptions', true);
+    ConfigService.queueLegacyDottedWritesBatch(
+      pendingWrites,
+      fileKeys,
+      cfg,
+      onBoardUserOptionsToDottedWrites(onBoardOpts),
+    );
+    const metricKeys = [
+      'ArithmeticUtilization',
+      'L2Cache',
+      'Memory',
+      'MemoryL0',
+      'MemoryUB',
+      'PipeUtilization',
+      'ResourceConflictRatio',
+    ] as const;
+    const allMetricEnabled = metricKeys.every((key) => onBoardOpts[key] === true);
+    queue('performanceTuning.onBoard.operatorMetrics', allMetricEnabled);
+
+    queue('environment.environmentScript', projectSH);
+
+    return pendingWrites;
+  }
+
+  private static loadBuildConfigsFromDb(projectId: number): BuildConfig[] {
+    const types = ['build_op', 'build_example', 'simulate', 'on_board', 'ut_test'] as const;
+    const configs: BuildConfig[] = [];
+    for (const configType of types) {
+      for (const row of getConfig(projectId, configType)) {
+        configs.push({
+          ...row,
+          user_options: row.user_options
+            ? (row.user_options as Record<string, unknown>)
+            : undefined,
+        } as BuildConfig);
       }
     }
-    catch (error) {
-      console.warn('[syncOperatorProjectWorkspaceSettings] failed:', error);
-    }
+    return configs;
   }
 
   private loadSanitizerConfigsFromDb(): BuildConfig[] {
@@ -398,33 +807,18 @@ export class ConfigService {
   }
 
   /**
-   * Save build configuration
-   */
-  async saveBuildConfig(params: SaveBuildConfigParams): Promise<void> {
-    try {
-      await postConfig('build', params.data as unknown[]);
-
-      if (params.showMessage) {
-        vscode.window.showInformationMessage(t('config.saveBuildConfigSuccess'));
-      }
-    }
-    catch {
-      vscode.window.showErrorMessage(t('config.saveBuildConfigFailed'));
-    }
-  }
-
-  /**
-   * Save configuration (simulation/boarding)
+   * Save configuration (simulation/boarding) — settings.json only (no legacy DB).
    */
   async saveConfig(params: SaveConfigParams): Promise<void> {
-    await postConfig(params.type, params.data as unknown[]);
+    const row = (params.data as Record<string, unknown>[])[0];
+    const opts = ((row?.user_options || {}) as Record<string, unknown>);
 
     if (params.type === CONFIG_TYPES.ON_BOARD) {
-      await this.pushOnBoardUserOptionsToWorkspaceSettings();
+      await ConfigService.writeOpDevtoolsDottedSettings(onBoardUserOptionsToDottedWrites(opts));
     }
 
     if (params.type === CONFIG_TYPES.SIMULATE) {
-      await this.pushSimulateUserOptionsToWorkspaceSettings();
+      await ConfigService.writeOpDevtoolsDottedSettings(simulateUserOptionsToDottedWrites(opts));
     }
 
     if (params.showMessage) {
@@ -467,7 +861,7 @@ export class ConfigService {
    * Get anomaly detection configuration list
    */
   async getSanitizerConfigsList(): Promise<BuildConfig[]> {
-    return mergeSanitizerConfigsWithOperatorProjectWorkspace(this.loadSanitizerConfigsFromDb());
+    return ConfigService.applyWorkspaceSettingsToConfigs(this.loadSanitizerConfigsFromDb());
   }
 
   /**
@@ -475,19 +869,10 @@ export class ConfigService {
    */
   async saveSanitizerForm(params: SaveSanitizerFormParams): Promise<void> {
     try {
-      const formData = this.loadSanitizerConfigsFromDb()[0];
-
-      await postConfig(CONFIG_TYPES.SANITIZER, [
-        {
-          ...formData,
-          user_options: {
-            ...(formData.user_options || {}),
-            ...(params.data as Record<string, unknown>),
-          },
-        },
-      ]);
-
-      await this.pushSanitizerUserOptionsToWorkspaceSettings();
+      const formOpts = params.data as Record<string, unknown>;
+      await ConfigService.writeOpDevtoolsDottedSettings(
+        sanitizerUserOptionsToDottedWrites(formOpts),
+      );
 
       if (params.showMessage) {
         vscode.window.showInformationMessage(t('config.saveSanitizerConfigSuccess'));
@@ -495,156 +880,6 @@ export class ConfigService {
     }
     catch {
       vscode.window.showErrorMessage(t('config.saveSanitizerConfigFailed'));
-    }
-  }
-
-  /**
-   * After devtool save, mirror sanitizer `user_options` into workspace `op-devtools.*`
-   * (same mapping as extension sync) so the panel and Settings stay aligned immediately.
-   */
-  private async pushSanitizerUserOptionsToWorkspaceSettings(): Promise<void> {
-    try {
-      const row = this.loadSanitizerConfigsFromDb()[0];
-
-      if (!row?.user_options) {
-        return;
-      }
-
-      const opts = row.user_options as Record<string, unknown>;
-      const tool = (opts.tool || {}) as Record<string, unknown>;
-      const mem = (opts.memcheckOption || {}) as Record<string, unknown>;
-      const updates: OpDevtoolsDottedWrites = {};
-
-      assignIfDefined(updates, 'compileAndDeploy.buildConfig.sanitizerCompileCommand', opts.script);
-      assignIfDefined(updates, 'sanitizer.reportLogLevel', opts.logLevel);
-      assignIfDefined(updates, 'sanitizer.maxSingleLogFileSize', opts.maxDebuglogSize);
-      assignIfDefined(updates, 'sanitizer.memory', tool.memcheck);
-      assignIfDefined(updates, 'sanitizer.race', tool.racecheck);
-      assignIfDefined(updates, 'sanitizer.uninitialized', tool.initcheck);
-      assignIfDefined(updates, 'sanitizer.memoryLeak', mem['leak-check']);
-      assignIfDefined(updates, 'sanitizer.allocUnused', mem['check-unused-memory']);
-      if (typeof opts.useBlock === 'boolean') {
-        updates['sanitizer.detectionScope'] = opts.useBlock ? 'singleBlock' : 'global';
-      }
-      assignIfDefined(updates, 'sanitizer.blockId', opts.blockId);
-
-      await ConfigService.writeOpDevtoolsDottedSettings(updates);
-    }
-    catch (error) {
-      console.warn('[pushSanitizerUserOptionsToWorkspaceSettings] failed:', error);
-    }
-  }
-
-  private static toKeyValueMapFromAdvanceParam(raw: unknown): Record<string, string> {
-    if (!Array.isArray(raw)) {
-      return {};
-    }
-
-    return raw.reduce((acc, item) => {
-      if (!item || typeof item !== 'object') {
-        return acc;
-      }
-
-      const row = item as Record<string, unknown>;
-      const name = row.name;
-
-      if (typeof name !== 'string' || name.trim().length === 0) {
-        return acc;
-      }
-
-      const value = row.value;
-
-      acc[name] = value === undefined || value === null ? '' : String(value);
-
-      return acc;
-    }, {} as Record<string, string>);
-  }
-
-  /** After on_board devtool save, mirror `user_options` into workspace `op-devtools.performanceTuning.onBoard.*` (and script). */
-  private async pushOnBoardUserOptionsToWorkspaceSettings(): Promise<void> {
-    try {
-      const projectId = ProjectManager.getInstance().projectId;
-      const rows = getConfig(Number(projectId), CONFIG_TYPES.ON_BOARD);
-      const row = rows[0];
-
-      if (!row?.user_options) {
-        return;
-      }
-
-      const onBoardOpts = row.user_options as Record<string, unknown>;
-      const updates: OpDevtoolsDottedWrites = {};
-
-      assignIfDefined(updates, 'compileAndDeploy.buildConfig.onBoardCompileCommand', onBoardOpts.script);
-      assignIfDefined(updates, 'performanceTuning.onBoard.interCoreLoad', onBoardOpts.Occupancy);
-      assignIfDefined(updates, 'performanceTuning.onBoard.roofline', onBoardOpts.Roofline);
-      assignIfDefined(updates, 'performanceTuning.onBoard.operatorCodeHotspot', onBoardOpts.Source);
-      assignIfDefined(updates, 'performanceTuning.onBoard.pcSampling', onBoardOpts.PCSampling);
-      assignIfDefined(updates, 'performanceTuning.onBoard.cacheHeatmap', onBoardOpts.MemoryDetail);
-
-      assignIfDefined(
-        updates,
-        'performanceTuning.onBoard.cubeAndVectorInstructionTimeAndRatio',
-        onBoardOpts.ArithmeticUtilization,
-      );
-      assignIfDefined(updates, 'performanceTuning.onBoard.l2CacheHitRate', onBoardOpts.L2Cache);
-      assignIfDefined(updates, 'performanceTuning.onBoard.memoryReadWriteBandwidth', onBoardOpts.Memory);
-      assignIfDefined(updates, 'performanceTuning.onBoard.l0ReadWriteBandwidth', onBoardOpts.MemoryL0);
-      assignIfDefined(updates, 'performanceTuning.onBoard.ubReadWriteBandwidth', onBoardOpts.MemoryUB);
-      assignIfDefined(
-        updates,
-        'performanceTuning.onBoard.computeAndMoveUnitTimeRatio',
-        onBoardOpts.PipeUtilization,
-      );
-      assignIfDefined(
-        updates,
-        'performanceTuning.onBoard.resourceConflictRatio',
-        onBoardOpts.ResourceConflictRatio,
-      );
-      assignIfDefined(
-        updates,
-        'performanceTuning.onBoard.enableKernelCodeSegmentProfiling',
-        onBoardOpts.KernelScale,
-      );
-      updates['performanceTuning.onBoard.parameters'] = ConfigService.toKeyValueMapFromAdvanceParam(
-        onBoardOpts.advance_param,
-      );
-
-      await ConfigService.writeOpDevtoolsDottedSettings(updates);
-    }
-    catch (error) {
-      console.warn('[pushOnBoardUserOptionsToWorkspaceSettings] failed:', error);
-    }
-  }
-
-  /** After simulate devtool save, mirror `user_options` into workspace simulation keys (and script). */
-  private async pushSimulateUserOptionsToWorkspaceSettings(): Promise<void> {
-    try {
-      const projectId = ProjectManager.getInstance().projectId;
-      const rows = getConfig(Number(projectId), CONFIG_TYPES.SIMULATE);
-      const row = rows[0];
-
-      if (!row?.user_options) {
-        return;
-      }
-
-      const simulateOpts = row.user_options as Record<string, unknown>;
-      const updates: OpDevtoolsDottedWrites = {};
-
-      assignIfDefined(updates, 'compileAndDeploy.buildConfig.simulationCompileCommand', simulateOpts.script);
-      assignIfDefined(updates, 'performanceTuning.simulation.memoryThroughputWaveform', simulateOpts.PMSampling);
-      assignIfDefined(
-        updates,
-        'performanceTuning.simulation.resourceConflictRatio',
-        simulateOpts.ResourceConflictRatio,
-      );
-      updates['performanceTuning.simulation.parameters'] = ConfigService.toKeyValueMapFromAdvanceParam(
-        simulateOpts.advance_param,
-      );
-
-      await ConfigService.writeOpDevtoolsDottedSettings(updates);
-    }
-    catch (error) {
-      console.warn('[pushSimulateUserOptionsToWorkspaceSettings] failed:', error);
     }
   }
 }

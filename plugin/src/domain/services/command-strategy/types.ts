@@ -119,6 +119,7 @@ export interface CommandStrategy {
    * @param operator operator information
    * @param exampleConfigId example configuration ID (for ascend type)
    * @returns target file path
+   * FIXME: Implementations still read profiler/sanitizer targets from legacy configs.json, not workspace settings.
    */
   getProfilerTargetFile(config: ConfigRecord, operator: OpRecord | null, exampleConfigId: number): string;
 }

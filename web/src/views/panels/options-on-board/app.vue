@@ -143,10 +143,19 @@ const performanceMetricsIndeterminate = computed(() => {
   return count > 0 && count < PERFORMANCE_METRIC_KEYS.length;
 });
 
+const operatorMetricsChecked = computed(() => {
+  const uo = onboardData.value.user_options as Record<string, unknown>;
+  if (typeof uo.operatorMetrics === 'boolean') {
+    return uo.operatorMetrics;
+  }
+  return allPerformanceMetricsSelected.value;
+});
+
 const handleOperatorPerformanceChange = (e: unknown) => {
   const checked = typeof e === 'boolean'
     ? e
     : ((e as { target?: { checked?: boolean } })?.target?.checked ?? false);
+  (onboardData.value.user_options as Record<string, unknown>).operatorMetrics = checked;
   PERFORMANCE_METRIC_KEYS.forEach((key) => {
     onboardData.value.user_options[key] = checked;
   });
@@ -292,7 +301,7 @@ onMounted(async () => {
 
         <div>
           <a-checkbox
-            :checked="allPerformanceMetricsSelected"
+            :checked="operatorMetricsChecked"
             :indeterminate="performanceMetricsIndeterminate"
             @change="handleOperatorPerformanceChange"
           >

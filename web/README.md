@@ -1,6 +1,6 @@
 # Web 模块开发指南
 
-> **导航**: [← 返回项目主页](../README.md) | [Ops API 使用指南 →](src/apis/OPS_API_USAGE.md)
+> **导航**: [← 返回项目主页](../README.md)
 
 ---
 

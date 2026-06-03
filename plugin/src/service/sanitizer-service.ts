@@ -86,8 +86,6 @@ export class SanitizerService {
               exampleCompileOption,
               params.operatorNames,
             );
-            const exampleBuildExecutor = ProjectManager.getInstance()
-              .getExecutor();
             const exampleBuildRes = await executeOperatorCommand(
               exampleBuildCommand,
               buildOperatorSpawnContext({
@@ -136,8 +134,6 @@ export class SanitizerService {
           Number(exampleConfigId),
           params.operatorNames,
         ) || '';
-      const executor = ProjectManager.getInstance()
-        .getExecutor();
       const res = await executeOperatorCommand(
         sanitizerCommand,
         buildOperatorSpawnContext({

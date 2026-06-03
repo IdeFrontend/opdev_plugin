@@ -1,11 +1,9 @@
 import { t } from 'i18next';
-import { parse_cmd_options } from '@plugin/domain/utils/aicore-utils';
 import { getOpRunPath } from '@plugin/domain/utils/op-util';
 import {
   joinCommands,
   getExecutableCommand,
   Command,
-  objectToCommandString,
 } from '@plugin/domain/utils/command-utils';
 import { OpRecord } from '@plugin/domain/models/model';
 import { joinIdeConfigRelative } from '@plugin/helpers/ide-config-dir';
@@ -18,9 +16,8 @@ import {
   ProfilerCommandParams,
 } from './types';
 import { ConfigRecord } from '@plugin/domain/models/config-model';
-import {
-  getConfig, getConfigById,
-} from '../../services/configuration';
+import { getConfigById } from '@plugin/domain/services/configuration';
+import { ConfigService } from '@plugin/service/config-service';
 import { resolveAscendEnv } from '@plugin/domain/utils/ascend-util';
 
 /**
@@ -144,7 +141,6 @@ export class AscendCommandStrategy implements CommandStrategy {
     const {
       config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames,
     } = params;
-    const options = (config.user_options as Record<string, unknown> | null | undefined) || {};
 
     let script = config.script || '';
 
@@ -283,15 +279,13 @@ export class AscendCommandStrategy implements CommandStrategy {
     return joinCommands(sourceCannCmd, cdBuildCmd, opprofCmd);
   }
 
-  getRunTargetFile(config: ConfigRecord, operator: OpRecord | null): string {
-    // ascend type: use the currently configured target_file
-    return config.target_file || '';
+  getRunTargetFile(_config: ConfigRecord, _operator: OpRecord | null): string {
+    return ConfigService.readBuildOpDeployTargetFromWorkspace() || '';
   }
 
-  getProfilerTargetFile(config: ConfigRecord, operator: OpRecord | null, exampleConfigId: number): string {
-    // ascend type: target_file using example configuration
-    const exConfig = getConfigById(exampleConfigId) as unknown as ConfigRecord;
-
+  // FIXME: Profiler/msprof/mssanitizer target still comes from legacy configs.json (build_example.target_file), not workspace settings.
+  getProfilerTargetFile(_config: ConfigRecord, _operator: OpRecord | null, exampleConfigId: number): string {
+    const exConfig = getConfigById(exampleConfigId) as ConfigRecord | null;
     return exConfig?.target_file || '';
   }
 }

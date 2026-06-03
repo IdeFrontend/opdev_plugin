@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import { MindStudioPluginInstaller } from '@plugin/class/mind-studio-plugin-installer';
 import type { OperateTreeProvider } from '@plugin/class/operate-tree-provider';
 import { welcomeMethods } from '@plugin/controller/welcome-controller';
+import { configService } from '@plugin/service/config-service';
+import { AsyncSingleFlight } from './async-single-flight';
 import { requestSidebarContextsRefresh } from './sidebar-context-refresh';
 
 export const MIND_STUDIO_DEBUG_PLUGIN_ID = 'ascend.mindstudio-debug-vscode-plugin';
@@ -10,18 +12,15 @@ export type PostActivateBootstrapDeps = {
   context: vscode.ExtensionContext;
   operateTreeProvider: OperateTreeProvider;
   logDebug: (message: string, payload?: unknown) => void;
-  checkDevtoolConfigExists: () => Promise<boolean>;
 };
 
-let postActivateBootstrapPromise: Promise<void> | undefined;
+const postActivateBootstrapFlight = new AsyncSingleFlight<void>();
 
 /**
  * Schedules heavy startup work after `activate()` returns (single-flight).
  */
 export function startPostActivateBootstrap(deps: PostActivateBootstrapDeps): void {
-  if (!postActivateBootstrapPromise) {
-    postActivateBootstrapPromise = runPostActivateBootstrapImpl(deps);
-  }
+  postActivateBootstrapFlight.run(() => runPostActivateBootstrapImpl(deps));
 }
 
 /**
@@ -29,7 +28,7 @@ export function startPostActivateBootstrap(deps: PostActivateBootstrapDeps): voi
  * No-op if bootstrap was never started (e.g. unit tests).
  */
 export function whenPostActivateBootstrapReady(): Promise<void> {
-  return postActivateBootstrapPromise ?? Promise.resolve();
+  return postActivateBootstrapFlight.pending ?? Promise.resolve();
 }
 
 export function isMindStudioDebugExtensionActive(): boolean {
@@ -38,12 +37,12 @@ export function isMindStudioDebugExtensionActive(): boolean {
 
 /** @internal */
 export function resetPostActivateBootstrapForTest(): void {
-  postActivateBootstrapPromise = undefined;
+  postActivateBootstrapFlight.reset();
 }
 
 async function runPostActivateBootstrapImpl(deps: PostActivateBootstrapDeps): Promise<void> {
   const {
-    context, operateTreeProvider, logDebug, checkDevtoolConfigExists,
+    context, operateTreeProvider, logDebug,
   } = deps;
   logDebug('postActivate:bootstrap:start');
   try {
@@ -81,7 +80,7 @@ async function runPostActivateBootstrapImpl(deps: PostActivateBootstrapDeps): Pr
     // openProject may create devtool_config.json after the sync refreshSidebarContexts in activate().
     await requestSidebarContextsRefresh();
 
-    if (await checkDevtoolConfigExists()) {
+    if (await configService.checkDevtoolConfig()) {
       try {
         await vscode.commands.executeCommand('opdevtoolsOperateTree.focus');
       }

@@ -11,6 +11,20 @@ Move `Operator project config` from webview UI to VS Code workspace settings wit
 
 This is a design/specification document (not implementation).
 
+### Branch implementation status (`svd/fix-settings-build-commands`)
+
+Partially implemented — see [`svd-fix-settings-build-commands.md`](./svd-fix-settings-build-commands.md).
+
+| Area | Status in branch |
+|------|------------------|
+| Per-flow compile keys (`compileCommand`, `sanitizerCompileCommand`, `onBoardCompileCommand`, `simulationCompileCommand`, …) | Migrated 1:1 from matching `config_type` rows; **no** cross-flow fallback to `compileCommand` |
+| Sanitizer flags, simulate/on_board metrics, `deployCommandOrRunCommand` | Migrated to workspace; runtime from settings |
+| `exampleBuildConfig.runCommand` / `executionMode` | Migrated; runtime from settings |
+| **Profiler binary target** (`build_example.target_file`, mssanitizer/msprof arg) | **Not** in settings — still read from legacy `configs.json` (`c41f6cb86`); distinct from deploy key and from per-flow **compile** keys |
+| On-board pre-build | `on_board` DB row id + `onBoardCompileCommand` — by design, not `build_op` / `compileCommand` |
+| `ConfigHelper` | **Read only** — all writes use `ConfigService.writeOpDevtoolsDottedSettings` |
+| Intermediate dotted keys (early UI-migration) | **Not read** — canonical 4-subsection keys only (`operator-project-workspace-config.ts`) |
+
 ---
 
 ## Re-validation scope
@@ -96,7 +110,8 @@ Required order (prototype parity):
   - Maps to `build_op.user_options.op`
 - `op-devtools.compileAndDeploy.buildConfig.deployCommandOrRunCommand`
   - UI element type: `string` (`textbox`)
-  - Maps to `build_op.user_options.target_file`
+  - Maps to `build_op.user_options.target_file` (migrated to settings; **run/deploy** runtime)
+  - Distinct from **profiler binary path** (`build_example.target_file` in DB only in current branch — not this key)
 - `op-devtools.compileAndDeploy.buildConfig.compileCommand`
   - UI element type: `string` (`textbox`)
   - Maps to `build_op.user_options.script`
@@ -468,27 +483,9 @@ Rationale: default stability + explicit workspace control + per-operator excepti
 
 ---
 
-## Compatibility strategy (critical to avoid regressions)
+## Compatibility strategy
 
-Current helper logic still contains legacy references such as:
-
-- `operatorProject.buildOp.`*
-- `operatorProject.buildExample.*`
-- `operatorProject.simulate.*`
-- `operatorProject.onBoard.*`
-- `operatorProject.sanitizerScript`
-
-These are compatibility-only legacy keys and must not be used as new proposal keys.
-
-Best solution:
-
-1. **Canonicalize to 4-subsection keys** (`compileAndDeploy.`*, `sanitizer.*`, `performanceTuning.*`, `environment.*`).
-2. **Keep legacy aliases readable** for at least one full release.
-3. **Resolve conflicts by precedence**:
-  - new canonical key wins over old alias when both are set.
-4. **Document deprecation** in descriptions.
-
-This avoids breaking users already on intermediate key names.
+Use only the canonical 4-subsection keys (`compileAndDeploy.*`, `sanitizer.*`, `performanceTuning.*`, `environment.*`). Intermediate dotted keys from early UI-migration experiments are **not** read at runtime; rename any leftovers in `.vscode/settings.json` to the canonical keys.
 
 ---
 
@@ -508,16 +505,15 @@ Descriptions in `package.nls*.json` should call out conditional applicability.
 ## Suggested rollout (lowest risk)
 
 1. Add full settings schema + i18n descriptions for the canonical 4 subsections.
-2. Implement alias-read compatibility for existing intermediate keys.
-3. Route all runtime reads through one merge helper (build/sanitizer/performance/env).
-4. Keep old webview command behavior unchanged for compatibility during rollout.
-5. Validate parity matrix:
+2. Route all runtime reads through workspace settings only (see `svd-fix-settings-build-commands.md`).
+3. Keep old webview command behavior unchanged for compatibility during rollout.
+4. Validate parity matrix:
   - build command fields
   - debug scripts
   - sanitizer panel + direct sanitizer run
   - simulation/on-board toggles and advanced params
   - env script read/write
-6. Deprecate and remove old panel only after parity sign-off.
+5. Deprecate and remove old panel only after parity sign-off.
 
 ---
 

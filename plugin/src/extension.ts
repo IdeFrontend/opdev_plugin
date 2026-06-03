@@ -35,6 +35,7 @@ import { msAgentBridgeService } from './service/ms-agent-bridge.service';
 import { getDumpTensorPanelViewProvider } from './class/dump-tensor-panel-view';
 import { appendLog } from './helpers/output-channel';
 
+import { AsyncSingleFlight } from './helpers/async-single-flight';
 import { startPostActivateBootstrap } from './helpers/post-activate-bootstrap';
 import { registerOperatorPlugins } from './domain/plugins';
 import { OperatorPluginRegistry } from './domain/plugins/operator-plugin.registry';
@@ -138,19 +139,20 @@ import {
   COMMAND_SIDEBAR_PERFORMANCE_REPORT_SHOW_ALL,
   COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN,
 } from './constants';
-import { isAscendA5ProfilerCannSoc } from './domain/utils/ascend-util';
 import { logGlobalEnvSnapshot } from './domain/utils/global-env-snapshot';
 import { FolderContextMenuService } from './service/folder-context-menu-service';
-import { buildService } from './service/build-service';
 import {
-  configService, ConfigService,
+  configService,
+  ConfigService,
+  isLegacySettingsMigrationInFlight,
 } from './service/config-service';
+import { ConfigHelper } from './helpers/ConfigHelper';
 import { projectService } from './service/project-service';
 import { OperatorProjectIconTheme } from './class/operator-project-icon-theme';
-import { welcomeMethods } from './controller/welcome-controller';
 import { registerSidebarContextsRefresh } from './helpers/sidebar-context-refresh';
 import {
-  getDevtoolConfigPath, getIdeConfigDirName,
+  getIdeConfigDirName,
+  isIdeSettingsFileEmpty,
 } from './helpers/ide-config-dir';
 import { getCompileOptionForSelectedOperators } from './helpers/compile-options';
 import {
@@ -244,30 +246,6 @@ function isExplorerResourceFileUri(candidate: unknown): candidate is vscode.Uri 
   );
 }
 
-/**
- * Check whether the IDE config dir contains devtool_config.json in the current workspace
- * @returns Returns true if the file exists, false otherwise
- */
-async function checkDevtoolConfigExists(): Promise<boolean> {
-  const workspaceFolders = vscode.workspace.workspaceFolders;
-
-  if (!workspaceFolders || workspaceFolders.length === 0) {
-    return false;
-  }
-
-  const workspacePath = workspaceFolders[0].uri.fsPath;
-  const devtoolConfigPath = getDevtoolConfigPath(workspacePath);
-
-  try {
-    return fs.existsSync(devtoolConfigPath);
-  }
-  catch (error) {
-    console.error('Error while checking devtool_config.json file:', error);
-
-    return false;
-  }
-}
-
 // Register resource selection change monitoring and dynamically update context variables.
 // Update context variables before command execution so menu display logic works correctly.
 const updateContextForUri = async (uri: vscode.Uri | undefined) => {
@@ -304,7 +282,6 @@ const updateContextForUri = async (uri: vscode.Uri | undefined) => {
  * @param context VSCode extended context
  */
 export async function activate(context: vscode.ExtensionContext) {
-  const myExtension = vscode.extensions.getExtension('publisher.extensionName');
   const debugTag = '[op-devtools][activate]';
   const logDebug = (...args: unknown[]) => {
     const [
@@ -345,34 +322,15 @@ export async function activate(context: vscode.ExtensionContext) {
   await initI18n();
 
   // Whether devtool_config.json exists (drives command visibility)
-  let hasDevtoolConfig = await checkDevtoolConfigExists();
+  let hasDevtoolConfig = await configService.checkDevtoolConfig();
 
   const homeTreeProvider = new HomeTreeProvider();
   const operateTreeProvider = new OperateTreeProvider(context.extensionUri, 'flow', context);
 
   OperateTreeProvider.registerOperateFlowTreeProvider(operateTreeProvider);
   const operatorProjectsTreeProvider = new OperateTreeProvider(context.extensionUri, 'operatorProjects', context);
-  let isSyncingWorkspaceSettings = false;
   let isRefreshingSidebarContexts = false;
   let hasPendingSidebarRefresh = false;
-
-  const syncOperatorProjectWorkspaceSettings = async () => {
-    isSyncingWorkspaceSettings = true;
-    const syncStart = Date.now();
-
-    logDebug('syncOperatorProjectWorkspaceSettings:start');
-
-    try {
-      await configService.syncOperatorProjectWorkspaceSettings();
-    }
-    catch (error) {
-      logDebug('syncOperatorProjectWorkspaceSettings:error', error);
-    }
-    finally {
-      isSyncingWorkspaceSettings = false;
-      logDebug('syncOperatorProjectWorkspaceSettings:end', { elapsedMs: Date.now() - syncStart });
-    }
-  };
 
   const refreshSidebarContexts = async () => {
     const refreshStart = Date.now();
@@ -381,7 +339,7 @@ export async function activate(context: vscode.ExtensionContext) {
       hasPendingSidebarRefresh = true;
       logDebug('refreshSidebarContexts:coalesced', {
         hasPendingSidebarRefresh,
-        isSyncingWorkspaceSettings,
+        isLegacySettingsMigrationInFlight: isLegacySettingsMigrationInFlight(),
       });
 
       return;
@@ -390,14 +348,14 @@ export async function activate(context: vscode.ExtensionContext) {
     isRefreshingSidebarContexts = true;
     logDebug('refreshSidebarContexts:start', {
       hasDevtoolConfig,
-      isSyncingWorkspaceSettings,
+      isLegacySettingsMigrationInFlight: isLegacySettingsMigrationInFlight(),
     });
 
     try {
       await ConfigService.writeOpDevtoolsDottedSettings({});
       do {
         hasPendingSidebarRefresh = false;
-        hasDevtoolConfig = await checkDevtoolConfigExists();
+        hasDevtoolConfig = await configService.checkDevtoolConfig();
         let projectType = '';
         let projectTypeSupported = true;
 
@@ -418,7 +376,21 @@ export async function activate(context: vscode.ExtensionContext) {
         });
 
         if (effectiveHasDevtoolConfig) {
-          await syncOperatorProjectWorkspaceSettings();
+          const migrateStart = Date.now();
+
+          logDebug('maybeMigrateLegacySettingsToWorkspace:start');
+
+          try {
+            await configService.maybeMigrateLegacySettingsToWorkspace();
+          }
+          catch (error) {
+            logDebug('maybeMigrateLegacySettingsToWorkspace:error', error);
+          }
+          finally {
+            logDebug('maybeMigrateLegacySettingsToWorkspace:end', {
+              elapsedMs: Date.now() - migrateStart,
+            });
+          }
         }
 
         await vscode.commands.executeCommand('setContext', 'hasDevtoolConfig', effectiveHasDevtoolConfig);
@@ -528,56 +500,135 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(watchColorThemeChange);
 
-  const watchOpDevtoolsEnvAndOperatorConfig = vscode.workspace.onDidChangeConfiguration(async (e) => {
-    const envAffected = e.affectsConfiguration('op-devtools.environment');
-    const operatorAffected = e.affectsConfiguration('op-devtools.operatorProject');
-    const operatorSupportAffected = e.affectsConfiguration('op-devtools.operatorSupport');
+  const ON_BOARD_OPERATOR_METRIC_CHILD_KEYS = [
+    'performanceTuning.onBoard.cubeAndVectorInstructionTimeAndRatio',
+    'performanceTuning.onBoard.l2CacheHitRate',
+    'performanceTuning.onBoard.memoryReadWriteBandwidth',
+    'performanceTuning.onBoard.l0ReadWriteBandwidth',
+    'performanceTuning.onBoard.ubReadWriteBandwidth',
+    'performanceTuning.onBoard.computeAndMoveUnitTimeRatio',
+    'performanceTuning.onBoard.resourceConflictRatio',
+  ] as const;
+
+  const onBoardOperatorMetricsSyncFlight = new AsyncSingleFlight<void>();
+
+  const syncOnBoardOperatorMetricChildren = async (): Promise<void> => {
+    const desired = ConfigHelper.getOptional<boolean>('performanceTuning.onBoard.operatorMetrics');
+    if (typeof desired !== 'boolean') {
+      return;
+    }
+
+    const metricWrites = Object.fromEntries(
+      ON_BOARD_OPERATOR_METRIC_CHILD_KEYS.map((key) => [key, desired]),
+    );
+    await ConfigService.writeOpDevtoolsDottedSettings(metricWrites);
+  };
+
+  /** Base config areas: specific → broad; within each case, sub-keys run before base actions. */
+  const MAIN_CONFIG_AREAS = [
+    'onBoard',
+    'operatorSupport',
+    'environment',
+    'opDevtools',
+  ] as const;
+
+  const watchMainConfig = vscode.workspace.onDidChangeConfiguration(async (e) => {
+    const onBoardOperatorMetricsAffected = e.affectsConfiguration(
+      'op-devtools.performanceTuning.onBoard.operatorMetrics',
+    );
+    const onBoardAffected = e.affectsConfiguration('op-devtools.performanceTuning.onBoard');
     const tritonSupportAffected = e.affectsConfiguration('op-devtools.operatorSupport.triton');
+    const operatorSupportAffected = e.affectsConfiguration('op-devtools.operatorSupport');
+    const envAffected = e.affectsConfiguration('op-devtools.environment');
     const opDevtoolsAffected = e.affectsConfiguration('op-devtools');
 
     logDebug('event:onDidChangeConfiguration', {
-      isSyncingWorkspaceSettings,
-      envAffected,
-      operatorAffected,
+      isLegacySettingsMigrationInFlight: isLegacySettingsMigrationInFlight(),
+      onBoardAffected,
+      onBoardOperatorMetricsAffected,
       operatorSupportAffected,
       tritonSupportAffected,
+      envAffected,
       opDevtoolsAffected,
     });
 
-    if (isSyncingWorkspaceSettings) {
-      logDebug('event:onDidChangeConfiguration:ignoredDueToSync');
+    if (isLegacySettingsMigrationInFlight()) {
+      logDebug('event:onDidChangeConfiguration:ignoredDueToLegacyMigration');
 
       return;
     }
 
-    if (opDevtoolsAffected) {
-      await ConfigService.writeOpDevtoolsDottedSettings({});
+    let shouldSyncAscendEnvFromWorkspace = false;
+
+    for (const area of MAIN_CONFIG_AREAS) {
+      switch (area) {
+        case 'onBoard': {
+          if (!onBoardAffected && !onBoardOperatorMetricsAffected) {
+            break;
+          }
+          if (isIdeSettingsFileEmpty()) {
+            logDebug('watchMainConfig:onBoard:skipEmptySettingsFile');
+            break;
+          }
+          // Sub-key: parent operatorMetrics toggles child metric keys.
+          if (onBoardOperatorMetricsAffected) {
+            await onBoardOperatorMetricsSyncFlight
+              .run(() => syncOnBoardOperatorMetricChildren())
+              .catch((error) => {
+                console.warn('[watchMainConfig] onBoard operatorMetrics sync failed:', error);
+              });
+          }
+          break;
+        }
+        case 'operatorSupport': {
+          if (!operatorSupportAffected && !tritonSupportAffected) {
+            break;
+          }
+          // Sub-key: triton support change may require reload.
+          if (tritonSupportAffected) {
+            const reloadAction = t('extension.reloadWindowAction');
+            const message = t('extension.tritonSupportChangedReload');
+            const pick = await vscode.window.showInformationMessage(message, reloadAction);
+
+            if (pick === reloadAction) {
+              await vscode.commands.executeCommand('workbench.action.reloadWindow');
+            }
+          }
+          if (operatorSupportAffected) {
+            shouldSyncAscendEnvFromWorkspace = true;
+          }
+          break;
+        }
+        case 'environment': {
+          if (!envAffected) {
+            break;
+          }
+          shouldSyncAscendEnvFromWorkspace = true;
+          break;
+        }
+        case 'opDevtools': {
+          if (!opDevtoolsAffected) {
+            break;
+          }
+          // Root: flatten legacy nested op-devtools after all specific handlers.
+          await ConfigService.writeOpDevtoolsDottedSettings({});
+          break;
+        }
+        default:
+          break;
+      }
     }
 
-    if (
-      envAffected
-      || operatorAffected
-      || operatorSupportAffected
-    ) {
+    if (shouldSyncAscendEnvFromWorkspace) {
       logDebug('event:onDidChangeConfiguration:syncAscendEnvScriptFromWorkspaceSettings:start');
       await projectService.syncAscendEnvScriptFromWorkspaceSettings();
       logDebug('event:onDidChangeConfiguration:syncAscendEnvScriptFromWorkspaceSettings:end');
       operateTreeProvider.notifyConfigurationChanged();
       operatorProjectsTreeProvider.notifyConfigurationChanged();
     }
-
-    if (tritonSupportAffected) {
-      const reloadAction = t('extension.reloadWindowAction');
-      const message = t('extension.tritonSupportChangedReload');
-      const pick = await vscode.window.showInformationMessage(message, reloadAction);
-
-      if (pick === reloadAction) {
-        await vscode.commands.executeCommand('workbench.action.reloadWindow');
-      }
-    }
   });
 
-  context.subscriptions.push(watchOpDevtoolsEnvAndOperatorConfig);
+  context.subscriptions.push(watchMainConfig);
 
   // view
   const viewServer = initViews(context, apiServer);
@@ -832,8 +883,7 @@ export async function activate(context: vscode.ExtensionContext) {
       }
 
       const operatorNames = await getOperatorNamesFromSelection();
-      const showQuickOptions = vscode.workspace.getConfiguration('op-devtools')
-        .get<boolean>('sanitizer.showQuickOptions', true) ?? true;
+      const showQuickOptions = ConfigHelper.get<boolean>('sanitizer.showQuickOptions', true);
 
       if (showQuickOptions) {
         await vscode.commands.executeCommand(COMMAND_SANITIZER_OPTIONS);
@@ -859,8 +909,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
       const operatorNames = await getOperatorNamesFromSelection();
       const compileOption = await getCompileOptionForSelectedOperators();
-      const showQuickOptions = vscode.workspace.getConfiguration('op-devtools')
-        .get<boolean>('performanceTuning.onBoard.showQuickOptions', true) ?? true;
+      const showQuickOptions = ConfigHelper.get<boolean>('performanceTuning.onBoard.showQuickOptions', true);
 
       if (showQuickOptions) {
         await vscode.commands.executeCommand(COMMAND_ON_BOARD_OPTIONS);
@@ -904,8 +953,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
       const operatorNames = await getOperatorNamesFromSelection();
       const compileOption = await getCompileOptionForSelectedOperators();
-      const showQuickOptions = vscode.workspace.getConfiguration('op-devtools')
-        .get<boolean>('performanceTuning.simulation.showQuickOptions', true) ?? true;
+      const showQuickOptions = ConfigHelper.get<boolean>('performanceTuning.simulation.showQuickOptions', true);
 
       if (showQuickOptions) {
         await vscode.commands.executeCommand(COMMAND_SIMULATOR_OPTIONS);
@@ -1373,7 +1421,7 @@ export async function activate(context: vscode.ExtensionContext) {
       }
 
       const [
-        , encodedReportPath,
+        , _encodedReportPath,
         mode,
         encodedGroupKey,
       ] = raw.split(':');
@@ -2404,113 +2452,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(watchWorkSpaceFolderChange);
 
-  let isSyncingOnBoardOperatorMetrics = false;
-  const onBoardOperatorMetricsSync = vscode.workspace.onDidChangeConfiguration(async (event) => {
-    if (isSyncingOnBoardOperatorMetrics) {
-      return;
-    }
-
-    if (isSyncingWorkspaceSettings) {
-      return;
-    }
-
-    if (!event.affectsConfiguration('op-devtools.performanceTuning.onBoard.operatorMetrics')) {
-      return;
-    }
-
-    const cfg = vscode.workspace.getConfiguration('op-devtools');
-    const debugEnabled = cfg.get<boolean>('debugMode') === true;
-
-    const parentKey = 'performanceTuning.onBoard.operatorMetrics';
-    const parentInspect = cfg.inspect<boolean>(parentKey);
-    const desired = cfg.get<boolean>(parentKey);
-
-    if (typeof desired !== 'boolean') {
-      if (debugEnabled) {
-        console.log('[onBoardOperatorMetricsSync] skip: desired is not boolean', desired);
-      }
-
-      return;
-    }
-
-    const metricKeys = [
-      'performanceTuning.onBoard.cubeAndVectorInstructionTimeAndRatio',
-      'performanceTuning.onBoard.l2CacheHitRate',
-      'performanceTuning.onBoard.memoryReadWriteBandwidth',
-      'performanceTuning.onBoard.l0ReadWriteBandwidth',
-      'performanceTuning.onBoard.ubReadWriteBandwidth',
-      'performanceTuning.onBoard.computeAndMoveUnitTimeRatio',
-      'performanceTuning.onBoard.resourceConflictRatio',
-    ];
-
-    const metricWrites = metricKeys.reduce((acc, k) => {
-      acc[k] = desired;
-
-      return acc;
-    }, {} as Record<string, unknown>);
-
-    const applyMetricKeys = async (target: vscode.ConfigurationTarget, scopeUri?: vscode.Uri) => {
-      const cfg = vscode.workspace.getConfiguration('op-devtools', scopeUri);
-
-      await Promise.all(metricKeys.map((k) => cfg.update(k, desired, target)));
-    };
-
-    const applyForWorkspace = async () => {
-      await ConfigService.writeOpDevtoolsDottedSettings(metricWrites);
-    };
-
-    const applyForGlobal = async () => {
-      await applyMetricKeys(vscode.ConfigurationTarget.Global);
-    };
-
-    const applyForAllFolders = async () => {
-      const folders = vscode.workspace.workspaceFolders || [];
-
-      await Promise.all(folders.map(async (folder) => {
-        await applyMetricKeys(vscode.ConfigurationTarget.WorkspaceFolder, folder.uri);
-      }));
-    };
-
-    isSyncingOnBoardOperatorMetrics = true;
-
-    try {
-      if (debugEnabled) {
-        console.log('[onBoardOperatorMetricsSync] desired:', desired, 'inspect:', parentInspect);
-      }
-
-      const wroteAnyExplicitScope = Boolean(typeof parentInspect?.workspaceFolderValue === 'boolean'
-        || typeof parentInspect?.workspaceValue === 'boolean'
-        || typeof parentInspect?.globalValue === 'boolean');
-
-      // If user explicitly set parent at certain scopes, update children in those scopes too.
-      if (typeof parentInspect?.workspaceFolderValue === 'boolean') {
-        await applyForAllFolders();
-      }
-
-      if (typeof parentInspect?.workspaceValue === 'boolean') {
-        await applyForWorkspace();
-      }
-
-      if (typeof parentInspect?.globalValue === 'boolean') {
-        await applyForGlobal();
-      }
-
-      // Always ensure workspace has the value too, so Settings UI reflects immediately even
-      // when parent scope is ambiguous.
-      if (!wroteAnyExplicitScope || typeof parentInspect?.workspaceValue !== 'boolean') {
-        await applyForWorkspace();
-      }
-    }
-    catch (error) {
-      console.warn('[onBoardOperatorMetricsSync] failed:', error);
-    }
-    finally {
-      isSyncingOnBoardOperatorMetrics = false;
-    }
-  });
-
-  context.subscriptions.push(onBoardOperatorMetricsSync);
-
   const devtoolConfigWatcher = vscode.workspace.createFileSystemWatcher(`**/${getIdeConfigDirName()}/devtool_config.json`);
   const watchDevtoolConfigCreate = devtoolConfigWatcher.onDidCreate(async (uri) => {
     logDebug('event:devtoolConfigWatcher:create', uri.fsPath);
@@ -2533,7 +2474,6 @@ export async function activate(context: vscode.ExtensionContext) {
     context,
     operateTreeProvider,
     logDebug,
-    checkDevtoolConfigExists,
   });
   logDebug('activate:end', {
     elapsedMs: Date.now() - activateStart,

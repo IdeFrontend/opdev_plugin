@@ -60,11 +60,6 @@ export type StartBuildExampleParams = {
   projectId?: string | number; // 项目ID（从 projects.json 根据根目录查找）
 };
 
-export type SaveBuildConfigParams = {
-  data: unknown;
-  showMessage?: boolean;
-};
-
 export type SaveConfigParams = {
   type: string;
   data: unknown;
@@ -79,14 +74,6 @@ export type SaveSanitizerFormParams = {
 export type UpdateShScriptParams = {
   ascendEnvScript?: string;
   soc_version?: string;
-};
-
-export type OperatorInfo = {
-  id: number;
-  op_name: string;
-  op_type: string;
-  op_path: string;
-  config_name: string;
 };
 
 export type StartUtTestParams = {

@@ -16,12 +16,4 @@ export const viewMethods = {
   async openInsight(filePath: string) {
     await viewService.openInsight(filePath);
   },
-
-  /**
-   * Open the anomaly detection panel
-   */
-  openMsSanitizerPanelView() {
-    // Compatible with old interfaces, temporarily leave blank or redirect
-    // viewService.openMsSanitizerPanelView({});
-  },
 };

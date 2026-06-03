@@ -1,3 +1,6 @@
+import { resolveEffectiveCannSoc } from '@plugin/domain/utils/ascend-util';
+import { isAscendA5ProfilerCannSoc } from '@shared/msprof-onboard-env';
+
 /**
  * Command generation configuration options
  */
@@ -84,7 +87,7 @@ export type ExecutableCommandMode = 'run' | 'deploy';
 export interface GetExecutableCommandOptions extends PermissionConfig {
   /** Default `run`. Use `deploy` for .run package install after build. */
   mode?: ExecutableCommandMode;
-  /** When mode is `deploy` and target is a .run package, append `--force` (default true). */
+  /** When mode is `deploy` and target is a .run package, append `--force` only on A5 (ascend950) unless false. */
   deployForce?: boolean;
 }
 
@@ -112,11 +115,11 @@ export function isRunPackageDeployTarget(file: string): boolean {
 }
 
 function runPackageForceSuffix(options: GetExecutableCommandOptions): string {
-  if (options.mode !== 'deploy') {
+  if (options.mode !== 'deploy' || options.deployForce === false) {
     return '';
   }
 
-  if (options.deployForce === false) {
+  if (!isAscendA5ProfilerCannSoc(resolveEffectiveCannSoc())) {
     return '';
   }
 

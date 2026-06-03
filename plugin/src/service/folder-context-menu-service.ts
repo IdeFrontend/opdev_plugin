@@ -16,23 +16,17 @@ import {
   type OperatorProjectDetectionResult,
 } from '@plugin/domain/services/operator-project-detector';
 import {
-  createProject,
   getProjectByPath,
   getProjectById,
-  deleteProject,
-  getAllProjects,
   getContainingStandardCustomProject,
   updateStandardCustomOperators,
   type SubOperatorInfo,
 } from '@plugin/domain/models/project-model';
-import { WorkspaceDetectorService } from './workspace-detector-service';
 import { ProjectManager } from '@plugin/core/project/project-manager';
-import { projectService } from './project-service';
 import { OperatorProjectIconTheme } from '@plugin/class/operator-project-icon-theme';
 import { generateStructure } from '@plugin/domain';
-import {
-  getOpsByProjectId, getOpByProjectIdAndOpName,
-} from '@plugin/domain/models/model';
+import { configService, ConfigService } from '@plugin/service/config-service';
+import { getOpByProjectIdAndOpName } from '@plugin/domain/models/model';
 import {
   getConfig, getConfigById, postConfig,
 } from '@plugin/domain/services/configuration';
@@ -1087,19 +1081,7 @@ export class FolderContextMenuService {
                 // Update target_file to python3 ${relativePath}
                 const newTargetFile = `python3 ${targetPath}`;
 
-                // Update config
-                const userOptions = config.user_options as any || {};
-
-                await postConfig('build_op', [
-                  {
-                    config_id: configId,
-                    project_id: project.id,
-                    user_options: {
-                      ...userOptions,
-                      target_file: newTargetFile,
-                    },
-                  },
-                ]);
+                await ConfigService.writeBuildOpDeployTarget(newTargetFile);
               }
             }
           }
@@ -1257,8 +1239,6 @@ export class FolderContextMenuService {
       return;
     }
 
-    const project = getProjectByPath(folderPath);
-
     // Check if sanitizer/tuning supported (standard custom: build.sh must contain --bisheng_flags)
     const rootPath = findStandardCustomRoot(folderPath);
 
@@ -1302,8 +1282,6 @@ export class FolderContextMenuService {
       return;
     }
 
-    const project = getProjectByPath(folderPath);
-
     // Check sanitizer/tuning support (standard custom: build.sh must have --bisheng_flags)
     const rootPath = findStandardCustomRoot(folderPath);
 
@@ -1346,8 +1324,6 @@ export class FolderContextMenuService {
 
       return;
     }
-
-    const project = getProjectByPath(folderPath);
 
     // Check sanitizer/tuning support (standard custom: build.sh must have --bisheng_flags)
     const rootPath = findStandardCustomRoot(folderPath);
@@ -1499,13 +1475,10 @@ export class FolderContextMenuService {
         isSkipUnZip, // When a standard custom operator is used and there is no template, template decompression is skipped.
         skipVscodeFiles, // Whether to skip creating .vscode and .arts files
       );
-
-      // Verify that the configuration is created successfully
-      const ops = getOpsByProjectId(projectId);
-      const buildOpConfigs = getConfig(projectId, 'build_op');
+      await configService.maybeMigrateLegacySettingsToWorkspace();
     }
-    catch (error) {
-      // Initialization failures should not prevent marking operations, only log errors
+    catch {
+      // Initialization failures should not prevent marking operations
     }
   }
 

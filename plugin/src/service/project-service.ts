@@ -10,10 +10,10 @@ import {
 } from '@shared/api-types';
 import {
   updateShScript,
-  generateOpsPrototype,
-  generateStructure,
   getProjectById,
-} from '@plugin/domain';
+} from '@plugin/domain/models/project-model';
+import { generateOpsPrototype } from '@plugin/domain/services/ops-prototype';
+import { generateStructure } from '@plugin/domain/services/ops';
 import {
   getAscendEnvScriptWithWorkspaceOverride,
   getEnvironmentSocVersionFromWorkspace,
@@ -21,6 +21,7 @@ import {
   getSocVersionWithWorkspaceOverride,
 } from '@plugin/helpers/operator-project-workspace-config';
 import { appendLog } from '@plugin/helpers/output-channel';
+import { configService } from '@plugin/service/config-service';
 
 export class ProjectService {
   /**
@@ -122,6 +123,7 @@ export class ProjectService {
 
       vscode.window.showInformationMessage(t('project.createOpFileSuccess'));
       await pm.checkVscode();
+      await configService.maybeMigrateLegacySettingsToWorkspace();
     }
     catch (e) {
       console.error('createOpsByPrototype: Failed to create operator', e);
@@ -203,7 +205,7 @@ export class ProjectService {
 
   /**
    * Mirror workspace environment settings into `projects.json` for the current project.
-   * Call when `op-devtools.environment.*` (or legacy operatorProject env keys) changes.
+   * Call when `op-devtools.environment.*` changes.
    */
   async syncAscendEnvScriptFromWorkspaceSettings(): Promise<void> {
     appendLog(

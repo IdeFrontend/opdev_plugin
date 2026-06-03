@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
+import { getIdeConfigDir, getIdeSettingsFilePath } from '@plugin/helpers/ide-config-dir';
 import { ConfigService } from '@plugin/service/config-service';
 
 describe('ConfigService settings file', () => {
@@ -10,9 +11,8 @@ describe('ConfigService settings file', () => {
 
   beforeEach(() => {
     tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'op-devtools-settings-'));
-    const vscodeDir = path.join(tmpRoot, '.vscode');
-    fs.mkdirSync(vscodeDir, { recursive: true });
-    settingsPath = path.join(vscodeDir, 'settings.json');
+    fs.mkdirSync(getIdeConfigDir(tmpRoot), { recursive: true });
+    settingsPath = getIdeSettingsFilePath(tmpRoot);
   });
 
   afterEach(() => {
@@ -106,6 +106,6 @@ describe('ConfigService settings file', () => {
         /assignIfDefined\(updates, 'performanceTuning\.simulation\.simulatorType'/,
       );
     expect(source)
-      .not.toMatch(/opDevtoolsWriteDepth|isOpDevtoolsSettingsWriteInProgress|runSerializedSettingsFileOp/);
+      .not.toMatch(/opDevtoolsWriteDepth|isOpDevtoolsSettingsWriteInProgress|runSerializedSettingsFileOp|settingsWriteChainsByRoot/);
   });
 });

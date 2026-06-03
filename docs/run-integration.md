@@ -21,8 +21,7 @@ The actual execution is the **target_file** (binary or `python3` script) invoked
 ```mermaid
 flowchart LR
   subgraph Plugin["This plugin"]
-    Webview[Operate panel]
-    OpsAPI[ops API\nstartRun]
+    Commands[VS Code command\n/ Operate tree]
     TaskCtrl[Task controller]
     BuildSvc[BuildService\nstartRun]
     DomainCmd[domain/services/command\ngetRunCommand]
@@ -38,8 +37,7 @@ flowchart LR
     Shell[Shell / target binary or python]
   end
 
-  Webview -->|"request"| OpsAPI
-  OpsAPI --> TaskCtrl --> BuildSvc
+  Commands --> TaskCtrl --> BuildSvc
   BuildSvc --> DomainCmd --> Strategy
   BuildSvc --> Executor
   Executor --> Shell
@@ -48,7 +46,7 @@ flowchart LR
 
 | Layer | Protocol | Role |
 |-------|----------|------|
-| **Webview → Plugin** | Custom request/response over ApiServer | Operate calls `ops/startRun(params)`. |
+| **Webview → Plugin** | — | Run is **not** on the `ops` namespace. Trigger via VS Code command / Operate tree → `taskMethods.startRun`. |
 | **Plugin → VS Code** | VS Code Extension API | Show success/error messages; project/workspace and active editor (for PyAsc). |
 | **Plugin → Environment** | Shell command (stdio) | Executor runs the generated run command (source env, `cd`, then target_file); exit code and output are reported back. |
 
@@ -59,11 +57,10 @@ flowchart LR
 ```mermaid
 flowchart TB
   subgraph Entry["Entry points"]
-    Operate["Operate panel\nstartRun (运行)"]
+    Tree["Operate tree / command\nstartRun (运行)"]
   end
 
   subgraph Plugin["Plugin (plugin/src)"]
-    ApiSrv["ApiServer\nops.startRun"]
     TaskCtrl["TaskController\nstartRun"]
     BuildSvc["BuildService\nstartRun\nconfig selection by project type"]
     DomainCmd["domain/services/command.ts\ngetRunCommand"]
@@ -79,7 +76,7 @@ flowchart TB
     Executor["CommandExecutor\nexecute(cmd)"]
   end
 
-  Operate --> ApiSrv --> TaskCtrl --> BuildSvc
+  Tree --> TaskCtrl --> BuildSvc
   BuildSvc --> DomainCmd
   DomainCmd --> ConfigSvc
   DomainCmd --> StrategyFactory
@@ -96,8 +93,7 @@ flowchart TB
 ```mermaid
 sequenceDiagram
   participant User
-  participant Webview as Operate panel
-  participant Api as ApiServer (ops)
+  participant Cmd as VS Code command
   participant Task as TaskController
   participant Build as BuildService
   participant Home as homeMethods
@@ -106,12 +102,10 @@ sequenceDiagram
   participant PM as ProjectManager
   participant Exec as CommandExecutor
 
-  User->>Webview: 运行 (startRun)
-  Webview->>Api: ops/startRun(params)
-  Api->>Task: startRun(params)
+  User->>Cmd: 运行 (startRun)
+  Cmd->>Task: startRun(params)
 
   Task->>PM: initProject()
-  Task->>Task: currentTaskType = 'runExample'
   Task->>Build: startRun(params)
 
   Build->>Home: getProjectType()
@@ -250,22 +244,22 @@ flowchart TB
 | `domain/services/command.ts` | getRunCommand(config_id): getBaseContext, get strategy, buildCommandContext, getRunTargetFile → set context.config.target_file, buildRunCommand(context). |
 | `domain/services/command-strategy/*` | buildRunCommand(context): source + cd + target; getRunTargetFile(config, operator): ascend/pyasc use config.target_file; cann uses build_op target_file. |
 | `controller/home-controller.ts` | getProjectType(): used to decide PyAsc vs non-PyAsc and thus which config to use for run. |
-| `api-routes.ts` | ops.startRun: taskMethods.startRun or taskMethodsV2.startRun by USE_V2_RUN. |
+| `api-routes.ts` | Run is **not** on `ops`; `taskMethods.startRun` (or v2) from commands / Operate tree. |
 
 ---
 
 ## V2 Run Path
 
-When feature flag **USE_V2_RUN** is enabled, `ops/startRun` is handled by **BuildControllerV2.startRun**. The flow is the same in spirit: initProject, PyAsc .py check and optional build_op target_file update (v2 uses `relativePath` for target_file in the saved config), then call BuildApplicationService.startRun; result is shown via INotificationService. Command generation and strategy behavior are unchanged.
+When feature flag **USE_V2_RUN** is enabled, run is handled by **BuildControllerV2.startRun** (same entry: in-plugin `taskMethods.startRun`, not web `ops`). The flow is the same in spirit: initProject, PyAsc `.py` check and optional `writeBuildOpDeployTarget`, then `BuildApplicationService.startRun`.
 
 ---
 
 ## Summary
 
-- **Protocols:** Webview → plugin via `ops/startRun`; plugin runs the generated run command via ProjectManager.getExecutor(); notifications for success/failure.
+- **Protocols:** Command / tree → `taskMethods.startRun`; plugin runs the generated run command via `ProjectManager.getExecutor()`; notifications for success/failure.
 - **Config:** Run uses **build_op** for PyAsc (with optional target_file update from active .py or filePath) and **build_example** for Ascend/CANN. target_file is resolved by strategy (getRunTargetFile).
 - **Command:** getRunCommand(configId) → strategy.buildCommandContext, strategy.getRunTargetFile (→ context.config.target_file), strategy.buildRunCommand → one shell string (source env, cd, then run target).
-- **Architecture:** Operate → ops.startRun → TaskController → BuildService.startRun (config selection, optional PyAsc config update) → getRunCommand → strategy → CommandExecutor. The plugin provides orchestration and command generation; the actual run is the target binary or Python command in the workspace environment.
+- **Architecture:** Operate tree / command → TaskController → BuildService.startRun → getRunCommand → strategy → CommandExecutor.
 
 ---
 

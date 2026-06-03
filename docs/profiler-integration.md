@@ -31,7 +31,7 @@ via `resolveAscendEnv({ isSimulator: true })`. Details: **`docs/ascend-a5-suppor
 ```mermaid
 flowchart LR
   subgraph Plugin["This plugin"]
-    Webview[Operate / Config panels]
+    Webview[Options webviews\nsimulator / on-board]
     PerfAPI[performance API]
     OpsAPI[ops API\nstartSimulate, startOnBoard]
     BuildSvc[BuildService]
@@ -66,7 +66,7 @@ flowchart LR
 
 | Layer | Protocol | Role |
 |-------|----------|------|
-| **Webview → Plugin** | Custom request/response over ApiServer | Operate calls `ops/startSimulate`, `ops/startOnBoard`; panel calls `performance/getRunData`, `performance/toggleRecordMark`, `view/openCsvFile`, `view/openInsight`, etc. |
+| **Webview → Plugin** | Custom request/response over ApiServer | Options panels call `ops/startSimulate`, `ops/startOnBoard`, `ops/getConfigData`, `ops/saveConfig`; performance sidebar calls `performance/*`, `view/openCsvFile`, `view/openInsight`. Operate tree may also trigger simulate/on-board via commands. |
 | **Plugin → VS Code** | VS Code Extension API (`vscode.commands`, `registerWebviewViewProvider`) | Register “性能调优” panel; open/focus panel; post refresh message to webview |
 | **Plugin → msprof** | CLI invocation (stdio) | Build `msprof op simulator` or `msprof op` command (output to `.vscode/opprof`); run via `ProjectManager.getExecutor().execute()` |
 | **Panel ↔ Plugin** | Webview `postMessage` / API | Panel calls `performance/getRunData`; plugin posts `iframeRefreshData` to refresh list; `updateTheme` for theme |
@@ -78,7 +78,7 @@ flowchart LR
 ```mermaid
 flowchart TB
   subgraph Entry["Entry points"]
-    Operate["Operate panel\nstartSimulate / startOnBoard"]
+    Options["options-simulator / options-on-board\n+ Operate tree commands"]
     OpenPanel["open-performance-panel-view\n(menu / after run)"]
   end
 
@@ -104,7 +104,7 @@ flowchart TB
     Msprof["msprof"]
   end
 
-  Operate --> ApiSrv --> BuildSvc
+  Options --> ApiSrv --> BuildSvc
   BuildSvc --> Domain --> Executor --> Msprof
   BuildSvc --> CmdOpen
   BuildSvc --> CmdFlash
@@ -124,7 +124,7 @@ Profiling is triggered by **仿真分析** (simulate) or **上板分析** (on-bo
 ```mermaid
 sequenceDiagram
   participant User
-  participant Webview as Operate panel
+  participant Webview as Options webview
   participant Api as ApiServer (ops)
   participant Build as BuildService
   participant Exec as Executor
@@ -316,8 +316,8 @@ flowchart LR
 
 | Concept | Location | Role |
 |--------|----------|------|
-| **Simulate config** | `ops/startSimulate`, getSimulateConfigId | Config type `simulate`; options include metrics (e.g. PipeUtilization, ResourceConflictRatio, PMSampling), simulatorType, advance_param; output dir `.vscode/opprof`. |
-| **On-board config** | `ops/startOnBoard`, getOnBoardConfigId | Config type `on_board`; options include metrics and advance_param; output dir `.vscode/opprof`. |
+| **Simulate config** | `ops/getConfigData`, `ops/saveConfig`, `ops/startSimulate` | UI reads/writes workspace `settings.json` via `saveConfig`; runtime uses `build-service.getSimulateConfigId()` internally. |
+| **On-board config** | `ops/getConfigData`, `ops/saveConfig`, `ops/startOnBoard` | Same pattern; internal `getOnBoardConfigId()`. |
 | **SimulatorStrategy** | `domain/services/profiler-service.ts` | Builds `msprof op simulator` with `--output`, `--aic-metrics`, etc. |
 | **OnBoardStrategy** | Same file | Builds `msprof op` with `--output`, `--aic-metrics`, etc. |
 | **fileMapList** | simulate/on_board `user_options` | List of `{ filePath, reportTime }`; after a run, paths can be added (e.g. from context menu); `PerformanceRunData` merges these into the run list with keys `simulate_${filePath}` / `onboard_${filePath}`. |
@@ -408,4 +408,4 @@ So all performance “windows” are this one sidebar webview; the plugin provid
 
 - **Protocols:** Webview ↔ plugin via `ops` (startSimulate, startOnBoard) and `performance` (getRunData, toggleRecordMark, copyReport, downloadReport, diffFiles) and `view` (openCsvFile, openInsight); plugin ↔ VS Code via WebviewViewProvider and commands; plugin ↔ environment via executor running `msprof`.
 - **Panel:** Single sidebar view “性能调优” (id `performancePanelView`), backed by `PerformancePanelViewProvider`, loading `sidebars/performance-run-data`; run data from `.vscode/opprof` and simulate/on_board `fileMapList`; marks from `marked_performance_records`; no per-report “content” message — tree only; CSV/Insight opened via view API.
-- **Architecture:** Entry points (Operate startSimulate/startOnBoard + open-performance-panel-view) → BuildService (msprof) and performance panel; PerformanceRunData aggregates opprof dirs and fileMapList; panel shows tree and opens files through view controller. This repo provides orchestration, config, and UI; the profiling engine is the external `msprof` tool.
+- **Architecture:** Entry points (options webviews + Operate tree + `open-performance-panel-view`) → BuildService (msprof) and performance panel; PerformanceRunData aggregates opprof dirs and fileMapList.

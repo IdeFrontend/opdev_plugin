@@ -3,6 +3,4 @@ export * from './home';
 
 export * from './config';
 
-export * from './Operate';
-
 export * from './welcome';

@@ -1,3 +1,4 @@
+import { ConfigHelper } from '@plugin/helpers/ConfigHelper';
 import * as vscode from 'vscode';
 
 export type MsAgentAiFixState = 'queued' | 'running' | 'fixed';
@@ -15,11 +16,7 @@ export interface MsAgentAiFixQueueSnapshot {
 export class MsAgentBridgeService {
   private isMsAgentAiFixEnabled(): boolean {
     try {
-      return (
-        vscode.workspace
-          .getConfiguration('op-devtools')
-          .get<boolean>('sanitizer.enableMsAgentAiFix', false) ?? false
-      );
+      return ConfigHelper.get<boolean>('sanitizer.enableMsAgentAiFix', false);
     }
     catch {
       return false;

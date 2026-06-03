@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs-extra';
 import { t } from 'i18next';
-import { getProjectById } from '@plugin/domain';
+import { getProjectById } from '@plugin/domain/models/project-model';
 
 async function generateOpsPrototypeJson(
   projectPath: string,

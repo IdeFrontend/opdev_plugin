@@ -19,6 +19,7 @@ import {
   viewIdToProjectType, ensureLaunchJsonExists,
 } from '../domain/utils/project-utils';
 import { requestSidebarContextsRefresh } from '@plugin/helpers/sidebar-context-refresh';
+import { configService } from '@plugin/service/config-service';
 import {
   OperatorProjectDetector,
   OperatorProjectType,
@@ -373,6 +374,7 @@ export const welcomeMethods = {
           const projectId = existingProject.id;
           await completeProjectConfigs(projectId);
           console.log('[openProject] Config completion finished');
+          await configService.maybeMigrateLegacySettingsToWorkspace();
         } catch (error) {
           console.warn(`[openProject] Config completion failed: ${error instanceof Error ? error.message : String(error)}`);
         }
@@ -464,6 +466,7 @@ export const welcomeMethods = {
         true,
       );
       await pm.checkVscode();
+      await configService.maybeMigrateLegacySettingsToWorkspace();
       await requestSidebarContextsRefresh();
 
       if (!isFromSystem) {

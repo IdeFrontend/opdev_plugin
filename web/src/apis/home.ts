@@ -1,8 +1,6 @@
 import { request } from '@/core/request';
 import {
-  GetProjectIdResult,
   GetHomeResult,
-  GetProjectSHResult,
   GetLastProjectPathResult,
   GetWorkspaceResult,
 } from '@shared/api-types';
@@ -12,13 +10,6 @@ import {
  */
 export function getHome() {
   return request.post<undefined, GetHomeResult>('webview/getHome');
-}
-
-/**
- * 获取项目SH脚本
- */
-export function getProjectSH() {
-  return request.post<undefined, GetProjectSHResult>('webview/getProjectSH');
 }
 
 /**

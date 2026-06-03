@@ -21,9 +21,9 @@ The actual debug engine uses the **Debug Adapter Protocol (DAP)** and is impleme
 ```mermaid
 flowchart LR
   subgraph Plugin["This plugin"]
-    Webview[Operate panel]
+    Tree[Operate tree / Explorer\ncontext menu]
     TaskCtrl[Task controller]
-    Webview -->|"postMessage / request"| TaskCtrl
+    Tree --> TaskCtrl
   end
 
   subgraph VSCode["VS Code"]
@@ -48,7 +48,7 @@ flowchart LR
 
 | Layer | Protocol | Role |
 |-------|----------|------|
-| **Webview → Plugin** | Custom request/response over webview messaging | Operate panel calls `webview/runDebug`, `webview/runCpuDebug`, etc. |
+| **Entry → Plugin** | VS Code commands / Operate tree / explorer context menu | Calls `taskMethods.runDebug`, `debugConfig`, `runCpuDebug`, `cpuDebugConfig` in-process. (`webview/*` still exposes `taskMethods` via `webviewMethods` spread, but no web client calls debug RPC today.) |
 | **Plugin → VS Code** | VS Code Extension API (`vscode.debug`, `vscode.commands`) | Start session by config name; open Configure / REPL |
 | **VS Code ↔ Debug Adapter** | **Debug Adapter Protocol (DAP)** | JSON-RPC over stdio/socket; implemented by MindStudio Debug extension |
 | **Debug Adapter → Target** | Tool-specific (GDB MI, Python, NPU) | MindStudio adapter talks to GDB / Python / NPU debuggee |
@@ -61,13 +61,12 @@ flowchart LR
 flowchart TB
   subgraph Entry["Entry points"]
     Explorer["Explorer context menu\n(调试 submenu)"]
-    Operate["Operate panel\n(webview)"]
+    Tree["Operate tree /\nExplorer menu"]
   end
 
   subgraph Plugin["Plugin (plugin/src)"]
     Commands["extension.ts\nRegistered commands"]
     FolderSvc["FolderContextMenuService"]
-    ApiSrv["ApiServer\n(webview/runDebug etc.)"]
     TaskCtrl["TaskController\nrunDebug / runCpuDebug\ndebugConfig / cpuDebugConfig"]
     LaunchJson["debug-launch.json\n(msdebug, msdebug-cpu, msdebug-python)"]
     ProjectUtils["project-utils\nensureLaunchJsonExists"]
@@ -84,7 +83,7 @@ flowchart TB
   end
 
   Explorer --> Commands --> FolderSvc --> TaskCtrl
-  Operate --> ApiSrv --> TaskCtrl
+  Tree --> Commands --> TaskCtrl
   TaskCtrl --> LaunchJson
   ProjectUtils --> LaunchJson
   TaskCtrl --> DebugAPI
@@ -100,16 +99,16 @@ flowchart TB
 ```mermaid
 sequenceDiagram
   participant User
-  participant Webview as Operate panel / Explorer
-  participant Api as ApiServer / Commands
+  participant UI as Operate tree / Explorer
+  participant Cmd as extension command
   participant Task as TaskController
   participant Build as BuildService
   participant VSCode as VS Code
   participant MS as MindStudio Debug
 
-  User->>Webview: Click CPU/NPU Debug or Configure
-  Webview->>Api: webview/runDebug or command
-  Api->>Task: runDebug() / runCpuDebug() / debugConfig()
+  User->>UI: Click CPU/NPU Debug or Configure
+  UI->>Cmd: registered command
+  Cmd->>Task: runDebug() / runCpuDebug() / debugConfig()
 
   alt Start debugging
     Task->>Build: startBuild(npu_debug_script / cpu_debug_script)
@@ -201,7 +200,7 @@ flowchart TB
 | `domain/utils/project-utils.ts` | Writes template to `.vscode/launch.json` and `.arts/launch.json` for new projects |
 | `controller/task-controller.ts` | Build + `startDebugging(name)` or `workbench.action.debug.configure` |
 | `service/folder-context-menu-service.ts` | Explorer menu handlers that call task controller methods |
-| `api-routes.ts` / `controller/index.ts` | Expose `webview/runDebug`, `webview/runCpuDebug`, etc. via `taskMethods` |
+| `api-routes.ts` | Debug **not** on `ops`; only in-plugin / optional `webview/*` via `webviewMethods` + `taskMethods` spread |
 | `extension.ts` | Registers debug commands; runs MindStudioPluginInstaller on activate |
 | `class/mind-studio-plugin-installer.ts` | Ensures `ascend.mindstudio-debug-vscode-plugin` is installed |
 | `constants.ts` | Command IDs for the four debug-related commands |
@@ -231,6 +230,6 @@ So all “debug windows” are VS Code’s native debug UI; the plugin only trig
 
 ## Summary
 
-- **Protocols:** DAP (VS Code ↔ MindStudio Debug adapter), Extension API (plugin ↔ VS Code), webview messaging (Operate panel ↔ plugin).
+- **Protocols:** DAP (VS Code ↔ MindStudio Debug adapter), Extension API (plugin ↔ VS Code). Entry via commands / Operate tree / explorer menu, not `ops` RPC.
 - **VS Code debug UI:** Standard RUN AND DEBUG views; the plugin starts sessions and opens Configure/REPL via the Debug API and built-in commands.
-- **Architecture:** Entry points (Explorer menu + webview API) → plugin task controller → `startDebugging` / configure → VS Code → MindStudio Debug extension (DAP) → debuggee. This repo provides launch configs and orchestration; the debug engine and DAP live in the MindStudio Debug extension.
+- **Architecture:** Explorer / Operate tree → `taskMethods` → optional build → `startDebugging` → MindStudio Debug extension (DAP).

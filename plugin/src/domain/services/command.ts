@@ -1,10 +1,7 @@
 import { t } from 'i18next';
 import { getOpByProjectIdAndOpName } from './ops';
 import { getProjectById } from '@plugin/domain';
-import {
-  getConfigById,
-  getConfig,
-} from './configuration';
+import { ConfigService } from '@plugin/service/config-service';
 import { getAdvanceCmd, getExecutableCommand, isRunPackageDeployTarget, joinCommands } from '@plugin/domain/utils/command-utils';
 import { ConfigRecord } from '@plugin/domain/models/config-model';
 import {
@@ -20,7 +17,7 @@ import {
  * @throws Error if the configuration does not exist
  */
 function getBaseContext(configId: number): BaseContext {
-  const config = getConfigById(configId) as unknown as ConfigRecord;
+  const config = ConfigService.getRuntimeConfigById(configId) as unknown as ConfigRecord;
 
   if (!config) {
     throw new Error(t('command.configNotFound'));

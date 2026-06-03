@@ -5,7 +5,7 @@ import { getIdeConfigDir } from '@plugin/helpers/ide-config-dir';
 import * as fs from 'fs';
 import { CommandExecutor } from '@plugin/class/command-options';
 import { ExplorerRootUtils } from '@plugin/class/explorer-root-utils';
-import { createProject } from '@plugin/domain';
+import { createProject } from '@plugin/domain/models/project-model';
 import { getProjectByPath } from '@plugin/domain/models/project-model';
 
 /**

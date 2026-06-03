@@ -189,10 +189,6 @@
         "title": "%config.category.compileAndDeploy.title%",
         "type": "object",
         "properties": {
-          "op-devtools": {
-            "type": "object",
-            "default": {}
-          },
           "op-devtools.debugMode": {
             "type": "boolean",
             "default": true,
@@ -1388,7 +1384,9 @@
     "lint": "oxlint . && eslint .",
     "lint:fix": "eslint . --fix",
     "type-check": "tsc --noEmit && cd web && vue-tsc --noEmit",
-    "install:web": "cd web && pnpm install"
+    "install:web": "cd web && pnpm install",
+    "test": "cd plugin && pnpm run test",
+    "verify": "pnpm run compile && pnpm run test"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,vue}": [

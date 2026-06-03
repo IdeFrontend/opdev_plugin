@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
@@ -30,6 +31,29 @@ export function joinIdeConfigRelative(...segments: string[]): string {
 
 export function getIdeSettingsFilePath(workspaceRoot: string): string {
   return joinIdeConfigPath(workspaceRoot, 'settings.json');
+}
+
+/** Missing, whitespace-only, invalid JSON, or `{}` workspace settings file. */
+export function isIdeSettingsFileEmpty(workspaceRoot?: string): boolean {
+  const root = workspaceRoot ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+  if (!root) {
+    return true;
+  }
+  const filePath = getIdeSettingsFilePath(root);
+  if (!fs.existsSync(filePath)) {
+    return true;
+  }
+  const raw = fs.readFileSync(filePath, 'utf8').trim();
+  if (!raw) {
+    return true;
+  }
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    return Object.keys(parsed).length === 0;
+  }
+  catch {
+    return true;
+  }
 }
 
 export function getDevtoolConfigPath(workspaceRoot: string): string {

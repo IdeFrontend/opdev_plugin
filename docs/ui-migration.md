@@ -238,9 +238,8 @@ Runtime mapping:
 
 Config sources now include:
 
-1. persisted project config (`user_options` from DB/config file path)
-2. workspace settings overrides
-3. (temporarily) legacy alias settings keys for compatibility
+1. persisted project config (`user_options` from DB/config file path) — row identity + db-only fields after migration
+2. workspace settings overrides (canonical `op-devtools.*` keys only)
 
 A merge layer is required so command generation sees one effective config object.
 
@@ -261,15 +260,16 @@ Service integration:
 - `config-service` reads merged sanitizer configs while preserving raw-save path
 - `project-service` applies environment script override
 
-## 4.3 Dynamic sync initialization
+## 4.3 One-time migration initialization (current branch)
 
-`syncOperatorProjectWorkspaceSettings` in [`plugin/src/extension.ts`](plugin/src/extension.ts):
+`configService.maybeMigrateLegacySettingsToWorkspace()` in [`plugin/src/extension.ts`](plugin/src/extension.ts) (via `refreshSidebarContexts`, welcome open, folder mark):
 
-- loads persisted config values
-- writes settings only when key is not explicitly set by user
-- initializes newly introduced settings keys during migration
+- runs once when `op-devtools.internal.settingsMigratedFromLegacy` is absent
+- seeds canonical dotted keys from legacy `configs.json` (`buildLegacySettingsMigrationWrites`)
+- does **not** read or write intermediate non-canonical dotted keys
+- sets migration flag only after ≥1 seed key
 
-This preserves user intent while avoiding empty settings after migration.
+Post-migration: webview/API saves use `ConfigService.writeOpDevtoolsDottedSettings` only.
 
 ## 4.4 Multi-scope implications
 
@@ -318,7 +318,7 @@ The two core docs now serve different but complementary roles:
 
 ## 5.3 Alignment status
 
-Implementation generally follows doc direction, with some documented compatibility leftovers (see Section 7).
+Implementation generally follows doc direction; see Section 7 for remaining gaps (popup residues, lint, manual QA).
 
 ---
 
@@ -339,20 +339,9 @@ This is not part of sidebar/settings architecture, but improves user flow stabil
 
 ## 7) Leftovers and Gaps
 
-## 7.1 Legacy alias compatibility remains active
+## 7.1 Intermediate settings key aliases — removed
 
-Current state:
-
-- merge helper still reads legacy `operatorProject.*` settings aliases
-
-Why it exists:
-
-- protects existing users who set earlier-generation keys
-
-Risk:
-
-- canonical model remains partially "soft"
-- conflict precedence becomes a long-term maintenance concern
+Runtime reads **canonical keys only** (`compileAndDeploy.*`, `sanitizer.*`, `performanceTuning.*`, `environment.*`). Rename any non-canonical dotted keys still present in `settings.json`.
 
 ## 7.2 Popup command/view residues still exist
 
@@ -397,8 +386,7 @@ Risk:
 
 ## 8) Recommended Next Actions
 
-1. Define and publish compatibility sunset for legacy alias keys.
-2. Remove compatibility-only popup routes/constants after sign-off window.
+1. Remove compatibility-only popup routes/constants after sign-off window.
 3. Add automated regression checks:
    - tree visibility matrix
    - single/multi-operator action gating

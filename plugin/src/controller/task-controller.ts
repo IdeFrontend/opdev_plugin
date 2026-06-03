@@ -14,12 +14,9 @@ import {
   StartSimulateParams,
   StartOnBoardParams,
   StartSanitizerParams,
-  StartDumpTensorParams,
   StartUtTestParams,
 } from '@shared/api-types';
-import {
-  getConfig, postConfig,
-} from '@plugin/domain';
+import { ConfigService } from '@plugin/service/config-service';
 import { OperatorProjectType } from '@plugin/domain/services/operator-project-detector';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import { getCompileOptionForSelectedOperators } from '@plugin/helpers/compile-options';
@@ -27,19 +24,6 @@ import { whenPostActivateBootstrapReady } from '@plugin/helpers/post-activate-bo
 
 // Global task manager: used to track and terminate executing tasks
 let currentExecutor: CommandExecutor | null = null;
-// Current task name mapping (key -> i18n key)
-const taskNameKeyMap: Record<string, string> = {
-  'build': 'task.taskName.build',
-  'runExample': 'task.taskName.runExample',
-  'sanitizer': 'task.taskName.sanitizer',
-  'onboard': 'task.taskName.onboard',
-  'simulation': 'task.taskName.simulation',
-  'buildAndCpuDebug': 'task.taskName.buildAndCpuDebug',
-  'buildAndDebug': 'task.taskName.buildAndDebug',
-  'dumpTensor': 'task.taskName.dumpTensor',
-  'utTest': 'task.taskName.utTest',
-};
-
 
 async function ensurePostActivateBootstrapReady(): Promise<void> {
   await whenPostActivateBootstrapReady();
@@ -56,9 +40,6 @@ async function guardSupportedProjectTypeOrNotify(): Promise<boolean> {
   return true;
 }
 
-/** Currently running task type (maps to taskNameKeyMap keys). */
-let currentTaskType: string | null = null;
-
 export const taskMethods = {
   /**
    * Build operator
@@ -71,13 +52,11 @@ export const taskMethods = {
       // Save the current executor reference for possible termination operations
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
-      currentTaskType = 'build';
       await buildService.startBuild(params);
     }
     finally {
       // Clear executor reference
       currentExecutor = null;
-      currentTaskType = null;
       ProjectManager.getInstance()
         .clearExecutor();
     }
@@ -94,13 +73,11 @@ export const taskMethods = {
       // Save current executor reference
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
-      currentTaskType = 'runExample';
       await buildService.startRun(params);
     }
     finally {
       // Clear executor reference
       currentExecutor = null;
-      currentTaskType = null;
       ProjectManager.getInstance()
         .clearExecutor();
     }
@@ -117,13 +94,11 @@ export const taskMethods = {
       // Save current executor reference
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
-      currentTaskType = 'build';
       await buildService.startBuildExample(params);
     }
     finally {
       // Clear executor reference
       currentExecutor = null;
-      currentTaskType = null;
       ProjectManager.getInstance()
         .clearExecutor();
     }
@@ -140,13 +115,11 @@ export const taskMethods = {
       // Save current executor reference
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
-      currentTaskType = 'simulation';
       await buildService.startSimulate(params);
     }
     finally {
       // Clear executor reference
       currentExecutor = null;
-      currentTaskType = null;
       ProjectManager.getInstance()
         .clearExecutor();
     }
@@ -163,13 +136,11 @@ export const taskMethods = {
       // Save current executor reference
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
-      currentTaskType = 'onboard';
       await buildService.startOnBoard(params);
     }
     finally {
       // Clear executor reference
       currentExecutor = null;
-      currentTaskType = null;
       ProjectManager.getInstance()
         .clearExecutor();
     }
@@ -186,13 +157,11 @@ export const taskMethods = {
       // Save the current executor reference for possible termination operations
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
-      currentTaskType = 'sanitizer';
       await sanitizerService.runSanitizer(params);
     }
     finally {
       // Clear executor reference
       currentExecutor = null;
-      currentTaskType = null;
       ProjectManager.getInstance()
         .clearExecutor();
     }
@@ -210,13 +179,11 @@ export const taskMethods = {
       // Save current executor reference
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
-      currentTaskType = 'dumpTensor';
       await buildService.startDumpTensor(params);
     }
     finally {
       // Clear executor reference
       currentExecutor = null;
-      currentTaskType = null;
       ProjectManager.getInstance()
         .clearExecutor();
     }
@@ -233,12 +200,10 @@ export const taskMethods = {
       // Keep executor reference for possible cancellation
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
-      currentTaskType = 'utTest';
       await buildService.startUtTest(params);
     }
     finally {
       currentExecutor = null;
-      currentTaskType = null;
       ProjectManager.getInstance()
         .clearExecutor();
     }
@@ -261,49 +226,6 @@ export const taskMethods = {
   },
 
   /**
-   * Build operator (webview compatible)
-   */
-  async buildOp(): Promise<void> {
-    return this.startBuild();
-  },
-
-  /**
-   * Build example (webview compatible)
-   */
-  async buildExample(): Promise<void> {
-    return this.startBuildExample();
-  },
-
-  /**
-   * Run the example (webview compatible)
-   */
-  async runExample(): Promise<void> {
-    return this.startRun();
-  },
-
-  /**
-   * Simulation analysis (webview compatible)
-   */
-  async simulate(): Promise<void> {
-    return this.startSimulate();
-  },
-
-  /**
-   * On-board analysis (webview compatible)
-   */
-  async onBoard(): Promise<void> {
-    return this.startOnBoard();
-  },
-
-  /**
-   * Check task execution status
-   * @returns whether there is a task running
-   */
-  async checkTaskStatus(): Promise<boolean> {
-    return currentExecutor !== null;
-  },
-
-  /**
    * Stop task
    */
   async stopTask(): Promise<void> {
@@ -313,7 +235,6 @@ export const taskMethods = {
       console.log('[stopTask] Terminating running task');
       await currentExecutor.kill();
       currentExecutor = null;
-      currentTaskType = null;
       ProjectManager.getInstance()
         .clearExecutor();
       vscode.window.showWarningMessage(t('task.stoppedByUser'));
@@ -322,46 +243,6 @@ export const taskMethods = {
       console.log('[stopTask] No running task');
       vscode.window.showInformationMessage(t('task.noRunningTask'));
     }
-  },
-
-  /**
-   * Get the current task name
-   * @returns current task name, or null if there is no task
-   */
-  async getCurrentTaskName(): Promise<string | null> {
-    if (currentTaskType && taskNameKeyMap[currentTaskType]) {
-      return t(taskNameKeyMap[currentTaskType]);
-    }
-
-    return null;
-  },
-
-  /**
-   * Show confirmation dialog
-   * @param params dialog parameters
-   * @returns the result of user selection, 'stop and execute' or undefined (cancel)
-   */
-  async showConfirmDialog(params: {
-    title: string;
-    content: string;
-    confirmText: string;
-    cancelText: string;
-  }): Promise<string | undefined> {
-    // VSCode's showWarningMessage does not support a separate title and displays the title and content together.
-    const message = `${params.title}\n${params.content}`;
-    // Use modal: true to keep the modal but only provide a "stop and execute" button
-    // VSCode will automatically add a close button (X), the user can cancel by closing the dialog box or pressing ESC
-    // In this way, there is only one way to cancel (the close button), and there will not be two cancel buttons.
-    const result = await vscode.window.showWarningMessage(
-      message,
-      { modal: true },
-      params.confirmText,
-    );
-
-    // Return the results selected by the user:
-    // - If the user clicks the "Stop and Execute" button, return confirmText
-    // - If the user clicks the close button (X) or presses ESC, returns undefined (equivalent to cancel)
-    return result;
   },
 
   /**
@@ -379,9 +260,6 @@ export const taskMethods = {
       // Save the current executor reference for possible termination operations
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
-      // Set current task type
-      currentTaskType = 'buildAndDebug';
-
       // For the pyasc type, check if a .py file is currently open and update the configuration
       const projectTypeInfo = await homeMethods.getProjectType();
       const isPythonOperator = projectTypeInfo.projectType === OperatorProjectType.PYASC
@@ -395,7 +273,6 @@ export const taskMethods = {
         if (!isPyFile) {
           vscode.window.showWarningMessage(t('task.openPyFirst'));
           currentExecutor = null;
-          currentTaskType = null;
           ProjectManager.getInstance()
             .clearExecutor();
 
@@ -408,7 +285,6 @@ export const taskMethods = {
           vscode.window.showWarningMessage(t('task.workspacePathNotFound'));
           // clear status
           currentExecutor = null;
-          currentTaskType = null;
           ProjectManager.getInstance()
             .clearExecutor();
 
@@ -430,25 +306,8 @@ export const taskMethods = {
           const projectIdStr = ProjectManager.getInstance().projectId;
 
           if (projectIdStr) {
-            const projectId = Number(projectIdStr);
-            // Get build_op configuration
-            const configs = await getConfig(projectId, 'build_op');
-            const buildOpConfig = configs.find((c: any) => c.config_id === buildConfigId);
-
-            if (buildOpConfig) {
-              // Update configured target_file
-              const updatedConfig = {
-                config_id: buildConfigId,
-                config_type: 'build_op',
-                user_options: {
-                  ...buildOpConfig.user_options,
-                  target_file: `python3 ${relativePath}`,
-                },
-              };
-
-              // Save configuration
-              await postConfig('build_op', [updatedConfig]);
-            }
+            const deployTarget = `python3 ${relativePath}`;
+            await ConfigService.writeBuildOpDeployTarget(deployTarget);
           }
         }
       }
@@ -487,7 +346,6 @@ export const taskMethods = {
     finally {
       // Clear executor reference and task type
       currentExecutor = null;
-      currentTaskType = null;
       ProjectManager.getInstance()
         .clearExecutor();
     }
@@ -524,9 +382,6 @@ export const taskMethods = {
       // Save the current executor reference for possible termination operations
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
-      // Set current task type
-      currentTaskType = 'buildAndCpuDebug';
-
       // For the pyasc type, check if a .py file is currently open and update the configuration
       const projectTypeInfo = await homeMethods.getProjectType();
       const isPythonOperator = projectTypeInfo.projectType === OperatorProjectType.PYASC
@@ -540,7 +395,6 @@ export const taskMethods = {
         if (!isPyFile) {
           vscode.window.showWarningMessage(t('task.openPyFirst'));
           currentExecutor = null;
-          currentTaskType = null;
           ProjectManager.getInstance()
             .clearExecutor();
 
@@ -553,7 +407,6 @@ export const taskMethods = {
           vscode.window.showWarningMessage(t('task.workspacePathNotFound'));
           // clear status
           currentExecutor = null;
-          currentTaskType = null;
           ProjectManager.getInstance()
             .clearExecutor();
 
@@ -575,25 +428,8 @@ export const taskMethods = {
           const projectIdStr = ProjectManager.getInstance().projectId;
 
           if (projectIdStr) {
-            const projectId = Number(projectIdStr);
-            // Get build_op configuration
-            const configs = await getConfig(projectId, 'build_op');
-            const buildOpConfig = configs.find((c: any) => c.config_id === buildConfigId);
-
-            if (buildOpConfig) {
-              // Update configured target_file
-              const updatedConfig = {
-                config_id: buildConfigId,
-                config_type: 'build_op',
-                user_options: {
-                  ...buildOpConfig.user_options,
-                  target_file: `python3 ${relativePath}`,
-                },
-              };
-
-              // Save configuration
-              await postConfig('build_op', [updatedConfig]);
-            }
+            const deployTarget = `python3 ${relativePath}`;
+            await ConfigService.writeBuildOpDeployTarget(deployTarget);
           }
         }
       }
@@ -625,7 +461,6 @@ export const taskMethods = {
     finally {
       // Clear executor reference and task type
       currentExecutor = null;
-      currentTaskType = null;
       ProjectManager.getInstance()
         .clearExecutor();
     }

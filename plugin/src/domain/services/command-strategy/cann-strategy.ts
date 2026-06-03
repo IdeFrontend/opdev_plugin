@@ -1,6 +1,5 @@
 import { t } from 'i18next';
 import * as vscode from 'vscode';
-import * as path from 'path';
 
 import { joinIdeConfigPath } from '@plugin/helpers/ide-config-dir';
 import { getOpRunPath } from '@plugin/domain/utils/op-util';
@@ -19,9 +18,8 @@ import {
   CommandBuildParams,
   ProfilerCommandParams,
 } from './types';
-import {
-  getConfig, getConfigById,
-} from '../../services/configuration';
+import { getConfig } from '@plugin/domain/services/configuration';
+import { ConfigService } from '@plugin/service/config-service';
 import { resolveAscendEnv } from '@plugin/domain/utils/ascend-util';
 
 /**
@@ -92,10 +90,6 @@ export class CannCommandStrategy implements CommandStrategy {
 
     const cmd = new Command(userOptions[scriptField] as string);
 
-    if (config.custom_options) {
-      cmd.addArgument(config.custom_options);
-    }
-
     // If there is an operator name, add it as a parameter to the command (for scenarios such as standard custom operators)
     if (operatorNames) {
       cmd.addArgument(operatorNames);
@@ -122,10 +116,6 @@ export class CannCommandStrategy implements CommandStrategy {
     }
 
     const cmd = new Command(config.script || '');
-
-    if (config.custom_options) {
-      cmd.addArgument(config.custom_options);
-    }
 
     if (compileOption) {
       cmd.addArgument(compileOption);
@@ -277,19 +267,14 @@ export class CannCommandStrategy implements CommandStrategy {
     return joinCommands(sourceCannCmd, cdBuildCmd, opprofCmd);
   }
 
-  getRunTargetFile(config: ConfigRecord, operator: OpRecord | null): string {
-    // CANN type: target_file configured using build_op
-    const buildOpConfigs = getConfig(config.project_id, 'build_op', config.op);
-    const buildOpConfig = buildOpConfigs.length > 0 ? buildOpConfigs[0] : null;
-
-    return buildOpConfig?.target_file || config.target_file || '';
+  getRunTargetFile(_config: ConfigRecord, _operator: OpRecord | null): string {
+    return ConfigService.readBuildOpDeployTargetFromWorkspace() || '';
   }
 
-  getProfilerTargetFile(config: ConfigRecord, operator: OpRecord | null, exampleConfigId: number): string {
-    // CANN type: target_file configured using build_op
+  // FIXME: Profiler/sanitizer target still comes from legacy configs.json (build_op.target_file), not workspace settings.
+  getProfilerTargetFile(config: ConfigRecord, _operator: OpRecord | null, _exampleConfigId: number): string {
     const buildOpConfigs = getConfig(config.project_id, 'build_op', config.op);
     const buildOpConfig = buildOpConfigs.length > 0 ? buildOpConfigs[0] : null;
-
     return buildOpConfig?.target_file || '';
   }
 
@@ -315,10 +300,6 @@ export class CannCommandStrategy implements CommandStrategy {
     }
 
     const cmd = new Command(script);
-
-    if (config.custom_options) {
-      cmd.addArgument(config.custom_options);
-    }
 
     if (compileOption) {
       cmd.addArgument(compileOption);

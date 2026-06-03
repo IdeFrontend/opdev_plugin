@@ -106,7 +106,6 @@ export type ConfigRecord = {
   script: string;
   target_dir?: string | null;
   target_file?: string | null;
-  custom_options?: string | null;
   user_options?: unknown | null;
   project_id: number;
   op: string;
@@ -152,7 +151,6 @@ function mapRecordToConfig(row: ConfigRecord) {
     script: row.script,
     config_type: row.config_type,
     user_options: row.user_options || null,
-    custom_options: row.custom_options,
     target_file: row.target_file,
     target_dir: row.target_dir,
     project_id: row.project_id,
@@ -209,17 +207,20 @@ export async function postConfig(config_type: string, dataList: unknown[]) {
         continue;
       }
 
-      store.configs[idx] = Object.assign({}, store.configs[idx], {
-        config_name: user_options.config_name,
-        script: user_options.script,
-        target_dir: user_options.target_dir || null,
-        target_file: user_options.target_file || null,
-        custom_options: item.custom_options || null,
-        user_options: user_options,
-        op: opVal,
-        update_by: item.update_by || null,
+      const existing = store.configs[idx];
+      // Post-migration runtime reads scripts from workspace settings only; do not mirror
+      // stale user_options.script / target_file into DB columns on update (e.g. fileMapList).
+      store.configs[idx] = {
+        ...existing,
+        config_name: user_options?.config_name ?? existing.config_name,
+        target_dir: user_options?.target_dir !== undefined
+          ? user_options.target_dir
+          : existing.target_dir,
+        user_options,
+        op: opVal ?? existing.op,
+        update_by: item.update_by ?? null,
         update_time: now,
-      });
+      };
       results.push({
         config_id: item.config_id,
         operation: 'update',
@@ -235,7 +236,6 @@ export async function postConfig(config_type: string, dataList: unknown[]) {
         script: user_options.script || '',
         target_dir: user_options.target_dir || null,
         target_file: user_options.target_file || null,
-        custom_options: item.custom_options || null,
         user_options: user_options,
         project_id: item.project_id,
         op: opVal,
@@ -289,7 +289,6 @@ export function getConfigById(config_id: number) {
     script: row.script,
     target_dir: row.target_dir,
     target_file: row.target_file,
-    custom_options: row.custom_options,
     user_options: row.user_options || null,
     project_id: row.project_id,
     op: row.op,

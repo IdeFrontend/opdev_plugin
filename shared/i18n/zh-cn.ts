@@ -168,8 +168,6 @@ export default {
   'sanitizer.detectionFailedError': '异常检测失败: {{error}}',
 
   // config
-  'config.saveBuildConfigSuccess': '保存编译配置成功',
-  'config.saveBuildConfigFailed': '保存编译配置失败',
   'config.saveConfigSuccess': '保存配置成功',
   'config.saveSanitizerConfigSuccess': '保存异常检测配置成功',
   'config.saveSanitizerConfigFailed': '保存异常检测配置失败',
@@ -236,17 +234,6 @@ export default {
   // file
   'file.saveTo': '保存至',
   'file.saveFailedSourceNotExist': '保存失败，源文件不存在',
-
-  // task (task names for getCurrentTaskName)
-  'task.taskName.build': '编译部署算子',
-  'task.taskName.runExample': '运行',
-  'task.taskName.sanitizer': '异常检测',
-  'task.taskName.onboard': '上板分析',
-  'task.taskName.simulation': '仿真分析',
-  'task.taskName.dumpTensor': '执行DumpTensor',
-  'task.taskName.buildAndCpuDebug': 'CPU调试',
-  'task.taskName.buildAndDebug': 'NPU调试',
-  'task.taskName.utTest': 'UT测试',
 
   // home (validation / display)
   'home.operatorList': '算子列表:',

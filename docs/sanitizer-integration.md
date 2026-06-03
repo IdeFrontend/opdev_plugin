@@ -10,7 +10,7 @@ The plugin integrates the **MindStudio Sanitizer** tool (`mssanitizer` CLI) for 
 
 - **Runs** sanitizer via a configurable flow: pre-build (and optionally example build for standard custom operators), then executes the `mssanitizer` command with options (e.g. memcheck, race detection, uninitialized detection).
 - **Presents** results in a dedicated **sidebar panel** (“异常检测”): run data list from `.vscode/mindstudio_sanitizer_log`, report detail view with parsed exceptions, and actions (copy report, download, toggle mark).
-- **Exposes** sanitizer config (get/save form), run trigger, and panel/data APIs to the webview (Operate panel, config views) via the `ops` and `msSanitizer` API namespaces.
+- **Exposes** sanitizer config and run via `options-sanitizer` webview (`ops/getSanitizerConfigs`, `ops/saveSanitizerForm`, `ops/runSanitizer`) and the Operate tree; results panel uses `msSanitizer` API.
 
 The actual detection engine is the **mssanitizer** binary (invoked by the plugin’s command strategy, e.g. Ascend); the plugin provides orchestration, config, and UI.
 
@@ -21,9 +21,9 @@ The actual detection engine is the **mssanitizer** binary (invoked by the plugin
 ```mermaid
 flowchart LR
   subgraph Plugin["This plugin"]
-    Webview[Operate / Config panels]
+    Webview[options-sanitizer webview]
     MsSanitizerAPI[msSanitizer API]
-    OpsAPI[ops API\nrunSanitizer, getSanitizerForm...]
+    OpsAPI[ops API\ngetSanitizerConfigs\nsaveSanitizerForm, runSanitizer]
     TaskCtrl[Task controller]
     SanitizerSvc[SanitizerService]
     RunDataSvc[RunDataService]
@@ -55,7 +55,7 @@ flowchart LR
 
 | Layer | Protocol | Role |
 |-------|----------|------|
-| **Webview → Plugin** | Custom request/response over ApiServer | Operate/config call `ops/runSanitizer`, `ops/getSanitizerConfigs`, `msSanitizer/getRunData`, `msSanitizer/openPanel`, etc. |
+| **Webview → Plugin** | Custom request/response over ApiServer | `options-sanitizer` calls `ops/getSanitizerConfigs`, `ops/saveSanitizerForm`, `ops/runSanitizer`; sidebar panel uses `msSanitizer/getRunData`, `msSanitizer/openPanel`, etc. |
 | **Plugin → VS Code** | VS Code Extension API (`vscode.commands`, `registerWebviewViewProvider`) | Register “异常检测” panel; open/focus panel; post refresh message to webview |
 | **Plugin → mssanitizer** | CLI invocation (stdio) | Build `mssanitizer` command (options: tool, log-level, log-file, etc.) and run via `ProjectManager.getExecutor().execute()` |
 | **Panel ↔ Plugin** | Webview `postMessage` / `onDidReceiveMessage` | Panel requests data (`vscodeGetMsSanitizerPanelViewData`, `vscodeLoadMsSanitizerReport`); plugin sends `iframeRemoteMsSanitizerPanelViewSetRenderList`, `iframeFlashMsSanitizerRunData` |
@@ -67,8 +67,8 @@ flowchart LR
 ```mermaid
 flowchart TB
   subgraph Entry["Entry points"]
-    Operate["Operate panel\n(ops/runSanitizer)"]
-    Config["Config / Sanitizer options\n(getSanitizerForm, saveSanitizerForm)"]
+    Options["options-sanitizer\n+ Operate tree"]
+    Config["ops/getSanitizerConfigs\nops/saveSanitizerForm"]
     OpenPanel["msSanitizer/openPanel\n(view list / open report)"]
   end
 
@@ -94,7 +94,7 @@ flowchart TB
     Mssanitizer["mssanitizer"]
   end
 
-  Operate --> ApiSrv --> TaskCtrl --> SanitizerSvc
+  Options --> ApiSrv --> TaskCtrl --> SanitizerSvc
   Config --> ApiSrv
   OpenPanel --> ApiSrv --> MsSanitizerCtrl --> ViewSvc --> CmdOpen
   MsSanitizerCtrl --> RunDataSvc
@@ -113,7 +113,7 @@ flowchart TB
 ```mermaid
 sequenceDiagram
   participant User
-  participant Webview as Operate / Config panel
+  participant Webview as options-sanitizer
   participant Api as ApiServer (ops)
   participant Task as TaskController
   participant Svc as SanitizerService
@@ -333,7 +333,7 @@ flowchart LR
 
 | Concept | Location | Role |
 |--------|----------|------|
-| **Sanitizer config** | `ops/getSanitizerConfigs`, `ops/getSanitizerConfigId`, `ops/saveSanitizerForm` | Single config of type `sanitizer`; form saved via `saveSanitizerForm` |
+| **Sanitizer config** | `ops/getSanitizerConfigs`, `ops/saveSanitizerForm` | Form persisted to workspace `settings.json`; DB row supplies identity only. Config id resolved internally (`getSanitizerConfigIdInternal`). |
 | **Pre-build** | SanitizerService (v1) / BuildForSanitizerStep (v2) | Build with sanitizer-related options so the example binary is ready for `mssanitizer` |
 | **mssanitizer command** | `plugin/src/domain/services/command-strategy/ascend-strategy.ts` → `buildSanitizerCommand` | Builds `mssanitizer` CLI with `--tool`, `--log-file` (under `.vscode/mindstudio_sanitizer_log/`), and other options from config |
 
@@ -450,4 +450,4 @@ So all sanitizer “windows” are this one sidebar webview; the plugin provides
 
 - **Protocols:** Webview ↔ plugin via `ops` and `msSanitizer` APIs; plugin ↔ VS Code via WebviewViewProvider and commands; plugin ↔ environment via executor running the `mssanitizer` CLI.
 - **Panel:** Single sidebar view “异常检测” (id `msSanitizerPanelView`), backed by `MsSanitizerPanelViewProvider`, loading `sidebars/ms-sanitizer-panel-view`; run data from `.vscode/mindstudio_sanitizer_log` and marks from `msSanitizer_marks`; report detail via `getPanelData` + `ExceptionParser`.
-- **Architecture:** Entry points (Operate/config + msSanitizer API) → task controller and ms-sanitizer controller → SanitizerService (build + mssanitizer) and RunDataService / ViewService; panel provider resolves webview and handles data/refresh messages. This repo provides orchestration, config, and UI; the detection engine is the external `mssanitizer` tool.
+- **Architecture:** Entry points (`options-sanitizer` + Operate tree + msSanitizer API) → task controller / ms-sanitizer controller → SanitizerService → `mssanitizer` CLI.

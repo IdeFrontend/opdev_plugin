@@ -39,7 +39,7 @@ Sequential / blocking work during activation:
 | Env snapshot log | `logGlobalEnvSnapshot()` | Low |
 | API + views | `initApiServer()`, `initViews()` | Medium |
 | Sidebar contexts | `await refreshSidebarContexts()` | **High** — FS checks, project detection |
-| Workspace sync | `syncOperatorProjectWorkspaceSettings()` | **High** — reads all build configs, may `configuration.update` |
+| Legacy settings migrate | `maybeMigrateLegacySettingsToWorkspace()` (once per project) | **Medium** — batch read DB + one `writeOpDevtoolsDottedSettings` |
 | Auto-open project | `welcomeMethods.openProject(..., true)` when folders exist | **High** — `/etc/profile`, `completeProjectConfigs`, report scans |
 | MindStudio VSIX | `MindStudioPluginInstaller.installIfNeeded()` | **High** — may install sibling extension |
 | Queue polling | `setInterval(syncNativeQueueState, 1000)` | Ongoing |
@@ -58,7 +58,7 @@ sequenceDiagram
   VSCode->>Ext: activate
   Ext->>Ext: initI18n initApiServer initViews
   Ext->>WS: refreshSidebarContexts
-  Note over WS: syncOperatorProjectWorkspaceSettings
+  Note over WS: maybeMigrateLegacySettingsToWorkspace (if flag absent)
   Ext->>Ext: openProject auto-open
   Note over Ext: chmod profile completeProjectConfigs
   Ext->>Ext: MindStudioPluginInstaller.installIfNeeded
@@ -70,7 +70,8 @@ sequenceDiagram
 |------|------|
 | `plugin/src/extension.ts` | `activate()` orchestration |
 | `plugin/src/controller/welcome-controller.ts` | Auto-open, `/etc/profile` execution |
-| `plugin/src/helpers/operator-project-workspace-config.ts` | Workspace settings sync |
+| `plugin/src/helpers/operator-project-workspace-config.ts` | Canonical env/SOC/simulator reads |
+| `plugin/src/service/config-service.ts` | One-time legacy → settings migration |
 | `plugin/src/class/operate-tree-provider.ts` | Sidebar refresh triggers |
 
 ### Open questions
@@ -88,7 +89,7 @@ sequenceDiagram
 2. **Defer non-critical work** (implemented in `post-activate-bootstrap.ts`):
    - After `activate()` returns, run auto-`openProject`, `MindStudioPluginInstaller.installIfNeeded()`, and post-open sidebar refresh in a single-flight background task.
    - Operator commands and user-initiated `openProject` call `whenPostActivateBootstrapReady()` so they do not race deferred startup (e.g. NPU debug before debug VSIX install).
-3. **Cache sidebar context** — avoid full `syncOperatorProjectWorkspaceSettings()` on every activation if hash of configs unchanged.
+3. **Cache sidebar context** — avoid redundant `refreshSidebarContexts` / migrate work on every activation when project unchanged.
 4. **Skip `/etc/profile` exec** on auto-open when `ascend_env_script` or `.arts/.env` suffices.
 5. **Document** expected first-open time and remote-SSH overhead.
 6. **Measure** before/after with large ops-math workspace fixture.

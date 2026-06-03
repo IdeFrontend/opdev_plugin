@@ -9,8 +9,8 @@ import type {
   PerformanceRunDataFolder,
 } from '@shared/api-types';
 
-import { configMethods } from '@plugin/controller/config-controller';
 import { homeMethods } from '@plugin/controller/home-controller';
+import { ConfigHelper } from '@plugin/helpers/ConfigHelper';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import { performanceDataMethods } from '@plugin/controller/performance-controller';
 import { performanceMethods } from '@plugin/controller/performance-data-controller';
@@ -466,11 +466,11 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   async refreshState(hasDevtoolConfig: boolean): Promise<{ showOperatorSearch: boolean; showOperatorProjects: boolean }> {
     const prevSearchKeyword = this.state.searchKeyword;
 
-    const [projectTypeResult, multipleResult, debugModeEnabled] = await Promise.all([
+    const [projectTypeResult, multipleResult] = await Promise.all([
       homeMethods.getProjectType(),
       homeMethods.checkMultipleOperators(),
-      configMethods.getDebugMode(),
     ]);
+    const debugModeEnabled = ConfigHelper.isDebugModeEnabled();
     const projectType = projectTypeResult.projectType || '';
     const projectTypeSupported = OperatorPluginRegistry.isProjectTypeSupported(projectType);
     appendLog(

@@ -3,6 +3,7 @@ import {
 } from '@shared/api-types';
 import { fileService } from '@plugin/service/file-service';
 import { ConfigService } from '@plugin/service/config-service';
+import { ConfigHelper } from '@plugin/helpers/ConfigHelper';
 import * as vscode from 'vscode';
 import { OperatorProjectViewId } from '@shared/project-type-view-id';
 import { isOperatorSupportEnabled } from '@plugin/helpers/feature-toggle';
@@ -46,7 +47,7 @@ export const commonMethods = {
    * Workspace setting: show sanitizer quick options panel from the Actions tree.
    */
   getSanitizerShowQuickOptions(): boolean {
-    return vscode.workspace.getConfiguration('op-devtools').get<boolean>('sanitizer.showQuickOptions', true) ?? true;
+    return ConfigHelper.get<boolean>('sanitizer.showQuickOptions', true);
   },
 
   async setSanitizerShowQuickOptions(params: { value: boolean }): Promise<void> {
@@ -56,10 +57,7 @@ export const commonMethods = {
   },
 
   getSimulationShowQuickOptions(): boolean {
-    return vscode.workspace.getConfiguration('op-devtools').get<boolean>(
-      'performanceTuning.simulation.showQuickOptions',
-      true,
-    ) ?? true;
+    return ConfigHelper.get<boolean>('performanceTuning.simulation.showQuickOptions', true);
   },
 
   async setSimulationShowQuickOptions(params: { value: boolean }): Promise<void> {
@@ -69,10 +67,7 @@ export const commonMethods = {
   },
 
   getOnBoardAnalysisShowQuickOptions(): boolean {
-    return vscode.workspace.getConfiguration('op-devtools').get<boolean>(
-      'performanceTuning.onBoard.showQuickOptions',
-      true,
-    ) ?? true;
+    return ConfigHelper.get<boolean>('performanceTuning.onBoard.showQuickOptions', true);
   },
 
   async setOnBoardAnalysisShowQuickOptions(params: { value: boolean }): Promise<void> {
