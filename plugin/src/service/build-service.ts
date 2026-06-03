@@ -881,6 +881,7 @@ export class BuildService {
 
     const currentDir = workspaceFolders[0].uri.fsPath;
     const tempDataPath = joinIdeConfigPath(currentDir, 'dump_tensor_temp_data');
+    const dumpTensorEnvPrefix = this.getDumpTensorEnvExportsPrefix();
 
     // Remove temp data folder from previous runs.
     console.log('[startDumpTensor] Removing temp data directory:', tempDataPath);
@@ -938,8 +939,7 @@ export class BuildService {
         params.compileOption,
         params.operatorNames,
       );
-      const exampleCmd =
-        `export ASCEND_GLOBAL_LOG_LEVEL=1 && export ASCEND_DUMP_PATH=../${joinIdeConfigRelative('dump_tensor_temp_data')} && ${exampleBuildCommand}`;
+      const exampleCmd = `${dumpTensorEnvPrefix}${exampleBuildCommand}`;
       const exampleBuildRes = await executeOperatorCommand(
         exampleCmd,
         buildOperatorSpawnContext({
@@ -957,25 +957,21 @@ export class BuildService {
         return;
       }
 
-
-      // Post-process dump files and build tree data.
-      await this.executeShowKernelDebugData(tempDataPath, dumpTensorPath);
-      vscode.window.showInformationMessage(t('build.dumpTensorSuccess'));
-      await this.openDumpTensorPanel();
+      await this.finalizeDumpTensorFlow(currentDir);
     }
     else {
       try {
         const runCommand = getRunCommand(Number(exConfigId));
+        const runCommandWithEnv = `${dumpTensorEnvPrefix}${runCommand}`;
 
-        console.log('[startDumpTensor] runCommand', runCommand);
+        console.log('[startDumpTensor] runCommand', runCommandWithEnv);
 
-        const envCommand = `export ASCEND_GLOBAL_LOG_LEVEL=1 && export ASCEND_DUMP_PATH=../.vscode/dump_tensor_temp_data && ${runCommand}`;
         const res = await executeOperatorCommand(
-          envCommand,
+          runCommandWithEnv,
           buildOperatorSpawnContext({
             configId: Number(exConfigId),
             operatorNames: params.operatorNames,
-            script: runCommand,
+            script: runCommandWithEnv,
           }),
           { outputLabel: 'run' },
         );
@@ -992,13 +988,7 @@ export class BuildService {
           return;
         }
 
-
-        // Post-process dump files and build tree data.
-        await this.executeShowKernelDebugData(tempDataPath, dumpTensorPath);
-        vscode.window.showInformationMessage(t('build.dumpTensorSuccess'));
-
-        // Open dump tensor panel and refresh.
-        await this.openDumpTensorPanel();
+        await this.finalizeDumpTensorFlow(currentDir);
       }
       catch (e) {
         vscode.window.showErrorMessage(t('build.getRunCommandFailed', { error: (e as Error).message }));
@@ -1060,6 +1050,23 @@ export class BuildService {
     catch (e) {
       vscode.window.showErrorMessage(t('build.getUtTestCommandFailed', { error: (e as Error).message }));
     }
+  }
+
+  /** ASCEND dump env exports prepended to example build / run during Dump tensor. */
+  private getDumpTensorEnvExportsPrefix(): string {
+    return `export ASCEND_GLOBAL_LOG_LEVEL=1 && export ASCEND_DUMP_PATH=../${joinIdeConfigRelative('dump_tensor_temp_data')} && `;
+  }
+
+  /**
+   * Post-process dump output, notify success, and open the Dump tensor panel.
+   */
+  private async finalizeDumpTensorFlow(workspaceRoot: string): Promise<void> {
+    const tempDataPath = joinIdeConfigPath(workspaceRoot, 'dump_tensor_temp_data');
+    const dumpTensorPath = joinIdeConfigPath(workspaceRoot, 'DumpTensor');
+
+    await this.executeShowKernelDebugData(tempDataPath, dumpTensorPath);
+    vscode.window.showInformationMessage(t('build.dumpTensorSuccess'));
+    await this.openDumpTensorPanel();
   }
 
   /**
@@ -1157,10 +1164,7 @@ export class BuildService {
 
       // Post-process dump files and build tree data.
       await this.executeShowKernelDebugData(tempDataPath, dumpTensorPath);
-
       vscode.window.showInformationMessage(t('build.importDumpTensorBinSuccess'));
-
-      // Open dump tensor panel and refresh.
       await this.openDumpTensorPanel();
     }
     catch (error) {

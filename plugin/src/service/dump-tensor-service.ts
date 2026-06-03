@@ -7,10 +7,7 @@ import {
   PerformanceRunDataFile,
   PerformanceRunDataFolder,
 } from '@shared/api-types';
-import { PermanentStorage } from '@plugin/class/permanent-storage';
 import { Project } from '@plugin/core/project/project';
-import { getConfig } from '@plugin/domain';
-import { getOpByProjectIdAndOpName } from '@plugin/domain/models/model';
 import { joinIdeConfigRelative } from '@plugin/helpers/ide-config-dir';
 
 const getDumpTensorDataRoot = (): string => joinIdeConfigRelative('DumpTensor');

@@ -320,10 +320,10 @@ flowchart TB
 
 ## DumpTensor Behavior Note
 
-- `BuildService.startDumpTensor` opens the DumpTensor panel (`openDumpTensorPanel`) after successful execution in both flow branches:
-  - standard-custom path (build example command branch)
-  - non-standard-custom path (run command branch)
-- This keeps DumpTensor panel visibility consistent regardless of project/custom-type branching.
+- `BuildService.startDumpTensor` runs `build_op`, then either **build example** (standard custom) or **run** (other project types).
+- Example build and run commands are prefixed with `ASCEND_GLOBAL_LOG_LEVEL=1` and `ASCEND_DUMP_PATH` pointing at `dump_tensor_temp_data` under the IDE config dir (same env for both branches).
+- After a successful example build or run, `show_kernel_debug_data` post-processes temp dump files into `DumpTensor`, then the panel opens (`finalizeDumpTensorFlow` → `openDumpTensorPanel`).
+- **Import .bin** uses the same `show_kernel_debug_data` step before opening the panel.
 
 ---
 
