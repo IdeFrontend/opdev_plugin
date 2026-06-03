@@ -1014,6 +1014,9 @@ export class BuildService {
         return;
       }
 
+
+      // Post-process dump files and build tree data.
+      await this.executeShowKernelDebugData(tempDataPath, dumpTensorPath);
       vscode.window.showInformationMessage(t('build.dumpTensorSuccess'));
       await this.openDumpTensorPanel();
     }
@@ -1046,6 +1049,9 @@ export class BuildService {
           return;
         }
 
+
+        // Post-process dump files and build tree data.
+        await this.executeShowKernelDebugData(tempDataPath, dumpTensorPath);
         vscode.window.showInformationMessage(t('build.dumpTensorSuccess'));
 
         // Open dump tensor panel and refresh.
