@@ -133,6 +133,10 @@ const ASCEND_SOC_RULES: ReadonlyArray<{ key: string;
     slug: CANN_SOC_ASCEND_950,
   },
   {
+    key: '910_93',
+    slug: CANN_SOC_ASCEND_910_93,
+  },
+  {
     key: '910c',
     slug: CANN_SOC_ASCEND_910_93,
   },
@@ -146,7 +150,7 @@ const ASCEND_SOC_RULES: ReadonlyArray<{ key: string;
   },
   {
     key: '910a',
-    slug: CANN_SOC_ASCEND_910,
+    slug: CANN_SOC_ASCEND_910B,
   },
   {
     key: '950',
@@ -190,7 +194,7 @@ export function normalizeCannSoc(cannSoc?: string | null): string {
     .toLowerCase();
 }
 
-function socFromCoreName(coreName?: string): string | undefined {
+export function socFromCoreName(coreName?: string): string | undefined {
   if (!coreName) {
     return undefined;
   }

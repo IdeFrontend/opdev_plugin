@@ -108,7 +108,7 @@ Ascend Environment Resolved: soc=ascend950 (source=…), simulator=Ascend950PR_9
 
 Controlled by `isAscendA5ProfilerCannSoc(cannSoc)` (exact normalized slug `ascend950`).
 
-| | A3 / 910B-class (`ascend910b`, …) | A5 / 950-class (`ascend950`) |
+| | A3 / non-A5 class (`ascend910_93`, `ascend910b`, …) | A5 / 950-class (`ascend950`) |
 |---|-----------------------------------|------------------------------|
 | Cache-style metric | `MemoryDetail` in base set | Not in base set |
 | PC sampling metric | Not in base set | `PCSampling` in base set |

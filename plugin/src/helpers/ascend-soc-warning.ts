@@ -27,9 +27,15 @@ export function maybeWarnSocNotDetected(resolution: AscendEnvResolution): void {
     .showWarningMessage(t('extension.ascendEnv.socNotDetected.message'), openSettingsLabel)
     .then((choice) => {
       if (choice === openSettingsLabel) {
+        // Open Workspace settings focused on the SOC setting: the resolver only
+        // honors Workspace/WorkspaceFolder scope (getConfiguredValue), so a value
+        // entered at the default User scope would be silently ignored. The
+        // `@ext:` query mirrors the gear "Project Config" command
+        // (huawei-op-devtools.sidebar.projectConfig) so both entry points land on
+        // the same Workspace-scope view.
         void vscode.commands.executeCommand(
-          'workbench.action.openSettings',
-          'op-devtools.environment.socVersion',
+          'workbench.action.openWorkspaceSettings',
+          '@ext:huawei.huawei-op-devtools-vscode-plugin op-devtools.environment.socVersion',
         );
       }
     });

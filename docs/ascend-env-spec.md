@@ -193,7 +193,7 @@ uses the same env → cache pattern for `SUPPORT_COMPUTE_UNIT` and
 
 | CANN SOC slug (packaging / `--soc=`) | Spawn `SUPPORT_COMPUTE_UNIT` | Spawn `SUPPORT_TILING_DIR` | Notes |
 |--------------------------------------|------------------------------|----------------------------|-------|
-| `ascend910b`, `ascend910_93`, `ascend910`, empty fallback | `ascend910_95` | `arch22` | A2/A3 class |
+| `ascend910_93`, `ascend910b`, `ascend910`, empty fallback | `ascend910_95` | `arch22` | A2/A3 class |
 | `ascend950` (Atlas A5) | `ascend950` | `arch35` | A5 class; verify against your CANN ACLNN sample |
 
 ## 7. Logging

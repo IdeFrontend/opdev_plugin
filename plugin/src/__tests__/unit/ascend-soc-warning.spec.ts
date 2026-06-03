@@ -21,6 +21,8 @@ import {
   _resetSocUndetectedWarningForTest,
   maybeWarnSocNotDetected,
 } from '@plugin/helpers/ascend-soc-warning';
+import enMessages from '@shared/i18n/en';
+import zhMessages from '@shared/i18n/zh-cn';
 
 describe('ascend SOC undetected warning', () => {
   beforeEach(() => {
@@ -38,9 +40,7 @@ describe('ascend SOC undetected warning', () => {
   });
 
   it('does not warn when SOC is resolved from workspace', () => {
-    const { getSocVersionWithWorkspaceOverride } = jest.requireMock(
-      '@plugin/helpers/operator-project-workspace-config',
-    ) as { getSocVersionWithWorkspaceOverride: jest.Mock };
+    const { getSocVersionWithWorkspaceOverride } = jest.requireMock('@plugin/helpers/operator-project-workspace-config') as { getSocVersionWithWorkspaceOverride: jest.Mock };
 
     getSocVersionWithWorkspaceOverride.mockReturnValue('ascend950');
 
@@ -90,5 +90,46 @@ describe('ascend SOC undetected warning', () => {
 
     expect(vscode.window.showWarningMessage)
       .toHaveBeenCalledTimes(1);
+  });
+
+  it('opens the Workspace-scope SOC setting when the warning action is clicked', async () => {
+    // Resolve the warning button click with whatever label was offered, so the
+    // assertion does not depend on i18next initialization.
+    (vscode.window.showWarningMessage as jest.Mock).mockImplementation((_message: string, label: string) => Promise.resolve(label));
+
+    maybeWarnSocNotDetected({
+      socVersion: '',
+      npuArch: '',
+      simulatorType: undefined,
+      source: {
+        socVersion: 'default',
+        simulatorType: 'n/a',
+        npuArch: 'derived-from-soc',
+      },
+    });
+
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(vscode.commands.executeCommand)
+      .toHaveBeenCalledWith(
+        'workbench.action.openWorkspaceSettings',
+        '@ext:huawei.huawei-op-devtools-vscode-plugin op-devtools.environment.socVersion',
+      );
+  });
+});
+
+describe('SOC-not-detected message A3 example', () => {
+  const KEY = 'extension.ascendEnv.socNotDetected.message';
+
+  it('recommends ascend910_93 (not ascend910b) for A3 in English', () => {
+    expect(enMessages[KEY])
+      .toContain('ascend910_93 on A3');
+    expect(enMessages[KEY]).not.toContain('ascend910b on A3');
+  });
+
+  it('recommends ascend910_93 for A3 in Chinese', () => {
+    expect(zhMessages[KEY])
+      .toContain('A3 使用 ascend910_93');
+    expect(zhMessages[KEY]).not.toContain('A3 使用 ascend910b');
   });
 });

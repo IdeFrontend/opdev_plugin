@@ -65,7 +65,7 @@ export default {
   'extension.environmentScript.fileNotFound': 'The selected path could not be accessed.',
   'extension.ascendEnv.socNotDetected.message':
     'SoC version could not be detected (asys and npu-smi failed). Operator builds require a SOC.\n\n'
-    + 'Fix: set "op-devtools.environment.socVersion" (e.g. ascend950 on Atlas A5, ascend910b on A3), '
+    + 'Fix: set "op-devtools.environment.socVersion" (e.g. ascend950 on Atlas A5, ascend910_93 on A3), '
     + 'or export SOC_VERSION before starting VS Code.\n\n'
     + 'If the asys command is missing: source the CANN set_env.sh script; install or update the CANN toolkit; '
     + 'confirm the NPU driver and npu-smi work on this host; on some A5 images asys is packaged separately '

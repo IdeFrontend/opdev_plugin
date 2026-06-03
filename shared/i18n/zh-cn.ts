@@ -65,7 +65,7 @@ export default {
   'extension.environmentScript.fileNotFound': '无法访问所选路径。',
   'extension.ascendEnv.socNotDetected.message':
     '未能检测到 SoC 版本（asys 与 npu-smi 均失败）。算子构建需要有效的 SOC。\n\n'
-    + '解决方法：设置「op-devtools.environment.socVersion」（例如 Atlas A5 使用 ascend950，A3 使用 ascend910b），'
+    + '解决方法：设置「op-devtools.environment.socVersion」（例如 Atlas A5 使用 ascend950，A3 使用 ascend910_93），'
     + '或在启动 VS Code 前 export SOC_VERSION。\n\n'
     + '若找不到 asys 命令：先 source CANN 的 set_env.sh；安装或更新 CANN 工具包；'
     + '确认本机 NPU 驱动与 npu-smi 可用；部分 A5 镜像中 asys 与 npu-smi 分包不同，'
