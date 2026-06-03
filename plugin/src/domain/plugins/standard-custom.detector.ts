@@ -45,6 +45,16 @@ export class StandardCustomDetector implements IProjectDetector {
       }
     }
 
+    // Path 1.5: definitive — a folder nested inside a standard-custom collection.
+    // If an ancestor (within 3 levels) has build.sh with --genop, this directory belongs to
+    // that collection regardless of its own .asc/.py/CMake contents.
+    if (hasAncestorBuildShWithGenop(dirPath)) {
+      return {
+        isMatch: true,
+        confidence: 'definitive',
+      };
+    }
+
     // Path 2: heuristic — CMakeLists + no .asc + no .py + path/ancestor pattern
     const hasCmake = fs.existsSync(path.join(dirPath, 'CMakeLists.txt'));
 

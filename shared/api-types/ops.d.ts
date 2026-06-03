@@ -12,6 +12,8 @@ export type CreateOpsParams = {
   projectName?: string;
   projectId?: string;
   prototypeName?: string;
+  /** When set, write the prototype JSON here instead of the project record's path. */
+  outputPath?: string;
 };
 
 export type CreateOpsByPrototypeParams = {
@@ -20,6 +22,10 @@ export type CreateOpsByPrototypeParams = {
   templateName?: string;
   /** Canonical operator / entrypoint name (e.g. New Project `projectName`). Passed to `generateStructure` as `op_name`. */
   opName?: string;
+  /** Override the project id used for scaffolding (e.g. the parent collection id). */
+  projectId?: string | number;
+  /** Override the operator output directory passed to generateStructure as op_path. */
+  opPath?: string;
 };
 
 export type BuildConfig = {

@@ -59,6 +59,7 @@ export class ProjectService {
         op_name,
         prototype_name,
         context.extensionPath,
+        params.outputPath,
       );
 
       vscode.window.showInformationMessage(t('project.createPrototypeSuccess'));
@@ -87,12 +88,14 @@ export class ProjectService {
     console.log('createOpsByPrototype: projectId type:', typeof pm.projectId);
 
     try {
-      const projectId = Number(pm.projectId);
+      const projectId = params.projectId !== undefined
+        ? Number(params.projectId)
+        : Number(pm.projectId);
 
       console.log('createOpsByPrototype: Converted projectId:', projectId);
 
       if (!projectId || isNaN(projectId)) {
-        throw new Error(t('project.invalidProjectId', { projectId: pm.projectId }));
+        throw new Error(t('project.invalidProjectId', { projectId: params.projectId ?? pm.projectId }));
       }
 
       console.log('createOpsByPrototype: Calling generateStructure...');
@@ -107,6 +110,7 @@ export class ProjectService {
           op_type: params.opType || 'ascend',
           template_name: params.templateName,
           ...(resolvedOpName ? { op_name: resolvedOpName } : {}),
+          ...(params.opPath ? { op_path: params.opPath } : {}),
         },
         context.extensionPath,
       );

@@ -1838,7 +1838,14 @@ export async function activate(context: vscode.ExtensionContext) {
   const createOptionsCommand = vscode.commands.registerCommand(
     COMMAND_CREATE_DIRECTORY,
     async (
-      data: { createOperatorProjectDirectoryFileType: OperatorProjectViewIdValue },
+      data: {
+        createOperatorProjectDirectoryFileType: OperatorProjectViewIdValue;
+        subOperatorContext?: {
+          parentProjectId: number;
+          opName: string;
+          outputPath: string;
+        };
+      },
       progress: vscode.Progress<{
         message?: string;
         increment?: number

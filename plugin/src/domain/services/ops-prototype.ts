@@ -67,6 +67,7 @@ export async function generateOpsPrototype(
   op_name = 'default_op',
   prototype_name = 'add_custom',
   extensionPath: string,
+  outputPath?: string,
 ): Promise<string> {
   const project = getProjectById(project_id);
 
@@ -75,7 +76,7 @@ export async function generateOpsPrototype(
   }
 
   return generateOpsPrototypeJson(
-    project.project_path,
+    outputPath ?? project.project_path,
     op_name,
     prototype_name,
     extensionPath,

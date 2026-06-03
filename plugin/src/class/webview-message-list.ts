@@ -41,6 +41,7 @@ function isRequestedProjectTypeEnabled(projectType: string): boolean {
   if (projectType === 'triton') {
     return isOperatorSupportEnabled('triton');
   }
+
   return true;
 }
 
@@ -105,7 +106,16 @@ const webviewMessageList: messageItem[] = [
 // - CANN / PYASC / TRITON create from template
 // - STANDARD_CUSTOM creates prototype first, then project
 export async function handleOperatorProjectDirectoryFile(
-  message: { createOperatorProjectDirectoryFileType: OperatorProjectViewIdValue } | undefined,
+  message:
+    | {
+      createOperatorProjectDirectoryFileType: OperatorProjectViewIdValue;
+      subOperatorContext?: {
+        parentProjectId: number;
+        opName: string;
+        outputPath: string;
+      };
+    }
+    | undefined,
   _that: unknown,
   progress: vscode.Progress<{ message?: string;
     increment?: number }>,
@@ -121,6 +131,7 @@ export async function handleOperatorProjectDirectoryFile(
   }
 
   const requestedProjectType = normalizeViewIdToProjectType(message.createOperatorProjectDirectoryFileType);
+
   if (!isRequestedProjectTypeEnabled(requestedProjectType)) {
     vscode.window.showErrorMessage(t('extension.unsupportedProjectTypeDisabled', { projectType: requestedProjectType }));
     throw new Error(`Project type '${requestedProjectType}' is currently disabled by settings.`);
@@ -236,38 +247,48 @@ export async function handleOperatorProjectDirectoryFile(
       }
 
       if (message.createOperatorProjectDirectoryFileType === OperatorProjectViewId.STANDARD_CUSTOM) {
-        // Start link creation operator
         console.log('Start creating operator (type 2)...');
-        // Note: The project has been initialized in createdProject and does not need to be initialized again here.
-        // Just make sure projectId is set
         const pm = ProjectManager.getInstance();
+        const ctx = message.subOperatorContext;
 
-        if (!pm.projectId) {
+        if (!ctx && !pm.projectId) {
           console.log('projectId not set, trying to initialize project...');
           await pm.ensureProjectId();
         }
 
-        console.log('Current projectId:', pm.projectId);
-        console.log('Start creating operator prototype file...');
+        const opName = ctx ? ctx.opName : pm.getProjectName();
 
-        const opsPrototypeFilePath = await welcomeMethods.createOps({});
+        const opsPrototypeFilePath = await welcomeMethods.createOps(ctx
+          ? {
+            projectId: String(ctx.parentProjectId),
+            projectName: ctx.opName,
+            outputPath: ctx.outputPath,
+          }
+          : {});
 
         console.log('Operator prototype file path:', opsPrototypeFilePath);
 
         if (opsPrototypeFilePath) {
-          console.log('Start creating operator project from prototype...');
           await welcomeMethods.createOpsByPrototype({
             opsPrototypeFile: opsPrototypeFilePath,
             opType: 'ascend',
-            opName: pm.getProjectName(),
+            opName,
+            ...(ctx
+              ? {
+                projectId: ctx.parentProjectId,
+                opPath: ctx.outputPath,
+              }
+              : {}),
           });
-          console.log('Operator project created from prototype');
         }
         else {
           throw new Error(t('webview.createPrototypeFailedEmptyPath'));
         }
 
-        await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+        // In the in-place sub-operator flow there is no separate editor to close.
+        if (!ctx) {
+          await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+        }
       }
 
       progress.report({

@@ -27,9 +27,11 @@ export function hasPyFilesRecursive(dirPath: string, maxDepth: number): boolean 
 
     for (const entry of entries) {
       const fullPath = path.join(dirPath, entry.name);
+
       if (entry.isFile() && entry.name.endsWith('.py')) {
         return true;
       }
+
       if (entry.isDirectory() && maxDepth > 0) {
         if (hasPyFilesRecursive(fullPath, maxDepth - 1)) {
           return true;
@@ -53,7 +55,9 @@ export function hasTritonPythonIndicatorsInRoot(dirPath: string): boolean {
     if (depth < 0) {
       return false;
     }
+
     let entries: fs.Dirent[] = [];
+
     try {
       entries = fs.readdirSync(scanPath, { withFileTypes: true });
     }
@@ -63,6 +67,7 @@ export function hasTritonPythonIndicatorsInRoot(dirPath: string): boolean {
 
     for (const entry of entries) {
       const fullPath = path.join(scanPath, entry.name);
+
       if (entry.isFile() && entry.name.endsWith('.py')) {
         try {
           const content = fs.readFileSync(fullPath, 'utf-8');
@@ -72,6 +77,7 @@ export function hasTritonPythonIndicatorsInRoot(dirPath: string): boolean {
             || /\btriton\.jit\b/.test(content)
             || /\btriton\.language\b/.test(content)
             || /\btriton\.cdiv\b/.test(content);
+
           if (hasIndicator) {
             return true;
           }
@@ -80,12 +86,14 @@ export function hasTritonPythonIndicatorsInRoot(dirPath: string): boolean {
           // ignore single-file read errors
         }
       }
+
       if (entry.isDirectory() && depth > 0) {
         if (hasTritonMarkersRecursive(fullPath, depth - 1)) {
           return true;
         }
       }
     }
+
     return false;
   }
 
@@ -148,10 +156,10 @@ export function hasAscFilesRecursive(dirPath: string, maxDepth: number): boolean
 }
 
 /**
- * Walk up at most 3 ancestor directories looking for a build.sh that contains --genop.
- * Mirrors the ancestor-detection logic in OperatorProjectDetector.detectOperatorProject() Path 2.
+ * Walk up at most 3 ancestor directories and return the first one whose build.sh
+ * contains --genop (the standard-custom collection root), or undefined.
  */
-export function hasAncestorBuildShWithGenop(dirPath: string): boolean {
+export function findAncestorGenopCollectionRoot(dirPath: string): string | undefined {
   try {
     let current = path.dirname(dirPath);
 
@@ -163,7 +171,7 @@ export function hasAncestorBuildShWithGenop(dirPath: string): boolean {
           const content = fs.readFileSync(buildSh, 'utf-8');
 
           if (content.includes('--genop')) {
-            return true;
+            return current;
           }
         }
         catch {
@@ -184,5 +192,13 @@ export function hasAncestorBuildShWithGenop(dirPath: string): boolean {
     // ignore
   }
 
-  return false;
+  return undefined;
+}
+
+/**
+ * Walk up at most 3 ancestor directories looking for a build.sh that contains --genop.
+ * Mirrors the ancestor-detection logic in OperatorProjectDetector.detectOperatorProject() Path 2.
+ */
+export function hasAncestorBuildShWithGenop(dirPath: string): boolean {
+  return findAncestorGenopCollectionRoot(dirPath) !== undefined;
 }

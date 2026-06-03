@@ -30,6 +30,10 @@ import {
   createProject,
   SubOperatorInfo,
 } from '@plugin/domain/models/project-model';
+import { isSubOperatorCreation } from '@plugin/domain/utils/sub-operator-creation';
+import {
+  hasAncestorBuildShWithGenop, findAncestorGenopCollectionRoot,
+} from '@plugin/domain/plugins/detection-utils';
 import { WorkspaceDetectorService } from '@plugin/service/workspace-detector-service';
 import { OperatorProjectIconTheme } from '../class/operator-project-icon-theme';
 import { whenPostActivateBootstrapReady } from '@plugin/helpers/post-activate-bootstrap';
@@ -75,6 +79,7 @@ async function openFolderFn(url: string) {
   const localUri = vscode.Uri.file(url);
 
   const forceNewWindow = await promptForceNewWindowForOpenFolder();
+
   if (forceNewWindow === undefined) {
     return;
   }
@@ -138,8 +143,24 @@ export const welcomeMethods = {
       }
       catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
+
         throw new Error(t('welcome.createProjectDirFailed', { error: msg }));
       }
+
+      const subOpDir = path.join(params.projectPath, params.projectName);
+      const collectionRoot = findAncestorGenopCollectionRoot(subOpDir);
+      const isSubOp = isSubOperatorCreation({
+        subOpDir,
+        isStandardCustomViewId:
+          viewIdToProjectType(params.createOperatorProjectDictoryFileType) === 'ascend',
+        hasAncestorGenop: hasAncestorBuildShWithGenop,
+      });
+      // Resolve the collection by path (type-agnostic): collection records are stored with
+      // project_type 'ascend' (viewIdToProjectType('standard-custom') === 'ascend'), so a
+      // type-filtered lookup would never match. getProjectByPath matches by path only.
+      const parentCollection = isSubOp && collectionRoot
+        ? getProjectByPath(collectionRoot)
+        : undefined;
 
       if (params.projectSH) {
         try {
@@ -152,101 +173,56 @@ export const welcomeMethods = {
         }
       }
 
-      // Optional: when creating a standard-custom sub-operator inside a collection workspace,
-      // attach metadata to the root project record (does not replace standalone project registration).
-      const projectType = viewIdToProjectType(params.createOperatorProjectDictoryFileType);
-      if (projectType === 'ascend') {
-        // Workspace folder currently open in VS Code
-        const currentWorkspaceFolders = vscode.workspace.workspaceFolders;
-        const currentExplorerPath = currentWorkspaceFolders && currentWorkspaceFolders.length > 0
-          ? currentWorkspaceFolders[0].uri.fsPath
-          : undefined;
-
-        console.log('Current directory opened in explorer:', currentExplorerPath);
-
-        if (currentExplorerPath?.includes('experimental')) {
-          // Find the project in the project.json configuration data according to currentExplorerPath, and insert it into its experimental_ops_list after finding it.
-          const project = getProjectByPath(currentExplorerPath);
-
-          if (project) {
-            console.log('Found project in experimental directory:', project);
-
-            // Create new sub-operator information
-            const newSubOperator: SubOperatorInfo = {
-              name: params.projectName,
-              path: path.join(params.projectPath, params.projectName),
-              isCompiled: false,
-            };
-
-            // Update the project's experimental_ops_list
-            const updatedExperimentalOpsList = [
-              ...(project.experimental_ops_list || []),
-              newSubOperator,
-            ];
-
-            // Update project record
-            await createProject({
-              project_name: project.project_name,
-              project_path: project.project_path,
-              experimental_ops_list: updatedExperimentalOpsList,
-            });
-
-            console.log('Added new operator to experimental_ops_list:', newSubOperator.name);
-          }
-          else {
-            console.log('No matching project found in project.json config');
-          }
+      if (isSubOp) {
+        // Sub-operator inside a standard-custom collection. We must have the collection's
+        // record to scaffold under its project_id. If it is missing, fail loudly rather than
+        // creating a phantom standalone record (that was the original bug).
+        if (!parentCollection) {
+          throw new Error(t('welcome.initOperatorProjectFailed', { error: 'standard-custom collection is not registered' }));
         }
-        else if (currentExplorerPath?.includes('math')) {
-          // Find the project in the project.json configuration data according to currentExplorerPath, and insert it into its ops_list after finding it.
-          const project = getProjectByPath(currentExplorerPath);
 
-          if (project) {
-            console.log('Found project in math directory:', project);
+        const newSubOperator: SubOperatorInfo = {
+          name: params.projectName,
+          path: subOpDir,
+          isCompiled: false,
+        };
+        const isExperimental = subOpDir.toLowerCase()
+          .includes('experimental');
 
-            // Create new sub-operator information
-            const newSubOperator: SubOperatorInfo = {
-              name: params.projectName,
-              path: path.join(params.projectPath, params.projectName),
-              isCompiled: false,
-            };
-
-            // Update the ops_list of the project
-            const updatedOpsList = [
-              ...(project.ops_list || []),
-              newSubOperator,
-            ];
-
-            // Update project record
-            await createProject({
-              project_name: project.project_name,
-              project_path: project.project_path,
-              ops_list: updatedOpsList,
-            });
-
-            console.log('Added new operator to ops_list:', newSubOperator.name);
-          }
-          else {
-            console.log('No matching project found in project.json config');
-          }
-        }
-        else {
-          vscode.window.showInformationMessage(t('welcome.cannotCreateHere'));
-        }
-      }
-
-      try {
-        await projectService.init({
-          ascendEnvScript: params.projectSH,
-          projectPath: params.projectPath,
-          projectName: params.projectName,
-          templateName: params.templateName,
-          projectType: viewIdToProjectType(params.createOperatorProjectDictoryFileType),
+        await createProject({
+          project_name: parentCollection.project_name,
+          project_path: parentCollection.project_path,
+          ...(isExperimental
+            ? {
+              experimental_ops_list: [
+                ...(parentCollection.experimental_ops_list || []),
+                newSubOperator,
+              ],
+            }
+            : {
+              ops_list: [
+                ...(parentCollection.ops_list || []),
+                newSubOperator,
+              ],
+            }),
         });
+        // No projectService.init here: do NOT create a standalone record for the sub-operator.
       }
-      catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        throw new Error(t('welcome.initOperatorProjectFailed', { error: msg }));
+      else {
+        try {
+          await projectService.init({
+            ascendEnvScript: params.projectSH,
+            projectPath: params.projectPath,
+            projectName: params.projectName,
+            templateName: params.templateName,
+            projectType: viewIdToProjectType(params.createOperatorProjectDictoryFileType),
+          });
+        }
+        catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+
+          throw new Error(t('welcome.initOperatorProjectFailed', { error: msg }));
+        }
       }
 
       try {
@@ -307,6 +283,15 @@ export const welcomeMethods = {
               {
                 createOperatorProjectDirectoryFileType:
                   params.createOperatorProjectDictoryFileType,
+                ...(isSubOp && parentCollection
+                  ? {
+                    subOperatorContext: {
+                      parentProjectId: Number(parentCollection.id),
+                      opName: params.projectName,
+                      outputPath: subOpDir,
+                    },
+                  }
+                  : {}),
               },
               progress,
             );
@@ -323,7 +308,22 @@ export const welcomeMethods = {
         vscode.window.showWarningMessage(t('welcome.createDirOkCreateFilesError', { error: error instanceof Error ? error.message : String(error) }));
       }
 
+      if (isSubOp) {
+        // Stay in the collection window: refresh the sidebar and reveal the new operator.
+        await requestSidebarContextsRefresh();
+
+        try {
+          await vscode.commands.executeCommand('revealInExplorer', localUri);
+        }
+        catch (error) {
+          console.warn(`Failed to reveal in explorer: ${error instanceof Error ? error.message : String(error)}`);
+        }
+
+        return;
+      }
+
       const forceNewWindow = await promptForceNewWindowForOpenFolder();
+
       if (forceNewWindow === undefined) {
         return;
       }
@@ -353,6 +353,7 @@ export const welcomeMethods = {
     if (!isFromSystem) {
       await whenPostActivateBootstrapReady();
     }
+
     try {
       // First check if the project is already in the user's configuration data
       const existingProject = getProjectByPath(params.projectPath);
@@ -365,17 +366,20 @@ export const welcomeMethods = {
         try {
           await ensureLaunchJsonExists(existingProject.project_path);
           console.log('[openProject] Ensured VS Code config files for existing project');
-        } catch (error) {
+        }
+        catch (error) {
           console.warn(`[openProject] Failed to ensure VS Code config files: ${error instanceof Error ? error.message : String(error)}`);
         }
 
         // Complete missing configs
         try {
           const projectId = existingProject.id;
+
           await completeProjectConfigs(projectId);
           console.log('[openProject] Config completion finished');
           await configService.maybeMigrateLegacySettingsToWorkspace();
-        } catch (error) {
+        }
+        catch (error) {
           console.warn(`[openProject] Config completion failed: ${error instanceof Error ? error.message : String(error)}`);
         }
 
@@ -447,6 +451,7 @@ export const welcomeMethods = {
       }
       catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
+
         throw new Error(t('welcome.initOperatorProjectFailed', { error: msg }));
       }
 
