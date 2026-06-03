@@ -2095,10 +2095,13 @@ export class InsightDataViewerPanel implements vscode.Disposable {
 
       this.serverPort = port;
       this.logDebug(`Found available port: ${this.serverPort}`);
+      const logDir = path.join(this.insightPluginBasePath, '.msinsight');
+      if (!fs.existsSync(logDir)) { fs.mkdirSync(logDir, { recursive: true }); }
 
       this.profilerServerProcess = spawn(this.serverPath, [
         `--wsPort=${this.serverPort}`,
         '--wsHost=0.0.0.0',
+        `--logPath=${logDir}`,
       ], {
         cwd: this.serverDir,
         env: {

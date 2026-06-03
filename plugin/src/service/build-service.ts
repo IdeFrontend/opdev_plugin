@@ -1023,8 +1023,9 @@ export class BuildService {
 
         console.log('[startDumpTensor] runCommand', runCommand);
 
+        const envCommand = `export ASCEND_GLOBAL_LOG_LEVEL=1 && export ASCEND_DUMP_PATH=../.vscode/dump_tensor_temp_data && ${runCommand}`;
         const res = await executeOperatorCommand(
-          runCommand,
+          envCommand,
           buildOperatorSpawnContext({
             configId: Number(exConfigId),
             operatorNames: params.operatorNames,
