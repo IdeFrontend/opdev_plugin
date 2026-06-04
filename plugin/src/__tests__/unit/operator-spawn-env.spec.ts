@@ -22,6 +22,7 @@ import {
 import { getGlobalEnvSnapshot } from '@plugin/domain/utils/global-env-snapshot';
 import {
   _primeSocDetectionFailedForTest,
+  _resetSocDetectionCacheForTest,
   buildOperatorSpawnEnvFromResolution,
   getNpuArchForCannSoc,
   getOperatorSpawnEnv,
@@ -33,6 +34,8 @@ import {
   resolveSimulatorDir,
   simulatorTypeToCannSoc,
 } from '@plugin/domain/utils/ascend-util';
+import { cacheDetectedChipName } from '@shared/ascend-series-registry';
+import { NPU_ARCH_DAV_1001 } from '@shared/cann-env-constants';
 import { _resetSocUndetectedWarningForTest } from '@plugin/helpers/ascend-soc-warning';
 import {
   SUPPORT_COMPUTE_UNIT_ASCEND_910_95,
@@ -62,6 +65,7 @@ describe('operator spawn env', () => {
     OperatorPluginRegistry._reset();
     OperatorPluginRegistry.registerOpPlugin(new CannPlugin());
     OperatorPluginRegistry.registerOpPlugin(new AscendPlugin());
+    _resetSocDetectionCacheForTest();
     _primeSocDetectionFailedForTest();
     _resetSocUndetectedWarningForTest();
     (getWorkspaceSimulatorType as jest.Mock).mockReturnValue('');
@@ -99,6 +103,25 @@ describe('operator spawn env', () => {
       .toBe('');
     expect(getNpuArchForCannSoc(null))
       .toBe('');
+  });
+
+  it('getNpuArchForCannSoc uses dav-1001 when cached chip is Pro/Premium/901', () => {
+    cacheDetectedChipName('Ascend910ProA');
+    (getSocVersionWithWorkspaceOverride as jest.Mock).mockImplementation(() => 'ascend910b');
+
+    expect(getNpuArchForCannSoc('ascend910b'))
+      .toBe(NPU_ARCH_DAV_1001);
+
+    const env = getOperatorSpawnEnv({
+      opType: 'cann',
+      projectType: OperatorProjectType.ASCEND_C,
+      projectId: 1,
+      configType: 'build_op',
+      script: 'bash build.sh --onboard',
+    });
+
+    expect(env.NPU_ARCH)
+      .toBe(NPU_ARCH_DAV_1001);
   });
 
   it('unresolved SOC emits empty spawn env (no silent 910-class defaults)', () => {

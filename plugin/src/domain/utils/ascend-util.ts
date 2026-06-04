@@ -1,20 +1,20 @@
 import fs from 'fs-extra';
 import path from 'path';
 import {
-  CANN_SOC_ASCEND_310P,
-  CANN_SOC_ASCEND_910,
-  CANN_SOC_ASCEND_910B,
-  CANN_SOC_ASCEND_910_93,
-  CANN_SOC_ASCEND_950,
   DEFAULT_FALLBACK_CANN_SOC,
   DEFAULT_FALLBACK_SIMULATOR_DEVICE_NAME,
-  NPU_ARCH_DAV_2201,
-  NPU_ARCH_DAV_3510,
-  SIMULATOR_ASCEND_310P,
-  SIMULATOR_ASCEND_910,
-  SIMULATOR_ASCEND_910C,
-  SIMULATOR_ASCEND_950PR_9589, SIMULATOR_ASCEND_910B3,
 } from '@shared/cann-env-constants';
+import {
+  _resetDetectedChipCacheForTest,
+  cannSocToSeries,
+  detectSocSlugFromChipOrProbe,
+  detectSocSlugFromProbe,
+  getCachedDetectedChipName,
+  getDefaultSimulatorForCannSoc,
+  getNpuArchForChipName,
+  getNpuArchForSeries,
+  simulatorTypeToCannSocSlug,
+} from '@shared/ascend-series-registry';
 import {
   SUPPORT_COMPUTE_UNIT_ASCEND_910_95,
   SUPPORT_COMPUTE_UNIT_ASCEND_950,
@@ -100,95 +100,11 @@ export { isAscendA5ProfilerCannSoc } from '@shared/msprof-onboard-env';
 
 export { DEFAULT_FALLBACK_CANN_SOC } from '@shared/cann-env-constants';
 
-/** Substrings in a normalized SOC slug that select the A5 NPU arch. */
-const A5_NPU_ARCH_KEY_FRAGMENTS = [
-  CANN_SOC_ASCEND_950,
-  'atlas a5',
-] as const;
-
-/** Compact SOC token (spaces removed) for Atlas A5-style names. */
-const A5_NPU_ARCH_COMPACT_FRAGMENT = 'atlasa5';
-
-/**
- * Substring → CANN SOC slug mapping. Entries are case-insensitive and matched
- * against the lowercased input. Order matters — longer / more specific keys
- * should come first so they win over generic ones (e.g. `Ascend 950` matches
- * before plain `950`).
- */
-const ASCEND_SOC_RULES: ReadonlyArray<{ key: string;
-  slug: string }> = [
-  {
-    key: 'atlas a5 series',
-    slug: CANN_SOC_ASCEND_950,
-  },
-  {
-    key: 'ascend 950',
-    slug: CANN_SOC_ASCEND_950,
-  },
-  {
-    key: CANN_SOC_ASCEND_950,
-    slug: CANN_SOC_ASCEND_950,
-  },
-  {
-    key: 'atlas a5',
-    slug: CANN_SOC_ASCEND_950,
-  },
-  {
-    key: 'atlasa5',
-    slug: CANN_SOC_ASCEND_950,
-  },
-  {
-    key: '910_93',
-    slug: CANN_SOC_ASCEND_910_93,
-  },
-  {
-    key: '910c',
-    slug: CANN_SOC_ASCEND_910_93,
-  },
-  {
-    key: '910b',
-    slug: CANN_SOC_ASCEND_910B,
-  },
-  {
-    key: '310p',
-    slug: CANN_SOC_ASCEND_310P,
-  },
-  {
-    key: '910a',
-    slug: CANN_SOC_ASCEND_910B,
-  },
-  {
-    key: '950',
-    slug: CANN_SOC_ASCEND_950,
-  },
-];
-
-/**
- * Default simulator device directory (`tools/simulator/<name>/lib`) per CANN
- * SOC slug. Used when no workspace simulator type was set and no
- * `SIMULATOR_TYPE` was in the host env. The inverse map below derives a SOC
- * back from a simulator directory for the simulator-driven SOC rule.
- */
-const CANN_SOC_TO_SIMULATOR_TYPE: Readonly<Record<string, string>> = {
-  [CANN_SOC_ASCEND_910B]: SIMULATOR_ASCEND_910B3,
-  [CANN_SOC_ASCEND_910_93]: SIMULATOR_ASCEND_910C,
-  [CANN_SOC_ASCEND_910]: SIMULATOR_ASCEND_910,
-  [CANN_SOC_ASCEND_310P]: SIMULATOR_ASCEND_310P,
-  [CANN_SOC_ASCEND_950]: SIMULATOR_ASCEND_950PR_9589,
-};
-
-const SIMULATOR_TYPE_TO_CANN_SOC: Readonly<Record<string, string>> = Object.freeze(Object.entries(CANN_SOC_TO_SIMULATOR_TYPE)
-  .reduce<Record<string, string>>(
-    (acc, [
-      slug,
-      simulator,
-    ]) => {
-      acc[simulator.toLowerCase()] = slug;
-
-      return acc;
-    },
-    {},
-  ));
+export {
+  extractChipNames,
+  matchChipNameToSeries,
+  normalizeChipNameForMatching,
+} from '@shared/ascend-series-registry';
 
 /**
  * Normalize a CANN SOC string for stable comparisons / mapping.
@@ -199,21 +115,13 @@ export function normalizeCannSoc(cannSoc?: string | null): string {
     .toLowerCase();
 }
 
+/** Chip Name or probe text → default CANN SOC slug (see docs/ascend-env-spec.md §4). */
 export function socFromCoreName(coreName?: string): string | undefined {
   if (!coreName) {
     return undefined;
   }
 
-  const lower = coreName.trim()
-    .toLowerCase();
-
-  for (const rule of ASCEND_SOC_RULES) {
-    if (lower.includes(rule.key)) {
-      return rule.slug;
-    }
-  }
-
-  return undefined;
+  return detectSocSlugFromChipOrProbe(coreName);
 }
 
 export function getDefaultSimulatorTypeForCannSoc(cannSoc: string): string {
@@ -223,73 +131,43 @@ export function getDefaultSimulatorTypeForCannSoc(cannSoc: string): string {
     return DEFAULT_FALLBACK_SIMULATOR_DEVICE_NAME;
   }
 
-  return CANN_SOC_TO_SIMULATOR_TYPE[key] || DEFAULT_FALLBACK_SIMULATOR_DEVICE_NAME;
+  return getDefaultSimulatorForCannSoc(key) || DEFAULT_FALLBACK_SIMULATOR_DEVICE_NAME;
 }
 
 /**
- * Inverse of {@link getDefaultSimulatorTypeForCannSoc}. Returns the CANN SOC
- * slug that the simulator directory belongs to, or `undefined` for unknown
- * names. Used by the simulator-driven SOC rule.
+ * Inverse of {@link getDefaultSimulatorTypeForCannSoc}. Table lookup only.
  */
 export function simulatorTypeToCannSoc(simulatorType?: string | null): string | undefined {
-  const key = (simulatorType || '').trim()
-    .toLowerCase();
-
-  if (!key) {
-    return undefined;
-  }
-
-  if (SIMULATOR_TYPE_TO_CANN_SOC[key]) {
-    return SIMULATOR_TYPE_TO_CANN_SOC[key];
-  }
-
-  // Conservative heuristic for forward-compatibility: names that include
-  // a known generation token map to the same slug as the closest entry.
-  if (key.includes('950') || key.includes('9589')) {
-    return CANN_SOC_ASCEND_950;
-  }
-
-  if (key.includes('910c') || key.includes('910_93')) {
-    return CANN_SOC_ASCEND_910_93;
-  }
-
-  if (key.includes('910b')) {
-    return CANN_SOC_ASCEND_910B;
-  }
-
-  if (key.includes('910')) {
-    return CANN_SOC_ASCEND_910;
-  }
-
-  if (key.includes('310p')) {
-    return CANN_SOC_ASCEND_310P;
-  }
-
-  return undefined;
+  return simulatorTypeToCannSocSlug(simulatorType);
 }
 
 /**
- * AscendC `--npu-arch` value for a CANN SOC slug. Always derived from the SOC
- * — never from a simulator directory — so that the value stays consistent
- * with `SOC_VERSION` for the resolved environment.
+ * `NPU_ARCH` from cached detected chip (§4.1 dav-1001) or series of resolved slug.
  */
 export function getNpuArchForCannSoc(cannSoc?: string | null): string {
+  const cachedChip = getCachedDetectedChipName();
+
+  if (cachedChip) {
+    const fromChip = getNpuArchForChipName(cachedChip);
+
+    if (fromChip) {
+      return fromChip;
+    }
+  }
+
   const key = normalizeCannSoc(cannSoc);
 
   if (!key) {
     return '';
   }
 
-  const compact = key.replace(/\s+/g, '');
+  const series = cannSocToSeries(key);
 
-  if (
-    A5_NPU_ARCH_KEY_FRAGMENTS.some((fragment) => key.includes(fragment))
-    || compact.includes(A5_NPU_ARCH_COMPACT_FRAGMENT)
-  ) {
-    return NPU_ARCH_DAV_3510;
+  if (!series) {
+    return '';
   }
 
-  return NPU_ARCH_DAV_2201;
+  return getNpuArchForSeries(series);
 }
 
 /** A2/A3 vs A5 branch for paired ACLNN spawn defaults ({@link getSupportComputeUnitForCannSoc}, etc.). */
@@ -308,6 +186,7 @@ function resolveAclnnBuildDefaultForCannSoc(
 }
 
 /** Placeholders in ascend `add_custom` CMakeLists.txt replaced at project generation. */
+
 export const MSTT_SUPPORT_COMPUTE_UNIT_PLACEHOLDER = '__MSTT_SUPPORT_COMPUTE_UNIT__' as const;
 export const MSTT_SUPPORT_TILING_DIR_PLACEHOLDER = '__MSTT_SUPPORT_TILING_DIR__' as const;
 
@@ -389,6 +268,19 @@ type DetectionState =
 
 let detectionState: DetectionState = { kind: 'pending' };
 
+function logDetectionHit(
+  hit: NonNullable<ReturnType<typeof detectSocSlugFromProbe>>,
+  via: 'asys' | 'npu-smi',
+): void {
+  const npuArch = getNpuArchForChipName(hit.chipRaw)
+    ?? getNpuArchForSeries(hit.series);
+
+  logAscendEnv(
+    `detected series=${hit.series.toUpperCase()} soc=${hit.socVersion}`
+    + ` npu_arch=${npuArch} chip=${hit.chipRaw} (via=${via})`,
+  );
+}
+
 function tryDetectSocViaAsys(): string | undefined {
   try {
     const setEnv = resolveCannSetEnvScriptForDetection();
@@ -403,7 +295,15 @@ function tryDetectSocViaAsys(): string | undefined {
       return undefined;
     }
 
-    return socFromCoreName(asysOutput);
+    const hit = detectSocSlugFromProbe(asysOutput);
+
+    if (!hit) {
+      return undefined;
+    }
+
+    logDetectionHit(hit, 'asys');
+
+    return hit.socVersion;
   }
   catch {
     return undefined;
@@ -414,8 +314,15 @@ function tryDetectSocViaNpuSmi(): string | undefined {
   try {
     const setEnv = resolveCannSetEnvScriptForDetection();
     const out = execBashWithCannEnv(setEnv, 'npu-smi info', 20000);
+    const hit = detectSocSlugFromProbe(out);
 
-    return socFromCoreName(out);
+    if (!hit) {
+      return undefined;
+    }
+
+    logDetectionHit(hit, 'npu-smi');
+
+    return hit.socVersion;
   }
   catch {
     return undefined;
@@ -439,8 +346,6 @@ function detectSocOnce(): string | undefined {
       soc: asysSoc,
       via: 'asys',
     };
-    logAscendEnv(`detected SOC via asys: ${asysSoc}`);
-
     return asysSoc;
   }
 
@@ -452,7 +357,6 @@ function detectSocOnce(): string | undefined {
       soc: npuSoc,
       via: 'npu-smi',
     };
-    logAscendEnv(`detected SOC via npu-smi: ${npuSoc}`);
 
     return npuSoc;
   }
@@ -469,6 +373,7 @@ function detectSocOnce(): string | undefined {
  */
 export function _resetSocDetectionCacheForTest(): void {
   detectionState = { kind: 'pending' };
+  _resetDetectedChipCacheForTest();
 }
 
 /** Test hook — skip slow host detection (`find` / `asys` / `npu-smi`). */

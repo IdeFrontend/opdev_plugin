@@ -40,9 +40,9 @@ When the workspace sets **`performanceTuning.simulation.simulatorType`** to `Asc
 | Area | Behavior |
 |------|----------|
 | **Single resolver** | `resolveAscendEnv` / `resolveAscendEnvForOperatorCommand` in `ascend-util.ts`; spawn env, `{soc_version}` / `{simulator_type}`, profiler, and build paths share one resolution per command. |
-| **Host detection** | Lazy `asys info -r=status` then `npu-smi info`; `ASCEND_SOC_RULES` maps A5-related substrings to `ascend950` (`atlas a5 series`, `atlas a5`, `atlasa5`, `ascend 950`, `950`, …). |
-| **NPU arch from SOC** | `getNpuArchForCannSoc('ascend950')` → `dav-3510` (also `atlas a5` tokens in slug). |
-| **SOC ↔ simulator tables** | `ascend950` ↔ `Ascend950PR_9589`; inverse via `simulatorTypeToCannSoc` (+ `950` / `9589` heuristics for unknown sim names). |
+| **Host detection** | Lazy `asys` / `npu-smi`; Chip Name → series → slug per [`ascend-env-spec.md`](./ascend-env-spec.md) §1 (`Ascend950*` → A5 / `ascend950`). |
+| **NPU arch from SOC** | `getNpuArchForCannSoc('ascend950')` → `dav-3510`; Pro/Premium/901 chips → A2 slug + `dav-1001` when detected. |
+| **SOC ↔ simulator tables** | `ascend950` ↔ `Ascend950PR_9589`; inverse via `simulatorTypeToCannSoc` (series profile table only). |
 | **Templates / new operators** | `ascend.plugin.ts`, `abstract-operator-plugin.ts`, `model.ts` use `{soc_version}` / `{simulator_type}` placeholders, not hardcoded 910B strings. |
 | **On-board profiler (A5)** | `OnBoardStrategy`: `MemoryDetail` replaced by `PCSampling` in base metrics; Roofline/PCSampling enable `Default` metric bundle (`profiler-service.ts`). |
 | **New project opprof defaults** | `generateStructure` sets `MemoryDetail: false`, `PCSampling: true` when `resolveAscendEnv(...).socVersion` is A5 (`model.ts`). |
@@ -71,7 +71,7 @@ When the workspace sets **`performanceTuning.simulation.simulatorType`** to `Asc
 
 ### 2.3 Remaining gaps / operational caveats
 
-- **Extend `ASCEND_SOC_RULES`** if your `npu-smi` / `asys` output uses strings not yet in the map; verify on physical A5 hosts.
+- **Extend chip rules** in [`ascend-env-spec.md`](./ascend-env-spec.md) §4 if `Chip Name` strings on your host are not yet covered; verify on physical A5 hosts.
 - **Simulator directory names** must exist under your CANN `tools/simulator`; CANN upgrades may rename dirs — update constants or workspace setting accordingly.
 - **Saved simulate / opprof config** can freeze `simulatorType` and metric flags from `generateStructure` time; changing SOC later does not rewrite stored configs until the user edits or regenerates.
 - **Stale workspace settings** — `extension.ts` / `config-service` may have synced `Ascend910B3` into `.vscode/settings.json` on older projects; update simulate/on-board settings after migrating to A5.
@@ -80,14 +80,13 @@ When the workspace sets **`performanceTuning.simulation.simulatorType`** to `Asc
 
 ---
 
-## 3. Host detection (A5 substrings)
+## 3. Host detection (chip → series)
 
-Rules in `ASCEND_SOC_RULES` (`ascend-util.ts`). Matching is case-insensitive substring on normalized probe output; **more specific keys are listed first** (e.g. `atlas a5 series` before `950`).
+Rules in [`ascend-env-spec.md`](./ascend-env-spec.md) §4 (`shared/ascend-series-registry.ts`). Extract `Chip Name`, normalize (strip spaces), prefix `Ascend950*` → series A5.
 
-| `npu-smi` / `asys` substring (examples) | CANN slug |
-|----------------------------------------|-----------|
-| `atlas a5 series`, `atlas a5`, `atlasa5` | `ascend950` |
-| `ascend 950`, `ascend950`, `950` | `ascend950` |
+| Chip Name (examples) | CANN slug |
+|----------------------|-----------|
+| `Ascend950PR_9589`, `Ascend 950PR_9589` | `ascend950` |
 
 Log lines when detection runs (Huawei Op Devtools channel, scope `op-devtools/ascend-env`):
 
