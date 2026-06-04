@@ -109,16 +109,27 @@ describe('ConfigService legacy settings migration', () => {
   });
 
   it('seeds all runtime-critical settings from generateStructure-like legacy rows (no empty commands)', async () => {
+    const ascendBase = 'bash build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames}';
+    const legacyScripts = {
+      compileCommand: ascendBase,
+      cpuDebugCompileCommand: `${ascendBase} --simulator {simulator_type}`,
+      npuDebugCompileCommand: `${ascendBase} --debug`,
+      utTestCompileCommand: 'bash build.sh --soc={soc_version} --ops={operatorNames} -u',
+      onBoardCompileCommand: `${ascendBase} --onboard`,
+      simulationCompileCommand: `${ascendBase} --simulator {simulator_type}`,
+      sanitizerCompileCommand: `${ascendBase} --mssanitizer`,
+    };
+
     (getConfig as jest.Mock).mockImplementation((_projectId: number, type: string) => {
       const rows: Record<string, { config_type: string; user_options: Record<string, unknown> }> = {
         build_op: {
           config_type: 'build_op',
           user_options: {
             op: 'myop',
-            script: 'bash build.sh',
+            script: legacyScripts.compileCommand,
             target_file: './build/myop',
-            cpu_debug_script: 'bash build.sh --debug',
-            npu_debug_script: 'bash build.sh --npu-debug',
+            cpu_debug_script: legacyScripts.cpuDebugCompileCommand,
+            npu_debug_script: legacyScripts.npuDebugCompileCommand,
           },
         },
         build_example: {
@@ -131,12 +142,12 @@ describe('ConfigService legacy settings migration', () => {
         },
         ut_test: {
           config_type: 'ut_test',
-          user_options: { op: 'myop', script: 'bash build.sh -u' },
+          user_options: { op: 'myop', script: legacyScripts.utTestCompileCommand },
         },
         sanitizer: {
           config_type: 'sanitizer',
           user_options: {
-            script: 'bash build.sh --mssanitizer',
+            script: legacyScripts.sanitizerCompileCommand,
             logLevel: 'warn',
             maxDebuglogSize: 1024,
             tool: { memcheck: true, racecheck: false, initcheck: false },
@@ -148,7 +159,7 @@ describe('ConfigService legacy settings migration', () => {
           config_type: 'on_board',
           user_options: {
             op: 'myop',
-            script: 'bash build.sh --onboard',
+            script: legacyScripts.onBoardCompileCommand,
             Occupancy: true,
             Roofline: true,
             Source: true,
@@ -162,7 +173,7 @@ describe('ConfigService legacy settings migration', () => {
           config_type: 'simulate',
           user_options: {
             op: 'myop',
-            script: 'bash build.sh --simulator {simulator_type}',
+            script: legacyScripts.simulationCompileCommand,
             PMSampling: true,
             ResourceConflictRatio: true,
             advance_param: [],
@@ -193,8 +204,21 @@ describe('ConfigService legacy settings migration', () => {
       expect(parsed[key]).toBeDefined();
       expect(parsed[key]).not.toBe('');
     }
-    expect(parsed['op-devtools.compileAndDeploy.buildConfig.compileCommand']).toBe('bash build.sh');
+    expect(parsed['op-devtools.compileAndDeploy.buildConfig.compileCommand'])
+      .toBe(legacyScripts.compileCommand);
     expect(parsed['op-devtools.compileAndDeploy.buildConfig.deployCommandOrRunCommand']).toBe('./build/myop');
+    expect(parsed['op-devtools.compileAndDeploy.buildConfig.cpuDebugCompileCommand'])
+      .toBe(legacyScripts.cpuDebugCompileCommand);
+    expect(parsed['op-devtools.compileAndDeploy.buildConfig.npuDebugCompileCommand'])
+      .toBe(legacyScripts.npuDebugCompileCommand);
+    expect(parsed['op-devtools.compileAndDeploy.buildConfig.utTestCompileCommand'])
+      .toBe(legacyScripts.utTestCompileCommand);
+    expect(parsed['op-devtools.compileAndDeploy.buildConfig.onBoardCompileCommand'])
+      .toBe(legacyScripts.onBoardCompileCommand);
+    expect(parsed['op-devtools.compileAndDeploy.buildConfig.simulationCompileCommand'])
+      .toBe(legacyScripts.simulationCompileCommand);
+    expect(parsed['op-devtools.compileAndDeploy.buildConfig.sanitizerCompileCommand'])
+      .toBe(legacyScripts.sanitizerCompileCommand);
   });
 
   it('migrates exampleBuildConfig whenever build_example row exists', async () => {

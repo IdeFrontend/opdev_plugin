@@ -706,7 +706,6 @@ export class ConfigService {
         queue(key, value.trim());
       }
     };
-
     queue('compileAndDeploy.buildConfig.operatorNameToCompile', buildOpOpts.op);
     queue('compileAndDeploy.buildConfig.deployCommandOrRunCommand', buildOpOpts.target_file);
     queueNonEmptyString('compileAndDeploy.buildConfig.compileCommand', buildOpOpts.script);

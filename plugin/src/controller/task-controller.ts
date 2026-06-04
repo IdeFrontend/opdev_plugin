@@ -447,8 +447,15 @@ export const taskMethods = {
         }
       }
 
+      const operatorNames = await homeMethods.getSelectedOperators();
+      const compileOption = await getCompileOptionForSelectedOperators();
+
       // Compile before CPU debugging, use the --simulator parameter
-      await buildService.startBuild({ scriptField: 'cpu_debug_script' });
+      await buildService.startBuild({
+        scriptField: 'cpu_debug_script',
+        operatorNames: operatorNames || undefined,
+        compileOption,
+      });
       await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
 
       // Get the project type and template name to determine whether to use msdebug-python

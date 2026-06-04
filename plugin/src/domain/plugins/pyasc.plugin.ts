@@ -83,6 +83,7 @@ export class PyAscPlugin extends AbstractOperatorPlugin implements IProjectDetec
       sanitizerScript: py,
       cpuDebugScript:  py,
       npuDebugScript:  py,
+      utTestScript:    py,
     };
   }
 

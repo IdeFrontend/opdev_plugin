@@ -144,6 +144,9 @@ keys when present (`pickAscendSpawnEnv` in `command-options.ts`).
   `{simulator_type}` but the run is not simulator-class —
   `enrichAscendResolutionForPlaceholders()` fills simulator dir without changing
   SOC resolution (workspace → global env → default-from-soc).
+- `{operatorNames}` / `--ops={operatorNames}` — compile scripts only; handled by
+  `applyOperatorNamesPlaceholder()` before ascend/cann strategies build the command
+  (see [`build-integration.md`](./build-integration.md#operatornames-and---ops-compile-scripts)).
 - Legacy call sites may use `replaceOperatorScriptPlaceholders()` in
   `operator-script-placeholders.ts` (computes without per-command logging when
   no resolution is passed).

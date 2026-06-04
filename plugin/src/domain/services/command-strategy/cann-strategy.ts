@@ -21,6 +21,7 @@ import {
 import { getConfig } from '@plugin/domain/services/configuration';
 import { ConfigService } from '@plugin/service/config-service';
 import { resolveAscendEnv } from '@plugin/domain/utils/ascend-util';
+import { applyOperatorNamesPlaceholder } from '@plugin/domain/utils/operator-script-placeholders';
 
 /**
  * CANN type command strategy
@@ -88,12 +89,11 @@ export class CannCommandStrategy implements CommandStrategy {
       throw new Error(t('cann.configMissingScript', { op: config.op }));
     }
 
-    const cmd = new Command(userOptions[scriptField] as string);
-
-    // If there is an operator name, add it as a parameter to the command (for scenarios such as standard custom operators)
-    if (operatorNames) {
-      cmd.addArgument(operatorNames);
-    }
+    const script = applyOperatorNamesPlaceholder(
+      userOptions[scriptField] as string,
+      operatorNames,
+    );
+    const cmd = new Command(script);
 
     if (compileOption) {
       cmd.addArgument(compileOption);
@@ -289,15 +289,7 @@ export class CannCommandStrategy implements CommandStrategy {
       throw new Error(`配置缺少脚本信息，且找不到算子记录: ${config.op}`);
     }
 
-    let script = userOptions.script as string;
-
-    // 替换 {operatorNames} 为传入的算子名称
-    if (operatorNames) {
-      script = script.replace('{operatorNames}', operatorNames);
-    }
-    else {
-      script = script.replace('{operatorNames}', '');
-    }
+    const script = applyOperatorNamesPlaceholder(userOptions.script as string, operatorNames);
 
     const cmd = new Command(script);
 

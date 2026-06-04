@@ -1,9 +1,9 @@
-jest.mock('@plugin/domain', () => ({ getProjectById: jest.fn() }));
+jest.mock('@plugin/domain/models/project-model', () => ({ getProjectById: jest.fn() }));
 
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { getProjectById } from '@plugin/domain';
+import { getProjectById } from '@plugin/domain/models/project-model';
 import { generateOpsPrototype } from '@plugin/domain/services/ops-prototype';
 
 function mkTmp(prefix: string): string {

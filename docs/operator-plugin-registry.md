@@ -51,7 +51,7 @@ Registered at `registerOperatorPlugins()` from `extension.ts` activate:
 |----------|--------------|----------------------|
 | **`CommandStrategyFactory`** | `ascend` / `cann` / `pyasc` / `triton` strategy classes | Still need a strategy class + factory map entry |
 | **`folder-context-menu-service.ts`** | Large `switch (detection.projectType)` for mark-as-operator, templates, warnings | Touch menu paths when adding a **project type** |
-| **`domain/models/model.ts`** | Dead helpers `getNpuDebugScript`… (unused); inline `op_type` for `ut_test` / sanitizer script in `generateStructure` | Minor cleanup; ut_test script not fully on plugin |
+| **`domain/models/model.ts`** | Dead helpers `getNpuDebugScript`… (unused); sanitizer script still partly inline in `generateStructure` | Minor cleanup; `ut_test` uses `scripts.utTestScript` from plugin |
 | **`command.ts`** | All commands via `CommandStrategyFactory.getStrategy(op_type)` | Expected until strategies are plugin-owned |
 
 Adding a **new `op_type`** today: implement `*.plugin.ts` ( `IOperatorPlugin` + optional `IProjectDetector` ), register in `index.ts`, add **`command-strategy/<type>-strategy.ts`** + factory registration, add tests.
@@ -65,7 +65,7 @@ Adding a **new project type** with existing `op_type`: often detector-only + `fo
 Key hooks used in production:
 
 - `getDefaultPaths(op)` — deploy/run targets, script paths  
-- `getInitialConfigScripts(record, workspaceRoot)` — seven strings for `generateStructure` / `completeProjectConfigs`  
+- `getInitialConfigScripts(record, workspaceRoot)` — script bundle (`script`, debug scripts, `utTestScript`, example, sanitizer, on-board, simulation) for `generateStructure` / `completeProjectConfigs`  
 - `createProjectGenerator(...)` — template unzip / scaffold  
 - `buildBehavior` — `requiresBuildBeforeAnalysis`, `requiresActiveFileCheck`, `supportsSanitizer`, `supportsSimulate`, `supportsOnBoard`, CPU/NPU debug flags  
 - `detectProject(dir)` — when plugin also implements `IProjectDetector`

@@ -19,6 +19,7 @@ import { ConfigRecord } from '@plugin/domain/models/config-model';
 import { getConfigById } from '@plugin/domain/services/configuration';
 import { ConfigService } from '@plugin/service/config-service';
 import { resolveAscendEnv } from '@plugin/domain/utils/ascend-util';
+import { applyOperatorNamesPlaceholder } from '@plugin/domain/utils/operator-script-placeholders';
 
 /**
  * Ascend type command strategy
@@ -81,18 +82,12 @@ export class AscendCommandStrategy implements CommandStrategy {
 
     const userOptions = (config.user_options as Record<string, unknown> | null | undefined) || {};
 
-    let script = userOptions[scriptField] as string || '';
+    const script = applyOperatorNamesPlaceholder(
+      userOptions[scriptField] as string || '',
+      operatorNames,
+    );
 
     const cmd = new Command(script);
-
-    const options: Record<string, unknown> = {};
-
-    // Add ops parameter only if operatorNames exists and is not empty
-    if (operatorNames && operatorNames.trim()) {
-      options.ops = operatorNames;
-    }
-
-    cmd.addOptions(options);
 
     if (compileOption) {
       cmd.addArgument(compileOption);
@@ -142,15 +137,7 @@ export class AscendCommandStrategy implements CommandStrategy {
       config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames,
     } = params;
 
-    let script = config.script || '';
-
-    // Replace {operatorNames} with the provided operator names
-    if (operatorNames) {
-      script = script.replace('{operatorNames}', operatorNames);
-    }
-    else {
-      script = script.replace('{operatorNames}', '');
-    }
+    const script = applyOperatorNamesPlaceholder(config.script || '', operatorNames);
 
     const cmd = new Command(script);
 

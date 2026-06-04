@@ -178,11 +178,25 @@ Flow is similar: `startBuildExample` → `getBuildExampleConfigId()` → `getBui
 
 There is **no** fallback to legacy script strings stored only on the DB row after migration.
 
+### `{operatorNames}` and `--ops` (compile scripts)
+
+Ascend standard-custom defaults (see `AscendPlugin.getInitialConfigScripts()` → `configs.json` → migration) include `--ops={operatorNames}` in compile-related script fields (`compileCommand`, `cpuDebugCompileCommand`, `npuDebugCompileCommand`, `utTestCompileCommand`, `onBoardCompileCommand`, `simulationCompileCommand`, `sanitizerCompileCommand`).
+
+At command time, **`applyOperatorNamesPlaceholder()`** in `plugin/src/domain/utils/operator-script-placeholders.ts` (used by ascend and cann `buildOpCommand` / `buildUtTestCommand`):
+
+| Selection | Behavior |
+|-----------|----------|
+| Operators selected | `{operatorNames}` → comma-separated names (e.g. `--ops=add,sub`) |
+| None selected | Token `--ops={operatorNames}` is **removed** (not left as `--ops=`) |
+| Legacy settings without placeholder | Temporary fallback appends `--ops=<names>` for ascend pkg/custom/UT-style scripts only (`//FIXME` in source — remove when legacy settings are gone) |
+
+PyAsc/Triton scripts are `python3 ./<op>.py` without `--ops`; cann plain `bash build.sh` flows are unchanged. Example run still uses positional operator args via `buildExampleCommand`, not `--ops` in settings.
+
 ### Command generation
 
 - **Select strategy:** `CommandStrategyFactory.getStrategy(operator?.op_type)` → `ascend` | `cann` | `pyasc` | `triton` (default **`cann`** if unknown).
 - **Build context:** `strategy.buildCommandContext(baseContext)` → `sourceCannCmd` (`. ${project.ascend_env_script} &&` when set), `cdCmd`, etc.
-- **build_op:** `strategy.buildOpCommand({ …, scriptField })` uses merged `user_options[scriptField]` (default `script`) and `config.target_file` for ascend deploy (`getExecutableCommand`); cann/triton append `operatorNames` / `compileOption` / `advance_cmd` as applicable.
+- **build_op:** `strategy.buildOpCommand({ …, scriptField })` uses merged `user_options[scriptField]` (default `script`) after `applyOperatorNamesPlaceholder()` (see below); ascend adds deploy via `getExecutableCommand(config.target_file)`; cann/triton append `compileOption` / `advance_cmd` as applicable.
 - **build_example:** `strategy.buildExampleCommand` — ascend/cann shell; triton/pyasc per strategy (pyasc example path throws on kernel build, not on all example paths — see strategy files).
 
 ```mermaid
@@ -204,8 +218,8 @@ flowchart LR
   WS --> Config
 
   subgraph Strategy["Strategy by op_type"]
-    Ascend["Ascend: script + deploy target_file\nops=..., compileOption"]
-    Cann["Cann: user_options.script\n+ operatorNames, compileOption"]
+    Ascend["Ascend: script + applyOperatorNamesPlaceholder\n+ deploy target_file"]
+    Cann["Cann: script + applyOperatorNamesPlaceholder\n+ compileOption"]
   end
 
   subgraph Out["Output"]
@@ -224,8 +238,8 @@ flowchart LR
 
 | Strategy | buildOpCommand | buildExampleCommand |
 |----------|----------------|---------------------|
-| **ascend** | Uses `user_options[scriptField]` (default `script`) as command; adds `--ops operatorNames`; then `getExecutableCommand(config.target_file)` for deploy. Combined: `sourceCannCmd`, `cdCmd`, script + args, deploy. | Uses `config.script`, args: op (or operatorNames), execution_mode, pkg_mode; optional compileOption. |
-| **cann** | Uses `user_options[scriptField]` as script; adds operatorNames, compileOption, advance_cmd. No separate deploy step in command. | Implements example build (script + args). |
+| **ascend** | `user_options[scriptField]` → `applyOperatorNamesPlaceholder` → `Command` + optional `compileOption` / `advance_cmd`; build_op adds `getExecutableCommand(config.target_file)` deploy. `--ops` comes from settings template or legacy fallback, not `Command.addOptions`. | Uses `config.script`, args: op (or operatorNames), execution_mode, pkg_mode; optional compileOption. |
+| **cann** | Same placeholder helper on `user_options[scriptField]`; no legacy `--ops` fallback for plain `bash build.sh`. `compileOption`, `advance_cmd`. No separate deploy step. | Implements example build (script + args). |
 | **pyasc** | **Not supported** (throws). PyAsc projects run Python; no kernel build in this sense. | **Not supported** (throws). |
 | **triton** | Python `build_op` / `build_example` via configured script (`TritonCommandStrategy`). | Same as build_op path for examples. |
 
@@ -309,8 +323,10 @@ flowchart TB
 | `service/config-service.ts` | `getRuntimeConfigById`, `buildUserOptionsFromWorkspaceSettings`, `applyWorkspaceSettingsToConfigs`. |
 | `domain/services/command.ts` | `getBuildOpCommand`, `getBuildExampleCommand` via `getBaseContext` → runtime config. |
 | `domain/services/command-strategy/factory.ts` | `CommandStrategyFactory.getStrategy(opType)` → ascend, cann, pyasc, or triton. |
-| `domain/services/command-strategy/ascend-strategy.ts` | Ascend: buildOpCommand (script + ops + deploy target_file), buildExampleCommand (script + op, mode, pkg_mode). |
-| `domain/services/command-strategy/cann-strategy.ts` | Cann: buildOpCommand (script + operatorNames, compileOption, advance_cmd). |
+| `domain/utils/operator-script-placeholders.ts` | `applyOperatorNamesPlaceholder`, `replaceOperatorScriptPlaceholders` (`{soc_version}`, `{simulator_type}`, `{operatorNames}`). |
+| `domain/plugins/ascend.plugin.ts` | Default compile scripts with `--ops={operatorNames}` in `base` (+ `utTestScript`). |
+| `domain/services/command-strategy/ascend-strategy.ts` | Ascend: buildOpCommand (placeholder + deploy), buildUtTestCommand, buildExampleCommand (script + op, mode, pkg_mode). |
+| `domain/services/command-strategy/cann-strategy.ts` | Cann: buildOpCommand / buildUtTestCommand via `applyOperatorNamesPlaceholder`. |
 | `domain/services/command-strategy/pyasc-strategy.ts` | PyAsc: buildOpCommand and buildExampleCommand throw (not supported). |
 | `domain/services/command-strategy/triton-strategy.ts` | Triton: Python `build_op` / `build_example` via configured script (`python3 ./<op>.py`); UT test throws; sanitizer command exists but Actions tree hides sanitizer when `TritonPlugin.buildBehavior.supportsSanitizer === false`. |
 | `core/project/project-manager.ts` | `initProject()`, `getExecutor()` (CommandExecutor), `clearExecutor()`. |

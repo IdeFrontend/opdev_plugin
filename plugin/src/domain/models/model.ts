@@ -401,9 +401,7 @@ export async function generateStructure(
         project_id: project.id,
         user_options: {
           op: record.op_name,
-          script: record.op_type === 'ascend'
-            ? `bash ${opScriptPath} --soc={soc_version} --ops={operatorNames} -u`
-            : `bash ${opScriptPath} -u`,
+          script: scripts.utTestScript,
           config_name: record.op_name,
           target_dir: targetDir,
           target_file: targetExampleFile,
@@ -609,11 +607,7 @@ function getConfigPayload(
         project_id,
         user_options: {
           op: record.op_name,
-          script: record.op_type === 'ascend'
-            ? `bash ${opScriptPath} --soc={soc_version} --ops={operatorNames} -u`
-            : (record.op_type === 'pyasc' || record.op_type === 'triton')
-              ? scripts.exampleScript
-              : `bash ${opScriptPath} -u`,
+          script: scripts.utTestScript,
           config_name: record.op_name,
           target_dir: targetDir,
           target_file: targetExampleFile,

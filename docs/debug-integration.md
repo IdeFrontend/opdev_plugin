@@ -126,7 +126,7 @@ sequenceDiagram
   alt NPU
     Task->>Build: startBuild(npu_debug_script, operatorNames, compileOption)
   else CPU
-    Task->>Build: startBuild(cpu_debug_script)
+    Task->>Build: startBuild(cpu_debug_script, operatorNames, compileOption)
   end
   Task->>VSCode: workbench.debug.action.toggleRepl
   Task->>Task: pick msdebug / msdebug-cpu / msdebug-python

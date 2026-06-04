@@ -13,15 +13,12 @@ jest.mock('@plugin/core/project/project-manager', () => ({
   },
 }));
 
-jest.mock('@plugin/domain', () => ({
-  updateShScript: jest.fn(),
-  generateOpsPrototype: jest.fn(),
+jest.mock('@plugin/domain/services/ops', () => ({
   generateStructure: jest.fn()
     .mockResolvedValue(1),
-  getProjectById: jest.fn(),
 }));
 
-import { generateStructure } from '@plugin/domain';
+import { generateStructure } from '@plugin/domain/services/ops';
 import { projectService } from '@plugin/service/project-service';
 
 describe('createOpsByPrototype: skipFileGeneration threading', () => {

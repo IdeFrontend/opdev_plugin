@@ -50,6 +50,7 @@ export interface OperatorConfigScripts {
   sanitizerScript: string;
   cpuDebugScript: string;
   npuDebugScript: string;
+  utTestScript: string;
 }
 
 /**

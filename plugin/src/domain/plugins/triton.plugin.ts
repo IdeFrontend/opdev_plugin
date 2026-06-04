@@ -85,6 +85,7 @@ export class TritonPlugin extends AbstractOperatorPlugin implements IProjectDete
       sanitizerScript: py,
       cpuDebugScript: py,
       npuDebugScript: py,
+      utTestScript: py,
     };
   }
 

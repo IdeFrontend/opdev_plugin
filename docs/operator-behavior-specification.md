@@ -59,7 +59,7 @@ Behavior details:
 
 **Canonical reference:** [`workspace-settings.md`](./workspace-settings.md) (keys, merge, migration).
 
-`generateStructure` creates default **rows** in `configs.json` per operator (`build_op`, `build_example`, `sanitizer`, `on_board`, `simulate`). Initial script strings come from `OperatorPluginRegistry.getOpPlugin(op_type).getInitialConfigScripts()` at creation time.
+`generateStructure` creates default **rows** in `configs.json` per operator (`build_op`, `build_example`, `ut_test`, `sanitizer`, `on_board`, `simulate`). Initial script strings come from `OperatorPluginRegistry.getOpPlugin(op_type).getInitialConfigScripts()` at creation time (ascend compile scripts include `--ops={operatorNames}`; see [`build-integration.md`](./build-integration.md#operatornames-and---ops-compile-scripts)).
 
 **At command time** (after one-time legacy migration, `op-devtools.internal.settingsMigratedFromLegacy`):
 

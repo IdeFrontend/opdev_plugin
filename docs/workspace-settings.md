@@ -108,6 +108,8 @@ Also includes extension-wide **`op-devtools.debugMode`** (boolean, default `true
 
 CPU/NPU debug script settings apply only when the project type and `OperatorPluginRegistry` support the corresponding debug mode (see [`debug-integration.md`](./debug-integration.md)).
 
+**Ascend standard-custom compile scripts** seeded from `AscendPlugin.getInitialConfigScripts()` include `--ops={operatorNames}` in `compileCommand`, debug scripts, UT, on-board, simulation, and sanitizer compile fields. At run time, `applyOperatorNamesPlaceholder()` ([`build-integration.md`](./build-integration.md#operatornames-and---ops-compile-scripts)) substitutes selected operator names or removes the token when none are selected. Legacy migrated rows without the placeholder still get a temporary `--ops` append for ascend pkg/custom/UT-style scripts only.
+
 #### `exampleBuildConfig` — maps to `build_example`
 
 | Setting key | `user_options` field | Notes |
@@ -349,7 +351,7 @@ pnpm run verify
 Focused:
 
 ```bash
-cd plugin && pnpm test -- --testPathPattern="config-service-settings|config-service-webview|op-devtools-workspace|standard-custom-deploy|command-strategy-deploy-target"
+cd plugin && pnpm test -- --testPathPattern="config-service-settings|config-service-webview|op-devtools-workspace|standard-custom-deploy|command-strategy-deploy-target|operator-script-placeholders|ut-test-compile-option|ascend-plugin-config-scripts"
 ```
 
 ---

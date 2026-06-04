@@ -16,7 +16,10 @@ import {
   getWorkspaceSimulatorType,
 } from '@plugin/helpers/operator-project-workspace-config';
 import { getGlobalEnvSnapshot } from '@plugin/domain/utils/global-env-snapshot';
-import { replaceOperatorScriptPlaceholders } from '@plugin/domain/utils/operator-script-placeholders';
+import {
+  applyOperatorNamesPlaceholder,
+  replaceOperatorScriptPlaceholders,
+} from '@plugin/domain/utils/operator-script-placeholders';
 
 const snapshot = (overrides: Partial<{ socVersion: string;
   simulatorType: string }> = {}) => ({
@@ -25,6 +28,37 @@ const snapshot = (overrides: Partial<{ socVersion: string;
   npuArch: undefined,
   ascendEnvScript: undefined,
   ...overrides,
+});
+
+describe('applyOperatorNamesPlaceholder', () => {
+  it('removes --ops={operatorNames} when no operator is selected', () => {
+    const script = 'bash build.sh --soc={soc_version} --ops={operatorNames} -u';
+    expect(applyOperatorNamesPlaceholder(script))
+      .toBe('bash build.sh --soc={soc_version} -u');
+  });
+
+  it('substitutes operator names into --ops={operatorNames}', () => {
+    const script = 'bash build.sh --ops={operatorNames} --debug';
+    expect(applyOperatorNamesPlaceholder(script, 'add,sub'))
+      .toBe('bash build.sh --ops=add,sub --debug');
+  });
+
+  it('appends --ops for legacy standard-custom script without placeholder', () => {
+    const script = 'bash build.sh --pkg --soc={soc_version} --vendor_name=custom --onboard';
+    expect(applyOperatorNamesPlaceholder(script, 'add'))
+      .toBe('bash build.sh --pkg --soc={soc_version} --vendor_name=custom --ops=add --onboard');
+  });
+
+  it('does not append --ops for plain cann-style scripts', () => {
+    expect(applyOperatorNamesPlaceholder('bash build.sh --onboard', 'add'))
+      .toBe('bash build.sh --onboard');
+  });
+
+  it('does not duplicate --ops when placeholder is already present', () => {
+    const script = 'bash build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames}';
+    expect(applyOperatorNamesPlaceholder(script, 'add').match(/--ops=/g)?.length)
+      .toBe(1);
+  });
 });
 
 describe('replaceOperatorScriptPlaceholders', () => {
