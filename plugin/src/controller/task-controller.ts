@@ -20,6 +20,7 @@ import { ConfigService } from '@plugin/service/config-service';
 import { OperatorProjectType } from '@plugin/domain/services/operator-project-detector';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import { getCompileOptionForSelectedOperators } from '@plugin/helpers/compile-options';
+import { updateMsdebugTarget } from '@plugin/domain/utils/debug-target';
 import { whenPostActivateBootstrapReady } from '@plugin/helpers/post-activate-bootstrap';
 
 // Global task manager: used to track and terminate executing tasks
@@ -332,6 +333,18 @@ export const taskMethods = {
 
       if (workspaceFolder) {
         const debugConfigName = usePythonDebug ? 'msdebug-python' : 'msdebug';
+
+        if (!usePythonDebug) {
+          // Auto-adapt the msdebug target to the actual built binary (#17), so
+          // the user no longer has to hand-edit launch.json. Best-effort: never
+          // throws, never clobbers a valid user-set target.
+          try {
+            await updateMsdebugTarget(workspaceFolder.uri.fsPath, operatorNames ?? undefined);
+          }
+          catch (e) {
+            console.warn('updateMsdebugTarget failed (continuing):', e);
+          }
+        }
 
         await vscode.debug.startDebugging(workspaceFolder, debugConfigName);
       }

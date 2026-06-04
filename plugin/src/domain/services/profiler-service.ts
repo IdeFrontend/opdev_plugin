@@ -50,7 +50,10 @@ export class SimulatorStrategy implements ProfilerCommandStrategy {
 
     const advance_cmd = getAdvanceCmd(userOptions?.advance_param);
 
-    const msprofSocVersionArg = resolveAscendEnv({ isSimulator: true }).simulatorType ?? '';
+    // msprof op simulator --soc-version expects the CANN SOC (e.g. ascend910_93),
+    // NOT the simulator device-directory name (Ascend910C). The device name is
+    // still used for the build (build.sh --simulator) via the spawn env.
+    const msprofSocVersionArg = resolveAscendEnv({ isSimulator: true }).socVersion;
 
     // Build the msprof op simulator command
     const msprof = new Command('msprof');

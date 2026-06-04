@@ -12,7 +12,10 @@ jest.mock('@plugin/domain/utils/global-env-snapshot', () => ({
 }));
 
 import { getGlobalEnvSnapshot } from '@plugin/domain/utils/global-env-snapshot';
-import { getWorkspaceSimulatorType } from '@plugin/helpers/operator-project-workspace-config';
+import {
+  getWorkspaceSimulatorType,
+  getSocVersionWithWorkspaceOverride,
+} from '@plugin/helpers/operator-project-workspace-config';
 import { SimulatorStrategy } from '@plugin/domain/services/profiler-service';
 
 describe('SimulatorStrategy SOC resolution', () => {
@@ -26,10 +29,21 @@ describe('SimulatorStrategy SOC resolution', () => {
   };
 
   beforeEach(() => {
+    // clearAllMocks resets call records but NOT mockReturnValue, so re-establish
+    // the factory defaults each test to prevent leakage across tests in file order
+    // (e.g. an explicit simulatorType from one test driving SOC in the next).
     jest.clearAllMocks();
+    (getWorkspaceSimulatorType as jest.Mock).mockReturnValue('');
+    (getSocVersionWithWorkspaceOverride as jest.Mock).mockReturnValue('');
+    (getGlobalEnvSnapshot as jest.Mock).mockReturnValue({
+      socVersion: undefined,
+      simulatorType: undefined,
+      npuArch: undefined,
+      ascendEnvScript: undefined,
+    });
   });
 
-  it('derives msprof --soc-version from global env SOC when simulatorType is absent', () => {
+  it('passes the CANN SOC slug (not the simulator device) from global env', () => {
     (getGlobalEnvSnapshot as jest.Mock).mockReturnValue({
       socVersion: 'ascend950',
       simulatorType: undefined,
@@ -44,10 +58,10 @@ describe('SimulatorStrategy SOC resolution', () => {
     const cmd = strategy.generate(config as any, operator as any, '/tmp/op.bin');
 
     expect(cmd)
-      .toContain('--soc-version=Ascend950PR_9589');
+      .toContain('--soc-version=ascend950');
   });
 
-  it('uses workspace simulatorType for msprof --soc-version', () => {
+  it('passes the CANN SOC slug derived from a workspace simulatorType', () => {
     (getWorkspaceSimulatorType as jest.Mock).mockReturnValue('Ascend910B3');
     const config = {
       project_id: 10,
@@ -57,6 +71,22 @@ describe('SimulatorStrategy SOC resolution', () => {
     const cmd = strategy.generate(config as any, operator as any, '/tmp/op.bin');
 
     expect(cmd)
-      .toContain('--soc-version=Ascend910B3');
+      .toContain('--soc-version=ascend910b');
+  });
+
+  it('passes ascend910_93 from the workspace SOC setting (issue #18 regression)', () => {
+    (getSocVersionWithWorkspaceOverride as jest.Mock).mockReturnValue('ascend910_93');
+    const config = {
+      project_id: 10,
+      user_options: {
+        ResourceConflictRatio: true,
+        PMSampling: true,
+      },
+    };
+
+    const cmd = strategy.generate(config as any, operator as any, '/tmp/op.bin');
+
+    expect(cmd)
+      .toContain('--soc-version=ascend910_93');
   });
 });
