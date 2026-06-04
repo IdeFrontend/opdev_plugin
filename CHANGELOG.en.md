@@ -2,6 +2,25 @@
 
 Notable changes to **Huawei OP DevTools** are listed here. For the full project history, see the repository on [GitCode](https://gitcode.com/mlh0101/mstt).
 
+## 1.3.2 — 2026-06-04
+
+Patch release: Ascend env resolution and explicit command-line exports, standard-custom in-collection operator creation, SOC/simulation/debug consistency, settings migration, and reliability fixes.
+
+- When creating a sub-operator inside a standard-custom collection, scaffolding completes at the chosen path without prompting to open in the current window, avoiding misclassification as a standalone project.
+- Standard-custom operator creation prefers the project’s own `build.sh --genop`; new **genOpCommand** setting (default `bash build.sh --genop={path}/{operatorname}`) with transparent fallback to plugin templates when genop is missing, fails, or produces no source.
+- Standard-custom build, debug, and tuning flows inject operator names via the `--ops={operatorNames}` placeholder in script templates (legacy scripts without the placeholder still supported).
+- Centralized Ascend series detection: chip name normalization, A3 `Ascend910_93xx` recognition, and A2 Pro/Premium/901 `dav-1001` handling.
+- Atlas A3 represented as CANN SOC `ascend910_93` across detection, warning examples, and docs; `Ascend910A` mapped to the 910B family.
+- **SOC settings** from the SOC-not-detected warning and the gear **Project Config** entry open the same **Workspace**-scope settings view (User-scope values were previously ignored by the resolver).
+- Simulation profiling passes the CANN SOC slug (e.g. `ascend910_93`) to `msprof op simulator --soc-version` instead of the simulator device directory name (e.g. `Ascend910C`).
+- A5/A3 Ascend variables are exported explicitly in command strings (auditable, ordered); standard-custom projects bake `SOC_VERSION`/`NPU_ARCH` placeholders and `SUPPORT_*` defaults into generated CMake instead of polluting spawn env.
+- CANN and `add_custom` project template CMake placeholders and A5 build notes updated.
+- Before NPU debug launch, `launch.json` debug target auto-adapts to `build/<operatorName>` when still a placeholder or pointing at a missing file; a valid user-set target is preserved.
+- One-time legacy settings migration; runtime uses VS Code workspace settings; watches main config changes.
+- Fixed profiler server **Error:OTHER** in VS Code caused by default log path permissions (explicit `--logPath`).
+- Restored `show_kernel_debug_data` calls in the dump tensor flow.
+- Documentation consolidated (`ascend-env-spec`, user-issues index, integration guides; no functional change).
+
 ## 1.3.1 — 2026-05-28
 
 Patch release: A5 environment alignment, standard-custom workflow fixes, faster startup, smaller download, output UX, and bug fixes.

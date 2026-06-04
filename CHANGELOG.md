@@ -2,6 +2,25 @@
 
 本文列出 **Huawei OP DevTools（华为算子一站式开发工具）** 的重要变更。完整提交历史见 [GitCode](https://gitcode.com/mlh0101/mstt) 仓库。
 
+## 1.3.2 — 2026-06-04
+
+本版本强化 A5/A3 芯片环境解析与命令行注入、标准自定义算子就地创建与 genop 脚手架、SOC 设置与仿真/调试一致性，并改进设置迁移与稳定性。
+
+- 在标准自定义算子集合内新建子算子时，直接在指定路径完成创建，不再提示「在当前窗口打开」，避免误识别为独立工程。
+- 新建标准自定义算子时优先执行工程自带的 `build.sh --genop`；新增可配置项 **genOpCommand**（默认 `bash build.sh --genop={path}/{operatorname}`），失败或无输出时回退到插件模板。
+- 标准自定义构建、调试、调优等流程统一通过脚本模板中的 `--ops={operatorNames}` 占位符注入算子名（兼容未迁移的旧脚本）。
+- 集中 Ascend 系列检测：芯片名规范化、A3 `Ascend910_93xx` 识别、A2 Pro/Premium/901 的 `dav-1001` 等。
+- Atlas A3 统一为 CANN SOC `ascend910_93`（检测、告警示例与文档）；`Ascend910A` 归入 910B 族。
+- 「SOC 未检测到」告警中的 **SOC 设置** 与齿轮 **项目配置** 一致，打开**工作区**作用域设置（避免在用户作用域填写却被解析器忽略）。
+- 仿真分析向 `msprof op simulator --soc-version` 传递 CANN SOC 标识（如 `ascend910_93`），不再误用仿真器目录名（如 `Ascend910C`）。
+- A5/A3 环境变量改为在**命令字符串**中显式 `export`（可审计、顺序可控）；标准自定义工程在生成 CMake 时写入 `SOC_VERSION`/`NPU_ARCH` 占位符及 `SUPPORT_*` 默认值，减少错误的环境注入。
+- CANN 与 `add_custom` 工程模板 CMake 占位符与 A5 构建说明更新。
+- NPU 调试启动前自动将 `launch.json` 中的调试目标适配为 `build/<算子名>`（占位或缺失路径时更新；用户已配置的有效目标保留）。
+- 一次性旧版设置迁移；运行时以 VS Code 工作区设置为准；监视主配置变更。
+- 修复性能分析服务在 VS Code 中因默认日志路径权限导致的 **Error:OTHER**（显式 `--logPath`）。
+- 恢复 Dump tensor 流程中的 `show_kernel_debug_data` 调用。
+- 文档整合：`ascend-env-spec`、用户问题索引、集成指南等（无功能变更）。
+
 ## 1.3.1 — 2026-05-28
 
 本版本面向 A5 环境适配、标准自定义算子工作流修复、启动与安装包体积优化、输出面板体验改进及缺陷修复。
