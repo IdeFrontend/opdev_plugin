@@ -11,6 +11,7 @@ import {
   detectSocSlugFromProbe,
   getCachedDetectedChipName,
   getDefaultSimulatorForCannSoc,
+  getExactChipRule,
   getNpuArchForChipName,
   getNpuArchForSeries,
   simulatorTypeToCannSocSlug,
@@ -142,19 +143,13 @@ export function simulatorTypeToCannSoc(simulatorType?: string | null): string | 
 }
 
 /**
- * `NPU_ARCH` from cached detected chip (§4.1 dav-1001) or series of resolved slug.
+ * `NPU_ARCH` for a resolved CANN SOC slug (spec §6). The slug's series drives
+ * the value (§6.2); a cached exact-match chip (Pro/Premium/901) only overrides
+ * to `dav-1001` when it belongs to the resolved series — i.e. an A2 (`ascend910b`)
+ * slug (§6.1). A cached chip never leaks its arch across series, so non-A2 slugs
+ * keep their own series arch. Empty/unknown slug → `''` (§6.3, no silent default).
  */
 export function getNpuArchForCannSoc(cannSoc?: string | null): string {
-  const cachedChip = getCachedDetectedChipName();
-
-  if (cachedChip) {
-    const fromChip = getNpuArchForChipName(cachedChip);
-
-    if (fromChip) {
-      return fromChip;
-    }
-  }
-
   const key = normalizeCannSoc(cannSoc);
 
   if (!key) {
@@ -165,6 +160,16 @@ export function getNpuArchForCannSoc(cannSoc?: string | null): string {
 
   if (!series) {
     return '';
+  }
+
+  const cachedChip = getCachedDetectedChipName();
+
+  if (cachedChip) {
+    const exact = getExactChipRule(cachedChip);
+
+    if (exact && exact.series === series) {
+      return exact.npuArch;
+    }
   }
 
   return getNpuArchForSeries(series);

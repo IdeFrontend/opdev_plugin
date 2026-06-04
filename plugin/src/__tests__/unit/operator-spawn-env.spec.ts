@@ -124,6 +124,15 @@ describe('operator spawn env', () => {
       .toBe(NPU_ARCH_DAV_1001);
   });
 
+  it('getNpuArchForCannSoc keeps the slug arch for non-A2 SOCs even with a cached A2 chip', () => {
+    cacheDetectedChipName('Ascend910ProA');
+
+    expect(getNpuArchForCannSoc('ascend950'))
+      .toBe('dav-3510');
+    expect(getNpuArchForCannSoc('ascend910_93'))
+      .toBe('dav-2201');
+  });
+
   it('unresolved SOC emits empty spawn env (no silent 910-class defaults)', () => {
     const env = getOperatorSpawnEnv({
       opType: 'cann',
