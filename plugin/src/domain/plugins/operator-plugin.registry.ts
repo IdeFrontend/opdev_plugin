@@ -42,12 +42,12 @@ function pickSpawnEnvKeys(
   return picked;
 }
 
-// NOTE: All imports above are type-only. This intentionally breaks the runtime
-// circular dependency cycles:
+// NOTE: Imports above are mostly type-only to break runtime circular dependency cycles:
 //   registry → op-generator-factory → registry
 //   registry → model.ts → registry
-// The actual values (IOperatorPlugin implementations, IProjectDetector implementations)
-// are passed in at runtime via register() calls, not imported directly.
+// Value imports (OperatorProjectType, normalize*ForSpawn) are leaf modules with no
+// registry back-edges. Plugin/detector implementations are registered at runtime via
+// register() calls, not imported directly.
 
 /** Minimal op descriptor needed for path/script lookup. Satisfied by both OpRecord and the local Op interface in op-util.ts. */
 export type OpDescriptor = Pick<OpRecord, 'op_path' | 'op_type' | 'op_name'>;

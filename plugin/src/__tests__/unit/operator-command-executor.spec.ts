@@ -127,6 +127,27 @@ describe('executeOperatorCommand', () => {
     expect(command).toMatch(/^export SOC_VERSION='/);
   });
 
+  it('embeds export prefixes when stored project_type is cann and no operator is selected', async () => {
+    const { getProjectById } = jest.requireMock('@plugin/domain/models/project-model') as {
+      getProjectById: jest.Mock;
+    };
+
+    getProjectById.mockReturnValueOnce({ project_type: 'cann' });
+
+    await executeOperatorCommand('cd build && ./build.sh', {
+      projectId: 1,
+      configType: 'build_op',
+      scriptField: null,
+      script: null,
+    });
+
+    const [command] = execute.mock.calls[0] as [string];
+
+    expect(command).toMatch(
+      /^export SOC_VERSION='ascend950' && export NPU_ARCH='dav-3510' && cd build && \.\/build\.sh$/,
+    );
+  });
+
   it('does not export SOC_VERSION or NPU_ARCH for standard-custom projects', async () => {
     const { getProjectById } = jest.requireMock('@plugin/domain/models/project-model') as {
       getProjectById: jest.Mock;

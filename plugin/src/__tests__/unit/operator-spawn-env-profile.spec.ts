@@ -35,6 +35,13 @@ describe('OperatorPluginRegistry spawn env', () => {
       .toBe(OperatorProjectType.STANDARD_CUSTOM);
     expect(OperatorPluginRegistry.normalizeProjectTypeForSpawn('ascend-c'))
       .toBe(OperatorProjectType.ASCEND_C);
+    expect(OperatorPluginRegistry.normalizeProjectTypeForSpawn('cann'))
+      .toBe(OperatorProjectType.ASCEND_C);
+  });
+
+  it('filterSpawnEnv keeps keys when stored project_type is cann and op_type is missing', () => {
+    expect(OperatorPluginRegistry.filterSpawnEnv(fullEnv, undefined, OperatorProjectType.ASCEND_C))
+      .toEqual(fullEnv);
   });
 
   it('normalizeOpTypeForSpawn maps known op_type strings', () => {

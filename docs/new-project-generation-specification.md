@@ -206,7 +206,7 @@ Keys: `TEMPLATE_UPPER`, PascalCase of segments, `template_snake` → correspondi
 | `__MSTT_SUPPORT_COMPUTE_UNIT__` | ACLNN compute unit from `resolveAclnnCmakeDefaultsForGeneration()` (**Ascend / STANDARD_CUSTOM** only) |
 | `__MSTT_SUPPORT_TILING_DIR__` | ACLNN tiling dir paired with compute unit (**Ascend / STANDARD_CUSTOM** only) |
 
-Used in **PYASC** / **TRITON** Python templates where symbols must track `op_name` but do not embed the template id. **Ascend** `add_custom` also uses `__MSTT_SUPPORT_*__` in `CMakeLists.txt` (patched by `AscendOpGenerator._patchAclnnCmakeSupportVars()` after unzip). CANN/Ascend `.asc` trees typically rely on template-id replacement only (§5.5.4 in prior docs — rationale unchanged).
+Used in **PYASC** / **TRITON** Python templates where symbols must track `op_name` but do not embed the template id. **Ascend** `add_custom` also uses `__MSTT_SUPPORT_*__` in `CMakeLists.txt` (patched by `AscendPlugin.patchGeneratedProject()` → `patchAclnnCmakeSupportVars()` in `ascend-util.ts`, invoked from `op-generator-factory.ts` after unzip). CANN/Ascend `.asc` trees typically rely on template-id replacement only (§5.5.4 in prior docs — rationale unchanged).
 
 #### Design summary
 

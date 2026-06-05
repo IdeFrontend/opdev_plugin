@@ -21,6 +21,11 @@ export function normalizeProjectTypeForSpawn(
     return OperatorProjectType.STANDARD_CUSTOM;
   }
 
+  // Stored by viewIdToProjectType for CANN / Ascend-C / Torch-Library init; all use cann cmake spawn keys.
+  if (raw === 'cann') {
+    return OperatorProjectType.ASCEND_C;
+  }
+
   if ((Object.values(OperatorProjectType) as string[]).includes(raw)) {
     return raw as OperatorProjectType;
   }

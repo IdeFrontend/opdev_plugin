@@ -7,7 +7,7 @@
  * - ACLNN compute unit differs by chip generation (see mapping below).
  * - Tiling subtree under op_host pairs with the compute unit.
  *
- * Platform mapping (injected by the plugin on operator spawn):
+ * Platform mapping (baked into CMakeLists.txt at project generation):
  * - A2/A3 (910B-class): `ascend910_95` + `arch22`
  * - A5 / 950-class: `ascend950` + `arch35`
  */
