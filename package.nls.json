@@ -98,6 +98,7 @@
   "command.flashPerformance.title": "刷新性能调优列表数据",
   "command.createOperatorInWorkspace.title": "在当前目录下新建算子",
   "command.clearLastProjectPath.title": "清除缓存的算子工程位置",
+  "command.resetProjectConfiguration.title": "重置工程配置",
   "command.simulatorOptions.title": "仿真分析快速选项",
   "command.onBoardOptions.title": "上板分析快速选项",
   "command.sanitizerOptions.title": "异常检测快速选项",

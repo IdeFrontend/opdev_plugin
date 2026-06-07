@@ -58,6 +58,10 @@ function normalizeProjectPath(projectPath: string): string {
     .toLowerCase();
 }
 
+export function projectPathsEqual(a: string, b: string): boolean {
+  return normalizeProjectPath(a) === normalizeProjectPath(b);
+}
+
 function ensureStore(): ProjectsStore {
   const init: ProjectsStore = {
     lastId: 0,

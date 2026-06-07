@@ -92,6 +92,58 @@ describe('ConfigService settings file', () => {
       .toBeUndefined();
   });
 
+  it('clearOpDevtoolsWorkspaceSettings removes dotted and nested op-devtools keys', async () => {
+    fs.writeFileSync(
+      settingsPath,
+      `${JSON.stringify({
+        'editor.fontSize': 14,
+        'op-devtools.sanitizer.memory': true,
+        'op-devtools': {
+          debugMode: true,
+        },
+      }, null, 2)}\n`,
+      'utf8',
+    );
+
+    const cleared = await ConfigService.clearOpDevtoolsWorkspaceSettings(tmpRoot);
+    expect(cleared)
+      .toBe(true);
+
+    const parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf8')) as Record<string, unknown>;
+    expect(parsed['editor.fontSize'])
+      .toBe(14);
+    expect(parsed['op-devtools.sanitizer.memory'])
+      .toBeUndefined();
+    expect(parsed['op-devtools'])
+      .toBeUndefined();
+  });
+
+  it('clearOpDevtoolsWorkspaceSettings deletes settings file when only op-devtools keys remain', async () => {
+    fs.writeFileSync(
+      settingsPath,
+      `${JSON.stringify({ 'op-devtools.debugMode': true }, null, 2)}\n`,
+      'utf8',
+    );
+
+    const cleared = await ConfigService.clearOpDevtoolsWorkspaceSettings(tmpRoot);
+    expect(cleared)
+      .toBe(true);
+    expect(fs.existsSync(settingsPath))
+      .toBe(false);
+  });
+
+  it('clearOpDevtoolsWorkspaceSettings is a no-op when no op-devtools keys exist', async () => {
+    fs.writeFileSync(
+      settingsPath,
+      `${JSON.stringify({ 'editor.fontSize': 14 }, null, 2)}\n`,
+      'utf8',
+    );
+
+    const cleared = await ConfigService.clearOpDevtoolsWorkspaceSettings(tmpRoot);
+    expect(cleared)
+      .toBe(false);
+  });
+
   it('does not seed or push socVersion / simulatorType from DB', () => {
     const source = fs.readFileSync(
       path.join(__dirname, '../../service/config-service.ts'),

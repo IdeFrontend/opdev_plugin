@@ -98,6 +98,7 @@
   "command.flashPerformance.title": "Refresh Performance List",
   "command.createOperatorInWorkspace.title": "New Operator in Current Directory",
   "command.clearLastProjectPath.title": "Clear Cached Operator Project Path",
+  "command.resetProjectConfiguration.title": "Reset Project Configuration",
   "command.simulatorOptions.title": "Simulation Analysis Quick Options",
   "command.onBoardOptions.title": "On-board Analysis Quick Options",
   "command.sanitizerOptions.title": "Sanitizer Quick Options",

@@ -34,6 +34,7 @@ import { sanitizerDiagnosticsService } from './service/sanitizer-diagnostics.ser
 import { msAgentBridgeService } from './service/ms-agent-bridge.service';
 import { getDumpTensorPanelViewProvider } from './class/dump-tensor-panel-view';
 import { appendLog } from './helpers/output-channel';
+import { promptReloadWindow } from './helpers/reload-window-prompt';
 
 import { AsyncSingleFlight } from './helpers/async-single-flight';
 import { startPostActivateBootstrap } from './helpers/post-activate-bootstrap';
@@ -46,6 +47,7 @@ import {
   COMMAND_TOGGLE_OPS_OPERATE,
   COMMAND_CLEAR_WELCOME_COUNT,
   COMMAND_CLEAR_LAST_PROJECT_PATH,
+  COMMAND_RESET_PROJECT_CONFIGURATION,
   COMMAND_CREATE_DIRECTORY,
   COMMAND_GET_HOME,
   COMMAND_FLASH_MS_SANITIZER_RUN_DATA,
@@ -146,6 +148,7 @@ import {
   ConfigService,
   isLegacySettingsMigrationInFlight,
 } from './service/config-service';
+import { resetCurrentProjectConfiguration } from './service/config-reset-service';
 import { ConfigHelper } from './helpers/ConfigHelper';
 import { projectService } from './service/project-service';
 import { OperatorProjectIconTheme } from './class/operator-project-icon-theme';
@@ -586,13 +589,7 @@ export async function activate(context: vscode.ExtensionContext) {
           }
           // Sub-key: triton support change may require reload.
           if (tritonSupportAffected) {
-            const reloadAction = t('extension.reloadWindowAction');
-            const message = t('extension.tritonSupportChangedReload');
-            const pick = await vscode.window.showInformationMessage(message, reloadAction);
-
-            if (pick === reloadAction) {
-              await vscode.commands.executeCommand('workbench.action.reloadWindow');
-            }
+            await promptReloadWindow(t('extension.tritonSupportChangedReload'));
           }
           if (operatorSupportAffected) {
             shouldSyncAscendEnvFromWorkspace = true;
@@ -1834,6 +1831,13 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
+  const resetProjectConfigurationCommand = vscode.commands.registerCommand(
+    COMMAND_RESET_PROJECT_CONFIGURATION,
+    async () => {
+      await resetCurrentProjectConfiguration();
+    },
+  );
+
   // Register the command to create an operator project, and the callback function will be executed.
   const createOptionsCommand = vscode.commands.registerCommand(
     COMMAND_CREATE_DIRECTORY,
@@ -1946,6 +1950,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(welcomeCommand);
   context.subscriptions.push(clearWelcomeCountCommand);
   context.subscriptions.push(clearLastProjectPathCommand);
+  context.subscriptions.push(resetProjectConfigurationCommand);
   // Note: createOptionsCommand has been added above, do not add it again
   context.subscriptions.push(getHome);
   context.subscriptions.push(createOperatorInWorkspaceCommand);

@@ -655,6 +655,11 @@
         "title": "%command.clearLastProjectPath.title%"
       },
       {
+        "command": "huawei-op-devtools.resetProjectConfiguration",
+        "title": "%command.resetProjectConfiguration.title%",
+        "category": "%config.title%"
+      },
+      {
         "command": "huawei-op-devtools.simulatorOptions",
         "title": "%command.simulatorOptions.title%"
       },

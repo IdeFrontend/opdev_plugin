@@ -16,7 +16,6 @@ import {
 } from '@plugin/domain/services/configuration';
 import { getFiles } from '@plugin/domain/services/system';
 import {
-  getFirstWorkspaceFolderPath,
   getOpDevtoolsWorkspaceConfiguration,
   mapKeyValueObjectToAdvanceParams,
   mapSanitizerScopeToUseBlock,
@@ -31,6 +30,7 @@ import {
   readLegacyFieldsFromDottedPairs,
 } from '@plugin/helpers/workspace-user-options-dotted-map';
 import { getDevtoolConfigPath, getIdeSettingsFilePath } from '@plugin/helpers/ide-config-dir';
+import { resolveWorkspaceRoot } from '@plugin/helpers/resolve-workspace-root';
 import { projectService } from '@plugin/service/project-service';
 
 const CONFIG_TYPES = {
@@ -56,17 +56,6 @@ const DB_ONLY_USER_OPTION_KEYS = new Set([
 
 /** Relative dotted keys under `op-devtools` (e.g. `sanitizer.memory`). */
 export type OpDevtoolsDottedWrites = Record<string, unknown>;
-
-function resolveWorkspaceRoot(workspaceRoot?: string): string | undefined {
-  if (workspaceRoot) {
-    return workspaceRoot;
-  }
-  const projectInfo = ProjectManager.getInstance().getProjectInfo();
-  if (projectInfo?.path) {
-    return projectInfo.path;
-  }
-  return getFirstWorkspaceFolderPath();
-}
 
 function toFullDottedKey(relativeKey: string): string {
   return relativeKey.startsWith(OP_DEVTOOLS_PREFIX)
@@ -278,16 +267,49 @@ function simulateUserOptionsToDottedWrites(opts: Record<string, unknown>): OpDev
   return updates;
 }
 
-function buildDottedOnlySettingsFileContent(filePath: string): Record<string, unknown> {
-  const raw = parseRawSettingsJson(filePath);
-  const flat = readSettingsJsonFile(filePath);
+function isOpDevtoolsSettingsKey(key: string): boolean {
+  return key === 'op-devtools' || key.startsWith('op-devtools.');
+}
+
+function stripOpDevtoolsKeysFromRaw(raw: Record<string, unknown>): {
+  output: Record<string, unknown>;
+  removedAny: boolean;
+} {
   const output: Record<string, unknown> = {};
+  let removedAny = false;
+
   for (const [key, value] of Object.entries(raw)) {
-    if (key === 'op-devtools' || key.startsWith('op-devtools.')) {
+    if (isOpDevtoolsSettingsKey(key)) {
+      removedAny = true;
       continue;
     }
     output[key] = value;
   }
+
+  return { output, removedAny };
+}
+
+async function persistIdeSettingsFile(
+  filePath: string,
+  output: Record<string, unknown>,
+  deleteIfEmpty = false,
+): Promise<void> {
+  if (Object.keys(output).length === 0 && deleteIfEmpty) {
+    await fs.promises.rm(filePath, { force: true });
+    return;
+  }
+
+  await fs.promises.writeFile(
+    filePath,
+    `${JSON.stringify(output, null, 2)}\n`,
+    'utf8',
+  );
+}
+
+function buildDottedOnlySettingsFileContent(filePath: string): Record<string, unknown> {
+  const raw = parseRawSettingsJson(filePath);
+  const flat = readSettingsJsonFile(filePath);
+  const { output } = stripOpDevtoolsKeysFromRaw(raw);
   for (const [key, value] of Object.entries(flat)) {
     if (key.startsWith('op-devtools.')) {
       output[key] = value;
@@ -304,10 +326,47 @@ export function isLegacySettingsMigrationInFlight(): boolean {
 
 /** @internal */
 export function resetLegacySettingsMigrationFlightForTest(): void {
+  resetLegacySettingsMigrationFlight();
+}
+
+export function resetLegacySettingsMigrationFlight(): void {
   legacySettingsMigrationFlight.reset();
 }
 
 export class ConfigService {
+  /**
+   * Remove all `op-devtools` keys from workspace settings.json (dotted and nested).
+   * @returns true if settings.json was changed or removed, false if no-op
+   */
+  static async clearOpDevtoolsWorkspaceSettings(workspaceRoot?: string): Promise<boolean> {
+    const root = resolveWorkspaceRoot(workspaceRoot);
+    if (!root) {
+      console.warn('[clearOpDevtoolsWorkspaceSettings] no workspace root');
+      return false;
+    }
+
+    const filePath = getIdeSettingsFilePath(root);
+    if (!fs.existsSync(filePath)) {
+      return false;
+    }
+
+    const raw = parseRawSettingsJson(filePath);
+    const { output, removedAny } = stripOpDevtoolsKeysFromRaw(raw);
+
+    if (!removedAny) {
+      return false;
+    }
+
+    try {
+      await persistIdeSettingsFile(filePath, output, true);
+      return true;
+    }
+    catch (error) {
+      console.warn('[clearOpDevtoolsWorkspaceSettings] failed:', error);
+      return false;
+    }
+  }
+
   /**
    * Batch-write `op-devtools` settings as dotted keys in one `settings.json` update.
    * Also rewrites legacy nested `"op-devtools": { ... }` to dotted keys when present,
@@ -350,11 +409,7 @@ export class ConfigService {
         }
       }
 
-      await fs.promises.writeFile(
-        filePath,
-        `${JSON.stringify(output, null, 2)}\n`,
-        'utf8',
-      );
+      await persistIdeSettingsFile(filePath, output);
       return true;
     }
     catch (error) {

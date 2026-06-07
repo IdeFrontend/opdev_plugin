@@ -4,6 +4,7 @@ import fs from 'fs-extra';
 import config from './config';
 import * as projectModel from './project-model';
 import * as configModel from './config-model';
+import { filterOutProjectId } from '@plugin/domain/utils/filter-by-project-id';
 import { OpGeneratorFactory } from '@plugin/domain/services/op-generator-factory';
 import { getDefaultPath } from '@plugin/domain/utils/op-util';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
@@ -198,6 +199,18 @@ export function getOpsByProjectId(project_id: number): OpRecord[] {
   const store = ensureStore();
 
   return store.ops.filter((o) => o.project_id === project_id);
+}
+
+export function deleteOpsByProjectId(projectId: number): void {
+  const store = ensureStore();
+  const { changed, rows } = filterOutProjectId(store.ops, projectId);
+
+  if (!changed) {
+    return;
+  }
+
+  store.ops = rows;
+  writeStore(store);
 }
 
 export async function generateStructure(

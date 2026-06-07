@@ -60,6 +60,16 @@ export function getDevtoolConfigPath(workspaceRoot: string): string {
   return joinIdeConfigPath(workspaceRoot, 'devtool_config.json');
 }
 
+/** Legacy workspace-local configs store: `.vscode|op_devtools/data/configs.json`. */
+export function getLegacyWorkspaceConfigsFile(workspaceRoot: string): string {
+  return path.join(joinIdeConfigPath(workspaceRoot, 'op_devtools'), 'data', 'configs.json');
+}
+
+/** Same path when `op_devtools` dir is already resolved (e.g. `config.workspace_data_dir`). */
+export function getLegacyWorkspaceConfigsFileFromOpDevtoolsDir(opDevtoolsDir: string): string {
+  return path.join(opDevtoolsDir, 'data', 'configs.json');
+}
+
 /** Remote/server directory name under the user home, e.g. `.vscode-server` when `uriScheme` is `vscode`. */
 export function getIdeServerDirName(): string {
   const scheme = (vscode.env.uriScheme || 'vscode').toLowerCase();

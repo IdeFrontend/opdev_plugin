@@ -14,6 +14,8 @@ export const COMMAND_CLEAR_WELCOME_COUNT = `${COMMAND_PREFIX}.clearWelcomeCount`
 
 export const COMMAND_CLEAR_LAST_PROJECT_PATH = `${COMMAND_PREFIX}.clearLastProjectPath`;
 
+export const COMMAND_RESET_PROJECT_CONFIGURATION = `${COMMAND_PREFIX}.resetProjectConfiguration`;
+
 export const COMMAND_CREATE_DIRECTORY = `${COMMAND_PREFIX}.createDictory`;
 
 export const COMMAND_GET_HOME = `${COMMAND_PREFIX}.getHome`;

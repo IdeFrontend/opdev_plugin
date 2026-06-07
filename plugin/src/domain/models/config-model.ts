@@ -2,6 +2,8 @@ import path from 'path';
 import * as fs from 'fs-extra';
 import config from './config';
 import { JsonStorage } from '@plugin/core/storage/json-storage';
+import { filterOutProjectId } from '@plugin/domain/utils/filter-by-project-id';
+import { getLegacyWorkspaceConfigsFileFromOpDevtoolsDir, getLegacyWorkspaceConfigsFile } from '@plugin/helpers/ide-config-dir';
 
 // Use user_data_dir instead of workspace_data_dir to ensure that the configuration is also found when a new window opens
 // Because workspace_data_dir depends on the workspace path, it may be different when a new window is opened
@@ -26,9 +28,7 @@ const getConfigsFile = () => {
 const getOldConfigsFile = () => {
   try {
     const workspaceDataDir = (config as unknown as { workspace_data_dir: string }).workspace_data_dir;
-    const oldDataDir = path.join(workspaceDataDir, 'data');
-
-    return path.join(oldDataDir, 'configs.json');
+    return getLegacyWorkspaceConfigsFileFromOpDevtoolsDir(workspaceDataDir);
   }
   catch {
     return null;
@@ -293,6 +293,48 @@ export function getConfigById(config_id: number) {
     project_id: row.project_id,
     op: row.op,
   };
+}
+
+export function deleteConfigsByProjectId(projectId: number): void {
+  const store = ensureStore();
+  const { changed, rows } = filterOutProjectId(store.configs, projectId);
+
+  if (!changed) {
+    return;
+  }
+
+  store.configs = rows;
+  writeStore(store);
+}
+
+export function deleteLegacyWorkspaceConfigsByProjectId(
+  projectId: number,
+  workspaceRoot: string,
+): void {
+  const oldConfigsFile = getLegacyWorkspaceConfigsFile(workspaceRoot);
+
+  if (!fs.existsSync(oldConfigsFile)) {
+    return;
+  }
+
+  const storage = new JsonStorage(oldConfigsFile);
+  const store = storage.read<ConfigsStore>({
+    lastId: 0,
+    configs: [],
+  });
+  const { changed, rows } = filterOutProjectId(store.configs, projectId);
+
+  if (!changed) {
+    return;
+  }
+
+  if (rows.length === 0) {
+    storage.delete();
+    return;
+  }
+
+  store.configs = rows;
+  storage.write(store);
 }
 
 export function _resetConfigsForTest(): void {
