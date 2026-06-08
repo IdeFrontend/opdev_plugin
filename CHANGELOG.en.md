@@ -2,7 +2,7 @@
 
 Notable changes to **Huawei OP DevTools** are listed here. For the full project history, see the repository on [GitCode](https://gitcode.com/mlh0101/mstt).
 
-## 1.3.2 — 2026-06-04
+## 1.3.2 — 2026-06-08
 
 Patch release: Ascend env resolution and explicit command-line exports, standard-custom in-collection operator creation, SOC/simulation/debug consistency, settings migration, and reliability fixes.
 
