@@ -46,8 +46,8 @@ export class WebviewProvider {
    */
   private getWebviewPanelIconPath(): vscode.Uri | { readonly light: vscode.Uri; readonly dark: vscode.Uri } | undefined {
     const candidates = [
-      path.join(this.context.extensionPath, 'web', 'resources', 'extension_icon.png'),
-      path.join(this.context.extensionPath, 'resources', 'extension_icon.png'),
+      path.join(this.context.extensionPath, 'out', 'web', 'branding', 'extension_icon.png'),
+      path.join(this.context.extensionPath, 'web', 'src', 'assets', 'branding', 'extension_icon.png'),
     ];
     for (const fsPath of candidates) {
       if (fs.existsSync(fsPath)) {
