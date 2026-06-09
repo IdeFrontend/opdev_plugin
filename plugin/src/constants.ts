@@ -92,6 +92,7 @@ export const COMMAND_REFRESH_FOLDER_DECORATIONS = `${COMMAND_PREFIX}.refreshFold
 
 // Sidebar tree commands
 export const COMMAND_SIDEBAR_PROJECT_CONFIG = `${COMMAND_PREFIX}.sidebar.projectConfig`;
+export const COMMAND_SIDEBAR_RESET_PROJECT_CONFIGURATION = `${COMMAND_PREFIX}.sidebar.resetProjectConfiguration`;
 export const COMMAND_SIDEBAR_BUILD = `${COMMAND_PREFIX}.sidebar.build`;
 export const COMMAND_SIDEBAR_RUN = `${COMMAND_PREFIX}.sidebar.run`;
 export const COMMAND_SIDEBAR_CPU_DEBUG = `${COMMAND_PREFIX}.sidebar.cpuDebug`;

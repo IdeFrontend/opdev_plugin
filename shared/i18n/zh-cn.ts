@@ -74,10 +74,8 @@ export default {
   'extension.tritonSupportChangedReload': 'Triton 支持设置已变更。请重载窗口以应用算子支持变更。',
   'extension.reloadWindowAction': '重载窗口',
   'extension.resetProjectConfigurationConfirm':
-    '是否重置 {{path}} 的工程配置？将清除该工程的 legacy 配置数据、删除 devtool_config.json、清除 op-devtools 工作区设置，并在路径匹配时清除缓存的工程路径。重载窗口后将重新生成默认配置。',
+    '是否重置{{projectName}}的工程配置？点击重置将清除本插件为{{projectName}}保存的配置信息，并重置为默认配置。不会修改仓库中的算子源码及其他工程文件。',
   'extension.resetProjectConfigurationConfirmReset': '重置',
-  'extension.resetProjectConfigurationReload':
-    '工程配置已清除。请重载窗口以重新生成默认配置并执行工作区设置迁移。',
   'extension.unsupportedProjectTypeDisabled': '当前项目类型“{{projectType}}”未在「算子支持」设置中启用。',
 
   // folder-context-menu

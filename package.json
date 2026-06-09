@@ -746,6 +746,10 @@
         "icon": "$(gear)"
       },
       {
+        "command": "huawei-op-devtools.sidebar.resetProjectConfiguration",
+        "title": "%command.resetProjectConfiguration.title%"
+      },
+      {
         "command": "huawei-op-devtools.sidebar.build",
         "title": "Compile & Deploy"
       },
@@ -1073,6 +1077,11 @@
           "command": "huawei-op-devtools.sidebar.projectConfig",
           "when": "view == opdevtoolsOperateTree",
           "group": "navigation@2"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.resetProjectConfiguration",
+          "when": "view == opdevtoolsOperateTree",
+          "group": "overflow@1"
         },
         {
           "command": "huawei-op-devtools.sidebar.sanitizer.report.add",

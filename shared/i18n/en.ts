@@ -74,10 +74,8 @@ export default {
   'extension.tritonSupportChangedReload': 'Triton support setting changed. Reload window to apply operator support changes.',
   'extension.reloadWindowAction': 'Reload Window',
   'extension.resetProjectConfigurationConfirm':
-    'Reset project configuration for {{path}}? This removes legacy config data for this project, deletes devtool_config.json, clears op-devtools workspace settings, and clears the cached project path when it matches. Defaults are regenerated after you reload the window.',
+    'Reset configuration for {{projectName}}? Choosing Reset will clear configuration stored by this plugin for {{projectName}} and regenerate defaults. Your operator source code and other project files in the repository will not be changed.',
   'extension.resetProjectConfigurationConfirmReset': 'Reset',
-  'extension.resetProjectConfigurationReload':
-    'Project configuration cleared. Reload the window so defaults are regenerated and workspace settings migration runs.',
   'extension.unsupportedProjectTypeDisabled': 'Project type "{{projectType}}" is currently not enabled in Operator Support settings.',
 
   // folder-context-menu

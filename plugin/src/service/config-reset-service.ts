@@ -1,4 +1,5 @@
 import * as fs from 'fs-extra';
+import * as path from 'path';
 import { t } from 'i18next';
 import * as vscode from 'vscode';
 
@@ -15,7 +16,6 @@ import {
   type ProjectRecord,
 } from '@plugin/domain/models/project-model';
 import { getDevtoolConfigPath } from '@plugin/helpers/ide-config-dir';
-import { promptReloadWindow } from '@plugin/helpers/reload-window-prompt';
 import { resolveWorkspaceRoot } from '@plugin/helpers/resolve-workspace-root';
 import { RemoteConfig } from '@plugin/helpers/remote-config';
 import {
@@ -47,13 +47,12 @@ export async function resetCurrentProjectConfiguration(): Promise<void> {
   const project = resolveProjectForWorkspace(workspaceRoot);
   const effectiveRoot = project?.project_path ?? workspaceRoot;
 
+  const projectName = project?.project_name || path.basename(effectiveRoot);
   const resetLabel = t('extension.resetProjectConfigurationConfirmReset');
-  const cancelLabel = t('common.cancel');
   const choice = await vscode.window.showWarningMessage(
-    t('extension.resetProjectConfigurationConfirm', { path: effectiveRoot }),
+    t('extension.resetProjectConfigurationConfirm', { projectName }),
     { modal: true },
     resetLabel,
-    cancelLabel,
   );
 
   if (choice !== resetLabel) {
@@ -80,5 +79,5 @@ export async function resetCurrentProjectConfiguration(): Promise<void> {
   await ConfigService.clearOpDevtoolsWorkspaceSettings(effectiveRoot);
   resetLegacySettingsMigrationFlight();
 
-  await promptReloadWindow(t('extension.resetProjectConfigurationReload'));
+  await vscode.commands.executeCommand('workbench.action.reloadWindow');
 }

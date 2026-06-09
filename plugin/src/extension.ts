@@ -81,6 +81,7 @@ import {
   COMMAND_REPORT_VISUALIZATION_PERFORMANCE,
   COMMAND_REFRESH_FOLDER_DECORATIONS,
   COMMAND_SIDEBAR_PROJECT_CONFIG,
+  COMMAND_SIDEBAR_RESET_PROJECT_CONFIGURATION,
   COMMAND_SIDEBAR_BUILD,
   COMMAND_SIDEBAR_RUN,
   COMMAND_SIDEBAR_CPU_DEBUG,
@@ -793,6 +794,13 @@ export async function activate(context: vscode.ExtensionContext) {
       'workbench.action.openWorkspaceSettings',
       `@ext:${context.extension.id}`,
     ),
+  );
+
+  const sidebarResetProjectConfigurationCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_RESET_PROJECT_CONFIGURATION,
+    async () => {
+      await resetCurrentProjectConfiguration();
+    },
   );
 
   const getOperatorNamesFromSelection = async (): Promise<string | undefined> => {
@@ -1958,6 +1966,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(onBoardOptionsCommand);
   context.subscriptions.push(sanitizerOptionsCommand);
   context.subscriptions.push(sidebarProjectConfigCommand);
+  context.subscriptions.push(sidebarResetProjectConfigurationCommand);
   context.subscriptions.push(sidebarBuildCommand);
   context.subscriptions.push(sidebarRunCommand);
   context.subscriptions.push(sidebarCpuDebugCommand);

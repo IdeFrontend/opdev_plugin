@@ -5,18 +5,18 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 
 jest.mock('i18next', () => ({
-  t: (key: string, options?: { path?: string }) => {
+  t: (key: string, options?: { projectName?: string }) => {
     const labels: Record<string, string> = {
       'extension.resetProjectConfigurationConfirmReset': 'Reset',
       'common.cancel': 'Cancel',
       'extension.reloadWindowAction': 'Reload Window',
       'extension.openWorkspaceFirst': 'Please open a workspace first',
-      'extension.resetProjectConfigurationConfirm': 'Reset project configuration for {{path}}?',
-      'extension.resetProjectConfigurationReload': 'Reload to regenerate defaults.',
+      'extension.resetProjectConfigurationConfirm':
+        'Reset configuration for {{projectName}}? Choosing Reset will clear configuration stored by this plugin for {{projectName}} and regenerate defaults. Your operator source code and other project files in the repository will not be changed.',
     };
     const template = labels[key] ?? key;
-    return options?.path
-      ? template.replace('{{path}}', options.path)
+    return options?.projectName
+      ? template.replaceAll('{{projectName}}', options.projectName)
       : template;
   },
 }));
@@ -148,10 +148,9 @@ describe('resetCurrentProjectConfiguration', () => {
     await resetCurrentProjectConfiguration();
 
     expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
-      `Reset project configuration for ${projectPath}?`,
+      'Reset configuration for my-operator? Choosing Reset will clear configuration stored by this plugin for my-operator and regenerate defaults. Your operator source code and other project files in the repository will not be changed.',
       { modal: true },
       'Reset',
-      'Cancel',
     );
     expect(deleteLegacyWorkspaceConfigsByProjectId).toHaveBeenCalledWith(7, projectPath);
     expect(deleteProject).toHaveBeenCalledWith(projectPath);
@@ -162,7 +161,7 @@ describe('resetCurrentProjectConfiguration', () => {
   });
 
   it('does nothing when confirmation is cancelled', async () => {
-    (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Cancel');
+    (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue(undefined);
 
     await resetCurrentProjectConfiguration();
 
@@ -172,12 +171,11 @@ describe('resetCurrentProjectConfiguration', () => {
     expect(fs.existsSync(getDevtoolConfigPath(tmpRoot))).toBe(true);
   });
 
-  it('reloads the window when the user chooses Reload Window', async () => {
-    (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue('Reload Window');
-
+  it('reloads the window automatically after reset is confirmed', async () => {
     await resetCurrentProjectConfiguration();
 
     expect(vscode.commands.executeCommand).toHaveBeenCalledWith('workbench.action.reloadWindow');
+    expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
   });
 
   it('still clears workspace artifacts when no project record exists', async () => {
