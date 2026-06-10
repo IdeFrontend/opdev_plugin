@@ -35,6 +35,8 @@ import {
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import { ConfigService } from '@plugin/service/config-service';
 import { requestSidebarContextsRefresh } from '@plugin/helpers/sidebar-context-refresh';
+import { resolveOrPickPythonOperatorUri } from '@plugin/helpers/python-operator-editor-context';
+import { buildPythonDeployTarget } from '@plugin/domain/services/command-strategy/python-operator-strategy-shared';
 
 const CONFIG_TYPES = {
   BUILD_OP: 'build_op',
@@ -444,15 +446,6 @@ export class BuildService {
     const behavior = opPlugin.buildBehavior;
 
     if (behavior.requiresActiveFileCheck && !params.filePath) {
-      const activeEditor = vscode.window.activeTextEditor;
-      const isPyFile = activeEditor?.document.fileName.endsWith(behavior.activeFileExtension!);
-
-      if (!isPyFile) {
-        vscode.window.showWarningMessage(t('build.openPyFirst'));
-
-        return;
-      }
-
       const workspaceFolders = vscode.workspace.workspaceFolders;
 
       if (!workspaceFolders || workspaceFolders.length === 0) {
@@ -462,7 +455,16 @@ export class BuildService {
       }
 
       const workspacePath = workspaceFolders[0].uri.fsPath;
-      const filePath = activeEditor!.document.uri.fsPath;
+      const ext = behavior.activeFileExtension!;
+      const pickedUri = await resolveOrPickPythonOperatorUri(ext, workspacePath);
+
+      if (!pickedUri) {
+        vscode.window.showWarningMessage(t('build.openPyFirst'));
+
+        return;
+      }
+
+      const filePath = pickedUri.fsPath;
       const relativePath = path.relative(workspacePath, filePath)
         .replace(/\\/g, '/');
 
@@ -472,7 +474,7 @@ export class BuildService {
         const projectIdStr = ProjectManager.getInstance().projectId;
 
         if (projectIdStr) {
-          const deployTarget = `python3 ${relativePath}`;
+          const deployTarget = buildPythonDeployTarget(relativePath);
           await ConfigService.writeBuildOpDeployTarget(deployTarget);
         }
       }
@@ -598,14 +600,6 @@ export class BuildService {
     const behavior = opPlugin.buildBehavior;
 
     if (behavior.requiresActiveFileCheck && !params.operatorNames) {
-      const activeEditor = vscode.window.activeTextEditor;
-      const isPyFile = activeEditor?.document.fileName.endsWith(behavior.activeFileExtension!);
-
-      if (!isPyFile) {
-        vscode.window.showWarningMessage(t('build.openPyFirst'));
-        throw new Error(t('task.openPyFirst'));
-      }
-
       const workspaceFolders = vscode.workspace.workspaceFolders;
 
       if (!workspaceFolders || workspaceFolders.length === 0) {
@@ -614,14 +608,22 @@ export class BuildService {
       }
 
       const workspacePath = workspaceFolders[0].uri.fsPath;
-      const filePath = activeEditor!.document.uri.fsPath;
+      const ext = behavior.activeFileExtension!;
+      const pickedUri = await resolveOrPickPythonOperatorUri(ext, workspacePath);
+
+      if (!pickedUri) {
+        vscode.window.showWarningMessage(t('build.openPyFirst'));
+        throw new Error(t('task.openPyFirst'));
+      }
+
+      const filePath = pickedUri.fsPath;
       const relativePath = path.relative(workspacePath, filePath)
         .replace(/\\/g, '/');
 
       const buildConfigId = await this.getBuildConfigId();
 
       if (buildConfigId && projectId) {
-        const deployTarget = `python3 ${relativePath}`;
+        const deployTarget = buildPythonDeployTarget(relativePath);
         await ConfigService.writeBuildOpDeployTarget(deployTarget);
       }
     }
@@ -735,15 +737,6 @@ export class BuildService {
     const behavior = opPlugin.buildBehavior;
 
     if (behavior.requiresActiveFileCheck && !params.operatorNames) {
-      const activeEditor = vscode.window.activeTextEditor;
-      const isPyFile = activeEditor?.document.fileName.endsWith(behavior.activeFileExtension!);
-
-      if (!isPyFile) {
-        vscode.window.showWarningMessage(t('build.openPyFirst'));
-
-        return;
-      }
-
       const workspaceFolders = vscode.workspace.workspaceFolders;
 
       if (!workspaceFolders || workspaceFolders.length === 0) {
@@ -753,14 +746,23 @@ export class BuildService {
       }
 
       const workspacePath = workspaceFolders[0].uri.fsPath;
-      const filePath = activeEditor!.document.uri.fsPath;
+      const ext = behavior.activeFileExtension!;
+      const pickedUri = await resolveOrPickPythonOperatorUri(ext, workspacePath);
+
+      if (!pickedUri) {
+        vscode.window.showWarningMessage(t('build.openPyFirst'));
+
+        return;
+      }
+
+      const filePath = pickedUri.fsPath;
       const relativePath = path.relative(workspacePath, filePath)
         .replace(/\\/g, '/');
 
       const buildConfigId = await this.getBuildConfigId();
 
       if (buildConfigId && projectId) {
-        const deployTarget = `python3 ${relativePath}`;
+        const deployTarget = buildPythonDeployTarget(relativePath);
         await ConfigService.writeBuildOpDeployTarget(deployTarget);
       }
     }

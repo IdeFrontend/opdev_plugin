@@ -81,12 +81,17 @@ export function resolveProfilerOperatorOrThrow(
   } as OpRecord;
 }
 
-function quoteShellTokenIfNeeded(arg: string): string {
+export function quoteShellTokenIfNeeded(arg: string): string {
   if (/[\s"'`$]/.test(arg)) {
     return `'${arg.replace(/'/g, "'\\''")}'`;
   }
 
   return arg;
+}
+
+/** Shell-safe `python3 <relativePath>` deploy/run target for workspace settings. */
+export function buildPythonDeployTarget(relativePath: string): string {
+  return `python3 ${quoteShellTokenIfNeeded(relativePath)}`;
 }
 
 function findLocalVenvPython(workspaceRoot: string): string | null {
@@ -162,8 +167,9 @@ export function normalizePythonCommandInterpreter(command: string): string {
   }
 
   const resolved = quoteShellTokenIfNeeded(resolvePythonExecutablePath());
+  const scriptPath = match[4].trim();
 
-  return `${resolved}${match[3]}${match[4]}`;
+  return `${resolved}${match[3]}${quoteShellTokenIfNeeded(scriptPath)}`;
 }
 
 export function buildPythonSimulateCommand(

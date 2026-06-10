@@ -24,7 +24,7 @@ import {
  *
  * Key behavioral differences from AbstractOperatorPlugin defaults:
  *  - No build step — Python files are run directly
- *  - Requires an active .py file in the editor before triggering analysis
+ *  - Requires editor context (focused tab group) or a unique root-level `.py` before triggering analysis
  */
 export class PyAscPlugin extends AbstractOperatorPlugin implements IProjectDetector {
   readonly opType = 'pyasc';

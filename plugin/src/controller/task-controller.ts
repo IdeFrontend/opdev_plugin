@@ -22,6 +22,8 @@ import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.r
 import { getCompileOptionForSelectedOperators } from '@plugin/helpers/compile-options';
 import { updateMsdebugTarget } from '@plugin/domain/utils/debug-target';
 import { whenPostActivateBootstrapReady } from '@plugin/helpers/post-activate-bootstrap';
+import { resolveOrPickPythonOperatorUri } from '@plugin/helpers/python-operator-editor-context';
+import { buildPythonDeployTarget } from '@plugin/domain/services/command-strategy/python-operator-strategy-shared';
 
 // Global task manager: used to track and terminate executing tasks
 let currentExecutor: CommandExecutor | null = null;
@@ -267,24 +269,10 @@ export const taskMethods = {
         || projectTypeInfo.projectType === OperatorProjectType.TRITON;
 
       if (isPythonOperator) {
-        // Check if a .py file is currently open
-        const activeEditor = vscode.window.activeTextEditor;
-        const isPyFile = activeEditor?.document.fileName.endsWith('.py');
-
-        if (!isPyFile) {
-          vscode.window.showWarningMessage(t('task.openPyFirst'));
-          currentExecutor = null;
-          ProjectManager.getInstance()
-            .clearExecutor();
-
-          return;
-        }
-
         const workspaceFolders = vscode.workspace.workspaceFolders;
 
         if (!workspaceFolders || workspaceFolders.length === 0) {
           vscode.window.showWarningMessage(t('task.workspacePathNotFound'));
-          // clear status
           currentExecutor = null;
           ProjectManager.getInstance()
             .clearExecutor();
@@ -293,7 +281,18 @@ export const taskMethods = {
         }
 
         const workspacePath = workspaceFolders[0].uri.fsPath;
-        const filePath = activeEditor!.document.uri.fsPath;
+        const pickedUri = await resolveOrPickPythonOperatorUri('.py', workspacePath);
+
+        if (!pickedUri) {
+          vscode.window.showWarningMessage(t('task.openPyFirst'));
+          currentExecutor = null;
+          ProjectManager.getInstance()
+            .clearExecutor();
+
+          return;
+        }
+
+        const filePath = pickedUri.fsPath;
 
         // Calculate relative paths
         const relativePath = path.relative(workspacePath, filePath)
@@ -307,7 +306,7 @@ export const taskMethods = {
           const projectIdStr = ProjectManager.getInstance().projectId;
 
           if (projectIdStr) {
-            const deployTarget = `python3 ${relativePath}`;
+            const deployTarget = buildPythonDeployTarget(relativePath);
             await ConfigService.writeBuildOpDeployTarget(deployTarget);
           }
         }
@@ -401,19 +400,6 @@ export const taskMethods = {
         || projectTypeInfo.projectType === OperatorProjectType.TRITON;
 
       if (isPythonOperator) {
-        // Check if a .py file is currently open
-        const activeEditor = vscode.window.activeTextEditor;
-        const isPyFile = activeEditor?.document.fileName.endsWith('.py');
-
-        if (!isPyFile) {
-          vscode.window.showWarningMessage(t('task.openPyFirst'));
-          currentExecutor = null;
-          ProjectManager.getInstance()
-            .clearExecutor();
-
-          return;
-        }
-
         const workspaceFolders = vscode.workspace.workspaceFolders;
 
         if (!workspaceFolders || workspaceFolders.length === 0) {
@@ -427,7 +413,18 @@ export const taskMethods = {
         }
 
         const workspacePath = workspaceFolders[0].uri.fsPath;
-        const filePath = activeEditor!.document.uri.fsPath;
+        const pickedUri = await resolveOrPickPythonOperatorUri('.py', workspacePath);
+
+        if (!pickedUri) {
+          vscode.window.showWarningMessage(t('task.openPyFirst'));
+          currentExecutor = null;
+          ProjectManager.getInstance()
+            .clearExecutor();
+
+          return;
+        }
+
+        const filePath = pickedUri.fsPath;
 
         // Calculate relative paths
         const relativePath = path.relative(workspacePath, filePath)
@@ -441,7 +438,7 @@ export const taskMethods = {
           const projectIdStr = ProjectManager.getInstance().projectId;
 
           if (projectIdStr) {
-            const deployTarget = `python3 ${relativePath}`;
+            const deployTarget = buildPythonDeployTarget(relativePath);
             await ConfigService.writeBuildOpDeployTarget(deployTarget);
           }
         }

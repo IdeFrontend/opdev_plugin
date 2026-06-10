@@ -23,9 +23,13 @@ export interface OperatorDefaultPaths {
 export interface OperatorBuildBehavior {
   /** False for pyasc — it runs Python files directly, no compilation step. */
   requiresBuildBeforeAnalysis: boolean;
-  /** True for pyasc — the active .py file in the editor determines what gets run. */
+  /**
+   * True for pyasc/triton — editor context or a unique root-level `.py` must be
+   * available to determine run/simulate `target_file` (split view: focused group's
+   * active tab only; single group: active tab or activeTextEditor; else one root `.py`).
+   */
   requiresActiveFileCheck: boolean;
-  /** Required when requiresActiveFileCheck is true. */
+  /** Required when requiresActiveFileCheck is true (e.g. `.py`). */
   activeFileExtension?: string;
   /** Whether sanitizer pipeline is supported for this operator type. */
   supportsSanitizer?: boolean;

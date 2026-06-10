@@ -25,11 +25,12 @@ import {
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import { OperatorProjectIconTheme } from '@plugin/class/operator-project-icon-theme';
 import { generateStructure } from '@plugin/domain';
-import { configService, ConfigService } from '@plugin/service/config-service';
+import { buildPythonDeployTarget } from '@plugin/domain/services/command-strategy/python-operator-strategy-shared';
 import { getOpByProjectIdAndOpName } from '@plugin/domain/models/model';
 import {
   getConfig, getConfigById, postConfig,
 } from '@plugin/domain/services/configuration';
+import { ConfigService, configService } from '@plugin/service/config-service';
 import { buildService } from './build-service';
 import { taskMethods } from '../controller/task-controller';
 import { homeMethods } from '../controller/home-controller';
@@ -1078,8 +1079,7 @@ export class FolderContextMenuService {
                   ? normalizedRelativePath
                   : `./${normalizedRelativePath}`;
 
-                // Update target_file to python3 ${relativePath}
-                const newTargetFile = `python3 ${targetPath}`;
+                const newTargetFile = buildPythonDeployTarget(targetPath);
 
                 await ConfigService.writeBuildOpDeployTarget(newTargetFile);
               }

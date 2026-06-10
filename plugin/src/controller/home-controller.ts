@@ -18,6 +18,7 @@ import {
 } from '@shared/api-types';
 
 import { checkMultipleOperatorsCore } from '@plugin/helpers/check-multiple-operators';
+import { hasAnyPythonOperatorActiveContext } from '@plugin/helpers/python-operator-editor-context';
 
 /** Only parses the current workspace project type for use by validatePyascForAnalysis etc. */
 async function getProjectTypeValue(): Promise<string | null> {
@@ -127,22 +128,21 @@ export const homeMethods = {
         return { valid: true };
       }
 
-      const activeEditor = vscode.window.activeTextEditor;
-      const isPyFile = activeEditor?.document.fileName.endsWith('.py');
-
-      if (!isPyFile) {
-        return {
-          valid: false,
-          message: t('extension.openPyFirst'),
-        };
-      }
-
       const workspaceFolders = vscode.workspace.workspaceFolders;
 
       if (!workspaceFolders || workspaceFolders.length === 0) {
         return {
           valid: false,
           message: t('task.workspacePathNotFound'),
+        };
+      }
+
+      const workspacePath = workspaceFolders[0].uri.fsPath;
+
+      if (!hasAnyPythonOperatorActiveContext('.py', workspacePath)) {
+        return {
+          valid: false,
+          message: t('extension.openPyFirst'),
         };
       }
 

@@ -6,14 +6,25 @@ import * as path from 'path';
  * Extracted from OperatorProjectDetector's private static methods.
  */
 
+const ROOT_PYTHON_ENTRY_EXCLUDE = new Set(['__init__.py', 'setup.py', 'conftest.py']);
+
 export function hasPyFilesInRoot(dirPath: string): boolean {
+  return listRootPythonEntryFiles(dirPath).length > 0;
+}
+
+/** Non-recursive `.py` files at `dirPath`, excluding common non-entry helpers. */
+export function listRootPythonEntryFiles(dirPath: string): string[] {
   try {
     const entries = fs.readdirSync(dirPath, { withFileTypes: true });
 
-    return entries.some((e) => e.isFile() && e.name.endsWith('.py'));
+    return entries
+      .filter((e) => e.isFile()
+        && e.name.endsWith('.py')
+        && !ROOT_PYTHON_ENTRY_EXCLUDE.has(e.name))
+      .map((e) => path.join(dirPath, e.name));
   }
   catch {
-    return false;
+    return [];
   }
 }
 
