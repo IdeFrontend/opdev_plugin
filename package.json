@@ -3,7 +3,7 @@
   "displayName": "Huawei OP DevTools",
   "description": "Operator development, debugging, and performance analysis all-in-one platform for Ascend C language.",
   "publisher": "huawei",
-  "version": "1.3.2-active-file",
+   "version": "1.3.2",
   "engines": {
     "node": ">=16.0.0",
     "vscode": "^1.80.0"
@@ -861,7 +861,7 @@
       },
       {
         "command": "huawei-op-devtools.sidebar.openWelcome",
-        "title": "Open Welcome"
+        "title": "%command.sidebar.openWelcome.title%"
       },
       {
         "command": "huawei-op-devtools.sidebar.openHelp",
@@ -1082,6 +1082,11 @@
           "command": "huawei-op-devtools.sidebar.resetProjectConfiguration",
           "when": "view == opdevtoolsOperateTree",
           "group": "overflow@1"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.openWelcome",
+          "when": "view == opdevtoolsOperateTree",
+          "group": "overflow@2"
         },
         {
           "command": "huawei-op-devtools.sidebar.sanitizer.report.add",

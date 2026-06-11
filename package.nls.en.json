@@ -127,6 +127,7 @@
   "command.sidebar.clearSelectedOperators.title": "Clear Selected Operators",
   "command.sidebar.stopFlowTask.title": "Stop task",
   "command.sidebar.stopAllOperatorActions.title": "Stop all",
+  "command.sidebar.openWelcome.title": "Open Welcome Page",
   "command.sidebar.sanitizer.report.select.title": "Select report",
   "command.sidebar.sanitizer.report.copyPath.title": "Copy path",
   "command.sidebar.sanitizer.report.toggleMark.title": "Mark / Unmark",
