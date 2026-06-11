@@ -131,12 +131,13 @@ async function patchLaunchJsonForDebugSession(
   pythonContext: PythonOperatorLaunchContext | null,
   projectType: string | null,
   mode: 'cpu' | 'npu',
-  operatorName?: string,
+  selectedOperator?: { name: string;
+    path: string },
 ): Promise<void> {
   if (!isPythonDebugLaunchConfig(debugConfigName) || !pythonContext) {
     if (!isPythonDebugLaunchConfig(debugConfigName)) {
       try {
-        await updateMsdebugTarget(workspaceRoot, operatorName);
+        await updateMsdebugTarget(workspaceRoot, selectedOperator);
       }
       catch (e) {
         console.warn('updateMsdebugTarget failed (continuing):', e);
@@ -457,13 +458,15 @@ export const taskMethods = {
       const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
 
       if (workspaceFolder) {
+        const [selectedOperator] = await homeMethods.getSelectedOperatorEntries();
+
         await patchLaunchJsonForDebugSession(
           workspaceFolder.uri.fsPath,
           debugConfigName,
           pythonContext,
           projectType ?? null,
           'npu',
-          operatorNames ?? undefined,
+          selectedOperator,
         );
 
         await vscode.debug.startDebugging(workspaceFolder, debugConfigName);
@@ -569,13 +572,15 @@ export const taskMethods = {
       const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
 
       if (workspaceFolder) {
+        const [selectedOperator] = await homeMethods.getSelectedOperatorEntries();
+
         await patchLaunchJsonForDebugSession(
           workspaceFolder.uri.fsPath,
           debugConfigName,
           pythonContext,
           projectType ?? null,
           'cpu',
-          operatorNames ?? undefined,
+          selectedOperator,
         );
 
         await vscode.debug.startDebugging(workspaceFolder, debugConfigName);

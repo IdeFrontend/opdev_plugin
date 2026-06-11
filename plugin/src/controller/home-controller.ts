@@ -17,7 +17,9 @@ import {
   GetLastProjectPathResult,
 } from '@shared/api-types';
 
-import { checkMultipleOperatorsCore } from '@plugin/helpers/check-multiple-operators';
+import {
+  checkMultipleOperatorsCore, type OperatorListEntry,
+} from '@plugin/helpers/check-multiple-operators';
 import { hasAnyPythonOperatorActiveContext } from '@plugin/helpers/python-operator-editor-context';
 
 /** Only parses the current workspace project type for use by validatePyascForAnalysis etc. */
@@ -208,9 +210,7 @@ export const homeMethods = {
       return { hasMultiple: false };
     }
 
-    return checkMultipleOperatorsCore(workspaceFolders[0].uri.fsPath, {
-      includeSupportsSanitizerAndTuning: true,
-    });
+    return checkMultipleOperatorsCore(workspaceFolders[0].uri.fsPath, { includeSupportsSanitizerAndTuning: true });
   },
 
   /**
@@ -295,21 +295,22 @@ export const homeMethods = {
   },
 
   /**
-   * Get the selected operator name list (for standard custom operator scenarios)
-   * @returns list of operator names, multiple ones separated by commas, if not, return undefined
+   * Get the selected operators (for standard custom operator scenarios), each
+   * carrying its name and absolute path. Returns an empty array when the project
+   * is not standard-custom or nothing is selected.
    */
-  async getSelectedOperators(): Promise<string | undefined> {
+  async getSelectedOperatorEntries(): Promise<OperatorListEntry[]> {
     const workspaceFolders = vscode.workspace.workspaceFolders;
 
     if (!workspaceFolders || workspaceFolders.length === 0) {
-      return undefined;
+      return [];
     }
 
     const workspacePath = workspaceFolders[0].uri.fsPath;
     const project = getProjectByPath(workspacePath);
 
     if (!project) {
-      return undefined;
+      return [];
     }
 
     // Make sure selected_operator_ids is an array type
@@ -321,33 +322,35 @@ export const homeMethods = {
         selectedOperatorIds = project.selected_operator_ids
           .map((id) => typeof id === 'string' ? Number(id) : id)
           .filter((id) => typeof id === 'number' && !isNaN(id));
-        // console.log('[getSelectedOperators] Converted selected_operator_ids:', selectedOperatorIds);
       }
       else {
-        // If not an array, try converting (maybe to string or other type)
-        // console.warn('[getSelectedOperators] selected_operator_ids is not an array:', typeof project.selected_operator_ids, project.selected_operator_ids);
-
-        return undefined;
+        return [];
       }
-    }
-    else {
-      // console.log('[getSelectedOperators] project.selected_operator_ids is empty');
     }
 
     if (selectedOperatorIds.length === 0) {
-      return undefined;
+      return [];
     }
 
     // Get all operator information
     const result = await checkMultipleOperatorsCore(workspacePath);
 
     if (!result.isStandardCustom || !result.operators) {
-      return undefined;
+      return [];
     }
 
-    // Match operator name based on ID
-    const selectedOperatorNames = result.operators
-      .filter((op) => selectedOperatorIds.includes(op.id))
+    // Match operators based on ID
+    return result.operators.filter((op) => selectedOperatorIds.includes(op.id));
+  },
+
+  /**
+   * Get the selected operator name list (for standard custom operator scenarios)
+   * @returns list of operator names, multiple ones separated by commas, if not, return undefined
+   */
+  async getSelectedOperators(): Promise<string | undefined> {
+    // Reference homeMethods (not `this`): this method is passed as an unbound
+    // value through api-routes, so `this` is not guaranteed at call time.
+    const selectedOperatorNames = (await homeMethods.getSelectedOperatorEntries())
       .map((op) => op.name);
 
     return selectedOperatorNames.length > 0 ? selectedOperatorNames.join(',') : undefined;
