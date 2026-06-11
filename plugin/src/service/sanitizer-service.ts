@@ -12,7 +12,9 @@ import {
   getSanitizerCommand, getBuildExampleCommand, getBuildOpCommand,
 } from '@plugin/domain';
 import { configService } from './config-service';
-import { buildService, notifyBuildSucceededForSidebar } from './build-service';
+import {
+  buildService, notifyBuildSucceededForSidebar,
+} from './build-service';
 import {
   OperatorProjectType, OperatorProjectDetector,
 } from '@plugin/domain/services/operator-project-detector';
@@ -20,6 +22,7 @@ import { getLatestSanitizerLogAbsPath } from '@plugin/helpers/sanitizer-log-path
 import { joinIdeConfigPath } from '@plugin/helpers/ide-config-dir';
 import { msAgentBridgeService } from '@plugin/service/ms-agent-bridge.service';
 import { sanitizerDiagnosticsService } from '@plugin/service/sanitizer-diagnostics.service';
+import { COMMAND_FLASH_MS_SANITIZER_RUN_DATA } from '@plugin/constants';
 
 const CONFIG_TYPES = { SANITIZER: 'sanitizer' } as const;
 
@@ -152,8 +155,10 @@ export class SanitizerService {
       vscode.window.showInformationMessage(t('sanitizer.detectionSuccess'));
 
       const wfAfter = vscode.workspace.workspaceFolders?.[0];
+
       if (wfAfter) {
         const logAbs = getLatestSanitizerLogAbsPath(wfAfter.uri.fsPath);
+
         if (logAbs && fs.existsSync(logAbs)) {
           sanitizerDiagnosticsService.publishFromLogFile(logAbs, wfAfter.uri.fsPath);
           void msAgentBridgeService.tryLoadLogWithIntegration(logAbs);
@@ -161,7 +166,7 @@ export class SanitizerService {
       }
 
       // After detection, refresh sanitizer data without opening the legacy sanitizer webview.
-      await vscode.commands.executeCommand('huawei-op-devtools.flashMsSanitizerRunData');
+      await vscode.commands.executeCommand(COMMAND_FLASH_MS_SANITIZER_RUN_DATA);
     }
     catch (e: unknown) {
       vscode.window.showErrorMessage(t('sanitizer.detectionFailedError', { error: (e as Error).message }));

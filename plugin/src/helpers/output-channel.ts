@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 
-const CHANNEL_NAME = 'Huawei Op Devtools';
+import { BRANDING } from '@shared/flavor';
 
-export const OP_DEVTOOLS_TOOL_CHANNEL_PREFIX = 'Op Dev Tools';
+/** @deprecated Use {@link BRANDING.productName} — kept for callers that imported this constant. */
+export const OP_DEVTOOLS_TOOL_CHANNEL_PREFIX = BRANDING.productName;
 
 export type OperatorToolOutputLabel =
   | 'compile'
@@ -19,25 +20,26 @@ const toolChannelsByLabel = new Map<string, vscode.OutputChannel>();
 
 export function getHuaweiOpDevtoolsOutputChannel(): vscode.OutputChannel {
   if (!sharedChannel) {
-    sharedChannel = vscode.window.createOutputChannel(CHANNEL_NAME);
+    sharedChannel = vscode.window.createOutputChannel(BRANDING.productName);
   }
+
   return sharedChannel;
 }
 
 /** One persistent output channel per operation label; cleared when reused for a new run. */
-export function getOperatorToolOutputChannel(
-  label: OperatorToolOutputLabel | string,
-): vscode.OutputChannel {
+export function getOperatorToolOutputChannel(label: OperatorToolOutputLabel | string): vscode.OutputChannel {
   const existing = toolChannelsByLabel.get(label);
+
   if (existing) {
     existing.clear();
+
     return existing;
   }
 
-  const channel = vscode.window.createOutputChannel(
-    `${OP_DEVTOOLS_TOOL_CHANNEL_PREFIX}: ${label}`,
-  );
+  const channel = vscode.window.createOutputChannel(`${BRANDING.productName}: ${label}`);
+
   toolChannelsByLabel.set(label, channel);
+
   return channel;
 }
 
@@ -68,12 +70,16 @@ export function appendLog(
   payload?: unknown,
 ): void {
   const channel = getHuaweiOpDevtoolsOutputChannel();
-  const timestamp = new Date().toISOString();
+  const timestamp = new Date()
+    .toISOString();
   const base = `[${scope}] ${timestamp} ${message}`;
+
   if (payload === undefined) {
     channel.appendLine(base);
+
     return;
   }
+
   try {
     channel.appendLine(`${base} ${JSON.stringify(payload)}`);
   }

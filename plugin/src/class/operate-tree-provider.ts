@@ -20,9 +20,26 @@ import { appendLog } from '@plugin/helpers/output-channel';
 import { sanitizerDiagnosticsService } from '@plugin/service/sanitizer-diagnostics.service';
 import { runDataService } from '@plugin/service/run-data-service';
 import {
+  COMMAND_SIDEBAR_BUILD,
+  COMMAND_SIDEBAR_CPU_DEBUG,
+  COMMAND_SIDEBAR_DUMP_TENSOR,
+  COMMAND_SIDEBAR_NPU_DEBUG,
+  COMMAND_SIDEBAR_ON_BOARD,
+  COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN,
+  COMMAND_SIDEBAR_RUN,
+  COMMAND_SIDEBAR_SANITIZER,
+  COMMAND_SIDEBAR_SANITIZER_MESSAGE_JUMP,
+  COMMAND_SIDEBAR_SIMULATION,
+  COMMAND_SIDEBAR_UT_TEST,
   COMMAND_SIDEBAR_TOGGLE_OPERATOR,
   COMMAND_SIDEBAR_SANITIZER_STACK_JUMP,
 } from '../constants';
+import {
+  CONTEXT_PREFIX,
+  SETTINGS_PREFIX,
+  TREE_VIEW_PERFORMANCE_RESULTS,
+  treeItemContextKey,
+} from '@shared/flavor';
 
 export type OperateNodeId =
   | 'build'
@@ -137,35 +154,113 @@ type SanitizerGroupedReportNode = {
 };
 
 const sanitizerQuestionLabelKeyMap = new Map<string, string>([
-  ['illegal read of size', 'exceptionParser.illegalRead'],
-  ['illegal write of size', 'exceptionParser.illegalWrite'],
-  ['out of bounds of size', 'exceptionParser.multiCoreStomp'],
-  ['misaligned access of size', 'exceptionParser.unalignedAccess'],
-  ['LeakCheck: detected memory leaks', 'exceptionParser.memoryLeak'],
-  ['direct leak of', 'exceptionParser.memoryLeak'],
-  ['illegal free()', 'exceptionParser.illegalFree'],
-  ['Unused memory', 'exceptionParser.allocUnused'],
-  ['Potential RAW hazard detected', 'exceptionParser.rawHazard'],
-  ['Potential WAW hazard detected', 'exceptionParser.wawHazard'],
-  ['Potential WAR hazard detected', 'exceptionParser.warHazard'],
-  ['uninitialized read of size', 'exceptionParser.uninitException'],
-  ['Unpaired set_flag insetructions detected', 'exceptionParser.syncException'],
+  [
+    'illegal read of size',
+    'exceptionParser.illegalRead',
+  ],
+  [
+    'illegal write of size',
+    'exceptionParser.illegalWrite',
+  ],
+  [
+    'out of bounds of size',
+    'exceptionParser.multiCoreStomp',
+  ],
+  [
+    'misaligned access of size',
+    'exceptionParser.unalignedAccess',
+  ],
+  [
+    'LeakCheck: detected memory leaks',
+    'exceptionParser.memoryLeak',
+  ],
+  [
+    'direct leak of',
+    'exceptionParser.memoryLeak',
+  ],
+  [
+    'illegal free()',
+    'exceptionParser.illegalFree',
+  ],
+  [
+    'Unused memory',
+    'exceptionParser.allocUnused',
+  ],
+  [
+    'Potential RAW hazard detected',
+    'exceptionParser.rawHazard',
+  ],
+  [
+    'Potential WAW hazard detected',
+    'exceptionParser.wawHazard',
+  ],
+  [
+    'Potential WAR hazard detected',
+    'exceptionParser.warHazard',
+  ],
+  [
+    'uninitialized read of size',
+    'exceptionParser.uninitException',
+  ],
+  [
+    'Unpaired set_flag insetructions detected',
+    'exceptionParser.syncException',
+  ],
 ]);
 
 const sanitizerQuestionHandlerKeyMap = new Map<string, string>([
-  ['illegal read of size', 'web.sanitizerPanel.handler.illegalRead'],
-  ['illegal write of size', 'web.sanitizerPanel.handler.illegalWrite'],
-  ['out of bounds of size', 'web.sanitizerPanel.handler.outOfBounds'],
-  ['misaligned access of size', 'web.sanitizerPanel.handler.misalignedAccess'],
-  ['LeakCheck: detected memory leaks', 'web.sanitizerPanel.handler.memoryLeak'],
-  ['direct leak of', 'web.sanitizerPanel.handler.memoryLeak'],
-  ['illegal free()', 'web.sanitizerPanel.handler.illegalFree'],
-  ['Unused memory', 'web.sanitizerPanel.handler.unusedMemory'],
-  ['Potential RAW hazard detected', 'web.sanitizerPanel.handler.rawHazard'],
-  ['Potential WAW hazard detected', 'web.sanitizerPanel.handler.wawHazard'],
-  ['Potential WAR hazard detected', 'web.sanitizerPanel.handler.warHazard'],
-  ['uninitialized read of size', 'web.sanitizerPanel.handler.uninitializedRead'],
-  ['Unpaired set_flag insetructions detected', 'web.sanitizerPanel.handler.unpairedSetFlag'],
+  [
+    'illegal read of size',
+    'web.sanitizerPanel.handler.illegalRead',
+  ],
+  [
+    'illegal write of size',
+    'web.sanitizerPanel.handler.illegalWrite',
+  ],
+  [
+    'out of bounds of size',
+    'web.sanitizerPanel.handler.outOfBounds',
+  ],
+  [
+    'misaligned access of size',
+    'web.sanitizerPanel.handler.misalignedAccess',
+  ],
+  [
+    'LeakCheck: detected memory leaks',
+    'web.sanitizerPanel.handler.memoryLeak',
+  ],
+  [
+    'direct leak of',
+    'web.sanitizerPanel.handler.memoryLeak',
+  ],
+  [
+    'illegal free()',
+    'web.sanitizerPanel.handler.illegalFree',
+  ],
+  [
+    'Unused memory',
+    'web.sanitizerPanel.handler.unusedMemory',
+  ],
+  [
+    'Potential RAW hazard detected',
+    'web.sanitizerPanel.handler.rawHazard',
+  ],
+  [
+    'Potential WAW hazard detected',
+    'web.sanitizerPanel.handler.wawHazard',
+  ],
+  [
+    'Potential WAR hazard detected',
+    'web.sanitizerPanel.handler.warHazard',
+  ],
+  [
+    'uninitialized read of size',
+    'web.sanitizerPanel.handler.uninitializedRead',
+  ],
+  [
+    'Unpaired set_flag insetructions detected',
+    'web.sanitizerPanel.handler.unpairedSetFlag',
+  ],
 ]);
 
 const INITIAL_STATE: OperateSidebarState = {
@@ -214,18 +309,20 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
    */
   static runFlowActionFromWebview<T>(
     nodeId: OperateNodeId,
-    action: () => Promise<T>,
+    action: ()=> Promise<T>,
   ): Promise<T | undefined> {
     const p = OperateTreeProvider.webviewOpsFlowProvider;
+
     if (!p) {
       return action();
     }
+
     return p.runFlowAction(nodeId, action);
   }
 
   static runFlowActionFromWebviewWithParams<P, T>(
     nodeId: OperateNodeId,
-    action: (params: P) => Promise<T>,
+    action: (params: P)=> Promise<T>,
     params: P,
   ): Promise<T | undefined> {
     return OperateTreeProvider.runFlowActionFromWebview(nodeId, () => action(params));
@@ -237,12 +334,10 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     context?: vscode.ExtensionContext,
   ) {
     if (context) {
-      context.subscriptions.push(
-        vscode.window.onDidChangeActiveColorTheme(() => {
-          this.themedIconCache.clear();
-          this.onDidChangeTreeDataEmitter.fire();
-        }),
-      );
+      context.subscriptions.push(vscode.window.onDidChangeActiveColorTheme(() => {
+        this.themedIconCache.clear();
+        this.onDidChangeTreeDataEmitter.fire();
+      }));
     }
   }
 
@@ -303,7 +398,8 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   }
 
   private getSanitizerViewCacheKey(reportPath: string): string {
-    return `${reportPath}\n${this.getNormalizedWorkspacePath().toLowerCase()}\n${this.state.sanitizer.hideDuplicates ? 'dedupe' : 'all'}`;
+    return `${reportPath}\n${this.getNormalizedWorkspacePath()
+      .toLowerCase()}\n${this.state.sanitizer.hideDuplicates ? 'dedupe' : 'all'}`;
   }
 
   /**
@@ -312,6 +408,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
    */
   private getLocaleForSort(): string | undefined {
     const lang = vscode.env.language?.trim();
+
     return lang ? lang : undefined;
   }
 
@@ -324,11 +421,14 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     if (this.kind !== 'flow') {
       return;
     }
+
     const prev = JSON.stringify(this.queuedFlowStates);
     const next = JSON.stringify(states ?? {});
+
     if (prev === next) {
       return;
     }
+
     this.queuedFlowStates = states ?? {};
     this.onDidChangeTreeDataEmitter.fire();
   }
@@ -341,27 +441,34 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
    */
   async runFlowAction<T>(
     nodeId: OperateNodeId,
-    action: () => Promise<T>,
-    options?: { skipEnvironmentScriptCheck?: boolean; skipFlowExecutionUi?: boolean },
+    action: ()=> Promise<T>,
+    options?: { skipEnvironmentScriptCheck?: boolean;
+      skipFlowExecutionUi?: boolean },
   ): Promise<T | undefined> {
     if (this.kind !== 'flow') {
       return action();
     }
+
     if (!options?.skipEnvironmentScriptCheck) {
       const envOk = await ensureEnvironmentScriptForOperateAction();
+
       if (!envOk) {
         return undefined;
       }
     }
+
     if (options?.skipFlowExecutionUi) {
       return await action();
     }
+
     const executionNodeId = nodeId;
+
     this.executingFlowNodeId = nodeId;
     this.onDidChangeTreeDataEmitter.fire();
     // Let the tree view repaint before the action runs; otherwise loading/stop may never appear
     // when the task yields quickly (e.g. after env check with no dialog).
     await OperateTreeProvider.yieldToUi();
+
     try {
       return await action();
     }
@@ -391,6 +498,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     if (this.kind !== 'flow') {
       return;
     }
+
     this.executingFlowNodeId = null;
     this.onDidChangeTreeDataEmitter.fire();
   }
@@ -408,31 +516,38 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     if (this.kind !== 'flow' || this.executingFlowNodeId === null) {
       return false;
     }
+
     const active = this.executingFlowNodeId;
+
     if (active === nodeId) {
       return true;
     }
+
     if (
-      nodeId === 'debug' &&
-      (active === 'cpuDebug' || active === 'npuDebug')
+      nodeId === 'debug'
+      && (active === 'cpuDebug' || active === 'npuDebug')
     ) {
       return true;
     }
+
     if (
-      nodeId === 'power' &&
-      (active === 'onboard' || active === 'simulation')
+      nodeId === 'power'
+      && (active === 'onboard' || active === 'simulation')
     ) {
       return true;
     }
+
     return false;
   }
 
   /** True when this tree row should show the loading spinner (parent + active subitem while a flow child action runs). */
   private isFlowExecutingIcon(nodeId: OperateNodeId): boolean {
     const q = this.queuedFlowStates[nodeId];
+
     if (q === 'running' || q === 'queued' || q === 'cancel_failed') {
       return true;
     }
+
     return this.matchesFlowExecutingNode(nodeId);
   }
 
@@ -443,38 +558,48 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     if (!this.isFlowExecutingIcon(nodeId)) {
       return normalIcon;
     }
+
     const q = this.queuedFlowStates[nodeId];
+
     // Waiting in the operator queue (not the active runner): themed animated SVG hourglass.
     if (q === 'queued') {
       return this.getAssetIcon('hourglass.svg');
     }
+
     return new vscode.ThemeIcon('loading~spin');
   }
 
-  private static readonly FLOW_RUNNING_CONTEXT = 'opdevtools.flowRunning';
+  private static readonly FLOW_RUNNING_CONTEXT = treeItemContextKey('flowRunning');
 
   /** Appends `opdevtools.flowRunning` while this row is the active flow action (inline stop in tree). */
   private mergeFlowRunningContext(nodeId: OperateNodeId, base?: string): string | undefined {
     const queuedState = this.queuedFlowStates[nodeId];
     const isQueuedCancellable = queuedState === 'queued' || queuedState === 'running' || queuedState === 'cancel_failed';
+
     if (!this.matchesFlowExecutingNode(nodeId) && !isQueuedCancellable) {
       return base;
     }
+
     return base ? `${base} ${OperateTreeProvider.FLOW_RUNNING_CONTEXT}` : OperateTreeProvider.FLOW_RUNNING_CONTEXT;
   }
 
-  async refreshState(hasDevtoolConfig: boolean): Promise<{ showOperatorSearch: boolean; showOperatorProjects: boolean }> {
+  async refreshState(hasDevtoolConfig: boolean): Promise<{ showOperatorSearch: boolean;
+    showOperatorProjects: boolean }> {
     const prevSearchKeyword = this.state.searchKeyword;
 
-    const [projectTypeResult, multipleResult] = await Promise.all([
+    const [
+      projectTypeResult,
+      multipleResult,
+    ] = await Promise.all([
       homeMethods.getProjectType(),
       homeMethods.checkMultipleOperators(),
     ]);
     const debugModeEnabled = ConfigHelper.isDebugModeEnabled();
     const projectType = projectTypeResult.projectType || '';
     const projectTypeSupported = OperatorPluginRegistry.isProjectTypeSupported(projectType);
+
     appendLog(
-      '[op-devtools][sidebar]',
+      `[${SETTINGS_PREFIX}][sidebar]`,
       'refreshState:projectTypeSupport',
       {
         kind: this.kind,
@@ -484,6 +609,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     );
 
     const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
+
     if (workspacePath !== this.selectionWorkspaceKey) {
       this.selectionWorkspaceKey = workspacePath;
       this.hasAppliedDefaultSelection = false;
@@ -504,6 +630,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       : [];
 
     let selectedOperatorIds = await (isStandardCustom ? homeMethods.getSelectedOperatorIds() : undefined);
+
     selectedOperatorIds = selectedOperatorIds ?? [];
 
     // Match web behavior: when no persisted selection exists and operator list is available,
@@ -511,6 +638,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     if (isStandardCustom && operators.length > 0 && selectedOperatorIds.length === 0 && !this.hasAppliedDefaultSelection) {
       const sorted = [...operators].sort((a, b) => a.name.localeCompare(b.name, this.getLocaleForSort()));
       const firstId = sorted[0]?.id;
+
       if (typeof firstId === 'number') {
         await homeMethods.setSelectedOperators({ operatorIds: [firstId] });
         selectedOperatorIds = [firstId];
@@ -552,7 +680,11 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
     this.onDidChangeTreeDataEmitter.fire();
     this.onDidChangePerformanceTreeDataEmitter.fire();
-    return { showOperatorSearch, showOperatorProjects };
+
+    return {
+      showOperatorSearch,
+      showOperatorProjects,
+    };
   }
 
   /**
@@ -572,7 +704,9 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     if (this.kind !== 'flow') {
       return;
     }
+
     let reports: SanitizerReportRecord[] = [];
+
     try {
       reports = await runDataService.getSanitizerRunData() as SanitizerReportRecord[];
     }
@@ -581,24 +715,31 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       this.state.sanitizer.reports = [];
       this.invalidateSanitizerDataCaches();
       this.onDidChangeTreeDataEmitter.fire();
+
       return;
     }
+
     const manualReports = this.state.sanitizer.manualReports
       .filter((item) => fs.existsSync(item.path));
+
     this.state.sanitizer.manualReports = manualReports;
     const merged = new Map<string, SanitizerReportRecord>();
+
     for (const report of reports) {
       merged.set(report.path, report);
     }
+
     for (const report of manualReports) {
       if (!merged.has(report.path)) {
         merged.set(report.path, report);
       }
     }
+
     this.state.sanitizer.reports = Array.from(merged.values());
     this.invalidateSanitizerDataCaches();
 
     const selectedPath = this.state.sanitizer.selectedReportPath;
+
     if (selectedPath && !reports.some((item) => item.path === selectedPath)) {
       this.state.sanitizer.selectedReportPath = undefined;
       this.state.sanitizer.selectedReportTitle = undefined;
@@ -617,15 +758,21 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     if (!reportPath || !fs.existsSync(reportPath)) {
       throw new Error(t('link.fileNotExist', { path: reportPath }));
     }
+
     const stat = fs.statSync(reportPath);
+
     if (!stat.isFile()) {
       throw new Error(t('msSanitizer.pathNotFileOrDir'));
     }
+
     const existing = this.state.sanitizer.reports.find((item) => item.path === reportPath);
+
     if (existing) {
       await this.selectSanitizerReport(existing.path);
+
       return;
     }
+
     const report: SanitizerReportRecord = {
       title: path.basename(reportPath),
       timestamp: stat.mtimeMs,
@@ -633,8 +780,15 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       path: reportPath,
       marked: false,
     };
-    this.state.sanitizer.manualReports = [...this.state.sanitizer.manualReports, report];
-    this.state.sanitizer.reports = [...this.state.sanitizer.reports, report];
+
+    this.state.sanitizer.manualReports = [
+      ...this.state.sanitizer.manualReports,
+      report,
+    ];
+    this.state.sanitizer.reports = [
+      ...this.state.sanitizer.reports,
+      report,
+    ];
     this.updateSanitizerReportRootCache();
     await this.selectSanitizerReport(reportPath);
   }
@@ -644,13 +798,17 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       .filter((item) => (this.state.sanitizer.markedOnly ? item.marked : true))
       .sort((a, b) => {
         const order = this.state.sanitizer.sortOrder === 'desc' ? -1 : 1;
+
         if (a.timestamp !== b.timestamp) {
           return (a.timestamp - b.timestamp) * order;
         }
+
         const titleCompare = a.title.localeCompare(b.title, this.getLocaleForSort());
+
         if (titleCompare !== 0) {
           return titleCompare;
         }
+
         return a.path.localeCompare(b.path, this.getLocaleForSort());
       });
   }
@@ -661,7 +819,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       report.title,
       undefined,
       vscode.TreeItemCollapsibleState.Collapsed,
-      `opdevtools.sanitizerReportItem.${report.marked ? 'marked' : 'unmarked'}`,
+      `${treeItemContextKey(`sanitizerReportItem.${report.marked ? 'marked' : 'unmarked'}`)}`,
       report.marked
         ? this.getCustomProductIcon('flag-filled')
         : undefined,
@@ -669,8 +827,11 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       `sanitizer-report:${encodeURIComponent(report.path)}`,
       undefined,
     );
-    item.description = new Date(report.timestamp).toLocaleString();
+
+    item.description = new Date(report.timestamp)
+      .toLocaleString();
     item.tooltip = report.path;
+
     return item;
   }
 
@@ -678,7 +839,9 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     if (!this.sanitizerReportRootNodesCache) {
       return;
     }
+
     const reports = this.getSortedVisibleSanitizerReports();
+
     if (reports.length === 0) {
       this.sanitizerReportRootNodesCache = [
         this.createItem(
@@ -688,24 +851,31 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
           vscode.TreeItemCollapsibleState.None,
         ),
       ];
+
       return;
     }
 
     const cachedByPath = new Map<string, OperateNode>();
+
     for (const node of this.sanitizerReportRootNodesCache) {
       const rawId = String(node.id ?? '');
+
       if (!rawId.startsWith('sanitizer-report:')) {
         continue;
       }
+
       const reportPath = decodeURIComponent(rawId.replace(/^sanitizer-report:/, ''));
+
       cachedByPath.set(reportPath, node);
     }
 
     this.sanitizerReportRootNodesCache = reports.map((report) => {
       const cached = cachedByPath.get(report.path);
+
       if (cached) {
         return cached;
       }
+
       return this.createSanitizerReportNode(report);
     });
   }
@@ -726,6 +896,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     if (this.state.sanitizer.markedOnly === enabled) {
       return;
     }
+
     this.state.sanitizer.markedOnly = enabled;
     this.invalidateSanitizerPresentationCaches();
     this.onDidChangeTreeDataEmitter.fire();
@@ -739,6 +910,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     if (this.state.sanitizer.resultsGroupBy === mode) {
       return;
     }
+
     this.state.sanitizer.resultsGroupBy = mode;
     this.invalidateSanitizerPresentationCaches();
     this.onDidChangeTreeDataEmitter.fire();
@@ -758,6 +930,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     if (this.state.sanitizer.hideDuplicates === enabled) {
       return;
     }
+
     this.state.sanitizer.hideDuplicates = enabled;
     this.invalidateSanitizerViewCaches();
     this.onDidChangeTreeDataEmitter.fire();
@@ -768,22 +941,31 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   }
 
   private normalizeSanitizerPath(raw: string, normalizedWorkspacePath: string): string {
-    const normalized = raw.replace(/\\/g, '/').replace(/\/+/g, '/').trim();
+    const normalized = raw.replace(/\\/g, '/')
+      .replace(/\/+/g, '/')
+      .trim();
+
     if (!normalized) {
       return '';
     }
+
     const isWindowsPath = /^[A-Za-z]:\//.test(normalized) || /^[A-Za-z]:\//.test(normalizedWorkspacePath);
     const maybeLower = isWindowsPath ? normalized.toLowerCase() : normalized;
+
     if (!normalizedWorkspacePath) {
       return maybeLower;
     }
+
     const work = isWindowsPath ? normalizedWorkspacePath.toLowerCase() : normalizedWorkspacePath;
+
     if (maybeLower === work) {
       return '';
     }
+
     if (maybeLower.startsWith(`${work}/`)) {
       return maybeLower.slice(work.length + 1);
     }
+
     return maybeLower;
   }
 
@@ -794,7 +976,9 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     const file = this.normalizeSanitizerPath(msg.fileLink ?? '', normalizedWorkspacePath);
     const row = msg.row ?? '';
     const col = msg.col ?? '';
-    const problem = (msg.title ?? '').replace(/\s+/g, ' ').trim();
+    const problem = (msg.title ?? '').replace(/\s+/g, ' ')
+      .trim();
+
     return `${msg.type}\n${problem}\n${file}:${row}:${col}`;
   }
 
@@ -807,7 +991,8 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     const col = msg.col ?? '';
     const detailsSignature = this.getSanitizerMessageDetailsText(msg)
       .split('\n')
-      .map((line) => line.replace(/\s+/g, ' ').trim())
+      .map((line) => line.replace(/\s+/g, ' ')
+        .trim())
       .filter((line) => line.length > 0)
       .join('\n');
     const stackSignature = (msg.originData || '')
@@ -816,17 +1001,27 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       .filter((line) => /^#\d+\s+/.test(line))
       .map((line) => {
         const match = line.match(/^#\d+\s+(.+?):(\d+):(\d+)(?:\s+.*)?$/);
+
         if (!match) {
           return line.replace(/\s+/g, ' ');
         }
-        const [, framePath, frameRow, frameCol] = match;
+
+        const [
+          , framePath,
+          frameRow,
+          frameCol,
+        ] = match;
+
         return `${this.normalizeSanitizerPath(framePath, normalizedWorkspacePath)}:${frameRow}:${frameCol}`;
       })
       .join('\n');
-    const problem = (msg.title ?? '').replace(/\s+/g, ' ').trim();
+    const problem = (msg.title ?? '').replace(/\s+/g, ' ')
+      .trim();
+
     if (!file) {
       return `${problem}\n${detailsSignature}`;
     }
+
     return `${msg.type}\n${problem}\n${stackSignature || `${file}:${row}:${col}`}`;
   }
 
@@ -841,48 +1036,65 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       if (!localCache) {
         return this.buildSanitizerFullDuplicateMessageKey(messages[index], normalizedWorkspacePath);
       }
+
       const cachedLocal = localCache.get(index);
+
       if (cachedLocal !== undefined) {
         return cachedLocal;
       }
+
       const computedLocal = this.buildSanitizerFullDuplicateMessageKey(messages[index], normalizedWorkspacePath);
+
       localCache.set(index, computedLocal);
+
       return computedLocal;
     }
+
     const cacheKey = `${reportPath}\n${normalizedWorkspacePath.toLowerCase()}`;
     let cachedByIndex = this.sanitizerFullDuplicateKeysCache.get(cacheKey);
+
     if (!cachedByIndex) {
       cachedByIndex = new Map<number, string>();
       this.sanitizerFullDuplicateKeysCache.set(cacheKey, cachedByIndex);
     }
+
     const cached = cachedByIndex.get(index);
+
     if (cached !== undefined) {
       return cached;
     }
+
     const computed = this.buildSanitizerFullDuplicateMessageKey(messages[index], normalizedWorkspacePath);
+
     cachedByIndex.set(index, computed);
+
     return computed;
   }
 
   private getSanitizerMessageDetailsText(item: SanitizerMessageRecord): string {
     const rawLines = (item.originData || '')
       .split(/\r?\n/)
-      .map((line) => line.replace(/^=+\s*/, '').trim())
+      .map((line) => line.replace(/^=+\s*/, '')
+        .trim())
       .filter((line) => line.length > 0);
     const detailsLines: string[] = [];
     let inStack = false;
+
     for (const line of rawLines) {
       if (/^#\d+\s+/.test(line)) {
         inStack = true;
         continue;
       }
+
       if (!inStack) {
         if (/^(ERROR|WARNING):\s*/i.test(line)) {
           continue;
         }
+
         detailsLines.push(line);
       }
     }
+
     return detailsLines.join('\n');
   }
 
@@ -893,26 +1105,33 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     if (!this.state.sanitizer.hideDuplicates) {
       return messages;
     }
+
     const normalizedWorkspacePath = this.getNormalizedWorkspacePath();
     const dedupeCacheKey = `${reportPath ?? '__selected__'}\n${normalizedWorkspacePath.toLowerCase()}`;
     const dedupeCached = this.sanitizerDedupeResultCache.get(dedupeCacheKey);
+
     if (dedupeCached && dedupeCached.source === messages) {
       return dedupeCached.filtered;
     }
+
     const firstIndexByFast = new Map<string, number>();
     const fullSeenByFast = new Map<string, Set<string>>();
     const localFullKeyCache = reportPath ? undefined : new Map<number, string>();
     const filtered: SanitizerMessageRecord[] = [];
+
     for (let i = 0; i < messages.length; i += 1) {
       const msg = messages[i];
       const fastKey = this.buildSanitizerFastDuplicateMessageKey(msg, normalizedWorkspacePath);
       const firstIndex = firstIndexByFast.get(fastKey);
+
       if (firstIndex === undefined) {
         firstIndexByFast.set(fastKey, i);
         filtered.push(msg);
         continue;
       }
+
       let seenForFast = fullSeenByFast.get(fastKey);
+
       if (!seenForFast) {
         seenForFast = new Set<string>();
         seenForFast.add(this.getSanitizerFullDuplicateKey(
@@ -924,6 +1143,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         ));
         fullSeenByFast.set(fastKey, seenForFast);
       }
+
       const fullKey = this.getSanitizerFullDuplicateKey(
         reportPath,
         messages,
@@ -931,16 +1151,20 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         normalizedWorkspacePath,
         localFullKeyCache,
       );
+
       if (seenForFast.has(fullKey)) {
         continue;
       }
+
       seenForFast.add(fullKey);
       filtered.push(msg);
     }
+
     this.sanitizerDedupeResultCache.set(dedupeCacheKey, {
       source: messages,
       filtered,
     });
+
     return filtered;
   }
 
@@ -952,33 +1176,51 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     if (!filePath || filePath === t('web.sanitizerTree.group.noFile')) {
       return;
     }
+
     const document = await vscode.workspace.openTextDocument(vscode.Uri.file(filePath));
-    await vscode.window.showTextDocument(document, { viewColumn: vscode.ViewColumn.One, preview: true });
+
+    await vscode.window.showTextDocument(document, {
+      viewColumn: vscode.ViewColumn.One,
+      preview: true,
+    });
   }
 
   async toggleSanitizerReportMark(reportId: string): Promise<void> {
     await runDataService.toggleSanitizerMark({ id: reportId });
     let changed = false;
+
     this.state.sanitizer.reports = this.state.sanitizer.reports.map((item) => {
       if (item.id !== reportId) {
         return item;
       }
+
       changed = true;
-      return { ...item, marked: !item.marked };
+
+      return {
+        ...item,
+        marked: !item.marked,
+      };
     });
     this.state.sanitizer.manualReports = this.state.sanitizer.manualReports.map((item) => {
       if (item.id !== reportId) {
         return item;
       }
-      return { ...item, marked: !item.marked };
+
+      return {
+        ...item,
+        marked: !item.marked,
+      };
     });
+
     if (!changed) {
       return;
     }
+
     if (this.state.sanitizer.markedOnly && !this.state.sanitizer.reports.some((item) => item.marked)) {
       // Keep list visible when filter would otherwise hide everything.
       this.state.sanitizer.markedOnly = false;
     }
+
     this.invalidateSanitizerPresentationCaches();
     this.onDidChangeTreeDataEmitter.fire();
   }
@@ -996,11 +1238,15 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     if (this.kind !== 'flow') {
       return;
     }
+
     const report = this.state.sanitizer.reports.find((item) => item.path === reportPath);
+
     if (!report) {
       return;
     }
+
     const revision = this.state.sanitizer.reportRevision + 1;
+
     this.state.sanitizer.reportRevision = revision;
     this.state.sanitizer.selectedReportPath = report.path;
     this.state.sanitizer.selectedReportTitle = report.title;
@@ -1010,18 +1256,22 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       title: report.title,
       timestamp: report.timestamp,
     });
+
     if (this.state.sanitizer.reportRevision !== revision) {
       return;
     }
+
     this.state.sanitizer.selectedMessages = (panelData.data ?? []) as SanitizerMessageRecord[];
     this.onDidChangeTreeDataEmitter.fire();
   }
 
   async jumpToSanitizerMessage(messageId: string): Promise<void> {
     const msg = this.state.sanitizer.selectedMessages[Number(messageId)];
+
     if (!msg || !msg.fileLink || msg.row === undefined || msg.col === undefined) {
       return;
     }
+
     const problemTypeKey = sanitizerQuestionLabelKeyMap.get(msg.question);
     const problemType = problemTypeKey ? t(problemTypeKey) : msg.question;
     const handlingKey = sanitizerQuestionHandlerKeyMap.get(msg.question);
@@ -1034,18 +1284,17 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       errorTitle: msg.title,
       errorMessage: tooltip.value,
     };
+
     await performanceDataMethods.jumpToFile(params);
   }
 
-  getSanitizerMessageAiFixIndex(
-    messageRef:
+  getSanitizerMessageAiFixIndex(messageRef:
     | string
     | {
       id?: string;
       msAgentIndex?: number;
       command?: { arguments?: unknown[] };
-    },
-  ): number | undefined {
+    }): number | undefined {
     if (typeof messageRef !== 'string') {
       if (
         typeof messageRef.msAgentIndex === 'number'
@@ -1055,27 +1304,35 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         return messageRef.msAgentIndex;
       }
     }
+
     const rawId = typeof messageRef === 'string'
       ? messageRef
       : String(messageRef.command?.arguments?.[0] ?? messageRef.id ?? '');
     let messageId = rawId;
+
     if (!/^\d+$/.test(messageId) && messageId.startsWith('sanitizer-msg:')) {
       const parts = messageId.split(':');
       const maybeGlobalIndex = parts[parts.length - 2];
+
       if (/^\d+$/.test(maybeGlobalIndex)) {
         messageId = maybeGlobalIndex;
       }
     }
+
     if (!/^\d+$/.test(messageId)) {
       return undefined;
     }
+
     const msg = this.state.sanitizer.selectedMessages[Number(messageId)];
+
     if (!msg) {
       return undefined;
     }
+
     if (typeof msg.msAgentIndex === 'number' && Number.isInteger(msg.msAgentIndex) && msg.msAgentIndex >= 0) {
       return msg.msAgentIndex;
     }
+
     return undefined;
   }
 
@@ -1089,28 +1346,42 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     _token: vscode.CancellationToken,
   ): Promise<vscode.TreeItem> {
     const node = item as OperateNode;
+
     if (node.nodeId !== 'sanitizerMessage' || node.tooltip || !node.sanitizerTooltipMeta) {
       return item;
     }
-    const { reportPath, globalIndex } = node.sanitizerTooltipMeta;
-    const { messages, derived } = await this.getVisibleSanitizerReportData(reportPath);
+
+    const {
+      reportPath, globalIndex,
+    } = node.sanitizerTooltipMeta;
+    const {
+      messages, derived,
+    } = await this.getVisibleSanitizerReportData(reportPath);
     const message = messages[globalIndex];
+
     if (!message) {
       return item;
     }
+
     const messageDerived = derived[globalIndex];
     const problemType = messageDerived?.typeLabel ?? message.question;
     const handlingKey = sanitizerQuestionHandlerKeyMap.get(message.question);
     const handling = handlingKey ? t(handlingKey) : '';
+
     if (messageDerived?.tooltip) {
       node.tooltip = messageDerived.tooltip;
+
       return item;
     }
+
     const tooltip = this.buildSanitizerMessageTooltip(message, problemType, handling);
+
     if (messageDerived) {
       messageDerived.tooltip = tooltip;
     }
+
     node.tooltip = tooltip;
+
     return item;
   }
 
@@ -1140,13 +1411,19 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     if (element.nodeId === 'sanitizerReportItem' && (element.id ?? '').startsWith('sanitizer-report:')) {
       const encodedPath = (element.id ?? '').replace(/^sanitizer-report:/, '');
       const reportPath = decodeURIComponent(encodedPath);
+
       return this.getSanitizerSeverityNodes(reportPath);
     }
 
     if (element.nodeId === 'sanitizerClass' && (element.id ?? '').startsWith('sanitizer-report-group:')) {
-      const [, encodedReportPath, mode, encodedGroupKey] = (element.id ?? '').split(':');
+      const [
+        , encodedReportPath,
+        mode,
+        encodedGroupKey,
+      ] = (element.id ?? '').split(':');
       const reportPath = decodeURIComponent(encodedReportPath ?? '');
       const groupKey = decodeURIComponent(encodedGroupKey ?? '');
+
       return this.getSanitizerMessageNodesForReportGroup(
         reportPath,
         mode as 'class' | 'severity' | 'type' | 'file',
@@ -1164,6 +1441,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
     if (element.nodeId === 'performanceReportItem' && (element.id ?? '').startsWith('performance-report:')) {
       const reportKey = decodeURIComponent((element.id ?? '').replace(/^performance-report:/, ''));
+
       return this.getPerformanceChildNodes(reportKey);
     }
 
@@ -1175,6 +1453,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       ] = encoded.split(':');
       const reportKey = decodeURIComponent(encodedReportKey ?? '');
       const folderPath = pathParts.map((part) => decodeURIComponent(part));
+
       return this.getPerformanceFolderChildNodes(reportKey, folderPath);
     }
 
@@ -1201,7 +1480,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       nodes.push(this.createItem(
         'build',
         t('web.operate.compileDeploy'),
-        'huawei-op-devtools.sidebar.build',
+        COMMAND_SIDEBAR_BUILD,
         vscode.TreeItemCollapsibleState.None,
         undefined,
         this.pickFlowIcon('build', this.getCustomProductIcon('build')),
@@ -1211,7 +1490,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     nodes.push(this.createItem(
       'run',
       t('web.operate.run'),
-      hasMultipleSelectedOperators ? undefined : 'huawei-op-devtools.sidebar.run',
+      hasMultipleSelectedOperators ? undefined : COMMAND_SIDEBAR_RUN,
       vscode.TreeItemCollapsibleState.None,
       undefined,
       this.pickFlowIcon('run', hasMultipleSelectedOperators ? disabledIcon : this.getCustomProductIcon('run')),
@@ -1223,13 +1502,14 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
     const debugChildren = this.getDebugChildren();
     const hideDebugForStandardCustom = this.state.isStandardCustom && !this.state.supportsSanitizerAndTuning;
+
     if (!hideDebugForStandardCustom && debugChildren.length > 0) {
       nodes.push(this.createItem(
         'debug',
         t('web.operate.debug'),
         undefined,
         vscode.TreeItemCollapsibleState.Collapsed,
-        'opdevtools.debug',
+        treeItemContextKey('debug'),
         this.pickFlowIcon('debug', this.getCustomProductIcon('debug')),
       ));
     }
@@ -1238,9 +1518,9 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       nodes.push(this.createItem(
         'sanitizer',
         t('web.operate.sanitizer'),
-        hasMultipleSelectedOperators ? undefined : 'huawei-op-devtools.sidebar.sanitizer',
+        hasMultipleSelectedOperators ? undefined : COMMAND_SIDEBAR_SANITIZER,
         vscode.TreeItemCollapsibleState.None,
-        'opdevtools.sanitizer',
+        treeItemContextKey('sanitizer'),
         this.pickFlowIcon('sanitizer', hasMultipleSelectedOperators ? disabledIcon : this.getCustomProductIcon('check')),
         undefined,
         undefined,
@@ -1250,6 +1530,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     }
 
     const hidePower = this.state.isStandardCustom && !this.state.supportsSanitizerAndTuning;
+
     if (!hidePower && canPower) {
       nodes.push(this.createItem(
         'power',
@@ -1265,7 +1546,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       nodes.push(this.createItem(
         'utTest',
         t('web.operate.utTest'),
-        hasMultipleSelectedOperators ? undefined : 'huawei-op-devtools.sidebar.utTest',
+        hasMultipleSelectedOperators ? undefined : COMMAND_SIDEBAR_UT_TEST,
         vscode.TreeItemCollapsibleState.None,
         undefined,
         hasMultipleSelectedOperators
@@ -1282,7 +1563,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       nodes.push(this.createItem(
         'dumpTensor',
         t('web.operate.dumpTensor'),
-        hasMultipleSelectedOperators ? undefined : 'huawei-op-devtools.sidebar.dumpTensor',
+        hasMultipleSelectedOperators ? undefined : COMMAND_SIDEBAR_DUMP_TENSOR,
         vscode.TreeItemCollapsibleState.None,
         undefined,
         hasMultipleSelectedOperators
@@ -1320,7 +1601,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       children.push(this.createItem(
         'cpuDebug',
         t('web.operate.cpuDebug'),
-        hasMultipleSelectedOperators ? undefined : 'huawei-op-devtools.sidebar.cpuDebug',
+        hasMultipleSelectedOperators ? undefined : COMMAND_SIDEBAR_CPU_DEBUG,
         vscode.TreeItemCollapsibleState.None,
         undefined,
         hasMultipleSelectedOperators
@@ -1334,11 +1615,12 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     }
 
     const showNpuDebug = this.supportsCapability(behavior.supportsNpuDebug);
+
     if (showNpuDebug && this.state.debugModeEnabled) {
       children.push(this.createItem(
         'npuDebug',
         t('web.operate.npuDebug'),
-        hasMultipleSelectedOperators ? undefined : 'huawei-op-devtools.sidebar.npuDebug',
+        hasMultipleSelectedOperators ? undefined : COMMAND_SIDEBAR_NPU_DEBUG,
         vscode.TreeItemCollapsibleState.None,
         undefined,
         hasMultipleSelectedOperators
@@ -1362,13 +1644,14 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     const singleOnlyTooltip = hasMultipleSelectedOperators ? t('web.operate.singleOperatorOnly') : undefined;
     const disabledIcon = new vscode.ThemeIcon('circle-slash', new vscode.ThemeColor('disabledForeground'));
     const items: OperateNode[] = [];
+
     if (showOnBoard) {
       items.push(this.createItem(
         'onboard',
         t('web.operate.onBoardAnalysis'),
-        hasMultipleSelectedOperators ? undefined : 'huawei-op-devtools.sidebar.onBoard',
+        hasMultipleSelectedOperators ? undefined : COMMAND_SIDEBAR_ON_BOARD,
         vscode.TreeItemCollapsibleState.None,
-        'opdevtools.onboard',
+        treeItemContextKey('onboard'),
         hasMultipleSelectedOperators
           ? disabledIcon
           : this.pickFlowIcon('onboard', this.getCustomProductIcon('onboard')),
@@ -1378,13 +1661,14 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         singleOnlyTooltip,
       ));
     }
+
     if (showSimulation) {
       items.push(this.createItem(
         'simulation',
         t('web.operate.simulationAnalysis'),
-        hasMultipleSelectedOperators ? undefined : 'huawei-op-devtools.sidebar.simulation',
+        hasMultipleSelectedOperators ? undefined : COMMAND_SIDEBAR_SIMULATION,
         vscode.TreeItemCollapsibleState.None,
-        'opdevtools.simulation',
+        treeItemContextKey('simulation'),
         hasMultipleSelectedOperators
           ? disabledIcon
           : this.pickFlowIcon('simulation', this.getCustomProductIcon('simulation')),
@@ -1394,6 +1678,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         singleOnlyTooltip,
       ));
     }
+
     return items;
   }
 
@@ -1401,7 +1686,9 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     if (this.sanitizerReportRootNodesCache) {
       return this.sanitizerReportRootNodesCache;
     }
+
     const reports = this.getSortedVisibleSanitizerReports();
+
     if (reports.length === 0) {
       this.sanitizerReportRootNodesCache = [
         this.createItem(
@@ -1411,9 +1698,12 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
           vscode.TreeItemCollapsibleState.None,
         ),
       ];
+
       return this.sanitizerReportRootNodesCache;
     }
+
     this.sanitizerReportRootNodesCache = reports.map((report) => this.createSanitizerReportNode(report));
+
     return this.sanitizerReportRootNodesCache;
   }
 
@@ -1428,25 +1718,32 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         ),
       ];
     }
+
     const mode = this.state.sanitizer.resultsGroupBy;
     const groups = this.getSanitizerResultGroups(mode);
-    return groups.map(({ key, label, messages }) => {
+
+    return groups.map(({
+      key, label, messages,
+    }) => {
       const errorCount = messages.filter((item) => item.type === 'error').length;
       const warningCount = messages.filter((item) => item.type === 'warning').length;
       const parts: string[] = [];
+
       if (errorCount > 0) {
         parts.push(`${errorCount} 🔴`);
       }
+
       if (warningCount > 0) {
         parts.push(`${warningCount} 🟡`);
       }
+
       return this.createItem(
         'sanitizerClass',
         label,
         undefined,
         vscode.TreeItemCollapsibleState.Collapsed,
         mode === 'file' && key !== t('web.sanitizerTree.group.noFile')
-          ? 'opdevtools.sanitizerPathGroupItem'
+          ? treeItemContextKey('sanitizerPathGroupItem')
           : undefined,
         mode === 'severity'
           ? (key === 'warning'
@@ -1459,32 +1756,58 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     });
   }
 
-  private getSanitizerResultGroups(
-    mode: 'class' | 'severity' | 'type' | 'file',
-  ): Array<{ key: string; label: string; messages: SanitizerMessageRecord[] }> {
-    const bucketOrder: Array<{ key: string; label: string }> = [
-      { key: 'memory', label: t('web.sanitizerPanel.memory') },
-      { key: 'memoryContention', label: t('web.sanitizerPanel.memoryRace') },
-      { key: 'uninitialized', label: t('web.sanitizerPanel.uninitialized') },
-      { key: 'synchronize', label: t('web.sanitizerPanel.sync') },
-      { key: 'other', label: t('web.sanitizerPanel.other') },
+  private getSanitizerResultGroups(mode: 'class' | 'severity' | 'type' | 'file'): Array<{ key: string;
+    label: string;
+    messages: SanitizerMessageRecord[] }> {
+    const bucketOrder: Array<{ key: string;
+      label: string }> = [
+      {
+        key: 'memory',
+        label: t('web.sanitizerPanel.memory'),
+      },
+      {
+        key: 'memoryContention',
+        label: t('web.sanitizerPanel.memoryRace'),
+      },
+      {
+        key: 'uninitialized',
+        label: t('web.sanitizerPanel.uninitialized'),
+      },
+      {
+        key: 'synchronize',
+        label: t('web.sanitizerPanel.sync'),
+      },
+      {
+        key: 'other',
+        label: t('web.sanitizerPanel.other'),
+      },
     ];
     const classSet = new Set(bucketOrder.map((bucket) => bucket.key));
+
     if (mode === 'class') {
       return bucketOrder
         .map((bucket) => {
-          const messages = this.getVisibleSanitizerSelectedMessages().filter((msg) => {
-            const key = classSet.has(msg.questionType) ? msg.questionType : 'other';
-            return key === bucket.key;
-          });
-          return { key: bucket.key, label: bucket.label, messages };
+          const messages = this.getVisibleSanitizerSelectedMessages()
+            .filter((msg) => {
+              const key = classSet.has(msg.questionType) ? msg.questionType : 'other';
+
+              return key === bucket.key;
+            });
+
+          return {
+            key: bucket.key,
+            label: bucket.label,
+            messages,
+          };
         })
         .filter((group) => group.messages.length > 0);
     }
+
     if (mode === 'severity') {
       const visibleMessages = this.getVisibleSanitizerSelectedMessages();
       const warningMessages = visibleMessages.filter((msg) => msg.type === 'warning');
       const errorMessages = visibleMessages.filter((msg) => msg.type === 'error');
+
       return [
         {
           key: 'error',
@@ -1498,18 +1821,25 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         },
       ].filter((group) => group.messages.length > 0);
     }
-    const grouped = new Map<string, { label: string; messages: SanitizerMessageRecord[] }>();
+
+    const grouped = new Map<string, { label: string;
+      messages: SanitizerMessageRecord[] }>();
+
     for (const msg of this.getVisibleSanitizerSelectedMessages()) {
       if (mode === 'type') {
         const labelKey = sanitizerQuestionLabelKeyMap.get(msg.question);
         const label = labelKey ? t(labelKey) : msg.question;
         const key = msg.question || 'unknown';
         const current = grouped.get(key);
+
         if (current) {
           current.messages.push(msg);
         }
         else {
-          grouped.set(key, { label, messages: [msg] });
+          grouped.set(key, {
+            label,
+            messages: [msg],
+          });
         }
       }
       else {
@@ -1517,12 +1847,15 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         const key = filePath;
         const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
         let labelPath = filePath;
+
         if (workspacePath && msg.fileLink) {
-          const normWorkRaw = workspacePath.replace(/\\/g, '/').replace(/\/+$/, '');
+          const normWorkRaw = workspacePath.replace(/\\/g, '/')
+            .replace(/\/+$/, '');
           const normFileRaw = filePath.replace(/\\/g, '/');
           const isWindowsPath = /^[A-Za-z]:\//.test(normWorkRaw) || /^[A-Za-z]:\//.test(normFileRaw);
           const normWork = isWindowsPath ? normWorkRaw.toLowerCase() : normWorkRaw;
           const normFile = isWindowsPath ? normFileRaw.toLowerCase() : normFileRaw;
+
           if (normFile === normWork) {
             labelPath = '';
           }
@@ -1530,17 +1863,26 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
             labelPath = normFileRaw.slice(normWorkRaw.length + 1);
           }
         }
+
         const current = grouped.get(key);
+
         if (current) {
           current.messages.push(msg);
         }
         else {
-          grouped.set(key, { label: labelPath || filePath, messages: [msg] });
+          grouped.set(key, {
+            label: labelPath || filePath,
+            messages: [msg],
+          });
         }
       }
     }
+
     return [...grouped.entries()]
-      .map(([key, value]) => ({
+      .map(([
+        key,
+        value,
+      ]) => ({
         key,
         label: value.label,
         messages: value.messages,
@@ -1562,12 +1904,17 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
   /** Sort `state.performance.reports` by current `sortOrder` (in-memory only). */
   private sortPerformanceReportsInPlace(): void {
-    const { reports, sortOrder } = this.state.performance;
+    const {
+      reports, sortOrder,
+    } = this.state.performance;
+
     if (reports.length <= 1) {
       return;
     }
+
     reports.sort((a, b) => {
       const byTime = sortOrder === 'asc' ? a.timestamp - b.timestamp : b.timestamp - a.timestamp;
+
       return byTime !== 0 ? byTime : a.key.localeCompare(b.key);
     });
   }
@@ -1577,12 +1924,14 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     if (element.nodeId === 'performanceReportItem' && (element.id ?? '').startsWith('performance-report:')) {
       return null;
     }
+
     return undefined;
   }
 
   /** Reload performance reports from disk/config; optionally focus and expand a newly added row. */
   async refreshPerformanceReports(options?: { focusIfNew?: boolean }): Promise<void> {
     const previousKeys = new Set(this.state.performance.reports.map((item) => item.key));
+
     try {
       const result = await performanceMethods.getRunData({
         sort: {
@@ -1590,6 +1939,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
           order: this.state.performance.sortOrder,
         },
       });
+
       this.state.performance.reports = result?.data ?? [];
       this.sortPerformanceReportsInPlace();
     }
@@ -1597,7 +1947,9 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       console.error('Failed to load performance reports:', error);
       this.state.performance.reports = [];
     }
+
     this.performanceNodesById.clear();
+
     for (const key of [...this.performanceReportRootNodesByKey.keys()]) {
       if (!this.state.performance.reports.some((item) => item.key === key)) {
         this.performanceReportRootNodesByKey.delete(key);
@@ -1607,6 +1959,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     const focusReportKey = options?.focusIfNew
       ? this.findNewPerformanceReportKey(previousKeys)
       : undefined;
+
     this.onDidChangePerformanceTreeDataEmitter.fire();
 
     if (focusReportKey) {
@@ -1617,12 +1970,15 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
   private findNewPerformanceReportKey(previousKeys: Set<string>): string | undefined {
     const newReports = this.state.performance.reports.filter((item) => !previousKeys.has(item.key));
+
     if (newReports.length === 0) {
       return undefined;
     }
+
     if (previousKeys.size === 0 && newReports.length > 1) {
       return undefined;
     }
+
     return newReports.reduce((latest, item) => (
       item.timestamp > latest.timestamp ? item : latest
     )).key;
@@ -1630,31 +1986,42 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
   private async revealPerformanceReport(reportKey: string): Promise<void> {
     this.state.performance.selectedReportKey = reportKey;
-    const node = this.getPerformanceReportNodes().find((item) => {
-      const report = this.getPerformanceReportByKey(reportKey);
-      return report && item.id === `performance-report:${encodeURIComponent(report.key)}`;
-    }) ?? this.performanceReportRootNodesByKey.get(reportKey);
+    const node = this.getPerformanceReportNodes()
+      .find((item) => {
+        const report = this.getPerformanceReportByKey(reportKey);
+
+        return report && item.id === `performance-report:${encodeURIComponent(report.key)}`;
+      }) ?? this.performanceReportRootNodesByKey.get(reportKey);
     const treeView = this.performanceResultsTreeView;
+
     if (!node || !treeView) {
       await this.syncPerformanceSelectionContext();
+
       return;
     }
 
     node.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
+
     try {
-      await vscode.commands.executeCommand('opdevtoolsPerformanceResultsTree.focus');
-      await treeView.reveal(node, { select: true, focus: true, expand: true });
+      await vscode.commands.executeCommand(`${TREE_VIEW_PERFORMANCE_RESULTS}.focus`);
+      await treeView.reveal(node, {
+        select: true,
+        focus: true,
+        expand: true,
+      });
     }
     catch (error) {
       console.warn('[OperateTreeProvider.revealPerformanceReport] reveal failed:', error);
     }
+
     await this.syncPerformanceSelectionContext();
   }
 
   private async syncPerformanceSelectionContext(): Promise<void> {
     const selected = this.getSelectedPerformanceReport();
-    await vscode.commands.executeCommand('setContext', 'opDevtools.performanceReportSelected', Boolean(selected));
-    await vscode.commands.executeCommand('setContext', 'opDevtools.performanceSelectedReportMarked', Boolean(selected?.marked));
+
+    await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.performanceReportSelected`, Boolean(selected));
+    await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.performanceSelectedReportMarked`, Boolean(selected?.marked));
   }
 
   /**
@@ -1688,20 +2055,26 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
   getSelectedPerformanceReport(): PerformanceExecutionRecord | undefined {
     const key = this.state.performance.selectedReportKey;
+
     if (!key) {
       return undefined;
     }
+
     return this.getPerformanceReportByKey(key);
   }
 
   async togglePerformanceReportMark(reportKey: string): Promise<void> {
     const report = this.getPerformanceReportByKey(reportKey);
+
     if (!report) {
       return;
     }
+
     const nextMarked = !Boolean(report.marked);
+
     report.marked = nextMarked;
     this.onDidChangePerformanceTreeDataEmitter.fire();
+
     try {
       performanceMethods.toggleRecordMark({
         key: reportKey,
@@ -1718,9 +2091,11 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
   async copyPerformanceReportPath(reportKey: string): Promise<void> {
     const report = this.getPerformanceReportByKey(reportKey);
+
     if (!report?.dirPath) {
       return;
     }
+
     try {
       await performanceMethods.copyReport({ dirPath: report.dirPath });
     }
@@ -1731,9 +2106,11 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
   async downloadPerformanceReport(reportKey: string): Promise<void> {
     const report = this.getPerformanceReportByKey(reportKey);
+
     if (!report?.dirPath) {
       return;
     }
+
     try {
       await performanceMethods.downloadReport({ dirPath: report.dirPath });
     }
@@ -1745,8 +2122,10 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   async openPerformanceFile(filePath: string, fileType: string): Promise<void> {
     if (fileType === 'csv') {
       await viewService.openCsvFile(filePath);
+
       return;
     }
+
     if (fileType === 'bin' || fileType === 'json') {
       await viewService.openInsight(filePath);
     }
@@ -1756,13 +2135,16 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     if (!this.state.performance.markedOnly) {
       return this.state.performance.reports;
     }
+
     return this.state.performance.reports.filter((item) => Boolean(item.marked));
   }
 
   private getPerformanceReportNodes(): OperateNode[] {
     const reports = this.getVisiblePerformanceReports();
+
     if (reports.length === 0) {
       this.performanceReportRootNodesByKey.clear();
+
       return [
         this.createItem(
           'performanceReportItem',
@@ -1772,13 +2154,15 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         ),
       ];
     }
+
     return reports.map((report) => {
       const contextValue = report.marked
-        ? 'opdevtools.performanceReportItem.marked'
-        : 'opdevtools.performanceReportItem.unmarked';
+        ? treeItemContextKey('performanceReportItem.marked')
+        : treeItemContextKey('performanceReportItem.unmarked');
       const description = this.formatPerformanceTimestamp(report.timestamp);
       const nodeId = `performance-report:${encodeURIComponent(report.key)}`;
       let node = this.performanceReportRootNodesByKey.get(report.key);
+
       if (!node) {
         node = this.createItem(
           'performanceReportItem',
@@ -1801,37 +2185,51 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         node.iconPath = report.marked
           ? this.getCustomProductIcon('flag-filled')
           : undefined;
+
         if (this.state.performance.selectedReportKey !== report.key) {
           node.collapsibleState = vscode.TreeItemCollapsibleState.Collapsed;
         }
       }
+
       this.performanceNodesById.set(node.id ?? '', []);
+
       return node;
     });
   }
 
   private getPerformanceChildNodes(reportKey: string): OperateNode[] {
     const report = this.getPerformanceReportByKey(reportKey);
+
     if (!report) {
       return [];
     }
+
     return report.children.map((child, index) => this.createPerformanceChildNode(report.key, child, [String(index)]));
   }
 
   private getPerformanceFolderChildNodes(reportKey: string, folderPath: string[]): OperateNode[] {
     const report = this.getPerformanceReportByKey(reportKey);
+
     if (!report) {
       return [];
     }
+
     let currentChildren: (PerformanceRunDataFolder | PerformanceRunDataFile)[] = report.children;
+
     for (const segment of folderPath) {
       const next = currentChildren[Number(segment)];
+
       if (!next || !('children' in next)) {
         return [];
       }
+
       currentChildren = next.children;
     }
-    return currentChildren.map((child, index) => this.createPerformanceChildNode(report.key, child, [...folderPath, String(index)]));
+
+    return currentChildren.map((child, index) => this.createPerformanceChildNode(report.key, child, [
+      ...folderPath,
+      String(index),
+    ]));
   }
 
   private createPerformanceChildNode(
@@ -1841,59 +2239,72 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   ): OperateNode {
     if ('children' in child) {
       const encodedSegments = pathSegments.map((segment) => encodeURIComponent(segment));
+
       return this.createItem(
         'performanceFolder',
         child.title,
         undefined,
         vscode.TreeItemCollapsibleState.Collapsed,
-        'opdevtools.performanceFolder',
+        treeItemContextKey('performanceFolder'),
         undefined,
         undefined,
         `performance-folder:${encodeURIComponent(reportKey)}:${encodedSegments.join(':')}`,
       );
     }
+
     return this.createItem(
       'performanceFile',
       child.title,
-      'huawei-op-devtools.sidebar.performance.file.open',
+      COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN,
       vscode.TreeItemCollapsibleState.None,
-      `opdevtools.performanceFile.${child.fileType}`,
+      `${treeItemContextKey(`performanceFile.${child.fileType}`)}`,
       undefined,
       undefined,
       `performance-file:${encodeURIComponent(child.filePath)}`,
-      [child.filePath, child.fileType],
+      [
+        child.filePath,
+        child.fileType,
+      ],
     );
   }
 
   private formatPerformanceTimestamp(timestamp: number): string {
     const date = new Date(timestamp);
+
     if (Number.isNaN(date.getTime())) {
       return '';
     }
+
     return date.toLocaleString();
   }
 
   private async getSanitizerMessagesForReport(reportPath: string): Promise<SanitizerMessageRecord[]> {
     const cached = this.sanitizerReportMessagesCache.get(reportPath);
+
     if (cached) {
       return cached;
     }
+
     const report = this.state.sanitizer.reports.find((item) => item.path === reportPath);
+
     if (!report) {
       return [];
     }
+
     const panelData = sanitizerDiagnosticsService.loadSanitizerPanelData({
       path: report.path,
       title: report.title,
       timestamp: report.timestamp,
     });
     const messages = (panelData.data ?? []) as SanitizerMessageRecord[];
+
     this.sanitizerReportMessagesCache.set(reportPath, messages);
     this.sanitizerReportDerivedCache.set(
       reportPath,
       messages.map((msg) => this.buildSanitizerMessageDerived(msg)),
     );
     this.sanitizerReportGroupsCache.delete(reportPath);
+
     return messages;
   }
 
@@ -1904,8 +2315,12 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     const cacheKey = this.getSanitizerViewCacheKey(reportPath);
     const cachedMessages = this.sanitizerVisibleMessagesCache.get(cacheKey);
     const cachedDerived = this.sanitizerVisibleDerivedCache.get(cacheKey);
+
     if (cachedMessages && cachedDerived) {
-      return { messages: cachedMessages, derived: cachedDerived };
+      return {
+        messages: cachedMessages,
+        derived: cachedDerived,
+      };
     }
 
     const sourceMessages = await this.getSanitizerMessagesForReport(reportPath);
@@ -1915,30 +2330,43 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     this.sanitizerVisibleMessagesCache.set(cacheKey, visibleMessages);
     this.sanitizerVisibleDerivedCache.set(cacheKey, visibleDerived);
 
-    return { messages: visibleMessages, derived: visibleDerived };
+    return {
+      messages: visibleMessages,
+      derived: visibleDerived,
+    };
   }
 
   private getNormalizedWorkspacePath(): string {
-    return (vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '').replace(/\\/g, '/').replace(/\/+$/, '');
+    return (vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '').replace(/\\/g, '/')
+      .replace(/\/+$/, '');
   }
 
   private stripWorkspacePrefix(filePath: string): string {
     const workspacePath = this.getNormalizedWorkspacePath();
+
     if (!workspacePath) {
       return filePath;
     }
+
     const normFileRaw = filePath.replace(/\\/g, '/');
     const isWindowsPath = /^[A-Za-z]:\//.test(workspacePath) || /^[A-Za-z]:\//.test(normFileRaw);
     const normWork = isWindowsPath ? workspacePath.toLowerCase() : workspacePath;
     const normFile = isWindowsPath ? normFileRaw.toLowerCase() : normFileRaw;
+
     if (normFile.startsWith(`${normWork}/`)) {
       return normFileRaw.slice(workspacePath.length + 1);
     }
+
     return filePath;
   }
 
   private buildSanitizerMessageDerived(msg: SanitizerMessageRecord): SanitizerMessageDerived {
-    const classKey = ['memory', 'memoryContention', 'uninitialized', 'synchronize'].includes(msg.questionType)
+    const classKey = [
+      'memory',
+      'memoryContention',
+      'uninitialized',
+      'synchronize',
+    ].includes(msg.questionType)
       ? msg.questionType
       : 'other';
     const classLabelMap: Record<string, string> = {
@@ -1953,6 +2381,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     const typeLabel = typeLabelKey ? t(typeLabelKey) : msg.question;
     const fileKey = msg.fileLink || t('web.sanitizerTree.group.noFile');
     const fileLabel = msg.fileLink ? this.stripWorkspacePrefix(msg.fileLink) : t('web.sanitizerTree.group.noFile');
+
     return {
       classKey,
       classLabel: classLabelMap[classKey] ?? classLabelMap.other,
@@ -1974,9 +2403,11 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     const da = derived[a];
     const db = derived[b];
     const severityDelta = da.severityRank - db.severityRank;
+
     if (severityDelta !== 0) {
       return severityDelta;
     }
+
     if (mode === 'class') {
       const classRank: Record<string, number> = {
         memory: 0,
@@ -1986,16 +2417,26 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         other: 4,
       };
       const d = (classRank[da.classKey] ?? 4) - (classRank[db.classKey] ?? 4);
-      if (d !== 0) return d;
+
+      if (d !== 0) {
+        return d;
+      }
     }
     else if (mode === 'type') {
       const d = da.typeLabel.localeCompare(db.typeLabel, this.getLocaleForSort());
-      if (d !== 0) return d;
+
+      if (d !== 0) {
+        return d;
+      }
     }
     else if (mode === 'file') {
       const d = da.fileLabel.localeCompare(db.fileLabel, this.getLocaleForSort());
-      if (d !== 0) return d;
+
+      if (d !== 0) {
+        return d;
+      }
     }
+
     return a - b;
   }
 
@@ -2005,11 +2446,13 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     derived: SanitizerMessageDerived[],
   ): SanitizerGroupedReportNode[] {
     const grouped = new Map<string, SanitizerGroupedReportNode>();
+
     for (let i = 0; i < messages.length; i += 1) {
       const msg = messages[i];
       const d = derived[i];
       let key = '';
       let label = '';
+
       if (mode === 'severity') {
         key = msg.type;
         label = msg.type === 'error' ? t('web.sanitizerTree.group.error') : t('web.sanitizerTree.group.warning');
@@ -2026,7 +2469,9 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         key = d.fileKey;
         label = d.fileLabel;
       }
+
       const existing = grouped.get(key);
+
       if (existing) {
         existing.messageIndices.push(i);
       }
@@ -2036,7 +2481,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
           label,
           description: '',
           contextValue: mode === 'file' && key !== t('web.sanitizerTree.group.noFile')
-            ? 'opdevtools.sanitizerPathGroupItem'
+            ? treeItemContextKey('sanitizerPathGroupItem')
             : undefined,
           messageIndices: [i],
         });
@@ -2044,21 +2489,36 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     }
 
     const groups = [...grouped.values()];
+
     for (const group of groups) {
       group.messageIndices.sort((a, b) => this.compareMessageIndicesByMode(mode, derived, messages, a, b));
+
       if (mode === 'severity') {
         group.description = String(group.messageIndices.length);
       }
       else {
         let errors = 0;
         let warnings = 0;
+
         for (const idx of group.messageIndices) {
-          if (messages[idx].type === 'error') errors += 1;
-          else warnings += 1;
+          if (messages[idx].type === 'error') {
+            errors += 1;
+          }
+          else {
+            warnings += 1;
+          }
         }
+
         const parts: string[] = [];
-        if (errors > 0) parts.push(`${errors} 🔴`);
-        if (warnings > 0) parts.push(`${warnings} 🟡`);
+
+        if (errors > 0) {
+          parts.push(`${errors} 🔴`);
+        }
+
+        if (warnings > 0) {
+          parts.push(`${warnings} 🟡`);
+        }
+
         group.description = parts.join(', ');
       }
     }
@@ -2070,19 +2530,32 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       const rank = (g: SanitizerGroupedReportNode): number => {
         const hasError = g.messageIndices.some((idx) => messages[idx].type === 'error');
         const hasWarning = g.messageIndices.some((idx) => messages[idx].type === 'warning');
-        if (hasError && !hasWarning) return 0;
-        if (hasError && hasWarning) return 1;
+
+        if (hasError && !hasWarning) {
+          return 0;
+        }
+
+        if (hasError && hasWarning) {
+          return 1;
+        }
+
         return 2;
       };
+
       groups.sort((a, b) => {
         const d = rank(a) - rank(b);
-        if (d !== 0) return d;
+
+        if (d !== 0) {
+          return d;
+        }
+
         return a.label.localeCompare(b.label, this.getLocaleForSort());
       });
     }
     else {
       groups.sort((a, b) => a.label.localeCompare(b.label, this.getLocaleForSort()));
     }
+
     return groups;
   }
 
@@ -2090,13 +2563,19 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     const viewCacheKey = this.getSanitizerViewCacheKey(reportPath);
     const byMode = this.sanitizerReportGroupsCache.get(viewCacheKey) ?? new Map<SanitizerGroupMode, SanitizerGroupedReportNode[]>();
     const cached = byMode.get(mode);
+
     if (cached) {
       return cached;
     }
-    const { messages, derived } = await this.getVisibleSanitizerReportData(reportPath);
+
+    const {
+      messages, derived,
+    } = await this.getVisibleSanitizerReportData(reportPath);
     const built = this.buildGroupedReportNodes(mode, messages, derived);
+
     byMode.set(mode, built);
     this.sanitizerReportGroupsCache.set(viewCacheKey, byMode);
+
     return built;
   }
 
@@ -2104,9 +2583,11 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     const mode = this.state.sanitizer.resultsGroupBy;
     const groupCacheKey = `${this.getSanitizerViewCacheKey(reportPath)}\n${mode}`;
     const cached = this.sanitizerGroupNodesCache.get(groupCacheKey);
+
     if (cached) {
       return cached;
     }
+
     const groups = await this.getGroupedReportNodes(reportPath, mode);
     const nodes = groups.map((group) => this.createItem(
       'sanitizerClass',
@@ -2122,7 +2603,9 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       group.description,
       `sanitizer-report-group:${encodeURIComponent(reportPath)}:${mode}:${encodeURIComponent(group.key)}`,
     ));
+
     this.sanitizerGroupNodesCache.set(groupCacheKey, nodes);
+
     return nodes;
   }
 
@@ -2133,16 +2616,21 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   ): Promise<OperateNode[]> {
     const messageCacheKey = `${this.getSanitizerViewCacheKey(reportPath)}\n${mode}\n${groupKey}`;
     const cached = this.sanitizerGroupMessageNodesCache.get(messageCacheKey);
+
     if (cached) {
       return cached;
     }
+
     const { messages: visibleMessages } = await this.getVisibleSanitizerReportData(reportPath);
+
     this.state.sanitizer.selectedMessages = visibleMessages;
     const groups = await this.getGroupedReportNodes(reportPath, mode);
     const group = groups.find((entry) => entry.key === groupKey);
+
     if (!group) {
       return [];
     }
+
     const nodes = group.messageIndices.map((globalIndex, index) => {
       const item = visibleMessages[globalIndex];
       const id = String(globalIndex);
@@ -2151,11 +2639,11 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         'sanitizerMessage',
         item.title,
         item.fileLink && item.row !== undefined && item.col !== undefined
-          ? 'huawei-op-devtools.sidebar.sanitizer.message.jump'
+          ? COMMAND_SIDEBAR_SANITIZER_MESSAGE_JUMP
           : undefined,
         vscode.TreeItemCollapsibleState.None,
         typeof item.msAgentIndex === 'number' && Number.isInteger(item.msAgentIndex) && item.msAgentIndex >= 0
-          ? 'opdevtools.sanitizerMessage.aiFix'
+          ? treeItemContextKey('sanitizerMessage.aiFix')
           : undefined,
         item.type === 'warning'
           ? new vscode.ThemeIcon('warning', new vscode.ThemeColor('problemsWarningIcon.foreground'))
@@ -2164,39 +2652,53 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         `sanitizer-msg:${encodeURIComponent(reportPath)}:${mode}:${encodeURIComponent(groupKey)}:${globalIndex}:${index}`,
         item.fileLink && item.row !== undefined && item.col !== undefined ? [id] : undefined,
       );
+
       node.sanitizerTooltipMeta = {
         reportPath,
         globalIndex,
       };
+
       return node;
     });
+
     this.sanitizerGroupMessageNodesCache.set(messageCacheKey, nodes);
+
     return nodes;
   }
 
   private getSanitizerMessageNodes(classId: string): OperateNode[] {
     const prefix = 'sanitizer-group:';
     const rawId = classId.startsWith(prefix) ? classId.slice(prefix.length) : classId;
-    const [modeRaw, ...rest] = rawId.split(':');
+    const [
+      modeRaw,
+      ...rest
+    ] = rawId.split(':');
     const mode = (modeRaw || this.state.sanitizer.resultsGroupBy) as 'class' | 'severity' | 'type' | 'file';
     const key = decodeURIComponent(rest.join(':') || '');
-    const targetGroup = this.getSanitizerResultGroups(mode).find((group) => group.key === key);
+    const targetGroup = this.getSanitizerResultGroups(mode)
+      .find((group) => group.key === key);
     const messages = (targetGroup?.messages ?? [])
-      .map((item, globalIndex) => ({ item, globalIndex }))
+      .map((item, globalIndex) => ({
+        item,
+        globalIndex,
+      }))
       .sort((a, b) => a.globalIndex - b.globalIndex);
     const reportPath = this.state.sanitizer.selectedReportPath;
-    return messages.map(({ item, globalIndex }, index) => {
+
+    return messages.map(({
+      item, globalIndex,
+    }, index) => {
       const id = String(globalIndex);
       const description = mode === 'file' ? undefined : this.getSanitizerMessageDescription(item);
       const node = this.createItem(
         'sanitizerMessage',
         item.title,
         item.fileLink && item.row !== undefined && item.col !== undefined
-          ? 'huawei-op-devtools.sidebar.sanitizer.message.jump'
+          ? COMMAND_SIDEBAR_SANITIZER_MESSAGE_JUMP
           : undefined,
         vscode.TreeItemCollapsibleState.None,
         typeof item.msAgentIndex === 'number' && Number.isInteger(item.msAgentIndex) && item.msAgentIndex >= 0
-          ? 'opdevtools.sanitizerMessage.aiFix'
+          ? treeItemContextKey('sanitizerMessage.aiFix')
           : undefined,
         item.type === 'warning'
           ? new vscode.ThemeIcon('warning', new vscode.ThemeColor('problemsWarningIcon.foreground'))
@@ -2205,24 +2707,29 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         `sanitizer-msg:legacy:${mode}:${encodeURIComponent(key)}:${globalIndex}:${index}`,
         item.fileLink && item.row !== undefined && item.col !== undefined ? [id] : undefined,
       );
+
       if (reportPath) {
         node.sanitizerTooltipMeta = {
           reportPath,
           globalIndex,
         };
       }
+
       return node;
     });
   }
 
   private getSanitizerMessageDescription(item: SanitizerMessageRecord): string | undefined {
     const fileName = item.fileLink ? path.basename(item.fileLink.replace(/\\/g, '/')) : '';
+
     if (!fileName) {
       return undefined;
     }
+
     if (item.row !== undefined && item.col !== undefined) {
       return `${fileName} ${item.row}:${item.col}`;
     }
+
     return fileName;
   }
 
@@ -2233,41 +2740,51 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   ): vscode.MarkdownString {
     const rawLines = (item.originData || '')
       .split(/\r?\n/)
-      .map((line) => line.replace(/^=+\s*/, '').trim())
+      .map((line) => line.replace(/^=+\s*/, '')
+        .trim())
       .filter((line) => line.length > 0);
     const detailsLines: string[] = [];
     const stackLines: string[] = [];
     let inStack = false;
+
     for (const line of rawLines) {
       if (/^#\d+\s+/.test(line)) {
         inStack = true;
         stackLines.push(line);
         continue;
       }
+
       if (!inStack) {
         if (/^(ERROR|WARNING):\s*/i.test(line)) {
           continue;
         }
+
         detailsLines.push(line);
       }
     }
+
     const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
     const renderedStack = stackLines.map((line) => {
       const m = line.match(/^#\d+\s+(.+):(\d+):(\d+)(?:\s+.*)?$/);
+
       if (!m) {
         return `- ${line.replace(/^#\d+\s+/, '')}`;
       }
+
       const fileLink = m[1];
       // Sanitizer stack frame uses "line:position" ordering.
       const lineNo = Number(m[2]);
       const position = Number(m[3]);
       let labelPath = fileLink;
+
       if (workspacePath) {
-        const normWorkRaw = workspacePath.replace(/\\/g, '/').replace(/\/+$/, '');
+        const normWorkRaw = workspacePath.replace(/\\/g, '/')
+          .replace(/\/+$/, '');
         const normFileRaw = fileLink.replace(/\\/g, '/');
         const isWindowsPath = /^[A-Za-z]:\//.test(normWorkRaw) || /^[A-Za-z]:\//.test(normFileRaw);
         const normWork = isWindowsPath ? normWorkRaw.toLowerCase() : normWorkRaw;
         const normFile = isWindowsPath ? normFileRaw.toLowerCase() : normFileRaw;
+
         if (normFile === normWork) {
           labelPath = '';
         }
@@ -2275,25 +2792,30 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
           labelPath = normFileRaw.slice(normWorkRaw.length + 1);
         }
       }
-      const cmdArgs = encodeURIComponent(JSON.stringify([{
-        fileLink,
-        row: lineNo,
-        col: position,
-        errorTitle: item.title,
-      }]));
+
+      const cmdArgs = encodeURIComponent(JSON.stringify([
+        {
+          fileLink,
+          row: lineNo,
+          col: position,
+          errorTitle: item.title,
+        },
+      ]));
       const cmd = `command:${COMMAND_SIDEBAR_SANITIZER_STACK_JUMP}?${cmdArgs}`;
+
       return `- [${labelPath}:${lineNo}:${position}](${cmd})`;
     });
-    const md = new vscode.MarkdownString(
-      [
-        `**${t('web.sanitizerPanel.problem')}**: ${item.title}`,
-        `**${t('web.sanitizerTree.details')}**: ${this.getSanitizerMessageDetailsText(item)}`.trim(),
-        `**${t('web.sanitizerTree.type')}**: ${problemType}`,
-        handling ? `**${t('web.sanitizerTree.description')}**: ${handling}` : '',
-        renderedStack.length > 0 ? `**${t('web.sanitizerTree.stack')}**:\n${renderedStack.join('\n')}` : '',
-      ].filter(Boolean).join('\n\n'),
-    );
+    const md = new vscode.MarkdownString([
+      `**${t('web.sanitizerPanel.problem')}**: ${item.title}`,
+      `**${t('web.sanitizerTree.details')}**: ${this.getSanitizerMessageDetailsText(item)}`.trim(),
+      `**${t('web.sanitizerTree.type')}**: ${problemType}`,
+      handling ? `**${t('web.sanitizerTree.description')}**: ${handling}` : '',
+      renderedStack.length > 0 ? `**${t('web.sanitizerTree.stack')}**:\n${renderedStack.join('\n')}` : '',
+    ].filter(Boolean)
+      .join('\n\n'));
+
     md.isTrusted = true;
+
     return md;
   }
 
@@ -2308,16 +2830,23 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
   async toggleOperator(operatorId: number): Promise<void> {
     const operator = this.state.operators.find((o) => o.id === operatorId);
-    if (!operator) return;
+
+    if (!operator) {
+      return;
+    }
 
     const isSelected = this.state.selectedOperatorIds.includes(operatorId);
+
     if (!isSelected && this.isOperatorDisabled(operator)) {
       return;
     }
 
     const nextIds = isSelected
       ? this.state.selectedOperatorIds.filter((id) => id !== operatorId)
-      : [...this.state.selectedOperatorIds, operatorId];
+      : [
+        ...this.state.selectedOperatorIds,
+        operatorId,
+      ];
 
     await homeMethods.setSelectedOperators({ operatorIds: nextIds });
     this.state.selectedOperatorIds = nextIds;
@@ -2326,21 +2855,34 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
   async toggleCompiledAll(): Promise<void> {
     const selectedType = this.getSelectedType();
-    if (!selectedType) return;
+
+    if (!selectedType) {
+      return;
+    }
 
     const filteredCompiled = this.getFilteredCompiledOperators();
-    if (filteredCompiled.length === 0) return;
+
+    if (filteredCompiled.length === 0) {
+      return;
+    }
 
     const targetHasEx = selectedType === 'ex';
     const targetItems = filteredCompiled.filter((op) => op.hasEx === targetHasEx);
-    if (targetItems.length === 0) return;
+
+    if (targetItems.length === 0) {
+      return;
+    }
 
     const shouldDeselect = this.isCompiledAllSelected();
     const targetIds = new Set(targetItems.map((op) => op.id));
 
     const nextIds = shouldDeselect
       ? this.state.selectedOperatorIds.filter((id) => !targetIds.has(id))
-      : [...this.state.selectedOperatorIds, ...targetItems.map((op) => op.id).filter((id) => !this.state.selectedOperatorIds.includes(id))];
+      : [
+        ...this.state.selectedOperatorIds,
+        ...targetItems.map((op) => op.id)
+          .filter((id) => !this.state.selectedOperatorIds.includes(id)),
+      ];
 
     await homeMethods.setSelectedOperators({ operatorIds: nextIds });
     this.state.selectedOperatorIds = nextIds;
@@ -2349,21 +2891,34 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
   async togglePreparedAll(): Promise<void> {
     const selectedType = this.getSelectedType();
-    if (!selectedType) return;
+
+    if (!selectedType) {
+      return;
+    }
 
     const filteredPrepared = this.getFilteredPreparedOperators();
-    if (filteredPrepared.length === 0) return;
+
+    if (filteredPrepared.length === 0) {
+      return;
+    }
 
     const targetHasEx = selectedType === 'ex';
     const targetItems = filteredPrepared.filter((op) => op.hasEx === targetHasEx);
-    if (targetItems.length === 0) return;
+
+    if (targetItems.length === 0) {
+      return;
+    }
 
     const shouldDeselect = this.isPreparedAllSelected();
     const targetIds = new Set(targetItems.map((op) => op.id));
 
     const nextIds = shouldDeselect
       ? this.state.selectedOperatorIds.filter((id) => !targetIds.has(id))
-      : [...this.state.selectedOperatorIds, ...targetItems.map((op) => op.id).filter((id) => !this.state.selectedOperatorIds.includes(id))];
+      : [
+        ...this.state.selectedOperatorIds,
+        ...targetItems.map((op) => op.id)
+          .filter((id) => !this.state.selectedOperatorIds.includes(id)),
+      ];
 
     await homeMethods.setSelectedOperators({ operatorIds: nextIds });
     this.state.selectedOperatorIds = nextIds;
@@ -2371,14 +2926,22 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   }
 
   private getSelectedType(): 'ex' | 'nonEx' | null {
-    if (this.state.selectedOperatorIds.length === 0) return null;
+    if (this.state.selectedOperatorIds.length === 0) {
+      return null;
+    }
 
     const selectedOps = this.state.operators.filter((o) => this.state.selectedOperatorIds.includes(o.id));
     const hasEx = selectedOps.some((op) => op.hasEx);
     const hasNonEx = selectedOps.some((op) => !op.hasEx);
 
-    if (hasEx && !hasNonEx) return 'ex';
-    if (!hasEx && hasNonEx) return 'nonEx';
+    if (hasEx && !hasNonEx) {
+      return 'ex';
+    }
+
+    if (!hasEx && hasNonEx) {
+      return 'nonEx';
+    }
+
     return null;
   }
 
@@ -2394,59 +2957,89 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     if (operator.hasEx) {
       return hasSelectedNonEx;
     }
+
     return hasSelectedEx;
   }
 
   private getFilteredCompiledOperators() {
-    const keyword = this.state.searchKeyword.trim().toLowerCase();
+    const keyword = this.state.searchKeyword.trim()
+      .toLowerCase();
     const compiled = this.state.operators.filter((o) => o.isCompiled);
-    if (!keyword) return compiled;
-    return compiled.filter((op) => op.name.toLowerCase().includes(keyword));
+
+    if (!keyword) {
+      return compiled;
+    }
+
+    return compiled.filter((op) => op.name.toLowerCase()
+      .includes(keyword));
   }
 
   private getFilteredPreparedOperators() {
-    const keyword = this.state.searchKeyword.trim().toLowerCase();
+    const keyword = this.state.searchKeyword.trim()
+      .toLowerCase();
     const prepared = this.state.operators.filter((o) => !o.isCompiled);
-    if (!keyword) return prepared;
-    return prepared.filter((op) => op.name.toLowerCase().includes(keyword));
+
+    if (!keyword) {
+      return prepared;
+    }
+
+    return prepared.filter((op) => op.name.toLowerCase()
+      .includes(keyword));
   }
 
   private isCompiledAllSelected(): boolean {
     const selectedType = this.getSelectedType();
-    if (!selectedType) return false;
+
+    if (!selectedType) {
+      return false;
+    }
 
     const filtered = this.getFilteredCompiledOperators();
     const targetHasEx = selectedType === 'ex';
     const targetItems = filtered.filter((op) => op.hasEx === targetHasEx);
+
     return targetItems.length > 0 && targetItems.every((op) => this.state.selectedOperatorIds.includes(op.id));
   }
 
   private isPreparedAllSelected(): boolean {
     const selectedType = this.getSelectedType();
-    if (!selectedType) return false;
+
+    if (!selectedType) {
+      return false;
+    }
 
     const filtered = this.getFilteredPreparedOperators();
     const targetHasEx = selectedType === 'ex';
     const targetItems = filtered.filter((op) => op.hasEx === targetHasEx);
+
     return targetItems.length > 0 && targetItems.every((op) => this.state.selectedOperatorIds.includes(op.id));
   }
 
   getAllOperatorsSelected(): boolean {
     const selectedType = this.getSelectedType();
-    if (!selectedType) return false;
+
+    if (!selectedType) {
+      return false;
+    }
+
     const targetHasEx = selectedType === 'ex';
-    const keyword = this.state.searchKeyword.trim().toLowerCase();
+    const keyword = this.state.searchKeyword.trim()
+      .toLowerCase();
     const filtered = keyword
-      ? this.state.operators.filter((op) => op.name.toLowerCase().includes(keyword))
+      ? this.state.operators.filter((op) => op.name.toLowerCase()
+        .includes(keyword))
       : this.state.operators;
     const targetItems = filtered.filter((op) => op.hasEx === targetHasEx);
+
     return targetItems.length > 0 && targetItems.every((op) => this.state.selectedOperatorIds.includes(op.id));
   }
 
   async selectAllOperators(): Promise<void> {
-    const keyword = this.state.searchKeyword.trim().toLowerCase();
+    const keyword = this.state.searchKeyword.trim()
+      .toLowerCase();
     const filtered = keyword
-      ? this.state.operators.filter((op) => op.name.toLowerCase().includes(keyword))
+      ? this.state.operators.filter((op) => op.name.toLowerCase()
+        .includes(keyword))
       : this.state.operators;
 
     const currentType = this.getSelectedType();
@@ -2459,9 +3052,13 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
           : true;
 
     const targetItems = filtered.filter((op) => op.hasEx === targetHasEx);
-    if (targetItems.length === 0) return;
+
+    if (targetItems.length === 0) {
+      return;
+    }
 
     const nextIds = targetItems.map((op) => op.id);
+
     await homeMethods.setSelectedOperators({ operatorIds: nextIds });
     this.state.selectedOperatorIds = nextIds;
     this.onDidChangeTreeDataEmitter.fire();
@@ -2472,7 +3069,9 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   }
 
   private getOperatorSelectorChildren(): OperateNode[] {
-    if (!(this.state.hasMultipleOperators || this.state.isStandardCustom)) return [];
+    if (!(this.state.hasMultipleOperators || this.state.isStandardCustom)) {
+      return [];
+    }
 
     const selectedCount = this.state.selectedOperatorIds.length;
 
@@ -2499,21 +3098,27 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
   /** All operators (compiled + prepared) as direct children, search-filtered and sorted by name. */
   private getFlatOperatorProjectRows(): OperateNode[] {
-    const keyword = this.state.searchKeyword.trim().toLowerCase();
+    const keyword = this.state.searchKeyword.trim()
+      .toLowerCase();
     let list = [...this.state.operators];
+
     if (keyword) {
-      list = list.filter((op) => op.name.toLowerCase().includes(keyword));
+      list = list.filter((op) => op.name.toLowerCase()
+        .includes(keyword));
     }
+
     // Keep "ex" items at the bottom, matching previous behavior.
     list.sort((a, b) => {
       if (a.hasEx !== b.hasEx) {
         return a.hasEx ? 1 : -1;
       }
+
       return a.name.localeCompare(b.name, this.getLocaleForSort());
     });
 
     const nodes: OperateNode[] = [];
     const disabledIcon = new vscode.ThemeIcon('circle-slash', new vscode.ThemeColor('disabledForeground'));
+
     for (const op of list) {
       const isDisabled = this.isOperatorDisabled(op);
       const isSelected = this.state.selectedOperatorIds.includes(op.id);
@@ -2522,33 +3127,38 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         : isDisabled
           ? disabledIcon
           : undefined;
-      nodes.push(
-        this.createItem(
-          'operatorItem',
-          op.name,
-          isDisabled ? undefined : COMMAND_SIDEBAR_TOGGLE_OPERATOR,
-          vscode.TreeItemCollapsibleState.None,
-          undefined,
-          iconPath,
-          this.buildOperatorProjectsDescription(op),
-          `operator-${op.id}`,
-          isDisabled ? undefined : [op.id],
-        ),
-      );
+
+      nodes.push(this.createItem(
+        'operatorItem',
+        op.name,
+        isDisabled ? undefined : COMMAND_SIDEBAR_TOGGLE_OPERATOR,
+        vscode.TreeItemCollapsibleState.None,
+        undefined,
+        iconPath,
+        this.buildOperatorProjectsDescription(op),
+        `operator-${op.id}`,
+        isDisabled ? undefined : [op.id],
+      ));
     }
+
     return nodes;
   }
 
   private getSelectedOperatorsChildren(): OperateNode[] {
     const selectedIds = this.state.selectedOperatorIds;
+
     if (!selectedIds || selectedIds.length === 0) {
       return [];
     }
 
     const nodes: OperateNode[] = [];
+
     for (const id of selectedIds) {
       const operator = this.state.operators.find((op) => op.id === id);
-      if (!operator) continue;
+
+      if (!operator) {
+        continue;
+      }
 
       nodes.push(this.createItem(
         'operatorItem',
@@ -2571,14 +3181,18 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
    * Secondary text to the right of the label. Uses `$(getting-started-item-checked)` for compiled
    * (same codicon syntax as labels; see Icons in labels in the VS Code extension docs).
    */
-  private buildOperatorProjectsDescription(op: { hasEx: boolean; isCompiled: boolean }): string | undefined {
+  private buildOperatorProjectsDescription(op: { hasEx: boolean;
+    isCompiled: boolean }): string | undefined {
     const parts: string[] = [];
+
     if (op.hasEx) {
       parts.push('ex');
     }
+
     if (op.isCompiled) {
       parts.push('⚑');
     }
+
     return parts.length ? parts.join(' · ') : undefined;
   }
 
@@ -2588,31 +3202,44 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     commandId?: string,
     collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.None,
     contextValue?: string,
-    iconPath?: vscode.ThemeIcon | vscode.Uri | { light: vscode.Uri; dark: vscode.Uri },
+    iconPath?: vscode.ThemeIcon | vscode.Uri | { light: vscode.Uri;
+      dark: vscode.Uri },
     description?: string,
     treeItemId?: string,
     commandArguments?: unknown[],
     tooltip?: string | vscode.MarkdownString,
   ): OperateNode {
     const item = new vscode.TreeItem(label, collapsibleState) as OperateNode;
+
     item.nodeId = nodeId;
     item.id = treeItemId ?? nodeId;
+
     if (commandId) {
-      item.command = { command: commandId, title: label, arguments: commandArguments };
+      item.command = {
+        command: commandId,
+        title: label,
+        arguments: commandArguments,
+      };
     }
+
     const mergedContext = this.mergeFlowRunningContext(nodeId, contextValue);
+
     if (mergedContext) {
       item.contextValue = mergedContext;
     }
+
     if (iconPath) {
       item.iconPath = iconPath;
     }
+
     if (description) {
       item.description = description;
     }
+
     if (tooltip) {
       item.tooltip = tooltip;
     }
+
     return item;
   }
 
@@ -2638,12 +3265,14 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     const resolved = fileName === 'hourglass.svg' ? this.getThemedHourglassFileName() : fileName;
     const cacheKey = `${vscode.window.activeColorTheme.kind}:${resolved}`;
     const cached = this.themedIconCache.get(cacheKey);
+
     if (cached) {
       return cached;
     }
 
     // Packaged with the web build: `web/vite.config.ts` copies `src/assets/svg/animated` → `out/web/tree-icons/svg/animated`.
-    const segments = resolved.split('/').filter(Boolean);
+    const segments = resolved.split('/')
+      .filter(Boolean);
     const iconFileUri = vscode.Uri.joinPath(
       this.extensionUri,
       'out',
@@ -2652,14 +3281,15 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       'svg',
       ...segments,
     );
+
     this.themedIconCache.set(cacheKey, iconFileUri);
+
     return iconFileUri;
   }
 
   private getCurrentBuildBehavior() {
     return OperatorPluginRegistry.getBuildBehaviorByProjectType(this.state.projectType);
   }
-
 
   private supportsCapability(value: boolean | undefined): boolean {
     return value !== false;
@@ -2669,4 +3299,3 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     return !OperatorPluginRegistry.isProjectTypeSupported(this.state.projectType);
   }
 }
-

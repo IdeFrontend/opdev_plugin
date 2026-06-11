@@ -12,6 +12,7 @@ import 'ant-design-vue/dist/reset.css';
 import '../../../assets/css/tailwind.css';
 import { vscode } from '@web/utils/vscode';
 import i18nResource from '@shared/i18n';
+import { BRANDING } from '@shared/flavor';
 import { getWebviewLang } from '@web/utils/lang';
 
 const lang = getWebviewLang();
@@ -38,6 +39,7 @@ void i18next.init({
   interpolation: { escapeValue: false },
 })
   .then(() => {
+    document.title = BRANDING.productName;
     createApp(App)
       .mount('#app');
   });

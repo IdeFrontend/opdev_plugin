@@ -21,6 +21,7 @@ import {
   type OperatorProjectViewIdValue,
 } from '@shared/project-type-view-id';
 import { isOperatorSupportEnabled } from '@plugin/helpers/feature-toggle';
+import { workbenchViewContainerCommand } from '@shared/flavor';
 
 function normalizeViewIdToProjectType(id: OperatorProjectViewIdValue): string {
   switch (id) {
@@ -89,7 +90,7 @@ const webviewMessageList: messageItem[] = [
   {
     command: 'vscodeOpenSidebar',
     callback: (_message: any, _that: any) => {
-      vscode.commands.executeCommand('workbench.view.extension.mindstudio-opssuite-vscode-plugin');
+      vscode.commands.executeCommand(workbenchViewContainerCommand());
     },
   },
   {

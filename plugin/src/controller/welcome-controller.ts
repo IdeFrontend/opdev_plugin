@@ -41,6 +41,7 @@ import { getWorkspaceGenOpCommand } from '@plugin/helpers/operator-project-works
 import {
   buildGenOpCommand, decideSkipFileGeneration,
 } from '@plugin/domain/utils/genop-command';
+import { COMMAND_CREATE_DIRECTORY } from '@plugin/constants';
 
 // Auxiliary function: get extension context
 function getExtensionContext(): vscode.ExtensionContext {
@@ -350,10 +351,10 @@ export const welcomeMethods = {
               increment: 0,
               message: t('welcome.createFilesProgressMessage'),
             });
-            console.log('createdProject: running command huawei-op-devtools.createDictory');
+            console.log(`createdProject: running command ${COMMAND_CREATE_DIRECTORY}`);
             console.log('createdProject: command params:', { createOperatorProjectDirectoryFileType: params.createOperatorProjectDictoryFileType });
             const result = await vscode.commands.executeCommand(
-              'huawei-op-devtools.createDictory',
+              COMMAND_CREATE_DIRECTORY,
               {
                 createOperatorProjectDirectoryFileType:
                   params.createOperatorProjectDictoryFileType,

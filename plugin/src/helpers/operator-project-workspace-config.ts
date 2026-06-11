@@ -2,8 +2,11 @@ import * as vscode from 'vscode';
 
 import { DEFAULT_GEN_OP_COMMAND } from '@plugin/domain/utils/genop-command';
 
-const SECTION = 'op-devtools';
+import { SETTINGS_PREFIX } from '@shared/flavor';
+
+const SECTION = SETTINGS_PREFIX;
 const DEFAULT_ENVIRONMENT_SCRIPT = '/etc/profile';
+
 export const ENVIRONMENT_SCRIPT_SETTING = 'environment.environmentScript';
 
 export function getFirstWorkspaceFolder(): vscode.WorkspaceFolder | undefined {
@@ -14,17 +17,13 @@ export function getFirstWorkspaceFolderPath(): string | undefined {
   return getFirstWorkspaceFolder()?.uri.fsPath;
 }
 
-export function getOpDevtoolsWorkspaceConfiguration(
-  scopeUri?: vscode.Uri,
-): vscode.WorkspaceConfiguration {
+export function getOpDevtoolsWorkspaceConfiguration(scopeUri?: vscode.Uri): vscode.WorkspaceConfiguration {
   return vscode.workspace.getConfiguration(SECTION, scopeUri ?? getFirstWorkspaceFolder()?.uri);
 }
 
 /** Workspace override only; `undefined` when the setting was never explicitly set. */
 function getExplicitEnvironmentScript(): string | undefined {
-  return getConfiguredValue<string>(getOpDevtoolsWorkspaceConfiguration(), [
-    ENVIRONMENT_SCRIPT_SETTING,
-  ]);
+  return getConfiguredValue<string>(getOpDevtoolsWorkspaceConfiguration(), [ENVIRONMENT_SCRIPT_SETTING]);
 }
 
 type InspectValue<T> =
@@ -41,21 +40,23 @@ function pickFromInspect<T>(
   if (!inspection) {
     return fallback;
   }
+
   if (inspection.workspaceFolderValue !== undefined) {
     return inspection.workspaceFolderValue;
   }
+
   if (inspection.workspaceValue !== undefined) {
     return inspection.workspaceValue;
   }
+
   return fallback;
 }
 
-function isExplicitlySet<T>(
-  inspection: InspectValue<T>,
-): boolean {
+function isExplicitlySet<T>(inspection: InspectValue<T>): boolean {
   if (!inspection) {
     return false;
   }
+
   return inspection.workspaceFolderValue !== undefined
     || inspection.workspaceValue !== undefined;
 }
@@ -66,10 +67,12 @@ function getConfiguredValue<T>(
 ): T | undefined {
   for (const relativePath of settingRelativePaths) {
     const inspection = cfg.inspect<T>(relativePath);
+
     if (isExplicitlySet(inspection)) {
       return pickFromInspect<T>(inspection, undefined as unknown as T);
     }
   }
+
   return undefined;
 }
 
@@ -77,20 +80,24 @@ export function mapSanitizerScopeToUseBlock(scope: string): boolean | undefined 
   if (scope === 'global' || scope === 'Global') {
     return false;
   }
+
   if (scope === 'singleBlock' || scope === 'Single block') {
     return true;
   }
+
   return undefined;
 }
 
-export function mapKeyValueObjectToAdvanceParams(
-  value: unknown,
-): Array<Record<string, unknown>> | undefined {
+export function mapKeyValueObjectToAdvanceParams(value: unknown): Array<Record<string, unknown>> | undefined {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return undefined;
   }
+
   return Object.entries(value as Record<string, unknown>)
-    .map(([name, rawValue]) => ({
+    .map(([
+      name,
+      rawValue,
+    ]) => ({
       name,
       value: rawValue === undefined || rawValue === null ? '' : String(rawValue),
     }));
@@ -108,7 +115,8 @@ export function getConfiguredEnvironmentScriptPath(): string | undefined {
     return undefined;
   }
 
-  const trimmed = String(explicit).trim();
+  const trimmed = String(explicit)
+    .trim();
 
   return trimmed.length > 0 ? trimmed : undefined;
 }
@@ -120,8 +128,10 @@ export function getConfiguredEnvironmentScriptPath(): string | undefined {
 export function getEnvironmentScriptPathFromWorkspace(): string {
   const explicit = getExplicitEnvironmentScript();
 
-  if (explicit !== undefined && String(explicit).trim() !== '') {
-    return String(explicit).trim();
+  if (explicit !== undefined && String(explicit)
+    .trim() !== '') {
+    return String(explicit)
+      .trim();
   }
 
   const cfg = getOpDevtoolsWorkspaceConfiguration();
@@ -138,12 +148,14 @@ export function getEnvironmentScriptPathFromWorkspace(): string {
 /** Workspace override for msprof / cann simulator directory name (e.g. Ascend910B3). */
 export function getWorkspaceSimulatorType(): string {
   const cfg = getOpDevtoolsWorkspaceConfiguration();
-  const explicit = getConfiguredValue<string>(cfg, [
-    'performanceTuning.simulation.simulatorType',
-  ]);
-  if (explicit !== undefined && String(explicit).trim() !== '') {
-    return String(explicit).trim();
+  const explicit = getConfiguredValue<string>(cfg, ['performanceTuning.simulation.simulatorType']);
+
+  if (explicit !== undefined && String(explicit)
+    .trim() !== '') {
+    return String(explicit)
+      .trim();
   }
+
   return '';
 }
 
@@ -157,38 +169,41 @@ export function getWorkspaceGenOpCommand(): string {
     'compileAndDeploy.buildConfig.genOpCommand',
     DEFAULT_GEN_OP_COMMAND,
   );
+
   return typeof value === 'string' && value.trim() ? value : DEFAULT_GEN_OP_COMMAND;
 }
 
 export function getEnvironmentSocVersionFromWorkspace(): string {
   const cfg = getOpDevtoolsWorkspaceConfiguration();
-  const explicit = getConfiguredValue<string>(cfg, [
-    'environment.socVersion',
-  ]);
-  if (explicit !== undefined && String(explicit).trim() !== '') {
-    return String(explicit).trim();
+  const explicit = getConfiguredValue<string>(cfg, ['environment.socVersion']);
+
+  if (explicit !== undefined && String(explicit)
+    .trim() !== '') {
+    return String(explicit)
+      .trim();
   }
+
   const primary = cfg.get<string>('environment.socVersion', '') ?? '';
+
   if (typeof primary === 'string' && primary.trim()) {
     return primary.trim();
   }
+
   return '';
 }
 
-export function getAscendEnvScriptWithWorkspaceOverride(
-  storedScript: string | null | undefined,
-): string {
+export function getAscendEnvScriptWithWorkspaceOverride(storedScript: string | null | undefined): string {
   const explicit = getExplicitEnvironmentScript();
 
-  return explicit !== undefined ? String(explicit).trim() : (storedScript || '');
+  return explicit !== undefined
+    ? String(explicit)
+      .trim()
+    : (storedScript || '');
 }
 
-export function getSocVersionWithWorkspaceOverride(
-  storedSocVersion: string | null | undefined,
-): string {
+export function getSocVersionWithWorkspaceOverride(storedSocVersion: string | null | undefined): string {
   const cfg = getOpDevtoolsWorkspaceConfiguration();
-  const socVersion = getConfiguredValue<string>(cfg, [
-    'environment.socVersion',
-  ]);
+  const socVersion = getConfiguredValue<string>(cfg, ['environment.socVersion']);
+
   return socVersion !== undefined ? socVersion : (storedSocVersion || '');
 }

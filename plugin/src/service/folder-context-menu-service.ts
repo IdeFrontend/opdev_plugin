@@ -37,6 +37,9 @@ import { homeMethods } from '../controller/home-controller';
 import {
   COMMAND_FLASH_MS_SANITIZER_RUN_DATA,
   COMMAND_FLASH_PERFORMANCE_RUN_DATA,
+  COMMAND_ON_BOARD_OPTIONS,
+  COMMAND_SANITIZER_OPTIONS,
+  COMMAND_SIMULATOR_OPTIONS,
 } from '@plugin/constants';
 
 /**
@@ -1254,7 +1257,7 @@ export class FolderContextMenuService {
 
     await this.switchToProject(uri, async () => {
       // Open sanitizer config, same as dashboard logic
-      const sanitizerCommand = 'huawei-op-devtools.sanitizerOptions';
+      const sanitizerCommand = COMMAND_SANITIZER_OPTIONS;
 
       await vscode.commands.executeCommand(sanitizerCommand);
     });
@@ -1297,7 +1300,7 @@ export class FolderContextMenuService {
 
     await this.switchToProject(uri, async () => {
       // Open on-board analysis config, same as dashboard logic
-      const onBoardCommand = 'huawei-op-devtools.onBoardOptions';
+      const onBoardCommand = COMMAND_ON_BOARD_OPTIONS;
 
       await vscode.commands.executeCommand(onBoardCommand);
     });
@@ -1340,7 +1343,7 @@ export class FolderContextMenuService {
 
     await this.switchToProject(uri, async () => {
       // Open the simulation analysis configuration and keep it consistent with the Kanban logic
-      const simulationCommand = 'huawei-op-devtools.simulatorOptions';
+      const simulationCommand = COMMAND_SIMULATOR_OPTIONS;
 
       await vscode.commands.executeCommand(simulationCommand);
     });

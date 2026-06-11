@@ -5,18 +5,18 @@ plugins/mindstudio-vscode-plugins/mindstudio-opsuite-vscode-plugin/.vscode
 dist
 node_modules
 out
+web/.flavor
 package-lock.json
 tsconfig.tsbuildinfo
 
 .vscode
 .claude
 CLAUDE.local.md
-huawei-op-devtools-vscode-plugin-**.vsix
+*.vsix
 deletePackage.bat
 deletePackage.js
 package.bat
 package.js
-huawei-op-devtools-vscode-plugin*
 .codemate
 artifacts/**
 tmp/**

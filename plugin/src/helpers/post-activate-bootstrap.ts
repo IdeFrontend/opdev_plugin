@@ -4,6 +4,7 @@ import type { OperateTreeProvider } from '@plugin/class/operate-tree-provider';
 import { welcomeMethods } from '@plugin/controller/welcome-controller';
 import { configService } from '@plugin/service/config-service';
 import { AsyncSingleFlight } from './async-single-flight';
+import { TREE_VIEW_OPERATE } from '@shared/flavor';
 import { requestSidebarContextsRefresh } from './sidebar-context-refresh';
 
 export const MIND_STUDIO_DEBUG_PLUGIN_ID = 'ascend.mindstudio-debug-vscode-plugin';
@@ -11,7 +12,7 @@ export const MIND_STUDIO_DEBUG_PLUGIN_ID = 'ascend.mindstudio-debug-vscode-plugi
 export type PostActivateBootstrapDeps = {
   context: vscode.ExtensionContext;
   operateTreeProvider: OperateTreeProvider;
-  logDebug: (message: string, payload?: unknown) => void;
+  logDebug: (message: string, payload?: unknown)=> void;
 };
 
 const postActivateBootstrapFlight = new AsyncSingleFlight<void>();
@@ -44,7 +45,9 @@ async function runPostActivateBootstrapImpl(deps: PostActivateBootstrapDeps): Pr
   const {
     context, operateTreeProvider, logDebug,
   } = deps;
+
   logDebug('postActivate:bootstrap:start');
+
   try {
     const installer = new MindStudioPluginInstaller(context, {
       pluginId: MIND_STUDIO_DEBUG_PLUGIN_ID,
@@ -52,13 +55,16 @@ async function runPostActivateBootstrapImpl(deps: PostActivateBootstrapDeps): Pr
         './out/plugin/mindstudio-debug-vscode-plugin/MindStudio-Debug-VSCode-Plugin-1.0.8.vsix',
       pluginVersion: '1.0.8',
     });
-    const installMindStudioDebug = installer.installIfNeeded().catch((error) => {
-      logDebug('postActivate:installMindStudioDebug:error', error);
-    });
+    const installMindStudioDebug = installer.installIfNeeded()
+      .catch((error) => {
+        logDebug('postActivate:installMindStudioDebug:error', error);
+      });
 
     const [workspaceFolder] = vscode.workspace.workspaceFolders ?? [];
+
     if (workspaceFolder) {
       const workspacePath = workspaceFolder.uri.fsPath;
+
       logDebug('postActivate:autoOpenProject:start', { workspacePath });
       const openWorkspace = (async () => {
         try {
@@ -71,7 +77,11 @@ async function runPostActivateBootstrapImpl(deps: PostActivateBootstrapDeps): Pr
           logDebug('postActivate:autoOpenProject:error', error);
         }
       })();
-      await Promise.all([openWorkspace, installMindStudioDebug]);
+
+      await Promise.all([
+        openWorkspace,
+        installMindStudioDebug,
+      ]);
     }
     else {
       await installMindStudioDebug;
@@ -82,7 +92,7 @@ async function runPostActivateBootstrapImpl(deps: PostActivateBootstrapDeps): Pr
 
     if (await configService.checkDevtoolConfig()) {
       try {
-        await vscode.commands.executeCommand('opdevtoolsOperateTree.focus');
+        await vscode.commands.executeCommand(`${TREE_VIEW_OPERATE}.focus`);
       }
       catch (error) {
         logDebug('postActivate:focusOperateTree:error', error);

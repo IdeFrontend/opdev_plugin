@@ -29,6 +29,33 @@
       "preLaunchTask": "npm: watch"
     },
     {
+      "name": "Debug Ascend C Toolkit Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/out/extension.js"
+      ],
+      "preLaunchTask": "compile:ascend-c-toolkit:debug"
+    },
+    {
+      "name": "Debug Ascend C Toolkit Extension (Hot Mode)",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/out/extension.js"
+      ],
+      "env": {
+        "MSTT_DEV_SERVER_URL": "http://localhost:5173"
+      },
+      "preLaunchTask": "ascend-c-toolkit: prewatch"
+    },
+    {
       "command": "npm run start-web",
       "name": "Debug VS Code Web Extension",
       "request": "launch",

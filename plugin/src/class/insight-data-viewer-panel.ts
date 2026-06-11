@@ -6,6 +6,7 @@
  */
 
 import { t } from 'i18next';
+import { INSIGHT_DATA_VIEWER_PANEL_TYPE } from '@shared/flavor';
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -191,7 +192,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
 
     // Create new panel
     const panel = vscode.window.createWebviewPanel(
-      'insightDataViewer',
+      INSIGHT_DATA_VIEWER_PANEL_TYPE,
       t('insight.performanceAnalysis'),
       column || vscode.ViewColumn.Active,
       {
@@ -2096,7 +2097,10 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       this.serverPort = port;
       this.logDebug(`Found available port: ${this.serverPort}`);
       const logDir = path.join(this.insightPluginBasePath, '.msinsight');
-      if (!fs.existsSync(logDir)) { fs.mkdirSync(logDir, { recursive: true }); }
+
+      if (!fs.existsSync(logDir)) {
+        fs.mkdirSync(logDir, { recursive: true });
+      }
 
       this.profilerServerProcess = spawn(this.serverPath, [
         `--wsPort=${this.serverPort}`,

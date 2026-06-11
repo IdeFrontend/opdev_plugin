@@ -71,12 +71,11 @@ export default {
     + '确认本机 NPU 驱动与 npu-smi 可用；部分 A5 镜像中 asys 与 npu-smi 分包不同，'
     + '或 find 无法在 */cann*/ 路径下定位 set_env.sh。',
   'extension.ascendEnv.socNotDetected.openSettings': '打开 SoC 设置…',
-  'extension.tritonSupportChangedReload': 'Triton 支持设置已变更。请重载窗口以应用算子支持变更。',
   'extension.reloadWindowAction': '重载窗口',
   'extension.resetProjectConfigurationConfirm':
     '是否重置{{projectName}}的工程配置？点击重置将清除本插件为{{projectName}}保存的配置信息，并重置为默认配置。不会修改仓库中的算子源码及其他工程文件。',
   'extension.resetProjectConfigurationConfirmReset': '重置',
-  'extension.unsupportedProjectTypeDisabled': '当前项目类型“{{projectType}}”未在「算子支持」设置中启用。',
+  'extension.unsupportedProjectTypeDisabled': '当前产品构建不支持项目类型“{{projectType}}”。',
 
   // folder-context-menu
   'folderContext.angleOpsNotSupported': '<<<>>>类型算子暂不支持该右键菜单操作',

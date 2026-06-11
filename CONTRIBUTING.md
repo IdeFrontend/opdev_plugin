@@ -23,16 +23,65 @@ pnpm install
 pnpm run install:web
 ```
 
+## Extension flavors (committed Huawei manifest)
+
+Multiple VSIX brands are built from this repo. **Huawei OP DevTools** is the default development flavor.
+
+| Path | Role |
+|------|------|
+| `package.json` | **Committed canonical Huawei manifest** + root scripts. Edit `contributes` here; `apply-flavor` regenerates flavor-specific fields. |
+| `package.nls.base*.json` | NLS templates |
+| `package.nls*.json` | Committed Huawei NLS (regenerated) |
+| `flavors/{id}/` | Per-flavor identity, branding, feature flags |
+| `shared/flavor/generated.ts` | Committed Huawei runtime constants (regenerated) |
+
+The repo keeps **Huawei** manifest/NLS/generated files committed on git HEAD. **`pnpm run compile` does not run `apply-flavor`** — it builds whatever flavor artifacts are already on disk. Run `apply-flavor` (or `restore-flavor`) explicitly when switching brands or after an Ascend build.
+
+**Important:** Keep a clean Huawei `package.json` committed on git HEAD. The pre-commit hook blocks accidental Ascend commits.
+
+Flavor `features` in `flavors/{id}/flavor.json` declare **per-brand differences only**. Today the sole flag is `operatorSupport.triton` (Huawei: optional via Settings, default off; Ascend: hard off via gate). Re-add entries to `FEATURE_CATALOG` in `flavors/schema.ts` when a second flavor needs to disable sanitizer, dump tensor, or other capabilities.
+
+### Pack another flavor (e.g. Ascend C Toolkit)
+
+```bash
+pnpm run apply-flavor:ascend-c-toolkit
+pnpm run compile
+pnpm run package
+# → hicann.ascend-c-toolkit-{version}.vsix
+```
+
+This rewrites manifest/NLS/generated files on disk. **Do not commit** unless you intentionally update the Huawei snapshot.
+
+Also run **`pnpm run restore-flavor`** before Huawei F5/debug or `pnpm run compile` if you previously applied another flavor — `restore-flavor` runs `git restore` on generated artifacts and re-applies Huawei branding.
+
+Optional: set `FLAVOR=ascend-c-toolkit` instead of passing a CLI argument to `apply-flavor`.
+
+### Restore Huawei before commit
+
+```bash
+pnpm run restore-flavor
+git status   # should be clean for manifest files
+```
+
+A **pre-commit hook** (`.husky/pre-commit`) runs on every commit after `pnpm install` (via the `prepare` / husky setup). It blocks commits when staged flavor files contain Ascend C Toolkit content. Run `restore-flavor` before committing after an Ascend build.
+
+If hooks are not running, run `pnpm install` once to activate husky (`git config core.hooksPath` should be `.husky/_`).
+
+Flavor scripts: `apply-flavor`, `apply-flavor:huawei`, `apply-flavor:ascend-c-toolkit`, `restore-flavor`, `check-staged-flavor`. You can also pass a flavor id: `pnpm exec tsx scripts/apply-flavor.ts ascend-c-toolkit`.
+
 ## Build
 
 | Command | Description |
 |--------|-------------|
-| `pnpm run compile` | Build extension (web UI + plugin). Output: `out/` |
+| `pnpm run compile` | Build extension (web UI + plugin). Uses flavor artifacts already on disk. Output: `out/` |
 | `pnpm run compile:web` | Build only the web frontend (`web/` → bundled in the extension) |
 | `pnpm run compile:plugin` | Build only the plugin TypeScript (`plugin/src` → `out/`) |
-| `pnpm run watch` | Watch plugin sources and rebuild on change (with source maps) |
+| `pnpm run watch` | Watch plugin sources and rebuild on change (with source maps). Run `restore-flavor` first if generated constants are out of sync. |
 | `pnpm run compile:debug` | Build with debug/source maps for extension debugging |
 | `pnpm run package` | Build and pack a `.vsix` for distribution |
+| `pnpm run apply-flavor:huawei` | Regenerate Huawei manifest/NLS/generated from git HEAD template |
+| `pnpm run apply-flavor:ascend-c-toolkit` | Switch manifest to Ascend C Toolkit (see above) |
+| `pnpm run restore-flavor` | Restore committed Huawei manifest on disk |
 | `pnpm run build:icons-font` | Regenerate icon font from SVG sources (see below) |
 
 First time or after pulling changes:
@@ -72,8 +121,9 @@ For debugging:
 | `web/` | Webview UI (Vue 3 + Vite). Built output is bundled into the extension. |
 | `shared/` | Shared code and i18n (e.g. `shared/i18n` for en / zh-cn). |
 | `out/` | Compiled extension output (generated). |
-| `package.json` | Extension manifest and root scripts. |
-| `package.nls.json` (Chinese default) / `package.nls.en.json` | Localized VS Code UI strings (commands, views, settings). |
+| `package.json` | Committed **Huawei** extension manifest + root scripts (edit `contributes` here). |
+| `flavors/` | Per-flavor config, branding, and feature flags. |
+| `package.nls.json` (Chinese default) / `package.nls.en.json` | Committed **Huawei** localized VS Code UI strings. |
 
 ## Lint and type-check
 

@@ -18,7 +18,9 @@ function copyPackagedStaticAssets(): Plugin {
     name: 'copy-packaged-static-assets',
     closeBundle() {
       const outWeb = path.resolve(__dirname, '../out/web');
-      const brandingSrc = path.resolve(__dirname, 'src/assets/branding');
+      const flavorBranding = path.resolve(__dirname, '.flavor/branding');
+      const defaultBranding = path.resolve(__dirname, 'src/assets/branding');
+      const brandingSrc = fs.existsSync(flavorBranding) ? flavorBranding : defaultBranding;
       const brandingDest = path.join(outWeb, 'branding');
       const fontSrc = path.resolve(__dirname, 'src/assets/fonts/opdevtools-icons.woff');
       const fontDestDir = path.join(outWeb, 'fonts');
@@ -31,6 +33,7 @@ function copyPackagedStaticAssets(): Plugin {
       }
 
       fs.mkdirSync(fontDestDir, { recursive: true });
+
       if (fs.existsSync(fontSrc)) {
         fs.copyFileSync(fontSrc, path.join(fontDestDir, 'opdevtools-icons.woff'));
       }

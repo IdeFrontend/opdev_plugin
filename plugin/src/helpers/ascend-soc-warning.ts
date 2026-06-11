@@ -2,6 +2,9 @@ import * as vscode from 'vscode';
 import { t } from 'i18next';
 
 import type { AscendEnvResolution } from '@plugin/domain/utils/ascend-util';
+import {
+  EXTENSION_ID, settingsKey,
+} from '@shared/flavor';
 
 let socUndetectedWarningShown = false;
 
@@ -35,7 +38,7 @@ export function maybeWarnSocNotDetected(resolution: AscendEnvResolution): void {
         // the same Workspace-scope view.
         void vscode.commands.executeCommand(
           'workbench.action.openWorkspaceSettings',
-          '@ext:huawei.huawei-op-devtools-vscode-plugin op-devtools.environment.socVersion',
+          `@ext:${EXTENSION_ID} ${settingsKey('environment.socVersion')}`,
         );
       }
     });

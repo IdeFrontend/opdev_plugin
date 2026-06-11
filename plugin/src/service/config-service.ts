@@ -29,9 +29,12 @@ import {
   collectDottedEntriesFromLegacyPairs,
   readLegacyFieldsFromDottedPairs,
 } from '@plugin/helpers/workspace-user-options-dotted-map';
-import { getDevtoolConfigPath, getIdeSettingsFilePath } from '@plugin/helpers/ide-config-dir';
+import {
+  getDevtoolConfigPath, getIdeSettingsFilePath,
+} from '@plugin/helpers/ide-config-dir';
 import { resolveWorkspaceRoot } from '@plugin/helpers/resolve-workspace-root';
 import { projectService } from '@plugin/service/project-service';
+import { SETTINGS_PREFIX } from '@shared/flavor';
 
 const CONFIG_TYPES = {
   SANITIZER: 'sanitizer',
@@ -39,7 +42,7 @@ const CONFIG_TYPES = {
   SIMULATE: 'simulate',
 } as const;
 
-const OP_DEVTOOLS_PREFIX = 'op-devtools.';
+const OP_DEVTOOLS_PREFIX = `${SETTINGS_PREFIX}.`;
 
 /** Relative key under `op-devtools`; written as `op-devtools.internal.settingsMigratedFromLegacy`. */
 export const SETTINGS_MIGRATED_FROM_LEGACY_KEY = 'internal.settingsMigratedFromLegacy';
@@ -68,8 +71,12 @@ function flattenNestedOpDevtools(
   prefix: string,
   out: Record<string, unknown>,
 ): void {
-  for (const [key, value] of Object.entries(nested)) {
+  for (const [
+    key,
+    value,
+  ] of Object.entries(nested)) {
     const dottedKey = `${prefix}.${key}`;
+
     if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
       flattenNestedOpDevtools(value as Record<string, unknown>, dottedKey, out);
     }
@@ -83,10 +90,14 @@ function parseRawSettingsJson(filePath: string): Record<string, unknown> {
   if (!fs.existsSync(filePath)) {
     return {};
   }
-  const raw = fs.readFileSync(filePath, 'utf8').trim();
+
+  const raw = fs.readFileSync(filePath, 'utf8')
+    .trim();
+
   if (!raw) {
     return {};
   }
+
   return JSON.parse(raw) as Record<string, unknown>;
 }
 
@@ -97,19 +108,27 @@ function isLegacyNestedOpDevtoolsRoot(value: unknown): value is Record<string, u
 function readSettingsJsonFile(filePath: string): Record<string, unknown> {
   try {
     const parsed = parseRawSettingsJson(filePath);
+
     if (Object.keys(parsed).length === 0) {
       return {};
     }
-    const nested = parsed['op-devtools'];
+
+    const nested = parsed[SETTINGS_PREFIX];
+
     if (isLegacyNestedOpDevtoolsRoot(nested)) {
-      const { 'op-devtools': _removed, ...rest } = parsed;
-      flattenNestedOpDevtools(nested, 'op-devtools', rest);
+      const rest = { ...parsed };
+
+      delete rest[SETTINGS_PREFIX];
+      flattenNestedOpDevtools(nested, SETTINGS_PREFIX, rest);
+
       return rest;
     }
+
     return parsed;
   }
   catch (error) {
     console.warn('[readSettingsJsonFile] failed:', filePath, error);
+
     return {};
   }
 }
@@ -131,6 +150,7 @@ function assignNonEmptyStringIfDefined(
 ): void {
   if (typeof value === 'string') {
     const trimmed = value.trim();
+
     if (trimmed) {
       updates[key] = trimmed;
     }
@@ -164,27 +184,31 @@ function normalizeExecutionMode(value: unknown): 'eager' | 'graph' | undefined {
   if (value === 'eager' || value === 'graph') {
     return value;
   }
+
   if (typeof value === 'string' && value.trim()) {
     const normalized = value.trim();
+
     if (normalized === 'eager' || normalized === 'graph') {
       return normalized;
     }
   }
+
   return undefined;
 }
 
-function extractDbOnlyUserOptionFields(
-  userOptions: Record<string, unknown> | undefined,
-): Record<string, unknown> {
+function extractDbOnlyUserOptionFields(userOptions: Record<string, unknown> | undefined): Record<string, unknown> {
   if (!userOptions) {
     return {};
   }
+
   const out: Record<string, unknown> = {};
+
   for (const key of DB_ONLY_USER_OPTION_KEYS) {
     if (userOptions[key] !== undefined) {
       out[key] = userOptions[key];
     }
   }
+
   return out;
 }
 
@@ -201,9 +225,11 @@ function sanitizerUserOptionsToDottedWrites(opts: Record<string, unknown>): OpDe
   assignIfDefined(updates, 'sanitizer.uninitialized', tool.initcheck);
   assignIfDefined(updates, 'sanitizer.memoryLeak', mem['leak-check']);
   assignIfDefined(updates, 'sanitizer.allocUnused', mem['check-unused-memory']);
+
   if (typeof opts.useBlock === 'boolean') {
     updates['sanitizer.detectionScope'] = opts.useBlock ? 'singleBlock' : 'global';
   }
+
   assignIfDefined(updates, 'sanitizer.blockId', opts.blockId);
 
   return updates;
@@ -238,14 +264,18 @@ function onBoardUserOptionsToDottedWrites(opts: Record<string, unknown>): OpDevt
   const updates: OpDevtoolsDottedWrites = {};
 
   assignNonEmptyStringIfDefined(updates, 'compileAndDeploy.buildConfig.onBoardCompileCommand', opts.script);
-  for (const [dotted, value] of collectDottedEntriesFromLegacyPairs(ON_BOARD_METRIC_LEGACY_TO_DOTTED, opts)) {
+
+  for (const [
+    dotted,
+    value,
+  ] of collectDottedEntriesFromLegacyPairs(ON_BOARD_METRIC_LEGACY_TO_DOTTED, opts)) {
     assignIfDefined(updates, dotted, value);
   }
+
   assignIfDefined(updates, 'performanceTuning.onBoard.pcSampling', opts.PCSampling);
   assignIfDefined(updates, 'performanceTuning.onBoard.cacheHeatmap', opts.MemoryDetail);
-  updates['performanceTuning.onBoard.parameters'] = toKeyValueMapFromAdvanceParam(
-    opts.advance_param,
-  );
+  updates['performanceTuning.onBoard.parameters'] = toKeyValueMapFromAdvanceParam(opts.advance_param);
+
   if (typeof opts.operatorMetrics === 'boolean') {
     updates['performanceTuning.onBoard.operatorMetrics'] = opts.operatorMetrics;
   }
@@ -257,18 +287,21 @@ function simulateUserOptionsToDottedWrites(opts: Record<string, unknown>): OpDev
   const updates: OpDevtoolsDottedWrites = {};
 
   assignNonEmptyStringIfDefined(updates, 'compileAndDeploy.buildConfig.simulationCompileCommand', opts.script);
-  for (const [dotted, value] of collectDottedEntriesFromLegacyPairs(SIMULATE_METRIC_LEGACY_TO_DOTTED, opts)) {
+
+  for (const [
+    dotted,
+    value,
+  ] of collectDottedEntriesFromLegacyPairs(SIMULATE_METRIC_LEGACY_TO_DOTTED, opts)) {
     assignIfDefined(updates, dotted, value);
   }
-  updates['performanceTuning.simulation.parameters'] = toKeyValueMapFromAdvanceParam(
-    opts.advance_param,
-  );
+
+  updates['performanceTuning.simulation.parameters'] = toKeyValueMapFromAdvanceParam(opts.advance_param);
 
   return updates;
 }
 
 function isOpDevtoolsSettingsKey(key: string): boolean {
-  return key === 'op-devtools' || key.startsWith('op-devtools.');
+  return key === SETTINGS_PREFIX || key.startsWith(OP_DEVTOOLS_PREFIX);
 }
 
 function stripOpDevtoolsKeysFromRaw(raw: Record<string, unknown>): {
@@ -278,15 +311,22 @@ function stripOpDevtoolsKeysFromRaw(raw: Record<string, unknown>): {
   const output: Record<string, unknown> = {};
   let removedAny = false;
 
-  for (const [key, value] of Object.entries(raw)) {
+  for (const [
+    key,
+    value,
+  ] of Object.entries(raw)) {
     if (isOpDevtoolsSettingsKey(key)) {
       removedAny = true;
       continue;
     }
+
     output[key] = value;
   }
 
-  return { output, removedAny };
+  return {
+    output,
+    removedAny,
+  };
 }
 
 async function persistIdeSettingsFile(
@@ -296,6 +336,7 @@ async function persistIdeSettingsFile(
 ): Promise<void> {
   if (Object.keys(output).length === 0 && deleteIfEmpty) {
     await fs.promises.rm(filePath, { force: true });
+
     return;
   }
 
@@ -310,11 +351,16 @@ function buildDottedOnlySettingsFileContent(filePath: string): Record<string, un
   const raw = parseRawSettingsJson(filePath);
   const flat = readSettingsJsonFile(filePath);
   const { output } = stripOpDevtoolsKeysFromRaw(raw);
-  for (const [key, value] of Object.entries(flat)) {
-    if (key.startsWith('op-devtools.')) {
+
+  for (const [
+    key,
+    value,
+  ] of Object.entries(flat)) {
+    if (key.startsWith(OP_DEVTOOLS_PREFIX)) {
       output[key] = value;
     }
   }
+
   return output;
 }
 
@@ -340,18 +386,23 @@ export class ConfigService {
    */
   static async clearOpDevtoolsWorkspaceSettings(workspaceRoot?: string): Promise<boolean> {
     const root = resolveWorkspaceRoot(workspaceRoot);
+
     if (!root) {
       console.warn('[clearOpDevtoolsWorkspaceSettings] no workspace root');
+
       return false;
     }
 
     const filePath = getIdeSettingsFilePath(root);
+
     if (!fs.existsSync(filePath)) {
       return false;
     }
 
     const raw = parseRawSettingsJson(filePath);
-    const { output, removedAny } = stripOpDevtoolsKeysFromRaw(raw);
+    const {
+      output, removedAny,
+    } = stripOpDevtoolsKeysFromRaw(raw);
 
     if (!removedAny) {
       return false;
@@ -359,10 +410,12 @@ export class ConfigService {
 
     try {
       await persistIdeSettingsFile(filePath, output, true);
+
       return true;
     }
     catch (error) {
       console.warn('[clearOpDevtoolsWorkspaceSettings] failed:', error);
+
       return false;
     }
   }
@@ -380,16 +433,16 @@ export class ConfigService {
     workspaceRoot?: string,
   ): Promise<boolean> {
     const root = resolveWorkspaceRoot(workspaceRoot);
+
     if (!root) {
       console.warn('[writeOpDevtoolsDottedSettings] no workspace root');
+
       return false;
     }
 
     const filePath = getIdeSettingsFilePath(root);
     const hasUpdates = Object.keys(updates).length > 0;
-    const needsNestedMigration = isLegacyNestedOpDevtoolsRoot(
-      parseRawSettingsJson(filePath)['op-devtools'],
-    );
+    const needsNestedMigration = isLegacyNestedOpDevtoolsRoot(parseRawSettingsJson(filePath)[SETTINGS_PREFIX]);
 
     if (!needsNestedMigration && !hasUpdates) {
       return false;
@@ -399,8 +452,13 @@ export class ConfigService {
       await fs.promises.mkdir(path.dirname(filePath), { recursive: true });
 
       const output = buildDottedOnlySettingsFileContent(filePath);
-      for (const [relativeKey, value] of Object.entries(updates)) {
+
+      for (const [
+        relativeKey,
+        value,
+      ] of Object.entries(updates)) {
         const fullKey = toFullDottedKey(relativeKey);
+
         if (value === undefined) {
           delete output[fullKey];
         }
@@ -410,10 +468,12 @@ export class ConfigService {
       }
 
       await persistIdeSettingsFile(filePath, output);
+
       return true;
     }
     catch (error) {
       console.warn('[writeOpDevtoolsDottedSettings] failed:', error);
+
       return false;
     }
   }
@@ -429,21 +489,30 @@ export class ConfigService {
   ): OpDevtoolsDottedWrites {
     const fileKeys = ConfigService.getWorkspaceSettingsFileKeySet(workspaceRoot);
     const filtered: OpDevtoolsDottedWrites = {};
-    for (const [relativeKey, value] of Object.entries(pendingWrites)) {
+
+    for (const [
+      relativeKey,
+      value,
+    ] of Object.entries(pendingWrites)) {
       const scratch: OpDevtoolsDottedWrites = {};
+
       ConfigService.queueSettingIfMissingInFile(scratch, fileKeys, cfg, relativeKey, value);
+
       if (relativeKey in scratch) {
         filtered[relativeKey] = scratch[relativeKey];
       }
     }
+
     return filtered;
   }
 
   private static getWorkspaceSettingsFileKeySet(workspaceRoot?: string): Set<string> {
     const root = resolveWorkspaceRoot(workspaceRoot);
+
     if (!root) {
       return new Set();
     }
+
     return new Set(Object.keys(readSettingsJsonFile(getIdeSettingsFilePath(root))));
   }
 
@@ -457,18 +526,22 @@ export class ConfigService {
     if (value === undefined) {
       return;
     }
+
     const inspection = cfg.inspect<unknown>(relativeKey);
     const explicitlySet = inspection
       && (
         inspection.workspaceFolderValue !== undefined
         || inspection.workspaceValue !== undefined
       );
+
     if (explicitlySet) {
       return;
     }
+
     if (fileKeys.has(toFullDottedKey(relativeKey))) {
       return;
     }
+
     pendingWrites[relativeKey] = value;
   }
 
@@ -479,25 +552,28 @@ export class ConfigService {
     cfg: vscode.WorkspaceConfiguration,
     batch: OpDevtoolsDottedWrites,
   ): void {
-    for (const [relativeKey, value] of Object.entries(batch)) {
+    for (const [
+      relativeKey,
+      value,
+    ] of Object.entries(batch)) {
       ConfigService.queueSettingIfMissingInFile(pendingWrites, fileKeys, cfg, relativeKey, value);
     }
   }
 
   static isSettingsMigratedFromLegacy(): boolean {
-    return getOpDevtoolsWorkspaceConfiguration().get<boolean>(SETTINGS_MIGRATED_FROM_LEGACY_KEY) === true;
+    return getOpDevtoolsWorkspaceConfiguration()
+      .get<boolean>(SETTINGS_MIGRATED_FROM_LEGACY_KEY) === true;
   }
 
   /** Persist build_op deploy/run target to workspace settings only. */
   static async writeBuildOpDeployTarget(deployTarget: string): Promise<void> {
-    await ConfigService.writeOpDevtoolsDottedSettings({
-      'compileAndDeploy.buildConfig.deployCommandOrRunCommand': deployTarget,
-    });
+    await ConfigService.writeOpDevtoolsDottedSettings({ 'compileAndDeploy.buildConfig.deployCommandOrRunCommand': deployTarget });
   }
 
   /** Direct read of one `op-devtools` key via VS Code configuration API (backed by settings.json). */
   static readOpDevtoolsSetting<T>(relativeKey: string): T | undefined {
-    return getOpDevtoolsWorkspaceConfiguration().get<T>(relativeKey);
+    return getOpDevtoolsWorkspaceConfiguration()
+      .get<T>(relativeKey);
   }
 
   /**
@@ -516,6 +592,7 @@ export class ConfigService {
       setIfDefined(opts, 'script', readNonEmptyOpDevtoolsSetting('compileAndDeploy.buildConfig.compileCommand'));
       setIfDefined(opts, 'cpu_debug_script', readNonEmptyOpDevtoolsSetting('compileAndDeploy.buildConfig.cpuDebugCompileCommand'));
       setIfDefined(opts, 'npu_debug_script', readNonEmptyOpDevtoolsSetting('compileAndDeploy.buildConfig.npuDebugCompileCommand'));
+
       return opts;
     }
 
@@ -526,6 +603,7 @@ export class ConfigService {
         'execution_mode',
         normalizeExecutionMode(readNonEmptyOpDevtoolsSetting('compileAndDeploy.exampleBuildConfig.executionMode')),
       );
+
       return opts;
     }
 
@@ -537,14 +615,17 @@ export class ConfigService {
       const params = ConfigService.readOpDevtoolsSetting<unknown>('performanceTuning.simulation.parameters');
       const advance = mapKeyValueObjectToAdvanceParams(params)
         ?? (Array.isArray(params) ? params : undefined);
+
       if (advance !== undefined) {
         opts.advance_param = advance;
       }
+
       return opts;
     }
 
     if (configType === 'ut_test') {
       setIfDefined(opts, 'script', readNonEmptyOpDevtoolsSetting('compileAndDeploy.buildConfig.utTestCompileCommand'));
+
       return opts;
     }
 
@@ -559,10 +640,13 @@ export class ConfigService {
 
       const isA5Profiler = isAscendA5ProfilerCannSoc(resolveEffectiveCannSoc());
       const pcSampling = ConfigService.readOpDevtoolsSetting<boolean>('performanceTuning.onBoard.pcSampling');
+
       if (pcSampling !== undefined && isA5Profiler) {
         opts.PCSampling = pcSampling;
       }
+
       const cacheHeatmap = ConfigService.readOpDevtoolsSetting<boolean>('performanceTuning.onBoard.cacheHeatmap');
+
       if (cacheHeatmap !== undefined && !isA5Profiler) {
         opts.MemoryDetail = cacheHeatmap;
       }
@@ -570,14 +654,17 @@ export class ConfigService {
       const onBoardParams = ConfigService.readOpDevtoolsSetting<unknown>('performanceTuning.onBoard.parameters');
       const onBoardAdvance = mapKeyValueObjectToAdvanceParams(onBoardParams)
         ?? (Array.isArray(onBoardParams) ? onBoardParams : undefined);
+
       if (onBoardAdvance !== undefined) {
         opts.advance_param = onBoardAdvance;
       }
+
       setIfDefined(
         opts,
         'operatorMetrics',
         ConfigService.readOpDevtoolsSetting<boolean>('performanceTuning.onBoard.operatorMetrics'),
       );
+
       return opts;
     }
 
@@ -587,43 +674,57 @@ export class ConfigService {
       setIfDefined(opts, 'maxDebuglogSize', ConfigService.readOpDevtoolsSetting<number>('sanitizer.maxSingleLogFileSize'));
 
       const scope = ConfigService.readOpDevtoolsSetting<string>('sanitizer.detectionScope');
+
       if (scope !== undefined) {
         const useBlock = mapSanitizerScopeToUseBlock(scope);
+
         if (useBlock !== undefined) {
           opts.useBlock = useBlock;
         }
       }
+
       setIfDefined(opts, 'blockId', ConfigService.readOpDevtoolsSetting<number>('sanitizer.blockId'));
 
       const tool: Record<string, unknown> = {};
       const memory = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.memory');
+
       if (memory !== undefined) {
         tool.memcheck = memory;
       }
+
       const race = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.race');
+
       if (race !== undefined) {
         tool.racecheck = race;
       }
+
       const uninitialized = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.uninitialized');
+
       if (uninitialized !== undefined) {
         tool.initcheck = uninitialized;
       }
+
       if (Object.keys(tool).length > 0) {
         opts.tool = tool;
       }
 
       const memcheckOption: Record<string, unknown> = {};
       const memoryLeak = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.memoryLeak');
+
       if (memoryLeak !== undefined) {
         memcheckOption['leak-check'] = memoryLeak;
       }
+
       const allocUnused = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.allocUnused');
+
       if (allocUnused !== undefined) {
         memcheckOption['check-unused-memory'] = allocUnused;
       }
+
       if (Object.keys(memcheckOption).length > 0) {
         opts.memcheckOption = memcheckOption;
       }
+
       return opts;
     }
 
@@ -638,14 +739,12 @@ export class ConfigService {
     return configs.map((config) => {
       const configType = (config.config_type
         ?? (config as { config_type?: string }).config_type) as string;
-      const dbOnly = extractDbOnlyUserOptionFields(
-        config.user_options as Record<string, unknown> | undefined,
-      );
+      const dbOnly = extractDbOnlyUserOptionFields(config.user_options as Record<string, unknown> | undefined);
       const user_options = ConfigService.buildUserOptionsFromWorkspaceSettings(configType, dbOnly);
       const script = user_options.script as string | undefined;
       const target_file = configType === 'build_op'
         ? (user_options.target_file as string | undefined)
-          ?? ConfigService.readBuildOpDeployTargetFromWorkspace()
+        ?? ConfigService.readBuildOpDeployTargetFromWorkspace()
         : undefined;
 
       return {
@@ -660,9 +759,11 @@ export class ConfigService {
   /** Config row for command generation: DB identity + workspace settings only after migration. */
   static getRuntimeConfigById(configId: number): BuildConfig | undefined {
     const raw = getConfigById(configId) as Record<string, unknown> | undefined;
+
     if (!raw) {
       return undefined;
     }
+
     const config = {
       ...raw,
       user_options: raw.user_options
@@ -671,6 +772,7 @@ export class ConfigService {
     } as BuildConfig;
 
     const [resolved] = ConfigService.applyWorkspaceSettingsToConfigs([config]);
+
     return resolved;
   }
 
@@ -707,11 +809,15 @@ export class ConfigService {
     if (ConfigService.isSettingsMigratedFromLegacy()) {
       return;
     }
+
     const projectId = ProjectManager.getInstance().projectId;
+
     if (!projectId) {
       return;
     }
+
     const buildOpRows = getConfig(Number(projectId), 'build_op');
+
     if (buildOpRows.length === 0) {
       return;
     }
@@ -719,14 +825,16 @@ export class ConfigService {
     const pendingWrites = await ConfigService.buildLegacySettingsMigrationWrites();
     const cfg = getOpDevtoolsWorkspaceConfiguration();
     const filteredWrites = ConfigService.filterPendingWritesByCurrentFile(pendingWrites, cfg);
-    const seedKeys = Object.keys(filteredWrites).filter(
-      (key) => key !== SETTINGS_MIGRATED_FROM_LEGACY_KEY,
-    );
+    const seedKeys = Object.keys(filteredWrites)
+      .filter((key) => key !== SETTINGS_MIGRATED_FROM_LEGACY_KEY);
+
     if (seedKeys.length === 0) {
       return;
     }
+
     filteredWrites[SETTINGS_MIGRATED_FROM_LEGACY_KEY] = true;
     const wrote = await ConfigService.writeOpDevtoolsDottedSettings(filteredWrites);
+
     if (!wrote) {
       return;
     }
@@ -761,6 +869,7 @@ export class ConfigService {
         queue(key, value.trim());
       }
     };
+
     queue('compileAndDeploy.buildConfig.operatorNameToCompile', buildOpOpts.op);
     queue('compileAndDeploy.buildConfig.deployCommandOrRunCommand', buildOpOpts.target_file);
     queueNonEmptyString('compileAndDeploy.buildConfig.compileCommand', buildOpOpts.script);
@@ -785,9 +894,11 @@ export class ConfigService {
       sanitizerUserOptionsToDottedWrites(sanitizerOpts),
     );
     queue('sanitizer.showQuickOptions', true);
+
     if (typeof sanitizerOpts.useBlock !== 'boolean') {
       queue('sanitizer.detectionScope', 'global');
     }
+
     queue('sanitizer.blockId', sanitizerOpts.blockId ?? null);
 
     queue('performanceTuning.simulation.showQuickOptions', true);
@@ -815,6 +926,7 @@ export class ConfigService {
       'ResourceConflictRatio',
     ] as const;
     const allMetricEnabled = metricKeys.every((key) => onBoardOpts[key] === true);
+
     queue('performanceTuning.onBoard.operatorMetrics', allMetricEnabled);
 
     queue('environment.environmentScript', projectSH);
@@ -823,8 +935,15 @@ export class ConfigService {
   }
 
   private static loadBuildConfigsFromDb(projectId: number): BuildConfig[] {
-    const types = ['build_op', 'build_example', 'simulate', 'on_board', 'ut_test'] as const;
+    const types = [
+      'build_op',
+      'build_example',
+      'simulate',
+      'on_board',
+      'ut_test',
+    ] as const;
     const configs: BuildConfig[] = [];
+
     for (const configType of types) {
       for (const row of getConfig(projectId, configType)) {
         configs.push({
@@ -835,6 +954,7 @@ export class ConfigService {
         } as BuildConfig);
       }
     }
+
     return configs;
   }
 
@@ -924,9 +1044,8 @@ export class ConfigService {
   async saveSanitizerForm(params: SaveSanitizerFormParams): Promise<void> {
     try {
       const formOpts = params.data as Record<string, unknown>;
-      await ConfigService.writeOpDevtoolsDottedSettings(
-        sanitizerUserOptionsToDottedWrites(formOpts),
-      );
+
+      await ConfigService.writeOpDevtoolsDottedSettings(sanitizerUserOptionsToDottedWrites(formOpts));
 
       if (params.showMessage) {
         vscode.window.showInformationMessage(t('config.saveSanitizerConfigSuccess'));

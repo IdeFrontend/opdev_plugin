@@ -15,6 +15,15 @@ import webviewMessageList from './webview-message-list';
 import { HtmlTransformer } from './html-transformer';
 import { ApiServer } from '@plugin/core/api-server';
 import {
+  VIEW_NEW_PROJECT,
+  VIEW_WELCOME,
+} from '@plugin/constants';
+import {
+  BRANDING,
+  MINDSTUDIO_OPSUITE_PANEL_TYPE,
+  PLUGIN_SIDEBAR_VIEW_TYPE,
+} from '@shared/flavor';
+import {
   handleThemeRequest,
   registerWebviewThemeBridge,
 } from '@plugin/core/view/webview-theme';
@@ -44,25 +53,45 @@ export class WebviewProvider {
   /**
    * Icon shown on the editor tab for this webview panel (must exist on disk).
    */
-  private getWebviewPanelIconPath(): vscode.Uri | { readonly light: vscode.Uri; readonly dark: vscode.Uri } | undefined {
+  private getWebviewPanelIconPath(): vscode.Uri | { readonly light: vscode.Uri;
+    readonly dark: vscode.Uri } | undefined {
     const candidates = [
       path.join(this.context.extensionPath, 'out', 'web', 'branding', 'extension_icon.png'),
       path.join(this.context.extensionPath, 'web', 'src', 'assets', 'branding', 'extension_icon.png'),
     ];
+
     for (const fsPath of candidates) {
       if (fs.existsSync(fsPath)) {
         const uri = vscode.Uri.file(fsPath);
-        return { light: uri, dark: uri };
+
+        return {
+          light: uri,
+          dark: uri,
+        };
       }
     }
+
     return undefined;
   }
 
   private applyWebviewPanelIcon(panel: vscode.WebviewPanel): void {
     const icon = this.getWebviewPanelIconPath();
+
     if (icon) {
       panel.iconPath = icon;
     }
+  }
+
+  private getPanelTitle(router: string): string {
+    if (router === VIEW_NEW_PROJECT) {
+      return t('web.home.newOperatorProject');
+    }
+
+    if (router === VIEW_WELCOME) {
+      return BRANDING.productName;
+    }
+
+    return BRANDING.productName;
   }
 
   /**
@@ -122,7 +151,7 @@ export class WebviewProvider {
       const viewRootUri = vscode.Uri.joinPath(extensionUri, 'out', 'web');
 
       this.pluginSidebarDisposable = vscode.window.registerWebviewViewProvider(
-        'pluginSidebar',
+        PLUGIN_SIDEBAR_VIEW_TYPE,
         {
           resolveWebviewView: async (webviewView: vscode.WebviewView) => {
             webviewView.webview.options = {
@@ -175,8 +204,8 @@ export class WebviewProvider {
       const iconPath = this.getWebviewPanelIconPath();
 
       this.panel = vscode.window.createWebviewPanel(
-        'mindstudioOpsuite',
-        'Huawei OP DevTools',
+        MINDSTUDIO_OPSUITE_PANEL_TYPE,
+        this.getPanelTitle(router),
         vscode.ViewColumn.Active,
         {
           enableScripts: true,

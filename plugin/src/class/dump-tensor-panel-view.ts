@@ -13,10 +13,11 @@ import {
   COMMAND_OPEN_DUMP_TENSOR_PANEL_VIEW,
   VIEW_DUMP_TENSOR_DATA,
 } from '@plugin/constants';
+import { DUMP_TENSOR_PANEL_VIEW_ID } from '@shared/flavor';
 
 export class DumpTensorPanelViewProvider
 implements vscode.WebviewViewProvider {
-  public static readonly viewType = 'dumpTensorPanelView';
+  public static readonly viewType = DUMP_TENSOR_PANEL_VIEW_ID;
 
   _view?: vscode.WebviewView;
   private _extensionUri: vscode.Uri;
@@ -77,6 +78,7 @@ implements vscode.WebviewViewProvider {
     // Handle DumpTensor .bin import command.
     if (message.command === 'importDumpTensorBinFile') {
       await this.importDumpTensorBinFile();
+
       return;
     }
 
@@ -96,20 +98,23 @@ implements vscode.WebviewViewProvider {
         canSelectMany: false,
         filters: {
           'Binary Files': ['bin'],
-          'All Files': ['*']
+          'All Files': ['*'],
         },
-        title: t('extension.selectDumpTensorBinFile')
+        title: t('extension.selectDumpTensorBinFile'),
       });
 
       if (fileUri && fileUri.length > 0) {
         const binFilePath = fileUri[0].fsPath;
+
         console.log('[DumpTensorPanelView] Selected .bin file path:', binFilePath);
-        
+
         // Import selected file.
         const { buildService } = await import('../service/build-service.js');
+
         await buildService.importDumpTensorBinFile(binFilePath);
       }
-    } catch (error) {
+    }
+    catch (error) {
       console.error('[DumpTensorPanelView] Failed to import DumpTensor .bin file:', error);
       vscode.window.showErrorMessage(t('extension.importDumpTensorBinFailed'));
     }
@@ -148,7 +153,7 @@ export const getDumpTensorPanelViewProvider = (
     COMMAND_OPEN_DUMP_TENSOR_PANEL_VIEW,
     async () => {
       await vscode.commands.executeCommand('workbench.action.togglePanel');
-      await vscode.commands.executeCommand('dumpTensorPanelView.focus');
+      await vscode.commands.executeCommand(`${DUMP_TENSOR_PANEL_VIEW_ID}.focus`);
     },
   );
 

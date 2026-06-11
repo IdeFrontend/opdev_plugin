@@ -5,24 +5,29 @@ jest.mock('vscode', () => ({
 }));
 
 jest.mock('@plugin/class/mind-studio-plugin-installer', () => ({
-  MindStudioPluginInstaller: jest.fn().mockImplementation(() => ({
-    installIfNeeded: jest.fn().mockResolvedValue(undefined),
-  })),
+  MindStudioPluginInstaller: jest.fn()
+    .mockImplementation(() => ({
+      installIfNeeded: jest.fn()
+        .mockResolvedValue(undefined),
+    })),
 }));
 
 jest.mock('@plugin/controller/welcome-controller', () => ({
   welcomeMethods: {
-    openProject: jest.fn().mockResolvedValue(undefined),
+    openProject: jest.fn()
+      .mockResolvedValue(undefined),
   },
 }));
 
 jest.mock('@plugin/helpers/sidebar-context-refresh', () => ({
-  requestSidebarContextsRefresh: jest.fn().mockResolvedValue(undefined),
+  requestSidebarContextsRefresh: jest.fn()
+    .mockResolvedValue(undefined),
 }));
 
 jest.mock('@plugin/service/config-service', () => ({
   configService: {
-    checkDevtoolConfig: jest.fn().mockResolvedValue(false),
+    checkDevtoolConfig: jest.fn()
+      .mockResolvedValue(false),
   },
 }));
 
@@ -36,10 +41,13 @@ import {
   resetPostActivateBootstrapForTest,
   MIND_STUDIO_DEBUG_PLUGIN_ID,
 } from '@plugin/helpers/post-activate-bootstrap';
+import { TREE_VIEW_OPERATE } from '@shared/flavor';
 
 const operateTreeProvider = {
-  refreshSanitizerReports: jest.fn().mockResolvedValue(undefined),
-  refreshPerformanceReports: jest.fn().mockResolvedValue(undefined),
+  refreshSanitizerReports: jest.fn()
+    .mockResolvedValue(undefined),
+  refreshPerformanceReports: jest.fn()
+    .mockResolvedValue(undefined),
 } as never;
 
 describe('post-activate-bootstrap', () => {
@@ -64,13 +72,12 @@ describe('post-activate-bootstrap', () => {
     await whenPostActivateBootstrapReady();
 
     expect(welcomeMethods.openProject).not.toHaveBeenCalled();
-    expect(requestSidebarContextsRefresh).toHaveBeenCalledTimes(1);
+    expect(requestSidebarContextsRefresh)
+      .toHaveBeenCalledTimes(1);
   });
 
   it('single-flights concurrent startPostActivateBootstrap calls', async () => {
-    (vscode.workspace as { workspaceFolders?: unknown }).workspaceFolders = [
-      { uri: { fsPath: '/proj' } },
-    ];
+    (vscode.workspace as { workspaceFolders?: unknown }).workspaceFolders = [{ uri: { fsPath: '/proj' } }];
 
     (configService.checkDevtoolConfig as jest.Mock).mockResolvedValue(true);
     const deps = {
@@ -83,15 +90,19 @@ describe('post-activate-bootstrap', () => {
     startPostActivateBootstrap(deps);
     await whenPostActivateBootstrapReady();
 
-    expect(welcomeMethods.openProject).toHaveBeenCalledTimes(1);
-    expect(welcomeMethods.openProject).toHaveBeenCalledWith(
-      { projectPath: '/proj' },
-      true,
-    );
-    expect(vscode.commands.executeCommand).toHaveBeenCalledWith('opdevtoolsOperateTree.focus');
+    expect(welcomeMethods.openProject)
+      .toHaveBeenCalledTimes(1);
+    expect(welcomeMethods.openProject)
+      .toHaveBeenCalledWith(
+        { projectPath: '/proj' },
+        true,
+      );
+    expect(vscode.commands.executeCommand)
+      .toHaveBeenCalledWith(`${TREE_VIEW_OPERATE}.focus`);
   });
 
   it('exports MindStudio debug plugin id constant', () => {
-    expect(MIND_STUDIO_DEBUG_PLUGIN_ID).toBe('ascend.mindstudio-debug-vscode-plugin');
+    expect(MIND_STUDIO_DEBUG_PLUGIN_ID)
+      .toBe('ascend.mindstudio-debug-vscode-plugin');
   });
 });

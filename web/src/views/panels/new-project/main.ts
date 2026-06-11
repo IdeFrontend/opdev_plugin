@@ -39,6 +39,7 @@ void i18next.init({
   interpolation: { escapeValue: false },
 })
   .then(() => {
+    document.title = i18next.t('web.home.newOperatorProject');
     createApp(App)
       .mount('#app');
   });

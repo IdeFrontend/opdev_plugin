@@ -21,6 +21,9 @@ import {
   _resetSocUndetectedWarningForTest,
   maybeWarnSocNotDetected,
 } from '@plugin/helpers/ascend-soc-warning';
+import {
+  EXTENSION_ID, settingsKey,
+} from '@shared/flavor';
 import enMessages from '@shared/i18n/en';
 import zhMessages from '@shared/i18n/zh-cn';
 
@@ -113,7 +116,7 @@ describe('ascend SOC undetected warning', () => {
     expect(vscode.commands.executeCommand)
       .toHaveBeenCalledWith(
         'workbench.action.openWorkspaceSettings',
-        '@ext:huawei.huawei-op-devtools-vscode-plugin op-devtools.environment.socVersion',
+        `@ext:${EXTENSION_ID} ${settingsKey('environment.socVersion')}`,
       );
   });
 });

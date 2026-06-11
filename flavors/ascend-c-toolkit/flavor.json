@@ -1,0 +1,36 @@
+{
+  "id": "ascend-c-toolkit",
+  "manifest": {
+    "name": "ascend-c-toolkit",
+    "displayName": "Ascend C Toolkit",
+    "publisher": "hicann",
+    "description": "Operator development, debugging, and performance analysis all-in-one platform for Ascend C language."
+  },
+  "ids": {
+    "commandPrefix": "ascend-c-toolkit",
+    "settingsPrefix": "ascendCToolkit",
+    "viewContainerId": "ascend-c-toolkit-sidebar",
+    "viewPrefix": "ascendCToolkit",
+    "contextPrefix": "ascendCToolkit",
+    "colorIdPrefix": "hicann.ascend.c.toolkit"
+  },
+  "branding": {
+    "productName": "Ascend C Toolkit",
+    "productNameZh": "Ascend C 工具包",
+    "productTaglineEn": "Ascend C Toolkit operator one-stop development platform",
+    "platformTitleKey": "web.welcome.platformTitle"
+  },
+  "features": {
+    "operatorSupport.triton": { "mode": "gate", "value": false }
+  },
+  "i18nOverrides": {
+    "en": {
+      "web.welcome.platformTitle": "Ascend C Toolkit operator one-stop development platform",
+      "extension.openDevToolsFailed": "Failed to open Ascend C Toolkit: {{error}}"
+    },
+    "zh-cn": {
+      "web.welcome.platformTitle": "Ascend C Toolkit 算子一站式开发平台",
+      "extension.openDevToolsFailed": "打开 Ascend C Toolkit 失败：{{error}}"
+    }
+  }
+}

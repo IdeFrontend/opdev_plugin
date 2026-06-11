@@ -1,0 +1,33 @@
+{
+  "id": "huawei",
+  "manifest": {
+    "name": "huawei-op-devtools-vscode-plugin",
+    "displayName": "Huawei OP DevTools",
+    "publisher": "huawei",
+    "description": "Operator development, debugging, and performance analysis all-in-one platform for Ascend C language."
+  },
+  "ids": {
+    "commandPrefix": "huawei-op-devtools",
+    "settingsPrefix": "op-devtools",
+    "viewContainerId": "mindstudio-opssuite-vscode-plugin",
+    "viewPrefix": "opdevtools",
+    "contextPrefix": "opDevtools",
+    "colorIdPrefix": "huawei.op.devtools"
+  },
+  "branding": {
+    "productName": "Huawei OP DevTools",
+    "productNameZh": "华为算子一站式开发工具",
+    "platformTitleKey": "web.welcome.platformTitle"
+  },
+  "features": {
+    "operatorSupport.triton": { "mode": "default", "value": false }
+  },
+  "i18nOverrides": {
+    "en": {
+      "web.welcome.platformTitle": "OP DevTools operator one-stop development platform"
+    },
+    "zh-cn": {
+      "web.welcome.platformTitle": "OP DevTools 算子一站式开发平台"
+    }
+  }
+}

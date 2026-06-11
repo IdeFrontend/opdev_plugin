@@ -4,7 +4,8 @@ import { ExceptionParser } from '@plugin/class/exception-parser';
 import { resolveSanitizerSourceFsPath } from '@plugin/helpers/sanitizer-source-path';
 import { msAgentBridgeService } from '@plugin/service/ms-agent-bridge.service';
 
-const COLLECTION_NAME = 'op-devtools-sanitizer';
+import { sanitizerDiagnosticCollectionId } from '@shared/flavor';
+
 export type SanitizerPanelData = {
   path?: string;
   title?: string;
@@ -19,13 +20,11 @@ export class SanitizerDiagnosticsService {
   private collection: vscode.DiagnosticCollection | undefined;
 
   activate(context: vscode.ExtensionContext): void {
-    this.collection = vscode.languages.createDiagnosticCollection(COLLECTION_NAME);
+    this.collection = vscode.languages.createDiagnosticCollection(sanitizerDiagnosticCollectionId());
     context.subscriptions.push(this.collection);
-    context.subscriptions.push(
-      vscode.workspace.onDidChangeWorkspaceFolders(() => {
-        this.clear();
-      }),
-    );
+    context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(() => {
+      this.clear();
+    }));
   }
 
   clear(): void {
@@ -41,6 +40,7 @@ export class SanitizerDiagnosticsService {
     }
 
     let content: string;
+
     try {
       content = fs.readFileSync(absoluteLogPath, 'utf-8');
     }
@@ -57,6 +57,7 @@ export class SanitizerDiagnosticsService {
 
     for (const r of results) {
       const fsPath = resolveSanitizerSourceFsPath(workspaceRoot, r.fileLink);
+
       if (!fsPath || r.row == null || r.row < 1) {
         continue;
       }
@@ -69,17 +70,23 @@ export class SanitizerDiagnosticsService {
       const message = r.question || r.title || r.exceptionName || 'Sanitizer';
       const range = new vscode.Range(line, col, line, 2000);
       const d = new vscode.Diagnostic(range, message, severity);
+
       d.source = 'sanitizer';
 
       const uri = vscode.Uri.file(fsPath);
       const key = uri.toString();
+
       if (!byUri.has(key)) {
         byUri.set(key, []);
       }
+
       byUri.get(key)!.push(d);
     }
 
-    for (const [key, diags] of byUri) {
+    for (const [
+      key,
+      diags,
+    ] of byUri) {
       this.collection.set(vscode.Uri.parse(key), diags);
     }
   }

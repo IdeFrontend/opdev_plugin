@@ -6,7 +6,12 @@ import { ConfigService } from '@plugin/service/config-service';
 import { ConfigHelper } from '@plugin/helpers/ConfigHelper';
 import * as vscode from 'vscode';
 import { OperatorProjectViewId } from '@shared/project-type-view-id';
-import { isOperatorSupportEnabled } from '@plugin/helpers/feature-toggle';
+import {
+  isOperatorSupportEnabled, isSanitizerEnabled, isPerformanceTuningEnabled, isNpuDebugEnabled, isDumpTensorEnabled,
+} from '@plugin/helpers/feature-toggle';
+import {
+  FLAVOR_GATES, FLAVOR_ID, BRANDING,
+} from '@shared/flavor';
 
 export const commonMethods = {
   /**
@@ -51,9 +56,7 @@ export const commonMethods = {
   },
 
   async setSanitizerShowQuickOptions(params: { value: boolean }): Promise<void> {
-    await ConfigService.writeOpDevtoolsDottedSettings({
-      'sanitizer.showQuickOptions': params.value,
-    });
+    await ConfigService.writeOpDevtoolsDottedSettings({ 'sanitizer.showQuickOptions': params.value });
   },
 
   getSimulationShowQuickOptions(): boolean {
@@ -61,9 +64,7 @@ export const commonMethods = {
   },
 
   async setSimulationShowQuickOptions(params: { value: boolean }): Promise<void> {
-    await ConfigService.writeOpDevtoolsDottedSettings({
-      'performanceTuning.simulation.showQuickOptions': params.value,
-    });
+    await ConfigService.writeOpDevtoolsDottedSettings({ 'performanceTuning.simulation.showQuickOptions': params.value });
   },
 
   getOnBoardAnalysisShowQuickOptions(): boolean {
@@ -71,9 +72,7 @@ export const commonMethods = {
   },
 
   async setOnBoardAnalysisShowQuickOptions(params: { value: boolean }): Promise<void> {
-    await ConfigService.writeOpDevtoolsDottedSettings({
-      'performanceTuning.onBoard.showQuickOptions': params.value,
-    });
+    await ConfigService.writeOpDevtoolsDottedSettings({ 'performanceTuning.onBoard.showQuickOptions': params.value });
   },
 
   getProjectTypeSupportEnabled(params: { projectType: string | number }): boolean {
@@ -101,5 +100,25 @@ export const commonMethods = {
 
     // Support API should reflect settings map in feature-toggle (source of truth).
     return isOperatorSupportEnabled(normalized);
+  },
+
+  getFlavorFeatures(): {
+    flavorId: string;
+    productName: string;
+    gates: typeof FLAVOR_GATES;
+    sanitizer: boolean;
+    performanceTuning: boolean;
+    npuDebug: boolean;
+    dumpTensor: boolean;
+  } {
+    return {
+      flavorId: FLAVOR_ID,
+      productName: BRANDING.productName,
+      gates: FLAVOR_GATES,
+      sanitizer: isSanitizerEnabled(),
+      performanceTuning: isPerformanceTuningEnabled(),
+      npuDebug: isNpuDebugEnabled(),
+      dumpTensor: isDumpTensorEnabled(),
+    };
   },
 };

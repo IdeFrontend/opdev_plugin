@@ -21,7 +21,9 @@ import {
   getConfig,
   getProjectById,
 } from '@plugin/domain';
-import { joinIdeConfigPath, joinIdeConfigRelative } from '@plugin/helpers/ide-config-dir';
+import {
+  joinIdeConfigPath, joinIdeConfigRelative,
+} from '@plugin/helpers/ide-config-dir';
 import { getConfigById } from '@plugin/domain/services/configuration';
 import { OperatorProjectType } from '@plugin/domain/services/operator-project-detector';
 import { markOperatorsAsCompiled } from '@plugin/domain/models/project-model';
@@ -37,6 +39,11 @@ import { ConfigService } from '@plugin/service/config-service';
 import { requestSidebarContextsRefresh } from '@plugin/helpers/sidebar-context-refresh';
 import { resolveOrPickPythonOperatorUri } from '@plugin/helpers/python-operator-editor-context';
 import { buildPythonDeployTarget } from '@plugin/domain/services/command-strategy/python-operator-strategy-shared';
+import {
+  COMMAND_FLASH_DUMP_TENSOR_DATA,
+  COMMAND_FLASH_PERFORMANCE_RUN_DATA,
+  COMMAND_OPEN_DUMP_TENSOR_PANEL_VIEW,
+} from '@plugin/constants';
 
 const CONFIG_TYPES = {
   BUILD_OP: 'build_op',
@@ -584,7 +591,8 @@ export class BuildService {
   /**
    * Start simulation analysis
    */
-  async startSimulate(params: { operatorNames?: string; compileOption?: string } = {}): Promise<void> {
+  async startSimulate(params: { operatorNames?: string;
+    compileOption?: string } = {}): Promise<void> {
     if (!(await this.guardSupportedProjectTypeForCurrentProject())) {
       return;
     }
@@ -713,7 +721,7 @@ export class BuildService {
       }
 
       vscode.window.showInformationMessage(t('build.simulationSuccess'));
-      await vscode.commands.executeCommand('huawei-op-devtools.flashPerformanceRunData', { focusIfNew: true });
+      await vscode.commands.executeCommand(COMMAND_FLASH_PERFORMANCE_RUN_DATA, { focusIfNew: true });
     }
     catch (e: unknown) {
       vscode.window.showErrorMessage(t('build.getSimulationCommandFailed', { error: (e as Error).message }));
@@ -724,7 +732,8 @@ export class BuildService {
   /**
    * Start board analysis
    */
-  async startOnBoard(params: { operatorNames?: string; compileOption?: string } = {}): Promise<void> {
+  async startOnBoard(params: { operatorNames?: string;
+    compileOption?: string } = {}): Promise<void> {
     if (!(await this.guardSupportedProjectTypeForCurrentProject())) {
       return;
     }
@@ -852,7 +861,7 @@ export class BuildService {
       }
 
       vscode.window.showInformationMessage(t('build.onBoardSuccess'));
-      await vscode.commands.executeCommand('huawei-op-devtools.flashPerformanceRunData', { focusIfNew: true });
+      await vscode.commands.executeCommand(COMMAND_FLASH_PERFORMANCE_RUN_DATA, { focusIfNew: true });
     }
     catch (e: unknown) {
       vscode.window.showErrorMessage(t('build.getOnBoardCommandFailed', { error: (e as Error).message }));
@@ -1106,8 +1115,8 @@ export class BuildService {
   private async openDumpTensorPanel(): Promise<void> {
     try {
       console.log('[startDumpTensor] Opening dump tensor data panel');
-      await vscode.commands.executeCommand('huawei-op-devtools.open-dump-tensor-panel-view');
-      await vscode.commands.executeCommand('huawei-op-devtools.flashDumpTensorData');
+      await vscode.commands.executeCommand(COMMAND_OPEN_DUMP_TENSOR_PANEL_VIEW);
+      await vscode.commands.executeCommand(COMMAND_FLASH_DUMP_TENSOR_DATA);
       console.log('[startDumpTensor] Dump tensor panel opened and refreshed');
     }
     catch (error) {

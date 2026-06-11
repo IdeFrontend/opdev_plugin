@@ -1,6 +1,8 @@
 import { t } from 'i18next';
 import * as vscode from 'vscode';
 
+import { CSV_VIEWER_VIEW_TYPE } from '@shared/flavor';
+
 /** Maximum number of rendering lines */
 const MAX_RENDER_ROWS = 1000;
 
@@ -8,7 +10,7 @@ const MAX_RENDER_ROWS = 1000;
  * CSV Editor Provider - Responsible for rendering CSV files into tables
  */
 export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
-  public static readonly viewType = 'csvViewer';
+  public static readonly viewType = CSV_VIEWER_VIEW_TYPE;
 
   /**
    * Parse CSV text into 2D array
@@ -124,7 +126,10 @@ export class CsvEditorProvider implements vscode.CustomTextEditorProvider {
     const displayRows = csvData.slice(0, MAX_RENDER_ROWS);
     const isOverMaxRows = csvData.length > MAX_RENDER_ROWS;
     const rowSummary = isOverMaxRows
-      ? t('csv.rowsCountTruncated', { count: csvData.length, max: MAX_RENDER_ROWS })
+      ? t('csv.rowsCountTruncated', {
+        count: csvData.length,
+        max: MAX_RENDER_ROWS,
+      })
       : t('csv.rowsCountOnly', { count: csvData.length });
 
     // Generate header

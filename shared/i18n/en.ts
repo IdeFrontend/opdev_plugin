@@ -71,12 +71,11 @@ export default {
     + 'confirm the NPU driver and npu-smi work on this host; on some A5 images asys is packaged separately '
     + 'or find / may not locate set_env.sh under */cann*/.',
   'extension.ascendEnv.socNotDetected.openSettings': 'Open SoC setting…',
-  'extension.tritonSupportChangedReload': 'Triton support setting changed. Reload window to apply operator support changes.',
   'extension.reloadWindowAction': 'Reload Window',
   'extension.resetProjectConfigurationConfirm':
     'Reset configuration for {{projectName}}? Choosing Reset will clear configuration stored by this plugin for {{projectName}} and regenerate defaults. Your operator source code and other project files in the repository will not be changed.',
   'extension.resetProjectConfigurationConfirmReset': 'Reset',
-  'extension.unsupportedProjectTypeDisabled': 'Project type "{{projectType}}" is currently not enabled in Operator Support settings.',
+  'extension.unsupportedProjectTypeDisabled': 'Project type "{{projectType}}" is not supported in this product build.',
 
   // folder-context-menu
   'folderContext.angleOpsNotSupported': '<<<>>> operator type does not support this context menu action',
@@ -329,7 +328,7 @@ export default {
   'web.home.orOpen': 'or open',
   'web.home.welcomeHome': 'Welcome',
   'web.home.viewPluginIntro': ' to view the plugin introduction.',
-  'web.home.newOperatorProject': 'New operator project',
+  'web.home.newOperatorProject': 'New Operator Project',
   'web.home.openOperatorProject': 'Open operator project',
 
   // web open-project panel

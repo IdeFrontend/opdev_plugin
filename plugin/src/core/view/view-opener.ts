@@ -2,6 +2,7 @@ import { t } from 'i18next';
 import * as vscode from 'vscode';
 
 import { InsightDataViewerPanel } from '@plugin/class/insight-data-viewer-panel';
+import { CSV_VIEWER_VIEW_TYPE } from '@shared/flavor';
 
 // Track opened CSV file directories
 const openedCsvDirectories = new Map<string, vscode.Uri>();
@@ -22,7 +23,7 @@ export class ViewOpener {
 
     // Open the new file first (using a custom editor) so the new file appears immediately
     // Use the openWith command, VSCode will automatically handle it and will not flash the source file.
-    await vscode.commands.executeCommand('vscode.openWith', uri, 'csvViewer');
+    await vscode.commands.executeCommand('vscode.openWith', uri, CSV_VIEWER_VIEW_TYPE);
 
     // If different files in the same directory are open, close the old file after the new file is opened
     // This way the new file is already displayed and the source file will not flash when closing the old file.

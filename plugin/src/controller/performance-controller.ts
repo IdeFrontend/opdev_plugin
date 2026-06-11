@@ -12,7 +12,9 @@ import {
   JumpToFileParams,
 } from '@shared/api-types';
 
-const jumpToFileDiagnosticCollection = vscode.languages.createDiagnosticCollection('opdevtools-jump-to-file');
+import { jumpToFileDiagnosticCollectionId } from '@shared/flavor';
+
+const jumpToFileDiagnosticCollection = vscode.languages.createDiagnosticCollection(jumpToFileDiagnosticCollectionId());
 
 function toDiagnosticMessage(message: string): string {
   const lines = message.split(/\r?\n/);
@@ -21,18 +23,22 @@ function toDiagnosticMessage(message: string): string {
 
   for (const rawLine of lines) {
     const line = rawLine.trim();
+
     if (!line) {
       continue;
     }
+
     if (/^\*\*.*stack.*\*\*:/i.test(line) || /^stack:/i.test(line)) {
       inStackSection = true;
       continue;
     }
+
     if (inStackSection) {
       // Skip stack list items and links under Stack section.
       if (/^[-*]\s+/.test(line) || /^\[.*\]\(.*\)$/.test(line)) {
         continue;
       }
+
       // If another field starts, leave stack section.
       if (/^\*\*.+\*\*:/.test(line) || /^[A-Za-z][^:]{1,40}:/.test(line)) {
         inStackSection = false;
@@ -41,6 +47,7 @@ function toDiagnosticMessage(message: string): string {
         continue;
       }
     }
+
     kept.push(line);
   }
 
@@ -87,9 +94,7 @@ export const performanceDataMethods = {
 
           progress.report({
             increment: 30,
-            message: t('performance.fileSizeKb', {
-              size: (stat.size / 1024).toFixed(2),
-            }),
+            message: t('performance.fileSizeKb', { size: (stat.size / 1024).toFixed(2) }),
           });
         }
         catch {
@@ -238,7 +243,8 @@ export const performanceDataMethods = {
       params.fileTypes.forEach((fileType) => {
         options.filters![fileType.label] = fileType.extensions;
       });
-    } else {
+    }
+    else {
       // Default filters
       options.filters![t('common.shellScript')] = ['sh'];
       options.filters![t('common.allFiles')] = ['*'];
@@ -337,6 +343,7 @@ export const performanceDataMethods = {
           toDiagnosticMessage(messageSource),
           vscode.DiagnosticSeverity.Warning,
         );
+
         diagnostic.source = 'Sanitizer';
         jumpToFileDiagnosticCollection.set(document.uri, [diagnostic]);
       }

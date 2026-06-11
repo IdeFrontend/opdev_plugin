@@ -31,6 +31,77 @@
       }
     },
     {
+      "label": "apply-flavor:ascend-c-toolkit",
+      "type": "npm",
+      "script": "apply-flavor:ascend-c-toolkit",
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      }
+    },
+    {
+      "label": "compile:ascend-c-toolkit:debug",
+      "dependsOn": [
+        "apply-flavor:ascend-c-toolkit",
+        "npm: compile:web:debug",
+        "npm: compile:plugin:debug"
+      ],
+      "dependsOrder": "sequence",
+      "group": "build",
+      "problemMatcher": ["$tsc"],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      }
+    },
+    {
+      "type": "npm",
+      "script": "compile:web:debug",
+      "group": "build",
+      "label": "npm: compile:web:debug",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      }
+    },
+    {
+      "type": "npm",
+      "script": "compile:plugin:debug",
+      "group": "build",
+      "label": "npm: compile:plugin:debug",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      }
+    },
+    {
+      "label": "ascend-c-toolkit: prewatch",
+      "dependsOn": [
+        "apply-flavor:ascend-c-toolkit",
+        "npm: watch"
+      ],
+      "dependsOrder": "sequence",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
       "type": "npm",
       "script": "watch",
       "group": "build",

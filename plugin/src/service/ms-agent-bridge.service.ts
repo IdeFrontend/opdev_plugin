@@ -1,11 +1,13 @@
-import { ConfigHelper } from '@plugin/helpers/ConfigHelper';
+import { isMsAgentAiFixEnabled as isMsAgentAiFixFlavorEnabled } from '@plugin/helpers/feature-toggle';
 import * as vscode from 'vscode';
 
 export type MsAgentAiFixState = 'queued' | 'running' | 'fixed';
+
 export interface MsAgentAiFixQueueSnapshot {
   paused: boolean;
   hasPendingTasks: boolean;
-  items: Array<{ id: string; title: string }>;
+  items: Array<{ id: string;
+    title: string }>;
   states: Record<string, MsAgentAiFixState>;
 }
 
@@ -16,7 +18,7 @@ export interface MsAgentAiFixQueueSnapshot {
 export class MsAgentBridgeService {
   private isMsAgentAiFixEnabled(): boolean {
     try {
-      return ConfigHelper.get<boolean>('sanitizer.enableMsAgentAiFix', false);
+      return isMsAgentAiFixFlavorEnabled();
     }
     catch {
       return false;
@@ -93,6 +95,7 @@ export class MsAgentBridgeService {
     options?: { suppressMessage?: boolean },
   ): Promise<void> {
     const uri = vscode.Uri.file(absoluteLogPath);
+
     this.log('loadMsAgentLog executeCommand msagent.parseLog', {
       absoluteLogPath,
       suppressMessage: options?.suppressMessage ?? false,
@@ -126,16 +129,19 @@ export class MsAgentBridgeService {
     }
 
     const globalObj = globalThis as {
-      __msAgentGetAiFixQueueSnapshot?: () => unknown;
-      __msAgentGetAiFixQueueStates?: () => unknown;
+      __msAgentGetAiFixQueueSnapshot?: ()=> unknown;
+      __msAgentGetAiFixQueueStates?: ()=> unknown;
     };
 
     const fromSnapshotGlobal = globalObj.__msAgentGetAiFixQueueSnapshot;
+
     if (typeof fromSnapshotGlobal === 'function') {
       try {
         const snapshot = fromSnapshotGlobal();
+
         if (this.isQueueSnapshot(snapshot)) {
           this.log('getAiFixQueueSnapshot from global', snapshot);
+
           return snapshot;
         }
       }
@@ -145,12 +151,16 @@ export class MsAgentBridgeService {
     }
 
     const fromStatesGlobal = globalObj.__msAgentGetAiFixQueueStates;
+
     if (typeof fromStatesGlobal === 'function') {
       try {
         const states = fromStatesGlobal();
+
         if (this.isStateMap(states)) {
           const snapshot = this.snapshotFromStates(states);
+
           this.log('getAiFixQueueSnapshot from global states', snapshot);
+
           return snapshot;
         }
       }
@@ -160,11 +170,11 @@ export class MsAgentBridgeService {
     }
 
     try {
-      const snapshot = await vscode.commands.executeCommand(
-        'msagent.getAiFixQueueSnapshot',
-      ) as unknown;
+      const snapshot = await vscode.commands.executeCommand('msagent.getAiFixQueueSnapshot') as unknown;
+
       if (this.isQueueSnapshot(snapshot)) {
         this.log('getAiFixQueueSnapshot from command', snapshot);
+
         return snapshot;
       }
     }
@@ -173,12 +183,13 @@ export class MsAgentBridgeService {
     }
 
     try {
-      const result = await vscode.commands.executeCommand(
-        'msagent.getAiFixQueueStates',
-      ) as unknown;
+      const result = await vscode.commands.executeCommand('msagent.getAiFixQueueStates') as unknown;
+
       if (this.isStateMap(result)) {
         const snapshot = this.snapshotFromStates(result);
+
         this.log('getAiFixQueueSnapshot from states command', snapshot);
+
         return snapshot;
       }
 
@@ -191,6 +202,7 @@ export class MsAgentBridgeService {
 
   async getAiFixQueueStates(): Promise<Record<string, MsAgentAiFixState>> {
     const snapshot = await this.getAiFixQueueSnapshot();
+
     return snapshot.states;
   }
 
@@ -198,15 +210,16 @@ export class MsAgentBridgeService {
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
       return false;
     }
-    return Object.values(value as Record<string, unknown>).every((state) =>
-      state === 'queued' || state === 'running' || state === 'fixed');
+
+    return Object.values(value as Record<string, unknown>)
+      .every((state) =>
+        state === 'queued' || state === 'running' || state === 'fixed');
   }
 
-  private snapshotFromStates(
-    states: Record<string, MsAgentAiFixState>,
-  ): MsAgentAiFixQueueSnapshot {
+  private snapshotFromStates(states: Record<string, MsAgentAiFixState>): MsAgentAiFixQueueSnapshot {
     const hasPendingTasks = Object.values(states)
       .some((state) => state === 'queued' || state === 'running');
+
     return {
       paused: false,
       hasPendingTasks,
@@ -219,13 +232,17 @@ export class MsAgentBridgeService {
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
       return false;
     }
+
     const snapshot = value as Partial<MsAgentAiFixQueueSnapshot>;
+
     if (typeof snapshot.paused !== 'boolean' || typeof snapshot.hasPendingTasks !== 'boolean') {
       return false;
     }
+
     if (!Array.isArray(snapshot.items) || !this.isStateMap(snapshot.states ?? {})) {
       return false;
     }
+
     return snapshot.items.every((item) =>
       item && typeof item.id === 'string' && typeof item.title === 'string');
   }
@@ -251,16 +268,19 @@ export class MsAgentBridgeService {
 
       if (typeof result === 'object' && result !== null && typeof result.status === 'string') {
         this.log('fixMsAgentProblem status object result', result);
+
         return { status: result.status };
       }
 
       if (result === true) {
         this.log('fixMsAgentProblem boolean result=true');
+
         return { status: 'completed' };
       }
 
       if (result === false) {
         this.log('fixMsAgentProblem boolean result=false');
+
         return { status: 'failed' };
       }
 
