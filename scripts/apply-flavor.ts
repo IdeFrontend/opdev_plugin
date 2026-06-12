@@ -596,6 +596,14 @@ function mergeNls(basePath: string, flavorPath: string | undefined, flavor: Flav
 
   merged['config.title'] = flavor.branding.productName;
 
+  const sidebarTitle = locale === 'en'
+    ? flavor.branding.sidebarTitleEn
+    : flavor.branding.sidebarTitleZh;
+
+  if (sidebarTitle) {
+    merged['viewContainer.activitybar.title'] = sidebarTitle;
+  }
+
   const jsonOverrides = flavor.i18nOverrides?.[locale] ?? {};
 
   for (const [

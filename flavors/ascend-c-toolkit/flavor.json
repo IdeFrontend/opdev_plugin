@@ -18,7 +18,9 @@
     "productName": "Ascend C Toolkit",
     "productNameZh": "Ascend C 工具包",
     "productTaglineEn": "Ascend C Toolkit operator one-stop development platform",
-    "platformTitleKey": "web.welcome.platformTitle"
+    "platformTitleKey": "web.welcome.platformTitle",
+    "sidebarTitleEn": "Ascend C Toolkit",
+    "sidebarTitleZh": "Ascend C 工具包"
   },
   "features": {
     "operatorSupport.triton": { "mode": "gate", "value": false }

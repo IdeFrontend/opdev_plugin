@@ -83,6 +83,10 @@ export type FlavorBranding = {
   /** English one-line product description in README.en.md. Defaults to BASE_FLAVOR_BRANDING.productTaglineEn. */
   productTaglineEn?: string;
   platformTitleKey?: string;
+  /** Secondary sidebar / activity bar container title (English). */
+  sidebarTitleEn?: string;
+  /** Secondary sidebar / activity bar container title (Chinese). */
+  sidebarTitleZh?: string;
 };
 
 export type FlavorDefinition = {

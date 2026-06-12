@@ -21,6 +21,8 @@ export const BRANDING = {
   'productName': 'Huawei OP DevTools',
   'productNameZh': '华为算子一站式开发工具',
   'platformTitleKey': 'web.welcome.platformTitle',
+  'sidebarTitleEn': 'Operator Development',
+  'sidebarTitleZh': '算子一站式交付平台',
 } as const;
 
 export const EXTENSION_ID = 'huawei.huawei-op-devtools-vscode-plugin';

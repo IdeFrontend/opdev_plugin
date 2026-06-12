@@ -64,6 +64,8 @@ describe('apply-flavor', () => {
       .toBe('Operator Support');
     expect(nlsEn['config.op-devtools.operatorSupport.triton.description'])
       .toBe('Enable Triton project support');
+    expect(nlsEn['viewContainer.activitybar.title'])
+      .toBe('Operator Development');
   });
 
   it('apply-flavor preserves package.json version from disk', () => {
@@ -158,6 +160,13 @@ describe('apply-flavor', () => {
       .toBeUndefined();
     expect(nlsEn['config.op-devtools.operatorSupport.triton.description'])
       .toBeUndefined();
+    expect(nlsEn['viewContainer.activitybar.title'])
+      .toBe('Ascend C Toolkit');
+
+    const nlsZh = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.nls.json'), 'utf8'));
+
+    expect(nlsZh['viewContainer.activitybar.title'])
+      .toBe('Ascend C 工具包');
   });
 
   it('huawei re-apply after ascend restores gated manifest sections from git HEAD', () => {
