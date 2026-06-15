@@ -66,8 +66,16 @@ describe('getExecutableCommand', () => {
     expect(cmd).not.toContain('--force');
   });
 
-  it('does not append --force for deploy on non-A5 SOC', () => {
+  it('appends --force for deploy on A2 SOC (ascend910b)', () => {
     (resolveEffectiveCannSoc as jest.Mock).mockReturnValueOnce('ascend910b');
+
+    const cmd = getExecutableCommand('build_out/*.run', { execute: true, mode: 'deploy' });
+
+    expect(cmd).toContain('"$RUN_FILE" --force');
+  });
+
+  it('does not append --force for deploy on A3 SOC (ascend910_93)', () => {
+    (resolveEffectiveCannSoc as jest.Mock).mockReturnValueOnce('ascend910_93');
 
     const cmd = getExecutableCommand('build_out/*.run', { execute: true, mode: 'deploy' });
 

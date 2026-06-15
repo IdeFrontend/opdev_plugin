@@ -90,8 +90,34 @@ describe('getStandardCustomDeployCommand', () => {
     expect(command).toContain('"$RUN_FILE" --force');
   });
 
-  it('omits --force on deploy when SOC is not A5', () => {
+  it('includes --force on deploy for A2 SOC (ascend910b)', () => {
     (resolveEffectiveCannSoc as jest.Mock).mockReturnValueOnce('ascend910b');
+    (ConfigService.getRuntimeConfigById as jest.Mock).mockReturnValue({
+      id: 1,
+      project_id: 10,
+      op: 'add',
+      config_type: 'build_op',
+      target_file: 'build_out/*.run',
+      user_options: { script: './build.sh --pkg', target_file: 'build_out/*.run' },
+    });
+    (getProjectById as jest.Mock).mockReturnValue({
+      id: 10,
+      project_path: '/repo',
+      ascend_env_script: '/cann/setenv.bash',
+    });
+    (getOpByProjectIdAndOpName as jest.Mock).mockReturnValue({
+      op_name: 'add',
+      op_type: 'cann',
+      op_path: '/repo/experimental/add',
+    });
+
+    const command = getStandardCustomDeployCommand(1);
+
+    expect(command).toContain('"$RUN_FILE" --force');
+  });
+
+  it('omits --force on deploy for A3 SOC (ascend910_93)', () => {
+    (resolveEffectiveCannSoc as jest.Mock).mockReturnValueOnce('ascend910_93');
     (ConfigService.getRuntimeConfigById as jest.Mock).mockReturnValue({
       id: 1,
       project_id: 10,

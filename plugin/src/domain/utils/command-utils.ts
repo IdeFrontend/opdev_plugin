@@ -1,5 +1,7 @@
 import { resolveEffectiveCannSoc } from '@plugin/domain/utils/ascend-util';
-import { isAscendA5ProfilerCannSoc } from '@shared/msprof-onboard-env';
+import {
+  cannSocToSeries, type AscendSeries,
+} from '@shared/ascend-series-registry';
 
 /**
  * Command generation configuration options
@@ -87,7 +89,7 @@ export type ExecutableCommandMode = 'run' | 'deploy';
 export interface GetExecutableCommandOptions extends PermissionConfig {
   /** Default `run`. Use `deploy` for .run package install after build. */
   mode?: ExecutableCommandMode;
-  /** When mode is `deploy` and target is a .run package, append `--force` only on A5 (ascend950) unless false. */
+  /** When mode is `deploy` and target is a .run package, append `--force` on A2/A5 SOCs unless false. */
   deployForce?: boolean;
 }
 
@@ -114,12 +116,30 @@ export function isRunPackageDeployTarget(file: string): boolean {
   return file.includes('.run');
 }
 
+/**
+ * Ascend series whose `.run` installer must be re-run with `--force` to
+ * overwrite an already-installed custom operator package: A2 (Ascend910A/B,
+ * 310P) and A5 (Ascend950). A3 (Ascend910_93xx) does not require it.
+ */
+const RUN_PACKAGE_FORCE_DEPLOY_SERIES: ReadonlySet<AscendSeries> = new Set([
+  'a2',
+  'a5',
+]);
+
+/** Whether a `.run` deploy on the given CANN SOC needs the `--force` flag. */
+function cannSocNeedsRunPackageForce(cannSoc: string): boolean {
+  const series = cannSocToSeries(cannSoc.trim()
+    .toLowerCase());
+
+  return series !== undefined && RUN_PACKAGE_FORCE_DEPLOY_SERIES.has(series);
+}
+
 function runPackageForceSuffix(options: GetExecutableCommandOptions): string {
   if (options.mode !== 'deploy' || options.deployForce === false) {
     return '';
   }
 
-  if (!isAscendA5ProfilerCannSoc(resolveEffectiveCannSoc())) {
+  if (!cannSocNeedsRunPackageForce(resolveEffectiveCannSoc())) {
     return '';
   }
 

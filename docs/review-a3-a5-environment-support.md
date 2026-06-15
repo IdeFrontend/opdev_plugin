@@ -103,9 +103,9 @@ Controlled in `profiler-service.ts` → `OnBoardStrategy.getOnBoardMetrics` usin
 
 ### 5. Standard-custom `.run` deploy
 
-`getExecutableCommand(..., { mode: 'deploy' })` in `command-utils.ts`:
+`getExecutableCommand(..., { mode: 'deploy' })` in `command-utils.ts` appends **` --force`** when re-installing a `.run` package on **A2** (`ascend910`, `ascend910b`, `ascend310p`) and **A5** (`ascend950`) SOCs; **A3** (`ascend910_93xx`) installs the package without it. Gated by `runPackageForceSuffix` → `cannSocNeedsRunPackageForce` (series set `{a2, a5}` via `cannSocToSeries`).
 
-| | A3-class | A5-class |
+| | A3-class | A2 / A5-class |
 |---|----------|----------|
 | `.run` package deploy | chmod + execute package path | same + append **` --force`** (`runPackageForceSuffix`) |
 
@@ -135,7 +135,7 @@ On project open / migration, `extension.ts` and `config-service.ts` align worksp
 | NPU arch | `dav-2201` | `dav-3510` |
 | ACLNN spawn pair | `ascend910_95` + `arch22` | `ascend950` + `arch35` |
 | On-board “memory” UX | Cache heatmap → `MemoryDetail` | PC sampling → `PCSampling` |
-| `.run` deploy `--force` | off | on |
+| `.run` deploy `--force` | A2 on, A3 off | on |
 
 ---
 
