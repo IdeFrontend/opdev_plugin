@@ -8,6 +8,16 @@ import { BASE_FLAVOR_IDS } from '../../../../flavors/schema';
 
 const REPO_ROOT = path.resolve(__dirname, '../../../..');
 
+function inlineStopMenuWhen(manifest: Record<string, unknown>): string | undefined {
+  const items = (manifest.contributes as {
+    menus?: { 'view/item/context'?: Array<{ command?: string;
+      when?: string;
+      group?: string }> };
+  }).menus?.['view/item/context'] ?? [];
+
+  return items.find((entry) => entry.group === 'inline@1' && entry.command?.endsWith('.sidebar.stopFlowTask'))?.when;
+}
+
 describe('apply-flavor', () => {
   afterAll(() => {
     try {
@@ -35,28 +45,29 @@ describe('apply-flavor', () => {
     expect(manifest.contributes.configuration.some((c: { id: string }) => c.id === 'op-devtools.operatorSupport'))
       .toBe(true);
 
-    const openCommand = manifest.contributes.commands.find(
-      (c: { command: string }) => c.command === 'huawei-op-devtools.open',
-    );
-    expect(openCommand?.category).toBe('%config.title%');
+    const openCommand = manifest.contributes.commands.find((c: { command: string }) => c.command === 'huawei-op-devtools.open');
 
-    const sidebarBuild = manifest.contributes.commands.find(
-      (c: { command: string }) => c.command === 'huawei-op-devtools.sidebar.build',
-    );
-    const hideSidebarBuild = manifest.contributes.menus.commandPalette.find(
-      (e: { command: string; when?: string }) => e.command === 'huawei-op-devtools.sidebar.build',
-    );
-    expect(hideSidebarBuild?.when).toBe('false');
-    expect(sidebarBuild?.category).toBeUndefined();
+    expect(openCommand?.category)
+      .toBe('%config.title%');
 
-    const toggleOps = manifest.contributes.commands.find(
-      (c: { command: string }) => c.command === 'huawei-op-devtools.toggleOpsOperate',
-    );
-    expect(toggleOps?.category).toBe('%config.title%');
-    const togglePalette = manifest.contributes.menus.commandPalette.find(
-      (e: { command: string; when?: string }) => e.command === 'huawei-op-devtools.toggleOpsOperate',
-    );
-    expect(togglePalette?.when).toBe('opDevtools.hasDevtoolConfig');
+    const sidebarBuild = manifest.contributes.commands.find((c: { command: string }) => c.command === 'huawei-op-devtools.sidebar.build');
+    const hideSidebarBuild = manifest.contributes.menus.commandPalette.find((e: { command: string;
+      when?: string }) => e.command === 'huawei-op-devtools.sidebar.build');
+
+    expect(hideSidebarBuild?.when)
+      .toBe('false');
+    expect(sidebarBuild?.category)
+      .toBeUndefined();
+
+    const toggleOps = manifest.contributes.commands.find((c: { command: string }) => c.command === 'huawei-op-devtools.toggleOpsOperate');
+
+    expect(toggleOps?.category)
+      .toBe('%config.title%');
+    const togglePalette = manifest.contributes.menus.commandPalette.find((e: { command: string;
+      when?: string }) => e.command === 'huawei-op-devtools.toggleOpsOperate');
+
+    expect(togglePalette?.when)
+      .toBe('opDevtools.hasDevtoolConfig');
 
     const nlsEn = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.nls.en.json'), 'utf8'));
 
@@ -66,6 +77,23 @@ describe('apply-flavor', () => {
       .toBe('Enable Triton project support');
     expect(nlsEn['viewContainer.activitybar.title'])
       .toBe('Operator Development');
+  });
+
+  it('substitutes escaped viewPrefix in inline stop menu regex for ascend-c-toolkit', () => {
+    applyFlavor('ascend-c-toolkit');
+    const manifest = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
+
+    expect(inlineStopMenuWhen(manifest))
+      .toBe('view == ascendCToolkitOperateTree && viewItem =~ /ascendCToolkit\\.flowRunning/');
+  });
+
+  it('restores inline stop menu regex after ascend-c-toolkit round-trip', () => {
+    applyFlavor('ascend-c-toolkit');
+    applyFlavor('huawei');
+    const manifest = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
+
+    expect(inlineStopMenuWhen(manifest))
+      .toBe(`view == ${BASE_FLAVOR_IDS.viewPrefix}OperateTree && viewItem =~ /${BASE_FLAVOR_IDS.viewPrefix}\\.flowRunning/`);
   });
 
   it('apply-flavor preserves package.json version from disk', () => {
@@ -134,10 +162,10 @@ describe('apply-flavor', () => {
     expect(manifest.contributes.menus['editor/title'].every((entry: { when?: string }) => entry.when?.includes('ascendCToolkit.hasDevtoolConfig')))
       .toBe(true);
 
-    const ascendOpen = manifest.contributes.commands.find(
-      (c: { command: string }) => c.command === 'ascend-c-toolkit.open',
-    );
-    expect(ascendOpen?.category).toBe('%config.title%');
+    const ascendOpen = manifest.contributes.commands.find((c: { command: string }) => c.command === 'ascend-c-toolkit.open');
+
+    expect(ascendOpen?.category)
+      .toBe('%config.title%');
 
     const generated = fs.readFileSync(path.join(REPO_ROOT, 'shared/flavor/generated.ts'), 'utf8');
 

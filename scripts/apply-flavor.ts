@@ -208,6 +208,10 @@ function reverseSubstituteIdsInString(value: string, flavor: FlavorDefinition): 
   result = result.replaceAll(flavor.ids.contextPrefix, BASE_FLAVOR_IDS.contextPrefix);
   result = result.replaceAll(flavor.ids.colorIdPrefix, BASE_FLAVOR_IDS.colorIdPrefix);
 
+  result = result.replaceAll(
+    `${flavor.ids.viewPrefix}\\.`,
+    `${BASE_FLAVOR_IDS.viewPrefix}\\.`,
+  );
   result = result.replaceAll(`${flavor.ids.viewPrefix}.`, `${BASE_FLAVOR_IDS.viewPrefix}.`);
 
   for (const suffix of VIEW_ID_SUFFIXES) {
@@ -368,6 +372,10 @@ function substituteIdsInString(value: string, flavor: FlavorDefinition): string 
   result = result.replaceAll(BASE_FLAVOR_IDS.colorIdPrefix, flavor.ids.colorIdPrefix);
   result = result.replaceAll(BASE_FLAVOR_IDS.settingsPrefix, flavor.ids.settingsPrefix);
 
+  result = result.replaceAll(
+    `${BASE_FLAVOR_IDS.viewPrefix}\\.`,
+    `${flavor.ids.viewPrefix}\\.`,
+  );
   result = result.replaceAll(`${BASE_FLAVOR_IDS.viewPrefix}.`, `${flavor.ids.viewPrefix}.`);
 
   for (const suffix of VIEW_ID_SUFFIXES) {
@@ -868,18 +876,27 @@ function applyCommandPalettePolicy(manifest: Record<string, unknown>): void {
 
   const menus = contributes.menus ?? {};
   const commandPalette: CommandPaletteEntry[] = [...(menus.commandPalette ?? [])];
-  const paletteIndex = new Map(commandPalette.map((entry, index) => [entry.command, index]));
+  const paletteIndex = new Map(commandPalette.map((entry, index) => [
+    entry.command,
+    index,
+  ]));
 
   for (const cmd of contributes.commands) {
     if (shouldHideCommandFromPalette(cmd.command)) {
       const existingIndex = paletteIndex.get(cmd.command);
 
       if (existingIndex === undefined) {
-        commandPalette.push({ command: cmd.command, when: 'false' });
+        commandPalette.push({
+          command: cmd.command,
+          when: 'false',
+        });
         paletteIndex.set(cmd.command, commandPalette.length - 1);
       }
       else {
-        commandPalette[existingIndex] = { command: cmd.command, when: 'false' };
+        commandPalette[existingIndex] = {
+          command: cmd.command,
+          when: 'false',
+        };
       }
 
       continue;
@@ -888,7 +905,10 @@ function applyCommandPalettePolicy(manifest: Record<string, unknown>): void {
     cmd.category = COMMAND_PALETTE_PRODUCT_CATEGORY;
   }
 
-  contributes.menus = { ...menus, commandPalette };
+  contributes.menus = {
+    ...menus,
+    commandPalette,
+  };
 }
 
 function resolveDocBranding(flavor: FlavorDefinition): {
