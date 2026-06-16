@@ -39,23 +39,61 @@
         flex-direction: column;
       }
 
+      /* Huawei-style indeterminate bar (loader variant B), accent #C7000B. */
       .loading-spinner {
-        border: 3px solid var(--vscode-input-background);
-        border-top: 3px solid var(--vscode-button-background);
-        border-radius: 50%;
-        width: 30px;
-        height: 30px;
-        animation: spin 1s linear infinite;
+        --hw-accent: #c7000b;
+        position: relative;
+        width: 220px;
+        height: 3px;
+        border-radius: 3px;
+        overflow: hidden;
+        background: rgba(199, 0, 11, 0.14);
+        background: color-mix(in oklch, var(--hw-accent) 14%, transparent);
         margin-bottom: 15px;
       }
 
-      @keyframes spin {
+      .loading-spinner::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        width: 40%;
+        border-radius: inherit;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          var(--hw-accent) 30%,
+          var(--hw-accent) 70%,
+          transparent
+        );
+        animation: hw-bar 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+      }
+
+      @keyframes hw-bar {
         0% {
-          transform: rotate(0deg);
+          transform: translateX(-120%);
         }
 
         100% {
-          transform: rotate(360deg);
+          transform: translateX(360%);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .loading-spinner::before {
+          animation: hw-breathe 1.6s ease-in-out infinite;
+          transform: none;
+          width: 100%;
+        }
+      }
+
+      @keyframes hw-breathe {
+        0%,
+        100% {
+          opacity: 0.4;
+        }
+
+        50% {
+          opacity: 1;
         }
       }
 

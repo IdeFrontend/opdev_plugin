@@ -130,6 +130,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       .catch((error) => {
         console.error('[InsightDataViewerPanel] Failed to initialize panel:', error);
         this.resolveServerPortReady();
+        this.notifyWebviewLoadFailed();
       });
 
     this.themeBridgeDisposable = registerWebviewThemeBridge(this.panel.webview);
@@ -287,19 +288,37 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     if (!startupSucceeded && os.platform() !== 'win32') {
       this.logDebug('Skipping iframe pre-load because profiler_server startup failed');
 
+      // Dismiss the loading overlay so it never traps the user behind a frozen
+      // screen when the server fails to start (issue GC-23).
+      this.notifyWebviewLoadFailed();
+
       return;
     }
 
     await this.loadAndSendAllIframes();
   }
 
+  /**
+   * Tell the webview to dismiss the loading overlay immediately when an
+   * initialization step fails, rather than waiting out the overlay's
+   * client-side fail-safe timeout (issue GC-23).
+   */
+  private notifyWebviewLoadFailed(): void {
+    if (this.isDisposed) {
+      return;
+    }
+
+    this.panel.webview.postMessage({ command: 'insightLoadFailed' });
+  }
+
   private async readInjectedHtmlFile(
     htmlPath: string,
     allowMissing = false,
+    includeLoadingOverlay = false,
   ): Promise<string | null> {
     try {
       const stat = await fs.promises.stat(htmlPath);
-      const cacheKey = `${path.resolve(htmlPath)}:${stat.size}:${stat.mtimeMs}`;
+      const cacheKey = `${path.resolve(htmlPath)}:${stat.size}:${stat.mtimeMs}:${includeLoadingOverlay ? 'loader' : 'plain'}`;
       const cachedHtml = InsightDataViewerPanel.takeCachedHtml(cacheKey);
 
       if (cachedHtml !== null) {
@@ -307,7 +326,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
       }
 
       const rawHtml = await fs.promises.readFile(htmlPath, 'utf8');
-      const injectedHtml = this.injectThemeOverrides(rawHtml);
+      const injectedHtml = this.injectThemeOverrides(rawHtml, includeLoadingOverlay);
 
       InsightDataViewerPanel.setCachedHtml(cacheKey, injectedHtml);
 
@@ -327,8 +346,8 @@ export class InsightDataViewerPanel implements vscode.Disposable {
    */
   private async setupWebview(): Promise<void> {
     const htmlPath = path.join(this.insightPluginBasePath, 'index.html');
-    const htmlContent = (await this.readInjectedHtmlFile(htmlPath, true))
-      || this.injectThemeOverrides(this.getDefaultHtml());
+    const htmlContent = (await this.readInjectedHtmlFile(htmlPath, true, true))
+      || this.injectThemeOverrides(this.getDefaultHtml(), true);
 
     this.panel.webview.html = htmlContent;
 
@@ -342,7 +361,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
    * Inject runtime overrides that map --mi-* and --ant-* CSS variables to current
    * VS Code theme values. The third-party HTML file on disk is not modified.
    */
-  private injectThemeOverrides(html: string): string {
+  private injectThemeOverrides(html: string, includeLoadingOverlay = false): string {
     const htmlWithTranslationAliases = this.addInsightTranslationAliases(html);
     const overrideStyle = `
 <style id="vscode-theme-overrides">
@@ -1740,18 +1759,178 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     const injection = `${overrideStyle}\n${overrideScript}`;
     const htmlWithoutExistingOverrides = htmlWithTranslationAliases
       .replace(/<style id="vscode-theme-overrides">[\s\S]*?<\/style>/g, '')
-      .replace(/<script id="vscode-theme-overrides-script">[\s\S]*?<\/script>/g, '');
+      .replace(/<script id="vscode-theme-overrides-script">[\s\S]*?<\/script>/g, '')
+      .replace(/<!-- hw-insight-loader:start -->[\s\S]*?<!-- hw-insight-loader:end -->/g, '');
 
-    // Inject before </head> if present, otherwise before </body>, otherwise append
-    if (htmlWithoutExistingOverrides.includes('</head>')) {
-      return htmlWithoutExistingOverrides.replace('</head>', `${injection}\n</head>`);
+    // The theme bridge belongs in <head>.
+    const withThemeBridge = this.injectBeforeTag(htmlWithoutExistingOverrides, '</head>', injection, ['</body>']);
+
+    // The loading overlay is added only to the top-level webview document — not
+    // the per-plugin iframes — so a single full-screen loader paints immediately
+    // and stacks above the still-empty Insight UI while profiler_server starts
+    // and prof data is loaded (issue GC-23).
+    if (!includeLoadingOverlay) {
+      return withThemeBridge;
     }
 
-    if (htmlWithoutExistingOverrides.includes('</body>')) {
-      return htmlWithoutExistingOverrides.replace('</body>', `${injection}\n</body>`);
+    // Insert before the LAST </body>: the bundled Insight SPA inlines minified
+    // JS that contains a literal "</body>" inside a string (its print/export
+    // feature), so the real document-closing tag is the last occurrence.
+    // Targeting the first one would split that <script> and break the page.
+    return this.injectBeforeTag(withThemeBridge, '</body>', this.buildLoadingOverlayInjection(), [], 'last');
+  }
+
+  /**
+   * Insert markup immediately before an occurrence of `primaryTag` (the first
+   * by default, or the last when `occurrence === 'last'`), falling back to the
+   * first available `fallbackTags` entry and finally appending when the
+   * document has neither.
+   */
+  private injectBeforeTag(
+    html: string,
+    primaryTag: string,
+    content: string,
+    fallbackTags: string[] = [],
+    occurrence: 'first' | 'last' = 'first',
+  ): string {
+    const tag = [
+      primaryTag,
+      ...fallbackTags,
+    ].find((candidate) => html.includes(candidate));
+
+    if (!tag) {
+      return html + content;
     }
 
-    return htmlWithoutExistingOverrides + injection;
+    // Slice-based insertion (not String.replace) so any `$` in `content` is
+    // inserted literally and so we can target the last occurrence precisely.
+    const index = occurrence === 'last' ? html.lastIndexOf(tag) : html.indexOf(tag);
+
+    return `${html.slice(0, index)}${content}\n${html.slice(index)}`;
+  }
+
+  /**
+   * Build the Huawei-styled "Linear bar" loading overlay (loader variant B,
+   * accent #C7000B) that covers the Insight webview while profiler_server
+   * starts and prof data is loaded. Without it the panel shows a blank UI for
+   * several seconds and users assume the plugin is frozen (issue GC-23). The
+   * overlay is torn down as soon as data starts flowing (`renderAllIframes` /
+   * `ws:message`), on an explicit load failure (`insightLoadFailed`), or after
+   * a fail-safe timeout so it can never trap the user.
+   */
+  private buildLoadingOverlayInjection(): string {
+    const caption = t('insight.loadingProfilingData');
+
+    return `<!-- hw-insight-loader:start -->
+<style id="hw-insight-loader-style">
+  #hw-insight-loader {
+    --hw-accent: #c7000b;
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+    background: var(--vscode-editor-background, #1e1e1e);
+    color: var(--vscode-foreground, var(--vscode-editor-foreground, #cccccc));
+    font-family: var(--vscode-font-family);
+    opacity: 1;
+    transition: opacity 0.3s ease;
+  }
+  #hw-insight-loader.hw-hide {
+    opacity: 0;
+    pointer-events: none;
+  }
+  #hw-insight-loader .hw-loader--bar {
+    position: relative;
+    width: 220px;
+    height: 3px;
+    border-radius: 3px;
+    overflow: hidden;
+    background: rgba(199, 0, 11, 0.14);
+    background: color-mix(in oklch, var(--hw-accent) 14%, transparent);
+  }
+  #hw-insight-loader .hw-loader--bar::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 40%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, transparent, var(--hw-accent) 30%, var(--hw-accent) 70%, transparent);
+    animation: hw-bar 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+  #hw-insight-loader .hw-label {
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    color: var(--vscode-descriptionForeground, #8b8b8b);
+  }
+  @keyframes hw-bar {
+    0% { transform: translateX(-120%); }
+    100% { transform: translateX(360%); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #hw-insight-loader .hw-loader--bar::before {
+      animation: hw-breathe 1.6s ease-in-out infinite;
+      transform: none;
+      width: 100%;
+    }
+  }
+  @keyframes hw-breathe {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+</style>
+<div id="hw-insight-loader" role="status" aria-live="polite">
+  <div class="hw-loader--bar" aria-hidden="true"></div>
+  <div class="hw-label">${caption}</div>
+</div>
+<script id="hw-insight-loader-script">
+(function () {
+  if (window.__hwInsightLoaderInstalled) {
+    return;
+  }
+  window.__hwInsightLoaderInstalled = true;
+
+  var GRACE_MS = 200;
+  var FAILSAFE_MS = 20000;
+  var hidden = false;
+
+  function hideLoader() {
+    if (hidden) {
+      return;
+    }
+    hidden = true;
+    var el = document.getElementById('hw-insight-loader');
+    if (!el) {
+      return;
+    }
+    el.classList.add('hw-hide');
+    window.setTimeout(function () {
+      if (el && el.parentNode) {
+        el.parentNode.removeChild(el);
+      }
+    }, 400);
+  }
+
+  window.addEventListener('message', function (event) {
+    var message = event && event.data;
+    if (!message) {
+      return;
+    }
+    if (message.command === 'renderAllIframes' || message.command === 'insightLoadFailed') {
+      window.setTimeout(hideLoader, GRACE_MS);
+    }
+    if (typeof message.type === 'string' && message.type === 'ws:message') {
+      window.setTimeout(hideLoader, GRACE_MS);
+    }
+  });
+
+  window.setTimeout(hideLoader, FAILSAFE_MS);
+})();
+</script>
+<!-- hw-insight-loader:end -->`;
   }
 
   /**
@@ -2337,6 +2516,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     }
     catch (error: any) {
       console.error('[InsightDataViewerPanel] Failed to load and send iframe content:', error);
+      this.notifyWebviewLoadFailed();
     }
   }
   /**

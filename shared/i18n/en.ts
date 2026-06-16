@@ -280,6 +280,7 @@ export default {
   'insight.wsPortLabel': 'WebSocket port:',
   'insight.placeholderLoading': 'Loading…',
   'insight.placeholderWsStarting': 'Starting…',
+  'insight.loadingProfilingData': 'Loading profiling data…',
   'insight.unzipFailed': 'Unzip failed: {{error}}',
   'insight.serverZipMissing': 'Server directory is missing and zip was not found: {{path}}',
   'insight.serverDirStillMissing': 'Unzip finished but server directory is still missing: {{path}}',

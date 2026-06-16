@@ -280,6 +280,7 @@ export default {
   'insight.wsPortLabel': 'WebSocket 端口：',
   'insight.placeholderLoading': '加载中…',
   'insight.placeholderWsStarting': '启动中…',
+  'insight.loadingProfilingData': '正在加载性能数据…',
   'insight.unzipFailed': '解压失败: {{error}}',
   'insight.serverZipMissing': '未找到 server 目录且未找到 zip: {{path}}',
   'insight.serverDirStillMissing': '解压完成但 server 目录仍不存在: {{path}}',
