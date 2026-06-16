@@ -35,16 +35,22 @@ export const NPU_ARCH_DAV_1001 = 'dav-1001' as const;
 /** Default `--npu-arch` for known non-A5 SOCs (empty SOC leaves NPU_ARCH unset). */
 export const DEFAULT_NPU_ARCH = NPU_ARCH_DAV_2201;
 
-/** Simulator directory for 910B / A3 class (`tools/simulator/<name>/lib`). */
+/**
+ * Simulator directory for 910B / A2 class (`tools/simulator/<name>/lib`).
+ * Also the value for `msprof op simulator --soc-version` on A2 (see docs/ascend-env-spec.md §8.1).
+ */
 export const SIMULATOR_ASCEND_910B3 = 'Ascend910B3' as const;
 
 /**
- * Simulator device name used when the CANN SOC is empty or unmapped
- * (msprof `--soc-version`, CANN `build.sh --simulator`).
+ * Fallback simulator device name when the CANN SOC is empty or unmapped.
+ * Used for CANN `build.sh --simulator` spawn env, not for `{soc_version}` (slug).
  */
 export const DEFAULT_FALLBACK_SIMULATOR_DEVICE_NAME = '';
 
 export const SIMULATOR_ASCEND_910C = 'Ascend910C' as const;
+
 export const SIMULATOR_ASCEND_910 = 'Ascend910' as const;
+
 export const SIMULATOR_ASCEND_310P = 'Ascend310P' as const;
+
 export const SIMULATOR_ASCEND_950PR_9589 = 'Ascend950PR_9589' as const;

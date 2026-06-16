@@ -144,7 +144,7 @@ Compile script: `compileAndDeploy.buildConfig.sanitizerCompileCommand` → `sani
 | Setting key | Legacy field | Notes |
 |-------------|--------------|--------|
 | `simulation.showQuickOptions` | — | Default `true`; `false` → direct simulation run from Actions tree |
-| `simulation.simulatorType` | `simulatorType` | CANN simulator dir name; also `getWorkspaceSimulatorType()` |
+| `simulation.simulatorType` | `simulatorType` | CANN simulator **directory name** under `tools/simulator/`; drives `msprof op simulator --soc-version` and `getWorkspaceSimulatorType()` ([`ascend-env-spec.md`](./ascend-env-spec.md) §8.1) |
 | `simulation.memoryThroughputWaveform` | `PMSampling` | |
 | `simulation.resourceConflictRatio` | `ResourceConflictRatio` | |
 | `simulation.parameters` | `advance_param` | Object map → `[{ name, value }]` |

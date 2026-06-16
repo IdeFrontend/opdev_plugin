@@ -2,6 +2,20 @@
 
 本文列出 **Huawei OP DevTools（华为算子一站式开发工具）** 的重要变更。完整提交历史见 [GitCode](https://gitcode.com/mlh0101/mstt) 仓库。
 
+## 1.3.3 — 2026-06-15
+
+本版本包含仿真分析修复、体验改进、部署修正与文档更新。
+
+- **重置项目配置** — 命令注册到侧栏；清理工作区设置前提供中英文确认提示；重置后自动重载窗口；修复重复「取消」按钮。
+- **欢迎页** — 重新设计欢迎面板布局与文案；欢迎页 Webview 标签图标从扩展品牌资源正确加载。
+- **从 Actions 视图打开欢迎页** — Actions 树新增侧栏命令分组与菜单项，可随时重新打开欢迎页。
+- **命令面板** — 用户可见命令按产品名称分组（`%config.title%`）；仅用于侧栏/操作树的 UI 命令不再出现在命令面板中。
+- **Triton / PyAsc 上下文** — 改进编辑器与工作区对当前 `.py` 的识别；消毒、仿真、上板流程在已有活动 Python 算子文件时不再误提示「请先打开 .py 文件」。
+- **`.run` 部署** — 在 **A2** 与 **A5** SOC（`ascend910b`、`ascend950` 等）重装 `.run` 包时追加 `--force`；A3（`ascend910_93`）行为不变。
+- 仿真分析向 `msprof op simulator --soc-version` 传递**仿真器目录名**（如 `Ascend910B3`、`Ascend910C`、`Ascend950PR_9589`），不再传递 CANN SOC 标识 — 恢复 1.3.2 之前行为，与 msopprof / CANN `tools/simulator` 目录一致。
+- 仿真分析不再同时传递 `PipeUtilization` 与 `ResourceConflictRatio`；启用资源冲突比时仅传递 `ResourceConflictRatio`（及可选的 `PMSampling`），符合 msprof 互斥规则。
+- 在 `docs/ascend-env-spec.md` §8.1 补充 `--soc-version` 与 SOC 标识、spawn 环境的规范说明；同步修订性能分析与 A3/A5 环境文档。
+
 ## 1.3.2 — 2026-06-08
 
 本版本强化 A5/A3 芯片环境解析与命令行注入、标准自定义算子就地创建与 genop 脚手架、SOC 设置与仿真/调试一致性，并改进设置迁移与稳定性。
@@ -12,7 +26,7 @@
 - 集中 Ascend 系列检测：芯片名规范化、A3 `Ascend910_93xx` 识别、A2 Pro/Premium/901 的 `dav-1001` 等。
 - Atlas A3 统一为 CANN SOC `ascend910_93`（检测、告警示例与文档）；`Ascend910A` 归入 910B 族。
 - 「SOC 未检测到」告警中的 **SOC 设置** 与齿轮 **项目配置** 一致，打开**工作区**作用域设置（避免在用户作用域填写却被解析器忽略）。
-- 仿真分析向 `msprof op simulator --soc-version` 传递 CANN SOC 标识（如 `ascend910_93`），不再误用仿真器目录名（如 `Ascend910C`）。
+- 仿真分析向 `msprof op simulator --soc-version` 传递 CANN SOC 标识（如 `ascend910_93`），不再误用仿真器目录名（如 `Ascend910C`）。**已在 1.3.3 废止** — A2/A5 现场工具链不接受 SOC 标识作为 `--soc-version`；见 `docs/ascend-env-spec.md` §8.1。
 - A5/A3 环境变量改为在**命令字符串**中显式 `export`（可审计、顺序可控）；标准自定义工程在生成 CMake 时写入 `SOC_VERSION`/`NPU_ARCH` 占位符及 `SUPPORT_*` 默认值，减少错误的环境注入。
 - CANN 与 `add_custom` 工程模板 CMake 占位符与 A5 构建说明更新。
 - NPU 调试启动前自动将 `launch.json` 中的调试目标适配为 `build/<算子名>`（占位或缺失路径时更新；用户已配置的有效目标保留）。

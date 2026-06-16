@@ -40,7 +40,7 @@ Constants: [`shared/cann-env-constants.ts`](../shared/cann-env-constants.ts).
 | Name | Meaning | Where it lands |
 |------|---------|----------------|
 | `SOC_VERSION` | CANN SOC **slug** on non-simulator runs; on **simulator-class** runs spawn value is **simulator directory name** | Spawn env (§8) + `{soc_version}` (**always slug**) + `--soc=` when applicable |
-| `simulatorType` | Simulator dir under `tools/simulator/<dir>/lib` | `{simulator_type}`, `--simulator`; **not** `process.env.SIMULATOR_TYPE` |
+| `simulatorType` | Simulator dir under `tools/simulator/<dir>/lib` | `{simulator_type}`, `--simulator`, **`msprof op simulator --soc-version`** (§8.1); **not** `process.env.SIMULATOR_TYPE` |
 | `NPU_ARCH` | AscendC `--npu-arch` | Spawn env; §6 |
 | `SUPPORT_COMPUTE_UNIT` / `SUPPORT_TILING_DIR` | ACLNN cmake literals | Baked at operator generation (§9) |
 
@@ -169,6 +169,80 @@ Apply §6 after `socVersion` is known. Empty SOC at generation still resolves `S
 
 **Placeholders / CLI** (same resolution per command): `{soc_version}` → slug; `{simulator_type}` → sim dir; ascend build → `--simulator <dir> --soc=<slug>`.
 
+### 8.1 `msprof op simulator --soc-version` (canonical)
+
+**Consumer:** CANN **msopprof** CLI (`msprof op simulator`). This is **not** the open-source [msprof](https://gitcode.com/Ascend/msprof) analysis repository (parsing only; no `op simulator` subcommand).
+
+**Required value:** the **simulator directory name** — a subdirectory of `$ASCEND_HOME_PATH/tools/simulator/` that ships with your CANN toolkit (each dir contains simulator runtime libs, typically under `lib/`).
+
+**Rejected value:** the **CANN SOC slug** (`ascend910b`, `ascend910_93`, `ascend950`, …). msopprof fails early with:
+
+```text
+--soc-version is invalid, please specify a simulator in $ASCEND_HOME_PATH/tools/simulator
+```
+
+Passing a slug can also surface misleading metric errors (`Unexpected argument … maybe in wrong soc platform`) because msopprof validates `--aic-metrics` against the platform selected by `--soc-version`.
+
+#### Default directory names (plugin)
+
+| Series | `simulatorType` (for `--soc-version`) | CANN slug (`socVersion`; **not** for `--soc-version`) |
+|--------|---------------------------------------|--------------------------------------------------------|
+| A2 | `Ascend910B3` | `ascend910b` |
+| A3 | `Ascend910C` | `ascend910_93` |
+| A5 | `Ascend950PR_9589` | `ascend950` |
+
+Constants: [`shared/cann-env-constants.ts`](../shared/cann-env-constants.ts). CANN upgrades may rename directories — list installed simulators on the host and override via workspace setting when needed.
+
+#### Plugin resolution
+
+`SimulatorStrategy` in `plugin/src/domain/services/profiler-service.ts` sets:
+
+```ts
+resolveAscendEnv({ isSimulator: true }).simulatorType
+```
+
+Precedence for `simulatorType` on simulate runs: §7.1 (workspace `performanceTuning.simulation.simulatorType` → global `SIMULATOR_TYPE` snapshot → §1 default for resolved series).
+
+Example generated fragment (A2, default simulate metrics):
+
+```bash
+msprof op simulator --soc-version=Ascend910B3 \
+  --output=<op_path>/.vscode/opprof \
+  --aic-metrics=ResourceConflictRatio,PMSampling \
+  python3 ./<op>.py
+```
+
+#### Where each identifier is used (do not conflate)
+
+| Context | Identifier | Example (A3) |
+|---------|------------|--------------|
+| `msprof op simulator --soc-version` | **Simulator directory** | `Ascend910C` |
+| Spawn `export SOC_VERSION=…` on **simulator-class** builds | **Simulator directory** | `Ascend910C` |
+| `{simulator_type}` script placeholder | **Simulator directory** | `Ascend910C` |
+| `build.sh --simulator` | **Simulator directory** | `Ascend910C` |
+| `{soc_version}` script placeholder | **CANN slug** | `ascend910_93` |
+| `build.sh --soc=` / packaging | **CANN slug** | `ascend910_93` |
+| Spawn `export SOC_VERSION=…` on **non-simulator** builds | **CANN slug** | `ascend910_93` |
+| On-board `msprof op` metric matrix | **CANN slug** (via `onboardCannSoc`) | `ascend910_93` |
+
+On-board profiling does **not** take `--soc-version`; only simulation does.
+
+#### Verify on the host
+
+```bash
+ls "$ASCEND_HOME_PATH/tools/simulator"
+```
+
+The name passed to `--soc-version` must match an entry in that listing (case-sensitive). If the default from §1 is missing, set **`op-devtools.performanceTuning.simulation.simulatorType`** in workspace settings ([`workspace-settings.md`](./workspace-settings.md)).
+
+#### Huawei documentation note
+
+Some CANN/msopprof guides mention obtaining `--soc-version` via `python3 -c "import acl; print(acl.get_soc_name())"`, which returns a **slug**, while examples use directory-style names (`Ascend910B3`, `Ascend910C`). The plugin follows the **directory-name** contract validated on A2/A3/A5 field toolkits: slug in `--soc-version` is rejected or mis-identifies the platform for metric validation.
+
+#### Historical correction (1.3.2 → 1.3.3)
+
+Release **1.3.2** briefly passed `resolveAscendEnv().socVersion` (CANN slug) per issue #18, based on an A3 report that `Ascend910C` caused “wrong soc platform” metric errors. Later reproduction on A2/A5 showed slugs are invalid for `--soc-version`; metric failures were largely downstream of that mismatch (and, separately, of emitting `PipeUtilization` together with `ResourceConflictRatio`). **1.3.3** restores `simulatorType` for `--soc-version`. See [`performance.md`](./performance.md) for simulation metrics and mutual-exclusion rules.
+
 ---
 
 ## 9. Templates
@@ -205,7 +279,7 @@ Apply §6 after `socVersion` is known. Empty SOC at generation still resolves `S
 
 ## 13. Tests
 
-`ascend-series-registry.spec.ts`, `ascend-soc-detection-rules.spec.ts`, `operator-spawn-env.spec.ts`, `shell-env-exports.spec.ts`, `operator-command-executor.spec.ts`, `operator-script-placeholders.spec.ts`, `profiler-simulator-resolution.spec.ts`.
+`ascend-series-registry.spec.ts`, `ascend-soc-detection-rules.spec.ts`, `operator-spawn-env.spec.ts`, `shell-env-exports.spec.ts`, `operator-command-executor.spec.ts`, `operator-script-placeholders.spec.ts`, `profiler-simulator-resolution.spec.ts` (§8.1 `--soc-version` = simulator directory).
 
 ---
 
@@ -218,3 +292,4 @@ Apply §6 after `socVersion` is known. Empty SOC at generation still resolves `S
 | Probes | `plugin/src/domain/utils/ascend-detection-env.ts` |
 | Snapshot | `plugin/src/domain/utils/global-env-snapshot.ts` |
 | Spawn | `operator-command-executor.ts`, `shell-env-exports.ts`, `operator-script-placeholders.ts` |
+| Simulate profiler CLI | `profiler-service.ts` (`SimulatorStrategy`, §8.1) |

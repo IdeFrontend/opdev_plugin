@@ -2,7 +2,9 @@ import { t } from 'i18next';
 import { getOpByProjectIdAndOpName } from './ops';
 import { getProjectById } from '@plugin/domain';
 import { ConfigService } from '@plugin/service/config-service';
-import { getAdvanceCmd, getExecutableCommand, isRunPackageDeployTarget, joinCommands } from '@plugin/domain/utils/command-utils';
+import {
+  getAdvanceCmd, getExecutableCommand, isRunPackageDeployTarget, joinCommands,
+} from '@plugin/domain/utils/command-utils';
 import { ConfigRecord } from '@plugin/domain/models/config-model';
 import {
   CommandStrategyFactory,
@@ -135,9 +137,8 @@ export function getBuildExampleCommand(
 /**
  * Generate simulation commands
  *
- * Example:
- * msprof op --output=$home/projects/output $home/projects/MyApp/out/main blockdim 1
- * msprof op simulator --soc-version=Ascendxxxyy --output=...
+ * Example (simulator directory for --soc-version, not CANN slug):
+ * msprof op simulator --soc-version=Ascend910B3 --output=... --aic-metrics=... ./app
  *
  * @param config_id configuration ID
  * @param example_config_id example configuration ID
@@ -326,7 +327,10 @@ export function getStandardCustomDeployCommand(config_id: number) {
     const deployTarget = isRunPackageDeployTarget(configuredTarget)
       ? configuredTarget
       : 'build_out/*.run';
-    const deployCmd = getExecutableCommand(deployTarget, { execute: true, mode: 'deploy' });
+    const deployCmd = getExecutableCommand(deployTarget, {
+      execute: true,
+      mode: 'deploy',
+    });
 
     return joinCommands(context.sourceCannCmd, context.cdCmd, deployCmd);
   }

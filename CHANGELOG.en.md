@@ -2,6 +2,20 @@
 
 Notable changes to **Huawei OP DevTools** are listed here. For the full project history, see the repository on [GitCode](https://gitcode.com/mlh0101/mstt).
 
+## 1.3.3 — 2026-06-15
+
+Patch release: simulation profiler fixes, UX improvements, deploy correction, and documentation.
+
+- **Reset project configuration** — command registered in the sidebar; clearer English/Chinese confirmation before clearing workspace settings; window reloads automatically after reset; duplicate Cancel button removed.
+- **Welcome screen** — redesigned welcome panel layout and copy; welcome webview tab icon resolved from extension branding assets.
+- **Open Welcome from Actions view** — new sidebar command group and menu entry on the Actions tree to reopen the welcome page.
+- **Command palette** — user-facing commands grouped under the product name (`%config.title%`); UI-only sidebar/operate commands hidden from the palette.
+- **Triton / PyAsc context** — improved active `.py` file detection from editor and workspace context so sanitizer, simulation, and on-board flows no longer prompt to open a `.py` when one is already active.
+- **`.run` deploy** — append `--force` when reinstalling packages on **A2** and **A5** SOCs (`ascend910b`, `ascend950`, …); A3 (`ascend910_93`) unchanged.
+- Simulation profiling passes the **simulator directory name** (e.g. `Ascend910B3`, `Ascend910C`, `Ascend950PR_9589`) to `msprof op simulator --soc-version`, not the CANN SOC slug — restores pre-1.3.2 behavior and matches msopprof / CANN `tools/simulator` layout.
+- Simulation profiling no longer emits `PipeUtilization` and `ResourceConflictRatio` together; when conflict ratio is enabled, only `ResourceConflictRatio` (+ optional `PMSampling`) is passed, matching msprof mutual-exclusion rules.
+- Canonical specification for `--soc-version` vs slug vs spawn env added in `docs/ascend-env-spec.md` §8.1; performance and A3/A5 env docs reconciled.
+
 ## 1.3.2 — 2026-06-08
 
 Patch release: Ascend env resolution and explicit command-line exports, standard-custom in-collection operator creation, SOC/simulation/debug consistency, settings migration, and reliability fixes.
@@ -12,7 +26,7 @@ Patch release: Ascend env resolution and explicit command-line exports, standard
 - Centralized Ascend series detection: chip name normalization, A3 `Ascend910_93xx` recognition, and A2 Pro/Premium/901 `dav-1001` handling.
 - Atlas A3 represented as CANN SOC `ascend910_93` across detection, warning examples, and docs; `Ascend910A` mapped to the 910B family.
 - **SOC settings** from the SOC-not-detected warning and the gear **Project Config** entry open the same **Workspace**-scope settings view (User-scope values were previously ignored by the resolver).
-- Simulation profiling passes the CANN SOC slug (e.g. `ascend910_93`) to `msprof op simulator --soc-version` instead of the simulator device directory name (e.g. `Ascend910C`).
+- Simulation profiling passed the CANN SOC slug (e.g. `ascend910_93`) to `msprof op simulator --soc-version` instead of the simulator device directory name (e.g. `Ascend910C`). **Superseded in 1.3.3** — slug is not accepted by msopprof on A2/A5 field toolkits; see `docs/ascend-env-spec.md` §8.1.
 - A5/A3 Ascend variables are exported explicitly in command strings (auditable, ordered); standard-custom projects bake `SOC_VERSION`/`NPU_ARCH` placeholders and `SUPPORT_*` defaults into generated CMake instead of polluting spawn env.
 - CANN and `add_custom` project template CMake placeholders and A5 build notes updated.
 - Before NPU debug launch, `launch.json` debug target auto-adapts to `build/<operatorName>` when still a placeholder or pointing at a missing file; a valid user-set target is preserved.

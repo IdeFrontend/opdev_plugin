@@ -16,9 +16,9 @@ Shared constants: `shared/cann-env-constants.ts`. Detection and mapping: `plugin
 
 | Concept | Constant / value | Used for |
 |---------|------------------|----------|
-| CANN SOC slug | `ascend950` (`CANN_SOC_ASCEND_950`) | `SOC_VERSION`, `{soc_version}`, `build.sh --soc=` |
+| CANN SOC slug | `ascend950` (`CANN_SOC_ASCEND_950`) | `SOC_VERSION` (non-simulator builds), `{soc_version}`, `build.sh --soc=` |
 | NPU arch | `dav-3510` (`NPU_ARCH_DAV_3510`) | Spawn `NPU_ARCH`, cmake `-DNPU_ARCH=` |
-| Default simulator dir | `Ascend950PR_9589` (`SIMULATOR_ASCEND_950PR_9589`) | `SIMULATOR_TYPE`, `{simulator_type}`, msprof `op simulator --soc-version` |
+| Default simulator dir | `Ascend950PR_9589` (`SIMULATOR_ASCEND_950PR_9589`) | Spawn `SOC_VERSION` on simulator builds, `{simulator_type}`, `msprof op simulator --soc-version` |
 | A5 profiler SOC check | `isAscendA5ProfilerCannSoc()` → true only for normalized `ascend950` | On-board `msprof op` aic-metrics matrix (`shared/msprof-onboard-env.ts`) |
 
 **Three names (do not conflate):**
@@ -45,6 +45,7 @@ When the workspace sets **`performanceTuning.simulation.simulatorType`** to `Asc
 | **SOC ↔ simulator tables** | `ascend950` ↔ `Ascend950PR_9589`; inverse via `simulatorTypeToCannSoc` (series profile table only). |
 | **Templates / new operators** | `ascend.plugin.ts`, `abstract-operator-plugin.ts`, `model.ts` use `{soc_version}` / `{simulator_type}` placeholders, not hardcoded 910B strings. |
 | **On-board profiler (A5)** | `OnBoardStrategy`: `MemoryDetail` replaced by `PCSampling` in base metrics; Roofline/PCSampling enable `Default` metric bundle (`profiler-service.ts`). |
+| **Simulator profiler** | `SimulatorStrategy`: `--soc-version=Ascend950PR_9589` (simulator **directory**, not `ascend950` slug) — see [`ascend-env-spec.md`](./ascend-env-spec.md) §8.1. |
 | **New project opprof defaults** | `generateStructure` sets `MemoryDetail: false`, `PCSampling: true` when `resolveAscendEnv(...).socVersion` is A5 (`model.ts`). |
 | **Workspace sync** | `extension.ts` / `config-service.ts`: A5 syncs `performanceTuning.onBoard.pcSampling`; A3 syncs `cacheHeatmap` from `MemoryDetail`. |
 | **Config load from settings** | `operator-project-workspace-config.ts`: maps `pcSampling` vs `cacheHeatmap` using workspace `environment.socVersion` + `isAscendA5ProfilerCannSoc`. |
@@ -76,7 +77,7 @@ When the workspace sets **`performanceTuning.simulation.simulatorType`** to `Asc
 - **Saved simulate / opprof config** can freeze `simulatorType` and metric flags from `generateStructure` time; changing SOC later does not rewrite stored configs until the user edits or regenerates.
 - **Stale workspace settings** — `extension.ts` / `config-service` may have synced `Ascend910B3` into `.vscode/settings.json` on older projects; update simulate/on-board settings after migrating to A5.
 - **Multi-NPU hosts** — detection scans full probe text with ordered substring rules; heterogeneous machines need an explicit workspace SOC or simulator setting.
-- **Profiler simulate** — `SimulatorStrategy` passes resolved **simulator directory** to `msprof op simulator --soc-version`, not the CANN slug (by design).
+- **Profiler simulate** — `SimulatorStrategy` passes resolved **simulator directory** to `msprof op simulator --soc-version`, not the CANN slug ([`ascend-env-spec.md`](./ascend-env-spec.md) §8.1).
 
 ---
 

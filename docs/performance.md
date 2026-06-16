@@ -150,10 +150,20 @@ Same structure as simulation, but:
 
 | Mode | Class | CLI shape |
 |------|-------|-----------|
-| Simulation | `SimulatorStrategy` | `msprof op simulator --soc-version=<SIMULATOR_TYPE> --output=<op_path>/<ideConfig>/opprof --aic-metrics=...` |
+| Simulation | `SimulatorStrategy` | `msprof op simulator --soc-version=<SIMULATOR_DIR> --output=<op_path>/<ideConfig>/opprof --aic-metrics=...` |
 | On-board | `OnBoardStrategy` | `msprof op --output=<op_path>/<ideConfig>/opprof --aic-metrics=...` |
 
-**Simulation metrics** (from merged `user_options`): base `PipeUtilization`; optional `ResourceConflictRatio`, `PMSampling` (mapped from workspace settings). **`--soc-version`** uses `resolveAscendEnv({ isSimulator: true }).simulatorType`.
+**Simulation metrics** (from merged `user_options`, mapped in [`workspace-settings.md`](./workspace-settings.md#performance-tuning-op-devtoolsperformancetuning)):
+
+| Workspace setting | `user_options` key | CLI metric |
+|-------------------|-------------------|------------|
+| (when conflict off) | — | `PipeUtilization` |
+| `simulation.resourceConflictRatio` | `ResourceConflictRatio` | `ResourceConflictRatio` |
+| `simulation.memoryThroughputWaveform` | `PMSampling` | `PMSampling` |
+
+msprof **mutual exclusion:** when `--aic-metrics` explicitly includes `PipeUtilization`, `ResourceConflictRatio` is disabled. The plugin never emits both: if `ResourceConflictRatio` is enabled, only `ResourceConflictRatio` (+ optional `PMSampling`) is passed; otherwise `PipeUtilization` (+ optional `PMSampling`). Default simulate settings enable conflict ratio, so the typical command is `--aic-metrics=ResourceConflictRatio,PMSampling`.
+
+**`--soc-version`:** must be the **simulator directory** (`resolveAscendEnv({ isSimulator: true }).simulatorType`), e.g. `Ascend910B3` / `Ascend910C` / `Ascend950PR_9589` — not the CANN slug. Full contract (defaults, precedence, verification, contrast with `{soc_version}` / spawn env): **[`ascend-env-spec.md` §8.1](./ascend-env-spec.md#81-msprof-op-simulator---soc-version-canonical)**.
 
 **On-board metrics** depend on SOC: `isAscendA5ProfilerCannSoc(cannSoc)` chooses A5 vs A3-style base sets; workspace checkboxes are merged in `ConfigService.buildUserOptionsFromWorkspaceSettings('on_board', …)` (key ↔ `user_options` mapping: [`workspace-settings.md`](./workspace-settings.md#performance-tuning-op-devtoolsperformancetuning)). A5 matrix: [`ascend-a5-support.md`](./ascend-a5-support.md).
 

@@ -28,6 +28,28 @@ export interface ProfilerCommandStrategy {
 }
 
 /**
+ * Build simulation aic-metrics per msprof mutual-exclusion rules.
+ * Explicit PipeUtilization disables ResourceConflictRatio; never emit both.
+ * Optional PMSampling is appended when enabled in user_options.
+ */
+export function getSimulationAicMetrics(userOptions: Record<string, unknown> | null | undefined): string[] {
+  const metrics: string[] = [];
+
+  if (userOptions?.ResourceConflictRatio) {
+    metrics.push('ResourceConflictRatio');
+  }
+  else {
+    metrics.push('PipeUtilization');
+  }
+
+  if (userOptions?.PMSampling) {
+    metrics.push('PMSampling');
+  }
+
+  return metrics;
+}
+
+/**
  * Simulation Profiler Strategy
  */
 export class SimulatorStrategy implements ProfilerCommandStrategy {
@@ -37,23 +59,16 @@ export class SimulatorStrategy implements ProfilerCommandStrategy {
     targetFile: string,
     _context?: ProfilerGenerateContext,
   ): string {
-    const metrics = ['PipeUtilization'];
     const userOptions = config.user_options as Record<string, unknown> | null | undefined;
-
-    if (userOptions?.ResourceConflictRatio) {
-      metrics.push('ResourceConflictRatio');
-    }
-
-    if (userOptions?.PMSampling) {
-      metrics.push('PMSampling');
-    }
-
     const advance_cmd = getAdvanceCmd(userOptions?.advance_param);
 
-    // msprof op simulator --soc-version expects the CANN SOC (e.g. ascend910_93),
-    // NOT the simulator device-directory name (Ascend910C). The device name is
-    // still used for the build (build.sh --simulator) via the spawn env.
-    const msprofSocVersionArg = resolveAscendEnv({ isSimulator: true }).socVersion;
+    const simEnv = resolveAscendEnv({ isSimulator: true });
+
+    // msprof op simulator --soc-version: simulator directory under
+    // $ASCEND_HOME_PATH/tools/simulator — see docs/ascend-env-spec.md §8.1.
+    const msprofSimulatorArg = simEnv.simulatorType ?? '';
+
+    const metrics = getSimulationAicMetrics(userOptions);
 
     // Build the msprof op simulator command
     const msprof = new Command('msprof');
@@ -61,7 +76,7 @@ export class SimulatorStrategy implements ProfilerCommandStrategy {
       .sub('simulator', { separators: { 'aic-metrics': ',' } });
 
     simulator.addOptions({
-      'soc-version': msprofSocVersionArg,
+      'soc-version': msprofSimulatorArg || undefined,
       output: `${operator.op_path}/${joinIdeConfigRelative('opprof')}`,
       'aic-metrics': metrics,
     });

@@ -101,6 +101,18 @@ Controlled in `profiler-service.ts` → `OnBoardStrategy.getOnBoardMetrics` usin
 
 **UI:** On-board options webview shows cache heatmap vs PC sampling tooltips per generation (`web/src/views/panels/options-on-board/`); i18n in `shared/i18n` / `package.nls*.json`.
 
+#### 4.1 Simulation profiler (`msprof op simulator`)
+
+**Same rule for A3-class and A5-class:** `--soc-version` is always the **simulator directory** from `resolveAscendEnv({ isSimulator: true }).simulatorType`, never the CANN slug. Full contract: [`ascend-env-spec.md`](./ascend-env-spec.md) §8.1.
+
+| Generation | Typical `--soc-version` | Typical CANN slug (not for `--soc-version`) |
+|------------|-------------------------|---------------------------------------------|
+| A2 / 910B-class | `Ascend910B3` | `ascend910b` |
+| A3 / `910_93` | `Ascend910C` | `ascend910_93` |
+| A5 / 950-class | `Ascend950PR_9589` | `ascend950` |
+
+**Metrics:** `SimulatorStrategy` / `getSimulationAicMetrics` — mutual exclusion between `PipeUtilization` and `ResourceConflictRatio`; optional `PMSampling` from workspace `performanceTuning.simulation.memoryThroughputWaveform`. Details: [`performance.md`](./performance.md).
+
 ### 5. Standard-custom `.run` deploy
 
 `getExecutableCommand(..., { mode: 'deploy' })` in `command-utils.ts` appends **` --force`** when re-installing a `.run` package on **A2** (`ascend910`, `ascend910b`, `ascend310p`) and **A5** (`ascend950`) SOCs; **A3** (`ascend910_93xx`) installs the package without it. Gated by `runPackageForceSuffix` → `cannSocNeedsRunPackageForce` (series set `{a2, a5}` via `cannSocToSeries`).
@@ -121,7 +133,7 @@ On project open / migration, `extension.ts` and `config-service.ts` align worksp
 |------|--------|
 | Resolver precedence | Same rules; only outputs change ([`ascend-env-spec.md`](./ascend-env-spec.md)) |
 | Placeholder mechanism | `{soc_version}`, `{simulator_type}` in all op plugins |
-| Simulate profiler | `SimulatorStrategy` uses resolved **simulator directory** for `msprof op simulator --soc-version` (both generations) |
+| Simulate profiler | `SimulatorStrategy` uses resolved **simulator directory** for `msprof op simulator --soc-version` (both generations); spec: [`ascend-env-spec.md`](./ascend-env-spec.md) §8.1 |
 | PyAsc / Triton | Python entrypoints; no A3/A5 cmake split; profiler still calls `resolveAscendEnv` for SOC passed into strategies |
 | CANN template `build.sh` / cmake | Env-driven; no hardcoded `Ascend910B3` in current templates |
 | Fallback when nothing resolves | `DEFAULT_FALLBACK_CANN_SOC` = `''` (empty — no silent default to `ascend910b`) |
@@ -131,7 +143,8 @@ On project open / migration, `extension.ts` and `config-service.ts` align worksp
 | Concern | A3-class | A5-class |
 |---------|----------|----------|
 | Profiler SOC gate | any slug except `ascend950` | `ascend950` only |
-| Default sim dir from SOC map | `Ascend910B3` | `Ascend950PR_9589` |
+| Simulate `msprof --soc-version` | `Ascend910C` (simulator dir) | `Ascend950PR_9589` (simulator dir) |
+| Default sim dir from SOC map | `Ascend910C` | `Ascend950PR_9589` |
 | NPU arch | `dav-2201` | `dav-3510` |
 | ACLNN spawn pair | `ascend910_95` + `arch22` | `ascend950` + `arch35` |
 | On-board “memory” UX | Cache heatmap → `MemoryDetail` | PC sampling → `PCSampling` |
