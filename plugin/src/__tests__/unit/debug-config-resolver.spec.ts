@@ -78,13 +78,13 @@ describe('isPythonDebugLaunchConfig', () => {
 });
 
 describe('triton buildBehavior flags', () => {
-  it('enables NPU debug only when triton plugin is registered', () => {
+  it('hides NPU debug in UI while keeping debug script implementation', () => {
     const plugin = new TritonPlugin();
 
     expect(plugin.buildBehavior.supportsCpuDebug)
       .toBe(false);
     expect(plugin.buildBehavior.supportsNpuDebug)
-      .toBe(true);
+      .toBe(false);
     expect(plugin.buildBehavior.supportsNpuPythonDebug)
       .toBe(true);
   });

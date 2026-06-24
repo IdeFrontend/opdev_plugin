@@ -59,7 +59,7 @@ export class TritonPlugin extends AbstractOperatorPlugin implements IProjectDete
     supportsSimulate: true,
     supportsOnBoard: true,
     supportsCpuDebug: false,
-    supportsNpuDebug: true,
+    supportsNpuDebug: false,
     supportsNpuPythonDebug: true,
   };
 
