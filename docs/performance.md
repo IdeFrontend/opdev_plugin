@@ -146,6 +146,8 @@ Same structure as simulation, but:
 
 `CommandStrategyFactory.getStrategy(op_type)` selects ascend / cann / pyasc / triton implementation. Commands are joined with CANN env sourcing + `cd` to build directory (`joinCommands`).
 
+**Python operators (PyAsc / Triton):** profiler commands wrap the deploy target (`python3 ./<file>.py`) with `msprof op [simulator] …` — no compile step. Triton runs `probeTritonPythonDependencies()` before simulate/on-board; profiler target comes from `build_op.target_file` (updated when the user selects an active `.py` file).
+
 ### msprof assembly (`domain/services/profiler-service.ts`)
 
 | Mode | Class | CLI shape |

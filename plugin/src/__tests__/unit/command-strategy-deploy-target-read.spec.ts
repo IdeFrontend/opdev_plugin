@@ -56,16 +56,13 @@ describe('command strategy deploy vs profiler target reads', () => {
     expect(getConfigById).toHaveBeenCalledWith(42);
   });
 
-  it('Triton getProfilerTargetFile reads sanitizer row target_file from legacy config', () => {
+  it('Triton getProfilerTargetFile reads build_op target from legacy DB', () => {
+    (getConfig as jest.Mock).mockReturnValue([{ target_file: 'python3 ./triton_vector_add.py' }]);
     const strategy = new TritonCommandStrategy();
-    const config = {
-      project_id: 1,
-      op: 'myop',
-      target_file: 'python main.py',
-    } as Parameters<TritonCommandStrategy['getProfilerTargetFile']>[0];
+    const config = { project_id: 1, op: 'myop' } as Parameters<TritonCommandStrategy['getProfilerTargetFile']>[0];
 
-    expect(strategy.getProfilerTargetFile(config, null, 1)).toBe('python main.py');
-    expect(getConfig).not.toHaveBeenCalled();
+    expect(strategy.getProfilerTargetFile(config, null, 1)).toBe('python3 ./triton_vector_add.py');
+    expect(getConfig).toHaveBeenCalledWith(1, 'build_op', 'myop');
   });
 
   it('PyAsc getProfilerTargetFile reads build_op target from legacy DB', () => {

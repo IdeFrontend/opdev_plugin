@@ -20,6 +20,12 @@ import { getConfigById } from '@plugin/domain/services/configuration';
 import { ConfigService } from '@plugin/service/config-service';
 import { resolveAscendEnv } from '@plugin/domain/utils/ascend-util';
 import { applyOperatorNamesPlaceholder } from '@plugin/domain/utils/operator-script-placeholders';
+import {
+  normalizeBlockId,
+  normalizeLogLevel,
+  normalizeMaxDebuglogSize,
+  normalizeSanitizerTools,
+} from './sanitizer-option-guards';
 
 /**
  * Ascend type command strategy
@@ -68,7 +74,10 @@ export class AscendCommandStrategy implements CommandStrategy {
     const {
       config, sourceCannCmd, cdCmd,
     } = context;
-    const run_cmd = getExecutableCommand(config.target_file || '', { execute: true, mode: 'run' });
+    const run_cmd = getExecutableCommand(config.target_file || '', {
+      execute: true,
+      mode: 'run',
+    });
 
     return joinCommands(sourceCannCmd, cdCmd, run_cmd);
   }
@@ -97,7 +106,10 @@ export class AscendCommandStrategy implements CommandStrategy {
       cmd.addArgument(advance_cmd);
     }
 
-    const deploy_cmd = getExecutableCommand(config.target_file || '', { execute: true, mode: 'deploy' });
+    const deploy_cmd = getExecutableCommand(config.target_file || '', {
+      execute: true,
+      mode: 'deploy',
+    });
 
     return joinCommands(sourceCannCmd, cdCmd, cmd.toString(), deploy_cmd);
   }
@@ -113,7 +125,7 @@ export class AscendCommandStrategy implements CommandStrategy {
     // If operatorNames is provided, it takes precedence; otherwise config.op is used
     const op = operatorNames || '';
 
-    let script = config.script || '';
+    const script = config.script || '';
 
     const cmd = new Command(script);
 
@@ -170,10 +182,12 @@ export class AscendCommandStrategy implements CommandStrategy {
 
     // Handle configuration options
     const toolOptions = (options.tool as Record<string, unknown> | undefined) || {};
-    const tools = Object.keys(toolOptions)
-      .filter((key) => toolOptions[key]);
+    const tools = normalizeSanitizerTools(Object.keys(toolOptions)
+      .filter((key) => toolOptions[key]));
 
-    mssanitizer.addOption('tool', tools);
+    if (tools.length > 0) {
+      mssanitizer.addOption('tool', tools);
+    }
 
     if (toolOptions.memcheck) {
       const memcheckOptions = (options.memcheckOption as Record<string, unknown> | undefined) || {};
@@ -186,9 +200,9 @@ export class AscendCommandStrategy implements CommandStrategy {
         });
     }
 
-    mssanitizer.addOption('log-level', options.logLevel as string | undefined);
-    mssanitizer.addOption('max-debuglog-size', options.maxDebuglogSize as string | undefined);
-    mssanitizer.addOption('block-id', options.blockId as string | number | undefined);
+    mssanitizer.addOption('log-level', normalizeLogLevel(options.logLevel));
+    mssanitizer.addOption('max-debuglog-size', normalizeMaxDebuglogSize(options.maxDebuglogSize));
+    mssanitizer.addOption('block-id', normalizeBlockId(options.blockId));
     mssanitizer.addOption(
       'log-file',
       `${operator?.op_path}/${joinIdeConfigRelative('mindstudio_sanitizer_log')}/mssanitizer_${new Date()
@@ -273,6 +287,7 @@ export class AscendCommandStrategy implements CommandStrategy {
   // FIXME: Profiler/msprof/mssanitizer target still comes from legacy configs.json (build_example.target_file), not workspace settings.
   getProfilerTargetFile(_config: ConfigRecord, _operator: OpRecord | null, exampleConfigId: number): string {
     const exConfig = getConfigById(exampleConfigId) as ConfigRecord | null;
+
     return exConfig?.target_file || '';
   }
 }

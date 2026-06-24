@@ -340,4 +340,20 @@ describe('operator spawn env', () => {
     expect(cmake).not.toContain('ENV{SUPPORT_COMPUTE_UNIT}');
     expect(cmake).not.toContain('ENV{SUPPORT_TILING_DIR}');
   });
+
+  it('triton sanitizer spawn merges required Triton env vars', () => {
+    const env = getOperatorSpawnEnv({
+      opType: 'triton',
+      projectId: 1,
+      configType: 'sanitizer',
+      script: 'mssanitizer -- python3 ./op.py',
+    });
+
+    expect(env.TRITON_ENABLE_SANITIZER)
+      .toBe('1');
+    expect(env.TRITON_ALWAYS_COMPILE)
+      .toBe('1');
+    expect(env.PYTORCH_NO_NPU_MEMORY_CACHING)
+      .toBe('1');
+  });
 });

@@ -31,6 +31,8 @@ import { PermanentStorage } from './class/permanent-storage';
 import { ExtensionConfig } from './core/extension-config';
 import { RemoteConfig } from './helpers/remote-config';
 import { sanitizerDiagnosticsService } from './service/sanitizer-diagnostics.service';
+import { sanitizerService } from './service/sanitizer-service';
+import { buildService } from './service/build-service';
 import { msAgentBridgeService } from './service/ms-agent-bridge.service';
 import { getDumpTensorPanelViewProvider } from './class/dump-tensor-panel-view';
 import { appendLog } from './helpers/output-channel';
@@ -1936,11 +1938,10 @@ export async function activate(context: vscode.ExtensionContext) {
   const simulatorOptionsCommand = vscode.commands.registerCommand(
     COMMAND_SIMULATOR_OPTIONS,
     async () => {
-      const pyascCheck = await homeMethods.validatePyascForAnalysis();
-
-      if (!pyascCheck.valid) {
-        vscode.window.showWarningMessage(pyascCheck.message ?? t('extension.openPyFirst'));
-
+      // Capture the active .py target now, while the editor still has focus. The panel
+      // opens in ViewColumn.Active and displaces it, so startSimulate (Start in the webview)
+      // could otherwise no longer read the active file and would abort with "open a .py".
+      if (!(await buildService.captureActiveFileTargetForOptionsPanel())) {
         return;
       }
 
@@ -1951,11 +1952,9 @@ export async function activate(context: vscode.ExtensionContext) {
   const onBoardOptionsCommand = vscode.commands.registerCommand(
     COMMAND_ON_BOARD_OPTIONS,
     async () => {
-      const pyascCheck = await homeMethods.validatePyascForAnalysis();
-
-      if (!pyascCheck.valid) {
-        vscode.window.showWarningMessage(pyascCheck.message ?? t('extension.openPyFirst'));
-
+      // Capture the active .py target before opening the panel (ViewColumn.Active displaces
+      // it), so startOnBoard can read the target after the webview takes focus.
+      if (!(await buildService.captureActiveFileTargetForOptionsPanel())) {
         return;
       }
 
@@ -1968,6 +1967,13 @@ export async function activate(context: vscode.ExtensionContext) {
   const sanitizerOptionsCommand = vscode.commands.registerCommand(
     COMMAND_SANITIZER_OPTIONS,
     async () => {
+      // Capture the active .py target now, while the editor still has focus. The panel
+      // opens in ViewColumn.Active and displaces it, so runSanitizer (Start in the webview)
+      // could otherwise no longer read the active file and would abort with "open a .py".
+      if (!(await sanitizerService.captureActiveFileTargetForOptionsPanel())) {
+        return;
+      }
+
       sanitizerOptionsProvider.show(VIEW_OPTIONS_SANITIZER);
     },
   );

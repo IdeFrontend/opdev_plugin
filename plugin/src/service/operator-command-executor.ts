@@ -6,6 +6,7 @@ import {
   applyAscendPlaceholdersToScript,
   buildOperatorSpawnEnvFromResolution,
   isSimulatorCompile,
+  mergeTritonSanitizerSpawnEnv,
   OperatorSpawnEnvContext,
   resolveAscendEnvForOperatorCommand,
 } from '@plugin/domain/utils/ascend-util';
@@ -45,9 +46,23 @@ export function buildOperatorSpawnContext(options: {
   const config = options.configId ? getConfigById(options.configId) : undefined;
   const projectId = config?.project_id;
   const project = projectId ? getProjectById(projectId) : undefined;
+  const configOp = (config?.user_options as Record<string, unknown> | undefined)?.op as
+    | string
+    | undefined;
+  const opName = options.operatorNames?.split(',')[0]?.trim() || configOp?.trim();
+
+  let opType = resolveOpTypeForSpawn(projectId, options.operatorNames);
+  if (!opType && projectId && opName) {
+    opType = OperatorPluginRegistry.normalizeOpTypeForSpawn(
+      getOpByProjectIdAndOpName(projectId, opName)?.op_type,
+    ) ?? undefined;
+  }
+  if (!opType && project) {
+    opType = OperatorPluginRegistry.normalizeOpTypeForSpawn(project.project_type) ?? undefined;
+  }
 
   return {
-    opType: resolveOpTypeForSpawn(projectId, options.operatorNames),
+    opType,
     projectId,
     projectType: OperatorPluginRegistry.normalizeProjectTypeForSpawn(project?.project_type),
     configType: config?.config_type ?? null,
@@ -73,7 +88,9 @@ function enrichOperatorSpawnContext(
     projectType: spawnContext.projectType
       ?? OperatorPluginRegistry.normalizeProjectTypeForSpawn(project?.project_type),
     opType: spawnContext.opType
-      ?? resolveOpTypeForSpawn(projectId, undefined),
+      ?? resolveOpTypeForSpawn(projectId, undefined)
+      ?? OperatorPluginRegistry.normalizeOpTypeForSpawn(project?.project_type)
+      ?? undefined,
   };
 }
 
@@ -85,12 +102,12 @@ export async function executeOperatorCommand(
   const ctxWithCommand = enrichOperatorSpawnContext(spawnContext, command);
   const isSimulator = isSimulatorCompile(ctxWithCommand);
   const resolution = resolveAscendEnvForOperatorCommand(ctxWithCommand);
-  const fullEnv = buildOperatorSpawnEnvFromResolution(resolution, isSimulator);
-  const env = OperatorPluginRegistry.filterSpawnEnv(
-    fullEnv,
+  const filtered = OperatorPluginRegistry.filterSpawnEnv(
+    buildOperatorSpawnEnvFromResolution(resolution, isSimulator),
     ctxWithCommand.opType ?? undefined,
     ctxWithCommand.projectType,
   );
+  const env = mergeTritonSanitizerSpawnEnv(filtered, ctxWithCommand);
   const finalCommand = applyAscendPlaceholdersToScript(command, resolution);
   const runnableCommand = injectAscendEnvExports(finalCommand, env);
   const toolOutputLabel = meta?.outputLabel ?? deriveOperatorToolOutputLabel(ctxWithCommand);

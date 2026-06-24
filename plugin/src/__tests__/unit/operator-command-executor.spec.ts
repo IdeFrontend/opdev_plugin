@@ -22,15 +22,27 @@ jest.mock('@plugin/domain/models/project-model', () => ({
   getProjectById: jest.fn(() => ({ project_type: 'ascend-c' })),
 }));
 
+jest.mock('@plugin/domain/services/configuration', () => ({
+  getConfigById: jest.fn(),
+}));
+
+jest.mock('@plugin/domain/models/model', () => ({
+  getOpByProjectIdAndOpName: jest.fn(() => undefined),
+}));
+
 import { AscendPlugin } from '@plugin/domain/plugins/ascend.plugin';
 import { CannPlugin } from '@plugin/domain/plugins/cann.plugin';
+import { TritonPlugin } from '@plugin/domain/plugins/triton.plugin';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import { deriveOperatorToolOutputLabel } from '@plugin/helpers/output-channel';
 import {
   getSocVersionWithWorkspaceOverride,
 } from '@plugin/helpers/operator-project-workspace-config';
-import { executeOperatorCommand } from '@plugin/service/operator-command-executor';
+import {
+  buildOperatorSpawnContext,
+  executeOperatorCommand,
+} from '@plugin/service/operator-command-executor';
 
 describe('executeOperatorCommand', () => {
   const execute = jest.fn().mockResolvedValue({ code: 0, output: '', stdout: '', stderr: '' });
@@ -40,6 +52,7 @@ describe('executeOperatorCommand', () => {
     OperatorPluginRegistry._reset();
     OperatorPluginRegistry.registerOpPlugin(new CannPlugin());
     OperatorPluginRegistry.registerOpPlugin(new AscendPlugin());
+    OperatorPluginRegistry.registerOpPlugin(new TritonPlugin());
     (getSocVersionWithWorkspaceOverride as jest.Mock).mockReturnValue('ascend950');
     (ProjectManager.getInstance as jest.Mock).mockReturnValue({
       getExecutor: () => ({ execute }),
@@ -167,6 +180,34 @@ describe('executeOperatorCommand', () => {
     expect(command).toBe('bash build.sh --soc=ascend950');
     expect(command).not.toContain('export SOC_VERSION');
     expect(command).not.toContain('export NPU_ARCH');
+  });
+
+  it('resolves opType=triton for a sanitizer config and injects Triton sanitizer env vars', async () => {
+    const { getProjectById } = jest.requireMock('@plugin/domain/models/project-model') as {
+      getProjectById: jest.Mock;
+    };
+    const { getConfigById } = jest.requireMock('@plugin/domain/services/configuration') as {
+      getConfigById: jest.Mock;
+    };
+
+    getProjectById.mockReturnValue({ project_type: 'triton' });
+    getConfigById.mockReturnValue({
+      project_id: 1,
+      config_type: 'sanitizer',
+      user_options: { op: 'triton_vector_add' },
+    });
+
+    const ctx = buildOperatorSpawnContext({ configId: 1 });
+    expect(ctx.opType).toBe('triton');
+    expect(ctx.configType).toBe('sanitizer');
+
+    await executeOperatorCommand('mssanitizer -- python3 ./a.py', ctx);
+
+    const [command] = execute.mock.calls[0] as [string];
+
+    expect(command).toContain("export TRITON_ENABLE_SANITIZER='1'");
+    expect(command).toContain("export TRITON_ALWAYS_COMPILE='1'");
+    expect(command).toContain("export PYTORCH_NO_NPU_MEMORY_CACHING='1'");
   });
 
   it('uses outputLabel from meta when provided', async () => {

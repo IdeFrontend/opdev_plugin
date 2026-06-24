@@ -44,6 +44,8 @@ import {
   COMMAND_FLASH_PERFORMANCE_RUN_DATA,
   COMMAND_OPEN_DUMP_TENSOR_PANEL_VIEW,
 } from '@plugin/constants';
+import { decidePythonTargetAction } from '@plugin/helpers/sync-sanitizer-python-target';
+import { probeTritonPythonDependencies } from '@plugin/domain/services/command-strategy/triton-strategy';
 
 const CONFIG_TYPES = {
   BUILD_OP: 'build_op',
@@ -144,6 +146,32 @@ export async function notifyBuildSucceededForSidebar(
 ): Promise<void> {
   await tryMarkOperatorsAsCompiled(configId, operatorNames);
   await requestSidebarContextsRefresh();
+}
+
+/**
+ * Triton simulate / on-board profiling needs PyTorch + Triton importable in the resolved
+ * interpreter. Probe before running so a missing dependency surfaces a clear error instead
+ * of a cryptic msprof failure later. No-op for non-Triton operators.
+ */
+async function guardTritonProfilerDependencies(opType: string | undefined): Promise<boolean> {
+  if (opType !== 'triton') {
+    return true;
+  }
+
+  const probe = await probeTritonPythonDependencies();
+
+  if (!probe.ok) {
+    vscode.window.showErrorMessage(
+      t('sanitizer.tritonDepsFailed', {
+        interpreter: probe.interpreter,
+        detail: probe.stderr,
+      }),
+    );
+
+    return false;
+  }
+
+  return true;
 }
 
 export class BuildService {
@@ -589,10 +617,79 @@ export class BuildService {
   }
 
   /**
+   * Resolve the python deploy/run target for an active-file project (PyAsc) before
+   * simulate / on-board. Captures it from the focused `.py`; if Start was clicked inside
+   * the options webview (which holds focus, so there is no active editor) it trusts the
+   * target captured at panel open. Returns false (after a warning) when no usable target
+   * exists, so the caller can abort.
+   */
+  private async ensurePythonDeployTarget(activeFileExtension: string): Promise<boolean> {
+    const activeEditor = vscode.window.activeTextEditor;
+    const deployTargetKey = 'compileAndDeploy.buildConfig.deployCommandOrRunCommand';
+    const existingTargetFile = ConfigService.readOpDevtoolsSetting<string>(deployTargetKey);
+
+    const action = decidePythonTargetAction({
+      activeFileName: activeEditor?.document.fileName,
+      activeFileExtension,
+      existingTargetFile,
+    });
+
+    if (action === 'use-existing') {
+      return true;
+    }
+
+    if (action === 'no-target') {
+      vscode.window.showWarningMessage(t('build.openPyFirst'));
+
+      return false;
+    }
+
+    // action === 'sync-from-active': capture the focused .py as the deploy/run target.
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+
+    if (!workspaceFolders || workspaceFolders.length === 0) {
+      vscode.window.showWarningMessage(t('build.workspacePathNotFound'));
+
+      return false;
+    }
+
+    const workspacePath = workspaceFolders[0].uri.fsPath;
+    const filePath = activeEditor!.document.uri.fsPath;
+    const relativePath = path.relative(workspacePath, filePath)
+      .replace(/\\/g, '/');
+
+    const buildConfigId = await this.getBuildConfigId();
+    const projectId = ProjectManager.getInstance().projectId;
+
+    if (buildConfigId && projectId) {
+      await ConfigService.writeBuildOpDeployTarget(buildPythonDeployTarget(relativePath));
+    }
+
+    return true;
+  }
+
+  /**
+   * Capture the active `.py` deploy target before the simulate/on-board options webview
+   * opens (it opens in ViewColumn.Active and displaces the editor). Returns false (after a
+   * warning) when an active-file project has no `.py` focused, so the caller can skip
+   * opening the panel.
+   */
+  async captureActiveFileTargetForOptionsPanel(): Promise<boolean> {
+    const projectId = ProjectManager.getInstance().projectId;
+    const project = projectId ? getProjectById(Number(projectId)) : null;
+    const behavior = OperatorPluginRegistry.getOpPlugin(project?.project_type).buildBehavior;
+
+    if (!behavior.requiresActiveFileCheck) {
+      return true;
+    }
+
+    return this.ensurePythonDeployTarget(behavior.activeFileExtension || '.py');
+  }
+
+  /**
    * Start simulation analysis
    */
-  async startSimulate(params: { operatorNames?: string;
-    compileOption?: string } = {}): Promise<void> {
+  async startSimulate(params: { operatorNames?: string; compileOption?: string } = {}): Promise<void> {
     if (!(await this.guardSupportedProjectTypeForCurrentProject())) {
       return;
     }
@@ -607,32 +704,17 @@ export class BuildService {
     const opPlugin = OperatorPluginRegistry.getOpPlugin(project?.project_type);
     const behavior = opPlugin.buildBehavior;
 
+    if (!behavior.supportsSimulate) {
+      return;
+    }
+
+    if (!(await guardTritonProfilerDependencies(opPlugin.opType))) {
+      return;
+    }
+
     if (behavior.requiresActiveFileCheck && !params.operatorNames) {
-      const workspaceFolders = vscode.workspace.workspaceFolders;
-
-      if (!workspaceFolders || workspaceFolders.length === 0) {
-        vscode.window.showWarningMessage(t('build.workspacePathNotFound'));
-        throw new Error(t('task.workspacePathNotFound'));
-      }
-
-      const workspacePath = workspaceFolders[0].uri.fsPath;
-      const ext = behavior.activeFileExtension!;
-      const pickedUri = await resolveOrPickPythonOperatorUri(ext, workspacePath);
-
-      if (!pickedUri) {
-        vscode.window.showWarningMessage(t('build.openPyFirst'));
+      if (!(await this.ensurePythonDeployTarget(behavior.activeFileExtension!))) {
         throw new Error(t('task.openPyFirst'));
-      }
-
-      const filePath = pickedUri.fsPath;
-      const relativePath = path.relative(workspacePath, filePath)
-        .replace(/\\/g, '/');
-
-      const buildConfigId = await this.getBuildConfigId();
-
-      if (buildConfigId && projectId) {
-        const deployTarget = buildPythonDeployTarget(relativePath);
-        await ConfigService.writeBuildOpDeployTarget(deployTarget);
       }
     }
 
@@ -745,34 +827,17 @@ export class BuildService {
     const opPlugin = OperatorPluginRegistry.getOpPlugin(project?.project_type);
     const behavior = opPlugin.buildBehavior;
 
+    if (!behavior.supportsOnBoard) {
+      return;
+    }
+
+    if (!(await guardTritonProfilerDependencies(opPlugin.opType))) {
+      return;
+    }
+
     if (behavior.requiresActiveFileCheck && !params.operatorNames) {
-      const workspaceFolders = vscode.workspace.workspaceFolders;
-
-      if (!workspaceFolders || workspaceFolders.length === 0) {
-        vscode.window.showWarningMessage(t('build.workspacePathNotFound'));
-
+      if (!(await this.ensurePythonDeployTarget(behavior.activeFileExtension!))) {
         return;
-      }
-
-      const workspacePath = workspaceFolders[0].uri.fsPath;
-      const ext = behavior.activeFileExtension!;
-      const pickedUri = await resolveOrPickPythonOperatorUri(ext, workspacePath);
-
-      if (!pickedUri) {
-        vscode.window.showWarningMessage(t('build.openPyFirst'));
-
-        return;
-      }
-
-      const filePath = pickedUri.fsPath;
-      const relativePath = path.relative(workspacePath, filePath)
-        .replace(/\\/g, '/');
-
-      const buildConfigId = await this.getBuildConfigId();
-
-      if (buildConfigId && projectId) {
-        const deployTarget = buildPythonDeployTarget(relativePath);
-        await ConfigService.writeBuildOpDeployTarget(deployTarget);
       }
     }
 

@@ -1,9 +1,9 @@
-import { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 
 import { joinIdeConfigPath } from '@plugin/helpers/ide-config-dir';
+import { collectSanitizerLogReports } from '@plugin/helpers/sanitizer-log-reports';
 
 import { PermanentStorage } from '@plugin/class/permanent-storage';
 import {
@@ -16,29 +16,6 @@ import { ProjectManager } from '@plugin/core/project/project-manager';
 import { getConfig } from '@plugin/domain';
 
 const MARKED_STORAGE_KEY = 'msSanitizer_marks';
-
-/**
- * Format timestamp to date string
- * @param {number} timestamp - Unix timestamp
- * @returns {string} Formatted date string (YYYYMMDD)
- */
-function formatTimestampToYYYYMMDD(timestamp: number): string {
-  const date = new Date(timestamp);
-
-  // Validate date
-  if (isNaN(date.getTime())) {
-    throw new Error(t('runData.invalidTimestamp'));
-  }
-
-  const year = date.getFullYear();
-  const month = (date.getMonth() + 1).toString()
-    .padStart(2, '0');
-  const day = date.getDate()
-    .toString()
-    .padStart(2, '0');
-
-  return `${year}${month}${day}`;
-}
 
 /**
  * Get marked records
@@ -114,26 +91,8 @@ export class RunDataService {
 
     const markSet = getMsSanitizerMarks();
 
-    // Read files in the log directory
-    if (fs.existsSync(logPath)) {
-      const allFileNames = await fs.readdirSync(logPath);
-
-      for (const filename of allFileNames) {
-        const _filename = filename.replace('.log', '');
-        const [
-          title,
-          timestamp,
-        ] = _filename.split('_');
-
-        res.push({
-          title: `${title}-${formatTimestampToYYYYMMDD(+timestamp)}`,
-          timestamp: +timestamp,
-          id: filename,
-          path: path.join(logPath, filename),
-          marked: markSet.has(filename),
-        });
-      }
-    }
+    // Read report files in the log directory; skips empty logs a failed run leaves behind.
+    res.push(...collectSanitizerLogReports(logPath, markSet));
 
     // Read fileMapList from config
     try {

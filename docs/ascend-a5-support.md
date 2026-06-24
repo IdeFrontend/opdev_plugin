@@ -59,7 +59,7 @@ When the workspace sets **`performanceTuning.simulation.simulatorType`** to `Asc
 | **CANN** (`cann_template/*`) | Env-driven `build.sh` / cmake — reference implementation |
 | **Ascend** (`ascend_template/add_custom`) | `SUPPORT_*` literals in generated `CMakeLists.txt`; `{soc_version}` placeholders on build (no `SOC_VERSION` / `NPU_ARCH` spawn export) |
 | **PyAsc** (`pyasc_temple`) | Python-only; configs use `python3 ./<op>.py`; profiler uses resolver |
-| **Triton** (`triton_vector_add`) | Python-only; no CANN env template contract; simulate/on-board disabled in plugin |
+| **Triton** (`triton_vector_add`) | Python-only; simulate/on-board msprof via Operate panel (PyAsc-style `python3` entry); requires CANN env + `torch_npu` + `triton` |
 
 ### 2.2 Not driven by `resolveAscendEnv` (intentional or legacy)
 

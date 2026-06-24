@@ -21,9 +21,20 @@ import { OperatorProjectType } from '@plugin/domain/services/operator-project-de
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import { getCompileOptionForSelectedOperators } from '@plugin/helpers/compile-options';
 import { updateMsdebugTarget } from '@plugin/domain/utils/debug-target';
+import {
+  isPythonDebugLaunchConfig,
+  resolveDebugLaunchConfigName,
+} from '@plugin/domain/utils/debug-config-resolver';
+import { updateMsdebugPythonTarget } from '@plugin/domain/utils/debug-python-target';
+import { ensureMsdebugBreakpointFileAssociations } from '@plugin/domain/utils/msdebug-ide-settings';
+import { resolveTritonLaunchKernelPath } from '@plugin/domain/utils/triton-kernel-path';
+import { probeTritonPythonDependencies } from '@plugin/domain/services/command-strategy/triton-strategy';
+import {
+  buildPythonDeployTarget,
+  resolvePythonExecutablePath,
+} from '@plugin/domain/services/command-strategy/python-operator-strategy-shared';
 import { whenPostActivateBootstrapReady } from '@plugin/helpers/post-activate-bootstrap';
 import { resolveOrPickPythonOperatorUri } from '@plugin/helpers/python-operator-editor-context';
-import { buildPythonDeployTarget } from '@plugin/domain/services/command-strategy/python-operator-strategy-shared';
 
 // Global task manager: used to track and terminate executing tasks
 let currentExecutor: CommandExecutor | null = null;
@@ -35,12 +46,140 @@ async function ensurePostActivateBootstrapReady(): Promise<void> {
 async function guardSupportedProjectTypeOrNotify(): Promise<boolean> {
   const projectTypeInfo = await homeMethods.getProjectType();
   const projectType = projectTypeInfo.projectType || '';
+
   if (!OperatorPluginRegistry.isProjectTypeSupported(projectType)) {
     vscode.window.showErrorMessage(t('extension.unsupportedProjectTypeDisabled', { projectType: projectType || 'unknown' }));
+
     return false;
   }
 
   return true;
+}
+
+type PythonOperatorLaunchContext = {
+  operatorCwd: string;
+  scriptArg: string;
+};
+
+async function runTritonDebugPreflight(projectType: string | null): Promise<boolean> {
+  if (projectType !== OperatorProjectType.TRITON) {
+    return true;
+  }
+
+  const result = await probeTritonPythonDependencies();
+
+  if (result.ok) {
+    return true;
+  }
+
+  const detail = result.stderr ? `\n${result.stderr}` : '';
+
+  vscode.window.showErrorMessage(t('task.tritonDebugDependenciesMissing', { interpreter: result.interpreter }) + detail);
+
+  return false;
+}
+
+async function preparePythonOperatorLaunchContext(projectType: string | null): Promise<PythonOperatorLaunchContext | null> {
+  const isPythonOperator = projectType === OperatorProjectType.PYASC
+    || projectType === OperatorProjectType.TRITON;
+
+  if (!isPythonOperator) {
+    return null;
+  }
+
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+
+  if (!workspaceFolders || workspaceFolders.length === 0) {
+    vscode.window.showWarningMessage(t('task.workspacePathNotFound'));
+
+    return null;
+  }
+
+  const workspacePath = workspaceFolders[0].uri.fsPath;
+  const pickedUri = await resolveOrPickPythonOperatorUri('.py', workspacePath);
+
+  if (!pickedUri) {
+    vscode.window.showWarningMessage(t('task.openPyFirst'));
+
+    return null;
+  }
+
+  const filePath = pickedUri.fsPath;
+  const relativePath = path.relative(workspacePath, filePath)
+    .replace(/\\/g, '/');
+  const buildConfigId = await buildService.getBuildConfigId();
+
+  if (buildConfigId) {
+    const projectIdStr = ProjectManager.getInstance().projectId;
+
+    if (projectIdStr) {
+      const deployTarget = buildPythonDeployTarget(relativePath);
+
+      await ConfigService.writeBuildOpDeployTarget(deployTarget);
+    }
+  }
+
+  return {
+    operatorCwd: path.dirname(filePath),
+    scriptArg: `./${path.basename(filePath)}`,
+  };
+}
+
+async function patchLaunchJsonForDebugSession(
+  workspaceRoot: string,
+  debugConfigName: string,
+  pythonContext: PythonOperatorLaunchContext | null,
+  projectType: string | null,
+  mode: 'cpu' | 'npu',
+  operatorName?: string,
+): Promise<void> {
+  if (!isPythonDebugLaunchConfig(debugConfigName) || !pythonContext) {
+    if (!isPythonDebugLaunchConfig(debugConfigName)) {
+      try {
+        await updateMsdebugTarget(workspaceRoot, operatorName);
+      }
+      catch (e) {
+        console.warn('updateMsdebugTarget failed (continuing):', e);
+      }
+    }
+
+    return;
+  }
+
+  let launchKernelPath: string | undefined;
+
+  if (projectType === OperatorProjectType.TRITON) {
+    if (mode === 'npu') {
+      const operatorStem = pythonContext?.scriptArg
+        ? path.basename(pythonContext.scriptArg, '.py')
+        : undefined;
+
+      launchKernelPath = resolveTritonLaunchKernelPath(workspaceRoot, operatorStem);
+
+      if (!launchKernelPath) {
+        vscode.window.showWarningMessage(t('task.tritonKernelPathNotFound'));
+      }
+    }
+
+    try {
+      await ensureMsdebugBreakpointFileAssociations(workspaceRoot);
+    }
+    catch (e) {
+      console.warn('ensureMsdebugBreakpointFileAssociations failed (continuing):', e);
+    }
+  }
+
+  try {
+    await updateMsdebugPythonTarget(workspaceRoot, [debugConfigName], {
+      interpreter: resolvePythonExecutablePath(),
+      scriptArg: pythonContext.scriptArg,
+      cwd: pythonContext.operatorCwd,
+      launchKernelPath,
+    });
+  }
+  catch (e) {
+    console.warn('updateMsdebugPythonTarget failed (continuing):', e);
+  }
 }
 
 export const taskMethods = {
@@ -49,6 +188,7 @@ export const taskMethods = {
    */
   async startBuild(params: StartBuildParams = {}): Promise<void> {
     await ensurePostActivateBootstrapReady();
+
     try {
       await ProjectManager.getInstance()
         .initProject();
@@ -70,6 +210,7 @@ export const taskMethods = {
    */
   async startRun(params: StartRunParams = {}): Promise<void> {
     await ensurePostActivateBootstrapReady();
+
     try {
       await ProjectManager.getInstance()
         .initProject();
@@ -91,6 +232,7 @@ export const taskMethods = {
    */
   async startBuildExample(params: StartBuildExampleParams = {}): Promise<void> {
     await ensurePostActivateBootstrapReady();
+
     try {
       await ProjectManager.getInstance()
         .initProject();
@@ -112,6 +254,7 @@ export const taskMethods = {
    */
   async startSimulate(params: StartSimulateParams = {}): Promise<void> {
     await ensurePostActivateBootstrapReady();
+
     try {
       await ProjectManager.getInstance()
         .initProject();
@@ -133,6 +276,7 @@ export const taskMethods = {
    */
   async startOnBoard(params: StartOnBoardParams = {}): Promise<void> {
     await ensurePostActivateBootstrapReady();
+
     try {
       await ProjectManager.getInstance()
         .initProject();
@@ -154,6 +298,7 @@ export const taskMethods = {
    */
   async runSanitizer(params: StartSanitizerParams = {}): Promise<void> {
     await ensurePostActivateBootstrapReady();
+
     try {
       await ProjectManager.getInstance()
         .initProject();
@@ -176,6 +321,7 @@ export const taskMethods = {
   async startDumpTensor(params: { operatorNames?: string,
     compileOption?: string } = {}): Promise<void> {
     await ensurePostActivateBootstrapReady();
+
     try {
       await ProjectManager.getInstance()
         .initProject();
@@ -197,6 +343,7 @@ export const taskMethods = {
    */
   async startUtTest(params: StartUtTestParams = {}): Promise<void> {
     await ensurePostActivateBootstrapReady();
+
     try {
       await ProjectManager.getInstance()
         .initProject();
@@ -217,6 +364,7 @@ export const taskMethods = {
    */
   async importDumpTensorBinFile(params: { binFilePath: string }): Promise<void> {
     await ensurePostActivateBootstrapReady();
+
     try {
       await ProjectManager.getInstance()
         .initProject();
@@ -253,6 +401,7 @@ export const taskMethods = {
    */
   async runDebug(): Promise<void> {
     await ensurePostActivateBootstrapReady();
+
     try {
       if (!(await guardSupportedProjectTypeOrNotify())) {
         return;
@@ -260,62 +409,35 @@ export const taskMethods = {
 
       await ProjectManager.getInstance()
         .initProject();
-      // Save the current executor reference for possible termination operations
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
-      // For the pyasc type, check if a .py file is currently open and update the configuration
+
       const projectTypeInfo = await homeMethods.getProjectType();
-      const isPythonOperator = projectTypeInfo.projectType === OperatorProjectType.PYASC
-        || projectTypeInfo.projectType === OperatorProjectType.TRITON;
+      const projectType = projectTypeInfo.projectType;
 
-      if (isPythonOperator) {
-        const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (!(await runTritonDebugPreflight(projectType))) {
+        currentExecutor = null;
+        ProjectManager.getInstance()
+          .clearExecutor();
 
-        if (!workspaceFolders || workspaceFolders.length === 0) {
-          vscode.window.showWarningMessage(t('task.workspacePathNotFound'));
-          currentExecutor = null;
-          ProjectManager.getInstance()
-            .clearExecutor();
+        return;
+      }
 
-          return;
-        }
+      const pythonContext = await preparePythonOperatorLaunchContext(projectType);
 
-        const workspacePath = workspaceFolders[0].uri.fsPath;
-        const pickedUri = await resolveOrPickPythonOperatorUri('.py', workspacePath);
+      if (pythonContext === null
+        && (projectType === OperatorProjectType.PYASC
+          || projectType === OperatorProjectType.TRITON)) {
+        currentExecutor = null;
+        ProjectManager.getInstance()
+          .clearExecutor();
 
-        if (!pickedUri) {
-          vscode.window.showWarningMessage(t('task.openPyFirst'));
-          currentExecutor = null;
-          ProjectManager.getInstance()
-            .clearExecutor();
-
-          return;
-        }
-
-        const filePath = pickedUri.fsPath;
-
-        // Calculate relative paths
-        const relativePath = path.relative(workspacePath, filePath)
-          .replace(/\\/g, '/');
-
-        // Get build_op configuration and update target_file
-        const buildConfigId = await buildService.getBuildConfigId();
-
-        if (buildConfigId) {
-          // Get project ID
-          const projectIdStr = ProjectManager.getInstance().projectId;
-
-          if (projectIdStr) {
-            const deployTarget = buildPythonDeployTarget(relativePath);
-            await ConfigService.writeBuildOpDeployTarget(deployTarget);
-          }
-        }
+        return;
       }
 
       const operatorNames = await homeMethods.getSelectedOperators();
       const compileOption = await getCompileOptionForSelectedOperators();
 
-      // Compile before debugging, use the --debug parameter
       await buildService.startBuild({
         scriptField: 'npu_debug_script',
         operatorNames: operatorNames || undefined,
@@ -323,27 +445,26 @@ export const taskMethods = {
       });
       await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
 
-      // Get the project type and template name to determine whether to use msdebug-python
       const projectInfo = await homeMethods.getProjectType();
-      const usePythonDebug = projectInfo.projectType === 'ascend' && projectInfo.projectTemplateName === 'torch_library_template';
+      const buildBehavior = OperatorPluginRegistry.getBuildBehaviorByProjectType(projectInfo.projectType);
+      const debugConfigName = resolveDebugLaunchConfigName(
+        projectInfo.projectType,
+        'npu',
+        buildBehavior,
+        projectInfo.projectTemplateName,
+      );
 
-      // Start debug configuration
       const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
 
       if (workspaceFolder) {
-        const debugConfigName = usePythonDebug ? 'msdebug-python' : 'msdebug';
-
-        if (!usePythonDebug) {
-          // Auto-adapt the msdebug target to the actual built binary (#17), so
-          // the user no longer has to hand-edit launch.json. Best-effort: never
-          // throws, never clobbers a valid user-set target.
-          try {
-            await updateMsdebugTarget(workspaceFolder.uri.fsPath, operatorNames ?? undefined);
-          }
-          catch (e) {
-            console.warn('updateMsdebugTarget failed (continuing):', e);
-          }
-        }
+        await patchLaunchJsonForDebugSession(
+          workspaceFolder.uri.fsPath,
+          debugConfigName,
+          pythonContext,
+          projectType ?? null,
+          'npu',
+          operatorNames ?? undefined,
+        );
 
         await vscode.debug.startDebugging(workspaceFolder, debugConfigName);
       }
@@ -356,7 +477,6 @@ export const taskMethods = {
       throw error;
     }
     finally {
-      // Clear executor reference and task type
       currentExecutor = null;
       ProjectManager.getInstance()
         .clearExecutor();
@@ -368,6 +488,7 @@ export const taskMethods = {
    */
   async debugConfig(): Promise<void> {
     await ensurePostActivateBootstrapReady();
+
     try {
       await vscode.commands.executeCommand('workbench.action.debug.configure');
       vscode.window.showInformationMessage(t('task.launchJsonOpened'));
@@ -384,6 +505,7 @@ export const taskMethods = {
    */
   async runCpuDebug(): Promise<void> {
     await ensurePostActivateBootstrapReady();
+
     try {
       if (!(await guardSupportedProjectTypeOrNotify())) {
         return;
@@ -391,63 +513,43 @@ export const taskMethods = {
 
       await ProjectManager.getInstance()
         .initProject();
-      // Save the current executor reference for possible termination operations
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
-      // For the pyasc type, check if a .py file is currently open and update the configuration
+
       const projectTypeInfo = await homeMethods.getProjectType();
-      const isPythonOperator = projectTypeInfo.projectType === OperatorProjectType.PYASC
-        || projectTypeInfo.projectType === OperatorProjectType.TRITON;
+      const projectType = projectTypeInfo.projectType;
 
-      if (isPythonOperator) {
-        const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (projectType === OperatorProjectType.TRITON) {
+        currentExecutor = null;
+        ProjectManager.getInstance()
+          .clearExecutor();
 
-        if (!workspaceFolders || workspaceFolders.length === 0) {
-          vscode.window.showWarningMessage(t('task.workspacePathNotFound'));
-          // clear status
-          currentExecutor = null;
-          ProjectManager.getInstance()
-            .clearExecutor();
+        return;
+      }
 
-          return;
-        }
+      if (!(await runTritonDebugPreflight(projectType))) {
+        currentExecutor = null;
+        ProjectManager.getInstance()
+          .clearExecutor();
 
-        const workspacePath = workspaceFolders[0].uri.fsPath;
-        const pickedUri = await resolveOrPickPythonOperatorUri('.py', workspacePath);
+        return;
+      }
 
-        if (!pickedUri) {
-          vscode.window.showWarningMessage(t('task.openPyFirst'));
-          currentExecutor = null;
-          ProjectManager.getInstance()
-            .clearExecutor();
+      const pythonContext = await preparePythonOperatorLaunchContext(projectType);
 
-          return;
-        }
+      if (pythonContext === null
+        && (projectType === OperatorProjectType.PYASC
+          || projectType === OperatorProjectType.TRITON)) {
+        currentExecutor = null;
+        ProjectManager.getInstance()
+          .clearExecutor();
 
-        const filePath = pickedUri.fsPath;
-
-        // Calculate relative paths
-        const relativePath = path.relative(workspacePath, filePath)
-          .replace(/\\/g, '/');
-
-        // Get build_op configuration and update target_file
-        const buildConfigId = await buildService.getBuildConfigId();
-
-        if (buildConfigId) {
-          // Get project ID
-          const projectIdStr = ProjectManager.getInstance().projectId;
-
-          if (projectIdStr) {
-            const deployTarget = buildPythonDeployTarget(relativePath);
-            await ConfigService.writeBuildOpDeployTarget(deployTarget);
-          }
-        }
+        return;
       }
 
       const operatorNames = await homeMethods.getSelectedOperators();
       const compileOption = await getCompileOptionForSelectedOperators();
 
-      // Compile before CPU debugging, use the --simulator parameter
       await buildService.startBuild({
         scriptField: 'cpu_debug_script',
         operatorNames: operatorNames || undefined,
@@ -455,15 +557,26 @@ export const taskMethods = {
       });
       await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
 
-      // Get the project type and template name to determine whether to use msdebug-python
       const projectInfo = await homeMethods.getProjectType();
-      const usePythonDebug = projectInfo.projectType === 'ascend' && projectInfo.projectTemplateName === 'torch_library_template';
+      const buildBehavior = OperatorPluginRegistry.getBuildBehaviorByProjectType(projectInfo.projectType);
+      const debugConfigName = resolveDebugLaunchConfigName(
+        projectInfo.projectType,
+        'cpu',
+        buildBehavior,
+        projectInfo.projectTemplateName,
+      );
 
-      // Start debug configuration
       const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
 
       if (workspaceFolder) {
-        const debugConfigName = usePythonDebug ? 'msdebug-python' : 'msdebug-cpu';
+        await patchLaunchJsonForDebugSession(
+          workspaceFolder.uri.fsPath,
+          debugConfigName,
+          pythonContext,
+          projectType ?? null,
+          'cpu',
+          operatorNames ?? undefined,
+        );
 
         await vscode.debug.startDebugging(workspaceFolder, debugConfigName);
       }
@@ -476,7 +589,6 @@ export const taskMethods = {
       throw error;
     }
     finally {
-      // Clear executor reference and task type
       currentExecutor = null;
       ProjectManager.getInstance()
         .clearExecutor();
@@ -488,6 +600,7 @@ export const taskMethods = {
    */
   async cpuDebugConfig(): Promise<void> {
     await ensurePostActivateBootstrapReady();
+
     try {
       await vscode.commands.executeCommand('workbench.action.debug.configure');
       vscode.window.showInformationMessage(t('task.launchJsonOpened'));

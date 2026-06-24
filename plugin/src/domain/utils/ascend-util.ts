@@ -30,6 +30,7 @@ import {
   execBashWithCannEnv,
   resolveCannSetEnvScriptForDetection,
 } from '@plugin/domain/utils/ascend-detection-env';
+import { TRITON_SANITIZER_SPAWN_ENV } from '@plugin/domain/constants/triton-sanitizer-env';
 import { getGlobalEnvSnapshot } from '@plugin/domain/utils/global-env-snapshot';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import { OperatorProjectType } from '@plugin/domain/models/operator-project-type';
@@ -706,6 +707,20 @@ export function buildOperatorSpawnEnvFromResolution(
   };
 }
 
+export function mergeTritonSanitizerSpawnEnv(
+  env: Record<string, string>,
+  ctx: OperatorSpawnEnvContext,
+): Record<string, string> {
+  if (ctx.opType === 'triton' && ctx.configType === 'sanitizer') {
+    return {
+      ...env,
+      ...TRITON_SANITIZER_SPAWN_ENV,
+    };
+  }
+
+  return env;
+}
+
 /** @deprecated Prefer {@link resolveAscendEnvForOperatorCommand} for operator runs. */
 export function getOperatorSpawnEnv(
   ctx: OperatorSpawnEnvContext,
@@ -714,11 +729,12 @@ export function getOperatorSpawnEnv(
   const resolved = resolution ?? computeAscendEnvResolution({
     isSimulator: isSimulatorCompile(ctx),
   });
-  const fullEnv = buildOperatorSpawnEnvFromResolution(resolved, isSimulatorCompile(ctx));
-
-  return OperatorPluginRegistry.filterSpawnEnv(
-    fullEnv,
+  const isSimulator = isSimulatorCompile(ctx);
+  const filtered = OperatorPluginRegistry.filterSpawnEnv(
+    buildOperatorSpawnEnvFromResolution(resolved, isSimulator),
     ctx.opType ?? undefined,
     ctx.projectType,
   );
+
+  return mergeTritonSanitizerSpawnEnv(filtered, ctx);
 }

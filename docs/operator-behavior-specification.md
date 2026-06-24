@@ -86,12 +86,11 @@ Operator commands use `resolveAscendEnvForOperatorCommand` → `executeOperatorC
 | `ascend-c` | Strategy exists, menu actions blocked | Blocked in folder menu | Blocked | Blocked | Blocked | Blocked |
 | `torch-library` | Strategy/init exists, menu actions blocked | Blocked in folder menu | Blocked | Blocked | Blocked | Blocked |
 | `pyasc` | Build/build_example unsupported in strategy | Yes | Yes | Unsupported in strategy | Yes | Blocked |
-| `triton` | Python script via `build_op` / `build_example` (not CANN `build.sh`) | Yes | No (plugin disables CPU/NPU debug rows) | Hidden in Actions tree (`supportsSanitizer: false`) | No (`supportsSimulate` / `supportsOnBoard: false`) | Blocked |
+| `triton` | Python script via `build_op` / `build_example` (not CANN `build.sh`) | Yes | NPU only (`msdebug-triton-npu`; needs `debugMode` and `supportsNpuDebug`) | Yes (`supportsSanitizer: true`) | Yes (`supportsSimulate` / `supportsOnBoard: true`) | Blocked |
 
 Notes:
 - `pyasc` and `triton` run paths require/select a `.py` target and rewrite `build_op.target_file` when needed.
-- `triton` uses `TritonCommandStrategy` (shared Python-operator shell assembly with PyAsc); probe `torch` + `triton` imports via `probeTritonPythonDependencies()` where used.
-- Debug flows compile first with script-field overrides (`npu_debug_script` / `cpu_debug_script`), then launch debug configuration — not exposed for Triton in the Actions tree.
+- `triton` uses `TritonCommandStrategy` (shared Python-operator shell assembly with PyAsc); probe `torch` + `triton` imports via `probeTritonPythonDependencies()` before sanitizer, profiling, and NPU debug runs; debug pre-build uses Triton compile env vars then launches `msdebug-triton-npu`.
 
 ## Templates per operator type and rationale
 
@@ -115,7 +114,7 @@ Rationale in current code:
 ## How users add new operators
 
 - **Inside standard-custom**: create operator under valid collection; metadata updates into root project’s `ops_list` / `experimental_ops_list`.
-- **Inside pyasc / triton**: add/select `.py` files and use run flows (debug/profile for pyasc; triton has no debug rows in Actions tree).
+- **Inside pyasc / triton**: add/select `.py` files and use run flows (debug/profile for pyasc; triton supports run, sanitizer, simulate/on-board profiling, and NPU msdebug when the Triton plugin is enabled (`supportsCpuDebug: false`)).
 
 ## Why separate Open Operator command exists
 

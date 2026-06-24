@@ -10,7 +10,9 @@ import {
   TritonOpGenerator,
 } from '@plugin/domain/services/op-generator-factory';
 import { AbstractOperatorPlugin } from './abstract-operator-plugin';
-import { IProjectDetector, ProjectDetectionResult } from './project-detector.interface';
+import {
+  IProjectDetector, ProjectDetectionResult,
+} from './project-detector.interface';
 import {
   OperatorBuildBehavior,
   OperatorConfigScripts,
@@ -23,6 +25,19 @@ import {
 
 function tritonDefaultPythonEntry(op: OpRecord): string {
   return `python3 ./${op.op_name}.py`;
+}
+
+function tritonLaunchKernelPathSidecarWriter(opName: string): string {
+  const findNewest = 'find "$HOME/.triton/cache" -type f \\( -name \'*.npubin\' -o -name kernel.o -o -name kernel_reloc.o \\) -printf "%T@ %p\\n" 2>/dev/null | sort -n | tail -1 | cut -d" " -f2-';
+  const writeSidecar = 'd="$PWD"; while [ "$d" != "/" ]; do for cfg in .vscode .arts; do if [ -d "$d/$cfg" ]; then printf "%s\\n" "$K" > "$d/$cfg/.triton_launch_kernel_path"; exit 0; fi; done; d=$(dirname "$d"); done';
+
+  return `sh -c 'K=$(find "$HOME/.triton/cache" -type f -name '${opName}.npubin' -printf "%T@ %p\\n" 2>/dev/null | sort -n | tail -1 | cut -d" " -f2-); [ -z "$K" ] && K=$(${findNewest}); [ -z "$K" ] && exit 0; ${writeSidecar}'`;
+}
+
+function tritonDebugPythonEntry(op: OpRecord): string {
+  const compile = `TRITON_DISABLE_CACHE=1 TRITON_DISABLE_LINE_INFO=false LLVM_EXTRACT_DI_LOCAL_VARIABLES=1 python3 ./${op.op_name}.py`;
+
+  return `${compile} && ${tritonLaunchKernelPathSidecarWriter(op.op_name)}`;
 }
 
 /**
@@ -40,12 +55,12 @@ export class TritonPlugin extends AbstractOperatorPlugin implements IProjectDete
     requiresBuildBeforeAnalysis: false,
     requiresActiveFileCheck: true,
     activeFileExtension: '.py',
-    supportsSanitizer: false,
-    supportsSimulate: false,
-    supportsOnBoard: false,
+    supportsSanitizer: true,
+    supportsSimulate: true,
+    supportsOnBoard: true,
     supportsCpuDebug: false,
-    supportsNpuDebug: false,
-    supportsNpuPythonDebug: false,
+    supportsNpuDebug: true,
+    supportsNpuPythonDebug: true,
   };
 
   async detectProject(dirPath: string): Promise<ProjectDetectionResult> {
@@ -61,6 +76,7 @@ export class TritonPlugin extends AbstractOperatorPlugin implements IProjectDete
 
   getDefaultPaths(op: OpRecord): OperatorDefaultPaths {
     const pyTarget = tritonDefaultPythonEntry(op);
+
     return {
       opScriptPath: path.join(op.op_path, 'build.sh'),
       exampleScriptPath: path.join(op.op_path, 'build.sh'),
@@ -73,10 +89,12 @@ export class TritonPlugin extends AbstractOperatorPlugin implements IProjectDete
   /**
    * Same idea as PyAsc: single `.py` entry, no bundled shell scripts. Point all config script
    * slots at that interpreter line so Build does not reference missing `build.sh`.
-   * Profiling/sanitizer flows may still need manual customization for real Ascend tooling.
+   * Sanitizer runs via mssanitizer + Triton env vars; script slot is unused (pre-build skipped).
    */
   getInitialConfigScripts(op: OpRecord, _workspaceRoot: string): OperatorConfigScripts {
     const py = tritonDefaultPythonEntry(op);
+    const debugPy = tritonDebugPythonEntry(op);
+
     return {
       buildScript: py,
       exampleScript: py,
@@ -84,7 +102,7 @@ export class TritonPlugin extends AbstractOperatorPlugin implements IProjectDete
       onBoardScript: py,
       sanitizerScript: py,
       cpuDebugScript: py,
-      npuDebugScript: py,
+      npuDebugScript: debugPy,
       utTestScript: py,
     };
   }

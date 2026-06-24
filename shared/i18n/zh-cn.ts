@@ -42,8 +42,13 @@ export default {
   'task.noRunningTask': '当前没有正在执行的任务',
   'task.openPyFirst': '请先打开一个 .py 文件',
   'task.workspacePathNotFound': '未找到工作区路径',
+  'task.fileOutsideWorkspace': '当前文件必须位于工作区目录内',
   'task.launchJsonOpened': '已打开 launch.json 文件',
   'task.cannotOpenLaunchJson': '无法打开 launch.json: {{error}}',
+  'task.tritonDebugDependenciesMissing':
+    'Triton 调试需要可成功 import torch 与 triton 的 Python 环境（解释器：{{interpreter}}）。',
+  'task.tritonKernelPathNotFound':
+    '调试构建后未在 ~/.triton/cache 下找到已编译的 Triton 内核（*.npubin 或 kernel.o）。如有需要，请在 launch.json 中手动设置 LAUNCH_KERNEL_PATH。',
 
   // extension
   'extension.openWorkspaceFirst': '请先打开一个工作区',
@@ -170,6 +175,7 @@ export default {
   'sanitizer.exampleCompileFailed': '编译示例失败 {{output}}',
   'sanitizer.detectionFailed': '异常检测失败 {{output}}',
   'sanitizer.detectionFailedError': '异常检测失败: {{error}}',
+  'sanitizer.tritonDepsFailed': 'Triton 异常检测需要 {{interpreter}} 已安装 PyTorch 与 Triton。{{detail}}',
 
   // config
   'config.saveConfigSuccess': '保存配置成功',
@@ -220,6 +226,7 @@ export default {
   'pyasc.buildOpNotSupported': 'PyAsc 类型不支持 buildOpCommand 操作',
   'pyasc.buildExampleNotSupported': 'PyAsc 类型不支持 buildExampleCommand 操作',
   'pyasc.buildSanitizerNotSupported': 'PyAsc 类型不支持 buildSanitizerCommand 操作',
+  'triton.utTestNotSupported': 'Triton 类型不支持 UT 测试',
 
   // build (additional)
   'build.noBuildConfig': '未找到编译配置，请先在配置面板添加编译配置',
@@ -549,5 +556,13 @@ export default {
   'web.options.sanitizer.uninit': '未初始化检测',
   'web.options.sanitizer.startNow': '立即开始',
   'web.options.sanitizer.doNotShowAgain': '不再显示',
+  'web.options.sanitizer.runSettings': '运行设置',
+  'web.options.sanitizer.reportLogLevel': '报告日志级别',
+  'web.options.sanitizer.maxLogSize': '单日志文件上限 (MB)',
+  'web.options.sanitizer.detectionScope': '检测范围',
+  'web.options.sanitizer.scopeGlobal': '全部 block',
+  'web.options.sanitizer.scopeSingleBlock': '单个 block',
+  'web.options.sanitizer.blockId': 'Block ID',
+  'web.options.sanitizer.tritonEnvNote': 'Triton 项目在运行异常检测时将自动启用算子插桩、强制重新编译内核，并关闭 PyTorch NPU 内存池缓存。',
 
 };

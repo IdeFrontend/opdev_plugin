@@ -20,6 +20,12 @@ import {
 } from './types';
 import { getConfig } from '@plugin/domain/services/configuration';
 import { ConfigService } from '@plugin/service/config-service';
+import {
+  normalizeBlockId,
+  normalizeLogLevel,
+  normalizeMaxDebuglogSize,
+  normalizeSanitizerTools,
+} from './sanitizer-option-guards';
 import { resolveAscendEnv } from '@plugin/domain/utils/ascend-util';
 import { applyOperatorNamesPlaceholder } from '@plugin/domain/utils/operator-script-placeholders';
 
@@ -148,10 +154,12 @@ export class CannCommandStrategy implements CommandStrategy {
       (config.user_options as Record<string, unknown> | null | undefined) || {};
     const toolOptions =
       (options.tool as Record<string, unknown> | undefined) || {};
-    const tools = Object.keys(toolOptions)
-      .filter((key) => toolOptions[key]);
+    const tools = normalizeSanitizerTools(Object.keys(toolOptions)
+      .filter((key) => toolOptions[key]));
 
-    mssanitizer.addOption('tool', tools);
+    if (tools.length > 0) {
+      mssanitizer.addOption('tool', tools);
+    }
 
     if (toolOptions.memcheck) {
       const memcheckOptions =
@@ -165,15 +173,12 @@ export class CannCommandStrategy implements CommandStrategy {
         });
     }
 
-    mssanitizer.addOption('log-level', options.logLevel as string | undefined);
+    mssanitizer.addOption('log-level', normalizeLogLevel(options.logLevel));
     mssanitizer.addOption(
       'max-debuglog-size',
-      options.maxDebuglogSize as string | undefined,
+      normalizeMaxDebuglogSize(options.maxDebuglogSize),
     );
-    mssanitizer.addOption(
-      'block-id',
-      options.blockId as string | number | undefined,
-    );
+    mssanitizer.addOption('block-id', normalizeBlockId(options.blockId));
 
     const workspaceFolders = vscode.workspace.workspaceFolders;
     const workspacePath = workspaceFolders?.[0]?.uri.fsPath || process.cwd();
@@ -275,6 +280,7 @@ export class CannCommandStrategy implements CommandStrategy {
   getProfilerTargetFile(config: ConfigRecord, _operator: OpRecord | null, _exampleConfigId: number): string {
     const buildOpConfigs = getConfig(config.project_id, 'build_op', config.op);
     const buildOpConfig = buildOpConfigs.length > 0 ? buildOpConfigs[0] : null;
+
     return buildOpConfig?.target_file || '';
   }
 

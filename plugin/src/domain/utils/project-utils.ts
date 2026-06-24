@@ -6,14 +6,18 @@ import { promisify } from 'util';
 import { exec } from 'child_process';
 import * as vscode from 'vscode';
 import { OperatorProjectViewId } from '@shared/project-type-view-id';
-import { getIdeConfigDir, getIdeConfigDirName, joinIdeConfigPath } from '@plugin/helpers/ide-config-dir';
+import {
+  getIdeConfigDir, getIdeConfigDirName, joinIdeConfigPath,
+} from '@plugin/helpers/ide-config-dir';
 
 import debugLaunch from './debug-launch.json';
+import { ensureMsdebugBreakpointFileAssociations } from './msdebug-ide-settings';
 
 const execAsync = promisify(exec);
 
 function buildDebugLaunchConfig(): typeof debugLaunch {
   const envScript = `\${workspaceFolder}/${getIdeConfigDirName()}/.env`;
+
   return {
     configurations: debugLaunch.configurations.map((config) => ({
       ...config,
@@ -90,6 +94,14 @@ export async function ensureLaunchJsonExists(
   }
 
   try {
+    await ensureMsdebugBreakpointFileAssociations(projectDir);
+    console.log('ensureLaunchJsonExists: msdebug breakpoint file associations ensured');
+  }
+  catch (error) {
+    console.warn('ensureLaunchJsonExists: failed to ensure msdebug settings:', error);
+  }
+
+  try {
     await exportEnvToFile(projectDir);
     console.log('ensureLaunchJsonExists: environment variables exported');
   }
@@ -159,24 +171,31 @@ export function viewIdToProjectType(id: string | number | undefined) {
   if (id === OperatorProjectViewId.CANN) {
     return 'cann';
   }
+
   if (id === OperatorProjectViewId.STANDARD_CUSTOM) {
     return 'ascend';
   }
+
   if (id === OperatorProjectViewId.PYASC) {
     return 'pyasc';
   }
+
   if (id === OperatorProjectViewId.TRITON) {
     return 'triton';
   }
+
   if (id === 'standard-custom') {
     return 'ascend';
   }
+
   if (id === 'ascend-c' || id === 'torch-library') {
     return 'cann';
   }
+
   if (id === 'pyasc') {
     return 'pyasc';
   }
+
   if (id === 'triton') {
     return 'triton';
   }

@@ -203,7 +203,9 @@ export function getOpsByProjectId(project_id: number): OpRecord[] {
 
 export function deleteOpsByProjectId(projectId: number): void {
   const store = ensureStore();
-  const { changed, rows } = filterOutProjectId(store.ops, projectId);
+  const {
+    changed, rows,
+  } = filterOutProjectId(store.ops, projectId);
 
   if (!changed) {
     return;
@@ -741,11 +743,58 @@ export async function ensureConfigExists(
 }
 
 /**
+ * Resolve the operators whose default configs should be ensured for a project.
+ *
+ * Normal projects register their operators in the ops store (ops.json), so those are used.
+ * Imported standard-custom collections (e.g. CANN ops-* repos like ops-math) register their
+ * operators only on the project record's `ops_list` (projects.json) via the directory scan —
+ * the ops store stays empty, so `getOpsByProjectId` returns []. Without this fallback no
+ * `build_op` config would ever be created for such a repo and Build fails with
+ * `build.noBuildConfig` even though operators are visible in the sidebar. Synthesize a single
+ * project-root operator (mirroring the root config `generateStructure` seeds on first open) so
+ * a root `build_op` exists; the `--ops={operatorNames}` placeholder selects the concrete
+ * operator at build time.
+ */
+function getConfigSeedOps(project_id: number): OpRecord[] {
+  const ops = getOpsByProjectId(project_id);
+
+  if (ops.length > 0) {
+    return ops;
+  }
+
+  const project = projectModel.getProjectById(project_id);
+
+  if (!project || !project.project_path) {
+    return [];
+  }
+
+  const hasScannedOperators = (project.ops_list?.length ?? 0) > 0
+    || (project.experimental_ops_list?.length ?? 0) > 0;
+
+  if (!hasScannedOperators) {
+    return [];
+  }
+
+  return [
+    {
+      id: -1,
+      project_id,
+      op_name: project.project_name,
+      // Standard-custom collections build via the ascend toolchain (`bash build.sh --pkg ...`);
+      // fall back to ascend when the record predates project_type being stored.
+      op_type: project.project_type || 'ascend',
+      op_path: project.project_path,
+      template_name: project.template_name ?? null,
+    },
+  ];
+}
+
+/**
  * Fill in all missing default configs for each operator under a project.
  */
 export async function completeProjectConfigs(project_id: number): Promise<void> {
   try {
-    const ops = getOpsByProjectId(project_id);
+    const ops = getConfigSeedOps(project_id);
 
     for (const op of ops) {
       const {

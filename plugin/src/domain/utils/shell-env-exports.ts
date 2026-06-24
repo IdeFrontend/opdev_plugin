@@ -1,7 +1,12 @@
-const ASCEND_EXPORT_KEYS = [
+import { TRITON_SANITIZER_SPAWN_ENV } from '@plugin/domain/constants/triton-sanitizer-env';
+
+// Allowlist of keys that are emitted as shell `export`s. Other spawn-env values
+// (e.g. SUPPORT_COMPUTE_UNIT / SUPPORT_TILING_DIR) are passed via CMake, not the shell.
+const ASCEND_EXPORT_KEYS: readonly string[] = [
   'SOC_VERSION',
   'NPU_ARCH',
-] as const;
+  ...Object.keys(TRITON_SANITIZER_SPAWN_ENV),
+];
 
 const SOURCE_PREFIX_RE = /^\.\s+[^&]+\s+&&\s+/;
 

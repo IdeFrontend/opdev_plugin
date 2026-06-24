@@ -42,8 +42,13 @@ export default {
   'task.noRunningTask': 'No task is currently running',
   'task.openPyFirst': 'Please open a .py file first',
   'task.workspacePathNotFound': 'Workspace path not found',
+  'task.fileOutsideWorkspace': 'The active file must be inside the workspace folder',
   'task.launchJsonOpened': 'launch.json opened',
   'task.cannotOpenLaunchJson': 'Cannot open launch.json: {{error}}',
+  'task.tritonDebugDependenciesMissing':
+    'Triton debug requires a Python environment where both torch and triton import successfully (interpreter: {{interpreter}}).',
+  'task.tritonKernelPathNotFound':
+    'Could not find a compiled Triton kernel (*.npubin or kernel.o) under ~/.triton/cache after the debug build. Set LAUNCH_KERNEL_PATH manually in launch.json if needed.',
 
   // extension
   'extension.openWorkspaceFirst': 'Please open a workspace first',
@@ -169,6 +174,7 @@ export default {
   'sanitizer.exampleCompileFailed': 'Compile example failed {{output}}',
   'sanitizer.detectionFailed': 'Sanitizer detection failed {{output}}',
   'sanitizer.detectionFailedError': 'Sanitizer detection failed: {{error}}',
+  'sanitizer.tritonDepsFailed': 'Triton sanitizer requires PyTorch and Triton in {{interpreter}}. {{detail}}',
 
   // config
   'config.saveConfigSuccess': 'Config saved successfully',
@@ -219,6 +225,7 @@ export default {
   'pyasc.buildOpNotSupported': 'PyAsc type does not support buildOpCommand',
   'pyasc.buildExampleNotSupported': 'PyAsc type does not support buildExampleCommand',
   'pyasc.buildSanitizerNotSupported': 'PyAsc type does not support buildSanitizerCommand',
+  'triton.utTestNotSupported': 'Triton type does not support UT test',
 
   // build (additional)
   'build.noBuildConfig': 'No build config found. Add one in the config panel first.',
@@ -549,5 +556,13 @@ export default {
   'web.options.sanitizer.uninit': 'Uninitialized',
   'web.options.sanitizer.startNow': 'Start now',
   'web.options.sanitizer.doNotShowAgain': 'Do not show again',
+  'web.options.sanitizer.runSettings': 'Run settings',
+  'web.options.sanitizer.reportLogLevel': 'Report log level',
+  'web.options.sanitizer.maxLogSize': 'Max log file size (MB)',
+  'web.options.sanitizer.detectionScope': 'Detection scope',
+  'web.options.sanitizer.scopeGlobal': 'All blocks',
+  'web.options.sanitizer.scopeSingleBlock': 'Single block',
+  'web.options.sanitizer.blockId': 'Block ID',
+  'web.options.sanitizer.tritonEnvNote': 'For Triton projects, sanitizer JIT instrumentation, forced kernel recompile, and PyTorch NPU memory-pool disable are applied automatically when you run detection.',
 
 };

@@ -245,6 +245,18 @@ flowchart LR
 
 ---
 
+## Triton debug pre-build scripts
+
+For `op_type=triton`, `TritonPlugin.getInitialConfigScripts()` seeds `npu_debug_script` with a compile-oriented command (and a plain `cpu_debug_script` entry for config schema only — Triton does not support CPU debug):
+
+```bash
+TRITON_DISABLE_CACHE=1 TRITON_DISABLE_LINE_INFO=false LLVM_EXTRACT_DI_LOCAL_VARIABLES=1 python3 ./<op>.py
+```
+
+NPU debug (`task-controller.runDebug`) calls `BuildService.startBuild` with `scriptField: 'npu_debug_script'` before launching `msdebug-triton-npu`. See [`debug-integration.md`](./debug-integration.md).
+
+---
+
 ## Data Format (API)
 
 ### startBuild params (StartBuildParams)
@@ -328,7 +340,7 @@ flowchart TB
 | `domain/services/command-strategy/ascend-strategy.ts` | Ascend: buildOpCommand (placeholder + deploy), buildUtTestCommand, buildExampleCommand (script + op, mode, pkg_mode). |
 | `domain/services/command-strategy/cann-strategy.ts` | Cann: buildOpCommand / buildUtTestCommand via `applyOperatorNamesPlaceholder`. |
 | `domain/services/command-strategy/pyasc-strategy.ts` | PyAsc: buildOpCommand and buildExampleCommand throw (not supported). |
-| `domain/services/command-strategy/triton-strategy.ts` | Triton: Python `build_op` / `build_example` via configured script (`python3 ./<op>.py`); UT test throws; sanitizer command exists but Actions tree hides sanitizer when `TritonPlugin.buildBehavior.supportsSanitizer === false`. |
+| `domain/services/command-strategy/triton-strategy.ts` | Triton: Python `build_op` / `build_example` via configured script (`python3 ./<op>.py`); UT test throws; Actions tree shows sanitizer, simulate, and on-board per `TritonPlugin.buildBehavior` (`supportsSanitizer` / `supportsSimulate` / `supportsOnBoard` all `true`), while CPU/NPU debug rows stay hidden. |
 | `core/project/project-manager.ts` | `initProject()`, `getExecutor()` (CommandExecutor), `clearExecutor()`. |
 | `api-routes.ts` | `ops`: `getConfigData`, `saveConfig` only. Build/run via in-plugin `taskMethods` (commands / Operate tree), not `ops` RPC. |
 

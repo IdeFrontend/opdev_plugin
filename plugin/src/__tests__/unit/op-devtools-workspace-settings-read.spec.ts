@@ -6,6 +6,7 @@ jest.mock('@plugin/domain/services/configuration', () => ({
 import * as vscode from 'vscode';
 import { getConfigById } from '@plugin/domain/services/configuration';
 import { ConfigService } from '@plugin/service/config-service';
+import { TritonCommandStrategy } from '@plugin/domain/services/command-strategy/triton-strategy';
 
 describe('ConfigService.getRuntimeConfigById', () => {
   const getStore: Record<string, unknown> = {};
@@ -107,5 +108,50 @@ describe('ConfigService.getRuntimeConfigById', () => {
 
     const runtime = ConfigService.getRuntimeConfigById(7);
     expect((runtime?.user_options as Record<string, unknown>).script).toBeUndefined();
+  });
+
+  it('surfaces the synced sanitizer target_file from user_options as the runtime top-level target_file', () => {
+    (getConfigById as jest.Mock).mockReturnValue({
+      config_id: 8,
+      config_type: 'sanitizer',
+      user_options: { target_file: 'python3 ./triton_vector_add.py' },
+    });
+
+    const runtime = ConfigService.getRuntimeConfigById(8);
+    expect(runtime?.target_file).toBe('python3 ./triton_vector_add.py');
+  });
+
+  it('Triton getProfilerTargetFile resolves the synced sanitizer target end-to-end via getRuntimeConfigById', () => {
+    (getConfigById as jest.Mock).mockReturnValue({
+      config_id: 9,
+      config_type: 'sanitizer',
+      op: 'triton_vector_add',
+      user_options: { target_file: 'python3 ./triton_vector_add.py' },
+    });
+
+    const runtime = ConfigService.getRuntimeConfigById(9) as Parameters<
+      TritonCommandStrategy['getProfilerTargetFile']
+    >[0];
+    const strategy = new TritonCommandStrategy();
+
+    expect(strategy.getProfilerTargetFile(runtime, null, NaN))
+      .toBe('python3 ./triton_vector_add.py');
+  });
+
+  it('maps sanitizer detectionScope=singleBlock to useBlock=true and carries blockId', () => {
+    getStore['sanitizer.detectionScope'] = 'singleBlock';
+    getStore['sanitizer.blockId'] = 7;
+
+    const opts = ConfigService.buildUserOptionsFromWorkspaceSettings('sanitizer', {});
+    expect(opts.useBlock).toBe(true);
+    expect(opts.blockId).toBe(7);
+  });
+
+  it('maps sanitizer detectionScope=global to useBlock=false', () => {
+    getStore['sanitizer.detectionScope'] = 'global';
+    getStore['sanitizer.blockId'] = 7;
+
+    const opts = ConfigService.buildUserOptionsFromWorkspaceSettings('sanitizer', {});
+    expect(opts.useBlock).toBe(false);
   });
 });

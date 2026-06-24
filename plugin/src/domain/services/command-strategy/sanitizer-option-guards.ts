@@ -1,0 +1,68 @@
+/**
+ * Guards for the options handed to `mssanitizer`. mssanitizer validates every
+ * flag and aborts the whole run (printing `[mssanitizer] ERROR: ...` and still
+ * exiting 0) when a value is out of range, so a stale/invalid config value such
+ * as `--max-debuglog-size=0` silently breaks detection. Each normalizer returns
+ * `undefined` for an invalid value so the command builder simply omits the flag
+ * and mssanitizer falls back to its own default.
+ *
+ * Ranges/enums mirror mssanitizer csrc/core/cli_parser.cpp.
+ */
+
+const MAX_DEBUGLOG_SIZE_MIN = 1;
+const MAX_DEBUGLOG_SIZE_MAX = 10240;
+const BLOCK_ID_MIN = 0;
+const BLOCK_ID_MAX = 200;
+const VALID_LOG_LEVELS = [
+  'info',
+  'warn',
+  'error',
+] as const;
+const VALID_TOOLS = [
+  'memcheck',
+  'racecheck',
+  'initcheck',
+  'synccheck',
+] as const;
+
+function toIntInRange(value: unknown, min: number, max: number): number | undefined {
+  if (value === null || value === undefined || value === '') {
+    return undefined;
+  }
+
+  const num = Number(value);
+
+  if (!Number.isFinite(num)) {
+    return undefined;
+  }
+
+  const int = Math.trunc(num);
+
+  if (int < min || int > max) {
+    return undefined;
+  }
+
+  return int;
+}
+
+/** `--max-debuglog-size` accepts 1..10240 (MB); returns undefined to omit the flag. */
+export function normalizeMaxDebuglogSize(value: unknown): number | undefined {
+  return toIntInRange(value, MAX_DEBUGLOG_SIZE_MIN, MAX_DEBUGLOG_SIZE_MAX);
+}
+
+/** `--block-id` accepts 0..200; returns undefined to omit the flag. */
+export function normalizeBlockId(value: unknown): number | undefined {
+  return toIntInRange(value, BLOCK_ID_MIN, BLOCK_ID_MAX);
+}
+
+/** `--log-level` accepts info|warn|error; returns undefined to omit the flag. */
+export function normalizeLogLevel(value: unknown): string | undefined {
+  return VALID_LOG_LEVELS.includes(value as typeof VALID_LOG_LEVELS[number])
+    ? (value as string)
+    : undefined;
+}
+
+/** `--tool` accepts memcheck|racecheck|initcheck|synccheck; drops anything else. */
+export function normalizeSanitizerTools(tools: string[]): string[] {
+  return tools.filter((tool) => VALID_TOOLS.includes(tool as typeof VALID_TOOLS[number]));
+}

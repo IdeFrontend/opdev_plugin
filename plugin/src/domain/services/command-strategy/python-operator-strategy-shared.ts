@@ -229,3 +229,5 @@ export function buildPythonOnBoardCommand(
 export function getPythonRunTargetFile(_config: ConfigRecord): string {
   return ConfigService.readBuildOpDeployTargetFromWorkspace() || '';
 }
+
+export { TRITON_SANITIZER_SPAWN_ENV } from '@plugin/domain/constants/triton-sanitizer-env';

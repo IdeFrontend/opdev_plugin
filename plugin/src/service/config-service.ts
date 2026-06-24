@@ -742,16 +742,26 @@ export class ConfigService {
       const dbOnly = extractDbOnlyUserOptionFields(config.user_options as Record<string, unknown> | undefined);
       const user_options = ConfigService.buildUserOptionsFromWorkspaceSettings(configType, dbOnly);
       const script = user_options.script as string | undefined;
-      const target_file = configType === 'build_op'
-        ? (user_options.target_file as string | undefined)
-        ?? ConfigService.readBuildOpDeployTargetFromWorkspace()
-        : undefined;
+      let target_file: string | undefined;
+
+      if (configType === 'build_op') {
+        target_file = (user_options.target_file as string | undefined)
+          ?? ConfigService.readBuildOpDeployTargetFromWorkspace();
+      }
+      else if (configType === 'sanitizer') {
+        // The sanitizer Python target (e.g. Triton `python3 <file>`) is synced into the persisted
+        // user_options by syncSanitizerPythonTargetFromActiveEditor. The workspace-settings rebuild
+        // above does not reproduce it, so surface it here for the top-level target_file that command
+        // builders (e.g. TritonCommandStrategy.getProfilerTargetFile) read.
+        const dbUserOptions = config.user_options as Record<string, unknown> | undefined;
+        target_file = dbUserOptions?.target_file as string | undefined;
+      }
 
       return {
         ...config,
         user_options,
         script,
-        target_file: configType === 'build_op' ? target_file : undefined,
+        target_file,
       };
     });
   }

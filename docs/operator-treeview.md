@@ -113,7 +113,7 @@ Root nodes are built in `getFlowRootNodes()` when `hasDevtoolConfig` and project
 - Unsupported `projectType` → empty flow tree.
 - **Standard custom** without `supportsSanitizerAndTuning` → hide Debug group and Performance tuning group.
 - **Multi-operator selection** (`selectedOperatorIds.length > 1`) → run/debug/sanitizer/onboard/simulation/ut/dump rows show disabled icon and drop click command (tooltip: single-operator only).
-- Sanitizer / on-board / simulation / build rows gated by `OperatorPluginRegistry` build behavior flags (`supportsSanitizer`, `supportsOnBoard`, `supportsSimulate`, etc.). **Triton** (`project_type` / `op_type` `triton`, when `op-devtools.operatorSupport.triton` is on) hides sanitizer, simulate, on-board, and CPU/NPU debug like `TritonPlugin.buildBehavior`; run still requires an active `.py` (same pattern as PyAsc).
+- Sanitizer / on-board / simulation / build rows gated by `OperatorPluginRegistry` build behavior flags (`supportsSanitizer`, `supportsOnBoard`, `supportsSimulate`, etc.). **Triton** (`project_type` / `op_type` `triton`, when `op-devtools.operatorSupport.triton` is on) shows sanitizer, simulate, and on-board per `TritonPlugin.buildBehavior`; CPU debug stays hidden; NPU debug row follows `supportsNpuDebug` and `debugMode`. Run still requires an active `.py` (same pattern as PyAsc).
 
 **Project config** is not a tree row; title-bar command `huawei-op-devtools.sidebar.projectConfig` opens extension settings ([`workspace-settings.md`](workspace-settings.md#opening-settings)).
 

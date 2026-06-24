@@ -8,7 +8,7 @@
       "target": "${workspaceFolder}/build/${workspaceFolderBasename}",
       "environmentScripts": ["${workspaceFolder}/.arts/.env"]
     },
-    
+
     {
       "name": "msdebug-cpu",
       "type": "msdebug-mi",
@@ -18,7 +18,7 @@
       "msdebugMiPath": "/usr/bin/gdb",
       "environmentScripts": ["${workspaceFolder}/.arts/.env"]
     },
-    
+
     {
       "name": "msdebug-python",
       "type": "msdebug-mi",
@@ -28,6 +28,16 @@
       "targetArgs": ["${workspaceFolder}/run.py"],
       "environmentScripts": ["${workspaceFolder}/.arts/.env"],
       "skipEnvCheck": true
+    },
+
+    {
+      "name": "msdebug-triton-npu",
+      "type": "msdebug-mi",
+      "request": "launch",
+      "cwd": "${workspaceRoot}",
+      "target": "/usr/bin/python3",
+      "targetArgs": ["${workspaceFolder}/op.py"],
+      "environmentScripts": ["${workspaceFolder}/.arts/.env"]
     }
   ]
 }
