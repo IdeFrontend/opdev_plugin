@@ -157,13 +157,13 @@ Same structure as simulation, but:
 
 **Simulation metrics** (from merged `user_options`, mapped in [`workspace-settings.md`](./workspace-settings.md#performance-tuning-op-devtoolsperformancetuning)):
 
-| Workspace setting | `user_options` key | CLI metric |
-|-------------------|-------------------|------------|
-| (when conflict off) | — | `PipeUtilization` |
-| `simulation.resourceConflictRatio` | `ResourceConflictRatio` | `ResourceConflictRatio` |
-| `simulation.memoryThroughputWaveform` | `PMSampling` | `PMSampling` |
+| Workspace setting | `user_options` key | CLI metric | Gating |
+|-------------------|-------------------|------------|--------|
+| (mandatory base) | — | `PipeUtilization` | always emitted |
+| `simulation.resourceConflictRatio` | `ResourceConflictRatio` | `ResourceConflictRatio` | only if SOC allow-listed |
+| `simulation.memoryThroughputWaveform` | `PMSampling` | `PMSampling` | only if SOC allow-listed |
 
-msprof **mutual exclusion:** when `--aic-metrics` explicitly includes `PipeUtilization`, `ResourceConflictRatio` is disabled. The plugin never emits both: if `ResourceConflictRatio` is enabled, only `ResourceConflictRatio` (+ optional `PMSampling`) is passed; otherwise `PipeUtilization` (+ optional `PMSampling`). Default simulate settings enable conflict ratio, so the typical command is `--aic-metrics=ResourceConflictRatio,PMSampling`.
+**SOC gating (GC-22 / plugin_release #32):** the simulator (CANN msopprof) validates `--aic-metrics` against the platform selected by `--soc-version` and accepts only a narrow, platform-dependent set; unknown metrics fail with `[ERROR] Unexpected argument … maybe in wrong soc platform` (this broke A3 / `ascend910_93`). So `getSimulationAicMetrics(userOptions, cannSoc)` requests an optional metric only when the resolved CANN SOC slug is in `SIMULATOR_OPTIONAL_METRIC_SOCS` for that metric. That allow-list ships **empty** — only the mandatory `PipeUtilization` base is emitted on every SOC — and a slug is added per metric once verified against the real CANN simulator. msprof **mutual exclusion** still holds: `ResourceConflictRatio` (when allow-listed and enabled) replaces `PipeUtilization`; the two are never emitted together. With the shipped (empty) allow-list the command is always `--aic-metrics=PipeUtilization`.
 
 **`--soc-version`:** must be the **simulator directory** (`resolveAscendEnv({ isSimulator: true }).simulatorType`), e.g. `Ascend910B3` / `Ascend910C` / `Ascend950PR_9589` — not the CANN slug. Full contract (defaults, precedence, verification, contrast with `{soc_version}` / spawn env): **[`ascend-env-spec.md` §8.1](./ascend-env-spec.md#81-msprof-op-simulator---soc-version-canonical)**.
 

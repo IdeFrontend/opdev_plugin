@@ -2,6 +2,10 @@
 
 Notable changes to **Huawei OP DevTools** are listed here. For the full project history, see the repository on [GitCode](https://gitcode.com/mlh0101/mstt).
 
+## Unreleased
+
+- **SOC-gate simulation `--aic-metrics`** (GC-22 / plugin_release #32): `msprof op simulator` only accepts metrics supported by the platform selected via `--soc-version`. A3 (`ascend910_93`, i.e. `Ascend910C`) does not support `ResourceConflictRatio`, yet the default simulate config passed `--aic-metrics=ResourceConflictRatio,PMSampling`, failing with `Unexpected argument --aic-metrics=ResourceConflictRatio, maybe in wrong soc platform`. Optional metrics are now emitted only when the resolved CANN SOC slug is allow-listed in `SIMULATOR_OPTIONAL_METRIC_SOCS`; the allow-list ships empty, so every platform emits only the mandatory `PipeUtilization` base (slugs to be added per metric once verified on the real CANN simulator). The `PipeUtilization` / `ResourceConflictRatio` mutual-exclusion rule is unchanged.
+
 ## 1.3.3 — 2026-06-15
 
 Patch release: simulation profiler fixes, UX improvements, deploy correction, and documentation.

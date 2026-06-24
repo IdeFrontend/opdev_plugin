@@ -203,12 +203,15 @@ resolveAscendEnv({ isSimulator: true }).simulatorType
 
 Precedence for `simulatorType` on simulate runs: §7.1 (workspace `performanceTuning.simulation.simulatorType` → global `SIMULATOR_TYPE` snapshot → §1 default for resolved series).
 
-Example generated fragment (A2, default simulate metrics):
+Example generated fragment (A2, default simulate metrics). The optional
+`--aic-metrics` values are SOC-gated (GC-22 / plugin_release #32): with the
+shipped empty allow-list only the mandatory `PipeUtilization` base is emitted —
+see [`performance.md`](./performance.md) "Simulation metrics":
 
 ```bash
 msprof op simulator --soc-version=Ascend910B3 \
   --output=<op_path>/.vscode/opprof \
-  --aic-metrics=ResourceConflictRatio,PMSampling \
+  --aic-metrics=PipeUtilization \
   python3 ./<op>.py
 ```
 

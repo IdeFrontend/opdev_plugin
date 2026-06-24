@@ -2,6 +2,10 @@
 
 本文列出 **Huawei OP DevTools（华为算子一站式开发工具）** 的重要变更。完整提交历史见 [GitCode](https://gitcode.com/mlh0101/mstt) 仓库。
 
+## 未发布（Unreleased）
+
+- **仿真分析 `--aic-metrics` 按 SOC 平台门控**（GC-22 / plugin_release #32）：`msprof op simulator` 仅接受当前 `--soc-version` 平台支持的指标。A3（`ascend910_93`，即 `Ascend910C`）不支持 `ResourceConflictRatio`，而默认仿真配置会传递 `--aic-metrics=ResourceConflictRatio,PMSampling`，导致执行报错 `Unexpected argument --aic-metrics=ResourceConflictRatio, maybe in wrong soc platform`。现仅当解析出的 CANN SOC 标识命中允许列表 `SIMULATOR_OPTIONAL_METRIC_SOCS` 时才传递对应可选指标；该允许列表默认为空，因此各平台均仅传递必选的 `PipeUtilization`（待在真实 CANN 仿真器上逐平台验证后再放开）。`PipeUtilization` 与 `ResourceConflictRatio` 互斥规则保持不变。
+
 ## 1.3.3 — 2026-06-15
 
 本版本包含仿真分析修复、体验改进、部署修正与文档更新。
