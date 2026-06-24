@@ -6,9 +6,13 @@ import {
 import { joinIdeConfigRelative } from '@plugin/helpers/ide-config-dir';
 import {
   isAscendA5ProfilerCannSoc,
-  normalizeCannSoc,
   resolveAscendEnv,
 } from '@plugin/domain/utils/ascend-util';
+import {
+  SIMULATOR_OPTIONAL_METRIC_SOCS,
+  isSimulatorOptionalMetricSupported,
+  type SimulatorOptionalMetricAllowList,
+} from '@shared/msprof-simulator-metrics';
 
 /** Optional context for building msprof commands (on-board SOC capability matrix). */
 export type ProfilerGenerateContext = {
@@ -29,40 +33,17 @@ export interface ProfilerCommandStrategy {
 }
 
 /**
- * Optional `msprof op simulator` aic-metrics, keyed by metric name → the set of
- * resolved CANN SOC slugs whose simulator is confirmed to accept that metric.
- *
- * `PipeUtilization` is intentionally absent: it is the mandatory simulator base
- * metric, always emitted by {@link getSimulationAicMetrics} unless replaced by a
- * mutually-exclusive `ResourceConflictRatio` that is allow-listed for the SOC.
- *
- * Conservative policy (GC-22 / plugin_release #32): unlike on-board `msprof op`,
- * the simulator (CANN msopprof) validates `--aic-metrics` against the platform
- * selected by `--soc-version` and accepts only a narrow, platform-dependent set.
- * Unknown metrics are rejected with "[ERROR] Unexpected argument ... maybe in
- * wrong soc platform" — which broke A3 (`ascend910_93`) out of the box. So a
- * metric is requested only where the simulator is *positively* known to accept
- * it. The CANN simulator reference lists only `PipeUtilization` (mandatory) and
- * `ResourceConflictRatio` (optional) and does NOT list `PMSampling` as a
- * simulator metric, so both sets start empty. Add the lowercase, normalized CANN
- * SOC slug (see {@link normalizeCannSoc}) to a set below once a metric is verified
- * to work for the simulator on that platform.
- */
-const SIMULATOR_OPTIONAL_METRIC_SOCS: {
-  ResourceConflictRatio: ReadonlySet<string>;
-  PMSampling: ReadonlySet<string>;
-} = {
-  ResourceConflictRatio: new Set<string>(),
-  PMSampling: new Set<string>(),
-};
-
-/**
  * Build simulation aic-metrics for `msprof op simulator` on the resolved SOC.
  *
  * Two rules combine:
  *  - SOC gating (GC-22): optional metrics are requested only where the simulator
  *    is confirmed to accept them, so msprof never rejects the command (e.g. A3 /
- *    `ascend910_93` rejects `ResourceConflictRatio`).
+ *    `ascend910_93` rejects `ResourceConflictRatio`). The per-SOC allow-list is the
+ *    shared {@link SIMULATOR_OPTIONAL_METRIC_SOCS}, evaluated through
+ *    {@link isSimulatorOptionalMetricSupported} — the same helper + list the
+ *    simulator-options webview consults (via the `getSimulatorSupportedMetrics`
+ *    RPC, resolved with the identical `isSimulator: true` SOC), so the UI never
+ *    offers a metric this builder would drop.
  *  - msprof mutual exclusion: `PipeUtilization` and `ResourceConflictRatio` are
  *    never emitted together. `ResourceConflictRatio` is used only when it is both
  *    requested and allow-listed for this SOC; otherwise the mandatory
@@ -75,22 +56,18 @@ const SIMULATOR_OPTIONAL_METRIC_SOCS: {
 export function getSimulationAicMetrics(
   userOptions: Record<string, unknown> | null | undefined,
   cannSoc: string,
-  allowedMetricSocs: {
-    ResourceConflictRatio: ReadonlySet<string>;
-    PMSampling: ReadonlySet<string>;
-  } = SIMULATOR_OPTIONAL_METRIC_SOCS,
+  allowedMetricSocs: SimulatorOptionalMetricAllowList = SIMULATOR_OPTIONAL_METRIC_SOCS,
 ): string[] {
-  const soc = normalizeCannSoc(cannSoc);
-
   const useResourceConflictRatio = Boolean(userOptions?.ResourceConflictRatio)
-    && allowedMetricSocs.ResourceConflictRatio.has(soc);
+    && isSimulatorOptionalMetricSupported('ResourceConflictRatio', cannSoc, allowedMetricSocs);
 
   // Mutual exclusion: ResourceConflictRatio replaces the mandatory PipeUtilization base.
   const metrics = useResourceConflictRatio
     ? ['ResourceConflictRatio']
     : ['PipeUtilization'];
 
-  if (userOptions?.PMSampling && allowedMetricSocs.PMSampling.has(soc)) {
+  if (userOptions?.PMSampling
+    && isSimulatorOptionalMetricSupported('PMSampling', cannSoc, allowedMetricSocs)) {
     metrics.push('PMSampling');
   }
 

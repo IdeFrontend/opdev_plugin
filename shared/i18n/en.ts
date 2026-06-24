@@ -516,6 +516,7 @@ export default {
   'web.options.simulator.memoryThroughput': 'Memory throughput waveform',
   'web.options.simulator.codeHotspot': 'Operator code hotspot (default)',
   'web.options.simulator.resourceConflict': 'Resource conflict ratio',
+  'web.options.simulator.optionalUnsupported': 'On this platform the simulator collects only the base instruction-pipeline metric (PipeUtilization); optional metrics are not available here.',
   'web.options.simulator.startNow': 'Start now',
 
   // web options-on-board

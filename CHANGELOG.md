@@ -4,7 +4,7 @@
 
 ## 未发布（Unreleased）
 
-- **仿真分析 `--aic-metrics` 按 SOC 平台门控**（GC-22 / plugin_release #32）：`msprof op simulator` 仅接受当前 `--soc-version` 平台支持的指标。A3（`ascend910_93`，即 `Ascend910C`）不支持 `ResourceConflictRatio`，而默认仿真配置会传递 `--aic-metrics=ResourceConflictRatio,PMSampling`，导致执行报错 `Unexpected argument --aic-metrics=ResourceConflictRatio, maybe in wrong soc platform`。现仅当解析出的 CANN SOC 标识命中允许列表 `SIMULATOR_OPTIONAL_METRIC_SOCS` 时才传递对应可选指标；该允许列表默认为空，因此各平台均仅传递必选的 `PipeUtilization`（待在真实 CANN 仿真器上逐平台验证后再放开）。`PipeUtilization` 与 `ResourceConflictRatio` 互斥规则保持不变。
+- **仿真分析 `--aic-metrics` 按 SOC 平台门控**（GC-22 / plugin_release #32）：`msprof op simulator` 仅接受当前 `--soc-version` 平台支持的指标。A3（`ascend910_93`，即 `Ascend910C`）不支持 `ResourceConflictRatio`，而默认仿真配置会传递 `--aic-metrics=ResourceConflictRatio,PMSampling`，导致执行报错 `Unexpected argument --aic-metrics=ResourceConflictRatio, maybe in wrong soc platform`。现仅当解析出的 CANN SOC 标识命中允许列表 `SIMULATOR_OPTIONAL_METRIC_SOCS` 时才传递对应可选指标；该允许列表默认为空，因此各平台均仅传递必选的 `PipeUtilization`（待在真实 CANN 仿真器上逐平台验证后再放开）。`PipeUtilization` 与 `ResourceConflictRatio` 互斥规则保持不变。该允许列表提取到 `shared/msprof-simulator-metrics.ts`，作为命令生成与仿真选项面板的**统一来源**：面板按当前 SOC 仅显示真正会被采集的可选指标，不再出现「勾选但被静默丢弃」的复选框。
 
 ## 1.3.3 — 2026-06-15
 

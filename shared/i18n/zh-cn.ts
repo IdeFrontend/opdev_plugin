@@ -516,6 +516,7 @@ export default {
   'web.options.simulator.memoryThroughput': '内存通路吞吐率波形子图',
   'web.options.simulator.codeHotspot': '算子代码热点图（默认采集）',
   'web.options.simulator.resourceConflict': '资源冲突占比指标',
+  'web.options.simulator.optionalUnsupported': '当前平台的仿真器仅采集基础指令流水指标（PipeUtilization）；附加指标在该平台暂不可用。',
   'web.options.simulator.startNow': '立即开始',
 
   // web options-on-board

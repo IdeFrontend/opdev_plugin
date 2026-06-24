@@ -76,6 +76,13 @@ export function getProjectEnv() {
   );
 }
 
+/** 获取当前 SOC 下仿真器支持的可选 aic-metrics（与命令生成同源，isSimulator:true 解析） */
+export function getSimulatorSupportedMetrics() {
+  return request.post<undefined, { ResourceConflictRatio: boolean; PMSampling: boolean }>(
+    'ops/getSimulatorSupportedMetrics',
+  );
+}
+
 /** 获取已选择的算子名称列表 */
 export function getSelectedOperators() {
   return request.post<undefined, string | undefined>('ops/getSelectedOperators', undefined);

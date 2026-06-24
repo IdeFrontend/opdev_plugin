@@ -21,6 +21,7 @@ const opsMethods = {
   startOnBoard: dispatchOnBoard,
 
   getProjectEnv: scriptMethods.getProjectEnv,
+  getSimulatorSupportedMetrics: scriptMethods.getSimulatorSupportedMetrics,
 
   getSanitizerConfigs: sanitizerViewMethods.getSanitizerConfigs,
   saveSanitizerForm: sanitizerViewMethods.saveSanitizerForm,

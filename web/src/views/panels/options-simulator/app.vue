@@ -8,7 +8,7 @@ import { useTheme } from '@web/composables/use-theme';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import {
   getConfigData, saveConfig, startSimulate, openExternalLink, executeVscodeCommand, getSelectedOperators,
-  getSimulationShowQuickOptions, setSimulationShowQuickOptions,
+  getSimulationShowQuickOptions, setSimulationShowQuickOptions, getSimulatorSupportedMetrics,
 } from '@web/apis';
 
 // 使用主题管理组合式函数
@@ -17,7 +17,11 @@ const {
 } = useTheme();
 const simulateOptions = ref({
   user_options: {
-    PMSampling: true,
+    // PMSampling is not a documented simulator metric (see shared/msprof-simulator-metrics.ts),
+    // so it defaults off — if a SOC ever allow-lists it the checkbox appears unchecked
+    // (opt-in), never pre-checked without consent. ResourceConflictRatio is a real optional
+    // metric, so it stays default-on (gated per SOC by the command builder + UI).
+    PMSampling: false,
     ResourceConflictRatio: true,
   },
 });
@@ -26,6 +30,18 @@ const isExecuting = ref(false);
 /** When true, workspace `performanceTuning.simulation.showQuickOptions` is false (tree runs without opening this panel). */
 const doNotShowAgain = ref(false);
 const guide = 'https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODtools/Operatordevelopmenttools/atlasopdev_16_0082.html';
+
+/**
+ * Which OPTIONAL aic-metrics the simulator accepts for THIS project's simulator runs.
+ * Resolved by the extension (`getSimulatorSupportedMetrics`) with the same
+ * `resolveAscendEnv({ isSimulator: true })` SOC + allow-list the command builder gates
+ * on, so a checkbox is shown iff its metric will actually be emitted — no
+ * silently-dropped toggles (GC-22 / plugin_release #32). Note: we must NOT derive this
+ * from `getProjectEnv().socVersion`, which is the non-simulator SOC and can differ when
+ * a workspace `simulation.simulatorType` override is set.
+ */
+const resourceConflictSupported = ref(false);
+const pmSamplingSupported = ref(false);
 
 const fetchConfig = async () => {
   try {
@@ -106,6 +122,15 @@ async function syncDoNotShowToWorkspace() {
 onBeforeMount(async () => {
   await fetchConfig();
   try {
+    const supported = await getSimulatorSupportedMetrics();
+    resourceConflictSupported.value = Boolean(supported?.ResourceConflictRatio);
+    pmSamplingSupported.value = Boolean(supported?.PMSampling);
+  }
+  catch {
+    resourceConflictSupported.value = false;
+    pmSamplingSupported.value = false;
+  }
+  try {
     const showQuick = await getSimulationShowQuickOptions();
     doNotShowAgain.value = !showQuick;
   }
@@ -144,11 +169,20 @@ onBeforeMount(async () => {
             <QuestionCircleOutlined class="help-icon" />
           </a-tooltip>
         </div>
+        <div
+          v-if="!resourceConflictSupported && !pmSamplingSupported"
+          class="optional-unsupported-hint"
+        >
+          {{ t('web.options.simulator.optionalUnsupported') }}
+        </div>
 
         <div style="margin-top: 12px">
           {{ t('web.options.simulator.instructionPipeline') }}
         </div>
-        <div class="nested-checkbox-group">
+        <div
+          v-if="pmSamplingSupported"
+          class="nested-checkbox-group"
+        >
           <div style="margin-bottom: 12px">
             {{ t('web.options.simulator.instructionPipelineDesc') }}
           </div>
@@ -160,11 +194,20 @@ onBeforeMount(async () => {
             {{ t('web.options.simulator.memoryThroughput') }}
           </a-checkbox>
         </div>
+        <div
+          v-else
+          style="margin-top: 8px"
+        >
+          {{ t('web.options.simulator.instructionPipelineDesc') }}
+        </div>
 
         <div style="margin-top: 12px">
           {{ t('web.options.simulator.codeHotspot') }}
         </div>
-        <div class="nested-checkbox-group">
+        <div
+          v-if="resourceConflictSupported"
+          class="nested-checkbox-group"
+        >
           {{ t('web.options.simulator.extraOptions') }}
           <a-checkbox
             v-model:checked="simulateOptions.user_options.ResourceConflictRatio"
@@ -219,6 +262,12 @@ onBeforeMount(async () => {
       margin-left: 4px;
       cursor: pointer;
     }
+  }
+
+  .optional-unsupported-hint {
+    margin-top: 6px;
+    font-size: 12px;
+    opacity: 0.65;
   }
 
   .nested-checkbox-group {

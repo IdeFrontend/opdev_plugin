@@ -530,7 +530,9 @@ export async function generateStructure(
           script:      scripts.simulateScript,
           config_name: record.op_name,
           ResourceConflictRatio: true,
-          PMSampling: true,
+          // Not a documented simulator metric (shared/msprof-simulator-metrics.ts): default off
+          // so it is never pre-enabled; the SOC allow-list gates it regardless.
+          PMSampling: false,
           downloadToLocal: true,
           renderInPlatform: false,
           // Data storage location default value
@@ -694,7 +696,9 @@ function getConfigPayload(
           script: scripts.simulateScript,
           config_name: record.op_name,
           ResourceConflictRatio: true,
-          PMSampling: true,
+          // Not a documented simulator metric (shared/msprof-simulator-metrics.ts): default off
+          // so it is never pre-enabled; the SOC allow-list gates it regardless.
+          PMSampling: false,
           downloadToLocal: true,
           renderInPlatform: false,
           dataStoragePath: getDefaultDirectory(),
