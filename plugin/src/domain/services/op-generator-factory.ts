@@ -455,6 +455,9 @@ export class CannOpGenerator extends BaseOpGenerator {
       this._replaceMsttPlaceholders();
     }
 
+    OperatorPluginRegistry.getOpPlugin('cann')
+      .patchGeneratedProject(this.op_path, this.params);
+
     return true;
   }
 }
@@ -567,10 +570,12 @@ export class TritonOpGenerator extends CannOpGenerator {
 
             const entryPath = path.join(this.op_path, entry.entryName);
             const entryDir = path.dirname(entryPath);
+
             fs.ensureDirSync(entryDir);
 
             if (!fs.pathExistsSync(entryPath)) {
               const content = zip.readFile(entry);
+
               if (content) {
                 fs.writeFileSync(entryPath, content);
               }

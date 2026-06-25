@@ -3,6 +3,7 @@ import {
   CannOpGenerator, OpGenParams, OpGenProject,
 } from '@plugin/domain/services/op-generator-factory';
 import { OperatorProjectType } from '@plugin/domain/models/operator-project-type';
+import { patchCannSanitizerCmakeOptions } from '@plugin/domain/utils/ascend-util';
 import { AbstractOperatorPlugin } from './abstract-operator-plugin';
 import type { OperatorSpawnEnvKey } from './operator-plugin.interface';
 
@@ -24,6 +25,10 @@ export class CannPlugin extends AbstractOperatorPlugin {
       'SOC_VERSION',
       'NPU_ARCH',
     ];
+  }
+
+  override patchGeneratedProject(opPath: string, params: OpGenParams): void {
+    patchCannSanitizerCmakeOptions(opPath, params.soc_version);
   }
 
   createProjectGenerator(params: OpGenParams, project: OpGenProject, extensionPath: string) {

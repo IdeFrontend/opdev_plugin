@@ -76,10 +76,9 @@ set(compile_options)
 if(ENABLE_DEBUG)
     list(APPEND compile_options -O0 -g)
 elseif(ENABLE_MS_SANITIZER)
-    list(APPEND compile_options -O2 -g --cce-enable-sanitizer)
+    list(APPEND compile_options __MSTT_SANITIZER_COMPILE_OPTIONS__)
     target_link_options(custom_ops PRIVATE
-        --cce-fatobj-link
-        --cce-enable-sanitizer
+        __MSTT_SANITIZER_LINK_OPTIONS__
     )
 elseif(ENABLE_SIMULATOR)
     list(APPEND compile_options -O2 -g)

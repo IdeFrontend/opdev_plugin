@@ -50,17 +50,15 @@ function logAscendEnvResolution(
   resolution: AscendEnvResolution,
   ctx: ResolveAscendEnvContext,
 ): void {
-  logAscendEnv(
-    `Ascend Environment Resolved: soc=${resolution.socVersion} (source=${resolution.source.socVersion})`
-      + (ctx.isSimulator
-        ? `, simulator=${resolution.simulatorType ?? '<unset>'}`
-        + ` (source=${resolution.source.simulatorType})`
-        : '')
-      + `, npu_arch=${resolution.npuArch} (source=${resolution.source.npuArch})`
-      + `, support_compute_unit=${getSupportComputeUnitForCannSoc(resolution.socVersion)}`
-      + `, support_tiling_dir=${getSupportTilingDirForCannSoc(resolution.socVersion)}`
-      + ` [isSimulator=${ctx.isSimulator}]`,
-  );
+  logAscendEnv(`Ascend Environment Resolved: soc=${resolution.socVersion} (source=${resolution.source.socVersion})`
+    + (ctx.isSimulator
+      ? `, simulator=${resolution.simulatorType ?? '<unset>'}`
+      + ` (source=${resolution.source.simulatorType})`
+      : '')
+    + `, npu_arch=${resolution.npuArch} (source=${resolution.source.npuArch})`
+    + `, support_compute_unit=${getSupportComputeUnitForCannSoc(resolution.socVersion)}`
+    + `, support_tiling_dir=${getSupportTilingDirForCannSoc(resolution.socVersion)}`
+    + ` [isSimulator=${ctx.isSimulator}]`);
 }
 
 /**
@@ -194,6 +192,7 @@ function resolveAclnnBuildDefaultForCannSoc(
 /** Placeholders in ascend `add_custom` CMakeLists.txt replaced at project generation. */
 
 export const MSTT_SUPPORT_COMPUTE_UNIT_PLACEHOLDER = '__MSTT_SUPPORT_COMPUTE_UNIT__' as const;
+
 export const MSTT_SUPPORT_TILING_DIR_PLACEHOLDER = '__MSTT_SUPPORT_TILING_DIR__' as const;
 
 export type AclnnCmakeDefaults = {
@@ -228,11 +227,8 @@ export function getSupportTilingDirForCannSoc(cannSoc?: string | null): string {
  * Uses workspace/project SOC when set, otherwise the same chain as
  * {@link computeAscendEnvResolution} (global env → detection → default).
  */
-export function resolveAclnnCmakeDefaultsForGeneration(
-  projectSoc?: string | null,
-): AclnnCmakeDefaults {
-  const cannSoc = normalizeCannSoc(getSocVersionWithWorkspaceOverride(projectSoc))
-    || computeAscendEnvResolution({ isSimulator: false }).socVersion;
+export function resolveAclnnCmakeDefaultsForGeneration(projectSoc?: string | null): AclnnCmakeDefaults {
+  const cannSoc = resolveCannSocForGeneration(projectSoc);
 
   return {
     supportComputeUnit: getSupportComputeUnitForCannSoc(cannSoc),
@@ -245,20 +241,89 @@ export function patchAclnnCmakeSupportVars(
   opPath: string,
   projectSoc?: string | null,
 ): void {
+  patchCmakePlaceholders(opPath, projectSoc, (content, projectSocValue) => {
+    const defaults = resolveAclnnCmakeDefaultsForGeneration(projectSocValue);
+
+    return content
+      .split(MSTT_SUPPORT_COMPUTE_UNIT_PLACEHOLDER)
+      .join(defaults.supportComputeUnit)
+      .split(MSTT_SUPPORT_TILING_DIR_PLACEHOLDER)
+      .join(defaults.supportTilingDir);
+  });
+}
+
+/** Placeholders in CANN AscendC CMakeLists.txt `ENABLE_MS_SANITIZER` branch. */
+
+export const MSTT_SANITIZER_COMPILE_OPTIONS_PLACEHOLDER = '__MSTT_SANITIZER_COMPILE_OPTIONS__' as const;
+
+export const MSTT_SANITIZER_LINK_OPTIONS_PLACEHOLDER = '__MSTT_SANITIZER_LINK_OPTIONS__' as const;
+
+const SANITIZER_COMPILE_OPTIONS_A5 = '-g';
+const SANITIZER_COMPILE_OPTIONS_NON_A5 = '-O2 -g --cce-enable-sanitizer';
+const SANITIZER_LINK_OPTIONS_A5 = '--cce-fatobj-link';
+const SANITIZER_LINK_OPTIONS_NON_A5 = '--cce-fatobj-link\n        --cce-enable-sanitizer';
+
+export type SanitizerCmakeDefaults = {
+  compileOptions: string;
+  linkOptions: string;
+};
+
+function resolveCannSocForGeneration(projectSoc?: string | null): string {
+  return normalizeCannSoc(getSocVersionWithWorkspaceOverride(projectSoc))
+    || computeAscendEnvResolution({ isSimulator: false }).socVersion;
+}
+
+/**
+ * MSSanitizer cmake flags for CANN AscendC templates.
+ * A5: `-g` only (no `--cce-enable-sanitizer` in compile or link options).
+ */
+export function resolveSanitizerCmakeDefaultsForGeneration(projectSoc?: string | null): SanitizerCmakeDefaults {
+  const isA5 = isAscendA5ProfilerCannSoc(resolveCannSocForGeneration(projectSoc));
+
+  return {
+    compileOptions: isA5 ? SANITIZER_COMPILE_OPTIONS_A5 : SANITIZER_COMPILE_OPTIONS_NON_A5,
+    linkOptions: isA5 ? SANITIZER_LINK_OPTIONS_A5 : SANITIZER_LINK_OPTIONS_NON_A5,
+  };
+}
+
+/** Replace `__MSTT_SANITIZER_*__` placeholders in the operator root CMakeLists.txt. */
+export function patchCannSanitizerCmakeOptions(
+  opPath: string,
+  projectSoc?: string | null,
+): void {
+  patchCmakePlaceholders(opPath, projectSoc, (content, projectSocValue) => {
+    if (!content.includes(MSTT_SANITIZER_COMPILE_OPTIONS_PLACEHOLDER)
+      && !content.includes(MSTT_SANITIZER_LINK_OPTIONS_PLACEHOLDER)) {
+      return content;
+    }
+
+    const defaults = resolveSanitizerCmakeDefaultsForGeneration(projectSocValue);
+
+    return content
+      .split(MSTT_SANITIZER_COMPILE_OPTIONS_PLACEHOLDER)
+      .join(defaults.compileOptions)
+      .split(MSTT_SANITIZER_LINK_OPTIONS_PLACEHOLDER)
+      .join(defaults.linkOptions);
+  });
+}
+
+function patchCmakePlaceholders(
+  opPath: string,
+  projectSoc: string | null | undefined,
+  patch: (content: string, projectSocValue: string | null | undefined)=> string,
+): void {
   const cmakePath = path.join(opPath, 'CMakeLists.txt');
 
   if (!fs.pathExistsSync(cmakePath)) {
     return;
   }
 
-  const defaults = resolveAclnnCmakeDefaultsForGeneration(projectSoc);
-  let content = fs.readFileSync(cmakePath, 'utf8');
+  const content = fs.readFileSync(cmakePath, 'utf8');
+  const patched = patch(content, projectSoc);
 
-  content = content.split(MSTT_SUPPORT_COMPUTE_UNIT_PLACEHOLDER)
-    .join(defaults.supportComputeUnit);
-  content = content.split(MSTT_SUPPORT_TILING_DIR_PLACEHOLDER)
-    .join(defaults.supportTilingDir);
-  fs.writeFileSync(cmakePath, content, 'utf8');
+  if (patched !== content) {
+    fs.writeFileSync(cmakePath, patched, 'utf8');
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -281,10 +346,8 @@ function logDetectionHit(
   const npuArch = getNpuArchForChipName(hit.chipRaw)
     ?? getNpuArchForSeries(hit.series);
 
-  logAscendEnv(
-    `detected series=${hit.series.toUpperCase()} soc=${hit.socVersion}`
-    + ` npu_arch=${npuArch} chip=${hit.chipRaw} (via=${via})`,
-  );
+  logAscendEnv(`detected series=${hit.series.toUpperCase()} soc=${hit.socVersion}`
+    + ` npu_arch=${npuArch} chip=${hit.chipRaw} (via=${via})`);
 }
 
 function tryDetectSocViaAsys(): string | undefined {
@@ -352,6 +415,7 @@ function detectSocOnce(): string | undefined {
       soc: asysSoc,
       via: 'asys',
     };
+
     return asysSoc;
   }
 
@@ -573,9 +637,7 @@ export function computeAscendEnvResolution(ctx: ResolveAscendEnvContext): Ascend
  * Resolve env for a single operator command execution. Logs once and returns
  * values for spawn env and `{soc_version}` / `{simulator_type}` substitution.
  */
-export function resolveAscendEnvForOperatorCommand(
-  spawnContext: OperatorSpawnEnvContext,
-): AscendEnvResolution {
+export function resolveAscendEnvForOperatorCommand(spawnContext: OperatorSpawnEnvContext): AscendEnvResolution {
   const isSimulator = isSimulatorCompile(spawnContext);
   const resolveCtx: ResolveAscendEnvContext = { isSimulator };
   let resolution = computeAscendEnvResolution(resolveCtx);
@@ -726,9 +788,7 @@ export function getOperatorSpawnEnv(
   ctx: OperatorSpawnEnvContext,
   resolution?: AscendEnvResolution,
 ): Record<string, string> {
-  const resolved = resolution ?? computeAscendEnvResolution({
-    isSimulator: isSimulatorCompile(ctx),
-  });
+  const resolved = resolution ?? computeAscendEnvResolution({ isSimulator: isSimulatorCompile(ctx) });
   const isSimulator = isSimulatorCompile(ctx);
   const filtered = OperatorPluginRegistry.filterSpawnEnv(
     buildOperatorSpawnEnvFromResolution(resolved, isSimulator),
