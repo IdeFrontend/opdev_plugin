@@ -5,12 +5,16 @@ import * as path from 'path';
 import {
   resolveDebugTargetBinary,
   debugTargetCandidates,
+  collectDebugTargetCandidates,
+  basenameFromTargetFile,
   toWorkspaceRelativeTarget,
   shouldReplaceDebugTarget,
+  patchMsdebugLaunchConfigTarget,
   updateMsdebugTarget,
+  DEFAULT_MSDEBUG_TARGET,
 } from '@plugin/domain/utils/debug-target';
 
-const DEFAULT_TARGET = '${workspaceFolder}/build/${workspaceFolderBasename}';
+const DEFAULT_TARGET = DEFAULT_MSDEBUG_TARGET;
 
 describe('resolveDebugTargetBinary', () => {
   it('returns the first candidate present, honoring priority order', () => {
@@ -65,10 +69,11 @@ describe('resolveDebugTargetBinary', () => {
 });
 
 describe('debugTargetCandidates', () => {
-  it('offers the AscendC aclnn example before the bare operator binary', () => {
+  it('offers the AscendC aclnn example before graph and the bare operator binary', () => {
     expect(debugTargetCandidates('add_custom'))
       .toEqual([
         'test_aclnn_add_custom',
+        'test_geir_add_custom',
         'add_custom',
       ]);
   });
@@ -77,6 +82,7 @@ describe('debugTargetCandidates', () => {
     expect(debugTargetCandidates('  matmul  '))
       .toEqual([
         'test_aclnn_matmul',
+        'test_geir_matmul',
         'matmul',
       ]);
   });
@@ -86,6 +92,36 @@ describe('debugTargetCandidates', () => {
       .toEqual([]);
     expect(debugTargetCandidates(undefined))
       .toEqual([]);
+  });
+});
+
+describe('collectDebugTargetCandidates', () => {
+  it('prefers build_example target_file basename when it differs from defaults', () => {
+    expect(collectDebugTargetCandidates(
+      'customop',
+      '/ws/math/customop/build/demo_customop',
+    ))
+      .toEqual([
+        'demo_customop',
+        'test_aclnn_customop',
+        'test_geir_customop',
+        'customop',
+      ]);
+  });
+
+  it('does not duplicate a basename already in the default list', () => {
+    expect(collectDebugTargetCandidates(
+      'add_custom',
+      '/ws/add_custom/build/test_aclnn_add_custom',
+    ))
+      .toEqual(debugTargetCandidates('add_custom'));
+  });
+});
+
+describe('basenameFromTargetFile', () => {
+  it('returns the basename of a target_file path', () => {
+    expect(basenameFromTargetFile('/ws/math/op/build/test_aclnn_op'))
+      .toBe('test_aclnn_op');
   });
 });
 
@@ -129,6 +165,24 @@ describe('shouldReplaceDebugTarget', () => {
     expect(shouldReplaceDebugTarget(
       '${workspaceFolder}/math/add_custom/build/test_aclnn_add_custom',
       true,
+    ))
+      .toBe(false);
+  });
+
+  it('replaces a stale 1.3.2 workspace-root build/ target when the nested path is known', () => {
+    expect(shouldReplaceDebugTarget(
+      '${workspaceFolder}/build/add_custom',
+      true,
+      '${workspaceFolder}/math/add_custom/build/test_aclnn_add_custom',
+    ))
+      .toBe(true);
+  });
+
+  it('keeps a custom existing target that is not the legacy root build pattern', () => {
+    expect(shouldReplaceDebugTarget(
+      '${workspaceFolder}/custom/my_target',
+      true,
+      '${workspaceFolder}/math/add_custom/build/test_aclnn_add_custom',
     ))
       .toBe(false);
   });
@@ -294,7 +348,56 @@ describe('updateMsdebugTarget', () => {
       .toBe('${workspaceFolder}/math/add_custom/build/test_aclnn_add_custom');
   });
 
-  it('does nothing when the operator binary was not built (no clobbering)', async () => {
+  it('auto-adapts to a graph-only operator binary', async () => {
+    mkWorkspace([
+      {
+        name: 'msdebug',
+        target: DEFAULT_TARGET,
+      },
+    ]);
+    const opPath = buildOperatorBinary(
+      path.join('math', 'pows'),
+      'test_geir_pows',
+    );
+
+    const result = await updateMsdebugTarget(root, {
+      name: 'pows',
+      path: opPath,
+    });
+
+    expect(result)
+      .toEqual({
+        status: 'patched',
+        target: '${workspaceFolder}/math/pows/build/test_geir_pows',
+      });
+    expect(readConfigs()[0].target)
+      .toBe('${workspaceFolder}/math/pows/build/test_geir_pows');
+  });
+
+  it('replaces a stale legacy workspace-root build/ target that still exists on disk', async () => {
+    mkWorkspace([
+      {
+        name: 'msdebug',
+        target: '${workspaceFolder}/build/add_custom',
+      },
+    ]);
+    fs.mkdirSync(path.join(root, 'build'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'build', 'add_custom'), '#!/bin/sh\n', 'utf-8');
+    const opPath = buildOperatorBinary(
+      path.join('math', 'add_custom'),
+      'test_aclnn_add_custom',
+    );
+
+    await updateMsdebugTarget(root, {
+      name: 'add_custom',
+      path: opPath,
+    });
+
+    expect(readConfigs()[0].target)
+      .toBe('${workspaceFolder}/math/add_custom/build/test_aclnn_add_custom');
+  });
+
+  it('reports noop when the operator binary was not built', async () => {
     mkWorkspace([
       {
         name: 'msdebug',
@@ -302,16 +405,18 @@ describe('updateMsdebugTarget', () => {
       },
     ]);
 
-    await updateMsdebugTarget(root, {
+    const result = await updateMsdebugTarget(root, {
       name: 'add_custom',
       path: path.join(root, 'math', 'add_custom'),
     });
 
+    expect(result)
+      .toEqual({ status: 'noop', reason: 'no_binary' });
     expect(readConfigs()[0].target)
       .toBe(DEFAULT_TARGET);
   });
 
-  it('does nothing when no operator is provided', async () => {
+  it('reports noop when no operator is provided', async () => {
     mkWorkspace([
       {
         name: 'msdebug',
@@ -319,8 +424,10 @@ describe('updateMsdebugTarget', () => {
       },
     ]);
 
-    await updateMsdebugTarget(root, undefined);
+    const result = await updateMsdebugTarget(root, undefined);
 
+    expect(result)
+      .toEqual({ status: 'noop', reason: 'no_operator' });
     expect(readConfigs()[0].target)
       .toBe(DEFAULT_TARGET);
   });
@@ -333,9 +440,42 @@ describe('updateMsdebugTarget', () => {
       path: path.join(root, 'math', 'add_custom'),
     }))
       .resolves
-      .toBeUndefined();
+      .toEqual({ status: 'noop', reason: 'no_launch_json' });
 
     expect(fs.existsSync(path.join(root, '.vscode', 'launch.json')))
       .toBe(false);
+  });
+});
+
+describe('patchMsdebugLaunchConfigTarget', () => {
+  it('patches an in-memory msdebug config for the Run panel flow', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'msdebug-patch-'));
+    const opPath = path.join(root, 'math', 'add_custom');
+    const buildDir = path.join(opPath, 'build');
+
+    fs.mkdirSync(buildDir, { recursive: true });
+    fs.writeFileSync(path.join(buildDir, 'test_aclnn_add_custom'), '#!/bin/sh\n', 'utf-8');
+
+    const patched = patchMsdebugLaunchConfigTarget(
+      root,
+      {
+        name: 'msdebug',
+        type: 'msdebug-mi',
+        request: 'launch',
+        target: DEFAULT_TARGET,
+      },
+      {
+        name: 'add_custom',
+        path: opPath,
+      },
+    );
+
+    expect(patched.target)
+      .toBe('${workspaceFolder}/math/add_custom/build/test_aclnn_add_custom');
+
+    fs.rmSync(root, {
+      recursive: true,
+      force: true,
+    });
   });
 });

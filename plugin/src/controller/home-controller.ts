@@ -7,6 +7,8 @@ import { RemoteConfig } from '@plugin/helpers/remote-config';
 import {
   getProjectByPath, getProjectById, createProject,
 } from '@plugin/domain/models/project-model';
+import { getConfig } from '@plugin/domain/models/config-model';
+import type { DebugOperatorRef } from '@plugin/domain/utils/debug-target';
 import {
   OperatorProjectType, OperatorProjectDetector,
 } from '@plugin/domain/services/operator-project-detector';
@@ -354,5 +356,94 @@ export const homeMethods = {
       .map((op) => op.name);
 
     return selectedOperatorNames.length > 0 ? selectedOperatorNames.join(',') : undefined;
+  },
+
+  /**
+   * Resolve the operator msdebug should attach to: explicit selection first, then
+   * a single-operator collection, build_example config op, or lone project op (#17).
+   */
+  async resolveDebugOperatorEntry(): Promise<DebugOperatorRef | undefined> {
+    const selected = await homeMethods.getSelectedOperatorEntries();
+
+    if (selected[0]) {
+      return {
+        name: selected[0].name,
+        path: selected[0].path,
+      };
+    }
+
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+
+    if (!workspaceFolders || workspaceFolders.length === 0) {
+      return undefined;
+    }
+
+    const workspacePath = workspaceFolders[0].uri.fsPath;
+    const multi = await checkMultipleOperatorsCore(workspacePath);
+
+    if (multi.isStandardCustom && multi.operators?.length === 1) {
+      const only = multi.operators[0];
+
+      return {
+        name: only.name,
+        path: only.path,
+      };
+    }
+
+    const project = getProjectByPath(workspacePath);
+
+    if (project && multi.operators?.length) {
+      const exampleConfigs = getConfig(project.id, 'build_example');
+      const configOp = exampleConfigs.find((c) => c.op)?.op
+        ?? (exampleConfigs[0]?.user_options as Record<string, unknown> | null | undefined)?.op;
+
+      if (typeof configOp === 'string' && configOp.trim()) {
+        const match = multi.operators.find((op) => op.name === configOp.trim());
+
+        if (match) {
+          return {
+            name: match.name,
+            path: match.path,
+          };
+        }
+      }
+    }
+
+    if (project?.ops_list?.length === 1) {
+      const op = project.ops_list[0];
+
+      return {
+        name: op.name,
+        path: op.path,
+      };
+    }
+
+    return undefined;
+  },
+
+  /**
+   * build_example `target_file` for an operator (legacy configs.json), when set.
+   */
+  resolveBuildExampleTargetFile(
+    operatorName: string,
+  ): string | undefined {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+
+    if (!workspaceFolders?.length) {
+      return undefined;
+    }
+
+    const project = getProjectByPath(workspaceFolders[0].uri.fsPath);
+
+    if (!project) {
+      return undefined;
+    }
+
+    const configs = getConfig(project.id, 'build_example', operatorName);
+    const row = configs[0];
+    const userOptions = row?.user_options as Record<string, unknown> | null | undefined;
+    const targetFile = userOptions?.target_file;
+
+    return typeof targetFile === 'string' && targetFile.trim() ? targetFile.trim() : undefined;
   },
 };

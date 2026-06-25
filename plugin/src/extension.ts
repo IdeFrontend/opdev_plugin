@@ -31,6 +31,8 @@ import { PermanentStorage } from './class/permanent-storage';
 import { ExtensionConfig } from './core/extension-config';
 import { RemoteConfig } from './helpers/remote-config';
 import { sanitizerDiagnosticsService } from './service/sanitizer-diagnostics.service';
+import { registerMsdebugTargetAutoAdapt } from '@plugin/domain/utils/debug-target';
+import { homeMethods } from './controller/home-controller';
 import { sanitizerService } from './service/sanitizer-service';
 import { buildService } from './service/build-service';
 import { msAgentBridgeService } from './service/ms-agent-bridge.service';
@@ -328,6 +330,13 @@ export async function activate(context: vscode.ExtensionContext) {
   // Must be called before any code that uses OperatorPluginRegistry.
   registerOperatorPlugins();
   sanitizerDiagnosticsService.activate(context);
+  registerMsdebugTargetAutoAdapt(
+    context,
+    () => homeMethods.resolveDebugOperatorEntry(),
+    (_workspaceRoot, operator) => Promise.resolve(
+      homeMethods.resolveBuildExampleTargetFile(operator.name) ?? null,
+    ),
+  );
 
   // Merge CANN env into this process once, then set `SOC_VERSION` / `NPU_ARCH` for spawned tools when unset.
   try {

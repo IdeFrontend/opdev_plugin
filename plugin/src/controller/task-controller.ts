@@ -20,7 +20,10 @@ import { ConfigService } from '@plugin/service/config-service';
 import { OperatorProjectType } from '@plugin/domain/services/operator-project-detector';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import { getCompileOptionForSelectedOperators } from '@plugin/helpers/compile-options';
-import { updateMsdebugTarget } from '@plugin/domain/utils/debug-target';
+import {
+  updateMsdebugTarget,
+  type MsdebugTargetPatchResult,
+} from '@plugin/domain/utils/debug-target';
 import {
   isPythonDebugLaunchConfig,
   resolveDebugLaunchConfigName,
@@ -125,19 +128,32 @@ async function preparePythonOperatorLaunchContext(projectType: string | null): P
   };
 }
 
+async function notifyMsdebugTargetPatchResult(result: MsdebugTargetPatchResult): Promise<void> {
+  if (result.status === 'noop' && result.reason === 'no_operator') {
+    vscode.window.showWarningMessage(t('debug.autoAdaptNoOperator'));
+  }
+  else if (result.status === 'noop' && result.reason === 'no_binary') {
+    vscode.window.showWarningMessage(t('debug.autoAdaptNoBinary'));
+  }
+}
+
 async function patchLaunchJsonForDebugSession(
   workspaceRoot: string,
   debugConfigName: string,
   pythonContext: PythonOperatorLaunchContext | null,
   projectType: string | null,
   mode: 'cpu' | 'npu',
-  selectedOperator?: { name: string;
-    path: string },
 ): Promise<void> {
   if (!isPythonDebugLaunchConfig(debugConfigName) || !pythonContext) {
     if (!isPythonDebugLaunchConfig(debugConfigName)) {
       try {
-        await updateMsdebugTarget(workspaceRoot, selectedOperator);
+        const operator = await homeMethods.resolveDebugOperatorEntry();
+        const targetFile = operator
+          ? homeMethods.resolveBuildExampleTargetFile(operator.name)
+          : undefined;
+        const result = await updateMsdebugTarget(workspaceRoot, operator, targetFile);
+
+        await notifyMsdebugTargetPatchResult(result);
       }
       catch (e) {
         console.warn('updateMsdebugTarget failed (continuing):', e);
@@ -458,15 +474,12 @@ export const taskMethods = {
       const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
 
       if (workspaceFolder) {
-        const [selectedOperator] = await homeMethods.getSelectedOperatorEntries();
-
         await patchLaunchJsonForDebugSession(
           workspaceFolder.uri.fsPath,
           debugConfigName,
           pythonContext,
           projectType ?? null,
           'npu',
-          selectedOperator,
         );
 
         await vscode.debug.startDebugging(workspaceFolder, debugConfigName);
@@ -572,15 +585,12 @@ export const taskMethods = {
       const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
 
       if (workspaceFolder) {
-        const [selectedOperator] = await homeMethods.getSelectedOperatorEntries();
-
         await patchLaunchJsonForDebugSession(
           workspaceFolder.uri.fsPath,
           debugConfigName,
           pythonContext,
           projectType ?? null,
           'cpu',
-          selectedOperator,
         );
 
         await vscode.debug.startDebugging(workspaceFolder, debugConfigName);

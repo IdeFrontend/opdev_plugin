@@ -50,6 +50,12 @@ export default {
   'task.tritonKernelPathNotFound':
     '调试构建后未在 ~/.triton/cache 下找到已编译的 Triton 内核（*.npubin 或 kernel.o）。如有需要，请在 launch.json 中手动设置 LAUNCH_KERNEL_PATH。',
 
+  // debug（launch.json 自动适配，GC-17）
+  'debug.autoAdaptNoOperator':
+    '无法自动适配 msdebug 目标：请先在 Actions 树中选择算子（或打开仅含单个算子的工程）后再进行 NPU/CPU 调试。',
+  'debug.autoAdaptNoBinary':
+    '无法自动适配 msdebug target：在算子 build/ 目录下未找到可调试的二进制文件。请先执行 NPU/CPU 调试编译后再试。',
+
   // extension
   'extension.openWorkspaceFirst': '请先打开一个工作区',
   'extension.clearedProjectPath': '已清除缓存的算子工程位置',

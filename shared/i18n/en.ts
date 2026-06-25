@@ -50,6 +50,12 @@ export default {
   'task.tritonKernelPathNotFound':
     'Could not find a compiled Triton kernel (*.npubin or kernel.o) under ~/.triton/cache after the debug build. Set LAUNCH_KERNEL_PATH manually in launch.json if needed.',
 
+  // debug (launch.json auto-adapt, GC-17)
+  'debug.autoAdaptNoOperator':
+    'Could not auto-adapt msdebug target: select an operator in the Actions tree (or open a single-operator project) before NPU/CPU debug.',
+  'debug.autoAdaptNoBinary':
+    'Could not auto-adapt msdebug target: no debug binary found under the operator build/ directory. Run NPU/CPU debug build first, then retry.',
+
   // extension
   'extension.openWorkspaceFirst': 'Please open a workspace first',
   'extension.clearedProjectPath': 'Cached operator project path cleared',
