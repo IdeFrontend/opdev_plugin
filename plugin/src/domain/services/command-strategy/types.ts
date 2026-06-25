@@ -26,6 +26,7 @@ export interface CommandBuildParams {
   advance_cmd?: string;
   operatorNames?: string; // Operator name, multiple separated by commas (used in scenarios such as standard custom operators)
   scriptField?: string | undefined | null // Script field, the default is script, there are also cpu_debug_script and npu_debug_script
+  exampleMode?: 'eager' | 'graph'; // Resolved run_example mode; overrides config.user_options.execution_mode when set
 }
 
 /**

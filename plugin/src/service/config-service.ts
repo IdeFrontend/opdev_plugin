@@ -603,6 +603,19 @@ export class ConfigService {
         'execution_mode',
         normalizeExecutionMode(readNonEmptyOpDevtoolsSetting('compileAndDeploy.exampleBuildConfig.executionMode')),
       );
+      // Example-filename match patterns (RegExp; default to the build.sh contract); let a
+      // project with a different example naming convention override per-operator mode
+      // detection.
+      setIfDefined(
+        opts,
+        'eager_example_pattern',
+        readNonEmptyOpDevtoolsSetting('compileAndDeploy.exampleBuildConfig.eagerExamplePattern'),
+      );
+      setIfDefined(
+        opts,
+        'graph_example_pattern',
+        readNonEmptyOpDevtoolsSetting('compileAndDeploy.exampleBuildConfig.graphExamplePattern'),
+      );
 
       return opts;
     }

@@ -27,7 +27,10 @@ import {
   normalizeSanitizerTools,
 } from './sanitizer-option-guards';
 import { resolveAscendEnv } from '@plugin/domain/utils/ascend-util';
-import { applyOperatorNamesPlaceholder } from '@plugin/domain/utils/operator-script-placeholders';
+import {
+  applyOperatorNamesPlaceholder,
+  ensureStandardCustomSocFlag,
+} from '@plugin/domain/utils/operator-script-placeholders';
 
 /**
  * CANN type command strategy
@@ -114,14 +117,49 @@ export class CannCommandStrategy implements CommandStrategy {
 
   buildExampleCommand(params: CommandBuildParams): string {
     const {
-      config, sourceCannCmd, cdCmd, compileOption, advance_cmd,
+      config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames,
     } = params;
 
     if (!config.script) {
       throw new Error(t('cann.configMissingScript', { op: config.op }));
     }
 
-    const cmd = new Command(config.script || '');
+    // build.sh `--run_example` reads the example name + mode from POSITIONAL args
+    // (`<op> <mode> <pkg_mode>`), NOT from flags: a field run with `--ops=abs` still
+    // printed "Start to run examples, name:  mode:" empty and dumped usage (issue #171).
+    // Mirror AscendCommandStrategy.buildExampleCommand (same build.sh interface for the
+    // same standard-custom operator), with two strict improvements it lacks: the
+    // `config.op` fallback its own comment promises, and an empty-op guard so `mode`
+    // never shifts into the name slot.
+    const userOptions = config.user_options as Record<string, unknown> | null | undefined;
+    const configOp = typeof userOptions?.op === 'string' ? userOptions.op : config.op;
+    const op = operatorNames?.trim() || configOp || '';
+    // `exampleMode` (resolved per operator from which example file ships) wins over the
+    // plugin-wide `execution_mode` setting — see operator-example-mode.ts / #171.
+    const mode = params.exampleMode || (userOptions?.execution_mode as string) || 'eager';
+    const pkgMode = 'cust';
+
+    // `--soc` sets the compile COMPUTE_UNIT (-DASCEND_COMPUTE_UNIT): the original failing
+    // run without it had no COMPUTE_UNIT. Inject it when the script lacks `--soc` and
+    // compileOption doesn't already supply it (the simulate-example flow passes
+    // "--simulator <dir> --soc=<soc>" there, which must not be duplicated).
+    let script = config.script;
+
+    if (!/\B--soc=/.test(compileOption || '')) {
+      script = ensureStandardCustomSocFlag(script);
+    }
+
+    const cmd = new Command(script);
+
+    // Only append the positional `<op> <mode> <pkg>` for the ops-math `--run_example`
+    // interface. Other CANN repos expose examples differently (e.g. cann-ops uses
+    // `-e|--example` with no eager/graph), so appending them there would corrupt the
+    // command. The operator is still required.
+    if (op && /--run_example\b/.test(script)) {
+      cmd.addArgument(op);
+      cmd.addArgument(mode);
+      cmd.addArgument(pkgMode);
+    }
 
     if (compileOption) {
       cmd.addArgument(compileOption);

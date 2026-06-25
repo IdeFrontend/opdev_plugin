@@ -120,7 +120,9 @@ export class AscendCommandStrategy implements CommandStrategy {
     } = params;
 
     const options = (config.user_options as Record<string, unknown> | null | undefined) || {};
-    const mode = options.execution_mode as string || 'eager';
+    // `exampleMode` (resolved per operator from which example file ships) wins over the
+    // plugin-wide `execution_mode` setting — see operator-example-mode.ts / #171.
+    const mode = params.exampleMode || (options.execution_mode as string) || 'eager';
     const pkg_mode = 'cust';
     // If operatorNames is provided, it takes precedence; otherwise config.op is used
     const op = operatorNames || '';
@@ -129,9 +131,13 @@ export class AscendCommandStrategy implements CommandStrategy {
 
     const cmd = new Command(script);
 
-    cmd.addArgument(op);
-    cmd.addArgument(mode);
-    cmd.addArgument(pkg_mode);
+    // Only append the positional `<op> <mode> <pkg>` for the ops-math `--run_example`
+    // interface; other example interfaces would be corrupted by appending eager/graph/cust.
+    if (op && /--run_example\b/.test(script)) {
+      cmd.addArgument(op);
+      cmd.addArgument(mode);
+      cmd.addArgument(pkg_mode);
+    }
 
     if (compileOption) {
       cmd.addArgument(compileOption);

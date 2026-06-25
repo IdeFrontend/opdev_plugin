@@ -19,6 +19,8 @@
   "config.op-devtools.compileAndDeploy.buildConfig.genOpCommand.description": "Command used to generate an operator in a standard-custom operator project. Supports the {path} and {operatorname} placeholders (default: bash build.sh --genop={path}/{operatorname}).",
   "config.op-devtools.compileAndDeploy.exampleBuildConfig.executionMode.description": "Example execution mode (`eager` or `graph`).",
   "config.op-devtools.compileAndDeploy.exampleBuildConfig.runCommand.markdownDescription": "Run command. Operator name, execution mode and package mode are appended automatically.",
+  "config.op-devtools.compileAndDeploy.exampleBuildConfig.eagerExamplePattern.description": "Regular expression matched against an example filename to auto-detect an operator's eager (aclnn) example (default: ^test_aclnn_.*\\.cpp$).",
+  "config.op-devtools.compileAndDeploy.exampleBuildConfig.graphExamplePattern.description": "Regular expression matched against an example filename to auto-detect an operator's graph (GE IR) example (default: ^test_geir_.*\\.cpp$).",
   "config.op-devtools.sanitizer.showQuickOptions.description": "Show quick options",
   "config.op-devtools.sanitizer.showQuickOptions.markdownDescription": "When enabled, choosing **Sanitizer** in **Actions** opens the quick options panel; start the run from the panel. When disabled, the sanitizer runs immediately from the tree.",
   "config.op-devtools.sanitizer.memory.markdownDescription": "Base: illegal read/write, multi-core stomp, unaligned access, illegal free.",

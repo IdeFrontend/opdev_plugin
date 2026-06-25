@@ -258,6 +258,18 @@
             "type": "string",
             "order": 111,
             "markdownDescription": "%config.op-devtools.compileAndDeploy.exampleBuildConfig.runCommand.markdownDescription%"
+          },
+          "op-devtools.compileAndDeploy.exampleBuildConfig.eagerExamplePattern": {
+            "type": "string",
+            "order": 113,
+            "default": "^test_aclnn_.*\\.cpp$",
+            "description": "%config.op-devtools.compileAndDeploy.exampleBuildConfig.eagerExamplePattern.description%"
+          },
+          "op-devtools.compileAndDeploy.exampleBuildConfig.graphExamplePattern": {
+            "type": "string",
+            "order": 115,
+            "default": "^test_geir_.*\\.cpp$",
+            "description": "%config.op-devtools.compileAndDeploy.exampleBuildConfig.graphExamplePattern.description%"
           }
         }
       },

@@ -84,6 +84,29 @@ export function applyOperatorNamesPlaceholder(
 }
 
 /**
+ * Ensure a standard-custom (`--vendor_name=custom`) `--run_example` line carries
+ * `--soc={soc_version}`. build.sh's `--run_example` validates/selects the platform from
+ * `--soc`; without it the run-example phase prints an empty "mode:" and bails to its
+ * usage text instead of building/running the example (plugin_release #171). No-op when
+ * the script already has a `--soc` flag or is not a standard-custom line. The injected
+ * `{soc_version}` placeholder is resolved later by {@link executeOperatorCommand}.
+ */
+export function ensureStandardCustomSocFlag(script: string): string {
+  if (/\B--soc=/.test(script)) {
+    return script;
+  }
+
+  if (script.includes('--vendor_name=custom')) {
+    return script.replace(
+      /--vendor_name=custom\b/,
+      '--soc={soc_version} --vendor_name=custom',
+    );
+  }
+
+  return script;
+}
+
+/**
  * Substitute `{soc_version}` and `{simulator_type}` using a single env resolution.
  * When `resolution` is omitted (tests / legacy), computes once without logging.
  *

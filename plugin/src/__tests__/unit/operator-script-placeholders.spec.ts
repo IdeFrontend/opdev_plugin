@@ -18,6 +18,7 @@ import {
 import { getGlobalEnvSnapshot } from '@plugin/domain/utils/global-env-snapshot';
 import {
   applyOperatorNamesPlaceholder,
+  ensureStandardCustomSocFlag,
   replaceOperatorScriptPlaceholders,
 } from '@plugin/domain/utils/operator-script-placeholders';
 
@@ -118,5 +119,23 @@ describe('replaceOperatorScriptPlaceholders', () => {
 
     expect(resolved)
       .toBe('bash build.sh --simulator Ascend950PR_9589');
+  });
+});
+
+describe('ensureStandardCustomSocFlag (plugin_release #171)', () => {
+  it('inserts --soc={soc_version} into a standard-custom run_example script that lacks --soc', () => {
+    expect(ensureStandardCustomSocFlag('bash build.sh --vendor_name=custom --run_example'))
+      .toBe('bash build.sh --soc={soc_version} --vendor_name=custom --run_example');
+  });
+
+  it('is a no-op when --soc is already present', () => {
+    const script = 'bash build.sh --soc=ascend910_93 --vendor_name=custom --run_example';
+    expect(ensureStandardCustomSocFlag(script))
+      .toBe(script);
+  });
+
+  it('is a no-op for non standard-custom scripts (no --vendor_name=custom)', () => {
+    expect(ensureStandardCustomSocFlag('bash build.sh --run_example'))
+      .toBe('bash build.sh --run_example');
   });
 });

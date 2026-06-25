@@ -12,6 +12,7 @@ import {
 } from '@shared/api-types';
 import {
   getBuildExampleCommand,
+  resolveExampleModeForConfig,
   getSimulateCommand,
   getOnBoardCommand,
   getBuildOpCommand,
@@ -589,10 +590,23 @@ export class BuildService {
     }
 
     try {
+      // Resolve the run_example mode from the example the operator actually ships (the
+      // plugin-wide executionMode setting is only a tiebreaker), and warn up front when it
+      // ships none — build.sh would otherwise fail deep in with "does not have <mode>
+      // examples" (plugin_release #171).
+      const exampleMode = resolveExampleModeForConfig(Number(configId), params.operatorNames);
+
+      if (!exampleMode.exampleFound && exampleMode.opName) {
+        vscode.window.showWarningMessage(
+          t('build.exampleNoSourceForOperator', { op: exampleMode.opName }),
+        );
+      }
+
       const buildCommand = getBuildExampleCommand(
         Number(configId),
         params.compileOption,
         params.operatorNames,
+        exampleMode.mode,
       );
       const res = await executeOperatorCommand(
         buildCommand,

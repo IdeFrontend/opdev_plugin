@@ -9,7 +9,15 @@ import { ConfigRecord } from '@plugin/domain/models/config-model';
 import {
   CommandStrategyFactory,
   BaseContext,
+  CommandContext,
 } from './command-strategy';
+import {
+  resolveExampleMode,
+  toExampleMatcher,
+  ExampleMode,
+  ExampleMatchers,
+  DEFAULT_EXAMPLE_MATCHERS,
+} from '@plugin/domain/utils/operator-example-mode';
 
 /**
  * Get basic context information (does not include policy-specific processing)
@@ -98,17 +106,68 @@ export function getRunCommand(config_id: number) {
 }
 
 /**
+ * Resolve the run_example mode for an operator from the example files present on disk,
+ * using the plugin-wide `execution_mode` setting only as a tiebreaker. Returns the
+ * resolved op name and whether any example was found so callers can warn the user.
+ *
+ * When the project path or operator name is unknown we cannot inspect the tree, so we keep
+ * the configured mode and do not claim the example is missing.
+ */
+function resolveModeFromContext(
+  context: CommandContext,
+  operatorNames?: string,
+): { mode: ExampleMode; exampleFound: boolean; opName: string } {
+  const userOptions = context.config.user_options as Record<string, unknown> | null | undefined;
+  const globalMode: ExampleMode = userOptions?.execution_mode === 'graph' ? 'graph' : 'eager';
+  const configOp = typeof userOptions?.op === 'string' ? userOptions.op : context.config.op;
+  const opName = operatorNames?.trim() || configOp || '';
+  const projectRoot = context.project?.project_path || '';
+
+  if (!projectRoot || !opName) {
+    return { mode: globalMode, exampleFound: true, opName };
+  }
+
+  // Example-filename matchers default to the build.sh contract but are overridable per
+  // project via settings (RegExp strings, surfaced into user_options by config-service).
+  const matchers: ExampleMatchers = {
+    eager: toExampleMatcher(userOptions?.eager_example_pattern as string | undefined, DEFAULT_EXAMPLE_MATCHERS.eager),
+    graph: toExampleMatcher(userOptions?.graph_example_pattern as string | undefined, DEFAULT_EXAMPLE_MATCHERS.graph),
+  };
+
+  const { mode, exampleFound } = resolveExampleMode(projectRoot, opName, globalMode, false, matchers);
+
+  return { mode, exampleFound, opName };
+}
+
+/**
+ * Resolve the run_example mode for a config without building the command, so the caller
+ * (e.g. the example-build action) can surface a warning when the operator ships no example.
+ */
+export function resolveExampleModeForConfig(
+  config_id: number,
+  operatorNames?: string,
+): { mode: ExampleMode; exampleFound: boolean; opName: string } {
+  const baseContext = getBaseContext(config_id);
+  const strategy = CommandStrategyFactory.getStrategy(baseContext.operator?.op_type);
+  const context = strategy.buildCommandContext(baseContext);
+
+  return resolveModeFromContext(context, operatorNames);
+}
+
+/**
  * Generate sample compilation commands
  *
  * @param config_id configuration ID
  * @param compileOption compile option
  * @param operatorNames Operator names, multiple separated by commas (used in scenarios such as standard custom operators)
+ * @param exampleMode explicit run_example mode; when omitted it is auto-detected from the operator's example files
  * @returns complete shell execution command string
  */
 export function getBuildExampleCommand(
   config_id: number,
   compileOption?: string,
   operatorNames?: string,
+  exampleMode?: ExampleMode,
 ) {
   try {
     const baseContext = getBaseContext(config_id);
@@ -119,6 +178,10 @@ export function getBuildExampleCommand(
     const userOptions = context.config.user_options as Record<string, unknown> | null | undefined;
     const advance_cmd = getAdvanceCmd(userOptions?.advance_param);
 
+    // `exampleMode`, when supplied, is the per-operator mode resolved by the caller (the
+    // run_example action — see resolveExampleModeForConfig / #171). When omitted, the
+    // strategy keeps its existing `execution_mode`-or-`eager` behavior, so the
+    // profiler/sanitizer example pre-builds are unaffected.
     return strategy.buildExampleCommand({
       config: context.config,
       operator: context.operator,
@@ -127,6 +190,7 @@ export function getBuildExampleCommand(
       compileOption,
       advance_cmd,
       operatorNames,
+      exampleMode,
     });
   }
   catch (e: unknown) {

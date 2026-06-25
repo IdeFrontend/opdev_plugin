@@ -19,6 +19,8 @@
   "config.op-devtools.compileAndDeploy.buildConfig.genOpCommand.description": "标准自定义算子工程生成算子的命令行，支持占位符 {path} 与 {operatorname}（默认：bash build.sh --genop={path}/{operatorname}）",
   "config.op-devtools.compileAndDeploy.exampleBuildConfig.executionMode.description": "执行模式",
   "config.op-devtools.compileAndDeploy.exampleBuildConfig.runCommand.markdownDescription": "运行命令。会自动追加算子名、执行模式与打包模式。",
+  "config.op-devtools.compileAndDeploy.exampleBuildConfig.eagerExamplePattern.description": "用于自动识别算子 eager（aclnn）样例的文件名正则表达式（默认：^test_aclnn_.*\\.cpp$）。",
+  "config.op-devtools.compileAndDeploy.exampleBuildConfig.graphExamplePattern.description": "用于自动识别算子 graph（GE IR）样例的文件名正则表达式（默认：^test_geir_.*\\.cpp$）。",
   "config.op-devtools.sanitizer.showQuickOptions.description": "显示快速选项",
   "config.op-devtools.sanitizer.showQuickOptions.markdownDescription": "开启时，在**操作**中点击**异常检测**会打开快速选项面板，并在面板中开始运行。关闭时，从树中点击后直接运行异常检测，不打开面板。",
   "config.op-devtools.sanitizer.memory.markdownDescription": "基础检测：非法读写、多核踩踏、非对齐访问、非法释放。",

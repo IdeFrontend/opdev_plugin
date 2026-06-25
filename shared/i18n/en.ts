@@ -137,6 +137,7 @@ export default {
   'build.getRunCommandFailed': 'Failed to get run command: {{error}}',
   'build.executeFailed': 'Execution failed {{output}}',
   'build.executeSuccess': 'Execution succeeded',
+  'build.exampleNoSourceForOperator': 'Could not find a run-example source (test_aclnn_*.cpp for eager / test_geir_*.cpp for graph) for operator "{{op}}" under the project. If the example build fails with "does not have ... examples", this is why.',
   'build.getExecuteCommandFailed': 'Failed to get execute command: {{error}}',
   'build.simulationFailed': 'Simulation analysis failed',
   'build.simulationSuccess': 'Simulation analysis succeeded',

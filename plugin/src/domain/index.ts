@@ -15,6 +15,7 @@ export { generateStructure, completeProjectConfigs } from './services/ops';
 export {
   getBuildOpCommand,
   getBuildExampleCommand,
+  resolveExampleModeForConfig,
   getRunCommand,
   getSimulateCommand,
   getOnBoardCommand,

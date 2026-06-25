@@ -137,6 +137,7 @@ export default {
   'build.getRunCommandFailed': '获取运行命令失败 {{error}}',
   'build.executeFailed': '执行失败 {{output}}',
   'build.executeSuccess': '执行成功',
+  'build.exampleNoSourceForOperator': '在工程下未找到算子 "{{op}}" 的可运行样例源文件（eager 对应 test_aclnn_*.cpp / graph 对应 test_geir_*.cpp）。若样例构建报 "does not have ... examples"，原因即在于此。',
   'build.getExecuteCommandFailed': '获取执行命令失败 {{error}}',
   'build.simulationFailed': '执行仿真分析失败',
   'build.simulationSuccess': '执行仿真分析成功',
