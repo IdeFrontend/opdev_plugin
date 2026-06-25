@@ -1,0 +1,341 @@
+# =============================================================================
+# All-in-one reference image (aarch64 / Ascend 9.0 CANN + Triton + dev tooling)
+#
+# This file documents a full-stack build recipe. It is NOT executed by CI and
+# the binary payloads below are intentionally absent from git.
+#
+# Before `docker build`, place these files next to this Dockerfile (build context
+# is typically `.devcontainer/` or the directory you pass as `-f` context):
+#
+#   Local COPY dependencies (must exist on the host, not in the repo):
+#   - Ascend-cann_9.0.0_linux-aarch64.run
+#       CANN toolkit 9.0 installer for aarch64.
+#   - Ascend-cann-910b-ops_9.0.0_linux-aarch64.run
+#       CANN 910B custom-operator package installer (ops bundle).
+#   - opensource.zip
+#       Bundled open-source tree (includes Insight under opensource/insight).
+#   - codearts.zip
+#       CodeArts / codearts-server runtime used for remote IDE sessions.
+#   - triton-ascend-proton_3.5.zip
+#       Triton-Ascend sources (extracted to ~/triton-ascend).
+#   - llvm-fad32722-ubuntu-arm64.tar.gz
+#       Prebuilt LLVM toolchain for Triton-Ascend (avoids long in-image compile).
+#   - ops-math-master.zip
+#       Sample / reference operator project (ops-math) for local validation.
+#   - start_docker.sh
+#       Container entry script (SSH, CodeArts, env bootstrap).
+#   - proxy.sh
+#       Optional proxy helper copied into the developer home.
+#
+# Network-fetched at build time (not copied from host):
+#   - Ubuntu packages, Huawei OBS pub_tools tarballs, Python source, PyPI wheels,
+#     PyTorch CPU wheels, and tini (via ADD from GitHub releases).
+#
+# Target platform: linux/arm64 (Ascend on aarch64 hosts or arm64 builders).
+# =============================================================================
+
+# syntax=docker/dockerfile:1
+
+# --- Base OS for the compile-heavy builder stage --------------------------------
+# Ubuntu 24.04 provides glibc and apt packages for native builds (Python, CANN
+# prerequisites, LLVM/clang packages used later for Triton).
+FROM ubuntu:24.04 AS builder
+
+ENV USER=root
+ENV PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ENV JAVA_HOME=/usr/lib/jvm/default-java
+USER root
+
+# Debian images symlink /bin/sh -> dash; many upstream build scripts assume bash
+# semantics for `source` and `[[`. Point sh at bash for fewer silent failures.
+RUN echo "dash dash/sh boolean false" | debconf-set-selections && \
+    DEBIAN_FRONTEND=noninteractive dpkg-reconfigure dash
+
+# Switch apt mirrors to Huawei Cloud for faster, more reliable downloads inside CN
+# networks. Handles both deb822 (ubuntu.sources) and legacy sources.list layouts.
+RUN sed -i "s@http://.*ports.ubuntu.com@http://repo.huaweicloud.com@g" \
+    /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null || \
+    (cp /etc/apt/sources.list /etc/apt/sources.list.bak && \
+     sed -i "s@http://.*ubuntu.com@http://repo.huaweicloud.com@g" /etc/apt/sources.list)
+
+# Core OS toolchain and utilities: compilers, headers, SSH, Java (some CANN tools),
+# compression/archivers, locale support, and common operator-build dependencies.
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    vim wget xz-utils net-tools openssh-client git curl unzip zip tree dos2unix \
+    tzdata tcl sudo bzip2 pigz default-jre locales lcov cloc gawk swig \
+    openssh-server gdb linux-headers-generic build-essential autoconf libtool \
+    makeself libboost-all-dev gcc g++ make unar rpm2cpio cpio texinfo flex \
+    libssl-dev zlib1g zlib1g-dev symlinks libffi-dev pciutils pkg-config \
+    libbz2-dev libgtest-dev git-lfs gperf ntpdate nano ninja-build liblzma-dev && \
+    apt-get clean all
+
+# UTF-8 locales for English and Chinese log/output from CANN and Python tooling.
+RUN locale-gen en_US.UTF-8 && locale-gen zh_CN.UTF-8
+
+# Align container clock with China Standard Time to match typical Ascend lab hosts.
+RUN rm -f /etc/localtime && cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+    echo 'Asia/Shanghai' > /etc/timezone
+
+ARG PYTHON_PATH=/opt/buildtools/python-3.12.9
+
+# Default pip index for root-stage downloads (Huawei PyPI mirror).
+RUN mkdir /root/.pip && \
+    echo "[global]" > /root/.pip/pip.conf && \
+    echo "index-url=https://repo.huaweicloud.com/repository/pypi/simple" >> /root/.pip/pip.conf && \
+    echo "trusted-host=repo.huaweicloud.com" >> /root/.pip/pip.conf && \
+    echo "timeout=120" >> /root/.pip/pip.conf
+
+# --- CMake 3.20.5 (prebuilt aarch64 tarball from OBS) ----------------------------
+# Operator and CANN sample builds expect a recent CMake; install under /opt/buildtools
+# and expose binaries on PATH via symlinks into /usr/local/bin.
+RUN mkdir -p /opt/buildtools && \
+    wget --no-check-certificate https://container-obsfs-filesystem.obs.cn-north-4.myhuaweicloud.com/pub_tools/cmake-3.20.5-linux-aarch64.tar.gz -P /opt/buildtools/ && \
+    tar -zxvf /opt/buildtools/cmake-3.20.5-linux-aarch64.tar.gz -C /opt/buildtools && \
+    chmod -R 755 /opt/buildtools/cmake-3.20.5-linux-aarch64 && \
+    ln -sf /opt/buildtools/cmake-3.20.5-linux-aarch64/bin/* /usr/local/bin/ && \
+    rm -f /opt/buildtools/cmake-3.20.5-linux-aarch64.tar.gz
+
+ENV PATH=/opt/buildtools/python-3.12.9/bin:/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/lib/jvm/default-java/bin
+ENV LD_LIBRARY_PATH=/opt/buildtools/python-3.12.9/lib:
+
+# --- SQLite 3.17 (source build) -------------------------------------------------
+# Python 3.12 is linked against a custom SQLite with FTS/JSON enabled; system
+# libsqlite is too old or lacks flags needed by the standard library module.
+RUN umask 022 && cd /tmp && \
+    wget --no-check-certificate https://container-obsfs-filesystem.obs.cn-north-4.myhuaweicloud.com/pub_tools/sqlite-autoconf-3170000.tar.gz && \
+    tar zxvf sqlite-autoconf-3170000.tar.gz && \
+    cd sqlite-autoconf-3170000 && \
+    ./configure --prefix=/usr/local/sqlite3 --disable-static --enable-fts5 --enable-json1 \
+    CFLAGS="-g -O2 -DSQLITE_ENABLE_FTS3=1 -DSQLITE_ENABLE_FTS4=1 -DSQLITE_ENABLE_RTREE=1" && \
+    make -j16 && make install -j16
+
+# --- Python 3.12.9 (source build, shared library) ---------------------------------
+# Build from upstream tarball with RPATH pointing at custom SQLite; install to
+# /opt/buildtools/python-3.12.9 and wire symlinks so `python3`/`pip3` resolve
+# consistently for root and later for the developer user.
+RUN cd /tmp && \
+    wget --no-check-certificate https://mirrors.huaweicloud.com/python/3.12.9/Python-3.12.9.tar.xz -P /opt/buildtools/ && \
+    tar -xf /opt/buildtools/Python-3.12.9.tar.xz -C /opt/buildtools && \
+    cd /opt/buildtools/Python-3.12.9 && \
+    LD_RUN_PATH=/usr/local/sqlite3/lib ./configure --prefix=/opt/buildtools/python-3.12.9 \
+    --enable-shared LDFLAGS="-L/usr/local/sqlite3/lib" CPPFLAGS="-I/usr/local/sqlite3/include" && \
+    LD_RUN_PATH=/usr/local/sqlite3/lib make -j16 && \
+    LD_RUN_PATH=/usr/local/sqlite3/lib make install -j16 && \
+    ln -sf /opt/buildtools/python-3.12.9/bin/python3 /usr/local/bin/python3.12 && \
+    ln -sf /opt/buildtools/python-3.12.9/bin/python3 /usr/local/bin/python3 && \
+    ln -sf /opt/buildtools/python-3.12.9/bin/pip3 /usr/local/bin/pip3 && \
+    ln -sf /opt/buildtools/python-3.12.9/bin/python3 /usr/local/bin/python && \
+    ln -sf /opt/buildtools/python-3.12.9/bin/python3 /usr/bin/python3 && \
+    ln -sf /opt/buildtools/python-3.12.9/bin/python3 /usr/bin/python3.12 && \
+    ln -sf /opt/buildtools/python-3.12.9/bin/pip3 /usr/local/bin/pip && \
+    ln -sf /opt/buildtools/python-3.12.9/lib/libpython3.12.so /lib/libpython3.12.so && \
+    ln -sf /opt/buildtools/python-3.12.9/lib/libpython3.12.so.1.0 /lib/libpython3.12.so.1.0 && \
+    ln -sf /opt/buildtools/python-3.12.9/include/python3.12/* /usr/local/include/ && \
+    ldconfig && rm -rf /tmp/*
+
+ENV TZ=Asia/Shanghai
+ENV LC_ALL=en_US.UTF-8
+ENV LANG=en_US.UTF-8
+
+# --- Python wheels: operator dev, test, and PyAsc stack (CPU torch for build) -----
+# Installs MSTT-adjacent tooling (pytest, pyasc, packaging, etc.) and CPU-only
+# PyTorch/torch-npu wheels used during image build; NPU runtime comes from CANN.
+RUN cd /tmp && \
+    pip3 --trusted-host files.pythonhosted.org --trusted-host download.pytorch.org --trusted-host download-r2.pytorch.org  install pyinstaller wheel requests lxml PyYAML pybind11 coverage numpy diff-cover \
+    redis protobuf pytest pytest-forked pytest-xdist decorator scipy attrs psutil patchelf \
+    scikit-build-core ruff yapf sympy cffi pathlib2 absl-py 'setuptools>=59.0.0' gnureadline \
+    ipykernel matplotlib pandas plotly pyasc==0.2.0 expecttest setproctitle
+RUN pip3 --trusted-host files.pythonhosted.org --trusted-host download.pytorch.org --trusted-host download-r2.pytorch.org install 'build>=1.0.3' packaging && \
+    pip3 --trusted-host files.pythonhosted.org --trusted-host download.pytorch.org --trusted-host download-r2.pytorch.org install torch==2.8.0+cpu torch-npu==2.8.0.post4 torchvision torchaudio \
+    --extra-index-url https://download.pytorch.org/whl/cpu && \
+    rm -rf /root/.cache/pip
+
+# --- Native build helpers: zstd, hiredis, ccache --------------------------------
+# zstd/hiredis are ccache dependencies; ccache accelerates repeated CANN/Triton
+# compiles inside long-lived dev containers.
+RUN cd /tmp && \
+    wget  --no-check-certificate https://container-obsfs-filesystem.obs.cn-north-4.myhuaweicloud.com/pub_tools/zstd-1.5.0.tar.gz && \
+    wget  --no-check-certificate https://container-obsfs-filesystem.obs.cn-north-4.myhuaweicloud.com/pub_tools/hiredis-1.0.2.tar.gz && \
+    wget  --no-check-certificate https://container-obsfs-filesystem.obs.cn-north-4.myhuaweicloud.com/pub_tools/ccache-4.12.2.tar.gz && \
+    tar -xf zstd-1.5.0.tar.gz -C /opt/buildtools && \
+    cd /opt/buildtools/zstd-1.5.0 && make -j 24 && make install -j 24 && \
+    tar -xf /tmp/hiredis-1.0.2.tar.gz -C /opt/buildtools/ && \
+    cd /opt/buildtools/hiredis-1.0.2/ && make -j $cpus prefix=/opt/buildtools/hiredis-1.0.2 all && \
+    make prefix=/opt/buildtools/hiredis-1.0.2 install && \
+    tar -xf /tmp/ccache-4.12.2.tar.gz -C /opt/buildtools/ && \
+    cd /opt/buildtools/ccache-4.12.2 && mkdir build && cd build/ && \
+    cmake -DCMAKE_BUILD_TYPE=Release -DZSTD_LIBRARY=/usr/local/lib/libzstd.a \
+    -DZSTD_INCLUDE_DIR=/usr/local/include -DHIREDIS_LIBRARY=/usr/local/lib/libhiredis.a \
+    -DHIREDIS_INCLUDE_DIR=/usr/local/include .. && \
+    make -j 24 && make install -j 24 && \
+    mkdir -p /usr/local/ccache/bin/ && \
+    ln -sf /usr/local/bin/ccache /usr/local/ccache/bin/ccache && \
+    rm -rf /tmp/*
+
+# --- Non-root developer user and Ascend-oriented shell profile --------------------
+# Creates uid/gid 1000 `developer`, passwordless sudo, and /etc/profile hooks that
+# will source CANN once installers populate ~/Ascend (paths assume cann-9.0.0 layout).
+ARG user=developer
+ARG uid=1000
+ARG gid=1000
+ARG group=developer
+ARG AGENT_WORKDIR=/home/developer/agent
+ENV AGENT_WORKDIR=/home/developer/agent
+ENV PATH=/home/developer/.local/bin:/home/developer/bin:/usr/local/cmake/bin:/usr/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/lib/jvm/default-java/bin
+ENV LD_LIBRARY_PATH=/opt/buildtools/python-3.12.9/lib:/usr/lib/aarch64-linux-gnu:/usr/local/lib:/usr/lib:/opt/buildtools/python-3.12.9/lib/python3.12/site-packages/torch/lib:/opt/buildtools/python-3.12.9/lib/python3.12/site-packages/torch_npu/lib:
+ENV INSIGHT_HOME_PATH=/home/developer/opensource/insight
+
+RUN groupadd -f -g ${gid} ${group} && \
+    useradd -o -c "Developer user" -d /home/${user} -u ${uid} -g ${gid} -m -s /bin/bash -p '$(openssl rand -base64 6)' ${user} && \
+    echo "developer ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
+    echo ". /home/developer/Ascend/cann/set_env.sh" >> /etc/profile && \
+    echo "export CMAKE_PREFIX_PATH=\${ASCEND_TOOLKIT_HOME}/compiler/tikcpp/ascendc_kernel_cmake:\$CMAKE_PREFIX_PATH" >> /etc/profile && \
+    echo "export ASCEND_HOME_PATH=/home/developer/Ascend/cann-9.0.0" >> /etc/profile && \
+    echo "export LD_LIBRARY_PATH=/opt/buildtools/python-3.12.9/lib:/lib/aarch64-linux-gnu:/home/developer/Ascend/cann-9.0.0/aarch64-linux/lib64:\${ASCEND_HOME_PATH}/tools/simulator/Ascend910B1/lib:/home/developer/Ascend/driver/lib64/common:/home/developer/Ascend/driver/lib64/driver:/home/developer/Ascend/driver/lib64:/usr/lib:/opt/buildtools/python-3.12.9/lib/python3.12/site-packages/torch/lib:/opt/buildtools/python-3.12.9/lib/python3.12/site-packages/torch_npu/lib:\$LD_LIBRARY_PATH" >> /etc/profile && \
+
+# Register torch/torch_npu shared libs with the dynamic linker and seed developer
+# bashrc to load global profile + CANN set_env on interactive shells.
+RUN echo -e '/opt/buildtools/python-3.12.9/lib/python3.12/site-packages/torch/lib\n/opt/buildtools/python-3.12.9/lib/python3.12/site-packages/torch_npu/lib' > /etc/ld.so.conf.d/torch_npu.conf && ldconfig && \
+    echo ". /etc/profile" >> /home/${user}/.bashrc && \
+    echo ". /home/developer/Ascend/cann/set_env.sh" >> /home/${user}/.bashrc
+
+USER developer
+
+# Developer-scoped pip mirror (same Huawei index as root stage).
+RUN mkdir -p ~/.pip && \
+    echo "[global]" > ~/.pip/pip.conf && \
+    echo "index-url=https://repo.huaweicloud.com/repository/pypi/simple" >> ~/.pip/pip.conf && \
+    echo "trusted-host=repo.huaweicloud.com" >> ~/.pip/pip.conf && \
+    echo "timeout=120" >> ~/.pip/pip.conf
+
+USER root
+
+# Remove default Ubuntu user if present; drop distro Python 3.12 shlibs that would
+# conflict with the custom /opt/buildtools Python; register custom lib path.
+RUN userdel ubuntu 2>/dev/null; rm -rf /home/ubuntu 2>/dev/null; true && \
+    rm -f /lib/aarch64-linux-gnu/libpython3.12.so /lib/aarch64-linux-gnu/libpython3.12.so.1 /lib/aarch64-linux-gnu/libpython3.12.so.1.0 && \
+    echo '/opt/buildtools/python-3.12.9/lib' > /etc/ld.so.conf.d/python-custom.conf && ldconfig
+
+USER developer
+RUN sudo chown -R ${user}:${user} /home/${user}
+
+USER root
+# Fixed login password for the developer account (lab image; rotate in production).
+RUN echo "developer:developer" | chpasswd
+
+USER developer
+
+# --- CANN 9.0 installers (local .run payloads) ----------------------------------
+# Ops package first, then toolkit; both install under ~/Ascend. Installers are
+# deleted after successful run to shrink layer size.
+COPY Ascend-cann_9.0.0_linux-aarch64.run /home/developer/Ascend-cann_9.0.0_linux-aarch64.run
+COPY Ascend-cann-910b-ops_9.0.0_linux-aarch64.run /home/developer/Ascend-cann-910b-ops_9.0.0_linux-aarch64.run
+RUN chmod 777 /home/developer/Ascend-cann_9.0.0_linux-aarch64.run /home/developer/Ascend-cann-910b-ops_9.0.0_linux-aarch64.run 2>/dev/null || true
+
+USER developer
+RUN cd /home/developer && \
+    echo y | ./Ascend-cann-910b-ops_9.0.0_linux-aarch64.run --install --install-path=/home/developer/Ascend && \
+    rm -f ./Ascend-cann-910b-ops_9.0.0_linux-aarch64.run
+RUN cd /home/developer && \
+    echo y | ./Ascend-cann_9.0.0_linux-aarch64.run --install --install-path=/home/developer/Ascend && \
+    rm -f ./Ascend-cann_9.0.0_linux-aarch64.run
+
+USER root
+USER developer
+
+# --- Bundled IDE / insight / Triton sources (local zip payloads) ------------------
+COPY opensource.zip /tmp/opensource.zip
+RUN unzip -o /tmp/opensource.zip -d /home/developer
+
+COPY codearts.zip /tmp/codearts.zip
+RUN unzip -o /tmp/codearts.zip -d /home/developer
+
+COPY triton-ascend-proton_3.5.zip /home/developer/triton.zip
+
+# LLVM 15 toolchain from apt for Triton host-side compilation; alternatives
+# make `clang`/`lld` resolve to the 15.x binaries expected by triton-ascend.
+USER root
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y clang-15 lld-15 llvm-15 mc && \
+    update-alternatives --install /usr/bin/clang clang /usr/bin/clang-15 20 && \
+    update-alternatives --install /usr/bin/lld lld /usr/bin/lld-15 20 && \
+    update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-15 20 && \
+    update-alternatives --install /usr/bin/clang clang /usr/bin/clang-15 20 && \
+    update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-15 20 && \
+    rm -rf /var/lib/apt/lists/*
+
+USER developer
+RUN /opt/buildtools/python-3.12.9/bin/python3 -m ensurepip
+
+# --- Prebuilt LLVM for Triton (local tarball) -----------------------------------
+# Triton-Ascend downloads LLVM by default; supplying a pinned tarball shortens
+# builds and makes the image reproducible. Extract under ~/.triton/llvm-builds and
+# symlink the layout Triton's build expects.
+COPY llvm-fad32722-ubuntu-arm64.tar.gz /home/developer/llvm.tar.gz
+
+# Sanity-check archive before extraction (guards corrupt/incomplete COPY artifacts).
+RUN echo "=== Check tar file ===" && ls -la /home/developer/llvm.tar.gz && file /home/developer/llvm.tar.gz && tar -tzf /home/developer/llvm.tar.gz 2>&1 | head -20
+
+RUN mkdir -p /home/developer/.triton/llvm-builds /home/developer/.triton/llvm && \
+    tar -xzf /home/developer/llvm.tar.gz -C /home/developer/.triton/llvm-builds/ && \
+    rm -f /home/developer/llvm.tar.gz && \
+    ln -sf /home/developer/.triton/llvm-builds/llvm-fad32722-ubuntu-arm64 /home/developer/.triton/llvm/llvm-fad32722-ubuntu-arm64
+
+# Post-extract layout check: headers, include dirs, and symlink target exist.
+RUN echo "=== LLVM Structure ===" && \
+    find /home/developer/.triton/llvm-builds -type f -name "*.h" 2>/dev/null | head -5 && \
+    find /home/developer/.triton/llvm-builds -type d -name "include" 2>/dev/null && \
+    ls -la /home/developer/.triton/llvm-builds/llvm-fad32722-ubuntu-arm64/ 2>/dev/null | head -10 && \
+    echo "=== LLVM Symlink ===" && \
+    ls -la /home/developer/.triton/llvm/
+
+USER developer
+
+# Unpack Triton-Ascend sources and normalize directory name to triton-ascend.
+RUN unzip -o /home/developer/triton.zip -d /home/developer && \
+    mv /home/developer/triton-ascend-proton_3.5 /home/developer/triton-ascend 2>/dev/null || true
+
+# Build-time Python deps for Triton wheel (nanobind, scikit-build-core, etc.).
+RUN pip3 install --no-cache-dir nanobind cmake scikit-build-core pybind11 ninja
+
+# Confirm LLVM_SYSPATH layout before pip install (catches wrong tarball layout early).
+RUN echo "=== LLVM Symlink Check ===" && \
+    ls -la /home/developer/.triton/llvm/ && \
+    ls /home/developer/.triton/llvm/llvm-fad32722-ubuntu-arm64/bin/llvm* 2>/dev/null | head -5 || true
+
+# Tell Triton build not to fetch LLVM; use the pre-extracted tree instead.
+ENV LLVM_SYSPATH=/home/developer/.triton/llvm-builds/llvm-fad32722-ubuntu-arm64
+
+# Install Triton-Ascend into the custom Python; nanobind_DIR points at site-packages.
+RUN cd /home/developer/triton-ascend && pip3 install . --no-build-isolation \
+    -C--config-settings=-Dnanobind_DIR=/home/developer/.local/lib/python3.12/site-packages
+
+# --- Sample operator tree (local zip) -------------------------------------------
+COPY ops-math-master.zip /home/developer/ops-math.zip
+ENV CMAKE_TLS_VERIFY=0
+RUN unzip -o /home/developer/ops-math.zip -d /home/developer/ && \
+    rm -f /home/developer/ops-math.zip
+
+# Stamp image version for support/debug correlation.
+RUN echo "${user}-python12-20260210" >> /home/${user}/image-version.txt
+
+# --- Container lifecycle scripts (local copies) ---------------------------------
+COPY start_docker.sh /start_docker.sh
+COPY proxy.sh /home/developer/proxy.sh
+
+USER root
+RUN chmod +x /start_docker.sh && chmod 644 /home/developer/proxy.sh
+
+# tini reaps zombie processes when CodeArts/SSH children exit; required for stable
+# long-running dev containers under Docker/Kubernetes.
+ENV TINI_VERSION v0.18.0
+
+RUN mkdir -p /run/sshd
+ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-arm64 /usr/bin/tini
+RUN chmod +x /usr/bin/tini
+
+USER developer
+EXPOSE 8888/tcp
+EXPOSE 22
+
+# tini -> start_docker.sh: bring up sshd + CodeArts (or equivalent) as PID 1 child.
+ENTRYPOINT ["/usr/bin/tini", "--", "/start_docker.sh"]
