@@ -254,18 +254,18 @@ export function patchAclnnCmakeSupportVars(
 
 /** Placeholders in CANN AscendC CMakeLists.txt `ENABLE_MS_SANITIZER` branch. */
 
-export const MSTT_SANITIZER_COMPILE_OPTIONS_PLACEHOLDER = '__MSTT_SANITIZER_COMPILE_OPTIONS__' as const;
+export const MSTT_SANITIZER_COMPILE_FLAGS_PLACEHOLDER = '__MSTT_SANITIZER_COMPILE_FLAGS__' as const;
 
-export const MSTT_SANITIZER_LINK_OPTIONS_PLACEHOLDER = '__MSTT_SANITIZER_LINK_OPTIONS__' as const;
+export const MSTT_SANITIZER_LINK_SUFFIX_PLACEHOLDER = '__MSTT_SANITIZER_LINK_SUFFIX__' as const;
 
-const SANITIZER_COMPILE_OPTIONS_A5 = '-g';
-const SANITIZER_COMPILE_OPTIONS_NON_A5 = '-O2 -g --cce-enable-sanitizer';
-const SANITIZER_LINK_OPTIONS_A5 = '--cce-fatobj-link';
-const SANITIZER_LINK_OPTIONS_NON_A5 = '--cce-fatobj-link\n        --cce-enable-sanitizer';
+const SANITIZER_COMPILE_FLAGS_A5 = '-g';
+const SANITIZER_COMPILE_FLAGS_NON_A5 = '-g --cce-enable-sanitizer';
+const SANITIZER_LINK_SUFFIX_A5 = '';
+const SANITIZER_LINK_SUFFIX_NON_A5 = '--cce-enable-sanitizer';
 
 export type SanitizerCmakeDefaults = {
-  compileOptions: string;
-  linkOptions: string;
+  compileFlags: string;
+  linkSuffix: string;
 };
 
 function resolveCannSocForGeneration(projectSoc?: string | null): string {
@@ -274,15 +274,17 @@ function resolveCannSocForGeneration(projectSoc?: string | null): string {
 }
 
 /**
- * MSSanitizer cmake flags for CANN AscendC templates.
- * A5: `-g` only (no `--cce-enable-sanitizer` in compile or link options).
+ * MSSanitizer cmake suffixes for CANN AscendC templates.
+ * Fixed in template for all SOCs: compile `-O2`, link `--cce-fatobj-link`.
+ * Placeholders supply only the alternating suffix:
+ * A5 compile `-g`, link none; non-A5 compile `-g --cce-enable-sanitizer`, link `--cce-enable-sanitizer`.
  */
 export function resolveSanitizerCmakeDefaultsForGeneration(projectSoc?: string | null): SanitizerCmakeDefaults {
   const isA5 = isAscendA5ProfilerCannSoc(resolveCannSocForGeneration(projectSoc));
 
   return {
-    compileOptions: isA5 ? SANITIZER_COMPILE_OPTIONS_A5 : SANITIZER_COMPILE_OPTIONS_NON_A5,
-    linkOptions: isA5 ? SANITIZER_LINK_OPTIONS_A5 : SANITIZER_LINK_OPTIONS_NON_A5,
+    compileFlags: isA5 ? SANITIZER_COMPILE_FLAGS_A5 : SANITIZER_COMPILE_FLAGS_NON_A5,
+    linkSuffix: isA5 ? SANITIZER_LINK_SUFFIX_A5 : SANITIZER_LINK_SUFFIX_NON_A5,
   };
 }
 
@@ -292,18 +294,30 @@ export function patchCannSanitizerCmakeOptions(
   projectSoc?: string | null,
 ): void {
   patchCmakePlaceholders(opPath, projectSoc, (content, projectSocValue) => {
-    if (!content.includes(MSTT_SANITIZER_COMPILE_OPTIONS_PLACEHOLDER)
-      && !content.includes(MSTT_SANITIZER_LINK_OPTIONS_PLACEHOLDER)) {
+    if (!content.includes(MSTT_SANITIZER_COMPILE_FLAGS_PLACEHOLDER)
+      && !content.includes(MSTT_SANITIZER_LINK_SUFFIX_PLACEHOLDER)) {
       return content;
     }
 
     const defaults = resolveSanitizerCmakeDefaultsForGeneration(projectSocValue);
 
-    return content
-      .split(MSTT_SANITIZER_COMPILE_OPTIONS_PLACEHOLDER)
-      .join(defaults.compileOptions)
-      .split(MSTT_SANITIZER_LINK_OPTIONS_PLACEHOLDER)
-      .join(defaults.linkOptions);
+    let patched = content
+      .split(MSTT_SANITIZER_COMPILE_FLAGS_PLACEHOLDER)
+      .join(defaults.compileFlags);
+
+    if (defaults.linkSuffix === '') {
+      patched = patched.replace(
+        new RegExp(`\\n {8}${MSTT_SANITIZER_LINK_SUFFIX_PLACEHOLDER}`, 'g'),
+        '',
+      );
+    }
+    else {
+      patched = patched
+        .split(MSTT_SANITIZER_LINK_SUFFIX_PLACEHOLDER)
+        .join(defaults.linkSuffix);
+    }
+
+    return patched;
   });
 }
 

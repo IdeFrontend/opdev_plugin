@@ -11,8 +11,8 @@ import { getSocVersionWithWorkspaceOverride } from '@plugin/helpers/operator-pro
 import { AscendPlugin } from '@plugin/domain/plugins/ascend.plugin';
 import { CannPlugin } from '@plugin/domain/plugins/cann.plugin';
 import {
-  MSTT_SANITIZER_COMPILE_OPTIONS_PLACEHOLDER,
-  MSTT_SANITIZER_LINK_OPTIONS_PLACEHOLDER,
+  MSTT_SANITIZER_COMPILE_FLAGS_PLACEHOLDER,
+  MSTT_SANITIZER_LINK_SUFFIX_PLACEHOLDER,
   MSTT_SUPPORT_COMPUTE_UNIT_PLACEHOLDER,
   MSTT_SUPPORT_TILING_DIR_PLACEHOLDER,
   resolveAclnnCmakeDefaultsForGeneration,
@@ -88,8 +88,8 @@ describe('cann sanitizer cmake generation', () => {
 
     expect(resolveSanitizerCmakeDefaultsForGeneration(null))
       .toEqual({
-        compileOptions: '-g',
-        linkOptions: '--cce-fatobj-link',
+        compileFlags: '-g',
+        linkSuffix: '',
       });
   });
 
@@ -98,8 +98,8 @@ describe('cann sanitizer cmake generation', () => {
 
     expect(resolveSanitizerCmakeDefaultsForGeneration(null))
       .toEqual({
-        compileOptions: '-O2 -g --cce-enable-sanitizer',
-        linkOptions: '--cce-fatobj-link\n        --cce-enable-sanitizer',
+        compileFlags: '-g --cce-enable-sanitizer',
+        linkSuffix: '--cce-enable-sanitizer',
       });
   });
 
@@ -107,9 +107,10 @@ describe('cann sanitizer cmake generation', () => {
     fs.writeFileSync(
       cmakePath,
       'elseif(ENABLE_MS_SANITIZER)\n'
-      + `    list(APPEND compile_options ${MSTT_SANITIZER_COMPILE_OPTIONS_PLACEHOLDER})\n`
+      + `    list(APPEND compile_options -O2 ${MSTT_SANITIZER_COMPILE_FLAGS_PLACEHOLDER})\n`
       + '    target_link_options(hello_world PRIVATE\n'
-      + `        ${MSTT_SANITIZER_LINK_OPTIONS_PLACEHOLDER}\n`
+      + '        --cce-fatobj-link\n'
+      + `        ${MSTT_SANITIZER_LINK_SUFFIX_PLACEHOLDER}\n`
       + '    )\n',
       'utf8',
     );
@@ -129,11 +130,14 @@ describe('cann sanitizer cmake generation', () => {
     const patched = fs.readFileSync(cmakePath, 'utf8');
 
     expect(patched)
-      .toContain('list(APPEND compile_options -g)');
+      .toContain('list(APPEND compile_options -O2 -g)');
     expect(patched)
       .toContain('        --cce-fatobj-link');
     expect(patched).not.toContain('--cce-enable-sanitizer');
-    expect(patched).not.toContain(MSTT_SANITIZER_COMPILE_OPTIONS_PLACEHOLDER);
+    expect(patched).not.toContain(MSTT_SANITIZER_COMPILE_FLAGS_PLACEHOLDER);
+    expect(patched).not.toContain(MSTT_SANITIZER_LINK_SUFFIX_PLACEHOLDER);
+    expect(patched)
+      .toMatch(/target_link_options\(hello_world PRIVATE\n {8}--cce-fatobj-link\n {4}\)/);
 
     fs.removeSync(tmp);
   });
@@ -157,7 +161,8 @@ describe('cann sanitizer cmake generation', () => {
       .toContain('        --cce-fatobj-link');
     expect(patched)
       .toContain('        --cce-enable-sanitizer');
-    expect(patched).not.toContain(MSTT_SANITIZER_COMPILE_OPTIONS_PLACEHOLDER);
+    expect(patched).not.toContain(MSTT_SANITIZER_COMPILE_FLAGS_PLACEHOLDER);
+    expect(patched).not.toContain(MSTT_SANITIZER_LINK_SUFFIX_PLACEHOLDER);
 
     fs.removeSync(tmp);
   });

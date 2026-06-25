@@ -60,9 +60,10 @@ set(compile_options)
 if(ENABLE_DEBUG)
     list(APPEND compile_options -Xaicore-start -O0 -Xaicore-end -g)
 elseif(ENABLE_MS_SANITIZER)
-    list(APPEND compile_options __MSTT_SANITIZER_COMPILE_OPTIONS__)
+    list(APPEND compile_options -O2 __MSTT_SANITIZER_COMPILE_FLAGS__)
     target_link_options(addn_custom PRIVATE
-        __MSTT_SANITIZER_LINK_OPTIONS__
+        --cce-fatobj-link
+        __MSTT_SANITIZER_LINK_SUFFIX__
     )
 elseif(ENABLE_SIMULATOR)
     list(APPEND compile_options -O2 -g)
