@@ -32,7 +32,6 @@ import { ExtensionConfig } from './core/extension-config';
 import { RemoteConfig } from './helpers/remote-config';
 import { sanitizerDiagnosticsService } from './service/sanitizer-diagnostics.service';
 import { registerMsdebugTargetAutoAdapt } from '@plugin/domain/utils/debug-target';
-import { homeMethods } from './controller/home-controller';
 import { sanitizerService } from './service/sanitizer-service';
 import { buildService } from './service/build-service';
 import { msAgentBridgeService } from './service/ms-agent-bridge.service';

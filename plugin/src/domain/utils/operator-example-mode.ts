@@ -78,10 +78,10 @@ function dirHasExampleFile(dir: string, matcher: RegExp): boolean {
 
 /**
  * Walk `projectRoot` for `<opName>/examples` and report which run_example modes ship a
- * source file. Mirrors build.sh's `find ... -path "*/<op>/examples/*"`: a bounded,
- * noise-skipping walk that stops once the operator's own examples directory has been
- * inspected (operator names are unique in the tree). `experimental/` is skipped unless
- * requested, matching build.sh's default `-not -path "*/experimental/*"`.
+ * source file. Mirrors build.sh's find pattern for `{collection}/<op>/examples/*`: a
+ * bounded, noise-skipping walk that stops once the operator's own examples directory has
+ * been inspected (operator names are unique in the tree). `experimental/` is skipped
+ * unless requested, matching build.sh's default exclusion of experimental paths.
  *
  * Scope: only the operator's top-level `examples/` directory is inspected — the A2/A3
  * layout (the #171 case). build.sh additionally searches `examples/arch35/` for

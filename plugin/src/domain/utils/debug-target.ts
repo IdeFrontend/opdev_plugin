@@ -315,11 +315,6 @@ export function registerMsdebugTargetAutoAdapt(
   };
 
   context.subscriptions.push(
-    vscode.debug.registerDebugConfigurationProvider(
-      'msdebug-mi',
-      provider,
-      vscode.DebugConfigurationProviderTriggerKind.Initial
-        | vscode.DebugConfigurationProviderTriggerKind.BeforeLaunch,
-    ),
+    vscode.debug.registerDebugConfigurationProvider('msdebug-mi', provider),
   );
 }
