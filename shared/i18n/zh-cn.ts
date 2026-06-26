@@ -513,17 +513,18 @@ export default {
 
   // web options-simulator
   'web.options.simulator.title': '仿真分析快速选项',
-  'web.options.simulator.alert': '执行仿真调优，需在代码中修改使用Model的配置，具体可参考README。',
+  'web.options.simulator.alert': '执行仿真调优，需在算子代码中修改使用 Model 的配置。',
   'web.options.simulator.collectContent': '采集内容',
   'web.options.simulator.guideRef': '具体图形案例请参考算子调优工具概述',
   'web.options.guideLinkText': '算子调优工具概述',
-  'web.options.simulator.instructionPipeline': '指令流水图（默认采集）',
+  'web.options.simulator.instructionPipeline': '指令流水图',
   'web.options.simulator.instructionPipelineDesc': '默认采集：计算单元和搬运单元指令耗时占比指标',
   'web.options.simulator.extraOptions': '附加选项：',
   'web.options.simulator.memoryThroughput': '内存通路吞吐率波形子图',
-  'web.options.simulator.codeHotspot': '算子代码热点图（默认采集）',
+  'web.options.simulator.codeHotspot': '算子代码热点图',
+  'web.options.simulator.codeHotspotDesc': '默认采集：资源冲突占比指标（替代指令流水基础指标）。取消勾选则仅采集指令流水。',
+  'web.options.simulator.codeHotspotDescBaseOnly': '默认采集：指令流水基础指标（计算单元和搬运单元指令耗时占比）。',
   'web.options.simulator.resourceConflict': '资源冲突占比指标',
-  'web.options.simulator.optionalUnsupported': '当前平台的仿真器仅采集基础指令流水指标（PipeUtilization）；附加指标在该平台暂不可用。',
   'web.options.simulator.startNow': '立即开始',
 
   // web options-on-board

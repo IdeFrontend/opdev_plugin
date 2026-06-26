@@ -1,3 +1,5 @@
+import { CANN_SOC_ASCEND_950 } from './cann-env-constants';
+
 /**
  * Single source of truth for OPTIONAL `msprof op simulator` aic-metrics, shared by
  * the command builder (plugin `SimulatorStrategy`) and the simulator-options
@@ -10,12 +12,12 @@
  * `ascend910_93`). `PipeUtilization` is the mandatory base metric and is always
  * emitted, so it is NOT listed here — only genuinely optional metrics are gated.
  *
- * Ships EMPTY on purpose: the authoritative per-SOC contract lives in the external
- * CANN runtime, not this repo, so guessing a slug could re-break a platform. Add a
- * lowercase, trimmed CANN SOC slug (e.g. `ascend910b`, `ascend950`) to a set below
- * only once the metric is verified on that platform's real simulator. The CANN
- * simulator reference does not list `PMSampling` as a simulator metric at all, so
- * its set is expected to stay empty.
+ * Add a lowercase, trimmed CANN SOC slug to a set below only once the metric is
+ * verified on that platform's real simulator via manual `msprof op simulator` CLI
+ * (see docs/simulator-options-spec.md §8). Slugs are added per-SOC independently.
+ *
+ * A5 (`ascend950`): `ResourceConflictRatio` and `PMSampling` confirmed §8.1 (2026-06-26).
+ * Never add `ascend910_93` for `ResourceConflictRatio` (GC-22 rejection).
  */
 export type SimulatorOptionalMetric = 'ResourceConflictRatio' | 'PMSampling';
 
@@ -23,8 +25,8 @@ export type SimulatorOptionalMetricAllowList =
   Readonly<Record<SimulatorOptionalMetric, ReadonlySet<string>>>;
 
 export const SIMULATOR_OPTIONAL_METRIC_SOCS: SimulatorOptionalMetricAllowList = {
-  ResourceConflictRatio: new Set<string>(),
-  PMSampling: new Set<string>(),
+  ResourceConflictRatio: new Set([CANN_SOC_ASCEND_950]),
+  PMSampling: new Set([CANN_SOC_ASCEND_950]),
 };
 
 /** Whether the simulator on `cannSoc` is allow-listed to accept `metric`. */

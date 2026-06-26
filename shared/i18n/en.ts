@@ -513,17 +513,18 @@ export default {
 
   // web options-simulator
   'web.options.simulator.title': 'Simulation Analysis Quick Options',
-  'web.options.simulator.alert': 'For simulation tuning, update Model config in code. See README.',
+  'web.options.simulator.alert': 'For simulation tuning, update Model config in your operator code.',
   'web.options.simulator.collectContent': 'Collect content',
   'web.options.simulator.guideRef': 'See operator tuning overview for examples.',
   'web.options.guideLinkText': 'Operator tuning overview',
-  'web.options.simulator.instructionPipeline': 'Instruction pipeline (default)',
+  'web.options.simulator.instructionPipeline': 'Instruction pipeline',
   'web.options.simulator.instructionPipelineDesc': 'Default: compute & move unit instruction time ratio',
   'web.options.simulator.extraOptions': 'Extra options:',
   'web.options.simulator.memoryThroughput': 'Memory throughput waveform',
-  'web.options.simulator.codeHotspot': 'Operator code hotspot (default)',
+  'web.options.simulator.codeHotspot': 'Operator code hotspot',
+  'web.options.simulator.codeHotspotDesc': 'Default: resource conflict ratio (replaces instruction pipeline). Uncheck to collect instruction pipeline only.',
+  'web.options.simulator.codeHotspotDescBaseOnly': 'Default: instruction pipeline only (compute & move unit instruction time ratio).',
   'web.options.simulator.resourceConflict': 'Resource conflict ratio',
-  'web.options.simulator.optionalUnsupported': 'On this platform the simulator collects only the base instruction-pipeline metric (PipeUtilization); optional metrics are not available here.',
   'web.options.simulator.startNow': 'Start now',
 
   // web options-on-board

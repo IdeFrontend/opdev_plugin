@@ -1,12 +1,13 @@
 # 更新日志
 
-本文列出 **Huawei OP DevTools（华为算子一站式开发工具）** 的重要变更。完整提交历史见 [GitCode](https://gitcode.com/mlh0101/mstt) 仓库。
+本文列出 **Ascend C Toolkit（Ascend C Toolkit）** 的重要变更。完整提交历史见 [GitCode](https://gitcode.com/mlh0101/mstt) 仓库。
 
 ## 未发布（Unreleased）
 
 - **修复 standard-custom「运行样例」缺少算子名/平台**（plugin_release #171）：之前生成 `bash build.sh --vendor_name=custom --run_example`。build.sh 的 `--run_example` 从**位置参数** `<算子> <模式> <pkg_mode>` 读取样例名与模式（并非从 `--ops`——现场带 `--ops=abs` 仍报 `name:` 为空），缺失时打印 `Start to run examples, name:  mode:`（均为空）并回退到 usage——样例既不编译也不运行。现 `CannCommandStrategy.buildExampleCommand` 与 `AscendCommandStrategy` 一致地追加位置参数 `<算子> <模式> cust`（算子取自所选，或 build_example 配置自带的 `op`），并补全 `--soc`（设置 COMPUTE_UNIT，经 `{soc_version}` 占位符在执行时解析）；当 `compileOption` 已带 `--soc`（仿真样例流程）时不重复添加。
 - **按算子自动选择 run_example 模式**（plugin_release #171 后续）：样例模式（`eager` → `test_aclnn_<算子>.cpp`，`graph` → `test_geir_<算子>.cpp`）是算子自身的属性，而非插件级偏好——但此前唯一开关是全局的 `op-devtools.compileAndDeploy.exampleBuildConfig.executionMode`。该项硬默认 `eager`，导致只带 graph 样例的算子（如 `pows`）报错 `ERROR: pows does not have eager examples`。现插件会扫描算子的 `examples/` 目录（有界遍历，对齐 build.sh 的 `find */<算子>/examples/*`，跳过 `experimental/`），选择实际存在的模式；仅当两种模式都存在时才用 `executionMode` 设置作为决胜项。当算子两种样例都没有时，提前给出告警，而不是在 build.sh 深处失败。样例文件名匹配默认采用 build.sh 约定（`^test_aclnn_.*\.cpp$` / `^test_geir_.*\.cpp$`，插件自带的算子模板也遵循该约定），并可通过 `op-devtools.compileAndDeploy.exampleBuildConfig.eagerExamplePattern` / `graphExamplePattern` 以**正则表达式**覆盖——`test_aclnn_`/`test_geir_` 命名是 ops-math 系列算子仓的约定，并非 CANN 通用标准（例如 cann-ops-adv 将 aclnn 样例命名为 `test_<op>.cpp`）。仅当运行脚本确实使用 `--run_example` 接口时才追加位置参数 `<op> <mode> cust`，因此将插件指向使用其他样例接口的工程（如 cann-ops 的 `-e|--example`）不会再破坏命令。（说明：`abs` 在 `ascend910b` 上无法编译与此无关——`abs` 的 `*_def.cpp` 只注册了 `ascend950`，即仅 A5。）
-- **仿真分析 `--aic-metrics` 按 SOC 平台门控**（GC-22 / plugin_release #32）：`msprof op simulator` 仅接受当前 `--soc-version` 平台支持的指标。A3（`ascend910_93`，即 `Ascend910C`）不支持 `ResourceConflictRatio`，而默认仿真配置会传递 `--aic-metrics=ResourceConflictRatio,PMSampling`，导致执行报错 `Unexpected argument --aic-metrics=ResourceConflictRatio, maybe in wrong soc platform`。现仅当解析出的 CANN SOC 标识命中允许列表 `SIMULATOR_OPTIONAL_METRIC_SOCS` 时才传递对应可选指标；该允许列表默认为空，因此各平台均仅传递必选的 `PipeUtilization`（待在真实 CANN 仿真器上逐平台验证后再放开）。`PipeUtilization` 与 `ResourceConflictRatio` 互斥规则保持不变。该允许列表提取到 `shared/msprof-simulator-metrics.ts`，作为命令生成与仿真选项面板的**统一来源**：面板按当前 SOC 仅显示真正会被采集的可选指标，不再出现「勾选但被静默丢弃」的复选框。
+- **仿真分析 `--aic-metrics` 按 SOC 平台门控**（GC-22 / plugin_release #32）：`msprof op simulator` 仅接受当前 `--soc-version` 平台支持的指标。A3（`ascend910_93`，即 `Ascend910C`）不支持 `ResourceConflictRatio`，而默认仿真配置会传递 `--aic-metrics=ResourceConflictRatio,PMSampling`，导致执行报错 `Unexpected argument --aic-metrics=ResourceConflictRatio, maybe in wrong soc platform`。可选指标仅在解析出的 CANN SOC 标识命中 `SIMULATOR_OPTIONAL_METRIC_SOCS` 允许列表时传递；A2/A3 仍仅传递必选的 `PipeUtilization`。`PipeUtilization` 与 `ResourceConflictRatio` 互斥规则保持不变。允许列表位于 `shared/msprof-simulator-metrics.ts`，作为命令生成与仿真选项面板的**统一来源**：面板按当前 SOC 仅显示真正会被采集的可选指标。
+- **A5 仿真可选指标启用**（§8.1 CLI 验证）：`ascend950` 已加入允许列表，`ResourceConflictRatio` 与 `PMSampling` 在 A5 仿真快速选项中可见。默认仿真命令由 `--aic-metrics=PipeUtilization` 变为 `--aic-metrics=ResourceConflictRatio`（与默认勾选状态一致）。A2/A3 行为不变。详见 `docs/simulator-options-spec.md`。
 
 ## 1.3.3 — 2026-06-15
 
@@ -16,7 +17,6 @@
 - **欢迎页** — 重新设计欢迎面板布局与文案；欢迎页 Webview 标签图标从扩展品牌资源正确加载。
 - **从 Actions 视图打开欢迎页** — Actions 树新增侧栏命令分组与菜单项，可随时重新打开欢迎页。
 - **命令面板** — 用户可见命令按产品名称分组（`%config.title%`）；仅用于侧栏/操作树的 UI 命令不再出现在命令面板中。
-- **Triton / PyAsc 上下文** — 改进编辑器与工作区对当前 `.py` 的识别；消毒、仿真、上板流程在已有活动 Python 算子文件时不再误提示「请先打开 .py 文件」。
 - **`.run` 部署** — 在 **A2** 与 **A5** SOC（`ascend910b`、`ascend950` 等）重装 `.run` 包时追加 `--force`；A3（`ascend910_93`）行为不变。
 - 仿真分析向 `msprof op simulator --soc-version` 传递**仿真器目录名**（如 `Ascend910B3`、`Ascend910C`、`Ascend950PR_9589`），不再传递 CANN SOC 标识 — 恢复 1.3.2 之前行为，与 msopprof / CANN `tools/simulator` 目录一致。
 - 仿真分析不再同时传递 `PipeUtilization` 与 `ResourceConflictRatio`；启用资源冲突比时仅传递 `ResourceConflictRatio`（及可选的 `PMSampling`），符合 msprof 互斥规则。
@@ -65,7 +65,6 @@
 
 - 侧栏、Webview 面板、Insight 视图全面适配 VS Code 颜色主题（浅色、深色、高对比度），扩展运行过程中切换主题时同步生效。
 - 扩展界面与提示文案随 VS Code 显示语言切换，支持 **英语** 与 **简体中文（zh-cn）**。
-- 新建工程流程新增 **Triton** 算子工程类型支持。
 - 支持将 **异常检测（Sanitizer）** 与 **性能调优（Profiling）** 选项存为工作区默认，配合 **不再提示** 减少启动后重复配置。
 - 侧栏操作与识别到的算子工程类型对齐；原先在独立面板中打开的工作流统一到侧栏。
 - 编译、调试等任务支持排队执行；**全部停止** 可终止进行中任务；新手引导与快捷选项面板的 **不再提示** 按工作区记忆。

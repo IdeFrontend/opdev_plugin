@@ -20,6 +20,7 @@ import {
   SimulatorStrategy,
   getSimulationAicMetrics,
 } from '@plugin/domain/services/profiler-service';
+import { isSimulatorOptionalMetricSupported } from '@shared/msprof-simulator-metrics';
 
 const operator = {
   id: 1,
@@ -279,9 +280,7 @@ describe('getSimulationAicMetrics (SOC gating + mutual exclusion)', () => {
       .not.toContain('PipeUtilization');
   });
 
-  it('gates with the empty production allow-list by default — A3 gets only PipeUtilization', () => {
-    // Guards the shipped default: no SOC is allow-listed, so the issue #32 command
-    // can never be regenerated regardless of user options.
+  it('gates A3 with production allow-list — ascend910_93 not allow-listed (GC-22)', () => {
     expect(getSimulationAicMetrics(
       {
         ResourceConflictRatio: true,
@@ -290,5 +289,135 @@ describe('getSimulationAicMetrics (SOC gating + mutual exclusion)', () => {
       'ascend910_93',
     ))
       .toEqual(['PipeUtilization']);
+  });
+});
+
+describe('getSimulationAicMetrics (production allow-list — A5 ascend950 §8.1)', () => {
+  it('emits ResourceConflictRatio for A5 defaults (RC on, PMSampling off)', () => {
+    expect(getSimulationAicMetrics(
+      {
+        ResourceConflictRatio: true,
+        PMSampling: false,
+      },
+      'ascend950',
+    ))
+      .toEqual(['ResourceConflictRatio']);
+  });
+
+  it('appends PMSampling when both enabled on allow-listed A5', () => {
+    expect(getSimulationAicMetrics(
+      {
+        ResourceConflictRatio: true,
+        PMSampling: true,
+      },
+      'ascend950',
+    ))
+      .toEqual([
+        'ResourceConflictRatio',
+        'PMSampling',
+      ]);
+  });
+
+  it('falls back to PipeUtilization when ResourceConflictRatio is unchecked on A5', () => {
+    expect(getSimulationAicMetrics(
+      {
+        ResourceConflictRatio: false,
+        PMSampling: false,
+      },
+      'ascend950',
+    ))
+      .toEqual(['PipeUtilization']);
+  });
+
+  it('appends PMSampling to PipeUtilization when RC off and PMSampling on (A5)', () => {
+    expect(getSimulationAicMetrics(
+      {
+        ResourceConflictRatio: false,
+        PMSampling: true,
+      },
+      'ascend950',
+    ))
+      .toEqual([
+        'PipeUtilization',
+        'PMSampling',
+      ]);
+  });
+
+  it('keeps A2 on PipeUtilization only — ascend910b not in production allow-list', () => {
+    expect(getSimulationAicMetrics(
+      {
+        ResourceConflictRatio: true,
+        PMSampling: true,
+      },
+      'ascend910b',
+    ))
+      .toEqual(['PipeUtilization']);
+  });
+
+  it('getSimulatorSupportedMetrics equivalent — both true on A5, false on A2/A3', () => {
+    expect(isSimulatorOptionalMetricSupported('ResourceConflictRatio', 'ascend950'))
+      .toBe(true);
+    expect(isSimulatorOptionalMetricSupported('PMSampling', 'ascend950'))
+      .toBe(true);
+    expect(isSimulatorOptionalMetricSupported('ResourceConflictRatio', 'ascend910b'))
+      .toBe(false);
+    expect(isSimulatorOptionalMetricSupported('PMSampling', 'ascend910_93'))
+      .toBe(false);
+  });
+});
+
+describe('SimulatorStrategy A5 production allow-list (§8.1)', () => {
+  const strategy = new SimulatorStrategy();
+
+  beforeEach(resetEnvMocks);
+
+  it('emits ResourceConflictRatio for A5 default simulate settings', () => {
+    (getGlobalEnvSnapshot as jest.Mock).mockReturnValue({
+      socVersion: 'ascend950',
+      simulatorType: undefined,
+      npuArch: undefined,
+      ascendEnvScript: undefined,
+    });
+    const config = {
+      project_id: 10,
+      user_options: {
+        ResourceConflictRatio: true,
+        PMSampling: false,
+      },
+    };
+
+    const cmd = strategy.generate(config as any, operator as any, '/tmp/op.bin');
+
+    expect(cmd)
+      .toContain('--soc-version=Ascend950PR_9589');
+    expect(cmd)
+      .toContain('--aic-metrics=ResourceConflictRatio');
+    expect(cmd)
+      .not.toContain('PipeUtilization');
+    expect(cmd)
+      .not.toContain('PMSampling');
+  });
+
+  it('appends PMSampling when enabled on A5', () => {
+    (getGlobalEnvSnapshot as jest.Mock).mockReturnValue({
+      socVersion: 'ascend950',
+      simulatorType: undefined,
+      npuArch: undefined,
+      ascendEnvScript: undefined,
+    });
+    const config = {
+      project_id: 10,
+      user_options: {
+        ResourceConflictRatio: true,
+        PMSampling: true,
+      },
+    };
+
+    const cmd = strategy.generate(config as any, operator as any, '/tmp/op.bin');
+
+    expect(cmd)
+      .toContain('ResourceConflictRatio');
+    expect(cmd)
+      .toContain('PMSampling');
   });
 });

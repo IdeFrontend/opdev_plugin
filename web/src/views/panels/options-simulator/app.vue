@@ -17,10 +17,8 @@ const {
 } = useTheme();
 const simulateOptions = ref({
   user_options: {
-    // PMSampling is not a documented simulator metric (see shared/msprof-simulator-metrics.ts),
-    // so it defaults off — if a SOC ever allow-lists it the checkbox appears unchecked
-    // (opt-in), never pre-checked without consent. ResourceConflictRatio is a real optional
-    // metric, so it stays default-on (gated per SOC by the command builder + UI).
+    // Optional metrics are gated per SOC (shared/msprof-simulator-metrics.ts). PMSampling
+    // defaults off (opt-in). ResourceConflictRatio defaults on when allow-listed (A5).
     PMSampling: false,
     ResourceConflictRatio: true,
   },
@@ -169,13 +167,6 @@ onBeforeMount(async () => {
             <QuestionCircleOutlined class="help-icon" />
           </a-tooltip>
         </div>
-        <div
-          v-if="!resourceConflictSupported && !pmSamplingSupported"
-          class="optional-unsupported-hint"
-        >
-          {{ t('web.options.simulator.optionalUnsupported') }}
-        </div>
-
         <div style="margin-top: 12px">
           {{ t('web.options.simulator.instructionPipeline') }}
         </div>
@@ -208,6 +199,9 @@ onBeforeMount(async () => {
           v-if="resourceConflictSupported"
           class="nested-checkbox-group"
         >
+          <div style="margin-bottom: 12px">
+            {{ t('web.options.simulator.codeHotspotDesc') }}
+          </div>
           {{ t('web.options.simulator.extraOptions') }}
           <a-checkbox
             v-model:checked="simulateOptions.user_options.ResourceConflictRatio"
@@ -215,6 +209,12 @@ onBeforeMount(async () => {
           >
             {{ t('web.options.simulator.resourceConflict') }}
           </a-checkbox>
+        </div>
+        <div
+          v-else
+          style="margin-top: 8px"
+        >
+          {{ t('web.options.simulator.codeHotspotDescBaseOnly') }}
         </div>
 
         <div class="do-not-show-row">
@@ -262,12 +262,6 @@ onBeforeMount(async () => {
       margin-left: 4px;
       cursor: pointer;
     }
-  }
-
-  .optional-unsupported-hint {
-    margin-top: 6px;
-    font-size: 12px;
-    opacity: 0.65;
   }
 
   .nested-checkbox-group {

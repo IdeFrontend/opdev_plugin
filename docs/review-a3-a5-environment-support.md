@@ -111,7 +111,7 @@ Controlled in `profiler-service.ts` → `OnBoardStrategy.getOnBoardMetrics` usin
 | A3 / `910_93` | `Ascend910C` | `ascend910_93` |
 | A5 / 950-class | `Ascend950PR_9589` | `ascend950` |
 
-**Metrics:** `SimulatorStrategy` / `getSimulationAicMetrics(userOptions, cannSoc)` — **SOC-gated** (GC-22 / plugin_release #32): the simulator rejects metrics it does not support for the selected platform (A3 / `ascend910_93` rejects `ResourceConflictRatio`), so optional metrics are emitted only when the resolved CANN slug is allow-listed in `SIMULATOR_OPTIONAL_METRIC_SOCS`. The allow-list ships empty → only the mandatory `PipeUtilization` base. Mutual exclusion between `PipeUtilization` and `ResourceConflictRatio` still applies; optional `PMSampling` (workspace `performanceTuning.simulation.memoryThroughputWaveform`) is likewise gated. Details: [`performance.md`](./performance.md).
+**Metrics:** `SimulatorStrategy` / `getSimulationAicMetrics(userOptions, cannSoc)` — **SOC-gated** (GC-22 / plugin_release #32): optional metrics are allow-listed in `SIMULATOR_OPTIONAL_METRIC_SOCS`. **A5 (`ascend950`):** `ResourceConflictRatio` and `PMSampling` confirmed via §8 CLI — see [`simulator-options-spec.md`](./simulator-options-spec.md). A3 (`ascend910_93`) still rejects `ResourceConflictRatio`. Mutual exclusion and PMSampling append rules: [`performance.md`](./performance.md).
 
 ### 5. Standard-custom `.run` deploy
 
