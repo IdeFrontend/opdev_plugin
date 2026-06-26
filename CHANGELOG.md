@@ -2,12 +2,17 @@
 
 本文列出 **Ascend C Toolkit（Ascend C Toolkit）** 的重要变更。完整提交历史见 [GitCode](https://gitcode.com/mlh0101/mstt) 仓库。
 
-## 未发布（Unreleased）
+## 1.3.5 — 2026-06-26
 
-- **修复 standard-custom「运行样例」缺少算子名/平台**（plugin_release #171）：之前生成 `bash build.sh --vendor_name=custom --run_example`。build.sh 的 `--run_example` 从**位置参数** `<算子> <模式> <pkg_mode>` 读取样例名与模式（并非从 `--ops`——现场带 `--ops=abs` 仍报 `name:` 为空），缺失时打印 `Start to run examples, name:  mode:`（均为空）并回退到 usage——样例既不编译也不运行。现 `CannCommandStrategy.buildExampleCommand` 与 `AscendCommandStrategy` 一致地追加位置参数 `<算子> <模式> cust`（算子取自所选，或 build_example 配置自带的 `op`），并补全 `--soc`（设置 COMPUTE_UNIT，经 `{soc_version}` 占位符在执行时解析）；当 `compileOption` 已带 `--soc`（仿真样例流程）时不重复添加。
-- **按算子自动选择 run_example 模式**（plugin_release #171 后续）：样例模式（`eager` → `test_aclnn_<算子>.cpp`，`graph` → `test_geir_<算子>.cpp`）是算子自身的属性，而非插件级偏好——但此前唯一开关是全局的 `op-devtools.compileAndDeploy.exampleBuildConfig.executionMode`。该项硬默认 `eager`，导致只带 graph 样例的算子（如 `pows`）报错 `ERROR: pows does not have eager examples`。现插件会扫描算子的 `examples/` 目录（有界遍历，对齐 build.sh 的 `find */<算子>/examples/*`，跳过 `experimental/`），选择实际存在的模式；仅当两种模式都存在时才用 `executionMode` 设置作为决胜项。当算子两种样例都没有时，提前给出告警，而不是在 build.sh 深处失败。样例文件名匹配默认采用 build.sh 约定（`^test_aclnn_.*\.cpp$` / `^test_geir_.*\.cpp$`，插件自带的算子模板也遵循该约定），并可通过 `op-devtools.compileAndDeploy.exampleBuildConfig.eagerExamplePattern` / `graphExamplePattern` 以**正则表达式**覆盖——`test_aclnn_`/`test_geir_` 命名是 ops-math 系列算子仓的约定，并非 CANN 通用标准（例如 cann-ops-adv 将 aclnn 样例命名为 `test_<op>.cpp`）。仅当运行脚本确实使用 `--run_example` 接口时才追加位置参数 `<op> <mode> cust`，因此将插件指向使用其他样例接口的工程（如 cann-ops 的 `-e|--example`）不会再破坏命令。（说明：`abs` 在 `ascend910b` 上无法编译与此无关——`abs` 的 `*_def.cpp` 只注册了 `ascend950`，即仅 A5。）
-- **仿真分析 `--aic-metrics` 按 SOC 平台门控**（GC-22 / plugin_release #32）：`msprof op simulator` 仅接受当前 `--soc-version` 平台支持的指标。A3（`ascend910_93`，即 `Ascend910C`）不支持 `ResourceConflictRatio`，而默认仿真配置会传递 `--aic-metrics=ResourceConflictRatio,PMSampling`，导致执行报错 `Unexpected argument --aic-metrics=ResourceConflictRatio, maybe in wrong soc platform`。可选指标仅在解析出的 CANN SOC 标识命中 `SIMULATOR_OPTIONAL_METRIC_SOCS` 允许列表时传递；A2/A3 仍仅传递必选的 `PipeUtilization`。`PipeUtilization` 与 `ResourceConflictRatio` 互斥规则保持不变。允许列表位于 `shared/msprof-simulator-metrics.ts`，作为命令生成与仿真选项面板的**统一来源**：面板按当前 SOC 仅显示真正会被采集的可选指标。
-- **A5 仿真可选指标启用**（§8.1 CLI 验证）：`ascend950` 已加入允许列表，`ResourceConflictRatio` 与 `PMSampling` 在 A5 仿真快速选项中可见。默认仿真命令由 `--aic-metrics=PipeUtilization` 变为 `--aic-metrics=ResourceConflictRatio`（与默认勾选状态一致）。A2/A3 行为不变。详见 `docs/simulator-options-spec.md`。
+本版本包含 Triton 仿真分析与异常检测支持、仿真分析修复、NPU 调试与异常检测改进。
+
+- **Triton 仿真分析与异常检测** — Triton 工程可在插件内运行**仿真分析**（`msprof`）与**异常检测**（`mssanitizer`）。异常检测快速选项新增检测范围、Block ID 与日志配置；活动 `.py` 目标从编辑器同步至运行时配置；`--log-file` 路径经 shell 引号转义。
+- **仿真分析 `--aic-metrics` 按 SOC 平台门控** — `msprof op simulator` 仅接受当前 `--soc-version` 平台支持的指标。A3（`ascend910_93`，即 `Ascend910C`）不支持 `ResourceConflictRatio`，而默认仿真配置会传递 `--aic-metrics=ResourceConflictRatio,PMSampling`，导致执行报错 `Unexpected argument --aic-metrics=ResourceConflictRatio, maybe in wrong soc platform`。可选指标仅在解析出的 CANN SOC 标识命中 `SIMULATOR_OPTIONAL_METRIC_SOCS` 允许列表（`shared/msprof-simulator-metrics.ts`）时传递；命令生成与仿真选项面板共用该统一来源。A2/A3 仍仅传递必选的 `PipeUtilization`；`PipeUtilization` 与 `ResourceConflictRatio` 互斥规则不变。**A5（`ascend950`）** 经 §8.1 CLI 验证已加入允许列表，`ResourceConflictRatio` 与 `PMSampling` 在 A5 仿真快速选项中可见；默认仿真命令由 `--aic-metrics=PipeUtilization` 变为 `--aic-metrics=ResourceConflictRatio`。详见 `docs/simulator-options-spec.md`。
+- **修复 standard-custom「运行样例」缺少算子名/平台** — `build.sh --run_example` 从**位置参数** `<算子> <模式> <pkg_mode>` 读取样例名与模式，而非从 `--ops`。缺失时脚本打印空的 `name:` / `mode:` 并回退到 usage。现 `CannCommandStrategy.buildExampleCommand` 与 `AscendCommandStrategy` 一致地追加 `<算子> <模式> cust`，并在 `compileOption` 未带 `--soc` 时补全 `--soc`（经 `{soc_version}` 占位符）。
+- **按算子自动选择 run_example 模式** — 通过扫描算子 `examples/` 目录（对齐 build.sh 布局，跳过 `experimental/`）检测样例模式（`eager` 与 `graph`）。全局 `executionMode` 设置仅在两种模式均存在时作为决胜项。文件名匹配默认 `^test_aclnn_.*\.cpp$` / `^test_geir_.*\.cpp$`，可通过 `eagerExamplePattern` / `graphExamplePattern` 覆盖。仅当运行脚本使用 `--run_example` 接口时才追加位置参数。
+- **NPU 调试 launch.json 自动适配** — 调试启动前，`launch.json` 目标在**所选算子自身**的 `build/` 目录下解析（而非工作区根 `build/`），使用插件默认名称（`test_aclnn_<算子>`、`<算子>`、graph 二进制及 build_example 目标）。多算子选择取第一个；替换遗留的根 `build/` 占位符；无法解析目标时向用户告警。
+- **异常检测 A5 CMake 模板修复** — CANN 工程模板在生成时按 SOC 修补异常检测编译/链接标志：A5 仅 `-g`；非 A5 保留 `--cce-enable-sanitizer` 与链接标志。仅 SOC 相关后缀使用占位符，共享选项（`-O2`、`--cce-fatobj-link`）保持字面量。
+- **MindStudio Debug VSIX 1.0.9** — 内置调试扩展由 1.0.8 升级至 1.0.9。
 
 ## 1.3.3 — 2026-06-15
 
