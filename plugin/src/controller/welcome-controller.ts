@@ -42,6 +42,7 @@ import {
   buildGenOpCommand, decideSkipFileGeneration,
 } from '@plugin/domain/utils/genop-command';
 import { COMMAND_CREATE_DIRECTORY } from '@plugin/constants';
+import { buildOpenFolderWindowOptions } from '@plugin/helpers/open-folder-window-options';
 
 // Auxiliary function: get extension context
 function getExtensionContext(): vscode.ExtensionContext {
@@ -148,7 +149,7 @@ async function openFolderFn(url: string) {
   }
 
   try {
-    await vscode.commands.executeCommand('vscode.openFolder', localUri, { forceNewWindow });
+    await vscode.commands.executeCommand('vscode.openFolder', localUri, buildOpenFolderWindowOptions(forceNewWindow));
     vscode.window.showInformationMessage(t('welcome.openProjectDirSuccess'));
   }
   catch (e) {
@@ -405,7 +406,7 @@ export const welcomeMethods = {
       }
 
       try {
-        await vscode.commands.executeCommand('vscode.openFolder', localUri, { forceNewWindow });
+        await vscode.commands.executeCommand('vscode.openFolder', localUri, buildOpenFolderWindowOptions(forceNewWindow));
         vscode.window.showInformationMessage(t('welcome.openProjectDirSuccess'));
       }
       catch (e) {
