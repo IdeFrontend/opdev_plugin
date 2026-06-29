@@ -47,14 +47,6 @@ add_executable(hello_world
     hello_world.asc
 )
 
-target_link_libraries(hello_world PRIVATE
-    tiling_api
-    register
-    platform
-    m
-)
-
-
 # 根据选项设置编译标志
 set(compile_options)
 if(ENABLE_DEBUG)

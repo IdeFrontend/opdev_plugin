@@ -47,14 +47,6 @@ add_executable(addn_custom
     addn_custom.asc
 )
 
-target_link_libraries(addn_custom PRIVATE
-    tiling_api
-    register
-    platform
-    m
-)
-
-
 # 根据选项设置编译标志
 set(compile_options)
 if(ENABLE_DEBUG)
