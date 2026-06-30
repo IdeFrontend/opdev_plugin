@@ -26,11 +26,16 @@ import { ProjectManager } from '@plugin/core/project/project-manager';
 import { OperatorProjectIconTheme } from '@plugin/class/operator-project-icon-theme';
 import { generateStructure } from '@plugin/domain';
 import { buildPythonDeployTarget } from '@plugin/domain/services/command-strategy/python-operator-strategy-shared';
-import { getOpByProjectIdAndOpName } from '@plugin/domain/models/model';
+import {
+  DEFAULT_SANITIZER_DETECTION_OPTIONS,
+  getOpByProjectIdAndOpName,
+} from '@plugin/domain/models/model';
 import {
   getConfig, getConfigById, postConfig,
 } from '@plugin/domain/services/configuration';
-import { ConfigService, configService } from '@plugin/service/config-service';
+import {
+  ConfigService, configService,
+} from '@plugin/service/config-service';
 import { buildService } from './build-service';
 import { taskMethods } from '../controller/task-controller';
 import { homeMethods } from '../controller/home-controller';
@@ -283,16 +288,10 @@ export class FolderContextMenuService {
           script: '',
           target_file: '',
           tool: {
-            memcheck: true,
-            racecheck: false,
-            initcheck: false,
-            synccheck: false,
+            ...DEFAULT_SANITIZER_DETECTION_OPTIONS.tool,
           },
           memcheckOption: {
-            'check-unused-memory': false,
-            'leak-check': false,
-            'check-device-heap': false,
-            'check-cann-heap': false,
+            ...DEFAULT_SANITIZER_DETECTION_OPTIONS.memcheckOption,
           },
           logLevel: 'warn',
           maxDebuglogSize: 1024,

@@ -45,6 +45,23 @@ type OpsStore = {
   ops: OpRecord[];
 };
 
+export const DEFAULT_SANITIZER_DETECTION_OPTIONS = {
+  tool: {
+    memcheck: true,
+    racecheck: true,
+    initcheck: true,
+    // Intentionally kept off because quick options does not expose this mode.
+    synccheck: false,
+  },
+  memcheckOption: {
+    'check-unused-memory': true,
+    'leak-check': true,
+    // Intentionally kept off because quick options does not expose these modes.
+    'check-device-heap': false,
+    'check-cann-heap': false,
+  },
+};
+
 /**
  * 检查根目录 build.sh 是否包含 --bisheng_flags
  * 用于修改标准自定义算子
@@ -450,16 +467,10 @@ export async function generateStructure(
           target_file: targetFile,
           config_name: record.op_name,
           tool: {
-            memcheck: true,
-            racecheck: false,
-            initcheck: false,
-            synccheck: false,
+            ...DEFAULT_SANITIZER_DETECTION_OPTIONS.tool,
           },
           memcheckOption: {
-            'check-unused-memory': false,
-            'leak-check': false,
-            'check-device-heap': false,
-            'check-cann-heap': false,
+            ...DEFAULT_SANITIZER_DETECTION_OPTIONS.memcheckOption,
           },
           logLevel: 'warn',
           maxDebuglogSize: 1024,
@@ -639,16 +650,10 @@ function getConfigPayload(
           target_file: targetFile,
           config_name: record.op_name,
           tool: {
-            memcheck: true,
-            racecheck: false,
-            initcheck: false,
-            synccheck: false,
+            ...DEFAULT_SANITIZER_DETECTION_OPTIONS.tool,
           },
           memcheckOption: {
-            'check-unused-memory': false,
-            'leak-check': false,
-            'check-device-heap': false,
-            'check-cann-heap': false,
+            ...DEFAULT_SANITIZER_DETECTION_OPTIONS.memcheckOption,
           },
           logLevel: 'warn',
           maxDebuglogSize: 1024,

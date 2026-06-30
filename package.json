@@ -287,26 +287,31 @@
           },
           "op-devtools.sanitizer.memory": {
             "type": "boolean",
+            "default": true,
             "order": 200,
             "markdownDescription": "%config.op-devtools.sanitizer.memory.markdownDescription%"
           },
           "op-devtools.sanitizer.memoryLeak": {
             "type": "boolean",
+            "default": true,
             "order": 201,
             "markdownDescription": "%config.op-devtools.sanitizer.memoryLeak.markdownDescription%"
           },
           "op-devtools.sanitizer.allocUnused": {
             "type": "boolean",
+            "default": true,
             "order": 202,
             "markdownDescription": "%config.op-devtools.sanitizer.allocUnused.markdownDescription%"
           },
           "op-devtools.sanitizer.race": {
             "type": "boolean",
+            "default": true,
             "order": 203,
             "description": "%config.op-devtools.sanitizer.race.description%"
           },
           "op-devtools.sanitizer.uninitialized": {
             "type": "boolean",
+            "default": true,
             "order": 204,
             "description": "%config.op-devtools.sanitizer.uninitialized.description%"
           },

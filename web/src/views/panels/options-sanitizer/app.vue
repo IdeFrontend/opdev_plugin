@@ -27,12 +27,12 @@ type DetectionScopeUi = 'global' | 'singleBlock';
 const form = ref({
   tool: {
     memcheck: true,
-    racecheck: false,
-    initcheck: false,
+    racecheck: true,
+    initcheck: true,
   },
   memcheckOption: {
-    'check-unused-memory': false,
-    'leak-check': false,
+    'check-unused-memory': true,
+    'leak-check': true,
   },
   logLevel: 'warn' as 'info' | 'warn' | 'error',
   maxDebuglogSize: 1024,
