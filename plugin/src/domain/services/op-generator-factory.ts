@@ -468,7 +468,7 @@ export class PyAscOpGenerator extends BaseOpGenerator {
       this.params.op_name
       || this.project.project_name
       || path.basename(this.project.project_path);
-    this.template_name = 'pyasc_temple';
+    this.template_name = 'pyasc_template';
 
     return this.op_name;
   }
@@ -476,7 +476,7 @@ export class PyAscOpGenerator extends BaseOpGenerator {
   executeGeneration(): boolean {
     const templateFilePath = path.resolve(
       this.extensionPath,
-      'out/templates/code_template/cann_template/pyasc_temple.zip',
+      'out/templates/code_template/cann_template/pyasc_template.zip',
     );
 
     if (!fs.pathExistsSync(templateFilePath)) {

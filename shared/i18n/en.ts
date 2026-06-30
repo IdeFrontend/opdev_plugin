@@ -350,14 +350,6 @@ export default {
   'web.home.newOperatorProject': 'New Operator Project',
   'web.home.openOperatorProject': 'Open operator project',
 
-  // web open-project panel
-  'web.openProject.title': 'Open operator project',
-  'web.openProject.projectPathLabel': 'Operator project path',
-  'web.openProject.projectPathTooltip': 'Storage path of the operator project to open.',
-  'web.openProject.projectPathPlaceholder': 'Enter project path (remote search supported)',
-  'web.openProject.envScriptLabel': 'Environment script',
-  'web.openProject.envScriptTooltip': 'Absolute path to set_env.sh run after installing CANN. Leave empty if using the one-stop platform container image. If you see "path does not exist", enter a valid env script path.',
-  'web.openProject.envScriptPlaceholder': 'Enter path to .sh env file (remote search supported)',
   'web.openProject.openNow': 'Open now',
 
   // web operate sidebar
@@ -427,7 +419,6 @@ export default {
   'web.welcome.ascendCOpProject': '<<<>>> operator',
   'web.welcome.langAscendC': 'Language: Ascend C',
   'web.welcome.typeAngle': 'Type: <<<>>>',
-  'web.welcome.sample': 'Sample',
   'web.welcome.ascendCStandardProject': 'Standard custom operator',
   'web.welcome.ascendCStandardDesc': 'Standard custom operator project in Ascend C. op_host on CPU, op_kernel on NPU, op_graph for graph mode.',
   'web.welcome.typeStandardCustom': 'Type: Standard custom',

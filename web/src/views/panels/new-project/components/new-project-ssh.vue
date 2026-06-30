@@ -1,35 +1,24 @@
 <script setup lang="ts">
 import {
-  ref, onMounted,
+  ref, onMounted, computed,
 } from 'vue';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import { t } from 'i18next';
-import { OperatorProjectViewId, type OperatorProjectViewIdValue } from '@shared/project-type-view-id';
+import {
+  OperatorProjectViewId,
+  isOperatorProjectViewId,
+  type OperatorProjectViewIdValue,
+} from '@shared/project-type-view-id';
 import { useNewProjectSSH } from '../composables/use-new-project-ssh';
 import { FormRulesFactory } from '../composables/form-rules';
-import tipBase_0 from '@/assets/imgs/add.png';
-import standardCustomPreview from '@/assets/imgs/standard_custom.png';
-import AscendC from '@/assets/imgs/AscendC.png';
-import tipBase_1_1 from '@/assets/imgs/hello_world.png';
-import tipBase_1_2 from '@/assets/imgs/add_custom.png';
-import tipBase_1_3 from '@/assets/imgs/torch_library_template.png';
-import tritonVectorAddPreview from '@/assets/imgs/triton_vector_add.png';
-import { getProjectType, getProjectTypeSupportEnabled } from '@web/apis';
+import TemplatePreview from '@/components/template-previews/template-preview.vue';
+import { getProjectPreviewFiles } from '@/components/template-previews/template-preview-files';
+import {
+  getProjectType, getProjectTypeSupportEnabled,
+} from '@web/apis';
 
 const getTextColorClass = () => 'op-text';
-const getBorderColorClass = () => 'border-[var(--op-devtools-border)]';
-const getSelectedBorderClass = () =>
-  'border-[var(--op-devtools-focus-border)] shadow-[0_0_0_3px_rgba(24,144,255,0.15)]';
-const getDividerClass = () => 'bg-[var(--op-devtools-border)]';
-const getDividerBorderClass = () => 'border-[var(--op-devtools-border)]';
-const getDescTextClass = () => 'op-text-muted';
-
-// 根据主题获取文本颜色
-// 根据主题获取边框颜色
-// 根据主题获取选中状态的边框和阴影
-// 根据主题获取分割线颜色（背景色）
-// 根据主题获取边框颜色（用于 border-t 等）
-// 根据主题获取描述文本颜色
+const getConfigDividerClass = () => 'border-[var(--op-devtools-border)]';
 
 defineProps({
   connected: {
@@ -41,7 +30,7 @@ defineProps({
 const selectedTemplate = ref<'helloworld' | 'addn' | 'torch_library_template' | 'triton_vector_add'>('helloworld');
 
 const {
-  connectionFormRef,
+  setConnectionFormRef,
   selectedId_type,
   projectFormData,
   projectPathOptions,
@@ -53,6 +42,17 @@ const {
   handleSelectFile,
   handleCreatedProject,
 } = useNewProjectSSH(selectedTemplate);
+
+const projectTypeTabKey = computed<string>({
+  get: () => String(selectedId_type.value),
+  set: (key: string) => {
+    const id = Number(key);
+
+    if (isOperatorProjectViewId(id)) {
+      selectedId_type.value = id;
+    }
+  },
+});
 
 const getTemplateDesc = (template: string) => {
   switch (template) {
@@ -69,32 +69,11 @@ const getTemplateDesc = (template: string) => {
   }
 };
 
-const getTemplateImage = (template: string) => {
-  switch (template) {
-    case 'helloworld':
-      return tipBase_1_1;
-    case 'addn':
-      return tipBase_1_2;
-    case 'torch_library_template':
-      return tipBase_1_3;
-    case 'triton_vector_add':
-      return tritonVectorAddPreview;
-    default:
-      return tipBase_1_1;
-  }
-};
-
-const getProjectPreviewImage = (projectTypeId: OperatorProjectViewIdValue) => {
-  if (projectTypeId === OperatorProjectViewId.CANN) {
-    return getTemplateImage(selectedTemplate.value);
-  }
-  if (projectTypeId === OperatorProjectViewId.TRITON) {
-    return tritonVectorAddPreview;
-  }
-  if (projectTypeId === OperatorProjectViewId.STANDARD_CUSTOM) {
-    return standardCustomPreview;
-  }
-  return tipBase_0;
+const getProjectPreviewFilesForItem = (projectTypeId: OperatorProjectViewIdValue) => {
+  return getProjectPreviewFiles(
+    projectTypeId,
+    projectTypeId === OperatorProjectViewId.CANN ? selectedTemplate.value : undefined,
+  );
 };
 
 type ProjectTypeItem = {
@@ -137,6 +116,16 @@ const items_type = ref<ProjectTypeItem[]>([
   tritonProject,
 ]);
 
+const projectPreviewFilesMap = computed(() => {
+  const previewFilesMap = new Map<OperatorProjectViewIdValue, ReturnType<typeof getProjectPreviewFiles>>();
+
+  items_type.value.forEach((item) => {
+    previewFilesMap.set(item.id, getProjectPreviewFilesForItem(item.id));
+  });
+
+  return previewFilesMap;
+});
+
 const connectionFormRules = FormRulesFactory.createFormRules();
 
 const currentProjectType = ref('');
@@ -144,8 +133,10 @@ const currentProjectType = ref('');
 onMounted(async () => {
   try {
     const tritonEnabled = await getProjectTypeSupportEnabled(OperatorProjectViewId.TRITON);
+
     if (!tritonEnabled) {
       items_type.value = items_type.value.filter((item) => item.id !== OperatorProjectViewId.TRITON);
+
       if (selectedId_type.value === OperatorProjectViewId.TRITON) {
         selectedId_type.value = OperatorProjectViewId.CANN;
       }
@@ -173,198 +164,159 @@ onMounted(async () => {
 });
 </script>
 <template>
-  <div class="">
-    <div class="flex w-full items-stretch max-[960px]:flex-wrap">
-      <div class="w-[35%] max-[960px]:flex-auto max-[960px]:w-full max-[960px]:min-w-0">
-        <div
-          class="text-base leading-[22px] font-bold mb-6"
-          :class="getTextColorClass()"
+  <div class="w-full">
+    <div class="welcome-step-media-tabs welcome-new-project-tabs box-border w-full min-h-0 min-w-0">
+      <a-tabs
+        v-model:active-key="projectTypeTabKey"
+        class="w-full"
+        tab-position="left"
+      >
+        <a-tab-pane
+          v-for="item in items_type"
+          :key="String(item.id)"
+          :tab="t(item.titleKey)"
         >
-          {{ t('web.link.projectType') }}
-        </div>
-        <div class="">
-          <div class="mb-5">
-            <div
-              v-for="item in items_type"
-              :key="item.id"
-              class="p-5 my-5 border rounded-lg cursor-pointer overflow-hidden relative hover:border-[#4ba5f4] hover:shadow-[0_0_0_3px_rgba(24,144,255,0.1)] group max-[960px]:flex-auto max-[960px]:min-w-0"
-              :class="[
-                getBorderColorClass(),
-                selectedId_type === item.id ? getSelectedBorderClass() : '',
-              ]"
-              @click="selectedId_type = item.id"
+          <div
+            class="welcome-new-project-tab-desc mb-2.5 whitespace-normal"
+            v-html="item.id === OperatorProjectViewId.CANN ? getTemplateDesc(selectedTemplate) : t(item.descKey)"
+          />
+          <a-tag
+            v-if="item.id === OperatorProjectViewId.CANN || item.id === OperatorProjectViewId.STANDARD_CUSTOM"
+            color="blue"
+            class="mt-2 mr-2"
+          >
+            {{ t('web.welcome.langAscendC') }}
+          </a-tag>
+          <a-tag
+            v-if="item.id === OperatorProjectViewId.PYASC || item.id === OperatorProjectViewId.TRITON"
+            color="blue"
+            class="mt-2 mr-2"
+          >
+            {{ t('web.welcome.langPython') }}
+          </a-tag>
+          <a-tag
+            v-if="item.id === OperatorProjectViewId.CANN"
+            color="purple"
+            class="mt-2 mr-2"
+          >
+            {{ t('web.welcome.typeAngle') }}
+          </a-tag>
+          <a-tag
+            v-if="item.id === OperatorProjectViewId.STANDARD_CUSTOM"
+            color="green"
+            class="mt-2 mr-2"
+          >
+            {{ t('web.welcome.typeStandardCustom') }}
+          </a-tag>
+          <a-tag
+            v-if="item.id === OperatorProjectViewId.PYASC"
+            color="purple"
+            class="mt-2 mr-2"
+          >
+            {{ t('web.welcome.typePyasc') }}
+          </a-tag>
+          <a-tag
+            v-if="item.id === OperatorProjectViewId.TRITON"
+            color="purple"
+            class="mt-2 mr-2"
+          >
+            {{ t('web.welcome.typeTriton') }}
+          </a-tag>
+          <div
+            v-if="item.id === OperatorProjectViewId.CANN"
+            class="mt-4"
+          >
+            <a-radio-group
+              v-model:value="selectedTemplate"
+              class="sample-radio-group flex flex-wrap gap-4"
             >
-              <div
-                class="font-extrabold mb-[25px]"
-                :class="getTextColorClass()"
-              >
-                {{ t(item.titleKey) }}
-              </div>
-              <div
-                class="leading-8 mt-2.5 text-[13px] mb-2.5 whitespace-nowrap overflow-hidden text-ellipsis group-[.selected]:whitespace-normal group-[.selected]:overflow-visible group-[.selected]:text-clip"
-                :class="getDescTextClass()"
-                v-html="item.id === OperatorProjectViewId.CANN ? getTemplateDesc(selectedTemplate) : t(item.descKey)"
+              <a-radio value="helloworld">
+                helloworld
+              </a-radio>
+              <a-radio value="addn">
+                addn
+              </a-radio>
+              <a-radio value="torch_library_template">
+                torch_library
+              </a-radio>
+            </a-radio-group>
+          </div>
+          <div class="mt-4">
+            <div class="transition-all duration-300">
+              <TemplatePreview
+                v-if="projectPreviewFilesMap.get(item.id)"
+                :files="projectPreviewFilesMap.get(item.id)!"
+                class="welcome-new-project-preview block transition-opacity duration-300 transform"
               />
-              <a-tag
-                v-if="item.id === OperatorProjectViewId.CANN || item.id === OperatorProjectViewId.STANDARD_CUSTOM"
-                color="blue"
-                class="mt-2.5 mr-2"
-              >
-                {{ t('web.welcome.langAscendC') }}
-              </a-tag>
-              <a-tag
-                v-if="item.id === OperatorProjectViewId.PYASC || item.id === OperatorProjectViewId.TRITON"
-                color="blue"
-                class="mt-2.5 mr-2"
-              >
-                {{ t('web.welcome.langPython') }}
-              </a-tag>
-              <a-tag
-                v-if="item.id === OperatorProjectViewId.CANN"
-                color="purple"
-                class="mt-2.5 mr-2"
-              >
-                {{ t('web.welcome.typeAngle') }}
-              </a-tag>
-              <a-tag
-                v-if="item.id === OperatorProjectViewId.STANDARD_CUSTOM"
-                color="green"
-                class="mt-2.5 mr-2"
-              >
-                {{ t('web.welcome.typeStandardCustom') }}
-              </a-tag>
-              <a-tag
-                v-if="item.id === OperatorProjectViewId.PYASC"
-                color="purple"
-                class="mt-2.5 mr-2"
-              >
-                {{ t('web.welcome.typePyasc') }}
-              </a-tag>
-              <a-tag
-                v-if="item.id === OperatorProjectViewId.TRITON"
-                color="purple"
-                class="mt-2.5 mr-2"
-              >
-                {{ t('web.welcome.typeTriton') }}
-              </a-tag>
-              <div
-                v-if="item.id === OperatorProjectViewId.CANN"
-                class="mt-4 flex gap-4"
-              >
-                <a-radio-group
-                  v-model:value="selectedTemplate"
-                  class="flex gap-4"
-                >
-                  <a-radio value="helloworld">
-                    helloworld
-                  </a-radio>
-                  <a-radio value="addn">
-                    addn
-                  </a-radio>
-                  <a-radio value="torch_library_template">
-                    torch_library
-                  </a-radio>
-                </a-radio-group>
-              </div>
-              <transition name="slide-fade">
-                <div
-                  v-if="selectedId_type === item.id"
-                  class="mt-5 pt-5 border-t"
-                  :class="getDividerBorderClass()"
-                >
-                  <div
-                    style="margin-bottom: 20px; margin-top: 20px"
-                    :class="getTextColorClass()"
-                  >
-                    {{ t('web.link.structureDiagram') }}
-                  </div>
-                  <div class="overflow-hidden max-w-full transition-all duration-300">
-                    <a-image
-                      :src="getProjectPreviewImage(item.id)"
-                      class="block max-w-full h-auto object-contain transition-opacity duration-300 transform"
-                    />
-                  </div>
-                </div>
-              </transition>
             </div>
           </div>
-        </div>
-      </div>
-      <div
-        class="w-px shrink-0 self-stretch mx-4"
-        :class="getDividerClass()"
-      />
-      <div
-        class="w-[65%] text-left text-sm font-normal leading-[22px] max-[960px]:flex-auto max-[960px]:w-full max-[960px]:min-w-0"
-        :class="getTextColorClass()"
-      >
-        <div
-          class="text-base leading-[22px] font-bold mb-6"
-          :class="getTextColorClass()"
-        >
-          {{ t('web.link.projectConfig') }}
-        </div>
-        <a-form
-          ref="connectionFormRef"
-          :model="projectFormData"
-          :label-col="{ span: 6 }"
-          :wrapper-col="{ span: 24 }"
-          :rules="connectionFormRules as any"
-          layout="vertical"
-        >
-          <a-form-item name="projectName">
-            <template #label>
-              <span>{{ t('web.link.projectNameLabel') }}</span>
-              <a-tooltip :title="t('web.link.projectNameTooltip')">
-                <QuestionCircleOutlined class="help-icon" />
-              </a-tooltip>
-            </template>
-            <a-input
-              v-model:value="projectFormData.projectName"
-              :placeholder="t('web.link.projectNamePlaceholder')"
-            />
-          </a-form-item>
-          <a-form-item name="projectPath">
-            <template #label>
-              <span>{{ t('web.link.projectPathLabel') }}</span>
-              <a-tooltip :title="t('web.link.projectPathTooltip')">
-                <QuestionCircleOutlined class="help-icon" />
-              </a-tooltip>
-            </template>
-            <a-auto-complete
-              v-model:value="projectFormData.projectPath"
-              :options="projectPathOptions"
-              :loading="projectPathLoading"
-              :placeholder="t('web.link.projectPathPlaceholder')"
-              @search="(val) => remoteSearch('projectPath', val)"
-              @focus="handleSelectFolder"
-            />
-          </a-form-item>
-          <a-form-item name="projectSH">
-            <template #label>
-              <span>{{ t('web.link.envScriptLabel') }}</span>
-              <a-tooltip :title="t('web.link.envScriptTooltip')">
-                <QuestionCircleOutlined class="help-icon" />
-              </a-tooltip>
-            </template>
-            <a-auto-complete
-              v-model:value="projectFormData.projectSH"
-              :options="projectSHOptions"
-              :loading="projectSHLoading"
-              :placeholder="t('web.link.envScriptPlaceholder')"
-              @search="(val) => remoteSearch('projectSH', val)"
-              @focus="handleSelectFile"
-            />
-          </a-form-item>
-        </a-form>
-        <a-button
-          type="primary"
-          class="!mt-6 !w-auto !min-w-[84px] !px-4 !h-8 !rounded-none"
-          @click="handleCreatedProject"
-        >
-          {{ t('web.link.createNow') }}
-        </a-button>
-      </div>
+          <div
+            v-if="selectedId_type === item.id"
+            class="new-project-config mt-6 pt-6 border-t text-left text-sm font-normal leading-[22px]"
+            :class="[getTextColorClass(), getConfigDividerClass()]"
+          >
+            <a-form
+              :ref="setConnectionFormRef"
+              :model="projectFormData"
+              :rules="connectionFormRules as any"
+              layout="vertical"
+              class="new-project-form"
+            >
+              <a-form-item name="projectName">
+                <template #label>
+                  <span>{{ t('web.link.projectNameLabel') }}</span>
+                  <a-tooltip :title="t('web.link.projectNameTooltip')">
+                    <QuestionCircleOutlined class="help-icon" />
+                  </a-tooltip>
+                </template>
+                <a-input
+                  v-model:value="projectFormData.projectName"
+                  :placeholder="t('web.link.projectNamePlaceholder')"
+                />
+              </a-form-item>
+              <a-form-item name="projectPath">
+                <template #label>
+                  <span>{{ t('web.link.projectPathLabel') }}</span>
+                  <a-tooltip :title="t('web.link.projectPathTooltip')">
+                    <QuestionCircleOutlined class="help-icon" />
+                  </a-tooltip>
+                </template>
+                <a-auto-complete
+                  v-model:value="projectFormData.projectPath"
+                  :options="projectPathOptions"
+                  :loading="projectPathLoading"
+                  :placeholder="t('web.link.projectPathPlaceholder')"
+                  @search="(val) => remoteSearch('projectPath', val)"
+                  @focus="handleSelectFolder"
+                />
+              </a-form-item>
+              <a-form-item name="projectSH">
+                <template #label>
+                  <span>{{ t('web.link.envScriptLabel') }}</span>
+                  <a-tooltip :title="t('web.link.envScriptTooltip')">
+                    <QuestionCircleOutlined class="help-icon" />
+                  </a-tooltip>
+                </template>
+                <a-auto-complete
+                  v-model:value="projectFormData.projectSH"
+                  :options="projectSHOptions"
+                  :loading="projectSHLoading"
+                  :placeholder="t('web.link.envScriptPlaceholder')"
+                  @search="(val) => remoteSearch('projectSH', val)"
+                  @focus="handleSelectFile"
+                />
+              </a-form-item>
+            </a-form>
+            <a-button
+              type="primary"
+              class="new-project-create-btn"
+              @click="handleCreatedProject"
+            >
+              {{ t('web.link.createNow') }}
+            </a-button>
+          </div>
+        </a-tab-pane>
+      </a-tabs>
     </div>
   </div>
 </template>
@@ -403,37 +355,154 @@ onMounted(async () => {
   background: var(--op-devtools-background);
 }
 
-.slide-fade-enter-active {
-  transition:
-    opacity 0.3s ease-out,
-    transform 0.3s ease-out;
-  overflow: hidden;
+:deep(.sample-radio-group .ant-radio-wrapper) {
+  color: var(--vscode-editor-foreground);
 }
 
-.slide-fade-leave-active {
-  transition:
-    opacity 0.3s ease-in,
-    transform 0.3s ease-in;
-  overflow: hidden;
+.welcome-step-media-tabs {
+  width: 100%;
+  min-width: 0;
 }
 
-.slide-fade-enter-from {
-  opacity: 0;
-  transform: translateY(-10px) scale(0.95);
+.welcome-new-project-tabs :deep(.ant-tabs-left) {
+  display: flex;
+  align-items: stretch;
+  min-height: 0;
+  flex: 1;
 }
 
-.slide-fade-enter-to {
-  opacity: 1;
-  transform: translateY(0) scale(1);
+.welcome-new-project-tabs :deep(.ant-tabs-left > .ant-tabs-nav) {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  width: auto;
+  min-width: 10.5rem;
+  max-width: min(22rem, 46%);
+  height: auto;
+  max-height: none;
+  margin: 0 16px 0 0;
 }
 
-.slide-fade-leave-from {
-  opacity: 1;
-  transform: translateY(0) scale(1);
+.welcome-new-project-tabs :deep(.ant-tabs-left .ant-tabs-nav-wrap) {
+  flex: none !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
 }
 
-.slide-fade-leave-to {
-  opacity: 0;
-  transform: translateY(-10px) scale(0.95);
+.welcome-new-project-tabs :deep(.ant-tabs-left .ant-tabs-nav-wrap::before),
+.welcome-new-project-tabs :deep(.ant-tabs-left .ant-tabs-nav-wrap::after) {
+  display: none !important;
+}
+
+.welcome-new-project-tabs :deep(.ant-tabs-left .ant-tabs-nav-list) {
+  flex-direction: column;
+  width: 100%;
+  align-items: stretch;
+  transform: none !important;
+}
+
+.welcome-new-project-tabs :deep(.ant-tabs-left .ant-tabs-nav-operations) {
+  display: none !important;
+}
+
+.welcome-new-project-tabs :deep(.ant-tabs-left .ant-tabs-tab) {
+  flex: 0 0 auto !important;
+  width: 100%;
+  justify-content: flex-start;
+  margin: 0 0 2px 0 !important;
+  padding: 8px 10px;
+  min-width: 0;
+  overflow: visible;
+}
+
+.welcome-new-project-tabs :deep(.ant-tabs-left .ant-tabs-tab-btn) {
+  max-width: none;
+  width: 100%;
+  overflow: visible;
+  text-overflow: unset;
+  white-space: normal;
+  text-align: left;
+  word-break: break-word;
+  font-size: 15px;
+  line-height: 1.625;
+}
+
+.welcome-new-project-tabs :deep(.ant-tabs-left .ant-tabs-content-holder) {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding-left: 12px;
+}
+
+.welcome-new-project-tabs :deep(.ant-tabs-left .ant-tabs-tabpane) {
+  padding: 8px 0 0 16px;
+}
+
+.welcome-new-project-tab-desc {
+  font-size: 15px;
+  line-height: 1.625;
+  color: var(--vscode-descriptionForeground);
+}
+
+.welcome-new-project-tabs :deep(.sample-radio-group .ant-radio-wrapper) {
+  font-size: 15px;
+  line-height: 1.625;
+}
+
+.welcome-new-project-tabs :deep(.ant-tag) {
+  font-size: 15px;
+  line-height: 1.625;
+}
+
+@media (max-width: 576px) {
+  .welcome-new-project-tabs :deep(.ant-tabs-left .ant-tabs-tab-btn) {
+    font-size: 14px;
+  }
+
+  .welcome-new-project-tab-desc {
+    font-size: 14px;
+  }
+
+  .welcome-new-project-tabs :deep(.sample-radio-group .ant-radio-wrapper) {
+    font-size: 14px;
+  }
+
+  .welcome-new-project-tabs :deep(.ant-tag) {
+    font-size: 14px;
+  }
+}
+
+.new-project-create-btn {
+  width: auto;
+  min-width: 84px;
+  height: auto;
+  margin: 0;
+  padding: 8px 8px !important;
+  border-radius: 0;
+  line-height: 1;
+}
+
+.new-project-config :deep(.new-project-form .ant-form-item-label) {
+  width: 100%;
+  max-width: none;
+  flex: 0 0 100%;
+  text-align: left;
+}
+
+.new-project-config :deep(.new-project-form .ant-form-item-label > label) {
+  width: 100%;
+}
+
+.new-project-config :deep(.new-project-form .ant-form-item-control) {
+  width: 100%;
+  max-width: none;
+  flex: 1 1 100%;
+}
+
+.new-project-config :deep(.ant-form-item-label .help-icon) {
+  color: var(--op-devtools-muted-foreground);
+  cursor: help;
+  font-size: 14px;
+  margin-left: 4px;
 }
 </style>

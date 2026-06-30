@@ -32,5 +32,6 @@ declare module 'vue' {
     ATabs: typeof import('ant-design-vue/es')['Tabs']
     ATag: typeof import('ant-design-vue/es')['Tag']
     ATooltip: typeof import('ant-design-vue/es')['Tooltip']
+    TemplatePreview: typeof import('./src/components/template-previews/template-preview.vue')['default']
   }
 }

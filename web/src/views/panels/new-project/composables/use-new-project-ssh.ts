@@ -14,11 +14,17 @@ import {
   selectFolder, selectFile,
 } from '@web/apis/performance-run-data';
 import { t } from 'i18next';
-import { OperatorProjectViewId, type OperatorProjectViewIdValue } from '@shared/project-type-view-id';
+import {
+  OperatorProjectViewId, type OperatorProjectViewIdValue,
+} from '@shared/project-type-view-id';
 import { ValidationStrategyFactory } from './validation-strategies';
 import { MessageHandlerStrategyManager } from './message-handler-strategies';
 import { SearchStrategyFactory } from './search-strategies';
 import { ProjectNameFactory } from './project-name-factory';
+
+function resolveAntdFormRef(refValue: AntdVForm | null | undefined): AntdVForm | null {
+  return refValue ?? null;
+}
 
 export function useNewProjectSSH(selectedTemplate?: Ref<'helloworld' | 'addn' | 'torch_library_template' | 'triton_vector_add'>) {
   const connectionFormRef = ref<AntdVForm | null>(null);
@@ -106,9 +112,11 @@ export function useNewProjectSSH(selectedTemplate?: Ref<'helloworld' | 'addn' | 
         ? getTemplateName(selectedTemplate.value)
         : undefined;
     }
+
     if (selectedId_type.value === OperatorProjectViewId.TRITON) {
       return 'triton_vector_add';
     }
+
     return undefined;
   };
 
@@ -140,9 +148,19 @@ export function useNewProjectSSH(selectedTemplate?: Ref<'helloworld' | 'addn' | 
     }
   };
 
+  const setConnectionFormRef = (el: AntdVForm | null) => {
+    connectionFormRef.value = el;
+  };
+
   const handleCreatedProject = async () => {
+    const form = resolveAntdFormRef(connectionFormRef.value);
+
+    if (!form) {
+      return;
+    }
+
     try {
-      await connectionFormRef.value?.validate();
+      await form.validate();
     }
     catch {
       return;
@@ -214,12 +232,14 @@ export function useNewProjectSSH(selectedTemplate?: Ref<'helloworld' | 'addn' | 
   const initFeatureToggles = async () => {
     try {
       const tritonEnabled = await getProjectTypeSupportEnabled(OperatorProjectViewId.TRITON);
+
       if (!tritonEnabled && selectedId_type.value === OperatorProjectViewId.TRITON) {
         selectedId_type.value = OperatorProjectViewId.CANN;
       }
     }
     catch (error) {
       console.error('[Link] Failed to read project type support setting:', error);
+
       if (selectedId_type.value === OperatorProjectViewId.TRITON) {
         selectedId_type.value = OperatorProjectViewId.CANN;
       }
@@ -238,6 +258,7 @@ export function useNewProjectSSH(selectedTemplate?: Ref<'helloworld' | 'addn' | 
 
   return {
     connectionFormRef,
+    setConnectionFormRef,
     selectedId_type,
     projectFormData,
     projectPathOptions: projectPathSearchStrategy.getOptions(),

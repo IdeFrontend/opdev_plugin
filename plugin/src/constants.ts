@@ -59,8 +59,6 @@ export const VIEW_OPTIONS_ON_BOARD = 'options-on-board';
 
 export const VIEW_OPTIONS_SANITIZER = 'options-sanitizer';
 
-export const VIEW_OPEN_PROJECT = 'open-project';
-
 // Folder right-click menu commands
 export const COMMAND_MARK_AS_OPERATOR_PROJECT = `${COMMAND_PREFIX}.markAsOperatorProject`;
 

@@ -15,7 +15,7 @@ const root = path.resolve(__dirname, '..');
 /** Unpacked template roots (see scripts/build-extension.ts pack step). */
 const templateSourceDirs = [
   'plugin/templates/code_template/triton_template/triton_vector_add',
-  'plugin/templates/code_template/cann_template/pyasc_temple',
+  'plugin/templates/code_template/cann_template/pyasc_template',
 ];
 
 function pascalFromSnake(opName) {

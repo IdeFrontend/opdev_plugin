@@ -2,13 +2,15 @@
   <a-config-provider :theme="themeConfig">
     <div
       class="w-full min-h-screen px-20 py-10 font-['Microsoft_Yahei',sans-serif] flex flex-col items-center relative box-border max-[992px]:px-[30px] max-[992px]:py-[20px] max-[576px]:p-[15px] bg-[var(--vscode-editor-background)] text-[var(--vscode-editor-foreground)]"
-      @click="handleClick">
+      @click="handleClick"
+    >
       <!-- 背景层（芯片图 + 深色遮罩） -->
       <div class="absolute top-0 left-0 w-full h-full bg-cover bg-opacity-90 bg-blend-overlay z-[1] bg-[var(--vscode-editor-background)]" />
 
       <!-- 内容层 -->
       <div
-        class="relative z-[2] w-full h-full flex flex-col items-center justify-center px-[50px] box-border text-[var(--vscode-foreground)]">
+        class="relative z-[2] w-full h-full flex flex-col items-center justify-center px-[50px] box-border text-[var(--vscode-foreground)]"
+      >
         <!-- 顶部标题区域 -->
         <div class="text-center mb-8 w-full max-[992px]:mb-[20px]">
           <h1 class="text-[32px] font-semibold m-0">
@@ -18,8 +20,12 @@
 
         <!-- 导航步骤条（位于标题和核心功能模块之间） -->
         <div class="w-full flex justify-center mb-8 max-[992px]:mb-6">
-          <a-steps class="welcome-steps w-full" type="navigation" :current="currentStep"
-            @change="onStepChange">
+          <a-steps
+            class="welcome-steps w-full"
+            type="navigation"
+            :current="currentStep"
+            @change="onStepChange"
+          >
             <a-step>
               <template #icon>
                 <span
@@ -28,7 +34,9 @@
                   v-html="settingIconSvg"
                 />
               </template>
-              <template #title>{{ t('web.welcome.stepNewProject') }}</template>
+              <template #title>
+                {{ t('web.welcome.stepNewProject') }}
+              </template>
             </a-step>
             <a-step>
               <template #icon>
@@ -38,7 +46,9 @@
                   v-html="buildIconSvg"
                 />
               </template>
-              <template #title>{{ t('web.welcome.stepDev') }}</template>
+              <template #title>
+                {{ t('web.welcome.stepDev') }}
+              </template>
             </a-step>
             <a-step>
               <template #icon>
@@ -48,7 +58,9 @@
                   v-html="debugIconSvg"
                 />
               </template>
-              <template #title>{{ t('web.welcome.stepDebug') }}</template>
+              <template #title>
+                {{ t('web.welcome.stepDebug') }}
+              </template>
             </a-step>
             <a-step>
               <template #icon>
@@ -58,7 +70,9 @@
                   v-html="checkIconSvg"
                 />
               </template>
-              <template #title>{{ t('web.welcome.stepSanitizer') }}</template>
+              <template #title>
+                {{ t('web.welcome.stepSanitizer') }}
+              </template>
             </a-step>
             <a-step>
               <template #icon>
@@ -68,7 +82,9 @@
                   v-html="powerIconSvg"
                 />
               </template>
-              <template #title>{{ t('web.welcome.stepPerformance') }}</template>
+              <template #title>
+                {{ t('web.welcome.stepPerformance') }}
+              </template>
             </a-step>
           </a-steps>
         </div>
@@ -76,7 +92,8 @@
         <!-- 核心功能模块区域：根据步骤展示 5 个面板 -->
         <div
           class="flex items-stretch justify-center gap-[15px] max-w-[1200px] w-full mb-[30px] py-[30px] px-[20px] flex-none rounded-xl min-h-[300px] max-[992px]:gap-3 max-[992px]:px-[15px] max-[992px]:py-[25px] max-[992px]:min-h-[400px] max-[576px]:gap-2 max-[576px]:p-[20px_10px] max-[576px]:min-h-[350px] bg-[var(--vscode-editorWidget-background)] shadow-md"
-          @click.stop>
+          @click.stop
+        >
           <!-- Step 0: 新建算子工程 -->
           <div
             v-show="currentStep === 0"
@@ -88,113 +105,147 @@
 
             <div class="flex w-full min-h-0 min-w-0 flex-1 flex-col gap-4">
               <div
-                class="welcome-step-media-tabs welcome-new-project-tabs box-border w-full min-h-0 min-w-0 flex-1 overflow-hidden rounded-lg border border-[var(--op-devtools-border)] p-3 max-[576px]:p-2.5"
+                class="welcome-step-media-tabs welcome-new-project-tabs box-border w-full min-h-0 min-w-0 flex-1"
               >
-                <a-tabs v-model:activeKey="projectTypeTabKey" class="w-full" tab-position="left">
-                    <a-tab-pane :key="String(OperatorProjectViewId.CANN)" :tab="t('web.welcome.ascendCOpProject')">
-                      <div
-                        class="welcome-new-project-tab-desc mt-1 mb-2.5 whitespace-normal"
-                        v-html="getTemplateDesc(selectedTemplate)"
-                      />
-                      <a-tag color="blue" class="mt-2 mr-2">
-                        {{ t('web.welcome.langAscendC') }}
-                      </a-tag>
-                      <a-tag color="purple" class="mt-2 mr-2">
-                        {{ t('web.welcome.typeAngle') }}
-                      </a-tag>
-                      <div class="mt-4 flex flex-wrap items-center gap-3">
-                        <span class="welcome-new-project-tab-desc whitespace-nowrap op-text">
-                          {{ t('web.welcome.sample') }}
-                        </span>
-                        <a-radio-group v-model:value="selectedTemplate" class="sample-radio-group flex flex-wrap gap-4">
-                          <a-radio value="helloworld">
-                            helloworld
-                          </a-radio>
-                          <a-radio value="addn">
-                            addn
-                          </a-radio>
-                          <a-radio value="torch_library_template">
-                            torch_library
-                          </a-radio>
-                        </a-radio-group>
-                      </div>
-                      <div class="mt-4">
-                        <div class="transition-all duration-300">
-                          <a-image
-                            :src="getTemplateImage(selectedTemplate)"
-                            class="welcome-new-project-preview block transition-opacity duration-300 transform"
-                          />
-                        </div>
-                      </div>
-                    </a-tab-pane>
-
-                    <a-tab-pane
-                      :key="String(OperatorProjectViewId.STANDARD_CUSTOM)"
-                      :tab="t('web.welcome.ascendCStandardProject')"
+                <a-tabs
+                  v-model:active-key="projectTypeTabKey"
+                  class="w-full"
+                  tab-position="left"
+                >
+                  <a-tab-pane
+                    :key="String(OperatorProjectViewId.CANN)"
+                    :tab="t('web.welcome.ascendCOpProject')"
+                  >
+                    <div
+                      class="welcome-new-project-tab-desc mb-2.5 whitespace-normal"
+                      v-html="getTemplateDesc(selectedTemplate)"
+                    />
+                    <a-tag
+                      color="blue"
+                      class="mt-2 mr-2"
                     >
-                      <div class="welcome-new-project-tab-desc mt-1 mb-2.5 whitespace-normal">
-                        {{ t('web.welcome.ascendCStandardDesc') }}
-                      </div>
-                      <a-tag color="blue" class="mt-2 mr-2">
-                        {{ t('web.welcome.langAscendC') }}
-                      </a-tag>
-                      <a-tag color="green" class="mt-2 mr-2">
-                        {{ t('web.welcome.typeStandardCustom') }}
-                      </a-tag>
-                      <div class="mt-4">
-                        <div class="transition-all duration-300">
-                          <a-image
-                            :src="standardCustomPreview"
-                            class="welcome-new-project-preview block transition-opacity duration-300 transform"
-                          />
-                        </div>
-                      </div>
-                    </a-tab-pane>
-
-                    <a-tab-pane :key="String(OperatorProjectViewId.PYASC)" :tab="t('web.welcome.pythonPyascProject')">
-                      <div class="welcome-new-project-tab-desc mt-1 mb-2.5 whitespace-normal">
-                        {{ t('web.welcome.pythonPyascDesc') }}
-                      </div>
-                      <a-tag color="blue" class="mt-2 mr-2">
-                        {{ t('web.welcome.langPython') }}
-                      </a-tag>
-                      <a-tag color="purple" class="mt-2 mr-2">
-                        {{ t('web.welcome.typePyasc') }}
-                      </a-tag>
-                      <div class="mt-4">
-                        <div class="transition-all duration-300">
-                          <a-image
-                            :src="tipBase_0"
-                            class="welcome-new-project-preview block transition-opacity duration-300 transform"
-                          />
-                        </div>
-                      </div>
-                    </a-tab-pane>
-
-                    <a-tab-pane
-                      v-if="tritonSupportEnabled"
-                      :key="String(OperatorProjectViewId.TRITON)"
-                      :tab="t('web.welcome.pythonTritonProject')"
+                      {{ t('web.welcome.langAscendC') }}
+                    </a-tag>
+                    <a-tag
+                      color="purple"
+                      class="mt-2 mr-2"
                     >
-                      <div class="welcome-new-project-tab-desc mt-1 mb-2.5 whitespace-normal">
-                        {{ t('web.welcome.pythonTritonDesc') }}
+                      {{ t('web.welcome.typeAngle') }}
+                    </a-tag>
+                    <div class="mt-4">
+                      <a-radio-group
+                        v-model:value="selectedTemplate"
+                        class="sample-radio-group flex flex-wrap gap-4"
+                      >
+                        <a-radio value="helloworld">
+                          helloworld
+                        </a-radio>
+                        <a-radio value="addn">
+                          addn
+                        </a-radio>
+                        <a-radio value="torch_library_template">
+                          torch_library
+                        </a-radio>
+                      </a-radio-group>
+                    </div>
+                    <div class="mt-4">
+                      <div class="transition-all duration-300">
+                        <TemplatePreview
+                          :files="selectedTemplatePreviewFiles"
+                          class="welcome-new-project-preview block transition-opacity duration-300 transform"
+                        />
                       </div>
-                      <a-tag color="blue" class="mt-2 mr-2">
-                        {{ t('web.welcome.langPython') }}
-                      </a-tag>
-                      <a-tag color="purple" class="mt-2 mr-2">
-                        {{ t('web.welcome.typeTriton') }}
-                      </a-tag>
-                      <div class="mt-4">
-                        <div class="transition-all duration-300">
-                          <a-image
-                            :src="tritonVectorAddPreview"
-                            class="welcome-new-project-preview block transition-opacity duration-300 transform"
-                          />
-                        </div>
+                    </div>
+                  </a-tab-pane>
+
+                  <a-tab-pane
+                    :key="String(OperatorProjectViewId.STANDARD_CUSTOM)"
+                    :tab="t('web.welcome.ascendCStandardProject')"
+                  >
+                    <div class="welcome-new-project-tab-desc mb-2.5 whitespace-normal">
+                      {{ t('web.welcome.ascendCStandardDesc') }}
+                    </div>
+                    <a-tag
+                      color="blue"
+                      class="mt-2 mr-2"
+                    >
+                      {{ t('web.welcome.langAscendC') }}
+                    </a-tag>
+                    <a-tag
+                      color="green"
+                      class="mt-2 mr-2"
+                    >
+                      {{ t('web.welcome.typeStandardCustom') }}
+                    </a-tag>
+                    <div class="mt-4">
+                      <div class="transition-all duration-300">
+                        <TemplatePreview
+                          :files="standardProjectPreviewFiles"
+                          class="welcome-new-project-preview block transition-opacity duration-300 transform"
+                        />
                       </div>
-                    </a-tab-pane>
-                  </a-tabs>
+                    </div>
+                  </a-tab-pane>
+
+                  <a-tab-pane
+                    :key="String(OperatorProjectViewId.PYASC)"
+                    :tab="t('web.welcome.pythonPyascProject')"
+                  >
+                    <div class="welcome-new-project-tab-desc mb-2.5 whitespace-normal">
+                      {{ t('web.welcome.pythonPyascDesc') }}
+                    </div>
+                    <a-tag
+                      color="blue"
+                      class="mt-2 mr-2"
+                    >
+                      {{ t('web.welcome.langPython') }}
+                    </a-tag>
+                    <a-tag
+                      color="purple"
+                      class="mt-2 mr-2"
+                    >
+                      {{ t('web.welcome.typePyasc') }}
+                    </a-tag>
+                    <div class="mt-4">
+                      <div class="transition-all duration-300">
+                        <TemplatePreview
+                          :files="pyascProjectPreviewFiles"
+                          class="welcome-new-project-preview block transition-opacity duration-300 transform"
+                        />
+                      </div>
+                    </div>
+                  </a-tab-pane>
+
+                  <a-tab-pane
+                    v-if="tritonSupportEnabled"
+                    :key="String(OperatorProjectViewId.TRITON)"
+                    :tab="t('web.welcome.pythonTritonProject')"
+                  >
+                    <div class="welcome-new-project-tab-desc mb-2.5 whitespace-normal">
+                      {{ t('web.welcome.pythonTritonDesc') }}
+                    </div>
+                    <a-tag
+                      color="blue"
+                      class="mt-2 mr-2"
+                    >
+                      {{ t('web.welcome.langPython') }}
+                    </a-tag>
+                    <a-tag
+                      color="purple"
+                      class="mt-2 mr-2"
+                    >
+                      {{ t('web.welcome.typeTriton') }}
+                    </a-tag>
+                    <div class="mt-4">
+                      <div class="transition-all duration-300">
+                        <TemplatePreview
+                          :files="tritonProjectPreviewFiles"
+                          class="welcome-new-project-preview block transition-opacity duration-300 transform"
+                        />
+                      </div>
+                    </div>
+                  </a-tab-pane>
+                </a-tabs>
               </div>
 
               <div class="flex w-full shrink-0 flex-col items-center">
@@ -223,14 +274,20 @@
             </p>
 
             <div class="w-full min-w-0 welcome-step-media-tabs">
-              <a-tabs v-model:activeKey="devTabKey">
-                <a-tab-pane key="code" :tab="t('web.welcome.tabWriteCode')">
+              <a-tabs v-model:active-key="devTabKey">
+                <a-tab-pane
+                  key="code"
+                  :tab="t('web.welcome.tabWriteCode')"
+                >
                   <a-image
                     :src="writeImg"
                     class="welcome-media-full transition-opacity duration-300 transform"
                   />
                 </a-tab-pane>
-                <a-tab-pane key="build" :tab="t('web.welcome.tabCompileDeploy')">
+                <a-tab-pane
+                  key="build"
+                  :tab="t('web.welcome.tabCompileDeploy')"
+                >
                   <video
                     :src="buildImg"
                     autoplay
@@ -240,7 +297,10 @@
                     class="welcome-media-full object-contain transition-opacity duration-300 transform"
                   />
                 </a-tab-pane>
-                <a-tab-pane key="run" :tab="t('web.welcome.tabRun')">
+                <a-tab-pane
+                  key="run"
+                  :tab="t('web.welcome.tabRun')"
+                >
                   <video
                     :src="runImg"
                     autoplay
@@ -285,8 +345,11 @@
             </p>
 
             <div class="w-full min-w-0 welcome-step-media-tabs">
-              <a-tabs v-model:activeKey="checkTabKey">
-                <a-tab-pane key="select" :tab="t('web.welcome.tabSelectCheckContent')">
+              <a-tabs v-model:active-key="checkTabKey">
+                <a-tab-pane
+                  key="select"
+                  :tab="t('web.welcome.tabSelectCheckContent')"
+                >
                   <video
                     :src="selectCheckImg"
                     autoplay
@@ -296,7 +359,10 @@
                     class="welcome-media-full object-contain transition-opacity duration-300 transform"
                   />
                 </a-tab-pane>
-                <a-tab-pane key="result" :tab="t('web.welcome.tabViewCheckResult')">
+                <a-tab-pane
+                  key="result"
+                  :tab="t('web.welcome.tabViewCheckResult')"
+                >
                   <video
                     :src="checkImg"
                     autoplay
@@ -320,8 +386,11 @@
             </p>
 
             <div class="w-full min-w-0 welcome-step-media-tabs">
-              <a-tabs v-model:activeKey="perfTabKey">
-                <a-tab-pane key="select" :tab="t('web.welcome.tabSelectAnalysisContent')">
+              <a-tabs v-model:active-key="perfTabKey">
+                <a-tab-pane
+                  key="select"
+                  :tab="t('web.welcome.tabSelectAnalysisContent')"
+                >
                   <video
                     :src="selectAnalysisImg"
                     autoplay
@@ -331,7 +400,10 @@
                     class="welcome-media-full object-contain transition-opacity duration-300 transform"
                   />
                 </a-tab-pane>
-                <a-tab-pane key="result" :tab="t('web.welcome.tabViewAnalysisResult')">
+                <a-tab-pane
+                  key="result"
+                  :tab="t('web.welcome.tabViewAnalysisResult')"
+                >
                   <video
                     :src="analysisImg"
                     autoplay
@@ -351,7 +423,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import {
+  computed, onMounted, ref,
+} from 'vue';
 import { t } from 'i18next';
 import { useTheme } from '@web/composables/use-theme';
 import {
@@ -365,12 +439,11 @@ import buildIconRaw from '@/assets/svg/build.svg?raw';
 import checkIconRaw from '@/assets/svg/check.svg?raw';
 import debugIconRaw from '@/assets/svg/debug.svg?raw';
 import powerIconRaw from '@/assets/svg/power.svg?raw';
-import tipBase_0 from '@/assets/imgs/add.png';
-import standardCustomPreview from '@/assets/imgs/standard_custom.png';
-import tipBase_1_1 from '@/assets/imgs/hello_world.png';
-import tipBase_1_2 from '@/assets/imgs/add_custom.png';
-import tipBase_1_3 from '@/assets/imgs/torch_library_template.png';
-import tritonVectorAddPreview from '@/assets/imgs/triton_vector_add.png';
+import TemplatePreview from '@/components/template-previews/template-preview.vue';
+import {
+  getProjectPreviewFiles,
+  getTemplatePreviewFiles,
+} from '@/components/template-previews/template-preview-files';
 import writeImg from '@/assets/imgs/write.png';
 import buildImg from '@/assets/imgs/build.mp4';
 import runImg from '@/assets/imgs/run.mp4';
@@ -379,7 +452,6 @@ import checkImg from '@/assets/imgs/check.mp4';
 import selectCheckImg from '@/assets/imgs/selectCheck.mp4';
 import analysisImg from '@/assets/imgs/analysis.mp4';
 import selectAnalysisImg from '@/assets/imgs/selectAnalysis.mp4';
-
 
 const { themeConfig } = useTheme();
 
@@ -406,6 +478,7 @@ const projectTypeTabKey = computed<string>({
   get: () => String(selectedProjectTypeId.value),
   set: (key: string) => {
     const id = Number(key);
+
     if (isOperatorProjectViewId(id)) {
       selectedProjectTypeId.value = id;
     }
@@ -413,10 +486,14 @@ const projectTypeTabKey = computed<string>({
 });
 
 // <<<>>> 算子工程模板选择（helloworld / addn / torch_library）
-const selectedTemplate = ref<'helloworld' | 'addn' | 'torch_library_template' | 'triton_vector_add'>(
-  'helloworld',
-);
+const selectedTemplate = ref<'helloworld' | 'addn' | 'torch_library_template' | 'triton_vector_add'>('helloworld');
 const tritonSupportEnabled = ref(false);
+const selectedTemplatePreviewFiles = computed(
+  () => getTemplatePreviewFiles(selectedTemplate.value) ?? [],
+);
+const standardProjectPreviewFiles = getProjectPreviewFiles(OperatorProjectViewId.STANDARD_CUSTOM) ?? [];
+const pyascProjectPreviewFiles = getProjectPreviewFiles(OperatorProjectViewId.PYASC) ?? [];
+const tritonProjectPreviewFiles = getProjectPreviewFiles(OperatorProjectViewId.TRITON) ?? [];
 
 const getTemplateDesc = (template: string) => {
   switch (template) {
@@ -430,21 +507,6 @@ const getTemplateDesc = (template: string) => {
       return t('web.welcome.templateDescTritonVectorAdd');
     default:
       return t('web.welcome.templateDescHelloworld');
-  }
-};
-
-const getTemplateImage = (template: string) => {
-  switch (template) {
-    case 'helloworld':
-      return tipBase_1_1;
-    case 'addn':
-      return tipBase_1_2;
-    case 'torch_library_template':
-      return tipBase_1_3;
-    case 'triton_vector_add':
-      return tritonVectorAddPreview;
-    default:
-      return tipBase_1_1;
   }
 };
 
@@ -481,6 +543,7 @@ onMounted(async () => {
     console.error('[Welcome] Failed to read project type support setting:', error);
     tritonSupportEnabled.value = false;
   }
+
   if (!tritonSupportEnabled.value && selectedProjectTypeId.value === OperatorProjectViewId.TRITON) {
     selectedProjectTypeId.value = OperatorProjectViewId.CANN;
   }
@@ -669,7 +732,7 @@ onMounted(async () => {
   max-width: min(22rem, 46%);
   height: auto;
   max-height: none;
-  margin: 0 12px 0 0;
+  margin: 0 16px 0 0;
 }
 
 .welcome-new-project-tabs :deep(.ant-tabs-left .ant-tabs-nav-wrap) {
@@ -721,10 +784,11 @@ onMounted(async () => {
   flex: 1;
   min-width: 0;
   min-height: 0;
+  padding-left: 12px;
 }
 
 .welcome-new-project-tabs :deep(.ant-tabs-left .ant-tabs-tabpane) {
-  padding: 0 0 0 4px;
+  padding: 8px 0 0 16px;
 }
 
 .welcome-new-project-tab-desc {

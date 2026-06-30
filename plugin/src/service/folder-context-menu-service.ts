@@ -1442,10 +1442,10 @@ export class FolderContextMenuService {
           opType = 'ascend';
           break;
         case OperatorProjectType.PYASC:
-          // pyasc operator project, using pyasc_temple template
-          templateName = 'pyasc_temple';
+          // pyasc operator project, using pyasc_template template
+          templateName = 'pyasc_template';
           opType = 'pyasc';
-          console.log('[FolderContextMenuService] PYASC type, using pyasc_temple template');
+          console.log('[FolderContextMenuService] PYASC type, using pyasc_template template');
           break;
         case OperatorProjectType.TRITON:
           templateName = 'triton_vector_add';

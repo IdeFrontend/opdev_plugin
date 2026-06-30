@@ -350,14 +350,6 @@ export default {
   'web.home.newOperatorProject': '新建算子工程',
   'web.home.openOperatorProject': '打开算子工程',
 
-  // web open-project panel
-  'web.openProject.title': '打开算子工程',
-  'web.openProject.projectPathLabel': '算子工程位置',
-  'web.openProject.projectPathTooltip': '您要打开的算子工程的存储路径。',
-  'web.openProject.projectPathPlaceholder': '请输入工程位置，支持远程搜索',
-  'web.openProject.envScriptLabel': '环境变量配置脚本',
-  'web.openProject.envScriptTooltip': '安装CANN包后需要执行的set_env.sh脚本的绝对路径信息，如果使用的是一站式开发平台提供的容器镜像，则此处可以置空。若出现报错提示路径不存在，说明非有效环境变量脚本路径，需要输入设置环境变量脚本的绝对路径。',
-  'web.openProject.envScriptPlaceholder': '请输入环境变量.sh文件地址，支持远程搜索',
   'web.openProject.openNow': '立即打开',
 
   // web operate sidebar
@@ -427,7 +419,6 @@ export default {
   'web.welcome.ascendCOpProject': '<<<>>>算子',
   'web.welcome.langAscendC': '语言：Ascend C',
   'web.welcome.typeAngle': '类型：<<<>>>',
-  'web.welcome.sample': '样例',
   'web.welcome.ascendCStandardProject': '标准自定义算子',
   'web.welcome.ascendCStandardDesc': '基于Ascend C语言的标准自定义算子工程，op_host存放在CPU侧的代码实现，op_kermel存放NPU侧的代码实现，op_graph存放图模式下的代码实现',
   'web.welcome.typeStandardCustom': '类型：标准自定义',
