@@ -45,6 +45,10 @@ export default {
   'task.fileOutsideWorkspace': '当前文件必须位于工作区目录内',
   'task.launchJsonOpened': '已打开 launch.json 文件',
   'task.cannotOpenLaunchJson': '无法打开 launch.json: {{error}}',
+  'task.operatorActionPreemptedByCompileRun':
+    '由于启动了编译/运行，算子队列中的动作已被中断。',
+  'task.queuedRunPreemptedByOperatorAction':
+    '由于启动了算子动作，排队中的 Run 已被取消。',
   'task.tritonDebugDependenciesMissing':
     'Triton 调试需要可成功 import torch 与 triton 的 Python 环境（解释器：{{interpreter}}）。',
   'task.tritonKernelPathNotFound':

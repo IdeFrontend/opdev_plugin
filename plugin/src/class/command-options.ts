@@ -57,6 +57,7 @@ interface CommandResult {
   stdout: string;
   stderr: string;
   output: string;
+  interruptedByUserStop: boolean;
 }
 
 class CommandExecutor extends EventEmitter {
@@ -64,6 +65,7 @@ class CommandExecutor extends EventEmitter {
   private stdout: string = '';
   private stderr: string = '';
   private output: string = '';
+  private interruptedByUserStop = false;
 
   // ANSI escape code regular expression
   private readonly ansiRegex = /\x1b\[[0-9;]*[a-zA-Z]/g;
@@ -108,6 +110,7 @@ class CommandExecutor extends EventEmitter {
       this.stdout = '';
       this.stderr = '';
       this.output = '';
+      this.interruptedByUserStop = false;
 
       const cwd = options.cwd || process.cwd();
       const ascendEnv = pickAscendSpawnEnv(options.env);
@@ -258,17 +261,22 @@ class CommandExecutor extends EventEmitter {
       stdout: this.stdout,
       stderr: this.stderr,
       output: this.output,
+      interruptedByUserStop: this.interruptedByUserStop,
     };
   }
 
   /**
    * Clean up resources (terminate process asynchronously and wait for exit)
    */
-  private async cleanup(): Promise<void> {
+  private async cleanup(markInterruptedByUserStop = false): Promise<void> {
     const child = this.process;
 
     if (!child) {
       return;
+    }
+
+    if (markInterruptedByUserStop) {
+      this.interruptedByUserStop = true;
     }
 
     // Immediately clear member variable references to prevent repeated calls to this method
@@ -350,7 +358,7 @@ class CommandExecutor extends EventEmitter {
    * Forcefully terminate command execution (asynchronously)
    */
   async kill(): Promise<void> {
-    await this.cleanup();
+    await this.cleanup(true);
   }
 }
 

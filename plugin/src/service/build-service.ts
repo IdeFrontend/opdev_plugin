@@ -445,9 +445,14 @@ export class BuildService {
       console.log('[startBuild] Build execution result:', {
         code: res.code,
         output: res.output,
+        interruptedByUserStop: res.interruptedByUserStop,
       });
 
       if (res.code !== 0) {
+        if (res.interruptedByUserStop) {
+          return;
+        }
+
         console.error('[startBuild] Build failed, exit code:', res.code, 'output:', res.output);
         vscode.window.showErrorMessage(t('build.compileFailed', { output: res.output }));
 
@@ -541,6 +546,10 @@ export class BuildService {
       console.log('runRes', res);
 
       if (res.code !== 0) {
+        if (res.interruptedByUserStop) {
+          return;
+        }
+
         const output = res.output ?? '';
         const isQemuSegfault = /qemu/i.test(output) && (/signal\s+11|Segmentation\s+fault/i.test(output) || /core\s+dumped/i.test(output));
         const isPyascRuntime = !behavior.requiresBuildBeforeAnalysis && /runtime_camodel|cannot find -lruntime_camodel|Runtime library must be available/i.test(output);

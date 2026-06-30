@@ -16,6 +16,7 @@ import { performanceDataMethods } from '@plugin/controller/performance-controlle
 import { performanceMethods } from '@plugin/controller/performance-data-controller';
 import { viewService } from '@plugin/service/view-service';
 import { ensureEnvironmentScriptForOperateAction } from '@plugin/helpers/environment-script-guard';
+import type { CompileRunGateUiState } from '@plugin/helpers/operator-compile-run-gate';
 import { appendLog } from '@plugin/helpers/output-channel';
 import { sanitizerDiagnosticsService } from '@plugin/service/sanitizer-diagnostics.service';
 import { runDataService } from '@plugin/service/run-data-service';
@@ -417,6 +418,9 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   /** Flow tree only: queue status for queueable operator actions. */
   private queuedFlowStates: Partial<Record<OperateNodeId, 'queued' | 'running' | 'cancel_failed'>> = {};
 
+  /** Compile/run gate row icons (build spinner + run hourglass while queued). */
+  private compileRunGateFlowState: CompileRunGateUiState = {};
+
   setQueuedFlowStates(states: Partial<Record<OperateNodeId, 'queued' | 'running' | 'cancel_failed'>>): void {
     if (this.kind !== 'flow') {
       return;
@@ -431,6 +435,34 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
     this.queuedFlowStates = states ?? {};
     this.onDidChangeTreeDataEmitter.fire();
+  }
+
+  setCompileRunGateUiState(state: CompileRunGateUiState): void {
+    if (this.kind !== 'flow') {
+      return;
+    }
+
+    const prev = JSON.stringify(this.compileRunGateFlowState);
+    const next = JSON.stringify(state ?? {});
+
+    if (prev === next) {
+      return;
+    }
+
+    this.compileRunGateFlowState = state ?? {};
+    this.onDidChangeTreeDataEmitter.fire();
+  }
+
+  private flowRowQueueState(nodeId: OperateNodeId): 'queued' | 'running' | 'cancel_failed' | undefined {
+    if (nodeId === 'build' || nodeId === 'run') {
+      const gateState = this.compileRunGateFlowState[nodeId];
+
+      if (gateState) {
+        return gateState;
+      }
+    }
+
+    return this.queuedFlowStates[nodeId];
   }
 
   /**
@@ -542,7 +574,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
   /** True when this tree row should show the loading spinner (parent + active subitem while a flow child action runs). */
   private isFlowExecutingIcon(nodeId: OperateNodeId): boolean {
-    const q = this.queuedFlowStates[nodeId];
+    const q = this.flowRowQueueState(nodeId);
 
     if (q === 'running' || q === 'queued' || q === 'cancel_failed') {
       return true;
@@ -559,7 +591,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       return normalIcon;
     }
 
-    const q = this.queuedFlowStates[nodeId];
+    const q = this.flowRowQueueState(nodeId);
 
     // Waiting in the operator queue (not the active runner): themed animated SVG hourglass.
     if (q === 'queued') {
@@ -573,7 +605,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
   /** Appends `opdevtools.flowRunning` while this row is the active flow action (inline stop in tree). */
   private mergeFlowRunningContext(nodeId: OperateNodeId, base?: string): string | undefined {
-    const queuedState = this.queuedFlowStates[nodeId];
+    const queuedState = this.flowRowQueueState(nodeId);
     const isQueuedCancellable = queuedState === 'queued' || queuedState === 'running' || queuedState === 'cancel_failed';
 
     if (!this.matchesFlowExecutingNode(nodeId) && !isQueuedCancellable) {

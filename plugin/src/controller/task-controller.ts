@@ -38,6 +38,7 @@ import {
 } from '@plugin/domain/services/command-strategy/python-operator-strategy-shared';
 import { whenPostActivateBootstrapReady } from '@plugin/helpers/post-activate-bootstrap';
 import { resolveOrPickPythonOperatorUri } from '@plugin/helpers/python-operator-editor-context';
+import { enqueueCompileRun } from '@plugin/helpers/operator-flow-coordinator';
 
 // Global task manager: used to track and terminate executing tasks
 let currentExecutor: CommandExecutor | null = null;
@@ -204,66 +205,72 @@ export const taskMethods = {
    * Build operator
    */
   async startBuild(params: StartBuildParams = {}): Promise<void> {
-    await ensurePostActivateBootstrapReady();
+    return enqueueCompileRun('build', async () => {
+      await ensurePostActivateBootstrapReady();
 
-    try {
-      await ProjectManager.getInstance()
-        .initProject();
-      // Save the current executor reference for possible termination operations
-      currentExecutor = ProjectManager.getInstance()
-        .getExecutor();
-      await buildService.startBuild(params);
-    }
-    finally {
-      // Clear executor reference
-      currentExecutor = null;
-      ProjectManager.getInstance()
-        .clearExecutor();
-    }
+      try {
+        await ProjectManager.getInstance()
+          .initProject();
+        // Save the current executor reference for possible termination operations
+        currentExecutor = ProjectManager.getInstance()
+          .getExecutor();
+        await buildService.startBuild(params);
+      }
+      finally {
+        // Clear executor reference
+        currentExecutor = null;
+        ProjectManager.getInstance()
+          .clearExecutor();
+      }
+    });
   },
 
   /**
    * Run operator
    */
   async startRun(params: StartRunParams = {}): Promise<void> {
-    await ensurePostActivateBootstrapReady();
+    return enqueueCompileRun('run', async () => {
+      await ensurePostActivateBootstrapReady();
 
-    try {
-      await ProjectManager.getInstance()
-        .initProject();
-      // Save current executor reference
-      currentExecutor = ProjectManager.getInstance()
-        .getExecutor();
-      await buildService.startRun(params);
-    }
-    finally {
-      // Clear executor reference
-      currentExecutor = null;
-      ProjectManager.getInstance()
-        .clearExecutor();
-    }
+      try {
+        await ProjectManager.getInstance()
+          .initProject();
+        // Save current executor reference
+        currentExecutor = ProjectManager.getInstance()
+          .getExecutor();
+        await buildService.startRun(params);
+      }
+      finally {
+        // Clear executor reference
+        currentExecutor = null;
+        ProjectManager.getInstance()
+          .clearExecutor();
+      }
+    });
   },
 
   /**
    * Build example
    */
   async startBuildExample(params: StartBuildExampleParams = {}): Promise<void> {
-    await ensurePostActivateBootstrapReady();
+    return enqueueCompileRun('buildExample', async () => {
+      await ensurePostActivateBootstrapReady();
 
-    try {
-      await ProjectManager.getInstance()
-        .initProject();
-      // Save current executor reference
-      currentExecutor = ProjectManager.getInstance()
-        .getExecutor();
-      await buildService.startBuildExample(params);
-    }
-    finally {
-      // Clear executor reference
-      currentExecutor = null;
-      ProjectManager.getInstance()
-        .clearExecutor();
-    }
+      try {
+        await ProjectManager.getInstance()
+          .initProject();
+        // Save current executor reference
+        currentExecutor = ProjectManager.getInstance()
+          .getExecutor();
+        await buildService.startBuildExample(params);
+      }
+      finally {
+        // Clear executor reference
+        currentExecutor = null;
+        ProjectManager.getInstance()
+          .clearExecutor();
+      }
+    });
   },
 
   /**
@@ -395,8 +402,9 @@ export const taskMethods = {
 
   /**
    * Stop task
+   * @returns true when a running shell process was terminated
    */
-  async stopTask(): Promise<void> {
+  async stopTask(options?: { notify?: boolean }): Promise<boolean> {
     console.log('[stopTask] Received stop task request');
 
     if (currentExecutor) {
@@ -405,98 +413,108 @@ export const taskMethods = {
       currentExecutor = null;
       ProjectManager.getInstance()
         .clearExecutor();
-      vscode.window.showWarningMessage(t('task.stoppedByUser'));
+
+      if (options?.notify !== false) {
+        vscode.window.showWarningMessage(t('task.stoppedByUser'));
+      }
+
+      return true;
     }
-    else {
+
+    if (options?.notify !== false) {
       console.log('[stopTask] No running task');
       vscode.window.showInformationMessage(t('task.noRunningTask'));
     }
+
+    return false;
   },
 
   /**
    * Run NPU debug
    */
   async runDebug(): Promise<void> {
-    await ensurePostActivateBootstrapReady();
+    return enqueueCompileRun('build', async () => {
+      await ensurePostActivateBootstrapReady();
 
-    try {
-      if (!(await guardSupportedProjectTypeOrNotify())) {
-        return;
-      }
+      try {
+        if (!(await guardSupportedProjectTypeOrNotify())) {
+          return;
+        }
 
-      await ProjectManager.getInstance()
-        .initProject();
-      currentExecutor = ProjectManager.getInstance()
-        .getExecutor();
+        await ProjectManager.getInstance()
+          .initProject();
+        currentExecutor = ProjectManager.getInstance()
+          .getExecutor();
 
-      const projectTypeInfo = await homeMethods.getProjectType();
-      const projectType = projectTypeInfo.projectType;
+        const projectTypeInfo = await homeMethods.getProjectType();
+        const projectType = projectTypeInfo.projectType;
 
-      if (!(await runTritonDebugPreflight(projectType))) {
-        currentExecutor = null;
-        ProjectManager.getInstance()
-          .clearExecutor();
+        if (!(await runTritonDebugPreflight(projectType))) {
+          currentExecutor = null;
+          ProjectManager.getInstance()
+            .clearExecutor();
 
-        return;
-      }
+          return;
+        }
 
-      const pythonContext = await preparePythonOperatorLaunchContext(projectType);
+        const pythonContext = await preparePythonOperatorLaunchContext(projectType);
 
-      if (pythonContext === null
-        && (projectType === OperatorProjectType.PYASC
-          || projectType === OperatorProjectType.TRITON)) {
-        currentExecutor = null;
-        ProjectManager.getInstance()
-          .clearExecutor();
+        if (pythonContext === null
+          && (projectType === OperatorProjectType.PYASC
+            || projectType === OperatorProjectType.TRITON)) {
+          currentExecutor = null;
+          ProjectManager.getInstance()
+            .clearExecutor();
 
-        return;
-      }
+          return;
+        }
 
-      const operatorNames = await homeMethods.getSelectedOperators();
-      const compileOption = await getCompileOptionForSelectedOperators();
+        const operatorNames = await homeMethods.getSelectedOperators();
+        const compileOption = await getCompileOptionForSelectedOperators();
 
-      await buildService.startBuild({
-        scriptField: 'npu_debug_script',
-        operatorNames: operatorNames || undefined,
-        compileOption,
-      });
-      await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
+        await buildService.startBuild({
+          scriptField: 'npu_debug_script',
+          operatorNames: operatorNames || undefined,
+          compileOption,
+        });
+        await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
 
-      const projectInfo = await homeMethods.getProjectType();
-      const buildBehavior = OperatorPluginRegistry.getBuildBehaviorByProjectType(projectInfo.projectType);
-      const debugConfigName = resolveDebugLaunchConfigName(
-        projectInfo.projectType,
-        'npu',
-        buildBehavior,
-        projectInfo.projectTemplateName,
-      );
-
-      const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-
-      if (workspaceFolder) {
-        await patchLaunchJsonForDebugSession(
-          workspaceFolder.uri.fsPath,
-          debugConfigName,
-          pythonContext,
-          projectType ?? null,
+        const projectInfo = await homeMethods.getProjectType();
+        const buildBehavior = OperatorPluginRegistry.getBuildBehaviorByProjectType(projectInfo.projectType);
+        const debugConfigName = resolveDebugLaunchConfigName(
+          projectInfo.projectType,
           'npu',
+          buildBehavior,
+          projectInfo.projectTemplateName,
         );
 
-        await vscode.debug.startDebugging(workspaceFolder, debugConfigName);
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+
+        if (workspaceFolder) {
+          await patchLaunchJsonForDebugSession(
+            workspaceFolder.uri.fsPath,
+            debugConfigName,
+            pythonContext,
+            projectType ?? null,
+            'npu',
+          );
+
+          await vscode.debug.startDebugging(workspaceFolder, debugConfigName);
+        }
+        else {
+          await vscode.commands.executeCommand('workbench.action.debug.start');
+        }
       }
-      else {
-        await vscode.commands.executeCommand('workbench.action.debug.start');
+      catch (error) {
+        console.error('Error while opening NPU debug:', error);
+        throw error;
       }
-    }
-    catch (error) {
-      console.error('Error while opening NPU debug:', error);
-      throw error;
-    }
-    finally {
-      currentExecutor = null;
-      ProjectManager.getInstance()
-        .clearExecutor();
-    }
+      finally {
+        currentExecutor = null;
+        ProjectManager.getInstance()
+          .clearExecutor();
+      }
+    });
   },
 
   /**
@@ -520,94 +538,96 @@ export const taskMethods = {
    * Run CPU debug
    */
   async runCpuDebug(): Promise<void> {
-    await ensurePostActivateBootstrapReady();
+    return enqueueCompileRun('build', async () => {
+      await ensurePostActivateBootstrapReady();
 
-    try {
-      if (!(await guardSupportedProjectTypeOrNotify())) {
-        return;
-      }
+      try {
+        if (!(await guardSupportedProjectTypeOrNotify())) {
+          return;
+        }
 
-      await ProjectManager.getInstance()
-        .initProject();
-      currentExecutor = ProjectManager.getInstance()
-        .getExecutor();
+        await ProjectManager.getInstance()
+          .initProject();
+        currentExecutor = ProjectManager.getInstance()
+          .getExecutor();
 
-      const projectTypeInfo = await homeMethods.getProjectType();
-      const projectType = projectTypeInfo.projectType;
+        const projectTypeInfo = await homeMethods.getProjectType();
+        const projectType = projectTypeInfo.projectType;
 
-      if (projectType === OperatorProjectType.TRITON) {
-        currentExecutor = null;
-        ProjectManager.getInstance()
-          .clearExecutor();
+        if (projectType === OperatorProjectType.TRITON) {
+          currentExecutor = null;
+          ProjectManager.getInstance()
+            .clearExecutor();
 
-        return;
-      }
+          return;
+        }
 
-      if (!(await runTritonDebugPreflight(projectType))) {
-        currentExecutor = null;
-        ProjectManager.getInstance()
-          .clearExecutor();
+        if (!(await runTritonDebugPreflight(projectType))) {
+          currentExecutor = null;
+          ProjectManager.getInstance()
+            .clearExecutor();
 
-        return;
-      }
+          return;
+        }
 
-      const pythonContext = await preparePythonOperatorLaunchContext(projectType);
+        const pythonContext = await preparePythonOperatorLaunchContext(projectType);
 
-      if (pythonContext === null
-        && (projectType === OperatorProjectType.PYASC
-          || projectType === OperatorProjectType.TRITON)) {
-        currentExecutor = null;
-        ProjectManager.getInstance()
-          .clearExecutor();
+        if (pythonContext === null
+          && (projectType === OperatorProjectType.PYASC
+            || projectType === OperatorProjectType.TRITON)) {
+          currentExecutor = null;
+          ProjectManager.getInstance()
+            .clearExecutor();
 
-        return;
-      }
+          return;
+        }
 
-      const operatorNames = await homeMethods.getSelectedOperators();
-      const compileOption = await getCompileOptionForSelectedOperators();
+        const operatorNames = await homeMethods.getSelectedOperators();
+        const compileOption = await getCompileOptionForSelectedOperators();
 
-      await buildService.startBuild({
-        scriptField: 'cpu_debug_script',
-        operatorNames: operatorNames || undefined,
-        compileOption,
-      });
-      await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
+        await buildService.startBuild({
+          scriptField: 'cpu_debug_script',
+          operatorNames: operatorNames || undefined,
+          compileOption,
+        });
+        await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
 
-      const projectInfo = await homeMethods.getProjectType();
-      const buildBehavior = OperatorPluginRegistry.getBuildBehaviorByProjectType(projectInfo.projectType);
-      const debugConfigName = resolveDebugLaunchConfigName(
-        projectInfo.projectType,
-        'cpu',
-        buildBehavior,
-        projectInfo.projectTemplateName,
-      );
-
-      const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-
-      if (workspaceFolder) {
-        await patchLaunchJsonForDebugSession(
-          workspaceFolder.uri.fsPath,
-          debugConfigName,
-          pythonContext,
-          projectType ?? null,
+        const projectInfo = await homeMethods.getProjectType();
+        const buildBehavior = OperatorPluginRegistry.getBuildBehaviorByProjectType(projectInfo.projectType);
+        const debugConfigName = resolveDebugLaunchConfigName(
+          projectInfo.projectType,
           'cpu',
+          buildBehavior,
+          projectInfo.projectTemplateName,
         );
 
-        await vscode.debug.startDebugging(workspaceFolder, debugConfigName);
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+
+        if (workspaceFolder) {
+          await patchLaunchJsonForDebugSession(
+            workspaceFolder.uri.fsPath,
+            debugConfigName,
+            pythonContext,
+            projectType ?? null,
+            'cpu',
+          );
+
+          await vscode.debug.startDebugging(workspaceFolder, debugConfigName);
+        }
+        else {
+          await vscode.commands.executeCommand('workbench.action.debug.start');
+        }
       }
-      else {
-        await vscode.commands.executeCommand('workbench.action.debug.start');
+      catch (error) {
+        console.error('Error while opening CPU debug:', error);
+        throw error;
       }
-    }
-    catch (error) {
-      console.error('Error while opening CPU debug:', error);
-      throw error;
-    }
-    finally {
-      currentExecutor = null;
-      ProjectManager.getInstance()
-        .clearExecutor();
-    }
+      finally {
+        currentExecutor = null;
+        ProjectManager.getInstance()
+          .clearExecutor();
+      }
+    });
   },
 
   /**

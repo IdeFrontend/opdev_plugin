@@ -45,6 +45,10 @@ export default {
   'task.fileOutsideWorkspace': 'The active file must be inside the workspace folder',
   'task.launchJsonOpened': 'launch.json opened',
   'task.cannotOpenLaunchJson': 'Cannot open launch.json: {{error}}',
+  'task.operatorActionPreemptedByCompileRun':
+    'Operator actions were interrupted because build/run started.',
+  'task.queuedRunPreemptedByOperatorAction':
+    'Queued Run was canceled because an operator action started.',
   'task.tritonDebugDependenciesMissing':
     'Triton debug requires a Python environment where both torch and triton import successfully (interpreter: {{interpreter}}).',
   'task.tritonKernelPathNotFound':

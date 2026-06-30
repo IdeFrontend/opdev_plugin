@@ -190,8 +190,12 @@ import {
   dispatchEnqueueNativeOperatorAction,
   dispatchGetOperatorActionQueueStatus,
   dispatchStopOperatorAction,
-  dispatchStopAllOperatorActions,
+  dispatchStopAllFlowActions,
+  dispatchStopCompileRunFlow,
   dispatchStopTask,
+  isFlowStopAllVisible,
+  registerFlowPreemptListener,
+  subscribeCompileRunGateUiState,
 } from './helpers/task-method-dispatch';
 import type { QueueableActionType } from './helpers/operator-action-queue';
 import type { OperatorProjectViewIdValue } from '@shared/project-type-view-id';
@@ -332,9 +336,7 @@ export async function activate(context: vscode.ExtensionContext) {
   registerMsdebugTargetAutoAdapt(
     context,
     () => homeMethods.resolveDebugOperatorEntry(),
-    (_workspaceRoot, operator) => Promise.resolve(
-      homeMethods.resolveBuildExampleTargetFile(operator.name) ?? null,
-    ),
+    (_workspaceRoot, operator) => Promise.resolve(homeMethods.resolveBuildExampleTargetFile(operator.name) ?? null),
   );
 
   // Merge CANN env into this process once, then set `SOC_VERSION` / `NPU_ARCH` for spawned tools when unset.
@@ -489,7 +491,7 @@ export async function activate(context: vscode.ExtensionContext) {
       await vscode.commands.executeCommand(
         'setContext',
         `${CONTEXT_PREFIX}.operatorActionQueueStopAllVisible`,
-        items.length >= 2,
+        await isFlowStopAllVisible(),
       );
       const states: Partial<Record<'sanitizer' | 'onboard' | 'simulation' | 'utTest' | 'dumpTensor', 'queued' | 'running' | 'cancel_failed'>> = {};
 
@@ -520,6 +522,20 @@ export async function activate(context: vscode.ExtensionContext) {
   }, 1000);
 
   context.subscriptions.push({ dispose: () => clearInterval(queueStatusTimer) });
+
+  context.subscriptions.push({
+    dispose: subscribeCompileRunGateUiState((state) => {
+      operateTreeProvider.setCompileRunGateUiState(state);
+      void syncNativeQueueState();
+    }),
+  });
+
+  context.subscriptions.push({
+    dispose: registerFlowPreemptListener(() => {
+      operateTreeProvider.clearFlowExecutionState();
+      void syncNativeQueueState();
+    }),
+  });
 
   const watchColorThemeChange = vscode.window.onDidChangeActiveColorTheme(async () => {
     logDebug('event:onDidChangeActiveColorTheme');
@@ -1831,6 +1847,14 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
 
+      if (node?.nodeId === 'build' || node?.nodeId === 'run') {
+        await dispatchStopCompileRunFlow({ nodeId: node.nodeId });
+        operateTreeProvider.clearFlowExecutionState();
+        await syncNativeQueueState();
+
+        return;
+      }
+
       await dispatchStopTask();
       operateTreeProvider.clearFlowExecutionState();
       await syncNativeQueueState();
@@ -1840,7 +1864,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const sidebarStopAllOperatorActionsCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_STOP_ALL_OPERATOR_ACTIONS,
     async () => {
-      await dispatchStopAllOperatorActions();
+      await dispatchStopAllFlowActions();
       operateTreeProvider.clearFlowExecutionState();
       await syncNativeQueueState();
     },

@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import type {
   StartBuildParams,
   StartRunParams,
@@ -12,11 +13,38 @@ import { taskMethods } from '@plugin/controller/task-controller';
 import { homeMethods } from '@plugin/controller/home-controller';
 import { getProjectByPath } from '@plugin/domain/models/project-model';
 import * as vscode from 'vscode';
-import { OperateTreeProvider, type OperateNodeId } from '../class/operate-tree-provider';
+import {
+  OperateTreeProvider, type OperateNodeId,
+} from '../class/operate-tree-provider';
 import {
   OperatorActionQueueManager,
   QueueableActionType,
 } from './operator-action-queue';
+import {
+  cancelQueuedCompileRunNode,
+  hasRunningCompileRunShell,
+  isCompileRunQueueActive,
+  notifyFlowPreempted,
+  preemptCompileRunQueue,
+  registerCompileRunStopShellProcess,
+  registerFlowPreemptListener,
+  registerPreemptOperatorActionQueue,
+  shouldShowCompileRunStopAll,
+  stopCompileRunQueueAll,
+  subscribeCompileRunGateUiState,
+} from './operator-flow-coordinator';
+import {
+  stopCompileRunFlow,
+  stopOperatorFlowAction,
+} from './operator-flow-stop';
+
+export {
+  isCompileRunQueueActive,
+  registerFlowPreemptListener,
+  shouldShowCompileRunStopAll,
+  stopCompileRunQueueAll,
+  subscribeCompileRunGateUiState,
+};
 
 export async function dispatchStartBuild(params: StartBuildParams = {}): Promise<void> {
   await taskMethods.startBuild(params);
@@ -54,28 +82,98 @@ export async function dispatchStopTask(): Promise<void> {
   await taskMethods.stopTask();
 }
 
-const operatorActionQueue = new OperatorActionQueueManager(async () => {
-  await dispatchStopTask();
+registerCompileRunStopShellProcess(async (options) => {
+  await taskMethods.stopTask(options);
 });
+
+let suppressOperatorQueueStopNotify = false;
+
+const operatorActionQueue = new OperatorActionQueueManager(async () => {
+  await taskMethods.stopTask({ notify: !suppressOperatorQueueStopNotify });
+});
+
+async function stopOperatorActionQueueAll(options?: { notify?: boolean }): Promise<boolean> {
+  const hadItems = operatorActionQueue.hasAnyItems();
+
+  if (!hadItems) {
+    return false;
+  }
+
+  if (options?.notify === false) {
+    suppressOperatorQueueStopNotify = true;
+  }
+
+  try {
+    await operatorActionQueue.stopAllScopes();
+  }
+  finally {
+    if (options?.notify === false) {
+      suppressOperatorQueueStopNotify = false;
+    }
+  }
+
+  return true;
+}
+
+async function preemptOperatorActionQueue(): Promise<void> {
+  const hadItems = await stopOperatorActionQueueAll({ notify: false });
+
+  if (hadItems) {
+    vscode.window.showWarningMessage(t('task.operatorActionPreemptedByCompileRun'));
+  }
+
+  notifyFlowPreempted();
+}
+
+registerPreemptOperatorActionQueue(preemptOperatorActionQueue);
+
+function createFlowStopDeps() {
+  return {
+    stopCompileRunQueueAll,
+    cancelQueuedCompileRunNode,
+    hasRunningCompileRunShell,
+    stopOperatorByType: async (actionType: string) => {
+      const scopeKey = await getOperatorQueueScopeKey();
+
+      return operatorActionQueue.stopByActionType(scopeKey, actionType as QueueableActionType);
+    },
+    stopTask: (options?: { notify?: boolean }) => taskMethods.stopTask(options),
+    notifyStoppedByUser: () => {
+      vscode.window.showWarningMessage(t('task.stoppedByUser'));
+    },
+    notifyNoMatchingAction: () => {
+      vscode.window.showInformationMessage('No matching queued/running action found');
+    },
+  };
+}
 
 async function getOperatorQueueScopeKey(): Promise<string> {
   const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
   let projectScope = 'unknown';
+
   if (workspacePath) {
     const existingProject = getProjectByPath(workspacePath);
+
     if (existingProject?.id !== undefined && existingProject.id !== null) {
       projectScope = `id:${String(existingProject.id)}`;
-    } else {
-      const normalizedPath = workspacePath.replace(/\\/g, '/').toLowerCase();
+    }
+    else {
+      const normalizedPath = workspacePath.replace(/\\/g, '/')
+        .toLowerCase();
+
       projectScope = `path:${normalizedPath}`;
     }
   }
 
   let selected = 'default';
+
   try {
     const ids = await homeMethods.getSelectedOperatorIds();
+
     if (ids && ids.length > 0) {
-      selected = ids.slice().sort((a, b) => a - b).join(',');
+      selected = ids.slice()
+        .sort((a, b) => a - b)
+        .join(',');
     }
   }
   catch {
@@ -88,11 +186,27 @@ async function getOperatorQueueScopeKey(): Promise<string> {
 async function enqueueQueueableAction<P>(
   actionType: QueueableActionType,
   params: P,
-  runner: (payload: P) => Promise<void>,
-  onFinished?: (payload: P) => Promise<void> | void,
+  runner: (payload: P)=> Promise<void>,
+  onFinished?: (payload: P)=> Promise<void> | void,
 ): Promise<void> {
   const scopeKey = await getOperatorQueueScopeKey();
   const wrappedRunner = async (payload: P): Promise<void> => {
+    const runGeneration = operatorActionQueue.getScopeCancelGeneration(scopeKey);
+
+    if (operatorActionQueue.isScopeCancelled(scopeKey, runGeneration)) {
+      return;
+    }
+
+    const { hadQueuedRun } = await preemptCompileRunQueue();
+
+    if (hadQueuedRun) {
+      vscode.window.showWarningMessage(t('task.queuedRunPreemptedByOperatorAction'));
+    }
+
+    if (operatorActionQueue.isScopeCancelled(scopeKey, runGeneration)) {
+      return;
+    }
+
     try {
       await runner(payload);
     }
@@ -108,6 +222,7 @@ async function enqueueQueueableAction<P>(
     }
   };
   const result = await operatorActionQueue.enqueue(scopeKey, actionType, params, wrappedRunner);
+
   if (!result.accepted) {
     vscode.window.showWarningMessage(result.reason ?? 'Action is already queued');
   }
@@ -126,39 +241,59 @@ export async function dispatchGetOperatorActionQueueStatus(): Promise<{
   }>;
 }> {
   const scopeKey = await getOperatorQueueScopeKey();
-  return {
-    items: operatorActionQueue.getActions(scopeKey),
-  };
+
+  return { items: operatorActionQueue.getActions(scopeKey) };
 }
 
-export async function dispatchStopOperatorAction(
-  params: { actionType: QueueableActionType },
-): Promise<void> {
-  const scopeKey = await getOperatorQueueScopeKey();
-  const stopped = await operatorActionQueue.stopByActionType(scopeKey, params.actionType);
-  if (!stopped) {
-    vscode.window.showInformationMessage('No matching queued/running action found');
+export async function isFlowStopAllVisible(): Promise<boolean> {
+  if (shouldShowCompileRunStopAll()) {
+    return true;
   }
+
+  const scopeKey = await getOperatorQueueScopeKey();
+
+  return operatorActionQueue.getActions(scopeKey).length >= 2;
+}
+
+export async function dispatchStopOperatorAction(params: { actionType: QueueableActionType }): Promise<boolean> {
+  return stopOperatorFlowAction(createFlowStopDeps(), params.actionType);
 }
 
 export async function dispatchStopAllOperatorActions(): Promise<void> {
-  const scopeKey = await getOperatorQueueScopeKey();
-  await operatorActionQueue.stopAllAndClearQueue(scopeKey);
+  await stopOperatorActionQueueAll();
+}
+
+/** Stop all: always clears compile/run gate and the operator action queue. */
+export async function dispatchStopAllFlowActions(): Promise<void> {
+  await stopCompileRunQueueAll({ notify: true });
+
+  suppressOperatorQueueStopNotify = true;
+
+  try {
+    await stopOperatorActionQueueAll();
+  }
+  finally {
+    suppressOperatorQueueStopNotify = false;
+  }
+}
+
+export async function dispatchStopCompileRunFlow(options?: { nodeId?: 'build' | 'run' }): Promise<boolean> {
+  return stopCompileRunFlow(createFlowStopDeps(), options);
 }
 
 export async function dispatchEnqueueNativeOperatorAction<P>(
   actionType: QueueableActionType,
   params: P,
-  runner: (payload: P) => Promise<void>,
-  onFinished?: (payload: P) => Promise<void> | void,
+  runner: (payload: P)=> Promise<void>,
+  onFinished?: (payload: P)=> Promise<void> | void,
 ): Promise<void> {
   await enqueueQueueableAction(actionType, params, runner, onFinished);
 }
 
 export function dispatchFlowFromWebview<P>(
   nodeId: OperateNodeId,
-  runner: (params: P) => Promise<void>,
-): (params: P) => Promise<void | undefined> {
+  runner: (params: P)=> Promise<void>,
+): (params: P)=> Promise<void | undefined> {
   return (params: P = {} as P) => {
     return OperateTreeProvider.runFlowActionFromWebviewWithParams(nodeId, runner, params);
   };
@@ -184,4 +319,3 @@ export const dispatchSanitizer = dispatchFlowFromWebview<StartSanitizerParams>(
     await dispatchEnqueueNativeOperatorAction('sanitizer', params, dispatchRunSanitizer);
   },
 );
-
