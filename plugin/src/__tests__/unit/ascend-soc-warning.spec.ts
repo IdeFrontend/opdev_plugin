@@ -16,30 +16,49 @@ import * as vscode from 'vscode';
 import {
   _primeSocDetectionFailedForTest,
   resolveAscendEnv,
+  resolveAscendEnvForOperatorCommand,
 } from '@plugin/domain/utils/ascend-util';
-import {
-  _resetSocUndetectedWarningForTest,
-  maybeWarnSocNotDetected,
-} from '@plugin/helpers/ascend-soc-warning';
+import { maybeWarnSocNotDetected } from '@plugin/helpers/ascend-soc-warning';
 import {
   EXTENSION_ID, settingsKey,
 } from '@shared/flavor';
 import enMessages from '@shared/i18n/en';
 import zhMessages from '@shared/i18n/zh-cn';
 
+const emptyDefaultResolution = {
+  socVersion: '',
+  npuArch: '',
+  simulatorType: undefined,
+  source: {
+    socVersion: 'default' as const,
+    simulatorType: 'n/a' as const,
+    npuArch: 'derived-from-soc' as const,
+  },
+};
+
 describe('ascend SOC undetected warning', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     _primeSocDetectionFailedForTest();
-    _resetSocUndetectedWarningForTest();
+    const { getSocVersionWithWorkspaceOverride } = jest.requireMock('@plugin/helpers/operator-project-workspace-config') as { getSocVersionWithWorkspaceOverride: jest.Mock };
+
+    getSocVersionWithWorkspaceOverride.mockReturnValue('');
   });
 
-  it('shows a warning once when SOC resolution uses the empty default', () => {
+  it('shows a warning on every operator command run when SOC resolution uses the empty default', () => {
+    resolveAscendEnvForOperatorCommand({ script: 'cd build && ./build.sh' });
+    resolveAscendEnvForOperatorCommand({ script: 'cd build && ./build.sh' });
+
+    expect(vscode.window.showWarningMessage)
+      .toHaveBeenCalledTimes(2);
+  });
+
+  it('does not warn from resolveAscendEnv even when SOC is empty', () => {
     resolveAscendEnv({ isSimulator: false });
     resolveAscendEnv({ isSimulator: false });
 
     expect(vscode.window.showWarningMessage)
-      .toHaveBeenCalledTimes(1);
+      .not.toHaveBeenCalled();
   });
 
   it('does not warn when SOC is resolved from workspace', () => {
@@ -47,38 +66,40 @@ describe('ascend SOC undetected warning', () => {
 
     getSocVersionWithWorkspaceOverride.mockReturnValue('ascend950');
 
-    resolveAscendEnv({ isSimulator: false });
+    resolveAscendEnvForOperatorCommand({ script: 'cd build && ./build.sh' });
 
     expect(vscode.window.showWarningMessage)
       .not.toHaveBeenCalled();
   });
 
-  it('maybeWarnSocNotDetected only fires for empty default source', () => {
-    maybeWarnSocNotDetected({
-      socVersion: '',
-      npuArch: '',
-      simulatorType: undefined,
-      source: {
-        socVersion: 'default',
-        simulatorType: 'n/a',
-        npuArch: 'derived-from-soc',
-      },
-    });
-    maybeWarnSocNotDetected({
-      socVersion: '',
-      npuArch: '',
-      simulatorType: undefined,
-      source: {
-        socVersion: 'default',
-        simulatorType: 'n/a',
-        npuArch: 'derived-from-soc',
-      },
-    });
+  it('does not warn when explicit workspace socVersion setting is set', () => {
+    const { getSocVersionWithWorkspaceOverride } = jest.requireMock('@plugin/helpers/operator-project-workspace-config') as { getSocVersionWithWorkspaceOverride: jest.Mock };
+
+    getSocVersionWithWorkspaceOverride.mockReturnValue('ascend950');
+
+    maybeWarnSocNotDetected(emptyDefaultResolution);
+
+    expect(vscode.window.showWarningMessage)
+      .not.toHaveBeenCalled();
+  });
+
+  it('still warns when only User-scoped socVersion would apply (resolver ignores User scope)', () => {
+    const { getSocVersionWithWorkspaceOverride } = jest.requireMock('@plugin/helpers/operator-project-workspace-config') as { getSocVersionWithWorkspaceOverride: jest.Mock };
+
+    getSocVersionWithWorkspaceOverride.mockReturnValue('');
+
+    maybeWarnSocNotDetected(emptyDefaultResolution);
 
     expect(vscode.window.showWarningMessage)
       .toHaveBeenCalledTimes(1);
+  });
 
-    _resetSocUndetectedWarningForTest();
+  it('maybeWarnSocNotDetected fires on every call for empty default source', () => {
+    maybeWarnSocNotDetected(emptyDefaultResolution);
+    maybeWarnSocNotDetected(emptyDefaultResolution);
+
+    expect(vscode.window.showWarningMessage)
+      .toHaveBeenCalledTimes(2);
 
     maybeWarnSocNotDetected({
       socVersion: 'ascend950',
@@ -92,7 +113,7 @@ describe('ascend SOC undetected warning', () => {
     });
 
     expect(vscode.window.showWarningMessage)
-      .toHaveBeenCalledTimes(1);
+      .toHaveBeenCalledTimes(2);
   });
 
   it('opens the Workspace-scope SOC setting when the warning action is clicked', async () => {
@@ -100,16 +121,7 @@ describe('ascend SOC undetected warning', () => {
     // assertion does not depend on i18next initialization.
     (vscode.window.showWarningMessage as jest.Mock).mockImplementation((_message: string, label: string) => Promise.resolve(label));
 
-    maybeWarnSocNotDetected({
-      socVersion: '',
-      npuArch: '',
-      simulatorType: undefined,
-      source: {
-        socVersion: 'default',
-        simulatorType: 'n/a',
-        npuArch: 'derived-from-soc',
-      },
-    });
+    maybeWarnSocNotDetected(emptyDefaultResolution);
 
     await new Promise((resolve) => setImmediate(resolve));
 
@@ -121,18 +133,20 @@ describe('ascend SOC undetected warning', () => {
   });
 });
 
-describe('SOC-not-detected message A3 example', () => {
+describe('SOC-not-detected message (issue #43)', () => {
   const KEY = 'extension.ascendEnv.socNotDetected.message';
 
-  it('recommends ascend910_93 (not ascend910b) for A3 in English', () => {
+  it('uses short English wording without asys/npu-smi troubleshooting', () => {
     expect(enMessages[KEY])
-      .toContain('ascend910_93 on A3');
-    expect(enMessages[KEY]).not.toContain('ascend910b on A3');
+      .toBe('NPU information could not be found. Please configure the SoC version manually.');
+    expect(enMessages[KEY]).not.toContain('asys');
+    expect(enMessages[KEY]).not.toContain('npu-smi');
   });
 
-  it('recommends ascend910_93 for A3 in Chinese', () => {
+  it('uses short Chinese wording per issue #43', () => {
     expect(zhMessages[KEY])
-      .toContain('A3 使用 ascend910_93');
-    expect(zhMessages[KEY]).not.toContain('A3 使用 ascend910b');
+      .toBe('找不到 NPU 相关信息，请手动配置 SoC 版本。');
+    expect(zhMessages[KEY]).not.toContain('asys');
+    expect(zhMessages[KEY]).not.toContain('npu-smi');
   });
 });

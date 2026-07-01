@@ -669,13 +669,14 @@ export function resolveAscendEnvForOperatorCommand(spawnContext: OperatorSpawnEn
 }
 
 /**
- * Non-command callers (config bootstrap, profiler helpers). Logs each call.
+ * Non-command callers (config bootstrap, profiler helpers, webview reads).
+ * Resolves silently — user notifications for missing SOC are shown only from
+ * {@link resolveAscendEnvForOperatorCommand} when an operator action runs.
  */
 export function resolveAscendEnv(ctx: ResolveAscendEnvContext): AscendEnvResolution {
   const resolution = computeAscendEnvResolution(ctx);
 
   logAscendEnvResolution(resolution, ctx);
-  maybeWarnSocNotDetected(resolution);
 
   return resolution;
 }

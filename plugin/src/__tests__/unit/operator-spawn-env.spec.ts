@@ -34,9 +34,8 @@ import {
   resolveSimulatorDir,
   simulatorTypeToCannSoc,
 } from '@plugin/domain/utils/ascend-util';
-import { cacheDetectedChipName } from '@shared/ascend-series-registry';
 import { NPU_ARCH_DAV_1001 } from '@shared/cann-env-constants';
-import { _resetSocUndetectedWarningForTest } from '@plugin/helpers/ascend-soc-warning';
+import { cacheDetectedChipName } from '@shared/ascend-series-registry';
 import {
   SUPPORT_COMPUTE_UNIT_ASCEND_910_95,
   SUPPORT_COMPUTE_UNIT_ASCEND_950,
@@ -67,7 +66,6 @@ describe('operator spawn env', () => {
     OperatorPluginRegistry.registerOpPlugin(new AscendPlugin());
     _resetSocDetectionCacheForTest();
     _primeSocDetectionFailedForTest();
-    _resetSocUndetectedWarningForTest();
     (getWorkspaceSimulatorType as jest.Mock).mockReturnValue('');
     (getSocVersionWithWorkspaceOverride as jest.Mock).mockImplementation(() => '');
     (getGlobalEnvSnapshot as jest.Mock).mockReturnValue(snapshot());
@@ -335,8 +333,10 @@ describe('operator spawn env', () => {
     );
     const cmake = fs.readFileSync(cmakePath, 'utf8');
 
-    expect(cmake).toContain('set(SUPPORT_COMPUTE_UNIT "__MSTT_SUPPORT_COMPUTE_UNIT__")');
-    expect(cmake).toContain('set(SUPPORT_TILING_DIR "__MSTT_SUPPORT_TILING_DIR__")');
+    expect(cmake)
+      .toContain('set(SUPPORT_COMPUTE_UNIT "__MSTT_SUPPORT_COMPUTE_UNIT__")');
+    expect(cmake)
+      .toContain('set(SUPPORT_TILING_DIR "__MSTT_SUPPORT_TILING_DIR__")');
     expect(cmake).not.toContain('ENV{SUPPORT_COMPUTE_UNIT}');
     expect(cmake).not.toContain('ENV{SUPPORT_TILING_DIR}');
   });

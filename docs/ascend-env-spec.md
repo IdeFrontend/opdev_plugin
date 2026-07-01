@@ -159,7 +159,11 @@ Only (1) triggers **SOC-from-simulator** via §4.4 inverse.
 
 ### 7.3 `npuArch`
 
-Apply §6 after `socVersion` is known. Empty SOC at generation still resolves `SUPPORT_*`; one-time warning before build if SOC unset.
+Apply §6 after `socVersion` is known. Empty SOC at generation still resolves `SUPPORT_*` silently (no user notification).
+
+### 7.4 Missing SOC notification
+
+When operator commands run (`resolveAscendEnvForOperatorCommand`) and SOC resolves to empty `default`, show a short warning with an action to open workspace `environment.socVersion`. Repeats on **every** operator run until SOC is configured (workspace explicit value, env var, or host detection). **Not** shown from passive `resolveAscendEnv` calls (project open, options webviews, profiler command assembly). Suppression uses the same explicit workspace check as §7.2 step 1 — User-scoped settings do not suppress the warning.
 
 ---
 

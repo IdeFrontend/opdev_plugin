@@ -58,7 +58,7 @@
   "config.op-devtools.performanceTuning.onBoard.enableKernelCodeSegmentProfiling.markdownDescription": "启用 Kernel 代码段性能采集。自定义范围请在 Kernel 代码中调用 [MetricsProfStart](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/API/ascendcopapi/atlasascendc_api_07_1214.html) 与 [MetricsProfStop](https://www.hiascend.com/document/detail/zh/canncommercial/83RC1/API/ascendcopapi/atlasascendc_api_07_1215.html)。请确认两者已包裹目标代码段，否则该选项无效。",
   "config.op-devtools.performanceTuning.onBoard.parameters.markdownDescription": "参数会追加到命令行。可运行 `msprof op -h` 查看选项。`aic-metrics` 由基础配置设置。参数名默认带 `--` 前缀。",
   "config.op-devtools.environment.environmentScript.markdownDescription": "环境脚本。CANN 安装后的 `set_env.sh` 绝对路径。若使用一站式镜像可留空；若提示路径错误，请设置为有效环境脚本路径。",
-  "config.op-devtools.environment.socVersion.markdownDescription": "项目命令使用的 SoC 版本（例如：`ascend910b`、`ascend10b`、`ascend950`）。未设置时，将从项目配置、环境变量或主机检测自动选择。",
+  "config.op-devtools.environment.socVersion.markdownDescription": "项目命令使用的 SoC 版本（例如：`ascend910b`、`ascend910c`、`ascend950`）。未设置时，将从项目配置、环境变量或主机检测自动选择。",
   "colors.operatorProject.description": "算子工程文件夹装饰颜色",
   "colors.operatorProjectCollection.description": "算子工程集合文件夹装饰颜色",
   "viewContainer.activitybar.title": "算子一站式交付平台",
