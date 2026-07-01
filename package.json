@@ -3,7 +3,7 @@
   "displayName": "Huawei OP DevTools",
   "description": "Operator development, debugging, and performance analysis all-in-one platform for Ascend C language.",
   "publisher": "huawei",
-  "version": "1.3.5",
+  "version": "1.3.6",
   "engines": {
     "node": ">=16.0.0",
     "vscode": "^1.80.0"

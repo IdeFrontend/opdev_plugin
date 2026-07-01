@@ -1,6 +1,16 @@
 # Changelog
 
-Notable changes to **Ascend C Toolkit** are listed here. For the full project history, see the repository on [GitCode](https://gitcode.com/mlh0101/mstt).
+Notable changes to **Huawei OP DevTools** are listed here. For the full project history, see the repository on [GitCode](https://gitcode.com/mlh0101/mstt).
+
+## 1.3.6 — 2026-07-01
+
+Patch release: new-project UI refresh, compile/run queue coordination, sanitizer defaults, SOC warning improvements, CANN template cleanup.
+
+- **New project and welcome UI (GC-40)** — Replace static template PNG previews with dynamic Seti file-tree previews; align welcome and new-project tab layout; fix Create form validation after the tab refactor; rename `pyasc_temple` → `pyasc_template` with generator wiring; remove the unused open-project panel and legacy preview PNG assets.
+- **Compile/run queue coordination (GC-24)** — Serialize Build, Run Example, and Run through `OperatorCompileRunGate` so Run waits for an in-flight compile instead of racing the shared executor. Coordinate the operator action queue with compile/run (cross-queue preemption, **Stop all** clears both queues, queue UI shows compile spinner while Run is queued). Debug flows use the same gate; sanitizer cancellation is reliable when compile/run actually starts.
+- **Sanitizer detection defaults (GC-36)** — Enable memcheck, racecheck, initcheck, check-unused-memory, and leak-check by default in workspace settings, generated configs, and the sanitizer quick-options panel via shared `DEFAULT_SANITIZER_DETECTION_OPTIONS`.
+- **Missing SoC version warning (GC-43 / [plugin_release #43](https://gitcode.com/opdevtools/plugin_release/issues/43))** — Show a short, actionable warning only when operator commands run with unresolved SOC, not during project open or passive env reads. Suppression uses the same explicit workspace check as the resolver so User-scoped settings do not hide the warning; **Open SoC setting…** opens workspace `environment.socVersion`. Warning repeats on every operator run until SOC is configured. Corrected the `socVersion` settings example from `ascend10b` to `ascend910c`.
+- **CANN CMake template cleanup** — Drop redundant `target_link_libraries` for tiling_api/register/platform/m from AscendC kernel templates; these libraries are provided by the ASC toolchain.
 
 ## 1.3.5 — 2026-06-26
 

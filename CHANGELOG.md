@@ -1,6 +1,16 @@
 # 更新日志
 
-本文列出 **Ascend C Toolkit（Ascend C Toolkit）** 的重要变更。完整提交历史见 [GitCode](https://gitcode.com/mlh0101/mstt) 仓库。
+本文列出 **Huawei OP DevTools（华为算子一站式开发工具）** 的重要变更。完整提交历史见 [GitCode](https://gitcode.com/mlh0101/mstt) 仓库。
+
+## 1.3.6 — 2026-07-01
+
+本版本包含新建工程 UI 刷新、编译/运行队列协调、异常检测默认选项、SoC 告警改进与 CANN 模板清理。
+
+- **新建工程与欢迎页 UI（GC-40）** — 用 Seti 文件树动态预览替代静态模板 PNG；统一欢迎页与新建工程标签布局；修复标签重构后 Create 表单校验；`pyasc_temple` 重命名为 `pyasc_template` 并接通生成器；移除未使用的打开工程面板及遗留预览 PNG 资源。
+- **编译/运行队列协调（GC-24）** — 经 `OperatorCompileRunGate` 串行化构建、运行样例与运行，Run 等待进行中的编译而非与共享执行器竞态；协调算子操作队列与编译/运行（跨队列抢占、**全部停止**清空双队列、Run 排队时侧栏显示编译 spinner）；调试流程共用同一门控；编译/运行实际启动时可靠取消异常检测。
+- **异常检测默认选项（GC-36）** — 工作区设置、生成配置与快速选项面板默认启用 memcheck、racecheck、initcheck、check-unused-memory、leak-check（共享 `DEFAULT_SANITIZER_DETECTION_OPTIONS`）。
+- **SoC 版本未配置告警（GC-43 / [plugin_release #43](https://gitcode.com/opdevtools/plugin_release/issues/43)）** — 仅在算子命令运行时 SoC 未解析时显示简短可操作告警，工程打开或被动环境读取时不提示。抑制逻辑与解析器一致，仅工作区显式配置生效，用户作用域设置不会隐藏告警；**打开 SoC 设置…** 跳转工作区 `environment.socVersion`。每次算子运行均重复提示直至 SoC 已配置。修正 `socVersion` 设置示例：`ascend10b` → `ascend910c`。
+- **CANN CMake 模板清理** — 从 AscendC 内核模板移除多余的 `target_link_libraries`（tiling_api/register/platform/m），由 ASC 工具链提供。
 
 ## 1.3.5 — 2026-06-26
 
