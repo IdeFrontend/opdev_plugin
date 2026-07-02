@@ -25,6 +25,9 @@ import {
   type MsdebugTargetPatchResult,
 } from '@plugin/domain/utils/debug-target';
 import {
+  backfillMsdebugLibInEnvFile,
+} from '@plugin/domain/utils/msdebug-env';
+import {
   isPythonDebugLaunchConfig,
   resolveDebugLaunchConfigName,
 } from '@plugin/domain/utils/debug-config-resolver';
@@ -145,6 +148,8 @@ async function patchLaunchJsonForDebugSession(
   projectType: string | null,
   mode: 'cpu' | 'npu',
 ): Promise<void> {
+  await backfillMsdebugLibInEnvFile(workspaceRoot);
+
   if (!isPythonDebugLaunchConfig(debugConfigName) || !pythonContext) {
     if (!isPythonDebugLaunchConfig(debugConfigName)) {
       try {

@@ -12,6 +12,10 @@ import {
 
 import debugLaunch from './debug-launch.json';
 import { ensureMsdebugBreakpointFileAssociations } from './msdebug-ide-settings';
+import {
+  ensureMsdebugLibInEnvFile,
+  getKnownSetEnvScriptPath,
+} from './msdebug-env';
 
 const execAsync = promisify(exec);
 
@@ -145,6 +149,16 @@ async function exportEnvToFile(projectDir: string) {
       shell: '/bin/bash',
       windowsHide: true,
     });
+
+    // GH-87: the msdebug-mi adapter needs CANN tools/msdebug/lib on
+    // LD_LIBRARY_PATH, but the plain `env` dump above does not include it.
+    try {
+      await ensureMsdebugLibInEnvFile(cwd, getKnownSetEnvScriptPath());
+    }
+    catch (error) {
+      console.warn('exportEnvToFile: failed to add msdebug lib dir to LD_LIBRARY_PATH:', error);
+    }
+
     await execAsync(`chmod -R 750 ${ideDirName}/`, {
       cwd,
       shell: '/bin/bash',

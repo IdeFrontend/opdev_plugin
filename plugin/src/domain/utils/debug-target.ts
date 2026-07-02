@@ -3,6 +3,7 @@ import path from 'path';
 import * as vscode from 'vscode';
 
 import { joinIdeConfigPath } from '@plugin/helpers/ide-config-dir';
+import { backfillMsdebugLibInEnvFile } from '@plugin/domain/utils/msdebug-env';
 
 export type DebugOperatorRef = {
   name: string;
@@ -299,6 +300,8 @@ export function registerMsdebugTargetAutoAdapt(
       if (!folder || !config?.name || !MSDEBUG_BINARY_CONFIG_NAMES.has(String(config.name))) {
         return config;
       }
+
+      await backfillMsdebugLibInEnvFile(folder.uri.fsPath);
 
       const operator = await resolveOperator(folder.uri.fsPath);
 
