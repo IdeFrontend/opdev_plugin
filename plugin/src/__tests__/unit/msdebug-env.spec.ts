@@ -123,16 +123,19 @@ describe('resolveMsdebugLibDir', () => {
 
 describe('ensureMsdebugLibInEnvFile', () => {
   let workspaceRoot: string;
-  let toolkitHome: string;
-  let msdebugLib: string;
   let envFilePath: string;
+
+  // The real `.env` dump always holds Linux CANN paths, so the toolkit dir is a
+  // fixed posix path decoupled from the host filesystem via an injected
+  // `dirExists`. Deriving it from a Windows temp dir (backslashes, a `C:` drive
+  // colon) would misrepresent production and break on win32.
+  const toolkitHome = '/home/dev/Ascend/cann-9.0.0';
+  const msdebugLib = `${toolkitHome}/tools/msdebug/lib`;
+  const libExists = (dir: string) => dir === msdebugLib;
 
   beforeEach(async () => {
     workspaceRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'msdebug-env-'));
-    toolkitHome = path.join(workspaceRoot, 'cann');
-    msdebugLib = path.join(toolkitHome, 'tools', 'msdebug', 'lib');
     envFilePath = path.join(workspaceRoot, getIdeConfigDirName(), '.env');
-    await fs.ensureDir(msdebugLib);
     await fs.ensureDir(path.dirname(envFilePath));
   });
 
@@ -147,7 +150,7 @@ describe('ensureMsdebugLibInEnvFile', () => {
       'utf-8',
     );
 
-    await expect(ensureMsdebugLibInEnvFile(workspaceRoot))
+    await expect(ensureMsdebugLibInEnvFile(workspaceRoot, undefined, libExists))
       .resolves.toBe(true);
 
     const expected = `ASCEND_TOOLKIT_HOME=${toolkitHome}\nLD_LIBRARY_PATH=/usr/lib64:${msdebugLib}\n`;
@@ -163,10 +166,10 @@ describe('ensureMsdebugLibInEnvFile', () => {
       'utf-8',
     );
 
-    await ensureMsdebugLibInEnvFile(workspaceRoot);
+    await ensureMsdebugLibInEnvFile(workspaceRoot, undefined, libExists);
     const afterFirst = await fs.readFile(envFilePath, 'utf-8');
 
-    await expect(ensureMsdebugLibInEnvFile(workspaceRoot))
+    await expect(ensureMsdebugLibInEnvFile(workspaceRoot, undefined, libExists))
       .resolves.toBe(false);
     await expect(fs.readFile(envFilePath, 'utf-8'))
       .resolves.toBe(afterFirst);
@@ -175,9 +178,9 @@ describe('ensureMsdebugLibInEnvFile', () => {
   it('resolves the toolkit through the set_env.sh path when the dump lacks ASCEND vars', async () => {
     await fs.writeFile(envFilePath, 'LD_LIBRARY_PATH=/usr/lib64\n', 'utf-8');
 
-    const setEnvScript = path.join(toolkitHome, 'set_env.sh');
+    const setEnvScript = `${toolkitHome}/set_env.sh`;
 
-    await expect(ensureMsdebugLibInEnvFile(workspaceRoot, setEnvScript))
+    await expect(ensureMsdebugLibInEnvFile(workspaceRoot, setEnvScript, libExists))
       .resolves.toBe(true);
 
     await expect(fs.readFile(envFilePath, 'utf-8'))
@@ -185,7 +188,7 @@ describe('ensureMsdebugLibInEnvFile', () => {
   });
 
   it('returns false when the .env file does not exist', async () => {
-    await expect(ensureMsdebugLibInEnvFile(workspaceRoot))
+    await expect(ensureMsdebugLibInEnvFile(workspaceRoot, undefined, libExists))
       .resolves.toBe(false);
   });
 
@@ -194,7 +197,7 @@ describe('ensureMsdebugLibInEnvFile', () => {
 
     await fs.writeFile(envFilePath, content, 'utf-8');
 
-    await expect(ensureMsdebugLibInEnvFile(workspaceRoot))
+    await expect(ensureMsdebugLibInEnvFile(workspaceRoot, undefined, () => false))
       .resolves.toBe(false);
     await expect(fs.readFile(envFilePath, 'utf-8'))
       .resolves.toBe(content);
