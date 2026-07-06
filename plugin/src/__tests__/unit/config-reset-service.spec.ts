@@ -15,15 +15,14 @@ jest.mock('i18next', () => ({
         'Reset configuration for {{projectName}}? Choosing Reset will clear configuration stored by this plugin for {{projectName}} and regenerate defaults. Your operator source code and other project files in the repository will not be changed.',
     };
     const template = labels[key] ?? key;
+
     return options?.projectName
       ? template.replaceAll('{{projectName}}', options.projectName)
       : template;
   },
 }));
 
-jest.mock('@plugin/domain/models/model', () => ({
-  deleteOpsByProjectId: jest.fn(),
-}));
+jest.mock('@plugin/domain/models/model', () => ({ deleteOpsByProjectId: jest.fn() }));
 
 jest.mock('@plugin/domain/models/config-model', () => ({
   deleteConfigsByProjectId: jest.fn(),
@@ -31,9 +30,8 @@ jest.mock('@plugin/domain/models/config-model', () => ({
 }));
 
 jest.mock('@plugin/domain/models/project-model', () => {
-  const actual = jest.requireActual<typeof import('@plugin/domain/models/project-model')>(
-    '@plugin/domain/models/project-model',
-  );
+  const actual = jest.requireActual<typeof import('@plugin/domain/models/project-model')>('@plugin/domain/models/project-model');
+
   return {
     ...actual,
     deleteProject: jest.fn(),
@@ -50,16 +48,13 @@ jest.mock('@plugin/helpers/remote-config', () => ({
 
 jest.mock('@plugin/service/config-service', () => ({
   ConfigService: {
-    clearOpDevtoolsWorkspaceSettings: jest.fn().mockResolvedValue(true),
+    clearOpDevtoolsWorkspaceSettings: jest.fn()
+      .mockResolvedValue(true),
   },
   resetLegacySettingsMigrationFlight: jest.fn(),
 }));
 
-jest.mock('@plugin/core/project/project-manager', () => ({
-  ProjectManager: {
-    getInstance: jest.fn(),
-  },
-}));
+jest.mock('@plugin/core/project/project-manager', () => ({ ProjectManager: { getInstance: jest.fn() } }));
 
 import { deleteOpsByProjectId } from '@plugin/domain/models/model';
 import {
@@ -70,7 +65,9 @@ import {
   deleteProject,
   getProjectByPath,
 } from '@plugin/domain/models/project-model';
-import { getDevtoolConfigPath, getIdeConfigDir } from '@plugin/helpers/ide-config-dir';
+import {
+  getDevtoolConfigPath, getIdeConfigDir,
+} from '@plugin/helpers/ide-config-dir';
 import { RemoteConfig } from '@plugin/helpers/remote-config';
 import {
   ConfigService,
@@ -92,9 +89,7 @@ describe('resetCurrentProjectConfiguration', () => {
     );
     vscode.workspace.workspaceFolders = [{ uri: { fsPath: tmpRoot } } as vscode.WorkspaceFolder];
     jest.clearAllMocks();
-    (ProjectManager.getInstance as jest.Mock).mockReturnValue({
-      getProjectInfo: () => ({ path: tmpRoot }),
-    });
+    (ProjectManager.getInstance as jest.Mock).mockReturnValue({ getProjectInfo: () => ({ path: tmpRoot }) });
     (getProjectByPath as jest.Mock).mockReturnValue({
       id: 7,
       project_path: tmpRoot,
@@ -114,18 +109,27 @@ describe('resetCurrentProjectConfiguration', () => {
   it('clears current project data, devtool_config.json, and workspace settings after confirmation', async () => {
     await resetCurrentProjectConfiguration();
 
-    expect(deleteLegacyWorkspaceConfigsByProjectId).toHaveBeenCalledWith(7, tmpRoot);
-    expect(deleteConfigsByProjectId).toHaveBeenCalledWith(7);
-    expect(deleteOpsByProjectId).toHaveBeenCalledWith(7);
-    expect(deleteProject).toHaveBeenCalledWith(tmpRoot);
-    expect(fs.existsSync(getDevtoolConfigPath(tmpRoot))).toBe(false);
-    expect(RemoteConfig.clearLastProjectPath).toHaveBeenCalled();
-    expect(ConfigService.clearOpDevtoolsWorkspaceSettings).toHaveBeenCalledWith(tmpRoot);
-    expect(resetLegacySettingsMigrationFlight).toHaveBeenCalled();
+    expect(deleteLegacyWorkspaceConfigsByProjectId)
+      .toHaveBeenCalledWith(7, tmpRoot);
+    expect(deleteConfigsByProjectId)
+      .toHaveBeenCalledWith(7);
+    expect(deleteOpsByProjectId)
+      .toHaveBeenCalledWith(7);
+    expect(deleteProject)
+      .toHaveBeenCalledWith(tmpRoot);
+    expect(fs.existsSync(getDevtoolConfigPath(tmpRoot)))
+      .toBe(false);
+    expect(RemoteConfig.clearLastProjectPath)
+      .toHaveBeenCalled();
+    expect(ConfigService.clearOpDevtoolsWorkspaceSettings)
+      .toHaveBeenCalledWith(tmpRoot);
+    expect(resetLegacySettingsMigrationFlight)
+      .toHaveBeenCalled();
   });
 
   it('clears filesystem artifacts under project path when it differs from workspace folder', async () => {
     const projectPath = path.join(tmpRoot, 'my-operator');
+
     fs.mkdirSync(getIdeConfigDir(projectPath), { recursive: true });
     fs.writeFileSync(
       getDevtoolConfigPath(projectPath),
@@ -134,30 +138,43 @@ describe('resetCurrentProjectConfiguration', () => {
     );
     fs.rmSync(getDevtoolConfigPath(tmpRoot), { force: true });
 
-    (ProjectManager.getInstance as jest.Mock).mockReturnValue({
-      getProjectInfo: () => ({ path: projectPath }),
-    });
+    (ProjectManager.getInstance as jest.Mock).mockReturnValue({ getProjectInfo: () => ({ path: projectPath }) });
     (getProjectByPath as jest.Mock).mockImplementation((lookupPath: string) => {
       if (lookupPath === projectPath) {
-        return { id: 7, project_path: projectPath };
+        return {
+          id: 7,
+          project_path: projectPath,
+        };
       }
+
       return undefined;
     });
     (RemoteConfig.getLastProjectPath as jest.Mock).mockReturnValue(projectPath);
 
     await resetCurrentProjectConfiguration();
 
-    expect(vscode.window.showWarningMessage).toHaveBeenCalledWith(
-      'Reset configuration for my-operator? Choosing Reset will clear configuration stored by this plugin for my-operator and regenerate defaults. Your operator source code and other project files in the repository will not be changed.',
-      { modal: true },
-      'Reset',
-    );
-    expect(deleteLegacyWorkspaceConfigsByProjectId).toHaveBeenCalledWith(7, projectPath);
-    expect(deleteProject).toHaveBeenCalledWith(projectPath);
-    expect(fs.existsSync(getDevtoolConfigPath(projectPath))).toBe(false);
-    expect(fs.existsSync(getDevtoolConfigPath(tmpRoot))).toBe(false);
-    expect(ConfigService.clearOpDevtoolsWorkspaceSettings).toHaveBeenCalledWith(projectPath);
-    expect(RemoteConfig.clearLastProjectPath).toHaveBeenCalled();
+    expect(vscode.window.showWarningMessage)
+      .toHaveBeenCalledWith(
+        'Reset configuration for my-operator? Choosing Reset will clear configuration stored by this plugin for my-operator and regenerate defaults. Your operator source code and other project files in the repository will not be changed.',
+        { modal: true },
+        'Reset',
+      );
+    expect(deleteLegacyWorkspaceConfigsByProjectId)
+      .toHaveBeenCalledWith(7, projectPath);
+    expect(deleteLegacyWorkspaceConfigsByProjectId)
+      .toHaveBeenCalledWith(7, tmpRoot);
+    expect(deleteProject)
+      .toHaveBeenCalledWith(projectPath);
+    expect(fs.existsSync(getDevtoolConfigPath(projectPath)))
+      .toBe(false);
+    expect(fs.existsSync(getDevtoolConfigPath(tmpRoot)))
+      .toBe(false);
+    expect(ConfigService.clearOpDevtoolsWorkspaceSettings)
+      .toHaveBeenCalledWith(projectPath);
+    expect(ConfigService.clearOpDevtoolsWorkspaceSettings)
+      .toHaveBeenCalledWith(tmpRoot);
+    expect(RemoteConfig.clearLastProjectPath)
+      .toHaveBeenCalled();
   });
 
   it('does nothing when confirmation is cancelled', async () => {
@@ -168,13 +185,15 @@ describe('resetCurrentProjectConfiguration', () => {
     expect(deleteConfigsByProjectId).not.toHaveBeenCalled();
     expect(deleteOpsByProjectId).not.toHaveBeenCalled();
     expect(ConfigService.clearOpDevtoolsWorkspaceSettings).not.toHaveBeenCalled();
-    expect(fs.existsSync(getDevtoolConfigPath(tmpRoot))).toBe(true);
+    expect(fs.existsSync(getDevtoolConfigPath(tmpRoot)))
+      .toBe(true);
   });
 
   it('reloads the window automatically after reset is confirmed', async () => {
     await resetCurrentProjectConfiguration();
 
-    expect(vscode.commands.executeCommand).toHaveBeenCalledWith('workbench.action.reloadWindow');
+    expect(vscode.commands.executeCommand)
+      .toHaveBeenCalledWith('workbench.action.reloadWindow');
     expect(vscode.window.showInformationMessage).not.toHaveBeenCalled();
   });
 
@@ -186,7 +205,9 @@ describe('resetCurrentProjectConfiguration', () => {
     expect(deleteConfigsByProjectId).not.toHaveBeenCalled();
     expect(deleteOpsByProjectId).not.toHaveBeenCalled();
     expect(deleteProject).not.toHaveBeenCalled();
-    expect(fs.existsSync(getDevtoolConfigPath(tmpRoot))).toBe(false);
-    expect(ConfigService.clearOpDevtoolsWorkspaceSettings).toHaveBeenCalledWith(tmpRoot);
+    expect(fs.existsSync(getDevtoolConfigPath(tmpRoot)))
+      .toBe(false);
+    expect(ConfigService.clearOpDevtoolsWorkspaceSettings)
+      .toHaveBeenCalledWith(tmpRoot);
   });
 });
