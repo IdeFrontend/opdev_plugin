@@ -21,6 +21,7 @@ import { OperatorProjectType } from '@plugin/domain/services/operator-project-de
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import { getCompileOptionForSelectedOperators } from '@plugin/helpers/compile-options';
 import {
+  msdebugConfiguredTargetExists,
   updateMsdebugTarget,
   type MsdebugTargetPatchResult,
 } from '@plugin/domain/utils/debug-target';
@@ -147,26 +148,38 @@ async function patchLaunchJsonForDebugSession(
   pythonContext: PythonOperatorLaunchContext | null,
   projectType: string | null,
   mode: 'cpu' | 'npu',
-): Promise<void> {
+): Promise<boolean> {
   await backfillMsdebugLibInEnvFile(workspaceRoot);
 
-  if (!isPythonDebugLaunchConfig(debugConfigName) || !pythonContext) {
-    if (!isPythonDebugLaunchConfig(debugConfigName)) {
-      try {
-        const operator = await homeMethods.resolveDebugOperatorEntry();
-        const targetFile = operator
-          ? homeMethods.resolveBuildExampleTargetFile(operator.name)
-          : undefined;
-        const result = await updateMsdebugTarget(workspaceRoot, operator, targetFile);
+  if (!isPythonDebugLaunchConfig(debugConfigName)) {
+    // C/C++ debug (msdebug / msdebug-cpu): auto-adapt the launch target to the built binary.
+    try {
+      const operator = await homeMethods.resolveDebugOperatorEntry();
+      const targetFile = operator
+        ? homeMethods.resolveBuildExampleTargetFile(operator.name)
+        : undefined;
+      const result = await updateMsdebugTarget(workspaceRoot, operator, targetFile);
 
-        await notifyMsdebugTargetPatchResult(result);
-      }
-      catch (e) {
-        console.warn('updateMsdebugTarget failed (continuing):', e);
-      }
+      await notifyMsdebugTargetPatchResult(result);
+    }
+    catch (e) {
+      console.warn('updateMsdebugTarget failed (continuing):', e);
     }
 
-    return;
+    // Never launch a debug session whose target binary is missing on disk: a debug build
+    // that failed or was preempted (GC-24) would otherwise attach msdebug to a phantom
+    // executable. Only block on a concrete, resolvable-but-absent target.
+    if (msdebugConfiguredTargetExists(workspaceRoot, debugConfigName) === false) {
+      vscode.window.showErrorMessage(t('debug.targetBinaryMissing'));
+
+      return false;
+    }
+
+    return true;
+  }
+
+  if (!pythonContext) {
+    return true;
   }
 
   let launchKernelPath: string | undefined;
@@ -203,6 +216,8 @@ async function patchLaunchJsonForDebugSession(
   catch (e) {
     console.warn('updateMsdebugPythonTarget failed (continuing):', e);
   }
+
+  return true;
 }
 
 export const taskMethods = {
@@ -477,11 +492,17 @@ export const taskMethods = {
         const operatorNames = await homeMethods.getSelectedOperators();
         const compileOption = await getCompileOptionForSelectedOperators();
 
-        await buildService.startBuild({
+        const built = await buildService.startBuild({
           scriptField: 'npu_debug_script',
           operatorNames: operatorNames || undefined,
           compileOption,
         });
+
+        if (!built) {
+          // Debug build failed or was preempted — do not launch msdebug against a missing binary.
+          return;
+        }
+
         await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
 
         const projectInfo = await homeMethods.getProjectType();
@@ -496,13 +517,18 @@ export const taskMethods = {
         const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
 
         if (workspaceFolder) {
-          await patchLaunchJsonForDebugSession(
+          const canDebug = await patchLaunchJsonForDebugSession(
             workspaceFolder.uri.fsPath,
             debugConfigName,
             pythonContext,
             projectType ?? null,
             'npu',
           );
+
+          if (!canDebug) {
+            // Target binary is missing — the error was already surfaced; skip startDebugging.
+            return;
+          }
 
           await vscode.debug.startDebugging(workspaceFolder, debugConfigName);
         }
@@ -590,11 +616,17 @@ export const taskMethods = {
         const operatorNames = await homeMethods.getSelectedOperators();
         const compileOption = await getCompileOptionForSelectedOperators();
 
-        await buildService.startBuild({
+        const built = await buildService.startBuild({
           scriptField: 'cpu_debug_script',
           operatorNames: operatorNames || undefined,
           compileOption,
         });
+
+        if (!built) {
+          // Debug build failed or was preempted — do not launch msdebug against a missing binary.
+          return;
+        }
+
         await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
 
         const projectInfo = await homeMethods.getProjectType();
@@ -609,13 +641,18 @@ export const taskMethods = {
         const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
 
         if (workspaceFolder) {
-          await patchLaunchJsonForDebugSession(
+          const canDebug = await patchLaunchJsonForDebugSession(
             workspaceFolder.uri.fsPath,
             debugConfigName,
             pythonContext,
             projectType ?? null,
             'cpu',
           );
+
+          if (!canDebug) {
+            // Target binary is missing — the error was already surfaced; skip startDebugging.
+            return;
+          }
 
           await vscode.debug.startDebugging(workspaceFolder, debugConfigName);
         }

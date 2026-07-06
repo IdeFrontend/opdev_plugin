@@ -59,6 +59,8 @@ export default {
     'Could not auto-adapt msdebug target: select an operator in the Actions tree (or open a single-operator project) before NPU/CPU debug.',
   'debug.autoAdaptNoBinary':
     'Could not auto-adapt msdebug target: no debug binary found under the operator build/ directory. Run NPU/CPU debug build first, then retry.',
+  'debug.targetBinaryMissing':
+    'Cannot start debug: the launch target binary does not exist. The debug build may have failed or been stopped — run a successful NPU/CPU debug build first, then retry.',
 
   // extension
   'extension.openWorkspaceFirst': 'Please open a workspace first',
