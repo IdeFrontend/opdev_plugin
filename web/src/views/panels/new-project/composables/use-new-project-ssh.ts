@@ -1,5 +1,5 @@
 import {
-  ref, reactive, onBeforeUnmount, onMounted, type Ref,
+  ref, reactive, onBeforeUnmount, onMounted, type ComponentPublicInstance, type Ref,
 } from 'vue';
 import { message } from 'ant-design-vue';
 import type { FormInstance as AntdVForm } from 'ant-design-vue';
@@ -21,6 +21,8 @@ import { ValidationStrategyFactory } from './validation-strategies';
 import { MessageHandlerStrategyManager } from './message-handler-strategies';
 import { SearchStrategyFactory } from './search-strategies';
 import { ProjectNameFactory } from './project-name-factory';
+
+type VueTemplateRefValue = Element | ComponentPublicInstance | null;
 
 function resolveAntdFormRef(refValue: AntdVForm | null | undefined): AntdVForm | null {
   return refValue ?? null;
@@ -148,8 +150,8 @@ export function useNewProjectSSH(selectedTemplate?: Ref<'helloworld' | 'addn' | 
     }
   };
 
-  const setConnectionFormRef = (el: AntdVForm | null) => {
-    connectionFormRef.value = el;
+  const setConnectionFormRef = (el: VueTemplateRefValue) => {
+    connectionFormRef.value = el as AntdVForm | null;
   };
 
   const handleCreatedProject = async () => {

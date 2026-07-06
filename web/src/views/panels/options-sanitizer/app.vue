@@ -42,6 +42,13 @@ const form = ref({
 
 const showBlockId = computed(() => form.value.detectionScope === 'singleBlock');
 
+const blockIdModel = computed<number | undefined>({
+  get: () => form.value.blockId ?? undefined,
+  set: (value) => {
+    form.value.blockId = clampBlockId(value);
+  },
+});
+
 // mssanitizer rejects out-of-range params (--max-debuglog-size 1..10240, --block-id 0..200)
 // and aborts the run, so clamp values from stored config before they reach save / run.
 const MAX_DEBUGLOG_SIZE_DEFAULT = 1024;
@@ -310,7 +317,7 @@ const handleConfirm = async () => {
           >
             <span class="run-setting-label">{{ t('web.options.sanitizer.blockId') }}</span>
             <a-input-number
-              v-model:value="form.blockId"
+              v-model:value="blockIdModel"
               :min="0"
               :max="200"
               style="width: 140px;"
