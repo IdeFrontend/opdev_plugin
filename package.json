@@ -18,6 +18,10 @@
     "workspaceContains:package.json",
     "onStartupFinished"
   ],
+  "extensionPack": [
+    "ms-vscode-remote.remote-ssh",
+    "ms-vscode.cpptools"
+  ],
   "icon": "out/web/branding/extension_icon.png",
   "contributes": {
     "icons": {
