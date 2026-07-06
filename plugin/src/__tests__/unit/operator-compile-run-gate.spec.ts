@@ -100,7 +100,7 @@ describe('OperatorCompileRunGate', () => {
       .toBe(false);
   });
 
-  it('keeps running state when same node is queued again', async () => {
+  it('skips duplicate actions for the same running node', async () => {
     const gate = new OperatorCompileRunGate();
 
     let releaseFirstBuild!: ()=> void;
@@ -116,14 +116,53 @@ describe('OperatorCompileRunGate', () => {
       secondBuildStarted = true;
     });
 
-    expect(gate.getUiState()).toEqual({ build: 'running' });
+    expect(gate.getUiState())
+      .toEqual({ build: 'running' });
 
     releaseFirstBuild();
     await firstBuild;
     await secondBuild;
 
-    expect(secondBuildStarted).toBe(true);
-    expect(gate.getUiState()).toEqual({});
+    expect(secondBuildStarted)
+      .toBe(false);
+    expect(gate.getUiState())
+      .toEqual({});
+  });
+
+  it('allows run to queue behind build but skips duplicate queued run', async () => {
+    const gate = new OperatorCompileRunGate();
+
+    let releaseBuild!: ()=> void;
+    const buildBarrier = new Promise<void>((resolve) => {
+      releaseBuild = resolve;
+    });
+
+    let runStarts = 0;
+    const build = gate.enqueue('build', async () => {
+      await buildBarrier;
+    });
+    const firstRun = gate.enqueue('run', async () => {
+      runStarts += 1;
+    });
+    const duplicateRun = gate.enqueue('run', async () => {
+      runStarts += 1;
+    });
+
+    expect(gate.getUiState())
+      .toEqual({
+        build: 'running',
+        run: 'queued',
+      });
+
+    releaseBuild();
+    await build;
+    await firstRun;
+    await duplicateRun;
+
+    expect(runStarts)
+      .toBe(1);
+    expect(gate.getUiState())
+      .toEqual({});
   });
 
   it('stopAll cancels the active task and drops queued run', async () => {
@@ -178,19 +217,25 @@ describe('OperatorCompileRunGate', () => {
       runStarted = true;
     });
 
-    expect(gate.getUiState()).toEqual({
-      build: 'running',
-      run: 'queued',
-    });
-    expect(gate.cancelQueued('run')).toBe(true);
-    expect(gate.isNodeQueued('run')).toBe(false);
-    expect(gate.getUiState()).toEqual({ build: 'running' });
+    expect(gate.getUiState())
+      .toEqual({
+        build: 'running',
+        run: 'queued',
+      });
+    expect(gate.cancelQueued('run'))
+      .toBe(true);
+    expect(gate.isNodeQueued('run'))
+      .toBe(false);
+    expect(gate.getUiState())
+      .toEqual({ build: 'running' });
 
     releaseBuild();
     await build;
     await run;
 
-    expect(runStarted).toBe(false);
-    expect(gate.getUiState()).toEqual({});
+    expect(runStarted)
+      .toBe(false);
+    expect(gate.getUiState())
+      .toEqual({});
   });
 });
