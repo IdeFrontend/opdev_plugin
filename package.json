@@ -499,6 +499,11 @@
             "type": "string",
             "order": 401,
             "markdownDescription": "%config.op-devtools.environment.socVersion.markdownDescription%"
+          },
+          "op-devtools.environment.insightPath": {
+            "type": "string",
+            "order": 402,
+            "markdownDescription": "%config.op-devtools.environment.insightPath.markdownDescription%"
           }
         }
       },

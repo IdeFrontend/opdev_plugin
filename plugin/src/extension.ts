@@ -38,6 +38,7 @@ import { msAgentBridgeService } from './service/ms-agent-bridge.service';
 import { getDumpTensorPanelViewProvider } from './class/dump-tensor-panel-view';
 import { appendLog } from './helpers/output-channel';
 import { promptReloadWindow } from './helpers/reload-window-prompt';
+import { insightService } from './service/insight-service';
 
 import { AsyncSingleFlight } from './helpers/async-single-flight';
 import { startPostActivateBootstrap } from './helpers/post-activate-bootstrap';
@@ -352,6 +353,15 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // Internationalization (i18n)
   await initI18n();
+
+  await insightService.initializeInsightPathConfig(context);
+
+  try {
+    await insightService.initializeInsight(context);
+  }
+  catch (error) {
+    console.error('[activate] Failed to initialize insight:', error);
+  }
 
   // Whether devtool_config.json exists (drives command visibility)
   let hasDevtoolConfig = await configService.checkDevtoolConfig();

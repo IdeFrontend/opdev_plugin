@@ -24,6 +24,7 @@ import {
   postCurrentTheme,
   registerWebviewThemeBridge,
 } from '../core/view/webview-theme';
+import { insightService } from '../service/insight-service';
 
 type CachedHtmlEntry = {
   html: string;
@@ -149,20 +150,12 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     );
   }
 
-  /**
-   * Get the insight-vscode-plugin base path
-   * Read from process.env first, if not, read from .arts/.env file
-   */
   private getInsightPluginBasePath(): string {
-    const envPath = EnvironmentVariableReader.getEnv('INSIGHT_HOME_PATH');
+    const insightPath = insightService.resolveInsightPath(this.context);
 
-    if (envPath) {
-      console.log(`[InsightDataViewerPanel] Got insight-vscode-plugin path from environment variable: ${envPath}`);
+    console.log(`[InsightDataViewerPanel] Got insight path: ${insightPath}`);
 
-      return envPath;
-    }
-
-    return '';
+    return insightPath;
   }
 
   /**
@@ -172,7 +165,7 @@ export class InsightDataViewerPanel implements vscode.Disposable {
     context: vscode.ExtensionContext,
     binPath: string,
   ): void {
-    const insightPluginBasePath = EnvironmentVariableReader.getEnv('INSIGHT_HOME_PATH');
+    const insightPluginBasePath = insightService.resolveInsightPath(context);
 
     if (!insightPluginBasePath) {
       vscode.window.showInformationMessage(t('insight.insightPathFailed'));

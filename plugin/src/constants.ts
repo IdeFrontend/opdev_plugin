@@ -222,3 +222,15 @@ export const COMMAND_SIDEBAR_PERFORMANCE_REPORT_FILTER_MARKED = `${COMMAND_PREFI
 export const COMMAND_SIDEBAR_PERFORMANCE_REPORT_SHOW_ALL = `${COMMAND_PREFIX}.sidebar.performance.report.showAll`;
 
 export const COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN = `${COMMAND_PREFIX}.sidebar.performance.file.open`;
+
+export const INSIGHT_VERSION_MAPPINGS = [
+  {
+    minPluginVersion: '1.0.0',
+    insightVersion: '0.0.1',
+    downloadUrl: 'https://gitcode.com/opdevtools/plugin_release/releases/download/msinsight/msinsight.zip',
+  },
+];
+
+export const INSIGHT_VERSION_FILE_NAME = 'insight-version.json';
+
+export const INSIGHT_BACKUP_SUFFIX = '_backup';
