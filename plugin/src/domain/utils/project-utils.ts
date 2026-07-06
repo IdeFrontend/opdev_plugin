@@ -62,6 +62,13 @@ export async function ensureLaunchJsonExists(
 
   if (fs.existsSync(devtoolConfigPath)) {
     console.log('ensureLaunchJsonExists: config file already exists, skip creation');
+    try {
+      await ensureMsdebugBreakpointFileAssociations(projectDir);
+      console.log('ensureLaunchJsonExists: workspace file associations ensured');
+    }
+    catch (error) {
+      console.warn('ensureLaunchJsonExists: failed to ensure file associations:', error);
+    }
 
     return;
   }

@@ -48,7 +48,7 @@ MindStudio Debug (`msdebug_session.ts`):
 | `export LAUNCH_KERNEL_PATH=…` | Patched into `launch.json` `environment` (sidecar or heuristic) |
 | `msdebug python3 ./op.py` | `msdebug-triton-npu` with `target` + `targetArgs` |
 | CANN env | `environmentScripts` → `<ide>/.env` |
-| Kernel breakpoints on `.cce` | `files.associations`: `*.cce` → `cpp` in `<ide>/settings.json` |
+| Kernel breakpoints on `.cce`/`.asc` | `files.associations`: `*.cce`/`*.asc` -> `cpp` in `<ide>/settings.json` when not already configured |
 
 Config name: `msdebug-triton-npu` (NPU only; no Triton CPU debug path).
 

@@ -208,7 +208,7 @@ Debug-related workspace keys (`debugMode`, CPU/NPU debug compile commands): [`wo
 | `domain/utils/debug-config-resolver.ts` | Launch config name selection |
 | `domain/utils/debug-python-target.ts` | Python/Triton `launch.json` patching |
 | `domain/utils/triton-kernel-path.ts` | Sidecar + heuristic kernel artifact discovery (`*.npubin`, `kernel.o`) for `LAUNCH_KERNEL_PATH` |
-| `domain/utils/msdebug-ide-settings.ts` | Seeds `files.associations` (`*.cce` → `cpp`) for kernel breakpoints |
+| `domain/utils/msdebug-ide-settings.ts` | Seeds `files.associations` (`*.cce`/`*.asc` -> `cpp`) for kernel breakpoints while preserving existing workspace associations |
 | `domain/plugins/triton.plugin.ts` | Triton debug flags and debug compile scripts |
 | `domain/services/command-strategy/triton-strategy.ts` | `probeTritonPythonDependencies()` preflight |
 | `domain/utils/project-utils.ts` | `ensureLaunchJsonExists` |
@@ -230,7 +230,7 @@ Requires `op-devtools.operatorSupport.triton=true`, MindStudio Debug VSIX, CANN/
 4. **Patch launch.json** — `msdebug-triton-npu`: python `target`, `./<script>.py` `targetArgs`, operator directory `cwd`; adds `LAUNCH_KERNEL_PATH` from `<ide>/.triton_launch_kernel_path` (written by debug pre-build) or newest matching kernel artifact under `~/.triton/cache` (prefers `<operator>.npubin` when the active script is known, then global newest among `*.npubin` / `kernel.o` / `kernel_reloc.o`).
 5. **Start** — `vscode.debug.startDebugging` → generic `msdebug-mi` adapter (no Triton-specific DAP).
 
-Breakpoints target generated kernel sources (e.g. `.cce` in the Triton cache). OP DevTools seeds `files.associations` for `*.cce` → `cpp` in workspace `<ide>/settings.json`.
+Breakpoints target generated kernel sources (e.g. `.cce` in the Triton cache) and Ascend kernel sources (`.asc`). OP DevTools seeds `files.associations` for `*.cce`/`*.asc` -> `cpp` in workspace `<ide>/settings.json` when those globs are not already configured.
 
 **CLI ↔ plugin mapping:** [msdebug-plugin-connection.md](msdebug-plugin-connection.md)  
 **NPU E2E checklist:** [msdebug-triton-e2e.md](msdebug-triton-e2e.md) (includes `scripts/triton-msdebug-cli-baseline.sh`)
