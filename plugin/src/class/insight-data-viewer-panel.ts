@@ -167,12 +167,6 @@ export class InsightDataViewerPanel implements vscode.Disposable {
   ): void {
     const insightPluginBasePath = insightService.resolveInsightPath(context);
 
-    if (!insightPluginBasePath) {
-      vscode.window.showInformationMessage(t('insight.insightPathFailed'));
-
-      return;
-    }
-
     const column = vscode.window.activeTextEditor
       ? vscode.window.activeTextEditor.viewColumn
       : undefined;

@@ -199,8 +199,9 @@ export default {
   'webview.createOpFileFailed': 'Failed to create operator file: {{error}}',
 
   // insight
-  'insight.insightPathFailed': 'Failed to get insight-vscode-plugin path from env. Check INSIGHT_HOME_PATH or ask admin.',
   'insight.profilerServerExitCode': 'profiler_server exited with code {{code}}',
+  'insight.downloadFailed': 'Insight download failed: {{error}}\n\nPlease download Insight manually and extract it to:\n{{path}}\n\nDownload URL: {{url}}\n\nAfter extraction, index.html should exist in this directory.',
+  'insight.downloadErrorUnknown': 'Unknown error',
   'insight.profilerServerStartFailed': 'Failed to start profiler_server: {{error}}',
 
   // mind-studio

@@ -200,8 +200,9 @@ export default {
   'webview.createOpFileFailed': '创建算子文件失败: {{error}}',
 
   // insight
-  'insight.insightPathFailed': '从环境变量获取 insight-vscode-plugin 路径失败，请检查环境变量 INSIGHT_HOME_PATH 是否正确，如不存在请联系管理员设置',
   'insight.profilerServerExitCode': 'profiler_server 进程异常退出，退出码: {{code}}',
+  'insight.downloadFailed': 'Insight 下载失败：{{error}}\n\n请手动下载 Insight 后解压到以下目录：\n{{path}}\n\n下载地址：{{url}}\n\n解压后该目录下应存在 index.html 文件。',
+  'insight.downloadErrorUnknown': '未知错误',
   'insight.profilerServerStartFailed': '启动 profiler_server 失败: {{error}}',
 
   // mind-studio

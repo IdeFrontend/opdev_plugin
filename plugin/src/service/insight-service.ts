@@ -3,10 +3,14 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+import http from 'http';
+import https from 'https';
+import { t } from 'i18next';
 import AdmZip from 'adm-zip';
 
 const execFileAsync = promisify(execFile);
 
+import { EnvironmentVariableReader } from '../class/environment-variable-reader';
 import {
   INSIGHT_VERSION_MAPPINGS,
   INSIGHT_VERSION_FILE_NAME,
@@ -43,7 +47,7 @@ export class InsightService {
   }
 
   private getAndSetDefaultInsightPath(context: vscode.ExtensionContext): string {
-    const envPath = process.env.INSIGHT_HOME_PATH;
+    const envPath = EnvironmentVariableReader.getEnv('INSIGHT_HOME_PATH');
 
     let defaultPath: string;
 
@@ -301,8 +305,77 @@ export class InsightService {
       return;
     }
     catch {
-      throw new Error('Failed to download file: neither wget, curl nor PowerShell is available');
+      // Fall back to Node.js http/https download
+      await this.downloadFileWithNodeHttp(url, destPath);
     }
+  }
+
+  private async downloadFileWithNodeHttp(url: string, destPath: string, redirectCount: number = 0): Promise<void> {
+    if (redirectCount > 5) {
+      throw new Error('Too many redirects');
+    }
+
+    return new Promise((resolve, reject) => {
+      const parsedUrl = new URL(url);
+      const protocol = parsedUrl.protocol === 'https:' ? https : http;
+
+      const options: http.RequestOptions = {
+        hostname: parsedUrl.hostname,
+        port: parsedUrl.port ? parseInt(parsedUrl.port) : (parsedUrl.protocol === 'https:' ? 443 : 80),
+        path: parsedUrl.pathname + parsedUrl.search,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': '*/*',
+          'Referer': 'https://gitcode.net/',
+        },
+      };
+
+      const req = protocol.get(options, (res) => {
+        if (res.statusCode && [
+          301,
+          302,
+          307,
+          308,
+        ].includes(res.statusCode)) {
+          const redirectUrl = res.headers.location;
+
+          if (redirectUrl) {
+            this.downloadFileWithNodeHttp(redirectUrl, destPath, redirectCount + 1)
+              .then(resolve)
+              .catch(reject);
+
+            return;
+          }
+        }
+
+        if (res.statusCode && res.statusCode >= 400) {
+          reject(new Error(`Download failed with status ${res.statusCode}`));
+
+          return;
+        }
+
+        const fileStream = fs.createWriteStream(destPath);
+
+        res.pipe(fileStream);
+
+        fileStream.on('finish', () => {
+          fileStream.close();
+          resolve();
+        });
+
+        fileStream.on('error', (err) => {
+          fileStream.close();
+          fs.unlink(destPath, () => { });
+          reject(err);
+        });
+      });
+
+      req.on('error', (err) => {
+        reject(err);
+      });
+
+      req.end();
+    });
   }
 
   async unzipFile(zipPath: string, destPath: string): Promise<void> {
@@ -509,8 +582,12 @@ export class InsightService {
   }
 
   private showDownloadFailedMessage(mapping: InsightVersionMapping, insightPath: string, error: unknown): void {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    const message = `Insight 下载失败：${errorMessage}\n\n请手动下载 Insight 后解压到以下目录：\n${insightPath}\n\n下载地址：${mapping.downloadUrl}\n\n解压后该目录下应存在 index.html 文件。`;
+    const errorMessage = error instanceof Error ? error.message : t('insight.downloadErrorUnknown');
+    const message = t('insight.downloadFailed', {
+      error: errorMessage,
+      path: insightPath,
+      url: mapping.downloadUrl,
+    });
 
     vscode.window.showErrorMessage(message);
   }
