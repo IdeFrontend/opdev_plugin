@@ -30,7 +30,7 @@ Default types shown: **CANN**, **PYASC**, **TRITON** (`items_type` in `new-proje
 | Condition | UI change |
 |-----------|-----------|
 | `getProjectTypeSupportEnabled(TRITON)` is `false` | Triton card removed; selection falls back to CANN if needed. |
-| Open workspace `getProjectType()` returns `projectType === 'ascend'` | List is **only STANDARD_CUSTOM** (Ascend standard-custom); selection forced to view ID 2. |
+| Open workspace `getProjectType()` returns standard-custom context (`projectType === 'ascend'` from stored project records or detected `projectType === 'standard-custom'`) | List is **only STANDARD_CUSTOM** (Ascend standard-custom); selection forced to view ID 2. |
 
 API: `common/getProjectTypeSupportEnabled` → [`common-controller.ts`](../plugin/src/controller/common-controller.ts) → `isOperatorSupportEnabled('triton')`.
 

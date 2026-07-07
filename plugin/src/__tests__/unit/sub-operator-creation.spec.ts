@@ -2,13 +2,22 @@ import { isSubOperatorCreation } from '@plugin/domain/utils/sub-operator-creatio
 
 describe('isSubOperatorCreation', () => {
   const base = {
-    subOpDir: '/repo/experimental/add',
+    subOpDir: '/repo/ops-math/math/add',
+    workspaceRoot: '/repo/ops-math',
     isStandardCustomViewId: true,
-    hasAncestorGenop: () => true,
+    currentProjectType: 'standard-custom',
   };
 
-  it('is true for a standard-custom view id nested under a --genop collection', () => {
+  it('is true for a standard-custom view id nested under the current standard-custom workspace', () => {
     expect(isSubOperatorCreation(base))
+      .toBe(true);
+  });
+
+  it('treats legacy stored project_type=ascend as the current standard-custom workspace', () => {
+    expect(isSubOperatorCreation({
+      ...base,
+      currentProjectType: 'ascend',
+    }))
       .toBe(true);
   });
 
@@ -20,10 +29,18 @@ describe('isSubOperatorCreation', () => {
       .toBe(false);
   });
 
-  it('is false when there is no --genop ancestor collection', () => {
+  it('is false when the current workspace is not standard-custom', () => {
     expect(isSubOperatorCreation({
       ...base,
-      hasAncestorGenop: () => false,
+      currentProjectType: 'cann',
+    }))
+      .toBe(false);
+  });
+
+  it('is false when the target directory is outside the current workspace', () => {
+    expect(isSubOperatorCreation({
+      ...base,
+      subOpDir: '/repo/other/math/add',
     }))
       .toBe(false);
   });

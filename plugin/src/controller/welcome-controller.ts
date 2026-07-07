@@ -31,9 +31,6 @@ import {
   SubOperatorInfo,
 } from '@plugin/domain/models/project-model';
 import { isSubOperatorCreation } from '@plugin/domain/utils/sub-operator-creation';
-import {
-  hasAncestorBuildShWithGenop, findAncestorGenopCollectionRoot,
-} from '@plugin/domain/plugins/detection-utils';
 import { WorkspaceDetectorService } from '@plugin/service/workspace-detector-service';
 import { OperatorProjectIconTheme } from '../class/operator-project-icon-theme';
 import { whenPostActivateBootstrapReady } from '@plugin/helpers/post-activate-bootstrap';
@@ -198,28 +195,39 @@ export const welcomeMethods = {
       const executor = new CommandExecutor();
 
       const subOpDir = path.join(params.projectPath, params.projectName);
-      const collectionRoot = findAncestorGenopCollectionRoot(subOpDir);
+      const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      const workspaceProject = workspaceRoot ? getProjectByPath(workspaceRoot) : undefined;
+      let currentProjectType = workspaceProject?.project_type;
+
+      if (!currentProjectType && workspaceRoot) {
+        const workspaceDetection = await OperatorProjectDetector.detectOperatorProject(workspaceRoot);
+
+        currentProjectType = workspaceDetection.isOperatorProject
+          ? workspaceDetection.projectType
+          : undefined;
+      }
+
       const isSubOp = isSubOperatorCreation({
         subOpDir,
+        workspaceRoot,
         isStandardCustomViewId:
           viewIdToProjectType(params.createOperatorProjectDictoryFileType) === 'ascend',
-        hasAncestorGenop: hasAncestorBuildShWithGenop,
+        currentProjectType,
       });
-      // Resolve the collection by path (type-agnostic): collection records are stored with
-      // project_type 'ascend' (viewIdToProjectType('standard-custom') === 'ascend'), so a
-      // type-filtered lookup would never match. getProjectByPath matches by path only.
-      const parentCollection = isSubOp && collectionRoot
-        ? getProjectByPath(collectionRoot)
+      // Resolve the collection by the current workspace root (type-agnostic): older
+      // standard-custom collection records are stored with project_type 'ascend'.
+      const parentCollection = isSubOp && workspaceRoot
+        ? getProjectByPath(workspaceRoot)
         : undefined;
 
       // Issue #14: prefer the project's own `build.sh --genop` to generate sub-operator
       // source. Only attempt it for a sub-operator with a resolved collection.
       let genopSkipFileGeneration = false;
 
-      if (isSubOp && parentCollection && collectionRoot) {
+      if (isSubOp && parentCollection && workspaceRoot) {
         genopSkipFileGeneration = await tryGenOpScaffold({
           executor,
-          collectionRoot,
+          collectionRoot: workspaceRoot,
           projectPath: params.projectPath,
           operatorName: params.projectName,
           subOpDir,

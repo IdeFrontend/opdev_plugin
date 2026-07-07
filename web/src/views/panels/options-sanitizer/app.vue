@@ -37,7 +37,7 @@ const form = ref({
   logLevel: 'warn' as 'info' | 'warn' | 'error',
   maxDebuglogSize: 1024,
   detectionScope: 'global' as DetectionScopeUi,
-  blockId: null as number | null,
+  blockId: undefined as number | undefined,
 });
 
 const showBlockId = computed(() => form.value.detectionScope === 'singleBlock');
@@ -63,15 +63,15 @@ function clampMaxDebuglogSize(value: unknown): number {
   return Math.min(n, 10240);
 }
 
-function clampBlockId(value: unknown): number | null {
+function clampBlockId(value: unknown): number | undefined {
   if (value === null || value === undefined || value === '') {
-    return null;
+    return undefined;
   }
 
   const n = Math.trunc(Number(value));
 
   if (!Number.isFinite(n)) {
-    return null;
+    return undefined;
   }
 
   return Math.min(Math.max(n, 0), 200);
@@ -126,7 +126,7 @@ function buildSavePayload() {
     logLevel: form.value.logLevel,
     maxDebuglogSize: clampMaxDebuglogSize(form.value.maxDebuglogSize),
     useBlock: form.value.detectionScope === 'singleBlock',
-    blockId: form.value.detectionScope === 'singleBlock' ? clampBlockId(form.value.blockId) : null,
+    blockId: form.value.detectionScope === 'singleBlock' ? clampBlockId(form.value.blockId) ?? null : null,
   };
 }
 
@@ -137,7 +137,7 @@ async function saveSanitizerForm() {
 function onDetectionScopeChange() {
   // Default a block id when switching to single-block so the run cannot silently
   // fall back to all-blocks (the strategy omits --block-id when blockId is null).
-  if (form.value.detectionScope === 'singleBlock' && form.value.blockId === null) {
+  if (form.value.detectionScope === 'singleBlock' && form.value.blockId === undefined) {
     form.value.blockId = 0;
   }
 
