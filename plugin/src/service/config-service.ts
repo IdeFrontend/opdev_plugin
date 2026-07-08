@@ -66,6 +66,21 @@ function toFullDottedKey(relativeKey: string): string {
     : `${OP_DEVTOOLS_PREFIX}${relativeKey}`;
 }
 
+function readWorkspaceScopedSetting<T>(relativeKey: string): T | undefined {
+  const inspection = getOpDevtoolsWorkspaceConfiguration()
+    .inspect<T>(relativeKey);
+
+  if (!inspection) {
+    return undefined;
+  }
+
+  if (inspection.workspaceFolderValue !== undefined) {
+    return inspection.workspaceFolderValue;
+  }
+
+  return inspection.workspaceValue;
+}
+
 function flattenNestedOpDevtools(
   nested: Record<string, unknown>,
   prefix: string,
@@ -561,8 +576,7 @@ export class ConfigService {
   }
 
   static isSettingsMigratedFromLegacy(): boolean {
-    return getOpDevtoolsWorkspaceConfiguration()
-      .get<boolean>(SETTINGS_MIGRATED_FROM_LEGACY_KEY) === true;
+    return ConfigService.readOpDevtoolsSetting<boolean>(SETTINGS_MIGRATED_FROM_LEGACY_KEY) === true;
   }
 
   /** Persist build_op deploy/run target to workspace settings only. */
@@ -572,8 +586,7 @@ export class ConfigService {
 
   /** Direct read of one `op-devtools` key via VS Code configuration API (backed by settings.json). */
   static readOpDevtoolsSetting<T>(relativeKey: string): T | undefined {
-    return getOpDevtoolsWorkspaceConfiguration()
-      .get<T>(relativeKey);
+    return readWorkspaceScopedSetting<T>(relativeKey);
   }
 
   /**
@@ -767,6 +780,7 @@ export class ConfigService {
         // above does not reproduce it, so surface it here for the top-level target_file that command
         // builders (e.g. TritonCommandStrategy.getProfilerTargetFile) read.
         const dbUserOptions = config.user_options as Record<string, unknown> | undefined;
+
         target_file = dbUserOptions?.target_file as string | undefined;
       }
 

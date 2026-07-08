@@ -9,11 +9,7 @@ import {
   resetLegacySettingsMigrationFlightForTest,
 } from '@plugin/service/config-service';
 
-jest.mock('@plugin/core/project/project-manager', () => ({
-  ProjectManager: {
-    getInstance: jest.fn(),
-  },
-}));
+jest.mock('@plugin/core/project/project-manager', () => ({ ProjectManager: { getInstance: jest.fn() } }));
 
 jest.mock('@plugin/domain/services/configuration', () => ({
   getConfig: jest.fn(),
@@ -23,20 +19,24 @@ jest.mock('@plugin/domain/services/configuration', () => ({
 
 jest.mock('@plugin/controller/home-controller', () => ({
   homeMethods: {
-    checkMultipleOperators: jest.fn().mockResolvedValue({
-      isStandardCustom: false,
-      hasMultiple: false,
-    }),
+    checkMultipleOperators: jest.fn()
+      .mockResolvedValue({
+        isStandardCustom: false,
+        hasMultiple: false,
+      }),
   },
 }));
 
 jest.mock('@plugin/service/project-service', () => ({
   projectService: {
-    getProjectSH: jest.fn().mockResolvedValue('/etc/profile'),
+    getProjectSH: jest.fn()
+      .mockResolvedValue('/etc/profile'),
   },
 }));
 
-import { getIdeConfigDir, getIdeSettingsFilePath } from '@plugin/helpers/ide-config-dir';
+import {
+  getIdeConfigDir, getIdeSettingsFilePath,
+} from '@plugin/helpers/ide-config-dir';
 import { getConfig } from '@plugin/domain/services/configuration';
 import { ProjectManager } from '@plugin/core/project/project-manager';
 
@@ -44,6 +44,17 @@ describe('ConfigService legacy settings migration', () => {
   let tmpRoot: string;
   let settingsPath: string;
   const getStore: Record<string, unknown> = {};
+  const inspectStore: Record<string, vscode.ConfigurationInspect<unknown> | undefined> = {};
+  const inspectFromStore = <T>(key: string): vscode.ConfigurationInspect<T> | undefined => {
+    if (!(key in getStore)) {
+      return undefined;
+    }
+
+    return {
+      key,
+      workspaceFolderValue: getStore[key] as T,
+    };
+  };
   const service = new ConfigService();
 
   beforeEach(() => {
@@ -51,42 +62,55 @@ describe('ConfigService legacy settings migration', () => {
     tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'op-devtools-migrate-'));
     fs.mkdirSync(getIdeConfigDir(tmpRoot), { recursive: true });
     settingsPath = getIdeSettingsFilePath(tmpRoot);
-    Object.keys(getStore).forEach((k) => delete getStore[k]);
+    Object.keys(getStore)
+      .forEach((k) => delete getStore[k]);
+    Object.keys(inspectStore)
+      .forEach((k) => delete inspectStore[k]);
     (ProjectManager.getInstance as jest.Mock).mockReturnValue({
       projectId: '1',
       getProjectInfo: () => ({ path: tmpRoot }),
     });
     vscode.workspace.workspaceFolders = [{ uri: { fsPath: tmpRoot } } as vscode.WorkspaceFolder];
     (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
-      inspect: jest.fn(),
+      inspect: <T>(key: string) => (
+        inspectStore[key] as vscode.ConfigurationInspect<T> | undefined
+      ) ?? inspectFromStore<T>(key),
       get: <T>(key: string) => getStore[key] as T | undefined,
     });
     jest.clearAllMocks();
     (getConfig as jest.Mock).mockImplementation((_projectId: number, type: string) => {
       if (type === 'build_op') {
-        return [{
-          config_type: 'build_op',
-          user_options: {
-            op: 'myop',
-            script: 'bash build.sh',
-            target_file: 'python run.py',
+        return [
+          {
+            config_type: 'build_op',
+            user_options: {
+              op: 'myop',
+              script: 'bash build.sh',
+              target_file: 'python run.py',
+            },
           },
-        }];
+        ];
       }
+
       if (type === 'sanitizer') {
-        return [{
-          config_type: 'sanitizer',
-          user_options: {
-            script: 'bash build.sh --sanitizer',
-            logLevel: 'warn',
-            tool: { memcheck: true },
+        return [
+          {
+            config_type: 'sanitizer',
+            user_options: {
+              script: 'bash build.sh --sanitizer',
+              logLevel: 'warn',
+              tool: { memcheck: true },
+            },
           },
-        }];
+        ];
       }
-      return [{
-        config_type: type,
-        user_options: { script: `script-${type}` },
-      }];
+
+      return [
+        {
+          config_type: type,
+          user_options: { script: `script-${type}` },
+        },
+      ];
     });
   });
 
@@ -101,11 +125,16 @@ describe('ConfigService legacy settings migration', () => {
     await service.migrateLegacySettingsToWorkspace();
 
     getStore[SETTINGS_MIGRATED_FROM_LEGACY_KEY] = true;
-    expect(ConfigService.isSettingsMigratedFromLegacy()).toBe(true);
+    expect(ConfigService.isSettingsMigratedFromLegacy())
+      .toBe(true);
     const parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf8')) as Record<string, unknown>;
-    expect(parsed[`op-devtools.${SETTINGS_MIGRATED_FROM_LEGACY_KEY}`]).toBe(true);
-    expect(parsed['op-devtools.compileAndDeploy.buildConfig.compileCommand']).toBe('bash build.sh');
-    expect(parsed['op-devtools.sanitizer.reportLogLevel']).toBe('warn');
+
+    expect(parsed[`op-devtools.${SETTINGS_MIGRATED_FROM_LEGACY_KEY}`])
+      .toBe(true);
+    expect(parsed['op-devtools.compileAndDeploy.buildConfig.compileCommand'])
+      .toBe('bash build.sh');
+    expect(parsed['op-devtools.sanitizer.reportLogLevel'])
+      .toBe('warn');
   });
 
   it('seeds all runtime-critical settings from generateStructure-like legacy rows (no empty commands)', async () => {
@@ -121,7 +150,8 @@ describe('ConfigService legacy settings migration', () => {
     };
 
     (getConfig as jest.Mock).mockImplementation((_projectId: number, type: string) => {
-      const rows: Record<string, { config_type: string; user_options: Record<string, unknown> }> = {
+      const rows: Record<string, { config_type: string;
+        user_options: Record<string, unknown> }> = {
         build_op: {
           config_type: 'build_op',
           user_options: {
@@ -142,7 +172,10 @@ describe('ConfigService legacy settings migration', () => {
         },
         ut_test: {
           config_type: 'ut_test',
-          user_options: { op: 'myop', script: legacyScripts.utTestCompileCommand },
+          user_options: {
+            op: 'myop',
+            script: legacyScripts.utTestCompileCommand,
+          },
         },
         sanitizer: {
           config_type: 'sanitizer',
@@ -150,8 +183,15 @@ describe('ConfigService legacy settings migration', () => {
             script: legacyScripts.sanitizerCompileCommand,
             logLevel: 'warn',
             maxDebuglogSize: 1024,
-            tool: { memcheck: true, racecheck: false, initcheck: false },
-            memcheckOption: { 'leak-check': false, 'check-unused-memory': false },
+            tool: {
+              memcheck: true,
+              racecheck: false,
+              initcheck: false,
+            },
+            memcheckOption: {
+              'leak-check': false,
+              'check-unused-memory': false,
+            },
             fileMapList: [],
           },
         },
@@ -181,6 +221,7 @@ describe('ConfigService legacy settings migration', () => {
           },
         },
       };
+
       return rows[type] ? [rows[type]] : [];
     });
 
@@ -200,13 +241,17 @@ describe('ConfigService legacy settings migration', () => {
       'op-devtools.performanceTuning.simulation.memoryThroughputWaveform',
       'op-devtools.environment.environmentScript',
     ];
+
     for (const key of requiredKeys) {
-      expect(parsed[key]).toBeDefined();
+      expect(parsed[key])
+        .toBeDefined();
       expect(parsed[key]).not.toBe('');
     }
+
     expect(parsed['op-devtools.compileAndDeploy.buildConfig.compileCommand'])
       .toBe(legacyScripts.compileCommand);
-    expect(parsed['op-devtools.compileAndDeploy.buildConfig.deployCommandOrRunCommand']).toBe('./build/myop');
+    expect(parsed['op-devtools.compileAndDeploy.buildConfig.deployCommandOrRunCommand'])
+      .toBe('./build/myop');
     expect(parsed['op-devtools.compileAndDeploy.buildConfig.cpuDebugCompileCommand'])
       .toBe(legacyScripts.cpuDebugCompileCommand);
     expect(parsed['op-devtools.compileAndDeploy.buildConfig.npuDebugCompileCommand'])
@@ -224,32 +269,54 @@ describe('ConfigService legacy settings migration', () => {
   it('migrates exampleBuildConfig whenever build_example row exists', async () => {
     (getConfig as jest.Mock).mockImplementation((_projectId: number, type: string) => {
       if (type === 'build_op') {
-        return [{
-          config_type: 'build_op',
-          user_options: { op: 'add', script: 'bash build.sh --pkg' },
-        }];
-      }
-      if (type === 'build_example') {
-        return [{
-          config_type: 'build_example',
-          user_options: {
-            script: 'bash build.sh --vendor_name=custom --run_example',
-            execution_mode: 'eager',
+        return [
+          {
+            config_type: 'build_op',
+            user_options: {
+              op: 'add',
+              script: 'bash build.sh --pkg',
+            },
           },
-        }];
+        ];
       }
+
+      if (type === 'build_example') {
+        return [
+          {
+            config_type: 'build_example',
+            user_options: {
+              script: 'bash build.sh --vendor_name=custom --run_example',
+              execution_mode: 'eager',
+            },
+          },
+        ];
+      }
+
       if (type === 'sanitizer') {
-        return [{ config_type: 'sanitizer', user_options: { script: 'bash build.sh --mssanitizer' } }];
+        return [
+          {
+            config_type: 'sanitizer',
+            user_options: { script: 'bash build.sh --mssanitizer' },
+          },
+        ];
       }
-      return [{ config_type: type, user_options: { script: `script-${type}` } }];
+
+      return [
+        {
+          config_type: type,
+          user_options: { script: `script-${type}` },
+        },
+      ];
     });
 
     await service.migrateLegacySettingsToWorkspace();
 
     const parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf8')) as Record<string, unknown>;
+
     expect(parsed['op-devtools.compileAndDeploy.exampleBuildConfig.runCommand'])
       .toBe('bash build.sh --vendor_name=custom --run_example');
-    expect(parsed['op-devtools.compileAndDeploy.exampleBuildConfig.executionMode']).toBe('eager');
+    expect(parsed['op-devtools.compileAndDeploy.exampleBuildConfig.executionMode'])
+      .toBe('eager');
   });
 
   it('maybeMigrate single-flights concurrent callers into one migrate', async () => {
@@ -260,21 +327,40 @@ describe('ConfigService legacy settings migration', () => {
       service.maybeMigrateLegacySettingsToWorkspace(),
     ]);
 
-    expect(migrateSpy).toHaveBeenCalledTimes(1);
+    expect(migrateSpy)
+      .toHaveBeenCalledTimes(1);
     migrateSpy.mockRestore();
   });
 
   it('maybeMigrate is a no-op when migration flag already set', async () => {
     getStore[SETTINGS_MIGRATED_FROM_LEGACY_KEY] = true;
-    await ConfigService.writeOpDevtoolsDottedSettings({
-      [SETTINGS_MIGRATED_FROM_LEGACY_KEY]: true,
-    }, tmpRoot);
+    await ConfigService.writeOpDevtoolsDottedSettings({ [SETTINGS_MIGRATED_FROM_LEGACY_KEY]: true }, tmpRoot);
 
     await service.maybeMigrateLegacySettingsToWorkspace();
 
     const parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf8')) as Record<string, unknown>;
-    expect(parsed['op-devtools.compileAndDeploy.buildConfig.compileCommand']).toBeUndefined();
-    expect(parsed['op-devtools.compileAndDeploy.exampleBuildConfig.runCommand']).toBeUndefined();
+
+    expect(parsed['op-devtools.compileAndDeploy.buildConfig.compileCommand'])
+      .toBeUndefined();
+    expect(parsed['op-devtools.compileAndDeploy.exampleBuildConfig.runCommand'])
+      .toBeUndefined();
+  });
+
+  it('does not treat a user-scope migration flag as a workspace migration flag', async () => {
+    getStore[SETTINGS_MIGRATED_FROM_LEGACY_KEY] = true;
+    inspectStore[SETTINGS_MIGRATED_FROM_LEGACY_KEY] = {
+      key: SETTINGS_MIGRATED_FROM_LEGACY_KEY,
+      userValue: true,
+    };
+
+    await service.maybeMigrateLegacySettingsToWorkspace();
+
+    const parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf8')) as Record<string, unknown>;
+
+    expect(parsed[`op-devtools.${SETTINGS_MIGRATED_FROM_LEGACY_KEY}`])
+      .toBe(true);
+    expect(parsed['op-devtools.compileAndDeploy.buildConfig.deployCommandOrRunCommand'])
+      .toBe('python run.py');
   });
 
   it('maybeMigrate skips when build_op row is missing', async () => {
@@ -282,7 +368,8 @@ describe('ConfigService legacy settings migration', () => {
 
     await service.maybeMigrateLegacySettingsToWorkspace();
 
-    expect(fs.existsSync(settingsPath)).toBe(false);
+    expect(fs.existsSync(settingsPath))
+      .toBe(false);
   });
 
   it('still seeds missing keys and sets flag when only some settings are pre-filled', async () => {
@@ -298,15 +385,21 @@ describe('ConfigService legacy settings migration', () => {
     await service.migrateLegacySettingsToWorkspace();
 
     const parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf8')) as Record<string, unknown>;
-    expect(parsed[`op-devtools.${SETTINGS_MIGRATED_FROM_LEGACY_KEY}`]).toBe(true);
-    expect(parsed['op-devtools.compileAndDeploy.buildConfig.compileCommand']).toBe('user-prefilled');
-    expect(parsed['op-devtools.compileAndDeploy.buildConfig.sanitizerCompileCommand']).toBe('user-sanitizer');
-    expect(parsed['op-devtools.compileAndDeploy.buildConfig.deployCommandOrRunCommand']).toBe('python run.py');
+
+    expect(parsed[`op-devtools.${SETTINGS_MIGRATED_FROM_LEGACY_KEY}`])
+      .toBe(true);
+    expect(parsed['op-devtools.compileAndDeploy.buildConfig.compileCommand'])
+      .toBe('user-prefilled');
+    expect(parsed['op-devtools.compileAndDeploy.buildConfig.sanitizerCompileCommand'])
+      .toBe('user-sanitizer');
+    expect(parsed['op-devtools.compileAndDeploy.buildConfig.deployCommandOrRunCommand'])
+      .toBe('python run.py');
   });
 
   it('does not set migration flag when all seed keys already exist in settings.json', async () => {
     await service.migrateLegacySettingsToWorkspace();
     const afterFirst = JSON.parse(fs.readFileSync(settingsPath, 'utf8')) as Record<string, unknown>;
+
     delete afterFirst[`op-devtools.${SETTINGS_MIGRATED_FROM_LEGACY_KEY}`];
     fs.writeFileSync(settingsPath, `${JSON.stringify(afterFirst, null, 2)}\n`, 'utf8');
     delete getStore[SETTINGS_MIGRATED_FROM_LEGACY_KEY];
@@ -314,15 +407,20 @@ describe('ConfigService legacy settings migration', () => {
     await service.migrateLegacySettingsToWorkspace();
 
     const parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf8')) as Record<string, unknown>;
-    expect(parsed[`op-devtools.${SETTINGS_MIGRATED_FROM_LEGACY_KEY}`]).toBeUndefined();
-    expect(ConfigService.isSettingsMigratedFromLegacy()).toBe(false);
+
+    expect(parsed[`op-devtools.${SETTINGS_MIGRATED_FROM_LEGACY_KEY}`])
+      .toBeUndefined();
+    expect(ConfigService.isSettingsMigratedFromLegacy())
+      .toBe(false);
   });
 
   it('does not set migration flag when settings write returns false', async () => {
-    const writeSpy = jest.spyOn(ConfigService, 'writeOpDevtoolsDottedSettings').mockResolvedValue(false);
+    const writeSpy = jest.spyOn(ConfigService, 'writeOpDevtoolsDottedSettings')
+      .mockResolvedValue(false);
 
     await service.migrateLegacySettingsToWorkspace();
-    expect(ConfigService.isSettingsMigratedFromLegacy()).toBe(false);
+    expect(ConfigService.isSettingsMigratedFromLegacy())
+      .toBe(false);
 
     writeSpy.mockRestore();
   });
@@ -337,8 +435,12 @@ describe('ConfigService legacy settings migration', () => {
     await service.migrateLegacySettingsToWorkspace();
 
     const parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf8')) as Record<string, unknown>;
-    expect(parsed['op-devtools.sanitizer.memory']).toBe(false);
-    expect(parsed['op-devtools.compileAndDeploy.buildConfig.compileCommand']).toBe('bash build.sh');
-    expect(parsed[`op-devtools.${SETTINGS_MIGRATED_FROM_LEGACY_KEY}`]).toBe(true);
+
+    expect(parsed['op-devtools.sanitizer.memory'])
+      .toBe(false);
+    expect(parsed['op-devtools.compileAndDeploy.buildConfig.compileCommand'])
+      .toBe('bash build.sh');
+    expect(parsed[`op-devtools.${SETTINGS_MIGRATED_FROM_LEGACY_KEY}`])
+      .toBe(true);
   });
 });
