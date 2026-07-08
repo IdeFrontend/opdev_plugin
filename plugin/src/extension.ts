@@ -1219,7 +1219,7 @@ export async function activate(context: vscode.ExtensionContext) {
   );
   const sidebarOpenHelpCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_OPEN_HELP,
-    async () => vscode.env.openExternal(vscode.Uri.parse('https://gitcode.com/org/cann/discussions/54')),
+    async () => vscode.env.openExternal(vscode.Uri.parse('https://gitcode.com/opdevtools/plugin_release')),
   );
   const sidebarSanitizerReportSelectCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_SANITIZER_REPORT_SELECT,

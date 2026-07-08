@@ -19,7 +19,7 @@
 
 ## 基于一站式算子开发平台进行算子开发
 基于一站式算子开发平台快速完成算子创建、开发、异常检测、性能调优 \
-指导文档：**[https://gitcode.com/org/cann/discussions/54](https://gitcode.com/org/cann/discussions/54)**
+指导文档：**[https://gitcode.com/opdevtools/plugin_release](https://gitcode.com/opdevtools/plugin_release)**
 
 ## 编译运行
 
@@ -34,4 +34,4 @@
 ## 算子描述
 - 算子功能：  
 
-  本样例通过使用<<<>>>内核调用符来完成算子核函数在NPU侧运行验证的基础流程，核函数内通过printf打印输出结果。  
+  本样例通过使用<<<>>>内核调用符来完成算子核函数在NPU侧运行验证的基础流程，核函数内通过printf打印输出结果。

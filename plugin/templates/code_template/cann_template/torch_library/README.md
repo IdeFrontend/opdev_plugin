@@ -20,7 +20,7 @@
 
 ## 基于一站式算子开发平台进行算子开发
 基于一站式算子开发平台快速完成算子创建、开发、异常检测、性能调优 \
-指导文档：**[https://gitcode.com/org/cann/discussions/54](https://gitcode.com/org/cann/discussions/54)**
+指导文档：**[https://gitcode.com/opdevtools/plugin_release](https://gitcode.com/opdevtools/plugin_release)**
 
 ## 编译运行
 
