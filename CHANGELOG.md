@@ -2,6 +2,22 @@
 
 本文列出 **Huawei OP DevTools（华为算子一站式开发工具）** 的重要变更。完整提交历史见 [GitCode](https://gitcode.com/mlh0101/mstt) 仓库。
 
+## 1.3.7 — 2026-07-09
+
+本版本包含 Insight 自动安装、调试可靠性改进、子算子与配置体验、操作面板聚焦及配套扩展推荐。
+
+- **Insight 自动安装** — 激活时在后台非阻塞初始化 Insight。路径解析优先级：工作区 `op-devtools.environment.insightPath` → `INSIGHT_HOME_PATH`（含 `.env`/`.arts`）→ 内置默认路径。`InsightService` 处理版本映射（含历史的 `insight-version.json`）、下载（wget/curl/PowerShell，不可用时回退 Node.js HTTP）、解压校验（检查 `index.html`）、备份/恢复及失败时的手动下载指引。性能数据查看器使用解析后的 Insight 路径。
+- **生成 `.env` 中的 msdebug 库路径** — 在插件生成的 `<ide>/.env` 中将 CANN `tools/msdebug/lib` 拼入 `LD_LIBRARY_PATH`；工程创建时写入，并在每次 NPU/CPU 调试启动前尽力回填（侧栏、F5 与 Run 面板）。修复 dump 环境缺少 LLDB 库目录导致 msdebug-mi 适配器无法启动的问题。
+- **调试构建失败或二进制缺失时中止启动** — 当解析出的 msdebug 目标可执行文件不在磁盘上时（调试构建失败或被抢占）阻止调试启动，显示明确错误而非附着到不存在的二进制。
+- **创建算子时复用当前窗口 ([#34](https://gitcode.com/opdevtools/plugin_release/issues/34))** — 修复独立算子与打开工程流程：「当前窗口」发出 `{ forceReuseWindow: true }`，「新窗口」发出 `{ forceNewWindow: true }`，不再使用会 defer 到 VS Code 默认行为并意外打开新窗口的 `{ forceNewWindow: false }`。
+- **README 与打包帮助链接 ([#35](https://gitcode.com/opdevtools/plugin_release/issues/35))** — 刷新 README 用户指引（中/英）；更新 CANN 模板 README 与首页侧栏 Webview 中的帮助/文档链接。
+- **推荐配套扩展 ([#27](https://gitcode.com/opdevtools/plugin_release/issues/27))** — 新增 `extensionPack` 项 Remote - SSH 与 C/C++（`ms-vscode-remote.remote-ssh`、`ms-vscode.cpptools`），引导 VS Code 提示安装所需配套扩展。
+- **嵌套工作区重置配置 ([#41](https://gitcode.com/opdevtools/plugin_release/issues/41))** — 当有效工程根与 VS Code 工作区文件夹根不一致时（例如在子文件夹打开工作区），重置项目配置会同时清理两者。移除所有相关根下的遗留配置、算子记录、`.arts` devtool 配置与工作区设置后重载窗口。
+- **忽略重复编译操作 ([#42](https://gitcode.com/opdevtools/plugin_release/issues/42))** — `OperatorCompileRunGate` 在同一 Build/Run 已排队或运行中时丢弃重复请求，避免重复触发编译。
+- **`.asc` 内核文件高亮 ([#25](https://gitcode.com/opdevtools/plugin_release/issues/25))** — 在工作区 `<ide>/settings.json` 中为 `*.asc` → `cpp` 写入 `files.associations`（与现有 `*.cce` 映射并存），使 Ascend 内核断点可用；用户已配置的关联保持不变。
+- **聚焦操作面板而非切换侧栏 ([#33](https://gitcode.com/opdevtools/plugin_release/issues/33))** — 编辑器标题栏图标通过 `workbench.view.extension.*` 或 `workbench.action.focusAuxiliaryBar` 聚焦插件操作面板（辅助侧栏），不再切换主侧栏并关闭资源管理器/调试等视图。
+- **子算子创建使用工作区工程类型 ([#13](https://gitcode.com/opdevtools/plugin_release/issues/13))** — 根据当前工作区工程类型（`standard-custom` 与遗留存储的 `ascend`）识别子算子创建，而非硬编码假设；按工作区根解析父集合，使嵌套 standard-custom 算子正确脚手架。
+
 ## 1.3.6 — 2026-07-01
 
 本版本包含新建工程 UI 刷新、编译/运行队列协调、异常检测默认选项、SoC 告警改进与 CANN 模板清理。
