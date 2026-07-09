@@ -291,7 +291,10 @@ export class InsightService {
           return;
         }
         catch {
-          // Fall through to Node.js http download
+          // Fall back to Node.js http/https download
+          await this.downloadFileWithNodeHttp(url, destPath);
+
+          return;
         }
       }
     }
@@ -475,6 +478,8 @@ export class InsightService {
 
       await this.unzipFile(zipPath, insightPath);
 
+      await this.validateInsightInstallation(insightPath);
+
       await fs.promises.unlink(zipPath);
     }
     catch (error) {
@@ -484,6 +489,14 @@ export class InsightService {
       }
 
       throw error;
+    }
+  }
+
+  private async validateInsightInstallation(insightPath: string): Promise<void> {
+    const indexHtmlPath = path.join(insightPath, 'index.html');
+
+    if (!fs.existsSync(indexHtmlPath)) {
+      throw new Error('Insight installation validation failed: index.html not found');
     }
   }
 

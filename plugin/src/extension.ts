@@ -357,7 +357,7 @@ export async function activate(context: vscode.ExtensionContext) {
   await insightService.initializeInsightPathConfig(context);
 
   insightService.initializeInsight(context)
-    .catch(() => { });
+    .catch((error) => console.error('[activate] Failed to initialize insight:', error));
 
   // Whether devtool_config.json exists (drives command visibility)
   let hasDevtoolConfig = await configService.checkDevtoolConfig();
