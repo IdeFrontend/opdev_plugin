@@ -2,6 +2,13 @@
 
 本文列出 **Huawei OP DevTools（华为算子一站式开发工具）** 的重要变更。完整提交历史见 [GitCode](https://gitcode.com/mlh0101/mstt) 仓库。
 
+## 1.3.8 — 2026-07-10
+
+本版本包含非 NPU 环境下 NPU 专属操作置灰，以及操作菜单 NPU 标签。
+
+- **非 NPU 环境下 NPU 专属操作置灰 ([#50](https://gitcode.com/opdevtools/plugin_release/issues/50))** — 激活后异步探测扩展主机是否具备 Ascend NPU（`asys info -r=status`，随后 `npu-smi info`）。任一工具返回非空输出（含 stdout/stderr）即视为可用，包括驱动/设备忙等错误（如 dcmi 初始化失败）；仅当两者均不可用（bash `command not found`、PowerShell cmdlet 未识别或空输出）时视为无 NPU。探测完成前保持乐观可用；完成后设置 `opDevtools.npuHardwareAvailable` 并刷新操作树。置灰项：运行、NPU 调试、异常检测、上板调优、UT 测试、Dump tensor；编译部署、CPU 调试、仿真分析与齿轮设置仍可用。资源管理器 Run/Sanitizer/On-board 菜单按上下文禁用；任务入口与异常检测/上板快速选项面板的「立即开始」同步拦截并提示 `web.operate.npuHardwareRequired`。
+- **操作菜单 NPU 标签** — 在 Actions 操作树中为需 NPU 的行（运行、异常检测、UT 测试、Dump tensor、NPU 调试、上板调优）显示 `「NPU」` 描述，与编译、CPU 调试、仿真等可在非 NPU 主机使用的操作区分。
+
 ## 1.3.7 — 2026-07-09
 
 本版本包含 Insight 自动安装、调试可靠性改进、子算子与配置体验、操作面板聚焦及配套扩展推荐。
