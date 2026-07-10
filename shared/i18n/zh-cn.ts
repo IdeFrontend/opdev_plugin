@@ -77,12 +77,14 @@ export default {
   'extension.environmentScript.missing': '工作区「环境脚本」(set_env.sh) 未设置。请先配置后再在「操作」中执行操作，或现在选择文件。',
   'extension.environmentScript.invalidPath': '工作区「环境脚本」路径在磁盘上不存在。请选择有效的 set_env.sh 或更新该设置。',
   'extension.environmentScript.browse': '选择文件…',
+  'extension.environmentScript.continue': '继续执行',
   'extension.environmentScript.selectFile': '选择环境脚本',
   'extension.environmentScript.saved': '环境脚本路径已保存到工作区设置。',
   'extension.environmentScript.fileNotFound': '无法访问所选路径。',
   'extension.ascendEnv.socNotDetected.message':
     '找不到 NPU 相关信息，请手动配置 SoC 版本。',
   'extension.ascendEnv.socNotDetected.openSettings': '打开 SoC 设置…',
+  'extension.ascendEnv.socNotDetected.continue': '继续执行',
   'extension.reloadWindowAction': '重载窗口',
   'extension.resetProjectConfigurationConfirm':
     '是否重置{{projectName}}的工程配置？点击重置将清除本插件为{{projectName}}保存的配置信息，并重置为默认配置。不会修改仓库中的算子源码及其他工程文件。',

@@ -650,8 +650,11 @@ export function computeAscendEnvResolution(ctx: ResolveAscendEnvContext): Ascend
 /**
  * Resolve env for a single operator command execution. Logs once and returns
  * values for spawn env and `{soc_version}` / `{simulator_type}` substitution.
+ *
+ * Returns undefined if the user cancels or opens settings (execution should be
+ * aborted and user should re-run after configuring SOC).
  */
-export function resolveAscendEnvForOperatorCommand(spawnContext: OperatorSpawnEnvContext): AscendEnvResolution {
+export async function resolveAscendEnvForOperatorCommand(spawnContext: OperatorSpawnEnvContext): Promise<AscendEnvResolution | undefined> {
   const isSimulator = isSimulatorCompile(spawnContext);
   const resolveCtx: ResolveAscendEnvContext = { isSimulator };
   let resolution = computeAscendEnvResolution(resolveCtx);
@@ -663,7 +666,11 @@ export function resolveAscendEnvForOperatorCommand(spawnContext: OperatorSpawnEn
   );
 
   logAscendEnvResolution(resolution, resolveCtx);
-  maybeWarnSocNotDetected(resolution);
+  const warningResult = await maybeWarnSocNotDetected(resolution);
+
+  if (warningResult === 'cancelled' || warningResult === 'open-settings') {
+    return undefined;
+  }
 
   return resolution;
 }

@@ -1,3 +1,15 @@
+jest.mock('i18next', () => ({
+  t: (key: string) => {
+    const labels: Record<string, string> = {
+      'extension.ascendEnv.socNotDetected.message': 'NPU information could not be found.',
+      'extension.ascendEnv.socNotDetected.openSettings': 'Open SoC setting…',
+      'extension.ascendEnv.socNotDetected.continue': 'Continue',
+    };
+
+    return labels[key] ?? key;
+  },
+}));
+
 jest.mock('@plugin/helpers/operator-project-workspace-config', () => ({
   getWorkspaceSimulatorType: jest.fn(() => ''),
   getSocVersionWithWorkspaceOverride: jest.fn(() => ''),
@@ -39,15 +51,19 @@ const emptyDefaultResolution = {
 describe('ascend SOC undetected warning', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (vscode.window.showWarningMessage as jest.Mock).mockReset();
+    (vscode.window.showWarningMessage as jest.Mock).mockImplementation(jest.fn());
     _primeSocDetectionFailedForTest();
     const { getSocVersionWithWorkspaceOverride } = jest.requireMock('@plugin/helpers/operator-project-workspace-config') as { getSocVersionWithWorkspaceOverride: jest.Mock };
 
     getSocVersionWithWorkspaceOverride.mockReturnValue('');
   });
 
-  it('shows a warning on every operator command run when SOC resolution uses the empty default', () => {
-    resolveAscendEnvForOperatorCommand({ script: 'cd build && ./build.sh' });
-    resolveAscendEnvForOperatorCommand({ script: 'cd build && ./build.sh' });
+  it('shows a warning on every operator command run when SOC resolution uses the empty default', async () => {
+    (vscode.window.showWarningMessage as jest.Mock).mockImplementation(() => Promise.resolve('Continue'));
+
+    await resolveAscendEnvForOperatorCommand({ script: 'cd build && ./build.sh' });
+    await resolveAscendEnvForOperatorCommand({ script: 'cd build && ./build.sh' });
 
     expect(vscode.window.showWarningMessage)
       .toHaveBeenCalledTimes(2);
@@ -61,12 +77,12 @@ describe('ascend SOC undetected warning', () => {
       .not.toHaveBeenCalled();
   });
 
-  it('does not warn when SOC is resolved from workspace', () => {
+  it('does not warn when SOC is resolved from workspace', async () => {
     const { getSocVersionWithWorkspaceOverride } = jest.requireMock('@plugin/helpers/operator-project-workspace-config') as { getSocVersionWithWorkspaceOverride: jest.Mock };
 
     getSocVersionWithWorkspaceOverride.mockReturnValue('ascend950');
 
-    resolveAscendEnvForOperatorCommand({ script: 'cd build && ./build.sh' });
+    await resolveAscendEnvForOperatorCommand({ script: 'cd build && ./build.sh' });
 
     expect(vscode.window.showWarningMessage)
       .not.toHaveBeenCalled();
@@ -94,14 +110,14 @@ describe('ascend SOC undetected warning', () => {
       .toHaveBeenCalledTimes(1);
   });
 
-  it('maybeWarnSocNotDetected fires on every call for empty default source', () => {
-    maybeWarnSocNotDetected(emptyDefaultResolution);
-    maybeWarnSocNotDetected(emptyDefaultResolution);
+  it('maybeWarnSocNotDetected fires on every call for empty default source', async () => {
+    await maybeWarnSocNotDetected(emptyDefaultResolution);
+    await maybeWarnSocNotDetected(emptyDefaultResolution);
 
     expect(vscode.window.showWarningMessage)
       .toHaveBeenCalledTimes(2);
 
-    maybeWarnSocNotDetected({
+    await maybeWarnSocNotDetected({
       socVersion: 'ascend950',
       npuArch: 'dav-3510',
       simulatorType: undefined,
@@ -121,15 +137,58 @@ describe('ascend SOC undetected warning', () => {
     // assertion does not depend on i18next initialization.
     (vscode.window.showWarningMessage as jest.Mock).mockImplementation((_message: string, label: string) => Promise.resolve(label));
 
-    maybeWarnSocNotDetected(emptyDefaultResolution);
-
-    await new Promise((resolve) => setImmediate(resolve));
+    await maybeWarnSocNotDetected(emptyDefaultResolution);
 
     expect(vscode.commands.executeCommand)
       .toHaveBeenCalledWith(
         'workbench.action.openWorkspaceSettings',
         `@ext:${EXTENSION_ID} ${settingsKey('environment.socVersion')}`,
       );
+  });
+
+  it('returns continue when user clicks Continue button', async () => {
+    (vscode.window.showWarningMessage as jest.Mock).mockImplementation((_message: string, _openSettingsLabel: string, continueLabel: string) => Promise.resolve(continueLabel));
+
+    const result = await maybeWarnSocNotDetected(emptyDefaultResolution);
+
+    expect(result)
+      .toBe('continue');
+  });
+
+  it('returns open-settings when user clicks Open Settings button', async () => {
+    (vscode.window.showWarningMessage as jest.Mock).mockImplementation((_message: string, openSettingsLabel: string) => Promise.resolve(openSettingsLabel));
+
+    const result = await maybeWarnSocNotDetected(emptyDefaultResolution);
+
+    expect(result)
+      .toBe('open-settings');
+  });
+
+  it('returns cancelled when user dismisses the warning', async () => {
+    (vscode.window.showWarningMessage as jest.Mock).mockImplementation(() => Promise.resolve(undefined));
+
+    const result = await maybeWarnSocNotDetected(emptyDefaultResolution);
+
+    expect(result)
+      .toBe('cancelled');
+  });
+
+  it('returns undefined from resolveAscendEnvForOperatorCommand when user opens settings', async () => {
+    (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue('Open SoC setting…');
+
+    const result = await resolveAscendEnvForOperatorCommand({ script: 'cd build && ./build.sh' });
+
+    expect(result)
+      .toBeUndefined();
+  });
+
+  it('returns undefined from resolveAscendEnvForOperatorCommand when user cancels', async () => {
+    (vscode.window.showWarningMessage as jest.Mock).mockResolvedValue(undefined);
+
+    const result = await resolveAscendEnvForOperatorCommand({ script: 'cd build && ./build.sh' });
+
+    expect(result)
+      .toBeUndefined();
   });
 });
 

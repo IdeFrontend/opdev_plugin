@@ -7,6 +7,8 @@ import {
   EXTENSION_ID, settingsKey,
 } from '@shared/flavor';
 
+export type SocWarningResult = 'continue' | 'open-settings' | 'cancelled';
+
 /**
  * When SOC resolution falls through to the empty default (host autodetection
  * failed and no workspace / global env override), show a warning with a link to
@@ -14,35 +16,40 @@ import {
  *
  * Called from operator command execution only; repeats on every run until SOC
  * is configured or otherwise resolved.
+ *
+ * Returns a Promise that resolves with the user's choice:
+ * - 'continue': User explicitly clicked Continue to proceed with empty SOC
+ * - 'open-settings': User clicked Open Settings
+ * - 'cancelled': User dismissed the warning (clicked elsewhere)
  */
-export function maybeWarnSocNotDetected(resolution: AscendEnvResolution): void {
-  // Match resolver: only explicit workspace/workspaceFolder values count; User
-  // scope via cfg.get is ignored (see getSocVersionWithWorkspaceOverride).
+export async function maybeWarnSocNotDetected(resolution: AscendEnvResolution): Promise<SocWarningResult> {
   if (getSocVersionWithWorkspaceOverride(null)
     .trim()) {
-    return;
+    return 'continue';
   }
 
   if (resolution.source.socVersion !== 'default' || resolution.socVersion) {
-    return;
+    return 'continue';
   }
 
   const openSettingsLabel = t('extension.ascendEnv.socNotDetected.openSettings');
+  const continueLabel = t('extension.ascendEnv.socNotDetected.continue');
 
-  void vscode.window
-    .showWarningMessage(t('extension.ascendEnv.socNotDetected.message'), openSettingsLabel)
-    .then((choice) => {
-      if (choice === openSettingsLabel) {
-        // Open Workspace settings focused on the SOC setting: the resolver only
-        // honors Workspace/WorkspaceFolder scope (getConfiguredValue), so a value
-        // entered at the default User scope would be silently ignored. The
-        // `@ext:` query mirrors the gear "Project Config" command
-        // (huawei-op-devtools.sidebar.projectConfig) so both entry points land on
-        // the same Workspace-scope view.
-        void vscode.commands.executeCommand(
-          'workbench.action.openWorkspaceSettings',
-          `@ext:${EXTENSION_ID} ${settingsKey('environment.socVersion')}`,
-        );
-      }
-    });
+  const choice = await vscode.window
+    .showWarningMessage(t('extension.ascendEnv.socNotDetected.message'), openSettingsLabel, continueLabel);
+
+  if (choice === openSettingsLabel) {
+    void vscode.commands.executeCommand(
+      'workbench.action.openWorkspaceSettings',
+      `@ext:${EXTENSION_ID} ${settingsKey('environment.socVersion')}`,
+    );
+
+    return 'open-settings';
+  }
+
+  if (choice === continueLabel) {
+    return 'continue';
+  }
+
+  return 'cancelled';
 }

@@ -52,11 +52,11 @@ export function buildOperatorSpawnContext(options: {
   const opName = options.operatorNames?.split(',')[0]?.trim() || configOp?.trim();
 
   let opType = resolveOpTypeForSpawn(projectId, options.operatorNames);
+
   if (!opType && projectId && opName) {
-    opType = OperatorPluginRegistry.normalizeOpTypeForSpawn(
-      getOpByProjectIdAndOpName(projectId, opName)?.op_type,
-    ) ?? undefined;
+    opType = OperatorPluginRegistry.normalizeOpTypeForSpawn(getOpByProjectIdAndOpName(projectId, opName)?.op_type) ?? undefined;
   }
+
   if (!opType && project) {
     opType = OperatorPluginRegistry.normalizeOpTypeForSpawn(project.project_type) ?? undefined;
   }
@@ -101,7 +101,17 @@ export async function executeOperatorCommand(
 ) {
   const ctxWithCommand = enrichOperatorSpawnContext(spawnContext, command);
   const isSimulator = isSimulatorCompile(ctxWithCommand);
-  const resolution = resolveAscendEnvForOperatorCommand(ctxWithCommand);
+  const resolution = await resolveAscendEnvForOperatorCommand(ctxWithCommand);
+
+  if (!resolution) {
+    return {
+      code: 1,
+      output: '',
+      stdout: '',
+      stderr: 'SOC version not configured. Please set op-devtools.environment.socVersion in workspace settings.',
+    };
+  }
+
   const filtered = OperatorPluginRegistry.filterSpawnEnv(
     buildOperatorSpawnEnvFromResolution(resolution, isSimulator),
     ctxWithCommand.opType ?? undefined,

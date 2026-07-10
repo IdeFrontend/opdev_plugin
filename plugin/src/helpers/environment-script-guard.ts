@@ -15,9 +15,11 @@ export function getEnvironmentScriptPath(): string {
 
 export function isEnvironmentScriptPathValid(): boolean {
   const p = getEnvironmentScriptPath();
+
   if (!p) {
     return false;
   }
+
   try {
     return fs.existsSync(p);
   }
@@ -38,11 +40,17 @@ export async function ensureEnvironmentScriptForOperateAction(): Promise<boolean
   }
 
   const browseLabel = t('extension.environmentScript.browse');
+  const continueLabel = t('extension.environmentScript.continue');
   const msg = getEnvironmentScriptPath()
     ? t('extension.environmentScript.invalidPath')
     : t('extension.environmentScript.missing');
 
-  const choice = await vscode.window.showWarningMessage(msg, browseLabel);
+  const choice = await vscode.window.showWarningMessage(msg, browseLabel, continueLabel);
+
+  if (choice === continueLabel) {
+    return true;
+  }
+
   if (choice !== browseLabel) {
     return false;
   }
@@ -53,7 +61,10 @@ export async function ensureEnvironmentScriptForOperateAction(): Promise<boolean
     canSelectMany: false,
     openLabel: t('extension.environmentScript.selectFile'),
     filters: {
-      'Shell scripts': ['sh', 'bash'],
+      'Shell scripts': [
+        'sh',
+        'bash',
+      ],
       'All files': ['*'],
     },
   });
@@ -63,23 +74,25 @@ export async function ensureEnvironmentScriptForOperateAction(): Promise<boolean
   }
 
   const fsPath = uris[0].fsPath;
+
   try {
     if (!fs.existsSync(fsPath)) {
       vscode.window.showErrorMessage(t('extension.environmentScript.fileNotFound'));
+
       return false;
     }
   }
   catch {
     vscode.window.showErrorMessage(t('extension.environmentScript.fileNotFound'));
+
     return false;
   }
 
-  await ConfigService.writeOpDevtoolsDottedSettings({
-    [ENVIRONMENT_SCRIPT_SETTING]: fsPath,
-  });
+  await ConfigService.writeOpDevtoolsDottedSettings({ [ENVIRONMENT_SCRIPT_SETTING]: fsPath });
 
   await projectService.syncAscendEnvScriptFromWorkspaceSettings();
 
   vscode.window.showInformationMessage(t('extension.environmentScript.saved'));
+
   return true;
 }

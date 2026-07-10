@@ -77,12 +77,14 @@ export default {
   'extension.environmentScript.missing': 'Workspace setting Environment script (set_env.sh) is empty. Set it before running actions from the Actions view, or choose a file now.',
   'extension.environmentScript.invalidPath': 'The workspace Environment script path does not exist on disk. Choose a valid set_env.sh or update the setting.',
   'extension.environmentScript.browse': 'Choose file…',
+  'extension.environmentScript.continue': 'Continue',
   'extension.environmentScript.selectFile': 'Select environment script',
   'extension.environmentScript.saved': 'Environment script path saved to workspace settings.',
   'extension.environmentScript.fileNotFound': 'The selected path could not be accessed.',
   'extension.ascendEnv.socNotDetected.message':
     'NPU information could not be found. Please configure the SoC version manually.',
   'extension.ascendEnv.socNotDetected.openSettings': 'Open SoC setting…',
+  'extension.ascendEnv.socNotDetected.continue': 'Continue',
   'extension.reloadWindowAction': 'Reload Window',
   'extension.resetProjectConfigurationConfirm':
     'Reset configuration for {{projectName}}? Choosing Reset will clear configuration stored by this plugin for {{projectName}} and regenerate defaults. Your operator source code and other project files in the repository will not be changed.',
