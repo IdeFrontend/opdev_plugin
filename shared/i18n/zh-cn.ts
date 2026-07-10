@@ -59,6 +59,8 @@ export default {
     '无法自动适配 msdebug 目标：请先在 Actions 树中选择算子（或打开仅含单个算子的工程）后再进行 NPU/CPU 调试。',
   'debug.autoAdaptNoBinary':
     '无法自动适配 msdebug target：在算子 build/ 目录下未找到可调试的二进制文件。请先执行 NPU/CPU 调试编译后再试。',
+  'debug.targetBinaryMissing':
+    '无法启动调试：调试目标可执行文件不存在。调试编译可能失败或已被中断，请先成功执行 NPU/CPU 调试编译后再重试。',
 
   // extension
   'extension.openWorkspaceFirst': '请先打开一个工作区',

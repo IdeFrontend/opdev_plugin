@@ -11,6 +11,7 @@ import {
   shouldReplaceDebugTarget,
   patchMsdebugLaunchConfigTarget,
   updateMsdebugTarget,
+  msdebugConfiguredTargetExists,
   DEFAULT_MSDEBUG_TARGET,
 } from '@plugin/domain/utils/debug-target';
 
@@ -411,7 +412,10 @@ describe('updateMsdebugTarget', () => {
     });
 
     expect(result)
-      .toEqual({ status: 'noop', reason: 'no_binary' });
+      .toEqual({
+        status: 'noop',
+        reason: 'no_binary',
+      });
     expect(readConfigs()[0].target)
       .toBe(DEFAULT_TARGET);
   });
@@ -427,7 +431,10 @@ describe('updateMsdebugTarget', () => {
     const result = await updateMsdebugTarget(root, undefined);
 
     expect(result)
-      .toEqual({ status: 'noop', reason: 'no_operator' });
+      .toEqual({
+        status: 'noop',
+        reason: 'no_operator',
+      });
     expect(readConfigs()[0].target)
       .toBe(DEFAULT_TARGET);
   });
@@ -440,7 +447,10 @@ describe('updateMsdebugTarget', () => {
       path: path.join(root, 'math', 'add_custom'),
     }))
       .resolves
-      .toEqual({ status: 'noop', reason: 'no_launch_json' });
+      .toEqual({
+        status: 'noop',
+        reason: 'no_launch_json',
+      });
 
     expect(fs.existsSync(path.join(root, '.vscode', 'launch.json')))
       .toBe(false);
@@ -477,5 +487,134 @@ describe('patchMsdebugLaunchConfigTarget', () => {
       recursive: true,
       force: true,
     });
+  });
+});
+
+describe('msdebugConfiguredTargetExists', () => {
+  let root: string;
+
+  function mkWorkspace(configs: Array<Record<string, unknown>>): void {
+    root = fs.mkdtempSync(path.join(os.tmpdir(), 'msdebug-exists-'));
+    const vscodeDir = path.join(root, '.vscode');
+
+    fs.mkdirSync(vscodeDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(vscodeDir, 'launch.json'),
+      JSON.stringify({
+        version: '0.2.0',
+        configurations: configs,
+      }, null, 2),
+      'utf-8',
+    );
+  }
+
+  function writeTargetBinary(relTarget: string): void {
+    const abs = path.join(root, relTarget);
+
+    fs.mkdirSync(path.dirname(abs), { recursive: true });
+    fs.writeFileSync(abs, '#!/bin/sh\n', 'utf-8');
+  }
+
+  afterEach(() => {
+    if (root) {
+      fs.rmSync(root, {
+        recursive: true,
+        force: true,
+      });
+      root = '';
+    }
+  });
+
+  it('returns true when the configured target exists on disk', () => {
+    mkWorkspace([
+      {
+        name: 'msdebug',
+        target: '${workspaceFolder}/math/add_custom/build/test_aclnn_add_custom',
+      },
+    ]);
+    writeTargetBinary(path.join('math', 'add_custom', 'build', 'test_aclnn_add_custom'));
+
+    expect(msdebugConfiguredTargetExists(root, 'msdebug'))
+      .toBe(true);
+  });
+
+  it('returns false when the configured target is a concrete path that is missing', () => {
+    mkWorkspace([
+      {
+        name: 'msdebug',
+        target: '${workspaceFolder}/math/add_custom/build/test_aclnn_add_custom',
+      },
+    ]);
+
+    expect(msdebugConfiguredTargetExists(root, 'msdebug'))
+      .toBe(false);
+  });
+
+  it('returns false for the untouched default placeholder target', () => {
+    mkWorkspace([
+      {
+        name: 'msdebug',
+        target: DEFAULT_MSDEBUG_TARGET,
+      },
+    ]);
+
+    expect(msdebugConfiguredTargetExists(root, 'msdebug'))
+      .toBe(false);
+  });
+
+  it('resolves the requested config independently (msdebug-cpu)', () => {
+    mkWorkspace([
+      {
+        name: 'msdebug',
+        target: '${workspaceFolder}/build/npu_bin',
+      },
+      {
+        name: 'msdebug-cpu',
+        target: '${workspaceFolder}/build/cpu_bin',
+      },
+    ]);
+    writeTargetBinary(path.join('build', 'cpu_bin'));
+
+    expect(msdebugConfiguredTargetExists(root, 'msdebug-cpu'))
+      .toBe(true);
+    expect(msdebugConfiguredTargetExists(root, 'msdebug'))
+      .toBe(false);
+  });
+
+  it('returns undefined when the named config is absent (do not block)', () => {
+    mkWorkspace([
+      {
+        name: 'msdebug-python',
+        target: '/usr/local/bin/python',
+      },
+    ]);
+
+    expect(msdebugConfiguredTargetExists(root, 'msdebug'))
+      .toBeUndefined();
+  });
+
+  it('returns undefined when the config has no target field (do not block)', () => {
+    mkWorkspace([{ name: 'msdebug' }]);
+
+    expect(msdebugConfiguredTargetExists(root, 'msdebug'))
+      .toBeUndefined();
+  });
+
+  it('returns undefined when launch.json is absent (do not block)', () => {
+    root = fs.mkdtempSync(path.join(os.tmpdir(), 'msdebug-exists-'));
+
+    expect(msdebugConfiguredTargetExists(root, 'msdebug'))
+      .toBeUndefined();
+  });
+
+  it('returns undefined when launch.json is unparseable (do not block)', () => {
+    root = fs.mkdtempSync(path.join(os.tmpdir(), 'msdebug-exists-'));
+    const vscodeDir = path.join(root, '.vscode');
+
+    fs.mkdirSync(vscodeDir, { recursive: true });
+    fs.writeFileSync(path.join(vscodeDir, 'launch.json'), '{ not json', 'utf-8');
+
+    expect(msdebugConfiguredTargetExists(root, 'msdebug'))
+      .toBeUndefined();
   });
 });

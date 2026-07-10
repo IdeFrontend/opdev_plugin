@@ -7,6 +7,7 @@ import { t } from 'i18next';
 import {
   OperatorProjectViewId,
   isOperatorProjectViewId,
+  isStandardCustomProjectType,
   type OperatorProjectViewIdValue,
 } from '@shared/project-type-view-id';
 import { useNewProjectSSH } from '../composables/use-new-project-ssh';
@@ -152,7 +153,7 @@ onMounted(async () => {
     currentProjectType.value = result.projectType || '';
     console.log('[Operate] 当前项目类型:', currentProjectType.value);
 
-    if (currentProjectType.value === 'ascend') {
+    if (isStandardCustomProjectType(currentProjectType.value)) {
       items_type.value = [ascendProject];
       selectedId_type.value = OperatorProjectViewId.STANDARD_CUSTOM;
     }

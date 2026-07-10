@@ -2,6 +2,22 @@
 
 Notable changes to **Huawei OP DevTools** are listed here. For the full project history, see the repository on [GitCode](https://gitcode.com/mlh0101/mstt).
 
+## 1.3.7 — 2026-07-09
+
+Patch release: Insight auto-installation, debug reliability improvements, sub-operator and configuration UX, operate-panel focus, and bundled extension recommendations.
+
+- **Insight installation support** — Automatic Insight setup on activation (non-blocking background init). Path resolution priority: workspace `op-devtools.environment.insightPath` → `INSIGHT_HOME_PATH` (including `.env`/`.arts`) → bundled default. `InsightService` handles version mapping (`insight-version.json` with history), download (wget/curl/PowerShell with Node.js HTTP fallback), unzip validation (`index.html` check), backup/restore, and actionable manual-download prompts on failure. Performance data viewer uses the resolved Insight path.
+- **msdebug library path in generated `.env`** — Splice CANN `tools/msdebug/lib` into `LD_LIBRARY_PATH` in the plugin-generated `<ide>/.env` at project creation and as a best-effort backfill before each NPU/CPU debug launch (sidebar, F5, and Run panel). Resolves msdebug-mi adapter startup failures when the LLDB library folder is missing from the dump env.
+- **Abort debug when build fails or binary is missing** — Block debug launch when the resolved msdebug target executable does not exist on disk (failed or preempted debug build). Shows a clear error instead of attaching to a phantom binary.
+- **Current window reuse on operator create ([#34](https://gitcode.com/opdevtools/plugin_release/issues/34))** — Fix standalone operator and open-project flows: emit `{ forceReuseWindow: true }` for "Current Window" and `{ forceNewWindow: true }` for "New Window" instead of `{ forceNewWindow: false }`, which defers to VS Code's default and opened a new window unexpectedly.
+- **README and packaged help links ([#35](https://gitcode.com/opdevtools/plugin_release/issues/35))** — Refresh README user guidance (zh/en); update help/documentation links in CANN template READMEs and the home sidebar webview.
+- **Bundled extension recommendations ([#27](https://gitcode.com/opdevtools/plugin_release/issues/27))** — Add `extensionPack` entries for Remote - SSH and C/C++ (`ms-vscode-remote.remote-ssh`, `ms-vscode.cpptools`) so VS Code prompts to install required companion extensions.
+- **Reset configuration for nested workspaces ([#41](https://gitcode.com/opdevtools/plugin_release/issues/41))** — Reset project configuration clears both the effective project root and the VS Code workspace folder root when they differ (e.g. workspace opened on a subfolder). Legacy configs, ops records, `.arts` devtool config, and workspace settings are removed from all relevant roots before reload.
+- **Ignore duplicate compile actions ([#42](https://gitcode.com/opdevtools/plugin_release/issues/42))** — `OperatorCompileRunGate` drops duplicate Build/Run requests while the same action is already queued or running, preventing double compile invocations.
+- **`.asc` kernel file highlighting ([#25](https://gitcode.com/opdevtools/plugin_release/issues/25))** — Seed `files.associations` for `*.asc` → `cpp` alongside existing `*.cce` mapping in workspace `<ide>/settings.json` so Ascend kernel breakpoints work; preserve user-configured associations when already set.
+- **Focus operate panel instead of toggling sidebar ([#33](https://gitcode.com/opdevtools/plugin_release/issues/33))** — Editor-title icon focuses the plugin's operate panel (auxiliary bar) via `workbench.view.extension.*` or `workbench.action.focusAuxiliaryBar`, instead of toggling the primary sidebar and closing Explorer/Debug.
+- **Sub-operator creation uses workspace project type ([#13](https://gitcode.com/opdevtools/plugin_release/issues/13))** — Detect sub-operator creation from the current workspace type (both `standard-custom` and legacy stored `ascend`) rather than hard-coded assumptions; resolves parent collection by workspace root so nested standard-custom operators scaffold correctly.
+
 ## 1.3.6 — 2026-07-01
 
 Patch release: new-project UI refresh, compile/run queue coordination, sanitizer defaults, SOC warning improvements, CANN template cleanup.

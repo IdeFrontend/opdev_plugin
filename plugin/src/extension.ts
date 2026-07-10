@@ -149,6 +149,7 @@ import {
   COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN,
   COMMAND_OPEN_CSV,
 } from './constants';
+import { resolveFocusOpsOperateCommand } from '@plugin/helpers/focus-ops-operate';
 import {
   EXTENSION_ID,
   CONTEXT_PREFIX,
@@ -737,13 +738,28 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // Register open and close operator work-operation command
+  // Register the open/close command for the plugin's OWN view container. The container is
+  // contributed to the secondary side bar (auxiliary bar), so the previous
+  // `workbench.action.toggleSidebarVisibility` toggled the wrong (primary) side bar and
+  // indiscriminately closed Explorer/Debug/etc. (GC-33 / plugin_release #33). The icon now
+  // only FOCUSES (reveals) the plugin's own panel — it never toggles it closed. We run the
+  // first registered focus candidate (per-container focus, then the secondary/auxiliary bar
+  // focus the VSCode-huawei fork provides) and skip when none exist instead of throwing
+  // "command not found".
   const toggleOpsOperateCommand = vscode.commands.registerCommand(
     COMMAND_TOGGLE_OPS_OPERATE,
     async () => {
       try {
-        // Keep this command as the sidebar visibility toggle for the view container
-        await vscode.commands.executeCommand('workbench.action.toggleSidebarVisibility');
+        const availableCommands = await vscode.commands.getCommands(true);
+        const focusCommand = resolveFocusOpsOperateCommand(availableCommands);
+
+        if (!focusCommand) {
+          console.warn('toggleOpsOperate: no registered command to focus the plugin view container');
+
+          return;
+        }
+
+        await vscode.commands.executeCommand(focusCommand);
       }
       catch (error) {
         console.log(error);
@@ -1203,7 +1219,7 @@ export async function activate(context: vscode.ExtensionContext) {
   );
   const sidebarOpenHelpCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_OPEN_HELP,
-    async () => vscode.env.openExternal(vscode.Uri.parse('https://gitcode.com/org/cann/discussions/54')),
+    async () => vscode.env.openExternal(vscode.Uri.parse('https://gitcode.com/opdevtools/plugin_release')),
   );
   const sidebarSanitizerReportSelectCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_SANITIZER_REPORT_SELECT,

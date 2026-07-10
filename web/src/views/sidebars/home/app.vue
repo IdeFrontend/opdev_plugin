@@ -45,9 +45,7 @@ import { t } from 'i18next';
 import { vscode } from '@web/utils/vscode';
 import { useTheme } from '@web/composables/use-theme';
 
-const {
-  themeConfig,
-} = useTheme();
+const { themeConfig } = useTheme();
 
 const handleMenuClick = () => {
   vscode.postMessage({
@@ -67,7 +65,7 @@ const openHomePage = () => {
 const openHelpPage = () => {
   vscode.postMessage({
     command: 'openExternalLink',
-    url: 'https://gitcode.com/org/cann/discussions/54',
+    url: 'https://gitcode.com/opdevtools/plugin_release',
   });
 };
 </script>

@@ -25,11 +25,14 @@ import {
 
 function resolveProjectForWorkspace(workspaceRoot: string): ProjectRecord | undefined {
   const direct = getProjectByPath(workspaceRoot);
+
   if (direct) {
     return direct;
   }
 
-  const info = ProjectManager.getInstance().getProjectInfo();
+  const info = ProjectManager.getInstance()
+    .getProjectInfo();
+
   if (info.path) {
     return getProjectByPath(info.path);
   }
@@ -37,15 +40,29 @@ function resolveProjectForWorkspace(workspaceRoot: string): ProjectRecord | unde
   return undefined;
 }
 
+function getResetRoots(workspaceRoot: string, effectiveRoot: string): string[] {
+  if (projectPathsEqual(workspaceRoot, effectiveRoot)) {
+    return [effectiveRoot];
+  }
+
+  return [
+    effectiveRoot,
+    workspaceRoot,
+  ];
+}
+
 export async function resetCurrentProjectConfiguration(): Promise<void> {
   const workspaceRoot = resolveWorkspaceRoot(undefined, 'workspaceFolderFirst');
+
   if (!workspaceRoot) {
     await vscode.window.showErrorMessage(t('extension.openWorkspaceFirst'));
+
     return;
   }
 
   const project = resolveProjectForWorkspace(workspaceRoot);
   const effectiveRoot = project?.project_path ?? workspaceRoot;
+  const resetRoots = getResetRoots(workspaceRoot, effectiveRoot);
 
   const projectName = project?.project_name || path.basename(effectiveRoot);
   const resetLabel = t('extension.resetProjectConfigurationConfirmReset');
@@ -60,23 +77,33 @@ export async function resetCurrentProjectConfiguration(): Promise<void> {
   }
 
   if (project) {
-    deleteLegacyWorkspaceConfigsByProjectId(project.id, effectiveRoot);
+    for (const root of resetRoots) {
+      deleteLegacyWorkspaceConfigsByProjectId(project.id, root);
+    }
+
     deleteConfigsByProjectId(project.id);
     deleteOpsByProjectId(project.id);
     deleteProject(project.project_path);
   }
 
-  const devtoolConfigPath = getDevtoolConfigPath(effectiveRoot);
-  if (fs.existsSync(devtoolConfigPath)) {
-    await fs.remove(devtoolConfigPath);
+  for (const root of resetRoots) {
+    const devtoolConfigPath = getDevtoolConfigPath(root);
+
+    if (fs.existsSync(devtoolConfigPath)) {
+      await fs.remove(devtoolConfigPath);
+    }
   }
 
   const lastProjectPath = RemoteConfig.getLastProjectPath();
-  if (lastProjectPath && projectPathsEqual(lastProjectPath, effectiveRoot)) {
+
+  if (lastProjectPath && resetRoots.some((root) => projectPathsEqual(lastProjectPath, root))) {
     RemoteConfig.clearLastProjectPath();
   }
 
-  await ConfigService.clearOpDevtoolsWorkspaceSettings(effectiveRoot);
+  for (const root of resetRoots) {
+    await ConfigService.clearOpDevtoolsWorkspaceSettings(root);
+  }
+
   resetLegacySettingsMigrationFlight();
 
   await vscode.commands.executeCommand('workbench.action.reloadWindow');

@@ -5,8 +5,11 @@ import {
   joinIdeConfigPath,
 } from '@plugin/helpers/ide-config-dir';
 
-/** MindStudio Debug expects kernel sources (e.g. Triton `.cce`) as C++ for breakpoints. */
-export const MSDEBUG_KERNEL_FILE_ASSOCIATIONS: Readonly<Record<string, string>> = { '*.cce': 'cpp' };
+/** MindStudio Debug expects kernel sources (e.g. Triton `.cce`/`.asc`) as C++ for breakpoints. */
+export const MSDEBUG_KERNEL_FILE_ASSOCIATIONS: Readonly<Record<string, string>> = {
+  '*.cce': 'cpp',
+  '*.asc': 'cpp',
+};
 
 /**
  * Merge msdebug-related `files.associations` into workspace `<ide>/settings.json`
@@ -26,10 +29,10 @@ export async function ensureMsdebugBreakpointFileAssociations(workspaceRoot: str
   }
 
   const associations = {
+    ...MSDEBUG_KERNEL_FILE_ASSOCIATIONS,
     ...(typeof settings['files.associations'] === 'object' && settings['files.associations'] !== null
       ? settings['files.associations'] as Record<string, string>
       : {}),
-    ...MSDEBUG_KERNEL_FILE_ASSOCIATIONS,
   };
 
   const next = {

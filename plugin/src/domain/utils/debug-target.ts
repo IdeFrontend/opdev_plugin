@@ -3,6 +3,7 @@ import path from 'path';
 import * as vscode from 'vscode';
 
 import { joinIdeConfigPath } from '@plugin/helpers/ide-config-dir';
+import { backfillMsdebugLibInEnvFile } from '@plugin/domain/utils/msdebug-env';
 
 export type DebugOperatorRef = {
   name: string;
@@ -12,9 +13,9 @@ export type DebugOperatorRef = {
 export type MsdebugTargetPatchResult =
   | { status: 'patched';
     target: string }
-  | { status: 'unchanged' }
-  | { status: 'noop';
-    reason: 'no_launch_json' | 'no_operator' | 'no_binary' | 'user_target' | 'unparseable' };
+    | { status: 'unchanged' }
+    | { status: 'noop';
+      reason: 'no_launch_json' | 'no_operator' | 'no_binary' | 'user_target' | 'unparseable' };
 
 /**
  * Debug-target file names the build can emit for an operator, in priority order.
@@ -158,6 +159,52 @@ export function resolveTargetPath(target: string, workspaceRoot: string): string
 }
 
 /**
+ * Whether the `msdebug` / `msdebug-cpu` launch config `configName` resolves to a target
+ * binary that exists on disk. Returns:
+ *   - `true`      the configured target exists (safe to attach);
+ *   - `false`     the config declares a concrete target that is NOT on disk;
+ *   - `undefined` indeterminate — no launch.json, no such config, or no `target` field —
+ *                 so the caller must not block the launch on this signal alone.
+ *
+ * Used to refuse a debug launch that would otherwise attach msdebug to a phantom
+ * executable when the debug build failed or was preempted. Checking the resolved
+ * target on disk (rather than the auto-adapt `no_binary` result) avoids false positives
+ * for a valid user-set target whose name is not among the auto-adapt candidates.
+ */
+export function msdebugConfiguredTargetExists(
+  workspaceRoot: string,
+  configName: string,
+): boolean | undefined {
+  const launchJsonPath = joinIdeConfigPath(workspaceRoot, 'launch.json');
+
+  if (!fs.existsSync(launchJsonPath)) {
+    return undefined;
+  }
+
+  let parsed: { configurations?: Array<Record<string, unknown>> };
+
+  try {
+    parsed = JSON.parse(fs.readFileSync(launchJsonPath, 'utf-8'));
+  }
+  catch {
+    return undefined;
+  }
+
+  if (!Array.isArray(parsed.configurations)) {
+    return undefined;
+  }
+
+  const config = parsed.configurations.find((cfg) => cfg.name === configName);
+  const target = config && typeof config.target === 'string' ? config.target : undefined;
+
+  if (!target) {
+    return undefined;
+  }
+
+  return fs.existsSync(resolveTargetPath(target, workspaceRoot));
+}
+
+/**
  * Resolve the msdebug attach path for an operator, or `undefined` when the
  * binary was not built.
  */
@@ -191,17 +238,26 @@ export async function updateMsdebugTarget(
   const launchJsonPath = joinIdeConfigPath(workspaceRoot, 'launch.json');
 
   if (!fs.existsSync(launchJsonPath)) {
-    return { status: 'noop', reason: 'no_launch_json' };
+    return {
+      status: 'noop',
+      reason: 'no_launch_json',
+    };
   }
 
   if (!operator?.name || !operator?.path) {
-    return { status: 'noop', reason: 'no_operator' };
+    return {
+      status: 'noop',
+      reason: 'no_operator',
+    };
   }
 
   const newTarget = resolveMsdebugTargetForOperator(workspaceRoot, operator, targetFile);
 
   if (!newTarget) {
-    return { status: 'noop', reason: 'no_binary' };
+    return {
+      status: 'noop',
+      reason: 'no_binary',
+    };
   }
 
   let parsed: { configurations?: Array<Record<string, unknown>> };
@@ -210,11 +266,17 @@ export async function updateMsdebugTarget(
     parsed = JSON.parse(await fs.readFile(launchJsonPath, 'utf-8'));
   }
   catch {
-    return { status: 'noop', reason: 'unparseable' };
+    return {
+      status: 'noop',
+      reason: 'unparseable',
+    };
   }
 
   if (!Array.isArray(parsed.configurations)) {
-    return { status: 'noop', reason: 'unparseable' };
+    return {
+      status: 'noop',
+      reason: 'unparseable',
+    };
   }
 
   let changed = false;
@@ -240,11 +302,17 @@ export async function updateMsdebugTarget(
   if (changed) {
     await fs.writeFile(launchJsonPath, JSON.stringify(parsed, null, 2), 'utf-8');
 
-    return { status: 'patched', target: newTarget };
+    return {
+      status: 'patched',
+      target: newTarget,
+    };
   }
 
   if (blockedByUserTarget) {
-    return { status: 'noop', reason: 'user_target' };
+    return {
+      status: 'noop',
+      reason: 'user_target',
+    };
   }
 
   return { status: 'unchanged' };
@@ -300,6 +368,8 @@ export function registerMsdebugTargetAutoAdapt(
         return config;
       }
 
+      await backfillMsdebugLibInEnvFile(folder.uri.fsPath);
+
       const operator = await resolveOperator(folder.uri.fsPath);
 
       if (!operator) {
@@ -314,7 +384,5 @@ export function registerMsdebugTargetAutoAdapt(
     },
   };
 
-  context.subscriptions.push(
-    vscode.debug.registerDebugConfigurationProvider('msdebug-mi', provider),
-  );
+  context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('msdebug-mi', provider));
 }

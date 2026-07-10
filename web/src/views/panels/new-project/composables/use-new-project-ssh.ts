@@ -1,5 +1,5 @@
 import {
-  ref, reactive, onBeforeUnmount, onMounted, type Ref,
+  ref, reactive, onBeforeUnmount, onMounted, type Ref, type VNodeRef,
 } from 'vue';
 import { message } from 'ant-design-vue';
 import type { FormInstance as AntdVForm } from 'ant-design-vue';
@@ -22,8 +22,12 @@ import { MessageHandlerStrategyManager } from './message-handler-strategies';
 import { SearchStrategyFactory } from './search-strategies';
 import { ProjectNameFactory } from './project-name-factory';
 
-function resolveAntdFormRef(refValue: AntdVForm | null | undefined): AntdVForm | null {
-  return refValue ?? null;
+function resolveAntdFormRef(refValue: unknown): AntdVForm | null {
+  if (refValue && typeof refValue === 'object' && 'validate' in refValue) {
+    return refValue as AntdVForm;
+  }
+
+  return null;
 }
 
 export function useNewProjectSSH(selectedTemplate?: Ref<'helloworld' | 'addn' | 'torch_library_template' | 'triton_vector_add'>) {
@@ -148,8 +152,8 @@ export function useNewProjectSSH(selectedTemplate?: Ref<'helloworld' | 'addn' | 
     }
   };
 
-  const setConnectionFormRef = (el: AntdVForm | null) => {
-    connectionFormRef.value = el;
+  const setConnectionFormRef: VNodeRef = (el) => {
+    connectionFormRef.value = resolveAntdFormRef(el);
   };
 
   const handleCreatedProject = async () => {

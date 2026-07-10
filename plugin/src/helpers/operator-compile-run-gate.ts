@@ -84,12 +84,16 @@ export class OperatorCompileRunGate {
   }
 
   enqueue<T>(action: CompileRunGateAction, task: ()=> Promise<T>): Promise<T | undefined> {
+    const nodeId = this.nodeIdFor(action);
+
+    if (this.uiState[nodeId]) {
+      return Promise.resolve(undefined);
+    }
+
     const generation = this.cancelGeneration;
     const willWait = this.pendingCount > 0;
 
     this.pendingCount += 1;
-
-    const nodeId = this.nodeIdFor(action);
 
     if (willWait) {
       if (this.uiState[nodeId] !== 'running') {
@@ -112,6 +116,7 @@ export class OperatorCompileRunGate {
 
         if (this.cancelledQueuedNodeIds.has(nodeId)) {
           this.cancelledQueuedNodeIds.delete(nodeId);
+
           return undefined;
         }
 

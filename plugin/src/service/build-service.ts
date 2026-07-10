@@ -162,12 +162,10 @@ async function guardTritonProfilerDependencies(opType: string | undefined): Prom
   const probe = await probeTritonPythonDependencies();
 
   if (!probe.ok) {
-    vscode.window.showErrorMessage(
-      t('sanitizer.tritonDepsFailed', {
-        interpreter: probe.interpreter,
-        detail: probe.stderr,
-      }),
-    );
+    vscode.window.showErrorMessage(t('sanitizer.tritonDepsFailed', {
+      interpreter: probe.interpreter,
+      detail: probe.stderr,
+    }));
 
     return false;
   }
@@ -351,9 +349,9 @@ export class BuildService {
   /**
    * Compile operator
    */
-  async startBuild(params: StartBuildParams): Promise<void> {
+  async startBuild(params: StartBuildParams): Promise<boolean> {
     if (!(await this.guardSupportedProjectTypeForCurrentProject())) {
-      return;
+      return false;
     }
 
     console.log('[startBuild] ========== Start building operators ==========');
@@ -411,7 +409,7 @@ export class BuildService {
       console.error('[startBuild]', errorMsg);
       vscode.window.showErrorMessage(errorMsg);
 
-      return;
+      return false;
     }
 
     console.log('[startBuild] Using config ID:', configId);
@@ -450,26 +448,29 @@ export class BuildService {
 
       if (res.code !== 0) {
         if (res.interruptedByUserStop) {
-          return;
+          return false;
         }
 
         console.error('[startBuild] Build failed, exit code:', res.code, 'output:', res.output);
         vscode.window.showErrorMessage(t('build.compileFailed', { output: res.output }));
 
-        return;
+        return false;
       }
 
       console.log('[startBuild] Build succeeded');
       vscode.window.showInformationMessage(t('build.compileSuccess'));
 
       await notifyBuildSucceededForSidebar(Number(configId), params.operatorNames);
+      console.log('[startBuild] ========== Finished building operators ==========');
+
+      return true;
     }
     catch (e) {
       console.error('[startBuild] Build process error:', e);
       vscode.window.showErrorMessage(t('build.getCompileCommandFailed', { error: (e as Error).message }));
-    }
 
-    console.log('[startBuild] ========== Finished building operators ==========');
+      return false;
+    }
   }
 
   /**
@@ -516,6 +517,7 @@ export class BuildService {
 
         if (projectIdStr) {
           const deployTarget = buildPythonDeployTarget(relativePath);
+
           await ConfigService.writeBuildOpDeployTarget(deployTarget);
         }
       }
@@ -606,9 +608,7 @@ export class BuildService {
       const exampleMode = resolveExampleModeForConfig(Number(configId), params.operatorNames);
 
       if (!exampleMode.exampleFound && exampleMode.opName) {
-        vscode.window.showWarningMessage(
-          t('build.exampleNoSourceForOperator', { op: exampleMode.opName }),
-        );
+        vscode.window.showWarningMessage(t('build.exampleNoSourceForOperator', { op: exampleMode.opName }));
       }
 
       const buildCommand = getBuildExampleCommand(
@@ -712,7 +712,8 @@ export class BuildService {
   /**
    * Start simulation analysis
    */
-  async startSimulate(params: { operatorNames?: string; compileOption?: string } = {}): Promise<void> {
+  async startSimulate(params: { operatorNames?: string;
+    compileOption?: string } = {}): Promise<void> {
     if (!(await this.guardSupportedProjectTypeForCurrentProject())) {
       return;
     }
