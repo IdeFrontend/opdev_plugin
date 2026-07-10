@@ -740,7 +740,8 @@
       {
         "command": "huawei-op-devtools.operatorProjectRun",
         "title": "%command.operatorProjectRun.title%",
-        "category": "%config.title%"
+        "category": "%config.title%",
+        "enablement": "opDevtools.npuHardwareAvailable"
       },
       {
         "command": "huawei-op-devtools.operatorProjectCpuDebug",
@@ -755,12 +756,14 @@
       {
         "command": "huawei-op-devtools.operatorProjectSanitizer",
         "title": "%command.operatorProjectSanitizer.title%",
-        "category": "%config.title%"
+        "category": "%config.title%",
+        "enablement": "opDevtools.npuHardwareAvailable"
       },
       {
         "command": "huawei-op-devtools.operatorProjectOnBoard",
         "title": "%command.operatorProjectOnBoard.title%",
-        "category": "%config.title%"
+        "category": "%config.title%",
+        "enablement": "opDevtools.npuHardwareAvailable"
       },
       {
         "command": "huawei-op-devtools.operatorProjectSimulation",

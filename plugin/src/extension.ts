@@ -521,6 +521,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
   registerSidebarContextsRefresh(refreshSidebarContexts);
 
+  await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.npuHardwareAvailable`, true);
+
   await refreshSidebarContexts();
   await syncNativeQueueState();
 

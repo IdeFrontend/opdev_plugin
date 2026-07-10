@@ -3,8 +3,11 @@ import { MindStudioPluginInstaller } from '@plugin/class/mind-studio-plugin-inst
 import type { OperateTreeProvider } from '@plugin/class/operate-tree-provider';
 import { welcomeMethods } from '@plugin/controller/welcome-controller';
 import { configService } from '@plugin/service/config-service';
+import { startNpuHardwareProbe } from '@plugin/domain/utils/npu-hardware-probe';
+import {
+  CONTEXT_PREFIX, TREE_VIEW_OPERATE,
+} from '@shared/flavor';
 import { AsyncSingleFlight } from './async-single-flight';
-import { TREE_VIEW_OPERATE } from '@shared/flavor';
 import { requestSidebarContextsRefresh } from './sidebar-context-refresh';
 
 export const MIND_STUDIO_DEBUG_PLUGIN_ID = 'ascend.mindstudio-debug-vscode-plugin';
@@ -47,6 +50,8 @@ async function runPostActivateBootstrapImpl(deps: PostActivateBootstrapDeps): Pr
   } = deps;
 
   logDebug('postActivate:bootstrap:start');
+
+  void refreshNpuHardwareAvailability(operateTreeProvider, logDebug);
 
   try {
     const installer = new MindStudioPluginInstaller(context, {
@@ -103,5 +108,31 @@ async function runPostActivateBootstrapImpl(deps: PostActivateBootstrapDeps): Pr
   }
   catch (error) {
     logDebug('postActivate:bootstrap:error', error);
+  }
+}
+
+async function refreshNpuHardwareAvailability(
+  operateTreeProvider: OperateTreeProvider,
+  logDebug: (message: string, payload?: unknown)=> void,
+): Promise<void> {
+  try {
+    const available = await startNpuHardwareProbe();
+
+    await vscode.commands.executeCommand(
+      'setContext',
+      `${CONTEXT_PREFIX}.npuHardwareAvailable`,
+      available,
+    );
+    operateTreeProvider.setNpuHardwareAvailable(available);
+    logDebug('postActivate:npuHardwareProbe', { available });
+  }
+  catch (error) {
+    logDebug('postActivate:npuHardwareProbe:error', error);
+    await vscode.commands.executeCommand(
+      'setContext',
+      `${CONTEXT_PREFIX}.npuHardwareAvailable`,
+      false,
+    );
+    operateTreeProvider.setNpuHardwareAvailable(false);
   }
 }

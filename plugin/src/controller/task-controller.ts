@@ -25,9 +25,7 @@ import {
   updateMsdebugTarget,
   type MsdebugTargetPatchResult,
 } from '@plugin/domain/utils/debug-target';
-import {
-  backfillMsdebugLibInEnvFile,
-} from '@plugin/domain/utils/msdebug-env';
+import { backfillMsdebugLibInEnvFile } from '@plugin/domain/utils/msdebug-env';
 import {
   isPythonDebugLaunchConfig,
   resolveDebugLaunchConfigName,
@@ -41,6 +39,7 @@ import {
   resolvePythonExecutablePath,
 } from '@plugin/domain/services/command-strategy/python-operator-strategy-shared';
 import { whenPostActivateBootstrapReady } from '@plugin/helpers/post-activate-bootstrap';
+import { assertNpuHardwareAvailableOrNotify } from '@plugin/helpers/npu-hardware-guard';
 import { resolveOrPickPythonOperatorUri } from '@plugin/helpers/python-operator-editor-context';
 import { enqueueCompileRun } from '@plugin/helpers/operator-flow-coordinator';
 
@@ -62,6 +61,10 @@ async function guardSupportedProjectTypeOrNotify(): Promise<boolean> {
   }
 
   return true;
+}
+
+function guardNpuHardwareOrReturn(): boolean {
+  return assertNpuHardwareAvailableOrNotify();
 }
 
 type PythonOperatorLaunchContext = {
@@ -249,6 +252,10 @@ export const taskMethods = {
    * Run operator
    */
   async startRun(params: StartRunParams = {}): Promise<void> {
+    if (!guardNpuHardwareOrReturn()) {
+      return;
+    }
+
     return enqueueCompileRun('run', async () => {
       await ensurePostActivateBootstrapReady();
 
@@ -273,6 +280,10 @@ export const taskMethods = {
    * Build example
    */
   async startBuildExample(params: StartBuildExampleParams = {}): Promise<void> {
+    if (!guardNpuHardwareOrReturn()) {
+      return;
+    }
+
     return enqueueCompileRun('buildExample', async () => {
       await ensurePostActivateBootstrapReady();
 
@@ -319,6 +330,10 @@ export const taskMethods = {
    * On-board analysis
    */
   async startOnBoard(params: StartOnBoardParams = {}): Promise<void> {
+    if (!guardNpuHardwareOrReturn()) {
+      return;
+    }
+
     await ensurePostActivateBootstrapReady();
 
     try {
@@ -341,6 +356,10 @@ export const taskMethods = {
    * Anomaly detection
    */
   async runSanitizer(params: StartSanitizerParams = {}): Promise<void> {
+    if (!guardNpuHardwareOrReturn()) {
+      return;
+    }
+
     await ensurePostActivateBootstrapReady();
 
     try {
@@ -362,8 +381,12 @@ export const taskMethods = {
   /**
    * Execute DumpTensor
    */
-  async startDumpTensor(params: { operatorNames?: string,
+  async startDumpTensor(params: { operatorNames?: string;
     compileOption?: string } = {}): Promise<void> {
+    if (!guardNpuHardwareOrReturn()) {
+      return;
+    }
+
     await ensurePostActivateBootstrapReady();
 
     try {
@@ -386,6 +409,10 @@ export const taskMethods = {
    * Run UT tests
    */
   async startUtTest(params: StartUtTestParams = {}): Promise<void> {
+    if (!guardNpuHardwareOrReturn()) {
+      return;
+    }
+
     await ensurePostActivateBootstrapReady();
 
     try {
@@ -453,6 +480,10 @@ export const taskMethods = {
    * Run NPU debug
    */
   async runDebug(): Promise<void> {
+    if (!guardNpuHardwareOrReturn()) {
+      return;
+    }
+
     return enqueueCompileRun('build', async () => {
       await ensurePostActivateBootstrapReady();
 

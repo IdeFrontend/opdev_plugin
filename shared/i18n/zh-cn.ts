@@ -366,6 +366,7 @@ export default {
   'web.operate.searchOperatorProject': '搜索算子工程',
   'web.operate.pleaseSelectOperatorProject': '请选择算子工程',
   'web.operate.singleOperatorOnly': '该功能只支持单算子执行',
+  'web.operate.npuHardwareRequired': '该操作需要在扩展主机上安装昇腾 NPU',
   'web.operate.actionsTitle': '操作',
   'web.operate.noActionsAvailable': '当前树视图中没有可执行的操作。',
 

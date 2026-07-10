@@ -78,6 +78,7 @@ export interface OperateNode extends vscode.TreeItem {
 type OperateSidebarState = {
   hasDevtoolConfig: boolean;
   debugModeEnabled: boolean;
+  npuHardwareAvailable: boolean;
   projectType: string;
   projectTemplateName: string;
   hasMultipleOperators: boolean;
@@ -267,6 +268,7 @@ const sanitizerQuestionHandlerKeyMap = new Map<string, string>([
 const INITIAL_STATE: OperateSidebarState = {
   hasDevtoolConfig: false,
   debugModeEnabled: true,
+  npuHardwareAvailable: true,
   projectType: '',
   projectTemplateName: '',
   hasMultipleOperators: false,
@@ -684,6 +686,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     this.state = {
       hasDevtoolConfig,
       debugModeEnabled,
+      npuHardwareAvailable: this.state.npuHardwareAvailable,
       projectType,
       projectTemplateName: projectTypeResult.projectTemplateName || '',
       hasMultipleOperators,
@@ -730,6 +733,47 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   /** Flow-tree cached state: true when current context is standard-custom. */
   isStandardCustomContext(): boolean {
     return this.state.isStandardCustom;
+  }
+
+  setNpuHardwareAvailable(available: boolean): void {
+    if (this.state.npuHardwareAvailable === available) {
+      return;
+    }
+
+    this.state.npuHardwareAvailable = available;
+    this.onDidChangeTreeDataEmitter.fire();
+  }
+
+  private resolveFlowActionState(
+    hasMultipleSelectedOperators: boolean,
+    commandId: string | undefined,
+    requiresNpu: boolean,
+  ): {
+    commandId: string | undefined;
+    tooltip: string | undefined;
+    useDisabledIcon: boolean;
+  } {
+    if (hasMultipleSelectedOperators) {
+      return {
+        commandId: undefined,
+        tooltip: t('web.operate.singleOperatorOnly'),
+        useDisabledIcon: true,
+      };
+    }
+
+    if (requiresNpu && !this.state.npuHardwareAvailable) {
+      return {
+        commandId: undefined,
+        tooltip: t('web.operate.npuHardwareRequired'),
+        useDisabledIcon: true,
+      };
+    }
+
+    return {
+      commandId,
+      tooltip: undefined,
+      useDisabledIcon: false,
+    };
   }
 
   async refreshSanitizerReports(revealLatest = false): Promise<void> {
@@ -1505,8 +1549,11 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     const canSimulate = this.supportsCapability(behavior.supportsSimulate);
     const canPower = canOnBoard || canSimulate;
     const hasMultipleSelectedOperators = this.state.selectedOperatorIds.length > 1;
-    const singleOnlyTooltip = hasMultipleSelectedOperators ? t('web.operate.singleOperatorOnly') : undefined;
     const disabledIcon = new vscode.ThemeIcon('circle-slash', new vscode.ThemeColor('disabledForeground'));
+    const runAction = this.resolveFlowActionState(hasMultipleSelectedOperators, COMMAND_SIDEBAR_RUN, true);
+    const sanitizerAction = this.resolveFlowActionState(hasMultipleSelectedOperators, COMMAND_SIDEBAR_SANITIZER, true);
+    const utTestAction = this.resolveFlowActionState(hasMultipleSelectedOperators, COMMAND_SIDEBAR_UT_TEST, true);
+    const dumpTensorAction = this.resolveFlowActionState(hasMultipleSelectedOperators, COMMAND_SIDEBAR_DUMP_TENSOR, true);
 
     if (canBuild) {
       nodes.push(this.createItem(
@@ -1523,14 +1570,14 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     nodes.push(this.createItem(
       'run',
       t('web.operate.run'),
-      hasMultipleSelectedOperators ? undefined : COMMAND_SIDEBAR_RUN,
+      runAction.commandId,
       vscode.TreeItemCollapsibleState.None,
       undefined,
-      this.pickFlowIcon('run', hasMultipleSelectedOperators ? disabledIcon : this.getCustomProductIcon('run')),
+      this.pickFlowIcon('run', runAction.useDisabledIcon ? disabledIcon : this.getCustomProductIcon('run')),
       '「NPU」',
       undefined,
       undefined,
-      singleOnlyTooltip,
+      runAction.tooltip,
     ));
 
     const debugChildren = this.getDebugChildren();
@@ -1551,14 +1598,14 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       nodes.push(this.createItem(
         'sanitizer',
         t('web.operate.sanitizer'),
-        hasMultipleSelectedOperators ? undefined : COMMAND_SIDEBAR_SANITIZER,
+        sanitizerAction.commandId,
         vscode.TreeItemCollapsibleState.None,
         treeItemContextKey('sanitizer'),
-        this.pickFlowIcon('sanitizer', hasMultipleSelectedOperators ? disabledIcon : this.getCustomProductIcon('check')),
+        this.pickFlowIcon('sanitizer', sanitizerAction.useDisabledIcon ? disabledIcon : this.getCustomProductIcon('check')),
         '「NPU」',
         undefined,
         undefined,
-        singleOnlyTooltip,
+        sanitizerAction.tooltip,
       ));
     }
 
@@ -1579,16 +1626,16 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       nodes.push(this.createItem(
         'utTest',
         t('web.operate.utTest'),
-        hasMultipleSelectedOperators ? undefined : COMMAND_SIDEBAR_UT_TEST,
+        utTestAction.commandId,
         vscode.TreeItemCollapsibleState.None,
         undefined,
-        hasMultipleSelectedOperators
+        utTestAction.useDisabledIcon
           ? disabledIcon
           : this.pickFlowIcon('utTest', this.getCustomProductIcon('beaker')),
         '「NPU」',
         undefined,
         undefined,
-        singleOnlyTooltip,
+        utTestAction.tooltip,
       ));
     }
 
@@ -1596,16 +1643,16 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       nodes.push(this.createItem(
         'dumpTensor',
         t('web.operate.dumpTensor'),
-        hasMultipleSelectedOperators ? undefined : COMMAND_SIDEBAR_DUMP_TENSOR,
+        dumpTensorAction.commandId,
         vscode.TreeItemCollapsibleState.None,
         undefined,
-        hasMultipleSelectedOperators
+        dumpTensorAction.useDisabledIcon
           ? disabledIcon
           : this.pickFlowIcon('dumpTensor', this.getCustomProductIcon('tensor')),
         '「NPU」',
         undefined,
         undefined,
-        singleOnlyTooltip,
+        dumpTensorAction.tooltip,
       ));
     }
 
@@ -1625,25 +1672,26 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     const children: OperateNode[] = [];
     const behavior = this.getCurrentBuildBehavior();
     const hasMultipleSelectedOperators = this.state.selectedOperatorIds.length > 1;
-    const singleOnlyTooltip = hasMultipleSelectedOperators ? t('web.operate.singleOperatorOnly') : undefined;
     const disabledIcon = new vscode.ThemeIcon('circle-slash', new vscode.ThemeColor('disabledForeground'));
     const isCannTorchLibrary = this.state.projectType === 'cann' && this.state.projectTemplateName === 'torch_library_template';
     const showCpuDebug = this.supportsCapability(behavior.supportsCpuDebug) && !isCannTorchLibrary;
+    const cpuDebugAction = this.resolveFlowActionState(hasMultipleSelectedOperators, COMMAND_SIDEBAR_CPU_DEBUG, false);
+    const npuDebugAction = this.resolveFlowActionState(hasMultipleSelectedOperators, COMMAND_SIDEBAR_NPU_DEBUG, true);
 
     if (showCpuDebug) {
       children.push(this.createItem(
         'cpuDebug',
         t('web.operate.cpuDebug'),
-        hasMultipleSelectedOperators ? undefined : COMMAND_SIDEBAR_CPU_DEBUG,
+        cpuDebugAction.commandId,
         vscode.TreeItemCollapsibleState.None,
         undefined,
-        hasMultipleSelectedOperators
+        cpuDebugAction.useDisabledIcon
           ? disabledIcon
           : this.pickFlowIcon('cpuDebug', this.getCustomProductIcon('debug-cpu')),
         undefined,
         undefined,
         undefined,
-        singleOnlyTooltip,
+        cpuDebugAction.tooltip,
       ));
     }
 
@@ -1653,16 +1701,16 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       children.push(this.createItem(
         'npuDebug',
         t('web.operate.npuDebug'),
-        hasMultipleSelectedOperators ? undefined : COMMAND_SIDEBAR_NPU_DEBUG,
+        npuDebugAction.commandId,
         vscode.TreeItemCollapsibleState.None,
         undefined,
-        hasMultipleSelectedOperators
+        npuDebugAction.useDisabledIcon
           ? disabledIcon
           : this.pickFlowIcon('npuDebug', this.getCustomProductIcon('debug-npu')),
         '「NPU」',
         undefined,
         undefined,
-        singleOnlyTooltip,
+        npuDebugAction.tooltip,
       ));
     }
 
@@ -1674,24 +1722,25 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     const showOnBoard = this.supportsCapability(behavior.supportsOnBoard);
     const showSimulation = this.supportsCapability(behavior.supportsSimulate);
     const hasMultipleSelectedOperators = this.state.selectedOperatorIds.length > 1;
-    const singleOnlyTooltip = hasMultipleSelectedOperators ? t('web.operate.singleOperatorOnly') : undefined;
     const disabledIcon = new vscode.ThemeIcon('circle-slash', new vscode.ThemeColor('disabledForeground'));
+    const onboardAction = this.resolveFlowActionState(hasMultipleSelectedOperators, COMMAND_SIDEBAR_ON_BOARD, true);
+    const simulationAction = this.resolveFlowActionState(hasMultipleSelectedOperators, COMMAND_SIDEBAR_SIMULATION, false);
     const items: OperateNode[] = [];
 
     if (showOnBoard) {
       items.push(this.createItem(
         'onboard',
         t('web.operate.onBoardAnalysis'),
-        hasMultipleSelectedOperators ? undefined : COMMAND_SIDEBAR_ON_BOARD,
+        onboardAction.commandId,
         vscode.TreeItemCollapsibleState.None,
         treeItemContextKey('onboard'),
-        hasMultipleSelectedOperators
+        onboardAction.useDisabledIcon
           ? disabledIcon
           : this.pickFlowIcon('onboard', this.getCustomProductIcon('onboard')),
         '「NPU」',
         undefined,
         undefined,
-        singleOnlyTooltip,
+        onboardAction.tooltip,
       ));
     }
 
@@ -1699,16 +1748,16 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       items.push(this.createItem(
         'simulation',
         t('web.operate.simulationAnalysis'),
-        hasMultipleSelectedOperators ? undefined : COMMAND_SIDEBAR_SIMULATION,
+        simulationAction.commandId,
         vscode.TreeItemCollapsibleState.None,
         treeItemContextKey('simulation'),
-        hasMultipleSelectedOperators
+        simulationAction.useDisabledIcon
           ? disabledIcon
           : this.pickFlowIcon('simulation', this.getCustomProductIcon('simulation')),
         undefined,
         undefined,
         undefined,
-        singleOnlyTooltip,
+        simulationAction.tooltip,
       ));
     }
 
