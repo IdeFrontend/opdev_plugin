@@ -1516,6 +1516,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         vscode.TreeItemCollapsibleState.None,
         undefined,
         this.pickFlowIcon('build', this.getCustomProductIcon('build')),
+        undefined,
       ));
     }
 
@@ -1526,7 +1527,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       vscode.TreeItemCollapsibleState.None,
       undefined,
       this.pickFlowIcon('run', hasMultipleSelectedOperators ? disabledIcon : this.getCustomProductIcon('run')),
-      undefined,
+      '「NPU」',
       undefined,
       undefined,
       singleOnlyTooltip,
@@ -1554,7 +1555,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         vscode.TreeItemCollapsibleState.None,
         treeItemContextKey('sanitizer'),
         this.pickFlowIcon('sanitizer', hasMultipleSelectedOperators ? disabledIcon : this.getCustomProductIcon('check')),
-        undefined,
+        '「NPU」',
         undefined,
         undefined,
         singleOnlyTooltip,
@@ -1584,7 +1585,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         hasMultipleSelectedOperators
           ? disabledIcon
           : this.pickFlowIcon('utTest', this.getCustomProductIcon('beaker')),
-        undefined,
+        '「NPU」',
         undefined,
         undefined,
         singleOnlyTooltip,
@@ -1601,7 +1602,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         hasMultipleSelectedOperators
           ? disabledIcon
           : this.pickFlowIcon('dumpTensor', this.getCustomProductIcon('tensor')),
-        undefined,
+        '「NPU」',
         undefined,
         undefined,
         singleOnlyTooltip,
@@ -1658,7 +1659,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         hasMultipleSelectedOperators
           ? disabledIcon
           : this.pickFlowIcon('npuDebug', this.getCustomProductIcon('debug-npu')),
-        undefined,
+        '「NPU」',
         undefined,
         undefined,
         singleOnlyTooltip,
@@ -1687,7 +1688,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         hasMultipleSelectedOperators
           ? disabledIcon
           : this.pickFlowIcon('onboard', this.getCustomProductIcon('onboard')),
-        undefined,
+        '「NPU」',
         undefined,
         undefined,
         singleOnlyTooltip,
