@@ -4,7 +4,7 @@ import { t } from 'i18next';
 import type { AscendEnvResolution } from '@plugin/domain/utils/ascend-util';
 import { getSocVersionWithWorkspaceOverride } from '@plugin/helpers/operator-project-workspace-config';
 import {
-  EXTENSION_ID, settingsKey,
+  EXTENSION_ID, settingsKey, SETTINGS_PREFIX,
 } from '@shared/flavor';
 import { ConfigService } from '@plugin/service/config-service';
 
@@ -55,6 +55,10 @@ export async function maybeWarnSocNotDetected(resolution: AscendEnvResolution): 
 
     if (socVersion?.trim()) {
       await ConfigService.writeOpDevtoolsDottedSettings({ 'environment.socVersion': socVersion.trim() });
+
+      const cfg = vscode.workspace.getConfiguration(SETTINGS_PREFIX);
+
+      await cfg.update('environment.socVersion', socVersion.trim(), vscode.ConfigurationTarget.Workspace);
 
       vscode.window.showInformationMessage(t('extension.ascendEnv.socNotDetected.setSuccess'));
 
