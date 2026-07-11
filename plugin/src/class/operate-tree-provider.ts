@@ -1574,7 +1574,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       vscode.TreeItemCollapsibleState.None,
       undefined,
       this.pickFlowIcon('run', runAction.useDisabledIcon ? disabledIcon : this.getCustomProductIcon('run')),
-      '「NPU」',
+      '- NPU',
       undefined,
       undefined,
       runAction.tooltip,
@@ -1602,7 +1602,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         vscode.TreeItemCollapsibleState.None,
         treeItemContextKey('sanitizer'),
         this.pickFlowIcon('sanitizer', sanitizerAction.useDisabledIcon ? disabledIcon : this.getCustomProductIcon('check')),
-        '「NPU」',
+        '- NPU',
         undefined,
         undefined,
         sanitizerAction.tooltip,
@@ -1632,7 +1632,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         utTestAction.useDisabledIcon
           ? disabledIcon
           : this.pickFlowIcon('utTest', this.getCustomProductIcon('beaker')),
-        '「NPU」',
+        '- NPU',
         undefined,
         undefined,
         utTestAction.tooltip,
@@ -1649,7 +1649,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         dumpTensorAction.useDisabledIcon
           ? disabledIcon
           : this.pickFlowIcon('dumpTensor', this.getCustomProductIcon('tensor')),
-        '「NPU」',
+        '- NPU',
         undefined,
         undefined,
         dumpTensorAction.tooltip,
@@ -1707,7 +1707,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         npuDebugAction.useDisabledIcon
           ? disabledIcon
           : this.pickFlowIcon('npuDebug', this.getCustomProductIcon('debug-npu')),
-        '「NPU」',
+        '- NPU',
         undefined,
         undefined,
         npuDebugAction.tooltip,
@@ -1737,7 +1737,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         onboardAction.useDisabledIcon
           ? disabledIcon
           : this.pickFlowIcon('onboard', this.getCustomProductIcon('onboard')),
-        '「NPU」',
+        '- NPU',
         undefined,
         undefined,
         onboardAction.tooltip,
@@ -3290,6 +3290,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     treeItemId?: string,
     commandArguments?: unknown[],
     tooltip?: string | vscode.MarkdownString,
+    disabled?: boolean,
   ): OperateNode {
     const item = new vscode.TreeItem(label, collapsibleState) as OperateNode;
 

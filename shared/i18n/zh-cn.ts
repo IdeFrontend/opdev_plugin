@@ -85,6 +85,11 @@ export default {
     '找不到 NPU 相关信息，请手动配置 SoC 版本。',
   'extension.ascendEnv.socNotDetected.openSettings': '打开 SoC 设置…',
   'extension.ascendEnv.socNotDetected.continue': '继续执行',
+  'extension.ascendEnv.socNotDetected.setAndExecute': '设置并执行',
+  'extension.ascendEnv.socNotDetected.inputPrompt': '请输入 SoC 版本（如 ascend910b）',
+  'extension.ascendEnv.socNotDetected.inputPlaceholder': 'ascend910b',
+  'extension.ascendEnv.socNotDetected.inputRequired': '请输入有效的 SoC 版本',
+  'extension.ascendEnv.socNotDetected.setSuccess': 'SoC 版本已保存到工作区设置。',
   'extension.reloadWindowAction': '重载窗口',
   'extension.resetProjectConfigurationConfirm':
     '是否重置{{projectName}}的工程配置？点击重置将清除本插件为{{projectName}}保存的配置信息，并重置为默认配置。不会修改仓库中的算子源码及其他工程文件。',
@@ -368,7 +373,8 @@ export default {
   'web.operate.searchOperatorProject': '搜索算子工程',
   'web.operate.pleaseSelectOperatorProject': '请选择算子工程',
   'web.operate.singleOperatorOnly': '该功能只支持单算子执行',
-  'web.operate.npuHardwareRequired': '该操作需要在扩展主机上安装昇腾 NPU',
+  'web.operate.npuHardwareRequired': '该操作只能在NPU环境下执行',
+  'web.operate.npuEnvHint': '标注NPU的操作，仅可在NPU环境下执行，可在右上角"我的环境"中切换后执行',
   'web.operate.actionsTitle': '操作',
   'web.operate.noActionsAvailable': '当前树视图中没有可执行的操作。',
 

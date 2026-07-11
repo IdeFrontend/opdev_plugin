@@ -46,6 +46,7 @@ import { registerOperatorPlugins } from './domain/plugins';
 import { OperatorPluginRegistry } from './domain/plugins/operator-plugin.registry';
 import {
   COMMAND_OPEN,
+  COMMAND_NPU_ENV_HINT,
   COMMAND_WELCOME,
   COMMAND_CREATE_OPERATOR_IN_WORKSPACE,
   COMMAND_TOGGLE_OPS_OPERATE,
@@ -704,6 +705,11 @@ export async function activate(context: vscode.ExtensionContext) {
     async () => {
       createOpsProvider.show(VIEW_NEW_PROJECT);
     },
+  );
+
+  const npuEnvHintCommand = vscode.commands.registerCommand(
+    COMMAND_NPU_ENV_HINT,
+    () => {},
   );
 
   // Register and open the operator project command (native Open Folder dialog)
@@ -2039,6 +2045,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(viewServer);
   context.subscriptions.push(createOptionsCommand);
   context.subscriptions.push(openCommand);
+  context.subscriptions.push(npuEnvHintCommand);
   context.subscriptions.push(openProjectCommand);
   context.subscriptions.push(welcomeCommand);
   context.subscriptions.push(clearWelcomeCountCommand);

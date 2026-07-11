@@ -85,6 +85,11 @@ export default {
     'NPU information could not be found. Please configure the SoC version manually.',
   'extension.ascendEnv.socNotDetected.openSettings': 'Open SoC setting…',
   'extension.ascendEnv.socNotDetected.continue': 'Continue',
+  'extension.ascendEnv.socNotDetected.setAndExecute': 'Set and Execute',
+  'extension.ascendEnv.socNotDetected.inputPrompt': 'Enter SoC version (e.g., ascend910b)',
+  'extension.ascendEnv.socNotDetected.inputPlaceholder': 'ascend910b',
+  'extension.ascendEnv.socNotDetected.inputRequired': 'Please enter a valid SoC version',
+  'extension.ascendEnv.socNotDetected.setSuccess': 'SoC version saved to workspace settings.',
   'extension.reloadWindowAction': 'Reload Window',
   'extension.resetProjectConfigurationConfirm':
     'Reset configuration for {{projectName}}? Choosing Reset will clear configuration stored by this plugin for {{projectName}} and regenerate defaults. Your operator source code and other project files in the repository will not be changed.',
@@ -368,7 +373,8 @@ export default {
   'web.operate.searchOperatorProject': 'Search operator project',
   'web.operate.pleaseSelectOperatorProject': 'Please select an operator project',
   'web.operate.singleOperatorOnly': 'This action supports single operator only',
-  'web.operate.npuHardwareRequired': 'This action requires an Ascend NPU on the extension host',
+  'web.operate.npuHardwareRequired': 'This action can only be performed in an NPU environment',
+  'web.operate.npuEnvHint': 'Operations marked with NPU can only be executed in NPU environment, switch in "My Environment" at the top right corner',
   'web.operate.actionsTitle': 'Actions',
   'web.operate.noActionsAvailable': 'No actions available in current tree view.',
 

@@ -6,6 +6,7 @@ import { getSocVersionWithWorkspaceOverride } from '@plugin/helpers/operator-pro
 import {
   EXTENSION_ID, settingsKey,
 } from '@shared/flavor';
+import { ConfigService } from '@plugin/service/config-service';
 
 export type SocWarningResult = 'continue' | 'open-settings' | 'cancelled';
 
@@ -34,9 +35,10 @@ export async function maybeWarnSocNotDetected(resolution: AscendEnvResolution): 
 
   const openSettingsLabel = t('extension.ascendEnv.socNotDetected.openSettings');
   const continueLabel = t('extension.ascendEnv.socNotDetected.continue');
+  const setAndExecuteLabel = t('extension.ascendEnv.socNotDetected.setAndExecute');
 
   const choice = await vscode.window
-    .showWarningMessage(t('extension.ascendEnv.socNotDetected.message'), openSettingsLabel, continueLabel);
+    .showWarningMessage(t('extension.ascendEnv.socNotDetected.message'), openSettingsLabel, setAndExecuteLabel, continueLabel);
 
   if (choice === openSettingsLabel) {
     void vscode.commands.executeCommand(
@@ -45,6 +47,30 @@ export async function maybeWarnSocNotDetected(resolution: AscendEnvResolution): 
     );
 
     return 'open-settings';
+  }
+
+  if (choice === setAndExecuteLabel) {
+    const socVersion = await vscode.window.showInputBox({
+      prompt: t('extension.ascendEnv.socNotDetected.inputPrompt'),
+      placeHolder: t('extension.ascendEnv.socNotDetected.inputPlaceholder'),
+      validateInput: (value) => {
+        if (!value?.trim()) {
+          return t('extension.ascendEnv.socNotDetected.inputRequired');
+        }
+
+        return undefined;
+      },
+    });
+
+    if (socVersion?.trim()) {
+      await ConfigService.writeOpDevtoolsDottedSettings({ 'environment.socVersion': socVersion.trim() });
+
+      vscode.window.showInformationMessage(t('extension.ascendEnv.socNotDetected.setSuccess'));
+
+      return 'continue';
+    }
+
+    return 'cancelled';
   }
 
   if (choice === continueLabel) {
