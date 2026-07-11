@@ -612,6 +612,12 @@
         "category": "%config.title%"
       },
       {
+        "command": "huawei-op-devtools.npuEnvHint",
+        "title": "%command.npuEnvHint.title%",
+        "icon": "$(question)",
+        "category": "%config.title%"
+      },
+      {
         "command": "huawei-op-devtools.openProject",
         "title": "%command.openProject.title%",
         "category": "%config.title%"
@@ -1382,6 +1388,11 @@
           "command": "huawei-op-devtools.sidebar.projectConfig",
           "when": "view == opdevtoolsOperateTree",
           "group": "navigation@2"
+        },
+        {
+          "command": "huawei-op-devtools.npuEnvHint",
+          "when": "view == opdevtoolsOperateTree",
+          "group": "navigation@3"
         },
         {
           "command": "huawei-op-devtools.sidebar.resetProjectConfiguration",
