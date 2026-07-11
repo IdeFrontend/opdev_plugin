@@ -2,6 +2,13 @@
 
 Notable changes to **Huawei OP DevTools** are listed here. For the full project history, see the repository on [GitCode](https://gitcode.com/mlh0101/mstt).
 
+## 1.3.8 — 2026-07-10
+
+Patch release: gray out NPU-only actions on non-NPU extension hosts, and NPU labels on Actions tree rows.
+
+- **Gray out NPU-only actions on non-NPU hosts ([#50](https://gitcode.com/opdevtools/plugin_release/issues/50))** — After activation, probe the extension host for Ascend NPU hardware asynchronously (`asys info -r=status`, then `npu-smi info`). NPU is **available** when either tool returns non-empty output (stdout or stderr), including driver/device errors such as a busy NPU or dcmi init failure; **unavailable** only when both commands are missing or produce no usable output (bash `command not found`, PowerShell cmdlet-not-found, or empty output). UI stays optimistically enabled while the probe is pending; on completion sets `opDevtools.npuHardwareAvailable` and refreshes the Actions tree. Grayed rows: Run, NPU debug, Sanitizer, on-board profiling, UT test, Dump tensor; compile/deploy, CPU debug, simulation, and inline gear/settings remain enabled. Explorer Run/Sanitizer/On-board entries respect command enablement; task entry points and sanitizer/on-board quick-start **Start now** buttons are blocked with `web.operate.npuHardwareRequired` (zh/en).
+- **NPU labels on Actions tree** — Show a `「NPU」` description on NPU-bound operation rows (Run, Sanitizer, UT test, Dump tensor, NPU debug, on-board) to distinguish them from CPU-capable actions (compile, CPU debug, simulation).
+
 ## 1.3.7 — 2026-07-09
 
 Patch release: Insight auto-installation, debug reliability improvements, sub-operator and configuration UX, operate-panel focus, and bundled extension recommendations.

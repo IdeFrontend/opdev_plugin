@@ -368,6 +368,7 @@ export default {
   'web.operate.searchOperatorProject': 'Search operator project',
   'web.operate.pleaseSelectOperatorProject': 'Please select an operator project',
   'web.operate.singleOperatorOnly': 'This action supports single operator only',
+  'web.operate.npuHardwareRequired': 'This action requires an Ascend NPU on the extension host',
   'web.operate.actionsTitle': 'Actions',
   'web.operate.noActionsAvailable': 'No actions available in current tree view.',
 

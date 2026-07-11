@@ -21,6 +21,7 @@ const opsMethods = {
   startOnBoard: dispatchOnBoard,
 
   getProjectEnv: scriptMethods.getProjectEnv,
+  getNpuHardwareAvailable: scriptMethods.getNpuHardwareAvailable,
   getSimulatorSupportedMetrics: scriptMethods.getSimulatorSupportedMetrics,
 
   getSanitizerConfigs: sanitizerViewMethods.getSanitizerConfigs,

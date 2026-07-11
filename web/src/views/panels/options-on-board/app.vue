@@ -9,14 +9,12 @@ import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import {
   getConfigData, saveConfig, openExternalLink, startOnBoard, executeVscodeCommand, getSelectedOperators,
   getOnBoardAnalysisShowQuickOptions, setOnBoardAnalysisShowQuickOptions,
-  getProjectEnv,
+  getProjectEnv, getNpuHardwareAvailable,
 } from '@web/apis';
 import { isAscendA5ProfilerCannSoc } from '@shared/msprof-onboard-env';
 
 // 使用主题管理组合式函数
-const {
-  themeConfig,
-} = useTheme();
+const { themeConfig } = useTheme();
 const guide = 'https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODtools/Operatordevelopmenttools/atlasopdev_16_0082.html';
 const onboardData = ref({
   user_options: {
@@ -39,6 +37,7 @@ const isExecuting = ref(false);
 /** When true, workspace `performanceTuning.onBoard.showQuickOptions` is false (tree runs without opening this panel). */
 const doNotShowAgain = ref(false);
 const projectCannSoc = ref('');
+const npuHardwareAvailable = ref(true);
 
 const isAscendA5Profiler = computed(() => isAscendA5ProfilerCannSoc(projectCannSoc.value));
 
@@ -74,7 +73,7 @@ const handleSave = async () => {
 };
 
 const handleConfirm = async () => {
-  if (!onboardData.value || isExecuting.value) {
+  if (!onboardData.value || isExecuting.value || !npuHardwareAvailable.value) {
     return;
   }
 
@@ -128,26 +127,33 @@ const PERFORMANCE_METRIC_KEYS = [
 
 const allPerformanceMetricsSelected = computed(() => {
   const uo = onboardData.value.user_options;
+
   if (!uo) {
     return false;
   }
+
   return PERFORMANCE_METRIC_KEYS.every((key) => Boolean(uo[key]));
 });
 
 const performanceMetricsIndeterminate = computed(() => {
   const uo = onboardData.value.user_options;
+
   if (!uo) {
     return false;
   }
+
   const count = PERFORMANCE_METRIC_KEYS.filter((key) => uo[key]).length;
+
   return count > 0 && count < PERFORMANCE_METRIC_KEYS.length;
 });
 
 const operatorMetricsChecked = computed(() => {
   const uo = onboardData.value.user_options as Record<string, unknown>;
+
   if (typeof uo.operatorMetrics === 'boolean') {
     return uo.operatorMetrics;
   }
+
   return allPerformanceMetricsSelected.value;
 });
 
@@ -155,6 +161,7 @@ const handleOperatorPerformanceChange = (e: unknown) => {
   const checked = typeof e === 'boolean'
     ? e
     : ((e as { target?: { checked?: boolean } })?.target?.checked ?? false);
+
   (onboardData.value.user_options as Record<string, unknown>).operatorMetrics = checked;
   PERFORMANCE_METRIC_KEYS.forEach((key) => {
     onboardData.value.user_options[key] = checked;
@@ -169,22 +176,36 @@ async function syncDoNotShowToWorkspace() {
 
 onMounted(async () => {
   await fetchConfig();
+
+  try {
+    npuHardwareAvailable.value = await getNpuHardwareAvailable();
+  }
+  catch {
+    npuHardwareAvailable.value = true;
+  }
+
   try {
     const env = await getProjectEnv();
+
     projectCannSoc.value = (env?.socVersion || '').trim();
   }
   catch {
     projectCannSoc.value = '';
   }
+
   if (isAscendA5ProfilerCannSoc(projectCannSoc.value)) {
     const uo = onboardData.value.user_options as Record<string, unknown>;
+
     uo.MemoryDetail = false;
+
     if (typeof uo.PCSampling !== 'boolean') {
       uo.PCSampling = true;
     }
   }
+
   try {
     const showQuick = await getOnBoardAnalysisShowQuickOptions();
+
     doNotShowAgain.value = !showQuick;
   }
   catch {
@@ -363,9 +384,16 @@ onMounted(async () => {
         </div>
 
         <div class="footer-actions">
+          <p
+            v-if="!npuHardwareAvailable"
+            class="npu-unavailable-hint"
+          >
+            {{ t('web.operate.npuHardwareRequired') }}
+          </p>
           <a-button
             type="primary"
             :loading="isExecuting"
+            :disabled="!npuHardwareAvailable"
             @click="handleConfirm"
           >
             {{ t('web.options.onboard.startNow') }}
@@ -433,6 +461,11 @@ onMounted(async () => {
 
   .footer-actions {
     margin-top: 12px;
+
+    .npu-unavailable-hint {
+      margin-bottom: 8px;
+      color: var(--vscode-disabledForeground, rgba(0, 0, 0, 0.45));
+    }
   }
 
   .cache-box {
