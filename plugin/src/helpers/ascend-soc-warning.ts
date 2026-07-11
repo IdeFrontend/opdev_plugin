@@ -8,7 +8,7 @@ import {
 } from '@shared/flavor';
 import { ConfigService } from '@plugin/service/config-service';
 
-export type SocWarningResult = 'continue' | 'open-settings' | 'cancelled';
+export type SocWarningResult = 'continue' | 'open-settings' | 'cancelled' | 'configured';
 
 /**
  * When SOC resolution falls through to the empty default (host autodetection
@@ -19,9 +19,10 @@ export type SocWarningResult = 'continue' | 'open-settings' | 'cancelled';
  * is configured or otherwise resolved.
  *
  * Returns a Promise that resolves with the user's choice:
- * - 'continue': User explicitly clicked Continue to proceed with empty SOC
- * - 'open-settings': User clicked Open Settings
- * - 'cancelled': User dismissed the warning (clicked elsewhere)
+ * - 'continue': Continue with the current resolution (SOC is already configured)
+ * - 'open-settings': User clicked Open Settings, should abort execution
+ * - 'cancelled': User dismissed the warning (clicked elsewhere), should abort execution
+ * - 'configured': User set SOC version via input box, should re-resolve with new config
  */
 export async function maybeWarnSocNotDetected(resolution: AscendEnvResolution): Promise<SocWarningResult> {
   if (getSocVersionWithWorkspaceOverride(null)
@@ -33,21 +34,11 @@ export async function maybeWarnSocNotDetected(resolution: AscendEnvResolution): 
     return 'continue';
   }
 
-  const openSettingsLabel = t('extension.ascendEnv.socNotDetected.openSettings');
-  const continueLabel = t('extension.ascendEnv.socNotDetected.continue');
   const setAndExecuteLabel = t('extension.ascendEnv.socNotDetected.setAndExecute');
+  const openSettingsLabel = t('extension.ascendEnv.socNotDetected.openSettings');
 
   const choice = await vscode.window
-    .showWarningMessage(t('extension.ascendEnv.socNotDetected.message'), openSettingsLabel, setAndExecuteLabel, continueLabel);
-
-  if (choice === openSettingsLabel) {
-    void vscode.commands.executeCommand(
-      'workbench.action.openWorkspaceSettings',
-      `@ext:${EXTENSION_ID} ${settingsKey('environment.socVersion')}`,
-    );
-
-    return 'open-settings';
-  }
+    .showWarningMessage(t('extension.ascendEnv.socNotDetected.message'), setAndExecuteLabel, openSettingsLabel);
 
   if (choice === setAndExecuteLabel) {
     const socVersion = await vscode.window.showInputBox({
@@ -67,14 +58,19 @@ export async function maybeWarnSocNotDetected(resolution: AscendEnvResolution): 
 
       vscode.window.showInformationMessage(t('extension.ascendEnv.socNotDetected.setSuccess'));
 
-      return 'continue';
+      return 'configured';
     }
 
     return 'cancelled';
   }
 
-  if (choice === continueLabel) {
-    return 'continue';
+  if (choice === openSettingsLabel) {
+    void vscode.commands.executeCommand(
+      'workbench.action.openWorkspaceSettings',
+      `@ext:${EXTENSION_ID} ${settingsKey('environment.socVersion')}`,
+    );
+
+    return 'open-settings';
   }
 
   return 'cancelled';

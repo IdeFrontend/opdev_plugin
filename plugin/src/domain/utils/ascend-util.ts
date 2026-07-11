@@ -672,6 +672,18 @@ export async function resolveAscendEnvForOperatorCommand(spawnContext: OperatorS
     return undefined;
   }
 
+  if (warningResult === 'configured') {
+    resolution = computeAscendEnvResolution(resolveCtx);
+
+    resolution = enrichAscendResolutionForPlaceholders(
+      resolveCtx,
+      resolution,
+      spawnContext.script || '',
+    );
+
+    logAscendEnvResolution(resolution, resolveCtx);
+  }
+
   return resolution;
 }
 
