@@ -468,7 +468,9 @@ export const welcomeMethods = {
           console.warn(`[openProject] Config completion failed: ${error instanceof Error ? error.message : String(error)}`);
         }
 
-        await requestSidebarContextsRefresh();
+        if (!isFromSystem) {
+          await requestSidebarContextsRefresh();
+        }
 
         if (!isFromSystem) {
           openFolderFn(params.projectPath);
@@ -557,7 +559,10 @@ export const welcomeMethods = {
       );
       await pm.checkVscode();
       await configService.maybeMigrateLegacySettingsToWorkspace();
-      await requestSidebarContextsRefresh();
+
+      if (!isFromSystem) {
+        await requestSidebarContextsRefresh();
+      }
 
       if (!isFromSystem) {
         await vscode.commands.executeCommand('workbench.action.closeActiveEditor');

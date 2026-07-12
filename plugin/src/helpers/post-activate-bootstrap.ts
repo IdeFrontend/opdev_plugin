@@ -60,11 +60,6 @@ async function runPostActivateBootstrapImpl(deps: PostActivateBootstrapDeps): Pr
         './out/plugin/mindstudio-debug-vscode-plugin/MindStudio-Debug-VSCode-Plugin-1.0.9.vsix',
       pluginVersion: '1.0.9',
     });
-    const installMindStudioDebug = installer.installIfNeeded()
-      .catch((error) => {
-        logDebug('postActivate:installMindStudioDebug:error', error);
-      });
-
     const [workspaceFolder] = vscode.workspace.workspaceFolders ?? [];
 
     if (workspaceFolder) {
@@ -83,14 +78,16 @@ async function runPostActivateBootstrapImpl(deps: PostActivateBootstrapDeps): Pr
         }
       })();
 
-      await Promise.all([
-        openWorkspace,
-        installMindStudioDebug,
-      ]);
+      await openWorkspace;
     }
-    else {
-      await installMindStudioDebug;
-    }
+
+    void installer.installIfNeeded()
+      .then(() => {
+        logDebug('postActivate:installMindStudioDebug:completed (fire-and-forget)');
+      })
+      .catch((error) => {
+        logDebug('postActivate:installMindStudioDebug:error (fire-and-forget)', error);
+      });
 
     // openProject may create devtool_config.json after the sync refreshSidebarContexts in activate().
     await requestSidebarContextsRefresh();

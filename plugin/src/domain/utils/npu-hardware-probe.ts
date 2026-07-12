@@ -1,16 +1,15 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
-import { appendLog } from '@plugin/helpers/output-channel';
 import {
   resolveCannSetEnvScriptForDetection,
   shellSourcePrefix,
   type ResolvedSetEnvScript,
 } from '@plugin/domain/utils/ascend-detection-env';
 
-const LOG_SCOPE = 'op-devtools/npu-hardware';
-const ASYS_TIMEOUT_MS = 30000;
-const NPU_SMI_TIMEOUT_MS = 20000;
+const ASYS_TIMEOUT_MS = 8000;
+const NPU_SMI_TIMEOUT_MS = 8000;
+const WHICH_TIMEOUT_MS = 2000;
 
 const execAsync = promisify(exec);
 
@@ -21,10 +20,6 @@ export type NpuHardwareProbeState =
 
 let probeState: NpuHardwareProbeState = { kind: 'pending' };
 let inFlightProbe: Promise<boolean> | undefined;
-
-function logProbe(message: string): void {
-  appendLog(LOG_SCOPE, message);
-}
 
 type ShellExecResult = {
   stdout: string;
@@ -100,41 +95,41 @@ async function execBashWithCannEnvAsync(
 }
 
 async function tryProbeViaAsys(setEnv: ResolvedSetEnvScript | undefined): Promise<boolean> {
-  if (!setEnv) {
+  const quickWhich = await execBashWithCannEnvAsync(undefined, 'which asys', WHICH_TIMEOUT_MS);
+
+  if (!quickWhich.stdout.trim()) {
     return false;
   }
 
-  const result = await execBashWithCannEnvAsync(setEnv, 'asys info -r=status', ASYS_TIMEOUT_MS);
+  const quickResult = await execBashWithCannEnvAsync(undefined, 'asys info -r=status', ASYS_TIMEOUT_MS);
 
-  return probeCommandResponded(result, 'asys');
+  return probeCommandResponded(quickResult, 'asys');
 }
 
 async function tryProbeViaNpuSmi(setEnv: ResolvedSetEnvScript | undefined): Promise<boolean> {
-  const result = await execBashWithCannEnvAsync(setEnv, 'npu-smi info', NPU_SMI_TIMEOUT_MS);
+  const quickWhich = await execBashWithCannEnvAsync(undefined, 'which npu-smi', WHICH_TIMEOUT_MS);
 
-  return probeCommandResponded(result, 'npu-smi');
+  if (!quickWhich.stdout.trim()) {
+    return false;
+  }
+
+  const quickResult = await execBashWithCannEnvAsync(undefined, 'npu-smi info', NPU_SMI_TIMEOUT_MS);
+
+  return probeCommandResponded(quickResult, 'npu-smi');
 }
 
 async function runNpuHardwareProbe(): Promise<boolean> {
   const setEnv = resolveCannSetEnvScriptForDetection();
-  const asysAvailable = await tryProbeViaAsys(setEnv);
-  const npuSmiAvailable = await tryProbeViaNpuSmi(setEnv);
 
-  if (asysAvailable || npuSmiAvailable) {
-    const via = asysAvailable && npuSmiAvailable
-      ? 'asys+npu-smi'
-      : asysAvailable
-        ? 'asys'
-        : 'npu-smi';
+  const [
+    asysAvailable,
+    npuSmiAvailable,
+  ] = await Promise.all([
+    tryProbeViaAsys(setEnv),
+    tryProbeViaNpuSmi(setEnv),
+  ]);
 
-    logProbe(`NPU hardware probe: available (via=${via})`);
-
-    return true;
-  }
-
-  logProbe('NPU hardware probe: unavailable (asys and npu-smi both unavailable)');
-
-  return false;
+  return asysAvailable || npuSmiAvailable;
 }
 
 /** True while probe has not finished, or when hardware was detected. */

@@ -219,6 +219,7 @@ export default {
   'mindStudio.installFailed': 'Install failed: {{error}}',
   'mindStudio.webManualConfig': 'Web environment does not support auto install. Please configure manually.',
   'mindStudio.configGenerateFailed': 'Failed to generate config: {{error}}',
+  'mindStudio.debugPluginInstalling': 'Debug plugin is installing. Please try again later.',
 
   // view / link
   'view.binPathEmpty': 'BIN file path cannot be empty',

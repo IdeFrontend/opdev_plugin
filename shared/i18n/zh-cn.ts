@@ -220,6 +220,7 @@ export default {
   'mindStudio.installFailed': '安装失败：{{error}}',
   'mindStudio.webManualConfig': '当前 Web 环境不支持自动安装，请手动配置。',
   'mindStudio.configGenerateFailed': '配置文件生成失败：{{error}}',
+  'mindStudio.debugPluginInstalling': '调试插件正在安装中，请稍后重试。',
 
   // view / link
   'view.binPathEmpty': 'BIN文件路径不能为空',

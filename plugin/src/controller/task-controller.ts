@@ -38,6 +38,7 @@ import {
   buildPythonDeployTarget,
   resolvePythonExecutablePath,
 } from '@plugin/domain/services/command-strategy/python-operator-strategy-shared';
+import { isMindStudioDebugExtensionActive } from '@plugin/helpers/post-activate-bootstrap';
 import { whenPostActivateBootstrapReady } from '@plugin/helpers/post-activate-bootstrap';
 import { assertNpuHardwareAvailableOrNotify } from '@plugin/helpers/npu-hardware-guard';
 import { resolveOrPickPythonOperatorUri } from '@plugin/helpers/python-operator-editor-context';
@@ -484,6 +485,12 @@ export const taskMethods = {
       return;
     }
 
+    if (!isMindStudioDebugExtensionActive()) {
+      vscode.window.showErrorMessage(t('mindStudio.debugPluginInstalling'));
+
+      return;
+    }
+
     return enqueueCompileRun('build', async () => {
       await ensurePostActivateBootstrapReady();
 
@@ -600,6 +607,12 @@ export const taskMethods = {
    * Run CPU debug
    */
   async runCpuDebug(): Promise<void> {
+    if (!isMindStudioDebugExtensionActive()) {
+      vscode.window.showErrorMessage(t('mindStudio.debugPluginInstalling'));
+
+      return;
+    }
+
     return enqueueCompileRun('build', async () => {
       await ensurePostActivateBootstrapReady();
 

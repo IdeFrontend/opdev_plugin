@@ -1,11 +1,9 @@
 import child_process from 'child_process';
 import fs from 'fs';
+import path from 'path';
 
 import { getGlobalEnvSnapshot } from '@plugin/domain/utils/global-env-snapshot';
 import { getConfiguredEnvironmentScriptPath } from '@plugin/helpers/operator-project-workspace-config';
-import { appendLog } from '@plugin/helpers/output-channel';
-
-const ASCEND_ENV_LOG_SCOPE = 'op-devtools/ascend-env';
 
 export type SetEnvScriptSource =
   | 'workspace-setting'
@@ -15,10 +13,6 @@ export type SetEnvScriptSource =
 export interface ResolvedSetEnvScript {
   path: string;
   source: SetEnvScriptSource;
-}
-
-function logDetectionEnv(message: string): void {
-  appendLog(ASCEND_ENV_LOG_SCOPE, message);
 }
 
 function isUsableSetEnvScript(path: string): boolean {
@@ -34,6 +28,25 @@ function isUsableSetEnvScript(path: string): boolean {
   catch {
     return false;
   }
+}
+
+function tryFindCannSetEnvShViaCommonPaths(): string | undefined {
+  const commonPaths = [
+    process.env.ASCEND_HOME_PATH && path.join(process.env.ASCEND_HOME_PATH, 'set_env.sh'),
+    '/usr/local/Ascend/ascend-toolkit/latest/set_env.sh',
+    '/usr/local/Ascend/set_env.sh',
+    '/opt/ascend/ascend-toolkit/latest/set_env.sh',
+    '/opt/ascend/set_env.sh',
+    '/usr/local/dcmi/set_env.sh',
+  ].filter(Boolean) as string[];
+
+  for (const candidatePath of commonPaths) {
+    if (isUsableSetEnvScript(candidatePath)) {
+      return candidatePath;
+    }
+  }
+
+  return undefined;
 }
 
 function tryFindCannSetEnvShViaFind(): string | undefined {
@@ -70,14 +83,10 @@ function resolveFromPath(
     return undefined;
   }
 
-  const resolved = {
+  return {
     path: path.trim(),
     source,
   };
-
-  logDetectionEnv(`SOC detection will source set_env.sh (${source}): ${resolved.path}`);
-
-  return resolved;
 }
 
 export function resolveCannSetEnvScriptForDetection(): ResolvedSetEnvScript | undefined {
@@ -99,27 +108,30 @@ export function resolveCannSetEnvScriptForDetection(): ResolvedSetEnvScript | un
     return fromLaunchEnv;
   }
 
+  const fromCommonPaths = tryFindCannSetEnvShViaCommonPaths();
+
+  if (fromCommonPaths) {
+    return {
+      path: fromCommonPaths,
+      source: 'find',
+    };
+  }
+
   const found = tryFindCannSetEnvShViaFind();
 
   if (found) {
-    logDetectionEnv(`SOC detection will source set_env.sh (find): ${found}`);
-
     return {
       path: found,
       source: 'find',
     };
   }
 
-  logDetectionEnv(
-    'SOC detection: no usable set_env.sh (workspace, ASCEND_ENV_SCRIPT, or find)',
-  );
-
   return undefined;
 }
 
 /** Bash prefix that sources CANN env for a single `execSync` invocation. */
 export function shellSourcePrefix(setEnvScriptPath: string): string {
-  const escaped = setEnvScriptPath.replace(/'/g, `'\"'\"'`);
+  const escaped = setEnvScriptPath.replace(/'/g, '\'\"\'\"\'');
 
   return `source '${escaped}' && `;
 }
