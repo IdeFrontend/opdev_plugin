@@ -43,10 +43,10 @@ import { insightService } from './service/insight-service';
 import { AsyncSingleFlight } from './helpers/async-single-flight';
 import { startPostActivateBootstrap } from './helpers/post-activate-bootstrap';
 import { registerOperatorPlugins } from './domain/plugins';
+import { startNpuHardwareProbe } from './domain/utils/npu-hardware-probe';
 import { OperatorPluginRegistry } from './domain/plugins/operator-plugin.registry';
 import {
   COMMAND_OPEN,
-  COMMAND_NPU_ENV_HINT,
   COMMAND_WELCOME,
   COMMAND_CREATE_OPERATOR_IN_WORKSPACE,
   COMMAND_TOGGLE_OPS_OPERATE,
@@ -524,6 +524,21 @@ export async function activate(context: vscode.ExtensionContext) {
 
   await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.npuHardwareAvailable`, true);
 
+  const checkNpuEnvironment = async (): Promise<boolean> => {
+    const available = await startNpuHardwareProbe();
+
+    if (!available) {
+      vscode.window.showInformationMessage(
+        t('extension.npuEnvRequired'),
+        { modal: true },
+      );
+
+      return false;
+    }
+
+    return true;
+  };
+
   await refreshSidebarContexts();
   await syncNativeQueueState();
 
@@ -705,11 +720,6 @@ export async function activate(context: vscode.ExtensionContext) {
     async () => {
       createOpsProvider.show(VIEW_NEW_PROJECT);
     },
-  );
-
-  const npuEnvHintCommand = vscode.commands.registerCommand(
-    COMMAND_NPU_ENV_HINT,
-    () => {},
   );
 
   // Register and open the operator project command (native Open Folder dialog)
@@ -903,6 +913,10 @@ export async function activate(context: vscode.ExtensionContext) {
   const sidebarRunCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_RUN,
     async () => {
+      if (!(await checkNpuEnvironment())) {
+        return;
+      }
+
       await operateTreeProvider.runFlowAction('run', async () => {
         if (operateTreeProvider.hasMultipleOperators() || operateTreeProvider.isStandardCustomContext()) {
           const operatorNames = await getOperatorNamesFromSelection();
@@ -950,6 +964,10 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
 
+      if (!(await checkNpuEnvironment())) {
+        return;
+      }
+
       await operateTreeProvider.runFlowAction('npuDebug', async () => {
         await taskMethods.runDebug();
       });
@@ -963,6 +981,10 @@ export async function activate(context: vscode.ExtensionContext) {
       if (selectedIds && selectedIds.length > 1) {
         vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
 
+        return;
+      }
+
+      if (!(await checkNpuEnvironment())) {
         return;
       }
 
@@ -988,6 +1010,10 @@ export async function activate(context: vscode.ExtensionContext) {
       if (selectedIds && selectedIds.length > 1) {
         vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
 
+        return;
+      }
+
+      if (!(await checkNpuEnvironment())) {
         return;
       }
 
@@ -1079,6 +1105,10 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
 
+      if (!(await checkNpuEnvironment())) {
+        return;
+      }
+
       const operatorNames = await getOperatorNamesFromSelection();
       const compileOption = await getCompileOptionForSelectedOperators();
 
@@ -1102,6 +1132,10 @@ export async function activate(context: vscode.ExtensionContext) {
       if (selectedIds && selectedIds.length > 1) {
         vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
 
+        return;
+      }
+
+      if (!(await checkNpuEnvironment())) {
         return;
       }
 
@@ -2045,7 +2079,6 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(viewServer);
   context.subscriptions.push(createOptionsCommand);
   context.subscriptions.push(openCommand);
-  context.subscriptions.push(npuEnvHintCommand);
   context.subscriptions.push(openProjectCommand);
   context.subscriptions.push(welcomeCommand);
   context.subscriptions.push(clearWelcomeCountCommand);
@@ -2231,6 +2264,10 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
 
+      if (!(await checkNpuEnvironment())) {
+        return;
+      }
+
       await FolderContextMenuService.runOperatorProject(uri);
     },
   );
@@ -2256,6 +2293,10 @@ export async function activate(context: vscode.ExtensionContext) {
       if (!uri) {
         vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
 
+        return;
+      }
+
+      if (!(await checkNpuEnvironment())) {
         return;
       }
 
@@ -2304,6 +2345,10 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
 
+      if (!(await checkNpuEnvironment())) {
+        return;
+      }
+
       const folderUri = getFolderUri(uri);
 
       await FolderContextMenuService.sanitizerOperatorProject(folderUri);
@@ -2316,6 +2361,10 @@ export async function activate(context: vscode.ExtensionContext) {
       if (!uri) {
         vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
 
+        return;
+      }
+
+      if (!(await checkNpuEnvironment())) {
         return;
       }
 

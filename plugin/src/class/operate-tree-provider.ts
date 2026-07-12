@@ -747,7 +747,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   private resolveFlowActionState(
     hasMultipleSelectedOperators: boolean,
     commandId: string | undefined,
-    requiresNpu: boolean,
+    _requiresNpu: boolean,
   ): {
     commandId: string | undefined;
     tooltip: string | undefined;
@@ -757,14 +757,6 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       return {
         commandId: undefined,
         tooltip: t('web.operate.singleOperatorOnly'),
-        useDisabledIcon: true,
-      };
-    }
-
-    if (requiresNpu && !this.state.npuHardwareAvailable) {
-      return {
-        commandId: undefined,
-        tooltip: t('web.operate.npuHardwareRequired'),
         useDisabledIcon: true,
       };
     }

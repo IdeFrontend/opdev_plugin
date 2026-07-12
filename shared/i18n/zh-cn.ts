@@ -94,7 +94,8 @@ export default {
   'extension.resetProjectConfigurationConfirm':
     '是否重置{{projectName}}的工程配置？点击重置将清除本插件为{{projectName}}保存的配置信息，并重置为默认配置。不会修改仓库中的算子源码及其他工程文件。',
   'extension.resetProjectConfigurationConfirmReset': '重置',
-  'extension.unsupportedProjectTypeDisabled': '当前产品构建不支持项目类型“{{projectType}}”。',
+  'extension.unsupportedProjectTypeDisabled': '当前产品构建不支持项目类型"{{projectType}}"。',
+  'extension.npuEnvRequired': '请切换至NPU环境\n\n该操作需要切换至NPU环境，请在右上角环境列表中进行NPU环境切换，然后再执行本操作。',
 
   // folder-context-menu
   'folderContext.angleOpsNotSupported': '<<<>>>类型算子暂不支持该右键菜单操作',
@@ -374,7 +375,7 @@ export default {
   'web.operate.pleaseSelectOperatorProject': '请选择算子工程',
   'web.operate.singleOperatorOnly': '该功能只支持单算子执行',
   'web.operate.npuHardwareRequired': '该操作只能在NPU环境下执行',
-  'web.operate.npuEnvHint': '标注NPU的操作，仅可在NPU环境下执行，可在右上角"我的环境"中切换后执行',
+
   'web.operate.actionsTitle': '操作',
   'web.operate.noActionsAvailable': '当前树视图中没有可执行的操作。',
 

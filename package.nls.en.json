@@ -162,6 +162,5 @@
   "view.homeTree.name": "Home",
   "view.welcome.homeTree.intro": "Click [Help Guide](command:huawei-op-devtools.sidebar.openHelp) or [Welcome Home](command:huawei-op-devtools.sidebar.openWelcome) to view plugin introduction.",
   "view.welcome.homeTree.newOperatorProject": "[New Operator Project](command:huawei-op-devtools.open)",
-  "view.welcome.homeTree.openOperatorProject": "[Open Operator Project](command:huawei-op-devtools.openProject)",
-  "command.npuEnvHint.title": "Operations marked with NPU can only be executed in NPU environment, switch in \"My Environment\" at the top right corner"
+  "view.welcome.homeTree.openOperatorProject": "[Open Operator Project](command:huawei-op-devtools.openProject)"
 }

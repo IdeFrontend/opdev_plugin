@@ -163,6 +163,5 @@
   "view.homeTree.name": "首页",
   "view.welcome.homeTree.intro": "点击[帮助指导](command:huawei-op-devtools.sidebar.openHelp)或打开[欢迎首页](command:huawei-op-devtools.sidebar.openWelcome)，查看插件介绍。",
   "view.welcome.homeTree.newOperatorProject": "[新建算子工程](command:huawei-op-devtools.open)",
-  "view.welcome.homeTree.openOperatorProject": "[打开算子工程](command:huawei-op-devtools.openProject)",
-  "command.npuEnvHint.title": "标注NPU的操作，仅可在NPU环境下执行，可在右上角\"我的环境\"中切换后执行"
+  "view.welcome.homeTree.openOperatorProject": "[打开算子工程](command:huawei-op-devtools.openProject)"
 }

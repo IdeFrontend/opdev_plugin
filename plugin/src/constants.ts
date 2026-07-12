@@ -4,8 +4,6 @@ export const COMMAND_PREFIX = FLAVOR_COMMAND_PREFIX;
 
 export const COMMAND_OPEN = `${COMMAND_PREFIX}.open`;
 
-export const COMMAND_NPU_ENV_HINT = `${COMMAND_PREFIX}.npuEnvHint`;
-
 export const COMMAND_WELCOME = `${COMMAND_PREFIX}.welcome`;
 
 export const COMMAND_OPEN_DUMP_TENSOR_PANEL_VIEW = `${COMMAND_PREFIX}.open-dump-tensor-panel-view`;
