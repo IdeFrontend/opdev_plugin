@@ -137,6 +137,10 @@ export class SanitizerService {
         );
 
         if (buildRes.code !== 0) {
+          if (buildRes.interruptedByUserStop) {
+            return;
+          }
+
           vscode.window.showErrorMessage(t('sanitizer.compileFailed', { output: buildRes.output }));
 
           return;
@@ -168,6 +172,10 @@ export class SanitizerService {
               );
 
               if (exampleBuildRes.code !== 0) {
+                if (exampleBuildRes.interruptedByUserStop) {
+                  return;
+                }
+
                 vscode.window.showErrorMessage(t('sanitizer.exampleCompileFailed', { output: exampleBuildRes.output }));
 
                 return;

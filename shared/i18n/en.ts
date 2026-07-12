@@ -95,7 +95,7 @@ export default {
     'Reset configuration for {{projectName}}? Choosing Reset will clear configuration stored by this plugin for {{projectName}} and regenerate defaults. Your operator source code and other project files in the repository will not be changed.',
   'extension.resetProjectConfigurationConfirmReset': 'Reset',
   'extension.unsupportedProjectTypeDisabled': 'Project type "{{projectType}}" is not supported in this product build.',
-  'extension.npuEnvRequired': 'Please switch to NPU environment\n\nThis operation requires switching to NPU environment. Please switch to NPU environment in the environment list at the top right corner, then execute this operation again.',
+  'extension.npuEnvRequired': 'Please switch to NPU environment\n\nThis operation requires switching to NPU environment. Please switch to NPU environment in my environment list, then execute this operation again.',
 
   // folder-context-menu
   'folderContext.angleOpsNotSupported': '<<<>>> operator type does not support this context menu action',

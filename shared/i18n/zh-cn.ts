@@ -95,7 +95,7 @@ export default {
     '是否重置{{projectName}}的工程配置？点击重置将清除本插件为{{projectName}}保存的配置信息，并重置为默认配置。不会修改仓库中的算子源码及其他工程文件。',
   'extension.resetProjectConfigurationConfirmReset': '重置',
   'extension.unsupportedProjectTypeDisabled': '当前产品构建不支持项目类型"{{projectType}}"。',
-  'extension.npuEnvRequired': '请切换至NPU环境\n\n该操作需要切换至NPU环境，请在右上角环境列表中进行NPU环境切换，然后再执行本操作。',
+  'extension.npuEnvRequired': '请切换至NPU环境\n\n该操作需要切换至NPU环境，请在我的环境列表中进行NPU环境切换，然后再执行本操作。',
 
   // folder-context-menu
   'folderContext.angleOpsNotSupported': '<<<>>>类型算子暂不支持该右键菜单操作',

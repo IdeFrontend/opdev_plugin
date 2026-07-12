@@ -108,8 +108,8 @@ export async function executeOperatorCommand(
       code: 1,
       output: '',
       stdout: '',
-      stderr: 'SOC version not configured. Please set op-devtools.environment.socVersion in workspace settings.',
-      interruptedByUserStop: false,
+      stderr: '',
+      interruptedByUserStop: true,
     };
   }
 

@@ -268,7 +268,7 @@ const sanitizerQuestionHandlerKeyMap = new Map<string, string>([
 const INITIAL_STATE: OperateSidebarState = {
   hasDevtoolConfig: false,
   debugModeEnabled: true,
-  npuHardwareAvailable: true,
+  npuHardwareAvailable: false,
   projectType: '',
   projectTemplateName: '',
   hasMultipleOperators: false,
@@ -747,7 +747,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   private resolveFlowActionState(
     hasMultipleSelectedOperators: boolean,
     commandId: string | undefined,
-    _requiresNpu: boolean,
+    requiresNpu: boolean,
   ): {
     commandId: string | undefined;
     tooltip: string | undefined;
@@ -758,6 +758,14 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         commandId: undefined,
         tooltip: t('web.operate.singleOperatorOnly'),
         useDisabledIcon: true,
+      };
+    }
+
+    if (requiresNpu && !this.state.npuHardwareAvailable) {
+      return {
+        commandId,
+        tooltip: t('web.operate.npuHardwareRequired'),
+        useDisabledIcon: false,
       };
     }
 

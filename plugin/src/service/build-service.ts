@@ -627,6 +627,10 @@ export class BuildService {
       );
 
       if (res.code !== 0) {
+        if (res.interruptedByUserStop) {
+          return;
+        }
+
         vscode.window.showErrorMessage(t('build.executeFailed', { output: '' }));
 
         return;
@@ -758,6 +762,10 @@ export class BuildService {
       console.log('buildRes', buildRes);
 
       if (buildRes.code !== 0) {
+        if (buildRes.interruptedByUserStop) {
+          throw new Error('SOC configuration interrupted by user');
+        }
+
         vscode.window.showErrorMessage(t('build.compileFailed', { output: buildRes.output }));
         throw new Error(t('build.compileFailedThrow', { output: buildRes.output }));
       }
@@ -797,6 +805,10 @@ export class BuildService {
         );
 
         if (deployRes.code !== 0) {
+          if (deployRes.interruptedByUserStop) {
+            throw new Error('SOC configuration interrupted by user');
+          }
+
           vscode.window.showErrorMessage(t('build.executeFailed', { output: deployRes.output }));
           throw new Error(t('build.executeFailedThrow', { output: deployRes.output ?? '' }));
         }
@@ -822,6 +834,10 @@ export class BuildService {
       );
 
       if (res.code !== 0) {
+        if (res.interruptedByUserStop) {
+          throw new Error('SOC configuration interrupted by user');
+        }
+
         vscode.window.showErrorMessage(t('build.simulationFailed'));
         throw new Error(t('build.simulationFailedThrow', { output: res.output ?? '' }));
       }
@@ -919,6 +935,10 @@ export class BuildService {
         );
 
         if (deployRes.code !== 0) {
+          if (deployRes.interruptedByUserStop) {
+            return;
+          }
+
           vscode.window.showErrorMessage(t('build.executeFailed', { output: deployRes.output }));
 
           return;
@@ -944,6 +964,10 @@ export class BuildService {
       );
 
       if (res.code !== 0) {
+        if (res.interruptedByUserStop) {
+          return;
+        }
+
         vscode.window.showErrorMessage(t('build.onBoardFailed'));
 
         return;
