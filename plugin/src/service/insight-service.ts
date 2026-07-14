@@ -22,6 +22,12 @@ import {
   type InsightVersionHistory,
 } from './insight-types';
 
+interface DownloadAttempt {
+  method: string;
+  command: string;
+  error: string;
+}
+
 export class InsightService {
   private static instance: InsightService;
 
@@ -259,58 +265,91 @@ export class InsightService {
 
   async downloadFile(url: string, destPath: string): Promise<void> {
     const isWindows = process.platform === 'win32';
-
-    if (!isWindows) {
-      try {
-        await execFileAsync('wget', [
-          '-q',
-          '-O',
-          destPath,
-          '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          '--referer=https://gitcode.net/',
-          '--max-redirect=5',
-          url,
-        ]);
-
-        return;
-      }
-      catch {
-        try {
-          await execFileAsync('curl', [
-            '-sSL',
-            '-o',
-            destPath,
-            '-A',
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            '-e',
-            'https://gitcode.net/',
-            '-L',
-            url,
-          ]);
-
-          return;
-        }
-        catch {
-          // Fall back to Node.js http/https download
-          await this.downloadFileWithNodeHttp(url, destPath);
-
-          return;
-        }
-      }
-    }
+    const attempts: DownloadAttempt[] = [];
 
     try {
-      await execFileAsync('powershell.exe', [
-        '-Command',
-        `Invoke-WebRequest -Uri "${url}" -OutFile "${destPath}" -UserAgent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" -Referer "https://gitcode.net/" -MaximumRedirection 5 -UseBasicParsing`,
+      await execFileAsync('wget', [
+        '-q',
+        '-O',
+        destPath,
+        '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        '--referer=https://gitcode.net/',
+        '--max-redirect=5',
+        url,
       ]);
 
       return;
     }
-    catch {
-      // Fall back to Node.js http/https download
-      await this.downloadFileWithNodeHttp(url, destPath);
+    catch (error) {
+      attempts.push({
+        method: 'wget',
+        command: `wget -q -O "${destPath}" --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" --referer="https://gitcode.net/" --max-redirect=5 "${url}"`,
+        error: error instanceof Error ? error.message : 'unknown error',
+      });
     }
+
+    try {
+      await execFileAsync('curl', [
+        '-sSL',
+        '-o',
+        destPath,
+        '-A',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        '-e',
+        'https://gitcode.net/',
+        '-L',
+        url,
+      ]);
+
+      return;
+    }
+    catch (error) {
+      attempts.push({
+        method: 'curl',
+        command: `curl -sSL -o "${destPath}" -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" -e "https://gitcode.net/" -L "${url}"`,
+        error: error instanceof Error ? error.message : 'unknown error',
+      });
+    }
+
+    if (isWindows) {
+      const powershellInnerCommand = `Invoke-WebRequest -Uri "${url}" -OutFile "${destPath}" -UserAgent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" -Referer "https://gitcode.net/" -MaximumRedirection 5 -UseBasicParsing`;
+
+      try {
+        await execFileAsync('powershell.exe', [
+          '-Command',
+          powershellInnerCommand,
+        ]);
+
+        return;
+      }
+      catch (error) {
+        attempts.push({
+          method: 'PowerShell',
+          command: `powershell.exe -Command "${powershellInnerCommand}"`,
+          error: error instanceof Error ? error.message : 'unknown error',
+        });
+      }
+    }
+
+    try {
+      await this.downloadFileWithNodeHttp(url, destPath);
+
+      return;
+    }
+    catch (error) {
+      attempts.push({
+        method: 'Node.js HTTP',
+        command: `Node.js HTTP download from ${url} to ${destPath}`,
+        error: error instanceof Error ? error.message : 'unknown error',
+      });
+    }
+
+    const attemptsDetails = attempts.map((attempt, index) => {
+      return `${index + 1}. [${attempt.method}] ${attempt.command}\n   Error: ${attempt.error}`;
+    })
+      .join('\n\n');
+
+    throw new Error(`All download methods failed.\n\nAttempted commands:\n${attemptsDetails}`);
   }
 
   private async downloadFileWithNodeHttp(url: string, destPath: string, redirectCount: number = 0): Promise<void> {
