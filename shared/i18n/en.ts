@@ -210,7 +210,7 @@ export default {
 
   // insight
   'insight.profilerServerExitCode': 'profiler_server exited with code {{code}}',
-  'insight.downloadFailed': 'Insight download failed: {{error}}\n\nPlease download Insight manually and extract it to:\n{{path}}\n\nDownload URL: {{url}}\n\nManual download command example:\nwget -q -O "{{path}}/insight.zip" --user-agent="Mozilla/5.0" --referer="https://gitcode.net/" "{{url}}"\n\nAfter extraction, index.html should exist in this directory.',
+  'insight.downloadFailed': 'Insight download failed: {{error}}\n\nPlease download Insight manually and extract it to:\n{{path}}\n\nDownload URL: {{url}}\n\nManual download command example:\n{{downloadCommand}}\n\nAfter extraction, index.html should exist in this directory.',
   'insight.downloadErrorUnknown': 'Unknown error',
   'insight.profilerServerStartFailed': 'Failed to start profiler_server: {{error}}',
 

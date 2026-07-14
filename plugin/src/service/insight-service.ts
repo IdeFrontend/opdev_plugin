@@ -17,6 +17,14 @@ import {
   INSIGHT_BACKUP_SUFFIX,
 } from '../constants';
 import {
+  buildWgetArgs,
+  buildCurlArgs,
+  buildWgetCommand,
+  buildCurlCommand,
+  USER_AGENT,
+  REFERER,
+} from '@shared';
+import {
   type InsightVersionMapping,
   type InsightVersionJson,
   type InsightVersionHistory,
@@ -268,51 +276,33 @@ export class InsightService {
     const attempts: DownloadAttempt[] = [];
 
     try {
-      await execFileAsync('wget', [
-        '-q',
-        '-O',
-        destPath,
-        '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        '--referer=https://gitcode.net/',
-        '--max-redirect=5',
-        url,
-      ]);
+      await execFileAsync('wget', buildWgetArgs(destPath, url));
 
       return;
     }
     catch (error) {
       attempts.push({
         method: 'wget',
-        command: `wget -q -O "${destPath}" --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" --referer="https://gitcode.net/" --max-redirect=5 "${url}"`,
+        command: buildWgetCommand(destPath, url),
         error: error instanceof Error ? error.message : 'unknown error',
       });
     }
 
     try {
-      await execFileAsync('curl', [
-        '-sSL',
-        '-o',
-        destPath,
-        '-A',
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        '-e',
-        'https://gitcode.net/',
-        '-L',
-        url,
-      ]);
+      await execFileAsync('curl', buildCurlArgs(destPath, url));
 
       return;
     }
     catch (error) {
       attempts.push({
         method: 'curl',
-        command: `curl -sSL -o "${destPath}" -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" -e "https://gitcode.net/" -L "${url}"`,
+        command: buildCurlCommand(destPath, url),
         error: error instanceof Error ? error.message : 'unknown error',
       });
     }
 
     if (isWindows) {
-      const powershellInnerCommand = `Invoke-WebRequest -Uri "${url}" -OutFile "${destPath}" -UserAgent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" -Referer "https://gitcode.net/" -MaximumRedirection 5 -UseBasicParsing`;
+      const powershellInnerCommand = `Invoke-WebRequest -Uri "${url}" -OutFile "${destPath}" -UserAgent "${USER_AGENT}" -Referer "${REFERER}" -MaximumRedirection 5 -UseBasicParsing`;
 
       try {
         await execFileAsync('powershell.exe', [
@@ -635,10 +625,13 @@ export class InsightService {
 
   private showDownloadFailedMessage(mapping: InsightVersionMapping, insightPath: string, error: unknown): void {
     const errorMessage = error instanceof Error ? error.message : t('insight.downloadErrorUnknown');
+    const zipPath = path.join(insightPath, 'insight.zip');
+    const downloadCommand = buildWgetCommand(zipPath, mapping.downloadUrl);
     const message = t('insight.downloadFailed', {
       error: errorMessage,
       path: insightPath,
       url: mapping.downloadUrl,
+      downloadCommand,
     });
 
     vscode.window.showErrorMessage(message);

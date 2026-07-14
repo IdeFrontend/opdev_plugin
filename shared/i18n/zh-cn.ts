@@ -211,7 +211,7 @@ export default {
 
   // insight
   'insight.profilerServerExitCode': 'profiler_server 进程异常退出，退出码: {{code}}',
-  'insight.downloadFailed': 'Insight 下载失败：{{error}}\n\n请手动下载 Insight 后解压到以下目录：\n{{path}}\n\n下载地址：{{url}}\n\n手动下载命令示例：\nwget -q -O "{{path}}/insight.zip" --user-agent="Mozilla/5.0" --referer="https://gitcode.net/" "{{url}}"\n\n解压后该目录下应存在 index.html 文件。',
+  'insight.downloadFailed': 'Insight 下载失败：{{error}}\n\n请手动下载 Insight 后解压到以下目录：\n{{path}}\n\n下载地址：{{url}}\n\n手动下载命令示例：\n{{downloadCommand}}\n\n解压后该目录下应存在 index.html 文件。',
   'insight.downloadErrorUnknown': '未知错误',
   'insight.profilerServerStartFailed': '启动 profiler_server 失败: {{error}}',
 
