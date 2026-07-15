@@ -9,6 +9,7 @@ import type {
   StartDumpTensorParams,
   StartUtTestParams,
 } from '@shared/api-types';
+import type { StartStTestParams } from '@plugin/service/st-test-service';
 import { taskMethods } from '@plugin/controller/task-controller';
 import { homeMethods } from '@plugin/controller/home-controller';
 import { getProjectByPath } from '@plugin/domain/models/project-model';
@@ -17,8 +18,11 @@ import {
   OperateTreeProvider, type OperateNodeId,
 } from '../class/operate-tree-provider';
 import {
+  GLOBAL_ST_TEST_QUEUE_SCOPE,
+  mergeVisibleOperatorActionQueues,
   OperatorActionQueueManager,
   QueueableActionType,
+  resolveOperatorActionQueueScope,
 } from './operator-action-queue';
 import {
   cancelQueuedCompileRunNode,
@@ -78,6 +82,13 @@ export async function dispatchStartUtTest(params: StartUtTestParams = {}): Promi
   await taskMethods.startUtTest(params);
 }
 
+export async function dispatchStartStTest(
+  context: vscode.ExtensionContext,
+  params: StartStTestParams,
+): Promise<void> {
+  await taskMethods.startStTest(context, params);
+}
+
 export async function dispatchStopTask(): Promise<void> {
   await taskMethods.stopTask();
 }
@@ -133,9 +144,11 @@ function createFlowStopDeps() {
     cancelQueuedCompileRunNode,
     hasRunningCompileRunShell,
     stopOperatorByType: async (actionType: string) => {
-      const scopeKey = await getOperatorQueueScopeKey();
+      const typedAction = actionType as QueueableActionType;
+      const localScope = await getOperatorQueueScopeKey();
+      const scopeKey = resolveOperatorActionQueueScope(typedAction, localScope);
 
-      return operatorActionQueue.stopByActionType(scopeKey, actionType as QueueableActionType);
+      return operatorActionQueue.stopByActionType(scopeKey, typedAction);
     },
     stopTask: (options?: { notify?: boolean }) => taskMethods.stopTask(options),
     notifyStoppedByUser: () => {
@@ -189,7 +202,8 @@ async function enqueueQueueableAction<P>(
   runner: (payload: P)=> Promise<void>,
   onFinished?: (payload: P)=> Promise<void> | void,
 ): Promise<void> {
-  const scopeKey = await getOperatorQueueScopeKey();
+  const localScope = await getOperatorQueueScopeKey();
+  const scopeKey = resolveOperatorActionQueueScope(actionType, localScope);
   const wrappedRunner = async (payload: P): Promise<void> => {
     const runGeneration = operatorActionQueue.getScopeCancelGeneration(scopeKey);
 
@@ -240,9 +254,13 @@ export async function dispatchGetOperatorActionQueueStatus(): Promise<{
     position: number;
   }>;
 }> {
-  const scopeKey = await getOperatorQueueScopeKey();
+  const localScope = await getOperatorQueueScopeKey();
+  const items = mergeVisibleOperatorActionQueues(
+    operatorActionQueue.getActions(localScope),
+    operatorActionQueue.getActions(GLOBAL_ST_TEST_QUEUE_SCOPE),
+  );
 
-  return { items: operatorActionQueue.getActions(scopeKey) };
+  return { items };
 }
 
 export async function isFlowStopAllVisible(): Promise<boolean> {
@@ -250,9 +268,13 @@ export async function isFlowStopAllVisible(): Promise<boolean> {
     return true;
   }
 
-  const scopeKey = await getOperatorQueueScopeKey();
+  const localScope = await getOperatorQueueScopeKey();
+  const items = mergeVisibleOperatorActionQueues(
+    operatorActionQueue.getActions(localScope),
+    operatorActionQueue.getActions(GLOBAL_ST_TEST_QUEUE_SCOPE),
+  );
 
-  return operatorActionQueue.getActions(scopeKey).length >= 2;
+  return items.length >= 2;
 }
 
 export async function dispatchStopOperatorAction(params: { actionType: QueueableActionType }): Promise<boolean> {

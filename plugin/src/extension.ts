@@ -96,6 +96,7 @@ import {
   COMMAND_SIDEBAR_SANITIZER,
   COMMAND_SIDEBAR_ON_BOARD,
   COMMAND_SIDEBAR_SIMULATION,
+  COMMAND_SIDEBAR_ST_TEST,
   COMMAND_SIDEBAR_UT_TEST,
   COMMAND_SIDEBAR_DUMP_TENSOR,
   COMMAND_SIDEBAR_DEBUG_SETTINGS,
@@ -188,6 +189,7 @@ import {
   dispatchRunSanitizer,
   dispatchStartOnBoard,
   dispatchStartSimulate,
+  dispatchStartStTest,
   dispatchStartUtTest,
   dispatchStartDumpTensor,
   dispatchEnqueueNativeOperatorAction,
@@ -202,6 +204,7 @@ import {
 } from './helpers/task-method-dispatch';
 import type { QueueableActionType } from './helpers/operator-action-queue';
 import type { OperatorProjectViewIdValue } from '@shared/project-type-view-id';
+import { pickAvailableStTestModes } from '@plugin/helpers/st-test-mode-picker';
 
 let extensionContext: vscode.ExtensionContext | undefined;
 
@@ -476,11 +479,12 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   };
 
-  const queueActionToNodeId: Record<QueueableActionType, 'sanitizer' | 'onboard' | 'simulation' | 'utTest' | 'dumpTensor'> = {
+  const queueActionToNodeId: Record<QueueableActionType, 'sanitizer' | 'onboard' | 'simulation' | 'utTest' | 'stTest' | 'dumpTensor'> = {
     sanitizer: 'sanitizer',
     onboard: 'onboard',
     simulation: 'simulation',
     utTest: 'utTest',
+    stTest: 'stTest',
     dumpTensor: 'dumpTensor',
   };
 
@@ -489,6 +493,7 @@ export async function activate(context: vscode.ExtensionContext) {
     onboard: 'onboard',
     simulation: 'simulation',
     utTest: 'utTest',
+    stTest: 'stTest',
     dumpTensor: 'dumpTensor',
   };
 
@@ -501,7 +506,7 @@ export async function activate(context: vscode.ExtensionContext) {
         `${CONTEXT_PREFIX}.operatorActionQueueStopAllVisible`,
         await isFlowStopAllVisible(),
       );
-      const states: Partial<Record<'sanitizer' | 'onboard' | 'simulation' | 'utTest' | 'dumpTensor', 'queued' | 'running' | 'cancel_failed'>> = {};
+      const states: Partial<Record<'sanitizer' | 'onboard' | 'simulation' | 'utTest' | 'stTest' | 'dumpTensor', 'queued' | 'running' | 'cancel_failed'>> = {};
 
       items.forEach((item) => {
         const nodeId = queueActionToNodeId[item.actionType];
@@ -1120,6 +1125,53 @@ export async function activate(context: vscode.ExtensionContext) {
             compileOption,
           },
           dispatchStartUtTest,
+        );
+      });
+    },
+  );
+  const sidebarStTestCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_ST_TEST,
+    async () => {
+      if (!operateTreeProvider.isStandardCustomContext()) {
+        vscode.window.showInformationMessage(t('stTest.standardCustomOnly'));
+
+        return;
+      }
+
+      const selectedOperators = await homeMethods.getSelectedOperatorEntries();
+
+      if (selectedOperators.length !== 1) {
+        vscode.window.showInformationMessage(t('stTest.oneOperatorRequired'));
+
+        return;
+      }
+
+      const operator = selectedOperators[0];
+      const workspaceRoot = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(operator.path))?.uri.fsPath
+        ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+
+      if (!workspaceRoot) {
+        vscode.window.showErrorMessage(t('stTest.noWorkspace'));
+
+        return;
+      }
+
+      const selectedModes = await pickAvailableStTestModes(workspaceRoot, operator.path);
+
+      if (!selectedModes || selectedModes.length === 0) {
+        return;
+      }
+
+      await operateTreeProvider.runFlowAction('stTest', async () => {
+        await dispatchEnqueueNativeOperatorAction(
+          'stTest',
+          {
+            workspaceRoot,
+            operatorName: operator.name,
+            operatorPath: operator.path,
+            modes: selectedModes,
+          },
+          async (params) => dispatchStartStTest(context, params),
         );
       });
     },
@@ -2097,6 +2149,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(sidebarOnBoardCommand);
   context.subscriptions.push(sidebarSimulationCommand);
   context.subscriptions.push(sidebarUtTestCommand);
+  context.subscriptions.push(sidebarStTestCommand);
   context.subscriptions.push(sidebarDumpTensorCommand);
   context.subscriptions.push(sidebarDebugSettingsCommand);
   context.subscriptions.push(sidebarSanitizerSettingsCommand);

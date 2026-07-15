@@ -119,6 +119,8 @@ export const COMMAND_SIDEBAR_SIMULATION = `${COMMAND_PREFIX}.sidebar.simulation`
 
 export const COMMAND_SIDEBAR_UT_TEST = `${COMMAND_PREFIX}.sidebar.utTest`;
 
+export const COMMAND_SIDEBAR_ST_TEST = `${COMMAND_PREFIX}.sidebar.stTest`;
+
 export const COMMAND_SIDEBAR_DUMP_TENSOR = `${COMMAND_PREFIX}.sidebar.dumpTensor`;
 
 export const COMMAND_SIDEBAR_DEBUG_SETTINGS = `${COMMAND_PREFIX}.operate.debugSettings`;

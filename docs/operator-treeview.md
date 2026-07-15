@@ -106,14 +106,15 @@ Root nodes are built in `getFlowRootNodes()` when `hasDevtoolConfig` and project
 | `onboard` | `huawei-op-devtools.sidebar.onboard` | Gear → on-board settings / quick panel (see [`workspace-settings.md`](workspace-settings.md#opening-settings)) |
 | `simulation` | `huawei-op-devtools.sidebar.simulation` | Gear → simulation settings / quick panel (see [`workspace-settings.md`](workspace-settings.md#opening-settings)) |
 | `utTest` | `huawei-op-devtools.sidebar.utTest` | Standard-custom + build-capable projects |
+| `stTest` | `huawei-op-devtools.sidebar.stTest` | Standard-custom + build-capable projects; native multi-mode picker |
 | `dumpTensor` | `huawei-op-devtools.sidebar.dumpTensor` | Opens dump-tensor panel webview |
 
 **Visibility rules (current):**
 
 - Unsupported `projectType` → empty flow tree.
 - **Standard custom** without `supportsSanitizerAndTuning` → hide Debug group and Performance tuning group.
-- **Multi-operator selection** (`selectedOperatorIds.length > 1`) → run/debug/sanitizer/onboard/simulation/ut/dump rows show disabled icon and drop click command (tooltip: single-operator only).
-- **No NPU on extension host** (`opDevtools.npuHardwareAvailable === false`) → NPU-only rows (`run`, `npuDebug`, `sanitizer`, `onboard`, `utTest`, `dumpTensor`) show disabled icon, drop click command, and tooltip `web.operate.npuHardwareRequired`. CPU-capable rows (`build`, `cpuDebug`, `simulation`) and inline gear/settings commands stay enabled. Hardware is probed once per session post-activate via `asys info -r=status` then `npu-smi info` ([`npu-hardware-probe.ts`](../plugin/src/domain/utils/npu-hardware-probe.ts)): NPU is **available** when either command responds (including driver errors such as a busy device); **unavailable** only when both commands are missing or produce no output. Context defaults to `true` until the probe completes (optimistic). See [plugin_release #50](https://gitcode.com/opdevtools/plugin_release/issues/50).
+- **Multi-operator selection** (`selectedOperatorIds.length > 1`) → run/debug/sanitizer/onboard/simulation/ut/st/dump rows show disabled icon and drop click command (tooltip: single-operator only).
+- **ST test** requires exactly one selected standard-custom operator. The picker accepts one or more of `kernel`, `aclnn`, and `e2e`; `kernel` is preselected. It discovers sorted `tests/st/arch35/ttk_<mode>_*.csv` files, runs them sequentially through system or plugin-managed pinned TTK, and writes unique CSV files under the IDE configuration directory's `st-results` subtree. The Test output preserves raw process output and reports file locations without interpreting precision results. There is no results webview in the basic flow.
 - Sanitizer / on-board / simulation / build rows gated by `OperatorPluginRegistry` build behavior flags (`supportsSanitizer`, `supportsOnBoard`, `supportsSimulate`, etc.). **Triton** (`project_type` / `op_type` `triton`, when `op-devtools.operatorSupport.triton` is on) shows sanitizer, simulate, and on-board per `TritonPlugin.buildBehavior`; CPU debug stays hidden; NPU debug row follows `supportsNpuDebug` and `debugMode`. Run still requires an active `.py` (same pattern as PyAsc).
 
 **Project config** is not a tree row; title-bar command `huawei-op-devtools.sidebar.projectConfig` opens extension settings ([`workspace-settings.md`](workspace-settings.md#opening-settings)).
@@ -136,6 +137,7 @@ Long-running flow actions share an **in-memory, strictly serial** queue per scop
 | `onboard` | `onboard` | `dispatchStartOnBoard` → `taskMethods.startOnBoard` |
 | `simulation` | `simulation` | `dispatchStartSimulate` → `taskMethods.startSimulate` |
 | `utTest` | `utTest` | `dispatchStartUtTest` |
+| `stTest` | `stTest` | `dispatchStartStTest` → `taskMethods.startStTest` |
 | `dumpTensor` | `dumpTensor` | `dispatchStartDumpTensor` |
 
 Entry from the Actions tree or quick-options webviews: `dispatchEnqueueNativeOperatorAction` (tree) or `dispatchSimulator` / `dispatchOnBoard` / `dispatchSanitizer` (webview wrappers that also call enqueue).
@@ -148,6 +150,8 @@ Queue key = **`{projectScope}::{selectedOperatorIds}`** (`getOperatorQueueScopeK
 - **Operators:** sorted comma-separated IDs from `homeMethods.getSelectedOperatorIds()`, or `default` if none.
 
 Switching workspace or selected operators uses a **different** queue; queues are not merged or migrated.
+
+ST tests use the dedicated `global::st-test` scope so changing the selection cannot start a second TTK run while the first one still owns the shared executor. Other operator action types keep their project/selection scopes.
 
 ### Rules
 

@@ -6,6 +6,11 @@ import { CommandExecutor } from '@plugin/class/command-options';
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import { buildService } from '@plugin/service/build-service';
 import { sanitizerService } from '@plugin/service/sanitizer-service';
+import {
+  StTestService,
+  type StartStTestParams,
+} from '@plugin/service/st-test-service';
+import { isStTestCancelledError } from '@plugin/domain/services/st-test-errors';
 import { homeMethods } from './home-controller';
 import {
   StartBuildParams,
@@ -43,6 +48,7 @@ import { whenPostActivateBootstrapReady } from '@plugin/helpers/post-activate-bo
 import { assertNpuHardwareAvailableOrNotify } from '@plugin/helpers/npu-hardware-guard';
 import { resolveOrPickPythonOperatorUri } from '@plugin/helpers/python-operator-editor-context';
 import { enqueueCompileRun } from '@plugin/helpers/operator-flow-coordinator';
+import { showStTestCompletionNotification } from '@plugin/helpers/st-test-completion-notification';
 
 // Global task manager: used to track and terminate executing tasks
 let currentExecutor: CommandExecutor | null = null;
@@ -428,6 +434,53 @@ export const taskMethods = {
       currentExecutor = null;
       ProjectManager.getInstance()
         .clearExecutor();
+    }
+  },
+
+  /**
+   * Run standard-custom ST tests through TTK.
+   */
+  async startStTest(
+    context: vscode.ExtensionContext,
+    params: StartStTestParams,
+  ): Promise<void> {
+    await ensurePostActivateBootstrapReady();
+    let stExecutor: CommandExecutor | undefined;
+
+    try {
+      await ProjectManager.getInstance()
+        .initProject();
+      const executor = ProjectManager.getInstance()
+        .getExecutor();
+
+      stExecutor = executor;
+      currentExecutor = executor;
+
+      const result = await new StTestService(context)
+        .startStTest(params, { isCancellationRequested: () => currentExecutor !== executor });
+
+      void showStTestCompletionNotification({
+        workspaceRoot: params.workspaceRoot,
+        outputPaths: result.outputPaths,
+        runDirectory: result.runDirectory,
+      });
+    }
+    catch (error) {
+      if (isStTestCancelledError(error)) {
+        return;
+      }
+
+      const message = error instanceof Error ? error.message : String(error);
+
+      vscode.window.showErrorMessage(t('stTest.failed', { error: message }));
+      throw error;
+    }
+    finally {
+      if (stExecutor && currentExecutor === stExecutor) {
+        currentExecutor = null;
+        ProjectManager.getInstance()
+          .clearExecutor();
+      }
     }
   },
 

@@ -6,6 +6,7 @@ jest.mock('@plugin/helpers/output-channel', () => ({
     dispose: jest.fn(),
   })),
   getOperatorToolOutputChannel: jest.fn(() => ({
+    append: jest.fn(),
     appendLine: jest.fn(),
     show: jest.fn(),
     clear: jest.fn(),

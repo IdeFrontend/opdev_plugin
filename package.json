@@ -841,6 +841,10 @@
         "title": "UT Test"
       },
       {
+        "command": "huawei-op-devtools.sidebar.stTest",
+        "title": "%command.sidebar.stTest.title%"
+      },
+      {
         "command": "huawei-op-devtools.sidebar.dumpTensor",
         "title": "Dump Tensor"
       },
@@ -1155,6 +1159,10 @@
         },
         {
           "command": "huawei-op-devtools.sidebar.utTest",
+          "when": "false"
+        },
+        {
+          "command": "huawei-op-devtools.sidebar.stTest",
           "when": "false"
         },
         {
