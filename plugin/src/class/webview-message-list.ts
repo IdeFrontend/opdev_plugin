@@ -288,10 +288,7 @@ export async function handleOperatorProjectDirectoryFile(
           throw new Error(t('webview.createPrototypeFailedEmptyPath'));
         }
 
-        // In the in-place sub-operator flow there is no separate editor to close.
-        if (!ctx) {
-          await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
-        }
+        await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
       }
 
       progress.report({

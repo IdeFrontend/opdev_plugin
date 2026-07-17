@@ -44,6 +44,7 @@ export async function maybeWarnSocNotDetected(resolution: AscendEnvResolution): 
     const socVersion = await vscode.window.showInputBox({
       prompt: t('extension.ascendEnv.socNotDetected.inputPrompt'),
       placeHolder: t('extension.ascendEnv.socNotDetected.inputPlaceholder'),
+      value: t('extension.ascendEnv.socNotDetected.inputPlaceholder'),
       validateInput: (value) => {
         if (!value?.trim()) {
           return t('extension.ascendEnv.socNotDetected.inputRequired');

@@ -10,7 +10,10 @@ import {
   isStandardCustomProjectType,
   type OperatorProjectViewIdValue,
 } from '@shared/project-type-view-id';
-import { useNewProjectSSH } from '../composables/use-new-project-ssh';
+import {
+  useNewProjectSSH,
+  ensureExperimentalInPath,
+} from '../composables/use-new-project-ssh';
 import { FormRulesFactory } from '../composables/form-rules';
 import TemplatePreview from '@/components/template-previews/template-preview.vue';
 import { getProjectPreviewFiles } from '@/components/template-previews/template-preview-files';
@@ -44,6 +47,19 @@ const {
   handleCreatedProject,
 } = useNewProjectSSH(selectedTemplate);
 
+const tryAppendExperimentalToPath = () => {
+  if (
+    selectedId_type.value === OperatorProjectViewId.STANDARD_CUSTOM
+    && projectFormData.projectPath
+  ) {
+    const updated = ensureExperimentalInPath(projectFormData.projectPath);
+
+    if (updated !== projectFormData.projectPath) {
+      projectFormData.projectPath = updated;
+    }
+  }
+};
+
 const projectTypeTabKey = computed<string>({
   get: () => String(selectedId_type.value),
   set: (key: string) => {
@@ -51,6 +67,7 @@ const projectTypeTabKey = computed<string>({
 
     if (isOperatorProjectViewId(id)) {
       selectedId_type.value = id;
+      tryAppendExperimentalToPath();
     }
   },
 });
@@ -156,6 +173,7 @@ onMounted(async () => {
     if (isStandardCustomProjectType(currentProjectType.value)) {
       items_type.value = [ascendProject];
       selectedId_type.value = OperatorProjectViewId.STANDARD_CUSTOM;
+      tryAppendExperimentalToPath();
     }
   }
   catch (error) {

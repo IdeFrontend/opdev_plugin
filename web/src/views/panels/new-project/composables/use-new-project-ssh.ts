@@ -22,6 +22,23 @@ import { MessageHandlerStrategyManager } from './message-handler-strategies';
 import { SearchStrategyFactory } from './search-strategies';
 import { ProjectNameFactory } from './project-name-factory';
 
+export const ensureExperimentalInPath = (currentPath: string): string => {
+  if (!currentPath) {
+    return currentPath;
+  }
+
+  const normalized = currentPath.replace(/\\/g, '/')
+    .toLowerCase();
+
+  if (!normalized.includes('/experimental')) {
+    return currentPath.endsWith('/') || currentPath.endsWith('\\')
+      ? `${currentPath}experimental`
+      : `${currentPath}/experimental`;
+  }
+
+  return currentPath;
+};
+
 function resolveAntdFormRef(refValue: unknown): AntdVForm | null {
   if (refValue && typeof refValue === 'object' && 'validate' in refValue) {
     return refValue as AntdVForm;
@@ -83,7 +100,29 @@ export function useNewProjectSSH(selectedTemplate?: Ref<'helloworld' | 'addn' | 
       isPathSetFromContextMenu,
     };
 
+    const isPathInitCommand =
+      messageData?.command === 'iframeSetHome'
+      || messageData?.command === 'iframeSetWorkspace'
+      || messageData?.command === 'iframeSetLastProjectPath'
+      || messageData?.command === 'iframeSetProjectPath';
+
+    const prevPath = projectFormData.projectPath;
+
     messageHandlerManager.handle(messageData, context);
+    const pathChanged = prevPath !== projectFormData.projectPath;
+
+    if (
+      isPathInitCommand
+      && pathChanged
+      && selectedId_type.value === OperatorProjectViewId.STANDARD_CUSTOM
+      && projectFormData.projectPath
+    ) {
+      const updated = ensureExperimentalInPath(projectFormData.projectPath);
+
+      if (updated !== projectFormData.projectPath) {
+        projectFormData.projectPath = updated;
+      }
+    }
   };
 
   const remoteSearch = async (

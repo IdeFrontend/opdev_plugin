@@ -68,7 +68,12 @@ async function tryGenOpScaffold(opts: {
       return false;
     }
 
-    const command = buildGenOpCommand(template, opts.projectPath, opts.operatorName);
+    const relativeProjectPath = path.relative(
+      opts.collectionRoot,
+      opts.projectPath,
+    )
+      .replace(/\\/g, '/') || '.';
+    const command = buildGenOpCommand(template, relativeProjectPath, opts.operatorName);
 
     vscode.window.showInformationMessage(t('welcome.genopRunning'));
 

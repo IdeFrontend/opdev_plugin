@@ -2005,18 +2005,15 @@ export async function activate(context: vscode.ExtensionContext) {
 
   console.log(workspaceFolder, 'Is a folder open');
 
-  // The welcome page will only pop up when no project/folder is open, and the number of times will be recorded in the local cache, with a maximum of two pop-ups.
-  if (!workspaceFolder) {
-    const welcomeShowCount =
-      context.globalState.get<number>('welcomeShowCount') ?? 0;
+  const welcomeShowCount =
+    context.globalState.get<number>('welcomeShowCount') ?? 0;
 
-    console.log(welcomeShowCount, 'Open count');
+  console.log(welcomeShowCount, 'Welcome show count');
 
-    if (welcomeShowCount < 2) {
-      vscode.commands.executeCommand(COMMAND_WELCOME);
-      vscode.commands.executeCommand(workbenchViewContainerCommand());
-      context.globalState.update('welcomeShowCount', welcomeShowCount + 1);
-    }
+  if (welcomeShowCount < 1) {
+    await vscode.commands.executeCommand(COMMAND_WELCOME);
+    await vscode.commands.executeCommand(workbenchViewContainerCommand());
+    await context.globalState.update('welcomeShowCount', welcomeShowCount + 1);
   }
 
   // DumpTensor data view (middle panel)
@@ -2686,8 +2683,4 @@ function initViews(
 }
 
 export function deactivate() {
-  if (extensionContext) {
-    // Clear welcome page popup count when uninstalling/disabling extensions
-    extensionContext.globalState.update('welcomeShowCount', undefined);
-  }
 }

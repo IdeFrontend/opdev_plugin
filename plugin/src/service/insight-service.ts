@@ -23,7 +23,7 @@ import {
   buildCurlCommand,
   USER_AGENT,
   REFERER,
-} from '@shared';
+} from '@shared/insight-download-constants';
 import {
   type InsightVersionMapping,
   type InsightVersionJson,

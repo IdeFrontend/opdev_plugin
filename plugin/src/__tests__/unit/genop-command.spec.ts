@@ -19,6 +19,21 @@ describe('genop-command helper', () => {
         .toBe('bash build.sh --genop=/mnt/workspace/ops-math/math/tttt');
     });
 
+    it('handles relative paths (relative to collection root)', () => {
+      expect(buildGenOpCommand(DEFAULT_GEN_OP_COMMAND, 'math', 'add_custom'))
+        .toBe('bash build.sh --genop=math/add_custom');
+    });
+
+    it('handles nested relative paths (e.g. experimental/math)', () => {
+      expect(buildGenOpCommand(DEFAULT_GEN_OP_COMMAND, 'experimental/math', 'add_custom'))
+        .toBe('bash build.sh --genop=experimental/math/add_custom');
+    });
+
+    it('handles current-dir relative path (.) when projectPath equals collectionRoot', () => {
+      expect(buildGenOpCommand(DEFAULT_GEN_OP_COMMAND, '.', 'top_level_op'))
+        .toBe('bash build.sh --genop=./top_level_op');
+    });
+
     it('quotes only the value that contains spaces', () => {
       expect(buildGenOpCommand(DEFAULT_GEN_OP_COMMAND, '/mnt/work space/ops-math/math', 'tttt'))
         .toBe('bash build.sh --genop="/mnt/work space/ops-math/math"/tttt');
