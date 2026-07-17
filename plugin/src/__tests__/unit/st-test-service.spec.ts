@@ -155,11 +155,41 @@ describe('StTestService', () => {
       });
 
     expect(result)
-      .toEqual({
+      .toMatchObject({
         outputPaths: expectedOutputs,
         runDirectory: expectedRunDirectory,
         runtimeSource: 'system',
       });
+    expect(result.artifacts)
+      .toEqual(expectedInputs.map((inputCsvPath, index) => ({
+        artifactId: `run-id:${String(index + 1)}`,
+        sequence: index + 1,
+        mode: index < 2 ? 'kernel' : 'aclnn',
+        inputCsvPath,
+        outputCsvPath: expectedOutputs[index],
+      })));
+    expect(result.report.files.map((file) => ({
+      sequence: file.sequence,
+      mode: file.mode,
+      testFile: file.testFile,
+    })))
+      .toEqual([
+        {
+          sequence: 1,
+          mode: 'kernel',
+          testFile: 'tests/st/arch35/alpha.csv',
+        },
+        {
+          sequence: 2,
+          mode: 'kernel',
+          testFile: 'tests/st/arch35/zeta.csv',
+        },
+        {
+          sequence: 3,
+          mode: 'aclnn',
+          testFile: 'tests/st/arch35/beta.csv',
+        },
+      ]);
     expect(executor.execute)
       .toHaveBeenCalledTimes(3);
     expectedInputs.forEach((inputPath, index) => {
@@ -188,7 +218,7 @@ describe('StTestService', () => {
     expect(outputChannel.append.mock.calls)
       .toEqual(expectedRawChunks.map((chunk) => [chunk]));
     expect(outputLines.join('\n'))
-      .toContain('Precision results were not interpreted');
+      .toContain('Precision report: invalid');
     expect(executor.listenerCount('stdout'))
       .toBe(0);
     expect(executor.listenerCount('stderr'))
@@ -478,11 +508,65 @@ describe('StTestService', () => {
       });
 
     expect(result)
-      .toEqual({
+      .toMatchObject({
         outputPaths: [expectedOutput],
         runDirectory: expectedRunDirectory,
         runtimeSource: 'system',
       });
+  });
+
+  it('keeps completed artifacts accessible when report construction unexpectedly fails', async () => {
+    const inputCsvPath = writeInput('ttk_kernel_a.csv');
+    const outputCsvPath = resolveStTestOutputCsvPath({
+      workspaceRoot,
+      operatorName: 'add custom',
+      mode: 'kernel',
+      inputCsvPath,
+      runId: 'run-id',
+      sequence: 1,
+    });
+
+    executor.execute.mockImplementation(async () => {
+      fs.writeFileSync(outputCsvPath, `${CSV_BY_MODE.kernel}`);
+
+      return commandResult();
+    });
+
+    const result = await createService({
+      buildResultReport: jest.fn(() => {
+        throw new Error('unexpected parser failure');
+      }),
+    })
+      .startStTest({
+        workspaceRoot,
+        operatorName: 'add custom',
+        operatorPath,
+        modes: ['kernel'],
+      });
+
+    expect(result.outputPaths)
+      .toEqual([outputCsvPath]);
+    expect(result.artifacts)
+      .toHaveLength(1);
+    expect(result.report)
+      .toMatchObject({
+        outcome: 'invalid',
+        summary: {
+          files: 1,
+          invalidFiles: 1,
+        },
+        files: [
+          {
+            artifactId: 'run-id:1',
+            error: { code: 'file_unreadable' },
+          },
+        ],
+      });
+    expect(JSON.stringify(result.report)).not.toContain(workspaceRoot);
+    expect(result.report.files[0].error)
+      .not.toHaveProperty('detail');
+    expect(outputLines.join('\n'))
+      .toContain('Could not interpret precision results: unexpected parser failure');
   });
 
   it('rejects non-standard-custom contexts before provisioning', async () => {

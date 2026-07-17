@@ -182,6 +182,11 @@ describe('ST test completion notification', () => {
       'stTest.openFile',
       'stTest.pickResultFile',
       'stTest.openResultFailed',
+      'stTest.results.invalidStatusWithCsv',
+      'stTest.results.errorDetail.record',
+      'stTest.results.errorDetail.bytes',
+      'stTest.results.errorDetail.header',
+      'stTest.results.errorDetail.rows',
     ] as const;
 
     keys.forEach((key) => {
@@ -194,9 +199,23 @@ describe('ST test completion notification', () => {
       .toContain('{{count}}');
     expect(enMessages['stTest.completed'])
       .toContain('{{path}}');
+    expect(enMessages['stTest.completed'])
+      .toContain(enMessages['stTest.openFile']);
+    expect(enMessages['stTest.completed'].toLowerCase())
+      .not.toContain('panel');
     expect(zhCnMessages['stTest.completed'])
       .toContain('{{count}}');
     expect(zhCnMessages['stTest.completed'])
       .toContain('{{path}}');
+    expect(zhCnMessages['stTest.completed'])
+      .toContain(zhCnMessages['stTest.openFile']);
+    expect(zhCnMessages['stTest.completed'])
+      .not.toContain('面板');
+    expect(zhCnMessages['stTest.results.errorDetail.record'])
+      .not.toMatch(/record|rows|bytes/i);
+    expect(zhCnMessages['stTest.results.errorDetail.bytes'])
+      .not.toMatch(/record|rows|bytes/i);
+    expect(zhCnMessages['stTest.results.errorDetail.rows'])
+      .not.toMatch(/record|rows|bytes/i);
   });
 });

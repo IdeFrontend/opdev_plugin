@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 
 import { CommandExecutor } from '@plugin/class/command-options';
+import { StTestResultsPanel } from '@plugin/class/st-test-results-panel';
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import { buildService } from '@plugin/service/build-service';
 import { sanitizerService } from '@plugin/service/sanitizer-service';
@@ -464,6 +465,18 @@ export const taskMethods = {
         outputPaths: result.outputPaths,
         runDirectory: result.runDirectory,
       });
+
+      try {
+        await StTestResultsPanel.createOrShow(
+          context,
+          result.report,
+          result.artifacts,
+          result.runDirectory,
+        );
+      }
+      catch (panelError) {
+        console.error('[ST test] Could not present the completed result report:', panelError);
+      }
     }
     catch (error) {
       if (isStTestCancelledError(error)) {

@@ -1,13 +1,14 @@
 import { joinCommands } from '@plugin/domain/utils/command-utils';
 import { shellQuoteBash } from '@plugin/domain/utils/shell-env-exports';
+import type { StTestMode } from '@shared/st-test-results';
+
+export type { StTestMode } from '@shared/st-test-results';
 
 export const ST_TEST_MODES = [
   'kernel',
   'aclnn',
   'e2e',
-] as const;
-
-export type StTestMode = typeof ST_TEST_MODES[number];
+] as const satisfies readonly StTestMode[];
 
 export function normalizeStTestModes(values: readonly string[]): StTestMode[] {
   const normalized = values.map((value) => value.trim()

@@ -30,6 +30,9 @@ export class WebviewConnector<T = unknown, R = T> {
    */
   private pendingDataList: WeakMap<Webview, T[]> = new WeakMap();
 
+  /** Latest replace-style payload, retained so a reloaded webview can request it again. */
+  private latestData: WeakMap<Webview, T> = new WeakMap();
+
   private messageReceivers: WeakMap<Webview, Disposable> = new WeakMap();
 
   private listeners: ExtensionListener<R>[] = [];
@@ -40,14 +43,20 @@ export class WebviewConnector<T = unknown, R = T> {
     const isReady = this.webviewReady.get(webview);
 
     if (isReady) {
-      webview.postMessage({
-        channel: this.channel,
-        data,
-      });
+      this.postData(webview, data, false);
     }
     else {
       this.pendingDataList.get(webview)
         ?.push(data);
+    }
+  }
+
+  public sendLatest(webview: Webview, data: T): void {
+    this.latestData.set(webview, data);
+    const isReady = this.webviewReady.get(webview);
+
+    if (isReady) {
+      this.postData(webview, data, true);
     }
   }
 
@@ -56,7 +65,11 @@ export class WebviewConnector<T = unknown, R = T> {
   }
 
   public addWebview(webview: Webview): void {
-    const receiver = webview.onDidReceiveMessage((res) => {
+    const receiver = webview.onDidReceiveMessage((res: unknown) => {
+      if (!isConnectMessage(res)) {
+        return;
+      }
+
       // Client initialization
       if (isWebviewReadyMessage(res, this.channel)) {
         this.startConnector(webview);
@@ -69,7 +82,7 @@ export class WebviewConnector<T = unknown, R = T> {
       }
 
       this.listeners.forEach((callback) => {
-        callback(res.data, webview);
+        callback(res.data as R, webview);
       });
     });
 
@@ -78,9 +91,12 @@ export class WebviewConnector<T = unknown, R = T> {
   }
 
   public removeWebview(webview: Webview): void {
+    this.webviewReady.delete(webview);
     this.pendingDataList.delete(webview);
+    this.latestData.delete(webview);
     this.messageReceivers.get(webview)
       ?.dispose();
+    this.messageReceivers.delete(webview);
   }
 
   private startConnector(webview: Webview): void {
@@ -88,17 +104,75 @@ export class WebviewConnector<T = unknown, R = T> {
     const pendingData = this.pendingDataList.get(webview);
 
     pendingData?.forEach((data) => {
-      this.send(webview, data);
+      this.postData(webview, data, false);
     });
-    this.pendingDataList.delete(webview);
+    pendingData?.splice(0);
+
+    if (this.latestData.has(webview)) {
+      this.postData(webview, this.latestData.get(webview)!, true);
+    }
+  }
+
+  private postData(webview: Webview, data: T, retainedLatest: boolean): void {
+    let delivery: Thenable<boolean>;
+
+    try {
+      delivery = webview.postMessage({
+        channel: this.channel,
+        data,
+      });
+    }
+    catch (error) {
+      this.logDeliveryFailure(retainedLatest, error);
+
+      return;
+    }
+
+    void Promise.resolve(delivery)
+      .then((delivered) => {
+        if (!delivered) {
+          this.logDeliveryFailure(retainedLatest);
+        }
+      })
+      .catch((error: unknown) => {
+        this.logDeliveryFailure(retainedLatest, error);
+      });
+  }
+
+  private logDeliveryFailure(retainedLatest: boolean, error?: unknown): void {
+    const retryNote = retainedLatest
+      ? ' The latest payload is retained for the next ready signal.'
+      : '';
+
+    if (error === undefined) {
+      console.warn(`[WebviewConnector:${this.channel}] postMessage returned false.${retryNote}`);
+
+      return;
+    }
+
+    console.warn(
+      `[WebviewConnector:${this.channel}] postMessage failed.${retryNote}`,
+      error,
+    );
   }
 }
 
+function isConnectMessage(message: unknown): message is ConnectMessage {
+  if (message === null || typeof message !== 'object') {
+    return false;
+  }
+
+  const candidate = message as Record<string, unknown>;
+
+  return typeof candidate.channel === 'string'
+    && Object.prototype.hasOwnProperty.call(candidate, 'data');
+}
+
 function isWebviewReadyMessage(
-  message: ConnectMessage,
+  message: unknown,
   channel: ConnectChannel,
 ): boolean {
-  return (
-    message.channel === CONNECTOR_READY_CHANNEL && message.data === channel
-  );
+  return isConnectMessage(message)
+    && message.channel === CONNECTOR_READY_CHANNEL
+    && message.data === channel;
 }

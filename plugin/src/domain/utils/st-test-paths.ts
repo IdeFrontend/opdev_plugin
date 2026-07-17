@@ -7,7 +7,7 @@ import * as path from 'path';
 import { TextDecoder } from 'util';
 
 import { joinIdeConfigPath } from '@plugin/helpers/ide-config-dir';
-import type { StTestMode } from '@plugin/domain/services/st-test-command';
+import type { StTestMode } from '@shared/st-test-results';
 
 export const ST_TEST_ARCH_DIR = 'arch35';
 

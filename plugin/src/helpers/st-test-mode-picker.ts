@@ -1,10 +1,8 @@
 import { t } from 'i18next';
 import * as vscode from 'vscode';
 
-import {
-  ST_TEST_MODES,
-  type StTestMode,
-} from '@plugin/domain/services/st-test-command';
+import { ST_TEST_MODES } from '@plugin/domain/services/st-test-command';
+import type { StTestMode } from '@shared/st-test-results';
 import {
   discoverStTestInputCsvFiles,
   validateStTestOperatorDirectory,

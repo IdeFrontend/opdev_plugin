@@ -9,8 +9,12 @@ import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.r
 import {
   buildStTestCommand,
   normalizeStTestModes,
-  type StTestMode,
 } from '@plugin/domain/services/st-test-command';
+import {
+  buildStTestResultReport,
+  type BuildStTestResultReportParams,
+  type CompletedStTestArtifact,
+} from '@plugin/domain/services/st-test-result-parser';
 import { StTestCancelledError } from '@plugin/domain/services/st-test-errors';
 import {
   createStTestRunId,
@@ -32,6 +36,10 @@ import {
   type EnsureTtkOptions,
   type TtkRuntime,
 } from '@plugin/service/ttk-installer.service';
+import type {
+  StTestMode,
+  StTestResultReportDto,
+} from '@shared/st-test-results';
 
 const ST_TEST_LOG_SCOPE = 'op-devtools/st-test';
 
@@ -44,6 +52,8 @@ export type StartStTestParams = {
 
 export type StTestExecutionResult = {
   outputPaths: string[];
+  artifacts: CompletedStTestArtifact[];
+  report: StTestResultReportDto;
   runDirectory: string;
   runtimeSource: TtkRuntime['source'];
 };
@@ -66,6 +76,7 @@ type StTestServiceDependencies = {
   getEnvironmentScriptPath: ()=> string;
   getOutputChannel: ()=> vscode.OutputChannel;
   createRunId: ()=> string;
+  buildResultReport: (params: BuildStTestResultReportParams)=> StTestResultReportDto;
 };
 
 export class StTestService {
@@ -89,6 +100,7 @@ export class StTestService {
         ?? getEnvironmentScriptPathFromWorkspace,
       getOutputChannel: dependencies.getOutputChannel ?? (() => getOperatorToolOutputChannel('test')),
       createRunId: dependencies.createRunId ?? createStTestRunId,
+      buildResultReport: dependencies.buildResultReport ?? buildStTestResultReport,
     };
   }
 
@@ -123,7 +135,7 @@ export class StTestService {
     const appendRawOutput = (chunk: string): void => {
       outputChannel.append(chunk);
     };
-    const completed: string[] = [];
+    const completedArtifacts: CompletedStTestArtifact[] = [];
 
     outputChannel.show(true);
     outputChannel.appendLine(`[ST test] Operator: ${params.operatorName}`);
@@ -178,9 +190,10 @@ export class StTestService {
         }
 
         if (result.code !== 0) {
+          const completedPaths = completedArtifacts.map((artifact) => artifact.outputCsvPath);
           const message = `TTK ${item.mode} failed for ${path.basename(item.inputCsvPath)} `
             + `with exit code ${String(result.code)}. Expected result: ${item.outputCsvPath}. `
-            + `Completed results: ${completed.join(', ') || 'none'}`;
+            + `Completed results: ${completedPaths.join(', ') || 'none'}`;
 
           throw new Error(message);
         }
@@ -188,35 +201,71 @@ export class StTestService {
         const outputStat = this.tryLstat(item.outputCsvPath);
 
         if (!outputStat?.isFile()) {
+          const completedPaths = completedArtifacts.map((artifact) => artifact.outputCsvPath);
           const message = `TTK ${item.mode} exited successfully but did not create a new regular result file at ${item.outputCsvPath}. `
-            + `Completed results: ${completed.join(', ') || 'none'}`;
+            + `Completed results: ${completedPaths.join(', ') || 'none'}`;
 
           throw new Error(message);
         }
 
-        completed.push(item.outputCsvPath);
+        completedArtifacts.push({
+          artifactId: `${runId}:${String(item.sequence)}`,
+          sequence: item.sequence,
+          mode: item.mode,
+          inputCsvPath: item.inputCsvPath,
+          outputCsvPath: item.outputCsvPath,
+        });
         outputChannel.appendLine(`[ST test] Process completed; result file: ${item.outputCsvPath}`);
       }
 
+      const reportParams: BuildStTestResultReportParams = {
+        workspaceRoot: params.workspaceRoot,
+        operatorPath: params.operatorPath,
+        operatorName: params.operatorName,
+        runId,
+        runDirectory,
+        artifacts: completedArtifacts,
+      };
+      let report: StTestResultReportDto;
+
+      try {
+        report = this.dependencies.buildResultReport(reportParams);
+      }
+      catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+
+        outputChannel.appendLine(`[ST test] Could not interpret precision results: ${message}`);
+        appendLog(ST_TEST_LOG_SCOPE, 'ST result report construction failed', {
+          operatorName: params.operatorName,
+          resultCount: completedArtifacts.length,
+          error: message,
+        });
+        report = this.createInvalidReportFallback(reportParams);
+      }
+
       outputChannel.appendLine('');
-      outputChannel.appendLine('[ST test] All requested TTK processes completed. Precision results were not interpreted.');
-      completed.forEach((outputPath) => outputChannel.appendLine(`[ST test] Produced: ${outputPath}`));
+      outputChannel.appendLine(`[ST test] All requested TTK processes completed. Precision report: ${report.outcome}.`);
+      completedArtifacts.forEach((artifact) => outputChannel.appendLine(`[ST test] Produced: ${artifact.outputCsvPath}`));
 
       appendLog(ST_TEST_LOG_SCOPE, 'ST test processes completed', {
         operatorName: params.operatorName,
         modes,
-        resultCount: completed.length,
+        resultCount: completedArtifacts.length,
+        reportOutcome: report.outcome,
         runtimeSource: runtime.source,
       });
 
       return {
-        outputPaths: completed,
+        outputPaths: completedArtifacts.map((artifact) => artifact.outputCsvPath),
+        artifacts: completedArtifacts,
+        report,
         runDirectory,
         runtimeSource: runtime.source,
       };
     }
     catch (error) {
-      const completedSummary = completed.join(', ') || 'none';
+      const completedSummary = completedArtifacts.map((artifact) => artifact.outputCsvPath)
+        .join(', ') || 'none';
 
       if (error instanceof StTestCancelledError) {
         outputChannel.appendLine(`[ST test] Cancelled. Produced before cancellation: ${completedSummary}`);
@@ -279,6 +328,44 @@ export class StTestService {
         sequence,
       };
     }));
+  }
+
+  private createInvalidReportFallback(params: BuildStTestResultReportParams): StTestResultReportDto {
+    const toDisplayPath = (basePath: string, targetPath: string): string => {
+      const relative = path.relative(path.resolve(basePath), path.resolve(targetPath));
+      const outside = path.isAbsolute(relative)
+        || relative === '..'
+        || relative.startsWith(`..${path.sep}`);
+
+      return (outside ? path.basename(targetPath) : relative || path.basename(targetPath))
+        .split(path.sep)
+        .join('/');
+    };
+
+    return {
+      runId: params.runId,
+      operatorName: params.operatorName,
+      runDirectory: toDisplayPath(params.workspaceRoot, params.runDirectory),
+      outcome: 'invalid',
+      summary: {
+        total: 0,
+        passed: 0,
+        failed: 0,
+        invalid: 0,
+        files: params.artifacts.length,
+        invalidFiles: params.artifacts.length,
+      },
+      files: params.artifacts.map((artifact) => ({
+        artifactId: artifact.artifactId,
+        sequence: artifact.sequence,
+        mode: artifact.mode,
+        testFile: toDisplayPath(params.operatorPath, artifact.inputCsvPath),
+        resultFile: toDisplayPath(params.workspaceRoot, artifact.outputCsvPath),
+        rowCount: 0,
+        error: { code: 'file_unreadable' },
+      })),
+      rows: [],
+    };
   }
 
   private async validateStandardCustomOperator(params: StartStTestParams): Promise<void> {

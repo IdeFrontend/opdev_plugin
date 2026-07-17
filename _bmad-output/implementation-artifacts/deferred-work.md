@@ -11,3 +11,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-gc-45-basic-ttk.md`
   summary: Add a configurable watchdog policy for individual TTK CSV executions.
   evidence: Download, install, and probe stages are bounded, while an actual NPU test is intentionally stopped through the existing Stop action. A safe default duration and timeout semantics require product and hardware-duration data that are outside the approved basic slice.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-gc-45-st-results-webview.md`
+  summary: Validate the canonical ST results root before creating output directories.
+  evidence: The baseline ST runner resolves its output beneath the workspace IDE-config path lexically, but a pre-existing junction or symlink in that directory chain can redirect TTK result creation outside the workspace; the visualization correctly confines artifacts to the resulting run root but cannot prove that root itself is workspace-owned.

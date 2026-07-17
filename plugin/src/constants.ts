@@ -1,4 +1,7 @@
-import { COMMAND_PREFIX as FLAVOR_COMMAND_PREFIX } from '@shared/flavor';
+import {
+  COMMAND_PREFIX as FLAVOR_COMMAND_PREFIX,
+  VIEW_PREFIX as FLAVOR_VIEW_PREFIX,
+} from '@shared/flavor';
 
 export const COMMAND_PREFIX = FLAVOR_COMMAND_PREFIX;
 
@@ -58,6 +61,10 @@ export const VIEW_OPTIONS_SIMULATOR = 'options-simulator';
 export const VIEW_OPTIONS_ON_BOARD = 'options-on-board';
 
 export const VIEW_OPTIONS_SANITIZER = 'options-sanitizer';
+
+export const VIEW_ST_TEST_RESULTS = 'st-test-results';
+
+export const ST_TEST_RESULTS_PANEL_TYPE = `${FLAVOR_VIEW_PREFIX}StTestResults`;
 
 // Folder right-click menu commands
 export const COMMAND_MARK_AS_OPERATOR_PROJECT = `${COMMAND_PREFIX}.markAsOperatorProject`;
