@@ -253,7 +253,7 @@ There is **no** webview panel that calls `getRunData` for the performance result
 
 | Location | Actions |
 |----------|---------|
-| `view/title` | Add visualization, sort by time, marked-only filter |
+| `view/title` | Add visualization, sort by time, marked-only filter, refresh results |
 | Report row inline | Copy (file **contents**), download (zip), mark/unmark |
 | File leaf | Open (`sidebar.performance.file.open`) |
 
@@ -269,6 +269,9 @@ See [`user-issues/profiling-and-insight.md`](./user-issues/profiling-and-insight
 ### Refresh
 
 - **Command:** `huawei-op-devtools.flashPerformanceRunData`
+- **Filesystem reconciliation:** each manual refresh replaces the visible inventory with one completed filesystem/config snapshot. Reports, supported child files, and nested folders deleted on disk disappear from the tree; surviving entries remain visible. If the selected report disappeared, selection-dependent context is cleared.
+- **Failure and concurrency:** a path confirmed as deleted is omitted without affecting unrelated reports. An unexpected scan error preserves the last valid inventory, and an older overlapping refresh cannot overwrite the newest requested snapshot.
+- **Persistence:** reconciliation does not mutate `fileMapList`, stored report mappings, or mark metadata. There is no automatic watcher or polling.
 - **Implementation:** `operateTreeProvider.refreshPerformanceReports(args)` only — **no** `postMessage` / iframe refresh.
 
 ---

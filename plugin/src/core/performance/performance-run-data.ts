@@ -64,6 +64,7 @@ export class PerformanceRunData {
     _order: 'asc' | 'desc',
   ): Promise<PerformanceExecutionRecord[]> {
     const markedKeySet = this.queryMarkedRecordKeySet();
+
     return await this.scanRunDataDirectory(markedKeySet);
   }
 
@@ -113,30 +114,39 @@ export class PerformanceRunData {
 
     // Runs under <op>/.vscode/opprof/<runId>/ (optional — folder may not exist yet)
     if (this.rootUri && (await this.uriExists(this.rootUri))) {
-      const executionEntries = await vscode.workspace.fs.readDirectory(this.rootUri);
-      const opprofDirs = executionEntries.filter(([, t]) => t === vscode.FileType.Directory)
-        .map(([name]) => name);
-      const opprofRecords = await Promise.all(
-        opprofDirs.map(async (subPath) => {
+      const executionEntries = await this.readDirectoryIfPresent(this.rootUri);
+
+      if (executionEntries) {
+        const opprofDirs = executionEntries.filter(([
+          , t,
+        ]) => t === vscode.FileType.Directory)
+          .map(([name]) => name);
+        const opprofRecords = await Promise.all(opprofDirs.map(async (subPath) => {
           const recordUri = vscode.Uri.joinPath(this.rootUri!, subPath);
-          const [
-            stat,
-            children,
-          ] = await Promise.all([
-            vscode.workspace.fs.stat(recordUri),
-            this.scanSubFiles(recordUri),
-          ]);
-          return {
-            key: subPath,
-            title: subPath,
-            timestamp: stat.ctime,
-            dirPath: recordUri.fsPath,
-            marked: markedKeySet.has(subPath),
-            children,
-          } satisfies PerformanceExecutionRecord;
-        }),
-      );
-      runData.push(...opprofRecords);
+
+          return await this.runIfPathPresent(recordUri, async () => {
+            const children = await this.scanSubFiles(recordUri);
+            // Re-check after traversal so a report deleted mid-scan cannot
+            // survive as an empty, stale row.
+            const stat = await vscode.workspace.fs.stat(recordUri);
+
+            return {
+              key: subPath,
+              title: subPath,
+              timestamp: stat.ctime,
+              dirPath: recordUri.fsPath,
+              marked: markedKeySet.has(subPath),
+              children,
+            } satisfies PerformanceExecutionRecord;
+          });
+        }));
+
+        for (const record of opprofRecords) {
+          if (record) {
+            runData.push(record);
+          }
+        }
+      }
     }
 
     // Manual / external reports from fileMapList (simulate + on_board) — must run even when opprof is absent
@@ -145,13 +155,15 @@ export class PerformanceRunData {
 
     const fileMapEntryTasks: Promise<PerformanceExecutionRecord | null>[] = [];
 
-    const pushSimulateFileMapTasks = (fileMapList: Array<{ filePath: string; reportTime: number }>) => {
+    const pushSimulateFileMapTasks = (fileMapList: Array<{ filePath: string;
+      reportTime: number }>) => {
       for (const fileMap of fileMapList) {
         fileMapEntryTasks.push(this.buildFileMapExecutionRecord(fileMap, 'simulate', markedKeySet));
       }
     };
 
-    const pushOnboardFileMapTasks = (fileMapList: Array<{ filePath: string; reportTime: number }>) => {
+    const pushOnboardFileMapTasks = (fileMapList: Array<{ filePath: string;
+      reportTime: number }>) => {
       for (const fileMap of fileMapList) {
         fileMapEntryTasks.push(this.buildFileMapExecutionRecord(fileMap, 'onboard', markedKeySet));
       }
@@ -159,20 +171,25 @@ export class PerformanceRunData {
 
     for (const config of simulateConfigs) {
       const userOptions = config.user_options as Record<string, unknown> | null;
+
       if (userOptions && Array.isArray(userOptions.fileMapList)) {
-        pushSimulateFileMapTasks(userOptions.fileMapList as Array<{ filePath: string; reportTime: number }>);
+        pushSimulateFileMapTasks(userOptions.fileMapList as Array<{ filePath: string;
+          reportTime: number }>);
       }
     }
 
     for (const config of onBoardConfigs) {
       const userOptions = config.user_options as Record<string, unknown> | null;
+
       if (userOptions && Array.isArray(userOptions.fileMapList)) {
-        pushOnboardFileMapTasks(userOptions.fileMapList as Array<{ filePath: string; reportTime: number }>);
+        pushOnboardFileMapTasks(userOptions.fileMapList as Array<{ filePath: string;
+          reportTime: number }>);
       }
     }
 
     if (fileMapEntryTasks.length > 0) {
       const fromMaps = await Promise.all(fileMapEntryTasks);
+
       for (const rec of fromMaps) {
         if (rec) {
           runData.push(rec);
@@ -184,53 +201,84 @@ export class PerformanceRunData {
   }
 
   private async buildFileMapExecutionRecord(
-    fileMap: { filePath: string; reportTime: number },
+    fileMap: { filePath: string;
+      reportTime: number },
     kind: 'simulate' | 'onboard',
     markedKeySet: Set<string>,
   ): Promise<PerformanceExecutionRecord | null> {
     const uri = vscode.Uri.file(fileMap.filePath);
+
     if (!(await this.uriExists(uri))) {
       return null;
     }
-    const stat = await vscode.workspace.fs.stat(uri);
-    const isDirectory = stat.type === vscode.FileType.Directory;
-    const keyPrefix = kind === 'simulate' ? 'simulate_' : 'onboard_';
-    const key = `${keyPrefix}${fileMap.filePath}`;
-    const children = isDirectory ? await this.scanSubFiles(uri) : [];
-    return {
-      key,
-      title: path.basename(fileMap.filePath),
-      timestamp: fileMap.reportTime,
-      dirPath: fileMap.filePath,
-      marked: markedKeySet.has(key),
-      children,
-    };
+
+    return await this.runIfPathPresent(uri, async () => {
+      const initialStat = await vscode.workspace.fs.stat(uri);
+      const isDirectory = initialStat.type === vscode.FileType.Directory;
+      const keyPrefix = kind === 'simulate' ? 'simulate_' : 'onboard_';
+      const key = `${keyPrefix}${fileMap.filePath}`;
+      const children = isDirectory ? await this.scanSubFiles(uri) : [];
+
+      // The path may disappear after the initial existence/type check.
+      await vscode.workspace.fs.stat(uri);
+
+      return {
+        key,
+        title: path.basename(fileMap.filePath),
+        timestamp: fileMap.reportTime,
+        dirPath: fileMap.filePath,
+        marked: markedKeySet.has(key),
+        children,
+      };
+    });
   }
 
   private async scanSubFiles(parentUri: vscode.Uri): Promise<(PerformanceRunDataFolder | PerformanceRunDataFile)[]> {
-    const subPathEntries = await vscode.workspace.fs.readDirectory(parentUri);
-    const mapped = await Promise.all(
-      subPathEntries.map(async ([
-        subPath,
-        entryType,
-      ]) => {
-        if (entryType === vscode.FileType.Directory) {
-          const subUri = vscode.Uri.joinPath(parentUri, subPath);
-          const children = await this.scanSubFiles(subUri);
-          if (children.length > 0) {
-            return { kind: 'folder' as const, title: subPath, children };
-          }
-          return null;
-        }
-        const ext = path.extname(subPath)
-          .replace(/^\./, '');
+    const subPathEntries = await this.readDirectoryIfPresent(parentUri);
 
-        if ([
-          'csv',
-          'bin',
-          'json',
-        ].includes(ext)) {
-          const filePath = path.join(parentUri.fsPath, subPath);
+    if (!subPathEntries) {
+      return [];
+    }
+
+    const mapped = await Promise.all(subPathEntries.map(async ([
+      subPath,
+      entryType,
+    ]) => {
+      if (entryType === vscode.FileType.Directory) {
+        const subUri = vscode.Uri.joinPath(parentUri, subPath);
+
+        return await this.runIfPathPresent(subUri, async () => {
+          const children = await this.scanSubFiles(subUri);
+          const currentStat = await vscode.workspace.fs.stat(subUri);
+
+          if (currentStat.type !== vscode.FileType.Directory || children.length === 0) {
+            return null;
+          }
+
+          return {
+            kind: 'folder' as const,
+            title: subPath,
+            children,
+          };
+        });
+      }
+
+      const ext = path.extname(subPath)
+        .replace(/^\./, '');
+
+      if ([
+        'csv',
+        'bin',
+        'json',
+      ].includes(ext)) {
+        const fileUri = vscode.Uri.joinPath(parentUri, subPath);
+
+        return await this.runIfPathPresent(fileUri, async () => {
+          // readDirectory may return an entry that is deleted before the
+          // snapshot is assembled. Confirm it still exists first.
+          await vscode.workspace.fs.stat(fileUri);
+          const filePath = fileUri.fsPath;
+
           return {
             kind: 'file' as const,
             node: {
@@ -240,16 +288,19 @@ export class PerformanceRunData {
               fileType: ext,
             } satisfies PerformanceRunDataFile,
           };
-        }
-        return null;
-      }),
-    );
+        });
+      }
+
+      return null;
+    }));
 
     const subDirOrFiles: (PerformanceRunDataFolder | PerformanceRunDataFile)[] = [];
+
     for (const item of mapped) {
       if (!item) {
         continue;
       }
+
       if (item.kind === 'folder') {
         subDirOrFiles.push({
           title: item.title,
@@ -260,7 +311,50 @@ export class PerformanceRunData {
         subDirOrFiles.push(item.node);
       }
     }
+
     return subDirOrFiles;
+  }
+
+  private async readDirectoryIfPresent(uri: vscode.Uri): Promise<[string, vscode.FileType][] | null> {
+    return await this.runIfPathPresent(uri, async () => vscode.workspace.fs.readDirectory(uri));
+  }
+
+  private async runIfPathPresent<T>(uri: vscode.Uri, action: ()=> Promise<T>): Promise<T | null> {
+    try {
+      return await action();
+    }
+    catch (error) {
+      if (await this.pathDisappearedAfterError(uri, error)) {
+        return null;
+      }
+
+      throw error;
+    }
+  }
+
+  private async pathDisappearedAfterError(uri: vscode.Uri, error: unknown): Promise<boolean> {
+    if (!this.isFileNotFoundError(error)) {
+      return false;
+    }
+
+    try {
+      await vscode.workspace.fs.stat(uri);
+
+      return false;
+    }
+    catch (recheckError) {
+      if (this.isFileNotFoundError(recheckError)) {
+        return true;
+      }
+
+      throw recheckError;
+    }
+  }
+
+  private isFileNotFoundError(error: unknown): boolean {
+    const code = (error as { code?: unknown } | null)?.code;
+
+    return code === 'FileNotFound' || code === 'ENOENT';
   }
 
   private async uriExists(uri: vscode.Uri): Promise<boolean> {
@@ -269,8 +363,12 @@ export class PerformanceRunData {
 
       return true;
     }
-    catch {
-      return false;
+    catch (error) {
+      if (this.isFileNotFoundError(error)) {
+        return false;
+      }
+
+      throw error;
     }
   }
 }

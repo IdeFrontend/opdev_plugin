@@ -680,6 +680,7 @@
       {
         "command": "huawei-op-devtools.flashPerformanceRunData",
         "title": "%command.flashPerformance.title%",
+        "icon": "$(refresh)",
         "category": "%config.title%"
       },
       {
@@ -1487,6 +1488,11 @@
           "command": "huawei-op-devtools.sidebar.performance.report.showAll",
           "when": "view == opdevtoolsPerformanceResultsTree && opDevtools.performanceMarkedOnly",
           "group": "navigation@3"
+        },
+        {
+          "command": "huawei-op-devtools.flashPerformanceRunData",
+          "when": "view == opdevtoolsPerformanceResultsTree",
+          "group": "navigation@4"
         },
         {
           "command": "huawei-op-devtools.sidebar.selectAllOperators",

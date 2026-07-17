@@ -378,6 +378,9 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   private readonly performanceNodesById = new Map<string, OperateNode[]>();
   private readonly performanceReportRootNodesByKey = new Map<string, OperateNode>();
   private performanceResultsTreeView?: vscode.TreeView<OperateNode>;
+  private performanceRefreshRevision = 0;
+  private performanceSelectionContextRevision = 0;
+  private performanceSelectionContextSync: Promise<void> = Promise.resolve();
 
   setPerformanceResultsTreeView(treeView: vscode.TreeView<OperateNode>): void {
     this.performanceResultsTreeView = treeView;
@@ -1996,7 +1999,9 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
   /** Reload performance reports from disk/config; optionally focus and expand a newly added row. */
   async refreshPerformanceReports(options?: { focusIfNew?: boolean }): Promise<void> {
+    const refreshRevision = ++this.performanceRefreshRevision;
     const previousKeys = new Set(this.state.performance.reports.map((item) => item.key));
+    let reports: PerformanceExecutionRecord[];
 
     try {
       const result = await performanceMethods.getRunData({
@@ -2006,17 +2011,34 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         },
       });
 
-      this.state.performance.reports = result?.data ?? [];
-      this.sortPerformanceReportsInPlace();
+      reports = result?.data ?? [];
     }
     catch (error) {
+      if (refreshRevision !== this.performanceRefreshRevision) {
+        return;
+      }
+
       console.error('Failed to load performance reports:', error);
-      this.state.performance.reports = [];
+
+      return;
+    }
+
+    if (refreshRevision !== this.performanceRefreshRevision) {
+      return;
+    }
+
+    this.state.performance.reports = reports;
+    this.sortPerformanceReportsInPlace();
+
+    const selectedReportKey = this.state.performance.selectedReportKey;
+
+    if (selectedReportKey && !this.getPerformanceReportByKey(selectedReportKey)) {
+      this.state.performance.selectedReportKey = undefined;
     }
 
     this.performanceNodesById.clear();
 
-    for (const key of [...this.performanceReportRootNodesByKey.keys()]) {
+    for (const key of this.performanceReportRootNodesByKey.keys()) {
       if (!this.state.performance.reports.some((item) => item.key === key)) {
         this.performanceReportRootNodesByKey.delete(key);
       }
@@ -2027,10 +2049,16 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       : undefined;
 
     this.onDidChangePerformanceTreeDataEmitter.fire();
+    await this.syncPerformanceSelectionContext();
 
     if (focusReportKey) {
       await OperateTreeProvider.yieldToUi();
-      await this.revealPerformanceReport(focusReportKey);
+
+      if (refreshRevision !== this.performanceRefreshRevision) {
+        return;
+      }
+
+      await this.revealPerformanceReport(focusReportKey, refreshRevision);
     }
   }
 
@@ -2050,7 +2078,11 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     )).key;
   }
 
-  private async revealPerformanceReport(reportKey: string): Promise<void> {
+  private async revealPerformanceReport(reportKey: string, refreshRevision?: number): Promise<void> {
+    if (!this.isPerformanceRefreshCurrent(refreshRevision) || !this.getPerformanceReportByKey(reportKey)) {
+      return;
+    }
+
     this.state.performance.selectedReportKey = reportKey;
     const node = this.getPerformanceReportNodes()
       .find((item) => {
@@ -2069,12 +2101,31 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     node.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
 
     try {
+      if (!this.isPerformanceRefreshCurrent(refreshRevision)) {
+        await this.syncPerformanceSelectionContext();
+
+        return;
+      }
+
       await vscode.commands.executeCommand(`${TREE_VIEW_PERFORMANCE_RESULTS}.focus`);
+
+      if (!this.isPerformanceRefreshCurrent(refreshRevision)) {
+        await this.syncPerformanceSelectionContext();
+
+        return;
+      }
+
       await treeView.reveal(node, {
         select: true,
         focus: true,
         expand: true,
       });
+
+      if (!this.isPerformanceRefreshCurrent(refreshRevision)) {
+        await this.syncPerformanceSelectionContext();
+
+        return;
+      }
     }
     catch (error) {
       console.warn('[OperateTreeProvider.revealPerformanceReport] reveal failed:', error);
@@ -2083,11 +2134,31 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     await this.syncPerformanceSelectionContext();
   }
 
-  private async syncPerformanceSelectionContext(): Promise<void> {
-    const selected = this.getSelectedPerformanceReport();
+  private isPerformanceRefreshCurrent(refreshRevision?: number): boolean {
+    return refreshRevision === undefined || refreshRevision === this.performanceRefreshRevision;
+  }
 
-    await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.performanceReportSelected`, Boolean(selected));
-    await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.performanceSelectedReportMarked`, Boolean(selected?.marked));
+  private syncPerformanceSelectionContext(): Promise<void> {
+    const contextRevision = ++this.performanceSelectionContextRevision;
+    const syncPromise = this.performanceSelectionContextSync.then(async () => {
+      if (contextRevision !== this.performanceSelectionContextRevision) {
+        return;
+      }
+
+      const selected = this.getSelectedPerformanceReport();
+
+      await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.performanceReportSelected`, Boolean(selected));
+
+      if (contextRevision !== this.performanceSelectionContextRevision) {
+        return;
+      }
+
+      await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.performanceSelectedReportMarked`, Boolean(selected?.marked));
+    });
+
+    this.performanceSelectionContextSync = syncPromise.catch(() => undefined);
+
+    return syncPromise;
   }
 
   /**
@@ -2270,7 +2341,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       return [];
     }
 
-    return report.children.map((child, index) => this.createPerformanceChildNode(report.key, child, [String(index)]));
+    return report.children.map((child) => this.createPerformanceChildNode(report.key, child, [child.title]));
   }
 
   private getPerformanceFolderChildNodes(reportKey: string, folderPath: string[]): OperateNode[] {
@@ -2283,7 +2354,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     let currentChildren: (PerformanceRunDataFolder | PerformanceRunDataFile)[] = report.children;
 
     for (const segment of folderPath) {
-      const next = currentChildren[Number(segment)];
+      const next = currentChildren.find((child) => 'children' in child && child.title === segment);
 
       if (!next || !('children' in next)) {
         return [];
@@ -2292,9 +2363,9 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       currentChildren = next.children;
     }
 
-    return currentChildren.map((child, index) => this.createPerformanceChildNode(report.key, child, [
+    return currentChildren.map((child) => this.createPerformanceChildNode(report.key, child, [
       ...folderPath,
-      String(index),
+      child.title,
     ]));
   }
 
