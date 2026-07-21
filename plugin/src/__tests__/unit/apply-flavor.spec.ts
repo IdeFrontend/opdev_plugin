@@ -7,6 +7,55 @@ import {
 import { BASE_FLAVOR_IDS } from '../../../../flavors/schema';
 
 const REPO_ROOT = path.resolve(__dirname, '../../../..');
+const CPP_INCLUDE_PATH_DEFAULTS = [
+  '${workspaceFolder}/**',
+  '${env:ASCEND_HOME_PATH}/include',
+  '${env:ASCEND_HOME_PATH}/include/aclnn',
+  '${env:ASCEND_HOME_PATH}/compiler/tikcpp',
+  '${env:ASCEND_HOME_PATH}/compiler/tikcpp/tikcfw',
+  '${env:ASCEND_HOME_PATH}/compiler/tikcpp/tikcfw/interface',
+  '${env:ASCEND_HOME_PATH}/compiler/tikcpp/tikcfw/impl',
+  '${env:ASCEND_HOME_PATH}/tools/tikicpulib/lib/include',
+];
+const CPP_BROWSE_PATH_DEFAULTS = [
+  '${workspaceFolder}',
+  '${env:ASCEND_HOME_PATH}/include',
+  '${env:ASCEND_HOME_PATH}/compiler/tikcpp/tikcfw',
+  '${env:ASCEND_HOME_PATH}/tools/tikicpulib/lib/include',
+];
+
+function expectCppLanguageSupportDefaults(manifest: Record<string, unknown>): void {
+  const typedManifest = manifest as {
+    extensionPack?: string[];
+    contributes?: {
+      configurationDefaults?: {
+        'files.associations'?: Record<string, string>;
+        'C_Cpp.default.includePath'?: string[];
+        'C_Cpp.default.browse.path'?: string[];
+      };
+    };
+  };
+  const defaults = typedManifest.contributes?.configurationDefaults;
+
+  expect(typedManifest.extensionPack)
+    .toContain('ms-vscode.cpptools');
+  expect(defaults?.['files.associations'])
+    .toEqual({
+      '*.asc': 'cpp',
+      '*.cce': 'cpp',
+    });
+  expect(defaults?.['C_Cpp.default.includePath'])
+    .toEqual(CPP_INCLUDE_PATH_DEFAULTS);
+  expect(defaults?.['C_Cpp.default.browse.path'])
+    .toEqual(CPP_BROWSE_PATH_DEFAULTS);
+  expect(defaults?.['C_Cpp.default.browse.path'])
+    .not.toContain('${env:ASCEND_HOME_PATH}/compiler/tikcpp/**');
+  expect([
+    ...(defaults?.['C_Cpp.default.includePath'] ?? []),
+    ...(defaults?.['C_Cpp.default.browse.path'] ?? []),
+  ].filter((entry) => entry.startsWith('${env:ASCEND_HOME_PATH}') && entry.endsWith('/**')))
+    .toEqual([]);
+}
 
 function inlineStopMenuWhen(manifest: Record<string, unknown>): string | undefined {
   const items = (manifest.contributes as {
@@ -44,6 +93,7 @@ describe('apply-flavor', () => {
       .toBe(true);
     expect(manifest.contributes.configuration.some((c: { id: string }) => c.id === 'op-devtools.operatorSupport'))
       .toBe(true);
+    expectCppLanguageSupportDefaults(manifest);
 
     const openCommand = manifest.contributes.commands.find((c: { command: string }) => c.command === 'huawei-op-devtools.open');
 
@@ -142,6 +192,7 @@ describe('apply-flavor', () => {
         .some((key) => key.includes('operatorSupport.triton'));
     }))
       .toBe(true);
+    expectCppLanguageSupportDefaults(manifest);
     expect(manifest.activationEvents)
       .toContain('onView:ascendCToolkitHomeTree');
     expect(manifest.contributes.views['ascend-c-toolkit-sidebar'])

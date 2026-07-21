@@ -46,6 +46,29 @@ Constants: [`shared/cann-env-constants.ts`](../shared/cann-env-constants.ts).
 
 Spawn exports `SOC_VERSION` + `NPU_ARCH` only for types whose cmake reads them (`ascend-c`, `torch-library`, `op_type=cann`). Standard-custom / pyasc / triton use placeholders only (`OperatorPluginRegistry.filterSpawnEnv()`).
 
+### 2.1 Zero-configuration C/C++ navigation
+
+When `ASCEND_HOME_PATH` is visible to the extension host, the packaged manifest associates `.asc` and `.cce` files with C++ and provides Microsoft C/C++ with these default include paths:
+
+```text
+${workspaceFolder}/**
+${env:ASCEND_HOME_PATH}/include
+${env:ASCEND_HOME_PATH}/include/aclnn
+${env:ASCEND_HOME_PATH}/compiler/tikcpp
+${env:ASCEND_HOME_PATH}/compiler/tikcpp/tikcfw
+${env:ASCEND_HOME_PATH}/compiler/tikcpp/tikcfw/interface
+${env:ASCEND_HOME_PATH}/compiler/tikcpp/tikcfw/impl
+${env:ASCEND_HOME_PATH}/tools/tikicpulib/lib/include
+```
+
+They cover workspace sources, public CANN headers such as `acl/acl.h`, and AscendC headers such as `kernel_operator.h`. The browse database recursively indexes only `${workspaceFolder}`, `${env:ASCEND_HOME_PATH}/include`, `${env:ASCEND_HOME_PATH}/compiler/tikcpp/tikcfw`, and `${env:ASCEND_HOME_PATH}/tools/tikicpulib/lib/include`; it does not inherit the broader `compiler/tikcpp` include root.
+
+These values are defaults only. Explicit user or workspace `files.associations` / `C_Cpp` settings and `c_cpp_properties.json` keep higher precedence, and OP DevTools does not rewrite them. Huawei and CodeArts C/C++ providers are not configured through Microsoft-specific settings.
+
+The Microsoft C/C++ extension remains associated through `extensionPack`. If its Marketplace installation is unavailable on a restricted network, install the appropriate VSIX manually; the failure does not block OP DevTools activation.
+
+For Remote-SSH or container use, `ASCEND_HOME_PATH` and its target directories must exist in the remote/container extension-host environment. A similarly named local workstation path is not used. If the variable is missing, workspace source navigation remains available, but CANN headers cannot resolve until the remote environment is configured.
+
 ---
 
 ## 3. Chip Name normalization

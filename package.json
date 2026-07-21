@@ -24,6 +24,28 @@
   ],
   "icon": "out/web/branding/extension_icon.png",
   "contributes": {
+    "configurationDefaults": {
+      "files.associations": {
+        "*.asc": "cpp",
+        "*.cce": "cpp"
+      },
+      "C_Cpp.default.includePath": [
+        "${workspaceFolder}/**",
+        "${env:ASCEND_HOME_PATH}/include",
+        "${env:ASCEND_HOME_PATH}/include/aclnn",
+        "${env:ASCEND_HOME_PATH}/compiler/tikcpp",
+        "${env:ASCEND_HOME_PATH}/compiler/tikcpp/tikcfw",
+        "${env:ASCEND_HOME_PATH}/compiler/tikcpp/tikcfw/interface",
+        "${env:ASCEND_HOME_PATH}/compiler/tikcpp/tikcfw/impl",
+        "${env:ASCEND_HOME_PATH}/tools/tikicpulib/lib/include"
+      ],
+      "C_Cpp.default.browse.path": [
+        "${workspaceFolder}",
+        "${env:ASCEND_HOME_PATH}/include",
+        "${env:ASCEND_HOME_PATH}/compiler/tikcpp/tikcfw",
+        "${env:ASCEND_HOME_PATH}/tools/tikicpulib/lib/include"
+      ]
+    },
     "icons": {
       "opdevtools-beaker": {
         "description": "Beaker icon",
