@@ -300,6 +300,64 @@
         }
       },
       {
+        "id": "op-devtools.stTest",
+        "title": "%config.category.stTest.title%",
+        "type": "object",
+        "properties": {
+          "op-devtools.stTest.selectedModes": {
+            "type": "array",
+            "scope": "resource",
+            "order": 100,
+            "default": [
+              "kernel"
+            ],
+            "items": {
+              "type": "string",
+              "enum": [
+                "kernel",
+                "aclnn",
+                "e2e"
+              ]
+            },
+            "description": "%config.op-devtools.stTest.selectedModes.description%"
+          },
+          "op-devtools.stTest.kernel.arguments": {
+            "type": "array",
+            "scope": "resource",
+            "order": 101,
+            "default": [
+              "-d=false",
+              "-b=release",
+              "--pc=8"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "markdownDescription": "%config.op-devtools.stTest.kernel.arguments.markdownDescription%"
+          },
+          "op-devtools.stTest.aclnn.arguments": {
+            "type": "array",
+            "scope": "resource",
+            "order": 102,
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "markdownDescription": "%config.op-devtools.stTest.aclnn.arguments.markdownDescription%"
+          },
+          "op-devtools.stTest.e2e.arguments": {
+            "type": "array",
+            "scope": "resource",
+            "order": 103,
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "markdownDescription": "%config.op-devtools.stTest.e2e.arguments.markdownDescription%"
+          }
+        }
+      },
+      {
         "id": "op-devtools.sanitizer",
         "title": "%config.category.sanitizer.title%",
         "type": "object",

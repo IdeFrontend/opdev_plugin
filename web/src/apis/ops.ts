@@ -3,6 +3,8 @@ import {
   SaveConfigParams,
   SaveSanitizerFormParams,
   BuildConfig,
+  RunStTestOptionsParams,
+  StTestOptionsResult,
 } from '@shared/api-types';
 
 import { request } from '@/core/request';
@@ -71,22 +73,36 @@ export function importDumpTensorBinFile(params: { binFilePath: string }) {
 
 /** 获取项目环境配置 */
 export function getProjectEnv() {
-  return request.post<undefined, { ascendEnvScript: string;
-    socVersion: string }>('ops/getProjectEnv');
-}
-
-/** 扩展主机是否检测到昇腾 NPU 硬件 */
-export function getNpuHardwareAvailable() {
-  return request.post<undefined, boolean>('ops/getNpuHardwareAvailable');
+  return request.post<undefined, {
+    ascendEnvScript: string;
+    socVersion: string;
+  }>('ops/getProjectEnv');
 }
 
 /** 获取当前 SOC 下仿真器支持的可选 aic-metrics（与命令生成同源，isSimulator:true 解析） */
 export function getSimulatorSupportedMetrics() {
-  return request.post<undefined, { ResourceConflictRatio: boolean;
-    PMSampling: boolean }>('ops/getSimulatorSupportedMetrics');
+  return request.post<undefined, {
+    ResourceConflictRatio: boolean;
+    PMSampling: boolean;
+  }>('ops/getSimulatorSupportedMetrics');
 }
 
 /** 获取已选择的算子名称列表 */
 export function getSelectedOperators() {
   return request.post<undefined, string | undefined>('ops/getSelectedOperators', undefined);
+}
+
+export function loadStTestOptions() {
+  return request.post<undefined, StTestOptionsResult>('ops/loadStTestOptions');
+}
+
+export function runStTestOptions(params: RunStTestOptionsParams) {
+  return request.post<RunStTestOptionsParams, void>(
+    'ops/runStTestOptions',
+    params,
+    {
+      timeout: Number.POSITIVE_INFINITY,
+      useCustomErrorHandler: true,
+    },
+  );
 }

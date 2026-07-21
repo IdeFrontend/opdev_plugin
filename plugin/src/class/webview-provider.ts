@@ -17,6 +17,7 @@ import { ApiServer } from '@plugin/core/api-server';
 import {
   VIEW_NEW_PROJECT,
   VIEW_WELCOME,
+  VIEW_OPTIONS_ST_TEST,
 } from '@plugin/constants';
 import {
   BRANDING,
@@ -91,6 +92,10 @@ export class WebviewProvider {
       return BRANDING.productName;
     }
 
+    if (router === VIEW_OPTIONS_ST_TEST) {
+      return t('stTest.options.title');
+    }
+
     return BRANDING.productName;
   }
 
@@ -101,6 +106,10 @@ export class WebviewProvider {
     try {
       // Create or display a panel
       if (this.panel) {
+        if (router === VIEW_OPTIONS_ST_TEST) {
+          await this.updateWebviewContent(router);
+        }
+
         this.applyWebviewPanelIcon(this.panel);
         this.panel.reveal();
       }
@@ -268,6 +277,7 @@ export class WebviewProvider {
         'options-simulator',
         'options-on-board',
         'options-sanitizer',
+        'options-st-test',
       ];
       const viewPath = panelViews.includes(router) ? `panels/${router}` : router;
 

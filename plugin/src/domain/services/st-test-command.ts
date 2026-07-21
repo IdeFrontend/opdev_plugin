@@ -1,5 +1,9 @@
 import { joinCommands } from '@plugin/domain/utils/command-utils';
 import { shellQuoteBash } from '@plugin/domain/utils/shell-env-exports';
+import {
+  cloneDefaultStTestArguments,
+  validateStTestArgumentTokens,
+} from '@shared/st-test-options';
 import type { StTestMode } from '@shared/st-test-results';
 
 export type { StTestMode } from '@shared/st-test-results';
@@ -60,14 +64,15 @@ export function buildStTestCommand(params: {
   inputCsvPath: string;
   outputCsvPath: string;
   pluginPath: string;
+  argumentTokens?: readonly string[];
 }): string {
-  const modeArgs = params.mode === 'kernel'
-    ? [
-      '-d=false',
-      '-b=release',
-      '--pc=8',
-    ]
-    : [];
+  const rawArgumentTokens = params.argumentTokens
+    ?? cloneDefaultStTestArguments(params.mode);
+  const validation = validateStTestArgumentTokens(rawArgumentTokens);
+
+  if (!validation.valid) {
+    throw new Error(`Invalid ST test argument token (${validation.code})`);
+  }
 
   return buildSourcedPythonCommand({
     interpreter: params.interpreter,
@@ -83,7 +88,7 @@ export function buildStTestCommand(params: {
       params.outputCsvPath,
       '--plugin',
       params.pluginPath,
-      ...modeArgs,
+      ...validation.tokens,
     ],
   });
 }

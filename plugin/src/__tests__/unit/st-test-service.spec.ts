@@ -135,6 +135,10 @@ describe('StTestService', () => {
 
     executor.execute.mockImplementation(async () => {
       const outputPath = expectedOutputs[executionIndex];
+      const command = executor.execute.mock.calls[executionIndex][0] as string;
+
+      expect(outputLines)
+        .toContain(`[ST test] Command: ${command}`);
 
       fs.writeFileSync(outputPath, `result ${executionIndex}`);
       executor.emit('stdout', `raw stdout ${executionIndex}\n`);
@@ -222,10 +226,52 @@ describe('StTestService', () => {
       .toEqual(expectedRawChunks.map((chunk) => [chunk]));
     expect(outputLines.join('\n'))
       .toContain('Precision report: invalid');
+    expect(outputLines.filter((line) => line.startsWith('[ST test] Command: ')))
+      .toHaveLength(3);
     expect(executor.listenerCount('stdout'))
       .toBe(0);
     expect(executor.listenerCount('stderr'))
       .toBe(0);
+  });
+
+  it('passes configured arguments to the matching mode command', async () => {
+    const inputCsvPath = writeInput('ttk_kernel_custom.csv');
+    const outputCsvPath = resolveStTestOutputCsvPath({
+      workspaceRoot,
+      operatorName: 'add',
+      mode: 'kernel',
+      inputCsvPath,
+      runId: 'run-id',
+      sequence: 1,
+    });
+
+    executor.execute.mockImplementation(async () => {
+      fs.writeFileSync(outputCsvPath, CSV_BY_MODE.kernel);
+
+      return commandResult();
+    });
+
+    await createService()
+      .startStTest({
+        workspaceRoot,
+        operatorName: 'add',
+        operatorPath,
+        modes: ['kernel'],
+        argumentsByMode: {
+          kernel: [
+            '--warmup',
+            'two words',
+          ],
+        },
+      });
+
+    const command = executor.execute.mock.calls[0][0] as string;
+
+    expect(command)
+      .toContain("'--warmup' 'two words'");
+    expect(command).not.toContain('-d=false');
+    expect(outputLines)
+      .toContain(`[ST test] Command: ${command}`);
   });
 
   it('executes a managed TTK command from its final managed source root', async () => {

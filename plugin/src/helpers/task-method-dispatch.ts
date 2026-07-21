@@ -201,7 +201,7 @@ async function enqueueQueueableAction<P>(
   params: P,
   runner: (payload: P)=> Promise<void>,
   onFinished?: (payload: P)=> Promise<void> | void,
-): Promise<void> {
+): Promise<boolean> {
   const localScope = await getOperatorQueueScopeKey();
   const scopeKey = resolveOperatorActionQueueScope(actionType, localScope);
   const wrappedRunner = async (payload: P): Promise<void> => {
@@ -239,7 +239,11 @@ async function enqueueQueueableAction<P>(
 
   if (!result.accepted) {
     vscode.window.showWarningMessage(result.reason ?? 'Action is already queued');
+
+    return false;
   }
+
+  return true;
 }
 
 export async function dispatchGetOperatorActionQueueStatus(): Promise<{
@@ -308,8 +312,8 @@ export async function dispatchEnqueueNativeOperatorAction<P>(
   params: P,
   runner: (payload: P)=> Promise<void>,
   onFinished?: (payload: P)=> Promise<void> | void,
-): Promise<void> {
-  await enqueueQueueableAction(actionType, params, runner, onFinished);
+): Promise<boolean> {
+  return enqueueQueueableAction(actionType, params, runner, onFinished);
 }
 
 export function dispatchFlowFromWebview<P>(
@@ -341,3 +345,18 @@ export const dispatchSanitizer = dispatchFlowFromWebview<StartSanitizerParams>(
     await dispatchEnqueueNativeOperatorAction('sanitizer', params, dispatchRunSanitizer);
   },
 );
+
+export async function dispatchStTestFromWebview(
+  context: vscode.ExtensionContext,
+  params: StartStTestParams,
+): Promise<boolean | undefined> {
+  return OperateTreeProvider.runFlowActionFromWebviewWithParams(
+    'stTest',
+    async (payload) => {
+      return dispatchEnqueueNativeOperatorAction('stTest', payload, async (queuedParams) => {
+        await dispatchStartStTest(context, queuedParams);
+      });
+    },
+    params,
+  );
+}

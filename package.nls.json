@@ -1,4 +1,9 @@
 {
+  "config.category.stTest.title": "ST 测试",
+  "config.op-devtools.stTest.selectedModes.description": "打开运行配置面板时选择的 ST 模式。当前不可用的模式会被忽略。",
+  "config.op-devtools.stTest.kernel.arguments.markdownDescription": "按顺序追加到 `python -m ttk kernel` 的参数 token。输入、输出和插件路径由扩展管理。",
+  "config.op-devtools.stTest.aclnn.arguments.markdownDescription": "按顺序追加到 `python -m ttk aclnn` 的参数 token。输入、输出和插件路径由扩展管理。",
+  "config.op-devtools.stTest.e2e.arguments.markdownDescription": "按顺序追加到 `python -m ttk e2e` 的参数 token。输入、输出和插件路径由扩展管理。",
   "config.title": "Huawei OP DevTools",
   "config.category.compileAndDeploy.title": "编译与部署",
   "config.category.sanitizer.title": "异常检测",

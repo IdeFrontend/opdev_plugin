@@ -28,6 +28,7 @@ import { routes } from './routes';
 import { apis } from './api-routes';
 import { homeMethods } from './controller/home-controller';
 import { taskMethods } from './controller/task-controller';
+import { registerStTestControllerContext } from './controller/st-test-controller';
 import { performanceDataMethods } from './controller/performance-controller';
 import { PermanentStorage } from './class/permanent-storage';
 import { ExtensionConfig } from './core/extension-config';
@@ -73,6 +74,7 @@ import {
   VIEW_OPTIONS_SANITIZER,
   VIEW_OPTIONS_SIMULATOR,
   VIEW_OPTIONS_ON_BOARD,
+  VIEW_OPTIONS_ST_TEST,
   COMMAND_OPEN_PROJECT,
   COMMAND_MARK_AS_OPERATOR_PROJECT,
   COMMAND_MARK_AS_MULTI_OPERATOR_PROJECT,
@@ -197,7 +199,6 @@ import {
   dispatchRunSanitizer,
   dispatchStartOnBoard,
   dispatchStartSimulate,
-  dispatchStartStTest,
   dispatchStartUtTest,
   dispatchStartDumpTensor,
   dispatchEnqueueNativeOperatorAction,
@@ -212,7 +213,6 @@ import {
 } from './helpers/task-method-dispatch';
 import type { QueueableActionType } from './helpers/operator-action-queue';
 import type { OperatorProjectViewIdValue } from '@shared/project-type-view-id';
-import { pickAvailableStTestModes } from '@plugin/helpers/st-test-mode-picker';
 
 let extensionContext: vscode.ExtensionContext | undefined;
 
@@ -339,6 +339,7 @@ export async function activate(context: vscode.ExtensionContext) {
   logDebug('activate:start', { workspaceFolders: workspaceFolderPaths });
 
   extensionContext = context;
+  registerStTestControllerContext(context);
   (
     globalThis as unknown as { extensionContext: vscode.ExtensionContext }
   ).extensionContext = context;
@@ -1217,6 +1218,7 @@ export async function activate(context: vscode.ExtensionContext) {
       });
     },
   );
+  const stTestOptionsProvider = new WebviewProvider(context, apiServer);
   const sidebarStTestCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_ST_TEST,
     async () => {
@@ -1234,34 +1236,7 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      const operator = selectedOperators[0];
-      const workspaceRoot = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(operator.path))?.uri.fsPath
-        ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-
-      if (!workspaceRoot) {
-        vscode.window.showErrorMessage(t('stTest.noWorkspace'));
-
-        return;
-      }
-
-      const selectedModes = await pickAvailableStTestModes(workspaceRoot, operator.path);
-
-      if (!selectedModes || selectedModes.length === 0) {
-        return;
-      }
-
-      await operateTreeProvider.runFlowAction('stTest', async () => {
-        await dispatchEnqueueNativeOperatorAction(
-          'stTest',
-          {
-            workspaceRoot,
-            operatorName: operator.name,
-            operatorPath: operator.path,
-            modes: selectedModes,
-          },
-          async (params) => dispatchStartStTest(context, params),
-        );
-      });
+      await stTestOptionsProvider.show(VIEW_OPTIONS_ST_TEST);
     },
   );
   const sidebarDumpTensorCommand = vscode.commands.registerCommand(
@@ -2238,6 +2213,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(sidebarSimulationCommand);
   context.subscriptions.push(sidebarUtTestCommand);
   context.subscriptions.push(sidebarStTestCommand);
+  context.subscriptions.push(stTestOptionsProvider);
   context.subscriptions.push(sidebarDumpTensorCommand);
   context.subscriptions.push(sidebarDebugSettingsCommand);
   context.subscriptions.push(sidebarSanitizerSettingsCommand);

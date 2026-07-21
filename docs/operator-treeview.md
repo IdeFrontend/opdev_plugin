@@ -111,7 +111,7 @@ Root nodes are built in `getFlowRootNodes()` when `hasDevtoolConfig` and project
 | `onboard` | `huawei-op-devtools.sidebar.onboard` | Gear → on-board settings / quick panel (see [`workspace-settings.md`](workspace-settings.md#opening-settings)) |
 | `simulation` | `huawei-op-devtools.sidebar.simulation` | Gear → simulation settings / quick panel (see [`workspace-settings.md`](workspace-settings.md#opening-settings)) |
 | `utTest` | `huawei-op-devtools.sidebar.utTest` | Standard-custom + build-capable projects |
-| `stTest` | `huawei-op-devtools.sidebar.stTest` | Standard-custom + build-capable projects; native multi-mode picker |
+| `stTest` | `huawei-op-devtools.sidebar.stTest` | Standard-custom + build-capable projects; opens the ST run configuration panel |
 | `dumpTensor` | `huawei-op-devtools.sidebar.dumpTensor` | Opens dump-tensor panel webview |
 
 **Visibility rules (current):**
@@ -119,7 +119,7 @@ Root nodes are built in `getFlowRootNodes()` when `hasDevtoolConfig` and project
 - Unsupported `projectType` → empty flow tree.
 - **Standard custom** without `supportsSanitizerAndTuning` → hide Debug group and Performance tuning group.
 - **Multi-operator selection** (`selectedOperatorIds.length > 1`) → run/debug/sanitizer/onboard/simulation/ut/st/dump rows show disabled icon and drop click command (tooltip: single-operator only).
-- **ST test** requires exactly one selected standard-custom operator. The picker accepts one or more of `kernel`, `aclnn`, and `e2e`; `kernel` is preselected. It discovers every sorted `.csv` file under `tests/st/arch35`, determines its mode from the CSV headers and content, runs matching inputs sequentially through system or plugin-managed pinned TTK, and writes unique CSV files under the IDE configuration directory's `st-results` subtree. After every requested process completes successfully, the extension strictly parses the five precision-result fields and opens a results panel with PASS/FAIL/invalid counters, mode and input-file provenance, filters, pagination, and allow-listed `Open CSV` actions. Up to 50 completed runs per operator are restored in the native ST Test History view; selecting an older run reparses its CSV files and switches the detailed panel's active file allow-list. The existing relative-path completion notification remains the raw-file fallback. Malformed or unknown evidence can never produce an overall PASS; partial results after process failure or cancellation remain outside this MVP.
+- **ST test** requires exactly one selected standard-custom operator. Its run configuration panel exposes only modes with currently discovered CSV files under `tests/st/arch35`, restores workspace-folder mode and ordered argument-token settings, and defaults `kernel` to `-d=false`, `-b=release`, `--pc=8`. The panel never accepts raw shell fragments or extension-managed input/output/plugin flags. On Run, the extension re-resolves the selected operator, validates and persists the configuration, then queues `kernel`, `aclnn`, and `e2e` in canonical order. Every sorted input CSV is processed sequentially, and the exact shell-ready `python -m ttk` command is printed to Test output immediately before each process starts. Results are written under the IDE configuration directory's `st-results` subtree. After every requested process completes successfully, the extension strictly parses the five precision-result fields and opens a results panel with PASS/FAIL/invalid counters, mode and input-file provenance, filters, pagination, and allow-listed `Open CSV` actions. Up to 50 completed runs per operator are restored in the native ST Test History view; selecting an older run reparses its CSV files and switches the detailed panel's active file allow-list. The existing relative-path completion notification remains the raw-file fallback. Malformed or unknown evidence can never produce an overall PASS; partial results after process failure or cancellation remain outside this MVP.
 - Sanitizer / on-board / simulation / build rows gated by `OperatorPluginRegistry` build behavior flags (`supportsSanitizer`, `supportsOnBoard`, `supportsSimulate`, etc.). **Triton** (`project_type` / `op_type` `triton`, when `op-devtools.operatorSupport.triton` is on) shows sanitizer, simulate, and on-board per `TritonPlugin.buildBehavior`; CPU debug stays hidden; NPU debug row follows `supportsNpuDebug` and `debugMode`. Run still requires an active `.py` (same pattern as PyAsc).
 
 **Project config** is not a tree row; title-bar command `huawei-op-devtools.sidebar.projectConfig` opens extension settings ([`workspace-settings.md`](workspace-settings.md#opening-settings)).
@@ -145,7 +145,7 @@ Long-running flow actions share an **in-memory, strictly serial** queue per scop
 | `stTest` | `stTest` | `dispatchStartStTest` → `taskMethods.startStTest` |
 | `dumpTensor` | `dumpTensor` | `dispatchStartDumpTensor` |
 
-Entry from the Actions tree or quick-options webviews: `dispatchEnqueueNativeOperatorAction` (tree) or `dispatchSimulator` / `dispatchOnBoard` / `dispatchSanitizer` (webview wrappers that also call enqueue).
+Entry from the Actions tree or quick-options webviews: `dispatchEnqueueNativeOperatorAction` (tree) or `dispatchSimulator` / `dispatchOnBoard` / `dispatchSanitizer` / `dispatchStTestFromWebview` (webview wrappers that also call enqueue).
 
 ### Scope and isolation
 

@@ -44,6 +44,10 @@ import type {
   StTestMode,
   StTestResultReportDto,
 } from '@shared/st-test-results';
+import {
+  cloneDefaultStTestArguments,
+  validateStTestArgumentTokens,
+} from '@shared/st-test-options';
 
 const ST_TEST_LOG_SCOPE = 'op-devtools/st-test';
 
@@ -52,6 +56,7 @@ export type StartStTestParams = {
   operatorName: string;
   operatorPath: string;
   modes: readonly string[];
+  argumentsByMode?: Partial<Record<StTestMode, readonly string[]>>;
 };
 
 export type StTestExecutionResult = {
@@ -118,6 +123,8 @@ export class StTestService {
       throw new Error('Select at least one ST test mode');
     }
 
+    const argumentsByMode = this.validateArgumentsByMode(params.argumentsByMode, modes);
+
     await this.validateStandardCustomOperator(params);
 
     const pluginPath = resolveStTestPluginDir(params.operatorPath);
@@ -180,7 +187,10 @@ export class StTestService {
           inputCsvPath: item.inputCsvPath,
           outputCsvPath: item.outputCsvPath,
           pluginPath,
+          argumentTokens: argumentsByMode[item.mode],
         });
+
+        outputChannel.appendLine(`[ST test] Command: ${command}`);
         const result = await executor.execute(
           command,
           [],
@@ -305,6 +315,29 @@ export class StTestService {
       executor.off('stdout', appendRawOutput);
       executor.off('stderr', appendRawOutput);
     }
+  }
+
+  private validateArgumentsByMode(
+    configured: StartStTestParams['argumentsByMode'],
+    modes: readonly StTestMode[],
+  ): Record<StTestMode, string[]> {
+    const result = {
+      kernel: cloneDefaultStTestArguments('kernel'),
+      aclnn: cloneDefaultStTestArguments('aclnn'),
+      e2e: cloneDefaultStTestArguments('e2e'),
+    };
+
+    for (const mode of modes) {
+      const validation = validateStTestArgumentTokens(configured?.[mode] ?? result[mode]);
+
+      if (!validation.valid) {
+        throw new Error(`Invalid ST test ${mode} argument token (${validation.code})`);
+      }
+
+      result[mode] = validation.tokens;
+    }
+
+    return result;
   }
 
   private createPlan(

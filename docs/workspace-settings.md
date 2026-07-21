@@ -14,10 +14,11 @@ Workspace settings drive:
 - **Deploy / run target** for `build_op` (`deployCommandOrRunCommand`)
 - Sanitizer detection options and compile script
 - Simulation and on-board profiling options and pre-profile compile scripts
+- ST test selected modes and ordered per-mode TTK argument tokens
 - Environment script path and optional SOC override
 - Optional **Triton** operator support (extension registration)
 
-Quick-options webviews (`options-sanitizer`, `options-simulator`, `options-on-board`) remain available when the corresponding `showQuickOptions` setting is `true` (default). Set it to `false` to run directly from the Actions tree using workspace values only.
+Quick-options webviews (`options-sanitizer`, `options-simulator`, `options-on-board`) remain available when the corresponding `showQuickOptions` setting is `true` (default). Set it to `false` to run directly from the Actions tree using workspace values only. ST always opens its run configuration panel because mode availability and ordered arguments are reviewed for each run.
 
 ---
 
@@ -118,6 +119,19 @@ CPU/NPU debug script settings apply only when the project type and `OperatorPlug
 | `exampleBuildConfig.runCommand` | `script` | Base example build script; strategy appends operator name, mode, package mode |
 
 Relevant for Ascend/CANN **run** and example build flows (not PyAsc/Triton `build_op` run path).
+
+### ST test (`op-devtools.stTest`)
+
+These resource-scoped values are persisted in the selected operator's workspace folder. The run panel filters saved modes against the CSV files currently available under `tests/st/arch35`.
+
+| Setting key | Type | Default | Effect |
+|-------------|------|---------|--------|
+| `stTest.selectedModes` | `string[]` | `['kernel']` | Modes selected when the panel opens; stale unavailable modes are ignored. |
+| `stTest.kernel.arguments` | `string[]` | `['-d=false', '-b=release', '--pc=8']` | Ordered tokens appended to `python -m ttk kernel`. |
+| `stTest.aclnn.arguments` | `string[]` | `[]` | Ordered tokens appended to `python -m ttk aclnn`. |
+| `stTest.e2e.arguments` | `string[]` | `[]` | Ordered tokens appended to `python -m ttk e2e`. |
+
+Each array element is one argument token, not a shell fragment. Empty, control-character, excessive, and extension-managed `-i`/`--input`, `-o`/`--output`, or `--plugin` tokens (including attached/assignment forms) are rejected before settings are changed or an action is queued. The extension owns those paths and shell-quotes every accepted token at the final command boundary. The exact command is printed to the Test output channel before its process output.
 
 ### Sanitizer (`op-devtools.sanitizer`)
 

@@ -1,6 +1,7 @@
 // 算子操作相关类型定义
 
 import type { OperatorOpType } from '../operator-op-type';
+import type { StTestMode } from '../st-test-results';
 
 export type { OperatorOpType };
 
@@ -115,4 +116,21 @@ export type StartSanitizerParams = {
 export type StartDumpTensorParams = {
   operatorNames?: string; // 算子名称，多个用逗号分隔
   compileOption?: string;
+};
+
+export type StTestArgumentsByMode = Record<StTestMode, string[]>;
+
+export type StTestOptionsResult = {
+  contextToken: string;
+  operatorName: string;
+  availableModes: StTestMode[];
+  selectedModes: StTestMode[];
+  argumentsByMode: StTestArgumentsByMode;
+  defaultArgumentsByMode: StTestArgumentsByMode;
+};
+
+export type RunStTestOptionsParams = {
+  contextToken: string;
+  selectedModes: string[];
+  argumentsByMode: Partial<StTestArgumentsByMode>;
 };

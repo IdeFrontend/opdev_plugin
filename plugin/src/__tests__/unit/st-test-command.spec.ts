@@ -86,4 +86,43 @@ describe('ST test command helpers', () => {
     expect(command).not.toContain('-b=release');
     expect(command).not.toContain('--pc=8');
   });
+
+  it('preserves custom argument token order and quotes each token independently', () => {
+    const command = buildStTestCommand({
+      interpreter: 'python3',
+      mode: 'kernel',
+      inputCsvPath: '/tmp/input.csv',
+      outputCsvPath: '/tmp/output.csv',
+      pluginPath: '/tmp/tests',
+      argumentTokens: [
+        '--warmup',
+        'two words',
+        '$(touch nope)',
+      ],
+    });
+
+    expect(command)
+      .toContain("'--warmup' 'two words' '$(touch nope)'");
+    expect(command).not.toContain('-d=false');
+  });
+
+  it.each([
+    '-i',
+    '-i/tmp/input.csv',
+    '--input=/tmp/input.csv',
+    '-o=escape.csv',
+    '-oescape.csv',
+    '--output',
+    '--plugin=/tmp/plugin',
+  ])('rejects extension-managed argument %s', (reserved) => {
+    expect(() => buildStTestCommand({
+      interpreter: 'python3',
+      mode: 'kernel',
+      inputCsvPath: '/tmp/input.csv',
+      outputCsvPath: '/tmp/output.csv',
+      pluginPath: '/tmp/tests',
+      argumentTokens: [reserved],
+    }))
+      .toThrow(/reserved/);
+  });
 });

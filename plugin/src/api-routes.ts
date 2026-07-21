@@ -7,6 +7,7 @@ import { sanitizerViewMethods } from './controller/sanitizer-controller';
 import { homeMethods } from './controller/home-controller';
 import { performanceMethods } from './controller/performance-data-controller';
 import { taskMethods } from './controller/task-controller';
+import { stTestMethods } from './controller/st-test-controller';
 import {
   dispatchOnBoard,
   dispatchSimulator,
@@ -31,6 +32,9 @@ const opsMethods = {
   importDumpTensorBinFile: taskMethods.importDumpTensorBinFile,
 
   getSelectedOperators: homeMethods.getSelectedOperators,
+
+  loadStTestOptions: stTestMethods.loadOptions,
+  runStTestOptions: stTestMethods.runOptions,
 };
 
 export const apis = {

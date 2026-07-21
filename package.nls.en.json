@@ -1,4 +1,9 @@
 {
+  "config.category.stTest.title": "ST Test",
+  "config.op-devtools.stTest.selectedModes.description": "ST modes selected when the run configuration panel opens. Unavailable modes are ignored.",
+  "config.op-devtools.stTest.kernel.arguments.markdownDescription": "Ordered argument tokens appended to `python -m ttk kernel`. Input, output, and plugin paths are managed by the extension.",
+  "config.op-devtools.stTest.aclnn.arguments.markdownDescription": "Ordered argument tokens appended to `python -m ttk aclnn`. Input, output, and plugin paths are managed by the extension.",
+  "config.op-devtools.stTest.e2e.arguments.markdownDescription": "Ordered argument tokens appended to `python -m ttk e2e`. Input, output, and plugin paths are managed by the extension.",
   "config.title": "Huawei OP DevTools",
   "config.category.compileAndDeploy.title": "Compile & Deploy",
   "config.category.sanitizer.title": "Sanitizer",
