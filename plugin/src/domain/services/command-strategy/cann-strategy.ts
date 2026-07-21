@@ -7,6 +7,7 @@ import {
   joinCommands,
   getExecutableCommand,
   Command,
+  shouldAddDebugBuildType,
 } from '@plugin/domain/utils/command-utils';
 import { ConfigRecord } from '@plugin/domain/models/config-model';
 import { OpRecord } from '@plugin/domain/models/model';
@@ -103,6 +104,10 @@ export class CannCommandStrategy implements CommandStrategy {
       operatorNames,
     );
     const cmd = new Command(script);
+
+    if (shouldAddDebugBuildType(scriptField, script, compileOption, advance_cmd)) {
+      cmd.addArgument('--build-type=Debug');
+    }
 
     if (compileOption) {
       cmd.addArgument(compileOption);

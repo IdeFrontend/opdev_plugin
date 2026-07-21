@@ -4,6 +4,7 @@ import {
   joinCommands,
   getExecutableCommand,
   Command,
+  shouldAddDebugBuildType,
 } from '@plugin/domain/utils/command-utils';
 import { OpRecord } from '@plugin/domain/models/model';
 import { joinIdeConfigRelative } from '@plugin/helpers/ide-config-dir';
@@ -97,6 +98,10 @@ export class AscendCommandStrategy implements CommandStrategy {
     );
 
     const cmd = new Command(script);
+
+    if (shouldAddDebugBuildType(scriptField, script, compileOption, advance_cmd)) {
+      cmd.addArgument('--build-type=Debug');
+    }
 
     if (compileOption) {
       cmd.addArgument(compileOption);

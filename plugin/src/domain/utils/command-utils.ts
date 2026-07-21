@@ -77,6 +77,53 @@ export function joinCommands(...commands: (string | undefined | null)[]): string
     .join(' && ');
 }
 
+const SIMPLE_ARGUMENT_PATTERN = /"[^"`$\r\n]*"|'[^'\r\n]*'|[^\s"'\\`$;&|#<>()]+/g;
+const SIMPLE_FRAGMENT_PATTERN = /^[ \t]*(?:(?:"[^"`$\r\n]*"|'[^'\r\n]*'|[^\s"'\\`$;&|#<>()]+)(?:[ \t]+(?:"[^"`$\r\n]*"|'[^'\r\n]*'|[^\s"'\\`$;&|#<>()]+))*)?[ \t]*$/;
+const DIRECT_BUILD_SCRIPT_PATTERN = /^\s*(?:(?:bash|bash\.exe)[ \t]+)?(?:"(?:[^"`$\r\n]*[/\\])?build\.sh"|'(?:[^'\r\n]*[/\\])?build\.sh'|(?:[^\s"'\\`$;&|#<>()]*\/)?build\.sh)((?:[ \t]+(?:"[^"`$\r\n]*"|'[^'\r\n]*'|[^\s"'\\`$;&|#<>()]+))*)[ \t]*$/;
+
+function simpleArguments(fragment: string): string[] {
+  return (fragment.match(SIMPLE_ARGUMENT_PATTERN) || [])
+    .map((argument) => /^(['"]).*\1$/.test(argument) ? argument.slice(1, -1) : argument);
+}
+
+export function isSupportedSimpleCommandFragment(fragment = ''): boolean {
+  return SIMPLE_FRAGMENT_PATTERN.test(fragment)
+    && simpleArguments(fragment)
+      .every((argument) => argument !== '--');
+}
+
+export function isDirectBuildScriptCommand(command: string): boolean {
+  const match = command.match(DIRECT_BUILD_SCRIPT_PATTERN);
+
+  return Boolean(match
+    && match[0].length === command.length
+    && isSupportedSimpleCommandFragment(match[1]));
+}
+
+export function hasExplicitBuildTypeArgument(...fragments: (string | undefined)[]): boolean {
+  if (!fragments.every((fragment) => isSupportedSimpleCommandFragment(fragment))) {
+    return false;
+  }
+
+  const args = fragments.flatMap((fragment) => simpleArguments(fragment || ''));
+
+  return args.some((argument, index) => (
+    (argument.startsWith('--build-type=') && argument.length > '--build-type='.length)
+    || (argument === '--build-type' && Boolean(args[index + 1]))
+  ));
+}
+
+export function shouldAddDebugBuildType(
+  scriptField: string,
+  script: string,
+  ...fragments: (string | undefined)[]
+): boolean {
+  return (scriptField === 'cpu_debug_script' || scriptField === 'npu_debug_script')
+    && isDirectBuildScriptCommand(script)
+    && fragments.every((fragment) => isSupportedSimpleCommandFragment(fragment))
+    && !hasExplicitBuildTypeArgument(script, ...fragments);
+}
+
 export interface PermissionConfig {
   read?: boolean;
   write?: boolean;
