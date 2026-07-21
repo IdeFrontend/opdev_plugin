@@ -11,6 +11,10 @@ tsconfig.tsbuildinfo
 
 .vscode
 .claude
+.agents
+_bmad-output
+_bmad
+.opencode
 CLAUDE.local.md
 *.vsix
 deletePackage.bat

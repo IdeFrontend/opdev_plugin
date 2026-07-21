@@ -1,27 +1,27 @@
 import {
   computed,
-  readonly,
   shallowRef,
 } from 'vue';
 
 import { useConnector } from '@web/core/use-connector';
 import {
   ST_TEST_RESULTS_CONNECT_CHANNEL,
-  type StTestResultReportDto,
+  type StTestResultsPanelDto,
   type StTestResultsWebviewAction,
 } from '@shared/st-test-results';
 
 export function useStTestResults() {
-  const report = shallowRef<StTestResultReportDto>();
+  const state = shallowRef<StTestResultsPanelDto>();
   const connector = useConnector<
     StTestResultsWebviewAction,
-    StTestResultReportDto
+    StTestResultsPanelDto
   >(ST_TEST_RESULTS_CONNECT_CHANNEL);
 
-  connector.receive((nextReport) => {
-    report.value = nextReport;
+  connector.receive((nextState) => {
+    state.value = nextState;
   });
 
+  const report = computed(() => state.value?.report);
   const hasReport = computed(() => report.value !== undefined);
 
   function openResultFile(artifactId: string): void {
@@ -32,7 +32,7 @@ export function useStTestResults() {
   }
 
   return {
-    report: readonly(report),
+    report,
     hasReport,
     openResultFile,
   };

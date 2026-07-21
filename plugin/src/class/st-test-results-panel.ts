@@ -3,6 +3,7 @@ import { t } from 'i18next';
 import * as vscode from 'vscode';
 
 import { HtmlTransformer } from '@plugin/class/html-transformer';
+import type { StTestRunHistoryTreeProvider } from '@plugin/class/st-test-run-history-tree-provider';
 import {
   ST_TEST_RESULTS_PANEL_TYPE,
   VIEW_ST_TEST_RESULTS,
@@ -17,8 +18,16 @@ import {
   type CompletedStTestArtifact,
 } from '@plugin/domain/services/st-test-result-parser';
 import {
+  buildHistoricalStTestReport,
+  createStTestRunHistoryRecord,
+  persistStTestRunHistoryRecord,
+  type StTestRunHistoryRecord,
+  type StTestWorkspaceRunHistoryRecord,
+} from '@plugin/domain/services/st-test-run-history';
+import {
   ST_TEST_RESULTS_CONNECT_CHANNEL,
   type StTestResultReportDto,
+  type StTestResultsPanelDto,
   type StTestResultsWebviewAction,
 } from '@shared/st-test-results';
 
@@ -35,11 +44,25 @@ function normalizeContentLanguage(language: string): 'en' | 'zh-cn' {
     : 'en';
 }
 
+function hasMatchingHistoricalSummary(
+  report: StTestResultReportDto,
+  record: StTestRunHistoryRecord,
+): boolean {
+  return report.outcome === record.outcome
+    && Object.entries(record.summary)
+      .every(([
+        key,
+        value,
+      ]) => report.summary[key as keyof typeof report.summary] === value);
+}
+
 export class StTestResultsPanel {
   private static currentPanel: StTestResultsPanel | undefined;
 
+  private static historyTreeProvider: Pick<StTestRunHistoryTreeProvider, 'setCurrentRun'> | undefined;
+
   private readonly connector = new WebviewConnector<
-    StTestResultReportDto,
+    StTestResultsPanelDto,
     StTestResultsWebviewAction
   >(ST_TEST_RESULTS_CONNECT_CHANNEL);
 
@@ -123,6 +146,60 @@ export class StTestResultsPanel {
     }
   }
 
+  public static setHistoryTreeProvider(provider: Pick<StTestRunHistoryTreeProvider, 'setCurrentRun'> | undefined): void {
+    this.historyTreeProvider = provider;
+  }
+
+  public static recordCompletedRun(
+    report: StTestResultReportDto,
+    artifacts: readonly CompletedStTestArtifact[],
+    runDirectory: string,
+    workspaceRoot: string,
+  ): void {
+    let currentRecord: StTestRunHistoryRecord;
+
+    try {
+      currentRecord = createStTestRunHistoryRecord(report, artifacts, runDirectory);
+    }
+    catch (error) {
+      console.error('[ST test] Could not create run history metadata:', error);
+
+      return;
+    }
+
+    try {
+      currentRecord = persistStTestRunHistoryRecord(currentRecord);
+    }
+    catch (error) {
+      console.error('[ST test] Could not persist run history:', error);
+    }
+
+    try {
+      StTestResultsPanel.historyTreeProvider?.setCurrentRun(workspaceRoot, currentRecord);
+    }
+    catch (error) {
+      console.error('[ST test] Could not refresh the native run history:', error);
+    }
+  }
+
+  public static async createOrShowHistorical(
+    context: vscode.ExtensionContext,
+    entry: StTestWorkspaceRunHistoryRecord,
+  ): Promise<void> {
+    const report = buildHistoricalStTestReport(entry.record);
+
+    if (!hasMatchingHistoricalSummary(report, entry.record)) {
+      throw new Error('Historical ST evidence no longer matches its manifest');
+    }
+
+    await this.createOrShow(
+      context,
+      report,
+      entry.record.artifacts,
+      entry.record.runDirectory,
+    );
+  }
+
   public dispose(): void {
     if (!this.disposed) {
       this.panel.dispose();
@@ -161,20 +238,34 @@ export class StTestResultsPanel {
     artifacts: readonly CompletedStTestArtifact[],
     runDirectory: string,
   ): void {
+    const currentRecord = createStTestRunHistoryRecord(
+      report,
+      artifacts,
+      runDirectory,
+    );
+
+    this.activateRun(currentRecord, report);
+  }
+
+  private activateRun(
+    record: StTestRunHistoryRecord,
+    report: StTestResultReportDto,
+  ): void {
     this.artifactAllowList.clear();
 
-    artifacts.forEach((artifact) => {
-      if (!path.isAbsolute(runDirectory)
-        || !isSafeStTestResultFile(artifact.outputCsvPath, runDirectory)) {
+    record.artifacts.forEach((artifact) => {
+      if (!path.isAbsolute(record.runDirectory)
+        || !isSafeStTestResultFile(artifact.outputCsvPath, record.runDirectory)) {
         return;
       }
 
       this.artifactAllowList.set(artifact.artifactId, {
         outputCsvPath: artifact.outputCsvPath,
-        runDirectory,
+        runDirectory: record.runDirectory,
       });
     });
-    this.connector.sendLatest(this.panel.webview, report);
+
+    this.connector.sendLatest(this.panel.webview, { report });
   }
 
   private async handleWebviewAction(message: unknown): Promise<void> {
@@ -202,7 +293,7 @@ export class StTestResultsPanel {
     }
   }
 
-  private isOpenResultFileAction(message: unknown): message is StTestResultsWebviewAction {
+  private isOpenResultFileAction(message: unknown): message is Extract<StTestResultsWebviewAction, { type: 'openResultFile' }> {
     return message !== null
       && typeof message === 'object'
       && 'type' in message

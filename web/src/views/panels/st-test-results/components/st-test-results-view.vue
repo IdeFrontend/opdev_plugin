@@ -49,6 +49,7 @@ const {
 
 .results-content {
   display: grid;
+  min-width: 0;
   gap: 16px;
   padding: 20px;
 }

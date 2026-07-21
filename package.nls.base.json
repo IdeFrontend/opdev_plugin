@@ -72,6 +72,7 @@
   "view.opsOperate.name": "操作",
   "view.sanitizerResultsTree.name": "异常检测结果",
   "view.performanceResultsTree.name": "性能调优结果",
+  "view.stTestHistoryTree.name": "ST测试历史",
   "view.sanitizerReportsTree.name": "报告",
   "view.operatorProjects.name": "算子",
   "view.msSanitizer.name": "异常检测",

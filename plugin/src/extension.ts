@@ -15,6 +15,8 @@ import { WebviewProvider } from './class/webview-provider';
 import { handleOperatorProjectDirectoryFile } from './class/webview-message-list';
 import { CsvEditorProvider } from './class/csv-editor-provider';
 import { HomeTreeProvider } from './class/home-tree-provider';
+import { StTestResultsPanel } from './class/st-test-results-panel';
+import { StTestRunHistoryTreeProvider } from './class/st-test-run-history-tree-provider';
 import {
   OperateTreeProvider, type OperateNode,
 } from './class/operate-tree-provider';
@@ -45,6 +47,9 @@ import { startPostActivateBootstrap } from './helpers/post-activate-bootstrap';
 import { registerOperatorPlugins } from './domain/plugins';
 import { startNpuHardwareProbe } from './domain/utils/npu-hardware-probe';
 import { OperatorPluginRegistry } from './domain/plugins/operator-plugin.registry';
+import { OperatorProjectType } from './domain/models/operator-project-type';
+import { getProjectByPath } from './domain/models/project-model';
+import { OperatorProjectDetector } from './domain/services/operator-project-detector';
 import {
   COMMAND_OPEN,
   COMMAND_WELCOME,
@@ -150,6 +155,7 @@ import {
   COMMAND_SIDEBAR_PERFORMANCE_REPORT_SHOW_ALL,
   COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN,
   COMMAND_OPEN_CSV,
+  COMMAND_ST_TEST_HISTORY_OPEN,
 } from './constants';
 import { resolveFocusOpsOperateCommand } from '@plugin/helpers/focus-ops-operate';
 import {
@@ -161,6 +167,7 @@ import {
   TREE_VIEW_OPERATOR_PROJECTS,
   TREE_VIEW_SANITIZER_RESULTS,
   TREE_VIEW_PERFORMANCE_RESULTS,
+  TREE_VIEW_ST_TEST_HISTORY,
   workbenchViewContainerCommand,
   settingsKey,
   contextKey,
@@ -178,6 +185,7 @@ import { projectService } from './service/project-service';
 import { OperatorProjectIconTheme } from './class/operator-project-icon-theme';
 import { registerSidebarContextsRefresh } from './helpers/sidebar-context-refresh';
 import {
+  getDevtoolConfigPath,
   getIdeConfigDirName,
   isIdeSettingsFileEmpty,
 } from './helpers/ide-config-dir';
@@ -369,6 +377,13 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const homeTreeProvider = new HomeTreeProvider();
   const operateTreeProvider = new OperateTreeProvider(context.extensionUri, 'flow', context);
+  let stTestHistoryWorkspaces: Array<{
+    root: string;
+    name: string;
+  }> = [];
+  const stTestRunHistoryTreeProvider = new StTestRunHistoryTreeProvider({ getWorkspaces: () => stTestHistoryWorkspaces });
+
+  StTestResultsPanel.setHistoryTreeProvider(stTestRunHistoryTreeProvider);
 
   OperateTreeProvider.registerOperateFlowTreeProvider(operateTreeProvider);
   const operatorProjectsTreeProvider = new OperateTreeProvider(context.extensionUri, 'operatorProjects', context);
@@ -437,6 +452,43 @@ export async function activate(context: vscode.ExtensionContext) {
         await vscode.commands.executeCommand('setContext', contextKey('hasDevtoolConfig'), effectiveHasDevtoolConfig);
         await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.showHomeTree`, !effectiveHasDevtoolConfig);
         await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.showOperateTree`, effectiveHasDevtoolConfig);
+        const detectedHistoryWorkspaces = await Promise.all((vscode.workspace.workspaceFolders ?? [])
+          .map(async (folder) => {
+            const root = folder.uri.fsPath;
+            let workspaceProjectType = getProjectByPath(root)?.project_type;
+
+            if (!workspaceProjectType) {
+              try {
+                workspaceProjectType = (await OperatorProjectDetector.detectOperatorProject(root)).projectType;
+              }
+              catch {
+                workspaceProjectType = undefined;
+              }
+            }
+
+            return workspaceProjectType === OperatorProjectType.STANDARD_CUSTOM
+              && fs.existsSync(getDevtoolConfigPath(root))
+              ? {
+                root,
+                name: folder.name,
+              }
+              : undefined;
+          }));
+
+        stTestHistoryWorkspaces = detectedHistoryWorkspaces
+          .filter((workspace): workspace is { root: string;
+            name: string } => workspace !== undefined);
+        const showStTestHistory = stTestHistoryWorkspaces.length > 0;
+
+        await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.showStTestHistory`, showStTestHistory);
+
+        if (showStTestHistory) {
+          stTestRunHistoryTreeProvider.refresh();
+        }
+        else {
+          stTestRunHistoryTreeProvider.clear();
+        }
+
         const {
           showOperatorSearch, showOperatorProjects,
         } = await operateTreeProvider.refreshState(effectiveHasDevtoolConfig);
@@ -839,6 +891,38 @@ export async function activate(context: vscode.ExtensionContext) {
     treeDataProvider: performanceResultsPanelProvider,
     showCollapseAll: false,
   });
+  const stTestHistoryTreeView = vscode.window.createTreeView(TREE_VIEW_ST_TEST_HISTORY, {
+    treeDataProvider: stTestRunHistoryTreeProvider,
+    showCollapseAll: true,
+  });
+
+  stTestRunHistoryTreeProvider.setTreeView(stTestHistoryTreeView);
+  const openStTestHistoryCommand = vscode.commands.registerCommand(
+    COMMAND_ST_TEST_HISTORY_OPEN,
+    async (recordKey: unknown) => {
+      if (typeof recordKey !== 'string') {
+        await vscode.window.showWarningMessage(t('stTest.results.historyUnavailable'));
+
+        return;
+      }
+
+      const entry = stTestRunHistoryTreeProvider.getRecord(recordKey);
+
+      if (!entry) {
+        await vscode.window.showWarningMessage(t('stTest.results.historyUnavailable'));
+
+        return;
+      }
+
+      try {
+        await StTestResultsPanel.createOrShowHistorical(context, entry);
+      }
+      catch (error) {
+        console.error('[ST test] Could not open a historical result report:', error);
+        await vscode.window.showWarningMessage(t('stTest.results.historyUnavailable'));
+      }
+    },
+  );
 
   operateTreeProvider.setPerformanceResultsTreeView(performanceResultsTreeView);
   context.subscriptions.push(performanceResultsTreeView.onDidChangeSelection(async (event) => {
@@ -866,6 +950,10 @@ export async function activate(context: vscode.ExtensionContext) {
     operateTreeView,
     sanitizerResultsTreeView,
     performanceResultsTreeView,
+    stTestHistoryTreeView,
+    stTestRunHistoryTreeProvider,
+    openStTestHistoryCommand,
+    { dispose: () => StTestResultsPanel.setHistoryTreeProvider(undefined) },
     operatorProjectsTreeView,
     toggleOpsOperateCommand,
   );
@@ -2661,6 +2749,8 @@ export async function activate(context: vscode.ExtensionContext) {
             });
         }
       }
+
+      await refreshSidebarContexts();
     });
 
   context.subscriptions.push(watchWorkSpaceFolderChange);

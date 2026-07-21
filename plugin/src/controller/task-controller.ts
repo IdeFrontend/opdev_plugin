@@ -466,6 +466,13 @@ export const taskMethods = {
         runDirectory: result.runDirectory,
       });
 
+      StTestResultsPanel.recordCompletedRun(
+        result.report,
+        result.artifacts,
+        result.runDirectory,
+        params.workspaceRoot,
+      );
+
       try {
         await StTestResultsPanel.createOrShow(
           context,

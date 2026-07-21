@@ -1,6 +1,6 @@
 # Operator sidebar — native tree views (current state)
 
-Canonical description of the plugin’s **activity-bar sidebar trees** (Home, Actions, Operators, Sanitizer results, Performance results). Feature-specific run/data flows are documented in [`sanitizer.md`](sanitizer.md) and [`performance.md`](performance.md); build/run/debug entry points in [`build-integration.md`](build-integration.md), [`run-integration.md`](run-integration.md), [`debug-integration.md`](debug-integration.md).
+Canonical description of the plugin’s **activity-bar sidebar trees** (Home, Actions, Operators, Sanitizer results, Performance results, ST Test History). Feature-specific run/data flows are documented in [`sanitizer.md`](sanitizer.md) and [`performance.md`](performance.md); build/run/debug entry points in [`build-integration.md`](build-integration.md), [`run-integration.md`](run-integration.md), [`debug-integration.md`](debug-integration.md).
 
 **Supersedes:** `sidebar-treeview-migration-plan.md` (removed). Legacy webview sidebars are **not** used at runtime.
 
@@ -24,17 +24,20 @@ flowchart TB
     Ops[opdevtoolsOperatorProjectsTree]
     San[opdevtoolsSanitizerResultsTree]
     Perf[opdevtoolsPerformanceResultsTree]
+    STH[opdevtoolsStTestHistoryTree]
   end
   HC --> HT
   HC --> OT
   OT --> San
   OT --> Perf
+  OT --> STH
   OT --> OP
   Home --> HomeTP[HomeTreeProvider]
   Actions --> FlowTP[OperateTreeProvider flow]
   Ops --> OpsTP[OperateTreeProvider operatorProjects]
   San --> FlowTP
   Perf --> FlowTP
+  STH --> STHP[StTestRunHistoryTreeProvider]
 ```
 
 ---
@@ -48,6 +51,7 @@ flowchart TB
 | `opdevtoolsOperatorProjectsTree` | Operators | `opDevtools.showOperatorProjects` |
 | `opdevtoolsSanitizerResultsTree` | Sanitizer results | `opDevtools.showOperateTree` |
 | `opdevtoolsPerformanceResultsTree` | Performance results | `opDevtools.showOperateTree` |
+| `opdevtoolsStTestHistoryTree` | ST Test History | `opDevtools.showStTestHistory` |
 
 ### Context switching (`extension.ts` → `refreshSidebarContexts`)
 
@@ -64,6 +68,7 @@ Refreshed on workspace changes, project open/create, config migration, and coale
 | `opDevtools.showOperateTree` | `effective` |
 | `opDevtools.showOperatorSearch` | `effective && (hasMultipleOperators \|\| isStandardCustom)` |
 | `opDevtools.showOperatorProjects` | `effective && hasMultipleOperators && isStandardCustom` |
+| `opDevtools.showStTestHistory` | `effective && isStandardCustom` |
 
 Additional contexts are updated from tree state (sanitizer group-by, marked-only filters, operator selection, action queue stop-all visibility, msAgent AI-fix availability).
 
@@ -114,7 +119,7 @@ Root nodes are built in `getFlowRootNodes()` when `hasDevtoolConfig` and project
 - Unsupported `projectType` → empty flow tree.
 - **Standard custom** without `supportsSanitizerAndTuning` → hide Debug group and Performance tuning group.
 - **Multi-operator selection** (`selectedOperatorIds.length > 1`) → run/debug/sanitizer/onboard/simulation/ut/st/dump rows show disabled icon and drop click command (tooltip: single-operator only).
-- **ST test** requires exactly one selected standard-custom operator. The picker accepts one or more of `kernel`, `aclnn`, and `e2e`; `kernel` is preselected. It discovers every sorted `.csv` file under `tests/st/arch35`, determines its mode from the CSV headers and content, runs matching inputs sequentially through system or plugin-managed pinned TTK, and writes unique CSV files under the IDE configuration directory's `st-results` subtree. After every requested process completes successfully, the extension strictly parses the five precision-result fields and opens one latest-run results panel with PASS/FAIL/invalid counters, mode and input-file provenance, filters, pagination, and allow-listed `Open CSV` actions. The existing relative-path completion notification remains the raw-file fallback. Malformed or unknown evidence can never produce an overall PASS; partial results after process failure or cancellation remain outside this MVP.
+- **ST test** requires exactly one selected standard-custom operator. The picker accepts one or more of `kernel`, `aclnn`, and `e2e`; `kernel` is preselected. It discovers every sorted `.csv` file under `tests/st/arch35`, determines its mode from the CSV headers and content, runs matching inputs sequentially through system or plugin-managed pinned TTK, and writes unique CSV files under the IDE configuration directory's `st-results` subtree. After every requested process completes successfully, the extension strictly parses the five precision-result fields and opens a results panel with PASS/FAIL/invalid counters, mode and input-file provenance, filters, pagination, and allow-listed `Open CSV` actions. Up to 50 completed runs per operator are restored in the native ST Test History view; selecting an older run reparses its CSV files and switches the detailed panel's active file allow-list. The existing relative-path completion notification remains the raw-file fallback. Malformed or unknown evidence can never produce an overall PASS; partial results after process failure or cancellation remain outside this MVP.
 - Sanitizer / on-board / simulation / build rows gated by `OperatorPluginRegistry` build behavior flags (`supportsSanitizer`, `supportsOnBoard`, `supportsSimulate`, etc.). **Triton** (`project_type` / `op_type` `triton`, when `op-devtools.operatorSupport.triton` is on) shows sanitizer, simulate, and on-board per `TritonPlugin.buildBehavior`; CPU debug stays hidden; NPU debug row follows `supportsNpuDebug` and `debugMode`. Run still requires an active `.py` (same pattern as PyAsc).
 
 **Project config** is not a tree row; title-bar command `huawei-op-devtools.sidebar.projectConfig` opens extension settings ([`workspace-settings.md`](workspace-settings.md#opening-settings)).
@@ -241,6 +246,20 @@ Details: [`performance.md`](performance.md).
 
 ---
 
+## ST Test History tree (`opdevtoolsStTestHistoryTree`)
+
+Dedicated `StTestRunHistoryTreeProvider`, visible only for an effective `standard-custom` project through `opDevtools.showStTestHistory`.
+
+- Restores validated manifests from every open workspace's IDE-specific `st-results` root without requiring the detailed webview to be open.
+- Groups runs under expandable workspace/operator roots and orders each operator's runs newest-first. Same-named operators in different workspace folders remain distinct.
+- Run rows use native outcome icons and show completion time plus total/failed/invalid counters.
+- Selecting a run resolves an opaque provider-owned key, reparses the current CSV evidence, and opens or reuses the detailed results webview with a freshly validated artifact allow-list.
+- A newly completed run refreshes and expands its operator best-effort; history presentation cannot change the ST execution result.
+
+The detailed webview contains only the selected report (summary, files, filters, table, and `Open CSV`). It never receives history arrays, manifest paths, or a history-selection action.
+
+---
+
 ## Commands and menus
 
 Primary wiring is in `package.json`:
@@ -280,7 +299,7 @@ Webview **quick options** panels (simulator/on-board/sanitizer) use `ops` only f
 
 | Area | File |
 |------|------|
-| Tree model + UI | `plugin/src/class/operate-tree-provider.ts` |
+| Tree model + UI | `plugin/src/class/operate-tree-provider.ts`, `plugin/src/class/st-test-run-history-tree-provider.ts` |
 | Home welcome | `plugin/src/class/home-tree-provider.ts` |
 | Views + commands | `plugin/src/extension.ts` |
 | View contributions | `package.json` → `views`, `viewsWelcome`, `menus` |

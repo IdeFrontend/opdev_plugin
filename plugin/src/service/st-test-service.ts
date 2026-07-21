@@ -17,6 +17,10 @@ import {
 } from '@plugin/domain/services/st-test-result-parser';
 import { StTestCancelledError } from '@plugin/domain/services/st-test-errors';
 import {
+  createStTestRunHistoryRecord,
+  persistStTestRunHistoryRecord,
+} from '@plugin/domain/services/st-test-run-history';
+import {
   createStTestRunId,
   discoverStTestInputCsvFiles,
   ensureStTestOutputDirectory,
@@ -254,6 +258,24 @@ export class StTestService {
         reportOutcome: report.outcome,
         runtimeSource: runtime.source,
       });
+
+      try {
+        persistStTestRunHistoryRecord(createStTestRunHistoryRecord(
+          report,
+          completedArtifacts,
+          runDirectory,
+        ));
+      }
+      catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+
+        outputChannel.appendLine(`[ST test] Could not persist run history: ${message}`);
+        appendLog(ST_TEST_LOG_SCOPE, 'ST run history persistence failed', {
+          operatorName: params.operatorName,
+          runId,
+          error: message,
+        });
+      }
 
       return {
         outputPaths: completedArtifacts.map((artifact) => artifact.outputCsvPath),

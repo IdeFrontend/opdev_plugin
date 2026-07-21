@@ -265,7 +265,7 @@ export function resolveStTestPluginDir(operatorPath: string): string | undefined
   });
 }
 
-function safeFileSegment(
+export function toSafeStTestPathSegment(
   value: string,
   maxLength: number = MAX_ST_TEST_DIRECTORY_SEGMENT_LENGTH,
 ): string {
@@ -295,7 +295,21 @@ export function createStTestRunId(
     .toISOString()
     .replace(/[:.]/g, '-');
 
-  return safeFileSegment(`${timestamp}-${entropy}`);
+  return toSafeStTestPathSegment(`${timestamp}-${entropy}`);
+}
+
+export function resolveStTestResultsRootDirectory(workspaceRoot: string): string {
+  return joinIdeConfigPath(workspaceRoot, 'st-results');
+}
+
+export function resolveStTestOperatorHistoryDirectory(
+  workspaceRoot: string,
+  operatorName: string,
+): string {
+  return path.join(
+    resolveStTestResultsRootDirectory(workspaceRoot),
+    toSafeStTestPathSegment(operatorName),
+  );
 }
 
 export function resolveStTestRunDirectory(params: {
@@ -303,11 +317,9 @@ export function resolveStTestRunDirectory(params: {
   operatorName: string;
   runId: string;
 }): string {
-  return joinIdeConfigPath(
-    params.workspaceRoot,
-    'st-results',
-    safeFileSegment(params.operatorName),
-    safeFileSegment(params.runId),
+  return path.join(
+    resolveStTestOperatorHistoryDirectory(params.workspaceRoot, params.operatorName),
+    toSafeStTestPathSegment(params.runId),
   );
 }
 
@@ -327,7 +339,7 @@ export function resolveStTestOutputCsvPath(params: {
     - sequence.length
     - 1
     - resultSuffix.length;
-  const fileName = `${sequence}-${safeFileSegment(stem, maxStemLength)}${resultSuffix}`;
+  const fileName = `${sequence}-${toSafeStTestPathSegment(stem, maxStemLength)}${resultSuffix}`;
 
   return path.join(
     resolveStTestRunDirectory(params),

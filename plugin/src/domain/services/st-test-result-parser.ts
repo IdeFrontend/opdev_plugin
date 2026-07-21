@@ -43,6 +43,13 @@ export interface BuildStTestResultReportParams {
   runId: string;
   runDirectory: string;
   artifacts: readonly CompletedStTestArtifact[];
+  display?: {
+    runDirectory: string;
+    artifacts: Readonly<Record<string, {
+      testFile: string;
+      resultFile: string;
+    }>>;
+  };
 }
 
 type CsvRecord = {
@@ -409,8 +416,11 @@ function parseArtifactRows(
   file: StTestResultFileDto;
   rows: StTestResultRowDto[];
 } {
-  const testFile = toDisplayPath(params.operatorPath, artifact.inputCsvPath);
-  const resultFile = toDisplayPath(params.workspaceRoot, artifact.outputCsvPath);
+  const artifactDisplay = params.display?.artifacts[artifact.artifactId];
+  const testFile = artifactDisplay?.testFile
+    ?? toDisplayPath(params.operatorPath, artifact.inputCsvPath);
+  const resultFile = artifactDisplay?.resultFile
+    ?? toDisplayPath(params.workspaceRoot, artifact.outputCsvPath);
   const fileBase: StTestResultFileDto = {
     artifactId: artifact.artifactId,
     sequence: artifact.sequence,
@@ -549,7 +559,8 @@ export function buildStTestResultReport(params: BuildStTestResultReportParams): 
   return {
     runId: params.runId,
     operatorName: params.operatorName,
-    runDirectory: toDisplayPath(params.workspaceRoot, params.runDirectory),
+    runDirectory: params.display?.runDirectory
+      ?? toDisplayPath(params.workspaceRoot, params.runDirectory),
     outcome,
     summary: {
       total: rows.length,

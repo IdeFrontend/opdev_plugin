@@ -71,6 +71,7 @@
   "view.opsOperate.name": "Actions",
   "view.sanitizerResultsTree.name": "Sanitizer Results",
   "view.performanceResultsTree.name": "Performance tuning results",
+  "view.stTestHistoryTree.name": "ST Test History",
   "view.sanitizerReportsTree.name": "Reports",
   "view.operatorProjects.name": "Operators",
   "view.msSanitizer.name": "Sanitizer",

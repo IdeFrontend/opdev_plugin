@@ -72,6 +72,17 @@ export interface StTestResultReportDto {
   rows: StTestResultRowDto[];
 }
 
+export interface StTestRunHistoryItemDto {
+  runId: string;
+  completedAt: string;
+  outcome: StTestReportOutcome;
+  summary: StTestResultReportDto['summary'];
+}
+
+export interface StTestResultsPanelDto {
+  report: StTestResultReportDto;
+}
+
 export type StTestResultsWebviewAction = {
   type: 'openResultFile';
   artifactId: string;

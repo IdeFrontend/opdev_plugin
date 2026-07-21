@@ -7,6 +7,7 @@ import type * as vscode from 'vscode';
 import type { CommandExecutor } from '@plugin/class/command-options';
 import { OperatorProjectType } from '@plugin/domain/models/operator-project-type';
 import { isStTestCancelledError } from '@plugin/domain/services/st-test-errors';
+import { ST_TEST_RUN_MANIFEST_FILE } from '@plugin/domain/services/st-test-run-history';
 import { shellQuoteBash } from '@plugin/domain/utils/shell-env-exports';
 import {
   discoverStTestInputCsvFiles,
@@ -168,6 +169,8 @@ describe('StTestService', () => {
         inputCsvPath,
         outputCsvPath: expectedOutputs[index],
       })));
+    expect(fs.existsSync(path.join(expectedRunDirectory, ST_TEST_RUN_MANIFEST_FILE)))
+      .toBe(true);
     expect(result.report.files.map((file) => ({
       sequence: file.sequence,
       mode: file.mode,

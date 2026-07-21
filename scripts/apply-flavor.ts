@@ -44,6 +44,7 @@ const VIEW_ID_SUFFIXES = [
   'OperateTree',
   'SanitizerResultsTree',
   'PerformanceResultsTree',
+  'StTestHistoryTree',
 ] as const;
 
 function readJson<T>(filePath: string): T {
@@ -764,6 +765,8 @@ export const TREE_VIEW_OPERATOR_PROJECTS = ${tsQuotedString(`${flavor.ids.viewPr
 export const TREE_VIEW_SANITIZER_RESULTS = ${tsQuotedString(`${flavor.ids.viewPrefix}SanitizerResultsTree`)};
 
 export const TREE_VIEW_PERFORMANCE_RESULTS = ${tsQuotedString(`${flavor.ids.viewPrefix}PerformanceResultsTree`)};
+
+export const TREE_VIEW_ST_TEST_HISTORY = ${tsQuotedString(`${flavor.ids.viewPrefix}StTestHistoryTree`)};
 
 export const DUMP_TENSOR_PANEL_CONTAINER_ID = ${tsQuotedString(buildCoInstallIds(flavor.ids).dumpTensorPanelContainerId)};
 

@@ -6,6 +6,7 @@ const mockOpenTextDocument = jest.fn();
 const mockShowTextDocument = jest.fn();
 const mockShowWarningMessage = jest.fn();
 const mockShowErrorMessage = jest.fn();
+const mockSetCurrentRun = jest.fn();
 
 jest.mock('i18next', () => ({ t: (key: string) => key }));
 
@@ -43,6 +44,7 @@ import * as vscode from 'vscode';
 
 import { StTestResultsPanel } from '@plugin/class/st-test-results-panel';
 import type { CompletedStTestArtifact } from '@plugin/domain/services/st-test-result-parser';
+import { loadStTestRunHistory } from '@plugin/domain/services/st-test-run-history';
 import { CONNECTOR_READY_CHANNEL } from '@shared/connector';
 import {
   ST_TEST_RESULTS_CONNECT_CHANNEL,
@@ -77,9 +79,12 @@ describe('StTestResultsPanel', () => {
   let runDirectory: string;
   let context: vscode.ExtensionContext;
   let panels: FakePanel[];
+  let consoleErrorSpy: jest.SpyInstance;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    consoleErrorSpy = jest.spyOn(console, 'error')
+      .mockImplementation(() => undefined);
     (vscode.env as { language: string }).language = 'en';
     root = fs.mkdtempSync(path.join(os.tmpdir(), 'mstt-st-panel-'));
     runDirectory = path.join(root, '.vscode', 'st-results', 'add', 'run-id');
@@ -93,6 +98,7 @@ describe('StTestResultsPanel', () => {
     mockShowTextDocument.mockResolvedValue(undefined);
     mockShowWarningMessage.mockResolvedValue(undefined);
     mockShowErrorMessage.mockResolvedValue(undefined);
+    StTestResultsPanel.setHistoryTreeProvider({ setCurrentRun: mockSetCurrentRun });
     mockCreateWebviewPanel.mockImplementation(() => {
       const webview = createWebview();
       const disposeRegistration = { dispose: jest.fn() };
@@ -116,6 +122,8 @@ describe('StTestResultsPanel', () => {
 
   afterEach(() => {
     panels.forEach((panel) => panel.dispose());
+    StTestResultsPanel.setHistoryTreeProvider(undefined);
+    consoleErrorSpy.mockRestore();
     fs.rmSync(root, {
       recursive: true,
       force: true,
@@ -234,6 +242,7 @@ describe('StTestResultsPanel', () => {
     const artifact = createArtifact('first', 1);
     const report = createReport('run-id', [artifact]);
 
+    StTestResultsPanel.recordCompletedRun(report, [artifact], runDirectory, root);
     await StTestResultsPanel.createOrShow(context, report, [artifact], runDirectory);
 
     const panel = panels[0];
@@ -267,8 +276,13 @@ describe('StTestResultsPanel', () => {
     expect(panel.webview.postMessage)
       .toHaveBeenCalledWith({
         channel: ST_TEST_RESULTS_CONNECT_CHANNEL,
-        data: report,
+        data: { report },
       });
+    expect(mockSetCurrentRun)
+      .toHaveBeenCalledWith(
+        root,
+        expect.objectContaining({ runId: report.runId }),
+      );
 
     const html = fs.readFileSync(
       path.join(__dirname, '../../../../web/src/views/panels/st-test-results/st-test-results.html'),
@@ -309,7 +323,7 @@ describe('StTestResultsPanel', () => {
     expect(panel.webview.postMessage)
       .toHaveBeenCalledWith({
         channel: ST_TEST_RESULTS_CONNECT_CHANNEL,
-        data: secondReport,
+        data: expect.objectContaining({ report: secondReport }),
       });
   });
 
@@ -358,7 +372,7 @@ describe('StTestResultsPanel', () => {
     expect(panels[0].webview.postMessage)
       .toHaveBeenCalledWith({
         channel: ST_TEST_RESULTS_CONNECT_CHANNEL,
-        data: secondReport,
+        data: expect.objectContaining({ report: secondReport }),
       });
 
     fireMessage(panels[0].webview, {
@@ -459,7 +473,7 @@ describe('StTestResultsPanel', () => {
     expect(panel.webview.postMessage)
       .toHaveBeenCalledWith({
         channel: ST_TEST_RESULTS_CONNECT_CHANNEL,
-        data: secondReport,
+        data: expect.objectContaining({ report: secondReport }),
       });
 
     fireMessage(panel.webview, {
@@ -601,6 +615,135 @@ describe('StTestResultsPanel', () => {
 
     expect(mockShowWarningMessage).not.toHaveBeenCalled();
     expect(mockOpenTextDocument).not.toHaveBeenCalled();
+  });
+
+  it('opens a provider-resolved historical run and switches the active allow-list', async () => {
+    runDirectory = path.join(root, '.vscode', 'st-results', 'add', 'first-run');
+    fs.mkdirSync(runDirectory, { recursive: true });
+    const first = createArtifact('first', 1);
+
+    fs.writeFileSync(
+      first.outputCsvPath,
+      'testcase_name,dyn_precision,cst_precision,bin_precision,precision_status\nfirst,1,1,1,PASS\n',
+    );
+    const firstReport = createReport('first-run', [first]);
+
+    StTestResultsPanel.recordCompletedRun(firstReport, [first], runDirectory, root);
+    await StTestResultsPanel.createOrShow(
+      context,
+      firstReport,
+      [first],
+      runDirectory,
+    );
+    panels[0].dispose();
+    const firstRecord = loadStTestRunHistory(path.dirname(runDirectory), 'add')[0];
+
+    expect(firstRecord)
+      .toBeDefined();
+
+    if (!firstRecord) {
+      throw new Error('Expected persisted first-run history');
+    }
+
+    runDirectory = path.join(root, '.vscode', 'st-results', 'add', 'second-run');
+    fs.mkdirSync(runDirectory, { recursive: true });
+    const second = createArtifact('second', 1, 'aclnn');
+
+    fs.writeFileSync(
+      second.outputCsvPath,
+      'testcase_name,dyn_precision,cst_precision,bin_precision,precision_status\nsecond,1,1,1,PASS\n',
+    );
+    await StTestResultsPanel.createOrShow(
+      context,
+      createReport('second-run', [second]),
+      [second],
+      runDirectory,
+    );
+    const reopenedPanel = panels[1];
+
+    fireMessage(reopenedPanel.webview, {
+      channel: CONNECTOR_READY_CHANNEL,
+      data: ST_TEST_RESULTS_CONNECT_CHANNEL,
+    });
+    reopenedPanel.webview.postMessage.mockClear();
+    mockSetCurrentRun.mockClear();
+    await StTestResultsPanel.createOrShowHistorical(context, {
+      workspaceRoot: root,
+      record: firstRecord,
+    });
+
+    expect(reopenedPanel.webview.postMessage)
+      .toHaveBeenCalledWith({
+        channel: ST_TEST_RESULTS_CONNECT_CHANNEL,
+        data: expect.objectContaining({
+          report: expect.objectContaining({
+            runId: 'first-run',
+            outcome: 'passed',
+          }),
+        }),
+      });
+    expect(mockSetCurrentRun).not.toHaveBeenCalled();
+
+    fireMessage(reopenedPanel.webview, {
+      channel: ST_TEST_RESULTS_CONNECT_CHANNEL,
+      data: {
+        type: 'openResultFile',
+        artifactId: first.artifactId,
+      },
+    });
+    fireMessage(reopenedPanel.webview, {
+      channel: ST_TEST_RESULTS_CONNECT_CHANNEL,
+      data: {
+        type: 'openResultFile',
+        artifactId: second.artifactId,
+      },
+    });
+    await flushAsyncActions();
+
+    expect(mockOpenTextDocument)
+      .toHaveBeenCalledWith({ fsPath: first.outputCsvPath });
+    expect(mockShowWarningMessage)
+      .toHaveBeenCalledWith('stTest.results.openRejected');
+  });
+
+  it('rejects changed historical evidence without replacing the active report', async () => {
+    runDirectory = path.join(root, '.vscode', 'st-results', 'add', 'historical-run');
+    fs.mkdirSync(runDirectory, { recursive: true });
+    const historical = createArtifact('historical', 1);
+    const historicalReport = createReport('historical-run', [historical]);
+
+    StTestResultsPanel.recordCompletedRun(historicalReport, [historical], runDirectory, root);
+    const historicalRecord = loadStTestRunHistory(path.dirname(runDirectory), 'add')[0];
+
+    if (!historicalRecord) {
+      throw new Error('Expected persisted historical run');
+    }
+
+    runDirectory = path.join(root, '.vscode', 'st-results', 'add', 'active-run');
+    fs.mkdirSync(runDirectory, { recursive: true });
+    const active = createArtifact('active', 1);
+
+    await StTestResultsPanel.createOrShow(
+      context,
+      createReport('active-run', [active]),
+      [active],
+      runDirectory,
+    );
+    const panel = panels[0];
+
+    fireMessage(panel.webview, {
+      channel: CONNECTOR_READY_CHANNEL,
+      data: ST_TEST_RESULTS_CONNECT_CHANNEL,
+    });
+    panel.webview.postMessage.mockClear();
+    fs.rmSync(historical.outputCsvPath);
+
+    await expect(StTestResultsPanel.createOrShowHistorical(context, {
+      workspaceRoot: root,
+      record: historicalRecord,
+    }))
+      .rejects.toThrow('Historical ST evidence no longer matches its manifest');
+    expect(panel.webview.postMessage).not.toHaveBeenCalled();
   });
 
   it('revalidates an allow-listed path and releases panel-owned listeners on disposal', async () => {

@@ -614,6 +614,11 @@
           "id": "opdevtoolsPerformanceResultsTree",
           "name": "%view.performanceResultsTree.name%",
           "when": "opDevtools.showOperateTree"
+        },
+        {
+          "id": "opdevtoolsStTestHistoryTree",
+          "name": "%view.stTestHistoryTree.name%",
+          "when": "opDevtools.showStTestHistory"
         }
       ],
       "huawei-op-devtools-dump-tensor-panel-view": [

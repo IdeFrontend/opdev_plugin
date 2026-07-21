@@ -37,6 +37,8 @@ export const TREE_VIEW_SANITIZER_RESULTS = 'opdevtoolsSanitizerResultsTree';
 
 export const TREE_VIEW_PERFORMANCE_RESULTS = 'opdevtoolsPerformanceResultsTree';
 
+export const TREE_VIEW_ST_TEST_HISTORY = 'opdevtoolsStTestHistoryTree';
+
 export const DUMP_TENSOR_PANEL_CONTAINER_ID = 'huawei-op-devtools-dump-tensor-panel-view';
 
 export const DUMP_TENSOR_PANEL_VIEW_ID = 'opdevtoolsDumpTensorPanelView';
