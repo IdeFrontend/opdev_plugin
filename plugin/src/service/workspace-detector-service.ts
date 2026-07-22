@@ -12,37 +12,113 @@ import {
   OperatorProjectType,
 } from '@plugin/domain/services/operator-project-detector';
 import {
+  createProject,
+  getProjectByPath,
+  projectPathsEqual,
   updateStandardCustomOperators,
+  type ProjectRecord,
   type SubOperatorInfo,
   type OperatorCollectionInfo,
 } from '@plugin/domain/models/project-model';
+import { viewIdToProjectType } from '@plugin/domain/utils/project-utils';
 
 /**
  * Workspace detector service
  * Detects whether the workspace is an operator project; if not, scans subdirectories
  */
 export class WorkspaceDetectorService {
+  private static readonly registrationFlights = new Map<string, Promise<void>>();
+
+  private static getRegistrationKey(workspacePath: string): string {
+    const normalizedWorkspacePath = path.normalize(workspacePath);
+    const rootPath = path.parse(normalizedWorkspacePath).root;
+
+    return (normalizedWorkspacePath.length > rootPath.length
+      ? normalizedWorkspacePath.replace(/[\\/]+$/, '')
+      : normalizedWorkspacePath)
+      .replace(/\\/g, '/')
+      .toLowerCase();
+  }
+
+  static async whenRegistrationReady(workspacePath: string): Promise<void> {
+    const pendingRegistration = this.registrationFlights.get(this.getRegistrationKey(workspacePath));
+
+    if (pendingRegistration) {
+      await pendingRegistration;
+    }
+  }
+
   /**
    * Detect and register operator projects in the workspace
    * Only handles standard custom operator type
    * @param workspacePath Workspace path
    */
   static async detectAndRegisterWorkspace(workspacePath: string): Promise<void> {
-    try {
-      // Check if root is an operator project
-      const rootDetection = await OperatorProjectDetector.detectOperatorProject(workspacePath);
+    const registrationKey = this.getRegistrationKey(workspacePath);
+    const pendingRegistration = this.registrationFlights.get(registrationKey);
 
-      // Only process standard custom operator type
-      if (
-        rootDetection.isOperatorProject
-        && rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM
-      ) {
-        await this.scanStandardCustomOperators(workspacePath);
+    if (pendingRegistration) {
+      await pendingRegistration;
+
+      return;
+    }
+
+    const registration = this.detectAndRegisterWorkspaceImpl(workspacePath);
+
+    this.registrationFlights.set(registrationKey, registration);
+
+    try {
+      await registration;
+    }
+    finally {
+      if (this.registrationFlights.get(registrationKey) === registration) {
+        this.registrationFlights.delete(registrationKey);
       }
     }
-    catch (error) {
-      // Ignore errors
+  }
+
+  private static async detectAndRegisterWorkspaceImpl(workspacePath: string): Promise<void> {
+    const storedProjectType = viewIdToProjectType(OperatorProjectType.STANDARD_CUSTOM);
+    let rootPath = path.normalize(workspacePath);
+    let rootProject = getProjectByPath(rootPath);
+
+    if (rootProject?.project_type !== storedProjectType) {
+      const rootDetection = await OperatorProjectDetector.detectOperatorProject(workspacePath);
+
+      if (
+        !rootDetection.isOperatorProject
+        || rootDetection.projectType !== OperatorProjectType.STANDARD_CUSTOM
+      ) {
+        return;
+      }
+
+      rootPath = path.normalize(rootDetection.projectPath || workspacePath);
+      rootProject = getProjectByPath(rootPath);
+
+      if (!rootProject) {
+        await createProject({
+          project_name: rootDetection.projectName || path.basename(rootPath),
+          project_path: rootPath,
+          project_type: storedProjectType,
+        });
+        rootProject = getProjectByPath(rootPath);
+      }
     }
+
+    if (rootProject && rootProject.project_type !== storedProjectType) {
+      await createProject({
+        project_name: rootProject.project_name,
+        project_path: rootProject.project_path,
+        project_type: storedProjectType,
+      });
+      rootProject = getProjectByPath(rootPath);
+    }
+
+    if (!rootProject) {
+      throw new Error(`Failed to register standard-custom workspace: ${rootPath}`);
+    }
+
+    await this.scanStandardCustomOperators(rootPath, rootProject);
   }
 
   /**
@@ -210,7 +286,7 @@ export class WorkspaceDetectorService {
    */
   private static scanOperatorsInCollection(
     collectionPath: string,
-    isExperimental: boolean,
+    _isExperimental: boolean,
   ): {
     hasOperators: boolean;
     operators: SubOperatorInfo[];
@@ -261,26 +337,71 @@ export class WorkspaceDetectorService {
    * Only scans collections (ops_meet) and operators (ops_list/experimental_ops_list), updates root project info.
    * Does not create new projects in projects for collections or sub-operators.
    */
-  private static async scanStandardCustomOperators(workspacePath: string): Promise<void> {
-    try {
-      console.log('[scanStandardCustomOperators] Scanning operator collections and operators...');
-      const {
-        opsMeet,
-        opsList,
-        experimentalOpsList,
-      } = this.scanOpsMeetAndOpsLists(workspacePath);
+  private static async scanStandardCustomOperators(
+    workspacePath: string,
+    rootProject: ProjectRecord,
+  ): Promise<void> {
+    console.log('[scanStandardCustomOperators] Scanning operator collections and operators...');
+    const {
+      opsMeet,
+      opsList,
+      experimentalOpsList,
+    } = this.scanOpsMeetAndOpsLists(workspacePath);
+    const mergedOpsList = this.mergeOperators(rootProject.ops_list || [], opsList)
+      .filter((operator) => !experimentalOpsList.some((experimentalOperator) =>
+        projectPathsEqual(operator.path, experimentalOperator.path)));
+    const mergedExperimentalOpsList = this.mergeOperators(
+      rootProject.experimental_ops_list || [],
+      experimentalOpsList,
+    )
+      .filter((operator) => !opsList.some((regularOperator) =>
+        projectPathsEqual(operator.path, regularOperator.path)));
 
-      console.log('[scanStandardCustomOperators] Operator collections:', opsMeet.map((m) => m.name));
-      console.log('[scanStandardCustomOperators] Operators:', opsList.map((o) => o.name));
-      console.log(
-        '[scanStandardCustomOperators] Experimental operators:',
-        experimentalOpsList.map((o) => o.name),
-      );
-      await updateStandardCustomOperators(workspacePath, opsMeet, opsList, experimentalOpsList);
-      console.log(`[scanStandardCustomOperators] Updated: ${opsMeet.length} collections, ${opsList.length} operators, ${experimentalOpsList.length} experimental`);
+    console.log('[scanStandardCustomOperators] Operator collections:', opsMeet.map((m) => m.name));
+    console.log('[scanStandardCustomOperators] Operators:', mergedOpsList.map((o) => o.name));
+    console.log(
+      '[scanStandardCustomOperators] Experimental operators:',
+      mergedExperimentalOpsList.map((o) => o.name),
+    );
+    await updateStandardCustomOperators(
+      workspacePath,
+      opsMeet,
+      mergedOpsList,
+      mergedExperimentalOpsList,
+    );
+    console.log(`[scanStandardCustomOperators] Updated: ${opsMeet.length} collections, ${mergedOpsList.length} operators, ${mergedExperimentalOpsList.length} experimental`);
+  }
+
+  private static mergeOperators(
+    existingOperators: SubOperatorInfo[],
+    scannedOperators: SubOperatorInfo[],
+  ): SubOperatorInfo[] {
+    const mergedOperators: SubOperatorInfo[] = [];
+
+    for (const scannedOperator of scannedOperators) {
+      const existingOperator = existingOperators.find((operator) =>
+        projectPathsEqual(operator.path, scannedOperator.path));
+      const mergedOperator = existingOperator
+        ? {
+          ...existingOperator,
+          ...scannedOperator,
+          isCompiled: existingOperator.isCompiled === true || scannedOperator.isCompiled === true,
+        }
+        : scannedOperator;
+
+      if (!mergedOperators.some((operator) =>
+        projectPathsEqual(operator.path, mergedOperator.path))) {
+        mergedOperators.push(mergedOperator);
+      }
     }
-    catch (error) {
-      console.warn(`[scanStandardCustomOperators] Failed to update operator info: ${error instanceof Error ? error.message : String(error)}`);
+
+    for (const existingOperator of existingOperators) {
+      if (!mergedOperators.some((operator) =>
+        projectPathsEqual(operator.path, existingOperator.path))) {
+        mergedOperators.push(existingOperator);
+      }
     }
+
+    return mergedOperators;
   }
 }

@@ -27,7 +27,7 @@ import {
 import {
   getProjectByPath,
   updateStandardCustomOperators,
-  createProject,
+  appendStandardCustomOperator,
   SubOperatorInfo,
 } from '@plugin/domain/models/project-model';
 import { isSubOperatorCreation } from '@plugin/domain/utils/sub-operator-creation';
@@ -188,6 +188,8 @@ export const welcomeMethods = {
    */
   async createdProject(params: CreatedProjectParams): Promise<void> {
     try {
+      await whenPostActivateBootstrapReady();
+
       const context = getExtensionContext();
 
       // Cache projectPath to globalState
@@ -221,9 +223,36 @@ export const welcomeMethods = {
       });
       // Resolve the collection by the current workspace root (type-agnostic): older
       // standard-custom collection records are stored with project_type 'ascend'.
-      const parentCollection = isSubOp && workspaceRoot
+      let parentCollection = isSubOp && workspaceRoot
         ? getProjectByPath(workspaceRoot)
         : undefined;
+
+      if (isSubOp && workspaceRoot) {
+        if (parentCollection) {
+          await WorkspaceDetectorService.whenRegistrationReady(workspaceRoot);
+        }
+        else {
+          await WorkspaceDetectorService.detectAndRegisterWorkspace(workspaceRoot);
+        }
+
+        parentCollection = getProjectByPath(workspaceRoot);
+      }
+
+      let parentProjectId: number | undefined;
+
+      if (isSubOp) {
+        if (!parentCollection) {
+          throw new Error(t('welcome.initOperatorProjectFailed', { error: 'standard-custom collection is not registered' }));
+        }
+
+        const candidateParentProjectId = Number(parentCollection.id);
+
+        if (!Number.isSafeInteger(candidateParentProjectId) || candidateParentProjectId <= 0) {
+          throw new Error(t('welcome.initOperatorProjectFailed', { error: 'standard-custom collection has an invalid project id' }));
+        }
+
+        parentProjectId = candidateParentProjectId;
+      }
 
       // Issue #14: prefer the project's own `build.sh --genop` to generate sub-operator
       // source. Only attempt it for a sub-operator with a resolved collection.
@@ -263,13 +292,6 @@ export const welcomeMethods = {
       }
 
       if (isSubOp) {
-        // Sub-operator inside a standard-custom collection. We must have the collection's
-        // record to scaffold under its project_id. If it is missing, fail loudly rather than
-        // creating a phantom standalone record (that was the original bug).
-        if (!parentCollection) {
-          throw new Error(t('welcome.initOperatorProjectFailed', { error: 'standard-custom collection is not registered' }));
-        }
-
         const newSubOperator: SubOperatorInfo = {
           name: params.projectName,
           path: subOpDir,
@@ -277,24 +299,24 @@ export const welcomeMethods = {
         };
         const isExperimental = subOpDir.toLowerCase()
           .includes('experimental');
+        const updatedParent = await appendStandardCustomOperator(
+          parentCollection!.project_path,
+          newSubOperator,
+          isExperimental,
+        );
 
-        await createProject({
-          project_name: parentCollection.project_name,
-          project_path: parentCollection.project_path,
-          ...(isExperimental
-            ? {
-              experimental_ops_list: [
-                ...(parentCollection.experimental_ops_list || []),
-                newSubOperator,
-              ],
-            }
-            : {
-              ops_list: [
-                ...(parentCollection.ops_list || []),
-                newSubOperator,
-              ],
-            }),
-        });
+        if (!updatedParent) {
+          throw new Error(t('welcome.initOperatorProjectFailed', { error: 'standard-custom collection is not registered' }));
+        }
+
+        const updatedParentProjectId = Number(updatedParent.id);
+
+        if (!Number.isSafeInteger(updatedParentProjectId) || updatedParentProjectId <= 0) {
+          throw new Error(t('welcome.initOperatorProjectFailed', { error: 'standard-custom collection has an invalid project id' }));
+        }
+
+        parentCollection = updatedParent;
+        parentProjectId = updatedParentProjectId;
         // No projectService.init here: do NOT create a standalone record for the sub-operator.
       }
       else {
@@ -372,10 +394,10 @@ export const welcomeMethods = {
               {
                 createOperatorProjectDirectoryFileType:
                   params.createOperatorProjectDictoryFileType,
-                ...(isSubOp && parentCollection
+                ...(isSubOp && parentCollection && parentProjectId !== undefined
                   ? {
                     subOperatorContext: {
-                      parentProjectId: Number(parentCollection.id),
+                      parentProjectId,
                       opName: params.projectName,
                       outputPath: subOpDir,
                       skipFileGeneration: genopSkipFileGeneration,

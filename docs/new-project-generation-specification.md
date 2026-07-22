@@ -78,18 +78,18 @@ Defaults in composable: `projectPath` `/home/developer`, `projectSH` `/etc/profi
 
 ### 3.1 Ordered steps (all view IDs)
 
-1. `globalState.lastProjectPath` ← `projectPath`.
-2. `fs.mkdirSync(projectPath/projectName, { recursive: true })`.
-3. Optional `projectSH`: `chmod +x` + execute via `CommandExecutor` (failures logged only).
-4. **Optional collection bookkeeping** when `viewIdToProjectType(viewId) === 'ascend'` (STANDARD_CUSTOM): if the **active workspace folder** path contains `experimental` or `math`, append a sub-operator entry to the **root** project's `experimental_ops_list` or `ops_list`; else `welcome.cannotCreateHere`. Does not skip standalone registration below.
-5. **`projectService.init`** → `ProjectManager.initProject` → **`createProject`**: `project_name`, `project_path` = `join(projectPath, projectName)`, `template_name`, `project_type` from `viewIdToProjectType`, `ascend_env_script` from `projectSH`.
-6. `revealInExplorer` on the new folder (best effort).
-7. `welcome.projectCreated` notification.
-8. `ensureLaunchJsonExists(fullProjectPath)`.
-9. If `params.templateName` is set → `globalState.templateName` (for `createDictory`).
-10. `huawei-op-devtools.createDictory` with `{ createOperatorProjectDirectoryFileType }` and progress → [`handleOperatorProjectDirectoryFile`](../plugin/src/class/webview-message-list.ts).
-11. On scaffold failure → `welcome.createDirOkCreateFilesError` (directory remains).
-12. Prompt open folder → `vscode.openFolder` (optional new window).
+1. Wait for pending post-activation bootstrap so automatic workspace initialization cannot race project creation.
+2. `globalState.lastProjectPath` receives `projectPath`.
+3. Resolve the active workspace root from `projects.json`, falling back to filesystem detection only for sub-operator classification.
+4. For a STANDARD_CUSTOM child inside the active workspace, resolve the root collection record. If it is missing, call `WorkspaceDetectorService.detectAndRegisterWorkspace`, then read the store again. The service creates one normalized root record with stored type `ascend` before scanning `ops_meet`, `ops_list`, and `experimental_ops_list`. Creation aborts with `welcome.initOperatorProjectFailed` if recovery still produces no parent.
+5. For a resolved STANDARD_CUSTOM child, try the workspace `build.sh --genop` command, then create the child directory when the command did not produce it.
+6. Optional `projectSH`: `chmod +x` + execute via `CommandExecutor` (failures logged only).
+7. For a STANDARD_CUSTOM child, append it once to the root record's regular or experimental operator list using normalized-path identity. The child is never registered as a standalone project. Other project types use `projectService.init` → `ProjectManager.initProject` → `createProject` for the new standalone root.
+8. `revealInExplorer` on the new folder (best effort), show `welcome.projectCreated`, and run `ensureLaunchJsonExists(fullProjectPath)`.
+9. If `params.templateName` is set, store it in `globalState.templateName` for `createDictory`.
+10. Invoke `huawei-op-devtools.createDictory` with the root project ID and child output path for an in-place STANDARD_CUSTOM child; other flows pass only `createOperatorProjectDirectoryFileType`.
+11. On scaffold failure, show `welcome.createDirOkCreateFilesError` and keep the directory.
+12. In-place children remain in the current collection window. Standalone projects prompt for current versus new window before `vscode.openFolder`.
 
 ### 3.2 Canonical `op_name`
 
@@ -257,7 +257,9 @@ sequenceDiagram
 ### 6.4 STANDARD_CUSTOM (view ID 2)
 
 - **`project_type` stored:** `ascend`.
+- A detected workspace that is not yet in `projects.json` is registered idempotently before its operator lists are scanned or a child operator is created. Existing root identity and metadata are reused.
 - **`createOps`** writes prototype JSON; **`createOpsByPrototype`** with **`op_type: 'ascend'`**, no `templateName`.
+- In-place child generation receives the registered root project ID and never creates a standalone child record.
 - ZIP: **`add_custom.zip`** via `AscendOpGenerator`.
 
 ---
@@ -283,6 +285,8 @@ Under [`plugin/templates/code_template/`](../plugin/templates/code_template/):
 | Step | Storage |
 |------|---------|
 | `initProject` | Project store (`projects.json`): `project_name`, `project_path`, `template_name`, `project_type`, `ascend_env_script`. |
+| Detected STANDARD_CUSTOM workspace registration | One normalized root record in `projects.json` with stored `project_type: ascend`; repeated and concurrent registration reuses it. |
+| STANDARD_CUSTOM child creation | Root `ops_list` or `experimental_ops_list`, keyed by normalized child path; no standalone child project record. |
 | `generateStructure` | **`ops`**: `op_name`, `op_type`, `op_path`, `template_name`. |
 | Same | **`configs.json`**: `build_op`, `build_example`, `ut_test`, `sanitizer`, `simulate`, `on_board` from plugin `getInitialConfigScripts`. |
 | After `createOpsByPrototype` | Optional **`maybeMigrateLegacySettingsToWorkspace`** → dotted `op-devtools.*` in workspace `settings.json` ([`workspace-settings.md`](./workspace-settings.md)). |
@@ -299,6 +303,7 @@ Runtime command fields are read from workspace settings after migration; row ids
 |---------|----------|
 | mkdir failure | Thrown; `welcome.createProjectDirFailed`. |
 | `init` failure | Thrown; `welcome.initOperatorProjectFailed`. |
+| Detected STANDARD_CUSTOM root still missing after registration recovery | Thrown before scaffolding receives a parent ID; `welcome.initOperatorProjectFailed`. |
 | Disabled Triton | Error in handler before generation. |
 | `createDictory` / scaffold failure | Warning; folder kept; user may still open folder. |
 | `createOps` empty path (STANDARD_CUSTOM) | `webview.createPrototypeFailedEmptyPath`. |

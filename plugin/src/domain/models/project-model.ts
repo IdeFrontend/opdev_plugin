@@ -53,7 +53,13 @@ type ProjectsStore = {
 };
 
 function normalizeProjectPath(projectPath: string): string {
-  return path.normalize(projectPath)
+  const normalizedPath = path.normalize(projectPath);
+  const rootPath = path.parse(normalizedPath).root;
+  const pathWithoutTrailingSeparators = normalizedPath.length > rootPath.length
+    ? normalizedPath.replace(/[\\/]+$/, '')
+    : normalizedPath;
+
+  return pathWithoutTrailingSeparators
     .replace(/\\/g, '/')
     .toLowerCase();
 }
@@ -83,10 +89,12 @@ function writeStore(store: ProjectsStore) {
 
 function findProjectByPath(store: ProjectsStore, projectPath: string): ProjectRecord | undefined {
   const normalizedPath = normalizeProjectPath(projectPath);
+
   return store.projects.find((p) => {
     if (!p.project_path) {
       return false;
     }
+
     return normalizeProjectPath(p.project_path) === normalizedPath;
   });
 }
@@ -95,6 +103,7 @@ function hasSameFieldValue(current: unknown, next: unknown): boolean {
   if (Object.is(current, next)) {
     return true;
   }
+
   if (
     current
     && next
@@ -108,6 +117,7 @@ function hasSameFieldValue(current: unknown, next: unknown): boolean {
       return false;
     }
   }
+
   return false;
 }
 
@@ -140,24 +150,31 @@ export async function updateShScript(data: CreateProjectParams) {
       hasSocVersion: data.soc_version !== undefined,
     });
     let changed = false;
+
     if (data.ascend_env_script !== undefined) {
       const nextEnvScript = data.ascend_env_script ?? null;
+
       if (!hasSameFieldValue(existing.ascend_env_script ?? null, nextEnvScript)) {
         existing.ascend_env_script = nextEnvScript;
         changed = true;
       }
     }
+
     if (data.soc_version !== undefined) {
       const nextSocVersion = data.soc_version;
+
       if (!hasSameFieldValue(existing.soc_version ?? null, nextSocVersion ?? null)) {
         existing.soc_version = nextSocVersion;
         changed = true;
       }
     }
+
     if (!changed) {
       appendLog('op-devtools/project-model', 'updateShScript:noChanges');
+
       return existing.id;
     }
+
     existing.update_time = new Date()
       .toISOString();
     writeStore(store);
@@ -165,9 +182,8 @@ export async function updateShScript(data: CreateProjectParams) {
 
     return existing.id;
   }
-  appendLog('op-devtools/project-model', 'updateShScript:projectNotFound', {
-    projectPath: data.project_path,
-  });
+
+  appendLog('op-devtools/project-model', 'updateShScript:projectNotFound', { projectPath: data.project_path });
 }
 
 export async function createProject(data: CreateProjectParams) {
@@ -178,6 +194,7 @@ export async function createProject(data: CreateProjectParams) {
   if (existing) {
     // Update existing project
     let changed = false;
+
     if (data.ascend_env_script) {
       if (!hasSameFieldValue(existing.ascend_env_script, data.ascend_env_script)) {
         existing.ascend_env_script = data.ascend_env_script;
@@ -290,7 +307,69 @@ export function getProjectByPath(projectPath: string): ProjectRecord | undefined
   }
 
   const store = ensureStore();
+
   return findProjectByPath(store, projectPath);
+}
+
+/**
+ * Append one standard-custom child using the latest persisted root record.
+ * The synchronous read-modify-write prevents overlapping creation requests in
+ * the extension host from replacing each other's operator lists.
+ */
+export async function appendStandardCustomOperator(
+  projectPath: string,
+  operator: SubOperatorInfo,
+  isExperimental: boolean,
+): Promise<ProjectRecord | undefined> {
+  const store = ensureStore();
+  const project = findProjectByPath(store, projectPath);
+
+  if (!project) {
+    return undefined;
+  }
+
+  const targetList = isExperimental
+    ? project.experimental_ops_list || []
+    : project.ops_list || [];
+  const oppositeList = isExperimental
+    ? project.ops_list || []
+    : project.experimental_ops_list || [];
+  const existingOperator = [
+    ...targetList,
+    ...oppositeList,
+  ].find((item) => projectPathsEqual(item.path, operator.path));
+  const nextOperator: SubOperatorInfo = existingOperator
+    ? {
+      ...existingOperator,
+      name: operator.name,
+      path: operator.path,
+      isCompiled: existingOperator.isCompiled === true || operator.isCompiled === true,
+    }
+    : operator;
+  const nextTargetList = [
+    ...targetList.filter((item) =>
+      !projectPathsEqual(item.path, operator.path)),
+    nextOperator,
+  ];
+  const nextOppositeList = oppositeList.filter((item) =>
+    !projectPathsEqual(item.path, operator.path));
+  const nextOpsList = isExperimental ? nextOppositeList : nextTargetList;
+  const nextExperimentalOpsList = isExperimental ? nextTargetList : nextOppositeList;
+
+  if (
+    hasSameFieldValue(project.ops_list ?? [], nextOpsList)
+    && hasSameFieldValue(project.experimental_ops_list ?? [], nextExperimentalOpsList)
+  ) {
+    return project;
+  }
+
+  project.ops_list = nextOpsList;
+  project.experimental_ops_list = nextExperimentalOpsList;
+  project.update_time = new Date()
+    .toISOString();
+  writeStore(store);
+
+  return project;
 }
 
 /**
@@ -462,6 +541,7 @@ export async function updateStandardCustomOperators(
         'op-devtools/project-model',
         '[updateStandardCustomOperators] No operator list changes detected, skipping store write',
       );
+
       return;
     }
 
@@ -493,7 +573,10 @@ export async function markOperatorsAsCompiled(
   projectPath: string,
   operatorNames: string | string[],
 ): Promise<void> {
-  appendLog('op-devtools/project-model', '[markOperatorsAsCompiled] Start', { projectPath, operatorNames });
+  appendLog('op-devtools/project-model', '[markOperatorsAsCompiled] Start', {
+    projectPath,
+    operatorNames,
+  });
   const store = ensureStore();
   const project = findProjectByPath(store, projectPath);
 
@@ -542,9 +625,7 @@ export async function markOperatorsAsCompiled(
     project.update_time = new Date()
       .toISOString();
     writeStore(store);
-    appendLog('op-devtools/project-model', '[markOperatorsAsCompiled] Marked operators', {
-      count: operatorNameArray.length,
-    });
+    appendLog('op-devtools/project-model', '[markOperatorsAsCompiled] Marked operators', { count: operatorNameArray.length });
   }
   else {
     console.warn(`[markOperatorsAsCompiled] Operators to mark were not found: ${operatorNameArray.join(', ')}`);
