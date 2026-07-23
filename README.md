@@ -2,15 +2,15 @@
 
 **Huawei OP DevTools（华为算子一站式开发工具）** 是面向 Ascend 算子开发的 Visual Studio Code 扩展，支持在编辑器内完成算子工程创建、编译部署、运行验证、CPU/NPU 调试、异常检测、性能调优和结果可视化。
 
-**最新使用指导：** VSIX 内以本 README 为准；在源码仓中可查看 `docs/` 目录的补充文档。旧讨论帖 <https://gitcode.com/org/cann/discussions/54> 已标记为过期，请以本 README 和 `docs/` 目录为准。
+**使用指导：** <https://gitcode.com/opdevtools/plugin_release>
 
 **问题反馈：** <https://gitcode.com/opdevtools/plugin_release/issues>
 
 ## 核心特性
 
 - 在 VS Code 中一站式完成算子开发相关操作，贴合主流编辑器使用习惯。
-- 支持 Ascend C、CANN 标准自定义算子、PyAsc、Triton 等工程类型。
-- 支持编译部署、运行验证、CPU/NPU 调试、Sanitizer 异常检测、上板分析和仿真分析。
+- 支持 Ascend C、标准自定义算子、PyAsc、Triton 等工程类型。
+- 支持编译部署、运行验证、CPU/NPU 调试、Sanitizer 异常检测、上板分析、仿真分析、dumptensor、UT等。
 - 自动处理常用环境变量、SoC / NPU_ARCH 设置、`.asc` 文件高亮和调试配置。
 - 通过原生侧边栏展示算子列表、操作入口、异常检测结果和性能结果。
 
