@@ -17,8 +17,10 @@ import torch
 import torch_npu
 import torchair
 from torch_npu.testing.testcase import TestCase, run_tests
-torch.ops.load_library("libcustom_ops.so")
 
+build_dir = os.environ.get("ASCENDC+ADD_BUILD_DIR", os.path.join(os.path.dirname(__file__), "build"))
+lib_path = os.path.join(build_dir, "libcustom_ops.so")
+torch.ops.load_library(lib_path)
 
 class TestCustomAdd(TestCase):
     def test_torch_library_ops(self):

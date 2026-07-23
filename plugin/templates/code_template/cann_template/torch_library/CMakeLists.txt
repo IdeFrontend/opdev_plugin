@@ -61,6 +61,10 @@ target_include_directories(custom_ops PRIVATE
     ${TORCH_NPU_INCLUDE_DIRS}
 )
 
+separate_arguments(ASC_LINK_OPTIONS UNIX_COMMAND "${CMAKE_ASC_LINK_FLAGS}")
+target_link_options(custom_ops PRIVATE
+    ${ASC_LINK_OPTIONS}
+)
 # 根据选项设置编译标志
 set(compile_options)
 if(ENABLE_DEBUG)
