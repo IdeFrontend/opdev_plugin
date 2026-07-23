@@ -1,38 +1,24 @@
 #!/bin/bash
 
 # 默认值
-cmake_args=()
-build_type=""
-
-set_build_type() {
-    local value=$1
-    if [[ -n $build_type ]]; then
-        echo "error: --build-type may only be specified once" >&2
-        exit 1
-    fi
-    if [[ -z $value || $value == -* ]]; then
-        echo "error: --build-type requires a non-empty, non-option value" >&2
-        exit 1
-    fi
-    build_type=$value
-}
+cmake_args=""
 
 # 显示帮助信息函数
 show_help() {
     cat << EOF
 用法: $0 [选项]
 
-选项(可组合使用):
-    --debug         启用调试模式构建
+选项(只支持一次调用其中一个选项):
+    --debug         启用NPU调试模式构建
+    --cpudebug      启用CPU调试模式构建
     --mssanitizer   启用MSSanitizer构建
-    --simulator [SOC_VERSION]  启用仿真调优模式构建；设备目录名可作为第二参数传入，或事先 export SOC_VERSION（如 Ascend910B3、Ascend950PR_9589）
+    --simulator     启用仿真调优模式构建
     --onboard       启用上板调优模式构建
-    --build-type Debug|Release  设置 CMAKE_BUILD_TYPE
     -h, --help      显示此帮助信息
 
 示例:
     $0
-    $0 --debug --build-type Debug
+    $0 --debug
     $0 --simulator Ascend910B3
 EOF
     exit 0
@@ -45,48 +31,30 @@ while [[ $# -gt 0 ]]; do
             show_help
             ;;
         --debug)
-            cmake_args+=("-DENABLE_DEBUG=ON")
-            shift
+            cmake_args="-DENABLE_DEBUG=ON"
+            break
+            ;;
+        --cpudebug)
+            cmake_args="-DCMAKE_ASC_RUN_MODE=cpu -DCMAKE_ASC_ARCHITECTURES=${NPU_ARCH} -DNPU_ARCH=${NPU_ARCH}"
+            break
             ;;
         --mssanitizer)
-            cmake_args+=("-DENABLE_MS_SANITIZER=ON")
-            shift
+            cmake_args="-DENABLE_MS_SANITIZER=ON"
+            break
             ;;
         --simulator)
-            cmake_args+=("-DENABLE_SIMULATOR=ON" "-DASCEND_HOME_PATH=${ASCEND_HOME_PATH}")
-            if [[ $# -gt 1 ]] && [[ -n $2 ]] && [[ $2 != -* ]]; then
-                cmake_args+=("-DSOC_VERSION=$2")
-                shift 2
-            else
-                cmake_args+=("-DSOC_VERSION=$SOC_VERSION")
-                shift
-            fi
-            ;;
-        --build-type=*)
-            set_build_type "${1#*=}"
-            shift
-            ;;
-        --build-type)
-            set_build_type "${2-}"
-            shift 2
+            cmake_args="-DCMAKE_ASC_RUN_MODE=sim -DCMAKE_ASC_ARCHITECTURES=${NPU_ARCH} -DNPU_ARCH=${NPU_ARCH}"
+            break
             ;;
         --onboard | --prof_onboard)
-            cmake_args+=("-DENABLE_ON_BOARD=ON")
-            shift
-            ;;
-        --)
-            shift
+            cmake_args="-DENABLE_ON_BOARD=ON"
             break
             ;;
         *)
-            shift
+            break
             ;;
     esac
 done
-
-if [[ -n $build_type ]]; then
-    cmake_args+=("-DCMAKE_BUILD_TYPE=$build_type")
-fi
 
 
 # 设置 CMAKE_PREFIX_PATH
@@ -96,5 +64,5 @@ rm -rf ./build
 mkdir -p build
 cd build
 # 配置和编译
-cmake .. "${cmake_args[@]}"
+cmake .. ${cmake_args}
 make -j VERBOSE=1
