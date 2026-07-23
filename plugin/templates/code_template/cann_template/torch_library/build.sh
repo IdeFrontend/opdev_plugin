@@ -9,9 +9,9 @@ show_help() {
 用法: $0 [选项]
 
 选项(只支持一次调用其中一个选项):
-    --debug         启用调试模式构建
+    --debug         启用NPU调试模式构建
     --mssanitizer   启用MSSanitizer构建
-    --simulator [SOC_VERSION]  启用仿真调优模式构建；设备目录名可作为第二参数传入，或事先 export SOC_VERSION（如 Ascend910B3、Ascend950PR_9589）
+    --simulator     启用仿真调优模式构建
     --onboard       启用上板调优模式构建
     -h, --help      显示此帮助信息
 
@@ -38,14 +38,8 @@ while [[ $# -gt 0 ]]; do
             break
             ;;
         --simulator)
-            cmake_args="-DENABLE_SIMULATOR=ON -DASCEND_HOME_PATH=${ASCEND_HOME_PATH}"
-            if [[ $# -gt 1 ]] && [[ $2 != --* ]]; then
-                cmake_args="$cmake_args -DSOC_VERSION=$2"
-                break
-            else
-                cmake_args="$cmake_args -DSOC_VERSION=$SOC_VERSION"
-                break
-            fi
+            cmake_args="-DCMAKE_ASC_RUN_MODE=sim -DCMAKE_ASC_ARCHITECTURES=${NPU_ARCH} -DNPU_ARCH=${NPU_ARCH}"
+            break
             ;;
         --onboard | --prof_onboard)
             cmake_args="-DENABLE_ON_BOARD=ON"
