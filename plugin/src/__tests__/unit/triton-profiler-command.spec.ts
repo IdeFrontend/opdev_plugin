@@ -58,12 +58,19 @@ describe('TritonCommandStrategy profiler commands', () => {
       cdBuildCmd: 'cd /ws/triton_vector_add',
     });
 
-    expect(cmd).toContain('. /opt/cann/set_env.sh');
-    expect(cmd).toContain('cd /ws/triton_vector_add');
-    expect(cmd).toContain('msprof op simulator');
-    expect(cmd).toContain('--soc-version=ascend910b');
-    expect(cmd).toContain('python3 ./triton_vector_add.py');
-    expect(cmd).toContain('/.vscode/opprof');
+    expect(cmd)
+      .toContain('. /opt/cann/set_env.sh');
+    expect(cmd)
+      .toContain('cd /ws/triton_vector_add');
+    expect(cmd)
+      .toContain('msprof op simulator');
+    expect(cmd)
+      .toContain('--soc-version=ascend910b');
+    expect(cmd)
+      .toContain('python3 ./triton_vector_add.py');
+    // Windows joins `.vscode/opprof` with `\`; keep the assertion OS-agnostic.
+    expect(cmd)
+      .toMatch(/\.vscode[/\\]opprof/);
   });
 
   it('buildOnBoardCommand wraps msprof op around the python entry', () => {
@@ -77,11 +84,16 @@ describe('TritonCommandStrategy profiler commands', () => {
       cdBuildCmd: 'cd /ws/triton_vector_add',
     });
 
-    expect(cmd).toContain('. /opt/cann/set_env.sh');
-    expect(cmd).toContain('cd /ws/triton_vector_add');
-    expect(cmd).toContain('msprof op');
+    expect(cmd)
+      .toContain('. /opt/cann/set_env.sh');
+    expect(cmd)
+      .toContain('cd /ws/triton_vector_add');
+    expect(cmd)
+      .toContain('msprof op');
     expect(cmd).not.toContain('simulator');
-    expect(cmd).toContain('python3 ./triton_vector_add.py');
-    expect(cmd).toContain('/.vscode/opprof');
+    expect(cmd)
+      .toContain('python3 ./triton_vector_add.py');
+    expect(cmd)
+      .toMatch(/\.vscode[/\\]opprof/);
   });
 });

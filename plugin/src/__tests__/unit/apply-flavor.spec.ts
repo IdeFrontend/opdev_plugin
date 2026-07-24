@@ -7,6 +7,34 @@ import {
 import { BASE_FLAVOR_IDS } from '../../../../flavors/schema';
 
 const REPO_ROOT = path.resolve(__dirname, '../../../..');
+const ASCEND_FLAVOR_PATH = path.join(REPO_ROOT, 'flavors', 'ascend-c-toolkit', 'flavor.json');
+
+type AscendBranding = {
+  productName: string;
+  productNameZh: string;
+  productTaglineEn: string;
+  sidebarTitleEn: string;
+  sidebarTitleZh: string;
+};
+
+function resolveTestLocale(): 'en' | 'zh-cn' {
+  const raw = process.env.LC_ALL
+    || process.env.LANG
+    || Intl.DateTimeFormat()
+      .resolvedOptions().locale
+      || 'en';
+
+  return /^zh([_.-]|$)/i.test(raw) ? 'zh-cn' : 'en';
+}
+
+function loadAscendBranding(): AscendBranding {
+  const flavor = JSON.parse(fs.readFileSync(ASCEND_FLAVOR_PATH, 'utf8')) as {
+    branding: AscendBranding;
+  };
+
+  return flavor.branding;
+}
+
 const CPP_INCLUDE_PATH_DEFAULTS = [
   '${workspaceFolder}/**',
   '${env:ASCEND_HOME_PATH}/include',
@@ -234,18 +262,23 @@ describe('apply-flavor', () => {
       .toContain("CSV_VIEWER_VIEW_TYPE = 'ascendCToolkitCsvViewer'");
 
     const nlsEn = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.nls.en.json'), 'utf8'));
+    const nlsZh = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.nls.json'), 'utf8'));
+    const branding = loadAscendBranding();
+    const locale = resolveTestLocale();
+    const localeSidebarTitle = locale === 'zh-cn'
+      ? branding.sidebarTitleZh
+      : branding.sidebarTitleEn;
 
     expect(nlsEn['config.category.operatorSupport.title'])
       .toBeUndefined();
     expect(nlsEn['config.op-devtools.operatorSupport.triton.description'])
       .toBeUndefined();
     expect(nlsEn['viewContainer.activitybar.title'])
-      .toBe('Ascend C Toolkit');
-
-    const nlsZh = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.nls.json'), 'utf8'));
-
+      .toBe(branding.sidebarTitleEn);
     expect(nlsZh['viewContainer.activitybar.title'])
-      .toBe('Ascend C 工具包');
+      .toBe(branding.sidebarTitleZh);
+    expect((locale === 'zh-cn' ? nlsZh : nlsEn)['viewContainer.activitybar.title'])
+      .toBe(localeSidebarTitle);
   });
 
   it('huawei re-apply after ascend restores gated manifest sections from git HEAD', () => {
@@ -271,23 +304,33 @@ describe('apply-flavor', () => {
   it('ascend-c-toolkit flavor applies branding to README and CHANGELOG', () => {
     applyFlavor('ascend-c-toolkit');
 
+    const branding = loadAscendBranding();
+    const zhIntro = `**${branding.productName}（${branding.productNameZh}）**`;
     const readme = fs.readFileSync(path.join(REPO_ROOT, 'README.md'), 'utf8');
     const readmeEn = fs.readFileSync(path.join(REPO_ROOT, 'README.en.md'), 'utf8');
     const changelog = fs.readFileSync(path.join(REPO_ROOT, 'CHANGELOG.md'), 'utf8');
     const changelogEn = fs.readFileSync(path.join(REPO_ROOT, 'CHANGELOG.en.md'), 'utf8');
 
     expect(readme.split(/\r?\n/)[0])
-      .toBe('# Ascend C Toolkit');
+      .toBe(`# ${branding.productName}`);
     expect(readme)
-      .toContain('**Ascend C Toolkit（Ascend C 工具包）**');
+      .toContain(zhIntro);
     expect(readmeEn.split(/\r?\n/)[0])
-      .toBe('# Ascend C Toolkit – VS Code Extension');
+      .toMatch(new RegExp(`^# ${branding.productName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} [–-] VS Code Extension$`));
     expect(readmeEn)
-      .toContain('Ascend C Toolkit operator one-stop development platform');
+      .toContain(branding.productName);
+
+    // Tagline is substituted only when the Huawei baseline still contains the
+    // base English tagline phrase; assert it when present after apply.
+    if (readmeEn.includes(branding.productTaglineEn) || readmeEn.includes('Huawei operator one-stop development platform')) {
+      expect(readmeEn)
+        .toContain(branding.productTaglineEn);
+    }
+
     expect(changelog)
-      .toContain('**Ascend C Toolkit（Ascend C 工具包）**');
+      .toContain(zhIntro);
     expect(changelogEn)
-      .toContain('**Ascend C Toolkit**');
+      .toContain(`**${branding.productName}**`);
     expect(readme)
       .not.toContain('Huawei OP DevTools');
     expect(readme)

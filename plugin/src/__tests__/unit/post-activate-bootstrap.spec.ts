@@ -31,6 +31,11 @@ jest.mock('@plugin/service/config-service', () => ({
   },
 }));
 
+jest.mock('@plugin/domain/utils/npu-hardware-probe', () => ({
+  startNpuHardwareProbe: jest.fn()
+    .mockResolvedValue(true),
+}));
+
 import * as vscode from 'vscode';
 import { welcomeMethods } from '@plugin/controller/welcome-controller';
 import { requestSidebarContextsRefresh } from '@plugin/helpers/sidebar-context-refresh';
@@ -48,6 +53,7 @@ const operateTreeProvider = {
     .mockResolvedValue(undefined),
   refreshPerformanceReports: jest.fn()
     .mockResolvedValue(undefined),
+  setNpuHardwareAvailable: jest.fn(),
 } as never;
 
 describe('post-activate-bootstrap', () => {

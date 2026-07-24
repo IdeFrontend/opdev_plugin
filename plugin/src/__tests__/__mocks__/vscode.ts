@@ -12,11 +12,15 @@ export const workspace = {
 export const window = {
   showInformationMessage: jest.fn(),
   showErrorMessage: jest.fn(),
-  showWarningMessage: jest.fn().mockResolvedValue(undefined),
+  showWarningMessage: jest.fn()
+    .mockResolvedValue(undefined),
+  showInputBox: jest.fn()
+    .mockResolvedValue(undefined),
 };
 
 export const commands = {
-  executeCommand: jest.fn().mockResolvedValue(undefined),
+  executeCommand: jest.fn()
+    .mockResolvedValue(undefined),
 };
 
 export const ConfigurationTarget = {
@@ -25,6 +29,4 @@ export const ConfigurationTarget = {
   WorkspaceFolder: 3,
 };
 
-export const Uri = {
-  file: (fsPath: string) => ({ fsPath }),
-};
+export const Uri = { file: (fsPath: string) => ({ fsPath }) };

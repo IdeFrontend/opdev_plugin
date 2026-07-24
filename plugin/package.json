@@ -5,7 +5,9 @@
   "type": "commonjs",
   "main": "../out/extension.js",
   "scripts": {
-    "test": "jest",
+    "test": "pnpm run test:unit && pnpm run test:flavor",
+    "test:unit": "jest --testPathIgnorePatterns=apply-flavor",
+    "test:flavor": "jest src/__tests__/unit/apply-flavor.spec.ts --runInBand",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
   },

@@ -140,6 +140,7 @@ function runBuildScript(sourceScript: string, args: string[]): ScriptResult {
         ...process.env,
         ASCEND_HOME_PATH: '/toolkit',
         CAPTURE_FILE: '../cmake-argv.bin',
+        NPU_ARCH: 'dav-2201',
         PATH: '../bin:/usr/bin:/bin',
         SOC_VERSION: 'EnvSoc',
       },
@@ -216,28 +217,52 @@ describe.each(templateScripts)('$name build.sh parser', ({ script }) => {
   });
 
   it('keeps parsing after unknown and empty args with separate build type', () => {
-    const result = runBuildScript(script, [
-      'unknown',
-      '',
-      '--simulator',
-      'Ascend910B3',
-      '--later',
-      '--build-type',
-      'Release',
-    ]);
+    const scriptSource = fs.readFileSync(script, 'utf8');
+    const usesAscRunModeSim = scriptSource.includes('CMAKE_ASC_RUN_MODE=sim');
+
+    // ASC_RUN_MODE templates break after --simulator (mutual-exclusive mode), so
+    // --build-type must appear before it. ENABLE_SIMULATOR templates keep parsing
+    // and accept an optional SOC_VERSION positional after --simulator.
+    const result = runBuildScript(script, usesAscRunModeSim
+      ? [
+        'unknown',
+        '',
+        '--build-type',
+        'Release',
+        '--simulator',
+        'Ascend910B3',
+        '--later',
+      ]
+      : [
+        'unknown',
+        '',
+        '--simulator',
+        'Ascend910B3',
+        '--later',
+        '--build-type',
+        'Release',
+      ]);
 
     expect(result.error)
       .toBeUndefined();
     expect(result.status)
       .toBe(0);
     expect(result.cmakeArgv)
-      .toEqual([
-        '..',
-        '-DENABLE_SIMULATOR=ON',
-        '-DASCEND_HOME_PATH=/toolkit',
-        '-DSOC_VERSION=Ascend910B3',
-        '-DCMAKE_BUILD_TYPE=Release',
-      ]);
+      .toEqual(usesAscRunModeSim
+        ? [
+          '..',
+          '-DCMAKE_ASC_RUN_MODE=sim',
+          '-DCMAKE_ASC_ARCHITECTURES=dav-2201',
+          '-DNPU_ARCH=dav-2201',
+          '-DCMAKE_BUILD_TYPE=Release',
+        ]
+        : [
+          '..',
+          '-DENABLE_SIMULATOR=ON',
+          '-DASCEND_HOME_PATH=/toolkit',
+          '-DSOC_VERSION=Ascend910B3',
+          '-DCMAKE_BUILD_TYPE=Release',
+        ]);
   });
 
   it('honors -- as the end of supported options', () => {
