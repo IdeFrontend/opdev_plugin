@@ -108,10 +108,10 @@ function getCpuDebugScript(type: string, scriptPath: string): string {
       return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --bisheng_flags=ccec_g`;
     }
 
-    return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --simulator {simulator_type}`;
+    return `bash ${scriptPath} --pkg --soc={soc_version} --vendor_name=custom --cpudebug --simulator {simulator_type}`;
   }
 
-  return `bash ${scriptPath} --simulator {simulator_type}`;
+  return `bash ${scriptPath} --cpudebug --simulator {simulator_type}`;
 }
 
 function getSimulateScript(type: string, scriptPath: string): string {
@@ -466,12 +466,8 @@ export async function generateStructure(
           script: scripts.sanitizerScript,
           target_file: targetFile,
           config_name: record.op_name,
-          tool: {
-            ...DEFAULT_SANITIZER_DETECTION_OPTIONS.tool,
-          },
-          memcheckOption: {
-            ...DEFAULT_SANITIZER_DETECTION_OPTIONS.memcheckOption,
-          },
+          tool: { ...DEFAULT_SANITIZER_DETECTION_OPTIONS.tool },
+          memcheckOption: { ...DEFAULT_SANITIZER_DETECTION_OPTIONS.memcheckOption },
           logLevel: 'warn',
           maxDebuglogSize: 1024,
           useBlock: false,
@@ -649,12 +645,8 @@ function getConfigPayload(
           script: scripts.sanitizerScript,
           target_file: targetFile,
           config_name: record.op_name,
-          tool: {
-            ...DEFAULT_SANITIZER_DETECTION_OPTIONS.tool,
-          },
-          memcheckOption: {
-            ...DEFAULT_SANITIZER_DETECTION_OPTIONS.memcheckOption,
-          },
+          tool: { ...DEFAULT_SANITIZER_DETECTION_OPTIONS.tool },
+          memcheckOption: { ...DEFAULT_SANITIZER_DETECTION_OPTIONS.memcheckOption },
           logLevel: 'warn',
           maxDebuglogSize: 1024,
           useBlock: false,

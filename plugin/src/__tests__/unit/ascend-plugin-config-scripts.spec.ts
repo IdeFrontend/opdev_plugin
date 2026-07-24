@@ -93,6 +93,13 @@ describe('AscendPlugin getInitialConfigScripts', () => {
   it('keeps generated defaults neutral and applies Debug at runtime', () => {
     expectNeutralDefaultsAndRuntimeDebug(plugin, op);
   });
+
+  it('puts --cpudebug before --simulator in the default CPU debug script', () => {
+    const scripts = plugin.getInitialConfigScripts(op, '/repo');
+
+    expect(scripts.cpuDebugScript)
+      .toMatch(/--cpudebug\b.*--simulator \{simulator_type\}/);
+  });
 });
 
 describe('CannPlugin getInitialConfigScripts', () => {
@@ -107,5 +114,12 @@ describe('CannPlugin getInitialConfigScripts', () => {
 
   it('keeps generated defaults neutral and applies Debug at runtime', () => {
     expectNeutralDefaultsAndRuntimeDebug(plugin, op);
+  });
+
+  it('puts --cpudebug before --simulator in the default CPU debug script', () => {
+    const scripts = plugin.getInitialConfigScripts(op, '/repo');
+
+    expect(scripts.cpuDebugScript)
+      .toMatch(/--cpudebug\b.*--simulator \{simulator_type\}/);
   });
 });

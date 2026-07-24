@@ -61,7 +61,7 @@ export abstract class AbstractOperatorPlugin implements IOperatorPlugin {
       simulateScript:  `bash ${script} --simulator {simulator_type}`,
       onBoardScript:   `bash ${script} --onboard`,
       sanitizerScript: `bash ${script} --mssanitizer`,
-      cpuDebugScript:  `bash ${script} --simulator {simulator_type}`,
+      cpuDebugScript:  `bash ${script} --cpudebug --simulator {simulator_type}`,
       npuDebugScript:  `bash ${script} --debug`,
       utTestScript:    `bash ${script} -u`,
     };

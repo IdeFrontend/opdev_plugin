@@ -70,6 +70,7 @@ export class AscendPlugin extends AbstractOperatorPlugin implements IProjectDete
     const script = path.join(op.op_path, 'build.sh');
     const h = checkBuildShHasBishengConfig(workspaceRoot);
     const base = `bash ${script} --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames}`;
+
     return {
       // V1 inline ternary for build_op.script had NO bisheng variant — always the plain base.
       buildScript:     base,
@@ -80,7 +81,7 @@ export class AscendPlugin extends AbstractOperatorPlugin implements IProjectDete
       onBoardScript:   h ? `${base} --bisheng_flags=ccec_g`         : `${base} --onboard`,
       // V1 inline ternary for sanitizer.script had NO bisheng variant — always base + --mssanitizer.
       sanitizerScript: `${base} --mssanitizer`,
-      cpuDebugScript:  h ? `${base} --bisheng_flags=ccec_g`         : `${base} --simulator {simulator_type}`,
+      cpuDebugScript:  h ? `${base} --bisheng_flags=ccec_g`         : `${base} --cpudebug --simulator {simulator_type}`,
       npuDebugScript:  h ? `${base} --bisheng_flags=ccec_O0,ccec_g` : `${base} --debug`,
       utTestScript:    `bash ${script} --soc={soc_version} --ops={operatorNames} -u`,
     };
