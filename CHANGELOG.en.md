@@ -2,6 +2,28 @@
 
 Notable changes to **Huawei OP DevTools** are listed here. For the full project history, see the repository on [GitCode](https://gitcode.com/mlh0101/mstt).
 
+## 1.4.0 — 2026-07-24
+
+Release: standard-custom ST (TTK) testing, Performance Results refresh, debug build flags, workspace-scoped settings, zero-config C++ navigation, and CANN template updates.
+
+- **Standard-custom ST / TTK testing ([#45](https://gitcode.com/opdevtools/plugin_release/issues/45))** — Actions-tree ST entry detects/installs TTK (`ops-test-kit`), runs `python -m ttk` by mode (kernel / aclnn / e2e) with configurable args and command preview, visualizes CSV results, and adds a native ST run-history tree view.
+- **Performance Results refresh ([#51](https://gitcode.com/opdevtools/plugin_release/issues/51))** — Manual refresh on Performance Results; safely reconcile result rows deleted from the filesystem.
+- **Debug builds with `--build-type=Debug` ([#46](https://gitcode.com/opdevtools/plugin_release/issues/46))** — Append `--build-type=Debug` to CPU/NPU debug `build.sh` invocations (without duplicating an existing build type) so host binaries get debug info; default CPU debug compile inserts `--cpudebug` before `--simulator`; CANN templates keep parsing after `--simulator` / `--cpudebug` so later flags such as `--build-type` still apply.
+- **Ignore user-scope op-devtools settings ([#41](https://gitcode.com/opdevtools/plugin_release/issues/41))** — Read runtime project settings (e.g. Deploy/Run Command) only from Workspace / Workspace Folder scope; ignore User / Remote User so behavior matches the resolver and Reset configuration.
+- **Zero-config CANN C++ navigation** — Seed `configurationDefaults` for `*.asc`/`*.cce` → `cpp` and C/C++ `includePath` / `browse.path` under `ASCEND_HOME_PATH` for out-of-the-box go-to-definition and IntelliSense.
+- **Restore local standard-custom project initialization** — Welcome-page create and workspace detection correctly register standard-custom projects when opening locally.
+- **CANN templates for CPU debug and simulation** — Update `hello_world` / `addn_custom` / `torch_library` `build.sh` and CMake templates for CPU debug and simulation workflows.
+
+## 1.3.9 — 2026-07-17
+
+Patch release: improve default new-operator project naming and assorted UX fixes.
+
+- **Default operator project name prefix** — change from `op_` to `op`.
+- **Welcome page** — show only once.
+- **SOC configuration dialog** — confirm quickly with Enter.
+- **genop** — use relative paths.
+- **Version** — 1.3.9.
+
 ## 1.3.8 — 2026-07-10
 
 Patch release: gray out NPU-only actions on non-NPU extension hosts, and NPU labels on Actions tree rows.

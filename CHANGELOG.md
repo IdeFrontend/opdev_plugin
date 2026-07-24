@@ -2,6 +2,28 @@
 
 本文列出 **Huawei OP DevTools（华为算子一站式开发工具）** 的重要变更。完整提交历史见 [GitCode](https://gitcode.com/mlh0101/mstt) 仓库。
 
+## 1.4.0 — 2026-07-24
+
+发布：新增标准自定义算子 ST（TTK）测试能力，并包含性能结果刷新、调试构建、工作区设置作用域、C++ 导航与 CANN 模板等多项改进。
+
+- **标准自定义算子 ST / TTK 测试 ([#45](https://gitcode.com/opdevtools/plugin_release/issues/45))** — 在操作树提供 ST 测试入口：检测/安装 TTK（`ops-test-kit`），按模式（kernel / aclnn / e2e）运行 `python -m ttk`，支持可配置参数与命令预览；解析结果 CSV 并可视化；提供原生运行历史树视图。
+- **性能调优结果刷新 ([#51](https://gitcode.com/opdevtools/plugin_release/issues/51))** — Performance Results 支持手动刷新；安全同步已从文件系统删除的结果条目。
+- **调试构建 `--build-type=Debug` ([#46](https://gitcode.com/opdevtools/plugin_release/issues/46))** — CPU/NPU 调试编译为 `build.sh` 追加 `--build-type=Debug`（避免重复），生成 host 调试信息；默认 CPU 调试命令在 `--simulator` 前加入 `--cpudebug`；CANN 模板在 `--simulator` / `--cpudebug` 后继续解析后续参数（如 `--build-type`）。
+- **忽略用户作用域 op-devtools 设置 ([#41](https://gitcode.com/opdevtools/plugin_release/issues/41))** — 运行时仅读取 Workspace / Workspace Folder 作用域配置（如 Deploy/Run Command），忽略 User / Remote User，与解析器及重置配置行为一致。
+- **零配置 CANN C++ 导航** — 通过 `configurationDefaults` 预置 `*.asc`/`*.cce` → `cpp` 关联及 `ASCEND_HOME_PATH` 下的 C/C++ `includePath` / `browse.path`，便于开箱跳转与补全。
+- **恢复本地 standard-custom 工程初始化** — 欢迎页创建与工作区检测在本地打开时正确注册 standard-custom 工程，避免漏登或误判。
+- **CANN 工程模板适配 CPU 调试与仿真** — 更新 `hello_world` / `addn_custom` / `torch_library` 等模板的 `build.sh` 与 CMake，对齐 CPU 调试与仿真场景。
+
+## 1.3.9 — 2026-07-17
+
+本版本优化新建算子工程默认名称格式及多项修复。
+
+- **默认算子工程名称前缀** — 由 `op_` 改为 `op`。
+- **欢迎页** — 仅弹一次。
+- **SOC 配置弹窗** — 支持回车快速确认。
+- **genop** — 使用相对路径。
+- **版本号** — 1.3.9。
+
 ## 1.3.8 — 2026-07-10
 
 本版本包含非 NPU 环境下 NPU 专属操作置灰，以及操作菜单 NPU 标签。
