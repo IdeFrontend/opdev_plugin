@@ -79,6 +79,11 @@ export function getProjectEnv() {
   }>('ops/getProjectEnv');
 }
 
+/** 扩展主机是否检测到昇腾 NPU 硬件 */
+export function getNpuHardwareAvailable() {
+  return request.post<undefined, boolean>('ops/getNpuHardwareAvailable');
+}
+
 /** 获取当前 SOC 下仿真器支持的可选 aic-metrics（与命令生成同源，isSimulator:true 解析） */
 export function getSimulatorSupportedMetrics() {
   return request.post<undefined, {

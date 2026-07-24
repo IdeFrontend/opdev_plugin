@@ -77,17 +77,25 @@ export default {
   'extension.environmentScript.missing': '工作区「环境脚本」(set_env.sh) 未设置。请先配置后再在「操作」中执行操作，或现在选择文件。',
   'extension.environmentScript.invalidPath': '工作区「环境脚本」路径在磁盘上不存在。请选择有效的 set_env.sh 或更新该设置。',
   'extension.environmentScript.browse': '选择文件…',
+  'extension.environmentScript.continue': '继续执行',
   'extension.environmentScript.selectFile': '选择环境脚本',
   'extension.environmentScript.saved': '环境脚本路径已保存到工作区设置。',
   'extension.environmentScript.fileNotFound': '无法访问所选路径。',
   'extension.ascendEnv.socNotDetected.message':
     '找不到 NPU 相关信息，请手动配置 SoC 版本。',
   'extension.ascendEnv.socNotDetected.openSettings': '打开 SoC 设置…',
+  'extension.ascendEnv.socNotDetected.continue': '继续执行',
+  'extension.ascendEnv.socNotDetected.setAndExecute': '设置并执行',
+  'extension.ascendEnv.socNotDetected.inputPrompt': '请输入 SoC 版本（如 ascend910b）',
+  'extension.ascendEnv.socNotDetected.inputPlaceholder': 'ascend910b',
+  'extension.ascendEnv.socNotDetected.inputRequired': '请输入有效的 SoC 版本',
+  'extension.ascendEnv.socNotDetected.setSuccess': 'SoC 版本已保存到工作区设置。',
   'extension.reloadWindowAction': '重载窗口',
   'extension.resetProjectConfigurationConfirm':
     '是否重置{{projectName}}的工程配置？点击重置将清除本插件为{{projectName}}保存的配置信息，并重置为默认配置。不会修改仓库中的算子源码及其他工程文件。',
   'extension.resetProjectConfigurationConfirmReset': '重置',
-  'extension.unsupportedProjectTypeDisabled': '当前产品构建不支持项目类型“{{projectType}}”。',
+  'extension.unsupportedProjectTypeDisabled': '当前产品构建不支持项目类型"{{projectType}}"。',
+  'extension.npuEnvRequired': '请切换至NPU环境\n\n该操作需要切换至NPU环境，请在我的环境列表中进行NPU环境切换，然后再执行本操作。',
 
   // folder-context-menu
   'folderContext.angleOpsNotSupported': '<<<>>>类型算子暂不支持该右键菜单操作',
@@ -203,7 +211,7 @@ export default {
 
   // insight
   'insight.profilerServerExitCode': 'profiler_server 进程异常退出，退出码: {{code}}',
-  'insight.downloadFailed': 'Insight 下载失败：{{error}}\n\n请手动下载 Insight 后解压到以下目录：\n{{path}}\n\n下载地址：{{url}}\n\n解压后该目录下应存在 index.html 文件。',
+  'insight.downloadFailed': 'Insight 下载失败：{{error}}\n\n请手动下载 Insight 后解压到以下目录：\n{{path}}\n\n下载地址：{{url}}\n\n手动下载命令示例：\n{{downloadCommand}}\n\n解压后该目录下应存在 index.html 文件。',
   'insight.downloadErrorUnknown': '未知错误',
   'insight.profilerServerStartFailed': '启动 profiler_server 失败: {{error}}',
 
@@ -212,6 +220,7 @@ export default {
   'mindStudio.installFailed': '安装失败：{{error}}',
   'mindStudio.webManualConfig': '当前 Web 环境不支持自动安装，请手动配置。',
   'mindStudio.configGenerateFailed': '配置文件生成失败：{{error}}',
+  'mindStudio.debugPluginInstalling': '调试插件正在安装中，请稍后重试。',
 
   // view / link
   'view.binPathEmpty': 'BIN文件路径不能为空',
@@ -367,6 +376,7 @@ export default {
   'web.operate.searchOperatorProject': '搜索算子工程',
   'web.operate.pleaseSelectOperatorProject': '请选择算子工程',
   'web.operate.singleOperatorOnly': '该功能只支持单算子执行',
+  'web.operate.npuHardwareRequired': '该操作只能在NPU环境下执行',
   'web.operate.selectOneOperatorForStTest': '请选择一个算子运行ST测试',
   'web.operate.actionsTitle': '操作',
   'web.operate.noActionsAvailable': '当前树视图中没有可执行的操作。',

@@ -77,17 +77,25 @@ export default {
   'extension.environmentScript.missing': 'Workspace setting Environment script (set_env.sh) is empty. Set it before running actions from the Actions view, or choose a file now.',
   'extension.environmentScript.invalidPath': 'The workspace Environment script path does not exist on disk. Choose a valid set_env.sh or update the setting.',
   'extension.environmentScript.browse': 'Choose file…',
+  'extension.environmentScript.continue': 'Continue',
   'extension.environmentScript.selectFile': 'Select environment script',
   'extension.environmentScript.saved': 'Environment script path saved to workspace settings.',
   'extension.environmentScript.fileNotFound': 'The selected path could not be accessed.',
   'extension.ascendEnv.socNotDetected.message':
     'NPU information could not be found. Please configure the SoC version manually.',
   'extension.ascendEnv.socNotDetected.openSettings': 'Open SoC setting…',
+  'extension.ascendEnv.socNotDetected.continue': 'Continue',
+  'extension.ascendEnv.socNotDetected.setAndExecute': 'Set and Execute',
+  'extension.ascendEnv.socNotDetected.inputPrompt': 'Enter SoC version (e.g., ascend910b)',
+  'extension.ascendEnv.socNotDetected.inputPlaceholder': 'ascend910b',
+  'extension.ascendEnv.socNotDetected.inputRequired': 'Please enter a valid SoC version',
+  'extension.ascendEnv.socNotDetected.setSuccess': 'SoC version saved to workspace settings.',
   'extension.reloadWindowAction': 'Reload Window',
   'extension.resetProjectConfigurationConfirm':
     'Reset configuration for {{projectName}}? Choosing Reset will clear configuration stored by this plugin for {{projectName}} and regenerate defaults. Your operator source code and other project files in the repository will not be changed.',
   'extension.resetProjectConfigurationConfirmReset': 'Reset',
   'extension.unsupportedProjectTypeDisabled': 'Project type "{{projectType}}" is not supported in this product build.',
+  'extension.npuEnvRequired': 'Please switch to NPU environment\n\nThis operation requires switching to NPU environment. Please switch to NPU environment in my environment list, then execute this operation again.',
 
   // folder-context-menu
   'folderContext.angleOpsNotSupported': '<<<>>> operator type does not support this context menu action',
@@ -202,7 +210,7 @@ export default {
 
   // insight
   'insight.profilerServerExitCode': 'profiler_server exited with code {{code}}',
-  'insight.downloadFailed': 'Insight download failed: {{error}}\n\nPlease download Insight manually and extract it to:\n{{path}}\n\nDownload URL: {{url}}\n\nAfter extraction, index.html should exist in this directory.',
+  'insight.downloadFailed': 'Insight download failed: {{error}}\n\nPlease download Insight manually and extract it to:\n{{path}}\n\nDownload URL: {{url}}\n\nManual download command example:\n{{downloadCommand}}\n\nAfter extraction, index.html should exist in this directory.',
   'insight.downloadErrorUnknown': 'Unknown error',
   'insight.profilerServerStartFailed': 'Failed to start profiler_server: {{error}}',
 
@@ -211,6 +219,7 @@ export default {
   'mindStudio.installFailed': 'Install failed: {{error}}',
   'mindStudio.webManualConfig': 'Web environment does not support auto install. Please configure manually.',
   'mindStudio.configGenerateFailed': 'Failed to generate config: {{error}}',
+  'mindStudio.debugPluginInstalling': 'Debug plugin is installing. Please try again later.',
 
   // view / link
   'view.binPathEmpty': 'BIN file path cannot be empty',
@@ -367,6 +376,7 @@ export default {
   'web.operate.searchOperatorProject': 'Search operator project',
   'web.operate.pleaseSelectOperatorProject': 'Please select an operator project',
   'web.operate.singleOperatorOnly': 'This action supports single operator only',
+  'web.operate.npuHardwareRequired': 'This action can only be performed in an NPU environment',
   'web.operate.selectOneOperatorForStTest': 'Select one operator to run ST tests',
   'web.operate.actionsTitle': 'Actions',
   'web.operate.noActionsAvailable': 'No actions available in current tree view.',
