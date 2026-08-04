@@ -22,7 +22,11 @@ describe('CannCommandStrategy.buildExampleCommand (plugin_release #171)', () => 
   it('appends the positional operator/mode/pkg and a --soc for a legacy run_example script', () => {
     const cmd = strategy.buildExampleCommand({
       ...base,
-      config: { project_id: 1, op: 'add_example', script: legacyScript },
+      config: {
+        project_id: 1,
+        op: 'add_example',
+        script: legacyScript,
+      },
       operatorNames: 'add_example',
       compileOption: '',
     } as any);
@@ -41,9 +45,13 @@ describe('CannCommandStrategy.buildExampleCommand (plugin_release #171)', () => 
   it('does NOT duplicate --soc when compileOption already supplies it (simulate-example flow)', () => {
     const cmd = strategy.buildExampleCommand({
       ...base,
-      config: { project_id: 1, op: 'add_example', script: legacyScript },
+      config: {
+        project_id: 1,
+        op: 'add_example',
+        script: legacyScript,
+      },
       operatorNames: 'add_example',
-      compileOption: '--simulator Ascend910C --soc=ascend910_93',
+      compileOption: '--simulator Ascend910_9362 --soc=ascend910_93',
     } as any);
 
     expect((cmd.match(/--soc=/g) || []).length)
@@ -51,13 +59,34 @@ describe('CannCommandStrategy.buildExampleCommand (plugin_release #171)', () => 
     expect(cmd)
       .toContain('--run_example add_example eager cust');
     expect(cmd)
-      .toContain('--simulator Ascend910C');
+      .toContain('--simulator Ascend910_9362');
+  });
+
+  it('does not add the standard-custom build-only option', () => {
+    const cmd = strategy.buildExampleCommand({
+      ...base,
+      config: {
+        project_id: 1,
+        op: 'add_example',
+        script: legacyScript,
+      },
+      operatorNames: 'add_example',
+      compileOption: '',
+      buildExampleOnly: true,
+    } as any);
+
+    expect(cmd)
+      .not.toContain('--noexec');
   });
 
   it('falls back to the build_example config operator (config.op) when operatorNames is empty', () => {
     const cmd = strategy.buildExampleCommand({
       ...base,
-      config: { project_id: 1, op: 'add_example', script: legacyScript },
+      config: {
+        project_id: 1,
+        op: 'add_example',
+        script: legacyScript,
+      },
       operatorNames: '',
       compileOption: '',
     } as any);
@@ -71,7 +100,11 @@ describe('CannCommandStrategy.buildExampleCommand (plugin_release #171)', () => 
   it('falls back to config.user_options.op when operatorNames is not provided', () => {
     const cmd = strategy.buildExampleCommand({
       ...base,
-      config: { project_id: 1, user_options: { op: 'add_example' }, script: legacyScript },
+      config: {
+        project_id: 1,
+        user_options: { op: 'add_example' },
+        script: legacyScript,
+      },
       operatorNames: undefined,
       compileOption: '',
     } as any);
@@ -87,7 +120,10 @@ describe('CannCommandStrategy.buildExampleCommand (plugin_release #171)', () => 
         project_id: 1,
         op: 'add_example',
         script: legacyScript,
-        user_options: { op: 'add_example', execution_mode: 'sim' },
+        user_options: {
+          op: 'add_example',
+          execution_mode: 'sim',
+        },
       },
       operatorNames: 'add_example',
       compileOption: '',
@@ -102,7 +138,11 @@ describe('CannCommandStrategy.buildExampleCommand (plugin_release #171)', () => 
     // positionals; appending them would corrupt the command.
     const cmd = strategy.buildExampleCommand({
       ...base,
-      config: { project_id: 1, op: 'add_example', script: 'bash build.sh -e add_example' },
+      config: {
+        project_id: 1,
+        op: 'add_example',
+        script: 'bash build.sh -e add_example',
+      },
       operatorNames: 'add_example',
       compileOption: '',
     } as any);
@@ -122,7 +162,10 @@ describe('CannCommandStrategy.buildExampleCommand (plugin_release #171)', () => 
         project_id: 1,
         op: 'pows',
         script: legacyScript,
-        user_options: { op: 'pows', execution_mode: 'eager' },
+        user_options: {
+          op: 'pows',
+          execution_mode: 'eager',
+        },
       },
       operatorNames: 'pows',
       compileOption: '',
@@ -136,7 +179,10 @@ describe('CannCommandStrategy.buildExampleCommand (plugin_release #171)', () => 
   it('adds --soc but no positional args when no operator is resolvable (avoids shifting mode into name)', () => {
     const cmd = strategy.buildExampleCommand({
       ...base,
-      config: { project_id: 1, script: legacyScript },
+      config: {
+        project_id: 1,
+        script: legacyScript,
+      },
       operatorNames: '',
       compileOption: '',
     } as any);

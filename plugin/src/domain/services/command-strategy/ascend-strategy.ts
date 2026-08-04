@@ -75,10 +75,7 @@ export class AscendCommandStrategy implements CommandStrategy {
     const {
       config, sourceCannCmd, cdCmd,
     } = context;
-    const run_cmd = getExecutableCommand(config.target_file || '', {
-      execute: true,
-      mode: 'run',
-    });
+    const run_cmd = getExecutableCommand(config.target_file || '', { execute: true });
 
     return joinCommands(sourceCannCmd, cdCmd, run_cmd);
   }
@@ -111,10 +108,7 @@ export class AscendCommandStrategy implements CommandStrategy {
       cmd.addArgument(advance_cmd);
     }
 
-    const deploy_cmd = getExecutableCommand(config.target_file || '', {
-      execute: true,
-      mode: 'deploy',
-    });
+    const deploy_cmd = getExecutableCommand(config.target_file || '', { execute: true });
 
     return joinCommands(sourceCannCmd, cdCmd, cmd.toString(), deploy_cmd);
   }
@@ -146,6 +140,18 @@ export class AscendCommandStrategy implements CommandStrategy {
 
     if (compileOption) {
       cmd.addArgument(compileOption);
+    }
+
+    if (params.buildExampleOnly
+      && /--run_example\b/.test(script)
+      && !/\B--noexec\b/.test([
+        script,
+        compileOption,
+        advance_cmd,
+      ]
+        .filter(Boolean)
+        .join(' '))) {
+      cmd.addArgument('--noexec');
     }
 
     if (advance_cmd) {

@@ -33,7 +33,6 @@ import { resolveAscendEnv } from '@plugin/domain/utils/ascend-util';
 import {
   buildOperatorSpawnContext,
   executeOperatorCommand,
-  resolveOpTypeForSpawn,
 } from '@plugin/service/operator-command-executor';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import { ConfigService } from '@plugin/service/config-service';
@@ -47,6 +46,15 @@ import {
 } from '@plugin/constants';
 import { decidePythonTargetAction } from '@plugin/helpers/sync-sanitizer-python-target';
 import { probeTritonPythonDependencies } from '@plugin/domain/services/command-strategy/triton-strategy';
+import {
+  buildRemoteBuildExampleCommand,
+  buildRemoteDumpTensorCommand,
+  buildRemoteExecCommand,
+  buildRemoteOnBoardCommand,
+  buildRemoteUtCommand,
+  createRemoteCommandWhenNoNpuTransformer,
+} from '@plugin/helpers/remote-command';
+import { getEnvironmentScriptPathFromWorkspace } from '@plugin/helpers/operator-project-workspace-config';
 
 const CONFIG_TYPES = {
   BUILD_OP: 'build_op',
@@ -60,7 +68,7 @@ const CONFIG_TYPES = {
  * Checks whether the VS Code workspace root is a STANDARD_CUSTOM operator project.
  * Uses OperatorPluginRegistry.detectProject() — routing through the plugin registry.
  */
-async function isRootStandardCustom(): Promise<boolean> {
+export async function isRootStandardCustom(): Promise<boolean> {
   const workspaceFolders = vscode.workspace.workspaceFolders;
 
   if (!workspaceFolders || workspaceFolders.length === 0) {
@@ -194,22 +202,13 @@ export class BuildService {
    * Uses a single {@link resolveAscendEnv} call so the simulator directory
    * and the `--soc=<slug>` argument cannot drift apart. The plugin still
    * emits `SOC_VERSION` (simulator device dir for cann sim) / `NPU_ARCH` in the spawn env via
-   * `executeOperatorCommand`; this option string only adds the Ascend
-   * `--soc=` CLI flag that the ascend operator `build.sh` expects.
+   * `executeOperatorCommand`; this option string adds the `--soc=` CLI flag
+   * required by the example build after `--simulator`.
    */
-  private buildSimulateExampleCompileOption(
-    projectId: number | undefined,
-    operatorNames?: string,
-  ): string {
+  private buildSimulateExampleCompileOption(): string {
     const resolved = resolveAscendEnv({ isSimulator: true });
-    const simDir = resolved.simulatorType ?? '';
-    const opType = resolveOpTypeForSpawn(projectId, operatorNames);
 
-    if (opType === 'ascend') {
-      return `--simulator ${simDir} --soc=${resolved.socVersion}`;
-    }
-
-    return `--simulator ${simDir}`;
+    return `--simulator --soc=${resolved.socVersion}`;
   }
 
   /**
@@ -542,7 +541,10 @@ export class BuildService {
           configId,
           script: runCommand,
         }),
-        { outputLabel: 'run' },
+        {
+          outputLabel: 'run',
+          transformCommand: createRemoteCommandWhenNoNpuTransformer((command) => buildRemoteExecCommand(command)),
+        },
       );
 
       console.log('runRes', res);
@@ -624,6 +626,12 @@ export class BuildService {
           operatorNames: params.operatorNames,
           script: buildCommand,
         }),
+        {
+          transformCommand: createRemoteCommandWhenNoNpuTransformer((command) => buildRemoteBuildExampleCommand(
+            command,
+            this.getProjectRootByConfigId(Number(configId)),
+          )),
+        },
       );
 
       if (res.code !== 0) {
@@ -774,14 +782,13 @@ export class BuildService {
 
       if (await isRootStandardCustom()) {
         const exConfigId = await this.getBuildExampleConfigId();
-        const exampleCompileOption = this.buildSimulateExampleCompileOption(
-          project?.id,
-          params.operatorNames,
-        );
+        const exampleCompileOption = this.buildSimulateExampleCompileOption();
         const exampleBuildCommand = getBuildExampleCommand(
           Number(exConfigId),
           params.compileOption ?? exampleCompileOption,
           params.operatorNames,
+          undefined,
+          true,
         );
         const exampleBuildRes = await executeOperatorCommand(
           exampleBuildCommand,
@@ -911,6 +918,8 @@ export class BuildService {
           Number(exConfigId),
           params.compileOption,
           params.operatorNames,
+          undefined,
+          true,
         );
         const exampleBuildRes = await executeOperatorCommand(
           exampleBuildCommand,
@@ -919,11 +928,21 @@ export class BuildService {
             operatorNames: params.operatorNames,
             script: exampleBuildCommand,
           }),
+          {
+            transformCommand: createRemoteCommandWhenNoNpuTransformer((command) => buildRemoteBuildExampleCommand(
+              command,
+              project?.project_path,
+            )),
+          },
         );
 
         console.log('example buildRes', exampleBuildRes);
 
         if (exampleBuildRes.code !== 0) {
+          if (exampleBuildRes.interruptedByUserStop) {
+            return;
+          }
+
           vscode.window.showErrorMessage(t('build.executeFailed', { output: exampleBuildRes.output }));
 
           return;
@@ -952,6 +971,13 @@ export class BuildService {
 
     try {
       const onBoardCommand = getOnBoardCommand(Number(configId), Number(exConfigId), params.operatorNames);
+      const remoteOnBoardCommandTransformer = createRemoteCommandWhenNoNpuTransformer(
+        (command) => buildRemoteOnBoardCommand(
+          command,
+          this.getRemotePullDir(project?.project_path, 'opprof'),
+        ),
+        this.isOnBoardProfilerCommand,
+      );
 
       console.log('onBoardCommand', onBoardCommand);
       const res = await executeOperatorCommand(
@@ -961,6 +987,7 @@ export class BuildService {
           operatorNames: params.operatorNames,
           script: onBoardCommand,
         }),
+        { transformCommand: remoteOnBoardCommandTransformer },
       );
 
       if (res.code !== 0) {
@@ -1006,6 +1033,10 @@ export class BuildService {
     const currentDir = workspaceFolders[0].uri.fsPath;
     const tempDataPath = joinIdeConfigPath(currentDir, 'dump_tensor_temp_data');
     const dumpTensorEnvPrefix = this.getDumpTensorEnvExportsPrefix();
+    const remoteDumpTensorCommandTransformer = createRemoteCommandWhenNoNpuTransformer((command) => buildRemoteDumpTensorCommand(
+      command,
+      this.getRemotePullDir(currentDir, 'dump_tensor_temp_data'),
+    ));
 
     // Remove temp data folder from previous runs.
     console.log('[startDumpTensor] Removing temp data directory:', tempDataPath);
@@ -1071,11 +1102,16 @@ export class BuildService {
           operatorNames: params.operatorNames,
           script: exampleBuildCommand,
         }),
+        { transformCommand: remoteDumpTensorCommandTransformer },
       );
 
       console.log('[startDumpTensor] example buildRes', exampleBuildRes);
 
       if (exampleBuildRes.code !== 0) {
+        if (exampleBuildRes.interruptedByUserStop) {
+          return;
+        }
+
         vscode.window.showErrorMessage(t('build.executeFailed', { output: exampleBuildRes.output }));
 
         return;
@@ -1097,12 +1133,19 @@ export class BuildService {
             operatorNames: params.operatorNames,
             script: runCommandWithEnv,
           }),
-          { outputLabel: 'run' },
+          {
+            outputLabel: 'run',
+            transformCommand: remoteDumpTensorCommandTransformer,
+          },
         );
 
         console.log('[startDumpTensor] runRes', res);
 
         if (res.code !== 0) {
+          if (res.interruptedByUserStop) {
+            return;
+          }
+
           const output = res.output ?? '';
           const isQemuSegfault = /qemu/i.test(output) && (/signal\s+11|Segmentation\s+fault/i.test(output) || /core\s+dumped/i.test(output));
           const message = isQemuSegfault ? t('build.runFailedQemuSegfault', { output }) : t('build.runFailed', { output });
@@ -1161,9 +1204,14 @@ export class BuildService {
           operatorNames: params.operatorNames,
           script: buildCommand,
         }),
+        { transformCommand: createRemoteCommandWhenNoNpuTransformer(buildRemoteUtCommand) },
       );
 
       if (res.code !== 0) {
+        if (res.interruptedByUserStop) {
+          return;
+        }
+
         vscode.window.showErrorMessage(t('build.utTestFailed'));
 
         return;
@@ -1181,6 +1229,25 @@ export class BuildService {
     return `export ASCEND_GLOBAL_LOG_LEVEL=1 && export ASCEND_DUMP_PATH=../${joinIdeConfigRelative('dump_tensor_temp_data')} && `;
   }
 
+  private isOnBoardProfilerCommand(command: string): boolean {
+    return /\bmsprof\s+op\b/.test(command) && !/\bmsprof\s+op\s+simulator\b/.test(command);
+  }
+
+  private getProjectRootByConfigId(configId: number): string | undefined {
+    const config = getConfigById(configId);
+
+    return config ? getProjectById(config.project_id)?.project_path : undefined;
+  }
+
+  private getRemotePullDir(rootPath: string | undefined, outputDir: 'opprof' | 'DumpTensor' | 'dump_tensor_temp_data'): string {
+    if (!rootPath) {
+      throw new Error('Output root path not found for remote artifact retrieval');
+    }
+
+    return `${joinIdeConfigPath(path.resolve(rootPath), outputDir)
+      .replace(/\\/g, '/')}/`;
+  }
+
   /**
    * Post-process dump output, notify success, and open the Dump tensor panel.
    */
@@ -1193,18 +1260,39 @@ export class BuildService {
     await this.openDumpTensorPanel();
   }
 
+  quoteShellTokenIfNeeded(value: string): string {
+    if (/[\s"'`$]/.test(value)) {
+      return `'${value.replace(/'/g, "'\\''")}'`;
+    }
+
+    return value;
+  }
+
   /**
    * Execute show_kernel_debug_data command.
    */
   private async executeShowKernelDebugData(tempDataPath: string, dumpTensorPath: string): Promise<void> {
     try {
-      const showCommand = `show_kernel_debug_data ${tempDataPath} ${dumpTensorPath}`;
+      const environmentScript = getEnvironmentScriptPathFromWorkspace();
+      const sourceEnvironmentCommand = environmentScript
+        ? `. ${this.quoteShellTokenIfNeeded(environmentScript)}`
+        : '';
+
+      const showKernelDebugDataCommand = `show_kernel_debug_data ${tempDataPath} ${dumpTensorPath}`;
+
+      const showCommand = sourceEnvironmentCommand
+        ? `${sourceEnvironmentCommand} && ${showKernelDebugDataCommand}`
+        : showKernelDebugDataCommand;
 
       console.log('[startDumpTensor] Running show_kernel_debug_data command:', showCommand);
 
+      const commandToExecute = await createRemoteCommandWhenNoNpuTransformer((command) => buildRemoteDumpTensorCommand(
+        command,
+        dumpTensorPath,
+      ))(showCommand);
       const executor = ProjectManager.getInstance()
         .getExecutor();
-      const showRes = await executor.execute(showCommand, [], [], { toolOutputLabel: 'debug' }, true);
+      const showRes = await executor.execute(commandToExecute, [], [], { toolOutputLabel: 'debug' }, true);
 
       console.log('[startDumpTensor] show_kernel_debug_data result:', {
         code: showRes.code,

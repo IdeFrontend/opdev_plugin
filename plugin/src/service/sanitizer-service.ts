@@ -1,6 +1,7 @@
 import { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
+import * as path from 'path';
 
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import {
@@ -10,6 +11,11 @@ import {
 import {
   getSanitizerCommand, getBuildExampleCommand, getBuildOpCommand,
 } from '@plugin/domain';
+import {
+  buildRemoteBuildExampleCommand,
+  buildRemoteExecCommand,
+  createRemoteCommandWhenNoNpuTransformer,
+} from '@plugin/helpers/remote-command';
 import { configService } from './config-service';
 import {
   buildService, notifyBuildSucceededForSidebar,
@@ -160,6 +166,8 @@ export class SanitizerService {
                 Number(exConfigId),
                 '',
                 params.operatorNames,
+                undefined,
+                true,
               );
               const exampleBuildRes = await executeOperatorCommand(
                 exampleBuildCommand,
@@ -168,7 +176,13 @@ export class SanitizerService {
                   operatorNames: params.operatorNames,
                   script: exampleBuildCommand,
                 }),
-                { outputLabel: 'compile' },
+                {
+                  outputLabel: 'compile',
+                  transformCommand: createRemoteCommandWhenNoNpuTransformer((command) => buildRemoteBuildExampleCommand(
+                    command,
+                    workspacePath,
+                  )),
+                },
               );
 
               if (exampleBuildRes.code !== 0) {
@@ -212,6 +226,7 @@ export class SanitizerService {
           Number(exampleConfigId),
           params.operatorNames,
         ) || '';
+      const remoteSanitizerCommandTransformer = createRemoteCommandWhenNoNpuTransformer((command) => buildRemoteExecCommand(command, this.getRemoteSanitizerLogPullDir(vscode.workspace.workspaceFolders?.[0]?.uri.fsPath)));
       const res = await executeOperatorCommand(
         sanitizerCommand,
         buildOperatorSpawnContext({
@@ -219,7 +234,12 @@ export class SanitizerService {
           operatorNames: params.operatorNames,
           script: sanitizerCommand,
         }),
+        { transformCommand: remoteSanitizerCommandTransformer },
       );
+
+      if (res.interruptedByUserStop) {
+        return;
+      }
 
       // mssanitizer also writes its own ./mindstudio_sanitizer_log into its working directory
       // (the operator run path / workspace root); remove that copy so it does not clutter the
@@ -271,6 +291,25 @@ export class SanitizerService {
     catch (e: unknown) {
       vscode.window.showErrorMessage(t('sanitizer.detectionFailedError', { error: (e as Error).message }));
     }
+  }
+
+  /**
+   * Absolute path of the IDE config `mindstudio_sanitizer_log` directory under the workspace root,
+   * formatted with forward slashes for `remote_tool.sh --pull-dir`. mssanitizer writes its
+   * report here (see `joinIdeConfigPath(workspacePath, 'mindstudio_sanitizer_log')` above), so
+   * after the remote run we pull this directory back so the local analysis pipeline
+   * (`sanitizerDiagnosticsService.publishFromLogFile`) can read it on the same absolute path.
+   *
+   * Mirrors `buildService.getRemotePullDir(rootPath, outputDir)` — uses `path.resolve` to
+   * normalize the root and `joinIdeConfigPath` so `.arts` (CodeArts) is picked up automatically.
+   */
+  private getRemoteSanitizerLogPullDir(rootPath: string | undefined): string {
+    if (!rootPath) {
+      throw new Error('Output root path not found for sanitizer log retrieval');
+    }
+
+    return `${joinIdeConfigPath(path.resolve(rootPath), 'mindstudio_sanitizer_log')
+      .replace(/\\/g, '/')}/`;
   }
 }
 

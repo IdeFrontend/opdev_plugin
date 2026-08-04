@@ -47,7 +47,7 @@ export const SIMULATOR_ASCEND_910B3 = 'Ascend910B3' as const;
  */
 export const DEFAULT_FALLBACK_SIMULATOR_DEVICE_NAME = '';
 
-export const SIMULATOR_ASCEND_910C = 'Ascend910C' as const;
+export const SIMULATOR_ASCEND_910C = 'Ascend910_9362' as const;
 
 export const SIMULATOR_ASCEND_910 = 'Ascend910' as const;
 

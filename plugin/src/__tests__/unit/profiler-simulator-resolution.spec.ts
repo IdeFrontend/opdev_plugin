@@ -98,7 +98,7 @@ describe('SimulatorStrategy SOC resolution', () => {
     const cmd = strategy.generate(config as any, operator as any, '/tmp/op.bin');
 
     expect(cmd)
-      .toContain('--soc-version=Ascend910C');
+      .toContain('--soc-version=Ascend910_9362');
     expect(cmd)
       .not.toContain('--soc-version=ascend910_93');
   });
@@ -125,7 +125,7 @@ describe('SimulatorStrategy aic-metrics SOC gating (GC-22 / plugin_release #32)'
     const cmd = strategy.generate(config as any, operator as any, '/tmp/op.bin');
 
     expect(cmd)
-      .toContain('--soc-version=Ascend910C');
+      .toContain('--soc-version=Ascend910_9362');
     expect(cmd)
       .toContain('--aic-metrics=PipeUtilization');
     expect(cmd)

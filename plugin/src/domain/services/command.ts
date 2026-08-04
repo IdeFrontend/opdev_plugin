@@ -3,7 +3,7 @@ import { getOpByProjectIdAndOpName } from './ops';
 import { getProjectById } from '@plugin/domain';
 import { ConfigService } from '@plugin/service/config-service';
 import {
-  getAdvanceCmd, getExecutableCommand, isRunPackageDeployTarget, joinCommands,
+  getAdvanceCmd, getExecutableCommand, isRunPackageTarget, joinCommands,
 } from '@plugin/domain/utils/command-utils';
 import { ConfigRecord } from '@plugin/domain/models/config-model';
 import {
@@ -116,7 +116,9 @@ export function getRunCommand(config_id: number) {
 function resolveModeFromContext(
   context: CommandContext,
   operatorNames?: string,
-): { mode: ExampleMode; exampleFound: boolean; opName: string } {
+): { mode: ExampleMode;
+  exampleFound: boolean;
+  opName: string } {
   const userOptions = context.config.user_options as Record<string, unknown> | null | undefined;
   const globalMode: ExampleMode = userOptions?.execution_mode === 'graph' ? 'graph' : 'eager';
   const configOp = typeof userOptions?.op === 'string' ? userOptions.op : context.config.op;
@@ -124,7 +126,11 @@ function resolveModeFromContext(
   const projectRoot = context.project?.project_path || '';
 
   if (!projectRoot || !opName) {
-    return { mode: globalMode, exampleFound: true, opName };
+    return {
+      mode: globalMode,
+      exampleFound: true,
+      opName,
+    };
   }
 
   // Example-filename matchers default to the build.sh contract but are overridable per
@@ -134,9 +140,15 @@ function resolveModeFromContext(
     graph: toExampleMatcher(userOptions?.graph_example_pattern as string | undefined, DEFAULT_EXAMPLE_MATCHERS.graph),
   };
 
-  const { mode, exampleFound } = resolveExampleMode(projectRoot, opName, globalMode, false, matchers);
+  const {
+    mode, exampleFound,
+  } = resolveExampleMode(projectRoot, opName, globalMode, false, matchers);
 
-  return { mode, exampleFound, opName };
+  return {
+    mode,
+    exampleFound,
+    opName,
+  };
 }
 
 /**
@@ -146,7 +158,9 @@ function resolveModeFromContext(
 export function resolveExampleModeForConfig(
   config_id: number,
   operatorNames?: string,
-): { mode: ExampleMode; exampleFound: boolean; opName: string } {
+): { mode: ExampleMode;
+  exampleFound: boolean;
+  opName: string } {
   const baseContext = getBaseContext(config_id);
   const strategy = CommandStrategyFactory.getStrategy(baseContext.operator?.op_type);
   const context = strategy.buildCommandContext(baseContext);
@@ -161,6 +175,7 @@ export function resolveExampleModeForConfig(
  * @param compileOption compile option
  * @param operatorNames Operator names, multiple separated by commas (used in scenarios such as standard custom operators)
  * @param exampleMode explicit run_example mode; when omitted it is auto-detected from the operator's example files
+ * @param buildExampleOnly standard-custom only: build an existing run_example target without executing it
  * @returns complete shell execution command string
  */
 export function getBuildExampleCommand(
@@ -168,6 +183,7 @@ export function getBuildExampleCommand(
   compileOption?: string,
   operatorNames?: string,
   exampleMode?: ExampleMode,
+  buildExampleOnly = false,
 ) {
   try {
     const baseContext = getBaseContext(config_id);
@@ -191,6 +207,7 @@ export function getBuildExampleCommand(
       advance_cmd,
       operatorNames,
       exampleMode,
+      buildExampleOnly,
     });
   }
   catch (e: unknown) {
@@ -388,13 +405,10 @@ export function getStandardCustomDeployCommand(config_id: number) {
     const context = strategy.buildCommandContext(baseContext);
 
     const configuredTarget = strategy.getRunTargetFile(context.config, context.operator);
-    const deployTarget = isRunPackageDeployTarget(configuredTarget)
+    const deployTarget = isRunPackageTarget(configuredTarget)
       ? configuredTarget
       : 'build_out/*.run';
-    const deployCmd = getExecutableCommand(deployTarget, {
-      execute: true,
-      mode: 'deploy',
-    });
+    const deployCmd = getExecutableCommand(deployTarget, { execute: true });
 
     return joinCommands(context.sourceCannCmd, context.cdCmd, deployCmd);
   }
