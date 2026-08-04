@@ -96,6 +96,7 @@ export default {
   'extension.resetProjectConfigurationConfirmReset': '重置',
   'extension.unsupportedProjectTypeDisabled': '当前产品构建不支持项目类型"{{projectType}}"。',
   'extension.npuEnvRequired': '请切换至NPU环境\n\n该操作需要切换至NPU环境，请在我的环境列表中进行NPU环境切换，然后再执行本操作。',
+  'extension.remoteToolRequired': '请先安装并配置 remote_tool.sh，再从 CPU 主机执行该操作。',
 
   // folder-context-menu
   'folderContext.angleOpsNotSupported': '<<<>>>类型算子暂不支持该右键菜单操作',

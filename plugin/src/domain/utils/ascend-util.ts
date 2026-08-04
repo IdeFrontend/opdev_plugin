@@ -14,6 +14,7 @@ import {
   getExactChipRule,
   getNpuArchForChipName,
   getNpuArchForSeries,
+  seriesToDefaultSoc,
   simulatorTypeToCannSocSlug,
 } from '@shared/ascend-series-registry';
 import {
@@ -36,6 +37,7 @@ import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.r
 import { OperatorProjectType } from '@plugin/domain/models/operator-project-type';
 import type { OperatorOpType } from '@shared/operator-op-type';
 import { maybeWarnSocNotDetected } from '@plugin/helpers/ascend-soc-warning';
+import { getRemoteToolSeriesSync } from '@plugin/helpers/remote-command';
 import { appendLog } from '@plugin/helpers/output-channel';
 import { isAscendA5ProfilerCannSoc } from '@shared/msprof-onboard-env';
 
@@ -348,14 +350,14 @@ type DetectionState =
   | { kind: 'pending' }
   | { kind: 'resolved';
     soc: string;
-    via: 'asys' | 'npu-smi' }
+    via: 'asys' | 'npu-smi' | 'remote-tool' }
     | { kind: 'failed' };
 
 let detectionState: DetectionState = { kind: 'pending' };
 
 function logDetectionHit(
   hit: NonNullable<ReturnType<typeof detectSocSlugFromProbe>>,
-  via: 'asys' | 'npu-smi',
+  via: 'asys' | 'npu-smi' | 'remote-tool',
 ): void {
   const npuArch = getNpuArchForChipName(hit.chipRaw)
     ?? getNpuArchForSeries(hit.series);
@@ -412,6 +414,20 @@ function tryDetectSocViaNpuSmi(): string | undefined {
   }
 }
 
+function tryDetectSocViaRemoteToolConfig(): string | undefined {
+  const series = getRemoteToolSeriesSync();
+
+  if (!series) {
+    return undefined;
+  }
+
+  const socVersion = seriesToDefaultSoc(series);
+
+  logAscendEnv(`detected series=${series.toUpperCase()} soc=${socVersion} (via=remote-tool-config)`);
+
+  return socVersion;
+}
+
 function detectSocOnce(): string | undefined {
   if (detectionState.kind === 'resolved') {
     return detectionState.soc;
@@ -445,8 +461,20 @@ function detectSocOnce(): string | undefined {
     return npuSoc;
   }
 
+  const remoteConfigSoc = tryDetectSocViaRemoteToolConfig();
+
+  if (remoteConfigSoc) {
+    detectionState = {
+      kind: 'resolved',
+      soc: remoteConfigSoc,
+      via: 'remote-tool',
+    };
+
+    return remoteConfigSoc;
+  }
+
   detectionState = { kind: 'failed' };
-  logAscendEnv('SOC autodetection failed (asys/npu-smi); SOC_VERSION will be unset');
+  logAscendEnv('SOC autodetection failed (asys/npu-smi/remote-tool-config); SOC_VERSION will be unset');
 
   return undefined;
 }
@@ -755,6 +783,8 @@ export function resolveRuntimeCannSoc(
 export type OperatorSpawnEnvContext = {
   opType?: OperatorOpType | null;
   projectId?: number;
+  configId?: number;
+  operatorNames?: string;
   /** Resolved from `projects.json` when omitted; see {@link normalizeProjectTypeForSpawn}. */
   projectType?: OperatorProjectType | null;
   configType?: string | null;

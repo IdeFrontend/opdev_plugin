@@ -96,6 +96,7 @@ export default {
   'extension.resetProjectConfigurationConfirmReset': 'Reset',
   'extension.unsupportedProjectTypeDisabled': 'Project type "{{projectType}}" is not supported in this product build.',
   'extension.npuEnvRequired': 'Please switch to NPU environment\n\nThis operation requires switching to NPU environment. Please switch to NPU environment in my environment list, then execute this operation again.',
+  'extension.remoteToolRequired': 'Please install and configure remote_tool.sh before running this action from a CPU host.',
 
   // folder-context-menu
   'folderContext.angleOpsNotSupported': '<<<>>> operator type does not support this context menu action',

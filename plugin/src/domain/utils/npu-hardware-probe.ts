@@ -6,6 +6,7 @@ import {
   shellSourcePrefix,
   type ResolvedSetEnvScript,
 } from '@plugin/domain/utils/ascend-detection-env';
+import { getRemoteToolSeries } from '@plugin/helpers/remote-command';
 
 const ASYS_TIMEOUT_MS = 8000;
 const NPU_SMI_TIMEOUT_MS = 8000;
@@ -20,6 +21,9 @@ export type NpuHardwareProbeState =
 
 let probeState: NpuHardwareProbeState = { kind: 'pending' };
 let inFlightProbe: Promise<boolean> | undefined;
+
+let remoteProbeState: NpuHardwareProbeState = { kind: 'pending' };
+let inFlightRemoteProbe: Promise<boolean> | undefined;
 
 type ShellExecResult = {
   stdout: string;
@@ -63,7 +67,7 @@ export function probeCommandResponded(
 async function execBashWithCannEnvAsync(
   setEnv: ResolvedSetEnvScript | undefined,
   innerCommand: string,
-  timeoutMs: number,
+  timeoutMs?: number,
 ): Promise<ShellExecResult> {
   const cmd = setEnv
     ? `${shellSourcePrefix(setEnv.path)}${innerCommand}`
@@ -118,6 +122,12 @@ async function tryProbeViaNpuSmi(setEnv: ResolvedSetEnvScript | undefined): Prom
   return probeCommandResponded(quickResult, 'npu-smi');
 }
 
+async function tryProbeViaRemoteToolConfig(): Promise<boolean> {
+  const series = await getRemoteToolSeries();
+
+  return series !== undefined;
+}
+
 async function runNpuHardwareProbe(): Promise<boolean> {
   const setEnv = resolveCannSetEnvScriptForDetection();
 
@@ -130,6 +140,10 @@ async function runNpuHardwareProbe(): Promise<boolean> {
   ]);
 
   return asysAvailable || npuSmiAvailable;
+}
+
+async function runRemoteNpuHardwareProbe(): Promise<boolean> {
+  return tryProbeViaRemoteToolConfig();
 }
 
 /** True while probe has not finished, or when hardware was detected. */
@@ -175,6 +189,43 @@ export function startNpuHardwareProbe(): Promise<boolean> {
   return inFlightProbe;
 }
 
+export function isRemoteNpuHardwareProbeAvailable(): boolean {
+  if (remoteProbeState.kind === 'pending') {
+    return true;
+  }
+
+  return remoteProbeState.available;
+}
+
+export function isRemoteNpuHardwareProbeResolved(): boolean {
+  return remoteProbeState.kind === 'resolved';
+}
+
+export function startRemoteNpuHardwareProbe(): Promise<boolean> {
+  if (remoteProbeState.kind === 'resolved') {
+    return Promise.resolve(remoteProbeState.available);
+  }
+
+  if (inFlightRemoteProbe) {
+    return inFlightRemoteProbe;
+  }
+
+  inFlightRemoteProbe = runRemoteNpuHardwareProbe()
+    .then((available) => {
+      remoteProbeState = {
+        kind: 'resolved',
+        available,
+      };
+
+      return available;
+    })
+    .finally(() => {
+      inFlightRemoteProbe = undefined;
+    });
+
+  return inFlightRemoteProbe;
+}
+
 /** @internal */
 export function _resetNpuHardwareProbeForTest(): void {
   probeState = { kind: 'pending' };
@@ -188,6 +239,21 @@ export function _primeNpuHardwareProbeForTest(available: boolean): void {
     available,
   };
   inFlightProbe = undefined;
+}
+
+/** @internal */
+export function _resetRemoteNpuHardwareProbeForTest(): void {
+  remoteProbeState = { kind: 'pending' };
+  inFlightRemoteProbe = undefined;
+}
+
+/** @internal */
+export function _primeRemoteNpuHardwareProbeForTest(available: boolean): void {
+  remoteProbeState = {
+    kind: 'resolved',
+    available,
+  };
+  inFlightRemoteProbe = undefined;
 }
 
 /** @internal */
