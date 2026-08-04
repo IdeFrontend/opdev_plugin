@@ -85,6 +85,7 @@ type OperateSidebarState = {
   hasDevtoolConfig: boolean;
   debugModeEnabled: boolean;
   npuHardwareAvailable: boolean;
+  remoteNpuHardwareAvailable: boolean;
   projectType: string;
   projectTemplateName: string;
   hasMultipleOperators: boolean;
@@ -275,6 +276,7 @@ const INITIAL_STATE: OperateSidebarState = {
   hasDevtoolConfig: false,
   debugModeEnabled: true,
   npuHardwareAvailable: false,
+  remoteNpuHardwareAvailable: false,
   projectType: '',
   projectTemplateName: '',
   hasMultipleOperators: false,
@@ -696,6 +698,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       hasDevtoolConfig,
       debugModeEnabled,
       npuHardwareAvailable: this.state.npuHardwareAvailable,
+      remoteNpuHardwareAvailable: this.state.remoteNpuHardwareAvailable ?? false,
       projectType,
       projectTemplateName: projectTypeResult.projectTemplateName || '',
       hasMultipleOperators,
@@ -753,6 +756,15 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     this.onDidChangeTreeDataEmitter.fire();
   }
 
+  setRemoteNpuHardwareAvailable(available: boolean): void {
+    if (this.state.remoteNpuHardwareAvailable === available) {
+      return;
+    }
+
+    this.state.remoteNpuHardwareAvailable = available;
+    this.onDidChangeTreeDataEmitter.fire();
+  }
+
   private resolveFlowActionState(
     hasMultipleSelectedOperators: boolean,
     commandId: string | undefined,
@@ -770,11 +782,11 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       };
     }
 
-    if (requiresNpu && !this.state.npuHardwareAvailable) {
+    if (requiresNpu && !(this.state.npuHardwareAvailable || this.state.remoteNpuHardwareAvailable)) {
       return {
-        commandId,
-        tooltip: t('web.operate.npuHardwareRequired'),
-        useDisabledIcon: false,
+        commandId: undefined,
+        tooltip: t('web.operate.remoteToolRequired'),
+        useDisabledIcon: true,
       };
     }
 
@@ -1711,7 +1723,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     const hasMultipleSelectedOperators = this.state.selectedOperatorIds.length > 1;
     const disabledIcon = new vscode.ThemeIcon('circle-slash', new vscode.ThemeColor('disabledForeground'));
     const isCannTorchLibrary = this.state.projectType === 'cann' && this.state.projectTemplateName === 'torch_library_template';
-    const showCpuDebug = this.supportsCapability(behavior.supportsCpuDebug) && !isCannTorchLibrary;
+    const showCpuDebug = this.supportsCapability(behavior.supportsCpuDebug) && !isCannTorchLibrary && !this.state.isStandardCustom;
     const cpuDebugAction = this.resolveFlowActionState(hasMultipleSelectedOperators, COMMAND_SIDEBAR_CPU_DEBUG, false);
     const npuDebugAction = this.resolveFlowActionState(hasMultipleSelectedOperators, COMMAND_SIDEBAR_NPU_DEBUG, true);
 

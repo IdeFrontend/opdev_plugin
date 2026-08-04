@@ -32,8 +32,12 @@ jest.mock('@plugin/service/config-service', () => ({
 }));
 
 jest.mock('@plugin/domain/utils/npu-hardware-probe', () => ({
+  isRemoteNpuHardwareProbeAvailable: jest.fn()
+    .mockReturnValue(true),
   startNpuHardwareProbe: jest.fn()
     .mockResolvedValue(true),
+  startRemoteNpuHardwareProbe: jest.fn()
+    .mockResolvedValue(false),
 }));
 
 import * as vscode from 'vscode';
@@ -46,7 +50,12 @@ import {
   resetPostActivateBootstrapForTest,
   MIND_STUDIO_DEBUG_PLUGIN_ID,
 } from '@plugin/helpers/post-activate-bootstrap';
-import { TREE_VIEW_OPERATE } from '@shared/flavor';
+import {
+  isRemoteNpuHardwareProbeAvailable, startNpuHardwareProbe, startRemoteNpuHardwareProbe,
+} from '@plugin/domain/utils/npu-hardware-probe';
+import {
+  CONTEXT_PREFIX, TREE_VIEW_OPERATE,
+} from '@shared/flavor';
 
 const operateTreeProvider = {
   refreshSanitizerReports: jest.fn()
@@ -54,12 +63,21 @@ const operateTreeProvider = {
   refreshPerformanceReports: jest.fn()
     .mockResolvedValue(undefined),
   setNpuHardwareAvailable: jest.fn(),
+  setRemoteNpuHardwareAvailable: jest.fn(),
 } as never;
+
+async function flushPromises(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+}
 
 describe('post-activate-bootstrap', () => {
   beforeEach(() => {
     resetPostActivateBootstrapForTest();
     jest.clearAllMocks();
+    (isRemoteNpuHardwareProbeAvailable as jest.Mock).mockReturnValue(true);
+    (startNpuHardwareProbe as jest.Mock).mockResolvedValue(true);
+    (startRemoteNpuHardwareProbe as jest.Mock).mockResolvedValue(false);
     (vscode.workspace as { workspaceFolders?: unknown }).workspaceFolders = undefined;
   });
 
@@ -110,5 +128,86 @@ describe('post-activate-bootstrap', () => {
   it('exports MindStudio debug plugin id constant', () => {
     expect(MIND_STUDIO_DEBUG_PLUGIN_ID)
       .toBe('ascend.mindstudio-debug-vscode-plugin');
+  });
+
+  it('keeps remote NPU actions available while remote probe is pending after local probe is unavailable', async () => {
+    let resolveRemoteProbe: (available: boolean)=> void = jest.fn();
+
+    (startNpuHardwareProbe as jest.Mock).mockResolvedValue(false);
+    (startRemoteNpuHardwareProbe as jest.Mock).mockImplementation(() => new Promise<boolean>((resolve) => {
+      resolveRemoteProbe = resolve;
+    }));
+
+    startPostActivateBootstrap({
+      context: {} as never,
+      operateTreeProvider,
+      logDebug: jest.fn(),
+    });
+
+    await flushPromises();
+
+    expect(operateTreeProvider.setNpuHardwareAvailable)
+      .toHaveBeenCalledWith(false);
+    expect(operateTreeProvider.setRemoteNpuHardwareAvailable)
+      .toHaveBeenCalledWith(true);
+
+    resolveRemoteProbe(false);
+    await flushPromises();
+
+    expect(operateTreeProvider.setRemoteNpuHardwareAvailable)
+      .toHaveBeenLastCalledWith(false);
+  });
+
+  it('keeps remote NPU actions available while remote probe is pending after local probe errors', async () => {
+    let resolveRemoteProbe: (available: boolean)=> void = jest.fn();
+
+    (startNpuHardwareProbe as jest.Mock).mockRejectedValue(new Error('local probe failed'));
+    (startRemoteNpuHardwareProbe as jest.Mock).mockImplementation(() => new Promise<boolean>((resolve) => {
+      resolveRemoteProbe = resolve;
+    }));
+
+    startPostActivateBootstrap({
+      context: {} as never,
+      operateTreeProvider,
+      logDebug: jest.fn(),
+    });
+
+    await flushPromises();
+
+    expect(vscode.commands.executeCommand)
+      .toHaveBeenCalledWith(
+        'setContext',
+        `${CONTEXT_PREFIX}.npuHardwareAvailable`,
+        false,
+      );
+    expect(operateTreeProvider.setNpuHardwareAvailable)
+      .toHaveBeenCalledWith(false);
+    expect(operateTreeProvider.setRemoteNpuHardwareAvailable)
+      .toHaveBeenCalledWith(true);
+
+    resolveRemoteProbe(true);
+    await flushPromises();
+
+    expect(operateTreeProvider.setRemoteNpuHardwareAvailable)
+      .toHaveBeenLastCalledWith(true);
+  });
+
+  it('does not temporarily enable remote NPU actions when remote probe is already unavailable', async () => {
+    (isRemoteNpuHardwareProbeAvailable as jest.Mock).mockReturnValue(false);
+    (startNpuHardwareProbe as jest.Mock).mockResolvedValue(false);
+    (startRemoteNpuHardwareProbe as jest.Mock).mockResolvedValue(false);
+
+    startPostActivateBootstrap({
+      context: {} as never,
+      operateTreeProvider,
+      logDebug: jest.fn(),
+    });
+
+    await flushPromises();
+
+    expect(operateTreeProvider.setRemoteNpuHardwareAvailable)
+      .not.toHaveBeenCalledWith(true);
+    expect(operateTreeProvider.setRemoteNpuHardwareAvailable)
+      .toHaveBeenLastCalledWith(false);
   });
 });

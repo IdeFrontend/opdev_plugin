@@ -53,6 +53,7 @@ export default {
     'Triton 调试需要可成功 import torch 与 triton 的 Python 环境（解释器：{{interpreter}}）。',
   'task.tritonKernelPathNotFound':
     '调试构建后未在 ~/.triton/cache 下找到已编译的 Triton 内核（*.npubin 或 kernel.o）。如有需要，请在 launch.json 中手动设置 LAUNCH_KERNEL_PATH。',
+  'task.remoteDebugAdapterStartFailed': '远程调试适配器启动失败',
 
   // debug（launch.json 自动适配，GC-17）
   'debug.autoAdaptNoOperator':
@@ -379,6 +380,7 @@ export default {
   'web.operate.pleaseSelectOperatorProject': '请选择算子工程',
   'web.operate.singleOperatorOnly': '该功能只支持单算子执行',
   'web.operate.npuHardwareRequired': '该操作只能在NPU环境下执行',
+  'web.operate.remoteToolRequired': '请安装并配置 remote_tool.sh，或在本机 NPU 环境下执行该操作',
   'web.operate.selectOneOperatorForStTest': '请选择一个算子运行ST测试',
   'web.operate.actionsTitle': '操作',
   'web.operate.noActionsAvailable': '当前树视图中没有可执行的操作。',
@@ -578,6 +580,7 @@ export default {
   // web options (shared)
   'web.options.simulationFailed': '仿真分析失败，已停止',
   'web.options.onboardFailed': '上板分析失败',
+  'web.options.onboard.remoteNpuHint': '未检测到本机 NPU，上板分析将使用远程 NPU 机器执行。',
   'web.options.sanitizerFailed': '异常检测启动失败',
 
   // web options-simulator
@@ -598,7 +601,7 @@ export default {
 
   // web options-on-board
   'web.options.onboard.title': '上板分析快速选项',
-  'web.options.onboard.alert1': '1、执行上板调优，需在代码中修改使用NPU的配置，具体可参考README。',
+  'web.options.onboard.alert1': '1、执行上板分析，需在代码中修改使用NPU的配置，具体可参考README。',
   'web.options.onboard.alert2': '2、若勾选"Roofline瓶颈分析"或"Cache热力图"，将默认采集所有算子性能指标。',
   'web.options.onboard.alert2A5': '2、若勾选"Roofline瓶颈分析"或"PC 采样"，将默认采集所有算子性能指标。',
   'web.options.onboard.collectContent': '采集内容',

@@ -23,6 +23,7 @@ const opsMethods = {
 
   getProjectEnv: scriptMethods.getProjectEnv,
   getNpuHardwareAvailable: scriptMethods.getNpuHardwareAvailable,
+  getOnBoardExecutionAvailable: scriptMethods.getOnBoardExecutionAvailable,
   getSimulatorSupportedMetrics: scriptMethods.getSimulatorSupportedMetrics,
 
   getSanitizerConfigs: sanitizerViewMethods.getSanitizerConfigs,

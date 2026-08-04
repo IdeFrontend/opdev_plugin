@@ -2,7 +2,11 @@ import {
   resolveAscendEnv,
   resolveEffectiveCannSoc,
 } from '@plugin/domain/utils/ascend-util';
-import { isNpuHardwareProbeAvailable } from '@plugin/domain/utils/npu-hardware-probe';
+import {
+  isNpuHardwareProbeAvailable,
+  startNpuHardwareProbe,
+  startRemoteNpuHardwareProbe,
+} from '@plugin/domain/utils/npu-hardware-probe';
 import { projectService } from '@plugin/service/project-service';
 import {
   isSimulatorOptionalMetricSupported,
@@ -24,6 +28,24 @@ export const scriptMethods = {
 
   async getNpuHardwareAvailable(): Promise<boolean> {
     return isNpuHardwareProbeAvailable();
+  },
+
+  async getOnBoardExecutionAvailable(): Promise<boolean> {
+    try {
+      if (await startNpuHardwareProbe()) {
+        return true;
+      }
+    }
+    catch {
+      // Probe failure is treated as no local NPU; remote fallback can still allow execution.
+    }
+
+    try {
+      return await startRemoteNpuHardwareProbe();
+    }
+    catch {
+      return false;
+    }
   },
 
   /**

@@ -9,7 +9,7 @@ import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import {
   getConfigData, saveConfig, openExternalLink, startOnBoard, executeVscodeCommand, getSelectedOperators,
   getOnBoardAnalysisShowQuickOptions, setOnBoardAnalysisShowQuickOptions,
-  getProjectEnv, getNpuHardwareAvailable,
+  getProjectEnv, getNpuHardwareAvailable, getOnBoardExecutionAvailable,
 } from '@web/apis';
 import { isAscendA5ProfilerCannSoc } from '@shared/msprof-onboard-env';
 
@@ -38,6 +38,7 @@ const isExecuting = ref(false);
 const doNotShowAgain = ref(false);
 const projectCannSoc = ref('');
 const npuHardwareAvailable = ref(true);
+const onBoardExecutionAvailable = ref(true);
 
 const isAscendA5Profiler = computed(() => isAscendA5ProfilerCannSoc(projectCannSoc.value));
 
@@ -73,7 +74,7 @@ const handleSave = async () => {
 };
 
 const handleConfirm = async () => {
-  if (!onboardData.value || isExecuting.value || !npuHardwareAvailable.value) {
+  if (!onboardData.value || isExecuting.value || !onBoardExecutionAvailable.value) {
     return;
   }
 
@@ -179,9 +180,11 @@ onMounted(async () => {
 
   try {
     npuHardwareAvailable.value = await getNpuHardwareAvailable();
+    onBoardExecutionAvailable.value = await getOnBoardExecutionAvailable();
   }
   catch {
     npuHardwareAvailable.value = true;
+    onBoardExecutionAvailable.value = true;
   }
 
   try {
@@ -385,15 +388,21 @@ onMounted(async () => {
 
         <div class="footer-actions">
           <p
-            v-if="!npuHardwareAvailable"
+            v-if="!onBoardExecutionAvailable"
             class="npu-unavailable-hint"
           >
-            {{ t('web.operate.npuHardwareRequired') }}
+            {{ t('web.operate.remoteToolRequired') }}
+          </p>
+          <p
+            v-else-if="!npuHardwareAvailable"
+            class="npu-unavailable-hint"
+          >
+            {{ t('web.options.onboard.remoteNpuHint') }}
           </p>
           <a-button
             type="primary"
             :loading="isExecuting"
-            :disabled="!npuHardwareAvailable"
+            :disabled="!onBoardExecutionAvailable"
             @click="handleConfirm"
           >
             {{ t('web.options.onboard.startNow') }}

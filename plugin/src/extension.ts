@@ -1007,10 +1007,6 @@ export async function activate(context: vscode.ExtensionContext) {
   const sidebarRunCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_RUN,
     async () => {
-      if (!(await checkNpuEnvironment())) {
-        return;
-      }
-
       await operateTreeProvider.runFlowAction('run', async () => {
         if (operateTreeProvider.hasMultipleOperators() || operateTreeProvider.isStandardCustomContext()) {
           const operatorNames = await getOperatorNamesFromSelection();
@@ -1058,10 +1054,6 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      if (!(await checkNpuEnvironment())) {
-        return;
-      }
-
       await operateTreeProvider.runFlowAction('npuDebug', async () => {
         await taskMethods.runDebug();
       });
@@ -1075,10 +1067,6 @@ export async function activate(context: vscode.ExtensionContext) {
       if (selectedIds && selectedIds.length > 1) {
         vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
 
-        return;
-      }
-
-      if (!(await checkNpuEnvironment())) {
         return;
       }
 
@@ -1104,10 +1092,6 @@ export async function activate(context: vscode.ExtensionContext) {
       if (selectedIds && selectedIds.length > 1) {
         vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
 
-        return;
-      }
-
-      if (!(await checkNpuEnvironment())) {
         return;
       }
 
@@ -1199,10 +1183,6 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      if (!(await checkNpuEnvironment())) {
-        return;
-      }
-
       const operatorNames = await getOperatorNamesFromSelection();
       const compileOption = await getCompileOptionForSelectedOperators();
 
@@ -1247,10 +1227,6 @@ export async function activate(context: vscode.ExtensionContext) {
       if (selectedIds && selectedIds.length > 1) {
         vscode.window.showInformationMessage(t('web.operate.singleOperatorOnly'));
 
-        return;
-      }
-
-      if (!(await checkNpuEnvironment())) {
         return;
       }
 
@@ -2378,10 +2354,6 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      if (!(await checkNpuEnvironment())) {
-        return;
-      }
-
       await FolderContextMenuService.runOperatorProject(uri);
     },
   );
@@ -2407,10 +2379,6 @@ export async function activate(context: vscode.ExtensionContext) {
       if (!uri) {
         vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
 
-        return;
-      }
-
-      if (!(await checkNpuEnvironment())) {
         return;
       }
 
@@ -2459,10 +2427,6 @@ export async function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      if (!(await checkNpuEnvironment())) {
-        return;
-      }
-
       const folderUri = getFolderUri(uri);
 
       await FolderContextMenuService.sanitizerOperatorProject(folderUri);
@@ -2475,10 +2439,6 @@ export async function activate(context: vscode.ExtensionContext) {
       if (!uri) {
         vscode.window.showErrorMessage(t('extension.rightClickFolderOrFile'));
 
-        return;
-      }
-
-      if (!(await checkNpuEnvironment())) {
         return;
       }
 

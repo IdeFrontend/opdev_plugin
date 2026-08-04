@@ -3,7 +3,9 @@ import { MindStudioPluginInstaller } from '@plugin/class/mind-studio-plugin-inst
 import type { OperateTreeProvider } from '@plugin/class/operate-tree-provider';
 import { welcomeMethods } from '@plugin/controller/welcome-controller';
 import { configService } from '@plugin/service/config-service';
-import { startNpuHardwareProbe } from '@plugin/domain/utils/npu-hardware-probe';
+import {
+  isRemoteNpuHardwareProbeAvailable, startNpuHardwareProbe, startRemoteNpuHardwareProbe,
+} from '@plugin/domain/utils/npu-hardware-probe';
 import {
   CONTEXT_PREFIX, TREE_VIEW_OPERATE,
 } from '@shared/flavor';
@@ -108,6 +110,23 @@ async function runPostActivateBootstrapImpl(deps: PostActivateBootstrapDeps): Pr
   }
 }
 
+function refreshRemoteNpuHardwareAvailability(
+  operateTreeProvider: OperateTreeProvider,
+  logDebug: (message: string, payload?: unknown)=> void,
+): void {
+  operateTreeProvider.setRemoteNpuHardwareAvailable(isRemoteNpuHardwareProbeAvailable());
+
+  void startRemoteNpuHardwareProbe()
+    .then((remoteAvailable) => {
+      operateTreeProvider.setRemoteNpuHardwareAvailable(remoteAvailable);
+      logDebug('postActivate:remoteNpuHardwareProbe', { remoteAvailable });
+    })
+    .catch((error) => {
+      operateTreeProvider.setRemoteNpuHardwareAvailable(false);
+      logDebug('postActivate:remoteNpuHardwareProbe:error', error);
+    });
+}
+
 async function refreshNpuHardwareAvailability(
   operateTreeProvider: OperateTreeProvider,
   logDebug: (message: string, payload?: unknown)=> void,
@@ -122,6 +141,13 @@ async function refreshNpuHardwareAvailability(
     );
     operateTreeProvider.setNpuHardwareAvailable(available);
     logDebug('postActivate:npuHardwareProbe', { available });
+
+    if (!available) {
+      refreshRemoteNpuHardwareAvailability(operateTreeProvider, logDebug);
+    }
+    else {
+      operateTreeProvider.setRemoteNpuHardwareAvailable(false);
+    }
   }
   catch (error) {
     logDebug('postActivate:npuHardwareProbe:error', error);
@@ -131,5 +157,7 @@ async function refreshNpuHardwareAvailability(
       false,
     );
     operateTreeProvider.setNpuHardwareAvailable(false);
+
+    refreshRemoteNpuHardwareAvailability(operateTreeProvider, logDebug);
   }
 }

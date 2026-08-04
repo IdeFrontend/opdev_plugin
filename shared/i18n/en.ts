@@ -53,6 +53,7 @@ export default {
     'Triton debug requires a Python environment where both torch and triton import successfully (interpreter: {{interpreter}}).',
   'task.tritonKernelPathNotFound':
     'Could not find a compiled Triton kernel (*.npubin or kernel.o) under ~/.triton/cache after the debug build. Set LAUNCH_KERNEL_PATH manually in launch.json if needed.',
+  'task.remoteDebugAdapterStartFailed': 'Failed to start remote debug adapter',
 
   // debug (launch.json auto-adapt, GC-17)
   'debug.autoAdaptNoOperator':
@@ -379,6 +380,7 @@ export default {
   'web.operate.pleaseSelectOperatorProject': 'Please select an operator project',
   'web.operate.singleOperatorOnly': 'This action supports single operator only',
   'web.operate.npuHardwareRequired': 'This action can only be performed in an NPU environment',
+  'web.operate.remoteToolRequired': 'Install and configure remote_tool.sh, or run this action in a local NPU environment',
   'web.operate.selectOneOperatorForStTest': 'Select one operator to run ST tests',
   'web.operate.actionsTitle': 'Actions',
   'web.operate.noActionsAvailable': 'No actions available in current tree view.',
@@ -578,6 +580,7 @@ export default {
   // web options-simulator / options-on-board / options-sanitizer (shared)
   'web.options.simulationFailed': 'Simulation failed and stopped',
   'web.options.onboardFailed': 'On-board analysis failed',
+  'web.options.onboard.remoteNpuHint': 'Local NPU was not detected. On-board analysis will run on the remote NPU host.',
   'web.options.sanitizerFailed': 'Sanitizer failed',
 
   // web options-simulator
@@ -598,7 +601,7 @@ export default {
 
   // web options-on-board
   'web.options.onboard.title': 'On-board Analysis Quick Options',
-  'web.options.onboard.alert1': '1. For on-board tuning, update NPU config in code. See README.',
+  'web.options.onboard.alert1': '1. For on-board analysis, update NPU config in code. See README.',
   'web.options.onboard.alert2': '2. If "Roofline" or "Cache heatmap" is checked, all operator metrics are collected by default',
   'web.options.onboard.alert2A5': '2. If "Roofline" or "PC sampling" is checked, all operator metrics are collected by default',
   'web.options.onboard.collectContent': 'Collect content',

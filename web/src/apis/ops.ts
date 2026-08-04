@@ -84,6 +84,10 @@ export function getNpuHardwareAvailable() {
   return request.post<undefined, boolean>('ops/getNpuHardwareAvailable');
 }
 
+export function getOnBoardExecutionAvailable() {
+  return request.post<undefined, boolean>('ops/getOnBoardExecutionAvailable');
+}
+
 /** 获取当前 SOC 下仿真器支持的可选 aic-metrics（与命令生成同源，isSimulator:true 解析） */
 export function getSimulatorSupportedMetrics() {
   return request.post<undefined, {

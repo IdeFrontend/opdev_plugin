@@ -13,14 +13,12 @@ import {
   getSelectedOperators,
   getSanitizerShowQuickOptions,
   setSanitizerShowQuickOptions,
-  getNpuHardwareAvailable,
 } from '@web/apis';
 import { getProjectType } from '@web/apis/home';
 
 const { themeConfig } = useTheme();
 const isExecuting = ref(false);
 const isTritonProject = ref(false);
-const npuHardwareAvailable = ref(true);
 /** When true, workspace `sanitizer.showQuickOptions` is false (tree runs without opening this panel). */
 const doNotShowAgain = ref(false);
 
@@ -150,13 +148,6 @@ onBeforeMount(async () => {
   await loadSanitizerForm();
 
   try {
-    npuHardwareAvailable.value = await getNpuHardwareAvailable();
-  }
-  catch {
-    npuHardwareAvailable.value = true;
-  }
-
-  try {
     const project = await getProjectType();
 
     isTritonProject.value = project.projectType === 'triton';
@@ -180,7 +171,7 @@ async function syncDoNotShowToWorkspace() {
 }
 
 const handleConfirm = async () => {
-  if (!form.value || isExecuting.value || !npuHardwareAvailable.value) {
+  if (!form.value || isExecuting.value) {
     return;
   }
 
@@ -352,16 +343,9 @@ const handleConfirm = async () => {
         </div>
 
         <div class="footer-actions">
-          <p
-            v-if="!npuHardwareAvailable"
-            class="npu-unavailable-hint"
-          >
-            {{ t('web.operate.npuHardwareRequired') }}
-          </p>
           <a-button
             type="primary"
             :loading="isExecuting"
-            :disabled="!npuHardwareAvailable"
             @click="handleConfirm"
           >
             {{ t('web.options.sanitizer.startNow') }}

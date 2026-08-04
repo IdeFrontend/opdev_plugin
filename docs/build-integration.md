@@ -350,6 +350,7 @@ flowchart TB
 
 - `BuildService.startDumpTensor` runs `build_op`, then either **build example** (standard custom) or **run** (other project types).
 - Example build and run commands are prefixed with `ASCEND_GLOBAL_LOG_LEVEL=1` and `ASCEND_DUMP_PATH` pointing at `dump_tensor_temp_data` under the IDE config dir (same env for both branches).
+- On CPU hosts where local NPU hardware is unavailable, only the DumpTensor data-producing **build example** / **run** command is wrapped with `remote_tool.sh exec`; `build_op` still runs locally. The remote pull directory defaults to the workspace `.vscode/dump_tensor_temp_data` path, while explicit `remoteOnBoardPullDirs` settings take precedence.
 - After a successful example build or run, `show_kernel_debug_data` post-processes temp dump files into `DumpTensor`, then the panel opens (`finalizeDumpTensorFlow` → `openDumpTensorPanel`).
 - **Import .bin** uses the same `show_kernel_debug_data` step before opening the panel.
 
