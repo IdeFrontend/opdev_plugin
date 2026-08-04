@@ -57,8 +57,8 @@ async function runPostActivateBootstrapImpl(deps: PostActivateBootstrapDeps): Pr
     const installer = new MindStudioPluginInstaller(context, {
       pluginId: MIND_STUDIO_DEBUG_PLUGIN_ID,
       vsixRelativePath:
-        './out/plugin/mindstudio-debug-vscode-plugin/MindStudio-Debug-VSCode-Plugin-1.0.9.vsix',
-      pluginVersion: '1.0.9',
+        './out/plugin/mindstudio-debug-vscode-plugin/MindStudio-Debug-VSCode-Plugin-1.0.10.vsix',
+      pluginVersion: '1.0.10',
     });
     const [workspaceFolder] = vscode.workspace.workspaceFolders ?? [];
 

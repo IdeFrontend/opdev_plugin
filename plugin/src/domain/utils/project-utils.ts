@@ -16,6 +16,7 @@ import {
   ensureMsdebugLibInEnvFile,
   getKnownSetEnvScriptPath,
 } from './msdebug-env';
+import { getRemoteToolHost } from '@plugin/helpers/remote-command';
 
 const execAsync = promisify(exec);
 
@@ -26,7 +27,7 @@ function buildDebugLaunchConfig(): typeof debugLaunch {
     configurations: debugLaunch.configurations.map((config) => ({
       ...config,
       environmentScripts: [envScript],
-    })),
+    })) as typeof debugLaunch['configurations'],
   };
 }
 
@@ -100,6 +101,32 @@ export async function ensureLaunchJsonExists(
       'utf-8',
     );
     console.log('ensureLaunchJsonExists: launch.json file created successfully');
+
+    try {
+      const remoteHost = await getRemoteToolHost();
+      const launchJson = JSON.parse(launchJsonContent);
+
+      for (const config of launchJson.configurations) {
+        if (config.name === 'remote-debug' && config.remoteConfig) {
+          if (remoteHost) {
+            config.remoteConfig.host = remoteHost;
+          }
+
+          config.remoteConfig.remoteWorkspaceFolder = projectDir;
+          break;
+        }
+      }
+
+      await fs.writeFile(
+        launchJsonPath,
+        JSON.stringify(launchJson, null, 2),
+        'utf-8',
+      );
+      console.log('ensureLaunchJsonExists: remote-debug config updated');
+    }
+    catch (error) {
+      console.warn('ensureLaunchJsonExists: failed to update remote-debug config:', error);
+    }
   }
   else {
     console.log('ensureLaunchJsonExists: launch.json file already exists, skip creation');

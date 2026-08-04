@@ -2,6 +2,7 @@ import type { OperatorBuildBehavior } from '@plugin/domain/plugins/operator-plug
 
 export const DEBUG_LAUNCH_CONFIG = {
   MSDEBUG: 'msdebug',
+  REMOTE_MSDEBUG: 'remote-debug',
   MSDEBUG_CPU: 'msdebug-cpu',
   MSDEBUG_PYTHON: 'msdebug-python',
   MSDEBUG_TRITON_NPU: 'msdebug-triton-npu',
@@ -31,6 +32,7 @@ export function resolveDebugLaunchConfigName(
   mode: 'cpu' | 'npu',
   _buildBehavior: OperatorBuildBehavior,
   projectTemplateName?: string,
+  remote?: boolean,
 ): DebugLaunchConfigName {
   const pt = (projectType ?? '').trim();
   const template = (projectTemplateName ?? '').trim();
@@ -45,7 +47,11 @@ export function resolveDebugLaunchConfigName(
     return DEBUG_LAUNCH_CONFIG.MSDEBUG_PYTHON;
   }
 
-  return mode === 'cpu'
-    ? DEBUG_LAUNCH_CONFIG.MSDEBUG_CPU
+  if (mode === 'cpu') {
+    return DEBUG_LAUNCH_CONFIG.MSDEBUG_CPU;
+  }
+
+  return remote
+    ? DEBUG_LAUNCH_CONFIG.REMOTE_MSDEBUG
     : DEBUG_LAUNCH_CONFIG.MSDEBUG;
 }

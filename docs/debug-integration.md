@@ -174,7 +174,7 @@ Debug pre-build scripts come from workspace settings ([`workspace-settings.md`](
 Not run synchronously in `activate()`. Deferred in `helpers/post-activate-bootstrap.ts`:
 
 - Plugin ID: `ascend.mindstudio-debug-vscode-plugin`
-- Bundled VSIX: `out/plugin/mindstudio-debug-vscode-plugin/MindStudio-Debug-VSCode-Plugin-1.0.9.vsix`
+- Bundled VSIX: `out/plugin/mindstudio-debug-vscode-plugin/MindStudio-Debug-VSCode-Plugin-1.0.10.vsix`
 - `MindStudioPluginInstaller.installIfNeeded()` (skip if already active)
 
 `runDebug` / `runCpuDebug` await `ensurePostActivateBootstrapReady()` so install/auto-open can finish first.

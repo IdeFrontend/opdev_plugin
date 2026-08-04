@@ -90,6 +90,9 @@ export function resolveDebugTargetBinary(
 /** The untouched template target — a placeholder that rarely matches the binary. */
 export const DEFAULT_MSDEBUG_TARGET = '${workspaceFolder}/build/${workspaceFolderBasename}';
 
+/** The untouched template target for remote-debug — uses remote workspace variable. */
+export const DEFAULT_REMOTE_MSDEBUG_TARGET = '${remoteWorkspaceFolder}/build/${workspaceFolderBasename}';
+
 /** 1.3.2 auto-adapt wrote workspace-root `build/<name>`; nested ops-math needs replacing. */
 const LEGACY_ROOT_BUILD_TARGET = /^\$\{workspaceFolder\}\/build\/[^/]+$/;
 
@@ -103,8 +106,13 @@ export function shouldReplaceDebugTarget(
   currentTarget: string | undefined,
   currentTargetExists: boolean,
   expectedTarget?: string,
+  configName?: string,
 ): boolean {
-  if (!currentTarget || currentTarget === DEFAULT_MSDEBUG_TARGET) {
+  const DEFAULT_TARGET = configName === 'remote-debug'
+    ? DEFAULT_REMOTE_MSDEBUG_TARGET
+    : DEFAULT_MSDEBUG_TARGET;
+
+  if (!currentTarget || currentTarget === DEFAULT_TARGET) {
     return true;
   }
 
@@ -152,9 +160,29 @@ export function toWorkspaceRelativeTarget(
     .join('/')}`;
 }
 
+/**
+ * Express an absolute binary path as a `${remoteWorkspaceFolder}`-relative
+ * launch.json target for remote-debug configs.
+ */
+export function toRemoteWorkspaceRelativeTarget(
+  workspaceRoot: string,
+  absTargetPath: string,
+): string {
+  const rel = path.relative(workspaceRoot, absTargetPath);
+
+  if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) {
+    return absTargetPath.split(path.sep)
+      .join('/');
+  }
+
+  return `\${remoteWorkspaceFolder}/${rel.split(path.sep)
+    .join('/')}`;
+}
+
 export function resolveTargetPath(target: string, workspaceRoot: string): string {
   return target
     .replace('${workspaceFolder}', workspaceRoot)
+    .replace('${remoteWorkspaceFolder}', workspaceRoot)
     .replace('${workspaceFolderBasename}', path.basename(workspaceRoot));
 }
 
@@ -195,7 +223,31 @@ export function msdebugConfiguredTargetExists(
   }
 
   const config = parsed.configurations.find((cfg) => cfg.name === configName);
-  const target = config && typeof config.target === 'string' ? config.target : undefined;
+
+  if (!config) {
+    return undefined;
+  }
+
+  if (configName === 'remote-debug') {
+    const remoteConfig = config.remoteConfig as Record<string, unknown> | undefined;
+    const remoteWorkspaceFolder = remoteConfig && typeof remoteConfig.remoteWorkspaceFolder === 'string'
+      ? remoteConfig.remoteWorkspaceFolder
+      : undefined;
+
+    if (remoteWorkspaceFolder === undefined) {
+      return false;
+    }
+
+    const target = typeof config.target === 'string' ? config.target : undefined;
+
+    if (!target) {
+      return undefined;
+    }
+
+    return fs.existsSync(resolveTargetPath(target, workspaceRoot));
+  }
+
+  const target = typeof config.target === 'string' ? config.target : undefined;
 
   if (!target) {
     return undefined;
@@ -227,8 +279,31 @@ export function resolveMsdebugTargetForOperator(
 }
 
 /**
- * Auto-adapt the `msdebug` / `msdebug-cpu` target in `<ide>/launch.json` to the
- * actual built binary, unless the user already set a valid target.
+ * Resolve the remote-debug attach path for an operator, or `undefined` when the
+ * binary was not built. Uses `${remoteWorkspaceFolder}` as the path prefix.
+ */
+export function resolveRemoteMsdebugTargetForOperator(
+  workspaceRoot: string,
+  operator: DebugOperatorRef,
+  targetFile?: string | null,
+): string | undefined {
+  const buildDir = path.join(operator.path, 'build');
+  const binary = resolveDebugTargetBinary(
+    listBuildFiles(buildDir),
+    collectDebugTargetCandidates(operator.name, targetFile),
+  );
+
+  if (!binary) {
+    return undefined;
+  }
+
+  return toRemoteWorkspaceRelativeTarget(workspaceRoot, path.join(buildDir, binary));
+}
+
+/**
+ * Auto-adapt the `msdebug` / `msdebug-cpu` / `remote-debug` target in
+ * `<ide>/launch.json` to the actual built binary, unless the user already set
+ * a valid target.
  */
 export async function updateMsdebugTarget(
   workspaceRoot: string,
@@ -252,8 +327,9 @@ export async function updateMsdebugTarget(
   }
 
   const newTarget = resolveMsdebugTargetForOperator(workspaceRoot, operator, targetFile);
+  const newRemoteTarget = resolveRemoteMsdebugTargetForOperator(workspaceRoot, operator, targetFile);
 
-  if (!newTarget) {
+  if (!newTarget && !newRemoteTarget) {
     return {
       status: 'noop',
       reason: 'no_binary',
@@ -283,6 +359,21 @@ export async function updateMsdebugTarget(
   let blockedByUserTarget = false;
 
   for (const cfg of parsed.configurations) {
+    if (cfg.name === 'remote-debug') {
+      const current = typeof cfg.target === 'string' ? cfg.target : undefined;
+      const exists = !!current && fs.existsSync(resolveTargetPath(current, workspaceRoot));
+
+      if (newRemoteTarget && shouldReplaceDebugTarget(current, exists, newRemoteTarget, 'remote-debug')) {
+        cfg.target = newRemoteTarget;
+        changed = true;
+      }
+      else if (current && current !== newRemoteTarget) {
+        blockedByUserTarget = true;
+      }
+
+      continue;
+    }
+
     if (cfg.name !== 'msdebug' && cfg.name !== 'msdebug-cpu') {
       continue;
     }
@@ -290,7 +381,7 @@ export async function updateMsdebugTarget(
     const current = typeof cfg.target === 'string' ? cfg.target : undefined;
     const exists = !!current && fs.existsSync(resolveTargetPath(current, workspaceRoot));
 
-    if (shouldReplaceDebugTarget(current, exists, newTarget)) {
+    if (newTarget && shouldReplaceDebugTarget(current, exists, newTarget, cfg.name)) {
       cfg.target = newTarget;
       changed = true;
     }
@@ -304,7 +395,7 @@ export async function updateMsdebugTarget(
 
     return {
       status: 'patched',
-      target: newTarget,
+      target: newTarget ?? newRemoteTarget ?? '',
     };
   }
 
@@ -325,11 +416,15 @@ export function patchMsdebugLaunchConfigTarget(
   operator: DebugOperatorRef,
   targetFile?: string | null,
 ): vscode.DebugConfiguration {
-  if (config.name !== 'msdebug' && config.name !== 'msdebug-cpu') {
+  const isRemote = config.name === 'remote-debug';
+
+  if (!isRemote && config.name !== 'msdebug' && config.name !== 'msdebug-cpu') {
     return config;
   }
 
-  const newTarget = resolveMsdebugTargetForOperator(workspaceRoot, operator, targetFile);
+  const newTarget = isRemote
+    ? resolveRemoteMsdebugTargetForOperator(workspaceRoot, operator, targetFile)
+    : resolveMsdebugTargetForOperator(workspaceRoot, operator, targetFile);
 
   if (!newTarget) {
     return config;
@@ -338,7 +433,7 @@ export function patchMsdebugLaunchConfigTarget(
   const current = typeof config.target === 'string' ? config.target : undefined;
   const exists = !!current && fs.existsSync(resolveTargetPath(current, workspaceRoot));
 
-  if (!shouldReplaceDebugTarget(current, exists, newTarget)) {
+  if (!shouldReplaceDebugTarget(current, exists, newTarget, config.name)) {
     return config;
   }
 
@@ -351,6 +446,7 @@ export function patchMsdebugLaunchConfigTarget(
 const MSDEBUG_BINARY_CONFIG_NAMES = new Set([
   'msdebug',
   'msdebug-cpu',
+  'remote-debug',
 ]);
 
 /**
@@ -385,4 +481,5 @@ export function registerMsdebugTargetAutoAdapt(
   };
 
   context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('msdebug-mi', provider));
+  context.subscriptions.push(vscode.debug.registerDebugConfigurationProvider('msdebug-mi-remote', provider));
 }

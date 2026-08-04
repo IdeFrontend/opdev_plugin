@@ -1,6 +1,7 @@
 import { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as path from 'path';
+import { promises as fs } from 'fs';
 
 import { CommandExecutor } from '@plugin/class/command-options';
 import { StTestResultsPanel } from '@plugin/class/st-test-results-panel';
@@ -48,7 +49,27 @@ import { isMindStudioDebugExtensionActive } from '@plugin/helpers/post-activate-
 import { whenPostActivateBootstrapReady } from '@plugin/helpers/post-activate-bootstrap';
 import { resolveOrPickPythonOperatorUri } from '@plugin/helpers/python-operator-editor-context';
 import { enqueueCompileRun } from '@plugin/helpers/operator-flow-coordinator';
+import {
+  startNpuHardwareProbe, startRemoteNpuHardwareProbe,
+} from '@plugin/domain/utils/npu-hardware-probe';
+import {
+  buildRemoteExecCommand,
+  ensureRemoteToolAvailable,
+  buildRemoteBuildExampleCommand,
+  createRemoteCommandWhenNoNpuTransformer,
+  getRemoteToolConfig,
+} from '@plugin/helpers/remote-command';
+import {
+  executeOperatorCommand, buildOperatorSpawnContext,
+} from '@plugin/service/operator-command-executor';
+import { joinIdeConfigPath } from '@plugin/helpers/ide-config-dir';
 import { showStTestCompletionNotification } from '@plugin/helpers/st-test-completion-notification';
+import {
+  getBuildExampleCommand,
+  resolveExampleModeForConfig,
+  getProjectById,
+} from '@plugin/domain';
+import { isRootStandardCustom } from '@plugin/service/build-service';
 
 // Global task manager: used to track and terminate executing tasks
 let currentExecutor: CommandExecutor | null = null;
@@ -226,6 +247,129 @@ async function patchLaunchJsonForDebugSession(
   return true;
 }
 
+type RemoteDebugLaunchConfigPatch = {
+  host: string;
+  port: number;
+};
+
+function extractJsonObjects(text: string): string[] {
+  const objects: string[] = [];
+  let start = -1;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      }
+      else if (char === '\\') {
+        escaped = true;
+      }
+      else if (char === '"') {
+        inString = false;
+      }
+
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+      continue;
+    }
+
+    if (char === '{') {
+      if (depth === 0) {
+        start = index;
+      }
+
+      depth += 1;
+      continue;
+    }
+
+    if (char === '}') {
+      if (depth === 0) {
+        start = -1;
+        continue;
+      }
+
+      depth -= 1;
+
+      if (depth === 0 && start >= 0) {
+        objects.push(text.slice(start, index + 1));
+        start = -1;
+      }
+    }
+  }
+
+  return objects;
+}
+
+export function parseRemoteDebugAdapterReadyPort(output: string): number | undefined {
+  const objects = extractJsonObjects(output);
+
+  for (let index = objects.length - 1; index >= 0; index -= 1) {
+    try {
+      const parsed = JSON.parse(objects[index]) as { event?: unknown;
+        port?: unknown };
+
+      if (parsed.event !== 'ready') {
+        continue;
+      }
+
+      const port = Number(parsed.port);
+
+      if (Number.isInteger(port) && port > 0 && port <= 65535) {
+        return port;
+      }
+    }
+    catch {
+      // Ignore non-JSON log fragments.
+    }
+  }
+
+  return undefined;
+}
+
+async function updateRemoteDebugConfig(
+  workspaceRoot: string,
+  patch: RemoteDebugLaunchConfigPatch,
+): Promise<boolean> {
+  const launchJsonPath = joinIdeConfigPath(workspaceRoot, 'launch.json');
+
+  try {
+    const launchJsonContent = await fs.readFile(launchJsonPath, 'utf8');
+    const launchJson = JSON.parse(launchJsonContent);
+    let updated = false;
+
+    for (const config of launchJson.configurations) {
+      if (config.name === 'remote-debug' && config.remoteConfig) {
+        config.remoteConfig.host = patch.host;
+        config.remoteConfig.port = patch.port;
+        config.remoteConfig.remoteWorkspaceFolder = workspaceRoot;
+        updated = true;
+        break;
+      }
+    }
+
+    if (!updated) {
+      return false;
+    }
+
+    await fs.writeFile(launchJsonPath, JSON.stringify(launchJson, null, 2), 'utf8');
+
+    return true;
+  }
+  catch (error) {
+    console.warn('Failed to update remote debug config in launch.json:', error);
+
+    return false;
+  }
+}
+
 export const taskMethods = {
   /**
    * Build operator
@@ -255,7 +399,6 @@ export const taskMethods = {
    * Run operator
    */
   async startRun(params: StartRunParams = {}): Promise<void> {
-
     return enqueueCompileRun('run', async () => {
       await ensurePostActivateBootstrapReady();
 
@@ -327,7 +470,6 @@ export const taskMethods = {
    * On-board analysis
    */
   async startOnBoard(params: StartOnBoardParams = {}): Promise<void> {
-
     await ensurePostActivateBootstrapReady();
 
     try {
@@ -350,7 +492,6 @@ export const taskMethods = {
    * Anomaly detection
    */
   async runSanitizer(params: StartSanitizerParams = {}): Promise<void> {
-
     await ensurePostActivateBootstrapReady();
 
     try {
@@ -372,9 +513,10 @@ export const taskMethods = {
   /**
    * Execute DumpTensor
    */
-  async startDumpTensor(params: { operatorNames?: string;
-    compileOption?: string } = {}): Promise<void> {
-
+  async startDumpTensor(params: {
+    operatorNames?: string;
+    compileOption?: string
+  } = {}): Promise<void> {
     await ensurePostActivateBootstrapReady();
 
     try {
@@ -397,7 +539,6 @@ export const taskMethods = {
    * Run UT tests
    */
   async startUtTest(params: StartUtTestParams = {}): Promise<void> {
-
     await ensurePostActivateBootstrapReady();
 
     try {
@@ -531,11 +672,22 @@ export const taskMethods = {
    * Run NPU debug
    */
   async runDebug(): Promise<void> {
-
     if (!isMindStudioDebugExtensionActive()) {
       vscode.window.showErrorMessage(t('mindStudio.debugPluginInstalling'));
 
       return;
+    }
+
+    const localNpuAvailable = await startNpuHardwareProbe();
+
+    if (!localNpuAvailable) {
+      const remoteNpuAvailable = await startRemoteNpuHardwareProbe();
+
+      if (!remoteNpuAvailable) {
+        vscode.window.showErrorMessage(t('extension.remoteToolRequired'));
+
+        return;
+      }
     }
 
     return enqueueCompileRun('build', async () => {
@@ -588,20 +740,144 @@ export const taskMethods = {
           return;
         }
 
+        // For standard custom operator projects, run buildExample before debug
+        if (await isRootStandardCustom()) {
+          const projectId = ProjectManager.getInstance().projectId;
+          const project = projectId ? getProjectById(Number(projectId)) : null;
+          const exConfigId = await buildService.getBuildExampleConfigId();
+
+          if (exConfigId) {
+            const exampleMode = resolveExampleModeForConfig(Number(exConfigId), operatorNames);
+
+            if (!exampleMode.exampleFound && exampleMode.opName) {
+              vscode.window.showWarningMessage(t('build.exampleNoSourceForOperator', { op: exampleMode.opName }));
+            }
+
+            const exampleBuildCommand = getBuildExampleCommand(
+              Number(exConfigId),
+              compileOption,
+              operatorNames || undefined,
+              exampleMode.mode,
+              true,
+            );
+
+            const exampleBuildRes = await executeOperatorCommand(
+              exampleBuildCommand,
+              buildOperatorSpawnContext({
+                configId: Number(exConfigId),
+                operatorNames: operatorNames || undefined,
+                script: exampleBuildCommand,
+              }),
+              {
+                transformCommand: createRemoteCommandWhenNoNpuTransformer((command) => buildRemoteBuildExampleCommand(
+                  command,
+                  project?.project_path,
+                )),
+              },
+            );
+
+            if (exampleBuildRes.code !== 0) {
+              if (exampleBuildRes.interruptedByUserStop) {
+                return;
+              }
+
+              vscode.window.showErrorMessage(t('build.executeFailed', { output: exampleBuildRes.output }));
+
+              return;
+            }
+          }
+        }
+
         await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
 
         const projectInfo = await homeMethods.getProjectType();
         const buildBehavior = OperatorPluginRegistry.getBuildBehaviorByProjectType(projectInfo.projectType);
+        const localNpuAvailableFinal = await startNpuHardwareProbe();
+        const isRemote = !localNpuAvailableFinal;
+
+        let remoteAdapterPort: number | undefined;
+        let remoteAdapterHost: string | undefined;
+
+        if (isRemote) {
+          if (!await ensureRemoteToolAvailable()) {
+            return;
+          }
+
+          const remoteToolConfig = await getRemoteToolConfig();
+
+          remoteAdapterHost = remoteToolConfig?.host?.trim();
+
+          if (!remoteAdapterHost) {
+            console.error('Remote tool config did not provide HOST for remote debug');
+            vscode.window.showErrorMessage(t('task.remoteDebugAdapterStartFailed'));
+
+            return;
+          }
+
+          try {
+            const remoteAdapterCommand = buildRemoteExecCommand('cd /opt/msdebug-remote-adapter && node ./bin/msdebug-remote-adapter start');
+            const executor = currentExecutor ?? ProjectManager.getInstance()
+              .getExecutor();
+            const adapterResult = await executor.executeDetached(
+              remoteAdapterCommand,
+              '"event":"ready"',
+              [],
+              {
+                toolOutputLabel: 'tool',
+                timeout: 30000,
+              },
+              true,
+            );
+
+            remoteAdapterPort = parseRemoteDebugAdapterReadyPort(adapterResult.output);
+
+            if (remoteAdapterPort === undefined) {
+              console.error('Remote debug adapter did not report a valid ready port:', adapterResult.output);
+              vscode.window.showErrorMessage(t('task.remoteDebugAdapterStartFailed'));
+
+              return;
+            }
+
+            console.log('Remote debug adapter started on port:', remoteAdapterPort);
+          }
+          catch (error) {
+            console.error('Failed to start remote msdebug adapter:', error);
+            vscode.window.showErrorMessage(t('task.remoteDebugAdapterStartFailed'));
+
+            return;
+          }
+        }
+
         const debugConfigName = resolveDebugLaunchConfigName(
           projectInfo.projectType,
           'npu',
           buildBehavior,
           projectInfo.projectTemplateName,
+          isRemote,
         );
 
         const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
 
         if (workspaceFolder) {
+          if (isRemote) {
+            if (!remoteAdapterHost || remoteAdapterPort === undefined) {
+              vscode.window.showErrorMessage(t('task.remoteDebugAdapterStartFailed'));
+
+              return;
+            }
+
+            const remoteDebugConfigUpdated = await updateRemoteDebugConfig(workspaceFolder.uri.fsPath, {
+              host: remoteAdapterHost,
+              port: remoteAdapterPort,
+            });
+
+            if (!remoteDebugConfigUpdated) {
+              vscode.window.showErrorMessage(t('task.remoteDebugAdapterStartFailed'));
+
+              return;
+            }
+          }
+
           const canDebug = await patchLaunchJsonForDebugSession(
             workspaceFolder.uri.fsPath,
             debugConfigName,
@@ -716,6 +992,54 @@ export const taskMethods = {
         if (!built) {
           // Debug build failed or was preempted — do not launch msdebug against a missing binary.
           return;
+        }
+
+        // For standard custom operator projects, run buildExample before debug
+        if (await isRootStandardCustom()) {
+          const projectId = ProjectManager.getInstance().projectId;
+          const project = projectId ? getProjectById(Number(projectId)) : null;
+          const exConfigId = await buildService.getBuildExampleConfigId();
+
+          if (exConfigId) {
+            const exampleMode = resolveExampleModeForConfig(Number(exConfigId), operatorNames);
+
+            if (!exampleMode.exampleFound && exampleMode.opName) {
+              vscode.window.showWarningMessage(t('build.exampleNoSourceForOperator', { op: exampleMode.opName }));
+            }
+
+            const exampleBuildCommand = getBuildExampleCommand(
+              Number(exConfigId),
+              compileOption,
+              operatorNames || undefined,
+              exampleMode.mode,
+              true,
+            );
+
+            const exampleBuildRes = await executeOperatorCommand(
+              exampleBuildCommand,
+              buildOperatorSpawnContext({
+                configId: Number(exConfigId),
+                operatorNames: operatorNames || undefined,
+                script: exampleBuildCommand,
+              }),
+              {
+                transformCommand: createRemoteCommandWhenNoNpuTransformer((command) => buildRemoteBuildExampleCommand(
+                  command,
+                  project?.project_path,
+                )),
+              },
+            );
+
+            if (exampleBuildRes.code !== 0) {
+              if (exampleBuildRes.interruptedByUserStop) {
+                return;
+              }
+
+              vscode.window.showErrorMessage(t('build.executeFailed', { output: exampleBuildRes.output }));
+
+              return;
+            }
+          }
         }
 
         await vscode.commands.executeCommand('workbench.debug.action.toggleRepl');
