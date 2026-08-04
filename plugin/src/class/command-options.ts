@@ -126,6 +126,7 @@ class CommandExecutor extends EventEmitter {
 
       if (isOpenTerminal) {
         const label = options.toolOutputLabel ?? 'tool';
+
         outputChannel = getOperatorToolOutputChannel(label);
         outputChannel.show();
         outputChannel.appendLine(command);
@@ -235,6 +236,151 @@ class CommandExecutor extends EventEmitter {
       child.on('error', () => {
         localCleanup();
         resolve(this.getResult(-1));
+      });
+    });
+  }
+
+  async executeDetached(
+    command: string,
+    readyKeyword: string = 'ready',
+    args: string[] = [],
+    options: CommandOptions = {},
+    isOpenTerminal: boolean = false,
+  ): Promise<CommandResult> {
+    return new Promise((resolve, reject) => {
+      this.stdout = '';
+      this.stderr = '';
+      this.output = '';
+      this.interruptedByUserStop = false;
+
+      const cwd = options.cwd || process.cwd();
+      const ascendEnv = pickAscendSpawnEnv(options.env);
+
+      appendLog(COMMAND_LOG_SCOPE, 'Executing detached', {
+        command,
+        cwd,
+        ...(args.length > 0 ? { args } : {}),
+        ...(ascendEnv ? { env: ascendEnv } : {}),
+      });
+
+      let outputChannel: vscode.OutputChannel | null = null;
+
+      if (isOpenTerminal) {
+        const label = options.toolOutputLabel ?? 'tool';
+
+        outputChannel = getOperatorToolOutputChannel(label);
+        outputChannel.show();
+        outputChannel.appendLine(command);
+      }
+
+      const child = spawn(command, args, {
+        cwd,
+        env: {
+          ...process.env,
+          ...options.env,
+        },
+        shell: true,
+        detached: process.platform !== 'win32',
+      });
+
+      this.process = child;
+
+      let timeoutId: NodeJS.Timeout | null = null;
+      let settled = false;
+
+      const release = () => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+
+        this.process = null;
+      };
+
+      const settleResolve = (result: CommandResult) => {
+        if (settled) {
+          return;
+        }
+
+        settled = true;
+        release();
+        resolve(result);
+      };
+
+      const settleReject = (error: Error) => {
+        if (settled) {
+          return;
+        }
+
+        settled = true;
+        release();
+        reject(error);
+      };
+
+      if (options.timeout && options.timeout > 0) {
+        timeoutId = setTimeout(async () => {
+          await this.cleanup();
+          settleReject(new Error(`Command execution timeout after ${options.timeout}ms`));
+        }, options.timeout);
+      }
+
+      if (process.platform !== 'win32') {
+        child.unref();
+      }
+
+      child.stdout?.on('data', (data: Buffer) => {
+        const text = data.toString();
+        const cleanText = this.stripAnsiCodes(text);
+
+        if (outputChannel) {
+          outputChannel.appendLine(cleanText);
+        }
+
+        console.log('executeDetached command, stdout:', cleanText);
+        this.stdout += cleanText;
+        this.output += cleanText;
+
+        this.emit('stdout', cleanText);
+
+        if (options.streaming) {
+          process.stdout.write(cleanText);
+        }
+
+        if (cleanText.includes(readyKeyword)) {
+          settleResolve(this.getResult(0));
+        }
+      });
+
+      child.stderr?.on('data', (data: Buffer) => {
+        const text = data.toString();
+        const cleanText = this.stripAnsiCodes(text);
+
+        console.error('executeDetached command, stderr:', cleanText);
+        this.stderr += cleanText;
+        this.output += cleanText;
+
+        if (outputChannel) {
+          outputChannel.appendLine(cleanText);
+        }
+
+        this.emit('stderr', cleanText);
+
+        if (options.streaming) {
+          process.stderr.write(cleanText);
+        }
+
+        if (cleanText.includes(readyKeyword)) {
+          settleResolve(this.getResult(0));
+        }
+      });
+
+      child.on('close', (code: number) => {
+        const result = this.getResult(code);
+
+        settleResolve(result);
+      });
+
+      child.on('error', () => {
+        settleResolve(this.getResult(-1));
       });
     });
   }

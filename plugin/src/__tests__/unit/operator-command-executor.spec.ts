@@ -1,8 +1,4 @@
-jest.mock('@plugin/core/project/project-manager', () => ({
-  ProjectManager: {
-    getInstance: jest.fn(),
-  },
-}));
+jest.mock('@plugin/core/project/project-manager', () => ({ ProjectManager: { getInstance: jest.fn() } }));
 
 jest.mock('@plugin/helpers/operator-project-workspace-config', () => ({
   getWorkspaceSimulatorType: jest.fn(() => ''),
@@ -18,17 +14,11 @@ jest.mock('@plugin/domain/utils/global-env-snapshot', () => ({
   })),
 }));
 
-jest.mock('@plugin/domain/models/project-model', () => ({
-  getProjectById: jest.fn(() => ({ project_type: 'ascend-c' })),
-}));
+jest.mock('@plugin/domain/models/project-model', () => ({ getProjectById: jest.fn(() => ({ project_type: 'ascend-c' })) }));
 
-jest.mock('@plugin/domain/services/configuration', () => ({
-  getConfigById: jest.fn(),
-}));
+jest.mock('@plugin/domain/services/configuration', () => ({ getConfigById: jest.fn() }));
 
-jest.mock('@plugin/domain/models/model', () => ({
-  getOpByProjectIdAndOpName: jest.fn(() => undefined),
-}));
+jest.mock('@plugin/domain/models/model', () => ({ getOpByProjectIdAndOpName: jest.fn(() => undefined) }));
 
 import { AscendPlugin } from '@plugin/domain/plugins/ascend.plugin';
 import { CannPlugin } from '@plugin/domain/plugins/cann.plugin';
@@ -36,16 +26,20 @@ import { TritonPlugin } from '@plugin/domain/plugins/triton.plugin';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import { deriveOperatorToolOutputLabel } from '@plugin/helpers/output-channel';
-import {
-  getSocVersionWithWorkspaceOverride,
-} from '@plugin/helpers/operator-project-workspace-config';
+import { getSocVersionWithWorkspaceOverride } from '@plugin/helpers/operator-project-workspace-config';
 import {
   buildOperatorSpawnContext,
   executeOperatorCommand,
 } from '@plugin/service/operator-command-executor';
 
 describe('executeOperatorCommand', () => {
-  const execute = jest.fn().mockResolvedValue({ code: 0, output: '', stdout: '', stderr: '' });
+  const execute = jest.fn()
+    .mockResolvedValue({
+      code: 0,
+      output: '',
+      stdout: '',
+      stderr: '',
+    });
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -54,9 +48,7 @@ describe('executeOperatorCommand', () => {
     OperatorPluginRegistry.registerOpPlugin(new AscendPlugin());
     OperatorPluginRegistry.registerOpPlugin(new TritonPlugin());
     (getSocVersionWithWorkspaceOverride as jest.Mock).mockReturnValue('ascend950');
-    (ProjectManager.getInstance as jest.Mock).mockReturnValue({
-      getExecutor: () => ({ execute }),
-    });
+    (ProjectManager.getInstance as jest.Mock).mockReturnValue({ getExecutor: () => ({ execute }) });
   });
 
   it('embeds export prefixes in the command and does not pass options.env', async () => {
@@ -67,22 +59,28 @@ describe('executeOperatorCommand', () => {
       script: null,
     });
 
-    expect(execute).toHaveBeenCalledTimes(1);
-    const [command, , , options, isOpenTerminal] = execute.mock.calls[0] as [
+    expect(execute)
+      .toHaveBeenCalledTimes(1);
+    const [
+      command, , , options,
+      isOpenTerminal,
+    ] = execute.mock.calls[0] as [
       string,
       string[],
       string[],
-      { toolOutputLabel?: string; env?: Record<string, string> },
+      { toolOutputLabel?: string;
+        env?: Record<string, string> },
       boolean,
     ];
 
-    expect(command).toMatch(
-      /^export SOC_VERSION='ascend950' && export NPU_ARCH='dav-3510' && cd build && \.\/build\.sh$/,
-    );
+    expect(command)
+      .toMatch(/^export SOC_VERSION='ascend950' && export NPU_ARCH='dav-3510' && cd build && \.\/build\.sh$/);
     expect(command).not.toContain('SUPPORT_COMPUTE_UNIT');
     expect(command).not.toContain('SUPPORT_TILING_DIR');
-    expect(options.env).toBeUndefined();
-    expect(isOpenTerminal).toBe(true);
+    expect(options.env)
+      .toBeUndefined();
+    expect(isOpenTerminal)
+      .toBe(true);
   });
 
   it('derives toolOutputLabel from spawn context when meta omits outputLabel', async () => {
@@ -95,13 +93,13 @@ describe('executeOperatorCommand', () => {
       script: null,
     });
 
-    expect(deriveOperatorToolOutputLabel).toHaveBeenCalledWith(
-      expect.objectContaining({
+    expect(deriveOperatorToolOutputLabel)
+      .toHaveBeenCalledWith(expect.objectContaining({
         configType: 'build_op',
         script: 'cd build && ./build.sh',
-      }),
-    );
-    expect(execute.mock.calls[0][3]).toEqual({ toolOutputLabel: 'compile' });
+      }));
+    expect(execute.mock.calls[0][3])
+      .toEqual({ toolOutputLabel: 'compile' });
   });
 
   it('inserts exports before ascend_env_script source prefix', async () => {
@@ -114,12 +112,10 @@ describe('executeOperatorCommand', () => {
 
     const [command] = execute.mock.calls[0] as [string];
 
-    expect(command).toMatch(
-      /^export SOC_VERSION='ascend950' && export NPU_ARCH='dav-3510' && /,
-    );
-    expect(command).toMatch(
-      / && \. \/cann\/set_env\.sh && cd build && \.\/build\.sh$/,
-    );
+    expect(command)
+      .toMatch(/^export SOC_VERSION='ascend950' && export NPU_ARCH='dav-3510' && /);
+    expect(command)
+      .toMatch(/ && \. \/cann\/set_env\.sh && cd build && \.\/build\.sh$/);
   });
 
   it('substitutes placeholders before injecting exports', async () => {
@@ -135,9 +131,11 @@ describe('executeOperatorCommand', () => {
 
     const [command] = execute.mock.calls[0] as [string];
 
-    expect(command).toContain('bash build.sh --soc=ascend950');
+    expect(command)
+      .toContain('bash build.sh --soc=ascend950');
     expect(command).not.toContain('{soc_version}');
-    expect(command).toMatch(/^export SOC_VERSION='/);
+    expect(command)
+      .toMatch(/^export SOC_VERSION='/);
   });
 
   it('embeds export prefixes when stored project_type is cann and no operator is selected', async () => {
@@ -156,9 +154,8 @@ describe('executeOperatorCommand', () => {
 
     const [command] = execute.mock.calls[0] as [string];
 
-    expect(command).toMatch(
-      /^export SOC_VERSION='ascend950' && export NPU_ARCH='dav-3510' && cd build && \.\/build\.sh$/,
-    );
+    expect(command)
+      .toMatch(/^export SOC_VERSION='ascend950' && export NPU_ARCH='dav-3510' && cd build && \.\/build\.sh$/);
   });
 
   it('does not export SOC_VERSION or NPU_ARCH for standard-custom projects', async () => {
@@ -177,7 +174,8 @@ describe('executeOperatorCommand', () => {
 
     const [command] = execute.mock.calls[0] as [string];
 
-    expect(command).toBe('bash build.sh --soc=ascend950');
+    expect(command)
+      .toBe('bash build.sh --soc=ascend950');
     expect(command).not.toContain('export SOC_VERSION');
     expect(command).not.toContain('export NPU_ARCH');
   });
@@ -198,16 +196,22 @@ describe('executeOperatorCommand', () => {
     });
 
     const ctx = buildOperatorSpawnContext({ configId: 1 });
-    expect(ctx.opType).toBe('triton');
-    expect(ctx.configType).toBe('sanitizer');
+
+    expect(ctx.opType)
+      .toBe('triton');
+    expect(ctx.configType)
+      .toBe('sanitizer');
 
     await executeOperatorCommand('mssanitizer -- python3 ./a.py', ctx);
 
     const [command] = execute.mock.calls[0] as [string];
 
-    expect(command).toContain("export TRITON_ENABLE_SANITIZER='1'");
-    expect(command).toContain("export TRITON_ALWAYS_COMPILE='1'");
-    expect(command).toContain("export PYTORCH_NO_NPU_MEMORY_CACHING='1'");
+    expect(command)
+      .toContain("export TRITON_ENABLE_SANITIZER='1'");
+    expect(command)
+      .toContain("export TRITON_ALWAYS_COMPILE='1'");
+    expect(command)
+      .toContain("export PYTORCH_NO_NPU_MEMORY_CACHING='1'");
   });
 
   it('uses outputLabel from meta when provided', async () => {
@@ -222,6 +226,31 @@ describe('executeOperatorCommand', () => {
       { outputLabel: 'run' },
     );
 
-    expect(execute.mock.calls[0][3]).toEqual({ toolOutputLabel: 'run' });
+    expect(execute.mock.calls[0][3])
+      .toEqual({ toolOutputLabel: 'run' });
+  });
+
+  it('applies the caller-provided command transformer after resolving placeholders and environment', async () => {
+    const transformCommand = jest.fn(async (command: string) => `remote_tool.sh exec --command '${command}'`);
+
+    await executeOperatorCommand(
+      'bash build.sh --soc={soc_version} -u',
+      {
+        projectId: 1,
+        configType: 'ut_test',
+        scriptField: null,
+        script: null,
+      },
+      { transformCommand },
+    );
+
+    const [command] = execute.mock.calls[0] as [string];
+
+    expect(command)
+      .toContain('bash build.sh --soc=ascend950 -u');
+    expect(command)
+      .toMatch(/^remote_tool\.sh exec --command '/);
+    expect(transformCommand)
+      .toHaveBeenCalledWith(expect.stringContaining('bash build.sh --soc=ascend950 -u'));
   });
 });

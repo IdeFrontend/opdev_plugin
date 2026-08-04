@@ -17,6 +17,10 @@ import {
   deriveOperatorToolOutputLabel,
   type OperatorToolOutputLabel,
 } from '@plugin/helpers/output-channel';
+import {
+  RemoteToolUnavailableError,
+  type OperatorCommandTransformer,
+} from '@plugin/helpers/remote-command';
 
 export function resolveOpTypeForSpawn(
   projectId: number | undefined,
@@ -63,6 +67,8 @@ export function buildOperatorSpawnContext(options: {
 
   return {
     opType,
+    configId: options.configId,
+    operatorNames: options.operatorNames,
     projectId,
     projectType: OperatorPluginRegistry.normalizeProjectTypeForSpawn(project?.project_type),
     configType: config?.config_type ?? null,
@@ -97,7 +103,12 @@ function enrichOperatorSpawnContext(
 export async function executeOperatorCommand(
   command: string,
   spawnContext: OperatorSpawnEnvContext,
-  meta?: { outputLabel?: OperatorToolOutputLabel },
+  meta?: {
+    outputLabel?: OperatorToolOutputLabel;
+    transformCommand?: OperatorCommandTransformer;
+    detached?: boolean;
+    readyKeyword?: string;
+  },
 ) {
   const ctxWithCommand = enrichOperatorSpawnContext(spawnContext, command);
   const isSimulator = isSimulatorCompile(ctxWithCommand);
@@ -122,8 +133,33 @@ export async function executeOperatorCommand(
   const finalCommand = applyAscendPlaceholdersToScript(command, resolution);
   const runnableCommand = injectAscendEnvExports(finalCommand, env);
   const toolOutputLabel = meta?.outputLabel ?? deriveOperatorToolOutputLabel(ctxWithCommand);
+  let commandToExecute: string;
 
-  return ProjectManager.getInstance()
-    .getExecutor()
-    .execute(runnableCommand, [], [], { toolOutputLabel }, true);
+  try {
+    commandToExecute = meta?.transformCommand
+      ? await meta.transformCommand(runnableCommand)
+      : runnableCommand;
+  }
+  catch (error) {
+    if (error instanceof RemoteToolUnavailableError) {
+      return {
+        code: 1,
+        output: '',
+        stdout: '',
+        stderr: '',
+        interruptedByUserStop: true,
+      };
+    }
+
+    throw error;
+  }
+
+  const executor = ProjectManager.getInstance()
+    .getExecutor();
+
+  if (meta?.detached) {
+    return executor.executeDetached(commandToExecute, meta.readyKeyword || 'ready', [], { toolOutputLabel }, true);
+  }
+
+  return executor.execute(commandToExecute, [], [], { toolOutputLabel }, true);
 }
