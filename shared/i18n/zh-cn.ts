@@ -129,6 +129,7 @@ export default {
   'folderContext.folderNotOperatorProject': '该文件夹不是算子工程',
   'folderContext.needBishengFlags': '暂不支持该功能，请确保 build.sh 中包含 --bisheng_flags',
   'folderContext.standardOpsNoTuning': '标准自定义算子暂不支持性能调优',
+  'folderContext.standardOpsNoCpuDebug': '标准自定义算子暂不支持CPU调试',
   'folderContext.sanitizerSelectFile': '异常检测只支持文件，请选择文件',
   'folderContext.selectFileOrFolder': '请选择文件或文件夹',
   'folderContext.noProjectId': '未找到项目ID',

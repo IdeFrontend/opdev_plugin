@@ -4,9 +4,13 @@ import * as path from 'path';
 import {
   OperatorProjectType, OperatorProjectDetector,
 } from '@plugin/domain/services/operator-project-detector';
-import { getAllProjects, getProjectByPath, type ProjectRecord } from '@plugin/domain/models/project-model';
-import { checkBuildShHasBishengConfig } from '@plugin/domain/utils/build-utils';
-import { getDevtoolConfigPath, getIdeConfigDirName } from '@plugin/helpers/ide-config-dir';
+import {
+  getAllProjects, getProjectByPath, type ProjectRecord,
+} from '@plugin/domain/models/project-model';
+import { buildShHelpSupportsGenop } from '@plugin/domain/plugins/detection-utils';
+import {
+  getDevtoolConfigPath, getIdeConfigDirName,
+} from '@plugin/helpers/ide-config-dir';
 
 export type OperatorListEntry = {
   id: number;
@@ -60,6 +64,7 @@ function findDevtoolConfigOperatorProjectPaths(workspacePath: string): string[] 
   };
 
   findOperatorProjects(workspacePath);
+
   return operatorProjects;
 }
 
@@ -121,7 +126,7 @@ export async function checkMultipleOperatorsCore(
         const opsList = rootProject.ops_list || [];
         const experimentalOpsList = rootProject.experimental_ops_list || [];
         const supportsSanitizerAndTuning = options.includeSupportsSanitizerAndTuning
-          ? checkBuildShHasBishengConfig(workspacePath)
+          ? await buildShHelpSupportsGenop(workspacePath)
           : undefined;
 
         console.log(
@@ -130,7 +135,10 @@ export async function checkMultipleOperatorsCore(
           t('home.operatorList'),
           operators.map((op) => `${op.name} (${op.isExperimental ? 'ex' : 'normal'}, compiled: ${op.isCompiled})`),
           ...(supportsSanitizerAndTuning !== undefined
-            ? [t('home.supportsSanitizerAndTuning'), supportsSanitizerAndTuning]
+            ? [
+              t('home.supportsSanitizerAndTuning'),
+              supportsSanitizerAndTuning,
+            ]
             : []),
         );
 

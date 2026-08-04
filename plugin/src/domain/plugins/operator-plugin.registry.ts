@@ -8,9 +8,7 @@ import type {
   IOperatorPlugin, OpGenParams, OpGenProject, OperatorSpawnEnvKey,
 } from './operator-plugin.interface';
 import type { OperatorBuildBehavior } from './operator-plugin.interface';
-import type {
-  IProjectDetector,
-} from './project-detector.interface';
+import type { IProjectDetector } from './project-detector.interface';
 import type { BaseOpGenerator } from '@plugin/domain/services/op-generator-factory';
 import type { OpRecord } from '@plugin/domain/models/model';
 
@@ -64,7 +62,7 @@ export type OpDescriptor = Pick<OpRecord, 'op_path' | 'op_type' | 'op_name'>;
  * return 'definitive') must be registered before ambiguous heuristic detectors.
  *
  * Recommended detector registration order:
- *   1. StandardCustomDetector  (definitive — build.sh content check)
+ *   1. StandardCustomDetector  (definitive — build.sh --help capability check)
  *   2. TorchLibraryDetector    (heuristic — CMakeLists + .py files)
  *   3. TritonPlugin            (heuristic/definitive — before PyAsc)
  *   4. PyAscPlugin             (heuristic — .py files, no CMakeLists)
@@ -113,12 +111,16 @@ export class OperatorPluginRegistry {
    * Falls back to cann plugin for unknown/unsupported mappings.
    */
   static getProjectTypePlugin(projectType: string | null | undefined): IOperatorPlugin {
-    if (!projectType) return this.getOpPlugin(undefined);
+    if (!projectType) {
+      return this.getOpPlugin(undefined);
+    }
+
     for (const plugin of this.opPlugins.values()) {
       if (plugin.projectTypeMappings?.includes(projectType as any)) {
         return plugin;
       }
     }
+
     return this.getOpPlugin(undefined);
   }
 
@@ -184,9 +186,7 @@ export class OperatorPluginRegistry {
    * Avoids conflating project_type (e.g. 'standard-custom', 'ascend-c') with op_type
    * (e.g. 'ascend', 'cann', 'pyasc', 'triton').
    */
-  static getBuildBehaviorByProjectType(
-    projectType: string | null | undefined,
-  ): OperatorBuildBehavior {
+  static getBuildBehaviorByProjectType(projectType: string | null | undefined): OperatorBuildBehavior {
     if (!projectType) {
       return this.getOpPlugin(undefined).buildBehavior;
     }
@@ -219,13 +219,15 @@ export class OperatorPluginRegistry {
     }
 
     if (pt && CANN_SOC_PROJECT_TYPES.has(pt)) {
-      return this.getOpPlugin('cann')?.getSpawnEnvExportKeys() ?? [];
+      return this.getOpPlugin('cann')
+        ?.getSpawnEnvExportKeys() ?? [];
     }
 
     const normalizedOp = normalizeOpTypeForSpawn(opType);
 
     if (normalizedOp) {
-      return this.getOpPlugin(normalizedOp)?.getSpawnEnvExportKeys() ?? [];
+      return this.getOpPlugin(normalizedOp)
+        ?.getSpawnEnvExportKeys() ?? [];
     }
 
     return [];
@@ -261,6 +263,7 @@ export class OperatorPluginRegistry {
       if (plugin.opType === projectType) {
         return true;
       }
+
       if (plugin.projectTypeMappings?.includes(projectType as any)) {
         return true;
       }

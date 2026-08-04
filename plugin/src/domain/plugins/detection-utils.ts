@@ -1,12 +1,123 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import {
+  spawn, spawnSync,
+} from 'child_process';
 
 /**
  * Shared filesystem detection helpers for operator project type detection.
  * Extracted from OperatorProjectDetector's private static methods.
  */
 
-const ROOT_PYTHON_ENTRY_EXCLUDE = new Set(['__init__.py', 'setup.py', 'conftest.py']);
+const ROOT_PYTHON_ENTRY_EXCLUDE = new Set([
+  '__init__.py',
+  'setup.py',
+  'conftest.py',
+]);
+const BUILD_SH_HELP_TIMEOUT_MS = 5_000;
+const BUILD_SH_HELP_MAX_OUTPUT_LENGTH = 64 * 1024;
+
+export type BuildShGenopSupportChecker = (dirPath: string)=> Promise<boolean>;
+
+export function helpOutputSupportsOption(output: string, option: string): boolean {
+  const escapedOption = option.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  return new RegExp(`(^|[^A-Za-z0-9_-])${escapedOption}(?:=|[^A-Za-z0-9_-]|$)`, 'm')
+    .test(output);
+}
+
+export function helpOutputSupportsGenop(output: string): boolean {
+  return helpOutputSupportsOption(output, '--genop');
+}
+
+/**
+ * Check the project's public build interface rather than its implementation.
+ * `build.sh --help` is deliberately run without a shell so the workspace path
+ * cannot be interpreted as command text.
+ */
+export async function buildShHelpSupportsGenop(dirPath: string): Promise<boolean> {
+  return buildShHelpSupportsOption(dirPath, '--genop');
+}
+
+/** Check whether the public build interface advertises an option. */
+export async function buildShHelpSupportsOption(dirPath: string, option: string): Promise<boolean> {
+  if (!fs.existsSync(path.join(dirPath, 'build.sh'))) {
+    return false;
+  }
+
+  return new Promise((resolve) => {
+    let output = '';
+    let settled = false;
+
+    const finish = () => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+
+      resolve(helpOutputSupportsOption(output, option));
+    };
+    const appendOutput = (data: Buffer | string) => {
+      const remaining = BUILD_SH_HELP_MAX_OUTPUT_LENGTH - output.length;
+
+      if (remaining > 0) {
+        output += data.toString()
+          .slice(0, remaining);
+      }
+    };
+    const child = spawn('bash', [
+      'build.sh',
+      '--help',
+    ], {
+      cwd: dirPath,
+      shell: false,
+      windowsHide: true,
+    });
+    const timeout = setTimeout(() => {
+      child.kill();
+      finish();
+    }, BUILD_SH_HELP_TIMEOUT_MS);
+
+    child.stdout?.on('data', appendOutput);
+    child.stderr?.on('data', appendOutput);
+    child.once('error', finish);
+    child.once('close', finish);
+  });
+}
+
+/**
+ * Synchronous variant for configuration creation, whose plugin contract is synchronous.
+ * The command still checks the public `build.sh --help` interface rather than script text.
+ */
+export function buildShHelpSupportsOptionSync(dirPath: string, option: string): boolean {
+  if (!fs.existsSync(path.join(dirPath, 'build.sh'))) {
+    return false;
+  }
+
+  try {
+    const result = spawnSync('bash', [
+      'build.sh',
+      '--help',
+    ], {
+      cwd: dirPath,
+      shell: false,
+      windowsHide: true,
+      timeout: BUILD_SH_HELP_TIMEOUT_MS,
+      maxBuffer: BUILD_SH_HELP_MAX_OUTPUT_LENGTH,
+      encoding: 'utf8',
+    });
+
+    return helpOutputSupportsOption(`${result.stdout ?? ''}${result.stderr ?? ''}`, option);
+  }
+  catch {
+    return false;
+  }
+}
 
 export function hasPyFilesInRoot(dirPath: string): boolean {
   return listRootPythonEntryFiles(dirPath).length > 0;
@@ -166,28 +277,19 @@ export function hasAscFilesRecursive(dirPath: string, maxDepth: number): boolean
   return false;
 }
 
-/**
- * Walk up at most 3 ancestor directories and return the first one whose build.sh
- * contains --genop (the standard-custom collection root), or undefined.
- */
-export function findAncestorGenopCollectionRoot(dirPath: string): string | undefined {
+/** Walk up at most 3 ancestors to find a collection whose help exposes --genop. */
+export async function findAncestorGenopCollectionRoot(
+  dirPath: string,
+  supportsGenop: BuildShGenopSupportChecker = buildShHelpSupportsGenop,
+): Promise<string | undefined> {
   try {
     let current = path.dirname(dirPath);
 
     for (let i = 0; i < 3; i++) {
       const buildSh = path.join(current, 'build.sh');
 
-      if (fs.existsSync(buildSh)) {
-        try {
-          const content = fs.readFileSync(buildSh, 'utf-8');
-
-          if (content.includes('--genop')) {
-            return current;
-          }
-        }
-        catch {
-          // ignore read error
-        }
+      if (fs.existsSync(buildSh) && await supportsGenop(current)) {
+        return current;
       }
 
       const parent = path.dirname(current);
@@ -207,9 +309,11 @@ export function findAncestorGenopCollectionRoot(dirPath: string): string | undef
 }
 
 /**
- * Walk up at most 3 ancestor directories looking for a build.sh that contains --genop.
- * Mirrors the ancestor-detection logic in OperatorProjectDetector.detectOperatorProject() Path 2.
+ * Walk up at most 3 ancestor directories looking for help output that exposes --genop.
  */
-export function hasAncestorBuildShWithGenop(dirPath: string): boolean {
-  return findAncestorGenopCollectionRoot(dirPath) !== undefined;
+export async function hasAncestorBuildShWithGenop(
+  dirPath: string,
+  supportsGenop: BuildShGenopSupportChecker = buildShHelpSupportsGenop,
+): Promise<boolean> {
+  return (await findAncestorGenopCollectionRoot(dirPath, supportsGenop)) !== undefined;
 }

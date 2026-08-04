@@ -19,7 +19,7 @@ describe('StandardCustomDetector — nested-in-collection hardening', () => {
     fs.writeFileSync(path.join(subOp, 'CMakeLists.txt'), '');
     fs.writeFileSync(path.join(subOp, 'add_custom.asc'), ''); // .asc would otherwise route to AscendPlugin
 
-    const result = await new StandardCustomDetector()
+    const result = await new StandardCustomDetector(async (dirPath) => dirPath === root)
       .detectProject(subOp);
 
     expect(result)
@@ -29,7 +29,7 @@ describe('StandardCustomDetector — nested-in-collection hardening', () => {
       });
   });
 
-  it('does not match an unrelated folder with no --genop ancestor', async () => {
+  it('does not match an unrelated folder when build.sh help has no --genop option', async () => {
     const root = mkTmp();
     const lone = path.join(root, 'lone_op');
 
@@ -37,25 +37,42 @@ describe('StandardCustomDetector — nested-in-collection hardening', () => {
     fs.writeFileSync(path.join(lone, 'CMakeLists.txt'), '');
     fs.writeFileSync(path.join(lone, 'lone.asc'), '');
 
-    const result = await new StandardCustomDetector()
+    const result = await new StandardCustomDetector(async () => false)
       .detectProject(lone);
 
     expect(result.isMatch)
       .toBe(false);
   });
 
-  it('keeps the collection root definitive', async () => {
+  it('uses the build.sh help capability for the collection root, not its source text', async () => {
     const root = mkTmp();
 
-    fs.writeFileSync(path.join(root, 'build.sh'), '#!/bin/bash\n./cmake.sh --genop\n');
+    fs.writeFileSync(path.join(root, 'build.sh'), '# --genop in a comment must not decide the type\n');
 
-    const result = await new StandardCustomDetector()
+    const result = await new StandardCustomDetector(async (dirPath) => dirPath === root)
       .detectProject(root);
 
     expect(result)
       .toEqual({
         isMatch: true,
         confidence: 'definitive',
+      });
+  });
+
+  it('keeps the legacy structural heuristic when help does not expose --genop', async () => {
+    const root = mkTmp();
+    const experimental = path.join(root, 'experimental');
+
+    fs.mkdirSync(experimental);
+    fs.writeFileSync(path.join(experimental, 'CMakeLists.txt'), '');
+
+    const result = await new StandardCustomDetector(async () => false)
+      .detectProject(experimental);
+
+    expect(result)
+      .toEqual({
+        isMatch: true,
+        confidence: 'heuristic',
       });
   });
 

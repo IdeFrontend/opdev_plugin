@@ -13,7 +13,7 @@ import { isOperatorSupportEnabled } from '@plugin/helpers/feature-toggle';
  *
  * Op-type plugins (registerOpPlugin): order doesn't matter.
  * Detectors (registerDetector): order IS significant — detection priority.
- *   1. StandardCustomDetector — 'definitive' build.sh check; must be first
+ *   1. StandardCustomDetector — 'definitive' build.sh --help check; must be first
  *   2. TorchLibraryDetector  — heuristic; CMakeLists + .py
  *   3. TritonPlugin          — heuristic/definitive; marker/dep + triton kernel pattern
  *   4. PyAscPlugin           — heuristic; .py, no CMakeLists
@@ -30,6 +30,7 @@ export function registerOperatorPlugins(): void {
   OperatorPluginRegistry.registerOpPlugin(ascend);
   OperatorPluginRegistry.registerOpPlugin(cann);
   OperatorPluginRegistry.registerOpPlugin(pyasc);
+
   if (triton) {
     OperatorPluginRegistry.registerOpPlugin(triton);
   }
@@ -37,9 +38,11 @@ export function registerOperatorPlugins(): void {
   // Detectors in detection-priority order
   OperatorPluginRegistry.registerDetector(new StandardCustomDetector());
   OperatorPluginRegistry.registerDetector(new TorchLibraryDetector());
+
   if (triton) {
     OperatorPluginRegistry.registerDetector(triton);
   }
+
   OperatorPluginRegistry.registerDetector(pyasc);
   OperatorPluginRegistry.registerDetector(ascend);
 }

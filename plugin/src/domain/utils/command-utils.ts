@@ -1,7 +1,4 @@
-import { resolveEffectiveCannSoc } from '@plugin/domain/utils/ascend-util';
-import {
-  cannSocToSeries, type AscendSeries,
-} from '@shared/ascend-series-registry';
+import { shellQuoteBash } from '@plugin/domain/utils/shell-env-exports';
 
 /**
  * Command generation configuration options
@@ -130,32 +127,8 @@ export interface PermissionConfig {
   execute?: boolean;
 }
 
-/** Whether getExecutableCommand treats target_file as a .run deploy or a generic run. */
-export type ExecutableCommandMode = 'run' | 'deploy';
-
-export interface GetExecutableCommandOptions extends PermissionConfig {
-  /** Default `run`. Use `deploy` for .run package install after build. */
-  mode?: ExecutableCommandMode;
-  /** When mode is `deploy` and target is a .run package, append `--force` on A2/A5 SOCs unless false. */
-  deployForce?: boolean;
-}
-
-function normalizeExecutableOptions(options: GetExecutableCommandOptions | PermissionConfig = { execute: true }): GetExecutableCommandOptions {
-  if ('mode' in options || 'deployForce' in options) {
-    return {
-      execute: true,
-      ...options,
-    };
-  }
-
-  return {
-    ...options,
-    mode: 'run',
-  };
-}
-
 /** True when target_file refers to a .run installer (not a shell command string). */
-export function isRunPackageDeployTarget(file: string): boolean {
+export function isRunPackageTarget(file: string): boolean {
   if (!file || isCommand(file)) {
     return false;
   }
@@ -164,33 +137,23 @@ export function isRunPackageDeployTarget(file: string): boolean {
 }
 
 /**
- * Ascend series whose `.run` installer must be re-run with `--force` to
- * overwrite an already-installed custom operator package: A2 (Ascend910A/B,
- * 310P) and A5 (Ascend950). A3 (Ascend910_93xx) does not require it.
+ * Build a `.run` installer command that discovers `--force` support from the
+ * installer itself. Help may be written to stderr or return non-zero, so both
+ * streams are captured and probe failures fall back to execution without it.
  */
-const RUN_PACKAGE_FORCE_DEPLOY_SERIES: ReadonlySet<AscendSeries> = new Set([
-  'a2',
-  'a5',
-]);
+function buildRunPackageCommand(file: string): string {
+  const resolveRunFile = file.includes('*')
+    ? `RUN_FILE=$(find ${file})`
+    : `RUN_FILE=${shellQuoteBash(file)}`;
 
-/** Whether a `.run` deploy on the given CANN SOC needs the `--force` flag. */
-function cannSocNeedsRunPackageForce(cannSoc: string): boolean {
-  const series = cannSocToSeries(cannSoc.trim()
-    .toLowerCase());
-
-  return series !== undefined && RUN_PACKAGE_FORCE_DEPLOY_SERIES.has(series);
-}
-
-function runPackageForceSuffix(options: GetExecutableCommandOptions): string {
-  if (options.mode !== 'deploy' || options.deployForce === false) {
-    return '';
-  }
-
-  if (!cannSocNeedsRunPackageForce(resolveEffectiveCannSoc())) {
-    return '';
-  }
-
-  return ' --force';
+  // Keep the match deliberately loose because installer help may decorate the
+  // option with ANSI colors or punctuation that is invisible in the terminal.
+  return joinCommands(
+    resolveRunFile,
+    'chmod +x "$RUN_FILE"',
+    'RUN_FILE_HELP=$("$RUN_FILE" --help 2>&1 || true)',
+    'case "$RUN_FILE_HELP" in *--force*) "$RUN_FILE" --force ;; *) "$RUN_FILE" ;; esac',
+  );
 }
 
 /**
@@ -272,18 +235,19 @@ function isCommand(str: string): boolean {
  */
 export function getExecutableCommand(
   file: string,
-  options: GetExecutableCommandOptions | PermissionConfig = { execute: true },
+  options: PermissionConfig = { execute: true },
 ): string {
   if (!file) {
     return '';
   }
 
-  const opts = normalizeExecutableOptions(options);
-  const forceSuffix = isRunPackageDeployTarget(file) ? runPackageForceSuffix(opts) : '';
+  if (isRunPackageTarget(file)) {
+    return buildRunPackageCommand(file);
+  }
 
   // Wildcards: resolve with find, then chmod + execute (path only — no flags in `file`)
   if (file.includes('*')) {
-    return `RUN_FILE=$(find ${file}) && chmod +x "$RUN_FILE" && "$RUN_FILE"${forceSuffix}`;
+    return `RUN_FILE=$(find ${file}) && chmod +x "$RUN_FILE" && "$RUN_FILE"`;
   }
 
   // Commands (e.g. python ../run.py): return as-is without chmod
@@ -291,12 +255,9 @@ export function getExecutableCommand(
     return file;
   }
 
-  const chmodCmd = generateChmodCommand(file, opts);
-  const runTarget = file.endsWith('.run') && forceSuffix
-    ? `"${file}"${forceSuffix}`
-    : file;
+  const chmodCmd = generateChmodCommand(file, options);
 
-  return joinCommands(chmodCmd, runTarget);
+  return joinCommands(chmodCmd, file);
 }
 
 /**

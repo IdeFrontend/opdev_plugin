@@ -129,6 +129,7 @@ export default {
   'folderContext.folderNotOperatorProject': 'This folder is not an operator project',
   'folderContext.needBishengFlags': 'Not supported. Ensure build.sh contains --bisheng_flags',
   'folderContext.standardOpsNoTuning': 'Standard custom operators do not support performance tuning',
+  'folderContext.standardOpsNoCpuDebug': 'Standard custom operators do not support CPU debug',
   'folderContext.sanitizerSelectFile': 'Sanitizer supports files only. Please select a file.',
   'folderContext.selectFileOrFolder': 'Please select a file or folder',
   'folderContext.noProjectId': 'Project ID not found',

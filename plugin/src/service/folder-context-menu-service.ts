@@ -16,6 +16,10 @@ import {
   type OperatorProjectDetectionResult,
 } from '@plugin/domain/services/operator-project-detector';
 import {
+  buildShHelpSupportsGenop,
+  buildShHelpSupportsOption,
+} from '@plugin/domain/plugins/detection-utils';
+import {
   getProjectByPath,
   getProjectById,
   getContainingStandardCustomProject,
@@ -112,24 +116,9 @@ const EXPERIMENTAL_OPERATOR_COLLECTIONS = new Set([
   'select_attention_operators',
 ]);
 
-/**
- * Check if directory is standard custom operator root (has build.sh with --genop)
- */
-function isStandardCustomRoot(dirPath: string): boolean {
-  const buildSh = path.join(dirPath, 'build.sh');
-
-  if (!fs.existsSync(buildSh)) {
-    return false;
-  }
-
-  try {
-    const content = fs.readFileSync(buildSh, 'utf-8');
-
-    return content.includes('--genop');
-  }
-  catch {
-    return false;
-  }
+/** Check if directory is a standard-custom root through its public build interface. */
+async function isStandardCustomRoot(dirPath: string): Promise<boolean> {
+  return buildShHelpSupportsGenop(dirPath);
 }
 
 /**
@@ -142,13 +131,13 @@ function isStandardCustomSubOperator(dirPath: string): boolean {
 }
 
 /**
- * Walk up to find standard custom operator root (build.sh with --genop), max 5 levels
+ * Walk up to find a standard-custom root whose build.sh help exposes --genop, max 5 levels.
  */
-function findStandardCustomRoot(startPath: string): string | null {
+async function findStandardCustomRoot(startPath: string): Promise<string | null> {
   let dir = path.normalize(startPath);
 
   for (let i = 0; i < 5; i++) {
-    if (isStandardCustomRoot(dir)) {
+    if (await isStandardCustomRoot(dir)) {
       return dir;
     }
 
@@ -166,23 +155,10 @@ function findStandardCustomRoot(startPath: string): string | null {
 
 /**
  * Check if standard custom operator supports sanitizer and tuning
- * By checking root build.sh for --bisheng_flags
+ * By checking whether root build.sh help exposes --bisheng_flags.
  */
-function checkSupportsSanitizerAndTuning(rootPath: string): boolean {
-  const buildShPath = path.join(rootPath, 'build.sh');
-
-  if (!fs.existsSync(buildShPath)) {
-    return false;
-  }
-
-  try {
-    const content = fs.readFileSync(buildShPath, 'utf-8');
-
-    return content.includes('--bisheng_flags');
-  }
-  catch {
-    return false;
-  }
+async function checkSupportsSanitizerAndTuning(rootPath: string): Promise<boolean> {
+  return buildShHelpSupportsOption(rootPath, '--bisheng_flags');
 }
 
 /**
@@ -287,12 +263,8 @@ export class FolderContextMenuService {
           config_name: defaultConfigName,
           script: '',
           target_file: '',
-          tool: {
-            ...DEFAULT_SANITIZER_DETECTION_OPTIONS.tool,
-          },
-          memcheckOption: {
-            ...DEFAULT_SANITIZER_DETECTION_OPTIONS.memcheckOption,
-          },
+          tool: { ...DEFAULT_SANITIZER_DETECTION_OPTIONS.tool },
+          memcheckOption: { ...DEFAULT_SANITIZER_DETECTION_OPTIONS.memcheckOption },
           logLevel: 'warn',
           maxDebuglogSize: 1024,
           useBlock: false,
@@ -329,7 +301,7 @@ export class FolderContextMenuService {
       }
 
       // 1. Find root (standard custom operator)
-      const rootPath = findStandardCustomRoot(folderPath);
+      const rootPath = await findStandardCustomRoot(folderPath);
 
       if (!rootPath) {
         vscode.window.showWarningMessage(t('folderContext.noOperatorRoot'));
@@ -449,7 +421,7 @@ export class FolderContextMenuService {
       }
 
       // 1. Find root (standard custom operator)
-      const rootPath = findStandardCustomRoot(folderPath);
+      const rootPath = await findStandardCustomRoot(folderPath);
 
       if (!rootPath) {
         vscode.window.showWarningMessage(t('folderContext.noOperatorRoot'));
@@ -662,7 +634,7 @@ export class FolderContextMenuService {
       }
 
       // 1. Find root (standard custom operator)
-      const rootPath = findStandardCustomRoot(folderPath);
+      const rootPath = await findStandardCustomRoot(folderPath);
 
       if (!rootPath) {
         vscode.window.showWarningMessage(t('folderContext.noOperatorRootShort'));
@@ -671,7 +643,7 @@ export class FolderContextMenuService {
       }
 
       // 2. Verify root is standard custom operator
-      if (!isStandardCustomRoot(rootPath)) {
+      if (!await isStandardCustomRoot(rootPath)) {
         vscode.window.showWarningMessage(t('folderContext.rootNotStandardOperator'));
 
         return;
@@ -760,7 +732,7 @@ export class FolderContextMenuService {
       }
 
       // 1. Find root (standard custom operator)
-      const rootPath = findStandardCustomRoot(folderPath);
+      const rootPath = await findStandardCustomRoot(folderPath);
 
       if (!rootPath) {
         vscode.window.showWarningMessage(t('folderContext.noOperatorRootShort'));
@@ -769,7 +741,7 @@ export class FolderContextMenuService {
       }
 
       // 2. Verify root is standard custom operator
-      if (!isStandardCustomRoot(rootPath)) {
+      if (!await isStandardCustomRoot(rootPath)) {
         vscode.window.showWarningMessage(t('folderContext.rootNotStandardOperator'));
 
         return;
@@ -1121,6 +1093,13 @@ export class FolderContextMenuService {
       return;
     }
 
+    // Standard custom: CPU debug not supported
+    if (operatorType === OperatorProjectType.STANDARD_CUSTOM) {
+      vscode.window.showWarningMessage(t('folderContext.standardOpsNoCpuDebug'));
+
+      return;
+    }
+
     const project = getProjectByPath(folderPath);
 
     // Check if operator project
@@ -1177,6 +1156,13 @@ export class FolderContextMenuService {
     // <<<>>> type: context menu not supported (except report visualization)
     if (isAscendLikeOperator(operatorType)) {
       vscode.window.showWarningMessage(t('folderContext.angleOpsNotSupported'));
+
+      return;
+    }
+
+    // Standard custom: CPU debug not supported
+    if (operatorType === OperatorProjectType.STANDARD_CUSTOM) {
+      vscode.window.showWarningMessage(t('folderContext.standardOpsNoCpuDebug'));
 
       return;
     }
@@ -1242,10 +1228,10 @@ export class FolderContextMenuService {
     }
 
     // Check if sanitizer/tuning supported (standard custom: build.sh must contain --bisheng_flags)
-    const rootPath = findStandardCustomRoot(folderPath);
+    const rootPath = await findStandardCustomRoot(folderPath);
 
     if (rootPath) {
-      const supportsSanitizerAndTuning = checkSupportsSanitizerAndTuning(rootPath);
+      const supportsSanitizerAndTuning = await checkSupportsSanitizerAndTuning(rootPath);
 
       if (!supportsSanitizerAndTuning) {
         vscode.window.showWarningMessage(t('folderContext.needBishengFlags'));
@@ -1285,10 +1271,10 @@ export class FolderContextMenuService {
     }
 
     // Check sanitizer/tuning support (standard custom: build.sh must have --bisheng_flags)
-    const rootPath = findStandardCustomRoot(folderPath);
+    const rootPath = await findStandardCustomRoot(folderPath);
 
     if (rootPath) {
-      const supportsSanitizerAndTuning = checkSupportsSanitizerAndTuning(rootPath);
+      const supportsSanitizerAndTuning = await checkSupportsSanitizerAndTuning(rootPath);
 
       if (!supportsSanitizerAndTuning) {
         vscode.window.showWarningMessage(t('folderContext.needBishengFlags'));
@@ -1328,10 +1314,10 @@ export class FolderContextMenuService {
     }
 
     // Check sanitizer/tuning support (standard custom: build.sh must have --bisheng_flags)
-    const rootPath = findStandardCustomRoot(folderPath);
+    const rootPath = await findStandardCustomRoot(folderPath);
 
     if (rootPath) {
-      const supportsSanitizerAndTuning = checkSupportsSanitizerAndTuning(rootPath);
+      const supportsSanitizerAndTuning = await checkSupportsSanitizerAndTuning(rootPath);
 
       if (!supportsSanitizerAndTuning) {
         vscode.window.showWarningMessage(t('folderContext.needBishengFlags'));

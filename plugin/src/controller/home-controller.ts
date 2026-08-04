@@ -203,7 +203,7 @@ export const homeMethods = {
       path: string;
       isExperimental: boolean }>;
     isStandardCustom?: boolean;
-    /** When the root directory is a standard custom operator: build.sh contains --bisheng_flags to support anomaly detection and tuning. */
+    /** When the root standard-custom build interface exposes --genop, enable anomaly detection and tuning. */
     supportsSanitizerAndTuning?: boolean;
   }> {
     const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -418,15 +418,24 @@ export const homeMethods = {
       };
     }
 
+    // 如果找不到算子，默认项目根目录就是算子目录
+    if (!multi.isStandardCustom
+      && !multi.operators?.length
+      && project?.project_path
+      && project?.project_name) {
+      return {
+        name: project.project_name,
+        path: project.project_path,
+      };
+    }
+
     return undefined;
   },
 
   /**
    * build_example `target_file` for an operator (legacy configs.json), when set.
    */
-  resolveBuildExampleTargetFile(
-    operatorName: string,
-  ): string | undefined {
+  resolveBuildExampleTargetFile(operatorName: string): string | undefined {
     const workspaceFolders = vscode.workspace.workspaceFolders;
 
     if (!workspaceFolders?.length) {

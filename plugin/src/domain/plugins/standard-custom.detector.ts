@@ -5,57 +5,35 @@ import {
   IProjectDetector, ProjectDetectionResult,
 } from './project-detector.interface';
 import {
-  hasPyFilesInRoot, hasAscFiles, hasAncestorBuildShWithGenop,
+  buildShHelpSupportsGenop, BuildShGenopSupportChecker, hasAncestorBuildShWithGenop,
+  hasAscFiles, hasPyFilesInRoot,
 } from './detection-utils';
 
 /**
  * Project detector for STANDARD_CUSTOM operator projects.
  *
  * STANDARD_CUSTOM has no dedicated op_type — operators inside use 'ascend' or 'cann'.
- * This is a detection-only class; it does NOT implement IOperatorPlugin.
- *
- * Replicates both detection paths from V1's OperatorProjectDetector.detectOperatorProject():
- *  Path 1 (definitive): build.sh exists and contains '--genop'
- *  Path 2 (heuristic):  CMakeLists.txt + no .asc + no .py + experimental/ancestor pattern
- *                        (detects sub-directories within a STANDARD_CUSTOM project root)
- *
- * Must be registered FIRST in OperatorPluginRegistry because its 'definitive' result
- * takes priority over AscendPlugin's heuristic.
+ * `bash build.sh --help` advertising --genop is definitive. Keep the legacy structure
+ * heuristic as a compatibility fallback for projects whose help cannot be queried.
  */
 export class StandardCustomDetector implements IProjectDetector {
   readonly projectType = OperatorProjectType.STANDARD_CUSTOM;
 
+  constructor(private readonly supportsGenop: BuildShGenopSupportChecker = buildShHelpSupportsGenop) {}
+
   async detectProject(dirPath: string): Promise<ProjectDetectionResult> {
-    const buildShPath = path.join(dirPath, 'build.sh');
-
-    // Path 1: definitive — build.sh file-content check
-    if (fs.existsSync(buildShPath)) {
-      try {
-        const content = fs.readFileSync(buildShPath, 'utf-8');
-
-        if (content.includes('--genop')) {
-          return {
-            isMatch: true,
-            confidence: 'definitive',
-          };
-        }
-      }
-      catch {
-        // fall through to Path 2
-      }
-    }
-
-    // Path 1.5: definitive — a folder nested inside a standard-custom collection.
-    // If an ancestor (within 3 levels) has build.sh with --genop, this directory belongs to
-    // that collection regardless of its own .asc/.py/CMake contents.
-    if (hasAncestorBuildShWithGenop(dirPath)) {
+    if (
+      await this.supportsGenop(dirPath)
+      || await hasAncestorBuildShWithGenop(dirPath, this.supportsGenop)
+    ) {
       return {
         isMatch: true,
         confidence: 'definitive',
       };
     }
 
-    // Path 2: heuristic — CMakeLists + no .asc + no .py + path/ancestor pattern
+    // Compatibility fallback: retain V1's project-layout heuristic when the public
+    // build interface did not identify the project.
     const hasCmake = fs.existsSync(path.join(dirPath, 'CMakeLists.txt'));
 
     if (hasCmake && !hasAscFiles(dirPath) && !hasPyFilesInRoot(dirPath)) {
@@ -65,7 +43,7 @@ export class StandardCustomDetector implements IProjectDetector {
       if (
         normalizedPath.includes('experimental')
         || fs.existsSync(path.join(path.dirname(dirPath), 'build.sh'))
-        || hasAncestorBuildShWithGenop(dirPath)
+        || await hasAncestorBuildShWithGenop(dirPath, this.supportsGenop)
       ) {
         return {
           isMatch: true,

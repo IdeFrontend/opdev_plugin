@@ -1,11 +1,8 @@
-jest.mock('@plugin/domain/utils/ascend-util', () => ({ resolveEffectiveCannSoc: jest.fn(() => 'ascend950') }));
-
-import { resolveEffectiveCannSoc } from '@plugin/domain/utils/ascend-util';
 import {
   getExecutableCommand,
   hasExplicitBuildTypeArgument,
   isDirectBuildScriptCommand,
-  isRunPackageDeployTarget,
+  isRunPackageTarget,
   isSupportedSimpleCommandFragment,
 } from '@plugin/domain/utils/command-utils';
 
@@ -101,111 +98,71 @@ describe('hasExplicitBuildTypeArgument', () => {
   });
 });
 
-describe('isRunPackageDeployTarget', () => {
+describe('isRunPackageTarget', () => {
   it('returns true for .run globs and paths', () => {
-    expect(isRunPackageDeployTarget('build_out/*.run'))
+    expect(isRunPackageTarget('build_out/*.run'))
       .toBe(true);
-    expect(isRunPackageDeployTarget('/tmp/pkg.run'))
+    expect(isRunPackageTarget('/tmp/pkg.run'))
       .toBe(true);
   });
 
   it('returns false for commands and test binaries', () => {
-    expect(isRunPackageDeployTarget('python3 run.py'))
+    expect(isRunPackageTarget('python3 run.py'))
       .toBe(false);
-    expect(isRunPackageDeployTarget('build/add'))
+    expect(isRunPackageTarget('build/add'))
       .toBe(false);
   });
 });
 
 describe('getExecutableCommand', () => {
-  it('appends --force after RUN_FILE for deploy mode with wildcard .run', () => {
-    const cmd = getExecutableCommand('build_out/*.run', {
-      execute: true,
-      mode: 'deploy',
-    });
+  it('probes --force support before executing a wildcard .run package', () => {
+    const cmd = getExecutableCommand('build_out/*.run', { execute: true });
 
     expect(cmd)
       .toContain('RUN_FILE=$(find build_out/*.run)');
     expect(cmd)
-      .toContain('"$RUN_FILE" --force');
+      .toContain('RUN_FILE_HELP=$("$RUN_FILE" --help 2>&1 || true)');
+    expect(cmd)
+      .toContain('case "$RUN_FILE_HELP" in');
+    expect(cmd)
+      .toContain(') "$RUN_FILE" --force ;; *) "$RUN_FILE" ;; esac');
     expect(cmd).not.toMatch(/find build_out\/\*\.run --force/);
   });
 
-  it('does not append --force for run mode with wildcard .run', () => {
-    const cmd = getExecutableCommand('build_out/*.run', {
-      execute: true,
-      mode: 'run',
-    });
+  it('loosely detects --force anywhere in help output', () => {
+    const cmd = getExecutableCommand('build_out/*.run', { execute: true });
 
     expect(cmd)
-      .toContain('"$RUN_FILE"');
-    expect(cmd).not.toContain('--force');
+      .toContain('case "$RUN_FILE_HELP" in *--force*)');
   });
 
-  it('appends --force for deploy mode with concrete .run path', () => {
-    const cmd = getExecutableCommand('/path/pkg.run', {
-      execute: true,
-      mode: 'deploy',
-    });
+  it('probes --force support before executing a concrete .run path', () => {
+    const cmd = getExecutableCommand('/path/pkg.run', { execute: true });
 
     expect(cmd)
-      .toContain('chmod +x /path/pkg.run');
+      .toContain("RUN_FILE='/path/pkg.run'");
     expect(cmd)
-      .toContain('"/path/pkg.run" --force');
+      .toContain('chmod +x "$RUN_FILE"');
+    expect(cmd)
+      .toContain('"$RUN_FILE" --help');
+    expect(cmd)
+      .toContain('"$RUN_FILE" --force');
   });
 
-  it('does not append --force for run mode on test binary path', () => {
-    const cmd = getExecutableCommand('build/add_custom', {
-      execute: true,
-      mode: 'run',
-    });
+  it('does not probe --force support for a non-.run executable', () => {
+    const cmd = getExecutableCommand('build/add_custom', { execute: true });
 
     expect(cmd)
       .toContain('chmod +x build/add_custom');
     expect(cmd)
       .toContain('build/add_custom');
-    expect(cmd).not.toContain('--force');
+    expect(cmd).not.toContain('--help');
   });
 
   it('passes through full shell commands unchanged', () => {
     const shell = 'bash deploy.sh --force';
 
-    expect(getExecutableCommand(shell, { mode: 'deploy' }))
+    expect(getExecutableCommand(shell))
       .toBe(shell);
-  });
-
-  it('respects deployForce: false', () => {
-    const cmd = getExecutableCommand('build_out/*.run', {
-      execute: true,
-      mode: 'deploy',
-      deployForce: false,
-    });
-
-    expect(cmd).not.toContain('--force');
-  });
-
-  it('appends --force for deploy on A2 SOC (ascend910b)', () => {
-    (resolveEffectiveCannSoc as jest.Mock).mockReturnValueOnce('ascend910b');
-
-    const cmd = getExecutableCommand('build_out/*.run', {
-      execute: true,
-      mode: 'deploy',
-    });
-
-    expect(cmd)
-      .toContain('"$RUN_FILE" --force');
-  });
-
-  it('does not append --force for deploy on A3 SOC (ascend910_93)', () => {
-    (resolveEffectiveCannSoc as jest.Mock).mockReturnValueOnce('ascend910_93');
-
-    const cmd = getExecutableCommand('build_out/*.run', {
-      execute: true,
-      mode: 'deploy',
-    });
-
-    expect(cmd)
-      .toContain('"$RUN_FILE"');
-    expect(cmd).not.toContain('--force');
   });
 });
