@@ -129,15 +129,40 @@ export function shouldReplaceDebugTarget(
   return false;
 }
 
-/** Regular-file names directly under `buildDir` (empty when it is absent). */
+/**
+ * Names of the executables directly under `buildDir` — empty when it is absent, not yet built
+ * or unreadable, so every caller can treat "no build dir" as "nothing built".
+ *
+ * `withFileTypes` reports on the entry itself (lstat), so a symlinked binary is a symlink and
+ * not a file; CMake and the ops-math build scripts do emit those, and callers want anything
+ * that can be executed. A link is kept only when it resolves to a regular file: a stale link
+ * left by an earlier build is not a target, and neither is a link to a directory.
+ */
 export function listBuildFiles(buildDir: string): string[] {
-  if (!fs.existsSync(buildDir)) {
+  try {
+    return fs.readdirSync(buildDir, { withFileTypes: true })
+      .filter((entry) => entry.isFile()
+        || (entry.isSymbolicLink() && linkResolvesToFile(path.join(buildDir, entry.name))))
+      .map((entry) => entry.name);
+  }
+  catch {
     return [];
   }
+}
 
-  return fs.readdirSync(buildDir, { withFileTypes: true })
-    .filter((entry) => entry.isFile())
-    .map((entry) => entry.name);
+/**
+ * Whether `linkPath` resolves to a regular file. Kept behind its own try/catch because a
+ * self-referencing link makes statSync throw ELOOP even with `throwIfNoEntry: false`, and
+ * one such entry must not blank out the whole listing.
+ */
+function linkResolvesToFile(linkPath: string): boolean {
+  try {
+    return fs.statSync(linkPath)
+      .isFile();
+  }
+  catch {
+    return false;
+  }
 }
 
 /**
