@@ -10,6 +10,7 @@ import {
   getWorkspaceNpuArch,
   getWorkspaceSimulatorType,
 } from '@plugin/helpers/operator-project-workspace-config';
+import { ConfigService } from '@plugin/service/config-service';
 
 const NPU_ARCH_SETTING = 'environment.npuArch';
 const SOC_VERSION_SETTING = 'environment.socVersion';
@@ -103,6 +104,42 @@ describe('workspace settings written as null (issue #29 follow-up)', () => {
       .toBe('/etc/profile');
     expect(getAscendEnvScriptWithWorkspaceOverride('/opt/stored/set_env.sh'))
       .toBe('/opt/stored/set_env.sh');
+  });
+
+  it('readOpDevtoolsSetting hands callers undefined for a null setting, not null', () => {
+    setSetting(SOC_VERSION_SETTING, null);
+    setSetting('compileAndDeploy.buildConfig.compileCommand', null);
+
+    // Callers type this as `string` and run it through String()/trim() — see
+    // build-service buildOpCompileScript and readNonEmptyOpDevtoolsSetting.
+    expect(ConfigService.readOpDevtoolsSetting<string>(SOC_VERSION_SETTING))
+      .toBeUndefined();
+    expect(ConfigService.readOpDevtoolsSetting<string>('compileAndDeploy.buildConfig.compileCommand'))
+      .toBeUndefined();
+  });
+
+  it('readOpDevtoolsSetting falls through a null folder scope to the workspace value', () => {
+    settings[SOC_VERSION_SETTING] = {
+      workspaceFolderValue: null,
+      workspaceValue: 'ascend910b',
+    };
+
+    expect(ConfigService.readOpDevtoolsSetting<string>(SOC_VERSION_SETTING))
+      .toBe('ascend910b');
+  });
+
+  it('never puts a null into build_op user_options', () => {
+    setSetting('compileAndDeploy.buildConfig.operatorNameToCompile', null);
+    setSetting('compileAndDeploy.buildConfig.deployCommandOrRunCommand', null);
+
+    const opts = ConfigService.buildUserOptionsFromWorkspaceSettings('build_op');
+
+    expect(opts)
+      .not
+      .toHaveProperty('op');
+    expect(opts)
+      .not
+      .toHaveProperty('target_file');
   });
 
   it('an empty string never reaches a command as a value', () => {

@@ -16,6 +16,7 @@ import {
 } from '@plugin/domain/services/configuration';
 import { getFiles } from '@plugin/domain/services/system';
 import {
+  getConfiguredValue,
   getOpDevtoolsWorkspaceConfiguration,
   getSocVersionWithWorkspaceOverride,
   mapKeyValueObjectToAdvanceParams,
@@ -69,18 +70,7 @@ function toFullDottedKey(relativeKey: string): string {
 }
 
 function readWorkspaceScopedSetting<T>(relativeKey: string): T | undefined {
-  const inspection = getOpDevtoolsWorkspaceConfiguration()
-    .inspect<T>(relativeKey);
-
-  if (!inspection) {
-    return undefined;
-  }
-
-  if (inspection.workspaceFolderValue !== undefined) {
-    return inspection.workspaceFolderValue;
-  }
-
-  return inspection.workspaceValue;
+  return getConfiguredValue<T>(getOpDevtoolsWorkspaceConfiguration(), [relativeKey]);
 }
 
 function flattenNestedOpDevtools(
@@ -383,6 +373,24 @@ function buildDottedOnlySettingsFileContent(filePath: string): Record<string, un
 
 const legacySettingsMigrationFlight = new AsyncSingleFlight<void>();
 
+let settingsFileWriteQueue: Promise<unknown> = Promise.resolve();
+
+/**
+ * Runs one settings file read-modify-write at a time. Every writer below re-reads the
+ * whole file and rewrites it, so two overlapping writers both read the same "before" copy
+ * and the second one drops the first one's keys — a build that pins `environment.socVersion`
+ * while the webview saves sanitizer options loses one of them. A single-flight would be the
+ * wrong tool: it hands the second caller the first caller's promise and never writes the
+ * second caller's keys at all. Queueing keeps both writes, in call order.
+ */
+function queueSettingsFileWrite<T>(task: ()=> Promise<T>): Promise<T> {
+  const next = settingsFileWriteQueue.then(task);
+
+  settingsFileWriteQueue = next.catch(() => undefined);
+
+  return next;
+}
+
 export function isLegacySettingsMigrationInFlight(): boolean {
   return legacySettingsMigrationFlight.pending !== undefined;
 }
@@ -410,31 +418,33 @@ export class ConfigService {
       return false;
     }
 
-    const filePath = getIdeSettingsFilePath(root);
+    const settingsPath = getIdeSettingsFilePath(root);
 
-    if (!fs.existsSync(filePath)) {
-      return false;
-    }
+    return queueSettingsFileWrite(async () => {
+      if (!fs.existsSync(settingsPath)) {
+        return false;
+      }
 
-    const raw = parseRawSettingsJson(filePath);
-    const {
-      output, removedAny,
-    } = stripOpDevtoolsKeysFromRaw(raw);
+      const raw = parseRawSettingsJson(settingsPath);
+      const {
+        output, removedAny,
+      } = stripOpDevtoolsKeysFromRaw(raw);
 
-    if (!removedAny) {
-      return false;
-    }
+      if (!removedAny) {
+        return false;
+      }
 
-    try {
-      await persistIdeSettingsFile(filePath, output, true);
+      try {
+        await persistIdeSettingsFile(settingsPath, output, true);
 
-      return true;
-    }
-    catch (error) {
-      console.warn('[clearOpDevtoolsWorkspaceSettings] failed:', error);
+        return true;
+      }
+      catch (error) {
+        console.warn('[clearOpDevtoolsWorkspaceSettings] failed:', error);
 
-      return false;
-    }
+        return false;
+      }
+    });
   }
 
   /**
@@ -442,7 +452,8 @@ export class ConfigService {
    * Also rewrites legacy nested `"op-devtools": { ... }` to dotted keys when present,
    * even when `updates` is empty (existing dotted keys win over nested values).
    * Intentionally uses direct file I/O (not `cfg.update` per key) for performance.
-   * Concurrent callers may interleave; last writer wins.
+   * Writes run one at a time (`queueSettingsFileWrite`), so overlapping callers cannot
+   * read the same "before" copy and drop each other's keys.
    * @returns true if settings.json was written, false if no-op
    */
   static async writeOpDevtoolsDottedSettings(
@@ -457,42 +468,44 @@ export class ConfigService {
       return false;
     }
 
-    const filePath = getIdeSettingsFilePath(root);
-    const hasUpdates = Object.keys(updates).length > 0;
-    const needsNestedMigration = isLegacyNestedOpDevtoolsRoot(parseRawSettingsJson(filePath)[SETTINGS_PREFIX]);
+    return queueSettingsFileWrite(async () => {
+      const filePath = getIdeSettingsFilePath(root);
+      const hasUpdates = Object.keys(updates).length > 0;
+      const needsNestedMigration = isLegacyNestedOpDevtoolsRoot(parseRawSettingsJson(filePath)[SETTINGS_PREFIX]);
 
-    if (!needsNestedMigration && !hasUpdates) {
-      return false;
-    }
-
-    try {
-      await fs.promises.mkdir(path.dirname(filePath), { recursive: true });
-
-      const output = buildDottedOnlySettingsFileContent(filePath);
-
-      for (const [
-        relativeKey,
-        value,
-      ] of Object.entries(updates)) {
-        const fullKey = toFullDottedKey(relativeKey);
-
-        if (value === undefined) {
-          delete output[fullKey];
-        }
-        else {
-          output[fullKey] = value;
-        }
+      if (!needsNestedMigration && !hasUpdates) {
+        return false;
       }
 
-      await persistIdeSettingsFile(filePath, output);
+      try {
+        await fs.promises.mkdir(path.dirname(filePath), { recursive: true });
 
-      return true;
-    }
-    catch (error) {
-      console.warn('[writeOpDevtoolsDottedSettings] failed:', error);
+        const output = buildDottedOnlySettingsFileContent(filePath);
 
-      return false;
-    }
+        for (const [
+          relativeKey,
+          value,
+        ] of Object.entries(updates)) {
+          const fullKey = toFullDottedKey(relativeKey);
+
+          if (value === undefined) {
+            delete output[fullKey];
+          }
+          else {
+            output[fullKey] = value;
+          }
+        }
+
+        await persistIdeSettingsFile(filePath, output);
+
+        return true;
+      }
+      catch (error) {
+        console.warn('[writeOpDevtoolsDottedSettings] failed:', error);
+
+        return false;
+      }
+    });
   }
 
   /**

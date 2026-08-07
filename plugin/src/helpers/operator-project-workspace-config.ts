@@ -71,7 +71,12 @@ function isExplicitlySet<T>(inspection: InspectValue<T>): boolean {
     || isConfiguredValue(inspection.workspaceValue);
 }
 
-function getConfiguredValue<T>(
+/**
+ * Workspace-scoped value for the first of `settingRelativePaths` the user actually set:
+ * folder scope wins over workspace scope, `null` counts as unset. The one reader every
+ * `op-devtools` setting goes through — see {@link isConfiguredValue} for why `null` matters.
+ */
+export function getConfiguredValue<T>(
   cfg: vscode.WorkspaceConfiguration,
   settingRelativePaths: string[],
 ): T | undefined {
