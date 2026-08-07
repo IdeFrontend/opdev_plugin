@@ -141,9 +141,11 @@ On successful host detection, cache **raw** Chip Name until extension restart. U
 
 ## 6. `npuArch`
 
-1. Cached chip matches §4.2 → `dav-1001` (slug still `ascend910b`).
-2. Else series default from §1 for resolved slug.
-3. Empty slug → `''` (no silent 910-class default).
+1. Workspace `environment.npuArch` (explicit, issue #29) → used verbatim, whatever the slug.
+2. Global snapshot `NPU_ARCH` — skipped when the slug came from the simulator type (§4.4).
+3. Cached chip matches §4.2 → `dav-1001` (slug still `ascend910b`).
+4. Else series default from §1 for resolved slug.
+5. Empty slug → `''` (no silent 910-class default).
 
 Simulator directory does not map to `npuArch`.
 
@@ -160,7 +162,7 @@ Simulator directory does not map to `npuArch`.
     socVersion: 'workspace-setting' | 'global-env' | 'detected' |
                 'derived-from-simulator' | 'default',
     simulatorType: 'workspace-setting' | 'global-env' | 'default-from-soc' | 'n/a',
-    npuArch: 'derived-from-soc',
+    npuArch: 'workspace-setting' | 'global-env' | 'derived-from-soc',
   },
 }
 ```
@@ -193,6 +195,10 @@ Apply §6 after `socVersion` is known. Empty SOC at generation still resolves `S
 ### 7.4 Missing SOC notification
 
 When operator commands run (`resolveAscendEnvForOperatorCommand`) and SOC resolves to empty `default`, show a short warning with an action to open workspace `environment.socVersion`. Repeats on **every** operator run until SOC is configured (workspace explicit value, env var, or host detection). **Not** shown from passive `resolveAscendEnv` calls (project open, options webviews, profiler command assembly). Suppression uses the same explicit workspace check as §7.2 step 1 — User-scoped settings do not suppress the warning.
+
+### 7.5 Reopened projects and manual terminal builds (issue #37)
+
+`context.environmentVariableCollection` carries `NPU_ARCH` into integrated terminals, so a hand-typed `bash build.sh` matches what the plugin would export. Post-activate bootstrap seeds it from settings / global snapshot only (`allowHostDetection: false` — the host probe is memoized and must not cache a failure before the first command); `executeOperatorCommand` refreshes it after each non-simulator run. A `detected` SOC is written to workspace `environment.socVersion` (`ConfigService.persistDetectedSocVersion`) so the next window resolves it without probing; explicit settings, blank values and simulator-derived slugs are never persisted.
 
 ---
 
