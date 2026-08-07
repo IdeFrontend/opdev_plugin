@@ -207,3 +207,16 @@ export function getSocVersionWithWorkspaceOverride(storedSocVersion: string | nu
 
   return socVersion !== undefined ? socVersion : (storedSocVersion || '');
 }
+
+/**
+ * Explicit `NPU_ARCH` override (issue #29). Empty string when the setting was
+ * never set, so callers keep the value derived from the resolved SOC.
+ */
+export function getWorkspaceNpuArch(): string {
+  const explicit = getConfiguredValue<string>(getOpDevtoolsWorkspaceConfiguration(), ['environment.npuArch']);
+
+  return explicit !== undefined
+    ? String(explicit)
+      .trim()
+    : '';
+}

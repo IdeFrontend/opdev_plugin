@@ -65,6 +65,7 @@
   "config.op-devtools.performanceTuning.onBoard.parameters.markdownDescription": "参数会追加到命令行。可运行 `msprof op -h` 查看选项。`aic-metrics` 由基础配置设置。参数名默认带 `--` 前缀。",
   "config.op-devtools.environment.environmentScript.markdownDescription": "环境脚本。CANN 安装后的 `set_env.sh` 绝对路径。若使用一站式镜像可留空；若提示路径错误，请设置为有效环境脚本路径。",
   "config.op-devtools.environment.socVersion.markdownDescription": "项目命令使用的 SoC 版本（例如：`ascend910b`、`ascend910c`、`ascend950`）。未设置时，将从项目配置、环境变量或主机检测自动选择。",
+  "config.op-devtools.environment.npuArch.markdownDescription": "AscendC 编译使用的 `NPU_ARCH`（例如：`dav-2201`、`dav-3510`）。未设置时，将根据解析出的 SoC 版本自动推导；设置后优先于自动推导，并会传给 `cmake -DCMAKE_ASC_ARCHITECTURES=` 与 `export NPU_ARCH`。",
   "config.op-devtools.environment.insightPath.markdownDescription": "Insight 目录路径。未设置时，将从环境变量 `INSIGHT_HOME_PATH` 读取；若环境变量也未设置，则使用插件同层级目录下的 `insight` 文件夹。",
   "config.op-devtools.execution.commandTimeoutSeconds.description": "算子命令执行超时时间（秒）。超时后将终止整个进程组并返回超时结果。默认 1800；设置为 0 可禁用超时。",
   "colors.operatorProject.description": "算子工程文件夹装饰颜色",

@@ -17,6 +17,7 @@ jest.mock('i18next', () => ({
 jest.mock('@plugin/helpers/operator-project-workspace-config', () => ({
   getWorkspaceSimulatorType: jest.fn(() => ''),
   getSocVersionWithWorkspaceOverride: jest.fn(() => ''),
+  getWorkspaceNpuArch: jest.fn(() => ''),
 }));
 jest.mock('@plugin/domain/utils/global-env-snapshot', () => ({
   getGlobalEnvSnapshot: jest.fn(() => ({

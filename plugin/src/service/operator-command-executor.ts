@@ -6,6 +6,7 @@ import { getOpByProjectIdAndOpName } from '@plugin/domain/models/model';
 import { getProjectById } from '@plugin/domain/models/project-model';
 import {
   applyAscendPlaceholdersToScript,
+  type AscendEnvResolution,
   buildOperatorSpawnEnvFromResolution,
   isSimulatorCompile,
   mergeTritonSanitizerSpawnEnv,
@@ -23,6 +24,10 @@ import {
   RemoteToolUnavailableError,
   type OperatorCommandTransformer,
 } from '@plugin/helpers/remote-command';
+import {
+  applyNpuArchToTerminalEnv,
+  getTerminalEnvCollection,
+} from '@plugin/helpers/terminal-npu-arch-env';
 import { ConfigService } from '@plugin/service/config-service';
 
 /** 30 min covers a cold full rebuild; anything past that is a hang, not a slow run. */
@@ -141,6 +146,24 @@ export function commandFailureMessage(
   return t(fallbackKey, params);
 }
 
+/**
+ * Issue #37: keep the reopen / manual-build path in sync with what the plugin just resolved.
+ * Refreshes `NPU_ARCH` in the integrated-terminal env (so a hand-typed `bash build.sh` in this
+ * window matches the plugin build) and pins a host-detected SOC into `settings.json` (so the
+ * next "Open Folder" resolves it without probing). Skipped for simulator runs, whose SOC/arch
+ * describe the simulator device rather than the host. Best-effort; never blocks the command.
+ */
+function syncReopenBuildEnv(resolution: AscendEnvResolution, isSimulator: boolean): void {
+  if (isSimulator) {
+    return;
+  }
+
+  applyNpuArchToTerminalEnv(getTerminalEnvCollection(), resolution.npuArch);
+
+  void ConfigService.persistDetectedSocVersion(resolution)
+    .catch(() => { /* persistence is an optimization; never fail the command */ });
+}
+
 export async function executeOperatorCommand(
   command: string,
   spawnContext: OperatorSpawnEnvContext,
@@ -165,6 +188,8 @@ export async function executeOperatorCommand(
       timedOut: false,
     };
   }
+
+  syncReopenBuildEnv(resolution, isSimulator);
 
   const filtered = OperatorPluginRegistry.filterSpawnEnv(
     buildOperatorSpawnEnvFromResolution(resolution, isSimulator),

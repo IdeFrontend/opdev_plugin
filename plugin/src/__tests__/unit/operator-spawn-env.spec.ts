@@ -1,6 +1,7 @@
 jest.mock('@plugin/helpers/operator-project-workspace-config', () => ({
   getWorkspaceSimulatorType: jest.fn(() => ''),
   getSocVersionWithWorkspaceOverride: jest.fn(),
+  getWorkspaceNpuArch: jest.fn(() => ''),
 }));
 jest.mock('@plugin/domain/utils/global-env-snapshot', () => ({
   getGlobalEnvSnapshot: jest.fn(() => ({
@@ -10,6 +11,10 @@ jest.mock('@plugin/domain/utils/global-env-snapshot', () => ({
     ascendEnvScript: undefined,
   })),
 }));
+jest.mock('@plugin/domain/utils/ascend-detection-env', () => ({
+  resolveCannSetEnvScriptForDetection: jest.fn(),
+  execBashWithCannEnv: jest.fn(),
+}));
 
 import { OperatorProjectType } from '@plugin/domain/models/operator-project-type';
 import { AscendPlugin } from '@plugin/domain/plugins/ascend.plugin';
@@ -17,9 +22,14 @@ import { CannPlugin } from '@plugin/domain/plugins/cann.plugin';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import {
   getSocVersionWithWorkspaceOverride,
+  getWorkspaceNpuArch,
   getWorkspaceSimulatorType,
 } from '@plugin/helpers/operator-project-workspace-config';
 import { getGlobalEnvSnapshot } from '@plugin/domain/utils/global-env-snapshot';
+import {
+  execBashWithCannEnv,
+  resolveCannSetEnvScriptForDetection,
+} from '@plugin/domain/utils/ascend-detection-env';
 import {
   _primeSocDetectionFailedForTest,
   _resetSocDetectionCacheForTest,
@@ -68,7 +78,10 @@ describe('operator spawn env', () => {
     _primeSocDetectionFailedForTest();
     (getWorkspaceSimulatorType as jest.Mock).mockReturnValue('');
     (getSocVersionWithWorkspaceOverride as jest.Mock).mockImplementation(() => '');
+    (getWorkspaceNpuArch as jest.Mock).mockReturnValue('');
     (getGlobalEnvSnapshot as jest.Mock).mockReturnValue(snapshot());
+    (resolveCannSetEnvScriptForDetection as jest.Mock).mockReturnValue(undefined);
+    (execBashWithCannEnv as jest.Mock).mockReturnValue('');
   });
 
   it('resolveSimulatorDir prefers workspace simulatorType', () => {
@@ -298,6 +311,82 @@ describe('operator spawn env', () => {
       .toBe('');
     expect(r.source.simulatorType)
       .toBe('default-from-soc');
+  });
+
+  it('explicit workspace npuArch overrides the SOC-derived arch (issue #29)', () => {
+    (getSocVersionWithWorkspaceOverride as jest.Mock).mockReturnValue('ascend910b');
+    (getWorkspaceNpuArch as jest.Mock).mockReturnValue('dav-3510');
+
+    const resolution = computeAscendEnvResolution({ isSimulator: false });
+
+    expect(resolution.socVersion)
+      .toBe('ascend910b');
+    expect(resolution.npuArch)
+      .toBe('dav-3510');
+    expect(resolution.source.npuArch)
+      .toBe('workspace-setting');
+    expect(buildOperatorSpawnEnvFromResolution(resolution, false).NPU_ARCH)
+      .toBe('dav-3510');
+  });
+
+  it('falls back to the SOC-derived arch when npuArch is unset (issue #29)', () => {
+    (getSocVersionWithWorkspaceOverride as jest.Mock).mockReturnValue('ascend910b');
+
+    const resolution = computeAscendEnvResolution({ isSimulator: false });
+
+    expect(resolution.npuArch)
+      .toBe(getNpuArchForCannSoc('ascend910b'));
+    expect(resolution.source.npuArch)
+      .toBe('derived-from-soc');
+  });
+
+  it('keeps an OS-level NPU_ARCH instead of the SOC-derived arch', () => {
+    (getSocVersionWithWorkspaceOverride as jest.Mock).mockReturnValue('ascend910b');
+    (getGlobalEnvSnapshot as jest.Mock).mockReturnValue(snapshot({ npuArch: 'dav-2201' }));
+
+    const resolution = computeAscendEnvResolution({ isSimulator: false });
+
+    expect(resolution.npuArch)
+      .toBe('dav-2201');
+    expect(resolution.source.npuArch)
+      .toBe('global-env');
+  });
+
+  it('ignores the OS-level NPU_ARCH when the SOC comes from the simulator type', () => {
+    (getWorkspaceSimulatorType as jest.Mock).mockReturnValue('Ascend950PR_9589');
+    (getGlobalEnvSnapshot as jest.Mock).mockReturnValue(snapshot({ npuArch: 'dav-2201' }));
+
+    const resolution = computeAscendEnvResolution({ isSimulator: true });
+
+    expect(resolution.source.socVersion)
+      .toBe('derived-from-simulator');
+    expect(resolution.npuArch)
+      .toBe(getNpuArchForCannSoc('ascend950'));
+    expect(resolution.source.npuArch)
+      .toBe('derived-from-soc');
+  });
+
+  it('allowHostDetection=false skips the host probe so no failure gets cached (issue #37)', () => {
+    _resetSocDetectionCacheForTest();
+
+    const startup = computeAscendEnvResolution({ isSimulator: false }, { allowHostDetection: false });
+
+    expect(startup.socVersion)
+      .toBe('');
+    expect(startup.npuArch)
+      .toBe('');
+    expect(execBashWithCannEnv)
+      .not
+      .toHaveBeenCalled();
+
+    (execBashWithCannEnv as jest.Mock).mockImplementation((_setEnv: unknown, command: string) => (command === 'npu-smi info' ? 'Chip Name : Ascend950' : ''));
+
+    const later = computeAscendEnvResolution({ isSimulator: false });
+
+    expect(later.socVersion)
+      .toBe('ascend950');
+    expect(later.source.socVersion)
+      .toBe('detected');
   });
 
   it('isSimulatorCompile detects --simulator in script', () => {

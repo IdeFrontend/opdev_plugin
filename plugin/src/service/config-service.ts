@@ -17,6 +17,7 @@ import {
 import { getFiles } from '@plugin/domain/services/system';
 import {
   getOpDevtoolsWorkspaceConfiguration,
+  getSocVersionWithWorkspaceOverride,
   mapKeyValueObjectToAdvanceParams,
   mapSanitizerScopeToUseBlock,
 } from '@plugin/helpers/operator-project-workspace-config';
@@ -35,6 +36,7 @@ import {
 import { resolveWorkspaceRoot } from '@plugin/helpers/resolve-workspace-root';
 import { projectService } from '@plugin/service/project-service';
 import { SETTINGS_PREFIX } from '@shared/flavor';
+import type { AscendEnvResolution } from '@plugin/domain/utils/ascend-util';
 
 const CONFIG_TYPES = {
   SANITIZER: 'sanitizer',
@@ -519,6 +521,30 @@ export class ConfigService {
     }
 
     return filtered;
+  }
+
+  /**
+   * Pin a host-detected SOC into the project's `settings.json` (issue #37). Reopening the
+   * project with "Open Folder" then resolves `SOC_VERSION` / `NPU_ARCH` from settings alone,
+   * without re-probing the host. No-op unless the SOC really came from host detection and no
+   * explicit `environment.socVersion` exists — we never clobber the user's choice, and never
+   * pin the fallback default (that would outrank later detection).
+   *
+   * @returns true if settings.json was written
+   */
+  static async persistDetectedSocVersion(resolution: AscendEnvResolution): Promise<boolean> {
+    const soc = resolution.socVersion.trim();
+
+    if (resolution.source.socVersion !== 'detected' || !soc) {
+      return false;
+    }
+
+    if (getSocVersionWithWorkspaceOverride(null)
+      .trim()) {
+      return false;
+    }
+
+    return ConfigService.writeOpDevtoolsDottedSettings({ 'environment.socVersion': soc });
   }
 
   private static getWorkspaceSettingsFileKeySet(workspaceRoot?: string): Set<string> {

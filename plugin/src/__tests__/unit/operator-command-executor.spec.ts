@@ -3,6 +3,7 @@ jest.mock('@plugin/core/project/project-manager', () => ({ ProjectManager: { get
 jest.mock('@plugin/helpers/operator-project-workspace-config', () => ({
   getWorkspaceSimulatorType: jest.fn(() => ''),
   getSocVersionWithWorkspaceOverride: jest.fn(),
+  getWorkspaceNpuArch: jest.fn(() => ''),
 }));
 
 jest.mock('@plugin/domain/utils/global-env-snapshot', () => ({
@@ -20,7 +21,12 @@ jest.mock('@plugin/domain/services/configuration', () => ({ getConfigById: jest.
 
 jest.mock('@plugin/domain/models/model', () => ({ getOpByProjectIdAndOpName: jest.fn(() => undefined) }));
 
-jest.mock('@plugin/service/config-service', () => ({ ConfigService: { readOpDevtoolsSetting: jest.fn(() => undefined) } }));
+jest.mock('@plugin/service/config-service', () => ({
+  ConfigService: {
+    readOpDevtoolsSetting: jest.fn(() => undefined),
+    persistDetectedSocVersion: jest.fn(async () => false),
+  },
+}));
 
 jest.mock('i18next', () => ({ t: (key: string) => key }));
 
@@ -39,6 +45,7 @@ import {
   commandFailureMessage,
   executeOperatorCommand,
 } from '@plugin/service/operator-command-executor';
+import { NPU_ARCH_ENV_VAR } from '@plugin/helpers/terminal-npu-arch-env';
 
 describe('executeOperatorCommand', () => {
   const execute = jest.fn()
@@ -53,6 +60,11 @@ describe('executeOperatorCommand', () => {
       ConfigService: { readOpDevtoolsSetting: jest.Mock };
     }
   ).ConfigService.readOpDevtoolsSetting;
+  const persistSoc = (): jest.Mock => (
+    jest.requireMock('@plugin/service/config-service') as {
+      ConfigService: { persistDetectedSocVersion: jest.Mock };
+    }
+  ).ConfigService.persistDetectedSocVersion;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -227,6 +239,60 @@ describe('executeOperatorCommand', () => {
       .toContain("export TRITON_ALWAYS_COMPILE='1'");
     expect(command)
       .toContain("export PYTORCH_NO_NPU_MEMORY_CACHING='1'");
+  });
+
+  describe('reopen / manual-build env sync (issue #37)', () => {
+    const globalRef = globalThis as unknown as { extensionContext?: unknown };
+    const originalContext = globalRef.extensionContext;
+    let environmentVariableCollection: { replace: jest.Mock;
+      delete: jest.Mock };
+
+    beforeEach(() => {
+      environmentVariableCollection = {
+        replace: jest.fn(),
+        delete: jest.fn(),
+      };
+      globalRef.extensionContext = { environmentVariableCollection };
+      persistSoc()
+        .mockResolvedValue(false);
+    });
+
+    afterEach(() => {
+      globalRef.extensionContext = originalContext;
+    });
+
+    it('refreshes the terminal NPU_ARCH and offers the resolution for persistence', async () => {
+      await executeOperatorCommand('cd build && ./build.sh', {
+        projectId: 1,
+        configType: 'build_op',
+        scriptField: null,
+        script: null,
+      });
+
+      expect(environmentVariableCollection.replace)
+        .toHaveBeenCalledWith(NPU_ARCH_ENV_VAR, 'dav-3510');
+      expect(persistSoc())
+        .toHaveBeenCalledWith(expect.objectContaining({ socVersion: 'ascend950' }));
+    });
+
+    it('leaves the terminal and settings untouched for simulator runs', async () => {
+      await executeOperatorCommand('bash build.sh --simulator', {
+        projectId: 1,
+        configType: 'simulate',
+        scriptField: null,
+        script: 'bash build.sh --simulator',
+      });
+
+      expect(environmentVariableCollection.replace)
+        .not
+        .toHaveBeenCalled();
+      expect(environmentVariableCollection.delete)
+        .not
+        .toHaveBeenCalled();
+      expect(persistSoc())
+        .not
+        .toHaveBeenCalled();
+    });
   });
 
   it('uses outputLabel from meta when provided', async () => {

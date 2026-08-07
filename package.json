@@ -583,9 +583,14 @@
             "order": 401,
             "markdownDescription": "%config.op-devtools.environment.socVersion.markdownDescription%"
           },
-          "op-devtools.environment.insightPath": {
+          "op-devtools.environment.npuArch": {
             "type": "string",
             "order": 402,
+            "markdownDescription": "%config.op-devtools.environment.npuArch.markdownDescription%"
+          },
+          "op-devtools.environment.insightPath": {
+            "type": "string",
+            "order": 403,
             "markdownDescription": "%config.op-devtools.environment.insightPath.markdownDescription%"
           }
         }
