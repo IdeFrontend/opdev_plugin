@@ -116,7 +116,9 @@ export function buildRemoteExecCommand(
   const args = [
     REMOTE_TOOL_COMMAND,
     'exec',
-    '-v',
+    // Target remote_tool.sh versions used by all remote OP flows require
+    // --progress for verbose progress streaming; do not fall back to -v here.
+    '--progress',
     '--command',
     shellQuoteBash(remoteCommand),
   ];
@@ -159,6 +161,13 @@ export function buildRemoteOnBoardCommand(
 }
 
 export function buildRemoteDumpTensorCommand(
+  remoteCommand: string,
+  pullDir: string,
+): string {
+  return buildRemoteExecCommand(remoteCommand, pullDir);
+}
+
+export function buildRemoteStTestCommand(
   remoteCommand: string,
   pullDir: string,
 ): string {

@@ -7,6 +7,7 @@ import {
   buildRemoteExecCommand,
   buildRemoteDumpTensorCommand,
   buildRemoteOnBoardCommand,
+  buildRemoteStTestCommand,
   buildRemoteUtCommand,
   createRemoteCommandWhenNoNpuTransformer,
   parseRemoteToolConfigOutput,
@@ -25,14 +26,14 @@ describe('remote command helpers', () => {
     const command = buildRemoteExecCommand("cd /repo && bash build.sh --name='add custom'");
 
     expect(command)
-      .toBe("remote_tool.sh exec -v --command 'cd /repo && bash build.sh --name='\\''add custom'\\'''");
+      .toBe("remote_tool.sh exec --progress --command 'cd /repo && bash build.sh --name='\\''add custom'\\'''");
   });
 
   it('does not pass pull-dir for remote UT commands', () => {
     const command = buildRemoteUtCommand('bash build.sh -u');
 
     expect(command)
-      .toBe("remote_tool.sh exec -v --command 'bash build.sh -u'");
+      .toBe("remote_tool.sh exec --progress --command 'bash build.sh -u'");
   });
 
   it('pulls both build directories for remote build-example commands', () => {
@@ -42,7 +43,7 @@ describe('remote command helpers', () => {
     );
 
     expect(command)
-      .toBe("remote_tool.sh exec -v --command 'bash build.sh --example' --pull-dir 'C:/repo/my operator/build/,C:/repo/my operator/build_out/'");
+      .toBe("remote_tool.sh exec --progress --command 'bash build.sh --example' --pull-dir 'C:/repo/my operator/build/,C:/repo/my operator/build_out/'");
   });
 
   it('requires a project root for remote build-example commands', () => {
@@ -57,7 +58,7 @@ describe('remote command helpers', () => {
     );
 
     expect(command)
-      .toBe("remote_tool.sh exec -v --command 'msprof op --output=/repo/.vscode/opprof ./run.sh --case='\\''add'\\''' --pull-dir '/repo/.vscode/opprof/'");
+      .toBe("remote_tool.sh exec --progress --command 'msprof op --output=/repo/.vscode/opprof ./run.sh --case='\\''add'\\''' --pull-dir '/repo/.vscode/opprof/'");
   });
 
   it('uses the supplied DumpTensor directory for remote DumpTensor commands', () => {
@@ -67,7 +68,17 @@ describe('remote command helpers', () => {
     );
 
     expect(command)
-      .toBe("remote_tool.sh exec -v --command 'export ASCEND_GLOBAL_LOG_LEVEL=1 && export ASCEND_DUMP_PATH=../.vscode/dump_tensor_temp_data && ./run.sh' --pull-dir '/repo/.vscode/DumpTensor/'");
+      .toBe("remote_tool.sh exec --progress --command 'export ASCEND_GLOBAL_LOG_LEVEL=1 && export ASCEND_DUMP_PATH=../.vscode/dump_tensor_temp_data && ./run.sh' --pull-dir '/repo/.vscode/DumpTensor/'");
+  });
+
+  it('uses the supplied ST results directory for remote ST test commands', () => {
+    const command = buildRemoteStTestCommand(
+      'python3 -m ttk kernel -i /repo/add/tests/st/arch35/a.csv -o /repo/.vscode/st-results/add/run/kernel/001-result.csv --plugin /repo/add/tests',
+      '/repo/.vscode/st-results/',
+    );
+
+    expect(command)
+      .toBe("remote_tool.sh exec --progress --command 'python3 -m ttk kernel -i /repo/add/tests/st/arch35/a.csv -o /repo/.vscode/st-results/add/run/kernel/001-result.csv --plugin /repo/add/tests' --pull-dir '/repo/.vscode/st-results/'");
   });
 
   it('uses the caller-provided remote command builder only when no local NPU is available', async () => {

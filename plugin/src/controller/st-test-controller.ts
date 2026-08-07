@@ -52,9 +52,12 @@ type StTestControllerDependencies = {
   )=> Promise<boolean>;
   createContextToken: (context: StTestOperatorContext)=> string;
   dispatch: (params: StartStTestParams)=> Promise<boolean | undefined>;
+  closeOptionsPanel: ()=> void;
 };
 
 let extensionContext: vscode.ExtensionContext | undefined;
+
+let closeStTestOptionsPanel: (()=> void) | undefined;
 
 function defaultArgumentsByMode(): StTestArgumentsByMode {
   return {
@@ -128,6 +131,10 @@ export function registerStTestControllerContext(context: vscode.ExtensionContext
   extensionContext = context;
 }
 
+export function registerStTestOptionsPanelCloser(closer: (()=> void) | undefined): void {
+  closeStTestOptionsPanel = closer;
+}
+
 export class StTestController {
   private readonly dependencies: StTestControllerDependencies;
 
@@ -145,6 +152,7 @@ export class StTestController {
 
         return dispatchStTestFromWebview(extensionContext, params);
       }),
+      closeOptionsPanel: dependencies.closeOptionsPanel ?? (() => closeStTestOptionsPanel?.()),
     };
   }
 
@@ -179,6 +187,14 @@ export class StTestController {
       argumentsByMode,
       defaultArgumentsByMode: defaults,
     };
+  }
+
+  async ensureOptionsAvailable(): Promise<void> {
+    const context = await this.dependencies.resolveContext();
+
+    if (context.availableModes.length === 0) {
+      throw new Error(t('stTest.noAvailableCsv'));
+    }
   }
 
   async runOptions(payload: RunStTestOptionsParams): Promise<void> {
@@ -232,6 +248,8 @@ export class StTestController {
     if (!queued) {
       throw new Error(t('stTest.options.notStarted'));
     }
+
+    this.dependencies.closeOptionsPanel();
   }
 
   private resolveSelectedModes(value: unknown, availableModes: readonly StTestMode[]): StTestMode[] {
@@ -288,6 +306,7 @@ export class StTestController {
 const stTestController = new StTestController();
 
 export const stTestMethods = {
+  ensureOptionsAvailable: () => stTestController.ensureOptionsAvailable(),
   loadOptions: () => stTestController.loadOptions(),
   runOptions: (payload: RunStTestOptionsParams) => stTestController.runOptions(payload),
 };

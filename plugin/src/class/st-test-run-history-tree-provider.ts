@@ -22,7 +22,7 @@ type StTestRunHistoryTreeDependencies = {
   loadWorkspaceHistory: (workspaceRoot: string)=> StTestWorkspaceRunHistoryRecord[];
 };
 
-type StTestHistoryTreeNode = StTestOperatorHistoryTreeItem | StTestRunHistoryTreeItem;
+type StTestHistoryTreeNode = StTestRunHistoryTreeItem | StTestEmptyHistoryTreeItem;
 
 const OUTCOME_ICON: Record<StTestReportOutcome, string> = {
   passed: 'pass',
@@ -60,34 +60,11 @@ function formatCompletedAt(completedAt: string): string {
     .format(timestamp);
 }
 
-class StTestOperatorHistoryTreeItem extends vscode.TreeItem {
-  public readonly children: StTestRunHistoryTreeItem[] = [];
-
-  constructor(
-    public readonly operatorKey: string,
-    operatorName: string,
-    workspaceName: string,
-    expanded: boolean,
-  ) {
-    super(
-      operatorName,
-      expanded
-        ? vscode.TreeItemCollapsibleState.Expanded
-        : vscode.TreeItemCollapsibleState.Collapsed,
-    );
-    this.id = operatorKey;
-    this.description = workspaceName;
-    this.tooltip = `${operatorName} — ${workspaceName}`;
-    this.iconPath = new vscode.ThemeIcon('symbol-namespace');
-    this.contextValue = 'stTestHistoryOperator';
-  }
-}
-
 class StTestRunHistoryTreeItem extends vscode.TreeItem {
   constructor(
     public readonly recordKey: string,
-    public readonly parent: StTestOperatorHistoryTreeItem,
     record: StTestRunHistoryRecord,
+    workspaceName: string,
     selected: boolean,
   ) {
     super(formatCompletedAt(record.completedAt), vscode.TreeItemCollapsibleState.None);
@@ -99,8 +76,8 @@ class StTestRunHistoryTreeItem extends vscode.TreeItem {
     });
 
     this.id = recordKey;
-    this.description = `${outcome} · ${summary}`;
-    this.tooltip = `${record.operatorName}\n${record.runId}\n${this.description}`;
+    this.description = `${record.operatorName} - ${workspaceName} - ${outcome} - ${summary}`;
+    this.tooltip = `${record.operatorName}\n${workspaceName}\n${record.runId}\n${this.description}`;
     this.iconPath = new vscode.ThemeIcon(OUTCOME_ICON[record.outcome]);
     this.contextValue = selected
       ? 'stTestHistoryRun.selected'
@@ -113,6 +90,14 @@ class StTestRunHistoryTreeItem extends vscode.TreeItem {
   }
 }
 
+class StTestEmptyHistoryTreeItem extends vscode.TreeItem {
+  constructor() {
+    super(t('stTest.results.noHistory'), vscode.TreeItemCollapsibleState.None);
+    this.id = 'st-test-history-empty';
+    this.contextValue = 'stTestHistoryEmpty';
+  }
+}
+
 export class StTestRunHistoryTreeProvider implements vscode.TreeDataProvider<StTestHistoryTreeNode>, vscode.Disposable {
   private readonly dependencies: StTestRunHistoryTreeDependencies;
 
@@ -120,7 +105,7 @@ export class StTestRunHistoryTreeProvider implements vscode.TreeDataProvider<StT
 
   public readonly onDidChangeTreeData = this.onDidChangeTreeDataEmitter.event;
 
-  private operatorNodes: StTestOperatorHistoryTreeItem[] = [];
+  private runNodes: StTestRunHistoryTreeItem[] = [];
 
   private readonly recordsByKey = new Map<string, StTestWorkspaceRunHistoryRecord>();
 
@@ -153,7 +138,7 @@ export class StTestRunHistoryTreeProvider implements vscode.TreeDataProvider<StT
   }
 
   public clear(): void {
-    this.operatorNodes = [];
+    this.runNodes = [];
     this.recordsByKey.clear();
     this.runNodesByKey.clear();
     this.currentRecord = undefined;
@@ -181,23 +166,21 @@ export class StTestRunHistoryTreeProvider implements vscode.TreeDataProvider<StT
 
   public getChildren(element?: StTestHistoryTreeNode): StTestHistoryTreeNode[] {
     if (!element) {
-      return this.operatorNodes;
+      return this.runNodes.length > 0
+        ? this.runNodes
+        : [new StTestEmptyHistoryTreeItem()];
     }
 
-    return element instanceof StTestOperatorHistoryTreeItem
-      ? element.children
-      : [];
+    return [];
   }
 
-  public getParent(element: StTestHistoryTreeNode): StTestHistoryTreeNode | undefined {
-    return element instanceof StTestRunHistoryTreeItem
-      ? element.parent
-      : undefined;
+  public getParent(_element: StTestHistoryTreeNode): StTestHistoryTreeNode | undefined {
+    return undefined;
   }
 
   public dispose(): void {
     this.onDidChangeTreeDataEmitter.dispose();
-    this.operatorNodes = [];
+    this.runNodes = [];
     this.recordsByKey.clear();
     this.runNodesByKey.clear();
     this.treeView = undefined;
@@ -247,78 +230,50 @@ export class StTestRunHistoryTreeProvider implements vscode.TreeDataProvider<StT
 
     this.recordsByKey.clear();
     this.runNodesByKey.clear();
-    const grouped = new Map<string, {
-      workspaceRoot: string;
+    const sortedRecords: Array<{
+      recordKey: string;
+      entry: StTestWorkspaceRunHistoryRecord;
       workspaceName: string;
-      operatorName: string;
-      records: Array<{
-        recordKey: string;
-        record: StTestRunHistoryRecord;
-      }>;
-    }>();
+    }> = [];
 
     for (const [
       recordKey,
       entry,
     ] of records) {
-      this.recordsByKey.set(recordKey, entry);
       const workspacePathKey = normalizePathKey(entry.workspaceRoot);
-      const operatorKey = stableKey('st-test-operator', workspacePathKey, entry.record.operatorName);
       const workspaceName = workspaceNames.get(workspacePathKey) ?? path.basename(entry.workspaceRoot);
-      const group = grouped.get(operatorKey) ?? {
-        workspaceRoot: entry.workspaceRoot,
+
+      sortedRecords.push({
+        recordKey,
+        entry,
         workspaceName: (workspaceNameCounts.get(workspaceName) ?? 0) > 1
           ? entry.workspaceRoot
           : workspaceName,
-        operatorName: entry.record.operatorName,
-        records: [],
-      };
-
-      group.records.push({
-        recordKey,
-        record: entry.record,
       });
-      grouped.set(operatorKey, group);
     }
 
-    this.operatorNodes = [...grouped.entries()]
-      .sort(([
-        , left,
-      ], [
-        , right,
-      ]) => left.operatorName.localeCompare(right.operatorName, 'en')
+    this.runNodes = sortedRecords
+      .sort((left, right) => Date.parse(right.entry.record.completedAt) - Date.parse(left.entry.record.completedAt)
+        || right.entry.record.runId.localeCompare(left.entry.record.runId, 'en')
+        || left.entry.record.operatorName.localeCompare(right.entry.record.operatorName, 'en')
         || left.workspaceName.localeCompare(right.workspaceName, 'en'))
-      .map(([
-        operatorKey,
-        group,
-      ]) => {
-        const containsCurrent = group.records.some(({ recordKey }) => recordKey === this.currentRecordKey);
-        const operatorNode = new StTestOperatorHistoryTreeItem(
-          operatorKey,
-          group.operatorName,
-          group.workspaceName,
-          containsCurrent,
+      .slice(0, MAX_ST_TEST_HISTORY_RUNS)
+      .map(({
+        recordKey,
+        entry,
+        workspaceName,
+      }) => {
+        const runNode = new StTestRunHistoryTreeItem(
+          recordKey,
+          entry.record,
+          workspaceName,
+          recordKey === this.currentRecordKey,
         );
 
-        group.records
-          .sort((left, right) => Date.parse(right.record.completedAt) - Date.parse(left.record.completedAt)
-            || right.record.runId.localeCompare(left.record.runId, 'en'))
-          .slice(0, MAX_ST_TEST_HISTORY_RUNS)
-          .forEach(({
-            recordKey, record,
-          }) => {
-            const runNode = new StTestRunHistoryTreeItem(
-              recordKey,
-              operatorNode,
-              record,
-              recordKey === this.currentRecordKey,
-            );
+        this.recordsByKey.set(recordKey, entry);
+        this.runNodesByKey.set(recordKey, runNode);
 
-            operatorNode.children.push(runNode);
-            this.runNodesByKey.set(recordKey, runNode);
-          });
-
-        return operatorNode;
+        return runNode;
       });
   }
 

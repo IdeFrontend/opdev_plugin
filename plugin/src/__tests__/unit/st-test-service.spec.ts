@@ -14,21 +14,35 @@ import {
   resolveStTestOutputCsvPath,
   resolveStTestRunDirectory,
 } from '@plugin/domain/utils/st-test-paths';
-import { StTestService } from '@plugin/service/st-test-service';
-import type { TtkRuntime } from '@plugin/service/ttk-installer.service';
+import {
+  resolveRemoteManagedTtkRootBase,
+  resolveRemoteStTestPullDir,
+  StTestService,
+} from '@plugin/service/st-test-service';
+import {
+  OPS_TEST_KIT_REVISION,
+  type TtkRuntime,
+} from '@plugin/service/ttk-installer.service';
 
 const CSV_BY_MODE = {
   kernel: 'testcase_name,op_name\ncase,add\n',
   aclnn: 'testcase_name,api_name\ncase,aclnnAdd\n',
   e2e: 'testcase_name,api_name\ncase,torch.add\n',
 } as const;
+const REMOTE_TTK_LOCK_ACQUIRED_SENTINEL = '__MSTT_REMOTE_TTK_LOCK_ACQUIRED__';
+const REMOTE_TTK_LOCK_HELD_SENTINEL = '__MSTT_REMOTE_TTK_LOCK_HELD__';
+const REMOTE_TTK_LOCK_STALE_RECOVERED_SENTINEL = '__MSTT_REMOTE_TTK_LOCK_STALE_RECOVERED__';
 
-function commandResult(code: number = 0) {
+function commandResult(
+  code: number = 0,
+  stdout: string = '',
+  stderr: string = '',
+) {
   return {
     code,
-    stdout: '',
-    stderr: '',
-    output: '',
+    stdout,
+    stderr,
+    output: `${stdout}${stderr}`,
     interruptedByUserStop: false,
   };
 }
@@ -90,6 +104,7 @@ describe('StTestService', () => {
       getEnvironmentScriptPath: () => '/cann/CANN env/set_env.sh',
       getOutputChannel: () => outputChannel as unknown as vscode.OutputChannel,
       createRunId: () => 'run-id',
+      shouldRunRemotely: async () => false,
       ...overrides,
     });
   }
@@ -104,6 +119,18 @@ describe('StTestService', () => {
 
     return inputPath;
   }
+
+  it('uses the ST results directory as the remote ST result pull directory', () => {
+    const workspacePath = process.platform === 'win32'
+      ? path.join('C:\\repo', 'workspace')
+      : path.join('/repo', 'workspace');
+    const expected = process.platform === 'win32'
+      ? 'C:/repo/workspace/.vscode/st-results/'
+      : '/repo/workspace/.vscode/st-results/';
+
+    expect(resolveRemoteStTestPullDir(workspacePath))
+      .toBe(expected);
+  });
 
   it('runs every selected-mode CSV sequentially with unique outputs and raw Test output', async () => {
     const kernelZ = writeInput('zeta.csv');
@@ -320,6 +347,577 @@ describe('StTestService', () => {
       .toContain(shellQuoteBash(expectedOutput));
     expect(command)
       .toContain(shellQuoteBash(path.join(operatorPath, 'tests', 'assets')));
+    expect(command).not.toContain('remote_tool.sh');
+    expect(executor.execute)
+      .toHaveBeenCalledTimes(1);
+    expect(outputLines.join('\n')).not.toContain('Remote TTK');
+  });
+
+  it('runs remote ST commands with remote managed TTK PYTHONPATH and pulls the ST results directory', async () => {
+    const inputCsvPath = writeInput('ttk_kernel_remote.csv');
+    const expectedOutput = resolveStTestOutputCsvPath({
+      workspaceRoot,
+      operatorName: 'add custom',
+      mode: 'kernel',
+      inputCsvPath,
+      runId: 'run-id',
+      sequence: 1,
+    });
+
+    const remoteHome = '/home/remote-user';
+    const managedRoot = path.posix.join(
+      resolveRemoteManagedTtkRootBase(remoteHome),
+      'python-3.11',
+    );
+
+    executor.execute.mockImplementation(async (command: string) => {
+      if (command.includes('__MSTT_REMOTE_ENV_READY__')) {
+        return commandResult(0, '__MSTT_REMOTE_ENV_READY__\n');
+      }
+
+      if (command.includes('__MSTT_REMOTE_PYTHON_VERSION__')) {
+        return commandResult(0, `__MSTT_REMOTE_HOME__=${remoteHome}\n__MSTT_REMOTE_PYTHON_VERSION__=3.11\n`);
+      }
+
+      if (command.includes('import os, ttk')) {
+        return commandResult(7, '', 'ModuleNotFoundError: No module named ttk\n');
+      }
+
+      if (command.includes('__MSTT_REMOTE_TTK_ROOT__')) {
+        return commandResult(0, `__MSTT_REMOTE_TTK_ROOT__=${managedRoot}\n`);
+      }
+
+      if (command.includes("'\\''-m'\\'' '\\''ttk'\\'' '\\''-v'\\''")) {
+        return commandResult(0, 'TTK v2.0.0\n');
+      }
+
+      fs.writeFileSync(expectedOutput, CSV_BY_MODE.kernel);
+
+      return commandResult();
+    });
+
+    const result = await createService({ shouldRunRemotely: async () => true })
+      .startStTest({
+        workspaceRoot,
+        operatorName: 'add custom',
+        operatorPath,
+        modes: ['kernel'],
+      });
+
+    const launchedCommand = executor.execute.mock.calls[5][0] as string;
+
+    expect(executor.execute)
+      .toHaveBeenCalledTimes(6);
+    expect(launchedCommand)
+      .toMatch(/^remote_tool\.sh exec --progress --command '/);
+    expect(launchedCommand)
+      .toContain("--pull-dir '");
+    expect(launchedCommand)
+      .toContain(resolveRemoteStTestPullDir(workspaceRoot));
+    expect(launchedCommand)
+      .toContain("'\\''python3'\\'' '\\''-m'\\'' '\\''ttk'\\''");
+    expect(launchedCommand)
+      .toContain('export PYTHONDONTWRITEBYTECODE=1');
+    expect(launchedCommand)
+      .toContain(managedRoot.replace(/\//g, '/'));
+    expect(launchedCommand)
+      .toContain('dependencies');
+    expect(launchedCommand)
+      .toContain('PYTHONPATH');
+    expect(launchedCommand)
+      .toContain(`cd '\\''${path.posix.join(managedRoot, 'ops-test-kit')}'\\''`);
+    expect(launchedCommand)
+      .toContain(`test ! -L '\\''${path.posix.join(managedRoot, 'ops-test-kit')}'\\''`);
+    expect(launchedCommand)
+      .toContain(`test -w '\\''${path.posix.join(managedRoot, 'ops-test-kit')}'\\''`);
+    expect(launchedCommand)
+      .toContain('Remote TTK working directory');
+    expect(executor.execute.mock.calls[4][0])
+      .toContain(`cd '\\''${path.posix.join(managedRoot, 'ops-test-kit')}'\\''`);
+    expect(launchedCommand).not.toContain(context.globalStorageUri.fsPath);
+    expect(ensureTtkAvailable)
+      .not.toHaveBeenCalled();
+    expect(result.runtimeSource)
+      .toBe('remote');
+    expect(outputLines)
+      .toContain(`[ST test] Command: ${launchedCommand}`);
+    expect(outputLines.join('\n'))
+      .toContain('Remote TTK 1/17: checking the remote environment script');
+    expect(outputLines.join('\n'))
+      .toContain('Remote system TTK was not found; checking the managed cache.');
+    expect(outputLines.join('\n'))
+      .toContain(`Remote managed TTK root: ${managedRoot}`);
+  });
+
+  it('uses a remote system TTK without checking the managed cache', async () => {
+    const inputCsvPath = writeInput('ttk_kernel_remote_system.csv');
+    const expectedOutput = resolveStTestOutputCsvPath({
+      workspaceRoot,
+      operatorName: 'add custom',
+      mode: 'kernel',
+      inputCsvPath,
+      runId: 'run-id',
+      sequence: 1,
+    });
+    const remoteSystemRoot = '/opt/ops-test-kit';
+
+    executor.execute.mockImplementation(async (command: string) => {
+      if (command.includes('__MSTT_REMOTE_ENV_READY__')) {
+        return commandResult(0, '__MSTT_REMOTE_ENV_READY__\n');
+      }
+
+      if (command.includes('__MSTT_REMOTE_PYTHON_VERSION__')) {
+        return commandResult(0, '__MSTT_REMOTE_HOME__=/home/remote-user\n__MSTT_REMOTE_PYTHON_VERSION__=3.11\n');
+      }
+
+      if (command.includes('import os, ttk')) {
+        return commandResult(0, `__MSTT_REMOTE_TTK_ROOT__=${remoteSystemRoot}\n`);
+      }
+
+      if (command.includes("'\\''-m'\\'' '\\''ttk'\\'' '\\''-v'\\''")) {
+        return commandResult(0, 'TTK v2.0.0\n');
+      }
+
+      fs.writeFileSync(expectedOutput, CSV_BY_MODE.kernel);
+
+      return commandResult();
+    });
+
+    const result = await createService({ shouldRunRemotely: async () => true })
+      .startStTest({
+        workspaceRoot,
+        operatorName: 'add custom',
+        operatorPath,
+        modes: ['kernel'],
+      });
+    const launchedCommand = executor.execute.mock.calls[4][0] as string;
+
+    expect(executor.execute)
+      .toHaveBeenCalledTimes(5);
+    expect(launchedCommand)
+      .toMatch(/^remote_tool\.sh exec --progress --command '/);
+    expect(launchedCommand).not.toContain('globalStorage');
+    expect(launchedCommand).not.toContain('PYTHONPATH');
+    expect(launchedCommand)
+      .toContain(`cd '\\''${remoteSystemRoot}'\\''`);
+    expect(launchedCommand)
+      .toContain(`test ! -L '\\''${remoteSystemRoot}'\\''`);
+    expect(launchedCommand)
+      .toContain(`test -w '\\''${remoteSystemRoot}'\\''`);
+    expect(launchedCommand)
+      .toContain('Remote TTK working directory');
+    expect(executor.execute.mock.calls[3][0])
+      .toContain(`cd '\\''${remoteSystemRoot}'\\''`);
+    expect(ensureTtkAvailable).not.toHaveBeenCalled();
+    expect(result.runtimeSource)
+      .toBe('remote');
+    expect(outputLines.join('\n'))
+      .toContain(`Remote system TTK root: ${remoteSystemRoot}`);
+    expect(outputLines.join('\n'))
+      .toContain('Remote system TTK is ready; managed TTK preparation skipped.');
+    expect(outputLines.join('\n')).not.toContain('locating the remote managed TTK cache');
+  });
+
+  it('provisions TTK in the remote NPU environment before running ST', async () => {
+    const inputCsvPath = writeInput('ttk_kernel_remote_install.csv');
+    const expectedOutput = resolveStTestOutputCsvPath({
+      workspaceRoot,
+      operatorName: 'add custom',
+      mode: 'kernel',
+      inputCsvPath,
+      runId: 'run-id',
+      sequence: 1,
+    });
+    const remoteHome = '/home/remote-user';
+    const managedRoot = path.posix.join(
+      resolveRemoteManagedTtkRootBase(remoteHome),
+      'python-3.11',
+    );
+
+    executor.execute.mockImplementation(async (command: string) => {
+      if (command.includes('__MSTT_REMOTE_ENV_READY__')) {
+        return commandResult(0, '__MSTT_REMOTE_ENV_READY__\n');
+      }
+
+      if (command.includes('__MSTT_REMOTE_PYTHON_VERSION__')) {
+        return commandResult(0, `__MSTT_REMOTE_HOME__=${remoteHome}\n__MSTT_REMOTE_PYTHON_VERSION__=3.11\n`);
+      }
+
+      if (command.includes('import os, ttk')) {
+        return commandResult(7, '', 'ModuleNotFoundError: No module named ttk\n');
+      }
+
+      if (command.includes('__MSTT_REMOTE_TTK_ROOT__')) {
+        return commandResult(7);
+      }
+
+      if (command.includes('.lock/owner.json') && !command.includes('grep -Fq')) {
+        return commandResult(0, `${REMOTE_TTK_LOCK_ACQUIRED_SENTINEL}\n`);
+      }
+
+      if (command.includes('rev-parse HEAD')) {
+        return commandResult(0, `${OPS_TEST_KIT_REVISION}\n`);
+      }
+
+      if (command.includes("'\\''-m'\\'' '\\''ttk'\\'' '\\''-v'\\''")) {
+        return commandResult(0, 'TTK v2.0.0\n');
+      }
+
+      if (command.includes("'\\''ttk'\\'' '\\''kernel'\\''")) {
+        fs.writeFileSync(expectedOutput, CSV_BY_MODE.kernel);
+      }
+
+      return commandResult();
+    });
+
+    const result = await createService({ shouldRunRemotely: async () => true })
+      .startStTest({
+        workspaceRoot,
+        operatorName: 'add custom',
+        operatorPath,
+        modes: ['kernel'],
+      });
+    const commands = executor.execute.mock.calls.map((call) => call[0] as string);
+
+    expect(commands.length)
+      .toBeGreaterThanOrEqual(16);
+    expect(commands.some((command) => command.includes('git init -q')))
+      .toBe(true);
+    expect(commands.some((command) => command.includes('gitcode.com/cann/ops-test-kit.git')))
+      .toBe(true);
+    expect(commands.some((command) => command.includes('fetch --depth=1 origin')
+      && command.includes(OPS_TEST_KIT_REVISION)))
+      .toBe(true);
+    expect(commands.some((command) => command.includes("'\\''pip'\\'' '\\''install'\\''")))
+      .toBe(true);
+    expect(commands.some((command) => command.includes("'\\''--upgrade'\\''")))
+      .toBe(false);
+    expect(commands.some((command) => command.includes('.lock/owner.json')))
+      .toBe(true);
+    expect(commands.some((command) => command.includes('.staging-run-id')))
+      .toBe(true);
+    expect(commands.some((command) => command.includes(`mv '\\''${path.posix.join(path.posix.dirname(managedRoot), '.staging-run-id')}'\\'' '\\''${managedRoot}'\\''`)))
+      .toBe(true);
+    expect(commands.some((command) => command.includes('{ [ ! -e')
+      && command.includes(`'\\''${managedRoot}'\\'' ] || mv`)
+      && command.includes(`mv '\\''${path.posix.join(path.posix.dirname(managedRoot), '.staging-run-id')}'\\'' '\\''${managedRoot}'\\''`)))
+      .toBe(true);
+    expect(commands.some((command) => command.includes(managedRoot)))
+      .toBe(true);
+    expect(commands.filter((command) => /git init|fetch --depth|checkout --detach|rev-parse HEAD|'\\''pip'\\''/.test(command))
+      .every((command) => command.includes(`test ! -L '\\''${path.posix.join(path.posix.dirname(managedRoot), '.staging-run-id')}'\\''`)
+        && command.includes(`test ! -L '\\''${path.posix.join(path.posix.dirname(managedRoot), '.staging-run-id', 'ops-test-kit')}'\\''`)
+        && command.includes(`test ! -L '\\''${path.posix.join(path.posix.dirname(managedRoot), '.staging-run-id', 'dependencies')}'\\''`)))
+      .toBe(true);
+    expect(executor.execute.mock.calls.slice(0, -1)
+      .every((call) => {
+        const options = call[3] as { timeout?: number };
+
+        return typeof options.timeout === 'number' && options.timeout > 0;
+      }))
+      .toBe(true);
+    expect(ensureTtkAvailable).not.toHaveBeenCalled();
+    expect(result.runtimeSource)
+      .toBe('remote');
+    expect(outputLines.join('\n'))
+      .toContain(`Remote managed TTK is absent; preparing it at ${managedRoot}.`);
+    expect(outputLines.join('\n'))
+      .toContain(`Remote managed TTK prepared successfully: ${managedRoot}`);
+  });
+
+  it('stops before ST when remote TTK provisioning fails', async () => {
+    writeInput('ttk_kernel_remote_install_failure.csv');
+
+    executor.execute.mockImplementation(async (command: string) => {
+      if (command.includes('__MSTT_REMOTE_ENV_READY__')) {
+        return commandResult(0, '__MSTT_REMOTE_ENV_READY__\n');
+      }
+
+      if (command.includes('__MSTT_REMOTE_PYTHON_VERSION__')) {
+        return commandResult(0, '__MSTT_REMOTE_HOME__=/home/remote-user\n__MSTT_REMOTE_PYTHON_VERSION__=3.11\n');
+      }
+
+      if (command.includes('import os, ttk') || command.includes('__MSTT_REMOTE_TTK_ROOT__')) {
+        return commandResult(7);
+      }
+
+      if (command.includes('.lock/owner.json') && !command.includes('grep -Fq')) {
+        return commandResult(0, `${REMOTE_TTK_LOCK_ACQUIRED_SENTINEL}\n`);
+      }
+
+      if (command.includes('fetch --depth=1 origin')) {
+        return commandResult(7, '', 'network unavailable\n');
+      }
+
+      return commandResult();
+    });
+
+    await expect(createService({ shouldRunRemotely: async () => true })
+      .startStTest({
+        workspaceRoot,
+        operatorName: 'add custom',
+        operatorPath,
+        modes: ['kernel'],
+      }))
+      .rejects.toThrow(/downloading the pinned ops-test-kit revision.*exit code 7/);
+
+    const commands = executor.execute.mock.calls.map((call) => call[0] as string);
+
+    expect(commands.some((command) => command.includes("'\\''ttk'\\'' '\\''kernel'\\''")))
+      .toBe(false);
+    expect(commands.some((command) => command.includes("'\\''pip'\\'' '\\''install'\\''")))
+      .toBe(false);
+    expect(outputLines.join('\n'))
+      .toContain('Remote TTK 11/17 exit code: 7');
+    expect(outputLines.join('\n'))
+      .toContain('Produced before failure: none');
+  });
+
+  it('releases the remote managed TTK lock and staging directory after cancellation once the lock is acquired', async () => {
+    writeInput('ttk_kernel_remote_install_cancel.csv');
+    let cancelled = false;
+
+    executor.execute.mockImplementation(async (command: string) => {
+      if (command.includes('__MSTT_REMOTE_ENV_READY__')) {
+        return commandResult(0, '__MSTT_REMOTE_ENV_READY__\n');
+      }
+
+      if (command.includes('__MSTT_REMOTE_PYTHON_VERSION__')) {
+        return commandResult(0, '__MSTT_REMOTE_HOME__=/home/remote-user\n__MSTT_REMOTE_PYTHON_VERSION__=3.11\n');
+      }
+
+      if (command.includes('import os, ttk') || command.includes('__MSTT_REMOTE_TTK_ROOT__')) {
+        return commandResult(7);
+      }
+
+      if (command.includes('.lock/owner.json') && !command.includes('grep -Fq')) {
+        cancelled = true;
+
+        return commandResult(0, `${REMOTE_TTK_LOCK_ACQUIRED_SENTINEL}\n`);
+      }
+
+      return commandResult();
+    });
+
+    try {
+      await createService({ shouldRunRemotely: async () => true })
+        .startStTest({
+          workspaceRoot,
+          operatorName: 'add custom',
+          operatorPath,
+          modes: ['kernel'],
+        }, { isCancellationRequested: () => cancelled });
+      throw new Error('Expected cancellation');
+    }
+    catch (error) {
+      expect(isStTestCancelledError(error))
+        .toBe(true);
+    }
+
+    const commands = executor.execute.mock.calls.map((call) => call[0] as string);
+
+    expect(commands.some((command) => command.includes('rm -rf') && command.includes('.staging-run-id')))
+      .toBe(true);
+    expect(commands.some((command) => command.includes('grep -Fq')
+      && command.includes('.lock/owner.json')))
+      .toBe(true);
+  });
+
+  it('polls remote managed TTK lock attempts on the client instead of waiting in a remote loop', async () => {
+    writeInput('ttk_kernel_remote_lock_wait.csv');
+    const sleep = jest.fn(async () => undefined);
+    let now = 0;
+    let lockAttempts = 0;
+
+    executor.execute.mockImplementation(async (command: string) => {
+      if (command.includes('__MSTT_REMOTE_ENV_READY__')) {
+        return commandResult(0, '__MSTT_REMOTE_ENV_READY__\n');
+      }
+
+      if (command.includes('__MSTT_REMOTE_PYTHON_VERSION__')) {
+        return commandResult(0, '__MSTT_REMOTE_HOME__=/home/remote-user\n__MSTT_REMOTE_PYTHON_VERSION__=3.11\n');
+      }
+
+      if (command.includes('import os, ttk') || command.includes('__MSTT_REMOTE_TTK_ROOT__')) {
+        return commandResult(7);
+      }
+
+      if (command.includes('.lock/owner.json') && !command.includes('grep -Fq')) {
+        lockAttempts += 1;
+
+        return commandResult(0, `${lockAttempts < 3 ? REMOTE_TTK_LOCK_HELD_SENTINEL : REMOTE_TTK_LOCK_ACQUIRED_SENTINEL}\n`);
+      }
+
+      if (command.includes('fetch --depth=1 origin')) {
+        return commandResult(7, '', 'stop after lock acquisition\n');
+      }
+
+      return commandResult();
+    });
+
+    await expect(createService({
+      now: () => {
+        now += 500;
+
+        return now;
+      },
+      shouldRunRemotely: async () => true,
+      sleep,
+    })
+      .startStTest({
+        workspaceRoot,
+        operatorName: 'add custom',
+        operatorPath,
+        modes: ['kernel'],
+      }))
+      .rejects.toThrow(/downloading the pinned ops-test-kit revision/);
+
+    const lockCommands = executor.execute.mock.calls
+      .map((call) => call[0] as string)
+      .filter((command) => command.includes('.lock/owner.json') && !command.includes('grep -Fq'));
+
+    expect(lockCommands)
+      .toHaveLength(3);
+    expect(lockCommands.every((command) => !command.includes('while true') && !command.includes('sleep 1')))
+      .toBe(true);
+    expect(sleep)
+      .toHaveBeenCalledTimes(2);
+  });
+
+  it('cancels promptly while waiting for the remote managed TTK lock', async () => {
+    writeInput('ttk_kernel_remote_lock_cancel.csv');
+    const sleep = jest.fn(async () => undefined);
+
+    executor.execute.mockImplementation(async (command: string) => {
+      if (command.includes('__MSTT_REMOTE_ENV_READY__')) {
+        return commandResult(0, '__MSTT_REMOTE_ENV_READY__\n');
+      }
+
+      if (command.includes('__MSTT_REMOTE_PYTHON_VERSION__')) {
+        return commandResult(0, '__MSTT_REMOTE_HOME__=/home/remote-user\n__MSTT_REMOTE_PYTHON_VERSION__=3.11\n');
+      }
+
+      if (command.includes('import os, ttk') || command.includes('__MSTT_REMOTE_TTK_ROOT__')) {
+        return commandResult(7);
+      }
+
+      if (command.includes('.lock/owner.json') && !command.includes('grep -Fq')) {
+        return commandResult(0, `${REMOTE_TTK_LOCK_HELD_SENTINEL}\n`);
+      }
+
+      return commandResult();
+    });
+
+    try {
+      await createService({
+        now: () => 0,
+        shouldRunRemotely: async () => true,
+        sleep,
+      })
+        .startStTest({
+          workspaceRoot,
+          operatorName: 'add custom',
+          operatorPath,
+          modes: ['kernel'],
+        }, { isCancellationRequested: () => sleep.mock.calls.length > 0 });
+      throw new Error('Expected cancellation');
+    }
+    catch (error) {
+      expect(isStTestCancelledError(error))
+        .toBe(true);
+    }
+
+    const lockCommands = executor.execute.mock.calls
+      .map((call) => call[0] as string)
+      .filter((command) => command.includes('.lock/owner.json') && !command.includes('grep -Fq'));
+
+    expect(lockCommands)
+      .toHaveLength(1);
+    expect(sleep)
+      .toHaveBeenCalledTimes(1);
+  });
+
+  it('recovers a stale remote managed TTK lock before retrying acquisition', async () => {
+    writeInput('ttk_kernel_remote_lock_stale.csv');
+    let lockAttempts = 0;
+
+    executor.execute.mockImplementation(async (command: string) => {
+      if (command.includes('__MSTT_REMOTE_ENV_READY__')) {
+        return commandResult(0, '__MSTT_REMOTE_ENV_READY__\n');
+      }
+
+      if (command.includes('__MSTT_REMOTE_PYTHON_VERSION__')) {
+        return commandResult(0, '__MSTT_REMOTE_HOME__=/home/remote-user\n__MSTT_REMOTE_PYTHON_VERSION__=3.11\n');
+      }
+
+      if (command.includes('import os, ttk') || command.includes('__MSTT_REMOTE_TTK_ROOT__')) {
+        return commandResult(7);
+      }
+
+      if (command.includes('.lock/owner.json') && !command.includes('grep -Fq')) {
+        lockAttempts += 1;
+
+        return commandResult(0, `${lockAttempts === 1 ? REMOTE_TTK_LOCK_STALE_RECOVERED_SENTINEL : REMOTE_TTK_LOCK_ACQUIRED_SENTINEL}\n`);
+      }
+
+      if (command.includes('fetch --depth=1 origin')) {
+        return commandResult(7, '', 'stop after stale lock recovery\n');
+      }
+
+      return commandResult();
+    });
+
+    await expect(createService({ shouldRunRemotely: async () => true })
+      .startStTest({
+        workspaceRoot,
+        operatorName: 'add custom',
+        operatorPath,
+        modes: ['kernel'],
+      }))
+      .rejects.toThrow(/downloading the pinned ops-test-kit revision/);
+
+    expect(lockAttempts)
+      .toBe(2);
+    expect(outputLines.join('\n'))
+      .toContain('Recovered a stale remote managed TTK cache lock');
+  });
+
+  it('reports a clear timeout while waiting for the remote managed TTK lock', async () => {
+    writeInput('ttk_kernel_remote_lock_timeout.csv');
+
+    executor.execute.mockImplementation(async (command: string) => {
+      if (command.includes('__MSTT_REMOTE_ENV_READY__')) {
+        return commandResult(0, '__MSTT_REMOTE_ENV_READY__\n');
+      }
+
+      if (command.includes('__MSTT_REMOTE_PYTHON_VERSION__')) {
+        return commandResult(0, '__MSTT_REMOTE_HOME__=/home/remote-user\n__MSTT_REMOTE_PYTHON_VERSION__=3.11\n');
+      }
+
+      if (command.includes('import os, ttk') || command.includes('__MSTT_REMOTE_TTK_ROOT__')) {
+        return commandResult(7);
+      }
+
+      if (command.includes('.lock/owner.json') && !command.includes('grep -Fq')) {
+        return commandResult(0, `${REMOTE_TTK_LOCK_HELD_SENTINEL}\n`);
+      }
+
+      return commandResult();
+    });
+
+    await expect(createService({
+      now: jest.fn()
+        .mockReturnValueOnce(0)
+        .mockReturnValue(20 * 60_000),
+      shouldRunRemotely: async () => true,
+    })
+      .startStTest({
+        workspaceRoot,
+        operatorName: 'add custom',
+        operatorPath,
+        modes: ['kernel'],
+      }))
+      .rejects.toThrow('Timed out waiting for remote managed TTK cache lock');
   });
 
   it('fails preflight for any selected mode with no CSV before provisioning or execution', async () => {

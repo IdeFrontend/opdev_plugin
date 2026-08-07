@@ -216,6 +216,8 @@ describe('ST test path helpers', () => {
     expect(first).not.toBe(second);
     expect(path.relative(root, first))
       .toMatch(/^\.vscode[\\/]st-results[\\/]/);
+    expect(path.relative(root, first))
+      .not.toMatch(/^\.vscode[\\/]st-results[\\/][^\\/]+[\\/]2026/);
     expect(first).not.toContain('unsafe operator');
     expect(first).not.toContain('..');
     expect(path.basename(first))

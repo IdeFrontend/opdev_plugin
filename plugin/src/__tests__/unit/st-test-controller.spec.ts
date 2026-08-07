@@ -18,11 +18,13 @@ describe('StTestController', () => {
   let readWorkspaceSetting: jest.Mock;
   let persistWorkspaceSettings: jest.Mock;
   let dispatch: jest.Mock;
+  let closeOptionsPanel: jest.Mock;
 
   beforeEach(() => {
     readWorkspaceSetting = jest.fn();
     persistWorkspaceSettings = jest.fn(async () => true);
     dispatch = jest.fn(async () => true);
+    closeOptionsPanel = jest.fn();
   });
 
   function createController(): StTestController {
@@ -32,6 +34,7 @@ describe('StTestController', () => {
       persistWorkspaceSettings,
       createContextToken: (value) => `${value.workspaceRoot}:${value.operatorPath}`,
       dispatch,
+      closeOptionsPanel,
     });
   }
 
@@ -83,6 +86,31 @@ describe('StTestController', () => {
       });
   });
 
+  it('rejects opening the options panel when the selected operator has no ST CSV files', async () => {
+    const controller = new StTestController({
+      resolveContext: async () => ({
+        ...context,
+        availableModes: [],
+      }),
+      readWorkspaceSetting,
+      persistWorkspaceSettings,
+      createContextToken: (value) => `${value.workspaceRoot}:${value.operatorPath}`,
+      dispatch,
+      closeOptionsPanel,
+    });
+
+    await expect(controller.ensureOptionsAvailable())
+      .rejects.toThrow();
+    expect(readWorkspaceSetting).not.toHaveBeenCalled();
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it('allows opening the options panel when at least one ST CSV mode is available', async () => {
+    await expect(createController()
+      .ensureOptionsAvailable())
+      .resolves.toBeUndefined();
+  });
+
   it('persists all available mode arguments before dispatching canonical modes', async () => {
     await createController()
       .runOptions({
@@ -130,6 +158,8 @@ describe('StTestController', () => {
           e2e: [],
         },
       });
+    expect(closeOptionsPanel)
+      .toHaveBeenCalledTimes(1);
   });
 
   it.each([
@@ -192,5 +222,6 @@ describe('StTestController', () => {
       })).rejects.toThrow();
     expect(persistWorkspaceSettings)
       .toHaveBeenCalled();
+    expect(closeOptionsPanel).not.toHaveBeenCalled();
   });
 });

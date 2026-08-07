@@ -28,7 +28,11 @@ import { routes } from './routes';
 import { apis } from './api-routes';
 import { homeMethods } from './controller/home-controller';
 import { taskMethods } from './controller/task-controller';
-import { registerStTestControllerContext } from './controller/st-test-controller';
+import {
+  registerStTestControllerContext,
+  registerStTestOptionsPanelCloser,
+  stTestMethods,
+} from './controller/st-test-controller';
 import { performanceDataMethods } from './controller/performance-controller';
 import { PermanentStorage } from './class/permanent-storage';
 import { ExtensionConfig } from './core/extension-config';
@@ -39,7 +43,10 @@ import { sanitizerService } from './service/sanitizer-service';
 import { buildService } from './service/build-service';
 import { msAgentBridgeService } from './service/ms-agent-bridge.service';
 import { getDumpTensorPanelViewProvider } from './class/dump-tensor-panel-view';
-import { appendLog } from './helpers/output-channel';
+import {
+  appendLog,
+  getOperatorToolOutputChannel,
+} from './helpers/output-channel';
 import { promptReloadWindow } from './helpers/reload-window-prompt';
 import { insightService } from './service/insight-service';
 
@@ -48,7 +55,6 @@ import { startPostActivateBootstrap } from './helpers/post-activate-bootstrap';
 import { registerOperatorPlugins } from './domain/plugins';
 import { startNpuHardwareProbe } from './domain/utils/npu-hardware-probe';
 import { OperatorPluginRegistry } from './domain/plugins/operator-plugin.registry';
-import { OperatorProjectType } from './domain/models/operator-project-type';
 import { getProjectByPath } from './domain/models/project-model';
 import { OperatorProjectDetector } from './domain/services/operator-project-detector';
 import {
@@ -160,6 +166,7 @@ import {
   COMMAND_ST_TEST_HISTORY_OPEN,
 } from './constants';
 import { resolveFocusOpsOperateCommand } from '@plugin/helpers/focus-ops-operate';
+import { shouldShowStTestHistoryView } from '@plugin/helpers/st-test-action';
 import {
   EXTENSION_ID,
   CONTEXT_PREFIX,
@@ -174,6 +181,7 @@ import {
   settingsKey,
   contextKey,
 } from '@shared/flavor';
+import { isStandardCustomProjectType } from '@shared/project-type-view-id';
 import { logGlobalEnvSnapshot } from './domain/utils/global-env-snapshot';
 import { FolderContextMenuService } from './service/folder-context-menu-service';
 import {
@@ -467,7 +475,7 @@ export async function activate(context: vscode.ExtensionContext) {
               }
             }
 
-            return workspaceProjectType === OperatorProjectType.STANDARD_CUSTOM
+            return isStandardCustomProjectType(workspaceProjectType)
               && fs.existsSync(getDevtoolConfigPath(root))
               ? {
                 root,
@@ -479,7 +487,18 @@ export async function activate(context: vscode.ExtensionContext) {
         stTestHistoryWorkspaces = detectedHistoryWorkspaces
           .filter((workspace): workspace is { root: string;
             name: string } => workspace !== undefined);
-        const showStTestHistory = stTestHistoryWorkspaces.length > 0;
+
+        const {
+          showOperatorSearch, showOperatorProjects,
+        } = await operateTreeProvider.refreshState(effectiveHasDevtoolConfig);
+
+        // Keep both tree views in sync.
+        await operatorProjectsTreeProvider.refreshState(effectiveHasDevtoolConfig);
+        const showStTestHistory = shouldShowStTestHistoryView({
+          hasOperateTree: effectiveHasDevtoolConfig,
+          isStandardCustomContext: operateTreeProvider.isStandardCustomContext(),
+          historyWorkspaceCount: stTestHistoryWorkspaces.length,
+        });
 
         await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.showStTestHistory`, showStTestHistory);
 
@@ -490,12 +509,6 @@ export async function activate(context: vscode.ExtensionContext) {
           stTestRunHistoryTreeProvider.clear();
         }
 
-        const {
-          showOperatorSearch, showOperatorProjects,
-        } = await operateTreeProvider.refreshState(effectiveHasDevtoolConfig);
-
-        // Keep both tree views in sync.
-        await operatorProjectsTreeProvider.refreshState(effectiveHasDevtoolConfig);
         await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.showOperatorSearch`, showOperatorSearch);
         await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.showOperatorProjects`, showOperatorProjects);
         await vscode.commands.executeCommand(
@@ -894,14 +907,25 @@ export async function activate(context: vscode.ExtensionContext) {
   });
   const stTestHistoryTreeView = vscode.window.createTreeView(TREE_VIEW_ST_TEST_HISTORY, {
     treeDataProvider: stTestRunHistoryTreeProvider,
-    showCollapseAll: true,
+    showCollapseAll: false,
   });
 
   stTestRunHistoryTreeProvider.setTreeView(stTestHistoryTreeView);
   const openStTestHistoryCommand = vscode.commands.registerCommand(
     COMMAND_ST_TEST_HISTORY_OPEN,
     async (recordKey: unknown) => {
+      const outputChannel = getOperatorToolOutputChannel('test', { clear: false });
+      const writeHistoryLog = (message: string): void => {
+        const timestamp = new Date()
+          .toISOString();
+
+        outputChannel.appendLine(`${timestamp} ${message}`);
+      };
+
+      writeHistoryLog(`[ST history] Open requested: recordKeyType=${typeof recordKey}, recordKey=${String(recordKey)}`);
+
       if (typeof recordKey !== 'string') {
+        writeHistoryLog('[ST history] Record lookup skipped: command argument is not a string.');
         await vscode.window.showWarningMessage(t('stTest.results.historyUnavailable'));
 
         return;
@@ -910,15 +934,19 @@ export async function activate(context: vscode.ExtensionContext) {
       const entry = stTestRunHistoryTreeProvider.getRecord(recordKey);
 
       if (!entry) {
+        writeHistoryLog('[ST history] Record lookup failed: the key is absent from the current history tree provider.');
         await vscode.window.showWarningMessage(t('stTest.results.historyUnavailable'));
 
         return;
       }
 
+      writeHistoryLog(`[ST history] Record resolved: workspaceRoot=${entry.workspaceRoot}, runId=${entry.record.runId}, runDirectory=${entry.record.runDirectory}`);
+
       try {
-        await StTestResultsPanel.createOrShowHistorical(context, entry);
+        await StTestResultsPanel.createOrShowHistorical(context, entry, writeHistoryLog);
       }
       catch (error) {
+        writeHistoryLog(`[ST history] Open failed: ${error instanceof Error ? `${error.name}: ${error.message}` : String(error)}`);
         console.error('[ST test] Could not open a historical result report:', error);
         await vscode.window.showWarningMessage(t('stTest.results.historyUnavailable'));
       }
@@ -1199,6 +1227,9 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
   const stTestOptionsProvider = new WebviewProvider(context, apiServer);
+
+  registerStTestOptionsPanelCloser(() => stTestOptionsProvider.dispose());
+  context.subscriptions.push({ dispose: () => registerStTestOptionsPanelCloser(undefined) });
   const sidebarStTestCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_ST_TEST,
     async () => {
@@ -1212,6 +1243,17 @@ export async function activate(context: vscode.ExtensionContext) {
 
       if (selectedOperators.length !== 1) {
         vscode.window.showInformationMessage(t('stTest.oneOperatorRequired'));
+
+        return;
+      }
+
+      try {
+        await stTestMethods.ensureOptionsAvailable();
+      }
+      catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+
+        vscode.window.showInformationMessage(message);
 
         return;
       }

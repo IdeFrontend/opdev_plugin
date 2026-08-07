@@ -11,6 +11,7 @@ import {
   createStTestRunHistoryRecord,
   loadStTestRunHistory,
   loadStTestRunHistoryFromWorkspace,
+  MAX_ST_TEST_HISTORY_RUNS,
   persistStTestRunHistoryRecord,
   ST_TEST_RUN_MANIFEST_FILE,
 } from '@plugin/domain/services/st-test-run-history';
@@ -23,7 +24,7 @@ describe('ST test run history', () => {
 
   beforeEach(() => {
     workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mstt-st-history-'));
-    historyDirectory = path.join(workspaceRoot, '.vscode', 'st-results', 'add');
+    historyDirectory = path.join(workspaceRoot, '.vscode', 'st-results');
     fs.mkdirSync(historyDirectory, { recursive: true });
   });
 
@@ -39,8 +40,11 @@ describe('ST test run history', () => {
     completedAt: string,
     status: 'PASS' | 'FAIL' = 'PASS',
     operatorName: string = 'add',
+    layout: 'current' | 'legacy' = 'current',
   ) {
-    const runHistoryDirectory = path.join(workspaceRoot, '.vscode', 'st-results', operatorName);
+    const runHistoryDirectory = layout === 'legacy'
+      ? path.join(workspaceRoot, '.vscode', 'st-results', operatorName)
+      : path.join(workspaceRoot, '.vscode', 'st-results');
     const runOperatorPath = path.join(workspaceRoot, 'operators', operatorName);
     const runDirectory = path.join(runHistoryDirectory, runId);
     const inputCsvPath = path.join(runOperatorPath, 'tests', 'st', 'arch35', `ttk_kernel_${operatorName}.csv`);
@@ -108,7 +112,7 @@ describe('ST test run history', () => {
     expect(refreshedReport.files[0].testFile)
       .toBe('tests/st/arch35/ttk_kernel_add.csv');
     expect(refreshedReport.files[0].resultFile)
-      .toBe('.vscode/st-results/add/2026-07-21T10-00-00-run/kernel/001-ttk_kernel_add-result.csv');
+      .toBe('.vscode/st-results/2026-07-21T10-00-00-run/kernel/001-ttk_kernel_add-result.csv');
   });
 
   it('discovers validated histories for every operator in a workspace', () => {
@@ -135,6 +139,75 @@ describe('ST test run history', () => {
       .toBe(true);
   });
 
+  it('continues to discover legacy operator-grouped histories', () => {
+    createRun('legacy-add-run', '2026-07-20T10:00:00.000Z', 'PASS', 'add', 'legacy');
+    createRun('legacy-multiply-run', '2026-07-21T10:00:00.000Z', 'FAIL', 'multiply', 'legacy');
+
+    const history = loadStTestRunHistoryFromWorkspace(workspaceRoot);
+
+    expect(history.map(({ record }) => ({
+      operatorName: record.operatorName,
+      runId: record.runId,
+    })))
+      .toEqual([
+        {
+          operatorName: 'multiply',
+          runId: 'legacy-multiply-run',
+        },
+        {
+          operatorName: 'add',
+          runId: 'legacy-add-run',
+        },
+      ]);
+  });
+
+  it('does not duplicate legacy runs already discovered by the flat scan', () => {
+    createRun('duplicate-run', '2026-07-22T10:00:00.000Z');
+    createRun('duplicate-run', '2026-07-21T10:00:00.000Z', 'PASS', 'add', 'legacy');
+    createRun('legacy-only-run', '2026-07-20T10:00:00.000Z', 'PASS', 'add', 'legacy');
+
+    const history = loadStTestRunHistoryFromWorkspace(workspaceRoot);
+
+    expect(history.map(({ record }) => record.runId))
+      .toEqual([
+        'duplicate-run',
+        'legacy-only-run',
+      ]);
+  });
+
+  it('loads only the newest 50 runs after flat and legacy histories are merged', () => {
+    for (let index = 0; index < MAX_ST_TEST_HISTORY_RUNS + 5; index += 1) {
+      createRun(
+        `flat-run-${index}`,
+        new Date(Date.UTC(2026, 6, 20, 0, index))
+          .toISOString(),
+      );
+    }
+
+    createRun(
+      'legacy-newest-run',
+      new Date(Date.UTC(2026, 6, 21, 0, 0))
+        .toISOString(),
+      'PASS',
+      'add',
+      'legacy',
+    );
+
+    const workspaceHistory = loadStTestRunHistoryFromWorkspace(workspaceRoot);
+    const operatorHistory = loadStTestRunHistory(historyDirectory, 'add');
+
+    expect(workspaceHistory)
+      .toHaveLength(MAX_ST_TEST_HISTORY_RUNS);
+    expect(operatorHistory)
+      .toHaveLength(MAX_ST_TEST_HISTORY_RUNS);
+    expect(workspaceHistory[0].record.runId)
+      .toBe('legacy-newest-run');
+    expect(workspaceHistory.map(({ record }) => record.runId))
+      .not.toContain('flat-run-0');
+    expect(operatorHistory.map((record) => record.runId))
+      .not.toContain('flat-run-0');
+  });
+
   it('does not overwrite invalid manifests or load paths that escape a run directory', () => {
     const runId = '2026-07-21T11-00-00-run';
     const created = createRun(runId, '2026-07-21T11:00:00.000Z');
@@ -156,7 +229,7 @@ describe('ST test run history', () => {
       .toThrow('Refusing to overwrite an invalid ST test history manifest');
   });
 
-  it('does not let invalid candidate directories consume the 50-run limit', () => {
+  it('ignores invalid candidate directories while loading valid runs', () => {
     createRun('valid-run', '2026-07-21T11:00:00.000Z');
 
     for (let index = 0; index < 60; index += 1) {

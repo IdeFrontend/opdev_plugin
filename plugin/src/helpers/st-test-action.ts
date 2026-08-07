@@ -5,6 +5,18 @@ export function shouldShowStTestAction(params: {
   return params.canBuild && params.isStandardCustom;
 }
 
+export function shouldShowStTestHistoryView(params: {
+  hasOperateTree: boolean;
+  isStandardCustomContext: boolean;
+  historyWorkspaceCount: number;
+}): boolean {
+  return params.hasOperateTree
+    && (
+      params.isStandardCustomContext
+      || params.historyWorkspaceCount > 0
+    );
+}
+
 export type StTestSelectionState = 'ready' | 'none' | 'multiple';
 
 export function getStTestSelectionState(selectedCount: number): StTestSelectionState {

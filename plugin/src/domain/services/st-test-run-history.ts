@@ -9,6 +9,7 @@ import {
 import {
   isPathOutside,
   resolveStTestResultsRootDirectory,
+  ST_TEST_RESULTS_DIR_NAME,
   toSafeStTestPathSegment,
 } from '@plugin/domain/utils/st-test-paths';
 import type {
@@ -326,8 +327,16 @@ function readRecord(
       expectedOperatorName,
     );
 
-    if (!manifest
-      || path.basename(path.dirname(runDirectory)) !== toSafeStTestPathSegment(manifest.operatorName)) {
+    if (!manifest) {
+      return undefined;
+    }
+
+    const parentName = path.basename(path.dirname(runDirectory));
+
+    // In the flat layout, the parent is the shared results root. Legacy records
+    // still use an operator-name parent, so both shapes remain readable.
+    if (parentName !== ST_TEST_RESULTS_DIR_NAME
+      && parentName !== toSafeStTestPathSegment(manifest.operatorName)) {
       return undefined;
     }
 
@@ -458,6 +467,7 @@ export function persistStTestRunHistoryRecord(record: StTestRunHistoryRecord): S
 function loadStTestRunHistoryDirectory(
   historyDirectory: string,
   operatorName?: string,
+  skipEntryNames: ReadonlySet<string> = new Set(),
 ): StTestRunHistoryRecord[] {
   let entries: fs.Dirent[];
 
@@ -474,26 +484,22 @@ function loadStTestRunHistoryDirectory(
 
   return entries
     .filter((entry) => entry.isDirectory())
+    .filter((entry) => !skipEntryNames.has(entry.name))
     .map((entry) => readRecord(path.join(historyDirectory, entry.name), operatorName))
     .filter((record): record is StTestRunHistoryRecord => record !== undefined)
     .sort((left, right) => Date.parse(right.completedAt) - Date.parse(left.completedAt)
-      || right.runId.localeCompare(left.runId, 'en'))
-    .slice(0, MAX_ST_TEST_HISTORY_RUNS);
+      || right.runId.localeCompare(left.runId, 'en'));
 }
 
-export function loadStTestRunHistory(
-  historyDirectory: string,
-  operatorName: string,
+function loadLegacyStTestRunHistoryDirectories(
+  resultsRoot: string,
+  operatorName?: string,
+  skipEntryNames: ReadonlySet<string> = new Set(),
 ): StTestRunHistoryRecord[] {
-  return loadStTestRunHistoryDirectory(historyDirectory, operatorName);
-}
-
-export function loadStTestRunHistoryFromWorkspace(workspaceRoot: string): StTestWorkspaceRunHistoryRecord[] {
-  const resultsRoot = resolveStTestResultsRootDirectory(workspaceRoot);
-  let operatorEntries: fs.Dirent[];
+  let entries: fs.Dirent[];
 
   try {
-    operatorEntries = fs.readdirSync(resultsRoot, { withFileTypes: true });
+    entries = fs.readdirSync(resultsRoot, { withFileTypes: true });
   }
   catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
@@ -503,22 +509,57 @@ export function loadStTestRunHistoryFromWorkspace(workspaceRoot: string): StTest
     throw error;
   }
 
-  return operatorEntries
+  return entries
     .filter((entry) => entry.isDirectory())
+    .filter((entry) => !skipEntryNames.has(entry.name))
     .flatMap((entry) => {
       try {
-        return loadStTestRunHistoryDirectory(path.join(resultsRoot, entry.name))
-          .map((record) => ({
-            workspaceRoot,
-            record,
-          }));
+        return loadStTestRunHistoryDirectory(path.join(resultsRoot, entry.name), operatorName, skipEntryNames);
       }
       catch {
         return [];
       }
-    })
+    });
+}
+
+/**
+ * Legacy/test helper for a single operator history directory. Production history
+ * loading uses loadStTestRunHistoryFromWorkspace so flat and legacy layouts merge
+ * through the same workspace-root path.
+ */
+export function loadStTestRunHistory(
+  historyDirectory: string,
+  operatorName: string,
+): StTestRunHistoryRecord[] {
+  const flatRecords = loadStTestRunHistoryDirectory(historyDirectory, operatorName);
+  const flatEntryNames = new Set(flatRecords.map((record) => path.basename(record.runDirectory)));
+
+  return [
+    ...flatRecords,
+    ...loadLegacyStTestRunHistoryDirectories(historyDirectory, operatorName, flatEntryNames),
+  ]
+    .sort((left, right) => Date.parse(right.completedAt) - Date.parse(left.completedAt)
+      || right.runId.localeCompare(left.runId, 'en'))
+    .slice(0, MAX_ST_TEST_HISTORY_RUNS);
+}
+
+export function loadStTestRunHistoryFromWorkspace(workspaceRoot: string): StTestWorkspaceRunHistoryRecord[] {
+  const resultsRoot = resolveStTestResultsRootDirectory(workspaceRoot);
+  const flatRecords = loadStTestRunHistoryDirectory(resultsRoot);
+  const flatEntryNames = new Set(flatRecords.map((record) => path.basename(record.runDirectory)));
+  const records = [
+    ...flatRecords,
+    ...loadLegacyStTestRunHistoryDirectories(resultsRoot, undefined, flatEntryNames),
+  ];
+
+  return records
+    .map((record) => ({
+      workspaceRoot,
+      record,
+    }))
     .sort((left, right) => Date.parse(right.record.completedAt) - Date.parse(left.record.completedAt)
-      || right.record.runId.localeCompare(left.record.runId, 'en'));
+      || right.record.runId.localeCompare(left.record.runId, 'en'))
+    .slice(0, MAX_ST_TEST_HISTORY_RUNS);
 }
 
 export function buildHistoricalStTestReport(record: StTestRunHistoryRecord): StTestResultReportDto {

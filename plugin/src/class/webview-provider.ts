@@ -322,8 +322,10 @@ export class WebviewProvider {
    */
   public dispose(): void {
     if (this.panel) {
-      this.panel.dispose();
+      const panel = this.panel;
+
       this.panel = undefined;
+      panel.dispose();
     }
 
     if (this.pluginSidebarDisposable) {

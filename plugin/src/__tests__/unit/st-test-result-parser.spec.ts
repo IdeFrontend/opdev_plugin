@@ -23,7 +23,7 @@ describe('ST test result parser', () => {
   beforeEach(() => {
     workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mstt-st-results-'));
     operatorPath = path.join(workspaceRoot, 'operators', 'add');
-    runDirectory = path.join(workspaceRoot, '.vscode', 'st-results', 'add', 'run-id');
+    runDirectory = path.join(workspaceRoot, '.vscode', 'st-results', 'run-id');
     fs.mkdirSync(operatorPath, { recursive: true });
     fs.mkdirSync(runDirectory, { recursive: true });
   });
@@ -130,9 +130,9 @@ describe('ST test result parser', () => {
         outcome: 'pass',
       });
     expect(report.runDirectory)
-      .toBe('.vscode/st-results/add/run-id');
+      .toBe('.vscode/st-results/run-id');
     expect(report.files[0].resultFile)
-      .toBe('.vscode/st-results/add/run-id/kernel/001-result.csv');
+      .toBe('.vscode/st-results/run-id/kernel/001-result.csv');
     expect(JSON.stringify(report)).not.toContain(workspaceRoot);
   });
 

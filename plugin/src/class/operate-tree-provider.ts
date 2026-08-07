@@ -1681,7 +1681,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
           'stTest',
           stTestEnabled ? this.getCustomProductIcon('beaker') : disabledIcon,
         ),
-        undefined,
+        '- NPU',
         undefined,
         undefined,
         stTestTooltip,

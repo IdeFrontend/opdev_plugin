@@ -6,7 +6,7 @@ const mockWorkspaceFolders: Array<{
 jest.mock('i18next', () => ({
   t: (key: string, values?: Record<string, number>) => {
     if (key === 'stTest.results.historySummary') {
-      return `${values?.total} total · ${values?.failed} failed · ${values?.invalid} invalid`;
+      return `${values?.total} total - ${values?.failed} failed - ${values?.invalid} invalid`;
     }
 
     return key;
@@ -62,6 +62,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 
 import { StTestRunHistoryTreeProvider } from '@plugin/class/st-test-run-history-tree-provider';
+import { MAX_ST_TEST_HISTORY_RUNS } from '@plugin/domain/services/st-test-run-history';
 import type {
   StTestRunHistoryRecord,
   StTestWorkspaceRunHistoryRecord,
@@ -80,8 +81,8 @@ function createRecord(
       runId,
       operatorName,
       completedAt,
-      runDirectory: path.join(workspaceRoot, '.vscode', 'st-results', operatorName, runId),
-      runDirectoryLabel: `.vscode/st-results/${operatorName}/${runId}`,
+      runDirectory: path.join(workspaceRoot, '.vscode', 'st-results', runId),
+      runDirectoryLabel: `.vscode/st-results/${runId}`,
       outcome,
       summary: {
         total: 2,
@@ -101,7 +102,7 @@ describe('StTestRunHistoryTreeProvider', () => {
   const workspaceA = path.resolve('workspace-a');
   const workspaceB = path.resolve('workspace-b');
 
-  it('groups runs by workspace and operator, then orders each operator newest-first', () => {
+  it('lists runs directly, ordered newest-first across operators and workspaces', () => {
     const entries = [
       createRecord(workspaceA, 'add', 'old', '2026-07-20T10:00:00.000Z'),
       createRecord(workspaceA, 'add', 'new', '2026-07-21T10:00:00.000Z', 'failed'),
@@ -125,41 +126,31 @@ describe('StTestRunHistoryTreeProvider', () => {
     provider.refresh();
     const roots = provider.getChildren();
 
-    expect(roots.map((item) => [
-      item.label,
-      item.description,
-    ]))
-      .toEqual([
-        [
-          'add',
-          'workspace-a',
-        ],
-        [
-          'add',
-          'workspace-b',
-        ],
-        [
-          'multiply',
-          'workspace-a',
-        ],
-      ]);
-
-    const addRuns = provider.getChildren(roots[0]);
-
-    expect(addRuns.map((item) => provider.getRecord(item.command?.arguments?.[0] as string)?.record.runId))
+    expect(roots.map((item) => provider.getRecord(item.command?.arguments?.[0] as string)?.record.runId))
       .toEqual([
         'new',
         'old',
+        'mul',
+        'other-workspace',
       ]);
-    const selectedKey = addRuns[0].command?.arguments?.[0] as string;
+    expect(roots.map((item) => item.description))
+      .toEqual([
+        'add - workspace-a - stTest.results.outcome.failed - 2 total - 1 failed - 0 invalid',
+        'add - workspace-a - stTest.results.outcome.passed - 2 total - 0 failed - 0 invalid',
+        'multiply - workspace-a - stTest.results.outcome.passed - 2 total - 0 failed - 0 invalid',
+        'add - workspace-b - stTest.results.outcome.passed - 2 total - 0 failed - 0 invalid',
+      ]);
+    const selectedKey = roots[0].command?.arguments?.[0] as string;
 
     expect(selectedKey).not.toContain(workspaceA);
     expect(selectedKey).not.toContain('new');
-    expect((addRuns[0].iconPath as vscode.ThemeIcon).id)
+    expect((roots[0].iconPath as vscode.ThemeIcon).id)
       .toBe('error');
+    expect(provider.getChildren(roots[0]))
+      .toEqual([]);
   });
 
-  it('keeps the current in-memory run, expands its operator, and reveals it natively', async () => {
+  it('keeps the current in-memory run and reveals it natively', async () => {
     const persisted = createRecord(workspaceA, 'add', 'persisted', '2026-07-20T10:00:00.000Z');
     const current = createRecord(workspaceA, 'add', 'current', '2026-07-21T10:00:00.000Z');
     const reveal = jest.fn(async () => undefined);
@@ -177,11 +168,8 @@ describe('StTestRunHistoryTreeProvider', () => {
     provider.setCurrentRun(workspaceA, current.record);
     await Promise.resolve();
 
-    const operator = provider.getChildren()[0];
-    const runs = provider.getChildren(operator);
+    const runs = provider.getChildren();
 
-    expect(operator.collapsibleState)
-      .toBe(vscode.TreeItemCollapsibleState.Expanded);
     expect(runs.map((item) => provider.getRecord(item.command?.arguments?.[0] as string)?.record.runId))
       .toEqual([
         'current',
@@ -217,12 +205,48 @@ describe('StTestRunHistoryTreeProvider', () => {
     workspaces = [];
     provider.refresh();
 
-    expect(provider.getChildren())
-      .toEqual([]);
+    expect(provider.getChildren()
+      .map((item) => [
+        item.label,
+        item.contextValue,
+      ]))
+      .toEqual([
+        [
+          'stTest.results.noHistory',
+          'stTestHistoryEmpty',
+        ],
+      ]);
   });
 
-  it('keeps at most 50 newest runs when an in-memory run is merged', () => {
-    const persisted = Array.from({ length: 50 }, (_, index) => createRecord(
+  it('returns an empty state node when no ST history exists', () => {
+    const provider = new StTestRunHistoryTreeProvider({
+      getWorkspaces: () => [
+        {
+          root: workspaceA,
+          name: 'workspace-a',
+        },
+      ],
+      loadWorkspaceHistory: () => [],
+    });
+
+    provider.refresh();
+
+    const roots = provider.getChildren();
+
+    expect(roots)
+      .toHaveLength(1);
+    expect(roots[0].label)
+      .toBe('stTest.results.noHistory');
+    expect(roots[0].contextValue)
+      .toBe('stTestHistoryEmpty');
+    expect(roots[0].collapsibleState)
+      .toBe(vscode.TreeItemCollapsibleState.None);
+    expect(roots[0].iconPath)
+      .toBeUndefined();
+  });
+
+  it('keeps only the newest 50 runs when an in-memory run is merged', () => {
+    const persisted = Array.from({ length: MAX_ST_TEST_HISTORY_RUNS }, (_, index) => createRecord(
       workspaceA,
       'add',
       `persisted-${index}`,
@@ -244,8 +268,14 @@ describe('StTestRunHistoryTreeProvider', () => {
       createRecord(workspaceA, 'add', 'current', '2026-07-21T10:00:00.000Z').record,
     );
 
-    expect(provider.getChildren(provider.getChildren()[0]))
-      .toHaveLength(50);
+    const runs = provider.getChildren();
+
+    expect(runs)
+      .toHaveLength(MAX_ST_TEST_HISTORY_RUNS);
+    expect(runs.map((item) => provider.getRecord(item.command?.arguments?.[0] as string)?.record.runId)[0])
+      .toBe('current');
+    expect(runs.map((item) => provider.getRecord(item.command?.arguments?.[0] as string)?.record.runId))
+      .not.toContain('persisted-0');
   });
 
   it('uses workspace paths to distinguish duplicate workspace names', () => {
@@ -275,8 +305,8 @@ describe('StTestRunHistoryTreeProvider', () => {
     expect(provider.getChildren()
       .map((item) => item.description))
       .toEqual([
-        workspaceA,
-        workspaceB,
+        `add - ${workspaceB} - stTest.results.outcome.passed - 2 total - 0 failed - 0 invalid`,
+        `add - ${workspaceA} - stTest.results.outcome.passed - 2 total - 0 failed - 0 invalid`,
       ]);
   });
 });

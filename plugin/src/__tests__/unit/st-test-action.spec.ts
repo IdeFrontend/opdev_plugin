@@ -1,6 +1,7 @@
 import {
   getStTestSelectionState,
   shouldShowStTestAction,
+  shouldShowStTestHistoryView,
 } from '@plugin/helpers/st-test-action';
 
 describe('shouldShowStTestAction', () => {
@@ -55,4 +56,43 @@ describe('getStTestSelectionState', () => {
     expect(getStTestSelectionState(selectedCount))
       .toBe(expected);
   });
+});
+
+describe('shouldShowStTestHistoryView', () => {
+  it.each([
+    [
+      true,
+      true,
+      true,
+      0,
+    ],
+    [
+      true,
+      true,
+      false,
+      1,
+    ],
+    [
+      false,
+      true,
+      false,
+      0,
+    ],
+    [
+      false,
+      false,
+      true,
+      0,
+    ],
+  ])(
+    'returns %s for hasOperateTree=%s isStandardCustomContext=%s historyWorkspaceCount=%i',
+    (expected, hasOperateTree, isStandardCustomContext, historyWorkspaceCount) => {
+      expect(shouldShowStTestHistoryView({
+        hasOperateTree,
+        isStandardCustomContext,
+        historyWorkspaceCount,
+      }))
+        .toBe(expected);
+    },
+  );
 });

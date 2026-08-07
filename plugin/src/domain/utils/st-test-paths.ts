@@ -11,6 +11,8 @@ import type { StTestMode } from '@shared/st-test-results';
 
 export const ST_TEST_ARCH_DIR = 'arch35';
 
+export const ST_TEST_RESULTS_DIR_NAME = 'st-results';
+
 const MAX_ST_TEST_DIRECTORY_SEGMENT_LENGTH = 80;
 const MAX_ST_TEST_RESULT_FILE_NAME_LENGTH = 120;
 const HASH_SUFFIX_LENGTH = 12;
@@ -299,7 +301,7 @@ export function createStTestRunId(
 }
 
 export function resolveStTestResultsRootDirectory(workspaceRoot: string): string {
-  return joinIdeConfigPath(workspaceRoot, 'st-results');
+  return joinIdeConfigPath(workspaceRoot, ST_TEST_RESULTS_DIR_NAME);
 }
 
 export function resolveStTestOperatorHistoryDirectory(
@@ -318,7 +320,7 @@ export function resolveStTestRunDirectory(params: {
   runId: string;
 }): string {
   return path.join(
-    resolveStTestOperatorHistoryDirectory(params.workspaceRoot, params.operatorName),
+    resolveStTestResultsRootDirectory(params.workspaceRoot),
     toSafeStTestPathSegment(params.runId),
   );
 }

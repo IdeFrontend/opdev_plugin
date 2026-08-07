@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 import * as path from 'path';
 import { t } from 'i18next';
 import * as vscode from 'vscode';
@@ -36,6 +37,8 @@ type AllowListedArtifact = {
   runDirectory: string;
 };
 
+type StTestHistoryLogger = (message: string)=> void;
+
 function normalizeContentLanguage(language: string): 'en' | 'zh-cn' {
   return language.trim()
     .toLowerCase()
@@ -68,6 +71,8 @@ export class StTestResultsPanel {
 
   private readonly artifactAllowList = new Map<string, AllowListedArtifact>();
 
+  private readonly webview: vscode.Webview;
+
   private themeDisposable: vscode.Disposable | undefined;
 
   private themeMessageDisposable: vscode.Disposable | undefined;
@@ -82,16 +87,17 @@ export class StTestResultsPanel {
     private readonly panel: vscode.WebviewPanel,
     private readonly context: vscode.ExtensionContext,
   ) {
+    this.webview = panel.webview;
     this.connector.receive((message, sourceWebview) => {
-      if (sourceWebview !== this.panel.webview) {
+      if (sourceWebview !== this.webview) {
         return;
       }
 
       void this.handleWebviewAction(message);
     });
-    this.connector.addWebview(this.panel.webview);
-    this.themeMessageDisposable = this.panel.webview.onDidReceiveMessage((message: unknown) => {
-      handleThemeRequest(this.panel.webview, message);
+    this.connector.addWebview(this.webview);
+    this.themeMessageDisposable = this.webview.onDidReceiveMessage((message: unknown) => {
+      handleThemeRequest(this.webview, message);
     });
     this.panelDisposeDisposable = this.panel.onDidDispose(() => {
       this.disposeResources();
@@ -104,8 +110,13 @@ export class StTestResultsPanel {
     artifacts: readonly CompletedStTestArtifact[],
     runDirectory: string,
   ): Promise<void> {
-    if (this.currentPanel) {
-      const instance = this.currentPanel;
+    const currentPanel = this.currentPanel;
+
+    if (currentPanel?.disposed) {
+      this.currentPanel = undefined;
+    }
+    else if (currentPanel) {
+      const instance = currentPanel;
 
       instance.replaceReport(report, artifacts, runDirectory);
       instance.panel.reveal(vscode.ViewColumn.Active);
@@ -185,27 +196,97 @@ export class StTestResultsPanel {
   public static async createOrShowHistorical(
     context: vscode.ExtensionContext,
     entry: StTestWorkspaceRunHistoryRecord,
+    log: StTestHistoryLogger = () => undefined,
   ): Promise<void> {
-    const report = buildHistoricalStTestReport(entry.record);
+    const { record } = entry;
+    const writeLog = (message: string): void => {
+      log(`[ST history] ${message}`);
+    };
+    const writeArtifactDiagnostics = (): void => {
+      for (const artifact of record.artifacts) {
+        let pathState = 'missing';
+        let size = 'n/a';
 
-    if (!hasMatchingHistoricalSummary(report, entry.record)) {
+        try {
+          const stat = fs.lstatSync(artifact.outputCsvPath);
+
+          pathState = stat.isFile()
+            ? 'file'
+            : stat.isSymbolicLink()
+              ? 'symlink'
+              : 'other';
+          size = String(stat.size);
+        }
+        catch (error) {
+          pathState = `unavailable(${error instanceof Error ? error.message : String(error)})`;
+        }
+
+        const artifactLog = `Artifact: id=${artifact.artifactId}, mode=${artifact.mode}, path=${artifact.outputCsvPath}, relativePath=${path.relative(record.runDirectory, artifact.outputCsvPath)}, state=${pathState}, size=${size}, safe=${isSafeStTestResultFile(artifact.outputCsvPath, record.runDirectory)}`;
+
+        writeLog(artifactLog);
+      }
+    };
+
+    writeLog(`Rebuilding report: workspaceRoot=${entry.workspaceRoot}, runId=${record.runId}, operator=${record.operatorName}`);
+    writeLog(`Manifest: runDirectory=${record.runDirectory}, outcome=${record.outcome}, summary=${JSON.stringify(record.summary)}, artifacts=${record.artifacts.length}`);
+
+    let report: StTestResultReportDto;
+
+    try {
+      report = buildHistoricalStTestReport(record);
+    }
+    catch (error) {
+      writeArtifactDiagnostics();
+      writeLog(`Report rebuild failed: ${error instanceof Error ? `${error.name}: ${error.message}` : String(error)}`);
+      throw error;
+    }
+
+    if (!hasMatchingHistoricalSummary(report, record)) {
+      const mismatches = Object.entries(record.summary)
+        .filter(([
+          key,
+          value,
+        ]) => report.summary[key as keyof typeof report.summary] !== value)
+        .map(([
+          key,
+          value,
+        ]) => `${key}:saved=${value},rebuilt=${report.summary[key as keyof typeof report.summary]}`);
+
+      if (report.outcome !== record.outcome) {
+        mismatches.unshift(`outcome:saved=${record.outcome},rebuilt=${report.outcome}`);
+      }
+
+      writeArtifactDiagnostics();
+      writeLog(`Rebuilt report: outcome=${report.outcome}, summary=${JSON.stringify(report.summary)}`);
+
+      for (const file of report.files) {
+        writeLog(`Rebuilt artifact: id=${file.artifactId}, rows=${file.rowCount}, error=${file.error ? JSON.stringify(file.error) : 'none'}`);
+      }
+
+      writeLog(`Validation failed: ${mismatches.join('; ') || 'unknown mismatch'}`);
       throw new Error('Historical ST evidence no longer matches its manifest');
     }
+
+    writeLog('Validation passed; opening results panel.');
 
     await this.createOrShow(
       context,
       report,
-      entry.record.artifacts,
-      entry.record.runDirectory,
+      record.artifacts,
+      record.runDirectory,
     );
+    writeLog('Results panel opened successfully.');
   }
 
   public dispose(): void {
-    if (!this.disposed) {
-      this.panel.dispose();
+    try {
+      if (!this.disposed) {
+        this.panel.dispose();
+      }
     }
-
-    this.disposeResources();
+    finally {
+      this.disposeResources();
+    }
   }
 
   private ensureInitialized(): Promise<void> {
@@ -216,11 +297,11 @@ export class StTestResultsPanel {
 
   private async initializeHtml(): Promise<void> {
     const distPath = path.join(this.context.extensionPath, 'out', 'web');
-    const cspSource = this.panel.webview.cspSource;
+    const cspSource = this.webview.cspSource;
 
-    this.panel.webview.html = await HtmlTransformer.transformDistHtml(
+    this.webview.html = await HtmlTransformer.transformDistHtml(
       distPath,
-      this.panel.webview,
+      this.webview,
       `panels/${VIEW_ST_TEST_RESULTS}`,
       {
         lang: normalizeContentLanguage(vscode.env.language),
@@ -230,7 +311,7 @@ export class StTestResultsPanel {
         imageSource: cspSource,
       },
     );
-    this.themeDisposable = registerWebviewThemeBridge(this.panel.webview);
+    this.themeDisposable = registerWebviewThemeBridge(this.webview);
   }
 
   private replaceReport(
@@ -265,7 +346,7 @@ export class StTestResultsPanel {
       });
     });
 
-    this.connector.sendLatest(this.panel.webview, { report });
+    this.connector.sendLatest(this.webview, { report });
   }
 
   private async handleWebviewAction(message: unknown): Promise<void> {
@@ -308,7 +389,12 @@ export class StTestResultsPanel {
     }
 
     this.disposed = true;
-    this.connector.removeWebview(this.panel.webview);
+
+    if (StTestResultsPanel.currentPanel === this) {
+      StTestResultsPanel.currentPanel = undefined;
+    }
+
+    this.connector.removeWebview(this.webview);
     this.themeDisposable?.dispose();
     this.themeMessageDisposable?.dispose();
     this.panelDisposeDisposable?.dispose();
@@ -316,9 +402,5 @@ export class StTestResultsPanel {
     this.themeMessageDisposable = undefined;
     this.panelDisposeDisposable = undefined;
     this.artifactAllowList.clear();
-
-    if (StTestResultsPanel.currentPanel === this) {
-      StTestResultsPanel.currentPanel = undefined;
-    }
   }
 }

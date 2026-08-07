@@ -102,10 +102,13 @@ describe('StTestResultsPanel', () => {
     mockCreateWebviewPanel.mockImplementation(() => {
       const webview = createWebview();
       const disposeRegistration = { dispose: jest.fn() };
+      let disposed = false;
       const panel = {
-        webview,
         reveal: jest.fn(),
-        dispose: jest.fn(() => panel.disposeCallback?.()),
+        dispose: jest.fn(() => {
+          disposed = true;
+          panel.disposeCallback?.();
+        }),
         onDidDispose: jest.fn((callback: ()=> void) => {
           panel.disposeCallback = callback;
 
@@ -114,6 +117,17 @@ describe('StTestResultsPanel', () => {
         disposeRegistration,
       } as FakePanel;
 
+      Object.defineProperty(panel, 'webview', {
+        configurable: true,
+        enumerable: true,
+        get: () => {
+          if (disposed) {
+            throw new Error('Webview is disposed');
+          }
+
+          return webview;
+        },
+      });
       panels.push(panel);
 
       return panel;
@@ -667,10 +681,12 @@ describe('StTestResultsPanel', () => {
     });
     reopenedPanel.webview.postMessage.mockClear();
     mockSetCurrentRun.mockClear();
+    const historyLog = jest.fn<void, [string]>();
+
     await StTestResultsPanel.createOrShowHistorical(context, {
       workspaceRoot: root,
       record: firstRecord,
-    });
+    }, historyLog);
 
     expect(reopenedPanel.webview.postMessage)
       .toHaveBeenCalledWith({
@@ -683,6 +699,12 @@ describe('StTestResultsPanel', () => {
         }),
       });
     expect(mockSetCurrentRun).not.toHaveBeenCalled();
+    expect(historyLog)
+      .toHaveBeenCalledWith(expect.stringContaining('[ST history] Manifest:'));
+    expect(historyLog)
+      .not.toHaveBeenCalledWith(expect.stringContaining('[ST history] Artifact:'));
+    expect(historyLog)
+      .toHaveBeenCalledWith('[ST history] Results panel opened successfully.');
 
     fireMessage(reopenedPanel.webview, {
       channel: ST_TEST_RESULTS_CONNECT_CHANNEL,
@@ -737,13 +759,18 @@ describe('StTestResultsPanel', () => {
     });
     panel.webview.postMessage.mockClear();
     fs.rmSync(historical.outputCsvPath);
+    const historyLog = jest.fn<void, [string]>();
 
     await expect(StTestResultsPanel.createOrShowHistorical(context, {
       workspaceRoot: root,
       record: historicalRecord,
-    }))
+    }, historyLog))
       .rejects.toThrow('Historical ST evidence no longer matches its manifest');
     expect(panel.webview.postMessage).not.toHaveBeenCalled();
+    expect(historyLog)
+      .toHaveBeenCalledWith(expect.stringContaining('state=unavailable('));
+    expect(historyLog)
+      .toHaveBeenCalledWith(expect.stringContaining('[ST history] Validation failed:'));
   });
 
   it('revalidates an allow-listed path and releases panel-owned listeners on disposal', async () => {
@@ -752,13 +779,14 @@ describe('StTestResultsPanel', () => {
 
     await StTestResultsPanel.createOrShow(context, report, [artifact], runDirectory);
     const firstPanel = panels[0];
+    const firstWebview = firstPanel.webview;
 
-    fireMessage(firstPanel.webview, {
+    fireMessage(firstWebview, {
       channel: CONNECTOR_READY_CHANNEL,
       data: ST_TEST_RESULTS_CONNECT_CHANNEL,
     });
     fs.rmSync(artifact.outputCsvPath);
-    fireMessage(firstPanel.webview, {
+    fireMessage(firstWebview, {
       channel: ST_TEST_RESULTS_CONNECT_CHANNEL,
       data: {
         type: 'openResultFile',
@@ -774,7 +802,7 @@ describe('StTestResultsPanel', () => {
 
     firstPanel.dispose();
 
-    expect(firstPanel.webview.receiverDisposables.every((item) => item.dispose.mock.calls.length > 0))
+    expect(firstWebview.receiverDisposables.every((item) => item.dispose.mock.calls.length > 0))
       .toBe(true);
     expect(themeDisposable.dispose)
       .toHaveBeenCalled();

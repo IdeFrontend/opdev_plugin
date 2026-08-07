@@ -26,12 +26,17 @@ export function getHuaweiOpDevtoolsOutputChannel(): vscode.OutputChannel {
   return sharedChannel;
 }
 
-/** One persistent output channel per operation label; cleared when reused for a new run. */
-export function getOperatorToolOutputChannel(label: OperatorToolOutputLabel | string): vscode.OutputChannel {
+/** One persistent output channel per operation label; cleared when reused for a new run by default. */
+export function getOperatorToolOutputChannel(
+  label: OperatorToolOutputLabel | string,
+  options: { clear?: boolean } = {},
+): vscode.OutputChannel {
   const existing = toolChannelsByLabel.get(label);
 
   if (existing) {
-    existing.clear();
+    if (options.clear !== false) {
+      existing.clear();
+    }
 
     return existing;
   }
