@@ -99,25 +99,25 @@ async function execBashWithCannEnvAsync(
 }
 
 async function tryProbeViaAsys(setEnv: ResolvedSetEnvScript | undefined): Promise<boolean> {
-  const quickWhich = await execBashWithCannEnvAsync(undefined, 'which asys', WHICH_TIMEOUT_MS);
+  const quickWhich = await execBashWithCannEnvAsync(setEnv, 'which asys', WHICH_TIMEOUT_MS);
 
   if (!quickWhich.stdout.trim()) {
     return false;
   }
 
-  const quickResult = await execBashWithCannEnvAsync(undefined, 'asys info -r=status', ASYS_TIMEOUT_MS);
+  const quickResult = await execBashWithCannEnvAsync(setEnv, 'asys info -r=status', ASYS_TIMEOUT_MS);
 
   return probeCommandResponded(quickResult, 'asys');
 }
 
 async function tryProbeViaNpuSmi(setEnv: ResolvedSetEnvScript | undefined): Promise<boolean> {
-  const quickWhich = await execBashWithCannEnvAsync(undefined, 'which npu-smi', WHICH_TIMEOUT_MS);
+  const quickWhich = await execBashWithCannEnvAsync(setEnv, 'which npu-smi', WHICH_TIMEOUT_MS);
 
   if (!quickWhich.stdout.trim()) {
     return false;
   }
 
-  const quickResult = await execBashWithCannEnvAsync(undefined, 'npu-smi info', NPU_SMI_TIMEOUT_MS);
+  const quickResult = await execBashWithCannEnvAsync(setEnv, 'npu-smi info', NPU_SMI_TIMEOUT_MS);
 
   return probeCommandResponded(quickResult, 'npu-smi');
 }
