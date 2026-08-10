@@ -1,5 +1,16 @@
 # 更新日志
 
+## 1.4.5 — 2026-08-10
+
+本版本新增 CPU 主机上的远程 NPU 算子开发能力，覆盖产物回传、调试、ST 测试，以及按远程环境状态适配的操作入口。
+
+- **远程算子执行与产物回传 ([#60](https://gitcode.com/opdevtools/plugin_release/issues/60))** — 本机未检测到 NPU 时，可通过已配置的 `remote_tool.sh` 探测远端 NPU/SOC，并在远端执行支持的算子流程；生成产物会回传到本地工作区以供后续使用。
+- **远程异常检测、上板调优与 DumpTensor ([#61](https://gitcode.com/opdevtools/plugin_release/issues/61)、[#62](https://gitcode.com/opdevtools/plugin_release/issues/62)、[#63](https://gitcode.com/opdevtools/plugin_release/issues/63))** — 支持在远端 NPU 执行异常检测、上板调优和 DumpTensor；诊断日志、性能分析结果及 DumpTensor 数据会回传，使现有本地可视化流程继续可用。
+- **远程 NPU 调试 ([#65](https://gitcode.com/opdevtools/plugin_release/issues/65))** — 新增 `msdebug-mi-remote` 启动配置，自动适配远程调试目标，并通过 `remote_tool.sh` 启动远程调试适配器；内置 MindStudio Debug 升级至 1.0.10。
+- **远程 ST 测试与报告历史 ([#72](https://gitcode.com/opdevtools/plugin_release/issues/72))** — 标准自定义算子 ST 测试支持远程执行和结果回传，以便查看报告；修复历史报告可视化，并在远程执行时输出远程连接信息。
+- **远程环境感知的操作可用性** — 操作树及相关选项面板同时识别本地 NPU 与已配置的远程工具；CPU 主机用户会获得配置 `remote_tool.sh` 的引导，避免对支持的流程过早拦截。
+- **标准自定义工程能力识别与安装包部署 ([#66](https://gitcode.com/opdevtools/plugin_release/issues/66))** — 标准自定义工程能力改为依据公开的 `build.sh --help` 接口识别；部署 `.run` 安装包前先检测安装器是否支持 `--force`，仅在支持时传入该参数。
+
 本文列出 **Huawei OP DevTools（华为算子一站式开发工具）** 的重要变更。完整提交历史见 [GitCode](https://gitcode.com/mlh0101/mstt) 仓库。
 
 ## 1.4.0 — 2026-07-24

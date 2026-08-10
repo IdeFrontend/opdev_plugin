@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.4.5 — 2026-08-10
+
+Release: remote NPU execution for CPU-host operator development, including artifact return, debugging, ST testing, and remote-environment-aware operation entry points.
+
+- **Remote operator execution and artifact return ([#60](https://gitcode.com/opdevtools/plugin_release/issues/60))** — When local NPU hardware is unavailable, use configured `remote_tool.sh` to probe the remote NPU/SOC and run supported operator workflows remotely. Return generated artifacts to the local workspace for follow-up use.
+- **Remote sanitizer, on-board profiling, and DumpTensor ([#61](https://gitcode.com/opdevtools/plugin_release/issues/61), [#62](https://gitcode.com/opdevtools/plugin_release/issues/62), [#63](https://gitcode.com/opdevtools/plugin_release/issues/63))** — Run sanitizer, on-board profiling, and DumpTensor flows on the remote NPU; pull diagnostic logs, profiling outputs, and DumpTensor data back so existing local visualization flows remain available.
+- **Remote NPU debugging ([#65](https://gitcode.com/opdevtools/plugin_release/issues/65))** — Add `msdebug-mi-remote` launch support, adapt remote debug targets, and start the remote debug adapter through `remote_tool.sh`; bundle MindStudio Debug 1.0.10.
+- **Remote ST testing and report history ([#72](https://gitcode.com/opdevtools/plugin_release/issues/72))** — Run standard-custom ST tests remotely, return result files for report viewing, repair historical-report visualization, and log remote connection information during remote execution.
+- **Remote-aware operation availability** — The Actions tree and relevant option panels recognize either local NPU hardware or a configured remote tool, guiding CPU-host users to configure `remote_tool.sh` instead of blocking supported flows too early.
+- **Standard-custom capability detection and package deployment ([#66](https://gitcode.com/opdevtools/plugin_release/issues/66))** — Detect standard-custom capabilities through the public `build.sh --help` interface. Before deploying a `.run` package, detect whether its installer supports `--force` and pass the option only when supported.
+
 Notable changes to **Huawei OP DevTools** are listed here. For the full project history, see the repository on [GitCode](https://gitcode.com/mlh0101/mstt).
 
 ## 1.4.0 — 2026-07-24

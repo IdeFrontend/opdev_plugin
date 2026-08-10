@@ -97,7 +97,7 @@ export default {
   'extension.resetProjectConfigurationConfirmReset': '重置',
   'extension.unsupportedProjectTypeDisabled': '当前产品构建不支持项目类型"{{projectType}}"。',
   'extension.npuEnvRequired': '请切换至NPU环境\n\n该操作需要切换至NPU环境，请在我的环境列表中进行NPU环境切换，然后再执行本操作。',
-  'extension.remoteToolRequired': '请先安装并配置 remote_tool.sh，再从 CPU 主机执行该操作。',
+  'extension.remoteToolRequired': '请在NPU环境执行',
 
   // folder-context-menu
   'folderContext.angleOpsNotSupported': '<<<>>>类型算子暂不支持该右键菜单操作',
@@ -380,7 +380,7 @@ export default {
   'web.operate.pleaseSelectOperatorProject': '请选择算子工程',
   'web.operate.singleOperatorOnly': '该功能只支持单算子执行',
   'web.operate.npuHardwareRequired': '该操作只能在NPU环境下执行',
-  'web.operate.remoteToolRequired': '请安装并配置 remote_tool.sh，或在本机 NPU 环境下执行该操作',
+  'web.operate.remoteToolRequired': '请在NPU环境执行',
   'web.operate.selectOneOperatorForStTest': '请选择一个算子运行ST测试',
   'web.operate.actionsTitle': '操作',
   'web.operate.noActionsAvailable': '当前树视图中没有可执行的操作。',
