@@ -97,7 +97,7 @@ export default {
   'extension.resetProjectConfigurationConfirmReset': 'Reset',
   'extension.unsupportedProjectTypeDisabled': 'Project type "{{projectType}}" is not supported in this product build.',
   'extension.npuEnvRequired': 'Please switch to NPU environment\n\nThis operation requires switching to NPU environment. Please switch to NPU environment in my environment list, then execute this operation again.',
-  'extension.remoteToolRequired': 'Please install and configure remote_tool.sh before running this action from a CPU host.',
+  'extension.remoteToolRequired': 'Please execute in the NPU environment',
 
   // folder-context-menu
   'folderContext.angleOpsNotSupported': '<<<>>> operator type does not support this context menu action',
@@ -380,7 +380,7 @@ export default {
   'web.operate.pleaseSelectOperatorProject': 'Please select an operator project',
   'web.operate.singleOperatorOnly': 'This action supports single operator only',
   'web.operate.npuHardwareRequired': 'This action can only be performed in an NPU environment',
-  'web.operate.remoteToolRequired': 'Install and configure remote_tool.sh, or run this action in a local NPU environment',
+  'web.operate.remoteToolRequired': 'Please execute in the NPU environment',
   'web.operate.selectOneOperatorForStTest': 'Select one operator to run ST tests',
   'web.operate.actionsTitle': 'Actions',
   'web.operate.noActionsAvailable': 'No actions available in current tree view.',
