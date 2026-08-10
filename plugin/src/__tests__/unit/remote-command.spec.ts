@@ -8,7 +8,6 @@ import {
   buildRemoteDumpTensorCommand,
   buildRemoteOnBoardCommand,
   buildRemoteStTestCommand,
-  buildRemoteUtCommand,
   createRemoteCommandWhenNoNpuTransformer,
   parseRemoteToolConfigOutput,
 } from '@plugin/helpers/remote-command';
@@ -27,13 +26,6 @@ describe('remote command helpers', () => {
 
     expect(command)
       .toBe("remote_tool.sh exec --progress --command 'cd /repo && bash build.sh --name='\\''add custom'\\'''");
-  });
-
-  it('does not pass pull-dir for remote UT commands', () => {
-    const command = buildRemoteUtCommand('bash build.sh -u');
-
-    expect(command)
-      .toBe("remote_tool.sh exec --progress --command 'bash build.sh -u'");
   });
 
   it('pulls both build directories for remote build-example commands', () => {
@@ -86,9 +78,9 @@ describe('remote command helpers', () => {
     const buildRemoteCommand = jest.fn((command: string) => `remote ${command}`);
     const transformCommand = createRemoteCommandWhenNoNpuTransformer(buildRemoteCommand);
 
-    await expect(transformCommand('bash build.sh -u')).resolves.toBe('remote bash build.sh -u');
+    await expect(transformCommand('bash build.sh --example')).resolves.toBe('remote bash build.sh --example');
     expect(buildRemoteCommand)
-      .toHaveBeenCalledWith('bash build.sh -u');
+      .toHaveBeenCalledWith('bash build.sh --example');
   });
 
   it('keeps build-example commands local when a local NPU is available', async () => {
@@ -116,7 +108,7 @@ describe('remote command helpers', () => {
     const buildRemoteCommand = jest.fn((command: string) => `remote ${command}`);
     const transformCommand = createRemoteCommandWhenNoNpuTransformer(buildRemoteCommand);
 
-    await expect(transformCommand('bash build.sh -u')).rejects.toMatchObject({ name: 'RemoteToolUnavailableError' });
+    await expect(transformCommand('bash build.sh --example')).rejects.toMatchObject({ name: 'RemoteToolUnavailableError' });
     expect(vscode.window.showInformationMessage)
       .toHaveBeenCalledWith(
         'extension.remoteToolRequired',

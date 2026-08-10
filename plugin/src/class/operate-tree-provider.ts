@@ -1580,7 +1580,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     const disabledIcon = new vscode.ThemeIcon('circle-slash', new vscode.ThemeColor('disabledForeground'));
     const runAction = this.resolveFlowActionState(hasMultipleSelectedOperators, COMMAND_SIDEBAR_RUN, true);
     const sanitizerAction = this.resolveFlowActionState(hasMultipleSelectedOperators, COMMAND_SIDEBAR_SANITIZER, true);
-    const utTestAction = this.resolveFlowActionState(hasMultipleSelectedOperators, COMMAND_SIDEBAR_UT_TEST, true);
+    const utTestAction = this.resolveFlowActionState(hasMultipleSelectedOperators, COMMAND_SIDEBAR_UT_TEST, false);
     const dumpTensorAction = this.resolveFlowActionState(hasMultipleSelectedOperators, COMMAND_SIDEBAR_DUMP_TENSOR, true);
 
     if (canBuild) {
@@ -1660,7 +1660,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         utTestAction.useDisabledIcon
           ? disabledIcon
           : this.pickFlowIcon('utTest', this.getCustomProductIcon('beaker')),
-        '- NPU',
+        undefined,
         undefined,
         undefined,
         utTestAction.tooltip,

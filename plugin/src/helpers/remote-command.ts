@@ -130,10 +130,6 @@ export function buildRemoteExecCommand(
   return args.join(' ');
 }
 
-export function buildRemoteUtCommand(remoteCommand: string): string {
-  return buildRemoteExecCommand(remoteCommand);
-}
-
 export function buildRemoteBuildExampleCommand(
   remoteCommand: string,
   projectRoot: string | undefined,
@@ -178,7 +174,7 @@ export function buildRemoteStTestCommand(
  * Creates a command transformer for flows that can fall back to remote execution.
  * execution.  The caller chooses both the command builder and, when needed,
  * the command predicate; this keeps the shared command executor independent
- * of UT, on-board, and DumpTensor command semantics.
+ * of on-board and DumpTensor command semantics.
  */
 export function createRemoteCommandWhenNoNpuTransformer(
   buildRemoteCommand: (command: string)=> string,

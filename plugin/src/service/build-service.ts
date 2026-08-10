@@ -51,7 +51,6 @@ import {
   buildRemoteDumpTensorCommand,
   buildRemoteExecCommand,
   buildRemoteOnBoardCommand,
-  buildRemoteUtCommand,
   createRemoteCommandWhenNoNpuTransformer,
 } from '@plugin/helpers/remote-command';
 import { getEnvironmentScriptPathFromWorkspace } from '@plugin/helpers/operator-project-workspace-config';
@@ -1204,7 +1203,6 @@ export class BuildService {
           operatorNames: params.operatorNames,
           script: buildCommand,
         }),
-        { transformCommand: createRemoteCommandWhenNoNpuTransformer(buildRemoteUtCommand) },
       );
 
       if (res.code !== 0) {
