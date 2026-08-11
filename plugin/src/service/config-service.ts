@@ -98,7 +98,10 @@ function parseRawSettingsJson(filePath: string): Record<string, unknown> {
     return {};
   }
 
+  // A BOM is legal in settings.json and makes JSON.parse throw, which would leave every
+  // op-devtools write on that workspace failing for good.
   const raw = fs.readFileSync(filePath, 'utf8')
+    .replace(/^\uFEFF/, '')
     .trim();
 
   if (!raw) {
@@ -347,11 +350,24 @@ async function persistIdeSettingsFile(
     return;
   }
 
-  await fs.promises.writeFile(
-    filePath,
-    `${JSON.stringify(output, null, 2)}\n`,
-    'utf8',
-  );
+  // Write to a sibling temp file and rename over the target: a crash (or a full disk) between
+  // truncate and write would otherwise leave the user with an empty or half-written
+  // settings.json and no way back. rename() within the same directory is atomic.
+  const tempPath = `${filePath}.${process.pid}.tmp`;
+
+  try {
+    await fs.promises.writeFile(
+      tempPath,
+      `${JSON.stringify(output, null, 2)}\n`,
+      'utf8',
+    );
+    await fs.promises.rename(tempPath, filePath);
+  }
+  catch (error) {
+    await fs.promises.rm(tempPath, { force: true });
+
+    throw error;
+  }
 }
 
 function buildDottedOnlySettingsFileContent(filePath: string): Record<string, unknown> {

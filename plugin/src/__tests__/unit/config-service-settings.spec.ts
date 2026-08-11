@@ -201,6 +201,36 @@ describe('ConfigService settings file', () => {
       .toBe(14);
   });
 
+  it('reads and rewrites a settings.json that starts with a BOM', async () => {
+    fs.writeFileSync(
+      settingsPath,
+      `\uFEFF${JSON.stringify({ 'editor.fontSize': 14 }, null, 2)}\n`,
+      'utf8',
+    );
+
+    const wrote = await ConfigService.writeOpDevtoolsDottedSettings(
+      { 'sanitizer.memory': true },
+      tmpRoot,
+    );
+
+    expect(wrote)
+      .toBe(true);
+
+    const parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf8')) as Record<string, unknown>;
+
+    expect(parsed['op-devtools.sanitizer.memory'])
+      .toBe(true);
+    expect(parsed['editor.fontSize'])
+      .toBe(14);
+  });
+
+  it('leaves no temp file behind after a write', async () => {
+    await ConfigService.writeOpDevtoolsDottedSettings({ 'sanitizer.memory': true }, tmpRoot);
+
+    expect(fs.readdirSync(getIdeConfigDir(tmpRoot)))
+      .toEqual(['settings.json']);
+  });
+
   it('does not seed or push socVersion / simulatorType from DB', () => {
     const source = fs.readFileSync(
       path.join(__dirname, '../../service/config-service.ts'),
