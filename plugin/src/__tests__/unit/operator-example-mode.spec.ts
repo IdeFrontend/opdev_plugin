@@ -7,6 +7,8 @@ import {
   resolveExampleMode,
   toExampleMatcher,
   DEFAULT_EXAMPLE_MATCHERS,
+  isExampleTarget,
+  rewriteExampleTarget,
 } from '@plugin/domain/utils/operator-example-mode';
 
 /**
@@ -130,6 +132,49 @@ describe('operator-example-mode (plugin_release #171)', () => {
     it('flags exampleFound=false and keeps the global mode when nothing ships', () => {
       expect(resolveExampleMode(root, 'nope', 'eager'))
         .toEqual({ mode: 'eager', exampleFound: false });
+    });
+  });
+
+  describe('rewriteExampleTarget', () => {
+    it('takes the prefix from the mode, so a graph-only operator profiles what was built', () => {
+      expect(rewriteExampleTarget('/ws/build/test_aclnn_add_custom', 'pows', 'graph'))
+        .toBe('/ws/build/test_geir_pows');
+    });
+
+    it('keeps the eager prefix for an eager run', () => {
+      expect(rewriteExampleTarget('/ws/build/test_aclnn_add_custom', 'abs', 'eager'))
+        .toBe('/ws/build/test_aclnn_abs');
+    });
+
+    it('repoints a graph target back at an eager one', () => {
+      expect(rewriteExampleTarget('/ws/build/test_geir_pows', 'abs', 'eager'))
+        .toBe('/ws/build/test_aclnn_abs');
+    });
+
+    it('leaves a target that names no example binary alone', () => {
+      expect(rewriteExampleTarget('/ws/build/libcustom_opapi.so', 'abs', 'graph'))
+        .toBe('/ws/build/libcustom_opapi.so');
+      expect(isExampleTarget('/ws/build/libcustom_opapi.so'))
+        .toBe(false);
+      expect(isExampleTarget(undefined))
+        .toBe(false);
+    });
+
+    it('recognises both example prefixes, so the rewrite gate stays open for them', () => {
+      expect(isExampleTarget('/ws/build/test_aclnn_add_custom'))
+        .toBe(true);
+      expect(isExampleTarget('/ws/build/test_geir_pows'))
+        .toBe(true);
+    });
+
+    it('leaves the target alone when no operator is selected', () => {
+      expect(rewriteExampleTarget('/ws/build/test_aclnn_add_custom', '', 'graph'))
+        .toBe('/ws/build/test_aclnn_add_custom');
+    });
+
+    it('keeps a directory that carries the prefix itself', () => {
+      expect(rewriteExampleTarget('/ws/test_aclnn_demo/build/test_aclnn_add_custom', 'pows', 'graph'))
+        .toBe('/ws/test_aclnn_demo/build/test_geir_pows');
     });
   });
 });

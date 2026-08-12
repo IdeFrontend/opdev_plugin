@@ -17,6 +17,8 @@ import {
   ExampleMode,
   ExampleMatchers,
   DEFAULT_EXAMPLE_MATCHERS,
+  isExampleTarget,
+  rewriteExampleTarget,
 } from '@plugin/domain/utils/operator-example-mode';
 
 /**
@@ -169,6 +171,41 @@ export function resolveExampleModeForConfig(
 }
 
 /**
+ * Repoints the stored example target at the operator being profiled, in the mode that operator
+ * actually ships. The mode lookup walks the operator's `examples/` dir, so it runs only for a
+ * target that names a build.sh example binary in the first place — cann, pyasc and triton point
+ * at their own build output and pass through untouched.
+ *
+ * The mode is resolved against the *example* config, the one the pre-build ran with: only that
+ * config carries `execution_mode` and the example-filename patterns in its `user_options`
+ * (config-service surfaces the settings per config type), so reading them off the
+ * profiler/sanitizer config would silently fall back to `eager` and to the default patterns.
+ */
+function rewriteExampleTargetForExample(
+  targetFile: string,
+  example_config_id: number,
+  fallbackContext: CommandContext,
+  operatorNames?: string,
+): string {
+  if (!operatorNames || !isExampleTarget(targetFile)) {
+    return targetFile;
+  }
+
+  let mode: ExampleMode;
+
+  try {
+    mode = resolveExampleModeForConfig(example_config_id, operatorNames).mode;
+  }
+  catch {
+    // No example config (getBaseContext throws): keep the profiler config as the source of
+    // the operator/project, rather than failing a run over a mode lookup.
+    mode = resolveModeFromContext(fallbackContext, operatorNames).mode;
+  }
+
+  return rewriteExampleTarget(targetFile, operatorNames, mode);
+}
+
+/**
  * Generate sample compilation commands
  *
  * @param config_id configuration ID
@@ -194,10 +231,10 @@ export function getBuildExampleCommand(
     const userOptions = context.config.user_options as Record<string, unknown> | null | undefined;
     const advance_cmd = getAdvanceCmd(userOptions?.advance_param);
 
-    // `exampleMode`, when supplied, is the per-operator mode resolved by the caller (the
-    // run_example action — see resolveExampleModeForConfig / #171). When omitted, the
-    // strategy keeps its existing `execution_mode`-or-`eager` behavior, so the
-    // profiler/sanitizer example pre-builds are unaffected.
+    // `exampleMode`, when supplied, is the per-operator mode already resolved by the caller
+    // (the run_example action resolves it up front to warn about a missing example — see
+    // resolveExampleModeForConfig / #171). Otherwise resolve it here, so every pre-build
+    // builds the example the operator actually ships instead of the configured one.
     return strategy.buildExampleCommand({
       config: context.config,
       operator: context.operator,
@@ -206,7 +243,7 @@ export function getBuildExampleCommand(
       compileOption,
       advance_cmd,
       operatorNames,
-      exampleMode,
+      exampleMode: exampleMode ?? resolveModeFromContext(context, operatorNames).mode,
       buildExampleOnly,
     });
   }
@@ -240,15 +277,7 @@ export function getSimulateCommand(
     // Use strategies to get the correct target_file
     let targetFile = strategy.getProfilerTargetFile(context.config, context.operator, example_config_id);
 
-    // If operatorNames is provided, use the separator test_aclnn_ to split the path and take the prefix + test_aclnn_ + operatorNames
-    if (operatorNames && targetFile) {
-      const delimiter = 'test_aclnn_';
-      const parts = targetFile.split(delimiter);
-
-      if (parts.length >= 2) {
-        targetFile = `${parts[0]}${delimiter}${operatorNames}`;
-      }
-    }
+    targetFile = rewriteExampleTargetForExample(targetFile, example_config_id, context, operatorNames);
 
     return strategy.buildSimulateCommand({
       config: context.config,
@@ -287,15 +316,7 @@ export function getOnBoardCommand(
     // Use strategies to get the correct target_file
     let targetFile = strategy.getProfilerTargetFile(context.config, context.operator, example_config_id);
 
-    // If operatorNames is provided, use the separator test_aclnn_ to split the path and take the prefix + test_aclnn_ + operatorNames
-    if (operatorNames && targetFile) {
-      const delimiter = 'test_aclnn_';
-      const parts = targetFile.split(delimiter);
-
-      if (parts.length >= 2) {
-        targetFile = `${parts[0]}${delimiter}${operatorNames}`;
-      }
-    }
+    targetFile = rewriteExampleTargetForExample(targetFile, example_config_id, context, operatorNames);
 
     return strategy.buildOnBoardCommand({
       config: context.config,
@@ -334,15 +355,7 @@ export function getSanitizerCommand(
     // Use strategies to get the correct target_file
     let targetFile = strategy.getProfilerTargetFile(context.config, context.operator, example_config_id);
 
-    // If operatorNames is provided, use the separator test_aclnn_ to split the path and take the prefix + test_aclnn_ + operatorNames
-    if (operatorNames && targetFile) {
-      const delimiter = 'test_aclnn_';
-      const parts = targetFile.split(delimiter);
-
-      if (parts.length >= 2) {
-        targetFile = `${parts[0]}${delimiter}${operatorNames}`;
-      }
-    }
+    targetFile = rewriteExampleTargetForExample(targetFile, example_config_id, context, operatorNames);
 
     return strategy.buildSanitizerCommand(
       context.config,
