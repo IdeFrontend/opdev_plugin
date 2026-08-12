@@ -34,6 +34,7 @@ import {
   _primeSocDetectionFailedForTest,
   _resetSocDetectionCacheForTest,
   buildOperatorSpawnEnvFromResolution,
+  computeAscendEnvResolution,
   getNpuArchForCannSoc,
   getOperatorSpawnEnv,
   getSupportComputeUnitForCannSoc,
