@@ -13,8 +13,10 @@ import {
   getSelectedOperators,
   getSanitizerShowQuickOptions,
   setSanitizerShowQuickOptions,
+  getProjectEnv,
 } from '@web/apis';
 import { getProjectType } from '@web/apis/home';
+import { isAscendA2A3CannSoc } from '@shared/cann-env-constants';
 
 const { themeConfig } = useTheme();
 const isExecuting = ref(false);
@@ -23,12 +25,19 @@ const isTritonProject = ref(false);
 const doNotShowAgain = ref(false);
 
 type DetectionScopeUi = 'global' | 'singleBlock';
+type SanitizerToolType = 'mssanitizer' | 'npu-sanitizer';
+
+const isA2A3Environment = ref(false);
 
 const form = ref({
+  toolType: 'mssanitizer' as SanitizerToolType,
   tool: {
     memcheck: true,
+    synccheck: true,
     racecheck: true,
     initcheck: true,
+    soccheck: true,
+    overcheck: true,
   },
   memcheckOption: {
     'check-unused-memory': true,
@@ -40,7 +49,9 @@ const form = ref({
   blockId: undefined as number | undefined,
 });
 
-const showBlockId = computed(() => form.value.detectionScope === 'singleBlock');
+const isMsSanitizer = computed(() => form.value.toolType === 'mssanitizer');
+const isNpuSanitizer = computed(() => form.value.toolType === 'npu-sanitizer');
+const showBlockId = computed(() => isMsSanitizer.value && form.value.detectionScope === 'singleBlock');
 
 const blockIdModel = computed<number | undefined>({
   get: () => form.value.blockId ?? undefined,
@@ -63,6 +74,16 @@ function clampMaxDebuglogSize(value: unknown): number {
   return Math.min(n, 10240);
 }
 
+function getDefaultToolTypeBySoc(socVersion: string | undefined): SanitizerToolType {
+  return isAscendA2A3CannSoc(socVersion)
+    ? 'mssanitizer'
+    : 'npu-sanitizer';
+}
+
+function isSanitizerToolType(value: unknown): value is SanitizerToolType {
+  return value === 'mssanitizer' || value === 'npu-sanitizer';
+}
+
 function clampBlockId(value: unknown): number | undefined {
   if (value === null || value === undefined || value === '') {
     return undefined;
@@ -80,6 +101,29 @@ function clampBlockId(value: unknown): number | undefined {
 async function loadSanitizerForm() {
   const configs = await getSanitizerConfigs();
   const obj = (configs[0] || {})?.user_options || {};
+
+  let socVersion: string | undefined;
+
+  try {
+    const env = await getProjectEnv();
+
+    socVersion = env.socVersion;
+  }
+  catch {
+    // env unavailable — defaults below handle it
+  }
+
+  isA2A3Environment.value = isAscendA2A3CannSoc(socVersion);
+
+  if (isA2A3Environment.value) {
+    form.value.toolType = 'mssanitizer';
+  }
+  else if (isSanitizerToolType(obj.toolType)) {
+    form.value.toolType = obj.toolType;
+  }
+  else {
+    form.value.toolType = getDefaultToolTypeBySoc(socVersion);
+  }
 
   Object.keys(form.value.tool)
     .forEach((key) => {
@@ -121,6 +165,7 @@ async function loadSanitizerForm() {
 
 function buildSavePayload() {
   return {
+    toolType: form.value.toolType,
     tool: { ...form.value.tool },
     memcheckOption: { ...form.value.memcheckOption },
     logLevel: form.value.logLevel,
@@ -135,12 +180,14 @@ async function saveSanitizerForm() {
 }
 
 function onDetectionScopeChange() {
-  // Default a block id when switching to single-block so the run cannot silently
-  // fall back to all-blocks (the strategy omits --block-id when blockId is null).
   if (form.value.detectionScope === 'singleBlock' && form.value.blockId === undefined) {
     form.value.blockId = 0;
   }
 
+  saveSanitizerForm();
+}
+
+function onToolTypeChange() {
   saveSanitizerForm();
 }
 
@@ -215,56 +262,131 @@ const handleConfirm = async () => {
       </div>
 
       <div class="sanitizer-content">
-        <a-checkbox
-          v-model:checked="form.tool.memcheck"
-          @change="saveSanitizerForm"
-        >
-          {{ t('web.options.sanitizer.memory') }}
-        </a-checkbox>
-        <div
-          v-if="form.tool.memcheck"
-          class="mem-check"
-        >
-          <div class="desc">
-            {{ t('web.options.sanitizer.memoryBase') }}
-          </div>
-          <div class="desc">
-            {{ t('web.options.sanitizer.memoryExtra') }}
-          </div>
-          <div class="mem-option">
-            <a-checkbox
-              v-model:checked="form.memcheckOption['leak-check']"
-              @change="saveSanitizerForm"
-            >
-              {{ t('web.options.sanitizer.memoryLeak') }}
-            </a-checkbox>
-            <a-checkbox
-              v-model:checked="form.memcheckOption['check-unused-memory']"
-              style="margin-left: 12px;"
-              @change="saveSanitizerForm"
-            >
-              {{ t('web.options.sanitizer.allocUnused') }}
-            </a-checkbox>
-          </div>
-        </div>
-        <div class="check-item-row">
-          <a-checkbox
-            v-model:checked="form.tool.racecheck"
-            @change="saveSanitizerForm"
+        <div class="tool-type-row">
+          <span class="run-setting-label">{{ t('web.options.sanitizer.toolType') }}</span>
+          <a-select
+            v-model:value="form.toolType"
+            style="width: 180px;"
+            @change="onToolTypeChange"
           >
-            {{ t('web.options.sanitizer.race') }}
-          </a-checkbox>
-        </div>
-        <div class="check-item-row">
-          <a-checkbox
-            v-model:checked="form.tool.initcheck"
-            @change="saveSanitizerForm"
-          >
-            {{ t('web.options.sanitizer.uninit') }}
-          </a-checkbox>
+            <a-select-option value="mssanitizer">
+              mssanitizer
+            </a-select-option>
+            <a-select-option
+              v-if="!isA2A3Environment"
+              value="npu-sanitizer"
+            >
+              npu-sanitizer
+            </a-select-option>
+          </a-select>
         </div>
 
-        <div class="run-settings-section">
+        <template v-if="isMsSanitizer">
+          <a-checkbox
+            v-model:checked="form.tool.memcheck"
+            @change="saveSanitizerForm"
+          >
+            {{ t('web.options.sanitizer.memory') }}
+          </a-checkbox>
+          <div
+            v-if="form.tool.memcheck"
+            class="mem-check"
+          >
+            <div class="desc">
+              {{ t('web.options.sanitizer.memoryBase') }}
+            </div>
+            <div class="desc">
+              {{ t('web.options.sanitizer.memoryExtra') }}
+            </div>
+            <div class="mem-option">
+              <a-checkbox
+                v-model:checked="form.memcheckOption['leak-check']"
+                @change="saveSanitizerForm"
+              >
+                {{ t('web.options.sanitizer.memoryLeak') }}
+              </a-checkbox>
+              <a-checkbox
+                v-model:checked="form.memcheckOption['check-unused-memory']"
+                style="margin-left: 12px;"
+                @change="saveSanitizerForm"
+              >
+                {{ t('web.options.sanitizer.allocUnused') }}
+              </a-checkbox>
+            </div>
+          </div>
+          <div class="check-item-row">
+            <a-checkbox
+              v-model:checked="form.tool.racecheck"
+              @change="saveSanitizerForm"
+            >
+              {{ t('web.options.sanitizer.race') }}
+            </a-checkbox>
+          </div>
+          <div class="check-item-row">
+            <a-checkbox
+              v-model:checked="form.tool.initcheck"
+              @change="saveSanitizerForm"
+            >
+              {{ t('web.options.sanitizer.uninit') }}
+            </a-checkbox>
+          </div>
+        </template>
+
+        <template v-if="isNpuSanitizer">
+          <div class="check-item-row">
+            <a-checkbox
+              v-model:checked="form.tool.memcheck"
+              @change="saveSanitizerForm"
+            >
+              {{ t('web.options.sanitizer.npuMemoryCheck') }}
+            </a-checkbox>
+          </div>
+          <div class="check-item-row">
+            <a-checkbox
+              v-model:checked="form.tool.synccheck"
+              @change="saveSanitizerForm"
+            >
+              {{ t('web.options.sanitizer.npuSyncCheck') }}
+            </a-checkbox>
+          </div>
+          <div class="check-item-row">
+            <a-checkbox
+              v-model:checked="form.tool.racecheck"
+              @change="saveSanitizerForm"
+            >
+              {{ t('web.options.sanitizer.npuRaceCheck') }}
+            </a-checkbox>
+          </div>
+          <div class="check-item-row">
+            <a-checkbox
+              v-model:checked="form.tool.initcheck"
+              @change="saveSanitizerForm"
+            >
+              {{ t('web.options.sanitizer.npuInitCheck') }}
+            </a-checkbox>
+          </div>
+          <div class="check-item-row">
+            <a-checkbox
+              v-model:checked="form.tool.soccheck"
+              @change="saveSanitizerForm"
+            >
+              {{ t('web.options.sanitizer.npuSocCheck') }}
+            </a-checkbox>
+          </div>
+          <div class="check-item-row">
+            <a-checkbox
+              v-model:checked="form.tool.overcheck"
+              @change="saveSanitizerForm"
+            >
+              {{ t('web.options.sanitizer.npuOverCheck') }}
+            </a-checkbox>
+          </div>
+        </template>
+
+        <div
+          v-if="isMsSanitizer"
+          class="run-settings-section"
+        >
           <div class="section-title">
             {{ t('web.options.sanitizer.runSettings') }}
           </div>
@@ -383,6 +505,13 @@ const handleConfirm = async () => {
 
   .check-item-row {
     margin-top: 12px;
+  }
+
+  .tool-type-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
   }
 
   .run-settings-section {

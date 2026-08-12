@@ -21,6 +21,7 @@ import {
   mapSanitizerScopeToUseBlock,
 } from '@plugin/helpers/operator-project-workspace-config';
 import { isAscendA5ProfilerCannSoc } from '@shared/msprof-onboard-env';
+import { isAscendA2A3CannSoc } from '@shared/cann-env-constants';
 import { resolveEffectiveCannSoc } from '@plugin/domain/utils/ascend-util';
 import { AsyncSingleFlight } from '@plugin/helpers/async-single-flight';
 import {
@@ -78,7 +79,11 @@ function readWorkspaceScopedSetting<T>(relativeKey: string): T | undefined {
     return inspection.workspaceFolderValue;
   }
 
-  return inspection.workspaceValue;
+  if (inspection.workspaceValue !== undefined) {
+    return inspection.workspaceValue;
+  }
+
+  return inspection.globalValue;
 }
 
 function flattenNestedOpDevtools(
@@ -233,11 +238,15 @@ function sanitizerUserOptionsToDottedWrites(opts: Record<string, unknown>): OpDe
   const updates: OpDevtoolsDottedWrites = {};
 
   assignNonEmptyStringIfDefined(updates, 'compileAndDeploy.buildConfig.sanitizerCompileCommand', opts.script);
+  assignIfDefined(updates, 'sanitizer.toolType', opts.toolType);
   assignIfDefined(updates, 'sanitizer.reportLogLevel', opts.logLevel);
   assignIfDefined(updates, 'sanitizer.maxSingleLogFileSize', opts.maxDebuglogSize);
   assignIfDefined(updates, 'sanitizer.memory', tool.memcheck);
+  assignIfDefined(updates, 'sanitizer.sync', tool.synccheck);
   assignIfDefined(updates, 'sanitizer.race', tool.racecheck);
   assignIfDefined(updates, 'sanitizer.uninitialized', tool.initcheck);
+  assignIfDefined(updates, 'sanitizer.soc', tool.soccheck);
+  assignIfDefined(updates, 'sanitizer.over', tool.overcheck);
   assignIfDefined(updates, 'sanitizer.memoryLeak', mem['leak-check']);
   assignIfDefined(updates, 'sanitizer.allocUnused', mem['check-unused-memory']);
 
@@ -589,6 +598,12 @@ export class ConfigService {
     return readWorkspaceScopedSetting<T>(relativeKey);
   }
 
+  static getDefaultSanitizerToolType(): 'mssanitizer' | 'npu-sanitizer' {
+    return isAscendA2A3CannSoc(resolveEffectiveCannSoc())
+      ? 'mssanitizer'
+      : 'npu-sanitizer';
+  }
+
   /**
    * Build `user_options` for runtime entirely from workspace settings (no legacy DB values).
    * `dbOnlyFields` preserves non-settings metadata still stored only in configs.json (e.g. fileMapList).
@@ -695,7 +710,19 @@ export class ConfigService {
     }
 
     if (configType === 'sanitizer') {
+      const configuredToolType = ConfigService.readOpDevtoolsSetting<string>('sanitizer.toolType');
+
       setIfDefined(opts, 'script', readNonEmptyOpDevtoolsSetting('compileAndDeploy.buildConfig.sanitizerCompileCommand'));
+
+      if (isAscendA2A3CannSoc(resolveEffectiveCannSoc())) {
+        opts.toolType = 'mssanitizer';
+      }
+      else {
+        opts.toolType = configuredToolType === 'mssanitizer' || configuredToolType === 'npu-sanitizer'
+          ? configuredToolType
+          : ConfigService.getDefaultSanitizerToolType();
+      }
+
       setIfDefined(opts, 'logLevel', ConfigService.readOpDevtoolsSetting<string>('sanitizer.reportLogLevel'));
       setIfDefined(opts, 'maxDebuglogSize', ConfigService.readOpDevtoolsSetting<number>('sanitizer.maxSingleLogFileSize'));
 
@@ -712,22 +739,42 @@ export class ConfigService {
       setIfDefined(opts, 'blockId', ConfigService.readOpDevtoolsSetting<number>('sanitizer.blockId'));
 
       const tool: Record<string, unknown> = {};
-      const memory = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.memory');
+      const sanitizerToolMap: Array<[string, string]> = [
+        [
+          'memory',
+          'memcheck',
+        ],
+        [
+          'sync',
+          'synccheck',
+        ],
+        [
+          'race',
+          'racecheck',
+        ],
+        [
+          'uninitialized',
+          'initcheck',
+        ],
+        [
+          'soc',
+          'soccheck',
+        ],
+        [
+          'over',
+          'overcheck',
+        ],
+      ];
 
-      if (memory !== undefined) {
-        tool.memcheck = memory;
-      }
+      for (const [
+        settingKey,
+        toolKey,
+      ] of sanitizerToolMap) {
+        const value = ConfigService.readOpDevtoolsSetting<boolean>(`sanitizer.${settingKey}`);
 
-      const race = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.race');
-
-      if (race !== undefined) {
-        tool.racecheck = race;
-      }
-
-      const uninitialized = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.uninitialized');
-
-      if (uninitialized !== undefined) {
-        tool.initcheck = uninitialized;
+        if (value !== undefined) {
+          tool[toolKey] = value;
+        }
       }
 
       if (Object.keys(tool).length > 0) {
@@ -735,16 +782,26 @@ export class ConfigService {
       }
 
       const memcheckOption: Record<string, unknown> = {};
-      const memoryLeak = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.memoryLeak');
+      const memcheckOptionMap: Array<[string, string]> = [
+        [
+          'memoryLeak',
+          'leak-check',
+        ],
+        [
+          'allocUnused',
+          'check-unused-memory',
+        ],
+      ];
 
-      if (memoryLeak !== undefined) {
-        memcheckOption['leak-check'] = memoryLeak;
-      }
+      for (const [
+        settingKey,
+        optKey,
+      ] of memcheckOptionMap) {
+        const value = ConfigService.readOpDevtoolsSetting<boolean>(`sanitizer.${settingKey}`);
 
-      const allocUnused = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.allocUnused');
-
-      if (allocUnused !== undefined) {
-        memcheckOption['check-unused-memory'] = allocUnused;
+        if (value !== undefined) {
+          memcheckOption[optKey] = value;
+        }
       }
 
       if (Object.keys(memcheckOption).length > 0) {

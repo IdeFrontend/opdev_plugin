@@ -25,7 +25,8 @@ import {
   normalizeBlockId,
   normalizeLogLevel,
   normalizeMaxDebuglogSize,
-  normalizeSanitizerTools,
+  addSanitizerToolOptions,
+  normalizeSanitizerCommand,
 } from './sanitizer-option-guards';
 import { resolveAscendEnv } from '@plugin/domain/utils/ascend-util';
 import {
@@ -185,43 +186,40 @@ export class CannCommandStrategy implements CommandStrategy {
     exampleTargetFile?: string,
     cdBuildCmd?: string,
   ): string {
-    const mssanitizer = new Command('mssanitizer');
-
-    // Add target file
-    if (exampleTargetFile) {
-      mssanitizer.addArgument(exampleTargetFile);
-    }
-
-    // Handle configuration options
     const options =
       (config.user_options as Record<string, unknown> | null | undefined) || {};
+    const commandName = normalizeSanitizerCommand(options.toolType ?? options.sanitizerTool);
+    const command = new Command(commandName);
+
+    if (exampleTargetFile) {
+      command.addArgument(exampleTargetFile);
+    }
+
     const toolOptions =
       (options.tool as Record<string, unknown> | undefined) || {};
-    const tools = normalizeSanitizerTools(Object.keys(toolOptions)
-      .filter((key) => toolOptions[key]));
 
-    if (tools.length > 0) {
-      mssanitizer.addOption('tool', tools);
+    addSanitizerToolOptions(command, toolOptions, commandName);
+
+    if (commandName !== 'npu-sanitizer') {
+      if (toolOptions.memcheck) {
+        const memcheckOptions =
+          (options.memcheckOption as Record<string, unknown> | undefined) || {};
+
+        Object.keys(memcheckOptions)
+          .forEach((key) => {
+            if (memcheckOptions[key]) {
+              command.addOption(key, 'yes');
+            }
+          });
+      }
+
+      command.addOption('log-level', normalizeLogLevel(options.logLevel));
+      command.addOption(
+        'max-debuglog-size',
+        normalizeMaxDebuglogSize(options.maxDebuglogSize),
+      );
+      command.addOption('block-id', normalizeBlockId(options.blockId));
     }
-
-    if (toolOptions.memcheck) {
-      const memcheckOptions =
-        (options.memcheckOption as Record<string, unknown> | undefined) || {};
-
-      Object.keys(memcheckOptions)
-        .forEach((key) => {
-          if (memcheckOptions[key]) {
-            mssanitizer.addOption(key, 'yes');
-          }
-        });
-    }
-
-    mssanitizer.addOption('log-level', normalizeLogLevel(options.logLevel));
-    mssanitizer.addOption(
-      'max-debuglog-size',
-      normalizeMaxDebuglogSize(options.maxDebuglogSize),
-    );
-    mssanitizer.addOption('block-id', normalizeBlockId(options.blockId));
 
     const workspaceFolders = vscode.workspace.workspaceFolders;
     const workspacePath = workspaceFolders?.[0]?.uri.fsPath || process.cwd();
@@ -232,9 +230,9 @@ export class CannCommandStrategy implements CommandStrategy {
         .valueOf()}.log`,
     );
 
-    mssanitizer.addOption('log-file', logFilePath);
+    command.addOption('log-file', logFilePath);
 
-    return joinCommands(sourceCannCmd, cdBuildCmd, mssanitizer.toString());
+    return joinCommands(sourceCannCmd, cdBuildCmd, command.toString());
   }
 
   buildSimulateCommand(params: ProfilerCommandParams): string {

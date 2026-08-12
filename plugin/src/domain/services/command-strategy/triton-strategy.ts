@@ -26,7 +26,8 @@ import {
   normalizeBlockId,
   normalizeLogLevel,
   normalizeMaxDebuglogSize,
-  normalizeSanitizerTools,
+  addSanitizerToolOptions,
+  normalizeSanitizerCommand,
 } from './sanitizer-option-guards';
 
 /**
@@ -223,42 +224,36 @@ export class TritonCommandStrategy extends BasePythonCommandStrategy implements 
   ): string {
     const options =
       (config.user_options as Record<string, unknown> | null | undefined) || {};
+    const commandName = normalizeSanitizerCommand(options.toolType ?? options.sanitizerTool);
+    const command = new Command(commandName);
     const toolOptions =
       (options.tool as Record<string, unknown> | undefined) || {};
-    const tools = normalizeSanitizerTools(Object.keys(toolOptions)
-      .filter((key) => toolOptions[key]));
-    const mssanitizer = new Command('mssanitizer');
 
-    // Skip --tool when nothing is selected so no empty token leaks into the command
-    // (mssanitizer defaults to memcheck when --tool is absent).
-    if (tools.length > 0) {
-      mssanitizer.addOption('tool', tools);
-    }
+    addSanitizerToolOptions(command, toolOptions, commandName);
 
-    // Emit the memcheck sub-options whenever they are enabled, independent of the memcheck
-    // checkbox: per the mssanitizer docs a sub-option (e.g. --leak-check=yes) auto-enables
-    // memory check, so `-t racecheck --leak-check=yes` is a valid documented invocation.
-    const memcheckOptions =
-      (options.memcheckOption as Record<string, unknown> | undefined) || {};
+    if (commandName !== 'npu-sanitizer') {
+      const memcheckOptions =
+        (options.memcheckOption as Record<string, unknown> | undefined) || {};
 
-    Object.keys(memcheckOptions)
-      .forEach((key) => {
-        if (memcheckOptions[key]) {
-          mssanitizer.addOption(key, 'yes');
-        }
-      });
+      Object.keys(memcheckOptions)
+        .forEach((key) => {
+          if (memcheckOptions[key]) {
+            command.addOption(key, 'yes');
+          }
+        });
 
-    mssanitizer.addOption('log-level', normalizeLogLevel(options.logLevel));
-    mssanitizer.addOption(
-      'max-debuglog-size',
-      normalizeMaxDebuglogSize(options.maxDebuglogSize),
-    );
+      command.addOption('log-level', normalizeLogLevel(options.logLevel));
+      command.addOption(
+        'max-debuglog-size',
+        normalizeMaxDebuglogSize(options.maxDebuglogSize),
+      );
 
-    const useBlock = options.useBlock === true;
-    const blockId = normalizeBlockId(options.blockId);
+      const useBlock = options.useBlock === true;
+      const blockId = normalizeBlockId(options.blockId);
 
-    if (useBlock && blockId !== undefined) {
-      mssanitizer.addOption('block-id', blockId);
+      if (useBlock && blockId !== undefined) {
+        command.addOption('block-id', blockId);
+      }
     }
 
     const workspacePath =
@@ -270,8 +265,7 @@ export class TritonCommandStrategy extends BasePythonCommandStrategy implements 
         .valueOf()}.log`,
     );
 
-    // Quote so a workspace path containing spaces stays a single --log-file token under `shell: true`.
-    mssanitizer.addOption('log-file', quoteShellTokenIfNeeded(logFilePath));
+    command.addOption('log-file', quoteShellTokenIfNeeded(logFilePath));
 
     const pythonProgram = normalizePythonCommandInterpreter((exampleTargetFile || config.target_file || '').trim());
 
@@ -279,10 +273,10 @@ export class TritonCommandStrategy extends BasePythonCommandStrategy implements 
       throw new Error(t('cann.configMissingScript', { op: config.op }));
     }
 
-    mssanitizer.addArgument('--');
-    mssanitizer.addArgument(pythonProgram);
+    command.addArgument('--');
+    command.addArgument(pythonProgram);
 
-    return joinCommands(sourceCannCmd, cdCmd, mssanitizer.toString());
+    return joinCommands(sourceCannCmd, cdCmd, command.toString());
   }
 
   buildUtTestCommand(_params: CommandBuildParams): string {

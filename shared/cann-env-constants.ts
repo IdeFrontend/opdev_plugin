@@ -54,3 +54,9 @@ export const SIMULATOR_ASCEND_910 = 'Ascend910' as const;
 export const SIMULATOR_ASCEND_310P = 'Ascend310P' as const;
 
 export const SIMULATOR_ASCEND_950PR_9589 = 'Ascend950PR_9589' as const;
+
+export function isAscendA2A3CannSoc(socVersion: string | undefined): boolean {
+  const normalized = (socVersion || '').toLowerCase();
+
+  return normalized === CANN_SOC_ASCEND_910B || normalized === CANN_SOC_ASCEND_910_93;
+}

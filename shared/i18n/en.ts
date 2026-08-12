@@ -630,6 +630,7 @@ export default {
 
   // web options-sanitizer
   'web.options.sanitizer.title': 'Sanitizer Quick Options',
+  'web.options.sanitizer.toolType': 'Sanitizer tool',
   'web.options.sanitizer.memory': 'Memory',
   'web.options.sanitizer.memoryBase': 'Base: illegal read/write, multi-core stomp, unaligned access, illegal free',
   'web.options.sanitizer.memoryExtra': 'Optional:',
@@ -646,6 +647,12 @@ export default {
   'web.options.sanitizer.scopeGlobal': 'All blocks',
   'web.options.sanitizer.scopeSingleBlock': 'Single block',
   'web.options.sanitizer.blockId': 'Block ID',
+  'web.options.sanitizer.npuMemoryCheck': 'Memory Check',
+  'web.options.sanitizer.npuSyncCheck': 'Sync Check',
+  'web.options.sanitizer.npuRaceCheck': 'Race Check',
+  'web.options.sanitizer.npuInitCheck': 'Init Check',
+  'web.options.sanitizer.npuSocCheck': 'Soc Check',
+  'web.options.sanitizer.npuOverCheck': 'Over Check',
   'web.options.sanitizer.tritonEnvNote': 'For Triton projects, sanitizer JIT instrumentation, forced kernel recompile, and PyTorch NPU memory-pool disable are applied automatically when you run detection.',
 
   // ST test run configuration

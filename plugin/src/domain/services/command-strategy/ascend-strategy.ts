@@ -25,7 +25,8 @@ import {
   normalizeBlockId,
   normalizeLogLevel,
   normalizeMaxDebuglogSize,
-  normalizeSanitizerTools,
+  addSanitizerToolOptions,
+  normalizeSanitizerCommand,
 } from './sanitizer-option-guards';
 
 /**
@@ -189,44 +190,41 @@ export class AscendCommandStrategy implements CommandStrategy {
     exampleTargetFile?: string,
   ): string {
     const options = (config.user_options as Record<string, unknown> | null | undefined) || {};
+    const commandName = normalizeSanitizerCommand(options.toolType ?? options.sanitizerTool);
+    const command = new Command(commandName);
 
-    const mssanitizer = new Command('mssanitizer');
-
-    // Add target file
     if (exampleTargetFile) {
-      mssanitizer.addArgument(exampleTargetFile);
+      command.addArgument(exampleTargetFile);
     }
 
-    // Handle configuration options
     const toolOptions = (options.tool as Record<string, unknown> | undefined) || {};
-    const tools = normalizeSanitizerTools(Object.keys(toolOptions)
-      .filter((key) => toolOptions[key]));
 
-    if (tools.length > 0) {
-      mssanitizer.addOption('tool', tools);
+    addSanitizerToolOptions(command, toolOptions, commandName);
+
+    if (commandName !== 'npu-sanitizer') {
+      if (toolOptions.memcheck) {
+        const memcheckOptions = (options.memcheckOption as Record<string, unknown> | undefined) || {};
+
+        Object.keys(memcheckOptions)
+          .forEach((key) => {
+            if (memcheckOptions[key]) {
+              command.addOption(key, 'yes');
+            }
+          });
+      }
+
+      command.addOption('log-level', normalizeLogLevel(options.logLevel));
+      command.addOption('max-debuglog-size', normalizeMaxDebuglogSize(options.maxDebuglogSize));
+      command.addOption('block-id', normalizeBlockId(options.blockId));
     }
 
-    if (toolOptions.memcheck) {
-      const memcheckOptions = (options.memcheckOption as Record<string, unknown> | undefined) || {};
-
-      Object.keys(memcheckOptions)
-        .forEach((key) => {
-          if (memcheckOptions[key]) {
-            mssanitizer.addOption(key, 'yes');
-          }
-        });
-    }
-
-    mssanitizer.addOption('log-level', normalizeLogLevel(options.logLevel));
-    mssanitizer.addOption('max-debuglog-size', normalizeMaxDebuglogSize(options.maxDebuglogSize));
-    mssanitizer.addOption('block-id', normalizeBlockId(options.blockId));
-    mssanitizer.addOption(
+    command.addOption(
       'log-file',
       `${operator?.op_path}/${joinIdeConfigRelative('mindstudio_sanitizer_log')}/mssanitizer_${new Date()
         .valueOf()}.log`,
     );
 
-    return joinCommands(sourceCannCmd, cdCmd, mssanitizer.toString());
+    return joinCommands(sourceCannCmd, cdCmd, command.toString());
   }
 
   buildSimulateCommand(params: ProfilerCommandParams): string {

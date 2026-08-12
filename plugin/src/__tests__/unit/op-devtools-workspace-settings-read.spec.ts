@@ -3,10 +3,16 @@ jest.mock('@plugin/domain/services/configuration', () => ({
   getConfig: jest.fn(),
 }));
 
+jest.mock('@plugin/domain/utils/ascend-util', () => ({
+  ...jest.requireActual('@plugin/domain/utils/ascend-util'),
+  resolveEffectiveCannSoc: jest.fn(() => 'ascend950'),
+}));
+
 import * as vscode from 'vscode';
 import { getConfigById } from '@plugin/domain/services/configuration';
 import { ConfigService } from '@plugin/service/config-service';
 import { TritonCommandStrategy } from '@plugin/domain/services/command-strategy/triton-strategy';
+import { resolveEffectiveCannSoc } from '@plugin/domain/utils/ascend-util';
 
 describe('ConfigService.getRuntimeConfigById', () => {
   const getStore: Record<string, unknown> = {};
@@ -28,6 +34,7 @@ describe('ConfigService.getRuntimeConfigById', () => {
     Object.keys(inspectStore)
       .forEach((k) => delete inspectStore[k]);
     (getConfigById as jest.Mock).mockImplementation(() => undefined);
+    (resolveEffectiveCannSoc as jest.Mock).mockReturnValue('ascend950');
     (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
       inspect: <T>(key: string) => (
         inspectStore[key] as vscode.ConfigurationInspect<T> | undefined
@@ -201,6 +208,30 @@ describe('ConfigService.getRuntimeConfigById', () => {
 
     expect(strategy.getProfilerTargetFile(runtime, null, NaN))
       .toBe('python3 ./triton_vector_add.py');
+  });
+
+  it('reads persisted npu-sanitizer toolType and npu check options from settings', () => {
+    getStore['sanitizer.toolType'] = 'npu-sanitizer';
+    getStore['sanitizer.memory'] = true;
+    getStore['sanitizer.sync'] = false;
+    getStore['sanitizer.race'] = true;
+    getStore['sanitizer.uninitialized'] = false;
+    getStore['sanitizer.soc'] = true;
+    getStore['sanitizer.over'] = false;
+
+    const opts = ConfigService.buildUserOptionsFromWorkspaceSettings('sanitizer', {});
+
+    expect(opts.toolType)
+      .toBe('npu-sanitizer');
+    expect(opts.tool)
+      .toEqual({
+        memcheck: true,
+        synccheck: false,
+        racecheck: true,
+        initcheck: false,
+        soccheck: true,
+        overcheck: false,
+      });
   });
 
   it('maps sanitizer detectionScope=singleBlock to useBlock=true and carries blockId', () => {
