@@ -638,6 +638,7 @@ export default {
 
   // web options-sanitizer
   'web.options.sanitizer.title': '异常检测快速选项',
+  'web.options.sanitizer.toolType': '检测工具',
   'web.options.sanitizer.memory': '内存检测',
   'web.options.sanitizer.memoryBase': '基础检测:默认会开启非法读写、多核踩踏、非对齐访问和非法释放',
   'web.options.sanitizer.memoryExtra': '可选检测:',
@@ -654,6 +655,12 @@ export default {
   'web.options.sanitizer.scopeGlobal': '全部 block',
   'web.options.sanitizer.scopeSingleBlock': '单个 block',
   'web.options.sanitizer.blockId': 'Block ID',
+  'web.options.sanitizer.npuMemoryCheck': '内存检测',
+  'web.options.sanitizer.npuSyncCheck': '同步检测',
+  'web.options.sanitizer.npuRaceCheck': '竞争检测',
+  'web.options.sanitizer.npuInitCheck': '未初始化检测',
+  'web.options.sanitizer.npuSocCheck': '芯片状态检测',
+  'web.options.sanitizer.npuOverCheck': '溢出检测',
   'web.options.sanitizer.tritonEnvNote': 'Triton 项目在运行异常检测时将自动启用算子插桩、强制重新编译内核，并关闭 PyTorch NPU 内存池缓存。',
 
   // ST test run configuration

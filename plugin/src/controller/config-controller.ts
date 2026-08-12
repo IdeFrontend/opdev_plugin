@@ -38,9 +38,13 @@ const SIMULATE_DOTTED_KEYS = [
 
 /** Dotted `sanitizer.*` keys. */
 const SANITIZER_DOTTED_KEYS = [
+  'sanitizer.toolType',
   'sanitizer.memory',
+  'sanitizer.sync',
   'sanitizer.race',
   'sanitizer.uninitialized',
+  'sanitizer.soc',
+  'sanitizer.over',
   'sanitizer.memoryLeak',
   'sanitizer.allocUnused',
   'sanitizer.reportLogLevel',

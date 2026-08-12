@@ -36,7 +36,8 @@ import {
   normalizeBlockId,
   normalizeLogLevel,
   normalizeMaxDebuglogSize,
-  normalizeSanitizerTools,
+  addSanitizerToolOptions,
+  normalizeSanitizerCommand,
 } from './sanitizer-option-guards';
 
 /**
@@ -247,42 +248,38 @@ export class TritonCommandStrategy extends BasePythonCommandStrategy implements 
     const {
       config, sourceCannCmd, cdCmd, op,
     } = context;
+    const commandName = normalizeSanitizerCommand(config.toolType);
+    const command = new Command(commandName);
     // Partial DAOs carry only the fields the user set — guard reads like
-    // `|| {}`. Note: on Triton the memcheck sub-options are
-    // emitted independent of the memcheck checkbox (mssanitizer
-    // auto-enables memory check from a sub-option like --leak-check=yes).
+    // `|| {}`.
     const tool = config.tool ?? {};
     const memcheckOption = config.memcheckOption ?? {};
-    const tools = normalizeSanitizerTools(SANITIZER_TOOL_KEYS
-      .filter((key) => tool[key]));
-    const mssanitizer = new Command('mssanitizer');
 
-    // Skip --tool when nothing is selected so no empty token leaks into the command
-    // (mssanitizer defaults to memcheck when --tool is absent).
-    if (tools.length > 0) {
-      mssanitizer.addOption('tool', tools);
-    }
+    addSanitizerToolOptions(command, tool, commandName);
 
-    // Emit the memcheck sub-options whenever they are enabled, independent of the memcheck
-    // checkbox: per the mssanitizer docs a sub-option (e.g. --leak-check=yes) auto-enables
-    // memory check, so `-t racecheck --leak-check=yes` is a valid documented invocation.
-    SANITIZER_MEMCHECK_OPTION_KEYS.forEach((key) => {
-      if (memcheckOption[key]) {
-        mssanitizer.addOption(key, 'yes');
+    // npu-sanitizer takes none of the mssanitizer-only flags below.
+    if (commandName !== 'npu-sanitizer') {
+      // Emit the memcheck sub-options whenever they are enabled, independent of the memcheck
+      // checkbox: per the mssanitizer docs a sub-option (e.g. --leak-check=yes) auto-enables
+      // memory check, so `-t racecheck --leak-check=yes` is a valid documented invocation.
+      SANITIZER_MEMCHECK_OPTION_KEYS.forEach((key) => {
+        if (memcheckOption[key]) {
+          command.addOption(key, 'yes');
+        }
+      });
+
+      command.addOption('log-level', normalizeLogLevel(config.logLevel));
+      command.addOption(
+        'max-debuglog-size',
+        normalizeMaxDebuglogSize(config.maxDebuglogSize),
+      );
+
+      const useBlock = config.useBlock === true;
+      const blockId = normalizeBlockId(config.blockId);
+
+      if (useBlock && blockId !== undefined) {
+        command.addOption('block-id', blockId);
       }
-    });
-
-    mssanitizer.addOption('log-level', normalizeLogLevel(config.logLevel));
-    mssanitizer.addOption(
-      'max-debuglog-size',
-      normalizeMaxDebuglogSize(config.maxDebuglogSize),
-    );
-
-    const useBlock = config.useBlock === true;
-    const blockId = normalizeBlockId(config.blockId);
-
-    if (useBlock && blockId !== undefined) {
-      mssanitizer.addOption('block-id', blockId);
     }
 
     const workspacePath =
@@ -294,8 +291,7 @@ export class TritonCommandStrategy extends BasePythonCommandStrategy implements 
         .valueOf()}.log`,
     );
 
-    // Quote so a workspace path containing spaces stays a single --log-file token under `shell: true`.
-    mssanitizer.addOption('log-file', quoteShellTokenIfNeeded(logFilePath));
+    command.addOption('log-file', quoteShellTokenIfNeeded(logFilePath));
 
     const pythonProgram = normalizePythonCommandInterpreter((exampleTargetFile || config.targetFile || '').trim());
 
@@ -303,10 +299,10 @@ export class TritonCommandStrategy extends BasePythonCommandStrategy implements 
       throw new Error(t('cann.configMissingScript', { op }));
     }
 
-    mssanitizer.addArgument('--');
-    mssanitizer.addArgument(pythonProgram);
+    command.addArgument('--');
+    command.addArgument(pythonProgram);
 
-    return joinCommands(sourceCannCmd, cdCmd, mssanitizer.toString());
+    return joinCommands(sourceCannCmd, cdCmd, command.toString());
   }
 
   buildUtTestCommand(_params: CommandBuildParams<UtTestConfig>): string {

@@ -35,19 +35,13 @@ import {
   normalizeBlockId,
   normalizeLogLevel,
   normalizeMaxDebuglogSize,
-  normalizeSanitizerTools,
+  addSanitizerToolOptions,
+  normalizeSanitizerCommand,
 } from './sanitizer-option-guards';
 import {
   buildPythonOnBoardCommand,
   buildPythonSimulateCommand,
 } from './python-operator-strategy-shared';
-
-/** The sanitizer tool keys the section DAO carries (a truthy subset feeds `--tool`). */
-const SANITIZER_TOOL_KEYS = [
-  'memcheck',
-  'racecheck',
-  'initcheck',
-] as const;
 
 /** The sanitizer memcheck sub-options the section DAO carries (truthy subset feeds `--<key>=yes`). */
 const SANITIZER_MEMCHECK_OPTION_KEYS = [
@@ -220,47 +214,48 @@ export class AscendCommandStrategy implements CommandStrategy {
     const {
       config, operator, sourceCannCmd, cdCmd,
     } = context;
-    const mssanitizer = new Command('mssanitizer');
+    const commandName = normalizeSanitizerCommand(config.toolType);
+    const command = new Command(commandName);
 
     // Add target file
     if (exampleTargetFile) {
-      mssanitizer.addArgument(exampleTargetFile);
+      command.addArgument(exampleTargetFile);
     }
 
     // Handle configuration options — partial DAOs carry only the fields the
     // user set, so every read is guarded with `|| {}`.
     const tool = config.tool ?? {};
-    const tools = normalizeSanitizerTools(SANITIZER_TOOL_KEYS
-      .filter((key) => tool[key]));
 
-    if (tools.length > 0) {
-      mssanitizer.addOption('tool', tools);
+    addSanitizerToolOptions(command, tool, commandName);
+
+    // npu-sanitizer takes none of the mssanitizer-only flags below.
+    if (commandName !== 'npu-sanitizer') {
+      if (tool.memcheck) {
+        const memcheckOption = config.memcheckOption ?? {};
+
+        SANITIZER_MEMCHECK_OPTION_KEYS.forEach((key) => {
+          if (memcheckOption[key]) {
+            command.addOption(key, 'yes');
+          }
+        });
+      }
+
+      command.addOption('log-level', normalizeLogLevel(config.logLevel));
+      command.addOption('max-debuglog-size', normalizeMaxDebuglogSize(config.maxDebuglogSize));
+      command.addOption('block-id', normalizeBlockId(config.blockId));
     }
 
-    if (tool.memcheck) {
-      const memcheckOption = config.memcheckOption ?? {};
-
-      SANITIZER_MEMCHECK_OPTION_KEYS.forEach((key) => {
-        if (memcheckOption[key]) {
-          mssanitizer.addOption(key, 'yes');
-        }
-      });
-    }
-
-    mssanitizer.addOption('log-level', normalizeLogLevel(config.logLevel));
-    mssanitizer.addOption('max-debuglog-size', normalizeMaxDebuglogSize(config.maxDebuglogSize));
-    mssanitizer.addOption('block-id', normalizeBlockId(config.blockId));
     // Sanitizer logs live under the workspace root — the reader only looks
     // there, and a per-operator copy would be lost (cann parity).
     const workspacePath = getFirstWorkspaceFolderPath() ?? operator?.op_path ?? process.cwd();
 
-    mssanitizer.addOption(
+    command.addOption(
       'log-file',
       `${joinIdeConfigPath(workspacePath, 'mindstudio_sanitizer_log', `mssanitizer_${new Date()
         .valueOf()}.log`)}`,
     );
 
-    return joinCommands(sourceCannCmd, cdCmd, mssanitizer.toString());
+    return joinCommands(sourceCannCmd, cdCmd, command.toString());
   }
 
   buildSimulateCommand(params: ProfilerCommandParams<SimulateConfig>): string {

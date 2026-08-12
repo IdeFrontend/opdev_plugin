@@ -2,6 +2,11 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
+jest.mock('@plugin/domain/utils/ascend-util', () => ({
+  ...jest.requireActual('@plugin/domain/utils/ascend-util'),
+  resolveEffectiveCannSoc: jest.fn(() => 'ascend950'),
+}));
+
 import * as vscode from 'vscode';
 import { resolveBuildOpBaseContext } from '@plugin/domain/services/command';
 import { TritonCommandStrategy } from '@plugin/domain/services/command-strategy/triton-strategy';
@@ -190,6 +195,32 @@ describe('ConfigService per-section DAO factories (settings + cache only)', () =
           reportTime: 42,
         },
       ]);
+  });
+
+  it('reads persisted npu-sanitizer toolType and npu check options from settings', () => {
+    getStore['sanitizer.toolType'] = 'npu-sanitizer';
+    getStore['sanitizer.memory'] = true;
+    getStore['sanitizer.sync'] = false;
+    getStore['sanitizer.race'] = true;
+    getStore['sanitizer.uninitialized'] = false;
+    getStore['sanitizer.soc'] = true;
+    getStore['sanitizer.over'] = false;
+
+    // resolveEffectiveCannSoc is mocked to 'ascend950' (non-A2/A3), so the
+    // persisted toolType is honored.
+    const config = ConfigService.getSanitizerConfig(workspacePath, 'op_add');
+
+    expect(config.toolType)
+      .toBe('npu-sanitizer');
+    expect(config.tool)
+      .toEqual({
+        memcheck: true,
+        synccheck: false,
+        racecheck: true,
+        initcheck: false,
+        soccheck: true,
+        overcheck: false,
+      });
   });
 
   it('maps sanitizer detectionScope=singleBlock to useBlock=true and carries blockId', () => {

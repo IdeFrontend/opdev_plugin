@@ -2,6 +2,8 @@ import {
   normalizeMaxDebuglogSize,
   normalizeBlockId,
   normalizeLogLevel,
+  normalizeNpuSanitizerTools,
+  normalizeSanitizerCommand,
   normalizeSanitizerTools,
 } from '@plugin/domain/services/command-strategy/sanitizer-option-guards';
 
@@ -124,5 +126,57 @@ describe('normalizeSanitizerTools (mssanitizer memcheck|racecheck|initcheck|sync
       .toEqual([]);
     expect(normalizeSanitizerTools([]))
       .toEqual([]);
+  });
+});
+
+describe('normalizeNpuSanitizerTools (npu-sanitizer tool allow-list)', () => {
+  it('keeps all supported npu-sanitizer tools', () => {
+    expect(normalizeNpuSanitizerTools([
+      'memcheck',
+      'synccheck',
+      'racecheck',
+      'initcheck',
+      'soccheck',
+      'overcheck',
+    ]))
+      .toEqual([
+        'memcheck',
+        'synccheck',
+        'racecheck',
+        'initcheck',
+        'soccheck',
+        'overcheck',
+      ]);
+  });
+
+  it('drops unsupported npu-sanitizer tool names', () => {
+    expect(normalizeNpuSanitizerTools([
+      'memcheck',
+      'leak-check',
+      'soccheck',
+      'bogus',
+      'overcheck',
+    ]))
+      .toEqual([
+        'memcheck',
+        'soccheck',
+        'overcheck',
+      ]);
+  });
+});
+
+describe('normalizeSanitizerCommand', () => {
+  it('keeps supported command names', () => {
+    expect(normalizeSanitizerCommand('mssanitizer'))
+      .toBe('mssanitizer');
+    expect(normalizeSanitizerCommand('npu-sanitizer'))
+      .toBe('npu-sanitizer');
+  });
+
+  it('defaults unknown command names to mssanitizer', () => {
+    expect(normalizeSanitizerCommand('unknown'))
+      .toBe('mssanitizer');
+    expect(normalizeSanitizerCommand(undefined))
+      .toBe('mssanitizer');
   });
 });

@@ -10,6 +10,7 @@ jest.mock('@plugin/core/project/project-manager', () => ({ ProjectManager: { get
 import {
   getIdeConfigDir, getIdeSettingsFilePath,
 } from '@plugin/helpers/ide-config-dir';
+import { configMethods } from '@plugin/controller/config-controller';
 import { ProjectManager } from '@plugin/core/project/project-manager';
 
 describe('webview/API settings writes (no DB)', () => {
@@ -54,6 +55,36 @@ describe('webview/API settings writes (no DB)', () => {
 
     return JSON.parse(fs.readFileSync(settingsPath, 'utf8')) as Record<string, unknown>;
   }
+
+  it('saveSanitizerOptions persists the npu-sanitizer toolType and npu check options', async () => {
+    await configMethods.saveSanitizerOptions({
+      toolType: 'npu-sanitizer',
+      memory: true,
+      sync: false,
+      race: false,
+      uninitialized: true,
+      soc: true,
+      over: false,
+      memoryLeak: true,
+    });
+
+    const parsed = readSettings();
+
+    expect(parsed['op-devtools.sanitizer.toolType'])
+      .toBe('npu-sanitizer');
+    expect(parsed['op-devtools.sanitizer.memory'])
+      .toBe(true);
+    expect(parsed['op-devtools.sanitizer.sync'])
+      .toBe(false);
+    expect(parsed['op-devtools.sanitizer.race'])
+      .toBe(false);
+    expect(parsed['op-devtools.sanitizer.soc'])
+      .toBe(true);
+    expect(parsed['op-devtools.sanitizer.over'])
+      .toBe(false);
+    expect(parsed['op-devtools.sanitizer.memoryLeak'])
+      .toBe(true);
+  });
 
   it('setSanitizerShowQuickOptions writes settings.json (settings-only runtime, no DB)', async () => {
     await commonMethods.setSanitizerShowQuickOptions({ value: false });

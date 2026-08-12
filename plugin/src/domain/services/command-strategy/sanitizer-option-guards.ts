@@ -9,6 +9,8 @@
  * Ranges/enums mirror mssanitizer csrc/core/cli_parser.cpp.
  */
 
+import { Command } from '@plugin/domain/utils/command-utils';
+
 const MAX_DEBUGLOG_SIZE_MIN = 1;
 const MAX_DEBUGLOG_SIZE_MAX = 10240;
 const BLOCK_ID_MIN = 0;
@@ -23,6 +25,18 @@ const VALID_TOOLS = [
   'racecheck',
   'initcheck',
   'synccheck',
+] as const;
+const VALID_NPU_TOOLS = [
+  'memcheck',
+  'synccheck',
+  'racecheck',
+  'initcheck',
+  'soccheck',
+  'overcheck',
+] as const;
+const VALID_SANITIZER_COMMANDS = [
+  'mssanitizer',
+  'npu-sanitizer',
 ] as const;
 
 function toIntInRange(value: unknown, min: number, max: number): number | undefined {
@@ -65,4 +79,34 @@ export function normalizeLogLevel(value: unknown): string | undefined {
 /** `--tool` accepts memcheck|racecheck|initcheck|synccheck; drops anything else. */
 export function normalizeSanitizerTools(tools: string[]): string[] {
   return tools.filter((tool) => VALID_TOOLS.includes(tool as typeof VALID_TOOLS[number]));
+}
+
+export function normalizeNpuSanitizerTools(tools: string[]): string[] {
+  return tools.filter((tool) => VALID_NPU_TOOLS.includes(tool as typeof VALID_NPU_TOOLS[number]));
+}
+
+export function normalizeSanitizerCommand(value: unknown): 'mssanitizer' | 'npu-sanitizer' {
+  return VALID_SANITIZER_COMMANDS.includes(value as typeof VALID_SANITIZER_COMMANDS[number])
+    ? (value as 'mssanitizer' | 'npu-sanitizer')
+    : 'mssanitizer';
+}
+
+/**
+ * Add `--tool=<value>` options to the command for the selected sanitizer tool.
+ * Shared by all command strategies (triton / cann / ascend).
+ */
+export function addSanitizerToolOptions(
+  command: Command,
+  toolOptions: Record<string, unknown>,
+  commandName: 'mssanitizer' | 'npu-sanitizer',
+): void {
+  const enabledTools = Object.keys(toolOptions)
+    .filter((key) => toolOptions[key]);
+  const tools = commandName === 'npu-sanitizer'
+    ? normalizeNpuSanitizerTools(enabledTools)
+    : normalizeSanitizerTools(enabledTools);
+
+  if (tools.length > 0) {
+    command.addOption('tool', tools);
+  }
 }

@@ -64,9 +64,13 @@ export type SimulateOptions = {
 
 /** Sanitizer options (dotted `sanitizer.*` settings, flat payload). */
 export type SanitizerOptions = {
+  toolType?: 'mssanitizer' | 'npu-sanitizer';
   memory?: boolean;
+  sync?: boolean;
   race?: boolean;
   uninitialized?: boolean;
+  soc?: boolean;
+  over?: boolean;
   memoryLeak?: boolean;
   allocUnused?: boolean;
   reportLogLevel?: 'info' | 'warn' | 'error';

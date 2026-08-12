@@ -24,6 +24,7 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
 
   const baseConfig: SanitizerConfig = {
     script: 'python3 ./triton_vector_add.py',
+    toolType: 'mssanitizer',
     tool: {
       memcheck: true,
       racecheck: false,
@@ -242,6 +243,94 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
     finally {
       (vscode.workspace as unknown as { workspaceFolders: unknown }).workspaceFolders = original;
     }
+  });
+
+  it('builds npu-sanitizer with repeated selected npu tool flags from toolType', () => {
+    const npuConfig: SanitizerConfig = {
+      ...baseConfig,
+      toolType: 'npu-sanitizer',
+      tool: {
+        memcheck: true,
+        synccheck: true,
+        racecheck: false,
+        initcheck: true,
+        soccheck: true,
+        overcheck: false,
+      },
+    };
+
+    const cmd = strategy.buildSanitizerCommand(buildContext(npuConfig));
+
+    expect(cmd)
+      .toContain('npu-sanitizer');
+    expect(cmd)
+      .toContain('--tool=memcheck');
+    expect(cmd)
+      .toContain('--tool=synccheck');
+    expect(cmd)
+      .toContain('--tool=initcheck');
+    expect(cmd)
+      .toContain('--tool=soccheck');
+    expect(cmd).not.toContain('--tool=racecheck');
+    expect(cmd).not.toContain('--tool=overcheck');
+    expect(cmd).not.toContain('--log-level');
+    expect(cmd).not.toContain('--max-debuglog-size');
+    expect(cmd)
+      .toContain('--log-file=');
+  });
+
+  it('builds npu-sanitizer with all selected npu tool flags', () => {
+    const npuConfig: SanitizerConfig = {
+      ...baseConfig,
+      toolType: 'npu-sanitizer',
+      tool: {
+        memcheck: true,
+        synccheck: true,
+        racecheck: true,
+        initcheck: true,
+        soccheck: true,
+        overcheck: true,
+      },
+    };
+
+    const cmd = strategy.buildSanitizerCommand(buildContext(npuConfig));
+
+    expect(cmd)
+      .toContain('npu-sanitizer');
+    expect(cmd)
+      .toContain('--tool=memcheck');
+    expect(cmd)
+      .toContain('--tool=synccheck');
+    expect(cmd)
+      .toContain('--tool=racecheck');
+    expect(cmd)
+      .toContain('--tool=initcheck');
+    expect(cmd)
+      .toContain('--tool=soccheck');
+    expect(cmd)
+      .toContain('--tool=overcheck');
+  });
+
+  it('keeps the mssanitizer log-file path rule when using npu-sanitizer from toolType', () => {
+    const npuConfig: SanitizerConfig = {
+      ...baseConfig,
+      toolType: 'npu-sanitizer',
+      tool: {
+        memcheck: true,
+        synccheck: true,
+        racecheck: true,
+        initcheck: true,
+        soccheck: true,
+        overcheck: true,
+      },
+    };
+
+    const cmd = strategy.buildSanitizerCommand(buildContext(npuConfig));
+    const ideDir = getIdeConfigDirName();
+    const normalized = cmd.replace(/\\/g, '/');
+
+    expect(normalized)
+      .toContain(`--log-file=/ws/triton-op/${ideDir}/mindstudio_sanitizer_log/mssanitizer_`);
   });
 });
 
