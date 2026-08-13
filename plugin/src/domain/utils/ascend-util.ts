@@ -177,6 +177,18 @@ export function getNpuArchForCannSoc(cannSoc?: string | null): string {
   return getNpuArchForSeries(series);
 }
 
+/**
+ * `NPU_ARCH` a CANN SOC slug yields from its series alone, ignoring the detected chip.
+ * Callers use it to tell a chip-specific arch — `dav-1001` on Ascend910ProA/ProB/PremiumA
+ * and the 901 pair — from the series default any process can recompute from the slug.
+ */
+export function getSeriesNpuArchForCannSoc(cannSoc?: string | null): string {
+  const key = normalizeCannSoc(cannSoc);
+  const series = key ? cannSocToSeries(key) : undefined;
+
+  return series ? getNpuArchForSeries(series) : '';
+}
+
 /** A2/A3 vs A5 branch for paired ACLNN spawn defaults ({@link getSupportComputeUnitForCannSoc}, etc.). */
 function resolveAclnnBuildDefaultForCannSoc(
   cannSoc: string | null | undefined,

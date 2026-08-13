@@ -23,7 +23,10 @@ import {
   mapSanitizerScopeToUseBlock,
 } from '@plugin/helpers/operator-project-workspace-config';
 import { isAscendA5ProfilerCannSoc } from '@shared/msprof-onboard-env';
-import { resolveEffectiveCannSoc } from '@plugin/domain/utils/ascend-util';
+import {
+  getSeriesNpuArchForCannSoc,
+  resolveEffectiveCannSoc,
+} from '@plugin/domain/utils/ascend-util';
 import { AsyncSingleFlight } from '@plugin/helpers/async-single-flight';
 import {
   ON_BOARD_METRIC_LEGACY_TO_DOTTED,
@@ -573,7 +576,38 @@ export class ConfigService {
       return false;
     }
 
-    return ConfigService.writeOpDevtoolsDottedSettings({ 'environment.socVersion': soc });
+    const updates: OpDevtoolsDottedWrites = { 'environment.socVersion': soc };
+    const npuArch = ConfigService.chipSpecificNpuArchToPin(resolution, soc);
+
+    if (npuArch) {
+      updates['environment.npuArch'] = npuArch;
+    }
+
+    return ConfigService.writeOpDevtoolsDottedSettings(updates);
+  }
+
+  /**
+   * The chip-specific `NPU_ARCH` to pin alongside the SOC, or undefined when the slug alone
+   * already yields it.
+   *
+   * A SOC slug carries only its series, so an Ascend910ProA/ProB/PremiumA or 901A/901B host
+   * resolves `dav-1001` only while the detected chip name is still cached in this process.
+   * Pinning the SOC makes the next window answer from settings and never detect again, which
+   * would silently downgrade those hosts to the series default `dav-2201`.
+   */
+  private static chipSpecificNpuArchToPin(
+    resolution: AscendEnvResolution,
+    soc: string,
+  ): string | undefined {
+    const npuArch = resolution.npuArch.trim();
+
+    // An explicit setting is already in settings.json, and a value inherited from the OS
+    // environment is not ours to freeze into the project.
+    if (!npuArch || resolution.source.npuArch !== 'derived-from-soc') {
+      return undefined;
+    }
+
+    return npuArch === getSeriesNpuArchForCannSoc(soc) ? undefined : npuArch;
   }
 
   private static getWorkspaceSettingsFileKeySet(workspaceRoot?: string): Set<string> {

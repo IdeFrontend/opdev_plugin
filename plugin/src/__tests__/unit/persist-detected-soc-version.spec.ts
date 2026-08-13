@@ -74,6 +74,49 @@ describe('ConfigService.persistDetectedSocVersion (issue #37)', () => {
       .toHaveBeenCalled();
   });
 
+  it('pins the chip-specific NPU_ARCH too, since the pinned SOC stops the next detection', async () => {
+    // Ascend910ProA and friends resolve dav-1001 only while the detected chip name is cached
+    // in this process; the slug alone would answer with the ascend910b series default.
+    await expect(ConfigService.persistDetectedSocVersion(resolution({
+      socVersion: 'ascend910b',
+      npuArch: 'dav-1001',
+    })))
+      .resolves
+      .toBe(true);
+    expect(writeSpy)
+      .toHaveBeenCalledWith({
+        'environment.socVersion': 'ascend910b',
+        'environment.npuArch': 'dav-1001',
+      });
+  });
+
+  it('leaves NPU_ARCH out when the slug alone already yields it', async () => {
+    await expect(ConfigService.persistDetectedSocVersion(resolution({
+      socVersion: 'ascend910b',
+      npuArch: 'dav-2201',
+    })))
+      .resolves
+      .toBe(true);
+    expect(writeSpy)
+      .toHaveBeenCalledWith({ 'environment.socVersion': 'ascend910b' });
+  });
+
+  it('never freezes an NPU_ARCH that came from the OS environment', async () => {
+    await expect(ConfigService.persistDetectedSocVersion(resolution({
+      socVersion: 'ascend910b',
+      npuArch: 'dav-1001',
+      source: {
+        socVersion: 'detected',
+        simulatorType: 'n/a',
+        npuArch: 'global-env',
+      },
+    })))
+      .resolves
+      .toBe(true);
+    expect(writeSpy)
+      .toHaveBeenCalledWith({ 'environment.socVersion': 'ascend910b' });
+  });
+
   it('writes nothing for a blank SOC', async () => {
     await expect(ConfigService.persistDetectedSocVersion(resolution({ socVersion: '  ' })))
       .resolves
