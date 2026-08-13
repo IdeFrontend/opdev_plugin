@@ -6,6 +6,8 @@ import { configService } from '@plugin/service/config-service';
 import {
   isRemoteNpuHardwareProbeAvailable, startNpuHardwareProbe, startRemoteNpuHardwareProbe,
 } from '@plugin/domain/utils/npu-hardware-probe';
+import { maybeApplyCannCppIncludePaths } from '@plugin/domain/utils/cann-cpp-include-paths';
+import { maybePromptInstallCppExtension } from '@plugin/helpers/cpp-extension-support';
 import {
   CONTEXT_PREFIX, TREE_VIEW_OPERATE,
 } from '@shared/flavor';
@@ -54,6 +56,16 @@ async function runPostActivateBootstrapImpl(deps: PostActivateBootstrapDeps): Pr
   logDebug('postActivate:bootstrap:start');
 
   void refreshNpuHardwareAvailability(operateTreeProvider, logDebug);
+
+  void maybePromptInstallCppExtension(context, logDebug)
+    .catch((error) => {
+      logDebug('postActivate:cppSupportPrompt:error', error);
+    });
+
+  void maybeApplyCannCppIncludePaths(logDebug)
+    .catch((error) => {
+      logDebug('postActivate:cannCppIncludePaths:error', error);
+    });
 
   try {
     const installer = new MindStudioPluginInstaller(context, {

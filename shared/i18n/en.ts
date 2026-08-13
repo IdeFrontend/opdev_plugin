@@ -91,6 +91,13 @@ export default {
   'extension.ascendEnv.socNotDetected.inputPlaceholder': 'ascend910b',
   'extension.ascendEnv.socNotDetected.inputRequired': 'Please enter a valid SoC version',
   'extension.ascendEnv.socNotDetected.setSuccess': 'SoC version saved to workspace settings.',
+  'extension.cppSupport.missing':
+    'No C/C++ extension is installed, so code navigation and completion for operator sources are unavailable. Install Microsoft C/C++?',
+  'extension.cppSupport.install': 'Install C/C++',
+  'extension.cppSupport.dontAskAgain': 'Don\'t ask again',
+  'extension.cppSupport.installed': 'C/C++ extension installed.',
+  'extension.cppSupport.installFailed':
+    'Could not install {{id}}. On a restricted network, install the VSIX manually.',
   'extension.reloadWindowAction': 'Reload Window',
   'extension.resetProjectConfigurationConfirm':
     'Reset configuration for {{projectName}}? Choosing Reset will clear configuration stored by this plugin for {{projectName}} and regenerate defaults. Your operator source code and other project files in the repository will not be changed.',

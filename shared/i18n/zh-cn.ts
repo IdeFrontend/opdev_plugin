@@ -91,6 +91,12 @@ export default {
   'extension.ascendEnv.socNotDetected.inputPlaceholder': 'ascend910b',
   'extension.ascendEnv.socNotDetected.inputRequired': '请输入有效的 SoC 版本',
   'extension.ascendEnv.socNotDetected.setSuccess': 'SoC 版本已保存到工作区设置。',
+  'extension.cppSupport.missing':
+    '未安装任何 C/C++ 插件，算子源码的代码跳转和代码联想不可用。是否安装 Microsoft C/C++？',
+  'extension.cppSupport.install': '安装 C/C++',
+  'extension.cppSupport.dontAskAgain': '不再提示',
+  'extension.cppSupport.installed': 'C/C++ 插件已安装。',
+  'extension.cppSupport.installFailed': '无法安装 {{id}}。在受限网络环境下，请手动安装 VSIX。',
   'extension.reloadWindowAction': '重载窗口',
   'extension.resetProjectConfigurationConfirm':
     '是否重置{{projectName}}的工程配置？点击重置将清除本插件为{{projectName}}保存的配置信息，并重置为默认配置。不会修改仓库中的算子源码及其他工程文件。',

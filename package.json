@@ -19,8 +19,7 @@
     "onStartupFinished"
   ],
   "extensionPack": [
-    "ms-vscode-remote.remote-ssh",
-    "ms-vscode.cpptools"
+    "ms-vscode-remote.remote-ssh"
   ],
   "icon": "out/web/branding/extension_icon.png",
   "contributes": {

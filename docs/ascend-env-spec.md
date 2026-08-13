@@ -65,9 +65,15 @@ They cover workspace sources, public CANN headers such as `acl/acl.h`, and Ascen
 
 These values are defaults only. Explicit user or workspace `files.associations` / `C_Cpp` settings and `c_cpp_properties.json` keep higher precedence, and OP DevTools does not rewrite them. Huawei and CodeArts C/C++ providers are not configured through Microsoft-specific settings.
 
-The Microsoft C/C++ extension remains associated through `extensionPack`. If its Marketplace installation is unavailable on a restricted network, install the appropriate VSIX manually; the failure does not block OP DevTools activation.
+Microsoft C/C++ is no longer listed in `extensionPack`, because that installed it even next to an existing Huawei or CodeArts C/C++ provider. Instead, post-activate bootstrap checks whether any installed non-built-in extension contributes the `c` / `cpp` languages ([`cpp-extension-support.ts`](../plugin/src/helpers/cpp-extension-support.ts)) and, only when none does, offers to install `ms-vscode.cpptools`. Built-ins are excluded because every VS Code build ships `vscode.cpp`, which contributes those language ids for syntax highlighting alone. Declining is remembered in global state. If the Marketplace is unavailable on a restricted network, install the appropriate VSIX manually; the failure does not block OP DevTools activation.
 
-For Remote-SSH or container use, `ASCEND_HOME_PATH` and its target directories must exist in the remote/container extension-host environment. A similarly named local workstation path is not used. If the variable is missing, workspace source navigation remains available, but CANN headers cannot resolve until the remote environment is configured.
+### 2.2 Fallback for hosts without `ASCEND_HOME_PATH`
+
+`${env:ASCEND_HOME_PATH}` in the manifest expands against the extension-host environment, not against the configured CANN environment script. An IDE started from a desktop launcher, or a Remote-SSH host whose login shell never sources `set_env.sh`, therefore resolves those entries to bare `/include`-style paths and gets no CANN navigation at all.
+
+When `ASCEND_HOME_PATH` is missing from the extension host, post-activate bootstrap sources the CANN environment script found by `resolveCannSetEnvScriptWithoutScan()`, reads `ASCEND_HOME_PATH` from it, and writes the same roots as absolute paths into workspace settings ([`cann-cpp-include-paths.ts`](../plugin/src/domain/utils/cann-cpp-include-paths.ts)). Script lookup covers the `environment.environmentScript` setting, the `ASCEND_ENV_SCRIPT` launch snapshot, and the common install paths; the `find /` fallback of `resolveCannSetEnvScriptForDetection()` is deliberately not used, because its `execSync` blocks the extension host for up to 30s. No new value is written when the variable is already visible, when no environment script is found, or when `C_Cpp.default.includePath` / `C_Cpp.default.browse.path` hold a value this helper did not generate. Values it did generate are refreshed when the CANN install moves, including on hosts where the variable is visible. All of it runs after `activate()` returns and uses async `exec`, so activation time is unaffected.
+
+For Remote-SSH or container use, `ASCEND_HOME_PATH` and its target directories must exist in the remote/container extension-host environment, or a CANN environment script must be reachable there. A similarly named local workstation path is not used.
 
 ---
 
