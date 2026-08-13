@@ -36,6 +36,7 @@ import {
 import { performanceDataMethods } from './controller/performance-controller';
 import { PermanentStorage } from './class/permanent-storage';
 import { ExtensionConfig } from './core/extension-config';
+import { ProjectManager } from './core/project/project-manager';
 import { RemoteConfig } from './helpers/remote-config';
 import { sanitizerDiagnosticsService } from './service/sanitizer-diagnostics.service';
 import { registerMsdebugTargetAutoAdapt } from '@plugin/domain/utils/debug-target';
@@ -2716,6 +2717,16 @@ export async function activate(context: vscode.ExtensionContext) {
 
       // Detect operator projects in the workspace
       const workspaceFolders = vscode.workspace.workspaceFolders;
+
+      // Discard stale project cache when the primary workspace folder no longer
+      // matches the cached path. Otherwise reads (devtool_config check, build
+      // command generation) would keep targeting the previous workspace.
+      const pm = ProjectManager.getInstance();
+      const primaryPath = workspaceFolders?.[0]?.uri.fsPath;
+
+      if (primaryPath && path.normalize(primaryPath) !== pm.getProjectInfo()?.path) {
+        pm.resetCachedProject();
+      }
 
       if (workspaceFolders && workspaceFolders.length > 0) {
         const { WorkspaceDetectorService } = await import('./service/workspace-detector-service.js');
