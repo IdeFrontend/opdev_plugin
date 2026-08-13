@@ -149,6 +149,7 @@ export default {
   'folderContext.addFailed': '添加失败: {{error}}',
 
   // build
+  'build.commandTimedOut': '命令执行超时并已被终止。若该步骤确实需要更长时间，请调大 op-devtools.execution.commandTimeoutSeconds。 {{output}}',
   'build.compileFailed': '编译算子失败 {{output}}',
   'build.compileSuccess': '编译算子成功',
   'build.getCompileCommandFailed': '获取编译算子命令失败 {{error}}',

@@ -705,6 +705,10 @@ export class TtkInstallerService {
   ): Promise<void> {
     const result = await this.execute(command, timeout, isCancellationRequested);
 
+    if (result.timedOut) {
+      throw new Error(`${stage} timed out after ${String(timeout)}ms and was terminated`);
+    }
+
     if (result.code !== 0) {
       throw new Error(`${stage} failed with exit code ${String(result.code)}`);
     }

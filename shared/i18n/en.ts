@@ -150,6 +150,7 @@ export default {
   'folderContext.addFailed': 'Add failed: {{error}}',
 
   // build
+  'build.commandTimedOut': 'Command timed out and was terminated. Raise op-devtools.execution.commandTimeoutSeconds if this step legitimately runs that long. {{output}}',
   'build.compileFailed': 'Compile operator failed {{output}}',
   'build.compileSuccess': 'Operator compiled successfully',
   'build.getCompileCommandFailed': 'Failed to get compile command: {{error}}',

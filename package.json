@@ -591,6 +591,20 @@
         }
       },
       {
+        "id": "op-devtools.execution",
+        "title": "%config.category.execution.title%",
+        "type": "object",
+        "properties": {
+          "op-devtools.execution.commandTimeoutSeconds": {
+            "type": "number",
+            "default": 1800,
+            "minimum": 0,
+            "order": 450,
+            "description": "%config.op-devtools.execution.commandTimeoutSeconds.description%"
+          }
+        }
+      },
+      {
         "id": "op-devtools.operatorSupport",
         "title": "%config.category.operatorSupport.title%",
         "type": "object",

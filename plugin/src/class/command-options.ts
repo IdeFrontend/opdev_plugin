@@ -58,7 +58,29 @@ interface CommandResult {
   stderr: string;
   output: string;
   interruptedByUserStop: boolean;
+  timedOut: boolean;
 }
+
+/**
+ * Grace period between the child exiting and giving up on its stdio pipes.
+ *
+ * `close` only fires once every process holding the inherited stdout/stderr
+ * write ends is gone, so a lingering grandchild (daemon, profiling agent,
+ * orphaned worker) keeps the run pending forever even though the command
+ * itself already finished — the same command run by hand in a terminal returns
+ * immediately, because the shell only waits for the foreground job.
+ */
+const STREAM_DRAIN_GRACE_MS = 2000;
+
+/**
+ * Deadline for the escalated `taskkill` retry on Windows.
+ *
+ * `taskkill` itself can hang (a wedged child, a busy WMI provider), and an
+ * unbounded escalation is the same bug as no escalation: the run is reported
+ * as stopped while the child keeps holding the build directory. Bounding it
+ * lets the callback fire so the direct child is terminated anyway.
+ */
+const TASKKILL_ESCALATION_TIMEOUT_MS = 2000;
 
 class CommandExecutor extends EventEmitter {
   private process: ChildProcess | null = null;
@@ -66,6 +88,7 @@ class CommandExecutor extends EventEmitter {
   private stderr: string = '';
   private output: string = '';
   private interruptedByUserStop = false;
+  private timedOut = false;
 
   // ANSI escape code regular expression
   private readonly ansiRegex = /\x1b\[[0-9;]*[a-zA-Z]/g;
@@ -106,11 +129,12 @@ class CommandExecutor extends EventEmitter {
     options: CommandOptions = {},
     isOpenTerminal: boolean = false,
   ): Promise<CommandResult> {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       this.stdout = '';
       this.stderr = '';
       this.output = '';
       this.interruptedByUserStop = false;
+      this.timedOut = false;
 
       const cwd = options.cwd || process.cwd();
       const ascendEnv = pickAscendSpawnEnv(options.env);
@@ -139,6 +163,14 @@ class CommandExecutor extends EventEmitter {
           ...options.env,
         },
         shell: true,
+        // stdin is never written to, so hand the command /dev/null instead of an
+        // idle pipe: anything that reads stdin (a confirmation prompt, `read`,
+        // python `input()`) gets EOF at once rather than blocking forever.
+        stdio: [
+          'ignore',
+          'pipe',
+          'pipe',
+        ],
         // On Windows, detached: false needs to be set, otherwise it cannot be terminated.
         // Set detached: true on Linux/macOS to create a process group
         detached: process.platform !== 'win32',
@@ -147,22 +179,92 @@ class CommandExecutor extends EventEmitter {
       this.process = child;
 
       let timeoutId: NodeJS.Timeout | null = null;
+      let drainId: NodeJS.Timeout | null = null;
+      let settled = false;
+
+      /** Returns false once the run has already produced its result. */
+      const beginSettlement = (): boolean => {
+        if (settled) {
+          return false;
+        }
+
+        settled = true;
+
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+
+        if (drainId) {
+          clearTimeout(drainId);
+          drainId = null;
+        }
+
+        return true;
+      };
+
+      /**
+       * `this.process` and the output buffers live on the executor, which is a shared singleton
+       * (ProjectManager.getExecutor()). The drain timer settles up to STREAM_DRAIN_GRACE_MS
+       * after exit, so a run started inside that window already owns them: this run then answers
+       * from `snapshotAtExit` and leaves the handle alone, instead of resolving with the other
+       * run's stdout and nulling out the process its `kill()` needs.
+       */
+      const settleNow = (code: number | null, snapshotAtExit?: CommandResult) => {
+        if (!beginSettlement()) {
+          return;
+        }
+
+        if (this.process !== child) {
+          resolve(snapshotAtExit ?? this.getResult(code));
+
+          return;
+        }
+
+        this.process = null;
+        resolve(this.getResult(code));
+      };
+
+      const settleAfterCleanup = async (code: number | null) => {
+        if (!beginSettlement()) {
+          return;
+        }
+
+        // Snapshot before awaiting: cleanup can take up to 5s, and the executor is a
+        // shared singleton (ProjectManager.getExecutor()). A run started inside that
+        // window resets stdout/stderr/output/timedOut, so reading them afterwards
+        // hands this caller the other run's output and timedOut: false.
+        const result = this.getResult(code);
+
+        await this.cleanup();
+        resolve(result);
+      };
 
       // Set timeout
       if (options.timeout && options.timeout > 0) {
         timeoutId = setTimeout(async () => {
-          await this.cleanup();
-          reject(new Error(`Command execution timeout after ${options.timeout}ms`));
+          if (settled) {
+            return;
+          }
+
+          this.timedOut = true;
+          const message = `Command timed out after ${options.timeout}ms: ${command}`;
+
+          this.stderr += message;
+          this.output += message;
+          appendLog(COMMAND_LOG_SCOPE, 'Timeout', {
+            command,
+            timeout: options.timeout,
+          });
+
+          if (outputChannel) {
+            outputChannel.appendLine(message);
+          }
+
+          // cleanup() takes down the whole process group, not just the shell wrapper.
+          await settleAfterCleanup(null);
         }, options.timeout);
       }
-
-      const localCleanup = () => {
-        if (timeoutId) {
-          clearTimeout(timeoutId);
-        }
-
-        this.process = null;
-      };
 
       // Process standard output
       child.stdout?.on('data', async (data: Buffer) => {
@@ -186,9 +288,18 @@ class CommandExecutor extends EventEmitter {
 
         // Check if stop keyword is included
         if (this.checkStopKeywords(cleanText, stopKeywords)) {
-          await this.cleanup();
-          resolve(this.getResult(0));
+          await settleAfterCleanup(0);
         }
+      });
+
+      // A stream error (EPIPE when the child is killed mid-write, a closed fd) has no listener
+      // otherwise and would come back as an uncaught exception in the extension host. `close`
+      // still fires afterwards, so the run settles through the normal path.
+      child.stdout?.on('error', (error: Error) => {
+        console.error('execute command, stdout stream error:', error);
+      });
+      child.stderr?.on('error', (error: Error) => {
+        console.error('execute command, stderr stream error:', error);
       });
 
       // Handle error output
@@ -213,29 +324,51 @@ class CommandExecutor extends EventEmitter {
 
         // Check if stop keyword is included
         if (this.checkStopKeywords(cleanText, stopKeywords)) {
-          await this.cleanup();
-          resolve(this.getResult(0));
+          await settleAfterCleanup(0);
         }
       });
 
-      // Processing ends
-      child.on('close', (code: number) => {
-        localCleanup();
-        const result = this.getResult(code);
-
-        if (code === 0) {
-          resolve(result);
-        }
-        else {
+      const finish = (code: number | null, snapshotAtExit?: CommandResult) => {
+        if (code !== 0 && !settled && this.process === child) {
           this.stderr += `Command failed with code ${code}: ${command} ${args.join(' ')}`;
-          resolve(this.getResult(code));
         }
+
+        settleNow(code, snapshotAtExit);
+      };
+
+      // The command itself is done here; `close` may still be minutes away (or
+      // never arrive) when a grandchild holds the inherited pipes, so only give
+      // the remaining output a short window to drain.
+      child.on('exit', (code: number | null, signal: NodeJS.Signals | null) => {
+        if (settled || drainId) {
+          return;
+        }
+
+        const exitCode = code ?? (signal ? -1 : 0);
+        // Everything this run produced, taken while the buffers are still unambiguously its
+        // own — the drain below settles seconds later, by which time another run may have
+        // reset them (see settleNow).
+        const snapshotAtExit = this.getResult(exitCode);
+
+        drainId = setTimeout(() => {
+          appendLog(COMMAND_LOG_SCOPE, 'Stdio still open after exit', {
+            command,
+            code: exitCode,
+          });
+          child.stdout?.destroy();
+          child.stderr?.destroy();
+          finish(exitCode, snapshotAtExit);
+        }, STREAM_DRAIN_GRACE_MS);
+      });
+
+      // Processing ends
+      child.on('close', (code: number | null) => {
+        finish(code);
       });
 
       // Handling process errors
       child.on('error', () => {
-        localCleanup();
-        resolve(this.getResult(-1));
+        settleNow(-1);
       });
     });
   }
@@ -251,6 +384,7 @@ class CommandExecutor extends EventEmitter {
       this.stdout = '';
       this.stderr = '';
       this.output = '';
+      this.timedOut = false;
       this.interruptedByUserStop = false;
 
       const cwd = options.cwd || process.cwd();
@@ -401,13 +535,14 @@ class CommandExecutor extends EventEmitter {
   /**
    * Get execution results
    */
-  private getResult(code: number): CommandResult {
+  private getResult(code: number | null): CommandResult {
     return {
       code,
       stdout: this.stdout,
       stderr: this.stderr,
       output: this.output,
       interruptedByUserStop: this.interruptedByUserStop,
+      timedOut: this.timedOut,
     };
   }
 
@@ -457,7 +592,36 @@ class CommandExecutor extends EventEmitter {
 
       // Set a 5-second timeout to prevent the process from getting stuck
       timeoutId = setTimeout(() => {
-        console.warn('CommandExecutor: kill process timed out after 5s, force resolving');
+        console.warn('CommandExecutor: kill process timed out after 5s, escalating to SIGKILL');
+
+        // SIGTERM is catchable, so a workload that traps or ignores it would keep
+        // running after the run was already reported as stopped/timed out.
+        if (child.pid) {
+          if (process.platform === 'win32') {
+            // The first taskkill either failed or is still hanging, otherwise the
+            // child would have exited by now. Retry it under a hard deadline and
+            // terminate the direct child when even the retry does not report back.
+            exec(
+              `taskkill /pid ${child.pid} /T /F`,
+              { timeout: TASKKILL_ESCALATION_TIMEOUT_MS },
+              (error) => {
+                if (error) {
+                  console.error('CommandExecutor: taskkill escalation failed, terminating child directly:', error);
+                  child.kill('SIGKILL');
+                }
+              },
+            );
+          }
+          else {
+            try {
+              process.kill(-child.pid, 'SIGKILL');
+            }
+            catch (e) {
+              child.kill('SIGKILL');
+            }
+          }
+        }
+
         finish();
       }, 5000);
 

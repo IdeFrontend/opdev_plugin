@@ -1,3 +1,5 @@
+import { t } from 'i18next';
+
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import { getConfigById } from '@plugin/domain/services/configuration';
 import { getOpByProjectIdAndOpName } from '@plugin/domain/models/model';
@@ -21,6 +23,25 @@ import {
   RemoteToolUnavailableError,
   type OperatorCommandTransformer,
 } from '@plugin/helpers/remote-command';
+import { ConfigService } from '@plugin/service/config-service';
+
+/** 30 min covers a cold full rebuild; anything past that is a hang, not a slow run. */
+const DEFAULT_OPERATOR_COMMAND_TIMEOUT_SECONDS = 30 * 60;
+const MAX_NODE_TIMER_DELAY_MS = 2_147_483_647;
+
+/** Configured operator command timeout in ms, or undefined when disabled. */
+export function resolveOperatorCommandTimeoutMs(): number | undefined {
+  const configured = ConfigService.readOpDevtoolsSetting<number>('execution.commandTimeoutSeconds');
+  const seconds = typeof configured === 'number'
+    ? configured
+    : DEFAULT_OPERATOR_COMMAND_TIMEOUT_SECONDS;
+
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    return undefined;
+  }
+
+  return Math.min(Math.round(seconds * 1000), MAX_NODE_TIMER_DELAY_MS);
+}
 
 export function resolveOpTypeForSpawn(
   projectId: number | undefined,
@@ -100,6 +121,26 @@ function enrichOperatorSpawnContext(
   };
 }
 
+/**
+ * Failure text for a finished command result.
+ *
+ * A timeout resolves as `{ code: null, timedOut: true }`, so a caller that only
+ * looks at `code !== 0` tells the user the compile/run failed and hides both the
+ * real cause and the setting that controls it.
+ */
+export function commandFailureMessage(
+  result: { timedOut?: boolean;
+    output?: string },
+  fallbackKey: string,
+  params: Record<string, unknown> = {},
+): string {
+  if (result.timedOut) {
+    return t('build.commandTimedOut', { output: result.output ?? '' });
+  }
+
+  return t(fallbackKey, params);
+}
+
 export async function executeOperatorCommand(
   command: string,
   spawnContext: OperatorSpawnEnvContext,
@@ -121,6 +162,7 @@ export async function executeOperatorCommand(
       stdout: '',
       stderr: '',
       interruptedByUserStop: true,
+      timedOut: false,
     };
   }
 
@@ -148,6 +190,7 @@ export async function executeOperatorCommand(
         stdout: '',
         stderr: '',
         interruptedByUserStop: true,
+        timedOut: false,
       };
     }
 
@@ -158,8 +201,15 @@ export async function executeOperatorCommand(
     .getExecutor();
 
   if (meta?.detached) {
+    // Detached runs wait on a ready keyword and keep going afterwards, so the command timeout
+    // does not apply to them.
     return executor.executeDetached(commandToExecute, meta.readyKeyword || 'ready', [], { toolOutputLabel }, true);
   }
 
-  return executor.execute(commandToExecute, [], [], { toolOutputLabel }, true);
+  const timeout = resolveOperatorCommandTimeoutMs();
+
+  return executor.execute(commandToExecute, [], [], {
+    toolOutputLabel,
+    ...(timeout !== undefined ? { timeout } : {}),
+  }, true);
 }
