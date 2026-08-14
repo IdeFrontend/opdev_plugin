@@ -16,7 +16,11 @@ import {
   getProjectEnv,
 } from '@web/apis';
 import { getProjectType } from '@web/apis/home';
-import { isAscendA2A3CannSoc } from '@shared/cann-env-constants';
+import {
+  isAscendA2A3CannSoc,
+  defaultSanitizerToolTypeForSoc,
+  type SanitizerToolType,
+} from '@shared/cann-env-constants';
 
 const { themeConfig } = useTheme();
 const isExecuting = ref(false);
@@ -25,7 +29,6 @@ const isTritonProject = ref(false);
 const doNotShowAgain = ref(false);
 
 type DetectionScopeUi = 'global' | 'singleBlock';
-type SanitizerToolType = 'mssanitizer' | 'npu-sanitizer';
 
 const isA2A3Environment = ref(false);
 
@@ -74,12 +77,6 @@ function clampMaxDebuglogSize(value: unknown): number {
   return Math.min(n, 10240);
 }
 
-function getDefaultToolTypeBySoc(socVersion: string | undefined): SanitizerToolType {
-  return isAscendA2A3CannSoc(socVersion)
-    ? 'mssanitizer'
-    : 'npu-sanitizer';
-}
-
 function isSanitizerToolType(value: unknown): value is SanitizerToolType {
   return value === 'mssanitizer' || value === 'npu-sanitizer';
 }
@@ -122,7 +119,7 @@ async function loadSanitizerForm() {
     form.value.toolType = obj.toolType;
   }
   else {
-    form.value.toolType = getDefaultToolTypeBySoc(socVersion);
+    form.value.toolType = defaultSanitizerToolTypeForSoc(socVersion);
   }
 
   Object.keys(form.value.tool)

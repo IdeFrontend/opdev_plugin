@@ -21,7 +21,10 @@ import {
   mapSanitizerScopeToUseBlock,
 } from '@plugin/helpers/operator-project-workspace-config';
 import { isAscendA5ProfilerCannSoc } from '@shared/msprof-onboard-env';
-import { isAscendA2A3CannSoc } from '@shared/cann-env-constants';
+import {
+  defaultSanitizerToolTypeForSoc,
+  SanitizerToolType,
+} from '@shared/cann-env-constants';
 import { resolveEffectiveCannSoc } from '@plugin/domain/utils/ascend-util';
 import { AsyncSingleFlight } from '@plugin/helpers/async-single-flight';
 import {
@@ -598,10 +601,8 @@ export class ConfigService {
     return readWorkspaceScopedSetting<T>(relativeKey);
   }
 
-  static getDefaultSanitizerToolType(): 'mssanitizer' | 'npu-sanitizer' {
-    return isAscendA2A3CannSoc(resolveEffectiveCannSoc())
-      ? 'mssanitizer'
-      : 'npu-sanitizer';
+  static getDefaultSanitizerToolType(): SanitizerToolType {
+    return defaultSanitizerToolTypeForSoc(resolveEffectiveCannSoc());
   }
 
   /**
@@ -714,7 +715,7 @@ export class ConfigService {
 
       setIfDefined(opts, 'script', readNonEmptyOpDevtoolsSetting('compileAndDeploy.buildConfig.sanitizerCompileCommand'));
 
-      if (isAscendA2A3CannSoc(resolveEffectiveCannSoc())) {
+      if (ConfigService.getDefaultSanitizerToolType() === 'mssanitizer') {
         opts.toolType = 'mssanitizer';
       }
       else {
