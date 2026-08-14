@@ -15,7 +15,10 @@ import {
   mapSanitizerScopeToUseBlock,
 } from '@plugin/helpers/operator-project-workspace-config';
 import { isAscendA5ProfilerCannSoc } from '@shared/msprof-onboard-env';
-import { isAscendA2A3CannSoc } from '@shared/cann-env-constants';
+import {
+  defaultSanitizerToolTypeForSoc,
+  SanitizerToolType,
+} from '@shared/cann-env-constants';
 import { resolveEffectiveCannSoc } from '@plugin/domain/utils/ascend-util';
 import {
   ON_BOARD_METRIC_LEGACY_TO_DOTTED,
@@ -806,10 +809,8 @@ export class ConfigService {
   }
 
   /** Default sanitizer command for the detected CANN SOC: A2/A3 → mssanitizer, others → npu-sanitizer. */
-  static getDefaultSanitizerToolType(): 'mssanitizer' | 'npu-sanitizer' {
-    return isAscendA2A3CannSoc(resolveEffectiveCannSoc())
-      ? 'mssanitizer'
-      : 'npu-sanitizer';
+  static getDefaultSanitizerToolType(): SanitizerToolType {
+    return defaultSanitizerToolTypeForSoc(resolveEffectiveCannSoc());
   }
 
   /**
@@ -1011,7 +1012,7 @@ export class ConfigService {
     // A2/A3 SOC only ships mssanitizer — the persisted toolType is ignored
     // there; every other SOC honors a valid persisted value and falls back to
     // the SOC default otherwise.
-    const toolType: SanitizerConfig['toolType'] = isAscendA2A3CannSoc(resolveEffectiveCannSoc())
+    const toolType: SanitizerConfig['toolType'] = ConfigService.getDefaultSanitizerToolType() === 'mssanitizer'
       ? 'mssanitizer'
       : configuredToolType === 'mssanitizer' || configuredToolType === 'npu-sanitizer'
         ? configuredToolType
