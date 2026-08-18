@@ -830,7 +830,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       reports = await runDataService.getSanitizerRunData() as SanitizerReportRecord[];
     }
     catch (error) {
-      if (refreshRevision !== this.sanitizerRefreshRevision) {
+      if (!this.isSanitizerRefreshCurrent(refreshRevision)) {
         return;
       }
 
@@ -842,7 +842,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       return;
     }
 
-    if (refreshRevision !== this.sanitizerRefreshRevision) {
+    if (!this.isSanitizerRefreshCurrent(refreshRevision)) {
       return;
     }
 
@@ -880,7 +880,11 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
     if (latest && (openLatest || (revealLatest && !this.state.sanitizer.selectedReportPath))) {
       if (openLatest) {
-        await this.showSanitizerReportUnderMarkedFilter(latest);
+        await this.showSanitizerReportUnderMarkedFilter(latest, refreshRevision);
+
+        if (!this.isSanitizerRefreshCurrent(refreshRevision)) {
+          return;
+        }
       }
 
       try {
@@ -891,8 +895,12 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         console.warn('[OperateTreeProvider.refreshSanitizerReports] select failed:', error);
       }
 
+      if (!this.isSanitizerRefreshCurrent(refreshRevision)) {
+        return;
+      }
+
       if (openLatest) {
-        await this.revealSanitizerReport(latest.path);
+        await this.revealSanitizerReport(latest.path, refreshRevision);
       }
     }
     else {
@@ -905,8 +913,11 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
    * leaves the user staring at the `noReports` placeholder. Drop the filter for the report we
    * are about to open, the same way marking does when it would empty the list.
    */
-  private async showSanitizerReportUnderMarkedFilter(report: SanitizerReportRecord): Promise<void> {
-    if (!this.state.sanitizer.markedOnly || report.marked) {
+  private async showSanitizerReportUnderMarkedFilter(
+    report: SanitizerReportRecord,
+    refreshRevision?: number,
+  ): Promise<void> {
+    if (!this.isSanitizerRefreshCurrent(refreshRevision) || !this.state.sanitizer.markedOnly || report.marked) {
       return;
     }
 
@@ -924,13 +935,25 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
    * Focus the results view and scroll the report's row into view. Focus alone is not enough:
    * with ascending sort or a long list the fresh report sits off-screen, so the user sees a
    * view that did not visibly react to the run.
+   *
+   * Every await boundary rechecks `refreshRevision`: a newer refresh that already dropped or
+   * replaced this report must not have its selection stolen by this reveal.
    */
-  private async revealSanitizerReport(reportPath: string): Promise<void> {
+  private async revealSanitizerReport(reportPath: string, refreshRevision?: number): Promise<void> {
+    if (!this.isSanitizerRefreshCurrent(refreshRevision)
+      || !this.state.sanitizer.reports.some((item) => item.path === reportPath)) {
+      return;
+    }
+
     const node = this.getSanitizerReportNodes()
       .find((item) => item.id === `sanitizer-report:${encodeURIComponent(reportPath)}`);
 
     try {
       await vscode.commands.executeCommand(`${TREE_VIEW_SANITIZER_RESULTS}.focus`);
+
+      if (!this.isSanitizerRefreshCurrent(refreshRevision)) {
+        return;
+      }
 
       if (node && this.sanitizerResultsTreeView) {
         await this.sanitizerResultsTreeView.reveal(node, {
@@ -942,6 +965,10 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     catch (error) {
       console.warn('[OperateTreeProvider.refreshSanitizerReports] focus failed:', error);
     }
+  }
+
+  private isSanitizerRefreshCurrent(refreshRevision?: number): boolean {
+    return refreshRevision === undefined || refreshRevision === this.sanitizerRefreshRevision;
   }
 
   async addSanitizerReportFromPath(reportPath: string): Promise<void> {
