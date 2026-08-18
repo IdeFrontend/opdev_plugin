@@ -1,5 +1,6 @@
 import type {
   PerformanceExecutionRecord,
+  PerformanceRunDataFile,
   PerformanceRunDataFolder,
 } from '@shared/api-types';
 import {
@@ -8,8 +9,16 @@ import {
 } from '@shared/flavor';
 
 const mockGetRunData = jest.fn();
+const mockOpenInsight = jest.fn();
+const mockOpenCsvFile = jest.fn();
+const mockExistsSync = jest.fn();
 
 jest.mock('i18next', () => ({ t: (key: string) => key }));
+
+jest.mock('fs', () => ({
+  ...jest.requireActual('fs'),
+  existsSync: (...args: unknown[]) => mockExistsSync(...args),
+}));
 
 jest.mock('vscode', () => {
   class EventEmitter<T> {
@@ -89,7 +98,12 @@ jest.mock('@plugin/controller/performance-data-controller', () => ({
     downloadReport: jest.fn(),
   },
 }));
-jest.mock('@plugin/service/view-service', () => ({ viewService: {} }));
+jest.mock('@plugin/service/view-service', () => ({
+  viewService: {
+    openInsight: (...args: unknown[]) => mockOpenInsight(...args),
+    openCsvFile: (...args: unknown[]) => mockOpenCsvFile(...args),
+  },
+}));
 jest.mock('@plugin/helpers/environment-script-guard', () => ({ ensureEnvironmentScriptForOperateAction: jest.fn() }));
 jest.mock('@plugin/helpers/output-channel', () => ({ appendLog: jest.fn() }));
 jest.mock('@plugin/service/sanitizer-diagnostics.service', () => ({ sanitizerDiagnosticsService: {} }));
@@ -137,6 +151,17 @@ const folder = (
   children,
 });
 
+const reportFile = (
+  recordKey: string,
+  name: string,
+  fileType: string,
+): PerformanceRunDataFile => ({
+  key: `${recordKey}/${name}`,
+  title: name,
+  filePath: `/reports/${recordKey}/${name}`,
+  fileType,
+});
+
 const createProvider = (): OperateTreeProvider => {
   const provider = new OperateTreeProvider(vscode.Uri.file('/extension'));
 
@@ -181,11 +206,19 @@ const waitFor = async (predicate: ()=> boolean): Promise<void> => {
 
 describe('OperateTreeProvider performance refresh reconciliation', () => {
   const executeCommandMock = vscode.commands.executeCommand as jest.MockedFunction<typeof vscode.commands.executeCommand>;
+  const showErrorMessageMock = vscode.window.showErrorMessage as jest.MockedFunction<typeof vscode.window.showErrorMessage>;
 
   beforeEach(() => {
     mockGetRunData.mockReset();
+    mockOpenInsight.mockReset();
+    mockOpenInsight.mockResolvedValue(undefined);
+    mockOpenCsvFile.mockReset();
+    mockOpenCsvFile.mockResolvedValue(undefined);
+    mockExistsSync.mockReset();
+    mockExistsSync.mockReturnValue(true);
     executeCommandMock.mockReset();
     executeCommandMock.mockResolvedValue(undefined);
+    showErrorMessageMock.mockReset();
   });
 
   it('clears deleted selection and does not resurrect it when the same key returns', async () => {
@@ -449,5 +482,283 @@ describe('OperateTreeProvider performance refresh reconciliation', () => {
       .toEqual(['b.json']);
     expect(provider.getChildren(deletedFolderNode))
       .toEqual([]);
+  });
+
+  it('opens the insight data file of the report a finished run produced', async () => {
+    const provider = createProvider();
+
+    mockGetRunData.mockResolvedValueOnce({ data: [record('baseline', 1)] });
+    await provider.refreshPerformanceReports();
+
+    mockGetRunData.mockResolvedValueOnce({
+      data: [
+        record('baseline', 1),
+        record('fresh', 2, [
+          folder('table', [reportFile('fresh', 'summary.csv', 'csv')]),
+          reportFile('fresh', 'profiling.json', 'json'),
+          reportFile('fresh', 'profiling.bin', 'bin'),
+        ]),
+      ],
+    });
+    await provider.refreshPerformanceReports({
+      focusIfNew: true,
+      openIfNew: true,
+    });
+
+    expect(mockOpenInsight)
+      .toHaveBeenCalledTimes(1);
+    expect(mockOpenInsight)
+      .toHaveBeenCalledWith('/reports/fresh/profiling.bin');
+    expect(mockOpenCsvFile)
+      .not
+      .toHaveBeenCalled();
+  });
+
+  it('falls back to the csv table when the new report has no insight data file', async () => {
+    const provider = createProvider();
+
+    mockGetRunData.mockResolvedValueOnce({ data: [record('baseline', 1)] });
+    await provider.refreshPerformanceReports();
+
+    mockGetRunData.mockResolvedValueOnce({
+      data: [
+        record('baseline', 1),
+        record('fresh', 2, [folder('table', [reportFile('fresh', 'summary.csv', 'csv')])]),
+      ],
+    });
+    await provider.refreshPerformanceReports({
+      focusIfNew: true,
+      openIfNew: true,
+    });
+
+    expect(mockOpenCsvFile)
+      .toHaveBeenCalledWith('/reports/fresh/summary.csv');
+    expect(mockOpenInsight)
+      .not
+      .toHaveBeenCalled();
+  });
+
+  it('opens nothing when a run produced no new report or no openable file', async () => {
+    const provider = createProvider();
+
+    mockGetRunData.mockResolvedValueOnce({ data: [record('baseline', 1, [reportFile('baseline', 'a.bin', 'bin')])] });
+    await provider.refreshPerformanceReports();
+
+    mockGetRunData.mockResolvedValueOnce({ data: [record('baseline', 1, [reportFile('baseline', 'a.bin', 'bin')])] });
+    await provider.refreshPerformanceReports({
+      focusIfNew: true,
+      openIfNew: true,
+    });
+
+    mockGetRunData.mockResolvedValueOnce({
+      data: [
+        record('baseline', 1, [reportFile('baseline', 'a.bin', 'bin')]),
+        record('empty', 2, [folder('logs', [])]),
+      ],
+    });
+    await provider.refreshPerformanceReports({
+      focusIfNew: true,
+      openIfNew: true,
+    });
+
+    expect(mockOpenInsight)
+      .not
+      .toHaveBeenCalled();
+    expect(mockOpenCsvFile)
+      .not
+      .toHaveBeenCalled();
+  });
+
+  it('does not open a report when the refresh was not triggered by a finished run', async () => {
+    const provider = createProvider();
+
+    mockGetRunData.mockResolvedValueOnce({ data: [record('fresh', 2, [reportFile('fresh', 'profiling.bin', 'bin')])] });
+    await provider.refreshPerformanceReports();
+
+    expect(mockOpenInsight)
+      .not
+      .toHaveBeenCalled();
+  });
+
+  it('reveals but does not open for a run that only reported it finished', async () => {
+    const provider = createProvider();
+
+    mockGetRunData.mockResolvedValueOnce({ data: [record('baseline', 1)] });
+    await provider.refreshPerformanceReports();
+
+    // The post-action hook runs from a finally, so a stopped run gets here too and its
+    // report directory holds a half-written csv.
+    mockGetRunData.mockResolvedValueOnce({
+      data: [
+        record('baseline', 1),
+        record('partial', 2, [reportFile('partial', 'summary.csv', 'csv')]),
+      ],
+    });
+    await provider.refreshPerformanceReports({ focusIfNew: true });
+
+    expect(mockOpenCsvFile)
+      .not
+      .toHaveBeenCalled();
+    expect(mockOpenInsight)
+      .not
+      .toHaveBeenCalled();
+  });
+
+  it('prefers the json data file over a csv table', async () => {
+    const provider = createProvider();
+
+    mockGetRunData.mockResolvedValueOnce({ data: [record('baseline', 1)] });
+    await provider.refreshPerformanceReports();
+
+    mockGetRunData.mockResolvedValueOnce({
+      data: [
+        record('baseline', 1),
+        record('fresh', 2, [
+          folder('table', [reportFile('fresh', 'summary.csv', 'csv')]),
+          reportFile('fresh', 'profiling.json', 'json'),
+        ]),
+      ],
+    });
+    await provider.refreshPerformanceReports({
+      focusIfNew: true,
+      openIfNew: true,
+    });
+
+    expect(mockOpenInsight)
+      .toHaveBeenCalledWith('/reports/fresh/profiling.json');
+    expect(mockOpenCsvFile)
+      .not
+      .toHaveBeenCalled();
+  });
+
+  it('does not open a batch of reports discovered by the very first scan', async () => {
+    const provider = createProvider();
+
+    mockGetRunData.mockResolvedValueOnce({
+      data: [
+        record('first', 1, [reportFile('first', 'a.bin', 'bin')]),
+        record('second', 2, [reportFile('second', 'b.bin', 'bin')]),
+      ],
+    });
+    await provider.refreshPerformanceReports({
+      focusIfNew: true,
+      openIfNew: true,
+    });
+
+    expect(mockOpenInsight)
+      .not
+      .toHaveBeenCalled();
+  });
+
+  it('does not open a stale report after a newer refresh started', async () => {
+    const provider = createProvider();
+    const delayedContext = deferred<unknown>();
+    let contextGateHit = false;
+
+    mockGetRunData
+      .mockResolvedValueOnce({ data: [record('baseline', 1)] })
+      .mockResolvedValueOnce({
+        data: [
+          record('baseline', 1),
+          record('gone', 2, [reportFile('gone', 'profiling.bin', 'bin')]),
+        ],
+      })
+      .mockResolvedValueOnce({ data: [record('baseline', 1)] });
+
+    await provider.refreshPerformanceReports();
+
+    executeCommandMock.mockImplementation(async () => {
+      if (!contextGateHit) {
+        contextGateHit = true;
+        await delayedContext.promise;
+      }
+
+      return undefined;
+    });
+
+    const staleRefresh = provider.refreshPerformanceReports({
+      focusIfNew: true,
+      openIfNew: true,
+    });
+
+    await waitFor(() => contextGateHit);
+
+    const newerRefresh = provider.refreshPerformanceReports();
+
+    delayedContext.resolve(undefined);
+    await Promise.all([
+      staleRefresh,
+      newerRefresh,
+    ]);
+
+    expect(mockOpenInsight)
+      .not
+      .toHaveBeenCalled();
+  });
+
+  it('tells the user when the produced report is gone before it can be opened', async () => {
+    const provider = createProvider();
+    const consoleWarn = jest.spyOn(console, 'warn')
+      .mockImplementation(() => undefined);
+
+    mockGetRunData.mockResolvedValueOnce({ data: [record('baseline', 1)] });
+    await provider.refreshPerformanceReports();
+
+    mockExistsSync.mockReturnValue(false);
+    mockGetRunData.mockResolvedValueOnce({
+      data: [
+        record('baseline', 1),
+        record('fresh', 2, [reportFile('fresh', 'profiling.bin', 'bin')]),
+      ],
+    });
+    await provider.refreshPerformanceReports({
+      focusIfNew: true,
+      openIfNew: true,
+    });
+
+    expect(mockExistsSync)
+      .toHaveBeenCalledWith('/reports/fresh/profiling.bin');
+    expect(mockOpenInsight)
+      .not
+      .toHaveBeenCalled();
+    expect(showErrorMessageMock)
+      .toHaveBeenCalledWith('performance.openReportFailed');
+    expect(consoleWarn)
+      .toHaveBeenCalled();
+    consoleWarn.mockRestore();
+  });
+
+  it('survives a failing report open', async () => {
+    const provider = createProvider();
+    const consoleWarn = jest.spyOn(console, 'warn')
+      .mockImplementation(() => undefined);
+
+    mockOpenInsight.mockRejectedValueOnce(new Error('viewer unavailable'));
+    mockGetRunData.mockResolvedValueOnce({ data: [record('baseline', 1)] });
+    await provider.refreshPerformanceReports();
+
+    mockGetRunData.mockResolvedValueOnce({
+      data: [
+        record('baseline', 1),
+        record('fresh', 2, [reportFile('fresh', 'profiling.bin', 'bin')]),
+      ],
+    });
+
+    await expect(provider.refreshPerformanceReports({
+      focusIfNew: true,
+      openIfNew: true,
+    }))
+      .resolves
+      .toBeUndefined();
+    expect((provider as unknown as PerformanceStateHarness).state.performance.reports.map((item) => item.key))
+      .toEqual([
+        'fresh',
+        'baseline',
+      ]);
+    expect(consoleWarn)
+      .toHaveBeenCalled();
+    expect(showErrorMessageMock)
+      .toHaveBeenCalledWith('performance.openReportFailed');
+    consoleWarn.mockRestore();
   });
 });

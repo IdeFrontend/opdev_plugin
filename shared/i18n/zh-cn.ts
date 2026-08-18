@@ -181,6 +181,7 @@ export default {
   'performance.confirmDelete': '确定要删除 {{key}} 吗？',
   'performance.deleted': '已删除: {{key}}',
   'performance.openFileFailed': '打开文件失败：{{error}}',
+  'performance.openReportFailed': '打开报告文件失败：{{path}}',
   'performance.nodeKeyRequired': '节点信息不能为空',
   'performance.fileSizeKb': '文件大小: {{size}} KB',
 

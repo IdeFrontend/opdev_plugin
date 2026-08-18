@@ -851,7 +851,10 @@ export class BuildService {
       }
 
       vscode.window.showInformationMessage(t('build.simulationSuccess'));
-      await vscode.commands.executeCommand(COMMAND_FLASH_PERFORMANCE_RUN_DATA, { focusIfNew: true });
+      await vscode.commands.executeCommand(COMMAND_FLASH_PERFORMANCE_RUN_DATA, {
+        focusIfNew: true,
+        openIfNew: true,
+      });
     }
     catch (e: unknown) {
       vscode.window.showErrorMessage(t('build.getSimulationCommandFailed', { error: (e as Error).message }));
@@ -1002,7 +1005,10 @@ export class BuildService {
       }
 
       vscode.window.showInformationMessage(t('build.onBoardSuccess'));
-      await vscode.commands.executeCommand(COMMAND_FLASH_PERFORMANCE_RUN_DATA, { focusIfNew: true });
+      await vscode.commands.executeCommand(COMMAND_FLASH_PERFORMANCE_RUN_DATA, {
+        focusIfNew: true,
+        openIfNew: true,
+      });
     }
     catch (e: unknown) {
       vscode.window.showErrorMessage(t('build.getOnBoardCommandFailed', { error: (e as Error).message }));

@@ -868,6 +868,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const sanitizerResultsPanelProvider: vscode.TreeDataProvider<OperateNode> = {
     onDidChangeTreeData: operateTreeProvider.onDidChangeTreeData,
     getTreeItem: (element) => operateTreeProvider.getTreeItem(element),
+    getParent: (element) => operateTreeProvider.getSanitizerTreeParent(element),
     resolveTreeItem: (item, element, token) => operateTreeProvider.resolveTreeItem(item, element as OperateNode, token),
     getChildren: (element) => {
       if (!element) {
@@ -885,6 +886,8 @@ export async function activate(context: vscode.ExtensionContext) {
     treeDataProvider: sanitizerResultsPanelProvider,
     showCollapseAll: false,
   });
+
+  operateTreeProvider.setSanitizerResultsTreeView(sanitizerResultsTreeView);
   const performanceResultsPanelProvider: vscode.TreeDataProvider<OperateNode> = {
     onDidChangeTreeData: operateTreeProvider.onDidChangePerformanceTreeData,
     getTreeItem: (element) => operateTreeProvider.getTreeItem(element),
@@ -2657,8 +2660,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const flashMsSanitizerRunData = vscode.commands.registerCommand(
     COMMAND_FLASH_MS_SANITIZER_RUN_DATA,
-    async () => {
-      await operateTreeProvider.refreshSanitizerReports(true);
+    async (options?: { openLatest?: boolean }) => {
+      await operateTreeProvider.flashSanitizerRunData(options);
     },
   );
 
@@ -2666,7 +2669,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const flashPerformanceRunData = vscode.commands.registerCommand(
     COMMAND_FLASH_PERFORMANCE_RUN_DATA,
-    async (options?: { focusIfNew?: boolean }) => {
+    async (options?: { focusIfNew?: boolean;
+      openIfNew?: boolean }) => {
       await operateTreeProvider.refreshPerformanceReports(options);
     },
   );

@@ -182,6 +182,7 @@ export default {
   'performance.confirmDelete': 'Delete {{key}}?',
   'performance.deleted': 'Deleted: {{key}}',
   'performance.openFileFailed': 'Failed to open file: {{error}}',
+  'performance.openReportFailed': 'Failed to open the report file: {{path}}',
   'performance.nodeKeyRequired': 'Node key is required',
 
   // performance-data

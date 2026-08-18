@@ -286,8 +286,9 @@ export class SanitizerService {
         void msAgentBridgeService.tryLoadLogWithIntegration(logAbs);
       }
 
-      // After detection, refresh sanitizer data without opening the legacy sanitizer webview.
-      await vscode.commands.executeCommand(COMMAND_FLASH_MS_SANITIZER_RUN_DATA);
+      // After a successful detection, refresh sanitizer data and switch to the fresh report
+      // (GC-54) without opening the legacy sanitizer webview.
+      await vscode.commands.executeCommand(COMMAND_FLASH_MS_SANITIZER_RUN_DATA, { openLatest: true });
     }
     catch (e: unknown) {
       vscode.window.showErrorMessage(t('sanitizer.detectionFailedError', { error: (e as Error).message }));
