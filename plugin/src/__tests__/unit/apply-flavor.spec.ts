@@ -65,8 +65,10 @@ function expectCppLanguageSupportDefaults(manifest: Record<string, unknown>): vo
   };
   const defaults = typedManifest.contributes?.configurationDefaults;
 
+  // Microsoft C/C++ is offered at runtime only when no other C/C++ provider is
+  // installed — see `cpp-extension-support.ts`.
   expect(typedManifest.extensionPack)
-    .toContain('ms-vscode.cpptools');
+    .not.toContain('ms-vscode.cpptools');
   expect(defaults?.['files.associations'])
     .toEqual({
       '*.asc': 'cpp',

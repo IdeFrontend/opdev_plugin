@@ -9,6 +9,12 @@ export const workspace = {
   })),
 };
 
+export const extensions = {
+  all: [] as Array<{ id: string;
+    packageJSON: unknown }>,
+  getExtension: jest.fn(),
+};
+
 export const window = {
   showInformationMessage: jest.fn(),
   showErrorMessage: jest.fn(),

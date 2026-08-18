@@ -6,6 +6,7 @@ import * as path from 'path';
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import {
   buildOperatorSpawnContext,
+  commandFailureMessage,
   executeOperatorCommand,
 } from '@plugin/service/operator-command-executor';
 import {
@@ -147,7 +148,7 @@ export class SanitizerService {
             return;
           }
 
-          vscode.window.showErrorMessage(t('sanitizer.compileFailed', { output: buildRes.output }));
+          vscode.window.showErrorMessage(commandFailureMessage(buildRes, 'sanitizer.compileFailed', { output: buildRes.output }));
 
           return;
         }
@@ -190,7 +191,7 @@ export class SanitizerService {
                   return;
                 }
 
-                vscode.window.showErrorMessage(t('sanitizer.exampleCompileFailed', { output: exampleBuildRes.output }));
+                vscode.window.showErrorMessage(commandFailureMessage(exampleBuildRes, 'sanitizer.exampleCompileFailed', { output: exampleBuildRes.output }));
 
                 return;
               }
@@ -273,7 +274,7 @@ export class SanitizerService {
           }
         }
 
-        vscode.window.showErrorMessage(t('sanitizer.detectionFailed', { output: outcome.reason ?? res.output }));
+        vscode.window.showErrorMessage(commandFailureMessage(res, 'sanitizer.detectionFailed', { output: outcome.reason ?? res.output }));
 
         return;
       }
@@ -285,8 +286,9 @@ export class SanitizerService {
         void msAgentBridgeService.tryLoadLogWithIntegration(logAbs);
       }
 
-      // After detection, refresh sanitizer data without opening the legacy sanitizer webview.
-      await vscode.commands.executeCommand(COMMAND_FLASH_MS_SANITIZER_RUN_DATA);
+      // After a successful detection, refresh sanitizer data and switch to the fresh report
+      // (GC-54) without opening the legacy sanitizer webview.
+      await vscode.commands.executeCommand(COMMAND_FLASH_MS_SANITIZER_RUN_DATA, { openLatest: true });
     }
     catch (e: unknown) {
       vscode.window.showErrorMessage(t('sanitizer.detectionFailedError', { error: (e as Error).message }));

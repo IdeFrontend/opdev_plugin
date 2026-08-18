@@ -21,6 +21,7 @@ import {
   type CompletedStTestArtifact,
 } from '@plugin/domain/services/st-test-result-parser';
 import { StTestCancelledError } from '@plugin/domain/services/st-test-errors';
+import { resolveOperatorCommandTimeoutMs } from '@plugin/service/operator-command-executor';
 import {
   createStTestRunHistoryRecord,
   persistStTestRunHistoryRecord,
@@ -298,12 +299,21 @@ export class StTestService {
           executableCommand,
           [],
           [],
-          { cwd: runtime.workingDirectory },
+          {
+            cwd: runtime.workingDirectory,
+            timeout: resolveOperatorCommandTimeoutMs(),
+          },
           false,
         );
 
         if (result.interruptedByUserStop || options.isCancellationRequested?.()) {
           throw new StTestCancelledError();
+        }
+
+        if (result.timedOut) {
+          throw new Error(`TTK ${item.mode} timed out for ${path.basename(item.inputCsvPath)} `
+            + 'and was terminated. Raise op-devtools.execution.commandTimeoutSeconds if the case '
+            + 'legitimately runs that long.');
         }
 
         if (result.code !== 0) {
@@ -1129,6 +1139,16 @@ export class StTestService {
 
     if (result.interruptedByUserStop || params.isCancellationRequested?.()) {
       throw new StTestCancelledError();
+    }
+
+    // execute() reports a timeout in the result instead of rejecting, and every caller here
+    // reads a non-zero exit as "this TTK is not usable". A probe that only hung would then
+    // send the run into a full remote clone plus pip install, so stop it at the source --
+    // this guard covers the probes, the validations and the provisioning steps alike.
+    if (result.timedOut) {
+      const timeout = params.timeout ?? REMOTE_TTK_PROBE_TIMEOUT_MS;
+
+      throw new Error(`Remote TTK step timed out after ${String(timeout)}ms while ${params.description}`);
     }
 
     params.outputChannel.appendLine(`[ST test] Remote TTK ${String(params.stage)}/${REMOTE_TTK_PROBE_STAGES} exit code: ${String(result.code)}`);

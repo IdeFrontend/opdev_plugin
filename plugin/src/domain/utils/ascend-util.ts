@@ -25,6 +25,7 @@ import {
 } from '@shared/cann-aclnn-build-defaults';
 import {
   getSocVersionWithWorkspaceOverride,
+  getWorkspaceNpuArch,
   getWorkspaceSimulatorType,
 } from '@plugin/helpers/operator-project-workspace-config';
 import {
@@ -174,6 +175,18 @@ export function getNpuArchForCannSoc(cannSoc?: string | null): string {
   }
 
   return getNpuArchForSeries(series);
+}
+
+/**
+ * `NPU_ARCH` a CANN SOC slug yields from its series alone, ignoring the detected chip.
+ * Callers use it to tell a chip-specific arch — `dav-1001` on Ascend910ProA/ProB/PremiumA
+ * and the 901 pair — from the series default any process can recompute from the slug.
+ */
+export function getSeriesNpuArchForCannSoc(cannSoc?: string | null): string {
+  const key = normalizeCannSoc(cannSoc);
+  const series = key ? cannSocToSeries(key) : undefined;
+
+  return series ? getNpuArchForSeries(series) : '';
 }
 
 /** A2/A3 vs A5 branch for paired ACLNN spawn defaults ({@link getSupportComputeUnitForCannSoc}, etc.). */
@@ -510,6 +523,11 @@ export type SimulatorTypeSource =
   | 'default-from-soc'
   | 'n/a';
 
+export type NpuArchSource =
+  | 'workspace-setting'
+  | 'global-env'
+  | 'derived-from-soc';
+
 export interface AscendEnvResolution {
   socVersion: string;
   npuArch: string;
@@ -517,12 +535,20 @@ export interface AscendEnvResolution {
   source: {
     socVersion: SocVersionSource;
     simulatorType: SimulatorTypeSource;
-    npuArch: 'derived-from-soc';
+    npuArch: NpuArchSource;
   };
 }
 
 export interface ResolveAscendEnvContext {
   isSimulator: boolean;
+}
+
+export interface ResolveAscendEnvOptions {
+  /**
+   * Set to false to skip the lazy host probe (`asys` / `npu-smi`). Used by callers
+   * that run before the user's CANN env is known and must not cache a failed probe.
+   */
+  allowHostDetection?: boolean;
 }
 
 interface SimulatorResolution {
@@ -571,6 +597,7 @@ function resolveSimulatorFirstPass(ctx: ResolveAscendEnvContext): SimulatorResol
 function resolveSocVersion(
   ctx: ResolveAscendEnvContext,
   sim: SimulatorResolution,
+  options: ResolveAscendEnvOptions,
 ): { socVersion: string;
   source: SocVersionSource } {
   // Spec: simulator runs with an explicit simulator type from the VS Code
@@ -613,7 +640,7 @@ function resolveSocVersion(
   }
 
   // Lazy host detection (`asys`, then `npu-smi`).
-  const detected = detectSocOnce();
+  const detected = options.allowHostDetection === false ? undefined : detectSocOnce();
 
   if (detected) {
     return {
@@ -625,6 +652,38 @@ function resolveSocVersion(
   return {
     socVersion: DEFAULT_FALLBACK_CANN_SOC,
     source: 'default',
+  };
+}
+
+function resolveNpuArch(soc: {
+  socVersion: string;
+  source: SocVersionSource;
+}): { npuArch: string;
+  source: NpuArchSource } {
+  // Explicit user override (issue #29) — wins wherever NPU_ARCH is resolved.
+  const fromWorkspace = getWorkspaceNpuArch();
+
+  if (fromWorkspace) {
+    return {
+      npuArch: fromWorkspace,
+      source: 'workspace-setting',
+    };
+  }
+
+  // OS-level `NPU_ARCH` captured at activation. Ignored when the SOC comes from the
+  // simulator type, where the arch must follow the simulated device.
+  const fromGlobalEnv = (getGlobalEnvSnapshot().npuArch || '').trim();
+
+  if (fromGlobalEnv && soc.source !== 'derived-from-simulator') {
+    return {
+      npuArch: fromGlobalEnv,
+      source: 'global-env',
+    };
+  }
+
+  return {
+    npuArch: getNpuArchForCannSoc(soc.socVersion),
+    source: 'derived-from-soc',
   };
 }
 
@@ -646,12 +705,17 @@ function resolveSocVersion(
  *   - Otherwise: workspace `op-devtools.environment.socVersion` (explicit) →
  *     `process.env.SOC_VERSION` snapshot → `asys` / `npu-smi` detection →
  *     `DEFAULT_FALLBACK_CANN_SOC`.
- * - **`npuArch`**: always `getNpuArchForCannSoc(socVersion)`.
+ * - **`npuArch`**: workspace `op-devtools.environment.npuArch` (explicit, issue #29) →
+ *   `process.env.NPU_ARCH` snapshot (unless the SOC came from the simulator type) →
+ *   `getNpuArchForCannSoc(socVersion)`.
  */
 /** Core resolver (no logging). Used internally and by tests. */
-export function computeAscendEnvResolution(ctx: ResolveAscendEnvContext): AscendEnvResolution {
+export function computeAscendEnvResolution(
+  ctx: ResolveAscendEnvContext,
+  options: ResolveAscendEnvOptions = {},
+): AscendEnvResolution {
   const firstSim = resolveSimulatorFirstPass(ctx);
-  const soc = resolveSocVersion(ctx, firstSim);
+  const soc = resolveSocVersion(ctx, firstSim, options);
 
   let simulatorType = firstSim.simulatorType;
   let simulatorSource = firstSim.source;
@@ -661,16 +725,16 @@ export function computeAscendEnvResolution(ctx: ResolveAscendEnvContext): Ascend
     simulatorSource = 'default-from-soc';
   }
 
-  const npuArch = getNpuArchForCannSoc(soc.socVersion);
+  const arch = resolveNpuArch(soc);
 
   return {
     socVersion: soc.socVersion,
-    npuArch,
+    npuArch: arch.npuArch,
     simulatorType,
     source: {
       socVersion: soc.source,
       simulatorType: ctx.isSimulator ? simulatorSource : 'n/a',
-      npuArch: 'derived-from-soc',
+      npuArch: arch.source,
     },
   };
 }

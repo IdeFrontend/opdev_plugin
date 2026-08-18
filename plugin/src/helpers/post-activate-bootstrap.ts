@@ -6,6 +6,10 @@ import { configService } from '@plugin/service/config-service';
 import {
   isRemoteNpuHardwareProbeAvailable, startNpuHardwareProbe, startRemoteNpuHardwareProbe,
 } from '@plugin/domain/utils/npu-hardware-probe';
+import { maybeApplyCannCppIncludePaths } from '@plugin/domain/utils/cann-cpp-include-paths';
+import { maybePromptInstallCppExtension } from '@plugin/helpers/cpp-extension-support';
+import { computeAscendEnvResolution } from '@plugin/domain/utils/ascend-util';
+import { applyNpuArchToTerminalEnv } from './terminal-npu-arch-env';
 import {
   CONTEXT_PREFIX, TREE_VIEW_OPERATE,
 } from '@shared/flavor';
@@ -54,6 +58,29 @@ async function runPostActivateBootstrapImpl(deps: PostActivateBootstrapDeps): Pr
   logDebug('postActivate:bootstrap:start');
 
   void refreshNpuHardwareAvailability(operateTreeProvider, logDebug);
+
+  void maybePromptInstallCppExtension(context, logDebug)
+    .catch((error) => {
+      logDebug('postActivate:cppSupportPrompt:error', error);
+    });
+
+  void maybeApplyCannCppIncludePaths(logDebug)
+    .catch((error) => {
+      logDebug('postActivate:cannCppIncludePaths:error', error);
+    });
+
+  // Issue #37: seed NPU_ARCH into the terminal env from settings / OS env only, so a manual
+  // `bash build.sh` right after "Open Folder" has it. Host detection stays off here: it is
+  // memoized, and probing before the user's CANN env is applied would cache a failure.
+  try {
+    applyNpuArchToTerminalEnv(
+      context.environmentVariableCollection,
+      computeAscendEnvResolution({ isSimulator: false }, { allowHostDetection: false }).npuArch,
+    );
+  }
+  catch (error) {
+    logDebug('postActivate:npuArchTerminalEnv:error', error);
+  }
 
   try {
     const installer = new MindStudioPluginInstaller(context, {

@@ -196,6 +196,7 @@ A5 metric matrix details: [`ascend-a5-support.md`](./ascend-a5-support.md).
 |-------------|-------------|
 | `environment.environmentScript` | Project `ascend_env_script`; default in schema `/etc/profile`. Explicit empty vs unset handled in `getConfiguredEnvironmentScriptPath` / `getAscendEnvScriptWithWorkspaceOverride`. |
 | `environment.socVersion` | Overrides stored project SOC when set; fed into `resolveAscendEnv` / spawn env ([`ascend-env-spec.md`](./ascend-env-spec.md)). |
+| `environment.npuArch` | Overrides the SOC-derived `NPU_ARCH` (e.g. `dav-2201`, `dav-3510`); reaches spawn exports, terminal env and `cmake -DCMAKE_ASC_ARCHITECTURES=` ([`ascend-env-spec.md`](./ascend-env-spec.md) §6). |
 
 ---
 

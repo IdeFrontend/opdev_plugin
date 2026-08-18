@@ -72,6 +72,18 @@ export class ProjectManager {
   public clearExecutor(): void {
     this._currentExecutor = null;
   }
+
+  /**
+   * Reset cached project context (id/name/path).
+   * Called when the workspace folder changes so that subsequent reads fall back
+   * to the current workspaceFolders[0] instead of a stale path from a previous workspace.
+   */
+  public resetCachedProject(): void {
+    this._projectId = '';
+    this._projectName = undefined;
+    this._projectPath = undefined;
+  }
+
   /**
    * Get project information
    * First use the incoming parameters, secondly use the cached information, and finally try to get it from the workspace

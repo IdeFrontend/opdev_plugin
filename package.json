@@ -19,8 +19,7 @@
     "onStartupFinished"
   ],
   "extensionPack": [
-    "ms-vscode-remote.remote-ssh",
-    "ms-vscode.cpptools"
+    "ms-vscode-remote.remote-ssh"
   ],
   "icon": "out/web/branding/extension_icon.png",
   "contributes": {
@@ -584,10 +583,29 @@
             "order": 401,
             "markdownDescription": "%config.op-devtools.environment.socVersion.markdownDescription%"
           },
-          "op-devtools.environment.insightPath": {
+          "op-devtools.environment.npuArch": {
             "type": "string",
             "order": 402,
+            "markdownDescription": "%config.op-devtools.environment.npuArch.markdownDescription%"
+          },
+          "op-devtools.environment.insightPath": {
+            "type": "string",
+            "order": 403,
             "markdownDescription": "%config.op-devtools.environment.insightPath.markdownDescription%"
+          }
+        }
+      },
+      {
+        "id": "op-devtools.execution",
+        "title": "%config.category.execution.title%",
+        "type": "object",
+        "properties": {
+          "op-devtools.execution.commandTimeoutSeconds": {
+            "type": "number",
+            "default": 1800,
+            "minimum": 0,
+            "order": 450,
+            "description": "%config.op-devtools.execution.commandTimeoutSeconds.description%"
           }
         }
       },

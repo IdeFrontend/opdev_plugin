@@ -36,6 +36,7 @@ import {
 import { performanceDataMethods } from './controller/performance-controller';
 import { PermanentStorage } from './class/permanent-storage';
 import { ExtensionConfig } from './core/extension-config';
+import { ProjectManager } from './core/project/project-manager';
 import { RemoteConfig } from './helpers/remote-config';
 import { sanitizerDiagnosticsService } from './service/sanitizer-diagnostics.service';
 import { registerMsdebugTargetAutoAdapt } from '@plugin/domain/utils/debug-target';
@@ -867,6 +868,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const sanitizerResultsPanelProvider: vscode.TreeDataProvider<OperateNode> = {
     onDidChangeTreeData: operateTreeProvider.onDidChangeTreeData,
     getTreeItem: (element) => operateTreeProvider.getTreeItem(element),
+    getParent: (element) => operateTreeProvider.getSanitizerTreeParent(element),
     resolveTreeItem: (item, element, token) => operateTreeProvider.resolveTreeItem(item, element as OperateNode, token),
     getChildren: (element) => {
       if (!element) {
@@ -884,6 +886,8 @@ export async function activate(context: vscode.ExtensionContext) {
     treeDataProvider: sanitizerResultsPanelProvider,
     showCollapseAll: false,
   });
+
+  operateTreeProvider.setSanitizerResultsTreeView(sanitizerResultsTreeView);
   const performanceResultsPanelProvider: vscode.TreeDataProvider<OperateNode> = {
     onDidChangeTreeData: operateTreeProvider.onDidChangePerformanceTreeData,
     getTreeItem: (element) => operateTreeProvider.getTreeItem(element),
@@ -2656,8 +2660,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const flashMsSanitizerRunData = vscode.commands.registerCommand(
     COMMAND_FLASH_MS_SANITIZER_RUN_DATA,
-    async () => {
-      await operateTreeProvider.refreshSanitizerReports(true);
+    async (options?: { openLatest?: boolean }) => {
+      await operateTreeProvider.flashSanitizerRunData(options);
     },
   );
 
@@ -2665,7 +2669,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const flashPerformanceRunData = vscode.commands.registerCommand(
     COMMAND_FLASH_PERFORMANCE_RUN_DATA,
-    async (options?: { focusIfNew?: boolean }) => {
+    async (options?: { focusIfNew?: boolean;
+      openIfNew?: boolean }) => {
       await operateTreeProvider.refreshPerformanceReports(options);
     },
   );
@@ -2716,6 +2721,16 @@ export async function activate(context: vscode.ExtensionContext) {
 
       // Detect operator projects in the workspace
       const workspaceFolders = vscode.workspace.workspaceFolders;
+
+      // Discard stale project cache when the primary workspace folder no longer
+      // matches the cached path. Otherwise reads (devtool_config check, build
+      // command generation) would keep targeting the previous workspace.
+      const pm = ProjectManager.getInstance();
+      const primaryPath = workspaceFolders?.[0]?.uri.fsPath;
+
+      if (primaryPath && path.normalize(primaryPath) !== pm.getProjectInfo()?.path) {
+        pm.resetCachedProject();
+      }
 
       if (workspaceFolders && workspaceFolders.length > 0) {
         const { WorkspaceDetectorService } = await import('./service/workspace-detector-service.js');

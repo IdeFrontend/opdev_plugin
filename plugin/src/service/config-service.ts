@@ -16,12 +16,17 @@ import {
 } from '@plugin/domain/services/configuration';
 import { getFiles } from '@plugin/domain/services/system';
 import {
+  getConfiguredValue,
   getOpDevtoolsWorkspaceConfiguration,
+  getSocVersionWithWorkspaceOverride,
   mapKeyValueObjectToAdvanceParams,
   mapSanitizerScopeToUseBlock,
 } from '@plugin/helpers/operator-project-workspace-config';
 import { isAscendA5ProfilerCannSoc } from '@shared/msprof-onboard-env';
-import { resolveEffectiveCannSoc } from '@plugin/domain/utils/ascend-util';
+import {
+  getSeriesNpuArchForCannSoc,
+  resolveEffectiveCannSoc,
+} from '@plugin/domain/utils/ascend-util';
 import { AsyncSingleFlight } from '@plugin/helpers/async-single-flight';
 import {
   ON_BOARD_METRIC_LEGACY_TO_DOTTED,
@@ -35,6 +40,7 @@ import {
 import { resolveWorkspaceRoot } from '@plugin/helpers/resolve-workspace-root';
 import { projectService } from '@plugin/service/project-service';
 import { SETTINGS_PREFIX } from '@shared/flavor';
+import type { AscendEnvResolution } from '@plugin/domain/utils/ascend-util';
 
 const CONFIG_TYPES = {
   SANITIZER: 'sanitizer',
@@ -67,18 +73,7 @@ function toFullDottedKey(relativeKey: string): string {
 }
 
 function readWorkspaceScopedSetting<T>(relativeKey: string): T | undefined {
-  const inspection = getOpDevtoolsWorkspaceConfiguration()
-    .inspect<T>(relativeKey);
-
-  if (!inspection) {
-    return undefined;
-  }
-
-  if (inspection.workspaceFolderValue !== undefined) {
-    return inspection.workspaceFolderValue;
-  }
-
-  return inspection.workspaceValue;
+  return getConfiguredValue<T>(getOpDevtoolsWorkspaceConfiguration(), [relativeKey]);
 }
 
 function flattenNestedOpDevtools(
@@ -106,7 +101,10 @@ function parseRawSettingsJson(filePath: string): Record<string, unknown> {
     return {};
   }
 
+  // A BOM is legal in settings.json and makes JSON.parse throw, which would leave every
+  // op-devtools write on that workspace failing for good.
   const raw = fs.readFileSync(filePath, 'utf8')
+    .replace(/^\uFEFF/, '')
     .trim();
 
   if (!raw) {
@@ -355,11 +353,24 @@ async function persistIdeSettingsFile(
     return;
   }
 
-  await fs.promises.writeFile(
-    filePath,
-    `${JSON.stringify(output, null, 2)}\n`,
-    'utf8',
-  );
+  // Write to a sibling temp file and rename over the target: a crash (or a full disk) between
+  // truncate and write would otherwise leave the user with an empty or half-written
+  // settings.json and no way back. rename() within the same directory is atomic.
+  const tempPath = `${filePath}.${process.pid}.tmp`;
+
+  try {
+    await fs.promises.writeFile(
+      tempPath,
+      `${JSON.stringify(output, null, 2)}\n`,
+      'utf8',
+    );
+    await fs.promises.rename(tempPath, filePath);
+  }
+  catch (error) {
+    await fs.promises.rm(tempPath, { force: true });
+
+    throw error;
+  }
 }
 
 function buildDottedOnlySettingsFileContent(filePath: string): Record<string, unknown> {
@@ -380,6 +391,24 @@ function buildDottedOnlySettingsFileContent(filePath: string): Record<string, un
 }
 
 const legacySettingsMigrationFlight = new AsyncSingleFlight<void>();
+
+let settingsFileWriteQueue: Promise<unknown> = Promise.resolve();
+
+/**
+ * Runs one settings file read-modify-write at a time. Every writer below re-reads the
+ * whole file and rewrites it, so two overlapping writers both read the same "before" copy
+ * and the second one drops the first one's keys — a build that pins `environment.socVersion`
+ * while the webview saves sanitizer options loses one of them. A single-flight would be the
+ * wrong tool: it hands the second caller the first caller's promise and never writes the
+ * second caller's keys at all. Queueing keeps both writes, in call order.
+ */
+function queueSettingsFileWrite<T>(task: ()=> Promise<T>): Promise<T> {
+  const next = settingsFileWriteQueue.then(task);
+
+  settingsFileWriteQueue = next.catch(() => undefined);
+
+  return next;
+}
 
 export function isLegacySettingsMigrationInFlight(): boolean {
   return legacySettingsMigrationFlight.pending !== undefined;
@@ -408,31 +437,33 @@ export class ConfigService {
       return false;
     }
 
-    const filePath = getIdeSettingsFilePath(root);
+    const settingsPath = getIdeSettingsFilePath(root);
 
-    if (!fs.existsSync(filePath)) {
-      return false;
-    }
+    return queueSettingsFileWrite(async () => {
+      if (!fs.existsSync(settingsPath)) {
+        return false;
+      }
 
-    const raw = parseRawSettingsJson(filePath);
-    const {
-      output, removedAny,
-    } = stripOpDevtoolsKeysFromRaw(raw);
+      const raw = parseRawSettingsJson(settingsPath);
+      const {
+        output, removedAny,
+      } = stripOpDevtoolsKeysFromRaw(raw);
 
-    if (!removedAny) {
-      return false;
-    }
+      if (!removedAny) {
+        return false;
+      }
 
-    try {
-      await persistIdeSettingsFile(filePath, output, true);
+      try {
+        await persistIdeSettingsFile(settingsPath, output, true);
 
-      return true;
-    }
-    catch (error) {
-      console.warn('[clearOpDevtoolsWorkspaceSettings] failed:', error);
+        return true;
+      }
+      catch (error) {
+        console.warn('[clearOpDevtoolsWorkspaceSettings] failed:', error);
 
-      return false;
-    }
+        return false;
+      }
+    });
   }
 
   /**
@@ -440,7 +471,8 @@ export class ConfigService {
    * Also rewrites legacy nested `"op-devtools": { ... }` to dotted keys when present,
    * even when `updates` is empty (existing dotted keys win over nested values).
    * Intentionally uses direct file I/O (not `cfg.update` per key) for performance.
-   * Concurrent callers may interleave; last writer wins.
+   * Writes run one at a time (`queueSettingsFileWrite`), so overlapping callers cannot
+   * read the same "before" copy and drop each other's keys.
    * @returns true if settings.json was written, false if no-op
    */
   static async writeOpDevtoolsDottedSettings(
@@ -455,42 +487,44 @@ export class ConfigService {
       return false;
     }
 
-    const filePath = getIdeSettingsFilePath(root);
-    const hasUpdates = Object.keys(updates).length > 0;
-    const needsNestedMigration = isLegacyNestedOpDevtoolsRoot(parseRawSettingsJson(filePath)[SETTINGS_PREFIX]);
+    return queueSettingsFileWrite(async () => {
+      const filePath = getIdeSettingsFilePath(root);
+      const hasUpdates = Object.keys(updates).length > 0;
+      const needsNestedMigration = isLegacyNestedOpDevtoolsRoot(parseRawSettingsJson(filePath)[SETTINGS_PREFIX]);
 
-    if (!needsNestedMigration && !hasUpdates) {
-      return false;
-    }
-
-    try {
-      await fs.promises.mkdir(path.dirname(filePath), { recursive: true });
-
-      const output = buildDottedOnlySettingsFileContent(filePath);
-
-      for (const [
-        relativeKey,
-        value,
-      ] of Object.entries(updates)) {
-        const fullKey = toFullDottedKey(relativeKey);
-
-        if (value === undefined) {
-          delete output[fullKey];
-        }
-        else {
-          output[fullKey] = value;
-        }
+      if (!needsNestedMigration && !hasUpdates) {
+        return false;
       }
 
-      await persistIdeSettingsFile(filePath, output);
+      try {
+        await fs.promises.mkdir(path.dirname(filePath), { recursive: true });
 
-      return true;
-    }
-    catch (error) {
-      console.warn('[writeOpDevtoolsDottedSettings] failed:', error);
+        const output = buildDottedOnlySettingsFileContent(filePath);
 
-      return false;
-    }
+        for (const [
+          relativeKey,
+          value,
+        ] of Object.entries(updates)) {
+          const fullKey = toFullDottedKey(relativeKey);
+
+          if (value === undefined) {
+            delete output[fullKey];
+          }
+          else {
+            output[fullKey] = value;
+          }
+        }
+
+        await persistIdeSettingsFile(filePath, output);
+
+        return true;
+      }
+      catch (error) {
+        console.warn('[writeOpDevtoolsDottedSettings] failed:', error);
+
+        return false;
+      }
+    });
   }
 
   /**
@@ -519,6 +553,61 @@ export class ConfigService {
     }
 
     return filtered;
+  }
+
+  /**
+   * Pin a host-detected SOC into the project's `settings.json` (issue #37). Reopening the
+   * project with "Open Folder" then resolves `SOC_VERSION` / `NPU_ARCH` from settings alone,
+   * without re-probing the host. No-op unless the SOC really came from host detection and no
+   * explicit `environment.socVersion` exists — we never clobber the user's choice, and never
+   * pin the fallback default (that would outrank later detection).
+   *
+   * @returns true if settings.json was written
+   */
+  static async persistDetectedSocVersion(resolution: AscendEnvResolution): Promise<boolean> {
+    const soc = resolution.socVersion.trim();
+
+    if (resolution.source.socVersion !== 'detected' || !soc) {
+      return false;
+    }
+
+    if (getSocVersionWithWorkspaceOverride(null)
+      .trim()) {
+      return false;
+    }
+
+    const updates: OpDevtoolsDottedWrites = { 'environment.socVersion': soc };
+    const npuArch = ConfigService.chipSpecificNpuArchToPin(resolution, soc);
+
+    if (npuArch) {
+      updates['environment.npuArch'] = npuArch;
+    }
+
+    return ConfigService.writeOpDevtoolsDottedSettings(updates);
+  }
+
+  /**
+   * The chip-specific `NPU_ARCH` to pin alongside the SOC, or undefined when the slug alone
+   * already yields it.
+   *
+   * A SOC slug carries only its series, so an Ascend910ProA/ProB/PremiumA or 901A/901B host
+   * resolves `dav-1001` only while the detected chip name is still cached in this process.
+   * Pinning the SOC makes the next window answer from settings and never detect again, which
+   * would silently downgrade those hosts to the series default `dav-2201`.
+   */
+  private static chipSpecificNpuArchToPin(
+    resolution: AscendEnvResolution,
+    soc: string,
+  ): string | undefined {
+    const npuArch = resolution.npuArch.trim();
+
+    // An explicit setting is already in settings.json, and a value inherited from the OS
+    // environment is not ours to freeze into the project.
+    if (!npuArch || resolution.source.npuArch !== 'derived-from-soc') {
+      return undefined;
+    }
+
+    return npuArch === getSeriesNpuArchForCannSoc(soc) ? undefined : npuArch;
   }
 
   private static getWorkspaceSettingsFileKeySet(workspaceRoot?: string): Set<string> {

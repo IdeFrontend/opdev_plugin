@@ -3,6 +3,7 @@ import * as os from 'os';
 import * as path from 'path';
 
 import {
+  listBuildFiles,
   resolveDebugTargetBinary,
   debugTargetCandidates,
   collectDebugTargetCandidates,
@@ -16,6 +17,66 @@ import {
 } from '@plugin/domain/utils/debug-target';
 
 const DEFAULT_TARGET = DEFAULT_MSDEBUG_TARGET;
+
+describe('listBuildFiles', () => {
+  let buildDir: string;
+
+  beforeEach(() => {
+    buildDir = fs.mkdtempSync(path.join(os.tmpdir(), 'build-files-'));
+  });
+
+  afterEach(() => {
+    fs.rmSync(buildDir, {
+      force: true,
+      recursive: true,
+    });
+  });
+
+  it('lists a symlinked binary — withFileTypes reports the link, not its target', () => {
+    fs.writeFileSync(path.join(buildDir, 'add_custom'), '');
+    fs.symlinkSync(path.join(buildDir, 'add_custom'), path.join(buildDir, 'test_aclnn_add_custom'));
+    fs.mkdirSync(path.join(buildDir, 'CMakeFiles'));
+
+    expect(listBuildFiles(buildDir)
+      .sort())
+      .toEqual([
+        'add_custom',
+        'test_aclnn_add_custom',
+      ]);
+  });
+
+  it('drops a dangling symlink left over from an earlier build', () => {
+    fs.writeFileSync(path.join(buildDir, 'add_custom'), '');
+    fs.symlinkSync(path.join(buildDir, 'removed_binary'), path.join(buildDir, 'test_aclnn_stale'));
+
+    expect(listBuildFiles(buildDir))
+      .toEqual(['add_custom']);
+  });
+
+  it('drops a link to a directory — msdebug cannot run one', () => {
+    fs.writeFileSync(path.join(buildDir, 'add_custom'), '');
+    fs.mkdirSync(path.join(buildDir, 'CMakeFiles'));
+    fs.symlinkSync(path.join(buildDir, 'CMakeFiles'), path.join(buildDir, 'test_aclnn_add_custom'));
+
+    expect(listBuildFiles(buildDir))
+      .toEqual(['add_custom']);
+  });
+
+  it('survives a self-referencing link instead of losing the listing to ELOOP', () => {
+    fs.writeFileSync(path.join(buildDir, 'add_custom'), '');
+    fs.symlinkSync(path.join(buildDir, 'loop'), path.join(buildDir, 'loop'));
+
+    expect(listBuildFiles(buildDir))
+      .toEqual(['add_custom']);
+  });
+
+  it('returns nothing for a missing or unreadable directory instead of throwing', () => {
+    expect(listBuildFiles(path.join(buildDir, 'nope')))
+      .toEqual([]);
+    expect(listBuildFiles(''))
+      .toEqual([]);
+  });
+});
 
 describe('resolveDebugTargetBinary', () => {
   it('returns the first candidate present, honoring priority order', () => {

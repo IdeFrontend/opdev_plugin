@@ -1,9 +1,12 @@
+import { t } from 'i18next';
+
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import { getConfigById } from '@plugin/domain/services/configuration';
 import { getOpByProjectIdAndOpName } from '@plugin/domain/models/model';
 import { getProjectById } from '@plugin/domain/models/project-model';
 import {
   applyAscendPlaceholdersToScript,
+  type AscendEnvResolution,
   buildOperatorSpawnEnvFromResolution,
   isSimulatorCompile,
   mergeTritonSanitizerSpawnEnv,
@@ -21,6 +24,29 @@ import {
   RemoteToolUnavailableError,
   type OperatorCommandTransformer,
 } from '@plugin/helpers/remote-command';
+import {
+  applyNpuArchToTerminalEnv,
+  getTerminalEnvCollection,
+} from '@plugin/helpers/terminal-npu-arch-env';
+import { ConfigService } from '@plugin/service/config-service';
+
+/** 30 min covers a cold full rebuild; anything past that is a hang, not a slow run. */
+const DEFAULT_OPERATOR_COMMAND_TIMEOUT_SECONDS = 30 * 60;
+const MAX_NODE_TIMER_DELAY_MS = 2_147_483_647;
+
+/** Configured operator command timeout in ms, or undefined when disabled. */
+export function resolveOperatorCommandTimeoutMs(): number | undefined {
+  const configured = ConfigService.readOpDevtoolsSetting<number>('execution.commandTimeoutSeconds');
+  const seconds = typeof configured === 'number'
+    ? configured
+    : DEFAULT_OPERATOR_COMMAND_TIMEOUT_SECONDS;
+
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    return undefined;
+  }
+
+  return Math.min(Math.round(seconds * 1000), MAX_NODE_TIMER_DELAY_MS);
+}
 
 export function resolveOpTypeForSpawn(
   projectId: number | undefined,
@@ -100,6 +126,44 @@ function enrichOperatorSpawnContext(
   };
 }
 
+/**
+ * Failure text for a finished command result.
+ *
+ * A timeout resolves as `{ code: null, timedOut: true }`, so a caller that only
+ * looks at `code !== 0` tells the user the compile/run failed and hides both the
+ * real cause and the setting that controls it.
+ */
+export function commandFailureMessage(
+  result: { timedOut?: boolean;
+    output?: string },
+  fallbackKey: string,
+  params: Record<string, unknown> = {},
+): string {
+  if (result.timedOut) {
+    return t('build.commandTimedOut', { output: result.output ?? '' });
+  }
+
+  return t(fallbackKey, params);
+}
+
+/**
+ * Issue #37: keep the reopen / manual-build path in sync with what the plugin just resolved.
+ * Refreshes `NPU_ARCH` in the integrated-terminal env (so a hand-typed `bash build.sh` in this
+ * window matches the plugin build) and pins a host-detected SOC into `settings.json` (so the
+ * next "Open Folder" resolves it without probing). Skipped for simulator runs, whose SOC/arch
+ * describe the simulator device rather than the host. Best-effort; never blocks the command.
+ */
+function syncReopenBuildEnv(resolution: AscendEnvResolution, isSimulator: boolean): void {
+  if (isSimulator) {
+    return;
+  }
+
+  applyNpuArchToTerminalEnv(getTerminalEnvCollection(), resolution.npuArch);
+
+  void ConfigService.persistDetectedSocVersion(resolution)
+    .catch(() => { /* persistence is an optimization; never fail the command */ });
+}
+
 export async function executeOperatorCommand(
   command: string,
   spawnContext: OperatorSpawnEnvContext,
@@ -121,8 +185,11 @@ export async function executeOperatorCommand(
       stdout: '',
       stderr: '',
       interruptedByUserStop: true,
+      timedOut: false,
     };
   }
+
+  syncReopenBuildEnv(resolution, isSimulator);
 
   const filtered = OperatorPluginRegistry.filterSpawnEnv(
     buildOperatorSpawnEnvFromResolution(resolution, isSimulator),
@@ -148,6 +215,7 @@ export async function executeOperatorCommand(
         stdout: '',
         stderr: '',
         interruptedByUserStop: true,
+        timedOut: false,
       };
     }
 
@@ -158,8 +226,15 @@ export async function executeOperatorCommand(
     .getExecutor();
 
   if (meta?.detached) {
+    // Detached runs wait on a ready keyword and keep going afterwards, so the command timeout
+    // does not apply to them.
     return executor.executeDetached(commandToExecute, meta.readyKeyword || 'ready', [], { toolOutputLabel }, true);
   }
 
-  return executor.execute(commandToExecute, [], [], { toolOutputLabel }, true);
+  const timeout = resolveOperatorCommandTimeoutMs();
+
+  return executor.execute(commandToExecute, [], [], {
+    toolOutputLabel,
+    ...(timeout !== undefined ? { timeout } : {}),
+  }, true);
 }

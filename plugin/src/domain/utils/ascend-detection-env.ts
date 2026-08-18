@@ -89,7 +89,12 @@ function resolveFromPath(
   };
 }
 
-export function resolveCannSetEnvScriptForDetection(): ResolvedSetEnvScript | undefined {
+/**
+ * Same precedence as {@link resolveCannSetEnvScriptForDetection} minus the
+ * `find /` fallback, which blocks the extension host for up to 30s through
+ * `execSync`. Use it on any path that runs at startup.
+ */
+export function resolveCannSetEnvScriptWithoutScan(): ResolvedSetEnvScript | undefined {
   const fromWorkspace = resolveFromPath(
     getConfiguredEnvironmentScriptPath(),
     'workspace-setting',
@@ -115,6 +120,16 @@ export function resolveCannSetEnvScriptForDetection(): ResolvedSetEnvScript | un
       path: fromCommonPaths,
       source: 'find',
     };
+  }
+
+  return undefined;
+}
+
+export function resolveCannSetEnvScriptForDetection(): ResolvedSetEnvScript | undefined {
+  const withoutScan = resolveCannSetEnvScriptWithoutScan();
+
+  if (withoutScan) {
+    return withoutScan;
   }
 
   const found = tryFindCannSetEnvShViaFind();

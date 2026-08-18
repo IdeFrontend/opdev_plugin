@@ -32,6 +32,7 @@ import { homeMethods } from '../controller/home-controller';
 import { resolveAscendEnv } from '@plugin/domain/utils/ascend-util';
 import {
   buildOperatorSpawnContext,
+  commandFailureMessage,
   executeOperatorCommand,
 } from '@plugin/service/operator-command-executor';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
@@ -450,7 +451,7 @@ export class BuildService {
         }
 
         console.error('[startBuild] Build failed, exit code:', res.code, 'output:', res.output);
-        vscode.window.showErrorMessage(t('build.compileFailed', { output: res.output }));
+        vscode.window.showErrorMessage(commandFailureMessage(res, 'build.compileFailed', { output: res.output }));
 
         return false;
       }
@@ -556,11 +557,12 @@ export class BuildService {
         const output = res.output ?? '';
         const isQemuSegfault = /qemu/i.test(output) && (/signal\s+11|Segmentation\s+fault/i.test(output) || /core\s+dumped/i.test(output));
         const isPyascRuntime = !behavior.requiresBuildBeforeAnalysis && /runtime_camodel|cannot find -lruntime_camodel|Runtime library must be available/i.test(output);
-        const message = isQemuSegfault
-          ? t('build.runFailedQemuSegfault', { output })
+        const messageKey = isQemuSegfault
+          ? 'build.runFailedQemuSegfault'
           : isPyascRuntime
-            ? t('build.runFailedPyascRuntime', { output })
-            : t('build.runFailed', { output });
+            ? 'build.runFailedPyascRuntime'
+            : 'build.runFailed';
+        const message = commandFailureMessage(res, messageKey, { output });
 
         vscode.window.showErrorMessage(message);
 
@@ -638,7 +640,7 @@ export class BuildService {
           return;
         }
 
-        vscode.window.showErrorMessage(t('build.executeFailed', { output: '' }));
+        vscode.window.showErrorMessage(commandFailureMessage(res, 'build.executeFailed', { output: '' }));
 
         return;
       }
@@ -773,8 +775,8 @@ export class BuildService {
           throw new Error('SOC configuration interrupted by user');
         }
 
-        vscode.window.showErrorMessage(t('build.compileFailed', { output: buildRes.output }));
-        throw new Error(t('build.compileFailedThrow', { output: buildRes.output }));
+        vscode.window.showErrorMessage(commandFailureMessage(buildRes, 'build.compileFailed', { output: buildRes.output }));
+        throw new Error(commandFailureMessage(buildRes, 'build.compileFailedThrow', { output: buildRes.output }));
       }
 
       await notifyBuildSucceededForSidebar(Number(simulatorItem?.config_id), params.operatorNames);
@@ -801,8 +803,8 @@ export class BuildService {
         console.log('example buildRes', exampleBuildRes);
 
         if (exampleBuildRes.code !== 0) {
-          vscode.window.showErrorMessage(t('build.executeFailed', { output: exampleBuildRes.output }));
-          throw new Error(t('build.executeFailedThrow', { output: exampleBuildRes.output }));
+          vscode.window.showErrorMessage(commandFailureMessage(exampleBuildRes, 'build.executeFailed', { output: exampleBuildRes.output }));
+          throw new Error(commandFailureMessage(exampleBuildRes, 'build.executeFailedThrow', { output: exampleBuildRes.output }));
         }
 
         const deployRes = await this.deployStandardCustomRunPackage(
@@ -815,8 +817,8 @@ export class BuildService {
             throw new Error('SOC configuration interrupted by user');
           }
 
-          vscode.window.showErrorMessage(t('build.executeFailed', { output: deployRes.output }));
-          throw new Error(t('build.executeFailedThrow', { output: deployRes.output ?? '' }));
+          vscode.window.showErrorMessage(commandFailureMessage(deployRes, 'build.executeFailed', { output: deployRes.output }));
+          throw new Error(commandFailureMessage(deployRes, 'build.executeFailedThrow', { output: deployRes.output ?? '' }));
         }
       }
     }
@@ -844,12 +846,15 @@ export class BuildService {
           throw new Error('SOC configuration interrupted by user');
         }
 
-        vscode.window.showErrorMessage(t('build.simulationFailed'));
-        throw new Error(t('build.simulationFailedThrow', { output: res.output ?? '' }));
+        vscode.window.showErrorMessage(commandFailureMessage(res, 'build.simulationFailed'));
+        throw new Error(commandFailureMessage(res, 'build.simulationFailedThrow', { output: res.output ?? '' }));
       }
 
       vscode.window.showInformationMessage(t('build.simulationSuccess'));
-      await vscode.commands.executeCommand(COMMAND_FLASH_PERFORMANCE_RUN_DATA, { focusIfNew: true });
+      await vscode.commands.executeCommand(COMMAND_FLASH_PERFORMANCE_RUN_DATA, {
+        focusIfNew: true,
+        openIfNew: true,
+      });
     }
     catch (e: unknown) {
       vscode.window.showErrorMessage(t('build.getSimulationCommandFailed', { error: (e as Error).message }));
@@ -904,7 +909,7 @@ export class BuildService {
       console.log('buildRes', buildRes);
 
       if (buildRes.code !== 0) {
-        vscode.window.showErrorMessage(t('build.compileFailed', { output: buildRes.output }));
+        vscode.window.showErrorMessage(commandFailureMessage(buildRes, 'build.compileFailed', { output: buildRes.output }));
 
         return;
       }
@@ -942,7 +947,7 @@ export class BuildService {
             return;
           }
 
-          vscode.window.showErrorMessage(t('build.executeFailed', { output: exampleBuildRes.output }));
+          vscode.window.showErrorMessage(commandFailureMessage(exampleBuildRes, 'build.executeFailed', { output: exampleBuildRes.output }));
 
           return;
         }
@@ -957,7 +962,7 @@ export class BuildService {
             return;
           }
 
-          vscode.window.showErrorMessage(t('build.executeFailed', { output: deployRes.output }));
+          vscode.window.showErrorMessage(commandFailureMessage(deployRes, 'build.executeFailed', { output: deployRes.output }));
 
           return;
         }
@@ -994,13 +999,16 @@ export class BuildService {
           return;
         }
 
-        vscode.window.showErrorMessage(t('build.onBoardFailed'));
+        vscode.window.showErrorMessage(commandFailureMessage(res, 'build.onBoardFailed'));
 
         return;
       }
 
       vscode.window.showInformationMessage(t('build.onBoardSuccess'));
-      await vscode.commands.executeCommand(COMMAND_FLASH_PERFORMANCE_RUN_DATA, { focusIfNew: true });
+      await vscode.commands.executeCommand(COMMAND_FLASH_PERFORMANCE_RUN_DATA, {
+        focusIfNew: true,
+        openIfNew: true,
+      });
     }
     catch (e: unknown) {
       vscode.window.showErrorMessage(t('build.getOnBoardCommandFailed', { error: (e as Error).message }));
@@ -1078,7 +1086,7 @@ export class BuildService {
 
     if (res.code !== 0) {
       console.error('[startDumpTensor] Build failed, exit code:', res.code, 'output:', res.output);
-      vscode.window.showErrorMessage(t('build.compileFailed', { output: res.output }));
+      vscode.window.showErrorMessage(commandFailureMessage(res, 'build.compileFailed', { output: res.output }));
 
       return;
     }
@@ -1111,7 +1119,7 @@ export class BuildService {
           return;
         }
 
-        vscode.window.showErrorMessage(t('build.executeFailed', { output: exampleBuildRes.output }));
+        vscode.window.showErrorMessage(commandFailureMessage(exampleBuildRes, 'build.executeFailed', { output: exampleBuildRes.output }));
 
         return;
       }
@@ -1147,7 +1155,8 @@ export class BuildService {
 
           const output = res.output ?? '';
           const isQemuSegfault = /qemu/i.test(output) && (/signal\s+11|Segmentation\s+fault/i.test(output) || /core\s+dumped/i.test(output));
-          const message = isQemuSegfault ? t('build.runFailedQemuSegfault', { output }) : t('build.runFailed', { output });
+          const messageKey = isQemuSegfault ? 'build.runFailedQemuSegfault' : 'build.runFailed';
+          const message = commandFailureMessage(res, messageKey, { output });
 
           vscode.window.showErrorMessage(message);
 
@@ -1210,7 +1219,7 @@ export class BuildService {
           return;
         }
 
-        vscode.window.showErrorMessage(t('build.utTestFailed'));
+        vscode.window.showErrorMessage(commandFailureMessage(res, 'build.utTestFailed'));
 
         return;
       }

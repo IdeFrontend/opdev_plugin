@@ -33,6 +33,16 @@ type InspectValue<T> =
   }
   | undefined;
 
+/**
+ * `"op-devtools.some.setting": null` in settings.json reaches us as `null`, and every
+ * reader below runs `String(value)` on what it gets — which would hand callers the
+ * literal `"null"` (into build commands, spawn env, NPU_ARCH). Treat it as unset so the
+ * value falls through to the next source in the precedence chain, like an absent setting.
+ */
+function isConfiguredValue<T>(value: T | null | undefined): value is T {
+  return value !== undefined && value !== null;
+}
+
 function pickFromInspect<T>(
   inspection: InspectValue<T>,
   fallback: T,
@@ -41,11 +51,11 @@ function pickFromInspect<T>(
     return fallback;
   }
 
-  if (inspection.workspaceFolderValue !== undefined) {
+  if (isConfiguredValue(inspection.workspaceFolderValue)) {
     return inspection.workspaceFolderValue;
   }
 
-  if (inspection.workspaceValue !== undefined) {
+  if (isConfiguredValue(inspection.workspaceValue)) {
     return inspection.workspaceValue;
   }
 
@@ -57,11 +67,16 @@ function isExplicitlySet<T>(inspection: InspectValue<T>): boolean {
     return false;
   }
 
-  return inspection.workspaceFolderValue !== undefined
-    || inspection.workspaceValue !== undefined;
+  return isConfiguredValue(inspection.workspaceFolderValue)
+    || isConfiguredValue(inspection.workspaceValue);
 }
 
-function getConfiguredValue<T>(
+/**
+ * Workspace-scoped value for the first of `settingRelativePaths` the user actually set:
+ * folder scope wins over workspace scope, `null` counts as unset. The one reader every
+ * `op-devtools` setting goes through — see {@link isConfiguredValue} for why `null` matters.
+ */
+export function getConfiguredValue<T>(
   cfg: vscode.WorkspaceConfiguration,
   settingRelativePaths: string[],
 ): T | undefined {
@@ -206,4 +221,17 @@ export function getSocVersionWithWorkspaceOverride(storedSocVersion: string | nu
   const socVersion = getConfiguredValue<string>(cfg, ['environment.socVersion']);
 
   return socVersion !== undefined ? socVersion : (storedSocVersion || '');
+}
+
+/**
+ * Explicit `NPU_ARCH` override (issue #29). Empty string when the setting was
+ * never set, so callers keep the value derived from the resolved SOC.
+ */
+export function getWorkspaceNpuArch(): string {
+  const explicit = getConfiguredValue<string>(getOpDevtoolsWorkspaceConfiguration(), ['environment.npuArch']);
+
+  return explicit !== undefined
+    ? String(explicit)
+      .trim()
+    : '';
 }

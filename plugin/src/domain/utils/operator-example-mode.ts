@@ -31,6 +31,56 @@ export const DEFAULT_EXAMPLE_MATCHERS: ExampleMatchers = {
   graph: /^test_geir_.*\.cpp$/,
 };
 
+/** The prefix `build.sh` gives the example binary it builds for each mode. */
+const EXAMPLE_BINARY_PREFIX: Record<ExampleMode, string> = {
+  eager: 'test_aclnn_',
+  graph: 'test_geir_',
+};
+
+const EXAMPLE_BINARY_PREFIXES = /test_aclnn_|test_geir_/;
+
+/**
+ * Whether `targetFile` names a build.sh example binary. cann, pyasc and triton point at their own
+ * build output instead, and callers use this to keep the on-disk mode lookup off those flavors.
+ */
+export function isExampleTarget(targetFile: string | undefined): boolean {
+  return !!targetFile && EXAMPLE_BINARY_PREFIXES.test(targetFile);
+}
+
+/**
+ * Repoints a stored example target at `operatorNames`, keeping its directory and taking the
+ * prefix from the mode that will actually be built.
+ *
+ * Rewriting the operator but not the prefix hands msprof and mssanitizer a path that was never
+ * built: an operator shipping only a GE IR example (`pows`, plugin_release #171) forces graph
+ * mode, so the pre-build produces `test_geir_pows` while the run still asks for
+ * `test_aclnn_pows`. Nothing stats the path before it reaches the tool.
+ *
+ * A target carrying neither prefix is not a build.sh example target — cann, pyasc and triton
+ * point at their own build output — so it is returned untouched.
+ */
+export function rewriteExampleTarget(
+  targetFile: string,
+  operatorNames: string | undefined,
+  mode: ExampleMode,
+): string {
+  if (!operatorNames || !targetFile) {
+    return targetFile;
+  }
+
+  // The binary name is the last path segment, so cut at the last prefix: a build directory that
+  // itself carries one (`/ws/test_aclnn_demo/build/test_aclnn_add`) must keep its directory.
+  const prefixCuts = Object.values(EXAMPLE_BINARY_PREFIX)
+    .map((prefix) => targetFile.lastIndexOf(prefix));
+  const cut = Math.max(...prefixCuts);
+
+  if (cut < 0) {
+    return targetFile;
+  }
+
+  return `${targetFile.slice(0, cut)}${EXAMPLE_BINARY_PREFIX[mode]}${operatorNames}`;
+}
+
 /**
  * Compile a user-supplied pattern string into a matcher RegExp, falling back to `fallback`
  * when the pattern is empty or not a valid regular expression (so a typo never silently

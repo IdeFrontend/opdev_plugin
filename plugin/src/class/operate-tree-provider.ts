@@ -44,6 +44,7 @@ import {
   CONTEXT_PREFIX,
   SETTINGS_PREFIX,
   TREE_VIEW_PERFORMANCE_RESULTS,
+  TREE_VIEW_SANITIZER_RESULTS,
   treeItemContextKey,
 } from '@shared/flavor';
 
@@ -382,12 +383,18 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   private readonly performanceNodesById = new Map<string, OperateNode[]>();
   private readonly performanceReportRootNodesByKey = new Map<string, OperateNode>();
   private performanceResultsTreeView?: vscode.TreeView<OperateNode>;
+  private sanitizerResultsTreeView?: vscode.TreeView<OperateNode>;
   private performanceRefreshRevision = 0;
+  private sanitizerRefreshRevision = 0;
   private performanceSelectionContextRevision = 0;
   private performanceSelectionContextSync: Promise<void> = Promise.resolve();
 
   setPerformanceResultsTreeView(treeView: vscode.TreeView<OperateNode>): void {
     this.performanceResultsTreeView = treeView;
+  }
+
+  setSanitizerResultsTreeView(treeView: vscode.TreeView<OperateNode>): void {
+    this.sanitizerResultsTreeView = treeView;
   }
 
   private invalidateSanitizerPresentationCaches(): void {
@@ -797,22 +804,45 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     };
   }
 
-  async refreshSanitizerReports(revealLatest = false): Promise<void> {
+  /**
+   * Entry point for `COMMAND_FLASH_MS_SANITIZER_RUN_DATA`. Keeps the command payload contract
+   * in one testable place: SanitizerService is the only dispatcher that asks for the fresh
+   * report to be opened, every other caller just wants the list reloaded.
+   */
+  async flashSanitizerRunData(options?: { openLatest?: boolean }): Promise<void> {
+    await this.refreshSanitizerReports(true, options?.openLatest === true);
+  }
+
+  /**
+   * @param revealLatest select the newest report when nothing is selected yet
+   * @param openLatest a detection run just succeeded — always switch to its report and
+   *   focus the results view, otherwise the new report hides behind the previous selection
+   */
+  async refreshSanitizerReports(revealLatest = false, openLatest = false): Promise<void> {
     if (this.kind !== 'flow') {
       return;
     }
 
+    const refreshRevision = ++this.sanitizerRefreshRevision;
     let reports: SanitizerReportRecord[] = [];
 
     try {
       reports = await runDataService.getSanitizerRunData() as SanitizerReportRecord[];
     }
     catch (error) {
+      if (refreshRevision !== this.sanitizerRefreshRevision) {
+        return;
+      }
+
       console.warn('[OperateTreeProvider.refreshSanitizerReports] failed to read reports:', error);
       this.state.sanitizer.reports = [];
       this.invalidateSanitizerDataCaches();
       this.onDidChangeTreeDataEmitter.fire();
 
+      return;
+    }
+
+    if (refreshRevision !== this.sanitizerRefreshRevision) {
       return;
     }
 
@@ -843,11 +873,74 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       this.state.sanitizer.selectedMessages = [];
     }
 
-    if (revealLatest && !this.state.sanitizer.selectedReportPath && reports.length > 0) {
-      await this.selectSanitizerReport(reports[0].path);
+    const latest = reports.reduce<SanitizerReportRecord | undefined>(
+      (newest, item) => (!newest || item.timestamp > newest.timestamp ? item : newest),
+      undefined,
+    );
+
+    if (latest && (openLatest || (revealLatest && !this.state.sanitizer.selectedReportPath))) {
+      if (openLatest) {
+        await this.showSanitizerReportUnderMarkedFilter(latest);
+      }
+
+      try {
+        await this.selectSanitizerReport(latest.path);
+      }
+      catch (error) {
+        // An unreadable report must not turn a successful detection into a failed one.
+        console.warn('[OperateTreeProvider.refreshSanitizerReports] select failed:', error);
+      }
+
+      if (openLatest) {
+        await this.revealSanitizerReport(latest.path);
+      }
     }
     else {
       this.onDidChangeTreeDataEmitter.fire();
+    }
+  }
+
+  /**
+   * The marked-only filter hides every unmarked row, so opening a fresh report while it is on
+   * leaves the user staring at the `noReports` placeholder. Drop the filter for the report we
+   * are about to open, the same way marking does when it would empty the list.
+   */
+  private async showSanitizerReportUnderMarkedFilter(report: SanitizerReportRecord): Promise<void> {
+    if (!this.state.sanitizer.markedOnly || report.marked) {
+      return;
+    }
+
+    this.setSanitizerMarkedOnly(false);
+
+    try {
+      await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.sanitizerMarkedOnly`, false);
+    }
+    catch (error) {
+      console.warn('[OperateTreeProvider.refreshSanitizerReports] marked filter context sync failed:', error);
+    }
+  }
+
+  /**
+   * Focus the results view and scroll the report's row into view. Focus alone is not enough:
+   * with ascending sort or a long list the fresh report sits off-screen, so the user sees a
+   * view that did not visibly react to the run.
+   */
+  private async revealSanitizerReport(reportPath: string): Promise<void> {
+    const node = this.getSanitizerReportNodes()
+      .find((item) => item.id === `sanitizer-report:${encodeURIComponent(reportPath)}`);
+
+    try {
+      await vscode.commands.executeCommand(`${TREE_VIEW_SANITIZER_RESULTS}.focus`);
+
+      if (node && this.sanitizerResultsTreeView) {
+        await this.sanitizerResultsTreeView.reveal(node, {
+          select: true,
+          focus: true,
+        });
+      }
+    }
+    catch (error) {
+      console.warn('[OperateTreeProvider.refreshSanitizerReports] focus failed:', error);
     }
   }
 
@@ -2059,8 +2152,25 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     return undefined;
   }
 
-  /** Reload performance reports from disk/config; optionally focus and expand a newly added row. */
-  async refreshPerformanceReports(options?: { focusIfNew?: boolean }): Promise<void> {
+  /** Same contract as `getPerformanceTreeParent`, for the sanitizer results view. */
+  getSanitizerTreeParent(element: OperateNode): vscode.ProviderResult<OperateNode | null | undefined> {
+    if (element.nodeId === 'sanitizerReportItem' && (element.id ?? '').startsWith('sanitizer-report:')) {
+      return null;
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Reload performance reports from disk/config; optionally focus and expand a newly added row.
+   *
+   * `openIfNew` additionally opens that report's data file. It is separate from `focusIfNew`
+   * because the post-action hook runs from a `finally` and therefore fires for a stopped or
+   * failed run too, whose report directory holds a half-written csv: only the run paths that
+   * checked the exit code ask for the file to be opened.
+   */
+  async refreshPerformanceReports(options?: { focusIfNew?: boolean;
+    openIfNew?: boolean }): Promise<void> {
     const refreshRevision = ++this.performanceRefreshRevision;
     const previousKeys = new Set(this.state.performance.reports.map((item) => item.key));
     let reports: PerformanceExecutionRecord[];
@@ -2121,7 +2231,71 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       }
 
       await this.revealPerformanceReport(focusReportKey, refreshRevision);
+
+      if (options?.openIfNew) {
+        await this.openPrimaryPerformanceReportFile(focusReportKey, refreshRevision);
+      }
     }
+  }
+
+  /**
+   * Open the report a just-finished run produced, so the user does not have to hunt for it
+   * in the results tree. Prefers the Insight data file (`bin`, then `json`) over a csv table;
+   * a report without any openable file is left alone.
+   */
+  private async openPrimaryPerformanceReportFile(reportKey: string, refreshRevision: number): Promise<void> {
+    if (!this.isPerformanceRefreshCurrent(refreshRevision)) {
+      return;
+    }
+
+    const report = this.getPerformanceReportByKey(reportKey);
+
+    if (!report) {
+      return;
+    }
+
+    const files = OperateTreeProvider.collectPerformanceReportFiles(report.children);
+    const file = files.find((item) => item.fileType === 'bin')
+      ?? files.find((item) => item.fileType === 'json')
+      ?? files.find((item) => item.fileType === 'csv');
+
+    if (!file) {
+      return;
+    }
+
+    if (!fs.existsSync(file.filePath)) {
+      OperateTreeProvider.warnPerformanceReportOpenFailed(file.filePath, 'file no longer exists');
+
+      return;
+    }
+
+    try {
+      await this.openPerformanceFile(file.filePath, file.fileType);
+    }
+    catch (error) {
+      OperateTreeProvider.warnPerformanceReportOpenFailed(file.filePath, error);
+    }
+  }
+
+  /** Auto-open is the only feedback the user gets after a run, so a silent failure reads as a broken feature. */
+  private static warnPerformanceReportOpenFailed(filePath: string, error: unknown): void {
+    console.warn('[OperateTreeProvider.openPrimaryPerformanceReportFile] open failed:', filePath, error);
+    void vscode.window.showErrorMessage(t('performance.openReportFailed', { path: filePath }));
+  }
+
+  private static collectPerformanceReportFiles(children: (PerformanceRunDataFolder | PerformanceRunDataFile)[]): PerformanceRunDataFile[] {
+    const files: PerformanceRunDataFile[] = [];
+
+    for (const child of children) {
+      if ('children' in child) {
+        files.push(...OperateTreeProvider.collectPerformanceReportFiles(child.children));
+      }
+      else {
+        files.push(child);
+      }
+    }
+
+    return files;
   }
 
   private findNewPerformanceReportKey(previousKeys: Set<string>): string | undefined {
