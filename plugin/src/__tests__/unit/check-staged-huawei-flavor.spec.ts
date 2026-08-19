@@ -22,7 +22,7 @@ describe('check-staged-huawei-flavor', () => {
     const content = JSON.stringify({
       name: 'ascend-c-toolkit',
       displayName: 'Ascend C Toolkit',
-      publisher: 'hicann',
+      publisher: 'cann-pub',
       activationEvents: ['onView:ascendCToolkitHomeTree'],
       contributes: { commands: [{ command: 'ascend-c-toolkit.open' }] },
     }, null, 2);
