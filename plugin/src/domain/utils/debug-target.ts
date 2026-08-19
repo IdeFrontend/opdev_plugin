@@ -282,6 +282,50 @@ export function msdebugConfiguredTargetExists(
 }
 
 /**
+ * Build directories that can hold an operator's debug target, in priority order.
+ *
+ * Two layouts are in the field and only the operator's own `build/` was searched:
+ *   - one operator per project (`<op>/build.sh`)  → `<op_path>/build/`
+ *   - one standard-custom repo opened at its root → `<repo>/build/`
+ * ops-nn and ops-math are the latter: `build.sh` builds into `${BASE_PATH}/build`
+ * where `BASE_PATH` is the repo root, so an operator selected in the sidebar has no
+ * `build/` of its own and the target stayed on the template placeholder (#17).
+ */
+function debugBuildDirs(workspaceRoot: string, operator: DebugOperatorRef): string[] {
+  const opBuildDir = path.join(operator.path, 'build');
+  const rootBuildDir = path.join(workspaceRoot, 'build');
+
+  return opBuildDir === rootBuildDir
+    ? [opBuildDir]
+    : [
+      opBuildDir,
+      rootBuildDir,
+    ];
+}
+
+/**
+ * Absolute path of the built debug target for an operator, or `undefined` when no
+ * candidate binary exists in any of its build directories.
+ */
+function resolveMsdebugTargetPath(
+  workspaceRoot: string,
+  operator: DebugOperatorRef,
+  targetFile?: string | null,
+): string | undefined {
+  const candidates = collectDebugTargetCandidates(operator.name, targetFile);
+
+  for (const buildDir of debugBuildDirs(workspaceRoot, operator)) {
+    const binary = resolveDebugTargetBinary(listBuildFiles(buildDir), candidates);
+
+    if (binary) {
+      return path.join(buildDir, binary);
+    }
+  }
+
+  return undefined;
+}
+
+/**
  * Resolve the msdebug attach path for an operator, or `undefined` when the
  * binary was not built.
  */
@@ -290,17 +334,13 @@ export function resolveMsdebugTargetForOperator(
   operator: DebugOperatorRef,
   targetFile?: string | null,
 ): string | undefined {
-  const buildDir = path.join(operator.path, 'build');
-  const binary = resolveDebugTargetBinary(
-    listBuildFiles(buildDir),
-    collectDebugTargetCandidates(operator.name, targetFile),
-  );
+  const absTarget = resolveMsdebugTargetPath(workspaceRoot, operator, targetFile);
 
-  if (!binary) {
+  if (!absTarget) {
     return undefined;
   }
 
-  return toWorkspaceRelativeTarget(workspaceRoot, path.join(buildDir, binary));
+  return toWorkspaceRelativeTarget(workspaceRoot, absTarget);
 }
 
 /**
@@ -312,17 +352,13 @@ export function resolveRemoteMsdebugTargetForOperator(
   operator: DebugOperatorRef,
   targetFile?: string | null,
 ): string | undefined {
-  const buildDir = path.join(operator.path, 'build');
-  const binary = resolveDebugTargetBinary(
-    listBuildFiles(buildDir),
-    collectDebugTargetCandidates(operator.name, targetFile),
-  );
+  const absTarget = resolveMsdebugTargetPath(workspaceRoot, operator, targetFile);
 
-  if (!binary) {
+  if (!absTarget) {
     return undefined;
   }
 
-  return toRemoteWorkspaceRelativeTarget(workspaceRoot, path.join(buildDir, binary));
+  return toRemoteWorkspaceRelativeTarget(workspaceRoot, absTarget);
 }
 
 /**

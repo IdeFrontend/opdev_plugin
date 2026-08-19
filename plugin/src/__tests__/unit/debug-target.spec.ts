@@ -374,6 +374,25 @@ describe('updateMsdebugTarget', () => {
       .toBe('${workspaceFolder}/math/add_custom/build/test_aclnn_add_custom');
   });
 
+  it('falls back to the repo-root build dir when the operator has none (ops-nn / ops-math, #17)', async () => {
+    mkWorkspace([
+      {
+        name: 'msdebug',
+        target: DEFAULT_TARGET,
+      },
+    ]);
+    // build.sh of a standard-custom repo builds into `<repo>/build`, not `<op>/build`.
+    buildOperatorBinary('.', 'test_aclnn_ada_layer_norm_v2');
+
+    await updateMsdebugTarget(root, {
+      name: 'ada_layer_norm_v2',
+      path: path.join(root, 'norm', 'ada_layer_norm_v2'),
+    });
+
+    expect(readConfigs()[0].target)
+      .toBe('${workspaceFolder}/build/test_aclnn_ada_layer_norm_v2');
+  });
+
   it('auto-adapts to the bare cann operator binary when there is no aclnn example', async () => {
     mkWorkspace([
       {
