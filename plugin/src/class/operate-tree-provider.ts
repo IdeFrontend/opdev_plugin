@@ -2240,8 +2240,9 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
   /**
    * Open the report a just-finished run produced, so the user does not have to hunt for it
-   * in the results tree. Prefers the Insight data file (`bin`, then `json`) over a csv table;
-   * a report without any openable file is left alone.
+   * in the results tree. Prefers the Insight primary data file (`visualize_data.bin`) produced by
+   * msprof at the run root over raw per-device files under `dump/` (e.g. `DeviceProf*.bin`); then
+   * falls back to the first `bin`, `json`, `csv`. A report without any openable file is left alone.
    */
   private async openPrimaryPerformanceReportFile(reportKey: string, refreshRevision: number): Promise<void> {
     if (!this.isPerformanceRefreshCurrent(refreshRevision)) {
@@ -2255,7 +2256,8 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     }
 
     const files = OperateTreeProvider.collectPerformanceReportFiles(report.children);
-    const file = files.find((item) => item.fileType === 'bin')
+    const file = files.find((item) => item.fileType === 'bin' && item.title === 'visualize_data.bin')
+      ?? files.find((item) => item.fileType === 'bin')
       ?? files.find((item) => item.fileType === 'json')
       ?? files.find((item) => item.fileType === 'csv');
 
