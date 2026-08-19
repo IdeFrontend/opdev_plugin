@@ -208,7 +208,7 @@ describe('apply-flavor', () => {
     expect(manifest.name)
       .toBe('ascend-c-toolkit');
     expect(manifest.publisher)
-      .toBe('hicann');
+      .toBe('cann-pub');
     expect(manifest.displayName)
       .toBe('Ascend C Toolkit');
     expect(manifest.contributes.commands.some((c: { command: string }) => c.command.startsWith('ascend-c-toolkit.')))
@@ -253,7 +253,7 @@ describe('apply-flavor', () => {
     expect(generated)
       .toContain("SETTINGS_PREFIX = 'ascendCToolkit'");
     expect(generated)
-      .toContain("EXTENSION_ID = 'hicann.ascend-c-toolkit'");
+      .toContain("EXTENSION_ID = 'cann-pub.ascend-c-toolkit'");
     expect(generated)
       .toContain("'operatorSupport.triton': false");
     expect(generated)
