@@ -76,6 +76,7 @@ describe('ConfigService legacy settings migration', () => {
         inspectStore[key] as vscode.ConfigurationInspect<T> | undefined
       ) ?? inspectFromStore<T>(key),
       get: <T>(key: string) => getStore[key] as T | undefined,
+      update: jest.fn(),
     });
     jest.clearAllMocks();
     (getConfig as jest.Mock).mockImplementation((_projectId: number, type: string) => {
