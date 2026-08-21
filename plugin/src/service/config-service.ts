@@ -517,7 +517,7 @@ export class ConfigService {
     const filePath = getIdeSettingsFilePath(root);
     const hasUpdates = Object.keys(updates).length > 0;
 
-    return guardedPersistIdeSettingsFile(filePath, (current) => {
+    const written = await guardedPersistIdeSettingsFile(filePath, (current) => {
       const needsNestedMigration = isLegacyNestedOpDevtoolsRoot(current[SETTINGS_PREFIX]);
 
       if (!needsNestedMigration && !hasUpdates) {
@@ -542,6 +542,19 @@ export class ConfigService {
 
       return { next: output };
     });
+
+    // Sync VS Code configuration cache so that reads via Configuration API
+    // (inspect()) immediately reflect the new values. Direct file writes are
+    // picked up by VS Code's file watcher asynchronously, which causes stale
+    // reads when a subsequent command reads the config right after save
+    // (e.g. runSanitizer reading sanitizer.toolType after saveSanitizerOptions —
+    // without this sync, toolType falls back to the default npu-sanitizer on
+    // A5 instead of the user-selected mssanitizer).
+    if (written && hasUpdates) {
+      await ConfigService.syncConfigurationCache(updates);
+    }
+
+    return written;
   }
 
   /**
@@ -713,6 +726,30 @@ export class ConfigService {
     }
     catch (error) {
       console.warn(`[ensureOpDevtoolsSettingsSeeded] failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Push `writeOpDevtoolsDottedSettings` file writes into the VS Code
+   * Configuration API memory cache via `cfg.update()`. VS Code's file watcher
+   * eventually reloads settings.json on its own, but not synchronously — a
+   * read via `workspace.getConfiguration().inspect()` immediately after a
+   * direct file write can still return the stale cached value. Mirrors the
+   * write+update pattern already used in `ascend-soc-warning.ts`.
+   */
+  static async syncConfigurationCache(updates: OpDevtoolsDottedWrites): Promise<void> {
+    const cfg = getOpDevtoolsWorkspaceConfiguration();
+
+    for (const [
+      relativeKey,
+      value,
+    ] of Object.entries(updates)) {
+      try {
+        await cfg.update(relativeKey, value, vscode.ConfigurationTarget.Workspace);
+      }
+      catch (error) {
+        console.warn(`[syncConfigurationCache] failed to sync ${relativeKey}:`, error);
+      }
     }
   }
 

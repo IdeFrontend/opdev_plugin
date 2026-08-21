@@ -37,6 +37,7 @@ describe('webview/API settings writes (no DB)', () => {
 
         return value !== undefined ? value : defaultValue;
       },
+      update: jest.fn(),
     });
     jest.clearAllMocks();
   });
