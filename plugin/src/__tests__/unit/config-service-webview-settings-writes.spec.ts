@@ -57,9 +57,9 @@ describe('webview/API settings writes (no DB)', () => {
     return JSON.parse(fs.readFileSync(settingsPath, 'utf8')) as Record<string, unknown>;
   }
 
-  it('saveSanitizerOptions persists the npu-sanitizer toolType and npu check options', async () => {
+  it('saveSanitizerOptions persists the npu-check toolType and npu check options', async () => {
     await configMethods.saveSanitizerOptions({
-      toolType: 'npu-sanitizer',
+      toolType: 'npu-check',
       memory: true,
       sync: false,
       race: false,
@@ -72,7 +72,7 @@ describe('webview/API settings writes (no DB)', () => {
     const parsed = readSettings();
 
     expect(parsed['op-devtools.sanitizer.toolType'])
-      .toBe('npu-sanitizer');
+      .toBe('npu-check');
     expect(parsed['op-devtools.sanitizer.memory'])
       .toBe(true);
     expect(parsed['op-devtools.sanitizer.sync'])

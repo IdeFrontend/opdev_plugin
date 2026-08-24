@@ -197,8 +197,8 @@ describe('ConfigService per-section DAO factories (settings + cache only)', () =
       ]);
   });
 
-  it('reads persisted npu-sanitizer toolType and npu check options from settings', () => {
-    getStore['sanitizer.toolType'] = 'npu-sanitizer';
+  it('reads persisted npu-check toolType and npu check options from settings', () => {
+    getStore['sanitizer.toolType'] = 'npu-check';
     getStore['sanitizer.memory'] = true;
     getStore['sanitizer.sync'] = false;
     getStore['sanitizer.race'] = true;
@@ -211,7 +211,7 @@ describe('ConfigService per-section DAO factories (settings + cache only)', () =
     const config = ConfigService.getSanitizerConfig(workspacePath, 'op_add');
 
     expect(config.toolType)
-      .toBe('npu-sanitizer');
+      .toBe('npu-check');
     expect(config.tool)
       .toEqual({
         memcheck: true,

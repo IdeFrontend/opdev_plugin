@@ -54,7 +54,7 @@ const form = ref({
 });
 
 const isMsSanitizer = computed(() => form.value.toolType === 'mssanitizer');
-const isNpuSanitizer = computed(() => form.value.toolType === 'npu-sanitizer');
+const isNpuSanitizer = computed(() => form.value.toolType === 'npu-check');
 const showBlockId = computed(() => isMsSanitizer.value && form.value.detectionScope === 'singleBlock');
 
 const blockIdModel = computed<number | undefined>({
@@ -79,7 +79,7 @@ function clampMaxDebuglogSize(value: unknown): number {
 }
 
 function isSanitizerToolType(value: unknown): value is SanitizerToolType {
-  return value === 'mssanitizer' || value === 'npu-sanitizer';
+  return value === 'mssanitizer' || value === 'npu-check';
 }
 
 function clampBlockId(value: unknown): number | undefined {
@@ -288,9 +288,9 @@ const handleConfirm = async () => {
             </a-select-option>
             <a-select-option
               v-if="!isA2A3Environment"
-              value="npu-sanitizer"
+              value="npu-check"
             >
-              npu-sanitizer
+              npu-check
             </a-select-option>
           </a-select>
         </div>

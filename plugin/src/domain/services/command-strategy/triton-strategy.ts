@@ -257,8 +257,8 @@ export class TritonCommandStrategy extends BasePythonCommandStrategy implements 
 
     addSanitizerToolOptions(command, tool, commandName);
 
-    // npu-sanitizer takes none of the mssanitizer-only flags below.
-    if (commandName !== 'npu-sanitizer') {
+    // npu-check takes none of the mssanitizer-only flags below.
+    if (commandName !== 'npu-check') {
       // Emit the memcheck sub-options whenever they are enabled, independent of the memcheck
       // checkbox: per the mssanitizer docs a sub-option (e.g. --leak-check=yes) auto-enables
       // memory check, so `-t racecheck --leak-check=yes` is a valid documented invocation.

@@ -147,8 +147,8 @@ export interface SanitizerConfig {
   script: string;
   // Sanitizer command selection: A2/A3 SOC forces mssanitizer; every other
   // SOC honors the persisted sanitizer.toolType setting and otherwise defaults
-  // to npu-sanitizer (getDefaultSanitizerToolType).
-  toolType: 'mssanitizer' | 'npu-sanitizer';
+  // to npu-check (getDefaultSanitizerToolType).
+  toolType: 'mssanitizer' | 'npu-check';
   // Partial sanitizer settings leave unset fields ABSENT (no defaults merged).
   // Only the fully-unset case falls back to the full defaults
   // (getSanitizerConfig fresh branch).
@@ -548,7 +548,7 @@ export class ConfigService {
     // picked up by VS Code's file watcher asynchronously, which causes stale
     // reads when a subsequent command reads the config right after save
     // (e.g. runSanitizer reading sanitizer.toolType after saveSanitizerOptions —
-    // without this sync, toolType falls back to the default npu-sanitizer on
+    // without this sync, toolType falls back to the default npu-check on
     // A5 instead of the user-selected mssanitizer).
     if (written && hasUpdates) {
       await ConfigService.syncConfigurationCache(updates);
@@ -845,7 +845,7 @@ export class ConfigService {
     return readWorkspaceScopedSetting<T>(relativeKey);
   }
 
-  /** Default sanitizer command for the detected CANN SOC: A2/A3 → mssanitizer, others → npu-sanitizer. */
+  /** Default sanitizer command for the detected CANN SOC: A2/A3 → mssanitizer, others → npu-check. */
   static getDefaultSanitizerToolType(): SanitizerToolType {
     return defaultSanitizerToolTypeForSoc(resolveEffectiveCannSoc());
   }
@@ -1051,7 +1051,7 @@ export class ConfigService {
     // the SOC default otherwise.
     const toolType: SanitizerConfig['toolType'] = ConfigService.getDefaultSanitizerToolType() === 'mssanitizer'
       ? 'mssanitizer'
-      : configuredToolType === 'mssanitizer' || configuredToolType === 'npu-sanitizer'
+      : configuredToolType === 'mssanitizer' || configuredToolType === 'npu-check'
         ? configuredToolType
         : ConfigService.getDefaultSanitizerToolType();
     const anySetting = script !== undefined

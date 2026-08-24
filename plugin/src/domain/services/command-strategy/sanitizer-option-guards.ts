@@ -36,7 +36,7 @@ const VALID_NPU_TOOLS = [
 ] as const;
 const VALID_SANITIZER_COMMANDS = [
   'mssanitizer',
-  'npu-sanitizer',
+  'npu-check',
 ] as const;
 
 function toIntInRange(value: unknown, min: number, max: number): number | undefined {
@@ -85,9 +85,9 @@ export function normalizeNpuSanitizerTools(tools: string[]): string[] {
   return tools.filter((tool) => VALID_NPU_TOOLS.includes(tool as typeof VALID_NPU_TOOLS[number]));
 }
 
-export function normalizeSanitizerCommand(value: unknown): 'mssanitizer' | 'npu-sanitizer' {
+export function normalizeSanitizerCommand(value: unknown): 'mssanitizer' | 'npu-check' {
   return VALID_SANITIZER_COMMANDS.includes(value as typeof VALID_SANITIZER_COMMANDS[number])
-    ? (value as 'mssanitizer' | 'npu-sanitizer')
+    ? (value as 'mssanitizer' | 'npu-check')
     : 'mssanitizer';
 }
 
@@ -98,11 +98,11 @@ export function normalizeSanitizerCommand(value: unknown): 'mssanitizer' | 'npu-
 export function addSanitizerToolOptions(
   command: Command,
   toolOptions: Record<string, unknown>,
-  commandName: 'mssanitizer' | 'npu-sanitizer',
+  commandName: 'mssanitizer' | 'npu-check',
 ): void {
   const enabledTools = Object.keys(toolOptions)
     .filter((key) => toolOptions[key]);
-  const tools = commandName === 'npu-sanitizer'
+  const tools = commandName === 'npu-check'
     ? normalizeNpuSanitizerTools(enabledTools)
     : normalizeSanitizerTools(enabledTools);
 

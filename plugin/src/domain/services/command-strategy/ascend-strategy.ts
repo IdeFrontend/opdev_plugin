@@ -228,8 +228,8 @@ export class AscendCommandStrategy implements CommandStrategy {
 
     addSanitizerToolOptions(command, tool, commandName);
 
-    // npu-sanitizer takes none of the mssanitizer-only flags below.
-    if (commandName !== 'npu-sanitizer') {
+    // npu-check takes none of the mssanitizer-only flags below.
+    if (commandName !== 'npu-check') {
       if (tool.memcheck) {
         const memcheckOption = config.memcheckOption ?? {};
 

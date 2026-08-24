@@ -129,8 +129,8 @@ describe('normalizeSanitizerTools (mssanitizer memcheck|racecheck|initcheck|sync
   });
 });
 
-describe('normalizeNpuSanitizerTools (npu-sanitizer tool allow-list)', () => {
-  it('keeps all supported npu-sanitizer tools', () => {
+describe('normalizeNpuSanitizerTools (npu-check tool allow-list)', () => {
+  it('keeps all supported npu-check tools', () => {
     expect(normalizeNpuSanitizerTools([
       'memcheck',
       'synccheck',
@@ -149,7 +149,7 @@ describe('normalizeNpuSanitizerTools (npu-sanitizer tool allow-list)', () => {
       ]);
   });
 
-  it('drops unsupported npu-sanitizer tool names', () => {
+  it('drops unsupported npu-check tool names', () => {
     expect(normalizeNpuSanitizerTools([
       'memcheck',
       'leak-check',
@@ -169,8 +169,8 @@ describe('normalizeSanitizerCommand', () => {
   it('keeps supported command names', () => {
     expect(normalizeSanitizerCommand('mssanitizer'))
       .toBe('mssanitizer');
-    expect(normalizeSanitizerCommand('npu-sanitizer'))
-      .toBe('npu-sanitizer');
+    expect(normalizeSanitizerCommand('npu-check'))
+      .toBe('npu-check');
   });
 
   it('defaults unknown command names to mssanitizer', () => {
