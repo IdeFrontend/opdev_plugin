@@ -70,7 +70,7 @@ describe('webview/API settings writes (no legacy DB)', () => {
   it('saveSanitizerForm writes settings.json and never calls postConfig', async () => {
     await configService.saveSanitizerForm({
       data: {
-        toolType: 'npu-sanitizer',
+        toolType: 'npu-check',
         tool: {
           memcheck: true,
           synccheck: false,
@@ -90,7 +90,7 @@ describe('webview/API settings writes (no legacy DB)', () => {
     const parsed = readSettings();
 
     expect(parsed['op-devtools.sanitizer.toolType'])
-      .toBe('npu-sanitizer');
+      .toBe('npu-check');
     expect(parsed['op-devtools.sanitizer.memory'])
       .toBe(true);
     expect(parsed['op-devtools.sanitizer.sync'])

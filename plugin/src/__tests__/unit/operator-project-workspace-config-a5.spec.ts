@@ -79,9 +79,9 @@ describe('ConfigService.buildUserOptionsFromWorkspaceSettings A5 on-board', () =
       .toBe('mssanitizer');
   });
 
-  it('forces sanitizer toolType to mssanitizer for A2/A3 even when npu-sanitizer is configured', () => {
+  it('forces sanitizer toolType to mssanitizer for A2/A3 even when npu-check is configured', () => {
     (resolveEffectiveCannSoc as jest.Mock).mockReturnValue('ascend910b');
-    getStore['sanitizer.toolType'] = 'npu-sanitizer';
+    getStore['sanitizer.toolType'] = 'npu-check';
 
     const opts = ConfigService.buildUserOptionsFromWorkspaceSettings('sanitizer', {});
 
@@ -89,18 +89,18 @@ describe('ConfigService.buildUserOptionsFromWorkspaceSettings A5 on-board', () =
       .toBe('mssanitizer');
   });
 
-  it('defaults sanitizer toolType to npu-sanitizer for non-A2/A3 SOC', () => {
+  it('defaults sanitizer toolType to npu-check for non-A2/A3 SOC', () => {
     (resolveEffectiveCannSoc as jest.Mock).mockReturnValue('ascend950');
 
     const opts = ConfigService.buildUserOptionsFromWorkspaceSettings('sanitizer', {});
 
     expect(opts.toolType)
-      .toBe('npu-sanitizer');
+      .toBe('npu-check');
   });
 
   it.each([
     'mssanitizer',
-    'npu-sanitizer',
+    'npu-check',
   ])('keeps configured sanitizer toolType %s for non-A2/A3 SOC', (toolType) => {
     (resolveEffectiveCannSoc as jest.Mock).mockReturnValue('ascend950');
     getStore['sanitizer.toolType'] = toolType;

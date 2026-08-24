@@ -501,7 +501,7 @@ export class ConfigService {
       // picked up by VS Code's file watcher asynchronously, which causes stale
       // reads when a subsequent command reads the config right after save
       // (e.g. runSanitizer reading sanitizer.toolType after saveSanitizerForm —
-      // without this sync, toolType falls back to the default npu-sanitizer on
+      // without this sync, toolType falls back to the default npu-check on
       // A5 instead of the user-selected mssanitizer).
       if (hasUpdates) {
         await ConfigService.syncConfigurationCache(updates);
@@ -754,7 +754,7 @@ export class ConfigService {
         opts.toolType = 'mssanitizer';
       }
       else {
-        opts.toolType = configuredToolType === 'mssanitizer' || configuredToolType === 'npu-sanitizer'
+        opts.toolType = configuredToolType === 'mssanitizer' || configuredToolType === 'npu-check'
           ? configuredToolType
           : ConfigService.getDefaultSanitizerToolType();
       }

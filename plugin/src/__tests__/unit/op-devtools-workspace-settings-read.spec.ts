@@ -210,8 +210,8 @@ describe('ConfigService.getRuntimeConfigById', () => {
       .toBe('python3 ./triton_vector_add.py');
   });
 
-  it('reads persisted npu-sanitizer toolType and npu check options from settings', () => {
-    getStore['sanitizer.toolType'] = 'npu-sanitizer';
+  it('reads persisted npu-check toolType and npu check options from settings', () => {
+    getStore['sanitizer.toolType'] = 'npu-check';
     getStore['sanitizer.memory'] = true;
     getStore['sanitizer.sync'] = false;
     getStore['sanitizer.race'] = true;
@@ -222,7 +222,7 @@ describe('ConfigService.getRuntimeConfigById', () => {
     const opts = ConfigService.buildUserOptionsFromWorkspaceSettings('sanitizer', {});
 
     expect(opts.toolType)
-      .toBe('npu-sanitizer');
+      .toBe('npu-check');
     expect(opts.tool)
       .toEqual({
         memcheck: true,

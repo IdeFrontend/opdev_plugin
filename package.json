@@ -373,7 +373,7 @@
             "type": "string",
             "enum": [
               "mssanitizer",
-              "npu-sanitizer"
+              "npu-check"
             ],
             "order": 110,
             "description": "%config.op-devtools.sanitizer.toolType.description%",

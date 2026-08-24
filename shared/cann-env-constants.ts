@@ -61,16 +61,16 @@ export function isAscendA2A3CannSoc(socVersion: string | undefined): boolean {
   return normalized === CANN_SOC_ASCEND_910B || normalized === CANN_SOC_ASCEND_910_93;
 }
 
-/** Sanitizer 命令名（mssanitizer / npu-sanitizer）。 */
-export type SanitizerToolType = 'mssanitizer' | 'npu-sanitizer';
+/** Sanitizer 命令名（mssanitizer / npu-check）。 */
+export type SanitizerToolType = 'mssanitizer' | 'npu-check';
 
 /**
  * 根据 CANN SOC 版本返回默认 sanitizer toolType。
- * A2/A3 SOC → mssanitizer；其余 → npu-sanitizer。
+ * A2/A3 SOC → mssanitizer；其余 → npu-check。
  * 单一真相源，供 plugin ConfigService 和 webview app.vue 复用。
  */
 export function defaultSanitizerToolTypeForSoc(socVersion: string | undefined): SanitizerToolType {
   return isAscendA2A3CannSoc(socVersion)
     ? 'mssanitizer'
-    : 'npu-sanitizer';
+    : 'npu-check';
 }

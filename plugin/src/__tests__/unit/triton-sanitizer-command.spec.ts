@@ -223,12 +223,12 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
     }
   });
 
-  it('builds npu-sanitizer with repeated selected npu tool flags from toolType', () => {
+  it('builds npu-check with repeated selected npu tool flags from toolType', () => {
     const npuConfig = {
       ...baseConfig,
       user_options: {
         ...baseConfig.user_options,
-        toolType: 'npu-sanitizer',
+        toolType: 'npu-check',
         tool: {
           memcheck: true,
           synccheck: true,
@@ -243,7 +243,7 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
     const cmd = strategy.buildSanitizerCommand(npuConfig, null, '', 'cd /op', 'python3 ./a.py');
 
     expect(cmd)
-      .toContain('npu-sanitizer');
+      .toContain('npu-check');
     expect(cmd)
       .toContain('--tool=memcheck');
     expect(cmd)
@@ -260,12 +260,12 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
       .toContain('--log-file=');
   });
 
-  it('builds npu-sanitizer with all selected npu tool flags', () => {
+  it('builds npu-check with all selected npu tool flags', () => {
     const npuConfig = {
       ...baseConfig,
       user_options: {
         ...baseConfig.user_options,
-        toolType: 'npu-sanitizer',
+        toolType: 'npu-check',
         tool: {
           memcheck: true,
           synccheck: true,
@@ -280,7 +280,7 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
     const cmd = strategy.buildSanitizerCommand(npuConfig, null, '', 'cd /op', 'python3 ./a.py');
 
     expect(cmd)
-      .toContain('npu-sanitizer');
+      .toContain('npu-check');
     expect(cmd)
       .toContain('--tool=memcheck');
     expect(cmd)
@@ -295,12 +295,12 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
       .toContain('--tool=overcheck');
   });
 
-  it('keeps the mssanitizer log-file path rule when using npu-sanitizer from toolType', () => {
+  it('keeps the mssanitizer log-file path rule when using npu-check from toolType', () => {
     const npuConfig = {
       ...baseConfig,
       user_options: {
         ...baseConfig.user_options,
-        toolType: 'npu-sanitizer',
+        toolType: 'npu-check',
         tool: {
           memcheck: true,
           synccheck: true,

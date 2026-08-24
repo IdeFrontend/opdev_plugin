@@ -231,7 +231,7 @@ export class TritonCommandStrategy extends BasePythonCommandStrategy implements 
 
     addSanitizerToolOptions(command, toolOptions, commandName);
 
-    if (commandName !== 'npu-sanitizer') {
+    if (commandName !== 'npu-check') {
       const memcheckOptions =
         (options.memcheckOption as Record<string, unknown> | undefined) || {};
 
