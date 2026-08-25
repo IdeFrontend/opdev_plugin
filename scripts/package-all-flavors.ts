@@ -6,13 +6,16 @@ import { KNOWN_FLAVOR_IDS } from '../flavors/schema';
 import {
   applyFlavor, restoreCommittedFlavorArtifacts,
 } from './apply-flavor';
+import { resolveVsixFileName } from './package-extension';
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 
 function readPackageManifest(): { name: string;
+  publisher: string;
   version: string } {
   const pkg = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8')) as {
     name: string;
+    publisher: string;
     version: string;
   };
 
@@ -26,10 +29,8 @@ function packageFlavor(flavorId: string): string {
     stdio: 'inherit',
   });
 
-  const {
-    name, version,
-  } = readPackageManifest();
-  const outName = `${name}-${version}.vsix`;
+  const manifest = readPackageManifest();
+  const outName = resolveVsixFileName(manifest);
 
   execSync(`pnpm exec vsce package --no-dependencies --allow-missing-repository --out ${outName}`, {
     cwd: REPO_ROOT,

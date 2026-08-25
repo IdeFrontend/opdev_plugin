@@ -115,7 +115,6 @@ describe('post-activate-bootstrap', () => {
   it('single-flights concurrent startPostActivateBootstrap calls', async () => {
     (vscode.workspace as { workspaceFolders?: unknown }).workspaceFolders = [{ uri: { fsPath: '/proj' } }];
 
-    (configService.checkDevtoolConfig as jest.Mock).mockResolvedValue(true);
     const deps = {
       context: {} as never,
       operateTreeProvider,
@@ -133,8 +132,10 @@ describe('post-activate-bootstrap', () => {
         { projectPath: '/proj' },
         true,
       );
+    // Bootstrap must not auto-focus the operate tree — revealing the secondary
+    // sidebar on every startup of an operator workspace disturbs users.
     expect(vscode.commands.executeCommand)
-      .toHaveBeenCalledWith(`${TREE_VIEW_OPERATE}.focus`);
+      .not.toHaveBeenCalledWith(`${TREE_VIEW_OPERATE}.focus`);
   });
 
   it('kicks off the C/C++ prompt and the CANN include-path fix', async () => {

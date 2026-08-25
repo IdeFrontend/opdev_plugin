@@ -3,7 +3,7 @@
   "displayName": "Huawei OP DevTools",
   "description": "Operator development, debugging, and performance analysis all-in-one platform for Ascend C language.",
   "publisher": "huawei",
-  "version": "1.4.6",
+  "version": "1.5.2",
   "engines": {
     "node": ">=16.0.0",
     "vscode": "^1.80.0"
@@ -1810,17 +1810,17 @@
     ]
   },
   "scripts": {
-    "package": "pnpm run compile && vsce package --no-dependencies --allow-missing-repository",
+    "package": "pnpm run compile && tsx scripts/package-extension.ts",
     "build": "pnpm run compile",
     "build:icons-font": "node scripts/build-icons-font.mjs",
     "compile": "pnpm run compile:web && pnpm run compile:plugin",
     "compile:web": "cd web && pnpm run build",
     "compile:plugin": "tsc --noEmit && tsx scripts/build-extension",
-    "package:debug": "pnpm run compile:debug && vsce package --no-dependencies --allow-missing-repository",
+    "package:debug": "pnpm run compile:debug && tsx scripts/package-extension.ts",
     "compile:debug": "pnpm run compile:web:debug && pnpm run compile:plugin:debug",
     "compile:web:debug": "cd web && pnpm run build:debug",
     "compile:plugin:debug": "tsx scripts/build-extension --sourcemap",
-    "package:readable": "pnpm run compile:readable && vsce package --no-dependencies --allow-missing-repository",
+    "package:readable": "pnpm run compile:readable && tsx scripts/package-extension.ts",
     "compile:readable": "pnpm run compile:web:readable && pnpm run compile:plugin:readable",
     "compile:web:readable": "cd web && pnpm run build --mode=readable",
     "compile:plugin:readable": "tsx scripts/build-extension --sourcemap --readable",

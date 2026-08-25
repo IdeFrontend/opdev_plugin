@@ -2,17 +2,14 @@ import * as vscode from 'vscode';
 import { MindStudioPluginInstaller } from '@plugin/class/mind-studio-plugin-installer';
 import type { OperateTreeProvider } from '@plugin/class/operate-tree-provider';
 import { welcomeMethods } from '@plugin/controller/welcome-controller';
-import { configService } from '@plugin/service/config-service';
 import {
   isRemoteNpuHardwareProbeAvailable, startNpuHardwareProbe, startRemoteNpuHardwareProbe,
 } from '@plugin/domain/utils/npu-hardware-probe';
+import { CONTEXT_PREFIX } from '@shared/flavor';
 import { maybeApplyCannCppIncludePaths } from '@plugin/domain/utils/cann-cpp-include-paths';
 import { maybePromptInstallCppExtension } from '@plugin/helpers/cpp-extension-support';
 import { computeAscendEnvResolution } from '@plugin/domain/utils/ascend-util';
 import { applyNpuArchToTerminalEnv } from './terminal-npu-arch-env';
-import {
-  CONTEXT_PREFIX, TREE_VIEW_OPERATE,
-} from '@shared/flavor';
 import { AsyncSingleFlight } from './async-single-flight';
 import { requestSidebarContextsRefresh } from './sidebar-context-refresh';
 
@@ -119,16 +116,11 @@ async function runPostActivateBootstrapImpl(deps: PostActivateBootstrapDeps): Pr
       });
 
     // openProject may create devtool_config.json after the sync refreshSidebarContexts in activate().
+    // Note: do not auto-focus the operate tree here — revealing the secondary sidebar on every
+    // startup of an operator workspace disturbs users who deliberately closed it. Visibility
+    // of the views inside the container is still driven by `refreshSidebarContexts` context
+    // keys, so the panel shows its content as soon as the user opens it themselves.
     await requestSidebarContextsRefresh();
-
-    if (await configService.checkDevtoolConfig()) {
-      try {
-        await vscode.commands.executeCommand(`${TREE_VIEW_OPERATE}.focus`);
-      }
-      catch (error) {
-        logDebug('postActivate:focusOperateTree:error', error);
-      }
-    }
 
     logDebug('postActivate:bootstrap:end');
   }

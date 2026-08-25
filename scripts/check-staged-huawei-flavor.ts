@@ -21,7 +21,7 @@ const GUARDED_PATHS = new Set([
 const ASCEND_MARKERS = [
   'ascend-c-toolkit',
   'ascendCToolkit',
-  'cann-pub.ascend-c-toolkit',
+  'cann-pub.asc-toolkit',
   'Ascend C Toolkit',
   'Ascend C 工具包',
 ] as const;
