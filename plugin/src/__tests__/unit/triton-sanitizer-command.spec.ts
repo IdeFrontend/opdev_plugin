@@ -318,5 +318,31 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
 
     expect(normalized)
       .toContain(`--log-file=/ws/triton-op/${ideDir}/mindstudio_sanitizer_log/mssanitizer_`);
+    expect(normalized)
+      .toMatch(/mssanitizer_\d+-npu-check\.log/);
+  });
+
+  it('keeps the legacy log-file name (no -npu-check identifier) for mssanitizer toolType or default', () => {
+    const explicitToolType = {
+      ...baseConfig,
+      user_options: {
+        ...baseConfig.user_options,
+        toolType: 'mssanitizer',
+      },
+    } as unknown as ConfigRecord;
+
+    const configs: ConfigRecord[] = [
+      explicitToolType,
+      baseConfig,
+    ];
+
+    configs.forEach((config) => {
+      const cmd = strategy.buildSanitizerCommand(config, null, '', 'cd /op', 'python3 ./a.py');
+      const normalized = cmd.replace(/\\/g, '/');
+
+      expect(normalized)
+        .toMatch(/mssanitizer_\d+\.log/);
+      expect(normalized).not.toContain('-npu-check');
+    });
   });
 });

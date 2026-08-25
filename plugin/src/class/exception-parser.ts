@@ -19,6 +19,8 @@ export interface Result {
   row?: number;
   // Number of columns
   col?: number;
+  // Which sanitizer tool produced this result (npu-check reports carry the marker)
+  sourceTool?: 'mssanitizer' | 'npu-check';
 }
 
 // Question categories
@@ -478,6 +480,7 @@ export class ExceptionParser {
 
     const hasErrorPrefix = line.includes('ERROR:');
     const hasWarningPrefix = line.includes('WARNING:');
+
     // Traverse the supported exception patterns, matching them in order (more specific patterns should be placed first)
     for (const pattern of SUPPORTED_EXCEPTION_PATTERNS) {
       // Check if the pattern is contained in the line
@@ -517,6 +520,7 @@ export class ExceptionParser {
         exceptionName,
         question: exceptionName,
       };
+
       return true;
     }
 
@@ -556,6 +560,7 @@ export class ExceptionParser {
           // If the file information has not been set, or the current call stack level is higher, update
           const prefersWorkspacePath = !!this.matchPath && filePath.includes(this.matchPath);
           const hasAbsolutePath = /^(?:[A-Za-z]:[\\/]|\/)/.test(filePath);
+
           if (!this.currentResult.fileLink) {
             if (prefersWorkspacePath || hasAbsolutePath) {
               this.currentResult.fileLink = filePath;

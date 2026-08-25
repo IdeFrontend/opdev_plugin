@@ -92,6 +92,18 @@ export function normalizeSanitizerCommand(value: unknown): 'mssanitizer' | 'npu-
 }
 
 /**
+ * Sanitizer report log file name.
+ * npu-check appends the `-npu-check` identifier so result parsing can tell
+ * which tool produced the report; mssanitizer keeps the legacy name.
+ */
+export function buildSanitizerLogFileName(commandName: 'mssanitizer' | 'npu-check'): string {
+  const timestamp = new Date()
+    .valueOf();
+
+  return commandName === 'npu-check' ? `mssanitizer_${timestamp}-npu-check.log` : `mssanitizer_${timestamp}.log`;
+}
+
+/**
  * Add `--tool=<value>` options to the command for the selected sanitizer tool.
  * Shared by all command strategies (triton / cann / ascend).
  */

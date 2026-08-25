@@ -1,7 +1,9 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { ExceptionParser } from '@plugin/class/exception-parser';
+import { NpuCheckParser } from '@plugin/class/npu-check-parser';
 import { resolveSanitizerSourceFsPath } from '@plugin/helpers/sanitizer-source-path';
+import { isNpuCheckReport } from '@plugin/helpers/sanitizer-log-reports';
 import { msAgentBridgeService } from '@plugin/service/ms-agent-bridge.service';
 
 import { sanitizerDiagnosticCollectionId } from '@shared/flavor';
@@ -48,7 +50,9 @@ export class SanitizerDiagnosticsService {
       return;
     }
 
-    const parser = new ExceptionParser({ matchPath: workspaceRoot });
+    const parser = isNpuCheckReport(absoluteLogPath)
+      ? new NpuCheckParser()
+      : new ExceptionParser({ matchPath: workspaceRoot });
     const results = parser.parseAll(content);
 
     this.collection.clear();
@@ -100,7 +104,10 @@ export class SanitizerDiagnosticsService {
 
     const workspacePath = workspaceFolders[0].uri.fsPath;
     const inputContent = fs.readFileSync(params.path, 'utf-8');
-    const parser = new ExceptionParser({ matchPath: workspacePath });
+    const isNpuCheck = isNpuCheckReport(params.path);
+    const parser = isNpuCheck
+      ? new NpuCheckParser()
+      : new ExceptionParser({ matchPath: workspacePath });
     const data = parser.parseAll(inputContent)
       .map((r, msAgentIndex) => {
         const resolved = resolveSanitizerSourceFsPath(workspacePath, r.fileLink);
@@ -108,12 +115,16 @@ export class SanitizerDiagnosticsService {
         return {
           ...r,
           fileLink: resolved ?? r.fileLink,
-          msAgentIndex,
+          // msAgent only understands mssanitizer logs; npu-check rows must not expose an AI-fix index
+          msAgentIndex: isNpuCheck ? undefined : msAgentIndex,
         };
       });
 
     this.publishFromLogFile(params.path, workspacePath);
-    void msAgentBridgeService.tryLoadLogWithIntegration(params.path);
+
+    if (!isNpuCheck) {
+      void msAgentBridgeService.tryLoadLogWithIntegration(params.path);
+    }
 
     return {
       ...params,

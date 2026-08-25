@@ -27,6 +27,7 @@ import {
   normalizeMaxDebuglogSize,
   addSanitizerToolOptions,
   normalizeSanitizerCommand,
+  buildSanitizerLogFileName,
 } from './sanitizer-option-guards';
 
 /**
@@ -220,8 +221,7 @@ export class AscendCommandStrategy implements CommandStrategy {
 
     command.addOption(
       'log-file',
-      `${operator?.op_path}/${joinIdeConfigRelative('mindstudio_sanitizer_log')}/mssanitizer_${new Date()
-        .valueOf()}.log`,
+      `${operator?.op_path}/${joinIdeConfigRelative('mindstudio_sanitizer_log')}/${buildSanitizerLogFileName(commandName)}`,
     );
 
     return joinCommands(sourceCannCmd, cdCmd, command.toString());

@@ -27,6 +27,7 @@ import {
   normalizeMaxDebuglogSize,
   addSanitizerToolOptions,
   normalizeSanitizerCommand,
+  buildSanitizerLogFileName,
 } from './sanitizer-option-guards';
 import { resolveAscendEnv } from '@plugin/domain/utils/ascend-util';
 import {
@@ -226,8 +227,7 @@ export class CannCommandStrategy implements CommandStrategy {
     const logFilePath = joinIdeConfigPath(
       workspacePath,
       'mindstudio_sanitizer_log',
-      `mssanitizer_${new Date()
-        .valueOf()}.log`,
+      buildSanitizerLogFileName(commandName),
     );
 
     command.addOption('log-file', logFilePath);

@@ -2,7 +2,9 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
-import { collectSanitizerLogReports } from '@plugin/helpers/sanitizer-log-reports';
+import {
+  collectSanitizerLogReports, isNpuCheckReport,
+} from '@plugin/helpers/sanitizer-log-reports';
 
 describe('collectSanitizerLogReports', () => {
   let dir: string;
@@ -38,6 +40,26 @@ describe('collectSanitizerLogReports', () => {
       });
     expect(reports[0].title)
       .toContain('mssanitizer');
+  });
+
+  it('returns an entry titled with the npu-check prefix for an npu-check report', () => {
+    write('mssanitizer_1700000000000-npu-check.log', 'report content');
+
+    const reports = collectSanitizerLogReports(dir, new Set());
+    // The title date is derived from the local timezone, so compute the
+    // expected YYYYMMDD the same way instead of hard-coding one zone's date.
+    const date = new Date(1700000000000);
+    const expectedDate = [
+      date.getFullYear(),
+      (date.getMonth() + 1).toString()
+        .padStart(2, '0'),
+      date.getDate()
+        .toString()
+        .padStart(2, '0'),
+    ].join('');
+
+    expect(reports[0].title)
+      .toBe(`npu-check-${expectedDate}`);
   });
 
   it('skips a 0-byte (empty) log file left behind by a failed/aborted run', () => {
@@ -85,5 +107,27 @@ describe('collectSanitizerLogReports', () => {
         'mssanitizer_1700000000001.log',
         'mssanitizer_1700000000003.log',
       ]);
+  });
+});
+
+describe('isNpuCheckReport', () => {
+  it('detects the -npu-check marker in the file name', () => {
+    expect(isNpuCheckReport('mssanitizer_1700000000000-npu-check.log'))
+      .toBe(true);
+  });
+
+  it('treats a plain mssanitizer log as not an npu-check report', () => {
+    expect(isNpuCheckReport('mssanitizer_1700000000000.log'))
+      .toBe(false);
+  });
+
+  it('ignores a -npu-check segment in a parent directory name', () => {
+    expect(isNpuCheckReport('/tmp/npu-check-dir/mssanitizer_1700000000000.log'))
+      .toBe(false);
+  });
+
+  it('detects the marker in a full path', () => {
+    expect(isNpuCheckReport('/tmp/mssanitizer_1700000000000-npu-check.log'))
+      .toBe(true);
   });
 });
