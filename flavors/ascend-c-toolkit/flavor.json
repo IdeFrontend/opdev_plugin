@@ -2,7 +2,7 @@
   "id": "ascend-c-toolkit",
   "manifest": {
     "name": "asc-toolkit",
-    "displayName": "Ascend C Toolkit Vscode Edition",
+    "displayName": "Ascend C Toolkits",
     "publisher": "cann-pub",
     "description": "Operator development, debugging, and performance analysis all-in-one platform for Ascend C language."
   },

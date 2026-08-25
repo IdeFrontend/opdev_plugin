@@ -210,7 +210,7 @@ describe('apply-flavor', () => {
     expect(manifest.publisher)
       .toBe('cann-pub');
     expect(manifest.displayName)
-      .toBe('Ascend C Toolkit Vscode Edition');
+      .toBe('Ascend C Toolkits');
     expect(manifest.contributes.commands.some((c: { command: string }) => c.command.startsWith('ascend-c-toolkit.')))
       .toBe(true);
     expect(manifest.contributes.configuration.some((c: { id: string }) => c.id === 'ascendCToolkit.sanitizer'))
