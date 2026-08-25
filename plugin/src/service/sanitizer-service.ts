@@ -27,6 +27,7 @@ import {
 } from '@plugin/domain/services/operator-project-detector';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import { getLatestSanitizerLogAbsPath } from '@plugin/helpers/sanitizer-log-path';
+import { isNpuCheckReport } from '@plugin/helpers/sanitizer-log-reports';
 import { evaluateSanitizerRunOutcome } from '@plugin/helpers/sanitizer-run-outcome';
 import { cleanupCwdSanitizerLog } from '@plugin/helpers/cleanup-sanitizer-cwd-log';
 import { joinIdeConfigPath } from '@plugin/helpers/ide-config-dir';
@@ -284,7 +285,11 @@ export class SanitizerService {
 
       if (wfAfter && logAbs && fs.existsSync(logAbs)) {
         sanitizerDiagnosticsService.publishFromLogFile(logAbs, wfAfter.uri.fsPath);
-        void msAgentBridgeService.tryLoadLogWithIntegration(logAbs);
+
+        // msAgent only understands mssanitizer logs; npu-check reports must not be fed into it.
+        if (!isNpuCheckReport(logAbs)) {
+          void msAgentBridgeService.tryLoadLogWithIntegration(logAbs);
+        }
       }
 
       // After a successful detection, refresh sanitizer data and switch to the fresh report

@@ -38,6 +38,7 @@ import {
   normalizeMaxDebuglogSize,
   addSanitizerToolOptions,
   normalizeSanitizerCommand,
+  buildSanitizerLogFileName,
 } from './sanitizer-option-guards';
 
 /**
@@ -287,8 +288,7 @@ export class TritonCommandStrategy extends BasePythonCommandStrategy implements 
     const logFilePath = joinIdeConfigPath(
       workspacePath,
       'mindstudio_sanitizer_log',
-      `mssanitizer_${new Date()
-        .valueOf()}.log`,
+      buildSanitizerLogFileName(commandName),
     );
 
     command.addOption('log-file', quoteShellTokenIfNeeded(logFilePath));

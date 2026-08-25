@@ -11,6 +11,7 @@ import type {
 
 import { homeMethods } from '@plugin/controller/home-controller';
 import { SettingsLoader } from '@plugin/service/settings-loader';
+import { parseNpuCheckStackFrame } from '@plugin/class/npu-check-parser';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import { performanceDataMethods } from '@plugin/controller/performance-controller';
 import { performanceMethods } from '@plugin/controller/performance-data-controller';
@@ -140,6 +141,7 @@ type SanitizerMessageRecord = {
   row?: number;
   col?: number;
   originData: string;
+  sourceTool?: 'mssanitizer' | 'npu-check';
 };
 
 type SanitizerGroupMode = 'class' | 'severity' | 'type' | 'file';
@@ -1297,6 +1299,10 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     let inStack = false;
 
     for (const line of rawLines) {
+      if (item.sourceTool === 'npu-check' && /^device\s+frames?\s*:\s*$/i.test(line)) {
+        continue;
+      }
+
       if (/^#\d+\s+/.test(line)) {
         inStack = true;
         continue;
@@ -1484,7 +1490,14 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   async jumpToSanitizerMessage(messageId: string): Promise<void> {
     const msg = this.state.sanitizer.selectedMessages[Number(messageId)];
 
-    if (!msg || !msg.fileLink || msg.row === undefined || msg.col === undefined) {
+    if (!msg || !msg.fileLink) {
+      return;
+    }
+
+    const isNpuCheck = msg.sourceTool === 'npu-check';
+
+    // npu-check frames may miss row/col; fall back to opening the file at line 1.
+    if (!isNpuCheck && (msg.row === undefined || msg.col === undefined)) {
       return;
     }
 
@@ -1495,8 +1508,8 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     const tooltip = this.buildSanitizerMessageTooltip(msg, problemType, handling);
     const params: JumpToFileParams = {
       fileLink: msg.fileLink,
-      row: msg.row,
-      col: msg.col,
+      row: msg.row ?? 1,
+      col: msg.col ?? 1,
       errorTitle: msg.title,
       errorMessage: tooltip.value,
     };
@@ -3047,10 +3060,12 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       const item = visibleMessages[globalIndex];
       const id = String(globalIndex);
       const description = mode === 'file' ? undefined : this.getSanitizerMessageDescription(item);
+      const canJump = !!item.fileLink
+        && (item.sourceTool === 'npu-check' || (item.row !== undefined && item.col !== undefined));
       const node = this.createItem(
         'sanitizerMessage',
         item.title,
-        item.fileLink && item.row !== undefined && item.col !== undefined
+        canJump
           ? COMMAND_SIDEBAR_SANITIZER_MESSAGE_JUMP
           : undefined,
         vscode.TreeItemCollapsibleState.None,
@@ -3062,7 +3077,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
           : new vscode.ThemeIcon('error', new vscode.ThemeColor('problemsErrorIcon.foreground')),
         description,
         `sanitizer-msg:${encodeURIComponent(reportPath)}:${mode}:${encodeURIComponent(groupKey)}:${globalIndex}:${index}`,
-        item.fileLink && item.row !== undefined && item.col !== undefined ? [id] : undefined,
+        canJump ? [id] : undefined,
       );
 
       node.sanitizerTooltipMeta = {
@@ -3102,10 +3117,12 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     }, index) => {
       const id = String(globalIndex);
       const description = mode === 'file' ? undefined : this.getSanitizerMessageDescription(item);
+      const canJump = !!item.fileLink
+        && (item.sourceTool === 'npu-check' || (item.row !== undefined && item.col !== undefined));
       const node = this.createItem(
         'sanitizerMessage',
         item.title,
-        item.fileLink && item.row !== undefined && item.col !== undefined
+        canJump
           ? COMMAND_SIDEBAR_SANITIZER_MESSAGE_JUMP
           : undefined,
         vscode.TreeItemCollapsibleState.None,
@@ -3117,7 +3134,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
           : new vscode.ThemeIcon('error', new vscode.ThemeColor('problemsErrorIcon.foreground')),
         description,
         `sanitizer-msg:legacy:${mode}:${encodeURIComponent(key)}:${globalIndex}:${index}`,
-        item.fileLink && item.row !== undefined && item.col !== undefined ? [id] : undefined,
+        canJump ? [id] : undefined,
       );
 
       if (reportPath) {
@@ -3145,6 +3162,29 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     return fileName;
   }
 
+  private buildSanitizerStackLinkLabel(fileLink: string): string {
+    const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
+    let labelPath = fileLink;
+
+    if (workspacePath) {
+      const normWorkRaw = workspacePath.replace(/\\/g, '/')
+        .replace(/\/+$/, '');
+      const normFileRaw = fileLink.replace(/\\/g, '/');
+      const isWindowsPath = /^[A-Za-z]:\//.test(normWorkRaw) || /^[A-Za-z]:\//.test(normFileRaw);
+      const normWork = isWindowsPath ? normWorkRaw.toLowerCase() : normWorkRaw;
+      const normFile = isWindowsPath ? normFileRaw.toLowerCase() : normFileRaw;
+
+      if (normFile === normWork) {
+        labelPath = '';
+      }
+      else if (normFile.startsWith(`${normWork}/`)) {
+        labelPath = normFileRaw.slice(normWorkRaw.length + 1);
+      }
+    }
+
+    return labelPath;
+  }
+
   private buildSanitizerMessageTooltip(
     item: SanitizerMessageRecord,
     problemType: string,
@@ -3155,28 +3195,37 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       .map((line) => line.replace(/^=+\s*/, '')
         .trim())
       .filter((line) => line.length > 0);
-    const detailsLines: string[] = [];
     const stackLines: string[] = [];
-    let inStack = false;
 
     for (const line of rawLines) {
       if (/^#\d+\s+/.test(line)) {
-        inStack = true;
         stackLines.push(line);
-        continue;
-      }
-
-      if (!inStack) {
-        if (/^(ERROR|WARNING):\s*/i.test(line)) {
-          continue;
-        }
-
-        detailsLines.push(line);
       }
     }
 
-    const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? '';
+    const isNpuCheck = item.sourceTool === 'npu-check';
     const renderedStack = stackLines.map((line) => {
+      if (isNpuCheck) {
+        const frame = parseNpuCheckStackFrame(line);
+
+        if (frame && frame.filePath !== undefined) {
+          const label = `${this.buildSanitizerStackLinkLabel(frame.filePath)}${frame.row !== undefined ? `:${frame.row}` : ''}`;
+          const cmdArgs = encodeURIComponent(JSON.stringify([
+            {
+              fileLink: frame.filePath,
+              row: frame.row ?? 1,
+              col: frame.col ?? 1,
+              errorTitle: item.title,
+            },
+          ]));
+          const cmd = `command:${COMMAND_SIDEBAR_SANITIZER_STACK_JUMP}?${cmdArgs}`;
+
+          return `- [${label}](${cmd})`;
+        }
+
+        return `- ${line.replace(/^#\d+\s+/, '')}`;
+      }
+
       const m = line.match(/^#\d+\s+(.+):(\d+):(\d+)(?:\s+.*)?$/);
 
       if (!m) {
@@ -3187,12 +3236,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       // Sanitizer stack frame uses "line:position" ordering.
       const lineNo = Number(m[2]);
       const position = Number(m[3]);
-      let labelPath = fileLink;
-
-      if (workspacePath) {
-        labelPath = this.stripWorkspacePrefix(fileLink, workspacePath) ?? fileLink;
-      }
-
+      const labelPath = this.buildSanitizerStackLinkLabel(fileLink);
       const cmdArgs = encodeURIComponent(JSON.stringify([
         {
           fileLink,
@@ -3208,8 +3252,12 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     const md = new vscode.MarkdownString([
       `**${t('web.sanitizerPanel.problem')}**: ${item.title}`,
       `**${t('web.sanitizerTree.details')}**: ${this.getSanitizerMessageDetailsText(item)}`.trim(),
-      `**${t('web.sanitizerTree.type')}**: ${problemType}`,
-      handling ? `**${t('web.sanitizerTree.description')}**: ${handling}` : '',
+      ...(isNpuCheck
+        ? []
+        : [
+          `**${t('web.sanitizerTree.type')}**: ${problemType}`,
+          handling ? `**${t('web.sanitizerTree.description')}**: ${handling}` : '',
+        ]),
       renderedStack.length > 0 ? `**${t('web.sanitizerTree.stack')}**:\n${renderedStack.join('\n')}` : '',
     ].filter(Boolean)
       .join('\n\n'));

@@ -37,6 +37,7 @@ import {
   normalizeMaxDebuglogSize,
   addSanitizerToolOptions,
   normalizeSanitizerCommand,
+  buildSanitizerLogFileName,
 } from './sanitizer-option-guards';
 import {
   buildPythonOnBoardCommand,
@@ -251,8 +252,7 @@ export class AscendCommandStrategy implements CommandStrategy {
 
     command.addOption(
       'log-file',
-      `${joinIdeConfigPath(workspacePath, 'mindstudio_sanitizer_log', `mssanitizer_${new Date()
-        .valueOf()}.log`)}`,
+      `${joinIdeConfigPath(workspacePath, 'mindstudio_sanitizer_log', buildSanitizerLogFileName(commandName))}`,
     );
 
     return joinCommands(sourceCannCmd, cdCmd, command.toString());

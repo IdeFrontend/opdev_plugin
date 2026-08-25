@@ -5,6 +5,7 @@ import {
   normalizeNpuSanitizerTools,
   normalizeSanitizerCommand,
   normalizeSanitizerTools,
+  buildSanitizerLogFileName,
 } from '@plugin/domain/services/command-strategy/sanitizer-option-guards';
 
 describe('normalizeMaxDebuglogSize (mssanitizer range 1..10240)', () => {
@@ -178,5 +179,17 @@ describe('normalizeSanitizerCommand', () => {
       .toBe('mssanitizer');
     expect(normalizeSanitizerCommand(undefined))
       .toBe('mssanitizer');
+  });
+});
+
+describe('buildSanitizerLogFileName', () => {
+  it('appends the -npu-check identifier for npu-check', () => {
+    expect(buildSanitizerLogFileName('npu-check'))
+      .toMatch(/^mssanitizer_\d+-npu-check\.log$/);
+  });
+
+  it('keeps the legacy name for mssanitizer', () => {
+    expect(buildSanitizerLogFileName('mssanitizer'))
+      .toMatch(/^mssanitizer_\d+\.log$/);
   });
 });

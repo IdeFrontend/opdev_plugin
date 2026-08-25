@@ -27,6 +27,16 @@ function formatTimestampToYYYYMMDD(timestamp: number): string {
 }
 
 /**
+ * npu-check runs are identified by the `-npu-check` segment in the report file
+ * name; reports without it were produced by mssanitizer. Only the file name is
+ * inspected so a parent directory name cannot flip the detection.
+ */
+export function isNpuCheckReport(reportPath: string): boolean {
+  return path.basename(reportPath)
+    .includes('-npu-check');
+}
+
+/**
  * Lists report nodes for the sanitizer log directory, skipping empty (0-byte)
  * logs left behind by a failed run and any file that is not a real
  * `mssanitizer_<timestamp>.log`. This is what keeps a crashed run from
@@ -67,7 +77,7 @@ export function collectSanitizerLogReports(
     const timestamp = Number(match[1]);
 
     reports.push({
-      title: `mssanitizer-${formatTimestampToYYYYMMDD(timestamp)}`,
+      title: `${isNpuCheckReport(filename) ? 'npu-check' : 'mssanitizer'}-${formatTimestampToYYYYMMDD(timestamp)}`,
       timestamp,
       id: filename,
       path: fullPath,
