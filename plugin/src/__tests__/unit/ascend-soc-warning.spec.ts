@@ -15,9 +15,14 @@ jest.mock('i18next', () => ({
 }));
 
 jest.mock('@plugin/helpers/operator-project-workspace-config', () => ({
+  getConfiguredValue: jest.fn(() => undefined),
+  getOpDevtoolsWorkspaceConfiguration: jest.fn(() => ({
+    inspect: jest.fn(() => undefined),
+    get: jest.fn(),
+  })),
+
   getWorkspaceSimulatorType: jest.fn(() => ''),
   getSocVersionWithWorkspaceOverride: jest.fn(() => ''),
-  getWorkspaceNpuArch: jest.fn(() => ''),
 }));
 jest.mock('@plugin/domain/utils/global-env-snapshot', () => ({
   getGlobalEnvSnapshot: jest.fn(() => ({
@@ -241,7 +246,7 @@ describe('ascend SOC undetected warning', () => {
   });
 });
 
-describe('SOC-not-detected message (issue #43)', () => {
+describe('SOC-not-detected message (short wording, no asys/npu-smi troubleshooting)', () => {
   const KEY = 'extension.ascendEnv.socNotDetected.message';
 
   it('uses short English wording without asys/npu-smi troubleshooting', () => {
@@ -251,7 +256,7 @@ describe('SOC-not-detected message (issue #43)', () => {
     expect(enMessages[KEY]).not.toContain('npu-smi');
   });
 
-  it('uses short Chinese wording per issue #43', () => {
+  it('uses short Chinese wording without asys/npu-smi troubleshooting', () => {
     expect(zhMessages[KEY])
       .toBe('找不到 NPU 相关信息，请手动配置 SoC 版本。');
     expect(zhMessages[KEY]).not.toContain('asys');

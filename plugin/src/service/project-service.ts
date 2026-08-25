@@ -1,27 +1,24 @@
 import { t } from 'i18next';
 import * as vscode from 'vscode';
+import * as path from 'path';
 
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import {
   InitOpsParams,
   CreateOpsParams,
   CreateOpsByPrototypeParams,
-  UpdateShScriptParams,
 } from '@shared/api-types';
-import {
-  updateShScript,
-  getProjectById,
-} from '@plugin/domain/models/project-model';
+import { updateShScript } from '@plugin/domain/models/project-model';
 import { generateOpsPrototype } from '@plugin/domain/services/ops-prototype';
-import { generateStructure } from '@plugin/domain/services/ops';
+import { OpGeneratorFactory } from '@plugin/domain/services/op-generator-factory';
+import { ensureLaunchJsonExists } from '@plugin/domain/utils/project-utils';
+import { ConfigService } from '@plugin/service/config-service';
 import {
   getAscendEnvScriptWithWorkspaceOverride,
-  getEnvironmentSocVersionFromWorkspace,
+  getConfiguredEnvironmentScriptPath,
   getEnvironmentScriptPathFromWorkspace,
-  getSocVersionWithWorkspaceOverride,
 } from '@plugin/helpers/operator-project-workspace-config';
 import { appendLog } from '@plugin/helpers/output-channel';
-import { configService } from '@plugin/service/config-service';
 
 export class ProjectService {
   /**
@@ -33,11 +30,36 @@ export class ProjectService {
   }
 
   /**
-   * Initialize operator project
+   * Initialize the operator project context — path-keyed: caches the project
+   * in ProjectManager and persists the environment script and the canonical
+   * project type into the workspace settings.
    */
-  async init(params: InitOpsParams): Promise<string> {
-    return await ProjectManager.getInstance()
-      .initProject(params);
+  async init(params: InitOpsParams): Promise<void> {
+    const pm = ProjectManager.getInstance();
+    const projectPath = params.projectPath && params.projectName
+      ? path.join(params.projectPath, params.projectName)
+      : (params.projectPath || pm.projectPath);
+
+    if (!projectPath) {
+      return;
+    }
+
+    pm.setProjectContext(projectPath, params.projectName);
+
+    if (params.ascendEnvScript) {
+      await updateShScript({
+        project_name: params.projectName ?? path.basename(projectPath),
+        project_path: projectPath,
+        ascend_env_script: params.ascendEnvScript,
+      });
+    }
+
+    if (params.projectType) {
+      await ConfigService.writeOpDevtoolsDottedSettings(
+        { projectType: params.projectType },
+        projectPath,
+      );
+    }
   }
 
   /**
@@ -45,17 +67,24 @@ export class ProjectService {
    */
   async createOps(params: CreateOpsParams): Promise<string> {
     const pm = ProjectManager.getInstance();
-    const info = pm.getProjectInfo();
-    const op_name = params.projectName || info.name;
-    const project_id = params.projectId || pm.projectId;
+    // Path-keyed: the target is the explicit project path, else
+    // the current ProjectManager context, else the workspace root — no
+    // registry/record gate, the prototype write itself validates the directory.
+    const projectPath = params.projectPath || pm.projectPath || vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+
+    if (!projectPath) {
+      return '';
+    }
+
+    const op_name = params.projectName || path.basename(projectPath);
     const prototype_name = params.prototypeName || undefined;
 
-    console.log('Create operator prototype params', op_name, project_id, prototype_name);
+    console.log('Create operator prototype params', op_name, projectPath, prototype_name);
 
     try {
       const context = this.getContext();
       const result = await generateOpsPrototype(
-        Number(project_id),
+        projectPath,
         op_name,
         prototype_name,
         context.extensionPath,
@@ -82,86 +111,90 @@ export class ProjectService {
   async createOpsByPrototype(params: CreateOpsByPrototypeParams): Promise<void> {
     const pm = ProjectManager.getInstance();
     const context = this.getContext();
+    const projectPath = params.projectPath || pm.projectPath;
 
     console.log('createOpsByPrototype: Starting, params:', params);
-    console.log('createOpsByPrototype: Current projectId:', pm.projectId);
-    console.log('createOpsByPrototype: projectId type:', typeof pm.projectId);
+    console.log('createOpsByPrototype: projectPath:', projectPath);
+
+    if (!projectPath) {
+      throw new Error(t('project.invalidProjectId'));
+    }
 
     try {
-      const projectId = params.projectId !== undefined
-        ? Number(params.projectId)
-        : Number(pm.projectId);
-
-      console.log('createOpsByPrototype: Converted projectId:', projectId);
-
-      if (!projectId || isNaN(projectId)) {
-        throw new Error(t('project.invalidProjectId', { projectId: params.projectId ?? pm.projectId }));
-      }
-
-      console.log('createOpsByPrototype: Calling generateStructure...');
       const resolvedOpName =
         params.opName?.trim()
-        || pm.getProjectName()?.trim()
+        || (pm.projectPath ? path.basename(pm.projectPath) : '')
         || undefined;
-      const result = await generateStructure(
+
+      // The operator output defaults to <projectPath>/<opName> for a
+      // sub-operator, or to the project path itself when the operator IS the
+      // project (opName === basename(projectPath)) — never the current
+      // window's workspace root of another project. An explicit opPath
+      // override wins.
+      const opPath = params.opPath
+        ?? (resolvedOpName && path.basename(projectPath) !== resolvedOpName
+          ? path.join(projectPath, resolvedOpName)
+          : projectPath);
+
+      console.log('createOpsByPrototype: Calling OpGeneratorFactory...');
+      const generator = OpGeneratorFactory.getGenerator(
         {
-          ops_prototype_file: params.opsPrototypeFile,
-          project_id: projectId,
           op_type: params.opType || 'ascend',
+          ops_prototype_file: params.opsPrototypeFile,
           template_name: params.templateName,
           ...(resolvedOpName ? { op_name: resolvedOpName } : {}),
-          ...(params.opPath ? { op_path: params.opPath } : {}),
+          op_path: opPath,
+        },
+        {
+          project_path: projectPath,
+          project_name: resolvedOpName,
         },
         context.extensionPath,
-        params.skipFileGeneration === true,
+      );
+
+      // parseMeta resolves the template/op name fallbacks (required before
+      // generation — the Cann generator renames template files on it).
+      generator.parseMeta();
+
+      // Structure generation (files from the template zip). Mirrors the
+      // isSkipUnZip semantics: skipped when the caller already scaffolded the
+      // operator (e.g. genop) and only the configs are wanted.
+      if (params.skipFileGeneration !== true) {
+        generator.executeGeneration();
+      }
+
+      await ensureLaunchJsonExists(opPath);
+      // Seed default settings from the PROJECT (collection root) — the
+      // root-keyed model: a standard-custom collection has one config set
+      // against the root build.sh, and a new sub-operator is selected only via
+      // the --ops={operatorNames} placeholder, so per-operator seed paths
+      // never land in the workspace settings.
+      await ConfigService.ensureOpDevtoolsSettingsSeeded(
+        projectPath,
+        '',
+        params.opType || 'ascend',
+        projectPath,
+        params.templateName,
       );
 
       console.log(
         'createOpsByPrototype: Operator project generated',
         {
           ops_prototype_file: params.opsPrototypeFile,
-          project_id: pm.projectId,
+          projectPath,
+          opPath,
           op_type: params.opType,
-          result,
         },
       );
 
       vscode.window.showInformationMessage(t('project.createOpFileSuccess'));
       await pm.checkVscode();
-      await configService.maybeMigrateLegacySettingsToWorkspace();
     }
     catch (e) {
       console.error('createOpsByPrototype: Failed to create operator', e);
       vscode.window.showErrorMessage(t('project.createOpFileFailed', { error: e instanceof Error ? e.message : '' }));
       throw e; // Re-throw so caller knows it failed
     }
-  }
-
-  /**
-   * Update script file
-   */
-  async updateShScript(params: UpdateShScriptParams): Promise<string> {
-    const pm = ProjectManager.getInstance();
-    const info = pm.getProjectInfo();
-    const project_name = info.name ?? '';
-    const project_path = info.path;
-
-    if (project_path === undefined) {
-      return '';
-    }
-
-    const ascend_env_script = params.ascendEnvScript || undefined;
-    const soc_version = params.soc_version || undefined;
-    const projectRes = await updateShScript({
-      project_name,
-      project_path,
-      ascend_env_script,
-      soc_version,
-    });
-
-    console.log('projectRes', projectRes);
-
-    return String(projectRes);
   }
 
   /**
@@ -173,73 +206,47 @@ export class ProjectService {
   }
 
   /**
-   * Get project script
+   * Get project script — settings-only: the environment script lives in the
+   * workspace `environment.environmentScript` key; the workspace override
+   * applies on top of it.
    */
   async getProjectSH(): Promise<string> {
-    const pm = ProjectManager.getInstance();
-
-    await pm.ensureProjectId();
-    const projectId = pm.projectId;
-
-    if (!projectId) {
-      return '';
-    }
-
-    const project = getProjectById(Number(projectId));
-
-    return getAscendEnvScriptWithWorkspaceOverride(project?.ascend_env_script || '');
+    return getAscendEnvScriptWithWorkspaceOverride(getEnvironmentScriptPathFromWorkspace());
   }
 
   /**
-   * Get project SoC version with workspace override.
-   */
-  async getProjectSocVersion(): Promise<string> {
-    const pm = ProjectManager.getInstance();
-
-    await pm.ensureProjectId();
-    const projectId = pm.projectId;
-
-    if (!projectId) {
-      return '';
-    }
-
-    const project = getProjectById(Number(projectId));
-
-    return getSocVersionWithWorkspaceOverride(project?.soc_version || '');
-  }
-
-  /**
-   * Mirror workspace environment settings into `projects.json` for the current project.
-   * Call when `op-devtools.environment.*` changes.
+   * Mirror the explicit environment script into the workspace settings
+   * for the current project. Call when `op-devtools.environment.*` changes.
    */
   async syncAscendEnvScriptFromWorkspaceSettings(): Promise<void> {
     appendLog(
       'op-devtools/project-service',
       'syncAscendEnvScriptFromWorkspaceSettings:start',
     );
-    const pm = ProjectManager.getInstance();
-    await pm.ensureProjectId();
-    const info = pm.getProjectInfo();
-    if (!info?.path) {
+    const projectPath = ProjectManager.getInstance().projectPath;
+
+    if (!projectPath) {
       appendLog(
         'op-devtools/project-service',
         'syncAscendEnvScriptFromWorkspaceSettings:skip:noProjectPath',
       );
+
       return;
     }
-    const scriptPath = getEnvironmentScriptPathFromWorkspace();
-    const socVersion = getEnvironmentSocVersionFromWorkspace();
+
+    // Explicit value only: an unset script must NOT materialize the
+    // '/etc/profile' schema default as a user setting — only the explicit
+    // value is ever written to settings.json.
+    const scriptPath = getConfiguredEnvironmentScriptPath();
+
     appendLog('op-devtools/project-service', 'syncAscendEnvScriptFromWorkspaceSettings:values', {
-      projectPath: info.path,
-      projectName: info.name,
+      projectPath,
       scriptPath,
-      socVersion,
     });
     await updateShScript({
-      project_name: info.name ?? '',
-      project_path: info.path,
-      ascend_env_script: scriptPath ? scriptPath : null,
-      soc_version: socVersion ? socVersion : undefined,
+      project_name: path.basename(projectPath),
+      project_path: projectPath,
+      ascend_env_script: scriptPath,
     });
     appendLog(
       'op-devtools/project-service',

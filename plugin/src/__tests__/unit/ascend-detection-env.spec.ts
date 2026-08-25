@@ -1,7 +1,11 @@
-jest.mock('fs', () => ({
-  existsSync: jest.fn(),
-}));
+jest.mock('fs', () => ({ existsSync: jest.fn() }));
 jest.mock('@plugin/helpers/operator-project-workspace-config', () => ({
+  getConfiguredValue: jest.fn(() => undefined),
+  getOpDevtoolsWorkspaceConfiguration: jest.fn(() => ({
+    inspect: jest.fn(() => undefined),
+    get: jest.fn(),
+  })),
+
   getConfiguredEnvironmentScriptPath: jest.fn(),
 }));
 jest.mock('@plugin/domain/utils/global-env-snapshot', () => ({
@@ -12,9 +16,7 @@ jest.mock('@plugin/domain/utils/global-env-snapshot', () => ({
     ascendEnvScript: undefined,
   })),
 }));
-jest.mock('child_process', () => ({
-  execSync: jest.fn(),
-}));
+jest.mock('child_process', () => ({ execSync: jest.fn() }));
 
 import fs from 'fs';
 import child_process from 'child_process';
@@ -45,9 +47,7 @@ describe('resolveCannSetEnvScriptForDetection', () => {
 
   it('prefers explicit workspace script over ASCEND_ENV_SCRIPT snapshot', () => {
     (getConfiguredEnvironmentScriptPath as jest.Mock).mockReturnValue('/ws/set_env.sh');
-    (getGlobalEnvSnapshot as jest.Mock).mockReturnValue({
-      ascendEnvScript: '/os/set_env.sh',
-    });
+    (getGlobalEnvSnapshot as jest.Mock).mockReturnValue({ ascendEnvScript: '/os/set_env.sh' });
     existsSync.mockImplementation((p: string) => p === '/ws/set_env.sh');
 
     expect(resolveCannSetEnvScriptForDetection())
@@ -60,9 +60,7 @@ describe('resolveCannSetEnvScriptForDetection', () => {
   });
 
   it('uses ASCEND_ENV_SCRIPT snapshot when workspace path is unset', () => {
-    (getGlobalEnvSnapshot as jest.Mock).mockReturnValue({
-      ascendEnvScript: '/os/set_env.sh',
-    });
+    (getGlobalEnvSnapshot as jest.Mock).mockReturnValue({ ascendEnvScript: '/os/set_env.sh' });
     existsSync.mockImplementation((p: string) => p === '/os/set_env.sh');
 
     expect(resolveCannSetEnvScriptForDetection())
@@ -85,9 +83,7 @@ describe('resolveCannSetEnvScriptForDetection', () => {
 
   it('skips missing paths and tries the next candidate', () => {
     (getConfiguredEnvironmentScriptPath as jest.Mock).mockReturnValue('/missing/ws.sh');
-    (getGlobalEnvSnapshot as jest.Mock).mockReturnValue({
-      ascendEnvScript: '/ok/os.sh',
-    });
+    (getGlobalEnvSnapshot as jest.Mock).mockReturnValue({ ascendEnvScript: '/ok/os.sh' });
     existsSync.mockImplementation((p: string) => p === '/ok/os.sh');
 
     expect(resolveCannSetEnvScriptForDetection())

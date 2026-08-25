@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-/** Default operator-generation command for standard-custom projects (issue #14). */
+/** Default operator-generation command for standard-custom projects. */
 export const DEFAULT_GEN_OP_COMMAND = 'bash build.sh --genop={path}/{operatorname}';
 
 /** Escape the shell-significant characters and wrap a value in double quotes. */

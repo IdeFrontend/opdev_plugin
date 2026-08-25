@@ -1,9 +1,15 @@
 jest.mock('@plugin/core/project/project-manager', () => ({ ProjectManager: { getInstance: jest.fn() } }));
 
 jest.mock('@plugin/helpers/operator-project-workspace-config', () => ({
+  getConfiguredValue: jest.fn(() => undefined),
+  getOpDevtoolsWorkspaceConfiguration: jest.fn(() => ({
+    inspect: jest.fn(() => undefined),
+    get: jest.fn(),
+  })),
+
   getWorkspaceSimulatorType: jest.fn(() => ''),
   getSocVersionWithWorkspaceOverride: jest.fn(),
-  getWorkspaceNpuArch: jest.fn(() => ''),
+  readWorkspaceProjectTypeSetting: jest.fn(() => undefined),
 }));
 
 jest.mock('@plugin/domain/utils/global-env-snapshot', () => ({
@@ -15,18 +21,17 @@ jest.mock('@plugin/domain/utils/global-env-snapshot', () => ({
   })),
 }));
 
-jest.mock('@plugin/domain/models/project-model', () => ({ getProjectById: jest.fn(() => ({ project_type: 'ascend-c' })) }));
-
-jest.mock('@plugin/domain/services/configuration', () => ({ getConfigById: jest.fn() }));
-
-jest.mock('@plugin/domain/models/model', () => ({ getOpByProjectIdAndOpName: jest.fn(() => undefined) }));
-
-jest.mock('@plugin/service/config-service', () => ({
-  ConfigService: {
-    readOpDevtoolsSetting: jest.fn(() => undefined),
-    persistDetectedSocVersion: jest.fn(async () => false),
-  },
+jest.mock('@plugin/domain/models/project-model', () => ({
+  getProjectByPath: jest.fn(() => ({
+    project_type: 'ascend-c',
+    project_path: '/ws',
+  }))
+    .mockName('getProjectByPath'),
 }));
+
+jest.mock('@plugin/domain/models/op-record', () => ({ resolveOpRecord: jest.fn(() => undefined) }));
+
+jest.mock('@plugin/service/config-service', () => ({ ConfigService: { readOpDevtoolsSetting: jest.fn(() => undefined) } }));
 
 jest.mock('i18next', () => ({ t: (key: string) => key }));
 
@@ -35,7 +40,6 @@ import { CannPlugin } from '@plugin/domain/plugins/cann.plugin';
 import { TritonPlugin } from '@plugin/domain/plugins/triton.plugin';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import { ProjectManager } from '@plugin/core/project/project-manager';
-import { deriveOperatorToolOutputLabel } from '@plugin/helpers/output-channel';
 import { getSocVersionWithWorkspaceOverride } from '@plugin/helpers/operator-project-workspace-config';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -45,7 +49,6 @@ import {
   commandFailureMessage,
   executeOperatorCommand,
 } from '@plugin/service/operator-command-executor';
-import { NPU_ARCH_ENV_VAR } from '@plugin/helpers/terminal-npu-arch-env';
 
 describe('executeOperatorCommand', () => {
   const execute = jest.fn()
@@ -60,11 +63,6 @@ describe('executeOperatorCommand', () => {
       ConfigService: { readOpDevtoolsSetting: jest.Mock };
     }
   ).ConfigService.readOpDevtoolsSetting;
-  const persistSoc = (): jest.Mock => (
-    jest.requireMock('@plugin/service/config-service') as {
-      ConfigService: { persistDetectedSocVersion: jest.Mock };
-    }
-  ).ConfigService.persistDetectedSocVersion;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -80,8 +78,7 @@ describe('executeOperatorCommand', () => {
 
   it('embeds export prefixes in the command and does not pass options.env', async () => {
     await executeOperatorCommand('cd build && ./build.sh', {
-      projectId: 1,
-      configType: 'build_op',
+      projectPath: '/ws',
       scriptField: null,
       script: null,
     });
@@ -111,28 +108,20 @@ describe('executeOperatorCommand', () => {
   });
 
   it('derives toolOutputLabel from spawn context when meta omits outputLabel', async () => {
-    (deriveOperatorToolOutputLabel as jest.Mock).mockReturnValueOnce('compile');
-
     await executeOperatorCommand('cd build && ./build.sh', {
-      projectId: 1,
-      configType: 'build_op',
+      projectPath: '/ws',
+      toolOutputLabel: 'compile',
       scriptField: null,
       script: null,
     });
 
-    expect(deriveOperatorToolOutputLabel)
-      .toHaveBeenCalledWith(expect.objectContaining({
-        configType: 'build_op',
-        script: 'cd build && ./build.sh',
-      }));
     expect(execute.mock.calls[0][3])
       .toEqual(expect.objectContaining({ toolOutputLabel: 'compile' }));
   });
 
   it('inserts exports before ascend_env_script source prefix', async () => {
     await executeOperatorCommand('. /cann/set_env.sh && cd build && ./build.sh', {
-      projectId: 1,
-      configType: 'build_op',
+      projectPath: '/ws',
       scriptField: null,
       script: null,
     });
@@ -149,8 +138,7 @@ describe('executeOperatorCommand', () => {
     await executeOperatorCommand(
       'bash build.sh --soc={soc_version}',
       {
-        projectId: 1,
-        configType: 'build_op',
+        projectPath: '/ws',
         scriptField: null,
         script: null,
       },
@@ -166,15 +154,17 @@ describe('executeOperatorCommand', () => {
   });
 
   it('embeds export prefixes when stored project_type is cann and no operator is selected', async () => {
-    const { getProjectById } = jest.requireMock('@plugin/domain/models/project-model') as {
-      getProjectById: jest.Mock;
+    const { getProjectByPath } = jest.requireMock('@plugin/domain/models/project-model') as {
+      getProjectByPath: jest.Mock;
     };
 
-    getProjectById.mockReturnValueOnce({ project_type: 'cann' });
+    getProjectByPath.mockReturnValueOnce({
+      project_type: 'cann',
+      project_path: '/ws',
+    });
 
     await executeOperatorCommand('cd build && ./build.sh', {
-      projectId: 1,
-      configType: 'build_op',
+      projectPath: '/ws',
       scriptField: null,
       script: null,
     });
@@ -186,15 +176,17 @@ describe('executeOperatorCommand', () => {
   });
 
   it('does not export SOC_VERSION or NPU_ARCH for standard-custom projects', async () => {
-    const { getProjectById } = jest.requireMock('@plugin/domain/models/project-model') as {
-      getProjectById: jest.Mock;
+    const { getProjectByPath } = jest.requireMock('@plugin/domain/models/project-model') as {
+      getProjectByPath: jest.Mock;
     };
 
-    getProjectById.mockReturnValueOnce({ project_type: 'ascend' });
+    getProjectByPath.mockReturnValueOnce({
+      project_type: 'ascend',
+      project_path: '/ws',
+    });
 
     await executeOperatorCommand('bash build.sh --soc={soc_version}', {
-      projectId: 2,
-      configType: 'build_op',
+      projectPath: '/ws',
       scriptField: null,
       script: null,
     });
@@ -208,26 +200,26 @@ describe('executeOperatorCommand', () => {
   });
 
   it('resolves opType=triton for a sanitizer config and injects Triton sanitizer env vars', async () => {
-    const { getProjectById } = jest.requireMock('@plugin/domain/models/project-model') as {
-      getProjectById: jest.Mock;
-    };
-    const { getConfigById } = jest.requireMock('@plugin/domain/services/configuration') as {
-      getConfigById: jest.Mock;
+    const { getProjectByPath } = jest.requireMock('@plugin/domain/models/project-model') as {
+      getProjectByPath: jest.Mock;
     };
 
-    getProjectById.mockReturnValue({ project_type: 'triton' });
-    getConfigById.mockReturnValue({
-      project_id: 1,
-      config_type: 'sanitizer',
-      user_options: { op: 'triton_vector_add' },
+    getProjectByPath.mockReturnValue({
+      id: 1,
+      project_type: 'triton',
+      project_path: '/ws',
     });
 
-    const ctx = buildOperatorSpawnContext({ configId: 1 });
+    const ctx = buildOperatorSpawnContext({
+      projectPath: '/ws',
+      sanitizerRun: true,
+      toolOutputLabel: 'sanitizer',
+    });
 
     expect(ctx.opType)
       .toBe('triton');
-    expect(ctx.configType)
-      .toBe('sanitizer');
+    expect(ctx.sanitizerRun)
+      .toBe(true);
 
     await executeOperatorCommand('mssanitizer -- python3 ./a.py', ctx);
 
@@ -241,66 +233,11 @@ describe('executeOperatorCommand', () => {
       .toContain("export PYTORCH_NO_NPU_MEMORY_CACHING='1'");
   });
 
-  describe('reopen / manual-build env sync (issue #37)', () => {
-    const globalRef = globalThis as unknown as { extensionContext?: unknown };
-    const originalContext = globalRef.extensionContext;
-    let environmentVariableCollection: { replace: jest.Mock;
-      delete: jest.Mock };
-
-    beforeEach(() => {
-      environmentVariableCollection = {
-        replace: jest.fn(),
-        delete: jest.fn(),
-      };
-      globalRef.extensionContext = { environmentVariableCollection };
-      persistSoc()
-        .mockResolvedValue(false);
-    });
-
-    afterEach(() => {
-      globalRef.extensionContext = originalContext;
-    });
-
-    it('refreshes the terminal NPU_ARCH and offers the resolution for persistence', async () => {
-      await executeOperatorCommand('cd build && ./build.sh', {
-        projectId: 1,
-        configType: 'build_op',
-        scriptField: null,
-        script: null,
-      });
-
-      expect(environmentVariableCollection.replace)
-        .toHaveBeenCalledWith(NPU_ARCH_ENV_VAR, 'dav-3510');
-      expect(persistSoc())
-        .toHaveBeenCalledWith(expect.objectContaining({ socVersion: 'ascend950' }));
-    });
-
-    it('leaves the terminal and settings untouched for simulator runs', async () => {
-      await executeOperatorCommand('bash build.sh --simulator', {
-        projectId: 1,
-        configType: 'simulate',
-        scriptField: null,
-        script: 'bash build.sh --simulator',
-      });
-
-      expect(environmentVariableCollection.replace)
-        .not
-        .toHaveBeenCalled();
-      expect(environmentVariableCollection.delete)
-        .not
-        .toHaveBeenCalled();
-      expect(persistSoc())
-        .not
-        .toHaveBeenCalled();
-    });
-  });
-
   it('uses outputLabel from meta when provided', async () => {
     await executeOperatorCommand(
       'cd build && ./run.sh',
       {
-        projectId: 1,
-        configType: 'on_board',
+        projectPath: '/ws',
         scriptField: null,
         script: null,
       },
@@ -319,8 +256,7 @@ describe('executeOperatorCommand', () => {
       .mockImplementation((key: string) => (key === 'execution.commandTimeoutSeconds' ? 90 : undefined));
 
     await executeOperatorCommand('cd build && ./run.sh', {
-      projectId: 1,
-      configType: 'on_board',
+      projectPath: '/ws',
       scriptField: null,
       script: null,
     });
@@ -334,8 +270,7 @@ describe('executeOperatorCommand', () => {
       .mockImplementation((key: string) => (key === 'execution.commandTimeoutSeconds' ? 0 : undefined));
 
     await executeOperatorCommand('cd build && ./run.sh', {
-      projectId: 1,
-      configType: 'on_board',
+      projectPath: '/ws',
       scriptField: null,
       script: null,
     });
@@ -349,8 +284,7 @@ describe('executeOperatorCommand', () => {
     await executeOperatorCommand(
       'bash build.sh --soc={soc_version} -u',
       {
-        projectId: 1,
-        configType: 'ut_test',
+        projectPath: '/ws',
         scriptField: null,
         script: null,
       },

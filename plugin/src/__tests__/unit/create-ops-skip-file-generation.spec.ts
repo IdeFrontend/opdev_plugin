@@ -1,24 +1,30 @@
 jest.mock('i18next', () => ({ t: (key: string) => key }));
 
 const checkVscode = jest.fn();
+const parseMeta = jest.fn();
+const executeGeneration = jest.fn();
 
 jest.mock('@plugin/core/project/project-manager', () => ({
   ProjectManager: {
     getInstance: () => ({
-      projectId: 10,
-      getProjectName: () => 'add',
-      getProjectInfo: () => ({ name: 'add' }),
+      projectPath: '/repo/math',
       checkVscode,
     }),
   },
 }));
 
-jest.mock('@plugin/domain/services/ops', () => ({
-  generateStructure: jest.fn()
-    .mockResolvedValue(1),
+jest.mock('@plugin/domain/services/op-generator-factory', () => ({
+  OpGeneratorFactory: {
+    getGenerator: jest.fn(() => ({
+      parseMeta,
+      executeGeneration,
+    })),
+  },
 }));
 
-import { generateStructure } from '@plugin/domain/services/ops';
+jest.mock('@plugin/domain/utils/project-utils', () => ({ ensureLaunchJsonExists: jest.fn(async () => {}) }));
+
+import { OpGeneratorFactory } from '@plugin/domain/services/op-generator-factory';
 import { projectService } from '@plugin/service/project-service';
 
 describe('createOpsByPrototype: skipFileGeneration threading', () => {
@@ -31,28 +37,28 @@ describe('createOpsByPrototype: skipFileGeneration threading', () => {
     opsPrototypeFile: '/repo/math/add/add.json',
     opType: 'ascend' as const,
     opName: 'add',
-    projectId: 10,
     opPath: '/repo/math/add',
+    projectPath: '/repo/math',
   };
 
-  it('passes isSkipUnZip=true to generateStructure when skipFileGeneration is true', async () => {
+  it('skips generator.executeGeneration when skipFileGeneration is true', async () => {
     await projectService.createOpsByPrototype({
       ...baseParams,
       skipFileGeneration: true,
     });
 
-    expect(generateStructure)
+    expect(OpGeneratorFactory.getGenerator)
       .toHaveBeenCalledTimes(1);
-    expect((generateStructure as jest.Mock).mock.calls[0][2])
-      .toBe(true);
+    expect(executeGeneration)
+      .not.toHaveBeenCalled();
   });
 
-  it('passes isSkipUnZip=false when skipFileGeneration is absent (fallback parity)', async () => {
+  it('runs generator.executeGeneration when skipFileGeneration is absent (fallback parity)', async () => {
     await projectService.createOpsByPrototype({ ...baseParams });
 
-    expect(generateStructure)
+    expect(OpGeneratorFactory.getGenerator)
       .toHaveBeenCalledTimes(1);
-    expect((generateStructure as jest.Mock).mock.calls[0][2])
-      .toBe(false);
+    expect(executeGeneration)
+      .toHaveBeenCalledTimes(1);
   });
 });

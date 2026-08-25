@@ -1,7 +1,7 @@
 import { isStandardCustomProjectType } from '@shared/project-type-view-id';
 
 describe('isStandardCustomProjectType', () => {
-  it('accepts both detected and legacy standard-custom project types', () => {
+  it('accepts both detected and stored standard-custom project types', () => {
     expect(isStandardCustomProjectType('standard-custom'))
       .toBe(true);
     expect(isStandardCustomProjectType('ascend'))

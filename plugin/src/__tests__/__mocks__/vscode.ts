@@ -7,6 +7,8 @@ export const workspace = {
     get: jest.fn(),
     update: jest.fn(),
   })),
+  onDidChangeConfiguration: jest.fn()
+    .mockReturnValue({ dispose: jest.fn() }),
 };
 
 export const extensions = {
@@ -16,6 +18,10 @@ export const extensions = {
 };
 
 export const window = {
+  activeTextEditor: undefined as
+  | { document: { fileName: string;
+    uri: { fsPath: string } } }
+    | undefined,
   showInformationMessage: jest.fn(),
   showErrorMessage: jest.fn(),
   showWarningMessage: jest.fn()

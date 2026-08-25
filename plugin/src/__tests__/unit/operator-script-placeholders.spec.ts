@@ -1,7 +1,9 @@
 jest.mock('@plugin/helpers/operator-project-workspace-config', () => ({
+  getOpDevtoolsWorkspaceConfiguration: jest.requireActual('@plugin/helpers/operator-project-workspace-config').getOpDevtoolsWorkspaceConfiguration,
+  getConfiguredValue: jest.requireActual('@plugin/helpers/operator-project-workspace-config').getConfiguredValue,
+
   getWorkspaceSimulatorType: jest.fn(() => ''),
   getSocVersionWithWorkspaceOverride: jest.fn(() => ''),
-  getWorkspaceNpuArch: jest.fn(() => ''),
 }));
 jest.mock('@plugin/domain/utils/global-env-snapshot', () => ({
   getGlobalEnvSnapshot: jest.fn(() => ({
@@ -35,18 +37,21 @@ const snapshot = (overrides: Partial<{ socVersion: string;
 describe('applyOperatorNamesPlaceholder', () => {
   it('removes --ops={operatorNames} when no operator is selected', () => {
     const script = 'bash build.sh --soc={soc_version} --ops={operatorNames} -u';
+
     expect(applyOperatorNamesPlaceholder(script))
       .toBe('bash build.sh --soc={soc_version} -u');
   });
 
   it('substitutes operator names into --ops={operatorNames}', () => {
     const script = 'bash build.sh --ops={operatorNames} --debug';
+
     expect(applyOperatorNamesPlaceholder(script, 'add,sub'))
       .toBe('bash build.sh --ops=add,sub --debug');
   });
 
-  it('appends --ops for legacy standard-custom script without placeholder', () => {
+  it('appends --ops for a stored standard-custom script without placeholder', () => {
     const script = 'bash build.sh --pkg --soc={soc_version} --vendor_name=custom --onboard';
+
     expect(applyOperatorNamesPlaceholder(script, 'add'))
       .toBe('bash build.sh --pkg --soc={soc_version} --vendor_name=custom --ops=add --onboard');
   });
@@ -58,7 +63,9 @@ describe('applyOperatorNamesPlaceholder', () => {
 
   it('does not duplicate --ops when placeholder is already present', () => {
     const script = 'bash build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames}';
-    expect(applyOperatorNamesPlaceholder(script, 'add').match(/--ops=/g)?.length)
+
+    expect(applyOperatorNamesPlaceholder(script, 'add')
+      .match(/--ops=/g)?.length)
       .toBe(1);
   });
 });
@@ -123,7 +130,7 @@ describe('replaceOperatorScriptPlaceholders', () => {
   });
 });
 
-describe('ensureStandardCustomSocFlag (plugin_release #171)', () => {
+describe('ensureStandardCustomSocFlag (run_example --soc insertion)', () => {
   it('inserts --soc={soc_version} into a standard-custom run_example script that lacks --soc', () => {
     expect(ensureStandardCustomSocFlag('bash build.sh --vendor_name=custom --run_example'))
       .toBe('bash build.sh --soc={soc_version} --vendor_name=custom --run_example');
@@ -131,6 +138,7 @@ describe('ensureStandardCustomSocFlag (plugin_release #171)', () => {
 
   it('is a no-op when --soc is already present', () => {
     const script = 'bash build.sh --soc=ascend910_93 --vendor_name=custom --run_example';
+
     expect(ensureStandardCustomSocFlag(script))
       .toBe(script);
   });

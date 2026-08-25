@@ -7,23 +7,17 @@ import { dumpTensorMethods } from './dump-tensor-controller';
 
 export const webviewMethods = {
   getHome: homeMethods.getHome,
-  getLastProjectPath: homeMethods.getLastProjectPath,
   getWorkspace: homeMethods.getWorkspace,
   getProjectType: homeMethods.getProjectType,
-  validatePyascForAnalysis: homeMethods.validatePyascForAnalysis,
 
   openFile: linkMethods.openFile,
 
   remotePathSearch: configMethods.remotePathSearch,
 
   createdProject: welcomeMethods.createdProject,
-  openProject: welcomeMethods.openProject,
 
   getDumpTensorData: dumpTensorMethods.getDumpTensorData,
 
-  downloadData: performanceDataMethods.downloadData,
-  deleteNode: performanceDataMethods.deleteNode,
   selectFolder: performanceDataMethods.selectFolder,
   selectFile: performanceDataMethods.selectFile,
-  jumpToFile: performanceDataMethods.jumpToFile,
 };

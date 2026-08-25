@@ -133,7 +133,7 @@ export default {
   'folderContext.noWorkspaceCannotRun': 'No workspace open, cannot run validation',
   'folderContext.noProjectIdMarkFirst': 'Project ID not found. Mark as operator project first.',
   'folderContext.noOperatorsToValidate': 'No operators to validate in this file/folder',
-  'folderContext.rootNotInProjectsJson': 'Root not registered in projects.json, cannot run validation',
+  'folderContext.rootNotRecognized': 'Root not recognized as an operator project, cannot run validation',
   'folderContext.folderNotOperatorProject': 'This folder is not an operator project',
   'folderContext.needBishengFlags': 'Not supported. Ensure build.sh contains --bisheng_flags',
   'folderContext.standardOpsNoTuning': 'Standard custom operators do not support performance tuning',
@@ -264,7 +264,7 @@ export default {
   'build.simulationFailedThrow': 'Simulation analysis failed: {{output}}',
 
   // project (additional)
-  'project.invalidProjectId': 'Invalid projectId: {{projectId}}',
+  'project.invalidProjectId': 'Invalid project path',
   'project.projectDirNotExist': 'Project directory does not exist',
   'project.opsPrototypeTemplateMissing': 'Ops prototype template not found: {{path}}',
 

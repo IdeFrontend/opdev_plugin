@@ -7,7 +7,7 @@ import {
 
 describe('genop-command helper', () => {
   describe('DEFAULT_GEN_OP_COMMAND', () => {
-    it('matches the template requested in issue #14', () => {
+    it('matches the default genop template', () => {
       expect(DEFAULT_GEN_OP_COMMAND)
         .toBe('bash build.sh --genop={path}/{operatorname}');
     });

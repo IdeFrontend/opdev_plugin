@@ -54,7 +54,7 @@ export function basenameFromTargetFile(targetFile?: string | null): string | und
 
 /**
  * Candidate basenames for an operator, preferring an explicit build_example
- * `target_file` basename when supplied (issue #17 / GC-17 next steps).
+ * `target_file` basename when supplied (GC-17 next steps).
  */
 export function collectDebugTargetCandidates(
   operatorName: string,
@@ -165,6 +165,22 @@ function linkResolvesToFile(linkPath: string): boolean {
   }
 }
 
+function toRelativeLaunchTarget(
+  workspaceRoot: string,
+  absTargetPath: string,
+  placeholder: string,
+): string {
+  const rel = path.relative(workspaceRoot, absTargetPath);
+
+  if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) {
+    return absTargetPath.split(path.sep)
+      .join('/');
+  }
+
+  return `${placeholder}/${rel.split(path.sep)
+    .join('/')}`;
+}
+
 /**
  * Express an absolute binary path as a `${workspaceFolder}`-relative launch.json
  * target. Falls back to an absolute (posix-separated) path when the binary lives
@@ -174,15 +190,7 @@ export function toWorkspaceRelativeTarget(
   workspaceRoot: string,
   absTargetPath: string,
 ): string {
-  const rel = path.relative(workspaceRoot, absTargetPath);
-
-  if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) {
-    return absTargetPath.split(path.sep)
-      .join('/');
-  }
-
-  return `\${workspaceFolder}/${rel.split(path.sep)
-    .join('/')}`;
+  return toRelativeLaunchTarget(workspaceRoot, absTargetPath, '${workspaceFolder}');
 }
 
 /**
@@ -193,15 +201,7 @@ export function toRemoteWorkspaceRelativeTarget(
   workspaceRoot: string,
   absTargetPath: string,
 ): string {
-  const rel = path.relative(workspaceRoot, absTargetPath);
-
-  if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) {
-    return absTargetPath.split(path.sep)
-      .join('/');
-  }
-
-  return `\${remoteWorkspaceFolder}/${rel.split(path.sep)
-    .join('/')}`;
+  return toRelativeLaunchTarget(workspaceRoot, absTargetPath, '${remoteWorkspaceFolder}');
 }
 
 export function resolveTargetPath(target: string, workspaceRoot: string): string {
@@ -476,7 +476,7 @@ const MSDEBUG_BINARY_CONFIG_NAMES = new Set([
 
 /**
  * Resolve msdebug targets when the user starts debug from the VS Code Run panel
- * (issue #17 — sidebar-only patching was insufficient).
+ * (sidebar-only patching is insufficient: the Run panel supplies its own config).
  */
 export function registerMsdebugTargetAutoAdapt(
   context: vscode.ExtensionContext,

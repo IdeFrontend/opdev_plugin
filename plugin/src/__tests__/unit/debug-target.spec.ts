@@ -240,7 +240,7 @@ describe('shouldReplaceDebugTarget', () => {
       .toBe(true);
   });
 
-  it('keeps a custom existing target that is not the legacy root build pattern', () => {
+  it('keeps a custom existing target that is not the root build pattern', () => {
     expect(shouldReplaceDebugTarget(
       '${workspaceFolder}/custom/my_target',
       true,
@@ -290,7 +290,7 @@ describe('updateMsdebugTarget', () => {
     }
   });
 
-  it('auto-adapts the msdebug target to a nested AscendC operator binary (#17)', async () => {
+  it('auto-adapts the msdebug target to a nested AscendC operator binary', async () => {
     mkWorkspace([
       {
         name: 'msdebug',
@@ -436,7 +436,7 @@ describe('updateMsdebugTarget', () => {
       .toBe('${workspaceFolder}/math/pows/build/test_geir_pows');
   });
 
-  it('replaces a stale legacy workspace-root build/ target that still exists on disk', async () => {
+  it('replaces a stale workspace-root build/ target that still exists on disk', async () => {
     mkWorkspace([
       {
         name: 'msdebug',

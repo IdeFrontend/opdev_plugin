@@ -15,7 +15,7 @@ export function isSubOperatorCreation(params: {
   workspaceRoot?: string | null;
   /** True when the requested project view id is the standard-custom one. */
   isStandardCustomViewId: boolean;
-  /** Current opened project type. Legacy standard-custom roots may be stored as "ascend". */
+  /** Current opened project type. Standard-custom roots created earlier may be stored as "ascend". */
   currentProjectType?: string | null;
 }): boolean {
   return params.isStandardCustomViewId

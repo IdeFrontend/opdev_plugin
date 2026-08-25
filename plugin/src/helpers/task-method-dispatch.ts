@@ -12,7 +12,6 @@ import type {
 import type { StartStTestParams } from '@plugin/service/st-test-service';
 import { taskMethods } from '@plugin/controller/task-controller';
 import { homeMethods } from '@plugin/controller/home-controller';
-import { getProjectByPath } from '@plugin/domain/models/project-model';
 import * as vscode from 'vscode';
 import {
   OperateTreeProvider, type OperateNodeId,
@@ -165,17 +164,10 @@ async function getOperatorQueueScopeKey(): Promise<string> {
   let projectScope = 'unknown';
 
   if (workspacePath) {
-    const existingProject = getProjectByPath(workspacePath);
+    const normalizedPath = workspacePath.replace(/\\/g, '/')
+      .toLowerCase();
 
-    if (existingProject?.id !== undefined && existingProject.id !== null) {
-      projectScope = `id:${String(existingProject.id)}`;
-    }
-    else {
-      const normalizedPath = workspacePath.replace(/\\/g, '/')
-        .toLowerCase();
-
-      projectScope = `path:${normalizedPath}`;
-    }
+    projectScope = `path:${normalizedPath}`;
   }
 
   let selected = 'default';

@@ -35,9 +35,7 @@ import {
 } from './controller/st-test-controller';
 import { performanceDataMethods } from './controller/performance-controller';
 import { PermanentStorage } from './class/permanent-storage';
-import { ExtensionConfig } from './core/extension-config';
 import { ProjectManager } from './core/project/project-manager';
-import { RemoteConfig } from './helpers/remote-config';
 import { sanitizerDiagnosticsService } from './service/sanitizer-diagnostics.service';
 import { registerMsdebugTargetAutoAdapt } from '@plugin/domain/utils/debug-target';
 import { sanitizerService } from './service/sanitizer-service';
@@ -51,7 +49,7 @@ import {
 import { promptReloadWindow } from './helpers/reload-window-prompt';
 import { insightService } from './service/insight-service';
 
-import { AsyncSingleFlight } from './helpers/async-single-flight';
+import { createMainConfigWatcher } from './helpers/main-config-watch';
 import { startPostActivateBootstrap } from './helpers/post-activate-bootstrap';
 import { registerOperatorPlugins } from './domain/plugins';
 import { startNpuHardwareProbe } from './domain/utils/npu-hardware-probe';
@@ -188,13 +186,14 @@ import { FolderContextMenuService } from './service/folder-context-menu-service'
 import {
   configService,
   ConfigService,
-  isLegacySettingsMigrationInFlight,
 } from './service/config-service';
 import { resetCurrentProjectConfiguration } from './service/config-reset-service';
-import { ConfigHelper } from './helpers/ConfigHelper';
+import { SettingsLoader } from './service/settings-loader';
+import { readWorkspaceProjectTypeSetting } from './helpers/operator-project-workspace-config';
 import { projectService } from './service/project-service';
 import { OperatorProjectIconTheme } from './class/operator-project-icon-theme';
 import { registerSidebarContextsRefresh } from './helpers/sidebar-context-refresh';
+import { importLegacyWorkspaceState } from './helpers/legacy-state-importer';
 import {
   getDevtoolConfigPath,
   getIdeConfigDirName,
@@ -405,19 +404,13 @@ export async function activate(context: vscode.ExtensionContext) {
 
     if (isRefreshingSidebarContexts) {
       hasPendingSidebarRefresh = true;
-      logDebug('refreshSidebarContexts:coalesced', {
-        hasPendingSidebarRefresh,
-        isLegacySettingsMigrationInFlight: isLegacySettingsMigrationInFlight(),
-      });
+      logDebug('refreshSidebarContexts:coalesced', { hasPendingSidebarRefresh });
 
       return;
     }
 
     isRefreshingSidebarContexts = true;
-    logDebug('refreshSidebarContexts:start', {
-      hasDevtoolConfig,
-      isLegacySettingsMigrationInFlight: isLegacySettingsMigrationInFlight(),
-    });
+    logDebug('refreshSidebarContexts:start', { hasDevtoolConfig });
 
     try {
       await ConfigService.writeOpDevtoolsDottedSettings({});
@@ -443,29 +436,15 @@ export async function activate(context: vscode.ExtensionContext) {
           projectTypeSupported,
         });
 
-        if (effectiveHasDevtoolConfig) {
-          const migrateStart = Date.now();
-
-          logDebug('maybeMigrateLegacySettingsToWorkspace:start');
-
-          try {
-            await configService.maybeMigrateLegacySettingsToWorkspace();
-          }
-          catch (error) {
-            logDebug('maybeMigrateLegacySettingsToWorkspace:error', error);
-          }
-          finally {
-            logDebug('maybeMigrateLegacySettingsToWorkspace:end', { elapsedMs: Date.now() - migrateStart });
-          }
-        }
-
         await vscode.commands.executeCommand('setContext', contextKey('hasDevtoolConfig'), effectiveHasDevtoolConfig);
         await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.showHomeTree`, !effectiveHasDevtoolConfig);
         await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.showOperateTree`, effectiveHasDevtoolConfig);
         const detectedHistoryWorkspaces = await Promise.all((vscode.workspace.workspaceFolders ?? [])
           .map(async (folder) => {
             const root = folder.uri.fsPath;
-            let workspaceProjectType = getProjectByPath(root)?.project_type;
+            // Cascade: workspace `projectType` setting → DB record → detection.
+            let workspaceProjectType = readWorkspaceProjectTypeSetting(folder.uri)
+              ?? getProjectByPath(root)?.project_type;
 
             if (!workspaceProjectType) {
               try {
@@ -611,6 +590,16 @@ export async function activate(context: vscode.ExtensionContext) {
     return true;
   };
 
+  // One-time workspace-state import: seeds settings.json + cache.json from the
+  // persisted stores before the first sidebar refresh. Marker = plugin version;
+  // steps with `stored < since <= current` run once per workspace.
+  const pluginVersion = (context.extension as { packageJSON?: { version?: string } } | undefined)
+    ?.packageJSON?.version ?? '0.0.0';
+
+  for (const folder of vscode.workspace.workspaceFolders ?? []) {
+    await importLegacyWorkspaceState(pluginVersion, { targetProjectPath: folder.uri.fsPath });
+  }
+
   await refreshSidebarContexts();
   await syncNativeQueueState();
 
@@ -641,135 +630,12 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(watchColorThemeChange);
 
-  const ON_BOARD_OPERATOR_METRIC_CHILD_KEYS = [
-    'performanceTuning.onBoard.cubeAndVectorInstructionTimeAndRatio',
-    'performanceTuning.onBoard.l2CacheHitRate',
-    'performanceTuning.onBoard.memoryReadWriteBandwidth',
-    'performanceTuning.onBoard.l0ReadWriteBandwidth',
-    'performanceTuning.onBoard.ubReadWriteBandwidth',
-    'performanceTuning.onBoard.computeAndMoveUnitTimeRatio',
-    'performanceTuning.onBoard.resourceConflictRatio',
-  ] as const;
-
-  const onBoardOperatorMetricsSyncFlight = new AsyncSingleFlight<void>();
-
-  const syncOnBoardOperatorMetricChildren = async (): Promise<void> => {
-    const desired = ConfigHelper.getOptional<boolean>('performanceTuning.onBoard.operatorMetrics');
-
-    if (typeof desired !== 'boolean') {
-      return;
-    }
-
-    const metricWrites = Object.fromEntries(ON_BOARD_OPERATOR_METRIC_CHILD_KEYS.map((key) => [
-      key,
-      desired,
-    ]));
-
-    await ConfigService.writeOpDevtoolsDottedSettings(metricWrites);
-  };
-
-  /** Base config areas: specific → broad; within each case, sub-keys run before base actions. */
-  const MAIN_CONFIG_AREAS = [
-    'onBoard',
-    'operatorSupport',
-    'environment',
-    'opDevtools',
-  ] as const;
-
-  const watchMainConfig = vscode.workspace.onDidChangeConfiguration(async (e) => {
-    const onBoardOperatorMetricsAffected = e.affectsConfiguration(settingsKey('performanceTuning.onBoard.operatorMetrics'));
-    const onBoardAffected = e.affectsConfiguration(settingsKey('performanceTuning.onBoard'));
-    const tritonSupportAffected = e.affectsConfiguration(settingsKey('operatorSupport.triton'));
-    const operatorSupportAffected = e.affectsConfiguration(settingsKey('operatorSupport'));
-    const envAffected = e.affectsConfiguration(settingsKey('environment'));
-    const opDevtoolsAffected = e.affectsConfiguration(SETTINGS_PREFIX);
-
-    logDebug('event:onDidChangeConfiguration', {
-      isLegacySettingsMigrationInFlight: isLegacySettingsMigrationInFlight(),
-      onBoardAffected,
-      onBoardOperatorMetricsAffected,
-      operatorSupportAffected,
-      tritonSupportAffected,
-      envAffected,
-      opDevtoolsAffected,
-    });
-
-    if (isLegacySettingsMigrationInFlight()) {
-      logDebug('event:onDidChangeConfiguration:ignoredDueToLegacyMigration');
-
-      return;
-    }
-
-    let shouldSyncAscendEnvFromWorkspace = false;
-
-    for (const area of MAIN_CONFIG_AREAS) {
-      switch (area) {
-        case 'onBoard': {
-          if (!onBoardAffected && !onBoardOperatorMetricsAffected) {
-            break;
-          }
-
-          if (isIdeSettingsFileEmpty()) {
-            logDebug('watchMainConfig:onBoard:skipEmptySettingsFile');
-            break;
-          }
-
-          // Sub-key: parent operatorMetrics toggles child metric keys.
-          if (onBoardOperatorMetricsAffected) {
-            await onBoardOperatorMetricsSyncFlight
-              .run(() => syncOnBoardOperatorMetricChildren())
-              .catch((error) => {
-                console.warn('[watchMainConfig] onBoard operatorMetrics sync failed:', error);
-              });
-          }
-
-          break;
-        }
-        case 'operatorSupport': {
-          if (!operatorSupportAffected && !tritonSupportAffected) {
-            break;
-          }
-
-          // Sub-key: triton support change may require reload.
-          if (tritonSupportAffected) {
-            await promptReloadWindow(t('extension.tritonSupportChangedReload'));
-          }
-
-          if (operatorSupportAffected) {
-            shouldSyncAscendEnvFromWorkspace = true;
-          }
-
-          break;
-        }
-        case 'environment': {
-          if (!envAffected) {
-            break;
-          }
-
-          shouldSyncAscendEnvFromWorkspace = true;
-          break;
-        }
-        case 'opDevtools': {
-          if (!opDevtoolsAffected) {
-            break;
-          }
-
-          // Root: flatten legacy nested op-devtools after all specific handlers.
-          await ConfigService.writeOpDevtoolsDottedSettings({});
-          break;
-        }
-        default:
-          break;
-      }
-    }
-
-    if (shouldSyncAscendEnvFromWorkspace) {
-      logDebug('event:onDidChangeConfiguration:syncAscendEnvScriptFromWorkspaceSettings:start');
-      await projectService.syncAscendEnvScriptFromWorkspaceSettings();
-      logDebug('event:onDidChangeConfiguration:syncAscendEnvScriptFromWorkspaceSettings:end');
-      operateTreeProvider.notifyConfigurationChanged();
-      operatorProjectsTreeProvider.notifyConfigurationChanged();
-    }
+  const watchMainConfig = createMainConfigWatcher({
+    projectService,
+    operateTreeProvider,
+    operatorProjectsTreeProvider,
+    logDebug,
+    promptReloadWindow,
   });
 
   context.subscriptions.push(watchMainConfig);
@@ -777,7 +643,6 @@ export async function activate(context: vscode.ExtensionContext) {
   // view
   const viewServer = initViews(context, apiServer);
 
-  ExtensionConfig.init(context);
   PermanentStorage.setInstance(context);
 
   // Initialize the Webview of the new operator project
@@ -829,10 +694,10 @@ export async function activate(context: vscode.ExtensionContext) {
   );
 
   // Register the open/close command for the plugin's OWN view container. The container is
-  // contributed to the secondary side bar (auxiliary bar), so the previous
-  // `workbench.action.toggleSidebarVisibility` toggled the wrong (primary) side bar and
-  // indiscriminately closed Explorer/Debug/etc. (GC-33 / plugin_release #33). The icon now
-  // only FOCUSES (reveals) the plugin's own panel — it never toggles it closed. We run the
+  // contributed to the secondary side bar (auxiliary bar), so
+  // `workbench.action.toggleSidebarVisibility` toggles the wrong (primary) side bar and
+  // indiscriminately closes Explorer/Debug/etc. (GC-33). The icon only FOCUSES (reveals) the
+  // plugin's own panel — it never toggles it closed. We run the
   // first registered focus candidate (per-container focus, then the secondary/auxiliary bar
   // focus the VSCode-huawei fork provides) and skip when none exist instead of throwing
   // "command not found".
@@ -1103,7 +968,7 @@ export async function activate(context: vscode.ExtensionContext) {
       }
 
       const operatorNames = await getOperatorNamesFromSelection();
-      const showQuickOptions = ConfigHelper.get<boolean>('sanitizer.showQuickOptions', true);
+      const showQuickOptions = SettingsLoader.read<boolean>('sanitizer.showQuickOptions', true);
 
       if (showQuickOptions) {
         await vscode.commands.executeCommand(COMMAND_SANITIZER_OPTIONS);
@@ -1129,7 +994,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
       const operatorNames = await getOperatorNamesFromSelection();
       const compileOption = await getCompileOptionForSelectedOperators();
-      const showQuickOptions = ConfigHelper.get<boolean>('performanceTuning.onBoard.showQuickOptions', true);
+      const showQuickOptions = SettingsLoader.read<boolean>('performanceTuning.onBoard.showQuickOptions', true);
 
       if (showQuickOptions) {
         await vscode.commands.executeCommand(COMMAND_ON_BOARD_OPTIONS);
@@ -1173,7 +1038,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
       const operatorNames = await getOperatorNamesFromSelection();
       const compileOption = await getCompileOptionForSelectedOperators();
-      const showQuickOptions = ConfigHelper.get<boolean>('performanceTuning.simulation.showQuickOptions', true);
+      const showQuickOptions = SettingsLoader.read<boolean>('performanceTuning.simulation.showQuickOptions', true);
 
       if (showQuickOptions) {
         await vscode.commands.executeCommand(COMMAND_SIMULATOR_OPTIONS);
@@ -2088,11 +1953,11 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // Register the operator project location command to clear the cache
+  // The last-project-path storage is unused — the clear command has nothing to
+  // clear, just the toast.
   const clearLastProjectPathCommand = vscode.commands.registerCommand(
     COMMAND_CLEAR_LAST_PROJECT_PATH,
     async () => {
-      RemoteConfig.clearLastProjectPath();
       vscode.window.showInformationMessage(t('extension.clearedProjectPath'));
     },
   );
@@ -2111,7 +1976,7 @@ export async function activate(context: vscode.ExtensionContext) {
       data: {
         createOperatorProjectDirectoryFileType: OperatorProjectViewIdValue;
         subOperatorContext?: {
-          parentProjectId: number;
+          parentProjectPath: string;
           opName: string;
           outputPath: string;
           skipFileGeneration?: boolean;
@@ -2728,7 +2593,7 @@ export async function activate(context: vscode.ExtensionContext) {
       const pm = ProjectManager.getInstance();
       const primaryPath = workspaceFolders?.[0]?.uri.fsPath;
 
-      if (primaryPath && path.normalize(primaryPath) !== pm.getProjectInfo()?.path) {
+      if (primaryPath && path.normalize(primaryPath) !== pm.projectPath) {
         pm.resetCachedProject();
       }
 

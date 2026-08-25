@@ -1,55 +1,53 @@
-jest.mock('@plugin/domain/services/configuration', () => ({
-  getConfigById: jest.fn(),
-  getConfig: jest.fn(),
+jest.mock('@plugin/domain/models/project-model', () => ({ getProjectByPath: jest.fn() }));
+
+jest.mock('@plugin/domain/models/op-record', () => ({
+  ...jest.requireActual('@plugin/domain/models/op-record'),
+  resolveOpRecord: jest.fn(),
 }));
-
-jest.mock('@plugin/domain', () => ({ getProjectById: jest.fn() }));
-
-jest.mock('@plugin/domain/services/ops', () => ({ getOpByProjectIdAndOpName: jest.fn() }));
 
 jest.mock('@plugin/service/config-service', () => ({
   ConfigService: {
-    getRuntimeConfigById: jest.fn(),
+    getBuildOpConfig: jest.fn(),
     readBuildOpDeployTargetFromWorkspace: jest.fn(),
   },
 }));
 
-import { getConfig } from '@plugin/domain/services/configuration';
-import { getProjectById } from '@plugin/domain';
-import { getOpByProjectIdAndOpName } from '@plugin/domain/services/ops';
+import { getProjectByPath } from '@plugin/domain/models/project-model';
+import { resolveOpRecord } from '@plugin/domain/models/op-record';
 import { ConfigService } from '@plugin/service/config-service';
-import { getStandardCustomDeployCommand } from '@plugin/domain/services/command';
+import type { BuildOpConfig } from '@plugin/service/config-service';
+import {
+  getStandardCustomDeployCommand,
+  resolveBuildOpBaseContext,
+} from '@plugin/domain/services/command';
+
+const CONFIG: BuildOpConfig = {
+  script: './build.sh --pkg',
+  cpuDebugScript: '',
+  npuDebugScript: '',
+  targetFile: 'build/add_custom',
+};
 
 describe('getStandardCustomDeployCommand', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (getConfig as jest.Mock).mockReturnValue([]);
-  });
-
-  it('defaults to build_out/*.run and probes --force support when target_file is not a .run package', () => {
-    (ConfigService.getRuntimeConfigById as jest.Mock).mockReturnValue({
-      id: 1,
-      project_id: 10,
-      op: 'add',
-      config_type: 'build_op',
-      target_file: 'build/add_custom',
-      user_options: {
-        script: './build.sh --pkg',
-        target_file: 'build/add_custom',
-      },
-    });
-    (getProjectById as jest.Mock).mockReturnValue({
+    (getProjectByPath as jest.Mock).mockReturnValue({
       id: 10,
       project_path: '/repo',
       ascend_env_script: '/cann/setenv.bash',
     });
-    (getOpByProjectIdAndOpName as jest.Mock).mockReturnValue({
+    (resolveOpRecord as jest.Mock).mockReturnValue({
       op_name: 'add',
-      op_type: 'cann',
+      op_type: 'ascend',
       op_path: '/repo/experimental/add',
     });
+    (ConfigService.getBuildOpConfig as jest.Mock).mockReturnValue(CONFIG);
+  });
 
-    const command = getStandardCustomDeployCommand(1);
+  it('defaults to build_out/*.run and probes --force support when the deploy target is not a .run package', () => {
+    (ConfigService.readBuildOpDeployTargetFromWorkspace as jest.Mock).mockReturnValue(undefined);
+
+    const command = getStandardCustomDeployCommand(resolveBuildOpBaseContext('/repo', 'add'));
 
     expect(command)
       .toContain('. /cann/setenv.bash');
@@ -63,30 +61,10 @@ describe('getStandardCustomDeployCommand', () => {
       .toContain('"$RUN_FILE" --force');
   });
 
-  it('uses build_op target_file and probes --force support for its .run package', () => {
-    (ConfigService.getRuntimeConfigById as jest.Mock).mockReturnValue({
-      id: 2,
-      project_id: 10,
-      op: 'add',
-      config_type: 'build_op',
-      target_file: 'build_out/*.run',
-      user_options: {
-        script: './build.sh --pkg',
-        target_file: 'build_out/*.run',
-      },
-    });
-    (getProjectById as jest.Mock).mockReturnValue({
-      id: 10,
-      project_path: '/repo',
-      ascend_env_script: '/cann/setenv.bash',
-    });
-    (getOpByProjectIdAndOpName as jest.Mock).mockReturnValue({
-      op_name: 'add',
-      op_type: 'cann',
-      op_path: '/repo/experimental/add',
-    });
+  it('uses the workspace deploy target when it is a .run package and probes --force support', () => {
+    (ConfigService.readBuildOpDeployTargetFromWorkspace as jest.Mock).mockReturnValue('build_out/*.run');
 
-    const command = getStandardCustomDeployCommand(2);
+    const command = getStandardCustomDeployCommand(resolveBuildOpBaseContext('/repo', 'add'));
 
     expect(command)
       .toContain('RUN_FILE=$(find build_out/*.run)');

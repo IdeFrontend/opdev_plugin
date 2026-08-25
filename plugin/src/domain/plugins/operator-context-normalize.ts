@@ -6,11 +6,9 @@ import {
 
 /**
  * Map persisted `projects.json` `project_type` to {@link OperatorProjectType}.
- * Legacy collections use `ascend` for standard-custom roots.
+ * Collections created earlier use `ascend` for standard-custom roots.
  */
-export function normalizeProjectTypeForSpawn(
-  stored?: string | null,
-): OperatorProjectType | null {
+export function normalizeProjectTypeForSpawn(stored?: string | null): OperatorProjectType | null {
   const raw = stored?.trim();
 
   if (!raw) {

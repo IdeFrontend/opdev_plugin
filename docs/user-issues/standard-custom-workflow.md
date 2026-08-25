@@ -32,11 +32,11 @@ flowchart LR
 |-------|------------------|
 | **Plugin (standard-custom onboard/sim)** | Auto-deploy `.run` from `build_op.target_file` or default `build_out/*.run` after pre-profiling build |
 | **New projects (plugin templates)** | Template `build.sh` may still include deploy-after-`--pkg` for standalone terminal use |
-| **[ops-math `build.sh`](https://gitcode.com/cann/ops-math/blob/master/build.sh)** | **Not auto-migrated** — users may add deploy in-repo (Option A) or rely on plugin auto-deploy |
+| **[ops-math `build.sh`](https://gitcode.com/cann/ops-math/blob/master/build.sh)** | **Not auto-patched** — users may add deploy in-repo (Option A) or rely on plugin auto-deploy |
 | **Plugin command generation** | `--ops` from settings template `{operatorNames}` via `applyOperatorNamesPlaceholder`; `--experimental` via `compileOption`; deploy is a separate orchestration step in `build-service` |
 | **Workspace settings** | Escape hatch: override full compile script per flow (`onBoardCompileCommand`, etc.) — still valid for custom deploy paths |
 
-Historical note: `RUN_FILE` in [`command-utils.ts`](../../plugin/src/domain/utils/command-utils.ts) was first wired for **Ascend Build** (2026-03-30); standard-custom onboard/sim gained the same deploy step in 1.3.1.
+The `RUN_FILE` deploy step is implemented once in [`command-utils.ts`](../../plugin/src/domain/utils/command-utils.ts) and reused by both **Ascend Build** and standard-custom onboard/sim flows.
 
 ---
 
@@ -61,7 +61,7 @@ Historical note: `RUN_FILE` in [`command-utils.ts`](../../plugin/src/domain/util
 
 ## User guidance
 
-Use when closing or commenting on ops-math / 一站式 deploy issues. **Automatic migration of upstream ops-math `build.sh` is out of scope.**
+Use when closing or commenting on ops-math / 一站式 deploy issues. **Automatic patching of upstream ops-math `build.sh` is out of scope.**
 
 ### Why the plugin may still stop at `build.sh --pkg` (settings override)
 
@@ -121,7 +121,7 @@ For **simulation**, use `simulationCompileCommand` instead. Replace `ascend910b`
 
 ### Related settings
 
-Key list and `user_options` mapping: [`workspace-settings.md`](../workspace-settings.md). For standard-custom deploy, **`deployCommandOrRunCommand`** is a path/glob (e.g. `build_out/*.run`); on **Ascend Build** the plugin appends `"$RUN_FILE" --force` after resolve — not a full shell with flags. There is **no** separate “deploy only” setting for cann — override the whole compile command string, or fix `build.sh`.
+Key list: [`workspace-settings.md`](../workspace-settings.md). For standard-custom deploy, **`deployCommandOrRunCommand`** is a path/glob (e.g. `build_out/*.run`); on **Ascend Build** the plugin appends `"$RUN_FILE" --force` after resolve — not a full shell with flags. There is **no** separate “deploy only” setting for cann — override the whole compile command string, or fix `build.sh`.
 
 ---
 
@@ -133,7 +133,7 @@ Key list and `user_options` mapping: [`workspace-settings.md`](../workspace-sett
 
 **Reported:** NPU debug missing selected operator; deploy requires `--force` on 一站式.
 
-**Shipped:** Ascend Build appends `"$RUN_FILE" --force` via `getExecutableCommand` deploy mode; CPU and NPU debug pre-build pass selected `operatorNames` (and `compileOption`) into `startBuild` so compile scripts get `--ops=<selected>` from settings or legacy fallback.
+**Shipped:** Ascend Build appends `"$RUN_FILE" --force` via `getExecutableCommand` deploy mode; CPU and NPU debug pre-build pass selected `operatorNames` (and `compileOption`) into `startBuild` so compile scripts get `--ops=<selected>` from the settings template.
 
 **Remaining:** None for default plugin flow. Settings override (`onBoardCompileCommand` / `simulationCompileCommand`) remains valid when deploy paths differ from `build_out/*.run`.
 
@@ -170,7 +170,7 @@ Key list and `user_options` mapping: [`workspace-settings.md`](../workspace-sett
 ### Automated tests
 
 ```bash
-cd plugin && npm test -- --testPathPattern="command-utils|compile-options|standard-custom-deploy|ut-test-compile-option|operator-script-placeholders|ascend-plugin-config-scripts|config-service-settings-migration|operator-project-workspace-config-a5"
+cd plugin && npm test -- --testPathPattern="command-utils|compile-options|standard-custom-deploy|ut-test-compile-option|operator-script-placeholders|ascend-plugin-config-scripts|operator-project-workspace-config-a5"
 ```
 
 | File | Covers |
@@ -178,9 +178,8 @@ cd plugin && npm test -- --testPathPattern="command-utils|compile-options|standa
 | `command-utils.spec.ts` | #8 deploy/run modes, `--force` on `.run` |
 | `compile-options.spec.ts` | #9 experimental flag helper |
 | `ut-test-compile-option.spec.ts` | #9 `--experimental` on UT; `--ops` template / removal |
-| `operator-script-placeholders.spec.ts` | `--ops={operatorNames}` substitution and legacy fallback |
+| `operator-script-placeholders.spec.ts` | `--ops={operatorNames}` substitution |
 | `ascend-plugin-config-scripts.spec.ts` | Default ascend scripts include `--ops` placeholder |
-| `config-service-settings-migration.spec.ts` | Legacy `--ops` rows copied as-is into workspace |
 | `standard-custom-deploy-command.spec.ts` | #10 deploy command before profiling |
 | `operator-project-workspace-config-a5.spec.ts` | A5 SOC merge for onboard UI config |
 
@@ -210,7 +209,7 @@ cd plugin && npm test -- --testPathPattern="command-utils|compile-options|standa
 
 - [ ] **Default On-board / Simulation:** after `build_example`, output shows `RUN_FILE=$(find build_out/*.run)` deploy with `--force`, then `msprof`
 - [ ] **Option B:** `onBoardCompileCommand` override still works for custom deploy paths
-- [ ] **Option A:** `deploy_run_package` in repo `build.sh` remains valid for terminal / legacy workflows
+- [ ] **Option A:** `deploy_run_package` in repo `build.sh` remains valid for terminal workflows
 
 ### Sign-off template
 

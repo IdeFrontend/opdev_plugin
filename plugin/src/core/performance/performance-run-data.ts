@@ -9,9 +9,9 @@ import {
 } from '@shared/api-types';
 import { PermanentStorage } from '@plugin/class/permanent-storage';
 import { Project } from '@plugin/core/project/project';
-import { getConfig } from '@plugin/domain';
-import { getOpByProjectIdAndOpName } from '@plugin/domain/models/model';
+import { getProjectByPath } from '@plugin/domain/models/project-model';
 import { joinIdeConfigRelative } from '@plugin/helpers/ide-config-dir';
+import { readWorkspaceCache } from '@plugin/helpers/workspace-cache';
 
 const getPerformanceRunDataRoot = (): string => joinIdeConfigRelative('opprof');
 
@@ -28,7 +28,11 @@ export class PerformanceRunData {
     return PerformanceRunData.instance;
   }
 
-  private readonly rootUri?: vscode.Uri;
+  /**
+   * The single opprof root (`<root>/<ideDir>/opprof`) — every operator writes
+   * its runs there, so the scan never walks per-operator directories.
+   */
+  private readonly rootUris: vscode.Uri[] = [];
 
   constructor() {
     const project = Project.getInstance();
@@ -37,22 +41,25 @@ export class PerformanceRunData {
       return;
     }
 
-    const [performanceConfig] = getConfig(project.projectId, 'build_op');
+    const projectPath = project.projectPath;
+    const record = getProjectByPath(projectPath);
 
-    if (!performanceConfig) {
-      // If the project does not have a build_op configuration (such as a project created by a non-plugin), no processing will be done
+    if (!record) {
+      // The workspace is not a recognized operator project — no processing.
       return;
     }
 
-    const op = getOpByProjectIdAndOpName(
-      project.projectId,
-      performanceConfig.op,
-    );
-
-    this.rootUri = vscode.Uri.joinPath(
-      vscode.Uri.file(op?.op_path || project.projectPath),
-      getPerformanceRunDataRoot(),
-    );
+    // All opprof reports live under the workspace root: the profiler writes
+    // `<root>/<ideDir>/opprof/<runId>` and the scan reads only that directory.
+    // A per-operator scan of a standard-custom collection walked every
+    // operator's run tree over the remote FS and stalled operator actions for
+    // minutes inside the post-activate bootstrap.
+    this.rootUris = [
+      vscode.Uri.joinPath(
+        vscode.Uri.file(projectPath),
+        getPerformanceRunDataRoot(),
+      ),
+    ];
   }
 
   /**
@@ -112,9 +119,14 @@ export class PerformanceRunData {
       return runData;
     }
 
-    // Runs under <op>/.vscode/opprof/<runId>/ (optional — folder may not exist yet)
-    if (this.rootUri && (await this.uriExists(this.rootUri))) {
-      const executionEntries = await this.readDirectoryIfPresent(this.rootUri);
+    // Runs under <root>/<ideDir>/opprof/<runId>/ (optional — the folder may
+    // not exist yet). Each physical report (distinct dirPath) is kept once.
+    for (const rootUri of this.rootUris) {
+      if (!(await this.uriExists(rootUri))) {
+        continue;
+      }
+
+      const executionEntries = await this.readDirectoryIfPresent(rootUri);
 
       if (executionEntries) {
         const opprofDirs = executionEntries.filter(([
@@ -122,7 +134,7 @@ export class PerformanceRunData {
         ]) => t === vscode.FileType.Directory)
           .map(([name]) => name);
         const opprofRecords = await Promise.all(opprofDirs.map(async (subPath) => {
-          const recordUri = vscode.Uri.joinPath(this.rootUri!, subPath);
+          const recordUri = vscode.Uri.joinPath(rootUri, subPath);
 
           return await this.runIfPathPresent(recordUri, async () => {
             const children = await this.scanSubFiles(recordUri);
@@ -142,7 +154,7 @@ export class PerformanceRunData {
         }));
 
         for (const record of opprofRecords) {
-          if (record) {
+          if (record && !runData.some((existing) => existing.dirPath === record.dirPath)) {
             runData.push(record);
           }
         }
@@ -150,9 +162,6 @@ export class PerformanceRunData {
     }
 
     // Manual / external reports from fileMapList (simulate + on_board) — must run even when opprof is absent
-    const simulateConfigs = getConfig(project.projectId, 'simulate');
-    const onBoardConfigs = getConfig(project.projectId, 'on_board');
-
     const fileMapEntryTasks: Promise<PerformanceExecutionRecord | null>[] = [];
 
     const pushSimulateFileMapTasks = (fileMapList: Array<{ filePath: string;
@@ -169,22 +178,16 @@ export class PerformanceRunData {
       }
     };
 
-    for (const config of simulateConfigs) {
-      const userOptions = config.user_options as Record<string, unknown> | null;
+    // The workspace cache is the source of file-map lists (written by the
+    // context menu addReportToFileMapList).
+    const cachedFileMaps = readWorkspaceCache(project.projectPath).fileMapLists;
 
-      if (userOptions && Array.isArray(userOptions.fileMapList)) {
-        pushSimulateFileMapTasks(userOptions.fileMapList as Array<{ filePath: string;
-          reportTime: number }>);
-      }
+    if (cachedFileMaps?.simulate) {
+      pushSimulateFileMapTasks(cachedFileMaps.simulate);
     }
 
-    for (const config of onBoardConfigs) {
-      const userOptions = config.user_options as Record<string, unknown> | null;
-
-      if (userOptions && Array.isArray(userOptions.fileMapList)) {
-        pushOnboardFileMapTasks(userOptions.fileMapList as Array<{ filePath: string;
-          reportTime: number }>);
-      }
+    if (cachedFileMaps?.on_board) {
+      pushOnboardFileMapTasks(cachedFileMaps.on_board);
     }
 
     if (fileMapEntryTasks.length > 0) {

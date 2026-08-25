@@ -6,6 +6,9 @@ if (!process.env.SOC_VERSION) {
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
+  // Lifecycle parity flows (fresh install + create/open + cache writes) exceed
+  // the 5s jest default under full-run load; 30s ceiling for the whole run.
+  testTimeout: 30000,
   setupFilesAfterEnv: ['<rootDir>/src/__tests__/jest-setup.ts'],
   roots: ['<rootDir>/src'],
   testMatch: [

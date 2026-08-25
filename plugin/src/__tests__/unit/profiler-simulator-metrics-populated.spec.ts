@@ -1,7 +1,10 @@
 jest.mock('@plugin/helpers/operator-project-workspace-config', () => ({
+  getOpDevtoolsWorkspaceConfiguration: jest.requireActual('@plugin/helpers/operator-project-workspace-config').getOpDevtoolsWorkspaceConfiguration,
+  getConfiguredValue: jest.requireActual('@plugin/helpers/operator-project-workspace-config').getConfiguredValue,
+
+  getFirstWorkspaceFolderPath: jest.requireActual('@plugin/helpers/operator-project-workspace-config').getFirstWorkspaceFolderPath,
   getWorkspaceSimulatorType: jest.fn(() => 'Ascend910B3'),
   getSocVersionWithWorkspaceOverride: jest.fn(() => ''),
-  getWorkspaceNpuArch: jest.fn(() => ''),
 }));
 jest.mock('@plugin/domain/utils/global-env-snapshot', () => ({
   getGlobalEnvSnapshot: jest.fn(() => ({
@@ -25,6 +28,7 @@ jest.mock('@shared/msprof-simulator-metrics', () => ({
 }));
 
 import { SimulatorStrategy } from '@plugin/domain/services/profiler-service';
+import type { SimulateConfig } from '@plugin/service/config-service';
 
 describe('SimulatorStrategy aic-metrics comma-join (allow-listed SOC)', () => {
   const strategy = new SimulatorStrategy();
@@ -37,15 +41,16 @@ describe('SimulatorStrategy aic-metrics comma-join (allow-listed SOC)', () => {
   };
 
   it('joins multiple allow-listed metrics into one comma-separated --aic-metrics arg', () => {
-    const config = {
-      project_id: 10,
-      user_options: {
-        ResourceConflictRatio: true,
-        PMSampling: true,
-      },
+    const config: SimulateConfig = {
+      script: '',
+      simulatorType: '',
+      memoryThroughputWaveform: true,
+      resourceConflictRatio: true,
+      advanceParam: [],
+      fileMapList: [],
     };
 
-    const cmd = strategy.generate(config as any, operator as any, '/tmp/op.bin');
+    const cmd = strategy.generate(config, operator as any, '/tmp/op.bin');
 
     expect(cmd)
       .toContain('--soc-version=Ascend910B3');

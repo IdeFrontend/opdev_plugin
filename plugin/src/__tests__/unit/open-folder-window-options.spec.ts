@@ -1,13 +1,13 @@
 import { buildOpenFolderWindowOptions } from '@plugin/helpers/open-folder-window-options';
 
-describe('buildOpenFolderWindowOptions (issue #34)', () => {
+describe('buildOpenFolderWindowOptions (window reuse semantics)', () => {
   it('forces a new window when forceNewWindow is true', () => {
     expect(buildOpenFolderWindowOptions(true))
       .toEqual({ forceNewWindow: true });
   });
 
   it('forces reuse of the current window when forceNewWindow is false', () => {
-    // Regression for #34: must NOT emit { forceNewWindow: false } (VS Code would then
+    // Must NOT emit { forceNewWindow: false } (VS Code would then
     // defer to window.openFoldersInNewWindow and spawn a new window). It must force reuse.
     expect(buildOpenFolderWindowOptions(false))
       .toEqual({ forceReuseWindow: true });

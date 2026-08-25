@@ -3,26 +3,26 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import { ExplorerRootUtils } from '@plugin/class/explorer-root-utils';
-import { RemoteConfig } from '@plugin/helpers/remote-config';
 import {
-  getProjectByPath, getProjectById, createProject,
+  getProjectByPath, createProject, projectPathsEqual, normalizeProjectPath,
 } from '@plugin/domain/models/project-model';
-import { getConfig } from '@plugin/domain/models/config-model';
+import { ConfigService } from '@plugin/service/config-service';
 import type { DebugOperatorRef } from '@plugin/domain/utils/debug-target';
 import {
   OperatorProjectType, OperatorProjectDetector,
 } from '@plugin/domain/services/operator-project-detector';
-import { getWorkspaceFolder } from '@plugin/domain/models/config';
+import { getWorkspaceFolderFromEnv } from '@plugin/helpers/ide-config-dir';
 import {
   GetHomeResult,
   GetWorkspaceResult,
-  GetLastProjectPathResult,
 } from '@shared/api-types';
 
 import {
   checkMultipleOperatorsCore, type OperatorListEntry,
 } from '@plugin/helpers/check-multiple-operators';
+import { readWorkspaceCache } from '@plugin/helpers/workspace-cache';
 import { hasAnyPythonOperatorActiveContext } from '@plugin/helpers/python-operator-editor-context';
+import { readWorkspaceProjectTypeSetting } from '@plugin/helpers/operator-project-workspace-config';
 
 /** Only parses the current workspace project type for use by validatePyascForAnalysis etc. */
 async function getProjectTypeValue(): Promise<string | null> {
@@ -34,9 +34,11 @@ async function getProjectTypeValue(): Promise<string | null> {
 
   const workspacePath = workspaceFolders[0].uri.fsPath;
   const project = getProjectByPath(workspacePath);
+  const projectType = readWorkspaceProjectTypeSetting(vscode.Uri.file(workspacePath))
+    ?? project?.project_type;
 
-  if (project?.project_type) {
-    return project.project_type;
+  if (projectType) {
+    return projectType;
   }
 
   const detection = await OperatorProjectDetector.detectOperatorProject(workspacePath);
@@ -51,70 +53,43 @@ export const homeMethods = {
    * @returns project type information
    */
   async getProjectType(): Promise<{ projectType: string | null;
-    projectTypeName: string;
     projectTemplateName?: string }> {
     try {
       const workspaceFolders = vscode.workspace.workspaceFolders;
 
       if (!workspaceFolders || workspaceFolders.length === 0) {
-        return {
-          projectType: null,
-          projectTypeName: '',
-        };
+        return { projectType: null };
       }
 
       const workspacePath = workspaceFolders[0].uri.fsPath;
       const project = getProjectByPath(workspacePath);
+      const projectType = readWorkspaceProjectTypeSetting(vscode.Uri.file(workspacePath))
+        ?? project?.project_type;
 
-      if (!project || !project.project_type) {
+      if (!projectType) {
         // If there is no registered project, try to detect the workspace path directly
         const detection = await OperatorProjectDetector.detectOperatorProject(workspacePath);
 
         if (detection.isOperatorProject && detection.projectType) {
-          const typeNameKeyMap: Record<string, string> = {
-            [OperatorProjectType.STANDARD_CUSTOM]: 'home.projectTypeStandardCustom',
-            [OperatorProjectType.ASCEND_C]: 'home.projectTypeAscendC',
-            [OperatorProjectType.TORCH_LIBRARY]: 'home.projectTypeTorchLibrary',
-            [OperatorProjectType.PYASC]: 'home.projectTypePyasc',
-          };
-          const projectTypeName = typeNameKeyMap[detection.projectType] ? t(typeNameKeyMap[detection.projectType]) : detection.projectType;
-
           return {
             projectType: detection.projectType,
-            projectTypeName,
             projectTemplateName: detection.projectType === OperatorProjectType.TORCH_LIBRARY ? 'torch_library_template' : '',
           };
         }
 
-        return {
-          projectType: null,
-          projectTypeName: '',
-        };
+        return { projectType: null };
       }
 
-      // Convert item type to Chinese name (only actual operator type included)
-      const typeNameKeyMap: Record<string, string> = {
-        [OperatorProjectType.STANDARD_CUSTOM]: 'home.projectTypeStandardCustom',
-        [OperatorProjectType.ASCEND_C]: 'home.projectTypeAscendC',
-        [OperatorProjectType.TORCH_LIBRARY]: 'home.projectTypeTorchLibrary',
-        [OperatorProjectType.PYASC]: 'home.projectTypePyasc',
-      };
-
-      const projectTypeName = typeNameKeyMap[project.project_type] ? t(typeNameKeyMap[project.project_type]) : project.project_type;
-
+      // Only the actual operator type is included (no display name)
       return {
-        projectType: project.project_type,
-        projectTypeName,
-        projectTemplateName: project.template_name || '',
+        projectType,
+        projectTemplateName: project?.template_name || '',
       };
     }
     catch (error) {
       console.error('[getProjectType] Failed to get project type:', error);
 
-      return {
-        projectType: null,
-        projectTypeName: '',
-      };
+      return { projectType: null };
     }
   },
 
@@ -173,20 +148,12 @@ export const homeMethods = {
   },
 
   /**
-   * Get the last project path
-   * @returns last project path
-   */
-  async getLastProjectPath(): Promise<GetLastProjectPathResult> {
-    return RemoteConfig.getLastProjectPath();
-  },
-
-  /**
    * Get HOME directory
    * @returns HOME directory
    */
   async getHome(): Promise<GetHomeResult> {
     // Use the encapsulated function to get WORKSPACE_FOLDER through the command
-    const workspaceFolder = getWorkspaceFolder();
+    const workspaceFolder = getWorkspaceFolderFromEnv();
 
     return workspaceFolder || process.env.HOME || process.env.USERPROFILE || '';
   },
@@ -272,26 +239,22 @@ export const homeMethods = {
       return undefined;
     }
 
-    // Make sure selected_operator_ids is an array type
-    let selectedOperatorIds: number[] = [];
+    // The selection persists as PATHS in the workspace cache (written by
+    // setSelectedOperators → createProject and by the one-time import). Resolve
+    // the current scan ids for those paths; fall back to undefined when nothing
+    // was ever selected.
+    const selectedPaths = readWorkspaceCache(workspacePath).project?.selectedOperatorPaths ?? [];
 
-    if (project.selected_operator_ids) {
-      if (Array.isArray(project.selected_operator_ids)) {
-        // Make sure the elements in the array are all numbers
-        selectedOperatorIds = project.selected_operator_ids
-          .map((id) => typeof id === 'string' ? Number(id) : id)
-          .filter((id) => typeof id === 'number' && !isNaN(id));
-        // console.log('[getSelectedOperatorIds] Converted selected_operator_ids:', selectedOperatorIds);
-      }
-      else {
-        // console.warn('[getSelectedOperatorIds] selected_operator_ids is not an array:', typeof project.selected_operator_ids, project.selected_operator_ids);
+    if (selectedPaths.length === 0) {
+      return undefined;
+    }
 
-        return undefined;
-      }
-    }
-    else {
-      console.log('[getSelectedOperatorIds] project.selected_operator_ids is empty');
-    }
+    const result = await checkMultipleOperatorsCore(workspacePath);
+    const operators = result.operators ?? [];
+
+    const selectedOperatorIds = selectedPaths
+      .map((selectedPath) => operators.find((op) => projectPathsEqual(op.path, selectedPath))?.id)
+      .filter((id): id is number => typeof id === 'number');
 
     return selectedOperatorIds.length > 0 ? selectedOperatorIds : undefined;
   },
@@ -315,22 +278,11 @@ export const homeMethods = {
       return [];
     }
 
-    // Make sure selected_operator_ids is an array type
-    let selectedOperatorIds: number[] = [];
+    // The selection persists as PATHS in the workspace cache — match the
+    // scan entries by path (case-insensitive), not by numeric ids.
+    const selectedPaths = readWorkspaceCache(workspacePath).project?.selectedOperatorPaths ?? [];
 
-    if (project.selected_operator_ids) {
-      if (Array.isArray(project.selected_operator_ids)) {
-        // Make sure the elements in the array are all numbers
-        selectedOperatorIds = project.selected_operator_ids
-          .map((id) => typeof id === 'string' ? Number(id) : id)
-          .filter((id) => typeof id === 'number' && !isNaN(id));
-      }
-      else {
-        return [];
-      }
-    }
-
-    if (selectedOperatorIds.length === 0) {
+    if (selectedPaths.length === 0) {
       return [];
     }
 
@@ -341,8 +293,8 @@ export const homeMethods = {
       return [];
     }
 
-    // Match operators based on ID
-    return result.operators.filter((op) => selectedOperatorIds.includes(op.id));
+    // Match operators based on their paths
+    return result.operators.filter((op) => selectedPaths.some((selectedPath) => projectPathsEqual(op.path, selectedPath)));
   },
 
   /**
@@ -360,7 +312,7 @@ export const homeMethods = {
 
   /**
    * Resolve the operator msdebug should attach to: explicit selection first, then
-   * a single-operator collection, build_example config op, or lone project op (#17).
+   * a single-operator collection, build_example config op, or lone project op.
    */
   async resolveDebugOperatorEntry(): Promise<DebugOperatorRef | undefined> {
     const selected = await homeMethods.getSelectedOperatorEntries();
@@ -393,11 +345,15 @@ export const homeMethods = {
     const project = getProjectByPath(workspacePath);
 
     if (project && multi.operators?.length) {
-      const exampleConfigs = getConfig(project.id, 'build_example');
-      const configOp = exampleConfigs.find((c) => c.op)?.op
-        ?? (exampleConfigs[0]?.user_options as Record<string, unknown> | null | undefined)?.op;
+      // The build_example config rows (one per scanned operator, first row =
+      // first operator of the collection) are not persisted — the equivalent
+      // is the scan state: the FIRST scanned operator name (opsList order,
+      // then experimentalOpsList). No scan state → undefined, exactly as when
+      // no build_example rows exist.
+      const scanState = readWorkspaceCache(workspacePath).folders?.[normalizeProjectPath(workspacePath)];
+      const configOp = scanState?.opsList[0]?.name ?? scanState?.experimentalOpsList[0]?.name;
 
-      if (typeof configOp === 'string' && configOp.trim()) {
+      if (configOp?.trim()) {
         const match = multi.operators.find((op) => op.name === configOp.trim());
 
         if (match) {
@@ -433,26 +389,10 @@ export const homeMethods = {
   },
 
   /**
-   * build_example `target_file` for an operator (legacy configs.json), when set.
+   * build_example `target_file` (carried from the persisted configs.json row into
+   * the `compileAndDeploy.exampleBuildConfig.targetFile` setting), when set.
    */
-  resolveBuildExampleTargetFile(operatorName: string): string | undefined {
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-
-    if (!workspaceFolders?.length) {
-      return undefined;
-    }
-
-    const project = getProjectByPath(workspaceFolders[0].uri.fsPath);
-
-    if (!project) {
-      return undefined;
-    }
-
-    const configs = getConfig(project.id, 'build_example', operatorName);
-    const row = configs[0];
-    const userOptions = row?.user_options as Record<string, unknown> | null | undefined;
-    const targetFile = userOptions?.target_file;
-
-    return typeof targetFile === 'string' && targetFile.trim() ? targetFile.trim() : undefined;
+  resolveBuildExampleTargetFile(_operatorName: string): string | undefined {
+    return ConfigService.readBuildExampleTargetFromWorkspace();
   },
 };

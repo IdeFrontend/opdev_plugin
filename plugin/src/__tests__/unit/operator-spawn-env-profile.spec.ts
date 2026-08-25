@@ -18,7 +18,8 @@ describe('OperatorPluginRegistry spawn env', () => {
   });
 
   it('CannPlugin exports SOC_VERSION and NPU_ARCH', () => {
-    expect(OperatorPluginRegistry.getOpPlugin('cann').getSpawnEnvExportKeys())
+    expect(OperatorPluginRegistry.getOpPlugin('cann')
+      .getSpawnEnvExportKeys())
       .toEqual([
         'SOC_VERSION',
         'NPU_ARCH',
@@ -26,11 +27,12 @@ describe('OperatorPluginRegistry spawn env', () => {
   });
 
   it('AscendPlugin exports no spawn keys', () => {
-    expect(OperatorPluginRegistry.getOpPlugin('ascend').getSpawnEnvExportKeys())
+    expect(OperatorPluginRegistry.getOpPlugin('ascend')
+      .getSpawnEnvExportKeys())
       .toEqual([]);
   });
 
-  it('normalizeProjectTypeForSpawn maps legacy ascend to standard-custom', () => {
+  it('normalizeProjectTypeForSpawn maps stored ascend to standard-custom', () => {
     expect(OperatorPluginRegistry.normalizeProjectTypeForSpawn('ascend'))
       .toBe(OperatorProjectType.STANDARD_CUSTOM);
     expect(OperatorPluginRegistry.normalizeProjectTypeForSpawn('ascend-c'))

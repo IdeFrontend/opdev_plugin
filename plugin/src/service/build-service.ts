@@ -8,26 +8,38 @@ import {
   StartBuildParams,
   StartRunParams,
   StartBuildExampleParams,
-  BuildConfig,
 } from '@shared/api-types';
 import {
   getBuildExampleCommand,
-  resolveExampleModeForConfig,
+  resolveExampleModeForBaseContext,
   getSimulateCommand,
   getOnBoardCommand,
   getBuildOpCommand,
   getRunCommand,
   getUtTestCommand,
   getStandardCustomDeployCommand,
-  getConfig,
-  getProjectById,
+  resolveBuildOpBaseContext,
+  resolveBuildExampleBaseContext,
+  resolveSimulateBaseContext,
+  resolveOnBoardBaseContext,
+  resolveUtTestBaseContext,
 } from '@plugin/domain';
+import { BaseContext } from '@plugin/domain/services/command-strategy';
+import type {
+  BuildOpConfig,
+  BuildExampleConfig,
+  SimulateConfig,
+  OnBoardConfig,
+  UtTestConfig,
+} from '@plugin/service/config-service';
 import {
   joinIdeConfigPath, joinIdeConfigRelative,
 } from '@plugin/helpers/ide-config-dir';
-import { getConfigById } from '@plugin/domain/services/configuration';
 import { OperatorProjectType } from '@plugin/domain/services/operator-project-detector';
-import { markOperatorsAsCompiled } from '@plugin/domain/models/project-model';
+import {
+  getProjectByPath,
+  normalizeProjectPath,
+} from '@plugin/domain/models/project-model';
 import { homeMethods } from '../controller/home-controller';
 import { resolveAscendEnv } from '@plugin/domain/utils/ascend-util';
 import {
@@ -39,7 +51,10 @@ import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.r
 import { ConfigService } from '@plugin/service/config-service';
 import { requestSidebarContextsRefresh } from '@plugin/helpers/sidebar-context-refresh';
 import { resolveOrPickPythonOperatorUri } from '@plugin/helpers/python-operator-editor-context';
-import { buildPythonDeployTarget } from '@plugin/domain/services/command-strategy/python-operator-strategy-shared';
+import {
+  buildPythonDeployTarget,
+  quoteShellTokenIfNeeded,
+} from '@plugin/domain/services/command-strategy/python-operator-strategy-shared';
 import {
   COMMAND_FLASH_DUMP_TENSOR_DATA,
   COMMAND_FLASH_PERFORMANCE_RUN_DATA,
@@ -53,16 +68,13 @@ import {
   buildRemoteExecCommand,
   buildRemoteOnBoardCommand,
   createRemoteCommandWhenNoNpuTransformer,
+  resolveRemotePullDir,
 } from '@plugin/helpers/remote-command';
-import { getEnvironmentScriptPathFromWorkspace } from '@plugin/helpers/operator-project-workspace-config';
-
-const CONFIG_TYPES = {
-  BUILD_OP: 'build_op',
-  BUILD_EXAMPLE: 'build_example',
-  SIMULATE: 'simulate',
-  ON_BOARD: 'on_board',
-  UT_TEST: 'ut_test',
-} as const;
+import { toWorkspaceRelativePosixPath } from '@plugin/domain/utils/path-utils';
+import {
+  getEnvironmentScriptPathFromWorkspace, getFirstWorkspaceFolderPath, readWorkspaceProjectTypeSetting,
+} from '@plugin/helpers/operator-project-workspace-config';
+import { updateWorkspaceCache } from '@plugin/helpers/workspace-cache';
 
 /**
  * Checks whether the VS Code workspace root is a STANDARD_CUSTOM operator project.
@@ -88,31 +100,28 @@ export async function isRootStandardCustom(): Promise<boolean> {
 }
 
 /**
- * After successful compilation, mark the operators corresponding to operatorNames (comma separated) as compiled and write them to projects.json.
- * It only takes effect for standard custom operator projects.
+ * After successful compilation, mark the operators corresponding to operatorNames
+ * (comma separated) as compiled in the workspace cache `compiledOpPaths`. It only
+ * takes effect for standard custom operator projects.
  */
 async function tryMarkOperatorsAsCompiled(
-  configId: number,
-  operatorNames: string | undefined,
+  projectPath: string,
+  operatorNames: string | string[] | undefined,
 ): Promise<void> {
-  console.log('[tryMarkOperatorsAsCompiled] After successful build, mark operators in operatorNames (comma-separated) as compiled and write to projects.json.', operatorNames);
+  const namesArray = Array.isArray(operatorNames)
+    ? operatorNames
+    : (operatorNames ?? '').split(',')
+      .map((name) => name.trim())
+      .filter(Boolean);
 
-  if (!operatorNames || !operatorNames.trim()) {
+  console.log('[tryMarkOperatorsAsCompiled] After successful build, mark operators in operatorNames (comma-separated) as compiled in the workspace cache.', namesArray.join(','));
+
+  if (namesArray.length === 0) {
     return;
   }
 
   try {
-    const config = getConfigById(configId);
-
-    console.log('[tryMarkOperatorsAsCompiled] Found config, config:', config);
-
-    if (!config) {
-      console.warn('[tryMarkOperatorsAsCompiled] Config not found, configId:', configId);
-
-      return;
-    }
-
-    const project = getProjectById(config.project_id);
+    const project = getProjectByPath(projectPath);
 
     console.log('[tryMarkOperatorsAsCompiled] Found project, project:', project);
 
@@ -134,8 +143,30 @@ async function tryMarkOperatorsAsCompiled(
     }
 
     console.log('[tryMarkOperatorsAsCompiled] Start marking operators as compiled');
-    await markOperatorsAsCompiled(project.project_path, operatorNames);
-    console.log('[tryMarkOperatorsAsCompiled] Marked operators as compiled:', operatorNames);
+    // Persist the compiled status in the workspace cache so the sidebar
+    // trees can read it id-free.
+    await updateWorkspaceCache(project.project_path, (cache) => {
+      const compiled = { ...(cache.project?.compiledOpPaths ?? {}) };
+      const state = cache.folders?.[normalizeProjectPath(project.project_path)];
+      const ops = [
+        ...(state?.opsList ?? []),
+        ...(state?.experimentalOpsList ?? []),
+      ];
+
+      for (const name of namesArray) {
+        const op = ops.find((candidate) => candidate.name === name);
+
+        if (op?.path) {
+          compiled[op.path] = true;
+        }
+      }
+
+      cache.project = {
+        selectedOperatorPaths: cache.project?.selectedOperatorPaths ?? [],
+        compiledOpPaths: compiled,
+      };
+    });
+    console.log('[tryMarkOperatorsAsCompiled] Marked operators as compiled:', namesArray.join(','));
   }
   catch (error) {
     console.warn(
@@ -150,10 +181,10 @@ async function tryMarkOperatorsAsCompiled(
  * the Operators / Actions trees so labels and selection state match.
  */
 export async function notifyBuildSucceededForSidebar(
-  configId: number,
-  operatorNames: string | undefined,
+  projectPath: string,
+  operatorNames: string | string[] | undefined,
 ): Promise<void> {
-  await tryMarkOperatorsAsCompiled(configId, operatorNames);
+  await tryMarkOperatorsAsCompiled(projectPath, operatorNames);
   await requestSidebarContextsRefresh();
 }
 
@@ -183,9 +214,12 @@ async function guardTritonProfilerDependencies(opType: string | undefined): Prom
 
 export class BuildService {
   private async guardSupportedProjectTypeForCurrentProject(): Promise<boolean> {
-    const projectId = ProjectManager.getInstance().projectId;
-    const project = projectId ? getProjectById(Number(projectId)) : null;
-    const detectedType = project?.project_type || (await homeMethods.getProjectType()).projectType || '';
+    const projectPath = getFirstWorkspaceFolderPath();
+    const project = projectPath ? getProjectByPath(projectPath) : null;
+    const detectedType = readWorkspaceProjectTypeSetting()
+      ?? project?.project_type
+      ?? (await homeMethods.getProjectType()).projectType
+      ?? '';
 
     if (!OperatorPluginRegistry.isProjectTypeSupported(detectedType)) {
       vscode.window.showErrorMessage(t('extension.unsupportedProjectTypeDisabled', { projectType: detectedType || 'unknown' }));
@@ -212,132 +246,65 @@ export class BuildService {
   }
 
   /**
-   * Get a list of build configurations
+   * Resolve the runtime command context for one config section of the
+   * workspace-root project. The operator carries no input: command generation
+   * resolves it from the sidebar selection first, then via the synthesized
+   * root/sub-operator records — never from workspace settings.
    */
-  async getBuildConfigsList(): Promise<BuildConfig[]> {
-    await ProjectManager.getInstance()
-      .initProject();
-    const projectId = ProjectManager.getInstance().projectId;
+  private resolveBuildOpCtx(projectPath: string, operatorNames?: string): BaseContext<BuildOpConfig> {
+    return resolveBuildOpBaseContext(projectPath, operatorNames);
+  }
 
-    console.log('getBuildConfigsList: querying configs, projectId:', projectId);
-    const array = [
-      getConfig(Number(projectId), CONFIG_TYPES.BUILD_OP),
-      getConfig(Number(projectId), CONFIG_TYPES.BUILD_EXAMPLE),
-      getConfig(Number(projectId), CONFIG_TYPES.SIMULATE),
-      getConfig(Number(projectId), CONFIG_TYPES.ON_BOARD),
-      getConfig(Number(projectId), CONFIG_TYPES.UT_TEST),
-    ];
-    const [
-      opConfig,
-      exampleConfig,
-      simulateConfig,
-      onBoardConfig,
-      utTestConfig,
-    ] = await Promise.all(array);
+  /** Resolved build_example context for the same project/operator (example-target repoint). */
+  private resolveBuildExampleCtx(projectPath: string, operatorNames?: string): BaseContext<BuildExampleConfig> {
+    return resolveBuildExampleBaseContext(projectPath, operatorNames);
+  }
 
-    console.log('getBuildConfigsList: query result', {
-      build_op: opConfig.length,
-      build_example: exampleConfig.length,
-      simulate: simulateConfig.length,
-      on_board: onBoardConfig.length,
-      ut_test: utTestConfig.length,
-    });
+  /** Resolved simulate context for the same project/operator. */
+  private resolveSimulateCtx(projectPath: string, operatorNames?: string): BaseContext<SimulateConfig> {
+    return resolveSimulateBaseContext(projectPath, operatorNames);
+  }
 
-    const configs = [
-      ...opConfig.map((c) => ({
-        ...c,
-        user_options: c.user_options ? (c.user_options as Record<string, unknown>) : undefined,
-      })),
-      ...exampleConfig.map((c) => ({
-        ...c,
-        user_options: c.user_options ? (c.user_options as Record<string, unknown>) : undefined,
-      })),
-      ...simulateConfig.map((c) => ({
-        ...c,
-        user_options: c.user_options ? (c.user_options as Record<string, unknown>) : undefined,
-      })),
-      ...onBoardConfig.map((c) => ({
-        ...c,
-        user_options: c.user_options ? (c.user_options as Record<string, unknown>) : undefined,
-      })),
-      ...utTestConfig.map((c) => ({
-        ...c,
-        user_options: c.user_options ? (c.user_options as Record<string, unknown>) : undefined,
-      })),
-    ] as BuildConfig[];
+  /** Resolved on_board context for the same project/operator. */
+  private resolveOnBoardCtx(projectPath: string, operatorNames?: string): BaseContext<OnBoardConfig> {
+    return resolveOnBoardBaseContext(projectPath, operatorNames);
+  }
 
-    return ConfigService.applyWorkspaceSettingsToConfigs(configs);
+  /** Resolved ut_test context for the same project/operator. */
+  private resolveUtTestCtx(projectPath: string, operatorNames?: string): BaseContext<UtTestConfig> {
+    return resolveUtTestBaseContext(projectPath, operatorNames);
   }
 
   /**
-   * Get configuration based on type
+   * Write the active-file deploy target whenever the workspace is a recognized
+   * project — the write is gated on `buildConfigId` (a build_op config ROW
+   * exists) && the registered project id; the row's VALUES never gate the write. The id-free
+   * twin of "build_op row exists" is `getProjectByPath` (non-null exactly for
+   * recognized projects; rows are seeded create-if-missing for them).
    */
-  async getConfigByType(type: string): Promise<BuildConfig | undefined> {
-    try {
-      const configData = await this.getBuildConfigsList();
+  private async writeBuildOpDeployTargetIfProject(relativePath: string): Promise<void> {
+    const projectPath = getFirstWorkspaceFolderPath();
+    const project = projectPath ? getProjectByPath(projectPath) : undefined;
 
-      return configData.find((v) => v.config_type === type);
+    if (!project) {
+      return;
     }
-    catch {
-      return undefined;
-    }
-  }
 
-  /**
-   * Get build configuration ID
-   */
-  async getBuildConfigId(): Promise<number | undefined> {
-    const config = await this.getConfigByType(CONFIG_TYPES.BUILD_OP);
-
-    return config?.config_id;
-  }
-
-  /**
-   * Get sample build configuration ID
-   */
-  async getBuildExampleConfigId(): Promise<number | undefined> {
-    const config = await this.getConfigByType(CONFIG_TYPES.BUILD_EXAMPLE);
-
-    return config?.config_id;
-  }
-
-  /**
-   * Get simulation configuration ID
-   */
-  async getSimulateConfigId(): Promise<string> {
-    const config = await this.getConfigByType(CONFIG_TYPES.SIMULATE);
-
-    return config?.config_id ? String(config.config_id) : '';
-  }
-
-  /**
-   * Get board configuration ID
-   */
-  async getOnBoardConfigId(): Promise<string> {
-    const config = await this.getConfigByType(CONFIG_TYPES.ON_BOARD);
-
-    return config?.config_id ? String(config.config_id) : '';
-  }
-
-  /**
-   * Get UT test configuration ID
-   */
-  async getUtTestConfigId(): Promise<number | undefined> {
-    const config = await this.getConfigByType(CONFIG_TYPES.UT_TEST);
-
-    return config?.config_id;
+    await ConfigService.writeBuildOpDeployTarget(buildPythonDeployTarget(relativePath));
   }
 
   private async deployStandardCustomRunPackage(
-    buildConfigId: number,
+    projectPath: string,
     operatorNames?: string,
   ) {
-    const deployCommand = getStandardCustomDeployCommand(buildConfigId);
+    const baseContext = this.resolveBuildOpCtx(projectPath);
+    const deployCommand = getStandardCustomDeployCommand(baseContext);
 
     return executeOperatorCommand(
       deployCommand,
       buildOperatorSpawnContext({
-        configId: buildConfigId,
+        baseContext,
+        projectPath,
         operatorNames,
         script: deployCommand,
       }),
@@ -355,54 +322,32 @@ export class BuildService {
 
     console.log('[startBuild] ========== Start building operators ==========');
     console.log('[startBuild] Input params:', JSON.stringify(params, null, 2));
-    const pm = ProjectManager.getInstance();
 
-    // If projectId is passed in, set the project ID of ProjectManager
-    if (params.projectId !== undefined) {
-      console.log('[startBuild] Detected incoming projectId:', params.projectId);
-      const projectIdStr = String(params.projectId);
-      const project = getProjectById(Number(params.projectId));
+    // Axiom: one window = one project = workspaceFolders[0] (subfolder/multi-project
+    // windows are outside the supported model).
+    const projectPath = getFirstWorkspaceFolderPath();
 
-      if (project) {
-        console.log('[startBuild] Found project info:', {
-          id: project.id,
-          project_name: project.project_name,
-          project_path: project.project_path,
-          project_type: project.project_type,
-        });
-        pm['_projectId'] = projectIdStr;
-        pm['_projectName'] = project.project_name;
-        pm['_projectPath'] = project.project_path;
-        console.log('[startBuild] ProjectManager project info set');
-      }
-      else {
-        console.warn('[startBuild] Matching project not found, projectId:', params.projectId);
-      }
-    }
-    else {
-      console.log('[startBuild] projectId not provided, using project ID in ProjectManager');
+    if (!projectPath) {
+      const errorMsg = t('build.workspacePathNotFound');
+
+      console.error('[startBuild]', errorMsg);
+      vscode.window.showErrorMessage(errorMsg);
+
+      return false;
     }
 
-    const projectId = pm.projectId;
-
-    console.log('[startBuild] Current project ID in use:', projectId);
-    console.log('[startBuild] ProjectManager project info:', {
-      projectId: pm.projectId,
-      projectName: pm['_projectName'],
-      projectPath: pm['_projectPath'],
+    console.log('[startBuild] Project root in use:', projectPath);
+    console.log('[startBuild] Build params:', {
+      projectPath,
+      compileOption: params.compileOption,
+      operatorNames: params.operatorNames,
+      operatorType: params.operatorType,
     });
 
-    let configId = params.configId ? Number(params.configId) : undefined;
-
-    console.log('[startBuild] Input configId:', configId);
-
-    if (!configId) {
-      console.log('[startBuild] configId not provided, trying to get current project config');
-      configId = await this.getBuildConfigId();
-      console.log('[startBuild] Retrieved configId:', configId);
-    }
-
-    if (!configId) {
+    // The gate twin of the `getBuildConfigId()` check — a build_op config row
+    // exists (`getProjectByPath` non-null) AND its script is non-empty. An
+    // unrecognized workspace or an empty compile command → no build.
+    if (getProjectByPath(projectPath) == null || ConfigService.getBuildOpConfig().script === '') {
       const errorMsg = t('build.noBuildConfig');
 
       console.error('[startBuild]', errorMsg);
@@ -411,17 +356,10 @@ export class BuildService {
       return false;
     }
 
-    console.log('[startBuild] Using config ID:', configId);
-    console.log('[startBuild] Build params:', {
-      configId,
-      compileOption: params.compileOption,
-      operatorNames: params.operatorNames,
-      operatorType: params.operatorType,
-    });
-
     try {
+      const baseContext = this.resolveBuildOpCtx(projectPath, params.operatorNames);
       const buildCommand = getBuildOpCommand(
-        Number(configId),
+        baseContext,
         params.compileOption,
         params.operatorNames,
         params.scriptField,
@@ -432,10 +370,12 @@ export class BuildService {
       const res = await executeOperatorCommand(
         buildCommand,
         buildOperatorSpawnContext({
-          configId,
+          baseContext,
+          projectPath,
           operatorNames: params.operatorNames,
           scriptField: params.scriptField,
           script: buildCommand,
+          toolOutputLabel: 'compile',
         }),
       );
 
@@ -459,7 +399,7 @@ export class BuildService {
       console.log('[startBuild] Build succeeded');
       vscode.window.showInformationMessage(t('build.compileSuccess'));
 
-      await notifyBuildSucceededForSidebar(Number(configId), params.operatorNames);
+      await notifyBuildSucceededForSidebar(projectPath, params.operatorNames);
       console.log('[startBuild] ========== Finished building operators ==========');
 
       return true;
@@ -486,16 +426,17 @@ export class BuildService {
     const opPlugin = OperatorPluginRegistry.getOpPlugin(projectTypeInfo.projectType);
     const behavior = opPlugin.buildBehavior;
 
+    // Axiom: one window = one project = workspaceFolders[0].
+    const projectPath = getFirstWorkspaceFolderPath();
+
+    if (!projectPath) {
+      vscode.window.showWarningMessage(t('build.workspacePathNotFound'));
+
+      return;
+    }
+
     if (behavior.requiresActiveFileCheck && !params.filePath) {
-      const workspaceFolders = vscode.workspace.workspaceFolders;
-
-      if (!workspaceFolders || workspaceFolders.length === 0) {
-        vscode.window.showWarningMessage(t('build.workspacePathNotFound'));
-
-        return;
-      }
-
-      const workspacePath = workspaceFolders[0].uri.fsPath;
+      const workspacePath = projectPath;
       const ext = behavior.activeFileExtension!;
       const pickedUri = await resolveOrPickPythonOperatorUri(ext, workspacePath);
 
@@ -506,39 +447,24 @@ export class BuildService {
       }
 
       const filePath = pickedUri.fsPath;
-      const relativePath = path.relative(workspacePath, filePath)
-        .replace(/\\/g, '/');
+      const relativePath = toWorkspaceRelativePosixPath(workspacePath, filePath);
 
-      const buildConfigId = await this.getBuildConfigId();
-
-      if (buildConfigId) {
-        const projectIdStr = ProjectManager.getInstance().projectId;
-
-        if (projectIdStr) {
-          const deployTarget = buildPythonDeployTarget(relativePath);
-
-          await ConfigService.writeBuildOpDeployTarget(deployTarget);
-        }
-      }
+      await this.writeBuildOpDeployTargetIfProject(relativePath);
     }
 
-    let configId = params.configId ? Number(params.configId) : undefined;
-
-    if (!configId) {
-      // pyasc uses build_op config (no separate example build); others use build_example
-      configId = behavior.requiresBuildBeforeAnalysis
-        ? await this.getBuildExampleConfigId()
-        : await this.getBuildConfigId();
-    }
-
+    // pyasc uses build_op config (no separate example build); others use build_example
     try {
-      const runCommand = getRunCommand(Number(configId));
+      const baseContext = behavior.requiresBuildBeforeAnalysis
+        ? this.resolveBuildExampleCtx(projectPath)
+        : this.resolveBuildOpCtx(projectPath);
+      const runCommand = getRunCommand(baseContext);
 
       console.log('runCommand', runCommand);
       const res = await executeOperatorCommand(
         runCommand,
         buildOperatorSpawnContext({
-          configId,
+          baseContext,
+          projectPath,
           script: runCommand,
         }),
         {
@@ -584,38 +510,29 @@ export class BuildService {
       return;
     }
 
-    const pm = ProjectManager.getInstance();
+    // Axiom: one window = one project = workspaceFolders[0].
+    const projectPath = getFirstWorkspaceFolderPath();
 
-    // If projectId is passed in, set the project information of ProjectManager (consistent with startBuild)
-    if (params.projectId !== undefined) {
-      const project = getProjectById(Number(params.projectId));
+    if (!projectPath) {
+      vscode.window.showWarningMessage(t('build.workspacePathNotFound'));
 
-      if (project) {
-        pm['_projectId'] = String(params.projectId);
-        pm['_projectName'] = project.project_name;
-        pm['_projectPath'] = project.project_path;
-      }
-    }
-
-    let configId = params.configId ? Number(params.configId) : undefined;
-
-    if (!configId) {
-      configId = await this.getBuildExampleConfigId();
+      return;
     }
 
     try {
       // Resolve the run_example mode from the example the operator actually ships (the
       // plugin-wide executionMode setting is only a tiebreaker), and warn up front when it
       // ships none — build.sh would otherwise fail deep in with "does not have <mode>
-      // examples" (plugin_release #171).
-      const exampleMode = resolveExampleModeForConfig(Number(configId), params.operatorNames);
+      // examples".
+      const exampleMode = resolveExampleModeForBaseContext(this.resolveBuildExampleCtx(projectPath, params.operatorNames), params.operatorNames);
 
       if (!exampleMode.exampleFound && exampleMode.opName) {
         vscode.window.showWarningMessage(t('build.exampleNoSourceForOperator', { op: exampleMode.opName }));
       }
 
+      const baseContext = this.resolveBuildExampleCtx(projectPath, params.operatorNames);
       const buildCommand = getBuildExampleCommand(
-        Number(configId),
+        baseContext,
         params.compileOption,
         params.operatorNames,
         exampleMode.mode,
@@ -623,14 +540,16 @@ export class BuildService {
       const res = await executeOperatorCommand(
         buildCommand,
         buildOperatorSpawnContext({
-          configId,
+          baseContext,
+          projectPath,
           operatorNames: params.operatorNames,
           script: buildCommand,
+          toolOutputLabel: 'compile',
         }),
         {
           transformCommand: createRemoteCommandWhenNoNpuTransformer((command) => buildRemoteBuildExampleCommand(
             command,
-            this.getProjectRootByConfigId(Number(configId)),
+            projectPath,
           )),
         },
       );
@@ -691,15 +610,9 @@ export class BuildService {
 
     const workspacePath = workspaceFolders[0].uri.fsPath;
     const filePath = activeEditor!.document.uri.fsPath;
-    const relativePath = path.relative(workspacePath, filePath)
-      .replace(/\\/g, '/');
+    const relativePath = toWorkspaceRelativePosixPath(workspacePath, filePath);
 
-    const buildConfigId = await this.getBuildConfigId();
-    const projectId = ProjectManager.getInstance().projectId;
-
-    if (buildConfigId && projectId) {
-      await ConfigService.writeBuildOpDeployTarget(buildPythonDeployTarget(relativePath));
-    }
+    await this.writeBuildOpDeployTargetIfProject(relativePath);
 
     return true;
   }
@@ -711,8 +624,8 @@ export class BuildService {
    * opening the panel.
    */
   async captureActiveFileTargetForOptionsPanel(): Promise<boolean> {
-    const projectId = ProjectManager.getInstance().projectId;
-    const project = projectId ? getProjectById(Number(projectId)) : null;
+    const projectPath = getFirstWorkspaceFolderPath();
+    const project = projectPath ? getProjectByPath(projectPath) : null;
     const behavior = OperatorPluginRegistry.getOpPlugin(project?.project_type).buildBehavior;
 
     if (!behavior.requiresActiveFileCheck) {
@@ -731,11 +644,16 @@ export class BuildService {
       return;
     }
 
-    const configData = await this.getBuildConfigsList();
-    const simulatorItem = configData.find((v) => v.config_type === CONFIG_TYPES.SIMULATE);
+    // Axiom: one window = one project = workspaceFolders[0].
+    const projectPath = getFirstWorkspaceFolderPath();
 
-    const projectId = ProjectManager.getInstance().projectId;
-    const project = projectId ? getProjectById(Number(projectId)) : null;
+    if (!projectPath) {
+      vscode.window.showWarningMessage(t('build.workspacePathNotFound'));
+
+      return;
+    }
+
+    const project = getProjectByPath(projectPath);
     // Option A: preserve V1 behavior — startSimulate reads project.project_type (stored value)
     // and throws on active-file-check failure.
     const opPlugin = OperatorPluginRegistry.getOpPlugin(project?.project_type);
@@ -756,14 +674,16 @@ export class BuildService {
     }
 
     if (behavior.requiresBuildBeforeAnalysis) {
-      const simConfigId = Number(simulatorItem?.config_id);
-      const buildCommand = getBuildOpCommand(simConfigId, params.compileOption, params.operatorNames);
+      const simulateBaseContext = this.resolveSimulateCtx(projectPath, params.operatorNames);
+      const buildCommand = getBuildOpCommand(simulateBaseContext, params.compileOption, params.operatorNames);
       const buildRes = await executeOperatorCommand(
         buildCommand,
         buildOperatorSpawnContext({
-          configId: simConfigId,
+          baseContext: simulateBaseContext,
+          projectPath,
           operatorNames: params.operatorNames,
           script: buildCommand,
+          isSimulator: true,
         }),
         { outputLabel: 'compile' },
       );
@@ -779,13 +699,13 @@ export class BuildService {
         throw new Error(commandFailureMessage(buildRes, 'build.compileFailedThrow', { output: buildRes.output }));
       }
 
-      await notifyBuildSucceededForSidebar(Number(simulatorItem?.config_id), params.operatorNames);
+      await notifyBuildSucceededForSidebar(projectPath, params.operatorNames);
 
       if (await isRootStandardCustom()) {
-        const exConfigId = await this.getBuildExampleConfigId();
         const exampleCompileOption = this.buildSimulateExampleCompileOption();
+        const exampleBaseContext = this.resolveBuildExampleCtx(projectPath, params.operatorNames);
         const exampleBuildCommand = getBuildExampleCommand(
-          Number(exConfigId),
+          exampleBaseContext,
           params.compileOption ?? exampleCompileOption,
           params.operatorNames,
           undefined,
@@ -794,9 +714,11 @@ export class BuildService {
         const exampleBuildRes = await executeOperatorCommand(
           exampleBuildCommand,
           buildOperatorSpawnContext({
-            configId: Number(exConfigId),
+            baseContext: exampleBaseContext,
+            projectPath,
             operatorNames: params.operatorNames,
             script: exampleBuildCommand,
+            toolOutputLabel: 'compile',
           }),
         );
 
@@ -808,7 +730,7 @@ export class BuildService {
         }
 
         const deployRes = await this.deployStandardCustomRunPackage(
-          simConfigId,
+          projectPath,
           params.operatorNames,
         );
 
@@ -823,21 +745,26 @@ export class BuildService {
       }
     }
 
-    const configId = await this.getSimulateConfigId();
-    const exConfigId = await this.getBuildExampleConfigId();
-
-    console.log('simulate configId', configId, exConfigId);
+    console.log('simulate projectPath', projectPath);
 
     try {
-      const simulateCommand = getSimulateCommand(Number(configId), Number(exConfigId), params.operatorNames);
+      const simulateBaseContext = this.resolveSimulateCtx(projectPath, params.operatorNames);
+      const simulateCommand = getSimulateCommand(
+        simulateBaseContext,
+        this.resolveBuildExampleCtx(projectPath, params.operatorNames),
+        params.operatorNames,
+      );
 
       console.log('simulateCommand', simulateCommand);
       const res = await executeOperatorCommand(
         simulateCommand,
         buildOperatorSpawnContext({
-          configId: Number(configId),
+          baseContext: simulateBaseContext,
+          projectPath,
           operatorNames: params.operatorNames,
           script: simulateCommand,
+          toolOutputLabel: 'simulate',
+          isSimulator: true,
         }),
       );
 
@@ -871,8 +798,16 @@ export class BuildService {
       return;
     }
 
-    const projectId = ProjectManager.getInstance().projectId;
-    const project = projectId ? getProjectById(Number(projectId)) : null;
+    // Axiom: one window = one project = workspaceFolders[0].
+    const projectPath = getFirstWorkspaceFolderPath();
+
+    if (!projectPath) {
+      vscode.window.showWarningMessage(t('build.workspacePathNotFound'));
+
+      return;
+    }
+
+    const project = getProjectByPath(projectPath);
     // Option A: preserve V1 behavior — startOnBoard reads project.project_type (stored value)
     // and returns (not throws) on active-file-check failure.
     const opPlugin = OperatorPluginRegistry.getOpPlugin(project?.project_type);
@@ -892,14 +827,14 @@ export class BuildService {
       }
     }
 
-    const configId = await this.getOnBoardConfigId();
-
     if (behavior.requiresBuildBeforeAnalysis) {
-      const buildCommand = getBuildOpCommand(Number(configId), params.compileOption, params.operatorNames);
+      const onBoardBaseContext = this.resolveOnBoardCtx(projectPath, params.operatorNames);
+      const buildCommand = getBuildOpCommand(onBoardBaseContext, params.compileOption, params.operatorNames);
       const buildRes = await executeOperatorCommand(
         buildCommand,
         buildOperatorSpawnContext({
-          configId: Number(configId),
+          baseContext: onBoardBaseContext,
+          projectPath,
           operatorNames: params.operatorNames,
           script: buildCommand,
         }),
@@ -914,12 +849,12 @@ export class BuildService {
         return;
       }
 
-      await notifyBuildSucceededForSidebar(Number(configId), params.operatorNames);
+      await notifyBuildSucceededForSidebar(projectPath, params.operatorNames);
 
       if (await isRootStandardCustom()) {
-        const exConfigId = await this.getBuildExampleConfigId();
+        const exampleBaseContext = this.resolveBuildExampleCtx(projectPath, params.operatorNames);
         const exampleBuildCommand = getBuildExampleCommand(
-          Number(exConfigId),
+          exampleBaseContext,
           params.compileOption,
           params.operatorNames,
           undefined,
@@ -928,14 +863,16 @@ export class BuildService {
         const exampleBuildRes = await executeOperatorCommand(
           exampleBuildCommand,
           buildOperatorSpawnContext({
-            configId: Number(exConfigId),
+            baseContext: exampleBaseContext,
+            projectPath,
             operatorNames: params.operatorNames,
             script: exampleBuildCommand,
+            toolOutputLabel: 'compile',
           }),
           {
             transformCommand: createRemoteCommandWhenNoNpuTransformer((command) => buildRemoteBuildExampleCommand(
               command,
-              project?.project_path,
+              projectPath,
             )),
           },
         );
@@ -953,7 +890,7 @@ export class BuildService {
         }
 
         const deployRes = await this.deployStandardCustomRunPackage(
-          Number(configId),
+          projectPath,
           params.operatorNames,
         );
 
@@ -969,16 +906,19 @@ export class BuildService {
       }
     }
 
-    const exConfigId = await this.getBuildExampleConfigId();
-
-    console.log('onboard configId', configId, exConfigId);
+    console.log('onboard projectPath', projectPath);
 
     try {
-      const onBoardCommand = getOnBoardCommand(Number(configId), Number(exConfigId), params.operatorNames);
+      const onBoardBaseContext = this.resolveOnBoardCtx(projectPath, params.operatorNames);
+      const onBoardCommand = getOnBoardCommand(
+        onBoardBaseContext,
+        this.resolveBuildExampleCtx(projectPath, params.operatorNames),
+        params.operatorNames,
+      );
       const remoteOnBoardCommandTransformer = createRemoteCommandWhenNoNpuTransformer(
         (command) => buildRemoteOnBoardCommand(
           command,
-          this.getRemotePullDir(project?.project_path, 'opprof'),
+          this.getRemotePullDir(projectPath, 'opprof'),
         ),
         this.isOnBoardProfilerCommand,
       );
@@ -987,9 +927,11 @@ export class BuildService {
       const res = await executeOperatorCommand(
         onBoardCommand,
         buildOperatorSpawnContext({
-          configId: Number(configId),
+          baseContext: onBoardBaseContext,
+          projectPath,
           operatorNames: params.operatorNames,
           script: onBoardCommand,
+          toolOutputLabel: 'run',
         }),
         { transformCommand: remoteOnBoardCommandTransformer },
       );
@@ -1024,20 +966,17 @@ export class BuildService {
       return;
     }
 
-    const configId = await this.getBuildConfigId();
+    // Resolve workspace paths used by dump tensor flow. Axiom: one window = one
+    // project = workspaceFolders[0].
+    const projectPath = getFirstWorkspaceFolderPath();
 
-    console.log('[startDumpTensor] Queried configId:', configId);
-
-    // Resolve workspace paths used by dump tensor flow.
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-
-    if (!workspaceFolders || workspaceFolders.length === 0) {
+    if (!projectPath) {
       vscode.window.showErrorMessage(t('build.workspacePathNotFound'));
 
       return;
     }
 
-    const currentDir = workspaceFolders[0].uri.fsPath;
+    const currentDir = projectPath;
     const tempDataPath = joinIdeConfigPath(currentDir, 'dump_tensor_temp_data');
     const dumpTensorEnvPrefix = this.getDumpTensorEnvExportsPrefix();
     const remoteDumpTensorCommandTransformer = createRemoteCommandWhenNoNpuTransformer((command) => buildRemoteDumpTensorCommand(
@@ -1061,8 +1000,9 @@ export class BuildService {
       console.error('[startDumpTensor] Failed to remove temp data directory:', error);
     }
 
+    const baseContext = this.resolveBuildOpCtx(currentDir, params.operatorNames);
     const buildCommand = getBuildOpCommand(
-      Number(configId),
+      baseContext,
       params.compileOption,
       params.operatorNames,
     );
@@ -1073,9 +1013,11 @@ export class BuildService {
     const res = await executeOperatorCommand(
       buildCommand,
       buildOperatorSpawnContext({
-        configId: Number(configId),
+        baseContext,
+        projectPath: currentDir,
         operatorNames: params.operatorNames,
         script: buildCommand,
+        toolOutputLabel: 'compile',
       }),
     );
 
@@ -1091,13 +1033,12 @@ export class BuildService {
       return;
     }
 
-    await notifyBuildSucceededForSidebar(Number(configId), params.operatorNames);
-
-    const exConfigId = await this.getBuildExampleConfigId();
+    await notifyBuildSucceededForSidebar(currentDir, params.operatorNames);
 
     if (await isRootStandardCustom()) {
+      const exampleBaseContext = this.resolveBuildExampleCtx(currentDir, params.operatorNames);
       const exampleBuildCommand = getBuildExampleCommand(
-        Number(exConfigId),
+        exampleBaseContext,
         params.compileOption,
         params.operatorNames,
       );
@@ -1105,9 +1046,11 @@ export class BuildService {
       const exampleBuildRes = await executeOperatorCommand(
         exampleCmd,
         buildOperatorSpawnContext({
-          configId: Number(exConfigId),
+          baseContext: exampleBaseContext,
+          projectPath: currentDir,
           operatorNames: params.operatorNames,
           script: exampleBuildCommand,
+          toolOutputLabel: 'compile',
         }),
         { transformCommand: remoteDumpTensorCommandTransformer },
       );
@@ -1128,7 +1071,8 @@ export class BuildService {
     }
     else {
       try {
-        const runCommand = getRunCommand(Number(exConfigId));
+        const baseContext = this.resolveBuildExampleCtx(currentDir);
+        const runCommand = getRunCommand(baseContext);
         const runCommandWithEnv = `${dumpTensorEnvPrefix}${runCommand}`;
 
         console.log('[startDumpTensor] runCommand', runCommandWithEnv);
@@ -1136,7 +1080,8 @@ export class BuildService {
         const res = await executeOperatorCommand(
           runCommandWithEnv,
           buildOperatorSpawnContext({
-            configId: Number(exConfigId),
+            baseContext,
+            projectPath: currentDir,
             operatorNames: params.operatorNames,
             script: runCommandWithEnv,
           }),
@@ -1175,32 +1120,21 @@ export class BuildService {
    * Start UT test.
    */
   async startUtTest(params: { operatorNames?: string,
-    compileOption?: string,
-    projectId?: string | number,
-    configId?: string } = {}): Promise<void> {
-    const pm = ProjectManager.getInstance();
+    compileOption?: string } = {}): Promise<void> {
+    // Axiom: one window = one project = workspaceFolders[0].
+    const projectPath = getFirstWorkspaceFolderPath();
 
-    // For external entry points, allow overriding project context.
-    if (params.projectId !== undefined) {
-      const project = getProjectById(Number(params.projectId));
+    if (!projectPath) {
+      vscode.window.showWarningMessage(t('build.workspacePathNotFound'));
 
-      if (project) {
-        pm['_projectId'] = String(params.projectId);
-        pm['_projectName'] = project.project_name;
-        pm['_projectPath'] = project.project_path;
-      }
-    }
-
-    let configId = params.configId ? Number(params.configId) : undefined;
-
-    if (!configId) {
-      configId = await this.getUtTestConfigId();
+      return;
     }
 
     try {
       // Build UT test command.
+      const baseContext = this.resolveUtTestCtx(projectPath, params.operatorNames);
       const buildCommand = getUtTestCommand(
-        Number(configId),
+        baseContext,
         params.operatorNames,
         params.compileOption,
       );
@@ -1208,9 +1142,11 @@ export class BuildService {
       const res = await executeOperatorCommand(
         buildCommand,
         buildOperatorSpawnContext({
-          configId,
+          baseContext,
+          projectPath,
           operatorNames: params.operatorNames,
           script: buildCommand,
+          toolOutputLabel: 'test',
         }),
       );
 
@@ -1240,19 +1176,8 @@ export class BuildService {
     return /\bmsprof\s+op\b/.test(command) && !/\bmsprof\s+op\s+simulator\b/.test(command);
   }
 
-  private getProjectRootByConfigId(configId: number): string | undefined {
-    const config = getConfigById(configId);
-
-    return config ? getProjectById(config.project_id)?.project_path : undefined;
-  }
-
   private getRemotePullDir(rootPath: string | undefined, outputDir: 'opprof' | 'DumpTensor' | 'dump_tensor_temp_data'): string {
-    if (!rootPath) {
-      throw new Error('Output root path not found for remote artifact retrieval');
-    }
-
-    return `${joinIdeConfigPath(path.resolve(rootPath), outputDir)
-      .replace(/\\/g, '/')}/`;
+    return resolveRemotePullDir(rootPath, outputDir, 'remote artifact retrieval');
   }
 
   /**
@@ -1267,14 +1192,6 @@ export class BuildService {
     await this.openDumpTensorPanel();
   }
 
-  quoteShellTokenIfNeeded(value: string): string {
-    if (/[\s"'`$]/.test(value)) {
-      return `'${value.replace(/'/g, "'\\''")}'`;
-    }
-
-    return value;
-  }
-
   /**
    * Execute show_kernel_debug_data command.
    */
@@ -1282,7 +1199,7 @@ export class BuildService {
     try {
       const environmentScript = getEnvironmentScriptPathFromWorkspace();
       const sourceEnvironmentCommand = environmentScript
-        ? `. ${this.quoteShellTokenIfNeeded(environmentScript)}`
+        ? `. ${quoteShellTokenIfNeeded(environmentScript)}`
         : '';
 
       const showKernelDebugDataCommand = `show_kernel_debug_data ${tempDataPath} ${dumpTensorPath}`;

@@ -1,20 +1,10 @@
 jest.mock('i18next', () => ({ t: (key: string) => key }));
 
-jest.mock('@plugin/domain/utils/op-util', () => ({ getOpRunPath: jest.fn() }));
+jest.mock('@plugin/domain/utils/ascend-util', () => ({ resolveAscendEnv: jest.fn() }));
 
-jest.mock('@plugin/domain/utils/ascend-util', () => ({
-  resolveAscendEnv: jest.fn(),
-}));
+jest.mock('@plugin/domain/services/profiler-service', () => ({ ProfilerFactory: { getStrategy: jest.fn() } }));
 
-jest.mock('@plugin/domain/services/profiler-service', () => ({
-  ProfilerFactory: { getStrategy: jest.fn() },
-}));
-
-jest.mock('@plugin/service/config-service', () => ({
-  ConfigService: {
-    readBuildOpDeployTargetFromWorkspace: jest.fn(),
-  },
-}));
+jest.mock('@plugin/service/config-service', () => ({ ConfigService: { readBuildOpDeployTargetFromWorkspace: jest.fn() } }));
 
 jest.mock('vscode', () => ({
   workspace: {
@@ -23,9 +13,7 @@ jest.mock('vscode', () => ({
   },
 }), { virtual: true });
 
-jest.mock('fs', () => ({
-  existsSync: jest.fn(() => false),
-}));
+jest.mock('fs', () => ({ existsSync: jest.fn(() => false) }));
 
 import {
   buildPythonDeployTarget,
@@ -36,11 +24,13 @@ import {
 describe('python-operator-strategy-shared shell quoting', () => {
   describe('quoteShellTokenIfNeeded', () => {
     it('quotes paths with spaces', () => {
-      expect(quoteShellTokenIfNeeded('operator copy.py')).toBe("'operator copy.py'");
+      expect(quoteShellTokenIfNeeded('operator copy.py'))
+        .toBe("'operator copy.py'");
     });
 
     it('leaves plain paths unquoted', () => {
-      expect(quoteShellTokenIfNeeded('./foo.py')).toBe('./foo.py');
+      expect(quoteShellTokenIfNeeded('./foo.py'))
+        .toBe('./foo.py');
     });
   });
 

@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { OpRecord } from '@plugin/domain/models/model';
+import { OpRecord } from '@plugin/domain/models/op-record';
 import { OperatorProjectType } from '@plugin/domain/models/operator-project-type';
 import { TritonCommandStrategy } from '@plugin/domain/services/command-strategy/triton-strategy';
 import {

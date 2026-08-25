@@ -1,25 +1,35 @@
-import { t } from 'i18next';
-import { getOpRunPath } from '@plugin/domain/utils/op-util';
 import {
   joinCommands,
   getExecutableCommand,
   Command,
   shouldAddDebugBuildType,
 } from '@plugin/domain/utils/command-utils';
-import { OpRecord } from '@plugin/domain/models/model';
-import { joinIdeConfigRelative } from '@plugin/helpers/ide-config-dir';
-import { ProfilerFactory } from '../profiler-service';
+import {
+  OpRecord,
+  resolveFallbackOperatorName,
+} from '@plugin/domain/models/op-record';
+import { ProjectRecord } from '@plugin/domain/models/project-model';
+import { joinIdeConfigPath } from '@plugin/helpers/ide-config-dir';
+import { getFirstWorkspaceFolderPath } from '@plugin/helpers/operator-project-workspace-config';
 import {
   CommandStrategy,
   BaseContext,
   CommandContext,
   CommandBuildParams,
   ProfilerCommandParams,
+  SectionConfig,
+  ProfilerTargetConfig,
 } from './types';
-import { ConfigRecord } from '@plugin/domain/models/config-model';
-import { getConfigById } from '@plugin/domain/services/configuration';
+import type {
+  BuildOpConfig,
+  BuildExampleConfig,
+  UtTestConfig,
+  SimulateConfig,
+  OnBoardConfig,
+  SanitizerConfig,
+} from '@plugin/service/config-service';
 import { ConfigService } from '@plugin/service/config-service';
-import { resolveAscendEnv } from '@plugin/domain/utils/ascend-util';
+import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import { applyOperatorNamesPlaceholder } from '@plugin/domain/utils/operator-script-placeholders';
 import {
   normalizeBlockId,
@@ -27,14 +37,31 @@ import {
   normalizeMaxDebuglogSize,
   normalizeSanitizerTools,
 } from './sanitizer-option-guards';
+import {
+  buildPythonOnBoardCommand,
+  buildPythonSimulateCommand,
+} from './python-operator-strategy-shared';
+
+/** The sanitizer tool keys the section DAO carries (a truthy subset feeds `--tool`). */
+const SANITIZER_TOOL_KEYS = [
+  'memcheck',
+  'racecheck',
+  'initcheck',
+] as const;
+
+/** The sanitizer memcheck sub-options the section DAO carries (truthy subset feeds `--<key>=yes`). */
+const SANITIZER_MEMCHECK_OPTION_KEYS = [
+  'leak-check',
+  'check-unused-memory',
+] as const;
 
 /**
  * Ascend type command strategy
  */
 export class AscendCommandStrategy implements CommandStrategy {
-  buildCommandContext(baseContext: BaseContext): CommandContext {
+  buildCommandContext<TConfig extends SectionConfig>(baseContext: BaseContext<TConfig>): CommandContext<TConfig> {
     const {
-      config, project, operator,
+      config, project, operator, op,
     } = baseContext;
 
     // Ascend type uses ascend_env_script as environment script
@@ -46,7 +73,7 @@ export class AscendCommandStrategy implements CommandStrategy {
     let runPath: string;
 
     if (operator) {
-      runPath = getOpRunPath(operator, config);
+      runPath = operator.op_path;
     }
     else {
       // If the operator cannot be found but there is a configuration script, use the project path as the running path
@@ -54,7 +81,7 @@ export class AscendCommandStrategy implements CommandStrategy {
         runPath = project.project_path;
       }
       else {
-        throw new Error(`Operator not found: ${config.op}`);
+        throw new Error(`Operator not found: ${op}`);
       }
     }
 
@@ -68,29 +95,34 @@ export class AscendCommandStrategy implements CommandStrategy {
       sourceCannCmd,
       cdCmd,
       cdBuildCmd,
+      op,
     };
   }
 
-  buildRunCommand(context: CommandContext): string {
+  buildRunCommand(context: CommandContext<BuildOpConfig>): string {
     const {
       config, sourceCannCmd, cdCmd,
     } = context;
-    const run_cmd = getExecutableCommand(config.target_file || '', { execute: true });
+    const run_cmd = getExecutableCommand(config.targetFile || '', { execute: true });
 
     return joinCommands(sourceCannCmd, cdCmd, run_cmd);
   }
 
-  buildOpCommand(params: CommandBuildParams): string {
+  buildOpCommand(params: CommandBuildParams<BuildOpConfig>): string {
     const {
       config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames,
     } = params;
 
     const scriptField = params.scriptField || 'script';
 
-    const userOptions = (config.user_options as Record<string, unknown> | null | undefined) || {};
+    const scriptValue = scriptField === 'cpu_debug_script'
+      ? config.cpuDebugScript
+      : scriptField === 'npu_debug_script'
+        ? config.npuDebugScript
+        : config.script;
 
     const script = applyOperatorNamesPlaceholder(
-      userOptions[scriptField] as string || '',
+      scriptValue || '',
       operatorNames,
     );
 
@@ -108,20 +140,23 @@ export class AscendCommandStrategy implements CommandStrategy {
       cmd.addArgument(advance_cmd);
     }
 
-    const deploy_cmd = getExecutableCommand(config.target_file || '', { execute: true });
+    // The deploy tail belongs to the build_op section — the simulate/on-board/sanitizer
+    // pre-builds resolve their OWN section DAO (no targetFile field), so their command
+    // ends after the compile step (target_file stays undefined for those sections).
+    const sectionTarget = 'targetFile' in config ? config.targetFile || '' : '';
+    const deploy_cmd = getExecutableCommand(sectionTarget, { execute: true });
 
     return joinCommands(sourceCannCmd, cdCmd, cmd.toString(), deploy_cmd);
   }
 
-  buildExampleCommand(params: CommandBuildParams): string {
+  buildExampleCommand(params: CommandBuildParams<BuildExampleConfig>): string {
     const {
       config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames,
     } = params;
 
-    const options = (config.user_options as Record<string, unknown> | null | undefined) || {};
     // `exampleMode` (resolved per operator from which example file ships) wins over the
-    // plugin-wide `execution_mode` setting — see operator-example-mode.ts / #171.
-    const mode = params.exampleMode || (options.execution_mode as string) || 'eager';
+    // plugin-wide `execution_mode` setting — see operator-example-mode.ts.
+    const mode = params.exampleMode || config.executionMode;
     const pkg_mode = 'cust';
     // If operatorNames is provided, it takes precedence; otherwise config.op is used
     const op = operatorNames || '';
@@ -161,7 +196,7 @@ export class AscendCommandStrategy implements CommandStrategy {
     return joinCommands(sourceCannCmd, cdCmd, cmd.toString());
   }
 
-  buildUtTestCommand(params: CommandBuildParams): string {
+  buildUtTestCommand(params: CommandBuildParams<UtTestConfig>): string {
     const {
       config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames,
     } = params;
@@ -181,15 +216,10 @@ export class AscendCommandStrategy implements CommandStrategy {
     return joinCommands(sourceCannCmd, cdCmd, cmd.toString());
   }
 
-  buildSanitizerCommand(
-    config: ConfigRecord,
-    operator: OpRecord | null,
-    sourceCannCmd: string,
-    cdCmd: string,
-    exampleTargetFile?: string,
-  ): string {
-    const options = (config.user_options as Record<string, unknown> | null | undefined) || {};
-
+  buildSanitizerCommand(context: CommandContext<SanitizerConfig>, exampleTargetFile?: string): string {
+    const {
+      config, operator, sourceCannCmd, cdCmd,
+    } = context;
     const mssanitizer = new Command('mssanitizer');
 
     // Add target file
@@ -197,114 +227,68 @@ export class AscendCommandStrategy implements CommandStrategy {
       mssanitizer.addArgument(exampleTargetFile);
     }
 
-    // Handle configuration options
-    const toolOptions = (options.tool as Record<string, unknown> | undefined) || {};
-    const tools = normalizeSanitizerTools(Object.keys(toolOptions)
-      .filter((key) => toolOptions[key]));
+    // Handle configuration options — partial DAOs carry only the fields the
+    // user set, so every read is guarded with `|| {}`.
+    const tool = config.tool ?? {};
+    const tools = normalizeSanitizerTools(SANITIZER_TOOL_KEYS
+      .filter((key) => tool[key]));
 
     if (tools.length > 0) {
       mssanitizer.addOption('tool', tools);
     }
 
-    if (toolOptions.memcheck) {
-      const memcheckOptions = (options.memcheckOption as Record<string, unknown> | undefined) || {};
+    if (tool.memcheck) {
+      const memcheckOption = config.memcheckOption ?? {};
 
-      Object.keys(memcheckOptions)
-        .forEach((key) => {
-          if (memcheckOptions[key]) {
-            mssanitizer.addOption(key, 'yes');
-          }
-        });
+      SANITIZER_MEMCHECK_OPTION_KEYS.forEach((key) => {
+        if (memcheckOption[key]) {
+          mssanitizer.addOption(key, 'yes');
+        }
+      });
     }
 
-    mssanitizer.addOption('log-level', normalizeLogLevel(options.logLevel));
-    mssanitizer.addOption('max-debuglog-size', normalizeMaxDebuglogSize(options.maxDebuglogSize));
-    mssanitizer.addOption('block-id', normalizeBlockId(options.blockId));
+    mssanitizer.addOption('log-level', normalizeLogLevel(config.logLevel));
+    mssanitizer.addOption('max-debuglog-size', normalizeMaxDebuglogSize(config.maxDebuglogSize));
+    mssanitizer.addOption('block-id', normalizeBlockId(config.blockId));
+    // Sanitizer logs live under the workspace root — the reader only looks
+    // there, and a per-operator copy would be lost (cann parity).
+    const workspacePath = getFirstWorkspaceFolderPath() ?? operator?.op_path ?? process.cwd();
+
     mssanitizer.addOption(
       'log-file',
-      `${operator?.op_path}/${joinIdeConfigRelative('mindstudio_sanitizer_log')}/mssanitizer_${new Date()
-        .valueOf()}.log`,
+      `${joinIdeConfigPath(workspacePath, 'mindstudio_sanitizer_log', `mssanitizer_${new Date()
+        .valueOf()}.log`)}`,
     );
 
     return joinCommands(sourceCannCmd, cdCmd, mssanitizer.toString());
   }
 
-  buildSimulateCommand(params: ProfilerCommandParams): string {
-    const {
-      config, project, operator, sourceCannCmd, cdBuildCmd, exampleTargetFile,
-    } = params;
+  buildSimulateCommand(params: ProfilerCommandParams<SimulateConfig>): string {
+    return buildPythonSimulateCommand(params, 'ascend');
+  }
 
-    // If the operator record is not found but the project path is available, create a temporary operator object
-    let effectiveOperator = operator;
+  buildOnBoardCommand(params: ProfilerCommandParams<OnBoardConfig>): string {
+    return buildPythonOnBoardCommand(params, 'ascend');
+  }
 
-    if (!effectiveOperator) {
-      if (!project || !project.project_path) {
-        throw new Error(t('cann.cannotGenerateSimulateCommand', { op: config.op }));
-      }
-
-      // Create a temporary operator object, using the project path as op_path
-      effectiveOperator = {
-        id: 0,
-        project_id: config.project_id,
-        op_name: config.op,
+  getRunTargetFile(op: string, operator: OpRecord | null = null, _project: ProjectRecord | null = null): string {
+    // The workspace deploy target is the per-op seed; when it is unset (the
+    // multi-operator seeder leaves it empty) fall back to the operator default
+    // .run package so a run never degrades to a bare `cd`.
+    return ConfigService.readBuildOpDeployTargetFromWorkspace()
+      || OperatorPluginRegistry.getDefaultPaths({
         op_type: 'ascend',
-        op_path: project.project_path,
-      } as OpRecord;
-    }
-
-    const simulatorCmd = ProfilerFactory.getStrategy('simulator')
-      .generate(
-        config,
-        effectiveOperator,
-        exampleTargetFile,
-      );
-
-    return joinCommands(sourceCannCmd, cdBuildCmd, simulatorCmd);
+        op_path: operator?.op_path || '',
+        op_name: resolveFallbackOperatorName(operator, op),
+      }).targetOpFile;
   }
 
-  buildOnBoardCommand(params: ProfilerCommandParams): string {
-    const {
-      config, project, operator, sourceCannCmd, cdBuildCmd, exampleTargetFile,
-    } = params;
-
-    // If the operator record is not found but the project path is available, create a temporary operator object
-    let effectiveOperator = operator;
-
-    if (!effectiveOperator) {
-      if (!project || !project.project_path) {
-        throw new Error(t('cann.cannotGenerateOnBoardCommand', { op: config.op }));
-      }
-
-      // Create a temporary operator object, using the project path as op_path
-      effectiveOperator = {
-        id: 0,
-        project_id: config.project_id,
-        op_name: config.op,
+  getProfilerTargetFile(config: ProfilerTargetConfig, operator: OpRecord | null, op: string, _project: ProjectRecord | null = null): string {
+    return ConfigService.readBuildExampleTargetFromWorkspace()
+      || OperatorPluginRegistry.getDefaultPaths({
         op_type: 'ascend',
-        op_path: project.project_path,
-      } as OpRecord;
-    }
-
-    const onboardCannSoc = resolveAscendEnv({ isSimulator: false }).socVersion;
-    const opprofCmd = ProfilerFactory.getStrategy('onboard')
-      .generate(
-        config,
-        effectiveOperator,
-        exampleTargetFile,
-        { onboardCannSoc },
-      );
-
-    return joinCommands(sourceCannCmd, cdBuildCmd, opprofCmd);
-  }
-
-  getRunTargetFile(_config: ConfigRecord, _operator: OpRecord | null): string {
-    return ConfigService.readBuildOpDeployTargetFromWorkspace() || '';
-  }
-
-  // FIXME: Profiler/msprof/mssanitizer target still comes from legacy configs.json (build_example.target_file), not workspace settings.
-  getProfilerTargetFile(_config: ConfigRecord, _operator: OpRecord | null, exampleConfigId: number): string {
-    const exConfig = getConfigById(exampleConfigId) as ConfigRecord | null;
-
-    return exConfig?.target_file || '';
+        op_path: operator?.op_path || '',
+        op_name: resolveFallbackOperatorName(operator, op),
+      }).targetExampleFile;
   }
 }

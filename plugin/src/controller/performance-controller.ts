@@ -3,8 +3,6 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 
 import {
-  DownloadDataParams,
-  DeleteNodeParams,
   SelectFolderParams,
   SelectFolderResult,
   SelectFileParams,
@@ -60,114 +58,6 @@ function toDiagnosticMessage(message: string): string {
 }
 
 export const performanceDataMethods = {
-  /**
-   * Download data
-   * @param params download parameters
-   */
-  async downloadData(params: DownloadDataParams): Promise<void> {
-    // Use filePath first, if not then use nodeKey
-    const remoteFilePath = params.filePath || params.nodeKey;
-
-    if (!remoteFilePath) {
-      throw new Error(t('performance.filePathEmpty'));
-    }
-
-    // Show download progress
-    await vscode.window.withProgress(
-      {
-        location: vscode.ProgressLocation.Notification,
-        title: t('performance.downloadingFile'),
-        cancellable: false,
-      },
-      async (progress) => {
-        progress.report({
-          increment: 0,
-          message: t('performance.readingRemoteFile'),
-        });
-
-        // Create a remote file URI
-        const remoteFileUri = vscode.Uri.file(remoteFilePath);
-
-        // Check if remote file exists
-        try {
-          const stat = await vscode.workspace.fs.stat(remoteFileUri);
-
-          progress.report({
-            increment: 30,
-            message: t('performance.fileSizeKb', { size: (stat.size / 1024).toFixed(2) }),
-          });
-        }
-        catch {
-          throw new Error(t('performance.remoteFileNotExist', { path: remoteFilePath }));
-        }
-
-        // Read remote file contents
-        progress.report({
-          increment: 40,
-          message: t('performance.readingFileContent'),
-        });
-        const fileData = await vscode.workspace.fs.readFile(remoteFileUri);
-
-        // Get file name
-        const fileName = path.basename(remoteFilePath);
-
-        progress.report({
-          increment: 60,
-          message: t('common.selectSaveLocation'),
-        });
-
-        // Let users choose a local save location
-        const localFileUri = await vscode.window.showSaveDialog({
-          defaultUri: vscode.Uri.file(fileName),
-          saveLabel: t('common.save'),
-          filters: { [t('common.allFiles')]: ['*'] },
-        });
-
-        if (!localFileUri) {
-          // User canceled save dialog
-          return;
-        }
-
-        // Write file contents locally
-        progress.report({
-          increment: 80,
-          message: t('common.savingFile'),
-        });
-        await vscode.workspace.fs.writeFile(localFileUri, fileData);
-
-        progress.report({
-          increment: 100,
-          message: t('common.downloadComplete'),
-        });
-        vscode.window.showInformationMessage(t('performance.fileDownloadedTo', { path: localFileUri.fsPath }));
-      },
-    );
-  },
-
-  /**
-   * Delete node
-   * @param params delete parameters
-   */
-  async deleteNode(params: DeleteNodeParams): Promise<void> {
-    if (!params.nodeKey) {
-      throw new Error(t('performance.nodeKeyRequired'));
-    }
-
-    // Confirm deletion
-    const confirmBtn = t('common.confirm');
-    const cancelBtn = t('common.cancel');
-    const result = await vscode.window.showWarningMessage(
-      t('performance.confirmDelete', { key: params.nodeKey }),
-      confirmBtn,
-      cancelBtn,
-    );
-
-    if (result === confirmBtn) {
-      console.log('Delete node:', params.nodeKey, params.filePath);
-      vscode.window.showInformationMessage(t('performance.deleted', { key: params.nodeKey }));
-    }
-  },
-
   /**
    * Select folder
    * @param params selection parameters, including optional default path

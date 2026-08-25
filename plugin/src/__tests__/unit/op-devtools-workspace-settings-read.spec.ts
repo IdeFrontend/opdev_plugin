@@ -1,16 +1,30 @@
-jest.mock('@plugin/domain/services/configuration', () => ({
-  getConfigById: jest.fn(),
-  getConfig: jest.fn(),
-}));
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 
 import * as vscode from 'vscode';
-import { getConfigById } from '@plugin/domain/services/configuration';
-import { ConfigService } from '@plugin/service/config-service';
+import { resolveBuildOpBaseContext } from '@plugin/domain/services/command';
 import { TritonCommandStrategy } from '@plugin/domain/services/command-strategy/triton-strategy';
+import {
+  getConfiguredEnvironmentScriptPath,
+  getEnvironmentScriptPathFromWorkspace,
+  getEnvironmentSocVersionFromWorkspace,
+  getSocVersionWithWorkspaceOverride,
+  getWorkspaceSimulatorType,
+  readWorkspaceProjectTypeSetting,
+} from '@plugin/helpers/operator-project-workspace-config';
+import { ConfigService } from '@plugin/service/config-service';
 
-describe('ConfigService.getRuntimeConfigById', () => {
+/**
+ * Runtime configs are synthesized from workspace settings + cache.json only —
+ * the per-section DAO factories.
+ */
+describe('ConfigService per-section DAO factories (settings + cache only)', () => {
   const getStore: Record<string, unknown> = {};
   const inspectStore: Record<string, vscode.ConfigurationInspect<unknown> | undefined> = {};
+  let workspacePath: string;
+  let cachePath: string;
+
   const inspectFromStore = <T>(key: string): vscode.ConfigurationInspect<T> | undefined => {
     if (!(key in getStore)) {
       return undefined;
@@ -22,196 +36,171 @@ describe('ConfigService.getRuntimeConfigById', () => {
     };
   };
 
+  function seedCache(content: Record<string, unknown>): void {
+    fs.mkdirSync(path.dirname(cachePath), { recursive: true });
+    fs.writeFileSync(cachePath, `${JSON.stringify({
+      schemaVersion: 1,
+      ...content,
+    }, null, 2)}\n`, 'utf8');
+  }
+
   beforeEach(() => {
     Object.keys(getStore)
       .forEach((k) => delete getStore[k]);
     Object.keys(inspectStore)
       .forEach((k) => delete inspectStore[k]);
-    (getConfigById as jest.Mock).mockImplementation(() => undefined);
+    workspacePath = fs.mkdtempSync(path.join(os.tmpdir(), 'op-devtools-read-'));
+    cachePath = path.join(workspacePath, '.vscode', 'cache.json');
     (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
       inspect: <T>(key: string) => (
         inspectStore[key] as vscode.ConfigurationInspect<T> | undefined
       ) ?? inspectFromStore<T>(key),
       get: <T>(key: string) => getStore[key] as T | undefined,
     });
-    vscode.workspace.workspaceFolders = [{ uri: { fsPath: '/workspace' } }];
+    vscode.workspace.workspaceFolders = [{ uri: { fsPath: workspacePath } } as vscode.WorkspaceFolder];
   });
 
-  it('uses workspace compileCommand only (no legacy script in user_options)', () => {
-    (getConfigById as jest.Mock).mockReturnValue({
-      config_id: 1,
-      config_type: 'build_op',
-      script: 'stale-db-script-column',
-      target_file: 'stale-db-target-column',
-      user_options: {
-        script: 'from-db-should-not-appear',
-        target_file: 'stale-db-target',
-      },
+  afterEach(() => {
+    fs.rmSync(workspacePath, {
+      recursive: true,
+      force: true,
     });
+  });
+
+  it('build_op script/target come from workspace settings only (no stored row)', () => {
     getStore['compileAndDeploy.buildConfig.compileCommand'] = 'from-settings';
     getStore['compileAndDeploy.buildConfig.deployCommandOrRunCommand'] = 'from-settings-run';
 
-    const runtime = ConfigService.getRuntimeConfigById(1);
+    const config = ConfigService.getBuildOpConfig();
 
-    expect((runtime?.user_options as Record<string, unknown>).script)
+    expect(config.script)
       .toBe('from-settings');
-    expect(runtime?.script)
-      .toBe('from-settings');
-    expect(runtime?.target_file)
+    expect(config.targetFile)
       .toBe('from-settings-run');
   });
 
-  it('ignores user-scope deploy target when workspace deploy target is unset', () => {
-    (getConfigById as jest.Mock).mockReturnValue({
-      config_id: 10,
-      config_type: 'build_op',
-      user_options: { target_file: 'stale-db-target' },
-    });
-    getStore['compileAndDeploy.buildConfig.deployCommandOrRunCommand'] = 'user-scope-run';
+  it('does not surface user-scope (global) deploy target when the workspace scopes are unset', () => {
     inspectStore['compileAndDeploy.buildConfig.deployCommandOrRunCommand'] = {
       key: 'compileAndDeploy.buildConfig.deployCommandOrRunCommand',
-      userValue: 'user-scope-run',
+      // User-level settings are reported by VS Code as `globalValue` on the
+      // inspect result (there is no `userValue` field). The workspace config
+      // read must NOT fall back to user scope — settings.json is the only source.
+      globalValue: 'user-scope-run',
+      workspaceValue: undefined,
+      workspaceFolderValue: undefined,
     };
 
-    const runtime = ConfigService.getRuntimeConfigById(10);
-
-    expect(runtime?.target_file)
-      .toBeUndefined();
-    expect((runtime?.user_options as Record<string, unknown>).target_file)
-      .toBeUndefined();
+    expect(ConfigService.getBuildOpConfig().targetFile)
+      .toBeNull();
   });
 
-  it('build_example script comes from settings, not legacy DB column', () => {
-    (getConfigById as jest.Mock).mockReturnValue({
-      config_id: 2,
-      config_type: 'build_example',
-      script: 'stale-db-example-script',
-      user_options: { script: 'stale-db-user-options-script' },
-    });
+  it('workspace-folder deploy target wins over user/workspace scopes', () => {
+    getStore['compileAndDeploy.buildConfig.deployCommandOrRunCommand'] = 'workspace-folder-run';
+    inspectStore['compileAndDeploy.buildConfig.deployCommandOrRunCommand'] = {
+      key: 'compileAndDeploy.buildConfig.deployCommandOrRunCommand',
+      globalValue: 'user-scope-run',
+      workspaceValue: 'workspace-scope-run',
+      workspaceFolderValue: 'workspace-folder-run',
+    };
+
+    expect(ConfigService.getBuildOpConfig().targetFile)
+      .toBe('workspace-folder-run');
+  });
+
+  it('build_example script comes from settings, not a default', () => {
     getStore['compileAndDeploy.exampleBuildConfig.runCommand'] = 'example-from-settings';
 
-    const runtime = ConfigService.getRuntimeConfigById(2);
-
-    expect(runtime?.script)
-      .toBe('example-from-settings');
-    expect((runtime?.user_options as Record<string, unknown>).script)
+    expect(ConfigService.getBuildExampleConfig().script)
       .toBe('example-from-settings');
   });
 
-  it('build_example script is undefined when runCommand setting is absent (no legacy fallback)', () => {
-    (getConfigById as jest.Mock).mockReturnValue({
-      config_id: 3,
-      config_type: 'build_example',
-      user_options: { script: 'bash build.sh --vendor_name=custom --run_example' },
-    });
-
-    const runtime = ConfigService.getRuntimeConfigById(3);
-
-    expect(runtime?.script)
-      .toBeUndefined();
-    expect((runtime?.user_options as Record<string, unknown>).script)
-      .toBeUndefined();
+  it('build_example script is empty when runCommand setting is absent (no fallback)', () => {
+    expect(ConfigService.getBuildExampleConfig().script)
+      .toBe('');
   });
 
-  it('build_example execution_mode is undefined when setting is absent (no legacy default)', () => {
-    (getConfigById as jest.Mock).mockReturnValue({
-      config_id: 5,
-      config_type: 'build_example',
-      user_options: {
-        script: 'bash build.sh --run_example',
-        execution_mode: 'eager',
-      },
-    });
-
-    const runtime = ConfigService.getRuntimeConfigById(5);
-
-    expect((runtime?.user_options as Record<string, unknown>).execution_mode)
-      .toBeUndefined();
+  it('build_example execution_mode defaults to eager when the setting is absent', () => {
+    expect(ConfigService.getBuildExampleConfig().executionMode)
+      .toBe('eager');
   });
 
   it('build_example execution_mode comes from settings when set', () => {
-    (getConfigById as jest.Mock).mockReturnValue({
-      config_id: 6,
-      config_type: 'build_example',
-      user_options: {
-        script: 'bash build.sh',
-        execution_mode: 'graph',
-      },
-    });
     getStore['compileAndDeploy.exampleBuildConfig.executionMode'] = 'graph';
 
-    const runtime = ConfigService.getRuntimeConfigById(6);
-
-    expect((runtime?.user_options as Record<string, unknown>).execution_mode)
+    expect(ConfigService.getBuildExampleConfig().executionMode)
       .toBe('graph');
   });
 
-  it('sanitizer script is undefined when sanitizerCompileCommand setting is absent (no legacy fallback)', () => {
-    (getConfigById as jest.Mock).mockReturnValue({
-      config_id: 4,
-      config_type: 'sanitizer',
-      user_options: { script: 'bash build.sh --mssanitizer' },
-    });
-
-    const runtime = ConfigService.getRuntimeConfigById(4);
-
-    expect((runtime?.user_options as Record<string, unknown>).script)
-      .toBeUndefined();
+  it('sanitizer script is empty when sanitizerCompileCommand setting is absent (no fallback)', () => {
+    expect(ConfigService.getSanitizerConfig(workspacePath, 'op_add').script)
+      .toBe('');
   });
 
-  it('on_board script is undefined when onBoardCompileCommand setting is absent (no compileCommand fallback)', () => {
-    (getConfigById as jest.Mock).mockReturnValue({
-      config_id: 7,
-      config_type: 'on_board',
-      user_options: { script: 'bash build.sh --onboard' },
-    });
+  it('on_board script is empty when onBoardCompileCommand is absent (no compileCommand fallback)', () => {
     getStore['compileAndDeploy.buildConfig.compileCommand'] = 'general-compile';
 
-    const runtime = ConfigService.getRuntimeConfigById(7);
-
-    expect((runtime?.user_options as Record<string, unknown>).script)
-      .toBeUndefined();
+    expect(ConfigService.getOnBoardConfig(workspacePath).script)
+      .toBe('');
   });
 
-  it('surfaces the synced sanitizer target_file from user_options as the runtime top-level target_file', () => {
-    (getConfigById as jest.Mock).mockReturnValue({
-      config_id: 8,
-      config_type: 'sanitizer',
-      user_options: { target_file: 'python3 ./triton_vector_add.py' },
-    });
+  it('surfaces the synced sanitizer target_file from cache.sanitizerPythonTarget[op]', () => {
+    seedCache({ sanitizerPythonTarget: { triton_vector_add: 'python3 ./triton_vector_add.py' } });
 
-    const runtime = ConfigService.getRuntimeConfigById(8);
-
-    expect(runtime?.target_file)
+    // The sanitizer target surfaces on the DAO directly — command builders read
+    // `targetFile` off the config.
+    expect(ConfigService.getSanitizerConfig(workspacePath, 'triton_vector_add').targetFile)
       .toBe('python3 ./triton_vector_add.py');
   });
 
-  it('Triton getProfilerTargetFile resolves the synced sanitizer target end-to-end via getRuntimeConfigById', () => {
-    (getConfigById as jest.Mock).mockReturnValue({
-      config_id: 9,
-      config_type: 'sanitizer',
-      op: 'triton_vector_add',
-      user_options: { target_file: 'python3 ./triton_vector_add.py' },
-    });
+  it('does not leak another op sanitizer target into the config', () => {
+    seedCache({ sanitizerPythonTarget: { other_op: 'python3 ./other.py' } });
 
-    const runtime = ConfigService.getRuntimeConfigById(9) as Parameters<
-      TritonCommandStrategy['getProfilerTargetFile']
-    >[0];
+    expect(ConfigService.getSanitizerConfig(workspacePath, 'triton_vector_add').targetFile)
+      .toBeNull();
+  });
+
+  it('Triton getProfilerTargetFile resolves the synced sanitizer target end-to-end via getSanitizerConfig', () => {
+    seedCache({ sanitizerPythonTarget: { triton_vector_add: 'python3 ./triton_vector_add.py' } });
+
+    const config = ConfigService.getSanitizerConfig(workspacePath, 'triton_vector_add');
     const strategy = new TritonCommandStrategy();
 
-    expect(strategy.getProfilerTargetFile(runtime, null, NaN))
+    expect(strategy.getProfilerTargetFile(config, null, 'triton_vector_add'))
       .toBe('python3 ./triton_vector_add.py');
+  });
+
+  it('carries the persisted fileMapList from cache.fileMapLists[configType]', () => {
+    seedCache({
+      fileMapLists: {
+        sanitizer: [
+          {
+            filePath: 'report.txt',
+            reportTime: 42,
+          },
+        ],
+        simulate: [],
+        on_board: [],
+      },
+    });
+
+    expect(ConfigService.getSanitizerConfig(workspacePath, 'op_add').fileMapList)
+      .toEqual([
+        {
+          filePath: 'report.txt',
+          reportTime: 42,
+        },
+      ]);
   });
 
   it('maps sanitizer detectionScope=singleBlock to useBlock=true and carries blockId', () => {
     getStore['sanitizer.detectionScope'] = 'singleBlock';
     getStore['sanitizer.blockId'] = 7;
 
-    const opts = ConfigService.buildUserOptionsFromWorkspaceSettings('sanitizer', {});
+    const config = ConfigService.getSanitizerConfig(workspacePath);
 
-    expect(opts.useBlock)
+    expect(config.useBlock)
       .toBe(true);
-    expect(opts.blockId)
+    expect(config.blockId)
       .toBe(7);
   });
 
@@ -219,9 +208,73 @@ describe('ConfigService.getRuntimeConfigById', () => {
     getStore['sanitizer.detectionScope'] = 'global';
     getStore['sanitizer.blockId'] = 7;
 
-    const opts = ConfigService.buildUserOptionsFromWorkspaceSettings('sanitizer', {});
-
-    expect(opts.useBlock)
+    expect(ConfigService.getSanitizerConfig(workspacePath).useBlock)
       .toBe(false);
+  });
+
+  it('null socVersion is unset on the workspace scope — readers fall through to empty', () => {
+    getStore['environment.socVersion'] = null;
+
+    expect(getSocVersionWithWorkspaceOverride(null))
+      .toBe('');
+    expect(getEnvironmentSocVersionFromWorkspace())
+      .toBe('');
+  });
+
+  it('null simulatorType is unset — simulator type reader returns empty', () => {
+    getStore['performanceTuning.simulation.simulatorType'] = null;
+
+    expect(getWorkspaceSimulatorType())
+      .toBe('');
+  });
+
+  it('null environmentScript is unset — script readers fall back to the default', () => {
+    getStore['environment.environmentScript'] = null;
+
+    expect(getConfiguredEnvironmentScriptPath())
+      .toBeUndefined();
+    expect(getEnvironmentScriptPathFromWorkspace())
+      .toBe('/etc/profile');
+  });
+
+  it('null projectType is unset — project type reader returns undefined', () => {
+    getStore['projectType'] = null;
+
+    expect(readWorkspaceProjectTypeSetting())
+      .toBeUndefined();
+  });
+
+  it('getBuildOpConfig reads op from the operatorNameToCompile setting', () => {
+    getStore['compileAndDeploy.buildConfig.operatorNameToCompile'] = 'saved_op';
+
+    expect(ConfigService.getBuildOpConfig().op)
+      .toBe('saved_op');
+  });
+
+  it('resolveBuildOpBaseContext backfills the op from the operatorNameToCompile setting when the sidebar selection is empty', () => {
+    getStore['projectType'] = 'ascend';
+    getStore['compileAndDeploy.buildConfig.operatorNameToCompile'] = 'saved_op';
+
+    const ctx = resolveBuildOpBaseContext(workspacePath);
+
+    expect(ctx.op)
+      .toBe('saved_op');
+    expect(ctx.config.op)
+      .toBe('saved_op');
+  });
+
+  it('resolveBuildOpBaseContext prefers the config-carried operator name over the sidebar selection', () => {
+    getStore['projectType'] = 'ascend';
+    getStore['compileAndDeploy.buildConfig.operatorNameToCompile'] = 'saved_op';
+
+    const ctx = resolveBuildOpBaseContext(workspacePath, 'sidebar_op');
+
+    // The config-carried name wins: a standard-custom collection carries the
+    // ROOT name in its single config set, and the selection flows only into
+    // the --ops={operatorNames} placeholder.
+    expect(ctx.op)
+      .toBe('saved_op');
+    expect(ctx.config.op)
+      .toBe('saved_op');
   });
 });

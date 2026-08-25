@@ -12,15 +12,15 @@ import {
   OperatorProjectType,
 } from '@plugin/domain/services/operator-project-detector';
 import {
-  createProject,
   getProjectByPath,
+  normalizeProjectPath,
   projectPathsEqual,
-  updateStandardCustomOperators,
-  type ProjectRecord,
   type SubOperatorInfo,
   type OperatorCollectionInfo,
 } from '@plugin/domain/models/project-model';
 import { viewIdToProjectType } from '@plugin/domain/utils/project-utils';
+import { updateWorkspaceCache } from '@plugin/helpers/workspace-cache';
+import { ConfigService } from '@plugin/service/config-service';
 
 /**
  * Workspace detector service
@@ -80,7 +80,7 @@ export class WorkspaceDetectorService {
   private static async detectAndRegisterWorkspaceImpl(workspacePath: string): Promise<void> {
     const storedProjectType = viewIdToProjectType(OperatorProjectType.STANDARD_CUSTOM);
     let rootPath = path.normalize(workspacePath);
-    let rootProject = getProjectByPath(rootPath);
+    const rootProject = getProjectByPath(rootPath);
 
     if (rootProject?.project_type !== storedProjectType) {
       const rootDetection = await OperatorProjectDetector.detectOperatorProject(workspacePath);
@@ -93,32 +93,14 @@ export class WorkspaceDetectorService {
       }
 
       rootPath = path.normalize(rootDetection.projectPath || workspacePath);
-      rootProject = getProjectByPath(rootPath);
-
-      if (!rootProject) {
-        await createProject({
-          project_name: rootDetection.projectName || path.basename(rootPath),
-          project_path: rootPath,
-          project_type: storedProjectType,
-        });
-        rootProject = getProjectByPath(rootPath);
-      }
     }
 
-    if (rootProject && rootProject.project_type !== storedProjectType) {
-      await createProject({
-        project_name: rootProject.project_name,
-        project_path: rootProject.project_path,
-        project_type: storedProjectType,
-      });
-      rootProject = getProjectByPath(rootPath);
-    }
+    // Mirror the registered root project type into the workspace `projectType`
+    // setting (view id form, e.g. 'ascend') so consumers can read it without a
+    // DB record (settings + cache.json only).
+    await ConfigService.writeOpDevtoolsDottedSettings({ projectType: storedProjectType }, rootPath);
 
-    if (!rootProject) {
-      throw new Error(`Failed to register standard-custom workspace: ${rootPath}`);
-    }
-
-    await this.scanStandardCustomOperators(rootPath, rootProject);
+    await this.scanStandardCustomOperators(rootPath);
   }
 
   /**
@@ -334,42 +316,48 @@ export class WorkspaceDetectorService {
 
   /**
    * Scan standard custom operators (special rules)
-   * Only scans collections (ops_meet) and operators (ops_list/experimental_ops_list), updates root project info.
-   * Does not create new projects in projects for collections or sub-operators.
+   * Only scans collections (ops_meet) and operators (ops_list/experimental_ops_list), updates the
+   * workspace cache scan state (folders[rootKey]).
+   * `isCompiled` of previously scanned operators is preserved (sticky).
    */
-  private static async scanStandardCustomOperators(
-    workspacePath: string,
-    rootProject: ProjectRecord,
-  ): Promise<void> {
+  private static async scanStandardCustomOperators(workspacePath: string): Promise<void> {
     console.log('[scanStandardCustomOperators] Scanning operator collections and operators...');
     const {
       opsMeet,
       opsList,
       experimentalOpsList,
     } = this.scanOpsMeetAndOpsLists(workspacePath);
-    const mergedOpsList = this.mergeOperators(rootProject.ops_list || [], opsList)
-      .filter((operator) => !experimentalOpsList.some((experimentalOperator) =>
-        projectPathsEqual(operator.path, experimentalOperator.path)));
-    const mergedExperimentalOpsList = this.mergeOperators(
-      rootProject.experimental_ops_list || [],
-      experimentalOpsList,
-    )
-      .filter((operator) => !opsList.some((regularOperator) =>
-        projectPathsEqual(operator.path, regularOperator.path)));
+    const rootKey = normalizeProjectPath(workspacePath);
 
-    console.log('[scanStandardCustomOperators] Operator collections:', opsMeet.map((m) => m.name));
-    console.log('[scanStandardCustomOperators] Operators:', mergedOpsList.map((o) => o.name));
-    console.log(
-      '[scanStandardCustomOperators] Experimental operators:',
-      mergedExperimentalOpsList.map((o) => o.name),
-    );
-    await updateStandardCustomOperators(
-      workspacePath,
-      opsMeet,
-      mergedOpsList,
-      mergedExperimentalOpsList,
-    );
-    console.log(`[scanStandardCustomOperators] Updated: ${opsMeet.length} collections, ${mergedOpsList.length} operators, ${mergedExperimentalOpsList.length} experimental`);
+    await updateWorkspaceCache(workspacePath, (cache) => {
+      const existing = cache.folders?.[rootKey];
+      const mergedOpsList = this.mergeOperators(existing?.opsList || [], opsList)
+        .filter((operator) => !experimentalOpsList.some((experimentalOperator) =>
+          projectPathsEqual(operator.path, experimentalOperator.path)));
+      const mergedExperimentalOpsList = this.mergeOperators(
+        existing?.experimentalOpsList || [],
+        experimentalOpsList,
+      )
+        .filter((operator) => !opsList.some((regularOperator) =>
+          projectPathsEqual(operator.path, regularOperator.path)));
+
+      console.log('[scanStandardCustomOperators] Operator collections:', opsMeet.map((m) => m.name));
+      console.log('[scanStandardCustomOperators] Operators:', mergedOpsList.map((o) => o.name));
+      console.log(
+        '[scanStandardCustomOperators] Experimental operators:',
+        mergedExperimentalOpsList.map((o) => o.name),
+      );
+
+      cache.folders = {
+        ...(cache.folders ?? {}),
+        [rootKey]: {
+          opsMeet,
+          opsList: mergedOpsList,
+          experimentalOpsList: mergedExperimentalOpsList,
+        },
+      };
+    });
+    console.log(`[scanStandardCustomOperators] Updated: ${opsMeet.length} collections, ${opsList.length} operators, ${experimentalOpsList.length} experimental`);
   }
 
   private static mergeOperators(

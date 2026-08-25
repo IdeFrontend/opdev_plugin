@@ -11,7 +11,7 @@ function scriptHasLiteralOpsFlag(script: string): boolean {
   return /\B--ops=/.test(script);
 }
 
-//FIXME: remove after legacy settings deleted
+//FIXME: remove once persisted settings always include the --ops placeholder
 /** Ascend standard-custom compile scripts that accept a `--ops` build.sh flag. */
 function isStandardCustomCompileScript(script: string): boolean {
   if (script.includes('--vendor_name=custom')) {
@@ -31,8 +31,8 @@ function isStandardCustomCompileScript(script: string): boolean {
 }
 
 /**
- * Legacy migrated settings may omit `--ops={operatorNames}`; append `--ops` like the
- * old Ascend Command.addOptions path when operators are selected.
+ * Persisted settings may omit `--ops={operatorNames}`; append `--ops` when
+ * operators are selected.
  */
 function appendLegacyStandardCustomOpsFlag(script: string, names: string): string {
   if (script.includes('--vendor_name=custom')) {
@@ -56,8 +56,8 @@ function appendLegacyStandardCustomOpsFlag(script: string, names: string): strin
 /**
  * Substitute `{operatorNames}` in compile scripts. When `operatorNames` is empty,
  * removes the `--ops={operatorNames}` token entirely (not `--ops=` with an empty value).
- * When names are set but the script has no `--ops` (legacy settings), appends `--ops`
- * for standard-custom ascend-style compile lines only.
+ * When names are set but the script has no `--ops` (persisted settings without the
+ * placeholder), appends `--ops` for standard-custom ascend-style compile lines only.
  */
 export function applyOperatorNamesPlaceholder(
   script: string,
@@ -75,7 +75,7 @@ export function applyOperatorNamesPlaceholder(
 
   let result = script.replace(/\{operatorNames\}/g, names);
 
-  //FIXME: remove after legacy settings deleted
+  //FIXME: remove once persisted settings always include the --ops placeholder
   if (!scriptHasLiteralOpsFlag(result) && isStandardCustomCompileScript(result)) {
     result = appendLegacyStandardCustomOpsFlag(result, names);
   }
@@ -87,7 +87,7 @@ export function applyOperatorNamesPlaceholder(
  * Ensure a standard-custom (`--vendor_name=custom`) `--run_example` line carries
  * `--soc={soc_version}`. build.sh's `--run_example` validates/selects the platform from
  * `--soc`; without it the run-example phase prints an empty "mode:" and bails to its
- * usage text instead of building/running the example (plugin_release #171). No-op when
+ * usage text instead of building/running the example. No-op when
  * the script already has a `--soc` flag or is not a standard-custom line. The injected
  * `{soc_version}` placeholder is resolved later by {@link executeOperatorCommand}.
  */
@@ -108,7 +108,7 @@ export function ensureStandardCustomSocFlag(script: string): string {
 
 /**
  * Substitute `{soc_version}` and `{simulator_type}` using a single env resolution.
- * When `resolution` is omitted (tests / legacy), computes once without logging.
+ * When `resolution` is omitted (tests / direct callers), computes once without logging.
  *
  * Operator commands should use {@link resolveAscendEnvForOperatorCommand} in
  * {@link executeOperatorCommand} instead of calling this before execute.
@@ -123,7 +123,6 @@ export function replaceOperatorScriptPlaceholders(
 
   const spawnLike = {
     script,
-    configType: null as string | null,
     scriptField: null as string | null,
   };
   const isSimulator = isSimulatorCompile(spawnLike);

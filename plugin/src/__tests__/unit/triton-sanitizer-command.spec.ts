@@ -4,41 +4,50 @@ jest.mock('vscode', () => ({
 }), { virtual: true });
 
 import { TritonCommandStrategy } from '@plugin/domain/services/command-strategy/triton-strategy';
-import { ConfigRecord } from '@plugin/domain/models/config-model';
+import type { CommandContext } from '@plugin/domain/services/command-strategy';
+import type { SanitizerConfig } from '@plugin/service/config-service';
 import { getIdeConfigDirName } from '@plugin/helpers/ide-config-dir';
 import * as vscode from 'vscode';
 
 describe('TritonCommandStrategy.buildSanitizerCommand', () => {
   const strategy = new TritonCommandStrategy();
 
-  const baseConfig = {
-    op: 'triton_vector_add',
-    target_file: 'python3 ./triton_vector_add.py',
-    user_options: {
-      tool: {
-        memcheck: true,
-        racecheck: false,
-        initcheck: false,
-      },
-      memcheckOption: {
-        'leak-check': false,
-        'check-unused-memory': false,
-      },
-      logLevel: 'warn',
-      maxDebuglogSize: 1024,
-      useBlock: false,
-      blockId: null,
+  const baseConfig: SanitizerConfig = {
+    script: 'python3 ./triton_vector_add.py',
+    tool: {
+      memcheck: true,
+      racecheck: false,
+      initcheck: false,
     },
-  } as unknown as ConfigRecord;
+    memcheckOption: {
+      'leak-check': false,
+      'check-unused-memory': false,
+    },
+    logLevel: 'warn',
+    maxDebuglogSize: 1024,
+    useBlock: false,
+    blockId: null,
+    targetFile: 'python3 ./triton_vector_add.py',
+    fileMapList: [],
+  };
+
+  /** Build the command context the new buildSanitizerCommand signature takes. */
+  const buildContext = (
+    config: SanitizerConfig,
+    overrides: Partial<CommandContext<SanitizerConfig>> = {},
+  ): CommandContext<SanitizerConfig> => ({
+    config,
+    project: null,
+    operator: null,
+    sourceCannCmd: '',
+    cdCmd: 'cd /op',
+    cdBuildCmd: 'cd /op',
+    op: 'triton_vector_add',
+    ...overrides,
+  });
 
   it('wraps python target after -- separator', () => {
-    const cmd = strategy.buildSanitizerCommand(
-      baseConfig,
-      null,
-      '. /env.sh',
-      'cd /op',
-      'python3 ./triton_vector_add.py',
-    );
+    const cmd = strategy.buildSanitizerCommand(buildContext(baseConfig, { sourceCannCmd: '. /env.sh' }));
 
     expect(cmd)
       .toContain('mssanitizer');
@@ -50,13 +59,7 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
   });
 
   it('writes log file under workspace ide config dir', () => {
-    const cmd = strategy.buildSanitizerCommand(
-      baseConfig,
-      null,
-      '',
-      'cd /op',
-      'python3 ./triton_vector_add.py',
-    );
+    const cmd = strategy.buildSanitizerCommand(buildContext(baseConfig));
 
     const ideDir = getIdeConfigDirName();
     const normalized = cmd.replace(/\\/g, '/');
@@ -66,30 +69,21 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
   });
 
   it('emits block-id only when useBlock is true', () => {
-    const withBlock = {
+    const withBlock: SanitizerConfig = {
       ...baseConfig,
-      user_options: {
-        ...baseConfig.user_options,
-        useBlock: true,
-        blockId: 0,
-      },
-    } as unknown as ConfigRecord;
+      useBlock: true,
+      blockId: 0,
+    };
 
-    expect(strategy.buildSanitizerCommand(withBlock, null, '', 'cd /op', 'python3 ./a.py'))
+    expect(strategy.buildSanitizerCommand(buildContext(withBlock)))
       .toContain('--block-id=0');
 
-    expect(strategy.buildSanitizerCommand(baseConfig, null, '', 'cd /op', 'python3 ./a.py'))
+    expect(strategy.buildSanitizerCommand(buildContext(baseConfig)))
       .not.toContain('--block-id');
   });
 
   it('includes basic log options from config', () => {
-    const cmd = strategy.buildSanitizerCommand(
-      baseConfig,
-      null,
-      '',
-      'cd /op',
-      'python3 ./a.py',
-    );
+    const cmd = strategy.buildSanitizerCommand(buildContext(baseConfig));
 
     expect(cmd)
       .toContain('--log-level=warn');
@@ -98,60 +92,48 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
   });
 
   it('omits --max-debuglog-size when the stored value is invalid (e.g. 0)', () => {
-    const badSize = {
+    const badSize: SanitizerConfig = {
       ...baseConfig,
-      user_options: {
-        ...baseConfig.user_options,
-        maxDebuglogSize: 0,
-      },
-    } as unknown as ConfigRecord;
+      maxDebuglogSize: 0,
+    };
 
-    const cmd = strategy.buildSanitizerCommand(badSize, null, '', 'cd /op', 'python3 ./a.py');
+    const cmd = strategy.buildSanitizerCommand(buildContext(badSize));
 
     expect(cmd).not.toContain('--max-debuglog-size');
   });
 
   it('omits --log-level when the stored value is not a valid level', () => {
-    const badLevel = {
+    const badLevel: SanitizerConfig = {
       ...baseConfig,
-      user_options: {
-        ...baseConfig.user_options,
-        logLevel: 'verbose',
-      },
-    } as unknown as ConfigRecord;
+      logLevel: 'verbose' as SanitizerConfig['logLevel'],
+    };
 
-    expect(strategy.buildSanitizerCommand(badLevel, null, '', 'cd /op', 'python3 ./a.py'))
+    expect(strategy.buildSanitizerCommand(buildContext(badLevel)))
       .not.toContain('--log-level');
   });
 
   it('omits --block-id when the stored id is out of mssanitizer range (0..200)', () => {
-    const badBlock = {
+    const badBlock: SanitizerConfig = {
       ...baseConfig,
-      user_options: {
-        ...baseConfig.user_options,
-        useBlock: true,
-        blockId: 999,
-      },
-    } as unknown as ConfigRecord;
+      useBlock: true,
+      blockId: 999,
+    };
 
-    expect(strategy.buildSanitizerCommand(badBlock, null, '', 'cd /op', 'python3 ./a.py'))
+    expect(strategy.buildSanitizerCommand(buildContext(badBlock)))
       .not.toContain('--block-id');
   });
 
   it('serializes multiple selected tools as repeated --tool flags', () => {
-    const multi = {
+    const multi: SanitizerConfig = {
       ...baseConfig,
-      user_options: {
-        ...baseConfig.user_options,
-        tool: {
-          memcheck: true,
-          racecheck: true,
-          initcheck: false,
-        },
+      tool: {
+        memcheck: true,
+        racecheck: true,
+        initcheck: false,
       },
-    } as unknown as ConfigRecord;
+    };
 
-    const cmd = strategy.buildSanitizerCommand(multi, null, '', 'cd /op', 'python3 ./a.py');
+    const cmd = strategy.buildSanitizerCommand(buildContext(multi));
 
     expect(cmd)
       .toContain('--tool=memcheck');
@@ -161,23 +143,20 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
   });
 
   it('emits memcheck sub-options even when the memcheck tool box is unchecked', () => {
-    const leakOnly = {
+    const leakOnly: SanitizerConfig = {
       ...baseConfig,
-      user_options: {
-        ...baseConfig.user_options,
-        tool: {
-          memcheck: false,
-          racecheck: true,
-          initcheck: false,
-        },
-        memcheckOption: {
-          'leak-check': true,
-          'check-unused-memory': false,
-        },
+      tool: {
+        memcheck: false,
+        racecheck: true,
+        initcheck: false,
       },
-    } as unknown as ConfigRecord;
+      memcheckOption: {
+        'leak-check': true,
+        'check-unused-memory': false,
+      },
+    };
 
-    const cmd = strategy.buildSanitizerCommand(leakOnly, null, '', 'cd /op', 'python3 ./a.py');
+    const cmd = strategy.buildSanitizerCommand(buildContext(leakOnly));
 
     expect(cmd)
       .toContain('--tool=racecheck');
@@ -186,19 +165,16 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
   });
 
   it('omits --tool entirely (no stray token) when no tool is selected', () => {
-    const noTools = {
+    const noTools: SanitizerConfig = {
       ...baseConfig,
-      user_options: {
-        ...baseConfig.user_options,
-        tool: {
-          memcheck: false,
-          racecheck: false,
-          initcheck: false,
-        },
+      tool: {
+        memcheck: false,
+        racecheck: false,
+        initcheck: false,
       },
-    } as unknown as ConfigRecord;
+    };
 
-    const cmd = strategy.buildSanitizerCommand(noTools, null, '', 'cd /op', 'python3 ./a.py');
+    const cmd = strategy.buildSanitizerCommand(buildContext(noTools));
 
     expect(cmd).not.toContain('--tool');
     expect(cmd).not.toMatch(/mssanitizer\s{2,}/);
@@ -210,7 +186,7 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
     (vscode.workspace as unknown as { workspaceFolders: unknown }).workspaceFolders = [{ uri: { fsPath: '/ws/my op' } }];
 
     try {
-      const cmd = strategy.buildSanitizerCommand(baseConfig, null, '', 'cd /op', 'python3 ./a.py');
+      const cmd = strategy.buildSanitizerCommand(buildContext(baseConfig));
       const normalized = cmd.replace(/\\/g, '/');
 
       // Quoted so the shell keeps the spaced path as a single --log-file token.

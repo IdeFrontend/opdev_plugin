@@ -132,7 +132,7 @@ export default {
   'folderContext.noWorkspaceCannotRun': '未打开工作区，无法运行验证',
   'folderContext.noProjectIdMarkFirst': '未找到对应的项目ID，请先标记为算子工程',
   'folderContext.noOperatorsToValidate': '该文件/文件夹无算子可运行验证',
-  'folderContext.rootNotInProjectsJson': '根目录未在 projects.json 中注册，无法运行验证',
+  'folderContext.rootNotRecognized': '根目录未被识别为算子工程，无法运行验证',
   'folderContext.folderNotOperatorProject': '该文件夹不是算子工程',
   'folderContext.needBishengFlags': '暂不支持该功能，请确保 build.sh 中包含 --bisheng_flags',
   'folderContext.standardOpsNoTuning': '标准自定义算子暂不支持性能调优',
@@ -264,7 +264,7 @@ export default {
   'build.simulationFailedThrow': '执行仿真分析失败: {{output}}',
 
   // project (additional)
-  'project.invalidProjectId': '无效的 projectId: {{projectId}}',
+  'project.invalidProjectId': '无效的工程路径',
   'project.projectDirNotExist': '工程目录不存在',
   'project.opsPrototypeTemplateMissing': '未找到算子原型模板: {{path}}',
 

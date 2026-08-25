@@ -59,7 +59,7 @@ describe('StandardCustomDetector — nested-in-collection hardening', () => {
       });
   });
 
-  it('keeps the legacy structural heuristic when help does not expose --genop', async () => {
+  it('keeps the structural heuristic when help does not expose --genop', async () => {
     const root = mkTmp();
     const experimental = path.join(root, 'experimental');
 

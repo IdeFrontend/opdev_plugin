@@ -11,7 +11,7 @@ How **operator run** (运行算子) is integrated: entry points, config selectio
 The plugin does **not** ship a runtime. It:
 
 - **Builds** a run command with **`getRunCommand(configId)`** → command strategy (`getRunTargetFile`, `buildRunCommand`).
-- **Selects the config row** in `BuildService.startRun` from **`OperatorPluginRegistry.getOpPlugin(projectType).buildBehavior`** (where `projectType` comes from `homeMethods.getProjectType()` — stored `projects.json` `project_type` or live detection).
+- **Selects the config row** in `BuildService.startRun` from **`OperatorPluginRegistry.getOpPlugin(projectType).buildBehavior`** (where `projectType` comes from `homeMethods.getProjectType()` — workspace `op-devtools.projectType` or live detection).
 - **Selects the shell strategy** from the operator row’s **`op_type`** (`CommandStrategyFactory.getStrategy(operator?.op_type)` inside `getRunCommand`).
 - **Runs** through **`executeOperatorCommand`** with `outputLabel: 'run'` (ascend env + placeholders + per-run output channel).
 - **Exposes** run via VS Code commands → `taskMethods.startRun` (Actions tree **Run**, folder context menu for PyAsc). **Not** on `ops` RPC.
@@ -21,7 +21,7 @@ The plugin does **not** ship a runtime. It:
 | Axis | Examples | Used in run for |
 |------|----------|-----------------|
 | **`project_type`** | `ascend`, `cann`, `pyasc`, `triton`, or detection strings `standard-custom`, `ascend-c`, `torch-library` | `build_op` vs `build_example` config id, active-`.py` gate, unsupported-project guard |
-| **`op_type`** (on `ops` row) | `ascend`, `cann`, `pyasc`, `triton` | `cdCmd` / `cdBuildCmd`, `getRunTargetFile`, `buildRunCommand` |
+| **`op_type`** (on the operator record) | `ascend`, `cann`, `pyasc`, `triton` | `cdCmd` / `cdBuildCmd`, `getRunTargetFile`, `buildRunCommand` |
 
 After **New Project** or **Open Project** init, stored `project_type` usually matches an **`op_type`** string (`cann`, `ascend`, `pyasc`, `triton`). Detection-only workspaces can still report `standard-custom`, `ascend-c`, or `torch-library` — see [Registry resolution](#registry-resolution-startrun-vs-sidebar).
 
@@ -82,9 +82,9 @@ sequenceDiagram
   end
 
   Build->>Build: configId = build_op or build_example
-  Build->>Domain: getRunCommand(configId)
+  Build->>Domain: getRunCommand(resolveBuildOpBaseContext(...))
   Note over Domain: strategy = operator.op_type
-  Domain->>Domain: getRuntimeConfigById
+  Domain->>Domain: resolveSectionBaseContext → section DAO
   Build->>ExecOp: execute(runCommand, spawnContext)
   ExecOp-->>Build: { code, output }
 ```
@@ -98,13 +98,13 @@ sequenceDiagram
 | Project context | `project_type` after init ([`viewIdToProjectType`](../plugin/src/domain/utils/project-utils.ts)) | Typical `op_type` on operators | `startRun` config row | Command strategy | Run target (`getRunTargetFile`) | Working directory in `buildRunCommand` |
 |-----------------|--------------------------------------------------------------------------------------------------|-------------------------------|----------------------|------------------|--------------------------------|----------------------------------------|
 | **CANN** (New Project view 1) | `cann` | `cann` | `build_example` | **cann** | Workspace `compileAndDeploy.buildConfig.deployCommandOrRunCommand` | `sourceCannCmd` + **`cdBuildCmd`** + `getExecutableCommand(target)` |
-| **Standard custom** (view 2; detection `standard-custom`) | `ascend` | `ascend` | `build_example` | **ascend** | Same workspace deploy key | `sourceCannCmd` + **`cdCmd`** + `getExecutableCommand(target, { mode: 'run' })` |
+| **Standard custom** (view 2; detection `standard-custom`) | `ascend` | `cann` (scanned collection ops) / `ascend` (plugin-created) | `build_example` | **cann** / **ascend** | Same workspace deploy key | `sourceCannCmd` + **`cdBuildCmd`** (cann) or **`cdCmd`** (ascend) + `getExecutableCommand(target)` |
 | **Ascend C** (detection `ascend-c`) | `cann` | `cann` (init uses `viewIdToProjectType`) | `build_example` | **cann** | Workspace deploy key | `cdBuildCmd` + executable |
 | **Torch library** (detection `torch-library`) | `cann` | `cann` | `build_example` | **cann** | Workspace deploy key | `cdBuildCmd` + executable |
 | **PyAsc** | `pyasc` | `pyasc` | **`build_op`** | **pyasc** | Workspace deploy (`python3 …`) via `getPythonRunTargetFile` | `sourceCannCmd` + **`cdCmd`** + normalized python command (no chmod) |
 | **Triton** (`op-devtools.operatorSupport.triton`) | `triton` | `triton` | **`build_op`** | **triton** | Same as PyAsc (workspace deploy) | Same as PyAsc |
 
-**Compiled run (CANN / Ascend / Ascend C / Torch / Standard custom):** user sets **`deployCommandOrRunCommand`** to the built binary or `.run` package (often updated after **编译示例**). `startRun` passes **`build_example`** config id, but the **executable path** still comes from the **`build_op`** workspace key through `getRunTargetFile` — not from DB `build_example.target_file`. DB `build_example.target_file` remains for **profiler / msprof** flows ([`workspace-settings.md`](./workspace-settings.md)).
+**Compiled run (CANN / Ascend / Ascend C / Torch / Standard custom):** user sets **`deployCommandOrRunCommand`** to the built binary or `.run` package (often updated after **编译示例**). `startRun` passes **`build_example`** config id, but the **executable path** still comes from the **`build_op`** workspace key through `getRunTargetFile` — not from `exampleBuildConfig.targetFile` — falling back to the operator-plugin default `targetOpFile` (`build_out/*.run` for standard-custom / ascend-c projects) when the setting is empty. `exampleBuildConfig.targetFile` feeds the **ascend** profiler / msprof flow ([`workspace-settings.md`](./workspace-settings.md)); the cann profiler flow reads the same deploy key (see [Strategy run assembly](#strategy-run-assembly)).
 
 **Python run (PyAsc / Triton):** deploy target is `python3 <path>` in the same workspace key; `startRun` uses **`build_op`** config id because `requiresBuildBeforeAnalysis: false`.
 
@@ -114,11 +114,12 @@ sequenceDiagram
 
 - Plugin: `CannPlugin` → `requiresBuildBeforeAnalysis: true`, no active-file check.
 - Run after example build: set **`deployCommandOrRunCommand`** to the runnable artifact (or rely on post-build helpers that refresh it for standard-custom `.run` flows — see `getStandardCustomDeployCommand` in `command.ts`).
-- Strategy **`cdBuildCmd`**: `mkdir -p <op>/build && cd <op>/build` (operator run path from `getOpRunPath`).
+- Strategy **`cdBuildCmd`**: `mkdir -p  <op>/build && cd <op>/build` — double space after `-p`, exactly as in source — (operator run path from the operator record's `op_path`).
 
-#### Standard custom (stored `ascend`, `op_type` `ascend`)
+#### Standard custom (stored `ascend`; per-op `op_type` `cann` or `ascend`)
 
-- Same config row and deploy key as other compiled types; strategy uses **`cdCmd`** to operator run path (not `cdBuildCmd` for run).
+- Operator rows in scanned collections carry **`op_type: cann`** (cann command forms — run from `cdBuildCmd`, no ascend deploy tail); plugin-created rows carry **`ascend`** (run from `cdCmd` with the deploy tail). `startRun` follows the operator record's `op_type`.
+- The `.run` deploy package is executed via `RUN_FILE=$(find build_out/*.run)` plus `chmod +x` and a `--force` probe (`getExecutableCommand`); run verification runs from `mkdir -p <op>/build && cd <op>/build` with the `RUN_FILE` fragment (cann form).
 - Multi-operator selection: Actions **Run** is disabled when multiple operators are selected ([`operator-treeview.md`](./operator-treeview.md)).
 - Collection operators share one project; run uses the configured example / deploy target for the active config row.
 
@@ -176,19 +177,19 @@ Command generation always follows **`operator.op_type`**, not `project_type`, so
 | `false` (PyAsc, Triton) | `build_op` | `getBuildConfigId()` |
 | `true` (Cann, Ascend, defaults) | `build_example` | `getBuildExampleConfigId()` |
 
-Runtime merge: **`ConfigService.getRuntimeConfigById`** → `applyWorkspaceSettingsToConfigs` ([`workspace-settings.md`](./workspace-settings.md)).
+Runtime merge: the per-section typed DAO factories on `ConfigService` (`getBuildOpConfig()` / `getBuildExampleConfig()` / `getUtTestConfig()` / `getSimulateConfig(projectPath)` / `getOnBoardConfig(projectPath)` / `getSanitizerConfig(projectPath, op)`), resolved via `resolveSectionBaseContext` — each DAO reads its own dotted `op-devtools.*` settings and folds in the cache-only fields ([`workspace-settings.md`](./workspace-settings.md)).
 
-For **`build_op`** rows, merged `target_file` comes from **`compileAndDeploy.buildConfig.deployCommandOrRunCommand`**. For **`build_example`** rows, workspace merge does **not** set `target_file`; strategies read deploy via **`getRunTargetFile`** → workspace key anyway.
+For **`build_op`**, `getBuildOpConfig().targetFile` comes from **`compileAndDeploy.buildConfig.deployCommandOrRunCommand`**. For **`build_example`**, `targetFile` is read from `exampleBuildConfig.targetFile` (null when unset); strategies read deploy via **`getRunTargetFile`** → workspace key anyway.
 
 ### Strategy run assembly
 
 | Strategy | `getRunTargetFile` | `buildRunCommand` |
 |----------|-------------------|-------------------|
-| **ascend** | `readBuildOpDeployTargetFromWorkspace()` | `sourceCannCmd`, **`cdCmd`**, `getExecutableCommand(target, { execute: true, mode: 'run' })` |
-| **cann** | Same workspace deploy key | `sourceCannCmd`, **`cdBuildCmd`**, `getExecutableCommand(target, { execute: true })` |
+| **ascend** | `readBuildOpDeployTargetFromWorkspace()` (fallback: plugin default `targetOpFile` → `build_out/*.run`) | `sourceCannCmd`, **`cdCmd`**, `getExecutableCommand(target, { execute: true, mode: 'run' })` |
+| **cann** | Same workspace deploy key (fallback: default `targetOpFile` — `build_out/*.run` for standard-custom / ascend-c projects) | `sourceCannCmd`, **`cdBuildCmd`** (`mkdir -p  <op>/build && cd <op>/build`), `getExecutableCommand(target, { execute: true })` |
 | **pyasc** / **triton** | `getPythonRunTargetFile` → workspace deploy | `sourceCannCmd`, **`cdCmd`**, `normalizePythonCommandInterpreter(target)` (interpreter from workspace / venv / `python.defaultInterpreterPath`) |
 
-Profiler / msprof / sanitizer **binary** paths still use DB `build_example.target_file` (or strategy-specific `getProfilerTargetFile`) — not the deploy workspace key.
+Profiler / msprof / sanitizer **binary** paths come from strategy-specific `getProfilerTargetFile`: **ascend** reads `exampleBuildConfig.targetFile` (fallback `OperatorPluginRegistry.getDefaultPaths`.targetExampleFile → `build/test_aclnn_<op>`); **cann** reads the deploy workspace key (fallback `.targetOpFile` — `build_out/*.run` for standard-custom / ascend-c projects).
 
 ---
 
@@ -209,7 +210,7 @@ Profiler / msprof / sanitizer **binary** paths still use DB `build_example.targe
 | `service/build-service.ts` | `startRun`, `writeBuildOpDeployTarget`, `getRunCommand`, `executeOperatorCommand` |
 | `service/folder-context-menu-service.ts` | PyAsc folder run → deploy target + `startRun({ filePath })` |
 | `service/operator-command-executor.ts` | Env + execute |
-| `service/config-service.ts` | `getRuntimeConfigById`, deploy target writes |
+| `service/config-service.ts` | section DAO factories, deploy target writes |
 | `domain/services/command.ts` | `getRunCommand` |
 | `controller/home-controller.ts` | `getProjectType` |
 | `domain/plugins/*.plugin.ts` | `buildBehavior`, `projectTypeMappings` |
@@ -221,7 +222,7 @@ Profiler / msprof / sanitizer **binary** paths still use DB `build_example.targe
 
 - **Entry:** Actions **Run** / command palette / PyAsc folder menu → `taskMethods.startRun` (not action queue).
 - **Config row:** from **`getOpPlugin(projectType).buildBehavior`**; **shell strategy:** from **`operator.op_type`**.
-- **Run target:** workspace **`deployCommandOrRunCommand`** for all strategies at run time; DB `build_example.target_file` is for profiler-related flows.
+- **Run target:** workspace **`deployCommandOrRunCommand`** for all strategies at run time; `exampleBuildConfig.targetFile` is for profiler-related flows.
 - **Execution:** `getRunCommand` → **`executeOperatorCommand`** (same stack as build).
 
 ---
@@ -238,7 +239,7 @@ Set **`environment.environmentScript`** to your CANN `set_env.sh` ([`workspace-s
 
 ### Run does nothing / “unsupported project type”
 
-Check **`projects.json`** `project_type` and live detection via **Open Project**. Triton requires **`op-devtools.operatorSupport.triton`**. Empty or unknown `project_type` fails `isProjectTypeSupported`.
+Check the workspace **`op-devtools.projectType`** setting and live detection via **Open Project**. Triton requires **`op-devtools.operatorSupport.triton`**. Empty or unknown `project_type` fails `isProjectTypeSupported`.
 
 ### Wrong binary or `python3` path
 

@@ -8,7 +8,7 @@ Canonical references for the Huawei OP DevTools VS Code extension. User-reported
 
 | Document | Use when |
 |----------|----------|
-| [`workspace-settings.md`](./workspace-settings.md) | All `op-devtools.*` keys, runtime merge, legacy migration |
+| [`workspace-settings.md`](./workspace-settings.md) | All `op-devtools.*` keys, runtime merge |
 | [`ascend-env-spec.md`](./ascend-env-spec.md) | SOC / simulator resolution, spawn env, placeholders |
 | [`ascend-a5-support.md`](./ascend-a5-support.md) | Atlas A5 / `ascend950` behavior and profiler matrix |
 | [`operator-treeview.md`](./operator-treeview.md) | Sidebar trees, action queue, visibility |
@@ -37,14 +37,3 @@ Canonical references for the Huawei OP DevTools VS Code extension. User-reported
 | Document | Notes |
 |----------|--------|
 | [`review-a3-a5-environment-support.md`](./review-a3-a5-environment-support.md) | A3 vs A5 implementation matrix; shared resolver in `ascend-env-spec` |
-
-## Historical (do not treat as primary spec)
-
----
-
-## Removed / merged (git history)
-
-- `operator-plugin-architecture.md` — migration proposal; merged into [`operator-plugin-registry.md`](./operator-plugin-registry.md)
-- `operator-architecture-analysis.md` — same
-- `sidebar-treeview-migration-plan.md` — superseded by `operator-treeview.md`
-- `svd-fix-settings-build-commands.md` — branch audit; merged into [`workspace-settings.md`](./workspace-settings.md) § Legacy settings and workspace migration

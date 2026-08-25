@@ -47,7 +47,7 @@ The reporter may be conflating `SOC_VERSION` with `SIMULATOR_TYPE`, **or** a tem
 | Host detection (`ASCEND_SOC_RULES`) | Maps A5 substrings to `ascend950` |
 | Spawn env (`SOC_VERSION`, `NPU_ARCH`, `SIMULATOR_TYPE`) | Injected per command |
 | On-board profiler metrics | A5 uses `PCSampling` instead of `MemoryDetail` |
-| `projects.json` `soc_version` | **Not read** by resolver (display/UI only) |
+| Stored project `soc_version` | **Not read** by resolver (display/UI only) |
 | `SUPPORT_COMPUTE_UNIT` / `SUPPORT_TILING_DIR` | Ascend `add_custom` template defaults to `ascend910_95` / `arch35`; plugin does not inject A5 values |
 
 ### Key files
@@ -77,8 +77,8 @@ The reporter may be conflating `SOC_VERSION` with `SIMULATOR_TYPE`, **or** a tem
 2. **Inject A5 ACLNN defaults** when resolved SOC is `ascend950`:
    - Add `SUPPORT_COMPUTE_UNIT` / `SUPPORT_TILING_DIR` to spawn env or document required user values.
    - Consider `shared/cann-aclnn-build-defaults.ts` for chip-specific defaults.
-3. **Wire `projects.json` soc into resolver** (optional) — or document that workspace `environment.socVersion` is required for A5.
-4. **Migration / regen** — when SOC changes from A3 to A5, refresh stored simulate/on_board configs (ties to [config-lifecycle.md](./config-lifecycle.md)).
+3. **Wire stored project soc into resolver** (optional) — or document that workspace `environment.socVersion` is required for A5.
+4. **Regen** — when SOC changes from A3 to A5, refresh stored simulate/on_board configs (see [config-lifecycle.md](./config-lifecycle.md)).
 5. **Extend detection rules** if `npu-smi` output on reporter's host uses unmatched strings.
 6. **Tests** — extend `operator-spawn-env.spec.ts` for A5 cmake-related env; template snapshot tests.
 
@@ -144,4 +144,4 @@ Possible failure modes:
 1. Clarify SOC vs simulator naming with reporter (may be docs-only).
 2. Sidebar reveal fix (UX, low risk).
 3. ACLNN / compute-unit injection for A5 builds.
-4. Config migration for stale A3 profiler settings on A5 hosts.
+4. Refresh stale A3 profiler settings on A5 hosts.

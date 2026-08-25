@@ -1,12 +1,26 @@
-import path from 'path';
-import config from './config';
-import { JsonStorage } from '@plugin/core/storage/json-storage';
-import { OperatorProjectType } from '@plugin/domain/services/operator-project-detector';
-import { appendLog } from '@plugin/helpers/output-channel';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as vscode from 'vscode';
 
-const dataDir = path.join(config.user_data_dir, 'data');
-const projectsFile = path.join(dataDir, 'projects.json');
-const storage = new JsonStorage(projectsFile);
+import { OperatorProjectType } from '@plugin/domain/models/operator-project-type';
+import {
+  hasAscFiles,
+  hasPyFilesInRoot,
+  hasPyFilesRecursive,
+  hasTritonPythonIndicatorsInRoot,
+} from '@plugin/domain/plugins/detection-utils';
+import { getDevtoolConfigPath } from '@plugin/helpers/ide-config-dir';
+import {
+  ENVIRONMENT_SCRIPT_SETTING,
+  getConfiguredEnvironmentScriptPath,
+  readWorkspaceProjectTypeSetting,
+} from '@plugin/helpers/operator-project-workspace-config';
+import type { FolderScanState } from '@plugin/helpers/workspace-cache';
+import {
+  readWorkspaceCache,
+  updateWorkspaceCache,
+} from '@plugin/helpers/workspace-cache';
+import { ConfigService } from '@plugin/service/config-service';
 
 // Sub-operator information
 export type SubOperatorInfo = {
@@ -22,21 +36,12 @@ export type OperatorCollectionInfo = {
 };
 
 export type ProjectRecord = {
-  id: number;
   project_name: string;
   project_path: string;
   template_name?: string | null; // Template name: helloworld addn torch_library
   project_type?: string | null; // Operator project type: cann ascend pyasc
   ascend_env_script?: string | null;
   soc_version?: string | null; // SOC版本
-  create_by?: string | null;
-  create_time?: string;
-  update_by?: string | null;
-  update_time?: string;
-  // List of subproject IDs of multi-operator project collections
-  sub_project_ids?: number[] | null;
-  // Whether it is an experimental operator (only operators in the experimental directory)
-  is_experimental?: boolean | null;
   // Operator collection list of standard custom operator project
   ops_meet?: OperatorCollectionInfo[] | null;
   // Sub-operator list of standard custom operator project (non-experimental)
@@ -47,12 +52,8 @@ export type ProjectRecord = {
   selected_operator_ids?: number[] | null;
 };
 
-type ProjectsStore = {
-  lastId: number;
-  projects: ProjectRecord[];
-};
-
-function normalizeProjectPath(projectPath: string): string {
+/** Canonical, case-insensitive path form used as a join key / equality basis (exported for the importer). */
+export function normalizeProjectPath(projectPath: string): string {
   const normalizedPath = path.normalize(projectPath);
   const rootPath = path.parse(normalizedPath).root;
   const pathWithoutTrailingSeparators = normalizedPath.length > rootPath.length
@@ -68,59 +69,6 @@ export function projectPathsEqual(a: string, b: string): boolean {
   return normalizeProjectPath(a) === normalizeProjectPath(b);
 }
 
-function ensureStore(): ProjectsStore {
-  const init: ProjectsStore = {
-    lastId: 0,
-    projects: [],
-  };
-  const data = storage.read<ProjectsStore>(init);
-
-  // Simple verification
-  if (!Array.isArray(data.projects)) {
-    return init;
-  }
-
-  return data;
-}
-
-function writeStore(store: ProjectsStore) {
-  storage.write(store);
-}
-
-function findProjectByPath(store: ProjectsStore, projectPath: string): ProjectRecord | undefined {
-  const normalizedPath = normalizeProjectPath(projectPath);
-
-  return store.projects.find((p) => {
-    if (!p.project_path) {
-      return false;
-    }
-
-    return normalizeProjectPath(p.project_path) === normalizedPath;
-  });
-}
-
-function hasSameFieldValue(current: unknown, next: unknown): boolean {
-  if (Object.is(current, next)) {
-    return true;
-  }
-
-  if (
-    current
-    && next
-    && typeof current === 'object'
-    && typeof next === 'object'
-  ) {
-    try {
-      return JSON.stringify(current) === JSON.stringify(next);
-    }
-    catch {
-      return false;
-    }
-  }
-
-  return false;
-}
-
 export interface CreateProjectParams {
   project_name: string;
   project_path: string;
@@ -129,176 +77,130 @@ export interface CreateProjectParams {
   /** Set to `null` to clear stored env script (e.g. when workspace setting is empty). */
   ascend_env_script?: string | null;
   soc_version?: string;
-  create_by?: string;
-  sub_project_ids?: number[]; // List of subproject IDs of multi-operator project collections
-  is_experimental?: boolean; // Whether it is an experimental operator
   ops_meet?: OperatorCollectionInfo[]; // Operator collection list of standard custom operator project
   ops_list?: SubOperatorInfo[]; // Sub-operator list of standard custom operator project (non-experimental)
   experimental_ops_list?: SubOperatorInfo[]; // Experimental sub-operator list of standard custom operator project
   selected_operator_ids?: number[]; // List of selected operator IDs (for standard custom operator scenarios)
 }
 
-export async function updateShScript(data: CreateProjectParams) {
-  // Database operations
-  const store = ensureStore();
-  const existing = findProjectByPath(store, data.project_path);
+/**
+ * Persist the project type into the workspace settings — the dotted
+ * `op-devtools.projectType` key that {@link readWorkspaceProjectTypeSetting}
+ * reads back — so the synthesized project record survives restarts.
+ */
+export async function createProject(data: CreateProjectParams): Promise<void> {
+  if (data.project_type) {
+    await ConfigService.writeOpDevtoolsDottedSettings(
+      { projectType: data.project_type },
+      data.project_path,
+    );
+  }
 
-  if (existing) {
-    appendLog('op-devtools/project-model', 'updateShScript:start', {
-      projectPath: data.project_path,
-      hasAscendEnvScript: data.ascend_env_script !== undefined,
-      hasSocVersion: data.soc_version !== undefined,
+  // The selection seed (`selected_operator_ids` — the scan index ids the
+  // tree/webview use) is re-keyed to PATHS in the workspace cache
+  // (`cache.project.selectedOperatorPaths`), the same re-key the import
+  // performs (deriveSelectedOperatorPaths). Sibling cache state
+  // (compiledOpPaths) is preserved.
+  if (data.selected_operator_ids) {
+    const cache = readWorkspaceCache(data.project_path);
+    const folder = cache.folders?.[normalizeProjectPath(data.project_path)];
+    const regular = folder?.opsList ?? [];
+    const experimental = folder?.experimentalOpsList ?? [];
+    const paths: string[] = [];
+
+    for (const id of data.selected_operator_ids) {
+      const index = id % 10000;
+      const op = index >= 1000 ? experimental[index - 1000] : regular[index];
+
+      if (op?.path) {
+        paths.push(op.path);
+      }
+    }
+
+    await updateWorkspaceCache(data.project_path, (nextCache) => {
+      nextCache.project = {
+        ...(nextCache.project ?? {}),
+        selectedOperatorPaths: paths,
+      };
     });
-    let changed = false;
-
-    if (data.ascend_env_script !== undefined) {
-      const nextEnvScript = data.ascend_env_script ?? null;
-
-      if (!hasSameFieldValue(existing.ascend_env_script ?? null, nextEnvScript)) {
-        existing.ascend_env_script = nextEnvScript;
-        changed = true;
-      }
-    }
-
-    if (data.soc_version !== undefined) {
-      const nextSocVersion = data.soc_version;
-
-      if (!hasSameFieldValue(existing.soc_version ?? null, nextSocVersion ?? null)) {
-        existing.soc_version = nextSocVersion;
-        changed = true;
-      }
-    }
-
-    if (!changed) {
-      appendLog('op-devtools/project-model', 'updateShScript:noChanges');
-
-      return existing.id;
-    }
-
-    existing.update_time = new Date()
-      .toISOString();
-    writeStore(store);
-    appendLog('op-devtools/project-model', 'updateShScript:wroteStore');
-
-    return existing.id;
   }
-
-  appendLog('op-devtools/project-model', 'updateShScript:projectNotFound', { projectPath: data.project_path });
 }
 
-export async function createProject(data: CreateProjectParams) {
-  // Database operations
-  const store = ensureStore();
-  const existing = findProjectByPath(store, data.project_path);
-
-  if (existing) {
-    // Update existing project
-    let changed = false;
-
-    if (data.ascend_env_script) {
-      if (!hasSameFieldValue(existing.ascend_env_script, data.ascend_env_script)) {
-        existing.ascend_env_script = data.ascend_env_script;
-        changed = true;
-      }
-    }
-
-    if (data.project_type) {
-      if (!hasSameFieldValue(existing.project_type, data.project_type)) {
-        existing.project_type = data.project_type;
-        changed = true;
-      }
-    }
-
-    if (data.template_name) {
-      if (!hasSameFieldValue(existing.template_name, data.template_name)) {
-        existing.template_name = data.template_name;
-        changed = true;
-      }
-    }
-
-    if (data.sub_project_ids) {
-      if (!hasSameFieldValue(existing.sub_project_ids, data.sub_project_ids)) {
-        existing.sub_project_ids = data.sub_project_ids;
-        changed = true;
-      }
-    }
-
-    if (data.is_experimental !== undefined) {
-      if (!hasSameFieldValue(existing.is_experimental, data.is_experimental)) {
-        existing.is_experimental = data.is_experimental;
-        changed = true;
-      }
-    }
-
-    if (data.ops_list !== undefined) {
-      if (!hasSameFieldValue(existing.ops_list, data.ops_list)) {
-        existing.ops_list = data.ops_list;
-        changed = true;
-      }
-    }
-
-    if (data.experimental_ops_list !== undefined) {
-      if (!hasSameFieldValue(existing.experimental_ops_list, data.experimental_ops_list)) {
-        existing.experimental_ops_list = data.experimental_ops_list;
-        changed = true;
-      }
-    }
-
-    if (data.ops_meet !== undefined) {
-      if (!hasSameFieldValue(existing.ops_meet, data.ops_meet)) {
-        existing.ops_meet = data.ops_meet;
-        changed = true;
-      }
-    }
-
-    if (data.selected_operator_ids !== undefined) {
-      if (!hasSameFieldValue(existing.selected_operator_ids, data.selected_operator_ids)) {
-        existing.selected_operator_ids = data.selected_operator_ids;
-        changed = true;
-      }
-    }
-
-    if (!changed) {
-      return existing.id;
-    }
-
-    existing.update_time = new Date()
-      .toISOString();
-    writeStore(store);
-
-    return existing.id;
+/**
+ * Persist the ascend env script into the workspace settings
+ * (`op-devtools.environment.environmentScript`). `null` clears the stored
+ * script; an absent field leaves it untouched.
+ */
+export async function updateShScript(data: CreateProjectParams): Promise<void> {
+  if (data.ascend_env_script !== undefined) {
+    await ConfigService.writeOpDevtoolsDottedSettings(
+      { [ENVIRONMENT_SCRIPT_SETTING]: data.ascend_env_script ?? undefined },
+      data.project_path,
+    );
   }
-
-  const nextId = store.lastId + 1;
-  const now = new Date()
-    .toISOString();
-  const record: ProjectRecord = {
-    id: nextId,
-    project_name: data.project_name,
-    project_path: data.project_path,
-    template_name: data.template_name || null,
-    project_type: data.project_type || null,
-    ascend_env_script: data.ascend_env_script || null,
-    soc_version: data.soc_version || null,
-    create_by: data.create_by || null,
-    create_time: now,
-    update_by: null,
-    update_time: now,
-    sub_project_ids: data.sub_project_ids || null,
-    is_experimental: data.is_experimental || null,
-    ops_meet: data.ops_meet || null,
-    ops_list: data.ops_list || null,
-    experimental_ops_list: data.experimental_ops_list || null,
-    selected_operator_ids: data.selected_operator_ids || null,
-  };
-
-  store.projects.push(record);
-  store.lastId = nextId;
-  writeStore(store);
-
-  return nextId;
 }
 
+/**
+ * Project_type values the synthesized record accepts verbatim (canonical
+ * detector types plus the stored values 'cann'/'ascend' — the
+ * view id 'ascend' stays 'ascend', it is NEVER mapped to
+ * 'standard-custom').
+ */
+const KNOWN_PROJECT_TYPES: ReadonlySet<string> = new Set([
+  OperatorProjectType.STANDARD_CUSTOM,
+  OperatorProjectType.ASCEND_C,
+  OperatorProjectType.TORCH_LIBRARY,
+  OperatorProjectType.PYASC,
+  OperatorProjectType.TRITON,
+  'cann',
+  'ascend',
+]);
+
+/**
+ * Synchronous structural re-detect: mirrors the detector registration
+ * order (StandardCustom → TorchLibrary → Triton → PyAsc → Ascend) using the
+ * sync fs helpers of detection-utils. StandardCustom's `build.sh --genop`
+ * check needs an async spawn — unacceptable in this synchronous hot path — and
+ * its structural fallback is ambiguous here, so paths without a distinctive
+ * structure resolve to null (NOT to 'standard-custom').
+ */
+function detectProjectTypeSync(dirPath: string): string | null {
+  const hasCmake = fs.existsSync(path.join(dirPath, 'CMakeLists.txt'));
+  const hasPyRoot = hasPyFilesInRoot(dirPath);
+  const hasTritonMarkers = hasTritonPythonIndicatorsInRoot(dirPath);
+
+  if (hasCmake && hasPyRoot) {
+    return OperatorProjectType.TORCH_LIBRARY;
+  }
+
+  if (hasTritonMarkers) {
+    return OperatorProjectType.TRITON;
+  }
+
+  if (hasPyFilesRecursive(dirPath, 2) && !hasCmake) {
+    return OperatorProjectType.PYASC;
+  }
+
+  if (hasCmake && hasAscFiles(dirPath) && !hasPyRoot) {
+    return OperatorProjectType.ASCEND_C;
+  }
+
+  return null;
+}
+
+/**
+ * Synthesize the project record for `projectPath` from workspace state. The
+ * path is recognized as an operator
+ * project when at least one marker is present:
+ *   1. an explicit workspace `op-devtools.projectType` setting,
+ *   2. a scanned standard-custom entry in `<project>/.vscode/cache.json`,
+ *   3. a `devtool_config.json` marker in the project's ide config dir.
+ * Returns `undefined` when none of the markers exists.
+ *
+ * The project_type comes strictly from (1) the setting when it is a
+ * recognized value, (2) a synchronous structural re-detect otherwise — with no
+ * 'ascend' → 'standard-custom' mapping and no standard-custom default.
+ */
 export function getProjectByPath(projectPath: string): ProjectRecord | undefined {
   if (!projectPath || typeof projectPath !== 'string') {
     console.warn('[getProjectByPath] Project path is empty or invalid:', projectPath);
@@ -306,332 +208,58 @@ export function getProjectByPath(projectPath: string): ProjectRecord | undefined
     return undefined;
   }
 
-  const store = ensureStore();
+  const settingsType = readWorkspaceProjectTypeSetting(vscode.Uri.file(projectPath));
+  const cacheFolder = findCachedFolder(projectPath);
+  const hasDevtoolConfig = fs.existsSync(getDevtoolConfigPath(projectPath));
 
-  return findProjectByPath(store, projectPath);
-}
-
-/**
- * Append one standard-custom child using the latest persisted root record.
- * The synchronous read-modify-write prevents overlapping creation requests in
- * the extension host from replacing each other's operator lists.
- */
-export async function appendStandardCustomOperator(
-  projectPath: string,
-  operator: SubOperatorInfo,
-  isExperimental: boolean,
-): Promise<ProjectRecord | undefined> {
-  const store = ensureStore();
-  const project = findProjectByPath(store, projectPath);
-
-  if (!project) {
+  if (settingsType === undefined && cacheFolder === undefined && !hasDevtoolConfig) {
     return undefined;
   }
 
-  const targetList = isExperimental
-    ? project.experimental_ops_list || []
-    : project.ops_list || [];
-  const oppositeList = isExperimental
-    ? project.ops_list || []
-    : project.experimental_ops_list || [];
-  const existingOperator = [
-    ...targetList,
-    ...oppositeList,
-  ].find((item) => projectPathsEqual(item.path, operator.path));
-  const nextOperator: SubOperatorInfo = existingOperator
-    ? {
-      ...existingOperator,
-      name: operator.name,
-      path: operator.path,
-      isCompiled: existingOperator.isCompiled === true || operator.isCompiled === true,
-    }
-    : operator;
-  const nextTargetList = [
-    ...targetList.filter((item) =>
-      !projectPathsEqual(item.path, operator.path)),
-    nextOperator,
-  ];
-  const nextOppositeList = oppositeList.filter((item) =>
-    !projectPathsEqual(item.path, operator.path));
-  const nextOpsList = isExperimental ? nextOppositeList : nextTargetList;
-  const nextExperimentalOpsList = isExperimental ? nextTargetList : nextOppositeList;
+  const projectType = settingsType !== undefined
+    ? (KNOWN_PROJECT_TYPES.has(settingsType) ? settingsType : detectProjectTypeSync(projectPath))
+    : detectProjectTypeSync(projectPath);
 
-  if (
-    hasSameFieldValue(project.ops_list ?? [], nextOpsList)
-    && hasSameFieldValue(project.experimental_ops_list ?? [], nextExperimentalOpsList)
-  ) {
-    return project;
-  }
-
-  project.ops_list = nextOpsList;
-  project.experimental_ops_list = nextExperimentalOpsList;
-  project.update_time = new Date()
-    .toISOString();
-  writeStore(store);
-
-  return project;
+  return {
+    project_name: path.basename(projectPath),
+    project_path: projectPath,
+    project_type: projectType,
+    // Explicit workspace setting only (the record is null unless create/open/sync
+    // wrote an explicit script). The `/etc/profile` default stays in the readers
+    // that use it (getEnvironmentScriptPathFromWorkspace for spawn paths) — the
+    // record itself is never defaulted.
+    ascend_env_script: getConfiguredEnvironmentScriptPath() ?? null,
+    template_name: projectType === OperatorProjectType.TORCH_LIBRARY ? 'torch_library_template' : '',
+  };
 }
 
 /**
- * Find standard custom operator projects (including multiple operator sets) containing the specified path
- * Used to right-click a subfolder to locate the root project when compiling.
- * @param folderPath Folder path (such as sub-operator directory)
- * @returns The STANDARD_CUSTOM item containing the path, with the longest path first; if not found, undefined is returned
+ * Cache marker: the folder's scan state under `folders[normalizeProjectPath(path)]`.
+ * A key stored under a differently-cased variant of the same path is matched
+ * case-insensitively as well.
  */
-export function getContainingStandardCustomProject(folderPath: string): ProjectRecord | undefined {
-  if (!folderPath || typeof folderPath !== 'string') {
+function findCachedFolder(projectPath: string): FolderScanState | undefined {
+  const folders = readWorkspaceCache(projectPath).folders;
+
+  if (!folders) {
     return undefined;
   }
 
-  const store = ensureStore();
-  const normalizedFolder = path.normalize(folderPath)
-    .replace(/\\/g, '/')
-    .toLowerCase();
+  const normalized = normalizeProjectPath(projectPath);
+  const direct = folders[normalized];
 
-  const containing = store.projects.filter((p) => {
-    if (!p.project_path || !p.project_type) {
-      return false;
-    }
-
-    if (
-      p.project_type !== OperatorProjectType.STANDARD_CUSTOM
-    ) {
-      return false;
-    }
-
-    const normalizedProject = path.normalize(p.project_path)
-      .replace(/\\/g, '/')
-      .toLowerCase();
-
-    if (normalizedFolder === normalizedProject) {
-      return true;
-    }
-
-    const prefix = normalizedProject.endsWith('/') ? normalizedProject : `${normalizedProject}/`;
-
-    return normalizedFolder.startsWith(prefix);
-  });
-
-  if (containing.length === 0) {
-    return undefined;
+  if (direct) {
+    return direct;
   }
 
-  containing.sort((a, b) => {
-    const na = path.normalize(a.project_path || '')
-      .replace(/\\/g, '/').length;
-    const nb = path.normalize(b.project_path || '')
-      .replace(/\\/g, '/').length;
-
-    return nb - na;
-  });
-
-  return containing[0];
-}
-
-export function getProjectById(project_id: number) {
-  const store = ensureStore();
-  const found = store.projects.find((p) => p.id === project_id);
-
-  return found || null;
-}
-
-export function deleteProject(projectPath: string): boolean {
-  if (!projectPath || typeof projectPath !== 'string') {
-    console.warn('[deleteProject] Project path is empty or invalid:', projectPath);
-
-    return false;
-  }
-
-  const store = ensureStore();
-  const project = findProjectByPath(store, projectPath);
-  const index = project ? store.projects.indexOf(project) : -1;
-
-  if (index === -1) {
-    return false;
-  }
-
-  store.projects.splice(index, 1);
-  writeStore(store);
-
-  return true;
-}
-
-export function getAllProjects(): ProjectRecord[] {
-  const store = ensureStore();
-
-  return store.projects;
-}
-
-/**
- * Update the operator information of the standard custom operator project
- * @param projectPath project path
- * @param opsMeet operator collection list
- * @param opsList ordinary operator list
- * @param experimentalOpsList experimental operator list
- */
-export async function updateStandardCustomOperators(
-  projectPath: string,
-  opsMeet: OperatorCollectionInfo[],
-  opsList: SubOperatorInfo[],
-  experimentalOpsList: SubOperatorInfo[],
-): Promise<void> {
-  const store = ensureStore();
-  const project = findProjectByPath(store, projectPath);
-
-  if (project) {
-    appendLog('op-devtools/project-model', '[updateStandardCustomOperators] Updating project', { projectPath });
-    appendLog('[updateStandardCustomOperators]', 'ops_meet groups', {
-      count: opsMeet.length,
-      names: opsMeet.map((m) => m.name),
-    });
-    appendLog('[updateStandardCustomOperators]', 'ops_list operators', {
-      count: opsList.length,
-      names: opsList.map((o) => o.name),
-    });
-    appendLog('[updateStandardCustomOperators]', 'experimental_ops_list operators', {
-      count: experimentalOpsList.length,
-      names: experimentalOpsList.map((o) => o.name),
-    });
-
-    // Keep the isCompiled status of existing operators
-    const existingOpsList = project.ops_list || [];
-    const existingExperimentalOpsList = project.experimental_ops_list || [];
-
-    // Create an isCompiled state map of an existing operator (using the operator name as the key)
-    const existingOpsCompiledMap = new Map<string, boolean>();
-
-    existingOpsList.forEach((op) => {
-      if (op.isCompiled === true) {
-        existingOpsCompiledMap.set(op.name, true);
-      }
-    });
-    existingExperimentalOpsList.forEach((op) => {
-      if (op.isCompiled === true) {
-        existingOpsCompiledMap.set(op.name, true);
-      }
-    });
-
-    // Update the operator list and retain the existing isCompiled: true state
-    const updatedOpsList = opsList.map((op) => {
-      const existingIsCompiled = existingOpsCompiledMap.get(op.name);
-
-      // If isCompiled of an existing operator is true, keep it; otherwise, use the result of the scan
-      return {
-        ...op,
-        isCompiled: existingIsCompiled === true ? true : op.isCompiled,
-      };
-    });
-
-    const updatedExperimentalOpsList = experimentalOpsList.map((op) => {
-      const existingIsCompiled = existingOpsCompiledMap.get(op.name);
-
-      // If isCompiled of an existing operator is true, keep it; otherwise, use the result of the scan
-      return {
-        ...op,
-        isCompiled: existingIsCompiled === true ? true : op.isCompiled,
-      };
-    });
-
-    const shouldUpdate = !hasSameFieldValue(project.ops_meet ?? null, opsMeet)
-      || !hasSameFieldValue(project.ops_list ?? null, updatedOpsList)
-      || !hasSameFieldValue(project.experimental_ops_list ?? null, updatedExperimentalOpsList);
-
-    if (!shouldUpdate) {
-      appendLog(
-        'op-devtools/project-model',
-        '[updateStandardCustomOperators] No operator list changes detected, skipping store write',
-      );
-
-      return;
-    }
-
-    project.ops_meet = opsMeet;
-    project.ops_list = updatedOpsList;
-    project.experimental_ops_list = updatedExperimentalOpsList;
-    project.update_time = new Date()
-      .toISOString();
-    writeStore(store);
-
-    appendLog(
-      'op-devtools/project-model',
-      '[updateStandardCustomOperators] Update completed',
-      { preservedCompiledOperators: existingOpsCompiledMap.size },
-    );
-  }
-  else {
-    console.warn(`[updateStandardCustomOperators] Project not found: ${projectPath}`);
-    console.warn('[updateStandardCustomOperators] Existing project paths:', store.projects.map((p) => p.project_path));
-  }
-}
-
-/**
- * Mark the sub-operators of the standard custom operator project as compiled
- * @param projectPath project path
- * @param operatorNames list of operator names (comma separated string or array)
- */
-export async function markOperatorsAsCompiled(
-  projectPath: string,
-  operatorNames: string | string[],
-): Promise<void> {
-  appendLog('op-devtools/project-model', '[markOperatorsAsCompiled] Start', {
-    projectPath,
-    operatorNames,
-  });
-  const store = ensureStore();
-  const project = findProjectByPath(store, projectPath);
-
-  if (!project) {
-    console.warn(`[markOperatorsAsCompiled] Project not found: ${projectPath}`);
-
-    return;
-  }
-
-  // Convert operatorNames to array
-  const operatorNameArray = Array.isArray(operatorNames)
-    ? operatorNames
-    : operatorNames.split(',')
-      .map((name) => name.trim())
-      .filter((name) => name.length > 0);
-
-  if (operatorNameArray.length === 0) {
-    console.warn('[markOperatorsAsCompiled] Operator name list is empty');
-
-    return;
-  }
-
-  let updated = false;
-
-  // Update common operator list
-  if (project.ops_list && project.ops_list.length > 0) {
-    for (const op of project.ops_list) {
-      if (operatorNameArray.includes(op.name) && op.isCompiled !== true) {
-        op.isCompiled = true;
-        updated = true;
-      }
+  for (const [
+    key,
+    value,
+  ] of Object.entries(folders)) {
+    if (normalizeProjectPath(key) === normalized) {
+      return value;
     }
   }
 
-  // Update experimental operator list
-  if (project.experimental_ops_list && project.experimental_ops_list.length > 0) {
-    for (const op of project.experimental_ops_list) {
-      if (operatorNameArray.includes(op.name) && op.isCompiled !== true) {
-        op.isCompiled = true;
-        updated = true;
-      }
-    }
-  }
-
-  if (updated) {
-    project.update_time = new Date()
-      .toISOString();
-    writeStore(store);
-    appendLog('op-devtools/project-model', '[markOperatorsAsCompiled] Marked operators', { count: operatorNameArray.length });
-  }
-  else {
-    console.warn(`[markOperatorsAsCompiled] Operators to mark were not found: ${operatorNameArray.join(', ')}`);
-  }
-}
-
-export function _resetProjectsForTest(): void {
-  storage.delete();
+  return undefined;
 }

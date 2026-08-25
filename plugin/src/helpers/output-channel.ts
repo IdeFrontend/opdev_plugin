@@ -48,27 +48,6 @@ export function getOperatorToolOutputChannel(
   return channel;
 }
 
-/** Fallback label from operator config type when call sites do not pass an override. */
-export function deriveOperatorToolOutputLabel(ctx: {
-  configType?: string | null;
-}): OperatorToolOutputLabel {
-  switch (ctx.configType) {
-    case 'build_op':
-    case 'build_example':
-      return 'compile';
-    case 'simulate':
-      return 'simulate';
-    case 'on_board':
-      return 'run';
-    case 'ut_test':
-      return 'test';
-    case 'sanitizer':
-      return 'sanitizer';
-    default:
-      return 'tool';
-  }
-}
-
 export function appendLog(
   scope: string,
   message: string,

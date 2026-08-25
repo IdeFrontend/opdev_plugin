@@ -10,7 +10,7 @@ import type {
 import type { OperatorBuildBehavior } from './operator-plugin.interface';
 import type { IProjectDetector } from './project-detector.interface';
 import type { BaseOpGenerator } from '@plugin/domain/services/op-generator-factory';
-import type { OpRecord } from '@plugin/domain/models/model';
+import type { OpRecord } from '@plugin/domain/models/op-record';
 
 const CANN_SOC_PROJECT_TYPES: ReadonlySet<OperatorProjectType> = new Set([
   OperatorProjectType.ASCEND_C,
@@ -47,7 +47,7 @@ function pickSpawnEnvKeys(
 // registry back-edges. Plugin/detector implementations are registered at runtime via
 // register() calls, not imported directly.
 
-/** Minimal op descriptor needed for path/script lookup. Satisfied by both OpRecord and the local Op interface in op-util.ts. */
+/** Minimal op descriptor needed for path/script lookup. Satisfied by OpRecord and structurally-compatible records. */
 export type OpDescriptor = Pick<OpRecord, 'op_path' | 'op_type' | 'op_name'>;
 
 /**

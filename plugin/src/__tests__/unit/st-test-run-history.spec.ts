@@ -208,6 +208,26 @@ describe('ST test run history', () => {
       .not.toContain('flat-run-0');
   });
 
+  it('rejects a manifest result path that escapes with Windows-style separators', () => {
+    const runId = 'escape-run';
+
+    createRun(runId, '2026-07-21T11:00:00.000Z');
+    const manifestPath = path.join(historyDirectory, runId, ST_TEST_RUN_MANIFEST_FILE);
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as {
+      artifacts: Array<{ resultPath: string }>;
+    };
+
+    // `..\outside.csv` is the Windows-separator escape form: on POSIX hosts a
+    // backslash is a plain filename character, so the containment check must
+    // normalize separators before comparing. The run must be rejected as
+    // invalid on every platform.
+    manifest.artifacts[0].resultPath = '..\\outside.csv';
+    fs.writeFileSync(manifestPath, JSON.stringify(manifest));
+
+    expect(loadStTestRunHistory(historyDirectory, 'add'))
+      .toEqual([]);
+  });
+
   it('does not overwrite invalid manifests or load paths that escape a run directory', () => {
     const runId = '2026-07-21T11-00-00-run';
     const created = createRun(runId, '2026-07-21T11:00:00.000Z');

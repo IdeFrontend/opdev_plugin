@@ -1,4 +1,9 @@
-import { CommandContext, BaseContext, ProfilerCommandParams } from './types';
+import {
+  CommandContext, BaseContext, ProfilerCommandParams, SectionConfig,
+} from './types';
+import type {
+  SimulateConfig, OnBoardConfig,
+} from '@plugin/service/config-service';
 import {
   buildPythonOperatorCommandContext,
   buildPythonOnBoardCommand,
@@ -12,37 +17,15 @@ import {
 export abstract class BasePythonCommandStrategy {
   protected abstract readonly pythonOpType: string;
 
-  buildCommandContext(baseContext: BaseContext): CommandContext {
+  buildCommandContext<TConfig extends SectionConfig>(baseContext: BaseContext<TConfig>): CommandContext<TConfig> {
     return buildPythonOperatorCommandContext(baseContext);
   }
 
-  buildSimulateCommand(params: ProfilerCommandParams): string {
-    const {
-      config, project, operator, sourceCannCmd, cdCmd, exampleTargetFile,
-    } = params;
-    return buildPythonSimulateCommand(
-      config,
-      project,
-      operator,
-      sourceCannCmd,
-      cdCmd,
-      exampleTargetFile,
-      this.pythonOpType,
-    );
+  buildSimulateCommand(params: ProfilerCommandParams<SimulateConfig>): string {
+    return buildPythonSimulateCommand(params, this.pythonOpType);
   }
 
-  buildOnBoardCommand(params: ProfilerCommandParams): string {
-    const {
-      config, project, operator, sourceCannCmd, cdCmd, exampleTargetFile,
-    } = params;
-    return buildPythonOnBoardCommand(
-      config,
-      project,
-      operator,
-      sourceCannCmd,
-      cdCmd,
-      exampleTargetFile,
-      this.pythonOpType,
-    );
+  buildOnBoardCommand(params: ProfilerCommandParams<OnBoardConfig>): string {
+    return buildPythonOnBoardCommand(params, this.pythonOpType);
   }
 }

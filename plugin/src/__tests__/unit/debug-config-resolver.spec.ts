@@ -42,6 +42,24 @@ describe('resolveDebugLaunchConfigName', () => {
       .toBe(DEBUG_LAUNCH_CONFIG.MSDEBUG_PYTHON);
   });
 
+  it('maps canonical torch-library + template to msdebug-python for CPU and NPU (settings-native openProject storage)', () => {
+    expect(resolveDebugLaunchConfigName(
+      'torch-library',
+      'npu',
+      defaultBehavior,
+      'torch_library_template',
+    ))
+      .toBe(DEBUG_LAUNCH_CONFIG.MSDEBUG_PYTHON);
+
+    expect(resolveDebugLaunchConfigName(
+      'torch-library',
+      'cpu',
+      defaultBehavior,
+      'torch_library_template',
+    ))
+      .toBe(DEBUG_LAUNCH_CONFIG.MSDEBUG_PYTHON);
+  });
+
   it('maps default ascend/cann projects to binary msdebug configs', () => {
     expect(resolveDebugLaunchConfigName('cann', 'npu', defaultBehavior))
       .toBe(DEBUG_LAUNCH_CONFIG.MSDEBUG);

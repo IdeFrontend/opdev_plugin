@@ -74,7 +74,7 @@ Registered in `extension.ts`; rows built in `operate-tree-provider.ts`.
 | Row | Command | Task method | Notes |
 |-----|---------|-------------|--------|
 | **CPU Debug** | `huawei-op-devtools.sidebar.cpuDebug` | `runCpuDebug` | Hidden for `projectType === 'ascend'` and `cann` + `torch_library_template`; hidden when plugin `buildBehavior.supportsCpuDebug` is false |
-| **NPU Debug** | `huawei-op-devtools.sidebar.npuDebug` | `runDebug` | Shown only if registry supports NPU debug **and** `op-devtools.debugMode` is true (`ConfigHelper.isDebugModeEnabled`); requires `supportsNpuDebug` on the active operator plugin (**Triton** when `op-devtools.operatorSupport.triton=true`) |
+| **NPU Debug** | `huawei-op-devtools.sidebar.npuDebug` | `runDebug` | Shown only if registry supports NPU debug **and** `op-devtools.debugMode` is true (read via `SettingsLoader`); requires `supportsNpuDebug` on the active operator plugin (**Triton** when `op-devtools.operatorSupport.triton=true`) |
 | **Debug** group gear | `huawei-op-devtools.operate.debugSettings` | `debugConfig` | Opens configure UI; `skipFlowExecutionUi` (no spinner) |
 
 Both debug runs use `operateTreeProvider.runFlowAction(...)` for row loading/stop UI. They are **not** enqueued in `OperatorActionQueueManager` (unlike sanitizer/simulation/on-board).
@@ -161,7 +161,7 @@ Selection in `task-controller.ts` via `resolveDebugLaunchConfigName()` (`domain/
 - NPU: `msdebug-triton-npu` (triton) / `msdebug-python` (torch library) / `msdebug` (default)
 - CPU: `msdebug-python` (torch library) / `msdebug-cpu` (default); Triton has no CPU debug (`supportsCpuDebug: false`)
 
-Python-based configs are patched before launch by `updateMsdebugPythonTarget()` (`domain/utils/debug-python-target.ts`): interpreter, active `.py` script, operator `cwd`, and (Triton NPU) `LAUNCH_KERNEL_PATH` when a compiled kernel (`*.npubin` or legacy `kernel.o` / `kernel_reloc.o`) is found under `~/.triton/cache`.
+Python-based configs are patched before launch by `updateMsdebugPythonTarget()` (`domain/utils/debug-python-target.ts`): interpreter, active `.py` script, operator `cwd`, and (Triton NPU) `LAUNCH_KERNEL_PATH` when a compiled kernel (`*.npubin`, `kernel.o` or `kernel_reloc.o`) is found under `~/.triton/cache`.
 
 If no workspace folder: falls back to `workbench.action.debug.start`.
 
@@ -214,7 +214,7 @@ Debug-related workspace keys (`debugMode`, CPU/NPU debug compile commands): [`wo
 | `domain/utils/project-utils.ts` | `ensureLaunchJsonExists` |
 | `helpers/post-activate-bootstrap.ts` | MindStudio Debug VSIX install |
 | `class/mind-studio-plugin-installer.ts` | Install logic (VS Code / remote / CodeArts) |
-| `helpers/ConfigHelper.ts` | `debugMode` read |
+| `service/settings-loader.ts` | `debugMode` read |
 | `constants.ts` | `COMMAND_SIDEBAR_*_DEBUG`, `COMMAND_OPERATOR_PROJECT_*_DEBUG` |
 | `package.json` | `operator.debug` submenu, `op-devtools.debugMode`, compile debug script settings |
 

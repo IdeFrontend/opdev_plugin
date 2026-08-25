@@ -4,6 +4,10 @@ import * as path from 'path';
 
 import { joinIdeConfigPath } from '@plugin/helpers/ide-config-dir';
 import { collectSanitizerLogReports } from '@plugin/helpers/sanitizer-log-reports';
+import {
+  FileMapEntry,
+  readWorkspaceCache,
+} from '@plugin/helpers/workspace-cache';
 
 import { PermanentStorage } from '@plugin/class/permanent-storage';
 import {
@@ -12,8 +16,6 @@ import {
   MarkRecordParams,
 } from '@shared/api-types';
 import { PerformanceRunData } from '@plugin/core/performance/performance-run-data';
-import { ProjectManager } from '@plugin/core/project/project-manager';
-import { getConfig } from '@plugin/domain';
 
 const MARKED_STORAGE_KEY = 'msSanitizer_marks';
 
@@ -94,49 +96,28 @@ export class RunDataService {
     // Read report files in the log directory; skips empty logs a failed run leaves behind.
     res.push(...collectSanitizerLogReports(logPath, markSet));
 
-    // Read fileMapList from config
-    try {
-      await ProjectManager.getInstance()
-        .initProject();
-      const projectId = ProjectManager.getInstance().projectId;
+    // Read fileMapList: the workspace cache is the source (the import seeds
+    // `fileMapLists` on activation, runtime writers extend it).
+    const fileMapList: FileMapEntry[] = readWorkspaceCache(workspacePath).fileMapLists?.sanitizer ?? [];
 
-      if (!projectId) {
-        return res;
-      }
+    for (const fileMap of fileMapList) {
+      if (fs.existsSync(fileMap.filePath)) {
+        const stat = fs.statSync(fileMap.filePath);
 
-      const sanitizerConfigs = getConfig(Number(projectId), 'sanitizer');
+        if (stat.isFile()) {
+          // Sanitizer only handles files
+          const filename = path.basename(fileMap.filePath);
+          const id = `sanitizer_${fileMap.filePath}`;
 
-      for (const config of sanitizerConfigs) {
-        const userOptions = config.user_options as Record<string, unknown> | null;
-
-        if (userOptions && Array.isArray(userOptions.fileMapList)) {
-          const fileMapList = userOptions.fileMapList as Array<{ filePath: string;
-            reportTime: number }>;
-
-          for (const fileMap of fileMapList) {
-            if (fs.existsSync(fileMap.filePath)) {
-              const stat = fs.statSync(fileMap.filePath);
-
-              if (stat.isFile()) {
-                // Sanitizer only handles files
-                const filename = path.basename(fileMap.filePath);
-                const id = `sanitizer_${fileMap.filePath}`;
-
-                res.push({
-                  title: filename,
-                  timestamp: fileMap.reportTime,
-                  id,
-                  path: fileMap.filePath,
-                  marked: markSet.has(id),
-                });
-              }
-            }
-          }
+          res.push({
+            title: filename,
+            timestamp: fileMap.reportTime,
+            id,
+            path: fileMap.filePath,
+            marked: markSet.has(id),
+          });
         }
       }
-    }
-    catch (error) {
-      console.error('Failed to read sanitizer config fileMapList:', error);
     }
 
     // Sort by time

@@ -1,15 +1,25 @@
 import { t } from 'i18next';
-import { getOpByProjectIdAndOpName } from './ops';
-import { getProjectById } from '@plugin/domain';
+import { resolveOpRecord } from '@plugin/domain/models/op-record';
+import { getProjectByPath } from '@plugin/domain/models/project-model';
 import { ConfigService } from '@plugin/service/config-service';
+import type {
+  BuildOpConfig,
+  BuildExampleConfig,
+  UtTestConfig,
+  SimulateConfig,
+  OnBoardConfig,
+  SanitizerConfig,
+} from '@plugin/service/config-service';
 import {
   getAdvanceCmd, getExecutableCommand, isRunPackageTarget, joinCommands,
 } from '@plugin/domain/utils/command-utils';
-import { ConfigRecord } from '@plugin/domain/models/config-model';
 import {
   CommandStrategyFactory,
   BaseContext,
   CommandContext,
+  SectionConfig,
+  BuildableConfig,
+  ProfilerTargetConfig,
 } from './command-strategy';
 import {
   resolveExampleMode,
@@ -22,58 +32,198 @@ import {
 } from '@plugin/domain/utils/operator-example-mode';
 
 /**
- * Get basic context information (does not include policy-specific processing)
- *
- * @param configId configuration ID
- * @returns BaseContext base context object
- * @throws Error if the configuration does not exist
+ * Resolve the op_type used for the synthesized operator record when no ops.json row
+ * exists. Mirrors the row-driven strategy routing: ascend/standard-custom projects
+ * build with the Ascend strategy, pyasc/triton with
+ * their own, everything else (cann, torch-library, unknown) with the cann strategy.
+ * This closes the regression where operator=null fell through to the cann strategy,
+ * stripping ascend/standard-custom projects of their deploy/run tails.
  */
-function getBaseContext(configId: number): BaseContext {
-  const config = ConfigService.getRuntimeConfigById(configId) as unknown as ConfigRecord;
+function resolveOperatorOpType(projectType: string | null | undefined): string {
+  if (projectType === 'standard-custom' || projectType === 'ascend') {
+    return 'ascend';
+  }
 
-  if (!config) {
+  if (projectType === 'pyasc') {
+    return 'pyasc';
+  }
+
+  if (projectType === 'triton') {
+    return 'triton';
+  }
+
+  return 'cann';
+}
+
+/**
+ * Shared resolution for the per-section base-context resolvers: the project
+ * record (throwing when the project does not exist), the operator record —
+ * the first name of the sidebar selection, falling back to the build_op
+ * `operatorNameToCompile` setting (`operatorNames?.first || config.op`), then
+ * the project root operator — and the section config produced by the
+ * caller-supplied factory. The full comma-separated selection is NOT consumed
+ * here: builders receive it separately and embed it into scripts / target
+ * rewriting.
+ *
+ * @param projectPath workspace project path
+ * @param operatorNames Operator names, multiple separated by commas (used in scenarios such as standard custom operators)
+ * @param configFactory section config factory, invoked with the resolved op name
+ * @returns BaseContext base context object
+ * @throws Error if the project does not exist
+ */
+function resolveSectionBaseContext<TConfig extends SectionConfig>(
+  projectPath: string,
+  operatorNames: string | undefined,
+  configFactory: (opName: string)=> TConfig,
+): BaseContext<TConfig> {
+  const selectionOp = operatorNames?.split(',')[0]?.trim() || '';
+
+  const project = getProjectByPath(projectPath);
+
+  if (!project) {
     throw new Error(t('command.configNotFound'));
   }
 
-  const project = getProjectById(config.project_id);
-  const operator = getOpByProjectIdAndOpName(config.project_id, config.op);
+  // The config is resolved with the raw selection first, so a config-carried
+  // operator name (build_op `operatorNameToCompile`) can backfill an empty
+  // selection — the resolution chain reads the row's `op` the same way. The
+  // config-carried name WINS when present: a standard-custom collection
+  // carries the ROOT name in its single config set (the row `op` is the
+  // project name, and the concrete operators are selected only via the
+  // `--ops={operatorNames}` placeholder).
+  const config = configFactory(selectionOp);
+  const configOp = typeof (config as unknown as { op?: unknown }).op === 'string'
+    ? (config as { op?: string }).op as string
+    : '';
+  const opName = configOp || selectionOp;
+
+  const operator = resolveOpRecord(projectPath, opName) ?? {
+    op_name: opName,
+    op_type: resolveOperatorOpType(project.project_type),
+    op_path: project.project_path,
+  };
 
   return {
     config,
     project,
     operator,
+    op: opName,
   };
+}
+
+/**
+ * Resolve the build_op base context (project, operator and runtime config row)
+ * for one command build. Callers resolve once and pass the result to the
+ * builders — the builders never fetch anything themselves.
+ *
+ * @param projectPath workspace project path
+ * @param operatorNames Operator names, multiple separated by commas (used in scenarios such as standard custom operators)
+ * @returns BaseContext base context object
+ * @throws Error if the project does not exist
+ */
+export function resolveBuildOpBaseContext(projectPath: string, operatorNames?: string): BaseContext<BuildOpConfig> {
+  return resolveSectionBaseContext(projectPath, operatorNames, (opName) => ConfigService.getBuildOpConfig());
+}
+
+/**
+ * Resolve the build_example base context (project, operator and runtime config
+ * row) for one command build. Callers resolve once and pass the result to the
+ * builders — the builders never fetch anything themselves.
+ *
+ * @param projectPath workspace project path
+ * @param operatorNames Operator names, multiple separated by commas (used in scenarios such as standard custom operators)
+ * @returns BaseContext base context object
+ * @throws Error if the project does not exist
+ */
+export function resolveBuildExampleBaseContext(projectPath: string, operatorNames?: string): BaseContext<BuildExampleConfig> {
+  return resolveSectionBaseContext(projectPath, operatorNames, (opName) => ConfigService.getBuildExampleConfig());
+}
+
+/**
+ * Resolve the ut_test base context (project, operator and runtime config row)
+ * for one command build. Callers resolve once and pass the result to the
+ * builders — the builders never fetch anything themselves.
+ *
+ * @param projectPath workspace project path
+ * @param operatorNames Operator names, multiple separated by commas (used in scenarios such as standard custom operators)
+ * @returns BaseContext base context object
+ * @throws Error if the project does not exist
+ */
+export function resolveUtTestBaseContext(projectPath: string, operatorNames?: string): BaseContext<UtTestConfig> {
+  return resolveSectionBaseContext(projectPath, operatorNames, (opName) => ConfigService.getUtTestConfig());
+}
+
+/**
+ * Resolve the simulate base context (project, operator and runtime config row)
+ * for one command build. Callers resolve once and pass the result to the
+ * builders — the builders never fetch anything themselves.
+ *
+ * @param projectPath workspace project path
+ * @param operatorNames Operator names, multiple separated by commas (used in scenarios such as standard custom operators)
+ * @returns BaseContext base context object
+ * @throws Error if the project does not exist
+ */
+export function resolveSimulateBaseContext(projectPath: string, operatorNames?: string): BaseContext<SimulateConfig> {
+  return resolveSectionBaseContext(projectPath, operatorNames, (opName) => ConfigService.getSimulateConfig(projectPath));
+}
+
+/**
+ * Resolve the on_board base context (project, operator and runtime config row)
+ * for one command build. Callers resolve once and pass the result to the
+ * builders — the builders never fetch anything themselves.
+ *
+ * @param projectPath workspace project path
+ * @param operatorNames Operator names, multiple separated by commas (used in scenarios such as standard custom operators)
+ * @returns BaseContext base context object
+ * @throws Error if the project does not exist
+ */
+export function resolveOnBoardBaseContext(projectPath: string, operatorNames?: string): BaseContext<OnBoardConfig> {
+  return resolveSectionBaseContext(projectPath, operatorNames, (opName) => ConfigService.getOnBoardConfig(projectPath));
+}
+
+/**
+ * Resolve the sanitizer base context (project, operator and runtime config row)
+ * for one command build. Callers resolve once and pass the result to the
+ * builders — the builders never fetch anything themselves.
+ *
+ * @param projectPath workspace project path
+ * @param operatorNames Operator names, multiple separated by commas (used in scenarios such as standard custom operators)
+ * @returns BaseContext base context object
+ * @throws Error if the project does not exist
+ */
+export function resolveSanitizerBaseContext(projectPath: string, operatorNames?: string): BaseContext<SanitizerConfig> {
+  return resolveSectionBaseContext(projectPath, operatorNames, (opName) => ConfigService.getSanitizerConfig(projectPath, opName));
 }
 
 /**
  * Generate operator compilation command
  *
- * @param config_id configuration ID
+ * @param baseContext resolved command context (see {@link resolveBuildOpBaseContext})
  * @param compileOption compilation parameters --debug: debug mode; --mssanitizer: anomaly detection mode
  * @param operatorNames Operator names, multiple separated by commas (used in scenarios such as standard custom operators)
  * @param scriptField script field, specifies which field to use as the command line script, script | cpu_debug_script | npu_debug_script
  * @returns complete shell execution command string
  */
-export function getBuildOpCommand(config_id: number, compileOption?: string, operatorNames?: string, scriptField?: string) {
+export function getBuildOpCommand(baseContext: BaseContext<BuildableConfig>, compileOption?: string, operatorNames?: string, scriptField?: string) {
   try {
-    const baseContext = getBaseContext(config_id);
     const strategy = CommandStrategyFactory.getStrategy(baseContext.operator?.op_type);
 
     // Build the complete context
     const context = strategy.buildCommandContext(baseContext);
 
-    const userOptions = context.config.user_options as Record<string, unknown> | null | undefined;
-    const advance_cmd = getAdvanceCmd(userOptions?.advance_param);
+    // Only the simulate/on-board/sanitizer sections carry advance_param; build_op itself
+    // never had one (its user_options carried no advance_param row).
+    const advance_cmd = 'advanceParam' in context.config ? getAdvanceCmd(context.config.advanceParam) : '';
 
     return strategy.buildOpCommand({
       config: context.config,
-      operator: context.operator,
       sourceCannCmd: context.sourceCannCmd,
       cdCmd: context.cdCmd,
       compileOption,
       advance_cmd,
       operatorNames,
       scriptField,
+      op: context.op,
     });
   }
   catch (e: unknown) {
@@ -84,21 +234,22 @@ export function getBuildOpCommand(config_id: number, compileOption?: string, ope
 /**
  * Generate operator running command
  *
- * @param config_id configuration ID
+ * @param baseContext resolved command context (see {@link resolveBuildOpBaseContext});
+ *   build_example contexts are accepted too — both sections carry `targetFile`, and
+ *   buildRunCommand reads only it
  * @returns complete shell execution command string
  */
-export function getRunCommand(config_id: number) {
+export function getRunCommand(baseContext: BaseContext<BuildOpConfig | BuildExampleConfig>) {
   try {
-    const baseContext = getBaseContext(config_id);
     const strategy = CommandStrategyFactory.getStrategy(baseContext.operator?.op_type);
 
     const context = strategy.buildCommandContext(baseContext);
 
     // Use strategies to get the correct target_file
-    const targetFile = strategy.getRunTargetFile(context.config, context.operator);
+    const targetFile = strategy.getRunTargetFile(context.op, context.operator, context.project);
 
     // Update target_file in context
-    context.config.target_file = targetFile;
+    context.config.targetFile = targetFile;
 
     return strategy.buildRunCommand(context);
   }
@@ -114,17 +265,19 @@ export function getRunCommand(config_id: number) {
  *
  * When the project path or operator name is unknown we cannot inspect the tree, so we keep
  * the configured mode and do not claim the example is missing.
+ *
+ * Profiler/sanitizer contexts carry no example settings in their config rows, so the
+ * `eagerExamplePattern`-presence guard keeps them on the fallback path: eager mode +
+ * the default example-filename matchers + the on-disk example scan.
  */
 function resolveModeFromContext(
-  context: CommandContext,
+  context: CommandContext<BuildExampleConfig | ProfilerTargetConfig>,
   operatorNames?: string,
 ): { mode: ExampleMode;
   exampleFound: boolean;
   opName: string } {
-  const userOptions = context.config.user_options as Record<string, unknown> | null | undefined;
-  const globalMode: ExampleMode = userOptions?.execution_mode === 'graph' ? 'graph' : 'eager';
-  const configOp = typeof userOptions?.op === 'string' ? userOptions.op : context.config.op;
-  const opName = operatorNames?.trim() || configOp || '';
+  const globalMode: ExampleMode = 'eagerExamplePattern' in context.config && context.config.executionMode === 'graph' ? 'graph' : 'eager';
+  const opName = operatorNames?.trim() || context.op || '';
   const projectRoot = context.project?.project_path || '';
 
   if (!projectRoot || !opName) {
@@ -136,10 +289,10 @@ function resolveModeFromContext(
   }
 
   // Example-filename matchers default to the build.sh contract but are overridable per
-  // project via settings (RegExp strings, surfaced into user_options by config-service).
+  // project via settings (RegExp strings, surfaced into the build_example DAO).
   const matchers: ExampleMatchers = {
-    eager: toExampleMatcher(userOptions?.eager_example_pattern as string | undefined, DEFAULT_EXAMPLE_MATCHERS.eager),
-    graph: toExampleMatcher(userOptions?.graph_example_pattern as string | undefined, DEFAULT_EXAMPLE_MATCHERS.graph),
+    eager: toExampleMatcher('eagerExamplePattern' in context.config ? context.config.eagerExamplePattern : undefined, DEFAULT_EXAMPLE_MATCHERS.eager),
+    graph: toExampleMatcher('graphExamplePattern' in context.config ? context.config.graphExamplePattern : undefined, DEFAULT_EXAMPLE_MATCHERS.graph),
   };
 
   const {
@@ -157,13 +310,12 @@ function resolveModeFromContext(
  * Resolve the run_example mode for a config without building the command, so the caller
  * (e.g. the example-build action) can surface a warning when the operator ships no example.
  */
-export function resolveExampleModeForConfig(
-  config_id: number,
+export function resolveExampleModeForBaseContext(
+  baseContext: BaseContext<BuildExampleConfig>,
   operatorNames?: string,
 ): { mode: ExampleMode;
   exampleFound: boolean;
   opName: string } {
-  const baseContext = getBaseContext(config_id);
   const strategy = CommandStrategyFactory.getStrategy(baseContext.operator?.op_type);
   const context = strategy.buildCommandContext(baseContext);
 
@@ -180,27 +332,19 @@ export function resolveExampleModeForConfig(
  * config carries `execution_mode` and the example-filename patterns in its `user_options`
  * (config-service surfaces the settings per config type), so reading them off the
  * profiler/sanitizer config would silently fall back to `eager` and to the default patterns.
+ * The caller resolves the example context explicitly via
+ * {@link resolveBuildExampleBaseContext} and passes it in.
  */
 function rewriteExampleTargetForExample(
   targetFile: string,
-  example_config_id: number,
-  fallbackContext: CommandContext,
+  exampleBaseContext: BaseContext<BuildExampleConfig>,
   operatorNames?: string,
 ): string {
   if (!operatorNames || !isExampleTarget(targetFile)) {
     return targetFile;
   }
 
-  let mode: ExampleMode;
-
-  try {
-    mode = resolveExampleModeForConfig(example_config_id, operatorNames).mode;
-  }
-  catch {
-    // No example config (getBaseContext throws): keep the profiler config as the source of
-    // the operator/project, rather than failing a run over a mode lookup.
-    mode = resolveModeFromContext(fallbackContext, operatorNames).mode;
-  }
+  const mode = resolveExampleModeForBaseContext(exampleBaseContext, operatorNames).mode;
 
   return rewriteExampleTarget(targetFile, operatorNames, mode);
 }
@@ -208,7 +352,7 @@ function rewriteExampleTargetForExample(
 /**
  * Generate sample compilation commands
  *
- * @param config_id configuration ID
+ * @param baseContext resolved command context (see {@link resolveBuildExampleBaseContext})
  * @param compileOption compile option
  * @param operatorNames Operator names, multiple separated by commas (used in scenarios such as standard custom operators)
  * @param exampleMode explicit run_example mode; when omitted it is auto-detected from the operator's example files
@@ -216,35 +360,30 @@ function rewriteExampleTargetForExample(
  * @returns complete shell execution command string
  */
 export function getBuildExampleCommand(
-  config_id: number,
+  baseContext: BaseContext<BuildExampleConfig>,
   compileOption?: string,
   operatorNames?: string,
   exampleMode?: ExampleMode,
   buildExampleOnly = false,
 ) {
   try {
-    const baseContext = getBaseContext(config_id);
     const strategy = CommandStrategyFactory.getStrategy(baseContext.operator?.op_type);
 
     const context = strategy.buildCommandContext(baseContext);
 
-    const userOptions = context.config.user_options as Record<string, unknown> | null | undefined;
-    const advance_cmd = getAdvanceCmd(userOptions?.advance_param);
-
     // `exampleMode`, when supplied, is the per-operator mode already resolved by the caller
-    // (the run_example action resolves it up front to warn about a missing example — see
-    // resolveExampleModeForConfig / #171). Otherwise resolve it here, so every pre-build
-    // builds the example the operator actually ships instead of the configured one.
+    // (the run_example action resolves it up front to warn about a missing example).
+    // Otherwise resolve it here, so every pre-build builds the example the operator
+    // actually ships instead of the configured one.
     return strategy.buildExampleCommand({
       config: context.config,
-      operator: context.operator,
       sourceCannCmd: context.sourceCannCmd,
       cdCmd: context.cdCmd,
       compileOption,
-      advance_cmd,
       operatorNames,
       exampleMode: exampleMode ?? resolveModeFromContext(context, operatorNames).mode,
       buildExampleOnly,
+      op: context.op,
     });
   }
   catch (e: unknown) {
@@ -258,26 +397,25 @@ export function getBuildExampleCommand(
  * Example (simulator directory for --soc-version, not CANN slug):
  * msprof op simulator --soc-version=Ascend910B3 --output=... --aic-metrics=... ./app
  *
- * @param config_id configuration ID
- * @param example_config_id example configuration ID
+ * @param baseContext resolved command context (see {@link resolveSimulateBaseContext})
+ * @param exampleBaseContext resolved build_example context, used to repoint example targets
  * @param operatorNames Operator names, multiple separated by commas (for standard custom operator scenarios)
  * @returns complete shell execution command string
  */
 export function getSimulateCommand(
-  config_id: number,
-  example_config_id: number,
+  baseContext: BaseContext<SimulateConfig>,
+  exampleBaseContext: BaseContext<BuildExampleConfig>,
   operatorNames?: string,
 ) {
   try {
-    const baseContext = getBaseContext(config_id);
     const strategy = CommandStrategyFactory.getStrategy(baseContext.operator?.op_type);
 
     const context = strategy.buildCommandContext(baseContext);
 
     // Use strategies to get the correct target_file
-    let targetFile = strategy.getProfilerTargetFile(context.config, context.operator, example_config_id);
+    let targetFile = strategy.getProfilerTargetFile(context.config, context.operator, context.op, context.project);
 
-    targetFile = rewriteExampleTargetForExample(targetFile, example_config_id, context, operatorNames);
+    targetFile = rewriteExampleTargetForExample(targetFile, exampleBaseContext, operatorNames);
 
     return strategy.buildSimulateCommand({
       config: context.config,
@@ -287,6 +425,7 @@ export function getSimulateCommand(
       cdCmd: context.cdCmd,
       exampleTargetFile: targetFile,
       cdBuildCmd: context.cdBuildCmd,
+      op: context.op,
     });
   }
   catch (e: unknown) {
@@ -297,26 +436,25 @@ export function getSimulateCommand(
 /**
  * Generate board command
  *
- * @param config_id configuration ID
- * @param example_config_id example configuration ID
+ * @param baseContext resolved command context (see {@link resolveOnBoardBaseContext})
+ * @param exampleBaseContext resolved build_example context, used to repoint example targets
  * @param operatorNames Operator names, multiple separated by commas (for standard custom operator scenarios)
  * @returns complete shell execution command string
  */
 export function getOnBoardCommand(
-  config_id: number,
-  example_config_id: number,
+  baseContext: BaseContext<OnBoardConfig>,
+  exampleBaseContext: BaseContext<BuildExampleConfig>,
   operatorNames?: string,
 ) {
   try {
-    const baseContext = getBaseContext(config_id);
     const strategy = CommandStrategyFactory.getStrategy(baseContext.operator?.op_type);
 
     const context = strategy.buildCommandContext(baseContext);
 
     // Use strategies to get the correct target_file
-    let targetFile = strategy.getProfilerTargetFile(context.config, context.operator, example_config_id);
+    let targetFile = strategy.getProfilerTargetFile(context.config, context.operator, context.op, context.project);
 
-    targetFile = rewriteExampleTargetForExample(targetFile, example_config_id, context, operatorNames);
+    targetFile = rewriteExampleTargetForExample(targetFile, exampleBaseContext, operatorNames);
 
     return strategy.buildOnBoardCommand({
       config: context.config,
@@ -326,6 +464,7 @@ export function getOnBoardCommand(
       cdCmd: context.cdCmd,
       exampleTargetFile: targetFile,
       cdBuildCmd: context.cdBuildCmd,
+      op: context.op,
     });
   }
   catch (e: unknown) {
@@ -336,35 +475,27 @@ export function getOnBoardCommand(
 /**
  * Generate Sanitizer (anomaly detection) command
  *
- * @param sanitizerConfigId Sanitizer configuration ID
- * @param example_config_id example configuration ID
+ * @param baseContext resolved command context (see {@link resolveSanitizerBaseContext})
+ * @param exampleBaseContext resolved build_example context, used to repoint example targets
  * @param operatorNames Operator names, multiple separated by commas (for standard custom operator scenarios)
  * @returns complete shell execution command string
  */
 export function getSanitizerCommand(
-  sanitizerConfigId: number,
-  example_config_id: number,
+  baseContext: BaseContext<SanitizerConfig>,
+  exampleBaseContext: BaseContext<BuildExampleConfig>,
   operatorNames?: string,
 ) {
   try {
-    const baseContext = getBaseContext(sanitizerConfigId);
     const strategy = CommandStrategyFactory.getStrategy(baseContext.operator?.op_type);
 
     const context = strategy.buildCommandContext(baseContext);
 
     // Use strategies to get the correct target_file
-    let targetFile = strategy.getProfilerTargetFile(context.config, context.operator, example_config_id);
+    let targetFile = strategy.getProfilerTargetFile(context.config, context.operator, context.op, context.project);
 
-    targetFile = rewriteExampleTargetForExample(targetFile, example_config_id, context, operatorNames);
+    targetFile = rewriteExampleTargetForExample(targetFile, exampleBaseContext, operatorNames);
 
-    return strategy.buildSanitizerCommand(
-      context.config,
-      context.operator,
-      context.sourceCannCmd,
-      context.cdCmd,
-      targetFile,
-      context.cdBuildCmd,
-    );
+    return strategy.buildSanitizerCommand(context, targetFile);
   }
   catch (e: unknown) {
     throw new Error(t('command.getSanitizerCommandFailed', { error: (e as Error).message }));
@@ -374,32 +505,28 @@ export function getSanitizerCommand(
 /**
  * Build UT test command
  *
- * @param config_id configuration ID
+ * @param baseContext resolved command context (see {@link resolveUtTestBaseContext})
  * @param operatorNames operator names, comma-separated (e.g. standard custom operators)
+ * @param compileOption compile option
  * @returns full shell command string
  */
 export function getUtTestCommand(
-  config_id: number,
+  baseContext: BaseContext<UtTestConfig>,
   operatorNames?: string,
   compileOption?: string,
 ) {
   try {
-    const baseContext = getBaseContext(config_id);
     const strategy = CommandStrategyFactory.getStrategy(baseContext.operator?.op_type);
 
     const context = strategy.buildCommandContext(baseContext);
 
-    const userOptions = context.config.user_options as Record<string, unknown> | null | undefined;
-    const advance_cmd = getAdvanceCmd(userOptions?.advance_param);
-
     return strategy.buildUtTestCommand({
       config: context.config,
-      operator: context.operator,
       sourceCannCmd: context.sourceCannCmd,
       cdCmd: context.cdCmd,
-      advance_cmd,
       operatorNames,
       compileOption,
+      op: context.op,
     });
   }
   catch (e: unknown) {
@@ -411,13 +538,15 @@ export function getUtTestCommand(
  * Generate standard-custom `.run` deploy command after build_example succeeds.
  * Uses build_op target_file when it references a .run package; otherwise `build_out/*.run`.
  */
-export function getStandardCustomDeployCommand(config_id: number) {
+export function getStandardCustomDeployCommand(baseContext: BaseContext<BuildOpConfig>) {
   try {
-    const baseContext = getBaseContext(config_id);
     const strategy = CommandStrategyFactory.getStrategy(baseContext.operator?.op_type);
     const context = strategy.buildCommandContext(baseContext);
 
-    const configuredTarget = strategy.getRunTargetFile(context.config, context.operator);
+    // The deploy command reads the workspace deploy setting directly
+    // (strategy.getRunTargetFile → the same read, no default-path fallback) —
+    // unset means the bare `build_out/*.run` default, never an operator-plugin path.
+    const configuredTarget = ConfigService.readBuildOpDeployTargetFromWorkspace() || '';
     const deployTarget = isRunPackageTarget(configuredTarget)
       ? configuredTarget
       : 'build_out/*.run';
@@ -429,8 +558,3 @@ export function getStandardCustomDeployCommand(config_id: number) {
     throw new Error(`Failed to build standard custom deploy command: ${(e as Error).message}`);
   }
 }
-
-// Export strategy types and factory for registering new strategies externally
-export { CommandStrategyFactory } from './command-strategy';
-
-export type { CommandStrategy } from './command-strategy';

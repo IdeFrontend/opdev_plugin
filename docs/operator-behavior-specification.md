@@ -47,7 +47,7 @@ flowchart TD
 
 Behavior details:
 - On activation with workspace, plugin calls `welcomeMethods.openProject(..., isFromSystem=true)`.
-- `openProject` detects type, initializes project metadata (`projects.json`), runs `generateStructure`, and for `standard-custom` scans and stores:
+- `openProject` detects type, records `op-devtools.projectType` in workspace settings and metadata in `.vscode/cache.json`, seeds default scripts (`ensureOpDevtoolsSettingsSeeded`), runs `generateStructure`, and for `standard-custom` scans and stores:
   - `ops_meet`
   - `ops_list`
   - `experimental_ops_list`
@@ -57,26 +57,25 @@ Behavior details:
 
 ### Config model
 
-**Canonical reference:** [`workspace-settings.md`](./workspace-settings.md) (keys, merge, migration).
+**Canonical reference:** [`workspace-settings.md`](./workspace-settings.md) (keys, merge).
 
-`generateStructure` creates default **rows** in `configs.json` per operator (`build_op`, `build_example`, `ut_test`, `sanitizer`, `on_board`, `simulate`). Initial script strings come from `OperatorPluginRegistry.getOpPlugin(op_type).getInitialConfigScripts()` at creation time (ascend compile scripts include `--ops={operatorNames}`; see [`build-integration.md`](./build-integration.md#operatornames-and---ops-compile-scripts)).
+Config rows are **synthesized** per command: the per-section typed DAO factories on `ConfigService` (`getBuildOpConfig()` / `getBuildExampleConfig()` / `getUtTestConfig()` / `getSimulateConfig(projectPath)` / `getOnBoardConfig(projectPath)` / `getSanitizerConfig(projectPath, op)`) read workspace `op-devtools.*` settings directly and fold in `.vscode/cache.json` DB-only fields (`fileMapLists[configType]` → `fileMapList`, `sanitizerPythonTarget[op]` → `target_file`). Default script strings come from `OperatorPluginRegistry.getOpPlugin(op_type).getInitialConfigScripts()` and are seeded into settings by `ensureOpDevtoolsSettingsSeeded` (ascend compile scripts include `--ops={operatorNames}`; see [`build-integration.md`](./build-integration.md#operatornames-and---ops-compile-scripts)).
 
-**At command time** (after one-time legacy migration, `op-devtools.internal.settingsMigratedFromLegacy`):
+**At command time** (workspace-only runtime):
 
 | Source | Holds |
 |--------|--------|
 | Workspace `settings.json` (`op-devtools.*`) | Compile/deploy scripts, sanitizer options, simulation/on-board options, env script path, SOC/simulator overrides |
-| `configs.json` row | Row id, `config_type`, operator linkage, **DB-only** fields (`fileMapList`, `config_name`, `target_dir`, …) and **`build_example.target_file`** (profiler binary path) |
+| `.vscode/cache.json` | `project.{selectedOperatorPaths, compiledOpPaths}`, per-folder `opsMeet` / `opsList` / `experimentalOpsList`, **DB-only** fields (`fileMapList`, …), sanitizer Python target |
+| `exampleBuildConfig.targetFile` | Profiler/msprof binary path (workspace setting; fallback `OperatorPluginRegistry.getDefaultPaths`) |
 
-Runtime `user_options` for commands are built by **`ConfigService.buildUserOptionsFromWorkspaceSettings`** + **`applyWorkspaceSettingsToConfigs`** (`getRuntimeConfigById`), not by re-reading stored script fields from the DB row. Writes to settings use **`ConfigService.writeOpDevtoolsDottedSettings`** only.
-
-`getConfig` / `postConfig` remain for row lifecycle (create structure, list configs, DB-only updates); they do **not** drive compile script strings after migration.
+Runtime config objects for commands come from the per-section typed DAO factories on `ConfigService` (`getBuildOpConfig()` / `getBuildExampleConfig()` / `getUtTestConfig()` / `getSimulateConfig(projectPath)` / `getOnBoardConfig(projectPath)` / `getSanitizerConfig(projectPath, op)`), each reading its own dotted settings directly. Writes to settings use **`ConfigService.writeOpDevtoolsDottedSettings`** only.
 
 ## Ascend/CANN environment and SOC resolution
 
 **Canonical spec:** [`ascend-env-spec.md`](./ascend-env-spec.md) (precedence, spawn env, placeholders, logging). **A5:** [`ascend-a5-support.md`](./ascend-a5-support.md). **Workspace keys:** [`workspace-settings.md`](./workspace-settings.md#environment-op-devtoolsenvironment).
 
-Operator commands use `resolveAscendEnvForOperatorCommand` → `executeOperatorCommand` ([`build-integration.md`](./build-integration.md)). Strategies may prepend `. ${project.ascend_env_script} &&` when `projects.json` has a script path synced from `environment.environmentScript`.
+Operator commands use `resolveAscendEnvForOperatorCommand` → `executeOperatorCommand` ([`build-integration.md`](./build-integration.md)). Strategies may prepend `. ${project.ascend_env_script} &&` when the workspace `environment.environmentScript` setting is set (the record's `ascend_env_script` is that setting, read via `getConfiguredEnvironmentScriptPath`).
 
 ### Action capability by type
 
@@ -89,7 +88,7 @@ Operator commands use `resolveAscendEnvForOperatorCommand` → `executeOperatorC
 | `triton` | Python script via `build_op` / `build_example` (not CANN `build.sh`) | Yes | NPU only (`msdebug-triton-npu`; needs `debugMode` and `supportsNpuDebug`) | Yes (`supportsSanitizer: true`) | Yes (`supportsSimulate` / `supportsOnBoard: true`) | Blocked |
 
 Notes:
-- `pyasc` and `triton` run paths require/select a `.py` target and rewrite `build_op.target_file` when needed.
+- `pyasc` and `triton` run paths require/select a `.py` target and rewrite the deploy target (`compileAndDeploy.buildConfig.deployCommandOrRunCommand` via `ConfigService.writeBuildOpDeployTarget`) when needed.
 - `triton` uses `TritonCommandStrategy` (shared Python-operator shell assembly with PyAsc); probe `torch` + `triton` imports via `probeTritonPythonDependencies()` before sanitizer, profiling, and NPU debug runs; debug pre-build uses Triton compile env vars then launches `msdebug-triton-npu`.
 
 ## Templates per operator type and rationale
@@ -144,10 +143,9 @@ flowchart LR
   I --> J
 ```
 
-Persisted state (cache-like):
-- `projects.json`: project metadata, operator lists, compile flags
-- `ops.json`: operator records
-- `configs.json`: action configuration records
+Persisted state (workspace):
+- `.vscode/cache.json`: project metadata (`project.{selectedOperatorPaths, compiledOpPaths}`), per-folder operator lists (`folders[rootKey].{opsMeet, opsList, experimentalOpsList}`), `fileMapLists`
+- Workspace `settings.json` (`op-devtools.*`): scripts, options, project type, env script
 
 Incremental behavior:
 - `skipExisting` avoids clobbering existing files on generation.

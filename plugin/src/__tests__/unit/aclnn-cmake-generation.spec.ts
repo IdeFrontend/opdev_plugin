@@ -3,6 +3,12 @@ import os from 'os';
 import path from 'path';
 
 jest.mock('@plugin/helpers/operator-project-workspace-config', () => ({
+  getConfiguredValue: jest.fn(() => undefined),
+  getOpDevtoolsWorkspaceConfiguration: jest.fn(() => ({
+    inspect: jest.fn(() => undefined),
+    get: jest.fn(),
+  })),
+
   getSocVersionWithWorkspaceOverride: jest.fn(),
   getWorkspaceSimulatorType: jest.fn(() => ''),
 }));

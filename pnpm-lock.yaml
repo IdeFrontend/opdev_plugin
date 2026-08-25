@@ -87,6 +87,9 @@ importers:
       i18next:
         specifier: ^25.7.2
         version: 25.10.10(typescript@5.9.3)
+      jsonc-parser:
+        specifier: ^3.3.1
+        version: 3.3.1
       ws:
         specifier: ^8.18.3
         version: 8.21.0

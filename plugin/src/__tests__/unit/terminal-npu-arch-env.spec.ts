@@ -9,7 +9,7 @@ const makeCollection = () => ({
   delete: jest.fn(),
 });
 
-describe('applyNpuArchToTerminalEnv (issue #37)', () => {
+describe('applyNpuArchToTerminalEnv', () => {
   it('targets the variable the generated build.sh / CMakeLists read', () => {
     expect(NPU_ARCH_ENV_VAR)
       .toBe('NPU_ARCH');

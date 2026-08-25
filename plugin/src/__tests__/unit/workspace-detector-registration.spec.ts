@@ -1,21 +1,74 @@
-import * as fs from 'fs';
-import * as os from 'os';
 import * as path from 'path';
-
-jest.mock('@plugin/domain/models/config', () => {
-  const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'op-devtools-workspace-registration-'));
-
-  (globalThis as Record<string, string>).__workspaceRegistrationUserDataDir = userDataDir;
-
-  return {
-    __esModule: true,
-    default: { user_data_dir: userDataDir },
-  };
-});
 
 jest.mock('@plugin/domain/services/operator-project-detector', () => ({
   OperatorProjectType: { STANDARD_CUSTOM: 'standard-custom' },
   OperatorProjectDetector: { detectOperatorProject: jest.fn() },
+}));
+
+type Row = {
+  project_name?: string;
+  project_path: string;
+  project_type?: string;
+  template_name?: string;
+  ops_list?: unknown[];
+  experimental_ops_list?: unknown[];
+};
+
+jest.mock('@plugin/domain/models/project-model', () => {
+  const actual = jest.requireActual('@plugin/domain/models/project-model') as Record<string, unknown>;
+  const rows: Row[] = [];
+  const normalize = actual.normalizeProjectPath as (projectPath: string)=> string;
+
+  return {
+    ...actual,
+    getProjectByPath: jest.fn((projectPath: string) =>
+      rows.find((row) => normalize(row.project_path) === normalize(projectPath))),
+    createProject: jest.fn(async (row: Row) => {
+      rows.push(row);
+    }),
+    _resetProjectsForTest: () => {
+      rows.length = 0;
+    },
+  };
+});
+
+// Registration writes the scan into the workspace cache
+// (cache.folders[rootKey]) instead of a projects.json row: mock the cache at
+// the read/write boundary with an in-memory folders store so the service's
+// merge logic runs against a real mutate sequence.
+jest.mock('@plugin/helpers/workspace-cache', () => {
+  const actual = jest.requireActual('@plugin/helpers/workspace-cache') as Record<string, unknown>;
+  const state: { folders: Record<string, unknown> } = { folders: {} };
+
+  return {
+    ...actual,
+    __setCacheFoldersForTest: (folders: Record<string, unknown>) => {
+      state.folders = folders;
+    },
+    readWorkspaceCache: jest.fn(() => ({
+      schemaVersion: 1,
+      folders: state.folders,
+    })),
+    updateWorkspaceCache: jest.fn(async (_root: string, mutate: (cache: Record<string, unknown>)=> void) => {
+      const cache = {
+        schemaVersion: 1,
+        folders: state.folders,
+      };
+
+      mutate(cache);
+      state.folders = cache.folders;
+
+      return true;
+    }),
+    updateFolderScanState: jest.fn(),
+  };
+});
+
+jest.mock('@plugin/service/config-service', () => ({
+  ConfigService: {
+    writeOpDevtoolsDottedSettings: jest.fn()
+      .mockResolvedValue(true),
+  },
 }));
 
 import {
@@ -24,15 +77,25 @@ import {
 } from '@plugin/domain/services/operator-project-detector';
 import {
   _resetProjectsForTest,
-  appendStandardCustomOperator,
   createProject,
-  getAllProjects,
-  getProjectByPath,
+  normalizeProjectPath,
 } from '@plugin/domain/models/project-model';
+import {
+  appendOperatorToFolderScanState,
+  readWorkspaceCache,
+  updateWorkspaceCache,
+  type FolderScanState,
+} from '@plugin/helpers/workspace-cache';
 import { WorkspaceDetectorService } from '@plugin/service/workspace-detector-service';
+import { ConfigService } from '@plugin/service/config-service';
+
+const workspaceCache = jest.requireMock('@plugin/helpers/workspace-cache') as unknown as {
+  __setCacheFoldersForTest: (folders: Record<string, unknown>)=> void;
+};
 
 const workspacePath = '/repo/ops-math';
 const normalizedWorkspacePath = path.normalize(workspacePath);
+const rootKey = normalizeProjectPath(workspacePath);
 const scannedOperators = {
   opsMeet: [
     {
@@ -61,6 +124,7 @@ describe('WorkspaceDetectorService standard-custom registration', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     _resetProjectsForTest();
+    workspaceCache.__setCacheFoldersForTest({});
     (OperatorProjectDetector.detectOperatorProject as jest.Mock).mockResolvedValue(detection);
     jest.spyOn(WorkspaceDetectorService, 'scanOpsMeetAndOpsLists')
       .mockReturnValue(scannedOperators);
@@ -71,23 +135,35 @@ describe('WorkspaceDetectorService standard-custom registration', () => {
     jest.restoreAllMocks();
   });
 
-  it('persists one missing root as ascend before applying the scan', async () => {
+  it('registers one missing root: writes the canonical type and persists the scanned operators into the cache', async () => {
     await WorkspaceDetectorService.detectAndRegisterWorkspace(workspacePath);
 
-    expect(getAllProjects())
-      .toHaveLength(1);
-    expect(getProjectByPath(workspacePath))
-      .toMatchObject({
-        project_name: 'ops-math',
-        project_path: normalizedWorkspacePath,
-        project_type: 'ascend',
-        ops_meet: scannedOperators.opsMeet,
-        ops_list: scannedOperators.opsList,
-        experimental_ops_list: [],
+    expect(OperatorProjectDetector.detectOperatorProject)
+      .toHaveBeenCalledTimes(1);
+    expect(ConfigService.writeOpDevtoolsDottedSettings)
+      .toHaveBeenCalledWith({ projectType: 'ascend' }, normalizedWorkspacePath);
+    expect(readWorkspaceCache(workspacePath).folders?.[rootKey])
+      .toEqual({
+        opsMeet: scannedOperators.opsMeet,
+        opsList: scannedOperators.opsList,
+        experimentalOpsList: scannedOperators.experimentalOpsList,
       });
   });
 
   it('reuses an existing collection and merges scanned operators without losing metadata', async () => {
+    workspaceCache.__setCacheFoldersForTest({
+      [rootKey]: {
+        opsMeet: [],
+        opsList: [
+          {
+            name: 'existing',
+            path: '/repo/ops-math/math/existing',
+            isCompiled: true,
+          },
+        ],
+        experimentalOpsList: [],
+      },
+    });
     await createProject({
       project_name: 'custom-name',
       project_path: workspacePath,
@@ -105,13 +181,10 @@ describe('WorkspaceDetectorService standard-custom registration', () => {
     await WorkspaceDetectorService.detectAndRegisterWorkspace(workspacePath);
 
     expect(OperatorProjectDetector.detectOperatorProject).not.toHaveBeenCalled();
-    expect(getAllProjects())
-      .toHaveLength(1);
-    expect(getProjectByPath(workspacePath))
+    expect(readWorkspaceCache(workspacePath).folders?.[rootKey])
       .toMatchObject({
-        project_name: 'custom-name',
-        template_name: 'preserved-template',
-        ops_list: expect.arrayContaining([
+        opsMeet: scannedOperators.opsMeet,
+        opsList: expect.arrayContaining([
           expect.objectContaining({
             name: 'existing',
             isCompiled: true,
@@ -121,7 +194,7 @@ describe('WorkspaceDetectorService standard-custom registration', () => {
       });
   });
 
-  it('normalizes a detected legacy root to the canonical stored type', async () => {
+  it('normalizes a detected root to the canonical stored type', async () => {
     await createProject({
       project_name: 'ops-math',
       project_path: workspacePath,
@@ -131,11 +204,27 @@ describe('WorkspaceDetectorService standard-custom registration', () => {
 
     expect(OperatorProjectDetector.detectOperatorProject)
       .toHaveBeenCalledTimes(1);
-    expect(getProjectByPath(workspacePath)?.project_type)
-      .toBe('ascend');
+    // No registry row mutation: the canonical type is persisted as
+    // the workspace `projectType` setting, which the synthesized record
+    // (getProjectByPath) reads back.
+    expect(ConfigService.writeOpDevtoolsDottedSettings)
+      .toHaveBeenCalledWith({ projectType: 'ascend' }, normalizedWorkspacePath);
   });
 
   it('accepts a newly scanned compiled state and reconciles list classification', async () => {
+    workspaceCache.__setCacheFoldersForTest({
+      [rootKey]: {
+        opsMeet: [],
+        opsList: [
+          {
+            name: 'add',
+            path: '/repo/ops-math/math/add',
+            isCompiled: false,
+          },
+        ],
+        experimentalOpsList: [],
+      },
+    });
     await createProject({
       project_name: 'ops-math',
       project_path: workspacePath,
@@ -162,11 +251,11 @@ describe('WorkspaceDetectorService standard-custom registration', () => {
 
     await WorkspaceDetectorService.detectAndRegisterWorkspace(workspacePath);
 
-    const root = getProjectByPath(workspacePath);
+    const state = readWorkspaceCache(workspacePath).folders?.[rootKey] as FolderScanState;
 
-    expect(root?.ops_list)
+    expect(state.opsList)
       .toEqual([]);
-    expect(root?.experimental_ops_list)
+    expect(state.experimentalOpsList)
       .toEqual([
         expect.objectContaining({
           name: 'add',
@@ -181,17 +270,17 @@ describe('WorkspaceDetectorService standard-custom registration', () => {
       WorkspaceDetectorService.detectAndRegisterWorkspace(`${workspacePath}${path.sep}`),
     ]);
 
-    expect(getAllProjects())
-      .toHaveLength(1);
     expect(OperatorProjectDetector.detectOperatorProject)
       .toHaveBeenCalledTimes(1);
     expect(WorkspaceDetectorService.scanOpsMeetAndOpsLists)
       .toHaveBeenCalledTimes(1);
+    expect(updateWorkspaceCache)
+      .toHaveBeenCalledTimes(1);
 
     await WorkspaceDetectorService.detectAndRegisterWorkspace(workspacePath);
 
-    expect(getAllProjects())
-      .toHaveLength(1);
+    expect(updateWorkspaceCache)
+      .toHaveBeenCalledTimes(2);
     expect(WorkspaceDetectorService.scanOpsMeetAndOpsLists)
       .toHaveBeenCalledTimes(2);
   });
@@ -206,93 +295,64 @@ describe('WorkspaceDetectorService standard-custom registration', () => {
   });
 });
 
-describe('standard-custom child persistence', () => {
-  beforeEach(() => {
-    _resetProjectsForTest();
-  });
+describe('standard-custom child persistence (cache scan state)', () => {
+  it('preserves overlapping child appends', async () => {
+    let state: FolderScanState = {
+      opsMeet: [],
+      opsList: [],
+      experimentalOpsList: [],
+    };
 
-  afterEach(() => {
-    _resetProjectsForTest();
-  });
+    state = appendOperatorToFolderScanState(state, {
+      name: 'add',
+      path: '/repo/ops-math/math/add',
+      isCompiled: false,
+    }, false);
+    state = appendOperatorToFolderScanState(state, {
+      name: 'sub',
+      path: '/repo/ops-math/math/sub',
+      isCompiled: false,
+    }, false);
 
-  it('atomically preserves overlapping child appends', async () => {
-    await createProject({
-      project_name: 'ops-math',
-      project_path: workspacePath,
-      project_type: 'ascend',
-    });
-
-    await Promise.all([
-      appendStandardCustomOperator(
-        workspacePath,
-        {
-          name: 'add',
-          path: '/repo/ops-math/math/add',
-          isCompiled: false,
-        },
-        false,
-      ),
-      appendStandardCustomOperator(
-        workspacePath,
-        {
-          name: 'sub',
-          path: '/repo/ops-math/math/sub',
-          isCompiled: false,
-        },
-        false,
-      ),
-    ]);
-
-    expect(getProjectByPath(workspacePath)?.ops_list)
+    expect(state.opsList)
       .toEqual(expect.arrayContaining([
         expect.objectContaining({ name: 'add' }),
         expect.objectContaining({ name: 'sub' }),
       ]));
   });
 
-  it('deduplicates an equivalent child path across regular and experimental lists', async () => {
-    await createProject({
-      project_name: 'ops-math',
-      project_path: `${workspacePath}${path.sep}`,
-      project_type: 'ascend',
-      experimental_ops_list: [
+  it('deduplicates an equivalent child path across regular and experimental lists', () => {
+    const state = appendOperatorToFolderScanState({
+      opsMeet: [],
+      opsList: [],
+      experimentalOpsList: [
         {
           name: 'add',
           path: '/repo/ops-math/math/add/',
           isCompiled: true,
         },
       ],
-    });
+    }, {
+      name: 'add',
+      path: '/repo/ops-math/math/add',
+      isCompiled: false,
+    }, false);
 
-    await appendStandardCustomOperator(
-      workspacePath,
-      {
-        name: 'add',
-        path: '/repo/ops-math/math/add',
-        isCompiled: false,
-      },
-      false,
-    );
-
-    const root = getProjectByPath(workspacePath);
-
-    expect(root?.ops_list)
+    expect(state.opsList)
       .toEqual([
         expect.objectContaining({
           name: 'add',
           isCompiled: true,
         }),
       ]);
-    expect(root?.experimental_ops_list)
+    expect(state.experimentalOpsList)
       .toEqual([]);
   });
 
-  it('collapses legacy duplicates already present in the target list', async () => {
-    await createProject({
-      project_name: 'ops-math',
-      project_path: workspacePath,
-      project_type: 'ascend',
-      ops_list: [
+  it('collapses stored duplicates already present in the target list', () => {
+    const state = appendOperatorToFolderScanState({
+      opsMeet: [],
+      opsList: [
         {
           name: 'add-old',
           path: '/repo/ops-math/math/add/',
@@ -304,19 +364,14 @@ describe('standard-custom child persistence', () => {
           isCompiled: false,
         },
       ],
-    });
+      experimentalOpsList: [],
+    }, {
+      name: 'add',
+      path: '/repo/ops-math/math/add',
+      isCompiled: true,
+    }, false);
 
-    await appendStandardCustomOperator(
-      workspacePath,
-      {
-        name: 'add',
-        path: '/repo/ops-math/math/add',
-        isCompiled: true,
-      },
-      false,
-    );
-
-    expect(getProjectByPath(workspacePath)?.ops_list)
+    expect(state.opsList)
       .toEqual([
         expect.objectContaining({
           name: 'add',
@@ -324,14 +379,4 @@ describe('standard-custom child persistence', () => {
         }),
       ]);
   });
-});
-
-afterAll(() => {
-  fs.rmSync(
-    (globalThis as Record<string, string>).__workspaceRegistrationUserDataDir,
-    {
-      recursive: true,
-      force: true,
-    },
-  );
 });

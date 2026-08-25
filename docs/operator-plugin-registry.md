@@ -1,6 +1,6 @@
 # Operator plugin registry — current state and gaps
 
-How `plugin/src` routes operator-type and project-structure behavior through **`OperatorPluginRegistry`** (`domain/plugins/`). Supersedes the former proposal docs `operator-plugin-architecture.md` and `operator-architecture-analysis.md`.
+How `plugin/src` routes operator-type and project-structure behavior through **`OperatorPluginRegistry`** (`domain/plugins/`).
 
 **Related:** [`operator-behavior-specification.md`](./operator-behavior-specification.md) (user-visible actions), [`new-project-generation-specification.md`](./new-project-generation-specification.md), [`build-integration.md`](./build-integration.md), [`ascend-env-spec.md`](./ascend-env-spec.md).
 
@@ -32,14 +32,14 @@ Registered at `registerOperatorPlugins()` from `extension.ts` activate:
 | `AscendPlugin` | `ascend` | `ascend-c` | |
 | `CannPlugin` | `cann` | — | No detector |
 
-**Already routed through registry (not legacy scatter):**
+**Routed through the registry:**
 
 | Concern | Implementation |
 |---------|----------------|
-| Default paths | `OperatorPluginRegistry.getDefaultPaths` ← `op-util.ts` |
+| Default paths | `OperatorPluginRegistry.getDefaultPaths(op)` → `{ targetOpFile, targetExampleFile }` |
 | Project generator | `OpGeneratorFactory.getGenerator` → `getProjectGenerator` |
 | Project detection | `OperatorProjectDetector` → `OperatorPluginRegistry.detectProject` |
-| Initial config scripts (most) | `generateStructure` → `getInitialConfigScripts` |
+| Initial config scripts (most) | `ProjectService.createOpsByPrototype` → `ConfigService.ensureOpDevtoolsSettingsSeeded` → `getInitialConfigScripts` / `getDefaultPaths` |
 | Build/run/sim/on-board preflight | `BuildService` → `opPlugin.buildBehavior` |
 | Actions tree capabilities | `OperatorPluginRegistry.getBuildBehaviorByProjectType` |
 
@@ -51,7 +51,7 @@ Registered at `registerOperatorPlugins()` from `extension.ts` activate:
 |----------|--------------|----------------------|
 | **`CommandStrategyFactory`** | `ascend` / `cann` / `pyasc` / `triton` strategy classes | Still need a strategy class + factory map entry |
 | **`folder-context-menu-service.ts`** | Large `switch (detection.projectType)` for mark-as-operator, templates, warnings | Touch menu paths when adding a **project type** |
-| **`domain/models/model.ts`** | Dead helpers `getNpuDebugScript`… (unused); sanitizer script still partly inline in `generateStructure` | Minor cleanup; `ut_test` uses `scripts.utTestScript` from plugin |
+| **`config-service.ts`** | Section defaults (sanitizer, on-board, simulate, …) assembled in `ensureOpDevtoolsSettingsSeeded` from plugin `getInitialConfigScripts` / `getDefaultPaths`; `ut_test` uses `scripts.utTestScript` from plugin | Defaults move with the plugin; section DAOs stay settings-native |
 | **`command.ts`** | All commands via `CommandStrategyFactory.getStrategy(op_type)` | Expected until strategies are plugin-owned |
 
 Adding a **new `op_type`** today: implement `*.plugin.ts` ( `IOperatorPlugin` + optional `IProjectDetector` ), register in `index.ts`, add **`command-strategy/<type>-strategy.ts`** + factory registration, add tests.
@@ -65,7 +65,7 @@ Adding a **new project type** with existing `op_type`: often detector-only + `fo
 Key hooks used in production:
 
 - `getDefaultPaths(op)` — deploy/run targets, script paths  
-- `getInitialConfigScripts(record, workspaceRoot)` — script bundle (`script`, debug scripts, `utTestScript`, example, sanitizer, on-board, simulation) for `generateStructure` / `completeProjectConfigs`  
+- `getInitialConfigScripts(record, workspaceRoot)` — script bundle (`script`, debug scripts, `utTestScript`, example, sanitizer, on-board, simulation) consumed by `ConfigService.ensureOpDevtoolsSettingsSeeded`  
 - `createProjectGenerator(...)` — template unzip / scaffold  
 - `buildBehavior` — `requiresBuildBeforeAnalysis`, `requiresActiveFileCheck`, `supportsSanitizer`, `supportsSimulate`, `supportsOnBoard`, CPU/NPU debug flags  
 - `getSpawnEnvExportKeys()` — which of `SOC_VERSION` / `NPU_ARCH` this op_type may export; filtered by `OperatorPluginRegistry.filterSpawnEnv()` (project_type can force none)  
@@ -78,9 +78,9 @@ Interfaces: `domain/plugins/operator-plugin.interface.ts`, `project-detector.int
 
 ## Command strategies (parallel system)
 
-Runtime shell commands are built by **`CommandStrategyFactory`** (`domain/services/command-strategy/`), not by the plugin registry directly. Plugins influence commands indirectly via merged config (`getRuntimeConfigById`) and `buildBehavior`.
+Runtime shell commands are built by **`CommandStrategyFactory`** (`domain/services/command-strategy/`), not by the plugin registry directly. Plugins influence commands indirectly via the per-section typed DAO factories on `ConfigService` (`getBuildOpConfig()` / `getBuildExampleConfig()` / `getUtTestConfig()` / `getSimulateConfig(projectPath)` / `getOnBoardConfig(projectPath)` / `getSanitizerConfig(projectPath, op)`) and `buildBehavior`.
 
-Registry **does not** replace strategies yet; Phase-8-style consolidation is **not** done.
+The registry does **not** dispatch commands itself — `CommandStrategyFactory` owns that; the two systems share `buildBehavior` and the settings-native section DAOs.
 
 ---
 
