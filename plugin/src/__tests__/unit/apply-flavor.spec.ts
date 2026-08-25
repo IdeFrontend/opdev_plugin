@@ -206,7 +206,7 @@ describe('apply-flavor', () => {
     const manifest = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
 
     expect(manifest.name)
-      .toBe('ascend-c-toolkit');
+      .toBe('asc-toolkit');
     expect(manifest.publisher)
       .toBe('cann-pub');
     expect(manifest.displayName)
@@ -253,7 +253,7 @@ describe('apply-flavor', () => {
     expect(generated)
       .toContain("SETTINGS_PREFIX = 'ascendCToolkit'");
     expect(generated)
-      .toContain("EXTENSION_ID = 'cann-pub.ascend-c-toolkit'");
+      .toContain("EXTENSION_ID = 'cann-pub.asc-toolkit'");
     expect(generated)
       .toContain("'operatorSupport.triton': false");
     expect(generated)

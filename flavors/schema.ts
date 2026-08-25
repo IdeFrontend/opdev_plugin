@@ -92,6 +92,8 @@ export type FlavorBranding = {
 export type FlavorDefinition = {
   id: string;
   manifest: FlavorManifest;
+  /** Base name of the packaged .vsix artifact; defaults to manifest.name. */
+  vsixBaseName?: string;
   ids: FlavorIds;
   branding: FlavorBranding;
   features: Record<string, FeatureFlag>;

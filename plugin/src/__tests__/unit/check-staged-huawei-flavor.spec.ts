@@ -20,7 +20,7 @@ describe('check-staged-huawei-flavor', () => {
 
   it('rejects Ascend manifest content in package.json', () => {
     const content = JSON.stringify({
-      name: 'ascend-c-toolkit',
+      name: 'asc-toolkit',
       displayName: 'Ascend C Toolkit',
       publisher: 'cann-pub',
       activationEvents: ['onView:ascendCToolkitHomeTree'],
