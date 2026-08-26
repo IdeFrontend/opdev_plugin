@@ -273,6 +273,8 @@ export class PerformanceRunData {
         'csv',
         'bin',
         'json',
+        'rep',
+        'ncrep',
       ].includes(ext)) {
         const fileUri = vscode.Uri.joinPath(parentUri, subPath);
 

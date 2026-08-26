@@ -1,0 +1,4 @@
+[submodule "profiling-report"]
+	path = profiling-report
+	url = https://github.com/IdeFrontend/profiling-report.git
+	branch = master

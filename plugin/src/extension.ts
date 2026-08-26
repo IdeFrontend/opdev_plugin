@@ -24,6 +24,7 @@ import {
   ApiServer, type ApiGroup,
 } from './core/api-server';
 import { ViewServer } from './core/view/view-server';
+import { ViewOpener } from './core/view/view-opener';
 import { routes } from './routes';
 import { apis } from './api-routes';
 import { homeMethods } from './controller/home-controller';
@@ -162,6 +163,7 @@ import {
   COMMAND_SIDEBAR_PERFORMANCE_REPORT_SHOW_ALL,
   COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN,
   COMMAND_OPEN_CSV,
+  COMMAND_OPEN_PROFILING_REPORT,
   COMMAND_ST_TEST_HISTORY_OPEN,
 } from './constants';
 import { resolveFocusOpsOperateCommand } from '@plugin/helpers/focus-ops-operate';
@@ -2522,6 +2524,38 @@ export async function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(openCsvCommand);
+
+  // Register a command to open any .rep / .ncrep profiling report.
+  const openProfilingReportCommand = vscode.commands.registerCommand(
+    COMMAND_OPEN_PROFILING_REPORT,
+    async (uri?: vscode.Uri) => {
+      if (uri && uri.fsPath) {
+        await ViewOpener.openProfilingReport(uri);
+
+        return;
+      }
+
+      const fileUri = await vscode.window.showOpenDialog({
+        canSelectFiles: true,
+        canSelectFolders: false,
+        canSelectMany: false,
+        openLabel: t('common.open'),
+        filters: {
+          [t('profilingReport.reportFile')]: [
+            'rep',
+            'ncrep',
+          ],
+          [t('common.allFiles')]: ['*'],
+        },
+      });
+
+      if (fileUri && fileUri[0]) {
+        await ViewOpener.openProfilingReport(fileUri[0]);
+      }
+    },
+  );
+
+  context.subscriptions.push(openProfilingReportCommand);
 
   const flashMsSanitizerRunData = vscode.commands.registerCommand(
     COMMAND_FLASH_MS_SANITIZER_RUN_DATA,

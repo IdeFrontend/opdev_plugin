@@ -690,4 +690,14 @@ export default {
   'stTest.options.validation.modes': 'Select at least one available ST test mode.',
   'stTest.options.validation.unavailableMode': 'One or more selected ST test modes are no longer available.',
 
+  // profiling-report
+  'profilingReport.title': 'Profiling Report',
+  'profilingReport.fileNotFound': 'Profiling data file not found: {{path}}',
+  'profilingReport.loadFailed': 'Failed to load profiling report: {{error}}',
+  'profilingReport.filePathEmpty': 'Profiling data file path cannot be empty',
+  'profilingReport.reportFile': 'Profiling report (.rep, .ncrep)',
+  'profilingReport.loading': 'Loading profiling report...',
+  'profilingReport.noData': 'No profiling data loaded.',
+  'profilingReport.fetchFailed': 'Failed to fetch profiling data',
+
 };

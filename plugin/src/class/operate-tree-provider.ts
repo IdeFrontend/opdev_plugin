@@ -2519,6 +2519,12 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       return;
     }
 
+    if (fileType === 'rep' || fileType === 'ncrep') {
+      await viewService.openProfilingReport(filePath);
+
+      return;
+    }
+
     if (fileType === 'bin' || fileType === 'json') {
       await viewService.openInsight(filePath);
     }

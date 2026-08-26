@@ -85,6 +85,7 @@
   "command.createOps.title": "New Operator Prototype File",
   "command.jsonButtonAction.title": "Generate Operator Project",
   "command.openCsv.title": "Open CSV File",
+  "command.openProfilingReport.title": "Open Profiling Report",
   "command.test.title": "Insight Plugin Test",
   "command.welcome.title": "Welcome",
   "command.clearWelcomeCount.title": "Clear Welcome Count",

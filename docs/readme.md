@@ -27,6 +27,7 @@ Canonical references for the Huawei OP DevTools VS Code extension. User-reported
 | [`debug-integration.md`](./debug-integration.md) | CPU/NPU debug + MindStudio Debug |
 | [`sanitizer.md`](./sanitizer.md) | Sanitizer + results tree |
 | [`performance.md`](./performance.md) | Simulation / on-board msprof |
+| [`profiling-report-integration.md`](./profiling-report-integration.md) | `.rep` / `.ncrep` viewer panel (profiling-report library) |
 | [`msagent.md`](./msagent.md) | Optional msAgent bridge |
 | [`new-project-generation-specification.md`](./new-project-generation-specification.md) | New Project webview + scaffold |
 

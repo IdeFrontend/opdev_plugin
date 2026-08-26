@@ -689,4 +689,14 @@ export default {
   'stTest.options.validation.modes': '请至少选择一个可用的 ST 测试模式。',
   'stTest.options.validation.unavailableMode': '一个或多个已选 ST 测试模式当前不可用。',
 
+  // profiling-report
+  'profilingReport.title': '性能分析报告',
+  'profilingReport.fileNotFound': '性能分析数据文件未找到：{{path}}',
+  'profilingReport.loadFailed': '加载性能分析报告失败：{{error}}',
+  'profilingReport.filePathEmpty': '性能分析数据文件路径不能为空',
+  'profilingReport.reportFile': '性能分析报告 (.rep, .ncrep)',
+  'profilingReport.loading': '正在加载性能分析报告...',
+  'profilingReport.noData': '未加载性能分析数据。',
+  'profilingReport.fetchFailed': '获取性能分析数据失败',
+
 };

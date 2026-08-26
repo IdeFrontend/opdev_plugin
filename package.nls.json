@@ -86,6 +86,7 @@
   "command.createOps.title": "新建算子原型文件",
   "command.jsonButtonAction.title": "生成算子工程",
   "command.openCsv.title": "打开 CSV 文件",
+  "command.openProfilingReport.title": "打开性能分析报告",
   "command.test.title": "insight插件测试",
   "command.welcome.title": "欢迎页",
   "command.clearWelcomeCount.title": "清除欢迎页显示计数",
