@@ -232,4 +232,99 @@ describe('OperatorProjectIconTheme folder decorations from cache', () => {
         color: new vscode.ThemeColor('charts.blue'),
       });
   });
+
+  it('returns undefined when the path is not a folder', () => {
+    (fs.statSync as jest.Mock)
+      .mockReturnValueOnce({ isDirectory: () => false });
+
+    const theme = createProvider();
+
+    expect(decorate(theme, path.join(tmpRoot, 'file.txt')))
+      .toBeUndefined();
+  });
+
+  it('returns undefined when the folder stat fails', () => {
+    (fs.statSync as jest.Mock)
+      .mockImplementationOnce(() => {
+        throw new Error('access denied');
+      });
+
+    const theme = createProvider();
+
+    expect(decorate(theme, path.join(tmpRoot, 'meet')))
+      .toBeUndefined();
+  });
+
+  it('returns undefined when no workspace folders are open', () => {
+    const folders = vscode.workspace.workspaceFolders as unknown as Array<{ uri: { fsPath: string } }>;
+
+    (vscode.workspace.workspaceFolders as unknown) = undefined;
+
+    try {
+      expect(decorate(createProvider(), path.join(tmpRoot, 'meet')))
+        .toBeUndefined();
+    }
+    finally {
+      (vscode.workspace.workspaceFolders as unknown) = folders;
+    }
+  });
+
+  it('returns undefined when the workspace folder list is empty', () => {
+    const folders = vscode.workspace.workspaceFolders as unknown as Array<{ uri: { fsPath: string } }>;
+
+    folders.splice(0);
+
+    expect(decorate(createProvider(), path.join(tmpRoot, 'meet')))
+      .toBeUndefined();
+  });
+
+  it('tolerates null folder states in the cache', () => {
+    fs.mkdirSync(path.dirname(getCacheFilePath(tmpRoot)), { recursive: true });
+    fs.writeFileSync(
+      getCacheFilePath(tmpRoot),
+      JSON.stringify({
+        schemaVersion: CACHE_SCHEMA_VERSION,
+        folders: { [normalizeProjectPath(tmpRoot)]: null },
+      }),
+      'utf8',
+    );
+
+    const theme = createProvider();
+
+    expect(decorate(theme, path.join(tmpRoot, 'op')))
+      .toBeUndefined();
+  });
+
+  it('returns the same singleton instance and registers the provider once', () => {
+    const first = createProvider();
+    const second = OperatorProjectIconTheme.getInstance({ subscriptions: [] } as unknown as vscode.ExtensionContext);
+
+    expect(second)
+      .toBe(first);
+    expect(vscode.window.registerFileDecorationProvider)
+      .toHaveBeenCalledTimes(1);
+  });
+
+  it('fires decoration updates without throwing when nothing has subscribed', () => {
+    const theme = createProvider();
+
+    expect(() => theme.fireDecorationUpdate())
+      .not.toThrow();
+  });
+
+  it('lazily creates the event emitter on first subscription and forwards updates', () => {
+    const theme = createProvider();
+    const listener = jest.fn();
+    const uri = vscode.Uri.file(path.join(tmpRoot, 'meet'));
+
+    theme.onDidChangeFileDecorations(listener);
+    theme.onDidChangeFileDecorations(listener);
+
+    theme.fireDecorationUpdate(uri);
+
+    expect(listener)
+      .toHaveBeenCalledTimes(2);
+    expect(listener)
+      .toHaveBeenCalledWith(uri);
+  });
 });

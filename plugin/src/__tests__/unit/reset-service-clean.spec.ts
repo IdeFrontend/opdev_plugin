@@ -299,4 +299,40 @@ describe('resetCurrentProjectConfiguration (settings + cache + devtool_config on
     expect(vscode.commands.executeCommand)
       .not.toHaveBeenCalled();
   });
+
+  it('shows an error and does nothing when no workspace folder or project is open', async () => {
+    vscode.workspace.workspaceFolders = undefined;
+    (ProjectManager.getInstance as jest.Mock).mockReturnValue({ projectPath: undefined });
+
+    await resetCurrentProjectConfiguration();
+
+    expect(vscode.window.showErrorMessage)
+      .toHaveBeenCalledWith('Please open a workspace first');
+    expect(ConfigService.clearOpDevtoolsWorkspaceSettings)
+      .not.toHaveBeenCalled();
+    expect(vscode.commands.executeCommand)
+      .not.toHaveBeenCalled();
+  });
+
+  it('falls back to the workspace root and its basename when no project record exists', async () => {
+    (ProjectManager.getInstance as jest.Mock).mockReturnValue({ projectPath: undefined });
+    (getProjectByPath as jest.Mock).mockReturnValue(undefined);
+
+    await resetCurrentProjectConfiguration();
+
+    expect(vscode.window.showWarningMessage)
+      .toHaveBeenCalledWith(
+        expect.stringContaining(path.basename(tmpRoot)),
+        { modal: true },
+        'Reset',
+      );
+    expect(readWorkspaceCache(tmpRoot))
+      .toEqual({ schemaVersion: CACHE_SCHEMA_VERSION });
+    expect(ConfigService.clearOpDevtoolsWorkspaceSettings)
+      .toHaveBeenCalledWith(tmpRoot);
+    expect(ConfigService.writeOpDevtoolsDottedSettings)
+      .toHaveBeenCalledWith({ 'internal.settingsVersion': '0.0.0' }, tmpRoot);
+    expect(vscode.commands.executeCommand)
+      .toHaveBeenCalledWith('workbench.action.reloadWindow');
+  });
 });

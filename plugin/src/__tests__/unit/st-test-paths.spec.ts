@@ -9,8 +9,12 @@ import {
   ensureStTestOutputDirectory,
   isPathOutside,
   resolveStTestInputDir,
+  resolveStTestOperatorHistoryDirectory,
   resolveStTestOutputCsvPath,
   resolveStTestPluginDir,
+  toDisplayPath,
+  toSafeStTestPathSegment,
+  validateStTestOperatorDirectory,
 } from '@plugin/domain/utils/st-test-paths';
 
 const KERNEL_CSV = 'testcase_name,op_name\ncase,add\n';
@@ -118,6 +122,33 @@ describe('ST test path helpers', () => {
       });
   });
 
+  it('returns empty per-mode lists when the input dir is missing', () => {
+    expect(discoverStTestInputCsvFiles(root))
+      .toEqual({
+        kernel: [],
+        aclnn: [],
+        e2e: [],
+      });
+  });
+
+  it('unquotes escaped quotes inside quoted fields', () => {
+    expect(classifyStTestInputCsv(
+      'testcase_name,api_name\n"case with ""quotes""","aclnnAdd"\n',
+      'input.csv',
+    ))
+      .toBe('aclnn');
+  });
+
+  it('classifies a final row that lacks a trailing newline', () => {
+    expect(classifyStTestInputCsv('testcase_name,api_name\ncase,aclnnAdd', 'input.csv'))
+      .toBe('aclnn');
+  });
+
+  it('treats a lone carriage return as a row terminator', () => {
+    expect(classifyStTestInputCsv('testcase_name,api_name\rcase,aclnnAdd\r', 'input.csv'))
+      .toBe('aclnn');
+  });
+
   it('rejects an empty lowercase CSV', () => {
     const inputDir = resolveStTestInputDir(root);
 
@@ -126,6 +157,82 @@ describe('ST test path helpers', () => {
 
     expect(() => discoverStTestInputCsvFiles(root))
       .toThrow(/ST CSV file is empty:.*empty\.csv/);
+  });
+
+  it('rejects a CSV whose open fails with ELOOP', () => {
+    const inputDir = resolveStTestInputDir(root);
+
+    fs.mkdirSync(inputDir, { recursive: true });
+    fs.writeFileSync(path.join(inputDir, 'loop.csv'), KERNEL_CSV);
+
+    const mutableFs = jest.requireActual<typeof import('fs')>('fs');
+
+    jest.spyOn(mutableFs, 'openSync')
+      .mockImplementationOnce(() => {
+        throw Object.assign(new Error('too many levels of symbolic links'), { code: 'ELOOP' });
+      });
+
+    expect(() => discoverStTestInputCsvFiles(root))
+      .toThrow(/ST CSV input must not be a symbolic link:.*loop\.csv/);
+  });
+
+  it('propagates non-ELOOP open errors', () => {
+    const inputDir = resolveStTestInputDir(root);
+
+    fs.mkdirSync(inputDir, { recursive: true });
+    fs.writeFileSync(path.join(inputDir, 'denied.csv'), KERNEL_CSV);
+
+    const mutableFs = jest.requireActual<typeof import('fs')>('fs');
+
+    jest.spyOn(mutableFs, 'openSync')
+      .mockImplementationOnce(() => {
+        throw Object.assign(new Error('permission denied'), { code: 'EACCES' });
+      });
+
+    expect(() => discoverStTestInputCsvFiles(root))
+      .toThrow(/permission denied/);
+  });
+
+  it('classifies a quote that appears mid-field as a literal character', () => {
+    expect(classifyStTestInputCsv('api_name\nacl"nnAdd\n', 'input.csv'))
+      .toBe('e2e');
+  });
+
+  it('skips data rows shorter than the api_name column', () => {
+    expect(classifyStTestInputCsv(
+      'a,api_name,b\nonly_one_field\ncase,aclnnAdd,y\n',
+      'input.csv',
+    ))
+      .toBe('aclnn');
+  });
+
+  it('rejects a CSV that is swapped while being read', () => {
+    const inputDir = resolveStTestInputDir(root);
+
+    fs.mkdirSync(inputDir, { recursive: true });
+    fs.writeFileSync(path.join(inputDir, 'raced.csv'), KERNEL_CSV);
+
+    const mutableFs = jest.requireActual<typeof import('fs')>('fs');
+    const realLstat = mutableFs.lstatSync.bind(mutableFs);
+    let lstatCalls = 0;
+
+    jest.spyOn(mutableFs, 'lstatSync')
+      .mockImplementation((((p: fs.PathLike) => {
+        lstatCalls += 1;
+
+        if (lstatCalls === 1) {
+          return realLstat(p);
+        }
+
+        return {
+          isFile: () => true,
+          dev: -1,
+          ino: -1,
+        } as unknown as fs.Stats;
+      }) as typeof fs.lstatSync));
+
+    expect(() => discoverStTestInputCsvFiles(root))
+      .toThrow(/ST CSV input changed while being read:.*raced\.csv/);
   });
 
   it('rejects malformed UTF-8 before classifying an input', () => {
@@ -244,6 +351,18 @@ describe('ST test path helpers', () => {
       .not.toBe(createStTestRunId(now));
   });
 
+  it('defaults to the current time and a UUID when called without arguments', () => {
+    expect(createStTestRunId())
+      .toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z-[a-f0-9-]+$/);
+  });
+
+  it('falls back to an underscore segment for whitespace-only values', () => {
+    expect(toSafeStTestPathSegment('   '))
+      .toBe('_');
+    expect(toSafeStTestPathSegment('...'))
+      .toBe('_');
+  });
+
   it('builds deterministic bounded result names for long input filenames', () => {
     const params = {
       workspaceRoot: root,
@@ -268,5 +387,149 @@ describe('ST test path helpers', () => {
   it('treats an in-workspace name beginning with two dots as inside', () => {
     expect(isPathOutside(root, path.join(root, '..custom')))
       .toBe(false);
+  });
+
+  it('detects escapes via foreign backslash separators', () => {
+    expect(isPathOutside(root, path.join(root, '..') + '\\outside.csv'))
+      .toBe(true);
+  });
+
+  it('treats the base path itself as inside', () => {
+    expect(isPathOutside(root, root))
+      .toBe(false);
+  });
+
+  it('builds the operator history directory under the results root', () => {
+    expect(resolveStTestOperatorHistoryDirectory(root, 'My Operator!'))
+      .toBe(path.join(root, '.vscode', 'st-results', 'My_Operator_'));
+  });
+});
+
+describe('toDisplayPath', () => {
+  let root: string;
+
+  beforeEach(() => {
+    root = fs.mkdtempSync(path.join(os.tmpdir(), 'mstt-display-path-'));
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+    fs.rmSync(root, {
+      recursive: true,
+      force: true,
+    });
+  });
+
+  it('renders in-workspace paths relative to the base with forward slashes', () => {
+    expect(toDisplayPath(root, path.join(root, 'a', 'b.csv')))
+      .toBe('a/b.csv');
+  });
+
+  it('falls back to the basename for the base path itself', () => {
+    expect(toDisplayPath(root, root))
+      .toBe(path.basename(root));
+  });
+
+  it('renders only the basename for paths outside the base', () => {
+    expect(toDisplayPath(root, path.join(root, '..', 'outside.csv')))
+      .toBe('outside.csv');
+  });
+
+  it('normalizes foreign backslash escapes before the containment check', () => {
+    expect(toDisplayPath(root, path.join(root, '..') + '\\escape.csv'))
+      .toBe('escape.csv');
+  });
+});
+
+describe('validateStTestOperatorDirectory', () => {
+  let workspaceRoot: string;
+
+  beforeEach(() => {
+    workspaceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mstt-validate-'));
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+    fs.rmSync(workspaceRoot, {
+      recursive: true,
+      force: true,
+    });
+  });
+
+  it('accepts an operator directory inside the workspace', () => {
+    const operatorPath = path.join(workspaceRoot, 'op');
+
+    fs.mkdirSync(operatorPath);
+
+    expect(() => validateStTestOperatorDirectory(workspaceRoot, operatorPath))
+      .not.toThrow();
+  });
+
+  it('rejects an operator directory outside the workspace', () => {
+    const outside = path.join(path.dirname(workspaceRoot), 'outside-op');
+
+    fs.mkdirSync(outside, { recursive: true });
+
+    try {
+      expect(() => validateStTestOperatorDirectory(workspaceRoot, outside))
+        .toThrow(/Selected operator is outside the current workspace/);
+    }
+    finally {
+      fs.rmSync(outside, {
+        recursive: true,
+        force: true,
+      });
+    }
+  });
+
+  it('rejects a missing operator directory', () => {
+    expect(() => validateStTestOperatorDirectory(workspaceRoot, path.join(workspaceRoot, 'missing')))
+      .toThrow(/Selected operator directory does not exist/);
+  });
+
+  it('rejects a non-directory operator path', () => {
+    const filePath = path.join(workspaceRoot, 'not-a-dir');
+
+    fs.writeFileSync(filePath, 'x');
+
+    expect(() => validateStTestOperatorDirectory(workspaceRoot, filePath))
+      .toThrow(/Selected operator directory does not exist/);
+  });
+
+  it('propagates non-ENOENT stat errors', () => {
+    const operatorPath = path.join(workspaceRoot, 'op');
+
+    fs.mkdirSync(operatorPath);
+
+    const mutableFs = jest.requireActual<typeof import('fs')>('fs');
+
+    jest.spyOn(mutableFs, 'statSync')
+      .mockImplementationOnce(() => {
+        throw Object.assign(new Error('permission denied'), { code: 'EACCES' });
+      });
+
+    expect(() => validateStTestOperatorDirectory(workspaceRoot, operatorPath))
+      .toThrow(/permission denied/);
+  });
+
+  it('rejects an operator whose realpath escapes the workspace', () => {
+    const operatorPath = path.join(workspaceRoot, 'op');
+
+    fs.mkdirSync(operatorPath);
+
+    const mutableFs = jest.requireActual<typeof import('fs')>('fs');
+    const realRealpath = mutableFs.realpathSync.bind(mutableFs);
+
+    jest.spyOn(mutableFs, 'realpathSync')
+      .mockImplementation((((p: fs.PathLike) => {
+        if (String(p) === operatorPath) {
+          return path.join(workspaceRoot, '..', 'escape-op');
+        }
+
+        return realRealpath(p);
+      }) as typeof fs.realpathSync));
+
+    expect(() => validateStTestOperatorDirectory(workspaceRoot, operatorPath))
+      .toThrow(/Selected operator resolves outside the current workspace/);
   });
 });

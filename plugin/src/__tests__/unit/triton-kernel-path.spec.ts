@@ -32,6 +32,20 @@ describe('tritonOperatorStemFromScriptArg', () => {
   it('derives stem from script arg', () => {
     expect(tritonOperatorStemFromScriptArg('./add_kernel.py'))
       .toBe('add_kernel');
+    expect(tritonOperatorStemFromScriptArg('/abs/path/run.py'))
+      .toBe('run');
+  });
+
+  it('returns undefined for non-py script args', () => {
+    expect(tritonOperatorStemFromScriptArg('./add_kernel'))
+      .toBeUndefined();
+    expect(tritonOperatorStemFromScriptArg('kernel.pyc'))
+      .toBeUndefined();
+  });
+
+  it('returns undefined for the bare .py stem', () => {
+    expect(tritonOperatorStemFromScriptArg('.py'))
+      .toBeUndefined();
   });
 });
 
@@ -43,6 +57,7 @@ describe('findNewestTritonKernelObject', () => {
   });
 
   afterEach(async () => {
+    jest.restoreAllMocks();
     await fs.remove(cacheRoot);
   });
 
@@ -132,6 +147,155 @@ describe('findNewestTritonKernelObject', () => {
     expect(findNewestTritonKernelObject(path.join(cacheRoot, 'missing')))
       .toBeUndefined();
   });
+
+  it('returns undefined for an existing but empty cache tree', () => {
+    fs.ensureDirSync(path.join(cacheRoot, 'empty-sub'));
+
+    expect(findNewestTritonKernelObject(cacheRoot))
+      .toBeUndefined();
+  });
+
+  it('matches stems with a dot prefix (add_kernel.v2.npubin)', async () => {
+    const dir = path.join(cacheRoot, 'd');
+
+    await fs.ensureDir(dir);
+
+    const stemFile = path.join(dir, 'add_kernel.v2.npubin');
+    const otherFile = path.join(dir, 'zzz.npubin');
+
+    await fs.writeFile(stemFile, 'stem');
+    await fs.writeFile(otherFile, 'other');
+
+    const old = new Date('2020-01-01');
+    const recent = new Date('2025-01-01');
+
+    await fs.utimes(stemFile, old, old);
+    await fs.utimes(otherFile, recent, recent);
+
+    expect(findNewestTritonKernelObject(cacheRoot, 'add_kernel'))
+      .toBe(stemFile);
+  });
+
+  it('matches stems with an underscore suffix (add_kernel_v2.npubin)', async () => {
+    const dir = path.join(cacheRoot, 'd');
+
+    await fs.ensureDir(dir);
+
+    const stemFile = path.join(dir, 'add_kernel_v2.npubin');
+
+    await fs.writeFile(stemFile, 'stem');
+
+    expect(findNewestTritonKernelObject(cacheRoot, 'add_kernel'))
+      .toBe(stemFile);
+  });
+
+  it('keeps the newest candidate regardless of traversal order', async () => {
+    const newerFile = path.join(cacheRoot, 'newer.npubin');
+    const olderFile = path.join(cacheRoot, 'older.npubin');
+
+    await fs.writeFile(newerFile, 'newer');
+    await fs.writeFile(olderFile, 'older');
+
+    const olderTime = new Date('2020-01-01');
+    const newerTime = new Date('2025-01-01');
+
+    await fs.utimes(newerFile, newerTime, newerTime);
+    await fs.utimes(olderFile, olderTime, olderTime);
+
+    // Force the newest file to be visited first so the reduce must keep it.
+    const makeEntry = (name: string): fs.Dirent => ({
+      name,
+      isDirectory: () => false,
+      isFile: () => true,
+      isSymbolicLink: () => false,
+      isBlockDevice: () => false,
+      isCharacterDevice: () => false,
+      isFIFO: () => false,
+      isSocket: () => false,
+    } as fs.Dirent);
+
+    const realReaddir = fs.readdirSync.bind(fs);
+
+    jest.spyOn(fs, 'readdirSync')
+      .mockImplementation((((dir: string, ...rest: unknown[]) => {
+        if (dir === cacheRoot) {
+          return [
+            makeEntry('newer.npubin'),
+            makeEntry('older.npubin'),
+          ] as fs.Dirent[];
+        }
+
+        return realReaddir(dir, ...rest as []);
+      }) as typeof fs.readdirSync));
+
+    expect(findNewestTritonKernelObject(cacheRoot))
+      .toBe(newerFile);
+  });
+
+  it('skips artifacts that only share a prefix but are not kernel artifacts', async () => {
+    const dir = path.join(cacheRoot, 'd');
+
+    await fs.ensureDir(dir);
+
+    const stemFile = path.join(dir, 'add_kernel_v2.mlirbc');
+
+    await fs.writeFile(stemFile, 'bytecode');
+
+    expect(findNewestTritonKernelObject(cacheRoot, 'add_kernel'))
+      .toBeUndefined();
+  });
+
+  it('keeps scanning when a subdirectory read fails', async () => {
+    const goodDir = path.join(cacheRoot, 'good');
+    const brokenDir = path.join(cacheRoot, 'broken');
+
+    await fs.ensureDir(goodDir);
+    await fs.ensureDir(brokenDir);
+
+    const goodFile = path.join(goodDir, 'ok.npubin');
+
+    await fs.writeFile(goodFile, 'ok');
+
+    const realReaddir = fs.readdirSync.bind(fs);
+
+    jest.spyOn(fs, 'readdirSync')
+      .mockImplementation((((dir: string, ...rest: unknown[]) => {
+        if (dir === brokenDir) {
+          throw new Error('EACCES');
+        }
+
+        return realReaddir(dir, ...rest as []);
+      }) as typeof fs.readdirSync));
+
+    expect(findNewestTritonKernelObject(cacheRoot))
+      .toBe(goodFile);
+  });
+
+  it('skips files whose stat fails', async () => {
+    const dir = path.join(cacheRoot, 'd');
+
+    await fs.ensureDir(dir);
+
+    const brokenFile = path.join(dir, 'broken.npubin');
+    const goodFile = path.join(dir, 'ok.npubin');
+
+    await fs.writeFile(brokenFile, 'broken');
+    await fs.writeFile(goodFile, 'ok');
+
+    const realStat = fs.statSync.bind(fs);
+
+    jest.spyOn(fs, 'statSync')
+      .mockImplementation((((target: string, ...rest: unknown[]) => {
+        if (target === brokenFile) {
+          throw new Error('EACCES');
+        }
+
+        return realStat(target, ...rest as []);
+      }) as typeof fs.statSync));
+
+    expect(findNewestTritonKernelObject(cacheRoot))
+      .toBe(goodFile);
+  });
 });
 
 describe('resolveTritonLaunchKernelPath', () => {
@@ -186,5 +350,26 @@ describe('resolveTritonLaunchKernelPath', () => {
 
     expect(readTritonKernelPathSidecar(workspaceRoot))
       .toBeUndefined();
+  });
+
+  it('readTritonKernelPathSidecar ignores a whitespace-only sidecar', async () => {
+    const sidecarPath = path.join(workspaceRoot, '.vscode', TRITON_LAUNCH_KERNEL_PATH_SIDECAR);
+
+    await fs.writeFile(sidecarPath, '   \n\t');
+
+    expect(readTritonKernelPathSidecar(workspaceRoot))
+      .toBeUndefined();
+  });
+
+  it('writeTritonKernelPathSidecar creates the ide dir and writes the path', async () => {
+    const sidecarPath = path.join(workspaceRoot, '.vscode', TRITON_LAUNCH_KERNEL_PATH_SIDECAR);
+    const kernel = path.join(workspaceRoot, 'kernel.npubin');
+
+    await fs.writeFile(kernel, 'elf');
+
+    await writeTritonKernelPathSidecar(workspaceRoot, kernel);
+
+    expect(await fs.readFile(sidecarPath, 'utf-8'))
+      .toBe(`${kernel}\n`);
   });
 });

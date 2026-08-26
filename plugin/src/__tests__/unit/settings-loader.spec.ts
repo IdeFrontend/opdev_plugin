@@ -13,8 +13,18 @@ import {
   getIdeConfigDir, getIdeSettingsFilePath,
 } from '@plugin/helpers/ide-config-dir';
 import { SettingsLoader } from '@plugin/service/settings-loader';
+import {
+  getFlavorDefault,
+  isFlavorGated,
+} from '@shared/flavor';
 
 jest.mock('i18next', () => ({ t: (key: string) => key }));
+
+jest.mock('@shared/flavor', () => ({
+  ...jest.requireActual('@shared/flavor'),
+  isFlavorGated: jest.fn(() => true),
+  getFlavorDefault: jest.fn(() => false),
+}));
 
 const makeDeps = (): MainConfigWatchDeps => ({
   projectService: { syncAscendEnvScriptFromWorkspaceSettings: jest.fn() },
@@ -235,5 +245,73 @@ describe('SettingsLoader', () => {
 
     expect(fs.readFileSync(settingsPath, 'utf8'))
       .toBe(before);
+  });
+
+  it('write with no arguments resolves the workspace root and is a no-op without updates', async () => {
+    const wrote = await SettingsLoader.write();
+
+    expect(wrote)
+      .toBe(false);
+  });
+
+  it('readCache returns the cache written by updateCache', async () => {
+    await SettingsLoader.updateCache(tmpRoot, (cache) => {
+      cache.sanitizerPythonTarget = { myop: 'python3 run.py' };
+    });
+
+    const cache = SettingsLoader.readCache(tmpRoot);
+
+    expect(cache.schemaVersion)
+      .toBe(1);
+    expect(cache.sanitizerPythonTarget)
+      .toEqual({ myop: 'python3 run.py' });
+  });
+
+  it('isOperatorSupportEnabled treats operator types without a toggle key as enabled', () => {
+    expect(SettingsLoader.isOperatorSupportEnabled('cann'))
+      .toBe(true);
+    expect(SettingsLoader.isOperatorSupportEnabled(''))
+      .toBe(true);
+  });
+
+  it('isOperatorSupportEnabled normalizes the operator type before the key lookup', () => {
+    getStore['operatorSupport.triton'] = false;
+
+    expect(SettingsLoader.isOperatorSupportEnabled('  Triton '))
+      .toBe(false);
+    expect(SettingsLoader.isOperatorSupportEnabled('TRITON'))
+      .toBe(false);
+  });
+
+  it('isOperatorSupportEnabled honors the flavor gate and returns false when the gate is off', () => {
+    (isFlavorGated as jest.Mock).mockReturnValueOnce(false);
+
+    expect(SettingsLoader.isOperatorSupportEnabled('triton'))
+      .toBe(false);
+  });
+
+  it('isOperatorSupportEnabled falls back to the flavor default when unset', () => {
+    expect(SettingsLoader.isOperatorSupportEnabled('triton'))
+      .toBe(false);
+  });
+
+  it('isOperatorSupportEnabled falls back to true when the flavor default is undefined', () => {
+    (getFlavorDefault as jest.Mock).mockReturnValueOnce(undefined);
+
+    expect(SettingsLoader.isOperatorSupportEnabled('triton'))
+      .toBe(true);
+  });
+
+  it('isMsAgentAiFixEnabled returns the explicit setting or false when unset', () => {
+    expect(SettingsLoader.isMsAgentAiFixEnabled())
+      .toBe(false);
+
+    getStore['sanitizer.enableMsAgentAiFix'] = true;
+    expect(SettingsLoader.isMsAgentAiFixEnabled())
+      .toBe(true);
+
+    getStore['sanitizer.enableMsAgentAiFix'] = false;
+    expect(SettingsLoader.isMsAgentAiFixEnabled())
+      .toBe(false);
   });
 });

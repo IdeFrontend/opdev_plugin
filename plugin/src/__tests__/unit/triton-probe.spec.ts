@@ -75,6 +75,21 @@ describe('buildTritonProbeSpawnSpec', () => {
         'import torch; import triton',
       ]);
   });
+
+  it('omits env-script sourcing when the workspace has no env script', () => {
+    Object.defineProperty(process, 'platform', { value: 'linux' });
+    (getEnvironmentScriptPathFromWorkspace as jest.Mock).mockReturnValue('');
+
+    const spec = buildTritonProbeSpawnSpec();
+
+    expect(spec.file)
+      .toBe('bash');
+    expect(spec.args)
+      .toEqual([
+        '-lc',
+        "python3 -c 'import torch; import triton'",
+      ]);
+  });
 });
 
 describe('probeTritonPythonDependencies', () => {
@@ -163,5 +178,38 @@ describe('probeTritonPythonDependencies', () => {
       .toBe(false);
     expect(result.stderr)
       .toContain('ENOENT');
+  });
+
+  it('kills the child and reports a timeout after 25s, ignoring later close events', async () => {
+    jest.useFakeTimers();
+
+    try {
+      const child = makeFakeChild();
+
+      (spawn as jest.Mock).mockReturnValue(child);
+
+      const pending = probeTritonPythonDependencies();
+
+      jest.advanceTimersByTime(25_000);
+
+      expect(child.kill)
+        .toHaveBeenCalled();
+
+      const result = await pending;
+
+      expect(result.ok)
+        .toBe(false);
+      expect(result.stderr)
+        .toContain('Timed out after 25s');
+
+      // A late close event after settle must not overwrite the timeout result.
+      child.emit('close', 0);
+
+      expect(result.ok)
+        .toBe(false);
+    }
+    finally {
+      jest.useRealTimers();
+    }
   });
 });

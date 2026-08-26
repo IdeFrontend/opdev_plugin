@@ -112,6 +112,46 @@ describe('AscendPlugin getInitialConfigScripts', () => {
   });
 });
 
+describe('AscendPlugin bisheng build.sh variants', () => {
+  const plugin = new AscendPlugin();
+  const op = {
+    id: 1,
+    project_id: 1,
+    op_name: 'add',
+    op_type: 'ascend',
+    op_path: '/repo/math/add',
+  } as OpRecord;
+  const buildUtils = jest.requireMock('@plugin/domain/utils/build-utils') as {
+    checkBuildShHasBishengConfig: jest.Mock;
+  };
+
+  afterEach(() => {
+    buildUtils.checkBuildShHasBishengConfig.mockReturnValue(false);
+  });
+
+  it('switches the run-mode scripts to bisheng flags when build.sh exposes bisheng config', () => {
+    buildUtils.checkBuildShHasBishengConfig.mockReturnValue(true);
+
+    const scripts = plugin.getInitialConfigScripts(op, '/repo');
+
+    expect(scripts.simulateScript)
+      .toContain('--bisheng_flags=ccec_g');
+    expect(scripts.onBoardScript)
+      .toContain('--bisheng_flags=ccec_g');
+    expect(scripts.cpuDebugScript)
+      .toContain('--bisheng_flags=ccec_g');
+    expect(scripts.npuDebugScript)
+      .toContain('--bisheng_flags=ccec_O0,ccec_g');
+    // The scripts without a bisheng variant stay neutral.
+    expect(scripts.buildScript)
+      .not.toContain('bisheng');
+    expect(scripts.sanitizerScript)
+      .not.toContain('bisheng');
+    expect(scripts.utTestScript)
+      .not.toContain('bisheng');
+  });
+});
+
 describe('CannPlugin getInitialConfigScripts', () => {
   const plugin = new CannPlugin();
   const op = {

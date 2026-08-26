@@ -157,6 +157,64 @@ describe('ST test completion notification', () => {
       .toHaveBeenCalledWith(`completed:1:${outsidePath}`, 'Open File');
   });
 
+  it('displays a dot when the target path IS the workspace root', () => {
+    expect(resolveStTestDisplayPath(workspaceRoot, workspaceRoot))
+      .toBe('.');
+  });
+
+  it('treats a target exactly one level above the workspace root as outside', () => {
+    const parentDir = path.resolve(workspaceRoot, '..');
+
+    expect(resolveStTestDisplayPath(workspaceRoot, parentDir))
+      .toBe(parentDir);
+  });
+
+  it('survives a failure while reporting the open failure', async () => {
+    const outputPath = path.join(runDirectory, 'kernel', '001-add-result.csv');
+    const consoleErrorSpy = jest.spyOn(console, 'error')
+      .mockImplementation(() => {});
+
+    mockShowInformationMessage.mockResolvedValue('Open File');
+    mockOpenTextDocument.mockRejectedValue(new Error('result was removed'));
+    mockShowErrorMessage.mockRejectedValue(new Error('report failed'));
+
+    await expect(showStTestCompletionNotification({
+      workspaceRoot,
+      outputPaths: [outputPath],
+      runDirectory,
+    }))
+      .resolves.toBeUndefined();
+
+    expect(consoleErrorSpy)
+      .toHaveBeenCalledWith('[ST test] Could not report result-file open failure:', expect.any(Error));
+
+    consoleErrorSpy.mockRestore();
+  });
+
+  it('stringifies a non-Error open failure and a non-Error report failure', async () => {
+    const outputPath = path.join(runDirectory, 'kernel', '001-add-result.csv');
+    const consoleErrorSpy = jest.spyOn(console, 'error')
+      .mockImplementation(() => {});
+
+    mockShowInformationMessage.mockResolvedValue('Open File');
+    mockOpenTextDocument.mockRejectedValue('open failed');
+    mockShowErrorMessage.mockRejectedValue('report failed');
+
+    await expect(showStTestCompletionNotification({
+      workspaceRoot,
+      outputPaths: [outputPath],
+      runDirectory,
+    }))
+      .resolves.toBeUndefined();
+
+    expect(mockShowErrorMessage)
+      .toHaveBeenCalledWith('open-failed:open failed');
+    expect(consoleErrorSpy)
+      .toHaveBeenCalledWith('[ST test] Could not report result-file open failure:', 'report failed');
+
+    consoleErrorSpy.mockRestore();
+  });
+
   it('reports an open failure separately without converting the completed ST run to failure', async () => {
     const outputPath = path.join(runDirectory, 'kernel', '001-add-result.csv');
 

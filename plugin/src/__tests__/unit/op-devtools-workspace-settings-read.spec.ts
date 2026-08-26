@@ -278,3 +278,289 @@ describe('ConfigService per-section DAO factories (settings + cache only)', () =
       .toBe('saved_op');
   });
 });
+
+describe('ConfigService ut_test / simulate / on_board DAOs', () => {
+  const getStore: Record<string, unknown> = {};
+  const inspectStore: Record<string, vscode.ConfigurationInspect<unknown> | undefined> = {};
+  let workspacePath: string;
+  let cachePath: string;
+
+  const inspectFromStore = <T>(key: string): vscode.ConfigurationInspect<T> | undefined => {
+    if (!(key in getStore)) {
+      return undefined;
+    }
+
+    return {
+      key,
+      workspaceFolderValue: getStore[key] as T,
+    };
+  };
+
+  function seedCache(content: Record<string, unknown>): void {
+    fs.mkdirSync(path.dirname(cachePath), { recursive: true });
+    fs.writeFileSync(cachePath, `${JSON.stringify({
+      schemaVersion: 1,
+      ...content,
+    }, null, 2)}\n`, 'utf8');
+  }
+
+  beforeEach(() => {
+    Object.keys(getStore)
+      .forEach((k) => delete getStore[k]);
+    Object.keys(inspectStore)
+      .forEach((k) => delete inspectStore[k]);
+    workspacePath = fs.mkdtempSync(path.join(os.tmpdir(), 'op-devtools-read-'));
+    cachePath = path.join(workspacePath, '.vscode', 'cache.json');
+    (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+      inspect: <T>(key: string) => (
+        inspectStore[key] as vscode.ConfigurationInspect<T> | undefined
+      ) ?? inspectFromStore<T>(key),
+      get: <T>(key: string) => getStore[key] as T | undefined,
+    });
+    vscode.workspace.workspaceFolders = [{ uri: { fsPath: workspacePath } } as vscode.WorkspaceFolder];
+  });
+
+  afterEach(() => {
+    fs.rmSync(workspacePath, {
+      recursive: true,
+      force: true,
+    });
+  });
+
+  it('getUtTestConfig is empty when the utTestCompileCommand setting is absent', () => {
+    expect(ConfigService.getUtTestConfig())
+      .toEqual({ script: '' });
+  });
+
+  it('getUtTestConfig carries the utTestCompileCommand setting', () => {
+    getStore['compileAndDeploy.buildConfig.utTestCompileCommand'] = 'bash ut.sh';
+
+    expect(ConfigService.getUtTestConfig())
+      .toEqual({ script: 'bash ut.sh' });
+  });
+
+  it('getUtTestConfig treats a whitespace-only setting as unset', () => {
+    getStore['compileAndDeploy.buildConfig.utTestCompileCommand'] = '   ';
+
+    expect(ConfigService.getUtTestConfig())
+      .toEqual({ script: '' });
+  });
+
+  it('getSimulateConfig returns the fresh-project defaults when nothing is set', () => {
+    expect(ConfigService.getSimulateConfig(workspacePath))
+      .toEqual({
+        script: '',
+        simulatorType: '',
+        memoryThroughputWaveform: false,
+        resourceConflictRatio: true,
+        advanceParam: [],
+        fileMapList: [],
+      });
+  });
+
+  it('getSimulateConfig carries partial settings once any setting is set', () => {
+    getStore['compileAndDeploy.buildConfig.simulationCompileCommand'] = 'sim.sh';
+
+    expect(ConfigService.getSimulateConfig(workspacePath))
+      .toEqual({
+        script: 'sim.sh',
+        simulatorType: '',
+        memoryThroughputWaveform: false,
+        resourceConflictRatio: false,
+        advanceParam: [],
+        fileMapList: [],
+      });
+  });
+
+  it('getSimulateConfig maps a parameters object into advanceParam rows', () => {
+    getStore['performanceTuning.simulation.parameters'] = {
+      iter: 3,
+      mem: null,
+    };
+
+    const config = ConfigService.getSimulateConfig(workspacePath);
+
+    expect(config.script)
+      .toBe('');
+    expect(config.advanceParam)
+      .toEqual([
+        {
+          name: 'iter',
+          value: '3',
+        },
+        {
+          name: 'mem',
+          value: '',
+        },
+      ]);
+  });
+
+  it('getSimulateConfig passes a parameters array through as advanceParam', () => {
+    getStore['performanceTuning.simulation.parameters'] = [
+      {
+        name: 'iter',
+        value: 3,
+      },
+    ];
+
+    expect(ConfigService.getSimulateConfig(workspacePath).advanceParam)
+      .toEqual([
+        {
+          name: 'iter',
+          value: 3,
+        },
+      ]);
+  });
+
+  it('getSimulateConfig carries the fileMapList from the cache', () => {
+    getStore['compileAndDeploy.buildConfig.simulationCompileCommand'] = 'sim.sh';
+    seedCache({
+      fileMapLists: {
+        simulate: [
+          {
+            filePath: '/ws/rep1.csv',
+            reportTime: 1,
+          },
+        ],
+      },
+    });
+
+    expect(ConfigService.getSimulateConfig(workspacePath).fileMapList)
+      .toEqual([
+        {
+          filePath: '/ws/rep1.csv',
+          reportTime: 1,
+        },
+      ]);
+  });
+
+  it('getOnBoardConfig returns the fresh-project defaults on a non-A5 profiler', () => {
+    const config = ConfigService.getOnBoardConfig(workspacePath);
+
+    expect(config.script)
+      .toBe('');
+    expect(config.memoryDetail)
+      .toBe(true);
+    expect(config.pcSampling)
+      .toBe(false);
+    expect(config.occupancy)
+      .toBe(true);
+    expect(config.kernelScale)
+      .toBe(false);
+    expect(config.operatorMetrics)
+      .toBe(false);
+    expect(config.advanceParam)
+      .toEqual([]);
+    expect(config.fileMapList)
+      .toEqual([]);
+  });
+
+  it('getOnBoardConfig carries partial settings once any setting is set', () => {
+    getStore['compileAndDeploy.buildConfig.onBoardCompileCommand'] = 'ob.sh';
+
+    const config = ConfigService.getOnBoardConfig(workspacePath);
+
+    expect(config.script)
+      .toBe('ob.sh');
+    expect(config.occupancy)
+      .toBe(false);
+    expect(config.roofline)
+      .toBe(false);
+    expect(config.kernelScale)
+      .toBe(false);
+    expect(config.memoryDetail)
+      .toBe(false);
+    expect(config.pcSampling)
+      .toBe(false);
+    expect(config.advanceParam)
+      .toEqual([]);
+  });
+
+  it('getOnBoardConfig maps a parameters object into advanceParam rows', () => {
+    getStore['performanceTuning.onBoard.parameters'] = { warmup: 1 };
+
+    expect(ConfigService.getOnBoardConfig(workspacePath).advanceParam)
+      .toEqual([
+        {
+          name: 'warmup',
+          value: '1',
+        },
+      ]);
+  });
+
+  it('surfaces pcSampling and hides memoryDetail on an A5 profiler', () => {
+    getStore['environment.socVersion'] = 'ascend950';
+    getStore['performanceTuning.onBoard.pcSampling'] = true;
+    getStore['performanceTuning.onBoard.cacheHeatmap'] = true;
+
+    const config = ConfigService.getOnBoardConfig(workspacePath);
+
+    expect(config.pcSampling)
+      .toBe(true);
+    expect(config.memoryDetail)
+      .toBe(false);
+  });
+
+  it('surfaces cacheHeatmap as memoryDetail on a non-A5 profiler', () => {
+    getStore['performanceTuning.onBoard.cacheHeatmap'] = true;
+
+    const config = ConfigService.getOnBoardConfig(workspacePath);
+
+    expect(config.memoryDetail)
+      .toBe(true);
+    expect(config.pcSampling)
+      .toBe(false);
+  });
+
+  it('hasBuildExampleConfig is true when the run command is set', () => {
+    getStore['compileAndDeploy.exampleBuildConfig.runCommand'] = 'bash run_example.sh';
+
+    expect(ConfigService.hasBuildExampleConfig())
+      .toBe(true);
+  });
+
+  it('hasBuildExampleConfig is true when only the example target file is set', () => {
+    getStore['compileAndDeploy.exampleBuildConfig.targetFile'] = './run_example.sh';
+
+    expect(ConfigService.hasBuildExampleConfig())
+      .toBe(true);
+  });
+
+  it('hasBuildExampleConfig is false when script and target file are both empty', () => {
+    expect(ConfigService.hasBuildExampleConfig())
+      .toBe(false);
+  });
+
+  it('getSanitizerConfig carries partial tool and memcheck settings', () => {
+    getStore['sanitizer.memory'] = true;
+    getStore['sanitizer.race'] = false;
+    getStore['sanitizer.uninitialized'] = true;
+    getStore['sanitizer.memoryLeak'] = false;
+    getStore['sanitizer.allocUnused'] = true;
+
+    const config = ConfigService.getSanitizerConfig(workspacePath);
+
+    expect(config.tool)
+      .toEqual({
+        memcheck: true,
+        racecheck: false,
+        initcheck: true,
+      });
+    expect(config.memcheckOption)
+      .toEqual({
+        'leak-check': false,
+        'check-unused-memory': true,
+      });
+    expect(config.targetFile)
+      .toBeNull();
+    expect(config.fileMapList)
+      .toEqual([]);
+  });
+
+  it('getBuildExampleConfig normalizes a whitespace-padded graph execution mode', () => {
+    getStore['compileAndDeploy.exampleBuildConfig.executionMode'] = ' graph ';
+
+    expect(ConfigService.getBuildExampleConfig().executionMode)
+      .toBe('graph');
+  });
+});

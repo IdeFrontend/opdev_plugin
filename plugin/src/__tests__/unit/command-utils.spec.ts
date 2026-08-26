@@ -1,9 +1,15 @@
 import {
+  Command,
+  generateChmodCommand,
+  getAdvanceCmd,
   getExecutableCommand,
   hasExplicitBuildTypeArgument,
   isDirectBuildScriptCommand,
   isRunPackageTarget,
   isSupportedSimpleCommandFragment,
+  joinCommands,
+  objectToCommandString,
+  shouldAddDebugBuildType,
 } from '@plugin/domain/utils/command-utils';
 
 describe('isDirectBuildScriptCommand', () => {
@@ -164,5 +170,267 @@ describe('getExecutableCommand', () => {
 
     expect(getExecutableCommand(shell))
       .toBe(shell);
+  });
+
+  it('returns an empty string for an empty file', () => {
+    expect(getExecutableCommand(''))
+      .toBe('');
+  });
+
+  it('resolves a wildcard non-run target with find + chmod + execute', () => {
+    const cmd = getExecutableCommand('build_out/*', { execute: true });
+
+    expect(cmd)
+      .toBe('RUN_FILE=$(find build_out/*) && chmod +x "$RUN_FILE" && "$RUN_FILE"');
+  });
+
+  it('does not chmod a bare command', () => {
+    expect(getExecutableCommand('npm test'))
+      .toBe('npm test');
+    expect(getExecutableCommand('/usr/bin/python3 run.py'))
+      .toBe('/usr/bin/python3 run.py');
+  });
+
+  it('honors read/write/execute permission flags', () => {
+    expect(getExecutableCommand('/bin/tool', { read: true }))
+      .toBe('chmod +r /bin/tool && /bin/tool');
+    expect(getExecutableCommand('/bin/tool', { write: true }))
+      .toBe('chmod +w /bin/tool && /bin/tool');
+    expect(getExecutableCommand('/bin/tool', {
+      read: true,
+      write: true,
+      execute: true,
+    }))
+      .toBe('chmod +rwx /bin/tool && /bin/tool');
+  });
+
+  it('runs the file without chmod when no permission bits are enabled', () => {
+    const cmd = getExecutableCommand('/bin/tool', {});
+
+    expect(cmd)
+      .toBe('/bin/tool');
+    expect(cmd)
+      .not.toContain('chmod');
+  });
+
+  it('returns empty chmod for an empty file', () => {
+    expect(generateChmodCommand(''))
+      .toBe('');
+    expect(generateChmodCommand('', {}))
+      .toBe('');
+  });
+
+  it('isRunPackageTarget is false for an empty target', () => {
+    expect(isRunPackageTarget(''))
+      .toBe(false);
+  });
+});
+
+describe('objectToCommandString', () => {
+  it('returns an empty string for no options', () => {
+    expect(objectToCommandString({}))
+      .toBe('');
+  });
+
+  it('emits --key for true and skips false/undefined/null', () => {
+    expect(objectToCommandString({
+      pkg: true,
+      skipFalse: false,
+      skipUndefined: undefined,
+      skipNull: null,
+      soc: 'Ascend310',
+    }))
+      .toBe('--pkg --soc=Ascend310');
+  });
+
+  it('emits repeated --key=value for arrays by default', () => {
+    expect(objectToCommandString({
+      tool: [
+        'memcheck',
+        'leak',
+      ],
+    }))
+      .toBe('--tool=memcheck --tool=leak');
+  });
+
+  it('joins array values with the configured separator', () => {
+    expect(objectToCommandString(
+      {
+        metrics: [
+          'A',
+          'B',
+        ],
+        tool: [
+          'x',
+          'y',
+        ],
+      },
+      { separators: { metrics: ',' } },
+    ))
+      .toBe('--metrics=A,B --tool=x --tool=y');
+  });
+
+  it('emits numeric scalars and array members', () => {
+    expect(objectToCommandString({
+      depth: 2,
+      ports: [
+        1,
+        2,
+      ],
+    }))
+      .toBe('--depth=2 --ports=1 --ports=2');
+  });
+});
+
+describe('joinCommands', () => {
+  it('joins non-empty commands with &&', () => {
+    expect(joinCommands('a', 'b', 'c'))
+      .toBe('a && b && c');
+  });
+
+  it('filters out empty, null, and undefined commands', () => {
+    expect(joinCommands('a', '', null, undefined, 'b'))
+      .toBe('a && b');
+  });
+
+  it('returns an empty string when nothing is left', () => {
+    expect(joinCommands('', null, undefined))
+      .toBe('');
+  });
+});
+
+describe('shouldAddDebugBuildType', () => {
+  it('adds --build-type=Debug to a direct cpu debug build script', () => {
+    expect(shouldAddDebugBuildType('cpu_debug_script', './build.sh --onboard'))
+      .toBe(true);
+    expect(shouldAddDebugBuildType('npu_debug_script', 'bash build.sh --debug'))
+      .toBe(true);
+  });
+
+  it('rejects non-debug script fields', () => {
+    expect(shouldAddDebugBuildType('build_script', './build.sh'))
+      .toBe(false);
+  });
+
+  it('rejects scripts that are not direct build invocations', () => {
+    expect(shouldAddDebugBuildType('cpu_debug_script', 'python3 build.py'))
+      .toBe(false);
+  });
+
+  it('rejects unsupported fragments', () => {
+    expect(shouldAddDebugBuildType('cpu_debug_script', './build.sh', '--fast && true'))
+      .toBe(false);
+  });
+
+  it('rejects scripts that already carry an explicit build type', () => {
+    expect(shouldAddDebugBuildType('cpu_debug_script', 'bash build.sh --build-type=Release'))
+      .toBe(false);
+    expect(shouldAddDebugBuildType('cpu_debug_script', 'bash build.sh', '--build-type', 'Debug'))
+      .toBe(false);
+  });
+});
+
+describe('Command', () => {
+  it('renders name, options, arguments, and subcommand in order', () => {
+    const cmd = new Command('ascend')
+      .addOption('pkg', true)
+      .addOption('soc', 'Ascend310')
+      .addArgument('--verbose')
+      .addArgument('extra');
+
+    expect(cmd.toString())
+      .toBe('ascend --pkg --soc=Ascend310 --verbose extra');
+  });
+
+  it('adds options in bulk and ignores empty arguments', () => {
+    const cmd = new Command('tool')
+      .addOptions({
+        a: '1',
+        b: 2,
+      })
+      .addArgument('')
+      .addArgument('x');
+
+    expect(cmd.toString())
+      .toBe('tool --a=1 --b=2 x');
+  });
+
+  it('renders only the name when nothing is configured', () => {
+    expect(new Command('bare')
+      .toString())
+      .toBe('bare');
+  });
+
+  it('recursively renders a subcommand with its own config', () => {
+    const cmd = new Command('parent');
+    const sub = cmd.sub('child', { separators: { list: '|' } });
+
+    sub.addOption('list', [
+      'a',
+      'b',
+    ]);
+
+    expect(cmd.toString())
+      .toBe('parent child --list=a|b');
+  });
+
+  it('supports nested subcommand chains', () => {
+    const cmd = new Command('outer')
+      .addOption('flag', true);
+
+    cmd.sub('inner')
+      .addArgument('pos');
+
+    expect(cmd.toString())
+      .toBe('outer --flag inner pos');
+  });
+});
+
+describe('getAdvanceCmd', () => {
+  it('returns an empty string for non-array or empty input', () => {
+    expect(getAdvanceCmd(undefined))
+      .toBe('');
+    expect(getAdvanceCmd('not-an-array'))
+      .toBe('');
+    expect(getAdvanceCmd([]))
+      .toBe('');
+  });
+
+  it('renders name/value pairs as --name=value', () => {
+    expect(getAdvanceCmd([
+      {
+        name: 'soc',
+        value: 'Ascend310',
+      },
+      {
+        name: 'pkg',
+        value: 'x',
+      },
+    ]))
+      .toBe('--soc=Ascend310 --pkg=x');
+  });
+
+  it('renders flag-only entries without =value', () => {
+    expect(getAdvanceCmd([
+      {
+        name: 'debug',
+        value: '',
+      },
+    ]))
+      .toBe('--debug');
+  });
+
+  it('skips entries without a name', () => {
+    expect(getAdvanceCmd([
+      {
+        name: '',
+        value: 'x',
+      },
+      {
+        name: 'keep',
+        value: '1',
+      },
+    ]))
+      .toBe('--keep=1');
   });
 });

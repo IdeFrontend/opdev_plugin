@@ -214,4 +214,208 @@ describe('OperatorActionQueueManager', () => {
     expect(queue.getActions(scopeKey))
       .toEqual([]);
   });
+
+  it('reports queued items through hasAnyItems while a scope is populated', async () => {
+    const queue = new OperatorActionQueueManager(jest.fn(async () => undefined));
+    const scopeKey = 'project::populated';
+    let releaseRunner!: ()=> void;
+    const barrier = new Promise<void>((resolve) => {
+      releaseRunner = resolve;
+    });
+
+    await queue.enqueue(scopeKey, 'sanitizer', {}, async () => barrier);
+
+    expect(queue.hasAnyItems())
+      .toBe(true);
+
+    releaseRunner();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(queue.hasAnyItems())
+      .toBe(false);
+  });
+
+  it('tracks the cancel generation per scope', async () => {
+    const stopCurrentTask = jest.fn(async () => undefined);
+    const queue = new OperatorActionQueueManager(stopCurrentTask);
+    const scopeKey = 'project::generation';
+
+    expect(queue.getScopeCancelGeneration(scopeKey))
+      .toBe(0);
+    expect(queue.isScopeCancelled('never-created-scope', 0))
+      .toBe(true);
+    expect(queue.isScopeCancelled(scopeKey, 0))
+      .toBe(false);
+    expect(queue.isScopeCancelled(scopeKey, 1))
+      .toBe(true);
+
+    let releaseRunner!: ()=> void;
+    const barrier = new Promise<void>((resolve) => {
+      releaseRunner = resolve;
+    });
+
+    await queue.enqueue(scopeKey, 'simulation', {}, async () => barrier);
+    const stopPromise = queue.stopAllAndClearQueue(scopeKey);
+
+    expect(queue.getScopeCancelGeneration(scopeKey))
+      .toBe(1);
+    expect(queue.isScopeCancelled(scopeKey, 0))
+      .toBe(true);
+    expect(queue.isScopeCancelled(scopeKey, 1))
+      .toBe(false);
+
+    releaseRunner();
+    await stopPromise;
+  });
+
+  it('is a no-op for unknown or empty scopes', async () => {
+    const stopCurrentTask = jest.fn(async () => undefined);
+    const queue = new OperatorActionQueueManager(stopCurrentTask);
+
+    await queue.stopAllAndClearQueue('never-created-scope');
+
+    const scopeKey = 'project::empty';
+
+    queue.getActions(scopeKey);
+    await queue.stopAllAndClearQueue(scopeKey);
+
+    expect(stopCurrentTask).not.toHaveBeenCalled();
+  });
+
+  it('returns false when stopping an action that is not in the scope', async () => {
+    const queue = new OperatorActionQueueManager(jest.fn(async () => undefined));
+
+    await expect(queue.stopByActionType('project::none', 'sanitizer'))
+      .resolves
+      .toBe(false);
+  });
+
+  it('removes a queued action via stopByActionType without touching the runner', async () => {
+    const queue = new OperatorActionQueueManager(jest.fn(async () => undefined));
+    const scopeKey = 'project::queued-stop';
+    let releaseFirst!: ()=> void;
+    const barrier = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+
+    await queue.enqueue(scopeKey, 'sanitizer', {}, async () => barrier);
+    await queue.enqueue(scopeKey, 'dumpTensor', {}, jest.fn(async () => undefined));
+
+    await expect(queue.stopByActionType(scopeKey, 'dumpTensor'))
+      .resolves
+      .toBe(true);
+    expect(queue.getActions(scopeKey)
+      .map((action) => action.actionType))
+      .toEqual(['sanitizer']);
+
+    releaseFirst();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+
+  it('cancels a running action via stopByActionType and tolerates repeat calls', async () => {
+    jest.useFakeTimers();
+    const stopCurrentTask = jest.fn(async () => undefined);
+    const queue = new OperatorActionQueueManager(stopCurrentTask);
+    const scopeKey = 'project::running-stop';
+    let releaseRunner!: ()=> void;
+    const barrier = new Promise<void>((resolve) => {
+      releaseRunner = resolve;
+    });
+
+    await queue.enqueue(scopeKey, 'sanitizer', {}, async () => barrier);
+
+    await expect(queue.stopByActionType(scopeKey, 'sanitizer'))
+      .resolves
+      .toBe(true);
+    expect(stopCurrentTask)
+      .toHaveBeenCalledTimes(1);
+    expect(queue.getActions(scopeKey)[0]?.internalState)
+      .toBe('running');
+
+    // A second call keeps the existing cancel request and stop timer.
+    await expect(queue.stopByActionType(scopeKey, 'sanitizer'))
+      .resolves
+      .toBe(true);
+    expect(stopCurrentTask)
+      .toHaveBeenCalledTimes(2);
+
+    // The stop timeout turns the stuck item into cancel_failed.
+    jest.advanceTimersByTime(10000);
+    expect(queue.getActions(scopeKey)[0]?.internalState)
+      .toBe('cancel_failed');
+
+    // cancel_failed items are still stopped through the shell stop callback.
+    await expect(queue.stopByActionType(scopeKey, 'sanitizer'))
+      .resolves
+      .toBe(true);
+    expect(stopCurrentTask)
+      .toHaveBeenCalledTimes(3);
+
+    releaseRunner();
+    await jest.advanceTimersByTimeAsync(1);
+
+    expect(queue.getActions(scopeKey))
+      .toEqual([]);
+    jest.useRealTimers();
+  });
+
+  it('does not re-request cancellation for a running item that is already cancelled', async () => {
+    jest.useFakeTimers();
+    const stopCurrentTask = jest.fn(async () => undefined);
+    const queue = new OperatorActionQueueManager(stopCurrentTask);
+    const scopeKey = 'project::already-cancelled';
+    let releaseRunner!: ()=> void;
+    const barrier = new Promise<void>((resolve) => {
+      releaseRunner = resolve;
+    });
+
+    await queue.enqueue(scopeKey, 'sanitizer', {}, async () => barrier);
+
+    const firstStop = queue.stopAllAndClearQueue(scopeKey);
+
+    expect(stopCurrentTask)
+      .toHaveBeenCalledTimes(1);
+
+    // The first stop request marks the item cancelled and arms a stop timer.
+    jest.advanceTimersByTime(10000);
+    expect(queue.getActions(scopeKey)[0]?.internalState)
+      .toBe('cancel_failed');
+
+    // A concurrent second stop request must not re-request cancellation.
+    const secondStop = queue.stopAllAndClearQueue(scopeKey);
+
+    expect(stopCurrentTask)
+      .toHaveBeenCalledTimes(2);
+
+    releaseRunner();
+    await firstStop;
+    await secondStop;
+
+    expect(queue.getActions(scopeKey))
+      .toEqual([]);
+    jest.useRealTimers();
+  });
+
+  it('does not start a second drain loop while one is already processing', async () => {
+    const queue = new OperatorActionQueueManager(jest.fn(async () => undefined));
+    const scopeKey = 'project::drain-guard';
+    let releaseFirst!: ()=> void;
+    const barrier = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    const secondRunner = jest.fn(async () => undefined);
+
+    await queue.enqueue(scopeKey, 'sanitizer', {}, async () => barrier);
+    await queue.enqueue(scopeKey, 'simulation', {}, secondRunner);
+
+    expect(secondRunner).not.toHaveBeenCalled();
+
+    releaseFirst();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(secondRunner)
+      .toHaveBeenCalledTimes(1);
+    expect(queue.getActions(scopeKey))
+      .toEqual([]);
+  });
 });

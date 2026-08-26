@@ -2,6 +2,17 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
+// Node 24 freezes the fs module namespace, so jest.spyOn(fs, ...) cannot
+// redefine its members. Wrap the real module in call-countable mocks instead.
+jest.mock('fs', () => {
+  const actual = jest.requireActual('fs') as typeof fs;
+
+  return {
+    ...actual,
+    readdirSync: jest.fn(actual.readdirSync),
+  };
+});
+
 import {
   buildStTestResultReport,
   type CompletedStTestArtifact,
@@ -262,5 +273,306 @@ describe('ST test run history', () => {
     expect(loadStTestRunHistory(historyDirectory, 'add')
       .map((record) => record.runId))
       .toEqual(['valid-run']);
+  });
+
+  it('returns an empty history when the history directories do not exist', () => {
+    expect(loadStTestRunHistory(path.join(historyDirectory, 'missing'), 'add'))
+      .toEqual([]);
+    expect(loadStTestRunHistoryFromWorkspace(path.join(workspaceRoot, 'missing-workspace')))
+      .toEqual([]);
+  });
+
+  it('propagates non-ENOENT directory read errors while loading an operator history', () => {
+    const readdirMock = fs.readdirSync as jest.Mock;
+
+    readdirMock.mockImplementationOnce(() => {
+      throw Object.assign(new Error('EACCES'), { code: 'EACCES' });
+    });
+
+    try {
+      expect(() => loadStTestRunHistory(historyDirectory, 'add'))
+        .toThrow('EACCES');
+    }
+    finally {
+      readdirMock.mockClear();
+    }
+  });
+
+  it('swallows per-operator directory read errors during the legacy scan', () => {
+    createRun('legacy-scan-run', '2026-07-21T10:00:00.000Z', 'PASS', 'add', 'legacy');
+
+    const readdirMock = fs.readdirSync as jest.Mock;
+    const realReaddir = jest.requireActual<typeof fs>('fs').readdirSync;
+    let callCount = 0;
+
+    readdirMock.mockImplementation((...args: Parameters<typeof fs.readdirSync>) => {
+      callCount += 1;
+
+      if (callCount === 3) {
+        throw Object.assign(new Error('EACCES'), { code: 'EACCES' });
+      }
+
+      return realReaddir(...args);
+    });
+
+    try {
+      expect(loadStTestRunHistoryFromWorkspace(workspaceRoot))
+        .toEqual([]);
+    }
+    finally {
+      readdirMock.mockClear();
+    }
+  });
+
+  it('rejects a manifest whose artifact result path is absolute', () => {
+    const runId = 'absolute-path-run';
+
+    createRun(runId, '2026-07-21T10:00:00.000Z');
+    const manifestPath = path.join(historyDirectory, runId, ST_TEST_RUN_MANIFEST_FILE);
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as {
+      artifacts: Array<{ resultPath: string }>;
+    };
+
+    manifest.artifacts[0].resultPath = path.join(workspaceRoot, 'outside.csv');
+    fs.writeFileSync(manifestPath, JSON.stringify(manifest));
+
+    expect(loadStTestRunHistory(historyDirectory, 'add'))
+      .toEqual([]);
+  });
+
+  it('rejects a manifest whose summary is not an object', () => {
+    const runId = 'bad-summary-run';
+
+    createRun(runId, '2026-07-21T10:00:00.000Z');
+    const manifestPath = path.join(historyDirectory, runId, ST_TEST_RUN_MANIFEST_FILE);
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as {
+      summary?: unknown;
+    };
+
+    manifest.summary = 'not-an-object';
+    fs.writeFileSync(manifestPath, JSON.stringify(manifest));
+
+    expect(loadStTestRunHistory(historyDirectory, 'add'))
+      .toEqual([]);
+  });
+
+  it('rejects a manifest whose summary has more invalid files than files', () => {
+    const runId = 'invalid-over-files-run';
+
+    createRun(runId, '2026-07-21T10:00:00.000Z');
+    const manifestPath = path.join(historyDirectory, runId, ST_TEST_RUN_MANIFEST_FILE);
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as {
+      summary: { files: number;
+        invalidFiles: number };
+    };
+
+    manifest.summary.invalidFiles = manifest.summary.files + 1;
+    fs.writeFileSync(manifestPath, JSON.stringify(manifest));
+
+    expect(loadStTestRunHistory(historyDirectory, 'add'))
+      .toEqual([]);
+  });
+
+  it('rejects a manifest with duplicate artifact ids', () => {
+    const runId = 'duplicate-artifact-run';
+
+    createRun(runId, '2026-07-21T10:00:00.000Z');
+    const manifestPath = path.join(historyDirectory, runId, ST_TEST_RUN_MANIFEST_FILE);
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as {
+      summary: { files: number };
+      artifacts: Array<Record<string, unknown>>;
+    };
+
+    manifest.artifacts[1] = { ...manifest.artifacts[0] };
+    manifest.summary.files = 2;
+    fs.writeFileSync(manifestPath, JSON.stringify(manifest));
+
+    expect(loadStTestRunHistory(historyDirectory, 'add'))
+      .toEqual([]);
+  });
+
+  it('rejects a manifest file larger than 1 MiB', () => {
+    const runId = 'oversized-manifest-run';
+
+    createRun(runId, '2026-07-21T10:00:00.000Z');
+    const manifestPath = path.join(historyDirectory, runId, ST_TEST_RUN_MANIFEST_FILE);
+
+    fs.appendFileSync(manifestPath, ' '.repeat(1024 * 1024));
+
+    expect(loadStTestRunHistory(historyDirectory, 'add'))
+      .toEqual([]);
+  });
+
+  it('skips a run directory nested under an unexpected parent', () => {
+    createRun('nested-run', '2026-07-21T10:00:00.000Z');
+
+    const nestedParent = path.join(historyDirectory, 'other-parent');
+
+    fs.mkdirSync(nestedParent, { recursive: true });
+    fs.renameSync(
+      path.join(historyDirectory, 'nested-run'),
+      path.join(nestedParent, 'nested-run'),
+    );
+
+    expect(loadStTestRunHistory(historyDirectory, 'add'))
+      .toEqual([]);
+  });
+
+  it('throws when a report lacks the file entry for an artifact', () => {
+    const created = createRun('missing-file-run', '2026-07-21T10:00:00.000Z');
+
+    expect(() => createStTestRunHistoryRecord(
+      created.report,
+      [
+        created.artifact,
+        {
+          artifactId: 'missing-file-run:2',
+          sequence: 2,
+          mode: 'kernel',
+          inputCsvPath: created.artifact.inputCsvPath,
+          outputCsvPath: created.artifact.outputCsvPath,
+        },
+      ],
+      created.runDirectory,
+    ))
+      .toThrow('Missing report file for ST artifact missing-file-run:2');
+  });
+
+  it('throws when the run directory does not match the record run id', () => {
+    const created = createRun('mismatch-run', '2026-07-21T10:00:00.000Z');
+    const record = createStTestRunHistoryRecord(
+      created.report,
+      [created.artifact],
+      path.join(historyDirectory, 'other-name'),
+    );
+
+    expect(() => persistStTestRunHistoryRecord(record))
+      .toThrow('ST history run directory does not match the report run ID');
+  });
+
+  it('throws when the record summary is inconsistent', () => {
+    const created = createRun('bad-summary-record', '2026-07-21T10:00:00.000Z');
+    const record = createStTestRunHistoryRecord(
+      created.report,
+      [created.artifact],
+      created.runDirectory,
+    );
+
+    record.summary.total = 99;
+
+    expect(() => persistStTestRunHistoryRecord(record))
+      .toThrow('Invalid ST test history metadata');
+  });
+
+  it('throws when an artifact is missing from the record display', () => {
+    const runId = 'missing-display-run';
+    const runDirectory = path.join(historyDirectory, runId);
+    const operatorPath = path.join(workspaceRoot, 'operators', 'add');
+    const artifact: CompletedStTestArtifact = {
+      artifactId: `${runId}:1`,
+      sequence: 1,
+      mode: 'kernel',
+      inputCsvPath: path.join(operatorPath, 'tests', 'st', 'arch35', 'ttk_kernel_add.csv'),
+      outputCsvPath: path.join(runDirectory, 'kernel', '001-ttk_kernel_add-result.csv'),
+    };
+
+    fs.mkdirSync(path.dirname(artifact.inputCsvPath), { recursive: true });
+    fs.mkdirSync(path.dirname(artifact.outputCsvPath), { recursive: true });
+    fs.writeFileSync(artifact.inputCsvPath, 'input');
+    fs.writeFileSync(artifact.outputCsvPath, `${HEADER}\ncase_missing_display,1,1,1,PASS\n`);
+
+    const report = buildStTestResultReport({
+      workspaceRoot,
+      operatorPath,
+      operatorName: 'add',
+      runId,
+      runDirectory,
+      artifacts: [artifact],
+    });
+    const record = createStTestRunHistoryRecord(
+      report,
+      [artifact],
+      runDirectory,
+    );
+
+    delete record.display[artifact.artifactId];
+
+    expect(() => persistStTestRunHistoryRecord(record))
+      .toThrow(`Invalid ST history artifact ${artifact.artifactId}`);
+  });
+
+  it('throws when the serialized manifest exceeds the size limit', () => {
+    const runId = 'oversized-record-run';
+    const runDirectory = path.join(historyDirectory, runId);
+    const longTestFile = 't'.repeat(4096);
+    const longResultFile = 'r'.repeat(4096);
+    const artifactCount = 150;
+    const artifacts: CompletedStTestArtifact[] = [];
+    const display: Record<string, { testFile: string;
+      resultFile: string }> = {};
+
+    for (let index = 0; index < artifactCount; index += 1) {
+      const artifactId = `long-artifact-${String(index)}`;
+
+      artifacts.push({
+        artifactId,
+        sequence: index + 1,
+        mode: 'kernel',
+        inputCsvPath: path.join(workspaceRoot, 'operators', 'add', 'input.csv'),
+        outputCsvPath: path.join(runDirectory, 'kernel', `${artifactId}.csv`),
+      });
+      display[artifactId] = {
+        testFile: longTestFile,
+        resultFile: longResultFile,
+      };
+    }
+
+    const record = createStTestRunHistoryRecord(
+      {
+        runId,
+        operatorName: 'add',
+        completedAt: '2026-07-21T10:00:00.000Z',
+        runDirectory: `.vscode/st-results/${runId}`,
+        outcome: 'passed',
+        summary: {
+          total: artifactCount,
+          passed: artifactCount,
+          failed: 0,
+          invalid: 0,
+          files: artifactCount,
+          invalidFiles: 0,
+        },
+        files: artifacts.map((artifact) => ({
+          artifactId: artifact.artifactId,
+          sequence: artifact.sequence,
+          mode: artifact.mode,
+          testFile: longTestFile,
+          resultFile: longResultFile,
+          rowCount: 1,
+        })),
+        rows: [],
+      },
+      artifacts,
+      runDirectory,
+    );
+
+    expect(() => persistStTestRunHistoryRecord(record))
+      .toThrow('ST test history metadata exceeds the manifest size limit');
+  });
+
+  it('returns the existing record when the same run is persisted twice', () => {
+    const created = createRun('twice-run', '2026-07-21T10:00:00.000Z');
+    const record = createStTestRunHistoryRecord(
+      created.report,
+      [created.artifact],
+      created.runDirectory,
+    );
+
+    const persisted = persistStTestRunHistoryRecord(record);
+
+    expect(persisted)
+      .toBeDefined();
+    expect(persisted.runId)
+      .toBe('twice-run');
   });
 });

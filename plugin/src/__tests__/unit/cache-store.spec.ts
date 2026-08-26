@@ -5,10 +5,14 @@ import * as path from 'path';
 import {
   CACHE_SCHEMA_VERSION,
   WorkspaceCache,
+  appendOperatorToFolderScanState,
   getCacheFilePath,
   readWorkspaceCache,
+  resetWorkspaceCacheChainsForTest,
   seedIfMissing,
+  updateFolderScanState,
   updateWorkspaceCache,
+  type FolderScanState,
 } from '@plugin/helpers/workspace-cache';
 import { getIdeConfigDir } from '@plugin/helpers/ide-config-dir';
 
@@ -16,6 +20,7 @@ describe('workspace cache store', () => {
   let tmpRoot: string;
 
   beforeEach(() => {
+    resetWorkspaceCacheChainsForTest();
     tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'op-devtools-cache-'));
   });
 
@@ -150,9 +155,308 @@ describe('workspace cache store', () => {
       .toEqual({ selectedOperatorPaths: ['/workspace/ops/add'] });
   });
 
+  it('read treats an empty or whitespace-only cache.json as a fresh object without touching the file', () => {
+    fs.mkdirSync(getIdeConfigDir(tmpRoot), { recursive: true });
+
+    fs.writeFileSync(getCacheFilePath(tmpRoot), '', 'utf8');
+    expect(readWorkspaceCache(tmpRoot))
+      .toEqual({ schemaVersion: CACHE_SCHEMA_VERSION });
+
+    fs.writeFileSync(getCacheFilePath(tmpRoot), '  \n\t ', 'utf8');
+    expect(readWorkspaceCache(tmpRoot))
+      .toEqual({ schemaVersion: CACHE_SCHEMA_VERSION });
+
+    expect(fs.existsSync(`${getCacheFilePath(tmpRoot)}.bak`))
+      .toBe(false);
+  });
+
+  it('read renames a JSON payload that is not a schema object to .bak', () => {
+    fs.mkdirSync(getIdeConfigDir(tmpRoot), { recursive: true });
+
+    fs.writeFileSync(getCacheFilePath(tmpRoot), '[1, 2]', 'utf8');
+    expect(readWorkspaceCache(tmpRoot))
+      .toEqual({ schemaVersion: CACHE_SCHEMA_VERSION });
+
+    fs.writeFileSync(getCacheFilePath(tmpRoot), '"a string"', 'utf8');
+    expect(readWorkspaceCache(tmpRoot))
+      .toEqual({ schemaVersion: CACHE_SCHEMA_VERSION });
+
+    fs.writeFileSync(getCacheFilePath(tmpRoot), 'null', 'utf8');
+    expect(readWorkspaceCache(tmpRoot))
+      .toEqual({ schemaVersion: CACHE_SCHEMA_VERSION });
+
+    fs.writeFileSync(getCacheFilePath(tmpRoot), '{}', 'utf8');
+    expect(readWorkspaceCache(tmpRoot))
+      .toEqual({ schemaVersion: CACHE_SCHEMA_VERSION });
+
+    expect(fs.existsSync(`${getCacheFilePath(tmpRoot)}.bak`))
+      .toBe(true);
+  });
+
+  it('read recovers when the cache file cannot be read (catch path)', () => {
+    fs.mkdirSync(getIdeConfigDir(tmpRoot), { recursive: true });
+    // A directory at the cache path makes readFileSync throw EISDIR.
+    fs.mkdirSync(getCacheFilePath(tmpRoot), { recursive: true });
+
+    const warnSpy = jest.spyOn(console, 'warn')
+      .mockImplementation(() => {});
+
+    expect(readWorkspaceCache(tmpRoot))
+      .toEqual({ schemaVersion: CACHE_SCHEMA_VERSION });
+    expect(fs.existsSync(`${getCacheFilePath(tmpRoot)}.bak`))
+      .toBe(true);
+
+    warnSpy.mockRestore();
+  });
+
+  it('read still returns fresh when the recovery rename also fails', () => {
+    fs.mkdirSync(getIdeConfigDir(tmpRoot), { recursive: true });
+    // A directory that cannot be read AND an existing .bak directory make the
+    // recovery rename fail as well.
+    fs.mkdirSync(getCacheFilePath(tmpRoot), { recursive: true });
+    fs.mkdirSync(`${getCacheFilePath(tmpRoot)}.bak`, { recursive: true });
+
+    const warnSpy = jest.spyOn(console, 'warn')
+      .mockImplementation(() => {});
+
+    expect(readWorkspaceCache(tmpRoot))
+      .toEqual({ schemaVersion: CACHE_SCHEMA_VERSION });
+    expect(warnSpy)
+      .toHaveBeenCalledWith('[readWorkspaceCache] failed:', tmpRoot, expect.objectContaining({ message: expect.any(String) }));
+
+    warnSpy.mockRestore();
+  });
+
+  it('update falls back to the current cache when mutate returns null', async () => {
+    fs.mkdirSync(getIdeConfigDir(tmpRoot), { recursive: true });
+
+    const wrote = await updateWorkspaceCache(tmpRoot, () => null);
+
+    expect(wrote)
+      .toBe(true);
+    expect(readRaw())
+      .toEqual({ schemaVersion: CACHE_SCHEMA_VERSION });
+  });
+
+  it('update refuses to persist a replacement that is not a plain object', async () => {
+    fs.mkdirSync(getIdeConfigDir(tmpRoot), { recursive: true });
+    fs.writeFileSync(getCacheFilePath(tmpRoot), '{ "schemaVersion": 1 }', 'utf8');
+
+    await expect(updateWorkspaceCache(tmpRoot, () => 'string' as never))
+      .resolves.toBe(false);
+    await expect(updateWorkspaceCache(tmpRoot, () => [] as never))
+      .resolves.toBe(false);
+
+    expect(fs.readFileSync(getCacheFilePath(tmpRoot), 'utf8'))
+      .toBe('{ "schemaVersion": 1 }');
+  });
+
+  it('update reports false and keeps the old file when the write fails', async () => {
+    fs.mkdirSync(getIdeConfigDir(tmpRoot), { recursive: true });
+    fs.writeFileSync(getCacheFilePath(tmpRoot), '{ "schemaVersion": 1 }', 'utf8');
+    const before = fs.readFileSync(getCacheFilePath(tmpRoot), 'utf8');
+
+    const warnSpy = jest.spyOn(console, 'warn')
+      .mockImplementation(() => {});
+    const writeFileSpy = jest.spyOn(fs.promises, 'writeFile')
+      .mockRejectedValueOnce(new Error('disk full'));
+
+    await expect(updateWorkspaceCache(tmpRoot, (c) => {
+      c.project = { selectedOperatorPaths: ['/x'] };
+    }))
+      .resolves.toBe(false);
+
+    writeFileSpy.mockRestore();
+    warnSpy.mockRestore();
+
+    expect(fs.readFileSync(getCacheFilePath(tmpRoot), 'utf8'))
+      .toBe(before);
+    expect(fs.existsSync(`${getCacheFilePath(tmpRoot)}.tmp`))
+      .toBe(false);
+  });
+
+  it('updateFolderScanState persists the scan state under the normalized root key', async () => {
+    const next = {
+      opsMeet: [
+        {
+          name: 'add',
+          path: '/workspace/ops/add',
+        },
+      ],
+      opsList: [
+        {
+          name: 'mul',
+          path: '/workspace/ops/mul',
+          isCompiled: true,
+          opType: 'cann',
+        },
+      ],
+      experimentalOpsList: [],
+    };
+
+    const wrote = await updateFolderScanState(tmpRoot, next);
+
+    expect(wrote)
+      .toBe(true);
+
+    const raw = readRaw();
+
+    expect(raw.folders)
+      .toBeDefined();
+    expect(Object.keys(raw.folders as Record<string, unknown>))
+      .toHaveLength(1);
+    expect((raw.folders as Record<string, unknown>)[Object.keys(raw.folders as Record<string, unknown>)[0]])
+      .toEqual(next);
+  });
+
   it('cache file lands in the workspace IDE config dir (.vscode by default)', () => {
     expect(getCacheFilePath(tmpRoot))
       .toBe(path.join(tmpRoot, '.vscode', 'cache.json'));
+  });
+
+  describe('appendOperatorToFolderScanState (pure merge)', () => {
+    const emptyState = (): FolderScanState => ({
+      opsMeet: [],
+      opsList: [],
+      experimentalOpsList: [],
+    });
+
+    it('adds a brand-new operator to the regular list when not experimental', () => {
+      const next = appendOperatorToFolderScanState(
+        emptyState(),
+        {
+          name: 'add',
+          path: '/workspace/ops/add',
+          isCompiled: true,
+        },
+        false,
+      );
+
+      expect(next.opsList)
+        .toEqual([
+          {
+            name: 'add',
+            path: '/workspace/ops/add',
+            isCompiled: true,
+          },
+        ]);
+      expect(next.experimentalOpsList)
+        .toEqual([]);
+    });
+
+    it('adds a brand-new operator to the experimental list when experimental', () => {
+      const next = appendOperatorToFolderScanState(
+        emptyState(),
+        {
+          name: 'mul',
+          path: '/workspace/ops/mul',
+        },
+        true,
+      );
+
+      expect(next.experimentalOpsList)
+        .toEqual([
+          {
+            name: 'mul',
+            path: '/workspace/ops/mul',
+          },
+        ]);
+      expect(next.opsList)
+        .toEqual([]);
+    });
+
+    it('moves an operator across lists when the experimental flag changes', () => {
+      const state = emptyState();
+
+      state.experimentalOpsList = [
+        {
+          name: 'add',
+          path: '/workspace/ops/add',
+        },
+      ];
+
+      const next = appendOperatorToFolderScanState(
+        state,
+        {
+          name: 'add',
+          path: '/workspace/ops/add',
+          isCompiled: false,
+        },
+        false,
+      );
+
+      expect(next.opsList)
+        .toEqual([
+          {
+            name: 'add',
+            path: '/workspace/ops/add',
+            isCompiled: false,
+          },
+        ]);
+      expect(next.experimentalOpsList)
+        .toEqual([]);
+    });
+
+    it('keeps isCompiled true when the existing entry already compiled the operator', () => {
+      const state = emptyState();
+
+      state.opsList = [
+        {
+          name: 'add',
+          path: '/workspace/ops/add',
+          isCompiled: true,
+        },
+      ];
+
+      const next = appendOperatorToFolderScanState(
+        state,
+        {
+          name: 'add',
+          path: '/workspace/ops/add',
+          isCompiled: false,
+        },
+        false,
+      );
+
+      expect(next.opsList)
+        .toEqual([
+          {
+            name: 'add',
+            path: '/workspace/ops/add',
+            isCompiled: true,
+          },
+        ]);
+    });
+
+    it('keeps isCompiled true when only the incoming operator compiles it', () => {
+      const state = emptyState();
+
+      state.opsList = [
+        {
+          name: 'add',
+          path: '/workspace/ops/add',
+        },
+      ];
+
+      const next = appendOperatorToFolderScanState(
+        state,
+        {
+          name: 'add',
+          path: '/workspace/ops/add',
+          isCompiled: true,
+        },
+        false,
+      );
+
+      expect(next.opsList)
+        .toEqual([
+          {
+            name: 'add',
+            path: '/workspace/ops/add',
+            isCompiled: true,
+          },
+        ]);
+    });
   });
 
   describe('seedIfMissing (merge primitive)', () => {

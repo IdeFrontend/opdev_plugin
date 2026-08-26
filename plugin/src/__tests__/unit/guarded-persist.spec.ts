@@ -6,7 +6,12 @@ import { ensureMsdebugBreakpointFileAssociations } from '@plugin/domain/utils/ms
 import {
   getIdeConfigDir, getIdeSettingsFilePath,
 } from '@plugin/helpers/ide-config-dir';
-import { resetGuardedPersistChainForTest } from '@plugin/helpers/ide-settings-persist';
+import {
+  guardedPersistIdeSettingsFile,
+  readIdeSettingsJson,
+  resetGuardedPersistChainForTest,
+  tryParseSettingsJsonc,
+} from '@plugin/helpers/ide-settings-persist';
 import {
   ConfigService, readSettingsJsonFile,
 } from '@plugin/service/config-service';
@@ -224,5 +229,111 @@ describe('guarded persist (shared settings.json writers)', () => {
       expect(hasOpDevtools ? parsed['op-devtools.sanitizer.memory'] === true : true)
         .toBe(true);
     }
+  });
+
+  describe('low-level persist API', () => {
+    it('readIdeSettingsJson treats a missing, empty or whitespace file as {}', () => {
+      expect(readIdeSettingsJson(settingsPath))
+        .toEqual({});
+
+      fs.writeFileSync(settingsPath, '', 'utf8');
+      expect(readIdeSettingsJson(settingsPath))
+        .toEqual({});
+
+      fs.writeFileSync(settingsPath, ' \n\t ', 'utf8');
+      expect(readIdeSettingsJson(settingsPath))
+        .toEqual({});
+    });
+
+    it('readIdeSettingsJson treats unparseable content as {}', () => {
+      fs.writeFileSync(settingsPath, '{ not json', 'utf8');
+
+      expect(readIdeSettingsJson(settingsPath))
+        .toEqual({});
+    });
+
+    it('tryParseSettingsJsonc tolerates a BOM and rejects non-object payloads', () => {
+      expect(tryParseSettingsJsonc('﻿{ "a": 1 }'))
+        .toEqual({ a: 1 });
+      expect(tryParseSettingsJsonc('{ "a": 1, }'))
+        .toEqual({ a: 1 });
+      expect(tryParseSettingsJsonc('// note\n{ "a": 1 }'))
+        .toEqual({ a: 1 });
+      expect(tryParseSettingsJsonc('{ "a": }'))
+        .toBeUndefined();
+      expect(tryParseSettingsJsonc('[1, 2]'))
+        .toBeUndefined();
+      expect(tryParseSettingsJsonc('null'))
+        .toBeUndefined();
+      expect(tryParseSettingsJsonc('"a string"'))
+        .toBeUndefined();
+      expect(tryParseSettingsJsonc('42'))
+        .toBeUndefined();
+    });
+
+    it('guardedPersistIdeSettingsFile skips when the builder returns null', async () => {
+      const wrote = await guardedPersistIdeSettingsFile(settingsPath, () => null);
+
+      expect(wrote)
+        .toBe(false);
+      expect(fs.existsSync(settingsPath))
+        .toBe(false);
+    });
+
+    it('guardedPersistIdeSettingsFile can delete the file', async () => {
+      fs.writeFileSync(settingsPath, '{ "a": 1 }', 'utf8');
+
+      const wrote = await guardedPersistIdeSettingsFile(settingsPath, () => ({ deleteFile: true }));
+
+      expect(wrote)
+        .toBe(true);
+      expect(fs.existsSync(settingsPath))
+        .toBe(false);
+    });
+
+    it('guardedPersistIdeSettingsFile refuses to overwrite an unparseable settings.json', async () => {
+      fs.writeFileSync(settingsPath, '{ not json', 'utf8');
+      const warnSpy = jest.spyOn(console, 'warn')
+        .mockImplementation(() => {});
+
+      const wrote = await guardedPersistIdeSettingsFile(settingsPath, (current) => ({
+        next: {
+          ...current,
+          'op-devtools.sanitizer.memory': true,
+        },
+      }));
+
+      expect(wrote)
+        .toBe(false);
+      expect(fs.readFileSync(settingsPath, 'utf8'))
+        .toBe('{ not json');
+      expect(warnSpy)
+        .toHaveBeenCalledWith('[guardedPersistIdeSettingsFile] refusing to overwrite unparseable settings.json:', settingsPath);
+      warnSpy.mockRestore();
+    });
+
+    it('guardedPersistIdeSettingsFile cleans up the temp file and reports false on write failure', async () => {
+      const warnSpy = jest.spyOn(console, 'warn')
+        .mockImplementation(() => {});
+      const writeFileSpy = jest.spyOn(fs.promises, 'writeFile')
+        .mockRejectedValueOnce(new Error('disk full'));
+
+      const wrote = await guardedPersistIdeSettingsFile(settingsPath, (current) => ({
+        next: {
+          ...current,
+          'op-devtools.sanitizer.memory': true,
+        },
+      }));
+
+      writeFileSpy.mockRestore();
+      warnSpy.mockRestore();
+
+      expect(wrote)
+        .toBe(false);
+      expect(fs.existsSync(settingsPath))
+        .toBe(false);
+      expect(fs.existsSync(`${settingsPath}.${process.pid}.tmp`))
+        .toBe(false);
+    });
   });
 });

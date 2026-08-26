@@ -3,9 +3,19 @@ jest.mock('vscode', () => ({
   env: { uriScheme: 'vscode' },
 }), { virtual: true });
 
+jest.mock('i18next', () => ({ t: (key: string) => key }));
+
+jest.mock('@plugin/service/config-service', () => ({ ConfigService: { readBuildOpDeployTargetFromWorkspace: jest.fn() } }));
+
+jest.mock('@plugin/domain/plugins/operator-plugin.registry', () => ({ OperatorPluginRegistry: { getDefaultPaths: jest.fn() } }));
+
 import { TritonCommandStrategy } from '@plugin/domain/services/command-strategy/triton-strategy';
-import type { CommandContext } from '@plugin/domain/services/command-strategy';
+import type {
+  CommandContext, CommandBuildParams,
+} from '@plugin/domain/services/command-strategy';
 import type { SanitizerConfig } from '@plugin/service/config-service';
+import { ConfigService } from '@plugin/service/config-service';
+import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import { getIdeConfigDirName } from '@plugin/helpers/ide-config-dir';
 import * as vscode from 'vscode';
 
@@ -197,5 +207,210 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
     finally {
       (vscode.workspace as unknown as { workspaceFolders: unknown }).workspaceFolders = original;
     }
+  });
+
+  it('tolerates a partial DAO without tool or memcheckOption fields', () => {
+    const cmd = strategy.buildSanitizerCommand(buildContext({
+      script: 'python3 ./run.py',
+      targetFile: 'python3 ./run.py',
+    } as unknown as SanitizerConfig));
+
+    expect(cmd)
+      .toContain('mssanitizer');
+    expect(cmd).not.toContain('--tool');
+  });
+
+  it('throws when no python target is resolvable', () => {
+    expect(() => strategy.buildSanitizerCommand(buildContext({ script: 'python3 ./run.py' } as unknown as SanitizerConfig)))
+      .toThrow('cann.configMissingScript');
+  });
+
+  it('falls back to the process cwd for the log file when no workspace folder exists', () => {
+    const original = vscode.workspace.workspaceFolders;
+
+    (vscode.workspace as unknown as { workspaceFolders: unknown }).workspaceFolders = undefined;
+
+    try {
+      const cmd = strategy.buildSanitizerCommand(buildContext(baseConfig));
+      const normalized = cmd.replace(/\\/g, '/');
+      const cwd = process.cwd()
+        .replace(/\\/g, '/');
+
+      expect(normalized)
+        .toContain(`--log-file=${cwd}/`);
+    }
+    finally {
+      (vscode.workspace as unknown as { workspaceFolders: unknown }).workspaceFolders = original;
+    }
+  });
+});
+
+describe('TritonCommandStrategy command builders', () => {
+  const strategy = new TritonCommandStrategy();
+
+  const makeParams = (config: Record<string, unknown>): CommandBuildParams<any> => ({
+    config: config as never,
+    sourceCannCmd: '. /env.sh',
+    cdCmd: 'cd /op',
+    cdBuildCmd: 'cd /op',
+    op: 'triton_vector_add',
+  });
+
+  describe('buildRunCommand', () => {
+    it('wraps the configured python target with source and cd commands', () => {
+      const cmd = strategy.buildRunCommand(makeParams({ targetFile: 'python3 ./run.py' }));
+
+      expect(cmd)
+        .toBe('. /env.sh && cd /op && python3 ./run.py');
+    });
+
+    it('throws when the configured target file is empty', () => {
+      expect(() => strategy.buildRunCommand(makeParams({ targetFile: '' })))
+        .toThrow('cann.configMissingScript');
+    });
+  });
+
+  describe('buildOpCommand', () => {
+    it('uses the cpu_debug_script field when scriptField is cpu_debug_script', () => {
+      const cmd = strategy.buildOpCommand({
+        ...makeParams({
+          script: 'script.sh',
+          cpuDebugScript: 'cpu.sh',
+          npuDebugScript: 'npu.sh',
+        }),
+        scriptField: 'cpu_debug_script',
+      });
+
+      expect(cmd)
+        .toContain('cpu.sh');
+      expect(cmd).not.toContain('script.sh');
+    });
+
+    it('uses the npu_debug_script field when scriptField is npu_debug_script', () => {
+      const cmd = strategy.buildOpCommand({
+        ...makeParams({
+          script: 'script.sh',
+          cpuDebugScript: 'cpu.sh',
+          npuDebugScript: 'npu.sh',
+        }),
+        scriptField: 'npu_debug_script',
+      });
+
+      expect(cmd)
+        .toContain('npu.sh');
+      expect(cmd).not.toContain('script.sh');
+    });
+
+    it('throws when the selected script is empty', () => {
+      expect(() => strategy.buildOpCommand(makeParams({})))
+        .toThrow('cann.configMissingScript');
+    });
+
+    it('appends the compile option and advance command when provided', () => {
+      const cmd = strategy.buildOpCommand({
+        ...makeParams({ script: 'build.sh' }),
+        compileOption: '--compile-option x',
+        advance_cmd: '--advance y',
+      });
+
+      expect(cmd)
+        .toBe('. /env.sh && cd /op && build.sh --compile-option x --advance y');
+    });
+  });
+
+  describe('buildExampleCommand', () => {
+    it('wraps the example script with source and cd commands', () => {
+      const cmd = strategy.buildExampleCommand(makeParams({ script: 'bash build.sh --example' }));
+
+      expect(cmd)
+        .toBe('. /env.sh && cd /op && bash build.sh --example');
+    });
+
+    it('throws when the example script is empty', () => {
+      expect(() => strategy.buildExampleCommand(makeParams({})))
+        .toThrow('cann.configMissingScript');
+    });
+
+    it('appends the compile option and advance command when provided', () => {
+      const cmd = strategy.buildExampleCommand({
+        ...makeParams({ script: 'bash build.sh --example' }),
+        compileOption: '--compile-option x',
+        advance_cmd: '--advance y',
+      });
+
+      expect(cmd)
+        .toBe('. /env.sh && cd /op && bash build.sh --example --compile-option x --advance y');
+    });
+  });
+
+  it('rejects ut tests for triton', () => {
+    expect(() => strategy.buildUtTestCommand({} as never))
+      .toThrow('triton.utTestNotSupported');
+  });
+
+  describe('getRunTargetFile', () => {
+    it('returns the workspace deploy target', () => {
+      (ConfigService.readBuildOpDeployTargetFromWorkspace as jest.Mock).mockReturnValue('python3 ./run.py');
+
+      expect(strategy.getRunTargetFile('op'))
+        .toBe('python3 ./run.py');
+    });
+
+    it('throws when no deploy target is configured', () => {
+      (ConfigService.readBuildOpDeployTargetFromWorkspace as jest.Mock).mockReturnValue('');
+
+      expect(() => strategy.getRunTargetFile('op'))
+        .toThrow('cann.configMissingScript');
+    });
+  });
+
+  describe('getProfilerTargetFile', () => {
+    it('returns the config target file when present', () => {
+      expect(strategy.getProfilerTargetFile({ targetFile: 'python3 ./run.py' } as never, null, 'op'))
+        .toBe('python3 ./run.py');
+    });
+
+    it('returns an empty string when the config target file is empty', () => {
+      expect(strategy.getProfilerTargetFile({ targetFile: '' } as never, null, 'op'))
+        .toBe('');
+    });
+
+    it('falls back to the workspace deploy target for simulate and on-board', () => {
+      (ConfigService.readBuildOpDeployTargetFromWorkspace as jest.Mock).mockReturnValue('python3 ./sim.py');
+
+      expect(strategy.getProfilerTargetFile({} as never, null, 'op'))
+        .toBe('python3 ./sim.py');
+    });
+
+    it('falls back to the registry default op file', () => {
+      (ConfigService.readBuildOpDeployTargetFromWorkspace as jest.Mock).mockReturnValue(undefined);
+      (OperatorPluginRegistry.getDefaultPaths as jest.Mock).mockReturnValue({ targetOpFile: 'python3 ./op.py' });
+
+      expect(strategy.getProfilerTargetFile({} as never, null, 'op'))
+        .toBe('python3 ./op.py');
+      expect(OperatorPluginRegistry.getDefaultPaths)
+        .toHaveBeenCalledWith({
+          op_type: 'triton',
+          op_path: '',
+          op_name: 'op',
+        });
+    });
+
+    it('passes the operator op_path to the registry fallback', () => {
+      (ConfigService.readBuildOpDeployTargetFromWorkspace as jest.Mock).mockReturnValue('');
+      (OperatorPluginRegistry.getDefaultPaths as jest.Mock).mockReturnValue({ targetOpFile: 'python3 ./op.py' });
+
+      strategy.getProfilerTargetFile({} as never, {
+        op_path: '/proj/op1',
+        op_name: 'op1',
+      } as never, 'op');
+
+      expect(OperatorPluginRegistry.getDefaultPaths)
+        .toHaveBeenCalledWith({
+          op_type: 'triton',
+          op_path: '/proj/op1',
+          op_name: 'op',
+        });
+    });
   });
 });

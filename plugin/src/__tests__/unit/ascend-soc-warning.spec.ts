@@ -217,6 +217,24 @@ describe('ascend SOC undetected warning', () => {
       .toBe('cancelled');
   });
 
+  it('validates the Set and Execute input box value', async () => {
+    (vscode.window.showWarningMessage as jest.Mock).mockImplementation((_message: string, setAndExecuteLabel: string) => Promise.resolve(setAndExecuteLabel));
+    (vscode.window.showInputBox as jest.Mock).mockResolvedValue('ascend910b');
+
+    await maybeWarnSocNotDetected(emptyDefaultResolution);
+
+    const options = (vscode.window.showInputBox as jest.Mock).mock.calls[0][0] as {
+      validateInput: (value: string)=> string | undefined;
+    };
+
+    expect(options.validateInput(''))
+      .toBe('Please enter a valid SoC version');
+    expect(options.validateInput('   '))
+      .toBe('Please enter a valid SoC version');
+    expect(options.validateInput('ascend910b'))
+      .toBeUndefined();
+  });
+
   it('returns cancelled when Set and Execute input is dismissed', async () => {
     (vscode.window.showWarningMessage as jest.Mock).mockImplementation((_message: string, setAndExecuteLabel: string) => Promise.resolve(setAndExecuteLabel));
     (vscode.window.showInputBox as jest.Mock).mockResolvedValue(undefined);

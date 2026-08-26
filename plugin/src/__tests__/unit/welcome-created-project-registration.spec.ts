@@ -27,11 +27,13 @@ jest.mock('fs', () => ({
   mkdirSync: jest.fn(),
 }));
 
+let mockExecutorExecuteImpl: ()=> Promise<unknown> = () => Promise.resolve({ code: 0 });
+
 jest.mock('@plugin/class/command-options', () => ({
   CommandExecutor: jest.fn()
     .mockImplementation(() => ({
       execute: jest.fn()
-        .mockResolvedValue({ code: 0 }),
+        .mockImplementation(() => mockExecutorExecuteImpl()),
     })),
 }));
 
@@ -166,6 +168,11 @@ import {
 import { WorkspaceDetectorService } from '@plugin/service/workspace-detector-service';
 import { whenPostActivateBootstrapReady } from '@plugin/helpers/post-activate-bootstrap';
 import { welcomeMethods } from '@plugin/controller/welcome-controller';
+import { getWorkspaceGenOpCommand } from '@plugin/helpers/operator-project-workspace-config';
+import {
+  buildGenOpCommand,
+  decideSkipFileGeneration,
+} from '@plugin/domain/utils/genop-command';
 import * as path from 'path';
 
 const params = {
@@ -362,5 +369,186 @@ describe('welcomeMethods.createdProject standard-custom registration recovery', 
       .toHaveBeenCalledTimes(1);
     expect(updateWorkspaceCache)
       .toHaveBeenNthCalledWith(1, '/repo/ops-math', expect.any(Function));
+  });
+
+  it('seeds the scan state for a cache without a folders key', async () => {
+    storedRoot = makeRoot();
+
+    await welcomeMethods.createdProject(params);
+
+    const cache = { schemaVersion: 1 } as WorkspaceCache;
+
+    collectionAppendUpdater()(cache);
+    expect(cache.folders?.['/repo/ops-math'])
+      .toEqual({
+        opsMeet: [],
+        opsList: [
+          {
+            name: 'add',
+            path: childPath,
+            isCompiled: false,
+          },
+        ],
+        experimentalOpsList: [],
+      });
+  });
+
+  it('warns when the reveal of a new sub-operator fails with an error', async () => {
+    storedRoot = makeRoot();
+    const warnSpy = jest.spyOn(console, 'warn')
+      .mockImplementation();
+
+    (vscode.commands.executeCommand as jest.Mock).mockImplementation((command: string) => {
+      if (command === 'revealInExplorer') {
+        return Promise.reject(new Error('tree busy'));
+      }
+
+      return Promise.resolve(undefined);
+    });
+
+    await welcomeMethods.createdProject(params);
+
+    expect(console.warn)
+      .toHaveBeenCalledWith(expect.stringContaining('tree busy'));
+    (vscode.commands.executeCommand as jest.Mock).mockResolvedValue(undefined);
+    warnSpy.mockRestore();
+  });
+
+  it('warns with stringified details when the reveal of a new sub-operator fails with a non-Error', async () => {
+    storedRoot = makeRoot();
+    const warnSpy = jest.spyOn(console, 'warn')
+      .mockImplementation();
+
+    (vscode.commands.executeCommand as jest.Mock).mockImplementation((command: string) => {
+      if (command === 'revealInExplorer') {
+        return Promise.reject('tree busy');
+      }
+
+      return Promise.resolve(undefined);
+    });
+
+    await welcomeMethods.createdProject(params);
+
+    expect(console.warn)
+      .toHaveBeenCalledWith(expect.stringContaining('tree busy'));
+    (vscode.commands.executeCommand as jest.Mock).mockResolvedValue(undefined);
+    warnSpy.mockRestore();
+  });
+});
+
+describe('welcomeMethods.createdProject genop scaffold', () => {
+  let storedRoot: ProjectRecord | undefined;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    storedRoot = makeRoot();
+    (globalThis as unknown as { extensionContext: unknown }).extensionContext = {
+      extensionPath: '/extension',
+      globalState: {
+        update: jest.fn()
+          .mockResolvedValue(undefined),
+      },
+    };
+    (vscode.workspace as { workspaceFolders?: unknown }).workspaceFolders = [{ uri: { fsPath: '/repo/ops-math' } }];
+    (vscode.window.withProgress as jest.Mock).mockImplementation(async (_options, task) =>
+      await task({ report: jest.fn() }));
+    (whenPostActivateBootstrapReady as jest.Mock).mockResolvedValue(undefined);
+    (getWorkspaceGenOpCommand as jest.Mock).mockReturnValue('build.sh --genop');
+    (buildGenOpCommand as jest.Mock).mockReturnValue('genop-cmd');
+    (decideSkipFileGeneration as jest.Mock).mockReturnValue(true);
+    (getProjectByPath as jest.Mock).mockImplementation(() => storedRoot);
+    mockExecutorExecuteImpl = () => Promise.resolve({ code: 0 });
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('defers to the collection genop command and skips file generation when it succeeds', async () => {
+    await welcomeMethods.createdProject(params);
+
+    expect(buildGenOpCommand)
+      .toHaveBeenCalledWith('build.sh --genop', 'math', 'add');
+    const executor = (CommandExecutor as jest.Mock).mock.results[0].value as { execute: jest.Mock };
+
+    expect(executor.execute)
+      .toHaveBeenCalledWith('genop-cmd', [], [], expect.objectContaining({
+        cwd: '/repo/ops-math',
+        toolOutputLabel: 'create',
+      }), true);
+    expect(vscode.window.showInformationMessage)
+      .toHaveBeenCalledWith('welcome.genopRunning');
+    expect(vscode.window.showWarningMessage)
+      .not
+      .toHaveBeenCalledWith('welcome.genopFellBack');
+    expect(vscode.commands.executeCommand)
+      .toHaveBeenCalledWith(
+        'create-directory',
+        expect.objectContaining({ subOperatorContext: expect.objectContaining({ skipFileGeneration: true }) }),
+        expect.anything(),
+      );
+  });
+
+  it('scaffolds from the collection root when the project path equals it', async () => {
+    await welcomeMethods.createdProject({
+      projectPath: '/repo/ops-math',
+      projectName: 'add',
+      createOperatorProjectDictoryFileType: 2,
+    });
+
+    expect(buildGenOpCommand)
+      .toHaveBeenCalledWith('build.sh --genop', '.', 'add');
+  });
+
+  it('falls back to template scaffolding when genop leaves no sources', async () => {
+    (decideSkipFileGeneration as jest.Mock).mockReturnValue(false);
+
+    await welcomeMethods.createdProject(params);
+
+    expect(vscode.window.showWarningMessage)
+      .toHaveBeenCalledWith('welcome.genopFellBack');
+    expect(vscode.commands.executeCommand)
+      .toHaveBeenCalledWith(
+        'create-directory',
+        expect.objectContaining({ subOperatorContext: expect.objectContaining({ skipFileGeneration: false }) }),
+        expect.anything(),
+      );
+  });
+
+  it('falls back to template scaffolding when the genop execution rejects with an error', async () => {
+    const warnSpy = jest.spyOn(console, 'warn')
+      .mockImplementation();
+
+    mockExecutorExecuteImpl = () => Promise.reject(new Error('bash missing'));
+
+    await welcomeMethods.createdProject(params);
+
+    expect(console.warn)
+      .toHaveBeenCalledWith(expect.stringContaining('falling back to template scaffolding'), expect.stringContaining('bash missing'));
+    expect(vscode.window.showWarningMessage)
+      .toHaveBeenCalledWith('welcome.genopFellBack');
+    // Template scaffolding still completes the flow.
+    expect(vscode.commands.executeCommand)
+      .toHaveBeenCalledWith(
+        'create-directory',
+        expect.objectContaining({ subOperatorContext: expect.objectContaining({ skipFileGeneration: false }) }),
+        expect.anything(),
+      );
+    warnSpy.mockRestore();
+  });
+
+  it('falls back to template scaffolding when the genop execution rejects with a string', async () => {
+    const warnSpy = jest.spyOn(console, 'warn')
+      .mockImplementation();
+
+    mockExecutorExecuteImpl = () => Promise.reject('no bash at all');
+
+    await welcomeMethods.createdProject(params);
+
+    expect(console.warn)
+      .toHaveBeenCalledWith(expect.stringContaining('falling back to template scaffolding'), expect.stringContaining('no bash at all'));
+    expect(vscode.window.showWarningMessage)
+      .toHaveBeenCalledWith('welcome.genopFellBack');
+    warnSpy.mockRestore();
   });
 });

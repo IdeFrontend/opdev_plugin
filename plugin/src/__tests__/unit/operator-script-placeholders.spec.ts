@@ -19,6 +19,7 @@ import {
   getWorkspaceSimulatorType,
 } from '@plugin/helpers/operator-project-workspace-config';
 import { getGlobalEnvSnapshot } from '@plugin/domain/utils/global-env-snapshot';
+import type { AscendEnvResolution } from '@plugin/domain/utils/ascend-util';
 import {
   applyOperatorNamesPlaceholder,
   ensureStandardCustomSocFlag,
@@ -67,6 +68,35 @@ describe('applyOperatorNamesPlaceholder', () => {
     expect(applyOperatorNamesPlaceholder(script, 'add')
       .match(/--ops=/g)?.length)
       .toBe(1);
+  });
+
+  it('trims whitespace around the operator names', () => {
+    const script = 'bash build.sh --ops={operatorNames} --debug';
+
+    expect(applyOperatorNamesPlaceholder(script, '  add,sub  '))
+      .toBe('bash build.sh --ops=add,sub --debug');
+  });
+
+  it('removes a bare {operatorNames} token when it is not part of --ops', () => {
+    const script = 'bash build.sh --label={operatorNames} --ops={operatorNames}';
+
+    expect(applyOperatorNamesPlaceholder(script))
+      .toBe('bash build.sh --label=');
+  });
+
+  it('appends --ops after --pkg for a stored script without the placeholder', () => {
+    expect(applyOperatorNamesPlaceholder('bash build.sh --pkg --onboard', 'add'))
+      .toBe('bash build.sh --pkg --ops=add --onboard');
+  });
+
+  it('appends --ops before -u for an Ascend UT-style stored script', () => {
+    expect(applyOperatorNamesPlaceholder('bash build.sh --soc=ascend910b -u', 'add'))
+      .toBe('bash build.sh --soc=ascend910b --ops=add -u');
+  });
+
+  it('does not append --ops when the substituted script lacks --ops but is not standard-custom', () => {
+    expect(applyOperatorNamesPlaceholder('bash build.sh --label={operatorNames}', 'add'))
+      .toBe('bash build.sh --label=add');
   });
 });
 
@@ -127,6 +157,44 @@ describe('replaceOperatorScriptPlaceholders', () => {
 
     expect(resolved)
       .toBe('bash build.sh --simulator Ascend950PR_9589');
+  });
+
+  it('uses a precomputed resolution verbatim when provided', () => {
+    const resolution: AscendEnvResolution = {
+      socVersion: 'ascend910b',
+      npuArch: 'dav-1001',
+      simulatorType: 'Ascend910B3',
+      source: {
+        socVersion: 'workspace-setting',
+        simulatorType: 'workspace-setting',
+        npuArch: 'derived-from-soc',
+      },
+    };
+
+    expect(replaceOperatorScriptPlaceholders(
+      'bash build.sh --soc={soc_version} --simulator {simulator_type}',
+      resolution,
+    ))
+      .toBe('bash build.sh --soc=ascend910b --simulator Ascend910B3');
+  });
+
+  it('substitutes an empty simulator from a resolution without simulatorType', () => {
+    const resolution: AscendEnvResolution = {
+      socVersion: 'ascend910b',
+      npuArch: '',
+      simulatorType: undefined,
+      source: {
+        socVersion: 'workspace-setting',
+        simulatorType: 'n/a',
+        npuArch: 'derived-from-soc',
+      },
+    };
+
+    expect(replaceOperatorScriptPlaceholders(
+      'bash build.sh --simulator {simulator_type}',
+      resolution,
+    ))
+      .toBe('bash build.sh --simulator ');
   });
 });
 

@@ -84,6 +84,18 @@ describe('hasCppLanguageSupportExtension', () => {
     expect(hasCppLanguageSupportExtension())
       .toBe(false);
   });
+
+  it('ignores extension language entries without an id', () => {
+    setInstalledExtensions([
+      {
+        id: 'some.shell',
+        packageJSON: { contributes: { languages: [{ name: 'Shell Script' }] } },
+      },
+    ]);
+
+    expect(hasCppLanguageSupportExtension())
+      .toBe(false);
+  });
 });
 
 describe('maybePromptInstallCppExtension', () => {
@@ -131,5 +143,20 @@ describe('maybePromptInstallCppExtension', () => {
 
     expect(vscode.window.showWarningMessage)
       .toHaveBeenCalledWith('extension.cppSupport.installFailed');
+  });
+
+  it('does nothing when the user closes the prompt with another button', async () => {
+    (vscode.window.showInformationMessage as jest.Mock).mockResolvedValueOnce('some other action');
+
+    const context = createContext();
+
+    await maybePromptInstallCppExtension(context, logDebug);
+
+    expect(vscode.commands.executeCommand)
+      .not
+      .toHaveBeenCalled();
+    expect(context.globalState.update)
+      .not
+      .toHaveBeenCalled();
   });
 });
