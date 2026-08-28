@@ -1719,7 +1719,7 @@
         {
           "command": "huawei-op-devtools.openProfilingReport",
           "group": "navigation@2",
-          "when": "resourceScheme == 'file' && (resourceExtname == '.rep' || resourceExtname == '.ncrep')"
+          "when": "opDevtools.hasDevtoolConfig && resourceScheme == 'file' && (resourceExtname == '.rep' || resourceExtname == '.ncrep')"
         }
       ],
       "explorer/context": [
