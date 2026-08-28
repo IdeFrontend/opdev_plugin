@@ -642,14 +642,7 @@
       }
     ],
     "viewsContainers": {
-      "secondarySidebar": [
-        {
-          "id": "mindstudio-opssuite-vscode-plugin",
-          "title": "%viewContainer.activitybar.title%",
-          "icon": "out/web/branding/activitybar_logo_mono.svg"
-        }
-      ],
-      "secondaryActivitybar": [
+      "activitybar": [
         {
           "id": "mindstudio-opssuite-vscode-plugin",
           "title": "%viewContainer.activitybar.title%",

@@ -4,9 +4,8 @@ import {
 } from '@shared/flavor';
 
 /**
- * View container id of the plugin's panel. It is contributed to the secondary side bar
- * (auxiliary bar) / secondary activity bar — see `contributes.viewsContainers` in the
- * extension manifest.
+ * View container id of the plugin's panel. It is contributed to the primary activity bar
+ * (left side bar) — see `contributes.viewsContainers` in the extension manifest.
  */
 export const OPS_OPERATE_VIEW_CONTAINER_ID = VIEW_CONTAINER_ID;
 
@@ -15,22 +14,14 @@ export const OPS_OPERATE_VIEW_CONTAINER_ID = VIEW_CONTAINER_ID;
  * order. The editor-title icon only ever shows/focuses the panel — it never toggles it
  * closed. The host executes the FIRST one it actually registers:
  *
- *  1. `workbench.view.extension.<id>` — standard VS Code view container command.
- *  2. `workbench.action.focusAuxiliaryBar` — focus the secondary (auxiliary) side bar where
- *     the container lives. The target IDE is a VS Code fork (`VSCode-huawei`) that
- *     contributes the container via the non-standard `secondarySidebar` /
- *     `secondaryActivitybar` keys and does NOT register the per-container command above
- *     (calling it throws "command not found"); this fork provides the auxiliary-bar
- *     command family (`toggleAuxiliaryBar` / `closeAuxiliaryBar` are used elsewhere).
+ *  1. `workbench.view.extension.<id>` — standard VS Code view container command; every
+ *     VS Code variant registers it for activity-bar containers, so it is the only candidate.
  *
  * `workbench.action.toggleSidebarVisibility` (the original GC-33 bug — toggles the PRIMARY
- * side bar and closes Explorer/Debug/etc.) and the auxiliary-bar TOGGLE are deliberately
- * absent: the icon must focus, not toggle.
+ * side bar and closes Explorer/Debug/etc.) and any toggle command are deliberately absent:
+ * the icon must focus, not toggle.
  */
-export const OPS_OPERATE_FOCUS_COMMAND_CANDIDATES: readonly string[] = [
-  workbenchViewContainerCommand(),
-  'workbench.action.focusAuxiliaryBar',
-];
+export const OPS_OPERATE_FOCUS_COMMAND_CANDIDATES: readonly string[] = [workbenchViewContainerCommand()];
 
 /**
  * Pick the command the editor-title icon should run to focus the plugin's panel: the first

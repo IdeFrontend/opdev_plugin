@@ -699,14 +699,12 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // Register the open/close command for the plugin's OWN view container. The container is
-  // contributed to the secondary side bar (auxiliary bar), so
-  // `workbench.action.toggleSidebarVisibility` toggles the wrong (primary) side bar and
-  // indiscriminately closes Explorer/Debug/etc. (GC-33). The icon only FOCUSES (reveals) the
-  // plugin's own panel — it never toggles it closed. We run the
-  // first registered focus candidate (per-container focus, then the secondary/auxiliary bar
-  // focus the VSCode-huawei fork provides) and skip when none exist instead of throwing
-  // "command not found".
+  // Register the open/close command for the plugin's OWN view container (contributed to the
+  // primary activity bar). `workbench.action.toggleSidebarVisibility` would toggle the whole
+  // primary side bar and indiscriminately close Explorer/Debug/etc. (GC-33). The icon only
+  // FOCUSES (reveals) the plugin's own panel — it never toggles it closed. We run the first
+  // registered focus candidate (the per-container command) and skip when none exist instead
+  // of throwing "command not found".
   const toggleOpsOperateCommand = vscode.commands.registerCommand(
     COMMAND_TOGGLE_OPS_OPERATE,
     async () => {

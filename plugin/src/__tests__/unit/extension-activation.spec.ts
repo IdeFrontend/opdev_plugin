@@ -1402,12 +1402,12 @@ describe('extension activation', () => {
 
     it('focuses the plugin view container when the focus command exists', async () => {
       await activateWith();
-      (vscode.commands.getCommands as jest.Mock).mockResolvedValue(['workbench.action.focusAuxiliaryBar']);
+      (vscode.commands.getCommands as jest.Mock).mockResolvedValue([workbenchViewContainerCommand()]);
 
       await invokeCommand(constants.COMMAND_TOGGLE_OPS_OPERATE);
 
       expect(vscode.commands.executeCommand)
-        .toHaveBeenCalledWith('workbench.action.focusAuxiliaryBar');
+        .toHaveBeenCalledWith(workbenchViewContainerCommand());
     });
 
     it('warns when no focus command is registered', async () => {
@@ -1416,12 +1416,16 @@ describe('extension activation', () => {
 
       await activateWith();
       (vscode.commands.getCommands as jest.Mock).mockResolvedValue([]);
+      const callsBefore = (vscode.commands.executeCommand as jest.Mock).mock.calls.length;
 
       await invokeCommand(constants.COMMAND_TOGGLE_OPS_OPERATE);
 
       expect(warnSpy)
         .toHaveBeenCalled();
-      expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith('workbench.action.focusAuxiliaryBar');
+      // The handler must skip execution entirely — other activation paths also
+      // call the container command, so compare call counts, not arguments.
+      expect((vscode.commands.executeCommand as jest.Mock).mock.calls.length)
+        .toBe(callsBefore);
     });
 
     it('swallows command listing failures', async () => {
