@@ -120,7 +120,7 @@ jest.mock('@plugin/domain', () => ({
   getOnBoardCommand: jest.fn(),
   getRunCommand: jest.fn(),
   getUtTestCommand: jest.fn(),
-  getStandardCustomDeployCommand: jest.fn(),
+  getStandardCustomDeployTail: jest.fn(() => ''),
   resolveExampleModeForBaseContext: jest.fn(() => ({
     mode: 'eager',
     exampleFound: true,
@@ -196,7 +196,7 @@ import {
   getSimulateCommand,
   getOnBoardCommand,
   getUtTestCommand,
-  getStandardCustomDeployCommand,
+  getStandardCustomDeployTail,
   resolveExampleModeForBaseContext,
 } from '@plugin/domain';
 import {
@@ -302,7 +302,7 @@ describe('build-service flows', () => {
     (getBuildExampleCommand as jest.Mock).mockReturnValue('example-cmd');
     (getSimulateCommand as jest.Mock).mockReturnValue('simulate-cmd');
     (getOnBoardCommand as jest.Mock).mockReturnValue('onboard-cmd');
-    (getStandardCustomDeployCommand as jest.Mock).mockReturnValue('deploy-cmd');
+    (getStandardCustomDeployTail as jest.Mock).mockReturnValue('');
     // clearAllMocks does NOT clear mockReturnValue/mockResolvedValue overrides,
     // so every default a test may have replaced is re-asserted here.
     (OperatorPluginRegistry.isProjectTypeSupported as jest.Mock).mockReturnValue(true);
@@ -1118,11 +1118,16 @@ describe('build-service flows', () => {
         requiresBuildBeforeAnalysis: true,
         supportsSimulate: true,
       });
+      (getStandardCustomDeployTail as jest.Mock).mockReturnValueOnce('deploy-tail');
 
       await buildService.startSimulate({});
 
-      expect(executeOperatorCommand)
-        .toHaveBeenCalledTimes(4);
+      const execMock = executeOperatorCommand as jest.Mock;
+
+      expect(execMock)
+        .toHaveBeenCalledTimes(3);
+      expect(execMock.mock.calls[0][0])
+        .toBe('build-op-cmd && deploy-tail');
       expect(resolveAscendEnv)
         .toHaveBeenCalledWith({ isSimulator: true });
       expect(getBuildExampleCommand)
@@ -1137,12 +1142,6 @@ describe('build-service flows', () => {
           undefined,
           true,
         );
-      expect(getStandardCustomDeployCommand)
-        .toHaveBeenCalledWith({
-          projectPath: root,
-          configType: 'build_op',
-          op: '',
-        });
       expect(vscode.window.showInformationMessage)
         .toHaveBeenCalledWith('build.simulationSuccess');
       expect(vscode.commands.executeCommand)
@@ -1214,14 +1213,12 @@ describe('build-service flows', () => {
         .toThrow('SOC configuration interrupted by user');
     });
 
-    it('throws when the deploy of the run package fails', async () => {
+    it('surfaces a deploy-phase failure through the combined compile+deploy command', async () => {
       setPluginBehavior({
         requiresBuildBeforeAnalysis: true,
         supportsSimulate: true,
       });
       setExecSequence([
-        { code: 0 },
-        { code: 0 },
         {
           code: 1,
           output: 'deploy boom',
@@ -1230,9 +1227,9 @@ describe('build-service flows', () => {
 
       await expect(buildService.startSimulate({}))
         .rejects
-        .toThrow('build.executeFailedThrow');
+        .toThrow('build.compileFailedThrow');
       expect(vscode.window.showErrorMessage)
-        .toHaveBeenCalledWith('build.executeFailed');
+        .toHaveBeenCalledWith('build.compileFailed');
     });
 
     it('skips the example+deploy chain when the root is not standard-custom', async () => {
@@ -1247,7 +1244,7 @@ describe('build-service flows', () => {
 
       expect(executeOperatorCommand)
         .toHaveBeenCalledTimes(2);
-      expect(getStandardCustomDeployCommand)
+      expect(getStandardCustomDeployTail)
         .not.toHaveBeenCalled();
     });
 
@@ -1386,17 +1383,18 @@ describe('build-service flows', () => {
         requiresBuildBeforeAnalysis: true,
         supportsOnBoard: true,
       });
+      (getStandardCustomDeployTail as jest.Mock).mockReturnValueOnce('deploy-tail');
 
       await buildService.startOnBoard({});
 
-      expect(executeOperatorCommand)
-        .toHaveBeenCalledTimes(4);
-      expect(getStandardCustomDeployCommand)
-        .toHaveBeenCalledWith({
-          projectPath: root,
-          configType: 'build_op',
-          op: '',
-        });
+      const execMock = executeOperatorCommand as jest.Mock;
+
+      expect(execMock)
+        .toHaveBeenCalledTimes(3);
+      // The .run deploy tail (with --force) is embedded in the compile command,
+      // so the operator is deployed before the example build runs.
+      expect(execMock.mock.calls[0][0])
+        .toBe('build-op-cmd && deploy-tail');
       expect(vscode.window.showInformationMessage)
         .toHaveBeenCalledWith('build.onBoardSuccess');
       expect(vscode.commands.executeCommand)
@@ -1448,7 +1446,7 @@ describe('build-service flows', () => {
         .not.toHaveBeenCalled();
     });
 
-    it('returns silently when the deploy of the run package is interrupted', async () => {
+    it('returns silently when the on-board command is interrupted', async () => {
       setPluginBehavior({
         requiresBuildBeforeAnalysis: true,
         supportsOnBoard: true,
@@ -1468,14 +1466,12 @@ describe('build-service flows', () => {
         .not.toHaveBeenCalled();
     });
 
-    it('maps a failed deploy to executeFailed and returns', async () => {
+    it('maps a failed compile+deploy command to compileFailed and returns', async () => {
       setPluginBehavior({
         requiresBuildBeforeAnalysis: true,
         supportsOnBoard: true,
       });
       setExecSequence([
-        { code: 0 },
-        { code: 0 },
         {
           code: 1,
           output: 'deploy boom',
@@ -1485,7 +1481,7 @@ describe('build-service flows', () => {
       await buildService.startOnBoard({});
 
       expect(vscode.window.showErrorMessage)
-        .toHaveBeenCalledWith('build.executeFailed');
+        .toHaveBeenCalledWith('build.compileFailed');
       expect(getOnBoardCommand)
         .not.toHaveBeenCalled();
     });
@@ -1542,7 +1538,6 @@ describe('build-service flows', () => {
       setExecSequence([
         { code: 0 },
         { code: 0 },
-        { code: 0 },
         {
           code: 1,
           interruptedByUserStop: true,
@@ -1561,7 +1556,6 @@ describe('build-service flows', () => {
         supportsOnBoard: true,
       });
       setExecSequence([
-        { code: 0 },
         { code: 0 },
         { code: 0 },
         {

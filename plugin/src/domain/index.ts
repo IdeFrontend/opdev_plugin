@@ -15,6 +15,7 @@ export {
   getSanitizerCommand,
   getUtTestCommand,
   getStandardCustomDeployCommand,
+  getStandardCustomDeployTail,
   resolveBuildOpBaseContext,
   resolveBuildExampleBaseContext,
   resolveUtTestBaseContext,

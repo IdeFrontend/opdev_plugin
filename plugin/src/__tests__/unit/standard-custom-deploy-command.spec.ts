@@ -18,6 +18,7 @@ import { ConfigService } from '@plugin/service/config-service';
 import type { BuildOpConfig } from '@plugin/service/config-service';
 import {
   getStandardCustomDeployCommand,
+  getStandardCustomDeployTail,
   resolveBuildOpBaseContext,
 } from '@plugin/domain/services/command';
 
@@ -71,6 +72,25 @@ describe('getStandardCustomDeployCommand', () => {
     expect(command)
       .toContain('"$RUN_FILE" --help');
     expect(command)
+      .toContain('"$RUN_FILE" --force');
+  });
+
+  it('returns only the deploy tail (no env/cd prefix) for embedding into a build command', () => {
+    (ConfigService.readBuildOpDeployTargetFromWorkspace as jest.Mock).mockReturnValue('build_out/*.run');
+
+    const tail = getStandardCustomDeployTail();
+
+    expect(tail)
+      .not
+      .toContain('. /cann/setenv.bash');
+    expect(tail)
+      .not
+      .toContain('cd ');
+    expect(tail)
+      .toContain('RUN_FILE=$(find build_out/*.run)');
+    expect(tail)
+      .toContain('"$RUN_FILE" --help');
+    expect(tail)
       .toContain('"$RUN_FILE" --force');
   });
 });

@@ -17,7 +17,7 @@ import {
   getBuildOpCommand,
   getRunCommand,
   getUtTestCommand,
-  getStandardCustomDeployCommand,
+  getStandardCustomDeployTail,
   resolveBuildOpBaseContext,
   resolveBuildExampleBaseContext,
   resolveSimulateBaseContext,
@@ -42,6 +42,7 @@ import {
 } from '@plugin/domain/models/project-model';
 import { homeMethods } from '../controller/home-controller';
 import { resolveAscendEnv } from '@plugin/domain/utils/ascend-util';
+import { joinCommands } from '@plugin/domain/utils/command-utils';
 import {
   buildOperatorSpawnContext,
   commandFailureMessage,
@@ -291,25 +292,6 @@ export class BuildService {
     }
 
     await ConfigService.writeBuildOpDeployTarget(buildPythonDeployTarget(relativePath));
-  }
-
-  private async deployStandardCustomRunPackage(
-    projectPath: string,
-    operatorNames?: string,
-  ) {
-    const baseContext = this.resolveBuildOpCtx(projectPath);
-    const deployCommand = getStandardCustomDeployCommand(baseContext);
-
-    return executeOperatorCommand(
-      deployCommand,
-      buildOperatorSpawnContext({
-        baseContext,
-        projectPath,
-        operatorNames,
-        script: deployCommand,
-      }),
-      { outputLabel: 'compile' },
-    );
   }
 
   /**
@@ -675,7 +657,14 @@ export class BuildService {
 
     if (behavior.requiresBuildBeforeAnalysis) {
       const simulateBaseContext = this.resolveSimulateCtx(projectPath, params.operatorNames);
-      const buildCommand = getBuildOpCommand(simulateBaseContext, params.compileOption, params.operatorNames);
+      // Standard-custom roots append the .run deploy tail (with --force) to the
+      // compile command — mirroring build_op/sanitizer — so the operator is
+      // installed before build_example runs.
+      const isStandardCustomRoot = await isRootStandardCustom();
+      const buildCommand = joinCommands(
+        getBuildOpCommand(simulateBaseContext, params.compileOption, params.operatorNames),
+        isStandardCustomRoot ? getStandardCustomDeployTail() : '',
+      );
       const buildRes = await executeOperatorCommand(
         buildCommand,
         buildOperatorSpawnContext({
@@ -701,7 +690,7 @@ export class BuildService {
 
       await notifyBuildSucceededForSidebar(projectPath, params.operatorNames);
 
-      if (await isRootStandardCustom()) {
+      if (isStandardCustomRoot) {
         const exampleCompileOption = this.buildSimulateExampleCompileOption();
         const exampleBaseContext = this.resolveBuildExampleCtx(projectPath, params.operatorNames);
         const exampleBuildCommand = getBuildExampleCommand(
@@ -727,20 +716,6 @@ export class BuildService {
         if (exampleBuildRes.code !== 0) {
           vscode.window.showErrorMessage(commandFailureMessage(exampleBuildRes, 'build.executeFailed', { output: exampleBuildRes.output }));
           throw new Error(commandFailureMessage(exampleBuildRes, 'build.executeFailedThrow', { output: exampleBuildRes.output }));
-        }
-
-        const deployRes = await this.deployStandardCustomRunPackage(
-          projectPath,
-          params.operatorNames,
-        );
-
-        if (deployRes.code !== 0) {
-          if (deployRes.interruptedByUserStop) {
-            throw new Error('SOC configuration interrupted by user');
-          }
-
-          vscode.window.showErrorMessage(commandFailureMessage(deployRes, 'build.executeFailed', { output: deployRes.output }));
-          throw new Error(commandFailureMessage(deployRes, 'build.executeFailedThrow', { output: deployRes.output ?? '' }));
         }
       }
     }
@@ -829,7 +804,14 @@ export class BuildService {
 
     if (behavior.requiresBuildBeforeAnalysis) {
       const onBoardBaseContext = this.resolveOnBoardCtx(projectPath, params.operatorNames);
-      const buildCommand = getBuildOpCommand(onBoardBaseContext, params.compileOption, params.operatorNames);
+      // Standard-custom roots append the .run deploy tail (with --force) to the
+      // compile command — mirroring build_op/sanitizer — so the operator is
+      // installed before build_example runs.
+      const isStandardCustomRoot = await isRootStandardCustom();
+      const buildCommand = joinCommands(
+        getBuildOpCommand(onBoardBaseContext, params.compileOption, params.operatorNames),
+        isStandardCustomRoot ? getStandardCustomDeployTail() : '',
+      );
       const buildRes = await executeOperatorCommand(
         buildCommand,
         buildOperatorSpawnContext({
@@ -844,6 +826,13 @@ export class BuildService {
       console.log('buildRes', buildRes);
 
       if (buildRes.code !== 0) {
+        // The compile command embeds the .run deploy tail for standard-custom
+        // projects, so a user stop during deploy also lands here — stay silent,
+        // exactly like the former standalone deploy step did.
+        if (buildRes.interruptedByUserStop) {
+          return;
+        }
+
         vscode.window.showErrorMessage(commandFailureMessage(buildRes, 'build.compileFailed', { output: buildRes.output }));
 
         return;
@@ -851,7 +840,7 @@ export class BuildService {
 
       await notifyBuildSucceededForSidebar(projectPath, params.operatorNames);
 
-      if (await isRootStandardCustom()) {
+      if (isStandardCustomRoot) {
         const exampleBaseContext = this.resolveBuildExampleCtx(projectPath, params.operatorNames);
         const exampleBuildCommand = getBuildExampleCommand(
           exampleBaseContext,
@@ -885,21 +874,6 @@ export class BuildService {
           }
 
           vscode.window.showErrorMessage(commandFailureMessage(exampleBuildRes, 'build.executeFailed', { output: exampleBuildRes.output }));
-
-          return;
-        }
-
-        const deployRes = await this.deployStandardCustomRunPackage(
-          projectPath,
-          params.operatorNames,
-        );
-
-        if (deployRes.code !== 0) {
-          if (deployRes.interruptedByUserStop) {
-            return;
-          }
-
-          vscode.window.showErrorMessage(commandFailureMessage(deployRes, 'build.executeFailed', { output: deployRes.output }));
 
           return;
         }

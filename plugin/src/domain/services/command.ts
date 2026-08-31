@@ -535,6 +535,23 @@ export function getUtTestCommand(
 }
 
 /**
+ * Standard-custom `.run` deploy tail (`RUN_FILE ... --force`) without the
+ * source-cann/cd prefix — for embedding into an existing build command
+ * (e.g. the simulate/on-board pre-build). Shares target resolution with
+ * getStandardCustomDeployCommand.
+ */
+export function getStandardCustomDeployTail(): string {
+  // The deploy tail reads the workspace deploy setting directly —
+  // unset means the bare `build_out/*.run` default, never an operator-plugin path.
+  const configuredTarget = ConfigService.readBuildOpDeployTargetFromWorkspace() || '';
+  const deployTarget = isRunPackageTarget(configuredTarget)
+    ? configuredTarget
+    : 'build_out/*.run';
+
+  return getExecutableCommand(deployTarget, { execute: true });
+}
+
+/**
  * Generate standard-custom `.run` deploy command after build_example succeeds.
  * Uses build_op target_file when it references a .run package; otherwise `build_out/*.run`.
  */
@@ -543,16 +560,7 @@ export function getStandardCustomDeployCommand(baseContext: BaseContext<BuildOpC
     const strategy = CommandStrategyFactory.getStrategy(baseContext.operator?.op_type);
     const context = strategy.buildCommandContext(baseContext);
 
-    // The deploy command reads the workspace deploy setting directly
-    // (strategy.getRunTargetFile → the same read, no default-path fallback) —
-    // unset means the bare `build_out/*.run` default, never an operator-plugin path.
-    const configuredTarget = ConfigService.readBuildOpDeployTargetFromWorkspace() || '';
-    const deployTarget = isRunPackageTarget(configuredTarget)
-      ? configuredTarget
-      : 'build_out/*.run';
-    const deployCmd = getExecutableCommand(deployTarget, { execute: true });
-
-    return joinCommands(context.sourceCannCmd, context.cdCmd, deployCmd);
+    return joinCommands(context.sourceCannCmd, context.cdCmd, getStandardCustomDeployTail());
   }
   catch (e: unknown) {
     throw new Error(`Failed to build standard custom deploy command: ${(e as Error).message}`);
