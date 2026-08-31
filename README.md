@@ -18,7 +18,7 @@
 
 - Visual Studio Code 1.80 或更高版本。
 - CANN / Ascend 工具链和运行环境。具体版本与镜像以团队或官方环境说明为准。
-- 远程开发建议安装 Remote SSH；C/C++ 语法与跳转建议安装 Microsoft C/C++ 扩展。当前 VSIX 不会自动安装这些推荐扩展，请按需手动安装。
+- 远程开发建议安装 Remote SSH。环境中没有任何 C/C++ 语言扩展时，插件会提示安装 Microsoft C/C++ 扩展（可选择不再提示）；CANN 头文件路径由插件在运行时自动解析。
 
 ## 快速开始
 
