@@ -1,5 +1,20 @@
 # 更新日志
 
+## 1.5.3 — 2026-08-31
+
+本版本将上板/仿真分析的编译与 `.run` 安装包部署合并为携带 `--force` 的单条命令，新增 NPU_ARCH 覆盖设置与可配置执行超时，并改进构建目标选择、报告自动打开和设置读写健壮性。
+
+- **上板/仿真分析编译部署携带 `--force`** — 标准自定义工程的上板分析与仿真分析将编译与 `.run` 安装包部署合并为单条命令，部署时按安装器支持情况自动追加 `--force`（与异常检测、DumpTensor 行为一致），确保示例构建前算子已安装；执行顺序为「编译+部署 → 示例构建 → msprof」。
+- **NPU_ARCH 覆盖设置（GC-29 / GC-37）** — 新增 `op-devtools.environment.npuArch` 工作区设置。解析链为：工作区设置 → 系统环境变量 `NPU_ARCH` → 按解析出的 SoC 推导，统一供命令环境导出、脚本占位符与 `cmake -DCMAKE_ASC_ARCHITECTURES` 使用。重新打开工程时保持 `NPU_ARCH` 生效，避免手工执行 `bash build.sh` 触发 CMakeLists 的 `NPU_ARCH` FATAL_ERROR；主机检测到的 SoC 会固化到工程 settings.json 供下次打开直接使用，显式用户设置与仿真推导值不会被持久化。
+- **settings.json 读写健壮性（GC-29 / GC-37）** — 工作区设置值为 `null` 时按未设置处理，不再当作字符串 `"null"`；引入共享的空安全设置读取器并串行化 settings.json 写入；容忍文件中的 BOM 并原子写入，避免并发编辑导致文件损坏。
+- **调优实际构建出的 example（GC-38）** — 上板/仿真分析选择本次构建实际产出的 example 目标执行，不再固定回退到 eager 目标；构建目标候选列表剔除悬空符号链接。
+- **可配置执行超时** — 新增 `op-devtools.execution.commandTimeoutSeconds` 设置（默认 1800 秒，`0` 表示不限制）。超时后终止整个进程组（Windows 下逐级升级终止方式），失败提示会明确指出超时原因。
+- **CANN include 路径运行时解析与按需推荐 C/C++ 扩展** — C/C++ `includePath` / `browse.path` 改为在运行时按实际 CANN 安装解析写入；仅当环境中没有任何 C/C++ 语言支持扩展时才提示安装 Microsoft C/C++（按语言贡献识别，兼容 Huawei / CodeArts C/C++），不再通过 extensionPack 无条件捆绑 `ms-vscode.cpptools`（Remote SSH 推荐保留）。
+- **自动打开本次生成的报告** — 性能调优或异常检测运行结束后，自动打开该次运行刚生成的报告，无需再到结果列表中手动查找；报告自动打开的每个 await 边界均有异常防护（GC-54）。
+- **WebIDE 刷新不再自动打开插件面板（[#75](https://gitcode.com/opdevtools/plugin_release/issues/75)）** — 启动时不再自动聚焦操作树侧栏，避免每次刷新 WebIDE 都弹出插件面板，尊重刻意关闭该面板的用户。
+- **切换工作区后清理缓存** — 切换工作区时清理运行时缓存，避免旧缓存导致的配置读取错误。
+- **发布信息更新** — Ascend 商店包发布者由 `hicann` 迁移至 `cann-pub`，扩展标识与显示名称同步更新。
+
 ## 1.4.5 — 2026-08-10
 
 本版本新增 CPU 主机上的远程 NPU 算子开发能力，覆盖产物回传、调试、ST 测试，以及按远程环境状态适配的操作入口。

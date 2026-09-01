@@ -4,6 +4,16 @@ jest.mock('vscode', () => ({
   commands: { executeCommand: jest.fn() },
 }));
 
+jest.mock('@plugin/helpers/cpp-extension-support', () => ({
+  maybePromptInstallCppExtension: jest.fn()
+    .mockResolvedValue(undefined),
+}));
+
+jest.mock('@plugin/domain/utils/cann-cpp-include-paths', () => ({
+  maybeApplyCannCppIncludePaths: jest.fn()
+    .mockResolvedValue(undefined),
+}));
+
 jest.mock('@plugin/class/mind-studio-plugin-installer', () => ({
   MindStudioPluginInstaller: jest.fn()
     .mockImplementation(() => ({
@@ -53,6 +63,8 @@ import {
 import {
   isRemoteNpuHardwareProbeAvailable, startNpuHardwareProbe, startRemoteNpuHardwareProbe,
 } from '@plugin/domain/utils/npu-hardware-probe';
+import { maybeApplyCannCppIncludePaths } from '@plugin/domain/utils/cann-cpp-include-paths';
+import { maybePromptInstallCppExtension } from '@plugin/helpers/cpp-extension-support';
 import {
   CONTEXT_PREFIX, TREE_VIEW_OPERATE,
 } from '@shared/flavor';
@@ -124,6 +136,47 @@ describe('post-activate-bootstrap', () => {
     // sidebar on every startup of an operator workspace disturbs users.
     expect(vscode.commands.executeCommand)
       .not.toHaveBeenCalledWith(`${TREE_VIEW_OPERATE}.focus`);
+  });
+
+  it('kicks off the C/C++ prompt and the CANN include-path fix', async () => {
+    const context = {} as never;
+    const logDebug = jest.fn();
+
+    startPostActivateBootstrap({
+      context,
+      operateTreeProvider,
+      logDebug,
+    });
+
+    await whenPostActivateBootstrapReady();
+
+    expect(maybePromptInstallCppExtension)
+      .toHaveBeenCalledWith(context, logDebug);
+    expect(maybeApplyCannCppIncludePaths)
+      .toHaveBeenCalledWith(logDebug);
+  });
+
+  it('finishes bootstrap when the C/C++ work rejects instead of taking the rest down', async () => {
+    const logDebug = jest.fn();
+
+    (maybePromptInstallCppExtension as jest.Mock).mockRejectedValueOnce(new Error('no marketplace'));
+    (maybeApplyCannCppIncludePaths as jest.Mock).mockRejectedValueOnce(new Error('settings.json is read-only'));
+
+    startPostActivateBootstrap({
+      context: {} as never,
+      operateTreeProvider,
+      logDebug,
+    });
+
+    await expect(whenPostActivateBootstrapReady())
+      .resolves
+      .toBeUndefined();
+    await flushPromises();
+
+    expect(logDebug)
+      .toHaveBeenCalledWith('postActivate:cppSupportPrompt:error', expect.any(Error));
+    expect(logDebug)
+      .toHaveBeenCalledWith('postActivate:cannCppIncludePaths:error', expect.any(Error));
   });
 
   it('exports MindStudio debug plugin id constant', () => {

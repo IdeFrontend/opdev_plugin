@@ -11,5 +11,4 @@ jest.mock('@plugin/helpers/output-channel', () => ({
     show: jest.fn(),
     clear: jest.fn(),
   })),
-  deriveOperatorToolOutputLabel: jest.fn(() => 'tool'),
 }));

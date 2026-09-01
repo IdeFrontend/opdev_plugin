@@ -7,16 +7,18 @@ import {
   resolveExampleMode,
   toExampleMatcher,
   DEFAULT_EXAMPLE_MATCHERS,
+  isExampleTarget,
+  rewriteExampleTarget,
 } from '@plugin/domain/utils/operator-example-mode';
 
 /**
- * plugin_release #171: the run_example mode (eager → test_aclnn_*.cpp, graph →
- * test_geir_*.cpp) is a property of the operator, not a plugin-wide preference. `pows`
+ * The run_example mode (eager → test_aclnn_*.cpp, graph → test_geir_*.cpp) is a
+ * property of the operator, not a plugin-wide preference. `pows`
  * ships only a graph example, so a hard `eager` default made build.sh exit with
  * `ERROR: pows does not have eager examples`. These cover the on-disk detection that lets
  * the plugin pick the right mode per operator.
  */
-describe('operator-example-mode (plugin_release #171)', () => {
+describe('operator-example-mode (per-operator run_example modes)', () => {
   let root: string;
 
   beforeAll(() => {
@@ -27,7 +29,7 @@ describe('operator-example-mode (plugin_release #171)', () => {
     fs.writeFileSync(path.join(root, 'math', 'abs', 'examples', 'test_aclnn_abs.cpp'), '');
     fs.writeFileSync(path.join(root, 'math', 'abs', 'examples', 'test_geir_abs.cpp'), '');
 
-    // graph only (pows-style, the #171 operator)
+    // graph only (pows-style)
     fs.mkdirSync(path.join(root, 'math', 'pows', 'examples'), { recursive: true });
     fs.writeFileSync(path.join(root, 'math', 'pows', 'examples', 'test_geir_pows.cpp'), '');
 
@@ -48,48 +50,78 @@ describe('operator-example-mode (plugin_release #171)', () => {
   });
 
   afterAll(() => {
-    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(root, {
+      recursive: true,
+      force: true,
+    });
   });
 
   describe('detectOperatorExampleModes', () => {
     it('detects both modes for an operator that ships aclnn + geir examples', () => {
       expect(detectOperatorExampleModes(root, 'abs'))
-        .toEqual({ hasEager: true, hasGraph: true });
+        .toEqual({
+          hasEager: true,
+          hasGraph: true,
+        });
     });
 
     it('detects only graph for pows', () => {
       expect(detectOperatorExampleModes(root, 'pows'))
-        .toEqual({ hasEager: false, hasGraph: true });
+        .toEqual({
+          hasEager: false,
+          hasGraph: true,
+        });
     });
 
     it('ignores experimental examples by default and finds them when asked', () => {
       expect(detectOperatorExampleModes(root, 'expop'))
-        .toEqual({ hasEager: false, hasGraph: false });
+        .toEqual({
+          hasEager: false,
+          hasGraph: false,
+        });
       expect(detectOperatorExampleModes(root, 'expop', true))
-        .toEqual({ hasEager: true, hasGraph: false });
+        .toEqual({
+          hasEager: true,
+          hasGraph: false,
+        });
     });
 
     it('skips build/ and other noise directories', () => {
       expect(detectOperatorExampleModes(root, 'decoy'))
-        .toEqual({ hasEager: false, hasGraph: false });
+        .toEqual({
+          hasEager: false,
+          hasGraph: false,
+        });
     });
 
     it('returns nothing for an unknown operator or empty inputs', () => {
       expect(detectOperatorExampleModes(root, 'nope'))
-        .toEqual({ hasEager: false, hasGraph: false });
+        .toEqual({
+          hasEager: false,
+          hasGraph: false,
+        });
       expect(detectOperatorExampleModes('', 'abs'))
-        .toEqual({ hasEager: false, hasGraph: false });
+        .toEqual({
+          hasEager: false,
+          hasGraph: false,
+        });
     });
 
     it('honors custom RegExp matchers for projects with a different naming convention', () => {
       // The default (build.sh) matchers do not match demo_graph_customop.cpp.
       expect(detectOperatorExampleModes(root, 'customop'))
-        .toEqual({ hasEager: false, hasGraph: false });
+        .toEqual({
+          hasEager: false,
+          hasGraph: false,
+        });
       expect(detectOperatorExampleModes(root, 'customop', false, {
         eager: /^demo_eager_.*\.cpp$/,
         graph: /^demo_graph_.*\.cpp$/,
       }))
-        .toEqual({ hasEager: false, hasGraph: true });
+        .toEqual({
+          hasEager: false,
+          hasGraph: true,
+        });
     });
   });
 
@@ -117,19 +149,74 @@ describe('operator-example-mode (plugin_release #171)', () => {
   describe('resolveExampleMode', () => {
     it('uses the global setting as a tiebreaker when both modes ship', () => {
       expect(resolveExampleMode(root, 'abs', 'graph'))
-        .toEqual({ mode: 'graph', exampleFound: true });
+        .toEqual({
+          mode: 'graph',
+          exampleFound: true,
+        });
       expect(resolveExampleMode(root, 'abs', 'eager'))
-        .toEqual({ mode: 'eager', exampleFound: true });
+        .toEqual({
+          mode: 'eager',
+          exampleFound: true,
+        });
     });
 
     it('forces graph for pows even when the global setting is eager', () => {
       expect(resolveExampleMode(root, 'pows', 'eager'))
-        .toEqual({ mode: 'graph', exampleFound: true });
+        .toEqual({
+          mode: 'graph',
+          exampleFound: true,
+        });
     });
 
     it('flags exampleFound=false and keeps the global mode when nothing ships', () => {
       expect(resolveExampleMode(root, 'nope', 'eager'))
-        .toEqual({ mode: 'eager', exampleFound: false });
+        .toEqual({
+          mode: 'eager',
+          exampleFound: false,
+        });
+    });
+  });
+
+  describe('rewriteExampleTarget', () => {
+    it('takes the prefix from the mode, so a graph-only operator profiles what was built', () => {
+      expect(rewriteExampleTarget('/ws/build/test_aclnn_add_custom', 'pows', 'graph'))
+        .toBe('/ws/build/test_geir_pows');
+    });
+
+    it('keeps the eager prefix for an eager run', () => {
+      expect(rewriteExampleTarget('/ws/build/test_aclnn_add_custom', 'abs', 'eager'))
+        .toBe('/ws/build/test_aclnn_abs');
+    });
+
+    it('repoints a graph target back at an eager one', () => {
+      expect(rewriteExampleTarget('/ws/build/test_geir_pows', 'abs', 'eager'))
+        .toBe('/ws/build/test_aclnn_abs');
+    });
+
+    it('leaves a target that names no example binary alone', () => {
+      expect(rewriteExampleTarget('/ws/build/libcustom_opapi.so', 'abs', 'graph'))
+        .toBe('/ws/build/libcustom_opapi.so');
+      expect(isExampleTarget('/ws/build/libcustom_opapi.so'))
+        .toBe(false);
+      expect(isExampleTarget(undefined))
+        .toBe(false);
+    });
+
+    it('recognises both example prefixes, so the rewrite gate stays open for them', () => {
+      expect(isExampleTarget('/ws/build/test_aclnn_add_custom'))
+        .toBe(true);
+      expect(isExampleTarget('/ws/build/test_geir_pows'))
+        .toBe(true);
+    });
+
+    it('leaves the target alone when no operator is selected', () => {
+      expect(rewriteExampleTarget('/ws/build/test_aclnn_add_custom', '', 'graph'))
+        .toBe('/ws/build/test_aclnn_add_custom');
+    });
+
+    it('keeps a directory that carries the prefix itself', () => {
+      expect(rewriteExampleTarget('/ws/test_aclnn_demo/build/test_aclnn_add_custom', 'pows', 'graph'))
+        .toBe('/ws/test_aclnn_demo/build/test_geir_pows');
     });
   });
 });

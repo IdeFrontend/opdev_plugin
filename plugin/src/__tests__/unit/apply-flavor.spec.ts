@@ -65,8 +65,10 @@ function expectCppLanguageSupportDefaults(manifest: Record<string, unknown>): vo
   };
   const defaults = typedManifest.contributes?.configurationDefaults;
 
+  // Microsoft C/C++ is offered at runtime only when no other C/C++ provider is
+  // installed — see `cpp-extension-support.ts`.
   expect(typedManifest.extensionPack)
-    .toContain('ms-vscode.cpptools');
+    .not.toContain('ms-vscode.cpptools');
   expect(defaults?.['files.associations'])
     .toEqual({
       '*.asc': 'cpp',
@@ -204,11 +206,11 @@ describe('apply-flavor', () => {
     const manifest = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
 
     expect(manifest.name)
-      .toBe('ascend-c-toolkit');
+      .toBe('asc-toolkit');
     expect(manifest.publisher)
-      .toBe('hicann');
+      .toBe('cann-pub');
     expect(manifest.displayName)
-      .toBe('Ascend C Toolkit');
+      .toBe('Ascend C Toolkits');
     expect(manifest.contributes.commands.some((c: { command: string }) => c.command.startsWith('ascend-c-toolkit.')))
       .toBe(true);
     expect(manifest.contributes.configuration.some((c: { id: string }) => c.id === 'ascendCToolkit.sanitizer'))
@@ -251,7 +253,7 @@ describe('apply-flavor', () => {
     expect(generated)
       .toContain("SETTINGS_PREFIX = 'ascendCToolkit'");
     expect(generated)
-      .toContain("EXTENSION_ID = 'hicann.ascend-c-toolkit'");
+      .toContain("EXTENSION_ID = 'cann-pub.asc-toolkit'");
     expect(generated)
       .toContain("'operatorSupport.triton': false");
     expect(generated)

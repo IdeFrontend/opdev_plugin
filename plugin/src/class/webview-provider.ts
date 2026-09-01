@@ -6,7 +6,6 @@
  */
 
 import * as path from 'path';
-import * as os from 'os';
 import * as fs from 'fs';
 import { t } from 'i18next';
 import * as vscode from 'vscode';
@@ -36,7 +35,6 @@ export class WebviewProvider {
   private panel: vscode.WebviewPanel | undefined;
   private storage: PermanentStorage;
   private context: vscode.ExtensionContext;
-  private readonly userInfo: os.UserInfo<string | number>;
   private pluginSidebarDisposable: vscode.Disposable | undefined;
   private pluginSidebarThemeDisposable: vscode.Disposable | undefined;
   private panelThemeDisposable: vscode.Disposable | undefined;
@@ -47,8 +45,6 @@ export class WebviewProvider {
   ) {
     this.storage = new PermanentStorage(context);
     this.context = context;
-    this.userInfo = os.userInfo();
-    this.storage.set('userInfo', this.userInfo);
   }
 
   /**

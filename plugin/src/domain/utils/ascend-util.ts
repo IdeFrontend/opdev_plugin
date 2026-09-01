@@ -1,9 +1,11 @@
+import * as vscode from 'vscode';
 import fs from 'fs-extra';
 import path from 'path';
 import {
   DEFAULT_FALLBACK_CANN_SOC,
   DEFAULT_FALLBACK_SIMULATOR_DEVICE_NAME,
 } from '@shared/cann-env-constants';
+import { SETTINGS_PREFIX } from '@shared/flavor';
 import {
   _resetDetectedChipCacheForTest,
   cannSocToSeries,
@@ -24,9 +26,12 @@ import {
   SUPPORT_TILING_DIR_ARCH35,
 } from '@shared/cann-aclnn-build-defaults';
 import {
+  getConfiguredValue,
+  getOpDevtoolsWorkspaceConfiguration,
   getSocVersionWithWorkspaceOverride,
   getWorkspaceSimulatorType,
 } from '@plugin/helpers/operator-project-workspace-config';
+import { ConfigService } from '@plugin/service/config-service';
 import {
   execBashWithCannEnv,
   resolveCannSetEnvScriptForDetection,
@@ -174,6 +179,36 @@ export function getNpuArchForCannSoc(cannSoc?: string | null): string {
   }
 
   return getNpuArchForSeries(series);
+}
+
+/**
+ * `NPU_ARCH` a CANN SOC slug yields from its series alone, ignoring the detected chip.
+ * Callers use it to tell a chip-specific arch — `dav-1001` on Ascend910ProA/ProB/PremiumA
+ * and the 901 pair — from the series default any process can recompute from the slug.
+ */
+export function getSeriesNpuArchForCannSoc(cannSoc?: string | null): string {
+  const key = normalizeCannSoc(cannSoc);
+  const series = key ? cannSocToSeries(key) : undefined;
+
+  return series ? getNpuArchForSeries(series) : '';
+}
+
+/**
+ * Explicit `NPU_ARCH` override from the workspace `op-devtools.environment.npuArch` setting.
+ * Empty string when the setting was never set (null counts as unset), so callers keep the
+ * value derived from the resolved SOC. Reads through the shared settings reader, so the
+ * folder → workspace precedence and the null-guard match every other op-devtools key.
+ */
+export function getWorkspaceNpuArch(): string {
+  const explicit = getConfiguredValue<string>(
+    getOpDevtoolsWorkspaceConfiguration(),
+    ['environment.npuArch'],
+  );
+
+  return explicit !== undefined
+    ? String(explicit)
+      .trim()
+    : '';
 }
 
 /** A2/A3 vs A5 branch for paired ACLNN spawn defaults ({@link getSupportComputeUnitForCannSoc}, etc.). */
@@ -510,6 +545,11 @@ export type SimulatorTypeSource =
   | 'default-from-soc'
   | 'n/a';
 
+export type NpuArchSource =
+  | 'workspace-setting'
+  | 'global-env'
+  | 'derived-from-soc';
+
 export interface AscendEnvResolution {
   socVersion: string;
   npuArch: string;
@@ -517,12 +557,20 @@ export interface AscendEnvResolution {
   source: {
     socVersion: SocVersionSource;
     simulatorType: SimulatorTypeSource;
-    npuArch: 'derived-from-soc';
+    npuArch: NpuArchSource;
   };
 }
 
 export interface ResolveAscendEnvContext {
   isSimulator: boolean;
+}
+
+export interface ResolveAscendEnvOptions {
+  /**
+   * Set to false to skip the lazy host probe (`asys` / `npu-smi`). Used by callers
+   * that run before the user's CANN env is known and must not cache a failed probe.
+   */
+  allowHostDetection?: boolean;
 }
 
 interface SimulatorResolution {
@@ -571,6 +619,7 @@ function resolveSimulatorFirstPass(ctx: ResolveAscendEnvContext): SimulatorResol
 function resolveSocVersion(
   ctx: ResolveAscendEnvContext,
   sim: SimulatorResolution,
+  options: ResolveAscendEnvOptions,
 ): { socVersion: string;
   source: SocVersionSource } {
   // Spec: simulator runs with an explicit simulator type from the VS Code
@@ -613,7 +662,7 @@ function resolveSocVersion(
   }
 
   // Lazy host detection (`asys`, then `npu-smi`).
-  const detected = detectSocOnce();
+  const detected = options.allowHostDetection === false ? undefined : detectSocOnce();
 
   if (detected) {
     return {
@@ -646,12 +695,49 @@ function resolveSocVersion(
  *   - Otherwise: workspace `op-devtools.environment.socVersion` (explicit) →
  *     `process.env.SOC_VERSION` snapshot → `asys` / `npu-smi` detection →
  *     `DEFAULT_FALLBACK_CANN_SOC`.
- * - **`npuArch`**: always `getNpuArchForCannSoc(socVersion)`.
+ * - **`npuArch`**: workspace `op-devtools.environment.npuArch` (explicit) →
+ *   `process.env.NPU_ARCH` snapshot (unless the SOC came from the simulator type) →
+ *   `getNpuArchForCannSoc(socVersion)`.
  */
+function resolveNpuArch(soc: {
+  socVersion: string;
+  source: SocVersionSource;
+}): { npuArch: string;
+  source: NpuArchSource } {
+  // Explicit user override — wins wherever NPU_ARCH is resolved.
+  const fromWorkspace = getWorkspaceNpuArch();
+
+  if (fromWorkspace) {
+    return {
+      npuArch: fromWorkspace,
+      source: 'workspace-setting',
+    };
+  }
+
+  // OS-level `NPU_ARCH` captured at activation. Ignored when the SOC comes from the
+  // simulator type, where the arch must follow the simulated device.
+  const fromGlobalEnv = (getGlobalEnvSnapshot().npuArch || '').trim();
+
+  if (fromGlobalEnv && soc.source !== 'derived-from-simulator') {
+    return {
+      npuArch: fromGlobalEnv,
+      source: 'global-env',
+    };
+  }
+
+  return {
+    npuArch: getNpuArchForCannSoc(soc.socVersion),
+    source: 'derived-from-soc',
+  };
+}
+
 /** Core resolver (no logging). Used internally and by tests. */
-export function computeAscendEnvResolution(ctx: ResolveAscendEnvContext): AscendEnvResolution {
+export function computeAscendEnvResolution(
+  ctx: ResolveAscendEnvContext,
+  options: ResolveAscendEnvOptions = {},
+): AscendEnvResolution {
   const firstSim = resolveSimulatorFirstPass(ctx);
-  const soc = resolveSocVersion(ctx, firstSim);
+  const soc = resolveSocVersion(ctx, firstSim, options);
 
   let simulatorType = firstSim.simulatorType;
   let simulatorSource = firstSim.source;
@@ -661,16 +747,16 @@ export function computeAscendEnvResolution(ctx: ResolveAscendEnvContext): Ascend
     simulatorSource = 'default-from-soc';
   }
 
-  const npuArch = getNpuArchForCannSoc(soc.socVersion);
+  const arch = resolveNpuArch(soc);
 
   return {
     socVersion: soc.socVersion,
-    npuArch,
+    npuArch: arch.npuArch,
     simulatorType,
     source: {
       socVersion: soc.source,
       simulatorType: ctx.isSimulator ? simulatorSource : 'n/a',
-      npuArch: 'derived-from-soc',
+      npuArch: arch.source,
     },
   };
 }
@@ -713,6 +799,61 @@ export async function resolveAscendEnvForOperatorCommand(spawnContext: OperatorS
   }
 
   return resolution;
+}
+
+/**
+ * Pin a host-detected SOC into the workspace `settings.json`. Reopening the project with
+ * "Open Folder" then resolves `SOC_VERSION` / `NPU_ARCH` from settings alone, without
+ * re-probing the host. No-op unless the SOC really came from host detection and no explicit
+ * `environment.socVersion` exists — we never clobber the user's choice, and never pin the
+ * fallback default (that would outrank later detection).
+ *
+ * @returns true if settings.json was written
+ */
+export async function persistDetectedSocVersion(resolution: AscendEnvResolution): Promise<boolean> {
+  const soc = resolution.socVersion.trim();
+
+  if (resolution.source.socVersion !== 'detected' || !soc) {
+    return false;
+  }
+
+  if (getSocVersionWithWorkspaceOverride(null)
+    .trim()) {
+    return false;
+  }
+
+  const updates: Record<string, string> = { 'environment.socVersion': soc };
+  const npuArch = chipSpecificNpuArchToPin(resolution, soc);
+
+  if (npuArch) {
+    updates['environment.npuArch'] = npuArch;
+  }
+
+  return ConfigService.writeOpDevtoolsDottedSettings(updates);
+}
+
+/**
+ * The chip-specific `NPU_ARCH` to pin alongside the SOC, or undefined when the slug alone
+ * already yields it.
+ *
+ * A SOC slug carries only its series, so an Ascend910ProA/ProB/PremiumA or 901A/901B host
+ * resolves `dav-1001` only while the detected chip name is still cached in this process.
+ * Pinning the SOC makes the next window answer from settings and never detect again, which
+ * would silently downgrade those hosts to the series default `dav-2201`.
+ */
+function chipSpecificNpuArchToPin(
+  resolution: AscendEnvResolution,
+  soc: string,
+): string | undefined {
+  const npuArch = resolution.npuArch.trim();
+
+  // An explicit setting is already in settings.json, and a value inherited from the OS
+  // environment is not ours to freeze into the project.
+  if (!npuArch || resolution.source.npuArch !== 'derived-from-soc') {
+    return undefined;
+  }
+
+  return npuArch === getSeriesNpuArchForCannSoc(soc) ? undefined : npuArch;
 }
 
 /**
@@ -782,18 +923,23 @@ export function resolveRuntimeCannSoc(
 /** Context for building per-spawn env overrides (merged over `process.env`). */
 export type OperatorSpawnEnvContext = {
   opType?: OperatorOpType | null;
-  projectId?: number;
-  configId?: number;
+  /** Workspace-root project path; de-id source for the project record. */
+  projectPath?: string;
   operatorNames?: string;
   /** Resolved from `projects.json` when omitted; see {@link normalizeProjectTypeForSpawn}. */
   projectType?: OperatorProjectType | null;
-  configType?: string | null;
+  /** Explicit simulator-class run (was `configType === 'simulate'`); overrides the script heuristics. */
+  isSimulator?: boolean;
+  /** Triton sanitizer run (was `configType === 'sanitizer'`); gates {@link TRITON_SANITIZER_SPAWN_ENV}. */
+  sanitizerRun?: boolean;
+  /** Output-channel label for the run; plain string to avoid an ascend-util ↔ output-channel cycle. */
+  toolOutputLabel?: string | null;
   scriptField?: string | null;
   script?: string | null;
 };
 
 export function isSimulatorCompile(params: OperatorSpawnEnvContext): boolean {
-  if (params.configType === 'simulate') {
+  if (params.isSimulator) {
     return true;
   }
 
@@ -837,7 +983,7 @@ export function mergeTritonSanitizerSpawnEnv(
   env: Record<string, string>,
   ctx: OperatorSpawnEnvContext,
 ): Record<string, string> {
-  if (ctx.opType === 'triton' && ctx.configType === 'sanitizer') {
+  if (ctx.opType === 'triton' && ctx.sanitizerRun === true) {
     return {
       ...env,
       ...TRITON_SANITIZER_SPAWN_ENV,

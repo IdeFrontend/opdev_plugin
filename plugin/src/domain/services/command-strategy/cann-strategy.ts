@@ -2,25 +2,37 @@ import { t } from 'i18next';
 import * as vscode from 'vscode';
 
 import { joinIdeConfigPath } from '@plugin/helpers/ide-config-dir';
-import { getOpRunPath } from '@plugin/domain/utils/op-util';
 import {
   joinCommands,
   getExecutableCommand,
   Command,
   shouldAddDebugBuildType,
 } from '@plugin/domain/utils/command-utils';
-import { ConfigRecord } from '@plugin/domain/models/config-model';
-import { OpRecord } from '@plugin/domain/models/model';
-import { ProfilerFactory } from '../profiler-service';
+import type {
+  BuildOpConfig,
+  BuildExampleConfig,
+  UtTestConfig,
+  SimulateConfig,
+  OnBoardConfig,
+  SanitizerConfig,
+} from '@plugin/service/config-service';
+import {
+  OpRecord,
+  resolveDefaultPathOpType,
+  resolveFallbackOperatorName,
+} from '@plugin/domain/models/op-record';
+import { ProjectRecord } from '@plugin/domain/models/project-model';
 import {
   CommandStrategy,
   BaseContext,
   CommandContext,
   CommandBuildParams,
   ProfilerCommandParams,
+  SectionConfig,
+  ProfilerTargetConfig,
 } from './types';
-import { getConfig } from '@plugin/domain/services/configuration';
 import { ConfigService } from '@plugin/service/config-service';
+import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import {
   normalizeBlockId,
   normalizeLogLevel,
@@ -29,20 +41,29 @@ import {
   normalizeSanitizerCommand,
   buildSanitizerLogFileName,
 } from './sanitizer-option-guards';
-import { resolveAscendEnv } from '@plugin/domain/utils/ascend-util';
 import {
   applyOperatorNamesPlaceholder,
   ensureStandardCustomSocFlag,
 } from '@plugin/domain/utils/operator-script-placeholders';
+import {
+  buildPythonOnBoardCommand,
+  buildPythonSimulateCommand,
+} from './python-operator-strategy-shared';
+
+/** The sanitizer memcheck sub-options the section DAO carries (truthy subset feeds `--<key>=yes`). */
+const SANITIZER_MEMCHECK_OPTION_KEYS = [
+  'leak-check',
+  'check-unused-memory',
+] as const;
 
 /**
  * CANN type command strategy
  * CANN (Compute Architecture for Neural Networks) is Huawei’s AI computing architecture
  */
 export class CannCommandStrategy implements CommandStrategy {
-  buildCommandContext(baseContext: BaseContext): CommandContext {
+  buildCommandContext<TConfig extends SectionConfig>(baseContext: BaseContext<TConfig>): CommandContext<TConfig> {
     const {
-      config, project, operator,
+      config, project, operator, op,
     } = baseContext;
 
     // CANN type uses ascend_env_script as environment script
@@ -54,7 +75,7 @@ export class CannCommandStrategy implements CommandStrategy {
     let runPath: string;
 
     if (operator) {
-      runPath = getOpRunPath(operator);
+      runPath = operator.op_path;
     }
     else {
       // If the operator cannot be found but there is a configuration script, use the project path as the running path
@@ -62,7 +83,7 @@ export class CannCommandStrategy implements CommandStrategy {
         runPath = project.project_path;
       }
       else {
-        throw new Error(`Operator not found: ${config.op}`);
+        throw new Error(`Operator not found: ${op}`);
       }
     }
 
@@ -76,33 +97,38 @@ export class CannCommandStrategy implements CommandStrategy {
       sourceCannCmd,
       cdCmd,
       cdBuildCmd,
+      op,
     };
   }
 
-  buildRunCommand(context: CommandContext): string {
+  buildRunCommand(context: CommandContext<BuildOpConfig>): string {
     const {
       config, sourceCannCmd, cdBuildCmd,
     } = context;
-    const run_cmd = getExecutableCommand(config.target_file || '', { execute: true });
+    const run_cmd = getExecutableCommand(config.targetFile || '', { execute: true });
 
     return joinCommands(sourceCannCmd, cdBuildCmd, run_cmd);
   }
 
-  buildOpCommand(params: CommandBuildParams): string {
+  buildOpCommand(params: CommandBuildParams<BuildOpConfig>): string {
     const {
-      config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames,
+      config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames, op,
     } = params;
 
     const scriptField = params.scriptField || 'script';
 
-    const userOptions = config.user_options as Record<string, unknown> | null | undefined;
+    const scriptValue = scriptField === 'cpu_debug_script'
+      ? config.cpuDebugScript
+      : scriptField === 'npu_debug_script'
+        ? config.npuDebugScript
+        : config.script;
 
-    if (!userOptions || !userOptions[scriptField]) {
-      throw new Error(t('cann.configMissingScript', { op: config.op }));
+    if (!scriptValue) {
+      throw new Error(t('cann.configMissingScript', { op }));
     }
 
     const script = applyOperatorNamesPlaceholder(
-      userOptions[scriptField] as string,
+      scriptValue,
       operatorNames,
     );
     const cmd = new Command(script);
@@ -122,28 +148,26 @@ export class CannCommandStrategy implements CommandStrategy {
     return joinCommands(sourceCannCmd, cdCmd, cmd.toString());
   }
 
-  buildExampleCommand(params: CommandBuildParams): string {
+  buildExampleCommand(params: CommandBuildParams<BuildExampleConfig>): string {
     const {
-      config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames,
+      config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames, op,
     } = params;
 
     if (!config.script) {
-      throw new Error(t('cann.configMissingScript', { op: config.op }));
+      throw new Error(t('cann.configMissingScript', { op }));
     }
 
     // build.sh `--run_example` reads the example name + mode from POSITIONAL args
     // (`<op> <mode> <pkg_mode>`), NOT from flags: a field run with `--ops=abs` still
-    // printed "Start to run examples, name:  mode:" empty and dumped usage (issue #171).
-    // Mirror AscendCommandStrategy.buildExampleCommand (same build.sh interface for the
+    // printed "Start to run examples, name:  mode:" empty and dumped usage. Match
+    // AscendCommandStrategy.buildExampleCommand (same build.sh interface for the
     // same standard-custom operator), with two strict improvements it lacks: the
     // `config.op` fallback its own comment promises, and an empty-op guard so `mode`
     // never shifts into the name slot.
-    const userOptions = config.user_options as Record<string, unknown> | null | undefined;
-    const configOp = typeof userOptions?.op === 'string' ? userOptions.op : config.op;
-    const op = operatorNames?.trim() || configOp || '';
+    const exampleOp = operatorNames?.trim() || op || '';
     // `exampleMode` (resolved per operator from which example file ships) wins over the
-    // plugin-wide `execution_mode` setting — see operator-example-mode.ts / #171.
-    const mode = params.exampleMode || (userOptions?.execution_mode as string) || 'eager';
+    // plugin-wide `execution_mode` setting — see operator-example-mode.ts.
+    const mode = params.exampleMode || config.executionMode;
     const pkgMode = 'cust';
 
     // `--soc` sets the compile COMPUTE_UNIT (-DASCEND_COMPUTE_UNIT): the original failing
@@ -162,8 +186,8 @@ export class CannCommandStrategy implements CommandStrategy {
     // interface. Other CANN repos expose examples differently (e.g. cann-ops uses
     // `-e|--example` with no eager/graph), so appending them there would corrupt the
     // command. The operator is still required.
-    if (op && /--run_example\b/.test(script)) {
-      cmd.addArgument(op);
+    if (exampleOp && /--run_example\b/.test(script)) {
+      cmd.addArgument(exampleOp);
       cmd.addArgument(mode);
       cmd.addArgument(pkgMode);
     }
@@ -179,47 +203,42 @@ export class CannCommandStrategy implements CommandStrategy {
     return joinCommands(sourceCannCmd, cdCmd, cmd.toString());
   }
 
-  buildSanitizerCommand(
-    config: ConfigRecord,
-    operator: OpRecord | null,
-    sourceCannCmd: string,
-    cdCmd: string,
-    exampleTargetFile?: string,
-    cdBuildCmd?: string,
-  ): string {
-    const options =
-      (config.user_options as Record<string, unknown> | null | undefined) || {};
-    const commandName = normalizeSanitizerCommand(options.toolType ?? options.sanitizerTool);
+  buildSanitizerCommand(context: CommandContext<SanitizerConfig>, exampleTargetFile?: string): string {
+    const {
+      config, sourceCannCmd, cdBuildCmd,
+    } = context;
+    const commandName = normalizeSanitizerCommand(config.toolType);
     const command = new Command(commandName);
 
+    // Add target file
     if (exampleTargetFile) {
       command.addArgument(exampleTargetFile);
     }
 
-    const toolOptions =
-      (options.tool as Record<string, unknown> | undefined) || {};
+    // Handle configuration options — partial DAOs carry only the fields the
+    // user set, so every read is guarded with `|| {}`.
+    const tool = config.tool ?? {};
 
-    addSanitizerToolOptions(command, toolOptions, commandName);
+    addSanitizerToolOptions(command, tool, commandName);
 
+    // npu-check takes none of the mssanitizer-only flags below.
     if (commandName !== 'npu-check') {
-      if (toolOptions.memcheck) {
-        const memcheckOptions =
-          (options.memcheckOption as Record<string, unknown> | undefined) || {};
+      if (tool.memcheck) {
+        const memcheckOption = config.memcheckOption ?? {};
 
-        Object.keys(memcheckOptions)
-          .forEach((key) => {
-            if (memcheckOptions[key]) {
-              command.addOption(key, 'yes');
-            }
-          });
+        SANITIZER_MEMCHECK_OPTION_KEYS.forEach((key) => {
+          if (memcheckOption[key]) {
+            command.addOption(key, 'yes');
+          }
+        });
       }
 
-      command.addOption('log-level', normalizeLogLevel(options.logLevel));
+      command.addOption('log-level', normalizeLogLevel(config.logLevel));
       command.addOption(
         'max-debuglog-size',
-        normalizeMaxDebuglogSize(options.maxDebuglogSize),
+        normalizeMaxDebuglogSize(config.maxDebuglogSize),
       );
-      command.addOption('block-id', normalizeBlockId(options.blockId));
+      command.addOption('block-id', normalizeBlockId(config.blockId));
     }
 
     const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -235,108 +254,48 @@ export class CannCommandStrategy implements CommandStrategy {
     return joinCommands(sourceCannCmd, cdBuildCmd, command.toString());
   }
 
-  buildSimulateCommand(params: ProfilerCommandParams): string {
+  buildSimulateCommand(params: ProfilerCommandParams<SimulateConfig>): string {
+    return buildPythonSimulateCommand(params, 'cann');
+  }
+
+  buildOnBoardCommand(params: ProfilerCommandParams<OnBoardConfig>): string {
+    return buildPythonOnBoardCommand(params, 'cann');
+  }
+
+  getRunTargetFile(op: string, operator: OpRecord | null = null, project: ProjectRecord | null = null): string {
+    // The workspace deploy target is the per-op seed; when it is unset (the
+    // multi-operator seeder leaves it empty) fall back to the operator default
+    // target so a run never degrades to a bare `cd`.
+    return ConfigService.readBuildOpDeployTargetFromWorkspace()
+      || OperatorPluginRegistry.getDefaultPaths({
+        op_type: resolveDefaultPathOpType(project?.project_type, operator?.op_type || 'cann'),
+        op_path: operator?.op_path || '',
+        op_name: resolveFallbackOperatorName(operator, op),
+      }).targetOpFile;
+  }
+
+  getProfilerTargetFile(config: ProfilerTargetConfig, operator: OpRecord | null, op: string, project: ProjectRecord | null = null): string {
+    // The cann profiler target is the build_op row target (the workspace deploy
+    // setting is the current form of it) — for a standard-custom sub-op that is
+    // the packaged `.run` artifact, not the example binary.
+    return ConfigService.readBuildOpDeployTargetFromWorkspace()
+      || OperatorPluginRegistry.getDefaultPaths({
+        op_type: resolveDefaultPathOpType(project?.project_type, operator?.op_type || 'cann'),
+        op_path: operator?.op_path || '',
+        op_name: resolveFallbackOperatorName(operator, op),
+      }).targetOpFile;
+  }
+
+  buildUtTestCommand(params: CommandBuildParams<UtTestConfig>): string {
     const {
-      config,
-      project,
-      operator,
-      sourceCannCmd,
-      cdBuildCmd,
-      exampleTargetFile,
+      config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames, op,
     } = params;
 
-    // If the operator record is not found but the project path is available, create a temporary operator object
-    let effectiveOperator = operator;
-
-    if (!effectiveOperator) {
-      if (!project || !project.project_path) {
-        throw new Error(t('cann.cannotGenerateSimulateCommand', { op: config.op }));
-      }
-
-      // Create a temporary operator object, using the project path as op_path
-      effectiveOperator = {
-        id: 0,
-        project_id: config.project_id,
-        op_name: config.op,
-        op_type: 'cann',
-        op_path: project.project_path,
-      } as OpRecord;
+    if (!config.script) {
+      throw new Error(`配置缺少脚本信息，且找不到算子记录: ${op}`);
     }
 
-    const simulatorCmd = ProfilerFactory.getStrategy('simulator')
-      .generate(
-        config,
-        effectiveOperator,
-        exampleTargetFile,
-      );
-
-    return joinCommands(sourceCannCmd, cdBuildCmd, simulatorCmd);
-  }
-
-  buildOnBoardCommand(params: ProfilerCommandParams): string {
-    const {
-      config,
-      project,
-      operator,
-      sourceCannCmd,
-      cdBuildCmd,
-      exampleTargetFile,
-    } = params;
-
-    // If the operator record is not found but the project path is available, create a temporary operator object
-    let effectiveOperator = operator;
-
-    if (!effectiveOperator) {
-      if (!project || !project.project_path) {
-        throw new Error(t('cann.cannotGenerateOnBoardCommand', { op: config.op }));
-      }
-
-      // Create a temporary operator object, using the project path as op_path
-      effectiveOperator = {
-        id: 0,
-        project_id: config.project_id,
-        op_name: config.op,
-        op_type: 'cann',
-        op_path: project.project_path,
-      } as OpRecord;
-    }
-
-    const onboardCannSoc = resolveAscendEnv({ isSimulator: false }).socVersion;
-    const opprofCmd = ProfilerFactory.getStrategy('onboard')
-      .generate(
-        config,
-        effectiveOperator,
-        exampleTargetFile,
-        { onboardCannSoc },
-      );
-
-    return joinCommands(sourceCannCmd, cdBuildCmd, opprofCmd);
-  }
-
-  getRunTargetFile(_config: ConfigRecord, _operator: OpRecord | null): string {
-    return ConfigService.readBuildOpDeployTargetFromWorkspace() || '';
-  }
-
-  // FIXME: Profiler/sanitizer target still comes from legacy configs.json (build_op.target_file), not workspace settings.
-  getProfilerTargetFile(config: ConfigRecord, _operator: OpRecord | null, _exampleConfigId: number): string {
-    const buildOpConfigs = getConfig(config.project_id, 'build_op', config.op);
-    const buildOpConfig = buildOpConfigs.length > 0 ? buildOpConfigs[0] : null;
-
-    return buildOpConfig?.target_file || '';
-  }
-
-  buildUtTestCommand(params: CommandBuildParams): string {
-    const {
-      config, sourceCannCmd, cdCmd, compileOption, advance_cmd, operatorNames,
-    } = params;
-
-    const userOptions = config.user_options as Record<string, unknown> | null | undefined;
-
-    if (!userOptions || !userOptions.script) {
-      throw new Error(`配置缺少脚本信息，且找不到算子记录: ${config.op}`);
-    }
-
-    const script = applyOperatorNamesPlaceholder(userOptions.script as string, operatorNames);
+    const script = applyOperatorNamesPlaceholder(config.script, operatorNames);
 
     const cmd = new Command(script);
 

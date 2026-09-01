@@ -3,7 +3,7 @@
  * NPU arch). Shared by the plugin resolver, profiler helpers, and tests.
  */
 
-/** CANN SOC slug for the legacy Ascend 910B class (Ascend910B/B1/B2C/B3/B4). */
+/** CANN SOC slug for the Ascend 910B class (Ascend910B/B1/B2C/B3/B4). */
 export const CANN_SOC_ASCEND_910B = 'ascend910b' as const;
 
 /** CANN SOC slug for the current Atlas A3 class (Ascend910_93xx / 910C). */

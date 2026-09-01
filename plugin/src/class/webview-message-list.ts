@@ -5,6 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import * as path from 'path';
 import { t } from 'i18next';
 import * as vscode from 'vscode';
 
@@ -20,7 +21,7 @@ import {
   OperatorProjectViewId,
   type OperatorProjectViewIdValue,
 } from '@shared/project-type-view-id';
-import { isOperatorSupportEnabled } from '@plugin/helpers/feature-toggle';
+import { SettingsLoader } from '@plugin/service/settings-loader';
 import { workbenchViewContainerCommand } from '@shared/flavor';
 
 function normalizeViewIdToProjectType(id: OperatorProjectViewIdValue): string {
@@ -40,7 +41,7 @@ function normalizeViewIdToProjectType(id: OperatorProjectViewIdValue): string {
 
 function isRequestedProjectTypeEnabled(projectType: string): boolean {
   if (projectType === 'triton') {
-    return isOperatorSupportEnabled('triton');
+    return SettingsLoader.isOperatorSupportEnabled('triton');
   }
 
   return true;
@@ -111,7 +112,7 @@ export async function handleOperatorProjectDirectoryFile(
     | {
       createOperatorProjectDirectoryFileType: OperatorProjectViewIdValue;
       subOperatorContext?: {
-        parentProjectId: number;
+        parentProjectPath: string;
         opName: string;
         outputPath: string;
         skipFileGeneration?: boolean;
@@ -164,22 +165,16 @@ export async function handleOperatorProjectDirectoryFile(
         // Create operators (via prototypes)
         console.log('Start creating operator prototype (type 1)...');
         // Note: The project has been initialized in createdProject and does not need to be initialized again here.
-        // Just make sure projectId is set
         const pm = ProjectManager.getInstance();
+        const opName = pm.projectPath ? path.basename(pm.projectPath) : undefined;
 
-        if (!pm.projectId) {
-          console.log('projectId not set, trying to initialize project...');
-          await pm.ensureProjectId();
-        }
-
-        console.log('Current projectId:', pm.projectId);
         console.log('Start creating operator prototype...');
 
         await welcomeMethods.createOpsByPrototype({
           opsPrototypeFile: '',
           opType: 'cann',
           templateName,
-          opName: pm.getProjectName(),
+          opName,
         });
         console.log('Operator prototype creation completed');
 
@@ -195,20 +190,15 @@ export async function handleOperatorProjectDirectoryFile(
         // pyasc operator project, created using templates
         console.log('Start creating pyasc operator (type 3)...');
         const pm = ProjectManager.getInstance();
+        const opName = pm.projectPath ? path.basename(pm.projectPath) : undefined;
 
-        if (!pm.projectId) {
-          console.log('projectId not set, trying to initialize project...');
-          await pm.ensureProjectId();
-        }
-
-        console.log('Current projectId:', pm.projectId);
         console.log('Start creating pyasc operator prototype...');
 
         await welcomeMethods.createOpsByPrototype({
           opsPrototypeFile: '',
           opType: 'pyasc',
           templateName,
-          opName: pm.getProjectName(),
+          opName,
         });
         console.log('pyasc operator prototype creation completed');
 
@@ -224,20 +214,15 @@ export async function handleOperatorProjectDirectoryFile(
         // Triton operator project: scaffold from template
         console.log('Creating Triton operator project (type 4)...');
         const pm = ProjectManager.getInstance();
+        const opName = pm.projectPath ? path.basename(pm.projectPath) : undefined;
 
-        if (!pm.projectId) {
-          console.log('projectId not set; initializing project...');
-          await pm.ensureProjectId();
-        }
-
-        console.log('Current projectId:', pm.projectId);
         console.log('Creating Triton operator prototype...');
 
         await welcomeMethods.createOpsByPrototype({
           opsPrototypeFile: '',
           opType: 'triton',
           templateName: templateName || 'triton_vector_add',
-          opName: pm.getProjectName(),
+          opName,
         });
         console.log('Triton operator prototype creation completed');
 
@@ -253,16 +238,13 @@ export async function handleOperatorProjectDirectoryFile(
         const pm = ProjectManager.getInstance();
         const ctx = message.subOperatorContext;
 
-        if (!ctx && !pm.projectId) {
-          console.log('projectId not set, trying to initialize project...');
-          await pm.ensureProjectId();
-        }
-
-        const opName = ctx ? ctx.opName : pm.getProjectName();
+        const opName = ctx
+          ? ctx.opName
+          : (pm.projectPath ? path.basename(pm.projectPath) : undefined);
 
         const opsPrototypeFilePath = await welcomeMethods.createOps(ctx
           ? {
-            projectId: String(ctx.parentProjectId),
+            projectPath: ctx.parentProjectPath,
             projectName: ctx.opName,
             outputPath: ctx.outputPath,
           }
@@ -277,7 +259,7 @@ export async function handleOperatorProjectDirectoryFile(
             opName,
             ...(ctx
               ? {
-                projectId: ctx.parentProjectId,
+                projectPath: ctx.parentProjectPath,
                 opPath: ctx.outputPath,
                 skipFileGeneration: ctx.skipFileGeneration === true,
               }

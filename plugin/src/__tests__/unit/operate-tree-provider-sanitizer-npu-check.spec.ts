@@ -76,7 +76,6 @@ jest.mock('vscode', () => {
 }, { virtual: true });
 
 jest.mock('@plugin/controller/home-controller', () => ({ homeMethods: {} }));
-jest.mock('@plugin/helpers/ConfigHelper', () => ({ ConfigHelper: {} }));
 jest.mock('@plugin/domain/plugins/operator-plugin.registry', () => ({ OperatorPluginRegistry: {} }));
 jest.mock('@plugin/controller/performance-controller', () => ({ performanceDataMethods: { jumpToFile: mockJumpToFile } }));
 jest.mock('@plugin/controller/performance-data-controller', () => ({

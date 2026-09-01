@@ -2,7 +2,14 @@ jest.mock(
   'vscode',
   () => ({
     env: { uriScheme: 'vscode' },
-    workspace: { workspaceFolders: [] },
+    workspace: {
+      workspaceFolders: [],
+      getConfiguration: jest.fn(() => ({
+        inspect: jest.fn(),
+        get: jest.fn(),
+        update: jest.fn(),
+      })),
+    },
   }),
   { virtual: true },
 );
@@ -11,8 +18,8 @@ jest.mock('@plugin/domain/utils/build-utils', () => ({ checkBuildShHasBishengCon
 
 import { AscendPlugin } from '@plugin/domain/plugins/ascend.plugin';
 import { CannPlugin } from '@plugin/domain/plugins/cann.plugin';
-import type { OpRecord } from '@plugin/domain/models/model';
-import type { ConfigRecord } from '@plugin/domain/models/types';
+import type { OpRecord } from '@plugin/domain/models/op-record';
+import type { BuildOpConfig } from '@plugin/service/config-service';
 
 function expectNeutralDefaultsAndRuntimeDebug(
   plugin: AscendPlugin | CannPlugin,
@@ -26,32 +33,35 @@ function expectNeutralDefaultsAndRuntimeDebug(
   const debugScripts = [
     {
       field: 'cpu_debug_script',
+      daoKey: 'cpuDebugScript',
       script: scripts.cpuDebugScript,
     },
     {
       field: 'npu_debug_script',
+      daoKey: 'npuDebugScript',
       script: scripts.npuDebugScript,
     },
   ] as const;
 
   for (const {
-    field, script,
+    field, daoKey, script,
   } of debugScripts) {
     expect(script).not.toContain('--build-type');
 
+    const config: BuildOpConfig = {
+      script: '',
+      cpuDebugScript: '',
+      npuDebugScript: '',
+      targetFile: null,
+      [daoKey]: script,
+    };
     const command = plugin.commandStrategy.buildOpCommand({
-      config: {
-        id: 1,
-        project_id: 1,
-        op: directOp.op_name,
-        config_type: 'build_op',
-        user_options: { [field]: script },
-      } as ConfigRecord,
-      operator: directOp,
+      config,
       sourceCannCmd: '',
       cdCmd: 'cd /repo',
       scriptField: field,
       operatorNames: directOp.op_name,
+      op: directOp.op_name,
     });
 
     expect(command.match(/--build-type=Debug/g))
@@ -102,6 +112,46 @@ describe('AscendPlugin getInitialConfigScripts', () => {
   });
 });
 
+describe('AscendPlugin bisheng build.sh variants', () => {
+  const plugin = new AscendPlugin();
+  const op = {
+    id: 1,
+    project_id: 1,
+    op_name: 'add',
+    op_type: 'ascend',
+    op_path: '/repo/math/add',
+  } as OpRecord;
+  const buildUtils = jest.requireMock('@plugin/domain/utils/build-utils') as {
+    checkBuildShHasBishengConfig: jest.Mock;
+  };
+
+  afterEach(() => {
+    buildUtils.checkBuildShHasBishengConfig.mockReturnValue(false);
+  });
+
+  it('switches the run-mode scripts to bisheng flags when build.sh exposes bisheng config', () => {
+    buildUtils.checkBuildShHasBishengConfig.mockReturnValue(true);
+
+    const scripts = plugin.getInitialConfigScripts(op, '/repo');
+
+    expect(scripts.simulateScript)
+      .toContain('--bisheng_flags=ccec_g');
+    expect(scripts.onBoardScript)
+      .toContain('--bisheng_flags=ccec_g');
+    expect(scripts.cpuDebugScript)
+      .toContain('--bisheng_flags=ccec_g');
+    expect(scripts.npuDebugScript)
+      .toContain('--bisheng_flags=ccec_O0,ccec_g');
+    // The scripts without a bisheng variant stay neutral.
+    expect(scripts.buildScript)
+      .not.toContain('bisheng');
+    expect(scripts.sanitizerScript)
+      .not.toContain('bisheng');
+    expect(scripts.utTestScript)
+      .not.toContain('bisheng');
+  });
+});
+
 describe('CannPlugin getInitialConfigScripts', () => {
   const plugin = new CannPlugin();
   const op = {
@@ -116,10 +166,12 @@ describe('CannPlugin getInitialConfigScripts', () => {
     expectNeutralDefaultsAndRuntimeDebug(plugin, op);
   });
 
-  it('puts --cpudebug before --simulator in the default CPU debug script', () => {
+  it('the default CPU debug script carries --cpudebug without a simulator suffix', () => {
     const scripts = plugin.getInitialConfigScripts(op, '/repo');
 
     expect(scripts.cpuDebugScript)
-      .toMatch(/--cpudebug\b.*--simulator \{simulator_type\}/);
+      .toMatch(/--cpudebug\b/);
+    expect(scripts.cpuDebugScript)
+      .not.toMatch(/--simulator \{simulator_type\}/);
   });
 });

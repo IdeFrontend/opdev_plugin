@@ -1,9 +1,12 @@
-import { ConfigRecord } from '@plugin/domain/models/config-model';
-import { OpRecord } from '@plugin/domain/models/model';
+import type {
+  SimulateConfig, OnBoardConfig,
+} from '@plugin/service/config-service';
+import { OpRecord } from '@plugin/domain/models/op-record';
 import {
   Command, getAdvanceCmd,
 } from '@plugin/domain/utils/command-utils';
 import { joinIdeConfigRelative } from '@plugin/helpers/ide-config-dir';
+import { getFirstWorkspaceFolderPath } from '@plugin/helpers/operator-project-workspace-config';
 import {
   isAscendA5ProfilerCannSoc,
   resolveAscendEnv,
@@ -25,7 +28,7 @@ export type ProfilerGenerateContext = {
  */
 export interface ProfilerCommandStrategy {
   generate(
-    config: ConfigRecord,
+    config: SimulateConfig | OnBoardConfig,
     operator: OpRecord,
     targetFile: string,
     context?: ProfilerGenerateContext,
@@ -36,8 +39,8 @@ export interface ProfilerCommandStrategy {
  * Build simulation aic-metrics for `msprof op simulator` on the resolved SOC.
  *
  * Two rules combine:
- *  - SOC gating (GC-22): optional metrics are requested only where the simulator
- *    is confirmed to accept them, so msprof never rejects the command (e.g. A3 /
+ *  - SOC gating (GC-22): optional metrics are requested only where the simulator is
+ *    confirmed to accept them, so msprof never rejects the command (e.g. A3 /
  *    `ascend910_93` rejects `ResourceConflictRatio`). The per-SOC allow-list is the
  *    shared {@link SIMULATOR_OPTIONAL_METRIC_SOCS}, evaluated through
  *    {@link isSimulatorOptionalMetricSupported} — the same helper + list the
@@ -79,13 +82,12 @@ export function getSimulationAicMetrics(
  */
 export class SimulatorStrategy implements ProfilerCommandStrategy {
   generate(
-    config: ConfigRecord,
+    config: SimulateConfig,
     operator: OpRecord,
     targetFile: string,
     _context?: ProfilerGenerateContext,
   ): string {
-    const userOptions = config.user_options as Record<string, unknown> | null | undefined;
-    const advance_cmd = getAdvanceCmd(userOptions?.advance_param);
+    const advance_cmd = getAdvanceCmd(config.advanceParam);
 
     const simEnv = resolveAscendEnv({ isSimulator: true });
 
@@ -95,7 +97,10 @@ export class SimulatorStrategy implements ProfilerCommandStrategy {
 
     // Gate aic-metrics by the resolved CANN SOC slug (NOT the simulator directory):
     // msopprof rejects metrics it does not support for the selected platform (GC-22).
-    const metrics = getSimulationAicMetrics(userOptions, simEnv.socVersion);
+    const metrics = getSimulationAicMetrics({
+      ResourceConflictRatio: config.resourceConflictRatio,
+      PMSampling: config.memoryThroughputWaveform,
+    }, simEnv.socVersion);
 
     // Build the msprof op simulator command
     const msprof = new Command('msprof');
@@ -104,7 +109,9 @@ export class SimulatorStrategy implements ProfilerCommandStrategy {
 
     simulator.addOptions({
       'soc-version': msprofSimulatorArg || undefined,
-      output: `${operator.op_path}/${joinIdeConfigRelative('opprof')}`,
+      // Root-level opprof (per the workspace-root report rule): every
+      // operator writes into <root>/<ideDir>/opprof/<runId>.
+      output: `${getFirstWorkspaceFolderPath() ?? operator.op_path}/${joinIdeConfigRelative('opprof')}`,
       'aic-metrics': metrics,
     });
 
@@ -125,22 +132,37 @@ export class SimulatorStrategy implements ProfilerCommandStrategy {
  */
 export class OnBoardStrategy implements ProfilerCommandStrategy {
   generate(
-    config: ConfigRecord,
+    config: OnBoardConfig,
     operator: OpRecord,
     targetFile: string,
     context?: ProfilerGenerateContext,
   ): string {
-    const userOptions = (config.user_options as Record<string, unknown> | null | undefined) || {};
     const cannSoc = context?.onboardCannSoc;
-    const metrics = this.getOnBoardMetrics(userOptions as Record<string, boolean>, cannSoc);
-    const advance_cmd = getAdvanceCmd(userOptions.advance_param);
+    const metrics = this.getOnBoardMetrics({
+      Occupancy: config.occupancy,
+      Roofline: config.roofline,
+      Source: config.source,
+      MemoryDetail: config.memoryDetail,
+      PCSampling: config.pcSampling,
+      KernelScale: config.kernelScale,
+      ArithmeticUtilization: config.arithmeticUtilization,
+      L2Cache: config.l2Cache,
+      Memory: config.memory,
+      MemoryL0: config.memoryL0,
+      MemoryUB: config.memoryUB,
+      PipeUtilization: config.pipeUtilization,
+      ResourceConflictRatio: config.resourceConflictRatio,
+    }, cannSoc);
+    const advance_cmd = getAdvanceCmd(config.advanceParam);
 
     // Build msprof op command
     const msprof = new Command('msprof');
     const op = msprof.sub('op', { separators: { 'aic-metrics': ',' } });
 
     op.addOptions({
-      output: `${operator.op_path}/${joinIdeConfigRelative('opprof')}`,
+      // Root-level opprof (per the workspace-root report rule): every
+      // operator writes into <root>/<ideDir>/opprof/<runId>.
+      output: `${getFirstWorkspaceFolderPath() ?? operator.op_path}/${joinIdeConfigRelative('opprof')}`,
       'aic-metrics': metrics.length > 0 ? metrics : undefined,
     });
 

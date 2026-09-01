@@ -1,6 +1,6 @@
 # New project generation — implementation specification
 
-How the **New Project** webview creates an operator project: UI parameters, `createdProject`, `createDictory` → `handleOperatorProjectDirectoryFile`, `generateStructure`, template ZIPs, and post-extract renaming.
+How the **New Project** webview creates an operator project: UI parameters, `createdProject`, `createDictory` → `handleOperatorProjectDirectoryFile`, `createOpsByPrototype` → `OpGeneratorFactory`, template ZIPs, and post-extract renaming.
 
 **Related:** [`operator-behavior-specification.md`](./operator-behavior-specification.md) (types and actions), [`workspace-settings.md`](./workspace-settings.md) (runtime `op-devtools.*` after scaffold), [`generated-files-specification.md`](./generated-files-specification.md) (persisted artifacts).
 
@@ -12,7 +12,7 @@ How the **New Project** webview creates an operator project: UI parameters, `cre
 |------|---------|
 | **View ID** | `OperatorProjectViewId` in [`shared/project-type-view-id.ts`](../shared/project-type-view-id.ts): `CANN` = 1, `STANDARD_CUSTOM` = 2, `PYASC` = 3, `TRITON` = 4. |
 | **`project_type` (stored)** | String on the project record from [`viewIdToProjectType`](../plugin/src/domain/utils/project-utils.ts): `cann`, `ascend`, `pyasc`, `triton`. **STANDARD_CUSTOM (2) stores `ascend`**, not `standard-custom`. |
-| **`op_type` (generator)** | Passed to `generateStructure` / [`OpGeneratorFactory`](../plugin/src/domain/services/op-generator-factory.ts): `cann`, `ascend`, `pyasc`, `triton`. New Project uses `viewIdToProjectType` for init, except STANDARD_CUSTOM scaffolding uses **`opType: 'ascend'`** in `handleOperatorProjectDirectoryFile`. |
+| **`op_type` (generator)** | Passed to `createOpsByPrototype` / [`OpGeneratorFactory`](../plugin/src/domain/services/op-generator-factory.ts): `cann`, `ascend`, `pyasc`, `triton`. New Project uses `viewIdToProjectType` for init, except STANDARD_CUSTOM scaffolding uses **`opType: 'ascend'`** in `handleOperatorProjectDirectoryFile`. |
 | **Feature-toggle key** | Used only in [`handleOperatorProjectDirectoryFile`](../plugin/src/class/webview-message-list.ts) via `normalizeViewIdToProjectType`: `cann`, `standard-custom`, `pyasc`, `triton`. Only **Triton** is gated today (`op-devtools.operatorSupport.triton`). |
 | **`projectName` (UI)** | Form field → child folder name and, after init, `project_name` / canonical `op_name` when `opName` is passed through. |
 | **`templateName` (API)** | Optional string from the webview; stored in `ExtensionContext.globalState` key `templateName` when set in `createdProject`, read by `createDictory` handler. |
@@ -21,11 +21,11 @@ How the **New Project** webview creates an operator project: UI parameters, `cre
 
 ## 2. Web UI
 
-**Panel:** [`web/src/views/panels/new-project/`](../web/src/views/panels/new-project/) (`app.vue` → `new-project-ssh.vue` + [`use-new-project-ssh.ts`](../web/src/views/panels/new-project/composables/use-new-project-ssh.ts)).
+**Panel:** [`web/src/views/panels/new-project/`](../web/src/views/panels/new-project/) (`app.vue` → `new-project.vue` + [`use-new-project.ts`](../web/src/views/panels/new-project/composables/use-new-project.ts)).
 
 ### 2.1 Project type list
 
-Default types shown: **CANN**, **PYASC**, **TRITON** (`items_type` in `new-project-ssh.vue`).
+Default types shown: **CANN**, **PYASC**, **TRITON** (`items_type` in `new-project.vue`).
 
 | Condition | UI change |
 |-----------|-----------|
@@ -50,7 +50,7 @@ Defaults in composable: `projectPath` `/home/developer`, `projectSH` `/etc/profi
 
 ### 2.3 Template name resolution (web)
 
-`resolveTemplateNameByProjectType()` in `use-new-project-ssh.ts`:
+`resolveTemplateNameByProjectType()` in `use-new-project.ts`:
 
 | View ID | `templateName` sent |
 |---------|------------------------|
@@ -79,27 +79,23 @@ Defaults in composable: `projectPath` `/home/developer`, `projectSH` `/etc/profi
 ### 3.1 Ordered steps (all view IDs)
 
 1. Wait for pending post-activation bootstrap so automatic workspace initialization cannot race project creation.
-2. `globalState.lastProjectPath` receives `projectPath`.
-3. Resolve the active workspace root from `projects.json`, falling back to filesystem detection only for sub-operator classification.
+3. Resolve the active workspace root from `.vscode/cache.json` (`getProjectByPath` → `cache.folders[rootKey]`), falling back to filesystem detection only for sub-operator classification.
 4. For a STANDARD_CUSTOM child inside the active workspace, resolve the root collection record. If it is missing, call `WorkspaceDetectorService.detectAndRegisterWorkspace`, then read the store again. The service creates one normalized root record with stored type `ascend` before scanning `ops_meet`, `ops_list`, and `experimental_ops_list`. Creation aborts with `welcome.initOperatorProjectFailed` if recovery still produces no parent.
 5. For a resolved STANDARD_CUSTOM child, try the workspace `build.sh --genop` command, then create the child directory when the command did not produce it.
 6. Optional `projectSH`: `chmod +x` + execute via `CommandExecutor` (failures logged only).
-7. For a STANDARD_CUSTOM child, append it once to the root record's regular or experimental operator list using normalized-path identity. The child is never registered as a standalone project. Other project types use `projectService.init` → `ProjectManager.initProject` → `createProject` for the new standalone root.
-8. `revealInExplorer` on the new folder (best effort), show `welcome.projectCreated`, and run `ensureLaunchJsonExists(fullProjectPath)`.
-9. If `params.templateName` is set, store it in `globalState.templateName` for `createDictory`.
-10. Invoke `huawei-op-devtools.createDictory` with the root project ID and child output path for an in-place STANDARD_CUSTOM child; other flows pass only `createOperatorProjectDirectoryFileType`.
-11. On scaffold failure, show `welcome.createDirOkCreateFilesError` and keep the directory.
-12. In-place children remain in the current collection window. Standalone projects prompt for current versus new window before `vscode.openFolder`.
+7. For a STANDARD_CUSTOM child, append it once to the root record's regular or experimental operator list in `cache.folders[rootKey]` scan state using normalized-path identity. The child is never registered as a standalone project. Other project types use `projectService.init` → `ProjectManager` context + `op-devtools.projectType` workspace setting for the new standalone root.
+8. Seed `cache.sanitizerPythonTarget` (keyed by the canonical operator name via `sanitizerTargetKeyForOp`) for **PYASC** / **TRITON** (`python3 ./<projectName>.py`) and for `torch_library_template` (`python ../run.py`), so a fresh creation already resolves the base sanitizer Python target.
+9. `revealInExplorer` on the new folder (best effort), show `welcome.projectCreated`, and run `ensureLaunchJsonExists(fullProjectPath)`.
+10. If `params.templateName` is set, store it in `globalState.templateName` for `createDictory`.
+11. Invoke `huawei-op-devtools.createDictory` with `subOperatorContext` (collection root path, operator name, child output path, `skipFileGeneration`) for an in-place STANDARD_CUSTOM child; other flows pass only `createOperatorProjectDirectoryFileType`.
+12. On scaffold failure, show `welcome.createDirOkCreateFilesError` and keep the directory.
+13. In-place children remain in the current collection window. Standalone projects prompt for current versus new window before `vscode.openFolder`.
 
 ### 3.2 Canonical `op_name`
 
-[`CreateOpsByPrototypeParams`](../shared/api-types/ops.d.ts) optional **`opName`**. [`ProjectService.createOpsByPrototype`](../plugin/src/service/project-service.ts) passes `op_name` into `generateStructure` (trimmed `opName` || `ProjectManager.getProjectName()`).
+[`CreateOpsByPrototypeParams`](../shared/api-types/ops.d.ts) optional **`opName`**. [`ProjectService.createOpsByPrototype`](../plugin/src/service/project-service.ts) passes `op_name` into the generator (trimmed `opName` || current project basename).
 
-`handleOperatorProjectDirectoryFile` passes **`opName: pm.getProjectName()`** for CANN, PYASC, TRITON, and STANDARD_CUSTOM so the form **`projectName`** is the scaffold **`op_name`**.
-
-### 3.3 Removed behavior (historical)
-
-STANDARD_CUSTOM no longer returns early without `createDictory` / wrong generator. It uses the same init + `createDictory` path as other types (§4.2).
+`handleOperatorProjectDirectoryFile` passes **`opName`** (the current project basename, or the sub-operator name for STANDARD_CUSTOM children) so the form **`projectName`** is the scaffold **`op_name`**.
 
 ---
 
@@ -111,8 +107,7 @@ STANDARD_CUSTOM no longer returns early without `createDictory` / wrong generato
 
 - `normalizeViewIdToProjectType(viewId)` → `cann` | `standard-custom` | `pyasc` | `triton`.
 - `isRequestedProjectTypeEnabled`: only **`triton`** can be disabled (`extension.unsupportedProjectTypeDisabled`).
-- Reads **`globalState.templateName`** (set in §3.1 step 9 only when web sent `templateName`).
-- Ensures `ProjectManager.projectId` via `ensureProjectId()` if missing.
+- Reads **`globalState.templateName`** (set in §3.1 step 10 only when web sent `templateName`).
 
 ### 4.2 Per view ID
 
@@ -125,27 +120,26 @@ STANDARD_CUSTOM no longer returns early without `createDictory` / wrong generato
 
 On success: progress 100%, `webview.opFileCreated`. On failure: error toast and rethrow.
 
-Each path → `ProjectService.createOpsByPrototype` → **`generateStructure`** ([`plugin/src/domain/services/ops.ts`](../plugin/src/domain/services/ops.ts) → [`model.ts`](../plugin/src/domain/models/model.ts)).
+Each path → `ProjectService.createOpsByPrototype` ([`plugin/src/service/project-service.ts`](../plugin/src/service/project-service.ts)) → **`OpGeneratorFactory.getGenerator`** ([`plugin/src/domain/services/op-generator-factory.ts`](../plugin/src/domain/services/op-generator-factory.ts)) → `OperatorPluginRegistry.getProjectGenerator`.
 
-After successful prototype generation: `configService.maybeMigrateLegacySettingsToWorkspace()` (one-time seed of `op-devtools.*` from legacy `configs.json` when applicable).
+After successful prototype generation: `ConfigService.ensureOpDevtoolsSettingsSeeded()` — a per-key create-if-missing seed of `op-devtools.*` built from the plugin's `getInitialConfigScripts` + `getDefaultPaths`; keys already present in `settings.json` are dropped, the rest are written (no one-key-skips-all gate).
 
 ---
 
-## 5. Core generation: `generateStructure` and generators
+## 5. Core generation: `createOpsByPrototype` and generators
 
 ### 5.1 Orchestration
 
-[`generateStructure`](../plugin/src/domain/models/model.ts) (wrapper: [`domain/services/ops.ts`](../plugin/src/domain/services/ops.ts)):
+[`ProjectService.createOpsByPrototype`](../plugin/src/service/project-service.ts):
 
-1. Load project by `data.project_id`.
-2. Build generator params (`op_type`, `ops_prototype_file`, `op_name`, `template_name`, `op_path`, `skipExisting`, …).
-3. Unless `skipVscodeFiles`: `ensureLaunchJsonExists(op_path)` (`.vscode` / `.arts` bootstrap).
-4. **`OpGeneratorFactory.getGenerator`** → [`OperatorPluginRegistry.getProjectGenerator`](../plugin/src/domain/plugins/operator-plugin.registry.ts).
-5. **`opName = generator.parseMeta()`**.
-6. Unless `isSkipUnZip`: **`generator.executeGeneration()`** (unzip + rename + replace).
-7. Upsert **`ops`** row; create default **`configs.json`** rows using `OperatorPluginRegistry.getOpPlugin(op_type).getInitialConfigScripts` and `getDefaultPath`.
+1. Resolve `opName` (`params.opName` trimmed, else current project basename) and `opPath` (explicit `params.opPath`, else `<projectPath>/<opName>` for a sub-operator, else the project path itself).
+2. Build generator params (`op_type`, `ops_prototype_file`, `op_name`, `template_name`, `op_path`) and call **`OpGeneratorFactory.getGenerator`** → [`OperatorPluginRegistry.getProjectGenerator`](../plugin/src/domain/plugins/operator-plugin.registry.ts).
+3. **`generator.parseMeta()`** — resolves `op_name` and `template_name` fallbacks (required before generation, the Cann generator renames template files on it).
+4. Unless `skipFileGeneration` (caller already scaffolded via `build.sh --genop`): **`generator.executeGeneration()`** (unzip + rename + replace).
+5. `ensureLaunchJsonExists(op_path)` (`.vscode` / `.arts` bootstrap).
+6. `ConfigService.ensureOpDevtoolsSettingsSeeded(projectPath, …, opType, opPath, templateName)` — per-key create-if-missing seed of `op-devtools.*` from `OperatorPluginRegistry.getOpPlugin(op_type).getInitialConfigScripts` / `getDefaultPaths`.
 
-New Project uses default `isSkipUnZip = false`, `skipVscodeFiles = false`.
+New Project always generates the structure (`skipFileGeneration` unset).
 
 ### 5.2 Generator selection and ZIP paths
 
@@ -153,7 +147,7 @@ New Project uses default `isSkipUnZip = false`, `skipVscodeFiles = false`.
 |-----------|--------|----------------------------------|
 | `ascend` | `AscendOpGenerator` | `out/templates/code_template/ascend_template/add_custom.zip` (fixed). |
 | `cann` | `CannOpGenerator` | `out/templates/code_template/cann_template/${template_name}.zip`. |
-| `pyasc` | `PyAscOpGenerator` | `out/templates/code_template/cann_template/pyasc_temple.zip` (fixed). |
+| `pyasc` | `PyAscOpGenerator` | `out/templates/code_template/cann_template/pyasc_template.zip` (fixed). |
 | `triton` | `TritonOpGenerator` | `out/templates/code_template/triton_template/${template_name}.zip` (default `triton_vector_add`). |
 
 Sources live under [`plugin/templates/code_template/`](../plugin/templates/code_template/). [`scripts/build-extension.ts`](../scripts/build-extension.ts) copies templates to `out/templates/` and packs each directory to `*.zip` for runtime.
@@ -165,7 +159,7 @@ Sources live under [`plugin/templates/code_template/`](../plugin/templates/code_
 | Generator | `op_name` | `template_name` |
 |-----------|-----------|-----------------|
 | **CannOpGenerator** | `params.op_name` \|\| `project.project_name` \|\| basename(`project_path`) | `params.template_name` \|\| `'hello_world'` |
-| **PyAscOpGenerator** | Same as CANN | **Always** `'pyasc_temple'` (ignores web `templateName`). |
+| **PyAscOpGenerator** | Same as CANN | **Always** `'pyasc_template'` (ignores web `templateName`). |
 | **TritonOpGenerator** | Same as CANN | `params.template_name` \|\| `'triton_vector_add'` |
 | **AscendOpGenerator** | Trimmed `params.op_name` if set; else if no prototype file → `project_name` / basename; else JSON prototype `op` field | `params.template_name` \|\| `'add_custom'` |
 
@@ -206,7 +200,7 @@ Keys: `TEMPLATE_UPPER`, PascalCase of segments, `template_snake` → correspondi
 | `__MSTT_SUPPORT_COMPUTE_UNIT__` | ACLNN compute unit from `resolveAclnnCmakeDefaultsForGeneration()` (**Ascend / STANDARD_CUSTOM** only) |
 | `__MSTT_SUPPORT_TILING_DIR__` | ACLNN tiling dir paired with compute unit (**Ascend / STANDARD_CUSTOM** only) |
 
-Used in **PYASC** / **TRITON** Python templates where symbols must track `op_name` but do not embed the template id. **Ascend** `add_custom` also uses `__MSTT_SUPPORT_*__` in `CMakeLists.txt` (patched by `AscendPlugin.patchGeneratedProject()` → `patchAclnnCmakeSupportVars()` in `ascend-util.ts`, invoked from `op-generator-factory.ts` after unzip). CANN/Ascend `.asc` trees typically rely on template-id replacement only (§5.5.4 in prior docs — rationale unchanged).
+Used in **PYASC** / **TRITON** Python templates where symbols must track `op_name` but do not embed the template id. **Ascend** `add_custom` also uses `__MSTT_SUPPORT_*__` in `CMakeLists.txt` (patched by `AscendPlugin.patchGeneratedProject()` → `patchAclnnCmakeSupportVars()` in `ascend-util.ts`, invoked from the generator's `executeGeneration` after unzip). CANN/Ascend `.asc` trees typically rely on template-id replacement only.
 
 #### Design summary
 
@@ -226,13 +220,13 @@ Used in **PYASC** / **TRITON** Python templates where symbols must track `op_nam
 sequenceDiagram
   participant Web as NewProjectWebview
   participant WC as createdProject
-  participant PM as initProject
+  participant PM as projectService.init
   participant CMD as createDictory
   participant WH as handleOperatorProjectDirectoryFile
-  participant GS as generateStructure
+  participant GS as createOpsByPrototype
 
   Web->>WC: createdProject(CANN, templateName?)
-  WC->>WC: mkdir, optional projectSH
+  WC->>WC: mkdirSync recursive, optional projectSH
   WC->>PM: init(cann, templateName, ...)
   WC->>WC: globalState.templateName if set
   WC->>CMD: createDictory(CANN)
@@ -242,12 +236,12 @@ sequenceDiagram
 ```
 
 - Default ZIP template: **`hello_world`** if `templateName` omitted.
-- `torch_library_template` build_op may set `target_file` to `python ../run.py` in `generateStructure`.
+- `torch_library_template` seeds the sanitizer Python target (`cache.sanitizerPythonTarget`, keyed by operator name) to `python ../run.py` in `createdProject` (§3.1 step 8), so build/run/sanitizer defaults resolve without an active-file sync.
 
 ### 6.2 PYASC
 
 - Same orchestration; **`op_type`: `pyasc`**.
-- ZIP: **`pyasc_temple.zip`**; substitution id **`pyasc_temple`**.
+- ZIP: **`pyasc_template.zip`**; substitution id **`pyasc_template`**.
 
 ### 6.3 TRITON
 
@@ -257,9 +251,9 @@ sequenceDiagram
 ### 6.4 STANDARD_CUSTOM (view ID 2)
 
 - **`project_type` stored:** `ascend`.
-- A detected workspace that is not yet in `projects.json` is registered idempotently before its operator lists are scanned or a child operator is created. Existing root identity and metadata are reused.
+- A detected workspace that is not yet in `.vscode/cache.json` (`folders[rootKey]`) is registered idempotently by `WorkspaceDetectorService.detectAndRegisterWorkspace` before its operator lists are scanned or a child operator is created. Existing root identity and metadata are reused.
 - **`createOps`** writes prototype JSON; **`createOpsByPrototype`** with **`op_type: 'ascend'`**, no `templateName`.
-- In-place child generation receives the registered root project ID and never creates a standalone child record.
+- In-place child generation receives the registered collection root path (`subOperatorContext.parentProjectPath`) and never creates a standalone child record.
 - ZIP: **`add_custom.zip`** via `AscendOpGenerator`.
 
 ---
@@ -273,8 +267,7 @@ Under [`plugin/templates/code_template/`](../plugin/templates/code_template/):
 | `cann_template/hello_world` | CANN default |
 | `cann_template/addn_custom` | CANN addn |
 | `cann_template/torch_library_template` | CANN torch library |
-| `cann_template/pyasc_temple` | PYASC |
-| `cann_template/torch_library` | Alternate sample (not default New Project mapping) |
+| `cann_template/pyasc_template` | PYASC |
 | `triton_template/triton_vector_add` | TRITON |
 | `ascend_template/add_custom` | Ascend / STANDARD_CUSTOM |
 
@@ -284,14 +277,14 @@ Under [`plugin/templates/code_template/`](../plugin/templates/code_template/):
 
 | Step | Storage |
 |------|---------|
-| `initProject` | Project store (`projects.json`): `project_name`, `project_path`, `template_name`, `project_type`, `ascend_env_script`. |
-| Detected STANDARD_CUSTOM workspace registration | One normalized root record in `projects.json` with stored `project_type: ascend`; repeated and concurrent registration reuses it. |
-| STANDARD_CUSTOM child creation | Root `ops_list` or `experimental_ops_list`, keyed by normalized child path; no standalone child project record. |
-| `generateStructure` | **`ops`**: `op_name`, `op_type`, `op_path`, `template_name`. |
-| Same | **`configs.json`**: `build_op`, `build_example`, `ut_test`, `sanitizer`, `simulate`, `on_board` from plugin `getInitialConfigScripts`. |
-| After `createOpsByPrototype` | Optional **`maybeMigrateLegacySettingsToWorkspace`** → dotted `op-devtools.*` in workspace `settings.json` ([`workspace-settings.md`](./workspace-settings.md)). |
+| `init` (`projectService.init`) | Workspace settings `op-devtools.projectType` + `op-devtools.environment.environmentScript` (`ascend_env_script`); `ProjectManager` path-keyed context. |
+| Detected STANDARD_CUSTOM workspace registration | One normalized root record in `.vscode/cache.json` (`folders[rootKey]`, `project_type: ascend`); repeated and concurrent registration reuses it. |
+| STANDARD_CUSTOM child creation | Root `opsList` / `experimentalOpsList` scan state in cache (`folders[rootKey]`, keyed by normalized child path, `isCompiled: false`); no standalone child project record. |
+| PYASC / TRITON / torch-library creation | `cache.sanitizerPythonTarget[opName]` — `python3 ./<projectName>.py` / `python ../run.py`. |
+| `createOpsByPrototype` | Operator identity is resolved at runtime from the cache scan state (`resolveOpRecord`); no separate `ops` row is written. |
+| Same | **`ensureOpDevtoolsSettingsSeeded`** → dotted `op-devtools.*` (build_op / build_example / ut_test / sanitizer / simulate / on_board scripts from plugin `getInitialConfigScripts` + `getDefaultPaths`) in workspace `settings.json`, per-key create-if-missing ([`workspace-settings.md`](./workspace-settings.md)). |
 
-Runtime command fields are read from workspace settings after migration; row ids and `fileMapList` remain in `configs.json`.
+Runtime command fields are read from workspace settings; scan state, `sanitizerPythonTarget`, and `selectedOperatorPaths` remain in `.vscode/cache.json`.
 
 **Regression (optional):** `node scripts/verify-template-entrypoints.cjs` — PYASC/TRITON `__MSTT_*` placeholder resolution.
 
@@ -314,11 +307,11 @@ Runtime command fields are read from workspace settings after migration; row ids
 
 | Concern | Primary file(s) |
 |---------|------------------|
-| Web payload + templates | [`use-new-project-ssh.ts`](../web/src/views/panels/new-project/composables/use-new-project-ssh.ts), [`new-project-ssh.vue`](../web/src/views/panels/new-project/components/new-project-ssh.vue) |
+| Web payload + templates | [`use-new-project.ts`](../web/src/views/panels/new-project/composables/use-new-project.ts), [`new-project.vue`](../web/src/views/panels/new-project/components/new-project.vue) |
 | `createdProject` | [`welcome-controller.ts`](../plugin/src/controller/welcome-controller.ts) |
 | `createDictory` / scaffold | [`webview-message-list.ts`](../plugin/src/class/webview-message-list.ts) |
 | Init + prototype | [`project-service.ts`](../plugin/src/service/project-service.ts), [`project-manager.ts`](../plugin/src/core/project/project-manager.ts) |
-| `generateStructure` | [`domain/models/model.ts`](../plugin/src/domain/models/model.ts), [`domain/services/ops.ts`](../plugin/src/domain/services/ops.ts) |
+| Generator orchestration | [`project-service.ts`](../plugin/src/service/project-service.ts) `createOpsByPrototype` |
 | Generators | [`op-generator-factory.ts`](../plugin/src/domain/services/op-generator-factory.ts) |
 | Plugins | [`domain/plugins/*.plugin.ts`](../plugin/src/domain/plugins/) |
 | View ID → stored `project_type` | [`project-utils.ts`](../plugin/src/domain/utils/project-utils.ts) `viewIdToProjectType` |

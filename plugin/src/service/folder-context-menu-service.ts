@@ -21,26 +21,23 @@ import {
 } from '@plugin/domain/plugins/detection-utils';
 import {
   getProjectByPath,
-  getProjectById,
-  getContainingStandardCustomProject,
-  updateStandardCustomOperators,
+  normalizeProjectPath,
   type SubOperatorInfo,
 } from '@plugin/domain/models/project-model';
+import { resolveOpRecord } from '@plugin/domain/models/op-record';
+import {
+  isUnderExperimentalDir,
+  stripRootPrefix,
+} from '@plugin/domain/utils/path-utils';
 import { ProjectManager } from '@plugin/core/project/project-manager';
+import {
+  readWorkspaceCache,
+  updateFolderScanState,
+  updateWorkspaceCache,
+} from '@plugin/helpers/workspace-cache';
 import { OperatorProjectIconTheme } from '@plugin/class/operator-project-icon-theme';
-import { generateStructure } from '@plugin/domain';
 import { buildPythonDeployTarget } from '@plugin/domain/services/command-strategy/python-operator-strategy-shared';
-import {
-  DEFAULT_SANITIZER_DETECTION_OPTIONS,
-  getOpByProjectIdAndOpName,
-} from '@plugin/domain/models/model';
-import {
-  getConfig, getConfigById, postConfig,
-} from '@plugin/domain/services/configuration';
-import {
-  ConfigService, configService,
-} from '@plugin/service/config-service';
-import { buildService } from './build-service';
+import { ConfigService } from '@plugin/service/config-service';
 import { taskMethods } from '../controller/task-controller';
 import { homeMethods } from '../controller/home-controller';
 import {
@@ -244,41 +241,11 @@ function isAscendLikeOperator(type?: OperatorProjectType): boolean {
  * Handles folder right-click menu actions
  */
 export class FolderContextMenuService {
-  private static async ensureSanitizerConfigExists(projectId: number): Promise<void> {
-    const existingConfigs = getConfig(projectId, 'sanitizer');
-
-    if (existingConfigs.length > 0) {
-      return;
-    }
-
-    const project = getProjectById(projectId);
-    const defaultConfigName = project?.project_name || `project-${projectId}`;
-    const defaultOp = defaultConfigName;
-
-    await postConfig('sanitizer', [
-      {
-        project_id: projectId,
-        user_options: {
-          op: defaultOp,
-          config_name: defaultConfigName,
-          script: '',
-          target_file: '',
-          tool: { ...DEFAULT_SANITIZER_DETECTION_OPTIONS.tool },
-          memcheckOption: { ...DEFAULT_SANITIZER_DETECTION_OPTIONS.memcheckOption },
-          logLevel: 'warn',
-          maxDebuglogSize: 1024,
-          useBlock: false,
-          blockId: null,
-          fileMapList: [],
-        },
-      },
-    ]);
-  }
-
   /**
    * Mark folder as operator project
    * 1. Only root (with build.sh --genop) is registered as standard custom and gets a project entry.
-   * 2. Collections and sub-operators are not new projects; info lives in root's ops_meet, ops_list, experimental_ops_list.
+   * 2. Collections and sub-operators are not new projects; info lives in the root's cache folders scan state
+   *    (ops_meet, ops_list, experimental_ops_list).
    */
   static async markAsOperatorProject(uri: vscode.Uri): Promise<void> {
     const folderPath = uri.fsPath;
@@ -326,20 +293,14 @@ export class FolderContextMenuService {
       }
 
       // 4. Check if under experimental directory
-      const normalizedFolderPath = path.normalize(folderPath)
-        .replace(/\\/g, '/')
-        .toLowerCase();
-      const normalizedRootPath = path.normalize(rootPath)
-        .replace(/\\/g, '/')
-        .toLowerCase();
-      const relativePath = normalizedFolderPath.replace(normalizedRootPath, '')
-        .replace(/^[/\\]/, '');
-      const isExperimental = relativePath.toLowerCase()
-        .startsWith('experimental/');
+      const normalizedFolderPath = normalizeProjectPath(folderPath);
+      const normalizedRootPath = normalizeProjectPath(rootPath);
+      const isExperimental = isUnderExperimentalDir(normalizedFolderPath, normalizedRootPath);
 
-      // 5. Get current project info
-      const currentOpsList = rootProject.ops_list || [];
-      const currentExperimentalOpsList = rootProject.experimental_ops_list || [];
+      // 5. Get current project info from the workspace cache scan state
+      const scanState = readWorkspaceCache(rootPath).folders?.[normalizeProjectPath(rootPath)];
+      const currentOpsList = scanState?.opsList || [];
+      const currentExperimentalOpsList = scanState?.experimentalOpsList || [];
       const operatorName = path.basename(folderPath);
 
       // 6. Check if already exists
@@ -372,13 +333,21 @@ export class FolderContextMenuService {
         currentOpsList.push(operatorInfo);
       }
 
-      // 10. Update project info (keep ops_meet unchanged)
-      await updateStandardCustomOperators(
-        rootPath,
-        rootProject.ops_meet || [],
-        currentOpsList,
-        currentExperimentalOpsList,
-      );
+      // 10. Persist the scan state into the workspace cache (keep ops_meet unchanged)
+      // The success message is only shown when the cache write really
+      // happened (updateFolderScanState boolean); on a failed write an error
+      // message is shown instead.
+      const written = await updateFolderScanState(rootPath, {
+        opsMeet: scanState?.opsMeet || [],
+        opsList: currentOpsList,
+        experimentalOpsList: currentExperimentalOpsList,
+      });
+
+      if (!written) {
+        vscode.window.showErrorMessage(t('folderContext.markAsOperatorFailed', { error: 'cache write failed' }));
+
+        return;
+      }
 
       // 11. Update folder icon decoration
       const ctx = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
@@ -439,22 +408,16 @@ export class FolderContextMenuService {
       }
 
       // 3. Check selected dir is operator collection (in whitelist)
-      const normalizedFolderPath = path.normalize(folderPath)
-        .replace(/\\/g, '/')
-        .toLowerCase();
-      const normalizedRootPath = path.normalize(rootPath)
-        .replace(/\\/g, '/')
-        .toLowerCase();
-      const relativePath = normalizedFolderPath.replace(normalizedRootPath, '')
-        .replace(/^[/\\]/, '');
+      const normalizedFolderPath = normalizeProjectPath(folderPath);
+      const normalizedRootPath = normalizeProjectPath(rootPath);
+      const relativePath = stripRootPrefix(normalizedFolderPath, normalizedRootPath);
 
       let collectionName: string;
       let collectionPath: string;
       let isExperimental: boolean;
 
       // Determine if root-level collection or under experimental/
-      if (relativePath.toLowerCase()
-        .startsWith('experimental/')) {
+      if (isUnderExperimentalDir(normalizedFolderPath, normalizedRootPath)) {
         // Operator collection under experimental
         const parts = relativePath.split('/');
 
@@ -531,10 +494,11 @@ export class FolderContextMenuService {
         return;
       }
 
-      // 5. Get current project info
-      const currentOpsMeet = rootProject.ops_meet || [];
-      const currentOpsList = rootProject.ops_list || [];
-      const currentExperimentalOpsList = rootProject.experimental_ops_list || [];
+      // 5. Get current project info from the workspace cache scan state
+      const scanState = readWorkspaceCache(rootPath).folders?.[normalizeProjectPath(rootPath)];
+      const currentOpsMeet = scanState?.opsMeet || [];
+      const currentOpsList = scanState?.opsList || [];
+      const currentExperimentalOpsList = scanState?.experimentalOpsList || [];
 
       // 6. Check if collection already exists
       const meetName = isExperimental ? `experimental/${collectionName}` : collectionName;
@@ -576,13 +540,12 @@ export class FolderContextMenuService {
         }
       });
 
-      // 9. Update project info
-      await updateStandardCustomOperators(
-        rootPath,
-        currentOpsMeet,
-        updatedOpsList,
-        updatedExperimentalOpsList,
-      );
+      // 9. Persist the scan state into the workspace cache
+      await updateFolderScanState(rootPath, {
+        opsMeet: currentOpsMeet,
+        opsList: updatedOpsList,
+        experimentalOpsList: updatedExperimentalOpsList,
+      });
 
       // 10. Update folder icon decoration
       const ctx = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
@@ -658,9 +621,10 @@ export class FolderContextMenuService {
         return;
       }
 
-      // 4. Check if this dir is marked as operator
-      const currentOpsList = rootProject.ops_list || [];
-      const currentExperimentalOpsList = rootProject.experimental_ops_list || [];
+      // 4. Check if this dir is marked as operator (workspace cache scan state)
+      const scanState = readWorkspaceCache(rootPath).folders?.[normalizeProjectPath(rootPath)];
+      const currentOpsList = scanState?.opsList || [];
+      const currentExperimentalOpsList = scanState?.experimentalOpsList || [];
       const operatorName = path.basename(folderPath);
 
       // Look up in ops_list
@@ -683,13 +647,21 @@ export class FolderContextMenuService {
         currentExperimentalOpsList.splice(experimentalOpsListIndex, 1);
       }
 
-      // 6. Update project info (keep ops_meet unchanged)
-      await updateStandardCustomOperators(
-        rootPath,
-        rootProject.ops_meet || [],
-        currentOpsList,
-        currentExperimentalOpsList,
-      );
+      // 6. Persist the scan state into the workspace cache (keep ops_meet unchanged)
+      // The success message is only shown when the cache write really
+      // happened (updateFolderScanState boolean); on a failed write an error
+      // message is shown instead.
+      const written = await updateFolderScanState(rootPath, {
+        opsMeet: scanState?.opsMeet || [],
+        opsList: currentOpsList,
+        experimentalOpsList: currentExperimentalOpsList,
+      });
+
+      if (!written) {
+        vscode.window.showErrorMessage(t('folderContext.unmarkFailed', { error: 'cache write failed' }));
+
+        return;
+      }
 
       // 7. Update folder icon decoration
       const ctx = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
@@ -756,8 +728,9 @@ export class FolderContextMenuService {
         return;
       }
 
-      // 4. Check if this dir is marked as operator collection
-      const currentOpsMeet = rootProject.ops_meet || [];
+      // 4. Check if this dir is marked as operator collection (workspace cache scan state)
+      const scanState = readWorkspaceCache(rootPath).folders?.[normalizeProjectPath(rootPath)];
+      const currentOpsMeet = scanState?.opsMeet || [];
       const meetIndex = currentOpsMeet.findIndex((m) => m.path === folderPath);
 
       if (meetIndex === -1) {
@@ -767,41 +740,24 @@ export class FolderContextMenuService {
       }
 
       const meetInfo = currentOpsMeet[meetIndex];
-      const normalizedFolderPath = path.normalize(folderPath)
-        .replace(/\\/g, '/')
-        .toLowerCase();
 
       // 5. Remove from operator collection list
       currentOpsMeet.splice(meetIndex, 1);
 
       // 6. Remove all operators under this collection
-      const currentOpsList = rootProject.ops_list || [];
-      const currentExperimentalOpsList = rootProject.experimental_ops_list || [];
+      const currentOpsList = scanState?.opsList || [];
+      const currentExperimentalOpsList = scanState?.experimentalOpsList || [];
+      const {
+        opsList: updatedOpsList, experimentalOpsList: updatedExperimentalOpsList,
+      } =
+        this.partitionOpsByFolder(folderPath, currentOpsList, currentExperimentalOpsList);
 
-      // Filter out operators under this collection
-      const updatedOpsList = currentOpsList.filter((op) => {
-        const normalizedOpPath = path.normalize(op.path)
-          .replace(/\\/g, '/')
-          .toLowerCase();
-
-        return !normalizedOpPath.startsWith(normalizedFolderPath + '/');
+      // 7. Persist the scan state into the workspace cache
+      await updateFolderScanState(rootPath, {
+        opsMeet: currentOpsMeet,
+        opsList: updatedOpsList,
+        experimentalOpsList: updatedExperimentalOpsList,
       });
-
-      const updatedExperimentalOpsList = currentExperimentalOpsList.filter((op) => {
-        const normalizedOpPath = path.normalize(op.path)
-          .replace(/\\/g, '/')
-          .toLowerCase();
-
-        return !normalizedOpPath.startsWith(normalizedFolderPath + '/');
-      });
-
-      // 7. Update project info
-      await updateStandardCustomOperators(
-        rootPath,
-        currentOpsMeet,
-        updatedOpsList,
-        updatedExperimentalOpsList,
-      );
 
       // 8. Update folder icon decoration
       const ctx = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
@@ -877,34 +833,27 @@ export class FolderContextMenuService {
       const operatorNames = path.basename(uri.fsPath);
 
       // Check if under experimental directory
-      const normalizedUriPath = path.normalize(uri.fsPath)
-        .replace(/\\/g, '/')
-        .toLowerCase();
-      const normalizedRootPath = path.normalize(workspaceRootPath)
-        .replace(/\\/g, '/')
-        .toLowerCase();
-      const relativePath = normalizedUriPath.replace(normalizedRootPath, '')
-        .replace(/^[/\\]/, '');
-      const isExperimental = relativePath.toLowerCase()
-        .startsWith('experimental/');
+      const normalizedUriPath = normalizeProjectPath(uri.fsPath);
+      const normalizedRootPath = normalizeProjectPath(workspaceRootPath);
+      const isExperimental = isUnderExperimentalDir(normalizedUriPath, normalizedRootPath);
 
-      // Resolve projectId from root
-      let projectId: number | undefined;
-      const containingProject = getContainingStandardCustomProject(uri.fsPath);
+      // Check the folder belongs to a registered standard-custom project.
+      // The mark/unmark writers persist the scan state into the CACHE OF THE
+      // STANDARD-CUSTOM ROOT (findStandardCustomRoot), so the read must look in
+      // the same cache — a workspace opened above the collection root would
+      // otherwise never see the marked operators. Normalized keys,
+      // prefix-match + longest wins; fall back to the workspace root record.
+      const normalizedUri = normalizeProjectPath(uri.fsPath);
+      const scanRoot = (await findStandardCustomRoot(uri.fsPath)) ?? workspaceRootPath;
+      const folderKeys = Object.keys(readWorkspaceCache(scanRoot).folders ?? {});
+      const containingRoot = folderKeys
+        .filter((key) => normalizedUri === key || normalizedUri.startsWith(`${key}/`))
+        .sort((a, b) => b.length - a.length)[0];
 
-      if (containingProject) {
-        projectId = containingProject.id;
-      }
-      else {
-        // If no containing project, try root directly
-        const rootProject = getProjectByPath(workspaceRootPath);
+      const hasRegisteredProject = containingRoot !== undefined
+        || getProjectByPath(workspaceRootPath) !== undefined;
 
-        if (rootProject) {
-          projectId = rootProject.id;
-        }
-      }
-
-      if (!projectId) {
+      if (!hasRegisteredProject) {
         vscode.window.showErrorMessage(t('folderContext.noProjectIdMarkFirst'));
 
         return;
@@ -913,11 +862,11 @@ export class FolderContextMenuService {
       // If under experimental, add --experimental
       const compileOption = isExperimental ? '--experimental' : undefined;
 
-      // Call startBuild with operatorNames, operatorType, projectId, compileOption
+      // Call startBuild with operatorNames, operatorType, compileOption (id-free:
+      // startBuild resolves the project from the workspace root).
       await taskMethods.startBuild({
         operatorNames,
         operatorType: 'standard-custom',
-        projectId,
         compileOption,
       });
 
@@ -987,26 +936,20 @@ export class FolderContextMenuService {
 
     // Case 1: folder selected and root is standard custom
     if (isFolder && isStandardCustom) {
-      // Same as app.vue: operatorNames = selected folder name, projectId from projects.json at root
+      // Same as app.vue: operatorNames = selected folder name; the synthesized
+      // project record (path-keyed) gates the standard-custom action.
       const project = getProjectByPath(workspaceRootPath);
 
       if (!project) {
-        vscode.window.showErrorMessage(t('folderContext.rootNotInProjectsJson'));
+        vscode.window.showErrorMessage(t('folderContext.rootNotRecognized'));
 
         return;
       }
 
       // Check if under experimental directory
-      const normalizedUriPath = path.normalize(uri.fsPath)
-        .replace(/\\/g, '/')
-        .toLowerCase();
-      const normalizedRootPath = path.normalize(workspaceRootPath)
-        .replace(/\\/g, '/')
-        .toLowerCase();
-      const relativePath = normalizedUriPath.replace(normalizedRootPath, '')
-        .replace(/^[/\\]/, '');
-      const isExperimental = relativePath.toLowerCase()
-        .startsWith('experimental/');
+      const normalizedUriPath = normalizeProjectPath(uri.fsPath);
+      const normalizedRootPath = normalizeProjectPath(workspaceRootPath);
+      const isExperimental = isUnderExperimentalDir(normalizedUriPath, normalizedRootPath);
 
       const operatorNames = path.basename(uri.fsPath);
       const operatorType = 'standard-custom';
@@ -1017,7 +960,6 @@ export class FolderContextMenuService {
       await taskMethods.startBuildExample({
         operatorNames,
         operatorType,
-        projectId: project.id,
         compileOption,
       });
 
@@ -1026,38 +968,28 @@ export class FolderContextMenuService {
 
     // Case 2: workspace root is pyasc
     if (isPyasc) {
-      // If .py file selected, update config target_file
+      // If .py file selected, update deploy target file
       if (isPyFile) {
         try {
-          // Get build_op config
-          const configId = await buildService.getBuildConfigId();
+          const project = getProjectByPath(workspaceRootPath);
 
-          if (configId) {
-            const config = getConfigById(configId);
+          if (project) {
+            // Resolve the run path from the op record (settings/cache, id-free)
+            const operator = resolveOpRecord(project.project_path, path.basename(project.project_path));
+            const runPath = operator?.op_path || project.project_path;
 
-            if (config) {
-              // Get project info
-              const project = getProjectByPath(workspaceRootPath);
+            // Compute relative path of selected file to run path
+            const selectedFilePath = uri.fsPath;
+            const relativePath = path.relative(runPath, selectedFilePath);
+            // Normalize path separators to / and ensure ./ prefix if not at root
+            const normalizedRelativePath = relativePath.replace(/\\/g, '/');
+            const targetPath = normalizedRelativePath.startsWith('.')
+              ? normalizedRelativePath
+              : `./${normalizedRelativePath}`;
 
-              if (project) {
-                // Get operator info for run path
-                const operator = getOpByProjectIdAndOpName(project.id, config.op);
-                const runPath = operator?.op_path || project.project_path;
+            const newTargetFile = buildPythonDeployTarget(targetPath);
 
-                // Compute relative path of selected file to run path
-                const selectedFilePath = uri.fsPath;
-                const relativePath = path.relative(runPath, selectedFilePath);
-                // Normalize path separators to / and ensure ./ prefix if not at root
-                const normalizedRelativePath = relativePath.replace(/\\/g, '/');
-                const targetPath = normalizedRelativePath.startsWith('.')
-                  ? normalizedRelativePath
-                  : `./${normalizedRelativePath}`;
-
-                const newTargetFile = buildPythonDeployTarget(targetPath);
-
-                await ConfigService.writeBuildOpDeployTarget(newTargetFile);
-              }
-            }
+            await ConfigService.writeBuildOpDeployTarget(newTargetFile);
           }
         }
         catch (error) {
@@ -1351,12 +1283,10 @@ export class FolderContextMenuService {
     }
 
     try {
-      // Set project information for ProjectManager
+      // Set project context for ProjectManager (path-keyed)
       const pm = ProjectManager.getInstance();
 
-      pm['_projectId'] = String(project.id);
-      pm['_projectName'] = project.project_name;
-      pm['_projectPath'] = project.project_path;
+      pm.setProjectContext(project.project_path, project.project_name);
 
       // perform operations
       await action();
@@ -1392,85 +1322,6 @@ export class FolderContextMenuService {
   }
 
   /**
-   * Initialization operator project configuration
-   * @param detection operator engineering detection result
-   * @param projectId project ID
-   * @param skipVscodeFiles Whether to skip creating .vscode and .arts files (default false)
-   */
-  private static async initializeOperatorProject(
-    detection: OperatorProjectDetectionResult,
-    projectId: number,
-    skipVscodeFiles: boolean = false,
-  ): Promise<void> {
-    if (!detection.isOperatorProject || !detection.projectType) {
-      return;
-    }
-
-    try {
-      const context = (globalThis as unknown as { extensionContext: vscode.ExtensionContext })
-        .extensionContext;
-
-      if (!context) {
-        return;
-      }
-
-      // Determine the template name and type based on the operator project type
-      let templateName: string | undefined;
-      let opType: string = 'ascend';
-
-      switch (detection.projectType) {
-        case OperatorProjectType.ASCEND_C:
-          templateName = 'hello_world';
-          opType = 'ascend';
-          break;
-        case OperatorProjectType.TORCH_LIBRARY:
-          templateName = 'torch_library_template';
-          opType = 'ascend';
-          break;
-        case OperatorProjectType.PYASC:
-          // pyasc operator project, using pyasc_template template
-          templateName = 'pyasc_template';
-          opType = 'pyasc';
-          console.log('[FolderContextMenuService] PYASC type, using pyasc_template template');
-          break;
-        case OperatorProjectType.TRITON:
-          templateName = 'triton_vector_add';
-          opType = 'triton';
-          console.log('[FolderContextMenuService] TRITON type, using triton_vector_add template');
-          break;
-        case OperatorProjectType.STANDARD_CUSTOM:
-          opType = 'cann';
-          // Standard custom operators do not require templates
-          break;
-        default:
-          return;
-      }
-
-      // Call generateStructure to initialize the configuration
-      // For standard custom operators, if there is no template, template decompression is skipped and only the configuration is created.
-      const isSkipUnZip = detection.projectType === OperatorProjectType.STANDARD_CUSTOM && !templateName;
-
-      await generateStructure(
-        {
-          project_id: projectId,
-          op_type: opType,
-          op_name: detection.projectName,
-          template_name: templateName,
-          op_path: detection.projectPath,
-          skipExisting: true, // Do not overwrite existing files
-        } as any,
-        context.extensionPath,
-        isSkipUnZip, // When a standard custom operator is used and there is no template, template decompression is skipped.
-        skipVscodeFiles, // Whether to skip creating .vscode and .arts files
-      );
-      await configService.maybeMigrateLegacySettingsToWorkspace();
-    }
-    catch {
-      // Initialization failures should not prevent marking operations
-    }
-  }
-
-  /**
    * Normalized paths are used for deduplication comparisons (unify delimiters, remove trailing slashes, resolve to absolute paths)
    */
   private static normalizePathForCompare(p: string): string {
@@ -1486,6 +1337,25 @@ export class FolderContextMenuService {
         .replace(/[/\\]+$/, '')
         .toLowerCase();
     }
+  }
+
+  /**
+   * Drop operators located under the given folder from both scan-state lists.
+   */
+  private static partitionOpsByFolder(
+    folderPath: string,
+    opsList: SubOperatorInfo[],
+    experimentalOpsList: SubOperatorInfo[],
+  ): { opsList: SubOperatorInfo[];
+    experimentalOpsList: SubOperatorInfo[] } {
+    const normalizedFolderPath = normalizeProjectPath(folderPath);
+    const isOutsideFolder = (op: SubOperatorInfo): boolean => !normalizeProjectPath(op.path)
+      .startsWith(normalizedFolderPath + '/');
+
+    return {
+      opsList: opsList.filter(isOutsideFolder),
+      experimentalOpsList: experimentalOpsList.filter(isOutsideFolder),
+    };
   }
 
   /**
@@ -1514,36 +1384,17 @@ export class FolderContextMenuService {
         return;
       }
 
-      await ProjectManager.getInstance()
-        .initProject();
-      const projectId = ProjectManager.getInstance().projectId;
+      const projectRoot = ProjectManager.getInstance().projectPath;
 
-      if (!projectId) {
+      if (!projectRoot) {
         vscode.window.showErrorMessage(t('folderContext.noProjectId'));
 
         return;
       }
 
-      // Get configuration
-      const numericProjectId = Number(projectId);
-
-      if (configType === 'sanitizer') {
-        await this.ensureSanitizerConfigExists(numericProjectId);
-      }
-
-      const configs = getConfig(numericProjectId, configType);
-
-      if (configs.length === 0) {
-        vscode.window.showErrorMessage(t('folderContext.noConfigFound', { type: configType === 'sanitizer' ? t('folderContext.configTypeSanitizer') : configType === 'on_board' ? t('folderContext.configTypeOnBoard') : t('folderContext.configTypeSimulation') }));
-
-        return;
-      }
-
-      // Use the first configuration
-      const config = configs[0];
-      const userOptions = (config.user_options as Record<string, unknown>) || {};
-      let fileMapList = (userOptions.fileMapList as Array<{ filePath: string;
-        reportTime: number }>) || [];
+      // The file-map list lives in the workspace cache (id-free).
+      const cachedFileMapList = readWorkspaceCache(projectRoot).fileMapLists?.[configType];
+      let fileMapList = cachedFileMapList ?? [];
 
       // Path deduplication: Compare according to standardized paths (unify separators, capitalization, etc.) to avoid repeated additions
       const normalizedNewPath = this.normalizePathForCompare(filePath);
@@ -1578,19 +1429,16 @@ export class FolderContextMenuService {
 
       fileMapList.push(newFileMap);
 
-      // Update configuration
-      const updatedUserOptions = {
-        ...userOptions,
-        fileMapList,
-      };
-
-      await postConfig(configType, [
-        {
-          config_id: config.config_id,
-          project_id: config.project_id,
-          user_options: updatedUserOptions,
-        },
-      ]);
+      // Persist the file-map list into the workspace cache, atomically — all
+      // three per-type lists are kept, only the target type changes.
+      await updateWorkspaceCache(projectRoot, (cache) => {
+        cache.fileMapLists = {
+          sanitizer: cache.fileMapLists?.sanitizer ?? [],
+          simulate: cache.fileMapLists?.simulate ?? [],
+          on_board: cache.fileMapLists?.on_board ?? [],
+          [configType]: fileMapList,
+        };
+      });
 
       vscode.window.showInformationMessage(t('folderContext.addedToReportList'));
 

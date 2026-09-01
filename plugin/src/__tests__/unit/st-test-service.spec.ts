@@ -23,6 +23,7 @@ import {
   OPS_TEST_KIT_REVISION,
   type TtkRuntime,
 } from '@plugin/service/ttk-installer.service';
+import { EXTENSION_ID } from '@shared/flavor';
 
 const CSV_BY_MODE = {
   kernel: 'testcase_name,op_name\ncase,add\n',
@@ -44,6 +45,7 @@ function commandResult(
     stderr,
     output: `${stdout}${stderr}`,
     interruptedByUserStop: false,
+    timedOut: false,
   };
 }
 
@@ -130,6 +132,40 @@ describe('StTestService', () => {
 
     expect(resolveRemoteStTestPullDir(workspacePath))
       .toBe(expected);
+  });
+
+  it.each([
+    [
+      'codearts',
+      '.codearts-server',
+    ],
+    [
+      'vscode',
+      '.vscode-server',
+    ],
+  ] as const)('resolveRemoteManagedTtkRootBase uses the ide-server dir name for the %s scheme', (scheme, serverDirName) => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const vscodeMock = require('vscode') as { env: { uriScheme: string } };
+    const previousScheme = vscodeMock.env.uriScheme;
+
+    vscodeMock.env.uriScheme = scheme;
+
+    try {
+      expect(resolveRemoteManagedTtkRootBase('/home/remote-user'))
+        .toBe(path.posix.join(
+          '/home/remote-user',
+          serverDirName,
+          'data',
+          'User',
+          'globalStorage',
+          EXTENSION_ID,
+          'ttk',
+          OPS_TEST_KIT_REVISION,
+        ));
+    }
+    finally {
+      vscodeMock.env.uriScheme = previousScheme;
+    }
   });
 
   it('runs every selected-mode CSV sequentially with unique outputs and raw Test output', async () => {
@@ -238,7 +274,10 @@ describe('StTestService', () => {
       expect(command)
         .toContain(". '/cann/CANN env/set_env.sh'");
       expect(executor.execute.mock.calls[index][3])
-        .toEqual({ cwd: systemTtkRoot });
+        .toEqual({
+          cwd: systemTtkRoot,
+          timeout: 1800 * 1000,
+        });
     });
     expect(ensureTtkAvailable)
       .toHaveBeenCalledWith({
@@ -340,7 +379,10 @@ describe('StTestService', () => {
     const command = executor.execute.mock.calls[0][0] as string;
 
     expect(executor.execute.mock.calls[0][3])
-      .toEqual({ cwd: managedRoot });
+      .toEqual({
+        cwd: managedRoot,
+        timeout: 1800 * 1000,
+      });
     expect(command)
       .toContain(shellQuoteBash(inputCsvPath));
     expect(command)
@@ -516,6 +558,42 @@ describe('StTestService', () => {
     expect(outputLines.join('\n'))
       .toContain('Remote system TTK is ready; managed TTK preparation skipped.');
     expect(outputLines.join('\n')).not.toContain('locating the remote managed TTK cache');
+  });
+
+  it('stops a remote run whose TTK probe timed out instead of reinstalling TTK', async () => {
+    writeInput('ttk_kernel_remote_timeout.csv');
+
+    executor.execute.mockImplementation(async (command: string) => {
+      if (command.includes('__MSTT_REMOTE_ENV_READY__')) {
+        return commandResult(0, '__MSTT_REMOTE_ENV_READY__\n');
+      }
+
+      if (command.includes('__MSTT_REMOTE_PYTHON_VERSION__')) {
+        return commandResult(0, '__MSTT_REMOTE_HOME__=/home/remote-user\n__MSTT_REMOTE_PYTHON_VERSION__=3.11\n');
+      }
+
+      // The probe hangs. execute() reports that in the result instead of rejecting, and
+      // every probe here reads a non-zero exit as "this TTK is unusable", so a timeout must
+      // not be mistaken for an absent TTK and start a clone plus pip install.
+      return {
+        ...commandResult(null as unknown as number),
+        timedOut: true,
+      };
+    });
+
+    await expect(createService({ shouldRunRemotely: async () => true })
+      .startStTest({
+        workspaceRoot,
+        operatorName: 'add custom',
+        operatorPath,
+        modes: ['kernel'],
+      }))
+      .rejects
+      .toThrow(/timed out/);
+
+    expect(outputLines.join('\n'))
+      .not
+      .toContain('downloading the pinned ops-test-kit revision');
   });
 
   it('provisions TTK in the remote NPU environment before running ST', async () => {
@@ -1038,6 +1116,23 @@ describe('StTestService', () => {
         modes: ['e2e'],
       }))
       .rejects.toThrow(/exited successfully but did not create/);
+  });
+
+  it('reports a timed-out case instead of a bare non-zero exit code', async () => {
+    writeInput('e2e-suite.csv', 'e2e');
+    executor.execute.mockResolvedValue({
+      ...commandResult(null as unknown as number),
+      timedOut: true,
+    });
+
+    await expect(createService()
+      .startStTest({
+        workspaceRoot,
+        operatorName: 'add',
+        operatorPath,
+        modes: ['e2e'],
+      }))
+      .rejects.toThrow(/timed out for e2e-suite\.csv/);
   });
 
   it('rejects a pre-existing result path before executing TTK', async () => {

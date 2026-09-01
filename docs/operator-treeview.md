@@ -2,7 +2,7 @@
 
 Canonical description of the plugin’s **activity-bar sidebar trees** (Home, Actions, Operators, Sanitizer results, Performance results). Feature-specific run/data flows are documented in [`sanitizer.md`](sanitizer.md) and [`performance.md`](performance.md); build/run/debug entry points in [`build-integration.md`](build-integration.md), [`run-integration.md`](run-integration.md), [`debug-integration.md`](debug-integration.md).
 
-**Supersedes:** `sidebar-treeview-migration-plan.md` (removed). Legacy webview sidebars are **not** used at runtime.
+All sidebar data is rendered in native VS Code `TreeView`s; no webview sidebar participates at runtime.
 
 ---
 
@@ -51,7 +51,7 @@ flowchart TB
 
 ### Context switching (`extension.ts` → `refreshSidebarContexts`)
 
-Refreshed on workspace changes, project open/create, config migration, and coalesced via `requestSidebarContextsRefresh()`.
+Refreshed on workspace changes, project open/create, `devtool_config.json` watcher events, and coalesced via `requestSidebarContextsRefresh()`.
 
 1. `hasDevtoolConfig` — workspace has usable `devtool_config.json` (via `configService.checkDevtoolConfig()`).
 2. `projectType` — from `homeMethods.getProjectType()`; must be supported by `OperatorPluginRegistry.isProjectTypeSupported`.
@@ -148,7 +148,7 @@ Queue key = **`{projectScope}::{selectedOperatorIds}`** (`getOperatorQueueScopeK
 - **Project:** `id:<projectId>` from `getProjectByPath`, else normalized workspace path.
 - **Operators:** sorted comma-separated IDs from `homeMethods.getSelectedOperatorIds()`, or `default` if none.
 
-Switching workspace or selected operators uses a **different** queue; queues are not merged or migrated.
+Switching workspace or selected operators uses a **different** queue; queues are never merged.
 
 ### Rules
 
@@ -202,11 +202,11 @@ On-board and simulation enqueue paths may pass `onFinished` (e.g. `refreshPerfor
 
 Second `OperateTreeProvider` instance (`operatorProjects`). Visible only when `opDevtools.showOperatorProjects`.
 
-- Lists operators from `homeMethods.checkMultipleOperators()` with search/filter via `searchKeyword` (title-bar search command).
-- Selection persisted through `homeMethods.getSelectedOperatorIds` / `setSelectedOperators`.
-- Default: first operator by name selected once per workspace session for standard-custom projects.
+- Operator rows come from the **cache scan state** of the collection root — `cache.folders[rootKey].opsList` / `.experimentalOpsList` (each entry: `name`, `path`, `isCompiled`; experimental operators render with an **ex** mark), exposed via `homeMethods.checkMultipleOperators()` with search/filter via `searchKeyword` (title-bar search command).
+- Selection persists as **paths** in `cache.project.selectedOperatorPaths` (`homeMethods.setSelectedOperators` → `createProject` re-keys ids to paths; `getSelectedOperatorIds` resolves them back against the scan entries by normalized path).
+- Default: the first operator **by name** is selected once per workspace session for standard-custom projects — applied on the first refresh once the operator list is actually known (`hasAppliedDefaultSelection` in `OperateTreeProvider.refreshState`), so a scan state that arrives late still triggers the default.
 - Title-bar: select all, clear selection, clear search.
-- Item context: toggle operator (`huawei-op-devtools.sidebar.toggleOperator`).
+- Item context: toggle operator (`huawei-op-devtools.sidebar.toggleOperator`) → `setSelectedOperators` → scan-state-backed path selection.
 
 Flow tree reads `selectedOperatorIds` for multi-operator disable rules and dispatches build/run with `homeMethods.getSelectedOperators()`.
 
@@ -269,7 +269,7 @@ Webview **quick options** panels (simulator/on-board/sanitizer) use `ops` only f
 | Sanitizer run + results UX | [`sanitizer.md`](sanitizer.md) |
 | msAgent AI fix on findings | [`msagent.md`](msagent.md) |
 | Profiling run + results + Insight | [`performance.md`](performance.md) |
-| Workspace `op-devtools.*` settings (replaces config webview) | [`workspace-settings.md`](workspace-settings.md), `package.json` |
+| Workspace `op-devtools.*` settings | [`workspace-settings.md`](workspace-settings.md), `package.json` |
 
 ---
 

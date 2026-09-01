@@ -308,22 +308,6 @@ export class Command {
   }
 
   /**
-   * Set subcommand
-   * @param cmd subcommand object or name
-   */
-  public setSubCommand(cmd: Command | string): Command {
-    if (typeof cmd === 'string') {
-      this._subCommand = new Command(cmd);
-
-      return this._subCommand;
-    }
-
-    this._subCommand = cmd;
-
-    return cmd;
-  }
-
-  /**
    * Create and return subcommands
    * @param name subcommand name
    * @param config subcommand configuration

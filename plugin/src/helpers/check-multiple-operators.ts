@@ -1,16 +1,19 @@
 import { t } from 'i18next';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as vscode from 'vscode';
 import {
   OperatorProjectType, OperatorProjectDetector,
 } from '@plugin/domain/services/operator-project-detector';
 import {
-  getAllProjects, getProjectByPath, type ProjectRecord,
+  getProjectByPath, normalizeProjectPath,
 } from '@plugin/domain/models/project-model';
 import { buildShHelpSupportsGenop } from '@plugin/domain/plugins/detection-utils';
 import {
   getDevtoolConfigPath, getIdeConfigDirName,
 } from '@plugin/helpers/ide-config-dir';
+import { readWorkspaceCache } from '@plugin/helpers/workspace-cache';
+import { readWorkspaceProjectTypeSetting } from '@plugin/helpers/operator-project-workspace-config';
 
 export type OperatorListEntry = {
   id: number;
@@ -26,6 +29,15 @@ export type CheckMultipleOperatorsResult = {
   isStandardCustom?: boolean;
   supportsSanitizerAndTuning?: boolean;
 };
+
+/**
+ * Standard-custom in any stored form: the DB row and the workspace setting keep
+ * the view id ('ascend'), while the detector reports 'standard-custom'.
+ */
+function isRootStandardCustomProjectType(projectType: string | null | undefined): boolean {
+  return projectType === OperatorProjectType.STANDARD_CUSTOM
+    || projectType === 'ascend';
+}
 
 function findDevtoolConfigOperatorProjectPaths(workspacePath: string): string[] {
   const operatorProjects: string[] = [];
@@ -68,34 +80,6 @@ function findDevtoolConfigOperatorProjectPaths(workspacePath: string): string[] 
   return operatorProjects;
 }
 
-function operatorsFromRootStandardCustomProject(rootProject: ProjectRecord): OperatorListEntry[] {
-  const opsList = rootProject.ops_list || [];
-  const experimentalOpsList = rootProject.experimental_ops_list || [];
-  const operators: OperatorListEntry[] = [];
-
-  opsList.forEach((op, index) => {
-    operators.push({
-      id: rootProject.id * 10000 + index,
-      name: op.name,
-      path: op.path,
-      isExperimental: false,
-      isCompiled: op.isCompiled || false,
-    });
-  });
-
-  experimentalOpsList.forEach((op, index) => {
-    operators.push({
-      id: rootProject.id * 10000 + 1000 + index,
-      name: op.name,
-      path: op.path,
-      isExperimental: true,
-      isCompiled: op.isCompiled || false,
-    });
-  });
-
-  return operators;
-}
-
 /**
  * Resolve multi-operator state for the given workspace folder path.
  * Used by `homeMethods.checkMultipleOperators` and `getSelectedOperators`.
@@ -105,73 +89,82 @@ export async function checkMultipleOperatorsCore(
   options: { includeSupportsSanitizerAndTuning?: boolean } = {},
 ): Promise<CheckMultipleOperatorsResult> {
   try {
-    const rootDetection = await OperatorProjectDetector.detectOperatorProject(workspacePath);
-    const isRootStandardCustom = rootDetection.isOperatorProject
-      && rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM;
+    const rootProject = getProjectByPath(workspacePath);
+    const rootProjectType = readWorkspaceProjectTypeSetting(vscode.Uri.file(workspacePath))
+      ?? rootProject?.project_type;
 
-    const allProjects = getAllProjects();
-    const normalizedWorkspace = path.normalize(workspacePath)
-      .toLowerCase();
-    const standardCustomOperators = allProjects.filter((p) => p.project_type === OperatorProjectType.STANDARD_CUSTOM
-      && p.project_path
-      && path.normalize(p.project_path)
-        .toLowerCase()
-        .startsWith(normalizedWorkspace));
+    let isRootStandardCustom: boolean;
 
-    if (isRootStandardCustom) {
-      const rootProject = getProjectByPath(workspacePath);
+    if (rootProjectType !== undefined && rootProjectType !== null) {
+      isRootStandardCustom = isRootStandardCustomProjectType(rootProjectType);
+    }
+    else {
+      const rootDetection = await OperatorProjectDetector.detectOperatorProject(workspacePath);
 
-      if (rootProject) {
-        const operators = operatorsFromRootStandardCustomProject(rootProject);
-        const opsList = rootProject.ops_list || [];
-        const experimentalOpsList = rootProject.experimental_ops_list || [];
-        const supportsSanitizerAndTuning = options.includeSupportsSanitizerAndTuning
-          ? await buildShHelpSupportsGenop(workspacePath)
-          : undefined;
-
-        console.log(
-          '[checkMultipleOperators] Standard custom operator, read from ops_list:',
-          `Regular operators: ${opsList.length}, experimental operators: ${experimentalOpsList.length}`,
-          t('home.operatorList'),
-          operators.map((op) => `${op.name} (${op.isExperimental ? 'ex' : 'normal'}, compiled: ${op.isCompiled})`),
-          ...(supportsSanitizerAndTuning !== undefined
-            ? [
-              t('home.supportsSanitizerAndTuning'),
-              supportsSanitizerAndTuning,
-            ]
-            : []),
-        );
-
-        return {
-          hasMultiple: operators.length > 1,
-          operators,
-          isStandardCustom: true,
-          ...(supportsSanitizerAndTuning !== undefined ? { supportsSanitizerAndTuning } : {}),
-        };
-      }
-
-      console.warn('[checkMultipleOperators] Root directory is a standard custom operator, but no project record was found');
+      isRootStandardCustom = rootDetection.isOperatorProject
+        && rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM;
     }
 
-    if (standardCustomOperators.length > 0) {
-      const operators = standardCustomOperators.map((p) => ({
-        id: p.id,
-        name: path.basename(p.project_path || ''),
-        path: p.project_path || '',
-        isExperimental: p.is_experimental || false,
-      }));
+    if (isRootStandardCustom) {
+      const cache = readWorkspaceCache(workspacePath);
+      const rootKey = normalizeProjectPath(workspacePath);
+      const folderState = cache.folders?.[rootKey];
+      const opsList = folderState?.opsList ?? [];
+      const experimentalOpsList = folderState?.experimentalOpsList ?? [];
+      const compiledOpPaths = cache.project?.compiledOpPaths;
+
+      if (!folderState) {
+        console.warn('[checkMultipleOperators] Standard custom operator, but no cache folder scan state was found:', rootKey);
+      }
+
+      const operators: OperatorListEntry[] = [];
+
+      opsList.forEach((op, index) => {
+        operators.push({
+          id: index,
+          name: op.name,
+          path: op.path,
+          isExperimental: false,
+          isCompiled: op.isCompiled === true || compiledOpPaths?.[op.path] === true,
+        });
+      });
+
+      experimentalOpsList.forEach((op, index) => {
+        operators.push({
+          id: 1000 + index,
+          name: op.name,
+          path: op.path,
+          isExperimental: true,
+          isCompiled: op.isCompiled === true || compiledOpPaths?.[op.path] === true,
+        });
+      });
+
+      if (!rootProject) {
+        console.warn('[checkMultipleOperators] Root directory is a standard custom operator, but no project record was found');
+      }
+
+      const supportsSanitizerAndTuning = options.includeSupportsSanitizerAndTuning
+        ? await buildShHelpSupportsGenop(workspacePath)
+        : undefined;
 
       console.log(
-        '[checkMultipleOperators] Standard custom operator, found operator project count:',
-        operators.length,
+        '[checkMultipleOperators] Standard custom operator, read from cache folder state:',
+        `Regular operators: ${opsList.length}, experimental operators: ${experimentalOpsList.length}`,
         t('home.operatorList'),
-        operators.map((op) => `${op.name} (${op.isExperimental ? 'ex' : 'normal'})`),
+        operators.map((op) => `${op.name} (${op.isExperimental ? 'ex' : 'normal'}, compiled: ${op.isCompiled})`),
+        ...(supportsSanitizerAndTuning !== undefined
+          ? [
+            t('home.supportsSanitizerAndTuning'),
+            supportsSanitizerAndTuning,
+          ]
+          : []),
       );
 
       return {
         hasMultiple: operators.length > 1,
         operators,
         isStandardCustom: true,
+        ...(supportsSanitizerAndTuning !== undefined ? { supportsSanitizerAndTuning } : {}),
       };
     }
 

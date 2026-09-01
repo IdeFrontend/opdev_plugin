@@ -1,6 +1,6 @@
 # Triton msdebug E2E validation (NPU hardware)
 
-Manual checklist to confirm `msdebug python3` CLI parity with OP DevTools `msdebug-triton-npu`.
+Manual checklist to confirm `msdebug python3` CLI parity with OP DevTools `msdebug-triton-npu` (extension version **1.4.6**).
 
 Prerequisites: CANN toolkit sourced, NPU driver, `msdebug` + `msdebug-mi` on PATH, `op-devtools.operatorSupport.triton=true`, `op-devtools.debugMode=true`.
 

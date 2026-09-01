@@ -2,11 +2,12 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { t } from 'i18next';
 
-import {
-  postConfig, getConfig,
-} from '@plugin/domain/services/configuration';
-import { ProjectManager } from '@plugin/core/project/project-manager';
 import { quoteShellTokenIfNeeded } from '@plugin/domain/services/command-strategy/python-operator-strategy-shared';
+import { toWorkspaceRelativePosixPath } from '@plugin/domain/utils/path-utils';
+import {
+  readWorkspaceCache,
+  updateWorkspaceCache,
+} from '@plugin/helpers/workspace-cache';
 
 export type PythonTargetAction = 'sync-from-active' | 'use-existing' | 'no-target';
 
@@ -17,7 +18,8 @@ export type PythonTargetAction = 'sync-from-active' | 'use-existing' | 'no-targe
  * The settings webview opens in `ViewColumn.Active` and displaces the `.py`, so at run
  * time (Start clicked inside the webview) there is no active text editor. When a matching
  * file is focused we (re)sync from it; when nothing is focused we trust the target already
- * captured in config (e.g. at panel open); a focused non-matching file still warns.
+ * captured in the workspace cache (e.g. at panel open); a focused non-matching file still
+ * warns.
  */
 export function decidePythonTargetAction(input: {
   activeFileName: string | undefined;
@@ -41,29 +43,33 @@ export function decidePythonTargetAction(input: {
 }
 
 /**
- * When a Python operator requires an active file, point sanitizer config `target_file`
- * at the open `.py` (same pattern as build/run for PyAsc/Triton).
+ * When a Python operator requires an active file, point the sanitizer Python target
+ * (`cache.sanitizerPythonTarget[op]`) at the open `.py` (same pattern as build/run
+ * for PyAsc/Triton).
+ *
+ * The cache key is the operator name. The active-file project types
+ * (pyasc/triton) are single-operator, so the root operator name — equal to the
+ * workspace root basename, per the synthesized root record — is the key, matching
+ * the hydrate convention (`deriveSanitizerPythonTarget` keyed by
+ * `row.user_options.op`).
  *
  * @returns false if validation failed (caller should abort the flow).
  */
-export async function syncSanitizerPythonTargetFromActiveEditor(
-  sanitizerConfigId: number,
-  activeFileExtension: string,
-): Promise<boolean> {
+export async function syncSanitizerPythonTargetFromActiveEditor(activeFileExtension: string): Promise<boolean> {
   const activeEditor = vscode.window.activeTextEditor;
   const activeFileName = activeEditor?.document.fileName;
 
-  const projectIdStr = ProjectManager.getInstance().projectId;
+  const workspaceFolders = vscode.workspace.workspaceFolders;
 
-  if (!projectIdStr) {
+  if (!workspaceFolders || workspaceFolders.length === 0) {
+    vscode.window.showWarningMessage(t('task.workspacePathNotFound'));
+
     return false;
   }
 
-  const projectId = Number(projectIdStr);
-  const configs = await getConfig(projectId, 'sanitizer');
-  const sanitizerConfig = configs.find((c) => c.config_id === sanitizerConfigId);
-  const existingTargetFile = (sanitizerConfig?.user_options as Record<string, unknown> | undefined)
-    ?.target_file as string | undefined;
+  const workspacePath = workspaceFolders[0].uri.fsPath;
+  const opName = path.basename(workspacePath);
+  const existingTargetFile = readWorkspaceCache(workspacePath).sanitizerPythonTarget?.[opName];
 
   const action = decidePythonTargetAction({
     activeFileName,
@@ -72,8 +78,7 @@ export async function syncSanitizerPythonTargetFromActiveEditor(
   });
 
   // No active editor (e.g. Start was clicked inside the settings webview, which holds
-  // focus): proceed with the target captured earlier — it is already in config and is
-  // what buildSanitizerCommand reads.
+  // focus): proceed with the target captured earlier (already in the workspace cache).
   if (action === 'use-existing') {
     return true;
   }
@@ -85,18 +90,8 @@ export async function syncSanitizerPythonTargetFromActiveEditor(
   }
 
   // action === 'sync-from-active': (re)point the sanitizer target at the focused file.
-  const workspaceFolders = vscode.workspace.workspaceFolders;
-
-  if (!workspaceFolders?.length) {
-    vscode.window.showWarningMessage(t('task.workspacePathNotFound'));
-
-    return false;
-  }
-
-  const workspacePath = workspaceFolders[0].uri.fsPath;
   const filePath = activeEditor!.document.uri.fsPath;
-  const relativePath = path.relative(workspacePath, filePath)
-    .replace(/\\/g, '/');
+  const relativePath = toWorkspaceRelativePosixPath(workspacePath, filePath);
 
   // Reject files outside the workspace (path.relative yields `../…` or, across drives, an
   // absolute path) so we never point the sanitizer target outside the project.
@@ -106,22 +101,14 @@ export async function syncSanitizerPythonTargetFromActiveEditor(
     return false;
   }
 
-  if (!sanitizerConfig) {
-    return false;
-  }
-
-  await postConfig('sanitizer', [
-    {
-      config_id: sanitizerConfigId,
-      config_type: 'sanitizer',
-      user_options: {
-        ...sanitizerConfig.user_options,
-        // Quote the path token (no-op for clean paths) so an in-workspace path with a space or
-        // shell metacharacter stays a single, injection-safe argument under `shell: true`.
-        target_file: `python3 ${quoteShellTokenIfNeeded(relativePath)}`,
-      },
-    },
-  ]);
+  await updateWorkspaceCache(workspacePath, (cache) => {
+    cache.sanitizerPythonTarget = {
+      ...(cache.sanitizerPythonTarget ?? {}),
+      // Quote the path token (no-op for clean paths) so an in-workspace path with a space or
+      // shell metacharacter stays a single, injection-safe argument under `shell: true`.
+      [opName]: `python3 ${quoteShellTokenIfNeeded(relativePath)}`,
+    };
+  });
 
   return true;
 }

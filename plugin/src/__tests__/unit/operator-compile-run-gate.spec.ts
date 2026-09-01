@@ -201,6 +201,103 @@ describe('OperatorCompileRunGate', () => {
       .toBe(false);
   });
 
+  it('unsubscribe stops the listener from receiving further state snapshots', async () => {
+    const gate = new OperatorCompileRunGate();
+    const listener = jest.fn();
+
+    const unsubscribe = gate.subscribe(listener);
+
+    unsubscribe();
+
+    let releaseBuild!: ()=> void;
+    const buildBarrier = new Promise<void>((resolve) => {
+      releaseBuild = resolve;
+    });
+
+    const build = gate.enqueue('build', async () => {
+      await buildBarrier;
+    });
+
+    expect(listener)
+      .toHaveBeenCalledTimes(1);
+
+    releaseBuild();
+    await build;
+
+    expect(listener)
+      .toHaveBeenCalledTimes(1);
+  });
+
+  it('stopAll on an idle gate is a silent no-op', async () => {
+    const gate = new OperatorCompileRunGate();
+    const stopShell = jest.fn(async () => undefined);
+
+    gate.setStopShellProcess(stopShell);
+
+    await expect(gate.stopAll())
+      .resolves.toBe(false);
+    expect(stopShell)
+      .not
+      .toHaveBeenCalled();
+  });
+
+  it('cancelQueued returns false for a running or absent node', async () => {
+    const gate = new OperatorCompileRunGate();
+
+    let releaseBuild!: ()=> void;
+    const buildBarrier = new Promise<void>((resolve) => {
+      releaseBuild = resolve;
+    });
+
+    const build = gate.enqueue('build', async () => {
+      await buildBarrier;
+    });
+
+    expect(gate.cancelQueued('build'))
+      .toBe(false);
+    expect(gate.cancelQueued('run'))
+      .toBe(false);
+
+    releaseBuild();
+    await build;
+  });
+
+  it('cancelQueued from a state listener can empty the queue and reset the tail', async () => {
+    const gate = new OperatorCompileRunGate();
+    let runStarted = false;
+
+    let releaseBuild!: ()=> void;
+    const buildBarrier = new Promise<void>((resolve) => {
+      releaseBuild = resolve;
+    });
+
+    const build = gate.enqueue('build', async () => {
+      await buildBarrier;
+    });
+    const run = gate.enqueue('run', async () => {
+      runStarted = true;
+    });
+
+    // The listener fires when build's finally clears the build state: at that
+    // moment the run is still queued and pendingCount has dropped to 1.
+    gate.subscribe((state) => {
+      if (!state.build && state.run === 'queued') {
+        gate.cancelQueued('run');
+      }
+    });
+
+    releaseBuild();
+    await build;
+    await run;
+
+    expect(runStarted)
+      .toBe(false);
+    expect(gate.getUiState())
+      .toEqual({});
+    expect(gate.isActive())
+      .toBe(false);
+  });
+
   it('cancelQueued drops only the queued run while build keeps running', async () => {
     const gate = new OperatorCompileRunGate();
 

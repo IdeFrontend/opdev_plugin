@@ -7,6 +7,14 @@ import type {
 const QUESTION_TYPE: QuestionType = 'other';
 
 /**
+ * Logger tag prefix of newer npu-check releases (CANN 9.2.0 aclsan), e.g.
+ * "npu_check: DIAGNOSTIC" or "npu_check: SUMMARY". The tag prefixes the "="
+ * decoration on the first line of every logger message; continuation lines
+ * keep the plain "=========" decoration.
+ */
+const NPU_CHECK_TAG_PATTERN = /^\s*npu[-_]?check:(?:\s*[\w-]+)?\s*/i;
+
+/**
  * A single call-stack frame of an npu-check "Device Frame(s)" section.
  */
 export interface NpuCheckStackFrame {
@@ -115,9 +123,11 @@ interface CurrentBlock {
  * npu-check decorates every line with a variable-length "=" prefix and reports
  * issues as "ERROR:"/"WARNING:" blocks, optionally followed by a
  * "Device Frame(s):" call-stack section whose "#N" frames count up from the
- * stack top. The jump target is therefore the frame with the smallest index
- * that resolves a file path, unlike the mssanitizer parser which prefers the
- * deepest frame.
+ * stack top. Newer releases (CANN 9.2.0 aclsan) additionally prefix the first
+ * line of every logger message with a "npu_check: <LEVEL>" tag; metadata
+ * messages such as "npu_check: SUMMARY" carry no diagnostic content. The jump
+ * target is the frame with the smallest index that resolves a file path,
+ * unlike the mssanitizer parser which prefers the deepest frame.
  */
 export class NpuCheckParser {
   private results: Result[] = [];
@@ -188,6 +198,15 @@ export class NpuCheckParser {
       return;
     }
 
+    // Logger metadata lines ("npu_check: SUMMARY ...", "npu_check:
+    // SESSION_END ...") carry no diagnostic content: they end the current
+    // block instead of being collected as description lines.
+    if (NPU_CHECK_TAG_PATTERN.test(line)) {
+      this.finalizeCurrentResult();
+
+      return;
+    }
+
     const block = this.currentResult;
 
     // Lines outside any block (tool headers such as "NPU CHECK"/"NPUSAN")
@@ -222,12 +241,14 @@ export class NpuCheckParser {
   }
 
   /**
-   * Clean line contents: remove the leading "=" decoration and surrounding
-   * whitespace. The number of "=" signs and spaces varies between releases,
-   * so both are matched flexibly.
+   * Clean line contents: remove the optional "npu_check: <LEVEL>" logger tag,
+   * then the leading "=" decoration and surrounding whitespace. The tag shape
+   * and the number of "=" signs and spaces vary between releases, so all of
+   * them are matched flexibly.
    */
   private cleanLine(line: string): string {
     return line
+      .replace(NPU_CHECK_TAG_PATTERN, '')
       .replace(/^\s*=+\s*/, '')
       .trim();
   }

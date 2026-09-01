@@ -1,24 +1,25 @@
 import { t } from 'i18next';
-import { getOpRunPath } from '@plugin/domain/utils/op-util';
 import { joinCommands } from '@plugin/domain/utils/command-utils';
-import { ConfigRecord } from '@plugin/domain/models/config-model';
-import { OpRecord } from '@plugin/domain/models/model';
+import type {
+  SimulateConfig, OnBoardConfig,
+} from '@plugin/service/config-service';
+import { OpRecord } from '@plugin/domain/models/op-record';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { ProfilerFactory } from '../profiler-service';
 import { resolveAscendEnv } from '@plugin/domain/utils/ascend-util';
 import {
-  BaseContext, CommandContext,
+  BaseContext, CommandContext, ProfilerCommandParams, SectionConfig,
 } from './types';
 import { ConfigService } from '@plugin/service/config-service';
 
 /**
  * Shared by PyAsc and Triton: Ascend env sourcing, operator run path, identical cd for build/run.
  */
-export function buildPythonOperatorCommandContext(baseContext: BaseContext): CommandContext {
+export function buildPythonOperatorCommandContext<TConfig extends SectionConfig>(baseContext: BaseContext<TConfig>): CommandContext<TConfig> {
   const {
-    config, project, operator,
+    config, project, operator, op,
   } = baseContext;
 
   const sourceCannCmd =
@@ -29,13 +30,13 @@ export function buildPythonOperatorCommandContext(baseContext: BaseContext): Com
   let runPath: string;
 
   if (operator) {
-    runPath = getOpRunPath(operator);
+    runPath = operator.op_path;
   }
   else if (config.script && project) {
     runPath = project.project_path;
   }
   else {
-    throw new Error(`Operator not found: ${config.op}`);
+    throw new Error(`Operator not found: ${op}`);
   }
 
   const cdCmd = `cd ${runPath}`;
@@ -47,6 +48,7 @@ export function buildPythonOperatorCommandContext(baseContext: BaseContext): Com
     sourceCannCmd,
     cdCmd,
     cdBuildCmd: cdCmd,
+    op,
   };
 }
 
@@ -58,7 +60,7 @@ type ProfilerMissingProjectKey =
  * Profiler strategies need an operator row; synthesize one from the project when only config+workspace exist.
  */
 export function resolveProfilerOperatorOrThrow(
-  config: ConfigRecord,
+  op: string,
   project: BaseContext['project'],
   operator: OpRecord | null,
   opType: string,
@@ -69,13 +71,11 @@ export function resolveProfilerOperatorOrThrow(
   }
 
   if (!project?.project_path) {
-    throw new Error(t(missingProjectI18nKey, { op: config.op }));
+    throw new Error(t(missingProjectI18nKey, { op }));
   }
 
   return {
-    id: 0,
-    project_id: config.project_id,
-    op_name: config.op,
+    op_name: op,
     op_type: opType,
     op_path: project.project_path,
   } as OpRecord;
@@ -173,16 +173,15 @@ export function normalizePythonCommandInterpreter(command: string): string {
 }
 
 export function buildPythonSimulateCommand(
-  config: ConfigRecord,
-  project: BaseContext['project'],
-  operator: OpRecord | null,
-  sourceCannCmd: string,
-  cdCmd: string,
-  exampleTargetFile: string,
+  params: ProfilerCommandParams<SimulateConfig>,
   opType: string,
 ): string {
+  const {
+    config, project, operator, cdBuildCmd, exampleTargetFile, op,
+  } = params;
+
   const effectiveOperator = resolveProfilerOperatorOrThrow(
-    config,
+    op,
     project,
     operator,
     opType,
@@ -195,20 +194,19 @@ export function buildPythonSimulateCommand(
       exampleTargetFile,
     );
 
-  return joinCommands(sourceCannCmd, cdCmd, simulatorCmd);
+  return joinCommands(params.sourceCannCmd, cdBuildCmd, simulatorCmd);
 }
 
 export function buildPythonOnBoardCommand(
-  config: ConfigRecord,
-  project: BaseContext['project'],
-  operator: OpRecord | null,
-  sourceCannCmd: string,
-  cdCmd: string,
-  exampleTargetFile: string,
+  params: ProfilerCommandParams<OnBoardConfig>,
   opType: string,
 ): string {
+  const {
+    config, project, operator, cdBuildCmd, exampleTargetFile, op,
+  } = params;
+
   const effectiveOperator = resolveProfilerOperatorOrThrow(
-    config,
+    op,
     project,
     operator,
     opType,
@@ -223,10 +221,10 @@ export function buildPythonOnBoardCommand(
       { onboardCannSoc },
     );
 
-  return joinCommands(sourceCannCmd, cdCmd, onBoardCmd);
+  return joinCommands(params.sourceCannCmd, cdBuildCmd, onBoardCmd);
 }
 
-export function getPythonRunTargetFile(_config: ConfigRecord): string {
+export function getPythonRunTargetFile(): string {
   return ConfigService.readBuildOpDeployTargetFromWorkspace() || '';
 }
 

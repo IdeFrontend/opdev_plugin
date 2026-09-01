@@ -91,6 +91,12 @@ export default {
   'extension.ascendEnv.socNotDetected.inputPlaceholder': 'ascend910b',
   'extension.ascendEnv.socNotDetected.inputRequired': '请输入有效的 SoC 版本',
   'extension.ascendEnv.socNotDetected.setSuccess': 'SoC 版本已保存到工作区设置。',
+  'extension.cppSupport.missing':
+    '未安装任何 C/C++ 插件，算子源码的代码跳转和代码联想不可用。是否安装 Microsoft C/C++？',
+  'extension.cppSupport.install': '安装 C/C++',
+  'extension.cppSupport.dontAskAgain': '不再提示',
+  'extension.cppSupport.installed': 'C/C++ 插件已安装。',
+  'extension.cppSupport.installFailed': '无法安装 {{id}}。在受限网络环境下，请手动安装 VSIX。',
   'extension.reloadWindowAction': '重载窗口',
   'extension.resetProjectConfigurationConfirm':
     '是否重置{{projectName}}的工程配置？点击重置将清除本插件为{{projectName}}保存的配置信息，并重置为默认配置。不会修改仓库中的算子源码及其他工程文件。',
@@ -126,7 +132,7 @@ export default {
   'folderContext.noWorkspaceCannotRun': '未打开工作区，无法运行验证',
   'folderContext.noProjectIdMarkFirst': '未找到对应的项目ID，请先标记为算子工程',
   'folderContext.noOperatorsToValidate': '该文件/文件夹无算子可运行验证',
-  'folderContext.rootNotInProjectsJson': '根目录未在 projects.json 中注册，无法运行验证',
+  'folderContext.rootNotRecognized': '根目录未被识别为算子工程，无法运行验证',
   'folderContext.folderNotOperatorProject': '该文件夹不是算子工程',
   'folderContext.needBishengFlags': '暂不支持该功能，请确保 build.sh 中包含 --bisheng_flags',
   'folderContext.standardOpsNoTuning': '标准自定义算子暂不支持性能调优',
@@ -143,6 +149,7 @@ export default {
   'folderContext.addFailed': '添加失败: {{error}}',
 
   // build
+  'build.commandTimedOut': '命令执行超时并已被终止。若该步骤确实需要更长时间，请调大 op-devtools.execution.commandTimeoutSeconds。 {{output}}',
   'build.compileFailed': '编译算子失败 {{output}}',
   'build.compileSuccess': '编译算子成功',
   'build.getCompileCommandFailed': '获取编译算子命令失败 {{error}}',
@@ -174,6 +181,7 @@ export default {
   'performance.confirmDelete': '确定要删除 {{key}} 吗？',
   'performance.deleted': '已删除: {{key}}',
   'performance.openFileFailed': '打开文件失败：{{error}}',
+  'performance.openReportFailed': '打开报告文件失败：{{path}}',
   'performance.nodeKeyRequired': '节点信息不能为空',
   'performance.fileSizeKb': '文件大小: {{size}} KB',
 
@@ -256,7 +264,7 @@ export default {
   'build.simulationFailedThrow': '执行仿真分析失败: {{output}}',
 
   // project (additional)
-  'project.invalidProjectId': '无效的 projectId: {{projectId}}',
+  'project.invalidProjectId': '无效的工程路径',
   'project.projectDirNotExist': '工程目录不存在',
   'project.opsPrototypeTemplateMissing': '未找到算子原型模板: {{path}}',
 
@@ -687,5 +695,15 @@ export default {
   'stTest.options.validation.reserved': '输入、输出和插件参数由扩展管理。',
   'stTest.options.validation.modes': '请至少选择一个可用的 ST 测试模式。',
   'stTest.options.validation.unavailableMode': '一个或多个已选 ST 测试模式当前不可用。',
+
+  // profiling-report
+  'profilingReport.title': '性能分析报告',
+  'profilingReport.fileNotFound': '性能分析数据文件未找到：{{path}}',
+  'profilingReport.loadFailed': '加载性能分析报告失败：{{error}}',
+  'profilingReport.filePathEmpty': '性能分析数据文件路径不能为空',
+  'profilingReport.reportFile': '性能分析报告 (.rep, .ncrep)',
+  'profilingReport.loading': '正在加载性能分析报告...',
+  'profilingReport.noData': '未加载性能分析数据。',
+  'profilingReport.fetchFailed': '获取性能分析数据失败',
 
 };

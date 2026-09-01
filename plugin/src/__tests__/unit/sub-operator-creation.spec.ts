@@ -13,7 +13,7 @@ describe('isSubOperatorCreation', () => {
       .toBe(true);
   });
 
-  it('treats legacy stored project_type=ascend as the current standard-custom workspace', () => {
+  it('treats stored project_type=ascend as the current standard-custom workspace', () => {
     expect(isSubOperatorCreation({
       ...base,
       currentProjectType: 'ascend',

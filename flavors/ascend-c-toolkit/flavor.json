@@ -1,18 +1,18 @@
 {
   "id": "ascend-c-toolkit",
   "manifest": {
-    "name": "ascend-c-toolkit",
-    "displayName": "Ascend C Toolkit",
-    "publisher": "hicann",
+    "name": "asc-toolkit",
+    "displayName": "Ascend C Toolkits",
+    "publisher": "cann-pub",
     "description": "Operator development, debugging, and performance analysis all-in-one platform for Ascend C language."
   },
+  "vsixBaseName": "ascend-c-toolkit",
   "ids": {
     "commandPrefix": "ascend-c-toolkit",
     "settingsPrefix": "ascendCToolkit",
     "viewContainerId": "ascend-c-toolkit-sidebar",
     "viewPrefix": "ascendCToolkit",
-    "contextPrefix": "ascendCToolkit",
-    "colorIdPrefix": "hicann.ascend.c.toolkit"
+    "contextPrefix": "ascendCToolkit"
   },
   "branding": {
     "productName": "Ascend C Toolkit",

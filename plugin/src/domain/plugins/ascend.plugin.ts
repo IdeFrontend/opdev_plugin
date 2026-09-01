@@ -4,7 +4,7 @@ import { AscendCommandStrategy } from '@plugin/domain/services/command-strategy/
 import {
   AscendOpGenerator, OpGenParams, OpGenProject,
 } from '@plugin/domain/services/op-generator-factory';
-import { OpRecord } from '@plugin/domain/models/model';
+import { OpRecord } from '@plugin/domain/models/op-record';
 import { OperatorProjectType } from '@plugin/domain/models/operator-project-type';
 import { checkBuildShHasBishengConfig } from '@plugin/domain/utils/build-utils';
 import { AbstractOperatorPlugin } from './abstract-operator-plugin';

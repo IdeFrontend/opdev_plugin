@@ -48,6 +48,8 @@ Older intermediate screens and screenshots from the previous discussion guide ar
 - Workspace settings use `op-devtools.*`; the source repository has additional notes in `docs/workspace-settings.md`.
 - Build, run, debug, and profiling flows are documented in the source repository under `docs/build-integration.md`, `docs/run-integration.md`, `docs/debug-integration.md`, and `docs/performance.md`.
 - Sanitizer behavior is documented in the source repository under `docs/sanitizer.md`.
+- `op-devtools.environment.npuArch` overrides the SOC-derived `NPU_ARCH`, and `op-devtools.execution.commandTimeoutSeconds` controls the operator command timeout (default 1800 seconds; `0` disables it).
+- After a profiling or sanitizer run finishes, the report that run produced opens automatically.
 
 ## Language
 

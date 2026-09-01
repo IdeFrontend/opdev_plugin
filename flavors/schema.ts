@@ -9,7 +9,6 @@ export const BASE_FLAVOR_IDS = {
   viewContainerId: 'mindstudio-opssuite-vscode-plugin',
   viewPrefix: 'opdevtools',
   contextPrefix: 'opDevtools',
-  colorIdPrefix: 'huawei.op.devtools',
 } as const;
 
 /** IDs that must differ per flavor when both extensions are installed in one VS Code. */
@@ -53,7 +52,6 @@ export type FlavorIds = {
   viewContainerId: string;
   viewPrefix: string;
   contextPrefix: string;
-  colorIdPrefix: string;
 };
 
 export type FeatureFlagMode = 'gate' | 'default';
@@ -92,6 +90,8 @@ export type FlavorBranding = {
 export type FlavorDefinition = {
   id: string;
   manifest: FlavorManifest;
+  /** Base name of the packaged .vsix artifact; defaults to manifest.name. */
+  vsixBaseName?: string;
   ids: FlavorIds;
   branding: FlavorBranding;
   features: Record<string, FeatureFlag>;
@@ -186,7 +186,6 @@ export function validateFlavorDefinition(raw: unknown): FlavorDefinition {
     'viewContainerId',
     'viewPrefix',
     'contextPrefix',
-    'colorIdPrefix',
   ];
 
   for (const key of requiredIdKeys) {

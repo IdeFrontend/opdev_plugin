@@ -2,7 +2,7 @@
 
 This document describes how **MindStudio Sanitizer** (`mssanitizer` CLI) is integrated in Huawei OP DevTools **as implemented today**. The extension orchestrates build steps, runs the CLI, discovers log files, and shows findings in a **native VS Code tree** plus the **Problems** view. It does **not** embed the detection engine.
 
-For CANN/Ascend spawn environment (`SOC_VERSION`, `NPU_ARCH`, env script sourcing), see [`ascend-env-spec.md`](./ascend-env-spec.md). For workspace file artifacts, see [`generated-files-specification.md`](./generated-files-specification.md) (sanitizer log directory). For `op-devtools.sanitizer.*` keys and settings→`user_options` mapping, see [`workspace-settings.md`](./workspace-settings.md).
+For CANN/Ascend spawn environment (`SOC_VERSION`, `NPU_ARCH`, env script sourcing), see [`ascend-env-spec.md`](./ascend-env-spec.md). For workspace file artifacts, see [`generated-files-specification.md`](./generated-files-specification.md) (sanitizer log directory). For `op-devtools.sanitizer.*` keys and how they fold into the sanitizer runtime config, see [`workspace-settings.md`](./workspace-settings.md).
 
 ---
 
@@ -12,7 +12,7 @@ For CANN/Ascend spawn environment (`SOC_VERSION`, `NPU_ARCH`, env script sourcin
 |-------|----------------|
 | **CLI** | `mssanitizer` (external binary) performs memcheck / race / init checks |
 | **Plugin** | Pre-build, optional example build, command assembly, shell execution, log path setup |
-| **Config** | Workspace settings ([`workspace-settings.md`](./workspace-settings.md) § Sanitizer); `configs.json` row (`config_type: sanitizer`) for id and `fileMapList` |
+| **Config** | Workspace settings ([`workspace-settings.md`](./workspace-settings.md) § Sanitizer); `.vscode/cache.json` for `fileMapLists.sanitizer` and `sanitizerPythonTarget` |
 | **Results UI** | Tree view `opdevtoolsSanitizerResultsTree` (report list → grouped messages) |
 | **Problems** | `SanitizerDiagnosticsService` → `DiagnosticCollection` `op-devtools-sanitizer` |
 | **msAgent (optional)** | See [`msagent.md`](./msagent.md) — `parseLog` / `fixProblem` bridge when enabled |
@@ -40,7 +40,7 @@ flowchart LR
   FlowTree --> Run["runSanitizer pipeline"]
   Options --> Run
   Run --> CLI["mssanitizer"]
-  CLI --> Logs["IDE config dir\nmindstudio_sanitizer_log"]
+  CLI --> Logs["Workspace-root IDE config dir\nmindstudio_sanitizer_log"]
   Logs --> ResultsTree
   Run --> Problems
   ResultsTree --> Problems
@@ -62,7 +62,7 @@ flowchart LR
 
 ### 2. Options webview (`web/src/views/panels/options-sanitizer/`)
 
-- Loads/saves form via **`ops`** API: `getSanitizerConfigs`, `saveSanitizerForm`, `runSanitizer` (see `plugin/src/api-routes.ts` → `sanitizerViewMethods`).
+- Loads/saves form via **`ops`** API: `getSanitizerOptions`, `saveSanitizerOptions`, `runSanitizer` (see `plugin/src/api-routes.ts` → `configMethods`).
 - On confirm: `runSanitizer({ operatorNames })` then closes the editor; does **not** use a separate `msSanitizer` API.
 - Can set **“do not show again”** → `sanitizer.showQuickOptions = false` (see [`workspace-settings.md`](./workspace-settings.md#sanitizer-op-devtoolssanitizer)).
 
@@ -123,11 +123,11 @@ sequenceDiagram
 
 Steps in detail:
 
-1. **Resolve** `sanitizer` config id (`configService.getSanitizerConfigsList()`).
-2. **Build operator** — `getBuildOpCommand(sanitizerConfigId, …)` via `executeOperatorCommand` (spawn env from [`operator-command-executor`](../../plugin/src/service/operator-command-executor.ts) / `resolveAscendEnv`).
+1. **Resolve** the sanitizer config — `resolveSanitizerBaseContext(projectPath, operatorNames)` → `ConfigService.getSanitizerConfig(projectPath, op)` (cache-only `fileMapLists.sanitizer` comes from `.vscode/cache.json`).
+2. **Build operator** — `getBuildOpCommand(resolveBuildOpBaseContext(projectPath, operatorNames), …)` via `executeOperatorCommand` (spawn env from [`operator-command-executor`](../../plugin/src/service/operator-command-executor.ts) / `resolveAscendEnv`).
 3. **Standard-custom only** — if workspace root detects `OperatorProjectType.STANDARD_CUSTOM`, also **build example** (`getBuildExampleCommand`).
 4. **`notifyBuildSucceededForSidebar`** — updates compile state for operate tree when applicable.
-5. **Ensure log directory** — `joinIdeConfigPath(workspace, 'mindstudio_sanitizer_log')` (see [Log files](#log-files)).
+5. **Ensure log directory** — `joinIdeConfigPath(workspaceRoot, 'mindstudio_sanitizer_log')` (see [Log files](#log-files)).
 6. **Run sanitizer** — `getSanitizerCommand(sanitizerConfigId, exampleConfigId, operatorNames)` then `executeOperatorCommand`.
 7. **On success**:
    - Notification `sanitizer.detectionSuccess`
@@ -144,10 +144,11 @@ Steps in detail:
 
 - **Facade:** `getSanitizerCommand` in `plugin/src/domain/services/command.ts`.
 - **Strategy:** `CommandStrategyFactory.getStrategy(operator.op_type)` → `buildSanitizerCommand` on ascend / cann / triton (not pyasc).
-- **Target binary:** `strategy.getProfilerTargetFile` from `build_example` config (profiler target in DB, not workspace settings — [`workspace-settings.md`](./workspace-settings.md#what-is-not-in-workspace-settings)); optional `operatorNames` rewrites `test_aclnn_*` segment for standard custom.
-- **Ascend example** (`ascend-strategy.ts`): builds `mssanitizer` with `tool`, `memcheckOption`, `log-level`, `max-debuglog-size`, `block-id`, `--log-file` under `{op_path}/<ideConfig>/mindstudio_sanitizer_log/mssanitizer_<ts>.log`, prefixed with CANN env sourcing + `cd` to operator path.
+- **Target binary:** `strategy.getProfilerTargetFile` — the **ascend** strategy reads `exampleBuildConfig.targetFile` (workspace setting, fallback `OperatorPluginRegistry.getDefaultPaths`); **cann** / **pyasc** / **triton** read the `build_op` deploy key — [`workspace-settings.md`](./workspace-settings.md#what-is-not-in-workspace-settings)); optional `operatorNames` rewrites `test_aclnn_*` segment for standard custom.
+- **cann strategy** (`cann-strategy.ts`): builds `mssanitizer` with `tool` (`memcheck` / `racecheck` / `initcheck`), memcheck options (`leak-check` / `check-unused-memory`), `log-level`, `max-debuglog-size`, `block-id`, `--log-file` under `<workspaceRoot>/<ideConfig>/mindstudio_sanitizer_log/mssanitizer_<ts>.log`, prefixed with CANN env sourcing + `cdBuildCmd` (`mkdir -p <op>/build && cd <op>/build`).
+- **ascend strategy** (`ascend-strategy.ts`): same option set, with `--log-file` under the **same workspace-root** `<workspaceRoot>/<ideConfig>/mindstudio_sanitizer_log/mssanitizer_<ts>.log` (the reader only looks there; `operator.op_path` is used only when no workspace folder is known), prefixed with CANN env sourcing + `cd` to the operator path (`cdCmd`).
 
-Runtime **`user_options`** for the sanitizer row: `ConfigService.buildUserOptionsFromWorkspaceSettings('sanitizer', dbOnly)` — keys and mapping in [`workspace-settings.md`](./workspace-settings.md#sanitizer-op-devtoolssanitizer). DB-only fields such as **`fileMapList`** stay on the `configs.json` row.
+Runtime config for the sanitizer row: the sanitizer section DAO `ConfigService.getSanitizerConfig(projectPath, op)` — keys and mapping in [`workspace-settings.md`](./workspace-settings.md#sanitizer-op-devtoolssanitizer). Cache-only fields such as **`fileMapLists.sanitizer`** and **`sanitizerPythonTarget`** stay in `.vscode/cache.json`.
 
 ---
 
@@ -155,16 +156,17 @@ Runtime **`user_options`** for the sanitizer row: `ConfigService.buildUserOption
 
 Sanitizer and compile keys: **[`workspace-settings.md`](./workspace-settings.md)** (§ Sanitizer, § Compile & deploy).
 
-### `configs.json`
+### `.vscode/cache.json`
 
-- Row type **`sanitizer`**: stable `config_id` for command resolution; optional **`user_options.fileMapList`** `{ filePath, reportTime }` for extra report files (merged in `RunDataService.getSanitizerRunData`).
+- **`sanitizerPythonTarget`** — per-operator Python target keyed by operator name (pyasc / triton: seeded as `python3 ./<op>.py` at project creation; torch_library: `python ../run.py`); merged into the sanitizer config as the target file.
+- **`fileMapLists.sanitizer`** — `{ filePath, reportTime }` entries for extra report files (merged in `RunDataService.getSanitizerRunData`).
 
 ### `ops` API (webview only)
 
 | Method | Handler |
 |--------|---------|
-| `ops/getSanitizerConfigs` | `sanitizerViewMethods.getSanitizerConfigs` |
-| `ops/saveSanitizerForm` | `sanitizerViewMethods.saveSanitizerForm` → `configService.saveSanitizerForm` |
+| `ops/getSanitizerOptions` | `configMethods.getSanitizerOptions` (dotted `sanitizer.*` settings) |
+| `ops/saveSanitizerOptions` | `configMethods.saveSanitizerOptions` → `ConfigService.writeOpDevtoolsDottedSettings` |
 | `ops/runSanitizer` | `dispatchSanitizer` → queued `taskMethods.runSanitizer` |
 
 Build/run for sanitizer are **not** exposed on `ops`; they go through the task controller / operate tree.
@@ -175,14 +177,14 @@ Build/run for sanitizer are **not** exposed on `ops`; they go through the task c
 
 | Item | Location |
 |------|----------|
-| Directory | `<workspace>/<ideConfigDir>/mindstudio_sanitizer_log/` — `ideConfigDir` is `.vscode` or `.arts` (`getIdeConfigDirName()`) |
+| Directory | `<workspaceRoot>/<ideConfigDir>/mindstudio_sanitizer_log/` — the cann, ascend and triton strategies all write under the **workspace root**; the ascend strategy falls back to `operator.op_path` only when no workspace folder is known. `ideConfigDir` is `.vscode` or `.arts` (`getIdeConfigDirName()`) |
 | New runs | `mssanitizer_<timestamp>.log` (filename parsed for report list title/date) |
 | Latest after run | `getLatestSanitizerLogAbsPath(workspaceRoot)` — newest by mtime |
 
 **Report list sources** (`RunDataService.getSanitizerRunData`):
 
 1. All `*.log` files in `mindstudio_sanitizer_log` (marks in `PermanentStorage` key `msSanitizer_marks`).
-2. Existing paths from sanitizer config **`fileMapList`** (ids `sanitizer_<filePath>`).
+2. Existing paths from sanitizer cache **`fileMapLists.sanitizer`** (ids `sanitizer_<filePath>`).
 3. **Manual add** via results tree → stored in `OperateSidebarState.sanitizer.manualReports`.
 
 Marks persist in extension global storage (`msSanitizer_marks`), not in the log file.

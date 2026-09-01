@@ -6,7 +6,7 @@ jest.mock('@plugin/domain/utils/ascend-util', () => ({ resolveEffectiveCannSoc: 
 
 import { resolveEffectiveCannSoc } from '@plugin/domain/utils/ascend-util';
 
-describe('ConfigService.buildUserOptionsFromWorkspaceSettings A5 on-board', () => {
+describe('ConfigService.getOnBoardConfig A5 on-board', () => {
   const getStore: Record<string, unknown> = {};
 
   beforeEach(() => {
@@ -33,12 +33,13 @@ describe('ConfigService.buildUserOptionsFromWorkspaceSettings A5 on-board', () =
     getStore['performanceTuning.onBoard.pcSampling'] = true;
     getStore['performanceTuning.onBoard.cacheHeatmap'] = true;
 
-    const opts = ConfigService.buildUserOptionsFromWorkspaceSettings('on_board', {});
+    const config = ConfigService.getOnBoardConfig('/workspace');
 
-    expect(opts.PCSampling)
+    expect(config.pcSampling)
       .toBe(true);
-    expect(opts.MemoryDetail)
-      .toBeUndefined();
+    // cacheHeatmap is gated off on A5 profilers — the DAO yields false, not undefined.
+    expect(config.memoryDetail)
+      .toBe(false);
   });
 
   it('applies cacheHeatmap but not pcSampling when workspace soc is not A5', () => {
@@ -46,12 +47,13 @@ describe('ConfigService.buildUserOptionsFromWorkspaceSettings A5 on-board', () =
     getStore['performanceTuning.onBoard.pcSampling'] = true;
     getStore['performanceTuning.onBoard.cacheHeatmap'] = false;
 
-    const opts = ConfigService.buildUserOptionsFromWorkspaceSettings('on_board', {});
+    const config = ConfigService.getOnBoardConfig('/workspace');
 
-    expect(opts.MemoryDetail)
+    expect(config.memoryDetail)
       .toBe(false);
-    expect(opts.PCSampling)
-      .toBeUndefined();
+    // pcSampling is gated off on non-A5 profilers — the DAO yields false, not undefined.
+    expect(config.pcSampling)
+      .toBe(false);
   });
 
   it('applies A5 on-board metrics when effective soc is detected ascend950 without workspace override', () => {
@@ -59,12 +61,56 @@ describe('ConfigService.buildUserOptionsFromWorkspaceSettings A5 on-board', () =
     getStore['performanceTuning.onBoard.pcSampling'] = true;
     getStore['performanceTuning.onBoard.cacheHeatmap'] = true;
 
-    const opts = ConfigService.buildUserOptionsFromWorkspaceSettings('on_board', {});
+    const config = ConfigService.getOnBoardConfig('/workspace');
 
-    expect(opts.PCSampling)
+    expect(config.pcSampling)
       .toBe(true);
-    expect(opts.MemoryDetail)
-      .toBeUndefined();
+    expect(config.memoryDetail)
+      .toBe(false);
+  });
+
+  it.each([
+    'ascend910b',
+    'ascend910_93',
+  ])('defaults sanitizer toolType to mssanitizer for A2/A3 SOC %s', (soc) => {
+    (resolveEffectiveCannSoc as jest.Mock).mockReturnValue(soc);
+
+    const config = ConfigService.getSanitizerConfig('/workspace');
+
+    expect(config.toolType)
+      .toBe('mssanitizer');
+  });
+
+  it('forces sanitizer toolType to mssanitizer for A2/A3 even when npu-check is configured', () => {
+    (resolveEffectiveCannSoc as jest.Mock).mockReturnValue('ascend910b');
+    getStore['sanitizer.toolType'] = 'npu-check';
+
+    const config = ConfigService.getSanitizerConfig('/workspace');
+
+    expect(config.toolType)
+      .toBe('mssanitizer');
+  });
+
+  it('defaults sanitizer toolType to npu-check for non-A2/A3 SOC', () => {
+    (resolveEffectiveCannSoc as jest.Mock).mockReturnValue('ascend950');
+
+    const config = ConfigService.getSanitizerConfig('/workspace');
+
+    expect(config.toolType)
+      .toBe('npu-check');
+  });
+
+  it.each([
+    'mssanitizer',
+    'npu-check',
+  ])('keeps configured sanitizer toolType %s for non-A2/A3 SOC', (toolType) => {
+    (resolveEffectiveCannSoc as jest.Mock).mockReturnValue('ascend950');
+    getStore['sanitizer.toolType'] = toolType;
+
+    const config = ConfigService.getSanitizerConfig('/workspace');
+
+    expect(config.toolType)
+      .toBe(toolType);
   });
 
   it.each([

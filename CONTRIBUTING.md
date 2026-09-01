@@ -47,7 +47,7 @@ Flavor `features` in `flavors/{id}/flavor.json` declare **per-brand differences 
 pnpm run apply-flavor:ascend-c-toolkit
 pnpm run compile
 pnpm run package
-# → hicann.ascend-c-toolkit-{version}.vsix
+# → ascend-c-toolkit-{version}.vsix (extension id: cann-pub.asc-toolkit)
 ```
 
 This rewrites manifest/NLS/generated files on disk. **Do not commit** unless you intentionally update the Huawei snapshot.

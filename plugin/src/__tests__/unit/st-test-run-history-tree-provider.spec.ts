@@ -58,6 +58,8 @@ jest.mock('vscode', () => {
   };
 }, { virtual: true });
 
+import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
@@ -308,5 +310,342 @@ describe('StTestRunHistoryTreeProvider', () => {
         `add - ${workspaceB} - stTest.results.outcome.passed - 2 total - 0 failed - 0 invalid`,
         `add - ${workspaceA} - stTest.results.outcome.passed - 2 total - 0 failed - 0 invalid`,
       ]);
+  });
+
+  it('keeps an unparseable completion time as the item label', () => {
+    const provider = new StTestRunHistoryTreeProvider({
+      getWorkspaces: () => [
+        {
+          root: workspaceA,
+          name: 'workspace-a',
+        },
+      ],
+      loadWorkspaceHistory: () => [createRecord(workspaceA, 'add', 'odd-run', 'not-a-date')],
+    });
+
+    provider.refresh();
+
+    expect(provider.getChildren()[0].label)
+      .toBe('not-a-date');
+  });
+
+  it('falls back to an empty tree when no workspace folders are exposed', () => {
+    const originalFolders = (vscode.workspace as { workspaceFolders?: unknown }).workspaceFolders;
+
+    try {
+      (vscode.workspace as { workspaceFolders?: unknown }).workspaceFolders = undefined;
+
+      const provider = new StTestRunHistoryTreeProvider();
+
+      provider.refresh();
+
+      expect(provider.getChildren())
+        .toHaveLength(1);
+      expect(provider.getChildren()[0].id)
+        .toBe('st-test-history-empty');
+    }
+    finally {
+      (vscode.workspace as { workspaceFolders?: unknown }).workspaceFolders = originalFolders;
+    }
+  });
+
+  it('maps the exposed workspace folders when no custom source is given', () => {
+    const workspaceFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'mstt-tree-folder-'));
+
+    try {
+      mockWorkspaceFolders.push({
+        name: 'ws-folder',
+        uri: { fsPath: workspaceFolder },
+      });
+
+      const provider = new StTestRunHistoryTreeProvider();
+
+      provider.refresh();
+
+      expect(provider.getChildren())
+        .toHaveLength(1);
+      expect(provider.getChildren()[0].id)
+        .toBe('st-test-history-empty');
+    }
+    finally {
+      mockWorkspaceFolders.length = 0;
+      fs.rmSync(workspaceFolder, {
+        recursive: true,
+        force: true,
+      });
+    }
+  });
+
+  it('clears the tree and fires a change event', () => {
+    const provider = new StTestRunHistoryTreeProvider({
+      getWorkspaces: () => [
+        {
+          root: workspaceA,
+          name: 'workspace-a',
+        },
+      ],
+      loadWorkspaceHistory: () => [createRecord(workspaceA, 'add', 'clear-me', '2026-07-21T10:00:00.000Z')],
+    });
+    const emitter = provider as unknown as {
+      onDidChangeTreeDataEmitter: { fire: jest.Mock };
+    };
+
+    provider.refresh();
+    expect(provider.getChildren())
+      .toHaveLength(1);
+
+    provider.clear();
+
+    expect(provider.getChildren()
+      .map((item) => [
+        item.label,
+        item.contextValue,
+      ]))
+      .toEqual([
+        [
+          'stTest.results.noHistory',
+          'stTestHistoryEmpty',
+        ],
+      ]);
+    expect(emitter.onDidChangeTreeDataEmitter.fire)
+      .toHaveBeenCalledTimes(2);
+  });
+
+  it('returns the element unchanged from getTreeItem and has no parent', () => {
+    const provider = new StTestRunHistoryTreeProvider({
+      getWorkspaces: () => [
+        {
+          root: workspaceA,
+          name: 'workspace-a',
+        },
+      ],
+      loadWorkspaceHistory: () => [createRecord(workspaceA, 'add', 'parentless', '2026-07-21T10:00:00.000Z')],
+    });
+
+    provider.refresh();
+    const node = provider.getChildren()[0];
+
+    expect(provider.getTreeItem(node))
+      .toBe(node);
+    expect(provider.getParent(node))
+      .toBeUndefined();
+  });
+
+  it('clears all state and disposes the change emitter', () => {
+    const provider = new StTestRunHistoryTreeProvider({
+      getWorkspaces: () => [
+        {
+          root: workspaceA,
+          name: 'workspace-a',
+        },
+      ],
+      loadWorkspaceHistory: () => [createRecord(workspaceA, 'add', 'disposed', '2026-07-21T10:00:00.000Z')],
+    });
+    const emitter = provider as unknown as {
+      onDidChangeTreeDataEmitter: { dispose: jest.Mock };
+    };
+
+    provider.refresh();
+    provider.dispose();
+
+    expect(emitter.onDidChangeTreeDataEmitter.dispose)
+      .toHaveBeenCalled();
+    expect(provider.getChildren()
+      .map((item) => item.id))
+      .toEqual(['st-test-history-empty']);
+  });
+
+  it('keeps loading other workspaces when one workspace history load fails', () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+
+    try {
+      const provider = new StTestRunHistoryTreeProvider({
+        getWorkspaces: () => [
+          {
+            root: workspaceA,
+            name: 'workspace-a',
+          },
+          {
+            root: workspaceB,
+            name: 'workspace-b',
+          },
+        ],
+        loadWorkspaceHistory: (workspaceRoot) => {
+          if (workspaceRoot === workspaceA) {
+            throw new Error('corrupt history');
+          }
+
+          return [createRecord(workspaceB, 'add', 'b-run', '2026-07-21T10:00:00.000Z')];
+        },
+      });
+
+      provider.refresh();
+
+      expect(consoleErrorSpy)
+        .toHaveBeenCalledWith(
+          '[ST test] Could not load run history for workspace workspace-a:',
+          expect.any(Error),
+        );
+      expect(provider.getChildren())
+        .toHaveLength(1);
+    }
+    finally {
+      consoleErrorSpy.mockRestore();
+    }
+  });
+
+  it('logs when the native reveal of the current run fails', async () => {
+    const consoleErrorSpy = jest.spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+
+    try {
+      const provider = new StTestRunHistoryTreeProvider({
+        getWorkspaces: () => [
+          {
+            root: workspaceA,
+            name: 'workspace-a',
+          },
+        ],
+        loadWorkspaceHistory: () => [],
+      });
+
+      provider.setTreeView({
+        reveal: jest.fn(async () => {
+          throw new Error('reveal failed');
+        }),
+      } as unknown as vscode.TreeView<never>);
+      provider.setCurrentRun(
+        workspaceA,
+        createRecord(workspaceA, 'add', 'current', '2026-07-21T10:00:00.000Z').record,
+      );
+      await new Promise<void>((resolve) => setImmediate(resolve));
+
+      expect(consoleErrorSpy)
+        .toHaveBeenCalledWith(
+          '[ST test] Could not reveal the current run in Test History:',
+          expect.any(Error),
+        );
+    }
+    finally {
+      consoleErrorSpy.mockRestore();
+    }
+  });
+
+  it('falls back to the record workspace basename when its root is not exposed', () => {
+    const elsewhere = path.resolve('elsewhere-x');
+    const provider = new StTestRunHistoryTreeProvider({
+      getWorkspaces: () => [
+        {
+          root: workspaceA,
+          name: 'workspace-a',
+        },
+      ],
+      loadWorkspaceHistory: () => [createRecord(elsewhere, 'add', 'stray', '2026-07-21T10:00:00.000Z')],
+    });
+
+    provider.refresh();
+
+    expect(provider.getChildren()[0].description)
+      .toContain(`add - ${path.basename(elsewhere)} - `);
+  });
+
+  it('orders equal runs by operator name and then workspace name', () => {
+    const workspaceC = path.resolve('workspace-c');
+    const provider = new StTestRunHistoryTreeProvider({
+      getWorkspaces: () => [
+        {
+          root: workspaceA,
+          name: 'workspace-a',
+        },
+        {
+          root: workspaceB,
+          name: 'workspace-b',
+        },
+        {
+          root: workspaceC,
+          name: 'workspace-c',
+        },
+      ],
+      loadWorkspaceHistory: (workspaceRoot) => {
+        const operatorName = workspaceRoot === workspaceB ? 'add' : workspaceRoot === workspaceC ? 'multiply' : 'add';
+
+        return [createRecord(workspaceRoot, operatorName, 'tie', '2026-07-21T10:00:00.000Z')];
+      },
+    });
+
+    provider.refresh();
+
+    expect(provider.getChildren()
+      .map((item) => item.description))
+      .toEqual([
+        'add - workspace-a - stTest.results.outcome.passed - 2 total - 0 failed - 0 invalid',
+        'add - workspace-b - stTest.results.outcome.passed - 2 total - 0 failed - 0 invalid',
+        'multiply - workspace-c - stTest.results.outcome.passed - 2 total - 0 failed - 0 invalid',
+      ]);
+  });
+
+  it('does not fold record keys to lower case on non-Windows platforms', () => {
+    const platformDescriptor = Object.getOwnPropertyDescriptor(process, 'platform');
+
+    try {
+      Object.defineProperty(process, 'platform', {
+        value: 'linux',
+        configurable: true,
+      });
+      const provider = new StTestRunHistoryTreeProvider({
+        getWorkspaces: () => [
+          {
+            root: workspaceA,
+            name: 'workspace-a',
+          },
+        ],
+        loadWorkspaceHistory: () => [createRecord(workspaceA, 'add', 'linux-run', '2026-07-21T10:00:00.000Z')],
+      });
+
+      provider.refresh();
+
+      const roots = provider.getChildren();
+
+      expect(provider.getRecord(roots[0].command?.arguments?.[0] as string)?.record.runId)
+        .toBe('linux-run');
+    }
+    finally {
+      if (platformDescriptor) {
+        Object.defineProperty(process, 'platform', platformDescriptor);
+      }
+    }
+  });
+
+  it('skips revealing a current run that was trimmed out of the view', () => {
+    const persisted = Array.from({ length: MAX_ST_TEST_HISTORY_RUNS }, (_, index) => createRecord(
+      workspaceA,
+      'add',
+      `persisted-${index}`,
+      new Date(Date.UTC(2026, 6, 20, 0, index))
+        .toISOString(),
+    ));
+    const reveal = jest.fn(async () => undefined);
+    const provider = new StTestRunHistoryTreeProvider({
+      getWorkspaces: () => [
+        {
+          root: workspaceA,
+          name: 'workspace-a',
+        },
+      ],
+      loadWorkspaceHistory: () => persisted,
+    });
+
+    provider.setTreeView({ reveal } as unknown as vscode.TreeView<never>);
+    provider.setCurrentRun(
+      workspaceA,
+      createRecord(workspaceA, 'add', 'stale-current', '2026-07-19T10:00:00.000Z').record,
+    );
+
+    expect(reveal)
+      .not
+      .toHaveBeenCalled();
+    expect(provider.getChildren())
+      .toHaveLength(MAX_ST_TEST_HISTORY_RUNS);
   });
 });

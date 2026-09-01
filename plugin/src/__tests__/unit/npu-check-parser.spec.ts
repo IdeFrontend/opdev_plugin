@@ -25,6 +25,36 @@ const FULL_SAMPLE = [
   '=========     #2 /mnt/workspace/op989467/op989467.asc:143:8',
 ].join('\n');
 
+// CANN 9.2.0 aclsan report: the first line of every logger message carries an
+// "npu_check: <LEVEL>" tag before the "=" decoration, the diagnostic is
+// followed by the example's own program output, and the report ends with
+// SUMMARY/SESSION_END metadata lines.
+const TAGGED_SAMPLE = [
+  'npu_check: DIAGNOSTIC ========= ERROR: Invalid GM read of size 8256 bytes',
+  '=========     at CopyGmToUbufAlignV2<float, (AscendC::PaddingMode)0>+0x0 in /home/cty/cann_0819/cann-9.2.0/asc/include/basic_api/../../impl/basic_api/dav_3510/core_mng/roc/../../kernel_operator_data_copy_impl.h:84',
+  '=========     by aicore (75) type (AIV) block (7) pipe (MTE2)',
+  '=========     Address 0x120000025000 is out of bounds',
+  '=========     and is 64 bytes after the nearest allocation at 0x120000017000 of size 65536 bytes',
+  '=========  Device Frames:',
+  '=========     [CALL-STACK] pc=0x188 status=available binary_id=1',
+  '=========       #0 CopyGmToUbufAlignV2<float, (AscendC::PaddingMode)0> at /home/cty/cann_0819/cann-9.2.0/asc/include/basic_api/../../impl/basic_api/dav_3510/core_mng/roc/../../kernel_operator_data_copy_impl.h:84:13',
+  '=========       #1 DataCopyGM2UBImpl<float> at /home/cty/cann_0819/cann-9.2.0/asc/include/basic_api/../../impl/basic_api/dav_3510/core_mng/roc/../../kernel_operator_data_copy_impl.h:262:13',
+  '=========       #2 DataCopy<float> at /home/cty/cann_0819/cann-9.2.0/asc/include/basic_api/../../impl/basic_api/dav_3510/core_mng/roc/../../kernel_operator_data_copy_impl.h:79:9',
+  '=========       #3 DataCopy<float> at /home/cty/cann_0819/cann-9.2.0/asc/include/basic_api/../../impl/basic_api/dav_3510/core_mng/roc/../../kernel_operator_data_copy_impl.h:833:5',
+  '=========       #4 add_custom<2048U> at /home/cty/asc-tools-aclsan/npu_sanitizer/demo/examples/add/add.asc:45:5',
+  '=========     #0 CopyGmToUbufAlignV2<float, (AscendC::PaddingMode)0> [0x188] in /home/cty/cann_0819/cann-9.2.0/asc/include/basic_api/../../impl/basic_api/dav_3510/core_mng/roc/../../kernel_operator_data_copy_impl.h:84:13',
+  '=========     #1 DataCopyGM2UBImpl<float> [0x188] in /home/cty/cann_0819/cann-9.2.0/asc/include/basic_api/../../impl/basic_api/dav_3510/core_mng/roc/../../kernel_operator_data_copy_impl.h:262:13',
+  '=========     #2 DataCopy<float> [0x188] in /home/cty/cann_0819/cann-9.2.0/asc/include/basic_api/../../impl/basic_api/dav_3510/core_mng/roc/../../kernel_operator_data_copy_impl.h:79:9',
+  '=========     #3 DataCopy<float> [0x188] in /home/cty/cann_0819/cann-9.2.0/asc/include/basic_api/../../impl/basic_api/dav_3510/core_mng/roc/../../kernel_operator_data_copy_impl.h:833:5',
+  '=========     #4 add_custom<2048U> [0x188] in /home/cty/asc-tools-aclsan/npu_sanitizer/demo/examples/add/add.asc:45:5',
+  '',
+  'Output: 0 0.3 0.6 0.9 1.2 1.5 1.8 2.1 2.4 2.7 3 3.3 3.6 3.9 4.2 4.5 4.8 5.1 5.4 5.7 ...',
+  'Golden: 0 0.3 0.6 0.9 1.2 1.5 1.8 2.1 2.4 2.7 3 3.3 3.6 3.9 4.2 4.5 4.8 5.1 5.4 5.7 ...',
+  'test pass!',
+  'npu_check: SUMMARY tool=memcheck allocations=3 frees=3 device_operations=24 synchronizations=1 errors=1 warnings=0 pending_device_operations=0 dropped_device_operations=0 callbacks=31 malformed_callbacks=0 framework_errors=0 dropped_messages=0',
+  'npu_check: SESSION_END status=complete aclsan_unsubscribe=0 dropped_messages=0',
+].join('\n');
+
 describe('NpuCheckParser', () => {
   it('parses the official NPUSAN and NPU CHECK sample into two ordered results', () => {
     const parser = new NpuCheckParser();
@@ -240,6 +270,71 @@ describe('NpuCheckParser', () => {
       .toBe(42);
     expect(results[0].originData)
       .toContain('at 0x1000 on GM in "myfunc(unsigned char*, unsigned char*)"');
+  });
+
+  it('parses reports whose logger lines carry the "npu_check: <LEVEL>" tag', () => {
+    const parser = new NpuCheckParser();
+    const results = parser.parseAll(TAGGED_SAMPLE);
+
+    expect(results)
+      .toHaveLength(1);
+    expect(results[0].type)
+      .toBe('error');
+    expect(results[0].exceptionName)
+      .toBe('Invalid GM read of size 8256 bytes');
+    expect(results[0].sourceTool)
+      .toBe('npu-check');
+    expect(results[0].fileLink)
+      .toBe('/home/cty/cann_0819/cann-9.2.0/asc/include/basic_api/../../impl/basic_api/dav_3510/core_mng/roc/../../kernel_operator_data_copy_impl.h');
+    expect(results[0].row)
+      .toBe(84);
+    expect(results[0].col)
+      .toBe(13);
+  });
+
+  it('keeps program output and logger metadata lines out of tagged results', () => {
+    const parser = new NpuCheckParser();
+    const results = parser.parseAll(TAGGED_SAMPLE);
+
+    expect(results[0].originData)
+      .toContain('npu_check: DIAGNOSTIC ========= ERROR: Invalid GM read of size 8256 bytes');
+    expect(results[0].originData)
+      .toContain('#4 add_custom<2048U> at /home/cty/asc-tools-aclsan/npu_sanitizer/demo/examples/add/add.asc:45:5');
+    expect(results[0].originData)
+      .not
+      .toContain('Output:');
+    expect(results[0].originData)
+      .not
+      .toContain('Golden:');
+    expect(results[0].originData)
+      .not
+      .toContain('SUMMARY');
+    expect(results[0].originData)
+      .not
+      .toContain('SESSION_END');
+  });
+
+  it('ends the current block at a logger metadata line even without a blank separator', () => {
+    const parser = new NpuCheckParser();
+    const results = parser.parseAll(`npu_check: DIAGNOSTIC ========= WARNING: illegal read of size 4064
+=========     at somefunc in /src/kernel/k.cu:42
+npu_check: SUMMARY tool=memcheck errors=1
+npu_check: SESSION_END status=complete`);
+
+    expect(results)
+      .toHaveLength(1);
+    expect(results[0].type)
+      .toBe('warning');
+    expect(results[0].exceptionName)
+      .toBe('illegal read of size 4064');
+    expect(results[0].originData)
+      .toContain('at somefunc in /src/kernel/k.cu:42');
+    expect(results[0].originData)
+      .not
+      .toContain('SUMMARY');
+    expect(results[0].originData)
+      .not
+      .toContain('SESSION_END');
   });
 });
 

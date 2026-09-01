@@ -9,8 +9,7 @@ import { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { getAllProjects } from '@plugin/domain/models/project-model';
-import { OperatorProjectType } from '@plugin/domain/services/operator-project-detector';
+import { readWorkspaceCache } from '@plugin/helpers/workspace-cache';
 
 /**
  * Operator project folder decoration provider
@@ -54,13 +53,23 @@ export class OperatorProjectIconTheme implements vscode.FileDecorationProvider {
       return undefined;
     }
 
-    // Find all projects from project configuration file
-    const allProjects = this.getAllProjectsFromConfig();
+    const workspaceFolders = vscode.workspace.workspaceFolders;
 
-    // Traverse all projects to find whether the current folder is in the configuration of a project
-    for (const project of allProjects) {
+    if (!workspaceFolders || workspaceFolders.length === 0) {
+      return undefined;
+    }
+
+    // The workspace root cache holds the scan state of the root project and
+    // every subfolder project, keyed by normalized project path.
+    const folderStates = readWorkspaceCache(workspaceFolders[0].uri.fsPath).folders ?? {};
+
+    for (const folderState of Object.values(folderStates)) {
+      const opsMeet = folderState?.opsMeet ?? [];
+      const opsList = folderState?.opsList ?? [];
+      const experimentalOpsList = folderState?.experimentalOpsList ?? [];
+
       // Check whether the current folder is in the ops_meet of the project (operator project collection)
-      if (project.ops_meet && project.ops_meet.some((collection) =>
+      if (opsMeet.some((collection) =>
         path.normalize(collection.path) === path.normalize(folderPath))) {
         // Operator Engineering Collection - Purple
         return {
@@ -71,9 +80,9 @@ export class OperatorProjectIconTheme implements vscode.FileDecorationProvider {
 
       // Check whether the current folder is in the project's ops_list or experimental_ops_list (operator project)
       const isOperatorProject =
-        (project.ops_list && project.ops_list.some((op) =>
+        (opsList.some((op) =>
           path.normalize(op.path) === path.normalize(folderPath)))
-        || (project.experimental_ops_list && project.experimental_ops_list.some((op) =>
+        || (experimentalOpsList.some((op) =>
           path.normalize(op.path) === path.normalize(folderPath)));
 
       if (isOperatorProject) {
@@ -87,20 +96,6 @@ export class OperatorProjectIconTheme implements vscode.FileDecorationProvider {
 
     // If no matching configuration is found, undefined is returned.
     return undefined;
-  }
-
-  /**
-   * Get all items from configuration
-   */
-  private getAllProjectsFromConfig(): any[] {
-    try {
-      return getAllProjects();
-    }
-    catch (error) {
-      console.error('[OperatorProjectIconTheme] Failed to get all projects:', error);
-
-      return [];
-    }
   }
 
   /**

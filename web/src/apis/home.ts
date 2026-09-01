@@ -1,7 +1,6 @@
 import { request } from '@/core/request';
 import {
   GetHomeResult,
-  GetLastProjectPathResult,
   GetWorkspaceResult,
 } from '@shared/api-types';
 
@@ -15,9 +14,6 @@ export function getHome() {
 /**
  * 获取最后项目路径
  */
-export function getLastProjectPath() {
-  return request.post<undefined, GetLastProjectPathResult>('webview/getLastProjectPath');
-}
 
 /**
  * 获取工作区路径
@@ -31,15 +27,5 @@ export function getWorkspace() {
  */
 export function getProjectType() {
   return request.post<undefined, { projectType: string | null;
-    projectTypeName: string;
-    projectTemplateName: string }>('webview/getProjectType');
-}
-
-/**
- * pyasc 类型仿真分析/性能调优前置校验（打开配置页面前由插件侧调用）
- * 仅 pyasc 项目时校验是否已打开 .py 文件及工作区
- */
-export function validatePyascForAnalysis() {
-  return request.post<undefined, { valid: boolean;
-    message?: string }>('webview/validatePyascForAnalysis');
+    projectTemplateName?: string }>('webview/getProjectType');
 }

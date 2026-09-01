@@ -17,6 +17,8 @@ For the full sanitizer run, results tree, and Problems view, see [`sanitizer.md`
 
 There is **no** `msSanitizer` ApiServer namespace, **no** sanitizer sidebar webview, and **no** `ms-sanitizer-panel-view.ts` in this codebase.
 
+The msAgent bridge is command-based (`executeCommand`), not part of the extension's webview↔plugin RPC surface — `api-routes.ts` currently exposes **37 endpoints** (webview 9 / common 10 / ops 17 / performance 1), none of which is msAgent-specific. Extension version: **1.4.6**.
+
 ---
 
 ## Architecture
@@ -59,7 +61,7 @@ flowchart TB
 
 ## Enabling integration
 
-Master switch: **`sanitizer.enableMsAgentAiFix`** (default `false`) — see [`workspace-settings.md`](./workspace-settings.md#sanitizer-op-devtoolssanitizer). Read in code via `ConfigHelper.get<boolean>('sanitizer.enableMsAgentAiFix', false)` inside `MsAgentBridgeService`.
+Master switch: **`sanitizer.enableMsAgentAiFix`** (default `false`) — see [`workspace-settings.md`](./workspace-settings.md#sanitizer-op-devtoolssanitizer). Read in code via `SettingsLoader.isMsAgentAiFixEnabled()` inside `MsAgentBridgeService`.
 
 ### When integration is “available”
 
@@ -103,7 +105,7 @@ All log paths passed to msAgent use **`vscode.Uri.file(absoluteLogPath)`** (abso
 ### 1. Auto-load log after sanitizer run
 
 1. `SanitizerService.runSanitizer` succeeds.  
-2. `getLatestSanitizerLogAbsPath(workspaceRoot)` picks newest `mssanitizer_*.log` under `<ideConfig>/mindstudio_sanitizer_log`.  
+2. `getLatestSanitizerLogAbsPath(workspaceRoot)` picks newest `mssanitizer_*.log` under `<workspaceRoot>/<ideConfig>/mindstudio_sanitizer_log`.  
 3. `sanitizerDiagnosticsService.publishFromLogFile(logAbs, workspaceRoot)`.  
 4. `msAgentBridgeService.tryLoadLogWithIntegration(logAbs)` if integration available.  
 5. `flashMsSanitizerRunData` refreshes the results tree.
@@ -127,7 +129,7 @@ All log paths passed to msAgent use **`vscode.Uri.file(absoluteLogPath)`** (abso
 
 1. `operateTreeProvider.getSanitizerMessageAiFixIndex(arg)` resolves index from:
    - `messageRef.msAgentIndex` on the tree item, or  
-   - legacy `sanitizer-msg:...` id → `selectedMessages[globalIndex].msAgentIndex`.  
+   - a string `sanitizer-msg:...` id → `selectedMessages[globalIndex].msAgentIndex`.  
 2. `msAgentBridgeService.fixMsAgentProblem(aiFixIndex)`.
 
 msAgent owns progress, LLM, and fix UX after that; mstt does not wrap or replace it.

@@ -1,4 +1,8 @@
 jest.mock('@plugin/helpers/operator-project-workspace-config', () => ({
+  getOpDevtoolsWorkspaceConfiguration: jest.requireActual('@plugin/helpers/operator-project-workspace-config').getOpDevtoolsWorkspaceConfiguration,
+  getConfiguredValue: jest.requireActual('@plugin/helpers/operator-project-workspace-config').getConfiguredValue,
+
+  getFirstWorkspaceFolderPath: jest.requireActual('@plugin/helpers/operator-project-workspace-config').getFirstWorkspaceFolderPath,
   getWorkspaceSimulatorType: jest.fn(() => ''),
   getSocVersionWithWorkspaceOverride: jest.fn(() => ''),
 }));
@@ -21,6 +25,7 @@ import {
   getSimulationAicMetrics,
 } from '@plugin/domain/services/profiler-service';
 import { isSimulatorOptionalMetricSupported } from '@shared/msprof-simulator-metrics';
+import type { SimulateConfig } from '@plugin/service/config-service';
 
 const operator = {
   id: 1,
@@ -29,6 +34,19 @@ const operator = {
   op_type: 'ascend',
   op_path: '/tmp/op',
 };
+
+// The fresh-project simulate DAO seed (getSimulateConfig defaults branch).
+function simulateConfig(overrides: Partial<SimulateConfig> = {}): SimulateConfig {
+  return {
+    script: '',
+    simulatorType: '',
+    memoryThroughputWaveform: false,
+    resourceConflictRatio: true,
+    advanceParam: [],
+    fileMapList: [],
+    ...overrides,
+  };
+}
 
 function resetEnvMocks(): void {
   // clearAllMocks resets call records but NOT mockReturnValue, so re-establish
@@ -57,12 +75,9 @@ describe('SimulatorStrategy SOC resolution', () => {
       npuArch: undefined,
       ascendEnvScript: undefined,
     });
-    const config = {
-      project_id: 10,
-      user_options: { PMSampling: true },
-    };
+    const config = simulateConfig({ memoryThroughputWaveform: true });
 
-    const cmd = strategy.generate(config as any, operator as any, '/tmp/op.bin');
+    const cmd = strategy.generate(config, operator as any, '/tmp/op.bin');
 
     expect(cmd)
       .toContain('--soc-version=Ascend950PR_9589');
@@ -72,12 +87,9 @@ describe('SimulatorStrategy SOC resolution', () => {
 
   it('passes the workspace simulator directory (not the CANN slug)', () => {
     (getWorkspaceSimulatorType as jest.Mock).mockReturnValue('Ascend910B3');
-    const config = {
-      project_id: 10,
-      user_options: { PMSampling: true },
-    };
+    const config = simulateConfig({ memoryThroughputWaveform: true });
 
-    const cmd = strategy.generate(config as any, operator as any, '/tmp/op.bin');
+    const cmd = strategy.generate(config, operator as any, '/tmp/op.bin');
 
     expect(cmd)
       .toContain('--soc-version=Ascend910B3');
@@ -87,15 +99,12 @@ describe('SimulatorStrategy SOC resolution', () => {
 
   it('passes the default A3 simulator directory when workspace SOC is ascend910_93', () => {
     (getSocVersionWithWorkspaceOverride as jest.Mock).mockReturnValue('ascend910_93');
-    const config = {
-      project_id: 10,
-      user_options: {
-        ResourceConflictRatio: true,
-        PMSampling: true,
-      },
-    };
+    const config = simulateConfig({
+      resourceConflictRatio: true,
+      memoryThroughputWaveform: true,
+    });
 
-    const cmd = strategy.generate(config as any, operator as any, '/tmp/op.bin');
+    const cmd = strategy.generate(config, operator as any, '/tmp/op.bin');
 
     expect(cmd)
       .toContain('--soc-version=Ascend910_9362');
@@ -104,25 +113,22 @@ describe('SimulatorStrategy SOC resolution', () => {
   });
 });
 
-describe('SimulatorStrategy aic-metrics SOC gating (GC-22 / plugin_release #32)', () => {
+describe('SimulatorStrategy aic-metrics SOC gating (GC-22)', () => {
   const strategy = new SimulatorStrategy();
 
   beforeEach(resetEnvMocks);
 
-  it('drops ResourceConflictRatio and PMSampling on A3 with default simulate settings (issue #32)', () => {
-    // The exact field scenario from plugin_release issue #32: A3 host, default
-    // simulate config (both options on). msopprof rejects ResourceConflictRatio
-    // on this platform, so the plugin must emit only the mandatory PipeUtilization.
+  it('drops ResourceConflictRatio and PMSampling on A3 with default simulate settings', () => {
+    // A3 host, default simulate config (both options on). msopprof rejects
+    // ResourceConflictRatio on this platform, so the plugin must emit only the
+    // mandatory PipeUtilization.
     (getSocVersionWithWorkspaceOverride as jest.Mock).mockReturnValue('ascend910_93');
-    const config = {
-      project_id: 10,
-      user_options: {
-        ResourceConflictRatio: true,
-        PMSampling: true,
-      },
-    };
+    const config = simulateConfig({
+      resourceConflictRatio: true,
+      memoryThroughputWaveform: true,
+    });
 
-    const cmd = strategy.generate(config as any, operator as any, '/tmp/op.bin');
+    const cmd = strategy.generate(config, operator as any, '/tmp/op.bin');
 
     expect(cmd)
       .toContain('--soc-version=Ascend910_9362');
@@ -136,15 +142,12 @@ describe('SimulatorStrategy aic-metrics SOC gating (GC-22 / plugin_release #32)'
 
   it('drops the optional metrics on A2 too — conservative gating until verified', () => {
     (getWorkspaceSimulatorType as jest.Mock).mockReturnValue('Ascend910B3');
-    const config = {
-      project_id: 10,
-      user_options: {
-        ResourceConflictRatio: true,
-        PMSampling: true,
-      },
-    };
+    const config = simulateConfig({
+      resourceConflictRatio: true,
+      memoryThroughputWaveform: true,
+    });
 
-    const cmd = strategy.generate(config as any, operator as any, '/tmp/op.bin');
+    const cmd = strategy.generate(config, operator as any, '/tmp/op.bin');
 
     expect(cmd)
       .toContain('--soc-version=Ascend910B3');
@@ -158,12 +161,9 @@ describe('SimulatorStrategy aic-metrics SOC gating (GC-22 / plugin_release #32)'
 
   it('always emits the mandatory PipeUtilization base metric, even with no user options', () => {
     (getWorkspaceSimulatorType as jest.Mock).mockReturnValue('Ascend910B3');
-    const config = {
-      project_id: 10,
-      user_options: {},
-    };
+    const config = simulateConfig({ resourceConflictRatio: false });
 
-    const cmd = strategy.generate(config as any, operator as any, '/tmp/op.bin');
+    const cmd = strategy.generate(config, operator as any, '/tmp/op.bin');
 
     expect(cmd)
       .toContain('--aic-metrics=PipeUtilization');
@@ -176,15 +176,12 @@ describe('SimulatorStrategy aic-metrics SOC gating (GC-22 / plugin_release #32)'
 
   it('emits PipeUtilization alone when optional metrics are disabled', () => {
     (getWorkspaceSimulatorType as jest.Mock).mockReturnValue('Ascend910B3');
-    const config = {
-      project_id: 10,
-      user_options: {
-        ResourceConflictRatio: false,
-        PMSampling: false,
-      },
-    };
+    const config = simulateConfig({
+      resourceConflictRatio: false,
+      memoryThroughputWaveform: false,
+    });
 
-    const cmd = strategy.generate(config as any, operator as any, '/tmp/op.bin');
+    const cmd = strategy.generate(config, operator as any, '/tmp/op.bin');
 
     expect(cmd)
       .toContain('--aic-metrics=PipeUtilization');
@@ -378,15 +375,12 @@ describe('SimulatorStrategy A5 production allow-list (§8.1)', () => {
       npuArch: undefined,
       ascendEnvScript: undefined,
     });
-    const config = {
-      project_id: 10,
-      user_options: {
-        ResourceConflictRatio: true,
-        PMSampling: false,
-      },
-    };
+    const config = simulateConfig({
+      resourceConflictRatio: true,
+      memoryThroughputWaveform: false,
+    });
 
-    const cmd = strategy.generate(config as any, operator as any, '/tmp/op.bin');
+    const cmd = strategy.generate(config, operator as any, '/tmp/op.bin');
 
     expect(cmd)
       .toContain('--soc-version=Ascend950PR_9589');
@@ -405,15 +399,12 @@ describe('SimulatorStrategy A5 production allow-list (§8.1)', () => {
       npuArch: undefined,
       ascendEnvScript: undefined,
     });
-    const config = {
-      project_id: 10,
-      user_options: {
-        ResourceConflictRatio: true,
-        PMSampling: true,
-      },
-    };
+    const config = simulateConfig({
+      resourceConflictRatio: true,
+      memoryThroughputWaveform: true,
+    });
 
-    const cmd = strategy.generate(config as any, operator as any, '/tmp/op.bin');
+    const cmd = strategy.generate(config, operator as any, '/tmp/op.bin');
 
     expect(cmd)
       .toContain('ResourceConflictRatio');

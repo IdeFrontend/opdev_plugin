@@ -6,6 +6,9 @@ if (!process.env.SOC_VERSION) {
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
+  // Lifecycle parity flows (fresh install + create/open + cache writes) exceed
+  // the 5s jest default under full-run load; 30s ceiling for the whole run.
+  testTimeout: 30000,
   setupFilesAfterEnv: ['<rootDir>/src/__tests__/jest-setup.ts'],
   roots: ['<rootDir>/src'],
   testMatch: [
@@ -25,10 +28,10 @@ module.exports = {
   ],
   coverageThreshold: {
     global: {
-      branches: 70,
-      functions: 70,
-      lines: 70,
-      statements: 70,
+      branches: 90,
+      functions: 90,
+      lines: 90,
+      statements: 90,
     },
   },
   coverageDirectory: '<rootDir>/coverage',

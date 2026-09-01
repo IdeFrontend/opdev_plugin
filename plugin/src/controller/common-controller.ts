@@ -1,17 +1,9 @@
-import {
-  CheckPathExistsParams, SaveFileParams, SaveFileResult,
-} from '@shared/api-types';
+import { CheckPathExistsParams } from '@shared/api-types';
 import { fileService } from '@plugin/service/file-service';
 import { ConfigService } from '@plugin/service/config-service';
-import { ConfigHelper } from '@plugin/helpers/ConfigHelper';
 import * as vscode from 'vscode';
 import { OperatorProjectViewId } from '@shared/project-type-view-id';
-import {
-  isOperatorSupportEnabled, isSanitizerEnabled, isPerformanceTuningEnabled, isNpuDebugEnabled, isDumpTensorEnabled,
-} from '@plugin/helpers/feature-toggle';
-import {
-  FLAVOR_GATES, FLAVOR_ID, BRANDING,
-} from '@shared/flavor';
+import { SettingsLoader } from '@plugin/service/settings-loader';
 
 export const commonMethods = {
   /**
@@ -19,14 +11,6 @@ export const commonMethods = {
    */
   pathExists(params: CheckPathExistsParams): Promise<boolean> {
     return fileService.pathExists(params);
-  },
-
-  /**
-   * Save file locally
-   * The web version returns file data, the desktop version returns boolean
-   */
-  async saveFileToLocal(params: SaveFileParams): Promise<SaveFileResult> {
-    return await fileService.saveFileToLocal(params);
   },
 
   /**
@@ -52,7 +36,7 @@ export const commonMethods = {
    * Workspace setting: show sanitizer quick options panel from the Actions tree.
    */
   getSanitizerShowQuickOptions(): boolean {
-    return ConfigHelper.get<boolean>('sanitizer.showQuickOptions', true);
+    return SettingsLoader.read<boolean>('sanitizer.showQuickOptions', true);
   },
 
   async setSanitizerShowQuickOptions(params: { value: boolean }): Promise<void> {
@@ -60,7 +44,7 @@ export const commonMethods = {
   },
 
   getSimulationShowQuickOptions(): boolean {
-    return ConfigHelper.get<boolean>('performanceTuning.simulation.showQuickOptions', true);
+    return SettingsLoader.read<boolean>('performanceTuning.simulation.showQuickOptions', true);
   },
 
   async setSimulationShowQuickOptions(params: { value: boolean }): Promise<void> {
@@ -68,7 +52,7 @@ export const commonMethods = {
   },
 
   getOnBoardAnalysisShowQuickOptions(): boolean {
-    return ConfigHelper.get<boolean>('performanceTuning.onBoard.showQuickOptions', true);
+    return SettingsLoader.read<boolean>('performanceTuning.onBoard.showQuickOptions', true);
   },
 
   async setOnBoardAnalysisShowQuickOptions(params: { value: boolean }): Promise<void> {
@@ -98,27 +82,7 @@ export const commonMethods = {
       }
     }
 
-    // Support API should reflect settings map in feature-toggle (source of truth).
-    return isOperatorSupportEnabled(normalized);
-  },
-
-  getFlavorFeatures(): {
-    flavorId: string;
-    productName: string;
-    gates: typeof FLAVOR_GATES;
-    sanitizer: boolean;
-    performanceTuning: boolean;
-    npuDebug: boolean;
-    dumpTensor: boolean;
-  } {
-    return {
-      flavorId: FLAVOR_ID,
-      productName: BRANDING.productName,
-      gates: FLAVOR_GATES,
-      sanitizer: isSanitizerEnabled(),
-      performanceTuning: isPerformanceTuningEnabled(),
-      npuDebug: isNpuDebugEnabled(),
-      dumpTensor: isDumpTensorEnabled(),
-    };
+    // Support API should reflect the settings map in SettingsLoader (source of truth).
+    return SettingsLoader.isOperatorSupportEnabled(normalized);
   },
 };

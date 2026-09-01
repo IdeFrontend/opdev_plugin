@@ -10,8 +10,8 @@ import type {
 } from '@shared/api-types';
 
 import { homeMethods } from '@plugin/controller/home-controller';
+import { SettingsLoader } from '@plugin/service/settings-loader';
 import { parseNpuCheckStackFrame } from '@plugin/class/npu-check-parser';
-import { ConfigHelper } from '@plugin/helpers/ConfigHelper';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import { performanceDataMethods } from '@plugin/controller/performance-controller';
 import { performanceMethods } from '@plugin/controller/performance-data-controller';
@@ -45,6 +45,7 @@ import {
   CONTEXT_PREFIX,
   SETTINGS_PREFIX,
   TREE_VIEW_PERFORMANCE_RESULTS,
+  TREE_VIEW_SANITIZER_RESULTS,
   treeItemContextKey,
 } from '@shared/flavor';
 
@@ -384,12 +385,18 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   private readonly performanceNodesById = new Map<string, OperateNode[]>();
   private readonly performanceReportRootNodesByKey = new Map<string, OperateNode>();
   private performanceResultsTreeView?: vscode.TreeView<OperateNode>;
+  private sanitizerResultsTreeView?: vscode.TreeView<OperateNode>;
   private performanceRefreshRevision = 0;
+  private sanitizerRefreshRevision = 0;
   private performanceSelectionContextRevision = 0;
   private performanceSelectionContextSync: Promise<void> = Promise.resolve();
 
   setPerformanceResultsTreeView(treeView: vscode.TreeView<OperateNode>): void {
     this.performanceResultsTreeView = treeView;
+  }
+
+  setSanitizerResultsTreeView(treeView: vscode.TreeView<OperateNode>): void {
+    this.sanitizerResultsTreeView = treeView;
   }
 
   private invalidateSanitizerPresentationCaches(): void {
@@ -641,7 +648,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       homeMethods.getProjectType(),
       homeMethods.checkMultipleOperators(),
     ]);
-    const debugModeEnabled = ConfigHelper.isDebugModeEnabled();
+    const debugModeEnabled = SettingsLoader.read<boolean>('debugMode', true);
     const projectType = projectTypeResult.projectType || '';
     const projectTypeSupported = OperatorPluginRegistry.isProjectTypeSupported(projectType);
 
@@ -692,7 +699,11 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       }
     }
 
-    if (isStandardCustom) {
+    // Only once the operator list is actually KNOWN: the scan state can arrive
+    // after the first refresh (fresh open / reset cache), and burning the flag
+    // while the list is empty would leave the first operator unselected
+    // forever.
+    if (isStandardCustom && operators.length > 0) {
       this.hasAppliedDefaultSelection = true;
     }
 
@@ -799,22 +810,45 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     };
   }
 
-  async refreshSanitizerReports(revealLatest = false): Promise<void> {
+  /**
+   * Entry point for `COMMAND_FLASH_MS_SANITIZER_RUN_DATA`. Keeps the command payload contract
+   * in one testable place: SanitizerService is the only dispatcher that asks for the fresh
+   * report to be opened, every other caller just wants the list reloaded.
+   */
+  async flashSanitizerRunData(options?: { openLatest?: boolean }): Promise<void> {
+    await this.refreshSanitizerReports(true, options?.openLatest === true);
+  }
+
+  /**
+   * @param revealLatest select the newest report when nothing is selected yet
+   * @param openLatest a detection run just succeeded — always switch to its report and
+   *   focus the results view, otherwise the new report hides behind the previous selection
+   */
+  async refreshSanitizerReports(revealLatest = false, openLatest = false): Promise<void> {
     if (this.kind !== 'flow') {
       return;
     }
 
+    const refreshRevision = ++this.sanitizerRefreshRevision;
     let reports: SanitizerReportRecord[] = [];
 
     try {
       reports = await runDataService.getSanitizerRunData() as SanitizerReportRecord[];
     }
     catch (error) {
+      if (!this.isSanitizerRefreshCurrent(refreshRevision)) {
+        return;
+      }
+
       console.warn('[OperateTreeProvider.refreshSanitizerReports] failed to read reports:', error);
       this.state.sanitizer.reports = [];
       this.invalidateSanitizerDataCaches();
       this.onDidChangeTreeDataEmitter.fire();
 
+      return;
+    }
+
+    if (!this.isSanitizerRefreshCurrent(refreshRevision)) {
       return;
     }
 
@@ -845,12 +879,102 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       this.state.sanitizer.selectedMessages = [];
     }
 
-    if (revealLatest && !this.state.sanitizer.selectedReportPath && reports.length > 0) {
-      await this.selectSanitizerReport(reports[0].path);
+    const latest = reports.reduce<SanitizerReportRecord | undefined>(
+      (newest, item) => (!newest || item.timestamp > newest.timestamp ? item : newest),
+      undefined,
+    );
+
+    if (latest && (openLatest || (revealLatest && !this.state.sanitizer.selectedReportPath))) {
+      if (openLatest) {
+        await this.showSanitizerReportUnderMarkedFilter(latest, refreshRevision);
+
+        if (!this.isSanitizerRefreshCurrent(refreshRevision)) {
+          return;
+        }
+      }
+
+      try {
+        await this.selectSanitizerReport(latest.path);
+      }
+      catch (error) {
+        // An unreadable report must not turn a successful detection into a failed one.
+        console.warn('[OperateTreeProvider.refreshSanitizerReports] select failed:', error);
+      }
+
+      if (!this.isSanitizerRefreshCurrent(refreshRevision)) {
+        return;
+      }
+
+      if (openLatest) {
+        await this.revealSanitizerReport(latest.path, refreshRevision);
+      }
     }
     else {
       this.onDidChangeTreeDataEmitter.fire();
     }
+  }
+
+  /**
+   * The marked-only filter hides every unmarked row, so opening a fresh report while it is on
+   * leaves the user staring at the `noReports` placeholder. Drop the filter for the report we
+   * are about to open, the same way marking does when it would empty the list.
+   */
+  private async showSanitizerReportUnderMarkedFilter(
+    report: SanitizerReportRecord,
+    refreshRevision?: number,
+  ): Promise<void> {
+    if (!this.isSanitizerRefreshCurrent(refreshRevision) || !this.state.sanitizer.markedOnly || report.marked) {
+      return;
+    }
+
+    this.setSanitizerMarkedOnly(false);
+
+    try {
+      await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.sanitizerMarkedOnly`, false);
+    }
+    catch (error) {
+      console.warn('[OperateTreeProvider.refreshSanitizerReports] marked filter context sync failed:', error);
+    }
+  }
+
+  /**
+   * Focus the results view and scroll the report's row into view. Focus alone is not enough:
+   * with ascending sort or a long list the fresh report sits off-screen, so the user sees a
+   * view that did not visibly react to the run.
+   *
+   * Every await boundary rechecks `refreshRevision`: a newer refresh that already dropped or
+   * replaced this report must not have its selection stolen by this reveal.
+   */
+  private async revealSanitizerReport(reportPath: string, refreshRevision?: number): Promise<void> {
+    if (!this.isSanitizerRefreshCurrent(refreshRevision)
+      || !this.state.sanitizer.reports.some((item) => item.path === reportPath)) {
+      return;
+    }
+
+    const node = this.getSanitizerReportNodes()
+      .find((item) => item.id === `sanitizer-report:${encodeURIComponent(reportPath)}`);
+
+    try {
+      await vscode.commands.executeCommand(`${TREE_VIEW_SANITIZER_RESULTS}.focus`);
+
+      if (!this.isSanitizerRefreshCurrent(refreshRevision)) {
+        return;
+      }
+
+      if (node && this.sanitizerResultsTreeView) {
+        await this.sanitizerResultsTreeView.reveal(node, {
+          select: true,
+          focus: true,
+        });
+      }
+    }
+    catch (error) {
+      console.warn('[OperateTreeProvider.refreshSanitizerReports] focus failed:', error);
+    }
+  }
+
+  private isSanitizerRefreshCurrent(refreshRevision?: number): boolean {
+    return refreshRevision === undefined || refreshRevision === this.sanitizerRefreshRevision;
   }
 
   async addSanitizerReportFromPath(reportPath: string): Promise<void> {
@@ -1050,19 +1174,14 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
     const isWindowsPath = /^[A-Za-z]:\//.test(normalized) || /^[A-Za-z]:\//.test(normalizedWorkspacePath);
     const maybeLower = isWindowsPath ? normalized.toLowerCase() : normalized;
+    const stripped = this.stripWorkspacePrefix(normalized, normalizedWorkspacePath);
 
-    if (!normalizedWorkspacePath) {
-      return maybeLower;
-    }
-
-    const work = isWindowsPath ? normalizedWorkspacePath.toLowerCase() : normalizedWorkspacePath;
-
-    if (maybeLower === work) {
+    if (stripped === '') {
       return '';
     }
 
-    if (maybeLower.startsWith(`${work}/`)) {
-      return maybeLower.slice(work.length + 1);
+    if (stripped !== undefined) {
+      return isWindowsPath ? stripped.toLowerCase() : stripped;
     }
 
     return maybeLower;
@@ -1735,7 +1854,11 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     const behavior = this.getCurrentBuildBehavior();
     const hasMultipleSelectedOperators = this.state.selectedOperatorIds.length > 1;
     const disabledIcon = new vscode.ThemeIcon('circle-slash', new vscode.ThemeColor('disabledForeground'));
-    const isCannTorchLibrary = this.state.projectType === 'cann' && this.state.projectTemplateName === 'torch_library_template';
+    // Torch-library in both stored forms: 'cann' (the view-id value) and the
+    // canonical 'torch-library' (settings-native openProject) — both must hide
+    // the C/C++ CPU debug action (python debug only).
+    const isCannTorchLibrary = (this.state.projectType === 'cann' || this.state.projectType === 'torch-library')
+      && this.state.projectTemplateName === 'torch_library_template';
     const showCpuDebug = this.supportsCapability(behavior.supportsCpuDebug) && !isCannTorchLibrary && !this.state.isStandardCustom;
     const cpuDebugAction = this.resolveFlowActionState(hasMultipleSelectedOperators, COMMAND_SIDEBAR_CPU_DEBUG, false);
     const npuDebugAction = this.resolveFlowActionState(hasMultipleSelectedOperators, COMMAND_SIDEBAR_NPU_DEBUG, true);
@@ -1993,19 +2116,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         let labelPath = filePath;
 
         if (workspacePath && msg.fileLink) {
-          const normWorkRaw = workspacePath.replace(/\\/g, '/')
-            .replace(/\/+$/, '');
-          const normFileRaw = filePath.replace(/\\/g, '/');
-          const isWindowsPath = /^[A-Za-z]:\//.test(normWorkRaw) || /^[A-Za-z]:\//.test(normFileRaw);
-          const normWork = isWindowsPath ? normWorkRaw.toLowerCase() : normWorkRaw;
-          const normFile = isWindowsPath ? normFileRaw.toLowerCase() : normFileRaw;
-
-          if (normFile === normWork) {
-            labelPath = '';
-          }
-          else if (normFile.startsWith(`${normWork}/`)) {
-            labelPath = normFileRaw.slice(normWorkRaw.length + 1);
-          }
+          labelPath = this.stripWorkspacePrefix(filePath, workspacePath) ?? filePath;
         }
 
         const current = grouped.get(key);
@@ -2072,8 +2183,25 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     return undefined;
   }
 
-  /** Reload performance reports from disk/config; optionally focus and expand a newly added row. */
-  async refreshPerformanceReports(options?: { focusIfNew?: boolean }): Promise<void> {
+  /** Same contract as `getPerformanceTreeParent`, for the sanitizer results view. */
+  getSanitizerTreeParent(element: OperateNode): vscode.ProviderResult<OperateNode | null | undefined> {
+    if (element.nodeId === 'sanitizerReportItem' && (element.id ?? '').startsWith('sanitizer-report:')) {
+      return null;
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Reload performance reports from disk/config; optionally focus and expand a newly added row.
+   *
+   * `openIfNew` additionally opens that report's data file. It is separate from `focusIfNew`
+   * because the post-action hook runs from a `finally` and therefore fires for a stopped or
+   * failed run too, whose report directory holds a half-written csv: only the run paths that
+   * checked the exit code ask for the file to be opened.
+   */
+  async refreshPerformanceReports(options?: { focusIfNew?: boolean;
+    openIfNew?: boolean }): Promise<void> {
     const refreshRevision = ++this.performanceRefreshRevision;
     const previousKeys = new Set(this.state.performance.reports.map((item) => item.key));
     let reports: PerformanceExecutionRecord[];
@@ -2134,7 +2262,73 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       }
 
       await this.revealPerformanceReport(focusReportKey, refreshRevision);
+
+      if (options?.openIfNew) {
+        await this.openPrimaryPerformanceReportFile(focusReportKey, refreshRevision);
+      }
     }
+  }
+
+  /**
+   * Open the report a just-finished run produced, so the user does not have to hunt for it
+   * in the results tree. Prefers the Insight primary data file (`visualize_data.bin`) produced by
+   * msprof at the run root over raw per-device files under `dump/` (e.g. `DeviceProf*.bin`); then
+   * falls back to the first `bin`, `json`, `csv`. A report without any openable file is left alone.
+   */
+  private async openPrimaryPerformanceReportFile(reportKey: string, refreshRevision: number): Promise<void> {
+    if (!this.isPerformanceRefreshCurrent(refreshRevision)) {
+      return;
+    }
+
+    const report = this.getPerformanceReportByKey(reportKey);
+
+    if (!report) {
+      return;
+    }
+
+    const files = OperateTreeProvider.collectPerformanceReportFiles(report.children);
+    const file = files.find((item) => item.fileType === 'bin' && item.title === 'visualize_data.bin')
+      ?? files.find((item) => item.fileType === 'bin')
+      ?? files.find((item) => item.fileType === 'json')
+      ?? files.find((item) => item.fileType === 'csv');
+
+    if (!file) {
+      return;
+    }
+
+    if (!fs.existsSync(file.filePath)) {
+      OperateTreeProvider.warnPerformanceReportOpenFailed(file.filePath, 'file no longer exists');
+
+      return;
+    }
+
+    try {
+      await this.openPerformanceFile(file.filePath, file.fileType);
+    }
+    catch (error) {
+      OperateTreeProvider.warnPerformanceReportOpenFailed(file.filePath, error);
+    }
+  }
+
+  /** Auto-open is the only feedback the user gets after a run, so a silent failure reads as a broken feature. */
+  private static warnPerformanceReportOpenFailed(filePath: string, error: unknown): void {
+    console.warn('[OperateTreeProvider.openPrimaryPerformanceReportFile] open failed:', filePath, error);
+    void vscode.window.showErrorMessage(t('performance.openReportFailed', { path: filePath }));
+  }
+
+  private static collectPerformanceReportFiles(children: (PerformanceRunDataFolder | PerformanceRunDataFile)[]): PerformanceRunDataFile[] {
+    const files: PerformanceRunDataFile[] = [];
+
+    for (const child of children) {
+      if ('children' in child) {
+        files.push(...OperateTreeProvider.collectPerformanceReportFiles(child.children));
+      }
+      else {
+        files.push(child);
+      }
+    }
+
+    return files;
   }
 
   private findNewPerformanceReportKey(previousKeys: Set<string>): string | undefined {
@@ -2334,6 +2528,12 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   async openPerformanceFile(filePath: string, fileType: string): Promise<void> {
     if (fileType === 'csv') {
       await viewService.openCsvFile(filePath);
+
+      return;
+    }
+
+    if (fileType === 'rep' || fileType === 'ncrep') {
+      await viewService.openProfilingReport(filePath);
 
       return;
     }
@@ -2553,23 +2753,34 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       .replace(/\/+$/, '');
   }
 
-  private stripWorkspacePrefix(filePath: string): string {
-    const workspacePath = this.getNormalizedWorkspacePath();
-
+  /**
+   * Strips the workspace root prefix from a file path with Windows-aware
+   * case-insensitive comparison. Returns `undefined` when the file is not
+   * under the workspace root (or no workspace path is given), `''` when the
+   * file IS the root itself, and otherwise the relative path sliced from the
+   * normalized raw file string.
+   */
+  private stripWorkspacePrefix(filePath: string, workspacePath: string): string | undefined {
     if (!workspacePath) {
-      return filePath;
+      return undefined;
     }
 
+    const normWorkRaw = workspacePath.replace(/\\/g, '/')
+      .replace(/\/+$/, '');
     const normFileRaw = filePath.replace(/\\/g, '/');
-    const isWindowsPath = /^[A-Za-z]:\//.test(workspacePath) || /^[A-Za-z]:\//.test(normFileRaw);
-    const normWork = isWindowsPath ? workspacePath.toLowerCase() : workspacePath;
+    const isWindowsPath = /^[A-Za-z]:\//.test(normWorkRaw) || /^[A-Za-z]:\//.test(normFileRaw);
+    const normWork = isWindowsPath ? normWorkRaw.toLowerCase() : normWorkRaw;
     const normFile = isWindowsPath ? normFileRaw.toLowerCase() : normFileRaw;
 
-    if (normFile.startsWith(`${normWork}/`)) {
-      return normFileRaw.slice(workspacePath.length + 1);
+    if (normFile === normWork) {
+      return '';
     }
 
-    return filePath;
+    if (normFile.startsWith(`${normWork}/`)) {
+      return normFileRaw.slice(normWorkRaw.length + 1);
+    }
+
+    return undefined;
   }
 
   private buildSanitizerMessageDerived(msg: SanitizerMessageRecord): SanitizerMessageDerived {
@@ -2592,7 +2803,9 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     const typeLabelKey = sanitizerQuestionLabelKeyMap.get(msg.question);
     const typeLabel = typeLabelKey ? t(typeLabelKey) : msg.question;
     const fileKey = msg.fileLink || t('web.sanitizerTree.group.noFile');
-    const fileLabel = msg.fileLink ? this.stripWorkspacePrefix(msg.fileLink) : t('web.sanitizerTree.group.noFile');
+    const fileLabel = msg.fileLink
+      ? this.stripWorkspacePrefix(msg.fileLink, this.getNormalizedWorkspacePath()) ?? msg.fileLink
+      : t('web.sanitizerTree.group.noFile');
 
     return {
       classKey,

@@ -7,31 +7,34 @@ import { message } from 'ant-design-vue';
 import { useTheme } from '@web/composables/use-theme';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import {
-  getConfigData, saveConfig, openExternalLink, startOnBoard, executeVscodeCommand, getSelectedOperators,
+  getOnBoardOptions, saveOnBoardOptions, openExternalLink, startOnBoard, executeVscodeCommand, getSelectedOperators,
   getOnBoardAnalysisShowQuickOptions, setOnBoardAnalysisShowQuickOptions,
   getProjectEnv, getNpuHardwareAvailable, getOnBoardExecutionAvailable,
 } from '@web/apis';
+import type { OnBoardOptions } from '@shared/api-types';
 import { isAscendA5ProfilerCannSoc } from '@shared/msprof-onboard-env';
 
 // 使用主题管理组合式函数
 const { themeConfig } = useTheme();
 const guide = 'https://www.hiascend.com/document/detail/zh/mindstudio/70RC2/ODtools/Operatordevelopmenttools/atlasopdev_16_0082.html';
-const onboardData = ref({
-  user_options: {
-    Occupancy: true,
-    Roofline: true,
-    Source: true,
-    MemoryDetail: true,
-    PCSampling: false,
-    ArithmeticUtilization: true,
-    L2Cache: true,
-    Memory: true,
-    MemoryL0: true,
-    MemoryUB: true,
-    PipeUtilization: true,
-    ResourceConflictRatio: true,
-  },
-});
+
+/** Defaults mirror the on_board config row (absent keys stay unchecked otherwise). */
+const DEFAULTS: OnBoardOptions = {
+  interCoreLoad: true,
+  roofline: true,
+  operatorCodeHotspot: true,
+  cacheHeatmap: true,
+  pcSampling: false,
+  cubeAndVectorInstructionTimeAndRatio: true,
+  l2CacheHitRate: true,
+  memoryReadWriteBandwidth: true,
+  l0ReadWriteBandwidth: true,
+  ubReadWriteBandwidth: true,
+  computeAndMoveUnitTimeRatio: true,
+  resourceConflictRatio: true,
+};
+
+const onboardData = ref<OnBoardOptions>({ ...DEFAULTS });
 const loading = ref(false);
 const isExecuting = ref(false);
 /** When true, workspace `performanceTuning.onBoard.showQuickOptions` is false (tree runs without opening this panel). */
@@ -45,18 +48,9 @@ const isAscendA5Profiler = computed(() => isAscendA5ProfilerCannSoc(projectCannS
 const fetchConfig = async () => {
   try {
     loading.value = true;
-    const configObj = await getConfigData();
+    const options = await getOnBoardOptions();
 
-    console.log('configObj', configObj);
-    const keys = Object.keys(configObj || {});
-    const configData = configObj[keys[0]] || [];
-    const onBoardConfig = configData.find((v) => v.config_type === 'on_board');
-
-    console.log('onBoardConfig', onBoardConfig);
-
-    if (onBoardConfig) {
-      onboardData.value = JSON.parse(JSON.stringify(onBoardConfig));
-    }
+    Object.assign(onboardData.value, DEFAULTS, options);
   }
   catch (error) {
     console.error('获取上板配置失败: ', error);
@@ -67,10 +61,18 @@ const fetchConfig = async () => {
 };
 
 const handleSave = async () => {
-  await saveConfig({
-    type: 'on_board',
-    data: [onboardData.value],
+  const payload: OnBoardOptions = {};
+
+  ON_BOARD_KEYS.forEach((key) => {
+    const value = onboardData.value[key];
+
+    // operatorMetrics only enters the payload once explicitly toggled.
+    if (typeof value === 'boolean') {
+      payload[key] = value;
+    }
   });
+
+  await saveOnBoardOptions(payload);
 };
 
 const handleConfirm = async () => {
@@ -115,44 +117,45 @@ const jumpToGuide = () => {
   openExternalLink(guide);
 };
 
+/** Dotted settings keys persisted by this panel (13; operatorMetrics derived from the checkbox below). */
+const ON_BOARD_KEYS: readonly (keyof OnBoardOptions)[] = [
+  'interCoreLoad',
+  'roofline',
+  'operatorCodeHotspot',
+  'cacheHeatmap',
+  'pcSampling',
+  'cubeAndVectorInstructionTimeAndRatio',
+  'l2CacheHitRate',
+  'memoryReadWriteBandwidth',
+  'l0ReadWriteBandwidth',
+  'ubReadWriteBandwidth',
+  'computeAndMoveUnitTimeRatio',
+  'resourceConflictRatio',
+  'operatorMetrics',
+];
+
 /** Keys under “Operator metrics”; parent checkbox must not use v-model + watch (that re-fired @change and synced every key). */
 const PERFORMANCE_METRIC_KEYS = [
-  'ArithmeticUtilization',
-  'L2Cache',
-  'Memory',
-  'MemoryL0',
-  'MemoryUB',
-  'PipeUtilization',
-  'ResourceConflictRatio',
+  'cubeAndVectorInstructionTimeAndRatio',
+  'l2CacheHitRate',
+  'memoryReadWriteBandwidth',
+  'l0ReadWriteBandwidth',
+  'ubReadWriteBandwidth',
+  'computeAndMoveUnitTimeRatio',
+  'resourceConflictRatio',
 ] as const;
 
-const allPerformanceMetricsSelected = computed(() => {
-  const uo = onboardData.value.user_options;
-
-  if (!uo) {
-    return false;
-  }
-
-  return PERFORMANCE_METRIC_KEYS.every((key) => Boolean(uo[key]));
-});
+const allPerformanceMetricsSelected = computed(() => PERFORMANCE_METRIC_KEYS.every((key) => Boolean(onboardData.value[key])));
 
 const performanceMetricsIndeterminate = computed(() => {
-  const uo = onboardData.value.user_options;
-
-  if (!uo) {
-    return false;
-  }
-
-  const count = PERFORMANCE_METRIC_KEYS.filter((key) => uo[key]).length;
+  const count = PERFORMANCE_METRIC_KEYS.filter((key) => onboardData.value[key]).length;
 
   return count > 0 && count < PERFORMANCE_METRIC_KEYS.length;
 });
 
 const operatorMetricsChecked = computed(() => {
-  const uo = onboardData.value.user_options as Record<string, unknown>;
-
-  if (typeof uo.operatorMetrics === 'boolean') {
-    return uo.operatorMetrics;
+  if (typeof onboardData.value.operatorMetrics === 'boolean') {
+    return onboardData.value.operatorMetrics;
   }
 
   return allPerformanceMetricsSelected.value;
@@ -163,9 +166,9 @@ const handleOperatorPerformanceChange = (e: unknown) => {
     ? e
     : ((e as { target?: { checked?: boolean } })?.target?.checked ?? false);
 
-  (onboardData.value.user_options as Record<string, unknown>).operatorMetrics = checked;
+  onboardData.value.operatorMetrics = checked;
   PERFORMANCE_METRIC_KEYS.forEach((key) => {
-    onboardData.value.user_options[key] = checked;
+    onboardData.value[key] = checked;
   });
 
   handleSave();
@@ -197,12 +200,10 @@ onMounted(async () => {
   }
 
   if (isAscendA5ProfilerCannSoc(projectCannSoc.value)) {
-    const uo = onboardData.value.user_options as Record<string, unknown>;
+    onboardData.value.cacheHeatmap = false;
 
-    uo.MemoryDetail = false;
-
-    if (typeof uo.PCSampling !== 'boolean') {
-      uo.PCSampling = true;
+    if (typeof onboardData.value.pcSampling !== 'boolean') {
+      onboardData.value.pcSampling = true;
     }
   }
 
@@ -268,13 +269,13 @@ onMounted(async () => {
 
           <span>{{ t('web.options.onboard.defaultOptions') }}</span>
           <a-checkbox
-            v-model:checked="onboardData.user_options.Occupancy"
+            v-model:checked="onboardData.interCoreLoad"
             @change="handleSave"
           >
             {{ t('web.options.onboard.interCoreLoad') }}
           </a-checkbox>
           <a-checkbox
-            v-model:checked="onboardData.user_options.Roofline"
+            v-model:checked="onboardData.roofline"
             style="margin-left: 12px;"
             @change="handleSave"
           >
@@ -287,7 +288,7 @@ onMounted(async () => {
 
         <div style="margin-top: 12px">
           <a-checkbox
-            v-model:checked="onboardData.user_options.Source"
+            v-model:checked="onboardData.operatorCodeHotspot"
             @change="handleSave"
           >
             {{ t('web.options.onboard.codeHotspot') }}
@@ -299,7 +300,7 @@ onMounted(async () => {
           class="cache-box"
         >
           <a-checkbox
-            v-model:checked="onboardData.user_options.MemoryDetail"
+            v-model:checked="onboardData.cacheHeatmap"
             @change="handleSave"
           >
             {{ t('web.options.onboard.cacheHeatmap') }}
@@ -313,7 +314,7 @@ onMounted(async () => {
           class="cache-box"
         >
           <a-checkbox
-            v-model:checked="onboardData.user_options.PCSampling"
+            v-model:checked="onboardData.pcSampling"
             @change="handleSave"
           >
             {{ t('web.options.onboard.pcSampling') }}
@@ -334,43 +335,43 @@ onMounted(async () => {
         </div>
         <div class="nested-checkbox-group">
           <a-checkbox
-            v-model:checked="onboardData.user_options.ArithmeticUtilization"
+            v-model:checked="onboardData.cubeAndVectorInstructionTimeAndRatio"
             @change="handleSave"
           >
             {{ t('web.options.onboard.cubeVector') }}
           </a-checkbox>
           <a-checkbox
-            v-model:checked="onboardData.user_options.L2Cache"
+            v-model:checked="onboardData.l2CacheHitRate"
             @change="handleSave"
           >
             {{ t('web.options.onboard.l2HitRate') }}
           </a-checkbox>
           <a-checkbox
-            v-model:checked="onboardData.user_options.Memory"
+            v-model:checked="onboardData.memoryReadWriteBandwidth"
             @change="handleSave"
           >
             {{ t('web.options.onboard.memoryBandwidth') }}
           </a-checkbox>
           <a-checkbox
-            v-model:checked="onboardData.user_options.MemoryL0"
+            v-model:checked="onboardData.l0ReadWriteBandwidth"
             @change="handleSave"
           >
             {{ t('web.options.onboard.l0Bandwidth') }}
           </a-checkbox>
           <a-checkbox
-            v-model:checked="onboardData.user_options.MemoryUB"
+            v-model:checked="onboardData.ubReadWriteBandwidth"
             @change="handleSave"
           >
             {{ t('web.options.onboard.ubBandwidth') }}
           </a-checkbox>
           <a-checkbox
-            v-model:checked="onboardData.user_options.PipeUtilization"
+            v-model:checked="onboardData.computeAndMoveUnitTimeRatio"
             @change="handleSave"
           >
             {{ t('web.options.onboard.computeMoveRatio') }}
           </a-checkbox>
           <a-checkbox
-            v-model:checked="onboardData.user_options.ResourceConflictRatio"
+            v-model:checked="onboardData.resourceConflictRatio"
             @change="handleSave"
           >
             {{ t('web.options.onboard.resourceConflict') }}

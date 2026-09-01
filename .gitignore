@@ -5,6 +5,7 @@ plugins/mindstudio-vscode-plugins/mindstudio-opsuite-vscode-plugin/.vscode
 dist
 node_modules
 out
+coverage
 web/.flavor
 package-lock.json
 tsconfig.tsbuildinfo

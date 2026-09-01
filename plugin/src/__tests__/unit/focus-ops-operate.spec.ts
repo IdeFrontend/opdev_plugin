@@ -12,7 +12,7 @@ const VIEW_CONTAINER_COMMAND = workbenchViewContainerCommand();
 const LEGACY_FOCUS_COMMAND = `workbench.view.extension.${OPS_OPERATE_VIEW_CONTAINER_ID}.focus`;
 const FOCUS_AUXILIARY_BAR = 'workbench.action.focusAuxiliaryBar';
 
-describe('resolveFocusOpsOperateCommand (issue #33)', () => {
+describe('resolveFocusOpsOperateCommand (focus command fallback)', () => {
   it('prefers the generated view container command when the host registers it', () => {
     expect(resolveFocusOpsOperateCommand([
       VIEW_CONTAINER_COMMAND,

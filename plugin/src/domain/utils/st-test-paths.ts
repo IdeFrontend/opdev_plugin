@@ -355,11 +355,28 @@ export function ensureStTestOutputDirectory(outputCsvPath: string): void {
 }
 
 export function isPathOutside(basePath: string, targetPath: string): boolean {
-  const relative = path.relative(path.resolve(basePath), path.resolve(targetPath));
+  // Manifest paths may carry either separator (e.g. a Windows-form escape such
+  // as `..\outside.csv` read from a JSON manifest on a POSIX host, where a
+  // backslash is a plain filename character): normalize foreign separators so
+  // the containment check cannot be bypassed by the platform's separator.
+  const base = path.resolve(basePath.replace(/\\/g, path.sep));
+  const target = path.resolve(targetPath.replace(/\\/g, path.sep));
+  const relative = path.relative(base, target);
 
   return path.isAbsolute(relative)
     || relative === '..'
     || relative.startsWith(`..${path.sep}`);
+}
+
+export function toDisplayPath(basePath: string, targetPath: string): string {
+  if (isPathOutside(basePath, targetPath)) {
+    return path.basename(targetPath);
+  }
+
+  const relative = path.relative(path.resolve(basePath), path.resolve(targetPath));
+
+  return (relative || path.basename(targetPath)).split(path.sep)
+    .join('/');
 }
 
 export function validateStTestOperatorDirectory(

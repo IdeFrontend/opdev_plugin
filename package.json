@@ -3,7 +3,7 @@
   "displayName": "Huawei OP DevTools",
   "description": "Operator development, debugging, and performance analysis all-in-one platform for Ascend C language.",
   "publisher": "huawei",
-  "version": "1.4.6",
+  "version": "1.5.3",
   "engines": {
     "node": ">=16.0.0",
     "vscode": "^1.80.0"
@@ -19,8 +19,7 @@
     "onStartupFinished"
   ],
   "extensionPack": [
-    "ms-vscode-remote.remote-ssh",
-    "ms-vscode.cpptools"
+    "ms-vscode-remote.remote-ssh"
   ],
   "icon": "out/web/branding/extension_icon.png",
   "contributes": {
@@ -615,10 +614,29 @@
             "order": 401,
             "markdownDescription": "%config.op-devtools.environment.socVersion.markdownDescription%"
           },
-          "op-devtools.environment.insightPath": {
+          "op-devtools.environment.npuArch": {
             "type": "string",
             "order": 402,
+            "markdownDescription": "%config.op-devtools.environment.npuArch.markdownDescription%"
+          },
+          "op-devtools.environment.insightPath": {
+            "type": "string",
+            "order": 403,
             "markdownDescription": "%config.op-devtools.environment.insightPath.markdownDescription%"
+          }
+        }
+      },
+      {
+        "id": "op-devtools.execution",
+        "title": "%config.category.execution.title%",
+        "type": "object",
+        "properties": {
+          "op-devtools.execution.commandTimeoutSeconds": {
+            "type": "number",
+            "default": 1800,
+            "minimum": 0,
+            "order": 450,
+            "description": "%config.op-devtools.execution.commandTimeoutSeconds.description%"
           }
         }
       },
@@ -762,6 +780,11 @@
       {
         "command": "huawei-op-devtools.openCsv",
         "title": "%command.openCsv.title%",
+        "category": "%config.title%"
+      },
+      {
+        "command": "huawei-op-devtools.openProfilingReport",
+        "title": "%command.openProfilingReport.title%",
         "category": "%config.title%"
       },
       {
@@ -1723,6 +1746,11 @@
           "command": "huawei-op-devtools.sidebar.actionsQuickPick",
           "group": "navigation@1",
           "when": "opDevtools.hasDevtoolConfig"
+        },
+        {
+          "command": "huawei-op-devtools.openProfilingReport",
+          "group": "navigation@2",
+          "when": "opDevtools.hasDevtoolConfig && resourceScheme == 'file' && (resourceExtname == '.rep' || resourceExtname == '.ncrep')"
         }
       ],
       "explorer/context": [
@@ -1730,6 +1758,11 @@
           "command": "huawei-op-devtools.createOperatorInWorkspace",
           "when": "explorerViewletVisible && resourceScheme == 'file'",
           "group": "navigation@1"
+        },
+        {
+          "command": "huawei-op-devtools.openProfilingReport",
+          "when": "resourceScheme == 'file' && (resourceExtname == '.rep' || resourceExtname == '.ncrep')",
+          "group": "navigation@2"
         },
         {
           "command": "huawei-op-devtools.markAsOperatorProject",
@@ -1823,17 +1856,18 @@
     ]
   },
   "scripts": {
-    "package": "pnpm run compile && vsce package --no-dependencies --allow-missing-repository",
+    "package": "pnpm run compile && tsx scripts/package-extension.ts",
     "build": "pnpm run compile",
     "build:icons-font": "node scripts/build-icons-font.mjs",
+    "precompile": "node scripts/prepare-integration.mjs",
     "compile": "pnpm run compile:web && pnpm run compile:plugin",
     "compile:web": "cd web && pnpm run build",
     "compile:plugin": "tsc --noEmit && tsx scripts/build-extension",
-    "package:debug": "pnpm run compile:debug && vsce package --no-dependencies --allow-missing-repository",
+    "package:debug": "pnpm run compile:debug && tsx scripts/package-extension.ts",
     "compile:debug": "pnpm run compile:web:debug && pnpm run compile:plugin:debug",
     "compile:web:debug": "cd web && pnpm run build:debug",
     "compile:plugin:debug": "tsx scripts/build-extension --sourcemap",
-    "package:readable": "pnpm run compile:readable && vsce package --no-dependencies --allow-missing-repository",
+    "package:readable": "pnpm run compile:readable && tsx scripts/package-extension.ts",
     "compile:readable": "pnpm run compile:web:readable && pnpm run compile:plugin:readable",
     "compile:web:readable": "cd web && pnpm run build --mode=readable",
     "compile:plugin:readable": "tsx scripts/build-extension --sourcemap --readable",
@@ -1841,6 +1875,7 @@
     "lint": "oxlint . && eslint .",
     "lint:fix": "eslint . --fix",
     "type-check": "tsc --noEmit && cd web && vue-tsc --noEmit",
+    "pretype-check": "node scripts/prepare-integration.mjs --types",
     "install:web": "cd web && pnpm install",
     "test": "cd plugin && pnpm run test",
     "verify": "pnpm run compile && pnpm run test",

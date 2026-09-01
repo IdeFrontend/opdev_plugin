@@ -1,7 +1,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { isPathOutside } from '@plugin/domain/utils/st-test-paths';
+import {
+  isPathOutside,
+  toDisplayPath,
+} from '@plugin/domain/utils/st-test-paths';
 import type {
   StTestMode,
   StTestResultErrorCode,
@@ -64,17 +67,6 @@ class StTestResultParseError extends Error {
   ) {
     super(code);
   }
-}
-
-function toDisplayPath(basePath: string, targetPath: string): string {
-  if (isPathOutside(basePath, targetPath)) {
-    return path.basename(targetPath);
-  }
-
-  const relative = path.relative(path.resolve(basePath), path.resolve(targetPath));
-
-  return (relative || path.basename(targetPath)).split(path.sep)
-    .join('/');
 }
 
 function isBlankRecord(record: CsvRecord): boolean {

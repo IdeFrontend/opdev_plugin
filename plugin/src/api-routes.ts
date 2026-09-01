@@ -1,9 +1,7 @@
 import { webviewMethods } from './controller/index';
 import { commonMethods } from './controller/common-controller';
-import { viewMethods } from './controller/view-controller';
 import { configMethods } from './controller/config-controller';
 import { scriptMethods } from './controller/script-controller';
-import { sanitizerViewMethods } from './controller/sanitizer-controller';
 import { homeMethods } from './controller/home-controller';
 import { performanceMethods } from './controller/performance-data-controller';
 import { taskMethods } from './controller/task-controller';
@@ -15,8 +13,12 @@ import {
 } from './helpers/task-method-dispatch';
 
 const opsMethods = {
-  getConfigData: configMethods.getConfigData,
-  saveConfig: configMethods.saveConfig,
+  getOnBoardOptions: configMethods.getOnBoardOptions,
+  saveOnBoardOptions: configMethods.saveOnBoardOptions,
+  getSimulateOptions: configMethods.getSimulateOptions,
+  saveSimulateOptions: configMethods.saveSimulateOptions,
+  getSanitizerOptions: configMethods.getSanitizerOptions,
+  saveSanitizerOptions: configMethods.saveSanitizerOptions,
 
   startSimulate: dispatchSimulator,
   startOnBoard: dispatchOnBoard,
@@ -26,8 +28,6 @@ const opsMethods = {
   getOnBoardExecutionAvailable: scriptMethods.getOnBoardExecutionAvailable,
   getSimulatorSupportedMetrics: scriptMethods.getSimulatorSupportedMetrics,
 
-  getSanitizerConfigs: sanitizerViewMethods.getSanitizerConfigs,
-  saveSanitizerForm: sanitizerViewMethods.saveSanitizerForm,
   runSanitizer: dispatchSanitizer,
 
   importDumpTensorBinFile: taskMethods.importDumpTensorBinFile,
@@ -41,7 +41,6 @@ const opsMethods = {
 export const apis = {
   webview: webviewMethods,
   common: commonMethods,
-  view: viewMethods,
   ops: opsMethods,
-  performance: performanceMethods,
+  performance: { diffFiles: performanceMethods.diffFiles },
 };

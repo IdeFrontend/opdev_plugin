@@ -2,6 +2,7 @@ import { t } from 'i18next';
 import * as vscode from 'vscode';
 
 import { InsightDataViewerPanel } from '@plugin/class/insight-data-viewer-panel';
+import { ProfilingReportPanel } from '@plugin/class/profiling-report-panel';
 import { CSV_VIEWER_VIEW_TYPE } from '@shared/flavor';
 
 // Track opened CSV file directories
@@ -70,6 +71,30 @@ export class ViewOpener {
     }
     catch (error) {
       vscode.window.showErrorMessage(t('view.loadDataFileFailed', { error: String(error) }));
+    }
+  }
+
+  /**
+   * Open the profiling report panel for .rep/.ncrep files
+   * @param uri rep/ncrep file uri
+   */
+  public static async openProfilingReport(uri: vscode.Uri): Promise<void> {
+    const filePath = uri.fsPath;
+    const context = (
+      globalThis as unknown as { extensionContext: vscode.ExtensionContext }
+    ).extensionContext;
+
+    if (!filePath) {
+      vscode.window.showErrorMessage(t('profilingReport.filePathEmpty'));
+
+      return;
+    }
+
+    try {
+      await ProfilingReportPanel.createOrShow(context, filePath);
+    }
+    catch (error) {
+      vscode.window.showErrorMessage(t('profilingReport.loadFailed', { error: String(error) }));
     }
   }
 }

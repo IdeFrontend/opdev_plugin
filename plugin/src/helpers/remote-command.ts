@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import { t } from 'i18next';
 import { shellQuoteBash } from '@plugin/domain/utils/shell-env-exports';
 import { startNpuHardwareProbe } from '@plugin/domain/utils/npu-hardware-probe';
+import { joinIdeConfigPath } from '@plugin/helpers/ide-config-dir';
 import { promisify } from 'util';
 import {
   exec, execSync,
@@ -168,6 +169,27 @@ export function buildRemoteStTestCommand(
   pullDir: string,
 ): string {
   return buildRemoteExecCommand(remoteCommand, pullDir);
+}
+
+/**
+ * Resolve a remote pull directory: the IDE config dir under the resolved root,
+ * forward-slashed with a trailing '/', or a caller-supplied sub-directory
+ * resolver. Throws when no root is known.
+ */
+export function resolveRemotePullDir(
+  rootPath: string | undefined,
+  subDirOrResolver: string | ((root: string)=> string),
+  what: string,
+): string {
+  if (!rootPath) {
+    throw new Error(`Output root path not found for ${what}`);
+  }
+
+  const sub = typeof subDirOrResolver === 'function'
+    ? subDirOrResolver(path.resolve(rootPath))
+    : joinIdeConfigPath(path.resolve(rootPath), subDirOrResolver);
+
+  return `${sub.replace(/\\/g, '/')}/`;
 }
 
 /**

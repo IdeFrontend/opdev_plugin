@@ -14,7 +14,8 @@
     "paths": {
       "@/*": ["./src/*"],
       "@web/*": ["./src/*"],
-      "@shared/*": ["../shared/*"]
+      "@shared/*": ["../shared/*"],
+      "@huawei/profiling-report": ["../profiling-report/dist/index.d.ts"]
     }
   },
   "include": [

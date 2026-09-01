@@ -736,6 +736,108 @@ describe('TtkInstallerService', () => {
       .toBe(false);
   });
 
+  it('recovers an ownerless lock directory once it outlives the acquire grace window', async () => {
+    const execute = jest.fn(async (command: string) => {
+      if (command.includes('import sys')) {
+        return commandResult('__MSTT_PYTHON_VERSION__=3.11.8\n');
+      }
+
+      if (command.includes('git init -q')) {
+        const stagingSource = /git init -q '([^']+)'/.exec(command)![1];
+
+        fs.mkdirSync(path.join(stagingSource, '.git'), { recursive: true });
+        fs.writeFileSync(path.join(stagingSource, 'requirements.txt'), 'pytest\n');
+
+        return commandResult();
+      }
+
+      if (command.includes('rev-parse HEAD')) {
+        return commandResult(`${OPS_TEST_KIT_REVISION}\n`);
+      }
+
+      if (command.includes("'-m' 'pip'")) {
+        return commandResult();
+      }
+
+      if (command.includes('PYTHONPATH=')) {
+        return commandResult('TTK v2.1.0\n');
+      }
+
+      return commandResult('', 1, 'No module named ttk');
+    });
+    const service = createService(execute, () => 'stage', { createLockToken: () => 'ownerless-lock' });
+    const cache = service.getManagedCachePaths('3.11');
+
+    // A crashed release fallback leaves the lock directory without its owner
+    // marker; the next waiter must recover it after the grace window.
+    fs.mkdirSync(cache.lock, { recursive: true });
+    const backdated = new Date(Date.now() - 10_000);
+
+    fs.utimesSync(cache.lock, backdated, backdated);
+
+    await expect(service.ensureAvailable())
+      .resolves
+      .toMatchObject({ source: 'managed' });
+    expect(fs.existsSync(cache.lock))
+      .toBe(false);
+  });
+
+  it('removes the lock in place when the rename is persistently refused (Windows EPERM)', async () => {
+    const execute = jest.fn(async (command: string) => {
+      if (command.includes('import sys')) {
+        return commandResult('__MSTT_PYTHON_VERSION__=3.11.8\n');
+      }
+
+      if (command.includes('git init -q')) {
+        const stagingSource = /git init -q '([^']+)'/.exec(command)![1];
+
+        fs.mkdirSync(path.join(stagingSource, '.git'), { recursive: true });
+        fs.writeFileSync(path.join(stagingSource, 'requirements.txt'), 'pytest\n');
+
+        return commandResult();
+      }
+
+      if (command.includes('rev-parse HEAD')) {
+        return commandResult(`${OPS_TEST_KIT_REVISION}\n`);
+      }
+
+      if (command.includes("'-m' 'pip'")) {
+        return commandResult();
+      }
+
+      if (command.includes('PYTHONPATH=')) {
+        return commandResult('TTK v2.1.0\n');
+      }
+
+      return commandResult('', 1, 'No module named ttk');
+    });
+    const service = createService(execute, () => 'stage', { createLockToken: () => 'fallback-lock' });
+    const cache = service.getManagedCachePaths('3.11');
+    const realRename = fs.promises.rename.bind(fs.promises);
+    const renameSpy = jest.spyOn(fs.promises, 'rename')
+      .mockImplementation(async (source, target) => {
+        if (String(target)
+          .includes('.released-')) {
+          throw Object.assign(new Error('EPERM: operation not permitted, rename'), { code: 'EPERM' });
+        }
+
+        return realRename(source, target);
+      });
+
+    try {
+      await expect(service.ensureAvailable())
+        .resolves
+        .toMatchObject({ source: 'managed' });
+      expect(renameSpy)
+        .toHaveBeenCalled();
+      expect(fs.existsSync(cache.lock))
+        .toBe(false);
+    }
+    finally {
+      renameSpy.mockRestore();
+    }
+  });
+
   it('reports restricted-network guidance and removes incomplete staging', async () => {
     const execute = jest.fn(async (command: string) => {
       if (command.includes('import sys')) {

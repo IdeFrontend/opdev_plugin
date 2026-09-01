@@ -8,13 +8,11 @@ This specification lists files and directories created, updated, or deleted by t
 - lifecycle conditions (create/update/delete),
 - how each artifact is consumed by plugin behavior.
 
-The scope covers runtime behavior in `plugin/src`, including workspace-local artifacts and user-level storage.
+The scope covers runtime behavior in `plugin/src`, including workspace-local artifacts and environment/tooling paths.
 
 ## Storage zones
 
-- **Operator workspace**: files created in the opened operator project.
-- **User data storage**: JSON stores under `config.user_data_dir`.
-- **Remote config storage**: dedicated config file under VS Code server home path.
+- **Operator workspace**: files created in the opened operator project (inside the IDE config directory — `.vscode` in VS Code, `.arts` in CodeArts — unless stated otherwise).
 - **Environment/tooling paths**: files created for plugin installation or export/download flows.
 
 ---
@@ -29,7 +27,45 @@ The scope covers runtime behavior in `plugin/src`, including workspace-local art
 - **Deleted when**: not deleted by normal plugin flows.
 - **Used by**:
   - startup checks to toggle UI behavior (`hasDevtoolConfig` context),
-  - project discovery scans that look for initialized operator subprojects.
+  - project discovery scans that look for initialized operator subprojects,
+  - project recognition in `getProjectByPath` (one of the operator-project markers).
+
+## `.vscode/cache.json`
+
+- **Purpose**: per-workspace runtime state — selected/compiled operator paths, per-folder scan state, file-map lists, and the per-operator sanitizer Python target.
+- **Created when**: first `updateWorkspaceCache` write (project open / registration / scan).
+- **Updated when**: folder scans, file-map lists, sanitizer Python target, selected/compiled operator state.
+- **Corruption handling**: a corrupt or unparseable `cache.json` is renamed to `cache.json.bak` on read and the next writer starts from a fresh object. Reads never create the file; a writer always does (a missing cache is created, never skipped).
+- **Used by**:
+  - the per-section DAO factories — `getSimulateConfig(projectPath)` / `getOnBoardConfig(projectPath)` / `getSanitizerConfig(projectPath, op)` (DB-only fields: `fileMapLists[configType]` → `fileMapList`, `sanitizerPythonTarget[op]` → `target_file`),
+  - `getProjectByPath` / `WorkspaceDetectorService` (standard-custom scan state under `folders[rootKey]`),
+  - `resolveOpRecord` (synthesized operator records; an attached `opType` selects the command strategy — `'cann'` for standard-custom collection sub-operators, `'ascend'` for plugin-created ones; a scanned entry without one falls back to `'cann'` for standard-custom collections).
+- **Schema** (`plugin/src/helpers/workspace-cache.ts`, `CACHE_SCHEMA_VERSION = 1`):
+
+```json
+{
+  "schemaVersion": 1,
+  "project": { "selectedOperatorPaths": [], "compiledOpPaths": {} },
+  "folders": {
+    "<normalized-root-path>": {
+      "opsMeet": [], "opsList": [], "experimentalOpsList": []
+    }
+  },
+  "fileMapLists": { "sanitizer": [], "simulate": [], "on_board": [] },
+  "sanitizerPythonTarget": {}
+}
+```
+
+`isCompiled` is sticky (merges preserve it across scans); `opType` is attached when the operator's type is known.
+
+## `.vscode/settings.json` (`op-devtools.*`)
+
+- **Purpose**: canonical runtime config — compile/deploy scripts, options, project type, env script ([`workspace-settings.md`](./workspace-settings.md)).
+- **Created when**: `ensureOpDevtoolsSettingsSeeded` / first settings write.
+- **Updated when**: user edits in Settings UI, option panels (`writeOpDevtoolsDottedSettings`), project type detection.
+- **Deleted when**: not deleted by normal plugin flows.
+- **Used by**: the per-section DAO factories (each reads its own dotted keys directly); `getProjectByPath` project recognition via the internal `op-devtools.projectType` key (not declared in `package.json`).
+- **Write semantics**: JSONC-tolerant read (BOM, comments, trailing commas); an unparseable file is never overwritten; atomic temp+rename; per-path serialized queue; content-diff guard (byte-identical write is a no-op); a nested `"op-devtools": { … }` object is flattened to dotted keys on write.
 
 ## `.vscode/launch.json`
 
@@ -43,23 +79,13 @@ The scope covers runtime behavior in `plugin/src`, including workspace-local art
 - **Used by**:
   - `taskMethods.runDebug()` / `runCpuDebug()` via named debug profiles,
   - `debugConfig` commands opening launch configuration.
+- **IDE config directory**: the file lives in the active IDE config directory — `.vscode` in VS Code, `.arts` in CodeArts (`getIdeConfigDirName()`); only one is created, there is no mirrored copy.
 
-## `.arts/launch.json`
-
-- **Purpose**: mirrored launch config for `.arts` toolchain context.
-- **Created when**:
-  - `ensureLaunchJsonExists` runs,
-  - `.vscode/devtool_config.json` does **not** already exist,
-  - and `.vscode/launch.json` is being created in the same run.
-- **Updated when**: created from bundled debug template at initialization; not continuously rewritten.
-- **Deleted when**: not deleted by normal plugin flows.
-- **Used by**: tooling compatibility paths expecting `.arts`-side launch config.
-
-## `.arts/.env`
+## `<ideConfig>/.env`
 
 - **Purpose**: snapshot of environment variables used as fallback for runtime environment reads.
 - **Created when**:
-  - `exportEnvToFile` executes `env > ./.arts/.env` during launch/config initialization,
+  - `exportEnvToFile` executes `env > ./<ideConfig>/.env` during launch/config initialization,
   - and only on the branch where `.vscode/devtool_config.json` was absent (because existing `devtool_config.json` causes early return from `ensureLaunchJsonExists`).
 - **Updated when**: re-initialization path reruns export command.
 - **Deleted when**: not deleted by normal plugin flows.
@@ -78,9 +104,9 @@ The scope covers runtime behavior in `plugin/src`, including workspace-local art
 - **Used by**:
   - compile/run pipelines and strategy-generated commands that enter build dirs.
 
-## `<ideConfig>/mindstudio_sanitizer_log/*.log`
+## `<workspaceRoot>/<ideConfig>/mindstudio_sanitizer_log/*.log`
 
-(`<ideConfig>` is `.vscode` or `.arts` — see `getIdeConfigDirName()`.)
+(`<ideConfig>` is `.vscode` or `.arts` — see `getIdeConfigDirName()`; the directory lives under the **workspace root** — every strategy (cann / ascend / triton) writes `--log-file` there, and the reader scans only that directory.)
 
 - **Purpose**: sanitizer report logs.
 - **Created when**: sanitizer command runs with generated `--log-file` path.
@@ -92,86 +118,7 @@ The scope covers runtime behavior in `plugin/src`, including workspace-local art
 
 ---
 
-## B) User data artifacts (`config.user_data_dir/data`)
-
-## `projects.json`
-
-- **Purpose**: registry of known projects and project-level metadata.
-- **Created when**:
-  - first access through `JsonStorage.read` default initialization,
-  - first `createProject(...)`.
-- **Updated when**:
-  - project init/open/create flows write project records,
-  - standard-custom scans refresh `ops_meet`, `ops_list`, `experimental_ops_list`,
-  - build success marks operator `isCompiled` state.
-- **Deleted when**:
-  - only by test helper `_resetProjectsForTest()` (`storage.delete()`).
-- **Used by**:
-  - path-to-project resolution,
-  - operator list rendering and context-menu action routing,
-  - keeping compile state across scans and sessions.
-
-## `ops.json`
-
-- **Purpose**: operator records per project (`op_type`, path, template, timestamps).
-- **Created when**:
-  - first access through model store initialization,
-  - operator structure generation ensures record exists.
-- **Updated when**:
-  - `generateStructure(...)` upserts operator records.
-- **Deleted when**:
-  - only by test helper `_resetOpsForTest()`.
-- **Used by**:
-  - command path resolution (`getDefaultPath`, run/debug/strategy lookup),
-  - default config generation binding to operator identity.
-
-## `configs.json`
-
-- **Purpose**: persisted action configurations (`build_op`, `build_example`, `sanitizer`, `on_board`, `simulate`, etc.).
-- **Created when**:
-  - first config read/write via `JsonStorage`,
-  - default config generation in `generateStructure`.
-- **Updated when**:
-  - row lifecycle / DB-only fields via `postConfig` (structure creation, `fileMapList`, sanitizer reports, etc.),
-  - **not** compile script strings after workspace migration — those live in `settings.json` ([`workspace-settings.md`](./workspace-settings.md)),
-  - PyAsc/Triton run may set deploy target via `ConfigService.writeBuildOpDeployTarget` (`python3 <relativePath>`) → workspace `deployCommandOrRunCommand`, not legacy script columns,
-  - add-report actions append/update `fileMapList`.
-- **Deleted when**:
-  - only by test helper `_resetConfigsForTest()`.
-- **Used by**:
-  - all command builders and action execution paths,
-  - run data collection and report visualization.
-
-## `*.json.bak` backup files (e.g., `projects.json.bak`)
-
-- **Purpose**: recovery backup when JSON parse/read fails.
-- **Created when**: `JsonStorage.read` catches read/parse error on existing store.
-- **Updated when**: recreated on subsequent corruption events.
-- **Deleted when**: not auto-deleted by normal runtime.
-- **Used by**: manual troubleshooting/recovery; plugin does not actively read backups.
-- **Current scope**:
-  - applies to stores using `JsonStorage` (e.g., `projects.json`, `configs.json`),
-  - does **not** apply to `ops.json`, which is managed by direct read/parse/write fallback in `model.ts` and resets to default without writing `.bak`.
-
----
-
-## C) Remote config artifact
-
-## `~/.vscode-server/data/ms-op-suite/config.json`
-
-- **Purpose**: remote-side lightweight config (e.g., `lastProjectPath`).
-- **Created when**: first write through `RemoteConfig.writeConfig(...)`.
-- **Updated when**:
-  - set/clear last project path,
-  - set/delete arbitrary keys via remote config API.
-- **Deleted when**:
-  - not removed as file in normal flow; `clear()` writes `{}`.
-- **Used by**:
-  - restoring remembered project path and remote preferences.
-
----
-
-## D) Environment-specific installer/generated artifacts
+## B) Environment-specific installer/generated artifacts
 
 These are generated by plugin installer flows and may exist outside the operator workspace.
 
@@ -218,7 +165,7 @@ These are generated by plugin installer flows and may exist outside the operator
 
 ---
 
-## E) User-triggered export/download temporary artifacts
+## C) User-triggered export/download temporary artifacts
 
 ## `<directory>.zip` temporary archive (desktop save flow)
 
@@ -253,7 +200,7 @@ These are generated by plugin installer flows and may exist outside the operator
 
 - **Current writer behavior**: writes `{ "type": create_by || "1" }`.
 
-## `.vscode/launch.json` and `.arts/launch.json`
+## `.vscode/launch.json` (or `.arts/launch.json` in CodeArts)
 
 - **Format**: JSON object (VS Code launch schema).
 - **Schema** (plugin-level expectation):
@@ -272,9 +219,9 @@ These are generated by plugin installer flows and may exist outside the operator
 }
 ```
 
-- **Current writer behavior**: copies bundled `debug-launch.json` content.
+- **Current writer behavior**: copies bundled `debug-launch.json` content, then injects `host` / `remoteWorkspaceFolder` into the `remote-debug` configuration.
 
-## `.arts/.env`
+## `<ideConfig>/.env`
 
 - **Format**: dotenv-like plain text generated from `env`.
 - **Schema**: one variable per line.
@@ -285,7 +232,7 @@ ANOTHER_KEY=value
 ...
 ```
 
-## `<ideConfig>/mindstudio_sanitizer_log/*.log`
+## `<workspaceRoot>/<ideConfig>/mindstudio_sanitizer_log/*.log`
 
 - **Filename schema**:
 
@@ -294,124 +241,6 @@ mssanitizer_<timestamp>.log
 ```
 
 - **Content schema**: tool-native mssanitizer output (unstructured text log).
-
-## `projects.json`
-
-- **Format**: JSON object.
-- **Top-level schema**:
-
-```json
-{
-  "lastId": "number",
-  "projects": [
-    {
-      "id": "number",
-      "project_name": "string",
-      "project_path": "string",
-      "template_name": "string|null",
-      "project_type": "string|null",
-      "ascend_env_script": "string|null",
-      "create_by": "string|null",
-      "create_time": "ISO datetime string",
-      "update_by": "string|null",
-      "update_time": "ISO datetime string",
-      "sub_project_ids": "number[]|null",
-      "is_experimental": "boolean|null",
-      "ops_meet": [
-        { "name": "string", "path": "string" }
-      ],
-      "ops_list": [
-        { "name": "string", "path": "string", "isCompiled": "boolean|undefined" }
-      ],
-      "experimental_ops_list": [
-        { "name": "string", "path": "string", "isCompiled": "boolean|undefined" }
-      ],
-      "selected_operator_ids": "number[]|null"
-    }
-  ]
-}
-```
-
-## `ops.json`
-
-- **Format**: JSON object.
-- **Top-level schema**:
-
-```json
-{
-  "lastId": "number",
-  "ops": [
-    {
-      "id": "number",
-      "task_id": "number|null",
-      "project_id": "number",
-      "op_class": "string|null",
-      "op_name": "string",
-      "op_type": "string",
-      "op_path": "string",
-      "ascend_env_script": "string|null",
-      "examples": "string|null",
-      "create_by": "string|null",
-      "create_time": "ISO datetime string",
-      "update_by": "string|null",
-      "update_time": "ISO datetime string",
-      "template_name": "string|null"
-    }
-  ]
-}
-```
-
-## `configs.json`
-
-- **Format**: JSON object.
-- **Top-level schema**:
-
-```json
-{
-  "lastId": "number",
-  "configs": [
-    {
-      "id": "number",
-      "config_name": "string",
-      "config_type": "string",
-      "script": "string",
-      "target_dir": "string|null",
-      "target_file": "string|null",
-      "user_options": "object|null",
-      "project_id": "number",
-      "op": "string|null",
-      "create_by": "string|null",
-      "create_time": "ISO datetime string",
-      "update_by": "string|null",
-      "update_time": "ISO datetime string"
-    }
-  ]
-}
-```
-
-- **Legacy field**: older `configs.json` rows may still contain `custom_options` on disk; the plugin no longer reads, writes, or maps this column (removed from `ConfigRecord` and CANN command building).
-- **`user_options` schema**: depends on `config_type`:
-  - `build_op`: includes `op`, `script`, `config_name`, `target_dir`, `target_file`, debug script fields.
-  - `build_example`: includes `op`, `script`, `config_name`, `target_dir`, `target_file`, `execution_mode`.
-  - `sanitizer`: includes `tool`, `memcheckOption`, `logLevel`, `maxDebuglogSize`, `blockId`, `fileMapList`, etc.
-  - `on_board` / `simulate`: includes profiler flags, `dataStoragePath`, `advance_param`, `fileMapList`, etc.
-
-## `*.json.bak`
-
-- **Format**: byte-for-byte backup copy of the original JSON file at time of read/parse failure for stores backed by `JsonStorage`.
-- **Schema**: same intended schema as source file, but may be malformed (backup of corrupted content).
-
-## `~/.vscode-server/data/ms-op-suite/config.json`
-
-- **Format**: JSON object with extensible keys.
-- **Schema**:
-
-```json
-{
-  "lastProjectPath": "string (optional)",
-  "...customKeys": "unknown"
-}
-```
 
 ## `extensions.json` (Code-server/CodeArts extensions dir)
 
@@ -496,16 +325,17 @@ vscode:
 
 ## Source index
 
-- `plugin/src/domain/utils/project-utils.ts`
-- `plugin/src/domain/models/project-model.ts`
-- `plugin/src/domain/models/model.ts`
-- `plugin/src/domain/models/config-model.ts`
-- `plugin/src/core/storage/json-storage.ts`
+- `plugin/src/domain/utils/project-utils.ts` — `ensureLaunchJsonExists` (devtool_config.json, launch.json, `.env`, `build/`)
+- `plugin/src/domain/models/project-model.ts` — `getProjectByPath` project recognition
+- `plugin/src/domain/models/op-record.ts` — `resolveOpRecord` (cache scan state → operator records)
 - `plugin/src/service/build-service.ts`
 - `plugin/src/service/sanitizer-service.ts`
 - `plugin/src/service/run-data-service.ts`
 - `plugin/src/service/folder-context-menu-service.ts`
 - `plugin/src/service/file-service.ts`
-- `plugin/src/helpers/remote-config.ts`
+- `plugin/src/service/config-service.ts` — settings writes, runtime merge, per-section DAO factories
+- `plugin/src/helpers/workspace-cache.ts` — `.vscode/cache.json` read/update (`.bak` rename on corruption)
+- `plugin/src/helpers/ide-config-dir.ts` — `.vscode` vs `.arts` resolution
+- `plugin/src/helpers/ide-settings-persist.ts` — guarded `settings.json` writes
+- `plugin/src/class/environment-variable-reader.ts` — `<ideConfig>/.env` fallback reads
 - `plugin/src/class/mind-studio-plugin-installer.ts`
-

@@ -54,7 +54,7 @@ export function basenameFromTargetFile(targetFile?: string | null): string | und
 
 /**
  * Candidate basenames for an operator, preferring an explicit build_example
- * `target_file` basename when supplied (issue #17 / GC-17 next steps).
+ * `target_file` basename when supplied (GC-17 next steps).
  */
 export function collectDebugTargetCandidates(
   operatorName: string,
@@ -129,15 +129,56 @@ export function shouldReplaceDebugTarget(
   return false;
 }
 
-/** Regular-file names directly under `buildDir` (empty when it is absent). */
+/**
+ * Names of the executables directly under `buildDir` — empty when it is absent, not yet built
+ * or unreadable, so every caller can treat "no build dir" as "nothing built".
+ *
+ * `withFileTypes` reports on the entry itself (lstat), so a symlinked binary is a symlink and
+ * not a file; CMake and the ops-math build scripts do emit those, and callers want anything
+ * that can be executed. A link is kept only when it resolves to a regular file: a stale link
+ * left by an earlier build is not a target, and neither is a link to a directory.
+ */
 export function listBuildFiles(buildDir: string): string[] {
-  if (!fs.existsSync(buildDir)) {
+  try {
+    return fs.readdirSync(buildDir, { withFileTypes: true })
+      .filter((entry) => entry.isFile()
+        || (entry.isSymbolicLink() && linkResolvesToFile(path.join(buildDir, entry.name))))
+      .map((entry) => entry.name);
+  }
+  catch {
     return [];
   }
+}
 
-  return fs.readdirSync(buildDir, { withFileTypes: true })
-    .filter((entry) => entry.isFile())
-    .map((entry) => entry.name);
+/**
+ * Whether `linkPath` resolves to a regular file. Kept behind its own try/catch because a
+ * self-referencing link makes statSync throw ELOOP even with `throwIfNoEntry: false`, and
+ * one such entry must not blank out the whole listing.
+ */
+function linkResolvesToFile(linkPath: string): boolean {
+  try {
+    return fs.statSync(linkPath)
+      .isFile();
+  }
+  catch {
+    return false;
+  }
+}
+
+function toRelativeLaunchTarget(
+  workspaceRoot: string,
+  absTargetPath: string,
+  placeholder: string,
+): string {
+  const rel = path.relative(workspaceRoot, absTargetPath);
+
+  if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) {
+    return absTargetPath.split(path.sep)
+      .join('/');
+  }
+
+  return `${placeholder}/${rel.split(path.sep)
+    .join('/')}`;
 }
 
 /**
@@ -149,15 +190,7 @@ export function toWorkspaceRelativeTarget(
   workspaceRoot: string,
   absTargetPath: string,
 ): string {
-  const rel = path.relative(workspaceRoot, absTargetPath);
-
-  if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) {
-    return absTargetPath.split(path.sep)
-      .join('/');
-  }
-
-  return `\${workspaceFolder}/${rel.split(path.sep)
-    .join('/')}`;
+  return toRelativeLaunchTarget(workspaceRoot, absTargetPath, '${workspaceFolder}');
 }
 
 /**
@@ -168,15 +201,7 @@ export function toRemoteWorkspaceRelativeTarget(
   workspaceRoot: string,
   absTargetPath: string,
 ): string {
-  const rel = path.relative(workspaceRoot, absTargetPath);
-
-  if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) {
-    return absTargetPath.split(path.sep)
-      .join('/');
-  }
-
-  return `\${remoteWorkspaceFolder}/${rel.split(path.sep)
-    .join('/')}`;
+  return toRelativeLaunchTarget(workspaceRoot, absTargetPath, '${remoteWorkspaceFolder}');
 }
 
 export function resolveTargetPath(target: string, workspaceRoot: string): string {
@@ -257,6 +282,50 @@ export function msdebugConfiguredTargetExists(
 }
 
 /**
+ * Build directories that can hold an operator's debug target, in priority order.
+ *
+ * Two layouts are in the field and only the operator's own `build/` was searched:
+ *   - one operator per project (`<op>/build.sh`)  → `<op_path>/build/`
+ *   - one standard-custom repo opened at its root → `<repo>/build/`
+ * ops-nn and ops-math are the latter: `build.sh` builds into `${BASE_PATH}/build`
+ * where `BASE_PATH` is the repo root, so an operator selected in the sidebar has no
+ * `build/` of its own and the target stayed on the template placeholder (#17).
+ */
+function debugBuildDirs(workspaceRoot: string, operator: DebugOperatorRef): string[] {
+  const opBuildDir = path.join(operator.path, 'build');
+  const rootBuildDir = path.join(workspaceRoot, 'build');
+
+  return opBuildDir === rootBuildDir
+    ? [opBuildDir]
+    : [
+      opBuildDir,
+      rootBuildDir,
+    ];
+}
+
+/**
+ * Absolute path of the built debug target for an operator, or `undefined` when no
+ * candidate binary exists in any of its build directories.
+ */
+function resolveMsdebugTargetPath(
+  workspaceRoot: string,
+  operator: DebugOperatorRef,
+  targetFile?: string | null,
+): string | undefined {
+  const candidates = collectDebugTargetCandidates(operator.name, targetFile);
+
+  for (const buildDir of debugBuildDirs(workspaceRoot, operator)) {
+    const binary = resolveDebugTargetBinary(listBuildFiles(buildDir), candidates);
+
+    if (binary) {
+      return path.join(buildDir, binary);
+    }
+  }
+
+  return undefined;
+}
+
+/**
  * Resolve the msdebug attach path for an operator, or `undefined` when the
  * binary was not built.
  */
@@ -265,17 +334,13 @@ export function resolveMsdebugTargetForOperator(
   operator: DebugOperatorRef,
   targetFile?: string | null,
 ): string | undefined {
-  const buildDir = path.join(operator.path, 'build');
-  const binary = resolveDebugTargetBinary(
-    listBuildFiles(buildDir),
-    collectDebugTargetCandidates(operator.name, targetFile),
-  );
+  const absTarget = resolveMsdebugTargetPath(workspaceRoot, operator, targetFile);
 
-  if (!binary) {
+  if (!absTarget) {
     return undefined;
   }
 
-  return toWorkspaceRelativeTarget(workspaceRoot, path.join(buildDir, binary));
+  return toWorkspaceRelativeTarget(workspaceRoot, absTarget);
 }
 
 /**
@@ -287,17 +352,13 @@ export function resolveRemoteMsdebugTargetForOperator(
   operator: DebugOperatorRef,
   targetFile?: string | null,
 ): string | undefined {
-  const buildDir = path.join(operator.path, 'build');
-  const binary = resolveDebugTargetBinary(
-    listBuildFiles(buildDir),
-    collectDebugTargetCandidates(operator.name, targetFile),
-  );
+  const absTarget = resolveMsdebugTargetPath(workspaceRoot, operator, targetFile);
 
-  if (!binary) {
+  if (!absTarget) {
     return undefined;
   }
 
-  return toRemoteWorkspaceRelativeTarget(workspaceRoot, path.join(buildDir, binary));
+  return toRemoteWorkspaceRelativeTarget(workspaceRoot, absTarget);
 }
 
 /**
@@ -451,7 +512,7 @@ const MSDEBUG_BINARY_CONFIG_NAMES = new Set([
 
 /**
  * Resolve msdebug targets when the user starts debug from the VS Code Run panel
- * (issue #17 — sidebar-only patching was insufficient).
+ * (sidebar-only patching is insufficient: the Run panel supplies its own config).
  */
 export function registerMsdebugTargetAutoAdapt(
   context: vscode.ExtensionContext,

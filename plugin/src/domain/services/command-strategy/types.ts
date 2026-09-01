@@ -1,14 +1,43 @@
-import { ConfigRecord } from '@plugin/domain/models/config-model';
+import type {
+  BuildOpConfig,
+  BuildExampleConfig,
+  UtTestConfig,
+  SimulateConfig,
+  OnBoardConfig,
+  SanitizerConfig,
+} from '@plugin/service/config-service';
 import { ProjectRecord } from '@plugin/domain/models/project-model';
-import { OpRecord } from '@plugin/domain/models/model';
+import { OpRecord } from '@plugin/domain/models/op-record';
+
+/**
+ * Union of the per-section config DAOs the command chain consumes. Section-specific
+ * strategies narrow to the concrete DAO they build for; `op` (the resolved operator
+ * name the DAO was built for, the row `user_options.op`) is carried by the contexts
+ * and params instead of the config rows.
+ */
+export type SectionConfig = BuildOpConfig | BuildExampleConfig | UtTestConfig | SimulateConfig | OnBoardConfig | SanitizerConfig;
+
+/** Sections whose configs flow into buildOpCommand: the simulate/on-board/sanitizer pre-builds run the build_op builder with their own section config. */
+export type BuildableConfig = BuildOpConfig | SimulateConfig | OnBoardConfig | SanitizerConfig;
+
+/** Sections whose configs flow into getProfilerTargetFile (simulate / on-board / sanitizer). */
+export type ProfilerTargetConfig = SimulateConfig | OnBoardConfig | SanitizerConfig;
 
 /**
  * Context interface, containing basic information required to generate commands
  */
-export interface CommandContext {
-  config: ConfigRecord;
+export interface BaseContext<TConfig = SectionConfig> {
+  config: TConfig;
   project: ProjectRecord | null;
   operator: OpRecord | null;
+  /** Resolved operator name the config was built for (the row `user_options.op`). */
+  op: string;
+}
+
+/**
+ * Command context interface, containing basic information required to generate commands
+ */
+export interface CommandContext<TConfig = SectionConfig> extends BaseContext<TConfig> {
   sourceCannCmd: string;
   cdCmd: string;
   cdBuildCmd: string;
@@ -17,39 +46,20 @@ export interface CommandContext {
 /**
  * Command build parameter interface
  */
-export interface CommandBuildParams {
-  config: ConfigRecord;
-  operator: OpRecord | null;
-  sourceCannCmd: string;
-  cdCmd: string;
+export interface CommandBuildParams<TConfig = SectionConfig> extends Omit<CommandContext<TConfig>, 'project' | 'cdBuildCmd' | 'operator'> {
   compileOption?: string;
   advance_cmd?: string;
   operatorNames?: string; // Operator name, multiple separated by commas (used in scenarios such as standard custom operators)
   scriptField?: string | undefined | null // Script field, the default is script, there are also cpu_debug_script and npu_debug_script
-  exampleMode?: 'eager' | 'graph'; // Resolved run_example mode; overrides config.user_options.execution_mode when set
+  exampleMode?: 'eager' | 'graph'; // Resolved run_example mode; overrides config.executionMode when set
   buildExampleOnly?: boolean; // Standard-custom: build an existing --run_example target without executing it
 }
 
 /**
  * Simulation/boarding command build parameter interface
  */
-export interface ProfilerCommandParams {
-  config: ConfigRecord;
-  project: ProjectRecord | null;
-  operator: OpRecord | null;
-  sourceCannCmd: string;
-  cdCmd: string;
+export interface ProfilerCommandParams<TConfig = SimulateConfig | OnBoardConfig> extends CommandContext<TConfig> {
   exampleTargetFile: string;
-  cdBuildCmd: string;
-}
-
-/**
- * Basic context information (used to determine policy type)
- */
-export interface BaseContext {
-  config: ConfigRecord;
-  project: ProjectRecord | null;
-  operator: OpRecord | null;
 }
 
 /**
@@ -61,67 +71,63 @@ export interface CommandStrategy {
    * @param baseContext basic context information
    * @returns complete command context
    */
-  buildCommandContext(baseContext: BaseContext): CommandContext;
+  buildCommandContext<TConfig extends SectionConfig>(baseContext: BaseContext<TConfig>): CommandContext<TConfig>;
 
   /**
    * Generate run command
    * @param context command context
    * @returns run command string
    */
-  buildRunCommand(context: CommandContext): string;
+  buildRunCommand(context: CommandContext<BuildOpConfig | BuildExampleConfig>): string;
 
   /**
    * Generate compilation command
    */
-  buildOpCommand(params: CommandBuildParams): string;
+  buildOpCommand(params: CommandBuildParams<BuildableConfig>): string;
 
   /**
    * Generate sample compilation commands
    */
-  buildExampleCommand(params: CommandBuildParams): string;
+  buildExampleCommand(params: CommandBuildParams<BuildExampleConfig>): string;
 
   /**
    * Generate Sanitizer command
    */
-  buildSanitizerCommand(
-    config: ConfigRecord,
-    operator: OpRecord | null,
-    sourceCannCmd: string,
-    cdCmd: string,
-    exampleTargetFile?: string,
-    cdBuildCmd?: string
-  ): string;
+  buildSanitizerCommand(context: CommandContext<SanitizerConfig>, exampleTargetFile?: string): string;
 
   /**
    * Generate simulation commands
    */
-  buildSimulateCommand(params: ProfilerCommandParams): string;
+  buildSimulateCommand(params: ProfilerCommandParams<SimulateConfig>): string;
 
   /**
    * Generate board command
    */
-  buildOnBoardCommand(params: ProfilerCommandParams): string;
+  buildOnBoardCommand(params: ProfilerCommandParams<OnBoardConfig>): string;
 
   /**
    * Build UT test command
    */
-  buildUtTestCommand(params: CommandBuildParams): string;
+  buildUtTestCommand(params: CommandBuildParams<UtTestConfig>): string;
 
   /**
    * Get the target file for running the command
-   * @param config current configuration
-   * @param operator operator information
+   * @param op resolved operator name (the row `user_options.op`)
+   * @param operator operator information (fallback source for the default-path target)
+   * @param project project record (default-path layout source: standard-custom
+   *   collections resolve the ascend artifact layout)
    * @returns target file path
    */
-  getRunTargetFile(config: ConfigRecord, operator: OpRecord | null): string;
+  getRunTargetFile(op: string, operator?: OpRecord | null, project?: ProjectRecord | null): string;
 
   /**
    * Get the target file of the simulation/boarding/detection command
    * @param config current configuration
    * @param operator operator information
-   * @param exampleConfigId example configuration ID (for ascend type)
+   * @param op resolved operator name (the row `user_options.op`)
+   * @param project project record (default-path layout source: standard-custom
+   *   collections resolve the ascend artifact layout)
    * @returns target file path
-   * FIXME: Implementations still read profiler/sanitizer targets from legacy configs.json, not workspace settings.
    */
-  getProfilerTargetFile(config: ConfigRecord, operator: OpRecord | null, exampleConfigId: number): string;
+  getProfilerTargetFile(config: ProfilerTargetConfig, operator: OpRecord | null, op: string, project?: ProjectRecord | null): string;
 }

@@ -1,6 +1,8 @@
 jest.mock('@plugin/helpers/operator-project-workspace-config', () => ({
   getWorkspaceSimulatorType: jest.fn(() => ''),
   getSocVersionWithWorkspaceOverride: jest.fn(),
+  getOpDevtoolsWorkspaceConfiguration: jest.requireActual('@plugin/helpers/operator-project-workspace-config').getOpDevtoolsWorkspaceConfiguration,
+  getConfiguredValue: jest.requireActual('@plugin/helpers/operator-project-workspace-config').getConfiguredValue,
 }));
 jest.mock('@plugin/domain/utils/global-env-snapshot', () => ({
   getGlobalEnvSnapshot: jest.fn(() => ({
@@ -24,6 +26,7 @@ import {
   _primeSocDetectionFailedForTest,
   _resetSocDetectionCacheForTest,
   buildOperatorSpawnEnvFromResolution,
+  computeAscendEnvResolution,
   getNpuArchForCannSoc,
   getOperatorSpawnEnv,
   getSupportComputeUnitForCannSoc,
@@ -44,6 +47,7 @@ import {
 } from '@shared/cann-aclnn-build-defaults';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as vscode from 'vscode';
 
 const snapshot = (overrides: Partial<{
   socVersion: string;
@@ -58,6 +62,12 @@ const snapshot = (overrides: Partial<{
   ...overrides,
 });
 
+const defaultConfigurationMock = () => ({
+  inspect: jest.fn(),
+  get: jest.fn(),
+  update: jest.fn(),
+});
+
 describe('operator spawn env', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -69,6 +79,7 @@ describe('operator spawn env', () => {
     (getWorkspaceSimulatorType as jest.Mock).mockReturnValue('');
     (getSocVersionWithWorkspaceOverride as jest.Mock).mockImplementation(() => '');
     (getGlobalEnvSnapshot as jest.Mock).mockReturnValue(snapshot());
+    (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue(defaultConfigurationMock());
   });
 
   it('resolveSimulatorDir prefers workspace simulatorType', () => {
@@ -113,8 +124,6 @@ describe('operator spawn env', () => {
     const env = getOperatorSpawnEnv({
       opType: 'cann',
       projectType: OperatorProjectType.ASCEND_C,
-      projectId: 1,
-      configType: 'build_op',
       script: 'bash build.sh --onboard',
     });
 
@@ -135,8 +144,6 @@ describe('operator spawn env', () => {
     const env = getOperatorSpawnEnv({
       opType: 'cann',
       projectType: OperatorProjectType.ASCEND_C,
-      projectId: 1,
-      configType: 'build_op',
       script: 'bash build.sh --onboard',
     });
 
@@ -168,8 +175,6 @@ describe('operator spawn env', () => {
     const env = getOperatorSpawnEnv({
       opType: 'cann',
       projectType: OperatorProjectType.ASCEND_C,
-      projectId: 1,
-      configType: 'build_op',
       script: 'bash build.sh --onboard',
     });
 
@@ -186,8 +191,6 @@ describe('operator spawn env', () => {
     const env = getOperatorSpawnEnv({
       opType: 'ascend',
       projectType: OperatorProjectType.STANDARD_CUSTOM,
-      projectId: 1,
-      configType: 'build_op',
       script: 'bash build.sh --pkg --soc=ascend950',
     });
 
@@ -201,8 +204,7 @@ describe('operator spawn env', () => {
     const env = getOperatorSpawnEnv({
       opType: 'cann',
       projectType: OperatorProjectType.ASCEND_C,
-      projectId: 1,
-      configType: 'simulate',
+      isSimulator: true,
       script: 'bash build.sh --simulator {simulator_type}',
     });
 
@@ -219,8 +221,7 @@ describe('operator spawn env', () => {
     const env = getOperatorSpawnEnv({
       opType: 'cann',
       projectType: OperatorProjectType.ASCEND_C,
-      projectId: 1,
-      configType: 'simulate',
+      isSimulator: true,
       script: 'bash build.sh --simulator {simulator_type}',
     });
 
@@ -237,8 +238,7 @@ describe('operator spawn env', () => {
     const env = getOperatorSpawnEnv({
       opType: 'cann',
       projectType: OperatorProjectType.ASCEND_C,
-      projectId: 1,
-      configType: 'simulate',
+      isSimulator: true,
       script: 'bash build.sh --simulator {simulator_type}',
     });
 
@@ -300,6 +300,64 @@ describe('operator spawn env', () => {
       .toBe('default-from-soc');
   });
 
+  it('explicit workspace npuArch overrides the SOC-derived arch', () => {
+    (getSocVersionWithWorkspaceOverride as jest.Mock).mockReturnValue('ascend910b');
+    (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+      inspect: jest.fn(() => ({
+        workspaceFolderValue: 'dav-3510',
+        workspaceValue: 'dav-3510',
+      })),
+      get: jest.fn(),
+      update: jest.fn(),
+    });
+
+    const resolution = computeAscendEnvResolution({ isSimulator: false });
+
+    expect(resolution.socVersion)
+      .toBe('ascend910b');
+    expect(resolution.npuArch)
+      .toBe('dav-3510');
+    expect(resolution.source.npuArch)
+      .toBe('workspace-setting');
+    expect(buildOperatorSpawnEnvFromResolution(resolution, false).NPU_ARCH)
+      .toBe('dav-3510');
+  });
+
+  it('falls back to the SOC-derived arch when npuArch is unset', () => {
+    (getSocVersionWithWorkspaceOverride as jest.Mock).mockReturnValue('ascend910b');
+
+    const resolution = computeAscendEnvResolution({ isSimulator: false });
+
+    expect(resolution.npuArch)
+      .toBe(getNpuArchForCannSoc('ascend910b'));
+    expect(resolution.source.npuArch)
+      .toBe('derived-from-soc');
+  });
+
+  it('keeps an OS-level NPU_ARCH instead of the SOC-derived arch', () => {
+    (getSocVersionWithWorkspaceOverride as jest.Mock).mockReturnValue('ascend910b');
+    (getGlobalEnvSnapshot as jest.Mock).mockReturnValue(snapshot({ npuArch: 'dav-2201' }));
+
+    const resolution = computeAscendEnvResolution({ isSimulator: false });
+
+    expect(resolution.npuArch)
+      .toBe('dav-2201');
+    expect(resolution.source.npuArch)
+      .toBe('global-env');
+  });
+
+  it('ignores the OS-level NPU_ARCH when the SOC comes from the simulator type', () => {
+    (getWorkspaceSimulatorType as jest.Mock).mockReturnValue('Ascend950PR_9589');
+    (getGlobalEnvSnapshot as jest.Mock).mockReturnValue(snapshot({ npuArch: 'dav-2201' }));
+
+    const resolution = computeAscendEnvResolution({ isSimulator: true });
+
+    expect(resolution.source.socVersion)
+      .toBe('derived-from-simulator');
+    expect(resolution.npuArch)
+      .toBe(getNpuArchForCannSoc('ascend950'));
+  });
+
   it('isSimulatorCompile detects --simulator in script', () => {
     expect(isSimulatorCompile({ script: 'bash build.sh --simulator Ascend910B3' }))
       .toBe(true);
@@ -344,8 +402,7 @@ describe('operator spawn env', () => {
   it('triton sanitizer spawn merges required Triton env vars', () => {
     const env = getOperatorSpawnEnv({
       opType: 'triton',
-      projectId: 1,
-      configType: 'sanitizer',
+      sanitizerRun: true,
       script: 'mssanitizer -- python3 ./op.py',
     });
 

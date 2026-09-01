@@ -5,23 +5,15 @@ import * as vscode from 'vscode';
 
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import {
-  deleteConfigsByProjectId,
-  deleteLegacyWorkspaceConfigsByProjectId,
-} from '@plugin/domain/models/config-model';
-import { deleteOpsByProjectId } from '@plugin/domain/models/model';
-import {
-  deleteProject,
   getProjectByPath,
   projectPathsEqual,
   type ProjectRecord,
 } from '@plugin/domain/models/project-model';
 import { getDevtoolConfigPath } from '@plugin/helpers/ide-config-dir';
 import { resolveWorkspaceRoot } from '@plugin/helpers/resolve-workspace-root';
-import { RemoteConfig } from '@plugin/helpers/remote-config';
-import {
-  ConfigService,
-  resetLegacySettingsMigrationFlight,
-} from '@plugin/service/config-service';
+import { updateWorkspaceCache } from '@plugin/helpers/workspace-cache';
+import { SETTINGS_VERSION_KEY } from '@plugin/helpers/legacy-state-importer';
+import { ConfigService } from '@plugin/service/config-service';
 
 function resolveProjectForWorkspace(workspaceRoot: string): ProjectRecord | undefined {
   const direct = getProjectByPath(workspaceRoot);
@@ -30,11 +22,11 @@ function resolveProjectForWorkspace(workspaceRoot: string): ProjectRecord | unde
     return direct;
   }
 
-  const info = ProjectManager.getInstance()
-    .getProjectInfo();
+  const projectPath = ProjectManager.getInstance()
+    .projectPath;
 
-  if (info.path) {
-    return getProjectByPath(info.path);
+  if (projectPath) {
+    return getProjectByPath(projectPath);
   }
 
   return undefined;
@@ -76,14 +68,16 @@ export async function resetCurrentProjectConfiguration(): Promise<void> {
     return;
   }
 
-  if (project) {
-    for (const root of resetRoots) {
-      deleteLegacyWorkspaceConfigsByProjectId(project.id, root);
-    }
-
-    deleteConfigsByProjectId(project.id);
-    deleteOpsByProjectId(project.id);
-    deleteProject(project.project_path);
+  // Clear the per-workspace cache (project record, scan state, runtime state)
+  // for every reset root. Source store files are untouched (read-only import
+  // invariant).
+  for (const root of resetRoots) {
+    await updateWorkspaceCache(root, (cache) => {
+      cache.project = undefined;
+      cache.folders = undefined;
+      cache.fileMapLists = undefined;
+      cache.sanitizerPythonTarget = undefined;
+    });
   }
 
   for (const root of resetRoots) {
@@ -94,17 +88,21 @@ export async function resetCurrentProjectConfiguration(): Promise<void> {
     }
   }
 
-  const lastProjectPath = RemoteConfig.getLastProjectPath();
-
-  if (lastProjectPath && resetRoots.some((root) => projectPathsEqual(lastProjectPath, root))) {
-    RemoteConfig.clearLastProjectPath();
-  }
-
   for (const root of resetRoots) {
     await ConfigService.clearOpDevtoolsWorkspaceSettings(root);
   }
 
-  resetLegacySettingsMigrationFlight();
+  // The reset wipes the re-import marker along with the settings — re-stamp it
+  // with the current plugin version so the import sees a COMPLETED marker on
+  // the next activation and does not re-seed the configuration the user just
+  // erased (the source stores stay on disk forever by design).
+  const pluginVersion = (globalThis as unknown as {
+    extensionContext?: { extension?: { packageJSON?: { version?: string } } }
+  }).extensionContext?.extension?.packageJSON?.version ?? '0.0.0';
+
+  for (const root of resetRoots) {
+    await ConfigService.writeOpDevtoolsDottedSettings({ [SETTINGS_VERSION_KEY]: pluginVersion }, root);
+  }
 
   await vscode.commands.executeCommand('workbench.action.reloadWindow');
 }

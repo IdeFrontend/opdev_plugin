@@ -26,7 +26,7 @@ Prefix order: `Ascend950` → `Ascend910_` → `Ascend910A` → `Ascend910B`.
 | Series | `socVersion` | `simulatorType` | Default `npuArch` |
 |--------|--------------|-----------------|-------------------|
 | A2 | `ascend910b` | `Ascend910B3` | `dav-2201` |
-| A3 | `ascend910_93` | `Ascend910C` | `dav-2201` |
+| A3 | `ascend910_93` | `Ascend910_9362` | `dav-2201` |
 | A5 | `ascend950` | `Ascend950PR_9589` | `dav-3510` |
 
 **A2 Pro / Premium / 901:** still series **A2** (`ascend910b`, `Ascend910B3`); only `NPU_ARCH` is **`dav-1001`** (not `dav-2201`). Workspace `socVersion=ascend910b` alone does not set `dav-1001` — needs a detected/cached §4.1 chip (§5).
@@ -65,9 +65,15 @@ They cover workspace sources, public CANN headers such as `acl/acl.h`, and Ascen
 
 These values are defaults only. Explicit user or workspace `files.associations` / `C_Cpp` settings and `c_cpp_properties.json` keep higher precedence, and OP DevTools does not rewrite them. Huawei and CodeArts C/C++ providers are not configured through Microsoft-specific settings.
 
-The Microsoft C/C++ extension remains associated through `extensionPack`. If its Marketplace installation is unavailable on a restricted network, install the appropriate VSIX manually; the failure does not block OP DevTools activation.
+Microsoft C/C++ is no longer listed in `extensionPack`, because that installed it even next to an existing Huawei or CodeArts C/C++ provider. Instead, post-activate bootstrap checks whether any installed non-built-in extension contributes the `c` / `cpp` languages ([`cpp-extension-support.ts`](../plugin/src/helpers/cpp-extension-support.ts)) and, only when none does, offers to install `ms-vscode.cpptools`. Built-ins are excluded because every VS Code build ships `vscode.cpp`, which contributes those language ids for syntax highlighting alone. Declining is remembered in global state. If the Marketplace is unavailable on a restricted network, install the appropriate VSIX manually; the failure does not block OP DevTools activation.
 
-For Remote-SSH or container use, `ASCEND_HOME_PATH` and its target directories must exist in the remote/container extension-host environment. A similarly named local workstation path is not used. If the variable is missing, workspace source navigation remains available, but CANN headers cannot resolve until the remote environment is configured.
+### 2.2 Fallback for hosts without `ASCEND_HOME_PATH`
+
+`${env:ASCEND_HOME_PATH}` in the manifest expands against the extension-host environment, not against the configured CANN environment script. An IDE started from a desktop launcher, or a Remote-SSH host whose login shell never sources `set_env.sh`, therefore resolves those entries to bare `/include`-style paths and gets no CANN navigation at all.
+
+When `ASCEND_HOME_PATH` is missing from the extension host, post-activate bootstrap sources the CANN environment script found by `resolveCannSetEnvScriptWithoutScan()`, reads `ASCEND_HOME_PATH` from it, and writes the same roots as absolute paths into workspace settings ([`cann-cpp-include-paths.ts`](../plugin/src/domain/utils/cann-cpp-include-paths.ts)). Script lookup covers the `environment.environmentScript` setting, the `ASCEND_ENV_SCRIPT` launch snapshot, and the common install paths; the `find /` fallback of `resolveCannSetEnvScriptForDetection()` is deliberately not used, because its `execSync` blocks the extension host for up to 30s. No new value is written when the variable is already visible, when no environment script is found, or when `C_Cpp.default.includePath` / `C_Cpp.default.browse.path` hold a value this helper did not generate. Values it did generate are refreshed when the CANN install moves, including on hosts where the variable is visible. All of it runs after `activate()` returns and uses async `exec`, so activation time is unaffected.
+
+For Remote-SSH or container use, `ASCEND_HOME_PATH` and its target directories must exist in the remote/container extension-host environment, or a CANN environment script must be reachable there. A similarly named local workstation path is not used.
 
 ---
 
@@ -85,7 +91,7 @@ Examples: `Ascend 910_9362 V1` → `Ascend910_9362V1` (A3); `Ascend 910 ProA` �
 
 ### 4.1 Extract from probes
 
-Once per session: `asys info -r=status`, then `npu-smi info`, in bash sourcing CANN `set_env.sh` (§7.2 step 3).
+Once per session: `asys info -r=status`, then `npu-smi info`, in bash sourcing CANN `set_env.sh` (§7.2 step 3); when both fail, a remote-tool series mapping (`getRemoteToolSeriesSync`) can supply the slug.
 
 1. Lines `Chip Name` / `芯片名称` — value after `:` to EOL.
 2. Fallback: tokens `Ascend` + digits/model (`Ascend\s*\d[\dA-Za-z_]*`).
@@ -135,9 +141,11 @@ On successful host detection, cache **raw** Chip Name until extension restart. U
 
 ## 6. `npuArch`
 
-1. Cached chip matches §4.2 → `dav-1001` (slug still `ascend910b`).
-2. Else series default from §1 for resolved slug.
-3. Empty slug → `''` (no silent 910-class default).
+1. Workspace `environment.npuArch` — an explicit value wins as-is (`null` counts as unset).
+2. Global snapshot `NPU_ARCH` — used unless the SOC was derived from the simulator type.
+3. Cached chip matches §4.2 and the resolved slug is series A2 → `dav-1001` (slug still `ascend910b`).
+4. Series default from §1 for the resolved slug.
+5. Empty slug → `''` (no silent 910-class default).
 
 Simulator directory does not map to `npuArch`.
 
@@ -178,7 +186,7 @@ Only (1) triggers **SOC-from-simulator** via §4.4 inverse.
   3. Host detection — §4.1–4.3 → §1 `socVersion`. `set_env.sh` from: `environment.environmentScript` → `ASCEND_ENV_SCRIPT` → `find … set_env.sh`. Project `ascend_env_script` **not** used for detection.
   4. `DEFAULT_FALLBACK_CANN_SOC` (`''`).
 
-`projects.json` `soc_version` is display only.
+The resolver never consults the project record; the workspace setting, the env snapshot, and host detection are its only sources.
 
 ### 7.3 `npuArch`
 
@@ -186,9 +194,13 @@ Apply §6 after `socVersion` is known. Empty SOC at generation still resolves `S
 
 ### 7.4 Missing SOC notification
 
-When operator commands run (`resolveAscendEnvForOperatorCommand`) and SOC resolves to empty `default`, show a short warning with an action to open workspace `environment.socVersion`. Repeats on **every** operator run until SOC is configured (workspace explicit value, env var, or host detection). **Not** shown from passive `resolveAscendEnv` calls (project open, options webviews, profiler command assembly). Suppression uses the same explicit workspace check as §7.2 step 1 — User-scoped settings do not suppress the warning.
+When operator commands run (`resolveAscendEnvForOperatorCommand`) and SOC resolves to empty `default`, show a short warning that offers to set `environment.socVersion` inline (writes the workspace setting and re-resolves) or to open workspace settings. Repeats on **every** operator run until SOC is configured (workspace explicit value, env var, or host detection). **Not** shown from passive `resolveAscendEnv` calls (project open, options webviews, profiler command assembly). Suppression uses the same explicit workspace check as §7.2 step 1 — User-scoped settings do not suppress the warning.
 
 ---
+
+### 7.5 Reopened projects and manual terminal builds
+
+`context.environmentVariableCollection` carries `NPU_ARCH` into integrated terminals, so a hand-typed `bash build.sh` matches what the plugin would export. Post-activate bootstrap seeds it from settings / global snapshot only (`allowHostDetection: false` — the host probe is memoized and must not cache a failure before the first command); `executeOperatorCommand` refreshes it after each non-simulator run. A `detected` SOC is written to workspace `environment.socVersion` (`persistDetectedSocVersion`) so the next window resolves it without probing; when the resolved arch is chip-specific (differs from the slug's series default, e.g. `dav-1001`), `environment.npuArch` is pinned alongside. Explicit settings, blank values and simulator-derived slugs are never persisted.
 
 ## 8. Operator commands
 
@@ -215,7 +227,7 @@ Passing a slug can also surface misleading metric errors (`Unexpected argument �
 | Series | `simulatorType` (for `--soc-version`) | CANN slug (`socVersion`; **not** for `--soc-version`) |
 |--------|---------------------------------------|--------------------------------------------------------|
 | A2 | `Ascend910B3` | `ascend910b` |
-| A3 | `Ascend910C` | `ascend910_93` |
+| A3 | `Ascend910_9362` | `ascend910_93` |
 | A5 | `Ascend950PR_9589` | `ascend950` |
 
 Constants: [`shared/cann-env-constants.ts`](../shared/cann-env-constants.ts). CANN upgrades may rename directories — list installed simulators on the host and override via workspace setting when needed.
@@ -237,7 +249,7 @@ see [`performance.md`](./performance.md) "Simulation metrics":
 
 ```bash
 msprof op simulator --soc-version=Ascend910B3 \
-  --output=<op_path>/.vscode/opprof \
+  --output=<workspaceRoot>/.vscode/opprof \
   --aic-metrics=PipeUtilization \
   python3 ./<op>.py
 ```
@@ -246,10 +258,10 @@ msprof op simulator --soc-version=Ascend910B3 \
 
 | Context | Identifier | Example (A3) |
 |---------|------------|--------------|
-| `msprof op simulator --soc-version` | **Simulator directory** | `Ascend910C` |
-| Spawn `export SOC_VERSION=…` on **simulator-class** builds | **Simulator directory** | `Ascend910C` |
-| `{simulator_type}` script placeholder | **Simulator directory** | `Ascend910C` |
-| `build.sh --simulator` | **Simulator directory** | `Ascend910C` |
+| `msprof op simulator --soc-version` | **Simulator directory** | `Ascend910_9362` |
+| Spawn `export SOC_VERSION=…` on **simulator-class** builds | **Simulator directory** | `Ascend910_9362` |
+| `{simulator_type}` script placeholder | **Simulator directory** | `Ascend910_9362` |
+| `build.sh --simulator` | **Simulator directory** | `Ascend910_9362` |
 | `{soc_version}` script placeholder | **CANN slug** | `ascend910_93` |
 | `build.sh --soc=` / packaging | **CANN slug** | `ascend910_93` |
 | Spawn `export SOC_VERSION=…` on **non-simulator** builds | **CANN slug** | `ascend910_93` |
@@ -267,18 +279,14 @@ The name passed to `--soc-version` must match an entry in that listing (case-sen
 
 #### Huawei documentation note
 
-Some CANN/msopprof guides mention obtaining `--soc-version` via `python3 -c "import acl; print(acl.get_soc_name())"`, which returns a **slug**, while examples use directory-style names (`Ascend910B3`, `Ascend910C`). The plugin follows the **directory-name** contract validated on A2/A3/A5 field toolkits: slug in `--soc-version` is rejected or mis-identifies the platform for metric validation.
-
-#### Historical correction (1.3.2 → 1.3.3)
-
-Release **1.3.2** briefly passed `resolveAscendEnv().socVersion` (CANN slug) per issue #18, based on an A3 report that `Ascend910C` caused “wrong soc platform” metric errors. Later reproduction on A2/A5 showed slugs are invalid for `--soc-version`; metric failures were largely downstream of that mismatch (and, separately, of emitting `PipeUtilization` together with `ResourceConflictRatio`). **1.3.3** restores `simulatorType` for `--soc-version`. See [`performance.md`](./performance.md) for simulation metrics and mutual-exclusion rules.
+Some CANN/msopprof guides mention obtaining `--soc-version` via `python3 -c "import acl; print(acl.get_soc_name())"`, which returns a **slug**, while examples use directory-style names (`Ascend910B3`, `Ascend910_9362`). The plugin follows the **directory-name** contract validated on A2/A3/A5 field toolkits: slug in `--soc-version` is rejected or mis-identifies the platform for metric validation. See [`performance.md`](./performance.md) for simulation metrics and mutual-exclusion rules.
 
 ---
 
 ## 9. Templates
 
 - **CANN:** cmake `$ENV{SOC_VERSION}` / `$ENV{NPU_ARCH}`; sim runs use sim dir as spawn `SOC_VERSION`.
-- **Ascend `add_custom`:** `__MSTT_SUPPORT_*__` at unzip via `resolveAclnnCmakeDefaultsForGeneration()` (§7.2 chain); values from §4.5.
+- **Ascend `add_custom`:** `__MSTT_SUPPORT_*__` replaced at project generation via `resolveAclnnCmakeDefaultsForGeneration()` — input: workspace `environment.socVersion` override, else the project's stored `soc_version`, else the §7 chain; values from §4.5.
 
 ---
 

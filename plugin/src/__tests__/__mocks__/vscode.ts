@@ -7,9 +7,21 @@ export const workspace = {
     get: jest.fn(),
     update: jest.fn(),
   })),
+  onDidChangeConfiguration: jest.fn()
+    .mockReturnValue({ dispose: jest.fn() }),
+};
+
+export const extensions = {
+  all: [] as Array<{ id: string;
+    packageJSON: unknown }>,
+  getExtension: jest.fn(),
 };
 
 export const window = {
+  activeTextEditor: undefined as
+  | { document: { fileName: string;
+    uri: { fsPath: string } } }
+    | undefined,
   showInformationMessage: jest.fn(),
   showErrorMessage: jest.fn(),
   showWarningMessage: jest.fn()

@@ -1,4 +1,5 @@
 jest.mock('@plugin/helpers/operator-project-workspace-config', () => ({
+  getFirstWorkspaceFolderPath: jest.requireActual('@plugin/helpers/operator-project-workspace-config').getFirstWorkspaceFolderPath,
   getWorkspaceSimulatorType: jest.fn(() => ''),
   getSocVersionWithWorkspaceOverride: jest.fn(() => 'ascend910b'),
 }));
@@ -23,8 +24,8 @@ jest.mock('@plugin/domain/utils/ascend-util', () => ({
 }));
 
 import { TritonCommandStrategy } from '@plugin/domain/services/command-strategy/triton-strategy';
-import { ConfigRecord } from '@plugin/domain/models/config-model';
-import { OpRecord } from '@plugin/domain/models/model';
+import type { ConfigRecord } from '@plugin/service/config-service';
+import type { OpRecord } from '@plugin/domain/models/op-record';
 
 describe('TritonCommandStrategy profiler commands', () => {
   const strategy = new TritonCommandStrategy();

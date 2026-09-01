@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.5.3 — 2026-08-31
+
+Release: on-board and simulation profiling now compile and deploy the built `.run` package in a single `--force`-aware command; adds an NPU_ARCH override setting and a configurable execution timeout; improves built-example selection, auto-opened reports, and settings.json robustness.
+
+- **`--force` deploy in on-board/simulation compile** — For standard-custom projects, on-board and simulation profiling merge compile and `.run` package deployment into a single command that appends `--force` when the installer supports it (matching sanitizer and DumpTensor), so the operator is installed before the example build runs; the sequence is compile+deploy → example build → msprof.
+- **NPU_ARCH override setting (GC-29 / GC-37)** — New `op-devtools.environment.npuArch` workspace setting. Resolution chain: workspace setting → OS-level `NPU_ARCH` env → arch derived from the resolved SOC, consumed by a single choke point feeding command env exports, script placeholders, and `cmake -DCMAKE_ASC_ARCHITECTURES`. NPU_ARCH stays set when a project is reopened so a manual `bash build.sh` no longer trips the CMakeLists `NPU_ARCH` FATAL_ERROR; a host-detected SOC is pinned into the project settings.json for the next window, while explicit user settings and simulator-derived values are never persisted.
+- **settings.json read/write robustness (GC-29 / GC-37)** — Treat a `null` workspace setting as unset instead of the string `"null"`; share a null-safe settings reader and serialize settings.json writes; tolerate a BOM and write settings.json atomically so concurrent edits do not corrupt the file.
+- **Profile the example that was actually built (GC-38)** — On-board and simulation profiling run the example target the current build actually produced instead of falling back to the eager one; dangling symlinks are dropped from build-target candidates.
+- **Configurable execution timeout** — New `op-devtools.execution.commandTimeoutSeconds` setting (default 1800 seconds; `0` disables the timeout). Timed-out commands terminate the whole process group (with kill escalation on Windows), and failure messages clearly report the timeout.
+- **Runtime CANN include paths and on-demand C/C++ offer** — C/C++ `includePath` / `browse.path` are resolved from the actual CANN installation at runtime; the Microsoft C/C++ extension is offered only when no C/C++ language extension is installed (detected by contributed languages, so Huawei / CodeArts C/C++ count), replacing the unconditional `extensionPack` bundling of `ms-vscode.cpptools` (Remote SSH recommendation kept).
+- **Auto-open freshly produced reports** — After a profiling or sanitizer run finishes, the report that run just produced opens automatically, so you no longer hunt for it in the results list; every await boundary of the auto-open is guarded (GC-54).
+- **No auto-open on WebIDE refresh ([#75](https://gitcode.com/opdevtools/plugin_release/issues/75))** — Startup no longer auto-focuses the operate tree sidebar, so refreshing the WebIDE does not reopen the plugin panel and users who deliberately closed it are not disturbed.
+- **Cache cleared after switching workspaces** — Runtime caches are cleared when switching workspaces to avoid configuration read errors from stale cache.
+- **Marketplace identity update** — The Ascend marketplace package moved from publisher `hicann` to `cann-pub`; its identifier and display name were updated accordingly.
+
 ## 1.4.5 — 2026-08-10
 
 Release: remote NPU execution for CPU-host operator development, including artifact return, debugging, ST testing, and remote-environment-aware operation entry points.

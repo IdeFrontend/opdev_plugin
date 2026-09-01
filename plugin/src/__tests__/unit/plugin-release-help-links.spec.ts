@@ -10,7 +10,6 @@ const userFacingHelpFiles = [
   'web/src/views/sidebars/home/app.vue',
   'plugin/templates/code_template/cann_template/addn_custom/README.md',
   'plugin/templates/code_template/cann_template/hello_world/README.md',
-  'plugin/templates/code_template/cann_template/torch_library/README.md',
   'plugin/templates/code_template/cann_template/torch_library_template/README.md',
 ];
 

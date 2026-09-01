@@ -3,8 +3,8 @@
  *
  * `forceNewWindow: false` does NOT force the current window to be reused: when a folder
  * is already open VS Code falls back to the `window.openFoldersInNewWindow` setting, which
- * by default opens a NEW window. That was issue #34 — picking "Current Window" still spawned
- * a new window. Passing `forceReuseWindow: true` reliably reuses the current window. The two
+ * by default opens a NEW window — picking "Current Window" would still spawn a new
+ * window. Passing `forceReuseWindow: true` reliably reuses the current window. The two
  * flags are mutually exclusive, so we emit exactly one.
  *
  * @param forceNewWindow true to open in a new window, false to reuse the current window

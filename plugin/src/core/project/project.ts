@@ -16,18 +16,6 @@ export class Project<HasProject extends boolean = false> {
     return Project.instance;
   }
 
-  public get projectId(): HasProject extends true
-    ? number
-    : number | undefined {
-    return this._workspaceProject!.id;
-  }
-
-  public get projectSH(): HasProject extends true
-    ? string
-    : string | undefined {
-    return this._workspaceProject!.ascend_env_script!;
-  }
-
   public get projectPath(): HasProject extends true
     ? string
     : string | undefined {
