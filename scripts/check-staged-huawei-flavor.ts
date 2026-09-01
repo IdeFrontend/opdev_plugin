@@ -22,7 +22,7 @@ const ASCEND_MARKERS = [
   'ascend-c-toolkit',
   'ascendCToolkit',
   'cann-pub.asc-toolkit',
-  'Ascend C Toolkit',
+  'Ascend C Toolkits',
   'Ascend C 工具包',
 ] as const;
 
@@ -83,7 +83,7 @@ function validateManifestJson(content: string, label: string): string[] {
     const markers = findAscendMarkers(JSON.stringify(manifestWithoutScripts));
 
     if (markers.length > 0) {
-      errors.push(`${label} contains Ascend C Toolkit manifest content (${markers.join(', ')})`);
+      errors.push(`${label} contains Ascend C Toolkits manifest content (${markers.join(', ')})`);
     }
 
     const configuration = (manifest.contributes as { configuration?: Array<{ id?: string }> } | undefined)?.configuration ?? [];
@@ -112,7 +112,7 @@ function validateGeneratedTs(content: string, label: string): string[] {
   const errors: string[] = [];
 
   if (findAscendMarkers(content).length > 0) {
-    errors.push(`${label} contains Ascend C Toolkit runtime constants`);
+    errors.push(`${label} contains Ascend C Toolkits runtime constants`);
   }
 
   if (!/FLAVOR_ID\s*=\s*['"]huawei['"]/.test(content)) {
@@ -138,7 +138,7 @@ export function validateGuardedFile(relativePath: string, content: string): stri
   const markers = findAscendMarkers(content);
 
   if (markers.length > 0) {
-    return [`${relativePath} contains Ascend C Toolkit content (${markers.join(', ')})`];
+    return [`${relativePath} contains Ascend C Toolkits content (${markers.join(', ')})`];
   }
 
   return [];
@@ -178,7 +178,7 @@ function main(): void {
     return;
   }
 
-  console.error('Commit blocked: staged files contain Ascend C Toolkit flavor artifacts.\n');
+  console.error('Commit blocked: staged files contain Ascend C Toolkits flavor artifacts.\n');
 
   for (const error of errors) {
     console.error(`  - ${error}`);

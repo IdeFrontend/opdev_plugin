@@ -32,7 +32,7 @@ describe('check-staged-huawei-flavor', () => {
     expect(errors.length)
       .toBeGreaterThan(0);
     expect(errors.join('\n'))
-      .toMatch(/Ascend C Toolkit/);
+      .toMatch(/Ascend C Toolkits/);
   });
 
   it('rejects manifest with commandPrefix used for configuration categories', () => {

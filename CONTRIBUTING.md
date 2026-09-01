@@ -41,7 +41,7 @@ The repo keeps **Huawei** manifest/NLS/generated files committed on git HEAD. **
 
 Flavor `features` in `flavors/{id}/flavor.json` declare **per-brand differences only**. Today the sole flag is `operatorSupport.triton` (Huawei: optional via Settings, default off; Ascend: hard off via gate). Re-add entries to `FEATURE_CATALOG` in `flavors/schema.ts` when a second flavor needs to disable sanitizer, dump tensor, or other capabilities.
 
-### Pack another flavor (e.g. Ascend C Toolkit)
+### Pack another flavor (e.g. Ascend C Toolkits)
 
 ```bash
 pnpm run apply-flavor:ascend-c-toolkit
@@ -63,7 +63,7 @@ pnpm run restore-flavor
 git status   # should be clean for manifest files
 ```
 
-A **pre-commit hook** (`.husky/pre-commit`) runs on every commit after `pnpm install` (via the `prepare` / husky setup). It blocks commits when staged flavor files contain Ascend C Toolkit content. Run `restore-flavor` before committing after an Ascend build.
+A **pre-commit hook** (`.husky/pre-commit`) runs on every commit after `pnpm install` (via the `prepare` / husky setup). It blocks commits when staged flavor files contain Ascend C Toolkits content. Run `restore-flavor` before committing after an Ascend build.
 
 If hooks are not running, run `pnpm install` once to activate husky (`git config core.hooksPath` should be `.husky/_`).
 
@@ -80,7 +80,7 @@ Flavor scripts: `apply-flavor`, `apply-flavor:huawei`, `apply-flavor:ascend-c-to
 | `pnpm run compile:debug` | Build with debug/source maps for extension debugging |
 | `pnpm run package` | Build and pack a `.vsix` for distribution |
 | `pnpm run apply-flavor:huawei` | Regenerate Huawei manifest/NLS/generated from git HEAD template |
-| `pnpm run apply-flavor:ascend-c-toolkit` | Switch manifest to Ascend C Toolkit (see above) |
+| `pnpm run apply-flavor:ascend-c-toolkit` | Switch manifest to Ascend C Toolkits (see above) |
 | `pnpm run restore-flavor` | Restore committed Huawei manifest on disk |
 | `pnpm run build:icons-font` | Regenerate icon font from SVG sources (see below) |
 
