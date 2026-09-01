@@ -52,7 +52,6 @@ export type FlavorIds = {
   viewContainerId: string;
   viewPrefix: string;
   contextPrefix: string;
-  colorIdPrefix: string;
 };
 
 export type FeatureFlagMode = 'gate' | 'default';
@@ -187,7 +186,6 @@ export function validateFlavorDefinition(raw: unknown): FlavorDefinition {
     'viewContainerId',
     'viewPrefix',
     'contextPrefix',
-    'colorIdPrefix',
   ];
 
   for (const key of requiredIdKeys) {
