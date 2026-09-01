@@ -336,21 +336,20 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
   });
 
   it('keeps the legacy log-file name (no -npu-check identifier) for mssanitizer toolType or default', () => {
-    const explicitToolType = {
+    const explicitToolType: SanitizerConfig = {
       ...baseConfig,
-      user_options: {
-        ...baseConfig.user_options,
-        toolType: 'mssanitizer',
-      },
-    } as unknown as ConfigRecord;
+      toolType: 'mssanitizer',
+    };
+    const defaultToolType = {
+      ...baseConfig,
+      toolType: undefined,
+    } as unknown as SanitizerConfig;
 
-    const configs: ConfigRecord[] = [
+    [
       explicitToolType,
-      baseConfig,
-    ];
-
-    configs.forEach((config) => {
-      const cmd = strategy.buildSanitizerCommand(config, null, '', 'cd /op', 'python3 ./a.py');
+      defaultToolType,
+    ].forEach((config) => {
+      const cmd = strategy.buildSanitizerCommand(buildContext(config), 'python3 ./a.py');
       const normalized = cmd.replace(/\\/g, '/');
 
       expect(normalized)
