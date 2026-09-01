@@ -15,24 +15,24 @@
     "contextPrefix": "ascendCToolkit"
   },
   "branding": {
-    "productName": "Ascend C Toolkit",
-    "productNameZh": "Ascend C Toolkit",
-    "productTaglineEn": "Ascend C Toolkit operator one-stop development platform",
+    "productName": "Ascend C Toolkits",
+    "productNameZh": "Ascend C Toolkits",
+    "productTaglineEn": "Ascend C Toolkits operator one-stop development platform",
     "platformTitleKey": "web.welcome.platformTitle",
-    "sidebarTitleEn": "Ascend C Toolkit",
-    "sidebarTitleZh": "Ascend C Toolkit"
+    "sidebarTitleEn": "Ascend C Toolkits",
+    "sidebarTitleZh": "Ascend C Toolkits"
   },
   "features": {
     "operatorSupport.triton": { "mode": "gate", "value": false }
   },
   "i18nOverrides": {
     "en": {
-      "web.welcome.platformTitle": "Ascend C Toolkit operator one-stop development platform",
-      "extension.openDevToolsFailed": "Failed to open Ascend C Toolkit: {{error}}"
+      "web.welcome.platformTitle": "Ascend C Toolkits operator one-stop development platform",
+      "extension.openDevToolsFailed": "Failed to open Ascend C Toolkits: {{error}}"
     },
     "zh-cn": {
-      "web.welcome.platformTitle": "Ascend C Toolkit 算子一站式开发平台",
-      "extension.openDevToolsFailed": "打开 Ascend C Toolkit 失败：{{error}}"
+      "web.welcome.platformTitle": "Ascend C Toolkits 算子一站式开发平台",
+      "extension.openDevToolsFailed": "打开 Ascend C Toolkits 失败：{{error}}"
     }
   }
 }

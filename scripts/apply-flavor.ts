@@ -104,7 +104,7 @@ function assertHuaweiBaselineManifest(manifest: Record<string, unknown>): void {
   const text = JSON.stringify(manifest);
 
   if (text.includes('ascend-c-toolkit') || text.includes('ascendCToolkit')) {
-    throw new Error('package.json contains Ascend C Toolkit IDs and is not a valid Huawei baseline manifest. '
+    throw new Error('package.json contains Ascend C Toolkits IDs and is not a valid Huawei baseline manifest. '
       + 'Run `pnpm run restore-flavor` or restore package.json from git history.');
   }
 
@@ -975,8 +975,8 @@ function normalizeDocsToBaseBranding(text: string): string {
 }
 
 function assertHuaweiBaselineDoc(text: string, relativePath: string): void {
-  if (text.includes('Ascend C Toolkit') || text.includes('Ascend C 工具包')) {
-    throw new Error(`${relativePath} contains Ascend C Toolkit branding and is not a valid Huawei baseline doc. `
+  if (text.includes('Ascend C Toolkits') || text.includes('Ascend C 工具包')) {
+    throw new Error(`${relativePath} contains Ascend C Toolkits branding and is not a valid Huawei baseline doc. `
       + 'Run `pnpm run restore-flavor` or fix the committed doc on git HEAD.');
   }
 
