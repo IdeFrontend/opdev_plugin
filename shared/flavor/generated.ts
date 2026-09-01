@@ -11,8 +11,6 @@ export const VIEW_PREFIX = 'opdevtools';
 
 export const CONTEXT_PREFIX = 'opDevtools';
 
-export const COLOR_ID_PREFIX = 'huawei.op.devtools';
-
 export const FLAVOR_GATES = { 'operatorSupport.triton': true } as const;
 
 export const FLAVOR_DEFAULTS = { 'operatorSupport.triton': false } as const;

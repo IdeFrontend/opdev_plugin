@@ -12,8 +12,7 @@
     "settingsPrefix": "ascendCToolkit",
     "viewContainerId": "ascend-c-toolkit-sidebar",
     "viewPrefix": "ascendCToolkit",
-    "contextPrefix": "ascendCToolkit",
-    "colorIdPrefix": "cann-pub.ascend.c.toolkit"
+    "contextPrefix": "ascendCToolkit"
   },
   "branding": {
     "productName": "Ascend C Toolkit",
