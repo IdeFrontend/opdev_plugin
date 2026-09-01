@@ -78,6 +78,8 @@
   "config.op-devtools.environment.npuArch.markdownDescription": "AscendC 编译使用的 `NPU_ARCH`（例如：`dav-2201`、`dav-3510`）。未设置时，将根据解析出的 SoC 版本自动推导；设置后优先于自动推导，并会传给 `cmake -DCMAKE_ASC_ARCHITECTURES=` 与 `export NPU_ARCH`。",
   "config.op-devtools.environment.insightPath.markdownDescription": "Insight 目录路径。未设置时，将从环境变量 `INSIGHT_HOME_PATH` 读取；若环境变量也未设置，则使用插件同层级目录下的 `insight` 文件夹。",
   "config.op-devtools.execution.commandTimeoutSeconds.description": "算子命令执行超时时间（秒）。超时后将终止整个进程组并返回超时结果。默认 1800；设置为 0 可禁用超时。",
+  "colors.operatorProject.description": "算子工程文件夹装饰颜色",
+  "colors.operatorProjectCollection.description": "算子工程集合文件夹装饰颜色",
   "viewContainer.activitybar.title": "算子一站式交付平台",
   "viewContainer.panel.dumpTensor.title": "DumpTensor数据",
   "view.opsOperate.name": "操作",

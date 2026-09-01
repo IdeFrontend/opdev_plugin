@@ -77,6 +77,8 @@
   "config.op-devtools.environment.socVersion.markdownDescription": "SoC version for project commands (for example: `ascend910b`, `ascend910c`, `ascend950`). If unset, it is selected automatically from the project, environment variables, or host detection.",
   "config.op-devtools.environment.npuArch.markdownDescription": "`NPU_ARCH` used by AscendC compilation (for example: `dav-2201`, `dav-3510`). If unset, it is derived from the resolved SoC version; when set it overrides the derived value and is passed to `cmake -DCMAKE_ASC_ARCHITECTURES=` and `export NPU_ARCH`.",
   "config.op-devtools.execution.commandTimeoutSeconds.description": "Operator command execution timeout in seconds. On timeout the whole process group is terminated and a timeout result is returned. Defaults to 1800; set to 0 to disable.",
+  "colors.operatorProject.description": "Operator project folder decoration color",
+  "colors.operatorProjectCollection.description": "Operator project collection folder decoration color",
   "viewContainer.activitybar.title": "Operator Development",
   "viewContainer.panel.dumpTensor.title": "DumpTensor Data",
   "view.opsOperate.name": "Actions",
