@@ -173,6 +173,8 @@ Same structure as simulation, but:
 
 **Output directory:** the workspace root — `joinIdeConfigRelative('opprof')` joined with the first workspace folder (fallback: `operator.op_path`), i.e. **`<workspaceRoot>/<ideDir>/opprof`**. Every operator writes its runs there; each run creates a subdirectory (`<runId>`), and the scan reads only this single root (never per-operator trees).
 
+**Output channel:** the on-board run writes to its own `Op Dev Tools: onboard` channel (`toolOutputLabel: 'onboard'`); simulator runs use the `simulate` channel. **Every command in the action's chain writes to the action's channel** — the internal compile/example pre-steps of simulate/on-board go to `simulate`/`onboard`, never to `compile`. Both channels append across runs (GC-73) — see [`build-integration.md`](./build-integration.md) for the channel contract.
+
 ---
 
 ## Configuration

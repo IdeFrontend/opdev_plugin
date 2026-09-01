@@ -117,7 +117,7 @@ export class SanitizerService {
             script: buildCommand,
             sanitizerRun: true,
           }),
-          { outputLabel: 'compile' },
+          { outputLabel: 'sanitizer' },
         );
 
         if (buildRes.code !== 0) {
@@ -157,7 +157,7 @@ export class SanitizerService {
                     script: exampleBuildCommand,
                   }),
                   {
-                    outputLabel: 'compile',
+                    outputLabel: 'sanitizer',
                     transformCommand: createRemoteCommandWhenNoNpuTransformer((command) => buildRemoteBuildExampleCommand(
                       command,
                       workspacePath,

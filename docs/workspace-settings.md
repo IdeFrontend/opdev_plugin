@@ -172,7 +172,7 @@ These resource-scoped values are persisted in the selected operator's workspace 
 | `stTest.aclnn.arguments` | `string[]` | `[]` | Ordered tokens appended to `python -m ttk aclnn`. |
 | `stTest.e2e.arguments` | `string[]` | `[]` | Ordered tokens appended to `python -m ttk e2e`. |
 
-Each array element is one argument token, not a shell fragment. Empty, control-character, excessive, and extension-managed `-i`/`--input`, `-o`/`--output`, or `--plugin` tokens (including attached/assignment forms) are rejected before settings are changed or an action is queued. The extension owns those paths and shell-quotes every accepted token at the final command boundary. The exact command is printed to the Test output channel before its process output.
+Each array element is one argument token, not a shell fragment. Empty, control-character, excessive, and extension-managed `-i`/`--input`, `-o`/`--output`, or `--plugin` tokens (including attached/assignment forms) are rejected before settings are changed or an action is queued. The extension owns those paths and shell-quotes every accepted token at the final command boundary. The exact command is printed to the `st test` output channel before its process output.
 
 ### Sanitizer (`op-devtools.sanitizer`)
 

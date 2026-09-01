@@ -527,13 +527,15 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   };
 
-  const queueActionToNodeId: Record<QueueableActionType, 'sanitizer' | 'onboard' | 'simulation' | 'utTest' | 'stTest' | 'dumpTensor'> = {
+  const queueActionToNodeId: Record<QueueableActionType, 'sanitizer' | 'onboard' | 'simulation' | 'utTest' | 'stTest' | 'dumpTensor' | 'cpuDebug' | 'npuDebug'> = {
     sanitizer: 'sanitizer',
     onboard: 'onboard',
     simulation: 'simulation',
     utTest: 'utTest',
     stTest: 'stTest',
     dumpTensor: 'dumpTensor',
+    cpuDebug: 'cpuDebug',
+    npuDebug: 'npuDebug',
   };
 
   const nodeIdToQueueAction: Partial<Record<string, QueueableActionType>> = {
@@ -543,6 +545,8 @@ export async function activate(context: vscode.ExtensionContext) {
     utTest: 'utTest',
     stTest: 'stTest',
     dumpTensor: 'dumpTensor',
+    cpuDebug: 'cpuDebug',
+    npuDebug: 'npuDebug',
   };
 
   const syncNativeQueueState = async () => {
@@ -785,7 +789,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const openStTestHistoryCommand = vscode.commands.registerCommand(
     COMMAND_ST_TEST_HISTORY_OPEN,
     async (recordKey: unknown) => {
-      const outputChannel = getOperatorToolOutputChannel('test', { clear: false });
+      const outputChannel = getOperatorToolOutputChannel('st test');
       const writeHistoryLog = (message: string): void => {
         const timestamp = new Date()
           .toISOString();
@@ -916,7 +920,7 @@ export async function activate(context: vscode.ExtensionContext) {
             operatorNames,
             operatorType,
             compileOption,
-          });
+          }, 'run');
 
           return;
         }
@@ -938,7 +942,7 @@ export async function activate(context: vscode.ExtensionContext) {
       }
 
       await operateTreeProvider.runFlowAction('cpuDebug', async () => {
-        await taskMethods.runCpuDebug();
+        await dispatchEnqueueNativeOperatorAction('cpuDebug', {}, () => taskMethods.runCpuDebug());
       });
     },
   );
@@ -954,7 +958,7 @@ export async function activate(context: vscode.ExtensionContext) {
       }
 
       await operateTreeProvider.runFlowAction('npuDebug', async () => {
-        await taskMethods.runDebug();
+        await dispatchEnqueueNativeOperatorAction('npuDebug', {}, () => taskMethods.runDebug());
       });
     },
   );

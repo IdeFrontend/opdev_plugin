@@ -174,7 +174,7 @@ export class StTestService {
       }),
       getEnvironmentScriptPath: dependencies.getEnvironmentScriptPath
         ?? getEnvironmentScriptPathFromWorkspace,
-      getOutputChannel: dependencies.getOutputChannel ?? (() => getOperatorToolOutputChannel('test')),
+      getOutputChannel: dependencies.getOutputChannel ?? (() => getOperatorToolOutputChannel('st test')),
       createRunId: dependencies.createRunId ?? createStTestRunId,
       now: dependencies.now ?? Date.now,
       sleep: dependencies.sleep ?? ((durationMs) => new Promise((resolve) => {

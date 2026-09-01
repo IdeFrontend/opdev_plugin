@@ -1787,7 +1787,7 @@ describe('extension activation', () => {
           operatorNames: ['op1'],
           operatorType: undefined,
           compileOption: undefined,
-        });
+        }, 'run');
     });
 
     it('builds an example with the standard-custom operator type', async () => {
@@ -1802,7 +1802,7 @@ describe('extension activation', () => {
           operatorNames: undefined,
           operatorType: 'standard-custom',
           compileOption: undefined,
-        });
+        }, 'run');
     });
 
     it('rejects cpu debug with multiple operators selected', async () => {
@@ -1819,15 +1819,19 @@ describe('extension activation', () => {
       expect(taskMethods.runCpuDebug).not.toHaveBeenCalled();
     });
 
-    it('runs cpu debug for a single operator', async () => {
+    it('runs cpu debug for a single operator through the operator-action queue', async () => {
       await activateWith();
 
       await invokeCommand(constants.COMMAND_SIDEBAR_CPU_DEBUG);
 
       expect(flowProvider().runFlowAction)
         .toHaveBeenCalledWith('cpuDebug', expect.any(Function));
-      expect(taskMethods.runCpuDebug)
-        .toHaveBeenCalled();
+      expect(taskDispatch.dispatchEnqueueNativeOperatorAction)
+        .toHaveBeenCalledWith(
+          'cpuDebug',
+          {},
+          expect.any(Function),
+        );
     });
 
     it('rejects npu debug with multiple operators selected', async () => {
@@ -1844,15 +1848,19 @@ describe('extension activation', () => {
       expect(taskMethods.runDebug).not.toHaveBeenCalled();
     });
 
-    it('runs npu debug for a single operator', async () => {
+    it('runs npu debug for a single operator through the operator-action queue', async () => {
       await activateWith();
 
       await invokeCommand(constants.COMMAND_SIDEBAR_NPU_DEBUG);
 
       expect(flowProvider().runFlowAction)
         .toHaveBeenCalledWith('npuDebug', expect.any(Function));
-      expect(taskMethods.runDebug)
-        .toHaveBeenCalled();
+      expect(taskDispatch.dispatchEnqueueNativeOperatorAction)
+        .toHaveBeenCalledWith(
+          'npuDebug',
+          {},
+          expect.any(Function),
+        );
     });
 
     it('routes the sidebar sanitizer action to the options panel when quick options are enabled', async () => {

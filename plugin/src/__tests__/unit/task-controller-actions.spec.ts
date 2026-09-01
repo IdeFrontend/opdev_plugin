@@ -180,7 +180,7 @@ describe('taskMethods basic actions', () => {
     expect(whenPostActivateBootstrapReady)
       .toHaveBeenCalledTimes(1);
     expect(buildService.startBuild)
-      .toHaveBeenCalledWith(params);
+      .toHaveBeenCalledWith(params, undefined);
     expect(projectManager.clearExecutor)
       .toHaveBeenCalledTimes(1);
   });
@@ -191,7 +191,7 @@ describe('taskMethods basic actions', () => {
     await taskMethods.startBuildExample(params);
 
     expect(buildService.startBuildExample)
-      .toHaveBeenCalledWith(params);
+      .toHaveBeenCalledWith(params, undefined);
     expect(projectManager.clearExecutor)
       .toHaveBeenCalledTimes(1);
   });
@@ -410,8 +410,16 @@ describe('taskMethods basic actions', () => {
   ] as const)('%s falls back to empty params when called without arguments', async (methodName, serviceMethod) => {
     await (taskMethods[methodName] as ()=> Promise<void>)();
 
+    // startBuild / startBuildExample thread an optional output-label argument.
+    const expectedArgs = methodName === 'startBuild' || methodName === 'startBuildExample'
+      ? [
+        {},
+        undefined,
+      ]
+      : [{}];
+
     expect(buildService[serviceMethod])
-      .toHaveBeenCalledWith({});
+      .toHaveBeenCalledWith(...expectedArgs);
     expect(projectManager.clearExecutor)
       .toHaveBeenCalledTimes(1);
   });

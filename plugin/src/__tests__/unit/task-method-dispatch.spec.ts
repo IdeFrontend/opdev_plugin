@@ -129,8 +129,16 @@ describe('task-method-dispatch', () => {
     ] as const)('%s forwards its params to taskMethods.%s', async (dispatchName, methodName) => {
       await (dispatch as unknown as Record<string, (params: unknown)=> Promise<void>>)[dispatchName]({ extra: 1 });
 
+      // dispatchStartBuildExample threads an optional output-label argument.
+      const expectedArgs = dispatchName === 'dispatchStartBuildExample'
+        ? [
+          { extra: 1 },
+          undefined,
+        ]
+        : [{ extra: 1 }];
+
       expect(taskMethods[methodName])
-        .toHaveBeenCalledWith({ extra: 1 });
+        .toHaveBeenCalledWith(...expectedArgs);
     });
 
     it.each([
@@ -148,8 +156,15 @@ describe('task-method-dispatch', () => {
       const methodName = dispatchName.replace('dispatch', '')
         .replace(/^./, (c) => c.toLowerCase());
 
+      const expectedArgs = dispatchName === 'dispatchStartBuildExample'
+        ? [
+          {},
+          undefined,
+        ]
+        : [{}];
+
       expect(taskMethods[methodName])
-        .toHaveBeenCalledWith({});
+        .toHaveBeenCalledWith(...expectedArgs);
     });
 
     it('dispatchStartStTest forwards the context alongside params', async () => {

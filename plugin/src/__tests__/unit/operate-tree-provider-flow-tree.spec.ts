@@ -1229,6 +1229,19 @@ describe('OperateTreeProvider flow root nodes', () => {
       expect((node.iconPath as vscode.ThemeIcon).id)
         .toBe('circle-slash');
     }
+
+    // The debug and performance-tuning sections mirror the disabled state of
+    // their children.
+    const debug = nodes.find((node) => node.nodeId === 'debug')!;
+    const power = nodes.find((node) => node.nodeId === 'power')!;
+
+    for (const node of [
+      debug,
+      power,
+    ]) {
+      expect((node.iconPath as vscode.ThemeIcon).id)
+        .toBe('circle-slash');
+    }
   });
 
   it('hides debug and power for standard custom without sanitizer support', () => {

@@ -4,9 +4,9 @@ export type QueueableActionType =
   | 'simulation'
   | 'utTest'
   | 'stTest'
-  | 'dumpTensor';
-
-export const GLOBAL_ST_TEST_QUEUE_SCOPE = 'global::st-test';
+  | 'dumpTensor'
+  | 'cpuDebug'
+  | 'npuDebug';
 
 export type QueueItemState =
   | 'queued'
@@ -49,21 +49,13 @@ export interface QueueActionView {
   position: number;
 }
 
-export function resolveOperatorActionQueueScope(
-  actionType: QueueableActionType,
-  localScope: string,
-): string {
-  return actionType === 'stTest' ? GLOBAL_ST_TEST_QUEUE_SCOPE : localScope;
-}
-
-export function mergeVisibleOperatorActionQueues(
-  localActions: readonly QueueActionView[],
-  globalActions: readonly QueueActionView[],
-): QueueActionView[] {
-  return [
-    ...localActions.filter((item) => item.actionType !== 'stTest'),
-    ...globalActions.filter((item) => item.actionType === 'stTest'),
-  ]
+/**
+ * Every queueable action — st test included — lives in the same per-project
+ * queue scope. Sort one scope's items by creation time and renumber positions
+ * for display.
+ */
+export function positionVisibleOperatorActions(actions: readonly QueueActionView[]): QueueActionView[] {
+  return [...actions]
     .sort((a, b) => a.createdAt - b.createdAt)
     .map((item, index) => ({
       ...item,
