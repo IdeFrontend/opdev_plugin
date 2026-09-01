@@ -9,7 +9,6 @@ export const BASE_FLAVOR_IDS = {
   viewContainerId: 'mindstudio-opssuite-vscode-plugin',
   viewPrefix: 'opdevtools',
   contextPrefix: 'opDevtools',
-  colorIdPrefix: 'huawei.op.devtools',
 } as const;
 
 /** IDs that must differ per flavor when both extensions are installed in one VS Code. */

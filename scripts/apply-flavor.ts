@@ -207,7 +207,6 @@ function reverseSubstituteIdsInString(value: string, flavor: FlavorDefinition): 
   result = result.replaceAll(flavor.ids.settingsPrefix, BASE_FLAVOR_IDS.settingsPrefix);
   result = result.replaceAll(flavor.ids.viewContainerId, BASE_FLAVOR_IDS.viewContainerId);
   result = result.replaceAll(flavor.ids.contextPrefix, BASE_FLAVOR_IDS.contextPrefix);
-  result = result.replaceAll(flavor.ids.colorIdPrefix, BASE_FLAVOR_IDS.colorIdPrefix);
 
   result = result.replaceAll(
     `${flavor.ids.viewPrefix}\\.`,
@@ -370,7 +369,6 @@ function substituteIdsInString(value: string, flavor: FlavorDefinition): string 
   result = result.replaceAll(BASE_FLAVOR_IDS.commandPrefix, flavor.ids.commandPrefix);
   result = result.replaceAll(BASE_FLAVOR_IDS.viewContainerId, flavor.ids.viewContainerId);
   result = result.replaceAll(BASE_FLAVOR_IDS.contextPrefix, flavor.ids.contextPrefix);
-  result = result.replaceAll(BASE_FLAVOR_IDS.colorIdPrefix, flavor.ids.colorIdPrefix);
   result = result.replaceAll(BASE_FLAVOR_IDS.settingsPrefix, flavor.ids.settingsPrefix);
 
   result = result.replaceAll(
@@ -745,8 +743,6 @@ export const VIEW_CONTAINER_ID = ${tsQuotedString(flavor.ids.viewContainerId)};
 export const VIEW_PREFIX = ${tsQuotedString(flavor.ids.viewPrefix)};
 
 export const CONTEXT_PREFIX = ${tsQuotedString(flavor.ids.contextPrefix)};
-
-export const COLOR_ID_PREFIX = ${tsQuotedString(flavor.ids.colorIdPrefix)};
 
 export const FLAVOR_GATES = ${tsCompactConstObject(gates)} as const;
 
