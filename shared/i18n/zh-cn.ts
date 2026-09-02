@@ -705,5 +705,7 @@ export default {
   'profilingReport.loading': '正在加载性能分析报告...',
   'profilingReport.noData': '未加载性能分析数据。',
   'profilingReport.fetchFailed': '获取性能分析数据失败',
+  'profilingReport.cannbotSent': '已将报告数据发送至 CANNBot',
+  'profilingReport.cannbotFailed': '调用 CANNBot 失败：{{error}}',
 
 };

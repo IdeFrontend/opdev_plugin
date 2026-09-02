@@ -74,6 +74,9 @@ export const VIEW_PROFILING_REPORT = 'profiling-report';
 
 export const PROFILING_REPORT_PANEL_TYPE = `${FLAVOR_VIEW_PREFIX}ProfilingReport`;
 
+// cannbot (CANNAssist) plugin command: fills its chat input box with the given text.
+export const CANN_ASSIST_SET_INPUT_TEXT = 'cann-assist.setInputText';
+
 // Folder right-click menu commands
 export const COMMAND_MARK_AS_OPERATOR_PROJECT = `${COMMAND_PREFIX}.markAsOperatorProject`;
 

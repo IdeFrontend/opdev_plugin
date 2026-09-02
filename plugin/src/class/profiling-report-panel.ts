@@ -5,6 +5,7 @@ import * as vscode from 'vscode';
 
 import { HtmlTransformer } from '@plugin/class/html-transformer';
 import {
+  CANN_ASSIST_SET_INPUT_TEXT,
   PROFILING_REPORT_PANEL_TYPE,
   VIEW_PROFILING_REPORT,
 } from '@plugin/constants';
@@ -56,6 +57,14 @@ export class ProfilingReportPanel {
           this.pendingFilePath = undefined;
           void this.loadFile(filePath);
         }
+      }
+
+      if (
+        message
+        && typeof message === 'object'
+        && (message as { command?: unknown }).command === 'cannbotRequest'
+      ) {
+        void this.handleCannbotRequest((message as { payload?: unknown }).payload);
       }
     });
     this.panelDisposeDisposable = this.panel.onDidDispose(() => {
@@ -173,11 +182,14 @@ export class ProfilingReportPanel {
     try {
       const fileUri = vscode.Uri.file(filePath);
       const webviewUri = this.panel.webview.asWebviewUri(fileUri);
+      const collectedAt = fs.statSync(filePath).mtime.toISOString();
 
       await this.panel.webview.postMessage({
         command: 'loadProfilingReport',
         uri: webviewUri.toString(),
         fileName: path.basename(filePath),
+        filePath,
+        collectedAt,
       });
     }
     catch (error) {
@@ -186,6 +198,24 @@ export class ProfilingReportPanel {
 
       await vscode.window.showErrorMessage(message);
       await this.postLoadFailed(message);
+    }
+  }
+
+  /**
+   * Forward the payload assembled by the profiling-report webview (section snapshot
+   * + prompt) to the cannbot plugin by filling its chat input box.
+   */
+  private async handleCannbotRequest(payload: unknown): Promise<void> {
+    try {
+      const inputText = JSON.stringify(payload ?? {}, null, 2);
+
+      await vscode.commands.executeCommand(CANN_ASSIST_SET_INPUT_TEXT, inputText);
+      await vscode.window.showInformationMessage(t('profilingReport.cannbotSent'));
+    }
+    catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+
+      await vscode.window.showErrorMessage(t('profilingReport.cannbotFailed', { error: detail }));
     }
   }
 

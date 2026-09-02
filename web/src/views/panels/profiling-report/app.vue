@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {
-  onMounted, onUnmounted, ref, shallowRef,
+  computed, onMounted, onUnmounted, ref, shallowRef,
 } from 'vue';
 import { t } from 'i18next';
 import { ProfilingReport } from '@huawei/profiling-report';
@@ -12,8 +12,17 @@ const { theme } = useProfilingReportTheme();
 
 const source = shallowRef<Uint8Array | null>(null);
 const fileName = ref('');
+const filePath = ref('');
+const collectedAt = ref('');
 const isLoading = ref(true);
 const error = ref<string | null>(null);
+
+/** Report identity for the cannbot payload (name / absolute path / collection time). */
+const reportMeta = computed(() => ({
+  name: fileName.value,
+  path: filePath.value,
+  collectedAt: collectedAt.value,
+}));
 
 const handleMessage = (e: MessageEvent) => {
   const message = e.data;
@@ -42,6 +51,8 @@ const handleMessage = (e: MessageEvent) => {
 
         source.value = new Uint8Array(buffer);
         fileName.value = message.fileName ?? '';
+        filePath.value = typeof message.filePath === 'string' ? message.filePath : '';
+        collectedAt.value = typeof message.collectedAt === 'string' ? message.collectedAt : '';
         isLoading.value = false;
       }
       catch {
@@ -71,6 +82,21 @@ const onError = (err: { message: string;
   error.value = err.message;
   isLoading.value = false;
 };
+
+/**
+ * Relay the assembled cannbot payload (section snapshot + prompt) to the extension host.
+ * The payload embeds Vue reactive view-model objects (proxies) which the webview
+ * postMessage structured clone cannot serialize — deep-plain them via a JSON
+ * round-trip first, otherwise postMessage throws DataCloneError.
+ */
+const onCannbotRequest = (payload: unknown) => {
+  const plainPayload = JSON.parse(JSON.stringify(payload ?? {}));
+
+  vscode.postMessage({
+    command: 'cannbotRequest',
+    payload: plainPayload,
+  });
+};
 </script>
 
 <template>
@@ -80,8 +106,10 @@ const onError = (err: { message: string;
       :source="source"
       :theme="theme"
       :title="fileName"
+      :report-meta="reportMeta"
       @ready="onReady"
       @error="onError"
+      @cannbot-request="onCannbotRequest"
     />
     <div
       v-else-if="error"

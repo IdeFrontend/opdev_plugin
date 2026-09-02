@@ -706,5 +706,7 @@ export default {
   'profilingReport.loading': 'Loading profiling report...',
   'profilingReport.noData': 'No profiling data loaded.',
   'profilingReport.fetchFailed': 'Failed to fetch profiling data',
+  'profilingReport.cannbotSent': 'Sent report data to CANNBot',
+  'profilingReport.cannbotFailed': 'Failed to call CANNBot: {{error}}',
 
 };

@@ -3,6 +3,8 @@ const mockRegisterThemeBridge = jest.fn(() => ({ dispose: jest.fn() }));
 const mockHandleThemeRequest = jest.fn(() => false);
 const mockCreateWebviewPanel = jest.fn();
 const mockShowErrorMessage = jest.fn();
+const mockShowInformationMessage = jest.fn();
+const mockExecuteCommand = jest.fn();
 
 jest.mock('i18next', () => ({ t: (key: string, opts?: Record<string, string>) => (opts ? `${key}:${JSON.stringify(opts)}` : key) }));
 
@@ -29,7 +31,9 @@ jest.mock('vscode', () => {
     window: {
       createWebviewPanel: mockCreateWebviewPanel,
       showErrorMessage: mockShowErrorMessage,
+      showInformationMessage: mockShowInformationMessage,
     },
+    commands: { executeCommand: mockExecuteCommand },
   };
 }, { virtual: true });
 
@@ -78,6 +82,8 @@ describe('ProfilingReportPanel', () => {
     } as vscode.ExtensionContext;
     panels = [];
     mockShowErrorMessage.mockResolvedValue(undefined);
+    mockShowInformationMessage.mockResolvedValue(undefined);
+    mockExecuteCommand.mockResolvedValue(undefined);
     mockTransformDistHtml.mockResolvedValue('<html>profiling</html>');
     mockCreateWebviewPanel.mockImplementation((_type, _title, _column, options) => {
       const webview = createWebview();
@@ -135,6 +141,10 @@ describe('ProfilingReportPanel', () => {
     }
   }
 
+  async function flushAsyncActions(): Promise<void> {
+    await new Promise<void>((resolve) => setImmediate(resolve));
+  }
+
   it('posts asWebviewUri after ready handshake instead of base64 payload', async () => {
     await ProfilingReportPanel.createOrShow(context, filePath);
 
@@ -152,8 +162,89 @@ describe('ProfilingReportPanel', () => {
         command: 'loadProfilingReport',
         uri: `webview://${filePath}`,
         fileName: 'sample.rep',
+        filePath,
+        collectedAt: expect.any(String),
       });
     expect(JSON.stringify(panel.webview.postMessage.mock.calls)).not.toContain('base64');
+  });
+
+  it('includes the report absolute path and mtime as collectedAt in the load message', async () => {
+    await ProfilingReportPanel.createOrShow(context, filePath);
+    emitReady(panels[0]!);
+    await Promise.resolve();
+
+    const message = panels[0]!.webview.postMessage.mock.calls[0]![0] as {
+      filePath: string;
+      collectedAt: string;
+    };
+
+    expect(message.filePath)
+      .toBe(filePath);
+    expect(message.collectedAt)
+      .toBe(fs.statSync(filePath).mtime.toISOString());
+  });
+
+  it('forwards cannbotRequest payload to the cann-assist input command', async () => {
+    await ProfilingReportPanel.createOrShow(context, filePath);
+
+    const panel = panels[0]!;
+    const payload = {
+      version: '1.0',
+      scope: 'compute',
+      report_name: 'sample.rep',
+      report_id: 'sample.rep',
+      report_path: filePath,
+      op_name: 'Add',
+      collected_at: '2026-08-13T09:41:00Z',
+      data: { pipeOccupancy: [] },
+      prompt: 'prompt-text',
+    };
+
+    for (const receiver of panel.webview.receivers) {
+      receiver({
+        command: 'cannbotRequest',
+        payload,
+      });
+    }
+
+    await flushAsyncActions();
+
+    expect(mockExecuteCommand)
+      .toHaveBeenCalledTimes(1);
+    expect(mockExecuteCommand)
+      .toHaveBeenCalledWith(
+        'cann-assist.setInputText',
+        JSON.stringify(payload, null, 2),
+      );
+    expect(mockShowInformationMessage)
+      .toHaveBeenCalledWith('profilingReport.cannbotSent');
+    expect(mockShowErrorMessage).not.toHaveBeenCalled();
+  });
+
+  it('shows an error message when the cann-assist command fails', async () => {
+    mockExecuteCommand.mockRejectedValueOnce(new Error('command not found'));
+
+    await ProfilingReportPanel.createOrShow(context, filePath);
+
+    const panel = panels[0]!;
+
+    for (const receiver of panel.webview.receivers) {
+      receiver({
+        command: 'cannbotRequest',
+        payload: { scope: 'summary' },
+      });
+    }
+
+    await flushAsyncActions();
+
+    expect(mockExecuteCommand)
+      .toHaveBeenCalledWith(
+        'cann-assist.setInputText',
+        expect.any(String),
+      );
+    expect(mockShowErrorMessage)
+      .toHaveBeenCalledWith(`profilingReport.cannbotFailed:${JSON.stringify({ error: 'command not found' })}`);
+    expect(mockShowInformationMessage).not.toHaveBeenCalled();
   });
 
   it('disposes and does not retain broken panels when initializeHtml fails', async () => {
