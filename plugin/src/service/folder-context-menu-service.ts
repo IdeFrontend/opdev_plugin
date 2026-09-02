@@ -29,6 +29,11 @@ import {
   isUnderExperimentalDir,
   stripRootPrefix,
 } from '@plugin/domain/utils/path-utils';
+import {
+  EXPERIMENTAL_OPERATOR_COLLECTIONS,
+  ROOT_OPERATOR_COLLECTIONS,
+  scanOperatorsInCollection,
+} from '@plugin/domain/utils/operator-collections';
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import {
   readWorkspaceCache,
@@ -47,71 +52,6 @@ import {
   COMMAND_SANITIZER_OPTIONS,
   COMMAND_SIMULATOR_OPTIONS,
 } from '@plugin/constants';
-
-/**
- * Whitelist of operator collections under root
- */
-const ROOT_OPERATOR_COLLECTIONS = new Set([
-  'image',
-  'objdetect',
-  'conversion',
-  'math',
-  'random',
-  'activation',
-  'control',
-  'conv',
-  'foreach',
-  'index',
-  'loss',
-  'matmul',
-  'norm',
-  'optim',
-  'pooling',
-  'quant',
-  'rnn',
-  'vfusion',
-  'hash',
-  'attention',
-  'ffn',
-  'gmm',
-  'mc2',
-  'moe',
-  'posembedding',
-  'select_attention_operators',
-]);
-
-/**
- * Whitelist of operator collections under experimental directory
- */
-const EXPERIMENTAL_OPERATOR_COLLECTIONS = new Set([
-  'image',
-  'objdetect',
-  'conversion',
-  'math',
-  'npu_ops_math_ext',
-  'random',
-  'activation',
-  'control',
-  'conv',
-  'foreach',
-  'index',
-  'loss',
-  'matmul',
-  'norm',
-  'optim',
-  'pooling',
-  'quant',
-  'rnn',
-  'vfusion',
-  'attention',
-  'ffn',
-  'gmm',
-  'mc2',
-  'moe',
-  'npu_ops_transformer_ext',
-  'posembedding',
-  'select_attention_operators',
-]);
 
 /** Check if directory is a standard-custom root through its public build interface. */
 async function isStandardCustomRoot(dirPath: string): Promise<boolean> {
@@ -453,40 +393,10 @@ export class FolderContextMenuService {
       }
 
       // 4. Scan operators under this directory
-      const operators: SubOperatorInfo[] = [];
-      let hasOperators = false;
-
-      try {
-        const subEntries = fs.readdirSync(collectionPath, { withFileTypes: true });
-
-        for (const subEntry of subEntries) {
-          if (!subEntry.isDirectory() || subEntry.name.startsWith('.')) {
-            continue;
-          }
-
-          const operatorPath = path.join(collectionPath, subEntry.name);
-          const operatorCmakeListsPath = path.join(operatorPath, 'CMakeLists.txt');
-
-          if (!fs.existsSync(operatorCmakeListsPath)) {
-            continue;
-          }
-
-          hasOperators = true;
-          const buildDir = path.join(operatorPath, 'build');
-          const outDir = path.join(operatorPath, 'out');
-          const isCompiled = fs.existsSync(buildDir) || fs.existsSync(outDir);
-          const operatorInfo: SubOperatorInfo = {
-            name: subEntry.name,
-            path: operatorPath,
-            isCompiled,
-          };
-
-          operators.push(operatorInfo);
-        }
-      }
-      catch {
-        // Ignore scan failure
-      }
+      const {
+        hasOperators,
+        operators,
+      } = scanOperatorsInCollection(collectionPath);
 
       if (!hasOperators) {
         vscode.window.showWarningMessage(t('folderContext.noOperatorsInDir'));
