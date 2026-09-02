@@ -104,9 +104,16 @@ export class SanitizerService {
 
       if (behavior.requiresBuildBeforeAnalysis) {
         const sanitizerBaseContext = resolveSanitizerBaseContext(projectPath, params.operatorNames);
+        // npu-check resolves call-stack frames from the line tables embedded in the
+        // built artifacts, so its pre-build compile must carry -gline-tables-only to
+        // report source locations. The mssanitizer build instruments the binary at
+        // compile time instead and must NOT carry the flag.
+        const compileOption = sanitizerBaseContext.config.toolType === 'npu-check'
+          ? '-gline-tables-only'
+          : '';
         const buildCommand = getBuildOpCommand(
           sanitizerBaseContext,
-          '',
+          compileOption,
           params.operatorNames,
         );
         const buildRes = await executeOperatorCommand(
