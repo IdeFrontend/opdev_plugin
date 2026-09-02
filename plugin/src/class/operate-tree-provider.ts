@@ -3023,6 +3023,37 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       return cached;
     }
 
+    // npu-check results carry no sanitizer question-type classification, so in
+    // class mode every message would collapse into a single "other" group. Skip
+    // that group layer and list the messages directly (mssanitizer keeps its
+    // grouping).
+    const {
+      messages, derived,
+    } = await this.getVisibleSanitizerReportData(reportPath);
+
+    if (
+      mode === 'class'
+      && messages.length > 0
+      && messages.every((msg) => msg.sourceTool === 'npu-check')
+      && derived.every((d) => d.classKey === 'other')
+    ) {
+      this.state.sanitizer.selectedMessages = messages;
+      const orderedIndices = messages
+        .map((_, index) => index)
+        .sort((a, b) => derived[a].severityRank - derived[b].severityRank);
+      const nodes = orderedIndices.map((globalIndex, index) => this.createSanitizerMessageNode(
+        reportPath,
+        mode,
+        messages[globalIndex],
+        globalIndex,
+        `sanitizer-msg:${encodeURIComponent(reportPath)}:${mode}:flat:${globalIndex}:${index}`,
+      ));
+
+      this.sanitizerGroupNodesCache.set(groupCacheKey, nodes);
+
+      return nodes;
+    }
+
     const groups = await this.getGroupedReportNodes(reportPath, mode);
     const nodes = groups.map((group) => this.createItem(
       'sanitizerClass',
@@ -3066,37 +3097,13 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       return [];
     }
 
-    const nodes = group.messageIndices.map((globalIndex, index) => {
-      const item = visibleMessages[globalIndex];
-      const id = String(globalIndex);
-      const description = mode === 'file' ? undefined : this.getSanitizerMessageDescription(item);
-      const canJump = !!item.fileLink
-        && (item.sourceTool === 'npu-check' || (item.row !== undefined && item.col !== undefined));
-      const node = this.createItem(
-        'sanitizerMessage',
-        item.title,
-        canJump
-          ? COMMAND_SIDEBAR_SANITIZER_MESSAGE_JUMP
-          : undefined,
-        vscode.TreeItemCollapsibleState.None,
-        typeof item.msAgentIndex === 'number' && Number.isInteger(item.msAgentIndex) && item.msAgentIndex >= 0
-          ? treeItemContextKey('sanitizerMessage.aiFix')
-          : undefined,
-        item.type === 'warning'
-          ? new vscode.ThemeIcon('warning', new vscode.ThemeColor('problemsWarningIcon.foreground'))
-          : new vscode.ThemeIcon('error', new vscode.ThemeColor('problemsErrorIcon.foreground')),
-        description,
-        `sanitizer-msg:${encodeURIComponent(reportPath)}:${mode}:${encodeURIComponent(groupKey)}:${globalIndex}:${index}`,
-        canJump ? [id] : undefined,
-      );
-
-      node.sanitizerTooltipMeta = {
-        reportPath,
-        globalIndex,
-      };
-
-      return node;
-    });
+    const nodes = group.messageIndices.map((globalIndex, index) => this.createSanitizerMessageNode(
+      reportPath,
+      mode,
+      visibleMessages[globalIndex],
+      globalIndex,
+      `sanitizer-msg:${encodeURIComponent(reportPath)}:${mode}:${encodeURIComponent(groupKey)}:${globalIndex}:${index}`,
+    ));
 
     this.sanitizerGroupMessageNodesCache.set(messageCacheKey, nodes);
 
@@ -3124,38 +3131,51 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
     return messages.map(({
       item, globalIndex,
-    }, index) => {
-      const id = String(globalIndex);
-      const description = mode === 'file' ? undefined : this.getSanitizerMessageDescription(item);
-      const canJump = !!item.fileLink
-        && (item.sourceTool === 'npu-check' || (item.row !== undefined && item.col !== undefined));
-      const node = this.createItem(
-        'sanitizerMessage',
-        item.title,
-        canJump
-          ? COMMAND_SIDEBAR_SANITIZER_MESSAGE_JUMP
-          : undefined,
-        vscode.TreeItemCollapsibleState.None,
-        typeof item.msAgentIndex === 'number' && Number.isInteger(item.msAgentIndex) && item.msAgentIndex >= 0
-          ? treeItemContextKey('sanitizerMessage.aiFix')
-          : undefined,
-        item.type === 'warning'
-          ? new vscode.ThemeIcon('warning', new vscode.ThemeColor('problemsWarningIcon.foreground'))
-          : new vscode.ThemeIcon('error', new vscode.ThemeColor('problemsErrorIcon.foreground')),
-        description,
-        `sanitizer-msg:legacy:${mode}:${encodeURIComponent(key)}:${globalIndex}:${index}`,
-        canJump ? [id] : undefined,
-      );
+    }, index) => this.createSanitizerMessageNode(
+      reportPath,
+      mode,
+      item,
+      globalIndex,
+      `sanitizer-msg:legacy:${mode}:${encodeURIComponent(key)}:${globalIndex}:${index}`,
+    ));
+  }
 
-      if (reportPath) {
-        node.sanitizerTooltipMeta = {
-          reportPath,
-          globalIndex,
-        };
-      }
+  private createSanitizerMessageNode(
+    reportPath: string | undefined,
+    mode: SanitizerGroupMode,
+    item: SanitizerMessageRecord,
+    globalIndex: number,
+    nodeId: string,
+  ): OperateNode {
+    const description = mode === 'file' ? undefined : this.getSanitizerMessageDescription(item);
+    const canJump = !!item.fileLink
+      && (item.sourceTool === 'npu-check' || (item.row !== undefined && item.col !== undefined));
+    const node = this.createItem(
+      'sanitizerMessage',
+      item.title,
+      canJump
+        ? COMMAND_SIDEBAR_SANITIZER_MESSAGE_JUMP
+        : undefined,
+      vscode.TreeItemCollapsibleState.None,
+      typeof item.msAgentIndex === 'number' && Number.isInteger(item.msAgentIndex) && item.msAgentIndex >= 0
+        ? treeItemContextKey('sanitizerMessage.aiFix')
+        : undefined,
+      item.type === 'warning'
+        ? new vscode.ThemeIcon('warning', new vscode.ThemeColor('problemsWarningIcon.foreground'))
+        : new vscode.ThemeIcon('error', new vscode.ThemeColor('problemsErrorIcon.foreground')),
+      description,
+      nodeId,
+      canJump ? [String(globalIndex)] : undefined,
+    );
 
-      return node;
-    });
+    if (reportPath) {
+      node.sanitizerTooltipMeta = {
+        reportPath,
+        globalIndex,
+      };
+    }
+
+    return node;
   }
 
   private getSanitizerMessageDescription(item: SanitizerMessageRecord): string | undefined {
