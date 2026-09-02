@@ -85,6 +85,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 
 import { sanitizerService } from '@plugin/service/sanitizer-service';
+import { getBuildOpCommand } from '@plugin/domain';
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import { getProjectByPath } from '@plugin/domain/models/project-model';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
@@ -103,6 +104,7 @@ import { resolveOpRecord } from '@plugin/domain/models/op-record';
 import { COMMAND_FLASH_MS_SANITIZER_RUN_DATA } from '@plugin/constants';
 
 const executeOperatorCommandMock = executeOperatorCommand as jest.Mock;
+const getBuildOpCommandMock = getBuildOpCommand as jest.Mock;
 const evaluateOutcome = evaluateSanitizerRunOutcome as jest.Mock;
 const getLogPath = getLatestSanitizerLogAbsPath as jest.Mock;
 const syncActive = syncSanitizerPythonTargetFromActiveEditor as jest.Mock;
@@ -278,6 +280,28 @@ describe('SanitizerService.runSanitizer', () => {
     expect(notifyBuildSucceededForSidebar)
       .not
       .toHaveBeenCalled();
+  });
+
+  it('compiles with -gline-tables-only when the sanitizer tool is npu-check', async () => {
+    (OperatorPluginRegistry.getOpPlugin as jest.Mock).mockReturnValue(plugin({ buildBehavior: { requiresBuildBeforeAnalysis: true } }));
+    jest.spyOn(ConfigService, 'getDefaultSanitizerToolType')
+      .mockReturnValue('npu-check');
+
+    await sanitizerService.runSanitizer();
+
+    expect(getBuildOpCommandMock)
+      .toHaveBeenCalledWith(expect.anything(), '-gline-tables-only', undefined);
+  });
+
+  it('compiles without -gline-tables-only when the sanitizer tool is mssanitizer', async () => {
+    (OperatorPluginRegistry.getOpPlugin as jest.Mock).mockReturnValue(plugin({ buildBehavior: { requiresBuildBeforeAnalysis: true } }));
+    jest.spyOn(ConfigService, 'getDefaultSanitizerToolType')
+      .mockReturnValue('mssanitizer');
+
+    await sanitizerService.runSanitizer();
+
+    expect(getBuildOpCommandMock)
+      .toHaveBeenCalledWith(expect.anything(), '', undefined);
   });
 
   it('returns silently when the build was interrupted by the user', async () => {
