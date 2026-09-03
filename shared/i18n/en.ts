@@ -393,6 +393,8 @@ export default {
   'web.operate.selectOneOperatorForStTest': 'Select one operator to run ST tests',
   'web.operate.actionsTitle': 'Actions',
   'web.operate.noActionsAvailable': 'No actions available in current tree view.',
+  'web.operate.examplesDisabledWhenOperatorSelected': 'Examples are disabled when an operator is selected. To enable the example selection, please clear the operator selection',
+  'web.operate.operatorsDisabledWhenExampleSelected': 'Operators are disabled when an example is selected. To enable operator selection, please clear the example selection',
   'stTest.mode.kernel': 'Kernel',
   'stTest.mode.aclnn': 'ACLNN',
   'stTest.mode.e2e': 'End-to-end',
