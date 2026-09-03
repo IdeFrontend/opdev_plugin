@@ -392,6 +392,8 @@ export default {
   'web.operate.selectOneOperatorForStTest': '请选择一个算子运行ST测试',
   'web.operate.actionsTitle': '操作',
   'web.operate.noActionsAvailable': '当前树视图中没有可执行的操作。',
+  'web.operate.examplesDisabledWhenOperatorSelected': '选中算子时，示例不可用。要启用示例选择，请先清除算子选择',
+  'web.operate.operatorsDisabledWhenExampleSelected': '选中示例时，算子不可用。要启用算子选择，请先清除示例选择',
   'stTest.mode.kernel': 'Kernel',
   'stTest.mode.aclnn': 'ACLNN',
   'stTest.mode.e2e': '端到端',

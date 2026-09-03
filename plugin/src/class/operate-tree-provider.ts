@@ -3531,6 +3531,13 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         : isDisabled
           ? disabledIcon
           : undefined;
+      // Every disabled row gets the same hover hint explaining why it is
+      // unavailable and how to re-enable it.
+      const disabledTooltip = isDisabled
+        ? t(op.hasEx
+          ? 'web.operate.examplesDisabledWhenOperatorSelected'
+          : 'web.operate.operatorsDisabledWhenExampleSelected')
+        : undefined;
 
       nodes.push(this.createItem(
         'operatorItem',
@@ -3542,6 +3549,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         this.buildOperatorProjectsDescription(op),
         `operator-${op.id}`,
         isDisabled ? undefined : [op.id],
+        disabledTooltip,
       ));
     }
 

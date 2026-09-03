@@ -252,6 +252,8 @@ describe('OperateTreeProvider operator project tree root', () => {
       .toBe('circle-slash');
     expect(nodes[1].command)
       .toBeUndefined();
+    expect(nodes[1].tooltip)
+      .toBe('web.operate.operatorsDisabledWhenExampleSelected');
     expect((nodes[2].iconPath as vscode.ThemeIcon).id)
       .toBe('check');
     expect(nodes[2].command)
@@ -260,6 +262,30 @@ describe('OperateTreeProvider operator project tree root', () => {
         title: 'ex-op',
         arguments: [1],
       });
+    expect(nodes[2].tooltip)
+      .toBeUndefined();
+  });
+
+  it('hints every disabled example row to clear the operator selection', () => {
+    harness.state.operators = [
+      operator(1, 'ex-op', { hasEx: true }),
+      operator(2, 'non-ex-op'),
+    ];
+    harness.state.selectedOperatorIds = [2];
+
+    const nodes = provider.getChildren() as OperateNode[];
+
+    // nodes[0] is the selected-count header; non-ex rows come first.
+    expect(nodes[1].label)
+      .toBe('non-ex-op');
+    expect(nodes[1].tooltip)
+      .toBeUndefined();
+    expect((nodes[2].iconPath as vscode.ThemeIcon).id)
+      .toBe('circle-slash');
+    expect(nodes[2].command)
+      .toBeUndefined();
+    expect(nodes[2].tooltip)
+      .toBe('web.operate.examplesDisabledWhenOperatorSelected');
   });
 
   it('filters rows by the search keyword', () => {
