@@ -112,6 +112,15 @@ export function createSanitizerCommand(commandName: 'mssanitizer' | 'npu-check')
 }
 
 /**
+ * Creates the sanitizer command with the flag style each CLI accepts:
+ * npu-check parses `--key value` (space-separated) while mssanitizer uses the
+ * `--key=value` form.
+ */
+export function createSanitizerCommand(commandName: 'mssanitizer' | 'npu-check'): Command {
+  return new Command(commandName, commandName === 'npu-check' ? { spaceSeparated: true } : undefined);
+}
+
+/**
  * Add `--tool=<value>` options to the command for the selected sanitizer tool.
  * Shared by all command strategies (triton / cann / ascend).
  */
