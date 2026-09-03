@@ -1712,7 +1712,7 @@
         {
           "command": "huawei-op-devtools.openProfilingReport",
           "group": "navigation@2",
-          "when": "opDevtools.hasDevtoolConfig && resourceScheme == 'file' && (resourceExtname == '.rep' || resourceExtname == '.ncrep')"
+          "when": "opDevtools.hasDevtoolConfig && resourceScheme == 'file' && (resourceExtname == '.rep' || resourceExtname == '.ncrep' || resourceExtname == '.npu-rep')"
         }
       ],
       "explorer/context": [
@@ -1723,7 +1723,7 @@
         },
         {
           "command": "huawei-op-devtools.openProfilingReport",
-          "when": "resourceScheme == 'file' && (resourceExtname == '.rep' || resourceExtname == '.ncrep')",
+          "when": "resourceScheme == 'file' && (resourceExtname == '.rep' || resourceExtname == '.ncrep' || resourceExtname == '.npu-rep')",
           "group": "navigation@2"
         },
         {
