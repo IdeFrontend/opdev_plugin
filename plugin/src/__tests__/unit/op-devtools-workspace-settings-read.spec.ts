@@ -194,6 +194,7 @@ describe('ConfigService per-section DAO factories (settings + cache only)', () =
 
   it('reads persisted npu-check toolType and npu check options from settings', () => {
     getStore['environment.socVersion'] = 'ascend950';
+    getStore['projectType'] = 'cann';
     getStore['sanitizer.toolType'] = 'npu-check';
     getStore['sanitizer.memory'] = true;
     getStore['sanitizer.sync'] = false;
@@ -202,7 +203,8 @@ describe('ConfigService per-section DAO factories (settings + cache only)', () =
     getStore['sanitizer.soc'] = true;
     getStore['sanitizer.over'] = false;
 
-    // ascend950 is non-A2/A3, so the persisted toolType is honored.
+    // ascend950 is non-A2/A3 and the project is a <<<>>> (cann) operator
+    // project, so the persisted toolType is honored.
     const config = ConfigService.getSanitizerConfig(workspacePath, 'op_add');
 
     expect(config.toolType)

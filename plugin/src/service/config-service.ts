@@ -19,7 +19,7 @@ import type {
   OnBoardTool, SimulationTool,
 } from '@shared/data-collection-config';
 import {
-  defaultSanitizerToolTypeForSoc,
+  resolveSanitizerToolType,
   SanitizerToolType,
 } from '@shared/cann-env-constants';
 import { resolveEffectiveCannSoc } from '@plugin/domain/utils/ascend-util';
@@ -39,7 +39,7 @@ import {
   readWorkspaceCache, type FileMapEntry,
 } from '@plugin/helpers/workspace-cache';
 import {
-  normalizeProjectPath, projectPathsEqual,
+  getProjectByPath, normalizeProjectPath, projectPathsEqual,
 } from '@plugin/domain/models/project-model';
 import {
   sanitizerTargetKeyForOp,
@@ -148,9 +148,10 @@ export interface OnBoardConfig {
 
 export interface SanitizerConfig {
   script: string;
-  // Sanitizer command selection: A2/A3 SOC forces mssanitizer; every other
-  // SOC honors the persisted sanitizer.toolType setting and otherwise defaults
-  // to npu-check (getDefaultSanitizerToolType).
+  // Sanitizer command selection: A2/A3 SOC or a non-<<<>>> operator project
+  // forces mssanitizer; every other case honors the persisted
+  // sanitizer.toolType setting and otherwise defaults to npu-check
+  // (getDefaultSanitizerToolType — npu-check is <<<>>>-project-only).
   toolType: 'mssanitizer' | 'npu-check';
   // Partial sanitizer settings leave unset fields ABSENT (no defaults merged).
   // Only the fully-unset case falls back to the full defaults
@@ -848,9 +849,12 @@ export class ConfigService {
     return readWorkspaceScopedSetting<T>(relativeKey);
   }
 
-  /** Default sanitizer command for the detected CANN SOC: A2/A3 → mssanitizer, others → npu-check. */
-  static getDefaultSanitizerToolType(): SanitizerToolType {
-    return defaultSanitizerToolTypeForSoc(resolveEffectiveCannSoc());
+  /**
+   * Default sanitizer command for the detected CANN SOC and the given project
+   * type: A2/A3 or a non-<<<>>> operator project → mssanitizer, others → npu-check.
+   */
+  static getDefaultSanitizerToolType(projectType?: string | null): SanitizerToolType {
+    return resolveSanitizerToolType(resolveEffectiveCannSoc(), projectType);
   }
 
   /**
@@ -1093,13 +1097,16 @@ export class ConfigService {
     const memoryLeak = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.memoryLeak');
     const allocUnused = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.allocUnused');
     // A2/A3 SOC only ships mssanitizer — the persisted toolType is ignored
-    // there; every other SOC honors a valid persisted value and falls back to
-    // the SOC default otherwise.
-    const toolType: SanitizerConfig['toolType'] = ConfigService.getDefaultSanitizerToolType() === 'mssanitizer'
+    // there; npu-check is a <<<>>>-operator-project-only tool — the persisted
+    // value is likewise ignored for every other project type. Every other case
+    // honors a valid persisted value and falls back to the project-aware
+    // default otherwise.
+    const projectType = getProjectByPath(projectPath)?.project_type ?? null;
+    const toolType: SanitizerConfig['toolType'] = ConfigService.getDefaultSanitizerToolType(projectType) === 'mssanitizer'
       ? 'mssanitizer'
       : configuredToolType === 'mssanitizer' || configuredToolType === 'npu-check'
         ? configuredToolType
-        : ConfigService.getDefaultSanitizerToolType();
+        : ConfigService.getDefaultSanitizerToolType(projectType);
     const anySetting = script !== undefined
       || configuredToolType !== undefined
       || logLevel !== undefined

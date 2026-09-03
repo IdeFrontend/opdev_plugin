@@ -270,6 +270,38 @@ describe('objectToCommandString', () => {
       .toBe('--metrics=A,B --tool=x --tool=y');
   });
 
+  it('joins keys and values with a space when spaceSeparated is set', () => {
+    expect(objectToCommandString(
+      {
+        tool: [
+          'memcheck',
+          'synccheck',
+        ],
+        'log-file': '/tmp/report.log',
+        verbose: true,
+      },
+      { spaceSeparated: true },
+    ))
+      .toBe('--tool memcheck --tool synccheck --log-file /tmp/report.log --verbose');
+  });
+
+  it('joins array values with the configured separator and spaceSeparated pairs', () => {
+    expect(objectToCommandString(
+      {
+        metrics: [
+          'A',
+          'B',
+        ],
+        tool: 'memcheck',
+      },
+      {
+        separators: { metrics: ',' },
+        spaceSeparated: true,
+      },
+    ))
+      .toBe('--metrics A,B --tool memcheck');
+  });
+
   it('emits numeric scalars and array members', () => {
     expect(objectToCommandString({
       depth: 2,

@@ -3,7 +3,9 @@ import * as os from 'os';
 import * as path from 'path';
 
 import {
+  buildSanitizerReportTitle,
   collectSanitizerLogReports, isNpuCheckReport,
+  parseSanitizerLogTimestamp,
 } from '@plugin/helpers/sanitizer-log-reports';
 
 describe('collectSanitizerLogReports', () => {
@@ -129,5 +131,53 @@ describe('isNpuCheckReport', () => {
   it('detects the marker in a full path', () => {
     expect(isNpuCheckReport('/tmp/mssanitizer_1700000000000-npu-check.log'))
       .toBe(true);
+  });
+});
+
+describe('parseSanitizerLogTimestamp', () => {
+  it('extracts the timestamp from npu-check and mssanitizer report names', () => {
+    expect(parseSanitizerLogTimestamp('mssanitizer_1700000000000-npu-check.log'))
+      .toBe(1700000000000);
+    expect(parseSanitizerLogTimestamp('mssanitizer_1700000000000.log'))
+      .toBe(1700000000000);
+  });
+
+  it('extracts the timestamp from a full path', () => {
+    expect(parseSanitizerLogTimestamp('/ws/mssanitizer_1766419043134-npu-check.log'))
+      .toBe(1766419043134);
+  });
+
+  it('returns undefined for names outside the mssanitizer_<ts> pattern', () => {
+    expect(parseSanitizerLogTimestamp('report.log'))
+      .toBeUndefined();
+    expect(parseSanitizerLogTimestamp('mssanitizer_notanumber.log'))
+      .toBeUndefined();
+    expect(parseSanitizerLogTimestamp('notes.txt'))
+      .toBeUndefined();
+  });
+});
+
+describe('buildSanitizerReportTitle', () => {
+  const expectedDateFor = (timestamp: number): string => {
+    const date = new Date(timestamp);
+
+    return [
+      date.getFullYear(),
+      (date.getMonth() + 1).toString()
+        .padStart(2, '0'),
+      date.getDate()
+        .toString()
+        .padStart(2, '0'),
+    ].join('');
+  };
+
+  it('prefixes the title with npu-check for an npu-check report name', () => {
+    expect(buildSanitizerReportTitle('mssanitizer_1766419043134-npu-check.log', 1766419043134))
+      .toBe(`npu-check-${expectedDateFor(1766419043134)}`);
+  });
+
+  it('prefixes the title with mssanitizer for a plain report name', () => {
+    expect(buildSanitizerReportTitle('mssanitizer_1700000000000.log', 1700000000000))
+      .toBe(`mssanitizer-${expectedDateFor(1700000000000)}`);
   });
 });

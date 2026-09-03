@@ -263,20 +263,22 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
 
     expect(cmd)
       .toContain('npu-check');
+    // npu-check parses space-separated flags (--tool memcheck), not --tool=memcheck.
     expect(cmd)
-      .toContain('--tool=memcheck');
+      .toContain('--tool memcheck');
     expect(cmd)
-      .toContain('--tool=synccheck');
+      .toContain('--tool synccheck');
     expect(cmd)
-      .toContain('--tool=initcheck');
+      .toContain('--tool initcheck');
     expect(cmd)
-      .toContain('--tool=soccheck');
-    expect(cmd).not.toContain('--tool=racecheck');
-    expect(cmd).not.toContain('--tool=overcheck');
+      .toContain('--tool soccheck');
+    expect(cmd).not.toContain('--tool racecheck');
+    expect(cmd).not.toContain('--tool overcheck');
+    expect(cmd).not.toContain('--tool=');
     expect(cmd).not.toContain('--log-level');
     expect(cmd).not.toContain('--max-debuglog-size');
     expect(cmd)
-      .toContain('--log-file=');
+      .toContain('--log-file ');
   });
 
   it('builds npu-check with all selected npu tool flags', () => {
@@ -298,17 +300,17 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
     expect(cmd)
       .toContain('npu-check');
     expect(cmd)
-      .toContain('--tool=memcheck');
+      .toContain('--tool memcheck');
     expect(cmd)
-      .toContain('--tool=synccheck');
+      .toContain('--tool synccheck');
     expect(cmd)
-      .toContain('--tool=racecheck');
+      .toContain('--tool racecheck');
     expect(cmd)
-      .toContain('--tool=initcheck');
+      .toContain('--tool initcheck');
     expect(cmd)
-      .toContain('--tool=soccheck');
+      .toContain('--tool soccheck');
     expect(cmd)
-      .toContain('--tool=overcheck');
+      .toContain('--tool overcheck');
   });
 
   it('keeps the mssanitizer log-file path rule when using npu-check from toolType', () => {
@@ -330,7 +332,7 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
     const normalized = cmd.replace(/\\/g, '/');
 
     expect(normalized)
-      .toContain(`--log-file=/ws/triton-op/${ideDir}/mindstudio_sanitizer_log/mssanitizer_`);
+      .toContain(`--log-file /ws/triton-op/${ideDir}/mindstudio_sanitizer_log/mssanitizer_`);
     expect(normalized)
       .toMatch(/mssanitizer_\d+-npu-check\.log/);
   });

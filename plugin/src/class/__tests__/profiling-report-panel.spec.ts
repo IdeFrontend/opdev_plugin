@@ -15,6 +15,8 @@ jest.mock('@plugin/core/view/webview-theme', () => ({
   handleThemeRequest: mockHandleThemeRequest,
 }));
 
+jest.mock('@plugin/service/settings-loader', () => ({ SettingsLoader: { getCannbotPromptOverride: jest.fn() } }));
+
 jest.mock('vscode', () => {
   const pathModule = jest.requireActual<typeof import('path')>('path');
 
@@ -43,6 +45,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 
 import { ProfilingReportPanel } from '@plugin/class/profiling-report-panel';
+import { SettingsLoader } from '@plugin/service/settings-loader';
 
 type FakeDisposable = {
   dispose: jest.Mock;
@@ -219,6 +222,71 @@ describe('ProfilingReportPanel', () => {
     expect(mockShowInformationMessage)
       .toHaveBeenCalledWith('profilingReport.cannbotSent');
     expect(mockShowErrorMessage).not.toHaveBeenCalled();
+  });
+
+  it('replaces the payload prompt when the hidden cannbot prompt override setting is set', async () => {
+    (SettingsLoader.getCannbotPromptOverride as jest.Mock).mockReturnValueOnce('override-prompt');
+
+    await ProfilingReportPanel.createOrShow(context, filePath);
+
+    const panel = panels[0]!;
+    const payload = {
+      version: '1.0',
+      scope: 'summary',
+      report_name: 'sample.rep',
+      report_id: 'sample.rep',
+      report_path: filePath,
+      op_name: 'Add',
+      collected_at: '2026-08-13T09:41:00Z',
+      data: { summary: {} },
+      prompt: 'prompt-text',
+    };
+
+    for (const receiver of panel.webview.receivers) {
+      receiver({
+        command: 'cannbotRequest',
+        payload,
+      });
+    }
+
+    await flushAsyncActions();
+
+    expect(mockExecuteCommand)
+      .toHaveBeenCalledWith(
+        'cann-assist.setInputText',
+        JSON.stringify({
+          ...payload,
+          prompt: 'override-prompt',
+        }, null, 2),
+      );
+    expect(mockShowInformationMessage)
+      .toHaveBeenCalledWith('profilingReport.cannbotSent');
+  });
+
+  it('injects the override prompt when the payload has no prompt field', async () => {
+    (SettingsLoader.getCannbotPromptOverride as jest.Mock).mockReturnValueOnce('override-prompt');
+
+    await ProfilingReportPanel.createOrShow(context, filePath);
+
+    const panel = panels[0]!;
+
+    for (const receiver of panel.webview.receivers) {
+      receiver({
+        command: 'cannbotRequest',
+        payload: { scope: 'summary' },
+      });
+    }
+
+    await flushAsyncActions();
+
+    expect(mockExecuteCommand)
+      .toHaveBeenCalledWith(
+        'cann-assist.setInputText',
+        JSON.stringify({
+          scope: 'summary',
+          prompt: 'override-prompt',
+        }, null, 2),
+      );
   });
 
   it('shows an error message when the cann-assist command fails', async () => {

@@ -123,4 +123,23 @@ export class SettingsLoader {
   static isMsAgentAiFixEnabled(): boolean {
     return SettingsLoader.readOptional<boolean>('sanitizer.enableMsAgentAiFix') ?? false;
   }
+
+  /**
+   * 调测专用隐藏配置（刻意不在 package.json 注册，不出现在设置页面）：
+   * 工作区 settings.json 中写入 `op-devtools.profilingReport.cannbotPromptOverride`
+   * 后，转发给 cannbot 插件的 payload 中的 prompt 会被该值替换，
+   * 用于在不重新构建 profiling-report webview 的情况下调测 prompt。
+   * 空白字符串视为未设置。
+   */
+  static getCannbotPromptOverride(): string | undefined {
+    const value = SettingsLoader.readOptional<string>('profilingReport.cannbotPromptOverride');
+
+    if (typeof value !== 'string') {
+      return undefined;
+    }
+
+    const trimmed = value.trim();
+
+    return trimmed.length > 0 ? trimmed : undefined;
+  }
 }

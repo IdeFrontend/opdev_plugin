@@ -38,6 +38,7 @@ import {
   addSanitizerToolOptions,
   normalizeSanitizerCommand,
   buildSanitizerLogFileName,
+  createSanitizerCommand,
 } from './sanitizer-option-guards';
 import {
   buildPythonOnBoardCommand,
@@ -216,7 +217,7 @@ export class AscendCommandStrategy implements CommandStrategy {
       config, operator, sourceCannCmd, cdCmd,
     } = context;
     const commandName = normalizeSanitizerCommand(config.toolType);
-    const command = new Command(commandName);
+    const command = createSanitizerCommand(commandName);
 
     // Add target file
     if (exampleTargetFile) {

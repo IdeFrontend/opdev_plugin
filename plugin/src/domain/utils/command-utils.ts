@@ -10,6 +10,12 @@ export interface CommandStringConfig {
    * Generates --key=val1,val2 if delimiter is specified (assuming delimiter is ,)
    */
   separators?: Record<string, string>;
+  /**
+   * Join option keys and values with a space (`--key value`) instead of `=`
+   * (`--key=value`). Needed for tools whose CLI only accepts the space form
+   * (e.g. npu-check).
+   */
+  spaceSeparated?: boolean;
 }
 
 /**
@@ -26,7 +32,7 @@ export interface CommandStringConfig {
  * - value is an array:
  * - If separators are specified in config.separators: --key=item1,item2
  * - Otherwise: --key=item1 --key=item2 ...
- * - Others: --key=value
+ * - Others: --key=value (or "--key value" when config.spaceSeparated is set)
  */
 export function objectToCommandString(
   options: Record<
@@ -35,6 +41,12 @@ export function objectToCommandString(
   >,
   config?: CommandStringConfig,
 ): string {
+  // The filter above only excludes nullish/false at runtime — the entry value
+  // type is not narrowed, so the pair formatter accepts the full union.
+  const formatPair = (key: string, value: string | number | boolean | undefined | null): string => (
+    config?.spaceSeparated ? `--${key} ${value}` : `--${key}=${value}`
+  );
+
   return Object.entries(options)
     .filter(([
       _,
@@ -52,14 +64,14 @@ export function objectToCommandString(
         const separator = config?.separators?.[key];
 
         if (separator) {
-          return `--${key}=${value.join(separator)}`;
+          return formatPair(key, value.join(separator));
         }
 
-        return value.map((v) => `--${key}=${v}`)
+        return value.map((v) => formatPair(key, v))
           .join(' ');
       }
 
-      return `--${key}=${value}`;
+      return formatPair(key, value);
     })
     .join(' ');
 }

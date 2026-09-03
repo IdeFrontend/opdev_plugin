@@ -3,7 +3,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import { joinIdeConfigPath } from '@plugin/helpers/ide-config-dir';
-import { collectSanitizerLogReports } from '@plugin/helpers/sanitizer-log-reports';
+import {
+  buildSanitizerReportTitle,
+  collectSanitizerLogReports,
+  parseSanitizerLogTimestamp,
+} from '@plugin/helpers/sanitizer-log-reports';
 import {
   FileMapEntry,
   readWorkspaceCache,
@@ -108,10 +112,14 @@ export class RunDataService {
           // Sanitizer only handles files
           const filename = path.basename(fileMap.filePath);
           const id = `sanitizer_${fileMap.filePath}`;
+          // Recognize `mssanitizer_<ts>[-npu-check].log` names so a manually
+          // imported npu-check report is titled and dated like one collected
+          // from the log directory; other files keep the raw name/import time.
+          const logTimestamp = parseSanitizerLogTimestamp(filename);
 
           res.push({
-            title: filename,
-            timestamp: fileMap.reportTime,
+            title: logTimestamp === undefined ? filename : buildSanitizerReportTitle(filename, logTimestamp),
+            timestamp: logTimestamp ?? fileMap.reportTime,
             id,
             path: fileMap.filePath,
             marked: markSet.has(id),
