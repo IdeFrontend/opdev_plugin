@@ -444,7 +444,7 @@ import {
   getProjectPreviewFiles,
   getTemplatePreviewFiles,
 } from '@/components/template-previews/template-preview-files';
-import writeImg from '@/assets/imgs/write.png';
+import writeImg from '@/assets/imgs/write.webp';
 import buildImg from '@/assets/imgs/build.mp4';
 import runImg from '@/assets/imgs/run.mp4';
 import debug from '@/assets/imgs/debug.mp4';
@@ -488,9 +488,7 @@ const projectTypeTabKey = computed<string>({
 // <<<>>> 算子工程模板选择（helloworld / addn / torch_library）
 const selectedTemplate = ref<'helloworld' | 'addn' | 'torch_library_template' | 'triton_vector_add'>('helloworld');
 const tritonSupportEnabled = ref(false);
-const selectedTemplatePreviewFiles = computed(
-  () => getTemplatePreviewFiles(selectedTemplate.value) ?? [],
-);
+const selectedTemplatePreviewFiles = computed(() => getTemplatePreviewFiles(selectedTemplate.value) ?? []);
 const standardProjectPreviewFiles = getProjectPreviewFiles(OperatorProjectViewId.STANDARD_CUSTOM) ?? [];
 const pyascProjectPreviewFiles = getProjectPreviewFiles(OperatorProjectViewId.PYASC) ?? [];
 const tritonProjectPreviewFiles = getProjectPreviewFiles(OperatorProjectViewId.TRITON) ?? [];
