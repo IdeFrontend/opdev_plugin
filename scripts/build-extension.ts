@@ -183,6 +183,17 @@ function copyAndPrepareTemplates() {
   packCodeTemplateSourceDirsToZips(outTemplatesRoot);
 }
 
+/**
+ * A previous --sourcemap build leaves out/extension.js.map behind and a
+ * regular build only overwrites extension.js — the stale map would then be
+ * packaged into the vsix. Drop it unless this build produces its own.
+ */
+function removeStaleSourceMap() {
+  if (!useSourcemap) {
+    fs.rmSync(path.resolve(__dirname, '../out/extension.js.map'), { force: true });
+  }
+}
+
 (async () => {
   if (isWatch) {
     const ctx = await esbuild.context({
@@ -210,6 +221,7 @@ function copyAndPrepareTemplates() {
   }
   else {
     await esbuild.build(buildOptions);
+    removeStaleSourceMap();
     copyAndPrepareTemplates();
   }
 })();
