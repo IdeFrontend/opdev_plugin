@@ -20,12 +20,15 @@ import { getProjectType } from '@web/apis/home';
 import {
   isAscendA2A3CannSoc,
   defaultSanitizerToolTypeForSoc,
+  isNpuCheckProjectTypeSupported,
   type SanitizerToolType,
 } from '@shared/cann-env-constants';
 
 const { themeConfig } = useTheme();
 const isExecuting = ref(false);
 const isTritonProject = ref(false);
+/** npu-check 仅支持 <<<>>>（Ascend C）算子工程；其他工程类型强制 mssanitizer。 */
+const isNpuCheckProjectSupported = ref(false);
 /** When true, workspace `sanitizer.showQuickOptions` is false (tree runs without opening this panel). */
 const doNotShowAgain = ref(false);
 
@@ -55,6 +58,7 @@ const form = ref({
 
 const isMsSanitizer = computed(() => form.value.toolType === 'mssanitizer');
 const isNpuSanitizer = computed(() => form.value.toolType === 'npu-check');
+const isNpuCheckAvailable = computed(() => !isA2A3Environment.value && isNpuCheckProjectSupported.value);
 const showBlockId = computed(() => isMsSanitizer.value && form.value.detectionScope === 'singleBlock');
 
 const blockIdModel = computed<number | undefined>({
@@ -112,7 +116,9 @@ async function loadSanitizerForm() {
 
   isA2A3Environment.value = isAscendA2A3CannSoc(socVersion);
 
-  if (isA2A3Environment.value) {
+  // A2/A3 SOC only ships mssanitizer; npu-check is <<<>>>-project-only —
+  // either way the persisted toolType is ignored and mssanitizer is forced.
+  if (!isNpuCheckAvailable.value) {
     form.value.toolType = 'mssanitizer';
   }
   else if (isSanitizerToolType(options.toolType)) {
@@ -206,16 +212,20 @@ function onToolTypeChange() {
 }
 
 onBeforeMount(async () => {
-  await loadSanitizerForm();
-
+  // Project type must be known before the form loads — the toolType default
+  // (npu-check vs mssanitizer) depends on it.
   try {
     const project = await getProjectType();
 
     isTritonProject.value = project.projectType === 'triton';
+    isNpuCheckProjectSupported.value = isNpuCheckProjectTypeSupported(project.projectType);
   }
   catch {
     isTritonProject.value = false;
+    isNpuCheckProjectSupported.value = false;
   }
+
+  await loadSanitizerForm();
 
   try {
     const showQuick = await getSanitizerShowQuickOptions();
@@ -287,7 +297,7 @@ const handleConfirm = async () => {
               mssanitizer
             </a-select-option>
             <a-select-option
-              v-if="!isA2A3Environment"
+              v-if="isNpuCheckAvailable"
               value="npu-check"
             >
               npu-check

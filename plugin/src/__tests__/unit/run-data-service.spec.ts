@@ -18,7 +18,14 @@ jest.mock('vscode', () => ({ workspace: { workspaceFolders: [{ uri: { fsPath: '/
 
 jest.mock('@plugin/helpers/ide-config-dir', () => ({ joinIdeConfigPath: mockJoinIdeConfigPath }));
 
-jest.mock('@plugin/helpers/sanitizer-log-reports', () => ({ collectSanitizerLogReports: mockCollectSanitizerLogReports }));
+jest.mock('@plugin/helpers/sanitizer-log-reports', () => {
+  const actual = jest.requireActual('@plugin/helpers/sanitizer-log-reports');
+
+  return {
+    ...actual,
+    collectSanitizerLogReports: mockCollectSanitizerLogReports,
+  };
+});
 
 jest.mock('@plugin/helpers/workspace-cache', () => ({ readWorkspaceCache: mockReadWorkspaceCache }));
 
@@ -212,6 +219,93 @@ describe('RunDataService.getSanitizerRunData', () => {
           marked: false,
         },
       ]);
+  });
+
+  it('titles a manually imported npu-check report like a log-directory one', async () => {
+    mockReadWorkspaceCache.mockReturnValue({
+      fileMapLists: {
+        sanitizer: [
+          {
+            filePath: '/ws/mssanitizer_1766419043134-npu-check.log',
+            reportTime: 200,
+          },
+        ],
+      },
+    });
+
+    const result = await runDataService.getSanitizerRunData();
+
+    // The title date is derived from the local timezone, so compute the
+    // expected YYYYMMDD the same way instead of hard-coding one zone's date.
+    const date = new Date(1766419043134);
+    const expectedDate = [
+      date.getFullYear(),
+      (date.getMonth() + 1).toString()
+        .padStart(2, '0'),
+      date.getDate()
+        .toString()
+        .padStart(2, '0'),
+    ].join('');
+
+    expect(result)
+      .toEqual([
+        {
+          title: `npu-check-${expectedDate}`,
+          timestamp: 1766419043134,
+          id: 'sanitizer_/ws/mssanitizer_1766419043134-npu-check.log',
+          path: '/ws/mssanitizer_1766419043134-npu-check.log',
+          marked: false,
+        },
+      ]);
+  });
+
+  it('titles a manually imported plain mssanitizer report with the mssanitizer prefix', async () => {
+    mockReadWorkspaceCache.mockReturnValue({
+      fileMapLists: {
+        sanitizer: [
+          {
+            filePath: '/ws/mssanitizer_1700000000000.log',
+            reportTime: 200,
+          },
+        ],
+      },
+    });
+
+    const result = await runDataService.getSanitizerRunData();
+    const date = new Date(1700000000000);
+    const expectedDate = [
+      date.getFullYear(),
+      (date.getMonth() + 1).toString()
+        .padStart(2, '0'),
+      date.getDate()
+        .toString()
+        .padStart(2, '0'),
+    ].join('');
+
+    expect(result[0].title)
+      .toBe(`mssanitizer-${expectedDate}`);
+    expect(result[0].timestamp)
+      .toBe(1700000000000);
+  });
+
+  it('keeps the raw file name for an imported report outside the mssanitizer naming scheme', async () => {
+    mockReadWorkspaceCache.mockReturnValue({
+      fileMapLists: {
+        sanitizer: [
+          {
+            filePath: '/ws/custom-report.log',
+            reportTime: 200,
+          },
+        ],
+      },
+    });
+
+    const result = await runDataService.getSanitizerRunData();
+
+    expect(result[0].title)
+      .toBe('custom-report.log');
+    expect(result[0].timestamp)
+      .toBe(200);
   });
 
   it('falls back to an empty file map list when the cache has no sanitizer list', async () => {

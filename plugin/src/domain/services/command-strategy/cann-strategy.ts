@@ -40,6 +40,7 @@ import {
   addSanitizerToolOptions,
   normalizeSanitizerCommand,
   buildSanitizerLogFileName,
+  createSanitizerCommand,
 } from './sanitizer-option-guards';
 import {
   applyOperatorNamesPlaceholder,
@@ -208,7 +209,7 @@ export class CannCommandStrategy implements CommandStrategy {
       config, sourceCannCmd, cdBuildCmd,
     } = context;
     const commandName = normalizeSanitizerCommand(config.toolType);
-    const command = new Command(commandName);
+    const command = createSanitizerCommand(commandName);
 
     // Add target file
     if (exampleTargetFile) {

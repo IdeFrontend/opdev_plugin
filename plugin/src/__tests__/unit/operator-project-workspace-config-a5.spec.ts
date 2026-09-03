@@ -93,6 +93,7 @@ describe('ConfigService.getOnBoardConfig A5 on-board', () => {
 
   it('defaults sanitizer toolType to npu-check for non-A2/A3 SOC', () => {
     (resolveEffectiveCannSoc as jest.Mock).mockReturnValue('ascend950');
+    getStore['projectType'] = 'ascend-c';
 
     const config = ConfigService.getSanitizerConfig('/workspace');
 
@@ -101,10 +102,60 @@ describe('ConfigService.getOnBoardConfig A5 on-board', () => {
   });
 
   it.each([
+    'ascend-c',
+    'cann',
+    'torch-library',
+  ])('defaults sanitizer toolType to npu-check for a <<<>>> project type %s on non-A2/A3 SOC', (projectType) => {
+    (resolveEffectiveCannSoc as jest.Mock).mockReturnValue('ascend950');
+    getStore['projectType'] = projectType;
+
+    const config = ConfigService.getSanitizerConfig('/workspace');
+
+    expect(config.toolType)
+      .toBe('npu-check');
+  });
+
+  it.each([
+    'standard-custom',
+    'ascend',
+    'pyasc',
+    'triton',
+  ])('defaults sanitizer toolType to mssanitizer for a non-<<<>>> project type %s even on non-A2/A3 SOC', (projectType) => {
+    (resolveEffectiveCannSoc as jest.Mock).mockReturnValue('ascend950');
+    getStore['projectType'] = projectType;
+
+    const config = ConfigService.getSanitizerConfig('/workspace');
+
+    expect(config.toolType)
+      .toBe('mssanitizer');
+  });
+
+  it('forces sanitizer toolType to mssanitizer for a non-<<<>>> project even when npu-check is configured', () => {
+    (resolveEffectiveCannSoc as jest.Mock).mockReturnValue('ascend950');
+    getStore['projectType'] = 'standard-custom';
+    getStore['sanitizer.toolType'] = 'npu-check';
+
+    const config = ConfigService.getSanitizerConfig('/workspace');
+
+    expect(config.toolType)
+      .toBe('mssanitizer');
+  });
+
+  it('defaults sanitizer toolType to mssanitizer when no project type is known', () => {
+    (resolveEffectiveCannSoc as jest.Mock).mockReturnValue('ascend950');
+
+    const config = ConfigService.getSanitizerConfig('/workspace');
+
+    expect(config.toolType)
+      .toBe('mssanitizer');
+  });
+
+  it.each([
     'mssanitizer',
     'npu-check',
-  ])('keeps configured sanitizer toolType %s for non-A2/A3 SOC', (toolType) => {
+  ])('keeps configured sanitizer toolType %s for non-A2/A3 SOC on a <<<>>> project', (toolType) => {
     (resolveEffectiveCannSoc as jest.Mock).mockReturnValue('ascend950');
+    getStore['projectType'] = 'ascend-c';
     getStore['sanitizer.toolType'] = toolType;
 
     const config = ConfigService.getSanitizerConfig('/workspace');

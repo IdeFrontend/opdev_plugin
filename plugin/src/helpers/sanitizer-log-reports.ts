@@ -36,6 +36,22 @@ export function isNpuCheckReport(reportPath: string): boolean {
     .includes('-npu-check');
 }
 
+/** Parses the millisecond timestamp from a `mssanitizer_<ts>...log` file name. */
+export function parseSanitizerLogTimestamp(filename: string): number | undefined {
+  const match = SANITIZER_LOG_NAME.exec(path.basename(filename));
+
+  return match ? Number(match[1]) : undefined;
+}
+
+/**
+ * Display title shared by log-directory and manually imported reports:
+ * `npu-check-YYYYMMDD` or `mssanitizer-YYYYMMDD` derived from the run
+ * timestamp embedded in the file name.
+ */
+export function buildSanitizerReportTitle(filename: string, timestamp: number): string {
+  return `${isNpuCheckReport(filename) ? 'npu-check' : 'mssanitizer'}-${formatTimestampToYYYYMMDD(timestamp)}`;
+}
+
 /**
  * Lists report nodes for the sanitizer log directory, skipping empty (0-byte)
  * logs left behind by a failed run and any file that is not a real
@@ -77,7 +93,7 @@ export function collectSanitizerLogReports(
     const timestamp = Number(match[1]);
 
     reports.push({
-      title: `${isNpuCheckReport(filename) ? 'npu-check' : 'mssanitizer'}-${formatTimestampToYYYYMMDD(timestamp)}`,
+      title: buildSanitizerReportTitle(filename, timestamp),
       timestamp,
       id: filename,
       path: fullPath,

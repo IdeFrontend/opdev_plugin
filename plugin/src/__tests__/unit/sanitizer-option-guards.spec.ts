@@ -6,6 +6,7 @@ import {
   normalizeSanitizerCommand,
   normalizeSanitizerTools,
   buildSanitizerLogFileName,
+  createSanitizerCommand,
 } from '@plugin/domain/services/command-strategy/sanitizer-option-guards';
 
 describe('normalizeMaxDebuglogSize (mssanitizer range 1..10240)', () => {
@@ -191,5 +192,28 @@ describe('buildSanitizerLogFileName', () => {
   it('keeps the legacy name for mssanitizer', () => {
     expect(buildSanitizerLogFileName('mssanitizer'))
       .toMatch(/^mssanitizer_\d+\.log$/);
+  });
+});
+
+describe('createSanitizerCommand', () => {
+  it('renders npu-check options as space-separated flags', () => {
+    const cmd = createSanitizerCommand('npu-check')
+      .addOption('tool', [
+        'memcheck',
+        'synccheck',
+      ])
+      .addOption('log-file', '/ws/.vscode/mindstudio_sanitizer_log/mssanitizer_1-npu-check.log');
+
+    expect(cmd.toString())
+      .toBe('npu-check --tool memcheck --tool synccheck --log-file /ws/.vscode/mindstudio_sanitizer_log/mssanitizer_1-npu-check.log');
+  });
+
+  it('renders mssanitizer options with the --key=value form', () => {
+    const cmd = createSanitizerCommand('mssanitizer')
+      .addOption('tool', 'memcheck')
+      .addOption('log-level', 'warn');
+
+    expect(cmd.toString())
+      .toBe('mssanitizer --tool=memcheck --log-level=warn');
   });
 });

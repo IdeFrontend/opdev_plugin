@@ -314,4 +314,23 @@ describe('SettingsLoader', () => {
     expect(SettingsLoader.isMsAgentAiFixEnabled())
       .toBe(false);
   });
+
+  it('getCannbotPromptOverride returns undefined when unset, blank, or non-string', () => {
+    expect(SettingsLoader.getCannbotPromptOverride())
+      .toBeUndefined();
+
+    getStore['profilingReport.cannbotPromptOverride'] = '   ';
+    expect(SettingsLoader.getCannbotPromptOverride())
+      .toBeUndefined();
+
+    getStore['profilingReport.cannbotPromptOverride'] = 42;
+    expect(SettingsLoader.getCannbotPromptOverride())
+      .toBeUndefined();
+  });
+
+  it('getCannbotPromptOverride returns the trimmed override text when set', () => {
+    getStore['profilingReport.cannbotPromptOverride'] = '  debug prompt  ';
+    expect(SettingsLoader.getCannbotPromptOverride())
+      .toBe('debug prompt');
+  });
 });

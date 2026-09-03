@@ -39,6 +39,7 @@ import {
   addSanitizerToolOptions,
   normalizeSanitizerCommand,
   buildSanitizerLogFileName,
+  createSanitizerCommand,
 } from './sanitizer-option-guards';
 
 /**
@@ -250,7 +251,7 @@ export class TritonCommandStrategy extends BasePythonCommandStrategy implements 
       config, sourceCannCmd, cdCmd, op,
     } = context;
     const commandName = normalizeSanitizerCommand(config.toolType);
-    const command = new Command(commandName);
+    const command = createSanitizerCommand(commandName);
     // Partial DAOs carry only the fields the user set — guard reads like
     // `|| {}`.
     const tool = config.tool ?? {};
