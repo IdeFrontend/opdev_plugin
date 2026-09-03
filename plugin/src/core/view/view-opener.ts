@@ -75,8 +75,8 @@ export class ViewOpener {
   }
 
   /**
-   * Open the profiling report panel for .rep/.ncrep files
-   * @param uri rep/ncrep file uri
+   * Open the profiling report panel for .rep/.ncrep/.npu-rep files
+   * @param uri rep/ncrep/npu-rep file uri
    */
   public static async openProfilingReport(uri: vscode.Uri): Promise<void> {
     const filePath = uri.fsPath;

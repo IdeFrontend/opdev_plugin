@@ -2523,7 +2523,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       return;
     }
 
-    if (fileType === 'rep' || fileType === 'ncrep') {
+    if (fileType === 'rep' || fileType === 'ncrep' || fileType === 'npu-rep') {
       await viewService.openProfilingReport(filePath);
 
       return;

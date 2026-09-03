@@ -2546,6 +2546,7 @@ export async function activate(context: vscode.ExtensionContext) {
           [t('profilingReport.reportFile')]: [
             'rep',
             'ncrep',
+            'npu-rep',
           ],
           [t('common.allFiles')]: ['*'],
         },
