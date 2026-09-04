@@ -16,11 +16,10 @@ import type {
 
 const mockProject = {
   workspaceIsProject: jest.fn(() => true),
-  projectId: 51,
   projectPath: '',
 };
-const mockGetConfig = jest.fn();
-const mockGetOpByProjectIdAndOpName = jest.fn();
+const mockReadProjectTypeSetting = jest.fn(() => undefined);
+const mockGetProjectByPath = jest.fn();
 const mockStorageGet = jest.fn(() => [] as string[]);
 const mockStorageSet = jest.fn();
 
@@ -54,6 +53,7 @@ jest.mock('vscode', () => {
 
   return {
     FileType,
+    env: { uriScheme: 'vscode' },
     Uri: {
       file: (fsPath: string) => ({ fsPath }),
       joinPath: (uri: { fsPath: string }, ...segments: string[]) => ({ fsPath: pathModule.join(uri.fsPath, ...segments) }),
@@ -78,15 +78,25 @@ jest.mock('@plugin/class/permanent-storage', () => ({
 
 jest.mock('@plugin/core/project/project', () => ({ Project: { getInstance: () => mockProject } }));
 
-jest.mock('@plugin/domain', () => ({ getConfig: mockGetConfig }));
-
-jest.mock('@plugin/domain/models/model', () => ({ getOpByProjectIdAndOpName: mockGetOpByProjectIdAndOpName }));
+jest.mock('@plugin/service/config-service', () => ({ ConfigService: { writeOpDevtoolsDottedSettings: jest.fn() } }));
 
 jest.mock('@plugin/helpers/ide-config-dir', () => {
   const pathModule = jest.requireActual<typeof import('node:path')>('node:path');
+  const actual = jest.requireActual<typeof import('@plugin/helpers/ide-config-dir')>('@plugin/helpers/ide-config-dir');
 
-  return { joinIdeConfigRelative: (...segments: string[]) => pathModule.join('.vscode', ...segments) };
+  return {
+    ...actual,
+    joinIdeConfigRelative: (...segments: string[]) => pathModule.join('.vscode', ...segments),
+    joinIdeConfigPath: (root: string, ...segments: string[]) => pathModule.join(root, '.vscode', ...segments),
+  };
 });
+
+jest.mock('@plugin/domain/models/project-model', () => ({
+  ...jest.requireActual('@plugin/domain/models/project-model'),
+  getProjectByPath: mockGetProjectByPath,
+}));
+
+jest.mock('@plugin/helpers/operator-project-workspace-config', () => ({ readWorkspaceProjectTypeSetting: mockReadProjectTypeSetting }));
 
 import * as vscode from 'vscode';
 import { PerformanceRunData } from '@plugin/core/performance/performance-run-data';
@@ -110,6 +120,17 @@ describe('PerformanceRunData refresh reconciliation', () => {
   const defaultStatImplementation = statMock.getMockImplementation()!;
   const defaultReadDirectoryImplementation = readDirectoryMock.getMockImplementation()!;
 
+  const writeCacheFileMapLists = (): Promise<void> => writeFile(
+    path.join(operatorRoot, '.vscode', 'cache.json'),
+    JSON.stringify({
+      schemaVersion: 1,
+      fileMapLists: {
+        simulate: simulateFileMapList,
+        on_board: onboardFileMapList,
+      },
+    }),
+  );
+
   beforeEach(async () => {
     tempRoot = await mkdtemp(path.join(os.tmpdir(), 'mstt-performance-refresh-'));
     operatorRoot = path.join(tempRoot, 'operator');
@@ -120,22 +141,15 @@ describe('PerformanceRunData refresh reconciliation', () => {
     await mkdir(opprofRoot, { recursive: true });
 
     mockProject.projectPath = operatorRoot;
-    mockGetOpByProjectIdAndOpName.mockReturnValue({ op_path: operatorRoot });
-    mockGetConfig.mockImplementation((_projectId: number, configType: string) => {
-      if (configType === 'build_op') {
-        return [{ op: 'test_op' }];
-      }
-
-      if (configType === 'simulate') {
-        return [{ user_options: { fileMapList: simulateFileMapList } }];
-      }
-
-      if (configType === 'on_board') {
-        return [{ user_options: { fileMapList: onboardFileMapList } }];
-      }
-
-      return [];
+    // The project is recognized through the synthesized record; a
+    // single-op (non-standard-custom) project roots at its own .vscode/opprof.
+    mockGetProjectByPath.mockReturnValue({
+      project_name: 'operator',
+      project_path: operatorRoot,
+      project_type: 'cann',
     });
+    mockReadProjectTypeSetting.mockReturnValue(undefined);
+    await writeCacheFileMapLists();
     mockStorageGet.mockReturnValue([]);
     mockStorageSet.mockClear();
     statMock.mockImplementation(defaultStatImplementation);
@@ -228,6 +242,7 @@ describe('PerformanceRunData refresh reconciliation', () => {
       filePath: survivor,
       reportTime: 3,
     });
+    await writeCacheFileMapLists();
     const mappingsBeforeRefresh = JSON.stringify({
       simulateFileMapList,
       onboardFileMapList,

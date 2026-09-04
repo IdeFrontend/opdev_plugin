@@ -66,7 +66,7 @@ async function runPostActivateBootstrapImpl(deps: PostActivateBootstrapDeps): Pr
       logDebug('postActivate:cannCppIncludePaths:error', error);
     });
 
-  // Issue #37: seed NPU_ARCH into the terminal env from settings / OS env only, so a manual
+  // Seed NPU_ARCH into the terminal env from settings / OS env only, so a manual
   // `bash build.sh` right after "Open Folder" has it. Host detection stays off here: it is
   // memoized, and probing before the user's CANN env is applied would cache a failure.
   try {

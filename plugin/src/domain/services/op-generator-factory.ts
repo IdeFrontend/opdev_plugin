@@ -158,6 +158,120 @@ export class BaseOpGenerator {
       [templateName]: opName,
     };
 
+    // If skipExisting is true, only template files (those whose filename or content contains the template name) are replaced
+    const shouldReplace = skipExisting
+      ? (fullPath: string, content: string): boolean => {
+        // Check if the file contains the template name
+        const fileName = path.basename(fullPath);
+
+        // If the file name does not contain the template name, check the file contents
+        return (
+          fileName.includes(templateName)
+          || Object.keys(replacements)
+            .some((key) => content.includes(key))
+        );
+      }
+      : undefined;
+
+    this.replaceFilesRecursively(this.op_path, replacements, shouldReplace);
+  }
+
+  /**
+   * Replace reserved `__MSTT_OP_NAME_*__` placeholders (longest keys first so partial matches are safe).
+   * Used in templates where the operator id must track `op_name` but is not the template id string.
+   */
+  _replaceMsttPlaceholders() {
+    if (!fs.pathExistsSync(this.op_path) || !this.op_name) {
+      return;
+    }
+
+    const opName = this.op_name;
+    const opNameCapitalized = opName
+      .split('_')
+      .map((s) => s.charAt(0)
+        .toUpperCase() + s.slice(1))
+      .join('');
+
+    const replacements: Record<string, string> = {
+      __MSTT_OP_NAME_PASCAL__: opNameCapitalized,
+      __MSTT_OP_NAME_UPPER__: opName.toUpperCase(),
+      __MSTT_OP_NAME__: opName,
+    };
+
+    this.replaceFilesRecursively(this.op_path, replacements);
+  }
+
+  /**
+   * Unzip the template archive into `op_path`.
+   * If `skipExisting` is true, existing files are not overwritten: entries are
+   * extracted one by one and skipped when the target file already exists.
+   */
+  protected extractTemplateZip(templateFilePath: string): void {
+    // Unzip using adm-zip (cross-platform compatible)
+    // If skipExisting is true, existing files will not be overwritten.
+    try {
+      const zip = new AdmZip(templateFilePath);
+      const skipExisting = this.params.skipExisting || false;
+
+      if (skipExisting) {
+        // Do not overwrite existing files: extract files one by one, skip if the file already exists
+        zip.getEntries()
+          .forEach((entry) => {
+            if (entry.isDirectory) {
+              return;
+            }
+
+            const entryPath = path.join(this.op_path, entry.entryName);
+            const entryDir = path.dirname(entryPath);
+
+            // Make sure the directory exists
+            fs.ensureDirSync(entryDir);
+
+            // Extract only if the file does not exist
+            if (!fs.pathExistsSync(entryPath)) {
+              const content = zip.readFile(entry);
+
+              if (content) {
+                fs.writeFileSync(entryPath, content);
+              }
+            }
+          });
+      }
+      else {
+        // Original logic: overwrite existing files
+        zip.extractAllTo(this.op_path, true);
+      }
+    }
+    catch (error) {
+      throw new Error(`Failed to extract template: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Post-extraction steps shared by all generators: rename template files and
+   * replace template tokens in the generated sources.
+   */
+  protected finalizeTemplate(): void {
+    if (this.template_name && this.op_name) {
+      this._renameFiles(this.template_name);
+      this._replaceContent(this.template_name);
+    }
+
+    if (this.op_name) {
+      this._replaceMsttPlaceholders();
+    }
+  }
+
+  /**
+   * Recursively walk `root` and apply `replacements` to every text file.
+   * If `shouldReplace` is provided, a file is only processed when the callback
+   * returns true; unreadable files are always skipped.
+   */
+  protected replaceFilesRecursively(
+    root: string,
+    replacements: Record<string, string>,
+    shouldReplace?: (fullPath: string, content: string)=> boolean,
+  ): void {
     const walk = (dir: string) => {
       const names = fs.readdirSync(dir);
 
@@ -170,29 +284,16 @@ export class BaseOpGenerator {
           continue;
         }
 
-        // If skipExisting is true, only template files (those whose filename or content contains the template name) are replaced
-        if (skipExisting) {
-          // Check if the file contains the template name
-          const fileName = path.basename(full);
-          let fileContainsTemplate = fileName.includes(templateName);
+        if (shouldReplace) {
+          try {
+            const content = fs.readFileSync(full, 'utf8');
 
-          // If the file name does not contain the template name, check the file contents
-          if (!fileContainsTemplate) {
-            try {
-              const content = fs.readFileSync(full, 'utf8');
-
-              // Check whether the content contains template-related strings
-              fileContainsTemplate = Object.keys(replacements)
-                .some((key) => content.includes(key));
-            }
-            catch {
-              // Unable to read file, skipping
+            if (!shouldReplace(full, content)) {
               continue;
             }
           }
-
-          // If the file does not contain template-related content, it means that the file already exists and the replacement is skipped.
-          if (!fileContainsTemplate) {
+          catch {
+            // Unable to read file, skipping
             continue;
           }
         }
@@ -220,66 +321,7 @@ export class BaseOpGenerator {
       }
     };
 
-    walk(this.op_path);
-  }
-
-  /**
-   * Replace reserved `__MSTT_OP_NAME_*__` placeholders (longest keys first so partial matches are safe).
-   * Used in templates where the operator id must track `op_name` but is not the template id string.
-   */
-  _replaceMsttPlaceholders() {
-    if (!fs.pathExistsSync(this.op_path) || !this.op_name) {
-      return;
-    }
-
-    const opName = this.op_name;
-    const opNameCapitalized = opName
-      .split('_')
-      .map((s) => s.charAt(0)
-        .toUpperCase() + s.slice(1))
-      .join('');
-
-    const replacements: Record<string, string> = {
-      __MSTT_OP_NAME_PASCAL__: opNameCapitalized,
-      __MSTT_OP_NAME_UPPER__: opName.toUpperCase(),
-      __MSTT_OP_NAME__: opName,
-    };
-
-    const walk = (dir: string) => {
-      const names = fs.readdirSync(dir);
-
-      for (const name of names) {
-        const full = path.join(dir, name);
-        const stat = fs.statSync(full);
-
-        if (stat.isDirectory()) {
-          walk(full);
-          continue;
-        }
-
-        try {
-          let content = fs.readFileSync(full, 'utf8');
-          let changed = false;
-
-          for (const oldKey of Object.keys(replacements)) {
-            if (content.includes(oldKey)) {
-              content = content.split(oldKey)
-                .join(replacements[oldKey]);
-              changed = true;
-            }
-          }
-
-          if (changed) {
-            fs.writeFileSync(full, content, 'utf8');
-          }
-        }
-        catch {
-          // skip binary or unreadable files
-        }
-      }
-    };
-
-    walk(this.op_path);
+    walk(root);
   }
 }
 
@@ -330,53 +372,8 @@ export class AscendOpGenerator extends BaseOpGenerator {
       throw new Error(`Template file does not exist: ${templateFilePath}`);
     }
 
-    // Unzip using adm-zip (cross-platform compatible)
-    // If skipExisting is true, existing files will not be overwritten.
-    try {
-      const zip = new AdmZip(templateFilePath);
-      const skipExisting = this.params.skipExisting || false;
-
-      if (skipExisting) {
-        // Do not overwrite existing files: extract files one by one, skip if the file already exists
-        zip.getEntries()
-          .forEach((entry) => {
-            if (entry.isDirectory) {
-              return;
-            }
-
-            const entryPath = path.join(this.op_path, entry.entryName);
-            const entryDir = path.dirname(entryPath);
-
-            // Make sure the directory exists
-            fs.ensureDirSync(entryDir);
-
-            // Extract only if the file does not exist
-            if (!fs.pathExistsSync(entryPath)) {
-              const content = zip.readFile(entry);
-
-              if (content) {
-                fs.writeFileSync(entryPath, content);
-              }
-            }
-          });
-      }
-      else {
-        // Original logic: overwrite existing files
-        zip.extractAllTo(this.op_path, true);
-      }
-    }
-    catch (error) {
-      throw new Error(`Failed to extract template: ${error instanceof Error ? error.message : String(error)}`);
-    }
-
-    if (this.template_name && this.op_name) {
-      this._renameFiles(this.template_name);
-      this._replaceContent(this.template_name);
-    }
-
-    if (this.op_name) {
-      this._replaceMsttPlaceholders();
-    }
+    this.extractTemplateZip(templateFilePath);
+    this.finalizeTemplate();
 
     OperatorPluginRegistry.getOpPlugin('ascend')
       .patchGeneratedProject(this.op_path, this.params);
@@ -407,53 +404,8 @@ export class CannOpGenerator extends BaseOpGenerator {
       throw new Error(`Template file does not exist: ${templateFilePath}`);
     }
 
-    // Unzip using adm-zip (cross-platform compatible)
-    // If skipExisting is true, existing files will not be overwritten.
-    try {
-      const zip = new AdmZip(templateFilePath);
-      const skipExisting = this.params.skipExisting || false;
-
-      if (skipExisting) {
-        // Do not overwrite existing files: extract files one by one, skip if the file already exists
-        zip.getEntries()
-          .forEach((entry) => {
-            if (entry.isDirectory) {
-              return;
-            }
-
-            const entryPath = path.join(this.op_path, entry.entryName);
-            const entryDir = path.dirname(entryPath);
-
-            // Make sure the directory exists
-            fs.ensureDirSync(entryDir);
-
-            // Extract only if the file does not exist
-            if (!fs.pathExistsSync(entryPath)) {
-              const content = zip.readFile(entry);
-
-              if (content) {
-                fs.writeFileSync(entryPath, content);
-              }
-            }
-          });
-      }
-      else {
-        // Original logic: overwrite existing files
-        zip.extractAllTo(this.op_path, true);
-      }
-    }
-    catch (error) {
-      throw new Error(`Failed to extract template: ${error instanceof Error ? error.message : String(error)}`);
-    }
-
-    if (this.template_name && this.op_name) {
-      this._renameFiles(this.template_name);
-      this._replaceContent(this.template_name);
-    }
-
-    if (this.op_name) {
-      this._replaceMsttPlaceholders();
-    }
+    this.extractTemplateZip(templateFilePath);
+    this.finalizeTemplate();
 
     OperatorPluginRegistry.getOpPlugin('cann')
       .patchGeneratedProject(this.op_path, this.params);
@@ -483,53 +435,8 @@ export class PyAscOpGenerator extends BaseOpGenerator {
       throw new Error(`Template file does not exist: ${templateFilePath}`);
     }
 
-    // Unzip using adm-zip (cross-platform compatible)
-    // If skipExisting is true, existing files will not be overwritten.
-    try {
-      const zip = new AdmZip(templateFilePath);
-      const skipExisting = this.params.skipExisting || false;
-
-      if (skipExisting) {
-        // Do not overwrite existing files: extract files one by one, skip if the file already exists
-        zip.getEntries()
-          .forEach((entry) => {
-            if (entry.isDirectory) {
-              return;
-            }
-
-            const entryPath = path.join(this.op_path, entry.entryName);
-            const entryDir = path.dirname(entryPath);
-
-            // Make sure the directory exists
-            fs.ensureDirSync(entryDir);
-
-            // Extract only if the file does not exist
-            if (!fs.pathExistsSync(entryPath)) {
-              const content = zip.readFile(entry);
-
-              if (content) {
-                fs.writeFileSync(entryPath, content);
-              }
-            }
-          });
-      }
-      else {
-        // Original logic: overwrite existing files
-        zip.extractAllTo(this.op_path, true);
-      }
-    }
-    catch (error) {
-      throw new Error(`Failed to extract template: ${error instanceof Error ? error.message : String(error)}`);
-    }
-
-    if (this.template_name && this.op_name) {
-      this._renameFiles(this.template_name);
-      this._replaceContent(this.template_name);
-    }
-
-    if (this.op_name) {
-      this._replaceMsttPlaceholders();
-    }
+    this.extractTemplateZip(templateFilePath);
+    this.finalizeTemplate();
 
     return true;
   }
@@ -557,47 +464,8 @@ export class TritonOpGenerator extends CannOpGenerator {
       throw new Error(`Template file does not exist: ${templateFilePath}`);
     }
 
-    try {
-      const zip = new AdmZip(templateFilePath);
-      const skipExisting = this.params.skipExisting || false;
-
-      if (skipExisting) {
-        zip.getEntries()
-          .forEach((entry) => {
-            if (entry.isDirectory) {
-              return;
-            }
-
-            const entryPath = path.join(this.op_path, entry.entryName);
-            const entryDir = path.dirname(entryPath);
-
-            fs.ensureDirSync(entryDir);
-
-            if (!fs.pathExistsSync(entryPath)) {
-              const content = zip.readFile(entry);
-
-              if (content) {
-                fs.writeFileSync(entryPath, content);
-              }
-            }
-          });
-      }
-      else {
-        zip.extractAllTo(this.op_path, true);
-      }
-    }
-    catch (error) {
-      throw new Error(`Failed to extract template: ${error instanceof Error ? error.message : String(error)}`);
-    }
-
-    if (this.template_name && this.op_name) {
-      this._renameFiles(this.template_name);
-      this._replaceContent(this.template_name);
-    }
-
-    if (this.op_name) {
-      this._replaceMsttPlaceholders();
-    }
+    this.extractTemplateZip(templateFilePath);
+    this.finalizeTemplate();
 
     return true;
   }

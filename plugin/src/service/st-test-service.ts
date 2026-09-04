@@ -7,6 +7,7 @@ import type {
   CommandResult,
 } from '@plugin/class/command-options';
 import { ProjectManager } from '@plugin/core/project/project-manager';
+import { getIdeServerDirName } from '@plugin/helpers/ide-config-dir';
 import { OperatorProjectType } from '@plugin/domain/models/operator-project-type';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import {
@@ -35,6 +36,7 @@ import {
   resolveStTestResultsRootDirectory,
   resolveStTestRunDirectory,
   ST_TEST_ARCH_DIR,
+  toDisplayPath,
   validateStTestOperatorDirectory,
 } from '@plugin/domain/utils/st-test-paths';
 import {
@@ -143,7 +145,7 @@ export function resolveRemoteStTestPullDir(workspaceRoot: string): string {
 export function resolveRemoteManagedTtkRootBase(remoteHome: string): string {
   return path.posix.join(
     remoteHome,
-    '.codearts-server',
+    getIdeServerDirName(),
     'data',
     'User',
     'globalStorage',
@@ -172,7 +174,7 @@ export class StTestService {
       }),
       getEnvironmentScriptPath: dependencies.getEnvironmentScriptPath
         ?? getEnvironmentScriptPathFromWorkspace,
-      getOutputChannel: dependencies.getOutputChannel ?? (() => getOperatorToolOutputChannel('test')),
+      getOutputChannel: dependencies.getOutputChannel ?? (() => getOperatorToolOutputChannel('st test')),
       createRunId: dependencies.createRunId ?? createStTestRunId,
       now: dependencies.now ?? Date.now,
       sleep: dependencies.sleep ?? ((durationMs) => new Promise((resolve) => {
@@ -1245,17 +1247,6 @@ export class StTestService {
   }
 
   private createInvalidReportFallback(params: BuildStTestResultReportParams): StTestResultReportDto {
-    const toDisplayPath = (basePath: string, targetPath: string): string => {
-      const relative = path.relative(path.resolve(basePath), path.resolve(targetPath));
-      const outside = path.isAbsolute(relative)
-        || relative === '..'
-        || relative.startsWith(`..${path.sep}`);
-
-      return (outside ? path.basename(targetPath) : relative || path.basename(targetPath))
-        .split(path.sep)
-        .join('/');
-    };
-
     return {
       runId: params.runId,
       operatorName: params.operatorName,

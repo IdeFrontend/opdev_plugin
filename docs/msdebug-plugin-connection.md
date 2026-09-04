@@ -1,6 +1,6 @@
 # msdebug CLI ↔ MindStudio Debug plugin connection
 
-How terminal `msdebug python3 test.py` relates to OP DevTools + MindStudio Debug VS Code extension.
+How terminal `msdebug python3 test.py` relates to OP DevTools + MindStudio Debug VS Code extension (extension version **1.4.6**; the webview↔plugin RPC surface is **37 endpoints** — webview 9 / common 10 / ops 17 / performance 1).
 
 See also: [debug-integration.md](./debug-integration.md), [msdebug-triton-e2e.md](./msdebug-triton-e2e.md).
 
@@ -17,7 +17,7 @@ OP DevTools does **not** spawn `msdebug`. It patches `launch.json` and calls `vs
 
 1. Wrapper `msdebug_script.sh` → `msdebug.bin`
 2. Positional args → `target create "python3"` + `settings set target.run-args "test.py"`
-3. Export `LAUNCH_KERNEL_PATH=/path/to/kernel` (compiled kernel ELF — Triton 3.5+ `*.npubin` or legacy `kernel.o`; msdebug is extension-agnostic)
+3. Export `LAUNCH_KERNEL_PATH=/path/to/kernel` (compiled kernel ELF — Triton 3.5+ `*.npubin` or `kernel.o`; msdebug is extension-agnostic)
 4. Set breakpoints on kernel source, `r` to run
 5. Host python launches with `LD_PRELOAD=libruntime_stub.so`; stub hooks `rtKernelLaunch*` → lldb-server → NPU kernel
 

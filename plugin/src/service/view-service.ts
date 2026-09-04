@@ -21,6 +21,15 @@ export class ViewService {
     await ViewOpener.openInsight(fileUri);
   }
 
+  /**
+   * Open profiling report
+   */
+  async openProfilingReport(filePath: string) {
+    const fileUri = vscode.Uri.file(filePath);
+
+    await ViewOpener.openProfilingReport(fileUri);
+  }
+
 }
 
 export const viewService = new ViewService();

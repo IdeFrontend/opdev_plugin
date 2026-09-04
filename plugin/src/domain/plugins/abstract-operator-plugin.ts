@@ -1,6 +1,6 @@
 import * as path from 'path';
 import { CommandStrategy } from '@plugin/domain/services/command-strategy/types';
-import { OpRecord } from '@plugin/domain/models/model';
+import { OpRecord } from '@plugin/domain/models/op-record';
 import {
   BaseOpGenerator, OpGenParams, OpGenProject,
 } from '@plugin/domain/services/op-generator-factory';

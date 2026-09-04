@@ -4,7 +4,7 @@ This document is the **A5-focused guide** for the Mind Studio / operator VS Code
 
 **Canonical environment resolution** (precedence, spawn env, placeholders, lifecycle) lives in **`docs/ascend-env-spec.md`**. Read that first for “how SOC / simulator / NPU arch are chosen”; this file covers **A5-specific values and behavior** on top of that contract.
 
-**A3 vs A5 behavior split** (detailed matrix): **`docs/review-a3-a5-environment-support.md`**. Pre-refactor bug list: git history (`b0a3a7557`).
+**A3 vs A5 behavior split** (detailed matrix): **`docs/review-a3-a5-environment-support.md`**.
 
 There is **no separate “A5” product mode**. A5 support means the plugin consistently uses the correct **CANN SOC slug**, **simulator directory**, **`NPU_ARCH`**, **host detection** substrings, and **on-board profiler** metric matrix for Ascend 950 / Atlas A5 class targets.
 
@@ -29,7 +29,7 @@ Shared constants: `shared/cann-env-constants.ts`. Detection and mapping: `plugin
 | `SIMULATOR_TYPE` | `Ascend950PR_9589` | Directory under `$ASCEND_HOME_PATH/tools/simulator/<name>/lib` |
 | `NPU_ARCH` | `dav-3510` | AscendC `--npu-arch` |
 
-When the workspace sets **`performanceTuning.simulation.simulatorType`** to `Ascend950PR_9589` ([`workspace-settings.md`](./workspace-settings.md)), `resolveAscendEnv` **derives** `SOC_VERSION=ascend950` and `NPU_ARCH=dav-3510` for that simulate run so SOC and simulator cannot disagree (see [`ascend-env-spec.md`](./ascend-env-spec.md) §3).
+When the workspace sets **`performanceTuning.simulation.simulatorType`** to `Ascend950PR_9589` ([`workspace-settings.md`](./workspace-settings.md)), `resolveAscendEnv` **derives** `SOC_VERSION=ascend950` and `NPU_ARCH=dav-3510` for that simulate run so SOC and simulator cannot disagree (see [`ascend-env-spec.md`](./ascend-env-spec.md) §7).
 
 ---
 
@@ -43,30 +43,27 @@ When the workspace sets **`performanceTuning.simulation.simulatorType`** to `Asc
 | **Host detection** | Lazy `asys` / `npu-smi`; Chip Name → series → slug per [`ascend-env-spec.md`](./ascend-env-spec.md) §1 (`Ascend950*` → A5 / `ascend950`). |
 | **NPU arch from SOC** | `getNpuArchForCannSoc('ascend950')` → `dav-3510`; Pro/Premium/901 chips → A2 slug + `dav-1001` when detected. |
 | **SOC ↔ simulator tables** | `ascend950` ↔ `Ascend950PR_9589`; inverse via `simulatorTypeToCannSoc` (series profile table only). |
-| **Templates / new operators** | `ascend.plugin.ts`, `abstract-operator-plugin.ts`, `model.ts` use `{soc_version}` / `{simulator_type}` placeholders, not hardcoded 910B strings. |
+| **Templates / new operators** | `ascend.plugin.ts`, `abstract-operator-plugin.ts` use `{soc_version}` / `{simulator_type}` placeholders, not hardcoded 910B strings. |
 | **On-board profiler (A5)** | `OnBoardStrategy`: `MemoryDetail` replaced by `PCSampling` in base metrics; Roofline/PCSampling enable `Default` metric bundle (`profiler-service.ts`). |
 | **Simulator profiler** | `SimulatorStrategy`: `--soc-version=Ascend950PR_9589` (simulator **directory**, not `ascend950` slug) — see [`ascend-env-spec.md`](./ascend-env-spec.md) §8.1. |
-| **New project opprof defaults** | `generateStructure` sets `MemoryDetail: false`, `PCSampling: true` when `resolveAscendEnv(...).socVersion` is A5 (`model.ts`). |
-| **Workspace sync** | `extension.ts` / `config-service.ts`: A5 syncs `performanceTuning.onBoard.pcSampling`; A3 syncs `cacheHeatmap` from `MemoryDetail`. |
-| **Config load from settings** | `operator-project-workspace-config.ts`: maps `pcSampling` vs `cacheHeatmap` using workspace `environment.socVersion` + `isAscendA5ProfilerCannSoc`. |
+| **New project opprof defaults** | Project creation seeds `MemoryDetail: false`, `PCSampling: true` when the effective SOC is A5 (`config-service.ts`). |
+| **On-board config storage** | Options persist as `performanceTuning.onBoard.*` workspace settings; `pcSampling` vs `cacheHeatmap` are SOC-gated at read time by `isAscendA5ProfilerCannSoc(resolveEffectiveCannSoc())` in `config-service.ts`. |
 | **i18n / package.nls** | User-facing copy for PC sampling vs cache heatmap on Ascend 950 / A5 (`shared/i18n`, `package.nls*.json`). |
 | **Unit tests** | `operator-spawn-env.spec.ts` (A5 sim → `ascend950` + `dav-3510`), `aclnn-cmake-generation.spec.ts` (`SUPPORT_*` at generation), `operator-script-placeholders.spec.ts`, `profiler-simulator-resolution.spec.ts`, `pyasc-plugin.spec.ts`. |
 
 ### 2.4 Project-type notes (templates)
 
-| Type | A4/A5 template status |
+| Type | A2/A3/A5 template status |
 |------|------------------------|
 | **CANN** (`cann_template/*`) | Env-driven `build.sh` / cmake — reference implementation |
 | **Ascend** (`ascend_template/add_custom`) | `SUPPORT_*` literals in generated `CMakeLists.txt`; `{soc_version}` placeholders on build (no `SOC_VERSION` / `NPU_ARCH` spawn export) |
-| **PyAsc** (`pyasc_temple`) | Python-only; configs use `python3 ./<op>.py`; profiler uses resolver |
-| **Triton** (`triton_vector_add`) | Python-only; simulate/on-board msprof via Operate panel (PyAsc-style `python3` entry); requires CANN env + `torch_npu` + `triton` |
+| **PyAsc** (`cann_template/pyasc_template`) | Python-only; configs use `python3 ./<op>.py`; profiler uses resolver |
+| **Triton** (`triton_template/triton_vector_add`) | Python-only; simulate/on-board msprof via Operate panel (PyAsc-style `python3` entry); requires CANN env + `torch_npu` + `triton` |
 
-### 2.2 Not driven by `resolveAscendEnv` (intentional or legacy)
+### 2.2 Not driven by `resolveAscendEnv`
 
 | Item | Detail |
 |------|--------|
-| **`projects.json` `soc_version`** | Env config UI persists it for display/APIs; **`resolveAscendEnv` does not read it**. To target A5, set **`environment.socVersion`** or **`simulation.simulatorType`** in workspace settings ([`workspace-settings.md`](./workspace-settings.md)), export `SOC_VERSION=ascend950` before launch, or rely on detection. |
-| **`getProjectSocVersion()`** | Returns `getSocVersionWithWorkspaceOverride(project.soc_version)` — used for **workspace settings sync** and env webview display, not for spawn env. |
 | **`DEFAULT_FALLBACK_CANN_SOC`** | Empty string when settings, env, and detection all fail (no silent `ascend910b` in resolver). |
 | **`SUPPORT_COMPUTE_UNIT` / `SUPPORT_TILING_DIR`** | Baked into generated `CMakeLists.txt` via `resolveAclnnCmakeDefaultsForGeneration`: A3-class → `ascend910_95` + `arch22`; A5-class → `ascend950` + `arch35` ([`cann-aclnn-build-defaults.ts`](../shared/cann-aclnn-build-defaults.ts), matrix in [`review-a3-a5-environment-support.md`](./review-a3-a5-environment-support.md)). |
 
@@ -74,8 +71,7 @@ When the workspace sets **`performanceTuning.simulation.simulatorType`** to `Asc
 
 - **Extend chip rules** in [`ascend-env-spec.md`](./ascend-env-spec.md) §4 if `Chip Name` strings on your host are not yet covered; verify on physical A5 hosts.
 - **Simulator directory names** must exist under your CANN `tools/simulator`; CANN upgrades may rename dirs — update constants or workspace setting accordingly.
-- **Saved simulate / opprof config** can freeze `simulatorType` and metric flags from `generateStructure` time; changing SOC later does not rewrite stored configs until the user edits or regenerates.
-- **Stale workspace settings** — `extension.ts` / `config-service` may have synced `Ascend910B3` into `.vscode/settings.json` on older projects; update simulate/on-board settings after migrating to A5.
+- **Persisted on-board / simulate options** — `performanceTuning.onBoard.*` and `performanceTuning.simulation.*` settings persist across sessions; on-board reads are SOC-gated at read time, while simulate options stay as configured until edited.
 - **Multi-NPU hosts** — detection scans full probe text with ordered substring rules; heterogeneous machines need an explicit workspace SOC or simulator setting.
 - **Profiler simulate** — `SimulatorStrategy` passes resolved **simulator directory** to `msprof op simulator --soc-version`, not the CANN slug ([`ascend-env-spec.md`](./ascend-env-spec.md) §8.1).
 
@@ -92,14 +88,14 @@ Rules in [`ascend-env-spec.md`](./ascend-env-spec.md) §4 (`shared/ascend-series
 Log lines when detection runs (Huawei Op Devtools channel, scope `op-devtools/ascend-env`):
 
 ```
-detected SOC via asys: ascend950
-detected SOC via npu-smi: ascend950
+detected series=A5 soc=ascend950 npu_arch=dav-3510 chip=Ascend950PR_9589 (via=npu-smi)
+detected series=A5 soc=ascend950 npu_arch=dav-3510 chip=Ascend950PR_9589 (via=asys)
 ```
 
 Per-command resolution (same channel):
 
 ```
-Ascend Environment Resolved: soc=ascend950 (source=…), simulator=Ascend950PR_9589 (source=…), npu_arch=dav-3510 (source=derived-from-soc) [projectId=… isSimulator=…]
+Ascend Environment Resolved: soc=ascend950 (source=workspace-setting), simulator=Ascend950PR_9589 (source=workspace-setting), npu_arch=dav-3510 (source=derived-from-soc), support_compute_unit=ascend950, support_tiling_dir=arch35 [isSimulator=true]
 ```
 
 ---
@@ -145,10 +141,9 @@ On-board command build passes `onboardCannSoc` from `resolveAscendEnv({ isSimula
 | Spawn entry | `plugin/src/service/operator-command-executor.ts` |
 | On-board / sim profiler strategies | `plugin/src/domain/services/profiler-service.ts` |
 | Strategies (onboardCannSoc) | `plugin/src/domain/services/command-strategy/ascend-strategy.ts`, `cann-strategy.ts` |
-| New-op defaults | `plugin/src/domain/models/model.ts` |
+| New-op on-board defaults | `plugin/src/service/config-service.ts` |
 | Workspace SOC / simulator helpers | `plugin/src/helpers/operator-project-workspace-config.ts` |
-| Settings sync | `plugin/src/extension.ts`, `plugin/src/service/config-service.ts` |
-| Env config UI | `web/src/views/panels/config/components/env-config.vue`, `simulation-tab.vue` |
+| On-board options (webview + settings DAO) | `plugin/src/extension.ts`, `plugin/src/service/config-service.ts` |
 | Env spec (all platforms) | `docs/ascend-env-spec.md` |
 
 ---

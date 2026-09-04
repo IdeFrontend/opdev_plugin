@@ -10,17 +10,18 @@ import {
   executeOperatorCommand,
 } from '@plugin/service/operator-command-executor';
 import {
-  getSanitizerCommand, getBuildExampleCommand, getBuildOpCommand,
+  getSanitizerCommand, getBuildExampleCommand, getBuildOpCommand, resolveSanitizerBaseContext, resolveBuildExampleBaseContext,
 } from '@plugin/domain';
+import { getProjectByPath } from '@plugin/domain/models/project-model';
+import { resolveOpRecord } from '@plugin/domain/models/op-record';
+import { ConfigService } from '@plugin/service/config-service';
 import {
   buildRemoteBuildExampleCommand,
   buildRemoteExecCommand,
   createRemoteCommandWhenNoNpuTransformer,
+  resolveRemotePullDir,
 } from '@plugin/helpers/remote-command';
-import { configService } from './config-service';
-import {
-  buildService, notifyBuildSucceededForSidebar,
-} from './build-service';
+import { notifyBuildSucceededForSidebar } from './build-service';
 import {
   OperatorProjectType, OperatorProjectDetector,
 } from '@plugin/domain/services/operator-project-detector';
@@ -31,29 +32,11 @@ import { cleanupCwdSanitizerLog } from '@plugin/helpers/cleanup-sanitizer-cwd-lo
 import { joinIdeConfigPath } from '@plugin/helpers/ide-config-dir';
 import { syncSanitizerPythonTargetFromActiveEditor } from '@plugin/helpers/sync-sanitizer-python-target';
 import { probeTritonPythonDependencies } from '@plugin/domain/services/command-strategy/triton-strategy';
-import { getProjectById } from '@plugin/domain';
 import { msAgentBridgeService } from '@plugin/service/ms-agent-bridge.service';
 import { sanitizerDiagnosticsService } from '@plugin/service/sanitizer-diagnostics.service';
 import { COMMAND_FLASH_MS_SANITIZER_RUN_DATA } from '@plugin/constants';
 
-const CONFIG_TYPES = { SANITIZER: 'sanitizer' } as const;
-
 export class SanitizerService {
-  /**
-   * Get anomaly detection (sanitizer) config ID
-   */
-  async getSanitizerConfigIdInternal(): Promise<number | undefined> {
-    try {
-      const configData = await configService.getSanitizerConfigsList();
-
-      return configData.find((v) => v.config_type === CONFIG_TYPES.SANITIZER)
-        ?.config_id;
-    }
-    catch {
-      return undefined;
-    }
-  }
-
   /**
    * Capture the active `.py` into the sanitizer config before the options webview opens.
    * The panel opens in ViewColumn.Active and displaces the editor, so once it is shown
@@ -61,25 +44,21 @@ export class SanitizerService {
    * active-file project has no `.py` focused, so the caller can skip opening the panel.
    */
   async captureActiveFileTargetForOptionsPanel(): Promise<boolean> {
-    const sanitizerConfigId = await this.getSanitizerConfigIdInternal();
+    const projectPath = ProjectManager.getInstance().projectPath;
+    const project = projectPath ? getProjectByPath(projectPath) : null;
 
-    if (sanitizerConfigId == null) {
-      // No sanitizer config yet — let the panel open; runSanitizer reports config errors.
+    if (!project) {
+      // No project yet — let the panel open; runSanitizer reports config errors.
       return true;
     }
 
-    const projectIdStr = ProjectManager.getInstance().projectId;
-    const project = projectIdStr ? getProjectById(Number(projectIdStr)) : null;
-    const behavior = OperatorPluginRegistry.getOpPlugin(project?.project_type).buildBehavior;
+    const behavior = OperatorPluginRegistry.getOpPlugin(project.project_type).buildBehavior;
 
     if (!behavior.requiresActiveFileCheck) {
       return true;
     }
 
-    return syncSanitizerPythonTargetFromActiveEditor(
-      Number(sanitizerConfigId),
-      behavior.activeFileExtension || '.py',
-    );
+    return syncSanitizerPythonTargetFromActiveEditor(behavior.activeFileExtension || '.py');
   }
 
   /**
@@ -87,25 +66,20 @@ export class SanitizerService {
    */
   async runSanitizer(params: { operatorNames?: string } = {}): Promise<void> {
     try {
-      const sanitizerConfigId: number | undefined =
-        await this.getSanitizerConfigIdInternal();
+      const projectPath = ProjectManager.getInstance().projectPath;
+      const project = projectPath ? getProjectByPath(projectPath) : null;
 
-      if (sanitizerConfigId == null) {
+      if (!projectPath || !project) {
         vscode.window.showErrorMessage(t('sanitizer.detectionFailedError', { error: 'No sanitizer config' }));
 
         return;
       }
 
-      const projectIdStr = ProjectManager.getInstance().projectId;
-      const project = projectIdStr ? getProjectById(Number(projectIdStr)) : null;
-      const opPlugin = OperatorPluginRegistry.getOpPlugin(project?.project_type);
+      const opPlugin = OperatorPluginRegistry.getOpPlugin(project.project_type);
       const behavior = opPlugin.buildBehavior;
 
       if (behavior.requiresActiveFileCheck) {
-        const synced = await syncSanitizerPythonTargetFromActiveEditor(
-          Number(sanitizerConfigId),
-          behavior.activeFileExtension || '.py',
-        );
+        const synced = await syncSanitizerPythonTargetFromActiveEditor(behavior.activeFileExtension || '.py');
 
         if (!synced) {
           return;
@@ -128,19 +102,22 @@ export class SanitizerService {
       const workspaceFolders = vscode.workspace.workspaceFolders;
 
       if (behavior.requiresBuildBeforeAnalysis) {
+        const sanitizerBaseContext = resolveSanitizerBaseContext(projectPath, params.operatorNames);
         const buildCommand = getBuildOpCommand(
-          Number(sanitizerConfigId),
+          sanitizerBaseContext,
           '',
           params.operatorNames,
         );
         const buildRes = await executeOperatorCommand(
           buildCommand,
           buildOperatorSpawnContext({
-            configId: Number(sanitizerConfigId),
+            baseContext: sanitizerBaseContext,
+            projectPath,
             operatorNames: params.operatorNames,
             script: buildCommand,
+            sanitizerRun: true,
           }),
-          { outputLabel: 'compile' },
+          { outputLabel: 'sanitizer' },
         );
 
         if (buildRes.code !== 0) {
@@ -162,38 +139,41 @@ export class SanitizerService {
               && rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM;
 
             if (isRootStandardCustom) {
-              const exConfigId = await buildService.getBuildExampleConfigId();
-              const exampleBuildCommand = getBuildExampleCommand(
-                Number(exConfigId),
-                '',
-                params.operatorNames,
-                undefined,
-                true,
-              );
-              const exampleBuildRes = await executeOperatorCommand(
-                exampleBuildCommand,
-                buildOperatorSpawnContext({
-                  configId: Number(exConfigId),
-                  operatorNames: params.operatorNames,
-                  script: exampleBuildCommand,
-                }),
-                {
-                  outputLabel: 'compile',
-                  transformCommand: createRemoteCommandWhenNoNpuTransformer((command) => buildRemoteBuildExampleCommand(
-                    command,
-                    workspacePath,
-                  )),
-                },
-              );
+              if (ConfigService.hasBuildExampleConfig()) {
+                const exampleBaseContext = resolveBuildExampleBaseContext(projectPath, params.operatorNames);
+                const exampleBuildCommand = getBuildExampleCommand(
+                  exampleBaseContext,
+                  '',
+                  params.operatorNames,
+                  undefined,
+                  true,
+                );
+                const exampleBuildRes = await executeOperatorCommand(
+                  exampleBuildCommand,
+                  buildOperatorSpawnContext({
+                    baseContext: exampleBaseContext,
+                    projectPath,
+                    operatorNames: params.operatorNames,
+                    script: exampleBuildCommand,
+                  }),
+                  {
+                    outputLabel: 'sanitizer',
+                    transformCommand: createRemoteCommandWhenNoNpuTransformer((command) => buildRemoteBuildExampleCommand(
+                      command,
+                      workspacePath,
+                    )),
+                  },
+                );
 
-              if (exampleBuildRes.code !== 0) {
-                if (exampleBuildRes.interruptedByUserStop) {
+                if (exampleBuildRes.code !== 0) {
+                  if (exampleBuildRes.interruptedByUserStop) {
+                    return;
+                  }
+
+                  vscode.window.showErrorMessage(commandFailureMessage(exampleBuildRes, 'sanitizer.exampleCompileFailed', { output: exampleBuildRes.output }));
+
                   return;
                 }
-
-                vscode.window.showErrorMessage(commandFailureMessage(exampleBuildRes, 'sanitizer.exampleCompileFailed', { output: exampleBuildRes.output }));
-
-                return;
               }
             }
           }
@@ -202,7 +182,7 @@ export class SanitizerService {
           }
         }
 
-        await notifyBuildSucceededForSidebar(Number(sanitizerConfigId), params.operatorNames);
+        await notifyBuildSucceededForSidebar(projectPath, params.operatorNames);
       }
 
       if (workspaceFolders && workspaceFolders.length > 0) {
@@ -218,22 +198,23 @@ export class SanitizerService {
         }
       }
 
-      const exampleConfigId: number | undefined | string =
-        await buildService.getBuildExampleConfigId();
-
+      const sanitizerBaseContext = resolveSanitizerBaseContext(projectPath, params.operatorNames);
       const sanitizerCommand =
         getSanitizerCommand(
-          Number(sanitizerConfigId),
-          Number(exampleConfigId),
+          sanitizerBaseContext,
+          resolveBuildExampleBaseContext(projectPath, params.operatorNames),
           params.operatorNames,
         ) || '';
       const remoteSanitizerCommandTransformer = createRemoteCommandWhenNoNpuTransformer((command) => buildRemoteExecCommand(command, this.getRemoteSanitizerLogPullDir(vscode.workspace.workspaceFolders?.[0]?.uri.fsPath)));
       const res = await executeOperatorCommand(
         sanitizerCommand,
         buildOperatorSpawnContext({
-          configId: Number(sanitizerConfigId),
+          baseContext: sanitizerBaseContext,
+          projectPath,
           operatorNames: params.operatorNames,
           script: sanitizerCommand,
+          toolOutputLabel: 'sanitizer',
+          sanitizerRun: true,
         }),
         { transformCommand: remoteSanitizerCommandTransformer },
       );
@@ -243,10 +224,30 @@ export class SanitizerService {
       }
 
       // mssanitizer also writes its own ./mindstudio_sanitizer_log into its working directory
-      // (the operator run path / workspace root); remove that copy so it does not clutter the
-      // project. The .vscode/mindstudio_sanitizer_log report dir (read below) is a separate path.
+      // (the operator build dir / workspace root); remove those copies so they do not clutter
+      // the project. The .vscode/mindstudio_sanitizer_log report dir (read below) is a separate path.
       if (workspaceFolders && workspaceFolders.length > 0) {
         cleanupCwdSanitizerLog(workspaceFolders[0].uri.fsPath);
+      }
+
+      // The root-keyed model resolves every selection to the ROOT record, so
+      // a single cleanup covers all selected operators (the mssanitizer cwd is
+      // <root>/build for the ascend forms).
+      const opPaths = new Set<string>();
+
+      for (const name of (params.operatorNames ?? '')
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)) {
+        const opPath = resolveOpRecord(projectPath, name)?.op_path;
+
+        if (opPath) {
+          opPaths.add(opPath);
+        }
+      }
+
+      for (const opPath of opPaths) {
+        cleanupCwdSanitizerLog(path.join(opPath, 'build'));
       }
 
       const wfAfter = vscode.workspace.workspaceFolders?.[0];
@@ -287,7 +288,7 @@ export class SanitizerService {
       }
 
       // After a successful detection, refresh sanitizer data and switch to the fresh report
-      // (GC-54) without opening the legacy sanitizer webview.
+      // without opening the sanitizer webview.
       await vscode.commands.executeCommand(COMMAND_FLASH_MS_SANITIZER_RUN_DATA, { openLatest: true });
     }
     catch (e: unknown) {
@@ -306,12 +307,7 @@ export class SanitizerService {
    * normalize the root and `joinIdeConfigPath` so `.arts` (CodeArts) is picked up automatically.
    */
   private getRemoteSanitizerLogPullDir(rootPath: string | undefined): string {
-    if (!rootPath) {
-      throw new Error('Output root path not found for sanitizer log retrieval');
-    }
-
-    return `${joinIdeConfigPath(path.resolve(rootPath), 'mindstudio_sanitizer_log')
-      .replace(/\\/g, '/')}/`;
+    return resolveRemotePullDir(rootPath, 'mindstudio_sanitizer_log', 'sanitizer log retrieval');
   }
 }
 

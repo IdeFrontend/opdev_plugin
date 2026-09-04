@@ -6,10 +6,14 @@
   "main": "../out/extension.js",
   "scripts": {
     "test": "pnpm run test:unit && pnpm run test:flavor",
-    "test:unit": "jest --testPathIgnorePatterns=apply-flavor",
+    "test:unit": "jest --testPathIgnorePatterns=apply-flavor --runInBand",
     "test:flavor": "jest src/__tests__/unit/apply-flavor.spec.ts --runInBand",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "golden:capture": "jest src/__tests__/golden/capture.spec.ts --runInBand",
+    "golden:compare": "jest src/__tests__/golden/compare.spec.ts --runInBand",
+    "lifecycle:capture": "jest src/__tests__/lifecycle/capture.spec.ts --runInBand",
+    "lifecycle:compare": "jest src/__tests__/lifecycle/compare.spec.ts --runInBand"
   },
   "dependencies": {
     "@mstt/shared": "workspace:*",
@@ -17,6 +21,7 @@
     "compressing": "^2.0.0",
     "fs-extra": "^11.3.2",
     "i18next": "^25.7.2",
+    "jsonc-parser": "^3.3.1",
     "ws": "^8.18.3"
   },
   "devDependencies": {

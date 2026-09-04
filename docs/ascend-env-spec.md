@@ -26,7 +26,7 @@ Prefix order: `Ascend950` → `Ascend910_` → `Ascend910A` → `Ascend910B`.
 | Series | `socVersion` | `simulatorType` | Default `npuArch` |
 |--------|--------------|-----------------|-------------------|
 | A2 | `ascend910b` | `Ascend910B3` | `dav-2201` |
-| A3 | `ascend910_93` | `Ascend910C` | `dav-2201` |
+| A3 | `ascend910_93` | `Ascend910_9362` | `dav-2201` |
 | A5 | `ascend950` | `Ascend950PR_9589` | `dav-3510` |
 
 **A2 Pro / Premium / 901:** still series **A2** (`ascend910b`, `Ascend910B3`); only `NPU_ARCH` is **`dav-1001`** (not `dav-2201`). Workspace `socVersion=ascend910b` alone does not set `dav-1001` — needs a detected/cached §4.1 chip (§5).
@@ -91,7 +91,7 @@ Examples: `Ascend 910_9362 V1` → `Ascend910_9362V1` (A3); `Ascend 910 ProA` �
 
 ### 4.1 Extract from probes
 
-Once per session: `asys info -r=status`, then `npu-smi info`, in bash sourcing CANN `set_env.sh` (§7.2 step 3).
+Once per session: `asys info -r=status`, then `npu-smi info`, in bash sourcing CANN `set_env.sh` (§7.2 step 3); when both fail, a remote-tool series mapping (`getRemoteToolSeriesSync`) can supply the slug.
 
 1. Lines `Chip Name` / `芯片名称` — value after `:` to EOL.
 2. Fallback: tokens `Ascend` + digits/model (`Ascend\s*\d[\dA-Za-z_]*`).
@@ -141,10 +141,10 @@ On successful host detection, cache **raw** Chip Name until extension restart. U
 
 ## 6. `npuArch`
 
-1. Workspace `environment.npuArch` (explicit, issue #29) → used verbatim, whatever the slug.
-2. Global snapshot `NPU_ARCH` — skipped when the slug came from the simulator type (§4.4).
-3. Cached chip matches §4.2 → `dav-1001` (slug still `ascend910b`).
-4. Else series default from §1 for resolved slug.
+1. Workspace `environment.npuArch` — an explicit value wins as-is (`null` counts as unset).
+2. Global snapshot `NPU_ARCH` — used unless the SOC was derived from the simulator type.
+3. Cached chip matches §4.2 and the resolved slug is series A2 → `dav-1001` (slug still `ascend910b`).
+4. Series default from §1 for the resolved slug.
 5. Empty slug → `''` (no silent 910-class default).
 
 Simulator directory does not map to `npuArch`.
@@ -162,7 +162,7 @@ Simulator directory does not map to `npuArch`.
     socVersion: 'workspace-setting' | 'global-env' | 'detected' |
                 'derived-from-simulator' | 'default',
     simulatorType: 'workspace-setting' | 'global-env' | 'default-from-soc' | 'n/a',
-    npuArch: 'workspace-setting' | 'global-env' | 'derived-from-soc',
+    npuArch: 'derived-from-soc',
   },
 }
 ```
@@ -186,7 +186,7 @@ Only (1) triggers **SOC-from-simulator** via §4.4 inverse.
   3. Host detection — §4.1–4.3 → §1 `socVersion`. `set_env.sh` from: `environment.environmentScript` → `ASCEND_ENV_SCRIPT` → `find … set_env.sh`. Project `ascend_env_script` **not** used for detection.
   4. `DEFAULT_FALLBACK_CANN_SOC` (`''`).
 
-`projects.json` `soc_version` is display only.
+The resolver never consults the project record; the workspace setting, the env snapshot, and host detection are its only sources.
 
 ### 7.3 `npuArch`
 
@@ -194,13 +194,13 @@ Apply §6 after `socVersion` is known. Empty SOC at generation still resolves `S
 
 ### 7.4 Missing SOC notification
 
-When operator commands run (`resolveAscendEnvForOperatorCommand`) and SOC resolves to empty `default`, show a short warning with an action to open workspace `environment.socVersion`. Repeats on **every** operator run until SOC is configured (workspace explicit value, env var, or host detection). **Not** shown from passive `resolveAscendEnv` calls (project open, options webviews, profiler command assembly). Suppression uses the same explicit workspace check as §7.2 step 1 — User-scoped settings do not suppress the warning.
-
-### 7.5 Reopened projects and manual terminal builds (issue #37)
-
-`context.environmentVariableCollection` carries `NPU_ARCH` into integrated terminals, so a hand-typed `bash build.sh` matches what the plugin would export. Post-activate bootstrap seeds it from settings / global snapshot only (`allowHostDetection: false` — the host probe is memoized and must not cache a failure before the first command); `executeOperatorCommand` refreshes it after each non-simulator run. A `detected` SOC is written to workspace `environment.socVersion` (`ConfigService.persistDetectedSocVersion`) so the next window resolves it without probing; explicit settings, blank values and simulator-derived slugs are never persisted. `environment.npuArch` is written alongside it when the arch came from the cached chip rather than the slug (§6.3 vs §6.4) — the pinned SOC stops the next window from detecting, and the slug alone would answer `dav-2201` for an Ascend910ProA/ProB/PremiumA or 901A/901B host. An arch that is already explicit or inherited from the OS environment is left alone.
+When operator commands run (`resolveAscendEnvForOperatorCommand`) and SOC resolves to empty `default`, show a short warning that offers to set `environment.socVersion` inline (writes the workspace setting and re-resolves) or to open workspace settings. Repeats on **every** operator run until SOC is configured (workspace explicit value, env var, or host detection). **Not** shown from passive `resolveAscendEnv` calls (project open, options webviews, profiler command assembly). Suppression uses the same explicit workspace check as §7.2 step 1 — User-scoped settings do not suppress the warning.
 
 ---
+
+### 7.5 Reopened projects and manual terminal builds
+
+`context.environmentVariableCollection` carries `NPU_ARCH` into integrated terminals, so a hand-typed `bash build.sh` matches what the plugin would export. Post-activate bootstrap seeds it from settings / global snapshot only (`allowHostDetection: false` — the host probe is memoized and must not cache a failure before the first command); `executeOperatorCommand` refreshes it after each non-simulator run. A `detected` SOC is written to workspace `environment.socVersion` (`persistDetectedSocVersion`) so the next window resolves it without probing; when the resolved arch is chip-specific (differs from the slug's series default, e.g. `dav-1001`), `environment.npuArch` is pinned alongside. Explicit settings, blank values and simulator-derived slugs are never persisted.
 
 ## 8. Operator commands
 
@@ -227,7 +227,7 @@ Passing a slug can also surface misleading metric errors (`Unexpected argument �
 | Series | `simulatorType` (for `--soc-version`) | CANN slug (`socVersion`; **not** for `--soc-version`) |
 |--------|---------------------------------------|--------------------------------------------------------|
 | A2 | `Ascend910B3` | `ascend910b` |
-| A3 | `Ascend910C` | `ascend910_93` |
+| A3 | `Ascend910_9362` | `ascend910_93` |
 | A5 | `Ascend950PR_9589` | `ascend950` |
 
 Constants: [`shared/cann-env-constants.ts`](../shared/cann-env-constants.ts). CANN upgrades may rename directories — list installed simulators on the host and override via workspace setting when needed.
@@ -249,7 +249,7 @@ see [`performance.md`](./performance.md) "Simulation metrics":
 
 ```bash
 msprof op simulator --soc-version=Ascend910B3 \
-  --output=<op_path>/.vscode/opprof \
+  --output=<workspaceRoot>/.vscode/opprof \
   --aic-metrics=PipeUtilization \
   python3 ./<op>.py
 ```
@@ -258,10 +258,10 @@ msprof op simulator --soc-version=Ascend910B3 \
 
 | Context | Identifier | Example (A3) |
 |---------|------------|--------------|
-| `msprof op simulator --soc-version` | **Simulator directory** | `Ascend910C` |
-| Spawn `export SOC_VERSION=…` on **simulator-class** builds | **Simulator directory** | `Ascend910C` |
-| `{simulator_type}` script placeholder | **Simulator directory** | `Ascend910C` |
-| `build.sh --simulator` | **Simulator directory** | `Ascend910C` |
+| `msprof op simulator --soc-version` | **Simulator directory** | `Ascend910_9362` |
+| Spawn `export SOC_VERSION=…` on **simulator-class** builds | **Simulator directory** | `Ascend910_9362` |
+| `{simulator_type}` script placeholder | **Simulator directory** | `Ascend910_9362` |
+| `build.sh --simulator` | **Simulator directory** | `Ascend910_9362` |
 | `{soc_version}` script placeholder | **CANN slug** | `ascend910_93` |
 | `build.sh --soc=` / packaging | **CANN slug** | `ascend910_93` |
 | Spawn `export SOC_VERSION=…` on **non-simulator** builds | **CANN slug** | `ascend910_93` |
@@ -279,18 +279,14 @@ The name passed to `--soc-version` must match an entry in that listing (case-sen
 
 #### Huawei documentation note
 
-Some CANN/msopprof guides mention obtaining `--soc-version` via `python3 -c "import acl; print(acl.get_soc_name())"`, which returns a **slug**, while examples use directory-style names (`Ascend910B3`, `Ascend910C`). The plugin follows the **directory-name** contract validated on A2/A3/A5 field toolkits: slug in `--soc-version` is rejected or mis-identifies the platform for metric validation.
-
-#### Historical correction (1.3.2 → 1.3.3)
-
-Release **1.3.2** briefly passed `resolveAscendEnv().socVersion` (CANN slug) per issue #18, based on an A3 report that `Ascend910C` caused “wrong soc platform” metric errors. Later reproduction on A2/A5 showed slugs are invalid for `--soc-version`; metric failures were largely downstream of that mismatch (and, separately, of emitting `PipeUtilization` together with `ResourceConflictRatio`). **1.3.3** restores `simulatorType` for `--soc-version`. See [`performance.md`](./performance.md) for simulation metrics and mutual-exclusion rules.
+Some CANN/msopprof guides mention obtaining `--soc-version` via `python3 -c "import acl; print(acl.get_soc_name())"`, which returns a **slug**, while examples use directory-style names (`Ascend910B3`, `Ascend910_9362`). The plugin follows the **directory-name** contract validated on A2/A3/A5 field toolkits: slug in `--soc-version` is rejected or mis-identifies the platform for metric validation. See [`performance.md`](./performance.md) for simulation metrics and mutual-exclusion rules.
 
 ---
 
 ## 9. Templates
 
 - **CANN:** cmake `$ENV{SOC_VERSION}` / `$ENV{NPU_ARCH}`; sim runs use sim dir as spawn `SOC_VERSION`.
-- **Ascend `add_custom`:** `__MSTT_SUPPORT_*__` at unzip via `resolveAclnnCmakeDefaultsForGeneration()` (§7.2 chain); values from §4.5.
+- **Ascend `add_custom`:** `__MSTT_SUPPORT_*__` replaced at project generation via `resolveAclnnCmakeDefaultsForGeneration()` — input: workspace `environment.socVersion` override, else the project's stored `soc_version`, else the §7 chain; values from §4.5.
 
 ---
 

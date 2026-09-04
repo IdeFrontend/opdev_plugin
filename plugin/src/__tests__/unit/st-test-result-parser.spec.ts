@@ -2,6 +2,21 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 
+// Node 24 freezes the fs module namespace, so jest.spyOn(fs, ...) cannot
+// redefine its members. Wrap the real module in call-countable mocks instead.
+// realpathSync stays untouched so its `.native` sub-function keeps working.
+jest.mock('fs', () => {
+  const actual = jest.requireActual('fs') as typeof fs;
+
+  return {
+    ...actual,
+    closeSync: jest.fn(actual.closeSync),
+    fstatSync: jest.fn(actual.fstatSync),
+    lstatSync: jest.fn(actual.lstatSync),
+    readSync: jest.fn(actual.readSync),
+  };
+});
+
 import {
   buildStTestResultReport,
   MAX_ST_TEST_RESULT_FILE_BYTES,
@@ -506,5 +521,269 @@ describe('ST test result parser', () => {
       .toBe('invalid');
     expect(report.summary.invalidFiles)
       .toBe(1);
+  });
+
+  it('skips blank CSV records without counting them', () => {
+    const artifact = createArtifact(1, 'kernel', 'blank-lines.csv');
+
+    fs.writeFileSync(
+      artifact.outputCsvPath,
+      `${HEADER}\nfirst,1,2,3,PASS\n\nlast,1,2,3,PASS\n`,
+    );
+
+    const report = build([artifact]);
+
+    expect(report.summary.total)
+      .toBe(2);
+    expect(report.rows.map((row) => row.testcaseName))
+      .toEqual([
+        'first',
+        'last',
+      ]);
+  });
+
+  it('accepts a quoted final field followed by a CRLF after a quoted field', () => {
+    const artifact = createArtifact(1, 'kernel', 'quoted-final.csv');
+
+    fs.writeFileSync(
+      artifact.outputCsvPath,
+      `${HEADER}\ncase,1,2,3,"PASS"\r\nother,1,2,3,"PASS"\n`,
+    );
+
+    const report = build([artifact]);
+
+    expect(report.rows.map((row) => [
+      row.testcaseName,
+      row.outcome,
+    ]))
+      .toEqual([
+        [
+          'case',
+          'pass',
+        ],
+        [
+          'other',
+          'pass',
+        ],
+      ]);
+  });
+
+  it('rejects a stray character directly after a quoted field', () => {
+    const artifact = createArtifact(1, 'kernel', 'stray-after-quote.csv');
+
+    fs.writeFileSync(artifact.outputCsvPath, `${HEADER}\n"case"x,1,2,3,PASS\n`);
+
+    const report = build([artifact]);
+
+    expect(report.files[0].error?.code)
+      .toBe('malformed_csv');
+  });
+
+  it('rejects a quote appearing inside an unquoted field', () => {
+    const artifact = createArtifact(1, 'kernel', 'quote-in-field.csv');
+
+    fs.writeFileSync(artifact.outputCsvPath, `${HEADER}\nca"se,1,2,3,PASS\n`);
+
+    const report = build([artifact]);
+
+    expect(report.files[0].error?.code)
+      .toBe('malformed_csv');
+  });
+
+  it('parses the final record when the file has no trailing newline', () => {
+    const artifact = createArtifact(1, 'kernel', 'no-trailing-newline.csv');
+
+    fs.writeFileSync(artifact.outputCsvPath, `${HEADER}\ncase,1,2,3,PASS`);
+
+    const report = build([artifact]);
+
+    expect(report.rows)
+      .toHaveLength(1);
+    expect(report.rows[0].testcaseName)
+      .toBe('case');
+    expect(report.rows[0].outcome)
+      .toBe('pass');
+  });
+
+  it('rejects a run directory that is itself a symbolic link', () => {
+    const realRunDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'mstt-st-parser-real-'));
+
+    try {
+      const artifact = createArtifact(1, 'kernel', 'linked-run.csv');
+
+      fs.writeFileSync(artifact.outputCsvPath, `${HEADER}\ncase,1,2,3,PASS\n`);
+      fs.rmSync(runDirectory, {
+        recursive: true,
+        force: true,
+      });
+      fs.symlinkSync(
+        realRunDirectory,
+        runDirectory,
+        process.platform === 'win32' ? 'junction' : 'dir',
+      );
+      fs.mkdirSync(path.join(runDirectory, 'kernel'), { recursive: true });
+      fs.writeFileSync(artifact.outputCsvPath, `${HEADER}\ncase,1,2,3,PASS\n`);
+
+      const report = build([artifact]);
+
+      expect(report.files[0].error?.code)
+        .toBe('file_unreadable');
+    }
+    finally {
+      fs.rmSync(realRunDirectory, {
+        recursive: true,
+        force: true,
+      });
+    }
+  });
+
+  it('wraps realpath failures for the run directory as file_unreadable', () => {
+    const artifact = createArtifact(1, 'kernel', 'realpath-fail.csv');
+
+    fs.writeFileSync(artifact.outputCsvPath, `${HEADER}\ncase,1,2,3,PASS\n`);
+
+    const realpathSpy = jest.spyOn(fs.realpathSync, 'native')
+      .mockImplementationOnce(() => {
+        throw new Error('realpath boom');
+      });
+
+    try {
+      const report = build([artifact]);
+
+      expect(report.files[0].error?.code)
+        .toBe('file_unreadable');
+    }
+    finally {
+      realpathSpy.mockRestore();
+    }
+  });
+
+  it('rejects a result file whose identity changed after it was opened', () => {
+    const artifact = createArtifact(1, 'kernel', 'identity-change.csv');
+
+    fs.writeFileSync(artifact.outputCsvPath, `${HEADER}\ncase,1,2,3,PASS\n`);
+
+    const lstatMock = fs.lstatSync as jest.Mock;
+    const realLstat = jest.requireActual<typeof fs>('fs').lstatSync;
+    let callCount = 0;
+
+    // validateResultPath (1), resolveRealDirectory (2), then the opened-file
+    // identity check (3): the third lstat reports a different dev/ino pair.
+    lstatMock.mockImplementation((...args: Parameters<typeof fs.lstatSync>) => {
+      callCount += 1;
+
+      if (callCount === 3) {
+        return {
+          isFile: () => true,
+          isSymbolicLink: () => false,
+          isDirectory: () => false,
+          dev: 424242,
+          ino: 424242,
+          size: 1,
+        } as unknown as fs.Stats;
+      }
+
+      return realLstat(...args);
+    });
+
+    try {
+      const report = build([artifact]);
+
+      expect(report.files[0].error?.code)
+        .toBe('file_unreadable');
+    }
+    finally {
+      lstatMock.mockClear();
+    }
+  });
+
+  it('rejects a file that outgrows the size limit while being read', () => {
+    const artifact = createArtifact(1, 'kernel', 'growing-file.csv');
+
+    fs.writeFileSync(artifact.outputCsvPath, `${HEADER}\ncase,1,2,3,PASS\n`);
+
+    const readSyncMock = fs.readSync as jest.Mock;
+
+    readSyncMock.mockImplementationOnce(() => MAX_ST_TEST_RESULT_FILE_BYTES + 5);
+
+    try {
+      const report = build([artifact]);
+
+      expect(report.files[0].error)
+        .toMatchObject({
+          code: 'file_too_large',
+          detail: String(MAX_ST_TEST_RESULT_FILE_BYTES + 5),
+        });
+    }
+    finally {
+      readSyncMock.mockClear();
+    }
+  });
+
+  it('rejects an opened descriptor that is not a regular file', () => {
+    const artifact = createArtifact(1, 'kernel', 'not-regular.csv');
+
+    fs.writeFileSync(artifact.outputCsvPath, `${HEADER}\ncase,1,2,3,PASS\n`);
+
+    const fstatMock = fs.fstatSync as jest.Mock;
+
+    fstatMock.mockImplementationOnce(() => ({
+      isFile: () => false,
+      size: 1,
+      dev: 1,
+      ino: 1,
+    } as unknown as fs.Stats));
+
+    try {
+      const report = build([artifact]);
+
+      expect(report.files[0].error?.code)
+        .toBe('file_unreadable');
+    }
+    finally {
+      fstatMock.mockClear();
+    }
+  });
+
+  it('wraps unexpected descriptor errors as file_unreadable', () => {
+    const artifact = createArtifact(1, 'kernel', 'descriptor-error.csv');
+
+    fs.writeFileSync(artifact.outputCsvPath, `${HEADER}\ncase,1,2,3,PASS\n`);
+
+    const fstatMock = fs.fstatSync as jest.Mock;
+
+    fstatMock.mockImplementationOnce(() => {
+      throw new Error('EBADF');
+    });
+
+    try {
+      const report = build([artifact]);
+
+      expect(report.files[0].error?.code)
+        .toBe('file_unreadable');
+    }
+    finally {
+      fstatMock.mockClear();
+    }
+  });
+
+  it('propagates non-parse errors thrown while closing the descriptor', () => {
+    const artifact = createArtifact(1, 'kernel', 'close-fail.csv');
+
+    fs.writeFileSync(artifact.outputCsvPath, `${HEADER}\ncase,1,2,3,PASS\n`);
+
+    const closeSyncMock = fs.closeSync as jest.Mock;
+
+    closeSyncMock.mockImplementationOnce(() => {
+      throw new Error('EBADF');
+    });
+
+    try {
+      expect(() => build([artifact]))
+        .toThrow('EBADF');
+    }
+    finally {
+      closeSyncMock.mockClear();
+    }
   });
 });

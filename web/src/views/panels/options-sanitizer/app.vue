@@ -6,14 +6,15 @@ import { t } from 'i18next';
 import { message } from 'ant-design-vue';
 import { useTheme } from '@web/composables/use-theme';
 import {
-  getSanitizerConfigs,
-  saveSanitizerForm as saveSanitizerFormAPI,
+  getSanitizerOptions,
+  saveSanitizerOptions,
   runSanitizer,
   executeVscodeCommand,
   getSelectedOperators,
   getSanitizerShowQuickOptions,
   setSanitizerShowQuickOptions,
 } from '@web/apis';
+import type { SanitizerOptions } from '@shared/api-types';
 import { getProjectType } from '@web/apis/home';
 
 const { themeConfig } = useTheme();
@@ -78,60 +79,61 @@ function clampBlockId(value: unknown): number | undefined {
 }
 
 async function loadSanitizerForm() {
-  const configs = await getSanitizerConfigs();
-  const obj = (configs[0] || {})?.user_options || {};
+  const options = await getSanitizerOptions();
 
-  Object.keys(form.value.tool)
-    .forEach((key) => {
-      const tool = obj.tool as Record<string, boolean> | undefined;
-
-      if (tool && tool[key] !== undefined) {
-        form.value.tool[key as keyof typeof form.value.tool] = Boolean(tool[key]);
-      }
-    });
-
-  Object.keys(form.value.memcheckOption)
-    .forEach((key) => {
-      const mem = obj.memcheckOption as Record<string, boolean> | undefined;
-
-      if (mem && mem[key] !== undefined) {
-        form.value.memcheckOption[key as keyof typeof form.value.memcheckOption] = Boolean(mem[key]);
-      }
-    });
-
-  if (obj.logLevel === 'info' || obj.logLevel === 'warn' || obj.logLevel === 'error') {
-    form.value.logLevel = obj.logLevel;
+  if (options.memory !== undefined) {
+    form.value.tool.memcheck = options.memory;
   }
 
-  if (obj.maxDebuglogSize !== undefined) {
-    form.value.maxDebuglogSize = clampMaxDebuglogSize(obj.maxDebuglogSize);
+  if (options.race !== undefined) {
+    form.value.tool.racecheck = options.race;
   }
 
-  if (obj.useBlock === true) {
-    form.value.detectionScope = 'singleBlock';
-  }
-  else {
-    form.value.detectionScope = 'global';
+  if (options.uninitialized !== undefined) {
+    form.value.tool.initcheck = options.uninitialized;
   }
 
-  if (obj.blockId !== undefined && obj.blockId !== null) {
-    form.value.blockId = clampBlockId(obj.blockId);
+  if (options.memoryLeak !== undefined) {
+    form.value.memcheckOption['leak-check'] = options.memoryLeak;
+  }
+
+  if (options.allocUnused !== undefined) {
+    form.value.memcheckOption['check-unused-memory'] = options.allocUnused;
+  }
+
+  if (options.reportLogLevel === 'info' || options.reportLogLevel === 'warn' || options.reportLogLevel === 'error') {
+    form.value.logLevel = options.reportLogLevel;
+  }
+
+  if (options.maxSingleLogFileSize !== undefined) {
+    form.value.maxDebuglogSize = clampMaxDebuglogSize(options.maxSingleLogFileSize);
+  }
+
+  if (options.detectionScope === 'global' || options.detectionScope === 'singleBlock') {
+    form.value.detectionScope = options.detectionScope;
+  }
+
+  if (options.blockId !== undefined && options.blockId !== null) {
+    form.value.blockId = clampBlockId(options.blockId);
   }
 }
 
-function buildSavePayload() {
+function buildSavePayload(): SanitizerOptions {
   return {
-    tool: { ...form.value.tool },
-    memcheckOption: { ...form.value.memcheckOption },
-    logLevel: form.value.logLevel,
-    maxDebuglogSize: clampMaxDebuglogSize(form.value.maxDebuglogSize),
-    useBlock: form.value.detectionScope === 'singleBlock',
+    memory: form.value.tool.memcheck,
+    race: form.value.tool.racecheck,
+    uninitialized: form.value.tool.initcheck,
+    memoryLeak: form.value.memcheckOption['leak-check'],
+    allocUnused: form.value.memcheckOption['check-unused-memory'],
+    reportLogLevel: form.value.logLevel,
+    maxSingleLogFileSize: clampMaxDebuglogSize(form.value.maxDebuglogSize),
+    detectionScope: form.value.detectionScope,
     blockId: form.value.detectionScope === 'singleBlock' ? clampBlockId(form.value.blockId) ?? null : null,
   };
 }
 
 async function saveSanitizerForm() {
-  await saveSanitizerFormAPI({ data: buildSavePayload() });
+  await saveSanitizerOptions(buildSavePayload());
 }
 
 function onDetectionScopeChange() {

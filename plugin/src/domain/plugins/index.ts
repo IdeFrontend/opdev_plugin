@@ -5,7 +5,7 @@ import { PyAscPlugin } from './pyasc.plugin';
 import { TritonPlugin } from './triton.plugin';
 import { StandardCustomDetector } from './standard-custom.detector';
 import { TorchLibraryDetector } from './torch-library.detector';
-import { isOperatorSupportEnabled } from '@plugin/helpers/feature-toggle';
+import { SettingsLoader } from '@plugin/service/settings-loader';
 
 /**
  * Register all built-in operator-type plugins and project-type detectors.
@@ -23,7 +23,7 @@ export function registerOperatorPlugins(): void {
   const ascend = new AscendPlugin();
   const cann   = new CannPlugin();
   const pyasc  = new PyAscPlugin();
-  const tritonEnabled = isOperatorSupportEnabled('triton');
+  const tritonEnabled = SettingsLoader.isOperatorSupportEnabled('triton');
   const triton = tritonEnabled ? new TritonPlugin() : null;
 
   // Op-type plugins

@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs-extra';
 import { t } from 'i18next';
-import { getProjectById } from '@plugin/domain/models/project-model';
+import { getProjectByPath } from '@plugin/domain/models/project-model';
 
 async function generateOpsPrototypeJson(
   projectPath: string,
@@ -62,14 +62,21 @@ async function generateOpsPrototypeJson(
   }
 }
 
+/**
+ * Generate an ops prototype JSON for the operator project at `projectPath`
+ * (path-keyed — no numeric project id is used). The target
+ * directory is validated by the synthesized project record marker; the write
+ * itself is FS-existence based, so a freshly created project works without a
+ * registry entry.
+ */
 export async function generateOpsPrototype(
-  project_id: number,
+  projectPath: string,
   op_name = 'default_op',
   prototype_name = 'add_custom',
   extensionPath: string,
   outputPath?: string,
 ): Promise<string> {
-  const project = getProjectById(project_id);
+  const project = getProjectByPath(projectPath);
 
   if (!project) {
     throw Object.assign(new Error('project not found'), { name: 'InvalidRequest' });

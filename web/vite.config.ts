@@ -100,6 +100,7 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, './src'),
         '@web': path.resolve(__dirname, './src'),
         '@shared': path.resolve(__dirname, '../shared'),
+        '@huawei/profiling-report': path.resolve(__dirname, '../profiling-report/src'),
       },
     },
     plugins: [

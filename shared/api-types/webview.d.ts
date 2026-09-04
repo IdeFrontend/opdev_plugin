@@ -4,8 +4,6 @@ import { OperatorProjectViewIdValue } from '../project-type-view-id';
 
 export type GetHomeResult = string;
 
-export type GetProjectSHResult = string;
-
 export type RemotePathSearchParams = {
   keyword: string;
   type: string;
@@ -30,19 +28,7 @@ export type OpenProjectParams = {
   projectSH?: string;
 };
 
-export type GetLastProjectPathResult = string | null;
-
 export type GetWorkspaceResult = string | null;
-
-export type DownloadDataParams = {
-  filePath?: string;
-  nodeKey?: string;
-};
-
-export type DeleteNodeParams = {
-  nodeKey: string;
-  filePath?: string;
-};
 
 export type SelectFolderParams = {
   defaultPath?: string;

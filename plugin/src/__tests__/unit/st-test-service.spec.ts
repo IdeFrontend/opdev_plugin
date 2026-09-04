@@ -23,6 +23,7 @@ import {
   OPS_TEST_KIT_REVISION,
   type TtkRuntime,
 } from '@plugin/service/ttk-installer.service';
+import { EXTENSION_ID } from '@shared/flavor';
 
 const CSV_BY_MODE = {
   kernel: 'testcase_name,op_name\ncase,add\n',
@@ -131,6 +132,40 @@ describe('StTestService', () => {
 
     expect(resolveRemoteStTestPullDir(workspacePath))
       .toBe(expected);
+  });
+
+  it.each([
+    [
+      'codearts',
+      '.codearts-server',
+    ],
+    [
+      'vscode',
+      '.vscode-server',
+    ],
+  ] as const)('resolveRemoteManagedTtkRootBase uses the ide-server dir name for the %s scheme', (scheme, serverDirName) => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const vscodeMock = require('vscode') as { env: { uriScheme: string } };
+    const previousScheme = vscodeMock.env.uriScheme;
+
+    vscodeMock.env.uriScheme = scheme;
+
+    try {
+      expect(resolveRemoteManagedTtkRootBase('/home/remote-user'))
+        .toBe(path.posix.join(
+          '/home/remote-user',
+          serverDirName,
+          'data',
+          'User',
+          'globalStorage',
+          EXTENSION_ID,
+          'ttk',
+          OPS_TEST_KIT_REVISION,
+        ));
+    }
+    finally {
+      vscodeMock.env.uriScheme = previousScheme;
+    }
   });
 
   it('runs every selected-mode CSV sequentially with unique outputs and raw Test output', async () => {

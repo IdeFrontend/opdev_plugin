@@ -1,9 +1,5 @@
-import fs from 'fs-extra';
-
-import {
-  getIdeSettingsFilePath,
-  joinIdeConfigPath,
-} from '@plugin/helpers/ide-config-dir';
+import { getIdeSettingsFilePath } from '@plugin/helpers/ide-config-dir';
+import { guardedPersistIdeSettingsFile } from '@plugin/helpers/ide-settings-persist';
 
 /** MindStudio Debug expects kernel sources (e.g. Triton `.cce`/`.asc`) as C++ for breakpoints. */
 export const MSDEBUG_KERNEL_FILE_ASSOCIATIONS: Readonly<Record<string, string>> = {
@@ -13,33 +9,26 @@ export const MSDEBUG_KERNEL_FILE_ASSOCIATIONS: Readonly<Record<string, string>> 
 
 /**
  * Merge msdebug-related `files.associations` into workspace `<ide>/settings.json`
- * without removing existing user settings.
+ * without removing existing user settings. Goes through the shared guarded persist
+ * (serialized with other settings.json writers, content-diff guard, tolerant read —
+ * a corrupt settings.json is never overwritten, the write backs off instead of throwing).
  */
 export async function ensureMsdebugBreakpointFileAssociations(workspaceRoot: string): Promise<void> {
   const settingsPath = getIdeSettingsFilePath(workspaceRoot);
-  let settings: Record<string, unknown> = {};
 
-  if (await fs.pathExists(settingsPath)) {
-    try {
-      settings = JSON.parse(await fs.readFile(settingsPath, 'utf-8')) as Record<string, unknown>;
-    }
-    catch {
-      settings = {};
-    }
-  }
+  await guardedPersistIdeSettingsFile(settingsPath, (current) => {
+    const associations = {
+      ...MSDEBUG_KERNEL_FILE_ASSOCIATIONS,
+      ...(typeof current['files.associations'] === 'object' && current['files.associations'] !== null
+        ? current['files.associations'] as Record<string, string>
+        : {}),
+    };
 
-  const associations = {
-    ...MSDEBUG_KERNEL_FILE_ASSOCIATIONS,
-    ...(typeof settings['files.associations'] === 'object' && settings['files.associations'] !== null
-      ? settings['files.associations'] as Record<string, string>
-      : {}),
-  };
-
-  const next = {
-    ...settings,
-    'files.associations': associations,
-  };
-
-  await fs.ensureDir(joinIdeConfigPath(workspaceRoot));
-  await fs.writeFile(settingsPath, JSON.stringify(next, null, 2), 'utf-8');
+    return {
+      next: {
+        ...current,
+        'files.associations': associations,
+      },
+    };
+  });
 }

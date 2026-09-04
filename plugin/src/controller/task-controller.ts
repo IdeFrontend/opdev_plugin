@@ -13,6 +13,7 @@ import {
   type StartStTestParams,
 } from '@plugin/service/st-test-service';
 import { isStTestCancelledError } from '@plugin/domain/services/st-test-errors';
+import type { OperatorToolOutputLabel } from '@plugin/helpers/output-channel';
 import { homeMethods } from './home-controller';
 import {
   StartBuildParams,
@@ -52,6 +53,7 @@ import { enqueueCompileRun } from '@plugin/helpers/operator-flow-coordinator';
 import {
   startNpuHardwareProbe, startRemoteNpuHardwareProbe,
 } from '@plugin/domain/utils/npu-hardware-probe';
+import { toWorkspaceRelativePosixPath } from '@plugin/domain/utils/path-utils';
 import {
   buildRemoteExecCommand,
   ensureRemoteToolAvailable,
@@ -66,9 +68,11 @@ import { joinIdeConfigPath } from '@plugin/helpers/ide-config-dir';
 import { showStTestCompletionNotification } from '@plugin/helpers/st-test-completion-notification';
 import {
   getBuildExampleCommand,
-  resolveExampleModeForConfig,
-  getProjectById,
+  resolveBuildExampleBaseContext,
+  resolveExampleModeForBaseContext,
 } from '@plugin/domain';
+import { resolveOpRecord } from '@plugin/domain/models/op-record';
+import { getProjectByPath } from '@plugin/domain/models/project-model';
 import { isRootStandardCustom } from '@plugin/service/build-service';
 
 // Global task manager: used to track and terminate executing tasks
@@ -114,7 +118,16 @@ async function runTritonDebugPreflight(projectType: string | null): Promise<bool
   return false;
 }
 
-async function preparePythonOperatorLaunchContext(projectType: string | null): Promise<PythonOperatorLaunchContext | null> {
+/**
+ * @internal — exported for regression tests (python-launch-deploy-target-guard.spec.ts).
+ * Semantics: the deploy target is written iff the workspace is a
+ * recognized project AND `pm.projectPath` is set; the write is gated on
+ * `getBuildConfigId()` (a build_op config ROW exists) && the registered project id. The
+ * settings VALUES never gate the write: the row survives even when the user clears all
+ * build_op settings. The id-free twin of "build_op row exists" is the synthesized project
+ * record (`getProjectByPath`), non-null exactly for recognized projects.
+ */
+export async function preparePythonOperatorLaunchContext(projectType: string | null): Promise<PythonOperatorLaunchContext | null> {
   const isPythonOperator = projectType === OperatorProjectType.PYASC
     || projectType === OperatorProjectType.TRITON;
 
@@ -140,18 +153,13 @@ async function preparePythonOperatorLaunchContext(projectType: string | null): P
   }
 
   const filePath = pickedUri.fsPath;
-  const relativePath = path.relative(workspacePath, filePath)
-    .replace(/\\/g, '/');
-  const buildConfigId = await buildService.getBuildConfigId();
+  const relativePath = toWorkspaceRelativePosixPath(workspacePath, filePath);
+  const projectPath = ProjectManager.getInstance().projectPath;
 
-  if (buildConfigId) {
-    const projectIdStr = ProjectManager.getInstance().projectId;
+  if (projectPath && getProjectByPath(projectPath)) {
+    const deployTarget = buildPythonDeployTarget(relativePath);
 
-    if (projectIdStr) {
-      const deployTarget = buildPythonDeployTarget(relativePath);
-
-      await ConfigService.writeBuildOpDeployTarget(deployTarget);
-    }
+    await ConfigService.writeBuildOpDeployTarget(deployTarget);
   }
 
   return {
@@ -374,17 +382,15 @@ export const taskMethods = {
   /**
    * Build operator
    */
-  async startBuild(params: StartBuildParams = {}): Promise<void> {
+  async startBuild(params: StartBuildParams = {}, outputLabel?: OperatorToolOutputLabel): Promise<void> {
     return enqueueCompileRun('build', async () => {
       await ensurePostActivateBootstrapReady();
 
       try {
-        await ProjectManager.getInstance()
-          .initProject();
         // Save the current executor reference for possible termination operations
         currentExecutor = ProjectManager.getInstance()
           .getExecutor();
-        await buildService.startBuild(params);
+        await buildService.startBuild(params, outputLabel);
       }
       finally {
         // Clear executor reference
@@ -403,8 +409,6 @@ export const taskMethods = {
       await ensurePostActivateBootstrapReady();
 
       try {
-        await ProjectManager.getInstance()
-          .initProject();
         // Save current executor reference
         currentExecutor = ProjectManager.getInstance()
           .getExecutor();
@@ -422,18 +426,16 @@ export const taskMethods = {
   /**
    * Build example
    */
-  async startBuildExample(params: StartBuildExampleParams = {}): Promise<void> {
+  async startBuildExample(params: StartBuildExampleParams = {}, outputLabel?: OperatorToolOutputLabel): Promise<void> {
 
     return enqueueCompileRun('buildExample', async () => {
       await ensurePostActivateBootstrapReady();
 
       try {
-        await ProjectManager.getInstance()
-          .initProject();
         // Save current executor reference
         currentExecutor = ProjectManager.getInstance()
           .getExecutor();
-        await buildService.startBuildExample(params);
+        await buildService.startBuildExample(params, outputLabel);
       }
       finally {
         // Clear executor reference
@@ -451,8 +453,6 @@ export const taskMethods = {
     await ensurePostActivateBootstrapReady();
 
     try {
-      await ProjectManager.getInstance()
-        .initProject();
       // Save current executor reference
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
@@ -473,8 +473,6 @@ export const taskMethods = {
     await ensurePostActivateBootstrapReady();
 
     try {
-      await ProjectManager.getInstance()
-        .initProject();
       // Save current executor reference
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
@@ -495,8 +493,6 @@ export const taskMethods = {
     await ensurePostActivateBootstrapReady();
 
     try {
-      await ProjectManager.getInstance()
-        .initProject();
       // Save the current executor reference for possible termination operations
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
@@ -520,8 +516,6 @@ export const taskMethods = {
     await ensurePostActivateBootstrapReady();
 
     try {
-      await ProjectManager.getInstance()
-        .initProject();
       // Save current executor reference
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
@@ -542,8 +536,6 @@ export const taskMethods = {
     await ensurePostActivateBootstrapReady();
 
     try {
-      await ProjectManager.getInstance()
-        .initProject();
       // Keep executor reference for possible cancellation
       currentExecutor = ProjectManager.getInstance()
         .getExecutor();
@@ -567,8 +559,6 @@ export const taskMethods = {
     let stExecutor: CommandExecutor | undefined;
 
     try {
-      await ProjectManager.getInstance()
-        .initProject();
       const executor = ProjectManager.getInstance()
         .getExecutor();
 
@@ -629,8 +619,6 @@ export const taskMethods = {
     await ensurePostActivateBootstrapReady();
 
     try {
-      await ProjectManager.getInstance()
-        .initProject();
       await buildService.importDumpTensorBinFile(params.binFilePath);
     }
     finally {
@@ -690,7 +678,7 @@ export const taskMethods = {
       }
     }
 
-    return enqueueCompileRun('build', async () => {
+    return (async () => {
       await ensurePostActivateBootstrapReady();
 
       try {
@@ -698,8 +686,6 @@ export const taskMethods = {
           return;
         }
 
-        await ProjectManager.getInstance()
-          .initProject();
         currentExecutor = ProjectManager.getInstance()
           .getExecutor();
 
@@ -733,7 +719,7 @@ export const taskMethods = {
           scriptField: 'npu_debug_script',
           operatorNames: operatorNames || undefined,
           compileOption,
-        });
+        }, 'npu debug');
 
         if (!built) {
           // Debug build failed or was preempted — do not launch msdebug against a missing binary.
@@ -742,19 +728,23 @@ export const taskMethods = {
 
         // For standard custom operator projects, run buildExample before debug
         if (await isRootStandardCustom()) {
-          const projectId = ProjectManager.getInstance().projectId;
-          const project = projectId ? getProjectById(Number(projectId)) : null;
-          const exConfigId = await buildService.getBuildExampleConfigId();
+          const projectPath = ProjectManager.getInstance().projectPath;
+          const project = projectPath ? getProjectByPath(projectPath) : null;
 
-          if (exConfigId) {
-            const exampleMode = resolveExampleModeForConfig(Number(exConfigId), operatorNames);
+          if (projectPath && ConfigService.hasBuildExampleConfig()) {
+            const exampleOp = projectPath ? (resolveOpRecord(projectPath, '')?.op_name ?? '') : '';
+            const exampleBaseContext = resolveBuildExampleBaseContext(
+              project?.project_path ?? '',
+              operatorNames,
+            );
+            const exampleMode = resolveExampleModeForBaseContext(exampleBaseContext, operatorNames);
 
             if (!exampleMode.exampleFound && exampleMode.opName) {
               vscode.window.showWarningMessage(t('build.exampleNoSourceForOperator', { op: exampleMode.opName }));
             }
 
             const exampleBuildCommand = getBuildExampleCommand(
-              Number(exConfigId),
+              exampleBaseContext,
               compileOption,
               operatorNames || undefined,
               exampleMode.mode,
@@ -764,9 +754,11 @@ export const taskMethods = {
             const exampleBuildRes = await executeOperatorCommand(
               exampleBuildCommand,
               buildOperatorSpawnContext({
-                configId: Number(exConfigId),
+                baseContext: exampleBaseContext,
+                projectPath: project?.project_path ?? '',
                 operatorNames: operatorNames || undefined,
                 script: exampleBuildCommand,
+                toolOutputLabel: 'npu debug',
               }),
               {
                 transformCommand: createRemoteCommandWhenNoNpuTransformer((command) => buildRemoteBuildExampleCommand(
@@ -823,7 +815,7 @@ export const taskMethods = {
               '"event":"ready"',
               [],
               {
-                toolOutputLabel: 'tool',
+                toolOutputLabel: 'npu debug',
                 timeout: 30000,
               },
               true,
@@ -906,7 +898,7 @@ export const taskMethods = {
         ProjectManager.getInstance()
           .clearExecutor();
       }
-    });
+    })();
   },
 
   /**
@@ -936,7 +928,7 @@ export const taskMethods = {
       return;
     }
 
-    return enqueueCompileRun('build', async () => {
+    return (async () => {
       await ensurePostActivateBootstrapReady();
 
       try {
@@ -944,8 +936,6 @@ export const taskMethods = {
           return;
         }
 
-        await ProjectManager.getInstance()
-          .initProject();
         currentExecutor = ProjectManager.getInstance()
           .getExecutor();
 
@@ -987,7 +977,7 @@ export const taskMethods = {
           scriptField: 'cpu_debug_script',
           operatorNames: operatorNames || undefined,
           compileOption,
-        });
+        }, 'cpu debug');
 
         if (!built) {
           // Debug build failed or was preempted — do not launch msdebug against a missing binary.
@@ -996,19 +986,23 @@ export const taskMethods = {
 
         // For standard custom operator projects, run buildExample before debug
         if (await isRootStandardCustom()) {
-          const projectId = ProjectManager.getInstance().projectId;
-          const project = projectId ? getProjectById(Number(projectId)) : null;
-          const exConfigId = await buildService.getBuildExampleConfigId();
+          const projectPath = ProjectManager.getInstance().projectPath;
+          const project = projectPath ? getProjectByPath(projectPath) : null;
 
-          if (exConfigId) {
-            const exampleMode = resolveExampleModeForConfig(Number(exConfigId), operatorNames);
+          if (projectPath && ConfigService.hasBuildExampleConfig()) {
+            const exampleOp = projectPath ? (resolveOpRecord(projectPath, '')?.op_name ?? '') : '';
+            const exampleBaseContext = resolveBuildExampleBaseContext(
+              project?.project_path ?? '',
+              operatorNames,
+            );
+            const exampleMode = resolveExampleModeForBaseContext(exampleBaseContext, operatorNames);
 
             if (!exampleMode.exampleFound && exampleMode.opName) {
               vscode.window.showWarningMessage(t('build.exampleNoSourceForOperator', { op: exampleMode.opName }));
             }
 
             const exampleBuildCommand = getBuildExampleCommand(
-              Number(exConfigId),
+              exampleBaseContext,
               compileOption,
               operatorNames || undefined,
               exampleMode.mode,
@@ -1018,9 +1012,11 @@ export const taskMethods = {
             const exampleBuildRes = await executeOperatorCommand(
               exampleBuildCommand,
               buildOperatorSpawnContext({
-                configId: Number(exConfigId),
+                baseContext: exampleBaseContext,
+                projectPath: project?.project_path ?? '',
                 operatorNames: operatorNames || undefined,
                 script: exampleBuildCommand,
+                toolOutputLabel: 'cpu debug',
               }),
               {
                 transformCommand: createRemoteCommandWhenNoNpuTransformer((command) => buildRemoteBuildExampleCommand(
@@ -1084,7 +1080,7 @@ export const taskMethods = {
         ProjectManager.getInstance()
           .clearExecutor();
       }
-    });
+    })();
   },
 
   /**

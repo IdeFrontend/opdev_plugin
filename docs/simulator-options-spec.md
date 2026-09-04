@@ -77,7 +77,7 @@ Example A5 command (defaults on):
 ```bash
 msprof op simulator \
   --soc-version=Ascend950PR_9589 \
-  --output=<op_path>/.vscode/opprof \
+  --output=<workspaceRoot>/.vscode/opprof \
   --aic-metrics=ResourceConflictRatio \
   <target>
 ```

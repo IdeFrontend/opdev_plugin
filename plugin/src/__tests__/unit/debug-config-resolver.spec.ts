@@ -42,6 +42,24 @@ describe('resolveDebugLaunchConfigName', () => {
       .toBe(DEBUG_LAUNCH_CONFIG.MSDEBUG_PYTHON);
   });
 
+  it('maps canonical torch-library + template to msdebug-python for CPU and NPU (settings-native openProject storage)', () => {
+    expect(resolveDebugLaunchConfigName(
+      'torch-library',
+      'npu',
+      defaultBehavior,
+      'torch_library_template',
+    ))
+      .toBe(DEBUG_LAUNCH_CONFIG.MSDEBUG_PYTHON);
+
+    expect(resolveDebugLaunchConfigName(
+      'torch-library',
+      'cpu',
+      defaultBehavior,
+      'torch_library_template',
+    ))
+      .toBe(DEBUG_LAUNCH_CONFIG.MSDEBUG_PYTHON);
+  });
+
   it('maps default ascend/cann projects to binary msdebug configs', () => {
     expect(resolveDebugLaunchConfigName('cann', 'npu', defaultBehavior))
       .toBe(DEBUG_LAUNCH_CONFIG.MSDEBUG);
@@ -59,6 +77,37 @@ describe('resolveDebugLaunchConfigName', () => {
     ))
       .toBe(DEBUG_LAUNCH_CONFIG.MSDEBUG);
   });
+
+  it('maps remote NPU debug to remote-debug', () => {
+    expect(resolveDebugLaunchConfigName('cann', 'npu', defaultBehavior, undefined, true))
+      .toBe(DEBUG_LAUNCH_CONFIG.REMOTE_MSDEBUG);
+  });
+
+  it('keeps local NPU debug as msdebug when remote is unset', () => {
+    expect(resolveDebugLaunchConfigName('cann', 'npu', defaultBehavior, undefined, false))
+      .toBe(DEBUG_LAUNCH_CONFIG.MSDEBUG);
+  });
+
+  it('falls back to binary configs for an unset project type', () => {
+    expect(resolveDebugLaunchConfigName(undefined, 'npu', defaultBehavior))
+      .toBe(DEBUG_LAUNCH_CONFIG.MSDEBUG);
+    expect(resolveDebugLaunchConfigName(undefined, 'cpu', defaultBehavior))
+      .toBe(DEBUG_LAUNCH_CONFIG.MSDEBUG_CPU);
+    expect(resolveDebugLaunchConfigName(null, 'npu', defaultBehavior))
+      .toBe(DEBUG_LAUNCH_CONFIG.MSDEBUG);
+  });
+
+  it('trims whitespace from project type and template values', () => {
+    expect(resolveDebugLaunchConfigName(' triton ', 'npu', defaultBehavior))
+      .toBe(DEBUG_LAUNCH_CONFIG.MSDEBUG_TRITON_NPU);
+    expect(resolveDebugLaunchConfigName(
+      '  cann  ',
+      'cpu',
+      defaultBehavior,
+      ' torch_library_template ',
+    ))
+      .toBe(DEBUG_LAUNCH_CONFIG.MSDEBUG_PYTHON);
+  });
 });
 
 describe('isPythonDebugLaunchConfig', () => {
@@ -73,6 +122,10 @@ describe('isPythonDebugLaunchConfig', () => {
     expect(isPythonDebugLaunchConfig(DEBUG_LAUNCH_CONFIG.MSDEBUG))
       .toBe(false);
     expect(isPythonDebugLaunchConfig(DEBUG_LAUNCH_CONFIG.MSDEBUG_CPU))
+      .toBe(false);
+    expect(isPythonDebugLaunchConfig(DEBUG_LAUNCH_CONFIG.REMOTE_MSDEBUG))
+      .toBe(false);
+    expect(isPythonDebugLaunchConfig('anything-else'))
       .toBe(false);
   });
 });

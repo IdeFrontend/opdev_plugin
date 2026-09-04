@@ -24,7 +24,7 @@
  * // Implement interface methods...
  * }
  *
- * CommandStrategyFactory.register('custom', new CustomStrategy());
+ * // register the strategy in the factory map (see command-strategy/factory.ts).
  */
 
 // Export type definition
@@ -34,6 +34,9 @@ export type {
   ProfilerCommandParams,
   BaseContext,
   CommandStrategy,
+  SectionConfig,
+  BuildableConfig,
+  ProfilerTargetConfig,
 } from './types';
 
 // Export strategy implementation
@@ -42,11 +45,14 @@ export { AscendCommandStrategy } from './ascend-strategy';
 export { CannCommandStrategy } from './cann-strategy';
 
 export { PyAscCommandStrategy } from './pyasc-strategy';
+
 export { BasePythonCommandStrategy } from './base-python-strategy';
+
 export {
   TritonCommandStrategy,
   probeTritonPythonDependencies,
 } from './triton-strategy';
+
 export { resolvePythonExecutablePath } from './python-operator-strategy-shared';
 
 // Export factory class

@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import { useTheme } from '@web/composables/use-theme';
 import { t } from 'i18next';
-import NewProjectSSH from './components/new-project-ssh.vue';
+import NewProject from './components/new-project.vue';
 
-const {
-  themeConfig,
-} = useTheme();
+const { themeConfig } = useTheme();
 </script>
 <template>
   <a-config-provider :theme="themeConfig">
@@ -21,7 +19,7 @@ const {
       />
       <div class="op-text">
         <div class="flex flex-col">
-          <NewProjectSSH />
+          <NewProject />
         </div>
       </div>
     </div>

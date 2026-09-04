@@ -12,9 +12,9 @@ For CANN/Ascend spawn environment (`SOC_VERSION`, `NPU_ARCH`; simulator-class ru
 |-------|----------------|
 | **CLI** | `msprof op simulator` (simulation) or `msprof op` (on-board) |
 | **Plugin** | Optional pre-build / example build / deploy (project-type dependent), command assembly, shell execution |
-| **Config** | Workspace settings ([`workspace-settings.md`](./workspace-settings.md) § Performance tuning); `configs.json` rows `simulate` / `on_board` for ids and **`fileMapList`** |
+| **Config** | Workspace settings ([`workspace-settings.md`](./workspace-settings.md) § Performance tuning); `.vscode/cache.json` (`fileMapLists`) for external report paths |
 | **Results UI** | Native tree **`opdevtoolsPerformanceResultsTree`** (reports → folder/file leaves) |
-| **Viewers** | CSV editor, Insight viewer (`bin`/`json`), optional `vscode.diff` via API |
+| **Viewers** | CSV editor, Insight viewer (`bin`/`json`), profiling-report viewer (`rep`/`ncrep`/`npu-rep`), optional `vscode.diff` via API |
 
 There is **no** performance-tuning sidebar webview (`performancePanelView` / `performance-run-data` panel) and **no** `open-performance-panel-view` command.
 
@@ -34,7 +34,7 @@ flowchart LR
   end
   subgraph External["Environment"]
     Msprof["msprof"]
-    Opprof["op_path / ideConfig / opprof"]
+    Opprof["workspaceRoot / ideConfig / opprof"]
   end
 
   FlowTree --> Msprof
@@ -71,10 +71,10 @@ After a queued run finishes, `extension.ts` may call `refreshPerformanceReports(
 
 | Panel | Path | `ops` API |
 |-------|------|-----------|
-| Simulation | `web/src/views/panels/options-simulator/` | `getConfigData` / `saveConfig` (type `simulate`), `startSimulate` |
-| On-board | `web/src/views/panels/options-on-board/` | `getConfigData` / `saveConfig` (type `on_board`), `startOnBoard` |
+| Simulation | `web/src/views/panels/options-simulator/` | `getSimulateOptions` / `saveSimulateOptions`, `startSimulate` |
+| On-board | `web/src/views/panels/options-on-board/` | `getOnBoardOptions` / `saveOnBoardOptions`, `startOnBoard` |
 
-On confirm, webviews call `startSimulate` / `startOnBoard` then close the editor. Settings persist to workspace `op-devtools.*` via `ConfigService.writeOpDevtoolsDottedSettings` (not legacy `postConfig` for script fields).
+On confirm, webviews call `startSimulate` / `startOnBoard` then close the editor. Settings persist to workspace `op-devtools.*` via `ConfigService.writeOpDevtoolsDottedSettings`.
 
 ### 3. Explorer: add visualization
 
@@ -101,21 +101,21 @@ sequenceDiagram
 
   User->>Build: startSimulate
   opt requiresBuildBeforeAnalysis
-    Build->>Exec: getBuildOpCommand (simulate config id)
+    Build->>Exec: getBuildOpCommand (simulate section config)
     opt standard-custom
       Build->>Exec: getBuildExampleCommand + deploy
     end
   end
   Build->>Exec: getSimulateCommand
   Exec->>Msprof: shell
-  Msprof-->>Build: writes under op_path/ideConfig/opprof
+  Msprof-->>Build: writes under workspaceRoot/ideConfig/opprof/runId
   Build->>User: flashPerformanceRunData
 ```
 
 Notable behavior:
 
 - Uses **`OperatorPluginRegistry.getOpPlugin(project.project_type).buildBehavior`** for active-file check (PyAsc: must have `.py` active; updates deploy target) and whether build/example/deploy run first.
-- **Simulate config id** drives pre-build when `requiresBuildBeforeAnalysis` (uses simulate row’s config for `getBuildOpCommand`).
+- The **simulate section config** (`resolveSimulateBaseContext(projectPath, operatorNames)` → `ConfigService.getSimulateConfig(projectPath)`) drives pre-build when `requiresBuildBeforeAnalysis` (`getBuildOpCommand` over that base context).
 - **Standard custom:** after example build, `deployStandardCustomRunPackage`.
 - On success: `build.simulationSuccess` + `huawei-op-devtools.flashPerformanceRunData` with `{ focusIfNew: true }`.
 - On failure: throws (simulate path) so the operator queue can surface errors.
@@ -128,7 +128,7 @@ Notable behavior:
 
 Same structure as simulation, but:
 
-- Pre-build uses **on_board** config id when `requiresBuildBeforeAnalysis`.
+- Pre-build uses the **on_board section config** (`resolveOnBoardBaseContext(projectPath, operatorNames)` → `ConfigService.getOnBoardConfig(projectPath)`) when `requiresBuildBeforeAnalysis`.
 - Command: `getOnBoardCommand` → `ProfilerFactory.getStrategy('onboard')` with `onboardCannSoc` from `resolveAscendEnv({ isSimulator: false })`.
 - PyAsc active-file failure **returns** early (does not throw) — asymmetry vs simulate.
 - On success: `build.onBoardSuccess` + `flashPerformanceRunData({ focusIfNew: true })`.
@@ -152,26 +152,28 @@ Same structure as simulation, but:
 
 | Mode | Class | CLI shape |
 |------|-------|-----------|
-| Simulation | `SimulatorStrategy` | `msprof op simulator --soc-version=<SIMULATOR_DIR> --output=<op_path>/<ideConfig>/opprof --aic-metrics=...` |
-| On-board | `OnBoardStrategy` | `msprof op --output=<op_path>/<ideConfig>/opprof --aic-metrics=...` |
+| Simulation | `SimulatorStrategy` | `msprof op simulator --soc-version=<SIMULATOR_DIR> --output=<workspaceRoot>/<ideConfig>/opprof --aic-metrics=...` |
+| On-board | `OnBoardStrategy` | `msprof op --output=<workspaceRoot>/<ideConfig>/opprof --aic-metrics=...` |
 
-**Simulation metrics** (from merged `user_options`, mapped in [`workspace-settings.md`](./workspace-settings.md#performance-tuning-op-devtoolsperformancetuning)):
+**Simulation metrics** (read from the simulate section DAO `ConfigService.getSimulateConfig(projectPath)` — the strategy passes `config.resourceConflictRatio` / `config.memoryThroughputWaveform` into `getSimulationAicMetrics`; workspace keys in [`workspace-settings.md`](./workspace-settings.md#performance-tuning-op-devtoolsperformancetuning)):
 
-| Workspace setting | `user_options` key | CLI metric | Gating |
-|-------------------|-------------------|------------|--------|
-| (mandatory base) | — | `PipeUtilization` | always emitted |
-| `simulation.resourceConflictRatio` | `ResourceConflictRatio` | `ResourceConflictRatio` | only if SOC allow-listed |
-| `simulation.memoryThroughputWaveform` | `PMSampling` | `PMSampling` | only if SOC allow-listed |
+| Workspace setting | CLI metric | Gating |
+|-------------------|------------|--------|
+| (mandatory base) | `PipeUtilization` | always emitted |
+| `simulation.resourceConflictRatio` | `ResourceConflictRatio` | only if SOC allow-listed |
+| `simulation.memoryThroughputWaveform` | `PMSampling` | only if SOC allow-listed |
 
 **SOC gating (GC-22 / plugin_release #32):** the simulator (CANN msopprof) validates `--aic-metrics` against the platform selected by `--soc-version` and accepts only a narrow, platform-dependent set; unknown metrics fail with `[ERROR] Unexpected argument … maybe in wrong soc platform` (this broke A3 / `ascend910_93`). Optional metrics are emitted only when the resolved CANN SOC slug is in `SIMULATOR_OPTIONAL_METRIC_SOCS` ([`shared/msprof-simulator-metrics.ts`](../shared/msprof-simulator-metrics.ts)). **A5 (`ascend950`):** `ResourceConflictRatio` and `PMSampling` are allow-listed after §8 CLI verification — see **[`simulator-options-spec.md`](./simulator-options-spec.md)**. Other SOCs remain on `PipeUtilization` only until verified. msprof **mutual exclusion:** `ResourceConflictRatio` (when allow-listed and enabled) replaces `PipeUtilization`; `PMSampling` may append.
 
 **`--soc-version`:** must be the **simulator directory** (`resolveAscendEnv({ isSimulator: true }).simulatorType`), e.g. `Ascend910B3` / `Ascend910C` / `Ascend950PR_9589` — not the CANN slug. Full contract (defaults, precedence, verification, contrast with `{soc_version}` / spawn env): **[`ascend-env-spec.md` §8.1](./ascend-env-spec.md#81-msprof-op-simulator---soc-version-canonical)**.
 
-**On-board metrics** depend on SOC: `isAscendA5ProfilerCannSoc(cannSoc)` chooses A5 vs A3-style base sets; workspace checkboxes are merged in `ConfigService.buildUserOptionsFromWorkspaceSettings('on_board', …)` (key ↔ `user_options` mapping: [`workspace-settings.md`](./workspace-settings.md#performance-tuning-op-devtoolsperformancetuning)). A5 matrix: [`ascend-a5-support.md`](./ascend-a5-support.md).
+**On-board metrics** depend on SOC: `isAscendA5ProfilerCannSoc(cannSoc)` chooses A5 vs A3-style base sets; workspace checkboxes are folded into the on_board section DAO (`ConfigService.getOnBoardConfig(projectPath)`); workspace keys: [`workspace-settings.md`](./workspace-settings.md#performance-tuning-op-devtoolsperformancetuning). A5 matrix: [`ascend-a5-support.md`](./ascend-a5-support.md).
 
-**Profiler target binary:** `strategy.getProfilerTargetFile` reads **`build_example.target_file`** from `configs.json` ([`workspace-settings.md`](./workspace-settings.md#what-is-not-in-workspace-settings)). Optional `operatorNames` rewrites `test_aclnn_*` path segment for standard custom.
+**Profiler target binary:** `strategy.getProfilerTargetFile` — the **ascend** strategy reads **`exampleBuildConfig.targetFile`** (workspace setting; falls back to `OperatorPluginRegistry.getDefaultPaths`); the **cann** / **pyasc** / **triton** strategies read the `build_op` deploy key (`deployCommandOrRunCommand`, fallback `targetOpFile`) — see [`workspace-settings.md`](./workspace-settings.md#what-is-not-in-workspace-settings). Optional `operatorNames` rewrites the `test_aclnn_*` path segment for standard custom (first selected name).
 
-**Output directory:** `joinIdeConfigRelative('opprof')` under operator `op_path` (typically `<opDir>/.vscode/opprof` or `<opDir>/.arts/opprof`).
+**Output directory:** the workspace root — `joinIdeConfigRelative('opprof')` joined with the first workspace folder (fallback: `operator.op_path`), i.e. **`<workspaceRoot>/<ideDir>/opprof`**. Every operator writes its runs there; each run creates a subdirectory (`<runId>`), and the scan reads only this single root (never per-operator trees).
+
+**Output channel:** the on-board run writes to its own `Op Dev Tools: onboard` channel (`toolOutputLabel: 'onboard'`); simulator runs use the `simulate` channel. **Every command in the action's chain writes to the action's channel** — the internal compile/example pre-steps of simulate/on-board go to `simulate`/`onboard`, never to `compile`. Both channels append across runs (GC-73) — see [`build-integration.md`](./build-integration.md) for the channel contract.
 
 ---
 
@@ -179,22 +181,18 @@ Same structure as simulation, but:
 
 Profiling keys, compile scripts, and runtime merge: **[`workspace-settings.md`](./workspace-settings.md)** (§ Performance tuning, § Compile & deploy, § Runtime model).
 
-### `configs.json` (this feature)
+### `.vscode/cache.json` (this feature)
 
-| `config_type` | Role |
-|---------------|------|
-| `simulate` | Row id for `getSimulateConfigId`; **`user_options.fileMapList`** for external report paths |
-| `on_board` | Row id for `getOnBoardConfigId`; **`fileMapList`** for manual / imported visualizations |
-| `build_op` / `build_example` | Pre-build / deploy / profiler target resolution |
+| Field | Role |
+|-------|------|
+| `fileMapLists.simulate` | External report paths added via “add visualization” (simulation) |
+| `fileMapLists.on_board` | External report paths for on-board visualizations (folder picker / explorer folder) |
 
-### `ops` API (webviews)
+Section configs are synthesized per run by the DAO factories (`getSimulateConfig(projectPath)` / `getOnBoardConfig(projectPath)` over workspace settings + cache) — nothing is stored on disk besides the workspace settings and `cache.json` fields above.
 
-| Method | Role |
-|--------|------|
-| `ops/getConfigData` | Load simulate / on_board rows for options panels |
-| `ops/saveConfig` | Persist metrics + scripts to workspace settings |
-| `ops/startSimulate` | Queued `startSimulate` |
-| `ops/startOnBoard` | Queued `startOnBoard` |
+### Options panels (webviews)
+
+Simulate / on-board options panels read and persist state through workspace settings (`op-devtools.*` via `getSimulateOptions` / `saveSimulateOptions` / `getOnBoardOptions` / `saveOnBoardOptions`) and the workspace cache (`fileMapLists`); there is no config RPC.
 
 Profiler runs are **not** started from the results tree; only from operate flow / options panels / explorer hooks.
 
@@ -220,7 +218,7 @@ There is **no** webview panel that calls `getRunData` for the performance result
 **Bridge:** `RunDataService.getPerformanceRunData` → `performanceMethods.getRunData` → `OperateTreeProvider.refreshPerformanceReports`.
 
 1. **`opprof` subdirectories**  
-   If the project has `build_op` and an operator path, scan `<op_path>/<ideConfig>/opprof/`. Each **subdirectory** = one report (`key` = folder name, `timestamp` = ctime, `children` = scanned files).
+   Scan the single workspace-root folder **`<workspaceRoot>/<ideConfig>/opprof/`** (joined with the project path). Each **subdirectory** (`<runId>`) = one report (`key` = folder name, `timestamp` = ctime, `children` = scanned files).
 
 2. **`fileMapList`**  
    From all `simulate` and `on_board` configs: `{ filePath, reportTime }` entries that still exist on disk. Keys: `simulate_<path>` or `onboard_<path>`. Directories get scanned children; single files have empty `children`.
@@ -233,7 +231,7 @@ There is **no** webview panel that calls `getRunData` for the performance result
 
 ### File tree under a report
 
-`scanSubFiles` includes only **`csv`**, **`bin`**, **`json`** (lowercase). Empty directory branches are pruned. Tree nodes: `performanceFolder`, `performanceFile`.
+`scanSubFiles` includes only **`csv`**, **`bin`**, **`json`**, **`rep`**, **`ncrep`**, **`npu-rep`** (lowercase). Empty directory branches are pruned. Tree nodes: `performanceFolder`, `performanceFile`.
 
 ---
 
@@ -263,6 +261,7 @@ There is **no** webview panel that calls `getRunData` for the performance result
 |-----------|---------|
 | `csv` | `viewService.openCsvFile` |
 | `bin`, `json` | `viewService.openInsight` → Insight data viewer panel (`INSIGHT_HOME_PATH` / `.arts/.env`) |
+| `rep`, `ncrep`, `npu-rep` | `viewService.openProfilingReport` → profiling-report panel (see [`profiling-report-integration.md`](./profiling-report-integration.md)) |
 
 See [`user-issues/profiling-and-insight.md`](./user-issues/profiling-and-insight.md) for known Insight viewer issues (not plugin msprof orchestration).
 
@@ -286,7 +285,7 @@ See [`user-issues/profiling-and-insight.md`](./user-issues/profiling-and-insight
 | `huawei-op-devtools.sidebar.performance.report.mark` / `.unmark` | Toggle mark |
 | `huawei-op-devtools.sidebar.performance.report.sortTime` | Toggle timestamp sort (in-memory) |
 | `huawei-op-devtools.sidebar.performance.report.filterMarked` / `.showAll` | Marked-only filter |
-| `huawei-op-devtools.sidebar.performance.file.open` | Open csv / bin / json |
+| `huawei-op-devtools.sidebar.performance.file.open` | Open csv / bin / json / rep / ncrep / npu-rep |
 | `huawei-op-devtools.flashPerformanceRunData` | Rescan disk + config lists |
 | `huawei-op-devtools.reportVisualizationPerformance` | Add folder to on_board `fileMapList` |
 
@@ -307,6 +306,7 @@ See [`user-issues/profiling-and-insight.md`](./user-issues/profiling-and-insight
 | Tree UI + state | `plugin/src/class/operate-tree-provider.ts` |
 | Clipboard / zip / diff | `plugin/src/controller/performance-data-controller.ts` |
 | CSV / Insight | `plugin/src/service/view-service.ts`, `plugin/src/class/insight-data-viewer-panel.ts` |
+| profiling-report | `plugin/src/class/profiling-report-panel.ts`, `web/src/views/panels/profiling-report/` |
 | Registration | `plugin/src/extension.ts`, `package.json` |
 | Options webviews | `web/src/views/panels/options-simulator/`, `options-on-board/` |
 | A5 metric matrix | `shared/msprof-onboard-env.ts`, `ascend-util.ts` |

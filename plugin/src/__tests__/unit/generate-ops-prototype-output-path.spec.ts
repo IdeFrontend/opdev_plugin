@@ -1,9 +1,9 @@
-jest.mock('@plugin/domain/models/project-model', () => ({ getProjectById: jest.fn() }));
+jest.mock('@plugin/domain/models/project-model', () => ({ getProjectByPath: jest.fn() }));
 
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { getProjectById } from '@plugin/domain/models/project-model';
+import { getProjectByPath } from '@plugin/domain/models/project-model';
 import { generateOpsPrototype } from '@plugin/domain/services/ops-prototype';
 
 function mkTmp(prefix: string): string {
@@ -21,12 +21,9 @@ describe('generateOpsPrototype output-path override', () => {
     fs.mkdirSync(tplDir, { recursive: true });
     fs.writeFileSync(path.join(tplDir, 'add_custom.json'), JSON.stringify([{ op: 'placeholder' }]));
 
-    (getProjectById as jest.Mock).mockReturnValue({
-      id: 7,
-      project_path: projectPath,
-    });
+    (getProjectByPath as jest.Mock).mockReturnValue({ project_path: projectPath });
 
-    const written = await generateOpsPrototype(7, 'my_op', 'add_custom', extensionPath, outputPath);
+    const written = await generateOpsPrototype(projectPath, 'my_op', 'add_custom', extensionPath, outputPath);
 
     expect(written)
       .toBe(path.join(outputPath, 'my_op.json'));
@@ -44,16 +41,24 @@ describe('generateOpsPrototype output-path override', () => {
     fs.mkdirSync(tplDir, { recursive: true });
     fs.writeFileSync(path.join(tplDir, 'add_custom.json'), JSON.stringify([{ op: 'placeholder' }]));
 
-    (getProjectById as jest.Mock).mockReturnValue({
-      id: 8,
-      project_path: projectPath,
-    });
+    (getProjectByPath as jest.Mock).mockReturnValue({ project_path: projectPath });
 
-    const written = await generateOpsPrototype(8, 'fallback_op', 'add_custom', extensionPath);
+    const written = await generateOpsPrototype(projectPath, 'fallback_op', 'add_custom', extensionPath);
 
     expect(written)
       .toBe(path.join(projectPath, 'fallback_op.json'));
     expect(fs.existsSync(path.join(projectPath, 'fallback_op.json')))
       .toBe(true);
+  });
+
+  it('throws when the project path is not a recognized operator project', async () => {
+    const projectPath = mkTmp('unknown-');
+    const extensionPath = mkTmp('ext-');
+
+    (getProjectByPath as jest.Mock).mockReturnValue(undefined);
+
+    await expect(generateOpsPrototype(projectPath, 'my_op', 'add_custom', extensionPath))
+      .rejects
+      .toMatchObject({ name: 'InvalidRequest' });
   });
 });

@@ -1,6 +1,7 @@
 import { t } from 'i18next';
 import * as vscode from 'vscode';
 import * as path from 'path';
+import { sanitizerTargetKeyForOp } from '@plugin/domain/models/op-record';
 import * as fs from 'fs';
 import { CommandExecutor } from '@plugin/class/command-options';
 import { ProjectManager } from '@plugin/core/project/project-manager';
@@ -12,29 +13,33 @@ import {
   OpenProjectParams,
 } from '@shared/api-types';
 import {
-  generateStructure,
-  completeProjectConfigs,
-} from '@plugin/domain';
-import {
   viewIdToProjectType, ensureLaunchJsonExists,
 } from '../domain/utils/project-utils';
 import { requestSidebarContextsRefresh } from '@plugin/helpers/sidebar-context-refresh';
-import { configService } from '@plugin/service/config-service';
+import { ConfigService } from '@plugin/service/config-service';
 import {
   OperatorProjectDetector,
   OperatorProjectType,
 } from '@plugin/domain/services/operator-project-detector';
 import {
   getProjectByPath,
-  updateStandardCustomOperators,
-  appendStandardCustomOperator,
-  SubOperatorInfo,
+  normalizeProjectPath,
+  type SubOperatorInfo,
 } from '@plugin/domain/models/project-model';
+import {
+  appendOperatorToFolderScanState,
+  readWorkspaceCache,
+  updateFolderScanState,
+  updateWorkspaceCache,
+} from '@plugin/helpers/workspace-cache';
 import { isSubOperatorCreation } from '@plugin/domain/utils/sub-operator-creation';
 import { WorkspaceDetectorService } from '@plugin/service/workspace-detector-service';
 import { OperatorProjectIconTheme } from '../class/operator-project-icon-theme';
 import { whenPostActivateBootstrapReady } from '@plugin/helpers/post-activate-bootstrap';
-import { getWorkspaceGenOpCommand } from '@plugin/helpers/operator-project-workspace-config';
+import {
+  getWorkspaceGenOpCommand,
+  readWorkspaceProjectTypeSetting,
+} from '@plugin/helpers/operator-project-workspace-config';
 import {
   buildGenOpCommand, decideSkipFileGeneration,
 } from '@plugin/domain/utils/genop-command';
@@ -52,7 +57,7 @@ function getExtensionContext(): vscode.ExtensionContext {
  * collection root. Returns true only when the command succeeded AND left operator
  * source on disk (skip the plugin's own source generation). Any failure, missing bash,
  * a build.sh without --genop, or an exit-0-but-no-output result returns false → the
- * caller falls back to the template scaffolding (issue #13 behaviour).
+ * caller falls back to the template scaffolding.
  */
 async function tryGenOpScaffold(opts: {
   executor: CommandExecutor;
@@ -159,6 +164,39 @@ async function openFolderFn(url: string) {
   }
 }
 
+/**
+ * Ensure the VS Code-side config files (devtool_config.json etc.) and the
+ * default op-devtools settings seed exist for a project. Each step is
+ * best-effort: failures are logged and swallowed so the open flow proceeds.
+ */
+async function ensureProjectIdeConfigAndSettings(
+  projectPath: string,
+  opts: { ascendEnvScript?: string;
+    projectType?: string;
+    templateName?: string },
+): Promise<void> {
+  try {
+    await ensureLaunchJsonExists(projectPath);
+  }
+  catch (error) {
+    console.warn(`[openProject] Failed to ensure VS Code config files: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  try {
+    await ConfigService.ensureOpDevtoolsSettingsSeeded(
+      projectPath,
+      opts.ascendEnvScript,
+      opts.projectType,
+      undefined,
+      opts.templateName ?? '',
+    );
+    console.log('[openProject] Settings seeding finished');
+  }
+  catch (error) {
+    console.warn(`[openProject] Settings seeding failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
 export const welcomeMethods = {
   /**
    * Create an operator project
@@ -166,9 +204,6 @@ export const welcomeMethods = {
    * @returns results
    */
   async createOps(params: CreateOpsParams): Promise<string> {
-    await ProjectManager.getInstance()
-      .initProject();
-
     return await projectService.createOps(params);
   },
 
@@ -177,8 +212,8 @@ export const welcomeMethods = {
    * @param params - parameters
    */
   async createOpsByPrototype(params: CreateOpsByPrototypeParams): Promise<void> {
-    await ProjectManager.getInstance()
-      .initProject();
+    // The structure comes from OpGeneratorFactory and the default settings from
+    // ConfigService.ensureOpDevtoolsSettingsSeeded.
     await projectService.createOpsByPrototype(params);
   },
 
@@ -192,11 +227,6 @@ export const welcomeMethods = {
 
       const context = getExtensionContext();
 
-      // Cache projectPath to globalState
-      const originalProjectPath = params.projectPath;
-
-      context.globalState.update('lastProjectPath', originalProjectPath);
-
       vscode.window.showInformationMessage(t('welcome.initializing'));
 
       const executor = new CommandExecutor();
@@ -204,7 +234,14 @@ export const welcomeMethods = {
       const subOpDir = path.join(params.projectPath, params.projectName);
       const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
       const workspaceProject = workspaceRoot ? getProjectByPath(workspaceRoot) : undefined;
-      let currentProjectType = workspaceProject?.project_type;
+      // Cascade: workspace `projectType` setting → DB record → detection.
+      let currentProjectType = workspaceRoot
+        ? readWorkspaceProjectTypeSetting(vscode.Uri.file(workspaceRoot))
+        : undefined;
+
+      if (!currentProjectType) {
+        currentProjectType = workspaceProject?.project_type ?? undefined;
+      }
 
       if (!currentProjectType && workspaceRoot) {
         const workspaceDetection = await OperatorProjectDetector.detectOperatorProject(workspaceRoot);
@@ -238,23 +275,11 @@ export const welcomeMethods = {
         parentCollection = getProjectByPath(workspaceRoot);
       }
 
-      let parentProjectId: number | undefined;
-
-      if (isSubOp) {
-        if (!parentCollection) {
-          throw new Error(t('welcome.initOperatorProjectFailed', { error: 'standard-custom collection is not registered' }));
-        }
-
-        const candidateParentProjectId = Number(parentCollection.id);
-
-        if (!Number.isSafeInteger(candidateParentProjectId) || candidateParentProjectId <= 0) {
-          throw new Error(t('welcome.initOperatorProjectFailed', { error: 'standard-custom collection has an invalid project id' }));
-        }
-
-        parentProjectId = candidateParentProjectId;
+      if (isSubOp && !parentCollection) {
+        throw new Error(t('welcome.initOperatorProjectFailed', { error: 'standard-custom collection is not registered' }));
       }
 
-      // Issue #14: prefer the project's own `build.sh --genop` to generate sub-operator
+      // Prefer the project's own `build.sh --genop` to generate sub-operator
       // source. Only attempt it for a sub-operator with a resolved collection.
       let genopSkipFileGeneration = false;
 
@@ -299,24 +324,26 @@ export const welcomeMethods = {
         };
         const isExperimental = subOpDir.toLowerCase()
           .includes('experimental');
-        const updatedParent = await appendStandardCustomOperator(
-          parentCollection!.project_path,
-          newSubOperator,
-          isExperimental,
-        );
+        // Append to the collection scan state in the workspace cache
+        // (no projects.json registry — the cache is the collection store).
+        // The collection is registered only when its scan state exists under
+        // cache.folders[rootKey].
+        const parentPath = parentCollection!.project_path;
+        const rootKey = normalizeProjectPath(parentPath);
+        const scanState = readWorkspaceCache(parentPath).folders?.[rootKey];
 
-        if (!updatedParent) {
+        if (!scanState) {
           throw new Error(t('welcome.initOperatorProjectFailed', { error: 'standard-custom collection is not registered' }));
         }
 
-        const updatedParentProjectId = Number(updatedParent.id);
+        const nextScanState = appendOperatorToFolderScanState(scanState, newSubOperator, isExperimental);
 
-        if (!Number.isSafeInteger(updatedParentProjectId) || updatedParentProjectId <= 0) {
-          throw new Error(t('welcome.initOperatorProjectFailed', { error: 'standard-custom collection has an invalid project id' }));
-        }
-
-        parentCollection = updatedParent;
-        parentProjectId = updatedParentProjectId;
+        await updateWorkspaceCache(parentPath, (cache) => {
+          cache.folders = {
+            ...(cache.folders ?? {}),
+            [rootKey]: nextScanState,
+          };
+        });
         // No projectService.init here: do NOT create a standalone record for the sub-operator.
       }
       else {
@@ -326,6 +353,7 @@ export const welcomeMethods = {
             projectPath: params.projectPath,
             projectName: params.projectName,
             templateName: params.templateName,
+            // Persist the canonical creation type in init.
             projectType: viewIdToProjectType(params.createOperatorProjectDictoryFileType),
           });
         }
@@ -333,6 +361,28 @@ export const welcomeMethods = {
           const msg = error instanceof Error ? error.message : String(error);
 
           throw new Error(t('welcome.initOperatorProjectFailed', { error: msg }));
+        }
+
+        // A plugin-created standard-custom collection must be registered in the
+        // workspace cache scan state (cache.folders[rootKey]) right away: the
+        // sub-operator creation flow below reads it. Create-if-missing — scan
+        // state from an earlier scan is never clobbered.
+        if (viewIdToProjectType(params.createOperatorProjectDictoryFileType) === 'ascend') {
+          const collectionPath = path.join(params.projectPath, params.projectName);
+          const rootKey = normalizeProjectPath(collectionPath);
+
+          await updateWorkspaceCache(collectionPath, (cache) => {
+            if (!cache.folders?.[rootKey]) {
+              cache.folders = {
+                ...(cache.folders ?? {}),
+                [rootKey]: {
+                  opsMeet: [],
+                  opsList: [],
+                  experimentalOpsList: [],
+                },
+              };
+            }
+          });
         }
       }
 
@@ -354,6 +404,27 @@ export const welcomeMethods = {
         normalizedProjectPath,
         normalizedProjectName,
       );
+
+      // Seed the sanitizer Python target for single-operator python
+      // types (pyasc/triton) — the default `targetOpFile` (`python3 ./<op>.py`)
+      // — and the torch-library target ('python ../run.py', the generated
+      // build_op target). So a fresh creation produces the sanitizer command
+      // without an active-file sync. Keyed by the canonical operator name via
+      // sanitizerTargetKeyForOp (the operator dir basename on creation), the
+      // same key the runtime reader resolves.
+      const projectType = viewIdToProjectType(params.createOperatorProjectDictoryFileType);
+
+      if (projectType === 'pyasc' || projectType === 'triton' || params.templateName === 'torch_library_template') {
+        await updateWorkspaceCache(fullProjectPath, (cache) => {
+          cache.sanitizerPythonTarget = {
+            ...(cache.sanitizerPythonTarget ?? {}),
+            [sanitizerTargetKeyForOp(fullProjectPath, '')]:
+              params.templateName === 'torch_library_template'
+                ? 'python ../run.py'
+                : `python3 ./${params.projectName}.py`,
+          };
+        });
+      }
 
       // In a remote environment we can directly open the local path (relative to the remote system)
       const localUri = vscode.Uri.file(fullProjectPath);
@@ -394,10 +465,10 @@ export const welcomeMethods = {
               {
                 createOperatorProjectDirectoryFileType:
                   params.createOperatorProjectDictoryFileType,
-                ...(isSubOp && parentCollection && parentProjectId !== undefined
+                ...(isSubOp && parentCollection
                   ? {
                     subOperatorContext: {
-                      parentProjectId,
+                      parentProjectPath: parentCollection.project_path,
                       opName: params.projectName,
                       outputPath: subOpDir,
                       skipFileGeneration: genopSkipFileGeneration,
@@ -475,24 +546,24 @@ export const welcomeMethods = {
 
         // Ensure VS Code-side config files exist for already-registered projects too.
         // Without devtool_config.json, the Operator Development sidebar remains hidden.
+        await ensureProjectIdeConfigAndSettings(existingProject.project_path, { templateName: existingProject.template_name ?? '' });
+        console.log('[openProject] Ensured VS Code config files for existing project');
+
+        // Materialize default build settings if missing. The seed is per-key
+        // create-if-missing, and the synthesized record carries the template
+        // name so torch_library projects get the 'python ../run.py' target.
+        // Write the stored project_type back into the setting; a failure
+        // surfaces the same seeding-failed warning as the seed itself.
         try {
-          await ensureLaunchJsonExists(existingProject.project_path);
-          console.log('[openProject] Ensured VS Code config files for existing project');
+          if (existingProject.project_type) {
+            await ConfigService.writeOpDevtoolsDottedSettings(
+              { projectType: existingProject.project_type },
+              existingProject.project_path,
+            );
+          }
         }
         catch (error) {
-          console.warn(`[openProject] Failed to ensure VS Code config files: ${error instanceof Error ? error.message : String(error)}`);
-        }
-
-        // Complete missing configs
-        try {
-          const projectId = existingProject.id;
-
-          await completeProjectConfigs(projectId);
-          console.log('[openProject] Config completion finished');
-          await configService.maybeMigrateLegacySettingsToWorkspace();
-        }
-        catch (error) {
-          console.warn(`[openProject] Config completion failed: ${error instanceof Error ? error.message : String(error)}`);
+          console.warn(`[openProject] Settings seeding failed: ${error instanceof Error ? error.message : String(error)}`);
         }
 
         if (!isFromSystem) {
@@ -553,14 +624,16 @@ export const welcomeMethods = {
         return;
       }
 
-      // Write the configuration to the project.json file
+      // Write the configuration to the workspace settings (the canonical
+      // detector type, not the viewIdToProjectType remap — a standard-custom
+      // collection keeps 'standard-custom').
       try {
         await projectService.init({
           ascendEnvScript: params.projectSH,
           projectPath: params.projectPath,
           projectName: params.projectName,
           templateName: rootDetection.projectType === OperatorProjectType.TORCH_LIBRARY ? 'torch_library_template' : '',
-          projectType: viewIdToProjectType(rootDetection.projectType),
+          projectType: rootDetection.projectType,
         });
       }
       catch (error) {
@@ -569,23 +642,22 @@ export const welcomeMethods = {
         throw new Error(t('welcome.initOperatorProjectFailed', { error: msg }));
       }
 
-      // Process configuration files
+      // Process configuration files: the structure was already generated by
+      // createOpsByPrototype during the creation flow (no generator call
+      // here); only the VS Code side files and the default settings seeding
+      // are ensured. The seeding is idempotent (skipped when compileCommand
+      // already exists). The seed's op_type comes from detection (ascend-c,
+      // cann, pyasc, triton, standard-custom, …); torch_library carries the
+      // template name so the seed writes 'python ../run.py' for build_op.
       const pm = ProjectManager.getInstance();
-      const projectId = Number(pm.projectId);
 
-      await generateStructure(
-        {
-          ops_prototype_file: '',
-          project_id: projectId,
-          // op_type from detection (ascend, cann, pyasc, triton, …)
-          op_type: viewIdToProjectType(rootDetection.projectType),
-          template_name: rootDetection.projectType === OperatorProjectType.TORCH_LIBRARY ? 'torch_library_template' : '',
-        },
-        context.extensionPath,
-        true,
-      );
+      await ensureProjectIdeConfigAndSettings(projectFullPath, {
+        ascendEnvScript: params.projectSH ?? '',
+        projectType: rootDetection.projectType,
+        templateName: rootDetection.projectType === OperatorProjectType.TORCH_LIBRARY ? 'torch_library_template' : '',
+      });
+
       await pm.checkVscode();
-      await configService.maybeMigrateLegacySettingsToWorkspace();
 
       if (!isFromSystem) {
         await requestSidebarContextsRefresh();
@@ -595,7 +667,8 @@ export const welcomeMethods = {
         await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
       }
 
-      // If it is a standard custom operator, scan the operator collection and operator and update the root project (do not create a new projects item for it)
+      // If it is a standard custom operator, scan the operator collection and operator
+      // and persist the scan state into the workspace cache (do not create a new projects item for it)
       if (rootDetection.projectType === OperatorProjectType.STANDARD_CUSTOM) {
         try {
           console.log('[openProject] Standard custom operators detected, scanning operator groups and operators...');
@@ -606,7 +679,11 @@ export const welcomeMethods = {
           console.log(`[openProject] Operator group list: ${opsMeet.map((m) => m.name)
             .join(', ')}`);
           console.log(`[openProject] Regular operators: ${opsList.length}, experimental operators: ${experimentalOpsList.length}`);
-          await updateStandardCustomOperators(projectFullPath, opsMeet, opsList, experimentalOpsList);
+          await updateFolderScanState(projectFullPath, {
+            opsMeet,
+            opsList,
+            experimentalOpsList,
+          });
           console.log(`[openProject] Stored ${opsMeet.length} operator groups, ${opsList.length} regular operators, and ${experimentalOpsList.length} experimental operators`);
         }
         catch (error) {

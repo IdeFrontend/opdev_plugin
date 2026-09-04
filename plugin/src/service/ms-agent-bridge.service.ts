@@ -1,4 +1,4 @@
-import { isMsAgentAiFixEnabled as isMsAgentAiFixFlavorEnabled } from '@plugin/helpers/feature-toggle';
+import { SettingsLoader } from '@plugin/service/settings-loader';
 import * as vscode from 'vscode';
 
 export type MsAgentAiFixState = 'queued' | 'running' | 'fixed';
@@ -18,7 +18,7 @@ export interface MsAgentAiFixQueueSnapshot {
 export class MsAgentBridgeService {
   private isMsAgentAiFixEnabled(): boolean {
     try {
-      return isMsAgentAiFixFlavorEnabled();
+      return SettingsLoader.isMsAgentAiFixEnabled();
     }
     catch {
       return false;

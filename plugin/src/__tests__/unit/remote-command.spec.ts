@@ -1,6 +1,11 @@
+import * as path from 'path';
+
 jest.mock('@plugin/domain/utils/npu-hardware-probe', () => ({ startNpuHardwareProbe: jest.fn() }));
 jest.mock('i18next', () => ({ t: (key: string) => key }));
-jest.mock('child_process', () => ({ exec: jest.fn((_: string, __: unknown, callback: (error: Error | null)=> void) => callback(null)) }));
+jest.mock('child_process', () => ({
+  exec: jest.fn((_: string, __: unknown, callback: (error: Error | null)=> void) => callback(null)),
+  execSync: jest.fn(() => ''),
+}));
 
 import {
   buildRemoteBuildExampleCommand,
@@ -9,11 +14,19 @@ import {
   buildRemoteOnBoardCommand,
   buildRemoteStTestCommand,
   createRemoteCommandWhenNoNpuTransformer,
+  getRemoteToolConfig,
+  getRemoteToolHost,
+  getRemoteToolSeries,
+  getRemoteToolSeriesSync,
   parseRemoteToolConfigOutput,
+  parseSeriesFromConfigOutput,
+  resolveRemotePullDir,
 } from '@plugin/helpers/remote-command';
 import { startNpuHardwareProbe } from '@plugin/domain/utils/npu-hardware-probe';
 import * as vscode from 'vscode';
-import { exec } from 'child_process';
+import {
+  exec, execSync,
+} from 'child_process';
 
 describe('remote command helpers', () => {
   beforeEach(() => {
@@ -135,5 +148,90 @@ describe('remote command helpers', () => {
     await expect(transformCommand('bash build.sh --onboard')).resolves.toBe('bash build.sh --onboard');
     expect(startNpuHardwareProbe).not.toHaveBeenCalled();
     expect(buildRemoteCommand).not.toHaveBeenCalled();
+  });
+
+  it('parses only the series out of config output', () => {
+    expect(parseSeriesFromConfigOutput('HOST=1.2.3.4\nSERIES=A2\n'))
+      .toBe('a2');
+    expect(parseSeriesFromConfigOutput('HOST=1.2.3.4'))
+      .toBeUndefined();
+  });
+
+  it('reads the remote tool config through the shell', async () => {
+    (exec as jest.Mock).mockImplementation((_command: string, _options: unknown, callback: (error: Error | null, result: { stdout: string })=> void) => callback(null, { stdout: 'HOST=10.1.2.3\nSERIES=A5\n' }));
+
+    await expect(getRemoteToolConfig())
+      .resolves.toEqual({
+        host: '10.1.2.3',
+        series: 'a5',
+      });
+
+    expect(exec)
+      .toHaveBeenCalledWith('remote_tool.sh config', {
+        encoding: 'utf8',
+        shell: '/bin/bash',
+        timeout: 5000,
+      }, expect.anything()); // the promisified wrapper appends its own callback
+  });
+
+  it('returns undefined when the remote tool config command fails', async () => {
+    const warnSpy = jest.spyOn(console, 'warn')
+      .mockImplementation(() => {});
+
+    (exec as jest.Mock).mockImplementation((_command: string, _options: unknown, callback: (error: Error | null)=> void) => callback(new Error('not found')));
+
+    await expect(getRemoteToolConfig())
+      .resolves.toBeUndefined();
+
+    expect(warnSpy)
+      .toHaveBeenCalledWith('Failed to get remote tool config:', expect.any(Error));
+    warnSpy.mockRestore();
+  });
+
+  it('delegates series and host queries to the config reader', async () => {
+    (exec as jest.Mock).mockImplementation((_command: string, _options: unknown, callback: (error: Error | null, result: { stdout: string })=> void) => callback(null, { stdout: 'HOST=10.1.2.3\nSERIES=A3\n' }));
+
+    await expect(getRemoteToolSeries())
+      .resolves.toBe('a3');
+    await expect(getRemoteToolHost())
+      .resolves.toBe('10.1.2.3');
+  });
+
+  it('reads the remote tool series synchronously', () => {
+    (execSync as jest.Mock).mockReturnValue('SERIES=A2\n');
+
+    expect(getRemoteToolSeriesSync())
+      .toBe('a2');
+  });
+
+  it('returns undefined when the sync config command fails', () => {
+    (execSync as jest.Mock).mockImplementation(() => {
+      throw new Error('not found');
+    });
+
+    expect(getRemoteToolSeriesSync())
+      .toBeUndefined();
+  });
+
+  it('resolves a pull dir under the IDE config dir of the resolved root', () => {
+    const root = 'C:\\repo\\my operator';
+
+    expect(resolveRemotePullDir(root, 'st-results', 'ST test'))
+      .toBe('C:/repo/my operator/.vscode/st-results/');
+  });
+
+  it('resolves a pull dir through a caller-supplied resolver', () => {
+    const resolvedRoot = path.resolve('/repo/ops/add');
+    const resolver = jest.fn((root: string) => `${root}/build_out`);
+
+    expect(resolveRemotePullDir('/repo/ops/add', resolver, 'build example'))
+      .toBe(`${resolvedRoot.replace(/\\/g, '/')}/build_out/`);
+    expect(resolver)
+      .toHaveBeenCalledWith(resolvedRoot);
+  });
+
+  it('throws when no root is known for the pull dir', () => {
+    expect(() => resolveRemotePullDir(undefined, 'st-results', 'ST test'))
+      .toThrow('Output root path not found for ST test');
   });
 });

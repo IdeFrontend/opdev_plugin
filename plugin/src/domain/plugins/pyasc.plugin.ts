@@ -4,7 +4,7 @@ import { PyAscCommandStrategy } from '@plugin/domain/services/command-strategy/p
 import {
   PyAscOpGenerator, OpGenParams, OpGenProject,
 } from '@plugin/domain/services/op-generator-factory';
-import { OpRecord } from '@plugin/domain/models/model';
+import { OpRecord } from '@plugin/domain/models/op-record';
 import { OperatorProjectType } from '@plugin/domain/models/operator-project-type';
 import { AbstractOperatorPlugin } from './abstract-operator-plugin';
 import {
@@ -75,6 +75,7 @@ export class PyAscPlugin extends AbstractOperatorPlugin implements IProjectDetec
    */
   getInitialConfigScripts(op: OpRecord, _workspaceRoot: string): OperatorConfigScripts {
     const py = `python3 ./${op.op_name}.py`;
+
     return {
       buildScript:     py,
       exampleScript:   py,

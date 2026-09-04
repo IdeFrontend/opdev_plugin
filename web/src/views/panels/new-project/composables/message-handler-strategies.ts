@@ -55,18 +55,6 @@ export class SetProjectPathMessageHandlerStrategy implements MessageHandlerStrat
   }
 }
 
-export class SetLastProjectPathMessageHandlerStrategy implements MessageHandlerStrategy {
-  canHandle(command: string): boolean {
-    return command === 'iframeSetLastProjectPath';
-  }
-
-  handle(message: MessageData, context: MessageHandlerContext): void {
-    if (!context.isPathSetFromContextMenu.value && message.data) {
-      context.projectPath.projectPath = message.data as string;
-    }
-  }
-}
-
 export class SetWorkspaceMessageHandlerStrategy implements MessageHandlerStrategy {
   canHandle(command: string): boolean {
     return command === 'iframeSetWorkspace';
@@ -98,7 +86,6 @@ export class MessageHandlerStrategyManager {
     this.strategies = [
       new SetHomeMessageHandlerStrategy(),
       new SetProjectPathMessageHandlerStrategy(),
-      new SetLastProjectPathMessageHandlerStrategy(),
       new SetWorkspaceMessageHandlerStrategy(),
     ];
   }

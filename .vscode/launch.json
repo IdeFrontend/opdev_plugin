@@ -29,7 +29,7 @@
       "preLaunchTask": "npm: watch"
     },
     {
-      "name": "Debug Ascend C Toolkit Extension",
+      "name": "Debug Ascend C Toolkits Extension",
       "type": "extensionHost",
       "request": "launch",
       "args": [
@@ -41,7 +41,7 @@
       "preLaunchTask": "compile:ascend-c-toolkit:debug"
     },
     {
-      "name": "Debug Ascend C Toolkit Extension (Hot Mode)",
+      "name": "Debug Ascend C Toolkits Extension (Hot Mode)",
       "type": "extensionHost",
       "request": "launch",
       "args": [

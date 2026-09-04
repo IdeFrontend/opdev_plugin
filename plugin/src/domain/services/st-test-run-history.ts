@@ -333,7 +333,7 @@ function readRecord(
 
     const parentName = path.basename(path.dirname(runDirectory));
 
-    // In the flat layout, the parent is the shared results root. Legacy records
+    // In the flat layout, the parent is the shared results root. Older records
     // still use an operator-name parent, so both shapes remain readable.
     if (parentName !== ST_TEST_RESULTS_DIR_NAME
       && parentName !== toSafeStTestPathSegment(manifest.operatorName)) {
@@ -523,8 +523,8 @@ function loadLegacyStTestRunHistoryDirectories(
 }
 
 /**
- * Legacy/test helper for a single operator history directory. Production history
- * loading uses loadStTestRunHistoryFromWorkspace so flat and legacy layouts merge
+ * Test helper for a single operator history directory. Production history
+ * loading uses loadStTestRunHistoryFromWorkspace so flat and older layouts merge
  * through the same workspace-root path.
  */
 export function loadStTestRunHistory(

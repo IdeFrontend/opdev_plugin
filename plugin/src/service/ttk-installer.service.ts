@@ -25,6 +25,12 @@ const TTK_INSTALL_TIMEOUT_MS = 10 * 60_000;
 const TTK_LOCK_WAIT_TIMEOUT_MS = 20 * 60_000;
 const TTK_LOCK_STALE_MS = 30 * 60_000;
 const TTK_LOCK_POLL_MS = 250;
+const TTK_RENAME_RETRY_ATTEMPTS = 20;
+const TTK_RENAME_RETRY_DELAY_MS = 25;
+const TTK_REMOVE_RETRY_ATTEMPTS = 20;
+// An ownerless lock directory is only broken when it outlives the
+// mkdir -> owner.json write window by far (that write happens immediately).
+const OWNERLESS_LOCK_GRACE_MS = 5_000;
 const CALLER_CANCELLATION_POLL_MS = 50;
 const CACHE_SCHEMA_VERSION = 1;
 const PYTHON_VERSION_SENTINEL = '__MSTT_PYTHON_VERSION__=';
@@ -902,6 +908,21 @@ export class TtkInstallerService {
       return true;
     }
 
+    if (currentOwner === undefined) {
+      // An ownerless lock directory is a broken half-state: the creator either
+      // crashed before writing owner.json or a release fallback removed the
+      // marker before deleting the directory. Nothing owns it — recover it
+      // once it outlives the mkdir -> owner.json write window.
+      if (this.dependencies.now() - lockCreatedAt < OWNERLESS_LOCK_GRACE_MS) {
+        return false;
+      }
+
+      await this.removeManagedPathWithRetry(lockPath);
+      appendLog(TTK_LOG_SCOPE, 'Recovered ownerless managed TTK cache lock', { cacheLock: lockPath });
+
+      return true;
+    }
+
     if (currentOwner?.host === os.hostname()) {
       if (this.isProcessAlive(currentOwner.pid)) {
         return false;
@@ -916,7 +937,7 @@ export class TtkInstallerService {
     this.assertManagedPath(stalePath);
 
     try {
-      await fs.promises.rename(lockPath, stalePath);
+      await this.renameManagedPathWithRetry(lockPath, stalePath);
     }
     catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
@@ -944,14 +965,28 @@ export class TtkInstallerService {
     this.assertManagedPath(releasedPath);
 
     try {
-      await fs.promises.rename(lockPath, releasedPath);
+      await this.renameManagedPathWithRetry(lockPath, releasedPath);
     }
     catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      const code = (error as NodeJS.ErrnoException).code;
+
+      if (code === 'ENOENT') {
         return;
       }
 
-      throw error;
+      // Windows can keep refusing to rename a directory another instance is
+      // polling for longer than the retry window, while deleting the same
+      // directory is allowed. Remove in place as the fallback: the owner
+      // marker has already been validated, and an ownerless directory left
+      // behind by a crash mid-removal is recovered by the next waiter
+      // (see recoverStaleManagedCacheLock).
+      if (code !== 'EPERM' && code !== 'EBUSY' && code !== 'ENOTEMPTY') {
+        throw error;
+      }
+
+      await this.removeManagedPathWithRetry(lockPath);
+
+      return;
     }
 
     await this.removeManagedPath(releasedPath);
@@ -1043,6 +1078,72 @@ export class TtkInstallerService {
       recursive: true,
       force: true,
     });
+  }
+
+  /**
+   * Rename with short retries. On Windows a directory that another instance
+   * is polling (stat / owner.json reads while it waits for the lock) makes
+   * `rename` fail transiently with EPERM/EBUSY/ENOTEMPTY; the poller's
+   * syscalls finish in microseconds, so a short backoff lets the rename
+   * through.
+   */
+  private async renameManagedPathWithRetry(source: string, target: string): Promise<void> {
+    this.assertManagedPath(source);
+    this.assertManagedPath(target);
+
+    for (let attempt = 0; attempt < TTK_RENAME_RETRY_ATTEMPTS; attempt += 1) {
+      try {
+        await fs.promises.rename(source, target);
+
+        return;
+      }
+      catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+
+        if (code !== 'EPERM' && code !== 'EBUSY' && code !== 'ENOTEMPTY') {
+          throw error;
+        }
+
+        if (attempt === TTK_RENAME_RETRY_ATTEMPTS - 1) {
+          throw error;
+        }
+
+        await this.dependencies.sleep(TTK_RENAME_RETRY_DELAY_MS);
+      }
+    }
+  }
+
+  /**
+   * Remove with short retries — the Windows counterpart of
+   * {@link renameManagedPathWithRetry}: deletion is allowed where rename of a
+   * polled directory is refused (see releaseManagedCacheLock).
+   */
+  private async removeManagedPathWithRetry(targetPath: string): Promise<void> {
+    this.assertManagedPath(targetPath);
+
+    for (let attempt = 0; attempt < TTK_REMOVE_RETRY_ATTEMPTS; attempt += 1) {
+      try {
+        await fs.promises.rm(targetPath, {
+          recursive: true,
+          force: true,
+        });
+
+        return;
+      }
+      catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+
+        if (code !== 'EPERM' && code !== 'EBUSY' && code !== 'ENOTEMPTY') {
+          throw error;
+        }
+
+        if (attempt === TTK_REMOVE_RETRY_ATTEMPTS - 1) {
+          throw error;
+        }
+
+        await this.dependencies.sleep(TTK_RENAME_RETRY_DELAY_MS);
+      }
+    }
   }
 
   private assertManagedPath(targetPath: string): void {

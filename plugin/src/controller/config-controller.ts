@@ -1,75 +1,151 @@
-import { ProjectManager } from '@plugin/core/project/project-manager';
-import { configService } from '@plugin/service/config-service';
-import { buildService } from '@plugin/service/build-service';
+import * as vscode from 'vscode';
+import { t } from 'i18next';
+import { isAscendA5ProfilerCannSoc } from '@shared/msprof-onboard-env';
+import { resolveEffectiveCannSoc } from '@plugin/domain/utils/ascend-util';
 import {
-  GetConfigDataResult,
-  SaveConfigParams,
+  ConfigService, configService,
+} from '@plugin/service/config-service';
+import {
+  OnBoardOptions,
   RemotePathSearchParams,
   RemotePathSearchResult,
+  SanitizerOptions,
+  SimulateOptions,
 } from '@shared/api-types';
 
+/** Dotted `performanceTuning.onBoard.*` keys (flat payload, no `user_options` wrapper). */
+const ON_BOARD_DOTTED_KEYS = [
+  'performanceTuning.onBoard.interCoreLoad',
+  'performanceTuning.onBoard.roofline',
+  'performanceTuning.onBoard.operatorCodeHotspot',
+  'performanceTuning.onBoard.cacheHeatmap',
+  'performanceTuning.onBoard.pcSampling',
+  'performanceTuning.onBoard.cubeAndVectorInstructionTimeAndRatio',
+  'performanceTuning.onBoard.l2CacheHitRate',
+  'performanceTuning.onBoard.memoryReadWriteBandwidth',
+  'performanceTuning.onBoard.l0ReadWriteBandwidth',
+  'performanceTuning.onBoard.ubReadWriteBandwidth',
+  'performanceTuning.onBoard.computeAndMoveUnitTimeRatio',
+  'performanceTuning.onBoard.resourceConflictRatio',
+  'performanceTuning.onBoard.operatorMetrics',
+] as const;
+
+/** Dotted `performanceTuning.simulation.*` keys. */
+const SIMULATE_DOTTED_KEYS = [
+  'performanceTuning.simulation.memoryThroughputWaveform',
+  'performanceTuning.simulation.resourceConflictRatio',
+] as const;
+
+/** Dotted `sanitizer.*` keys. */
+const SANITIZER_DOTTED_KEYS = [
+  'sanitizer.memory',
+  'sanitizer.race',
+  'sanitizer.uninitialized',
+  'sanitizer.memoryLeak',
+  'sanitizer.allocUnused',
+  'sanitizer.reportLogLevel',
+  'sanitizer.maxSingleLogFileSize',
+  'sanitizer.detectionScope',
+  'sanitizer.blockId',
+] as const;
+
+/**
+ * Read the explicitly set option keys from the merged settings layer
+ * (workspace folder > workspace > global). Keys that were never set are omitted,
+ * so the panel can merge the result over its defaults.
+ */
+function readSetOptionKeys<T>(dottedKeys: readonly string[]): Partial<T> {
+  const out: Record<string, unknown> = {};
+
+  for (const dottedKey of dottedKeys) {
+    const value = ConfigService.readOpDevtoolsSetting<unknown>(dottedKey);
+
+    if (value !== undefined) {
+      out[dottedKey.slice(dottedKey.lastIndexOf('.') + 1)] = value;
+    }
+  }
+
+  return out as Partial<T>;
+}
+
+/**
+ * Map a flat option payload to dotted relative settings keys, dropping
+ * `undefined` fields: `writeOpDevtoolsDottedSettings` deletes a key when its
+ * value is `undefined`, and the panels' merged payloads must never delete
+ * settings they did not touch.
+ */
+function definedDottedWrites(
+  dottedKeys: readonly string[],
+  params: Record<string, unknown> | undefined,
+): Record<string, unknown> {
+  const writes: Record<string, unknown> = {};
+
+  for (const dottedKey of dottedKeys) {
+    const flatKey = dottedKey.slice(dottedKey.lastIndexOf('.') + 1);
+    const value = params?.[flatKey];
+
+    if (value !== undefined) {
+      writes[dottedKey] = value;
+    }
+  }
+
+  return writes;
+}
+
 export const configMethods = {
-  /**
-   * Get configuration data for options webviews (simulate / on-board).
-   */
-  async getConfigData(params?: { opName?: string;
-    projectId?: number }): Promise<GetConfigDataResult> {
-    const opName = params?.opName;
-    const projectId = params?.projectId;
+  /** Get the explicitly set on-board profiler options (dotted settings). */
+  async getOnBoardOptions(): Promise<OnBoardOptions> {
+    return readSetOptionKeys<OnBoardOptions>(ON_BOARD_DOTTED_KEYS);
+  },
 
-    const pm = ProjectManager.getInstance();
-    const originalProjectId = pm.projectId;
+  /** Save on-board profiler options as dotted `performanceTuning.onBoard.*` settings. */
+  async saveOnBoardOptions(params: OnBoardOptions): Promise<void> {
+    const writes = definedDottedWrites(ON_BOARD_DOTTED_KEYS, params as Record<string, unknown>);
 
-    if (projectId) {
-      (pm as any)._projectId = String(projectId);
+    // The panel surfaces PCSampling only on an A5 profiler and MemoryDetail
+    // only on non-A5 (SOC-gated in the section DAO). A save must never persist
+    // the HIDDEN counterpart and clobber the other SOC's value.
+    if (isAscendA5ProfilerCannSoc(resolveEffectiveCannSoc())) {
+      delete writes['performanceTuning.onBoard.cacheHeatmap'];
     }
     else {
-      await pm.ensureProjectId();
+      delete writes['performanceTuning.onBoard.pcSampling'];
     }
 
-    try {
-      const buildConfigs = await buildService.getBuildConfigsList();
+    await ConfigService.writeOpDevtoolsDottedSettings(writes);
+  },
 
-      if (!buildConfigs.length) {
-        return {};
-      }
+  /** Get the explicitly set simulator options (dotted settings). */
+  async getSimulateOptions(): Promise<SimulateOptions> {
+    return readSetOptionKeys<SimulateOptions>(SIMULATE_DOTTED_KEYS);
+  },
 
-      if (opName) {
-        const filteredConfigs = buildConfigs.filter((config) => {
-          const configName = (config.user_options as any)?.config_name || config.config_name;
+  /** Save simulator options as dotted `performanceTuning.simulation.*` settings. */
+  async saveSimulateOptions(params: SimulateOptions): Promise<void> {
+    await ConfigService.writeOpDevtoolsDottedSettings(definedDottedWrites(SIMULATE_DOTTED_KEYS, params as Record<string, unknown>));
+  },
 
-          return configName === opName;
-        });
-
-        if (filteredConfigs.length > 0) {
-          return { [opName]: filteredConfigs };
-        }
-
-        return {};
-      }
-
-      const firstConfigName = (buildConfigs[0].user_options as any)?.config_name || buildConfigs[0].config_name;
-
-      return { [firstConfigName]: buildConfigs };
-    }
-    finally {
-      if (projectId) {
-        (pm as any)._projectId = originalProjectId;
-      }
-    }
+  /** Get the explicitly set sanitizer options (dotted settings). */
+  async getSanitizerOptions(): Promise<SanitizerOptions> {
+    return readSetOptionKeys<SanitizerOptions>(SANITIZER_DOTTED_KEYS);
   },
 
   /**
-   * Save configuration (simulation / on-board) — settings.json only.
+   * Save sanitizer options as dotted `sanitizer.*` settings.
+   * Keeps the old `saveSanitizerForm` UX: a failed write surfaces
+   * `config.saveSanitizerConfigFailed` instead of bubbling up.
    */
-  async saveConfig(params: SaveConfigParams): Promise<void> {
-    await ProjectManager.getInstance()
-      .initProject();
-    await configService.saveConfig(params);
+  async saveSanitizerOptions(params: SanitizerOptions): Promise<void> {
+    try {
+      await ConfigService.writeOpDevtoolsDottedSettings(definedDottedWrites(SANITIZER_DOTTED_KEYS, params as Record<string, unknown>));
+    }
+    catch {
+      vscode.window.showErrorMessage(t('config.saveSanitizerConfigFailed'));
+    }
   },
 
   /**
-   * Remote path search (new-project SSH wizard).
+   * Remote path search (new-project wizard).
    */
   async remotePathSearch(params: RemotePathSearchParams): Promise<RemotePathSearchResult> {
     return await configService.remotePathSearch(params);

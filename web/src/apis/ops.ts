@@ -1,26 +1,41 @@
 import {
-  GetConfigDataResult,
-  SaveConfigParams,
-  SaveSanitizerFormParams,
-  BuildConfig,
   RunStTestOptionsParams,
   StTestOptionsResult,
+  OnBoardOptions,
+  SimulateOptions,
+  SanitizerOptions,
 } from '@shared/api-types';
 
 import { request } from '@/core/request';
 
-/** 获取配置数据 */
-export function getConfigData(opName?: string, projectId?: number) {
-  return request.post<{ opName?: string;
-    projectId?: number }, GetConfigDataResult>('ops/getConfigData', {
-    opName,
-    projectId,
-  });
+/** 获取上板分析选项（flat payload，dotted settings） */
+export function getOnBoardOptions() {
+  return request.post<undefined, OnBoardOptions>('ops/getOnBoardOptions');
 }
 
-/** 保存配置（仿真/上板） */
-export function saveConfig(params: SaveConfigParams) {
-  return request.post<SaveConfigParams, void>('ops/saveConfig', params);
+/** 保存上板分析选项（flat payload，dotted settings） */
+export function saveOnBoardOptions(params: OnBoardOptions) {
+  return request.post<OnBoardOptions, void>('ops/saveOnBoardOptions', params);
+}
+
+/** 获取仿真分析选项（flat payload，dotted settings） */
+export function getSimulateOptions() {
+  return request.post<undefined, SimulateOptions>('ops/getSimulateOptions');
+}
+
+/** 保存仿真分析选项（flat payload，dotted settings） */
+export function saveSimulateOptions(params: SimulateOptions) {
+  return request.post<SimulateOptions, void>('ops/saveSimulateOptions', params);
+}
+
+/** 获取异常检测选项（flat payload，dotted settings） */
+export function getSanitizerOptions() {
+  return request.post<undefined, SanitizerOptions>('ops/getSanitizerOptions');
+}
+
+/** 保存异常检测选项（flat payload，dotted settings） */
+export function saveSanitizerOptions(params: SanitizerOptions) {
+  return request.post<SanitizerOptions, void>('ops/saveSanitizerOptions', params);
 }
 
 /** 开始仿真分析 */
@@ -38,19 +53,6 @@ export function startOnBoard(params: { operatorNames?: string } = {}) {
     'ops/startOnBoard',
     params,
     { timeout: Number.POSITIVE_INFINITY },
-  );
-}
-
-/** 获取异常检测配置列表 */
-export function getSanitizerConfigs() {
-  return request.post<undefined, BuildConfig[]>('ops/getSanitizerConfigs');
-}
-
-/** 保存异常检测表单配置 */
-export function saveSanitizerForm(params: SaveSanitizerFormParams) {
-  return request.post<SaveSanitizerFormParams, void>(
-    'ops/saveSanitizerForm',
-    params,
   );
 }
 
@@ -74,7 +76,6 @@ export function importDumpTensorBinFile(params: { binFilePath: string }) {
 /** 获取项目环境配置 */
 export function getProjectEnv() {
   return request.post<undefined, {
-    ascendEnvScript: string;
     socVersion: string;
   }>('ops/getProjectEnv');
 }

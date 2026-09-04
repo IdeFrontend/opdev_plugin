@@ -1,9 +1,11 @@
+import * as vscode from 'vscode';
 import fs from 'fs-extra';
 import path from 'path';
 import {
   DEFAULT_FALLBACK_CANN_SOC,
   DEFAULT_FALLBACK_SIMULATOR_DEVICE_NAME,
 } from '@shared/cann-env-constants';
+import { SETTINGS_PREFIX } from '@shared/flavor';
 import {
   _resetDetectedChipCacheForTest,
   cannSocToSeries,
@@ -24,10 +26,12 @@ import {
   SUPPORT_TILING_DIR_ARCH35,
 } from '@shared/cann-aclnn-build-defaults';
 import {
+  getConfiguredValue,
+  getOpDevtoolsWorkspaceConfiguration,
   getSocVersionWithWorkspaceOverride,
-  getWorkspaceNpuArch,
   getWorkspaceSimulatorType,
 } from '@plugin/helpers/operator-project-workspace-config';
+import { ConfigService } from '@plugin/service/config-service';
 import {
   execBashWithCannEnv,
   resolveCannSetEnvScriptForDetection,
@@ -187,6 +191,24 @@ export function getSeriesNpuArchForCannSoc(cannSoc?: string | null): string {
   const series = key ? cannSocToSeries(key) : undefined;
 
   return series ? getNpuArchForSeries(series) : '';
+}
+
+/**
+ * Explicit `NPU_ARCH` override from the workspace `op-devtools.environment.npuArch` setting.
+ * Empty string when the setting was never set (null counts as unset), so callers keep the
+ * value derived from the resolved SOC. Reads through the shared settings reader, so the
+ * folder → workspace precedence and the null-guard match every other op-devtools key.
+ */
+export function getWorkspaceNpuArch(): string {
+  const explicit = getConfiguredValue<string>(
+    getOpDevtoolsWorkspaceConfiguration(),
+    ['environment.npuArch'],
+  );
+
+  return explicit !== undefined
+    ? String(explicit)
+      .trim()
+    : '';
 }
 
 /** A2/A3 vs A5 branch for paired ACLNN spawn defaults ({@link getSupportComputeUnitForCannSoc}, etc.). */
@@ -655,12 +677,34 @@ function resolveSocVersion(
   };
 }
 
+/**
+ * Single entry-point that decides `SOC_VERSION`, `SIMULATOR_TYPE` and
+ * `NPU_ARCH` for one operator command. All consumers (script placeholders,
+ * spawn env, profiler, build-service, model defaults, …) call this so they
+ * cannot disagree.
+ *
+ * Precedence (canonical contract — also captured in `docs/ascend-env-spec.md`):
+ *
+ * - **`simulatorType`** (only when `isSimulator`):
+ *   1. Workspace `op-devtools.performanceTuning.simulation.simulatorType` (explicit).
+ *   2. `process.env.SIMULATOR_TYPE` captured at activation.
+ *   3. `getDefaultSimulatorTypeForCannSoc(socVersion)` after SOC is resolved.
+ * - **`socVersion`**:
+ *   - When `isSimulator` AND the simulator type came from the workspace
+ *     setting → derived from that simulator type.
+ *   - Otherwise: workspace `op-devtools.environment.socVersion` (explicit) →
+ *     `process.env.SOC_VERSION` snapshot → `asys` / `npu-smi` detection →
+ *     `DEFAULT_FALLBACK_CANN_SOC`.
+ * - **`npuArch`**: workspace `op-devtools.environment.npuArch` (explicit) →
+ *   `process.env.NPU_ARCH` snapshot (unless the SOC came from the simulator type) →
+ *   `getNpuArchForCannSoc(socVersion)`.
+ */
 function resolveNpuArch(soc: {
   socVersion: string;
   source: SocVersionSource;
 }): { npuArch: string;
   source: NpuArchSource } {
-  // Explicit user override (issue #29) — wins wherever NPU_ARCH is resolved.
+  // Explicit user override — wins wherever NPU_ARCH is resolved.
   const fromWorkspace = getWorkspaceNpuArch();
 
   if (fromWorkspace) {
@@ -687,28 +731,6 @@ function resolveNpuArch(soc: {
   };
 }
 
-/**
- * Single entry-point that decides `SOC_VERSION`, `SIMULATOR_TYPE` and
- * `NPU_ARCH` for one operator command. All consumers (script placeholders,
- * spawn env, profiler, build-service, model defaults, …) call this so they
- * cannot disagree.
- *
- * Precedence (canonical contract — also captured in `docs/ascend-env-spec.md`):
- *
- * - **`simulatorType`** (only when `isSimulator`):
- *   1. Workspace `op-devtools.performanceTuning.simulation.simulatorType` (explicit).
- *   2. `process.env.SIMULATOR_TYPE` captured at activation.
- *   3. `getDefaultSimulatorTypeForCannSoc(socVersion)` after SOC is resolved.
- * - **`socVersion`**:
- *   - When `isSimulator` AND the simulator type came from the workspace
- *     setting → derived from that simulator type.
- *   - Otherwise: workspace `op-devtools.environment.socVersion` (explicit) →
- *     `process.env.SOC_VERSION` snapshot → `asys` / `npu-smi` detection →
- *     `DEFAULT_FALLBACK_CANN_SOC`.
- * - **`npuArch`**: workspace `op-devtools.environment.npuArch` (explicit, issue #29) →
- *   `process.env.NPU_ARCH` snapshot (unless the SOC came from the simulator type) →
- *   `getNpuArchForCannSoc(socVersion)`.
- */
 /** Core resolver (no logging). Used internally and by tests. */
 export function computeAscendEnvResolution(
   ctx: ResolveAscendEnvContext,
@@ -780,6 +802,61 @@ export async function resolveAscendEnvForOperatorCommand(spawnContext: OperatorS
 }
 
 /**
+ * Pin a host-detected SOC into the workspace `settings.json`. Reopening the project with
+ * "Open Folder" then resolves `SOC_VERSION` / `NPU_ARCH` from settings alone, without
+ * re-probing the host. No-op unless the SOC really came from host detection and no explicit
+ * `environment.socVersion` exists — we never clobber the user's choice, and never pin the
+ * fallback default (that would outrank later detection).
+ *
+ * @returns true if settings.json was written
+ */
+export async function persistDetectedSocVersion(resolution: AscendEnvResolution): Promise<boolean> {
+  const soc = resolution.socVersion.trim();
+
+  if (resolution.source.socVersion !== 'detected' || !soc) {
+    return false;
+  }
+
+  if (getSocVersionWithWorkspaceOverride(null)
+    .trim()) {
+    return false;
+  }
+
+  const updates: Record<string, string> = { 'environment.socVersion': soc };
+  const npuArch = chipSpecificNpuArchToPin(resolution, soc);
+
+  if (npuArch) {
+    updates['environment.npuArch'] = npuArch;
+  }
+
+  return ConfigService.writeOpDevtoolsDottedSettings(updates);
+}
+
+/**
+ * The chip-specific `NPU_ARCH` to pin alongside the SOC, or undefined when the slug alone
+ * already yields it.
+ *
+ * A SOC slug carries only its series, so an Ascend910ProA/ProB/PremiumA or 901A/901B host
+ * resolves `dav-1001` only while the detected chip name is still cached in this process.
+ * Pinning the SOC makes the next window answer from settings and never detect again, which
+ * would silently downgrade those hosts to the series default `dav-2201`.
+ */
+function chipSpecificNpuArchToPin(
+  resolution: AscendEnvResolution,
+  soc: string,
+): string | undefined {
+  const npuArch = resolution.npuArch.trim();
+
+  // An explicit setting is already in settings.json, and a value inherited from the OS
+  // environment is not ours to freeze into the project.
+  if (!npuArch || resolution.source.npuArch !== 'derived-from-soc') {
+    return undefined;
+  }
+
+  return npuArch === getSeriesNpuArchForCannSoc(soc) ? undefined : npuArch;
+}
+
+/**
  * Non-command callers (config bootstrap, profiler helpers, webview reads).
  * Resolves silently — user notifications for missing SOC are shown only from
  * {@link resolveAscendEnvForOperatorCommand} when an operator action runs.
@@ -846,18 +923,23 @@ export function resolveRuntimeCannSoc(
 /** Context for building per-spawn env overrides (merged over `process.env`). */
 export type OperatorSpawnEnvContext = {
   opType?: OperatorOpType | null;
-  projectId?: number;
-  configId?: number;
+  /** Workspace-root project path; de-id source for the project record. */
+  projectPath?: string;
   operatorNames?: string;
   /** Resolved from `projects.json` when omitted; see {@link normalizeProjectTypeForSpawn}. */
   projectType?: OperatorProjectType | null;
-  configType?: string | null;
+  /** Explicit simulator-class run (was `configType === 'simulate'`); overrides the script heuristics. */
+  isSimulator?: boolean;
+  /** Triton sanitizer run (was `configType === 'sanitizer'`); gates {@link TRITON_SANITIZER_SPAWN_ENV}. */
+  sanitizerRun?: boolean;
+  /** Output-channel label for the run; plain string to avoid an ascend-util ↔ output-channel cycle. */
+  toolOutputLabel?: string | null;
   scriptField?: string | null;
   script?: string | null;
 };
 
 export function isSimulatorCompile(params: OperatorSpawnEnvContext): boolean {
-  if (params.configType === 'simulate') {
+  if (params.isSimulator) {
     return true;
   }
 
@@ -901,7 +983,7 @@ export function mergeTritonSanitizerSpawnEnv(
   env: Record<string, string>,
   ctx: OperatorSpawnEnvContext,
 ): Record<string, string> {
-  if (ctx.opType === 'triton' && ctx.configType === 'sanitizer') {
+  if (ctx.opType === 'triton' && ctx.sanitizerRun === true) {
     return {
       ...env,
       ...TRITON_SANITIZER_SPAWN_ENV,

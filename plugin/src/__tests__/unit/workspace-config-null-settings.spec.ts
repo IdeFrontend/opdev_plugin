@@ -1,20 +1,25 @@
 import * as vscode from 'vscode';
 
+import { getWorkspaceNpuArch } from '@plugin/domain/utils/ascend-util';
+
 import {
   ENVIRONMENT_SCRIPT_SETTING,
   getAscendEnvScriptWithWorkspaceOverride,
   getConfiguredEnvironmentScriptPath,
+  getConfiguredValue,
   getEnvironmentScriptPathFromWorkspace,
   getEnvironmentSocVersionFromWorkspace,
+  getOpDevtoolsWorkspaceConfiguration,
   getSocVersionWithWorkspaceOverride,
-  getWorkspaceNpuArch,
   getWorkspaceSimulatorType,
+  readWorkspaceProjectTypeSetting,
 } from '@plugin/helpers/operator-project-workspace-config';
 import { ConfigService } from '@plugin/service/config-service';
 
 const NPU_ARCH_SETTING = 'environment.npuArch';
 const SOC_VERSION_SETTING = 'environment.socVersion';
 const SIMULATOR_TYPE_SETTING = 'performanceTuning.simulation.simulatorType';
+const PROJECT_TYPE_SETTING = 'projectType';
 
 type Inspection = {
   workspaceFolderValue?: unknown;
@@ -40,10 +45,11 @@ const setSetting = (key: string, value: unknown): void => {
   settings[key] = { workspaceValue: value };
 };
 
-describe('workspace settings written as null (issue #29 follow-up)', () => {
+describe('workspace settings written as null (settings-first null-guard)', () => {
   beforeEach(() => {
     Object.keys(settings)
       .forEach((key) => delete settings[key]);
+    vscode.workspace.workspaceFolders = [{ uri: { fsPath: '/workspace' } }];
     (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
       inspect: (key: string) => settings[key],
       get: (key: string, fallback: unknown) => {
@@ -55,11 +61,11 @@ describe('workspace settings written as null (issue #29 follow-up)', () => {
     });
   });
 
-  it('getWorkspaceNpuArch keeps the SOC-derived arch instead of exporting the string "null"', () => {
+  it('a null npuArch is unset on the workspace scope — getConfiguredValue hands callers undefined, never the string "null"', () => {
     setSetting(NPU_ARCH_SETTING, null);
 
-    expect(getWorkspaceNpuArch())
-      .toBe('');
+    expect(getConfiguredValue<string>(getOpDevtoolsWorkspaceConfiguration(), [NPU_ARCH_SETTING]))
+      .toBeUndefined();
   });
 
   it('getWorkspaceNpuArch ignores an empty npuArch', () => {
@@ -91,6 +97,7 @@ describe('workspace settings written as null (issue #29 follow-up)', () => {
     setSetting(SIMULATOR_TYPE_SETTING, null);
     setSetting(SOC_VERSION_SETTING, null);
     setSetting(ENVIRONMENT_SCRIPT_SETTING, null);
+    setSetting(PROJECT_TYPE_SETTING, null);
 
     expect(getWorkspaceSimulatorType())
       .toBe('');
@@ -104,6 +111,8 @@ describe('workspace settings written as null (issue #29 follow-up)', () => {
       .toBe('/etc/profile');
     expect(getAscendEnvScriptWithWorkspaceOverride('/opt/stored/set_env.sh'))
       .toBe('/opt/stored/set_env.sh');
+    expect(readWorkspaceProjectTypeSetting())
+      .toBeUndefined();
   });
 
   it('readOpDevtoolsSetting hands callers undefined for a null setting, not null', () => {
@@ -111,7 +120,7 @@ describe('workspace settings written as null (issue #29 follow-up)', () => {
     setSetting('compileAndDeploy.buildConfig.compileCommand', null);
 
     // Callers type this as `string` and run it through String()/trim() — see
-    // build-service buildOpCompileScript and readNonEmptyOpDevtoolsSetting.
+    // readNonEmptyOpDevtoolsSetting in config-service.
     expect(ConfigService.readOpDevtoolsSetting<string>(SOC_VERSION_SETTING))
       .toBeUndefined();
     expect(ConfigService.readOpDevtoolsSetting<string>('compileAndDeploy.buildConfig.compileCommand'))
@@ -128,18 +137,21 @@ describe('workspace settings written as null (issue #29 follow-up)', () => {
       .toBe('ascend910b');
   });
 
-  it('never puts a null into build_op user_options', () => {
+  it('never puts a null into the build_op config', () => {
     setSetting('compileAndDeploy.buildConfig.operatorNameToCompile', null);
     setSetting('compileAndDeploy.buildConfig.deployCommandOrRunCommand', null);
 
-    const opts = ConfigService.buildUserOptionsFromWorkspaceSettings('build_op');
+    const config = ConfigService.getBuildOpConfig();
 
-    expect(opts)
-      .not
-      .toHaveProperty('op');
-    expect(opts)
-      .not
-      .toHaveProperty('target_file');
+    // The DAO is the settings-first replacement for the build_op user_options
+    // row: `op` is absent and `targetFile` stays a typed null, never the
+    // literal string "null".
+    expect(config.op)
+      .toBeUndefined();
+    expect(config.targetFile)
+      .toBeNull();
+    expect(config.script)
+      .toBe('');
   });
 
   it('an empty string never reaches a command as a value', () => {

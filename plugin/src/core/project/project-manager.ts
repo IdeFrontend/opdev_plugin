@@ -1,26 +1,24 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 
 import { getIdeConfigDir } from '@plugin/helpers/ide-config-dir';
 import * as fs from 'fs';
 import { CommandExecutor } from '@plugin/class/command-options';
-import { ExplorerRootUtils } from '@plugin/class/explorer-root-utils';
-import { createProject } from '@plugin/domain/models/project-model';
-import { getProjectByPath } from '@plugin/domain/models/project-model';
 
 /**
  * project manager
- * Responsible for managing the project context (ID, name, path) of the current operation and the task executor status
+ * Responsible for managing the project path of the current operation and the task executor status.
+ *
+ * The project context is path-only. Consumers resolve project records
+ * themselves via `getProjectByPath(workspaceRoot)`; this class only caches the
+ * active path (`setProjectContext` callers) and owns the task executor.
  */
 export class ProjectManager {
   private static instance: ProjectManager;
 
-  /** Project ID */
-  private _projectId: string = '';
-  /** Project name */
-  private _projectName: string | undefined;
-  /** Project path */
+  /** Project path (full path of the operator project; undefined when no project was set) */
   private _projectPath: string | undefined;
+  /** Project name (display name cached alongside the path; no getter — consumers derive it from the path) */
+  private _projectName: string | undefined;
   /** current task executor */
   private _currentExecutor: CommandExecutor | null = null;
 
@@ -39,17 +37,28 @@ export class ProjectManager {
   }
 
   /**
-   * Get project ID
+   * Active project path. The cached context (`setProjectContext`) wins; when
+   * nothing was cached — a fresh window opened via `vscode.openFolder`
+   * (creation), or after `resetCachedProject` on a workspace switch — fall
+   * back to the live workspace root (`workspaceFolders[0]`). This restores
+   * the base `getProjectInfo()` → `ExplorerRootUtils.getPrimaryRoot()`
+   * fallback: without it every fresh-window command (sanitizer
+   * "Start now", on-board, dump tensor, task debug) hits the
+   * "No sanitizer config"-style guards because nothing populates the cache
+   * on activation.
    */
-  public get projectId(): string {
-    return this._projectId;
+  public get projectPath(): string | undefined {
+    return this._projectPath ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
   }
 
   /**
-   * Cached operator project name from the last `initProject` with explicit path/name, or workspace-derived name.
+   * Set the project context (path + name). The context is cached locally; the
+   * project record itself is synthesized from settings/cache on demand
+   * (`getProjectByPath`).
    */
-  public getProjectName(): string | undefined {
-    return this._projectName;
+  public setProjectContext(projectPath: string, projectName?: string): void {
+    this._projectPath = projectPath;
+    this._projectName = projectName;
   }
 
   /**
@@ -74,106 +83,13 @@ export class ProjectManager {
   }
 
   /**
-   * Reset cached project context (id/name/path).
+   * Reset cached project context (path/name).
    * Called when the workspace folder changes so that subsequent reads fall back
    * to the current workspaceFolders[0] instead of a stale path from a previous workspace.
    */
   public resetCachedProject(): void {
-    this._projectId = '';
     this._projectName = undefined;
     this._projectPath = undefined;
-  }
-
-  /**
-   * Get project information
-   * First use the incoming parameters, secondly use the cached information, and finally try to get it from the workspace
-   * @param params optional project path and name parameters
-   * @returns project name and path object
-   */
-  public getProjectInfo(params?: {
-    projectPath?: string;
-    projectName?: string;
-  }) {
-    if (params?.projectPath && params?.projectName) {
-      return {
-        name: params.projectName,
-        path: path.normalize(`${params.projectPath}/${params.projectName}`),
-      };
-    }
-
-    if (this._projectName && this._projectPath) {
-      return {
-        name: this._projectName,
-        path: this._projectPath,
-      };
-    }
-
-    const selectedFiles = ExplorerRootUtils.getPrimaryRoot();
-
-    return {
-      name: selectedFiles?.name,
-      path: selectedFiles?.path,
-    };
-  }
-
-  /**
-   * Initialize project context
-   * Set the project path and name, and call the backend to create/get the project ID
-   * @param params initialization parameters
-   * @returns project ID
-   */
-  public async initProject(params: {
-    projectPath?: string;
-    projectName?: string;
-    ascendEnvScript?: string;
-    projectType?: string,
-    templateName?: string,
-  } = {}): Promise<string> {
-    const info = this.getProjectInfo(params);
-
-    if (params.projectPath && params.projectName) {
-      this._projectPath = path.normalize(`${params.projectPath}/${params.projectName}`);
-      this._projectName = params.projectName;
-    }
-    else {
-      this._projectName = info.name;
-      this._projectPath = info.path;
-    }
-
-    // Get project ID
-    if (this._projectPath === undefined) {
-      this._projectId = '';
-
-      return this._projectId;
-    }
-
-    // 检查是否存在现有项目
-    const existingProject = getProjectByPath(this._projectPath);
-
-    // 优先使用现有项目的配置，然后是参数传入的值，最后是默认值
-    const ascend_env_script = params.ascendEnvScript || existingProject?.ascend_env_script || undefined;
-
-    const projectRes = await createProject({
-      project_name: this._projectName ?? '',
-      project_path: this._projectPath,
-      ascend_env_script,
-      template_name: params.templateName,
-      project_type: params.projectType,
-    });
-
-    this._projectId = String(projectRes);
-
-    return this._projectId;
-  }
-
-  /**
-   * Make sure projectId is initialized
-   * If projectId is empty, try to initialize automatically
-   */
-  public async ensureProjectId(): Promise<void> {
-    if (!this._projectId) {
-      await this.initProject();
-    }
   }
 
   /**

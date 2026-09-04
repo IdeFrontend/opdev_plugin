@@ -3,7 +3,7 @@
   "displayName": "Huawei OP DevTools",
   "description": "Operator development, debugging, and performance analysis all-in-one platform for Ascend C language.",
   "publisher": "huawei",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "engines": {
     "node": ">=16.0.0",
     "vscode": "^1.80.0"
@@ -642,14 +642,7 @@
       }
     ],
     "viewsContainers": {
-      "secondarySidebar": [
-        {
-          "id": "mindstudio-opssuite-vscode-plugin",
-          "title": "%viewContainer.activitybar.title%",
-          "icon": "out/web/branding/activitybar_logo_mono.svg"
-        }
-      ],
-      "secondaryActivitybar": [
+      "activitybar": [
         {
           "id": "mindstudio-opssuite-vscode-plugin",
           "title": "%viewContainer.activitybar.title%",
@@ -749,6 +742,11 @@
       {
         "command": "huawei-op-devtools.openCsv",
         "title": "%command.openCsv.title%",
+        "category": "%config.title%"
+      },
+      {
+        "command": "huawei-op-devtools.openProfilingReport",
+        "title": "%command.openProfilingReport.title%",
         "category": "%config.title%"
       },
       {
@@ -1710,6 +1708,11 @@
           "command": "huawei-op-devtools.sidebar.actionsQuickPick",
           "group": "navigation@1",
           "when": "opDevtools.hasDevtoolConfig"
+        },
+        {
+          "command": "huawei-op-devtools.openProfilingReport",
+          "group": "navigation@2",
+          "when": "opDevtools.hasDevtoolConfig && resourceScheme == 'file' && (resourceExtname == '.rep' || resourceExtname == '.ncrep' || resourceExtname == '.npu-rep')"
         }
       ],
       "explorer/context": [
@@ -1717,6 +1720,11 @@
           "command": "huawei-op-devtools.createOperatorInWorkspace",
           "when": "explorerViewletVisible && resourceScheme == 'file'",
           "group": "navigation@1"
+        },
+        {
+          "command": "huawei-op-devtools.openProfilingReport",
+          "when": "resourceScheme == 'file' && (resourceExtname == '.rep' || resourceExtname == '.ncrep' || resourceExtname == '.npu-rep')",
+          "group": "navigation@2"
         },
         {
           "command": "huawei-op-devtools.markAsOperatorProject",
@@ -1813,6 +1821,7 @@
     "package": "pnpm run compile && tsx scripts/package-extension.ts",
     "build": "pnpm run compile",
     "build:icons-font": "node scripts/build-icons-font.mjs",
+    "precompile": "node scripts/prepare-integration.mjs",
     "compile": "pnpm run compile:web && pnpm run compile:plugin",
     "compile:web": "cd web && pnpm run build",
     "compile:plugin": "tsc --noEmit && tsx scripts/build-extension",
@@ -1828,6 +1837,7 @@
     "lint": "oxlint . && eslint .",
     "lint:fix": "eslint . --fix",
     "type-check": "tsc --noEmit && cd web && vue-tsc --noEmit",
+    "pretype-check": "node scripts/prepare-integration.mjs --types",
     "install:web": "cd web && pnpm install",
     "test": "cd plugin && pnpm run test",
     "verify": "pnpm run compile && pnpm run test",

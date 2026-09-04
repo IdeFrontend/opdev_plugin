@@ -8,17 +8,17 @@ describe('AscendCommandStrategy standard-custom build example --noexec', () => {
     const strategy = new AscendCommandStrategy();
     const command = strategy.buildExampleCommand({
       config: {
-        project_id: 1,
-        op: 'add_example',
         script: 'bash build.sh --vendor_name=custom --run_example',
+        executionMode: 'eager',
+        targetFile: null,
       },
-      operator: null,
       sourceCannCmd: '',
       cdCmd: '',
       operatorNames: 'add_example',
       compileOption: '--soc=ascend910b',
       buildExampleOnly: true,
-    } as any);
+      op: 'add_example',
+    });
 
     expect(command)
       .toContain('--run_example add_example eager cust --soc=ascend910b --noexec');
@@ -34,17 +34,17 @@ describe('AscendCommandStrategy standard-custom build example --noexec', () => {
     const strategy = new AscendCommandStrategy();
     const command = strategy.buildExampleCommand({
       config: {
-        project_id: 1,
-        op: 'add_example',
         script: 'bash build.sh --vendor_name=custom --run_example',
+        executionMode: 'eager',
+        targetFile: null,
       },
-      operator: null,
       sourceCannCmd: '',
       cdCmd: '',
       operatorNames: 'add_example',
       compileOption: '--noexec',
       buildExampleOnly: true,
-    } as any);
+      op: 'add_example',
+    });
 
     expect(command)
       .not.toMatch(noexeTokenPattern);

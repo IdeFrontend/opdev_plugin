@@ -4,6 +4,7 @@ jest.mock('@plugin/helpers/operator-project-workspace-config', () => ({
 }));
 
 import type { AscendEnvResolution } from '@plugin/domain/utils/ascend-util';
+import { persistDetectedSocVersion } from '@plugin/domain/utils/ascend-util';
 import { getSocVersionWithWorkspaceOverride } from '@plugin/helpers/operator-project-workspace-config';
 import { ConfigService } from '@plugin/service/config-service';
 
@@ -19,7 +20,7 @@ const resolution = (overrides: Partial<AscendEnvResolution> = {}): AscendEnvReso
   ...overrides,
 });
 
-describe('ConfigService.persistDetectedSocVersion (issue #37)', () => {
+describe('persistDetectedSocVersion', () => {
   let writeSpy: jest.SpyInstance;
 
   beforeEach(() => {
@@ -33,7 +34,7 @@ describe('ConfigService.persistDetectedSocVersion (issue #37)', () => {
   });
 
   it('pins a host-detected SOC so a reopened project resolves NPU_ARCH without probing', async () => {
-    await expect(ConfigService.persistDetectedSocVersion(resolution()))
+    await expect(persistDetectedSocVersion(resolution()))
       .resolves
       .toBe(true);
     expect(writeSpy)
@@ -43,7 +44,7 @@ describe('ConfigService.persistDetectedSocVersion (issue #37)', () => {
   it('never clobbers an explicit workspace socVersion', async () => {
     (getSocVersionWithWorkspaceOverride as jest.Mock).mockReturnValue('ascend910b');
 
-    await expect(ConfigService.persistDetectedSocVersion(resolution()))
+    await expect(persistDetectedSocVersion(resolution()))
       .resolves
       .toBe(false);
     expect(writeSpy)
@@ -58,7 +59,7 @@ describe('ConfigService.persistDetectedSocVersion (issue #37)', () => {
       'derived-from-simulator',
       'default',
     ] as const) {
-      await expect(ConfigService.persistDetectedSocVersion(resolution({
+      await expect(persistDetectedSocVersion(resolution({
         source: {
           socVersion: source,
           simulatorType: 'n/a',
@@ -77,7 +78,7 @@ describe('ConfigService.persistDetectedSocVersion (issue #37)', () => {
   it('pins the chip-specific NPU_ARCH too, since the pinned SOC stops the next detection', async () => {
     // Ascend910ProA and friends resolve dav-1001 only while the detected chip name is cached
     // in this process; the slug alone would answer with the ascend910b series default.
-    await expect(ConfigService.persistDetectedSocVersion(resolution({
+    await expect(persistDetectedSocVersion(resolution({
       socVersion: 'ascend910b',
       npuArch: 'dav-1001',
     })))
@@ -91,7 +92,7 @@ describe('ConfigService.persistDetectedSocVersion (issue #37)', () => {
   });
 
   it('leaves NPU_ARCH out when the slug alone already yields it', async () => {
-    await expect(ConfigService.persistDetectedSocVersion(resolution({
+    await expect(persistDetectedSocVersion(resolution({
       socVersion: 'ascend910b',
       npuArch: 'dav-2201',
     })))
@@ -102,7 +103,7 @@ describe('ConfigService.persistDetectedSocVersion (issue #37)', () => {
   });
 
   it('never freezes an NPU_ARCH that came from the OS environment', async () => {
-    await expect(ConfigService.persistDetectedSocVersion(resolution({
+    await expect(persistDetectedSocVersion(resolution({
       socVersion: 'ascend910b',
       npuArch: 'dav-1001',
       source: {
@@ -118,7 +119,7 @@ describe('ConfigService.persistDetectedSocVersion (issue #37)', () => {
   });
 
   it('writes nothing for a blank SOC', async () => {
-    await expect(ConfigService.persistDetectedSocVersion(resolution({ socVersion: '  ' })))
+    await expect(persistDetectedSocVersion(resolution({ socVersion: '  ' })))
       .resolves
       .toBe(false);
     expect(writeSpy)

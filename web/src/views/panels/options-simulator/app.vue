@@ -7,21 +7,18 @@ import { message } from 'ant-design-vue';
 import { useTheme } from '@web/composables/use-theme';
 import { QuestionCircleOutlined } from '@ant-design/icons-vue';
 import {
-  getConfigData, saveConfig, startSimulate, openExternalLink, executeVscodeCommand, getSelectedOperators,
+  getSimulateOptions, saveSimulateOptions, startSimulate, openExternalLink, executeVscodeCommand, getSelectedOperators,
   getSimulationShowQuickOptions, setSimulationShowQuickOptions, getSimulatorSupportedMetrics,
 } from '@web/apis';
+import type { SimulateOptions } from '@shared/api-types';
 
 // 使用主题管理组合式函数
-const {
-  themeConfig,
-} = useTheme();
-const simulateOptions = ref({
-  user_options: {
-    // Optional metrics are gated per SOC (shared/msprof-simulator-metrics.ts). PMSampling
-    // defaults off (opt-in). ResourceConflictRatio defaults on when allow-listed (A5).
-    PMSampling: false,
-    ResourceConflictRatio: true,
-  },
+const { themeConfig } = useTheme();
+const simulateOptions = ref<SimulateOptions>({
+  // Optional metrics are gated per SOC (shared/msprof-simulator-metrics.ts). memoryThroughputWaveform
+  // defaults off (opt-in). resourceConflictRatio defaults on when allow-listed (A5).
+  memoryThroughputWaveform: false,
+  resourceConflictRatio: true,
 });
 const loading = ref(false);
 const isExecuting = ref(false);
@@ -44,18 +41,9 @@ const pmSamplingSupported = ref(false);
 const fetchConfig = async () => {
   try {
     loading.value = true;
-    const configObj = await getConfigData();
+    const options = await getSimulateOptions();
 
-    console.log('configObj', configObj);
-    const keys = Object.keys(configObj || {});
-    const configData = configObj[keys[0]] || [];
-    const simulateConfig = configData.find((v) => v.config_type === 'simulate');
-
-    console.log('simulateConfig', simulateConfig);
-
-    if (simulateConfig) {
-      simulateOptions.value = JSON.parse(JSON.stringify(simulateConfig));
-    }
+    Object.assign(simulateOptions.value, options);
   }
   catch (error) {
     console.error('获取仿真配置失败: ', error);
@@ -66,9 +54,9 @@ const fetchConfig = async () => {
 };
 
 const handleChange = async () => {
-  await saveConfig({
-    type: 'simulate',
-    data: [simulateOptions.value],
+  await saveSimulateOptions({
+    memoryThroughputWaveform: simulateOptions.value.memoryThroughputWaveform,
+    resourceConflictRatio: simulateOptions.value.resourceConflictRatio,
   });
 };
 
@@ -119,8 +107,10 @@ async function syncDoNotShowToWorkspace() {
 
 onBeforeMount(async () => {
   await fetchConfig();
+
   try {
     const supported = await getSimulatorSupportedMetrics();
+
     resourceConflictSupported.value = Boolean(supported?.ResourceConflictRatio);
     pmSamplingSupported.value = Boolean(supported?.PMSampling);
   }
@@ -128,8 +118,10 @@ onBeforeMount(async () => {
     resourceConflictSupported.value = false;
     pmSamplingSupported.value = false;
   }
+
   try {
     const showQuick = await getSimulationShowQuickOptions();
+
     doNotShowAgain.value = !showQuick;
   }
   catch {
@@ -179,7 +171,7 @@ onBeforeMount(async () => {
           </div>
           {{ t('web.options.simulator.extraOptions') }}
           <a-checkbox
-            v-model:checked="simulateOptions.user_options.PMSampling"
+            v-model:checked="simulateOptions.memoryThroughputWaveform"
             @change="handleChange"
           >
             {{ t('web.options.simulator.memoryThroughput') }}
@@ -204,7 +196,7 @@ onBeforeMount(async () => {
           </div>
           {{ t('web.options.simulator.extraOptions') }}
           <a-checkbox
-            v-model:checked="simulateOptions.user_options.ResourceConflictRatio"
+            v-model:checked="simulateOptions.resourceConflictRatio"
             @change="handleChange"
           >
             {{ t('web.options.simulator.resourceConflict') }}

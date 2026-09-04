@@ -133,7 +133,7 @@ export default {
   'folderContext.noWorkspaceCannotRun': 'No workspace open, cannot run validation',
   'folderContext.noProjectIdMarkFirst': 'Project ID not found. Mark as operator project first.',
   'folderContext.noOperatorsToValidate': 'No operators to validate in this file/folder',
-  'folderContext.rootNotInProjectsJson': 'Root not registered in projects.json, cannot run validation',
+  'folderContext.rootNotRecognized': 'Root not recognized as an operator project, cannot run validation',
   'folderContext.folderNotOperatorProject': 'This folder is not an operator project',
   'folderContext.needBishengFlags': 'Not supported. Ensure build.sh contains --bisheng_flags',
   'folderContext.standardOpsNoTuning': 'Standard custom operators do not support performance tuning',
@@ -264,7 +264,7 @@ export default {
   'build.simulationFailedThrow': 'Simulation analysis failed: {{output}}',
 
   // project (additional)
-  'project.invalidProjectId': 'Invalid projectId: {{projectId}}',
+  'project.invalidProjectId': 'Invalid project path',
   'project.projectDirNotExist': 'Project directory does not exist',
   'project.opsPrototypeTemplateMissing': 'Ops prototype template not found: {{path}}',
 
@@ -689,5 +689,15 @@ export default {
   'stTest.options.validation.reserved': 'Input, output, and plugin flags are managed by the extension.',
   'stTest.options.validation.modes': 'Select at least one available ST test mode.',
   'stTest.options.validation.unavailableMode': 'One or more selected ST test modes are no longer available.',
+
+  // profiling-report
+  'profilingReport.title': 'Profiling Report',
+  'profilingReport.fileNotFound': 'Profiling data file not found: {{path}}',
+  'profilingReport.loadFailed': 'Failed to load profiling report: {{error}}',
+  'profilingReport.filePathEmpty': 'Profiling data file path cannot be empty',
+  'profilingReport.reportFile': 'Profiling report (.rep, .ncrep)',
+  'profilingReport.loading': 'Loading profiling report...',
+  'profilingReport.noData': 'No profiling data loaded.',
+  'profilingReport.fetchFailed': 'Failed to fetch profiling data',
 
 };

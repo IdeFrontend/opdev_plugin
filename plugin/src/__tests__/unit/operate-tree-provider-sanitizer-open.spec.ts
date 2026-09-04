@@ -75,7 +75,7 @@ jest.mock('vscode', () => {
 });
 
 jest.mock('@plugin/controller/home-controller', () => ({ homeMethods: {} }));
-jest.mock('@plugin/helpers/ConfigHelper', () => ({ ConfigHelper: {} }));
+jest.mock('@plugin/service/settings-loader', () => ({ SettingsLoader: {} }));
 jest.mock('@plugin/domain/plugins/operator-plugin.registry', () => ({ OperatorPluginRegistry: {} }));
 jest.mock('@plugin/controller/performance-controller', () => ({ performanceDataMethods: {} }));
 jest.mock('@plugin/controller/performance-data-controller', () => ({ performanceMethods: {} }));
@@ -402,6 +402,133 @@ describe('OperateTreeProvider sanitizer report auto open', () => {
       .toBe('/reports/fresh-detection.log');
 
     consoleWarn.mockRestore();
+  });
+
+  it('does not focus the view for a refresh a newer one already superseded', async () => {
+    const provider = createProvider();
+    const stale = deferred<SanitizerReport[]>();
+
+    mockGetSanitizerRunData
+      .mockReturnValueOnce(stale.promise)
+      .mockResolvedValueOnce([report('fresh-detection', 3)]);
+
+    const staleRefresh = provider.refreshSanitizerReports(true, true);
+    const newerRefresh = provider.refreshSanitizerReports(true);
+
+    await newerRefresh;
+    stale.resolve([report('stale-detection', 1)]);
+    await staleRefresh;
+
+    expect(wasFocused())
+      .toBe(false);
+  });
+
+  it('does not reveal a stale report when a newer refresh starts while the view is focusing', async () => {
+    const provider = createProvider();
+    const harness = provider as unknown as SanitizerStateHarness;
+    const reveal = jest.fn()
+      .mockResolvedValue(undefined);
+    const delayedFocus = deferred<undefined>();
+    let focusGateHit = false;
+
+    provider.setSanitizerResultsTreeView({ reveal } as unknown as vscode.TreeView<never>);
+    mockGetSanitizerRunData
+      .mockResolvedValueOnce([report('stale-detection', 1)])
+      .mockResolvedValueOnce([report('fresh-detection', 3)]);
+    executeCommandMock.mockImplementation(async (command) => {
+      if (command === focusCommand && !focusGateHit) {
+        focusGateHit = true;
+        await delayedFocus.promise;
+      }
+
+      return undefined;
+    });
+
+    const staleRefresh = provider.refreshSanitizerReports(true, true);
+
+    await waitFor(() => focusGateHit);
+
+    const newerRefresh = provider.refreshSanitizerReports(true);
+
+    delayedFocus.resolve(undefined);
+    await Promise.all([
+      staleRefresh,
+      newerRefresh,
+    ]);
+
+    expect(reveal)
+      .not
+      .toHaveBeenCalled();
+    expect(harness.state.sanitizer.reports.map((item) => item.path))
+      .toEqual(['/reports/fresh-detection.log']);
+  });
+
+  it('does not select or focus for a refresh superseded while the marked filter is syncing', async () => {
+    const provider = createProvider();
+    const harness = provider as unknown as SanitizerStateHarness;
+    const delayedContext = deferred<undefined>();
+    let contextGateHit = false;
+
+    provider.setSanitizerMarkedOnly(true);
+    mockGetSanitizerRunData
+      .mockResolvedValueOnce([report('stale-detection', 1)])
+      .mockResolvedValueOnce([report('fresh-detection', 3)]);
+    executeCommandMock.mockImplementation(async (command) => {
+      if (command === 'setContext' && !contextGateHit) {
+        contextGateHit = true;
+        await delayedContext.promise;
+      }
+
+      return undefined;
+    });
+
+    const staleRefresh = provider.refreshSanitizerReports(true, true);
+
+    await waitFor(() => contextGateHit);
+
+    // A plain reload, so any selection left behind can only come from the superseded refresh.
+    const newerRefresh = provider.refreshSanitizerReports();
+
+    delayedContext.resolve(undefined);
+    await Promise.all([
+      staleRefresh,
+      newerRefresh,
+    ]);
+
+    expect(harness.state.sanitizer.selectedReportPath)
+      .toBeUndefined();
+    expect(wasFocused())
+      .toBe(false);
+  });
+  it('does not steal focus for a report a newer refresh already dropped', async () => {
+    const provider = createProvider();
+    const harness = provider as unknown as SanitizerStateHarness;
+    const delayedFocus = deferred<unknown>();
+    const reveal = jest.fn()
+      .mockResolvedValue(undefined);
+
+    provider.setSanitizerResultsTreeView({ reveal } as unknown as vscode.TreeView<never>);
+    executeCommandMock.mockImplementation(async (command) => {
+      if (command === focusCommand) {
+        await delayedFocus.promise;
+      }
+
+      return undefined;
+    });
+    mockGetSanitizerRunData
+      .mockResolvedValueOnce([report('deleted-before-reveal', 1)])
+      .mockResolvedValueOnce([]);
+
+    const olderRefresh = provider.refreshSanitizerReports(true, true);
+
+    await waitFor(() => executeCommandMock.mock.calls.some(([command]) => command === focusCommand));
+    await provider.refreshSanitizerReports();
+    delayedFocus.resolve(undefined);
+    await olderRefresh;
+
+    expect(reveal).not.toHaveBeenCalled();
+    expect(harness.state.sanitizer.reports)
+      .toEqual([]);
   });
 
   it('does not focus the view for a refresh a newer one already superseded', async () => {

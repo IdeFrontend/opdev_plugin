@@ -1,6 +1,6 @@
-import * as path from 'path';
 import * as vscode from 'vscode';
 import { listRootPythonEntryFiles } from '@plugin/domain/plugins/detection-utils';
+import { toWorkspaceRelativePosixPath } from '@plugin/domain/utils/path-utils';
 
 function uriMatchesExtension(uri: vscode.Uri, ext: string): boolean {
   const e = ext.toLowerCase();
@@ -87,9 +87,11 @@ export function resolveUniqueRootPythonUri(rootPath: string): vscode.Uri | undef
 }
 
 export type ResolvePythonOperatorContextResult =
-  | { kind: 'uri'; uri: vscode.Uri }
-  | { kind: 'none' }
-  | { kind: 'ambiguous'; candidates: vscode.Uri[] };
+  | { kind: 'uri';
+    uri: vscode.Uri }
+    | { kind: 'none' }
+    | { kind: 'ambiguous';
+      candidates: vscode.Uri[] };
 
 /**
  * Editor-only URI for run/simulate/debug `target_file`.
@@ -103,7 +105,10 @@ export function resolvePythonOperatorContextUri(ext: string): ResolvePythonOpera
   const focusedGroupUri = focusedGroupTab ? tabUriFromTab(focusedGroupTab) : undefined;
 
   if (focusedGroupUri && uriMatchesExtension(focusedGroupUri, ext)) {
-    return { kind: 'uri', uri: focusedGroupUri };
+    return {
+      kind: 'uri',
+      uri: focusedGroupUri,
+    };
   }
 
   if (focusedGroupUri) {
@@ -114,7 +119,10 @@ export function resolvePythonOperatorContextUri(ext: string): ResolvePythonOpera
     const editorUri = activeEditorUriForExtension(ext);
 
     if (editorUri) {
-      return { kind: 'uri', uri: editorUri };
+      return {
+        kind: 'uri',
+        uri: editorUri,
+      };
     }
   }
 
@@ -145,15 +153,16 @@ export async function pickPythonOperatorUri(
 ): Promise<vscode.Uri | undefined> {
   const items = candidates.map((uri) => {
     const label = workspacePath
-      ? path.relative(workspacePath, uri.fsPath).replace(/\\/g, '/')
+      ? toWorkspaceRelativePosixPath(workspacePath, uri.fsPath)
       : uri.fsPath;
 
-    return { label, uri };
+    return {
+      label,
+      uri,
+    };
   });
 
-  const picked = await vscode.window.showQuickPick(items, {
-    placeHolder: 'Select which Python file to use',
-  });
+  const picked = await vscode.window.showQuickPick(items, { placeHolder: 'Select which Python file to use' });
 
   return picked?.uri;
 }

@@ -13,7 +13,7 @@ import {
  * Project detector for STANDARD_CUSTOM operator projects.
  *
  * STANDARD_CUSTOM has no dedicated op_type — operators inside use 'ascend' or 'cann'.
- * `bash build.sh --help` advertising --genop is definitive. Keep the legacy structure
+ * `bash build.sh --help` advertising --genop is definitive. Keep the structure
  * heuristic as a compatibility fallback for projects whose help cannot be queried.
  */
 export class StandardCustomDetector implements IProjectDetector {

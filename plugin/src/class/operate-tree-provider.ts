@@ -10,7 +10,7 @@ import type {
 } from '@shared/api-types';
 
 import { homeMethods } from '@plugin/controller/home-controller';
-import { ConfigHelper } from '@plugin/helpers/ConfigHelper';
+import { SettingsLoader } from '@plugin/service/settings-loader';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import { performanceDataMethods } from '@plugin/controller/performance-controller';
 import { performanceMethods } from '@plugin/controller/performance-data-controller';
@@ -646,7 +646,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       homeMethods.getProjectType(),
       homeMethods.checkMultipleOperators(),
     ]);
-    const debugModeEnabled = ConfigHelper.isDebugModeEnabled();
+    const debugModeEnabled = SettingsLoader.read<boolean>('debugMode', true);
     const projectType = projectTypeResult.projectType || '';
     const projectTypeSupported = OperatorPluginRegistry.isProjectTypeSupported(projectType);
 
@@ -697,7 +697,11 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       }
     }
 
-    if (isStandardCustom) {
+    // Only once the operator list is actually KNOWN: the scan state can arrive
+    // after the first refresh (fresh open / reset cache), and burning the flag
+    // while the list is empty would leave the first operator unselected
+    // forever.
+    if (isStandardCustom && operators.length > 0) {
       this.hasAppliedDefaultSelection = true;
     }
 
@@ -1168,19 +1172,14 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
     const isWindowsPath = /^[A-Za-z]:\//.test(normalized) || /^[A-Za-z]:\//.test(normalizedWorkspacePath);
     const maybeLower = isWindowsPath ? normalized.toLowerCase() : normalized;
+    const stripped = this.stripWorkspacePrefix(normalized, normalizedWorkspacePath);
 
-    if (!normalizedWorkspacePath) {
-      return maybeLower;
-    }
-
-    const work = isWindowsPath ? normalizedWorkspacePath.toLowerCase() : normalizedWorkspacePath;
-
-    if (maybeLower === work) {
+    if (stripped === '') {
       return '';
     }
 
-    if (maybeLower.startsWith(`${work}/`)) {
-      return maybeLower.slice(work.length + 1);
+    if (stripped !== undefined) {
+      return isWindowsPath ? stripped.toLowerCase() : stripped;
     }
 
     return maybeLower;
@@ -1738,7 +1737,9 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         undefined,
         vscode.TreeItemCollapsibleState.Collapsed,
         treeItemContextKey('debug'),
-        this.pickFlowIcon('debug', this.getCustomProductIcon('debug')),
+        hasMultipleSelectedOperators
+          ? disabledIcon
+          : this.pickFlowIcon('debug', this.getCustomProductIcon('debug')),
       ));
     }
 
@@ -1766,7 +1767,9 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         undefined,
         vscode.TreeItemCollapsibleState.Collapsed,
         undefined,
-        this.pickFlowIcon('power', this.getCustomProductIcon('power')),
+        hasMultipleSelectedOperators
+          ? disabledIcon
+          : this.pickFlowIcon('power', this.getCustomProductIcon('power')),
       ));
     }
 
@@ -1842,7 +1845,11 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     const behavior = this.getCurrentBuildBehavior();
     const hasMultipleSelectedOperators = this.state.selectedOperatorIds.length > 1;
     const disabledIcon = new vscode.ThemeIcon('circle-slash', new vscode.ThemeColor('disabledForeground'));
-    const isCannTorchLibrary = this.state.projectType === 'cann' && this.state.projectTemplateName === 'torch_library_template';
+    // Torch-library in both stored forms: 'cann' (the view-id value) and the
+    // canonical 'torch-library' (settings-native openProject) — both must hide
+    // the C/C++ CPU debug action (python debug only).
+    const isCannTorchLibrary = (this.state.projectType === 'cann' || this.state.projectType === 'torch-library')
+      && this.state.projectTemplateName === 'torch_library_template';
     const showCpuDebug = this.supportsCapability(behavior.supportsCpuDebug) && !isCannTorchLibrary && !this.state.isStandardCustom;
     const cpuDebugAction = this.resolveFlowActionState(hasMultipleSelectedOperators, COMMAND_SIDEBAR_CPU_DEBUG, false);
     const npuDebugAction = this.resolveFlowActionState(hasMultipleSelectedOperators, COMMAND_SIDEBAR_NPU_DEBUG, true);
@@ -2100,19 +2107,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         let labelPath = filePath;
 
         if (workspacePath && msg.fileLink) {
-          const normWorkRaw = workspacePath.replace(/\\/g, '/')
-            .replace(/\/+$/, '');
-          const normFileRaw = filePath.replace(/\\/g, '/');
-          const isWindowsPath = /^[A-Za-z]:\//.test(normWorkRaw) || /^[A-Za-z]:\//.test(normFileRaw);
-          const normWork = isWindowsPath ? normWorkRaw.toLowerCase() : normWorkRaw;
-          const normFile = isWindowsPath ? normFileRaw.toLowerCase() : normFileRaw;
-
-          if (normFile === normWork) {
-            labelPath = '';
-          }
-          else if (normFile.startsWith(`${normWork}/`)) {
-            labelPath = normFileRaw.slice(normWorkRaw.length + 1);
-          }
+          labelPath = this.stripWorkspacePrefix(filePath, workspacePath) ?? filePath;
         }
 
         const current = grouped.get(key);
@@ -2528,6 +2523,12 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       return;
     }
 
+    if (fileType === 'rep' || fileType === 'ncrep' || fileType === 'npu-rep') {
+      await viewService.openProfilingReport(filePath);
+
+      return;
+    }
+
     if (fileType === 'bin' || fileType === 'json') {
       await viewService.openInsight(filePath);
     }
@@ -2743,23 +2744,34 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       .replace(/\/+$/, '');
   }
 
-  private stripWorkspacePrefix(filePath: string): string {
-    const workspacePath = this.getNormalizedWorkspacePath();
-
+  /**
+   * Strips the workspace root prefix from a file path with Windows-aware
+   * case-insensitive comparison. Returns `undefined` when the file is not
+   * under the workspace root (or no workspace path is given), `''` when the
+   * file IS the root itself, and otherwise the relative path sliced from the
+   * normalized raw file string.
+   */
+  private stripWorkspacePrefix(filePath: string, workspacePath: string): string | undefined {
     if (!workspacePath) {
-      return filePath;
+      return undefined;
     }
 
+    const normWorkRaw = workspacePath.replace(/\\/g, '/')
+      .replace(/\/+$/, '');
     const normFileRaw = filePath.replace(/\\/g, '/');
-    const isWindowsPath = /^[A-Za-z]:\//.test(workspacePath) || /^[A-Za-z]:\//.test(normFileRaw);
-    const normWork = isWindowsPath ? workspacePath.toLowerCase() : workspacePath;
+    const isWindowsPath = /^[A-Za-z]:\//.test(normWorkRaw) || /^[A-Za-z]:\//.test(normFileRaw);
+    const normWork = isWindowsPath ? normWorkRaw.toLowerCase() : normWorkRaw;
     const normFile = isWindowsPath ? normFileRaw.toLowerCase() : normFileRaw;
 
-    if (normFile.startsWith(`${normWork}/`)) {
-      return normFileRaw.slice(workspacePath.length + 1);
+    if (normFile === normWork) {
+      return '';
     }
 
-    return filePath;
+    if (normFile.startsWith(`${normWork}/`)) {
+      return normFileRaw.slice(normWorkRaw.length + 1);
+    }
+
+    return undefined;
   }
 
   private buildSanitizerMessageDerived(msg: SanitizerMessageRecord): SanitizerMessageDerived {
@@ -2782,7 +2794,9 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     const typeLabelKey = sanitizerQuestionLabelKeyMap.get(msg.question);
     const typeLabel = typeLabelKey ? t(typeLabelKey) : msg.question;
     const fileKey = msg.fileLink || t('web.sanitizerTree.group.noFile');
-    const fileLabel = msg.fileLink ? this.stripWorkspacePrefix(msg.fileLink) : t('web.sanitizerTree.group.noFile');
+    const fileLabel = msg.fileLink
+      ? this.stripWorkspacePrefix(msg.fileLink, this.getNormalizedWorkspacePath()) ?? msg.fileLink
+      : t('web.sanitizerTree.group.noFile');
 
     return {
       classKey,
@@ -3180,19 +3194,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       let labelPath = fileLink;
 
       if (workspacePath) {
-        const normWorkRaw = workspacePath.replace(/\\/g, '/')
-          .replace(/\/+$/, '');
-        const normFileRaw = fileLink.replace(/\\/g, '/');
-        const isWindowsPath = /^[A-Za-z]:\//.test(normWorkRaw) || /^[A-Za-z]:\//.test(normFileRaw);
-        const normWork = isWindowsPath ? normWorkRaw.toLowerCase() : normWorkRaw;
-        const normFile = isWindowsPath ? normFileRaw.toLowerCase() : normFileRaw;
-
-        if (normFile === normWork) {
-          labelPath = '';
-        }
-        else if (normFile.startsWith(`${normWork}/`)) {
-          labelPath = normFileRaw.slice(normWorkRaw.length + 1);
-        }
+        labelPath = this.stripWorkspacePrefix(fileLink, workspacePath) ?? fileLink;
       }
 
       const cmdArgs = encodeURIComponent(JSON.stringify([

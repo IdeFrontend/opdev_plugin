@@ -18,7 +18,7 @@ export function getTerminalEnvCollection(): MutableEnvVarCollection | undefined 
 }
 
 /**
- * Inject the resolved `NPU_ARCH` into the integrated-terminal environment (issue #37).
+ * Inject the resolved `NPU_ARCH` into the integrated-terminal environment.
  * A manually typed `bash build.sh` / `cmake` then inherits `NPU_ARCH`, so a project
  * reopened with "Open Folder" builds without running a plugin command first — the gap
  * the spawn-env exports cannot close, because a bare terminal never reads settings.json.

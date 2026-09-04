@@ -1,0 +1,1580 @@
+{
+  "cann": {
+    "commands": {
+      "getBuildOpCommand": ". /etc/profile && cd /workspace/projects/cann_hello && bash /workspace/projects/cann_hello/build.sh",
+      "getRunCommand": ". /etc/profile && mkdir -p  /workspace/projects/cann_hello/build && cd /workspace/projects/cann_hello/build && chmod +x /workspace/projects/cann_hello/build/cann_hello && /workspace/projects/cann_hello/build/cann_hello",
+      "resolveExampleModeForConfig": {
+        "mode": "eager",
+        "exampleFound": false,
+        "opName": "cann_hello"
+      },
+      "getBuildExampleCommand": ". /etc/profile && cd /workspace/projects/cann_hello && bash /workspace/projects/cann_hello/build.sh",
+      "getSimulateCommand": ". /etc/profile && mkdir -p  /workspace/projects/cann_hello/build && cd /workspace/projects/cann_hello/build && msprof op simulator --soc-version=Ascend910B3 --output=/workspace/projects/cann_hello/.vscode\\opprof --aic-metrics=PipeUtilization /workspace/projects/cann_hello/build/cann_hello",
+      "getOnBoardCommand": ". /etc/profile && mkdir -p  /workspace/projects/cann_hello/build && cd /workspace/projects/cann_hello/build && msprof op --output=/workspace/projects/cann_hello/.vscode\\opprof --aic-metrics=Occupancy,Roofline,Source,MemoryDetail,Default /workspace/projects/cann_hello/build/cann_hello",
+      "getSanitizerCommand": ". /etc/profile && mkdir -p  /workspace/projects/cann_hello/build && cd /workspace/projects/cann_hello/build && mssanitizer --tool=memcheck --tool=racecheck --tool=initcheck --leak-check=yes --check-unused-memory=yes --log-level=warn --max-debuglog-size=1024 --log-file=/workspace/projects/cann_hello\\.vscode\\mindstudio_sanitizer_log\\mssanitizer_<ts>.log /workspace/projects/cann_hello/build/cann_hello",
+      "getUtTestCommand": ". /etc/profile && cd /workspace/projects/cann_hello && bash /workspace/projects/cann_hello/build.sh -u",
+      "getStandardCustomDeployCommand": ". /etc/profile && cd /workspace/projects/cann_hello && RUN_FILE=$(find build_out/*.run) && chmod +x \"$RUN_FILE\" && RUN_FILE_HELP=$(\"$RUN_FILE\" --help 2>&1 || true) && case \"$RUN_FILE_HELP\" in *--force*) \"$RUN_FILE\" --force ;; *) \"$RUN_FILE\" ;; esac"
+    },
+    "errors": {
+      "getBuildOpCommand": "",
+      "getRunCommand": "",
+      "resolveExampleModeForConfig": "",
+      "getBuildExampleCommand": "",
+      "getSimulateCommand": "",
+      "getOnBoardCommand": "",
+      "getSanitizerCommand": "",
+      "getUtTestCommand": "",
+      "getStandardCustomDeployCommand": ""
+    },
+    "merges": {
+      "build_op": [
+        {
+          "config_name": "cann_hello",
+          "config_type": "build_op",
+          "script": "bash /workspace/projects/cann_hello/build.sh",
+          "target_file": "/workspace/projects/cann_hello/build/cann_hello",
+          "user_options": {
+            "config_name": "cann_hello",
+            "target_file": "/workspace/projects/cann_hello/build/cann_hello",
+            "script": "bash /workspace/projects/cann_hello/build.sh",
+            "cpu_debug_script": "bash /workspace/projects/cann_hello/build.sh --cpudebug",
+            "npu_debug_script": "bash /workspace/projects/cann_hello/build.sh --debug",
+            "op": "cann_hello"
+          },
+          "project_id": 1,
+          "op": "cann_hello",
+          "config_id": 1
+        }
+      ],
+      "build_example": [
+        {
+          "config_name": "cann_hello",
+          "config_type": "build_example",
+          "script": "bash /workspace/projects/cann_hello/build.sh",
+          "user_options": {
+            "config_name": "cann_hello",
+            "script": "bash /workspace/projects/cann_hello/build.sh",
+            "execution_mode": "eager"
+          },
+          "project_id": 1,
+          "op": "cann_hello",
+          "config_id": 2
+        }
+      ],
+      "ut_test": [
+        {
+          "config_name": "cann_hello",
+          "config_type": "ut_test",
+          "script": "bash /workspace/projects/cann_hello/build.sh -u",
+          "user_options": {
+            "config_name": "cann_hello",
+            "script": "bash /workspace/projects/cann_hello/build.sh -u"
+          },
+          "project_id": 1,
+          "op": "cann_hello",
+          "config_id": 3
+        }
+      ],
+      "sanitizer": [
+        {
+          "config_name": "cann_hello",
+          "config_type": "sanitizer",
+          "script": "bash /workspace/projects/cann_hello/build.sh --mssanitizer",
+          "target_file": "/workspace/projects/cann_hello/build/cann_hello",
+          "user_options": {
+            "fileMapList": [],
+            "config_name": "cann_hello",
+            "script": "bash /workspace/projects/cann_hello/build.sh --mssanitizer",
+            "logLevel": "warn",
+            "maxDebuglogSize": 1024,
+            "useBlock": false,
+            "tool": {
+              "memcheck": true,
+              "racecheck": true,
+              "initcheck": true
+            },
+            "memcheckOption": {
+              "leak-check": true,
+              "check-unused-memory": true
+            }
+          },
+          "project_id": 1,
+          "op": "cann_hello",
+          "config_id": 4
+        }
+      ],
+      "on_board": [
+        {
+          "config_name": "cann_hello",
+          "config_type": "on_board",
+          "script": "bash /workspace/projects/cann_hello/build.sh --onboard",
+          "user_options": {
+            "fileMapList": [],
+            "config_name": "cann_hello",
+            "script": "bash /workspace/projects/cann_hello/build.sh --onboard",
+            "Occupancy": true,
+            "Roofline": true,
+            "Source": true,
+            "ArithmeticUtilization": true,
+            "L2Cache": true,
+            "Memory": true,
+            "MemoryL0": true,
+            "MemoryUB": true,
+            "PipeUtilization": true,
+            "ResourceConflictRatio": true,
+            "KernelScale": false,
+            "MemoryDetail": true,
+            "operatorMetrics": true
+          },
+          "project_id": 1,
+          "op": "cann_hello",
+          "config_id": 5
+        }
+      ],
+      "simulate": [
+        {
+          "config_name": "cann_hello",
+          "config_type": "simulate",
+          "script": "bash /workspace/projects/cann_hello/build.sh --simulator",
+          "user_options": {
+            "fileMapList": [],
+            "config_name": "cann_hello",
+            "script": "bash /workspace/projects/cann_hello/build.sh --simulator",
+            "PMSampling": false,
+            "ResourceConflictRatio": true
+          },
+          "project_id": 1,
+          "op": "cann_hello",
+          "config_id": 6
+        }
+      ]
+    },
+    "runtimeConfigs": {
+      "1": {
+        "id": 1,
+        "config_name": "cann_hello",
+        "config_type": "build_op",
+        "script": "bash /workspace/projects/cann_hello/build.sh",
+        "target_file": "/workspace/projects/cann_hello/build/cann_hello",
+        "user_options": {
+          "config_name": "cann_hello",
+          "target_file": "/workspace/projects/cann_hello/build/cann_hello",
+          "script": "bash /workspace/projects/cann_hello/build.sh",
+          "cpu_debug_script": "bash /workspace/projects/cann_hello/build.sh --cpudebug",
+          "npu_debug_script": "bash /workspace/projects/cann_hello/build.sh --debug",
+          "op": "cann_hello"
+        },
+        "project_id": 1,
+        "op": "cann_hello"
+      },
+      "2": {
+        "id": 2,
+        "config_name": "cann_hello",
+        "config_type": "build_example",
+        "script": "bash /workspace/projects/cann_hello/build.sh",
+        "user_options": {
+          "config_name": "cann_hello",
+          "script": "bash /workspace/projects/cann_hello/build.sh",
+          "execution_mode": "eager"
+        },
+        "project_id": 1,
+        "op": "cann_hello"
+      },
+      "3": {
+        "id": 3,
+        "config_name": "cann_hello",
+        "config_type": "ut_test",
+        "script": "bash /workspace/projects/cann_hello/build.sh -u",
+        "user_options": {
+          "config_name": "cann_hello",
+          "script": "bash /workspace/projects/cann_hello/build.sh -u"
+        },
+        "project_id": 1,
+        "op": "cann_hello"
+      },
+      "4": {
+        "id": 4,
+        "config_name": "cann_hello",
+        "config_type": "sanitizer",
+        "script": "bash /workspace/projects/cann_hello/build.sh --mssanitizer",
+        "target_file": "/workspace/projects/cann_hello/build/cann_hello",
+        "user_options": {
+          "fileMapList": [],
+          "config_name": "cann_hello",
+          "script": "bash /workspace/projects/cann_hello/build.sh --mssanitizer",
+          "logLevel": "warn",
+          "maxDebuglogSize": 1024,
+          "useBlock": false,
+          "tool": {
+            "memcheck": true,
+            "racecheck": true,
+            "initcheck": true
+          },
+          "memcheckOption": {
+            "leak-check": true,
+            "check-unused-memory": true
+          }
+        },
+        "project_id": 1,
+        "op": "cann_hello"
+      },
+      "5": {
+        "id": 5,
+        "config_name": "cann_hello",
+        "config_type": "on_board",
+        "script": "bash /workspace/projects/cann_hello/build.sh --onboard",
+        "user_options": {
+          "fileMapList": [],
+          "config_name": "cann_hello",
+          "script": "bash /workspace/projects/cann_hello/build.sh --onboard",
+          "Occupancy": true,
+          "Roofline": true,
+          "Source": true,
+          "ArithmeticUtilization": true,
+          "L2Cache": true,
+          "Memory": true,
+          "MemoryL0": true,
+          "MemoryUB": true,
+          "PipeUtilization": true,
+          "ResourceConflictRatio": true,
+          "KernelScale": false,
+          "MemoryDetail": true,
+          "operatorMetrics": true
+        },
+        "project_id": 1,
+        "op": "cann_hello"
+      },
+      "6": {
+        "id": 6,
+        "config_name": "cann_hello",
+        "config_type": "simulate",
+        "script": "bash /workspace/projects/cann_hello/build.sh --simulator",
+        "user_options": {
+          "fileMapList": [],
+          "config_name": "cann_hello",
+          "script": "bash /workspace/projects/cann_hello/build.sh --simulator",
+          "PMSampling": false,
+          "ResourceConflictRatio": true
+        },
+        "project_id": 1,
+        "op": "cann_hello"
+      }
+    },
+    "sanitizerList": []
+  },
+  "ascend": {
+    "commands": {
+      "getBuildOpCommand": ". /etc/profile && cd /workspace/projects/ascend_add_custom && bash /workspace/projects/ascend_add_custom/build.sh --pkg --soc={soc_version} --vendor_name=custom && RUN_FILE=$(find /workspace/projects/ascend_add_custom/build_out/*.run) && chmod +x \"$RUN_FILE\" && RUN_FILE_HELP=$(\"$RUN_FILE\" --help 2>&1 || true) && case \"$RUN_FILE_HELP\" in *--force*) \"$RUN_FILE\" --force ;; *) \"$RUN_FILE\" ;; esac",
+      "getRunCommand": ". /etc/profile && cd /workspace/projects/ascend_add_custom && RUN_FILE=$(find /workspace/projects/ascend_add_custom/build_out/*.run) && chmod +x \"$RUN_FILE\" && RUN_FILE_HELP=$(\"$RUN_FILE\" --help 2>&1 || true) && case \"$RUN_FILE_HELP\" in *--force*) \"$RUN_FILE\" --force ;; *) \"$RUN_FILE\" ;; esac",
+      "resolveExampleModeForConfig": {
+        "mode": "eager",
+        "exampleFound": false,
+        "opName": "add_custom"
+      },
+      "getBuildExampleCommand": ". /etc/profile && cd /workspace/projects/ascend_add_custom && bash /workspace/projects/ascend_add_custom/build.sh --vendor_name=custom --run_example",
+      "getSimulateCommand": ". /etc/profile && mkdir -p /workspace/projects/ascend_add_custom/build && cd /workspace/projects/ascend_add_custom/build && msprof op simulator --soc-version=Ascend910B3 --output=/workspace/projects/ascend_add_custom/.vscode\\opprof --aic-metrics=PipeUtilization /workspace/projects/ascend_add_custom\\build\\test_aclnn_add_custom",
+      "getOnBoardCommand": ". /etc/profile && mkdir -p /workspace/projects/ascend_add_custom/build && cd /workspace/projects/ascend_add_custom/build && msprof op --output=/workspace/projects/ascend_add_custom/.vscode\\opprof --aic-metrics=Occupancy,Roofline,Source,MemoryDetail,Default /workspace/projects/ascend_add_custom\\build\\test_aclnn_add_custom",
+      "getSanitizerCommand": ". /etc/profile && cd /workspace/projects/ascend_add_custom && mssanitizer --tool=memcheck --tool=racecheck --tool=initcheck --leak-check=yes --check-unused-memory=yes --log-level=warn --max-debuglog-size=1024 --log-file=/workspace/projects/ascend_add_custom\\.vscode\\mindstudio_sanitizer_log\\mssanitizer_<ts>.log /workspace/projects/ascend_add_custom\\build\\test_aclnn_add_custom",
+      "getUtTestCommand": ". /etc/profile && cd /workspace/projects/ascend_add_custom && bash /workspace/projects/ascend_add_custom/build.sh --soc={soc_version} -u",
+      "getStandardCustomDeployCommand": ". /etc/profile && cd /workspace/projects/ascend_add_custom && RUN_FILE=$(find /workspace/projects/ascend_add_custom/build_out/*.run) && chmod +x \"$RUN_FILE\" && RUN_FILE_HELP=$(\"$RUN_FILE\" --help 2>&1 || true) && case \"$RUN_FILE_HELP\" in *--force*) \"$RUN_FILE\" --force ;; *) \"$RUN_FILE\" ;; esac"
+    },
+    "errors": {
+      "getBuildOpCommand": "",
+      "getRunCommand": "",
+      "resolveExampleModeForConfig": "",
+      "getBuildExampleCommand": "",
+      "getSimulateCommand": "",
+      "getOnBoardCommand": "",
+      "getSanitizerCommand": "",
+      "getUtTestCommand": "",
+      "getStandardCustomDeployCommand": ""
+    },
+    "merges": {
+      "build_op": [
+        {
+          "config_name": "add_custom",
+          "config_type": "build_op",
+          "script": "bash /workspace/projects/ascend_add_custom/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames}",
+          "target_file": "/workspace/projects/ascend_add_custom/build_out/*.run",
+          "user_options": {
+            "config_name": "add_custom",
+            "target_file": "/workspace/projects/ascend_add_custom/build_out/*.run",
+            "script": "bash /workspace/projects/ascend_add_custom/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames}",
+            "cpu_debug_script": "bash /workspace/projects/ascend_add_custom/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --cpudebug --simulator {simulator_type}",
+            "npu_debug_script": "bash /workspace/projects/ascend_add_custom/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --debug",
+            "op": "add_custom"
+          },
+          "project_id": 1,
+          "op": "add_custom",
+          "config_id": 1
+        }
+      ],
+      "build_example": [
+        {
+          "config_name": "add_custom",
+          "config_type": "build_example",
+          "script": "bash /workspace/projects/ascend_add_custom/build.sh --vendor_name=custom --run_example",
+          "user_options": {
+            "config_name": "add_custom",
+            "script": "bash /workspace/projects/ascend_add_custom/build.sh --vendor_name=custom --run_example",
+            "execution_mode": "eager"
+          },
+          "project_id": 1,
+          "op": "add_custom",
+          "config_id": 2
+        }
+      ],
+      "ut_test": [
+        {
+          "config_name": "add_custom",
+          "config_type": "ut_test",
+          "script": "bash /workspace/projects/ascend_add_custom/build.sh --soc={soc_version} --ops={operatorNames} -u",
+          "user_options": {
+            "config_name": "add_custom",
+            "script": "bash /workspace/projects/ascend_add_custom/build.sh --soc={soc_version} --ops={operatorNames} -u"
+          },
+          "project_id": 1,
+          "op": "add_custom",
+          "config_id": 3
+        }
+      ],
+      "sanitizer": [
+        {
+          "config_name": "add_custom",
+          "config_type": "sanitizer",
+          "script": "bash /workspace/projects/ascend_add_custom/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --mssanitizer",
+          "target_file": "/workspace/projects/ascend_add_custom/build_out/*.run",
+          "user_options": {
+            "fileMapList": [],
+            "config_name": "add_custom",
+            "script": "bash /workspace/projects/ascend_add_custom/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --mssanitizer",
+            "logLevel": "warn",
+            "maxDebuglogSize": 1024,
+            "useBlock": false,
+            "tool": {
+              "memcheck": true,
+              "racecheck": true,
+              "initcheck": true
+            },
+            "memcheckOption": {
+              "leak-check": true,
+              "check-unused-memory": true
+            }
+          },
+          "project_id": 1,
+          "op": "add_custom",
+          "config_id": 4
+        }
+      ],
+      "on_board": [
+        {
+          "config_name": "add_custom",
+          "config_type": "on_board",
+          "script": "bash /workspace/projects/ascend_add_custom/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --onboard",
+          "user_options": {
+            "fileMapList": [],
+            "config_name": "add_custom",
+            "script": "bash /workspace/projects/ascend_add_custom/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --onboard",
+            "Occupancy": true,
+            "Roofline": true,
+            "Source": true,
+            "ArithmeticUtilization": true,
+            "L2Cache": true,
+            "Memory": true,
+            "MemoryL0": true,
+            "MemoryUB": true,
+            "PipeUtilization": true,
+            "ResourceConflictRatio": true,
+            "KernelScale": false,
+            "MemoryDetail": true,
+            "operatorMetrics": true
+          },
+          "project_id": 1,
+          "op": "add_custom",
+          "config_id": 5
+        }
+      ],
+      "simulate": [
+        {
+          "config_name": "add_custom",
+          "config_type": "simulate",
+          "script": "bash /workspace/projects/ascend_add_custom/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --simulator {simulator_type}",
+          "user_options": {
+            "fileMapList": [],
+            "config_name": "add_custom",
+            "script": "bash /workspace/projects/ascend_add_custom/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --simulator {simulator_type}",
+            "PMSampling": false,
+            "ResourceConflictRatio": true
+          },
+          "project_id": 1,
+          "op": "add_custom",
+          "config_id": 6
+        }
+      ]
+    },
+    "runtimeConfigs": {
+      "1": {
+        "id": 1,
+        "config_name": "add_custom",
+        "config_type": "build_op",
+        "script": "bash /workspace/projects/ascend_add_custom/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames}",
+        "target_file": "/workspace/projects/ascend_add_custom/build_out/*.run",
+        "user_options": {
+          "config_name": "add_custom",
+          "target_file": "/workspace/projects/ascend_add_custom/build_out/*.run",
+          "script": "bash /workspace/projects/ascend_add_custom/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames}",
+          "cpu_debug_script": "bash /workspace/projects/ascend_add_custom/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --cpudebug --simulator {simulator_type}",
+          "npu_debug_script": "bash /workspace/projects/ascend_add_custom/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --debug",
+          "op": "add_custom"
+        },
+        "project_id": 1,
+        "op": "add_custom"
+      },
+      "2": {
+        "id": 2,
+        "config_name": "add_custom",
+        "config_type": "build_example",
+        "script": "bash /workspace/projects/ascend_add_custom/build.sh --vendor_name=custom --run_example",
+        "user_options": {
+          "config_name": "add_custom",
+          "script": "bash /workspace/projects/ascend_add_custom/build.sh --vendor_name=custom --run_example",
+          "execution_mode": "eager"
+        },
+        "project_id": 1,
+        "op": "add_custom"
+      },
+      "3": {
+        "id": 3,
+        "config_name": "add_custom",
+        "config_type": "ut_test",
+        "script": "bash /workspace/projects/ascend_add_custom/build.sh --soc={soc_version} --ops={operatorNames} -u",
+        "user_options": {
+          "config_name": "add_custom",
+          "script": "bash /workspace/projects/ascend_add_custom/build.sh --soc={soc_version} --ops={operatorNames} -u"
+        },
+        "project_id": 1,
+        "op": "add_custom"
+      },
+      "4": {
+        "id": 4,
+        "config_name": "add_custom",
+        "config_type": "sanitizer",
+        "script": "bash /workspace/projects/ascend_add_custom/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --mssanitizer",
+        "target_file": "/workspace/projects/ascend_add_custom/build_out/*.run",
+        "user_options": {
+          "fileMapList": [],
+          "config_name": "add_custom",
+          "script": "bash /workspace/projects/ascend_add_custom/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --mssanitizer",
+          "logLevel": "warn",
+          "maxDebuglogSize": 1024,
+          "useBlock": false,
+          "tool": {
+            "memcheck": true,
+            "racecheck": true,
+            "initcheck": true
+          },
+          "memcheckOption": {
+            "leak-check": true,
+            "check-unused-memory": true
+          }
+        },
+        "project_id": 1,
+        "op": "add_custom"
+      },
+      "5": {
+        "id": 5,
+        "config_name": "add_custom",
+        "config_type": "on_board",
+        "script": "bash /workspace/projects/ascend_add_custom/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --onboard",
+        "user_options": {
+          "fileMapList": [],
+          "config_name": "add_custom",
+          "script": "bash /workspace/projects/ascend_add_custom/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --onboard",
+          "Occupancy": true,
+          "Roofline": true,
+          "Source": true,
+          "ArithmeticUtilization": true,
+          "L2Cache": true,
+          "Memory": true,
+          "MemoryL0": true,
+          "MemoryUB": true,
+          "PipeUtilization": true,
+          "ResourceConflictRatio": true,
+          "KernelScale": false,
+          "MemoryDetail": true,
+          "operatorMetrics": true
+        },
+        "project_id": 1,
+        "op": "add_custom"
+      },
+      "6": {
+        "id": 6,
+        "config_name": "add_custom",
+        "config_type": "simulate",
+        "script": "bash /workspace/projects/ascend_add_custom/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --simulator {simulator_type}",
+        "user_options": {
+          "fileMapList": [],
+          "config_name": "add_custom",
+          "script": "bash /workspace/projects/ascend_add_custom/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --simulator {simulator_type}",
+          "PMSampling": false,
+          "ResourceConflictRatio": true
+        },
+        "project_id": 1,
+        "op": "add_custom"
+      }
+    },
+    "sanitizerList": []
+  },
+  "pyasc": {
+    "commands": {
+      "getBuildOpCommand": "",
+      "getRunCommand": ". /etc/profile && cd /workspace/projects/pyasc_demo && python3 ./pyasc_demo.py",
+      "resolveExampleModeForConfig": {
+        "mode": "eager",
+        "exampleFound": false,
+        "opName": "pyasc_demo"
+      },
+      "getBuildExampleCommand": "",
+      "getSimulateCommand": ". /etc/profile && cd /workspace/projects/pyasc_demo && msprof op simulator --soc-version=Ascend910B3 --output=/workspace/projects/pyasc_demo/.vscode\\opprof --aic-metrics=PipeUtilization python3 ./pyasc_demo.py",
+      "getOnBoardCommand": ". /etc/profile && cd /workspace/projects/pyasc_demo && msprof op --output=/workspace/projects/pyasc_demo/.vscode\\opprof --aic-metrics=Occupancy,Roofline,Source,MemoryDetail,Default python3 ./pyasc_demo.py",
+      "getSanitizerCommand": "",
+      "getUtTestCommand": "",
+      "getStandardCustomDeployCommand": ". /etc/profile && cd /workspace/projects/pyasc_demo && RUN_FILE=$(find build_out/*.run) && chmod +x \"$RUN_FILE\" && RUN_FILE_HELP=$(\"$RUN_FILE\" --help 2>&1 || true) && case \"$RUN_FILE_HELP\" in *--force*) \"$RUN_FILE\" --force ;; *) \"$RUN_FILE\" ;; esac"
+    },
+    "errors": {
+      "getBuildOpCommand": "",
+      "getRunCommand": "",
+      "resolveExampleModeForConfig": "",
+      "getBuildExampleCommand": "",
+      "getSimulateCommand": "",
+      "getOnBoardCommand": "",
+      "getSanitizerCommand": "",
+      "getUtTestCommand": "Failed to build UT test command: PyAsc 类型不支持 buildUtTestCommand 操作",
+      "getStandardCustomDeployCommand": ""
+    },
+    "merges": {
+      "build_op": [
+        {
+          "config_name": "pyasc_demo",
+          "config_type": "build_op",
+          "script": "python3 ./pyasc_demo.py",
+          "target_file": "python3 ./pyasc_demo.py",
+          "user_options": {
+            "config_name": "pyasc_demo",
+            "target_file": "python3 ./pyasc_demo.py",
+            "script": "python3 ./pyasc_demo.py",
+            "cpu_debug_script": "python3 ./pyasc_demo.py",
+            "npu_debug_script": "python3 ./pyasc_demo.py",
+            "op": "pyasc_demo"
+          },
+          "project_id": 1,
+          "op": "pyasc_demo",
+          "config_id": 1
+        }
+      ],
+      "build_example": [
+        {
+          "config_name": "pyasc_demo",
+          "config_type": "build_example",
+          "script": "python3 ./pyasc_demo.py",
+          "user_options": {
+            "config_name": "pyasc_demo",
+            "script": "python3 ./pyasc_demo.py",
+            "execution_mode": "eager"
+          },
+          "project_id": 1,
+          "op": "pyasc_demo",
+          "config_id": 2
+        }
+      ],
+      "ut_test": [
+        {
+          "config_name": "pyasc_demo",
+          "config_type": "ut_test",
+          "script": "python3 ./pyasc_demo.py",
+          "user_options": {
+            "config_name": "pyasc_demo",
+            "script": "python3 ./pyasc_demo.py"
+          },
+          "project_id": 1,
+          "op": "pyasc_demo",
+          "config_id": 3
+        }
+      ],
+      "sanitizer": [
+        {
+          "config_name": "pyasc_demo",
+          "config_type": "sanitizer",
+          "script": "python3 ./pyasc_demo.py",
+          "target_file": "python3 ./pyasc_demo.py",
+          "user_options": {
+            "fileMapList": [],
+            "config_name": "pyasc_demo",
+            "script": "python3 ./pyasc_demo.py",
+            "logLevel": "warn",
+            "maxDebuglogSize": 1024,
+            "useBlock": false,
+            "tool": {
+              "memcheck": true,
+              "racecheck": true,
+              "initcheck": true
+            },
+            "memcheckOption": {
+              "leak-check": true,
+              "check-unused-memory": true
+            }
+          },
+          "project_id": 1,
+          "op": "pyasc_demo",
+          "config_id": 4
+        }
+      ],
+      "on_board": [
+        {
+          "config_name": "pyasc_demo",
+          "config_type": "on_board",
+          "script": "python3 ./pyasc_demo.py",
+          "user_options": {
+            "fileMapList": [],
+            "config_name": "pyasc_demo",
+            "script": "python3 ./pyasc_demo.py",
+            "Occupancy": true,
+            "Roofline": true,
+            "Source": true,
+            "ArithmeticUtilization": true,
+            "L2Cache": true,
+            "Memory": true,
+            "MemoryL0": true,
+            "MemoryUB": true,
+            "PipeUtilization": true,
+            "ResourceConflictRatio": true,
+            "KernelScale": false,
+            "MemoryDetail": true,
+            "operatorMetrics": true
+          },
+          "project_id": 1,
+          "op": "pyasc_demo",
+          "config_id": 5
+        }
+      ],
+      "simulate": [
+        {
+          "config_name": "pyasc_demo",
+          "config_type": "simulate",
+          "script": "python3 ./pyasc_demo.py",
+          "user_options": {
+            "fileMapList": [],
+            "config_name": "pyasc_demo",
+            "script": "python3 ./pyasc_demo.py",
+            "PMSampling": false,
+            "ResourceConflictRatio": true
+          },
+          "project_id": 1,
+          "op": "pyasc_demo",
+          "config_id": 6
+        }
+      ]
+    },
+    "runtimeConfigs": {
+      "1": {
+        "id": 1,
+        "config_name": "pyasc_demo",
+        "config_type": "build_op",
+        "script": "python3 ./pyasc_demo.py",
+        "target_file": "python3 ./pyasc_demo.py",
+        "user_options": {
+          "config_name": "pyasc_demo",
+          "target_file": "python3 ./pyasc_demo.py",
+          "script": "python3 ./pyasc_demo.py",
+          "cpu_debug_script": "python3 ./pyasc_demo.py",
+          "npu_debug_script": "python3 ./pyasc_demo.py",
+          "op": "pyasc_demo"
+        },
+        "project_id": 1,
+        "op": "pyasc_demo"
+      },
+      "2": {
+        "id": 2,
+        "config_name": "pyasc_demo",
+        "config_type": "build_example",
+        "script": "python3 ./pyasc_demo.py",
+        "user_options": {
+          "config_name": "pyasc_demo",
+          "script": "python3 ./pyasc_demo.py",
+          "execution_mode": "eager"
+        },
+        "project_id": 1,
+        "op": "pyasc_demo"
+      },
+      "3": {
+        "id": 3,
+        "config_name": "pyasc_demo",
+        "config_type": "ut_test",
+        "script": "python3 ./pyasc_demo.py",
+        "user_options": {
+          "config_name": "pyasc_demo",
+          "script": "python3 ./pyasc_demo.py"
+        },
+        "project_id": 1,
+        "op": "pyasc_demo"
+      },
+      "4": {
+        "id": 4,
+        "config_name": "pyasc_demo",
+        "config_type": "sanitizer",
+        "script": "python3 ./pyasc_demo.py",
+        "target_file": "python3 ./pyasc_demo.py",
+        "user_options": {
+          "fileMapList": [],
+          "config_name": "pyasc_demo",
+          "script": "python3 ./pyasc_demo.py",
+          "logLevel": "warn",
+          "maxDebuglogSize": 1024,
+          "useBlock": false,
+          "tool": {
+            "memcheck": true,
+            "racecheck": true,
+            "initcheck": true
+          },
+          "memcheckOption": {
+            "leak-check": true,
+            "check-unused-memory": true
+          }
+        },
+        "project_id": 1,
+        "op": "pyasc_demo"
+      },
+      "5": {
+        "id": 5,
+        "config_name": "pyasc_demo",
+        "config_type": "on_board",
+        "script": "python3 ./pyasc_demo.py",
+        "user_options": {
+          "fileMapList": [],
+          "config_name": "pyasc_demo",
+          "script": "python3 ./pyasc_demo.py",
+          "Occupancy": true,
+          "Roofline": true,
+          "Source": true,
+          "ArithmeticUtilization": true,
+          "L2Cache": true,
+          "Memory": true,
+          "MemoryL0": true,
+          "MemoryUB": true,
+          "PipeUtilization": true,
+          "ResourceConflictRatio": true,
+          "KernelScale": false,
+          "MemoryDetail": true,
+          "operatorMetrics": true
+        },
+        "project_id": 1,
+        "op": "pyasc_demo"
+      },
+      "6": {
+        "id": 6,
+        "config_name": "pyasc_demo",
+        "config_type": "simulate",
+        "script": "python3 ./pyasc_demo.py",
+        "user_options": {
+          "fileMapList": [],
+          "config_name": "pyasc_demo",
+          "script": "python3 ./pyasc_demo.py",
+          "PMSampling": false,
+          "ResourceConflictRatio": true
+        },
+        "project_id": 1,
+        "op": "pyasc_demo"
+      }
+    },
+    "sanitizerList": []
+  },
+  "triton": {
+    "commands": {
+      "getBuildOpCommand": ". /etc/profile && cd /workspace/projects/triton_vector_add && python3 ./triton_vector_add.py",
+      "getRunCommand": ". /etc/profile && cd /workspace/projects/triton_vector_add && python3 ./triton_vector_add.py",
+      "resolveExampleModeForConfig": {
+        "mode": "eager",
+        "exampleFound": false,
+        "opName": "triton_vector_add"
+      },
+      "getBuildExampleCommand": ". /etc/profile && cd /workspace/projects/triton_vector_add && python3 ./triton_vector_add.py",
+      "getSimulateCommand": ". /etc/profile && cd /workspace/projects/triton_vector_add && msprof op simulator --soc-version=Ascend910B3 --output=/workspace/projects/triton_vector_add/.vscode\\opprof --aic-metrics=PipeUtilization python3 ./triton_vector_add.py",
+      "getOnBoardCommand": ". /etc/profile && cd /workspace/projects/triton_vector_add && msprof op --output=/workspace/projects/triton_vector_add/.vscode\\opprof --aic-metrics=Occupancy,Roofline,Source,MemoryDetail,Default python3 ./triton_vector_add.py",
+      "getSanitizerCommand": ". /etc/profile && cd /workspace/projects/triton_vector_add && mssanitizer --tool=memcheck --tool=racecheck --tool=initcheck --leak-check=yes --check-unused-memory=yes --log-level=warn --max-debuglog-size=1024 --log-file=/workspace/projects/triton_vector_add\\.vscode\\mindstudio_sanitizer_log\\mssanitizer_<ts>.log -- python3 ./triton_vector_add.py",
+      "getUtTestCommand": "",
+      "getStandardCustomDeployCommand": ". /etc/profile && cd /workspace/projects/triton_vector_add && RUN_FILE=$(find build_out/*.run) && chmod +x \"$RUN_FILE\" && RUN_FILE_HELP=$(\"$RUN_FILE\" --help 2>&1 || true) && case \"$RUN_FILE_HELP\" in *--force*) \"$RUN_FILE\" --force ;; *) \"$RUN_FILE\" ;; esac"
+    },
+    "errors": {
+      "getBuildOpCommand": "",
+      "getRunCommand": "",
+      "resolveExampleModeForConfig": "",
+      "getBuildExampleCommand": "",
+      "getSimulateCommand": "",
+      "getOnBoardCommand": "",
+      "getSanitizerCommand": "",
+      "getUtTestCommand": "Failed to build UT test command: ",
+      "getStandardCustomDeployCommand": ""
+    },
+    "merges": {
+      "build_op": [
+        {
+          "config_name": "triton_vector_add",
+          "config_type": "build_op",
+          "script": "python3 ./triton_vector_add.py",
+          "target_file": "python3 ./triton_vector_add.py",
+          "user_options": {
+            "config_name": "triton_vector_add",
+            "target_file": "python3 ./triton_vector_add.py",
+            "script": "python3 ./triton_vector_add.py",
+            "cpu_debug_script": "python3 ./triton_vector_add.py",
+            "npu_debug_script": "TRITON_DISABLE_CACHE=1 TRITON_DISABLE_LINE_INFO=false LLVM_EXTRACT_DI_LOCAL_VARIABLES=1 python3 ./triton_vector_add.py && sh -c 'K=$(find \"$HOME/.triton/cache\" -type f -name 'triton_vector_add.npubin' -printf \"%T@ %p\\n\" 2>/dev/null | sort -n | tail -1 | cut -d\" \" -f2-); [ -z \"$K\" ] && K=$(find \"$HOME/.triton/cache\" -type f \\( -name '*.npubin' -o -name kernel.o -o -name kernel_reloc.o \\) -printf \"%T@ %p\\n\" 2>/dev/null | sort -n | tail -1 | cut -d\" \" -f2-); [ -z \"$K\" ] && exit 0; d=\"$PWD\"; while [ \"$d\" != \"/\" ]; do for cfg in .vscode .arts; do if [ -d \"$d/$cfg\" ]; then printf \"%s\\n\" \"$K\" > \"$d/$cfg/.triton_launch_kernel_path\"; exit 0; fi; done; d=$(dirname \"$d\"); done'",
+            "op": "triton_vector_add"
+          },
+          "project_id": 1,
+          "op": "triton_vector_add",
+          "config_id": 1
+        }
+      ],
+      "build_example": [
+        {
+          "config_name": "triton_vector_add",
+          "config_type": "build_example",
+          "script": "python3 ./triton_vector_add.py",
+          "user_options": {
+            "config_name": "triton_vector_add",
+            "script": "python3 ./triton_vector_add.py",
+            "execution_mode": "eager"
+          },
+          "project_id": 1,
+          "op": "triton_vector_add",
+          "config_id": 2
+        }
+      ],
+      "ut_test": [
+        {
+          "config_name": "triton_vector_add",
+          "config_type": "ut_test",
+          "script": "python3 ./triton_vector_add.py",
+          "user_options": {
+            "config_name": "triton_vector_add",
+            "script": "python3 ./triton_vector_add.py"
+          },
+          "project_id": 1,
+          "op": "triton_vector_add",
+          "config_id": 3
+        }
+      ],
+      "sanitizer": [
+        {
+          "config_name": "triton_vector_add",
+          "config_type": "sanitizer",
+          "script": "python3 ./triton_vector_add.py",
+          "target_file": "python3 ./triton_vector_add.py",
+          "user_options": {
+            "fileMapList": [],
+            "config_name": "triton_vector_add",
+            "script": "python3 ./triton_vector_add.py",
+            "logLevel": "warn",
+            "maxDebuglogSize": 1024,
+            "useBlock": false,
+            "tool": {
+              "memcheck": true,
+              "racecheck": true,
+              "initcheck": true
+            },
+            "memcheckOption": {
+              "leak-check": true,
+              "check-unused-memory": true
+            }
+          },
+          "project_id": 1,
+          "op": "triton_vector_add",
+          "config_id": 4
+        }
+      ],
+      "on_board": [
+        {
+          "config_name": "triton_vector_add",
+          "config_type": "on_board",
+          "script": "python3 ./triton_vector_add.py",
+          "user_options": {
+            "fileMapList": [],
+            "config_name": "triton_vector_add",
+            "script": "python3 ./triton_vector_add.py",
+            "Occupancy": true,
+            "Roofline": true,
+            "Source": true,
+            "ArithmeticUtilization": true,
+            "L2Cache": true,
+            "Memory": true,
+            "MemoryL0": true,
+            "MemoryUB": true,
+            "PipeUtilization": true,
+            "ResourceConflictRatio": true,
+            "KernelScale": false,
+            "MemoryDetail": true,
+            "operatorMetrics": true
+          },
+          "project_id": 1,
+          "op": "triton_vector_add",
+          "config_id": 5
+        }
+      ],
+      "simulate": [
+        {
+          "config_name": "triton_vector_add",
+          "config_type": "simulate",
+          "script": "python3 ./triton_vector_add.py",
+          "user_options": {
+            "fileMapList": [],
+            "config_name": "triton_vector_add",
+            "script": "python3 ./triton_vector_add.py",
+            "PMSampling": false,
+            "ResourceConflictRatio": true
+          },
+          "project_id": 1,
+          "op": "triton_vector_add",
+          "config_id": 6
+        }
+      ]
+    },
+    "runtimeConfigs": {
+      "1": {
+        "id": 1,
+        "config_name": "triton_vector_add",
+        "config_type": "build_op",
+        "script": "python3 ./triton_vector_add.py",
+        "target_file": "python3 ./triton_vector_add.py",
+        "user_options": {
+          "config_name": "triton_vector_add",
+          "target_file": "python3 ./triton_vector_add.py",
+          "script": "python3 ./triton_vector_add.py",
+          "cpu_debug_script": "python3 ./triton_vector_add.py",
+          "npu_debug_script": "TRITON_DISABLE_CACHE=1 TRITON_DISABLE_LINE_INFO=false LLVM_EXTRACT_DI_LOCAL_VARIABLES=1 python3 ./triton_vector_add.py && sh -c 'K=$(find \"$HOME/.triton/cache\" -type f -name 'triton_vector_add.npubin' -printf \"%T@ %p\\n\" 2>/dev/null | sort -n | tail -1 | cut -d\" \" -f2-); [ -z \"$K\" ] && K=$(find \"$HOME/.triton/cache\" -type f \\( -name '*.npubin' -o -name kernel.o -o -name kernel_reloc.o \\) -printf \"%T@ %p\\n\" 2>/dev/null | sort -n | tail -1 | cut -d\" \" -f2-); [ -z \"$K\" ] && exit 0; d=\"$PWD\"; while [ \"$d\" != \"/\" ]; do for cfg in .vscode .arts; do if [ -d \"$d/$cfg\" ]; then printf \"%s\\n\" \"$K\" > \"$d/$cfg/.triton_launch_kernel_path\"; exit 0; fi; done; d=$(dirname \"$d\"); done'",
+          "op": "triton_vector_add"
+        },
+        "project_id": 1,
+        "op": "triton_vector_add"
+      },
+      "2": {
+        "id": 2,
+        "config_name": "triton_vector_add",
+        "config_type": "build_example",
+        "script": "python3 ./triton_vector_add.py",
+        "user_options": {
+          "config_name": "triton_vector_add",
+          "script": "python3 ./triton_vector_add.py",
+          "execution_mode": "eager"
+        },
+        "project_id": 1,
+        "op": "triton_vector_add"
+      },
+      "3": {
+        "id": 3,
+        "config_name": "triton_vector_add",
+        "config_type": "ut_test",
+        "script": "python3 ./triton_vector_add.py",
+        "user_options": {
+          "config_name": "triton_vector_add",
+          "script": "python3 ./triton_vector_add.py"
+        },
+        "project_id": 1,
+        "op": "triton_vector_add"
+      },
+      "4": {
+        "id": 4,
+        "config_name": "triton_vector_add",
+        "config_type": "sanitizer",
+        "script": "python3 ./triton_vector_add.py",
+        "target_file": "python3 ./triton_vector_add.py",
+        "user_options": {
+          "fileMapList": [],
+          "config_name": "triton_vector_add",
+          "script": "python3 ./triton_vector_add.py",
+          "logLevel": "warn",
+          "maxDebuglogSize": 1024,
+          "useBlock": false,
+          "tool": {
+            "memcheck": true,
+            "racecheck": true,
+            "initcheck": true
+          },
+          "memcheckOption": {
+            "leak-check": true,
+            "check-unused-memory": true
+          }
+        },
+        "project_id": 1,
+        "op": "triton_vector_add"
+      },
+      "5": {
+        "id": 5,
+        "config_name": "triton_vector_add",
+        "config_type": "on_board",
+        "script": "python3 ./triton_vector_add.py",
+        "user_options": {
+          "fileMapList": [],
+          "config_name": "triton_vector_add",
+          "script": "python3 ./triton_vector_add.py",
+          "Occupancy": true,
+          "Roofline": true,
+          "Source": true,
+          "ArithmeticUtilization": true,
+          "L2Cache": true,
+          "Memory": true,
+          "MemoryL0": true,
+          "MemoryUB": true,
+          "PipeUtilization": true,
+          "ResourceConflictRatio": true,
+          "KernelScale": false,
+          "MemoryDetail": true,
+          "operatorMetrics": true
+        },
+        "project_id": 1,
+        "op": "triton_vector_add"
+      },
+      "6": {
+        "id": 6,
+        "config_name": "triton_vector_add",
+        "config_type": "simulate",
+        "script": "python3 ./triton_vector_add.py",
+        "user_options": {
+          "fileMapList": [],
+          "config_name": "triton_vector_add",
+          "script": "python3 ./triton_vector_add.py",
+          "PMSampling": false,
+          "ResourceConflictRatio": true
+        },
+        "project_id": 1,
+        "op": "triton_vector_add"
+      }
+    },
+    "sanitizerList": []
+  },
+  "torch_library": {
+    "commands": {
+      "getBuildOpCommand": ". /etc/profile && cd /workspace/projects/torch_lib && bash /workspace/projects/torch_lib/build.sh",
+      "getRunCommand": ". /etc/profile && mkdir -p  /workspace/projects/torch_lib/build && cd /workspace/projects/torch_lib/build && python ../run.py",
+      "resolveExampleModeForConfig": {
+        "mode": "eager",
+        "exampleFound": false,
+        "opName": "torch_lib"
+      },
+      "getBuildExampleCommand": ". /etc/profile && cd /workspace/projects/torch_lib && bash /workspace/projects/torch_lib/build.sh",
+      "getSimulateCommand": ". /etc/profile && mkdir -p  /workspace/projects/torch_lib/build && cd /workspace/projects/torch_lib/build && msprof op simulator --soc-version=Ascend910B3 --output=/workspace/projects/torch_lib/.vscode\\opprof --aic-metrics=PipeUtilization python ../run.py",
+      "getOnBoardCommand": ". /etc/profile && mkdir -p  /workspace/projects/torch_lib/build && cd /workspace/projects/torch_lib/build && msprof op --output=/workspace/projects/torch_lib/.vscode\\opprof --aic-metrics=Occupancy,Roofline,Source,MemoryDetail,Default python ../run.py",
+      "getSanitizerCommand": ". /etc/profile && mkdir -p  /workspace/projects/torch_lib/build && cd /workspace/projects/torch_lib/build && mssanitizer --tool=memcheck --tool=racecheck --tool=initcheck --leak-check=yes --check-unused-memory=yes --log-level=warn --max-debuglog-size=1024 --log-file=/workspace/projects/torch_lib\\.vscode\\mindstudio_sanitizer_log\\mssanitizer_<ts>.log python ../run.py",
+      "getUtTestCommand": ". /etc/profile && cd /workspace/projects/torch_lib && bash /workspace/projects/torch_lib/build.sh -u",
+      "getStandardCustomDeployCommand": ". /etc/profile && cd /workspace/projects/torch_lib && RUN_FILE=$(find build_out/*.run) && chmod +x \"$RUN_FILE\" && RUN_FILE_HELP=$(\"$RUN_FILE\" --help 2>&1 || true) && case \"$RUN_FILE_HELP\" in *--force*) \"$RUN_FILE\" --force ;; *) \"$RUN_FILE\" ;; esac"
+    },
+    "errors": {
+      "getBuildOpCommand": "",
+      "getRunCommand": "",
+      "resolveExampleModeForConfig": "",
+      "getBuildExampleCommand": "",
+      "getSimulateCommand": "",
+      "getOnBoardCommand": "",
+      "getSanitizerCommand": "",
+      "getUtTestCommand": "",
+      "getStandardCustomDeployCommand": ""
+    },
+    "merges": {
+      "build_op": [
+        {
+          "config_name": "torch_lib",
+          "config_type": "build_op",
+          "script": "bash /workspace/projects/torch_lib/build.sh",
+          "target_file": "python ../run.py",
+          "user_options": {
+            "config_name": "torch_lib",
+            "target_file": "python ../run.py",
+            "script": "bash /workspace/projects/torch_lib/build.sh",
+            "cpu_debug_script": "bash /workspace/projects/torch_lib/build.sh --cpudebug",
+            "npu_debug_script": "bash /workspace/projects/torch_lib/build.sh --debug",
+            "op": "torch_lib"
+          },
+          "project_id": 1,
+          "op": "torch_lib",
+          "config_id": 1
+        }
+      ],
+      "build_example": [
+        {
+          "config_name": "torch_lib",
+          "config_type": "build_example",
+          "script": "bash /workspace/projects/torch_lib/build.sh",
+          "user_options": {
+            "config_name": "torch_lib",
+            "script": "bash /workspace/projects/torch_lib/build.sh",
+            "execution_mode": "eager"
+          },
+          "project_id": 1,
+          "op": "torch_lib",
+          "config_id": 2
+        }
+      ],
+      "ut_test": [
+        {
+          "config_name": "torch_lib",
+          "config_type": "ut_test",
+          "script": "bash /workspace/projects/torch_lib/build.sh -u",
+          "user_options": {
+            "config_name": "torch_lib",
+            "script": "bash /workspace/projects/torch_lib/build.sh -u"
+          },
+          "project_id": 1,
+          "op": "torch_lib",
+          "config_id": 3
+        }
+      ],
+      "sanitizer": [
+        {
+          "config_name": "torch_lib",
+          "config_type": "sanitizer",
+          "script": "bash /workspace/projects/torch_lib/build.sh --mssanitizer",
+          "target_file": "python ../run.py",
+          "user_options": {
+            "fileMapList": [],
+            "config_name": "torch_lib",
+            "script": "bash /workspace/projects/torch_lib/build.sh --mssanitizer",
+            "logLevel": "warn",
+            "maxDebuglogSize": 1024,
+            "useBlock": false,
+            "tool": {
+              "memcheck": true,
+              "racecheck": true,
+              "initcheck": true
+            },
+            "memcheckOption": {
+              "leak-check": true,
+              "check-unused-memory": true
+            }
+          },
+          "project_id": 1,
+          "op": "torch_lib",
+          "config_id": 4
+        }
+      ],
+      "on_board": [
+        {
+          "config_name": "torch_lib",
+          "config_type": "on_board",
+          "script": "bash /workspace/projects/torch_lib/build.sh --onboard",
+          "user_options": {
+            "fileMapList": [],
+            "config_name": "torch_lib",
+            "script": "bash /workspace/projects/torch_lib/build.sh --onboard",
+            "Occupancy": true,
+            "Roofline": true,
+            "Source": true,
+            "ArithmeticUtilization": true,
+            "L2Cache": true,
+            "Memory": true,
+            "MemoryL0": true,
+            "MemoryUB": true,
+            "PipeUtilization": true,
+            "ResourceConflictRatio": true,
+            "KernelScale": false,
+            "MemoryDetail": true,
+            "operatorMetrics": true
+          },
+          "project_id": 1,
+          "op": "torch_lib",
+          "config_id": 5
+        }
+      ],
+      "simulate": [
+        {
+          "config_name": "torch_lib",
+          "config_type": "simulate",
+          "script": "bash /workspace/projects/torch_lib/build.sh --simulator",
+          "user_options": {
+            "fileMapList": [],
+            "config_name": "torch_lib",
+            "script": "bash /workspace/projects/torch_lib/build.sh --simulator",
+            "PMSampling": false,
+            "ResourceConflictRatio": true
+          },
+          "project_id": 1,
+          "op": "torch_lib",
+          "config_id": 6
+        }
+      ]
+    },
+    "runtimeConfigs": {
+      "1": {
+        "id": 1,
+        "config_name": "torch_lib",
+        "config_type": "build_op",
+        "script": "bash /workspace/projects/torch_lib/build.sh",
+        "target_file": "python ../run.py",
+        "user_options": {
+          "config_name": "torch_lib",
+          "target_file": "python ../run.py",
+          "script": "bash /workspace/projects/torch_lib/build.sh",
+          "cpu_debug_script": "bash /workspace/projects/torch_lib/build.sh --cpudebug",
+          "npu_debug_script": "bash /workspace/projects/torch_lib/build.sh --debug",
+          "op": "torch_lib"
+        },
+        "project_id": 1,
+        "op": "torch_lib"
+      },
+      "2": {
+        "id": 2,
+        "config_name": "torch_lib",
+        "config_type": "build_example",
+        "script": "bash /workspace/projects/torch_lib/build.sh",
+        "user_options": {
+          "config_name": "torch_lib",
+          "script": "bash /workspace/projects/torch_lib/build.sh",
+          "execution_mode": "eager"
+        },
+        "project_id": 1,
+        "op": "torch_lib"
+      },
+      "3": {
+        "id": 3,
+        "config_name": "torch_lib",
+        "config_type": "ut_test",
+        "script": "bash /workspace/projects/torch_lib/build.sh -u",
+        "user_options": {
+          "config_name": "torch_lib",
+          "script": "bash /workspace/projects/torch_lib/build.sh -u"
+        },
+        "project_id": 1,
+        "op": "torch_lib"
+      },
+      "4": {
+        "id": 4,
+        "config_name": "torch_lib",
+        "config_type": "sanitizer",
+        "script": "bash /workspace/projects/torch_lib/build.sh --mssanitizer",
+        "target_file": "python ../run.py",
+        "user_options": {
+          "fileMapList": [],
+          "config_name": "torch_lib",
+          "script": "bash /workspace/projects/torch_lib/build.sh --mssanitizer",
+          "logLevel": "warn",
+          "maxDebuglogSize": 1024,
+          "useBlock": false,
+          "tool": {
+            "memcheck": true,
+            "racecheck": true,
+            "initcheck": true
+          },
+          "memcheckOption": {
+            "leak-check": true,
+            "check-unused-memory": true
+          }
+        },
+        "project_id": 1,
+        "op": "torch_lib"
+      },
+      "5": {
+        "id": 5,
+        "config_name": "torch_lib",
+        "config_type": "on_board",
+        "script": "bash /workspace/projects/torch_lib/build.sh --onboard",
+        "user_options": {
+          "fileMapList": [],
+          "config_name": "torch_lib",
+          "script": "bash /workspace/projects/torch_lib/build.sh --onboard",
+          "Occupancy": true,
+          "Roofline": true,
+          "Source": true,
+          "ArithmeticUtilization": true,
+          "L2Cache": true,
+          "Memory": true,
+          "MemoryL0": true,
+          "MemoryUB": true,
+          "PipeUtilization": true,
+          "ResourceConflictRatio": true,
+          "KernelScale": false,
+          "MemoryDetail": true,
+          "operatorMetrics": true
+        },
+        "project_id": 1,
+        "op": "torch_lib"
+      },
+      "6": {
+        "id": 6,
+        "config_name": "torch_lib",
+        "config_type": "simulate",
+        "script": "bash /workspace/projects/torch_lib/build.sh --simulator",
+        "user_options": {
+          "fileMapList": [],
+          "config_name": "torch_lib",
+          "script": "bash /workspace/projects/torch_lib/build.sh --simulator",
+          "PMSampling": false,
+          "ResourceConflictRatio": true
+        },
+        "project_id": 1,
+        "op": "torch_lib"
+      }
+    },
+    "sanitizerList": []
+  },
+  "standard_custom": {
+    "commands": {
+      "getBuildOpCommand": ". /etc/profile && cd /workspace/projects/ops_math && bash /workspace/projects/ops_math/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops=add,sub --soc=ascend910b && RUN_FILE=$(find /workspace/projects/ops_math/build_out/*.run) && chmod +x \"$RUN_FILE\" && RUN_FILE_HELP=$(\"$RUN_FILE\" --help 2>&1 || true) && case \"$RUN_FILE_HELP\" in *--force*) \"$RUN_FILE\" --force ;; *) \"$RUN_FILE\" ;; esac",
+      "getRunCommand": ". /etc/profile && cd /workspace/projects/ops_math && RUN_FILE=$(find /workspace/projects/ops_math/build_out/*.run) && chmod +x \"$RUN_FILE\" && RUN_FILE_HELP=$(\"$RUN_FILE\" --help 2>&1 || true) && case \"$RUN_FILE_HELP\" in *--force*) \"$RUN_FILE\" --force ;; *) \"$RUN_FILE\" ;; esac",
+      "resolveExampleModeForConfig": {
+        "mode": "eager",
+        "exampleFound": false,
+        "opName": "add,sub"
+      },
+      "getBuildExampleCommand": ". /etc/profile && cd /workspace/projects/ops_math && bash /workspace/projects/ops_math/build.sh --vendor_name=custom --run_example add,sub eager cust --soc=ascend910b",
+      "getSimulateCommand": ". /etc/profile && mkdir -p /workspace/projects/ops_math/build && cd /workspace/projects/ops_math/build && msprof op simulator --soc-version=Ascend910B3 --output=/workspace/projects/ops_math/.vscode\\opprof --aic-metrics=PipeUtilization /workspace/projects/ops_math/build/test_aclnn_add",
+      "getOnBoardCommand": ". /etc/profile && mkdir -p /workspace/projects/ops_math/build && cd /workspace/projects/ops_math/build && msprof op --output=/workspace/projects/ops_math/.vscode\\opprof --aic-metrics=Occupancy,Roofline,Source,MemoryDetail,Default /workspace/projects/ops_math/build/test_aclnn_add",
+      "getSanitizerCommand": ". /etc/profile && cd /workspace/projects/ops_math && mssanitizer --tool=memcheck --tool=racecheck --tool=initcheck --leak-check=yes --check-unused-memory=yes --log-level=warn --max-debuglog-size=1024 --log-file=/workspace/projects/ops_math\\.vscode\\mindstudio_sanitizer_log\\mssanitizer_<ts>.log /workspace/projects/ops_math/build/test_aclnn_add",
+      "getUtTestCommand": ". /etc/profile && cd /workspace/projects/ops_math && bash /workspace/projects/ops_math/build.sh --soc={soc_version} --ops=add,sub -u --soc=ascend910b",
+      "getStandardCustomDeployCommand": ". /etc/profile && cd /workspace/projects/ops_math && RUN_FILE=$(find /workspace/projects/ops_math/build_out/*.run) && chmod +x \"$RUN_FILE\" && RUN_FILE_HELP=$(\"$RUN_FILE\" --help 2>&1 || true) && case \"$RUN_FILE_HELP\" in *--force*) \"$RUN_FILE\" --force ;; *) \"$RUN_FILE\" ;; esac"
+    },
+    "errors": {
+      "getBuildOpCommand": "",
+      "getRunCommand": "",
+      "resolveExampleModeForConfig": "",
+      "getBuildExampleCommand": "",
+      "getSimulateCommand": "",
+      "getOnBoardCommand": "",
+      "getSanitizerCommand": "",
+      "getUtTestCommand": "",
+      "getStandardCustomDeployCommand": ""
+    },
+    "merges": {
+      "build_op": [
+        {
+          "config_name": "ops_math",
+          "config_type": "build_op",
+          "script": "bash /workspace/projects/ops_math/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames}",
+          "target_file": "/workspace/projects/ops_math/build_out/*.run",
+          "user_options": {
+            "config_name": "ops_math",
+            "target_file": "/workspace/projects/ops_math/build_out/*.run",
+            "script": "bash /workspace/projects/ops_math/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames}",
+            "cpu_debug_script": "bash /workspace/projects/ops_math/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --cpudebug --simulator {simulator_type}",
+            "npu_debug_script": "bash /workspace/projects/ops_math/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --debug",
+            "op": "ops_math"
+          },
+          "project_id": 1,
+          "op": "ops_math",
+          "config_id": 1
+        }
+      ],
+      "build_example": [
+        {
+          "config_name": "ops_math",
+          "config_type": "build_example",
+          "script": "bash /workspace/projects/ops_math/build.sh --vendor_name=custom --run_example",
+          "user_options": {
+            "config_name": "ops_math",
+            "script": "bash /workspace/projects/ops_math/build.sh --vendor_name=custom --run_example",
+            "execution_mode": "eager"
+          },
+          "project_id": 1,
+          "op": "ops_math",
+          "config_id": 2
+        }
+      ],
+      "ut_test": [
+        {
+          "config_name": "ops_math",
+          "config_type": "ut_test",
+          "script": "bash /workspace/projects/ops_math/build.sh --soc={soc_version} --ops={operatorNames} -u",
+          "user_options": {
+            "config_name": "ops_math",
+            "script": "bash /workspace/projects/ops_math/build.sh --soc={soc_version} --ops={operatorNames} -u"
+          },
+          "project_id": 1,
+          "op": "ops_math",
+          "config_id": 3
+        }
+      ],
+      "sanitizer": [
+        {
+          "config_name": "ops_math",
+          "config_type": "sanitizer",
+          "script": "bash /workspace/projects/ops_math/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --mssanitizer",
+          "target_file": "/workspace/projects/ops_math/build_out/*.run",
+          "user_options": {
+            "fileMapList": [],
+            "config_name": "ops_math",
+            "script": "bash /workspace/projects/ops_math/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --mssanitizer",
+            "logLevel": "warn",
+            "maxDebuglogSize": 1024,
+            "useBlock": false,
+            "tool": {
+              "memcheck": true,
+              "racecheck": true,
+              "initcheck": true
+            },
+            "memcheckOption": {
+              "leak-check": true,
+              "check-unused-memory": true
+            }
+          },
+          "project_id": 1,
+          "op": "ops_math",
+          "config_id": 4
+        }
+      ],
+      "on_board": [
+        {
+          "config_name": "ops_math",
+          "config_type": "on_board",
+          "script": "bash /workspace/projects/ops_math/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --onboard",
+          "user_options": {
+            "fileMapList": [],
+            "config_name": "ops_math",
+            "script": "bash /workspace/projects/ops_math/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --onboard",
+            "Occupancy": true,
+            "Roofline": true,
+            "Source": true,
+            "ArithmeticUtilization": true,
+            "L2Cache": true,
+            "Memory": true,
+            "MemoryL0": true,
+            "MemoryUB": true,
+            "PipeUtilization": true,
+            "ResourceConflictRatio": true,
+            "KernelScale": false,
+            "MemoryDetail": true,
+            "operatorMetrics": true
+          },
+          "project_id": 1,
+          "op": "ops_math",
+          "config_id": 5
+        }
+      ],
+      "simulate": [
+        {
+          "config_name": "ops_math",
+          "config_type": "simulate",
+          "script": "bash /workspace/projects/ops_math/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --simulator {simulator_type}",
+          "user_options": {
+            "fileMapList": [],
+            "config_name": "ops_math",
+            "script": "bash /workspace/projects/ops_math/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --simulator {simulator_type}",
+            "PMSampling": false,
+            "ResourceConflictRatio": true
+          },
+          "project_id": 1,
+          "op": "ops_math",
+          "config_id": 6
+        }
+      ]
+    },
+    "runtimeConfigs": {
+      "1": {
+        "id": 1,
+        "config_name": "ops_math",
+        "config_type": "build_op",
+        "script": "bash /workspace/projects/ops_math/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames}",
+        "target_file": "/workspace/projects/ops_math/build_out/*.run",
+        "user_options": {
+          "config_name": "ops_math",
+          "target_file": "/workspace/projects/ops_math/build_out/*.run",
+          "script": "bash /workspace/projects/ops_math/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames}",
+          "cpu_debug_script": "bash /workspace/projects/ops_math/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --cpudebug --simulator {simulator_type}",
+          "npu_debug_script": "bash /workspace/projects/ops_math/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --debug",
+          "op": "ops_math"
+        },
+        "project_id": 1,
+        "op": "ops_math"
+      },
+      "2": {
+        "id": 2,
+        "config_name": "ops_math",
+        "config_type": "build_example",
+        "script": "bash /workspace/projects/ops_math/build.sh --vendor_name=custom --run_example",
+        "user_options": {
+          "config_name": "ops_math",
+          "script": "bash /workspace/projects/ops_math/build.sh --vendor_name=custom --run_example",
+          "execution_mode": "eager"
+        },
+        "project_id": 1,
+        "op": "ops_math"
+      },
+      "3": {
+        "id": 3,
+        "config_name": "ops_math",
+        "config_type": "ut_test",
+        "script": "bash /workspace/projects/ops_math/build.sh --soc={soc_version} --ops={operatorNames} -u",
+        "user_options": {
+          "config_name": "ops_math",
+          "script": "bash /workspace/projects/ops_math/build.sh --soc={soc_version} --ops={operatorNames} -u"
+        },
+        "project_id": 1,
+        "op": "ops_math"
+      },
+      "4": {
+        "id": 4,
+        "config_name": "ops_math",
+        "config_type": "sanitizer",
+        "script": "bash /workspace/projects/ops_math/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --mssanitizer",
+        "target_file": "/workspace/projects/ops_math/build_out/*.run",
+        "user_options": {
+          "fileMapList": [],
+          "config_name": "ops_math",
+          "script": "bash /workspace/projects/ops_math/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --mssanitizer",
+          "logLevel": "warn",
+          "maxDebuglogSize": 1024,
+          "useBlock": false,
+          "tool": {
+            "memcheck": true,
+            "racecheck": true,
+            "initcheck": true
+          },
+          "memcheckOption": {
+            "leak-check": true,
+            "check-unused-memory": true
+          }
+        },
+        "project_id": 1,
+        "op": "ops_math"
+      },
+      "5": {
+        "id": 5,
+        "config_name": "ops_math",
+        "config_type": "on_board",
+        "script": "bash /workspace/projects/ops_math/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --onboard",
+        "user_options": {
+          "fileMapList": [],
+          "config_name": "ops_math",
+          "script": "bash /workspace/projects/ops_math/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --onboard",
+          "Occupancy": true,
+          "Roofline": true,
+          "Source": true,
+          "ArithmeticUtilization": true,
+          "L2Cache": true,
+          "Memory": true,
+          "MemoryL0": true,
+          "MemoryUB": true,
+          "PipeUtilization": true,
+          "ResourceConflictRatio": true,
+          "KernelScale": false,
+          "MemoryDetail": true,
+          "operatorMetrics": true
+        },
+        "project_id": 1,
+        "op": "ops_math"
+      },
+      "6": {
+        "id": 6,
+        "config_name": "ops_math",
+        "config_type": "simulate",
+        "script": "bash /workspace/projects/ops_math/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --simulator {simulator_type}",
+        "user_options": {
+          "fileMapList": [],
+          "config_name": "ops_math",
+          "script": "bash /workspace/projects/ops_math/build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames} --simulator {simulator_type}",
+          "PMSampling": false,
+          "ResourceConflictRatio": true
+        },
+        "project_id": 1,
+        "op": "ops_math"
+      }
+    },
+    "sanitizerList": []
+  }
+}

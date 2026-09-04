@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 
 export const IDE_CONFIG_DIR_VSCODE = '.vscode';
+
 export const IDE_CONFIG_DIR_CODEARTS = '.arts';
 
 /** True when running in CodeArts IDE (`vscode.env.uriScheme === 'codearts'`). */
@@ -36,19 +37,27 @@ export function getIdeSettingsFilePath(workspaceRoot: string): string {
 /** Missing, whitespace-only, invalid JSON, or `{}` workspace settings file. */
 export function isIdeSettingsFileEmpty(workspaceRoot?: string): boolean {
   const root = workspaceRoot ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+
   if (!root) {
     return true;
   }
+
   const filePath = getIdeSettingsFilePath(root);
+
   if (!fs.existsSync(filePath)) {
     return true;
   }
-  const raw = fs.readFileSync(filePath, 'utf8').trim();
+
+  const raw = fs.readFileSync(filePath, 'utf8')
+    .trim();
+
   if (!raw) {
     return true;
   }
+
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
+
     return Object.keys(parsed).length === 0;
   }
   catch {
@@ -60,19 +69,41 @@ export function getDevtoolConfigPath(workspaceRoot: string): string {
   return joinIdeConfigPath(workspaceRoot, 'devtool_config.json');
 }
 
-/** Legacy workspace-local configs store: `.vscode|op_devtools/data/configs.json`. */
+/** Workspace-local configs store: `.vscode|op_devtools/data/configs.json`. */
 export function getLegacyWorkspaceConfigsFile(workspaceRoot: string): string {
   return path.join(joinIdeConfigPath(workspaceRoot, 'op_devtools'), 'data', 'configs.json');
 }
 
-/** Same path when `op_devtools` dir is already resolved (e.g. `config.workspace_data_dir`). */
+/** Same path when the `op_devtools` dir is already resolved (e.g. `workspace_data_dir`). */
 export function getLegacyWorkspaceConfigsFileFromOpDevtoolsDir(opDevtoolsDir: string): string {
   return path.join(opDevtoolsDir, 'data', 'configs.json');
+}
+
+/**
+ * Host-global user data dir: the `WORKSPACE_FOLDER` env var when set, otherwise
+ * the ide-server relative `data/ms-op-suite` under the user home. Read-only —
+ * no `ensureDirSync`/`execSync` side effects; the stores are only read by the
+ * importer.
+ */
+export function getLegacyUserDataDir(): string {
+  return process.env.WORKSPACE_FOLDER ?? joinIdeServerPath(os.homedir(), 'data', 'ms-op-suite');
+}
+
+/**
+ * Host-global remote config file (`~/<ide-server>/data/ms-op-suite/
+ * config.json`) — shared by the importer (seeds cache.json) and the
+ * new-project prefill peek. Read-only: the file is never written or recreated.
+ */
+
+/** `WORKSPACE_FOLDER` env var, read without side effects. */
+export function getWorkspaceFolderFromEnv(): string | undefined {
+  return process.env.WORKSPACE_FOLDER || undefined;
 }
 
 /** Remote/server directory name under the user home, e.g. `.vscode-server` when `uriScheme` is `vscode`. */
 export function getIdeServerDirName(): string {
   const scheme = (vscode.env.uriScheme || 'vscode').toLowerCase();
+
   return `.${scheme}-server`;
 }
 

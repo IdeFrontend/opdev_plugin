@@ -41,8 +41,8 @@ jest.mock('@plugin/domain/plugins/operator-plugin.registry', () => ({ OperatorPl
 
 jest.mock('@plugin/domain', () => ({
   getBuildExampleCommand: jest.fn(),
-  getProjectById: jest.fn(),
-  resolveExampleModeForConfig: jest.fn(),
+  resolveBuildExampleBaseContext: jest.fn(),
+  resolveExampleModeForBaseContext: jest.fn(),
 }));
 
 jest.mock('@plugin/domain/utils/debug-target', () => ({
@@ -87,7 +87,6 @@ import {
 describe('taskMethods.startUtTest', () => {
   const executor = { kill: jest.fn() };
   const projectManager = {
-    initProject: jest.fn(),
     getExecutor: jest.fn(() => executor),
     clearExecutor: jest.fn(),
   };
@@ -110,8 +109,6 @@ describe('taskMethods.startUtTest', () => {
     expect(assertNpuHardwareAvailableOrNotify).not.toHaveBeenCalled();
     expect(whenPostActivateBootstrapReady)
       .toHaveBeenCalledTimes(1);
-    expect(projectManager.initProject)
-      .toHaveBeenCalledTimes(1);
     expect(buildService.startUtTest)
       .toHaveBeenCalledWith(params);
     expect(projectManager.clearExecutor)
@@ -129,8 +126,6 @@ describe('taskMethods.startUtTest', () => {
     expect(assertNpuHardwareAvailableOrNotify).not.toHaveBeenCalled();
     expect(whenPostActivateBootstrapReady)
       .toHaveBeenCalledTimes(1);
-    expect(projectManager.initProject)
-      .toHaveBeenCalledTimes(1);
     expect(buildService.startOnBoard)
       .toHaveBeenCalledWith(params);
     expect(projectManager.clearExecutor)
@@ -142,8 +137,6 @@ describe('taskMethods.startUtTest', () => {
 
     expect(assertNpuHardwareAvailableOrNotify).not.toHaveBeenCalled();
     expect(whenPostActivateBootstrapReady)
-      .toHaveBeenCalledTimes(1);
-    expect(projectManager.initProject)
       .toHaveBeenCalledTimes(1);
     expect(buildService.startRun)
       .toHaveBeenCalledTimes(1);
@@ -163,8 +156,6 @@ describe('taskMethods.startUtTest', () => {
       .not.toHaveBeenCalled();
     expect(whenPostActivateBootstrapReady)
       .toHaveBeenCalledTimes(1);
-    expect(projectManager.initProject)
-      .toHaveBeenCalledTimes(1);
     expect(buildService.startDumpTensor)
       .toHaveBeenCalledWith(params);
     expect(projectManager.clearExecutor)
@@ -176,8 +167,6 @@ describe('taskMethods.startUtTest', () => {
 
     expect(assertNpuHardwareAvailableOrNotify).not.toHaveBeenCalled();
     expect(whenPostActivateBootstrapReady)
-      .toHaveBeenCalledTimes(1);
-    expect(projectManager.initProject)
       .toHaveBeenCalledTimes(1);
     expect(sanitizerService.runSanitizer)
       .toHaveBeenCalledTimes(1);
@@ -196,8 +185,6 @@ describe('taskMethods.startUtTest', () => {
       .toHaveBeenCalledTimes(1);
     expect(startRemoteNpuHardwareProbe)
       .toHaveBeenCalledTimes(1);
-    expect(projectManager.initProject)
-      .not.toHaveBeenCalled();
   });
 
   it('parses ready adapter ports from nested JSON logs', () => {

@@ -11,7 +11,7 @@ export function resolveWorkspaceRoot(
     return explicitRoot;
   }
 
-  const projectPath = ProjectManager.getInstance().getProjectInfo()?.path;
+  const projectPath = ProjectManager.getInstance().projectPath;
   const folderPath = getFirstWorkspaceFolderPath();
 
   if (preference === 'workspaceFolderFirst') {

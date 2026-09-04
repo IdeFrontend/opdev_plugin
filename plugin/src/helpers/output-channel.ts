@@ -10,8 +10,12 @@ export type OperatorToolOutputLabel =
   | 'run'
   | 'simulate'
   | 'sanitizer'
-  | 'test'
-  | 'debug'
+  | 'onboard'
+  | 'st test'
+  | 'ut test'
+  | 'dump tensor'
+  | 'cpu debug'
+  | 'npu debug'
   | 'tool';
 
 let sharedChannel: vscode.OutputChannel | undefined;
@@ -26,7 +30,12 @@ export function getHuaweiOpDevtoolsOutputChannel(): vscode.OutputChannel {
   return sharedChannel;
 }
 
-/** One persistent output channel per operation label; cleared when reused for a new run by default. */
+/**
+ * One persistent output channel per operation label. A new run APPENDS to the
+ * channel by default — repeated runs of the same operation (debug, compile, …)
+ * accumulate their output instead of overwriting it (GC-73). Pass
+ * `{ clear: true }` when a run must start from a clean channel.
+ */
 export function getOperatorToolOutputChannel(
   label: OperatorToolOutputLabel | string,
   options: { clear?: boolean } = {},
@@ -34,7 +43,7 @@ export function getOperatorToolOutputChannel(
   const existing = toolChannelsByLabel.get(label);
 
   if (existing) {
-    if (options.clear !== false) {
+    if (options.clear === true) {
       existing.clear();
     }
 
@@ -46,27 +55,6 @@ export function getOperatorToolOutputChannel(
   toolChannelsByLabel.set(label, channel);
 
   return channel;
-}
-
-/** Fallback label from operator config type when call sites do not pass an override. */
-export function deriveOperatorToolOutputLabel(ctx: {
-  configType?: string | null;
-}): OperatorToolOutputLabel {
-  switch (ctx.configType) {
-    case 'build_op':
-    case 'build_example':
-      return 'compile';
-    case 'simulate':
-      return 'simulate';
-    case 'on_board':
-      return 'run';
-    case 'ut_test':
-      return 'test';
-    case 'sanitizer':
-      return 'sanitizer';
-    default:
-      return 'tool';
-  }
 }
 
 export function appendLog(

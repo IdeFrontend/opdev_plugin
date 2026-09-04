@@ -1,17 +1,17 @@
 import { CannCommandStrategy } from '@plugin/domain/services/command-strategy/cann-strategy';
+import type { BuildExampleConfig } from '@plugin/service/config-service';
 
 /**
- * Regression for plugin_release #171: standard-custom `--run_example` was emitted as
+ * Standard-custom `--run_example` was emitted as
  * `bash build.sh --vendor_name=custom --run_example` with no positional operator/mode,
  * so build.sh printed "Start to run examples, name:  mode:" (both empty) and dumped its
  * usage instead of building/running the example. A field run confirmed the name/mode come
  * from POSITIONAL args (`<op> <mode> <pkg_mode>`), not from `--ops`: a command carrying
  * `--ops=abs` still left `name:` empty. The fix mirrors AscendCommandStrategy.
  */
-describe('CannCommandStrategy.buildExampleCommand (plugin_release #171)', () => {
+describe('CannCommandStrategy.buildExampleCommand (positional run_example args)', () => {
   const strategy = new CannCommandStrategy();
   const base = {
-    operator: null,
     sourceCannCmd: '. /etc/profile',
     cdCmd: 'cd /home/dev/ops-math',
     advance_cmd: '',
@@ -19,17 +19,20 @@ describe('CannCommandStrategy.buildExampleCommand (plugin_release #171)', () => 
 
   const legacyScript = 'bash build.sh --vendor_name=custom --run_example';
 
-  it('appends the positional operator/mode/pkg and a --soc for a legacy run_example script', () => {
+  const baseConfig: BuildExampleConfig = {
+    script: legacyScript,
+    executionMode: 'eager',
+    targetFile: null,
+  };
+
+  it('appends the positional operator/mode/pkg and a --soc for a stored run_example script', () => {
     const cmd = strategy.buildExampleCommand({
       ...base,
-      config: {
-        project_id: 1,
-        op: 'add_example',
-        script: legacyScript,
-      },
+      config: baseConfig,
       operatorNames: 'add_example',
       compileOption: '',
-    } as any);
+      op: 'add_example',
+    });
 
     // build.sh reads name (op) + mode from positionals after --run_example.
     expect(cmd)
@@ -45,14 +48,11 @@ describe('CannCommandStrategy.buildExampleCommand (plugin_release #171)', () => 
   it('does NOT duplicate --soc when compileOption already supplies it (simulate-example flow)', () => {
     const cmd = strategy.buildExampleCommand({
       ...base,
-      config: {
-        project_id: 1,
-        op: 'add_example',
-        script: legacyScript,
-      },
+      config: baseConfig,
       operatorNames: 'add_example',
       compileOption: '--simulator Ascend910_9362 --soc=ascend910_93',
-    } as any);
+      op: 'add_example',
+    });
 
     expect((cmd.match(/--soc=/g) || []).length)
       .toBe(1);
@@ -65,31 +65,25 @@ describe('CannCommandStrategy.buildExampleCommand (plugin_release #171)', () => 
   it('does not add the standard-custom build-only option', () => {
     const cmd = strategy.buildExampleCommand({
       ...base,
-      config: {
-        project_id: 1,
-        op: 'add_example',
-        script: legacyScript,
-      },
+      config: baseConfig,
       operatorNames: 'add_example',
       compileOption: '',
       buildExampleOnly: true,
-    } as any);
+      op: 'add_example',
+    });
 
     expect(cmd)
       .not.toContain('--noexec');
   });
 
-  it('falls back to the build_example config operator (config.op) when operatorNames is empty', () => {
+  it('falls back to the resolved operator (op) when operatorNames is empty', () => {
     const cmd = strategy.buildExampleCommand({
       ...base,
-      config: {
-        project_id: 1,
-        op: 'add_example',
-        script: legacyScript,
-      },
+      config: baseConfig,
       operatorNames: '',
       compileOption: '',
-    } as any);
+      op: 'add_example',
+    });
 
     expect(cmd)
       .toContain('--run_example add_example eager cust');
@@ -97,40 +91,33 @@ describe('CannCommandStrategy.buildExampleCommand (plugin_release #171)', () => 
       .toContain('--soc={soc_version}');
   });
 
-  it('falls back to config.user_options.op when operatorNames is not provided', () => {
+  it('falls back to op when operatorNames is not provided', () => {
     const cmd = strategy.buildExampleCommand({
       ...base,
-      config: {
-        project_id: 1,
-        user_options: { op: 'add_example' },
-        script: legacyScript,
-      },
+      config: baseConfig,
       operatorNames: undefined,
       compileOption: '',
-    } as any);
+      op: 'add_example',
+    });
 
     expect(cmd)
       .toContain('--run_example add_example eager cust');
   });
 
-  it('uses the config execution_mode for the positional mode when set', () => {
+  it('uses the config executionMode for the positional mode when set', () => {
     const cmd = strategy.buildExampleCommand({
       ...base,
       config: {
-        project_id: 1,
-        op: 'add_example',
-        script: legacyScript,
-        user_options: {
-          op: 'add_example',
-          execution_mode: 'sim',
-        },
+        ...baseConfig,
+        executionMode: 'graph',
       },
       operatorNames: 'add_example',
       compileOption: '',
-    } as any);
+      op: 'add_example',
+    });
 
     expect(cmd)
-      .toContain('--run_example add_example sim cust');
+      .toContain('--run_example add_example graph cust');
   });
 
   it('does NOT append the positional op/mode/pkg when the script is not a --run_example interface', () => {
@@ -139,13 +126,13 @@ describe('CannCommandStrategy.buildExampleCommand (plugin_release #171)', () => 
     const cmd = strategy.buildExampleCommand({
       ...base,
       config: {
-        project_id: 1,
-        op: 'add_example',
+        ...baseConfig,
         script: 'bash build.sh -e add_example',
       },
       operatorNames: 'add_example',
       compileOption: '',
-    } as any);
+      op: 'add_example',
+    });
 
     expect(cmd)
       .not.toMatch(/add_example\s+eager\s+cust/);
@@ -153,24 +140,17 @@ describe('CannCommandStrategy.buildExampleCommand (plugin_release #171)', () => 
       .toContain('bash build.sh -e add_example');
   });
 
-  it('honors an explicit exampleMode over config execution_mode (per-operator resolution)', () => {
+  it('honors an explicit exampleMode over config executionMode (per-operator resolution)', () => {
     // pows ships only a graph example; the resolver passes exampleMode='graph' even though
-    // the plugin-wide execution_mode setting is 'eager'. The positional mode must follow it.
+    // the plugin-wide executionMode setting is 'eager'. The positional mode must follow it.
     const cmd = strategy.buildExampleCommand({
       ...base,
-      config: {
-        project_id: 1,
-        op: 'pows',
-        script: legacyScript,
-        user_options: {
-          op: 'pows',
-          execution_mode: 'eager',
-        },
-      },
+      config: baseConfig,
       operatorNames: 'pows',
       compileOption: '',
       exampleMode: 'graph',
-    } as any);
+      op: 'pows',
+    });
 
     expect(cmd)
       .toContain('--run_example pows graph cust');
@@ -179,13 +159,11 @@ describe('CannCommandStrategy.buildExampleCommand (plugin_release #171)', () => 
   it('adds --soc but no positional args when no operator is resolvable (avoids shifting mode into name)', () => {
     const cmd = strategy.buildExampleCommand({
       ...base,
-      config: {
-        project_id: 1,
-        script: legacyScript,
-      },
+      config: baseConfig,
       operatorNames: '',
       compileOption: '',
-    } as any);
+      op: '',
+    });
 
     expect(cmd)
       .toContain('--soc={soc_version}');

@@ -11,8 +11,7 @@
     "settingsPrefix": "op-devtools",
     "viewContainerId": "mindstudio-opssuite-vscode-plugin",
     "viewPrefix": "opdevtools",
-    "contextPrefix": "opDevtools",
-    "colorIdPrefix": "huawei.op.devtools"
+    "contextPrefix": "opDevtools"
   },
   "branding": {
     "productName": "Huawei OP DevTools",

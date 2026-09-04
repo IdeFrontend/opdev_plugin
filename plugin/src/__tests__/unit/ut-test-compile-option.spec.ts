@@ -1,16 +1,11 @@
 import { AscendCommandStrategy } from '@plugin/domain/services/command-strategy/ascend-strategy';
 import { CannCommandStrategy } from '@plugin/domain/services/command-strategy/cann-strategy';
-import type { ConfigRecord } from '@plugin/domain/models/types';
+import type {
+  BuildOpConfig, UtTestConfig,
+} from '@plugin/service/config-service';
 
 describe('buildUtTestCommand compileOption', () => {
-  const baseConfig = {
-    id: 1,
-    project_id: 1,
-    op: 'test_op',
-    config_type: 'ut_test',
-    script: './build.sh --ut',
-    user_options: { script: './build.sh --ut' },
-  } as ConfigRecord;
+  const baseConfig: UtTestConfig = { script: './build.sh --ut' };
 
   it('ascend strategy appends compileOption to UT command', () => {
     const strategy = new AscendCommandStrategy();
@@ -46,10 +41,7 @@ describe('buildUtTestCommand compileOption', () => {
 
   it('cann strategy removes --ops={operatorNames} when no operator selected', () => {
     const strategy = new CannCommandStrategy();
-    const config = {
-      ...baseConfig,
-      user_options: { script: 'bash build.sh --soc={soc_version} --ops={operatorNames} -u' },
-    } as typeof baseConfig;
+    const config: UtTestConfig = { script: 'bash build.sh --soc={soc_version} --ops={operatorNames} -u' };
     const command = strategy.buildUtTestCommand({
       config,
       sourceCannCmd: 'source /path/setenv.bash',
@@ -62,15 +54,14 @@ describe('buildUtTestCommand compileOption', () => {
       .toContain('bash build.sh --soc={soc_version} -u');
   });
 
-  it('ascend strategy appends --ops for legacy settings script without placeholder', () => {
+  it('ascend strategy appends --ops for a stored settings script without placeholder', () => {
     const strategy = new AscendCommandStrategy();
-    const config = {
-      id: 1,
-      project_id: 1,
-      op: 'test_op',
-      config_type: 'build_op',
-      user_options: { script: 'bash build.sh --pkg --soc={soc_version} --vendor_name=custom' },
-    } as ConfigRecord;
+    const config: BuildOpConfig = {
+      script: 'bash build.sh --pkg --soc={soc_version} --vendor_name=custom',
+      cpuDebugScript: '',
+      npuDebugScript: '',
+      targetFile: null,
+    };
     const command = strategy.buildOpCommand({
       config,
       sourceCannCmd: 'source /path/setenv.bash',
@@ -86,13 +77,12 @@ describe('buildUtTestCommand compileOption', () => {
 
   it('ascend strategy applies --ops only from settings template (no runtime injection)', () => {
     const strategy = new AscendCommandStrategy();
-    const config = {
-      id: 1,
-      project_id: 1,
-      op: 'test_op',
-      config_type: 'build_op',
-      user_options: { script: 'bash build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames}' },
-    } as ConfigRecord;
+    const config: BuildOpConfig = {
+      script: 'bash build.sh --pkg --soc={soc_version} --vendor_name=custom --ops={operatorNames}',
+      cpuDebugScript: '',
+      npuDebugScript: '',
+      targetFile: null,
+    };
     const command = strategy.buildOpCommand({
       config,
       sourceCannCmd: 'source /path/setenv.bash',
@@ -119,28 +109,22 @@ describe.each([
     () => new CannCommandStrategy(),
   ],
 ] as const)('%s debug build type', (_name, createStrategy) => {
-  const debugConfig = {
-    id: 1,
-    project_id: 1,
-    op: 'test_op',
-    config_type: 'build_op',
-    user_options: {
-      cpu_debug_script: 'bash.exe "C:\\repo with spaces\\build.sh" --simulator {simulator_type}',
-      npu_debug_script: 'bash ./build.sh --debug',
-      script: 'bash ./build.sh --pkg',
-    },
-  } as ConfigRecord;
+  const debugConfig: BuildOpConfig = {
+    cpuDebugScript: 'bash.exe "C:\\repo with spaces\\build.sh" --simulator {simulator_type}',
+    npuDebugScript: 'bash ./build.sh --debug',
+    script: 'bash ./build.sh --pkg',
+    targetFile: null,
+  };
 
   function build(
     scriptField: 'script' | 'cpu_debug_script' | 'npu_debug_script',
     options: { compileOption?: string;
       advance_cmd?: string } = {},
-    config: ConfigRecord = debugConfig,
+    config: BuildOpConfig = debugConfig,
   ): string {
     return createStrategy()
       .buildOpCommand({
         config,
-        operator: null,
         sourceCannCmd: '',
         cdCmd: 'cd /project',
         scriptField,
@@ -206,13 +190,15 @@ describe.each([
       { advance_cmd: '--trace # comment' },
     ],
   ] as const)('leaves unsupported debug input unchanged: %s / %s', (field, script, options) => {
-    const customConfig = {
+    const daoKey = field === 'cpu_debug_script'
+      ? 'cpuDebugScript'
+      : field === 'npu_debug_script'
+        ? 'npuDebugScript'
+        : 'script';
+    const customConfig: BuildOpConfig = {
       ...debugConfig,
-      user_options: {
-        ...debugConfig.user_options,
-        [field]: script,
-      },
-    } as ConfigRecord;
+      [daoKey]: script,
+    };
 
     expect(build(field, options, customConfig)).not.toContain('--build-type=Debug');
   });

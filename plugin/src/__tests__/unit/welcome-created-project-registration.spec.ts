@@ -27,11 +27,13 @@ jest.mock('fs', () => ({
   mkdirSync: jest.fn(),
 }));
 
+let mockExecutorExecuteImpl: ()=> Promise<unknown> = () => Promise.resolve({ code: 0 });
+
 jest.mock('@plugin/class/command-options', () => ({
   CommandExecutor: jest.fn()
     .mockImplementation(() => ({
       execute: jest.fn()
-        .mockResolvedValue({ code: 0 }),
+        .mockImplementation(() => mockExecutorExecuteImpl()),
     })),
 }));
 
@@ -55,11 +57,6 @@ jest.mock('@plugin/service/project-service', () => ({
   },
 }));
 
-jest.mock('@plugin/domain', () => ({
-  generateStructure: jest.fn(),
-  completeProjectConfigs: jest.fn(),
-}));
-
 jest.mock('@plugin/domain/utils/project-utils', () => ({
   viewIdToProjectType: jest.fn((id: number | string) =>
     id === 2 || id === 'standard-custom' ? 'ascend' : 'cann'),
@@ -72,23 +69,65 @@ jest.mock('@plugin/helpers/sidebar-context-refresh', () => ({
     .mockResolvedValue(undefined),
 }));
 
-jest.mock('@plugin/service/config-service', () => ({ configService: { maybeMigrateLegacySettingsToWorkspace: jest.fn() } }));
+jest.mock('@plugin/service/config-service', () => ({
+  configService: {},
+  ConfigService: {
+    ensureOpDevtoolsSettingsSeeded: jest.fn()
+      .mockResolvedValue(true),
+    writeOpDevtoolsDottedSettings: jest.fn()
+      .mockResolvedValue(true),
+  },
+}));
 
 jest.mock('@plugin/domain/services/operator-project-detector', () => ({
   OperatorProjectType: { STANDARD_CUSTOM: 'standard-custom' },
   OperatorProjectDetector: { detectOperatorProject: jest.fn() },
 }));
 
-jest.mock('@plugin/domain/models/project-model', () => ({
-  getProjectByPath: jest.fn(),
-  updateStandardCustomOperators: jest.fn(),
-  appendStandardCustomOperator: jest.fn(),
-}));
+jest.mock('@plugin/domain/models/project-model', () => {
+  const actual = jest.requireActual('@plugin/domain/models/project-model') as Record<string, unknown>;
+
+  return {
+    ...actual,
+    getProjectByPath: jest.fn(),
+  };
+});
+
+// Sub-operator appends go into the workspace cache scan state, not a
+// registry row. The cache module is mocked at the read/write boundary so the
+// controller tests exercise the cascade + cache-append logic without touching
+// the filesystem (the spec's fs mock has a no-op mkdirSync).
+jest.mock('@plugin/helpers/workspace-cache', () => {
+  const actual = jest.requireActual('@plugin/helpers/workspace-cache') as Record<string, unknown>;
+  // Keyed like normalizeProjectPath (forward slashes, lowercase).
+  const rootKey = '/repo/ops-math';
+
+  return {
+    ...actual,
+    readWorkspaceCache: jest.fn(() => ({
+      schemaVersion: 1,
+      folders: {
+        [rootKey]: {
+          opsMeet: [],
+          opsList: [],
+          experimentalOpsList: [],
+        },
+      },
+    })),
+    updateWorkspaceCache: jest.fn(),
+    updateFolderScanState: jest.fn(),
+  };
+});
 
 jest.mock('@plugin/service/workspace-detector-service', () => ({
   WorkspaceDetectorService: {
     detectAndRegisterWorkspace: jest.fn(),
     whenRegistrationReady: jest.fn(),
+    scanOpsMeetAndOpsLists: jest.fn(() => ({
+      opsMeet: [],
+      opsList: [],
+      experimentalOpsList: [],
+    })),
   },
 }));
 
@@ -99,7 +138,10 @@ jest.mock('@plugin/helpers/post-activate-bootstrap', () => ({
     .mockResolvedValue(undefined),
 }));
 
-jest.mock('@plugin/helpers/operator-project-workspace-config', () => ({ getWorkspaceGenOpCommand: jest.fn(() => '') }));
+jest.mock('@plugin/helpers/operator-project-workspace-config', () => ({
+  getWorkspaceGenOpCommand: jest.fn(() => ''),
+  readWorkspaceProjectTypeSetting: jest.fn(() => undefined),
+}));
 
 jest.mock('@plugin/domain/utils/genop-command', () => ({
   buildGenOpCommand: jest.fn(),
@@ -116,13 +158,21 @@ import { CommandExecutor } from '@plugin/class/command-options';
 import { projectService } from '@plugin/service/project-service';
 import { OperatorProjectDetector } from '@plugin/domain/services/operator-project-detector';
 import {
-  appendStandardCustomOperator,
   getProjectByPath,
   type ProjectRecord,
 } from '@plugin/domain/models/project-model';
+import {
+  updateWorkspaceCache,
+  type WorkspaceCache,
+} from '@plugin/helpers/workspace-cache';
 import { WorkspaceDetectorService } from '@plugin/service/workspace-detector-service';
 import { whenPostActivateBootstrapReady } from '@plugin/helpers/post-activate-bootstrap';
 import { welcomeMethods } from '@plugin/controller/welcome-controller';
+import { getWorkspaceGenOpCommand } from '@plugin/helpers/operator-project-workspace-config';
+import {
+  buildGenOpCommand,
+  decideSkipFileGeneration,
+} from '@plugin/domain/utils/genop-command';
 import * as path from 'path';
 
 const params = {
@@ -141,6 +191,14 @@ function makeRoot(opsList: ProjectRecord['ops_list'] = []): ProjectRecord {
     template_name: 'preserved-template',
     ops_list: opsList,
   };
+}
+
+/** The updater the controller passed to updateWorkspaceCache for the collection root. */
+function collectionAppendUpdater(): (cache: WorkspaceCache)=> void {
+  const call = (updateWorkspaceCache as jest.Mock).mock.calls
+    .find(([root]) => root === '/repo/ops-math');
+
+  return call?.[1] as (cache: WorkspaceCache)=> void;
 }
 
 describe('welcomeMethods.createdProject standard-custom registration recovery', () => {
@@ -169,7 +227,6 @@ describe('welcomeMethods.createdProject standard-custom registration recovery', 
     (getProjectByPath as jest.Mock).mockImplementation(() => storedRoot);
     (WorkspaceDetectorService.detectAndRegisterWorkspace as jest.Mock).mockResolvedValue(undefined);
     (WorkspaceDetectorService.whenRegistrationReady as jest.Mock).mockResolvedValue(undefined);
-    (appendStandardCustomOperator as jest.Mock).mockImplementation(async () => storedRoot);
   });
 
   it('waits for pending bootstrap and uses the root it registered', async () => {
@@ -191,18 +248,31 @@ describe('welcomeMethods.createdProject standard-custom registration recovery', 
     expect(WorkspaceDetectorService.whenRegistrationReady)
       .toHaveBeenCalledWith('/repo/ops-math');
     expect(WorkspaceDetectorService.detectAndRegisterWorkspace).not.toHaveBeenCalled();
-    expect(appendStandardCustomOperator)
-      .toHaveBeenCalledWith(
-        '/repo/ops-math',
-        expect.objectContaining({
-          name: 'add',
-          path: childPath,
-        }),
-        false,
-      );
+    // The child lands in the collection's cache scan state (no
+    // appendStandardCustomOperator registry call).
+    expect(updateWorkspaceCache)
+      .toHaveBeenCalledWith('/repo/ops-math', expect.any(Function));
+    const cache = {
+      schemaVersion: 1,
+      folders: {} as Record<string, unknown>,
+    };
+
+    collectionAppendUpdater()(cache);
+    expect(cache.folders['/repo/ops-math'])
+      .toEqual({
+        opsMeet: [],
+        opsList: [
+          {
+            name: 'add',
+            path: childPath,
+            isCompiled: false,
+          },
+        ],
+        experimentalOpsList: [],
+      });
   });
 
-  it('recovers a missing root, keeps one child entry, and scaffolds with the root id', async () => {
+  it('recovers a missing root, keeps one child entry, and scaffolds with the collection path', async () => {
     (WorkspaceDetectorService.detectAndRegisterWorkspace as jest.Mock).mockImplementation(async () => {
       storedRoot = makeRoot([
         {
@@ -217,25 +287,39 @@ describe('welcomeMethods.createdProject standard-custom registration recovery', 
 
     expect(WorkspaceDetectorService.detectAndRegisterWorkspace)
       .toHaveBeenCalledWith('/repo/ops-math');
-    expect(appendStandardCustomOperator)
-      .toHaveBeenCalledWith(
-        '/repo/ops-math',
-        {
-          name: 'add',
-          path: childPath,
-          isCompiled: false,
-        },
-        false,
-      );
+    expect(updateWorkspaceCache)
+      .toHaveBeenCalledWith('/repo/ops-math', expect.any(Function));
+    const cache = {
+      schemaVersion: 1,
+      folders: {} as Record<string, unknown>,
+    };
+
+    collectionAppendUpdater()(cache);
+    expect(cache.folders['/repo/ops-math'])
+      .toEqual({
+        opsMeet: [],
+        opsList: [
+          {
+            name: 'add',
+            path: childPath,
+            isCompiled: false,
+          },
+        ],
+        experimentalOpsList: [],
+      });
     expect(projectService.init).not.toHaveBeenCalled();
     expect(vscode.commands.executeCommand)
       .toHaveBeenCalledWith(
         'create-directory',
         expect.objectContaining({
+          createOperatorProjectDirectoryFileType: 2,
           subOperatorContext: expect.objectContaining({
-            parentProjectId: 91,
+            // The scaffold context carries the collection PATH instead of
+            // a registry row id.
+            parentProjectPath: '/repo/ops-math',
             opName: 'add',
             outputPath: childPath,
+            skipFileGeneration: false,
           }),
         }),
         expect.anything(),
@@ -250,7 +334,7 @@ describe('welcomeMethods.createdProject standard-custom registration recovery', 
 
     expect(WorkspaceDetectorService.detectAndRegisterWorkspace)
       .toHaveBeenCalledWith('/repo/ops-math');
-    expect(appendStandardCustomOperator).not.toHaveBeenCalled();
+    expect(updateWorkspaceCache).not.toHaveBeenCalled();
     expect(fs.mkdirSync).not.toHaveBeenCalled();
     expect((CommandExecutor as jest.Mock).mock.results[0].value.execute)
       .not.toHaveBeenCalled();
@@ -274,13 +358,197 @@ describe('welcomeMethods.createdProject standard-custom registration recovery', 
 
     await Promise.resolve();
     await Promise.resolve();
-    expect(appendStandardCustomOperator).not.toHaveBeenCalled();
+    expect(updateWorkspaceCache).not.toHaveBeenCalled();
 
     finishRegistration?.();
     await creation;
 
-    expect(appendStandardCustomOperator)
+    // Only the collection scan-state registration writes the cache now — the
+    // created-project path goes to the extension global state, not cache.json.
+    expect(updateWorkspaceCache)
       .toHaveBeenCalledTimes(1);
-    expect(WorkspaceDetectorService.detectAndRegisterWorkspace).not.toHaveBeenCalled();
+    expect(updateWorkspaceCache)
+      .toHaveBeenNthCalledWith(1, '/repo/ops-math', expect.any(Function));
+  });
+
+  it('seeds the scan state for a cache without a folders key', async () => {
+    storedRoot = makeRoot();
+
+    await welcomeMethods.createdProject(params);
+
+    const cache = { schemaVersion: 1 } as WorkspaceCache;
+
+    collectionAppendUpdater()(cache);
+    expect(cache.folders?.['/repo/ops-math'])
+      .toEqual({
+        opsMeet: [],
+        opsList: [
+          {
+            name: 'add',
+            path: childPath,
+            isCompiled: false,
+          },
+        ],
+        experimentalOpsList: [],
+      });
+  });
+
+  it('warns when the reveal of a new sub-operator fails with an error', async () => {
+    storedRoot = makeRoot();
+    const warnSpy = jest.spyOn(console, 'warn')
+      .mockImplementation();
+
+    (vscode.commands.executeCommand as jest.Mock).mockImplementation((command: string) => {
+      if (command === 'revealInExplorer') {
+        return Promise.reject(new Error('tree busy'));
+      }
+
+      return Promise.resolve(undefined);
+    });
+
+    await welcomeMethods.createdProject(params);
+
+    expect(console.warn)
+      .toHaveBeenCalledWith(expect.stringContaining('tree busy'));
+    (vscode.commands.executeCommand as jest.Mock).mockResolvedValue(undefined);
+    warnSpy.mockRestore();
+  });
+
+  it('warns with stringified details when the reveal of a new sub-operator fails with a non-Error', async () => {
+    storedRoot = makeRoot();
+    const warnSpy = jest.spyOn(console, 'warn')
+      .mockImplementation();
+
+    (vscode.commands.executeCommand as jest.Mock).mockImplementation((command: string) => {
+      if (command === 'revealInExplorer') {
+        return Promise.reject('tree busy');
+      }
+
+      return Promise.resolve(undefined);
+    });
+
+    await welcomeMethods.createdProject(params);
+
+    expect(console.warn)
+      .toHaveBeenCalledWith(expect.stringContaining('tree busy'));
+    (vscode.commands.executeCommand as jest.Mock).mockResolvedValue(undefined);
+    warnSpy.mockRestore();
+  });
+});
+
+describe('welcomeMethods.createdProject genop scaffold', () => {
+  let storedRoot: ProjectRecord | undefined;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    storedRoot = makeRoot();
+    (globalThis as unknown as { extensionContext: unknown }).extensionContext = {
+      extensionPath: '/extension',
+      globalState: {
+        update: jest.fn()
+          .mockResolvedValue(undefined),
+      },
+    };
+    (vscode.workspace as { workspaceFolders?: unknown }).workspaceFolders = [{ uri: { fsPath: '/repo/ops-math' } }];
+    (vscode.window.withProgress as jest.Mock).mockImplementation(async (_options, task) =>
+      await task({ report: jest.fn() }));
+    (whenPostActivateBootstrapReady as jest.Mock).mockResolvedValue(undefined);
+    (getWorkspaceGenOpCommand as jest.Mock).mockReturnValue('build.sh --genop');
+    (buildGenOpCommand as jest.Mock).mockReturnValue('genop-cmd');
+    (decideSkipFileGeneration as jest.Mock).mockReturnValue(true);
+    (getProjectByPath as jest.Mock).mockImplementation(() => storedRoot);
+    mockExecutorExecuteImpl = () => Promise.resolve({ code: 0 });
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('defers to the collection genop command and skips file generation when it succeeds', async () => {
+    await welcomeMethods.createdProject(params);
+
+    expect(buildGenOpCommand)
+      .toHaveBeenCalledWith('build.sh --genop', 'math', 'add');
+    const executor = (CommandExecutor as jest.Mock).mock.results[0].value as { execute: jest.Mock };
+
+    expect(executor.execute)
+      .toHaveBeenCalledWith('genop-cmd', [], [], expect.objectContaining({
+        cwd: '/repo/ops-math',
+        toolOutputLabel: 'create',
+      }), true);
+    expect(vscode.window.showInformationMessage)
+      .toHaveBeenCalledWith('welcome.genopRunning');
+    expect(vscode.window.showWarningMessage)
+      .not
+      .toHaveBeenCalledWith('welcome.genopFellBack');
+    expect(vscode.commands.executeCommand)
+      .toHaveBeenCalledWith(
+        'create-directory',
+        expect.objectContaining({ subOperatorContext: expect.objectContaining({ skipFileGeneration: true }) }),
+        expect.anything(),
+      );
+  });
+
+  it('scaffolds from the collection root when the project path equals it', async () => {
+    await welcomeMethods.createdProject({
+      projectPath: '/repo/ops-math',
+      projectName: 'add',
+      createOperatorProjectDictoryFileType: 2,
+    });
+
+    expect(buildGenOpCommand)
+      .toHaveBeenCalledWith('build.sh --genop', '.', 'add');
+  });
+
+  it('falls back to template scaffolding when genop leaves no sources', async () => {
+    (decideSkipFileGeneration as jest.Mock).mockReturnValue(false);
+
+    await welcomeMethods.createdProject(params);
+
+    expect(vscode.window.showWarningMessage)
+      .toHaveBeenCalledWith('welcome.genopFellBack');
+    expect(vscode.commands.executeCommand)
+      .toHaveBeenCalledWith(
+        'create-directory',
+        expect.objectContaining({ subOperatorContext: expect.objectContaining({ skipFileGeneration: false }) }),
+        expect.anything(),
+      );
+  });
+
+  it('falls back to template scaffolding when the genop execution rejects with an error', async () => {
+    const warnSpy = jest.spyOn(console, 'warn')
+      .mockImplementation();
+
+    mockExecutorExecuteImpl = () => Promise.reject(new Error('bash missing'));
+
+    await welcomeMethods.createdProject(params);
+
+    expect(console.warn)
+      .toHaveBeenCalledWith(expect.stringContaining('falling back to template scaffolding'), expect.stringContaining('bash missing'));
+    expect(vscode.window.showWarningMessage)
+      .toHaveBeenCalledWith('welcome.genopFellBack');
+    // Template scaffolding still completes the flow.
+    expect(vscode.commands.executeCommand)
+      .toHaveBeenCalledWith(
+        'create-directory',
+        expect.objectContaining({ subOperatorContext: expect.objectContaining({ skipFileGeneration: false }) }),
+        expect.anything(),
+      );
+    warnSpy.mockRestore();
+  });
+
+  it('falls back to template scaffolding when the genop execution rejects with a string', async () => {
+    const warnSpy = jest.spyOn(console, 'warn')
+      .mockImplementation();
+
+    mockExecutorExecuteImpl = () => Promise.reject('no bash at all');
+
+    await welcomeMethods.createdProject(params);
+
+    expect(console.warn)
+      .toHaveBeenCalledWith(expect.stringContaining('falling back to template scaffolding'), expect.stringContaining('no bash at all'));
+    expect(vscode.window.showWarningMessage)
+      .toHaveBeenCalledWith('welcome.genopFellBack');
+    warnSpy.mockRestore();
   });
 });

@@ -12,15 +12,20 @@ import {
   OperatorProjectType,
 } from '@plugin/domain/services/operator-project-detector';
 import {
-  createProject,
   getProjectByPath,
+  normalizeProjectPath,
   projectPathsEqual,
-  updateStandardCustomOperators,
-  type ProjectRecord,
   type SubOperatorInfo,
   type OperatorCollectionInfo,
 } from '@plugin/domain/models/project-model';
 import { viewIdToProjectType } from '@plugin/domain/utils/project-utils';
+import {
+  EXPERIMENTAL_OPERATOR_COLLECTIONS,
+  ROOT_OPERATOR_COLLECTIONS,
+  scanOperatorsInCollection,
+} from '@plugin/domain/utils/operator-collections';
+import { updateWorkspaceCache } from '@plugin/helpers/workspace-cache';
+import { ConfigService } from '@plugin/service/config-service';
 
 /**
  * Workspace detector service
@@ -80,7 +85,7 @@ export class WorkspaceDetectorService {
   private static async detectAndRegisterWorkspaceImpl(workspacePath: string): Promise<void> {
     const storedProjectType = viewIdToProjectType(OperatorProjectType.STANDARD_CUSTOM);
     let rootPath = path.normalize(workspacePath);
-    let rootProject = getProjectByPath(rootPath);
+    const rootProject = getProjectByPath(rootPath);
 
     if (rootProject?.project_type !== storedProjectType) {
       const rootDetection = await OperatorProjectDetector.detectOperatorProject(workspacePath);
@@ -93,98 +98,15 @@ export class WorkspaceDetectorService {
       }
 
       rootPath = path.normalize(rootDetection.projectPath || workspacePath);
-      rootProject = getProjectByPath(rootPath);
-
-      if (!rootProject) {
-        await createProject({
-          project_name: rootDetection.projectName || path.basename(rootPath),
-          project_path: rootPath,
-          project_type: storedProjectType,
-        });
-        rootProject = getProjectByPath(rootPath);
-      }
     }
 
-    if (rootProject && rootProject.project_type !== storedProjectType) {
-      await createProject({
-        project_name: rootProject.project_name,
-        project_path: rootProject.project_path,
-        project_type: storedProjectType,
-      });
-      rootProject = getProjectByPath(rootPath);
-    }
+    // Mirror the registered root project type into the workspace `projectType`
+    // setting (view id form, e.g. 'ascend') so consumers can read it without a
+    // DB record (settings + cache.json only).
+    await ConfigService.writeOpDevtoolsDottedSettings({ projectType: storedProjectType }, rootPath);
 
-    if (!rootProject) {
-      throw new Error(`Failed to register standard-custom workspace: ${rootPath}`);
-    }
-
-    await this.scanStandardCustomOperators(rootPath, rootProject);
+    await this.scanStandardCustomOperators(rootPath);
   }
-
-  /**
-   * Whitelist of operator collections under root
-   */
-  private static readonly ROOT_OPERATOR_COLLECTIONS = new Set([
-    'image',
-    'objdetect',
-    'conversion',
-    'math',
-    'random',
-    'activation',
-    'control',
-    'conv',
-    'foreach',
-    'index',
-    'loss',
-    'matmul',
-    'norm',
-    'optim',
-    'pooling',
-    'quant',
-    'rnn',
-    'vfusion',
-    'hash',
-    'attention',
-    'ffn',
-    'gmm',
-    'mc2',
-    'moe',
-    'posembedding',
-    'select_attention_operators',
-  ]);
-
-  /**
-   * Whitelist of operator collections under experimental directory
-   */
-  private static readonly EXPERIMENTAL_OPERATOR_COLLECTIONS = new Set([
-    'image',
-    'objdetect',
-    'conversion',
-    'math',
-    'npu_ops_math_ext',
-    'random',
-    'activation',
-    'control',
-    'conv',
-    'foreach',
-    'index',
-    'loss',
-    'matmul',
-    'norm',
-    'optim',
-    'pooling',
-    'quant',
-    'rnn',
-    'vfusion',
-    'attention',
-    'ffn',
-    'gmm',
-    'mc2',
-    'moe',
-    'npu_ops_transformer_ext',
-    'posembedding',
-    'select_attention_operators',
-  ]);
 
   /**
    * Scan operator collections (ops_meet) and operators (ops_list/experimental_ops_list) under root.
@@ -220,11 +142,11 @@ export class WorkspaceDetectorService {
       const collectionPath = path.join(rootPath, dirName);
 
       // Process operator collections under root
-      if (this.ROOT_OPERATOR_COLLECTIONS.has(dirName)) {
+      if (ROOT_OPERATOR_COLLECTIONS.has(dirName)) {
         const {
           hasOperators,
           operators,
-        } = this.scanOperatorsInCollection(collectionPath, false);
+        } = scanOperatorsInCollection(collectionPath);
 
         if (hasOperators) {
           opsMeet.push({
@@ -247,12 +169,12 @@ export class WorkspaceDetectorService {
             const expCollectionName = expEntry.name;
 
             // Check if in experimental operator collection whitelist
-            if (this.EXPERIMENTAL_OPERATOR_COLLECTIONS.has(expCollectionName)) {
+            if (EXPERIMENTAL_OPERATOR_COLLECTIONS.has(expCollectionName)) {
               const expCollectionPath = path.join(collectionPath, expCollectionName);
               const {
                 hasOperators,
                 operators,
-              } = this.scanOperatorsInCollection(expCollectionPath, true);
+              } = scanOperatorsInCollection(expCollectionPath);
 
               if (hasOperators) {
                 // Use full path as name for experimental collections (e.g. experimental/image)
@@ -279,97 +201,49 @@ export class WorkspaceDetectorService {
   }
 
   /**
-   * Scan operators under an operator collection directory
-   * @param collectionPath Operator collection path
-   * @param isExperimental Whether experimental (currently unused, reserved for future)
-   * @returns Whether it has operators and the operator list
-   */
-  private static scanOperatorsInCollection(
-    collectionPath: string,
-    _isExperimental: boolean,
-  ): {
-    hasOperators: boolean;
-    operators: SubOperatorInfo[];
-  } {
-    const operators: SubOperatorInfo[] = [];
-    let hasOperators = false;
-
-    try {
-      const subEntries = fs.readdirSync(collectionPath, { withFileTypes: true });
-
-      for (const subEntry of subEntries) {
-        if (!subEntry.isDirectory() || subEntry.name.startsWith('.')) {
-          continue;
-        }
-
-        const operatorPath = path.join(collectionPath, subEntry.name);
-        const operatorCmakeListsPath = path.join(operatorPath, 'CMakeLists.txt');
-
-        if (!fs.existsSync(operatorCmakeListsPath)) {
-          continue;
-        }
-
-        hasOperators = true;
-        const buildDir = path.join(operatorPath, 'build');
-        const outDir = path.join(operatorPath, 'out');
-        const isCompiled = fs.existsSync(buildDir) || fs.existsSync(outDir);
-        const operatorInfo: SubOperatorInfo = {
-          name: subEntry.name,
-          path: operatorPath,
-          isCompiled: isCompiled,
-        };
-
-        operators.push(operatorInfo);
-      }
-    }
-    catch {
-      // Ignore single-dir scan failure
-    }
-
-    return {
-      hasOperators,
-      operators,
-    };
-  }
-
-  /**
    * Scan standard custom operators (special rules)
-   * Only scans collections (ops_meet) and operators (ops_list/experimental_ops_list), updates root project info.
-   * Does not create new projects in projects for collections or sub-operators.
+   * Only scans collections (ops_meet) and operators (ops_list/experimental_ops_list), updates the
+   * workspace cache scan state (folders[rootKey]).
+   * `isCompiled` of previously scanned operators is preserved (sticky).
    */
-  private static async scanStandardCustomOperators(
-    workspacePath: string,
-    rootProject: ProjectRecord,
-  ): Promise<void> {
+  private static async scanStandardCustomOperators(workspacePath: string): Promise<void> {
     console.log('[scanStandardCustomOperators] Scanning operator collections and operators...');
     const {
       opsMeet,
       opsList,
       experimentalOpsList,
     } = this.scanOpsMeetAndOpsLists(workspacePath);
-    const mergedOpsList = this.mergeOperators(rootProject.ops_list || [], opsList)
-      .filter((operator) => !experimentalOpsList.some((experimentalOperator) =>
-        projectPathsEqual(operator.path, experimentalOperator.path)));
-    const mergedExperimentalOpsList = this.mergeOperators(
-      rootProject.experimental_ops_list || [],
-      experimentalOpsList,
-    )
-      .filter((operator) => !opsList.some((regularOperator) =>
-        projectPathsEqual(operator.path, regularOperator.path)));
+    const rootKey = normalizeProjectPath(workspacePath);
 
-    console.log('[scanStandardCustomOperators] Operator collections:', opsMeet.map((m) => m.name));
-    console.log('[scanStandardCustomOperators] Operators:', mergedOpsList.map((o) => o.name));
-    console.log(
-      '[scanStandardCustomOperators] Experimental operators:',
-      mergedExperimentalOpsList.map((o) => o.name),
-    );
-    await updateStandardCustomOperators(
-      workspacePath,
-      opsMeet,
-      mergedOpsList,
-      mergedExperimentalOpsList,
-    );
-    console.log(`[scanStandardCustomOperators] Updated: ${opsMeet.length} collections, ${mergedOpsList.length} operators, ${mergedExperimentalOpsList.length} experimental`);
+    await updateWorkspaceCache(workspacePath, (cache) => {
+      const existing = cache.folders?.[rootKey];
+      const mergedOpsList = this.mergeOperators(existing?.opsList || [], opsList)
+        .filter((operator) => !experimentalOpsList.some((experimentalOperator) =>
+          projectPathsEqual(operator.path, experimentalOperator.path)));
+      const mergedExperimentalOpsList = this.mergeOperators(
+        existing?.experimentalOpsList || [],
+        experimentalOpsList,
+      )
+        .filter((operator) => !opsList.some((regularOperator) =>
+          projectPathsEqual(operator.path, regularOperator.path)));
+
+      console.log('[scanStandardCustomOperators] Operator collections:', opsMeet.map((m) => m.name));
+      console.log('[scanStandardCustomOperators] Operators:', mergedOpsList.map((o) => o.name));
+      console.log(
+        '[scanStandardCustomOperators] Experimental operators:',
+        mergedExperimentalOpsList.map((o) => o.name),
+      );
+
+      cache.folders = {
+        ...(cache.folders ?? {}),
+        [rootKey]: {
+          opsMeet,
+          opsList: mergedOpsList,
+          experimentalOpsList: mergedExperimentalOpsList,
+        },
+      };
+    });
+    console.log(`[scanStandardCustomOperators] Updated: ${opsMeet.length} collections, ${opsList.length} operators, ${experimentalOpsList.length} experimental`);
   }
 
   private static mergeOperators(

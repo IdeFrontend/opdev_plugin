@@ -10,23 +10,14 @@ import {
 
 const VIEW_CONTAINER_COMMAND = workbenchViewContainerCommand();
 const LEGACY_FOCUS_COMMAND = `workbench.view.extension.${OPS_OPERATE_VIEW_CONTAINER_ID}.focus`;
-const FOCUS_AUXILIARY_BAR = 'workbench.action.focusAuxiliaryBar';
 
-describe('resolveFocusOpsOperateCommand (issue #33)', () => {
-  it('prefers the generated view container command when the host registers it', () => {
+describe('resolveFocusOpsOperateCommand (focus command fallback)', () => {
+  it('resolves the generated view container command when the host registers it', () => {
     expect(resolveFocusOpsOperateCommand([
       VIEW_CONTAINER_COMMAND,
-      FOCUS_AUXILIARY_BAR,
-    ]))
-      .toBe(VIEW_CONTAINER_COMMAND);
-  });
-
-  it('uses focusAuxiliaryBar on the VSCode-huawei fork (no per-container command)', () => {
-    expect(resolveFocusOpsOperateCommand([
-      FOCUS_AUXILIARY_BAR,
       'some.other.command',
     ]))
-      .toBe(FOCUS_AUXILIARY_BAR);
+      .toBe(VIEW_CONTAINER_COMMAND);
   });
 
   it('returns undefined when no candidate is registered (no "command not found" crash)', () => {
@@ -45,6 +36,13 @@ describe('resolveFocusOpsOperateCommand (issue #33)', () => {
       .not.toContain(`workbench.view.extension.${OPS_OPERATE_VIEW_CONTAINER_ID}.toggleVisibility`);
     expect(OPS_OPERATE_FOCUS_COMMAND_CANDIDATES)
       .not.toContain(LEGACY_FOCUS_COMMAND);
+  });
+
+  it('no longer falls back to the auxiliary bar — the container lives in the primary activity bar', () => {
+    expect(OPS_OPERATE_FOCUS_COMMAND_CANDIDATES)
+      .toEqual([VIEW_CONTAINER_COMMAND]);
+    expect(OPS_OPERATE_FOCUS_COMMAND_CANDIDATES)
+      .not.toContain('workbench.action.focusAuxiliaryBar');
   });
 
   it('container id comes from the generated flavor constants', () => {

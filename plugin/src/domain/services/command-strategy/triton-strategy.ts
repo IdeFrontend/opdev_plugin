@@ -5,13 +5,22 @@ import {
   joinCommands,
   Command,
 } from '@plugin/domain/utils/command-utils';
-import { ConfigRecord } from '@plugin/domain/models/config-model';
-import { OpRecord } from '@plugin/domain/models/model';
+import type {
+  BuildOpConfig,
+  BuildExampleConfig,
+  UtTestConfig,
+  SanitizerConfig,
+} from '@plugin/service/config-service';
+import {
+  OpRecord,
+  resolveFallbackOperatorName,
+} from '@plugin/domain/models/op-record';
 import { joinIdeConfigPath } from '@plugin/helpers/ide-config-dir';
 import {
   CommandStrategy,
   CommandContext,
   CommandBuildParams,
+  ProfilerTargetConfig,
 } from './types';
 import {
   getPythonRunTargetFile,
@@ -21,7 +30,8 @@ import {
 } from './python-operator-strategy-shared';
 import { getEnvironmentScriptPathFromWorkspace } from '@plugin/helpers/operator-project-workspace-config';
 import { BasePythonCommandStrategy } from './base-python-strategy';
-import { getConfig } from '@plugin/domain/services/configuration';
+import { ConfigService } from '@plugin/service/config-service';
+import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import {
   normalizeBlockId,
   normalizeLogLevel,
@@ -146,6 +156,19 @@ export function probeTritonPythonDependencies(): Promise<TritonProbeResult> {
   });
 }
 
+/** The sanitizer tool keys the section DAO carries (a truthy subset feeds `--tool`). */
+const SANITIZER_TOOL_KEYS = [
+  'memcheck',
+  'racecheck',
+  'initcheck',
+] as const;
+
+/** The sanitizer memcheck sub-options the section DAO carries (truthy subset feeds `--<key>=yes`). */
+const SANITIZER_MEMCHECK_OPTION_KEYS = [
+  'leak-check',
+  'check-unused-memory',
+] as const;
+
 /**
  * Triton command strategy.
  * Triton runs the current configured python target directly.
@@ -153,29 +176,35 @@ export function probeTritonPythonDependencies(): Promise<TritonProbeResult> {
 export class TritonCommandStrategy extends BasePythonCommandStrategy implements CommandStrategy {
   protected readonly pythonOpType = 'triton';
 
-  buildRunCommand(context: CommandContext): string {
+  buildRunCommand(context: CommandContext<BuildOpConfig>): string {
     const {
-      config, sourceCannCmd, cdCmd,
+      config, sourceCannCmd, cdCmd, op,
     } = context;
-    const runScript = normalizePythonCommandInterpreter(config.target_file || '');
+    const runScript = normalizePythonCommandInterpreter(config.targetFile || '');
 
     if (!runScript) {
-      throw new Error(t('cann.configMissingScript', { op: config.op }));
+      throw new Error(t('cann.configMissingScript', { op }));
     }
 
     return joinCommands(sourceCannCmd, cdCmd, runScript);
   }
 
-  buildOpCommand(params: CommandBuildParams): string {
+  buildOpCommand(params: CommandBuildParams<BuildOpConfig>): string {
     const {
-      config, sourceCannCmd, cdCmd, compileOption, advance_cmd,
+      config, sourceCannCmd, cdCmd, compileOption, advance_cmd, op,
     } = params;
     const scriptField = params.scriptField || 'script';
-    const userOptions = config.user_options as Record<string, unknown> | null | undefined;
-    const script = (userOptions?.[scriptField] as string | undefined)?.trim() || '';
+
+    const scriptValue = scriptField === 'cpu_debug_script'
+      ? config.cpuDebugScript
+      : scriptField === 'npu_debug_script'
+        ? config.npuDebugScript
+        : config.script;
+
+    const script = (scriptValue || '').trim();
 
     if (!script) {
-      throw new Error(t('cann.configMissingScript', { op: config.op }));
+      throw new Error(t('cann.configMissingScript', { op }));
     }
 
     const cmd = new Command(script);
@@ -191,14 +220,14 @@ export class TritonCommandStrategy extends BasePythonCommandStrategy implements 
     return joinCommands(sourceCannCmd, cdCmd, cmd.toString());
   }
 
-  buildExampleCommand(params: CommandBuildParams): string {
+  buildExampleCommand(params: CommandBuildParams<BuildExampleConfig>): string {
     const {
-      config, sourceCannCmd, cdCmd, compileOption, advance_cmd,
+      config, sourceCannCmd, cdCmd, compileOption, advance_cmd, op,
     } = params;
     const script = (config.script || '').trim();
 
     if (!script) {
-      throw new Error(t('cann.configMissingScript', { op: config.op }));
+      throw new Error(t('cann.configMissingScript', { op }));
     }
 
     const cmd = new Command(script);
@@ -214,19 +243,18 @@ export class TritonCommandStrategy extends BasePythonCommandStrategy implements 
     return joinCommands(sourceCannCmd, cdCmd, cmd.toString());
   }
 
-  buildSanitizerCommand(
-    config: ConfigRecord,
-    _operator: OpRecord | null,
-    sourceCannCmd: string,
-    cdCmd: string,
-    exampleTargetFile?: string,
-  ): string {
-    const options =
-      (config.user_options as Record<string, unknown> | null | undefined) || {};
-    const toolOptions =
-      (options.tool as Record<string, unknown> | undefined) || {};
-    const tools = normalizeSanitizerTools(Object.keys(toolOptions)
-      .filter((key) => toolOptions[key]));
+  buildSanitizerCommand(context: CommandContext<SanitizerConfig>, exampleTargetFile?: string): string {
+    const {
+      config, sourceCannCmd, cdCmd, op,
+    } = context;
+    // Partial DAOs carry only the fields the user set — guard reads like
+    // `|| {}`. Note: on Triton the memcheck sub-options are
+    // emitted independent of the memcheck checkbox (mssanitizer
+    // auto-enables memory check from a sub-option like --leak-check=yes).
+    const tool = config.tool ?? {};
+    const memcheckOption = config.memcheckOption ?? {};
+    const tools = normalizeSanitizerTools(SANITIZER_TOOL_KEYS
+      .filter((key) => tool[key]));
     const mssanitizer = new Command('mssanitizer');
 
     // Skip --tool when nothing is selected so no empty token leaks into the command
@@ -238,24 +266,20 @@ export class TritonCommandStrategy extends BasePythonCommandStrategy implements 
     // Emit the memcheck sub-options whenever they are enabled, independent of the memcheck
     // checkbox: per the mssanitizer docs a sub-option (e.g. --leak-check=yes) auto-enables
     // memory check, so `-t racecheck --leak-check=yes` is a valid documented invocation.
-    const memcheckOptions =
-      (options.memcheckOption as Record<string, unknown> | undefined) || {};
+    SANITIZER_MEMCHECK_OPTION_KEYS.forEach((key) => {
+      if (memcheckOption[key]) {
+        mssanitizer.addOption(key, 'yes');
+      }
+    });
 
-    Object.keys(memcheckOptions)
-      .forEach((key) => {
-        if (memcheckOptions[key]) {
-          mssanitizer.addOption(key, 'yes');
-        }
-      });
-
-    mssanitizer.addOption('log-level', normalizeLogLevel(options.logLevel));
+    mssanitizer.addOption('log-level', normalizeLogLevel(config.logLevel));
     mssanitizer.addOption(
       'max-debuglog-size',
-      normalizeMaxDebuglogSize(options.maxDebuglogSize),
+      normalizeMaxDebuglogSize(config.maxDebuglogSize),
     );
 
-    const useBlock = options.useBlock === true;
-    const blockId = normalizeBlockId(options.blockId);
+    const useBlock = config.useBlock === true;
+    const blockId = normalizeBlockId(config.blockId);
 
     if (useBlock && blockId !== undefined) {
       mssanitizer.addOption('block-id', blockId);
@@ -273,10 +297,10 @@ export class TritonCommandStrategy extends BasePythonCommandStrategy implements 
     // Quote so a workspace path containing spaces stays a single --log-file token under `shell: true`.
     mssanitizer.addOption('log-file', quoteShellTokenIfNeeded(logFilePath));
 
-    const pythonProgram = normalizePythonCommandInterpreter((exampleTargetFile || config.target_file || '').trim());
+    const pythonProgram = normalizePythonCommandInterpreter((exampleTargetFile || config.targetFile || '').trim());
 
     if (!pythonProgram) {
-      throw new Error(t('cann.configMissingScript', { op: config.op }));
+      throw new Error(t('cann.configMissingScript', { op }));
     }
 
     mssanitizer.addArgument('--');
@@ -285,35 +309,36 @@ export class TritonCommandStrategy extends BasePythonCommandStrategy implements 
     return joinCommands(sourceCannCmd, cdCmd, mssanitizer.toString());
   }
 
-  buildUtTestCommand(_params: CommandBuildParams): string {
+  buildUtTestCommand(_params: CommandBuildParams<UtTestConfig>): string {
     throw new Error(t('triton.utTestNotSupported'));
   }
 
-  getRunTargetFile(config: ConfigRecord, _operator: OpRecord | null): string {
-    const script = getPythonRunTargetFile(config)
+  getRunTargetFile(op: string): string {
+    const script = getPythonRunTargetFile()
       .trim();
 
     if (!script) {
-      throw new Error(t('cann.configMissingScript', { op: config.op }));
+      throw new Error(t('cann.configMissingScript', { op }));
     }
 
     return script;
   }
 
-  getProfilerTargetFile(config: ConfigRecord, _operator: OpRecord | null, _exampleConfigId: number): string {
+  getProfilerTargetFile(config: ProfilerTargetConfig, operator: OpRecord | null, op: string): string {
     // Sanitizer: the active .py is synced into THIS config's target_file by
-    // syncSanitizerPythonTargetFromActiveEditor and surfaced as the top-level target_file by
-    // getRuntimeConfigById. Read it directly — do NOT fall back to the static build_op default,
+    // syncSanitizerPythonTargetFromActiveEditor and surfaced as the DAO's targetFile.
+    // Read it directly — do NOT fall back to the static build_op default,
     // which would shadow the file the user actually opened.
-    if (config.config_type === 'sanitizer') {
-      return config.target_file || '';
+    if ('targetFile' in config) {
+      return config.targetFile || '';
     }
 
-    // Simulate / on-board: mirror PyAsc — the profiler target comes from the build_op row.
-    // FIXME: still the legacy configs.json target_file column, not the workspace deploy setting.
-    const buildOpConfigs = getConfig(config.project_id, 'build_op', config.op);
-    const buildOpConfig = buildOpConfigs.length > 0 ? buildOpConfigs[0] : null;
-
-    return buildOpConfig?.target_file || '';
+    // Simulate / on-board: mirror PyAsc — the profiler target comes from the workspace deploy setting.
+    return ConfigService.readBuildOpDeployTargetFromWorkspace()
+      || OperatorPluginRegistry.getDefaultPaths({
+        op_type: 'triton',
+        op_path: operator?.op_path || '',
+        op_name: resolveFallbackOperatorName(operator, op),
+      }).targetOpFile;
   }
 }

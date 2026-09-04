@@ -1,4 +1,5 @@
 import type { OperatorBuildBehavior } from '@plugin/domain/plugins/operator-plugin.interface';
+import { OperatorProjectType } from '@plugin/domain/models/operator-project-type';
 
 export const DEBUG_LAUNCH_CONFIG = {
   MSDEBUG: 'msdebug',
@@ -41,7 +42,12 @@ export function resolveDebugLaunchConfigName(
     return DEBUG_LAUNCH_CONFIG.MSDEBUG_TRITON_NPU;
   }
 
-  const isTorchLibrary = pt === 'cann' && template === TORCH_LIBRARY_TEMPLATE;
+  // Torch-library is recognized in BOTH stored forms: the canonical detector
+  // type ('torch-library', written by the settings-native openProject) and the
+  // view-id value ('cann', written by createdProject and kept for imported
+  // rows).
+  const isTorchLibrary = (pt === OperatorProjectType.TORCH_LIBRARY || pt === 'cann')
+    && template === TORCH_LIBRARY_TEMPLATE;
 
   if (isTorchLibrary) {
     return DEBUG_LAUNCH_CONFIG.MSDEBUG_PYTHON;

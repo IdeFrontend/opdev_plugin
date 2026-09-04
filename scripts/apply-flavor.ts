@@ -104,7 +104,7 @@ function assertHuaweiBaselineManifest(manifest: Record<string, unknown>): void {
   const text = JSON.stringify(manifest);
 
   if (text.includes('ascend-c-toolkit') || text.includes('ascendCToolkit')) {
-    throw new Error('package.json contains Ascend C Toolkit IDs and is not a valid Huawei baseline manifest. '
+    throw new Error('package.json contains Ascend C Toolkits IDs and is not a valid Huawei baseline manifest. '
       + 'Run `pnpm run restore-flavor` or restore package.json from git history.');
   }
 
@@ -207,7 +207,6 @@ function reverseSubstituteIdsInString(value: string, flavor: FlavorDefinition): 
   result = result.replaceAll(flavor.ids.settingsPrefix, BASE_FLAVOR_IDS.settingsPrefix);
   result = result.replaceAll(flavor.ids.viewContainerId, BASE_FLAVOR_IDS.viewContainerId);
   result = result.replaceAll(flavor.ids.contextPrefix, BASE_FLAVOR_IDS.contextPrefix);
-  result = result.replaceAll(flavor.ids.colorIdPrefix, BASE_FLAVOR_IDS.colorIdPrefix);
 
   result = result.replaceAll(
     `${flavor.ids.viewPrefix}\\.`,
@@ -370,7 +369,6 @@ function substituteIdsInString(value: string, flavor: FlavorDefinition): string 
   result = result.replaceAll(BASE_FLAVOR_IDS.commandPrefix, flavor.ids.commandPrefix);
   result = result.replaceAll(BASE_FLAVOR_IDS.viewContainerId, flavor.ids.viewContainerId);
   result = result.replaceAll(BASE_FLAVOR_IDS.contextPrefix, flavor.ids.contextPrefix);
-  result = result.replaceAll(BASE_FLAVOR_IDS.colorIdPrefix, flavor.ids.colorIdPrefix);
   result = result.replaceAll(BASE_FLAVOR_IDS.settingsPrefix, flavor.ids.settingsPrefix);
 
   result = result.replaceAll(
@@ -746,8 +744,6 @@ export const VIEW_PREFIX = ${tsQuotedString(flavor.ids.viewPrefix)};
 
 export const CONTEXT_PREFIX = ${tsQuotedString(flavor.ids.contextPrefix)};
 
-export const COLOR_ID_PREFIX = ${tsQuotedString(flavor.ids.colorIdPrefix)};
-
 export const FLAVOR_GATES = ${tsCompactConstObject(gates)} as const;
 
 export const FLAVOR_DEFAULTS = ${tsCompactConstObject(defaults)} as const;
@@ -979,8 +975,8 @@ function normalizeDocsToBaseBranding(text: string): string {
 }
 
 function assertHuaweiBaselineDoc(text: string, relativePath: string): void {
-  if (text.includes('Ascend C Toolkit') || text.includes('Ascend C 工具包')) {
-    throw new Error(`${relativePath} contains Ascend C Toolkit branding and is not a valid Huawei baseline doc. `
+  if (text.includes('Ascend C Toolkits') || text.includes('Ascend C 工具包')) {
+    throw new Error(`${relativePath} contains Ascend C Toolkits branding and is not a valid Huawei baseline doc. `
       + 'Run `pnpm run restore-flavor` or fix the committed doc on git HEAD.');
   }
 

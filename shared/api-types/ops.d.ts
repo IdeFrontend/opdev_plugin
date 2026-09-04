@@ -15,7 +15,8 @@ export type InitOpsParams = {
 
 export type CreateOpsParams = {
   projectName?: string;
-  projectId?: string;
+  /** Target project path (the workspace root project or a parent collection). */
+  projectPath?: string;
   prototypeName?: string;
   /** When set, write the prototype JSON here instead of the project record's path. */
   outputPath?: string;
@@ -27,8 +28,8 @@ export type CreateOpsByPrototypeParams = {
   templateName?: string;
   /** Canonical operator / entrypoint name (e.g. New Project `projectName`). Passed to `generateStructure` as `op_name`. */
   opName?: string;
-  /** Override the project id used for scaffolding (e.g. the parent collection id). */
-  projectId?: string | number;
+  /** Override the project path used for scaffolding (e.g. the parent collection path). */
+  projectPath?: string;
   /** Override the operator output directory passed to generateStructure as op_path. */
   opPath?: string;
   /**
@@ -38,65 +39,66 @@ export type CreateOpsByPrototypeParams = {
   skipFileGeneration?: boolean;
 };
 
-export type BuildConfig = {
-  config_id: number;
-  config_name: string;
-  config_type:
-    | 'build_op'
-    | 'build_example'
-    | 'simulate'
-    | 'on_board'
-    | 'sanitizer';
-  user_options?: Record<string, unknown>;
+/** On-board profiler options (dotted `performanceTuning.onBoard.*` settings, flat payload). */
+export type OnBoardOptions = {
+  interCoreLoad?: boolean;
+  roofline?: boolean;
+  operatorCodeHotspot?: boolean;
+  cacheHeatmap?: boolean;
+  pcSampling?: boolean;
+  cubeAndVectorInstructionTimeAndRatio?: boolean;
+  l2CacheHitRate?: boolean;
+  memoryReadWriteBandwidth?: boolean;
+  l0ReadWriteBandwidth?: boolean;
+  ubReadWriteBandwidth?: boolean;
+  computeAndMoveUnitTimeRatio?: boolean;
+  resourceConflictRatio?: boolean;
+  operatorMetrics?: boolean;
 };
 
-export type GetConfigDataResult = {
-  [key: string]: BuildConfig[];
+/** Simulator options (dotted `performanceTuning.simulation.*` settings, flat payload). */
+export type SimulateOptions = {
+  memoryThroughputWaveform?: boolean;
+  resourceConflictRatio?: boolean;
+};
+
+/** Sanitizer options (dotted `sanitizer.*` settings, flat payload). */
+export type SanitizerOptions = {
+  memory?: boolean;
+  race?: boolean;
+  uninitialized?: boolean;
+  memoryLeak?: boolean;
+  allocUnused?: boolean;
+  reportLogLevel?: 'info' | 'warn' | 'error';
+  maxSingleLogFileSize?: number;
+  detectionScope?: 'global' | 'singleBlock';
+  blockId?: number | null;
 };
 
 export type StartBuildParams = {
-  configId?: string;
   compileOption?: string;
   operatorNames?: string; // 算子名称，多个用逗号分隔
   operatorType?: string; // 算子类型，用于标识编译哪种类型的算子（如 'standard-custom'）
-  projectId?: string | number; // 项目ID
   scriptField?: string; // 指定使用哪个字段作为脚本
 };
 
 export type StartRunParams = {
-  configId?: string;
   filePath?: string; // 文件路径（右键调用时传入）
 };
 
 export type StartBuildExampleParams = {
-  configId?: string;
   compileOption?: string;
   operatorNames?: string; // 算子名称，多个用逗号分隔
   operatorType?: string; // 算子类型，用于标识编译哪种类型的算子（如 'standard-custom'）
-  projectId?: string | number; // 项目ID（从 projects.json 根据根目录查找）
-};
-
-export type SaveConfigParams = {
-  type: string;
-  data: unknown;
-  showMessage?: boolean;
-};
-
-export type SaveSanitizerFormParams = {
-  data: unknown;
-  showMessage?: boolean;
 };
 
 export type UpdateShScriptParams = {
   ascendEnvScript?: string;
-  soc_version?: string;
 };
 
 export type StartUtTestParams = {
   operatorNames?: string; // 算子名称，多个用逗号分隔
   compileOption?: string;
-  configId?: string;
-  projectId?: string | number; // 项目ID
 };
 
 export type StartSimulateParams = {

@@ -192,8 +192,14 @@ describe('CommandExecutor', () => {
     // The drained run must not have taken the handle kill() needs for the live one.
     const killPromise = executor.kill();
 
-    expect(processKillSpy)
-      .toHaveBeenCalledWith(-4321, 'SIGTERM');
+    if (process.platform === 'win32') {
+      expect(execMock)
+        .toHaveBeenCalledWith(expect.stringContaining('taskkill /pid 4321'), expect.any(Function));
+    }
+    else {
+      expect(processKillSpy)
+        .toHaveBeenCalledWith(-4321, 'SIGTERM');
+    }
 
     second.emit('close', 0);
     await killPromise;

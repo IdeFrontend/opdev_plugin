@@ -233,7 +233,7 @@ export class StTestController {
 
     const persisted = await this.dependencies.persistWorkspaceSettings(writes, context.workspaceRoot);
 
-    if (!persisted) {
+    if (!persisted && !(await this.writesAlreadyOnDisk(writes, context.workspaceRoot))) {
       throw new Error(t('stTest.options.saveFailed'));
     }
 
@@ -250,6 +250,30 @@ export class StTestController {
     }
 
     this.dependencies.closeOptionsPanel();
+  }
+
+  /**
+   * `persistWorkspaceSettings` reports false both for real failures and for a
+   * no-op write (the guarded writer skips a byte-identical serialization). A
+   * no-op write means the requested settings are already persisted — only fail
+   * when the disk actually does not hold them.
+   */
+  private async writesAlreadyOnDisk(
+    writes: Record<string, unknown>,
+    workspaceRoot: string,
+  ): Promise<boolean> {
+    for (const [
+      key,
+      value,
+    ] of Object.entries(writes)) {
+      const stored = this.dependencies.readWorkspaceSetting(workspaceRoot, key);
+
+      if (JSON.stringify(stored) !== JSON.stringify(value)) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   private resolveSelectedModes(value: unknown, availableModes: readonly StTestMode[]): StTestMode[] {

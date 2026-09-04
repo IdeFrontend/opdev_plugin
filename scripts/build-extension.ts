@@ -21,6 +21,16 @@ const buildOptions: esbuild.BuildOptions = {
   keepNames: isReadable,
   plugins: [
     {
+      // jsonc-parser's package "main" is its UMD build, which requires
+      // ./impl/format etc. through a bare `require` that esbuild does not
+      // rewrite — the extension host then dies at activation with
+      // "Cannot find module './impl/format'". Bundle the ESM build instead.
+      name: 'jsonc-parser-esm',
+      setup(build) {
+        build.onResolve({ filter: /^jsonc-parser$/ }, () => ({ path: path.resolve(__dirname, '../plugin/node_modules/jsonc-parser/lib/esm/main.js') }));
+      },
+    },
+    {
       name: 'resolve-paths',
       setup(build) {
         // 解析 @plugin/* 和 @shared/* 别名

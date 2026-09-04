@@ -34,12 +34,13 @@ type InspectValue<T> =
   | undefined;
 
 /**
- * `"op-devtools.some.setting": null` in settings.json reaches us as `null`, and every
- * reader below runs `String(value)` on what it gets — which would hand callers the
- * literal `"null"` (into build commands, spawn env, NPU_ARCH). Treat it as unset so the
- * value falls through to the next source in the precedence chain, like an absent setting.
+ * `"op-devtools.some.setting": null` in settings.json reaches us as `null`, and
+ * every reader below runs `String(value)` on what it gets — which would hand
+ * callers the literal `"null"` (into build commands, spawn env, NPU_ARCH).
+ * Treat it as unset so the value falls through to the next source in the
+ * precedence chain, like an absent setting.
  */
-function isConfiguredValue<T>(value: T | null | undefined): value is T {
+export function isConfiguredValue<T>(value: T | null | undefined): value is T {
   return value !== undefined && value !== null;
 }
 
@@ -72,9 +73,10 @@ function isExplicitlySet<T>(inspection: InspectValue<T>): boolean {
 }
 
 /**
- * Workspace-scoped value for the first of `settingRelativePaths` the user actually set:
- * folder scope wins over workspace scope, `null` counts as unset. The one reader every
- * `op-devtools` setting goes through — see {@link isConfiguredValue} for why `null` matters.
+ * Workspace-scoped value for the first of `settingRelativePaths` the user
+ * actually set: folder scope wins over workspace scope, `null` counts as
+ * unset. The one reader every `op-devtools` setting goes through — see
+ * {@link isConfiguredValue} for why `null` matters.
  */
 export function getConfiguredValue<T>(
   cfg: vscode.WorkspaceConfiguration,
@@ -160,6 +162,34 @@ export function getEnvironmentScriptPathFromWorkspace(): string {
   return DEFAULT_ENVIRONMENT_SCRIPT;
 }
 
+/**
+ * Workspace `op-devtools.projectType` override (view id, e.g. 'ascend'),
+ * written by the workspace detector / openProject flows. Deliberately NOT
+ * declared in package.json — it is a runtime-only mirror of the project type
+ * and must not surface in the settings UI.
+ */
+export const PROJECT_TYPE_SETTING = 'projectType';
+
+/**
+ * Explicit workspace project type (view id form, e.g. 'ascend'). Returns
+ * `undefined` when the setting was never set in the workspace scope — callers
+ * cascade to the DB project record and finally to detection.
+ */
+export function readWorkspaceProjectTypeSetting(scopeUri?: vscode.Uri): string | undefined {
+  const explicit = getConfiguredValue<string>(
+    getOpDevtoolsWorkspaceConfiguration(scopeUri),
+    [PROJECT_TYPE_SETTING],
+  );
+
+  if (explicit !== undefined && String(explicit)
+    .trim() !== '') {
+    return String(explicit)
+      .trim();
+  }
+
+  return undefined;
+}
+
 /** Workspace override for msprof / cann simulator directory name (e.g. Ascend910B3). */
 export function getWorkspaceSimulatorType(): string {
   const cfg = getOpDevtoolsWorkspaceConfiguration();
@@ -176,7 +206,7 @@ export function getWorkspaceSimulatorType(): string {
 
 /**
  * Workspace-overridable command template used to generate an operator in a
- * standard-custom project (issue #14). Returns the default template when unset/blank.
+ * standard-custom project. Returns the default template when unset/blank.
  */
 export function getWorkspaceGenOpCommand(): string {
   const cfg = getOpDevtoolsWorkspaceConfiguration();
@@ -221,17 +251,4 @@ export function getSocVersionWithWorkspaceOverride(storedSocVersion: string | nu
   const socVersion = getConfiguredValue<string>(cfg, ['environment.socVersion']);
 
   return socVersion !== undefined ? socVersion : (storedSocVersion || '');
-}
-
-/**
- * Explicit `NPU_ARCH` override (issue #29). Empty string when the setting was
- * never set, so callers keep the value derived from the resolved SOC.
- */
-export function getWorkspaceNpuArch(): string {
-  const explicit = getConfiguredValue<string>(getOpDevtoolsWorkspaceConfiguration(), ['environment.npuArch']);
-
-  return explicit !== undefined
-    ? String(explicit)
-      .trim()
-    : '';
 }

@@ -7,8 +7,8 @@ import * as path from 'path';
  * example (`test_geir_<op>.cpp`). Which one an operator actually ships is a property of
  * the operator (its `examples/` directory), not a user preference — so a single
  * plugin-wide `executionMode` setting cannot be right for every operator in a project
- * (plugin_release #171: `pows` ships only a graph example, so a hard `eager` default made
- * build.sh exit with `ERROR: pows does not have eager examples`).
+ * (`pows` ships only a graph example, so a hard `eager` default made build.sh exit with
+ * `ERROR: pows does not have eager examples`).
  */
 export type ExampleMode = 'eager' | 'graph';
 
@@ -52,9 +52,13 @@ export function isExampleTarget(targetFile: string | undefined): boolean {
  * prefix from the mode that will actually be built.
  *
  * Rewriting the operator but not the prefix hands msprof and mssanitizer a path that was never
- * built: an operator shipping only a GE IR example (`pows`, plugin_release #171) forces graph
- * mode, so the pre-build produces `test_geir_pows` while the run still asks for
+ * built: an operator shipping only a GE IR example (`pows`) forces graph mode, so the
+ * pre-build produces `test_geir_pows` while the run still asks for
  * `test_aclnn_pows`. Nothing stats the path before it reaches the tool.
+ *
+ * A multi-op selection (`add,sub`) still names ONE binary — the first operator's — because the
+ * run_example pre-build compiles only that example; a comma in the binary name could never
+ * exist on disk.
  *
  * A target carrying neither prefix is not a build.sh example target — cann, pyasc and triton
  * point at their own build output — so it is returned untouched.
@@ -68,6 +72,12 @@ export function rewriteExampleTarget(
     return targetFile;
   }
 
+  const firstOp = operatorNames.split(',')[0]?.trim() || '';
+
+  if (!firstOp) {
+    return targetFile;
+  }
+
   // The binary name is the last path segment, so cut at the last prefix: a build directory that
   // itself carries one (`/ws/test_aclnn_demo/build/test_aclnn_add`) must keep its directory.
   const prefixCuts = Object.values(EXAMPLE_BINARY_PREFIX)
@@ -78,7 +88,7 @@ export function rewriteExampleTarget(
     return targetFile;
   }
 
-  return `${targetFile.slice(0, cut)}${EXAMPLE_BINARY_PREFIX[mode]}${operatorNames}`;
+  return `${targetFile.slice(0, cut)}${EXAMPLE_BINARY_PREFIX[mode]}${firstOp}`;
 }
 
 /**
@@ -134,7 +144,7 @@ function dirHasExampleFile(dir: string, matcher: RegExp): boolean {
  * unless requested, matching build.sh's default exclusion of experimental paths.
  *
  * Scope: only the operator's top-level `examples/` directory is inspected — the A2/A3
- * layout (the #171 case). build.sh additionally searches `examples/arch35/` for
+ * layout. build.sh additionally searches `examples/arch35/` for
  * `ascend950`; those arch35-only variants are intentionally not inspected here, so for
  * such operators the configured mode is kept and build.sh stays the source of truth.
  */
@@ -143,8 +153,12 @@ export function detectOperatorExampleModes(
   opName: string,
   includeExperimental = false,
   matchers: ExampleMatchers = DEFAULT_EXAMPLE_MATCHERS,
-): { hasEager: boolean; hasGraph: boolean } {
-  const result = { hasEager: false, hasGraph: false };
+): { hasEager: boolean;
+  hasGraph: boolean } {
+  const result = {
+    hasEager: false,
+    hasGraph: false,
+  };
 
   if (!projectRoot || !opName) {
     return result;
@@ -214,8 +228,11 @@ export function resolveExampleMode(
   globalMode: ExampleMode,
   includeExperimental = false,
   matchers: ExampleMatchers = DEFAULT_EXAMPLE_MATCHERS,
-): { mode: ExampleMode; exampleFound: boolean } {
-  const { hasEager, hasGraph } = detectOperatorExampleModes(
+): { mode: ExampleMode;
+  exampleFound: boolean } {
+  const {
+    hasEager, hasGraph,
+  } = detectOperatorExampleModes(
     projectRoot,
     opName,
     includeExperimental,
@@ -223,16 +240,28 @@ export function resolveExampleMode(
   );
 
   if (hasEager && hasGraph) {
-    return { mode: globalMode, exampleFound: true };
+    return {
+      mode: globalMode,
+      exampleFound: true,
+    };
   }
 
   if (hasEager) {
-    return { mode: 'eager', exampleFound: true };
+    return {
+      mode: 'eager',
+      exampleFound: true,
+    };
   }
 
   if (hasGraph) {
-    return { mode: 'graph', exampleFound: true };
+    return {
+      mode: 'graph',
+      exampleFound: true,
+    };
   }
 
-  return { mode: globalMode, exampleFound: false };
+  return {
+    mode: globalMode,
+    exampleFound: false,
+  };
 }
