@@ -105,7 +105,7 @@ All log paths passed to msAgent use **`vscode.Uri.file(absoluteLogPath)`** (abso
 ### 1. Auto-load log after sanitizer run
 
 1. `SanitizerService.runSanitizer` succeeds.  
-2. `getLatestSanitizerLogAbsPath(workspaceRoot)` picks newest `mssanitizer_*.log` under `<workspaceRoot>/<ideConfig>/mindstudio_sanitizer_log`.  
+2. `getLatestSanitizerLogAbsPath(workspaceRoot)` picks newest `mssanitizer_*.log` / `npu-check_*.log` under `<workspaceRoot>/<ideConfig>/mindstudio_sanitizer_log`.  
 3. `sanitizerDiagnosticsService.publishFromLogFile(logAbs, workspaceRoot)`.  
 4. `msAgentBridgeService.tryLoadLogWithIntegration(logAbs)` if integration available.  
 5. `flashMsSanitizerRunData` refreshes the results tree.

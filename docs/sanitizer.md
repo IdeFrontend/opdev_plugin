@@ -131,7 +131,7 @@ Steps in detail:
 6. **Run sanitizer** — `getSanitizerCommand(sanitizerConfigId, exampleConfigId, operatorNames)` then `executeOperatorCommand`.
 7. **On success**:
    - Notification `sanitizer.detectionSuccess`
-   - Newest `mssanitizer_*.log` via `getLatestSanitizerLogAbsPath`
+   - Newest `mssanitizer_*.log` / `npu-check_*.log` via `getLatestSanitizerLogAbsPath`
    - `sanitizerDiagnosticsService.publishFromLogFile`
    - `msAgentBridgeService.tryLoadLogWithIntegration` (if enabled)
    - `flashMsSanitizerRunData` (refresh results tree; optional auto-select newest report when none selected)
@@ -178,12 +178,12 @@ Build/run for sanitizer are **not** exposed on `ops`; they go through the task c
 | Item | Location |
 |------|----------|
 | Directory | `<workspaceRoot>/<ideConfigDir>/mindstudio_sanitizer_log/` — the cann, ascend and triton strategies all write under the **workspace root**; the ascend strategy falls back to `operator.op_path` only when no workspace folder is known. `ideConfigDir` is `.vscode` or `.arts` (`getIdeConfigDirName()`) |
-| New runs | `mssanitizer_<timestamp>.log` (filename parsed for report list title/date) |
+| New runs | `mssanitizer_<timestamp>.log` (mssanitizer) / `npu-check_<timestamp>.log` (npu-check); the report list title is the file name itself |
 | Latest after run | `getLatestSanitizerLogAbsPath(workspaceRoot)` — newest by mtime |
 
 **Report list sources** (`RunDataService.getSanitizerRunData`):
 
-1. All `*.log` files in `mindstudio_sanitizer_log` (marks in `PermanentStorage` key `msSanitizer_marks`).
+1. All `mssanitizer_<ts>.log` / `npu-check_<ts>.log` files in `mindstudio_sanitizer_log` (marks in `PermanentStorage` key `msSanitizer_marks`).
 2. Existing paths from sanitizer cache **`fileMapLists.sanitizer`** (ids `sanitizer_<filePath>`).
 3. **Manual add** via results tree → stored in `OperateSidebarState.sanitizer.manualReports`.
 

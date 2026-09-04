@@ -183,6 +183,7 @@ function normalizeActual(command: string, actualProjectDir: string, actualOp: st
 
   return separatorsToForward(command)
     .replace(/mssanitizer_\d+\.log/g, 'mssanitizer_<ts>.log')
+    .replace(/npu-check_\d+\.log/g, 'npu-check_<ts>.log')
     .split(actualFwd)
     .join(goldenProjectPath)
     .split(actualOp)

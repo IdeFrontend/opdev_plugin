@@ -313,7 +313,7 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
       .toContain('--tool overcheck');
   });
 
-  it('keeps the mssanitizer log-file path rule when using npu-check from toolType', () => {
+  it('uses the npu-check_<ts> log-file name and workspace report dir when using npu-check from toolType', () => {
     const npuConfig: SanitizerConfig = {
       ...baseConfig,
       toolType: 'npu-check',
@@ -332,12 +332,12 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
     const normalized = cmd.replace(/\\/g, '/');
 
     expect(normalized)
-      .toContain(`--log-file /ws/triton-op/${ideDir}/mindstudio_sanitizer_log/mssanitizer_`);
+      .toContain(`--log-file /ws/triton-op/${ideDir}/mindstudio_sanitizer_log/npu-check_`);
     expect(normalized)
-      .toMatch(/mssanitizer_\d+-npu-check\.log/);
+      .toMatch(/npu-check_\d+\.log/);
   });
 
-  it('keeps the legacy log-file name (no -npu-check identifier) for mssanitizer toolType or default', () => {
+  it('keeps the legacy log-file name (no npu-check_ identifier) for mssanitizer toolType or default', () => {
     const explicitToolType: SanitizerConfig = {
       ...baseConfig,
       toolType: 'mssanitizer',
@@ -356,7 +356,7 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
 
       expect(normalized)
         .toMatch(/mssanitizer_\d+\.log/);
-      expect(normalized).not.toContain('-npu-check');
+      expect(normalized).not.toContain('npu-check_');
     });
   });
 });

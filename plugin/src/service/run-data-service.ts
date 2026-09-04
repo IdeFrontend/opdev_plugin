@@ -4,7 +4,6 @@ import * as path from 'path';
 
 import { joinIdeConfigPath } from '@plugin/helpers/ide-config-dir';
 import {
-  buildSanitizerReportTitle,
   collectSanitizerLogReports,
   parseSanitizerLogTimestamp,
 } from '@plugin/helpers/sanitizer-log-reports';
@@ -109,16 +108,15 @@ export class RunDataService {
         const stat = fs.statSync(fileMap.filePath);
 
         if (stat.isFile()) {
-          // Sanitizer only handles files
+          // Sanitizer only handles files; the title is the file name itself.
+          // `mssanitizer_<ts>.log` / `npu-check_<ts>.log` names still contribute
+          // their embedded run timestamp so the list stays sorted by run time.
           const filename = path.basename(fileMap.filePath);
           const id = `sanitizer_${fileMap.filePath}`;
-          // Recognize `mssanitizer_<ts>[-npu-check].log` names so a manually
-          // imported npu-check report is titled and dated like one collected
-          // from the log directory; other files keep the raw name/import time.
           const logTimestamp = parseSanitizerLogTimestamp(filename);
 
           res.push({
-            title: logTimestamp === undefined ? filename : buildSanitizerReportTitle(filename, logTimestamp),
+            title: filename,
             timestamp: logTimestamp ?? fileMap.reportTime,
             id,
             path: fileMap.filePath,
