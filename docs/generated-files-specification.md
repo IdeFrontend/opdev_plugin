@@ -108,8 +108,8 @@ The scope covers runtime behavior in `plugin/src`, including workspace-local art
 
 (`<ideConfig>` is `.vscode` or `.arts` — see `getIdeConfigDirName()`; the directory lives under the **workspace root** — every strategy (cann / ascend / triton) writes `--log-file` there, and the reader scans only that directory.)
 
-- **Purpose**: sanitizer report logs.
-- **Created when**: sanitizer command runs with generated `--log-file` path.
+- **Purpose**: sanitizer report logs — `mssanitizer_<timestamp>.log` (mssanitizer) and `npu-check_<timestamp>.log` (npu-check).
+- **Created when**: the sanitizer service pre-creates the dir and a sanitizer run writes its generated `--log-file` path (remote runs pull the dir back).
 - **Updated when**: each sanitizer execution generates a new log file.
 - **Deleted when**: no plugin auto-delete in normal flows.
 - **Used by**:
@@ -238,9 +238,10 @@ ANOTHER_KEY=value
 
 ```text
 mssanitizer_<timestamp>.log
+npu-check_<timestamp>.log
 ```
 
-- **Content schema**: tool-native mssanitizer output (unstructured text log).
+- **Content schema**: tool-native mssanitizer / npu-check output (unstructured text log).
 
 ## `extensions.json` (Code-server/CodeArts extensions dir)
 

@@ -34,7 +34,7 @@ describe('getLatestSanitizerLogAbsPath', () => {
       .toBeUndefined();
   });
 
-  it('returns undefined when no mssanitizer_*.log files exist', () => {
+  it('returns undefined when no mssanitizer_*.log / npu-check_*.log files exist', () => {
     fs.mkdirSync(logDir, { recursive: true });
     fs.writeFileSync(path.join(logDir, 'notes.txt'), 'hi', 'utf8');
 
@@ -42,17 +42,16 @@ describe('getLatestSanitizerLogAbsPath', () => {
       .toBeUndefined();
   });
 
-  it('picks the newest mssanitizer_*.log by mtime', () => {
+  it('picks the newest mssanitizer_*.log / npu-check_*.log by mtime', () => {
     fs.mkdirSync(logDir, { recursive: true });
     const older = path.join(logDir, 'mssanitizer_1700000000000.log');
-    const newer = path.join(logDir, 'mssanitizer_1700001000000.log');
+    const newer = path.join(logDir, 'npu-check_1700001000000.log');
 
     fs.writeFileSync(older, 'old', 'utf8');
     fs.writeFileSync(newer, 'new', 'utf8');
-
-    const oldMtime = Date.now() - 100000;
-
-    fs.utimesSync(older, new Date(oldMtime), new Date(oldMtime));
+    // Pin mtimes so the newest-by-mtime pick is deterministic regardless of write timing.
+    fs.utimesSync(older, new Date(1000), new Date(1000));
+    fs.utimesSync(newer, new Date(2000), new Date(2000));
 
     expect(getLatestSanitizerLogAbsPath(workspaceRoot))
       .toBe(newer);
@@ -63,7 +62,7 @@ describe('getLatestSanitizerLogAbsPath', () => {
     fs.writeFileSync(path.join(logDir, 'mssanitizer.txt'), 'no', 'utf8');
     fs.writeFileSync(path.join(logDir, 'other.log'), 'no', 'utf8');
     fs.mkdirSync(path.join(logDir, 'mssanitizer_0000000000000.log'), { recursive: true });
-    const real = path.join(logDir, 'mssanitizer_1700002000000.log');
+    const real = path.join(logDir, 'npu-check_1700002000000.log');
 
     fs.writeFileSync(real, 'real', 'utf8');
 

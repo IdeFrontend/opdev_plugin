@@ -184,9 +184,9 @@ describe('normalizeSanitizerCommand', () => {
 });
 
 describe('buildSanitizerLogFileName', () => {
-  it('appends the -npu-check identifier for npu-check', () => {
+  it('uses the npu-check_<timestamp> name for npu-check', () => {
     expect(buildSanitizerLogFileName('npu-check'))
-      .toMatch(/^mssanitizer_\d+-npu-check\.log$/);
+      .toMatch(/^npu-check_\d+\.log$/);
   });
 
   it('keeps the legacy name for mssanitizer', () => {
@@ -202,10 +202,10 @@ describe('createSanitizerCommand', () => {
         'memcheck',
         'synccheck',
       ])
-      .addOption('log-file', '/ws/.vscode/mindstudio_sanitizer_log/mssanitizer_1-npu-check.log');
+      .addOption('log-file', '/ws/.vscode/mindstudio_sanitizer_log/npu-check_1.log');
 
     expect(cmd.toString())
-      .toBe('npu-check --tool memcheck --tool synccheck --log-file /ws/.vscode/mindstudio_sanitizer_log/mssanitizer_1-npu-check.log');
+      .toBe('npu-check --tool memcheck --tool synccheck --log-file /ws/.vscode/mindstudio_sanitizer_log/npu-check_1.log');
   });
 
   it('renders mssanitizer options with the --key=value form', () => {

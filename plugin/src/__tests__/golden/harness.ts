@@ -114,7 +114,9 @@ function createFixturePathNormalizer(realPath: string, virtualPath: string): (va
         .join(to);
     }
 
-    return out.replace(/mssanitizer_\d+\.log/g, 'mssanitizer_<ts>.log');
+    return out
+      .replace(/mssanitizer_\d+\.log/g, 'mssanitizer_<ts>.log')
+      .replace(/npu-check_\d+\.log/g, 'npu-check_<ts>.log');
   };
 
   const walk = (value: unknown): unknown => {

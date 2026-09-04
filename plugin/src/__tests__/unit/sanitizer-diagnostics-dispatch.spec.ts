@@ -86,7 +86,7 @@ describe('sanitizer diagnostics npu-check dispatch', () => {
     // Resolvable by basename so publishFromLogFile can map the npu-check frame onto it.
     fs.writeFileSync(path.join(workspaceDir, 'op989467.asc'), 'asc');
 
-    npuCheckLog = path.join(workspaceDir, 'mssanitizer_1-npu-check.log');
+    npuCheckLog = path.join(workspaceDir, 'npu-check_1.log');
     fs.writeFileSync(npuCheckLog, NPU_CHECK_LOG);
 
     mssanitizerLog = path.join(workspaceDir, 'mssanitizer_1.log');
