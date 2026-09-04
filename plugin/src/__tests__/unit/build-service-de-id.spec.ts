@@ -539,7 +539,7 @@ describe('build-service de-id', () => {
           projectPath: root,
           operatorNames: 'AddCustom',
           script: 'ut-cmd',
-          toolOutputLabel: 'test',
+          toolOutputLabel: 'ut test',
         });
     });
 

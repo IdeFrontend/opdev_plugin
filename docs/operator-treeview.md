@@ -112,7 +112,7 @@ Root nodes are built in `getFlowRootNodes()` when `hasDevtoolConfig` and project
 
 - Unsupported `projectType` → empty flow tree.
 - **Standard custom** whose `build.sh --help` does not expose `--genop` (`supportsSanitizerAndTuning` is false) → hide Debug group and Performance tuning group.
-- **Multi-operator selection** (`selectedOperatorIds.length > 1`) → run/debug/sanitizer/onboard/simulation/ut/dump rows show disabled icon and drop click command (tooltip: single-operator only).
+- **Multi-operator selection** (`selectedOperatorIds.length > 1`) → run/debug/sanitizer/onboard/simulation/ut/dump rows show disabled icon and drop click command (tooltip: single-operator only); the **Debug** and **Performance tuning** section headers mirror the disabled icon.
 - **No NPU on extension host** (`opDevtools.npuHardwareAvailable === false`) → NPU-only rows (`run`, `npuDebug`, `sanitizer`, `onboard`, `dumpTensor`) show disabled icon, drop click command, and tooltip `web.operate.npuHardwareRequired`. CPU-capable rows (`build`, `cpuDebug`, `simulation`, `utTest`) and inline gear/settings commands stay enabled. Hardware is probed once per session post-activate via `asys info -r=status` then `npu-smi info` ([`npu-hardware-probe.ts`](../plugin/src/domain/utils/npu-hardware-probe.ts)): NPU is **available** when either command responds (including driver errors such as a busy device); **unavailable** only when both commands are missing or produce no output. Context defaults to `true` until the probe completes (optimistic). See [plugin_release #50](https://gitcode.com/opdevtools/plugin_release/issues/50).
 - **UT test:** UT is CPU-capable and runs the configured UT command locally. It does not probe NPU hardware or invoke `remote_tool.sh`.
 - Sanitizer / on-board / simulation / build rows gated by `OperatorPluginRegistry` build behavior flags (`supportsSanitizer`, `supportsOnBoard`, `supportsSimulate`, etc.). **Triton** (`project_type` / `op_type` `triton`, when `op-devtools.operatorSupport.triton` is on) shows sanitizer, simulate, and on-board per `TritonPlugin.buildBehavior`; CPU debug stays hidden; NPU debug row follows `supportsNpuDebug` and `debugMode`. Run still requires an active `.py` (same pattern as PyAsc).
@@ -138,6 +138,9 @@ Long-running flow actions share an **in-memory, strictly serial** queue per scop
 | `simulation` | `simulation` | `dispatchStartSimulate` → `taskMethods.startSimulate` |
 | `utTest` | `utTest` | `dispatchStartUtTest` |
 | `dumpTensor` | `dumpTensor` | `dispatchStartDumpTensor` |
+| `stTest` | `stTest` | `dispatchStTestFromWebview` → `taskMethods.startStTest` |
+| `cpuDebug` | `cpuDebug` | `taskMethods.runCpuDebug` |
+| `npuDebug` | `npuDebug` | `taskMethods.runDebug` |
 
 Entry from the Actions tree or quick-options webviews: `dispatchEnqueueNativeOperatorAction` (tree) or `dispatchSimulator` / `dispatchOnBoard` / `dispatchSanitizer` (webview wrappers that also call enqueue).
 
@@ -148,7 +151,7 @@ Queue key = **`{projectScope}::{selectedOperatorIds}`** (`getOperatorQueueScopeK
 - **Project:** `id:<projectId>` from `getProjectByPath`, else normalized workspace path.
 - **Operators:** sorted comma-separated IDs from `homeMethods.getSelectedOperatorIds()`, or `default` if none.
 
-Switching workspace or selected operators uses a **different** queue; queues are never merged.
+Switching workspace or selected operators uses a **different** queue; queues are never merged. **Every queueable action — st test included — lives in this same per-project queue** (st test previously used a separate global queue; it was unified so it serializes with dump tensor and the rest of the group).
 
 ### Rules
 

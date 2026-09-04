@@ -19,6 +19,11 @@ import {
   type OperatorCollectionInfo,
 } from '@plugin/domain/models/project-model';
 import { viewIdToProjectType } from '@plugin/domain/utils/project-utils';
+import {
+  EXPERIMENTAL_OPERATOR_COLLECTIONS,
+  ROOT_OPERATOR_COLLECTIONS,
+  scanOperatorsInCollection,
+} from '@plugin/domain/utils/operator-collections';
 import { updateWorkspaceCache } from '@plugin/helpers/workspace-cache';
 import { ConfigService } from '@plugin/service/config-service';
 
@@ -104,71 +109,6 @@ export class WorkspaceDetectorService {
   }
 
   /**
-   * Whitelist of operator collections under root
-   */
-  private static readonly ROOT_OPERATOR_COLLECTIONS = new Set([
-    'image',
-    'objdetect',
-    'conversion',
-    'math',
-    'random',
-    'activation',
-    'control',
-    'conv',
-    'foreach',
-    'index',
-    'loss',
-    'matmul',
-    'norm',
-    'optim',
-    'pooling',
-    'quant',
-    'rnn',
-    'vfusion',
-    'hash',
-    'attention',
-    'ffn',
-    'gmm',
-    'mc2',
-    'moe',
-    'posembedding',
-    'select_attention_operators',
-  ]);
-
-  /**
-   * Whitelist of operator collections under experimental directory
-   */
-  private static readonly EXPERIMENTAL_OPERATOR_COLLECTIONS = new Set([
-    'image',
-    'objdetect',
-    'conversion',
-    'math',
-    'npu_ops_math_ext',
-    'random',
-    'activation',
-    'control',
-    'conv',
-    'foreach',
-    'index',
-    'loss',
-    'matmul',
-    'norm',
-    'optim',
-    'pooling',
-    'quant',
-    'rnn',
-    'vfusion',
-    'attention',
-    'ffn',
-    'gmm',
-    'mc2',
-    'moe',
-    'npu_ops_transformer_ext',
-    'posembedding',
-    'select_attention_operators',
-  ]);
-
-  /**
    * Scan operator collections (ops_meet) and operators (ops_list/experimental_ops_list) under root.
    * Shared by WorkspaceDetectorService, FolderContextMenuService, etc.
    *
@@ -202,11 +142,11 @@ export class WorkspaceDetectorService {
       const collectionPath = path.join(rootPath, dirName);
 
       // Process operator collections under root
-      if (this.ROOT_OPERATOR_COLLECTIONS.has(dirName)) {
+      if (ROOT_OPERATOR_COLLECTIONS.has(dirName)) {
         const {
           hasOperators,
           operators,
-        } = this.scanOperatorsInCollection(collectionPath, false);
+        } = scanOperatorsInCollection(collectionPath);
 
         if (hasOperators) {
           opsMeet.push({
@@ -229,12 +169,12 @@ export class WorkspaceDetectorService {
             const expCollectionName = expEntry.name;
 
             // Check if in experimental operator collection whitelist
-            if (this.EXPERIMENTAL_OPERATOR_COLLECTIONS.has(expCollectionName)) {
+            if (EXPERIMENTAL_OPERATOR_COLLECTIONS.has(expCollectionName)) {
               const expCollectionPath = path.join(collectionPath, expCollectionName);
               const {
                 hasOperators,
                 operators,
-              } = this.scanOperatorsInCollection(expCollectionPath, true);
+              } = scanOperatorsInCollection(expCollectionPath);
 
               if (hasOperators) {
                 // Use full path as name for experimental collections (e.g. experimental/image)
@@ -257,60 +197,6 @@ export class WorkspaceDetectorService {
       opsMeet,
       opsList,
       experimentalOpsList,
-    };
-  }
-
-  /**
-   * Scan operators under an operator collection directory
-   * @param collectionPath Operator collection path
-   * @param isExperimental Whether experimental (currently unused, reserved for future)
-   * @returns Whether it has operators and the operator list
-   */
-  private static scanOperatorsInCollection(
-    collectionPath: string,
-    _isExperimental: boolean,
-  ): {
-    hasOperators: boolean;
-    operators: SubOperatorInfo[];
-  } {
-    const operators: SubOperatorInfo[] = [];
-    let hasOperators = false;
-
-    try {
-      const subEntries = fs.readdirSync(collectionPath, { withFileTypes: true });
-
-      for (const subEntry of subEntries) {
-        if (!subEntry.isDirectory() || subEntry.name.startsWith('.')) {
-          continue;
-        }
-
-        const operatorPath = path.join(collectionPath, subEntry.name);
-        const operatorCmakeListsPath = path.join(operatorPath, 'CMakeLists.txt');
-
-        if (!fs.existsSync(operatorCmakeListsPath)) {
-          continue;
-        }
-
-        hasOperators = true;
-        const buildDir = path.join(operatorPath, 'build');
-        const outDir = path.join(operatorPath, 'out');
-        const isCompiled = fs.existsSync(buildDir) || fs.existsSync(outDir);
-        const operatorInfo: SubOperatorInfo = {
-          name: subEntry.name,
-          path: operatorPath,
-          isCompiled: isCompiled,
-        };
-
-        operators.push(operatorInfo);
-      }
-    }
-    catch {
-      // Ignore single-dir scan failure
-    }
-
-    return {
-      hasOperators,
-      operators,
     };
   }
 

@@ -13,6 +13,7 @@ import {
   type StartStTestParams,
 } from '@plugin/service/st-test-service';
 import { isStTestCancelledError } from '@plugin/domain/services/st-test-errors';
+import type { OperatorToolOutputLabel } from '@plugin/helpers/output-channel';
 import { homeMethods } from './home-controller';
 import {
   StartBuildParams,
@@ -381,7 +382,7 @@ export const taskMethods = {
   /**
    * Build operator
    */
-  async startBuild(params: StartBuildParams = {}): Promise<void> {
+  async startBuild(params: StartBuildParams = {}, outputLabel?: OperatorToolOutputLabel): Promise<void> {
     return enqueueCompileRun('build', async () => {
       await ensurePostActivateBootstrapReady();
 
@@ -389,7 +390,7 @@ export const taskMethods = {
         // Save the current executor reference for possible termination operations
         currentExecutor = ProjectManager.getInstance()
           .getExecutor();
-        await buildService.startBuild(params);
+        await buildService.startBuild(params, outputLabel);
       }
       finally {
         // Clear executor reference
@@ -425,7 +426,7 @@ export const taskMethods = {
   /**
    * Build example
    */
-  async startBuildExample(params: StartBuildExampleParams = {}): Promise<void> {
+  async startBuildExample(params: StartBuildExampleParams = {}, outputLabel?: OperatorToolOutputLabel): Promise<void> {
 
     return enqueueCompileRun('buildExample', async () => {
       await ensurePostActivateBootstrapReady();
@@ -434,7 +435,7 @@ export const taskMethods = {
         // Save current executor reference
         currentExecutor = ProjectManager.getInstance()
           .getExecutor();
-        await buildService.startBuildExample(params);
+        await buildService.startBuildExample(params, outputLabel);
       }
       finally {
         // Clear executor reference
@@ -677,7 +678,7 @@ export const taskMethods = {
       }
     }
 
-    return enqueueCompileRun('build', async () => {
+    return (async () => {
       await ensurePostActivateBootstrapReady();
 
       try {
@@ -718,7 +719,7 @@ export const taskMethods = {
           scriptField: 'npu_debug_script',
           operatorNames: operatorNames || undefined,
           compileOption,
-        });
+        }, 'npu debug');
 
         if (!built) {
           // Debug build failed or was preempted — do not launch msdebug against a missing binary.
@@ -757,7 +758,7 @@ export const taskMethods = {
                 projectPath: project?.project_path ?? '',
                 operatorNames: operatorNames || undefined,
                 script: exampleBuildCommand,
-                toolOutputLabel: 'compile',
+                toolOutputLabel: 'npu debug',
               }),
               {
                 transformCommand: createRemoteCommandWhenNoNpuTransformer((command) => buildRemoteBuildExampleCommand(
@@ -814,7 +815,7 @@ export const taskMethods = {
               '"event":"ready"',
               [],
               {
-                toolOutputLabel: 'tool',
+                toolOutputLabel: 'npu debug',
                 timeout: 30000,
               },
               true,
@@ -897,7 +898,7 @@ export const taskMethods = {
         ProjectManager.getInstance()
           .clearExecutor();
       }
-    });
+    })();
   },
 
   /**
@@ -927,7 +928,7 @@ export const taskMethods = {
       return;
     }
 
-    return enqueueCompileRun('build', async () => {
+    return (async () => {
       await ensurePostActivateBootstrapReady();
 
       try {
@@ -976,7 +977,7 @@ export const taskMethods = {
           scriptField: 'cpu_debug_script',
           operatorNames: operatorNames || undefined,
           compileOption,
-        });
+        }, 'cpu debug');
 
         if (!built) {
           // Debug build failed or was preempted — do not launch msdebug against a missing binary.
@@ -1015,7 +1016,7 @@ export const taskMethods = {
                 projectPath: project?.project_path ?? '',
                 operatorNames: operatorNames || undefined,
                 script: exampleBuildCommand,
-                toolOutputLabel: 'compile',
+                toolOutputLabel: 'cpu debug',
               }),
               {
                 transformCommand: createRemoteCommandWhenNoNpuTransformer((command) => buildRemoteBuildExampleCommand(
@@ -1079,7 +1080,7 @@ export const taskMethods = {
         ProjectManager.getInstance()
           .clearExecutor();
       }
-    });
+    })();
   },
 
   /**

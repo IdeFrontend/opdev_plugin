@@ -275,6 +275,7 @@ export class PerformanceRunData {
         'json',
         'rep',
         'ncrep',
+        'npu-rep',
       ].includes(ext)) {
         const fileUri = vscode.Uri.joinPath(parentUri, subPath);
 

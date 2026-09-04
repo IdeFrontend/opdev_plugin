@@ -363,6 +363,29 @@ describe('WorkspaceDetectorService real scan (standard custom)', () => {
       .toBe(false);
   });
 
+  it('collects operators from the root examples collection', async () => {
+    fs.mkdirSync(path.join(workspacePath, 'examples', 'my_op'), { recursive: true });
+    fs.writeFileSync(path.join(workspacePath, 'examples', 'my_op', 'CMakeLists.txt'), '');
+    fs.mkdirSync(path.join(workspacePath, 'examples', 'plain_dir'), { recursive: true });
+
+    await WorkspaceDetectorService.detectAndRegisterWorkspace(workspacePath);
+
+    const cache = readCache(workspacePath);
+
+    expect(cache.folders[rootKey].opsMeet)
+      .toContainEqual({
+        name: 'examples',
+        path: path.join(workspacePath, 'examples'),
+      });
+    expect(cache.folders[rootKey].opsList)
+      .toEqual([
+        expect.objectContaining({
+          name: 'my_op',
+          isCompiled: false,
+        }),
+      ]);
+  });
+
   it('ignores a failure to scan a single collection', async () => {
     scaffoldStandardCustomRoot(workspacePath);
     const mathDir = path.join(workspacePath, 'math');

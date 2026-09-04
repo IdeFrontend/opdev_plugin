@@ -527,13 +527,15 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   };
 
-  const queueActionToNodeId: Record<QueueableActionType, 'sanitizer' | 'onboard' | 'simulation' | 'utTest' | 'stTest' | 'dumpTensor'> = {
+  const queueActionToNodeId: Record<QueueableActionType, 'sanitizer' | 'onboard' | 'simulation' | 'utTest' | 'stTest' | 'dumpTensor' | 'cpuDebug' | 'npuDebug'> = {
     sanitizer: 'sanitizer',
     onboard: 'onboard',
     simulation: 'simulation',
     utTest: 'utTest',
     stTest: 'stTest',
     dumpTensor: 'dumpTensor',
+    cpuDebug: 'cpuDebug',
+    npuDebug: 'npuDebug',
   };
 
   const nodeIdToQueueAction: Partial<Record<string, QueueableActionType>> = {
@@ -543,6 +545,8 @@ export async function activate(context: vscode.ExtensionContext) {
     utTest: 'utTest',
     stTest: 'stTest',
     dumpTensor: 'dumpTensor',
+    cpuDebug: 'cpuDebug',
+    npuDebug: 'npuDebug',
   };
 
   const syncNativeQueueState = async () => {
@@ -695,14 +699,12 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  // Register the open/close command for the plugin's OWN view container. The container is
-  // contributed to the secondary side bar (auxiliary bar), so
-  // `workbench.action.toggleSidebarVisibility` toggles the wrong (primary) side bar and
-  // indiscriminately closes Explorer/Debug/etc. (GC-33). The icon only FOCUSES (reveals) the
-  // plugin's own panel — it never toggles it closed. We run the
-  // first registered focus candidate (per-container focus, then the secondary/auxiliary bar
-  // focus the VSCode-huawei fork provides) and skip when none exist instead of throwing
-  // "command not found".
+  // Register the open/close command for the plugin's OWN view container (contributed to the
+  // primary activity bar). `workbench.action.toggleSidebarVisibility` would toggle the whole
+  // primary side bar and indiscriminately close Explorer/Debug/etc. (GC-33). The icon only
+  // FOCUSES (reveals) the plugin's own panel — it never toggles it closed. We run the first
+  // registered focus candidate (the per-container command) and skip when none exist instead
+  // of throwing "command not found".
   const toggleOpsOperateCommand = vscode.commands.registerCommand(
     COMMAND_TOGGLE_OPS_OPERATE,
     async () => {
@@ -785,7 +787,7 @@ export async function activate(context: vscode.ExtensionContext) {
   const openStTestHistoryCommand = vscode.commands.registerCommand(
     COMMAND_ST_TEST_HISTORY_OPEN,
     async (recordKey: unknown) => {
-      const outputChannel = getOperatorToolOutputChannel('test', { clear: false });
+      const outputChannel = getOperatorToolOutputChannel('st test');
       const writeHistoryLog = (message: string): void => {
         const timestamp = new Date()
           .toISOString();
@@ -916,7 +918,7 @@ export async function activate(context: vscode.ExtensionContext) {
             operatorNames,
             operatorType,
             compileOption,
-          });
+          }, 'run');
 
           return;
         }
@@ -938,7 +940,7 @@ export async function activate(context: vscode.ExtensionContext) {
       }
 
       await operateTreeProvider.runFlowAction('cpuDebug', async () => {
-        await taskMethods.runCpuDebug();
+        await dispatchEnqueueNativeOperatorAction('cpuDebug', {}, () => taskMethods.runCpuDebug());
       });
     },
   );
@@ -954,7 +956,7 @@ export async function activate(context: vscode.ExtensionContext) {
       }
 
       await operateTreeProvider.runFlowAction('npuDebug', async () => {
-        await taskMethods.runDebug();
+        await dispatchEnqueueNativeOperatorAction('npuDebug', {}, () => taskMethods.runDebug());
       });
     },
   );
@@ -2544,6 +2546,7 @@ export async function activate(context: vscode.ExtensionContext) {
           [t('profilingReport.reportFile')]: [
             'rep',
             'ncrep',
+            'npu-rep',
           ],
           [t('common.allFiles')]: ['*'],
         },

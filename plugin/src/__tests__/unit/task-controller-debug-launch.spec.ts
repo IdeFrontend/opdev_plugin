@@ -383,7 +383,7 @@ describe('taskMethods.runDebug', () => {
         scriptField: 'npu_debug_script',
         operatorNames: ['Add'],
         compileOption: '--fast',
-      });
+      }, 'npu debug');
     expect(vscode.commands.executeCommand)
       .toHaveBeenCalledWith('workbench.debug.action.toggleRepl');
     expect(updateMsdebugTarget)
@@ -725,7 +725,7 @@ describe('taskMethods.runDebug', () => {
         '"event":"ready"',
         [],
         expect.objectContaining({
-          toolOutputLabel: 'tool',
+          toolOutputLabel: 'npu debug',
           timeout: 30000,
         }),
         true,
@@ -941,7 +941,7 @@ describe('taskMethods.runDebug', () => {
         scriptField: 'npu_debug_script',
         operatorNames: undefined,
         compileOption: '--fast',
-      });
+      }, 'npu debug');
     expect(vscode.debug.startDebugging)
       .toHaveBeenCalled();
   });
@@ -1141,7 +1141,7 @@ describe('taskMethods.runCpuDebug', () => {
         scriptField: 'cpu_debug_script',
         operatorNames: ['Add'],
         compileOption: '--fast',
-      });
+      }, 'cpu debug');
     expect(resolveDebugLaunchConfigName)
       .toHaveBeenCalledWith('ascend', 'cpu', 'build', undefined);
     expect(updateMsdebugTarget)
@@ -1304,7 +1304,7 @@ describe('taskMethods.runCpuDebug', () => {
         scriptField: 'cpu_debug_script',
         operatorNames: undefined,
         compileOption: '--fast',
-      });
+      }, 'cpu debug');
     expect(vscode.debug.startDebugging)
       .toHaveBeenCalled();
   });

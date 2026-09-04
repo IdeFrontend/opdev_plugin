@@ -14,7 +14,7 @@ For CANN/Ascend spawn environment (`SOC_VERSION`, `NPU_ARCH`; simulator-class ru
 | **Plugin** | Optional pre-build / example build / deploy (project-type dependent), command assembly, shell execution |
 | **Config** | Workspace settings ([`workspace-settings.md`](./workspace-settings.md) § Performance tuning); `.vscode/cache.json` (`fileMapLists`) for external report paths |
 | **Results UI** | Native tree **`opdevtoolsPerformanceResultsTree`** (reports → folder/file leaves) |
-| **Viewers** | CSV editor, Insight viewer (`bin`/`json`), profiling-report viewer (`rep`/`ncrep`), optional `vscode.diff` via API |
+| **Viewers** | CSV editor, Insight viewer (`bin`/`json`), profiling-report viewer (`rep`/`ncrep`/`npu-rep`), optional `vscode.diff` via API |
 
 There is **no** performance-tuning sidebar webview (`performancePanelView` / `performance-run-data` panel) and **no** `open-performance-panel-view` command.
 
@@ -173,6 +173,8 @@ Same structure as simulation, but:
 
 **Output directory:** the workspace root — `joinIdeConfigRelative('opprof')` joined with the first workspace folder (fallback: `operator.op_path`), i.e. **`<workspaceRoot>/<ideDir>/opprof`**. Every operator writes its runs there; each run creates a subdirectory (`<runId>`), and the scan reads only this single root (never per-operator trees).
 
+**Output channel:** the on-board run writes to its own `Op Dev Tools: onboard` channel (`toolOutputLabel: 'onboard'`); simulator runs use the `simulate` channel. **Every command in the action's chain writes to the action's channel** — the internal compile/example pre-steps of simulate/on-board go to `simulate`/`onboard`, never to `compile`. Both channels append across runs (GC-73) — see [`build-integration.md`](./build-integration.md) for the channel contract.
+
 ---
 
 ## Configuration
@@ -229,7 +231,7 @@ There is **no** webview panel that calls `getRunData` for the performance result
 
 ### File tree under a report
 
-`scanSubFiles` includes only **`csv`**, **`bin`**, **`json`**, **`rep`**, **`ncrep`** (lowercase). Empty directory branches are pruned. Tree nodes: `performanceFolder`, `performanceFile`.
+`scanSubFiles` includes only **`csv`**, **`bin`**, **`json`**, **`rep`**, **`ncrep`**, **`npu-rep`** (lowercase). Empty directory branches are pruned. Tree nodes: `performanceFolder`, `performanceFile`.
 
 ---
 
@@ -259,7 +261,7 @@ There is **no** webview panel that calls `getRunData` for the performance result
 |-----------|---------|
 | `csv` | `viewService.openCsvFile` |
 | `bin`, `json` | `viewService.openInsight` → Insight data viewer panel (`INSIGHT_HOME_PATH` / `.arts/.env`) |
-| `rep`, `ncrep` | `viewService.openProfilingReport` → profiling-report panel (see [`profiling-report-integration.md`](./profiling-report-integration.md)) |
+| `rep`, `ncrep`, `npu-rep` | `viewService.openProfilingReport` → profiling-report panel (see [`profiling-report-integration.md`](./profiling-report-integration.md)) |
 
 See [`user-issues/profiling-and-insight.md`](./user-issues/profiling-and-insight.md) for known Insight viewer issues (not plugin msprof orchestration).
 
@@ -283,7 +285,7 @@ See [`user-issues/profiling-and-insight.md`](./user-issues/profiling-and-insight
 | `huawei-op-devtools.sidebar.performance.report.mark` / `.unmark` | Toggle mark |
 | `huawei-op-devtools.sidebar.performance.report.sortTime` | Toggle timestamp sort (in-memory) |
 | `huawei-op-devtools.sidebar.performance.report.filterMarked` / `.showAll` | Marked-only filter |
-| `huawei-op-devtools.sidebar.performance.file.open` | Open csv / bin / json / rep / ncrep |
+| `huawei-op-devtools.sidebar.performance.file.open` | Open csv / bin / json / rep / ncrep / npu-rep |
 | `huawei-op-devtools.flashPerformanceRunData` | Rescan disk + config lists |
 | `huawei-op-devtools.reportVisualizationPerformance` | Add folder to on_board `fileMapList` |
 

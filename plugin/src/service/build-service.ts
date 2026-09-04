@@ -75,6 +75,7 @@ import { toWorkspaceRelativePosixPath } from '@plugin/domain/utils/path-utils';
 import {
   getEnvironmentScriptPathFromWorkspace, getFirstWorkspaceFolderPath, readWorkspaceProjectTypeSetting,
 } from '@plugin/helpers/operator-project-workspace-config';
+import type { OperatorToolOutputLabel } from '@plugin/helpers/output-channel';
 import { updateWorkspaceCache } from '@plugin/helpers/workspace-cache';
 
 /**
@@ -296,8 +297,12 @@ export class BuildService {
 
   /**
    * Compile operator
+   *
+   * `outputLabel` is the tool-output channel this whole action writes to —
+   * default 'compile'; debug flows pass 'cpu debug'/'npu debug' so their
+   * pre-build chain lands in the action's channel (GC-73).
    */
-  async startBuild(params: StartBuildParams): Promise<boolean> {
+  async startBuild(params: StartBuildParams, outputLabel: OperatorToolOutputLabel = 'compile'): Promise<boolean> {
     if (!(await this.guardSupportedProjectTypeForCurrentProject())) {
       return false;
     }
@@ -357,7 +362,7 @@ export class BuildService {
           operatorNames: params.operatorNames,
           scriptField: params.scriptField,
           script: buildCommand,
-          toolOutputLabel: 'compile',
+          toolOutputLabel: outputLabel,
         }),
       );
 
@@ -486,8 +491,12 @@ export class BuildService {
 
   /**
    * Compile example
+   *
+   * `outputLabel` is the tool-output channel this action writes to — default
+   * 'compile' (standalone build-example runs belong to the compile channel);
+   * chains that embed a build-example step pass their own action label (GC-73).
    */
-  async startBuildExample(params: StartBuildExampleParams): Promise<void> {
+  async startBuildExample(params: StartBuildExampleParams, outputLabel: OperatorToolOutputLabel = 'compile'): Promise<void> {
     if (!(await this.guardSupportedProjectTypeForCurrentProject())) {
       return;
     }
@@ -526,7 +535,7 @@ export class BuildService {
           projectPath,
           operatorNames: params.operatorNames,
           script: buildCommand,
-          toolOutputLabel: 'compile',
+          toolOutputLabel: outputLabel,
         }),
         {
           transformCommand: createRemoteCommandWhenNoNpuTransformer((command) => buildRemoteBuildExampleCommand(
@@ -674,7 +683,7 @@ export class BuildService {
           script: buildCommand,
           isSimulator: true,
         }),
-        { outputLabel: 'compile' },
+        { outputLabel: 'simulate' },
       );
 
       console.log('buildRes', buildRes);
@@ -707,7 +716,7 @@ export class BuildService {
             projectPath,
             operatorNames: params.operatorNames,
             script: exampleBuildCommand,
-            toolOutputLabel: 'compile',
+            toolOutputLabel: 'simulate',
           }),
         );
 
@@ -820,7 +829,7 @@ export class BuildService {
           operatorNames: params.operatorNames,
           script: buildCommand,
         }),
-        { outputLabel: 'compile' },
+        { outputLabel: 'onboard' },
       );
 
       console.log('buildRes', buildRes);
@@ -856,7 +865,7 @@ export class BuildService {
             projectPath,
             operatorNames: params.operatorNames,
             script: exampleBuildCommand,
-            toolOutputLabel: 'compile',
+            toolOutputLabel: 'onboard',
           }),
           {
             transformCommand: createRemoteCommandWhenNoNpuTransformer((command) => buildRemoteBuildExampleCommand(
@@ -905,7 +914,7 @@ export class BuildService {
           projectPath,
           operatorNames: params.operatorNames,
           script: onBoardCommand,
-          toolOutputLabel: 'run',
+          toolOutputLabel: 'onboard',
         }),
         { transformCommand: remoteOnBoardCommandTransformer },
       );
@@ -991,7 +1000,7 @@ export class BuildService {
         projectPath: currentDir,
         operatorNames: params.operatorNames,
         script: buildCommand,
-        toolOutputLabel: 'compile',
+        toolOutputLabel: 'dump tensor',
       }),
     );
 
@@ -1024,7 +1033,7 @@ export class BuildService {
           projectPath: currentDir,
           operatorNames: params.operatorNames,
           script: exampleBuildCommand,
-          toolOutputLabel: 'compile',
+          toolOutputLabel: 'dump tensor',
         }),
         { transformCommand: remoteDumpTensorCommandTransformer },
       );
@@ -1060,7 +1069,7 @@ export class BuildService {
             script: runCommandWithEnv,
           }),
           {
-            outputLabel: 'run',
+            outputLabel: 'dump tensor',
             transformCommand: remoteDumpTensorCommandTransformer,
           },
         );
@@ -1120,7 +1129,7 @@ export class BuildService {
           projectPath,
           operatorNames: params.operatorNames,
           script: buildCommand,
-          toolOutputLabel: 'test',
+          toolOutputLabel: 'ut test',
         }),
       );
 
@@ -1190,7 +1199,7 @@ export class BuildService {
       ))(showCommand);
       const executor = ProjectManager.getInstance()
         .getExecutor();
-      const showRes = await executor.execute(commandToExecute, [], [], { toolOutputLabel: 'debug' }, true);
+      const showRes = await executor.execute(commandToExecute, [], [], { toolOutputLabel: 'dump tensor' }, true);
 
       console.log('[startDumpTensor] show_kernel_debug_data result:', {
         code: showRes.code,

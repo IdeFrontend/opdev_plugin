@@ -1530,6 +1530,21 @@ describe('build-service flows', () => {
         .toHaveBeenCalledWith('build.onBoardSuccess');
     });
 
+    it('writes the on-board run to its own onboard output channel', async () => {
+      setPluginBehavior({
+        requiresBuildBeforeAnalysis: true,
+        supportsOnBoard: true,
+      });
+
+      await buildService.startOnBoard({});
+
+      // GC-73: the on-board run no longer shares the 'run' channel.
+      expect(buildOperatorSpawnContext)
+        .toHaveBeenCalledWith(expect.objectContaining({ toolOutputLabel: 'onboard' }));
+      expect(buildOperatorSpawnContext)
+        .not.toHaveBeenCalledWith(expect.objectContaining({ toolOutputLabel: 'run' }));
+    });
+
     it('returns silently when the on-board command is interrupted by the user', async () => {
       setPluginBehavior({
         requiresBuildBeforeAnalysis: true,
@@ -1678,7 +1693,7 @@ describe('build-service flows', () => {
       expect(buildOperatorSpawnContext)
         .toHaveBeenCalledWith(expect.objectContaining({
           script: 'example-cmd',
-          toolOutputLabel: 'compile',
+          toolOutputLabel: 'dump tensor',
         }));
       expect(vscode.window.showInformationMessage)
         .toHaveBeenCalledWith('build.dumpTensorSuccess');
@@ -1700,7 +1715,7 @@ describe('build-service flows', () => {
       expect(command)
         .toContain(path.join(root, '.vscode', 'DumpTensor'));
       expect(executorExecute)
-        .toHaveBeenCalledWith(expect.any(String), [], [], { toolOutputLabel: 'debug' }, true);
+        .toHaveBeenCalledWith(expect.any(String), [], [], { toolOutputLabel: 'dump tensor' }, true);
     });
 
     it('keeps the flow going when show_kernel_debug_data fails', async () => {

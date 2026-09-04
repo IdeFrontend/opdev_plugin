@@ -1750,7 +1750,9 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         undefined,
         vscode.TreeItemCollapsibleState.Collapsed,
         treeItemContextKey('debug'),
-        this.pickFlowIcon('debug', this.getCustomProductIcon('debug')),
+        hasMultipleSelectedOperators
+          ? disabledIcon
+          : this.pickFlowIcon('debug', this.getCustomProductIcon('debug')),
       ));
     }
 
@@ -1778,7 +1780,9 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         undefined,
         vscode.TreeItemCollapsibleState.Collapsed,
         undefined,
-        this.pickFlowIcon('power', this.getCustomProductIcon('power')),
+        hasMultipleSelectedOperators
+          ? disabledIcon
+          : this.pickFlowIcon('power', this.getCustomProductIcon('power')),
       ));
     }
 
@@ -2532,7 +2536,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       return;
     }
 
-    if (fileType === 'rep' || fileType === 'ncrep') {
+    if (fileType === 'rep' || fileType === 'ncrep' || fileType === 'npu-rep') {
       await viewService.openProfilingReport(filePath);
 
       return;

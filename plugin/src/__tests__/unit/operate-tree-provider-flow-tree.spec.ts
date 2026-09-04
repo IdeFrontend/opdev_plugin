@@ -17,6 +17,7 @@ const mockCopyReport = jest.fn();
 const mockDownloadReport = jest.fn();
 const mockOpenInsight = jest.fn();
 const mockOpenCsvFile = jest.fn();
+const mockOpenProfilingReport = jest.fn();
 const mockGetStTestSelectionState = jest.fn();
 const mockShouldShowStTestAction = jest.fn();
 
@@ -122,6 +123,7 @@ jest.mock('@plugin/service/view-service', () => ({
   viewService: {
     openInsight: (...args: unknown[]) => mockOpenInsight(...args),
     openCsvFile: (...args: unknown[]) => mockOpenCsvFile(...args),
+    openProfilingReport: (...args: unknown[]) => mockOpenProfilingReport(...args),
   },
 }));
 jest.mock('@plugin/helpers/environment-script-guard', () => ({ ensureEnvironmentScriptForOperateAction: (...args: unknown[]) => mockEnsureEnvironmentScript(...args) }));
@@ -1229,6 +1231,19 @@ describe('OperateTreeProvider flow root nodes', () => {
       expect((node.iconPath as vscode.ThemeIcon).id)
         .toBe('circle-slash');
     }
+
+    // The debug and performance-tuning sections mirror the disabled state of
+    // their children.
+    const debug = nodes.find((node) => node.nodeId === 'debug')!;
+    const power = nodes.find((node) => node.nodeId === 'power')!;
+
+    for (const node of [
+      debug,
+      power,
+    ]) {
+      expect((node.iconPath as vscode.ThemeIcon).id)
+        .toBe('circle-slash');
+    }
   });
 
   it('hides debug and power for standard custom without sanitizer support', () => {
@@ -1499,6 +1514,8 @@ describe('OperateTreeProvider performance results panel', () => {
     mockOpenInsight.mockResolvedValue(undefined);
     mockOpenCsvFile.mockReset();
     mockOpenCsvFile.mockResolvedValue(undefined);
+    mockOpenProfilingReport.mockReset();
+    mockOpenProfilingReport.mockResolvedValue(undefined);
   });
 
   const executeCommandMock = vscode.commands.executeCommand as jest.MockedFunction<typeof vscode.commands.executeCommand>;
@@ -1766,6 +1783,9 @@ describe('OperateTreeProvider performance results panel', () => {
     await provider.openPerformanceFile('/r.csv', 'csv');
     await provider.openPerformanceFile('/r.bin', 'bin');
     await provider.openPerformanceFile('/r.json', 'json');
+    await provider.openPerformanceFile('/r.rep', 'rep');
+    await provider.openPerformanceFile('/r.ncrep', 'ncrep');
+    await provider.openPerformanceFile('/r.npu-rep', 'npu-rep');
     await provider.openPerformanceFile('/r.other', 'other');
 
     expect(mockOpenCsvFile)
@@ -1776,6 +1796,14 @@ describe('OperateTreeProvider performance results panel', () => {
       .toHaveBeenCalledWith('/r.bin');
     expect(mockOpenInsight)
       .toHaveBeenCalledWith('/r.json');
+    expect(mockOpenProfilingReport)
+      .toHaveBeenCalledTimes(3);
+    expect(mockOpenProfilingReport)
+      .toHaveBeenCalledWith('/r.rep');
+    expect(mockOpenProfilingReport)
+      .toHaveBeenCalledWith('/r.ncrep');
+    expect(mockOpenProfilingReport)
+      .toHaveBeenCalledWith('/r.npu-rep');
   });
 
   it('renders report children and nested folders', () => {

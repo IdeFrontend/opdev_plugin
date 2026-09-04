@@ -1402,12 +1402,12 @@ describe('extension activation', () => {
 
     it('focuses the plugin view container when the focus command exists', async () => {
       await activateWith();
-      (vscode.commands.getCommands as jest.Mock).mockResolvedValue(['workbench.action.focusAuxiliaryBar']);
+      (vscode.commands.getCommands as jest.Mock).mockResolvedValue([workbenchViewContainerCommand()]);
 
       await invokeCommand(constants.COMMAND_TOGGLE_OPS_OPERATE);
 
       expect(vscode.commands.executeCommand)
-        .toHaveBeenCalledWith('workbench.action.focusAuxiliaryBar');
+        .toHaveBeenCalledWith(workbenchViewContainerCommand());
     });
 
     it('warns when no focus command is registered', async () => {
@@ -1416,12 +1416,16 @@ describe('extension activation', () => {
 
       await activateWith();
       (vscode.commands.getCommands as jest.Mock).mockResolvedValue([]);
+      const callsBefore = (vscode.commands.executeCommand as jest.Mock).mock.calls.length;
 
       await invokeCommand(constants.COMMAND_TOGGLE_OPS_OPERATE);
 
       expect(warnSpy)
         .toHaveBeenCalled();
-      expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith('workbench.action.focusAuxiliaryBar');
+      // The handler must skip execution entirely — other activation paths also
+      // call the container command, so compare call counts, not arguments.
+      expect((vscode.commands.executeCommand as jest.Mock).mock.calls.length)
+        .toBe(callsBefore);
     });
 
     it('swallows command listing failures', async () => {
@@ -1787,7 +1791,7 @@ describe('extension activation', () => {
           operatorNames: ['op1'],
           operatorType: undefined,
           compileOption: undefined,
-        });
+        }, 'run');
     });
 
     it('builds an example with the standard-custom operator type', async () => {
@@ -1802,7 +1806,7 @@ describe('extension activation', () => {
           operatorNames: undefined,
           operatorType: 'standard-custom',
           compileOption: undefined,
-        });
+        }, 'run');
     });
 
     it('rejects cpu debug with multiple operators selected', async () => {
@@ -1819,15 +1823,19 @@ describe('extension activation', () => {
       expect(taskMethods.runCpuDebug).not.toHaveBeenCalled();
     });
 
-    it('runs cpu debug for a single operator', async () => {
+    it('runs cpu debug for a single operator through the operator-action queue', async () => {
       await activateWith();
 
       await invokeCommand(constants.COMMAND_SIDEBAR_CPU_DEBUG);
 
       expect(flowProvider().runFlowAction)
         .toHaveBeenCalledWith('cpuDebug', expect.any(Function));
-      expect(taskMethods.runCpuDebug)
-        .toHaveBeenCalled();
+      expect(taskDispatch.dispatchEnqueueNativeOperatorAction)
+        .toHaveBeenCalledWith(
+          'cpuDebug',
+          {},
+          expect.any(Function),
+        );
     });
 
     it('rejects npu debug with multiple operators selected', async () => {
@@ -1844,15 +1852,19 @@ describe('extension activation', () => {
       expect(taskMethods.runDebug).not.toHaveBeenCalled();
     });
 
-    it('runs npu debug for a single operator', async () => {
+    it('runs npu debug for a single operator through the operator-action queue', async () => {
       await activateWith();
 
       await invokeCommand(constants.COMMAND_SIDEBAR_NPU_DEBUG);
 
       expect(flowProvider().runFlowAction)
         .toHaveBeenCalledWith('npuDebug', expect.any(Function));
-      expect(taskMethods.runDebug)
-        .toHaveBeenCalled();
+      expect(taskDispatch.dispatchEnqueueNativeOperatorAction)
+        .toHaveBeenCalledWith(
+          'npuDebug',
+          {},
+          expect.any(Function),
+        );
     });
 
     it('routes the sidebar sanitizer action to the options panel when quick options are enabled', async () => {

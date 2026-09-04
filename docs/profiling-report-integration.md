@@ -1,6 +1,6 @@
 # Profiling report integration
 
-How the **`@huawei/profiling-report`** Vue library is integrated into Huawei OP DevTools as a new `.rep` / `.ncrep` viewer panel, alongside the existing CSV editor and MindStudio Insight viewer. This documents the **as-implemented** wiring; the library's consumer contract lives in the profiling-report repo (`docs/usage/USAGE.md`).
+How the **`@huawei/profiling-report`** Vue library is integrated into Huawei OP DevTools as a new `.rep` / `.ncrep` / `.npu-rep` viewer panel, alongside the existing CSV editor and MindStudio Insight viewer. This documents the **as-implemented** wiring; the library's consumer contract lives in the profiling-report repo (`docs/usage/USAGE.md`).
 
 ## Viewer boundary
 
@@ -8,13 +8,13 @@ How the **`@huawei/profiling-report`** Vue library is integrated into Huawei OP 
 |-----------|--------|
 | `.csv` | `CsvEditorProvider` (custom text editor) |
 | `.bin`, `.json` | MindStudio Insight (`InsightDataViewerPanel` + `profiler_server`) |
-| `.rep`, `.ncrep` | **profiling-report** panel (this doc) |
+| `.rep`, `.ncrep`, `.npu-rep` | **profiling-report** panel (this doc) |
 
 The profiling-report library is never injected into Insight iframes — Insight remains a sealed third-party shell.
 
 ## Submodule linking
 
-`profiling-report` is a git submodule at the repo root, tracking `IdeFrontend/profiling-report` `master`:
+`profiling-report` is a git submodule at the repo root, tracking `IdeFrontend/profiling-report` `new-report-format`:
 
 ```text
 mstt/
@@ -81,7 +81,7 @@ The shell gives the host element `height: 100vh` (the `ProfilingReport` componen
 
 ## Data flow
 
-A `.rep` / `.ncrep` archive is exposed to the webview as a **local resource URI**; the webview `fetch`es the bytes and the library unpacks the container client-side.
+A `.rep` / `.ncrep` / `.npu-rep` archive is exposed to the webview as a **local resource URI**; the webview `fetch`es the bytes and the library unpacks the container client-side.
 
 ```mermaid
 sequenceDiagram
@@ -90,15 +90,15 @@ sequenceDiagram
   participant WV as Webview app.vue
   participant Comp as ProfilingReport
 
-  Tree->>Panel: openPerformanceFile(.rep / .ncrep)
+  Tree->>Panel: openPerformanceFile(.rep / .ncrep / .npu-rep)
   Panel->>WV: postMessage({ command: loadProfilingReport, uri, fileName })
   WV->>WV: fetch(uri) → Uint8Array
   WV->>Comp: mount <ProfilingReport :source :theme :title>
-  Comp->>Comp: loadReportSource → parseRep → adaptRep → render
+  Comp->>Comp: loadReportSource → parseRep / parseNpuRep160 → adaptRep → render
 ```
 
 - The extension host does **not** read the whole archive into a JSON message; large reports stay on disk and transfer through the webview resource protocol.
-- `parseRep` slices the container's embedded files by offset/length (no decompression); `adaptRep` maps them to `SwimlaneModel` + `ReportViewModel`.
+- `parseRep` slices the `cann-rep` container's embedded files by offset/length (no decompression); `parseNpuRep160` parses the product `.npu-rep` 160-byte layout; `adaptRep` maps them to `SwimlaneModel` + `ReportViewModel`.
 
 ### CANNBot 分析 (cannbot request)
 
@@ -128,15 +128,19 @@ The panel registers the standard MSTT theme bridge (`registerWebviewThemeBridge`
 
 ## File discovery
 
-[`plugin/src/core/performance/performance-run-data.ts`](../../plugin/src/core/performance/performance-run-data.ts) — `scanSubFiles` now includes `rep` and `ncrep` in the accepted extensions list (alongside `csv`, `bin`, `json`).
+[`plugin/src/core/performance/performance-run-data.ts`](../../plugin/src/core/performance/performance-run-data.ts) — `scanSubFiles` now includes `rep`, `ncrep`, and `npu-rep` in the accepted extensions list (alongside `csv`, `bin`, `json`).
 
 ## Open dispatch
 
-1. [`plugin/src/class/operate-tree-provider.ts`](../../plugin/src/class/operate-tree-provider.ts) — `openPerformanceFile` routes `rep`/`ncrep` to `viewService.openProfilingReport`.
+1. [`plugin/src/class/operate-tree-provider.ts`](../../plugin/src/class/operate-tree-provider.ts) — `openPerformanceFile` routes `rep`/`ncrep`/`npu-rep` to `viewService.openProfilingReport`.
 2. [`plugin/src/service/view-service.ts`](../../plugin/src/service/view-service.ts) — `openProfilingReport` → `ViewOpener.openProfilingReport`.
 3. [`plugin/src/core/view/view-opener.ts`](../../plugin/src/core/view/view-opener.ts) — `openProfilingReport(uri)` → `ProfilingReportPanel.createOrShow(context, filePath)`.
 
 Constants: `VIEW_PROFILING_REPORT` and `PROFILING_REPORT_PANEL_TYPE` in [`plugin/src/constants.ts`](../../plugin/src/constants.ts).
+
+## Context menu
+
+The `huawei-op-devtools.openProfilingReport` command is surfaced on report files via the `editor/title` toolbar button and the `explorer/context` right-click menu. Both `when` clauses gate on `resourceExtname == '.rep' || '.ncrep' || '.npu-rep'` (in [`package.json`](../../package.json)). Right-clicking a `.npu-rep` file in the Explorer offers **Open Profiling Report**.
 
 ## i18n
 
@@ -159,6 +163,6 @@ Constants: `VIEW_PROFILING_REPORT` and `PROFILING_REPORT_PANEL_TYPE` in [`plugin
 
 | Document | Use for |
 |----------|---------|
-| [`performance.md`](./performance.md) | msprof pipeline + results tree (updated for `.rep`/`.ncrep`) |
+| [`performance.md`](./performance.md) | msprof pipeline + results tree (updated for `.rep`/`.ncrep`/`.npu-rep`) |
 | `profiling-report/docs/usage/USAGE.md` (submodule) | Library consumer contract |
 | `profiling-report/docs/architecture/MSTT_INTEGRATION.md` (submodule) | Design-level integration |

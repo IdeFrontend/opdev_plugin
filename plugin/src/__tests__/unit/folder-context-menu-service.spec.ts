@@ -667,6 +667,39 @@ describe('FolderContextMenuService', () => {
         .toHaveBeenCalled();
     });
 
+    it('marks the root examples collection', async () => {
+      const collection = path.join(tmpRoot, 'examples');
+      const addPath = path.join(collection, 'my_op');
+
+      fs.mkdirSync(addPath, { recursive: true });
+      fs.writeFileSync(path.join(addPath, 'CMakeLists.txt'), '', 'utf8');
+
+      await FolderContextMenuService.markAsMultiOperatorProject(vscode.Uri.file(collection));
+
+      const folders = readCache().folders as Record<string, {
+        opsMeet: Array<{ name: string;
+          path: string }>;
+        opsList: Array<{ name: string;
+          path: string;
+          isCompiled?: boolean }>;
+      }>;
+      const scan = folders[normalizeProjectPath(tmpRoot)];
+
+      expect(scan.opsMeet)
+        .toContainEqual({
+          name: 'examples',
+          path: collection,
+        });
+      expect(scan.opsList)
+        .toContainEqual({
+          name: 'my_op',
+          path: addPath,
+          isCompiled: false,
+        });
+      expect(vscode.window.showInformationMessage)
+        .toHaveBeenCalledWith('folderContext.markedAsCollection');
+    });
+
     it('marks an experimental collection into the experimentalOpsList', async () => {
       const collection = path.join(tmpRoot, 'experimental', 'math');
       const addPath = path.join(collection, 'add');

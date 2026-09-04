@@ -1,8 +1,6 @@
 import {
-  GLOBAL_ST_TEST_QUEUE_SCOPE,
-  mergeVisibleOperatorActionQueues,
   OperatorActionQueueManager,
-  resolveOperatorActionQueueScope,
+  positionVisibleOperatorActions,
   type QueueActionView,
   type QueueableActionType,
 } from '@plugin/helpers/operator-action-queue';
@@ -24,44 +22,32 @@ function queueAction(
 }
 
 describe('OperatorActionQueueManager', () => {
-  it('resolves ST actions to the global scope and keeps other actions local', () => {
-    const localScope = 'project::operator-1';
-
-    expect(resolveOperatorActionQueueScope('stTest', localScope))
-      .toBe(GLOBAL_ST_TEST_QUEUE_SCOPE);
-    expect(resolveOperatorActionQueueScope('utTest', localScope))
-      .toBe(localScope);
-  });
-
-  it('merges local non-ST actions with global ST actions in visible queue order', () => {
-    const visible = mergeVisibleOperatorActionQueues(
-      [
-        queueAction('stale-local-st', 'stTest', 10),
-        queueAction('local-sanitizer', 'sanitizer', 30),
-      ],
-      [
-        queueAction('global-st', 'stTest', 20),
-        queueAction('foreign-global-action', 'dumpTensor', 5),
-      ],
-    );
+  it('positions one queue scope by creation time (st test shares the local queue)', () => {
+    const visible = positionVisibleOperatorActions([
+      queueAction('st-test', 'stTest', 20),
+      queueAction('sanitizer', 'sanitizer', 30),
+      queueAction('dump-tensor', 'dumpTensor', 10),
+    ]);
 
     expect(visible.map((item) => item.id))
       .toEqual([
-        'global-st',
-        'local-sanitizer',
+        'dump-tensor',
+        'st-test',
+        'sanitizer',
       ]);
     expect(visible.map((item) => item.position))
       .toEqual([
         1,
         2,
+        3,
       ]);
   });
 
   it('prevents overlapping ST runs after the local operator scope changes', async () => {
     const stopCurrentTask = jest.fn(async () => undefined);
     const queue = new OperatorActionQueueManager(stopCurrentTask);
-    const firstScope = resolveOperatorActionQueueScope('stTest', 'project::operator-1');
-    const changedScope = resolveOperatorActionQueueScope('stTest', 'project::operator-2');
+    const firstScope = 'project::operator-1';
+    const changedScope = firstScope;
     let releaseFirst!: ()=> void;
     const firstBarrier = new Promise<void>((resolve) => {
       releaseFirst = resolve;
@@ -72,8 +58,6 @@ describe('OperatorActionQueueManager', () => {
     const firstResult = await queue.enqueue(firstScope, 'stTest', {}, firstRunner);
     const overlappingResult = await queue.enqueue(changedScope, 'stTest', {}, overlappingRunner);
 
-    expect(firstScope)
-      .toBe(GLOBAL_ST_TEST_QUEUE_SCOPE);
     expect(changedScope)
       .toBe(firstScope);
     expect(firstResult)

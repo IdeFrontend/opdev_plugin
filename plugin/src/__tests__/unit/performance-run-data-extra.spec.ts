@@ -342,6 +342,7 @@ describe('PerformanceRunData lifecycle and edge cases', () => {
 
     await mkdir(emptySub, { recursive: true });
     await writeFile(path.join(report, 'data.csv'), 'a,b\n1,2\n');
+    await writeFile(path.join(report, 'result.npu-rep'), 'binary');
     await writeFile(path.join(report, 'notes.txt'), 'text only');
     await writeFile(path.join(report, 'noext'), 'no extension');
     await writeFile(path.join(emptySub, 'readme.txt'), 'ignored');
@@ -352,7 +353,10 @@ describe('PerformanceRunData lifecycle and edge cases', () => {
     expect(records)
       .toHaveLength(1);
     expect((records[0]!.children as Array<{ title: string }>).map((child) => child.title))
-      .toEqual(['data.csv']);
+      .toEqual([
+        'data.csv',
+        'result.npu-rep',
+      ]);
   });
 
   it('drops a folder whose stat no longer reports it as a directory', async () => {

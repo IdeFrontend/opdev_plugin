@@ -58,7 +58,7 @@ describe('output-channel', () => {
         .toBeDefined();
     });
 
-    it('returns the same channel for a repeated label and clears it by default', () => {
+    it('returns the same channel for a repeated label and APPENDS by default (no clear)', () => {
       const first = outputChannel.getOperatorToolOutputChannel('sanitizer');
       const second = outputChannel.getOperatorToolOutputChannel('sanitizer');
 
@@ -66,17 +66,17 @@ describe('output-channel', () => {
         .toBe(second);
       expect(createOutputChannel)
         .toHaveBeenCalledTimes(1);
-      expect(first.clear)
-        .toHaveBeenCalledTimes(1);
+      expect(first.clear).not.toHaveBeenCalled();
     });
 
-    it('does not clear a reused channel when clear: false is passed', () => {
+    it('clears a reused channel when clear: true is passed', () => {
       const first = outputChannel.getOperatorToolOutputChannel('run');
-      const second = outputChannel.getOperatorToolOutputChannel('run', { clear: false });
+      const second = outputChannel.getOperatorToolOutputChannel('run', { clear: true });
 
       expect(first)
         .toBe(second);
-      expect(first.clear).not.toHaveBeenCalled();
+      expect(first.clear)
+        .toHaveBeenCalledTimes(1);
     });
 
     it('keeps channels for different labels distinct', () => {

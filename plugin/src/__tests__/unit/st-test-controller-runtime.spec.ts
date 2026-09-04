@@ -348,6 +348,53 @@ describe('StTestController validation branches', () => {
     });
   }
 
+  it('proceeds when the write is a no-op because the settings are already on disk', async () => {
+    let written: Record<string, unknown> = {};
+    const readWorkspaceSetting = jest.fn((_root: string, key: string) => written[key]);
+    const persistWorkspaceSettings = jest.fn(async (writes: Record<string, unknown>) => {
+      written = writes;
+
+      return false;
+    });
+    const dispatch = jest.fn(async () => true);
+    const controller = createController({
+      readWorkspaceSetting,
+      persistWorkspaceSettings,
+      dispatch,
+    });
+
+    await expect(controller.runOptions({
+      contextToken: '/workspace:/workspace/add',
+      selectedModes: ['kernel'],
+      argumentsByMode: { kernel: [] },
+    }))
+      .resolves
+      .toBeUndefined();
+    expect(dispatch)
+      .toHaveBeenCalled();
+  });
+
+  it('throws saveFailed when the settings write fails and the disk does not hold them', async () => {
+    const persistWorkspaceSettings = jest.fn(async () => false);
+    const dispatch = jest.fn(async () => true);
+    const controller = createController({
+      readWorkspaceSetting: jest.fn(),
+      persistWorkspaceSettings,
+      dispatch,
+    });
+
+    await expect(controller.runOptions({
+      contextToken: '/workspace:/workspace/add',
+      selectedModes: ['kernel'],
+      argumentsByMode: { kernel: [] },
+    }))
+      .rejects
+      .toThrow('stTest.options.saveFailed');
+    expect(dispatch)
+      .not
+      .toHaveBeenCalled();
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
