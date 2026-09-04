@@ -5,6 +5,7 @@ import type {
   StartBuildExampleParams,
   StartSimulateParams,
   StartOnBoardParams,
+  StartNewToolCollectionParams,
   StartSanitizerParams,
   StartDumpTensorParams,
   StartUtTestParams,
@@ -69,6 +70,10 @@ export async function dispatchStartSimulate(params: StartSimulateParams = {}): P
 
 export async function dispatchStartOnBoard(params: StartOnBoardParams = {}): Promise<void> {
   await taskMethods.startOnBoard(params);
+}
+
+export async function dispatchStartNewToolCollection(params: StartNewToolCollectionParams): Promise<void> {
+  await taskMethods.startNewToolCollection(params);
 }
 
 export async function dispatchRunSanitizer(params: StartSanitizerParams = {}): Promise<void> {
@@ -325,6 +330,25 @@ export const dispatchSimulator = dispatchFlowFromWebview<StartSimulateParams>(
     await dispatchEnqueueNativeOperatorAction('simulation', params, dispatchStartSimulate);
   },
 );
+
+/**
+ * A5 new-tool (npu-compute / npusim) collection from the "数据采集配置" webview.
+ * Routes through the same flow node the legacy on-board / simulation actions use
+ * (picked by `config.collectionType`) so the sidebar gate/queue behaves alike.
+ */
+export async function dispatchNewToolCollection(params: StartNewToolCollectionParams): Promise<void | undefined> {
+  const isSimulate = params.config.collectionType === 'simulate';
+  const nodeId: OperateNodeId = isSimulate ? 'simulation' : 'onboard';
+  const actionType: QueueableActionType = isSimulate ? 'simulation' : 'onboard';
+
+  return OperateTreeProvider.runFlowActionFromWebviewWithParams(
+    nodeId,
+    async (payload) => {
+      await dispatchEnqueueNativeOperatorAction(actionType, payload, dispatchStartNewToolCollection);
+    },
+    params,
+  );
+}
 
 export const dispatchSanitizer = dispatchFlowFromWebview<StartSanitizerParams>(
   'sanitizer',

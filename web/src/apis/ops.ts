@@ -5,6 +5,7 @@ import {
   SimulateOptions,
   SanitizerOptions,
 } from '@shared/api-types';
+import type { DataCollectionConfig } from '@shared/data-collection-config';
 
 import { request } from '@/core/request';
 
@@ -51,6 +52,29 @@ export function startSimulate(params: { operatorNames?: string } = {}) {
 export function startOnBoard(params: { operatorNames?: string } = {}) {
   return request.post<{ operatorNames?: string }, void>(
     'ops/startOnBoard',
+    params,
+    { timeout: Number.POSITIVE_INFINITY },
+  );
+}
+
+/** 获取 A5 数据采集配置弹窗的初始配置 */
+export function getDataCollectionConfig() {
+  return request.post<undefined, DataCollectionConfig>('ops/getDataCollectionConfig');
+}
+
+/** 保存 A5 数据采集配置弹窗的配置（按采集类型持久化，下次打开时回显） */
+export function saveDataCollectionConfig(config: DataCollectionConfig) {
+  return request.post<DataCollectionConfig, void>('ops/saveDataCollectionConfig', config);
+}
+
+/** A5 新工具（npu-compute / npusim）数据采集：编译并执行工具，随后打开报告 */
+export function startNewToolCollection(params: {
+  config: DataCollectionConfig;
+  operatorNames?: string;
+}) {
+  return request.post<{ config: DataCollectionConfig;
+    operatorNames?: string }, void>(
+    'ops/startNewToolCollection',
     params,
     { timeout: Number.POSITIVE_INFINITY },
   );

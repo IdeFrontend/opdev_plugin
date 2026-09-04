@@ -636,6 +636,20 @@ export default {
   'web.options.onboard.resourceConflict': '资源冲突占比',
   'web.options.onboard.startNow': '立即开始',
 
+  // web data-collection-config (A5 新工具 npu-compute / npusim 弹窗)
+  'web.dataCollection.title': '数据采集配置',
+  'web.dataCollection.collectionType': 'Collection type',
+  'web.dataCollection.simulate': '仿真',
+  'web.dataCollection.onboard': '上板',
+  'web.dataCollection.common': 'Common',
+  'web.dataCollection.metrics': 'Metrics',
+  'web.dataCollection.outputFilePlaceholder': '报告输出路径（默认落在 opprof 目录）',
+  'web.dataCollection.browse': '选择',
+  'web.dataCollection.commandLinePlaceholder': '工具参数（根据上方选择自动同步，可手动编辑）',
+  'web.dataCollection.cancel': '取消',
+  'web.dataCollection.confirm': '确认',
+  'web.dataCollection.startFailed': '启动数据采集失败',
+
   // web options-sanitizer
   'web.options.sanitizer.title': '异常检测快速选项',
   'web.options.sanitizer.toolType': '检测工具',

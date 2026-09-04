@@ -66,7 +66,14 @@ jest.mock('@plugin/domain/services/command-strategy/python-operator-strategy-sha
 // exercised by the service.
 jest.mock('@plugin/class/operator-project-icon-theme', () => ({ OperatorProjectIconTheme: { getInstance: jest.fn() } }));
 
-jest.mock('@plugin/service/config-service', () => ({ ConfigService: { writeBuildOpDeployTarget: jest.fn() } }));
+jest.mock('@plugin/service/config-service', () => ({
+  ConfigService: {
+    writeBuildOpDeployTarget: jest.fn(),
+    // A5 new-tool switches default to false (non-A5 → legacy on-board/simulation flow).
+    shouldUseNewOnBoardTool: jest.fn(() => false),
+    shouldUseNewSimulationTool: jest.fn(() => false),
+  },
+}));
 
 const mockProjectManager = {
   projectPath: '',

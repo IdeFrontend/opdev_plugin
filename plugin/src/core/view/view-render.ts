@@ -41,6 +41,7 @@ export class ViewRenderer extends vscode.Disposable {
         'options-on-board',
         'options-sanitizer',
         'options-st-test',
+        'data-collection-config',
       ];
       const sidebarViews = [
         'home',

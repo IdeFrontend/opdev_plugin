@@ -12,6 +12,7 @@ export {
   getRunCommand,
   getSimulateCommand,
   getOnBoardCommand,
+  getNewToolProfilerContext,
   getSanitizerCommand,
   getUtTestCommand,
   getStandardCustomDeployCommand,

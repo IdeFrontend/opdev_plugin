@@ -115,6 +115,16 @@ export type StartOnBoardParams = {
   compileOption?: string;
 };
 
+/**
+ * A5 new-tool (npu-compute / npusim) data-collection run params. `config` is the
+ * "数据采集配置" dialog payload (its `collectionType` selects on-board vs simulate).
+ */
+export type StartNewToolCollectionParams = {
+  config: import('../data-collection-config').DataCollectionConfig;
+  operatorNames?: string; // 算子名称，多个用逗号分隔
+  compileOption?: string;
+};
+
 export type StartSanitizerParams = {
   operatorNames?: string; // 算子名称，多个用逗号分隔
 };

@@ -1,3 +1,5 @@
+import * as vscode from 'vscode';
+
 import {
   VIEW_CONTAINER_ID,
   workbenchViewContainerCommand,
@@ -32,4 +34,33 @@ export const OPS_OPERATE_FOCUS_COMMAND_CANDIDATES: readonly string[] = [workbenc
  */
 export function resolveFocusOpsOperateCommand(availableCommands: readonly string[]): string | undefined {
   return OPS_OPERATE_FOCUS_COMMAND_CANDIDATES.find((command) => availableCommands.includes(command));
+}
+
+/**
+ * Focus (reveal) the plugin's OWN view container, degrading gracefully across hosts.
+ *
+ * The generated `workbench.view.extension.<id>` command only exists on hosts that register
+ * it (standard VS Code). The VSCode-huawei fork contributes the container via the
+ * non-standard `secondarySidebar` / `secondaryActivitybar` keys and does NOT register that
+ * command, so calling it blindly throws "command not found" — which, during `activate`,
+ * surfaces as "Activating extension failed". This resolves the first candidate the host has
+ * actually registered, executes only that, skips when none exist, and swallows any error so
+ * it never bubbles out to break activation.
+ */
+export async function focusOpsOperateViewContainer(): Promise<void> {
+  try {
+    const availableCommands = await vscode.commands.getCommands(true);
+    const focusCommand = resolveFocusOpsOperateCommand(availableCommands);
+
+    if (!focusCommand) {
+      console.warn('focusOpsOperateViewContainer: no registered command to focus the plugin view container');
+
+      return;
+    }
+
+    await vscode.commands.executeCommand(focusCommand);
+  }
+  catch (error) {
+    console.log(error);
+  }
 }

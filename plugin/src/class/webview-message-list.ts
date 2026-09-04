@@ -23,6 +23,7 @@ import {
 } from '@shared/project-type-view-id';
 import { SettingsLoader } from '@plugin/service/settings-loader';
 import { workbenchViewContainerCommand } from '@shared/flavor';
+import { focusOpsOperateViewContainer } from '@plugin/helpers/focus-ops-operate';
 
 function normalizeViewIdToProjectType(id: OperatorProjectViewIdValue): string {
   switch (id) {
@@ -91,7 +92,7 @@ const webviewMessageList: messageItem[] = [
   {
     command: 'vscodeOpenSidebar',
     callback: (_message: any, _that: any) => {
-      vscode.commands.executeCommand(workbenchViewContainerCommand());
+      void focusOpsOperateViewContainer();
     },
   },
   {

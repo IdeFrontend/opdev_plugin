@@ -33,6 +33,8 @@ export const window = {
 export const commands = {
   executeCommand: jest.fn()
     .mockResolvedValue(undefined),
+  getCommands: jest.fn()
+    .mockResolvedValue([]),
 };
 
 export const ConfigurationTarget = {

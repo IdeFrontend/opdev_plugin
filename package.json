@@ -486,6 +486,16 @@
             "description": "%config.op-devtools.performanceTuning.simulation.showQuickOptions.description%",
             "markdownDescription": "%config.op-devtools.performanceTuning.simulation.showQuickOptions.markdownDescription%"
           },
+          "op-devtools.performanceTuning.simulation.tool": {
+            "type": "string",
+            "enum": [
+              "npusim",
+              "msprof"
+            ],
+            "order": 299,
+            "description": "%config.op-devtools.performanceTuning.simulation.tool.description%",
+            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.tool.markdownDescription%"
+          },
           "op-devtools.performanceTuning.simulation.simulatorType": {
             "type": "string",
             "order": 300,
@@ -516,6 +526,16 @@
             "order": 309,
             "description": "%config.op-devtools.performanceTuning.onBoard.showQuickOptions.description%",
             "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.showQuickOptions.markdownDescription%"
+          },
+          "op-devtools.performanceTuning.onBoard.tool": {
+            "type": "string",
+            "enum": [
+              "npu-compute",
+              "msprof"
+            ],
+            "order": 308,
+            "description": "%config.op-devtools.performanceTuning.onBoard.tool.description%",
+            "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.tool.markdownDescription%"
           },
           "op-devtools.performanceTuning.onBoard.interCoreLoad": {
             "type": "boolean",

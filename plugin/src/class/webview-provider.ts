@@ -274,6 +274,7 @@ export class WebviewProvider {
         'options-on-board',
         'options-sanitizer',
         'options-st-test',
+        'data-collection-config',
       ];
       const viewPath = panelViews.includes(router) ? `panels/${router}` : router;
 

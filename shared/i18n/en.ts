@@ -637,6 +637,20 @@ export default {
   'web.options.onboard.resourceConflict': 'Resource conflict ratio',
   'web.options.onboard.startNow': 'Start now',
 
+  // web data-collection-config (A5 new-tool npu-compute / npusim dialog)
+  'web.dataCollection.title': 'Data Collection Config',
+  'web.dataCollection.collectionType': 'Collection type',
+  'web.dataCollection.simulate': 'Simulate',
+  'web.dataCollection.onboard': 'On-board',
+  'web.dataCollection.common': 'Common',
+  'web.dataCollection.metrics': 'Metrics',
+  'web.dataCollection.outputFilePlaceholder': 'Report output path (default under opprof)',
+  'web.dataCollection.browse': 'Browse',
+  'web.dataCollection.commandLinePlaceholder': 'Tool arguments (auto-synced from the selections above, editable)',
+  'web.dataCollection.cancel': 'Cancel',
+  'web.dataCollection.confirm': 'Confirm',
+  'web.dataCollection.startFailed': 'Failed to start data collection',
+
   // web options-sanitizer
   'web.options.sanitizer.title': 'Sanitizer Quick Options',
   'web.options.sanitizer.toolType': 'Sanitizer tool',

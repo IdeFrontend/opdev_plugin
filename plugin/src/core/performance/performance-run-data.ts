@@ -266,8 +266,12 @@ export class PerformanceRunData {
         });
       }
 
-      const ext = path.extname(subPath)
-        .replace(/^\./, '');
+      // `.npu-rep` is a compound extension `path.extname` would collapse to
+      // `rep`; detect it explicitly so new-tool reports keep the distinct type.
+      const ext = /\.npu-rep$/i.test(subPath)
+        ? 'npu-rep'
+        : path.extname(subPath)
+          .replace(/^\./, '');
 
       if ([
         'csv',

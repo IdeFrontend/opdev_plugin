@@ -10,6 +10,7 @@ import {
   dispatchOnBoard,
   dispatchSimulator,
   dispatchSanitizer,
+  dispatchNewToolCollection,
 } from './helpers/task-method-dispatch';
 
 const opsMethods = {
@@ -22,6 +23,11 @@ const opsMethods = {
 
   startSimulate: dispatchSimulator,
   startOnBoard: dispatchOnBoard,
+
+  // A5 new-tool (npu-compute / npusim) data-collection dialog.
+  getDataCollectionConfig: configMethods.getDataCollectionConfig,
+  saveDataCollectionConfig: configMethods.saveDataCollectionConfig,
+  startNewToolCollection: dispatchNewToolCollection,
 
   getProjectEnv: scriptMethods.getProjectEnv,
   getNpuHardwareAvailable: scriptMethods.getNpuHardwareAvailable,

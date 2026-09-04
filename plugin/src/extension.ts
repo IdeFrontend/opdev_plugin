@@ -77,10 +77,12 @@ import {
   COMMAND_SIMULATOR_OPTIONS,
   COMMAND_ON_BOARD_OPTIONS,
   COMMAND_SANITIZER_OPTIONS,
+  COMMAND_DATA_COLLECTION_CONFIG,
   VIEW_OPTIONS_SANITIZER,
   VIEW_OPTIONS_SIMULATOR,
   VIEW_OPTIONS_ON_BOARD,
   VIEW_OPTIONS_ST_TEST,
+  VIEW_DATA_COLLECTION_CONFIG,
   COMMAND_OPEN_PROJECT,
   COMMAND_MARK_AS_OPERATOR_PROJECT,
   COMMAND_MARK_AS_MULTI_OPERATOR_PROJECT,
@@ -166,7 +168,10 @@ import {
   COMMAND_OPEN_PROFILING_REPORT,
   COMMAND_ST_TEST_HISTORY_OPEN,
 } from './constants';
-import { resolveFocusOpsOperateCommand } from '@plugin/helpers/focus-ops-operate';
+import {
+  focusOpsOperateViewContainer,
+  resolveFocusOpsOperateCommand,
+} from '@plugin/helpers/focus-ops-operate';
 import { shouldShowStTestHistoryView } from '@plugin/helpers/st-test-action';
 import {
   EXTENSION_ID,
@@ -178,7 +183,6 @@ import {
   TREE_VIEW_SANITIZER_RESULTS,
   TREE_VIEW_PERFORMANCE_RESULTS,
   TREE_VIEW_ST_TEST_HISTORY,
-  workbenchViewContainerCommand,
   settingsKey,
   contextKey,
 } from '@shared/flavor';
@@ -190,6 +194,7 @@ import {
   ConfigService,
 } from './service/config-service';
 import { resetCurrentProjectConfiguration } from './service/config-reset-service';
+import { setPendingDataCollectionType } from './controller/config-controller';
 import { SettingsLoader } from './service/settings-loader';
 import { readWorkspaceProjectTypeSetting } from './helpers/operator-project-workspace-config';
 import { projectService } from './service/project-service';
@@ -998,6 +1003,16 @@ export async function activate(context: vscode.ExtensionContext) {
 
       const operatorNames = await getOperatorNamesFromSelection();
       const compileOption = await getCompileOptionForSelectedOperators();
+
+      // A5 + npu-compute: open the unified data-collection dialog instead of the
+      // legacy quick-options panel / direct msprof flow.
+      if (ConfigService.shouldUseNewOnBoardTool()) {
+        setPendingDataCollectionType('onboard');
+        await vscode.commands.executeCommand(COMMAND_DATA_COLLECTION_CONFIG);
+
+        return;
+      }
+
       const showQuickOptions = SettingsLoader.read<boolean>('performanceTuning.onBoard.showQuickOptions', true);
 
       if (showQuickOptions) {
@@ -1042,6 +1057,16 @@ export async function activate(context: vscode.ExtensionContext) {
 
       const operatorNames = await getOperatorNamesFromSelection();
       const compileOption = await getCompileOptionForSelectedOperators();
+
+      // A5 + npusim: open the unified data-collection dialog instead of the
+      // legacy quick-options panel / direct msprof flow.
+      if (ConfigService.shouldUseNewSimulationTool()) {
+        setPendingDataCollectionType('simulate');
+        await vscode.commands.executeCommand(COMMAND_DATA_COLLECTION_CONFIG);
+
+        return;
+      }
+
       const showQuickOptions = SettingsLoader.read<boolean>('performanceTuning.simulation.showQuickOptions', true);
 
       if (showQuickOptions) {
@@ -2018,7 +2043,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   if (welcomeShowCount < 1) {
     await vscode.commands.executeCommand(COMMAND_WELCOME);
-    await vscode.commands.executeCommand(workbenchViewContainerCommand());
+    await focusOpsOperateViewContainer();
     await context.globalState.update('welcomeShowCount', welcomeShowCount + 1);
   }
 
@@ -2077,6 +2102,25 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
+  // A5 new-tool (npu-compute / npusim) unified "数据采集配置" dialog. The entry
+  // command stashes the collection type (on-board / simulation) via
+  // setPendingDataCollectionType before invoking this, so the panel preselects it.
+  // Constructed after the sanitizer provider so the pre-existing WebviewProvider
+  // construction indices (relied on by extension-activation.spec) stay stable.
+  const dataCollectionConfigProvider = new WebviewProvider(context, apiServer);
+  const dataCollectionConfigCommand = vscode.commands.registerCommand(
+    COMMAND_DATA_COLLECTION_CONFIG,
+    async () => {
+      // Capture the active .py target before the panel takes focus (ViewColumn.Active
+      // displaces it), so startNewToolCollection can read the target afterwards.
+      if (!(await buildService.captureActiveFileTargetForOptionsPanel())) {
+        return;
+      }
+
+      dataCollectionConfigProvider.show(VIEW_DATA_COLLECTION_CONFIG);
+    },
+  );
+
   // Subscription to destruction event
   context.subscriptions.push(apiServer);
   context.subscriptions.push(viewServer);
@@ -2092,6 +2136,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(createOperatorInWorkspaceCommand);
   context.subscriptions.push(simulatorOptionsCommand);
   context.subscriptions.push(onBoardOptionsCommand);
+  context.subscriptions.push(dataCollectionConfigCommand);
   context.subscriptions.push(sanitizerOptionsCommand);
   context.subscriptions.push(sidebarProjectConfigCommand);
   context.subscriptions.push(sidebarResetProjectConfigurationCommand);
@@ -2530,9 +2575,13 @@ export async function activate(context: vscode.ExtensionContext) {
   // Register a command to open any .rep / .ncrep profiling report.
   const openProfilingReportCommand = vscode.commands.registerCommand(
     COMMAND_OPEN_PROFILING_REPORT,
-    async (uri?: vscode.Uri) => {
-      if (uri && uri.fsPath) {
-        await ViewOpener.openProfilingReport(uri);
+    async (uri?: vscode.Uri | string) => {
+      // The new-tool flow invokes this with a plain report path string; accept
+      // both a Uri and a string so .npu-rep reports open without a dialog.
+      const target = typeof uri === 'string' ? vscode.Uri.file(uri) : uri;
+
+      if (target && target.fsPath) {
+        await ViewOpener.openProfilingReport(target);
 
         return;
       }

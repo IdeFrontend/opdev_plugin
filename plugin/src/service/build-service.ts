@@ -14,6 +14,7 @@ import {
   resolveExampleModeForBaseContext,
   getSimulateCommand,
   getOnBoardCommand,
+  getNewToolProfilerContext,
   getBuildOpCommand,
   getRunCommand,
   getUtTestCommand,
@@ -44,6 +45,12 @@ import { homeMethods } from '../controller/home-controller';
 import { resolveAscendEnv } from '@plugin/domain/utils/ascend-util';
 import { joinCommands } from '@plugin/domain/utils/command-utils';
 import {
+  buildNpuComputeCommand,
+  buildNpusimCommand,
+} from '@plugin/domain/services/new-profiler-service';
+import type { DataCollectionConfig } from '@shared/data-collection-config';
+import { NEW_TOOL_REPORT_FILENAME } from '@shared/data-collection-config';
+import {
   buildOperatorSpawnContext,
   commandFailureMessage,
   executeOperatorCommand,
@@ -60,6 +67,7 @@ import {
   COMMAND_FLASH_DUMP_TENSOR_DATA,
   COMMAND_FLASH_PERFORMANCE_RUN_DATA,
   COMMAND_OPEN_DUMP_TENSOR_PANEL_VIEW,
+  COMMAND_OPEN_PROFILING_REPORT,
 } from '@plugin/constants';
 import { decidePythonTargetAction } from '@plugin/helpers/sync-sanitizer-python-target';
 import { probeTritonPythonDependencies } from '@plugin/domain/services/command-strategy/triton-strategy';
@@ -938,6 +946,229 @@ export class BuildService {
     catch (e: unknown) {
       vscode.window.showErrorMessage(t('build.getOnBoardCommandFailed', { error: (e as Error).message }));
     }
+  }
+
+  /**
+   * A5 new-tool collection (npu-compute for on-board, npusim for simulation).
+   *
+   * Compiles with the legacy build sequence (build_op + the standard-custom
+   * example build), then hands the compiled target to the selected prototype
+   * tool with a deterministic report location under the shared opprof run dir,
+   * and finally opens the produced report through `openProfilingReport`.
+   */
+  async startNewToolCollection(params: {
+    config: DataCollectionConfig;
+    operatorNames?: string;
+    compileOption?: string;
+  }): Promise<void> {
+    if (!(await this.guardSupportedProjectTypeForCurrentProject())) {
+      return;
+    }
+
+    // Axiom: one window = one project = workspaceFolders[0].
+    const projectPath = getFirstWorkspaceFolderPath();
+
+    if (!projectPath) {
+      vscode.window.showWarningMessage(t('build.workspacePathNotFound'));
+
+      return;
+    }
+
+    const isSimulate = params.config.collectionType === 'simulate';
+    const project = getProjectByPath(projectPath);
+    const opPlugin = OperatorPluginRegistry.getOpPlugin(project?.project_type);
+    const behavior = opPlugin.buildBehavior;
+
+    if (isSimulate ? !behavior.supportsSimulate : !behavior.supportsOnBoard) {
+      return;
+    }
+
+    if (!(await guardTritonProfilerDependencies(opPlugin.opType))) {
+      return;
+    }
+
+    if (behavior.requiresActiveFileCheck && !params.operatorNames) {
+      if (!(await this.ensurePythonDeployTarget(behavior.activeFileExtension!))) {
+        return;
+      }
+    }
+
+    if (behavior.requiresBuildBeforeAnalysis
+      && !(await this.compileForNewToolCollection(projectPath, params, isSimulate))) {
+      return;
+    }
+
+    // Per-run opprof directory the report link scans: <root>/<ideDir>/opprof/<runId>.
+    const runId = `${isSimulate ? 'npusim' : 'npu-compute'}_${Date.now()}`;
+    const opprofRunDir = joinIdeConfigPath(projectPath, 'opprof', runId);
+
+    try {
+      fs.mkdirSync(opprofRunDir, { recursive: true });
+    }
+    catch (error) {
+      console.warn('[startNewToolCollection] Failed to create opprof run dir:', error);
+    }
+
+    try {
+      const baseContext = isSimulate
+        ? this.resolveSimulateCtx(projectPath, params.operatorNames)
+        : this.resolveOnBoardCtx(projectPath, params.operatorNames);
+      const {
+        sourceCannCmd, cdBuildCmd, targetFile,
+      } = getNewToolProfilerContext(
+        baseContext,
+        this.resolveBuildExampleCtx(projectPath, params.operatorNames),
+        params.operatorNames,
+      );
+
+      const toolCmd = isSimulate
+        ? buildNpusimCommand({
+          config: params.config,
+          targetFile,
+          opprofRunDir,
+        })
+        : buildNpuComputeCommand({
+          config: params.config,
+          targetFile,
+          opprofRunDir,
+        });
+      const collectionCommand = joinCommands(sourceCannCmd, cdBuildCmd, toolCmd);
+
+      console.log('newToolCollectionCommand', collectionCommand);
+      const res = await executeOperatorCommand(
+        collectionCommand,
+        buildOperatorSpawnContext({
+          baseContext,
+          projectPath,
+          operatorNames: params.operatorNames,
+          script: collectionCommand,
+          toolOutputLabel: isSimulate ? 'simulate' : 'run',
+          isSimulator: isSimulate,
+        }),
+      );
+
+      if (res.code !== 0) {
+        if (res.interruptedByUserStop) {
+          return;
+        }
+
+        vscode.window.showErrorMessage(commandFailureMessage(res, isSimulate ? 'build.simulationFailed' : 'build.onBoardFailed'));
+
+        return;
+      }
+
+      vscode.window.showInformationMessage(t(isSimulate ? 'build.simulationSuccess' : 'build.onBoardSuccess'));
+
+      // New-tool reports open through the profiling-report viewer (.npu-rep).
+      const reportPath = path.join(opprofRunDir, NEW_TOOL_REPORT_FILENAME);
+
+      if (fs.existsSync(reportPath)) {
+        await vscode.commands.executeCommand(COMMAND_OPEN_PROFILING_REPORT, reportPath);
+      }
+
+      // Refresh the tree without auto-opening again (the report is already shown).
+      await vscode.commands.executeCommand(COMMAND_FLASH_PERFORMANCE_RUN_DATA, {
+        focusIfNew: true,
+        openIfNew: false,
+      });
+    }
+    catch (e: unknown) {
+      vscode.window.showErrorMessage(t(
+        isSimulate ? 'build.getSimulationCommandFailed' : 'build.getOnBoardCommandFailed',
+        { error: (e as Error).message },
+      ));
+    }
+  }
+
+  /**
+   * Shared compile step for {@link startNewToolCollection}: build_op (+ the
+   * standard-custom `.run` deploy tail and example build). Mirrors the compile
+   * blocks in `startOnBoard` / `startSimulate`. Returns false when a step fails
+   * or is interrupted so the caller aborts before running the new tool.
+   */
+  private async compileForNewToolCollection(
+    projectPath: string,
+    params: { operatorNames?: string;
+      compileOption?: string },
+    isSimulate: boolean,
+  ): Promise<boolean> {
+    const baseContext = isSimulate
+      ? this.resolveSimulateCtx(projectPath, params.operatorNames)
+      : this.resolveOnBoardCtx(projectPath, params.operatorNames);
+    const isStandardCustomRoot = await isRootStandardCustom();
+    const buildCommand = joinCommands(
+      getBuildOpCommand(baseContext, params.compileOption, params.operatorNames),
+      isStandardCustomRoot ? getStandardCustomDeployTail() : '',
+    );
+    const buildRes = await executeOperatorCommand(
+      buildCommand,
+      buildOperatorSpawnContext({
+        baseContext,
+        projectPath,
+        operatorNames: params.operatorNames,
+        script: buildCommand,
+        isSimulator: isSimulate,
+      }),
+      { outputLabel: 'compile' },
+    );
+
+    if (buildRes.code !== 0) {
+      if (buildRes.interruptedByUserStop) {
+        return false;
+      }
+
+      vscode.window.showErrorMessage(commandFailureMessage(buildRes, 'build.compileFailed', { output: buildRes.output }));
+
+      return false;
+    }
+
+    await notifyBuildSucceededForSidebar(projectPath, params.operatorNames);
+
+    if (!isStandardCustomRoot) {
+      return true;
+    }
+
+    const exampleBaseContext = this.resolveBuildExampleCtx(projectPath, params.operatorNames);
+    const exampleCompileOption = isSimulate
+      ? (params.compileOption ?? this.buildSimulateExampleCompileOption())
+      : params.compileOption;
+    const exampleBuildCommand = getBuildExampleCommand(
+      exampleBaseContext,
+      exampleCompileOption,
+      params.operatorNames,
+      undefined,
+      true,
+    );
+    const exampleBuildRes = await executeOperatorCommand(
+      exampleBuildCommand,
+      buildOperatorSpawnContext({
+        baseContext: exampleBaseContext,
+        projectPath,
+        operatorNames: params.operatorNames,
+        script: exampleBuildCommand,
+        toolOutputLabel: 'compile',
+      }),
+      isSimulate
+        ? undefined
+        : {
+          transformCommand: createRemoteCommandWhenNoNpuTransformer((command) => buildRemoteBuildExampleCommand(
+            command,
+            projectPath,
+          )),
+        },
+    );
+
+    if (exampleBuildRes.code !== 0) {
+      if (exampleBuildRes.interruptedByUserStop) {
+        return false;
+      }
+
+      vscode.window.showErrorMessage(commandFailureMessage(exampleBuildRes, 'build.executeFailed', { output: exampleBuildRes.output }));
+
+      return false;
+    }
+
+    return true;
   }
 
   /**

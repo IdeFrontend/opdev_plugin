@@ -12,6 +12,25 @@ import {
   SanitizerOptions,
   SimulateOptions,
 } from '@shared/api-types';
+import type {
+  CollectionType, DataCollectionConfig,
+} from '@shared/data-collection-config';
+import {
+  dataCollectionConfigSettingKey,
+  mergeSavedDataCollectionConfig,
+} from '@shared/data-collection-config';
+
+/**
+ * One-shot preselect for the "数据采集配置" dialog. The on-board / simulation
+ * entry command stashes which side the user clicked here; `getDataCollectionConfig`
+ * consumes it on the next open so the top Collection type switch matches the entry.
+ */
+let pendingDataCollectionType: CollectionType | null = null;
+
+/** Stash the collection type the next dialog open should preselect (one-shot). */
+export function setPendingDataCollectionType(collectionType: CollectionType): void {
+  pendingDataCollectionType = collectionType;
+}
 
 /** Dotted `performanceTuning.onBoard.*` keys (flat payload, no `user_options` wrapper). */
 const ON_BOARD_DOTTED_KEYS = [
@@ -132,6 +151,46 @@ export const configMethods = {
   /** Get the explicitly set sanitizer options (dotted settings). */
   async getSanitizerOptions(): Promise<SanitizerOptions> {
     return readSetOptionKeys<SanitizerOptions>(SANITIZER_DOTTED_KEYS);
+  },
+
+  /**
+   * Initial "数据采集配置" dialog config. When the entry command
+   * (`COMMAND_DATA_COLLECTION_CONFIG`) stashed a collection type via
+   * {@link setPendingDataCollectionType}, honor it so the dialog preselects the
+   * side the user clicked (on-board / simulation); otherwise default to whichever
+   * new tool is active on A5 (`npusim` → simulate, else `npu-compute` → onboard).
+   *
+   * The last config the user confirmed for that side (persisted by
+   * {@link configMethods.saveDataCollectionConfig}) is merged over the fresh
+   * default so reopening the dialog shows the same settings.
+   */
+  async getDataCollectionConfig(): Promise<DataCollectionConfig> {
+    const collectionType: CollectionType = pendingDataCollectionType
+      ?? (ConfigService.shouldUseNewSimulationTool() && !ConfigService.shouldUseNewOnBoardTool()
+        ? 'simulate'
+        : 'onboard');
+
+    // Consume the one-shot preselect so a later reopen falls back to the default.
+    pendingDataCollectionType = null;
+
+    const saved = ConfigService.readOpDevtoolsSetting<unknown>(dataCollectionConfigSettingKey(collectionType));
+
+    return mergeSavedDataCollectionConfig(collectionType, saved);
+  },
+
+  /**
+   * Persist the "数据采集配置" dialog config for its collection type so the next
+   * open restores it. Called from the web panel on 确认. `collectionType` is not
+   * itself stored (it is the setting key), and a failed write is swallowed — the
+   * collection run itself must not be blocked by a settings-file write error.
+   */
+  async saveDataCollectionConfig(config: DataCollectionConfig): Promise<void> {
+    try {
+      await ConfigService.writeOpDevtoolsDottedSettings({ [dataCollectionConfigSettingKey(config.collectionType)]: config });
+    }
+    catch (_) {
+      // Persisting the dialog config is best-effort; keep the run flow going.
+    }
   },
 
   /**

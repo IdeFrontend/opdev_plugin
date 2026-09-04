@@ -51,7 +51,9 @@ import {
   COMMAND_ON_BOARD_OPTIONS,
   COMMAND_SANITIZER_OPTIONS,
   COMMAND_SIMULATOR_OPTIONS,
+  COMMAND_DATA_COLLECTION_CONFIG,
 } from '@plugin/constants';
+import { setPendingDataCollectionType } from '@plugin/controller/config-controller';
 
 /** Check if directory is a standard-custom root through its public build interface. */
 async function isStandardCustomRoot(dirPath: string): Promise<boolean> {
@@ -1126,6 +1128,15 @@ export class FolderContextMenuService {
     }
 
     await this.switchToProject(uri, async () => {
+      // A5 + npu-compute: open the unified data-collection dialog (keep parity
+      // with the sidebar on-board entry); otherwise the legacy options panel.
+      if (ConfigService.shouldUseNewOnBoardTool()) {
+        setPendingDataCollectionType('onboard');
+        await vscode.commands.executeCommand(COMMAND_DATA_COLLECTION_CONFIG);
+
+        return;
+      }
+
       // Open on-board analysis config, same as dashboard logic
       const onBoardCommand = COMMAND_ON_BOARD_OPTIONS;
 
@@ -1169,6 +1180,15 @@ export class FolderContextMenuService {
     }
 
     await this.switchToProject(uri, async () => {
+      // A5 + npusim: open the unified data-collection dialog (keep parity with the
+      // sidebar simulation entry); otherwise the legacy options panel.
+      if (ConfigService.shouldUseNewSimulationTool()) {
+        setPendingDataCollectionType('simulate');
+        await vscode.commands.executeCommand(COMMAND_DATA_COLLECTION_CONFIG);
+
+        return;
+      }
+
       // Open the simulation analysis configuration and keep it consistent with the Kanban logic
       const simulationCommand = COMMAND_SIMULATOR_OPTIONS;
 

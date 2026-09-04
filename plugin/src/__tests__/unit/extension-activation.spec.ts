@@ -443,7 +443,12 @@ jest.mock('@plugin/service/folder-context-menu-service', () => ({
 
 jest.mock('@plugin/service/config-service', () => ({
   configService: { checkDevtoolConfig: jest.fn(async () => false) },
-  ConfigService: { writeOpDevtoolsDottedSettings: jest.fn(async () => false) },
+  ConfigService: {
+    writeOpDevtoolsDottedSettings: jest.fn(async () => false),
+    // A5 new-tool switches default to false (non-A5 → legacy on-board/simulation flow).
+    shouldUseNewOnBoardTool: jest.fn(() => false),
+    shouldUseNewSimulationTool: jest.fn(() => false),
+  },
 }));
 
 jest.mock('@plugin/service/config-reset-service', () => ({ resetCurrentProjectConfiguration: jest.fn(async () => undefined) }));
@@ -825,6 +830,11 @@ describe('extension activation', () => {
   });
 
   it('opens the welcome page once for a fresh install and records the count', async () => {
+    // Activation now focuses the view container via focusOpsOperateViewContainer(),
+    // which resolves the first registered focus command — expose it so the helper
+    // executes workbench.view.extension.<id> instead of skipping.
+    (vscode.commands.getCommands as jest.Mock).mockResolvedValue([workbenchViewContainerCommand()]);
+
     await activateWith();
 
     expect(vscode.commands.executeCommand)

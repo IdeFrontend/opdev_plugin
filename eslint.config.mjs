@@ -11,6 +11,9 @@ export default defineConfig([
     ignores: [
       // Operator code templates: plain CMake/shell/Python sources; not linted as app TS/JS.
       'plugin/templates/code_template/**',
+      // Reference material / submodule with their own tooling; not part of the app source lint.
+      'npu-simulator-analysis/**',
+      'profiling-report/**',
       'out/',
       'dist/',
       '**/dist/',

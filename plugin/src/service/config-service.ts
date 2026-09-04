@@ -15,6 +15,9 @@ import {
   mapSanitizerScopeToUseBlock,
 } from '@plugin/helpers/operator-project-workspace-config';
 import { isAscendA5ProfilerCannSoc } from '@shared/msprof-onboard-env';
+import type {
+  OnBoardTool, SimulationTool,
+} from '@shared/data-collection-config';
 import {
   defaultSanitizerToolTypeForSoc,
   SanitizerToolType,
@@ -848,6 +851,49 @@ export class ConfigService {
   /** Default sanitizer command for the detected CANN SOC: A2/A3 → mssanitizer, others → npu-check. */
   static getDefaultSanitizerToolType(): SanitizerToolType {
     return defaultSanitizerToolTypeForSoc(resolveEffectiveCannSoc());
+  }
+
+  /**
+   * On-board profiling tool selector. On A5 (ascend950) the new `npu-compute`
+   * prototype tool is the default; the workspace setting
+   * `performanceTuning.onBoard.tool` may pin `npu-compute` or the legacy
+   * `msprof`. Non-A5 SOCs always resolve to `msprof` (the new tool is A5-only).
+   */
+  static getOnBoardTool(): OnBoardTool {
+    const configured = ConfigService.readOpDevtoolsSetting<string>('performanceTuning.onBoard.tool');
+
+    if (configured === 'npu-compute' || configured === 'msprof') {
+      return configured;
+    }
+
+    return isAscendA5ProfilerCannSoc(resolveEffectiveCannSoc()) ? 'npu-compute' : 'msprof';
+  }
+
+  /**
+   * Simulation tool selector. On A5 the new `npusim` tool is the default; the
+   * workspace setting `performanceTuning.simulation.tool` may pin `npusim` or the
+   * legacy `msprof`. Non-A5 SOCs always resolve to `msprof`.
+   */
+  static getSimulationTool(): SimulationTool {
+    const configured = ConfigService.readOpDevtoolsSetting<string>('performanceTuning.simulation.tool');
+
+    if (configured === 'npusim' || configured === 'msprof') {
+      return configured;
+    }
+
+    return isAscendA5ProfilerCannSoc(resolveEffectiveCannSoc()) ? 'npusim' : 'msprof';
+  }
+
+  /** True when the on-board analysis should open the new-tool data-collection dialog (A5 + npu-compute). */
+  static shouldUseNewOnBoardTool(): boolean {
+    return isAscendA5ProfilerCannSoc(resolveEffectiveCannSoc())
+      && ConfigService.getOnBoardTool() === 'npu-compute';
+  }
+
+  /** True when the simulation analysis should open the new-tool data-collection dialog (A5 + npusim). */
+  static shouldUseNewSimulationTool(): boolean {
+    return isAscendA5ProfilerCannSoc(resolveEffectiveCannSoc())
+      && ConfigService.getSimulationTool() === 'npusim';
   }
 
   /**

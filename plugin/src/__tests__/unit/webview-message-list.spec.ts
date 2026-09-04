@@ -15,7 +15,12 @@ jest.mock('vscode', () => ({
     showInformationMessage: jest.fn(),
     showWarningMessage: jest.fn(),
   },
-  commands: { executeCommand: jest.fn() },
+  commands: {
+    executeCommand: jest.fn(),
+    // focusOpsOperateViewContainer resolves the first registered focus command;
+    // expose the view-container command so it executes instead of skipping.
+    getCommands: jest.fn(async () => ['workbench.view.extension.mstt']),
+  },
   env: { openExternal: jest.fn() },
 }));
 
@@ -45,7 +50,6 @@ import {
 import { SettingsLoader } from '@plugin/service/settings-loader';
 import { ProjectManager } from '@plugin/core/project/project-manager';
 import { welcomeMethods } from '@plugin/controller/welcome-controller';
-import { workbenchViewContainerCommand } from '@shared/flavor';
 
 const showErrorMessageMock = vscode.window.showErrorMessage as jest.Mock;
 const showInformationMessageMock = vscode.window.showInformationMessage as jest.Mock;
@@ -129,15 +133,19 @@ describe('webviewMessageList', () => {
       .toHaveBeenNthCalledWith(3, COMMAND_WELCOME);
   });
 
-  it('opens the sidebar view container from webview messages', () => {
+  it('opens the sidebar view container from webview messages', async () => {
     const handler = webviewMessageList.find((item) => item.command === 'vscodeOpenSidebar');
 
-    handler?.callback({}, undefined);
+    // The handler fires focusOpsOperateViewContainer() (async: getCommands → executeCommand);
+    // await it so the resolved focus command is executed before asserting.
+    await handler?.callback({}, undefined);
+    await Promise.resolve();
 
+    // The focus candidate list (which calls workbenchViewContainerCommand()) is built at
+    // module-load time, so beforeEach's clearAllMocks wipes that call before the body runs.
+    // Assert on the resolved command actually executed instead.
     expect(executeCommandMock)
       .toHaveBeenCalledWith('workbench.view.extension.mstt');
-    expect(workbenchViewContainerCommand)
-      .toHaveBeenCalled();
   });
 
   it('opens external urls only when the message carries one', async () => {

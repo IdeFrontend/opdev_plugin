@@ -1,5 +1,8 @@
+import * as vscode from 'vscode';
+
 import {
   resolveFocusOpsOperateCommand,
+  focusOpsOperateViewContainer,
   OPS_OPERATE_VIEW_CONTAINER_ID,
   OPS_OPERATE_FOCUS_COMMAND_CANDIDATES,
 } from '@plugin/helpers/focus-ops-operate';
@@ -50,5 +53,65 @@ describe('resolveFocusOpsOperateCommand (focus command fallback)', () => {
       .toBe(VIEW_CONTAINER_ID);
     expect(VIEW_CONTAINER_COMMAND)
       .toBe(`workbench.view.extension.${VIEW_CONTAINER_ID}`);
+  });
+});
+
+describe('focusOpsOperateViewContainer (activation-safe)', () => {
+  const getCommands = vscode.commands.getCommands as unknown as jest.Mock;
+  const executeCommand = vscode.commands.executeCommand as unknown as jest.Mock;
+
+  beforeEach(() => {
+    getCommands.mockReset();
+    executeCommand.mockReset()
+      .mockResolvedValue(undefined);
+    jest.spyOn(console, 'warn')
+      .mockImplementation(() => {});
+    jest.spyOn(console, 'log')
+      .mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('executes the generated view container command when the host registers it', async () => {
+    getCommands.mockResolvedValue([
+      VIEW_CONTAINER_COMMAND,
+      FOCUS_AUXILIARY_BAR,
+    ]);
+
+    await focusOpsOperateViewContainer();
+
+    expect(executeCommand)
+      .toHaveBeenCalledWith(VIEW_CONTAINER_COMMAND);
+  });
+
+  it('falls back to focusAuxiliaryBar on the VSCode-huawei fork', async () => {
+    getCommands.mockResolvedValue([FOCUS_AUXILIARY_BAR]);
+
+    await focusOpsOperateViewContainer();
+
+    expect(executeCommand)
+      .toHaveBeenCalledWith(FOCUS_AUXILIARY_BAR);
+  });
+
+  it('skips execution (no "command not found" crash) when no candidate is registered', async () => {
+    getCommands.mockResolvedValue(['unrelated.command']);
+
+    await expect(focusOpsOperateViewContainer())
+      .resolves
+      .toBeUndefined();
+    expect(executeCommand)
+      .not
+      .toHaveBeenCalled();
+  });
+
+  it('swallows executeCommand rejection so activation never fails', async () => {
+    getCommands.mockResolvedValue([VIEW_CONTAINER_COMMAND]);
+    executeCommand.mockRejectedValue(new Error('command not found'));
+
+    await expect(focusOpsOperateViewContainer())
+      .resolves
+      .toBeUndefined();
   });
 });

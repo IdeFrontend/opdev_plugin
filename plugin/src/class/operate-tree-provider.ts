@@ -2291,7 +2291,10 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     }
 
     const files = OperateTreeProvider.collectPerformanceReportFiles(report.children);
-    const file = files.find((item) => item.fileType === 'bin' && item.title === 'visualize_data.bin')
+    // New-tool reports (.npu-rep) auto-open first; legacy runs fall back to the
+    // insight/csv artifacts as before.
+    const file = files.find((item) => item.fileType === 'npu-rep')
+      ?? files.find((item) => item.fileType === 'bin' && item.title === 'visualize_data.bin')
       ?? files.find((item) => item.fileType === 'bin')
       ?? files.find((item) => item.fileType === 'json')
       ?? files.find((item) => item.fileType === 'csv');
@@ -2536,6 +2539,9 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       return;
     }
 
+    // New-tool (npu-compute / npusim) reports carry the .npu-rep extension; old
+    // tools never produce one, so the file type alone routes each report to the
+    // matching viewer. All three open through the profiling-report panel.
     if (fileType === 'rep' || fileType === 'ncrep' || fileType === 'npu-rep') {
       await viewService.openProfilingReport(filePath);
 

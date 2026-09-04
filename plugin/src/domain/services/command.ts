@@ -473,6 +473,41 @@ export function getOnBoardCommand(
 }
 
 /**
+ * Pieces the A5 new-tool (npu-compute / npusim) command builders need, resolved
+ * through the same strategy path the legacy on-board / simulation flows use:
+ * the Ascend env `source` prefix, the `cd` into the run/build dir, and the
+ * compiled profiler target file (with the standard-custom example repoint).
+ *
+ * Kept separate from {@link getOnBoardCommand} / {@link getSimulateCommand} so
+ * the new-tool flow reuses the stable target resolution without producing an
+ * `msprof` command.
+ */
+export interface NewToolProfilerContext {
+  sourceCannCmd: string;
+  cdBuildCmd: string;
+  targetFile: string;
+}
+
+export function getNewToolProfilerContext(
+  baseContext: BaseContext<OnBoardConfig | SimulateConfig>,
+  exampleBaseContext: BaseContext<BuildExampleConfig>,
+  operatorNames?: string,
+): NewToolProfilerContext {
+  const strategy = CommandStrategyFactory.getStrategy(baseContext.operator?.op_type);
+  const context = strategy.buildCommandContext(baseContext);
+
+  let targetFile = strategy.getProfilerTargetFile(context.config, context.operator, context.op, context.project);
+
+  targetFile = rewriteExampleTargetForExample(targetFile, exampleBaseContext, operatorNames);
+
+  return {
+    sourceCannCmd: context.sourceCannCmd,
+    cdBuildCmd: context.cdBuildCmd,
+    targetFile,
+  };
+}
+
+/**
  * Generate Sanitizer (anomaly detection) command
  *
  * @param baseContext resolved command context (see {@link resolveSanitizerBaseContext})

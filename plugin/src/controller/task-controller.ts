@@ -21,6 +21,7 @@ import {
   StartRunParams,
   StartSimulateParams,
   StartOnBoardParams,
+  StartNewToolCollectionParams,
   StartSanitizerParams,
   StartUtTestParams,
 } from '@shared/api-types';
@@ -480,6 +481,26 @@ export const taskMethods = {
     }
     finally {
       // Clear executor reference
+      currentExecutor = null;
+      ProjectManager.getInstance()
+        .clearExecutor();
+    }
+  },
+
+  /**
+   * A5 new-tool (npu-compute / npusim) data collection: compile with the legacy
+   * sequence, hand the artifact to the selected prototype tool, then open the
+   * produced .npu-rep report. `params.config.collectionType` selects the tool.
+   */
+  async startNewToolCollection(params: StartNewToolCollectionParams): Promise<void> {
+    await ensurePostActivateBootstrapReady();
+
+    try {
+      currentExecutor = ProjectManager.getInstance()
+        .getExecutor();
+      await buildService.startNewToolCollection(params);
+    }
+    finally {
       currentExecutor = null;
       ProjectManager.getInstance()
         .clearExecutor();
