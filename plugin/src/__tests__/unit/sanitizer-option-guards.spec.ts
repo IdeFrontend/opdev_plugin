@@ -147,10 +147,6 @@ describe('normalizeNpuSanitizerTools (npu-check tool allow-list)', () => {
       .toEqual([
         'memcheck',
         'synccheck',
-        'racecheck',
-        'initcheck',
-        'soccheck',
-        'overcheck',
       ]);
   });
 
@@ -162,11 +158,7 @@ describe('normalizeNpuSanitizerTools (npu-check tool allow-list)', () => {
       'bogus',
       'overcheck',
     ]))
-      .toEqual([
-        'memcheck',
-        'soccheck',
-        'overcheck',
-      ]);
+      .toEqual(['memcheck']);
   });
 });
 

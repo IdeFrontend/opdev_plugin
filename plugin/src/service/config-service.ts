@@ -159,9 +159,7 @@ export interface SanitizerConfig {
   tool?: { memcheck?: boolean;
     synccheck?: boolean;
     racecheck?: boolean;
-    initcheck?: boolean;
-    soccheck?: boolean;
-    overcheck?: boolean };
+    initcheck?: boolean };
   memcheckOption?: { 'leak-check'?: boolean;
     'check-unused-memory'?: boolean };
   logLevel?: 'info' | 'warn' | 'error';
@@ -321,8 +319,6 @@ function sanitizerUserOptionsToDottedWrites(opts: Record<string, unknown>): OpDe
   assignIfDefined(updates, 'sanitizer.sync', tool.synccheck);
   assignIfDefined(updates, 'sanitizer.race', tool.racecheck);
   assignIfDefined(updates, 'sanitizer.uninitialized', tool.initcheck);
-  assignIfDefined(updates, 'sanitizer.soc', tool.soccheck);
-  assignIfDefined(updates, 'sanitizer.over', tool.overcheck);
   assignIfDefined(updates, 'sanitizer.memoryLeak', mem['leak-check']);
   assignIfDefined(updates, 'sanitizer.allocUnused', mem['check-unused-memory']);
 
@@ -1092,8 +1088,6 @@ export class ConfigService {
     const synccheck = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.sync');
     const racecheck = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.race');
     const initcheck = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.uninitialized');
-    const soccheck = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.soc');
-    const overcheck = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.over');
     const memoryLeak = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.memoryLeak');
     const allocUnused = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.allocUnused');
     // A2/A3 SOC only ships mssanitizer — the persisted toolType is ignored
@@ -1117,8 +1111,6 @@ export class ConfigService {
       || synccheck !== undefined
       || racecheck !== undefined
       || initcheck !== undefined
-      || soccheck !== undefined
-      || overcheck !== undefined
       || memoryLeak !== undefined
       || allocUnused !== undefined;
 
@@ -1166,14 +1158,6 @@ export class ConfigService {
 
     if (initcheck !== undefined) {
       tool.initcheck = initcheck;
-    }
-
-    if (soccheck !== undefined) {
-      tool.soccheck = soccheck;
-    }
-
-    if (overcheck !== undefined) {
-      tool.overcheck = overcheck;
     }
 
     if (memoryLeak !== undefined) {
