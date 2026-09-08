@@ -31,6 +31,7 @@ import { isNpuCheckReport } from '@plugin/helpers/sanitizer-log-reports';
 import { evaluateSanitizerRunOutcome } from '@plugin/helpers/sanitizer-run-outcome';
 import { cleanupCwdSanitizerLog } from '@plugin/helpers/cleanup-sanitizer-cwd-log';
 import { joinIdeConfigPath } from '@plugin/helpers/ide-config-dir';
+import { getSanitizerLogDirName } from '@plugin/domain/services/command-strategy/sanitizer-option-guards';
 import { syncSanitizerPythonTargetFromActiveEditor } from '@plugin/helpers/sync-sanitizer-python-target';
 import { probeTritonPythonDependencies } from '@plugin/domain/services/command-strategy/triton-strategy';
 import { msAgentBridgeService } from '@plugin/service/ms-agent-bridge.service';
@@ -193,9 +194,15 @@ export class SanitizerService {
         await notifyBuildSucceededForSidebar(projectPath, params.operatorNames);
       }
 
+      const sanitizerBaseContext = resolveSanitizerBaseContext(projectPath, params.operatorNames);
+      // npu-check reports go to `npu-check-log`, mssanitizer keeps
+      // `mindstudio_sanitizer_log` — the report dir (mkdir + remote pull) follows the tool.
+      const sanitizerCommandName = sanitizerBaseContext.config.toolType === 'npu-check' ? 'npu-check' : 'mssanitizer';
+      const sanitizerLogDirName = getSanitizerLogDirName(sanitizerCommandName);
+
       if (workspaceFolders && workspaceFolders.length > 0) {
         const workspacePath = workspaceFolders[0].uri.fsPath;
-        const logPath = joinIdeConfigPath(workspacePath, 'mindstudio_sanitizer_log');
+        const logPath = joinIdeConfigPath(workspacePath, sanitizerLogDirName);
 
         if (!fs.existsSync(logPath)) {
           // recursive so a fresh workspace without the IDE config dir does not throw ENOENT.
@@ -206,14 +213,13 @@ export class SanitizerService {
         }
       }
 
-      const sanitizerBaseContext = resolveSanitizerBaseContext(projectPath, params.operatorNames);
       const sanitizerCommand =
         getSanitizerCommand(
           sanitizerBaseContext,
           resolveBuildExampleBaseContext(projectPath, params.operatorNames),
           params.operatorNames,
         ) || '';
-      const remoteSanitizerCommandTransformer = createRemoteCommandWhenNoNpuTransformer((command) => buildRemoteExecCommand(command, this.getRemoteSanitizerLogPullDir(vscode.workspace.workspaceFolders?.[0]?.uri.fsPath)));
+      const remoteSanitizerCommandTransformer = createRemoteCommandWhenNoNpuTransformer((command) => buildRemoteExecCommand(command, this.getRemoteSanitizerLogPullDir(vscode.workspace.workspaceFolders?.[0]?.uri.fsPath, sanitizerLogDirName)));
       const res = await executeOperatorCommand(
         sanitizerCommand,
         buildOperatorSpawnContext({
@@ -309,17 +315,18 @@ export class SanitizerService {
   }
 
   /**
-   * Absolute path of the IDE config `mindstudio_sanitizer_log` directory under the workspace root,
-   * formatted with forward slashes for `remote_tool.sh --pull-dir`. mssanitizer writes its
-   * report here (see `joinIdeConfigPath(workspacePath, 'mindstudio_sanitizer_log')` above), so
-   * after the remote run we pull this directory back so the local analysis pipeline
-   * (`sanitizerDiagnosticsService.publishFromLogFile`) can read it on the same absolute path.
+   * Absolute path of the IDE config sanitizer report directory under the workspace root
+   * (`mindstudio_sanitizer_log` for mssanitizer, `npu-check-log` for npu-check), formatted
+   * with forward slashes for `remote_tool.sh --pull-dir`. The selected tool writes its
+   * report there (see the mkdir above), so after the remote run we pull this directory
+   * back so the local analysis pipeline (`sanitizerDiagnosticsService.publishFromLogFile`)
+   * can read it on the same absolute path.
    *
    * Mirrors `buildService.getRemotePullDir(rootPath, outputDir)` — uses `path.resolve` to
    * normalize the root and `joinIdeConfigPath` so `.arts` (CodeArts) is picked up automatically.
    */
-  private getRemoteSanitizerLogPullDir(rootPath: string | undefined): string {
-    return resolveRemotePullDir(rootPath, 'mindstudio_sanitizer_log', 'sanitizer log retrieval');
+  private getRemoteSanitizerLogPullDir(rootPath: string | undefined, logDirName: string): string {
+    return resolveRemotePullDir(rootPath, logDirName, 'sanitizer log retrieval');
   }
 }
 

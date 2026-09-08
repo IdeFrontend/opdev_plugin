@@ -108,11 +108,29 @@ export function parseNpuCheckStackFrame(line: string): NpuCheckStackFrame | null
 }
 
 /**
+ * True when `filePath` is located inside `projectRoot` (both may use either
+ * separator style; Windows paths compare case-insensitively).
+ */
+function isPathInsideProject(filePath: string, projectRoot: string): boolean {
+  const normFile = filePath.replace(/\\/g, '/')
+    .replace(/\/+$/, '');
+  const normRoot = projectRoot.replace(/\\/g, '/')
+    .replace(/\/+$/, '');
+  const isWindowsPath = /^[A-Za-z]:\//.test(normFile) || /^[A-Za-z]:\//.test(normRoot);
+  const file = isWindowsPath ? normFile.toLowerCase() : normFile;
+  const root = isWindowsPath ? normRoot.toLowerCase() : normRoot;
+
+  return file === root || file.startsWith(`${root}/`);
+}
+
+/**
  * Internal state of the exception block currently being collected.
  */
 interface CurrentBlock {
   type: 'error' | 'warning';
   exceptionName: string;
+  // Bracketed group tag after ERROR:/WARNING: (e.g. "[MEMCHECK]"), when present
+  groupName?: string;
   rawLines: string[];
   frames: NpuCheckStackFrame[];
   stackStarted: boolean;
@@ -125,18 +143,23 @@ interface CurrentBlock {
  * "Device Frame(s):" call-stack section whose "#N" frames count up from the
  * stack top. Newer releases (CANN 9.2.0 aclsan) additionally prefix the first
  * line of every logger message with a "npu_check: <LEVEL>" tag; metadata
- * messages such as "npu_check: SUMMARY" carry no diagnostic content. The jump
- * target is the frame with the smallest index that resolves a file path,
- * unlike the mssanitizer parser which prefers the deepest frame.
+ * messages such as "npu_check: SUMMARY" carry no diagnostic content. A
+ * bracketed tag right after the severity prefix ("ERROR:[MEMCHECK] ...")
+ * carries the problem group and is parsed into `groupName`. The jump target is
+ * the first frame (smallest index) whose file is located inside the configured
+ * project directory (`matchPath`); when no frame matches (or no matchPath is
+ * given) it falls back to the first frame that resolves a file path, unlike
+ * the mssanitizer parser which prefers the deepest frame.
  */
 export class NpuCheckParser {
   private results: Result[] = [];
   private currentResult: CurrentBlock | null = null;
+  private matchPath = '';
 
   constructor(config?: Record<string, string>) {
-    // Signature parity with ExceptionParser; this parser does not filter
-    // frames by matchPath, so the config is intentionally unused.
-    void config;
+    if (config?.matchPath) {
+      this.matchPath = config.matchPath;
+    }
   }
 
   /**
@@ -182,14 +205,21 @@ export class NpuCheckParser {
       return;
     }
 
-    // A new exception block starts with "ERROR:" or "WARNING:".
+    // A new exception block starts with "ERROR:" or "WARNING:", optionally
+    // followed by a bracketed group tag: "ERROR:[MEMCHECK] <message>".
     const blockStart = cleaned.match(/^(ERROR|WARNING):\s*(.*)$/i);
 
     if (blockStart) {
       this.finalizeCurrentResult();
+
+      const rest = blockStart[2].trim();
+      const groupMatch = rest.match(/^\[([^\]]+)\]\s*(.*)$/);
+      const groupName = groupMatch && groupMatch[1].trim() !== '' ? groupMatch[1] : undefined;
+
       this.currentResult = {
         type: blockStart[1].toUpperCase() === 'WARNING' ? 'warning' : 'error',
-        exceptionName: blockStart[2].trim(),
+        exceptionName: (groupName !== undefined ? groupMatch![2] : rest).trim(),
+        groupName,
         rawLines: [line],
         frames: [],
         stackStarted: false,
@@ -279,12 +309,17 @@ export class NpuCheckParser {
       block.rawLines.pop();
     }
 
-    // Jump target: the frame with the smallest index that resolves a file
-    // path (the stack top is the key point of the problem; frames without a
-    // path are skipped in index order).
-    const target = [...block.frames]
-      .sort((a, b) => a.index - b.index)
-      .find((frame) => frame.filePath !== undefined);
+    // Jump target: starting from #0, the first frame whose file is located
+    // inside the project directory (matchPath); frames without a path are
+    // skipped in index order. When no frame is inside the project (remote
+    // paths, or no matchPath configured), fall back to the first frame that
+    // resolves any file path.
+    const sortedFrames = [...block.frames].sort((a, b) => a.index - b.index);
+    const target = (
+      this.matchPath
+        ? sortedFrames.find((frame) => frame.filePath !== undefined && isPathInsideProject(frame.filePath, this.matchPath))
+        : undefined
+    ) ?? sortedFrames.find((frame) => frame.filePath !== undefined);
 
     const result: Result = {
       title: block.exceptionName,
@@ -292,6 +327,7 @@ export class NpuCheckParser {
       type: block.type,
       questionType: QUESTION_TYPE,
       question: block.exceptionName,
+      groupName: block.groupName,
       originData: block.rawLines.join('\n'),
       fileLink: target ? target.filePath : undefined,
       row: target ? target.row : undefined,

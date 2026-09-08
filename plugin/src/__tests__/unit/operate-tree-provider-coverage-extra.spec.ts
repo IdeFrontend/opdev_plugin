@@ -181,6 +181,7 @@ type SanitizerMessage = {
   msAgentIndex?: number;
   originData?: string;
   sourceTool?: 'mssanitizer' | 'npu-check';
+  groupName?: string;
 };
 
 type StateHarness = {
@@ -820,7 +821,7 @@ describe('grouped report nodes', () => {
     return provider.getChildren(reportNode('/reports/r.log')) as Promise<OperateNode[]>;
   };
 
-  it('lists npu-check messages directly without the other group in class mode', async () => {
+  it('groups npu-check messages without a group tag under the other group in class mode', async () => {
     const provider = createProvider();
     const nodes = await reportData(provider, [
       message({
@@ -841,22 +842,14 @@ describe('grouped report nodes', () => {
       }),
     ], 'class');
 
+    // Untagged npu-check messages collapse into a single "other" group node
+    // rather than being listed flatly.
     expect(nodes)
-      .toHaveLength(2);
-    expect(nodes.every((node) => node.nodeId === 'sanitizerMessage'))
-      .toBe(true);
-    expect(nodes.some((node) => node.nodeId === 'sanitizerClass'))
-      .toBe(false);
-    // Severity ordering is preserved (errors before warnings).
-    expect(nodes.map((node) => node.label))
-      .toEqual([
-        'Invalid GM read',
-        'redundant SET_FLAG',
-      ]);
+      .toHaveLength(1);
+    expect(nodes[0].nodeId)
+      .toBe('sanitizerClass');
     expect(nodes[0].id)
-      .toBe(`sanitizer-msg:${encodeURIComponent('/reports/r.log')}:class:flat:1:0`);
-    expect((nodes[0].command as { arguments?: string[] }).arguments)
-      .toEqual(['1']);
+      .toBe(`sanitizer-report-group:${encodeURIComponent('/reports/r.log')}:class:${encodeURIComponent('other')}`);
   });
 
   it('keeps the other group for mssanitizer messages in class mode', async () => {
@@ -894,13 +887,14 @@ describe('grouped report nodes', () => {
       .toBe(`sanitizer-report-group:${encodeURIComponent('/reports/r.log')}:severity:${encodeURIComponent('error')}`);
   });
 
-  it('groups npu-check messages again once they carry a question type', async () => {
+  it('groups npu-check messages by their group name even when they carry a question type', async () => {
     const provider = createProvider();
     const nodes = await reportData(provider, [
       message({
         questionType: 'memory',
         question: 'Invalid GM read',
         sourceTool: 'npu-check',
+        groupName: 'MEMCHECK',
       }),
     ], 'class');
 
@@ -909,7 +903,7 @@ describe('grouped report nodes', () => {
     expect(nodes[0].nodeId)
       .toBe('sanitizerClass');
     expect(nodes[0].id)
-      .toBe(`sanitizer-report-group:${encodeURIComponent('/reports/r.log')}:class:${encodeURIComponent('memory')}`);
+      .toBe(`sanitizer-report-group:${encodeURIComponent('/reports/r.log')}:class:${encodeURIComponent('MEMCHECK')}`);
   });
 
   it('sorts within a class group stably when severity and rank match', async () => {

@@ -10,6 +10,7 @@
  */
 
 import { Command } from '@plugin/domain/utils/command-utils';
+import { joinIdeConfigPath } from '@plugin/helpers/ide-config-dir';
 
 const MAX_DEBUGLOG_SIZE_MIN = 1;
 const MAX_DEBUGLOG_SIZE_MAX = 10240;
@@ -100,6 +101,30 @@ export function buildSanitizerLogFileName(commandName: 'mssanitizer' | 'npu-chec
     .valueOf();
 
   return commandName === 'npu-check' ? `npu-check_${timestamp}.log` : `mssanitizer_${timestamp}.log`;
+}
+
+/**
+ * Sanitizer report directory name under the workspace IDE config dir: npu-check
+ * writes its reports into `npu-check-log`, mssanitizer keeps its historical
+ * `mindstudio_sanitizer_log` directory (both live side by side).
+ */
+export function getSanitizerLogDirName(commandName: 'mssanitizer' | 'npu-check'): string {
+  return commandName === 'npu-check' ? 'npu-check-log' : 'mindstudio_sanitizer_log';
+}
+
+/** All sanitizer report directory names a reader must scan, in no particular order. */
+export const SANITIZER_LOG_DIR_NAMES: readonly string[] = [
+  'mindstudio_sanitizer_log',
+  'npu-check-log',
+];
+
+/** Absolute `--log-file` path: `<ideConfig>/<tool log dir>/<tool>_<timestamp>.log`. */
+export function buildSanitizerLogFilePath(workspaceRoot: string, commandName: 'mssanitizer' | 'npu-check'): string {
+  return joinIdeConfigPath(
+    workspaceRoot,
+    getSanitizerLogDirName(commandName),
+    buildSanitizerLogFileName(commandName),
+  );
 }
 
 /**

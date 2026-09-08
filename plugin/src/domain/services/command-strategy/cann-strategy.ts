@@ -1,7 +1,6 @@
 import { t } from 'i18next';
 import * as vscode from 'vscode';
 
-import { joinIdeConfigPath } from '@plugin/helpers/ide-config-dir';
 import {
   joinCommands,
   getExecutableCommand,
@@ -39,7 +38,7 @@ import {
   normalizeMaxDebuglogSize,
   addSanitizerToolOptions,
   normalizeSanitizerCommand,
-  buildSanitizerLogFileName,
+  buildSanitizerLogFilePath,
   createSanitizerCommand,
 } from './sanitizer-option-guards';
 import {
@@ -244,11 +243,7 @@ export class CannCommandStrategy implements CommandStrategy {
 
     const workspaceFolders = vscode.workspace.workspaceFolders;
     const workspacePath = workspaceFolders?.[0]?.uri.fsPath || process.cwd();
-    const logFilePath = joinIdeConfigPath(
-      workspacePath,
-      'mindstudio_sanitizer_log',
-      buildSanitizerLogFileName(commandName),
-    );
+    const logFilePath = buildSanitizerLogFilePath(workspacePath, commandName);
 
     command.addOption('log-file', logFilePath);
 
