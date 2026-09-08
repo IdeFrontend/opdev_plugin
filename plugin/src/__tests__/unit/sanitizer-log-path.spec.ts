@@ -57,6 +57,30 @@ describe('getLatestSanitizerLogAbsPath', () => {
       .toBe(newer);
   });
 
+  it('picks the newest report across the mindstudio_sanitizer_log and npu-check-log dirs', () => {
+    const npuCheckLogDir = path.join(getIdeConfigDir(workspaceRoot), 'npu-check-log');
+
+    fs.mkdirSync(logDir, { recursive: true });
+    fs.mkdirSync(npuCheckLogDir, { recursive: true });
+
+    const msLog = path.join(logDir, 'mssanitizer_1700000000000.log');
+    const npuLog = path.join(npuCheckLogDir, 'npu-check_1700001000000.log');
+
+    fs.writeFileSync(msLog, 'ms', 'utf8');
+    fs.writeFileSync(npuLog, 'npu', 'utf8');
+    fs.utimesSync(msLog, new Date(2000), new Date(2000));
+    fs.utimesSync(npuLog, new Date(1000), new Date(1000));
+
+    // The newer mssanitizer report wins even though the npu-check dir is scanned too.
+    expect(getLatestSanitizerLogAbsPath(workspaceRoot))
+      .toBe(msLog);
+
+    fs.utimesSync(npuLog, new Date(3000), new Date(3000));
+
+    expect(getLatestSanitizerLogAbsPath(workspaceRoot))
+      .toBe(npuLog);
+  });
+
   it('skips non-matching names and directory entries', () => {
     fs.mkdirSync(logDir, { recursive: true });
     fs.writeFileSync(path.join(logDir, 'mssanitizer.txt'), 'no', 'utf8');

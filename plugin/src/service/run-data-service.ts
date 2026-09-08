@@ -7,6 +7,7 @@ import {
   collectSanitizerLogReports,
   parseSanitizerLogTimestamp,
 } from '@plugin/helpers/sanitizer-log-reports';
+import { SANITIZER_LOG_DIR_NAMES } from '@plugin/domain/services/command-strategy/sanitizer-option-guards';
 import {
   FileMapEntry,
   readWorkspaceCache,
@@ -92,12 +93,15 @@ export class RunDataService {
       marked: boolean;
     }> = [];
 
-    const logPath = joinIdeConfigPath(workspacePath, 'mindstudio_sanitizer_log');
-
     const markSet = getMsSanitizerMarks();
 
-    // Read report files in the log directory; skips empty logs a failed run leaves behind.
-    res.push(...collectSanitizerLogReports(logPath, markSet));
+    // Read report files from every sanitizer log directory (mssanitizer keeps
+    // `mindstudio_sanitizer_log`, npu-check writes `npu-check-log`); skips empty
+    // logs a failed run leaves behind. Results stay flat — the final sort below
+    // orders them by run time.
+    for (const dirName of SANITIZER_LOG_DIR_NAMES) {
+      res.push(...collectSanitizerLogReports(joinIdeConfigPath(workspacePath, dirName), markSet));
+    }
 
     // Read fileMapList: the workspace cache is the source (the import seeds
     // `fileMapLists` on activation, runtime writers extend it).

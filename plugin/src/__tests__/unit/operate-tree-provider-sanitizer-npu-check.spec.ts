@@ -110,6 +110,7 @@ type SanitizerMessageLike = {
   col?: number;
   originData: string;
   sourceTool?: 'mssanitizer' | 'npu-check';
+  groupName?: string;
 };
 
 type SanitizerStateHarness = {
@@ -336,6 +337,143 @@ describe('OperateTreeProvider sanitizer npu-check tooltips and jumps', () => {
     await provider.jumpToSanitizerMessage('0');
 
     expect(mockJumpToFile)
-      .not.toHaveBeenCalled();
+      .not
+      .toHaveBeenCalled();
+  });
+});
+
+describe('OperateTreeProvider sanitizer npu-check class grouping', () => {
+  type DerivedHarness = {
+    buildSanitizerMessageDerived: (msg: SanitizerMessageLike)=> {
+      classKey: string;
+      classLabel: string;
+    };
+    getSanitizerResultGroups: (mode: string)=> Array<{
+      key: string;
+      label: string;
+      messages: SanitizerMessageLike[];
+    }>;
+  };
+
+  const asHarness = (provider: OperateTreeProvider): DerivedHarness =>
+    provider as unknown as DerivedHarness;
+
+  it('uses the parsed group name as class key/label for npu-check messages', () => {
+    const provider = createProvider();
+    const harness = asHarness(provider);
+    const grouped = harness.buildSanitizerMessageDerived({
+      title: 'Invalid GM read',
+      type: 'error',
+      questionType: 'other',
+      question: 'Invalid GM read',
+      originData: '=========ERROR:[MEMCHECK] Invalid GM read',
+      sourceTool: 'npu-check',
+      groupName: 'MEMCHECK',
+    });
+
+    expect(grouped.classKey)
+      .toBe('MEMCHECK');
+    expect(grouped.classLabel)
+      .toBe('MEMCHECK');
+  });
+
+  it('falls back to the other bucket for npu-check messages without a group tag', () => {
+    const provider = createProvider();
+    const harness = asHarness(provider);
+    const grouped = harness.buildSanitizerMessageDerived({
+      title: 'aie exec timeout',
+      type: 'error',
+      questionType: 'other',
+      question: 'aie exec timeout',
+      originData: '=========ERROR: aie exec timeout',
+      sourceTool: 'npu-check',
+    });
+
+    expect(grouped.classKey)
+      .toBe('other');
+    expect(grouped.classLabel)
+      .toBe('web.sanitizerPanel.other');
+  });
+
+  it('keeps the fixed mssanitizer classes for mssanitizer messages', () => {
+    const provider = createProvider();
+    const harness = asHarness(provider);
+    const grouped = harness.buildSanitizerMessageDerived({
+      title: 'illegal read of size 224',
+      type: 'error',
+      questionType: 'memory',
+      question: 'illegal read of size 224',
+      originData: '======ERROR: illegal read of size 224',
+    });
+
+    expect(grouped.classKey)
+      .toBe('memory');
+    expect(grouped.classLabel)
+      .toBe('web.sanitizerPanel.memory');
+  });
+
+  it('groups npu-check messages by group name with ungrouped ones in the other bucket last', () => {
+    const provider = createProvider([
+      {
+        title: 'mem issue',
+        type: 'error',
+        questionType: 'other',
+        question: 'mem issue',
+        originData: '=========ERROR:[MEMCHECK] mem issue',
+        sourceTool: 'npu-check',
+        groupName: 'MEMCHECK',
+      },
+      {
+        title: 'ungrouped issue',
+        type: 'warning',
+        questionType: 'other',
+        question: 'ungrouped issue',
+        originData: '=========ERROR: ungrouped issue',
+        sourceTool: 'npu-check',
+      },
+      {
+        title: 'race issue',
+        type: 'error',
+        questionType: 'other',
+        question: 'race issue',
+        originData: '=========ERROR:[RACECHECK] race issue',
+        sourceTool: 'npu-check',
+        groupName: 'RACECHECK',
+      },
+      {
+        title: 'another mem issue',
+        type: 'error',
+        questionType: 'other',
+        question: 'another mem issue',
+        originData: '=========ERROR:[MEMCHECK] another mem issue',
+        sourceTool: 'npu-check',
+        groupName: 'MEMCHECK',
+      },
+    ]);
+    const groups = asHarness(provider)
+      .getSanitizerResultGroups('class');
+
+    expect(groups.map((group) => [
+      group.key,
+      group.label,
+      group.messages.length,
+    ]))
+      .toEqual([
+        [
+          'MEMCHECK',
+          'MEMCHECK',
+          2,
+        ],
+        [
+          'RACECHECK',
+          'RACECHECK',
+          1,
+        ],
+        [
+          'other',
+          'web.sanitizerPanel.other',
+          1,
+        ],
+      ]);
   });
 });

@@ -21,6 +21,9 @@ export interface Result {
   col?: number;
   // Which sanitizer tool produced this result (npu-check reports carry the marker)
   sourceTool?: 'mssanitizer' | 'npu-check';
+  // Problem group parsed from the bracketed tag after ERROR:/WARNING:
+  // (e.g. "[MEMCHECK]" in "ERROR:[MEMCHECK] Invalid GM read..."); npu-check only
+  groupName?: string;
 }
 
 // Question categories

@@ -6,6 +6,9 @@ import {
   normalizeSanitizerCommand,
   normalizeSanitizerTools,
   buildSanitizerLogFileName,
+  buildSanitizerLogFilePath,
+  getSanitizerLogDirName,
+  SANITIZER_LOG_DIR_NAMES,
   createSanitizerCommand,
 } from '@plugin/domain/services/command-strategy/sanitizer-option-guards';
 
@@ -195,6 +198,52 @@ describe('buildSanitizerLogFileName', () => {
   });
 });
 
+describe('getSanitizerLogDirName', () => {
+  it('routes npu-check reports to the npu-check-log directory', () => {
+    expect(getSanitizerLogDirName('npu-check'))
+      .toBe('npu-check-log');
+  });
+
+  it('keeps mssanitizer reports in mindstudio_sanitizer_log', () => {
+    expect(getSanitizerLogDirName('mssanitizer'))
+      .toBe('mindstudio_sanitizer_log');
+  });
+
+  it('exposes both reader directories', () => {
+    expect(SANITIZER_LOG_DIR_NAMES)
+      .toEqual(expect.arrayContaining([
+        'mindstudio_sanitizer_log',
+        'npu-check-log',
+      ]));
+  });
+});
+
+describe('buildSanitizerLogFilePath', () => {
+  it('places the npu-check log file inside npu-check-log', () => {
+    const filePath = buildSanitizerLogFilePath('/ws', 'npu-check');
+
+    expect(filePath)
+      .toContain('npu-check-log');
+    expect(filePath)
+      .toMatch(/npu-check_\d+\.log$/);
+    expect(filePath)
+      .not
+      .toContain('mindstudio_sanitizer_log');
+  });
+
+  it('keeps the mssanitizer log file inside mindstudio_sanitizer_log', () => {
+    const filePath = buildSanitizerLogFilePath('/ws', 'mssanitizer');
+
+    expect(filePath)
+      .toContain('mindstudio_sanitizer_log');
+    expect(filePath)
+      .toMatch(/mssanitizer_\d+\.log$/);
+    expect(filePath)
+      .not
+      .toContain('npu-check-log');
+  });
+});
+
 describe('createSanitizerCommand', () => {
   it('renders npu-check options as space-separated flags', () => {
     const cmd = createSanitizerCommand('npu-check')
@@ -202,10 +251,10 @@ describe('createSanitizerCommand', () => {
         'memcheck',
         'synccheck',
       ])
-      .addOption('log-file', '/ws/.vscode/mindstudio_sanitizer_log/npu-check_1.log');
+      .addOption('log-file', '/ws/.vscode/npu-check-log/npu-check_1.log');
 
     expect(cmd.toString())
-      .toBe('npu-check --tool memcheck --tool synccheck --log-file /ws/.vscode/mindstudio_sanitizer_log/npu-check_1.log');
+      .toBe('npu-check --tool memcheck --tool synccheck --log-file /ws/.vscode/npu-check-log/npu-check_1.log');
   });
 
   it('renders mssanitizer options with the --key=value form', () => {

@@ -332,7 +332,7 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
     const normalized = cmd.replace(/\\/g, '/');
 
     expect(normalized)
-      .toContain(`--log-file /ws/triton-op/${ideDir}/mindstudio_sanitizer_log/npu-check_`);
+      .toContain(`--log-file /ws/triton-op/${ideDir}/npu-check-log/npu-check_`);
     expect(normalized)
       .toMatch(/npu-check_\d+\.log/);
   });
