@@ -254,8 +254,6 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
         synccheck: true,
         racecheck: false,
         initcheck: true,
-        soccheck: true,
-        overcheck: false,
       },
     };
 
@@ -268,11 +266,10 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
       .toContain('--tool memcheck');
     expect(cmd)
       .toContain('--tool synccheck');
-    expect(cmd)
-      .toContain('--tool initcheck');
-    expect(cmd)
-      .toContain('--tool soccheck');
+    // racecheck/initcheck are temporarily disabled for npu-check; soccheck/overcheck removed.
     expect(cmd).not.toContain('--tool racecheck');
+    expect(cmd).not.toContain('--tool initcheck');
+    expect(cmd).not.toContain('--tool soccheck');
     expect(cmd).not.toContain('--tool overcheck');
     expect(cmd).not.toContain('--tool=');
     expect(cmd).not.toContain('--log-level');
@@ -290,8 +287,6 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
         synccheck: true,
         racecheck: true,
         initcheck: true,
-        soccheck: true,
-        overcheck: true,
       },
     };
 
@@ -303,14 +298,11 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
       .toContain('--tool memcheck');
     expect(cmd)
       .toContain('--tool synccheck');
-    expect(cmd)
-      .toContain('--tool racecheck');
-    expect(cmd)
-      .toContain('--tool initcheck');
-    expect(cmd)
-      .toContain('--tool soccheck');
-    expect(cmd)
-      .toContain('--tool overcheck');
+    // racecheck/initcheck are temporarily disabled for npu-check; soccheck/overcheck removed.
+    expect(cmd).not.toContain('--tool racecheck');
+    expect(cmd).not.toContain('--tool initcheck');
+    expect(cmd).not.toContain('--tool soccheck');
+    expect(cmd).not.toContain('--tool overcheck');
   });
 
   it('uses the npu-check_<ts> log-file name and workspace report dir when using npu-check from toolType', () => {
@@ -322,8 +314,6 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
         synccheck: true,
         racecheck: true,
         initcheck: true,
-        soccheck: true,
-        overcheck: true,
       },
     };
 

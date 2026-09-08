@@ -457,20 +457,6 @@
             "order": 300,
             "description": "%config.op-devtools.sanitizer.sync.description%",
             "markdownDescription": "%config.op-devtools.sanitizer.sync.markdownDescription%"
-          },
-          "op-devtools.sanitizer.soc": {
-            "type": "boolean",
-            "default": true,
-            "order": 301,
-            "description": "%config.op-devtools.sanitizer.soc.description%",
-            "markdownDescription": "%config.op-devtools.sanitizer.soc.markdownDescription%"
-          },
-          "op-devtools.sanitizer.over": {
-            "type": "boolean",
-            "default": true,
-            "order": 302,
-            "description": "%config.op-devtools.sanitizer.over.description%",
-            "markdownDescription": "%config.op-devtools.sanitizer.over.markdownDescription%"
           }
         }
       },

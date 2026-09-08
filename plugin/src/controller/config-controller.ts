@@ -62,8 +62,6 @@ const SANITIZER_DOTTED_KEYS = [
   'sanitizer.sync',
   'sanitizer.race',
   'sanitizer.uninitialized',
-  'sanitizer.soc',
-  'sanitizer.over',
   'sanitizer.memoryLeak',
   'sanitizer.allocUnused',
   'sanitizer.reportLogLevel',

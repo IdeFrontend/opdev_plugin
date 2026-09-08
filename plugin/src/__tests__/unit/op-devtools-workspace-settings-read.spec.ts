@@ -200,8 +200,6 @@ describe('ConfigService per-section DAO factories (settings + cache only)', () =
     getStore['sanitizer.sync'] = false;
     getStore['sanitizer.race'] = true;
     getStore['sanitizer.uninitialized'] = false;
-    getStore['sanitizer.soc'] = true;
-    getStore['sanitizer.over'] = false;
 
     // ascend950 is non-A2/A3 and the project is a <<<>>> (cann) operator
     // project, so the persisted toolType is honored.
@@ -215,8 +213,6 @@ describe('ConfigService per-section DAO factories (settings + cache only)', () =
         synccheck: false,
         racecheck: true,
         initcheck: false,
-        soccheck: true,
-        overcheck: false,
       });
   });
 

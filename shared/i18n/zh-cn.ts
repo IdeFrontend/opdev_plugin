@@ -673,8 +673,6 @@ export default {
   'web.options.sanitizer.npuSyncCheck': '同步检测',
   'web.options.sanitizer.npuRaceCheck': '竞争检测',
   'web.options.sanitizer.npuInitCheck': '未初始化检测',
-  'web.options.sanitizer.npuSocCheck': '芯片状态检测',
-  'web.options.sanitizer.npuOverCheck': '溢出检测',
   'web.options.sanitizer.tritonEnvNote': 'Triton 项目在运行异常检测时将自动启用算子插桩、强制重新编译内核，并关闭 PyTorch NPU 内存池缓存。',
 
   // ST test run configuration

@@ -30,10 +30,8 @@ const VALID_TOOLS = [
 const VALID_NPU_TOOLS = [
   'memcheck',
   'synccheck',
-  'racecheck',
-  'initcheck',
-  'soccheck',
-  'overcheck',
+  // 'racecheck', // npu-check 竞争检测暂未开发完毕，下个版本开放
+  // 'initcheck', // npu-check 未初始化检测暂未开发完毕，下个版本开放
 ] as const;
 const VALID_SANITIZER_COMMANDS = [
   'mssanitizer',
