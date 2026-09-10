@@ -14,7 +14,7 @@ The profiling-report library is never injected into Insight iframes — Insight 
 
 ## Submodule linking
 
-`profiling-report` is a git submodule at the repo root, tracking `IdeFrontend/profiling-report` `new-report-format`:
+`profiling-report` is a git submodule at the repo root, tracking `IdeFrontend/profiling-report` `master`:
 
 ```text
 mstt/
