@@ -216,7 +216,7 @@ describe('ProfilingReportPanel', () => {
       .toHaveBeenCalledTimes(1);
     expect(mockExecuteCommand)
       .toHaveBeenCalledWith(
-        'cann-assist.setInputText',
+        'cannwork.setInputText',
         JSON.stringify(payload, null, 2),
       );
     expect(mockShowInformationMessage)
@@ -253,7 +253,7 @@ describe('ProfilingReportPanel', () => {
 
     expect(mockExecuteCommand)
       .toHaveBeenCalledWith(
-        'cann-assist.setInputText',
+        'cannwork.setInputText',
         JSON.stringify({
           ...payload,
           prompt: 'override-prompt',
@@ -281,7 +281,7 @@ describe('ProfilingReportPanel', () => {
 
     expect(mockExecuteCommand)
       .toHaveBeenCalledWith(
-        'cann-assist.setInputText',
+        'cannwork.setInputText',
         JSON.stringify({
           scope: 'summary',
           prompt: 'override-prompt',
@@ -307,7 +307,7 @@ describe('ProfilingReportPanel', () => {
 
     expect(mockExecuteCommand)
       .toHaveBeenCalledWith(
-        'cann-assist.setInputText',
+        'cannwork.setInputText',
         expect.any(String),
       );
     expect(mockShowErrorMessage)

@@ -243,7 +243,7 @@ export class ProfilingReportPanel {
     try {
       const inputText = JSON.stringify(applyCannbotPromptOverride(payload), null, 2);
 
-      await vscode.commands.executeCommand(CANN_ASSIST_SET_INPUT_TEXT, inputText);
+      await vscode.commands.executeCommand(CANN_ASSIST_SET_INPUT_TEXT, inputText, { autoSend: true });
       await vscode.window.showInformationMessage(t('profilingReport.cannbotSent'));
     }
     catch (error) {
