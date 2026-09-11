@@ -10,6 +10,8 @@ import type {
 } from '@shared/api-types';
 
 import { homeMethods } from '@plugin/controller/home-controller';
+import { normalizeProjectPath } from '@plugin/domain/models/project-model';
+import { stableCommandId } from '@plugin/domain/utils/command-utils';
 import { SettingsLoader } from '@plugin/service/settings-loader';
 import { OperatorPluginRegistry } from '@plugin/domain/plugins/operator-plugin.registry';
 import { performanceDataMethods } from '@plugin/controller/performance-controller';
@@ -96,6 +98,8 @@ type OperateSidebarState = {
   operators: Array<{
     id: number;
     name: string;
+    /** Scan path of the operator project — identity of its toggle command. */
+    path: string;
     hasEx: boolean;
     isCompiled: boolean;
   }>;
@@ -366,6 +370,12 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
   private selectionWorkspaceKey = '';
   private hasAppliedDefaultSelection = false;
+  // True while a selection write issued by THIS provider (toggleOperatorForPath
+  // or the default-selection persist) is awaiting its cache round-trip. While
+  // set, refreshState keeps the in-memory selection instead of adopting the
+  // on-disk snapshot, so a refresh pass that started before the click cannot
+  // clobber the fresh selection with the pre-click value.
+  private selectionWriteInFlight = false;
   private readonly themedIconCache = new Map<string, vscode.Uri>();
   private readonly sanitizerReportMessagesCache = new Map<string, SanitizerMessageRecord[]>();
   private readonly sanitizerReportDerivedCache = new Map<string, SanitizerMessageDerived[]>();
@@ -389,12 +399,40 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   private performanceSelectionContextRevision = 0;
   private performanceSelectionContextSync: Promise<void> = Promise.resolve();
 
+  /**
+   * Per-row command registrations, keyed by the row's normalized identity.
+   *
+   * A tree row cannot carry its identity in `TreeItem.command.arguments`: VS Code
+   * converts such a command into a synthetic `<command> /NN` id cached in the
+   * tree node's disposable store, and every refresh disposes the node — a click
+   * in flight then fails with "command not found". Identity lives in the command
+   * id instead (see {@link stableCommandId}), so a click always executes a
+   * directly registered command.
+   */
+  private readonly operatorToggleCommandDisposables = new Map<string, vscode.Disposable>();
+
+  private operatorToggleAfterCallback: (()=> Promise<void>) | undefined;
+
+  private readonly performanceFileCommandDisposables = new Map<string, vscode.Disposable>();
+
+  private readonly sanitizerMessageCommandDisposables = new Map<string, vscode.Disposable>();
+
   setPerformanceResultsTreeView(treeView: vscode.TreeView<OperateNode>): void {
     this.performanceResultsTreeView = treeView;
   }
 
   setSanitizerResultsTreeView(treeView: vscode.TreeView<OperateNode>): void {
     this.sanitizerResultsTreeView = treeView;
+  }
+
+  /**
+   * Register one toggle command per operator project, with the operator path
+   * baked into the command id. `afterToggle` repaints the surrounding sidebar
+   * context — what the single `sidebar.toggleOperator` command used to do.
+   */
+  registerOperatorToggleCommands(afterToggle: ()=> Promise<void>): void {
+    this.operatorToggleAfterCallback = afterToggle;
+    this.syncOperatorToggleCommands();
   }
 
   private invalidateSanitizerPresentationCaches(): void {
@@ -676,12 +714,15 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       ? multipleResult.operators.map((op) => ({
         id: op.id,
         name: op.name,
+        path: op.path,
         hasEx: op.isExperimental,
         isCompiled: (op as unknown as { isCompiled?: boolean }).isCompiled ?? false,
       }))
       : [];
 
-    let selectedOperatorIds = await (isStandardCustom ? homeMethods.getSelectedOperatorIds() : undefined);
+    let selectedOperatorIds = this.selectionWriteInFlight
+      ? this.state.selectedOperatorIds
+      : await (isStandardCustom ? homeMethods.getSelectedOperatorIds() : undefined);
 
     selectedOperatorIds = selectedOperatorIds ?? [];
 
@@ -692,7 +733,15 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       const firstId = sorted[0]?.id;
 
       if (typeof firstId === 'number') {
-        await homeMethods.setSelectedOperators({ operatorIds: [firstId] });
+        this.selectionWriteInFlight = true;
+
+        try {
+          await homeMethods.setSelectedOperators({ operatorIds: [firstId] });
+        }
+        finally {
+          this.selectionWriteInFlight = false;
+        }
+
         selectedOperatorIds = [firstId];
       }
     }
@@ -734,6 +783,16 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       this.state.sanitizer.hideDuplicates = false;
       this.state.performance.reports = [];
       this.state.performance.selectedReportKey = undefined;
+    }
+
+    // Rows of this list carry one command each; keep the registry in step with
+    // the operator list that is about to be rendered. ONLY the operatorProjects
+    // kind renders operator rows: a second kind syncing the same registry would
+    // re-register the same command ids, and VS Code throws on duplicate
+    // registrations ('Command with id ... already exists'), silently killing
+    // the tree refresh for every view.
+    if (this.kind === 'operatorProjects') {
+      this.syncOperatorToggleCommands();
     }
 
     this.onDidChangeTreeDataEmitter.fire();
@@ -1481,6 +1540,25 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     this.onDidChangeTreeDataEmitter.fire();
   }
 
+  /**
+   * Command id of a sanitizer message row; registers the command when the row is
+   * first rendered. Registrations are keyed by message index and never disposed:
+   * they are bounded by the report contents and re-rendered rows reuse them.
+   */
+  private resolveSanitizerMessageCommandId(messageId: string): string {
+    if (!this.sanitizerMessageCommandDisposables.has(messageId)) {
+      this.sanitizerMessageCommandDisposables.set(messageId, vscode.commands.registerCommand(
+        stableCommandId(COMMAND_SIDEBAR_SANITIZER_MESSAGE_JUMP, messageId),
+        async () => {
+          await this.jumpToSanitizerMessage(messageId);
+        },
+      ));
+    }
+
+    return stableCommandId(COMMAND_SIDEBAR_SANITIZER_MESSAGE_JUMP, messageId);
+  }
+
+  /** No-op when the message is gone or carries no source location. */
   async jumpToSanitizerMessage(messageId: string): Promise<void> {
     const msg = this.state.sanitizer.selectedMessages[Number(messageId)];
 
@@ -1723,7 +1801,6 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       this.pickFlowIcon('run', runAction.useDisabledIcon ? disabledIcon : this.getCustomProductIcon('run')),
       '- NPU',
       undefined,
-      undefined,
       runAction.tooltip,
     ));
 
@@ -1752,7 +1829,6 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         treeItemContextKey('sanitizer'),
         this.pickFlowIcon('sanitizer', sanitizerAction.useDisabledIcon ? disabledIcon : this.getCustomProductIcon('check')),
         '- NPU',
-        undefined,
         undefined,
         sanitizerAction.tooltip,
       ));
@@ -1785,7 +1861,6 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
           : this.pickFlowIcon('utTest', this.getCustomProductIcon('beaker')),
         undefined,
         undefined,
-        undefined,
         utTestAction.tooltip,
       ));
     }
@@ -1806,7 +1881,6 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         ),
         '- NPU',
         undefined,
-        undefined,
         stTestTooltip,
       ));
     }
@@ -1822,7 +1896,6 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
           ? disabledIcon
           : this.pickFlowIcon('dumpTensor', this.getCustomProductIcon('tensor')),
         '- NPU',
-        undefined,
         undefined,
         dumpTensorAction.tooltip,
       ));
@@ -1866,7 +1939,6 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
           : this.pickFlowIcon('cpuDebug', this.getCustomProductIcon('debug-cpu')),
         undefined,
         undefined,
-        undefined,
         cpuDebugAction.tooltip,
       ));
     }
@@ -1884,7 +1956,6 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
           ? disabledIcon
           : this.pickFlowIcon('npuDebug', this.getCustomProductIcon('debug-npu')),
         '- NPU',
-        undefined,
         undefined,
         npuDebugAction.tooltip,
       ));
@@ -1915,7 +1986,6 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
           : this.pickFlowIcon('onboard', this.getCustomProductIcon('onboard')),
         '- NPU',
         undefined,
-        undefined,
         onboardAction.tooltip,
       ));
     }
@@ -1930,7 +2000,6 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         simulationAction.useDisabledIcon
           ? disabledIcon
           : this.pickFlowIcon('simulation', this.getCustomProductIcon('simulation')),
-        undefined,
         undefined,
         undefined,
         simulationAction.tooltip,
@@ -2534,6 +2603,30 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     }
   }
 
+  /**
+   * Command id of a performance file row; registers the command when the row is
+   * first rendered. Registrations are keyed by path+type and never disposed:
+   * they are bounded by the report contents and re-rendered rows reuse them.
+   */
+  private resolvePerformanceFileCommandId(filePath: string, fileType: string): string | undefined {
+    if (!filePath || !fileType) {
+      return undefined;
+    }
+
+    const key = `${filePath}\n${fileType}`;
+
+    if (!this.performanceFileCommandDisposables.has(key)) {
+      this.performanceFileCommandDisposables.set(key, vscode.commands.registerCommand(
+        stableCommandId(COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN, key),
+        async () => {
+          await this.openPerformanceFile(filePath, fileType);
+        },
+      ));
+    }
+
+    return stableCommandId(COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN, key);
+  }
+
   private getVisiblePerformanceReports(): PerformanceExecutionRecord[] {
     if (!this.state.performance.markedOnly) {
       return this.state.performance.reports;
@@ -2658,16 +2751,12 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     return this.createItem(
       'performanceFile',
       child.title,
-      COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN,
+      this.resolvePerformanceFileCommandId(child.filePath, child.fileType),
       vscode.TreeItemCollapsibleState.None,
       `${treeItemContextKey(`performanceFile.${child.fileType}`)}`,
       undefined,
       undefined,
       `performance-file:${encodeURIComponent(child.filePath)}`,
-      [
-        child.filePath,
-        child.fileType,
-      ],
     );
   }
 
@@ -3055,7 +3144,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         'sanitizerMessage',
         item.title,
         item.fileLink && item.row !== undefined && item.col !== undefined
-          ? COMMAND_SIDEBAR_SANITIZER_MESSAGE_JUMP
+          ? this.resolveSanitizerMessageCommandId(id)
           : undefined,
         vscode.TreeItemCollapsibleState.None,
         typeof item.msAgentIndex === 'number' && Number.isInteger(item.msAgentIndex) && item.msAgentIndex >= 0
@@ -3066,7 +3155,6 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
           : new vscode.ThemeIcon('error', new vscode.ThemeColor('problemsErrorIcon.foreground')),
         description,
         `sanitizer-msg:${encodeURIComponent(reportPath)}:${mode}:${encodeURIComponent(groupKey)}:${globalIndex}:${index}`,
-        item.fileLink && item.row !== undefined && item.col !== undefined ? [id] : undefined,
       );
 
       node.sanitizerTooltipMeta = {
@@ -3110,7 +3198,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         'sanitizerMessage',
         item.title,
         item.fileLink && item.row !== undefined && item.col !== undefined
-          ? COMMAND_SIDEBAR_SANITIZER_MESSAGE_JUMP
+          ? this.resolveSanitizerMessageCommandId(id)
           : undefined,
         vscode.TreeItemCollapsibleState.None,
         typeof item.msAgentIndex === 'number' && Number.isInteger(item.msAgentIndex) && item.msAgentIndex >= 0
@@ -3121,7 +3209,6 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
           : new vscode.ThemeIcon('error', new vscode.ThemeColor('problemsErrorIcon.foreground')),
         description,
         `sanitizer-msg:legacy:${mode}:${encodeURIComponent(key)}:${globalIndex}:${index}`,
-        item.fileLink && item.row !== undefined && item.col !== undefined ? [id] : undefined,
       );
 
       if (reportPath) {
@@ -3232,13 +3319,23 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     this.onDidChangeTreeDataEmitter.fire();
   }
 
-  async toggleOperator(operatorId: number): Promise<void> {
-    const operator = this.state.operators.find((o) => o.id === operatorId);
+  /** Toggle by operator project path — the identity baked into the row command id. */
+  async toggleOperatorForPath(operatorPath: string): Promise<void> {
+    const key = this.getOperatorIdentityKey(operatorPath);
+    const operator = key
+      ? this.state.operators.find((o) => this.getOperatorIdentityKey(o.path) === key)
+      : undefined;
 
     if (!operator) {
       return;
     }
 
+    await this.toggleOperatorRecord(operator);
+  }
+
+  private async toggleOperatorRecord(operator: { id: number;
+    hasEx: boolean }): Promise<void> {
+    const operatorId = operator.id;
     const isSelected = this.state.selectedOperatorIds.includes(operatorId);
 
     if (!isSelected && this.isOperatorDisabled(operator)) {
@@ -3252,9 +3349,81 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         operatorId,
       ];
 
-    await homeMethods.setSelectedOperators({ operatorIds: nextIds });
+    // Apply the in-memory selection synchronously and repaint BEFORE the
+    // async persist: the visible row state must not depend on the cache
+    // round-trip, and the selectionWriteInFlight flag keeps a concurrent
+    // refreshState from re-adopting the stale on-disk snapshot while this
+    // write is still in flight.
     this.state.selectedOperatorIds = nextIds;
     this.onDidChangeTreeDataEmitter.fire();
+    this.selectionWriteInFlight = true;
+
+    try {
+      await homeMethods.setSelectedOperators({ operatorIds: nextIds });
+    }
+    finally {
+      this.selectionWriteInFlight = false;
+    }
+  }
+
+  /** Normalized operator path used as the per-row command key ('' when unknown). */
+  private getOperatorIdentityKey(operatorPath: string | undefined): string {
+    return operatorPath ? normalizeProjectPath(operatorPath) : '';
+  }
+
+  /** Command id of an operator row; registers the command when first rendered. */
+  private resolveOperatorToggleCommandId(operatorPath: string): string | undefined {
+    const key = this.getOperatorIdentityKey(operatorPath);
+
+    if (!key) {
+      return undefined;
+    }
+
+    this.ensureOperatorToggleCommand(key);
+
+    return stableCommandId(COMMAND_SIDEBAR_TOGGLE_OPERATOR, key);
+  }
+
+  private ensureOperatorToggleCommand(key: string): void {
+    if (this.operatorToggleCommandDisposables.has(key)) {
+      return;
+    }
+
+    this.operatorToggleCommandDisposables.set(key, vscode.commands.registerCommand(
+      stableCommandId(COMMAND_SIDEBAR_TOGGLE_OPERATOR, key),
+      async () => {
+        await this.toggleOperatorForPath(key);
+        await this.operatorToggleAfterCallback?.();
+      },
+    ));
+  }
+
+  /** Register commands for new operators, dispose the ones that left the list. */
+  private syncOperatorToggleCommands(): void {
+    const activeKeys = new Set<string>();
+
+    for (const operator of this.state.operators) {
+      const key = this.getOperatorIdentityKey(operator.path);
+
+      if (!key) {
+        continue;
+      }
+
+      activeKeys.add(key);
+      this.ensureOperatorToggleCommand(key);
+    }
+
+    for (const [
+      key,
+      disposable,
+    ] of [...this.operatorToggleCommandDisposables]) {
+      if (activeKeys.has(key)) {
+        continue;
+      }
+
+      disposable.dispose();
+      this.operatorToggleCommandDisposables.delete(key);
+    }
   }
 
   async toggleCompiledAll(): Promise<void> {
@@ -3542,13 +3711,12 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       nodes.push(this.createItem(
         'operatorItem',
         op.name,
-        isDisabled ? undefined : COMMAND_SIDEBAR_TOGGLE_OPERATOR,
+        isDisabled ? undefined : this.resolveOperatorToggleCommandId(op.path),
         vscode.TreeItemCollapsibleState.None,
         undefined,
         iconPath,
         this.buildOperatorProjectsDescription(op),
         `operator-${op.id}`,
-        isDisabled ? undefined : [op.id],
         disabledTooltip,
       ));
     }
@@ -3576,13 +3744,12 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
         'operatorItem',
         operator.name,
         // Toggle operator to remove it from the selected list.
-        COMMAND_SIDEBAR_TOGGLE_OPERATOR,
+        this.resolveOperatorToggleCommandId(operator.path),
         vscode.TreeItemCollapsibleState.None,
         undefined,
         new vscode.ThemeIcon('check'),
         this.buildOperatorProjectsDescription(operator),
         `selected-operator-${operator.id}`,
-        [id],
       ));
     }
 
@@ -3618,7 +3785,6 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       dark: vscode.Uri },
     description?: string,
     treeItemId?: string,
-    commandArguments?: unknown[],
     tooltip?: string | vscode.MarkdownString,
     disabled?: boolean,
   ): OperateNode {
@@ -3628,10 +3794,11 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     item.id = treeItemId ?? nodeId;
 
     if (commandId) {
+      // No `arguments`: they make VS Code cache a synthetic `<command> /NN` id
+      // in the tree node's disposable store, which every refresh throws away.
       item.command = {
         command: commandId,
         title: label,
-        arguments: commandArguments,
       };
     }
 

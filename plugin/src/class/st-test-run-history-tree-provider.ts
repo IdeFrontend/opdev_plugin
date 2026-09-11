@@ -4,6 +4,7 @@ import { t } from 'i18next';
 import * as vscode from 'vscode';
 
 import { COMMAND_ST_TEST_HISTORY_OPEN } from '@plugin/constants';
+import { stableCommandId } from '@plugin/domain/utils/command-utils';
 import {
   loadStTestRunHistoryFromWorkspace,
   MAX_ST_TEST_HISTORY_RUNS,
@@ -20,6 +21,8 @@ type WorkspaceHistorySource = {
 type StTestRunHistoryTreeDependencies = {
   getWorkspaces: ()=> readonly WorkspaceHistorySource[];
   loadWorkspaceHistory: (workspaceRoot: string)=> StTestWorkspaceRunHistoryRecord[];
+  /** Opens a resolved history record; wired by extension activation. */
+  openRecord: (entry: StTestWorkspaceRunHistoryRecord)=> Promise<void>;
 };
 
 type StTestHistoryTreeNode = StTestRunHistoryTreeItem | StTestEmptyHistoryTreeItem;
@@ -66,6 +69,7 @@ class StTestRunHistoryTreeItem extends vscode.TreeItem {
     record: StTestRunHistoryRecord,
     workspaceName: string,
     selected: boolean,
+    commandId: string,
   ) {
     super(formatCompletedAt(record.completedAt), vscode.TreeItemCollapsibleState.None);
     const outcome = t(`stTest.results.outcome.${record.outcome}`);
@@ -82,10 +86,12 @@ class StTestRunHistoryTreeItem extends vscode.TreeItem {
     this.contextValue = selected
       ? 'stTestHistoryRun.selected'
       : 'stTestHistoryRun';
+    // The record key lives in the command id, not in `command.arguments`:
+    // argument-carrying commands are cached per tree node by VS Code and dropped
+    // on every refresh, which made a rapid click fail with "command not found".
     this.command = {
-      command: COMMAND_ST_TEST_HISTORY_OPEN,
+      command: commandId,
       title: t('stTest.results.history'),
-      arguments: [recordKey],
     };
   }
 }
@@ -111,6 +117,9 @@ export class StTestRunHistoryTreeProvider implements vscode.TreeDataProvider<StT
 
   private readonly runNodesByKey = new Map<string, StTestRunHistoryTreeItem>();
 
+  /** One open command per rendered record, keyed by record key. */
+  private readonly commandDisposables = new Map<string, vscode.Disposable>();
+
   private treeView: vscode.TreeView<StTestHistoryTreeNode> | undefined;
 
   private currentRecord: StTestWorkspaceRunHistoryRecord | undefined;
@@ -125,7 +134,29 @@ export class StTestRunHistoryTreeProvider implements vscode.TreeDataProvider<StT
           name: folder.name,
         }))),
       loadWorkspaceHistory: dependencies.loadWorkspaceHistory ?? loadStTestRunHistoryFromWorkspace,
+      openRecord: dependencies.openRecord ?? (async () => undefined),
     };
+  }
+
+  /** Command id of a history row — the record key is baked into the id. */
+  private resolveRecordCommandId(recordKey: string): string {
+    if (!this.commandDisposables.has(recordKey)) {
+      this.commandDisposables.set(recordKey, vscode.commands.registerCommand(
+        stableCommandId(COMMAND_ST_TEST_HISTORY_OPEN, recordKey),
+        async () => {
+          const entry = this.getRecord(recordKey);
+
+          // The record may have left the history since the row was rendered.
+          if (!entry) {
+            return;
+          }
+
+          await this.dependencies.openRecord(entry);
+        },
+      ));
+    }
+
+    return stableCommandId(COMMAND_ST_TEST_HISTORY_OPEN, recordKey);
   }
 
   public setTreeView(treeView: vscode.TreeView<StTestHistoryTreeNode>): void {
@@ -180,6 +211,12 @@ export class StTestRunHistoryTreeProvider implements vscode.TreeDataProvider<StT
 
   public dispose(): void {
     this.onDidChangeTreeDataEmitter.dispose();
+
+    for (const disposable of this.commandDisposables.values()) {
+      disposable.dispose();
+    }
+
+    this.commandDisposables.clear();
     this.runNodes = [];
     this.recordsByKey.clear();
     this.runNodesByKey.clear();
@@ -268,6 +305,7 @@ export class StTestRunHistoryTreeProvider implements vscode.TreeDataProvider<StT
           entry.record,
           workspaceName,
           recordKey === this.currentRecordKey,
+          this.resolveRecordCommandId(recordKey),
         );
 
         this.recordsByKey.set(recordKey, entry);

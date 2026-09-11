@@ -209,7 +209,7 @@ Second `OperateTreeProvider` instance (`operatorProjects`). Visible only when `o
 - Selection persists as **paths** in `cache.project.selectedOperatorPaths` (`homeMethods.setSelectedOperators` → `createProject` re-keys ids to paths; `getSelectedOperatorIds` resolves them back against the scan entries by normalized path).
 - Default: the first operator **by name** is selected once per workspace session for standard-custom projects — applied on the first refresh once the operator list is actually known (`hasAppliedDefaultSelection` in `OperateTreeProvider.refreshState`), so a scan state that arrives late still triggers the default.
 - Title-bar: select all, clear selection, clear search.
-- Item context: toggle operator (`huawei-op-devtools.sidebar.toggleOperator`) → `setSelectedOperators` → scan-state-backed path selection.
+- Item context: toggle operator → `setSelectedOperators` → scan-state-backed path selection. Each row carries its own command id, `huawei-op-devtools.sidebar.toggleOperator.<hash>` (hash = first 16 hex chars of the SHA-256 of the normalized operator project path): `OperateTreeProvider.registerOperatorToggleCommands` registers one such command per rendered row and disposes it when the operator leaves the list. Row identity must live in the command id — a `TreeItem.command` carrying `arguments` is converted by VS Code into a synthetic `<command> /NN` id cached per tree node, which every refresh discards, so a click in flight fails with "command not found".
 
 Flow tree reads `selectedOperatorIds` for multi-operator disable rules and dispatches build/run with `homeMethods.getSelectedOperators()`.
 

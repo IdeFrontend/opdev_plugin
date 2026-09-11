@@ -80,7 +80,7 @@ Registered in `plugin/src/extension.ts` (prefix `huawei-op-devtools.sidebar.sani
 | `sidebar.sanitizer.report.filterMarked` / `showAll` | Marked-only filter |
 | `sidebar.sanitizer.results.groupBy*` | Group findings: class, severity, type, file |
 | `sidebar.sanitizer.results.hideDuplicates` / `showDuplicates` | Dedupe findings in tree |
-| `sidebar.sanitizer.message.jump` | Open source location (`performanceDataMethods.jumpToFile`) |
+| `sidebar.sanitizer.message.jump.<hash>` | Open source location (`performanceDataMethods.jumpToFile`). Base command registered in `extension.ts` for the menu entry; each message row carries a variant whose hash is derived from the message id, registered by `OperateTreeProvider` |
 | `sidebar.sanitizer.message.aiFix` | `msAgentBridgeService.fixMsAgentProblem(index)` when available |
 | `sidebar.sanitizer.results.openGroupFile` | Open file for file-group nodes |
 
