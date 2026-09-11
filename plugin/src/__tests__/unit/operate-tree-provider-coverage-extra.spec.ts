@@ -1,6 +1,7 @@
 import type { PerformanceExecutionRecord } from '@shared/api-types';
 import { treeItemContextKey } from '@shared/flavor';
 import { COMMAND_SIDEBAR_SANITIZER_MESSAGE_JUMP } from '../../constants';
+import { stableCommandId } from '@plugin/domain/utils/command-utils';
 
 const mockGetProjectType = jest.fn();
 const mockCheckMultipleOperators = jest.fn();
@@ -96,6 +97,7 @@ jest.mock('vscode', () => {
     commands: {
       executeCommand: jest.fn()
         .mockResolvedValue(undefined),
+      registerCommand: jest.fn(() => ({ dispose: jest.fn() })),
     },
     // Unset language: getLocaleForSort must fall back to undefined.
     env: { language: undefined },
@@ -448,6 +450,57 @@ describe('refreshState combos', () => {
     expect(mockGetSelectedOperatorIds)
       .toHaveBeenCalledTimes(1);
   });
+
+  it('keeps the in-memory selection while a selection write is in flight (stale disk snapshot cannot clobber it)', async () => {
+    const provider = createProvider();
+    const harness = provider as unknown as StateHarness;
+
+    harness.state.selectedOperatorIds = [7];
+    (provider as unknown as { selectionWriteInFlight: boolean }).selectionWriteInFlight = true;
+    // The on-disk snapshot still holds the pre-click value.
+    mockGetSelectedOperatorIds.mockResolvedValue([3]);
+    mockCheckMultipleOperators.mockResolvedValueOnce({
+      hasMultiple: true,
+      isStandardCustom: true,
+      operators: [],
+    });
+    mockGetProjectType.mockResolvedValueOnce({
+      projectType: '',
+      projectTemplateName: '',
+    });
+
+    await provider.refreshState(true);
+
+    expect(harness.state.selectedOperatorIds)
+      .toEqual([7]);
+    expect(mockGetSelectedOperatorIds)
+      .not.toHaveBeenCalled();
+  });
+
+  it('adopts the on-disk selection when no write is in flight', async () => {
+    const provider = createProvider();
+    const harness = provider as unknown as StateHarness;
+
+    harness.state.selectedOperatorIds = [];
+    (provider as unknown as { selectionWriteInFlight: boolean }).selectionWriteInFlight = false;
+    mockGetSelectedOperatorIds.mockResolvedValue([3]);
+    mockCheckMultipleOperators.mockResolvedValueOnce({
+      hasMultiple: true,
+      isStandardCustom: true,
+      operators: [],
+    });
+    mockGetProjectType.mockResolvedValueOnce({
+      projectType: '',
+      projectTemplateName: '',
+    });
+
+    await provider.refreshState(true);
+
+    expect(harness.state.selectedOperatorIds)
+      .toEqual([3]);
+    expect(mockGetSelectedOperatorIds)
+      .toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('sanitizer report root cache', () => {
@@ -680,7 +733,9 @@ describe('getChildren fallbacks for partial nodes', () => {
     expect(nodes)
       .toHaveLength(2);
     expect((nodes[0].command as { command: string }).command)
-      .toBe(COMMAND_SIDEBAR_SANITIZER_MESSAGE_JUMP);
+      .toBe(stableCommandId(COMMAND_SIDEBAR_SANITIZER_MESSAGE_JUMP, '0'));
+    expect(nodes[0].command?.arguments)
+      .toBeUndefined();
     expect(nodes[0].contextValue)
       .toBe(treeItemContextKey('sanitizerMessage.aiFix'));
     expect(nodes[0].description)

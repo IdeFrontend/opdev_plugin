@@ -80,6 +80,7 @@ jest.mock('vscode', () => {
     commands: {
       executeCommand: jest.fn()
         .mockResolvedValue(undefined),
+      registerCommand: jest.fn(() => ({ dispose: jest.fn() })),
     },
     env: { language: 'en' },
     window: {
@@ -155,6 +156,7 @@ import {
   OperateNode,
   OperateTreeProvider,
 } from '@plugin/class/operate-tree-provider';
+import { stableCommandId } from '@plugin/domain/utils/command-utils';
 
 type SanitizerReportRecord = {
   title: string;
@@ -1861,26 +1863,22 @@ describe('OperateTreeProvider performance results panel', () => {
       .toHaveLength(1);
     expect(fileChildren[0].nodeId)
       .toBe('performanceFile');
+    // File identity lives in the command id; `arguments` would be cached per
+    // tree node by VS Code and dropped on every refresh.
     expect(fileChildren[0].command)
       .toEqual({
-        command: COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN,
+        command: stableCommandId(COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN, '/reports/r1/folder-a/a.csv\ncsv'),
         title: 'a.csv',
-        arguments: [
-          '/reports/r1/folder-a/a.csv',
-          'csv',
-        ],
       });
+    expect(fileChildren[0].command?.arguments)
+      .toBeUndefined();
     expect(fileChildren[0].contextValue)
       .toBe(treeItemContextKey('performanceFile.csv'));
 
     expect(fileNode.command)
       .toEqual({
-        command: COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN,
+        command: stableCommandId(COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN, '/reports/r1/b.bin\nbin'),
         title: 'b.bin',
-        arguments: [
-          '/reports/r1/b.bin',
-          'bin',
-        ],
       });
   });
 

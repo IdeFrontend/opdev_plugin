@@ -17,6 +17,7 @@ import { CsvEditorProvider } from './class/csv-editor-provider';
 import { HomeTreeProvider } from './class/home-tree-provider';
 import { StTestResultsPanel } from './class/st-test-results-panel';
 import { StTestRunHistoryTreeProvider } from './class/st-test-run-history-tree-provider';
+import type { StTestWorkspaceRunHistoryRecord } from '@plugin/domain/services/st-test-run-history';
 import {
   OperateTreeProvider, type OperateNode,
 } from './class/operate-tree-provider';
@@ -120,7 +121,6 @@ import {
   COMMAND_SIDEBAR_CLEAR_SELECTED_OPERATORS,
   COMMAND_SIDEBAR_SEARCH_OPERATORS,
   COMMAND_SIDEBAR_CLEAR_OPERATOR_PROJECTS_SEARCH,
-  COMMAND_SIDEBAR_TOGGLE_OPERATOR,
   COMMAND_SIDEBAR_SELECT_ALL_OPERATORS,
   COMMAND_SIDEBAR_SELECT_ALL_COMPILED_OPERATORS,
   COMMAND_SIDEBAR_SELECT_ALL_PREPARED_OPERATORS,
@@ -164,7 +164,6 @@ import {
   COMMAND_SIDEBAR_PERFORMANCE_FILE_OPEN,
   COMMAND_OPEN_CSV,
   COMMAND_OPEN_PROFILING_REPORT,
-  COMMAND_ST_TEST_HISTORY_OPEN,
 } from './constants';
 import { resolveFocusOpsOperateCommand } from '@plugin/helpers/focus-ops-operate';
 import { shouldShowStTestHistoryView } from '@plugin/helpers/st-test-action';
@@ -392,7 +391,32 @@ export async function activate(context: vscode.ExtensionContext) {
     root: string;
     name: string;
   }> = [];
-  const stTestRunHistoryTreeProvider = new StTestRunHistoryTreeProvider({ getWorkspaces: () => stTestHistoryWorkspaces });
+  // The history tree resolves the record from its own key and delegates the open
+  // to this handler, so a row click runs a directly registered command.
+  const openStTestHistoryRecord = async (entry: StTestWorkspaceRunHistoryRecord): Promise<void> => {
+    const outputChannel = getOperatorToolOutputChannel('st test');
+    const writeHistoryLog = (message: string): void => {
+      const timestamp = new Date()
+        .toISOString();
+
+      outputChannel.appendLine(`${timestamp} ${message}`);
+    };
+
+    writeHistoryLog(`[ST history] Record resolved: workspaceRoot=${entry.workspaceRoot}, runId=${entry.record.runId}, runDirectory=${entry.record.runDirectory}`);
+
+    try {
+      await StTestResultsPanel.createOrShowHistorical(context, entry, writeHistoryLog);
+    }
+    catch (error) {
+      writeHistoryLog(`[ST history] Open failed: ${error instanceof Error ? `${error.name}: ${error.message}` : String(error)}`);
+      console.error('[ST test] Could not open a historical result report:', error);
+      await vscode.window.showWarningMessage(t('stTest.results.historyUnavailable'));
+    }
+  };
+  const stTestRunHistoryTreeProvider = new StTestRunHistoryTreeProvider({
+    getWorkspaces: () => stTestHistoryWorkspaces,
+    openRecord: openStTestHistoryRecord,
+  });
 
   StTestResultsPanel.setHistoryTreeProvider(stTestRunHistoryTreeProvider);
 
@@ -784,47 +808,6 @@ export async function activate(context: vscode.ExtensionContext) {
   });
 
   stTestRunHistoryTreeProvider.setTreeView(stTestHistoryTreeView);
-  const openStTestHistoryCommand = vscode.commands.registerCommand(
-    COMMAND_ST_TEST_HISTORY_OPEN,
-    async (recordKey: unknown) => {
-      const outputChannel = getOperatorToolOutputChannel('st test');
-      const writeHistoryLog = (message: string): void => {
-        const timestamp = new Date()
-          .toISOString();
-
-        outputChannel.appendLine(`${timestamp} ${message}`);
-      };
-
-      writeHistoryLog(`[ST history] Open requested: recordKeyType=${typeof recordKey}, recordKey=${String(recordKey)}`);
-
-      if (typeof recordKey !== 'string') {
-        writeHistoryLog('[ST history] Record lookup skipped: command argument is not a string.');
-        await vscode.window.showWarningMessage(t('stTest.results.historyUnavailable'));
-
-        return;
-      }
-
-      const entry = stTestRunHistoryTreeProvider.getRecord(recordKey);
-
-      if (!entry) {
-        writeHistoryLog('[ST history] Record lookup failed: the key is absent from the current history tree provider.');
-        await vscode.window.showWarningMessage(t('stTest.results.historyUnavailable'));
-
-        return;
-      }
-
-      writeHistoryLog(`[ST history] Record resolved: workspaceRoot=${entry.workspaceRoot}, runId=${entry.record.runId}, runDirectory=${entry.record.runDirectory}`);
-
-      try {
-        await StTestResultsPanel.createOrShowHistorical(context, entry, writeHistoryLog);
-      }
-      catch (error) {
-        writeHistoryLog(`[ST history] Open failed: ${error instanceof Error ? `${error.name}: ${error.message}` : String(error)}`);
-        console.error('[ST test] Could not open a historical result report:', error);
-        await vscode.window.showWarningMessage(t('stTest.results.historyUnavailable'));
-      }
-    },
-  );
 
   operateTreeProvider.setPerformanceResultsTreeView(performanceResultsTreeView);
   context.subscriptions.push(performanceResultsTreeView.onDidChangeSelection(async (event) => {
@@ -847,6 +830,9 @@ export async function activate(context: vscode.ExtensionContext) {
     showCollapseAll: false,
   });
 
+  // One toggle command per operator project, registered by the provider.
+  operatorProjectsTreeProvider.registerOperatorToggleCommands(refreshSidebarContexts);
+
   context.subscriptions.push(
     homeTreeView,
     operateTreeView,
@@ -854,7 +840,6 @@ export async function activate(context: vscode.ExtensionContext) {
     performanceResultsTreeView,
     stTestHistoryTreeView,
     stTestRunHistoryTreeProvider,
-    openStTestHistoryCommand,
     { dispose: () => StTestResultsPanel.setHistoryTreeProvider(undefined) },
     operatorProjectsTreeView,
     toggleOpsOperateCommand,
@@ -1867,14 +1852,6 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   );
 
-  const sidebarToggleOperatorCommand = vscode.commands.registerCommand(
-    COMMAND_SIDEBAR_TOGGLE_OPERATOR,
-    async (operatorId: number) => {
-      await operatorProjectsTreeProvider.toggleOperator(operatorId);
-      await refreshSidebarContexts();
-    },
-  );
-
   const sidebarSelectAllOperatorsCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_SELECT_ALL_OPERATORS,
     async () => {
@@ -2114,7 +2091,6 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(sidebarClearSelectedOperatorsCommand);
   context.subscriptions.push(sidebarSearchOperatorsCommand);
   context.subscriptions.push(sidebarClearOperatorProjectsSearchCommand);
-  context.subscriptions.push(sidebarToggleOperatorCommand);
   context.subscriptions.push(sidebarSelectAllOperatorsCommand);
   context.subscriptions.push(sidebarSelectAllCompiledOperatorsCommand);
   context.subscriptions.push(sidebarSelectAllPreparedOperatorsCommand);

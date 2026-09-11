@@ -217,7 +217,10 @@ jest.mock('@plugin/class/st-test-run-history-tree-provider', () => {
     setTreeView = jest.fn();
     dispose = jest.fn();
 
-    constructor(public getWorkspaces: unknown) {
+    constructor(public dependencies: {
+      getWorkspaces?: unknown;
+      openRecord?: (entry: unknown)=> Promise<void>;
+    }) {
       MockStTestRunHistoryTreeProvider.instances.push(this);
     }
   }
@@ -283,7 +286,7 @@ jest.mock('@plugin/class/operate-tree-provider', () => {
     openPerformanceFile = jest.fn(async () => undefined);
     togglePerformanceSortOrder = jest.fn();
     setSearchKeyword = jest.fn();
-    toggleOperator = jest.fn(async () => undefined);
+    registerOperatorToggleCommands = jest.fn();
     selectAllOperators = jest.fn(async () => undefined);
     toggleCompiledAll = jest.fn(async () => undefined);
     togglePreparedAll = jest.fn(async () => undefined);
@@ -537,6 +540,7 @@ import { buildService } from '@plugin/service/build-service';
 import { resetCurrentProjectConfiguration } from '@plugin/service/config-reset-service';
 import { SettingsLoader } from '@plugin/service/settings-loader';
 import { importLegacyWorkspaceState } from '@plugin/helpers/legacy-state-importer';
+import { getOperatorToolOutputChannel } from '@plugin/helpers/output-channel';
 import { getDumpTensorPanelViewProvider } from '@plugin/class/dump-tensor-panel-view';
 import { startPostActivateBootstrap } from '@plugin/helpers/post-activate-bootstrap';
 import { createMainConfigWatcher } from '@plugin/helpers/main-config-watch';
@@ -611,7 +615,7 @@ type MockOperateTreeProviderShape = {
   openPerformanceFile: jest.Mock;
   togglePerformanceSortOrder: jest.Mock;
   setSearchKeyword: jest.Mock;
-  toggleOperator: jest.Mock;
+  registerOperatorToggleCommands: jest.Mock;
   selectAllOperators: jest.Mock;
   toggleCompiledAll: jest.Mock;
   togglePreparedAll: jest.Mock;
@@ -638,11 +642,14 @@ const StTestHistoryProviderMock = StTestRunHistoryTreeProvider as unknown as {
   instances: Array<{ getRecord: jest.Mock;
     refresh: jest.Mock;
     clear: jest.Mock;
-    setTreeView: jest.Mock }>;
+    setTreeView: jest.Mock;
+    dependencies: { openRecord: (entry: unknown)=> Promise<void> } }>;
 };
 
 const flowProvider = (): MockOperateTreeProviderShape => OperateTreeProviderMock.instances[0];
 const operatorProjectsProvider = (): MockOperateTreeProviderShape => OperateTreeProviderMock.instances[1];
+/** Open handler the history provider got from activation — one per resolved record. */
+const openStTestHistoryRecord = (): ((entry: unknown)=> Promise<void>) => StTestHistoryProviderMock.instances[0].dependencies.openRecord;
 
 type MockContext = {
   subscriptions: Array<{ dispose: ()=> unknown }>;
@@ -1441,28 +1448,7 @@ describe('extension activation', () => {
         .toHaveBeenCalled();
     });
 
-    it('warns when the st test history argument is not a string', async () => {
-      await activateWith();
-
-      await invokeCommand(constants.COMMAND_ST_TEST_HISTORY_OPEN, 42);
-
-      expect(vscode.window.showWarningMessage)
-        .toHaveBeenCalled();
-      expect(StTestHistoryProviderMock.instances[0].getRecord).not.toHaveBeenCalled();
-    });
-
-    it('warns when the st test history record is missing', async () => {
-      await activateWith();
-
-      await invokeCommand(constants.COMMAND_ST_TEST_HISTORY_OPEN, 'missing-key');
-
-      expect(StTestHistoryProviderMock.instances[0].getRecord)
-        .toHaveBeenCalledWith('missing-key');
-      expect(vscode.window.showWarningMessage)
-        .toHaveBeenCalled();
-    });
-
-    it('opens the st test history panel for a resolved record', async () => {
+    it('opens the st test history panel for a record the provider resolved', async () => {
       const entry = {
         workspaceRoot: tmpRoot,
         record: {
@@ -1472,9 +1458,8 @@ describe('extension activation', () => {
       };
 
       await activateWith();
-      StTestHistoryProviderMock.instances[0].getRecord.mockReturnValue(entry);
 
-      await invokeCommand(constants.COMMAND_ST_TEST_HISTORY_OPEN, 'key-1');
+      await openStTestHistoryRecord()(entry);
 
       expect(StTestResultsPanel.createOrShowHistorical)
         .toHaveBeenCalledWith(
@@ -1484,36 +1469,68 @@ describe('extension activation', () => {
         );
     });
 
-    it('warns when the st test history panel fails to open', async () => {
+    it('logs the resolved st test history record to the tool channel', async () => {
+      const log = jest.fn();
+
       await activateWith();
-      StTestHistoryProviderMock.instances[0].getRecord.mockReturnValue({
+      (StTestResultsPanel.createOrShowHistorical as jest.Mock).mockImplementation(async (
+        _context: unknown,
+        _entry: unknown,
+        writeLog: (message: string)=> void,
+      ) => {
+        writeLog('[ST history] panel ready');
+      });
+      (getOperatorToolOutputChannel as jest.Mock).mockReturnValue({ appendLine: log });
+
+      await openStTestHistoryRecord()({
         workspaceRoot: tmpRoot,
         record: {
           runId: 'r1',
           runDirectory: '/runs/r1',
         },
       });
+
+      expect(log)
+        .toHaveBeenCalledTimes(2);
+      expect(String(log.mock.calls[0][0]))
+        .toContain('runId=r1');
+      expect(String(log.mock.calls[1][0]))
+        .toContain('panel ready');
+    });
+
+    it('warns when the st test history panel fails to open', async () => {
+      await activateWith();
       (StTestResultsPanel.createOrShowHistorical as jest.Mock).mockRejectedValue(new Error('panel boom'));
 
-      await invokeCommand(constants.COMMAND_ST_TEST_HISTORY_OPEN, 'key-1');
+      await openStTestHistoryRecord()({
+        workspaceRoot: tmpRoot,
+        record: {
+          runId: 'r1',
+          runDirectory: '/runs/r1',
+        },
+      });
 
       expect(vscode.window.showWarningMessage)
         .toHaveBeenCalled();
     });
 
     it('stringifies a non-Error st test history open failure', async () => {
+      const log = jest.fn();
+
       await activateWith();
-      StTestHistoryProviderMock.instances[0].getRecord.mockReturnValue({
+      (StTestResultsPanel.createOrShowHistorical as jest.Mock).mockRejectedValue('panel boom');
+      (getOperatorToolOutputChannel as jest.Mock).mockReturnValue({ appendLine: log });
+
+      await openStTestHistoryRecord()({
         workspaceRoot: tmpRoot,
         record: {
           runId: 'r1',
           runDirectory: '/runs/r1',
         },
       });
-      (StTestResultsPanel.createOrShowHistorical as jest.Mock).mockRejectedValue('panel boom');
 
-      await invokeCommand(constants.COMMAND_ST_TEST_HISTORY_OPEN, 'key-1');
-
+      expect(String(log.mock.calls[1][0]))
+        .toContain('panel boom');
       expect(vscode.window.showWarningMessage)
         .toHaveBeenCalled();
     });
@@ -2409,13 +2426,13 @@ describe('extension activation', () => {
         .toHaveBeenCalledWith('');
     });
 
-    it('toggles a single operator', async () => {
+    it('hands the per-operator toggle command registry to the projects tree', async () => {
       await activateWith();
 
-      await invokeCommand(constants.COMMAND_SIDEBAR_TOGGLE_OPERATOR, 3);
-
-      expect(operatorProjectsProvider().toggleOperator)
-        .toHaveBeenCalledWith(3);
+      // Every operator row now runs its own command, so activation must give the
+      // provider the sidebar repaint callback it fires after a toggle.
+      expect(operatorProjectsProvider().registerOperatorToggleCommands)
+        .toHaveBeenCalledWith(expect.any(Function));
     });
 
     it('selects all operators', async () => {
@@ -3661,9 +3678,9 @@ describe('extension activation', () => {
     it('reads the st-test history workspaces through the registered provider', async () => {
       await activateWith();
       const getWorkspaces = (StTestHistoryProviderMock.instances[0] as unknown as {
-        getWorkspaces: { getWorkspaces: ()=> Array<{ root: string;
+        dependencies: { getWorkspaces: ()=> Array<{ root: string;
           name: string }> };
-      }).getWorkspaces.getWorkspaces;
+      }).dependencies.getWorkspaces;
 
       expect(Array.isArray(getWorkspaces()))
         .toBe(true);
