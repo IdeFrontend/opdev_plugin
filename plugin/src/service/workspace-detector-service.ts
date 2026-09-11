@@ -276,6 +276,20 @@ export class WorkspaceDetectorService {
       }
     }
 
+    // Canonical path-sorted order: the operator ids handed out to the tree
+    // (check-multiple-operators) and decoded by project-model are positional
+    // indices into this list, so the persisted order must be deterministic.
+    // readdir order is not — an unsorted merge re-indexes operators between
+    // scans, which re-targets tree clicks and churns row identities.
+    // Bytewise comparison on the normalized path keeps the order identical
+    // across machines and locales.
+    mergedOperators.sort((a, b) => {
+      const ap = normalizeProjectPath(a.path);
+      const bp = normalizeProjectPath(b.path);
+
+      return ap < bp ? -1 : ap > bp ? 1 : 0;
+    });
+
     return mergedOperators;
   }
 }

@@ -253,7 +253,7 @@ There is **no** webview panel that calls `getRunData` for the performance result
 |----------|---------|
 | `view/title` | Add visualization, sort by time, marked-only filter, refresh results |
 | Report row inline | Copy (file **contents**), download (zip), mark/unmark |
-| File leaf | Open (`sidebar.performance.file.open`) |
+| File leaf | Open — one command per file row, `sidebar.performance.file.open.<hash of file path + type>` |
 
 ### Open file behavior
 
@@ -285,7 +285,7 @@ See [`user-issues/profiling-and-insight.md`](./user-issues/profiling-and-insight
 | `huawei-op-devtools.sidebar.performance.report.mark` / `.unmark` | Toggle mark |
 | `huawei-op-devtools.sidebar.performance.report.sortTime` | Toggle timestamp sort (in-memory) |
 | `huawei-op-devtools.sidebar.performance.report.filterMarked` / `.showAll` | Marked-only filter |
-| `huawei-op-devtools.sidebar.performance.file.open` | Open csv / bin / json / rep / ncrep / npu-rep |
+| `huawei-op-devtools.sidebar.performance.file.open.<hash>` | Open csv / bin / json / rep / ncrep / npu-rep. The base command is registered for the `view/item/context` menu entry; each file row carries a variant whose hash is derived from `filePath` + `fileType`, registered by the provider |
 | `huawei-op-devtools.flashPerformanceRunData` | Rescan disk + config lists |
 | `huawei-op-devtools.reportVisualizationPerformance` | Add folder to on_board `fileMapList` |
 
