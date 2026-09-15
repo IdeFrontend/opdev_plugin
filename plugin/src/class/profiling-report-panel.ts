@@ -23,35 +23,35 @@ function normalizeContentLanguage(language: string): 'en' | 'zh-cn' {
     : 'en';
 }
 
+/** cannbot 转发模板首行的内置提示词：默认调用 tool-report-analysis 技能分析报告。 */
+const CANNBOT_BUILD_IN_PROMPT = '调用技能 tool-report-analysis 分析下方报告，按其流程与固定框架输出。';
+
+function toText(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
 /**
- * 调测专用：当工作区隐藏配置 `op-devtools.profilingReport.cannbotPromptOverride`
- * 有值时，用它替换 payload 中的 prompt；未配置时原样返回。
- * 配置读取失败不影响正常转发（视为未配置）。
+ * 将 payload 中的采集时间（ISO 8601）格式化为 `YYYY-MM-DD HH:mm:ss`（本地时区）。
+ * 空值返回空字符串；无法解析时原样返回。
  */
-function applyCannbotPromptOverride(payload: unknown): unknown {
-  const effective = payload ?? {};
+function formatCollectedAt(value: unknown): string {
+  const raw = toText(value);
 
-  if (!effective || typeof effective !== 'object' || Array.isArray(effective)) {
-    return effective;
+  if (!raw) {
+    return raw;
   }
 
-  let promptOverride: string | undefined;
+  const date = new Date(raw);
 
-  try {
-    promptOverride = SettingsLoader.getCannbotPromptOverride();
-  }
-  catch {
-    promptOverride = undefined;
+  if (Number.isNaN(date.getTime())) {
+    return raw;
   }
 
-  if (promptOverride === undefined) {
-    return effective;
-  }
+  const pad = (part: number) => String(part)
+    .padStart(2, '0');
 
-  return {
-    ...(effective as Record<string, unknown>),
-    prompt: promptOverride,
-  };
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} `
+    + `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
 export class ProfilingReportPanel {
@@ -234,14 +234,33 @@ export class ProfilingReportPanel {
   }
 
   /**
-   * Forward the payload assembled by the profiling-report webview (section snapshot
-   * + prompt) to the cannbot plugin by filling its chat input box.
+   * Forward the cannbot request payload to the cannbot plugin by filling its chat
+   * input box: payload 字段填入多行模板，首行为内置提示词（buildInPrompt）。
    * 调测专用隐藏配置 `op-devtools.profilingReport.cannbotPromptOverride` 有值时，
-   * payload 中的 prompt 会被替换后再转发。
+   * 内置提示词会被替换后再转发。
    */
   private async handleCannbotRequest(payload: unknown): Promise<void> {
     try {
-      const inputText = JSON.stringify(applyCannbotPromptOverride(payload), null, 2);
+      const effective = payload && typeof payload === 'object' && !Array.isArray(payload)
+        ? payload as Record<string, unknown>
+        : {};
+
+      let buildInPrompt = CANNBOT_BUILD_IN_PROMPT;
+
+      try {
+        buildInPrompt = SettingsLoader.getCannbotPromptOverride() ?? CANNBOT_BUILD_IN_PROMPT;
+      }
+      catch {
+        // 配置读取失败不影响正常转发（视为未配置）
+      }
+
+      const inputText = `${buildInPrompt}
+报告路径：${toText(effective.report_path)}
+报告名称：${toText(effective.report_name)}
+报告章节：${toText(effective.scope)}
+算子名称：${toText(effective.op_name)}
+采集时间：${formatCollectedAt(effective.collected_at)}
+`;
 
       await vscode.commands.executeCommand(CANN_ASSIST_SET_INPUT_TEXT, inputText, { autoSend: true });
       await vscode.window.showInformationMessage(t('profilingReport.cannbotSent'));

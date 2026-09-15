@@ -148,6 +148,15 @@ describe('ProfilingReportPanel', () => {
     await new Promise<void>((resolve) => setImmediate(resolve));
   }
 
+  function formatLocalDateTime(iso: string): string {
+    const date = new Date(iso);
+    const pad = (n: number) => String(n)
+      .padStart(2, '0');
+
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} `
+      + `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+  }
+
   it('posts asWebviewUri after ready handshake instead of base64 payload', async () => {
     await ProfilingReportPanel.createOrShow(context, filePath);
 
@@ -217,14 +226,20 @@ describe('ProfilingReportPanel', () => {
     expect(mockExecuteCommand)
       .toHaveBeenCalledWith(
         'cannwork.setInputText',
-        JSON.stringify(payload, null, 2),
+        '调用技能 tool-report-analysis 分析下方报告，按其流程与固定框架输出。\n'
+        + `报告路径：${filePath}\n`
+        + '报告名称：sample.rep\n'
+        + '报告章节：compute\n'
+        + '算子名称：Add\n'
+        + `采集时间：${formatLocalDateTime('2026-08-13T09:41:00Z')}\n`,
+        { autoSend: true },
       );
     expect(mockShowInformationMessage)
       .toHaveBeenCalledWith('profilingReport.cannbotSent');
     expect(mockShowErrorMessage).not.toHaveBeenCalled();
   });
 
-  it('replaces the payload prompt when the hidden cannbot prompt override setting is set', async () => {
+  it('replaces the built-in prompt line when the hidden cannbot prompt override setting is set', async () => {
     (SettingsLoader.getCannbotPromptOverride as jest.Mock).mockReturnValueOnce('override-prompt');
 
     await ProfilingReportPanel.createOrShow(context, filePath);
@@ -254,16 +269,19 @@ describe('ProfilingReportPanel', () => {
     expect(mockExecuteCommand)
       .toHaveBeenCalledWith(
         'cannwork.setInputText',
-        JSON.stringify({
-          ...payload,
-          prompt: 'override-prompt',
-        }, null, 2),
+        'override-prompt\n'
+        + `报告路径：${filePath}\n`
+        + '报告名称：sample.rep\n'
+        + '报告章节：summary\n'
+        + '算子名称：Add\n'
+        + `采集时间：${formatLocalDateTime('2026-08-13T09:41:00Z')}\n`,
+        { autoSend: true },
       );
     expect(mockShowInformationMessage)
       .toHaveBeenCalledWith('profilingReport.cannbotSent');
   });
 
-  it('injects the override prompt when the payload has no prompt field', async () => {
+  it('keeps empty template lines when the payload has no meta fields', async () => {
     (SettingsLoader.getCannbotPromptOverride as jest.Mock).mockReturnValueOnce('override-prompt');
 
     await ProfilingReportPanel.createOrShow(context, filePath);
@@ -282,10 +300,13 @@ describe('ProfilingReportPanel', () => {
     expect(mockExecuteCommand)
       .toHaveBeenCalledWith(
         'cannwork.setInputText',
-        JSON.stringify({
-          scope: 'summary',
-          prompt: 'override-prompt',
-        }, null, 2),
+        'override-prompt\n'
+        + '报告路径：\n'
+        + '报告名称：\n'
+        + '报告章节：summary\n'
+        + '算子名称：\n'
+        + '采集时间：\n',
+        { autoSend: true },
       );
   });
 
@@ -309,6 +330,7 @@ describe('ProfilingReportPanel', () => {
       .toHaveBeenCalledWith(
         'cannwork.setInputText',
         expect.any(String),
+        { autoSend: true },
       );
     expect(mockShowErrorMessage)
       .toHaveBeenCalledWith(`profilingReport.cannbotFailed:${JSON.stringify({ error: 'command not found' })}`);
