@@ -48,7 +48,7 @@ Spawn exports `SOC_VERSION` + `NPU_ARCH` only for types whose cmake reads them (
 
 ### 2.1 Zero-configuration C/C++ navigation
 
-When `ASCEND_HOME_PATH` is visible to the extension host, the packaged manifest associates `.asc` and `.cce` files with C++ and provides Microsoft C/C++ with these default include paths:
+When `ASCEND_HOME_PATH` is visible to the extension host, the packaged manifest associates `.asc` and `.cce` files with C++ and provides Microsoft C/C++ with these default include paths (the manifest also contributes an `ascend-c` language for `.asc` — see `docs/user-issues/ascend-c-language.md` — but the default association stays `cpp` so C/C++ IntelliSense applies):
 
 ```text
 ${workspaceFolder}/**

@@ -6,13 +6,13 @@ Tracked issues from the public feedback board:
 
 This folder groups open and closed reports by theme, documents their current state in the `mstt` codebase, lists open questions for reporters, and outlines implementation plans.
 
-## Summary (as of 2026-05-25)
+## Summary (as of 2026-09-14)
 
 | Status | Count |
 |--------|-------|
-| Open | 9 |
-| Closed | 2 |
-| Total | 11 |
+| Open | 14 |
+| Closed (tracked) | 2 |
+| Total | 16 |
 
 ## Documents
 
@@ -23,6 +23,7 @@ This folder groups open and closed reports by theme, documents their current sta
 | [profiling-and-insight.md](./profiling-and-insight.md) | [#1](https://gitcode.com/opdevtools/plugin_release/issues/1), [#2](https://gitcode.com/opdevtools/plugin_release/issues/2) | P1 |
 | [config-lifecycle.md](./config-lifecycle.md) | [#11](https://gitcode.com/opdevtools/plugin_release/issues/11) | P1 |
 | [startup-performance.md](./startup-performance.md) | [#4](https://gitcode.com/opdevtools/plugin_release/issues/4), [#7](https://gitcode.com/opdevtools/plugin_release/issues/7) | P2 |
+| [ascend-c-language.md](./ascend-c-language.md) | [#84](https://gitcode.com/opdevtools/plugin_release/issues/84) — Ascend C entry in the language picker, implemented (GC-84) | P1 |
 | [closed-issues.md](./closed-issues.md) | [#3](https://gitcode.com/opdevtools/plugin_release/issues/3), [#5](https://gitcode.com/opdevtools/plugin_release/issues/5) | — |
 
 ## Cross-cutting notes

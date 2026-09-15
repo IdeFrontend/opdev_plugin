@@ -159,6 +159,41 @@ describe('apply-flavor', () => {
       .toBe('Operator Development');
   });
 
+  it('keeps the Ascend C language and grammar contributions in both flavors', () => {
+    const expectAscendCLanguage = () => {
+      const manifest = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
+
+      expect(manifest.contributes.languages)
+        .toEqual([
+          {
+            id: 'ascend-c',
+            aliases: [
+              'Ascend C',
+              'ascend-c',
+            ],
+            extensions: ['.asc'],
+            icon: {
+              light: './out/web/branding/language-ascend-c.svg',
+              dark: './out/web/branding/language-ascend-c.svg',
+            },
+          },
+        ]);
+      expect(manifest.contributes.grammars)
+        .toEqual([
+          {
+            language: 'ascend-c',
+            scopeName: 'source.ascend-c',
+            path: './syntaxes/ascend-c.tmLanguage.json',
+          },
+        ]);
+    };
+
+    applyFlavor('ascend-c-toolkit');
+    expectAscendCLanguage();
+    applyFlavor('huawei');
+    expectAscendCLanguage();
+  });
+
   it('substitutes escaped viewPrefix in inline stop menu regex for ascend-c-toolkit', () => {
     applyFlavor('ascend-c-toolkit');
     const manifest = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'));
