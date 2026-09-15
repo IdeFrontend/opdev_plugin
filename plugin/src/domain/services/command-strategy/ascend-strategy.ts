@@ -9,7 +9,6 @@ import {
   resolveFallbackOperatorName,
 } from '@plugin/domain/models/op-record';
 import { ProjectRecord } from '@plugin/domain/models/project-model';
-import { joinIdeConfigPath } from '@plugin/helpers/ide-config-dir';
 import { getFirstWorkspaceFolderPath } from '@plugin/helpers/operator-project-workspace-config';
 import {
   CommandStrategy,
@@ -37,7 +36,7 @@ import {
   normalizeMaxDebuglogSize,
   addSanitizerToolOptions,
   normalizeSanitizerCommand,
-  buildSanitizerLogFileName,
+  buildSanitizerLogFilePath,
   createSanitizerCommand,
 } from './sanitizer-option-guards';
 import {
@@ -253,7 +252,7 @@ export class AscendCommandStrategy implements CommandStrategy {
 
     command.addOption(
       'log-file',
-      `${joinIdeConfigPath(workspacePath, 'mindstudio_sanitizer_log', buildSanitizerLogFileName(commandName))}`,
+      buildSanitizerLogFilePath(workspacePath, commandName),
     );
 
     return joinCommands(sourceCannCmd, cdCmd, command.toString());

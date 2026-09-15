@@ -51,7 +51,7 @@ export class SanitizerDiagnosticsService {
     }
 
     const parser = isNpuCheckReport(absoluteLogPath)
-      ? new NpuCheckParser()
+      ? new NpuCheckParser({ matchPath: workspaceRoot })
       : new ExceptionParser({ matchPath: workspaceRoot });
     const results = parser.parseAll(content);
 
@@ -106,7 +106,7 @@ export class SanitizerDiagnosticsService {
     const inputContent = fs.readFileSync(params.path, 'utf-8');
     const isNpuCheck = isNpuCheckReport(params.path);
     const parser = isNpuCheck
-      ? new NpuCheckParser()
+      ? new NpuCheckParser({ matchPath: workspacePath })
       : new ExceptionParser({ matchPath: workspacePath });
     const data = parser.parseAll(inputContent)
       .map((r, msAgentIndex) => {

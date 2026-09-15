@@ -15,7 +15,6 @@ import {
   OpRecord,
   resolveFallbackOperatorName,
 } from '@plugin/domain/models/op-record';
-import { joinIdeConfigPath } from '@plugin/helpers/ide-config-dir';
 import {
   CommandStrategy,
   CommandContext,
@@ -38,7 +37,7 @@ import {
   normalizeMaxDebuglogSize,
   addSanitizerToolOptions,
   normalizeSanitizerCommand,
-  buildSanitizerLogFileName,
+  buildSanitizerLogFilePath,
   createSanitizerCommand,
 } from './sanitizer-option-guards';
 
@@ -286,11 +285,7 @@ export class TritonCommandStrategy extends BasePythonCommandStrategy implements 
 
     const workspacePath =
       vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd();
-    const logFilePath = joinIdeConfigPath(
-      workspacePath,
-      'mindstudio_sanitizer_log',
-      buildSanitizerLogFileName(commandName),
-    );
+    const logFilePath = buildSanitizerLogFilePath(workspacePath, commandName);
 
     command.addOption('log-file', quoteShellTokenIfNeeded(logFilePath));
 

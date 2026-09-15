@@ -336,6 +336,88 @@ npu_check: SESSION_END status=complete`);
       .not
       .toContain('SESSION_END');
   });
+
+  it('parses the bracketed group tag after ERROR:/WARNING: into groupName', () => {
+    const parser = new NpuCheckParser();
+    const results = parser.parseAll(`========= ERROR:[MEMCHECK] Invalid GM read of size 32 bytes
+=========     at 0x1000
+========= WARNING:[INITCHECK] Invalid GM read of size 8 bytes
+=========     at 0x2000
+========= ERROR:[RACECHECK] Invalid GM read of size 4 bytes
+=========     at 0x3000
+========= ERROR: no group on this one
+=========     at 0x4000`);
+
+    expect(results)
+      .toHaveLength(4);
+    expect(results.map((r) => r.groupName))
+      .toEqual([
+        'MEMCHECK',
+        'INITCHECK',
+        'RACECHECK',
+        undefined,
+      ]);
+    // The group tag is stripped from the title/exception name.
+    expect(results[0].exceptionName)
+      .toBe('Invalid GM read of size 32 bytes');
+    expect(results[0].title)
+      .toBe('Invalid GM read of size 32 bytes');
+    expect(results[0].question)
+      .toBe('Invalid GM read of size 32 bytes');
+    expect(results[1].exceptionName)
+      .toBe('Invalid GM read of size 8 bytes');
+    expect(results[3].exceptionName)
+      .toBe('no group on this one');
+    // The raw block keeps the original line including the group tag.
+    expect(results[0].originData)
+      .toContain('ERROR:[MEMCHECK] Invalid GM read of size 32 bytes');
+  });
+
+  it('jumps to the first frame located inside the configured project directory', () => {
+    const parser = new NpuCheckParser({ matchPath: '/home/cty/asc-tools-aclsan/npu_tools/npu_sanitizer' });
+    const results = parser.parseAll(`========= ERROR:[MEMCHECK] Invalid GM read of size 32 bytes
+=========  Device Frames:
+=========       #0 asc_sync_notify_impl_aiv at /home/cty/cann_0831/cann-9.2.0/asc/impl/c_api/instr_impl/npu_arch_3510/sync_impl/asc_sync_notify_impl.h:85:13
+=========       #1 asc_sync_notify_impl at /home/cty/cann_0831/cann-9.2.0/asc/impl/c_api/instr_impl/npu_arch_3510/sync_impl/asc_sync_notify_impl.h:113:9
+=========       #2 asc_sync_notify at /home/cty/cann_0831/cann-9.2.0/asc/impl/c_api/instr_impl/npu_arch_3510/sync_impl.h:47:81
+=========       #3 UnconsumedSetFlag at /home/cty/asc-tools-aclsan/npu_tools/npu_sanitizer/demo/examples/basic_func/dual_tool_multi_launch_aggregate/dual_tool_multi_launch_aggregate.asc:62:5
+=========       #4 UnconsumedGetEnv at /home/cty/asc-tools-aclsan/npu_tools/npu_sanitizer/demo/examples/basic_func/dual_tool_multi_launch_aggregate/dual_tool_multi_launch_aggregate.asc:85:4`);
+
+    expect(results)
+      .toHaveLength(1);
+    expect(results[0].fileLink)
+      .toBe('/home/cty/asc-tools-aclsan/npu_tools/npu_sanitizer/demo/examples/basic_func/dual_tool_multi_launch_aggregate/dual_tool_multi_launch_aggregate.asc');
+    expect(results[0].row)
+      .toBe(62);
+    expect(results[0].col)
+      .toBe(5);
+  });
+
+  it('falls back to the first frame with a path when no frame is inside the project', () => {
+    const parser = new NpuCheckParser({ matchPath: '/home/somewhere/else' });
+    const results = parser.parseAll(`========= ERROR:[MEMCHECK] Invalid GM read of size 32 bytes
+=========  Device Frames:
+=========       #0 asc_sync_notify_impl_aiv at /home/cty/cann_0831/asc_sync_notify_impl.h:85:13
+=========       #1 UnconsumedSetFlag at /home/cty/asc-tools-aclsan/npu_sanitizer/dual_tool_multi_launch_aggregate.asc:62:5`);
+
+    expect(results[0].fileLink)
+      .toBe('/home/cty/cann_0831/asc_sync_notify_impl.h');
+    expect(results[0].row)
+      .toBe(85);
+  });
+
+  it('matches project paths with a trailing separator and Windows-style separators', () => {
+    const parser = new NpuCheckParser({ matchPath: 'D:\\proj\\ops\\' });
+    const results = parser.parseAll(`========= ERROR:[MEMCHECK] bad access
+=========  Device Frames:
+=========       #0 kernel at D:/proj/ops/src/kernel.cu:12:3
+=========       #1 other at /usr/local/cuda/include/x.h:1:1`);
+
+    expect(results[0].fileLink)
+      .toBe('D:/proj/ops/src/kernel.cu');
+    expect(results[0].row)
+      .toBe(12);
+  });
 });
 
 describe('parseNpuCheckStackFrame', () => {

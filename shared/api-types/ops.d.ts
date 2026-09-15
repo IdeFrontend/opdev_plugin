@@ -69,8 +69,6 @@ export type SanitizerOptions = {
   sync?: boolean;
   race?: boolean;
   uninitialized?: boolean;
-  soc?: boolean;
-  over?: boolean;
   memoryLeak?: boolean;
   allocUnused?: boolean;
   reportLogLevel?: 'info' | 'warn' | 'error';

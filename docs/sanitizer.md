@@ -39,8 +39,8 @@ flowchart LR
 
   FlowTree --> Run["runSanitizer pipeline"]
   Options --> Run
-  Run --> CLI["mssanitizer"]
-  CLI --> Logs["Workspace-root IDE config dir\nmindstudio_sanitizer_log"]
+  Run --> CLI["mssanitizer / npu-check"]
+  CLI --> Logs["Workspace-root IDE config dir\nmindstudio_sanitizer_log (mssanitizer)\nnpu-check-log (npu-check)"]
   Logs --> ResultsTree
   Run --> Problems
   ResultsTree --> Problems
@@ -127,7 +127,7 @@ Steps in detail:
 2. **Build operator** — `getBuildOpCommand(resolveBuildOpBaseContext(projectPath, operatorNames), …)` via `executeOperatorCommand` (spawn env from [`operator-command-executor`](../../plugin/src/service/operator-command-executor.ts) / `resolveAscendEnv`).
 3. **Standard-custom only** — if workspace root detects `OperatorProjectType.STANDARD_CUSTOM`, also **build example** (`getBuildExampleCommand`).
 4. **`notifyBuildSucceededForSidebar`** — updates compile state for operate tree when applicable.
-5. **Ensure log directory** — `joinIdeConfigPath(workspaceRoot, 'mindstudio_sanitizer_log')` (see [Log files](#log-files)).
+5. **Ensure log directory** — `joinIdeConfigPath(workspaceRoot, getSanitizerLogDirName(tool))` → `mindstudio_sanitizer_log` (mssanitizer) or `npu-check-log` (npu-check) (see [Log files](#log-files)).
 6. **Run sanitizer** — `getSanitizerCommand(sanitizerConfigId, exampleConfigId, operatorNames)` then `executeOperatorCommand`.
 7. **On success**:
    - Notification `sanitizer.detectionSuccess`

@@ -163,17 +163,28 @@ describe('RunDataService.getSanitizerRunData', () => {
       .toEqual([]);
   });
 
-  it('combines sanitizer log reports with cache entries sorted by time desc', async () => {
+  it('combines sanitizer log reports from both report dirs with cache entries sorted by time desc', async () => {
     mockStorageGet.mockReturnValue(['sanitizer_/ws/map1.txt']);
-    mockCollectSanitizerLogReports.mockReturnValue([
-      {
-        title: 'log-a',
-        timestamp: 100,
-        id: 'log-1',
-        path: `${LOG_PATH}/mssanitizer_100.log`,
-        marked: false,
-      },
-    ]);
+    mockJoinIdeConfigPath.mockImplementation((_workspacePath: string, dirName: string) => `/ws/.vscode/${dirName}`);
+    mockCollectSanitizerLogReports.mockImplementation((logPath: string) => (logPath.includes('npu-check-log')
+      ? [
+        {
+          title: 'npu-check-log-a',
+          timestamp: 50,
+          id: 'npu-log-1',
+          path: '/ws/.vscode/npu-check-log/npu-check_50.log',
+          marked: false,
+        },
+      ]
+      : [
+        {
+          title: 'log-a',
+          timestamp: 100,
+          id: 'log-1',
+          path: `${LOG_PATH}/mssanitizer_100.log`,
+          marked: false,
+        },
+      ]));
     mockReadWorkspaceCache.mockReturnValue({
       fileMapLists: {
         sanitizer: [
@@ -193,8 +204,12 @@ describe('RunDataService.getSanitizerRunData', () => {
 
     expect(mockJoinIdeConfigPath)
       .toHaveBeenCalledWith(WORKSPACE_PATH, 'mindstudio_sanitizer_log');
+    expect(mockJoinIdeConfigPath)
+      .toHaveBeenCalledWith(WORKSPACE_PATH, 'npu-check-log');
     expect(mockCollectSanitizerLogReports)
       .toHaveBeenCalledWith(LOG_PATH, expect.any(Set));
+    expect(mockCollectSanitizerLogReports)
+      .toHaveBeenCalledWith('/ws/.vscode/npu-check-log', expect.any(Set));
     expect(mockStorageGet)
       .toHaveBeenCalledWith(MARKED_KEY, []);
     expect(result)
@@ -218,6 +233,13 @@ describe('RunDataService.getSanitizerRunData', () => {
           timestamp: 100,
           id: 'log-1',
           path: `${LOG_PATH}/mssanitizer_100.log`,
+          marked: false,
+        },
+        {
+          title: 'npu-check-log-a',
+          timestamp: 50,
+          id: 'npu-log-1',
+          path: '/ws/.vscode/npu-check-log/npu-check_50.log',
           marked: false,
         },
       ]);
