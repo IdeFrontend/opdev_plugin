@@ -127,8 +127,8 @@ export class SettingsLoader {
   /**
    * 调测专用隐藏配置（刻意不在 package.json 注册，不出现在设置页面）：
    * 工作区 settings.json 中写入 `op-devtools.profilingReport.cannbotPromptOverride`
-   * 后，转发给 cannbot 插件的 payload 中的 prompt 会被该值替换，
-   * 用于在不重新构建 profiling-report webview 的情况下调测 prompt。
+   * 后，转发给 cannbot 插件的多行模板首行内置提示词（buildInPrompt）会被该值替换，
+   * 用于在不重新构建插件的情况下调测提示词。
    * 空白字符串视为未设置。
    */
   static getCannbotPromptOverride(): string | undefined {
