@@ -672,7 +672,7 @@ export default {
   'web.options.sanitizer.scopeGlobal': 'All blocks',
   'web.options.sanitizer.scopeSingleBlock': 'Single block',
   'web.options.sanitizer.blockId': 'Block ID',
-  'web.options.sanitizer.npuMemoryCheck': 'Memory Check',
+  'web.options.sanitizer.npuMemCheck': 'Mem Check',
   'web.options.sanitizer.npuSyncCheck': 'Sync Check',
   'web.options.sanitizer.npuRaceCheck': 'Race Check',
   'web.options.sanitizer.npuInitCheck': 'Init Check',

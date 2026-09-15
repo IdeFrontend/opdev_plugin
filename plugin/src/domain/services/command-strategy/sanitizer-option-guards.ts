@@ -135,6 +135,17 @@ export function createSanitizerCommand(commandName: 'mssanitizer' | 'npu-check')
 }
 
 /**
+ * npu-check maps its own detection fields to the CLI `--tool` values: the Mem
+ * Check setting lives in `npumemcheck` (NOT the mssanitizer `memcheck`/Memory
+ * field, which must never leak into an npu-check run). Unmapped keys
+ * (`memcheck`/`racecheck`/`initcheck`) are mssanitizer-only and dropped.
+ */
+const NPU_TOOL_KEY_MAP: Record<string, string> = {
+  npumemcheck: 'memcheck',
+  synccheck: 'synccheck',
+};
+
+/**
  * Add `--tool=<value>` options to the command for the selected sanitizer tool.
  * Shared by all command strategies (triton / cann / ascend).
  */
@@ -146,7 +157,11 @@ export function addSanitizerToolOptions(
   const enabledTools = Object.keys(toolOptions)
     .filter((key) => toolOptions[key]);
   const tools = commandName === 'npu-check'
-    ? normalizeNpuSanitizerTools(enabledTools)
+    ? normalizeNpuSanitizerTools(enabledTools.flatMap((key) => {
+      const mapped = NPU_TOOL_KEY_MAP[key];
+
+      return mapped ? [mapped] : [];
+    }))
     : normalizeSanitizerTools(enabledTools);
 
   if (tools.length > 0) {
