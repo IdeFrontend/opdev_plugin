@@ -40,6 +40,7 @@ const form = ref({
   toolType: 'mssanitizer' as SanitizerToolType,
   tool: {
     memcheck: true,
+    npumemcheck: true,
     synccheck: true,
     racecheck: true,
     initcheck: true,
@@ -130,6 +131,10 @@ async function loadSanitizerForm() {
     form.value.tool.memcheck = options.memory;
   }
 
+  if (options.memCheck !== undefined) {
+    form.value.tool.npumemcheck = options.memCheck;
+  }
+
   if (options.sync !== undefined) {
     form.value.tool.synccheck = options.sync;
   }
@@ -171,6 +176,7 @@ function buildSavePayload(): SanitizerOptions {
   return {
     toolType: form.value.toolType,
     memory: form.value.tool.memcheck,
+    memCheck: form.value.tool.npumemcheck,
     sync: form.value.tool.synccheck,
     race: form.value.tool.racecheck,
     uninitialized: form.value.tool.initcheck,
@@ -347,10 +353,10 @@ const handleConfirm = async () => {
         <template v-if="isNpuSanitizer">
           <div class="check-item-row">
             <a-checkbox
-              v-model:checked="form.tool.memcheck"
+              v-model:checked="form.tool.npumemcheck"
               @change="saveSanitizerForm"
             >
-              {{ t('web.options.sanitizer.npuMemoryCheck') }}
+              {{ t('web.options.sanitizer.npuMemCheck') }}
             </a-checkbox>
           </div>
           <div class="check-item-row">

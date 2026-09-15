@@ -671,7 +671,7 @@ export default {
   'web.options.sanitizer.scopeGlobal': '全部 block',
   'web.options.sanitizer.scopeSingleBlock': '单个 block',
   'web.options.sanitizer.blockId': 'Block ID',
-  'web.options.sanitizer.npuMemoryCheck': '内存检测',
+  'web.options.sanitizer.npuMemCheck': '内存检测',
   'web.options.sanitizer.npuSyncCheck': '同步检测',
   'web.options.sanitizer.npuRaceCheck': '竞争检测',
   'web.options.sanitizer.npuInitCheck': '未初始化检测',

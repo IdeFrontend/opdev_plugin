@@ -101,7 +101,12 @@ function loadGitHeadFile(relativePath: string): string | null {
 }
 
 function assertHuaweiBaselineManifest(manifest: Record<string, unknown>): void {
-  const text = JSON.stringify(manifest);
+  // Scripts hold devtool commands (e.g. `apply-flavor:ascend-c-toolkit`) that are kept from the
+  // working tree and never take part in flavor ID substitution, so exclude them from the check.
+  const {
+    scripts: _scripts, ...manifestWithoutScripts
+  } = manifest;
+  const text = JSON.stringify(manifestWithoutScripts);
 
   if (text.includes('ascend-c-toolkit') || text.includes('ascendCToolkit')) {
     throw new Error('package.json contains Ascend C Toolkits IDs and is not a valid Huawei baseline manifest. '
@@ -150,15 +155,41 @@ function tryNormalizeBaselineManifest(source: Record<string, unknown>): Record<s
   }
 }
 
-/** Load Huawei baseline manifest from git HEAD, falling back to disk when HEAD is invalid. */
+/**
+ * Load the Huawei baseline manifest for apply-flavor.
+ *
+ * Priority:
+ * 1. Working-tree package.json when it is already a valid Huawei baseline as-is
+ *    (keeps uncommitted configuration edits, e.g. newly added settings).
+ * 2. git HEAD package.json (normalized), so a flavored or hand-edited disk copy
+ *    cannot regress feature-gated manifest content.
+ * 3. Working-tree package.json (normalized) as last resort.
+ */
 function loadManifestTemplate(_flavorId: string): Record<string, unknown> {
   const packageJsonPath = path.join(REPO_ROOT, 'package.json');
+
+  if (fs.existsSync(packageJsonPath)) {
+    const fromDisk = readJson(packageJsonPath) as Record<string, unknown>;
+
+    try {
+      assertHuaweiBaselineManifest(fromDisk);
+
+      return structuredClone(fromDisk);
+    }
+    catch {
+      // Disk is flavored or invalid as-is; fall through to git HEAD.
+    }
+  }
+
   const fromGit = loadGitHeadFile('package.json');
 
   if (fromGit) {
     const baseline = tryNormalizeBaselineManifest(JSON.parse(fromGit) as Record<string, unknown>);
 
     if (baseline) {
+      console.warn('[apply-flavor] Using the committed Huawei baseline from git HEAD; '
+        + 'working-tree package.json edits (if any) were skipped because it is not a valid Huawei baseline as-is.');
+
       return baseline;
     }
 
@@ -169,9 +200,7 @@ function loadManifestTemplate(_flavorId: string): Record<string, unknown> {
     const baseline = tryNormalizeBaselineManifest(readJson(packageJsonPath));
 
     if (baseline) {
-      if (fromGit) {
-        console.warn('[apply-flavor] Using valid Huawei baseline from disk. Commit a clean package.json to git HEAD.');
-      }
+      console.warn('[apply-flavor] Using normalized Huawei baseline from disk. Commit a clean package.json to git HEAD.');
 
       return baseline;
     }

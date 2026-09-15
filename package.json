@@ -451,6 +451,13 @@
             "maximum": 200,
             "description": "%config.op-devtools.sanitizer.blockId.description%"
           },
+          "op-devtools.sanitizer.memCheck": {
+            "type": "boolean",
+            "default": true,
+            "order": 299,
+            "description": "%config.op-devtools.sanitizer.memCheck.description%",
+            "markdownDescription": "%config.op-devtools.sanitizer.memCheck.markdownDescription%"
+          },
           "op-devtools.sanitizer.sync": {
             "type": "boolean",
             "default": true,
