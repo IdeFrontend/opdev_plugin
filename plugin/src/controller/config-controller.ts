@@ -59,6 +59,7 @@ const SIMULATE_DOTTED_KEYS = [
 const SANITIZER_DOTTED_KEYS = [
   'sanitizer.toolType',
   'sanitizer.memory',
+  'sanitizer.memCheck',
   'sanitizer.sync',
   'sanitizer.race',
   'sanitizer.uninitialized',
