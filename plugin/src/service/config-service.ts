@@ -59,10 +59,12 @@ const CONFIG_TYPES = {
 const OP_DEVTOOLS_PREFIX = `${SETTINGS_PREFIX}.`;
 
 /** Sanitizer defaults seeded for fresh projects: tool set, memcheck
- * sub-options, warn log, 1 KiB cap. */
+ * sub-options, warn log, 1 KiB cap. `memcheck` is mssanitizer-only (Memory);
+ * `npumemcheck` is npu-check-only (Mem Check). */
 export const DEFAULT_SANITIZER_DETECTION_OPTIONS = {
   tool: {
     memcheck: true,
+    npumemcheck: true,
     racecheck: true,
     initcheck: true,
     synccheck: false,
@@ -157,6 +159,7 @@ export interface SanitizerConfig {
   // Only the fully-unset case falls back to the full defaults
   // (getSanitizerConfig fresh branch).
   tool?: { memcheck?: boolean;
+    npumemcheck?: boolean;
     synccheck?: boolean;
     racecheck?: boolean;
     initcheck?: boolean };
@@ -316,6 +319,7 @@ function sanitizerUserOptionsToDottedWrites(opts: Record<string, unknown>): OpDe
   assignIfDefined(updates, 'sanitizer.reportLogLevel', opts.logLevel);
   assignIfDefined(updates, 'sanitizer.maxSingleLogFileSize', opts.maxDebuglogSize);
   assignIfDefined(updates, 'sanitizer.memory', tool.memcheck);
+  assignIfDefined(updates, 'sanitizer.memCheck', tool.npumemcheck);
   assignIfDefined(updates, 'sanitizer.sync', tool.synccheck);
   assignIfDefined(updates, 'sanitizer.race', tool.racecheck);
   assignIfDefined(updates, 'sanitizer.uninitialized', tool.initcheck);
@@ -693,6 +697,7 @@ export class ConfigService {
             script: scripts.sanitizerScript,
             tool: {
               memcheck: true,
+              npumemcheck: true,
               racecheck: true,
               initcheck: true,
             },
@@ -1085,6 +1090,7 @@ export class ConfigService {
     const useBlock = scope !== undefined ? mapSanitizerScopeToUseBlock(scope) : undefined;
     const blockId = ConfigService.readOpDevtoolsSetting<number>('sanitizer.blockId');
     const memcheck = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.memory');
+    const npumemcheck = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.memCheck');
     const synccheck = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.sync');
     const racecheck = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.race');
     const initcheck = ConfigService.readOpDevtoolsSetting<boolean>('sanitizer.uninitialized');
@@ -1108,6 +1114,7 @@ export class ConfigService {
       || useBlock !== undefined
       || blockId !== undefined
       || memcheck !== undefined
+      || npumemcheck !== undefined
       || synccheck !== undefined
       || racecheck !== undefined
       || initcheck !== undefined
@@ -1122,6 +1129,7 @@ export class ConfigService {
         toolType,
         tool: {
           memcheck: DEFAULT_SANITIZER_DETECTION_OPTIONS.tool.memcheck,
+          npumemcheck: DEFAULT_SANITIZER_DETECTION_OPTIONS.tool.npumemcheck,
           racecheck: DEFAULT_SANITIZER_DETECTION_OPTIONS.tool.racecheck,
           initcheck: DEFAULT_SANITIZER_DETECTION_OPTIONS.tool.initcheck,
         },
@@ -1146,6 +1154,10 @@ export class ConfigService {
 
     if (memcheck !== undefined) {
       tool.memcheck = memcheck;
+    }
+
+    if (npumemcheck !== undefined) {
+      tool.npumemcheck = npumemcheck;
     }
 
     if (synccheck !== undefined) {

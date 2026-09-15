@@ -250,7 +250,7 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
       ...baseConfig,
       toolType: 'npu-check',
       tool: {
-        memcheck: true,
+        npumemcheck: true,
         synccheck: true,
         racecheck: false,
         initcheck: true,
@@ -278,12 +278,32 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
       .toContain('--log-file ');
   });
 
-  it('builds npu-check with all selected npu tool flags', () => {
+  it('never maps the mssanitizer memcheck (Memory) field into an npu-check run', () => {
     const npuConfig: SanitizerConfig = {
       ...baseConfig,
       toolType: 'npu-check',
       tool: {
         memcheck: true,
+        synccheck: false,
+      },
+    };
+
+    const cmd = strategy.buildSanitizerCommand(buildContext(npuConfig));
+
+    expect(cmd)
+      .toContain('npu-check');
+    // npu-check reads Mem Check from `npumemcheck` only — the mssanitizer
+    // `memcheck` (Memory) setting must not leak into an npu-check command.
+    expect(cmd).not.toContain('--tool memcheck');
+    expect(cmd).not.toContain('--tool synccheck');
+  });
+
+  it('builds npu-check with all selected npu tool flags', () => {
+    const npuConfig: SanitizerConfig = {
+      ...baseConfig,
+      toolType: 'npu-check',
+      tool: {
+        npumemcheck: true,
         synccheck: true,
         racecheck: true,
         initcheck: true,
@@ -310,7 +330,7 @@ describe('TritonCommandStrategy.buildSanitizerCommand', () => {
       ...baseConfig,
       toolType: 'npu-check',
       tool: {
-        memcheck: true,
+        npumemcheck: true,
         synccheck: true,
         racecheck: true,
         initcheck: true,

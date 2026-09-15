@@ -66,6 +66,7 @@ export type SimulateOptions = {
 export type SanitizerOptions = {
   toolType?: 'mssanitizer' | 'npu-check';
   memory?: boolean;
+  memCheck?: boolean;
   sync?: boolean;
   race?: boolean;
   uninitialized?: boolean;
