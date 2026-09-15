@@ -641,6 +641,29 @@
         }
       }
     ],
+    "languages": [
+      {
+        "id": "ascend-c",
+        "aliases": [
+          "Ascend C",
+          "ascend-c"
+        ],
+        "extensions": [
+          ".asc"
+        ],
+        "icon": {
+          "light": "./out/web/branding/language-ascend-c.svg",
+          "dark": "./out/web/branding/language-ascend-c.svg"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "ascend-c",
+        "scopeName": "source.ascend-c",
+        "path": "./syntaxes/ascend-c.tmLanguage.json"
+      }
+    ],
     "viewsContainers": {
       "activitybar": [
         {
