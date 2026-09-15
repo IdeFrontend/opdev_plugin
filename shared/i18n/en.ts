@@ -674,8 +674,6 @@ export default {
   'web.options.sanitizer.npuSyncCheck': 'Sync Check',
   'web.options.sanitizer.npuRaceCheck': 'Race Check',
   'web.options.sanitizer.npuInitCheck': 'Init Check',
-  'web.options.sanitizer.npuSocCheck': 'Soc Check',
-  'web.options.sanitizer.npuOverCheck': 'Over Check',
   'web.options.sanitizer.tritonEnvNote': 'For Triton projects, sanitizer JIT instrumentation, forced kernel recompile, and PyTorch NPU memory-pool disable are applied automatically when you run detection.',
 
   // ST test run configuration

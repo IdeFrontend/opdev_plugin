@@ -142,6 +142,8 @@ type SanitizerMessageRecord = {
   col?: number;
   originData: string;
   sourceTool?: 'mssanitizer' | 'npu-check';
+  // npu-check problem group parsed from the bracketed tag after ERROR:/WARNING:
+  groupName?: string;
 };
 
 type SanitizerGroupMode = 'class' | 'severity' | 'type' | 'file';
@@ -2056,22 +2058,44 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     const classSet = new Set(bucketOrder.map((bucket) => bucket.key));
 
     if (mode === 'class') {
-      return bucketOrder
-        .map((bucket) => {
-          const messages = this.getVisibleSanitizerSelectedMessages()
-            .filter((msg) => {
-              const key = classSet.has(msg.questionType) ? msg.questionType : 'other';
+      // npu-check messages group by their parsed bracketed group name
+      // ("ERROR:[MEMCHECK] ..." → "MEMCHECK", missing tag → "other");
+      // mssanitizer messages keep the fixed question-type classes.
+      const grouped = new Map<string, { key: string;
+        label: string;
+        messages: SanitizerMessageRecord[] }>();
 
-              return key === bucket.key;
-            });
+      for (const msg of this.getVisibleSanitizerSelectedMessages()) {
+        const key = msg.sourceTool === 'npu-check'
+          ? (msg.groupName ?? 'other')
+          : (classSet.has(msg.questionType) ? msg.questionType : 'other');
+        const label = bucketOrder.find((bucket) => bucket.key === key)?.label ?? msg.groupName ?? key;
+        const current = grouped.get(key);
 
-          return {
-            key: bucket.key,
-            label: bucket.label,
-            messages,
-          };
-        })
+        if (current) {
+          current.messages.push(msg);
+        }
+        else {
+          grouped.set(key, {
+            key,
+            label,
+            messages: [msg],
+          });
+        }
+      }
+
+      // Fixed buckets keep their canonical order; extra npu-check group keys
+      // are appended in first-seen order and the catch-all "other" bucket
+      // always goes last.
+      const orderedGroups = bucketOrder
+        .filter((bucket) => grouped.has(bucket.key))
+        .map((bucket) => grouped.get(bucket.key)!)
+        .concat([...grouped.values()].filter((group) => !classSet.has(group.key)))
         .filter((group) => group.messages.length > 0);
+
+      return orderedGroups
+        .filter((group) => group.key !== 'other')
+        .concat(orderedGroups.filter((group) => group.key === 'other'));
     }
 
     if (mode === 'severity') {
@@ -2794,14 +2818,6 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
   }
 
   private buildSanitizerMessageDerived(msg: SanitizerMessageRecord): SanitizerMessageDerived {
-    const classKey = [
-      'memory',
-      'memoryContention',
-      'uninitialized',
-      'synchronize',
-    ].includes(msg.questionType)
-      ? msg.questionType
-      : 'other';
     const classLabelMap: Record<string, string> = {
       memory: t('web.sanitizerPanel.memory'),
       memoryContention: t('web.sanitizerPanel.memoryRace'),
@@ -2809,6 +2825,19 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       synchronize: t('web.sanitizerPanel.sync'),
       other: t('web.sanitizerPanel.other'),
     };
+    // npu-check groups come straight from the bracketed tag in the log
+    // ("ERROR:[MEMCHECK] ..." → group "MEMCHECK"); ungrouped messages land
+    // in the generic "other" bucket. mssanitizer keeps its fixed classes.
+    const classKey = msg.sourceTool === 'npu-check'
+      ? (msg.groupName ?? 'other')
+      : ([
+        'memory',
+        'memoryContention',
+        'uninitialized',
+        'synchronize',
+      ].includes(msg.questionType)
+        ? msg.questionType
+        : 'other');
     const typeKey = msg.question || 'unknown';
     const typeLabelKey = sanitizerQuestionLabelKeyMap.get(msg.question);
     const typeLabel = typeLabelKey ? t(typeLabelKey) : msg.question;
@@ -2819,7 +2848,9 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
     return {
       classKey,
-      classLabel: classLabelMap[classKey] ?? classLabelMap.other,
+      // npu-check group names (e.g. "MEMCHECK") have no translation entry and
+      // are displayed verbatim as the group label.
+      classLabel: classLabelMap[classKey] ?? (msg.sourceTool === 'npu-check' && msg.groupName ? msg.groupName : classLabelMap.other),
       typeKey,
       typeLabel,
       fileKey,
@@ -3021,37 +3052,6 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
 
     if (cached) {
       return cached;
-    }
-
-    // npu-check results carry no sanitizer question-type classification, so in
-    // class mode every message would collapse into a single "other" group. Skip
-    // that group layer and list the messages directly (mssanitizer keeps its
-    // grouping).
-    const {
-      messages, derived,
-    } = await this.getVisibleSanitizerReportData(reportPath);
-
-    if (
-      mode === 'class'
-      && messages.length > 0
-      && messages.every((msg) => msg.sourceTool === 'npu-check')
-      && derived.every((d) => d.classKey === 'other')
-    ) {
-      this.state.sanitizer.selectedMessages = messages;
-      const orderedIndices = messages
-        .map((_, index) => index)
-        .sort((a, b) => derived[a].severityRank - derived[b].severityRank);
-      const nodes = orderedIndices.map((globalIndex, index) => this.createSanitizerMessageNode(
-        reportPath,
-        mode,
-        messages[globalIndex],
-        globalIndex,
-        `sanitizer-msg:${encodeURIComponent(reportPath)}:${mode}:flat:${globalIndex}:${index}`,
-      ));
-
-      this.sanitizerGroupNodesCache.set(groupCacheKey, nodes);
-
-      return nodes;
     }
 
     const groups = await this.getGroupedReportNodes(reportPath, mode);

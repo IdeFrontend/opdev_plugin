@@ -64,8 +64,6 @@ describe('webview/API settings writes (no DB)', () => {
       sync: false,
       race: false,
       uninitialized: true,
-      soc: true,
-      over: false,
       memoryLeak: true,
     });
 
@@ -78,10 +76,6 @@ describe('webview/API settings writes (no DB)', () => {
     expect(parsed['op-devtools.sanitizer.sync'])
       .toBe(false);
     expect(parsed['op-devtools.sanitizer.race'])
-      .toBe(false);
-    expect(parsed['op-devtools.sanitizer.soc'])
-      .toBe(true);
-    expect(parsed['op-devtools.sanitizer.over'])
       .toBe(false);
     expect(parsed['op-devtools.sanitizer.memoryLeak'])
       .toBe(true);

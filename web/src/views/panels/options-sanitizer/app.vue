@@ -43,8 +43,6 @@ const form = ref({
     synccheck: true,
     racecheck: true,
     initcheck: true,
-    soccheck: true,
-    overcheck: true,
   },
   memcheckOption: {
     'check-unused-memory': true,
@@ -144,14 +142,6 @@ async function loadSanitizerForm() {
     form.value.tool.initcheck = options.uninitialized;
   }
 
-  if (options.soc !== undefined) {
-    form.value.tool.soccheck = options.soc;
-  }
-
-  if (options.over !== undefined) {
-    form.value.tool.overcheck = options.over;
-  }
-
   if (options.memoryLeak !== undefined) {
     form.value.memcheckOption['leak-check'] = options.memoryLeak;
   }
@@ -184,8 +174,6 @@ function buildSavePayload(): SanitizerOptions {
     sync: form.value.tool.synccheck,
     race: form.value.tool.racecheck,
     uninitialized: form.value.tool.initcheck,
-    soc: form.value.tool.soccheck,
-    over: form.value.tool.overcheck,
     memoryLeak: form.value.memcheckOption['leak-check'],
     allocUnused: form.value.memcheckOption['check-unused-memory'],
     reportLogLevel: form.value.logLevel,
@@ -373,6 +361,7 @@ const handleConfirm = async () => {
               {{ t('web.options.sanitizer.npuSyncCheck') }}
             </a-checkbox>
           </div>
+          <!-- npu-check 竞争检测暂未开发完毕，下个版本开放
           <div class="check-item-row">
             <a-checkbox
               v-model:checked="form.tool.racecheck"
@@ -381,6 +370,8 @@ const handleConfirm = async () => {
               {{ t('web.options.sanitizer.npuRaceCheck') }}
             </a-checkbox>
           </div>
+          -->
+          <!-- npu-check 未初始化检测暂未开发完毕，下个版本开放
           <div class="check-item-row">
             <a-checkbox
               v-model:checked="form.tool.initcheck"
@@ -389,22 +380,7 @@ const handleConfirm = async () => {
               {{ t('web.options.sanitizer.npuInitCheck') }}
             </a-checkbox>
           </div>
-          <div class="check-item-row">
-            <a-checkbox
-              v-model:checked="form.tool.soccheck"
-              @change="saveSanitizerForm"
-            >
-              {{ t('web.options.sanitizer.npuSocCheck') }}
-            </a-checkbox>
-          </div>
-          <div class="check-item-row">
-            <a-checkbox
-              v-model:checked="form.tool.overcheck"
-              @change="saveSanitizerForm"
-            >
-              {{ t('web.options.sanitizer.npuOverCheck') }}
-            </a-checkbox>
-          </div>
+          -->
         </template>
 
         <div
