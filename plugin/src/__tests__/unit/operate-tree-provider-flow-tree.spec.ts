@@ -1301,6 +1301,45 @@ describe('OperateTreeProvider flow root nodes', () => {
     expect(stTest.tooltip)
       .toBe('web.operate.singleOperatorOnly');
   });
+
+  it('shows the st-test row disabled with remote-tool tooltip when NPU hardware is unavailable', () => {
+    const provider = createProvider();
+    const harness = provider as unknown as StateHarness;
+
+    harness.state.isStandardCustom = true;
+    harness.state.selectedOperatorIds = [1];
+    harness.state.npuHardwareAvailable = false;
+    harness.state.remoteNpuHardwareAvailable = false;
+    mockShouldShowStTestAction.mockReturnValue(true);
+    mockGetStTestSelectionState.mockReturnValue('noNpu');
+
+    const stTest = (provider.getChildren(undefined) as OperateNode[])
+      .find((node) => node.nodeId === 'stTest')!;
+
+    expect(stTest.command)
+      .toBeUndefined();
+    expect(stTest.tooltip)
+      .toBe('web.operate.remoteToolRequired');
+    expect((stTest.iconPath as vscode.ThemeIcon).id)
+      .toBe('circle-slash');
+  });
+
+  it('passes the NPU hardware availability into the st-test selection state', () => {
+    const provider = createProvider();
+    const harness = provider as unknown as StateHarness;
+
+    harness.state.isStandardCustom = true;
+    harness.state.selectedOperatorIds = [1];
+    harness.state.npuHardwareAvailable = false;
+    harness.state.remoteNpuHardwareAvailable = true;
+    mockShouldShowStTestAction.mockReturnValue(true);
+    mockGetStTestSelectionState.mockReturnValue('ready');
+
+    provider.getChildren(undefined);
+
+    expect(mockGetStTestSelectionState)
+      .toHaveBeenCalledWith(1, true);
+  });
 });
 
 describe('OperateTreeProvider debug children', () => {

@@ -17,12 +17,16 @@ export function shouldShowStTestHistoryView(params: {
     );
 }
 
-export type StTestSelectionState = 'ready' | 'none' | 'multiple';
+export type StTestSelectionState = 'ready' | 'none' | 'multiple' | 'noNpu';
 
-export function getStTestSelectionState(selectedCount: number): StTestSelectionState {
-  if (selectedCount === 1) {
-    return 'ready';
+export function getStTestSelectionState(selectedCount: number, npuAvailable: boolean): StTestSelectionState {
+  if (selectedCount === 0) {
+    return 'none';
   }
 
-  return selectedCount === 0 ? 'none' : 'multiple';
+  if (selectedCount > 1) {
+    return 'multiple';
+  }
+
+  return npuAvailable ? 'ready' : 'noNpu';
 }
