@@ -42,18 +42,36 @@ describe('getStTestSelectionState', () => {
   it.each([
     [
       0,
+      true,
+      'none',
+    ],
+    [
+      0,
+      false,
       'none',
     ],
     [
       1,
+      true,
       'ready',
     ],
     [
+      1,
+      false,
+      'noNpu',
+    ],
+    [
       2,
+      true,
       'multiple',
     ],
-  ] as const)('maps %i selected operators to %s', (selectedCount, expected) => {
-    expect(getStTestSelectionState(selectedCount))
+    [
+      2,
+      false,
+      'multiple',
+    ],
+  ] as const)('maps %i selected operators with npuAvailable=%s to %s', (selectedCount, npuAvailable, expected) => {
+    expect(getStTestSelectionState(selectedCount, npuAvailable))
       .toBe(expected);
   });
 });

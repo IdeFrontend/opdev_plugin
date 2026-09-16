@@ -1704,13 +1704,18 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
     const canSimulate = this.supportsCapability(behavior.supportsSimulate);
     const canPower = canOnBoard || canSimulate;
     const hasMultipleSelectedOperators = this.state.selectedOperatorIds.length > 1;
-    const stTestSelectionState = getStTestSelectionState(this.state.selectedOperatorIds.length);
+    const stTestSelectionState = getStTestSelectionState(
+      this.state.selectedOperatorIds.length,
+      this.state.npuHardwareAvailable || this.state.remoteNpuHardwareAvailable,
+    );
     const stTestEnabled = stTestSelectionState === 'ready';
     const stTestTooltip = stTestSelectionState === 'none'
       ? t('web.operate.selectOneOperatorForStTest')
       : stTestSelectionState === 'multiple'
         ? t('web.operate.singleOperatorOnly')
-        : undefined;
+        : stTestSelectionState === 'noNpu'
+          ? t('web.operate.remoteToolRequired')
+          : undefined;
     const disabledIcon = new vscode.ThemeIcon('circle-slash', new vscode.ThemeColor('disabledForeground'));
     const runAction = this.resolveFlowActionState(hasMultipleSelectedOperators, COMMAND_SIDEBAR_RUN, true);
     const sanitizerAction = this.resolveFlowActionState(hasMultipleSelectedOperators, COMMAND_SIDEBAR_SANITIZER, true);
