@@ -23,8 +23,8 @@ function normalizeContentLanguage(language: string): 'en' | 'zh-cn' {
     : 'en';
 }
 
-/** cannbot 转发模板首行的内置提示词：默认调用 tool-report-analysis 技能分析报告。 */
-const CANNBOT_BUILD_IN_PROMPT = '调用技能 tool-report-analysis 分析下方报告，按其流程与固定框架输出。';
+/** cannbot 转发模板首行的内置提示词：默认调用 tool-perf-analysis 技能分析报告。 */
+const CANNBOT_BUILD_IN_PROMPT = '调用技能 tool-perf-analysis 分析下方报告，按其流程与固定框架输出。';
 
 function toText(value: unknown): string {
   return typeof value === 'string' ? value : '';

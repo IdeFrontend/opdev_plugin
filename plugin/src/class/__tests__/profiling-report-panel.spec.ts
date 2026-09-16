@@ -226,7 +226,7 @@ describe('ProfilingReportPanel', () => {
     expect(mockExecuteCommand)
       .toHaveBeenCalledWith(
         'cannwork.setInputText',
-        '调用技能 tool-report-analysis 分析下方报告，按其流程与固定框架输出。\n'
+        '调用技能 tool-perf-analysis 分析下方报告，按其流程与固定框架输出。\n'
         + `报告路径：${filePath}\n`
         + '报告名称：sample.rep\n'
         + '报告章节：compute\n'
