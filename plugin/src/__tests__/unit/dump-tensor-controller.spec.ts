@@ -1,8 +1,28 @@
 const mockQueryExecutionRecords = jest.fn();
+const mockMarkRecord = jest.fn();
+const mockUnmarkRecord = jest.fn();
+const mockDownloadReport = jest.fn();
+const mockDiffFiles = jest.fn();
 
-jest.mock('@plugin/service/dump-tensor-service', () => ({ DumpTensorData: { getInstance: () => ({ queryExecutionRecords: mockQueryExecutionRecords }) } }));
+jest.mock('@plugin/service/dump-tensor-service', () => ({
+  DumpTensorData: {
+    getInstance: () => ({
+      queryExecutionRecords: mockQueryExecutionRecords,
+      markRecord: mockMarkRecord,
+      unmarkRecord: mockUnmarkRecord,
+    }),
+  },
+}));
+
+jest.mock('@plugin/controller/performance-data-controller', () => ({
+  performanceMethods: {
+    downloadReport: mockDownloadReport,
+    diffFiles: mockDiffFiles,
+  },
+}));
 
 import { dumpTensorMethods } from '@plugin/controller/dump-tensor-controller';
+import { performanceMethods } from '@plugin/controller/performance-data-controller';
 
 describe('dumpTensorMethods.getDumpTensorData', () => {
   beforeEach(() => {
@@ -48,5 +68,72 @@ describe('dumpTensorMethods.getDumpTensorData', () => {
     }))
       .rejects
       .toThrow('log corrupted');
+  });
+});
+
+describe('dumpTensorMethods.toggleRecordMark', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('marks the record when the marked flag is set', () => {
+    dumpTensorMethods.toggleRecordMark({
+      key: 'run-1',
+      marked: true,
+    });
+
+    expect(mockMarkRecord)
+      .toHaveBeenCalledWith('run-1');
+    expect(mockUnmarkRecord)
+      .not.toHaveBeenCalled();
+  });
+
+  it('unmarks the record when the marked flag is not set', () => {
+    dumpTensorMethods.toggleRecordMark({
+      key: 'run-1',
+      marked: false,
+    });
+
+    expect(mockUnmarkRecord)
+      .toHaveBeenCalledWith('run-1');
+    expect(mockMarkRecord)
+      .not.toHaveBeenCalled();
+  });
+});
+
+describe('dumpTensorMethods report actions', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockDownloadReport.mockResolvedValue(undefined);
+    mockDiffFiles.mockResolvedValue(undefined);
+  });
+
+  it('delegates downloadReport and diffFiles to the performance methods', async () => {
+    expect(dumpTensorMethods.downloadReport)
+      .toBe(performanceMethods.downloadReport);
+    expect(dumpTensorMethods.diffFiles)
+      .toBe(performanceMethods.diffFiles);
+
+    await dumpTensorMethods.downloadReport({ dirPath: '/data/run-1' });
+    await dumpTensorMethods.diffFiles({
+      filePath1: '/data/run-1/a.txt',
+      filePath2: '/data/run-2/a.txt',
+    });
+
+    expect(mockDownloadReport)
+      .toHaveBeenCalledWith({ dirPath: '/data/run-1' });
+    expect(mockDiffFiles)
+      .toHaveBeenCalledWith({
+        filePath1: '/data/run-1/a.txt',
+        filePath2: '/data/run-2/a.txt',
+      });
+  });
+
+  it('propagates download failures from the performance methods', async () => {
+    mockDownloadReport.mockRejectedValue(new Error('disk full'));
+
+    await expect(dumpTensorMethods.downloadReport({ dirPath: '/data/run-1' }))
+      .rejects
+      .toThrow('disk full');
   });
 });

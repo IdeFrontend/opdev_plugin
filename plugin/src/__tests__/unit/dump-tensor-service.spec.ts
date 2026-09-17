@@ -1,8 +1,13 @@
 /**
  * Unit tests for DumpTensorData: project gating, run-data directory scanning,
- * nested .bin file discovery, and timestamp-based record sorting. The vscode
- * filesystem and the Project singleton are mocked; no real files are touched.
+ * nested .bin file discovery, timestamp-based record sorting, and the
+ * mark/unmark contract persisted through PermanentStorage. The vscode
+ * filesystem, the Project singleton, and PermanentStorage are mocked; no real
+ * files are touched.
  */
+
+const mockStorageGet = jest.fn();
+const mockStorageSet = jest.fn();
 
 import * as vscode from 'vscode';
 
@@ -33,11 +38,21 @@ jest.mock('vscode', () => ({
 
 jest.mock('@plugin/core/project/project', () => ({ Project: { getInstance: jest.fn() } }));
 
+jest.mock('@plugin/class/permanent-storage', () => ({
+  PermanentStorage: {
+    getInstance: () => ({
+      get: mockStorageGet,
+      set: mockStorageSet,
+    }),
+  },
+}));
+
 import path from 'node:path';
 
 import { Project } from '@plugin/core/project/project';
 import { DumpTensorData } from '@plugin/service/dump-tensor-service';
 
+const MARKED_KEY = 'marked_dump_tensor_records';
 const readDirectoryMock = vscode.workspace.fs.readDirectory as jest.Mock;
 const statMock = vscode.workspace.fs.stat as jest.Mock;
 const getProjectMock = Project.getInstance as jest.Mock;
@@ -56,6 +71,9 @@ describe('DumpTensorData', () => {
     statMock.mockReset();
     getProjectMock.mockReset();
     getProjectMock.mockReturnValue(mockProject(true));
+    mockStorageGet.mockReset();
+    mockStorageGet.mockReturnValue([]);
+    mockStorageSet.mockReset();
     (DumpTensorData as unknown as { instance?: DumpTensorData }).instance = undefined;
   });
 
@@ -261,6 +279,96 @@ describe('DumpTensorData', () => {
         'run-b',
         'run-c',
         'run-a',
+      ]);
+  });
+
+  it('marks a record and persists the marked key list', () => {
+    const service = DumpTensorData.getInstance();
+
+    service.markRecord('run-2024-01');
+
+    expect(mockStorageGet)
+      .toHaveBeenCalledWith(MARKED_KEY, []);
+    expect(mockStorageSet)
+      .toHaveBeenCalledWith(MARKED_KEY, ['run-2024-01']);
+  });
+
+  it('keeps the already stored marks when marking another record', () => {
+    mockStorageGet.mockReturnValue(['run-2024-01']);
+
+    DumpTensorData.getInstance()
+      .markRecord('run-2024-02');
+
+    expect(mockStorageSet)
+      .toHaveBeenCalledWith(MARKED_KEY, [
+        'run-2024-01',
+        'run-2024-02',
+      ]);
+  });
+
+  it('unmarks a record and persists the remaining keys', () => {
+    mockStorageGet.mockReturnValue([
+      'run-2024-01',
+      'run-2024-02',
+    ]);
+
+    DumpTensorData.getInstance()
+      .unmarkRecord('run-2024-01');
+
+    expect(mockStorageSet)
+      .toHaveBeenCalledWith(MARKED_KEY, ['run-2024-02']);
+  });
+
+  it('rewrites the same key list when the unmarked record was not marked', () => {
+    mockStorageGet.mockReturnValue(['run-2024-01']);
+
+    DumpTensorData.getInstance()
+      .unmarkRecord('run-2024-09');
+
+    expect(mockStorageSet)
+      .toHaveBeenCalledWith(MARKED_KEY, ['run-2024-01']);
+  });
+
+  it('reports the stored marked flag per execution record', async () => {
+    const rootFsPath = `${projectRoot}/${path.join('.vscode', 'DumpTensor')}`;
+
+    mockStorageGet.mockReturnValue(['run-2024-01']);
+    readDirectoryMock.mockImplementation((uri: { fsPath: string }) => {
+      if (uri.fsPath === rootFsPath) {
+        return [
+          [
+            'run-2024-01',
+            vscode.FileType.Directory,
+          ],
+          [
+            'run-2024-02',
+            vscode.FileType.Directory,
+          ],
+        ];
+      }
+
+      return [];
+    });
+    statMock.mockImplementation((uri: { fsPath: string }) => ({ ctime: uri.fsPath.endsWith('run-2024-01') ? 1000 : 2000 }));
+
+    const records = await DumpTensorData.getInstance()
+      .queryExecutionRecords('timestamp', 'asc');
+
+    expect(mockStorageGet)
+      .toHaveBeenCalledWith(MARKED_KEY, []);
+    expect(records.map((record) => [
+      record.key,
+      record.marked,
+    ]))
+      .toEqual([
+        [
+          'run-2024-01',
+          true,
+        ],
+        [
+          'run-2024-02',
+          false,
+        ],
       ]);
   });
 });

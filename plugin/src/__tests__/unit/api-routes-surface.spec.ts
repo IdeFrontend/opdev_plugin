@@ -25,18 +25,18 @@ import * as vscode from 'vscode';
 const { apis } = require('@plugin/api-routes') as typeof import('@plugin/api-routes');
 
 /**
- * The complete RPC surface after the settings-native refactor:
- * 38 endpoints total (49 − 17 dead/duplicated registrations + 6 new options endpoints).
+ * The complete RPC surface after the dump-tensor native-tree port:
+ * 33 endpoints total (webview 7 / common 10 / ops 16) — the dump-tensor webview
+ * RPCs (webview/getDumpTensorData, webview/openFile, ops/importDumpTensorBinFile)
+ * and the whole performance group are gone.
  */
 const EXPECTED_SURFACE = [
-  // webview (10)
+  // webview (7)
   'webview/getHome',
   'webview/getWorkspace',
   'webview/getProjectType',
-  'webview/openFile',
   'webview/remotePathSearch',
   'webview/createdProject',
-  'webview/getDumpTensorData',
   'webview/selectFolder',
   'webview/selectFile',
   // common (10)
@@ -50,7 +50,7 @@ const EXPECTED_SURFACE = [
   'common/getOnBoardAnalysisShowQuickOptions',
   'common/setOnBoardAnalysisShowQuickOptions',
   'common/getProjectTypeSupportEnabled',
-  // ops (17)
+  // ops (16)
   'ops/getOnBoardOptions',
   'ops/saveOnBoardOptions',
   'ops/getSimulateOptions',
@@ -64,15 +64,15 @@ const EXPECTED_SURFACE = [
   'ops/getOnBoardExecutionAvailable',
   'ops/getSimulatorSupportedMetrics',
   'ops/runSanitizer',
-  'ops/importDumpTensorBinFile',
   'ops/getSelectedOperators',
   'ops/loadStTestOptions',
   'ops/runStTestOptions',
-  // performance (1)
-  'performance/diffFiles',
 ];
 
-/** Registrations that must be absent (13 dead endpoints + 4 performance-only registrations). */
+/**
+ * Registrations that must be absent (13 dead endpoints + 4 performance-only
+ * registrations + 3 dump-tensor webview RPCs).
+ */
 const REMOVED_SURFACE = [
   'view/openCsvFile',
   'view/openInsight',
@@ -81,12 +81,15 @@ const REMOVED_SURFACE = [
   'webview/downloadData',
   'webview/deleteNode',
   'webview/jumpToFile',
+  'webview/getDumpTensorData',
+  'webview/openFile',
   'common/saveFileToLocal',
   'common/getFlavorFeatures',
   'ops/getConfigData',
   'ops/saveConfig',
   'ops/getSanitizerConfigs',
   'ops/saveSanitizerForm',
+  'ops/importDumpTensorBinFile',
   'performance/getRunData',
   'performance/toggleRecordMark',
   'performance/copyReport',
@@ -94,7 +97,7 @@ const REMOVED_SURFACE = [
 ];
 
 describe('api-routes RPC surface', () => {
-  it('exposes exactly 37 endpoints (webview 9 / common 10 / ops 17 / performance 1)', () => {
+  it('exposes exactly 33 endpoints (webview 7 / common 10 / ops 16)', () => {
     const flat = Object.entries(apis)
       .flatMap(([
         group,
@@ -106,10 +109,10 @@ describe('api-routes RPC surface', () => {
     expect([...flat].sort())
       .toEqual([...EXPECTED_SURFACE].sort());
     expect(flat)
-      .toHaveLength(37);
+      .toHaveLength(33);
   });
 
-  it('no longer registers any of the 17 removed endpoints', () => {
+  it('no longer registers any of the 20 removed endpoints', () => {
     const flat = new Set(Object.entries(apis)
       .flatMap(([
         group,
@@ -126,6 +129,13 @@ describe('api-routes RPC surface', () => {
 
   it('drops the whole `view` group (view-controller) from the surface', () => {
     expect('view' in apis)
+      .toBe(false);
+  });
+
+  it('drops the whole `performance` group (performance-data-controller) from the surface', () => {
+    // `performance/diffFiles` was the group's only registration; the native dump
+    // tensor tree calls dump-tensor-controller's diffFiles directly.
+    expect('performance' in apis)
       .toBe(false);
   });
 

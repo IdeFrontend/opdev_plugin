@@ -356,9 +356,6 @@ export default {
   'csv.errorLoadFailed': '无法加载 CSV 文件',
   'csv.errorDetailsLabel': '错误：',
 
-  // routes
-  'routes.dumpTensorViewTitle': 'DumpTensor数据-视图',
-
   // web home sidebar
   'web.home.clickOpen': '点击打开',
   'web.home.helpGuide': '帮助指导',
@@ -577,17 +574,12 @@ export default {
   'web.link.validation.scriptNotExist': '脚本文件不存在，请确认',
   'web.link.validation.failed': '验证失败',
 
-  // web dump-tensor-data
+  // dump tensor native sidebar tree
   'web.dump.selectTwoFiles': '请选择至少两个文件进行比较',
   'web.dump.maxSelectCount': '最多只能选择 {{count}} 个文件进行比较',
-  'web.dump.compareStarting': '正在启动VSCode文件对比...',
-  'web.dump.compareFailed': '启动VSCode文件对比失败',
-  'web.dump.startCompare': '开始对比',
-  'web.dump.cancel': '取消',
-  'web.dump.import': '导入',
-  'web.dump.compare': '对比',
-  'web.dump.importSuccess': '导入成功',
-  'web.dump.importFailed': '导入失败',
+  'web.dump.noData': '暂无数据',
+  'web.dump.markFailed': '标记操作失败',
+  'web.dump.txtCompanionMissing': '未找到配套的文本文件：{{path}}',
 
   // web options (shared)
   'web.options.simulationFailed': '仿真分析失败，已停止',

@@ -13,8 +13,6 @@ export const BASE_FLAVOR_IDS = {
 
 /** IDs that must differ per flavor when both extensions are installed in one VS Code. */
 export const BASE_CO_INSTALL_IDS = {
-  dumpTensorPanelContainerId: 'huawei-op-devtools-dump-tensor-panel-view',
-  dumpTensorPanelViewId: 'opdevtoolsDumpTensorPanelView',
   dumpTensorSidebarViewId: 'opdevtoolsDumpTensorSidebarView',
   submenuOperatorDebugId: 'opdevtools.operator.debug',
   submenuOperatorPerformanceId: 'opdevtools.operator.performance',
@@ -31,8 +29,6 @@ export type CoInstallIds = typeof BASE_CO_INSTALL_IDS;
 
 export function buildCoInstallIds(ids: FlavorIds): CoInstallIds {
   return {
-    dumpTensorPanelContainerId: `${ids.commandPrefix}-dump-tensor-panel-view`,
-    dumpTensorPanelViewId: `${ids.viewPrefix}DumpTensorPanelView`,
     dumpTensorSidebarViewId: `${ids.viewPrefix}DumpTensorSidebarView`,
     submenuOperatorDebugId: `${ids.viewPrefix}.operator.debug`,
     submenuOperatorPerformanceId: `${ids.viewPrefix}.operator.performance`,

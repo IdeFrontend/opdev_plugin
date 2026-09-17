@@ -3,8 +3,6 @@ import { commonMethods } from './controller/common-controller';
 import { configMethods } from './controller/config-controller';
 import { scriptMethods } from './controller/script-controller';
 import { homeMethods } from './controller/home-controller';
-import { performanceMethods } from './controller/performance-data-controller';
-import { taskMethods } from './controller/task-controller';
 import { stTestMethods } from './controller/st-test-controller';
 import {
   dispatchOnBoard,
@@ -30,8 +28,6 @@ const opsMethods = {
 
   runSanitizer: dispatchSanitizer,
 
-  importDumpTensorBinFile: taskMethods.importDumpTensorBinFile,
-
   getSelectedOperators: homeMethods.getSelectedOperators,
 
   loadStTestOptions: stTestMethods.loadOptions,
@@ -42,5 +38,4 @@ export const apis = {
   webview: webviewMethods,
   common: commonMethods,
   ops: opsMethods,
-  performance: { diffFiles: performanceMethods.diffFiles },
 };
