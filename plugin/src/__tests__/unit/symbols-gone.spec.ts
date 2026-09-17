@@ -261,29 +261,32 @@ describe('Lock: deleted symbols stay absent', () => {
       'package.nls.base.en.json',
     ];
     const allKeys = new Set<string>();
+    const deadByFile: Record<string, string[]> = {};
 
     for (const nlsFile of nlsFiles) {
       const keys = Object.keys(JSON.parse(fs.readFileSync(path.join(repoRoot, nlsFile), 'utf8')));
       const dead = keys.filter((key) => !refs.has(key));
 
+      if (dead.length > 0) {
+        deadByFile[nlsFile] = dead;
+      }
+
       for (const key of keys) {
         allKeys.add(key);
       }
-
-      expect({
-        nlsFile,
-        dead,
-      })
-        .toEqual({
-          nlsFile,
-          dead: [],
-        });
     }
 
-    const unreferencedRefs = [...refs].filter((ref) => !allKeys.has(ref));
-
-    expect(unreferencedRefs)
-      .toEqual([]);
+    // Both directions are reported in one shot: a key defined in nls but never
+    // referenced is dead weight, while a manifest reference with no key behind
+    // it makes the view render its raw `%key%` placeholder.
+    expect({
+      deadByFile,
+      unreferencedRefs: [...refs].filter((ref) => !allKeys.has(ref)),
+    })
+      .toEqual({
+        deadByFile: {},
+        unreferencedRefs: [],
+      });
   });
 
   it('docs do not mention absent endpoints, keys or file deletion', () => {
