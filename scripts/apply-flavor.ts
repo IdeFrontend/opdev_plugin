@@ -764,10 +764,6 @@ export const TREE_VIEW_PERFORMANCE_RESULTS = ${tsQuotedString(`${flavor.ids.view
 
 export const TREE_VIEW_ST_TEST_HISTORY = ${tsQuotedString(`${flavor.ids.viewPrefix}StTestHistoryTree`)};
 
-export const DUMP_TENSOR_PANEL_CONTAINER_ID = ${tsQuotedString(buildCoInstallIds(flavor.ids).dumpTensorPanelContainerId)};
-
-export const DUMP_TENSOR_PANEL_VIEW_ID = ${tsQuotedString(buildCoInstallIds(flavor.ids).dumpTensorPanelViewId)};
-
 export const DUMP_TENSOR_SIDEBAR_VIEW_ID = ${tsQuotedString(buildCoInstallIds(flavor.ids).dumpTensorSidebarViewId)};
 
 export const SUBMENU_OPERATOR_DEBUG_ID = ${tsQuotedString(buildCoInstallIds(flavor.ids).submenuOperatorDebugId)};

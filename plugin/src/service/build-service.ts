@@ -59,7 +59,6 @@ import {
 import {
   COMMAND_FLASH_DUMP_TENSOR_DATA,
   COMMAND_FLASH_PERFORMANCE_RUN_DATA,
-  COMMAND_OPEN_DUMP_TENSOR_PANEL_VIEW,
 } from '@plugin/constants';
 import { decidePythonTargetAction } from '@plugin/helpers/sync-sanitizer-python-target';
 import { probeTritonPythonDependencies } from '@plugin/domain/services/command-strategy/triton-strategy';
@@ -1164,7 +1163,7 @@ export class BuildService {
   }
 
   /**
-   * Post-process dump output, notify success, and open the Dump tensor panel.
+   * Post-process dump output, notify success, and refresh the Dump tensor results tree.
    */
   private async finalizeDumpTensorFlow(workspaceRoot: string): Promise<void> {
     const tempDataPath = joinIdeConfigPath(workspaceRoot, 'dump_tensor_temp_data');
@@ -1172,7 +1171,7 @@ export class BuildService {
 
     await this.executeShowKernelDebugData(tempDataPath, dumpTensorPath);
     vscode.window.showInformationMessage(t('build.dumpTensorSuccess'));
-    await this.openDumpTensorPanel();
+    await this.refreshDumpTensorResults({ focusIfNew: true });
   }
 
   /**
@@ -1218,17 +1217,16 @@ export class BuildService {
   }
 
   /**
-   * Open dump tensor panel and refresh data.
+   * Refresh the Dump tensor results tree, optionally focusing the newest report.
    */
-  private async openDumpTensorPanel(): Promise<void> {
+  private async refreshDumpTensorResults(options?: { focusIfNew?: boolean }): Promise<void> {
     try {
-      console.log('[startDumpTensor] Opening dump tensor data panel');
-      await vscode.commands.executeCommand(COMMAND_OPEN_DUMP_TENSOR_PANEL_VIEW);
-      await vscode.commands.executeCommand(COMMAND_FLASH_DUMP_TENSOR_DATA);
-      console.log('[startDumpTensor] Dump tensor panel opened and refreshed');
+      console.log('[startDumpTensor] Refreshing dump tensor results tree');
+      await vscode.commands.executeCommand(COMMAND_FLASH_DUMP_TENSOR_DATA, options);
+      console.log('[startDumpTensor] Dump tensor results tree refreshed');
     }
     catch (error) {
-      console.error('[startDumpTensor] Failed to open dump tensor panel:', error);
+      console.error('[startDumpTensor] Failed to refresh dump tensor results tree:', error);
     }
   }
 
@@ -1284,7 +1282,7 @@ export class BuildService {
       // Post-process dump files and build tree data.
       await this.executeShowKernelDebugData(tempDataPath, dumpTensorPath);
       vscode.window.showInformationMessage(t('build.importDumpTensorBinSuccess'));
-      await this.openDumpTensorPanel();
+      await this.refreshDumpTensorResults({ focusIfNew: true });
     }
     catch (error) {
       console.error('[importDumpTensorBinFile] Failed to import DumpTensor .bin file:', error);

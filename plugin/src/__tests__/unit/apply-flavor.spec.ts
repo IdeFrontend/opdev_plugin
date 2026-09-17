@@ -262,8 +262,6 @@ describe('apply-flavor', () => {
       .toContain('onView:ascendCToolkitHomeTree');
     expect(manifest.contributes.views['ascend-c-toolkit-sidebar'])
       .toBeDefined();
-    expect(manifest.contributes.views['ascend-c-toolkit-dump-tensor-panel-view'])
-      .toEqual(expect.arrayContaining([expect.objectContaining({ id: 'ascendCToolkitDumpTensorPanelView' })]));
     expect(manifest.contributes.submenus.some((entry: { id: string }) => entry.id === 'ascendCToolkit.operator.debug'))
       .toBe(true);
     expect(manifest.contributes.submenus.some((entry: { id: string }) => entry.id === 'ascendCToolkit.operator.performance'))
@@ -292,7 +290,7 @@ describe('apply-flavor', () => {
     expect(generated)
       .toContain("'operatorSupport.triton': false");
     expect(generated)
-      .toContain("DUMP_TENSOR_PANEL_VIEW_ID = 'ascendCToolkitDumpTensorPanelView'");
+      .toContain("DUMP_TENSOR_SIDEBAR_VIEW_ID = 'ascendCToolkitDumpTensorSidebarView'");
     expect(generated)
       .toContain("SUBMENU_OPERATOR_DEBUG_ID = 'ascendCToolkit.operator.debug'");
     expect(generated)

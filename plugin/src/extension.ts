@@ -24,9 +24,7 @@ import {
 import {
   ApiServer, type ApiGroup,
 } from './core/api-server';
-import { ViewServer } from './core/view/view-server';
 import { ViewOpener } from './core/view/view-opener';
-import { routes } from './routes';
 import { apis } from './api-routes';
 import { homeMethods } from './controller/home-controller';
 import { taskMethods } from './controller/task-controller';
@@ -43,12 +41,16 @@ import { registerMsdebugTargetAutoAdapt } from '@plugin/domain/utils/debug-targe
 import { sanitizerService } from './service/sanitizer-service';
 import { buildService } from './service/build-service';
 import { msAgentBridgeService } from './service/ms-agent-bridge.service';
-import { getDumpTensorPanelViewProvider } from './class/dump-tensor-panel-view';
 import {
   appendLog,
   getOperatorToolOutputChannel,
 } from './helpers/output-channel';
 import { promptReloadWindow } from './helpers/reload-window-prompt';
+import {
+  resolveDumpTensorFileCommandArgs,
+  resolveDumpTensorReportCommandKey,
+  resolvePerformanceReportCommandKey,
+} from './helpers/report-command-key';
 import { insightService } from './service/insight-service';
 
 import { createMainConfigWatcher } from './helpers/main-config-watch';
@@ -72,7 +74,6 @@ import {
   COMMAND_FLASH_PERFORMANCE_RUN_DATA,
   COMMAND_FLASH_DUMP_TENSOR_DATA,
   COMMAND_IMPORT_DUMP_TENSOR_BIN_FILE,
-  COMMAND_OPEN_DUMP_TENSOR_PANEL_VIEW,
   VIEW_NEW_PROJECT,
   VIEW_WELCOME,
   COMMAND_SIMULATOR_OPTIONS,
@@ -113,6 +114,18 @@ import {
   COMMAND_SIDEBAR_ST_TEST,
   COMMAND_SIDEBAR_UT_TEST,
   COMMAND_SIDEBAR_DUMP_TENSOR,
+  COMMAND_SIDEBAR_DUMP_TENSOR_FILE_OPEN,
+  COMMAND_SIDEBAR_DUMP_TENSOR_FILE_COMPARE_WITH,
+  COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_COPY_PATH,
+  COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_DOWNLOAD,
+  COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_MARK,
+  COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_UNMARK,
+  COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_SORT_TIME,
+  COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_FILTER_MARKED,
+  COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_SHOW_ALL,
+  COMMAND_SIDEBAR_DUMP_TENSOR_COMPARE,
+  COMMAND_SIDEBAR_DUMP_TENSOR_COMPARE_START,
+  COMMAND_SIDEBAR_DUMP_TENSOR_COMPARE_CANCEL,
   COMMAND_SIDEBAR_DEBUG_SETTINGS,
   COMMAND_SIDEBAR_SANITIZER_SETTINGS,
   COMMAND_SIDEBAR_ON_BOARD_SETTINGS,
@@ -176,6 +189,7 @@ import {
   TREE_VIEW_OPERATOR_PROJECTS,
   TREE_VIEW_SANITIZER_RESULTS,
   TREE_VIEW_PERFORMANCE_RESULTS,
+  DUMP_TENSOR_SIDEBAR_VIEW_ID,
   TREE_VIEW_ST_TEST_HISTORY,
   workbenchViewContainerCommand,
   settingsKey,
@@ -245,21 +259,6 @@ function getFolderUri(uri: vscode.Uri): vscode.Uri {
     // If the file information cannot be obtained, assuming it is a file, return to the parent directory
     return vscode.Uri.file(path.dirname(uri.fsPath));
   }
-}
-
-function resolvePerformanceReportCommandKey(arg: string | {
-  id?: string;
-  command?: { arguments?: unknown[] }
-} | undefined): string {
-  const raw = typeof arg === 'string'
-    ? arg
-    : String(arg?.command?.arguments?.[0] ?? arg?.id ?? '');
-
-  if (raw.startsWith('performance-report:')) {
-    return decodeURIComponent(raw.replace(/^performance-report:/, ''));
-  }
-
-  return raw;
 }
 
 function resolvePerformanceReportKeyFromTreeItem(node: OperateNode): string | undefined {
@@ -670,9 +669,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(watchMainConfig);
 
-  // view
-  const viewServer = initViews(context, apiServer);
-
   PermanentStorage.setInstance(context);
 
   // Initialize the Webview of the new operator project
@@ -825,6 +821,28 @@ export async function activate(context: vscode.ExtensionContext) {
 
     await applyPerformanceReportSelection(operateTreeProvider, reportKey);
   }));
+  const dumpTensorResultsPanelProvider: vscode.TreeDataProvider<OperateNode> = {
+    onDidChangeTreeData: operateTreeProvider.onDidChangeDumpTensorTreeData,
+    getTreeItem: (element) => operateTreeProvider.getTreeItem(element),
+    getParent: (element) => operateTreeProvider.getDumpTensorTreeParent(element),
+    getChildren: (element) => {
+      if (!element) {
+        return operateTreeProvider.getDumpTensorResultsPanelNodes();
+      }
+
+      if (element.nodeId === 'dumpTensorReportItem' || element.nodeId === 'dumpTensorFolder') {
+        return operateTreeProvider.getChildren(element);
+      }
+
+      return [];
+    },
+  };
+  const dumpTensorResultsTreeView = vscode.window.createTreeView(DUMP_TENSOR_SIDEBAR_VIEW_ID, {
+    treeDataProvider: dumpTensorResultsPanelProvider,
+    showCollapseAll: false,
+  });
+
+  operateTreeProvider.setDumpTensorResultsTreeView(dumpTensorResultsTreeView);
   const operatorProjectsTreeView = vscode.window.createTreeView(TREE_VIEW_OPERATOR_PROJECTS, {
     treeDataProvider: operatorProjectsTreeProvider,
     showCollapseAll: false,
@@ -838,6 +856,7 @@ export async function activate(context: vscode.ExtensionContext) {
     operateTreeView,
     sanitizerResultsTreeView,
     performanceResultsTreeView,
+    dumpTensorResultsTreeView,
     stTestHistoryTreeView,
     stTestRunHistoryTreeProvider,
     { dispose: () => StTestResultsPanel.setHistoryTreeProvider(undefined) },
@@ -849,6 +868,8 @@ export async function activate(context: vscode.ExtensionContext) {
   await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.performanceMarkedOnly`, operateTreeProvider.isPerformanceMarkedOnlyEnabled());
   await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.performanceReportSelected`, false);
   await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.performanceSelectedReportMarked`, false);
+  await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.dumpTensorMarkedOnly`, operateTreeProvider.isDumpTensorMarkedOnlyEnabled());
+  await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.dumpTensorComparing`, operateTreeProvider.isDumpTensorCompareModeEnabled());
   await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.sanitizerResultsGroupBy`, operateTreeProvider.getSanitizerResultsGroupBy());
   await vscode.commands.executeCommand(
     'setContext',
@@ -1776,6 +1797,156 @@ export async function activate(context: vscode.ExtensionContext) {
       await operateTreeProvider.openPerformanceFile(filePath, fileType);
     },
   );
+  const sidebarDumpTensorReportCopyPathCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_COPY_PATH,
+    async (arg: string | {
+      id?: string;
+      command?: { arguments?: unknown[] }
+    }) => {
+      const reportKey = resolveDumpTensorReportCommandKey(arg);
+
+      if (!reportKey) {
+        return;
+      }
+
+      await operateTreeProvider.copyDumpTensorReportPath(reportKey);
+    },
+  );
+  const sidebarDumpTensorReportDownloadCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_DOWNLOAD,
+    async (arg: string | {
+      id?: string;
+      command?: { arguments?: unknown[] }
+    }) => {
+      const reportKey = resolveDumpTensorReportCommandKey(arg);
+
+      if (!reportKey) {
+        return;
+      }
+
+      await operateTreeProvider.downloadDumpTensorReport(reportKey);
+    },
+  );
+  const sidebarDumpTensorReportMarkCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_MARK,
+    async (arg: string | {
+      id?: string;
+      command?: { arguments?: unknown[] }
+    }) => {
+      const reportKey = resolveDumpTensorReportCommandKey(arg);
+
+      if (!reportKey) {
+        return;
+      }
+
+      const report = operateTreeProvider.getDumpTensorReportByKey(reportKey);
+
+      if (report?.marked) {
+        return;
+      }
+
+      await operateTreeProvider.toggleDumpTensorReportMark(reportKey);
+      await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.dumpTensorMarkedOnly`, operateTreeProvider.isDumpTensorMarkedOnlyEnabled());
+    },
+  );
+  const sidebarDumpTensorReportUnmarkCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_UNMARK,
+    async (arg: string | {
+      id?: string;
+      command?: { arguments?: unknown[] }
+    }) => {
+      const reportKey = resolveDumpTensorReportCommandKey(arg);
+
+      if (!reportKey) {
+        return;
+      }
+
+      const report = operateTreeProvider.getDumpTensorReportByKey(reportKey);
+
+      if (!report?.marked) {
+        return;
+      }
+
+      await operateTreeProvider.toggleDumpTensorReportMark(reportKey);
+      await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.dumpTensorMarkedOnly`, operateTreeProvider.isDumpTensorMarkedOnlyEnabled());
+    },
+  );
+  const sidebarDumpTensorReportSortTimeCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_SORT_TIME,
+    async () => {
+      operateTreeProvider.toggleDumpTensorSortOrder();
+    },
+  );
+  const sidebarDumpTensorReportFilterMarkedCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_FILTER_MARKED,
+    async () => {
+      operateTreeProvider.setDumpTensorMarkedOnly(true);
+      await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.dumpTensorMarkedOnly`, true);
+    },
+  );
+  const sidebarDumpTensorReportShowAllCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_DUMP_TENSOR_REPORT_SHOW_ALL,
+    async () => {
+      operateTreeProvider.setDumpTensorMarkedOnly(false);
+      await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.dumpTensorMarkedOnly`, false);
+    },
+  );
+  const sidebarDumpTensorFileOpenCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_DUMP_TENSOR_FILE_OPEN,
+    async (arg: string | {
+      id?: string;
+      command?: { arguments?: unknown[] };
+    }) => {
+      const resolved = resolveDumpTensorFileCommandArgs(arg);
+
+      if (!resolved || !resolved.filePath) {
+        return;
+      }
+
+      await operateTreeProvider.openDumpTensorFile(resolved.filePath, resolved.fileType);
+    },
+  );
+  const sidebarDumpTensorFileCompareWithCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_DUMP_TENSOR_FILE_COMPARE_WITH,
+    async (arg: string | {
+      id?: string;
+      command?: { arguments?: unknown[] };
+    }) => {
+      const resolved = resolveDumpTensorFileCommandArgs(arg);
+
+      if (!resolved || resolved.fileType !== 'bin' || !resolved.filePath) {
+        return;
+      }
+
+      operateTreeProvider.beginDumpTensorCompareWithFile(resolved.filePath);
+      await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.dumpTensorComparing`, true);
+    },
+  );
+  const sidebarDumpTensorCompareCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_DUMP_TENSOR_COMPARE,
+    async () => {
+      operateTreeProvider.setDumpTensorCompareMode(true);
+      await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.dumpTensorComparing`, true);
+    },
+  );
+  const sidebarDumpTensorCompareStartCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_DUMP_TENSOR_COMPARE_START,
+    async () => {
+      await operateTreeProvider.startDumpTensorCompare();
+      await vscode.commands.executeCommand(
+        'setContext',
+        `${CONTEXT_PREFIX}.dumpTensorComparing`,
+        operateTreeProvider.isDumpTensorCompareModeEnabled(),
+      );
+    },
+  );
+  const sidebarDumpTensorCompareCancelCommand = vscode.commands.registerCommand(
+    COMMAND_SIDEBAR_DUMP_TENSOR_COMPARE_CANCEL,
+    async () => {
+      operateTreeProvider.setDumpTensorCompareMode(false);
+      await vscode.commands.executeCommand('setContext', `${CONTEXT_PREFIX}.dumpTensorComparing`, false);
+    },
+  );
   const sidebarSelectOperatorsCommand = vscode.commands.registerCommand(
     COMMAND_SIDEBAR_SELECT_OPERATORS,
     async () => {
@@ -1999,15 +2170,6 @@ export async function activate(context: vscode.ExtensionContext) {
     await context.globalState.update('welcomeShowCount', welcomeShowCount + 1);
   }
 
-  // DumpTensor data view (middle panel)
-  const {
-    dumpTensorPanelView,
-    openDumpTensorDisposable,
-    getWebview: getDumpTensorPanelWebview,
-  } = getDumpTensorPanelViewProvider(context, apiServer);
-
-  context.subscriptions.push(dumpTensorPanelView, openDumpTensorDisposable);
-
   // Simulation / on-board quick options panels (collection picker)
   const simulatorOptionsProvider = new WebviewProvider(context, apiServer);
   const onBoardOptionsProvider = new WebviewProvider(context, apiServer);
@@ -2056,7 +2218,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
   // Subscription to destruction event
   context.subscriptions.push(apiServer);
-  context.subscriptions.push(viewServer);
   context.subscriptions.push(createOptionsCommand);
   context.subscriptions.push(openCommand);
   context.subscriptions.push(openProjectCommand);
@@ -2131,6 +2292,18 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(sidebarPerformanceReportFilterMarkedCommand);
   context.subscriptions.push(sidebarPerformanceReportShowAllCommand);
   context.subscriptions.push(sidebarPerformanceFileOpenCommand);
+  context.subscriptions.push(sidebarDumpTensorReportCopyPathCommand);
+  context.subscriptions.push(sidebarDumpTensorReportDownloadCommand);
+  context.subscriptions.push(sidebarDumpTensorReportMarkCommand);
+  context.subscriptions.push(sidebarDumpTensorReportUnmarkCommand);
+  context.subscriptions.push(sidebarDumpTensorReportSortTimeCommand);
+  context.subscriptions.push(sidebarDumpTensorReportFilterMarkedCommand);
+  context.subscriptions.push(sidebarDumpTensorReportShowAllCommand);
+  context.subscriptions.push(sidebarDumpTensorFileOpenCommand);
+  context.subscriptions.push(sidebarDumpTensorFileCompareWithCommand);
+  context.subscriptions.push(sidebarDumpTensorCompareCommand);
+  context.subscriptions.push(sidebarDumpTensorCompareStartCommand);
+  context.subscriptions.push(sidebarDumpTensorCompareCancelCommand);
 
   // Initialize folder decoration provider
   const iconTheme = OperatorProjectIconTheme.getInstance(context);
@@ -2147,7 +2320,7 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(refreshDecorationsCommand);
 
   // Note: Do not automatically detect and mark the operator project collection when the plug-in is activated.
-  // Automatic detection only occurs when the user explicitly opens the project (link-controller.ts)
+  // Automatic detection only occurs when the user explicitly opens the project.
 
   // Register folder right-click menu command
   const markAsOperatorProjectCommand = vscode.commands.registerCommand(
@@ -2557,15 +2730,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const flashDumpTensorData = vscode.commands.registerCommand(
     COMMAND_FLASH_DUMP_TENSOR_DATA,
-    async () => {
-      const webview = getDumpTensorPanelWebview();
-
-      if (webview) {
-        webview.postMessage({ command: 'dumpTensorRefreshData' });
-      }
-      else {
-        console.log('[flashDumpTensorData] Webview not available, skipping refresh');
-      }
+    async (options?: { focusIfNew?: boolean }) => {
+      await operateTreeProvider.refreshDumpTensorReports(options);
     },
   );
 
@@ -2573,10 +2739,33 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const importDumpTensorBinFileCommand = vscode.commands.registerCommand(
     COMMAND_IMPORT_DUMP_TENSOR_BIN_FILE,
-    async (uri) => {
+    async (uri?: vscode.Uri) => {
       try {
-        if (uri && uri.fsPath) {
-          await taskMethods.importDumpTensorBinFile({ binFilePath: uri.fsPath });
+        let binFilePath: string | undefined;
+
+        if (uri?.fsPath) {
+          binFilePath = uri.fsPath;
+        }
+        else {
+          const picks = await vscode.window.showOpenDialog({
+            canSelectFiles: true,
+            canSelectFolders: false,
+            canSelectMany: false,
+            filters: { 'Binary Files': ['bin'] },
+            title: t('extension.selectDumpTensorBinFile'),
+          });
+
+          if (!picks || picks.length === 0) {
+            return;
+          }
+
+          binFilePath = picks[0].fsPath;
+        }
+
+        if (binFilePath) {
+          // buildService.importDumpTensorBinFile already refreshes the results
+          // tree with focusIfNew internally - no second flash here.
+          await taskMethods.importDumpTensorBinFile({ binFilePath });
         }
       }
       catch (error) {
@@ -2673,27 +2862,6 @@ async function initI18n() {
  */
 function initApiServer() {
   return new ApiServer(apis as ApiGroup);
-}
-
-/**
- * view
- * @param context extended context
- * @param apiServer api service
- */
-function initViews(
-  context: vscode.ExtensionContext,
-  apiServer: ApiServer,
-): ViewServer {
-  const viewServer = new ViewServer(routes, context);
-
-  viewServer.onViewActivated((path, webview) => {
-    apiServer.addWebview(path, webview);
-  });
-  viewServer.onViewDisposed((path) => {
-    apiServer.removeWebview(path);
-  });
-
-  return viewServer;
 }
 
 export function deactivate() {

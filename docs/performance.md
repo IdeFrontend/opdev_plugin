@@ -46,7 +46,7 @@ flowchart LR
 
 - **`opdevtoolsOperateTree`**: when the project supports profiling, a **Performance tuning** group (`nodeId === 'power'`) exposes **Simulation analysis** (`simulation`) and **On-board analysis** (`onboard`). Gear icons open workspace settings or the quick-options webviews.
 - **`opdevtoolsPerformanceResultsTree`**: separate view (`%view.performanceResultsTree.name%`). **Report rows live here only**, not under the `power` node.
-- **Dump tensor** sidebar (`dump-tensor-data` webview) reuses shared performance APIs for folder trees and `performance/diffFiles`; it is not the performance-results browser.
+- **`opdevtoolsDumpTensorSidebarView`**: separate native tree for dump tensor reports; it reuses `dumpTensorMethods`, which delegates `downloadReport` to the performance helper and compare to `performanceMethods.diffFiles` (`vscode.diff` on the two companion `.txt` files). It is not the performance-results browser. See [`dump-tensor.md`](./dump-tensor.md).
 
 ---
 
@@ -196,17 +196,17 @@ Simulate / on-board options panels read and persist state through workspace sett
 
 Profiler runs are **not** started from the results tree; only from operate flow / options panels / explorer hooks.
 
-### `performance` API (host)
+### Performance data controller (host)
 
-Registered in `api-routes.ts` as `performanceMethods` (`performance-data-controller.ts`). Used **in-process** by `OperateTreeProvider` and from webviews:
+`performance-data-controller.ts` exposes `performanceMethods`, used **in-process** by `OperateTreeProvider` (performance and dump tensor trees). No `performance/*` HTTP API group is registered:
 
 | Method | Used by |
 |--------|---------|
-| `performance/getRunData` | Host tree refresh (via `runDataService`) |
-| `performance/toggleRecordMark` | Mark/unmark reports |
-| `performance/copyReport` | Concatenate all file contents under report dir → clipboard |
-| `performance/downloadReport` | Zip report directory |
-| `performance/diffFiles` | `vscode.diff` — **Dump tensor** file tree (`web/.../dump-tensor-data`) |
+| `getRunData` | Performance tree refresh (via `runDataService`) |
+| `toggleRecordMark` | Mark/unmark reports |
+| `copyReport` | Concatenate all file contents under report dir → clipboard |
+| `downloadReport` | Zip report directory (performance / dump tensor tree) |
+| `diffFiles` | `vscode.diff` — dump tensor tree compare (companion `.txt` files) |
 
 There is **no** webview panel that calls `getRunData` for the performance results tree.
 
@@ -322,3 +322,4 @@ See [`user-issues/profiling-and-insight.md`](./user-issues/profiling-and-insight
 | [`ascend-a5-support.md`](./ascend-a5-support.md) | A5 on-board metrics and defaults |
 | [`workspace-settings.md`](./workspace-settings.md) | All `op-devtools.*` keys and runtime merge |
 | [`sanitizer.md`](./sanitizer.md) | Parallel native-tree pattern for sanitizer results |
+| [`dump-tensor.md`](./dump-tensor.md) | Dump tensor results tree — reuses `downloadReport` / `diffFiles` |
