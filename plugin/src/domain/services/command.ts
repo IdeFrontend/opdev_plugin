@@ -473,7 +473,7 @@ export function getOnBoardCommand(
 }
 
 /**
- * Pieces the A5 new-tool (npu-compute / npusim) command builders need, resolved
+ * Pieces the A5 new-tool (npu-compute / npu-emulate) command builders need, resolved
  * through the same strategy path the legacy on-board / simulation flows use:
  * the Ascend env `source` prefix, the `cd` into the run/build dir, and the
  * compiled profiler target file (with the standard-custom example repoint).

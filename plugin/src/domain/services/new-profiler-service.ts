@@ -8,8 +8,8 @@
 /**
  * Command generation for the A5 replacement prototype profiler tools driven by
  * the "数据采集配置" dialog:
- *   - on-board  → `npu-compute` (see npu-compute使用文档.md)
- *   - simulation → `npusim`     (see NPUSim_使用文档.md)
+ *   - on-board  → `npu-compute`  (see npu-compute使用文档.md)
+ *   - simulation → `npu-emulate` (see NPUSim_使用文档.md; renamed from `npusim`)
  *
  * The dialog's `common.commandLine` textarea is the source of truth for the
  * tool argument body (user-editable). These builders only *augment* that text
@@ -20,8 +20,8 @@
 import type { DataCollectionConfig } from '@shared/data-collection-config';
 import { NEW_TOOL_REPORT_FILENAME } from '@shared/data-collection-config';
 
-/** SoC `-s` value NPUSim accepts for the A5 class (see NPUSim doc §5). */
-export const NPUSIM_SOC_VERSION = 'Ascend950' as const;
+/** SoC `-s` value NPU-Emulate accepts for the A5 class (see NPUSim doc §5). */
+export const NPU_EMULATE_SOC_VERSION = 'Ascend950' as const;
 
 /** Inputs shared by both new-tool command builders. */
 export interface NewProfilerCommandParams {
@@ -76,21 +76,21 @@ export function buildNpuComputeCommand(params: NewProfilerCommandParams): string
 }
 
 /**
- * Build the `npusim record` command (auto-generates the report with `-g`).
+ * Build the `npu-emulate record` command (auto-generates the report with `-g`).
  *
- * Shape (NPUSim doc §5): `npusim record <user_app> -s Ascend950 -o <output> -g`.
+ * Shape (NPUSim doc §5): `npu-emulate record <user_app> -s Ascend950 -o <output> -g`.
  * The user's `commandLine` text is passed through as extra record options; we
  * append `-s`, `-o <opprofRunDir>` and `-g` only when not already present so the
  * report link finds the artifacts under the shared opprof run directory.
  */
-export function buildNpusimCommand(params: NewProfilerCommandParams): string {
+export function buildNpuEmulateCommand(params: NewProfilerCommandParams): string {
   const {
     config, targetFile, opprofRunDir,
   } = params;
   const userArgs = (config.common.commandLine || '').trim();
 
   const parts = [
-    'npusim',
+    'npu-emulate',
     'record',
   ];
 
@@ -104,7 +104,7 @@ export function buildNpusimCommand(params: NewProfilerCommandParams): string {
   }
 
   if (!commandLineHasOption(userArgs, '-s', '--soc-version')) {
-    parts.push(`-s ${NPUSIM_SOC_VERSION}`);
+    parts.push(`-s ${NPU_EMULATE_SOC_VERSION}`);
   }
 
   if (!commandLineHasOption(userArgs, '-o', '--output')) {

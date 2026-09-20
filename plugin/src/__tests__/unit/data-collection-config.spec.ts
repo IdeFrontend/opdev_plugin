@@ -31,7 +31,7 @@ describe('describeDataCollectionSet', () => {
     expect(describeDataCollectionSet('basic'))
       .toBe('PipeUtilization;L2Cache;Memory');
     expect(describeDataCollectionSet('full'))
-      .toBe('PipeUtilization;L2Cache;Memory;MemoryL0;MemoryUB');
+      .toBe('PipeUtilization;Pipeline;L2Cache;Memory;MemoryL0;MemoryUB;ArithmeticUtilization;ResourceConflictRatio');
   });
 
   it('returns the "暂不支持" placeholder for sets with no expansion', () => {
@@ -60,7 +60,7 @@ describe('matchSetForSections', () => {
       .toBe('basic');
   });
 
-  it('matches the full set from its 5-section expansion', () => {
+  it('matches the full set from its 8-section expansion', () => {
     expect(matchSetForSections([...DATA_COLLECTION_SET_SECTIONS.full]))
       .toBe('full');
   });
@@ -139,7 +139,7 @@ describe('resolveSelectedSections', () => {
       .toEqual(['L2Cache']);
   });
 
-  it('filters out unsupported sections from the resolved list', () => {
+  it('passes all sections through (all sections are now supported)', () => {
     const config = base();
 
     config.metrics = {
@@ -152,7 +152,11 @@ describe('resolveSelectedSections', () => {
     };
 
     expect(resolveSelectedSections(config))
-      .toEqual(['L2Cache']);
+      .toEqual([
+        'Pipeline',
+        'L2Cache',
+        'ArithmeticUtilization',
+      ]);
   });
 
   it('falls back to checked sections for an unsupported (empty) set', () => {
@@ -230,7 +234,7 @@ describe('buildDefaultCommandLine', () => {
       .toBe('--section Memory --force');
   });
 
-  it('emits no metric flags for simulate (npusim takes no --section/--set)', () => {
+  it('emits no metric flags for simulate (npu-emulate takes no --section/--set)', () => {
     const config = buildDefaultDataCollectionConfig('simulate');
 
     config.metrics = {
@@ -268,7 +272,7 @@ describe('buildDefaultDataCollectionConfig', () => {
       .toBe('--section PipeUtilization --section L2Cache --section Memory');
   });
 
-  it('seeds an empty commandLine for simulate (npusim takes no metric flags)', () => {
+  it('seeds an empty commandLine for simulate (npu-emulate takes no metric flags)', () => {
     expect(buildDefaultDataCollectionConfig('simulate').common.commandLine)
       .toBe('');
   });
@@ -394,7 +398,7 @@ describe('mergeSavedDataCollectionConfig', () => {
       ]);
   });
 
-  it('drops unsupported sections from a saved config (migration safety)', () => {
+  it('keeps all sections from a saved config (all sections are now supported)', () => {
     const merged = mergeSavedDataCollectionConfig('onboard', {
       metrics: {
         kind: 'section',
@@ -408,6 +412,11 @@ describe('mergeSavedDataCollectionConfig', () => {
     });
 
     expect(merged.metrics.sections)
-      .toEqual(['Memory']);
+      .toEqual([
+        'Pipeline',
+        'Memory',
+        'ArithmeticUtilization',
+        'ResourceConflictRatio',
+      ]);
   });
 });

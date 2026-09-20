@@ -26,8 +26,8 @@ const { apis } = require('@plugin/api-routes') as typeof import('@plugin/api-rou
 
 /**
  * The complete RPC surface after the settings-native refactor, plus the two A5
- * new-tool (npu-compute / npusim) data-collection endpoints:
- * 39 endpoints total (webview 9 + common 10 + ops 19 + performance 1).
+ * new-tool (npu-compute / npu-emulate) data-collection endpoints:
+ * 40 endpoints total (webview 9 + common 10 + ops 20 + performance 1).
  */
 const EXPECTED_SURFACE = [
   // webview (10)
@@ -69,8 +69,9 @@ const EXPECTED_SURFACE = [
   'ops/getSelectedOperators',
   'ops/loadStTestOptions',
   'ops/runStTestOptions',
-  // A5 new-tool (npu-compute / npusim) data-collection dialog.
+  // A5 new-tool (npu-compute / npu-emulate) data-collection dialog.
   'ops/getDataCollectionConfig',
+  'ops/saveDataCollectionConfig',
   'ops/startNewToolCollection',
   // performance (1)
   'performance/diffFiles',
@@ -98,7 +99,7 @@ const REMOVED_SURFACE = [
 ];
 
 describe('api-routes RPC surface', () => {
-  it('exposes exactly 39 endpoints (webview 9 / common 10 / ops 19 / performance 1)', () => {
+  it('exposes exactly 40 endpoints (webview 9 / common 10 / ops 20 / performance 1)', () => {
     const flat = Object.entries(apis)
       .flatMap(([
         group,
@@ -110,7 +111,7 @@ describe('api-routes RPC surface', () => {
     expect([...flat].sort())
       .toEqual([...EXPECTED_SURFACE].sort());
     expect(flat)
-      .toHaveLength(39);
+      .toHaveLength(40);
   });
 
   it('no longer registers any of the 17 removed endpoints', () => {

@@ -332,7 +332,7 @@ export const dispatchSimulator = dispatchFlowFromWebview<StartSimulateParams>(
 );
 
 /**
- * A5 new-tool (npu-compute / npusim) collection from the "数据采集配置" webview.
+ * A5 new-tool (npu-compute / npu-emulate) collection from the "数据采集配置" webview.
  * Routes through the same flow node the legacy on-board / simulation actions use
  * (picked by `config.collectionType`) so the sidebar gate/queue behaves alike.
  */

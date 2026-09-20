@@ -1,15 +1,16 @@
 /**
  * Unit tests for the A5 new-tool command builders (new-profiler-service):
- * buildNpuComputeCommand (on-board → npu-compute) and buildNpusimCommand
- * (simulation → npusim). The dialog's common.commandLine is authoritative for
- * tool args; the builders only augment it with the report output path and the
- * compiled target, and never overwrite an option the user already typed.
+ * buildNpuComputeCommand (on-board → npu-compute) and buildNpuEmulateCommand
+ * (simulation → npu-emulate, renamed from npusim). The dialog's
+ * common.commandLine is authoritative for tool args; the builders only augment
+ * it with the report output path and the compiled target, and never overwrite
+ * an option the user already typed.
  */
 
 import {
   buildNpuComputeCommand,
-  buildNpusimCommand,
-  NPUSIM_SOC_VERSION,
+  buildNpuEmulateCommand,
+  NPU_EMULATE_SOC_VERSION,
 } from '@plugin/domain/services/new-profiler-service';
 import {
   NEW_TOOL_REPORT_FILENAME,
@@ -76,20 +77,20 @@ describe('buildNpuComputeCommand', () => {
   });
 });
 
-describe('buildNpusimCommand', () => {
-  it('builds "npusim record <target> <args> -s <soc> -o <dir> -g" with defaults', () => {
-    const cmd = buildNpusimCommand({
+describe('buildNpuEmulateCommand', () => {
+  it('builds "npu-emulate record <target> <args> -s <soc> -o <dir> -g" with defaults', () => {
+    const cmd = buildNpuEmulateCommand({
       config: configWithCommandLine('simulate', '--section Memory'),
       targetFile,
       opprofRunDir,
     });
 
     expect(cmd)
-      .toBe(`npusim record ${targetFile} --section Memory -s ${NPUSIM_SOC_VERSION} -o ${opprofRunDir} -g`);
+      .toBe(`npu-emulate record ${targetFile} --section Memory -s ${NPU_EMULATE_SOC_VERSION} -o ${opprofRunDir} -g`);
   });
 
   it('does not duplicate -s / -o / -g when the user already supplied them', () => {
-    const cmd = buildNpusimCommand({
+    const cmd = buildNpuEmulateCommand({
       config: configWithCommandLine('simulate', '-s Ascend950 -o /tmp/sim -g'),
       targetFile,
       opprofRunDir,
@@ -105,14 +106,14 @@ describe('buildNpusimCommand', () => {
   });
 
   it('recognizes long-form --soc-version / --output / --gen-report', () => {
-    const cmd = buildNpusimCommand({
+    const cmd = buildNpuEmulateCommand({
       config: configWithCommandLine('simulate', '--soc-version Ascend950 --output /tmp/sim --gen-report'),
       targetFile,
       opprofRunDir,
     });
 
     expect(cmd)
-      .not.toContain(`-s ${NPUSIM_SOC_VERSION}`);
+      .not.toContain(`-s ${NPU_EMULATE_SOC_VERSION}`);
     expect(cmd)
       .not.toContain(`-o ${opprofRunDir}`);
     expect(cmd)
@@ -120,13 +121,13 @@ describe('buildNpusimCommand', () => {
   });
 
   it('places the compiled target as the first positional after record', () => {
-    const cmd = buildNpusimCommand({
+    const cmd = buildNpuEmulateCommand({
       config: configWithCommandLine('simulate', ''),
       targetFile,
       opprofRunDir,
     });
 
-    expect(cmd.startsWith(`npusim record ${targetFile}`))
+    expect(cmd.startsWith(`npu-emulate record ${targetFile}`))
       .toBe(true);
   });
 });

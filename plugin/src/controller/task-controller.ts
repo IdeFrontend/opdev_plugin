@@ -488,7 +488,7 @@ export const taskMethods = {
   },
 
   /**
-   * A5 new-tool (npu-compute / npusim) data collection: compile with the legacy
+   * A5 new-tool (npu-compute / npu-emulate) data collection: compile with the legacy
    * sequence, hand the artifact to the selected prototype tool, then open the
    * produced .npu-rep report. `params.config.collectionType` selects the tool.
    */

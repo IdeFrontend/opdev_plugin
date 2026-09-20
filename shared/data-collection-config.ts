@@ -12,20 +12,24 @@
  *
  * On A5 (`ascend950`) the on-board / simulation analysis can be switched to the
  * replacement prototype tools:
- *   - on-board  → `npu-compute` (see npu-compute使用文档.md)
- *   - simulation → `npusim`     (see NPUSim_使用文档.md)
+ *   - on-board  → `npu-compute`  (see npu-compute使用文档.md)
+ *   - simulation → `npu-emulate` (see NPUSim_使用文档.md; renamed from `npusim`)
+ *
+ * NOTE: the new simulation tool (`npu-emulate`, formerly `npusim`) is
+ * temporarily unsupported on A5 — until it lands, simulation always falls back
+ * to the legacy `msprof` tool (see ConfigService.getSimulationTool).
  */
 
 /** On-board profiling tool: the new `npu-compute` prototype or the legacy `msprof`. */
 export type OnBoardTool = 'npu-compute' | 'msprof';
 
-/** Simulation tool: the new `npusim` prototype or the legacy `msprof`. */
-export type SimulationTool = 'npusim' | 'msprof';
+/** Simulation tool: the new `npu-emulate` prototype (renamed from `npusim`) or the legacy `msprof`. */
+export type SimulationTool = 'npu-emulate' | 'msprof';
 
 /** Which collection the dialog is configuring; also preselects the top switch. */
 export type CollectionType = 'onboard' | 'simulate';
 
-/** Common (npu-compute/npusim shared) collection options — the dialog's "Common" panel. */
+/** Common (npu-compute/npu-emulate shared) collection options — the dialog's "Common" panel. */
 export interface DataCollectionCommon {
   /** `--export` / `-o` output file path; empty → tool default under opprof. */
   outputFile: string;
@@ -85,12 +89,12 @@ export const DATA_COLLECTION_SECTIONS: readonly string[] = [
  * disabled in the UI, and they are filtered out when building `--section` flags
  * and when expanding named sets, so an unsupported section never reaches the
  * tool command line.
+ *
+ * As of the latest A5 npu-compute build, all sections listed in
+ * {@link DATA_COLLECTION_SECTIONS} are supported on-board, so this set is
+ * empty — every section row is selectable and reaches the command line.
  */
-export const DATA_COLLECTION_UNSUPPORTED_SECTIONS: ReadonlySet<string> = new Set([
-  'Pipeline',
-  'ArithmeticUtilization',
-  'ResourceConflictRatio',
-]);
+export const DATA_COLLECTION_UNSUPPORTED_SECTIONS: ReadonlySet<string> = new Set<string>();
 
 /**
  * Sets that are visible in the Metrics table but not yet supported (no
@@ -137,10 +141,13 @@ export const DATA_COLLECTION_SET_SECTIONS: Record<string, readonly string[]> = {
   detailed: [],
   full: [
     'PipeUtilization',
+    'Pipeline',
     'L2Cache',
     'Memory',
     'MemoryL0',
     'MemoryUB',
+    'ArithmeticUtilization',
+    'ResourceConflictRatio',
   ],
   hccl: [],
   roofline: [],
@@ -234,7 +241,7 @@ export function resolveSelectedSections(config: DataCollectionConfig): string[] 
  * Build a sensible default `commandLine` text from the structured metrics/common
  * selections. Only npu-compute (on-board) consumes metric flags, and it accepts
  * one repeated `--section <id>` per section (no `--set`, no comma/space lists —
- * npu-compute使用文档.md §7). Simulation (npusim) takes no section/set flags, so
+ * npu-compute使用文档.md §7). Simulation (npu-emulate) takes no section/set flags, so
  * metrics contribute nothing to its command line.
  */
 export function buildDefaultCommandLine(config: DataCollectionConfig): string {
@@ -286,7 +293,7 @@ export function buildDefaultDataCollectionConfig(collectionType: CollectionType)
 /**
  * Relative (dotted) workspace-setting key the dialog config for a collection type
  * is persisted under, so reopening the dialog restores the last confirmed config.
- * Kept per collection type because on-board (npu-compute) and simulation (npusim)
+ * Kept per collection type because on-board (npu-compute) and simulation (npu-emulate)
  * carry different option sets — one shared blob would leak the other tool's args.
  */
 export function dataCollectionConfigSettingKey(collectionType: CollectionType): string {

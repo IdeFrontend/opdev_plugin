@@ -157,7 +157,7 @@ export const configMethods = {
    * (`COMMAND_DATA_COLLECTION_CONFIG`) stashed a collection type via
    * {@link setPendingDataCollectionType}, honor it so the dialog preselects the
    * side the user clicked (on-board / simulation); otherwise default to whichever
-   * new tool is active on A5 (`npusim` → simulate, else `npu-compute` → onboard).
+   * new tool is active on A5 (`npu-emulate` → simulate, else `npu-compute` → onboard).
    *
    * The last config the user confirmed for that side (persisted by
    * {@link configMethods.saveDataCollectionConfig}) is merged over the fresh
