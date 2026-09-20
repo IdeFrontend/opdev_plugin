@@ -482,7 +482,7 @@
           "op-devtools.performanceTuning.simulation.tool": {
             "type": "string",
             "enum": [
-              "npusim",
+              "npu-emulate",
               "msprof"
             ],
             "order": 299,
