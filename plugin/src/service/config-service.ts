@@ -875,18 +875,17 @@ export class ConfigService {
   }
 
   /**
-   * Simulation tool selector. On A5 the new `npusim` tool is the default; the
-   * workspace setting `performanceTuning.simulation.tool` may pin `npusim` or the
-   * legacy `msprof`. Non-A5 SOCs always resolve to `msprof`.
+   * Simulation tool selector. The new simulation tool was renamed
+   * `npusim` → `npu-emulate`, but it is temporarily unsupported on A5, so for
+   * now every SOC resolves to the legacy `msprof` tool.
+   *
+   * TODO(A5): once `npu-emulate` support lands, restore the previous behavior —
+   * A5 defaults to the new tool and the workspace setting
+   * `performanceTuning.simulation.tool` may pin `npu-emulate` or the legacy
+   * `msprof`; non-A5 SOCs always resolve to `msprof`.
    */
   static getSimulationTool(): SimulationTool {
-    const configured = ConfigService.readOpDevtoolsSetting<string>('performanceTuning.simulation.tool');
-
-    if (configured === 'npusim' || configured === 'msprof') {
-      return configured;
-    }
-
-    return isAscendA5ProfilerCannSoc(resolveEffectiveCannSoc()) ? 'npusim' : 'msprof';
+    return 'msprof';
   }
 
   /** True when the on-board analysis should open the new-tool data-collection dialog (A5 + npu-compute). */
@@ -895,10 +894,14 @@ export class ConfigService {
       && ConfigService.getOnBoardTool() === 'npu-compute';
   }
 
-  /** True when the simulation analysis should open the new-tool data-collection dialog (A5 + npusim). */
+  /**
+   * True when the simulation analysis should open the new-tool data-collection
+   * dialog (A5 + npu-emulate). `npu-emulate` (renamed from `npusim`) is
+   * temporarily unsupported on A5, so simulation stays on the legacy msprof
+   * flow (no data-collection dialog) until the new tool lands.
+   */
   static shouldUseNewSimulationTool(): boolean {
-    return isAscendA5ProfilerCannSoc(resolveEffectiveCannSoc())
-      && ConfigService.getSimulationTool() === 'npusim';
+    return false;
   }
 
   /**

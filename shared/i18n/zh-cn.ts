@@ -638,7 +638,7 @@ export default {
   'web.options.onboard.resourceConflict': '资源冲突占比',
   'web.options.onboard.startNow': '立即开始',
 
-  // web data-collection-config (A5 新工具 npu-compute / npusim 弹窗)
+  // web data-collection-config (A5 新工具 npu-compute / npu-emulate 弹窗)
   'web.dataCollection.title': '数据采集配置',
   'web.dataCollection.collectionType': 'Collection type',
   'web.dataCollection.simulate': '仿真',

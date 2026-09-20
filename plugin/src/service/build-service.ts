@@ -46,7 +46,7 @@ import { resolveAscendEnv } from '@plugin/domain/utils/ascend-util';
 import { joinCommands } from '@plugin/domain/utils/command-utils';
 import {
   buildNpuComputeCommand,
-  buildNpusimCommand,
+  buildNpuEmulateCommand,
 } from '@plugin/domain/services/new-profiler-service';
 import type { DataCollectionConfig } from '@shared/data-collection-config';
 import { NEW_TOOL_REPORT_FILENAME } from '@shared/data-collection-config';
@@ -949,7 +949,7 @@ export class BuildService {
   }
 
   /**
-   * A5 new-tool collection (npu-compute for on-board, npusim for simulation).
+   * A5 new-tool collection (npu-compute for on-board, npu-emulate for simulation).
    *
    * Compiles with the legacy build sequence (build_op + the standard-custom
    * example build), then hands the compiled target to the selected prototype
@@ -999,7 +999,7 @@ export class BuildService {
     }
 
     // Per-run opprof directory the report link scans: <root>/<ideDir>/opprof/<runId>.
-    const runId = `${isSimulate ? 'npusim' : 'npu-compute'}_${Date.now()}`;
+    const runId = `${isSimulate ? 'npu-emulate' : 'npu-compute'}_${Date.now()}`;
     const opprofRunDir = joinIdeConfigPath(projectPath, 'opprof', runId);
 
     try {
@@ -1022,7 +1022,7 @@ export class BuildService {
       );
 
       const toolCmd = isSimulate
-        ? buildNpusimCommand({
+        ? buildNpuEmulateCommand({
           config: params.config,
           targetFile,
           opprofRunDir,

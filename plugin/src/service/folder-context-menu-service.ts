@@ -1180,8 +1180,8 @@ export class FolderContextMenuService {
     }
 
     await this.switchToProject(uri, async () => {
-      // A5 + npusim: open the unified data-collection dialog (keep parity with the
-      // sidebar simulation entry); otherwise the legacy options panel.
+      // A5 + npu-emulate (formerly npusim): open the unified data-collection dialog
+      // (keep parity with the sidebar simulation entry); otherwise the legacy options panel.
       if (ConfigService.shouldUseNewSimulationTool()) {
         setPendingDataCollectionType('simulate');
         await vscode.commands.executeCommand(COMMAND_DATA_COLLECTION_CONFIG);

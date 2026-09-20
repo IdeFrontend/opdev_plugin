@@ -67,7 +67,7 @@ export function saveDataCollectionConfig(config: DataCollectionConfig) {
   return request.post<DataCollectionConfig, void>('ops/saveDataCollectionConfig', config);
 }
 
-/** A5 新工具（npu-compute / npusim）数据采集：编译并执行工具，随后打开报告 */
+/** A5 新工具（npu-compute / npu-emulate）数据采集：编译并执行工具，随后打开报告 */
 export function startNewToolCollection(params: {
   config: DataCollectionConfig;
   operatorNames?: string;

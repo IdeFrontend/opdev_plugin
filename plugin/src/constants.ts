@@ -37,7 +37,7 @@ export const COMMAND_ON_BOARD_OPTIONS = `${COMMAND_PREFIX}.onBoardOptions`;
 
 export const COMMAND_SANITIZER_OPTIONS = `${COMMAND_PREFIX}.sanitizerOptions`;
 
-// A5 new-tool (npu-compute / npusim) data-collection config dialog.
+// A5 new-tool (npu-compute / npu-emulate) data-collection config dialog.
 export const COMMAND_DATA_COLLECTION_CONFIG = `${COMMAND_PREFIX}.dataCollectionConfig`;
 
 export const COMMAND_IMPORT_DUMP_TENSOR_BIN_FILE = `${COMMAND_PREFIX}.importDumpTensorBinFile`;
@@ -67,7 +67,7 @@ export const VIEW_OPTIONS_ON_BOARD = 'options-on-board';
 
 export const VIEW_OPTIONS_SANITIZER = 'options-sanitizer';
 
-// A5 new-tool (npu-compute / npusim) data-collection config dialog panel.
+// A5 new-tool (npu-compute / npu-emulate) data-collection config dialog panel.
 export const VIEW_DATA_COLLECTION_CONFIG = 'data-collection-config';
 
 export const VIEW_OPTIONS_ST_TEST = 'options-st-test';

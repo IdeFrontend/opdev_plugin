@@ -115,7 +115,7 @@ export type StartOnBoardParams = {
 };
 
 /**
- * A5 new-tool (npu-compute / npusim) data-collection run params. `config` is the
+ * A5 new-tool (npu-compute / npu-emulate) data-collection run params. `config` is the
  * "数据采集配置" dialog payload (its `collectionType` selects on-board vs simulate).
  */
 export type StartNewToolCollectionParams = {

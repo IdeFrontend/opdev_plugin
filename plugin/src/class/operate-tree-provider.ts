@@ -2568,7 +2568,7 @@ export class OperateTreeProvider implements vscode.TreeDataProvider<OperateNode>
       return;
     }
 
-    // New-tool (npu-compute / npusim) reports carry the .npu-rep extension; old
+    // New-tool (npu-compute / npu-emulate) reports carry the .npu-rep extension; old
     // tools never produce one, so the file type alone routes each report to the
     // matching viewer. All three open through the profiling-report panel.
     if (fileType === 'rep' || fileType === 'ncrep' || fileType === 'npu-rep') {

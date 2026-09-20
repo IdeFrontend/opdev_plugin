@@ -3,8 +3,11 @@
  * getOnBoardTool / getSimulationTool and the shouldUseNewOnBoardTool /
  * shouldUseNewSimulationTool gates that decide whether the on-board / simulation
  * entry opens the new "数据采集配置" dialog. The new tools are A5-only (ascend950):
- * an explicit workspace setting pins the tool, otherwise A5 defaults to the new
- * tool and every other SOC resolves to the legacy msprof.
+ * an explicit workspace setting pins the on-board tool, otherwise A5 defaults to
+ * `npu-compute` and every other SOC resolves to the legacy msprof. The new
+ * simulation tool was renamed `npusim` → `npu-emulate` but is temporarily
+ * unsupported, so `getSimulationTool` currently resolves to `msprof` everywhere
+ * and `shouldUseNewSimulationTool` is always false.
  */
 
 import { ConfigService } from '@plugin/service/config-service';
@@ -71,23 +74,23 @@ describe('ConfigService new-tool selectors', () => {
   });
 
   describe('getSimulationTool', () => {
-    it('defaults to npusim on A5 with no explicit setting', () => {
+    it('temporarily resolves to msprof even on A5 (npu-emulate unsupported)', () => {
       resolveSocMock.mockReturnValue('ascend950');
 
       expect(ConfigService.getSimulationTool())
-        .toBe('npusim');
+        .toBe('msprof');
     });
 
-    it('defaults to msprof on non-A5 SOC', () => {
+    it('resolves to msprof on non-A5 SOC', () => {
       resolveSocMock.mockReturnValue('ascend910b');
 
       expect(ConfigService.getSimulationTool())
         .toBe('msprof');
     });
 
-    it('honors an explicit setting', () => {
+    it('ignores an explicit npu-emulate setting while the new tool is unsupported', () => {
       resolveSocMock.mockReturnValue('ascend950');
-      readSettingSpy.mockReturnValue('msprof');
+      readSettingSpy.mockReturnValue('npu-emulate');
 
       expect(ConfigService.getSimulationTool())
         .toBe('msprof');
@@ -119,11 +122,11 @@ describe('ConfigService new-tool selectors', () => {
   });
 
   describe('shouldUseNewSimulationTool', () => {
-    it('is true only on A5 with the new tool selected', () => {
+    it('is false even on A5 while npu-emulate is temporarily unsupported', () => {
       resolveSocMock.mockReturnValue('ascend950');
 
       expect(ConfigService.shouldUseNewSimulationTool())
-        .toBe(true);
+        .toBe(false);
     });
 
     it('is false on non-A5 SOC', () => {
@@ -133,9 +136,9 @@ describe('ConfigService new-tool selectors', () => {
         .toBe(false);
     });
 
-    it('is false on A5 when the user pins the legacy msprof', () => {
+    it('is false when an npu-emulate setting is pinned (new tool unsupported)', () => {
       resolveSocMock.mockReturnValue('ascend950');
-      readSettingSpy.mockReturnValue('msprof');
+      readSettingSpy.mockReturnValue('npu-emulate');
 
       expect(ConfigService.shouldUseNewSimulationTool())
         .toBe(false);

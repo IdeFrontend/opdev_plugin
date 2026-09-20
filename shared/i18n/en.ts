@@ -639,7 +639,7 @@ export default {
   'web.options.onboard.resourceConflict': 'Resource conflict ratio',
   'web.options.onboard.startNow': 'Start now',
 
-  // web data-collection-config (A5 new-tool npu-compute / npusim dialog)
+  // web data-collection-config (A5 new-tool npu-compute / npu-emulate dialog)
   'web.dataCollection.title': 'Data Collection Config',
   'web.dataCollection.collectionType': 'Collection type',
   'web.dataCollection.simulate': 'Simulate',
