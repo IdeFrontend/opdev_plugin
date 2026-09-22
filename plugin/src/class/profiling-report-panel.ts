@@ -268,7 +268,12 @@ export class ProfilingReportPanel {
     catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
 
-      await vscode.window.showErrorMessage(t('profilingReport.cannbotFailed', { error: detail }));
+      if (detail.includes(CANN_ASSIST_SET_INPUT_TEXT) && detail.includes('not found')) {
+        await vscode.window.showErrorMessage(t('profilingReport.cannbotNotInstalled'));
+      }
+      else {
+        await vscode.window.showErrorMessage(t('profilingReport.cannbotFailed', { error: detail }));
+      }
     }
   }
 
