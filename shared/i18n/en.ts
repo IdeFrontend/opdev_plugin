@@ -722,5 +722,6 @@ export default {
   'profilingReport.fetchFailed': 'Failed to fetch profiling data',
   'profilingReport.cannbotSent': 'Sent report data to CANNBot',
   'profilingReport.cannbotFailed': 'Failed to call CANNBot: {{error}}',
+  'profilingReport.cannbotNotInstalled': 'The "CANNBot Analysis" feature depends on an extension plugin that is not installed. Please search for and install "CANNWork (CANNLab-WorkAgent)" in "Extensions" before using the "CANNBot Analysis" feature.',
 
 };

@@ -310,8 +310,8 @@ describe('ProfilingReportPanel', () => {
       );
   });
 
-  it('shows an error message when the cann-assist command fails', async () => {
-    mockExecuteCommand.mockRejectedValueOnce(new Error('command not found'));
+  it('shows an install prompt when the cann-assist command is not found (plugin missing)', async () => {
+    mockExecuteCommand.mockRejectedValueOnce(new Error("command 'cannwork.setInputText' not found"));
 
     await ProfilingReportPanel.createOrShow(context, filePath);
 
@@ -333,7 +333,28 @@ describe('ProfilingReportPanel', () => {
         { autoSend: true },
       );
     expect(mockShowErrorMessage)
-      .toHaveBeenCalledWith(`profilingReport.cannbotFailed:${JSON.stringify({ error: 'command not found' })}`);
+      .toHaveBeenCalledWith('profilingReport.cannbotNotInstalled');
+    expect(mockShowInformationMessage).not.toHaveBeenCalled();
+  });
+
+  it('shows the raw error message when the cann-assist command fails for another reason', async () => {
+    mockExecuteCommand.mockRejectedValueOnce(new Error('network down'));
+
+    await ProfilingReportPanel.createOrShow(context, filePath);
+
+    const panel = panels[0]!;
+
+    for (const receiver of panel.webview.receivers) {
+      receiver({
+        command: 'cannbotRequest',
+        payload: { scope: 'summary' },
+      });
+    }
+
+    await flushAsyncActions();
+
+    expect(mockShowErrorMessage)
+      .toHaveBeenCalledWith(`profilingReport.cannbotFailed:${JSON.stringify({ error: 'network down' })}`);
     expect(mockShowInformationMessage).not.toHaveBeenCalled();
   });
 
