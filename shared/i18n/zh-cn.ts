@@ -721,6 +721,6 @@ export default {
   'profilingReport.fetchFailed': '获取性能分析数据失败',
   'profilingReport.cannbotSent': '已将报告数据发送至 CANNBot',
   'profilingReport.cannbotFailed': '调用 CANNBot 失败：{{error}}',
-  'profilingReport.cannbotNotInstalled': '”CANNBot 分析“功能依赖的扩展插件未安装，请先在”扩展“中搜索并安装 "CANNWork (CANNLab-WorkAgent)"，再使用”CANNBot 分析“功能',
+  'profilingReport.cannbotNotInstalled': '调用"CANNBot 分析"功能失败，请确认 CANNWork 插件是否安装以及 CANNWork 版本是否正确：\n1、如 CANNWork 扩展插件未安装，请先在"扩展"中搜索并安装 "CANNWork"\n2、如 CANNWork 版本小于 2.0.0，请升级插件到最新版本',
 
 };
