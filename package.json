@@ -468,58 +468,10 @@
         }
       },
       {
-        "id": "op-devtools.performanceTuning",
-        "title": "%config.category.performanceTuning.title%",
+        "id": "op-devtools.performanceTuning.onBoard",
+        "title": "%config.category.performanceTuning.onBoard.title%",
         "type": "object",
         "properties": {
-          "op-devtools.performanceTuning.simulation.showQuickOptions": {
-            "type": "boolean",
-            "default": true,
-            "order": 298,
-            "description": "%config.op-devtools.performanceTuning.simulation.showQuickOptions.description%",
-            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.showQuickOptions.markdownDescription%"
-          },
-          "op-devtools.performanceTuning.simulation.tool": {
-            "type": "string",
-            "enum": [
-              "npu-emulate",
-              "msprof"
-            ],
-            "order": 299,
-            "description": "%config.op-devtools.performanceTuning.simulation.tool.description%",
-            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.tool.markdownDescription%"
-          },
-          "op-devtools.performanceTuning.simulation.simulatorType": {
-            "type": "string",
-            "order": 300,
-            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.simulatorType.markdownDescription%"
-          },
-          "op-devtools.performanceTuning.simulation.memoryThroughputWaveform": {
-            "type": "boolean",
-            "order": 301,
-            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.memoryThroughputWaveform.markdownDescription%"
-          },
-          "op-devtools.performanceTuning.simulation.resourceConflictRatio": {
-            "type": "boolean",
-            "order": 302,
-            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.resourceConflictRatio.markdownDescription%"
-          },
-          "op-devtools.performanceTuning.simulation.parameters": {
-            "type": "object",
-            "order": 303,
-            "default": {},
-            "additionalProperties": {
-              "type": "string"
-            },
-            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.parameters.markdownDescription%"
-          },
-          "op-devtools.performanceTuning.onBoard.showQuickOptions": {
-            "type": "boolean",
-            "default": true,
-            "order": 309,
-            "description": "%config.op-devtools.performanceTuning.onBoard.showQuickOptions.description%",
-            "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.showQuickOptions.markdownDescription%"
-          },
           "op-devtools.performanceTuning.onBoard.tool": {
             "type": "string",
             "enum": [
@@ -529,6 +481,33 @@
             "order": 308,
             "description": "%config.op-devtools.performanceTuning.onBoard.tool.description%",
             "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.tool.markdownDescription%"
+          }
+        }
+      },
+      {
+        "id": "op-devtools.performanceTuning.onBoard.npuCompute",
+        "title": "%config.category.performanceTuning.onBoard.npuCompute.title%",
+        "type": "object",
+        "properties": {
+          "op-devtools.performanceTuning.dataCollection.onboard": {
+            "type": "object",
+            "order": 330,
+            "default": {},
+            "markdownDescription": "%config.op-devtools.performanceTuning.dataCollection.onboard.markdownDescription%"
+          }
+        }
+      },
+      {
+        "id": "op-devtools.performanceTuning.onBoard.msprof",
+        "title": "%config.category.performanceTuning.onBoard.msprof.title%",
+        "type": "object",
+        "properties": {
+          "op-devtools.performanceTuning.onBoard.showQuickOptions": {
+            "type": "boolean",
+            "default": true,
+            "order": 309,
+            "description": "%config.op-devtools.performanceTuning.onBoard.showQuickOptions.description%",
+            "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.showQuickOptions.markdownDescription%"
           },
           "op-devtools.performanceTuning.onBoard.interCoreLoad": {
             "type": "boolean",
@@ -608,6 +587,74 @@
               "type": "string"
             },
             "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.parameters.markdownDescription%"
+          }
+        }
+      },
+      {
+        "id": "op-devtools.performanceTuning.simulation",
+        "title": "%config.category.performanceTuning.simulation.title%",
+        "type": "object",
+        "properties": {
+          "op-devtools.performanceTuning.simulation.tool": {
+            "type": "string",
+            "enum": [
+              "npu-emulate",
+              "msprof"
+            ],
+            "order": 299,
+            "description": "%config.op-devtools.performanceTuning.simulation.tool.description%",
+            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.tool.markdownDescription%"
+          }
+        }
+      },
+      {
+        "id": "op-devtools.performanceTuning.simulation.npuEmulate",
+        "title": "%config.category.performanceTuning.simulation.npuEmulate.title%",
+        "type": "object",
+        "properties": {
+          "op-devtools.performanceTuning.dataCollection.simulate": {
+            "type": "object",
+            "order": 340,
+            "default": {},
+            "markdownDescription": "%config.op-devtools.performanceTuning.dataCollection.simulate.markdownDescription%"
+          }
+        }
+      },
+      {
+        "id": "op-devtools.performanceTuning.simulation.msprof",
+        "title": "%config.category.performanceTuning.simulation.msprof.title%",
+        "type": "object",
+        "properties": {
+          "op-devtools.performanceTuning.simulation.showQuickOptions": {
+            "type": "boolean",
+            "default": true,
+            "order": 298,
+            "description": "%config.op-devtools.performanceTuning.simulation.showQuickOptions.description%",
+            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.showQuickOptions.markdownDescription%"
+          },
+          "op-devtools.performanceTuning.simulation.simulatorType": {
+            "type": "string",
+            "order": 300,
+            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.simulatorType.markdownDescription%"
+          },
+          "op-devtools.performanceTuning.simulation.memoryThroughputWaveform": {
+            "type": "boolean",
+            "order": 301,
+            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.memoryThroughputWaveform.markdownDescription%"
+          },
+          "op-devtools.performanceTuning.simulation.resourceConflictRatio": {
+            "type": "boolean",
+            "order": 302,
+            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.resourceConflictRatio.markdownDescription%"
+          },
+          "op-devtools.performanceTuning.simulation.parameters": {
+            "type": "object",
+            "order": 303,
+            "default": {},
+            "additionalProperties": {
+              "type": "string"
+            },
+            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.parameters.markdownDescription%"
           }
         }
       },
