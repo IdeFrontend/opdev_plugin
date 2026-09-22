@@ -93,6 +93,15 @@ describe('sub-operator creation on a fresh standard-custom workspace', () => {
         name: 'add',
         path: path.join(rootPath as string, 'add'),
       }));
+
+    // issue #83: 新创建的子算子自动被选中，并去除其它已选算子。
+    // selectedOperatorPaths 以 PATHS 形式持久化，与 opsList 中 path 同源。
+    const project = (cache as Record<string, unknown>).project as
+      | { selectedOperatorPaths?: string[] }
+      | undefined;
+
+    expect(project?.selectedOperatorPaths)
+      .toEqual([path.join(rootPath as string, 'add')]);
   });
 
   it('mirrors the registered root type into the workspace projectType setting', async () => {

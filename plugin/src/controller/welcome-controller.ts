@@ -343,6 +343,13 @@ export const welcomeMethods = {
             ...(cache.folders ?? {}),
             [rootKey]: nextScanState,
           };
+          // 自动选中新创建的子算子，并去除其它已选算子（issue #83）。
+          // selectedOperatorPaths 以 PATHS 形式持久化，与 scan state 中
+          // newSubOperator.path 同源，home-controller 的 projectPathsEqual 可匹配。
+          cache.project = {
+            ...(cache.project ?? {}),
+            selectedOperatorPaths: [subOpDir],
+          };
         });
         // No projectService.init here: do NOT create a standalone record for the sub-operator.
       }
