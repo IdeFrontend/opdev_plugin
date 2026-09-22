@@ -48,14 +48,24 @@ const {
 } = useNewProject(selectedTemplate);
 
 const tryAppendExperimentalToPath = () => {
-  if (
-    selectedId_type.value === OperatorProjectViewId.STANDARD_CUSTOM
-    && projectFormData.projectPath
-  ) {
+  if (!projectFormData.projectPath) {
+    return;
+  }
+
+  // 仅标准自定义算子工程的子算子路径需要 experimental 后缀；
+  // 切换到其它类型时去除尾部 experimental 后缀，避免污染新工程路径。
+  if (selectedId_type.value === OperatorProjectViewId.STANDARD_CUSTOM) {
     const updated = ensureExperimentalInPath(projectFormData.projectPath);
 
     if (updated !== projectFormData.projectPath) {
       projectFormData.projectPath = updated;
+    }
+  }
+  else {
+    const stripped = projectFormData.projectPath.replace(/[/\\]experimental$/i, '');
+
+    if (stripped !== projectFormData.projectPath) {
+      projectFormData.projectPath = stripped;
     }
   }
 };
@@ -130,6 +140,7 @@ const tritonProject: ProjectTypeItem = {
 };
 const items_type = ref<ProjectTypeItem[]>([
   cannProject,
+  ascendProject,
   pyascProject,
   tritonProject,
 ]);
@@ -171,7 +182,8 @@ onMounted(async () => {
     console.log('[Operate] 当前项目类型:', currentProjectType.value);
 
     if (isStandardCustomProjectType(currentProjectType.value)) {
-      items_type.value = [ascendProject];
+      // 不裁剪可选项：在标准自定义算子工程中也允许创建其它类型算子（issue #83）。
+      // 仅默认选中 STANDARD_CUSTOM，以便走子算子流程（不打开新工程）。
       selectedId_type.value = OperatorProjectViewId.STANDARD_CUSTOM;
       tryAppendExperimentalToPath();
     }
