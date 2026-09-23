@@ -13,11 +13,15 @@ import {
   SimulateOptions,
 } from '@shared/api-types';
 import type {
-  CollectionType, DataCollectionConfig,
+  CollectionType, DataCollectionConfig, NpuComputeSectionSelection,
 } from '@shared/data-collection-config';
 import {
+  DATA_COLLECTION_CAMEL_TO_SECTION,
+  DATA_COLLECTION_SECTIONS,
+  NPU_COMPUTE_SECTION_DOTTED_KEYS,
   dataCollectionConfigSettingKey,
   mergeSavedDataCollectionConfig,
+  resolveSelectedSections,
 } from '@shared/data-collection-config';
 
 /**
@@ -153,6 +157,45 @@ export const configMethods = {
   },
 
   /**
+   * Read the selected npu-compute sections from the 8 per-section boolean
+   * settings (the single source of truth for on-board section selection).
+   * Returns section names in {@link DATA_COLLECTION_SECTIONS} order, filtered to
+   * those whose boolean is explicitly `true`.
+   */
+  async getNpuComputeSections(): Promise<string[]> {
+    const sel = readSetOptionKeys<NpuComputeSectionSelection>(NPU_COMPUTE_SECTION_DOTTED_KEYS);
+
+    return DATA_COLLECTION_SECTIONS.filter((section) => {
+      const camel = NPU_COMPUTE_SECTION_DOTTED_KEYS[DATA_COLLECTION_SECTIONS.indexOf(section)]
+        .split('.')
+        .pop()!;
+
+      return sel[camel as keyof NpuComputeSectionSelection] === true;
+    });
+  },
+
+  /**
+   * Persist the npu-compute section selection to the 8 per-section boolean
+   * settings. Each of the 8 booleans is written explicitly (true when selected,
+   * false otherwise) so deselecting a section clears its setting. No SOC gating
+   * — all 8 npu-compute sections are supported on-board.
+   */
+  async saveNpuComputeSections(sections: readonly string[]): Promise<void> {
+    const wanted = new Set(sections);
+    const writes: Record<string, boolean> = {};
+
+    for (const dottedKey of NPU_COMPUTE_SECTION_DOTTED_KEYS) {
+      const camel = dottedKey.split('.')
+        .pop()!;
+      const section = DATA_COLLECTION_CAMEL_TO_SECTION[camel];
+
+      writes[dottedKey] = wanted.has(section);
+    }
+
+    await ConfigService.writeOpDevtoolsDottedSettings(writes);
+  },
+
+  /**
    * Initial "数据采集配置" dialog config. When the entry command
    * (`COMMAND_DATA_COLLECTION_CONFIG`) stashed a collection type via
    * {@link setPendingDataCollectionType}, honor it so the dialog preselects the
@@ -162,6 +205,11 @@ export const configMethods = {
    * The last config the user confirmed for that side (persisted by
    * {@link configMethods.saveDataCollectionConfig}) is merged over the fresh
    * default so reopening the dialog shows the same settings.
+   *
+   * On-board: migrates any legacy `saved.metrics.sections` array (the pre-boolean
+   * shape) into the 8 per-section boolean settings and strips it from the saved
+   * object, then reads the booleans as the single source of truth. The migration
+   * is idempotent — once `metrics.sections` is gone it never re-triggers.
    */
   async getDataCollectionConfig(): Promise<DataCollectionConfig> {
     const collectionType: CollectionType = pendingDataCollectionType
@@ -172,9 +220,39 @@ export const configMethods = {
     // Consume the one-shot preselect so a later reopen falls back to the default.
     pendingDataCollectionType = null;
 
-    const saved = ConfigService.readOpDevtoolsSetting<unknown>(dataCollectionConfigSettingKey(collectionType));
+    const settingKey = dataCollectionConfigSettingKey(collectionType);
+    let saved = ConfigService.readOpDevtoolsSetting<unknown>(settingKey);
 
-    return mergeSavedDataCollectionConfig(collectionType, saved);
+    // Migrate legacy on-board shape: saved.metrics.sections array → 8 booleans.
+    if (collectionType === 'onboard' && saved && typeof saved === 'object') {
+      const savedObj = saved as Record<string, unknown>;
+      const metrics = savedObj.metrics as Record<string, unknown> | undefined;
+
+      if (metrics && Array.isArray(metrics.sections)) {
+        const legacySections = (metrics.sections as unknown[])
+          .filter((s): s is string => typeof s === 'string')
+          .filter((s) => DATA_COLLECTION_SECTIONS.includes(s));
+
+        try {
+          // Write the 8 booleans (single source of truth) from the legacy array.
+          await this.saveNpuComputeSections(legacySections);
+          // Strip the legacy field so the migration never re-triggers, then persist.
+          delete metrics.sections;
+          await ConfigService.writeOpDevtoolsDottedSettings({ [settingKey]: savedObj });
+          saved = savedObj;
+        }
+        catch (_) {
+          // Best-effort migration; the next open will retry since sections still set.
+        }
+      }
+    }
+
+    // On-board: the 8 booleans are the source of truth; simulate has none.
+    const sectionSelection = collectionType === 'onboard'
+      ? await this.getNpuComputeSections()
+      : undefined;
+
+    return mergeSavedDataCollectionConfig(collectionType, saved, sectionSelection);
   },
 
   /**
@@ -182,10 +260,43 @@ export const configMethods = {
    * open restores it. Called from the web panel on 确认. `collectionType` is not
    * itself stored (it is the setting key), and a failed write is swallowed — the
    * collection run itself must not be blocked by a settings-file write error.
+   *
+   * On-board: the 8 per-section booleans are the single source of truth, so the
+   * resolved sections are written to them, and only the non-section dialog state
+   * (common.outputFile/forceOverwrite, metrics.kind/set UI linkage) is persisted
+   * to the object key — `metrics.sections` and `common.commandLine` are derived,
+   * never stored. Simulate keeps the legacy whole-object write (npu-emulate gated).
    */
   async saveDataCollectionConfig(config: DataCollectionConfig): Promise<void> {
     try {
-      await ConfigService.writeOpDevtoolsDottedSettings({ [dataCollectionConfigSettingKey(config.collectionType)]: config });
+      if (config.collectionType === 'onboard') {
+        // Source of truth: write the 8 section booleans.
+        await this.saveNpuComputeSections(resolveSelectedSections(config));
+
+        // Persist only the derived state (common + UI linkage), not sections/commandLine.
+        const {
+          outputFile, forceOverwrite,
+        } = config.common;
+        const cleaned: DataCollectionConfig = {
+          ...config,
+          common: {
+            ...config.common,
+            outputFile,
+            forceOverwrite,
+            commandLine: '',
+          },
+          metrics: {
+            kind: config.metrics.kind,
+            set: config.metrics.set,
+            sections: [],
+          },
+        };
+
+        await ConfigService.writeOpDevtoolsDottedSettings({ [dataCollectionConfigSettingKey('onboard')]: cleaned });
+      }
+      else {
+        await ConfigService.writeOpDevtoolsDottedSettings({ [dataCollectionConfigSettingKey(config.collectionType)]: config });
+      }
     }
     catch (_) {
       // Persisting the dialog config is best-effort; keep the run flow going.

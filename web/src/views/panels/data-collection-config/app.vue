@@ -381,6 +381,7 @@ onMounted(async () => {
               <a-textarea
                 v-model:value="config.common.commandLine"
                 :rows="3"
+                readonly
                 :placeholder="t('web.dataCollection.commandLinePlaceholder')"
               />
             </div>

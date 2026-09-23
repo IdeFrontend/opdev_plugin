@@ -97,6 +97,53 @@ export const DATA_COLLECTION_SECTIONS: readonly string[] = [
 export const DATA_COLLECTION_UNSUPPORTED_SECTIONS: ReadonlySet<string> = new Set<string>();
 
 /**
+ * camelCase setting key suffix for each npu-compute section, used to derive the
+ * per-section boolean setting keys (`performanceTuning.onBoard.npuCompute.<camel>`).
+ * Order matches {@link DATA_COLLECTION_SECTIONS}.
+ */
+export const DATA_COLLECTION_SECTION_TO_CAMEL: Record<string, string> = {
+  PipeUtilization: 'pipeUtilization',
+  Pipeline: 'pipeline',
+  L2Cache: 'l2Cache',
+  Memory: 'memory',
+  MemoryL0: 'memoryL0',
+  MemoryUB: 'memoryUB',
+  ArithmeticUtilization: 'arithmeticUtilization',
+  ResourceConflictRatio: 'resourceConflictRatio',
+};
+
+/** Reverse of {@link DATA_COLLECTION_SECTION_TO_CAMEL} (camel suffix → section name). */
+export const DATA_COLLECTION_CAMEL_TO_SECTION: Record<string, string> = Object.fromEntries(Object.entries(DATA_COLLECTION_SECTION_TO_CAMEL)
+  .map(([
+    section,
+    camel,
+  ]) => [
+    camel,
+    section,
+  ]));
+
+/**
+ * Relative (dotted) workspace-setting keys for the 8 npu-compute section
+ * booleans (no flavor prefix; the controller prepends the setting namespace).
+ * These are the single source of truth for on-board npu-compute section
+ * selection — the dialog reads/writes them, and the command line is built from
+ * them. Order matches {@link DATA_COLLECTION_SECTIONS}.
+ */
+export const NPU_COMPUTE_SECTION_DOTTED_KEYS: readonly string[] = DATA_COLLECTION_SECTIONS.map((section) => `performanceTuning.onBoard.npuCompute.${DATA_COLLECTION_SECTION_TO_CAMEL[section]}`);
+
+/** Per-section boolean selection (mirror of the 8 npu-compute setting keys). */
+export interface NpuComputeSectionSelection {
+  pipeUtilization?: boolean;
+  pipeline?: boolean;
+  l2Cache?: boolean;
+  memory?: boolean;
+  memoryL0?: boolean;
+  memoryUB?: boolean;
+  arithmeticUtilization?: boolean;
+  resourceConflictRatio?: boolean;
+}
+
+/**
  * Sets that are visible in the Metrics table but not yet supported (no
  * expansion defined). Their radio button is disabled in the UI so the user
  * cannot select them; the "暂不支持" description already conveys why.
@@ -248,10 +295,13 @@ export function buildDefaultCommandLine(config: DataCollectionConfig): string {
   const tokens: string[] = [];
 
   if (config.collectionType === 'onboard') {
-    resolveSelectedSections(config)
-      .forEach((section) => {
-        tokens.push(`--section ${section}`);
-      });
+    // Reuse buildNpuComputeSectionFlags so the preview matches the actual tool
+    // invocation order (DATA_COLLECTION_SECTIONS order, deduped).
+    const flags = buildNpuComputeSectionFlags(resolveSelectedSections(config));
+
+    if (flags) {
+      tokens.push(flags);
+    }
 
     if (config.common.forceOverwrite) {
       tokens.push('--force');
@@ -259,6 +309,20 @@ export function buildDefaultCommandLine(config: DataCollectionConfig): string {
   }
 
   return tokens.join(' ');
+}
+
+/**
+ * Build the `--section <id>` flags (space-joined) for npu-compute from the
+ * selected sections, preserving {@link DATA_COLLECTION_SECTIONS} order. Returns
+ * an empty string when no section is selected. This is the single npu-compute
+ * command-line section source — the dialog's `commandLine` preview and the
+ * actual tool invocation both derive from it.
+ */
+export function buildNpuComputeSectionFlags(sections: readonly string[]): string {
+  return DATA_COLLECTION_SECTIONS
+    .filter((section) => sections.includes(section))
+    .map((section) => `--section ${section}`)
+    .join(' ');
 }
 
 /**
@@ -307,57 +371,69 @@ export function dataCollectionConfigSettingKey(collectionType: CollectionType): 
  * recognized shapes are adopted; anything missing or malformed keeps the default.
  * `collectionType` always comes from the caller (which side the dialog opened),
  * never from the saved blob.
+ *
+ * For on-board (`collectionType === 'onboard'`), the caller passes the sections
+ * derived from the 8 per-section boolean settings (the single source of truth)
+ * via `sectionSelection`; these override any `saved.metrics.sections`. The
+ * `common.commandLine` is never restored verbatim — it is regenerated from the
+ * resolved sections so the preview always reflects the current booleans.
  */
 export function mergeSavedDataCollectionConfig(
   collectionType: CollectionType,
   saved: unknown,
+  sectionSelection?: readonly string[],
 ): DataCollectionConfig {
   const config = buildDefaultDataCollectionConfig(collectionType);
 
-  if (!saved || typeof saved !== 'object') {
-    return config;
-  }
+  if (saved && typeof saved === 'object') {
+    const savedCommon = (saved as { common?: unknown }).common;
 
-  const savedCommon = (saved as { common?: unknown }).common;
+    if (savedCommon && typeof savedCommon === 'object') {
+      const c = savedCommon as Record<string, unknown>;
 
-  if (savedCommon && typeof savedCommon === 'object') {
-    const c = savedCommon as Record<string, unknown>;
+      if (typeof c.outputFile === 'string') {
+        config.common.outputFile = c.outputFile;
+      }
 
-    if (typeof c.outputFile === 'string') {
-      config.common.outputFile = c.outputFile;
+      if (typeof c.forceOverwrite === 'boolean') {
+        config.common.forceOverwrite = c.forceOverwrite;
+      }
+      // commandLine is intentionally NOT restored — it is regenerated below.
     }
 
-    if (typeof c.forceOverwrite === 'boolean') {
-      config.common.forceOverwrite = c.forceOverwrite;
-    }
+    const savedMetrics = (saved as { metrics?: unknown }).metrics;
 
-    if (typeof c.commandLine === 'string') {
-      config.common.commandLine = c.commandLine;
-    }
-  }
+    if (savedMetrics && typeof savedMetrics === 'object') {
+      const m = savedMetrics as Record<string, unknown>;
 
-  const savedMetrics = (saved as { metrics?: unknown }).metrics;
+      if (m.kind === 'section' || m.kind === 'set') {
+        config.metrics.kind = m.kind;
+      }
 
-  if (savedMetrics && typeof savedMetrics === 'object') {
-    const m = savedMetrics as Record<string, unknown>;
-
-    if (m.kind === 'section' || m.kind === 'set') {
-      config.metrics.kind = m.kind;
-    }
-
-    if (typeof m.set === 'string'
-      && DATA_COLLECTION_SETS.includes(m.set)
-      && !DATA_COLLECTION_UNSUPPORTED_SETS.has(m.set)
-    ) {
-      config.metrics.set = m.set;
-    }
-
-    if (Array.isArray(m.sections)) {
-      config.metrics.sections = m.sections
-        .filter((s): s is string => typeof s === 'string')
-        .filter((s) => !DATA_COLLECTION_UNSUPPORTED_SECTIONS.has(s));
+      if (typeof m.set === 'string'
+        && DATA_COLLECTION_SETS.includes(m.set)
+        && !DATA_COLLECTION_UNSUPPORTED_SETS.has(m.set)
+      ) {
+        config.metrics.set = m.set;
+      }
+      // metrics.sections is intentionally NOT restored from saved — on-board uses
+      // the caller-provided sectionSelection (source of truth); simulate keeps the
+      // fresh default (npu-emulate is gated off and takes no section flags).
     }
   }
+
+  // On-board: the 8 booleans are the single source of truth for sections.
+  if (sectionSelection) {
+    config.metrics.sections = [...sectionSelection];
+    // kind=section so resolveSelectedSections uses these sections (not a preset
+    // set expansion); set is still tracked so the UI can highlight the matching
+    // preset (or Custom when none matches).
+    config.metrics.kind = 'section';
+    config.metrics.set = matchSetForSections(sectionSelection);
+  }
+
+  // Regenerate the read-only commandLine preview from the resolved selections.
+  config.common.commandLine = buildDefaultCommandLine(config);
 
   return config;
 }
