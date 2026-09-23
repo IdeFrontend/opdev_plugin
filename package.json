@@ -384,7 +384,35 @@
             "order": 400,
             "description": "%config.op-devtools.sanitizer.enableMsAgentAiFix.description%",
             "markdownDescription": "%config.op-devtools.sanitizer.enableMsAgentAiFix.markdownDescription%"
+          }
+        }
+      },
+      {
+        "id": "op-devtools.sanitizerNpuCheck",
+        "title": "%config.category.sanitizerNpuCheck.title%",
+        "type": "object",
+        "properties": {
+          "op-devtools.sanitizer.memCheck": {
+            "type": "boolean",
+            "default": true,
+            "order": 200,
+            "description": "%config.op-devtools.sanitizer.memCheck.description%",
+            "markdownDescription": "%config.op-devtools.sanitizer.memCheck.markdownDescription%"
           },
+          "op-devtools.sanitizer.sync": {
+            "type": "boolean",
+            "default": true,
+            "order": 201,
+            "description": "%config.op-devtools.sanitizer.sync.description%",
+            "markdownDescription": "%config.op-devtools.sanitizer.sync.markdownDescription%"
+          }
+        }
+      },
+      {
+        "id": "op-devtools.sanitizerMsSanitizer",
+        "title": "%config.category.sanitizerMsSanitizer.title%",
+        "type": "object",
+        "properties": {
           "op-devtools.sanitizer.memory": {
             "type": "boolean",
             "default": true,
@@ -450,27 +478,29 @@
             "minimum": 0,
             "maximum": 200,
             "description": "%config.op-devtools.sanitizer.blockId.description%"
-          },
-          "op-devtools.sanitizer.memCheck": {
-            "type": "boolean",
-            "default": true,
-            "order": 299,
-            "description": "%config.op-devtools.sanitizer.memCheck.description%",
-            "markdownDescription": "%config.op-devtools.sanitizer.memCheck.markdownDescription%"
-          },
-          "op-devtools.sanitizer.sync": {
-            "type": "boolean",
-            "default": true,
-            "order": 300,
-            "description": "%config.op-devtools.sanitizer.sync.description%",
-            "markdownDescription": "%config.op-devtools.sanitizer.sync.markdownDescription%"
           }
         }
       },
       {
-        "id": "op-devtools.performanceAnalysis",
-        "title": "%config.category.performanceAnalysis.title%",
-        "properties": {}
+        "id": "op-devtools.performanceTuning",
+        "title": "%config.category.performanceTuning.title%",
+        "type": "object",
+        "properties": {
+          "op-devtools.performanceTuning.onBoard.showQuickOptions": {
+            "type": "boolean",
+            "default": true,
+            "order": 309,
+            "description": "%config.op-devtools.performanceTuning.onBoard.showQuickOptions.description%",
+            "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.showQuickOptions.markdownDescription%"
+          },
+          "op-devtools.performanceTuning.simulation.showQuickOptions": {
+            "type": "boolean",
+            "default": true,
+            "order": 298,
+            "description": "%config.op-devtools.performanceTuning.simulation.showQuickOptions.description%",
+            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.showQuickOptions.markdownDescription%"
+          }
+        }
       },
       {
         "id": "op-devtools.performanceTuning.onBoard",
@@ -555,13 +585,6 @@
         "title": "%config.category.performanceTuning.onBoard.msprof.title%",
         "type": "object",
         "properties": {
-          "op-devtools.performanceTuning.onBoard.showQuickOptions": {
-            "type": "boolean",
-            "default": true,
-            "order": 309,
-            "description": "%config.op-devtools.performanceTuning.onBoard.showQuickOptions.description%",
-            "markdownDescription": "%config.op-devtools.performanceTuning.onBoard.showQuickOptions.markdownDescription%"
-          },
           "op-devtools.performanceTuning.onBoard.interCoreLoad": {
             "type": "boolean",
             "order": 310,
@@ -678,13 +701,6 @@
         "title": "%config.category.performanceTuning.simulation.msprof.title%",
         "type": "object",
         "properties": {
-          "op-devtools.performanceTuning.simulation.showQuickOptions": {
-            "type": "boolean",
-            "default": true,
-            "order": 298,
-            "description": "%config.op-devtools.performanceTuning.simulation.showQuickOptions.description%",
-            "markdownDescription": "%config.op-devtools.performanceTuning.simulation.showQuickOptions.markdownDescription%"
-          },
           "op-devtools.performanceTuning.simulation.simulatorType": {
             "type": "string",
             "order": 300,
