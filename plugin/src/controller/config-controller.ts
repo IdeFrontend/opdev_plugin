@@ -118,6 +118,51 @@ function definedDottedWrites(
   return writes;
 }
 
+/**
+ * Read the selected npu-compute sections from the 8 per-section boolean
+ * settings (the single source of truth for on-board section selection).
+ * Returns section names in {@link DATA_COLLECTION_SECTIONS} order, filtered to
+ * those whose boolean is `true` or unset (the per-section default is `true`;
+ * only an explicit `false` deselects).
+ *
+ * Module-level (not a `configMethods` method): the API router extracts handler
+ * references from the object and invokes them standalone, so a `this`-based
+ * method would see `this === undefined` at runtime.
+ */
+export async function getNpuComputeSections(): Promise<string[]> {
+  const sel = readSetOptionKeys<NpuComputeSectionSelection>(NPU_COMPUTE_SECTION_DOTTED_KEYS);
+
+  return DATA_COLLECTION_SECTIONS.filter((section) => {
+    const camel = NPU_COMPUTE_SECTION_DOTTED_KEYS[DATA_COLLECTION_SECTIONS.indexOf(section)]
+      .split('.')
+      .pop()!;
+
+    // Unset (undefined) defaults to true — only an explicit false deselects.
+    return sel[camel as keyof NpuComputeSectionSelection] !== false;
+  });
+}
+
+/**
+ * Persist the npu-compute section selection to the 8 per-section boolean
+ * settings. Each of the 8 booleans is written explicitly (true when selected,
+ * false otherwise) so deselecting a section clears its setting. No SOC gating
+ * — all 8 npu-compute sections are supported on-board.
+ */
+export async function saveNpuComputeSections(sections: readonly string[]): Promise<void> {
+  const wanted = new Set(sections);
+  const writes: Record<string, boolean> = {};
+
+  for (const dottedKey of NPU_COMPUTE_SECTION_DOTTED_KEYS) {
+    const camel = dottedKey.split('.')
+      .pop()!;
+    const section = DATA_COLLECTION_CAMEL_TO_SECTION[camel];
+
+    writes[dottedKey] = wanted.has(section);
+  }
+
+  await ConfigService.writeOpDevtoolsDottedSettings(writes);
+}
+
 export const configMethods = {
   /** Get the explicitly set on-board profiler options (dotted settings). */
   async getOnBoardOptions(): Promise<OnBoardOptions> {
@@ -156,44 +201,11 @@ export const configMethods = {
     return readSetOptionKeys<SanitizerOptions>(SANITIZER_DOTTED_KEYS);
   },
 
-  /**
-   * Read the selected npu-compute sections from the 8 per-section boolean
-   * settings (the single source of truth for on-board section selection).
-   * Returns section names in {@link DATA_COLLECTION_SECTIONS} order, filtered to
-   * those whose boolean is explicitly `true`.
-   */
-  async getNpuComputeSections(): Promise<string[]> {
-    const sel = readSetOptionKeys<NpuComputeSectionSelection>(NPU_COMPUTE_SECTION_DOTTED_KEYS);
-
-    return DATA_COLLECTION_SECTIONS.filter((section) => {
-      const camel = NPU_COMPUTE_SECTION_DOTTED_KEYS[DATA_COLLECTION_SECTIONS.indexOf(section)]
-        .split('.')
-        .pop()!;
-
-      return sel[camel as keyof NpuComputeSectionSelection] === true;
-    });
-  },
-
-  /**
-   * Persist the npu-compute section selection to the 8 per-section boolean
-   * settings. Each of the 8 booleans is written explicitly (true when selected,
-   * false otherwise) so deselecting a section clears its setting. No SOC gating
-   * — all 8 npu-compute sections are supported on-board.
-   */
-  async saveNpuComputeSections(sections: readonly string[]): Promise<void> {
-    const wanted = new Set(sections);
-    const writes: Record<string, boolean> = {};
-
-    for (const dottedKey of NPU_COMPUTE_SECTION_DOTTED_KEYS) {
-      const camel = dottedKey.split('.')
-        .pop()!;
-      const section = DATA_COLLECTION_CAMEL_TO_SECTION[camel];
-
-      writes[dottedKey] = wanted.has(section);
-    }
-
-    await ConfigService.writeOpDevtoolsDottedSettings(writes);
-  },
+  // Module-level implementations referenced (not `this`-bound methods): the API
+  // router invokes extracted handler references standalone, where `this` would
+  // be undefined. Re-exposed here so callers/tests can use them via the object.
+  getNpuComputeSections,
+  saveNpuComputeSections,
 
   /**
    * Initial "数据采集配置" dialog config. When the entry command
@@ -235,7 +247,7 @@ export const configMethods = {
 
         try {
           // Write the 8 booleans (single source of truth) from the legacy array.
-          await this.saveNpuComputeSections(legacySections);
+          await saveNpuComputeSections(legacySections);
           // Strip the legacy field so the migration never re-triggers, then persist.
           delete metrics.sections;
           await ConfigService.writeOpDevtoolsDottedSettings({ [settingKey]: savedObj });
@@ -249,7 +261,7 @@ export const configMethods = {
 
     // On-board: the 8 booleans are the source of truth; simulate has none.
     const sectionSelection = collectionType === 'onboard'
-      ? await this.getNpuComputeSections()
+      ? await getNpuComputeSections()
       : undefined;
 
     return mergeSavedDataCollectionConfig(collectionType, saved, sectionSelection);
@@ -271,7 +283,7 @@ export const configMethods = {
     try {
       if (config.collectionType === 'onboard') {
         // Source of truth: write the 8 section booleans.
-        await this.saveNpuComputeSections(resolveSelectedSections(config));
+        await saveNpuComputeSections(resolveSelectedSections(config));
 
         // Persist only the derived state (common + UI linkage), not sections/commandLine.
         const {

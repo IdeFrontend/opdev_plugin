@@ -403,9 +403,18 @@ describe('configMethods settings-native options endpoints', () => {
       ]);
   });
 
-  it('getNpuComputeSections returns [] when nothing is set', async () => {
+  it('getNpuComputeSections returns all 8 sections when nothing is set (default true)', async () => {
     expect(await configMethods.getNpuComputeSections())
-      .toEqual([]);
+      .toEqual([
+        'PipeUtilization',
+        'Pipeline',
+        'L2Cache',
+        'Memory',
+        'MemoryL0',
+        'MemoryUB',
+        'ArithmeticUtilization',
+        'ResourceConflictRatio',
+      ]);
   });
 
   it('saveNpuComputeSections([]) clears all 8 booleans', async () => {
