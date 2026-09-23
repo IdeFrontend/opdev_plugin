@@ -206,8 +206,24 @@ export const DATA_COLLECTION_SET_UNSUPPORTED = '暂不支持' as const;
 /** Description shown for the `Custom` (free-form) set row. */
 export const DATA_COLLECTION_SET_CUSTOM_DESC = '默认参数' as const;
 
-/** Single Description shared by every section row (section mode). */
-export const DATA_COLLECTION_SECTION_DESC = 'Detail analysis of the compute resource...' as const;
+/**
+ * Chinese label for each npu-compute section, shown in the dialog Metrics table
+ * (section mode) Description column so each row identifies its metric (the old
+ * uniform placeholder left every row indistinguishable). Mirrors the per-section
+ * boolean's NLS description (config.op-devtools.performanceTuning.onBoard.npuCompute.<camel>.description)
+ * so the dialog and the VS Code settings UI stay consistent. Keys are section ids
+ * (see {@link DATA_COLLECTION_SECTIONS}).
+ */
+export const DATA_COLLECTION_SECTION_LABELS: Record<string, string> = {
+  PipeUtilization: '流水线利用率',
+  Pipeline: '流水线',
+  L2Cache: 'L2Cache',
+  Memory: 'Memory',
+  MemoryL0: 'MemoryL0',
+  MemoryUB: 'MemoryUB',
+  ArithmeticUtilization: '算力利用率',
+  ResourceConflictRatio: '资源冲突率',
+};
 
 /**
  * Description text shown in the Metrics table for a given set: the `Custom`

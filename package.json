@@ -3,7 +3,7 @@
   "displayName": "Huawei OP DevTools",
   "description": "Operator development, debugging, and performance analysis all-in-one platform for Ascend C language.",
   "publisher": "huawei",
-  "version": "1.5.4-beta5",
+  "version": "1.5.4-beta7",
   "engines": {
     "node": ">=16.0.0",
     "vscode": "^1.80.0"
@@ -468,6 +468,11 @@
         }
       },
       {
+        "id": "op-devtools.performanceAnalysis",
+        "title": "%config.category.performanceAnalysis.title%",
+        "properties": {}
+      },
+      {
         "id": "op-devtools.performanceTuning.onBoard",
         "title": "%config.category.performanceTuning.onBoard.title%",
         "type": "object",
@@ -498,49 +503,49 @@
           "op-devtools.performanceTuning.onBoard.npuCompute.pipeUtilization": {
             "type": "boolean",
             "order": 331,
-            "default": false,
+            "default": true,
             "description": "%config.op-devtools.performanceTuning.onBoard.npuCompute.pipeUtilization.description%"
           },
           "op-devtools.performanceTuning.onBoard.npuCompute.pipeline": {
             "type": "boolean",
             "order": 332,
-            "default": false,
+            "default": true,
             "description": "%config.op-devtools.performanceTuning.onBoard.npuCompute.pipeline.description%"
           },
           "op-devtools.performanceTuning.onBoard.npuCompute.l2Cache": {
             "type": "boolean",
             "order": 333,
-            "default": false,
+            "default": true,
             "description": "%config.op-devtools.performanceTuning.onBoard.npuCompute.l2Cache.description%"
           },
           "op-devtools.performanceTuning.onBoard.npuCompute.memory": {
             "type": "boolean",
             "order": 334,
-            "default": false,
+            "default": true,
             "description": "%config.op-devtools.performanceTuning.onBoard.npuCompute.memory.description%"
           },
           "op-devtools.performanceTuning.onBoard.npuCompute.memoryL0": {
             "type": "boolean",
             "order": 335,
-            "default": false,
+            "default": true,
             "description": "%config.op-devtools.performanceTuning.onBoard.npuCompute.memoryL0.description%"
           },
           "op-devtools.performanceTuning.onBoard.npuCompute.memoryUB": {
             "type": "boolean",
             "order": 336,
-            "default": false,
+            "default": true,
             "description": "%config.op-devtools.performanceTuning.onBoard.npuCompute.memoryUB.description%"
           },
           "op-devtools.performanceTuning.onBoard.npuCompute.arithmeticUtilization": {
             "type": "boolean",
             "order": 337,
-            "default": false,
+            "default": true,
             "description": "%config.op-devtools.performanceTuning.onBoard.npuCompute.arithmeticUtilization.description%"
           },
           "op-devtools.performanceTuning.onBoard.npuCompute.resourceConflictRatio": {
             "type": "boolean",
             "order": 338,
-            "default": false,
+            "default": true,
             "description": "%config.op-devtools.performanceTuning.onBoard.npuCompute.resourceConflictRatio.description%"
           }
         }
