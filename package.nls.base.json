@@ -7,6 +7,8 @@
   "config.title": "Huawei OP DevTools",
   "config.category.compileAndDeploy.title": "编译与部署",
   "config.category.sanitizer.title": "异常检测",
+  "config.category.sanitizerNpuCheck.title": "\u00a0\u00a0\u00a0\u00a0npu-check",
+  "config.category.sanitizerMsSanitizer.title": "\u00a0\u00a0\u00a0\u00a0mssanitizer",
   "config.category.performanceTuning.title": "性能调优",
   "config.category.environment.title": "环境",
   "config.category.execution.title": "执行",
