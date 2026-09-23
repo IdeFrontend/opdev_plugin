@@ -49,7 +49,10 @@ import {
   buildNpuEmulateCommand,
 } from '@plugin/domain/services/new-profiler-service';
 import type { DataCollectionConfig } from '@shared/data-collection-config';
-import { NEW_TOOL_REPORT_FILENAME } from '@shared/data-collection-config';
+import {
+  NEW_TOOL_REPORT_FILENAME,
+  resolveSelectedSections,
+} from '@shared/data-collection-config';
 import {
   buildOperatorSpawnContext,
   commandFailureMessage,
@@ -1031,6 +1034,7 @@ export class BuildService {
           config: params.config,
           targetFile,
           opprofRunDir,
+          sections: resolveSelectedSections(params.config),
         });
       const collectionCommand = joinCommands(sourceCannCmd, cdBuildCmd, toolCmd);
 
