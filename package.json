@@ -384,7 +384,35 @@
             "order": 400,
             "description": "%config.op-devtools.sanitizer.enableMsAgentAiFix.description%",
             "markdownDescription": "%config.op-devtools.sanitizer.enableMsAgentAiFix.markdownDescription%"
+          }
+        }
+      },
+      {
+        "id": "op-devtools.sanitizerNpuCheck",
+        "title": "%config.category.sanitizerNpuCheck.title%",
+        "type": "object",
+        "properties": {
+          "op-devtools.sanitizer.memCheck": {
+            "type": "boolean",
+            "default": true,
+            "order": 200,
+            "description": "%config.op-devtools.sanitizer.memCheck.description%",
+            "markdownDescription": "%config.op-devtools.sanitizer.memCheck.markdownDescription%"
           },
+          "op-devtools.sanitizer.sync": {
+            "type": "boolean",
+            "default": true,
+            "order": 201,
+            "description": "%config.op-devtools.sanitizer.sync.description%",
+            "markdownDescription": "%config.op-devtools.sanitizer.sync.markdownDescription%"
+          }
+        }
+      },
+      {
+        "id": "op-devtools.sanitizerMsSanitizer",
+        "title": "%config.category.sanitizerMsSanitizer.title%",
+        "type": "object",
+        "properties": {
           "op-devtools.sanitizer.memory": {
             "type": "boolean",
             "default": true,
@@ -450,20 +478,6 @@
             "minimum": 0,
             "maximum": 200,
             "description": "%config.op-devtools.sanitizer.blockId.description%"
-          },
-          "op-devtools.sanitizer.memCheck": {
-            "type": "boolean",
-            "default": true,
-            "order": 299,
-            "description": "%config.op-devtools.sanitizer.memCheck.description%",
-            "markdownDescription": "%config.op-devtools.sanitizer.memCheck.markdownDescription%"
-          },
-          "op-devtools.sanitizer.sync": {
-            "type": "boolean",
-            "default": true,
-            "order": 300,
-            "description": "%config.op-devtools.sanitizer.sync.description%",
-            "markdownDescription": "%config.op-devtools.sanitizer.sync.markdownDescription%"
           }
         }
       },
