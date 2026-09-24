@@ -16,7 +16,7 @@ import {
   DATA_COLLECTION_SECTIONS,
   DATA_COLLECTION_SETS,
   DATA_COLLECTION_SET_SECTIONS,
-  DATA_COLLECTION_SECTION_DESC,
+  DATA_COLLECTION_SECTION_LABELS,
   DATA_COLLECTION_UNSUPPORTED_SECTIONS,
   DATA_COLLECTION_UNSUPPORTED_SETS,
   buildDefaultCommandLine,
@@ -53,7 +53,7 @@ const sectionRows = computed(() => DATA_COLLECTION_SECTIONS
   .map((name) => ({
     key: name,
     name,
-    description: DATA_COLLECTION_SECTION_DESC,
+    description: DATA_COLLECTION_SECTION_LABELS[name],
   })));
 
 /** Rows for the Metrics table in set mode (description = the set's section list / placeholder). */
@@ -381,6 +381,7 @@ onMounted(async () => {
               <a-textarea
                 v-model:value="config.common.commandLine"
                 :rows="3"
+                readonly
                 :placeholder="t('web.dataCollection.commandLinePlaceholder')"
               />
             </div>
