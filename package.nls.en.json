@@ -114,6 +114,7 @@
   "command.jsonButtonAction.title": "Generate Operator Project",
   "command.openCsv.title": "Open CSV File",
   "command.openProfilingReport.title": "Open Profiling Report",
+  "command.showPerformanceHints.title": "Show Performance Hints",
   "command.test.title": "Insight Plugin Test",
   "command.welcome.title": "Welcome",
   "command.clearWelcomeCount.title": "Clear Welcome Count",

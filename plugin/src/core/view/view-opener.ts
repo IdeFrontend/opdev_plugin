@@ -2,7 +2,12 @@ import { t } from 'i18next';
 import * as vscode from 'vscode';
 
 import { InsightDataViewerPanel } from '@plugin/class/insight-data-viewer-panel';
-import { ProfilingReportPanel } from '@plugin/class/profiling-report-panel';
+import {
+  ProfilingReportPanel, type ProfilingReportPanelHooks,
+} from '@plugin/class/profiling-report-panel';
+import {
+  isNpuRepFile, performanceHintsDiagnosticsService,
+} from '@plugin/service/performance-hints-diagnostics.service';
 import { CSV_VIEWER_VIEW_TYPE } from '@shared/flavor';
 
 // Track opened CSV file directories
@@ -90,11 +95,76 @@ export class ViewOpener {
       return;
     }
 
+    const isNpuRep = isNpuRepFile(filePath);
+
     try {
-      await ProfilingReportPanel.createOrShow(context, filePath);
+      await ProfilingReportPanel.createOrShow(context, filePath, ViewOpener.profilingReportHooks(filePath, isNpuRep));
     }
     catch (error) {
       vscode.window.showErrorMessage(t('profilingReport.loadFailed', { error: String(error) }));
+
+      return;
+    }
+
+    if (isNpuRep) {
+      await ViewOpener.publishPerformanceHints(filePath);
+    }
+  }
+
+  /**
+   * Hints follow the active profiling tab: a `.npu-rep` panel publishes its own
+   * hints while active (re-publishing on operator changes) and drops exactly
+   * those hints when it is hidden or disposed; any other report type clears the
+   * collection so hints never outlive the tab they came from.
+   */
+  private static profilingReportHooks(filePath: string, isNpuRep: boolean): ProfilingReportPanelHooks {
+    if (!isNpuRep) {
+      return {
+        onActiveChanged: (active) => {
+          if (active) {
+            performanceHintsDiagnosticsService.clear();
+          }
+        },
+      };
+    }
+
+    /**
+     * Operator the webview last reported. The panel keeps the webview alive
+     * while the tab is hidden, so re-activating it must republish the very same
+     * scope instead of falling back to the report's default operator.
+     */
+    let selectedOperatorId: string | undefined;
+
+    return {
+      onActiveChanged: (active) => {
+        if (active) {
+          void ViewOpener.publishPerformanceHints(filePath, selectedOperatorId);
+
+          return;
+        }
+
+        performanceHintsDiagnosticsService.clearIfOwns(filePath);
+      },
+      onDispose: () => {
+        performanceHintsDiagnosticsService.clearIfOwns(filePath);
+      },
+      onOperatorChanged: (operatorId) => {
+        selectedOperatorId = operatorId ?? undefined;
+        void ViewOpener.publishPerformanceHints(filePath, selectedOperatorId);
+      },
+    };
+  }
+
+  /** Hint publishing is auxiliary: a failure must never break panel opening or tab switching. */
+  private static async publishPerformanceHints(filePath: string, operatorId?: string): Promise<void> {
+    try {
+      await performanceHintsDiagnosticsService.publishFromFile(filePath, { operatorId });
+    }
+    catch (error) {
+      void vscode.window.showWarningMessage(t('performanceHints.publishFailed', {
+        file: filePath,
+        error: String(error),
+      }));
     }
   }
 }

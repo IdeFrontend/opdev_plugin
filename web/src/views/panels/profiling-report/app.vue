@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import {
-  computed, onMounted, onUnmounted, ref, shallowRef,
+  computed, onMounted, onUnmounted, ref, shallowRef, watch,
 } from 'vue';
 import { t } from 'i18next';
 import { ProfilingReport } from '@huawei/profiling-report';
 
 import { vscode } from '@web/utils/vscode';
 import { useProfilingReportTheme } from './composables/useProfilingReportTheme';
+
+/** Members `<ProfilingReport>` exposes for the host (`defineExpose` in the library). */
+type ProfilingReportHandle = {
+  selectedOperatorId?: string | null;
+};
 
 const { theme } = useProfilingReportTheme();
 
@@ -16,6 +21,32 @@ const filePath = ref('');
 const collectedAt = ref('');
 const isLoading = ref(true);
 const error = ref<string | null>(null);
+const reportRef = ref<ProfilingReportHandle | null>(null);
+
+/**
+ * The host mirrors the report's selected operator into the Problems view, so
+ * the published hints always describe the operator the user is looking at.
+ * A flat report (single operator) exposes no id and nothing has to be sent.
+ */
+watch(
+  () => reportRef.value?.selectedOperatorId,
+  (operatorId) => {
+    if (typeof operatorId !== 'string' || operatorId.length === 0) {
+      return;
+    }
+
+    try {
+      vscode.postMessage({
+        command: 'profilingReportOperatorChanged',
+        operatorId,
+      });
+    }
+    catch {
+      // Host not ready yet: the host republishes hints on its own triggers.
+    }
+  },
+  { immediate: true },
+);
 
 /** Report identity for the cannbot payload (name / absolute path / collection time). */
 const reportMeta = computed(() => ({
@@ -103,6 +134,7 @@ const onCannbotRequest = (payload: unknown) => {
   <div class="profiling-report-host">
     <ProfilingReport
       v-if="source"
+      ref="reportRef"
       :source="source"
       :theme="theme"
       :title="fileName"

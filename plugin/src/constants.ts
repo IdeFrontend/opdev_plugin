@@ -48,6 +48,8 @@ export const COMMAND_OPEN_CSV = `${COMMAND_PREFIX}.openCsv`;
 
 export const COMMAND_OPEN_PROFILING_REPORT = `${COMMAND_PREFIX}.openProfilingReport`;
 
+export const COMMAND_SHOW_PERFORMANCE_HINTS = `${COMMAND_PREFIX}.showPerformanceHints`;
+
 export const COMMAND_JSON_BUTTON_ACTION = `${COMMAND_PREFIX}.jsonButtonAction`;
 
 export const COMMAND_VSCODE_JUMP_TO_FILE = `${COMMAND_PREFIX}.vscodeJumpToFile`;

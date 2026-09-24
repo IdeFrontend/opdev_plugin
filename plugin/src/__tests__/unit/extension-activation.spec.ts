@@ -375,6 +375,20 @@ jest.mock('@plugin/core/project/project-manager', () => ({
 
 jest.mock('@plugin/service/sanitizer-diagnostics.service', () => ({ sanitizerDiagnosticsService: { activate: jest.fn() } }));
 
+jest.mock('@plugin/service/performance-hints-diagnostics.service', () => ({
+  ...jest.requireActual('@plugin/service/performance-hints-diagnostics.service'),
+  performanceHintsDiagnosticsService: {
+    activate: jest.fn(),
+    clear: jest.fn(),
+    clearIfOwns: jest.fn(),
+    publishFromFile: jest.fn(async () => ({
+      published: 0,
+      failed: false,
+    })),
+    showPerformanceHintsForFile: jest.fn(async () => undefined),
+  },
+}));
+
 jest.mock('@plugin/domain/utils/debug-target', () => ({ registerMsdebugTargetAutoAdapt: jest.fn() }));
 
 jest.mock('@plugin/service/sanitizer-service', () => ({ sanitizerService: { captureActiveFileTargetForOptionsPanel: jest.fn(async () => true) } }));

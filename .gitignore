@@ -30,3 +30,4 @@ docs/superpowers/
 
 # BMAD-generated directories
 _bmad-*/
+.aider*

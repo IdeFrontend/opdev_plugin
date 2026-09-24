@@ -62,10 +62,13 @@ type FakeWebview = {
 
 type FakePanel = {
   webview: FakeWebview;
+  active: boolean;
   reveal: jest.Mock;
   dispose: jest.Mock;
   onDidDispose: jest.Mock;
+  onDidChangeViewState: jest.Mock;
   disposeCallback?: ()=> void;
+  viewStateCallback?: ()=> void;
 };
 
 describe('ProfilingReportPanel', () => {
@@ -92,12 +95,18 @@ describe('ProfilingReportPanel', () => {
       const webview = createWebview();
       const panel = {
         webview,
+        active: true,
         reveal: jest.fn(),
         dispose: jest.fn(() => {
           panel.disposeCallback?.();
         }),
         onDidDispose: jest.fn((callback: ()=> void) => {
           panel.disposeCallback = callback;
+
+          return { dispose: jest.fn() } as FakeDisposable;
+        }),
+        onDidChangeViewState: jest.fn((callback: ()=> void) => {
+          panel.viewStateCallback = callback;
 
           return { dispose: jest.fn() } as FakeDisposable;
         }),
@@ -139,8 +148,12 @@ describe('ProfilingReportPanel', () => {
   }
 
   function emitReady(panel: FakePanel): void {
+    emitMessage(panel, { command: 'profilingReportReady' });
+  }
+
+  function emitMessage(panel: FakePanel, message: unknown): void {
     for (const receiver of panel.webview.receivers) {
-      receiver({ command: 'profilingReportReady' });
+      receiver(message);
     }
   }
 
@@ -384,5 +397,102 @@ describe('ProfilingReportPanel', () => {
 
     expect(options.localResourceRoots.map((uri) => uri.fsPath))
       .toEqual(expect.arrayContaining([path.dirname(filePath)]));
+  });
+
+  it('forwards view state changes so hints can follow the active tab', async () => {
+    const onActiveChanged = jest.fn();
+
+    await ProfilingReportPanel.createOrShow(context, filePath, { onActiveChanged });
+
+    const panel = panels[0]!;
+
+    panel.active = false;
+    panel.viewStateCallback?.();
+    panel.active = true;
+    panel.viewStateCallback?.();
+
+    expect(onActiveChanged)
+      .toHaveBeenNthCalledWith(1, false);
+    expect(onActiveChanged)
+      .toHaveBeenNthCalledWith(2, true);
+  });
+
+  it('reports the operator selected inside the report, normalizing empty payloads', async () => {
+    const onOperatorChanged = jest.fn();
+
+    await ProfilingReportPanel.createOrShow(context, filePath, { onOperatorChanged });
+
+    const panel = panels[0]!;
+
+    emitMessage(panel, {
+      command: 'profilingReportOperatorChanged',
+      operatorId: 'op2.npu.rep',
+    });
+    emitMessage(panel, {
+      command: 'profilingReportOperatorChanged',
+      operatorId: '',
+    });
+    emitMessage(panel, { command: 'profilingReportOperatorChanged' });
+
+    expect(onOperatorChanged)
+      .toHaveBeenNthCalledWith(1, 'op2.npu.rep');
+    expect(onOperatorChanged)
+      .toHaveBeenNthCalledWith(2, null);
+    expect(onOperatorChanged)
+      .toHaveBeenNthCalledWith(3, null);
+  });
+
+  it('calls onDispose exactly once when the panel closes', async () => {
+    const onDispose = jest.fn();
+
+    await ProfilingReportPanel.createOrShow(context, filePath, { onDispose });
+
+    const panel = panels[0]!;
+
+    expect(onDispose)
+      .not.toHaveBeenCalled();
+
+    panel.dispose();
+    panel.dispose();
+
+    expect(onDispose)
+      .toHaveBeenCalledTimes(1);
+  });
+
+  it('refreshes the hooks when an already open report is opened again', async () => {
+    await ProfilingReportPanel.createOrShow(context, filePath);
+
+    const onOperatorChanged = jest.fn();
+
+    await ProfilingReportPanel.createOrShow(context, filePath, { onOperatorChanged });
+
+    expect(mockCreateWebviewPanel)
+      .toHaveBeenCalledTimes(1);
+
+    emitMessage(panels[0]!, {
+      command: 'profilingReportOperatorChanged',
+      operatorId: 'op1.npu.rep',
+    });
+
+    expect(onOperatorChanged)
+      .toHaveBeenCalledWith('op1.npu.rep');
+  });
+
+  it('keeps working without hooks', async () => {
+    await ProfilingReportPanel.createOrShow(context, filePath);
+
+    const panel = panels[0]!;
+
+    panel.active = false;
+    panel.viewStateCallback?.();
+    emitMessage(panel, {
+      command: 'profilingReportOperatorChanged',
+      operatorId: 'op1.npu.rep',
+    });
+    emitReady(panel);
+    await Promise.resolve();
+
+    expect(panel.webview.postMessage)
+      .toHaveBeenCalledWith(expect.objectContaining({ command: 'loadProfilingReport' }));
   });
 });

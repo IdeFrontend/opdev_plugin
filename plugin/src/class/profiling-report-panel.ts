@@ -54,6 +54,20 @@ function formatCollectedAt(value: unknown): string {
     + `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
+/**
+ * Host-side reactions to panel lifecycle events. The performance-hints
+ * diagnostics service uses them to publish/clear hints so the Problems view
+ * follows the active tab and the operator selected inside the report.
+ */
+export interface ProfilingReportPanelHooks {
+  /** Panel tab (de)activated; `active` is `panel.active`. */
+  onActiveChanged?(active: boolean): void;
+  /** Panel closed: hints published for this report must be dropped. */
+  onDispose?(): void;
+  /** Webview reported its selected operator (multi-op packs); `null` when none. */
+  onOperatorChanged?(operatorId: string | null): void;
+}
+
 export class ProfilingReportPanel {
   private static openedFiles = new Map<string, ProfilingReportPanel>();
 
@@ -63,24 +77,32 @@ export class ProfilingReportPanel {
 
   private panelDisposeDisposable: vscode.Disposable | undefined;
 
+  private viewStateDisposable: vscode.Disposable | undefined;
+
   private disposed = false;
 
   private webviewReady = false;
 
   private pendingFilePath: string | undefined;
 
+  private hooks: ProfilingReportPanelHooks | undefined;
+
   private constructor(
     private readonly panel: vscode.WebviewPanel,
     private readonly context: vscode.ExtensionContext,
+    hooks?: ProfilingReportPanelHooks,
   ) {
+    this.hooks = hooks;
     this.themeMessageDisposable = this.panel.webview.onDidReceiveMessage((message: unknown) => {
       handleThemeRequest(this.panel.webview, message);
 
-      if (
-        message
-        && typeof message === 'object'
-        && (message as { command?: unknown }).command === 'profilingReportReady'
-      ) {
+      if (!message || typeof message !== 'object') {
+        return;
+      }
+
+      const command = (message as { command?: unknown }).command;
+
+      if (command === 'profilingReportReady') {
         this.webviewReady = true;
 
         if (this.pendingFilePath) {
@@ -89,6 +111,8 @@ export class ProfilingReportPanel {
           this.pendingFilePath = undefined;
           void this.loadFile(filePath);
         }
+
+        return;
       }
 
       if (
@@ -98,6 +122,15 @@ export class ProfilingReportPanel {
       ) {
         void this.handleCannbotRequest((message as { payload?: unknown }).payload);
       }
+
+      if (command === 'profilingReportOperatorChanged') {
+        const operatorId = (message as { operatorId?: unknown }).operatorId;
+
+        this.hooks?.onOperatorChanged?.(typeof operatorId === 'string' && operatorId ? operatorId : null);
+      }
+    });
+    this.viewStateDisposable = this.panel.onDidChangeViewState(() => {
+      this.hooks?.onActiveChanged?.(this.panel.active);
     });
     this.panelDisposeDisposable = this.panel.onDidDispose(() => {
       this.dispose();
@@ -107,10 +140,15 @@ export class ProfilingReportPanel {
   public static async createOrShow(
     context: vscode.ExtensionContext,
     filePath: string,
+    hooks?: ProfilingReportPanelHooks,
   ): Promise<void> {
     const existing = ProfilingReportPanel.openedFiles.get(filePath);
 
     if (existing && !existing.disposed) {
+      if (hooks) {
+        existing.hooks = hooks;
+      }
+
       await existing.loadFile(filePath);
       existing.panel.reveal(vscode.ViewColumn.Active);
 
@@ -132,7 +170,7 @@ export class ProfilingReportPanel {
         ],
       },
     );
-    const instance = new ProfilingReportPanel(panel, context);
+    const instance = new ProfilingReportPanel(panel, context, hooks);
 
     try {
       await instance.initializeHtml();
@@ -158,10 +196,13 @@ export class ProfilingReportPanel {
     this.disposed = true;
     this.themeDisposable?.dispose();
     this.themeMessageDisposable?.dispose();
+    this.viewStateDisposable?.dispose();
     this.panelDisposeDisposable?.dispose();
     this.themeDisposable = undefined;
     this.themeMessageDisposable = undefined;
+    this.viewStateDisposable = undefined;
     this.panelDisposeDisposable = undefined;
+    this.hooks?.onDispose?.();
     this.panel.dispose();
 
     for (const [
