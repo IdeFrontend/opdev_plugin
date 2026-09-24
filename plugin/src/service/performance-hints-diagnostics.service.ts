@@ -21,12 +21,21 @@ const LOG_SCOPE = 'performanceHints';
 /** VS Code clamps the end column to the line length, so any large value works. */
 const HINT_RANGE_END_COLUMN = 2000;
 
+/** Localized diagnostic-code label per hint origin, used when a hint has no type name. */
+const HINT_ORIGIN_TAG_KEYS: Record<PerformanceHintItem['origin'], string> = {
+  instruction: 'performanceHints.origin.instruction',
+  sourceLine: 'performanceHints.origin.sourceLine',
+  kernel: 'performanceHints.origin.kernel',
+};
+
 /** Outcome of one `publishFromFile` call. */
 export interface PerformanceHintsPublishResult {
   /** Hints published from the file; `0` means the collection was cleared instead. */
   published: number;
   /** True when the file could not be read or parsed (already warned about). */
   failed: boolean;
+  /** True when a newer publish/clear superseded this one mid-flight (result dropped). */
+  stale?: boolean;
 }
 
 /**
@@ -153,6 +162,8 @@ export class PerformanceHintsDiagnosticsService {
    */
   private readonly lastScopes = new Map<string, string | undefined>();
 
+  private readonly clearListeners = new Set<()=> void>();
+
   activate(context: vscode.ExtensionContext): void {
     this.collection = vscode.languages.createDiagnosticCollection(performanceHintsDiagnosticCollectionId());
     context.subscriptions.push(this.collection);
@@ -168,6 +179,26 @@ export class PerformanceHintsDiagnosticsService {
     this.lastPublishTarget = undefined;
     this.lastScopes.clear();
     this.collection?.clear();
+
+    for (const listener of this.clearListeners) {
+      listener();
+    }
+  }
+
+  /**
+   * Subscribe to collection clears (workspace changes, empty or failed
+   * publishes). Panels use it to switch their "published in Problems"
+   * indicator off when the hints they published are gone without a tab
+   * change.
+   */
+  onDidClear(listener: ()=> void): vscode.Disposable {
+    this.clearListeners.add(listener);
+
+    return {
+      dispose: () => {
+        this.clearListeners.delete(listener);
+      },
+    };
   }
 
   /**
@@ -253,7 +284,6 @@ export class PerformanceHintsDiagnosticsService {
     }
 
     const fallbackUri = vscode.Uri.file(filePath);
-    const source = t('performanceHints.source');
     const diagnosticsByUri = new Map<string, vscode.Diagnostic[]>();
     const sourceFileCache = new Map<string, vscode.Uri | undefined>();
 
@@ -262,7 +292,7 @@ export class PerformanceHintsDiagnosticsService {
       const key = uri.toString();
       const diagnostics = diagnosticsByUri.get(key) ?? [];
 
-      diagnostics.push(this.createHintDiagnostic(hint, parsed.sourceLines, source));
+      diagnostics.push(this.createHintDiagnostic(hint, parsed.sourceLines));
       diagnosticsByUri.set(key, diagnostics);
     }
 
@@ -273,6 +303,7 @@ export class PerformanceHintsDiagnosticsService {
       return {
         published: 0,
         failed: false,
+        stale: true,
       };
     }
 
@@ -308,7 +339,7 @@ export class PerformanceHintsDiagnosticsService {
 
     await vscode.commands.executeCommand('workbench.actions.view.problems');
 
-    if (!result.failed && result.published === 0) {
+    if (!result.failed && result.published === 0 && !result.stale) {
       void vscode.window.showInformationMessage(t('performanceHints.empty', { file: filePath }));
     }
   }
@@ -316,20 +347,31 @@ export class PerformanceHintsDiagnosticsService {
   private createHintDiagnostic(
     hint: PerformanceHintItem,
     sourceLines: Map<string, SourceLineInfo>,
-    source: string,
   ): vscode.Diagnostic {
-    const typePrefix = hint.typeName ? `${hint.typeName}: ` : '';
     const pcSuffix = hint.pc ? ` (PC: ${hint.pc})` : '';
     const diagnostic = new vscode.Diagnostic(
       this.createHintRange(hint, sourceLines),
-      `${typePrefix}${hint.message}${pcSuffix}`,
+      `${hint.message}${pcSuffix}`,
       vscode.DiagnosticSeverity.Information,
     );
 
-    diagnostic.source = source;
-    diagnostic.code = hint.typeName ?? hint.origin;
+    diagnostic.source = t('performanceHints.source');
+    diagnostic.code = this.createHintTag(hint);
 
     return diagnostic;
+  }
+
+  /** Tag shown as the diagnostic code in Problems: the hint type name, or a short localized origin label. */
+  private createHintTag(hint: PerformanceHintItem): string {
+    const typeName = hint.typeName?.trim();
+
+    if (typeName) {
+      return typeName;
+    }
+
+    const key = HINT_ORIGIN_TAG_KEYS[hint.origin];
+
+    return t(key);
   }
 
   /** `SourceLines.SourceLine` is 1-based; hints without a line point at the file start. */

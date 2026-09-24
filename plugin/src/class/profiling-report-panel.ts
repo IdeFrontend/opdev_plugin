@@ -6,6 +6,7 @@ import * as vscode from 'vscode';
 import { HtmlTransformer } from '@plugin/class/html-transformer';
 import {
   CANN_ASSIST_SET_INPUT_TEXT,
+  COMMAND_SHOW_PERFORMANCE_HINTS,
   PROFILING_REPORT_PANEL_TYPE,
   VIEW_PROFILING_REPORT,
 } from '@plugin/constants';
@@ -66,6 +67,8 @@ export interface ProfilingReportPanelHooks {
   onDispose?(): void;
   /** Webview reported its selected operator (multi-op packs); `null` when none. */
   onOperatorChanged?(operatorId: string | null): void;
+  /** New hooks replaced this set (panel reopened): drop subscriptions, keep the published hints intact. */
+  onHooksReplaced?(): void;
 }
 
 export class ProfilingReportPanel {
@@ -84,6 +87,12 @@ export class ProfilingReportPanel {
   private webviewReady = false;
 
   private pendingFilePath: string | undefined;
+
+  /** Report path the panel is showing; used by the "open in Problems" click handler. */
+  private filePath: string | undefined;
+
+  /** Publish-state to forward once the webview becomes ready (posted after the pending load). */
+  private pendingPublishedState: boolean | undefined;
 
   private hooks: ProfilingReportPanelHooks | undefined;
 
@@ -112,6 +121,16 @@ export class ProfilingReportPanel {
           void this.loadFile(filePath);
         }
 
+        if (this.pendingPublishedState !== undefined) {
+          const published = this.pendingPublishedState;
+
+          this.pendingPublishedState = undefined;
+          void this.panel.webview.postMessage({
+            command: 'performanceHintsPublishedChanged',
+            published,
+          });
+        }
+
         return;
       }
 
@@ -128,6 +147,12 @@ export class ProfilingReportPanel {
 
         this.hooks?.onOperatorChanged?.(typeof operatorId === 'string' && operatorId ? operatorId : null);
       }
+
+      if (command === 'showPerformanceHintsInProblems') {
+        if (this.filePath) {
+          void vscode.commands.executeCommand(COMMAND_SHOW_PERFORMANCE_HINTS, this.filePath);
+        }
+      }
     });
     this.viewStateDisposable = this.panel.onDidChangeViewState(() => {
       this.hooks?.onActiveChanged?.(this.panel.active);
@@ -137,22 +162,29 @@ export class ProfilingReportPanel {
     });
   }
 
+  /**
+   * Show the report panel of `filePath`, reusing an already open one, and
+   * return the instance so the caller can push state into its webview (the
+   * performance-hints publish flag). The instance returned after a failed
+   * `initializeHtml` is already disposed: calls on it are no-ops.
+   */
   public static async createOrShow(
     context: vscode.ExtensionContext,
     filePath: string,
     hooks?: ProfilingReportPanelHooks,
-  ): Promise<void> {
+  ): Promise<ProfilingReportPanel> {
     const existing = ProfilingReportPanel.openedFiles.get(filePath);
 
     if (existing && !existing.disposed) {
       if (hooks) {
+        existing.hooks?.onHooksReplaced?.();
         existing.hooks = hooks;
       }
 
       await existing.loadFile(filePath);
       existing.panel.reveal(vscode.ViewColumn.Active);
 
-      return;
+      return existing;
     }
 
     const webRootUri = vscode.Uri.joinPath(context.extensionUri, 'out', 'web');
@@ -181,11 +213,13 @@ export class ProfilingReportPanel {
 
       await vscode.window.showErrorMessage(t('profilingReport.loadFailed', { error: detail }));
 
-      return;
+      return instance;
     }
 
     ProfilingReportPanel.openedFiles.set(filePath, instance);
     await instance.loadFile(filePath);
+
+    return instance;
   }
 
   public dispose(): void {
@@ -216,6 +250,28 @@ export class ProfilingReportPanel {
     }
   }
 
+  /**
+   * Forward the performance-hints publish state to the webview: the indicator
+   * is only clickable while hints of this report are actually published in the
+   * Problems view. Queued until the webview is ready, dropped after dispose.
+   */
+  public setPerformanceHintsPublished(published: boolean): void {
+    if (this.disposed) {
+      return;
+    }
+
+    if (!this.webviewReady) {
+      this.pendingPublishedState = published;
+
+      return;
+    }
+
+    void this.panel.webview.postMessage({
+      command: 'performanceHintsPublishedChanged',
+      published,
+    });
+  }
+
   private async initializeHtml(): Promise<void> {
     const distPath = path.join(this.context.extensionPath, 'out', 'web');
     const cspSource = this.panel.webview.cspSource;
@@ -237,6 +293,8 @@ export class ProfilingReportPanel {
   }
 
   private async loadFile(filePath: string): Promise<void> {
+    this.filePath = filePath;
+
     if (!fs.existsSync(filePath)) {
       const message = t('profilingReport.fileNotFound', { path: filePath });
 

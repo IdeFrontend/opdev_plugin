@@ -14,6 +14,7 @@ const mockCollection = {
 };
 
 const mockCreateOrShow = jest.fn();
+const mockSetPublished = jest.fn();
 const mockShowErrorMessage = jest.fn();
 const mockShowWarningMessage = jest.fn();
 const mockFindFiles = jest.fn(async () => [] as Array<{ fsPath: string;
@@ -104,6 +105,8 @@ describe('ViewOpener.openProfilingReport — performance hints triggers', () => 
   let tempDir: string;
   let context: vscode.ExtensionContext;
   let hooks: ProfilingReportPanelHooks | undefined;
+  /** Every hooks set handed to the panel mock, in panel creation order. */
+  let hooksList: ProfilingReportPanelHooks[];
 
   beforeEach(() => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mstt-view-opener-hints-'));
@@ -117,8 +120,15 @@ describe('ViewOpener.openProfilingReport — performance hints triggers', () => 
     ));
 
     hooks = undefined;
+    hooksList = [];
     mockCreateOrShow.mockImplementation(async (_context: unknown, _filePath: string, panelHooks?: ProfilingReportPanelHooks) => {
       hooks = panelHooks;
+
+      if (panelHooks) {
+        hooksList.push(panelHooks);
+      }
+
+      return { setPerformanceHintsPublished: mockSetPublished };
     });
     (globalThis as unknown as { extensionContext: vscode.ExtensionContext }).extensionContext = { subscriptions: [] } as unknown as vscode.ExtensionContext;
     context = (globalThis as unknown as { extensionContext: vscode.ExtensionContext }).extensionContext;
@@ -315,5 +325,82 @@ describe('ViewOpener.openProfilingReport — performance hints triggers', () => 
 
     expect(mockCollection.clear)
       .toHaveBeenCalledTimes(1);
+  });
+
+  it('forwards the hint publish state to the panel webview', async () => {
+    await ViewOpener.openProfilingReport(vscode.Uri.file(GELU_NPU_REP));
+
+    expect(mockSetPublished)
+      .toHaveBeenCalledWith(true);
+
+    mockSetPublished.mockClear();
+    hooks?.onActiveChanged?.(false);
+
+    expect(mockSetPublished)
+      .toHaveBeenCalledWith(false);
+
+    mockSetPublished.mockClear();
+    hooks?.onActiveChanged?.(true);
+    await flushRepublish();
+
+    expect(mockSetPublished)
+      .toHaveBeenCalledWith(true);
+  });
+
+  it('reports false when the report cannot be parsed', async () => {
+    const brokenPath = path.join(tempDir, 'broken.npu-rep');
+
+    fs.writeFileSync(brokenPath, 'not an npu-rep container');
+
+    await ViewOpener.openProfilingReport(vscode.Uri.file(brokenPath));
+
+    expect(mockSetPublished)
+      .toHaveBeenCalledWith(false);
+  });
+
+  it('reports false when the panel is closed', async () => {
+    await ViewOpener.openProfilingReport(vscode.Uri.file(GELU_NPU_REP));
+    mockSetPublished.mockClear();
+
+    hooks?.onDispose?.();
+
+    expect(mockSetPublished)
+      .toHaveBeenCalledWith(false);
+  });
+
+  it('reports false when the report has no hints', async () => {
+    const emptyPath = path.join(tempDir, 'empty.npu-rep');
+    const parseResult: NpuRepHintParseResult = {
+      hints: [],
+      sourceLines: new Map(),
+    };
+
+    fs.writeFileSync(emptyPath, 'npu-rep-bytes');
+    mockParsePerformanceHints.mockReturnValue(parseResult);
+
+    await ViewOpener.openProfilingReport(vscode.Uri.file(emptyPath));
+
+    expect(mockSetPublished)
+      .toHaveBeenCalledWith(false);
+  });
+
+  it('turns the indicator off when another report clears the hints', async () => {
+    await ViewOpener.openProfilingReport(vscode.Uri.file(GELU_NPU_REP));
+
+    expect(mockSetPublished)
+      .toHaveBeenCalledWith(true);
+
+    const repPath = path.join(tempDir, 'profile.rep');
+
+    fs.writeFileSync(repPath, 'rep-bytes');
+    await ViewOpener.openProfilingReport(vscode.Uri.file(repPath));
+    mockSetPublished.mockClear();
+
+    // The backend report taking over clears the collection: the npu-rep panel's
+    // indicator goes off through the clear listener, not through a tab change.
+    hooksList[1]?.onActiveChanged?.(true);
+
+    expect(mockSetPublished)
+      .toHaveBeenCalledWith(false);
   });
 });

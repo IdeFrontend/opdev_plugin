@@ -271,8 +271,9 @@ describe('PerformanceHintsDiagnosticsService', () => {
         .toBe(true);
       expect(diagnostics[0])
         .toMatchObject({
-          message: 'warp_occupancy_hint: Low warp occupancy detected (32.5%). Consider to use more warps and '
+          message: 'Low warp occupancy detected (32.5%). Consider to use more warps and '
             + 'eliminate job imbalance for better performance. (PC: 624191680372)',
+          source: 'performanceHints.source',
           code: 'warp_occupancy_hint',
           range: {
             startLine: 0,
@@ -285,7 +286,7 @@ describe('PerformanceHintsDiagnosticsService', () => {
         .not.toMatch(/Not specified/u);
     });
 
-    it('omits the type and PC decorations when the hint has neither', async () => {
+    it('labels the origin in code when the hint has no type name', async () => {
       const service = new PerformanceHintsDiagnosticsService();
 
       activateService(service);
@@ -296,8 +297,37 @@ describe('PerformanceHintsDiagnosticsService', () => {
 
       expect(diagnostics[0].message)
         .toBe('Use vectorized loads.');
+      expect(diagnostics[0].source)
+        .toBe('performanceHints.source');
       expect(diagnostics[0].code)
-        .toBe('kernel');
+        .toBe('performanceHints.origin.kernel');
+    });
+
+    it('keeps messages tag-free and shows the tag in code — no file path', async () => {
+      const service = new PerformanceHintsDiagnosticsService();
+
+      activateService(service);
+      await service.publishFromFile(GELU_NPU_REP);
+
+      const diagnostics = diagnosticsFor(GELU_NPU_REP);
+      const serialized = JSON.stringify(diagnostics);
+
+      expect(serialized).not.toMatch(/File:/i);
+      expect(diagnostics.every((d) => typeof d.code === 'string' && d.code.length > 0))
+        .toBe(true);
+      expect(diagnostics.every((d) => !d.message.startsWith(`${String(d.code)}: `)))
+        .toBe(true);
+    });
+
+    it('falls back to the localized origin tag when the hint has no type name', async () => {
+      const service = new PerformanceHintsDiagnosticsService();
+
+      activateService(service);
+      mockParsePerformanceHints.mockReturnValue(parseResult([hint({ origin: 'instruction' })]));
+      await service.publishFromFile(npuRepPath);
+
+      expect(diagnosticsFor(npuRepPath)[0].code)
+        .toBe('performanceHints.origin.instruction');
     });
 
     it('maps source-line hints onto the workspace file and keeps the 1-based line', async () => {
@@ -607,6 +637,7 @@ describe('PerformanceHintsDiagnosticsService', () => {
         .toEqual({
           published: 0,
           failed: false,
+          stale: true,
         });
       expect(mockCollection.set)
         .not.toHaveBeenCalled();
@@ -776,6 +807,7 @@ describe('PerformanceHintsDiagnosticsService', () => {
         .toEqual({
           published: 0,
           failed: false,
+          stale: true,
         });
       expect(mockCollection.set)
         .not.toHaveBeenCalled();
@@ -833,6 +865,27 @@ describe('PerformanceHintsDiagnosticsService', () => {
 
       expect(mockCollection.clear)
         .not.toHaveBeenCalled();
+    });
+  });
+
+  describe('onDidClear', () => {
+    it('notifies listeners when the collection is cleared and stops after disposal', () => {
+      const service = new PerformanceHintsDiagnosticsService();
+
+      activateService(service);
+      const listener = jest.fn();
+      const subscription = service.onDidClear(listener);
+
+      service.clear();
+
+      expect(listener)
+        .toHaveBeenCalledTimes(1);
+
+      subscription.dispose();
+      service.clear();
+
+      expect(listener)
+        .toHaveBeenCalledTimes(1);
     });
   });
 

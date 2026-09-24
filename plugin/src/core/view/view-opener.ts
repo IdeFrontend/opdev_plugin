@@ -97,17 +97,27 @@ export class ViewOpener {
 
     const isNpuRep = isNpuRepFile(filePath);
 
+    let panel: ProfilingReportPanel | undefined;
+    const hooks = ViewOpener.profilingReportHooks(filePath, isNpuRep, (published) => {
+      panel?.setPerformanceHintsPublished(published);
+    });
+
     try {
-      await ProfilingReportPanel.createOrShow(context, filePath, ViewOpener.profilingReportHooks(filePath, isNpuRep));
+      panel = await ProfilingReportPanel.createOrShow(context, filePath, hooks);
     }
     catch (error) {
+      hooks.onDispose?.();
       vscode.window.showErrorMessage(t('profilingReport.loadFailed', { error: String(error) }));
 
       return;
     }
 
     if (isNpuRep) {
-      await ViewOpener.publishPerformanceHints(filePath);
+      const published = await ViewOpener.publishPerformanceHints(filePath);
+
+      if (published !== undefined) {
+        panel.setPerformanceHintsPublished(published);
+      }
     }
   }
 
@@ -115,9 +125,17 @@ export class ViewOpener {
    * Hints follow the active profiling tab: a `.npu-rep` panel publishes its own
    * hints while active (re-publishing on operator changes) and drops exactly
    * those hints when it is hidden or disposed; any other report type clears the
-   * collection so hints never outlive the tab they came from.
+   * collection so hints never outlive the tab they came from. Each publish
+   * reports back through `onPublishedState` so the panel can flag whether its
+   * hints are currently visible in Problems: superseded publishes are ignored
+   * (a newer publish owns the collection), and any clear — even one triggered
+   * by another report — switches the flag off.
    */
-  private static profilingReportHooks(filePath: string, isNpuRep: boolean): ProfilingReportPanelHooks {
+  private static profilingReportHooks(
+    filePath: string,
+    isNpuRep: boolean,
+    onPublishedState: (published: boolean)=> void,
+  ): ProfilingReportPanelHooks {
     if (!isNpuRep) {
       return {
         onActiveChanged: (active) => {
@@ -135,36 +153,68 @@ export class ViewOpener {
      */
     let selectedOperatorId: string | undefined;
 
+    const clearSubscription = performanceHintsDiagnosticsService.onDidClear(() => {
+      onPublishedState(false);
+    });
+
     return {
       onActiveChanged: (active) => {
         if (active) {
-          void ViewOpener.publishPerformanceHints(filePath, selectedOperatorId);
+          void ViewOpener.publishPerformanceHints(filePath, selectedOperatorId)
+            .then((published) => {
+              if (published !== undefined) {
+                onPublishedState(published);
+              }
+            });
 
           return;
         }
 
         performanceHintsDiagnosticsService.clearIfOwns(filePath);
+        onPublishedState(false);
       },
       onDispose: () => {
+        clearSubscription.dispose();
         performanceHintsDiagnosticsService.clearIfOwns(filePath);
+        onPublishedState(false);
       },
       onOperatorChanged: (operatorId) => {
         selectedOperatorId = operatorId ?? undefined;
-        void ViewOpener.publishPerformanceHints(filePath, selectedOperatorId);
+        void ViewOpener.publishPerformanceHints(filePath, selectedOperatorId)
+          .then((published) => {
+            if (published !== undefined) {
+              onPublishedState(published);
+            }
+          });
+      },
+      onHooksReplaced: () => {
+        clearSubscription.dispose();
       },
     };
   }
 
-  /** Hint publishing is auxiliary: a failure must never break panel opening or tab switching. */
-  private static async publishPerformanceHints(filePath: string, operatorId?: string): Promise<void> {
+  /**
+   * Hint publishing is auxiliary: a failure must never break panel opening or
+   * tab switching. `undefined` means the publish was superseded mid-flight by a
+   * newer publish/clear, so the caller must leave the published flag alone.
+   */
+  private static async publishPerformanceHints(filePath: string, operatorId?: string): Promise<boolean | undefined> {
     try {
-      await performanceHintsDiagnosticsService.publishFromFile(filePath, { operatorId });
+      const result = await performanceHintsDiagnosticsService.publishFromFile(filePath, { operatorId });
+
+      if (result.stale) {
+        return undefined;
+      }
+
+      return result.published > 0;
     }
     catch (error) {
       void vscode.window.showWarningMessage(t('performanceHints.publishFailed', {
         file: filePath,
         error: String(error),
       }));
+
+      return false;
     }
   }
 }

@@ -22,6 +22,7 @@ const collectedAt = ref('');
 const isLoading = ref(true);
 const error = ref<string | null>(null);
 const reportRef = ref<ProfilingReportHandle | null>(null);
+const performanceHintsPublished = ref(false);
 
 /**
  * The host mirrors the report's selected operator into the Problems view, so
@@ -58,6 +59,12 @@ const reportMeta = computed(() => ({
 const handleMessage = (e: MessageEvent) => {
   const message = e.data;
 
+  if (message?.command === 'performanceHintsPublishedChanged' && typeof message.published === 'boolean') {
+    performanceHintsPublished.value = message.published;
+
+    return;
+  }
+
   if (message?.command === 'loadProfilingReportFailed' && typeof message.error === 'string') {
     source.value = null;
     error.value = message.error;
@@ -92,6 +99,22 @@ const handleMessage = (e: MessageEvent) => {
         isLoading.value = false;
       }
     })();
+  }
+};
+
+/**
+ * Host environment the library sees: hints published in Problems → vscode routing,
+ * otherwise the internal dock.
+ */
+const environment = computed(() => (performanceHintsPublished.value ? 'vscode' : 'browser'));
+
+/** 性能分析 详情 under vscode routing: ask the host to reveal the published hints in Problems. */
+const onOpenPerformanceHintsInProblems = () => {
+  try {
+    vscode.postMessage({ command: 'showPerformanceHintsInProblems' });
+  }
+  catch {
+    // Host not ready: the indicator is hidden again once the state is false.
   }
 };
 
@@ -139,9 +162,11 @@ const onCannbotRequest = (payload: unknown) => {
       :theme="theme"
       :title="fileName"
       :report-meta="reportMeta"
+      :environment="environment"
       @ready="onReady"
       @error="onError"
       @cannbot-request="onCannbotRequest"
+      @open-performance-hints-in-problems="onOpenPerformanceHintsInProblems"
     />
     <div
       v-else-if="error"

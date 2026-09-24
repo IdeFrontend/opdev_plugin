@@ -45,6 +45,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 
 import { ProfilingReportPanel } from '@plugin/class/profiling-report-panel';
+import { COMMAND_SHOW_PERFORMANCE_HINTS } from '@plugin/constants';
 import { SettingsLoader } from '@plugin/service/settings-loader';
 
 type FakeDisposable = {
@@ -494,5 +495,70 @@ describe('ProfilingReportPanel', () => {
 
     expect(panel.webview.postMessage)
       .toHaveBeenCalledWith(expect.objectContaining({ command: 'loadProfilingReport' }));
+  });
+
+  it('queues the hints publish state until the webview is ready and posts it after the ready handshake', async () => {
+    const instance = await ProfilingReportPanel.createOrShow(context, filePath);
+    const panel = panels[0]!;
+
+    instance.setPerformanceHintsPublished(true);
+
+    expect(panel.webview.postMessage)
+      .not.toHaveBeenCalled();
+
+    emitReady(panel);
+    await Promise.resolve();
+
+    expect(panel.webview.postMessage)
+      .toHaveBeenCalledWith({
+        command: 'performanceHintsPublishedChanged',
+        published: true,
+      });
+  });
+
+  it('posts the hints publish state immediately once the webview is ready', async () => {
+    const instance = await ProfilingReportPanel.createOrShow(context, filePath);
+    const panel = panels[0]!;
+
+    emitReady(panel);
+    await Promise.resolve();
+    instance.setPerformanceHintsPublished(false);
+
+    const calls = panel.webview.postMessage.mock.calls;
+
+    expect(calls[calls.length - 1]![0])
+      .toEqual({
+        command: 'performanceHintsPublishedChanged',
+        published: false,
+      });
+  });
+
+  it('opens Problems with the current report when the webview asks for the hints', async () => {
+    await ProfilingReportPanel.createOrShow(context, filePath);
+
+    const panel = panels[0]!;
+
+    emitReady(panel);
+    await Promise.resolve();
+    emitMessage(panel, { command: 'showPerformanceHintsInProblems' });
+    await flushAsyncActions();
+
+    expect(mockExecuteCommand)
+      .toHaveBeenCalledWith(COMMAND_SHOW_PERFORMANCE_HINTS, filePath);
+  });
+
+  it('drops the publish state after dispose without throwing', async () => {
+    const instance = await ProfilingReportPanel.createOrShow(context, filePath);
+    const panel = panels[0]!;
+
+    instance.dispose();
+    panel.webview.postMessage.mockClear();
+
+    expect(() => instance.setPerformanceHintsPublished(true)).not.toThrow();
+    expect(panel.webview.postMessage)
+      .not.toHaveBeenCalledWith({
+        command: 'performanceHintsPublishedChanged',
+        published: true,
+      });
   });
 });
