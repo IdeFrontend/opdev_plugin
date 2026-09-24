@@ -378,4 +378,60 @@ describe('configMethods settings-native options endpoints', () => {
     expect(readSettings()['op-devtools.sanitizer.blockId'])
       .toBe(7);
   });
+
+  it('saveNpuComputeSections writes all 8 booleans (true/false), getNpuComputeSections reads them back', async () => {
+    await configMethods.saveNpuComputeSections([
+      'Pipeline',
+      'Memory',
+    ]);
+
+    const parsed = readSettings();
+
+    expect(parsed['op-devtools.performanceTuning.onBoard.npuCompute.pipeline'])
+      .toBe(true);
+    expect(parsed['op-devtools.performanceTuning.onBoard.npuCompute.memory'])
+      .toBe(true);
+    expect(parsed['op-devtools.performanceTuning.onBoard.npuCompute.pipeUtilization'])
+      .toBe(false);
+    expect(parsed['op-devtools.performanceTuning.onBoard.npuCompute.resourceConflictRatio'])
+      .toBe(false);
+
+    expect(await configMethods.getNpuComputeSections())
+      .toEqual([
+        'Pipeline',
+        'Memory',
+      ]);
+  });
+
+  it('getNpuComputeSections returns all 8 sections when nothing is set (default true)', async () => {
+    expect(await configMethods.getNpuComputeSections())
+      .toEqual([
+        'PipeUtilization',
+        'Pipeline',
+        'L2Cache',
+        'Memory',
+        'MemoryL0',
+        'MemoryUB',
+        'ArithmeticUtilization',
+        'ResourceConflictRatio',
+      ]);
+  });
+
+  it('saveNpuComputeSections([]) clears all 8 booleans', async () => {
+    await ConfigService.writeOpDevtoolsDottedSettings({
+      'performanceTuning.onBoard.npuCompute.pipeline': true,
+      'performanceTuning.onBoard.npuCompute.memory': true,
+    }, tmpRoot);
+
+    await configMethods.saveNpuComputeSections([]);
+
+    const parsed = readSettings();
+
+    expect(parsed['op-devtools.performanceTuning.onBoard.npuCompute.pipeline'])
+      .toBe(false);
+    expect(parsed['op-devtools.performanceTuning.onBoard.npuCompute.memory'])
+      .toBe(false);
+    expect(await configMethods.getNpuComputeSections())
+      .toEqual([]);
+  });
 });

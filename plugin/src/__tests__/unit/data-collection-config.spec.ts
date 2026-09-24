@@ -8,6 +8,7 @@
  */
 
 import {
+  DATA_COLLECTION_SECTIONS,
   DATA_COLLECTION_SET_SECTIONS,
   DATA_COLLECTION_SET_CUSTOM_DESC,
   DATA_COLLECTION_SET_UNSUPPORTED,
@@ -16,6 +17,7 @@ import {
   resolveSelectedSections,
   buildDefaultCommandLine,
   buildDefaultDataCollectionConfig,
+  buildNpuComputeSectionFlags,
   dataCollectionConfigSettingKey,
   mergeSavedDataCollectionConfig,
   type DataCollectionConfig,
@@ -331,15 +333,57 @@ describe('mergeSavedDataCollectionConfig', () => {
       .toBe('/tmp/out.npu-rep');
     expect(merged.common.forceOverwrite)
       .toBe(true);
-    // A hand-edited commandLine is preserved verbatim (not re-derived).
+    // commandLine is regenerated from sections (saved.set=full → 8 sections),
+    // never restored verbatim.
     expect(merged.common.commandLine)
-      .toBe('--section Memory --force');
+      .toBe('--section PipeUtilization --section Pipeline --section L2Cache --section Memory --section MemoryL0 --section MemoryUB --section ArithmeticUtilization --section ResourceConflictRatio --force');
     expect(merged.metrics.kind)
       .toBe('set');
     expect(merged.metrics.set)
       .toBe('full');
+    // Without a caller-provided sectionSelection, the fresh default sections are kept.
     expect(merged.metrics.sections)
-      .toEqual([...DATA_COLLECTION_SET_SECTIONS.full]);
+      .toEqual([...DATA_COLLECTION_SET_SECTIONS.basic]);
+  });
+
+  it('uses the caller-provided sectionSelection as the source of truth (on-board)', () => {
+    const saved = {
+      common: {
+        outputFile: '/tmp/x',
+        forceOverwrite: false,
+      },
+      metrics: {
+        kind: 'section',
+        set: 'Custom',
+        sections: [
+          'Memory',
+          'L2Cache',
+        ],
+      },
+    };
+
+    const merged = mergeSavedDataCollectionConfig('onboard', saved, [
+      'Memory',
+      'L2Cache',
+    ]);
+
+    expect(merged.metrics.sections)
+      .toEqual([
+        'Memory',
+        'L2Cache',
+      ]);
+    // saved.metrics.sections is ignored; the caller's selection wins.
+    expect(merged.common.commandLine)
+      .toBe('--section L2Cache --section Memory');
+  });
+
+  it('regenerates commandLine even when nothing was saved (on-board with selection)', () => {
+    const merged = mergeSavedDataCollectionConfig('onboard', undefined, ['Pipeline']);
+
+    expect(merged.metrics.sections)
+      .toEqual(['Pipeline']);
+    expect(merged.common.commandLine)
+      .toBe('--section Pipeline');
   });
 
   it('takes collectionType from the caller, never from the saved blob', () => {
@@ -377,46 +421,35 @@ describe('mergeSavedDataCollectionConfig', () => {
     expect(merged.metrics.sections)
       .toEqual(base.metrics.sections);
   });
+});
 
-  it('drops non-string entries from a saved sections array', () => {
-    const merged = mergeSavedDataCollectionConfig('onboard', {
-      metrics: {
-        kind: 'section',
-        sections: [
-          'Memory',
-          42,
-          'L2Cache',
-          null,
-        ],
-      },
-    });
-
-    expect(merged.metrics.sections)
-      .toEqual([
-        'Memory',
-        'L2Cache',
-      ]);
+describe('buildNpuComputeSectionFlags', () => {
+  it('returns an empty string when no section is selected', () => {
+    expect(buildNpuComputeSectionFlags([]))
+      .toBe('');
   });
 
-  it('keeps all sections from a saved config (all sections are now supported)', () => {
-    const merged = mergeSavedDataCollectionConfig('onboard', {
-      metrics: {
-        kind: 'section',
-        sections: [
-          'Pipeline',
-          'Memory',
-          'ArithmeticUtilization',
-          'ResourceConflictRatio',
-        ],
-      },
-    });
+  it('emits one --section <id> per selected section in DATA_COLLECTION_SECTIONS order', () => {
+    // Input out of order and with a duplicate — output must be ordered + deduped.
+    expect(buildNpuComputeSectionFlags([
+      'Memory',
+      'Pipeline',
+      'Memory',
+    ]))
+      .toBe('--section Pipeline --section Memory');
+  });
 
-    expect(merged.metrics.sections)
-      .toEqual([
-        'Pipeline',
-        'Memory',
-        'ArithmeticUtilization',
-        'ResourceConflictRatio',
-      ]);
+  it('emits all 8 sections in canonical order when all are selected', () => {
+    expect(buildNpuComputeSectionFlags([...DATA_COLLECTION_SECTIONS]))
+      .toBe('--section PipeUtilization --section Pipeline --section L2Cache --section Memory --section MemoryL0 --section MemoryUB --section ArithmeticUtilization --section ResourceConflictRatio');
+  });
+
+  it('ignores unknown section names', () => {
+    expect(buildNpuComputeSectionFlags([
+      'Memory',
+      'Bogus',
+      'L2Cache',
+    ]))
+      .toBe('--section L2Cache --section Memory');
   });
 });

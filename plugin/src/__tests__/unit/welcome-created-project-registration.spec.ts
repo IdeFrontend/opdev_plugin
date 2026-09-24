@@ -434,6 +434,30 @@ describe('welcomeMethods.createdProject standard-custom registration recovery', 
     (vscode.commands.executeCommand as jest.Mock).mockResolvedValue(undefined);
     warnSpy.mockRestore();
   });
+
+  it('auto-selects the new sub-operator and clears previous selection (issue #83)', async () => {
+    storedRoot = makeRoot();
+
+    await welcomeMethods.createdProject(params);
+
+    const cache: WorkspaceCache = {
+      schemaVersion: 1,
+      folders: {},
+      // 模拟此前已有别的算子被选中
+      project: {
+        selectedOperatorPaths: ['/repo/ops-math/math/old_op'],
+        compiledOpPaths: { '/repo/ops-math/math/old_op': true },
+      },
+    };
+
+    collectionAppendUpdater()(cache);
+
+    // 新算子路径被选中，原有选择被清空；compiledOpPaths 等兄弟字段保留
+    expect(cache.project?.selectedOperatorPaths)
+      .toEqual([childPath]);
+    expect(cache.project?.compiledOpPaths)
+      .toEqual({ '/repo/ops-math/math/old_op': true });
+  });
 });
 
 describe('welcomeMethods.createdProject genop scaffold', () => {

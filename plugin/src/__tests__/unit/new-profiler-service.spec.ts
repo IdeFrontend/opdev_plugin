@@ -21,6 +21,9 @@ import {
 const opprofRunDir = '/ws/.mstt/opprof/run-1';
 const targetFile = '/ws/build_out/op_test';
 
+const configWithSections = (collectionType: 'onboard' | 'simulate'): DataCollectionConfig =>
+  buildDefaultDataCollectionConfig(collectionType);
+
 const configWithCommandLine = (collectionType: 'onboard' | 'simulate', commandLine: string): DataCollectionConfig => {
   const config = buildDefaultDataCollectionConfig(collectionType);
 
@@ -30,44 +33,49 @@ const configWithCommandLine = (collectionType: 'onboard' | 'simulate', commandLi
 };
 
 describe('buildNpuComputeCommand', () => {
-  it('appends the default --export (result.npu-rep) and the target after user args', () => {
+  it('builds --section flags from the booleans (sections param), then --export + target', () => {
     const cmd = buildNpuComputeCommand({
-      config: configWithCommandLine('onboard', '--section Pipeline'),
+      config: configWithSections('onboard'),
       targetFile,
       opprofRunDir,
+      sections: ['Pipeline'],
     });
 
     expect(cmd)
       .toBe(`npu-compute --section Pipeline --export ${opprofRunDir}/${NEW_TOOL_REPORT_FILENAME} ${targetFile}`);
   });
 
-  it('respects a user --export and does not add the default output', () => {
+  it('orders multiple sections per DATA_COLLECTION_SECTIONS and dedupes', () => {
     const cmd = buildNpuComputeCommand({
-      config: configWithCommandLine('onboard', '--export /tmp/custom.npu-rep'),
+      config: configWithSections('onboard'),
       targetFile,
       opprofRunDir,
+      sections: [
+        'Memory',
+        'Pipeline',
+        'Memory',
+      ],
     });
 
     expect(cmd)
-      .toBe(`npu-compute --export /tmp/custom.npu-rep ${targetFile}`);
-    expect(cmd)
-      .not.toContain(opprofRunDir);
+      .toBe(`npu-compute --section Pipeline --section Memory --export ${opprofRunDir}/${NEW_TOOL_REPORT_FILENAME} ${targetFile}`);
   });
 
-  it('respects a user -o (short form) as an explicit output', () => {
+  it('omits section flags but still emits --export when no section is selected', () => {
     const cmd = buildNpuComputeCommand({
-      config: configWithCommandLine('onboard', '-o /tmp/out.npu-rep'),
+      config: configWithSections('onboard'),
       targetFile,
       opprofRunDir,
+      sections: [],
     });
 
     expect(cmd)
-      .not.toContain('--export');
+      .toBe(`npu-compute --export ${opprofRunDir}/${NEW_TOOL_REPORT_FILENAME} ${targetFile}`);
   });
 
-  it('still emits a runnable command when no user args are provided', () => {
+  it('defaults sections to empty when the param is omitted', () => {
     const cmd = buildNpuComputeCommand({
-      config: configWithCommandLine('onboard', ''),
+      config: configWithSections('onboard'),
       targetFile,
       opprofRunDir,
     });

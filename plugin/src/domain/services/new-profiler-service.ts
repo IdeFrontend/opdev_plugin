@@ -18,7 +18,10 @@
  */
 
 import type { DataCollectionConfig } from '@shared/data-collection-config';
-import { NEW_TOOL_REPORT_FILENAME } from '@shared/data-collection-config';
+import {
+  NEW_TOOL_REPORT_FILENAME,
+  buildNpuComputeSectionFlags,
+} from '@shared/data-collection-config';
 
 /** SoC `-s` value NPU-Emulate accepts for the A5 class (see NPUSim doc §5). */
 export const NPU_EMULATE_SOC_VERSION = 'Ascend950' as const;
@@ -31,6 +34,12 @@ export interface NewProfilerCommandParams {
   targetFile: string;
   /** Absolute per-run opprof directory (`<root>/<ideDir>/opprof/<runId>`) reports land in. */
   opprofRunDir: string;
+  /**
+   * On-board only: the resolved npu-compute section names (the 8 per-section
+   * booleans are the single source of truth). npu-compute's `--section` flags
+   * are built from these; ignored by the simulation builder.
+   */
+  sections?: readonly string[];
 }
 
 /** True when the free-text tool args already carry one of the given long/short options. */
@@ -45,25 +54,28 @@ function commandLineHasOption(commandLine: string, ...options: string[]): boolea
  * Build the `npu-compute` collection command.
  *
  * Shape (npu-compute doc §4/§5): `npu-compute [options] <target> [target args]`.
- * The user's `commandLine` text supplies `[options]` (e.g. repeated `--section`).
- * We only append `--export <opprofRunDir>/result.npu-rep` when the user has not
- * already pinned an output (`-o`/`--export`), then the compiled `targetFile`.
+ * The `--section <id>` flags are derived from the 8 per-section booleans (the
+ * single source of truth, passed as `params.sections`); the user no longer
+ * hand-edits them via `commandLine`. We append `--export
+ * <opprofRunDir>/result.npu-rep` (always — the section flags carry no output)
+ * then the compiled `targetFile`.
  */
 export function buildNpuComputeCommand(params: NewProfilerCommandParams): string {
   const {
-    config, targetFile, opprofRunDir,
+    targetFile, opprofRunDir, sections = [],
   } = params;
-  const userArgs = (config.common.commandLine || '').trim();
+
+  const sectionFlags = buildNpuComputeSectionFlags(sections);
 
   const parts = ['npu-compute'];
 
-  if (userArgs) {
-    parts.push(userArgs);
+  if (sectionFlags) {
+    parts.push(sectionFlags);
   }
 
-  // Report link relies on a deterministic .npu-rep path; respect an explicit
-  // user output and only add the default export otherwise.
-  if (!commandLineHasOption(userArgs, '--export', '-o')) {
+  // Report link relies on a deterministic .npu-rep path. Section flags never
+  // carry an output option, so the default export is always appended.
+  if (!commandLineHasOption(sectionFlags, '--export', '-o')) {
     parts.push(`--export ${opprofRunDir}/${NEW_TOOL_REPORT_FILENAME}`);
   }
 
