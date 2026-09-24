@@ -2172,7 +2172,7 @@ describe('extension activation', () => {
       expect(vscode.commands.executeCommand)
         .toHaveBeenCalledWith(
           'workbench.action.openWorkspaceSettings',
-          `@ext:${EXTENSION_ID}`,
+          `@ext:${EXTENSION_ID} ${settingsKey('sanitizer')}`,
         );
     });
 
