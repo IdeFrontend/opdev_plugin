@@ -97,10 +97,21 @@ export class ViewOpener {
 
     const isNpuRep = isNpuRepFile(filePath);
 
+    // Reusing a retained panel must keep the webview's operator: hooks are
+    // rebuilt from scratch, and Vue will not re-emit an unchanged selection.
+    const retainedOperatorId = isNpuRep
+      ? ProfilingReportPanel.retainedOperatorId(filePath)
+      : undefined;
+
     let panel: ProfilingReportPanel | undefined;
-    const hooks = ViewOpener.profilingReportHooks(filePath, isNpuRep, (published) => {
-      panel?.setPerformanceHintsPublished(published);
-    });
+    const hooks = ViewOpener.profilingReportHooks(
+      filePath,
+      isNpuRep,
+      (published) => {
+        panel?.setPerformanceHintsPublished(published);
+      },
+      retainedOperatorId,
+    );
 
     try {
       panel = await ProfilingReportPanel.createOrShow(context, filePath, hooks);
@@ -113,7 +124,7 @@ export class ViewOpener {
     }
 
     if (isNpuRep) {
-      const published = await ViewOpener.publishPerformanceHints(filePath);
+      const published = await ViewOpener.publishPerformanceHints(filePath, retainedOperatorId);
 
       if (published !== undefined) {
         panel.setPerformanceHintsPublished(published);
@@ -135,6 +146,7 @@ export class ViewOpener {
     filePath: string,
     isNpuRep: boolean,
     onPublishedState: (published: boolean)=> void,
+    initialOperatorId?: string,
   ): ProfilingReportPanelHooks {
     if (!isNpuRep) {
       return {
@@ -149,9 +161,10 @@ export class ViewOpener {
     /**
      * Operator the webview last reported. The panel keeps the webview alive
      * while the tab is hidden, so re-activating it must republish the very same
-     * scope instead of falling back to the report's default operator.
+     * scope instead of falling back to the report's default operator. Seeded
+     * from the retained panel when hooks are replaced on reopen.
      */
-    let selectedOperatorId: string | undefined;
+    let selectedOperatorId: string | undefined = initialOperatorId;
 
     const clearSubscription = performanceHintsDiagnosticsService.onDidClear(() => {
       onPublishedState(false);

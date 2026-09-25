@@ -14,6 +14,7 @@ const mockCollection = {
 };
 
 const mockCreateOrShow = jest.fn();
+const mockRetainedOperatorId = jest.fn((): string | undefined => undefined);
 const mockSetPublished = jest.fn();
 const mockShowErrorMessage = jest.fn();
 const mockShowWarningMessage = jest.fn();
@@ -83,7 +84,12 @@ jest.mock('@plugin/core/profiling', () => {
   };
 });
 
-jest.mock('@plugin/class/profiling-report-panel', () => ({ ProfilingReportPanel: { createOrShow: mockCreateOrShow } }));
+jest.mock('@plugin/class/profiling-report-panel', () => ({
+  ProfilingReportPanel: {
+    createOrShow: mockCreateOrShow,
+    retainedOperatorId: mockRetainedOperatorId,
+  },
+}));
 
 import * as fs from 'fs';
 import * as os from 'os';
@@ -98,8 +104,8 @@ import { performanceHintsDiagnosticsService } from '@plugin/service/performance-
 
 const actualProfiling = jest.requireActual<typeof import('@plugin/core/profiling')>('@plugin/core/profiling');
 
-/** Vendored producer pack (`profiling-report/data/gelu.npu-rep`). */
-const GELU_NPU_REP = path.resolve(__dirname, '../fixtures/gelu.npu-rep');
+/** Producer pack from the profiling-report submodule (not vendored into the plugin tree). */
+const GELU_NPU_REP = path.resolve(__dirname, '../../../../profiling-report/data/gelu.npu-rep');
 
 describe('ViewOpener.openProfilingReport — performance hints triggers', () => {
   let tempDir: string;
@@ -121,6 +127,7 @@ describe('ViewOpener.openProfilingReport — performance hints triggers', () => 
 
     hooks = undefined;
     hooksList = [];
+    mockRetainedOperatorId.mockReturnValue(undefined);
     mockCreateOrShow.mockImplementation(async (_context: unknown, _filePath: string, panelHooks?: ProfilingReportPanelHooks) => {
       hooks = panelHooks;
 
@@ -210,6 +217,33 @@ describe('ViewOpener.openProfilingReport — performance hints triggers', () => 
       .toHaveBeenCalledTimes(2);
     expect(publishedDiagnostics())
       .toHaveLength(106);
+  });
+
+  it('reopens a retained panel with the same operator scope the webview still shows', async () => {
+    await ViewOpener.openProfilingReport(vscode.Uri.file(GELU_NPU_REP));
+    hooks?.onOperatorChanged?.('op2.npu.rep');
+    await flushRepublish();
+
+    mockRetainedOperatorId.mockReturnValue('op2.npu.rep');
+    mockParsePerformanceHints.mockClear();
+    mockCollection.set.mockClear();
+
+    await ViewOpener.openProfilingReport(vscode.Uri.file(GELU_NPU_REP));
+    await flushRepublish();
+
+    expect(mockParsePerformanceHints)
+      .toHaveBeenCalledWith(expect.any(Uint8Array), { operatorId: 'op2.npu.rep' });
+    expect(mockCollection.set)
+      .toHaveBeenCalled();
+
+    // Hooks rebuilt for the reopen must keep that scope on later reactivation.
+    mockParsePerformanceHints.mockClear();
+    hooks?.onActiveChanged?.(false);
+    hooks?.onActiveChanged?.(true);
+    await flushRepublish();
+
+    expect(mockParsePerformanceHints)
+      .toHaveBeenLastCalledWith(expect.any(Uint8Array), { operatorId: 'op2.npu.rep' });
   });
 
   it('re-publishes with the previously selected operator when the .npu-rep tab becomes active again', async () => {

@@ -98,9 +98,9 @@ const actualProfiling = jest.requireActual<typeof import('@plugin/core/profiling
 const createDiagnosticCollection = vscode.languages.createDiagnosticCollection as jest.Mock;
 const onDidChangeWorkspaceFolders = vscode.workspace.onDidChangeWorkspaceFolders as jest.Mock;
 
-/** Vendored producer pack (`profiling-report/data/gelu.npu-rep`). */
+/** Producer pack from the profiling-report submodule (not vendored into the plugin tree). */
+const GELU_NPU_REP = path.resolve(__dirname, '../../../../profiling-report/data/gelu.npu-rep');
 const DATA_DIR = path.resolve(__dirname, '../fixtures');
-const GELU_NPU_REP = path.join(DATA_DIR, 'gelu.npu-rep');
 
 type MockDiagnostic = {
   range: {
@@ -581,10 +581,44 @@ describe('PerformanceHintsDiagnosticsService', () => {
         });
       expect(mockCollection.set)
         .not.toHaveBeenCalled();
+      expect(mockCollection.clear)
+        .toHaveBeenCalled();
       expect(mockShowWarningMessage)
         .toHaveBeenCalledWith(expect.stringContaining('performanceHints.publishFailed'));
       expect(mockAppendLog)
         .toHaveBeenCalledWith('performanceHints', expect.stringContaining('performanceHints.publishFailed'));
+    });
+
+    it('clears previously published hints when a later parse fails', async () => {
+      const brokenPath = path.join(tempDir, 'broken.npu-rep');
+
+      fs.writeFileSync(brokenPath, 'not an npu-rep container');
+
+      const service = new PerformanceHintsDiagnosticsService();
+
+      activateService(service);
+      mockParsePerformanceHints.mockReturnValue(parseResult([hint()]));
+      await service.publishFromFile(npuRepPath);
+
+      expect(mockCollection.set)
+        .toHaveBeenCalled();
+
+      mockCollection.clear.mockClear();
+      mockParsePerformanceHints.mockImplementation(() => {
+        throw new Error('corrupt pack');
+      });
+
+      const result = await service.publishFromFile(brokenPath);
+
+      expect(result)
+        .toEqual({
+          published: 0,
+          failed: true,
+        });
+      expect(mockCollection.clear)
+        .toHaveBeenCalled();
+      expect(mockCollection.set.mock.calls.length)
+        .toBe(1);
     });
 
     it('drops a publish superseded while source files are being resolved', async () => {

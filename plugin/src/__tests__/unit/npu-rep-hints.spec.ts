@@ -16,15 +16,18 @@ import {
 } from '@plugin/core/profiling';
 
 // ---------------------------------------------------------------------------
-// Fixtures — vendored copies of the producer packs this module is ported from
-// (`profiling-report/data/` at the time of the port). Vendored so the specs do
-// not depend on the submodule revision checked out next to them.
+// Fixtures — small packs are vendored under `../fixtures`. The large gelu
+// producer pack is read from the profiling-report submodule so the parent repo
+// does not carry a 7.7 MB binary.
 // ---------------------------------------------------------------------------
 
 const DATA_DIR = path.resolve(__dirname, '../fixtures');
+const SUBMODULE_DATA_DIR = path.resolve(__dirname, '../../../../profiling-report/data');
 
 function readFixture(name: string): Uint8Array {
-  return new Uint8Array(fs.readFileSync(path.join(DATA_DIR, name)));
+  const dir = name === 'gelu.npu-rep' ? SUBMODULE_DATA_DIR : DATA_DIR;
+
+  return new Uint8Array(fs.readFileSync(path.join(dir, name)));
 }
 
 const UB_MESSAGE =

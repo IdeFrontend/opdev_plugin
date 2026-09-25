@@ -267,6 +267,9 @@ export class PerformanceHintsDiagnosticsService {
     }
     catch (error) {
       this.warnPublishFailed(filePath, error);
+      // Same as the empty-hints path: Problems must not keep a previous
+      // publish while the panel indicator reports failure / zero hints.
+      this.clear();
 
       return {
         published: 0,

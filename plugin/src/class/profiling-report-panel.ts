@@ -94,6 +94,13 @@ export class ProfilingReportPanel {
   /** Publish-state to forward once the webview becomes ready (posted after the pending load). */
   private pendingPublishedState: boolean | undefined;
 
+  /**
+   * Operator the retained webview last reported. Survives hook replacement and
+   * tab hide (`retainContextWhenHidden`), so a reopen can republish the same
+   * scope even when Vue does not re-fire its selection watch.
+   */
+  private selectedOperatorId: string | undefined;
+
   private hooks: ProfilingReportPanelHooks | undefined;
 
   private constructor(
@@ -145,7 +152,8 @@ export class ProfilingReportPanel {
       if (command === 'profilingReportOperatorChanged') {
         const operatorId = (message as { operatorId?: unknown }).operatorId;
 
-        this.hooks?.onOperatorChanged?.(typeof operatorId === 'string' && operatorId ? operatorId : null);
+        this.selectedOperatorId = typeof operatorId === 'string' && operatorId ? operatorId : undefined;
+        this.hooks?.onOperatorChanged?.(this.selectedOperatorId ?? null);
       }
 
       if (command === 'showPerformanceHintsInProblems') {
@@ -160,6 +168,16 @@ export class ProfilingReportPanel {
     this.panelDisposeDisposable = this.panel.onDidDispose(() => {
       this.dispose();
     });
+  }
+
+  /**
+   * Operator selection retained by an already-open panel for `filePath`, if any.
+   * Used to seed hint publishing when the panel is reused without a Vue re-emit.
+   */
+  public static retainedOperatorId(filePath: string): string | undefined {
+    const existing = ProfilingReportPanel.openedFiles.get(filePath);
+
+    return existing && !existing.disposed ? existing.selectedOperatorId : undefined;
   }
 
   /**
