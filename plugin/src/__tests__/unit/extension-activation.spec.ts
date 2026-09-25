@@ -195,6 +195,12 @@ jest.mock('@plugin/class/csv-editor-provider', () => ({
   },
 }));
 
+jest.mock('@plugin/class/npu-rep-editor-provider', () => ({
+  NpuRepEditorProvider: class MockNpuRepEditorProvider {
+    static viewType = 'test.npuRepEditor';
+  },
+}));
+
 jest.mock('@plugin/class/home-tree-provider', () => ({
   HomeTreeProvider: class MockHomeTreeProvider {
     refresh = jest.fn();
@@ -1228,6 +1234,15 @@ describe('extension activation', () => {
         {
           webviewOptions: { retainContextWhenHidden: true },
           supportsMultipleEditorsPerDocument: false,
+        },
+      );
+    expect(vscode.window.registerCustomEditorProvider)
+      .toHaveBeenCalledWith(
+        'test.npuRepEditor',
+        expect.any(Object),
+        {
+          supportsMultipleEditorsPerDocument: false,
+          webviewOptions: { retainContextWhenHidden: false },
         },
       );
     expect(StTestHistoryProviderMock.instances[0].setTreeView)

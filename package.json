@@ -1988,6 +1988,19 @@
           }
         ],
         "priority": "option"
+      },
+      {
+        "viewType": "opdevtoolsNpuRepViewer",
+        "displayName": "%customEditor.npuRepViewer.displayName%",
+        "selector": [
+          {
+            "filenamePattern": "*.npu-rep"
+          },
+          {
+            "filenamePattern": "*.npu.rep"
+          }
+        ],
+        "priority": "default"
       }
     ]
   },

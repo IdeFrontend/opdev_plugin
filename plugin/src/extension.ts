@@ -14,6 +14,7 @@ import i18nResource from '@shared/i18n';
 import { WebviewProvider } from './class/webview-provider';
 import { handleOperatorProjectDirectoryFile } from './class/webview-message-list';
 import { CsvEditorProvider } from './class/csv-editor-provider';
+import { NpuRepEditorProvider } from './class/npu-rep-editor-provider';
 import { HomeTreeProvider } from './class/home-tree-provider';
 import { StTestResultsPanel } from './class/st-test-results-panel';
 import { StTestRunHistoryTreeProvider } from './class/st-test-run-history-tree-provider';
@@ -2547,6 +2548,19 @@ export async function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(csvEditorRegistration);
+
+  // Binary .npu-rep / .npu.rep: Problems/Explorer open this URI as the editor;
+  // hand off to the profiling-report panel instead of a text document.
+  const npuRepEditorRegistration = vscode.window.registerCustomEditorProvider(
+    NpuRepEditorProvider.viewType,
+    new NpuRepEditorProvider(),
+    {
+      supportsMultipleEditorsPerDocument: false,
+      webviewOptions: { retainContextWhenHidden: false },
+    },
+  );
+
+  context.subscriptions.push(npuRepEditorRegistration);
 
   // Register a command to open a CSV file
   const openCsvCommand = vscode.commands.registerCommand(
