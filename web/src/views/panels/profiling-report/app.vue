@@ -2,13 +2,16 @@
 import {
   computed, onMounted, onUnmounted, ref, shallowRef,
 } from 'vue';
-import { t } from 'i18next';
+import i18next, { t } from 'i18next';
 import { ProfilingReport } from '@huawei/profiling-report';
 
 import { vscode } from '@web/utils/vscode';
 import { useProfilingReportTheme } from './composables/useProfilingReportTheme';
 
 const { theme } = useProfilingReportTheme();
+
+/** IDE/extension language injected into the webview; library accepts en* / zh* prefixes. */
+const locale = (i18next.resolvedLanguage ?? 'en').toLowerCase();
 
 const source = shallowRef<Uint8Array | null>(null);
 const fileName = ref('');
@@ -105,6 +108,7 @@ const onCannbotRequest = (payload: unknown) => {
       v-if="source"
       :source="source"
       :theme="theme"
+      :locale="locale"
       :title="fileName"
       :report-meta="reportMeta"
       @ready="onReady"
