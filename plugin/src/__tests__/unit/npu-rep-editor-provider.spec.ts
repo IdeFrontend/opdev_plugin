@@ -12,6 +12,7 @@ jest.mock('@plugin/core/view/view-opener', () => ({ ViewOpener: { openProfilingR
 import * as vscode from 'vscode';
 
 import { NpuRepEditorProvider } from '@plugin/class/npu-rep-editor-provider';
+import { NPU_REP_EDITOR_VIEW_TYPE } from '@plugin/constants';
 import { ViewOpener } from '@plugin/core/view/view-opener';
 
 describe('NpuRepEditorProvider', () => {
@@ -21,10 +22,10 @@ describe('NpuRepEditorProvider', () => {
 
   it('exposes the package.json custom editor view type', () => {
     expect(NpuRepEditorProvider.viewType)
-      .toBe('opdevtoolsNpuRepViewer');
+      .toBe(NPU_REP_EDITOR_VIEW_TYPE);
   });
 
-  it('opens the profiling report panel then disposes the routing tab', async () => {
+  it('hosts the profiling report in the custom-editor webview panel', async () => {
     const provider = new NpuRepEditorProvider();
     const uri = vscode.Uri.file('/tmp/gelu.npu-rep');
     const document = await provider.openCustomDocument(
@@ -42,12 +43,13 @@ describe('NpuRepEditorProvider', () => {
     );
 
     expect(ViewOpener.openProfilingReport)
-      .toHaveBeenCalledWith(uri);
+      .toHaveBeenCalledWith(uri, webviewPanel);
     expect(dispose)
-      .toHaveBeenCalledTimes(1);
+      .not
+      .toHaveBeenCalled();
   });
 
-  it('still disposes the routing tab when opening the panel fails', async () => {
+  it('does not dispose the custom-editor tab when opening the report fails', async () => {
     const provider = new NpuRepEditorProvider();
     const uri = vscode.Uri.file('/tmp/broken.npu-rep');
     const document = await provider.openCustomDocument(
@@ -70,6 +72,7 @@ describe('NpuRepEditorProvider', () => {
       .toThrow('panel failed');
 
     expect(dispose)
-      .toHaveBeenCalledTimes(1);
+      .not
+      .toHaveBeenCalled();
   });
 });

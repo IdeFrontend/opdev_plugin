@@ -2556,7 +2556,7 @@ export async function activate(context: vscode.ExtensionContext) {
     new NpuRepEditorProvider(),
     {
       supportsMultipleEditorsPerDocument: false,
-      webviewOptions: { retainContextWhenHidden: false },
+      webviewOptions: { retainContextWhenHidden: true },
     },
   );
 

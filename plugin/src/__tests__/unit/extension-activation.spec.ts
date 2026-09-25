@@ -1242,7 +1242,7 @@ describe('extension activation', () => {
         expect.any(Object),
         {
           supportsMultipleEditorsPerDocument: false,
-          webviewOptions: { retainContextWhenHidden: false },
+          webviewOptions: { retainContextWhenHidden: true },
         },
       );
     expect(StTestHistoryProviderMock.instances[0].setTreeView)

@@ -14,6 +14,8 @@ const mockCollection = {
 };
 
 const mockCreateOrShow = jest.fn();
+const mockAttachTo = jest.fn();
+const mockIsOpen = jest.fn((): boolean => false);
 const mockRetainedOperatorId = jest.fn((): string | undefined => undefined);
 const mockSetPublished = jest.fn();
 const mockShowErrorMessage = jest.fn();
@@ -21,6 +23,7 @@ const mockShowWarningMessage = jest.fn();
 const mockFindFiles = jest.fn(async () => [] as Array<{ fsPath: string;
   toString: ()=> string }>);
 const mockAppendLog = jest.fn();
+const mockExecuteCommand = jest.fn(async () => undefined);
 
 const mockParsePerformanceHints = jest.fn();
 
@@ -33,7 +36,7 @@ jest.mock('vscode', () => ({
     onDidChangeWorkspaceFolders: jest.fn(() => ({ dispose: jest.fn() })),
     findFiles: mockFindFiles,
   },
-  commands: { executeCommand: jest.fn(async () => undefined) },
+  commands: { executeCommand: (...args: unknown[]) => mockExecuteCommand(...args) },
   window: {
     showErrorMessage: mockShowErrorMessage,
     showWarningMessage: mockShowWarningMessage,
@@ -87,7 +90,9 @@ jest.mock('@plugin/core/profiling', () => {
 jest.mock('@plugin/class/profiling-report-panel', () => ({
   ProfilingReportPanel: {
     createOrShow: mockCreateOrShow,
+    attachTo: mockAttachTo,
     retainedOperatorId: mockRetainedOperatorId,
+    isOpen: mockIsOpen,
   },
 }));
 
@@ -98,6 +103,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 
 import type { ProfilingReportPanelHooks } from '@plugin/class/profiling-report-panel';
+import { NPU_REP_EDITOR_VIEW_TYPE } from '@plugin/constants';
 import type { NpuRepHintParseResult } from '@plugin/core/profiling';
 import { ViewOpener } from '@plugin/core/view/view-opener';
 import { performanceHintsDiagnosticsService } from '@plugin/service/performance-hints-diagnostics.service';
@@ -106,6 +112,9 @@ const actualProfiling = jest.requireActual<typeof import('@plugin/core/profiling
 
 /** Producer pack from the profiling-report submodule (not vendored into the plugin tree). */
 const GELU_NPU_REP = path.resolve(__dirname, '../../../../profiling-report/data/gelu.npu-rep');
+
+/** Custom-editor host panel used so tests exercise attach + publish (not openWith). */
+const hostPanel = { title: 'host' } as unknown as vscode.WebviewPanel;
 
 describe('ViewOpener.openProfilingReport — performance hints triggers', () => {
   let tempDir: string;
@@ -127,8 +136,27 @@ describe('ViewOpener.openProfilingReport — performance hints triggers', () => 
 
     hooks = undefined;
     hooksList = [];
+    mockIsOpen.mockReturnValue(false);
     mockRetainedOperatorId.mockReturnValue(undefined);
-    mockCreateOrShow.mockImplementation(async (_context: unknown, _filePath: string, panelHooks?: ProfilingReportPanelHooks) => {
+    mockCreateOrShow.mockImplementation(async (
+      _context: unknown,
+      _filePath: string,
+      panelHooks?: ProfilingReportPanelHooks,
+    ) => {
+      hooks = panelHooks;
+
+      if (panelHooks) {
+        hooksList.push(panelHooks);
+      }
+
+      return { setPerformanceHintsPublished: mockSetPublished };
+    });
+    mockAttachTo.mockImplementation(async (
+      _panel: unknown,
+      _context: unknown,
+      _filePath: string,
+      panelHooks?: ProfilingReportPanelHooks,
+    ) => {
       hooks = panelHooks;
 
       if (panelHooks) {
@@ -161,10 +189,34 @@ describe('ViewOpener.openProfilingReport — performance hints triggers', () => 
     }
   }
 
-  it('publishes the hints of an opened .npu-rep report while the tab is active', async () => {
+  function openNpuRep(filePath: string = GELU_NPU_REP): Promise<void> {
+    return ViewOpener.openProfilingReport(vscode.Uri.file(filePath), hostPanel);
+  }
+
+  it('opens .npu-rep via the custom editor when no host panel is mounted yet', async () => {
     await ViewOpener.openProfilingReport(vscode.Uri.file(GELU_NPU_REP));
 
+    expect(mockExecuteCommand)
+      .toHaveBeenCalledWith(
+        'vscode.openWith',
+        expect.objectContaining({ fsPath: GELU_NPU_REP }),
+        NPU_REP_EDITOR_VIEW_TYPE,
+      );
+    expect(mockAttachTo)
+      .not
+      .toHaveBeenCalled();
     expect(mockCreateOrShow)
+      .not
+      .toHaveBeenCalled();
+    expect(mockCollection.set)
+      .not
+      .toHaveBeenCalled();
+  });
+
+  it('publishes the hints of an opened .npu-rep report while the tab is active', async () => {
+    await openNpuRep();
+
+    expect(mockAttachTo)
       .toHaveBeenCalledTimes(1);
     expect(publishedDiagnostics())
       .toHaveLength(53);
@@ -184,7 +236,7 @@ describe('ViewOpener.openProfilingReport — performance hints triggers', () => 
   });
 
   it('clears the hints when the .npu-rep tab is hidden or closed', async () => {
-    await ViewOpener.openProfilingReport(vscode.Uri.file(GELU_NPU_REP));
+    await openNpuRep();
     mockCollection.clear.mockClear();
 
     hooks?.onActiveChanged?.(false);
@@ -205,7 +257,7 @@ describe('ViewOpener.openProfilingReport — performance hints triggers', () => 
   });
 
   it('re-publishes the hints for the operator selected inside a multi-op report', async () => {
-    await ViewOpener.openProfilingReport(vscode.Uri.file(GELU_NPU_REP));
+    await openNpuRep();
     mockParsePerformanceHints.mockClear();
 
     hooks?.onOperatorChanged?.('op2.npu.rep');
@@ -220,17 +272,20 @@ describe('ViewOpener.openProfilingReport — performance hints triggers', () => 
   });
 
   it('reopens a retained panel with the same operator scope the webview still shows', async () => {
-    await ViewOpener.openProfilingReport(vscode.Uri.file(GELU_NPU_REP));
+    await openNpuRep();
     hooks?.onOperatorChanged?.('op2.npu.rep');
     await flushRepublish();
 
     mockRetainedOperatorId.mockReturnValue('op2.npu.rep');
+    mockIsOpen.mockReturnValue(true);
     mockParsePerformanceHints.mockClear();
     mockCollection.set.mockClear();
 
     await ViewOpener.openProfilingReport(vscode.Uri.file(GELU_NPU_REP));
     await flushRepublish();
 
+    expect(mockCreateOrShow)
+      .toHaveBeenCalledTimes(1);
     expect(mockParsePerformanceHints)
       .toHaveBeenCalledWith(expect.any(Uint8Array), { operatorId: 'op2.npu.rep' });
     expect(mockCollection.set)
@@ -247,7 +302,7 @@ describe('ViewOpener.openProfilingReport — performance hints triggers', () => 
   });
 
   it('re-publishes with the previously selected operator when the .npu-rep tab becomes active again', async () => {
-    await ViewOpener.openProfilingReport(vscode.Uri.file(GELU_NPU_REP));
+    await openNpuRep();
 
     hooks?.onOperatorChanged?.('op2.npu.rep');
     await flushRepublish();
@@ -266,7 +321,7 @@ describe('ViewOpener.openProfilingReport — performance hints triggers', () => 
   });
 
   it('resets the operator scope when the webview reports none', async () => {
-    await ViewOpener.openProfilingReport(vscode.Uri.file(GELU_NPU_REP));
+    await openNpuRep();
 
     hooks?.onOperatorChanged?.('op2.npu.rep');
     await flushRepublish();
@@ -288,7 +343,7 @@ describe('ViewOpener.openProfilingReport — performance hints triggers', () => 
 
     fs.writeFileSync(repPath, 'rep-bytes');
 
-    await ViewOpener.openProfilingReport(vscode.Uri.file(GELU_NPU_REP));
+    await openNpuRep();
     expect(publishedDiagnostics())
       .toHaveLength(53);
     mockCollection.clear.mockClear();
@@ -312,9 +367,9 @@ describe('ViewOpener.openProfilingReport — performance hints triggers', () => 
 
     fs.writeFileSync(brokenPath, 'not an npu-rep container');
 
-    await ViewOpener.openProfilingReport(vscode.Uri.file(brokenPath));
+    await openNpuRep(brokenPath);
 
-    expect(mockCreateOrShow)
+    expect(mockAttachTo)
       .toHaveBeenCalledTimes(1);
     expect(mockCollection.set)
       .not.toHaveBeenCalled();
@@ -350,7 +405,7 @@ describe('ViewOpener.openProfilingReport — performance hints triggers', () => 
     fs.writeFileSync(reportPath, 'npu-rep-bytes');
     mockParsePerformanceHints.mockReturnValue(parseResult);
 
-    await ViewOpener.openProfilingReport(vscode.Uri.file(reportPath));
+    await openNpuRep(reportPath);
     expect(mockCollection.set.mock.calls[0][0].toString())
       .toBe(`file://${sourcePath}`);
     mockCollection.clear.mockClear();
@@ -362,7 +417,7 @@ describe('ViewOpener.openProfilingReport — performance hints triggers', () => 
   });
 
   it('forwards the hint publish state to the panel webview', async () => {
-    await ViewOpener.openProfilingReport(vscode.Uri.file(GELU_NPU_REP));
+    await openNpuRep();
 
     expect(mockSetPublished)
       .toHaveBeenCalledWith(true);
@@ -386,14 +441,14 @@ describe('ViewOpener.openProfilingReport — performance hints triggers', () => 
 
     fs.writeFileSync(brokenPath, 'not an npu-rep container');
 
-    await ViewOpener.openProfilingReport(vscode.Uri.file(brokenPath));
+    await openNpuRep(brokenPath);
 
     expect(mockSetPublished)
       .toHaveBeenCalledWith(false);
   });
 
   it('reports false when the panel is closed', async () => {
-    await ViewOpener.openProfilingReport(vscode.Uri.file(GELU_NPU_REP));
+    await openNpuRep();
     mockSetPublished.mockClear();
 
     hooks?.onDispose?.();
@@ -412,14 +467,14 @@ describe('ViewOpener.openProfilingReport — performance hints triggers', () => 
     fs.writeFileSync(emptyPath, 'npu-rep-bytes');
     mockParsePerformanceHints.mockReturnValue(parseResult);
 
-    await ViewOpener.openProfilingReport(vscode.Uri.file(emptyPath));
+    await openNpuRep(emptyPath);
 
     expect(mockSetPublished)
       .toHaveBeenCalledWith(false);
   });
 
   it('turns the indicator off when another report clears the hints', async () => {
-    await ViewOpener.openProfilingReport(vscode.Uri.file(GELU_NPU_REP));
+    await openNpuRep();
 
     expect(mockSetPublished)
       .toHaveBeenCalledWith(true);

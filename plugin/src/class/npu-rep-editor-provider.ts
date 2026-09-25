@@ -1,14 +1,15 @@
 import * as vscode from 'vscode';
 
+import { NPU_REP_EDITOR_VIEW_TYPE } from '@plugin/constants';
 import { ViewOpener } from '@plugin/core/view/view-opener';
 
 /**
  * Default editor for binary `.npu-rep` / `.npu.rep` reports. Problems and
- * Explorer open this URI as the active editor; instead of showing bytes as
- * text we hand off to the existing profiling-report webview panel.
+ * Explorer open this URI as the active editor; the provided webview hosts the
+ * profiling-report UI (no dispose-and-reopen router tab).
  */
 export class NpuRepEditorProvider implements vscode.CustomReadonlyEditorProvider {
-  public static readonly viewType = 'opdevtoolsNpuRepViewer';
+  public static readonly viewType = NPU_REP_EDITOR_VIEW_TYPE;
 
   public async openCustomDocument(
     uri: vscode.Uri,
@@ -26,13 +27,6 @@ export class NpuRepEditorProvider implements vscode.CustomReadonlyEditorProvider
     webviewPanel: vscode.WebviewPanel,
     _token: vscode.CancellationToken,
   ): Promise<void> {
-    try {
-      await ViewOpener.openProfilingReport(document.uri);
-    }
-    finally {
-      // The custom-editor tab is only a routing shell — the real surface is
-      // ProfilingReportPanel. Closing this empty tab avoids a blank editor.
-      webviewPanel.dispose();
-    }
+    await ViewOpener.openProfilingReport(document.uri, webviewPanel);
   }
 }

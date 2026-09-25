@@ -5,6 +5,7 @@ import { InsightDataViewerPanel } from '@plugin/class/insight-data-viewer-panel'
 import {
   ProfilingReportPanel, type ProfilingReportPanelHooks,
 } from '@plugin/class/profiling-report-panel';
+import { NPU_REP_EDITOR_VIEW_TYPE } from '@plugin/constants';
 import {
   isNpuRepFile, performanceHintsDiagnosticsService,
 } from '@plugin/service/performance-hints-diagnostics.service';
@@ -80,10 +81,15 @@ export class ViewOpener {
   }
 
   /**
-   * Open the profiling report panel for .rep/.ncrep/.npu-rep files
-   * @param uri rep/ncrep/npu-rep file uri
+   * Open the profiling report panel for .rep/.ncrep/.npu-rep files.
+   * For `.npu-rep`, pass `hostPanel` from the custom editor so the report fills
+   * that tab; without a host, open via `vscode.openWith` (or reveal if already
+   * mounted) so Problems/Explorer share one surface.
    */
-  public static async openProfilingReport(uri: vscode.Uri): Promise<void> {
+  public static async openProfilingReport(
+    uri: vscode.Uri,
+    hostPanel?: vscode.WebviewPanel,
+  ): Promise<void> {
     const filePath = uri.fsPath;
     const context = (
       globalThis as unknown as { extensionContext: vscode.ExtensionContext }
@@ -96,6 +102,15 @@ export class ViewOpener {
     }
 
     const isNpuRep = isNpuRepFile(filePath);
+
+    // First open of an npu-rep from command/tree: hand off to the custom editor,
+    // which re-enters with `hostPanel`. Skip when already mounted so reopen
+    // reveals without relying on resolveCustomEditor being called again.
+    if (isNpuRep && !hostPanel && !ProfilingReportPanel.isOpen(filePath)) {
+      await vscode.commands.executeCommand('vscode.openWith', uri, NPU_REP_EDITOR_VIEW_TYPE);
+
+      return;
+    }
 
     // Reusing a retained panel must keep the webview's operator: hooks are
     // rebuilt from scratch, and Vue will not re-emit an unchanged selection.
@@ -114,7 +129,9 @@ export class ViewOpener {
     );
 
     try {
-      panel = await ProfilingReportPanel.createOrShow(context, filePath, hooks);
+      panel = hostPanel
+        ? await ProfilingReportPanel.attachTo(hostPanel, context, filePath, hooks)
+        : await ProfilingReportPanel.createOrShow(context, filePath, hooks);
     }
     catch (error) {
       hooks.onDispose?.();

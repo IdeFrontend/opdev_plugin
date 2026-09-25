@@ -180,6 +180,13 @@ export class ProfilingReportPanel {
     return existing && !existing.disposed ? existing.selectedOperatorId : undefined;
   }
 
+  /** True when a live panel is already hosting `filePath`. */
+  public static isOpen(filePath: string): boolean {
+    const existing = ProfilingReportPanel.openedFiles.get(filePath);
+
+    return !!(existing && !existing.disposed);
+  }
+
   /**
    * Show the report panel of `filePath`, reusing an already open one, and
    * return the instance so the caller can push state into its webview (the
@@ -191,18 +198,10 @@ export class ProfilingReportPanel {
     filePath: string,
     hooks?: ProfilingReportPanelHooks,
   ): Promise<ProfilingReportPanel> {
-    const existing = ProfilingReportPanel.openedFiles.get(filePath);
+    const reused = await ProfilingReportPanel.reuseIfOpen(filePath, hooks);
 
-    if (existing && !existing.disposed) {
-      if (hooks) {
-        existing.hooks?.onHooksReplaced?.();
-        existing.hooks = hooks;
-      }
-
-      await existing.loadFile(filePath);
-      existing.panel.reveal(vscode.ViewColumn.Active);
-
-      return existing;
+    if (reused) {
+      return reused;
     }
 
     const webRootUri = vscode.Uri.joinPath(context.extensionUri, 'out', 'web');
@@ -220,6 +219,75 @@ export class ProfilingReportPanel {
         ],
       },
     );
+
+    return ProfilingReportPanel.mount(panel, context, filePath, hooks);
+  }
+
+  /**
+   * Host the report inside an existing webview (custom editor tab). Prefer this
+   * for `.npu-rep` so Problems/Explorer open one surface without a dispose-and-
+   * reopen flash.
+   */
+  public static async attachTo(
+    panel: vscode.WebviewPanel,
+    context: vscode.ExtensionContext,
+    filePath: string,
+    hooks?: ProfilingReportPanelHooks,
+  ): Promise<ProfilingReportPanel> {
+    const existing = ProfilingReportPanel.openedFiles.get(filePath);
+
+    if (existing && !existing.disposed) {
+      if (existing.panel === panel) {
+        return (await ProfilingReportPanel.reuseIfOpen(filePath, hooks))!;
+      }
+
+      // Legacy free-floating panel for the same file: drop it and host on the
+      // custom-editor shell Problems just opened.
+      existing.dispose();
+    }
+
+    const webRootUri = vscode.Uri.joinPath(context.extensionUri, 'out', 'web');
+    const fileDirUri = vscode.Uri.file(path.dirname(filePath));
+
+    panel.title = t('profilingReport.title');
+    panel.webview.options = {
+      enableScripts: true,
+      localResourceRoots: [
+        webRootUri,
+        fileDirUri,
+      ],
+    };
+
+    return ProfilingReportPanel.mount(panel, context, filePath, hooks);
+  }
+
+  private static async reuseIfOpen(
+    filePath: string,
+    hooks?: ProfilingReportPanelHooks,
+  ): Promise<ProfilingReportPanel | undefined> {
+    const existing = ProfilingReportPanel.openedFiles.get(filePath);
+
+    if (!existing || existing.disposed) {
+      return undefined;
+    }
+
+    if (hooks) {
+      existing.hooks?.onHooksReplaced?.();
+      existing.hooks = hooks;
+    }
+
+    await existing.loadFile(filePath);
+    existing.panel.reveal(vscode.ViewColumn.Active);
+
+    return existing;
+  }
+
+  private static async mount(
+    panel: vscode.WebviewPanel,
+    context: vscode.ExtensionContext,
+    filePath: string,
+    hooks?: ProfilingReportPanelHooks,
+  ): Promise<ProfilingReportPanel> {
     const instance = new ProfilingReportPanel(panel, context, hooks);
 
     try {
