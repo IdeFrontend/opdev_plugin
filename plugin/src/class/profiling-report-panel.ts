@@ -276,7 +276,9 @@ export class ProfilingReportPanel {
       existing.hooks = hooks;
     }
 
-    await existing.loadFile(filePath);
+    // Already hosting this path: reveal only. Reloading would reset the
+    // webview selectedOperatorId to the pack default and republish the wrong
+    // Problems scope on multi-op tree/command reopen.
     existing.panel.reveal(vscode.ViewColumn.Active);
 
     return existing;

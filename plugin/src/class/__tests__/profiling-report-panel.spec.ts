@@ -479,6 +479,36 @@ describe('ProfilingReportPanel', () => {
       .toHaveBeenCalledWith('op1.npu.rep');
   });
 
+  it('does not reload the webview when reopening the same already-hosted report', async () => {
+    await ProfilingReportPanel.createOrShow(context, filePath);
+    const panel = panels[0]!;
+
+    emitReady(panel);
+    await Promise.resolve();
+    panel.webview.postMessage.mockClear();
+    panel.reveal.mockClear();
+
+    emitMessage(panel, {
+      command: 'profilingReportOperatorChanged',
+      operatorId: 'op2.npu.rep',
+    });
+
+    expect(ProfilingReportPanel.retainedOperatorId(filePath))
+      .toBe('op2.npu.rep');
+
+    await ProfilingReportPanel.createOrShow(context, filePath);
+
+    expect(mockCreateWebviewPanel)
+      .toHaveBeenCalledTimes(1);
+    expect(panel.reveal)
+      .toHaveBeenCalledWith(vscode.ViewColumn.Active);
+    expect(panel.webview.postMessage)
+      .not
+      .toHaveBeenCalledWith(expect.objectContaining({ command: 'loadProfilingReport' }));
+    expect(ProfilingReportPanel.retainedOperatorId(filePath))
+      .toBe('op2.npu.rep');
+  });
+
   it('keeps working without hooks', async () => {
     await ProfilingReportPanel.createOrShow(context, filePath);
 
