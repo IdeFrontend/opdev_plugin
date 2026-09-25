@@ -146,6 +146,8 @@ The `huawei-op-devtools.openProfilingReport` command is surfaced on report files
 
 `profilingReport.*` keys added to [`shared/i18n/en.ts`](../../shared/i18n/en.ts) and [`shared/i18n/zh-cn.ts`](../../shared/i18n/zh-cn.ts): panel title, loading/empty/fetch-failed webview strings, file-not-found, load-failed, empty-path.
 
+Host shell strings follow `vscode.env.language` via HTML `lang` injection (`ProfilingReportPanel` → i18next in `main.ts`). Library chrome (toolbar, aside, detail, tooltips) is separate: map the same resolved language to `:locale` on `<ProfilingReport>` in `app.vue`. The library accepts `en*` / `zh*` prefixes and defaults to `zh-CN` when `locale` is omitted.
+
 ## Key source files
 
 | Area | Path |
