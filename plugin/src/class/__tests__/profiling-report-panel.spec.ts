@@ -45,6 +45,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 
 import { ProfilingReportPanel } from '@plugin/class/profiling-report-panel';
+import { COMMAND_SHOW_PERFORMANCE_HINTS } from '@plugin/constants';
 import { SettingsLoader } from '@plugin/service/settings-loader';
 
 type FakeDisposable = {
@@ -62,10 +63,13 @@ type FakeWebview = {
 
 type FakePanel = {
   webview: FakeWebview;
+  active: boolean;
   reveal: jest.Mock;
   dispose: jest.Mock;
   onDidDispose: jest.Mock;
+  onDidChangeViewState: jest.Mock;
   disposeCallback?: ()=> void;
+  viewStateCallback?: ()=> void;
 };
 
 describe('ProfilingReportPanel', () => {
@@ -92,12 +96,18 @@ describe('ProfilingReportPanel', () => {
       const webview = createWebview();
       const panel = {
         webview,
+        active: true,
         reveal: jest.fn(),
         dispose: jest.fn(() => {
           panel.disposeCallback?.();
         }),
         onDidDispose: jest.fn((callback: ()=> void) => {
           panel.disposeCallback = callback;
+
+          return { dispose: jest.fn() } as FakeDisposable;
+        }),
+        onDidChangeViewState: jest.fn((callback: ()=> void) => {
+          panel.viewStateCallback = callback;
 
           return { dispose: jest.fn() } as FakeDisposable;
         }),
@@ -139,8 +149,12 @@ describe('ProfilingReportPanel', () => {
   }
 
   function emitReady(panel: FakePanel): void {
+    emitMessage(panel, { command: 'profilingReportReady' });
+  }
+
+  function emitMessage(panel: FakePanel, message: unknown): void {
     for (const receiver of panel.webview.receivers) {
-      receiver({ command: 'profilingReportReady' });
+      receiver(message);
     }
   }
 
@@ -384,5 +398,197 @@ describe('ProfilingReportPanel', () => {
 
     expect(options.localResourceRoots.map((uri) => uri.fsPath))
       .toEqual(expect.arrayContaining([path.dirname(filePath)]));
+  });
+
+  it('forwards view state changes so hints can follow the active tab', async () => {
+    const onActiveChanged = jest.fn();
+
+    await ProfilingReportPanel.createOrShow(context, filePath, { onActiveChanged });
+
+    const panel = panels[0]!;
+
+    panel.active = false;
+    panel.viewStateCallback?.();
+    panel.active = true;
+    panel.viewStateCallback?.();
+
+    expect(onActiveChanged)
+      .toHaveBeenNthCalledWith(1, false);
+    expect(onActiveChanged)
+      .toHaveBeenNthCalledWith(2, true);
+  });
+
+  it('reports the operator selected inside the report, normalizing empty payloads', async () => {
+    const onOperatorChanged = jest.fn();
+
+    await ProfilingReportPanel.createOrShow(context, filePath, { onOperatorChanged });
+
+    const panel = panels[0]!;
+
+    emitMessage(panel, {
+      command: 'profilingReportOperatorChanged',
+      operatorId: 'op2.npu.rep',
+    });
+    emitMessage(panel, {
+      command: 'profilingReportOperatorChanged',
+      operatorId: '',
+    });
+    emitMessage(panel, { command: 'profilingReportOperatorChanged' });
+
+    expect(onOperatorChanged)
+      .toHaveBeenNthCalledWith(1, 'op2.npu.rep');
+    expect(onOperatorChanged)
+      .toHaveBeenNthCalledWith(2, null);
+    expect(onOperatorChanged)
+      .toHaveBeenNthCalledWith(3, null);
+  });
+
+  it('calls onDispose exactly once when the panel closes', async () => {
+    const onDispose = jest.fn();
+
+    await ProfilingReportPanel.createOrShow(context, filePath, { onDispose });
+
+    const panel = panels[0]!;
+
+    expect(onDispose)
+      .not.toHaveBeenCalled();
+
+    panel.dispose();
+    panel.dispose();
+
+    expect(onDispose)
+      .toHaveBeenCalledTimes(1);
+  });
+
+  it('refreshes the hooks when an already open report is opened again', async () => {
+    await ProfilingReportPanel.createOrShow(context, filePath);
+
+    const onOperatorChanged = jest.fn();
+
+    await ProfilingReportPanel.createOrShow(context, filePath, { onOperatorChanged });
+
+    expect(mockCreateWebviewPanel)
+      .toHaveBeenCalledTimes(1);
+
+    emitMessage(panels[0]!, {
+      command: 'profilingReportOperatorChanged',
+      operatorId: 'op1.npu.rep',
+    });
+
+    expect(onOperatorChanged)
+      .toHaveBeenCalledWith('op1.npu.rep');
+  });
+
+  it('does not reload the webview when reopening the same already-hosted report', async () => {
+    await ProfilingReportPanel.createOrShow(context, filePath);
+    const panel = panels[0]!;
+
+    emitReady(panel);
+    await Promise.resolve();
+    panel.webview.postMessage.mockClear();
+    panel.reveal.mockClear();
+
+    emitMessage(panel, {
+      command: 'profilingReportOperatorChanged',
+      operatorId: 'op2.npu.rep',
+    });
+
+    expect(ProfilingReportPanel.retainedOperatorId(filePath))
+      .toBe('op2.npu.rep');
+
+    await ProfilingReportPanel.createOrShow(context, filePath);
+
+    expect(mockCreateWebviewPanel)
+      .toHaveBeenCalledTimes(1);
+    expect(panel.reveal)
+      .toHaveBeenCalledWith(vscode.ViewColumn.Active);
+    expect(panel.webview.postMessage)
+      .not
+      .toHaveBeenCalledWith(expect.objectContaining({ command: 'loadProfilingReport' }));
+    expect(ProfilingReportPanel.retainedOperatorId(filePath))
+      .toBe('op2.npu.rep');
+  });
+
+  it('keeps working without hooks', async () => {
+    await ProfilingReportPanel.createOrShow(context, filePath);
+
+    const panel = panels[0]!;
+
+    panel.active = false;
+    panel.viewStateCallback?.();
+    emitMessage(panel, {
+      command: 'profilingReportOperatorChanged',
+      operatorId: 'op1.npu.rep',
+    });
+    emitReady(panel);
+    await Promise.resolve();
+
+    expect(panel.webview.postMessage)
+      .toHaveBeenCalledWith(expect.objectContaining({ command: 'loadProfilingReport' }));
+  });
+
+  it('queues the hints publish state until the webview is ready and posts it after the ready handshake', async () => {
+    const instance = await ProfilingReportPanel.createOrShow(context, filePath);
+    const panel = panels[0]!;
+
+    instance.setPerformanceHintsPublished(true);
+
+    expect(panel.webview.postMessage)
+      .not.toHaveBeenCalled();
+
+    emitReady(panel);
+    await Promise.resolve();
+
+    expect(panel.webview.postMessage)
+      .toHaveBeenCalledWith({
+        command: 'performanceHintsPublishedChanged',
+        published: true,
+      });
+  });
+
+  it('posts the hints publish state immediately once the webview is ready', async () => {
+    const instance = await ProfilingReportPanel.createOrShow(context, filePath);
+    const panel = panels[0]!;
+
+    emitReady(panel);
+    await Promise.resolve();
+    instance.setPerformanceHintsPublished(false);
+
+    const calls = panel.webview.postMessage.mock.calls;
+
+    expect(calls[calls.length - 1]![0])
+      .toEqual({
+        command: 'performanceHintsPublishedChanged',
+        published: false,
+      });
+  });
+
+  it('opens Problems with the current report when the webview asks for the hints', async () => {
+    await ProfilingReportPanel.createOrShow(context, filePath);
+
+    const panel = panels[0]!;
+
+    emitReady(panel);
+    await Promise.resolve();
+    emitMessage(panel, { command: 'showPerformanceHintsInProblems' });
+    await flushAsyncActions();
+
+    expect(mockExecuteCommand)
+      .toHaveBeenCalledWith(COMMAND_SHOW_PERFORMANCE_HINTS, filePath);
+  });
+
+  it('drops the publish state after dispose without throwing', async () => {
+    const instance = await ProfilingReportPanel.createOrShow(context, filePath);
+    const panel = panels[0]!;
+
+    instance.dispose();
+    panel.webview.postMessage.mockClear();
+
+    expect(() => instance.setPerformanceHintsPublished(true)).not.toThrow();
+    expect(panel.webview.postMessage)
+      .not.toHaveBeenCalledWith({
+        command: 'performanceHintsPublishedChanged',
+        published: true,
+      });
   });
 });
