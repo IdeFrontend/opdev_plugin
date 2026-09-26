@@ -97,3 +97,7 @@ export function sanitizerDiagnosticCollectionId(): string {
 export function jumpToFileDiagnosticCollectionId(): string {
   return `${VIEW_PREFIX}-jump-to-file`;
 }
+
+export function performanceHintsDiagnosticCollectionId(): string {
+  return `${VIEW_PREFIX}.performanceHints`;
+}

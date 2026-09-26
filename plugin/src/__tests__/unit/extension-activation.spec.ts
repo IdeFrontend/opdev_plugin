@@ -195,6 +195,12 @@ jest.mock('@plugin/class/csv-editor-provider', () => ({
   },
 }));
 
+jest.mock('@plugin/class/npu-rep-editor-provider', () => ({
+  NpuRepEditorProvider: class MockNpuRepEditorProvider {
+    static viewType = 'test.npuRepEditor';
+  },
+}));
+
 jest.mock('@plugin/class/home-tree-provider', () => ({
   HomeTreeProvider: class MockHomeTreeProvider {
     refresh = jest.fn();
@@ -374,6 +380,20 @@ jest.mock('@plugin/core/project/project-manager', () => ({
 }));
 
 jest.mock('@plugin/service/sanitizer-diagnostics.service', () => ({ sanitizerDiagnosticsService: { activate: jest.fn() } }));
+
+jest.mock('@plugin/service/performance-hints-diagnostics.service', () => ({
+  ...jest.requireActual('@plugin/service/performance-hints-diagnostics.service'),
+  performanceHintsDiagnosticsService: {
+    activate: jest.fn(),
+    clear: jest.fn(),
+    clearIfOwns: jest.fn(),
+    publishFromFile: jest.fn(async () => ({
+      published: 0,
+      failed: false,
+    })),
+    showPerformanceHintsForFile: jest.fn(async () => undefined),
+  },
+}));
 
 jest.mock('@plugin/domain/utils/debug-target', () => ({ registerMsdebugTargetAutoAdapt: jest.fn() }));
 
@@ -1214,6 +1234,15 @@ describe('extension activation', () => {
         {
           webviewOptions: { retainContextWhenHidden: true },
           supportsMultipleEditorsPerDocument: false,
+        },
+      );
+    expect(vscode.window.registerCustomEditorProvider)
+      .toHaveBeenCalledWith(
+        'test.npuRepEditor',
+        expect.any(Object),
+        {
+          supportsMultipleEditorsPerDocument: false,
+          webviewOptions: { retainContextWhenHidden: true },
         },
       );
     expect(StTestHistoryProviderMock.instances[0].setTreeView)
