@@ -97,6 +97,7 @@ async function runPostActivateBootstrapImpl(deps: PostActivateBootstrapDeps): Pr
           await welcomeMethods.openProject({ projectPath: workspacePath }, true);
           await operateTreeProvider.refreshSanitizerReports(false);
           await operateTreeProvider.refreshPerformanceReports();
+          await operateTreeProvider.refreshDumpTensorReports();
           logDebug('postActivate:autoOpenProject:end');
         }
         catch (error) {

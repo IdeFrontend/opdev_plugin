@@ -206,10 +206,14 @@ export const homeMethods = {
         operatorIds = [];
       }
 
-      // Make sure operatorIds is a numeric array
-      const numericIds = operatorIds
-        .map((id) => typeof id === 'string' ? Number(id) : id)
-        .filter((id) => typeof id === 'number' && !isNaN(id));
+      // Make sure operatorIds is a numeric array, without duplicates: a
+      // duplicated id would persist duplicated paths and produce duplicate
+      // tree rows on the next refresh.
+      const numericIds = [
+        ...new Set(operatorIds
+          .map((id) => typeof id === 'string' ? Number(id) : id)
+          .filter((id) => typeof id === 'number' && !isNaN(id))),
+      ];
 
       console.log('[setSelectedOperators] Saved operator IDs:', numericIds);
 
@@ -252,9 +256,16 @@ export const homeMethods = {
     const result = await checkMultipleOperatorsCore(workspacePath);
     const operators = result.operators ?? [];
 
-    const selectedOperatorIds = selectedPaths
-      .map((selectedPath) => operators.find((op) => projectPathsEqual(op.path, selectedPath))?.id)
-      .filter((id): id is number => typeof id === 'number');
+    // Dedupe by normalized path BEFORE resolving: a duplicated persisted
+    // selection would otherwise produce duplicate ids and duplicate tree
+    // rows (VS Code throws 'Element with id X is already registered').
+    const uniquePaths = [...new Set(selectedPaths.map((selectedPath) => normalizeProjectPath(selectedPath)))];
+
+    const selectedOperatorIds = [
+      ...new Set(uniquePaths
+        .map((selectedPath) => operators.find((op) => projectPathsEqual(op.path, selectedPath))?.id)
+        .filter((id): id is number => typeof id === 'number')),
+    ];
 
     return selectedOperatorIds.length > 0 ? selectedOperatorIds : undefined;
   },

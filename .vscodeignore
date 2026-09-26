@@ -9,6 +9,7 @@
 !out/templates/code_template/cann_template/**
 !out/templates/code_template/triton_template/**
 !resources/**
+!syntaxes/**
 !package.json
 !package.nls.json
 !package.nls.en.json

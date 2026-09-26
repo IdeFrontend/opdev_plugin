@@ -60,6 +60,7 @@ jest.mock('vscode', () => {
     commands: {
       executeCommand: jest.fn()
         .mockResolvedValue(undefined),
+      registerCommand: jest.fn(() => ({ dispose: jest.fn() })),
     },
     env: { language: 'en' },
     window: {

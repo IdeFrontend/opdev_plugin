@@ -357,9 +357,6 @@ export default {
   'csv.errorLoadFailed': 'Unable to load CSV file',
   'csv.errorDetailsLabel': 'Error:',
 
-  // routes
-  'routes.dumpTensorViewTitle': 'DumpTensor data view',
-
   // web home sidebar
   'web.home.clickOpen': 'Click to open',
   'web.home.helpGuide': 'Help guide',
@@ -578,17 +575,12 @@ export default {
   'web.link.validation.scriptNotExist': 'Script file does not exist. Please confirm.',
   'web.link.validation.failed': 'Validation failed',
 
-  // web dump-tensor-data
+  // dump tensor native sidebar tree
   'web.dump.selectTwoFiles': 'Select at least two files to compare',
   'web.dump.maxSelectCount': 'At most {{count}} files can be selected for comparison',
-  'web.dump.compareStarting': 'Starting VSCode file compare...',
-  'web.dump.compareFailed': 'VSCode file compare failed',
-  'web.dump.startCompare': 'Compare',
-  'web.dump.cancel': 'Cancel',
-  'web.dump.import': 'Import',
-  'web.dump.compare': 'Compare',
-  'web.dump.importSuccess': 'Import succeeded',
-  'web.dump.importFailed': 'Import failed',
+  'web.dump.noData': 'No data',
+  'web.dump.markFailed': 'Mark operation failed',
+  'web.dump.txtCompanionMissing': 'Companion text file not found: {{path}}',
 
   // web options-simulator / options-on-board / options-sanitizer (shared)
   'web.options.simulationFailed': 'Simulation failed and stopped',

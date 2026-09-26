@@ -53,7 +53,3 @@ export type JumpToFileParams = {
   errorMessage?: string; // 错误信息，用于在高亮时显示
   errorTitle?: string; // 错误标题
 };
-
-export type OpenFileParams = {
-  file: string;
-};

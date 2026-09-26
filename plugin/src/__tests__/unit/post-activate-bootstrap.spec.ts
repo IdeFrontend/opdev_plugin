@@ -74,6 +74,8 @@ const operateTreeProvider = {
     .mockResolvedValue(undefined),
   refreshPerformanceReports: jest.fn()
     .mockResolvedValue(undefined),
+  refreshDumpTensorReports: jest.fn()
+    .mockResolvedValue(undefined),
   setNpuHardwareAvailable: jest.fn(),
   setRemoteNpuHardwareAvailable: jest.fn(),
 } as never;
@@ -136,6 +138,13 @@ describe('post-activate-bootstrap', () => {
     // sidebar on every startup of an operator workspace disturbs users.
     expect(vscode.commands.executeCommand)
       .not.toHaveBeenCalledWith(`${TREE_VIEW_OPERATE}.focus`);
+    // The three results trees are refreshed after the auto-opened project.
+    expect(operateTreeProvider.refreshSanitizerReports)
+      .toHaveBeenCalledWith(false);
+    expect(operateTreeProvider.refreshPerformanceReports)
+      .toHaveBeenCalledTimes(1);
+    expect(operateTreeProvider.refreshDumpTensorReports)
+      .toHaveBeenCalledTimes(1);
   });
 
   it('kicks off the C/C++ prompt and the CANN include-path fix', async () => {
